@@ -1,0 +1,3234 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>第 9 章: SOLID 原則とモジュール設計 - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#9-solid" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              第 9 章: SOLID 原則とモジュール設計
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト駆動開発から始める XX 入門
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokkingfp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Functional Programming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokking-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-desgin-ppp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型デザイン - 原則、パターン、実践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="9-solid">第 9 章: SOLID 原則とモジュール設計<a class="headerlink" href="#9-solid" title="Permanent link">&para;</a></h1>
+<h2 id="91-solid">9.1 SOLID 原則の検証<a class="headerlink" href="#91-solid" title="Permanent link">&para;</a></h2>
+<p>第 7-8 章で構築した設計が SOLID 原則に沿っているか検証します。</p>
+<h3 id="srp">単一責任原則（SRP）<a class="headerlink" href="#srp" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>クラスが変更される理由は 1 つだけであるべきだ</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>構造体 / インターフェース</th>
+<th>責務</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FizzBuzzValue</code></td>
+<td>FizzBuzz の結果値を保持</td>
+</tr>
+<tr>
+<td><code>FizzBuzzList</code></td>
+<td>FizzBuzzValue のコレクション管理</td>
+</tr>
+<tr>
+<td><code>FizzBuzzType01</code></td>
+<td>タイプ 1 のルールで生成</td>
+</tr>
+<tr>
+<td><code>FizzBuzzType02</code></td>
+<td>タイプ 2 のルールで生成</td>
+</tr>
+<tr>
+<td><code>FizzBuzzType03</code></td>
+<td>タイプ 3 のルールで生成</td>
+</tr>
+<tr>
+<td><code>FizzBuzzValueCommand</code></td>
+<td>単一値の生成操作</td>
+</tr>
+<tr>
+<td><code>FizzBuzzListCommand</code></td>
+<td>リストの生成操作</td>
+</tr>
+</tbody>
+</table>
+<p>各構造体が 1 つの責務のみを担っており、SRP を満たしています。</p>
+<h3 id="ocp">開放閉鎖原則（OCP）<a class="headerlink" href="#ocp" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>ソフトウェアの実体は拡張に対して開いていて、修正に対して閉じているべきだ</p>
+</blockquote>
+<p>新しいタイプ（例: タイプ 4）を追加する場合:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// 既存コードを変更せず、新しい構造体を追加するだけ</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzType04</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">fizzBuzzTypeBase</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">f</span><span class="w"> </span><span class="nx">FizzBuzzType04</span><span class="p">)</span><span class="w"> </span><span class="nx">Generate</span><span class="p">(</span><span class="nx">number</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 新しいルールを実装</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">NewFizzBuzzValue</span><span class="p">(</span><span class="nx">number</span><span class="p">,</span><span class="w"> </span><span class="nx">strconv</span><span class="p">.</span><span class="nx">Itoa</span><span class="p">(</span><span class="nx">number</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>FizzBuzzType</code> インターフェースを満たす構造体を追加するだけで、既存のコードを変更する必要がありません（ファクトリ関数 <code>NewFizzBuzzType</code> の修正は必要）。</p>
+<h3 id="lsp">リスコフの置換原則（LSP）<a class="headerlink" href="#lsp" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>サブタイプはそのベースタイプと置換可能でなければならない</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><span class="c1">// どのタイプでも FizzBuzzType として使用可能</span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">processType</span><span class="p">(</span><span class="nx">fbt</span><span class="w"> </span><span class="nx">FizzBuzzType</span><span class="p">,</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">fbt</span><span class="p">.</span><span class="nx">Generate</span><span class="p">(</span><span class="nx">number</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// Type01, 02, 03 のいずれを渡しても正しく動作する</span>
+<span class="nx">processType</span><span class="p">(</span><span class="nx">FizzBuzzType01</span><span class="p">{},</span><span class="w"> </span><span class="mi">15</span><span class="p">)</span><span class="w"> </span><span class="c1">// &quot;FizzBuzz&quot;</span>
+<span class="nx">processType</span><span class="p">(</span><span class="nx">FizzBuzzType02</span><span class="p">{},</span><span class="w"> </span><span class="mi">15</span><span class="p">)</span><span class="w"> </span><span class="c1">// &quot;15&quot;</span>
+<span class="nx">processType</span><span class="p">(</span><span class="nx">FizzBuzzType03</span><span class="p">{},</span><span class="w"> </span><span class="mi">15</span><span class="p">)</span><span class="w"> </span><span class="c1">// &quot;FizzBuzz&quot;</span>
+</code></pre></div>
+<p>Go のインターフェースは暗黙的実装のため、メソッドシグネチャが一致すれば自動的に LSP を満たします。</p>
+<h3 id="isp">インターフェース分離原則（ISP）<a class="headerlink" href="#isp" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>クライアントが使用しないメソッドに依存させてはならない</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><span class="c1">// FizzBuzzType は Generate のみを要求する最小限のインターフェース</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzType</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">Generate</span><span class="p">(</span><span class="nx">number</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="nx">FizzBuzzValue</span>
+<span class="p">}</span>
+
+<span class="c1">// FizzBuzzCommand は Execute のみを要求する最小限のインターフェース</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzCommand</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">Execute</span><span class="p">()</span><span class="w"> </span><span class="kd">interface</span><span class="p">{}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>各インターフェースは 1 つのメソッドのみを定義しており、ISP を満たしています。Go では 1-2 メソッドのインターフェースが推奨されます。</p>
+<h3 id="dip">依存関係逆転原則（DIP）<a class="headerlink" href="#dip" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>上位モジュールは下位モジュールに依存してはならない。両方とも抽象に依存すべきだ</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><span class="c1">// FizzBuzzValueCommand は具体型ではなくインターフェースに依存</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzValueCommand</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">number</span><span class="w">       </span><span class="kt">int</span>
+<span class="w">    </span><span class="nx">fizzBuzzType</span><span class="w"> </span><span class="nx">FizzBuzzType</span><span class="w">  </span><span class="c1">// インターフェースに依存</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>コマンドは <code>FizzBuzzType</code> インターフェースに依存しており、具体的な <code>FizzBuzzType01</code> 等には直接依存していません。</p>
+<h2 id="92">9.2 モジュール設計<a class="headerlink" href="#92" title="Permanent link">&para;</a></h2>
+<p>単一ファイルに集約されたコードを、責務に基づいてパッケージ分割します。</p>
+<h3 id="before">Before: 単一パッケージ<a class="headerlink" href="#before" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>apps/go/
+├── fizzbuzz/
+│   ├── fizzbuzz.go          (全ての型・関数が 1 ファイル)
+│   ├── fizzbuzz_test.go
+│   └── learning_test.go
+└── main.go
+</code></pre></div>
+<h3 id="after-3">After: 3 層パッケージ構成<a class="headerlink" href="#after-3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>apps/go/
+├── main.go
+├── fizzbuzz/
+│   ├── fizzbuzz.go            (公開 API: Generate, GenerateList, Print)
+│   ├── fizzbuzz_test.go       (統合テスト)
+│   └── learning_test.go
+├── domain/
+│   ├── model/
+│   │   ├── fizz_buzz_value.go       (値オブジェクト)
+│   │   ├── fizz_buzz_value_test.go
+│   │   ├── fizz_buzz_list.go        (ファーストクラスコレクション)
+│   │   └── fizz_buzz_list_test.go
+│   └── type_/
+│       ├── fizz_buzz_type.go        (インターフェース + ファクトリ)
+│       ├── fizz_buzz_type_01.go     (タイプ 1)
+│       ├── fizz_buzz_type_02.go     (タイプ 2)
+│       ├── fizz_buzz_type_03.go     (タイプ 3)
+│       └── fizz_buzz_type_test.go
+└── application/
+    ├── fizz_buzz_command.go          (コマンドインターフェース)
+    ├── fizz_buzz_value_command.go    (単一値コマンド)
+    ├── fizz_buzz_list_command.go     (リストコマンド)
+    └── fizz_buzz_command_test.go
+</code></pre></div>
+<p><strong>注</strong>: Go の予約語 <code>type</code> との衝突を避けるため、パッケージ名は <code>type_</code> とします。</p>
+<h3 id="_1">パッケージ依存関係<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjY4N3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6OTg0cHg7aGVpZ2h0OjY4N3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDk4NCA2ODciIHdpZHRoPSI5ODRweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PHRpdGxlPiYjMTI0OTc7JiMxMjQ4MzsmIzEyNDY1OyYjMTI1NDA7JiMxMjQ3MjsmIzIwMzgxOyYjMjMzODQ7JiMzODMwNjsmIzIwNDE4OzwvdGl0bGU+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNS45OTk1IiB4PSI0MjIuMDAwNCIgeT0iMjIuOTk1MSI+JiMxMjQ5NzsmIzEyNDgzOyYjMTI0NjU7JiMxMjU0MDsmIzEyNDcyOyYjMjAzODE7JiMyMzM4NDsmIzM4MzA2OyYjMjA0MTg7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBhcHBsaWNhdGlvbi0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJhcHBsaWNhdGlvbiIgZGF0YS1zb3VyY2UtbGluZT0iMyIgaWQ9ImVudDAwMDIiPjxwYXRoIGQ9Ik04LjUsMTY0LjU5NjkgTDk3LjQxMDIsMTY0LjU5NjkgQTMuNzUsMy43NSAwIDAgMSA5OS45MTAyLDE2Ny4wOTY5IEwxMDYuOTEwMiwxODYuODkzNyBMNDc4LjUsMTg2Ljg5MzcgQTIuNSwyLjUgMCAwIDEgNDgxLDE4OS4zOTM3IEw0ODEsMzY1LjY4NjkgQTIuNSwyLjUgMCAwIDEgNDc4LjUsMzY4LjE4NjkgTDguNSwzNjguMTg2OSBBMi41LDIuNSAwIDAgMSA2LDM2NS42ODY5IEw2LDE2Ny4wOTY5IEEyLjUsMi41IDAgMCAxIDguNSwxNjQuNTk2OSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7IiB4MT0iNiIgeDI9IjEwNi45MTAyIiB5MT0iMTg2Ljg5MzciIHkyPSIxODYuODkzNyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4Ny45MTAyIiB4PSIxMCIgeT0iMTc5LjU5MiI+YXBwbGljYXRpb248L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGRvbWFpbi90eXBlXy0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJkb21haW4udHlwZV8iIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJlbnQwMDA2Ij48cGF0aCBkPSJNNDcuNSwzOTIuMTg2OSBMMTU0LjM4ODcsMzkyLjE4NjkgQTMuNzUsMy43NSAwIDAgMSAxNTYuODg4NywzOTQuNjg2OSBMMTYzLjg4ODcsNDE0LjQ4MzggTDc2OS41LDQxNC40ODM4IEEyLjUsMi41IDAgMCAxIDc3Miw0MTYuOTgzOCBMNzcyLDQ4Ni45ODY5IEEyLjUsMi41IDAgMCAxIDc2OS41LDQ4OS40ODY5IEw0Ny41LDQ4OS40ODY5IEEyLjUsMi41IDAgMCAxIDQ1LDQ4Ni45ODY5IEw0NSwzOTQuNjg2OSBBMi41LDIuNSAwIDAgMSA0Ny41LDM5Mi4xODY5IiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIHgxPSI0NSIgeDI9IjE2My44ODg3IiB5MT0iNDE0LjQ4MzgiIHkyPSI0MTQuNDgzOCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDUuODg4NyIgeD0iNDkiIHk9IjQwNy4xODIiPmRvbWFpbi90eXBlXzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgZG9tYWluL21vZGVsLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImRvbWFpbi5tb2RlbCIgZGF0YS1zb3VyY2UtbGluZT0iMTYiIGlkPSJlbnQwMDExIj48cGF0aCBkPSJNNzk4LjUsMzkyLjE4NjkgTDkxMS41NzUyLDM5Mi4xODY5IEEzLjc1LDMuNzUgMCAwIDEgOTE0LjA3NTIsMzk0LjY4NjkgTDkyMS4wNzUyLDQxNC40ODM4IEw5NjUuNSw0MTQuNDgzOCBBMi41LDIuNSAwIDAgMSA5NjgsNDE2Ljk4MzggTDk2OCw1OTMuMjc2OSBBMi41LDIuNSAwIDAgMSA5NjUuNSw1OTUuNzc2OSBMNzk4LjUsNTk1Ljc3NjkgQTIuNSwyLjUgMCAwIDEgNzk2LDU5My4yNzY5IEw3OTYsMzk0LjY4NjkgQTIuNSwyLjUgMCAwIDEgNzk4LjUsMzkyLjE4NjkiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIgeDE9Ijc5NiIgeDI9IjkyMS4wNzUyIiB5MT0iNDE0LjQ4MzgiIHkyPSI0MTQuNDgzOCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTIuMDc1MiIgeD0iODAwIiB5PSI0MDcuMTgyIj5kb21haW4vbW9kZWw8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGZpenpidXp6LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImZpenpidXp6IiBkYXRhLXNvdXJjZS1saW5lPSIyMSIgaWQ9ImVudDAwMTQiPjxwYXRoIGQ9Ik0xODYuNSw0My4yOTY5IEwyNTAuOTcxNyw0My4yOTY5IEEzLjc1LDMuNzUgMCAwIDEgMjUzLjQ3MTcsNDUuNzk2OSBMMjYwLjQ3MTcsNjUuNTkzOCBMMzA3LjUsNjUuNTkzOCBBMi41LDIuNSAwIDAgMSAzMTAsNjguMDkzOCBMMzEwLDEzOC4wOTY5IEEyLjUsMi41IDAgMCAxIDMwNy41LDE0MC41OTY5IEwxODYuNSwxNDAuNTk2OSBBMi41LDIuNSAwIDAgMSAxODQsMTM4LjA5NjkgTDE4NCw0NS43OTY5IEEyLjUsMi41IDAgMCAxIDE4Ni41LDQzLjI5NjkiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIgeDE9IjE4NCIgeDI9IjI2MC40NzE3IiB5MT0iNjUuNTkzOCIgeTI9IjY1LjU5MzgiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNjMuNDcxNyIgeD0iMTg4IiB5PSI1OC4yOTIiPmZpenpidXp6PC90ZXh0PjwvZz48IS0tZW50aXR5IEZpenpCdXp6Q29tbWFuZC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImFwcGxpY2F0aW9uLkZpenpCdXp6Q29tbWFuZCIgZGF0YS1zb3VyY2UtbGluZT0iNCIgaWQ9ImVudDAwMDMiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTcxLjc2OTUiIHg9IjE2MS4xMiIgeT0iMTk5LjU5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iMzEyLjg4OTUiIHk9IjIwNC41OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIzMTAuODg5NSIgeT0iMjA2LjU5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjMxMC44ODk1IiB5PSIyMTAuNTk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzMS43Njk1IiB4PSIxNzYuMTIiIHk9IjIzMi41OTIiPkZpenpCdXp6Q29tbWFuZDwvdGV4dD48L2c+PCEtLWVudGl0eSBGaXp6QnV6elZhbHVlQ29tbWFuZC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImFwcGxpY2F0aW9uLkZpenpCdXp6VmFsdWVDb21tYW5kIiBkYXRhLXNvdXJjZS1saW5lPSI1IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0Ni4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIyMTEuMzAxOCIgeD0iMjIuMzUiIHk9IjMwNS44ODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIxMCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTUiIHg9IjIxMy42NTE4IiB5PSIzMTAuODg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iMjExLjY1MTgiIHk9IjMxMi44ODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIyMTEuNjUxOCIgeT0iMzE2Ljg4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzEuMzAxOCIgeD0iMzcuMzUiIHk9IjMzOC44ODIiPkZpenpCdXp6VmFsdWVDb21tYW5kPC90ZXh0PjwvZz48IS0tZW50aXR5IEZpenpCdXp6TGlzdENvbW1hbmQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJhcHBsaWNhdGlvbi5GaXp6QnV6ekxpc3RDb21tYW5kIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0Ni4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxOTYuMjQyMiIgeD0iMjY4Ljg4IiB5PSIzMDUuODg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1IiB4PSI0NDUuMTIyMiIgeT0iMzEwLjg4NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjQ0My4xMjIyIiB5PSIzMTIuODg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iNDQzLjEyMjIiIHk9IjMxNi44ODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTU2LjI0MjIiIHg9IjI4My44OCIgeT0iMzM4Ljg4MiI+Rml6ekJ1enpMaXN0Q29tbWFuZDwvdGV4dD48L2c+PCEtLWVudGl0eSBGaXp6QnV6elR5cGUtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJkb21haW4udHlwZV8uRml6ekJ1enpUeXBlIiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImVudDAwMDciPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTM0LjE1MTQiIHg9IjYwLjkyIiB5PSI0MjcuMTg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1IiB4PSIxNzUuMDcxNCIgeT0iNDMyLjE4NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjE3My4wNzE0IiB5PSI0MzQuMTg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iMTczLjA3MTQiIHk9IjQzOC4xODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTQuMTUxNCIgeD0iNzUuOTIiIHk9IjQ2MC4xODIiPkZpenpCdXp6VHlwZTwvdGV4dD48L2c+PCEtLWVudGl0eSBGaXp6QnV6elR5cGUwMS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImRvbWFpbi50eXBlXy5GaXp6QnV6elR5cGUwMSIgZGF0YS1zb3VyY2UtbGluZT0iMTEiIGlkPSJlbnQwMDA4Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1MS45NjU4IiB4PSIyMzAuMDIiIHk9IjQyNy4xODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIxMCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTUiIHg9IjM2MS45ODU4IiB5PSI0MzIuMTg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iMzU5Ljk4NTgiIHk9IjQzNC4xODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIzNTkuOTg1OCIgeT0iNDM4LjE4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTEuOTY1OCIgeD0iMjQ1LjAyIiB5PSI0NjAuMTgyIj5GaXp6QnV6elR5cGUwMTwvdGV4dD48L2c+PCEtLWVudGl0eSBGaXp6QnV6elR5cGUwMi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImRvbWFpbi50eXBlXy5GaXp6QnV6elR5cGUwMiIgZGF0YS1zb3VyY2UtbGluZT0iMTIiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1MS45NjU4IiB4PSI0MTcuMDIiIHk9IjQyNy4xODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIxMCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTUiIHg9IjU0OC45ODU4IiB5PSI0MzIuMTg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iNTQ2Ljk4NTgiIHk9IjQzNC4xODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSI1NDYuOTg1OCIgeT0iNDM4LjE4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTEuOTY1OCIgeD0iNDMyLjAyIiB5PSI0NjAuMTgyIj5GaXp6QnV6elR5cGUwMjwvdGV4dD48L2c+PCEtLWVudGl0eSBGaXp6QnV6elR5cGUwMy0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImRvbWFpbi50eXBlXy5GaXp6QnV6elR5cGUwMyIgZGF0YS1zb3VyY2UtbGluZT0iMTMiIGlkPSJlbnQwMDEwIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1MS45NjU4IiB4PSI2MDQuMDIiIHk9IjQyNy4xODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIxMCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTUiIHg9IjczNS45ODU4IiB5PSI0MzIuMTg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iNzMzLjk4NTgiIHk9IjQzNC4xODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSI3MzMuOTg1OCIgeT0iNDM4LjE4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTEuOTY1OCIgeD0iNjE5LjAyIiB5PSI0NjAuMTgyIj5GaXp6QnV6elR5cGUwMzwvdGV4dD48L2c+PCEtLWVudGl0eSBGaXp6QnV6elZhbHVlLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iZG9tYWluLm1vZGVsLkZpenpCdXp6VmFsdWUiIGRhdGEtc291cmNlLWxpbmU9IjE3IiBpZD0iZW50MDAxMiI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0Ni4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMzkuMzQ2NyIgeD0iODEyLjMzIiB5PSI1MzMuNDg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1IiB4PSI5MzEuNjc2NyIgeT0iNTM4LjQ4NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjkyOS42NzY3IiB5PSI1NDAuNDg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iOTI5LjY3NjciIHk9IjU0NC40ODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTkuMzQ2NyIgeD0iODI3LjMzIiB5PSI1NjYuNDgyIj5GaXp6QnV6elZhbHVlPC90ZXh0PjwvZz48IS0tZW50aXR5IEZpenpCdXp6TGlzdC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImRvbWFpbi5tb2RlbC5GaXp6QnV6ekxpc3QiIGRhdGEtc291cmNlLWxpbmU9IjE4IiBpZD0iZW50MDAxMyI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0Ni4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMjQuMjg3MSIgeD0iODE1Ljg2IiB5PSI0MjcuMTg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1IiB4PSI5MjAuMTQ3MSIgeT0iNDMyLjE4NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjkxOC4xNDcxIiB5PSI0MzQuMTg2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iOTE4LjE0NzEiIHk9IjQzOC4xODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODQuMjg3MSIgeD0iODMwLjg2IiB5PSI0NjAuMTgyIj5GaXp6QnV6ekxpc3Q8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8gQVBJLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iZml6emJ1enouLi4gQVBJIiBkYXRhLXNvdXJjZS1saW5lPSIyMiIgaWQ9ImVudDAwMTUiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iOTQuNTk4NSIgeD0iMTk5LjciIHk9Ijc4LjI5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iMjc0LjI5ODUiIHk9IjgzLjI5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjI3Mi4yOTg1IiB5PSI4NS4yOTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIyNzIuMjk4NSIgeT0iODkuMjk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjU0LjU5ODUiIHg9IjIxNC43IiB5PSIxMTEuMjkyIj4mIzIwODQ0OyYjMzgyODM7IEFQSTwvdGV4dD48L2c+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iR01OMjYiIGRhdGEtc291cmNlLWxpbmU9IjM3IiBpZD0iZW50MDAyNyI+PHBhdGggZD0iTTc4Nyw2MzkuNzc2OSBMNzg3LDY4MC4wNDI1IEEwLDAgMCAwIDAgNzg3LDY4MC4wNDI1IEw5NzcuMDAwMiw2ODAuMDQyNSBBMCwwIDAgMCAwIDk3Ny4wMDAyLDY4MC4wNDI1IEw5NzcuMDAwMiw2NDkuNzc2OSBMOTY3LjAwMDIsNjM5Ljc3NjkgTDg4Niw2MzkuNzc2OSBMODgyLDU4MC4xMDY5IEw4NzgsNjM5Ljc3NjkgTDc4Nyw2MzkuNzc2OSBBMCwwIDAgMCAwIDc4Nyw2MzkuNzc2OSIgZmlsbD0iI0ZFRkZERCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7Ii8+PHBhdGggZD0iTTk2Ny4wMDAyLDYzOS43NzY5IEw5NjcuMDAwMiw2NDkuNzc2OSBMOTc3LjAwMDIsNjQ5Ljc3NjkgTDk2Ny4wMDAyLDYzOS43NzY5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5MS4wMDAxIiB4PSI3OTMiIHk9IjY1Ni44NDM4Ij4mIzI2MzY4OyYjMTI0MTg7JiMyMzQzMzsmIzIzNDUwOyYjMTIzNzU7JiMxMjM4MzsmIzIzNjUyOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNjkuMDAwMiIgeD0iNzkzIiB5PSI2NzEuOTc2NiI+JiMyMDE4MjsmIzEyMzk4OyYjMTI0OTc7JiMxMjQ4MzsmIzEyNDY1OyYjMTI1NDA7JiMxMjQ3MjsmIzEyMzk1OyYjMjAzODE7JiMyMzM4NDsmIzEyMzc1OyYjMTIzOTQ7JiMxMjM1Njs8L3RleHQ+PC9nPjwhLS1saW5rID8/IEFQSSB0byBGaXp6QnV6ekNvbW1hbmQtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAxNSIgZGF0YS1lbnRpdHktMj0iZW50MDAwMyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjI1IiBpZD0ibG5rMTYiPjxwYXRoIGQ9Ik0yNDcsMTI0Ljg4NjkgQzI0NywxNDYuMjE2OSAyNDcsMTcyLjEwNjkgMjQ3LDE5My40MDY5IiBmaWxsPSJub25lIiBpZD0iJiMyMDg0NDsmIzM4MjgzOyBBUEktdG8tRml6ekJ1enpDb21tYW5kIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIyNDcsMTk5LjQwNjksMjUxLDE5MC40MDY5LDI0NywxOTQuNDA2OSwyNDMsMTkwLjQwNjksMjQ3LDE5OS40MDY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIEZpenpCdXp6Q29tbWFuZCB0byBGaXp6QnV6elZhbHVlQ29tbWFuZC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAzIiBkYXRhLWVudGl0eS0yPSJlbnQwMDA0IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMjYiIGlkPSJsbmsxNyI+PHBhdGggZD0iTTIyMS4xOCwyNDYuMzc2OSBDMjAxLjIyLDI2My44NjY5IDE3OC4yMzE3LDI4NC4wMTE1IDE1OC4yODE3LDMwMS41MDE1IiBmaWxsPSJub25lIiBpZD0iRml6ekJ1enpDb21tYW5kLXRvLUZpenpCdXp6VmFsdWVDb21tYW5kIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxNTMuNzcsMzA1LjQ1NjksMTYzLjE3NDQsMzAyLjUzMTYsMTU3LjUyOTcsMzAyLjE2MDgsMTU3LjkwMDYsMjk2LjUxNjEsMTUzLjc3LDMwNS40NTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIEZpenpCdXp6Q29tbWFuZCB0byBGaXp6QnV6ekxpc3RDb21tYW5kLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDMiIGRhdGEtZW50aXR5LTI9ImVudDAwMDUiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIyNyIgaWQ9ImxuazE4Ij48cGF0aCBkPSJNMjczLjA0LDI0Ni4zNzY5IEMyOTMuMTcsMjYzLjg2NjkgMzE2LjM3MjcsMjg0LjAyOTQgMzM2LjQ4MjcsMzAxLjUxOTQiIGZpbGw9Im5vbmUiIGlkPSJGaXp6QnV6ekNvbW1hbmQtdG8tRml6ekJ1enpMaXN0Q29tbWFuZCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMzQxLjAxLDMwNS40NTY5LDMzNi44NDQsMjk2LjUzMjUsMzM3LjIzNzMsMzAyLjE3NTcsMzMxLjU5NDEsMzAyLjU2ODksMzQxLjAxLDMwNS40NTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIEZpenpCdXp6VmFsdWVDb21tYW5kIHRvIEZpenpCdXp6VHlwZS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA3IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMjgiIGlkPSJsbmsxOSI+PHBhdGggZD0iTTEyOCwzNTIuNDc2OSBDMTI4LDM3My44MDY5IDEyOCwzOTkuNzA2OSAxMjgsNDIwLjk5NjkiIGZpbGw9Im5vbmUiIGlkPSJGaXp6QnV6elZhbHVlQ29tbWFuZC10by1GaXp6QnV6elR5cGUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEyOCw0MjYuOTk2OSwxMzIsNDE3Ljk5NjksMTI4LDQyMS45OTY5LDEyNCw0MTcuOTk2OSwxMjgsNDI2Ljk5NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgRml6ekJ1enpMaXN0Q29tbWFuZCB0byBGaXp6QnV6elR5cGUtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNSIgZGF0YS1lbnRpdHktMj0iZW50MDAwNyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjI5IiBpZD0ibG5rMjAiPjxwYXRoIGQ9Ik0zMTUuNywzNTIuNjM2OSBDMjk1Ljc3LDM2MC44MzY5IDI3Mi41OCwzNjkuNjc2OSAyNTEsMzc2LjE4NjkgQzIzNC40OCwzODEuMTc2OSAyMjguNjgsMzc2Ljk3NjkgMjEzLDM4NC4xODY5IEMxOTAuMDIsMzk0Ljc0NjkgMTcxLjk1NzQsNDA4LjQ5NCAxNTUuODU3NCw0MjIuNzg0IiBmaWxsPSJub25lIiBpZD0iRml6ekJ1enpMaXN0Q29tbWFuZC10by1GaXp6QnV6elR5cGUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjE1MS4zNyw0MjYuNzY2OSwxNjAuNzU2Myw0MjMuNzg0MSwxNTUuMTA5NSw0MjMuNDQ3OCwxNTUuNDQ1OCw0MTcuODAwOSwxNTEuMzcsNDI2Ljc2NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgRml6ekJ1enpMaXN0Q29tbWFuZCB0byBGaXp6QnV6ekxpc3QtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNSIgZGF0YS1lbnRpdHktMj0iZW50MDAxMyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjMwIiBpZD0ibG5rMjEiPjxwYXRoIGQ9Ik00NjUuNDEsMzMxLjgwNjkgQzU0OS4xMywzMzUuOTU2OSA2NzEuNDIsMzQ4LjM4NjkgNzcyLDM4NC4xODY5IEM4MDAuMDgsMzk0LjE4NjkgODIzLjgxMTIsNDA4Ljg0NDUgODQ0LjIyMTIsNDIzLjQ1NDUiIGZpbGw9Im5vbmUiIGlkPSJGaXp6QnV6ekxpc3RDb21tYW5kLXRvLUZpenpCdXp6TGlzdCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iODQ5LjEsNDI2Ljk0NjksODQ0LjExLDQxOC40NTU3LDg0NS4wMzQzLDQyNC4wMzY1LDgzOS40NTM1LDQyNC45NjA4LDg0OS4xLDQyNi45NDY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIEZpenpCdXp6VHlwZTAxIHRvIEZpenpCdXp6VmFsdWUtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwOCIgZGF0YS1lbnRpdHktMj0iZW50MDAxMiIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjMxIiBpZD0ibG5rMjIiPjxwYXRoIGQ9Ik0zNDQuNTksNDczLjkzNjkgQzM2MS4xNCw0ODIuNjQ2OSAzODEsNDkxLjg0NjkgNDAwLDQ5Ny40ODY5IEM1NDIuMjMsNTM5LjY0NjkgNzEwLjcxMzMsNTUxLjEyNzEgODA1Ljg4MzMsNTU0LjI5NzEiIGZpbGw9Im5vbmUiIGlkPSJGaXp6QnV6elR5cGUwMS10by1GaXp6QnV6elZhbHVlIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI4MTEuODgsNTU0LjQ5NjksODAzLjAxODEsNTUwLjE5OTUsODA2Ljg4MjgsNTU0LjMzMDQsODAyLjc1MTgsNTU4LjE5NSw4MTEuODgsNTU0LjQ5NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgRml6ekJ1enpUeXBlMDIgdG8gRml6ekJ1enpWYWx1ZS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA5IiBkYXRhLWVudGl0eS0yPSJlbnQwMDEyIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMzIiIGlkPSJsbmsyMyI+PHBhdGggZD0iTTUzMy4xOSw0NzMuOTU2OSBDNTQ5LjQ5LDQ4Mi4zNDY5IDU2OC43NCw0OTEuMzI2OSA1ODcsNDk3LjQ4NjkgQzY2MS45Myw1MjIuNzc2OSA3NDUuNTQ5Nyw1MzcuNjUyMyA4MDYuMTc5Nyw1NDYuMjcyMyIgZmlsbD0ibm9uZSIgaWQ9IkZpenpCdXp6VHlwZTAyLXRvLUZpenpCdXp6VmFsdWUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjgxMi4xMiw1NDcuMTE2OSw4MDMuNzcyNiw1NDEuODg5OSw4MDcuMTY5OCw1NDYuNDEzMSw4MDIuNjQ2Niw1NDkuODEwMiw4MTIuMTIsNTQ3LjExNjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgRml6ekJ1enpUeXBlMDMgdG8gRml6ekJ1enpWYWx1ZS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDEwIiBkYXRhLWVudGl0eS0yPSJlbnQwMDEyIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMzMiIGlkPSJsbmsyNCI+PHBhdGggZD0iTTcyMy44Myw0NzMuOTY2OSBDNzU3LjcxLDQ5MS40NTY5IDc5OS4wNTg1LDUxMi44MTQ1IDgzMi45MTg1LDUzMC4yOTQ1IiBmaWxsPSJub25lIiBpZD0iRml6ekJ1enpUeXBlMDMtdG8tRml6ekJ1enpWYWx1ZSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iODM4LjI1LDUzMy4wNDY5LDgzMi4wODc3LDUyNS4zNjQsODMzLjgwNzEsNTMwLjc1MzMsODI4LjQxNzksNTMyLjQ3MjcsODM4LjI1LDUzMy4wNDY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIEZpenpCdXp6TGlzdCB0byBGaXp6QnV6elZhbHVlLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMTMiIGRhdGEtZW50aXR5LTI9ImVudDAwMTIiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIzNCIgaWQ9ImxuazI1Ij48cGF0aCBkPSJNODc4Ljg3LDQ3My45NjY5IEM4NzkuNTQsNDkxLjQ1NjkgODgwLjIzMDIsNTA5LjU3MTMgODgwLjkwMDIsNTI3LjA1MTMiIGZpbGw9Im5vbmUiIGlkPSJGaXp6QnV6ekxpc3QtdG8tRml6ekJ1enpWYWx1ZSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iODgxLjEzLDUzMy4wNDY5LDg4NC43ODI0LDUyMy45MDAzLDg4MC45Mzg1LDUyOC4wNTA1LDg3Ni43ODgyLDUyNC4yMDY3LDg4MS4xMyw1MzMuMDQ2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjwvZz48P3BsYW50dW1sLXNyYyBBeWFpb0tiTFVEbXl5TjVweS1FY1pPLVJ6cG5rc2w1YXR6b2RRc1V5ZEJSZW9WdWNCZ3cybkVKaW5GSEsxUU40V2VBU3BFSjRhaXB5RjJNNVFndmVqeW9nQWdWSWdZaGRfRHBTbkJvS004SDhNNjlFUUlnY2k0emNTR2JTajFSOXY5Snl0Q0pDRkZzSW9lQktVMUlaR3UwWWlRWFMwcURxMElEcTBNRWlma1ZjZndKY2U5V0VUWVFRLXIycmZXNWJhZTBvTzZyRk16VXlkRFFqdTFaVzJMUTRwNVZHclJMSm0xQ1dDMTQ1RkpxYVRKWTIyUmpZYkMzM1JXSWdBejMyM2JhX2NHZVh1T0NVNndYZ3FDQ0s2YUQ0QTM4Y2UwWGlFck9iTjdkdjlRYUFJVmFiOVZjdjJsYmY2RkJGdlpHeVJjZndrZ3hwd1JmUFpua2RGc3dTX3RKWjRndWRrd1N6UmJvN2JsR1ZEd3c2Zjd3bWtiTUY2cmt1S2xESTU0ME0wMDAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<p><strong>依存方向のルール</strong>:</p>
+<ul>
+<li><code>domain/model</code> → 他のパッケージに依存しない（最も安定）</li>
+<li><code>domain/type_</code> → <code>domain/model</code> のみに依存</li>
+<li><code>application</code> → <code>domain/type_</code> と <code>domain/model</code> に依存</li>
+<li><code>fizzbuzz</code> → <code>application</code> に依存（公開 API として統合）</li>
+</ul>
+<h3 id="go">Go パッケージの循環インポート禁止<a class="headerlink" href="#go" title="Permanent link">&para;</a></h3>
+<p>Go ではパッケージ間の循環インポートがコンパイルエラーになります。依存方向を一方向に保つことが重要です。</p>
+<div class="highlight"><pre><span></span><code>❌ application → domain/type_ → application（循環）
+✅ application → domain/type_ → domain/model（一方向）
+</code></pre></div>
+<h2 id="93">9.3 パッケージ分割の実装<a class="headerlink" href="#93" title="Permanent link">&para;</a></h2>
+<h3 id="domainmodel">domain/model パッケージ<a class="headerlink" href="#domainmodel" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// domain/model/fizz_buzz_value.go</span>
+<span class="kn">package</span><span class="w"> </span><span class="nx">model</span>
+
+<span class="c1">// FizzBuzzValue は FizzBuzz の結果を表す値オブジェクトです。</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">number</span><span class="w"> </span><span class="kt">int</span>
+<span class="w">    </span><span class="nx">value</span><span class="w">  </span><span class="kt">string</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">NewFizzBuzzValue</span><span class="p">(</span><span class="nx">number</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">number</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nb">panic</span><span class="p">(</span><span class="s">&quot;値は正の値のみ許可します&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="p">{</span><span class="nx">number</span><span class="p">:</span><span class="w"> </span><span class="nx">number</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="p">:</span><span class="w"> </span><span class="nx">value</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="p">)</span><span class="w"> </span><span class="nx">Number</span><span class="p">()</span><span class="w"> </span><span class="kt">int</span><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">number</span><span class="w"> </span><span class="p">}</span>
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="p">)</span><span class="w"> </span><span class="nx">Value</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">value</span><span class="w"> </span><span class="p">}</span>
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="p">)</span><span class="w"> </span><span class="nx">String</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">value</span><span class="w"> </span><span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">v</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="p">)</span><span class="w"> </span><span class="nx">Equal</span><span class="p">(</span><span class="nx">other</span><span class="w"> </span><span class="nx">FizzBuzzValue</span><span class="p">)</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">number</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">other</span><span class="p">.</span><span class="nx">number</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">value</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">other</span><span class="p">.</span><span class="nx">value</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="domaintype_">domain/type_ パッケージ<a class="headerlink" href="#domaintype_" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// domain/type_/fizz_buzz_type.go</span>
+<span class="kn">package</span><span class="w"> </span><span class="nx">type_</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="s">&quot;github.com/k2works/getting-started-tdd/apps/go/domain/model&quot;</span>
+<span class="p">)</span>
+
+<span class="c1">// FizzBuzzType は FizzBuzz 生成のインターフェースです。</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzType</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">Generate</span><span class="p">(</span><span class="nx">number</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="nx">model</span><span class="p">.</span><span class="nx">FizzBuzzValue</span>
+<span class="p">}</span>
+
+<span class="c1">// NewFizzBuzzType は指定されたタイプの FizzBuzzType を生成します。</span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">NewFizzBuzzType</span><span class="p">(</span><span class="nx">fizzBuzzType</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="nx">FizzBuzzType</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="nx">fizzBuzzType</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">FizzBuzzType01</span><span class="p">{}</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">FizzBuzzType02</span><span class="p">{}</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="mi">3</span><span class="p">:</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">FizzBuzzType03</span><span class="p">{}</span>
+<span class="w">    </span><span class="k">default</span><span class="p">:</span>
+<span class="w">        </span><span class="nb">panic</span><span class="p">(</span><span class="s">&quot;該当するタイプは存在しません&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="application">application パッケージ<a class="headerlink" href="#application" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// application/fizz_buzz_command.go</span>
+<span class="kn">package</span><span class="w"> </span><span class="nx">application</span>
+
+<span class="c1">// FizzBuzzCommand は FizzBuzz 操作のインターフェースです。</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzCommand</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">Execute</span><span class="p">()</span><span class="w"> </span><span class="kd">interface</span><span class="p">{}</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1">// application/fizz_buzz_list_command.go</span>
+<span class="kn">package</span><span class="w"> </span><span class="nx">application</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="s">&quot;github.com/k2works/getting-started-tdd/apps/go/domain/model&quot;</span>
+<span class="w">    </span><span class="nx">type_</span><span class="w"> </span><span class="s">&quot;github.com/k2works/getting-started-tdd/apps/go/domain/type_&quot;</span>
+<span class="p">)</span>
+
+<span class="c1">// FizzBuzzListCommand は FizzBuzzList を生成するコマンドです。</span>
+<span class="kd">type</span><span class="w"> </span><span class="nx">FizzBuzzListCommand</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">count</span><span class="w">        </span><span class="kt">int</span>
+<span class="w">    </span><span class="nx">fizzBuzzType</span><span class="w"> </span><span class="nx">type_</span><span class="p">.</span><span class="nx">FizzBuzzType</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">NewFizzBuzzListCommand</span><span class="p">(</span><span class="nx">fizzBuzzType</span><span class="w"> </span><span class="nx">type_</span><span class="p">.</span><span class="nx">FizzBuzzType</span><span class="p">,</span><span class="w"> </span><span class="nx">count</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="nx">FizzBuzzListCommand</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">FizzBuzzListCommand</span><span class="p">{</span><span class="nx">count</span><span class="p">:</span><span class="w"> </span><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="nx">fizzBuzzType</span><span class="p">:</span><span class="w"> </span><span class="nx">fizzBuzzType</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">*</span><span class="nx">FizzBuzzListCommand</span><span class="p">)</span><span class="w"> </span><span class="nx">Execute</span><span class="p">()</span><span class="w"> </span><span class="kd">interface</span><span class="p">{}</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">values</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="nx">model</span><span class="p">.</span><span class="nx">FizzBuzzValue</span><span class="p">,</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">count</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">values</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">c</span><span class="p">.</span><span class="nx">fizzBuzzType</span><span class="p">.</span><span class="nx">Generate</span><span class="p">(</span><span class="nx">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">model</span><span class="p">.</span><span class="nx">NewFizzBuzzList</span><span class="p">(</span><span class="nx">values</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="94">9.4 テスト構成<a class="headerlink" href="#94" title="Permanent link">&para;</a></h2>
+<p>テストもパッケージに対応させます。</p>
+<h3 id="domainmodel_1">domain/model のテスト<a class="headerlink" href="#domainmodel_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// domain/model/fizz_buzz_value_test.go</span>
+<span class="kn">package</span><span class="w"> </span><span class="nx">model</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="s">&quot;testing&quot;</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">TestNewFizzBuzzValue_正の値で生成できる</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">NewFizzBuzzValue</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">Number</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;Number() = %d, want %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">v</span><span class="p">.</span><span class="nx">Number</span><span class="p">(),</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">TestNewFizzBuzzValue_負の値でパニックする</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">recover</span><span class="p">();</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nx">t</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="s">&quot;should panic for negative number&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}()</span>
+<span class="w">    </span><span class="nx">NewFizzBuzzValue</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;-1&quot;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="domaintype__1">domain/type_ のテスト<a class="headerlink" href="#domaintype__1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// domain/type_/fizz_buzz_type_test.go</span>
+<span class="kn">package</span><span class="w"> </span><span class="nx">type_</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="s">&quot;testing&quot;</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">TestFizzBuzzType01_Generate_3の倍数でFizzを返す</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">fbt</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">FizzBuzzType01</span><span class="p">{}</span>
+<span class="w">    </span><span class="nx">got</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fbt</span><span class="p">.</span><span class="nx">Generate</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">got</span><span class="p">.</span><span class="nx">Value</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s">&quot;Fizz&quot;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">t</span><span class="p">.</span><span class="nx">Fatalf</span><span class="p">(</span><span class="s">&quot;Generate(3).Value() = %q, want %q&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">got</span><span class="p">.</span><span class="nx">Value</span><span class="p">(),</span><span class="w"> </span><span class="s">&quot;Fizz&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">TestNewFizzBuzzType_不正なタイプでパニックする</span><span class="p">(</span><span class="nx">t</span><span class="w"> </span><span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">recover</span><span class="p">();</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nx">t</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="s">&quot;should panic for invalid type&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}()</span>
+<span class="w">    </span><span class="nx">NewFizzBuzzType</span><span class="p">(</span><span class="mi">99</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="95">9.5 言語間比較<a class="headerlink" href="#95" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>Go</th>
+<th>Ruby</th>
+<th>Java</th>
+<th>TypeScript</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>モジュール単位</td>
+<td>パッケージ</td>
+<td>モジュール / クラス</td>
+<td>パッケージ / クラス</td>
+<td>モジュール（ES Modules）</td>
+</tr>
+<tr>
+<td>公開制御</td>
+<td>大文字/小文字</td>
+<td><code>public</code> / <code>private</code></td>
+<td>アクセス修飾子</td>
+<td><code>export</code></td>
+</tr>
+<tr>
+<td>バレルファイル</td>
+<td>同一パッケージ</td>
+<td><code>require_relative</code> 集約</td>
+<td>なし（パッケージ）</td>
+<td><code>index.ts</code> で <code>export</code></td>
+</tr>
+<tr>
+<td>名前空間</td>
+<td>パッケージパス</td>
+<td><code>Module::Class</code></td>
+<td><code>package.Class</code></td>
+<td>ファイル + <code>import</code></td>
+</tr>
+<tr>
+<td>循環依存</td>
+<td>コンパイルエラー</td>
+<td>警告</td>
+<td>コンパイルエラー</td>
+<td>実行時エラー</td>
+</tr>
+</tbody>
+</table>
+<h2 id="96">9.6 まとめ<a class="headerlink" href="#96" title="Permanent link">&para;</a></h2>
+<p>第 9 章で達成したこと:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> SOLID 原則の検証（5 原則すべて確認）</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> パッケージ分割（domain/model, domain/type_, application）</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> 依存方向の一方向化（循環インポート回避）</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> テストのパッケージ対応</li>
+</ul>
+<h3 id="before-after">Before / After<a class="headerlink" href="#before-after" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>Before（第 2 部終了時）</th>
+<th>After（第 3 部終了時）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ファイル数</td>
+<td>4 ファイル</td>
+<td>15+ ファイル</td>
+</tr>
+<tr>
+<td>パッケージ数</td>
+<td>1（fizzbuzz）</td>
+<td>4（fizzbuzz, domain/model, domain/type_, application）</td>
+</tr>
+<tr>
+<td>デザインパターン</td>
+<td>なし</td>
+<td>Strategy, Value Object, First-Class Collection, Command, Factory Method</td>
+</tr>
+<tr>
+<td>テスト数</td>
+<td>11 テスト</td>
+<td>30+ テスト</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tdd">TDD サイクルの実践<a class="headerlink" href="#tdd" title="Permanent link">&para;</a></h3>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkFDVElWSVRZIiBoZWlnaHQ9IjIxN3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MjMwcHg7aGVpZ2h0OjIxN3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDIzMCAyMTciIHdpZHRoPSIyMzBweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxOTUuMTk2NCIgeD0iMTcuNjMyOCIgeT0iMTEiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzUuMTk2NCIgeD0iMjcuNjMyOCIgeT0iMzIuMTM4NyI+UmVkOiAmIzIxNTA4OyYjMTI0OTc7JiMxMjQ4MzsmIzEyNDY1OyYjMTI1NDA7JiMxMjQ3MjsmIzEyMzk4OyYjMTI0ODY7JiMxMjQ3MzsmIzEyNDg4OyYjMjAzMTY7JiMyNTEwNDs8L3RleHQ+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzMy45Njg4IiByeD0iMTIuNSIgcnk9IjEyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjIwOC40NjIiIHg9IjExIiB5PSI2NC45Njg4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTg4LjQ2MiIgeD0iMjEiIHk9Ijg2LjEwNzQiPkdyZWVuOiAmIzEyNDk3OyYjMTI0ODM7JiMxMjQ2NTsmIzEyNTQwOyYjMTI0NzI7JiMyMDk5ODsmIzIxMTA2OyYjMTIzOTI7JiMyMjQxMTsmIzEyMzk4OyYjMzEyMjc7JiMyMTIwNTs8L3RleHQ+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzMy45Njg4IiByeD0iMTIuNSIgcnk9IjEyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE4Mi4xNzA0IiB4PSIyNC4xNDU4IiB5PSIxMTguOTM3NSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE2Mi4xNzA0IiB4PSIzNC4xNDU4IiB5PSIxNDAuMDc2MiI+UmVmYWN0b3I6IGltcG9ydCAmIzEyNDk3OyYjMTI0NzM7JiMxMjM5ODsmIzI1OTcyOyYjMjk3MDI7PC90ZXh0PjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMjguMDAwOCIgeD0iNTEuMjMwNiIgeT0iMTcyLjkwNjMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDguMDAwOCIgeD0iNjEuMjMwNiIgeT0iMTk0LjA0NDkiPiYjMTI0ODY7JiMxMjQ3MzsmIzEyNDg4OyYjMjA4NDA7JiMzNjg5MDsmIzM2OTQyOyYjMTI0MzQ7JiMzMDkwNjsmIzM1NDY5OzwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTE1LjIzMSIgeDI9IjExNS4yMzEiIHkxPSI0NC45Njg4IiB5Mj0iNjQuOTY4OCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTExLjIzMSw1NC45Njg4LDExNS4yMzEsNjQuOTY4OCwxMTkuMjMxLDU0Ljk2ODgsMTE1LjIzMSw1OC45Njg4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjExNS4yMzEiIHgyPSIxMTUuMjMxIiB5MT0iOTguOTM3NSIgeTI9IjExOC45Mzc1Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMTEuMjMxLDEwOC45Mzc1LDExNS4yMzEsMTE4LjkzNzUsMTE5LjIzMSwxMDguOTM3NSwxMTUuMjMxLDExMi45Mzc1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjExNS4yMzEiIHgyPSIxMTUuMjMxIiB5MT0iMTUyLjkwNjMiIHkyPSIxNzIuOTA2MyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTExLjIzMSwxNjIuOTA2MywxMTUuMjMxLDE3Mi45MDYzLDExOS4yMzEsMTYyLjkwNjMsMTE1LjIzMSwxNjYuOTA2MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjw/cGxhbnR1bWwtc3JjIGltZkFKUjVJVTNnWHZON3BuQ1ZEcE8tUkRadmt0bEV1UVNWWm5kTUZjemlVRC1yeXREcG5QRS1TUG5xSmhCY2l0OGpJS19FaTVEMktGa3JlVXpndndON1pZZ1Zwa2U3UWRZX1ZfUkh4QWIxcks2ZlFPZDk5VmY2TEdjUGtHTnZIMkxXVnFDMzZUUy1jUmRhLWVHc2UxNng1cXpPTEJuamNsTXBpVXptcXdWY1lOSXpNekxlMzAwMDA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="3-go">第 3 部で学んだ Go の設計原則<a class="headerlink" href="#3-go" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>インターフェースは小さく</strong>: 1-2 メソッドが理想</li>
+<li><strong>コンポジション &gt; 継承</strong>: 構造体埋め込みで共通ロジックを共有</li>
+<li><strong>依存は一方向に</strong>: パッケージ循環インポートの禁止を活用</li>
+<li><strong>大文字/小文字でアクセス制御</strong>: シンプルだが強力なカプセル化</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+        <script src="../../../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>

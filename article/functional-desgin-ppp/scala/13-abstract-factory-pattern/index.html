@@ -1,0 +1,3167 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>第13章: Abstract Factory パターン - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#13-abstract-factory" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              第13章: Abstract Factory パターン
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-start-tdd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト駆動開発から始める XX 入門
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokkingfp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Functional Programming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokking-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型デザイン - 原則、パターン、実践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="13-abstract-factory">第13章: Abstract Factory パターン<a class="headerlink" href="#13-abstract-factory" title="Permanent link">&para;</a></h1>
+<h2 id="_1">はじめに<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Abstract Factory パターンは、関連するオブジェクトのファミリーを、その具体的なクラスを指定することなく生成するためのインターフェースを提供するパターンです。</p>
+<p>本章では、図形ファクトリ、UI ファクトリ、データベースファクトリの例を通じて、Abstract Factory パターンの実装を学びます。</p>
+<h2 id="1">1. パターンの構造<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkNMQVNTIiBoZWlnaHQ9IjM5OHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NzYycHg7aGVpZ2h0OjM5OHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDc2MiAzOTgiIHdpZHRoPSI3NjJweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PHRpdGxlPkFic3RyYWN0IEZhY3RvcnkgJiMxMjQ5NzsmIzEyNDc5OyYjMTI1NDA7JiMxMjUzMTsmIzI3MDgzOyYjMzY4OTY7PC90aXRsZT48ZGVmcy8+PGc+PGcgY2xhc3M9InRpdGxlIiBkYXRhLXNvdXJjZS1saW5lPSIxIj48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjIwLjYyMjciIHg9IjI2My44NzYyIiB5PSIyMi45OTUxIj5BYnN0cmFjdCBGYWN0b3J5ICYjMTI0OTc7JiMxMjQ3OTsmIzEyNTQwOyYjMTI1MzE7JiMyNzA4MzsmIzM2ODk2OzwvdGV4dD48L2c+PCEtLWNsYXNzIEZhY3RvcnktLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJGYWN0b3J5IiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI4MC41OTM4IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIyMTcuNDY3OCIgeD0iMjcxLjQ1IiB5PSI0NC4yOTY5Ii8+PGVsbGlwc2UgY3g9IjMyMC4zMzcyIiBjeT0iNjAuMjk2OSIgZmlsbD0iI0I0QTdFNSIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMzE2LjI1OTEsNTYuMDYyNSBMMzE2LjI1OTEsNTMuOTA2MyBMMzIzLjY0OTcsNTMuOTA2MyBMMzIzLjY0OTcsNTYuMDYyNSBMMzIxLjE4MSw1Ni4wNjI1IEwzMjEuMTgxLDY0LjE0MDYgTDMyMy42NDk3LDY0LjE0MDYgTDMyMy42NDk3LDY2LjI5NjkgTDMxNi4yNTkxLDY2LjI5NjkgTDMxNi4yNTkxLDY0LjE0MDYgTDMxOC43Mjc4LDY0LjE0MDYgTDMxOC43Mjc4LDU2LjA2MjUgTDMxNi4yNTkxLDU2LjA2MjUgWiAiIGZpbGw9IiMwMDAwMDAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC1zdHlsZT0iaXRhbGljIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExMS4xOTM0IiB4PSIzNDAuODM3MiIgeT0iNjUuMTQzNiI+QWJzdHJhY3RGYWN0b3J5PC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjI3Mi40NSIgeDI9IjQ4Ny45MTc4IiB5MT0iNzYuMjk2OSIgeTI9Ijc2LjI5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIyNzIuNDUiIHgyPSI0ODcuOTE3OCIgeTE9Ijg0LjI5NjkiIHkyPSI4NC4yOTY5Ii8+PGcgZGF0YS12aXNpYmlsaXR5LW1vZGlmaWVyPSJQVUJMSUNfTUVUSE9EIj48ZWxsaXBzZSBjeD0iMjgyLjQ1IiBjeT0iOTcuOTQ1MyIgZmlsbD0iIzg0QkU4NCIgcng9IjMiIHJ5PSIzIiBzdHlsZT0ic3Ryb2tlOiMwMzgwNDg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5MS40MTMxIiB4PSIyOTEuNDUiIHk9IjEwMS4yOTIiPmNyZWF0ZVByb2R1Y3RBKCk6IFByb2R1Y3RBPC90ZXh0PjxnIGRhdGEtdmlzaWJpbGl0eS1tb2RpZmllcj0iUFVCTElDX01FVEhPRCI+PGVsbGlwc2UgY3g9IjI4Mi40NSIgY3k9IjExNC4yNDIyIiBmaWxsPSIjODRCRTg0IiByeD0iMyIgcnk9IjMiIHN0eWxlPSJzdHJva2U6IzAzODA0ODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTkxLjQ2NzgiIHg9IjI5MS40NSIgeT0iMTE3LjU4ODkiPmNyZWF0ZVByb2R1Y3RCKCk6IFByb2R1Y3RCPC90ZXh0PjwvZz48IS0tY2xhc3MgRmFjdG9yeTEtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJGYWN0b3J5MSIgZGF0YS1zb3VyY2UtbGluZT0iOCIgaWQ9ImVudDAwMDMiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iODAuNTkzOCIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMjI2LjM3NSIgeD0iNyIgeT0iMTg1Ljg5NjkiLz48ZWxsaXBzZSBjeD0iNTMuNTgwMSIgY3k9IjIwMS44OTY5IiBmaWxsPSIjQUREMUIyIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik01Ni41NDg4LDIwNy41Mzc1IFE1NS45NzA3LDIwNy44MzQ0IDU1LjMzMDEsMjA3Ljk3NSBRNTQuNjg5NSwyMDguMTMxMyA1My45ODYzLDIwOC4xMzEzIFE1MS40ODYzLDIwOC4xMzEzIDUwLjE1ODIsMjA2LjQ5MDYgUTQ4Ljg0NTcsMjA0LjgzNDQgNDguODQ1NywyMDEuNzA5NCBRNDguODQ1NywxOTguNTg0NCA1MC4xNTgyLDE5Ni45MjgxIFE1MS40ODYzLDE5NS4yNzE5IDUzLjk4NjMsMTk1LjI3MTkgUTU0LjY4OTUsMTk1LjI3MTkgNTUuMzMwMSwxOTUuNDI4MSBRNTUuOTg2MywxOTUuNTg0NCA1Ni41NDg4LDE5NS44ODEzIEw1Ni41NDg4LDE5OC42IFE1NS45MjM4LDE5OC4wMjE5IDU1LjMzMDEsMTk3Ljc1NjMgUTU0LjczNjMsMTk3LjQ3NSA1NC4xMTEzLDE5Ny40NzUgUTUyLjc2NzYsMTk3LjQ3NSA1Mi4wODAxLDE5OC41NTMxIFE1MS4zOTI2LDE5OS42MTU2IDUxLjM5MjYsMjAxLjcwOTQgUTUxLjM5MjYsMjAzLjgwMzEgNTIuMDgwMSwyMDQuODgxMyBRNTIuNzY3NiwyMDUuOTQzOCA1NC4xMTEzLDIwNS45NDM4IFE1NC43MzYzLDIwNS45NDM4IDU1LjMzMDEsMjA1LjY3ODEgUTU1LjkyMzgsMjA1LjM5NjkgNTYuNTQ4OCwyMDQuODE4OCBMNTYuNTQ4OCwyMDcuNTM3NSBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNC43MTQ4IiB4PSI3NC4wODAxIiB5PSIyMDYuNzQzNiI+Q29uY3JldGVGYWN0b3J5MTwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI4IiB4Mj0iMjMyLjM3NSIgeTE9IjIxNy44OTY5IiB5Mj0iMjE3Ljg5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI4IiB4Mj0iMjMyLjM3NSIgeTE9IjIyNS44OTY5IiB5Mj0iMjI1Ljg5NjkiLz48ZyBkYXRhLXZpc2liaWxpdHktbW9kaWZpZXI9IlBVQkxJQ19NRVRIT0QiPjxlbGxpcHNlIGN4PSIxOCIgY3k9IjIzOS41NDUzIiBmaWxsPSIjODRCRTg0IiByeD0iMyIgcnk9IjMiIHN0eWxlPSJzdHJva2U6IzAzODA0ODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjAwLjMyMDMiIHg9IjI3IiB5PSIyNDIuODkyIj5jcmVhdGVQcm9kdWN0QSgpOiBQcm9kdWN0QTE8L3RleHQ+PGcgZGF0YS12aXNpYmlsaXR5LW1vZGlmaWVyPSJQVUJMSUNfTUVUSE9EIj48ZWxsaXBzZSBjeD0iMTgiIGN5PSIyNTUuODQyMiIgZmlsbD0iIzg0QkU4NCIgcng9IjMiIHJ5PSIzIiBzdHlsZT0ic3Ryb2tlOiMwMzgwNDg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIwMC4zNzUiIHg9IjI3IiB5PSIyNTkuMTg4OSI+Y3JlYXRlUHJvZHVjdEIoKTogUHJvZHVjdEIxPC90ZXh0PjwvZz48IS0tY2xhc3MgRmFjdG9yeTItLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJGYWN0b3J5MiIgZGF0YS1zb3VyY2UtbGluZT0iMTMiIGlkPSJlbnQwMDA0Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjgwLjU5MzgiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjIyNi4zNzUiIHg9IjUyOSIgeT0iMTg1Ljg5NjkiLz48ZWxsaXBzZSBjeD0iNTc1LjU4MDEiIGN5PSIyMDEuODk2OSIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNNTc4LjU0ODgsMjA3LjUzNzUgUTU3Ny45NzA3LDIwNy44MzQ0IDU3Ny4zMzAxLDIwNy45NzUgUTU3Ni42ODk1LDIwOC4xMzEzIDU3NS45ODYzLDIwOC4xMzEzIFE1NzMuNDg2MywyMDguMTMxMyA1NzIuMTU4MiwyMDYuNDkwNiBRNTcwLjg0NTcsMjA0LjgzNDQgNTcwLjg0NTcsMjAxLjcwOTQgUTU3MC44NDU3LDE5OC41ODQ0IDU3Mi4xNTgyLDE5Ni45MjgxIFE1NzMuNDg2MywxOTUuMjcxOSA1NzUuOTg2MywxOTUuMjcxOSBRNTc2LjY4OTUsMTk1LjI3MTkgNTc3LjMzMDEsMTk1LjQyODEgUTU3Ny45ODYzLDE5NS41ODQ0IDU3OC41NDg4LDE5NS44ODEzIEw1NzguNTQ4OCwxOTguNiBRNTc3LjkyMzgsMTk4LjAyMTkgNTc3LjMzMDEsMTk3Ljc1NjMgUTU3Ni43MzYzLDE5Ny40NzUgNTc2LjExMTMsMTk3LjQ3NSBRNTc0Ljc2NzYsMTk3LjQ3NSA1NzQuMDgwMSwxOTguNTUzMSBRNTczLjM5MjYsMTk5LjYxNTYgNTczLjM5MjYsMjAxLjcwOTQgUTU3My4zOTI2LDIwMy44MDMxIDU3NC4wODAxLDIwNC44ODEzIFE1NzQuNzY3NiwyMDUuOTQzOCA1NzYuMTExMywyMDUuOTQzOCBRNTc2LjczNjMsMjA1Ljk0MzggNTc3LjMzMDEsMjA1LjY3ODEgUTU3Ny45MjM4LDIwNS4zOTY5IDU3OC41NDg4LDIwNC44MTg4IEw1NzguNTQ4OCwyMDcuNTM3NSBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNC43MTQ4IiB4PSI1OTYuMDgwMSIgeT0iMjA2Ljc0MzYiPkNvbmNyZXRlRmFjdG9yeTI8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iNTMwIiB4Mj0iNzU0LjM3NSIgeTE9IjIxNy44OTY5IiB5Mj0iMjE3Ljg5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI1MzAiIHgyPSI3NTQuMzc1IiB5MT0iMjI1Ljg5NjkiIHkyPSIyMjUuODk2OSIvPjxnIGRhdGEtdmlzaWJpbGl0eS1tb2RpZmllcj0iUFVCTElDX01FVEhPRCI+PGVsbGlwc2UgY3g9IjU0MCIgY3k9IjIzOS41NDUzIiBmaWxsPSIjODRCRTg0IiByeD0iMyIgcnk9IjMiIHN0eWxlPSJzdHJva2U6IzAzODA0ODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjAwLjMyMDMiIHg9IjU0OSIgeT0iMjQyLjg5MiI+Y3JlYXRlUHJvZHVjdEEoKTogUHJvZHVjdEEyPC90ZXh0PjxnIGRhdGEtdmlzaWJpbGl0eS1tb2RpZmllcj0iUFVCTElDX01FVEhPRCI+PGVsbGlwc2UgY3g9IjU0MCIgY3k9IjI1NS44NDIyIiBmaWxsPSIjODRCRTg0IiByeD0iMyIgcnk9IjMiIHN0eWxlPSJzdHJva2U6IzAzODA0ODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjAwLjM3NSIgeD0iNTQ5IiB5PSIyNTkuMTg4OSI+Y3JlYXRlUHJvZHVjdEIoKTogUHJvZHVjdEIyPC90ZXh0PjwvZz48IS0tY2xhc3MgUHJvZHVjdEEtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJQcm9kdWN0QSIgZGF0YS1zb3VyY2UtbGluZT0iMTgiIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ4IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI5NS4yODcxIiB4PSIyNjguNTQiIHk9IjIwMi4xODY5Ii8+PGVsbGlwc2UgY3g9IjI4My41NCIgY3k9IjIxOC4xODY5IiBmaWxsPSIjQjRBN0U1IiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0yNzkuNDYxOSwyMTMuOTUyNSBMMjc5LjQ2MTksMjExLjc5NjMgTDI4Ni44NTI1LDIxMS43OTYzIEwyODYuODUyNSwyMTMuOTUyNSBMMjg0LjM4MzgsMjEzLjk1MjUgTDI4NC4zODM4LDIyMi4wMzA2IEwyODYuODUyNSwyMjIuMDMwNiBMMjg2Ljg1MjUsMjI0LjE4NjkgTDI3OS40NjE5LDIyNC4xODY5IEwyNzkuNDYxOSwyMjIuMDMwNiBMMjgxLjkzMDYsMjIyLjAzMDYgTDI4MS45MzA2LDIxMy45NTI1IEwyNzkuNDYxOSwyMTMuOTUyNSBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXN0eWxlPSJpdGFsaWMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNjMuMjg3MSIgeD0iMjk3LjU0IiB5PSIyMjMuMDMzNiI+UHJvZHVjdEE8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMjY5LjU0IiB4Mj0iMzYyLjgyNzEiIHkxPSIyMzQuMTg2OSIgeTI9IjIzNC4xODY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMjY5LjU0IiB4Mj0iMzYyLjgyNzEiIHkxPSIyNDIuMTg2OSIgeTI9IjI0Mi4xODY5Ii8+PC9nPjwhLS1jbGFzcyBQcm9kdWN0Qi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlByb2R1Y3RCIiBkYXRhLXNvdXJjZS1saW5lPSIxOSIgaWQ9ImVudDAwMDYiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDgiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9Ijk1LjMxNDUiIHg9IjM5OC41MyIgeT0iMjAyLjE4NjkiLz48ZWxsaXBzZSBjeD0iNDEzLjUzIiBjeT0iMjE4LjE4NjkiIGZpbGw9IiNCNEE3RTUiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBhdGggZD0iTTQwOS40NTE5LDIxMy45NTI1IEw0MDkuNDUxOSwyMTEuNzk2MyBMNDE2Ljg0MjUsMjExLjc5NjMgTDQxNi44NDI1LDIxMy45NTI1IEw0MTQuMzczOCwyMTMuOTUyNSBMNDE0LjM3MzgsMjIyLjAzMDYgTDQxNi44NDI1LDIyMi4wMzA2IEw0MTYuODQyNSwyMjQuMTg2OSBMNDA5LjQ1MTksMjI0LjE4NjkgTDQwOS40NTE5LDIyMi4wMzA2IEw0MTEuOTIwNiwyMjIuMDMwNiBMNDExLjkyMDYsMjEzLjk1MjUgTDQwOS40NTE5LDIxMy45NTI1IFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtc3R5bGU9Iml0YWxpYyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2My4zMTQ1IiB4PSI0MjcuNTMiIHk9IjIyMy4wMzM2Ij5Qcm9kdWN0QjwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIzOTkuNTMiIHgyPSI0OTIuODQ0NSIgeTE9IjIzNC4xODY5IiB5Mj0iMjM0LjE4NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIzOTkuNTMiIHgyPSI0OTIuODQ0NSIgeTE9IjI0Mi4xODY5IiB5Mj0iMjQyLjE4NjkiLz48L2c+PCEtLWNsYXNzIEExLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iQTEiIGRhdGEtc291cmNlLWxpbmU9IjIxIiBpZD0iZW50MDAwNyI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0OCIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTA0LjE5NDMiIHg9Ijg1LjA5IiB5PSIzNDMuNDg2OSIvPjxlbGxpcHNlIGN4PSIxMDAuMDkiIGN5PSIzNTkuNDg2OSIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMTAzLjA1ODgsMzY1LjEyNzUgUTEwMi40ODA2LDM2NS40MjQ0IDEwMS44NCwzNjUuNTY1IFExMDEuMTk5NCwzNjUuNzIxMyAxMDAuNDk2MywzNjUuNzIxMyBROTcuOTk2MywzNjUuNzIxMyA5Ni42NjgxLDM2NC4wODA2IFE5NS4zNTU2LDM2Mi40MjQ0IDk1LjM1NTYsMzU5LjI5OTQgUTk1LjM1NTYsMzU2LjE3NDQgOTYuNjY4MSwzNTQuNTE4MSBROTcuOTk2MywzNTIuODYxOSAxMDAuNDk2MywzNTIuODYxOSBRMTAxLjE5OTQsMzUyLjg2MTkgMTAxLjg0LDM1My4wMTgxIFExMDIuNDk2MywzNTMuMTc0NCAxMDMuMDU4OCwzNTMuNDcxMyBMMTAzLjA1ODgsMzU2LjE5IFExMDIuNDMzOCwzNTUuNjExOSAxMDEuODQsMzU1LjM0NjMgUTEwMS4yNDYzLDM1NS4wNjUgMTAwLjYyMTMsMzU1LjA2NSBROTkuMjc3NSwzNTUuMDY1IDk4LjU5LDM1Ni4xNDMxIFE5Ny45MDI1LDM1Ny4yMDU2IDk3LjkwMjUsMzU5LjI5OTQgUTk3LjkwMjUsMzYxLjM5MzEgOTguNTksMzYyLjQ3MTMgUTk5LjI3NzUsMzYzLjUzMzggMTAwLjYyMTMsMzYzLjUzMzggUTEwMS4yNDYzLDM2My41MzM4IDEwMS44NCwzNjMuMjY4MSBRMTAyLjQzMzgsMzYyLjk4NjkgMTAzLjA1ODgsMzYyLjQwODggTDEwMy4wNTg4LDM2NS4xMjc1IFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzIuMTk0MyIgeD0iMTE0LjA5IiB5PSIzNjQuMzMzNiI+UHJvZHVjdEExPC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9Ijg2LjA5IiB4Mj0iMTg4LjI4NDMiIHkxPSIzNzUuNDg2OSIgeTI9IjM3NS40ODY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iODYuMDkiIHgyPSIxODguMjg0MyIgeTE9IjM4My40ODY5IiB5Mj0iMzgzLjQ4NjkiLz48L2c+PCEtLWNsYXNzIEEyLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iQTIiIGRhdGEtc291cmNlLWxpbmU9IjIyIiBpZD0iZW50MDAwOCI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0OCIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTA0LjE5NDMiIHg9IjQyMC4wOSIgeT0iMzQzLjQ4NjkiLz48ZWxsaXBzZSBjeD0iNDM1LjA5IiBjeT0iMzU5LjQ4NjkiIGZpbGw9IiNBREQxQjIiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBhdGggZD0iTTQzOC4wNTg4LDM2NS4xMjc1IFE0MzcuNDgwNiwzNjUuNDI0NCA0MzYuODQsMzY1LjU2NSBRNDM2LjE5OTQsMzY1LjcyMTMgNDM1LjQ5NjMsMzY1LjcyMTMgUTQzMi45OTYzLDM2NS43MjEzIDQzMS42NjgxLDM2NC4wODA2IFE0MzAuMzU1NiwzNjIuNDI0NCA0MzAuMzU1NiwzNTkuMjk5NCBRNDMwLjM1NTYsMzU2LjE3NDQgNDMxLjY2ODEsMzU0LjUxODEgUTQzMi45OTYzLDM1Mi44NjE5IDQzNS40OTYzLDM1Mi44NjE5IFE0MzYuMTk5NCwzNTIuODYxOSA0MzYuODQsMzUzLjAxODEgUTQzNy40OTYzLDM1My4xNzQ0IDQzOC4wNTg4LDM1My40NzEzIEw0MzguMDU4OCwzNTYuMTkgUTQzNy40MzM4LDM1NS42MTE5IDQzNi44NCwzNTUuMzQ2MyBRNDM2LjI0NjMsMzU1LjA2NSA0MzUuNjIxMywzNTUuMDY1IFE0MzQuMjc3NSwzNTUuMDY1IDQzMy41OSwzNTYuMTQzMSBRNDMyLjkwMjUsMzU3LjIwNTYgNDMyLjkwMjUsMzU5LjI5OTQgUTQzMi45MDI1LDM2MS4zOTMxIDQzMy41OSwzNjIuNDcxMyBRNDM0LjI3NzUsMzYzLjUzMzggNDM1LjYyMTMsMzYzLjUzMzggUTQzNi4yNDYzLDM2My41MzM4IDQzNi44NCwzNjMuMjY4MSBRNDM3LjQzMzgsMzYyLjk4NjkgNDM4LjA1ODgsMzYyLjQwODggTDQzOC4wNTg4LDM2NS4xMjc1IFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzIuMTk0MyIgeD0iNDQ5LjA5IiB5PSIzNjQuMzMzNiI+UHJvZHVjdEEyPC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjQyMS4wOSIgeDI9IjUyMy4yODQzIiB5MT0iMzc1LjQ4NjkiIHkyPSIzNzUuNDg2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjQyMS4wOSIgeDI9IjUyMy4yODQzIiB5MT0iMzgzLjQ4NjkiIHkyPSIzODMuNDg2OSIvPjwvZz48IS0tY2xhc3MgQjEtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJCMSIgZGF0YS1zb3VyY2UtbGluZT0iMjMiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ4IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMDQuMjIxNyIgeD0iMjYyLjA4IiB5PSIzNDMuNDg2OSIvPjxlbGxpcHNlIGN4PSIyNzcuMDgiIGN5PSIzNTkuNDg2OSIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMjgwLjA0ODgsMzY1LjEyNzUgUTI3OS40NzA2LDM2NS40MjQ0IDI3OC44MywzNjUuNTY1IFEyNzguMTg5NCwzNjUuNzIxMyAyNzcuNDg2MywzNjUuNzIxMyBRMjc0Ljk4NjMsMzY1LjcyMTMgMjczLjY1ODEsMzY0LjA4MDYgUTI3Mi4zNDU2LDM2Mi40MjQ0IDI3Mi4zNDU2LDM1OS4yOTk0IFEyNzIuMzQ1NiwzNTYuMTc0NCAyNzMuNjU4MSwzNTQuNTE4MSBRMjc0Ljk4NjMsMzUyLjg2MTkgMjc3LjQ4NjMsMzUyLjg2MTkgUTI3OC4xODk0LDM1Mi44NjE5IDI3OC44MywzNTMuMDE4MSBRMjc5LjQ4NjMsMzUzLjE3NDQgMjgwLjA0ODgsMzUzLjQ3MTMgTDI4MC4wNDg4LDM1Ni4xOSBRMjc5LjQyMzgsMzU1LjYxMTkgMjc4LjgzLDM1NS4zNDYzIFEyNzguMjM2MywzNTUuMDY1IDI3Ny42MTEzLDM1NS4wNjUgUTI3Ni4yNjc1LDM1NS4wNjUgMjc1LjU4LDM1Ni4xNDMxIFEyNzQuODkyNSwzNTcuMjA1NiAyNzQuODkyNSwzNTkuMjk5NCBRMjc0Ljg5MjUsMzYxLjM5MzEgMjc1LjU4LDM2Mi40NzEzIFEyNzYuMjY3NSwzNjMuNTMzOCAyNzcuNjExMywzNjMuNTMzOCBRMjc4LjIzNjMsMzYzLjUzMzggMjc4LjgzLDM2My4yNjgxIFEyNzkuNDIzOCwzNjIuOTg2OSAyODAuMDQ4OCwzNjIuNDA4OCBMMjgwLjA0ODgsMzY1LjEyNzUgWiAiIGZpbGw9IiMwMDAwMDAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3Mi4yMjE3IiB4PSIyOTEuMDgiIHk9IjM2NC4zMzM2Ij5Qcm9kdWN0QjE8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMjYzLjA4IiB4Mj0iMzY1LjMwMTciIHkxPSIzNzUuNDg2OSIgeTI9IjM3NS40ODY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMjYzLjA4IiB4Mj0iMzY1LjMwMTciIHkxPSIzODMuNDg2OSIgeTI9IjM4My40ODY5Ii8+PC9nPjwhLS1jbGFzcyBCMi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IkIyIiBkYXRhLXNvdXJjZS1saW5lPSIyNCIgaWQ9ImVudDAwMTAiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDgiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEwNC4yMjE3IiB4PSI1NjguMDgiIHk9IjM0My40ODY5Ii8+PGVsbGlwc2UgY3g9IjU4My4wOCIgY3k9IjM1OS40ODY5IiBmaWxsPSIjQUREMUIyIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik01ODYuMDQ4OCwzNjUuMTI3NSBRNTg1LjQ3MDYsMzY1LjQyNDQgNTg0LjgzLDM2NS41NjUgUTU4NC4xODk0LDM2NS43MjEzIDU4My40ODYzLDM2NS43MjEzIFE1ODAuOTg2MywzNjUuNzIxMyA1NzkuNjU4MSwzNjQuMDgwNiBRNTc4LjM0NTYsMzYyLjQyNDQgNTc4LjM0NTYsMzU5LjI5OTQgUTU3OC4zNDU2LDM1Ni4xNzQ0IDU3OS42NTgxLDM1NC41MTgxIFE1ODAuOTg2MywzNTIuODYxOSA1ODMuNDg2MywzNTIuODYxOSBRNTg0LjE4OTQsMzUyLjg2MTkgNTg0LjgzLDM1My4wMTgxIFE1ODUuNDg2MywzNTMuMTc0NCA1ODYuMDQ4OCwzNTMuNDcxMyBMNTg2LjA0ODgsMzU2LjE5IFE1ODUuNDIzOCwzNTUuNjExOSA1ODQuODMsMzU1LjM0NjMgUTU4NC4yMzYzLDM1NS4wNjUgNTgzLjYxMTMsMzU1LjA2NSBRNTgyLjI2NzUsMzU1LjA2NSA1ODEuNTgsMzU2LjE0MzEgUTU4MC44OTI1LDM1Ny4yMDU2IDU4MC44OTI1LDM1OS4yOTk0IFE1ODAuODkyNSwzNjEuMzkzMSA1ODEuNTgsMzYyLjQ3MTMgUTU4Mi4yNjc1LDM2My41MzM4IDU4My42MTEzLDM2My41MzM4IFE1ODQuMjM2MywzNjMuNTMzOCA1ODQuODMsMzYzLjI2ODEgUTU4NS40MjM4LDM2Mi45ODY5IDU4Ni4wNDg4LDM2Mi40MDg4IEw1ODYuMDQ4OCwzNjUuMTI3NSBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjcyLjIyMTciIHg9IjU5Ny4wOCIgeT0iMzY0LjMzMzYiPlByb2R1Y3RCMjwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI1NjkuMDgiIHgyPSI2NzEuMzAxNyIgeTE9IjM3NS40ODY5IiB5Mj0iMzc1LjQ4NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI1NjkuMDgiIHgyPSI2NzEuMzAxNyIgeTE9IjM4My40ODY5IiB5Mj0iMzgzLjQ4NjkiLz48L2c+PCEtLXJldmVyc2UgbGluayBGYWN0b3J5IHRvIEZhY3RvcnkxLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDIiIGRhdGEtZW50aXR5LTI9ImVudDAwMDMiIGRhdGEtbGluay10eXBlPSJleHRlbnNpb24iIGRhdGEtc291cmNlLWxpbmU9IjI2IiBpZD0ibG5rMTEiPjxwYXRoIGNvZGVMaW5lPSIyNiIgZD0iTTI5MC41MjEsMTMzLjc0MSBDMjU1LjM5MSwxNTIuNjAxIDIyOS4zNCwxNjYuNTg2OSAxOTQuMTgsMTg1LjQ2NjkiIGZpbGw9Im5vbmUiIGlkPSJGYWN0b3J5LWJhY2t0by1GYWN0b3J5MSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9Im5vbmUiIHBvaW50cz0iMzA2LjM4LDEyNS4yMjY5LDI4Ny42ODI5LDEyOC40NTQ3LDI5My4zNTksMTM5LjAyNzQsMzA2LjM4LDEyNS4yMjY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1yZXZlcnNlIGxpbmsgRmFjdG9yeSB0byBGYWN0b3J5Mi0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAyIiBkYXRhLWVudGl0eS0yPSJlbnQwMDA0IiBkYXRhLWxpbmstdHlwZT0iZXh0ZW5zaW9uIiBkYXRhLXNvdXJjZS1saW5lPSIyNyIgaWQ9ImxuazEyIj48cGF0aCBjb2RlTGluZT0iMjciIGQ9Ik00NzAuNDU2MSwxMzMuNjkwNSBDNTA1Ljg1NjEsMTUyLjU1MDUgNTMyLjIsMTY2LjU4NjkgNTY3LjYyLDE4NS40NjY5IiBmaWxsPSJub25lIiBpZD0iRmFjdG9yeS1iYWNrdG8tRmFjdG9yeTIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjcsNzsiLz48cG9seWdvbiBmaWxsPSJub25lIiBwb2ludHM9IjQ1NC41NywxMjUuMjI2OSw0NjcuNjM0OSwxMzguOTg1OCw0NzMuMjc3MywxMjguMzk1MSw0NTQuNTcsMTI1LjIyNjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLXJldmVyc2UgbGluayBQcm9kdWN0QSB0byBBMS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA1IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA3IiBkYXRhLWxpbmstdHlwZT0iZXh0ZW5zaW9uIiBkYXRhLXNvdXJjZS1saW5lPSIyOCIgaWQ9ImxuazEzIj48cGF0aCBjb2RlTGluZT0iMjgiIGQ9Ik0zMDYuNTA1MiwyNjguMDIxMSBDMzAxLjI5NTIsMjg3LjI2MTEgMjk2LjAyLDI5Ni42MDY5IDI3OC4xOSwzMTMuNDg2OSBDMjUzLjg3LDMzNi40OTY5IDIxOC42MiwzNDkuNzQ2OSAxODkuNDUsMzU3LjI0NjkiIGZpbGw9Im5vbmUiIGlkPSJQcm9kdWN0QS1iYWNrdG8tQTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjcsNzsiLz48cG9seWdvbiBmaWxsPSJub25lIiBwb2ludHM9IjMxMS4yMSwyNTAuNjQ2OSwzMDAuNzEzOCwyNjYuNDUyOSwzMTIuMjk2NiwyNjkuNTg5NCwzMTEuMjEsMjUwLjY0NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLXJldmVyc2UgbGluayBQcm9kdWN0QSB0byBBMi0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA1IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA4IiBkYXRhLWxpbmstdHlwZT0iZXh0ZW5zaW9uIiBkYXRhLXNvdXJjZS1saW5lPSIyOSIgaWQ9ImxuazE0Ij48cGF0aCBjb2RlTGluZT0iMjkiIGQ9Ik0zNTUuNzI3OSwyNjIuNDk0IEMzODQuNTI3OSwyODguMjA0IDQxNy4xNiwzMTcuMzQ2OSA0NDUuOTksMzQzLjA5NjkiIGZpbGw9Im5vbmUiIGlkPSJQcm9kdWN0QS1iYWNrdG8tQTIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjcsNzsiLz48cG9seWdvbiBmaWxsPSJub25lIiBwb2ludHM9IjM0Mi4zLDI1MC41MDY5LDM1MS43MzIxLDI2Ni45NywzNTkuNzIzNiwyNTguMDE4MSwzNDIuMywyNTAuNTA2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjwvZz48IS0tcmV2ZXJzZSBsaW5rIFByb2R1Y3RCIHRvIEIxLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDYiIGRhdGEtZW50aXR5LTI9ImVudDAwMDkiIGRhdGEtbGluay10eXBlPSJleHRlbnNpb24iIGRhdGEtc291cmNlLWxpbmU9IjMwIiBpZD0ibG5rMTUiPjxwYXRoIGNvZGVMaW5lPSIzMCIgZD0iTTQxMS43MDk4LDI2My41NzMyIEMzODcuMzQ5OCwyODkuMjgzMiAzNjAuNzUsMzE3LjM0NjkgMzM2LjM1LDM0My4wOTY5IiBmaWxsPSJub25lIiBpZD0iUHJvZHVjdEItYmFja3RvLUIxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0ibm9uZSIgcG9pbnRzPSI0MjQuMDksMjUwLjUwNjksNDA3LjM1NDMsMjU5LjQ0NjUsNDE2LjA2NTIsMjY3LjcsNDI0LjA5LDI1MC41MDY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1yZXZlcnNlIGxpbmsgUHJvZHVjdEIgdG8gQjItLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNiIgZGF0YS1lbnRpdHktMj0iZW50MDAxMCIgZGF0YS1saW5rLXR5cGU9ImV4dGVuc2lvbiIgZGF0YS1zb3VyY2UtbGluZT0iMzEiIGlkPSJsbmsxNiI+PHBhdGggY29kZUxpbmU9IjMxIiBkPSJNNDc3LjIxNTksMjY0LjE1OSBDNDkzLjEyNTksMjgyLjU3OSA1MDUuMTYsMjk0LjYwNjkgNTI5LjE5LDMxMy40ODY5IEM1NDMuMTMsMzI0LjQ0NjkgNTU5LjU3LDMzNC43MDY5IDU3NC42MiwzNDMuMjI2OSIgZmlsbD0ibm9uZSIgaWQ9IlByb2R1Y3RCLWJhY2t0by1CMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9Im5vbmUiIHBvaW50cz0iNDY1LjQ1LDI1MC41MzY5LDQ3Mi42NzUyLDI2OC4wODEsNDgxLjc1NjYsMjYwLjIzNyw0NjUuNDUsMjUwLjUzNjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgRmFjdG9yeTEgdG8gQTEtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwNyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjMzIiBpZD0ibG5rMTciPjxwYXRoIGNvZGVMaW5lPSIzMyIgZD0iTTEyNC42NCwyNjYuNzI2OSBDMTI2LjMyLDI4MS40MTY5IDEyOC4yOSwyOTguMjE2OSAxMzAuMTksMzEzLjQ4NjkgQzEzMS4zOSwzMjMuMTU2OSAxMzEuOTg0OSwzMjcuODY5OCAxMzMuMjE0OSwzMzcuMDY5OCIgZmlsbD0ibm9uZSIgaWQ9IkZhY3RvcnkxLXRvLUExIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMzQuMDEsMzQzLjAxNjksMTM2Ljc4MjEsMzMzLjU2NjIsMTMzLjM0NzQsMzM4LjA2MSwxMjguODUyNiwzMzQuNjI2MywxMzQuMDEsMzQzLjAxNjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0OC4zMjQ3IiB4PSIxMzEuMTkiIHk9IjMwOS41NTM4Ij5jcmVhdGVzPC90ZXh0PjwvZz48IS0tbGluayBGYWN0b3J5MSB0byBCMS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAzIiBkYXRhLWVudGl0eS0yPSJlbnQwMDA5IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMzQiIGlkPSJsbmsxOCI+PHBhdGggY29kZUxpbmU9IjM0IiBkPSJNMTc1LjUyLDI2Ni45MTY5IEMyMDkuNzksMjkxLjUyNjkgMjQ3Ljc1NjYsMzE4Ljc4NjkgMjc2LjY3NjYsMzM5LjU1NjkiIGZpbGw9Im5vbmUiIGlkPSJGYWN0b3J5MS10by1CMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMjgxLjU1LDM0My4wNTY5LDI3Ni41NzMzLDMzNC41NTc5LDI3Ny40ODg4LDM0MC4xNDAyLDI3MS45MDY2LDM0MS4wNTU4LDI4MS41NSwzNDMuMDU2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ4LjMyNDciIHg9IjI0MS4yNyIgeT0iMzA5LjU1MzgiPmNyZWF0ZXM8L3RleHQ+PC9nPjwhLS1saW5rIEZhY3RvcnkyIHRvIEEyLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDQiIGRhdGEtZW50aXR5LTI9ImVudDAwMDgiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIzNSIgaWQ9ImxuazE5Ij48cGF0aCBjb2RlTGluZT0iMzUiIGQ9Ik01OTMuOTMsMjY2LjczNjkgQzU2My44OSwyOTEuMzQ2OSA1MzAuOTExMSwzMTguMzY0MiA1MDUuNTAxMSwzMzkuMTg0MiIgZmlsbD0ibm9uZSIgaWQ9IkZhY3RvcnkyLXRvLUEyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI1MDAuODYsMzQyLjk4NjksNTEwLjM1NjcsMzQwLjM3NjksNTA0LjcyNzUsMzM5LjgxOCw1MDUuMjg2NCwzMzQuMTg4OCw1MDAuODYsMzQyLjk4NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0OC4zMjQ3IiB4PSI1NTguMTkiIHk9IjMwOS41NTM4Ij5jcmVhdGVzPC90ZXh0PjwvZz48IS0tbGluayBGYWN0b3J5MiB0byBCMi0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDEwIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMzYiIGlkPSJsbmsyMCI+PHBhdGggY29kZUxpbmU9IjM2IiBkPSJNNjM1Ljk0LDI2Ni43MzY5IEM2MzIuMDUsMjkxLjM0NjkgNjI4LjEyNjUsMzE2LjI0MDQgNjI0LjgzNjUsMzM3LjA2MDQiIGZpbGw9Im5vbmUiIGlkPSJGYWN0b3J5Mi10by1CMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNjIzLjksMzQyLjk4NjksNjI5LjI1NTcsMzM0LjcyMTUsNjI0LjY4MDQsMzM4LjA0ODIsNjIxLjM1MzgsMzMzLjQ3MjgsNjIzLjksMzQyLjk4NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0OC4zMjQ3IiB4PSI2MzIuMTkiIHk9IjMwOS41NTM4Ij5jcmVhdGVzPC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBWUDUxWVc4bjQ0TnRFS05IQXFMZUk5UUQyOVJXVWd1R091RzZpSTY5MnQ0NjFkbGZvWGt1eW0xazFHX0o4N1lCb0hXSk96SlVYRjNfaHRnTFlZZEROQzltZWV0WW1pM083ZkxRR0xGbGNpc3ZnS3pEVlJtU2pqVlZGSTdibWFXcnVxOTJ2bEZ0VTBQU1h6OHJ3R2Fia1A1VmdmZWtYSGJza1dOdVUtOVh2Mjd2OEtKQ2tUUUdaUWc1cEhidnhxYlowNnFkcTNPNF9TbldDT0VyQ3JXUldfcXBlYnR2ZWJsX2k4Vk4wQ08xMzZFNlR6cmkteG40VHRGUmFQdnJUN2JDeS1ab1RhaFlGd3BfZFVUWGtNekxIWnBEb05RQUgwVzlUMEJJTDdXMEFVSnZtRlEwMGptTXpSRTNSbnBjUWpXZDFvRmQzbTAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h2 id="2-product">2. 図形とスタイル - Product<a class="headerlink" href="#2-product" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Color</span><span class="p">(</span><span class="n">r</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">g</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">)</span>
+
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">(</span>
+<span class="w">  </span><span class="n">strokeColor</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Color</span><span class="p">.</span><span class="nc">Black</span><span class="p">,</span>
+<span class="w">  </span><span class="n">strokeWidth</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">  </span><span class="n">fillColor</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Color</span><span class="p">.</span><span class="nc">Transparent</span>
+<span class="p">)</span>
+
+<span class="k">sealed</span><span class="w"> </span><span class="k">trait</span><span class="w"> </span><span class="nc">Shape</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">style</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeStyle</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">translate</span><span class="p">(</span><span class="n">dx</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">,</span><span class="w"> </span><span class="n">dy</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Shape</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">scale</span><span class="p">(</span><span class="n">factor</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Shape</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">withStyle</span><span class="p">(</span><span class="n">newStyle</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">):</span><span class="w"> </span><span class="nc">Shape</span>
+
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Circle</span><span class="p">(</span><span class="n">center</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">,</span><span class="w"> </span><span class="n">style</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">())</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">Shape</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Square</span><span class="p">(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">,</span><span class="w"> </span><span class="n">style</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">())</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">Shape</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Rectangle</span><span class="p">(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">,</span><span class="w"> </span><span class="n">style</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">())</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">Shape</span>
+</code></pre></div>
+<h2 id="3-shapefactory-abstract-factory">3. ShapeFactory - Abstract Factory<a class="headerlink" href="#3-shapefactory-abstract-factory" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">trait</span><span class="w"> </span><span class="nc">ShapeFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createCircle</span><span class="p">(</span><span class="n">center</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Circle</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createSquare</span><span class="p">(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Square</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createRectangle</span><span class="p">(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Rectangle</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createTriangle</span><span class="p">(</span><span class="n">p1</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">p2</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">p3</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">):</span><span class="w"> </span><span class="nc">Triangle</span>
+</code></pre></div>
+<h2 id="4-concrete-factories">4. Concrete Factories<a class="headerlink" href="#4-concrete-factories" title="Permanent link">&para;</a></h2>
+<h3 id="standardshapefactory">StandardShapeFactory<a class="headerlink" href="#standardshapefactory" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">StandardShapeFactory</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">ShapeFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createCircle</span><span class="p">(</span><span class="n">center</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Circle</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Circle</span><span class="p">(</span><span class="n">center</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createSquare</span><span class="p">(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Square</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Square</span><span class="p">(</span><span class="n">topLeft</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createRectangle</span><span class="p">(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Rectangle</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Rectangle</span><span class="p">(</span><span class="n">topLeft</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createTriangle</span><span class="p">(</span><span class="n">p1</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">p2</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">p3</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">):</span><span class="w"> </span><span class="nc">Triangle</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Triangle</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="w"> </span><span class="n">p2</span><span class="p">,</span><span class="w"> </span><span class="n">p3</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="outlinedshapefactory">OutlinedShapeFactory<a class="headerlink" href="#outlinedshapefactory" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">OutlinedShapeFactory</span><span class="p">(</span>
+<span class="w">  </span><span class="n">strokeColor</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="p">,</span>
+<span class="w">  </span><span class="n">strokeWidth</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span>
+<span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">ShapeFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">style</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">(</span><span class="n">strokeColor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strokeColor</span><span class="p">,</span><span class="w"> </span><span class="n">strokeWidth</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">strokeWidth</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createCircle</span><span class="p">(</span><span class="n">center</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Circle</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Circle</span><span class="p">(</span><span class="n">center</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">,</span><span class="w"> </span><span class="n">style</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createSquare</span><span class="p">(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Square</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Square</span><span class="p">(</span><span class="n">topLeft</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">,</span><span class="w"> </span><span class="n">style</span><span class="p">)</span>
+<span class="w">  </span><span class="c1">// ...</span>
+</code></pre></div>
+<h3 id="filledshapefactory">FilledShapeFactory<a class="headerlink" href="#filledshapefactory" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">FilledShapeFactory</span><span class="p">(</span>
+<span class="w">  </span><span class="n">fillColor</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="p">,</span>
+<span class="w">  </span><span class="n">strokeColor</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Color</span><span class="p">.</span><span class="nc">Black</span><span class="p">,</span>
+<span class="w">  </span><span class="n">strokeWidth</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span>
+<span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">ShapeFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">style</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">(</span><span class="n">strokeColor</span><span class="p">,</span><span class="w"> </span><span class="n">strokeWidth</span><span class="p">,</span><span class="w"> </span><span class="n">fillColor</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createCircle</span><span class="p">(</span><span class="n">center</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Circle</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Circle</span><span class="p">(</span><span class="n">center</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">,</span><span class="w"> </span><span class="n">style</span><span class="p">)</span>
+<span class="w">  </span><span class="c1">// ...</span>
+</code></pre></div>
+<h3 id="_2">使用例<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">createShapes</span><span class="p">(</span><span class="n">factory</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeFactory</span><span class="p">):</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">Shape</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="nc">List</span><span class="p">(</span>
+<span class="w">    </span><span class="n">factory</span><span class="p">.</span><span class="n">createCircle</span><span class="p">(</span><span class="nc">Point</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="mi">5</span><span class="p">),</span>
+<span class="w">    </span><span class="n">factory</span><span class="p">.</span><span class="n">createSquare</span><span class="p">(</span><span class="nc">Point</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">),</span><span class="w"> </span><span class="mi">10</span><span class="p">),</span>
+<span class="w">    </span><span class="n">factory</span><span class="p">.</span><span class="n">createRectangle</span><span class="p">(</span><span class="nc">Point</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">),</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span>
+<span class="w">  </span><span class="p">)</span>
+
+<span class="c1">// ファクトリを切り替えるだけで異なるスタイルの図形を生成</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">standardShapes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createShapes</span><span class="p">(</span><span class="nc">StandardShapeFactory</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">outlinedShapes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createShapes</span><span class="p">(</span><span class="nc">OutlinedShapeFactory</span><span class="p">(</span><span class="nc">Color</span><span class="p">.</span><span class="nc">Red</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">))</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">filledShapes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createShapes</span><span class="p">(</span><span class="nc">FilledShapeFactory</span><span class="p">(</span><span class="nc">Color</span><span class="p">.</span><span class="nc">Blue</span><span class="p">))</span>
+</code></pre></div>
+<h2 id="5-uifactory-ui">5. UIFactory - プラットフォーム別 UI<a class="headerlink" href="#5-uifactory-ui" title="Permanent link">&para;</a></h2>
+<h3 id="ui">UI コンポーネント<a class="headerlink" href="#ui" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">trait</span><span class="w"> </span><span class="nc">Button</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">theme</span><span class="p">:</span><span class="w"> </span><span class="nc">Theme</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+
+<span class="k">trait</span><span class="w"> </span><span class="nc">TextField</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">placeholder</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">value</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">setValue</span><span class="p">(</span><span class="n">newValue</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">TextField</span>
+
+<span class="k">trait</span><span class="w"> </span><span class="nc">Checkbox</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">checked</span><span class="p">:</span><span class="w"> </span><span class="nc">Boolean</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">toggle</span><span class="p">:</span><span class="w"> </span><span class="nc">Checkbox</span>
+</code></pre></div>
+<h3 id="uifactory">UIFactory インターフェース<a class="headerlink" href="#uifactory" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">trait</span><span class="w"> </span><span class="nc">UIFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">theme</span><span class="p">:</span><span class="w"> </span><span class="nc">Theme</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createButton</span><span class="p">(</span><span class="n">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">Button</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createTextField</span><span class="p">(</span><span class="n">placeholder</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">TextField</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createCheckbox</span><span class="p">(</span><span class="n">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="n">checked</span><span class="p">:</span><span class="w"> </span><span class="nc">Boolean</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">):</span><span class="w"> </span><span class="nc">Checkbox</span>
+</code></pre></div>
+<h3 id="_3">プラットフォーム別実装<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Windows</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">WindowsUIFactory</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="n">theme</span><span class="p">:</span><span class="w"> </span><span class="nc">Theme</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Theme</span><span class="p">.</span><span class="nc">Light</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">UIFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createButton</span><span class="p">(</span><span class="n">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">WindowsButton</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WindowsButton</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="w"> </span><span class="n">theme</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createTextField</span><span class="p">(</span><span class="n">placeholder</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">WindowsTextField</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WindowsTextField</span><span class="p">(</span><span class="n">placeholder</span><span class="p">,</span><span class="w"> </span><span class="n">theme</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createCheckbox</span><span class="p">(</span><span class="n">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="n">checked</span><span class="p">:</span><span class="w"> </span><span class="nc">Boolean</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">):</span><span class="w"> </span><span class="nc">WindowsCheckbox</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WindowsCheckbox</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="w"> </span><span class="n">checked</span><span class="p">,</span><span class="w"> </span><span class="n">theme</span><span class="p">)</span>
+
+<span class="c1">// MacOS</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MacOSUIFactory</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="n">theme</span><span class="p">:</span><span class="w"> </span><span class="nc">Theme</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Theme</span><span class="p">.</span><span class="nc">Light</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">UIFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createButton</span><span class="p">(</span><span class="n">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">MacOSButton</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MacOSButton</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="w"> </span><span class="n">theme</span><span class="p">)</span>
+<span class="w">  </span><span class="c1">// ...</span>
+
+<span class="c1">// Web</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">WebUIFactory</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="n">theme</span><span class="p">:</span><span class="w"> </span><span class="nc">Theme</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Theme</span><span class="p">.</span><span class="nc">Light</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">UIFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createButton</span><span class="p">(</span><span class="n">label</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">WebButton</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">WebButton</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="w"> </span><span class="n">theme</span><span class="p">)</span>
+<span class="w">  </span><span class="c1">// ...</span>
+</code></pre></div>
+<h3 id="_4">使用例<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">createForm</span><span class="p">(</span><span class="n">factory</span><span class="p">:</span><span class="w"> </span><span class="nc">UIFactory</span><span class="p">):</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="nc">String</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="nc">Map</span><span class="p">(</span>
+<span class="w">    </span><span class="s">&quot;button&quot;</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">createButton</span><span class="p">(</span><span class="s">&quot;Submit&quot;</span><span class="p">).</span><span class="n">render</span><span class="p">,</span>
+<span class="w">    </span><span class="s">&quot;field&quot;</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">createTextField</span><span class="p">(</span><span class="s">&quot;Email&quot;</span><span class="p">).</span><span class="n">render</span><span class="p">,</span>
+<span class="w">    </span><span class="s">&quot;checkbox&quot;</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">createCheckbox</span><span class="p">(</span><span class="s">&quot;Accept&quot;</span><span class="p">).</span><span class="n">render</span>
+<span class="w">  </span><span class="p">)</span>
+
+<span class="kd">val</span><span class="w"> </span><span class="n">windowsForm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createForm</span><span class="p">(</span><span class="nc">WindowsUIFactory</span><span class="p">())</span><span class="w">  </span><span class="c1">// [░ Submit]</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">macForm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createForm</span><span class="p">(</span><span class="nc">MacOSUIFactory</span><span class="p">())</span><span class="w">        </span><span class="c1">// (○ Submit)</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">webForm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createForm</span><span class="p">(</span><span class="nc">WebUIFactory</span><span class="p">())</span><span class="w">          </span><span class="c1">// &lt;button&gt;Submit&lt;/button&gt;</span>
+</code></pre></div>
+<h2 id="6-databasefactory-">6. DatabaseFactory - データベース抽象化<a class="headerlink" href="#6-databasefactory-" title="Permanent link">&para;</a></h2>
+<h3 id="_5">データベースコンポーネント<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">trait</span><span class="w"> </span><span class="nc">Connection</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">database</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">isConnected</span><span class="p">:</span><span class="w"> </span><span class="nc">Boolean</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">():</span><span class="w"> </span><span class="nc">Connection</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">disconnect</span><span class="p">():</span><span class="w"> </span><span class="nc">Connection</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">QueryResult</span>
+
+<span class="k">trait</span><span class="w"> </span><span class="nc">QueryBuilder</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">select</span><span class="p">(</span><span class="n">columns</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="o">*</span><span class="p">):</span><span class="w"> </span><span class="nc">QueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">from</span><span class="p">(</span><span class="n">table</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">QueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">where</span><span class="p">(</span><span class="n">condition</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">QueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">orderBy</span><span class="p">(</span><span class="n">column</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="n">ascending</span><span class="p">:</span><span class="w"> </span><span class="nc">Boolean</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">):</span><span class="w"> </span><span class="nc">QueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">limit</span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">QueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+</code></pre></div>
+<h3 id="databasefactory">DatabaseFactory インターフェース<a class="headerlink" href="#databasefactory" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">trait</span><span class="w"> </span><span class="nc">DatabaseFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createConnection</span><span class="p">(</span><span class="n">database</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">Connection</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createQueryBuilder</span><span class="p">():</span><span class="w"> </span><span class="nc">QueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">databaseType</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span>
+</code></pre></div>
+<h3 id="_6">データベース別実装<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">PostgreSQLFactory</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">DatabaseFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createConnection</span><span class="p">(</span><span class="n">database</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">PostgreSQLConnection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">PostgreSQLConnection</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createQueryBuilder</span><span class="p">():</span><span class="w"> </span><span class="nc">PostgreSQLQueryBuilder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="nc">PostgreSQLQueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">databaseType</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;PostgreSQL&quot;</span>
+
+<span class="k">object</span><span class="w"> </span><span class="nc">MySQLFactory</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">DatabaseFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createConnection</span><span class="p">(</span><span class="n">database</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">MySQLConnection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">MySQLConnection</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createQueryBuilder</span><span class="p">():</span><span class="w"> </span><span class="nc">MySQLQueryBuilder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="nc">MySQLQueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">databaseType</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;MySQL&quot;</span>
+
+<span class="k">object</span><span class="w"> </span><span class="nc">SQLiteFactory</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">DatabaseFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createConnection</span><span class="p">(</span><span class="n">database</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">SQLiteConnection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">SQLiteConnection</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">createQueryBuilder</span><span class="p">():</span><span class="w"> </span><span class="nc">SQLiteQueryBuilder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="nc">SQLiteQueryBuilder</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">databaseType</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;SQLite&quot;</span>
+</code></pre></div>
+<h3 id="_7">使用例<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">executeQuery</span><span class="p">(</span><span class="n">factory</span><span class="p">:</span><span class="w"> </span><span class="nc">DatabaseFactory</span><span class="p">,</span><span class="w"> </span><span class="n">db</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">QueryResult</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">conn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">createConnection</span><span class="p">(</span><span class="n">db</span><span class="p">).</span><span class="n">connect</span><span class="p">()</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">factory</span><span class="p">.</span><span class="n">createQueryBuilder</span><span class="p">()</span>
+<span class="w">    </span><span class="p">.</span><span class="n">select</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;name&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">from</span><span class="p">(</span><span class="s">&quot;users&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">where</span><span class="p">(</span><span class="s">&quot;active = true&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">build</span>
+<span class="w">  </span><span class="n">conn</span><span class="p">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+<span class="c1">// ファクトリを切り替えるだけで異なるデータベースに対応</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">pgResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">executeQuery</span><span class="p">(</span><span class="nc">PostgreSQLFactory</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;pg_db&quot;</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">mysqlResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">executeQuery</span><span class="p">(</span><span class="nc">MySQLFactory</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mysql_db&quot;</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">sqliteResult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">executeQuery</span><span class="p">(</span><span class="nc">SQLiteFactory</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;sqlite.db&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="7">7. 関数型アプローチ<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">FunctionalFactory</span><span class="p">:</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="p">(</span>
+<span class="w">    </span><span class="n">strokeColor</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Color</span><span class="p">.</span><span class="nc">Black</span><span class="p">,</span>
+<span class="w">    </span><span class="n">strokeWidth</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fillColor</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Color</span><span class="p">.</span><span class="nc">Transparent</span>
+<span class="w">  </span><span class="p">):</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">style</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">ShapeStyle</span><span class="p">(</span><span class="n">strokeColor</span><span class="p">,</span><span class="w"> </span><span class="n">strokeWidth</span><span class="p">,</span><span class="w"> </span><span class="n">fillColor</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">circleCreator</span><span class="p">(</span><span class="n">config</span><span class="p">:</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="p">)(</span><span class="n">center</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Circle</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Circle</span><span class="p">(</span><span class="n">center</span><span class="p">,</span><span class="w"> </span><span class="n">radius</span><span class="p">,</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="n">style</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">squareCreator</span><span class="p">(</span><span class="n">config</span><span class="p">:</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="p">)(</span><span class="n">topLeft</span><span class="p">:</span><span class="w"> </span><span class="nc">Point</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">Square</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Square</span><span class="p">(</span><span class="n">topLeft</span><span class="p">,</span><span class="w"> </span><span class="n">side</span><span class="p">,</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="n">style</span><span class="p">)</span>
+
+<span class="w">  </span><span class="c1">// ファクトリを合成</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">composeFactory</span><span class="p">(</span>
+<span class="w">    </span><span class="n">baseConfig</span><span class="p">:</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="p">,</span>
+<span class="w">    </span><span class="n">modifiers</span><span class="p">:</span><span class="w"> </span><span class="p">(</span><span class="nc">FactoryConfig</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="p">)</span><span class="o">*</span>
+<span class="w">  </span><span class="p">):</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">modifiers</span><span class="p">.</span><span class="n">foldLeft</span><span class="p">(</span><span class="n">baseConfig</span><span class="p">)((</span><span class="n">config</span><span class="p">,</span><span class="w"> </span><span class="n">modifier</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">modifier</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+
+<span class="w">  </span><span class="c1">// 修飾子</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">withStroke</span><span class="p">(</span><span class="n">color</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="p">,</span><span class="w"> </span><span class="n">width</span><span class="p">:</span><span class="w"> </span><span class="nc">Double</span><span class="p">):</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">config</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="n">copy</span><span class="p">(</span><span class="n">strokeColor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">color</span><span class="p">,</span><span class="w"> </span><span class="n">strokeWidth</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">width</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">withFill</span><span class="p">(</span><span class="n">color</span><span class="p">:</span><span class="w"> </span><span class="nc">Color</span><span class="p">):</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">FactoryConfig</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">config</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">config</span><span class="p">.</span><span class="n">copy</span><span class="p">(</span><span class="n">fillColor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">color</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="_8">使用例<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nc">FunctionalFactory</span><span class="p">.</span><span class="n">_</span>
+
+<span class="kd">val</span><span class="w"> </span><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">composeFactory</span><span class="p">(</span>
+<span class="w">  </span><span class="nc">FactoryConfig</span><span class="p">(),</span>
+<span class="w">  </span><span class="n">withStroke</span><span class="p">(</span><span class="nc">Color</span><span class="p">.</span><span class="nc">Red</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">),</span>
+<span class="w">  </span><span class="n">withFill</span><span class="p">(</span><span class="nc">Color</span><span class="p">.</span><span class="nc">Blue</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="kd">val</span><span class="w"> </span><span class="n">createCircle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">circleCreator</span><span class="p">(</span><span class="n">config</span><span class="p">)</span><span class="w"> </span><span class="n">_</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">circle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">createCircle</span><span class="p">(</span><span class="nc">Point</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">),</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span>
+<span class="c1">// Circle with red stroke and blue fill</span>
+</code></pre></div>
+<h2 id="8">8. ファクトリレジストリ<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">FactoryRegistry</span><span class="p">:</span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">var</span><span class="w"> </span><span class="n">shapeFactories</span><span class="p">:</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="nc">ShapeFactory</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Map</span><span class="p">(</span>
+<span class="w">    </span><span class="s">&quot;standard&quot;</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nc">StandardShapeFactory</span><span class="p">,</span>
+<span class="w">    </span><span class="s">&quot;outlined&quot;</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nc">OutlinedShapeFactory</span><span class="p">(</span><span class="nc">Color</span><span class="p">.</span><span class="nc">Black</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">),</span>
+<span class="w">    </span><span class="s">&quot;filled&quot;</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nc">FilledShapeFactory</span><span class="p">(</span><span class="nc">Color</span><span class="p">.</span><span class="nc">Blue</span><span class="p">)</span>
+<span class="w">  </span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">registerShapeFactory</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="n">factory</span><span class="p">:</span><span class="w"> </span><span class="nc">ShapeFactory</span><span class="p">):</span><span class="w"> </span><span class="nc">Unit</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">shapeFactories</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">shapeFactories</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">factory</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">getShapeFactory</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">Option</span><span class="p">[</span><span class="nc">ShapeFactory</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">shapeFactories</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="_9">使用例<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="n">factory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">FactoryRegistry</span><span class="p">.</span><span class="n">getShapeFactory</span><span class="p">(</span><span class="s">&quot;filled&quot;</span><span class="p">)</span>
+<span class="n">factory</span><span class="p">.</span><span class="n">foreach</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">circle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">createCircle</span><span class="p">(</span><span class="nc">Point</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span>
+<span class="w">  </span><span class="c1">// Blue filled circle</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="9">9. パターンの利点<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>製品ファミリーの一貫性</strong>: 関連する製品が一貫して生成される</li>
+<li><strong>具体クラスの分離</strong>: クライアントは具体的な製品クラスを知らない</li>
+<li><strong>製品ファミリーの交換</strong>: ファクトリを交換するだけで製品群全体を変更可能</li>
+<li><strong>新しい製品ファミリーの追加が容易</strong>: 新しい ConcreteFactory を追加するだけ</li>
+</ol>
+<h2 id="clojure">Clojure との比較<a class="headerlink" href="#clojure" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>Clojure</th>
+<th>Scala</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AbstractFactory</td>
+<td>マルチメソッド</td>
+<td>trait</td>
+</tr>
+<tr>
+<td>ConcreteFactory</td>
+<td>defmethod</td>
+<td>object/class extends trait</td>
+</tr>
+<tr>
+<td>Product</td>
+<td>マップ</td>
+<td>case class</td>
+</tr>
+<tr>
+<td>ファクトリ設定</td>
+<td>マップのキー</td>
+<td>コンストラクタ引数</td>
+</tr>
+<tr>
+<td>ファクトリ選択</td>
+<td>型キーでディスパッチ</td>
+<td>多態性 or パターンマッチ</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_10">まとめ<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<p>本章では、Abstract Factory パターンについて学びました：</p>
+<ol>
+<li><strong>ShapeFactory</strong>: Standard, Outlined, Filled の各ファクトリ</li>
+<li><strong>UIFactory</strong>: Windows, MacOS, Web の各プラットフォーム</li>
+<li><strong>DatabaseFactory</strong>: PostgreSQL, MySQL, SQLite の各データベース</li>
+<li><strong>関数型アプローチ</strong>: 設定と修飾子による合成</li>
+<li><strong>ファクトリレジストリ</strong>: ファクトリの動的な登録と取得</li>
+</ol>
+<p>Abstract Factory パターンは、関連するオブジェクトのファミリーを一貫して生成する必要がある場面で有効です。</p>
+<h2 id="_11">参考コード<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>本章のコード例は以下のファイルで確認できます：</p>
+<ul>
+<li>ソースコード: <code>apps/scala/part3/src/main/scala/AbstractFactoryPattern.scala</code></li>
+<li>テストコード: <code>apps/scala/part3/src/test/scala/AbstractFactoryPatternSpec.scala</code></li>
+</ul>
+<h2 id="_12">次章予告<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<p>次章では、<strong>Abstract Server パターン</strong>について学びます。依存関係の逆転を実現し、モジュール間の疎結合を達成する方法を探ります。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+        <script src="../../../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>

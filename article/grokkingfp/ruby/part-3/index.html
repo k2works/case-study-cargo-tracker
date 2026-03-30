@@ -1,0 +1,3643 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Part III: エラーハンドリングと Maybe/Result - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#part-iii-mayberesult" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Part III: エラーハンドリングと Maybe/Result
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-start-tdd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト駆動開発から始める XX 入門
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Functional Programming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokking-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-desgin-ppp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型デザイン - 原則、パターン、実践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="part-iii-mayberesult">Part III: エラーハンドリングと Maybe/Result<a class="headerlink" href="#part-iii-mayberesult" title="Permanent link">&para;</a></h1>
+<p>本章では、関数型プログラミングにおける安全なエラーハンドリングを学びます。<code>nil</code> や例外に頼らず、dry-monads の <code>Maybe</code> と <code>Result</code> を使って型安全にエラーを扱う方法を習得します。</p>
+<hr />
+<h2 id="6-maybe">第6章: Maybe 型による安全なエラーハンドリング<a class="headerlink" href="#6-maybe" title="Permanent link">&para;</a></h2>
+<h3 id="61-maybe">6.1 なぜ Maybe が必要か<a class="headerlink" href="#61-maybe" title="Permanent link">&para;</a></h3>
+<p>従来のエラーハンドリングには問題があります。</p>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjQxOXB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6OTc4cHg7aGVpZ2h0OjQxOXB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDk3OCA0MTkiIHdpZHRoPSI5NzhweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjE3Mi4zIiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iOTYwIiB4PSIxMiIgeT0iMTIiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTY3Ljk5OTMiIHg9IjQwOC4wMDA0IiB5PSIyNi45OTUxIj4mIzI0NDY3OyYjMjY0Njk7JiMxMjM5ODsmIzEyNDU2OyYjMTI1MjE7JiMxMjU0MDsmIzEyNDk1OyYjMTI1MzE7JiMxMjQ4OTsmIzEyNTIyOyYjMTI1MzE7JiMxMjQ2NDs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIG5pbF9yZXQtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4uLm5pbF9yZXQiIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAzIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9Ijg5LjMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI0NDgiIHg9IjQ0IiB5PSI2MyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2Ni40MzgzIiB4PSIyMzQuNzgwOSIgeT0iNzcuOTk1MSI+bmlsICYjMTI0MzQ7JiMzNjgyMDsmIzEyMzc3OzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgZXhjZXB0aW9uLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLi5leGNlcHRpb24iIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJlbnQwMDA2Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9Ijg5LjMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI0MDgiIHg9IjUzMiIgeT0iNjMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTExLjk5OTUiIHg9IjY4MC4wMDAyIiB5PSI3Ny45OTUxIj4mIzIwMzYzOyYjMjI4MDY7JiMxMjQzNDsmIzEyNDczOyYjMTI1MjU7JiMxMjU0MDsmIzEyMzc3OyYjMTI0Mjc7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBtYXliZS0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJtYXliZSIgZGF0YS1zb3VyY2UtbGluZT0iMTUiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjE3Mi41OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjUyMCIgeD0iMjQwIiB5PSIyNDEuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMjYuODk1MiIgeD0iNDM2LjU1MjQiIHk9IjI1Ni4yOTUxIj5NYXliZSAmIzEyMzk1OyYjMTI0MjQ7JiMxMjQyNzsmIzM1Mjk5OyYjMjc3NzA7PC90ZXh0PjwvZz48IS0tZW50aXR5IE5vTWV0aG9kRXJyb3IgPz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4uLm5pbF9yZXQuTm9NZXRob2RFcnJvciAuLi4iIGRhdGEtc291cmNlLWxpbmU9IjUiIGlkPSJlbnQwMDA0Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNzIuNjczNiIgeD0iNjcuNjYiIHk9IjEwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1Mi42NzM2IiB4PSI3Ny42NiIgeT0iMTIxLjk5NTEiPk5vTWV0aG9kRXJyb3IgJiMxMjM5ODsmIzIxMzYxOyYjMzg1MjI7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4uLm5pbF9yZXQuLi4uLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjYiIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNzMuOTk5MyIgeD0iMjc1IiB5PSIxMDYiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTMuOTk5MyIgeD0iMjg1IiB5PSIxMjEuOTk1MSI+JiMyMzQ1NTsmIzM0ODkyOyYjMjYxNzg7JiMxMjQxNDsmIzEyMzkxOyYjMjY5MDg7JiMyMDk4NjsmIzEyMzkxOyYjMTIzNjU7JiMxMjM5NDsmIzEyMzU2OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLi4uZXhjZXB0aW9uLi4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMTAiIGlkPSJlbnQwMDA3Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNDUuOTk5NSIgeD0iNTU2IiB5PSIxMDYiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMjUuOTk5NSIgeD0iNTY2IiB5PSIxMjEuOTk1MSI+JiMyMTA0NjsmIzI0NDgxOyYjMTI1MDE7JiMxMjUyNTsmIzEyNTQwOyYjMTIzNjQ7JiMzNTA3OTsmIzM4NjA5OyYjMjEyNzA7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLi4uZXhjZXB0aW9uLi4uLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjExIiBpZD0iZW50MDAwOCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTU5Ljk5OTQiIHg9IjczNyIgeT0iMTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTM5Ljk5OTQiIHg9Ijc0NyIgeT0iMTIxLjk5NTEiPiYjMzIwMjA7JiMzMTg4MzsmIzM4MzA2OyYjMjU5Njg7JiMxMjM5MTsmIzEyMzk5OyYjMTIzOTQ7JiMxMjM2NzsmIzEyMzk0OyYjMTI0Mjc7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Pz8/Pz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ibWF5YmUuLi4uLi4uLi4uLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjE2IiBpZD0iZW50MDAxMCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjU3Ljk5OSIgeD0iMjY0IiB5PSIyODQuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIzNy45OTkiIHg9IjI3NCIgeT0iMzAwLjI5NTEiPiYjMjI0MTE7JiMxMjM5MTsmIzEyMzAwOyYjMjA1MTY7JiMxMjM2NDsmIzEyMzk0OyYjMTIzNTY7JiMxMjM2MzsmIzEyNDE4OyYjMTIzNzU7JiMxMjQyODsmIzEyMzk0OyYjMTIzNTY7JiMxMjMwMTsmIzEyNDM0OyYjMzQ5MjA7JiMyOTY5NDs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Im1heWJlLi4uLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjE3IiBpZD0iZW50MDAxMSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTU5Ljk5OTQiIHg9IjU1NyIgeT0iMjg0LjMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzkuOTk5NCIgeD0iNTY3IiB5PSIzMDAuMjk1MSI+JiMxMjQ5NzsmIzEyNDc5OyYjMTI1NDA7JiMxMjUzMTsmIzEyMzkxOyYjMjM0MzM7JiMyMDg0MDsmIzEyMzk1OyYjMjA5NjY7JiMyOTcwMjs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Im1heWJlLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjE4IiBpZD0iZW50MDAxMiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTE3Ljk5OTYiIHg9IjMzNCIgeT0iMzY3LjU5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTcuOTk5NiIgeD0iMzQ0IiB5PSIzODMuNTg1MSI+JiMzMjAyMDsmIzMxODgzOyYjMzgzMDY7JiMyNTk2ODsmIzEyMzk4OyYjMTI0MTQ7JiMxMjQxNDs8L3RleHQ+PC9nPjwhLS1saW5rIG5pbF9yZXQgdG8gbWF5YmUtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwOSIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjIxIiBpZD0ibG5rMTMiPjxwYXRoIGQ9Ik00OTIuMTEyNCwxMzUuMzczNSBDNDkyLjE2NjksMTM1LjQ3NzIgNDkyLjIyMTgsMTM1LjU4MTMgNDkyLjI3NjksMTM1LjY4NTcgQzQ5Mi4zODcsMTM1Ljg5NDQgNDkyLjQ5ODIsMTM2LjEwNDMgNDkyLjYxMDUsMTM2LjMxNTUgQzQ5Mi44MzUxLDEzNi43Mzc4IDQ5My4wNjM4LDEzNy4xNjQ4IDQ5My4yOTY4LDEzNy41OTY0IEM0OTUuMTYwNCwxNDEuMDQ4OCA0OTcuMjkyMiwxNDQuNzg4NCA0OTkuNjgxMywxNDguNjY2MyBDNTA5LjIzNzUsMTY0LjE3NzUgNTIyLjkxLDE4MS45IDU0MCwxOTIuMyBDNjE0LjM0LDIzNy41MyA2NjguNSwxNjYuODggNzMzLDIyNS4zIEM3MzUuODYsMjI3Ljg5IDczOC4zMDU5LDIzMC44NjY3IDc0MC4zOTYyLDIzNC4wOTg1IEM3NDEuNDQxMywyMzUuNzE0NCA3NDIuMzk3NCwyMzcuMzk0MSA3NDMuMjcyLDIzOS4xMjExIEM3NDMuNDkwNiwyMzkuNTUyOCA3NDMuNzA0MSwyMzkuOTg3NSA3NDMuOTEyNywyNDAuNDI0OSBDNzQ0LjAxNywyNDAuNjQzNiA3NDEuNjAwNiwyMzUuNDE3NSA3NDEuNzAyNCwyMzUuNjM3NiIgZmlsbD0ibm9uZSIgaWQ9Im5pbF9yZXQtdG8tbWF5YmUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMDAwMDAwIiBwb2ludHM9Ijc0NC4yMjE4LDI0MS4wODMsNzQ0LjA3MzEsMjMxLjIzNTMsNzQyLjEyMjMsMjM2LjU0NTEsNzM2LjgxMjUsMjM0LjU5NDQsNzQ0LjIyMTgsMjQxLjA4MyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjUyLjAwMDEiIHg9IjcyMi41IiB5PSIyMTMuMzY2OSI+JiMzMjYyMjsmIzEyMzY1OyYjMjU1NjM7JiMxMjM2MDs8L3RleHQ+PC9nPjwhLS1saW5rIGV4Y2VwdGlvbiB0byBtYXliZS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA2IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA5IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMjIiIGlkPSJsbmsxNCI+PHBhdGggZD0iTTkyOC43MTQ3LDE1Mi4zNzE3IEM5MjguNjkxLDE1Mi40OTI3IDkyOC42NjczLDE1Mi42MTM5IDkyOC42NDMzLDE1Mi43MzUxIEM5MjguNTk1NCwxNTIuOTc3NiA5MjguNTQ2OCwxNTMuMjIwNiA5MjguNDk3NiwxNTMuNDY0IEM5MjguMzk5LDE1My45NTA4IDkyOC4yOTc4LDE1NC40Mzk0IDkyOC4xOTM3LDE1NC45Mjk1IEM5MjcuOTg1NCwxNTUuOTA5OCA5MjcuNzY1OSwxNTYuODk2MyA5MjcuNTM0NSwxNTcuODg3MSBDOTI2LjYwODcsMTYxLjg1MDYgOTI1LjQ5MjMsMTY1Ljg4NDEgOTI0LjE0NjEsMTY5Ljg3MTEgQzkyMS40NTM3LDE3Ny44NDUgOTE3Ljg0MjUsMTg1LjYzMjUgOTEzLDE5Mi4zIEM4ODguNDksMjI2LjA0NSA4NDkuMTA1LDI1MS4zMTc1IDgxNS40MjUsMjY4LjI4MjUgQzc5OC41ODUsMjc2Ljc2NSA3ODMuMTcxMywyODMuMTcwNiA3NzEuNzU2MiwyODcuNTIgQzc2OC45MDI1LDI4OC42MDczIDc2Ni4yOTg3LDI4OS41NjYyIDc2My45ODUsMjkwLjM5NjggQzc2Mi44MjgxLDI5MC44MTIxIDc2MS43NDM4LDI5MS4xOTU0IDc2MC43MzcsMjkxLjU0NjcgQzc2MC42MTEyLDI5MS41OTA2IDc2Ni4xNTM4LDI4OS42NjM2IDc2Ni4wMzA0LDI4OS43MDY1IiBmaWxsPSJub25lIiBpZD0iZXhjZXB0aW9uLXRvLW1heWJlIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzAwMDAwMCIgcG9pbnRzPSI3NjAuMzYzMSwyOTEuNjc2OSw3NzAuMTc3NiwyOTIuNDk5NSw3NjUuMDg1OCwyOTAuMDM0OSw3NjcuNTUwNCwyODQuOTQzMiw3NjAuMzYzMSwyOTEuNjc2OSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjUyLjAwMDEiIHg9IjkwNy43NCIgeT0iMjEzLjM2NjkiPiYjMzI2MjI7JiMxMjM2NTsmIzI1NTYzOyYjMTIzNjA7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBUUDdGSmk5MDRDUmxWT2dyVHJ4MFdwVUYtMGdjbWFQOGUyTXIxdXFuT05UTDgyc2ZBNjA4X1djQVdYV0huOVg4ajNwQ2syc3lYVGtMZ1lId3NLbmNsZnRWRHBEQkxXZmRDU2ZiakJJa0EyUEVNOWctY1M1OHZUdzlWdHUzZjAtcTItbUVzMWltNXpXOE0wYk9CbXBlRzRNeGx4X2V3R20yVVpvVEw4NHFMQUhqOFA1UER4NGJQMGRESjI5cnBPWFpBc0thTHF0SkM5NWVwaWwzTU1FaXBpa3lWcGJqRU53MzBsNjBURnBzNkktQ0hHMmEzQUc3UDV6THpYUENWZFdzUnpTNTQtV2hpOFZHOTZhMGpJS1NSb1RtcGFlUi1aVVU1ci11cm05TVl4SkVqNXNPRElsU2dLU01Xa1RneTZKRndiVC1SSTM5WnZCaVhnX2VBX1lCM2tCUXBXT01hem0zQkdoMWo3RmozeVNJZHZNTFJfSTU3UlJCRXBwVjVqb2xTTzNPR0NNbWZxMlpKQnVTUmgzTDNMbWxpV0lpMGRHWTNwMElGTllfbjAtd1dpV0JqeTdIdVRfNi10QTNkam5OVDhIT1I2TGtRWGE1eHE5SHpqcWNhQUJvaXdaXzk5eTA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<p><strong>ソースファイル</strong>: <code>app/ruby/src/ch06_error_handling.rb</code></p>
+<h3 id="62-maybe">6.2 Maybe の基本<a class="headerlink" href="#62-maybe" title="Permanent link">&para;</a></h3>
+<p>dry-monads の <code>Maybe</code> は「値があるか、ないか」を表す型です。</p>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjE1OHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NjQ4cHg7aGVpZ2h0OjE1OHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDY0OCAxNTgiIHdpZHRoPSI2NDhweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyIG1heWJlLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Im1heWJlIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxNDAuMyIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjYzMCIgeD0iMTIiIHk9IjEyIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijc1LjY1MzMiIHg9IjI4OS4xNzMzIiB5PSIyNi45OTUxIj5NYXliZVtBXTwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgc29tZS0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJtYXliZS5zb21lIiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSI3My4zIiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjc1IiB4PSIzNiIgeT0iNTUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTkuNDE1IiB4PSIxMjMuNzkyNSIgeT0iNjkuOTk1MSI+U29tZSh2YWx1ZSk8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIG5vbmUtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ibWF5YmUubm9uZSIgZGF0YS1zb3VyY2UtbGluZT0iOSIgaWQ9ImVudDAwMDYiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iNzMuMyIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjI4MyIgeD0iMzM1IiB5PSI1NSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0MC43OTY5IiB4PSI0NTYuMTAxNiIgeT0iNjkuOTk1MSI+Tm9uZTwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJtYXliZS5zb21lLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEwMy45OTk2IiB4PSI1MiIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4My45OTk2IiB4PSI2MiIgeT0iMTA1Ljk5NTEiPiYjMjA1MTY7JiMxMjM2NDsmIzIzMzg0OyYjMjIzMTI7JiMxMjM3NzsmIzEyNDI3OzwvdGV4dD48L2c+PCEtLWVudGl0eSB2YWx1ZSA/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJtYXliZS5zb21lLnZhbHVlIC4uLiIgZGF0YS1zb3VyY2UtbGluZT0iNiIgaWQ9ImVudDAwMDUiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEwNC42OTAyIiB4PSIxOTAuNjUiIHk9IjkwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODQuNjkwMiIgeD0iMjAwLjY1IiB5PSIxMDUuOTk1MSI+dmFsdWUgJiMxMjQzNDsmIzIwNDQ1OyYjMjUzNDU7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJtYXliZS5ub25lLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjEwIiBpZD0iZW50MDAwNyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTE3Ljk5OTYiIHg9IjM1MSIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5Ny45OTk2IiB4PSIzNjEiIHk9IjEwNS45OTUxIj4mIzIwNTE2OyYjMTIzNjQ7JiMyMzM4NDsmIzIyMzEyOyYjMTIzNzU7JiMxMjM5NDsmIzEyMzU2OzwvdGV4dD48L2c+PCEtLWVudGl0eSBuaWwgPz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Im1heWJlLm5vbmUubmlsIC4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjExIiBpZD0iZW50MDAwOCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iOTcuMTAyMyIgeD0iNTA0LjQ1IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijc3LjEwMjMiIHg9IjUxNC40NSIgeT0iMTA1Ljk5NTEiPm5pbCAmIzEyMzk4OyYjMjAxOTU7JiMxMjQzMTsmIzEyNDI2OzwvdGV4dD48L2c+PD9wbGFudHVtbC1zcmMgS29wOUlDckRMSVo4SVNwQ3UtOGdJYXFrSVNuQnBxYkxLRjlEaDRuQVpOUUNMTDk4QjVSODFONEtnZjdiV19EcEtwTkE0ZERBS3BOMUllZzFWQTJBdkNJWTUwTWJmbXJCN1pWc0Y1cXh1LWNTNU95UlBwdmt3YlEyb2UxckEzbmtjbEhhX3puZEZPckFOQktlamxoYnZ3TTJaU2kzQ2QwT0Rfcm51d2g3WklxbTRfQ29TbkdVRHd2eGlkbG51d1ItbnFyVDgyRGgwRzAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<div class="highlight"><pre><span></span><code><span class="nb">require</span><span class="w"> </span><span class="s1">&#39;dry/monads&#39;</span>
+
+<span class="k">module</span><span class="w"> </span><span class="nn">MyModule</span>
+<span class="w">  </span><span class="kp">include</span><span class="w"> </span><span class="no">Dry</span><span class="o">::</span><span class="no">Monads</span><span class="o">[</span><span class="ss">:maybe</span><span class="o">]</span>
+
+<span class="w">  </span><span class="c1"># Some を作成</span>
+<span class="w">  </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Some</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="w">  </span><span class="n">result</span><span class="o">.</span><span class="n">value!</span><span class="w">  </span><span class="c1"># =&gt; 42</span>
+
+<span class="w">  </span><span class="c1"># None を作成</span>
+<span class="w">  </span><span class="n">no_value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">None</span><span class="p">()</span>
+<span class="w">  </span><span class="n">no_value</span><span class="o">.</span><span class="n">value_or</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; 0</span>
+
+<span class="w">  </span><span class="c1"># 値を Maybe でラップ（nil は None になる）</span>
+<span class="w">  </span><span class="no">Maybe</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="w">    </span><span class="c1"># =&gt; Some(5)</span>
+<span class="w">  </span><span class="no">Maybe</span><span class="p">(</span><span class="kp">nil</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+<span class="k">end</span>
+</code></pre></div>
+<h3 id="63">6.3 安全な操作<a class="headerlink" href="#63" title="Permanent link">&para;</a></h3>
+<h4 id="_1">安全な除算<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">safe_divide</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">b</span><span class="o">.</span><span class="n">zero?</span>
+<span class="w">  </span><span class="no">Some</span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">b</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="n">safe_divide</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Some(5)</span>
+<span class="n">safe_divide</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+</code></pre></div>
+<h4 id="_2">安全な整数パース<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">safe_parse_int</span><span class="p">(</span><span class="n">str</span><span class="p">)</span>
+<span class="w">  </span><span class="no">Some</span><span class="p">(</span><span class="nb">Integer</span><span class="p">(</span><span class="n">str</span><span class="p">))</span>
+<span class="k">rescue</span><span class="w"> </span><span class="no">ArgumentError</span><span class="p">,</span><span class="w"> </span><span class="no">TypeError</span>
+<span class="w">  </span><span class="no">None</span><span class="p">()</span>
+<span class="k">end</span>
+
+<span class="n">safe_parse_int</span><span class="p">(</span><span class="s1">&#39;42&#39;</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Some(42)</span>
+<span class="n">safe_parse_int</span><span class="p">(</span><span class="s1">&#39;abc&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+</code></pre></div>
+<h3 id="64-tv">6.4 TV番組のパース例<a class="headerlink" href="#64-tv" title="Permanent link">&para;</a></h3>
+<p>TV番組の文字列をパースする例で Maybe の使い方を学びます。</p>
+<div class="highlight"><pre><span></span><code><span class="no">TvShow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Struct</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:title</span><span class="p">,</span><span class="w"> </span><span class="ss">:start_year</span><span class="p">,</span><span class="w"> </span><span class="ss">:end_year</span><span class="p">,</span><span class="w"> </span><span class="ss">keyword_init</span><span class="p">:</span><span class="w"> </span><span class="kp">true</span><span class="p">)</span>
+
+<span class="c1"># 入力例: &quot;Breaking Bad (2008-2013)&quot;</span>
+<span class="c1"># 期待する出力: TvShow(title: &quot;Breaking Bad&quot;, start_year: 2008, end_year: 2013)</span>
+</code></pre></div>
+<h4 id="_3">小さな関数から組み立てる<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># 名前を抽出</span>
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">extract_name</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span>
+<span class="w">  </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">bracket_open</span><span class="o">.</span><span class="n">nil?</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">0</span>
+
+<span class="w">  </span><span class="no">Some</span><span class="p">(</span><span class="n">raw_show</span><span class="o">[</span><span class="mi">0</span><span class="o">...</span><span class="n">bracket_open</span><span class="o">].</span><span class="n">strip</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="c1"># 開始年を抽出</span>
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">extract_year_start</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span>
+<span class="w">  </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">dash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">bracket_open</span><span class="o">.</span><span class="n">nil?</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">dash</span><span class="o">.</span><span class="n">nil?</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">dash</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
+
+<span class="w">  </span><span class="n">year_str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">[</span><span class="p">(</span><span class="n">bracket_open</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="o">...</span><span class="n">dash</span><span class="o">]</span>
+<span class="w">  </span><span class="n">safe_parse_int</span><span class="p">(</span><span class="n">year_str</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="c1"># 終了年を抽出</span>
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">extract_year_end</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span>
+<span class="w">  </span><span class="n">dash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">bracket_close</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">dash</span><span class="o">.</span><span class="n">nil?</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">bracket_close</span><span class="o">.</span><span class="n">nil?</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">bracket_close</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">dash</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
+
+<span class="w">  </span><span class="n">year_str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">[</span><span class="p">(</span><span class="n">dash</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="o">...</span><span class="n">bracket_close</span><span class="o">]</span>
+<span class="w">  </span><span class="n">safe_parse_int</span><span class="p">(</span><span class="n">year_str</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjM1MHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NTU5cHg7aGVpZ2h0OjM1MHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDU1OSAzNTAiIHdpZHRoPSI1NTlweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIzMzIuODkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI1NDEiIHg9IjEyIiB5PSIxMiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTEuOTk5NSIgeD0iMjI2LjUwMDIiIHk9IjI2Ljk5NTEiPiYjMTI0OTc7JiMxMjU0MDsmIzEyNDczOyYjMjA5NjY7JiMyOTcwMjsmIzEyMzk4OyYjMjA5OTg7JiMzNTI5OTs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGZ1bmNzLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLmZ1bmNzIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxODguNTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIzNjYiIHg9IjQ0IiB5PSIxMjQuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2OS45OTk3IiB4PSIxOTIuMDAwMiIgeT0iMTM5LjI5NTEiPiYjMjM1Njc7JiMxMjM3MzsmIzEyMzk0OyYjMzgzMDY7JiMyNTk2ODs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgaW5wdXQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi5pbnB1dCIgZGF0YS1zb3VyY2UtbGluZT0iNCIgaWQ9ImVudDAwMDMiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjIyNy44MjYyIiB4PSIyODguMDkiIHk9IjQ3Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjA3LjgyNjIiIHg9IjI5OC4wOSIgeT0iNjIuOTk1MSI+XCJCcmVha2luZyBCYWQgKDIwMDgtMjAxMylcIjwvdGV4dD48L2c+PCEtLWVudGl0eSBvdXRwdXQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi5vdXRwdXQiIGRhdGEtc291cmNlLWxpbmU9IjEyIiBpZD0iZW50MDAwOCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNzQuNjEyMyIgeD0iNDMzLjY5IiB5PSIyNjYuNTkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1NC42MTIzIiB4PSI0NDMuNjkiIHk9IjI4Mi41ODUxIj5UdlNob3c8L3RleHQ+PC9nPjwhLS1lbnRpdHkgbmFtZS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLmZ1bmNzLm5hbWUiIGRhdGEtc291cmNlLWxpbmU9IjciIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMTYuNjEyMyIgeD0iNjcuNjkiIHk9IjE2Ny4zIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTYuNjEyMyIgeD0iNzcuNjkiIHk9IjE4My4yOTUxIj5leHRyYWN0X25hbWU8L3RleHQ+PC9nPjwhLS1lbnRpdHkgc3RhcnQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi5mdW5jcy5zdGFydCIgZGF0YS1zb3VyY2UtbGluZT0iOCIgaWQ9ImVudDAwMDYiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE0Ny43NSIgeD0iMjE5LjEzIiB5PSIxNjcuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNy43NSIgeD0iMjI5LjEzIiB5PSIxODMuMjk1MSI+ZXh0cmFjdF95ZWFyX3N0YXJ0PC90ZXh0PjwvZz48IS0tZW50aXR5IGVuZF95ZWFyLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uZnVuY3MuZW5kX3llYXIiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJlbnQwMDA3Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNDEuNTE1NiIgeD0iNjguMjQiIHk9IjI2Ni41OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyMS41MTU2IiB4PSI3OC4yNCIgeT0iMjgyLjU4NTEiPmV4dHJhY3RfeWVhcl9lbmQ8L3RleHQ+PC9nPjwhLS1saW5rIGlucHV0IHRvIGZ1bmNzLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDMiIGRhdGEtZW50aXR5LTI9ImVudDAwMDQiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxNCIgaWQ9ImxuazkiPjxwYXRoIGQ9Ik00MDIsNjkuNjUgQzQwMiw3Ni43NzUgNDAyLDg2LjkyMTIgNDAyLDk4LjE3MDMgQzQwMiwxMDMuNzk0OCA0MDIsMTA5LjY5NTEgNDAyLDExNS42MzEyIEM0MDIsMTE3LjExNTIgNDAyLDExOC42MDE1IDQwMiwxMjAuMDg2MyBDNDAyLDEyMC44Mjg3IDQwMiwxMjEuNTcwNyA0MDIsMTIyLjMxMTkgQzQwMiwxMjIuNjgyNCA0MDIsMTIzLjA1MjggNDAyLDEyMy40MjI5IEM0MDIsMTIzLjYwOCA0MDIsMTE3Ljc5MyA0MDIsMTE3Ljk3NzkiIGZpbGw9Im5vbmUiIGlkPSJpbnB1dC10by1mdW5jcyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMwMDAwMDAiIHBvaW50cz0iNDAyLDEyMy45Nzc5LDQwNiwxMTQuOTc3OSw0MDIsMTE4Ljk3NzksMzk4LDExNC45Nzc5LDQwMiwxMjMuOTc3OSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjwvZz48IS0tbGluayBmdW5jcyB0byBvdXRwdXQtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNCIgZGF0YS1lbnRpdHktMj0iZW50MDAwOCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE1IiBpZD0ibG5rMTAiPjxwYXRoIGQ9Ik00MTAuMTE1OCwxOTAuODg4OSBDNDEwLjE4NjUsMTkwLjk4ODYgNDEwLjI1NzYsMTkxLjA4ODkgNDEwLjMyOTEsMTkxLjE4OTYgQzQxMC40NzIsMTkxLjM5MTIgNDEwLjYxNjQsMTkxLjU5NDcgNDEwLjc2MjIsMTkxLjgwMDMgQzQxMS4wNTM4LDE5Mi4yMTE1IDQxMS4zNTExLDE5Mi42MzA3IDQxMS42NTM4LDE5My4wNTc1IEM0MTIuMjU5MywxOTMuOTExMiA0MTIuODg2NCwxOTQuNzk1NiA0MTMuNTMzNCwxOTUuNzA3OCBDNDE0LjgyNzIsMTk3LjUzMjIgNDE2LjIwMDEsMTk5LjQ2OCA0MTcuNjM1OCwyMDEuNDkyNyBDNDIwLjUwNzMsMjA1LjU0MTkgNDIzLjYzMDYsMjA5Ljk0NjMgNDI2Ljg3NzUsMjE0LjUyNSBDNDM5Ljg2NSwyMzIuODQgNDUxLjM1OTMsMjQ5LjA1MDcgNDYwLjA5OTMsMjYxLjM3NTciIGZpbGw9Im5vbmUiIGlkPSJmdW5jcy10by1vdXRwdXQiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMDAwMDAwIiBwb2ludHM9IjQ2My41NywyNjYuMjcsNDYxLjYyNjgsMjU2LjYxNDcsNDYwLjY3NzgsMjYyLjE5MTQsNDU1LjEwMTEsMjYxLjI0MjMsNDYzLjU3LDI2Ni4yNyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEwOS4zMjU3IiB4PSI0NDEuNjMiIHk9IjIzMi42NTY5Ij5iaW5kL2ZtYXAgJiMxMjM5MTsmIzIxNTEyOyYjMjUxMDQ7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBLb3A5SUNyRExJWjhJU3BDdS04Z0lhcWtJU25CcHFiTEs3aFNGRjVueXZ4N0pKa1ZqWXp4Rmc3alNVRXdmbnJqQnZPbExiQWV2YWZFQjRmSEs4ZkhTWWZBSlNwRXA0ak5TNGZDS1QwbUNaMm1xM0tvQzNKTVo1NUlLYVdpTGlaQ0FvV2pHSjdxd09SLW51cko3cFVrVVpianFSRWY2eTJncWFocGFlbFhYZ1BNYjFHYjlmVjR2b05jZmVBYkdHbXFrU2hLbkFCdXVmQjRlWEFtMlowQmN2QktsMUltMFkwRDVrMmd2TzhnMm9hQnBpV2wxcWxjYnZRME5HYnNoOEFraFh0NEdMbUdQdTd1NDFLQUxXZjljTmFmLWNjdllHS0FabmtORnZ0R3lRblowYlNqMDAwMD8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="65-or">6.5 or によるフォールバック<a class="headerlink" href="#65-or" title="Permanent link">&para;</a></h3>
+<p><code>or</code> を使って、最初の Maybe が <code>None</code> の場合に代替を試すことができます。</p>
+<div class="highlight"><pre><span></span><code><span class="n">seven</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Some</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">eight</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Some</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">none</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">None</span><span class="p">()</span>
+
+<span class="n">seven</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="n">eight</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Some(7) - 最初が Some なのでそのまま</span>
+<span class="n">none</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="n">eight</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Some(8) - 最初が None なので代替を使用</span>
+<span class="n">seven</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="n">none</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Some(7)</span>
+<span class="n">none</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="n">none</span><span class="p">)</span><span class="w">    </span><span class="c1"># =&gt; None</span>
+</code></pre></div>
+<h4 id="_4">単年の番組に対応する<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># 単年を抽出（&quot;Chernobyl (2019)&quot; 形式）</span>
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">extract_single_year</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span>
+<span class="w">  </span><span class="n">dash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">unless</span><span class="w"> </span><span class="n">dash</span><span class="o">.</span><span class="n">nil?</span><span class="w">  </span><span class="c1"># ダッシュがあれば単年ではない</span>
+
+<span class="w">  </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">bracket_close</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">bracket_open</span><span class="o">.</span><span class="n">nil?</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">bracket_close</span><span class="o">.</span><span class="n">nil?</span>
+
+<span class="w">  </span><span class="n">year_str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">[</span><span class="p">(</span><span class="n">bracket_open</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="o">...</span><span class="n">bracket_close</span><span class="o">]</span>
+<span class="w">  </span><span class="n">safe_parse_int</span><span class="p">(</span><span class="n">year_str</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="c1"># パース関数（or でフォールバック）</span>
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">parse_show</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span>
+<span class="w">  </span><span class="nb">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">extract_name</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span>
+<span class="w">  </span><span class="n">year_start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">extract_year_start</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="n">extract_single_year</span><span class="p">(</span><span class="n">raw_show</span><span class="p">))</span>
+<span class="w">  </span><span class="n">year_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">extract_year_end</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="n">extract_single_year</span><span class="p">(</span><span class="n">raw_show</span><span class="p">))</span>
+
+<span class="w">  </span><span class="nb">name</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">n</span><span class="o">|</span>
+<span class="w">    </span><span class="n">year_start</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">ys</span><span class="o">|</span>
+<span class="w">      </span><span class="n">year_end</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">ye</span><span class="o">|</span>
+<span class="w">        </span><span class="no">TvShow</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">title</span><span class="p">:</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="ss">start_year</span><span class="p">:</span><span class="w"> </span><span class="n">ys</span><span class="p">,</span><span class="w"> </span><span class="ss">end_year</span><span class="p">:</span><span class="w"> </span><span class="n">ye</span><span class="p">)</span>
+<span class="w">      </span><span class="k">end</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">parse_show</span><span class="p">(</span><span class="s1">&#39;Breaking Bad (2008-2013)&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Some(TvShow(...))</span>
+<span class="n">parse_show</span><span class="p">(</span><span class="s1">&#39;Chernobyl (2019)&#39;</span><span class="p">)</span><span class="w">          </span><span class="c1"># =&gt; Some(TvShow(start_year: 2019, end_year: 2019))</span>
+<span class="n">parse_show</span><span class="p">(</span><span class="s1">&#39;Invalid&#39;</span><span class="p">)</span><span class="w">                    </span><span class="c1"># =&gt; None</span>
+</code></pre></div>
+<h3 id="66-maybe">6.6 Maybe の主要メソッド<a class="headerlink" href="#66-maybe" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>メソッド</th>
+<th>説明</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fmap</code></td>
+<td>値があれば変換</td>
+<td><code>Some(5).fmap { \|x\| x * 2 }</code> → <code>Some(10)</code></td>
+</tr>
+<tr>
+<td><code>bind</code></td>
+<td>Maybe を返す関数を適用</td>
+<td><code>Some(5).bind { \|x\| Some(x * 2) }</code> → <code>Some(10)</code></td>
+</tr>
+<tr>
+<td><code>or</code></td>
+<td>None なら代替を使用</td>
+<td><code>None().or(Some(5))</code> → <code>Some(5)</code></td>
+</tr>
+<tr>
+<td><code>value_or</code></td>
+<td>None ならデフォルト値</td>
+<td><code>None().value_or(0)</code> → <code>0</code></td>
+</tr>
+<tr>
+<td><code>value!</code></td>
+<td>値を取り出す（None なら例外）</td>
+<td><code>Some(5).value!</code> → <code>5</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="n">year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Some</span><span class="p">(</span><span class="mi">996</span><span class="p">)</span>
+<span class="n">no_year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">None</span><span class="p">()</span>
+
+<span class="c1"># fmap</span>
+<span class="n">year</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">}</span><span class="w">     </span><span class="c1"># =&gt; Some(1992)</span>
+<span class="n">no_year</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+
+<span class="c1"># bind</span>
+<span class="n">year</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span><span class="w"> </span><span class="no">Some</span><span class="p">(</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">     </span><span class="c1"># =&gt; Some(1992)</span>
+<span class="n">no_year</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span><span class="w"> </span><span class="no">Some</span><span class="p">(</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+
+<span class="c1"># or</span>
+<span class="n">year</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="no">Some</span><span class="p">(</span><span class="mi">2020</span><span class="p">))</span><span class="w">     </span><span class="c1"># =&gt; Some(996)</span>
+<span class="n">no_year</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="no">Some</span><span class="p">(</span><span class="mi">2020</span><span class="p">))</span><span class="w">  </span><span class="c1"># =&gt; Some(2020)</span>
+
+<span class="c1"># value_or</span>
+<span class="n">year</span><span class="o">.</span><span class="n">value_or</span><span class="p">(</span><span class="mi">2020</span><span class="p">)</span><span class="w">     </span><span class="c1"># =&gt; 996</span>
+<span class="n">no_year</span><span class="o">.</span><span class="n">value_or</span><span class="p">(</span><span class="mi">2020</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; 2020</span>
+</code></pre></div>
+<h3 id="67">6.7 エラーハンドリング戦略<a class="headerlink" href="#67" title="Permanent link">&para;</a></h3>
+<p>複数の要素をパースする場合、2つの戦略があります。</p>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjI0MHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6ODkwcHg7aGVpZ2h0OjI0MHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDg5MCAyNDAiIHdpZHRoPSI4OTBweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMjIuNTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI4NzIiIHg9IjEyIiB5PSIxMiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTMuOTk5MyIgeD0iMzcxLjAwMDMiIHk9IjI2Ljk5NTEiPiYjMTI0NTY7JiMxMjUyMTsmIzEyNTQwOyYjMTI0OTU7JiMxMjUzMTsmIzEyNDg5OyYjMTI1MjI7JiMxMjUzMTsmIzEyNDY0OyYjMjUxMjY7JiMzMDA1Mzs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGJlc3QtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4uYmVzdCIgZGF0YS1zb3VyY2UtbGluZT0iNCIgaWQ9ImVudDAwMDMiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMTU1LjU5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMzU5IiB4PSIzNiIgeT0iNTUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTE4Ljc2NzUiIHg9IjE1Ni4xMTYzIiB5PSI2OS45OTUxIj5CZXN0LWVmZm9ydCAmIzI1MTI2OyYjMzAwNTM7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBhbGwtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4uYWxsIiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImVudDAwMDciPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMTU1LjU5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNDQxIiB4PSI0MTkiIHk9IjU1Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE0Mi40ODEzIiB4PSI1NjguMjU5MyIgeT0iNjkuOTk1MSI+QWxsLW9yLW5vdGhpbmcgJiMyNTEyNjsmIzMwMDUzOzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLi5iZXN0Li4uLi4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE4Ny45OTkzIiB4PSI1MiIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNjcuOTk5MyIgeD0iNjIiIHk9IjEwNS45OTUxIj4mIzEyNDk3OyYjMTI1NDA7JiMxMjQ3MzsmIzEyMzkxOyYjMTIzNjU7JiMxMjM4MzsmIzEyNDE4OyYjMTIzOTg7JiMxMjM4NDsmIzEyMzY5OyYjMzY4MjA7JiMxMjM3Nzs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4uYmVzdC4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjYiIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMDMuOTk5NiIgeD0iMjc1IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgzLjk5OTYiIHg9IjI4NSIgeT0iMTA1Ljk5NTEiPiYjMTI0NTY7JiMxMjUyMTsmIzEyNTQwOyYjMTIzOTk7JiMyODk2MTsmIzM1MjIyOzwvdGV4dD48L2c+PCEtLWVudGl0eSBBcnJheVtUdlNob3ddID8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLmJlc3QuQXJyYXkuVHZTaG93LiAuLi4iIGRhdGEtc291cmNlLWxpbmU9IjciIGlkPSJlbnQwMDA2Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNjkuOTM5MyIgeD0iNjEuMDMiIHk9IjE3Mi4yOSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE0OS45MzkzIiB4PSI3MS4wMyIgeT0iMTg4LjI4NTEiPkFycmF5W1R2U2hvd10gJiMxMjQzNDsmIzM2ODIwOyYjMTIzNzc7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLmFsbC4uLi4uLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjExIiBpZD0iZW50MDAwOCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTg3Ljk5OTMiIHg9IjQzNSIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNjcuOTk5MyIgeD0iNDQ1IiB5PSIxMDUuOTk1MSI+JiMyMDg0MDsmIzM3MDk2OyYjMjUxMDQ7JiMyMTE1MTsmIzEyMzc3OyYjMTI0Mjc7JiMxMjM2MzsmIzEyMjg5OyYjMjA4NDA7JiMzNzA5NjsmIzIyODMzOyYjMjU5NDM7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Pz8/PyBOb25lLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4uYWxsLi4uLi4uLi4uLiBOb25lIiBkYXRhLXNvdXJjZS1saW5lPSIxMiIgaWQ9ImVudDAwMDkiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE4Ni45NzQxIiB4PSI2NTcuNTEiIHk9IjkwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTY2Ljk3NDEiIHg9IjY2Ny41MSIgeT0iMTA1Ljk5NTEiPiYjMTk5Njg7JiMxMjM4ODsmIzEyMzkxOyYjMTI0MTg7JiMyMjgzMzsmIzI1OTQzOyYjMTIzNzU7JiMxMjM4MzsmIzEyNDI1OyBOb25lPC90ZXh0PjwvZz48IS0tZW50aXR5IE1heWJlW0FycmF5W1R2U2hvd11dID8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLmFsbC5NYXliZS5BcnJheS5UdlNob3cuLiAuLi4iIGRhdGEtc291cmNlLWxpbmU9IjEzIiBpZD0iZW50MDAxMCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjI3LjMwNjUiIHg9IjQzNS4zNSIgeT0iMTcyLjI5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjA3LjMwNjUiIHg9IjQ0NS4zNSIgeT0iMTg4LjI4NTEiPk1heWJlW0FycmF5W1R2U2hvd11dICYjMTI0MzQ7JiMzNjgyMDsmIzEyMzc3OzwvdGV4dD48L2c+PD9wbGFudHVtbC1zcmMgTk9fMUppOTA0OFJsRkNOUVVueTJ4dGhINl82bXU0OTlyak9pWk9PTzRjUE40djBPbk9aNDR2ZVc1V3lBeVFBOVlHX3BzdTlsT0lqUDBqdWNDel95eXlyNnc4YTNtR3ViaF9ndmQxQWJhRmlMQVBXMzdTNkNPSnZYQmM3VU9EZW1wcmNYOXFiaERFaXpFa25hYlR5S2pUMEx2TkFXR2NPMU5jRjVqOXMyOVF4c3FxcEpwR0JyMS1XOVQwNFFHNmxHMi1XVXI5cl90TzNrN0Npa3h6Rmh4RkhYRmhncmF4bklsNXhPRlRobldrQ3oxZHJqNW5qaDMtSWJUMEZiLWE3ZUxWdEFnWEVOU2dhS2RxS185YWZRTF83djgwczF4ZTB3UURBWTdtLWRJUXpsM3QtX0RxNzNwNXRobkdKS190a1lwUk8zTnJYa1l6VUJlaDJjLVMtcHlHaTA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h4 id="best-effort">Best-effort 戦略<a class="headerlink" href="#best-effort" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">parse_shows_best_effort</span><span class="p">(</span><span class="n">raw_shows</span><span class="p">)</span>
+<span class="w">  </span><span class="n">raw_shows</span>
+<span class="w">    </span><span class="o">.</span><span class="n">map</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">raw</span><span class="o">|</span><span class="w"> </span><span class="n">parse_show</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="o">.</span><span class="n">flat_map</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">maybe</span><span class="o">|</span><span class="w"> </span><span class="n">maybe_to_array</span><span class="p">(</span><span class="n">maybe</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+<span class="k">end</span>
+
+<span class="n">raw_shows</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span>
+<span class="w">  </span><span class="s1">&#39;Breaking Bad (2008-2013)&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;Invalid Show&#39;</span><span class="p">,</span><span class="w">           </span><span class="c1"># 無効な形式</span>
+<span class="w">  </span><span class="s1">&#39;Mad Men (2007-2015)&#39;</span>
+<span class="o">]</span>
+
+<span class="n">parse_shows_best_effort</span><span class="p">(</span><span class="n">raw_shows</span><span class="p">)</span>
+<span class="c1"># =&gt; [TvShow(&quot;Breaking Bad&quot;, ...), TvShow(&quot;Mad Men&quot;, ...)]</span>
+<span class="c1"># 無効なものは無視される</span>
+</code></pre></div>
+<h4 id="all-or-nothing">All-or-nothing 戦略<a class="headerlink" href="#all-or-nothing" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">parse_shows_all_or_nothing</span><span class="p">(</span><span class="n">raw_shows</span><span class="p">)</span>
+<span class="w">  </span><span class="n">initial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Some</span><span class="p">(</span><span class="o">[]</span><span class="p">)</span>
+
+<span class="w">  </span><span class="n">raw_shows</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">initial</span><span class="p">)</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">acc</span><span class="p">,</span><span class="w"> </span><span class="n">raw</span><span class="o">|</span>
+<span class="w">    </span><span class="n">parsed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parse_show</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+<span class="w">    </span><span class="n">acc</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">shows</span><span class="o">|</span>
+<span class="w">      </span><span class="n">parsed</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">show</span><span class="o">|</span><span class="w"> </span><span class="n">shows</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="o">[</span><span class="n">show</span><span class="o">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c1"># 全部成功 → Some([...])</span>
+<span class="n">parse_shows_all_or_nothing</span><span class="p">(</span><span class="o">[</span><span class="s1">&#39;Breaking Bad (2008-2013)&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Mad Men (2007-2015)&#39;</span><span class="o">]</span><span class="p">)</span>
+<span class="c1"># =&gt; Some([TvShow(...), TvShow(...)])</span>
+
+<span class="c1"># 一つでも失敗 → None</span>
+<span class="n">parse_shows_all_or_nothing</span><span class="p">(</span><span class="o">[</span><span class="s1">&#39;Breaking Bad (2008-2013)&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Invalid&#39;</span><span class="o">]</span><span class="p">)</span>
+<span class="c1"># =&gt; None</span>
+</code></pre></div>
+<hr />
+<h2 id="7-result">第7章: Result 型と複合的なエラー処理<a class="headerlink" href="#7-result" title="Permanent link">&para;</a></h2>
+<h3 id="71-maybe">7.1 Maybe の限界<a class="headerlink" href="#71-maybe" title="Permanent link">&para;</a></h3>
+<p><code>Maybe</code> は「値があるかないか」しか表現できません。<strong>なぜ失敗したのか</strong>を伝えられません。</p>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjQxN3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NTkxcHg7aGVpZ2h0OjQxN3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDU5MSA0MTciIHdpZHRoPSI1OTFweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyIE1heWJlIHZzIFJlc3VsdC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJNYXliZSB2cyBSZXN1bHQiIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjMyNi42IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNDA1IiB4PSIxMiIgeT0iMTIiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTI5LjI5NDkiIHg9IjE0OS44NTI1IiB5PSIyNi45OTUxIj5NYXliZSB2cyBSZXN1bHQ8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIG9wdC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJNYXliZSB2cyBSZXN1bHQub3B0IiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSI4OS4zIiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjY4IiB4PSIxMTciIHk9IjYzIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijc1LjY1MzMiIHg9IjIxMy4xNzMzIiB5PSI3Ny45OTUxIj5NYXliZVtBXTwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgcmVzdWx0LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ik1heWJlIHZzIFJlc3VsdC5yZXN1bHQiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJlbnQwMDA2Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9Ijg5LjMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIzNDEiIHg9IjQ0IiB5PSIyMTcuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3My42OTgyIiB4PSIxNzcuNjUwOSIgeT0iMjMyLjI5NTEiPlJlc3VsdFtBXTwvdGV4dD48L2c+PCEtLWVudGl0eSBzb21lLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iTWF5YmUgdnMgUmVzdWx0Lm9wdC5zb21lIiBkYXRhLXNvdXJjZS1saW5lPSI1IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTA4Ljg2NzIiIHg9IjE2MC41NyIgeT0iMTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODguODY3MiIgeD0iMTcwLjU3IiB5PSIxMjEuOTk1MSI+U29tZSh2YWx1ZSk8L3RleHQ+PC9nPjwhLS1lbnRpdHkgbm9uZS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ik1heWJlIHZzIFJlc3VsdC5vcHQubm9uZSIgZGF0YS1zb3VyY2UtbGluZT0iNiIgaWQ9ImVudDAwMDUiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjU2LjUyNDQiIHg9IjMwNC43NCIgeT0iMTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzYuNTI0NCIgeD0iMzE0Ljc0IiB5PSIxMjEuOTk1MSI+Tm9uZTwvdGV4dD48L2c+PCEtLWVudGl0eSBzdWNjZXNzLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iTWF5YmUgdnMgUmVzdWx0LnJlc3VsdC5zdWNjZXNzIiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImVudDAwMDciPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEyNS41MTk1IiB4PSI2OC4yNCIgeT0iMjYwLjMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDUuNTE5NSIgeD0iNzguMjQiIHk9IjI3Ni4yOTUxIj5TdWNjZXNzKHZhbHVlKTwvdGV4dD48L2c+PCEtLWVudGl0eSBmYWlsdXJlLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iTWF5YmUgdnMgUmVzdWx0LnJlc3VsdC5mYWlsdXJlIiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImVudDAwMDgiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjExMy4wMjM0IiB4PSIyMjguNDkiIHk9IjI2MC4zIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTMuMDIzNCIgeD0iMjM4LjQ5IiB5PSIyNzYuMjk1MSI+RmFpbHVyZShlcnJvcik8L3RleHQ+PC9nPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IkdNTjEwIiBkYXRhLXNvdXJjZS1saW5lPSIxOCIgaWQ9ImVudDAwMTEiPjxwYXRoIGQ9Ik00MzMuNSwyNTguODggTDQzMy41LDI4NC4wMTI4IEEwLDAgMCAwIDAgNDMzLjUsMjg0LjAxMjggTDU4NC41MDAyLDI4NC4wMTI4IEEwLDAgMCAwIDAgNTg0LjUwMDIsMjg0LjAxMjggTDU4NC41MDAyLDI2OC44OCBMNTc0LjUwMDIsMjU4Ljg4IEw0OTkuMTQsMjU4Ljg4IEwzNDUuMSwxMjguNjIgTDQ5MS4xNCwyNTguODggTDQzMy41LDI1OC44OCBBMCwwIDAgMCAwIDQzMy41LDI1OC44OCIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik01NzQuNTAwMiwyNTguODggTDU3NC41MDAyLDI2OC44OCBMNTg0LjUwMDIsMjY4Ljg4IEw1NzQuNTAwMiwyNTguODgiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzAuMDAwMiIgeD0iNDM5LjUiIHk9IjI3NS45NDY5Ij4mIzIyODMzOyYjMjU5NDM7JiMyOTcwMjsmIzMwMDAxOyYjMTIzNjQ7JiMyMDk5ODsmIzEyMzYzOyYjMTI0MjU7JiMxMjM5NDsmIzEyMzU2OzwvdGV4dD48L2c+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iR01OMTMiIGRhdGEtc291cmNlLWxpbmU9IjIyIiBpZD0iZW50MDAxNCI+PHBhdGggZD0iTTIwMywzODUuNiBMMjAzLDQxMC43MzI4IEEwLDAgMCAwIDAgMjAzLDQxMC43MzI4IEwzNjcuMDAwMiw0MTAuNzMyOCBBMCwwIDAgMCAwIDM2Ny4wMDAyLDQxMC43MzI4IEwzNjcuMDAwMiwzOTUuNiBMMzU3LjAwMDIsMzg1LjYgTDI4OSwzODUuNiBMMjg1LDI4My4wOCBMMjgxLDM4NS42IEwyMDMsMzg1LjYgQTAsMCAwIDAgMCAyMDMsMzg1LjYiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMzU3LjAwMDIsMzg1LjYgTDM1Ny4wMDAyLDM5NS42IEwzNjcuMDAwMiwzOTUuNiBMMzU3LjAwMDIsMzg1LjYiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNDMuMDAwMiIgeD0iMjA5IiB5PSI0MDIuNjY2OSI+JiMxMjQ1NjsmIzEyNTIxOyYjMTI1NDA7JiMyNDc3MzsmIzIyNTc3OyYjMTI0MzQ7JiMyMDQ0NTsmIzI1MzQ1OyYjMTIzOTE7JiMxMjM2NTsmIzEyNDI3OzwvdGV4dD48L2c+PCEtLWxpbmsgb3B0IHRvIHJlc3VsdC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAzIiBkYXRhLWVudGl0eS0yPSJlbnQwMDA2IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTQiIGlkPSJsbms5Ij48cGF0aCBkPSJNMTMzLjExNywxNTIuNDQ0NiBDMTMzLjE1NjEsMTUyLjUyNzUgMTMzLjE5NTQsMTUyLjYxMDMgMTMzLjIzNDgsMTUyLjY5MyBDMTMzLjU1MDQsMTUzLjM1NTEgMTMzLjg3NzksMTU0LjAxMjQgMTM0LjIxOCwxNTQuNjYzNCBDMTM2LjkzODEsMTU5Ljg3MTkgMTQwLjQ1NSwxNjQuNjggMTQ1LDE2OC4zIEMyMTkuOTQsMjI3Ljk4IDI4Ni41LDEzNy41NSAzNTgsMjAxLjMgQzM2MC44ODEzLDIwMy44Njg4IDM2My4zNDMzLDIwNi44Mjk0IDM2NS40NDU0LDIxMC4wNDkzIEMzNjYuNDk2NCwyMTEuNjU5MyAzNjcuNDU3NSwyMTMuMzM0IDM2OC4zMzYsMjE1LjA1NzEgQzM2OC41NTU2LDIxNS40ODc4IDM2OC43NywyMTUuOTIxNiAzNjguOTc5NSwyMTYuMzU4MSBDMzY5LjA4NDIsMjE2LjU3NjQgMzY2LjY1NjEsMjExLjM1NTYgMzY2Ljc1ODMsMjExLjU3NTIiIGZpbGw9Im5vbmUiIGlkPSJvcHQtdG8tcmVzdWx0IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzAwMDAwMCIgcG9pbnRzPSIzNjkuMjg5OCwyMTcuMDE1LDM2OS4xMTkxLDIwNy4xNjc2LDM2Ny4xODAyLDIxMi40ODE4LDM2MS44NjYsMjEwLjU0MjksMzY5LjI4OTgsMjE3LjAxNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2IiB4PSIzNDYuMTgiIHk9IjE4OS4zNjY5Ij4mIzM2OTE0OyYjMjEyNzA7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBLb3A5SUNyRExJWjhJU3BDdS04Z0lhcWtJU25CcHFiTEtGOURoNG5BTElXaExXWEFCSXhEQUw1SWdDUUdaTlFDTEw5OEI1UjhCb1cxb1lPZDVnS2VBME5kdndQZ2IyTmNiQVBnV2tNQVdOb2ViNXotTllmT0IwXzh1QWY1aUdyWTJTcDA4WjBGT01QZlNkOWdTSjZBaUgwWGcwQXRuQ29TcWc5S1pUSVllbG1ZWTg4cVkxMzg2ZjNwVDdOak9BUFFBUm5pc0ZJcVBuZjhBWS1fOTVLWEFSLWE5M3pOOEp5RHVoMmRJcE8tY3Boei1PSXN2ckNzRmN4aVVUaEh6aFluLXQ1SnYtRjZMT3lSTXhYSXlyOEtHRGVtRENEaVZEb3F1ZDdwb2lWRFV2dXJqcHZUaUY1bnF3R2QtLVMtd3NieXRCWnlTTUZsdXdQa2sxNDA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<p><strong>ソースファイル</strong>: <code>app/ruby/src/ch07_result.rb</code></p>
+<h3 id="72-result">7.2 Result の基本<a class="headerlink" href="#72-result" title="Permanent link">&para;</a></h3>
+<p>dry-monads の <code>Result</code> は「成功値かエラーか」を表す型です。</p>
+<ul>
+<li><code>Success(value)</code>: 成功（Scala の <code>Right</code> 相当）</li>
+<li><code>Failure(error)</code>: 失敗（Scala の <code>Left</code> 相当）</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nb">require</span><span class="w"> </span><span class="s1">&#39;dry/monads&#39;</span>
+
+<span class="k">module</span><span class="w"> </span><span class="nn">MyModule</span>
+<span class="w">  </span><span class="kp">include</span><span class="w"> </span><span class="no">Dry</span><span class="o">::</span><span class="no">Monads</span><span class="o">[</span><span class="ss">:result</span><span class="o">]</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">extract_name</span><span class="p">(</span><span class="n">show</span><span class="p">)</span>
+<span class="w">    </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">      </span><span class="no">Success</span><span class="p">(</span><span class="n">show</span><span class="o">[</span><span class="mi">0</span><span class="o">...</span><span class="n">bracket_open</span><span class="o">].</span><span class="n">strip</span><span class="p">)</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">      </span><span class="no">Failure</span><span class="p">(</span><span class="s2">&quot;Can&#39;t extract name from </span><span class="si">#{</span><span class="n">show</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+
+<span class="w">  </span><span class="n">extract_name</span><span class="p">(</span><span class="s1">&#39;The Wire (2002-2008)&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Success(&quot;The Wire&quot;)</span>
+<span class="w">  </span><span class="n">extract_name</span><span class="p">(</span><span class="s1">&#39;(2022)&#39;</span><span class="p">)</span><span class="w">                </span><span class="c1"># =&gt; Failure(&quot;Can&#39;t extract name from (2022)&quot;)</span>
+<span class="k">end</span>
+</code></pre></div>
+<h3 id="73-result">7.3 Result を使ったパース<a class="headerlink" href="#73-result" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">safe_parse_int</span><span class="p">(</span><span class="n">str</span><span class="p">)</span>
+<span class="w">  </span><span class="no">Success</span><span class="p">(</span><span class="nb">Integer</span><span class="p">(</span><span class="n">str</span><span class="p">))</span>
+<span class="k">rescue</span><span class="w"> </span><span class="no">ArgumentError</span><span class="p">,</span><span class="w"> </span><span class="no">TypeError</span>
+<span class="w">  </span><span class="no">Failure</span><span class="p">(</span><span class="s2">&quot;Cannot parse &#39;</span><span class="si">#{</span><span class="n">str</span><span class="si">}</span><span class="s2">&#39; as integer&quot;</span><span class="p">)</span>
+<span class="k">end</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">extract_year_start</span><span class="p">(</span><span class="n">raw_show</span><span class="p">)</span>
+<span class="w">  </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">dash</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">bracket_open</span><span class="o">.</span><span class="n">nil?</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">dash</span><span class="o">.</span><span class="n">nil?</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">dash</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">bracket_open</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="s2">&quot;Cannot extract start year from &#39;</span><span class="si">#{</span><span class="n">raw_show</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="n">year_str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw_show</span><span class="o">[</span><span class="p">(</span><span class="n">bracket_open</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="o">...</span><span class="n">dash</span><span class="o">]</span>
+<span class="w">    </span><span class="n">safe_parse_int</span><span class="p">(</span><span class="n">year_str</span><span class="p">)</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">extract_year_start</span><span class="p">(</span><span class="s1">&#39;The Wire (2002-2008)&#39;</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Success(2002)</span>
+<span class="n">extract_year_start</span><span class="p">(</span><span class="s1">&#39;The Wire (-2008)&#39;</span><span class="p">)</span><span class="w">       </span><span class="c1"># =&gt; Failure(&quot;Cannot extract start year from...&quot;)</span>
+<span class="n">extract_year_start</span><span class="p">(</span><span class="s1">&#39;The Wire (oops-2008)&#39;</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Failure(&quot;Cannot parse &#39;oops&#39; as integer&quot;)</span>
+</code></pre></div>
+<h3 id="74-maybe-result">7.4 Maybe から Result への変換<a class="headerlink" href="#74-maybe-result" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">maybe_to_result</span><span class="p">(</span><span class="n">maybe_value</span><span class="p">,</span><span class="w"> </span><span class="n">error_msg</span><span class="p">)</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">maybe_value</span>
+<span class="w">  </span><span class="k">when</span><span class="w"> </span><span class="no">Dry</span><span class="o">::</span><span class="no">Monads</span><span class="o">::</span><span class="no">Some</span>
+<span class="w">    </span><span class="no">Success</span><span class="p">(</span><span class="n">maybe_value</span><span class="o">.</span><span class="n">value!</span><span class="p">)</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">maybe_to_result</span><span class="p">(</span><span class="no">Some</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;not found&#39;</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Success(5)</span>
+<span class="n">maybe_to_result</span><span class="p">(</span><span class="no">None</span><span class="p">(),</span><span class="w"> </span><span class="s1">&#39;not found&#39;</span><span class="p">)</span><span class="w">    </span><span class="c1"># =&gt; Failure(&#39;not found&#39;)</span>
+</code></pre></div>
+<h3 id="75-result">7.5 Result の主要メソッド<a class="headerlink" href="#75-result" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>メソッド</th>
+<th>説明</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fmap</code></td>
+<td>Success の値を変換</td>
+<td><code>Success(5).fmap { \|x\| x * 2 }</code> → <code>Success(10)</code></td>
+</tr>
+<tr>
+<td><code>bind</code></td>
+<td>Result を返す関数を適用</td>
+<td><code>Success(5).bind { \|x\| Success(x * 2) }</code> → <code>Success(10)</code></td>
+</tr>
+<tr>
+<td><code>or</code></td>
+<td>Failure なら代替を使用</td>
+<td><code>Failure('err').or(Success(5))</code> → <code>Success(5)</code></td>
+</tr>
+<tr>
+<td><code>value_or</code></td>
+<td>Failure ならデフォルト値</td>
+<td><code>Failure('err').value_or(0)</code> → <code>0</code></td>
+</tr>
+<tr>
+<td><code>to_maybe</code></td>
+<td>Maybe に変換</td>
+<td><code>Success(5).to_maybe</code> → <code>Some(5)</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="n">year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Success</span><span class="p">(</span><span class="mi">996</span><span class="p">)</span>
+<span class="n">no_year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Failure</span><span class="p">(</span><span class="s1">&#39;no year&#39;</span><span class="p">)</span>
+
+<span class="c1"># fmap</span>
+<span class="n">year</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">}</span><span class="w">     </span><span class="c1"># =&gt; Success(1992)</span>
+<span class="n">no_year</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1"># =&gt; Failure(&#39;no year&#39;)</span>
+
+<span class="c1"># bind</span>
+<span class="n">year</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span><span class="w"> </span><span class="no">Success</span><span class="p">(</span><span class="n">y</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">         </span><span class="c1"># =&gt; Success(1992)</span>
+<span class="n">year</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">_</span><span class="o">|</span><span class="w"> </span><span class="no">Failure</span><span class="p">(</span><span class="s2">&quot;can&#39;t proceed&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1"># =&gt; Failure(&quot;can&#39;t proceed&quot;)</span>
+
+<span class="c1"># or</span>
+<span class="n">year</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="no">Success</span><span class="p">(</span><span class="mi">2020</span><span class="p">))</span><span class="w">     </span><span class="c1"># =&gt; Success(996)</span>
+<span class="n">no_year</span><span class="o">.</span><span class="n">or</span><span class="p">(</span><span class="no">Success</span><span class="p">(</span><span class="mi">2020</span><span class="p">))</span><span class="w">  </span><span class="c1"># =&gt; Success(2020)</span>
+
+<span class="c1"># to_maybe</span>
+<span class="n">year</span><span class="o">.</span><span class="n">to_maybe</span><span class="w">     </span><span class="c1"># =&gt; Some(996)</span>
+<span class="n">no_year</span><span class="o">.</span><span class="n">to_maybe</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+</code></pre></div>
+<h3 id="76">7.6 バリデーション例<a class="headerlink" href="#76" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">validate_age</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">age</span><span class="o">.</span><span class="n">negative?</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="s1">&#39;Age cannot be negative&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">elsif</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">150</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="s1">&#39;Age cannot be greater than 150&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="no">Success</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">validate_email</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">email</span><span class="o">.</span><span class="n">nil?</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">email</span><span class="o">.</span><span class="n">strip</span><span class="o">.</span><span class="n">empty?</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="s1">&#39;Email cannot be empty&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">elsif</span><span class="w"> </span><span class="o">!</span><span class="n">email</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="s1">&#39;Email must contain @&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="no">Success</span><span class="p">(</span><span class="n">email</span><span class="o">.</span><span class="n">strip</span><span class="p">)</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c1"># 複数のバリデーションを組み合わせ</span>
+<span class="no">Person</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Struct</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:age</span><span class="p">,</span><span class="w"> </span><span class="ss">:email</span><span class="p">,</span><span class="w"> </span><span class="ss">keyword_init</span><span class="p">:</span><span class="w"> </span><span class="kp">true</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">validate_person</span><span class="p">(</span><span class="nb">name</span><span class="p">,</span><span class="w"> </span><span class="n">age</span><span class="p">,</span><span class="w"> </span><span class="n">email</span><span class="p">)</span>
+<span class="w">  </span><span class="n">validate_non_empty</span><span class="p">(</span><span class="nb">name</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">n</span><span class="o">|</span>
+<span class="w">    </span><span class="n">validate_age</span><span class="p">(</span><span class="n">age</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">a</span><span class="o">|</span>
+<span class="w">      </span><span class="n">validate_email</span><span class="p">(</span><span class="n">email</span><span class="p">)</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">e</span><span class="o">|</span>
+<span class="w">        </span><span class="no">Person</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="ss">age</span><span class="p">:</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">e</span><span class="p">)</span>
+<span class="w">      </span><span class="k">end</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">validate_person</span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;alice@example.com&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Success(Person(...))</span>
+<span class="n">validate_person</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;alice@example.com&#39;</span><span class="p">)</span><span class="w">       </span><span class="c1"># =&gt; Failure(&#39;Name cannot be empty&#39;)</span>
+<span class="n">validate_person</span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;alice@example.com&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Failure(&#39;Age cannot be negative&#39;)</span>
+</code></pre></div>
+<h3 id="77-adt-ruby">7.7 ADT（代数的データ型）を Ruby で表現<a class="headerlink" href="#77-adt-ruby" title="Permanent link">&para;</a></h3>
+<h4 id="product-type">直積型（Product Type）<a class="headerlink" href="#product-type" title="Permanent link">&para;</a></h4>
+<p>複数のフィールドを <strong>AND</strong> で組み合わせる型です。Ruby では <code>Struct</code> を使います。</p>
+<div class="highlight"><pre><span></span><code><span class="no">Artist</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Struct</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="ss">:name</span><span class="p">,</span><span class="w"> </span><span class="ss">:genre</span><span class="p">,</span><span class="w"> </span><span class="ss">:origin</span><span class="p">,</span><span class="w"> </span><span class="ss">:years_active</span><span class="p">,</span><span class="w"> </span><span class="ss">keyword_init</span><span class="p">:</span><span class="w"> </span><span class="kp">true</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="sum-type">直和型（Sum Type）<a class="headerlink" href="#sum-type" title="Permanent link">&para;</a></h4>
+<p>複数の選択肢を <strong>OR</strong> で表す型です。Ruby ではモジュールとクラスで表現します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">module</span><span class="w"> </span><span class="nn">YearsActive</span>
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">StillActive</span>
+<span class="w">    </span><span class="kp">attr_reader</span><span class="w"> </span><span class="ss">:since</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="n">since</span><span class="p">)</span>
+<span class="w">      </span><span class="vi">@since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">since</span>
+<span class="w">    </span><span class="k">end</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">active_during?</span><span class="p">(</span><span class="n">year_start</span><span class="p">,</span><span class="w"> </span><span class="n">year_end</span><span class="p">)</span>
+<span class="w">      </span><span class="n">since</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">year_end</span>
+<span class="w">    </span><span class="k">end</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">active_length</span><span class="p">(</span><span class="n">current_year</span><span class="p">)</span>
+<span class="w">      </span><span class="n">current_year</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">since</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">ActiveBetween</span>
+<span class="w">    </span><span class="kp">attr_reader</span><span class="w"> </span><span class="ss">:start_year</span><span class="p">,</span><span class="w"> </span><span class="ss">:end_year</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="n">start_year</span><span class="p">,</span><span class="w"> </span><span class="n">end_year</span><span class="p">)</span>
+<span class="w">      </span><span class="vi">@start_year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start_year</span>
+<span class="w">      </span><span class="vi">@end_year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">end_year</span>
+<span class="w">    </span><span class="k">end</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">active_during?</span><span class="p">(</span><span class="n">year_start</span><span class="p">,</span><span class="w"> </span><span class="n">year_end</span><span class="p">)</span>
+<span class="w">      </span><span class="n">start_year</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">year_end</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">end_year</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">year_start</span>
+<span class="w">    </span><span class="k">end</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">active_length</span><span class="p">(</span><span class="n">_current_year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kp">nil</span><span class="p">)</span>
+<span class="w">      </span><span class="n">end_year</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_year</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">metallica</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Artist</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
+<span class="w">  </span><span class="nb">name</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;Metallica&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="ss">genre</span><span class="p">:</span><span class="w"> </span><span class="ss">:heavy_metal</span><span class="p">,</span>
+<span class="w">  </span><span class="ss">origin</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;U.S.&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="ss">years_active</span><span class="p">:</span><span class="w"> </span><span class="no">YearsActive</span><span class="o">::</span><span class="no">StillActive</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="mi">1981</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">led_zeppelin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="no">Artist</span><span class="o">.</span><span class="n">new</span><span class="p">(</span>
+<span class="w">  </span><span class="nb">name</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;Led Zeppelin&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="ss">genre</span><span class="p">:</span><span class="w"> </span><span class="ss">:hard_rock</span><span class="p">,</span>
+<span class="w">  </span><span class="ss">origin</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;England&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="ss">years_active</span><span class="p">:</span><span class="w"> </span><span class="no">YearsActive</span><span class="o">::</span><span class="no">ActiveBetween</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="mi">1968</span><span class="p">,</span><span class="w"> </span><span class="mi">1980</span><span class="p">)</span>
+<span class="p">)</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjI3NHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MTUwN3B4O2hlaWdodDoyNzRweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxNTA3IDI3NCIgd2lkdGg9IjE1MDdweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8/QURUPy0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLkFEVC4iIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjI1Ni4wMSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9Ijc1MSIgeD0iMTIiIHk9IjEyIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1OC4wMDUzIiB4PSIzMDguNDk3MyIgeT0iMjYuOTk1MSI+JiMyMDE5NTsmIzI1OTY4OyYjMzAzNDA7JiMxMjQ4NzsmIzEyNTQwOyYjMTI0Nzk7JiMyMjQxMTsmIzY1Mjg4O0FEVCYjNjUyODk7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBwcm9kdWN0LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uQURULi5wcm9kdWN0IiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxNzMuMDEiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIyOTMiIHg9IjQ0IiB5PSI2MyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzQuODI4OCIgeD0iMTAzLjA4NTYiIHk9Ijc3Ljk5NTEiPiYjMzA0NTI7JiMzMTMwOTsmIzIyNDExOyYjNjUyODg7UHJvZHVjdCBUeXBlJiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHN1bS0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLkFEVC4uc3VtIiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImVudDAwMDciPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMTczLjAxIiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMzU0IiB4PSIzNzciIHk9IjYzIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE0Ny43MDM4IiB4PSI0ODAuMTQ4MSIgeT0iNzcuOTk1MSI+JiMzMDQ1MjsmIzIxNjQ0OyYjMjI0MTE7JiM2NTI4ODtTdW0gVHlwZSYjNjUyODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IFN0cnVjdC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uQURULi5wcm9kdWN0LlN0cnVjdCIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjYyLjE5MTQiIHg9IjY3LjkiIHk9IjEwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQyLjE5MTQiIHg9Ijc3LjkiIHk9IjEyMS45OTUxIj5TdHJ1Y3Q8L3RleHQ+PC9nPjwhLS1lbnRpdHkgQSBBTkQgQiBBTkQgQy0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uQURULi5wcm9kdWN0LkEgQU5EIEIgQU5EIEMiIGRhdGEtc291cmNlLWxpbmU9IjYiIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMjguNDE4IiB4PSIxNjQuNzkiIHk9IjEwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEwOC40MTgiIHg9IjE3NC43OSIgeT0iMTIxLjk5NTEiPkEgQU5EIEIgQU5EIEM8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLkFEVC4ucHJvZHVjdC4uLi4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iNyIgaWQ9ImVudDAwMDYiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE3My45OTkzIiB4PSI2OCIgeT0iMTg5LjcxIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUzLjk5OTMiIHg9Ijc4IiB5PSIyMDUuNzA1MSI+JiMxMjUwMTsmIzEyNDUxOyYjMTI1NDA7JiMxMjUyMzsmIzEyNDg5OyYjMTIzOTg7JiMzMjA2ODsmIzEyNDE1OyYjMjE1MTI7JiMxMjQzMTsmIzEyMzc5OzwvdGV4dD48L2c+PCEtLWVudGl0eSBNb2R1bGUgKyBDbGFzc2VzLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi5BRFQuLnN1bS5Nb2R1bGUgLiBDbGFzc2VzIiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImVudDAwMDgiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE0NC4yNzczIiB4PSI0MDAuODYiIHk9IjEwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNC4yNzczIiB4PSI0MTAuODYiIHk9IjEyMS45OTUxIj5Nb2R1bGUgKyBDbGFzc2VzPC90ZXh0PjwvZz48IS0tZW50aXR5IEEgT1IgQiBPUiBDLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi5BRFQuLnN1bS5BIE9SIEIgT1IgQyIgZGF0YS1zb3VyY2UtbGluZT0iMTIiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMDguMjUyIiB4PSI1NzkuODciIHk9IjEwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijg4LjI1MiIgeD0iNTg5Ljg3IiB5PSIxMjEuOTk1MSI+QSBPUiBCIE9SIEM8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLkFEVC4uc3VtLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxMyIgaWQ9ImVudDAwMTAiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzMS45OTk1IiB4PSI0MDciIHk9IjE4OS43MSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExMS45OTk1IiB4PSI0MTciIHk9IjIwNS43MDUxIj4mIzM2OTg0OyYjMjUyNDY7JiMzMjkzMDsmIzEyMzk4OyYjMTIzNTY7JiMxMjM3ODsmIzEyNDI4OyYjMTIzNjM7PC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xMSIgZGF0YS1zb3VyY2UtbGluZT0iMTgiIGlkPSJlbnQwMDEyIj48cGF0aCBkPSJNNzc5LjQyLDE4OC4zIEw3NzkuNDIsMjEzLjQzMjggTDExNTguNTczOCwyMTMuNDMyOCBMMTE1OC41NzM4LDE5OC4zIEwxMTQ4LjU3MzgsMTg4LjMgTDc3OS40MiwxODguMyIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0xMTQ4LjU3MzgsMTg4LjMgTDExNDguNTczOCwxOTguMyBMMTE1OC41NzM4LDE5OC4zIEwxMTQ4LjU3MzgsMTg4LjMiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzNTguMTUzOCIgeD0iNzg1LjQyIiB5PSIyMDUuMzY2OSI+QXJ0aXN0ID0gbmFtZSBBTkQgZ2VucmUgQU5EIG9yaWdpbiBBTkQgeWVhcnNfYWN0aXZlPC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xNCIgZGF0YS1zb3VyY2UtbGluZT0iMjIiIGlkPSJlbnQwMDE1Ij48cGF0aCBkPSJNMTE5My45NSwxODguMyBMMTE5My45NSwyMTMuNDMyOCBMMTUwMC4wNDg2LDIxMy40MzI4IEwxNTAwLjA0ODYsMTk4LjMgTDE0OTAuMDQ4NiwxODguMyBMMTE5My45NSwxODguMyIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0xNDkwLjA0ODYsMTg4LjMgTDE0OTAuMDQ4NiwxOTguMyBMMTUwMC4wNDg2LDE5OC4zIEwxNDkwLjA0ODYsMTg4LjMiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyODUuMDk4NiIgeD0iMTE5OS45NSIgeT0iMjA1LjM2NjkiPlllYXJzQWN0aXZlID0gU3RpbGxBY3RpdmUgT1IgQWN0aXZlQmV0d2VlbjwvdGV4dD48L2c+PCEtLWxpbmsgcHJvZHVjdCB0byBHTU4xMS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAzIiBkYXRhLWVudGl0eS0yPSJlbnQwMDEyIiBkYXRhLWxpbmstdHlwZT0iYXNzb2NpYXRpb24iIGRhdGEtc291cmNlLWxpbmU9IjE4IiBpZD0ibG5rMTMiPjxwYXRoIGQ9Ik0zMzcuMDcxOCwxMTkuNzYxNSBDMzM3LjEzMTgsMTE5Ljc3MzMgMzM3LjE5MjEsMTE5Ljc4NTIgMzM3LjI1MjcsMTE5Ljc5NzEgQzMzNy40OTQ5LDExOS44NDQ3IDMzNy43NDE1LDExOS44OTMxIDMzNy45OTI0LDExOS45NDIyIEMzMzguOTk2LDEyMC4xMzg5IDM0MC4wNjgsMTIwLjM0OCAzNDEuMjAwMSwxMjAuNTY3NSBDMzQzLjQ2NDMsMTIxLjAwNjUgMzQ1Ljk2OTEsMTIxLjQ4NzIgMzQ4LjY0ODgsMTIxLjk5MzcgQzM1OS4zNjc1LDEyNC4wMiAzNzIuODg1LDEyNi40NiAzODUsMTI4LjMgQzU0Ny42LDE1Mi45NyA3MzYuNjYsMTc0LjkxIDg1NC41OSwxODcuOCIgZmlsbD0ibm9uZSIgaWQ9InByb2R1Y3QtR01OMTEiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjcsNzsiLz48L2c+PCEtLWxpbmsgc3VtIHRvIEdNTjE0LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDciIGRhdGEtZW50aXR5LTI9ImVudDAwMTUiIGRhdGEtbGluay10eXBlPSJhc3NvY2lhdGlvbiIgZGF0YS1zb3VyY2UtbGluZT0iMjIiIGlkPSJsbmsxNiI+PHBhdGggZD0iTTczMS41ODAyLDExOS4yNjkgQzczMS44MTYxLDExOS4yOTk5IDczMi4wNTY3LDExOS4zMzE0IDczMi4zMDE4LDExOS4zNjM1IEM3MzIuNzkyLDExOS40Mjc3IDczMy4zMDA2LDExOS40OTQzIDczMy44MjcyLDExOS41NjMyIEM3MzUuOTMzNywxMTkuODM5MSA3MzguMzI5NSwxMjAuMTUyOCA3NDAuOTk4MywxMjAuNTAyMiBDNzUxLjY3MzYsMTIxLjkwMDEgNzY2LjcxODgsMTIzLjg3MDIgNzg1LjEwNTYsMTI2LjI3OCBDODIxLjg3OTQsMTMxLjA5MzQgODcyLjAyLDEzNy42NTk0IDkyNy4zMDI1LDE0NC44OTg4IEMxMDM3Ljg2NzUsMTU5LjM3NzUgMTE2OSwxNzYuNTUgMTI1NC45LDE4Ny44IiBmaWxsPSJub25lIiBpZD0ic3VtLUdNTjE0IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PC9nPjw/cGxhbnR1bWwtc3JjIFBQM0RKaTkwNThOdHluSk5SZHE2NW1Nc19hSk9rMzlaa01BSkNZS3BXdU9HNXNyOTFDNWVKRFgwbWE5TW5pSXVxQ0g0NFh2Y1hFZ0FMXzJzMVZwUkpFd3ZFSmRka3hFWEp4MkFLRkV1QW5ZSnc2V2tBWHcyelZ1c2RsVVZ1YTdCSDFTY2NmWG1FWGpyNXZFc05JV2o5WHFCY1pfRHlWMHZsaF9BMzdsSUJ6U1QzUUw2M0xDZExyMVJ4ZmhDdVI4Q0xiNUJhalBJc00zbDUyMk5sbGRMcWFIejR1d0p2a1oxSDFxSkZDT2xCSERDUHBUajRyd1JPNlluU19RN09OUlJvbllBelVnbFZhTHdyUnJEQUVKVlhCcDdiS0JySlI2eEpuM3FoMWEtV3pWdnZVV1psQURzNHIzeG04R3o0dElKUVllTmxhT3V5aE5zZy0wVmh1dmFqaklrcWgwNVdqRkY5YVRMS0NYaXlnTFJTS0t3RGYxQlRTV1R4UHVZR3I2NjlFdlZBOTZwV3lIZmZxUEFCTWhOeXZRQU9CQ2ZYX2VDS1FucGxXMDA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="78">7.8 パターンマッチング<a class="headerlink" href="#78" title="Permanent link">&para;</a></h3>
+<p>Ruby 3.0+ では <code>case/when</code> でパターンマッチングができます。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">describe_years_active</span><span class="p">(</span><span class="n">years_active</span><span class="p">)</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">years_active</span>
+<span class="w">  </span><span class="k">when</span><span class="w"> </span><span class="no">YearsActive</span><span class="o">::</span><span class="no">StillActive</span>
+<span class="w">    </span><span class="s2">&quot;Active since </span><span class="si">#{</span><span class="n">years_active</span><span class="o">.</span><span class="n">since</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">  </span><span class="k">when</span><span class="w"> </span><span class="no">YearsActive</span><span class="o">::</span><span class="no">ActiveBetween</span>
+<span class="w">    </span><span class="s2">&quot;Active from </span><span class="si">#{</span><span class="n">years_active</span><span class="o">.</span><span class="n">start_year</span><span class="si">}</span><span class="s2"> to </span><span class="si">#{</span><span class="n">years_active</span><span class="o">.</span><span class="n">end_year</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="s1">&#39;Unknown&#39;</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">describe_years_active</span><span class="p">(</span><span class="n">metallica</span><span class="o">.</span><span class="n">years_active</span><span class="p">)</span>
+<span class="c1"># =&gt; &quot;Active since 1981&quot;</span>
+
+<span class="n">describe_years_active</span><span class="p">(</span><span class="n">led_zeppelin</span><span class="o">.</span><span class="n">years_active</span><span class="p">)</span>
+<span class="c1"># =&gt; &quot;Active from 1968 to 1980&quot;</span>
+</code></pre></div>
+<h3 id="79">7.9 検索条件のモデリング<a class="headerlink" href="#79" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">module</span><span class="w"> </span><span class="nn">SearchCondition</span>
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">ByGenre</span>
+<span class="w">    </span><span class="kp">attr_reader</span><span class="w"> </span><span class="ss">:genres</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="n">genres</span><span class="p">)</span>
+<span class="w">      </span><span class="vi">@genres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">genres</span>
+<span class="w">    </span><span class="k">end</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">matches?</span><span class="p">(</span><span class="n">artist</span><span class="p">)</span>
+<span class="w">      </span><span class="n">genres</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">artist</span><span class="o">.</span><span class="n">genre</span><span class="p">)</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">ByOrigin</span>
+<span class="w">    </span><span class="kp">attr_reader</span><span class="w"> </span><span class="ss">:locations</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="n">locations</span><span class="p">)</span>
+<span class="w">      </span><span class="vi">@locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">locations</span>
+<span class="w">    </span><span class="k">end</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">matches?</span><span class="p">(</span><span class="n">artist</span><span class="p">)</span>
+<span class="w">      </span><span class="n">locations</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="n">artist</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">ByActiveYears</span>
+<span class="w">    </span><span class="kp">attr_reader</span><span class="w"> </span><span class="ss">:start_year</span><span class="p">,</span><span class="w"> </span><span class="ss">:end_year</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="n">start_year</span><span class="p">,</span><span class="w"> </span><span class="n">end_year</span><span class="p">)</span>
+<span class="w">      </span><span class="vi">@start_year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start_year</span>
+<span class="w">      </span><span class="vi">@end_year</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">end_year</span>
+<span class="w">    </span><span class="k">end</span>
+
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">matches?</span><span class="p">(</span><span class="n">artist</span><span class="p">)</span>
+<span class="w">      </span><span class="n">artist</span><span class="o">.</span><span class="n">years_active</span><span class="o">.</span><span class="n">active_during?</span><span class="p">(</span><span class="n">start_year</span><span class="p">,</span><span class="w"> </span><span class="n">end_year</span><span class="p">)</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">search_artists</span><span class="p">(</span><span class="n">artists</span><span class="p">,</span><span class="w"> </span><span class="n">conditions</span><span class="p">)</span>
+<span class="w">  </span><span class="n">artists</span><span class="o">.</span><span class="n">select</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">artist</span><span class="o">|</span>
+<span class="w">    </span><span class="n">conditions</span><span class="o">.</span><span class="n">all?</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="o">|</span><span class="n">condition</span><span class="o">|</span><span class="w"> </span><span class="n">condition</span><span class="o">.</span><span class="n">matches?</span><span class="p">(</span><span class="n">artist</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="c1"># 使用例</span>
+<span class="n">conditions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span>
+<span class="w">  </span><span class="no">SearchCondition</span><span class="o">::</span><span class="no">ByGenre</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">%</span><span class="n">i</span><span class="o">[</span><span class="n">heavy_metal</span><span class="o">]</span><span class="p">),</span>
+<span class="w">  </span><span class="no">SearchCondition</span><span class="o">::</span><span class="no">ByOrigin</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">[</span><span class="s1">&#39;U.S.&#39;</span><span class="o">]</span><span class="p">)</span>
+<span class="o">]</span>
+
+<span class="n">search_artists</span><span class="p">(</span><span class="o">[</span><span class="n">metallica</span><span class="p">,</span><span class="w"> </span><span class="n">led_zeppelin</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">conditions</span><span class="p">)</span>
+<span class="c1"># =&gt; [metallica]</span>
+</code></pre></div>
+<h3 id="710">7.10 エラーの収集<a class="headerlink" href="#710" title="Permanent link">&para;</a></h3>
+<p>通常の <code>bind</code> チェーンでは最初のエラーで停止しますが、全てのエラーを収集することも可能です。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nc">self</span><span class="o">.</span><span class="nf">validate_all</span><span class="p">(</span><span class="n">validations</span><span class="p">)</span>
+<span class="w">  </span><span class="n">errors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[]</span>
+<span class="w">  </span><span class="n">values</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[]</span>
+
+<span class="w">  </span><span class="n">validations</span><span class="o">.</span><span class="n">each</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">validation</span><span class="o">|</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="n">validation</span>
+<span class="w">    </span><span class="k">when</span><span class="w"> </span><span class="no">Dry</span><span class="o">::</span><span class="no">Monads</span><span class="o">::</span><span class="no">Success</span>
+<span class="w">      </span><span class="n">values</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">validation</span><span class="o">.</span><span class="n">value!</span>
+<span class="w">    </span><span class="k">when</span><span class="w"> </span><span class="no">Dry</span><span class="o">::</span><span class="no">Monads</span><span class="o">::</span><span class="no">Failure</span>
+<span class="w">      </span><span class="n">errors</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">validation</span><span class="o">.</span><span class="n">failure</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">errors</span><span class="o">.</span><span class="n">empty?</span>
+<span class="w">    </span><span class="no">Success</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">validations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span>
+<span class="w">  </span><span class="n">validate_non_empty</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Name&#39;</span><span class="p">),</span><span class="w">      </span><span class="c1"># Failure</span>
+<span class="w">  </span><span class="n">validate_age</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">),</span><span class="w">                     </span><span class="c1"># Failure</span>
+<span class="w">  </span><span class="n">validate_email</span><span class="p">(</span><span class="s1">&#39;invalid&#39;</span><span class="p">)</span><span class="w">             </span><span class="c1"># Failure</span>
+<span class="o">]</span>
+
+<span class="n">validate_all</span><span class="p">(</span><span class="n">validations</span><span class="p">)</span>
+<span class="c1"># =&gt; Failure([&#39;Name cannot be empty&#39;, &#39;Age cannot be negative&#39;, &#39;Email must contain @&#39;])</span>
+</code></pre></div>
+<hr />
+<h2 id="_5">まとめ<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h3 id="part-iii">Part III で学んだこと<a class="headerlink" href="#part-iii" title="Permanent link">&para;</a></h3>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjM2MXB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MTAwMXB4O2hlaWdodDozNjFweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxMDAxIDM2MSIgd2lkdGg9IjEwMDFweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyIFBhcnQgSUlJOiA/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBJSUkuIC4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMyIgaWQ9ImVudDAwMDIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMzQzLjg5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iOTgzIiB4PSIxMiIgeT0iMTIiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTkwLjI3NzgiIHg9IjQwOC4zNjExIiB5PSIyNi45OTUxIj5QYXJ0IElJSTogJiMxMjQ1NjsmIzEyNTIxOyYjMTI1NDA7JiMxMjQ5NTsmIzEyNTMxOyYjMTI0ODk7JiMxMjUyMjsmIzEyNTMxOyYjMTI0NjQ7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBjaDYtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBJSUkuIC4uLi4uLi4uLi5jaDYiIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAzIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjE3OC41OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjQxNSIgeD0iNDQiIHk9IjYzIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM3Ljc0MTEiIHg9IjIzMi42Mjk1IiB5PSI3Ny45OTUxIj4mIzMxNTMyOzYmIzMxNDU2OzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgY2g3LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlBhcnQgSUlJLiAuLi4uLi4uLi4uY2g3IiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImVudDAwMDgiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMTcxLjU5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNDY0IiB4PSI0OTkiIHk9IjE1Mi4zIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM3Ljc0MTEiIHg9IjcxMi4xMjk1IiB5PSIxNjcuMjk1MSI+JiMzMTUzMjs3JiMzMTQ1Njs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgTWF5YmUgKFNvbWUvTm9uZSktLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJQYXJ0IElJSS4gLi4uLi4uLi4uLmNoNi5NYXliZSAuU29tZS5Ob25lLiIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE2Mi43NjE3IiB4PSI2Ny42MiIgeT0iMTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTQyLjc2MTciIHg9Ijc3LjYyIiB5PSIxMjEuOTk1MSI+TWF5YmUgKFNvbWUvTm9uZSk8L3RleHQ+PC9nPjwhLS1lbnRpdHkgZm1hcCAvIGJpbmQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJQYXJ0IElJSS4gLi4uLi4uLi4uLmNoNi5mbWFwIC4gYmluZCIgZGF0YS1zb3VyY2UtbGluZT0iNiIgaWQ9ImVudDAwMDUiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEwMC4xODU1IiB4PSIyNjQuOTEiIHk9IjEwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgwLjE4NTUiIHg9IjI3NC45MSIgeT0iMTIxLjk5NTEiPmZtYXAgLyBiaW5kPC90ZXh0PjwvZz48IS0tZW50aXR5IG9yID8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBJSUkuIC4uLi4uLi4uLi5jaDYub3IgLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjciIGlkPSJlbnQwMDA2Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNTAuNzcxIiB4PSI2Ny42MSIgeT0iMTk1LjMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzAuNzcxIiB4PSI3Ny42MSIgeT0iMjExLjI5NTEiPm9yICYjMTIzOTE7JiMxMjUwMTsmIzEyNDU3OyYjMTI1NDA7JiMxMjUyMzsmIzEyNDk2OyYjMTI0ODM7JiMxMjQ2Mzs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJQYXJ0IElJSS4gLi4uLi4uLi4uLmNoNi4uLi4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iOCIgaWQ9ImVudDAwMDciPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE3My45OTkzIiB4PSIyNTMiIHk9IjE5NS4zIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUzLjk5OTMiIHg9IjI2MyIgeT0iMjExLjI5NTEiPiYjMTI0NTY7JiMxMjUyMTsmIzEyNTQwOyYjMTI0OTU7JiMxMjUzMTsmIzEyNDg5OyYjMTI1MjI7JiMxMjUzMTsmIzEyNDY0OyYjMjUxMjY7JiMzMDA1Mzs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgUmVzdWx0IChTdWNjZXNzL0ZhaWx1cmUpLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBJSUkuIC4uLi4uLi4uLi5jaDcuUmVzdWx0IC5TdWNjZXNzLkZhaWx1cmUuIiBkYXRhLXNvdXJjZS1saW5lPSIxMiIgaWQ9ImVudDAwMDkiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE4Ny45ODYzIiB4PSI1MjMuMDEiIHk9IjE5NS4zIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTY3Ljk4NjMiIHg9IjUzMy4wMSIgeT0iMjExLjI5NTEiPlJlc3VsdCAoU3VjY2Vzcy9GYWlsdXJlKTwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlBhcnQgSUlJLiAuLi4uLi4uLi4uY2g3Li4uLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxMyIgaWQ9ImVudDAwMTAiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE3My45OTkzIiB4PSI3NDYiIHk9IjE5NS4zIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUzLjk5OTMiIHg9Ijc1NiIgeT0iMjExLjI5NTEiPiYjMTI0NTY7JiMxMjUyMTsmIzEyNTQwOyYjMTI1MTM7JiMxMjQ4MzsmIzEyNDc1OyYjMTI1NDA7JiMxMjQ3MjsmIzEyMzk4OyYjMjA0NDU7JiMyNTM0NTs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgQURUPz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBJSUkuIC4uLi4uLi4uLi5jaDcuQURULi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxNCIgaWQ9ImVudDAwMTEiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE3NC45MDg2IiB4PSI1MjkuNTUiIHk9IjI3Ny41OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1NC45MDg2IiB4PSI1MzkuNTUiIHk9IjI5My41ODUxIj5BRFQmIzY1Mjg4OyYjMjAxOTU7JiMyNTk2ODsmIzMwMzQwOyYjMTI0ODc7JiMxMjU0MDsmIzEyNDc5OyYjMjI0MTE7JiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBJSUkuIC4uLi4uLi4uLi5jaDcuLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxNSIgaWQ9ImVudDAwMTIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE0NS45OTk1IiB4PSI3MzkiIHk9IjI3Ny41OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNS45OTk1IiB4PSI3NDkiIHk9IjI5My41ODUxIj4mIzEyNDk3OyYjMTI0Nzk7JiMxMjU0MDsmIzEyNTMxOyYjMTI1MTA7JiMxMjQ4MzsmIzEyNDgxOyYjMTI1MzE7JiMxMjQ2NDs8L3RleHQ+PC9nPjwhLS1saW5rIGNoNiB0byBjaDctLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwOCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE5IiBpZD0ibG5rMTMiPjxwYXRoIGQ9Ik00NTkuNzM4NywxMTguMTg0NiBDNDYwLjAwODIsMTE4LjE4NTkgNDYwLjI4MzcsMTE4LjE4NzIgNDYwLjU2NDksMTE4LjE4ODUgQzQ2MS42ODk4LDExOC4xOTM3IDQ2Mi45MDc3LDExOC4xOTk2IDQ2NC4yMTUsMTE4LjIwNjEgQzQ2Ni44Mjk3LDExOC4yMTkyIDQ2OS44MDI1LDExOC4yMzUgNDczLjEwNjMsMTE4LjI1MzkgQzQ4Ni4zMjE0LDExOC4zMjk2IDUwNC44MzMyLDExOC40NTUyIDUyNi45MTIsMTE4LjY1NzIgQzU3MS4wNjk3LDExOS4wNjEyIDYyOS40OTU2LDExOS43NzEyIDY4OC4zNTM4LDEyMSBDODA2LjA3LDEyMy40NTc1IDkyNS41MTUsMTI3Ljk5IDkzNiwxMzYuMyBDOTM5LjAyNSwxMzguNjk2MiA5NDEuNTk1OSwxNDEuNTI2MSA5NDMuNzc4NCwxNDQuNjQ5NCBDOTQ0Ljg2OTcsMTQ2LjIxMSA5NDUuODYzOCwxNDcuODQ2IDk0Ni43NjkxLDE0OS41MzY5IEM5NDcuMjIxNywxNTAuMzgyMyA5NDUuMTAxMiwxNDUuODEwOSA5NDUuNTEwNCwxNDYuNjgyMSIgZmlsbD0ibm9uZSIgaWQ9ImNoNi10by1jaDciIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMDAwMDAwIiBwb2ludHM9Ijk0OC4wNjEzLDE1Mi4xMTI4LDk0Ny44NTU0LDE0Mi4yNjYxLDk0NS45MzU1LDE0Ny41ODcyLDk0MC42MTQ0LDE0NS42NjczLDk0OC4wNjEzLDE1Mi4xMTI4IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjw/cGxhbnR1bWwtc3JjIEtvcDlJQ3JETElaOElTcEN1LThnSWFxa0lTbkJwcWJMSzBmOEIyZkh5RkpxajU5dXRCSllTVkZBbnlyeDdaVnRGc3hVX0JZdnl0N3BBWDJaUU9FSUdaTW9ka1RocmZXek54cjBJSTZuTTI0dm1tbWVjUG5PYkFBV3Y5ak9jUElnZTE2U2R2a2d4dlVWYndnZjE5TDhvcXFpS0QxTklDaENJdTQ5dkhTZkY2dlNfaFh2d2tDY1k5c2g3cFRGVURwU19CWGZGS205N1dTendyWnNWRWZJOVF2UUJaSHRjSUZTUEd2dExyMWdTTWJFMlQxWGZTZDlnU041LWN3OWNKY2JIR1pkOExjcTRFbzR0STFzcXV4N1pVa1V4OV94aEFTSGZqM0g5VUp6ZGV1ZGtuU19jeGhYLVFvTW55dGpPOE54ZHl4aFZoLWQ0c3ZTeXFJVzZEV3VlQUZkV0tuaVJlRzY5RDM1RzNVMzBhck5ybXhhSTAwMD8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="maybe-vs-result">Maybe vs Result の使い分け<a class="headerlink" href="#maybe-vs-result" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>状況</th>
+<th>使用する型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>値があるかないかだけが重要</td>
+<td><code>Maybe</code></td>
+</tr>
+<tr>
+<td>失敗理由を伝える必要がある</td>
+<td><code>Result</code></td>
+</tr>
+<tr>
+<td>検索結果が見つからない</td>
+<td><code>Maybe</code></td>
+</tr>
+<tr>
+<td>バリデーションエラーを伝える</td>
+<td><code>Result</code></td>
+</tr>
+<tr>
+<td>複数のエラー種別がある</td>
+<td><code>Result</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="scala">Scala との対応<a class="headerlink" href="#scala" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scala</th>
+<th>dry-monads</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Option[A]</code></td>
+<td><code>Maybe</code></td>
+<td>値の有無</td>
+</tr>
+<tr>
+<td><code>Some(x)</code></td>
+<td><code>Some(x)</code></td>
+<td>値あり</td>
+</tr>
+<tr>
+<td><code>None</code></td>
+<td><code>None()</code></td>
+<td>値なし</td>
+</tr>
+<tr>
+<td><code>Either[E, A]</code></td>
+<td><code>Result</code></td>
+<td>成功/失敗</td>
+</tr>
+<tr>
+<td><code>Right(x)</code></td>
+<td><code>Success(x)</code></td>
+<td>成功</td>
+</tr>
+<tr>
+<td><code>Left(e)</code></td>
+<td><code>Failure(e)</code></td>
+<td>失敗</td>
+</tr>
+<tr>
+<td><code>map</code></td>
+<td><code>fmap</code></td>
+<td>値の変換</td>
+</tr>
+<tr>
+<td><code>flatMap</code></td>
+<td><code>bind</code></td>
+<td>モナディック合成</td>
+</tr>
+<tr>
+<td><code>orElse</code></td>
+<td><code>or</code></td>
+<td>フォールバック</td>
+</tr>
+<tr>
+<td><code>getOrElse</code></td>
+<td><code>value_or</code></td>
+<td>デフォルト値</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">キーポイント<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Maybe</strong>: 値の有無を型で表現する</li>
+<li><strong>Result</strong>: 成功/失敗とエラー情報を型で表現する</li>
+<li><strong>bind チェーン</strong>: Maybe/Result を組み合わせて使う</li>
+<li><strong>or</strong>: フォールバックを提供する</li>
+<li><strong>ADT</strong>: 直積型（Struct）と直和型（Module+Class）でドメインをモデリング</li>
+<li><strong>パターンマッチング</strong>: 直和型を安全に処理する</li>
+</ol>
+<h3 id="_7">次のステップ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<p>Part IV では、以下のトピックを学びます:</p>
+<ul>
+<li>IO モナドの導入</li>
+<li>副作用の管理</li>
+<li>非同期処理</li>
+</ul>
+<hr />
+<h2 id="_8">演習問題<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<h3 id="1-maybe">問題 1: Maybe の基本<a class="headerlink" href="#1-maybe" title="Permanent link">&para;</a></h3>
+<p>以下の関数を実装してください。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">safe_divide</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span>
+<span class="w">  </span><span class="c1"># 実装してください</span>
+<span class="k">end</span>
+
+<span class="c1"># 期待される動作</span>
+<span class="n">safe_divide</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Some(5)</span>
+<span class="n">safe_divide</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+<span class="n">safe_divide</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Some(3)</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">safe_divide</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="no">None</span><span class="p">()</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">b</span><span class="o">.</span><span class="n">zero?</span>
+<span class="w">  </span><span class="no">Some</span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">b</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre></div>
+
+</details>
+
+<h3 id="2-maybe">問題 2: Maybe の合成<a class="headerlink" href="#2-maybe" title="Permanent link">&para;</a></h3>
+<p>以下の関数を実装してください。2つの数値文字列を受け取り、その合計を返します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_strings</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span>
+<span class="w">  </span><span class="c1"># 実装してください</span>
+<span class="k">end</span>
+
+<span class="c1"># 期待される動作</span>
+<span class="n">add_strings</span><span class="p">(</span><span class="s1">&#39;10&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;20&#39;</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Some(30)</span>
+<span class="n">add_strings</span><span class="p">(</span><span class="s1">&#39;10&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;abc&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+<span class="n">add_strings</span><span class="p">(</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;20&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; None</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_strings</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span>
+<span class="w">  </span><span class="n">safe_parse_int</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">x</span><span class="o">|</span>
+<span class="w">    </span><span class="n">safe_parse_int</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">fmap</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="o">|</span><span class="n">y</span><span class="o">|</span>
+<span class="w">      </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">y</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+
+</details>
+
+<h3 id="3-result">問題 3: Result によるバリデーション<a class="headerlink" href="#3-result" title="Permanent link">&para;</a></h3>
+<p>以下の関数を実装してください。年齢を検証し、エラーメッセージを返します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">validate_age</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+<span class="w">  </span><span class="c1"># 実装してください</span>
+<span class="k">end</span>
+
+<span class="c1"># 期待される動作</span>
+<span class="n">validate_age</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Success(25)</span>
+<span class="n">validate_age</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">)</span><span class="w">   </span><span class="c1"># =&gt; Failure(&#39;Age cannot be negative&#39;)</span>
+<span class="n">validate_age</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span><span class="w">  </span><span class="c1"># =&gt; Failure(&#39;Age cannot be greater than 150&#39;)</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">validate_age</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">age</span><span class="o">.</span><span class="n">negative?</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="s1">&#39;Age cannot be negative&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">elsif</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">150</span>
+<span class="w">    </span><span class="no">Failure</span><span class="p">(</span><span class="s1">&#39;Age cannot be greater than 150&#39;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="no">Success</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+
+</details>
+
+<h3 id="4">問題 4: パターンマッチング<a class="headerlink" href="#4" title="Permanent link">&para;</a></h3>
+<p>以下のモジュールとパターンマッチングを使った関数を実装してください。</p>
+<div class="highlight"><pre><span></span><code><span class="k">module</span><span class="w"> </span><span class="nn">PaymentMethod</span>
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">CreditCard</span>
+<span class="w">    </span><span class="kp">attr_reader</span><span class="w"> </span><span class="ss">:number</span><span class="p">,</span><span class="w"> </span><span class="ss">:expiry</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="n">number</span><span class="p">,</span><span class="w"> </span><span class="n">expiry</span><span class="p">)</span>
+<span class="w">      </span><span class="vi">@number</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">number</span>
+<span class="w">      </span><span class="vi">@expiry</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">expiry</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">BankTransfer</span>
+<span class="w">    </span><span class="kp">attr_reader</span><span class="w"> </span><span class="ss">:account_number</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="n">account_number</span><span class="p">)</span>
+<span class="w">      </span><span class="vi">@account_number</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">account_number</span>
+<span class="w">    </span><span class="k">end</span>
+<span class="w">  </span><span class="k">end</span>
+
+<span class="w">  </span><span class="k">class</span><span class="w"> </span><span class="nc">Cash</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">describe_payment</span><span class="p">(</span><span class="nb">method</span><span class="p">)</span>
+<span class="w">  </span><span class="c1"># 実装してください</span>
+<span class="k">end</span>
+
+<span class="c1"># 期待される動作</span>
+<span class="n">describe_payment</span><span class="p">(</span><span class="no">PaymentMethod</span><span class="o">::</span><span class="no">CreditCard</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;1234&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;12/25&#39;</span><span class="p">))</span>
+<span class="c1"># =&gt; &#39;Credit card ending in 1234&#39;</span>
+
+<span class="n">describe_payment</span><span class="p">(</span><span class="no">PaymentMethod</span><span class="o">::</span><span class="no">BankTransfer</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;9876&#39;</span><span class="p">))</span>
+<span class="c1"># =&gt; &#39;Bank transfer to account 9876&#39;</span>
+
+<span class="n">describe_payment</span><span class="p">(</span><span class="no">PaymentMethod</span><span class="o">::</span><span class="no">Cash</span><span class="o">.</span><span class="n">new</span><span class="p">)</span>
+<span class="c1"># =&gt; &#39;Cash payment&#39;</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">describe_payment</span><span class="p">(</span><span class="nb">method</span><span class="p">)</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="nb">method</span>
+<span class="w">  </span><span class="k">when</span><span class="w"> </span><span class="no">PaymentMethod</span><span class="o">::</span><span class="no">CreditCard</span>
+<span class="w">    </span><span class="s2">&quot;Credit card ending in </span><span class="si">#{</span><span class="nb">method</span><span class="o">.</span><span class="n">number</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">  </span><span class="k">when</span><span class="w"> </span><span class="no">PaymentMethod</span><span class="o">::</span><span class="no">BankTransfer</span>
+<span class="w">    </span><span class="s2">&quot;Bank transfer to account </span><span class="si">#{</span><span class="nb">method</span><span class="o">.</span><span class="n">account_number</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">  </span><span class="k">when</span><span class="w"> </span><span class="no">PaymentMethod</span><span class="o">::</span><span class="no">Cash</span>
+<span class="w">    </span><span class="s1">&#39;Cash payment&#39;</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="s1">&#39;Unknown payment method&#39;</span>
+<span class="w">  </span><span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div>
+
+</details>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+        <script src="../../../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>

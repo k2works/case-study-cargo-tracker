@@ -1,0 +1,3313 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>第19章: Wa-Tor シミュレーション - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#19-wa-tor" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              第19章: Wa-Tor シミュレーション
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-start-tdd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト駆動開発から始める XX 入門
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokkingfp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Functional Programming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokking-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型デザイン - 原則、パターン、実践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="19-wa-tor">第19章: Wa-Tor シミュレーション<a class="headerlink" href="#19-wa-tor" title="Permanent link">&para;</a></h1>
+<h2 id="_1">はじめに<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>本章では、Wa-Tor（Water Torus）シミュレーションを通じて、セルオートマトンと ADT（代数的データ型）を使った捕食者-被食者モデルの実装を学びます。</p>
+<p>Wa-Tor は1984年に A.K. Dewdney が Scientific American で紹介した古典的なシミュレーションで、魚（被食者）とサメ（捕食者）の生態系をモデル化します。</p>
+<p>この問題を通じて以下の概念を学びます：</p>
+<ul>
+<li>セルオートマトンの実装</li>
+<li>sealed trait と case class による ADT</li>
+<li>トーラス型ワールドの座標計算</li>
+<li>繁殖と捕食のルール実装</li>
+</ul>
+<h2 id="1-wa-tor">1. Wa-Tor の世界<a class="headerlink" href="#1-wa-tor" title="Permanent link">&para;</a></h2>
+<h3 id="_2">トーラス型ワールド<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>Wa-Tor の世界はトーラス（ドーナツ型）です。端に到達すると反対側に出現します。</p>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjMyM3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NjU1cHg7aGVpZ2h0OjMyM3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDY1NSAzMjMiIHdpZHRoPSI2NTVweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PHRpdGxlPiYjMTI0ODg7JiMxMjU0MDsmIzEyNTIxOyYjMTI0NzM7JiMyMjQxMTsmIzEyNTI3OyYjMTI1NDA7JiMxMjUyMzsmIzEyNDg5OzwvdGl0bGU+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNS45OTk1IiB4PSIyNTcuNzUwNCIgeT0iMjIuOTk1MSI+JiMxMjQ4ODsmIzEyNTQwOyYjMTI1MjE7JiMxMjQ3MzsmIzIyNDExOyYjMTI1Mjc7JiMxMjU0MDsmIzEyNTIzOyYjMTI0ODk7PC90ZXh0PjwvZz48IS0tY2x1c3RlciAyRCBHcmlkLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IjJEIEdyaWQiIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSJub25lIiBoZWlnaHQ9IjI3Mi45OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjQ3MiIgeD0iNyIgeT0iNDQuMjk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1OS40NTIxIiB4PSIyMTMuMjczOSIgeT0iNTkuMjkyIj4yRCBHcmlkPC90ZXh0PjwvZz48IS0tZW50aXR5IGMwMC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IjJEIEdyaWQuYzAwIiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1My4xODg1IiB4PSIyODcuNDEiIHk9Ijc5LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMy4xODg1IiB4PSIyOTcuNDEiIHk9Ijk1LjI5MiI+WzAsMF08L3RleHQ+PC9nPjwhLS1lbnRpdHkgYzEwLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iMkQgR3JpZC5jMTAiIGRhdGEtc291cmNlLWxpbmU9IjUiIGlkPSJlbnQwMDA0Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjUzLjE4ODUiIHg9IjQwOS40MSIgeT0iMTc5LjE0NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMy4xODg1IiB4PSI0MTkuNDEiIHk9IjE5NS4xNDIiPlsxLDBdPC90ZXh0PjwvZz48IS0tZW50aXR5IGMyMC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IjJEIEdyaWQuYzIwIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1My4xODg1IiB4PSIzMzkuNDEiIHk9IjI3OC45ODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzMuMTg4NSIgeD0iMzQ5LjQxIiB5PSIyOTQuOTgyIj5bMiwwXTwvdGV4dD48L2c+PCEtLWVudGl0eSBjMDEtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIyRCBHcmlkLmMwMSIgZGF0YS1zb3VyY2UtbGluZT0iNyIgaWQ9ImVudDAwMDYiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTMuMTg4NSIgeD0iMjE2LjQxIiB5PSIxNzkuMTQ2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMzLjE4ODUiIHg9IjIyNi40MSIgeT0iMTk1LjE0MiI+WzAsMV08L3RleHQ+PC9nPjwhLS1lbnRpdHkgYzExLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iMkQgR3JpZC5jMTEiIGRhdGEtc291cmNlLWxpbmU9IjgiIGlkPSJlbnQwMDA3Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjUzLjE4ODUiIHg9IjIzLjQxIiB5PSI3OS4yOTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzMuMTg4NSIgeD0iMzMuNDEiIHk9Ijk1LjI5MiI+WzEsMV08L3RleHQ+PC9nPjwhLS1lbnRpdHkgYzIxLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iMkQgR3JpZC5jMjEiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJlbnQwMDA4Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjUzLjE4ODUiIHg9IjExMS40MSIgeT0iNzkuMjk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMzLjE4ODUiIHg9IjEyMS40MSIgeT0iOTUuMjkyIj5bMiwxXTwvdGV4dD48L2c+PCEtLWVudGl0eSBjMDItLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIyRCBHcmlkLmMwMiIgZGF0YS1zb3VyY2UtbGluZT0iMTAiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjUzLjE4ODUiIHg9IjE0Ni40MSIgeT0iMjc4Ljk4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMy4xODg1IiB4PSIxNTYuNDEiIHk9IjI5NC45ODIiPlswLDJdPC90ZXh0PjwvZz48IS0tZW50aXR5IGMxMi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IjJEIEdyaWQuYzEyIiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImVudDAwMTAiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTMuMTg4NSIgeD0iMjMuNDEiIHk9IjE3OS4xNDY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzMuMTg4NSIgeD0iMzMuNDEiIHk9IjE5NS4xNDIiPlsxLDJdPC90ZXh0PjwvZz48IS0tZW50aXR5IGMyMi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IjJEIEdyaWQuYzIyIiBkYXRhLXNvdXJjZS1saW5lPSIxMiIgaWQ9ImVudDAwMTEiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTMuMTg4NSIgeD0iNDA5LjQxIiB5PSI3OS4yOTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzMuMTg4NSIgeD0iNDE5LjQxIiB5PSI5NS4yOTIiPlsyLDJdPC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xOCIgZGF0YS1zb3VyY2UtbGluZT0iMjQiIGlkPSJlbnQwMDE5Ij48cGF0aCBkPSJNNDk3LjUsMTYyLjU4NjkgTDQ5Ny41LDIxNy45ODUzIEEwLDAgMCAwIDAgNDk3LjUsMjE3Ljk4NTMgTDY0OC41MDAyLDIxNy45ODUzIEEwLDAgMCAwIDAgNjQ4LjUwMDIsMjE3Ljk4NTMgTDY0OC41MDAyLDE3Mi41ODY5IEw2MzguNTAwMiwxNjIuNTg2OSBMNTM4Ljk1LDE2Mi41ODY5IEw0NTAuNjYsMTAxLjkxNjkgTDUzMC45NSwxNjIuNTg2OSBMNDk3LjUsMTYyLjU4NjkgQTAsMCAwIDAgMCA0OTcuNSwxNjIuNTg2OSIgZmlsbD0iI0ZFRkZERCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7Ii8+PHBhdGggZD0iTTYzOC41MDAyLDE2Mi41ODY5IEw2MzguNTAwMiwxNzIuNTg2OSBMNjQ4LjUwMDIsMTcyLjU4NjkgTDYzOC41MDAyLDE2Mi41ODY5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzAuMDAwMiIgeD0iNTAzLjUiIHk9IjE3OS42NTM4Ij4mIzMxNDcxOyYjMTIzNjM7JiMxMjQyNTsmIzMxNDcxOyYjMTI0MDg7JiMxMjUyNzsmIzEyNTQwOyYjMTI1MDM7JiMxMjM3NzsmIzEyNDI3OzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDIuMzA1MiIgeD0iNTAzLjUiIHk9IjE5NC43ODY2Ij4mIzIwMzYzOzogWzMsMF0gJiM4NTk0OyBbMCwwXTwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDYuOTk2MSIgeD0iNTAzLjUiIHk9IjIwOS45MTk0Ij4mIzIwMzYzOzogWy0xLDBdICYjODU5NDsgWzIsMF08L3RleHQ+PC9nPjwhLS1saW5rIGMwMCB0byBjMTAtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwNCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE1IiBpZD0ibG5rMTIiPjxwYXRoIGQ9Ik0zMjcuMDYsMTAxLjkxNjkgQzM1MC41NCwxMjAuNzQ2OSAzOTQuOTM5MSwxNTYuMzYzMyA0MTguMzU5MSwxNzUuMTQzMyIgZmlsbD0ibm9uZSIgaWQ9ImMwMC10by1jMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQyMy4wNCwxNzguODk2OSw0MTguNTIxLDE3MC4xNDYsNDE5LjEzOTIsMTc1Ljc2ODksNDEzLjUxNjMsMTc2LjM4NzIsNDIzLjA0LDE3OC44OTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIGMxMCB0byBjMjAtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNCIgZGF0YS1lbnRpdHktMj0iZW50MDAwNSIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE2IiBpZD0ibG5rMTMiPjxwYXRoIGQ9Ik00MjguNTEsMjAxLjc2NjkgQzQxNS4wNCwyMjAuNTk2OSAzOTAuMzYwMSwyNTUuMDg2NCAzNzYuOTMwMSwyNzMuODY2NCIgZmlsbD0ibm9uZSIgaWQ9ImMxMC10by1jMjAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjM3My40NCwyNzguNzQ2OSwzODEuOTI4OCwyNzMuNzUyOSwzNzYuMzQ4NCwyNzQuNjc5OCwzNzUuNDIxNiwyNjkuMDk5NCwzNzMuNDQsMjc4Ljc0NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgYzIwIHRvIGMwMC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA1IiBkYXRhLWVudGl0eS0yPSJlbnQwMDAzIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTciIGlkPSJsbmsxNCI+PHBhdGggZD0iTTM2My4zMiwyNzguOTM2OSBDMzU0LjQxLDI0NS4wNjY5IDMyNy4zOTY0LDE0Mi4zNTk1IDMxOC4zMjY0LDEwNy44Nzk1IiBmaWxsPSJub25lIiBpZD0iYzIwLXRvLWMwMCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMzE2LjgsMTAyLjA3NjksMzE1LjIyMTIsMTExLjc5ODQsMzE4LjA3MiwxMDYuOTEyNCwzMjIuOTU4LDEwOS43NjMyLDMxNi44LDEwMi4wNzY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzIuMTk1MyIgeD0iMzQ4LjI4IiB5PSIxOTQuODUzOCI+d3JhcDwvdGV4dD48L2c+PCEtLWxpbmsgYzAwIHRvIGMwMS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAzIiBkYXRhLWVudGl0eS0yPSJlbnQwMDA2IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTkiIGlkPSJsbmsxNSI+PHBhdGggZD0iTTMwNi40LDEwMS45MTY5IEMyOTIuNzQsMTIwLjc0NjkgMjY3LjY5NDMsMTU1LjI2MSAyNTQuMDY0MywxNzQuMDQxIiBmaWxsPSJub25lIiBpZD0iYzAwLXRvLWMwMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMjUwLjU0LDE3OC44OTY5LDI1OS4wNjM2LDE3My45NjI2LDI1My40NzY5LDE3NC44NTAzLDI1Mi41ODkxLDE2OS4yNjM1LDI1MC41NCwxNzguODk2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjwvZz48IS0tbGluayBjMDEgdG8gYzAyLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDYiIGRhdGEtZW50aXR5LTI9ImVudDAwMDkiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIyMCIgaWQ9ImxuazE2Ij48cGF0aCBkPSJNMjM1LjUxLDIwMS43NjY5IEMyMjIuMDQsMjIwLjU5NjkgMTk3LjM2MDEsMjU1LjA4NjQgMTgzLjkzMDEsMjczLjg2NjQiIGZpbGw9Im5vbmUiIGlkPSJjMDEtdG8tYzAyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxODAuNDQsMjc4Ljc0NjksMTg4LjkyODgsMjczLjc1MjksMTgzLjM0ODQsMjc0LjY3OTgsMTgyLjQyMTYsMjY5LjA5OTQsMTgwLjQ0LDI3OC43NDY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIGMwMiB0byBjMDAtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwOSIgZGF0YS1lbnRpdHktMj0iZW50MDAwMyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjIxIiBpZD0ibG5rMTciPjxwYXRoIGQ9Ik0xNjguNTEsMjc4LjYyNjkgQzE1OS40MywyNTUuNTU2OSAxNDEuNjMsMTk5LjY0NjkgMTY1LDE2Mi41ODY5IEMxOTEuODQsMTIwLjAzNjkgMjQ2LjAxMjIsMTAzLjU0MTYgMjgxLjE0MjIsOTYuNjUxNiIgZmlsbD0ibm9uZSIgaWQ9ImMwMi10by1jMDAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjI4Ny4wMyw5NS40OTY5LDI3Ny40Mjg0LDkzLjMwMzgsMjgyLjEyMzUsOTYuNDU5MiwyNzguOTY4MSwxMDEuMTU0MywyODcuMDMsOTUuNDk2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMyLjE5NTMiIHg9IjE2NiIgeT0iMTk0Ljg1MzgiPndyYXA8L3RleHQ+PC9nPjw/cGxhbnR1bWwtc3JjIFBQMm5ZaTkwNDhSeFVPZVh6R0xzdlplQkEtNFVHZ3c4SUgxMWFvQ2tONzVPYzhOWjk5c0RzRFlCWFFzMi0zMkVueHM2Y3Jtc1V0M1Rsel9FRG1vX2RrWGZZY0EtbjVwNHhBS3lWLXlnQ1NWY1VIMnAwWVpJTTRWUHM4dTVGQzJOT2Y4NC0wNW5MMkdPM0RNSlVXcW1jY0VpYjZGS0NVZU9UdW9MVHljdnY1dDdZQnBoNjlEdHNSZGlOU1U4bFVpT0NvbTB4OWFPWGx0VnF3WkR6S2RTUGxsVm1fU1lVbGlwTXYtZGdDcnNqVTlfaXJja0tucGJNa1NwLTNhU1BMYjlrTWgyb1JNdmFVTE1vV2hrcndnN21zVFIyRHUtcnpYS3NDQUdFYmVOMWNjTU9CdHYwRzAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="_3">セルの種類<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>水（Water）</strong>: 空のセル</li>
+<li><strong>魚（Fish）</strong>: 被食者、移動と繁殖のみ</li>
+<li><strong>サメ（Shark）</strong>: 捕食者、移動、繁殖、捕食</li>
+</ul>
+<h2 id="2">2. 基本型定義<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="_4">座標と方向<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Position</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">+</span><span class="p">(</span><span class="n">other</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">Position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Position</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">other</span><span class="p">.</span><span class="n">y</span><span class="p">)</span>
+
+<span class="k">object</span><span class="w"> </span><span class="nc">Direction</span><span class="p">:</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">deltas</span><span class="p">:</span><span class="w"> </span><span class="nc">Seq</span><span class="p">[</span><span class="nc">Position</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span>
+<span class="w">    </span><span class="n">dx</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Seq</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="n">dy</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Seq</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">!</span><span class="p">(</span><span class="n">dx</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">dy</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<span class="w">  </span><span class="k">yield</span><span class="w"> </span><span class="nc">Position</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span><span class="w"> </span><span class="n">dy</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="adt">セルの定義（ADT）<a class="headerlink" href="#adt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * セルの基底trait</span>
+<span class="cm"> */</span>
+<span class="k">sealed</span><span class="w"> </span><span class="k">trait</span><span class="w"> </span><span class="nc">Cell</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">display</span><span class="p">:</span><span class="w"> </span><span class="nc">Char</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * 水（空のセル）</span>
+<span class="cm"> */</span>
+<span class="k">case</span><span class="w"> </span><span class="k">object</span><span class="w"> </span><span class="nc">Water</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">Cell</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">display</span><span class="p">:</span><span class="w"> </span><span class="nc">Char</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;.&#39;</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * 動物の共通属性</span>
+<span class="cm"> */</span>
+<span class="k">sealed</span><span class="w"> </span><span class="k">trait</span><span class="w"> </span><span class="nc">Animal</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">Cell</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">age</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">withAge</span><span class="p">(</span><span class="n">newAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Animal</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">incrementAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Animal</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">withAge</span><span class="p">(</span><span class="n">age</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">reproductionAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * 魚（被食者）</span>
+<span class="cm"> */</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Fish</span><span class="p">(</span><span class="n">age</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">Animal</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">display</span><span class="p">:</span><span class="w"> </span><span class="nc">Char</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;f&#39;</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">withAge</span><span class="p">(</span><span class="n">newAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Fish</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">copy</span><span class="p">(</span><span class="n">age</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newAge</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">reproductionAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Config</span><span class="p">.</span><span class="n">fishReproductionAge</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * サメ（捕食者）</span>
+<span class="cm"> */</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Shark</span><span class="p">(</span><span class="n">age</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">health</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Config</span><span class="p">.</span><span class="n">sharkStartingHealth</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">Animal</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">display</span><span class="p">:</span><span class="w"> </span><span class="nc">Char</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;S&#39;</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">withAge</span><span class="p">(</span><span class="n">newAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">copy</span><span class="p">(</span><span class="n">age</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newAge</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">reproductionAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Config</span><span class="p">.</span><span class="n">sharkReproductionAge</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">withHealth</span><span class="p">(</span><span class="n">newHealth</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">copy</span><span class="p">(</span><span class="n">health</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newHealth</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">decrementHealth</span><span class="p">:</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">copy</span><span class="p">(</span><span class="n">health</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">health</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">feed</span><span class="p">:</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="n">newHealth</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">math</span><span class="p">.</span><span class="n">min</span><span class="p">(</span><span class="nc">Config</span><span class="p">.</span><span class="n">sharkMaxHealth</span><span class="p">,</span><span class="w"> </span><span class="n">health</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nc">Config</span><span class="p">.</span><span class="n">sharkEatingHealth</span><span class="p">)</span>
+<span class="w">    </span><span class="n">copy</span><span class="p">(</span><span class="n">health</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newHealth</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="3">3. ワールド構造<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">World</span><span class="p">(</span>
+<span class="w">  </span><span class="n">width</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span>
+<span class="w">  </span><span class="n">height</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span>
+<span class="w">  </span><span class="n">cells</span><span class="p">:</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="nc">Cell</span><span class="p">],</span>
+<span class="w">  </span><span class="n">generation</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="p">):</span>
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 座標をトーラス上でラップ</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">wrap</span><span class="p">(</span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">Position</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Position</span><span class="p">(</span>
+<span class="w">      </span><span class="p">((</span><span class="n">pos</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">width</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">width</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">width</span><span class="p">,</span>
+<span class="w">      </span><span class="p">((</span><span class="n">pos</span><span class="p">.</span><span class="n">y</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">height</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">height</span>
+<span class="w">    </span><span class="p">)</span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 隣接セルの座標を取得（8方向）</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">neighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">Seq</span><span class="p">[</span><span class="nc">Position</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="nc">Direction</span><span class="p">.</span><span class="n">deltas</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">d</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">wrap</span><span class="p">(</span><span class="n">pos</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">d</span><span class="p">))</span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 隣接する空のセルを取得</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">emptyNeighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">Seq</span><span class="p">[</span><span class="nc">Position</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">neighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">).</span><span class="n">filter</span><span class="p">(</span><span class="n">p</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">getCell</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nc">Water</span><span class="p">)</span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 隣接する魚のセルを取得</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">fishNeighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">Seq</span><span class="p">[</span><span class="nc">Position</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">neighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">).</span><span class="n">filter</span><span class="p">(</span><span class="n">p</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">getCell</span><span class="p">(</span><span class="n">p</span><span class="p">).</span><span class="k">isInstanceOf</span><span class="p">[</span><span class="nc">Fish</span><span class="p">])</span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 統計情報</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">statistics</span><span class="p">:</span><span class="w"> </span><span class="nc">Statistics</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="n">cellList</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cells</span><span class="p">.</span><span class="n">values</span><span class="p">.</span><span class="n">toList</span>
+<span class="w">    </span><span class="nc">Statistics</span><span class="p">(</span>
+<span class="w">      </span><span class="n">fish</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cellList</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="k">isInstanceOf</span><span class="p">[</span><span class="nc">Fish</span><span class="p">]),</span>
+<span class="w">      </span><span class="n">sharks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cellList</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="k">isInstanceOf</span><span class="p">[</span><span class="nc">Shark</span><span class="p">]),</span>
+<span class="w">      </span><span class="n">water</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cellList</span><span class="p">.</span><span class="n">count</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nc">Water</span><span class="p">),</span>
+<span class="w">      </span><span class="n">generation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">generation</span>
+<span class="w">    </span><span class="p">)</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjMwN3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6ODAwcHg7aGVpZ2h0OjMwN3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDgwMCAzMDciIHdpZHRoPSI4MDBweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PHRpdGxlPiYjMzg1NjM7JiMyNTUwOTsmIzEyNDc1OyYjMTI1MjM7JiMxMjM5ODsmIzM1MzM2OyYjMzE2Mzk7PC90aXRsZT48ZGVmcy8+PGc+PGcgY2xhc3M9InRpdGxlIiBkYXRhLXNvdXJjZS1saW5lPSIxIj48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTcuOTk5NiIgeD0iMzQ0LjAwMDMiIHk9IjIyLjk5NTEiPiYjMzg1NjM7JiMyNTUwOTsmIzEyNDc1OyYjMTI1MjM7JiMxMjM5ODsmIzM1MzM2OyYjMzE2Mzk7PC90ZXh0PjwvZz48IS0tY2x1c3RlciAzeDMgR3JpZC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSIzeDMgR3JpZCIgZGF0YS1zb3VyY2UtbGluZT0iMyIgaWQ9ImVudDAwMDIiPjxyZWN0IGZpbGw9Im5vbmUiIGhlaWdodD0iMTcxLjg5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNzM0IiB4PSI3IiB5PSI0NC4yOTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjY2LjYwMjUiIHg9IjM0MC42OTg3IiB5PSI1OS4yOTIiPjN4MyBHcmlkPC90ZXh0PjwvZz48IS0tZW50aXR5IG53LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iM3gzIEdyaWQubnciIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAzIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjYzLjI5MiIgeD0iMjMuMzUiIHk9IjE3Ny44OTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDMuMjkyIiB4PSIzMy4zNSIgeT0iMTkzLjg5MiI+Wy0xLC0xXTwvdGV4dD48L2c+PCEtLWVudGl0eSBuLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iM3gzIEdyaWQubiIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTguMjQwMiIgeD0iMTIxLjg4IiB5PSIxNzcuODk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM4LjI0MDIiIHg9IjEzMS44OCIgeT0iMTkzLjg5MiI+WzAsLTFdPC90ZXh0PjwvZz48IS0tZW50aXR5IG5lLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iM3gzIEdyaWQubmUiIGRhdGEtc291cmNlLWxpbmU9IjYiIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjU4LjI0MDIiIHg9IjIxNC44OCIgeT0iMTc3Ljg5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzOC4yNDAyIiB4PSIyMjQuODgiIHk9IjE5My44OTIiPlsxLC0xXTwvdGV4dD48L2c+PCEtLWVudGl0eSB3LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iM3gzIEdyaWQudyIgZGF0YS1zb3VyY2UtbGluZT0iNyIgaWQ9ImVudDAwMDYiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTguMjQwMiIgeD0iMzA3Ljg4IiB5PSIxNzcuODk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM4LjI0MDIiIHg9IjMxNy44OCIgeT0iMTkzLjg5MiI+Wy0xLDBdPC90ZXh0PjwvZz48IS0tZW50aXR5IGMtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIzeDMgR3JpZC5jIiBkYXRhLXNvdXJjZS1saW5lPSI4IiBpZD0iZW50MDAwNyI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzOC41OTM4IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI2Ny4xMjAxIiB4PSIzNDguNDQiIHk9Ijc5LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMy4xODg1IiB4PSIzNTguNDQiIHk9Ijk1LjI5MiI+WzAsMF08L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDcuMTIwMSIgeD0iMzU4LjQ0IiB5PSIxMTEuNTg4OSI+Q2VudGVyPC90ZXh0PjwvZz48IS0tZW50aXR5IGUtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIzeDMgR3JpZC5lIiBkYXRhLXNvdXJjZS1saW5lPSI5IiBpZD0iZW50MDAwOCI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1My4xODg1IiB4PSI0MDEuNDEiIHk9IjE3Ny44OTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzMuMTg4NSIgeD0iNDExLjQxIiB5PSIxOTMuODkyIj5bMSwwXTwvdGV4dD48L2c+PCEtLWVudGl0eSBzdy0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IjN4MyBHcmlkLnN3IiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImVudDAwMDkiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTguMjQwMiIgeD0iNDg5Ljg4IiB5PSIxNzcuODk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM4LjI0MDIiIHg9IjQ5OS44OCIgeT0iMTkzLjg5MiI+Wy0xLDFdPC90ZXh0PjwvZz48IS0tZW50aXR5IHMtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIzeDMgR3JpZC5zIiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImVudDAwMTAiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTMuMTg4NSIgeD0iNTgzLjQxIiB5PSIxNzcuODk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMzLjE4ODUiIHg9IjU5My40MSIgeT0iMTkzLjg5MiI+WzAsMV08L3RleHQ+PC9nPjwhLS1lbnRpdHkgc2UtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIzeDMgR3JpZC5zZSIgZGF0YS1zb3VyY2UtbGluZT0iMTIiIGlkPSJlbnQwMDExIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjUzLjE4ODUiIHg9IjY3MS40MSIgeT0iMTc3Ljg5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMy4xODg1IiB4PSI2ODEuNDEiIHk9IjE5My44OTIiPlsxLDFdPC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4yMCIgZGF0YS1zb3VyY2UtbGluZT0iMjUiIGlkPSJlbnQwMDIxIj48cGF0aCBkPSJNNjAzLDI2MC4xODY5IEw2MDMsMzAwLjQ1MjUgQTAsMCAwIDAgMCA2MDMsMzAwLjQ1MjUgTDc5My4wMDAyLDMwMC40NTI1IEEwLDAgMCAwIDAgNzkzLjAwMDIsMzAwLjQ1MjUgTDc5My4wMDAyLDI3MC4xODY5IEw3ODMuMDAwMiwyNjAuMTg2OSBMNzAyLDI2MC4xODY5IEw2OTgsMjAwLjYzNjkgTDY5NCwyNjAuMTg2OSBMNjAzLDI2MC4xODY5IEEwLDAgMCAwIDAgNjAzLDI2MC4xODY5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48cGF0aCBkPSJNNzgzLjAwMDIsMjYwLjE4NjkgTDc4My4wMDAyLDI3MC4xODY5IEw3OTMuMDAwMiwyNzAuMTg2OSBMNzgzLjAwMDIsMjYwLjE4NjkiIGZpbGw9IiNGRUZGREQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzOC4yNzExIiB4PSI2MDkiIHk9IjI3Ny4yNTM4Ij44JiMyNjA0MTsmIzIxNTIxOyYjMTIzOTg7JiMzODU2MzsmIzI1NTA5OyYjMTI0NzU7JiMxMjUyMzsmIzEyNDM0OyYjMjE0NjI7JiMyNDQ3MTs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTY5LjAwMDIiIHg9IjYwOSIgeT0iMjkyLjM4NjYiPiYjMTI1Mjc7JiMxMjU0MDsmIzEyNTIzOyYjMTI0ODk7JiMxMjM5ODsmIzMxNDcxOyYjMTIzOTE7JiMxMjM5OTsmIzEyNTIxOyYjMTI0ODM7JiMxMjUwMzsmIzEyMzc3OyYjMTI0Mjc7PC90ZXh0PjwvZz48IS0tbGluayBjIHRvIG53LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDciIGRhdGEtZW50aXR5LTI9ImVudDAwMDMiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxNSIgaWQ9ImxuazEyIj48cGF0aCBkPSJNMzQ4LjI0LDEwOC43MjY5IEMyODQuOTIsMTI1Ljg1NjkgMTU0Ljk2MTksMTYxLjAxMDMgOTIuOTIxOSwxNzcuNzkwMyIgZmlsbD0ibm9uZSIgaWQ9ImMtdG8tbnciIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9Ijg3LjEzLDE3OS4zNTY5LDk2Ljg2MjIsMTgwLjg2ODMsOTEuOTU2NiwxNzguMDUxNCw5NC43NzM1LDE3My4xNDU4LDg3LjEzLDE3OS4zNTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIGMgdG8gbi0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA3IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA0IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTYiIGlkPSJsbmsxMyI+PHBhdGggZD0iTTM0OC40MSwxMTIuNDU2OSBDMzAyLjQ5LDEzMC4wMzY5IDIyNi41NzM3LDE1OS4xMTI1IDE4NC4wODM3LDE3NS4zNzI1IiBmaWxsPSJub25lIiBpZD0iYy10by1uIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxNzguNDgsMTc3LjUxNjksMTg4LjMxNTIsMTc4LjAzNjEsMTgzLjE0OTgsMTc1LjcyOTksMTg1LjQ1NTksMTcwLjU2NDUsMTc4LjQ4LDE3Ny41MTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIGMgdG8gbmUtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNyIgZGF0YS1lbnRpdHktMj0iZW50MDAwNSIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE3IiBpZD0ibG5rMTQiPjxwYXRoIGQ9Ik0zNTIuNzMsMTE4LjM1NjkgQzMyNC41NywxMzYuNDA2OSAyODguMDUxLDE1OS44MDg1IDI2NS4zNDEsMTc0LjM2ODUiIGZpbGw9Im5vbmUiIGlkPSJjLXRvLW5lIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIyNjAuMjksMTc3LjYwNjksMjcwLjAyNTUsMTc2LjExNjcsMjY0LjQ5OTIsMTc0LjkwODIsMjY1LjcwNzcsMTY5LjM4MiwyNjAuMjksMTc3LjYwNjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgYyB0byB3LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDciIGRhdGEtZW50aXR5LTI9ImVudDAwMDYiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxOCIgaWQ9ImxuazE1Ij48cGF0aCBkPSJNMzcyLjQ2LDExOC4zNTY5IEMzNjMuMjcsMTM2LjQwNjkgMzUyLjQ0MTQsMTU3LjY5OTUgMzQ1LjAzMTQsMTcyLjI1OTUiIGZpbGw9Im5vbmUiIGlkPSJjLXRvLXciIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjM0Mi4zMSwxNzcuNjA2OSwzNDkuOTU3LDE3MS40MDAyLDM0NC41Nzc4LDE3My4xNTA4LDM0Mi44MjcyLDE2Ny43NzE2LDM0Mi4zMSwxNzcuNjA2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjwvZz48IS0tbGluayBjIHRvIGUtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNyIgZGF0YS1lbnRpdHktMj0iZW50MDAwOCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE5IiBpZD0ibG5rMTYiPjxwYXRoIGQ9Ik0zOTEuNzYsMTE4LjM1NjkgQzQwMS4xNCwxMzYuNDA2OSA0MTIuMjMyMiwxNTcuNzIzNCA0MTkuODAyMiwxNzIuMjgzNCIgZmlsbD0ibm9uZSIgaWQ9ImMtdG8tZSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDIyLjU3LDE3Ny42MDY5LDQyMS45NjczLDE2Ny43NzY1LDQyMC4yNjM1LDE3My4xNzA2LDQxNC44Njk0LDE3MS40NjY4LDQyMi41NywxNzcuNjA2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjwvZz48IS0tbGluayBjIHRvIHN3LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDciIGRhdGEtZW50aXR5LTI9ImVudDAwMDkiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIyMCIgaWQ9ImxuazE3Ij48cGF0aCBkPSJNNDExLjA1LDExOC4zNTY5IEM0MzkuMDIsMTM2LjQwNjkgNDc1LjIzOTQsMTU5Ljc5MjMgNDk3Ljc4OTQsMTc0LjM1MjMiIGZpbGw9Im5vbmUiIGlkPSJjLXRvLXN3IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI1MDIuODMsMTc3LjYwNjksNDk3LjQzODgsMTY5LjM2NDYsNDk4LjYyOTUsMTc0Ljg5NDcsNDkzLjA5OTQsMTc2LjA4NTQsNTAyLjgzLDE3Ny42MDY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIGMgdG8gcy0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA3IiBkYXRhLWVudGl0eS0yPSJlbnQwMDEwIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMjEiIGlkPSJsbmsxOCI+PHBhdGggZD0iTTQxNS42NCwxMTIuNjQ2OSBDNDYxLjEsMTMwLjI4NjkgNTM1LjY1NTksMTU5LjIwNzYgNTc3LjQwNTksMTc1LjM5NzYiIGZpbGw9Im5vbmUiIGlkPSJjLXRvLXMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjU4MywxNzcuNTY2OSw1NzYuMDU1LDE3MC41ODM1LDU3OC4zMzgyLDE3NS43NTkxLDU3My4xNjI2LDE3OC4wNDIzLDU4MywxNzcuNTY2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjwvZz48IS0tbGluayBjIHRvIHNlLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDciIGRhdGEtZW50aXR5LTI9ImVudDAwMTEiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIyMiIgaWQ9ImxuazE5Ij48cGF0aCBkPSJNNDE1LjgyLDEwOS4wNjY5IEM0NzkuMDMsMTI2Ljc1NjkgNjA4LjA5MiwxNjIuODc5NyA2NjUuNDcyLDE3OC45Mzk3IiBmaWxsPSJub25lIiBpZD0iYy10by1zZSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNjcxLjI1LDE4MC41NTY5LDY2My42NjEyLDE3NC4yNzkxLDY2Ni40MzUsMTc5LjIwOTIsNjYxLjUwNSwxODEuOTgzMSw2NzEuMjUsMTgwLjU1NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48L2c+PD9wbGFudHVtbC1zcmMgQXlhaW9LYkxVM2JoeVJFLWZPLVJUWnprTmxzdVNUc0I1SHRGcnF0ZHVZZkFKSXY5cDRpN0FiMG9oWjFNUzJfQUo1NUlnRVBBSlluQUtMMkFyWk5LcUpNQ0xMOThCNVI4QXVTOTZZMzRPNDk4b2JBSHoxZjBuOTFxNmlKNnYzY2R2Zk1hNWU1YmFYNDZHREtZUXVTUU1Pb2E3b1E0cTBTSklVTWd2VTlBTGozTGpHQ3g1U0EwcVFiRzFhbTJuWS02MkhKM3c1R2toaHB5YWJJNWZGb0lhbG5TQmVqZHF0Ty1kSjBINjYwZXVUU3F3TWRfakFWeGZkQ3pSYnhfazdhRklBWXY0d1plLVVoclpua05Gc3U0Mmd2eXREcHlrN2R3dXlRUFp2a3drTEJwS1hIMHZXODA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h2 id="4">4. シミュレーションロジック<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="_5">アクション結果の定義<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * セルの更新結果</span>
+<span class="cm"> */</span>
+<span class="k">sealed</span><span class="w"> </span><span class="k">trait</span><span class="w"> </span><span class="nc">CellUpdate</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Move</span><span class="p">(</span><span class="n">from</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">to</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">cell</span><span class="p">:</span><span class="w"> </span><span class="nc">Cell</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">CellUpdate</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Reproduce</span><span class="p">(</span><span class="n">parent</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">child</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">parentCell</span><span class="p">:</span><span class="w"> </span><span class="nc">Cell</span><span class="p">,</span><span class="w"> </span><span class="n">childCell</span><span class="p">:</span><span class="w"> </span><span class="nc">Cell</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">CellUpdate</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Eat</span><span class="p">(</span><span class="n">from</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">to</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">cell</span><span class="p">:</span><span class="w"> </span><span class="nc">Cell</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">CellUpdate</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Die</span><span class="p">(</span><span class="n">at</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">CellUpdate</span>
+<span class="k">case</span><span class="w"> </span><span class="k">object</span><span class="w"> </span><span class="nc">NoChange</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">CellUpdate</span>
+</code></pre></div>
+<h3 id="_6">移動と繁殖<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">:</span>
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 動物の移動を試みる</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">tryMove</span><span class="p">(</span><span class="n">animal</span><span class="p">:</span><span class="w"> </span><span class="nc">Animal</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">:</span><span class="w"> </span><span class="nc">Random</span><span class="p">):</span><span class="w"> </span><span class="nc">Option</span><span class="p">[</span><span class="nc">Move</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="n">empty</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">world</span><span class="p">.</span><span class="n">emptyNeighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">empty</span><span class="p">.</span><span class="n">isEmpty</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="nc">None</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">      </span><span class="kd">val</span><span class="w"> </span><span class="n">target</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">empty</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextInt</span><span class="p">(</span><span class="n">empty</span><span class="p">.</span><span class="n">length</span><span class="p">))</span>
+<span class="w">      </span><span class="nc">Some</span><span class="p">(</span><span class="nc">Move</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">animal</span><span class="p">))</span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 動物の繁殖を試みる</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">tryReproduce</span><span class="p">(</span><span class="n">animal</span><span class="p">:</span><span class="w"> </span><span class="nc">Animal</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">:</span><span class="w"> </span><span class="nc">Random</span><span class="p">):</span><span class="w"> </span><span class="nc">Option</span><span class="p">[</span><span class="nc">Reproduce</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">animal</span><span class="p">.</span><span class="n">age</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">animal</span><span class="p">.</span><span class="n">reproductionAge</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="nc">None</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">      </span><span class="kd">val</span><span class="w"> </span><span class="n">empty</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">world</span><span class="p">.</span><span class="n">emptyNeighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="n">empty</span><span class="p">.</span><span class="n">isEmpty</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="nc">None</span>
+<span class="w">      </span><span class="k">else</span>
+<span class="w">        </span><span class="kd">val</span><span class="w"> </span><span class="n">childPos</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">empty</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextInt</span><span class="p">(</span><span class="n">empty</span><span class="p">.</span><span class="n">length</span><span class="p">))</span>
+<span class="w">        </span><span class="kd">val</span><span class="w"> </span><span class="n">child</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">animal</span><span class="w"> </span><span class="k">match</span>
+<span class="w">          </span><span class="k">case</span><span class="w"> </span><span class="n">_:</span><span class="w"> </span><span class="nc">Fish</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">Fish</span><span class="p">()</span>
+<span class="w">          </span><span class="k">case</span><span class="w"> </span><span class="n">_:</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">Shark</span><span class="p">()</span>
+<span class="w">        </span><span class="nc">Some</span><span class="p">(</span><span class="nc">Reproduce</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">childPos</span><span class="p">,</span><span class="w"> </span><span class="n">animal</span><span class="p">.</span><span class="n">withAge</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="n">child</span><span class="p">))</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkFDVElWSVRZIiBoZWlnaHQ9IjU3MnB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MzQ4cHg7aGVpZ2h0OjU3MnB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDM0OCA1NzIiIHdpZHRoPSIzNDhweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PHRpdGxlPiYjMzIzMjE7JiMyNzU0MjsmIzEyMzk4OyYjMTI1MjM7JiMxMjU0MDsmIzEyNTIzOzwvdGl0bGU+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgzLjk5OTYiIHg9IjEzMC42MzI5IiB5PSIzMi45OTUxIj4mIzMyMzIxOyYjMjc1NDI7JiMxMjM5ODsmIzEyNTIzOyYjMTI1NDA7JiMxMjUyMzs8L3RleHQ+PC9nPjxlbGxpcHNlIGN4PSIyMTUuNjMzIiBjeT0iNTcuMjk2OSIgZmlsbD0iIzIyMjIyMiIgcng9IjEwIiByeT0iMTAiIHN0eWxlPSJzdHJva2U6IzIyMjIyMjtzdHJva2Utd2lkdGg6MTsiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjMzLjk2ODgiIHJ4PSIxMi41IiByeT0iMTIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iODAuMDAwNSIgeD0iMTc1LjYzMjciIHk9Ijg3LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2MC4wMDA1IiB4PSIxODUuNjMyNyIgeT0iMTA4LjQzNTUiPiYjMjQxODA7JiM0MDgwMjsmIzEyNDM0OyYjMzA5MDY7JiMzNTQ2OTs8L3RleHQ+PHBvbHlnb24gZmlsbD0iI0YxRjFGMSIgcG9pbnRzPSIxNTYuMDAwNywxNDEuMjY1NiwyNzUuMjY1MiwxNDEuMjY1NiwyODcuMjY1MiwxNTMuMjY1NiwyNzUuMjY1MiwxNjUuMjY1NiwxNTYuMDAwNywxNjUuMjY1NiwxNDQuMDAwNywxNTMuMjY1NiwxNTYuMDAwNywxNDEuMjY1NiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTE5LjI2NDUiIHg9IjE1Ni4wMDA3IiB5PSIxNTcuMDczNyI+JiMyNDE4MDsmIzQwODAyOyAmZ3Q7PSAmIzMyMzIxOyYjMjc1NDI7JiMyMTQ4NzsmIzMzMDIxOyYjMjQxODA7JiM0MDgwMjs/PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjAwODMiIHg9IjEyNC45OTI0IiB5PSIxNTAuNjcxNCI+eWVzPC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzLjcwMTciIHg9IjI4Ny4yNjUyIiB5PSIxNTAuNjcxNCI+bm88L3RleHQ+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzMy45Njg4IiByeD0iMTIuNSIgcnk9IjEyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE0MC4wMDA5IiB4PSI2NC4wMDAzIiB5PSIxNzUuMjY1NiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyMC4wMDA5IiB4PSI3NC4wMDAzIiB5PSIxOTYuNDA0MyI+JiMzODU2MzsmIzI1NTA5OyYjMTIzNzc7JiMxMjQyNzsmIzMxMzU0OyYjMTI0NzU7JiMxMjUyMzsmIzEyNDM0OyYjMjY5MDg7JiMzMjAzNDs8L3RleHQ+PHBvbHlnb24gZmlsbD0iI0YxRjFGMSIgcG9pbnRzPSI5OC4wODE3LDIyOS4yMzQ0LDE2OS45MTk3LDIyOS4yMzQ0LDE4MS45MTk3LDI0MS4yMzQ0LDE2OS45MTk3LDI1My4yMzQ0LDk4LjA4MTcsMjUzLjIzNDQsODYuMDgxNywyNDEuMjM0NCw5OC4wODE3LDIyOS4yMzQ0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3MS44Mzc5IiB4PSI5OC4wODE3IiB5PSIyNDUuMDQyNSI+JiMzMTM1NDsmIzEyNDc1OyYjMTI1MjM7JiMxMjM2NDsmIzEyMzU0OyYjMTI0Mjc7PzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxOS4wMDgzIiB4PSI2Ny4wNzM0IiB5PSIyMzguNjQwMSI+eWVzPC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzLjcwMTciIHg9IjE4MS45MTk3IiB5PSIyMzguNjQwMSI+bm88L3RleHQ+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzMy45Njg4IiByeD0iMTIuNSIgcnk9IjEyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEwNC4wMDA2IiB4PSIyMy4wMDAxIiB5PSIyNjMuMjM0NCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijg0LjAwMDYiIHg9IjMzLjAwMDEiIHk9IjI4NC4zNzMiPiYjMTI1MjE7JiMxMjUzMTsmIzEyNDgwOyYjMTI1MTI7JiMxMjM5NTsmIzM2OTg0OyYjMjUyNDY7PC90ZXh0PjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMjguMDAwOCIgeD0iMTEiIHk9IjMxNy4yMDMxIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTA4LjAwMDgiIHg9IjIxIiB5PSIzMzguMzQxOCI+JiMzNTI0MjsmIzEyMzk4OyYjMjQxODA7JiM0MDgwMjsmIzEyNDM0OyYjMTI1MjI7JiMxMjQ3NTsmIzEyNDgzOyYjMTI0ODg7PC90ZXh0PjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMTYuMDAwNyIgeD0iMTciIHk9IjM3MS4xNzE5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTYuMDAwNyIgeD0iMjciIHk9IjM5Mi4zMTA1Ij4mIzIzMzc2OyYjMTI0MzQ7JiMzMTM1NDsmIzEyNDc1OyYjMTI1MjM7JiMxMjM5NTsmIzM3MTk3OyYjMzI2MjI7PC90ZXh0PjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI2OC4wMDA0IiB4PSI0MS4wMDAyIiB5PSI0MjUuMTQwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ4LjAwMDQiIHg9IjUxLjAwMDIiIHk9IjQ0Ni4yNzkzIj4mIzMyMzIxOyYjMjc1NDI7JiMyNTEwNDsmIzIxMTUxOzwvdGV4dD48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjMzLjk2ODgiIHJ4PSIxMi41IiByeT0iMTIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNjguMDAwNCIgeD0iMTU5LjAwMDgiIHk9IjI2My4yMzQ0Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDguMDAwNCIgeD0iMTY5LjAwMDgiIHk9IjI4NC4zNzMiPiYjMzIzMjE7JiMyNzU0MjsmIzIyODMzOyYjMjU5NDM7PC90ZXh0Pjxwb2x5Z29uIGZpbGw9IiNGMUYxRjEiIHBvaW50cz0iMTM0LjAwMDcsNDY1LjEwOTQsMTQ2LjAwMDcsNDc3LjEwOTQsMTM0LjAwMDcsNDg5LjEwOTQsMTIyLjAwMDcsNDc3LjEwOTQsMTM0LjAwMDcsNDY1LjEwOTQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI4MC4wMDA1IiB4PSIyNTcuMjY1IiB5PSIxNzUuMjY1NiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjYwLjAwMDUiIHg9IjI2Ny4yNjUiIHk9IjE5Ni40MDQzIj4mIzMyMzIxOyYjMjc1NDI7JiMxMjM3NTsmIzEyMzk0OyYjMTIzNTY7PC90ZXh0Pjxwb2x5Z29uIGZpbGw9IiNGMUYxRjEiIHBvaW50cz0iMjE1LjYzMyw0OTUuMTA5NCwyMjcuNjMzLDUwNy4xMDk0LDIxNS42MzMsNTE5LjEwOTQsMjAzLjYzMyw1MDcuMTA5NCwyMTUuNjMzLDQ5NS4xMDk0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48ZWxsaXBzZSBjeD0iMjE1LjYzMyIgY3k9IjU1MC4xMDk0IiBmaWxsPSJub25lIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMjIyMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxlbGxpcHNlIGN4PSIyMTUuNjMzIiBjeT0iNTUwLjEwOTQiIGZpbGw9IiMyMjIyMjIiIHJ4PSI2IiByeT0iNiIgc3R5bGU9InN0cm9rZTojMjIyMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIyMTUuNjMzIiB4Mj0iMjE1LjYzMyIgeTE9IjY3LjI5NjkiIHkyPSI4Ny4yOTY5Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIyMTEuNjMzLDc3LjI5NjksMjE1LjYzMyw4Ny4yOTY5LDIxOS42MzMsNzcuMjk2OSwyMTUuNjMzLDgxLjI5NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iNzUuMDAwNCIgeDI9Ijc1LjAwMDQiIHkxPSIyOTcuMjAzMSIgeTI9IjMxNy4yMDMxIi8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI3MS4wMDA0LDMwNy4yMDMxLDc1LjAwMDQsMzE3LjIwMzEsNzkuMDAwNCwzMDcuMjAzMSw3NS4wMDA0LDMxMS4yMDMxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9Ijc1LjAwMDQiIHgyPSI3NS4wMDA0IiB5MT0iMzUxLjE3MTkiIHkyPSIzNzEuMTcxOSIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNzEuMDAwNCwzNjEuMTcxOSw3NS4wMDA0LDM3MS4xNzE5LDc5LjAwMDQsMzYxLjE3MTksNzUuMDAwNCwzNjUuMTcxOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSI3NS4wMDA0IiB4Mj0iNzUuMDAwNCIgeTE9IjQwNS4xNDA2IiB5Mj0iNDI1LjE0MDYiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjcxLjAwMDQsNDE1LjE0MDYsNzUuMDAwNCw0MjUuMTQwNiw3OS4wMDA0LDQxNS4xNDA2LDc1LjAwMDQsNDE5LjE0MDYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iODYuMDgxNyIgeDI9Ijc1LjAwMDQiIHkxPSIyNDEuMjM0NCIgeTI9IjI0MS4yMzQ0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9Ijc1LjAwMDQiIHgyPSI3NS4wMDA0IiB5MT0iMjQxLjIzNDQiIHkyPSIyNjMuMjM0NCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNzEuMDAwNCwyNTMuMjM0NCw3NS4wMDA0LDI2My4yMzQ0LDc5LjAwMDQsMjUzLjIzNDQsNzUuMDAwNCwyNTcuMjM0NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxODEuOTE5NyIgeDI9IjE5My4wMDEiIHkxPSIyNDEuMjM0NCIgeTI9IjI0MS4yMzQ0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjE5My4wMDEiIHgyPSIxOTMuMDAxIiB5MT0iMjQxLjIzNDQiIHkyPSIyNjMuMjM0NCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTg5LjAwMSwyNTMuMjM0NCwxOTMuMDAxLDI2My4yMzQ0LDE5Ny4wMDEsMjUzLjIzNDQsMTkzLjAwMSwyNTcuMjM0NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSI3NS4wMDA0IiB4Mj0iNzUuMDAwNCIgeTE9IjQ1OS4xMDk0IiB5Mj0iNDc3LjEwOTQiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iNzUuMDAwNCIgeDI9IjEyMi4wMDA3IiB5MT0iNDc3LjEwOTQiIHkyPSI0NzcuMTA5NCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTEyLjAwMDcsNDczLjEwOTQsMTIyLjAwMDcsNDc3LjEwOTQsMTEyLjAwMDcsNDgxLjEwOTQsMTE2LjAwMDcsNDc3LjEwOTQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTkzLjAwMSIgeDI9IjE5My4wMDEiIHkxPSIyOTcuMjAzMSIgeTI9IjQ3Ny4xMDk0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjE5My4wMDEiIHgyPSIxNDYuMDAwNyIgeTE9IjQ3Ny4xMDk0IiB5Mj0iNDc3LjEwOTQiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjE1Ni4wMDA3LDQ3My4xMDk0LDE0Ni4wMDA3LDQ3Ny4xMDk0LDE1Ni4wMDA3LDQ4MS4xMDk0LDE1Mi4wMDA3LDQ3Ny4xMDk0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4wMDA3IiB4Mj0iMTM0LjAwMDciIHkxPSIyMDkuMjM0NCIgeTI9IjIyOS4yMzQ0Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMzAuMDAwNywyMTkuMjM0NCwxMzQuMDAwNywyMjkuMjM0NCwxMzguMDAwNywyMTkuMjM0NCwxMzQuMDAwNywyMjMuMjM0NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxNDQuMDAwNyIgeDI9IjEzNC4wMDA3IiB5MT0iMTUzLjI2NTYiIHkyPSIxNTMuMjY1NiIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxMzQuMDAwNyIgeDI9IjEzNC4wMDA3IiB5MT0iMTUzLjI2NTYiIHkyPSIxNzUuMjY1NiIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTMwLjAwMDcsMTY1LjI2NTYsMTM0LjAwMDcsMTc1LjI2NTYsMTM4LjAwMDcsMTY1LjI2NTYsMTM0LjAwMDcsMTY5LjI2NTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMjg3LjI2NTIiIHgyPSIyOTcuMjY1MiIgeTE9IjE1My4yNjU2IiB5Mj0iMTUzLjI2NTYiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMjk3LjI2NTIiIHgyPSIyOTcuMjY1MiIgeTE9IjE1My4yNjU2IiB5Mj0iMTc1LjI2NTYiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjI5My4yNjUyLDE2NS4yNjU2LDI5Ny4yNjUyLDE3NS4yNjU2LDMwMS4yNjUyLDE2NS4yNjU2LDI5Ny4yNjUyLDE2OS4yNjU2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4wMDA3IiB4Mj0iMTM0LjAwMDciIHkxPSI0ODkuMTA5NCIgeTI9IjUwNy4xMDk0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4wMDA3IiB4Mj0iMjAzLjYzMyIgeTE9IjUwNy4xMDk0IiB5Mj0iNTA3LjEwOTQiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjE5My42MzMsNTAzLjEwOTQsMjAzLjYzMyw1MDcuMTA5NCwxOTMuNjMzLDUxMS4xMDk0LDE5Ny42MzMsNTA3LjEwOTQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMjk3LjI2NTIiIHgyPSIyOTcuMjY1MiIgeTE9IjIwOS4yMzQ0IiB5Mj0iNTA3LjEwOTQiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMjk3LjI2NTIiIHgyPSIyMjcuNjMzIiB5MT0iNTA3LjEwOTQiIHkyPSI1MDcuMTA5NCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMjM3LjYzMyw1MDMuMTA5NCwyMjcuNjMzLDUwNy4xMDk0LDIzNy42MzMsNTExLjEwOTQsMjMzLjYzMyw1MDcuMTA5NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIyMTUuNjMzIiB4Mj0iMjE1LjYzMyIgeTE9IjEyMS4yNjU2IiB5Mj0iMTQxLjI2NTYiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjIxMS42MzMsMTMxLjI2NTYsMjE1LjYzMywxNDEuMjY1NiwyMTkuNjMzLDEzMS4yNjU2LDIxNS42MzMsMTM1LjI2NTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMjE1LjYzMyIgeDI9IjIxNS42MzMiIHkxPSI1MTkuMTA5NCIgeTI9IjUzOS4xMDk0Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIyMTEuNjMzLDUyOS4xMDk0LDIxNS42MzMsNTM5LjEwOTQsMjE5LjYzMyw1MjkuMTA5NCwyMTUuNjMzLDUzMy4xMDk0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PD9wbGFudHVtbC1zcmMgUFAzMUlpRDA0OFJsLW5IeEo1dVhHTnFNbUlxNklZZmNCendTN09MSWhQUTI1YUxLT1hNUU80SmltUlJjUU9SVEpUeDJoTWFqdzZLRV9fVkZGcHlaOHphTXRDeDA1RFM0MU01RS1FS2NPdWRTRlBHaXFCRGZOUVFhWFpRVExyYV9QMm5nU1F6SC1WUk1RYkxWbGJMT0RrZ0VwLU0tWUJidDkxQVYxVk5qYXhidTloV1hUTU9kU3JBQnZINHJERUN4RXFyTlVIaTB2bUpBTVYtYTQ0dThGbVlGMkh5OXlYZS1KVXktUDQ3cmFoZFFsb0s5aXZ5UzlFbXdnYnk3by1RUnlCbS14VGtvU0FaZlJSZTN0Tmk4Y01XZFdkam5ucnkzRk51dExvQzd1aHNlekh5SlowWlN2UEVybXhzaFNfMEQ/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="_7">サメの捕食<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * サメの捕食を試みる</span>
+<span class="cm"> */</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">tryEat</span><span class="p">(</span><span class="n">shark</span><span class="p">:</span><span class="w"> </span><span class="nc">Shark</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">:</span><span class="w"> </span><span class="nc">Random</span><span class="p">):</span><span class="w"> </span><span class="nc">Option</span><span class="p">[</span><span class="nc">Eat</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">fishCells</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">world</span><span class="p">.</span><span class="n">fishNeighbors</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">fishCells</span><span class="p">.</span><span class="n">isEmpty</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="nc">None</span>
+<span class="w">  </span><span class="k">else</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="n">target</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fishCells</span><span class="p">(</span><span class="n">random</span><span class="p">.</span><span class="n">nextInt</span><span class="p">(</span><span class="n">fishCells</span><span class="p">.</span><span class="n">length</span><span class="p">))</span>
+<span class="w">    </span><span class="nc">Some</span><span class="p">(</span><span class="nc">Eat</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">shark</span><span class="p">.</span><span class="n">feed</span><span class="p">))</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * サメのティック処理</span>
+<span class="cm"> */</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">tickShark</span><span class="p">(</span><span class="n">shark</span><span class="p">:</span><span class="w"> </span><span class="nc">Shark</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">:</span><span class="w"> </span><span class="nc">Random</span><span class="p">):</span><span class="w"> </span><span class="nc">CellUpdate</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="c1">// 体力が尽きたら死亡</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="n">shark</span><span class="p">.</span><span class="n">health</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nc">Die</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">agedShark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">shark</span><span class="p">.</span><span class="n">incrementAge</span><span class="p">.</span><span class="k">asInstanceOf</span><span class="p">[</span><span class="nc">Shark</span><span class="p">].</span><span class="n">decrementHealth</span>
+
+<span class="w">  </span><span class="c1">// 優先順位: 繁殖 &gt; 捕食 &gt; 移動</span>
+<span class="w">  </span><span class="n">tryReproduce</span><span class="p">(</span><span class="n">agedShark</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">orElse</span><span class="p">(</span><span class="n">tryEat</span><span class="p">(</span><span class="n">agedShark</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">))</span>
+<span class="w">    </span><span class="p">.</span><span class="n">orElse</span><span class="p">(</span><span class="n">tryMove</span><span class="p">(</span><span class="n">agedShark</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">))</span>
+<span class="w">    </span><span class="p">.</span><span class="n">getOrElse</span><span class="p">(</span><span class="nc">NoChange</span><span class="p">)</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkFDVElWSVRZIiBoZWlnaHQ9IjkxNXB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MjYzcHg7aGVpZ2h0OjkxNXB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDI2MyA5MTUiIHdpZHRoPSIyNjNweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PHRpdGxlPiYjMTI0Njk7JiMxMjUxMzsmIzEyMzk4OyYjMTI0ODY7JiMxMjQ1MTsmIzEyNDgzOyYjMTI0NjM7JiMyMDk2NjsmIzI5NzAyOzwvdGl0bGU+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNS45OTk1IiB4PSI2Ny4xNDI0IiB5PSIzMi45OTUxIj4mIzEyNDY5OyYjMTI1MTM7JiMxMjM5ODsmIzEyNDg2OyYjMTI0NTE7JiMxMjQ4MzsmIzEyNDYzOyYjMjA5NjY7JiMyOTcwMjs8L3RleHQ+PC9nPjxlbGxpcHNlIGN4PSIxMzQuMzIxNCIgY3k9IjU3LjI5NjkiIGZpbGw9IiMyMjIyMjIiIHJ4PSIxMCIgcnk9IjEwIiBzdHlsZT0ic3Ryb2tlOiMyMjIyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzMy45Njg4IiByeD0iMTIuNSIgcnk9IjEyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjgwLjAwMDUiIHg9Ijk0LjMyMTIiIHk9Ijg3LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2MC4wMDA1IiB4PSIxMDQuMzIxMiIgeT0iMTA4LjQzNTUiPiYjMjAzMDc7JiMyMTE0NzsmIzEyNDM0OyYjMzA5MDY7JiMzNTQ2OTs8L3RleHQ+PHBvbHlnb24gZmlsbD0iI0YxRjFGMSIgcG9pbnRzPSIxMDQuMTg5NywxNDEuMjY1NiwxNjQuNDUzMiwxNDEuMjY1NiwxNzYuNDUzMiwxNTMuMjY1NiwxNjQuNDUzMiwxNjUuMjY1NiwxMDQuMTg5NywxNjUuMjY1Niw5Mi4xODk3LDE1My4yNjU2LDEwNC4xODk3LDE0MS4yNjU2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2MC4yNjM1IiB4PSIxMDQuMTg5NyIgeT0iMTU3LjA3MzciPiYjMjAzMDc7JiMyMTE0NzsgJmx0Oz0gMT88L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTkuMDA4MyIgeD0iNzMuMTgxNCIgeT0iMTUwLjY3MTQiPnllczwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMy43MDE3IiB4PSIxNzYuNDUzMiIgeT0iMTUwLjY3MTQiPm5vPC90ZXh0PjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMTYuMDAwNyIgeD0iMTEiIHk9IjE3NS4yNjU2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTYuMDAwNyIgeD0iMjEiIHk9IjE5Ni40MDQzIj4mIzI3NTE1OyYjMjAxMjk7JiM2NTI4ODsmIzI3NzAwOyYjMTIzOTU7JiMzMjYyMjsmIzI1NTYzOyYjNjUyODk7PC90ZXh0PjxlbGxpcHNlIGN4PSI2OS4wMDA0IiBjeT0iMjQwLjIzNDQiIGZpbGw9Im5vbmUiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMyMjIyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9IjY5LjAwMDQiIGN5PSIyNDAuMjM0NCIgZmlsbD0iIzIyMjIyMiIgcng9IjYiIHJ5PSI2IiBzdHlsZT0ic3Ryb2tlOiMyMjIyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzMy45Njg4IiByeD0iMTIuNSIgcnk9IjEyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEwNS4yODM2IiB4PSIxNDcuMDAwNyIgeT0iMTc1LjI2NTYiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4NS4yODM2IiB4PSIxNTcuMDAwNyIgeT0iMTk2LjQwNDMiPiYjMjQxODA7JiM0MDgwMjsrMSwgJiMyMDMwNzsmIzIxMTQ3Oy0xPC90ZXh0PjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI5Mi4wMDA1IiB4PSI4OC4zMjEyIiB5PSIyNzEuMjM0NCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjcyLjAwMDUiIHg9Ijk4LjMyMTIiIHk9IjI5Mi4zNzMiPiYjMzIzMjE7JiMyNzU0MjsmIzEyNDM0OyYjMzU0MzA7JiMxMjQxNTsmIzEyNDI3OzwvdGV4dD48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjMzLjk2ODgiIHJ4PSIxMi41IiByeT0iMTIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTA0LjAwMDYiIHg9IjgyLjMyMTEiIHk9IjM3My42MDU1Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODQuMDAwNiIgeD0iOTIuMzIxMSIgeT0iMzk0Ljc0NDEiPiYjMzIzMjE7JiMyNzU0MjsmIzMyMDgwOyYjMjY1MjQ7JiMxMjQzNDsmIzM2ODIwOyYjMTIzNzc7PC90ZXh0PjxlbGxpcHNlIGN4PSIxMzQuMzIxNCIgY3k9IjQ0Ny4wODk4IiBmaWxsPSJub25lIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMjIyMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxlbGxpcHNlIGN4PSIxMzQuMzIxNCIgY3k9IjQ0Ny4wODk4IiBmaWxsPSIjMjIyMjIyIiByeD0iNiIgcnk9IjYiIHN0eWxlPSJzdHJva2U6IzIyMjIyMjtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjRjFGMUYxIiBwb2ludHM9IjEwOS40MDI0LDMyNS4yMDMxLDE1OS4yNDA1LDMyNS4yMDMxLDE3MS4yNDA1LDMzNy4yMDMxLDE1OS4yNDA1LDM0OS4yMDMxLDEwOS40MDI0LDM0OS4yMDMxLDk3LjQwMjQsMzM3LjIwMzEsMTA5LjQwMjQsMzI1LjIwMzEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjAwODMiIHg9IjEzOC4zMjE0IiB5PSIzNTkuNDEzNiI+eWVzPC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ5LjgzODEiIHg9IjEwOS40MDI0IiB5PSIzNDEuMDExMiI+JiMzMjMyMTsmIzI3NTQyOyYjMjUxMDQ7JiMyMTE1MTs/PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzLjcwMTciIHg9IjE3MS4yNDA1IiB5PSIzMzQuNjA4OSI+bm88L3RleHQ+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzMy45Njg4IiByeD0iMTIuNSIgcnk9IjEyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjkyLjAwMDUiIHg9Ijg4LjMyMTIiIHk9IjUwMC4wODk4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzIuMDAwNSIgeD0iOTguMzIxMiIgeT0iNTIxLjIyODUiPiYjMjU0Mjk7JiMzOTEzNTsmIzEyNDM0OyYjMzU0MzA7JiMxMjQxNTsmIzEyNDI3OzwvdGV4dD48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjMzLjk2ODgiIHJ4PSIxMi41IiByeT0iMTIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNjguMDAwNCIgeD0iMTAwLjMyMTMiIHk9IjYwMi40NjA5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDguMDAwNCIgeD0iMTEwLjMyMTMiIHk9IjYyMy41OTk2Ij4mIzIwMzA3OyYjMjExNDc7JiMyMjIzODsmIzI0NDg5OzwvdGV4dD48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjMzLjk2ODgiIHJ4PSIxMi41IiByeT0iMTIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTA0LjAwMDYiIHg9IjgyLjMyMTEiIHk9IjY1Ni40Mjk3Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODQuMDAwNiIgeD0iOTIuMzIxMSIgeT0iNjc3LjU2ODQiPiYjMjU0Mjk7JiMzOTEzNTsmIzMyMDgwOyYjMjY1MjQ7JiMxMjQzNDsmIzM2ODIwOyYjMTIzNzc7PC90ZXh0PjxlbGxpcHNlIGN4PSIxMzQuMzIxNCIgY3k9IjcyMS4zOTg0IiBmaWxsPSJub25lIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMjIyMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxlbGxpcHNlIGN4PSIxMzQuMzIxNCIgY3k9IjcyMS4zOTg0IiBmaWxsPSIjMjIyMjIyIiByeD0iNiIgcnk9IjYiIHN0eWxlPSJzdHJva2U6IzIyMjIyMjtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjRjFGMUYxIiBwb2ludHM9IjEwOS40MDI0LDU1NC4wNTg2LDE1OS4yNDA1LDU1NC4wNTg2LDE3MS4yNDA1LDU2Ni4wNTg2LDE1OS4yNDA1LDU3OC4wNTg2LDEwOS40MDI0LDU3OC4wNTg2LDk3LjQwMjQsNTY2LjA1ODYsMTA5LjQwMjQsNTU0LjA1ODYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjAwODMiIHg9IjEzOC4zMjE0IiB5PSI1ODguMjY5Ij55ZXM8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDkuODM4MSIgeD0iMTA5LjQwMjQiIHk9IjU2OS44NjY3Ij4mIzI1NDI5OyYjMzkxMzU7JiMyNTEwNDsmIzIxMTUxOz88L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTMuNzAxNyIgeD0iMTcxLjI0MDUiIHk9IjU2My40NjQ0Ij5ubzwvdGV4dD48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjMzLjk2ODgiIHJ4PSIxMi41IiByeT0iMTIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iOTIuMDAwNSIgeD0iODguMzIxMiIgeT0iNzc0LjM5ODQiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3Mi4wMDA1IiB4PSI5OC4zMjEyIiB5PSI3OTUuNTM3MSI+JiMzMTIyNzsmIzIxMjA1OyYjMTI0MzQ7JiMzNTQzMDsmIzEyNDE1OyYjMTI0Mjc7PC90ZXh0PjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzMuOTY4OCIgcng9IjEyLjUiIHJ5PSIxMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMDQuMDAwNiIgeD0iODIuMzIxMSIgeT0iODI4LjM2NzIiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4NC4wMDA2IiB4PSI5Mi4zMjExIiB5PSI4NDkuNTA1OSI+JiMzMTIyNzsmIzIxMjA1OyYjMzIwODA7JiMyNjUyNDsmIzEyNDM0OyYjMzY4MjA7JiMxMjM3Nzs8L3RleHQ+PGVsbGlwc2UgY3g9IjEzNC4zMjE0IiBjeT0iODkzLjMzNTkiIGZpbGw9Im5vbmUiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMyMjIyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9IjEzNC4zMjE0IiBjeT0iODkzLjMzNTkiIGZpbGw9IiMyMjIyMjIiIHJ4PSI2IiByeT0iNiIgc3R5bGU9InN0cm9rZTojMjIyMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxMzQuMzIxNCIgeDI9IjEzNC4zMjE0IiB5MT0iNjcuMjk2OSIgeTI9Ijg3LjI5NjkiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzMC4zMjE0LDc3LjI5NjksMTM0LjMyMTQsODcuMjk2OSwxMzguMzIxNCw3Ny4yOTY5LDEzNC4zMjE0LDgxLjI5NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iNjkuMDAwNCIgeDI9IjY5LjAwMDQiIHkxPSIyMDkuMjM0NCIgeTI9IjIyOS4yMzQ0Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI2NS4wMDA0LDIxOS4yMzQ0LDY5LjAwMDQsMjI5LjIzNDQsNzMuMDAwNCwyMTkuMjM0NCw2OS4wMDA0LDIyMy4yMzQ0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjkyLjE4OTciIHgyPSI2OS4wMDA0IiB5MT0iMTUzLjI2NTYiIHkyPSIxNTMuMjY1NiIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSI2OS4wMDA0IiB4Mj0iNjkuMDAwNCIgeTE9IjE1My4yNjU2IiB5Mj0iMTc1LjI2NTYiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjY1LjAwMDQsMTY1LjI2NTYsNjkuMDAwNCwxNzUuMjY1Niw3My4wMDA0LDE2NS4yNjU2LDY5LjAwMDQsMTY5LjI2NTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTc2LjQ1MzIiIHgyPSIxOTkuNjQyNSIgeTE9IjE1My4yNjU2IiB5Mj0iMTUzLjI2NTYiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTk5LjY0MjUiIHgyPSIxOTkuNjQyNSIgeTE9IjE1My4yNjU2IiB5Mj0iMTc1LjI2NTYiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjE5NS42NDI1LDE2NS4yNjU2LDE5OS42NDI1LDE3NS4yNjU2LDIwMy42NDI1LDE2NS4yNjU2LDE5OS42NDI1LDE2OS4yNjU2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjE5OS42NDI1IiB4Mj0iMTk5LjY0MjUiIHkxPSIyMDkuMjM0NCIgeTI9IjI1Ni4yMzQ0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjE5OS42NDI1IiB4Mj0iMTM0LjMyMTQiIHkxPSIyNTYuMjM0NCIgeTI9IjI1Ni4yMzQ0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4zMjE0IiB4Mj0iMTM0LjMyMTQiIHkxPSIyNTYuMjM0NCIgeTI9IjI3MS4yMzQ0Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMzAuMzIxNCwyNjEuMjM0NCwxMzQuMzIxNCwyNzEuMjM0NCwxMzguMzIxNCwyNjEuMjM0NCwxMzQuMzIxNCwyNjUuMjM0NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxMzQuMzIxNCIgeDI9IjEzNC4zMjE0IiB5MT0iMTIxLjI2NTYiIHkyPSIxNDEuMjY1NiIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTMwLjMyMTQsMTMxLjI2NTYsMTM0LjMyMTQsMTQxLjI2NTYsMTM4LjMyMTQsMTMxLjI2NTYsMTM0LjMyMTQsMTM1LjI2NTYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTM0LjMyMTQiIHgyPSIxMzQuMzIxNCIgeTE9IjQwNy41NzQyIiB5Mj0iNDM2LjA4OTgiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzMC4zMjE0LDQyNi4wODk4LDEzNC4zMjE0LDQzNi4wODk4LDEzOC4zMjE0LDQyNi4wODk4LDEzNC4zMjE0LDQzMC4wODk4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4zMjE0IiB4Mj0iMTM0LjMyMTQiIHkxPSIzNDkuMjAzMSIgeTI9IjM3My42MDU1Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMzAuMzIxNCwzNjMuNjA1NSwxMzQuMzIxNCwzNzMuNjA1NSwxMzguMzIxNCwzNjMuNjA1NSwxMzQuMzIxNCwzNjcuNjA1NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxNzEuMjQwNSIgeDI9IjE5Ni4zMjE4IiB5MT0iMzM3LjIwMzEiIHkyPSIzMzcuMjAzMSIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTkyLjMyMTgsNDA2LjA4OTgsMTk2LjMyMTgsNDE2LjA4OTgsMjAwLjMyMTgsNDA2LjA4OTgsMTk2LjMyMTgsNDEwLjA4OTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTk2LjMyMTgiIHgyPSIxOTYuMzIxOCIgeTE9IjMzNy4yMDMxIiB5Mj0iNDgwLjA4OTgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTk2LjMyMTgiIHgyPSIxMzQuMzIxNCIgeTE9IjQ4MC4wODk4IiB5Mj0iNDgwLjA4OTgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTM0LjMyMTQiIHgyPSIxMzQuMzIxNCIgeTE9IjQ4MC4wODk4IiB5Mj0iNTAwLjA4OTgiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzMC4zMjE0LDQ5MC4wODk4LDEzNC4zMjE0LDUwMC4wODk4LDEzOC4zMjE0LDQ5MC4wODk4LDEzNC4zMjE0LDQ5NC4wODk4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4zMjE0IiB4Mj0iMTM0LjMyMTQiIHkxPSIzMDUuMjAzMSIgeTI9IjMyNS4yMDMxIi8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMzAuMzIxNCwzMTUuMjAzMSwxMzQuMzIxNCwzMjUuMjAzMSwxMzguMzIxNCwzMTUuMjAzMSwxMzQuMzIxNCwzMTkuMjAzMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxMzQuMzIxNCIgeDI9IjEzNC4zMjE0IiB5MT0iNjM2LjQyOTciIHkyPSI2NTYuNDI5NyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTMwLjMyMTQsNjQ2LjQyOTcsMTM0LjMyMTQsNjU2LjQyOTcsMTM4LjMyMTQsNjQ2LjQyOTcsMTM0LjMyMTQsNjUwLjQyOTciIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTM0LjMyMTQiIHgyPSIxMzQuMzIxNCIgeTE9IjY5MC4zOTg0IiB5Mj0iNzEwLjM5ODQiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzMC4zMjE0LDcwMC4zOTg0LDEzNC4zMjE0LDcxMC4zOTg0LDEzOC4zMjE0LDcwMC4zOTg0LDEzNC4zMjE0LDcwNC4zOTg0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4zMjE0IiB4Mj0iMTM0LjMyMTQiIHkxPSI1NzguMDU4NiIgeTI9IjYwMi40NjA5Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMzAuMzIxNCw1OTIuNDYwOSwxMzQuMzIxNCw2MDIuNDYwOSwxMzguMzIxNCw1OTIuNDYwOSwxMzQuMzIxNCw1OTYuNDYwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxNzEuMjQwNSIgeDI9IjE5Ni4zMjE4IiB5MT0iNTY2LjA1ODYiIHkyPSI1NjYuMDU4NiIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTkyLjMyMTgsNjU0LjQyOTcsMTk2LjMyMTgsNjY0LjQyOTcsMjAwLjMyMTgsNjU0LjQyOTcsMTk2LjMyMTgsNjU4LjQyOTciIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTk2LjMyMTgiIHgyPSIxOTYuMzIxOCIgeTE9IjU2Ni4wNTg2IiB5Mj0iNzU0LjM5ODQiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTk2LjMyMTgiIHgyPSIxMzQuMzIxNCIgeTE9Ijc1NC4zOTg0IiB5Mj0iNzU0LjM5ODQiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTM0LjMyMTQiIHgyPSIxMzQuMzIxNCIgeTE9Ijc1NC4zOTg0IiB5Mj0iNzc0LjM5ODQiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzMC4zMjE0LDc2NC4zOTg0LDEzNC4zMjE0LDc3NC4zOTg0LDEzOC4zMjE0LDc2NC4zOTg0LDEzNC4zMjE0LDc2OC4zOTg0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgeDE9IjEzNC4zMjE0IiB4Mj0iMTM0LjMyMTQiIHkxPSI1MzQuMDU4NiIgeTI9IjU1NC4wNTg2Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMzAuMzIxNCw1NDQuMDU4NiwxMzQuMzIxNCw1NTQuMDU4NiwxMzguMzIxNCw1NDQuMDU4NiwxMzQuMzIxNCw1NDguMDU4NiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHgxPSIxMzQuMzIxNCIgeDI9IjEzNC4zMjE0IiB5MT0iODA4LjM2NzIiIHkyPSI4MjguMzY3MiIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTMwLjMyMTQsODE4LjM2NzIsMTM0LjMyMTQsODI4LjM2NzIsMTM4LjMyMTQsODE4LjM2NzIsMTM0LjMyMTQsODIyLjM2NzIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMTM0LjMyMTQiIHgyPSIxMzQuMzIxNCIgeTE9Ijg2Mi4zMzU5IiB5Mj0iODgyLjMzNTkiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzMC4zMjE0LDg3Mi4zMzU5LDEzNC4zMjE0LDg4Mi4zMzU5LDEzOC4zMjE0LDg3Mi4zMzU5LDEzNC4zMjE0LDg3Ni4zMzU5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PD9wbGFudHVtbC1zcmMgWlN4RkppOTA0MFJtLXBwNTdhbEtHd3pUWlN6WXVYQVFhNjlpQm52dGNtMTIyOHNBWVFjMTAwYTZaVEszN0ZYSlVQWFhULTc0QXJYVEVJV1NsN3VweV9xY1M4Q1k4b1o2NjdRSDluWU1LVkduMzU2eW9TZjBIc0swRnBZeDNDMVBmaFVvNWdFdXFSdGZ3aGIxMFRteWlLbkFaYS04VlBlWkdPNXZuQmZZVld1U3pKZlJKaGtSVUxNelp2Ml93M0hIcE5XcGx3UFBPVWEyTUQ1ZG5GOUFzUVFTWkRQZnh5MC05QVJqb0FSMGw3Q3QzLTNlMkxWOVZRUWtYV0ZhMm5Ici1rc1FONUtaTVVseVdTcjhab0ZMVmxtd05EbVhWelhIanUxZ2pEUnpwWXZXeWhzMC1MQjZSVmFuZkRrNl90aHdRSVJoaFRfVUp4WXR1WEMwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="_8">ワールドの更新<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 更新を適用</span>
+<span class="cm"> */</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">applyUpdate</span><span class="p">(</span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="p">:</span><span class="w"> </span><span class="nc">CellUpdate</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="n">update</span><span class="w"> </span><span class="k">match</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">Move</span><span class="p">(</span><span class="n">from</span><span class="p">,</span><span class="w"> </span><span class="n">to</span><span class="p">,</span><span class="w"> </span><span class="n">cell</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">      </span><span class="n">world</span><span class="p">.</span><span class="n">setCell</span><span class="p">(</span><span class="n">from</span><span class="p">,</span><span class="w"> </span><span class="nc">Water</span><span class="p">).</span><span class="n">setCell</span><span class="p">(</span><span class="n">to</span><span class="p">,</span><span class="w"> </span><span class="n">cell</span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">Reproduce</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span><span class="w"> </span><span class="n">child</span><span class="p">,</span><span class="w"> </span><span class="n">parentCell</span><span class="p">,</span><span class="w"> </span><span class="n">childCell</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">      </span><span class="n">world</span><span class="p">.</span><span class="n">setCell</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span><span class="w"> </span><span class="n">parentCell</span><span class="p">).</span><span class="n">setCell</span><span class="p">(</span><span class="n">child</span><span class="p">,</span><span class="w"> </span><span class="n">childCell</span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">Eat</span><span class="p">(</span><span class="n">from</span><span class="p">,</span><span class="w"> </span><span class="n">to</span><span class="p">,</span><span class="w"> </span><span class="n">cell</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">      </span><span class="n">world</span><span class="p">.</span><span class="n">setCell</span><span class="p">(</span><span class="n">from</span><span class="p">,</span><span class="w"> </span><span class="nc">Water</span><span class="p">).</span><span class="n">setCell</span><span class="p">(</span><span class="n">to</span><span class="p">,</span><span class="w"> </span><span class="n">cell</span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">Die</span><span class="p">(</span><span class="n">at</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">      </span><span class="n">world</span><span class="p">.</span><span class="n">setCell</span><span class="p">(</span><span class="n">at</span><span class="p">,</span><span class="w"> </span><span class="nc">Water</span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">NoChange</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">      </span><span class="n">world</span>
+
+<span class="cm">/**</span>
+<span class="cm"> * ワールドの1ステップを実行</span>
+<span class="cm"> */</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">tick</span><span class="p">(</span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">:</span><span class="w"> </span><span class="nc">Random</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="nc">Random</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">positions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">random</span><span class="p">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">world</span><span class="p">.</span><span class="n">allPositions</span><span class="p">.</span><span class="n">toList</span><span class="p">)</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">processed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scala</span><span class="p">.</span><span class="n">collection</span><span class="p">.</span><span class="n">mutable</span><span class="p">.</span><span class="nc">Set</span><span class="p">.</span><span class="n">empty</span><span class="p">[</span><span class="nc">Position</span><span class="p">]</span>
+
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">newWorld</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">positions</span><span class="p">.</span><span class="n">foldLeft</span><span class="p">(</span><span class="n">world</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">processed</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span><span class="w"> </span><span class="k">then</span><span class="w"> </span><span class="n">w</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">      </span><span class="kd">val</span><span class="w"> </span><span class="n">cell</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">getCell</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+<span class="w">      </span><span class="kd">val</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tickCell</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">)</span>
+<span class="w">      </span><span class="c1">// 処理済みの位置を記録</span>
+<span class="w">      </span><span class="n">update</span><span class="w"> </span><span class="k">match</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="nc">Move</span><span class="p">(</span><span class="n">from</span><span class="p">,</span><span class="w"> </span><span class="n">to</span><span class="p">,</span><span class="w"> </span><span class="n">_</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">          </span><span class="n">processed</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">from</span>
+<span class="w">          </span><span class="n">processed</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">to</span>
+<span class="w">        </span><span class="c1">// ... 他のケース</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">()</span>
+<span class="w">      </span><span class="n">applyUpdate</span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="p">)</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">newWorld</span><span class="p">.</span><span class="n">copy</span><span class="p">(</span><span class="n">generation</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">newWorld</span><span class="p">.</span><span class="n">generation</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="5">5. 設定パラメータ<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span>
+<span class="w">  </span><span class="c1">// 魚の設定</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">fishReproductionAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span>
+
+<span class="w">  </span><span class="c1">// サメの設定</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">sharkReproductionAge</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">sharkReproductionHealth</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">sharkStartingHealth</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">sharkEatingHealth</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="n">sharkMaxHealth</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>パラメータ</th>
+<th>説明</th>
+<th>デフォルト値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fishReproductionAge</td>
+<td>魚の繁殖可能年齢</td>
+<td>6</td>
+</tr>
+<tr>
+<td>sharkReproductionAge</td>
+<td>サメの繁殖可能年齢</td>
+<td>5</td>
+</tr>
+<tr>
+<td>sharkStartingHealth</td>
+<td>サメの初期体力</td>
+<td>5</td>
+</tr>
+<tr>
+<td>sharkEatingHealth</td>
+<td>捕食時の体力回復量</td>
+<td>5</td>
+</tr>
+<tr>
+<td>sharkMaxHealth</td>
+<td>サメの最大体力</td>
+<td>10</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-dsl">6. DSL<a class="headerlink" href="#6-dsl" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">DSL</span><span class="p">:</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">world</span><span class="p">(</span><span class="n">width</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">World</span><span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="w"> </span><span class="n">height</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">fish</span><span class="p">:</span><span class="w"> </span><span class="nc">Fish</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Fish</span><span class="p">()</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">fish</span><span class="p">(</span><span class="n">age</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Fish</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Fish</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">shark</span><span class="p">:</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Shark</span><span class="p">()</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">shark</span><span class="p">(</span><span class="n">age</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">health</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Shark</span><span class="p">(</span><span class="n">age</span><span class="p">,</span><span class="w"> </span><span class="n">health</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">pos</span><span class="p">(</span><span class="n">x</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Position</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">)</span>
+
+<span class="w">  </span><span class="k">extension</span><span class="w"> </span><span class="p">(</span><span class="n">w</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">)</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">place</span><span class="p">(</span><span class="n">cell</span><span class="p">:</span><span class="w"> </span><span class="nc">Cell</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">setCell</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">cell</span><span class="p">)</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">placeFish</span><span class="p">(</span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">setCell</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="nc">Fish</span><span class="p">())</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">placeShark</span><span class="p">(</span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">setCell</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="nc">Shark</span><span class="p">())</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">populate</span><span class="p">(</span><span class="n">fishCount</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">sharkCount</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span>
+<span class="w">      </span><span class="nc">World</span><span class="p">.</span><span class="n">populateRandom</span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">fishCount</span><span class="p">,</span><span class="w"> </span><span class="n">sharkCount</span><span class="p">)</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">.</span><span class="n">tick</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">steps</span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">)</span>
+<span class="w">    </span><span class="k">def</span><span class="w"> </span><span class="nf">history</span><span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">World</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">.</span><span class="n">runWithHistory</span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="7">7. 使用例<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nc">WatorSimulation</span><span class="p">.</span><span class="n">*</span>
+<span class="k">import</span><span class="w"> </span><span class="nc">DSL</span><span class="p">.</span><span class="n">*</span>
+
+<span class="c1">// 10x10 のワールドを作成</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">w</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">world</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span>
+
+<span class="c1">// 魚20匹、サメ5匹をランダム配置</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">populated</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">w</span><span class="p">.</span><span class="n">populate</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1">// 統計情報</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">populated</span><span class="p">.</span><span class="n">statistics</span>
+<span class="c1">// =&gt; Statistics(fish = 20, sharks = 5, water = 75, generation = 0)</span>
+
+<span class="c1">// ワールドを表示</span>
+<span class="n">println</span><span class="p">(</span><span class="n">populated</span><span class="p">.</span><span class="n">display</span><span class="p">)</span>
+<span class="c1">// ..f.......</span>
+<span class="c1">// .S....f...</span>
+<span class="c1">// ..f.......</span>
+<span class="c1">// ...f..f...</span>
+<span class="c1">// ....S.....</span>
+<span class="c1">// .f........</span>
+<span class="c1">// ......f...</span>
+<span class="c1">// ..f...S...</span>
+<span class="c1">// ....f.....</span>
+<span class="c1">// .......f..</span>
+
+<span class="c1">// 1ステップ実行</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">w1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">populated</span><span class="p">.</span><span class="n">step</span>
+
+<span class="c1">// 100ステップ実行</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">w100</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">populated</span><span class="p">.</span><span class="n">steps</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="c1">// 履歴付き実行</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">history</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">populated</span><span class="p">.</span><span class="n">history</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="8">8. コンビネータ<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">object</span><span class="w"> </span><span class="nc">Combinators</span><span class="p">:</span>
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 条件が満たされるまでシミュレーションを実行</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">runUntil</span><span class="p">(</span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">predicate</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">Boolean</span><span class="p">,</span><span class="w"> </span><span class="n">maxSteps</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">):</span><span class="w"> </span><span class="p">(</span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">)</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="n">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">world</span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="n">steps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="n">steps</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">maxSteps</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="n">predicate</span><span class="p">(</span><span class="n">current</span><span class="p">)</span><span class="w"> </span><span class="k">do</span>
+<span class="w">      </span><span class="n">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">.</span><span class="n">tick</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+<span class="w">      </span><span class="n">steps</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="p">(</span><span class="n">current</span><span class="p">,</span><span class="w"> </span><span class="n">steps</span><span class="p">)</span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 絶滅判定</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">isExtinct</span><span class="p">(</span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">):</span><span class="w"> </span><span class="nc">Boolean</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">world</span><span class="p">.</span><span class="n">statistics</span>
+<span class="w">    </span><span class="n">stats</span><span class="p">.</span><span class="n">fish</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">sharks</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * 安定判定</span>
+<span class="cm">   */</span>
+<span class="w">  </span><span class="k">def</span><span class="w"> </span><span class="nf">isStable</span><span class="p">(</span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">minFish</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">maxFish</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">minSharks</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">,</span><span class="w"> </span><span class="n">maxSharks</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">):</span><span class="w"> </span><span class="nc">Boolean</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">world</span><span class="p">.</span><span class="n">statistics</span>
+<span class="w">    </span><span class="n">stats</span><span class="p">.</span><span class="n">fish</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">minFish</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">fish</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">maxFish</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+<span class="w">    </span><span class="n">stats</span><span class="p">.</span><span class="n">sharks</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">minSharks</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="n">sharks</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">maxSharks</span>
+</code></pre></div>
+<h2 id="9">9. シミュレーションのダイナミクス<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjYyM3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6Mjc4cHg7aGVpZ2h0OjYyM3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDI3OCA2MjMiIHdpZHRoPSIyNzhweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PHRpdGxlPiYjMjU0Mjk7JiMzOTEzNTsmIzMyNzczOy0mIzM0OTg3OyYjMzkxMzU7JiMzMjc3MzsmIzEyNDgwOyYjMTI0NTI7JiMxMjQ5MDsmIzEyNTExOyYjMTI0NjM7JiMxMjQ3Mzs8L3RpdGxlPjxkZWZzLz48Zz48ZyBjbGFzcz0idGl0bGUiIGRhdGEtc291cmNlLWxpbmU9IjEiPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzMuODA5OCIgeD0iNDUuMzgwMSIgeT0iMjIuOTk1MSI+JiMyNTQyOTsmIzM5MTM1OyYjMzI3NzM7LSYjMzQ5ODc7JiMzOTEzNTsmIzMyNzczOyYjMTI0ODA7JiMxMjQ1MjsmIzEyNDkwOyYjMTI1MTE7JiMxMjQ2MzsmIzEyNDczOzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgZmlzaF91cC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJmaXNoX3VwIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0ibm9uZSIgaGVpZ2h0PSI3My4yOSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjgwIiB4PSIxMDciIHk9IjQ0LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTUuOTk5OCIgeD0iMTE5LjAwMDEiIHk9IjU5LjI5MiI+JiMzOTc3MDsmIzEyMzk4OyYjMjI2Nzk7JiMyMTE1Mjs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGZpc2hfZG93bi0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJmaXNoX2Rvd24iIGRhdGEtc291cmNlLWxpbmU9IjciIGlkPSJlbnQwMDA0Ij48cmVjdCBmaWxsPSJub25lIiBoZWlnaHQ9IjczLjMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMjIiIHg9IjkiIHk9IjE4MS41ODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjU1Ljk5OTgiIHg9IjQyLjAwMDEiIHk9IjE5Ni41ODIiPiYjMzk3NzA7JiMxMjM5ODsmIzI4MTg3OyYjMjM1Njk7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBzaGFya191cC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzaGFya191cCIgZGF0YS1zb3VyY2UtbGluZT0iMTEiIGlkPSJlbnQwMDA2Ij48cmVjdCBmaWxsPSJub25lIiBoZWlnaHQ9IjczLjMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI4NSIgeD0iNyIgeT0iMzE4Ljg4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNjkuOTk5NyIgeD0iMTQuNTAwMiIgeT0iMzMzLjg4MiI+JiMxMjQ2OTsmIzEyNTEzOyYjMTIzOTg7JiMyMjY3OTsmIzIxMTUyOzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgc2hhcmtfZG93bi0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzaGFya19kb3duIiBkYXRhLXNvdXJjZS1saW5lPSIxNSIgaWQ9ImVudDAwMDgiPjxyZWN0IGZpbGw9Im5vbmUiIGhlaWdodD0iNzMuMjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI4NSIgeD0iNjQiIHk9IjQ1Ni4xODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjY5Ljk5OTciIHg9IjcxLjUwMDIiIHk9IjQ3MS4xODIiPiYjMTI0Njk7JiMxMjUxMzsmIzEyMzk4OyYjMjgxODc7JiMyMzU2OTs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgZmItLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJmaXNoX3VwLmZiIiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0Ny45OTk5IiB4PSIxMjMiIHk9Ijc5LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNy45OTk5IiB4PSIxMzMiIHk9Ijk1LjI5MiI+JiMzMjMyMTsmIzI3NTQyOzwvdGV4dD48L2c+PCEtLWVudGl0eSBmZS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImZpc2hfZG93bi5mZSIgZGF0YS1zb3VyY2UtbGluZT0iOCIgaWQ9ImVudDAwMDUiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iODkuOTk5NyIgeD0iMjUiIHk9IjIxNi41ODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNjkuOTk5NyIgeD0iMzUiIHk9IjIzMi41ODIiPiYjMjU0Mjk7JiMzOTEzNTsmIzEyMzczOyYjMTI0Mjg7JiMxMjQyNzs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgc2ItLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzaGFya191cC5zYiIgZGF0YS1zb3VyY2UtbGluZT0iMTIiIGlkPSJlbnQwMDA3Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQ3Ljk5OTkiIHg9IjI1IiB5PSIzNTMuODg2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI3Ljk5OTkiIHg9IjM1IiB5PSIzNjkuODgyIj4mIzMyMzIxOyYjMjc1NDI7PC90ZXh0PjwvZz48IS0tZW50aXR5IHNkLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2hhcmtfZG93bi5zZCIgZGF0YS1zb3VyY2UtbGluZT0iMTYiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQ3Ljk5OTkiIHg9IjgyIiB5PSI0OTEuMTg2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI3Ljk5OTkiIHg9IjkyIiB5PSI1MDcuMTgyIj4mIzM5MTg3OyYjMjc1MTU7PC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xNCIgZGF0YS1zb3VyY2UtbGluZT0iMjUiIGlkPSJlbnQwMDE1Ij48cGF0aCBkPSJNOC42NSw1NzYuNDc2OSBMOC42NSw2MTYuNzQyNSBBMCwwIDAgMCAwIDguNjUsNjE2Ljc0MjUgTDIwMy4zNDExLDYxNi43NDI1IEEwLDAgMCAwIDAgMjAzLjM0MTEsNjE2Ljc0MjUgTDIwMy4zNDExLDU4Ni40NzY5IEwxOTMuMzQxMSw1NzYuNDc2OSBMMTEwLDU3Ni40NzY5IEwxMDYsNTEzLjkxNjkgTDEwMiw1NzYuNDc2OSBMOC42NSw1NzYuNDc2OSBBMCwwIDAgMCAwIDguNjUsNTc2LjQ3NjkiIGZpbGw9IiNGRUZGREQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjxwYXRoIGQ9Ik0xOTMuMzQxMSw1NzYuNDc2OSBMMTkzLjM0MTEsNTg2LjQ3NjkgTDIwMy4zNDExLDU4Ni40NzY5IEwxOTMuMzQxMSw1NzYuNDc2OSIgZmlsbD0iI0ZFRkZERCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTczLjY5MTEiIHg9IjE0LjY1IiB5PSI1OTMuNTQzOCI+JiMyMDg1NjsmIzIyNDExOyYjMzAzNDA7JiMxMjM5NDsmIzI1NDI5OyYjMzkxMzU7JiMzMjc3MzstJiMzNDk4NzsmIzM5MTM1OyYjMzI3NzM7JiMxMjUxNDsmIzEyNDg3OyYjMTI1MjM7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1OC45NjQ0IiB4PSIxNC42NSIgeT0iNjA4LjY3NjYiPihMb3RrYS1Wb2x0ZXJyYSAmIzMwMzQwOyYjMTIzOTQ7JiMyNTM5MTsmIzIxMjA1Oyk8L3RleHQ+PC9nPjwhLS1saW5rIGZiIHRvIGZlLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDMiIGRhdGEtZW50aXR5LTI9ImVudDAwMDUiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxOSIgaWQ9ImxuazEwIj48cGF0aCBkPSJNMTIyLjc2LDk5Ljk2NjkgQzEwNy41NCwxMDYuNjU2OSA4OC45NywxMTcuNTQ2OSA3OSwxMzMuNTg2OSBDNjIuNzksMTU5LjY2NjkgNjQuNzY4MywxOTIuMDc2MiA2Ny4zNTgzLDIxMC4zNTYyIiBmaWxsPSJub25lIiBpZD0iZmItdG8tZmUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjY4LjIsMjE2LjI5NjksNzAuODk3OSwyMDYuODI0Nyw2Ny40OTg2LDIxMS4zNDYzLDYyLjk3NywyMDcuOTQ3LDY4LjIsMjE2LjI5NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3OC4wMDAxIiB4PSI4MCIgeT0iMTQ2LjY1MzgiPiYjMzk3NzA7JiMxMjM2NDsmIzIyNjc5OyYjMTIzNjA7JiMxMjQyNzsmIzEyMzkyOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3OC4wMDAxIiB4PSI4MCIgeT0iMTYxLjc4NjYiPiYjMTI0Njk7JiMxMjUxMzsmIzEyMzY0OyYjMjI2Nzk7JiMxMjM2MDsmIzEyNDI3OzwvdGV4dD48L2c+PCEtLWxpbmsgZmUgdG8gc2ItLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNSIgZGF0YS1lbnRpdHktMj0iZW50MDAwNyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjIwIiBpZD0ibG5rMTEiPjxwYXRoIGQ9Ik02Ny44OSwyMzkuMTA2OSBDNjYuMTgsMjQ3LjYyNjkgNjMuNzksMjYwLjAwNjkgNjIsMjcwLjg4NjkgQzU3LjA5LDMwMC42OTY5IDUzLjIzODksMzMwLjExMzggNTEuMDU4OSwzNDcuNDQzOCIgZmlsbD0ibm9uZSIgaWQ9ImZlLXRvLXNiIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI1MC4zMSwzNTMuMzk2OSw1NS40MDIsMzQ0Ljk2NjUsNTAuOTM0LDM0OC40MzYsNDcuNDY0NiwzNDMuOTY4LDUwLjMxLDM1My4zOTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzguMDAwMSIgeD0iNjMiIHk9IjI4My45NTM4Ij4mIzM5MTgwOyYjMTIzNjQ7JiMyMjY3OTsmIzEyMzYwOyYjMTI0Mjc7JiMxMjM5Mjs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzguMDAwMSIgeD0iNjMiIHk9IjI5OS4wODY2Ij4mIzMyMzIxOyYjMjc1NDI7JiMxMjM3NTsmIzEyNDIwOyYjMTIzNzc7JiMxMjM1Njs8L3RleHQ+PC9nPjwhLS1saW5rIHNiIHRvIHNkLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDciIGRhdGEtZW50aXR5LTI9ImVudDAwMDkiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIyMSIgaWQ9ImxuazEyIj48cGF0aCBkPSJNNDQuNDMsMzc2LjU5NjkgQzM4LjcyLDM5MS40NDY5IDMwLjc2LDQxOS4wMjY5IDQwLDQ0MC4xODY5IEM0OS43NSw0NjIuNTE2OSA2Ny4xMTc1LDQ3Ny4wMzkxIDgzLjEwNzUsNDg3LjU1OTEiIGZpbGw9Im5vbmUiIGlkPSJzYi10by1zZCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iODguMTIsNDkwLjg1NjksODIuNzk5OCw0ODIuNTY4Niw4My45NDI5LDQ4OC4xMDg3LDc4LjQwMjgsNDg5LjI1MTksODguMTIsNDkwLjg1NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTcuMDAwMSIgeD0iNDEiIHk9IjQyMS4yNTM4Ij4mIzEyNDY5OyYjMTI1MTM7JiMxMjM2NDsmIzIyNjc5OyYjMTIzNjA7JiMxMjM3NzsmIzEyMzY2OyYjMTI0Mjc7JiMxMjM5Mjs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzguMDAwMSIgeD0iNjAuNSIgeT0iNDM2LjM4NjYiPiYjMzkxODA7JiMxOTk4MTsmIzM2Mjc1OyYjMTIzOTE7JiMzOTE4NzsmIzI3NTE1OzwvdGV4dD48L2c+PCEtLWxpbmsgc2QgdG8gZmItLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwOSIgZGF0YS1lbnRpdHktMj0iZW50MDAwMyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjIyIiBpZD0ibG5rMTMiPjxwYXRoIGQ9Ik0xMjAuOTcsNDkwLjY4NjkgQzEzNC44NSw0NzkuODE2OSAxNTQuNiw0NjEuNTE2OSAxNjMsNDQwLjE4NjkgQzIxMi45MywzMTMuMzk2OSAxODcuNTgsMjY3LjYxNjkgMTYzLDEzMy41ODY5IEMxNjAuOTQsMTIyLjM0NjkgMTU4LjUyNjksMTE1LjY3ODEgMTU0LjY4NjksMTA3LjMyODEiIGZpbGw9Im5vbmUiIGlkPSJzZC10by1mYiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTUyLjE4LDEwMS44NzY5LDE1Mi4zMDYyLDExMS43MjQ5LDE1NC4yNjkxLDEwNi40MTk1LDE1OS41NzQ1LDEwOC4zODI0LDE1Mi4xOCwxMDEuODc2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijc4LjAwMDEiIHg9IjE5Mi41NyIgeT0iMjgzLjk1MzgiPiYjMTI0Njk7JiMxMjUxMzsmIzEyMzY0OyYjMjgxODc7JiMxMjQyNzsmIzEyMzkyOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2NS4wMDAxIiB4PSIxOTkuMDciIHk9IjI5OS4wODY2Ij4mIzM5NzcwOyYjMTIzNjQ7JiMyMjY3OTsmIzEyMzYwOyYjMTI0Mjc7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBUUEJGSWlDbTc4M2xVT2dtYW54dzBYdnkwaS1VMTZkTnBldERMZmc4MW42TVQ0RFBFcTZhM1lTdWRHRTdPdmlXSWVVRnl4RlQtWFFjWV9sSmtUcjJ5bGstVjg3RzBZcVBFQWh4eUtqaEtndWdhdFBGaGkwZjAtLTBLbUVkMU5tOFY4SUdSTUlmUVh1OTgxRnRjeTA2T1JpSHJmdW9NMkt1TG8zdm16Q0pWOHdvZ2d0WnA3WjRlaTZURkRCR25IZXUyWHgyenZpNWg1amR2WG9OSFMxeXUxdm1McXVQQW54V2QtMHlmcGo4TmhNQjZxQThqYWNtcjI4NWdQWXVTbmxybC1NZmRZWG82YlFLTkg2NFRfM3FDUHVlMDdPYkllNXIzeW9QVHg2RG42bzI0MnIxRWp1X0g2TzJRbTJsMEJpN0xhNTR0YTlxV1FtUWF1ZGg2SWp5RnE1enlsSzF4NU1zOFc1RDJ4TGJMaG5vWmdJaDRKOGpRYzNEZWpHd0hjNHIyMV9UU0xFNGxBdHo2Y3JtQmk3ZmVRcXpZblBMUFR5Z0tTRXNMVm83VUNGR3pSVUhPVWV1cVZ1Mj8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title="" /></p>
+<h2 id="10-clojure">10. Clojure との比較<a class="headerlink" href="#10-clojure" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>機能</th>
+<th>Clojure</th>
+<th>Scala</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>セル定義</td>
+<td>defmulti/defmethod</td>
+<td>sealed trait + case class</td>
+</tr>
+<tr>
+<td>多態的ティック</td>
+<td>マルチメソッド</td>
+<td>パターンマッチング</td>
+</tr>
+<tr>
+<td>ワールド更新</td>
+<td>assoc/update</td>
+<td>copy メソッド</td>
+</tr>
+<tr>
+<td>ランダム選択</td>
+<td>rand-nth</td>
+<td>random.nextInt</td>
+</tr>
+<tr>
+<td>座標ラップ</td>
+<td>mod</td>
+<td>((x % w) + w) % w</td>
+</tr>
+</tbody>
+</table>
+<p>Clojure ではマルチメソッドを使用して異なるセルタイプの振る舞いを定義しますが、Scala では sealed trait と case class による ADT とパターンマッチングで同等の多態性を実現します。</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Scala: パターンマッチングによる多態性</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">tickCell</span><span class="p">(</span><span class="n">cell</span><span class="p">:</span><span class="w"> </span><span class="nc">Cell</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">:</span><span class="w"> </span><span class="nc">Position</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">:</span><span class="w"> </span><span class="nc">World</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">:</span><span class="w"> </span><span class="nc">Random</span><span class="p">):</span><span class="w"> </span><span class="nc">CellUpdate</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="n">cell</span><span class="w"> </span><span class="k">match</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">Water</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">NoChange</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="n">fish</span><span class="p">:</span><span class="w"> </span><span class="nc">Fish</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tickFish</span><span class="p">(</span><span class="n">fish</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="n">shark</span><span class="p">:</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">tickShark</span><span class="p">(</span><span class="n">shark</span><span class="p">,</span><span class="w"> </span><span class="n">pos</span><span class="p">,</span><span class="w"> </span><span class="n">world</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1">;; Clojure: マルチメソッドによる多態性</span>
+<span class="p">(</span><span class="kd">defmulti </span><span class="nv">tick</span><span class="w"> </span><span class="p">(</span><span class="k">fn </span><span class="p">[</span><span class="nv">cell</span><span class="w"> </span><span class="nv">loc</span><span class="w"> </span><span class="nv">world</span><span class="p">]</span><span class="w"> </span><span class="p">(</span><span class="ss">::type</span><span class="w"> </span><span class="nv">cell</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="kd">defmethod </span><span class="nv">tick</span><span class="w"> </span><span class="ss">::water</span><span class="w"> </span><span class="p">[</span><span class="nv">_water</span><span class="w"> </span><span class="nv">_loc</span><span class="w"> </span><span class="nv">_world</span><span class="p">]</span><span class="w"> </span><span class="nv">nil</span><span class="p">)</span>
+<span class="p">(</span><span class="kd">defmethod </span><span class="nv">tick</span><span class="w"> </span><span class="ss">::fish</span><span class="w"> </span><span class="p">[</span><span class="nv">fish</span><span class="w"> </span><span class="nv">loc</span><span class="w"> </span><span class="nv">world</span><span class="p">]</span><span class="w"> </span><span class="nv">...</span><span class="p">)</span>
+<span class="p">(</span><span class="kd">defmethod </span><span class="nv">tick</span><span class="w"> </span><span class="ss">::shark</span><span class="w"> </span><span class="p">[</span><span class="nv">shark</span><span class="w"> </span><span class="nv">loc</span><span class="w"> </span><span class="nv">world</span><span class="p">]</span><span class="w"> </span><span class="nv">...</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="11">11. 関数型アプローチの特徴<a class="headerlink" href="#11" title="Permanent link">&para;</a></h2>
+<h3 id="_9">不変性<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<p>すべての状態更新は新しいワールドを返します。</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// 元のワールドは変更されない</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">w1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">World</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">w2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">.</span><span class="n">tick</span><span class="p">(</span><span class="n">w1</span><span class="p">)</span>
+
+<span class="c1">// w1 と w2 は独立</span>
+<span class="n">w1</span><span class="p">.</span><span class="n">generation</span><span class="w"> </span><span class="c1">// =&gt; 0</span>
+<span class="n">w2</span><span class="p">.</span><span class="n">generation</span><span class="w"> </span><span class="c1">// =&gt; 1</span>
+</code></pre></div>
+<h3 id="adt_1">ADT による型安全性<a class="headerlink" href="#adt_1" title="Permanent link">&para;</a></h3>
+<p>sealed trait により、すべてのセルタイプがコンパイル時に網羅されていることが保証されます。</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// コンパイラが網羅性をチェック</span>
+<span class="n">cell</span><span class="w"> </span><span class="k">match</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="nc">Water</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">...</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">fish</span><span class="p">:</span><span class="w"> </span><span class="nc">Fish</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">...</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">shark</span><span class="p">:</span><span class="w"> </span><span class="nc">Shark</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">...</span>
+<span class="w">  </span><span class="c1">// すべてのケースをカバー</span>
+</code></pre></div>
+<h3 id="_10">テスト容易性<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<p>純粋関数であるため、決定的なテストが可能です。</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// シード付きRandomで決定的なテスト</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">random</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="nc">Random</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">world</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">World</span><span class="p">.</span><span class="n">populateRandom</span><span class="p">(</span><span class="nc">World</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">),</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="n">random</span><span class="p">)</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">.</span><span class="n">tick</span><span class="p">(</span><span class="n">world</span><span class="p">,</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="nc">Random</span><span class="p">(</span><span class="mi">42</span><span class="p">))</span>
+<span class="c1">// 同じシードなら同じ結果</span>
+</code></pre></div>
+<h2 id="_11">まとめ<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>本章では、Wa-Tor シミュレーションを通じて以下を学びました：</p>
+<ol>
+<li><strong>セルオートマトン</strong>: グリッドベースのシミュレーション</li>
+<li><strong>ADT</strong>: sealed trait と case class による型安全な設計</li>
+<li><strong>トーラス型ワールド</strong>: 端のラップ処理</li>
+<li><strong>捕食者-被食者モデル</strong>: 繁殖、捕食、餓死のルール</li>
+<li><strong>パターンマッチング</strong>: 多態的な振る舞いの実現</li>
+<li><strong>不変データ構造</strong>: 状態更新の明示的な管理</li>
+</ol>
+<h2 id="_12">参考コード<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<p>本章のコード例は以下のファイルで確認できます：</p>
+<ul>
+<li>ソースコード: <code>apps/scala/part6/src/main/scala/WatorSimulation.scala</code></li>
+<li>テストコード: <code>apps/scala/part6/src/test/scala/WatorSimulationSpec.scala</code></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+        <script src="../../../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>

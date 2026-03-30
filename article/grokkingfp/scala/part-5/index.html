@@ -1,0 +1,3340 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Part V: 並行処理 - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#part-v" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Part V: 並行処理
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-start-tdd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト駆動開発から始める XX 入門
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Functional Programming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../grokking-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-desgin-ppp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型デザイン - 原則、パターン、実践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="part-v">Part V: 並行処理<a class="headerlink" href="#part-v" title="Permanent link">&para;</a></h1>
+<p>本章では、関数型プログラミングにおける並行処理を学びます。Fiber による軽量スレッド、Ref による安全な共有状態管理、そして並行プログラムの構築方法を習得します。</p>
+<hr />
+<h2 id="10">第10章: 並行・並列処理<a class="headerlink" href="#10" title="Permanent link">&para;</a></h2>
+<h3 id="101">10.1 並行処理の課題<a class="headerlink" href="#101" title="Permanent link">&para;</a></h3>
+<p>従来の並行処理には多くの課題があります:</p>
+<ul>
+<li>デッドロック</li>
+<li>競合状態（Race Condition）</li>
+<li>共有状態の管理の複雑さ</li>
+<li>スレッドのオーバーヘッド</li>
+</ul>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjQyN3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6ODY3cHg7aGVpZ2h0OjQyN3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDg2NyA0MjciIHdpZHRoPSI4NjdweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMyIgaWQ9ImVudDAwMDIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iNDA5Ljg5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iODQ5IiB4PSIxMiIgeT0iMTIiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTM5Ljk5OTQiIHg9IjM2Ni41MDAzIiB5PSIyNi45OTUxIj4mIzI0NDY3OyYjMjY0Njk7JiMxMjM5ODsmIzIwMDA2OyYjMzQ4OTI7JiMyMDk2NjsmIzI5NzAyOyYjMTIzOTg7JiMyMTgzOTsmIzM4OTg4OzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgcHJvYmxlbXMtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi5wcm9ibGVtcyIgZGF0YS1zb3VyY2UtbGluZT0iNCIgaWQ9ImVudDAwMDMiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjI1LjU5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMzEzIiB4PSI0NCIgeT0iNjMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjcuOTk5OSIgeD0iMTg2LjUwMDEiIHk9Ijc3Ljk5NTEiPiYjMjE4Mzk7JiMzODk4ODs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHNvbHV0aW9ucy0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLnNvbHV0aW9ucyIgZGF0YS1zb3VyY2UtbGluZT0iMTEiIGlkPSJlbnQwMDA4Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjE5MC41OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjQzMiIgeD0iMzk3IiB5PSIxOTkuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5Ny45OTk2IiB4PSI1NjQuMDAwMiIgeT0iMjE0LjI5NTEiPiYjMzgzMDY7JiMyNTk2ODsmIzIyNDExOyYjMTIzOTg7JiMzNTI5OTsmIzI3NzcwOyYjMzE1NzQ7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4ucHJvYmxlbXMuLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI1IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTAzLjk5OTYiIHg9Ijc1IiB5PSIxMDYiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4My45OTk2IiB4PSI4NSIgeT0iMTIxLjk5NTEiPiYjMTI0ODc7JiMxMjQ4MzsmIzEyNDg5OyYjMTI1MjU7JiMxMjQ4MzsmIzEyNDYzOzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi5wcm9ibGVtcy4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNzUuOTk5OCIgeD0iMjE0IiB5PSIxMDYiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1NS45OTk4IiB4PSIyMjQiIHk9IjEyMS45OTUxIj4mIzMxNDc4OyYjMjE1MTI7JiMyOTM2NjsmIzI0OTA3OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi5wcm9ibGVtcy4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI3IiBpZD0iZW50MDAwNiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTE3Ljk5OTYiIHg9IjY4IiB5PSIyNDIuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijk3Ljk5OTYiIHg9Ijc4IiB5PSIyNTguMjk1MSI+JiMyMTQ4NzsmIzIyNzkzOyYjMjkzNjY7JiMyNDkwNzsmIzEyMzk4OyYjMjA4NDk7JiMyNjM3Nzs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgPz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi5wcm9ibGVtcy4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjgiIGlkPSJlbnQwMDA3Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMDMuOTk5NiIgeD0iMjIxIiB5PSIyNDIuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgzLjk5OTYiIHg9IjIzMSIgeT0iMjU4LjI5NTEiPiYjMTI0NzM7JiMxMjUyNDsmIzEyNDgzOyYjMTI0ODk7JiMzMTY0OTsmIzI5NzAyOzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi5zb2x1dGlvbnMuLi4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMTIiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNTkuOTk5NCIgeD0iNDIxIiB5PSIyNDIuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzOS45OTk0IiB4PSI0MzEiIHk9IjI1OC4yOTUxIj4mIzEyNDUyOyYjMTI1MTE7JiMxMjUxNzsmIzEyNTQwOyYjMTI0Nzk7JiMxMjUwMjsmIzEyNTIzOyYjMTI0ODc7JiMxMjU0MDsmIzEyNDc5OzwvdGV4dD48L2c+PCEtLWVudGl0eSBSZWY/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLnNvbHV0aW9ucy5SZWYuLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjEzIiBpZD0iZW50MDAxMCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTY5LjI2OSIgeD0iNjE2LjM3IiB5PSIyNDIuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE0OS4yNjkiIHg9IjYyNi4zNyIgeT0iMjU4LjI5NTEiPlJlZiYjNjUyODg7JiMxMjQ1MDsmIzEyNDg4OyYjMTI1MTE7JiMxMjQ4MzsmIzEyNDYzOyYjMjE0NDI7JiMyOTAzMTsmIzY1Mjg5OzwvdGV4dD48L2c+PCEtLWVudGl0eSBGaWJlcj8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi5zb2x1dGlvbnMuRmliZXIuLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMTQiIGlkPSJlbnQwMDExIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNjcuMTk3OCIgeD0iNDIxLjQiIHk9IjM0My41OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE0Ny4xOTc4IiB4PSI0MzEuNCIgeT0iMzU5LjU4NTEiPkZpYmVyJiM2NTI4ODsmIzM2NjA1OyYjMzczMjc7JiMxMjQ3MzsmIzEyNTI0OyYjMTI0ODM7JiMxMjQ4OTsmIzY1Mjg5OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uc29sdXRpb25zLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxNSIgaWQ9ImVudDAwMTIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzMS45OTk1IiB4PSI2MjQiIHk9IjM0My41OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExMS45OTk1IiB4PSI2MzQiIHk9IjM1OS41ODUxIj4mIzIzNDU5OyYjMzUzMjg7JiMzMDM0MDsmIzEyMzk0OyYjMjAwMDY7JiMzNDg5MjsmIzIwOTY2OyYjMjk3MDI7PC90ZXh0PjwvZz48IS0tbGluayBwcm9ibGVtcyB0byBzb2x1dGlvbnMtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwOCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE5IiBpZD0ibG5rMTMiPjxwYXRoIGQ9Ik0zNTcuNDM4NywxMTkuMjk4NiBDMzU3LjY5ODgsMTE5LjMzNDEgMzU3Ljk2NDUsMTE5LjM3MDMgMzU4LjIzNTgsMTE5LjQwNzMgQzM1OS4zMjExLDExOS41NTUzIDM2MC40OTU4LDExOS43MTU1IDM2MS43NTY2LDExOS44ODc1IEMzNjQuMjc4MywxMjAuMjMxNCAzNjcuMTQ0NCwxMjAuNjIyNiAzNzAuMzI4NSwxMjEuMDU3NCBDMzgzLjA2NDYsMTIyLjc5NjcgNDAwLjg4NywxMjUuMjM0NyA0MjIuMDk0NSwxMjguMTQ2OSBDNDY0LjUwOTcsMTMzLjk3MTMgNTIwLjQ2NTYsMTQxLjY5MjUgNTc2LjM1MzgsMTQ5LjUxNSBDNjg4LjEzLDE2NS4xNiA3OTkuNjM1LDE4MS4yMSA4MDIsMTgzLjMgQzgwNC44OTUsMTg1Ljg1MjUgODA3LjM2NzUsMTg4LjgwMDggODA5LjQ3NzQsMTkyLjAxMTYgQzgxMC41MzIzLDE5My42MTcgODExLjQ5NjYsMTk1LjI4OCA4MTIuMzc3NywxOTcuMDA3OSBDODEyLjU5NzksMTk3LjQzNzkgODEyLjgxMywxOTcuODcxIDgxMy4wMjMsMTk4LjMwNjkgQzgxMy4xMjgsMTk4LjUyNDggODEzLjIzMTcsMTk4Ljc0MzQgODEzLjMzNDIsMTk4Ljk2MjcgQzgxMy4zODU0LDE5OS4wNzI0IDgxMC45MjgxLDE5My43MzE2IDgxMC45Nzg3LDE5My44NDE2IiBmaWxsPSJub25lIiBpZD0icHJvYmxlbXMtdG8tc29sdXRpb25zIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzAwMDAwMCIgcG9pbnRzPSI4MTMuNDg3LDE5OS4yOTIxLDgxMy4zNTgzLDE4OS40NDQxLDgxMS4zOTY4LDE5NC43NSw4MDYuMDkwOSwxOTIuNzg4NSw4MTMuNDg3LDE5OS4yOTIxIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTA0LjAwMDEiIHg9Ijc1NC4wNiIgeT0iMTcxLjM2NjkiPiYjMzgzMDY7JiMyNTk2ODsmIzIyNDExOyYjMTI0NTA7JiMxMjUwMzsmIzEyNTI1OyYjMTI1NDA7JiMxMjQ4MTs8L3RleHQ+PC9nPjw/cGxhbnR1bWwtc3JjIExQMTlKaUQwNDROdEVLTlpWSXgwV1lLN3UwUEVRMjJJQ3lXOUF1STRrcDJFOFA4WmVIVzlDU1dQNEk0RXNLR0MxV3ZKakRqUHZHZ3VkRzVkcnJOcmctbHpsckt4ZWFMQUFmZlFBNktvRWl0TnJEQVhIZWQybHdfMy1udVFfa3pSRl84UXRFZ0J2YUxTeWZPcHluZUFFVGFHQnZqZ2JMSnFTYXdabk1laW9BbHdGYjRHQjBIMGkxNTZ5aTc2b2Q4WVhiRlVoOGxCUU1YVWhOaFM2VkVrbFVaOVEtT2FsQkROR3NKbDIyLUJ0dUpsbksxQXZkSTNVa1FzbXpPaFZ2MnhxUTBKSlp4NG80c3VnY05qazVPZWJyOVdoOGxtWUQxMzI5M3o4Qlc4bXVITWJna1JVX0hXN2pJSGpIN2dZTG13dTB1SnZjMFVoQ2JzMnBjZ254aGV5c2pjRU1kRWI4WnhkVVpmSkRvVWVfNlNKYk1RWTZzaWF5amNUckF1cy1KVmJBSXVJTjhDNDhtXz8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="102">10.2 チェックインのリアルタイム集計<a class="headerlink" href="#102" title="Permanent link">&para;</a></h3>
+<p><strong>ソースファイル</strong>: <code>app/scala/src/main/scala/ch10_CheckIns.scala</code></p>
+<p>都市へのチェックインをリアルタイムで集計し、ランキングを更新する例を見ていきます。</p>
+<div class="highlight"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">City</span><span class="p">(</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">)</span>
+<span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">CityStats</span><span class="p">(</span><span class="n">city</span><span class="p">:</span><span class="w"> </span><span class="nc">City</span><span class="p">,</span><span class="w"> </span><span class="n">checkIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">)</span>
+
+<span class="c1">// チェックインのストリーム</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">checkIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Stream</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">City</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="nc">Stream</span><span class="p">(</span><span class="nc">City</span><span class="p">(</span><span class="s">&quot;Sydney&quot;</span><span class="p">),</span><span class="w"> </span><span class="nc">City</span><span class="p">(</span><span class="s">&quot;Dublin&quot;</span><span class="p">),</span><span class="w"> </span><span class="nc">City</span><span class="p">(</span><span class="s">&quot;Cape Town&quot;</span><span class="p">),</span><span class="w"> </span><span class="nc">City</span><span class="p">(</span><span class="s">&quot;Lima&quot;</span><span class="p">),</span><span class="w"> </span><span class="nc">City</span><span class="p">(</span><span class="s">&quot;Singapore&quot;</span><span class="p">))</span>
+<span class="w">    </span><span class="p">.</span><span class="n">repeatN</span><span class="p">(</span><span class="mi">100</span><span class="n">_000</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">covary</span><span class="p">[</span><span class="nc">IO</span><span class="p">]</span>
+</code></pre></div>
+<h4 id="3">トップ3都市の計算（純粋関数）<a class="headerlink" href="#3" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">topCities</span><span class="p">(</span><span class="n">cityCheckIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">City</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]):</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">CityStats</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">cityCheckIns</span><span class="p">.</span><span class="n">toList</span>
+<span class="w">    </span><span class="p">.</span><span class="n">map</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="n">city</span><span class="p">,</span><span class="w"> </span><span class="n">checkIns</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">CityStats</span><span class="p">(</span><span class="n">city</span><span class="p">,</span><span class="w"> </span><span class="n">checkIns</span><span class="p">)</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">.</span><span class="n">sortBy</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="n">checkIns</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">reverse</span>
+<span class="w">    </span><span class="p">.</span><span class="n">take</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="103">10.3 逐次処理の問題<a class="headerlink" href="#103" title="Permanent link">&para;</a></h3>
+<p>最初の実装は逐次処理で、パフォーマンスに問題があります。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">processCheckIns</span><span class="p">(</span><span class="n">checkIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Stream</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">City</span><span class="p">]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Unit</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">checkIns</span>
+<span class="w">    </span><span class="p">.</span><span class="n">scan</span><span class="p">(</span><span class="nc">Map</span><span class="p">.</span><span class="n">empty</span><span class="p">[</span><span class="nc">City</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">])((</span><span class="n">cityCheckIns</span><span class="p">,</span><span class="w"> </span><span class="n">city</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">      </span><span class="n">cityCheckIns</span><span class="p">.</span><span class="n">updatedWith</span><span class="p">(</span><span class="n">city</span><span class="p">)(</span><span class="n">_</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">).</span><span class="n">orElse</span><span class="p">(</span><span class="nc">Some</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+<span class="w">    </span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">topCities</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">foreach</span><span class="p">(</span><span class="nc">IO</span><span class="p">.</span><span class="n">println</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">compile</span>
+<span class="w">    </span><span class="p">.</span><span class="n">drain</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjQ3N3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MjIxcHg7aGVpZ2h0OjQ3N3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDIyMSA0NzciIHdpZHRoPSIyMjFweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8tLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMyIgaWQ9ImVudDAwMDIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMzcxLjE4IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTQ0IiB4PSI0MC41IiB5PSIxMiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5Ny45OTk2IiB4PSI2My41MDAyIiB5PSIyNi45OTUxIj4mIzM2ODgwOyYjMjc0MjU7JiMyMDk2NjsmIzI5NzAyOyYjMTIzOTg7JiMyMTgzOTsmIzM4OTg4OzwvdGV4dD48L2c+PCEtLWVudGl0eSBjMS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uYzEiIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAzIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMTIuOTA2OSIgeD0iNTYuMDUiIHk9IjQ3Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTIuOTA2OSIgeD0iNjYuMDUiIHk9IjYyLjk5NTEiPiYjMTI0ODE7JiMxMjQ1NTsmIzEyNDgzOyYjMTI0NjM7JiMxMjQ1MjsmIzEyNTMxOzE8L3RleHQ+PC9nPjwhLS1lbnRpdHkgYzItLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLmMyIiBkYXRhLXNvdXJjZS1saW5lPSI1IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTEyLjkwNjkiIHg9IjU2LjA1IiB5PSIxNDYuMjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5Mi45MDY5IiB4PSI2Ni4wNSIgeT0iMTYyLjI4NTEiPiYjMTI0ODE7JiMxMjQ1NTsmIzEyNDgzOyYjMTI0NjM7JiMxMjQ1MjsmIzEyNTMxOzI8L3RleHQ+PC9nPjwhLS1lbnRpdHkgYzMtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLmMzIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTEyLjkwNjkiIHg9IjU2LjA1IiB5PSIyNDUuNTkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5Mi45MDY5IiB4PSI2Ni4wNSIgeT0iMjYxLjU4NTEiPiYjMTI0ODE7JiMxMjQ1NTsmIzEyNDgzOyYjMTI0NjM7JiMxMjQ1MjsmIzEyNTMxOzM8L3RleHQ+PC9nPjwhLS1lbnRpdHkgZG90cy0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uZG90cyIgZGF0YS1zb3VyY2UtbGluZT0iNyIgaWQ9ImVudDAwMDYiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjMzLjM1MDYiIHg9Ijk1LjgyIiB5PSIzNDQuODkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMy4zNTA2IiB4PSIxMDUuODIiIHk9IjM2MC44ODUxIj4uLi48L3RleHQ+PC9nPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IkdNTjEwIiBkYXRhLXNvdXJjZS1saW5lPSIxNSIgaWQ9ImVudDAwMTEiPjxwYXRoIGQ9Ik0xMSw0MzAuMTggTDExLDQ3MC40NDU2IEEwLDAgMCAwIDAgMTEsNDcwLjQ0NTYgTDIxNC4wMDAyLDQ3MC40NDU2IEEwLDAgMCAwIDAgMjE0LjAwMDIsNDcwLjQ0NTYgTDIxNC4wMDAyLDQ0MC4xOCBMMjA0LjAwMDIsNDMwLjE4IEwxMTYuNSw0MzAuMTggTDExMi41LDM2Ny42MiBMMTA4LjUsNDMwLjE4IEwxMSw0MzAuMTggQTAsMCAwIDAgMCAxMSw0MzAuMTgiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMjA0LjAwMDIsNDMwLjE4IEwyMDQuMDAwMiw0NDAuMTggTDIxNC4wMDAyLDQ0MC4xOCBMMjA0LjAwMDIsNDMwLjE4IiBmaWxsPSIjRkZGRkZGIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTgyLjAwMDIiIHg9IjE3IiB5PSI0NDcuMjQ2OSI+JiMyMTUwODsmIzEyNDgxOyYjMTI0NTU7JiMxMjQ4MzsmIzEyNDYzOyYjMTI0NTI7JiMxMjUzMTsmIzEyMzY0OyYjMjM0MzY7JiMyMDEwMjsmIzEyMzc3OyYjMTI0Mjc7JiMxMjQxNDsmIzEyMzkxOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzAuMDAwMiIgeD0iMTciIHk9IjQ2Mi4zNzk3Ij4mIzI3NDI1OyYjMTIzOTg7JiMyMDk2NjsmIzI5NzAyOyYjMTIzNjQ7JiMyMjk4NzsmIzEyNDE0OyYjMTI0MjU7JiMxMjM5NDsmIzEyMzU2OzwvdGV4dD48L2c+PCEtLWxpbmsgYzEgdG8gYzItLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwNCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJsbms3Ij48cGF0aCBkPSJNMTEyLjUsNjkuNTYgQzExMi41LDg4LjE5IDExMi41LDEyMS4wMiAxMTIuNSwxMzkuODEiIGZpbGw9Im5vbmUiIGlkPSJjMS10by1jMiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMwMDAwMDAiIHBvaW50cz0iMTEyLjUsMTQ1LjgxLDExNi41LDEzNi44MSwxMTIuNSwxNDAuODEsMTA4LjUsMTM2LjgxLDExMi41LDE0NS44MSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2IiB4PSIxMTMuNSIgeT0iMTEyLjM1NjkiPiYjMjQ0NTM7JiMyNzIzMTs8L3RleHQ+PC9nPjwhLS1saW5rIGMyIHRvIGMzLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDQiIGRhdGEtZW50aXR5LTI9ImVudDAwMDUiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImxuazgiPjxwYXRoIGQ9Ik0xMTIuNSwxNjguODUgQzExMi41LDE4Ny40OCAxMTIuNSwyMjAuMzIgMTEyLjUsMjM5LjExIiBmaWxsPSJub25lIiBpZD0iYzItdG8tYzMiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMDAwMDAwIiBwb2ludHM9IjExMi41LDI0NS4xMSwxMTYuNSwyMzYuMTEsMTEyLjUsMjQwLjExLDEwOC41LDIzNi4xMSwxMTIuNSwyNDUuMTEiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNiIgeD0iMTEzLjUiIHk9IjIxMS42NTY5Ij4mIzI0NDUzOyYjMjcyMzE7PC90ZXh0PjwvZz48IS0tbGluayBjMyB0byBkb3RzLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDUiIGRhdGEtZW50aXR5LTI9ImVudDAwMDYiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImxuazkiPjxwYXRoIGQ9Ik0xMTIuNSwyNjguMTUgQzExMi41LDI4Ni43OCAxMTIuNSwzMTkuNjIgMTEyLjUsMzM4LjQiIGZpbGw9Im5vbmUiIGlkPSJjMy10by1kb3RzIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzAwMDAwMCIgcG9pbnRzPSIxMTIuNSwzNDQuNCwxMTYuNSwzMzUuNCwxMTIuNSwzMzkuNCwxMDguNSwzMzUuNCwxMTIuNSwzNDQuNCIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2IiB4PSIxMTMuNSIgeT0iMzEwLjk1NjkiPiYjMjQ0NTM7JiMyNzIzMTs8L3RleHQ+PC9nPjw/cGxhbnR1bWwtc3JjIFRQMm4yaTkwMzhSdEY0TmlSZzdqdmsyeHJGUEdHTGxIc3FKbWhiS0gydFBuUzE5MUI4aGV1RVJXb3lISlYwbFJBWVg4al8zYklxQi00Yy1tRGlERW9zdncwNXRjU0RraGpuWGdwczV5RndwTFBGazhub0lFUVo1X2hZQ0QtLTNPTkhTcjJXSjlYOEEwdjhkYVhlQXBlUTdUR3lTZTVDb3RPMU9BcmJrbUZlQWt3cGJtVlR1M1MwbWlid2xmRTVQR05LVnR0R2hJRWFWTTN4OW9iOHJ5dUczMHlwZDNjaS12dG1PTFhfLXRJS0pnNkRxa3dRekJhWkNJTG44OWYwYmFsdHoyWTVJSUQtSUtuOXY0MkNucENUbHkwVzAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="104-ref-">10.4 Ref - アトミックな共有状態<a class="headerlink" href="#104-ref-" title="Permanent link">&para;</a></h3>
+<p><strong>Ref</strong> は、複数の並行処理から安全にアクセスできるアトミックな参照です。</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nn">cats</span><span class="p">.</span><span class="nn">effect</span><span class="p">.</span><span class="nc">Ref</span>
+
+<span class="c1">// Ref の作成と使用</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">example</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">counter</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">](</span><span class="mi">0</span><span class="p">)</span><span class="w">    </span><span class="c1">// 初期値 0 の Ref を作成</span>
+<span class="w">  </span><span class="n">_</span><span class="w">       </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w">  </span><span class="c1">// アトミックに更新</span>
+<span class="w">  </span><span class="n">result</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">get</span><span class="w">            </span><span class="c1">// 現在の値を取得</span>
+<span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">result</span>
+
+<span class="n">example</span><span class="p">.</span><span class="n">unsafeRunSync</span><span class="p">()</span><span class="w">  </span><span class="c1">// 3</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjI5OHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6Mzk0cHg7aGVpZ2h0OjI5OHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDM5NCAyOTgiIHdpZHRoPSIzOTRweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyIFJlZiA/Pz8tLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUmVmIC4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMyIgaWQ9ImVudDAwMDIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjgwLjg4IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjA4IiB4PSIxMiIgeT0iMTIiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzMuMjQwMSIgeD0iNzkuMzgiIHk9IjI2Ljk5NTEiPlJlZiAmIzEyMzk4OyYjMjU4MDU7JiMyMDMxNjs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgY3JlYXRlLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUmVmIC4uLi5jcmVhdGUiIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAzIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMzQuNTA4OCIgeD0iNDguNzUiIHk9IjQ3Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTE0LjUwODgiIHg9IjU4Ljc1IiB5PSI2Mi45OTUxIj5SZWYub2ZbSU8sIEludF0oMCk8L3RleHQ+PC9nPjwhLS1lbnRpdHkgdXBkYXRlLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUmVmIC4uLi51cGRhdGUiIGRhdGEtc291cmNlLWxpbmU9IjUiIGlkPSJlbnQwMDA0Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNzUuMTA3NCIgeD0iMjguNDUiIHk9IjE0Ni4zIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTU1LjEwNzQiIHg9IjM4LjQ1IiB5PSIxNjIuMjk1MSI+Y291bnRlci51cGRhdGUoXyArIDMpPC90ZXh0PjwvZz48IS0tZW50aXR5IGdldC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlJlZiAuLi4uZ2V0IiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTAxLjMwNjYiIHg9IjY1LjM1IiB5PSIyNTQuNTgiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4MS4zMDY2IiB4PSI3NS4zNSIgeT0iMjcwLjU3NTEiPmNvdW50ZXIuZ2V0PC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU44IiBkYXRhLXNvdXJjZS1saW5lPSIxMyIgaWQ9ImVudDAwMDkiPjxwYXRoIGQ9Ik0yMzYuNSwyNDUuNiBMMjM2LjUsMjg1Ljg2NTYgQTAsMCAwIDAgMCAyMzYuNSwyODUuODY1NiBMMzg3LjUwMDIsMjg1Ljg2NTYgQTAsMCAwIDAgMCAzODcuNTAwMiwyODUuODY1NiBMMzg3LjUwMDIsMjU1LjYgTDM3Ny41MDAyLDI0NS42IEwyODAuMDQsMjQ1LjYgTDEzNS41MSwxNjkuMDMgTDI3Mi4wNCwyNDUuNiBMMjM2LjUsMjQ1LjYgQTAsMCAwIDAgMCAyMzYuNSwyNDUuNiIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0zNzcuNTAwMiwyNDUuNiBMMzc3LjUwMDIsMjU1LjYgTDM4Ny41MDAyLDI1NS42IEwzNzcuNTAwMiwyNDUuNiIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyNy45MzcxIiB4PSIyNDIuNSIgeT0iMjYyLjY2NjkiPnVwZGF0ZSAmIzEyMzk5OyYjMTI0NTA7JiMxMjQ4ODsmIzEyNTExOyYjMTI0ODM7JiMxMjQ2Mzs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTMwLjAwMDIiIHg9IjI0Mi41IiB5PSIyNzcuNzk5NyI+JiMyMDE4MjsmIzEyMzk4OyYjMjA5NjY7JiMyOTcwMjsmIzEyMzkyOyYjMzE0Nzg7JiMyMTUxMjsmIzEyMzc1OyYjMTIzOTQ7JiMxMjM1Njs8L3RleHQ+PC9nPjwhLS1saW5rIGNyZWF0ZSB0byB1cGRhdGUtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwNCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjgiIGlkPSJsbms2Ij48cGF0aCBkPSJNMTE2LDY5LjU3IEMxMTYsODguMTkgMTE2LDEyMS4wMyAxMTYsMTM5LjgyIiBmaWxsPSJub25lIiBpZD0iY3JlYXRlLXRvLXVwZGF0ZSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMwMDAwMDAiIHBvaW50cz0iMTE2LDE0NS44MiwxMjAsMTM2LjgyLDExNiwxNDAuODIsMTEyLDEzNi44MiwxMTYsMTQ1LjgyIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjYiIHg9IjExNyIgeT0iMTEyLjM2NjkiPiYjMjAzMTY7JiMyNTEwNDs8L3RleHQ+PC9nPjwhLS1saW5rIHVwZGF0ZSB0byBnZXQtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNCIgZGF0YS1lbnRpdHktMj0iZW50MDAwNSIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJsbms3Ij48cGF0aCBkPSJNMTE2LDE2OS4wMyBDMTE2LDE4OS40IDExNiwyMjcuODYgMTE2LDI0OC4yIiBmaWxsPSJub25lIiBpZD0idXBkYXRlLXRvLWdldCIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMwMDAwMDAiIHBvaW50cz0iMTE2LDI1NC4yLDEyMCwyNDUuMiwxMTYsMjQ5LjIsMTEyLDI0NS4yLDExNiwyNTQuMiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2IiB4PSIxMTciIHk9IjIxMS42NjY5Ij4mIzI2MzU2OyYjMjYwMzI7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBLb3A5SUNyRExJWjhJU3BDdS04Z0lhcWtJU25CcHFiTEswZkFKTER1dEJaa3NVSlU5dGxkQTJiS1NvS2Q1Z00wWFZOb3F3OHpfTktLRkZEQU9aS0NEOUtLNGVpTGFlakk0cWpJZU1nSXlxbHBJYkFCejRlQktlMjI2bDRBc1doNjQ2S0c0Skhid1FhYk80YVdwU0s1Q0tYMUx6U0VnYloxSVc3ZVc2U1Q0eFlXVjkwS0syYkdfRGRpQlMtY1JVMmd2VUJBb21UQTlFTU5iRUpkQWtJZG1RbzFRZFpTa0Z2bnF3QjdwSHNGYy1TX1Jjdi10QklVd3lka1FLMl9GTXJWemRuMnMtRjY1U3pOUnRpd2VVRG51X0o3WlFpVUR4UG1mVVFiQTgyQzEwMDA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h4 id="ref">Ref の主要メソッド<a class="headerlink" href="#ref" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>メソッド</th>
+<th>説明</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ref.of[IO, A](initial)</code></td>
+<td>初期値で Ref を作成</td>
+<td><code>Ref.of[IO, Int](0)</code></td>
+</tr>
+<tr>
+<td><code>ref.get</code></td>
+<td>現在の値を取得</td>
+<td><code>counter.get</code></td>
+</tr>
+<tr>
+<td><code>ref.set(value)</code></td>
+<td>値を設定</td>
+<td><code>counter.set(10)</code></td>
+</tr>
+<tr>
+<td><code>ref.update(f)</code></td>
+<td>アトミックに更新</td>
+<td><code>counter.update(_ + 1)</code></td>
+</tr>
+<tr>
+<td><code>ref.modify(f)</code></td>
+<td>更新して古い値を返す</td>
+<td><code>counter.modify(n =&gt; (n + 1, n))</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="105-parsequence-">10.5 parSequence - 並列実行<a class="headerlink" href="#105-parsequence-" title="Permanent link">&para;</a></h3>
+<p><code>sequence</code> は IO を順番に実行しますが、<code>parSequence</code> は並列に実行します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nn">cats</span><span class="p">.</span><span class="nn">implicits</span><span class="p">.</span><span class="n">_</span>
+
+<span class="c1">// 順次実行</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">sequential</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">List</span><span class="p">[</span><span class="nc">Int</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="nc">List</span><span class="p">(</span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">3</span><span class="p">)).</span><span class="n">sequence</span>
+
+<span class="c1">// 並列実行</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">parallel</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">List</span><span class="p">[</span><span class="nc">Int</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="nc">List</span><span class="p">(</span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">3</span><span class="p">)).</span><span class="n">parSequence</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjM1N3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6OTIzcHg7aGVpZ2h0OjM1N3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDkyMyAzNTciIHdpZHRoPSI5MjNweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyIHNlcXVlbmNlIHZzIHBhclNlcXVlbmNlLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InNlcXVlbmNlIHZzIHBhclNlcXVlbmNlIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIzMzkuNzMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI0NDEiIHg9IjEyIiB5PSIxMiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMDUuNDc0NiIgeD0iMTI5Ljc2MjciIHk9IjI2Ljk5NTEiPnNlcXVlbmNlIHZzIHBhclNlcXVlbmNlPC90ZXh0PjwvZz48IS0tY2x1c3RlciBzZXEtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VxdWVuY2UgdnMgcGFyU2VxdWVuY2Uuc2VxIiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyNTYuNzMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNDciIHg9IjQ0IiB5PSI2MyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzEuMDcyIiB4PSI1MS45NjQiIHk9Ijc3Ljk5NTEiPnNlcXVlbmNlJiM2NTI4ODsmIzM4OTE4OyYjMjc0MjU7JiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHBhci0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzZXF1ZW5jZSB2cyBwYXJTZXF1ZW5jZS5wYXIiIGRhdGEtc291cmNlLWxpbmU9IjEyIiBpZD0iZW50MDAwOSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxNzMuMDIiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxOTAiIHg9IjIzMSIgeT0iNjMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTU5LjE5NTEiIHg9IjI0Ni40MDI1IiB5PSI3Ny45OTUxIj5wYXJTZXF1ZW5jZSYjNjUyODg7JiMyMDAwNjsmIzIxMDE1OyYjNjUyODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IHMxLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VxdWVuY2UgdnMgcGFyU2VxdWVuY2Uuc2VxLnMxIiBkYXRhLXNvdXJjZS1saW5lPSI1IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNDQuMDU1NyIgeD0iODUuOTciIHk9IjEwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI0LjA1NTciIHg9Ijk1Ljk3IiB5PSIxMjEuOTk1MSI+SU8xPC90ZXh0PjwvZz48IS0tZW50aXR5IHMyLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VxdWVuY2UgdnMgcGFyU2VxdWVuY2Uuc2VxLnMyIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNDQuMDU1NyIgeD0iODUuOTciIHk9IjE4OS43MiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI0LjA1NTciIHg9Ijk1Ljk3IiB5PSIyMDUuNzE1MSI+SU8yPC90ZXh0PjwvZz48IS0tZW50aXR5IHMzLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VxdWVuY2UgdnMgcGFyU2VxdWVuY2Uuc2VxLnMzIiBkYXRhLXNvdXJjZS1saW5lPSI3IiBpZD0iZW50MDAwNiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iNDQuMDU1NyIgeD0iODUuOTciIHk9IjI3My40MyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI0LjA1NTciIHg9Ijk1Ljk3IiB5PSIyODkuNDI1MSI+SU8zPC90ZXh0PjwvZz48IS0tZW50aXR5IHAxLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VxdWVuY2UgdnMgcGFyU2VxdWVuY2UucGFyLnAxIiBkYXRhLXNvdXJjZS1saW5lPSIxMyIgaWQ9ImVudDAwMTAiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjQ0LjA1NTciIHg9IjI1NC45NyIgeT0iMTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjQuMDU1NyIgeD0iMjY0Ljk3IiB5PSIxMjEuOTk1MSI+SU8xPC90ZXh0PjwvZz48IS0tZW50aXR5IHAyLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VxdWVuY2UgdnMgcGFyU2VxdWVuY2UucGFyLnAyIiBkYXRhLXNvdXJjZS1saW5lPSIxNCIgaWQ9ImVudDAwMTEiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjQ0LjA1NTciIHg9IjMzMy45NyIgeT0iMTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjQuMDU1NyIgeD0iMzQzLjk3IiB5PSIxMjEuOTk1MSI+SU8yPC90ZXh0PjwvZz48IS0tZW50aXR5IHAzLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VxdWVuY2UgdnMgcGFyU2VxdWVuY2UucGFyLnAzIiBkYXRhLXNvdXJjZS1saW5lPSIxNSIgaWQ9ImVudDAwMTIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjQ0LjA1NTciIHg9IjI1NC45NyIgeT0iMTg5LjcyIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjQuMDU1NyIgeD0iMjY0Ljk3IiB5PSIyMDUuNzE1MSI+SU8zPC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xMyIgZGF0YS1zb3VyY2UtbGluZT0iMjAiIGlkPSJlbnQwMDE0Ij48cGF0aCBkPSJNNDY5LjI2LDE4OC4zIEw0NjkuMjYsMjEzLjQzMjggTDY2Ni43NDM5LDIxMy40MzI4IEw2NjYuNzQzOSwxOTguMyBMNjU2Ljc0MzksMTg4LjMgTDQ2OS4yNiwxODguMyIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik02NTYuNzQzOSwxODguMyBMNjU2Ljc0MzksMTk4LjMgTDY2Ni43NDM5LDE5OC4zIEw2NTYuNzQzOSwxODguMyIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3Ni40ODM5IiB4PSI0NzUuMjYiIHk9IjIwNS4zNjY5Ij4mIzIxNTEyOyYjMzUzMzY7JiMyNjE3ODsmIzM4MjkxOyA9IElPMSArIElPMiArIElPMzwvdGV4dD48L2c+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iR01OMTYiIGRhdGEtc291cmNlLWxpbmU9IjI0IiBpZD0iZW50MDAxNyI+PHBhdGggZD0iTTcwMS45MiwxODguMyBMNzAxLjkyLDIxMy40MzI4IEw5MTYuMDg1NiwyMTMuNDMyOCBMOTE2LjA4NTYsMTk4LjMgTDkwNi4wODU2LDE4OC4zIEw3MDEuOTIsMTg4LjMiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNOTA2LjA4NTYsMTg4LjMgTDkwNi4wODU2LDE5OC4zIEw5MTYuMDg1NiwxOTguMyBMOTA2LjA4NTYsMTg4LjMiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxOTMuMTY1NiIgeD0iNzA3LjkyIiB5PSIyMDUuMzY2OSI+JiMyMTUxMjsmIzM1MzM2OyYjMjYxNzg7JiMzODI5MTsgJiM4Nzc2OyBtYXgoSU8xLCBJTzIsIElPMyk8L3RleHQ+PC9nPjwhLS1saW5rIHMxIHRvIHMyLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDQiIGRhdGEtZW50aXR5LTI9ImVudDAwMDUiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI4IiBpZD0ibG5rNyI+PHBhdGggZD0iTTEwOCwxMjguNSBDMTA4LDE0NC4xMyAxMDgsMTY3LjYxIDEwOCwxODMuMzQiIGZpbGw9Im5vbmUiIGlkPSJzMS10by1zMiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMwMDAwMDAiIHBvaW50cz0iMTA4LDE4OS4zNCwxMTIsMTgwLjM0LDEwOCwxODQuMzQsMTA0LDE4MC4zNCwxMDgsMTg5LjM0IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rIHMyIHRvIHMzLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDUiIGRhdGEtZW50aXR5LTI9ImVudDAwMDYiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI5IiBpZD0ibG5rOCI+PHBhdGggZD0iTTEwOCwyMTIuMjIgQzEwOCwyMjcuODUgMTA4LDI1MS4zMiAxMDgsMjY3LjA2IiBmaWxsPSJub25lIiBpZD0iczItdG8tczMiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMDAwMDAwIiBwb2ludHM9IjEwOCwyNzMuMDYsMTEyLDI2NC4wNiwxMDgsMjY4LjA2LDEwNCwyNjQuMDYsMTA4LDI3My4wNiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjwvZz48IS0tbGluayBzZXEgdG8gR01OMTMtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAxNCIgZGF0YS1saW5rLXR5cGU9ImFzc29jaWF0aW9uIiBkYXRhLXNvdXJjZS1saW5lPSIyMCIgaWQ9ImxuazE1Ij48cGF0aCBkPSJNMTkxLjIxOTUsMTE5Ljg5OTQgQzE5MS4zOTg1LDExOS45Mzc0IDE5MS41ODAyLDExOS45NzYgMTkxLjc2NDcsMTIwLjAxNTEgQzE5Mi41MDI1LDEyMC4xNzE3IDE5My4yODM3LDEyMC4zMzc1IDE5NC4xMDcxLDEyMC41MTIyIEMyMDAuNjkzNiwxMjEuOTEwMSAyMDkuOTc2MywxMjMuODgwMiAyMjEuMzIwOCwxMjYuMjg4IEMyNDQuMDA5NywxMzEuMTAzNCAyNzQuOTQ1NiwxMzcuNjY5NCAzMDkuMDUzOCwxNDQuOTA4OCBDMzc3LjI3LDE1OS4zODc1IDQ1OC4xNzUsMTc2LjU2IDUxMS4xNywxODcuODEiIGZpbGw9Im5vbmUiIGlkPSJzZXEtR01OMTMiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjcsNzsiLz48L2c+PCEtLWxpbmsgcGFyIHRvIEdNTjE2LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDkiIGRhdGEtZW50aXR5LTI9ImVudDAwMTciIGRhdGEtbGluay10eXBlPSJhc3NvY2lhdGlvbiIgZGF0YS1zb3VyY2UtbGluZT0iMjQiIGlkPSJsbmsxOCI+PHBhdGggZD0iTTQyMS40NTI3LDExOS44OTk0IEM0MjEuNjM2OCwxMTkuOTM3NCA0MjEuODIzNywxMTkuOTc2IDQyMi4wMTM1LDEyMC4wMTUxIEM0MjIuNzcyNCwxMjAuMTcxNyA0MjMuNTc1OSwxMjAuMzM3NSA0MjQuNDIyNywxMjAuNTEyMiBDNDMxLjE5NzUsMTIxLjkxMDEgNDQwLjc0NTMsMTIzLjg4MDIgNDUyLjQxMzgsMTI2LjI4OCBDNDc1Ljc1MDYsMTMxLjEwMzQgNTA3LjU3LDEzNy42Njk0IDU0Mi42NTI1LDE0NC45MDg4IEM2MTIuODE3NSwxNTkuMzg3NSA2OTYuMDM1LDE3Ni41NiA3NTAuNTUsMTg3LjgxIiBmaWxsPSJub25lIiBpZD0icGFyLUdNTjE2IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PC9nPjw/cGxhbnR1bWwtc3JjIEtvcDlJQ3JETElaOElTcEN1LThnSWFxa0lTbkJwcWJMSzJmRUJJbkRwS2pFTElXaExZWDhCMGc2U2ZLS2doNmZVaC1kdS1NMmpjVGg1aHhWcXdjYWE1WWkwOUcwZ2FuRUI0ZkhLRkJxRHVJODZTODVaMjAySGQwMU91WTBDTFVuZU9Ba2hYcjhnalc4bVpCY2dhTG42UDloV0RPLXNSN2lRU1RxY0JMMEVHbmgyejJqQksydGpXMWExVDJJbEZvSUw4TWFfOUFJXzVvNV8zSUc3eFlVSmtYdWlRQlpzU29jYnpDY0F6V2cwQ3JLcTBRSUhjM0ljMmlyQnFLMWYwajNCejBYZzdlVlROT2V2MlBNUTAxRHEwNFAwMkFDRFU0NjAwMDA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h4 id="_1">スリープを使った比較<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nn">scala</span><span class="p">.</span><span class="nn">concurrent</span><span class="p">.</span><span class="nn">duration</span><span class="p">.</span><span class="n">_</span>
+
+<span class="kd">val</span><span class="w"> </span><span class="n">program1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">).</span><span class="n">flatMap</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">program2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">).</span><span class="n">flatMap</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">program3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">).</span><span class="n">flatMap</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+
+<span class="c1">// 順次実行: 約3秒</span>
+<span class="nc">List</span><span class="p">(</span><span class="n">program1</span><span class="p">,</span><span class="w"> </span><span class="n">program2</span><span class="p">,</span><span class="w"> </span><span class="n">program3</span><span class="p">).</span><span class="n">sequence</span>
+
+<span class="c1">// 並列実行: 約1秒</span>
+<span class="nc">List</span><span class="p">(</span><span class="n">program1</span><span class="p">,</span><span class="w"> </span><span class="n">program2</span><span class="p">,</span><span class="w"> </span><span class="n">program3</span><span class="p">).</span><span class="n">parSequence</span>
+</code></pre></div>
+<h3 id="106">10.6 サイコロを並行して振る<a class="headerlink" href="#106" title="Permanent link">&para;</a></h3>
+<p><strong>ソースファイル</strong>: <code>app/scala/src/main/scala/ch10_CastingDieConcurrently.scala</code></p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">castTheDie</span><span class="p">():</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">delay</span><span class="p">(</span><span class="n">castTheDieImpure</span><span class="p">())</span>
+
+<span class="c1">// 2つのサイコロを並行して振り、合計を返す</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">program</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">_</span><span class="w">      </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">)</span>
+<span class="w">  </span><span class="n">result</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">List</span><span class="p">(</span><span class="n">castTheDie</span><span class="p">(),</span><span class="w"> </span><span class="n">castTheDie</span><span class="p">()).</span><span class="n">parSequence</span>
+<span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">result</span><span class="p">.</span><span class="n">sum</span>
+</code></pre></div>
+<h4 id="ref-parsequence">Ref と parSequence の組み合わせ<a class="headerlink" href="#ref-parsequence" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1">// 3つのサイコロを並行して振り、結果を Ref に保存</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">program</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">List</span><span class="p">[</span><span class="nc">Int</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">storedCasts</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">Int</span><span class="p">]](</span><span class="nc">List</span><span class="p">.</span><span class="n">empty</span><span class="p">)</span>
+<span class="w">  </span><span class="n">singleCast</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">castTheDie</span><span class="p">().</span><span class="n">flatMap</span><span class="p">(</span><span class="n">result</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">                   </span><span class="n">storedCasts</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="n">appended</span><span class="p">(</span><span class="n">result</span><span class="p">)))</span>
+<span class="w">  </span><span class="n">_</span><span class="w">           </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">List</span><span class="p">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">3</span><span class="p">)(</span><span class="n">singleCast</span><span class="p">).</span><span class="n">parSequence</span>
+<span class="w">  </span><span class="n">casts</span><span class="w">       </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">storedCasts</span><span class="p">.</span><span class="n">get</span>
+<span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">casts</span>
+</code></pre></div>
+<h3 id="107">10.7 チェックイン処理の並行版<a class="headerlink" href="#107" title="Permanent link">&para;</a></h3>
+<p>チェックインの保存とランキングの更新を並行して実行します。</p>
+<h4 id="_2">チェックインの保存<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">storeCheckIn</span><span class="p">(</span><span class="n">storedCheckIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Ref</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">City</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]])(</span><span class="n">city</span><span class="p">:</span><span class="w"> </span><span class="nc">City</span><span class="p">):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Unit</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">storedCheckIns</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="n">updatedWith</span><span class="p">(</span><span class="n">city</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">None</span><span class="w">           </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">Some</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nc">Some</span><span class="p">(</span><span class="n">checkIns</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">Some</span><span class="p">(</span><span class="n">checkIns</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">  </span><span class="p">})</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="_3">ランキングの継続的な更新<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">updateRanking</span><span class="p">(</span>
+<span class="w">    </span><span class="n">storedCheckIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Ref</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">City</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]],</span>
+<span class="w">    </span><span class="n">storedRanking</span><span class="p">:</span><span class="w"> </span><span class="nc">Ref</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">CityStats</span><span class="p">]]</span>
+<span class="p">):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Nothing</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">storedCheckIns</span><span class="p">.</span><span class="n">get</span>
+<span class="w">    </span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">topCities</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">flatMap</span><span class="p">(</span><span class="n">storedRanking</span><span class="p">.</span><span class="n">set</span><span class="p">)</span>
+<span class="w">    </span><span class="p">.</span><span class="n">foreverM</span><span class="w">  </span><span class="c1">// 永遠に繰り返す</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjI0MnB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MTMzNnB4O2hlaWdodDoyNDJweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxMzM2IDI0MiIgd2lkdGg9IjEzMzZweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8tLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMyIgaWQ9ImVudDAwMDIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjI0LjAxIiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTA5MCIgeD0iMTIiIHk9IjEyIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijk3Ljk5OTYiIHg9IjUwOC4wMDAyIiB5PSIyNi45OTUxIj4mIzIwMDA2OyYjMzQ4OTI7JiMyMDk2NjsmIzI5NzAyOyYjMTIzOTg7JiMyNzA4MzsmIzM2ODk2OzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgY2hlY2tpbi0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLmNoZWNraW4iIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAzIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjczLjMiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIzODciIHg9IjM2IiB5PSI1NSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTEuOTk5NSIgeD0iMTczLjUwMDIiIHk9IjY5Ljk5NTEiPiYjMTI0ODE7JiMxMjQ1NTsmIzEyNDgzOyYjMTI0NjM7JiMxMjQ1MjsmIzEyNTMxOyYjMjA5NjY7JiMyOTcwMjs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHJhbmtpbmctLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi5yYW5raW5nIiBkYXRhLXNvdXJjZS1saW5lPSI5IiBpZD0iZW50MDAwNiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxNTcuMDEiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIzODciIHg9IjQ0NyIgeT0iNTUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTcuOTk5NiIgeD0iNTkxLjUwMDIiIHk9IjY5Ljk5NTEiPiYjMTI1MjE7JiMxMjUzMTsmIzEyNDYxOyYjMTI1MzE7JiMxMjQ2NDsmIzI2MzU2OyYjMjYwMzI7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBvdXRwdXQtLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi5vdXRwdXQiIGRhdGEtc291cmNlLWxpbmU9IjE1IiBpZD0iZW50MDAxMCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSI3My4zIiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjIwIiB4PSI4NTgiIHk9IjU1Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjU1Ljk5OTgiIHg9Ijk0MC4wMDAxIiB5PSI2OS45OTUxIj4mIzIwOTg2OyYjMjExNDc7JiMyMDk2NjsmIzI5NzAyOzwvdGV4dD48L2c+PCEtLWVudGl0eSBTdHJlYW0gPz8/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLmNoZWNraW4uU3RyZWFtIC4uLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI1IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjI5LjQxMTQiIHg9IjUyLjI5IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIwOS40MTE0IiB4PSI2Mi4yOSIgeT0iMTA1Ljk5NTEiPlN0cmVhbSAmIzEyMzYzOyYjMTI0MjU7JiMxMjQ4MTsmIzEyNDU1OyYjMTI0ODM7JiMxMjQ2MzsmIzEyNDUyOyYjMTI1MzE7JiMxMjQzNDsmIzIxNDYzOyYjMjA0NDk7PC90ZXh0PjwvZz48IS0tZW50aXR5IFJlZiA/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLmNoZWNraW4uUmVmIC4uLiIgZGF0YS1zb3VyY2UtbGluZT0iNiIgaWQ9ImVudDAwMDUiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9Ijg5LjcxOTUiIHg9IjMxNy4xNCIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2OS43MTk1IiB4PSIzMjcuMTQiIHk9IjEwNS45OTUxIj5SZWYgJiMxMjM5NTsmIzIwNDQ1OyYjMjMzODQ7PC90ZXh0PjwvZz48IS0tZW50aXR5IFJlZiA/Pz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi5yYW5raW5nLlJlZiAuLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxMCIgaWQ9ImVudDAwMDciPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE4Ny43MTkxIiB4PSI0NjMuMTQiIHk9IjkwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTY3LjcxOTEiIHg9IjQ3My4xNCIgeT0iMTA1Ljk5NTEiPlJlZiAmIzEyMzYzOyYjMTI0MjU7JiMxMjQ4NzsmIzEyNTQwOyYjMTI0Nzk7JiMxMjQzNDsmIzM1NTAxOyYjMTI0MTU7JiMyMTQ2MjsmIzEyNDI2OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4ucmFua2luZy4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMTEiIGlkPSJlbnQwMDA4Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMzEuOTk5NSIgeD0iNjg2IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExMS45OTk1IiB4PSI2OTYiIHk9IjEwNS45OTUxIj4mIzEyNTIxOyYjMTI1MzE7JiMxMjQ2MTsmIzEyNTMxOyYjMTI0NjQ7JiMxMjQzNDsmIzM1MzM2OyYjMzE2Mzk7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/PyBSZWYgPz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi5yYW5raW5nLi4uLiBSZWYgLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxMiIgaWQ9ImVudDAwMDkiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzNi4xNjk2IiB4PSI0ODguOTIiIHk9IjE3My43MSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExNi4xNjk2IiB4PSI0OTguOTIiIHk9IjE4OS43MDUxIj4mIzMyMDgwOyYjMjY1MjQ7JiMxMjQzNDsgUmVmICYjMTIzOTU7JiMyMDQ0NTsmIzIzMzg0OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLm91dHB1dC4uLi4uLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjE2IiBpZD0iZW50MDAxMSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTg3Ljk5OTMiIHg9Ijg3NCIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNjcuOTk5MyIgeD0iODg0IiB5PSIxMDUuOTk1MSI+JiMyMzQ1MDsmIzI2Mzk5OyYjMzAzNDA7JiMxMjM5NTsmIzEyNTIxOyYjMTI1MzE7JiMxMjQ2MTsmIzEyNTMxOyYjMTI0NjQ7JiMxMjQzNDsmIzIwOTg2OyYjMjExNDc7PC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJHTU4xMiIgZGF0YS1zb3VyY2UtbGluZT0iMjEiIGlkPSJlbnQwMDEzIj48cGF0aCBkPSJNMTExOC4zNiwxNzIuMyBMMTExOC4zNiwxOTcuNDMyOCBBMCwwIDAgMCAwIDExMTguMzYsMTk3LjQzMjggTDEzMjkuNjMxMiwxOTcuNDMyOCBBMCwwIDAgMCAwIDEzMjkuNjMxMiwxOTcuNDMyOCBMMTMyOS42MzEyLDE4Mi4zIEwxMzE5LjYzMTIsMTcyLjMgTDExOTAuMjgsMTcyLjMgTDEwMDEuMjEsMTEyLjc1IEwxMTgyLjI4LDE3Mi4zIEwxMTE4LjM2LDE3Mi4zIEEwLDAgMCAwIDAgMTExOC4zNiwxNzIuMyIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0xMzE5LjYzMTIsMTcyLjMgTDEzMTkuNjMxMiwxODIuMyBMMTMyOS42MzEyLDE4Mi4zIEwxMzE5LjYzMTIsMTcyLjMiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxOTAuMjcxMiIgeD0iMTEyNC4zNiIgeT0iMTg5LjM2NjkiPjMmIzEyMzg4OyYjMTIzOTg7JiMyMDk2NjsmIzI5NzAyOyYjMTIzNjQ7JiMyMDAwNjsmIzM0ODkyOyYjMTIzNzU7JiMxMjM5MDsmIzIzNDU1OyYjMzQ4OTI7JiMxMjM3MzsmIzEyNDI4OyYjMTI0Mjc7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBWUDdsSWlDbTVDTV96b2JZTnk0dHFJVWVOVG82UXBmZ3phYTRhdWhMalIwWGtDZXNkT0ZILU9WTVdHZVlHWF9jRGtyeTJ6Rk1aa2QwQm83YWRkRC1idm1qc2kwNkhrc01yWUlBT2M2VFFnSlVtYVhEdGVGYnIxREVhRk5GVzROZnRGcXdrTEZIcVJlNlIwUHkzaE9EXzFkdTNFb05LZ3lZeEgzZjNRbVZEOGJxdzlmTEctZWtqUjFjODYwa3k4akQ5XzFCcVZFSlVBaC13N1ZtbFhHXzlWNkQyQXpMdkxadkpOdWVGNjVuQmpCSFFwZk81NVhCOHY5UU5zN0JjOUJmV0ZxOUY5UWV2TUM4QjFRejBWMWsxVm9KY1Fsa3B4RjhoLVJQTXAtejdTamR6RXpnbWxhR3RUN1FIdldUc2t4R3JLOFk2Z1JaSUpPeWJHY1JvREFUUHlmS09iQUN6YW5BSktGUDFaUUpGTEk1VTZLX203bldXT1djblZxQWswVlNMSjJmZVRweDNHMDA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<h4 id="_4">完全な並行処理版<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">processCheckIns</span><span class="p">(</span><span class="n">checkIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Stream</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">City</span><span class="p">]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Unit</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">storedCheckIns</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">City</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]](</span><span class="nc">Map</span><span class="p">.</span><span class="n">empty</span><span class="p">)</span>
+<span class="w">    </span><span class="n">storedRanking</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">CityStats</span><span class="p">]](</span><span class="nc">List</span><span class="p">.</span><span class="n">empty</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c1">// ランキング更新プログラム（永遠に実行）</span>
+<span class="w">    </span><span class="n">rankingProgram</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">updateRanking</span><span class="p">(</span><span class="n">storedCheckIns</span><span class="p">,</span><span class="w"> </span><span class="n">storedRanking</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c1">// チェックイン処理プログラム</span>
+<span class="w">    </span><span class="n">checkInsProgram</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkIns</span><span class="p">.</span><span class="n">evalMap</span><span class="p">(</span><span class="n">storeCheckIn</span><span class="p">(</span><span class="n">storedCheckIns</span><span class="p">)).</span><span class="n">compile</span><span class="p">.</span><span class="n">drain</span>
+
+<span class="w">    </span><span class="c1">// 出力プログラム（1秒ごとにランキングを出力）</span>
+<span class="w">    </span><span class="n">outputProgram</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">)</span>
+<span class="w">                        </span><span class="p">.</span><span class="n">flatMap</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">storedRanking</span><span class="p">.</span><span class="n">get</span><span class="p">)</span>
+<span class="w">                        </span><span class="p">.</span><span class="n">flatMap</span><span class="p">(</span><span class="nc">IO</span><span class="p">.</span><span class="n">println</span><span class="p">)</span>
+<span class="w">                        </span><span class="p">.</span><span class="n">foreverM</span>
+
+<span class="w">    </span><span class="c1">// 3つのプログラムを並行実行</span>
+<span class="w">    </span><span class="n">_</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">List</span><span class="p">(</span><span class="n">rankingProgram</span><span class="p">,</span><span class="w"> </span><span class="n">checkInsProgram</span><span class="p">,</span><span class="w"> </span><span class="n">outputProgram</span><span class="p">).</span><span class="n">parSequence</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="108-fiber-">10.8 Fiber - 軽量スレッド<a class="headerlink" href="#108-fiber-" title="Permanent link">&para;</a></h3>
+<p><strong>Fiber</strong> は、OS スレッドよりもはるかに軽量な実行単位です。</p>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjI0MHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6ODAycHg7aGVpZ2h0OjI0MHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDgwMiAyNDAiIHdpZHRoPSI4MDJweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyIFRocmVhZCB2cyBGaWJlci0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJUaHJlYWQgdnMgRmliZXIiIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyMi41OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9Ijc4NCIgeD0iMTIiIHk9IjEyIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyMy4zNzUiIHg9IjM0Mi4zMTI1IiB5PSIyNi45OTUxIj5UaHJlYWQgdnMgRmliZXI8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHRocmVhZC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJUaHJlYWQgdnMgRmliZXIudGhyZWFkIiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxNTUuNTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIzMzUiIHg9IjM2IiB5PSI1NSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4Mi4yNDMyIiB4PSIxNjIuMzc4NCIgeT0iNjkuOTk1MSI+T1MgVGhyZWFkPC90ZXh0PjwvZz48IS0tY2x1c3RlciBmaWJlci0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJUaHJlYWQgdnMgRmliZXIuZmliZXIiIGRhdGEtc291cmNlLWxpbmU9IjEwIiBpZD0iZW50MDAwNyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxNTUuNTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIzNzciIHg9IjM5NSIgeT0iNTUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDAuNzgzMiIgeD0iNTYzLjEwODQiIHk9IjY5Ljk5NTEiPkZpYmVyPC90ZXh0PjwvZz48IS0tZW50aXR5ID8/P01CPz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlRocmVhZCB2cyBGaWJlci50aHJlYWQuLi4uTUIuLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI1IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTgxLjY4MyIgeD0iNTIuMTYiIHk9IjkwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTYxLjY4MyIgeD0iNjIuMTYiIHk9IjEwNS45OTUxIj4mIzM3MzI1OyYjMTIzNTY7JiM2NTI4ODtNQiYjMjEzMzY7JiMyMDMwMTsmIzEyMzk4OyYjMTI1MTM7JiMxMjUxNDsmIzEyNTIyOyYjNjUyODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IE9TID8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlRocmVhZCB2cyBGaWJlci50aHJlYWQuT1MgLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iODYuMzU2MyIgeD0iMjY4LjgyIiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjY2LjM1NjMiIHg9IjI3OC44MiIgeT0iMTA1Ljk5NTEiPk9TICYjMTIzNjQ7JiMzMTY0OTsmIzI5NzAyOzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iVGhyZWFkIHZzIEZpYmVyLnRocmVhZC4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI3IiBpZD0iZW50MDAwNiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTE3Ljk5OTYiIHg9Ijg0IiB5PSIxNzIuMjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5Ny45OTk2IiB4PSI5NCIgeT0iMTg4LjI4NTEiPiYjMjU5Njg7JiMyMTMxNTsmIzMxMjQzOyYjMjQyMzA7JiMxMjM2NDsmIzM4NDgwOyYjMzAwMjg7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/P0tCPz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlRocmVhZCB2cyBGaWJlci5maWJlci4uLi5LQi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjExIiBpZD0iZW50MDAwOCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTc4Ljc4NDUiIHg9IjQxMC42MSIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTguNzg0NSIgeD0iNDIwLjYxIiB5PSIxMDUuOTk1MSI+JiMzNjYwNTsmIzEyMzU2OyYjNjUyODg7S0ImIzIxMzM2OyYjMjAzMDE7JiMxMjM5ODsmIzEyNTEzOyYjMTI1MTQ7JiMxMjUyMjsmIzY1Mjg5OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlRocmVhZCB2cyBGaWJlci5maWJlci4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMTIiIGlkPSJlbnQwMDA5Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMzEuOTk5NSIgeD0iNjI0IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExMS45OTk1IiB4PSI2MzQiIHk9IjEwNS45OTUxIj4mIzEyNTIxOyYjMTI1MzE7JiMxMjQ3OTsmIzEyNDUyOyYjMTI1MTI7JiMxMjM2NDsmIzMxNjQ5OyYjMjk3MDI7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlRocmVhZCB2cyBGaWJlci5maWJlci4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjEzIiBpZD0iZW50MDAxMCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTAzLjk5OTYiIHg9IjQ0OCIgeT0iMTcyLjI5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODMuOTk5NiIgeD0iNDU4IiB5PSIxODguMjg1MSI+JiMyNTk2ODsmIzMwMzM0OyYjMTk5NzU7JiMxMjQxODsmIzIxNDg3OyYjMzMwMjE7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBLb3A5SUNyRExJWjhJU3BDdS04Z0lhcWtJU25CcHFiTEswaDlBNGZESjU0ZUFyUG1vcW5BQkw5SWc0UU16R3pNVzJYR0thV2lMWVkxZ0F0Y0lhdWlJYjVHVWpkVS14WW52VnNVM2ItZGZ4cXBka201eWpPelJieHVrN2RIdS1QTHhfVHFBYTdMMEdydnREWnBWRHQydm5GUU82QkZmY3Z1c2pseVY0TnRxcnRCVzk4bFBxdnVGaEw3WVFpTW5Nckc1bTVqSldFbnUxUV9zQnFOT2g0dFZlaVZEd3p5dEJwdlNURi1ucXJCN1pTbG1FUTh2cEZ0RlRkSF9oWWZ3TWRfLVhWRFVxNGtnMEswPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h4 id="fiber">Fiber の起動とキャンセル<a class="headerlink" href="#fiber" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="n">program</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Unit</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">// Fiber を起動（バックグラウンドで実行）</span>
+<span class="w">  </span><span class="n">fiber</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">300</span><span class="p">.</span><span class="n">millis</span><span class="p">)</span>
+<span class="w">             </span><span class="p">.</span><span class="n">flatMap</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;hello&quot;</span><span class="p">))</span>
+<span class="w">             </span><span class="p">.</span><span class="n">foreverM</span>
+<span class="w">             </span><span class="p">.</span><span class="n">start</span>
+
+<span class="w">  </span><span class="c1">// 1秒待機</span>
+<span class="w">  </span><span class="n">_</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">)</span>
+
+<span class="w">  </span><span class="c1">// Fiber をキャンセル</span>
+<span class="w">  </span><span class="n">_</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fiber</span><span class="p">.</span><span class="n">cancel</span>
+
+<span class="w">  </span><span class="c1">// さらに1秒待機（hello は出力されない）</span>
+<span class="w">  </span><span class="n">_</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">)</span>
+<span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="p">()</span>
+</code></pre></div>
+<h3 id="109">10.9 呼び出し元に制御を返す<a class="headerlink" href="#109" title="Permanent link">&para;</a></h3>
+<p>Fiber を使って、呼び出し元に制御を返しつつバックグラウンドで処理を続ける設計ができます。</p>
+<div class="highlight"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">ProcessingCheckIns</span><span class="p">(</span>
+<span class="w">  </span><span class="n">currentRanking</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">List</span><span class="p">[</span><span class="nc">CityStats</span><span class="p">]],</span><span class="w">  </span><span class="c1">// 現在のランキングを取得</span>
+<span class="w">  </span><span class="n">stop</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Unit</span><span class="p">]</span><span class="w">                         </span><span class="c1">// 処理を停止</span>
+<span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">processCheckIns</span><span class="p">(</span><span class="n">checkIns</span><span class="p">:</span><span class="w"> </span><span class="nc">Stream</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">City</span><span class="p">]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">ProcessingCheckIns</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">storedCheckIns</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">City</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]](</span><span class="nc">Map</span><span class="p">.</span><span class="n">empty</span><span class="p">)</span>
+<span class="w">    </span><span class="n">storedRanking</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">CityStats</span><span class="p">]](</span><span class="nc">List</span><span class="p">.</span><span class="n">empty</span><span class="p">)</span>
+
+<span class="w">    </span><span class="n">rankingProgram</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">updateRanking</span><span class="p">(</span><span class="n">storedCheckIns</span><span class="p">,</span><span class="w"> </span><span class="n">storedRanking</span><span class="p">)</span>
+<span class="w">    </span><span class="n">checkInsProgram</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">checkIns</span><span class="p">.</span><span class="n">evalMap</span><span class="p">(</span><span class="n">storeCheckIn</span><span class="p">(</span><span class="n">storedCheckIns</span><span class="p">)).</span><span class="n">compile</span><span class="p">.</span><span class="n">drain</span>
+
+<span class="w">    </span><span class="c1">// Fiber として起動し、すぐに戻る</span>
+<span class="w">    </span><span class="n">fiber</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">List</span><span class="p">(</span><span class="n">rankingProgram</span><span class="p">,</span><span class="w"> </span><span class="n">checkInsProgram</span><span class="p">).</span><span class="n">parSequence</span><span class="p">.</span><span class="n">start</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="nc">ProcessingCheckIns</span><span class="p">(</span><span class="n">storedRanking</span><span class="p">.</span><span class="n">get</span><span class="p">,</span><span class="w"> </span><span class="n">fiber</span><span class="p">.</span><span class="n">cancel</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjQzNHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NjQ4cHg7aGVpZ2h0OjQzNHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDY0OCA0MzQiIHdpZHRoPSI2NDhweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSI0MTYuMTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI2MzAiIHg9IjEyIiB5PSIxMiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2OS45OTk3IiB4PSIyOTIuMDAwMiIgeT0iMjYuOTk1MSI+JiMyMTA0NjsmIzI0NDgxOyYjMTIzOTg7JiMyNzk2OTsmIzEyNDI4OzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgYmctLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uYmciIGRhdGEtc291cmNlLWxpbmU9IjEzIiBpZD0iZW50MDAxMCI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSI4OS4zIiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMzUyIiB4PSIyNTgiIHk9IjMwNi44OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTEuOTk5NSIgeD0iMzc4LjAwMDIiIHk9IjMyMS44ODUxIj4mIzEyNDk2OyYjMTI0ODM7JiMxMjQ2MzsmIzEyNDY0OyYjMTI1MjE7JiMxMjQ1NDsmIzEyNTMxOyYjMTI0ODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IGNhbGwtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi5jYWxsIiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTk3LjkxODciIHg9IjE2OC4wNCIgeT0iNDciLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzcuOTE4NyIgeD0iMTc4LjA0IiB5PSI2Mi45OTUxIj5wcm9jZXNzQ2hlY2tJbnMgJiMyMTYyODsmIzEyNDAzOyYjMjA5ODY7JiMxMjM3NTs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgaW5pdC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLmluaXQiIGRhdGEtc291cmNlLWxpbmU9IjUiIGlkPSJlbnQwMDA0Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMDMuNzE5NSIgeD0iMjE1LjE0IiB5PSIxMzAuMyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgzLjcxOTUiIHg9IjIyNS4xNCIgeT0iMTQ2LjI5NTEiPlJlZiAmIzEyMzk4OyYjMjEwMjE7JiMyNjM5OTsmIzIxMjcwOzwvdGV4dD48L2c+PCEtLWVudGl0eSBzdGFydC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLnN0YXJ0IiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTAxLjY0ODMiIHg9IjIxNi4xOCIgeT0iMjEzLjYiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4MS42NDgzIiB4PSIyMjYuMTgiIHk9IjIyOS41OTUxIj5GaWJlciAmIzEyMzk4OyYjMzYyMTU7JiMyMTIwNTs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgcmV0dXJuLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4ucmV0dXJuIiBkYXRhLXNvdXJjZS1saW5lPSI3IiBpZD0iZW50MDAwNiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjA1LjEyMzgiIHg9IjI4LjQ0IiB5PSIzNDkuODkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxODUuMTIzOCIgeD0iMzguNDQiIHk9IjM2NS44ODUxIj5Qcm9jZXNzaW5nQ2hlY2tJbnMgJiMxMjQzNDsmIzM2ODIwOyYjMTIzNzc7PC90ZXh0PjwvZz48IS0tZW50aXR5IGNoZWNraW4tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi5iZy5jaGVja2luIiBkYXRhLXNvdXJjZS1saW5lPSIxNCIgaWQ9ImVudDAwMTEiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzMS45OTk1IiB4PSIyODIiIHk9IjM0OS44OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExMS45OTk1IiB4PSIyOTIiIHk9IjM2NS44ODUxIj4mIzEyNDgxOyYjMTI0NTU7JiMxMjQ4MzsmIzEyNDYzOyYjMTI0NTI7JiMxMjUzMTsmIzIwOTY2OyYjMjk3MDI7PC90ZXh0PjwvZz48IS0tZW50aXR5IHJhbmtpbmctLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi5iZy5yYW5raW5nIiBkYXRhLXNvdXJjZS1saW5lPSIxNSIgaWQ9ImVudDAwMTIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjExNy45OTk2IiB4PSI0NDkiIHk9IjM0OS44OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijk3Ljk5OTYiIHg9IjQ1OSIgeT0iMzY1Ljg4NTEiPiYjMTI1MjE7JiMxMjUzMTsmIzEyNDYxOyYjMTI1MzE7JiMxMjQ2NDsmIzI2MzU2OyYjMjYwMzI7PC90ZXh0PjwvZz48IS0tbGluayBjYWxsIHRvIGluaXQtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMyIgZGF0YS1lbnRpdHktMj0iZW50MDAwNCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJsbms3Ij48cGF0aCBkPSJNMjY3LDY5Ljc4IEMyNjcsODUuMzYgMjY3LDEwOC4yNCAyNjcsMTIzLjgyIiBmaWxsPSJub25lIiBpZD0iY2FsbC10by1pbml0IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzAwMDAwMCIgcG9pbnRzPSIyNjcsMTI5LjgyLDI3MSwxMjAuODIsMjY3LDEyNC44MiwyNjMsMTIwLjgyLDI2NywxMjkuODIiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgaW5pdCB0byBzdGFydC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA1IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTAiIGlkPSJsbms4Ij48cGF0aCBkPSJNMjY3LDE1My4wOCBDMjY3LDE2OC42NiAyNjcsMTkxLjUzIDI2NywyMDcuMTEiIGZpbGw9Im5vbmUiIGlkPSJpbml0LXRvLXN0YXJ0IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzAwMDAwMCIgcG9pbnRzPSIyNjcsMjEzLjExLDI3MSwyMDQuMTEsMjY3LDIwOC4xMSwyNjMsMjA0LjExLDI2NywyMTMuMTEiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48L2c+PCEtLWxpbmsgc3RhcnQgdG8gcmV0dXJuLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDUiIGRhdGEtZW50aXR5LTI9ImVudDAwMDYiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImxuazkiPjxwYXRoIGQ9Ik0yNTYuMzMsMjM2LjI4IEMyMzAuOTEsMjYxLjM5IDE3MS4yNzAzLDMyMC4yODUyIDE0NS44OTAzLDM0NS4zMzUyIiBmaWxsPSJub25lIiBpZD0ic3RhcnQtdG8tcmV0dXJuIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzAwMDAwMCIgcG9pbnRzPSIxNDEuNjIsMzQ5LjU1LDE1MC44MzUzLDM0Ni4wNzQ3LDE0NS4xNzg2LDM0Ni4wMzc3LDE0NS4yMTU2LDM0MC4zODA5LDE0MS42MiwzNDkuNTUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2NS4wMDAxIiB4PSIyMjQuMDEiIHk9IjI3OC45NTY5Ij4mIzEyMzc3OyYjMTIzNjg7JiMxMjM5NTsmIzI1MTQ3OyYjMTI0Mjc7PC90ZXh0PjwvZz48IS0tbGluayBzdGFydCB0byBiZy0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA1IiBkYXRhLWVudGl0eS0yPSJlbnQwMDEwIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTgiIGlkPSJsbmsxMyI+PHBhdGggZD0iTTMxOC4yOCwyMzQuODcgQzQwNS4yNiwyNTAuNTYgNTczLjMzLDI4MS44MyA1ODMsMjkwLjg5IEM1ODUuODE2MywyOTMuNTMgNTg4LjIyOTEsMjk2LjU0NDcgNTkwLjI5NDgsMjk5LjgwNDYgQzU5MS4zMjc3LDMwMS40MzQ2IDU5Mi4yNzM5LDMwMy4xMjU4IDU5My4xNDAzLDMwNC44NjIyIEM1OTMuMzU2OSwzMDUuMjk2MyA1OTMuNTY4NSwzMDUuNzMzMyA1OTMuNzc1MywzMDYuMTcyNyBDNTkzLjg3ODcsMzA2LjM5MjUgNTkxLjQ4NzcsMzAxLjE1NTQgNTkxLjU4ODcsMzAxLjM3NjMiIGZpbGw9Im5vbmUiIGlkPSJzdGFydC10by1iZyIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMwMDAwMDAiIHBvaW50cz0iNTk0LjA4MTgsMzA2LjgzMzksNTkzLjk4MDUsMjk2Ljk4NTUsNTkyLjAwNDIsMzAyLjI4NTksNTg2LjcwMzgsMzAwLjMwOTYsNTk0LjA4MTgsMzA2LjgzMzkiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1Mi4wMDAxIiB4PSI1NTcuODkiIHk9IjI3OC45NTY5Ij4mIzIwMDA2OyYjMzQ4OTI7JiMyMzQ1NTsmIzM0ODkyOzwvdGV4dD48L2c+PD9wbGFudHVtbC1zcmMgTFAzMUlpRDA1NE50eW5MWnpsczFCam04V1psbjN3UG5KOENuYmFiU2JJdmMxY29hTUtKSEliNGYxT2FLaUdQZ0xMSnFPdnVKeW5iRTlhdEhwT043RXpweHRicUJzX0kwdWV2N04xeVhIa3NHLTh2N2lRTVlQX0t2MEp4QjVubjRSRTRraVdkUm5MUTc3VGVxMjNSUXJEeFZ5V0VpSlotMHByTl8zVlliWEtjMFJVOXZJdFE3eGM1amVRQVJfN2dpdWc3UGt4dVJCbFVSUmVrb2FZV01Cc2ZtT1RQMUk1WXp0d3dvTkR6UG5PNHVBeHhFV095Q3A2WHVuRkpYUElQa0RET2h5ckJDTDdhUERORTV1d1FFNzA1RldEX2RxSms4bVJfRkdJT1c5T1g3NDFkOEFPV0t2MXBhWUdiaUVRaVlHRWZZeGNocUxhRWdkX3VhbnJLOXZSc3dxWGdUYlh4WW1NWU1OcHRibXdud1dGV1FTcjBGX0piSlhwSm56c2pRSjY4cjZzajVsTHkwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h4 id="_5">使用例<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="n">program</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">List</span><span class="p">[</span><span class="nc">CityStats</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">processing</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">processCheckIns</span><span class="p">(</span><span class="n">checkIns</span><span class="p">)</span>
+
+<span class="w">  </span><span class="c1">// 最初のランキングを取得</span>
+<span class="w">  </span><span class="n">ranking</span><span class="w">    </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">processing</span><span class="p">.</span><span class="n">currentRanking</span>
+<span class="w">  </span><span class="n">_</span><span class="w">          </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="n">ranking</span><span class="p">)</span>
+
+<span class="w">  </span><span class="c1">// 1秒待機</span>
+<span class="w">  </span><span class="n">_</span><span class="w">          </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">)</span>
+
+<span class="w">  </span><span class="c1">// 更新されたランキングを取得</span>
+<span class="w">  </span><span class="n">newRanking</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">processing</span><span class="p">.</span><span class="n">currentRanking</span>
+
+<span class="w">  </span><span class="c1">// 処理を停止</span>
+<span class="w">  </span><span class="n">_</span><span class="w">          </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">processing</span><span class="p">.</span><span class="n">stop</span>
+<span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">newRanking</span>
+</code></pre></div>
+<h3 id="1010-iosleep-vs-threadsleep">10.10 IO.sleep vs Thread.sleep<a class="headerlink" href="#1010-iosleep-vs-threadsleep" title="Permanent link">&para;</a></h3>
+<p><code>IO.sleep</code> と <code>Thread.sleep</code> は異なる動作をします。</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>IO.sleep</th>
+<th>Thread.sleep</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ブロック対象</td>
+<td>Fiber</td>
+<td>OS Thread</td>
+</tr>
+<tr>
+<td>リソース</td>
+<td>軽量</td>
+<td>重い</td>
+</tr>
+<tr>
+<td>並行性</td>
+<td>他の Fiber が実行可能</td>
+<td>スレッドがブロック</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1">// Thread.sleep: スレッドをブロック</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">threadSleep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">delay</span><span class="p">(</span><span class="nc">Thread</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1000</span><span class="p">))</span>
+
+<span class="c1">// IO.sleep: Fiber をスリープ（スレッドは解放）</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">fiberSleep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">)</span>
+
+<span class="c1">// シングルスレッドで3つの IO.sleep を並行実行 → 約1秒</span>
+<span class="nc">List</span><span class="p">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">3</span><span class="p">)(</span><span class="n">fiberSleep</span><span class="p">).</span><span class="n">parSequence</span>
+
+<span class="c1">// シングルスレッドで3つの Thread.sleep を並行実行 → 約3秒</span>
+<span class="nc">List</span><span class="p">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">3</span><span class="p">)(</span><span class="n">threadSleep</span><span class="p">).</span><span class="n">parSequence</span>
+</code></pre></div>
+<hr />
+<h2 id="_6">まとめ<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="part-v_1">Part V で学んだこと<a class="headerlink" href="#part-v_1" title="Permanent link">&para;</a></h3>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjI0MHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NzAycHg7aGVpZ2h0OjI0MHB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDcwMiAyNDAiIHdpZHRoPSI3MDJweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyIFBhcnQgVjogPz8/Py0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJQYXJ0IFYuIC4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyMi41OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjY4NCIgeD0iMTIiIHk9IjEyIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExNS40ODYxIiB4PSIyOTYuMjU3IiB5PSIyNi45OTUxIj5QYXJ0IFY6ICYjMjAwMDY7JiMzNDg5MjsmIzIwOTY2OyYjMjk3MDI7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBjaDEwLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlBhcnQgVi4gLi4uLi5jaDEwIiBkYXRhLXNvdXJjZS1saW5lPSI0IiBpZD0iZW50MDAwMyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIxNTUuNTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSI2MzYiIHg9IjM2IiB5PSI1NSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0Ny40ODIzIiB4PSIzMzAuMjU4OSIgeT0iNjkuOTk1MSI+JiMzMTUzMjsxMCYjMzE0NTY7PC90ZXh0PjwvZz48IS0tZW50aXR5IFJlZj8/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlBhcnQgVi4gLi4uLi5jaDEwLlJlZi4uLi4uLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE2OS4yNjkiIHg9IjUyLjM3IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE0OS4yNjkiIHg9IjYyLjM3IiB5PSIxMDUuOTk1MSI+UmVmJiM2NTI4ODsmIzEyNDUwOyYjMTI0ODg7JiMxMjUxMTsmIzEyNDgzOyYjMTI0NjM7JiMyMTQ0MjsmIzI5MDMxOyYjNjUyODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IHBhclNlcXVlbmNlPz8/Pz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBWLiAuLi4uLmNoMTAucGFyU2VxdWVuY2UuLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjYiIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxOTYuMjc4IiB4PSIyNTYuODYiIHk9IjkwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTc2LjI3OCIgeD0iMjY2Ljg2IiB5PSIxMDUuOTk1MSI+cGFyU2VxdWVuY2UmIzY1Mjg4OyYjMjAwMDY7JiMyMTAxNTsmIzIzNDU1OyYjMzQ4OTI7JiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgRmliZXI/Pz8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IlBhcnQgVi4gLi4uLi5jaDEwLkZpYmVyLi4uLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjciIGlkPSJlbnQwMDA2Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNjcuMTk3OCIgeD0iNDg4LjQiIHk9IjkwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTQ3LjE5NzgiIHg9IjQ5OC40IiB5PSIxMDUuOTk1MSI+RmliZXImIzY1Mjg4OyYjMzY2MDU7JiMzNzMyNzsmIzEyNDczOyYjMTI1MjQ7JiMxMjQ4MzsmIzEyNDg5OyYjNjUyODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IGZvcmV2ZXJNPz8/Pz8/Pz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJQYXJ0IFYuIC4uLi4uY2gxMC5mb3JldmVyTS4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI4IiBpZD0iZW50MDAwNyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTk0LjU5NjIiIHg9IjUxLjciIHk9IjE3Mi4yOSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3NC41OTYyIiB4PSI2MS43IiB5PSIxODguMjg1MSI+Zm9yZXZlck0mIzY1Mjg4OyYjMjc3MDQ7JiMzMjE1NDsmIzMwMzQwOyYjMTIzOTQ7JiMyMzQ1NTsmIzM0ODkyOyYjNjUyODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IHN0YXJ0IC8gY2FuY2VsLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iUGFydCBWLiAuLi4uLmNoMTAuc3RhcnQgLiBjYW5jZWwiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJlbnQwMDA4Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMTEuNTc0MiIgeD0iMjgxLjIxIiB5PSIxNzIuMjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5MS41NzQyIiB4PSIyOTEuMjEiIHk9IjE4OC4yODUxIj5zdGFydCAvIGNhbmNlbDwvdGV4dD48L2c+PD9wbGFudHVtbC1zcmMgS29wOUlDckRMSVo4SVNwQ3UtOGdJYXFrSVNuQnBxYkxLMGY4QjJmSDJCRElVQjlac09rNUZLX1JicHNWcUFRYUs4c2l2RmNRRE9PNnByU2xLNTk4QjVQOHBaMHEwNGVkOW5RYkEyVzVmUVF6dHpGbms2ZEh1LVFFbnl0cDdwU3RGc3ZRX3hJX3dOZGh5bFR4RWZNV2dXZUlZdTlKMnFqSnl2OUpXUWcxNVp0amNGdnF0Tm9XVEtZQXQzQUpLZWswcVl6c3h0dFB0bC11UVVWWnZaS1d5dmV4YUhJYnZIVWJiZ0tNLUdCTEZUa211X2NzTVN6ZGpKbmtOOExYTTc0OW81VncyaWM5RzNqcGJCWGdrTWUxPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="_7">主要コンポーネント<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>コンポーネント</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ref[IO, A]</code></td>
+<td>スレッドセーフな共有状態</td>
+</tr>
+<tr>
+<td><code>parSequence</code></td>
+<td>IO のリストを並列実行</td>
+</tr>
+<tr>
+<td><code>Fiber</code></td>
+<td>軽量な実行単位</td>
+</tr>
+<tr>
+<td><code>fiber.start</code></td>
+<td>Fiber をバックグラウンドで起動</td>
+</tr>
+<tr>
+<td><code>fiber.cancel</code></td>
+<td>Fiber をキャンセル</td>
+</tr>
+<tr>
+<td><code>foreverM</code></td>
+<td>永遠に繰り返し実行</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_8">キーポイント<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Ref</strong>: 複数の並行処理から安全にアクセスできるアトミックな参照</li>
+<li><strong>parSequence</strong>: IO のリストを並列実行して結果を集約</li>
+<li><strong>Fiber</strong>: OS スレッドより軽量で、数百万の並行処理が可能</li>
+<li><strong>start</strong>: Fiber をバックグラウンドで起動し、すぐに制御を返す</li>
+<li><strong>IO.sleep</strong>: Fiber をスリープさせ、スレッドは解放する</li>
+</ol>
+<h3 id="_9">設計パターン<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<p><img src="data:image/svg+xml;base64,PD9wbGFudHVtbCAxLjIwMjYuMj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjI0MHB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MTAzM3B4O2hlaWdodDoyNDBweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxMDMzIDI0MCIgd2lkdGg9IjEwMzNweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjwhLS1jbHVzdGVyID8/Pz8/Pz8/Pz8/LS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIzIiBpZD0iZW50MDAwMiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMjIuNTkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMDE1IiB4PSIxMiIgeT0iMTIiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUzLjk5OTMiIHg9IjQ0Mi41MDAzIiB5PSIyNi45OTUxIj4mIzIwMDA2OyYjMzQ4OTI7JiMyMDk2NjsmIzI5NzAyOyYjMTIzOTg7JiMzNTM3MzsmIzM1MzM2OyYjMTI0OTc7JiMxMjQ3OTsmIzEyNTQwOyYjMTI1MzE7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBwMS0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLi5wMSIgZGF0YS1zb3VyY2UtbGluZT0iNCIgaWQ9ImVudDAwMDMiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iNzMuMjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIzMTMiIHg9IjM2IiB5PSI1NSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzIuMjEzNCIgeD0iMTI2LjM5MzMiIHk9IjY5Ljk5NTEiPiYjMTI0OTc7JiMxMjQ3OTsmIzEyNTQwOyYjMTI1MzE7MTogJiMyMDAwNjsmIzIxMDE1OyYjMzg1OTg7JiMzMjAwNDs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHAyLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLnAyIiBkYXRhLXNvdXJjZS1saW5lPSI5IiBpZD0iZW50MDAwNiI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSI3My4yOSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjM0NyIgeD0iMzczIiB5PSI1NSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzIuMjEzNCIgeD0iNDgwLjM5MzMiIHk9IjY5Ljk5NTEiPiYjMTI0OTc7JiMxMjQ3OTsmIzEyNTQwOyYjMTI1MzE7MjogJiMyMDg0OTsmIzI2Mzc3OyYjMjkzNjY7JiMyNDkwNzs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHAzLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLnAzIiBkYXRhLXNvdXJjZS1saW5lPSIxNCIgaWQ9ImVudDAwMDkiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMTU1LjU5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMjU5IiB4PSI3NDQiIHk9IjU1Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9IlZlcmRhbmEiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxNi4yMTMiIHg9Ijc2NS4zOTM1IiB5PSI2OS45OTUxIj4mIzEyNDk3OyYjMTI0Nzk7JiMxMjU0MDsmIzEyNTMxOzM6ICYjMTI0OTY7JiMxMjQ4MzsmIzEyNDYzOyYjMTI0NjQ7JiMxMjUyMTsmIzEyNDU0OyYjMTI1MzE7JiMxMjQ4OTsmIzIwOTY2OyYjMjk3MDI7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/PyBJTyA/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLnAxLi4uLiBJTyAuLi4uLiIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE1Ni4wNDgzIiB4PSI1MS45OCIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzYuMDQ4MyIgeD0iNjEuOTgiIHk9IjEwNS45OTUxIj4mIzM1MDc5OyYjMjU5Njg7JiMxMjM5ODsgSU8gJiMxMjQzNDsmIzIwMDA2OyYjMjEwMTU7JiMyMzQ1NTsmIzM0ODkyOzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLnAxLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNSI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iODkuOTk5NyIgeD0iMjQzIiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjY5Ljk5OTciIHg9IjI1MyIgeT0iMTA1Ljk5NTEiPiYjMzIwODA7JiMyNjUyNDsmIzEyNDM0OyYjMzg1OTg7JiMzMjAwNDs8L3RleHQ+PC9nPjwhLS1lbnRpdHkgUmVmID8/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLnAyLlJlZiAuLi4uLi4iIGRhdGEtc291cmNlLWxpbmU9IjEwIiBpZD0iZW50MDAwNyI+PHJlY3QgZmlsbD0iI0ZGRkZGRiIgaGVpZ2h0PSIyMi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB3aWR0aD0iMTMxLjcxOTQiIHg9IjM4OS4xNCIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTEuNzE5NCIgeD0iMzk5LjE0IiB5PSIxMDUuOTk1MSI+UmVmICYjMTIzOTE7JiMyOTM2NjsmIzI0OTA3OyYjMTI0MzQ7JiMyMDg0OTsmIzI2Mzc3OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8gRmliZXIgPz8/LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iLi4uLi4uLi4uLi4ucDIuLi4uIEZpYmVyIC4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMTEiIGlkPSJlbnQwMDA4Ij48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxNDguMDk4MyIgeD0iNTU1Ljk1IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyOC4wOTgzIiB4PSI1NjUuOTUiIHk9IjEwNS45OTUxIj4mIzM1MDc5OyYjMjU5Njg7JiMxMjM5ODsgRmliZXIgJiMxMjM2NDsmIzI2MzU2OyYjMjYwMzI7PC90ZXh0PjwvZz48IS0tZW50aXR5IEZpYmVyID8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLnAzLkZpYmVyIC4uLiIgZGF0YS1zb3VyY2UtbGluZT0iMTUiIGlkPSJlbnQwMDEwIj48cmVjdCBmaWxsPSIjRkZGRkZGIiBoZWlnaHQ9IjIyLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMDEuNjQ4MyIgeD0iNzYwLjE4IiB5PSI5MCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgxLjY0ODMiIHg9Ijc3MC4xOCIgeT0iMTA1Ljk5NTEiPkZpYmVyICYjMTIzOTE7JiMzNjIxNTsmIzIxMjA1OzwvdGV4dD48L2c+PCEtLWVudGl0eSA/Pz8/Py0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii4uLi4uLi4uLi4uLnAzLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxNiIgaWQ9ImVudDAwMTEiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9Ijg5Ljk5OTciIHg9Ijg5NyIgeT0iOTAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0iVmVyZGFuYSIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI2OS45OTk3IiB4PSI5MDciIHk9IjEwNS45OTUxIj4mIzIxMDQ2OyYjMjQ0ODE7JiMxMjQzNDsmIzM2ODIwOyYjMTIzNzc7PC90ZXh0PjwvZz48IS0tZW50aXR5ID8/Pz8/Pz8vPz8tLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSIuLi4uLi4uLi4uLi5wMy4uLi4uLi4uLi4uIiBkYXRhLXNvdXJjZS1saW5lPSIxNyIgaWQ9ImVudDAwMTIiPjxyZWN0IGZpbGw9IiNGRkZGRkYiIGhlaWdodD0iMjIuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjE1MC43MTYyIiB4PSI3NTkuNjQiIHk9IjE3Mi4yOSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJWZXJkYW5hIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzMC43MTYyIiB4PSI3NjkuNjQiIHk9IjE4OC4yODUxIj4mIzI0NDYwOyYjMTIzOTE7JiMzMjA4MDsmIzI2NTI0OyYjMTI0MzQ7JiMyMTQ2MjsmIzI0NDcxOy8mIzIwNTcyOyYjMjc0OTA7PC90ZXh0PjwvZz48P3BsYW50dW1sLXNyYyBWUDMxSmk5MDQ4UmxWT2ZuTnkwMGpwdzBZSVNKdHczWWdZSDhJRUxjRUJHaEtBSTlyR1o0cTZXbWZrMDFoMTdHV29hRkMtd3NsZUxCYlpPYUhneXBfX3BWYnpjZ2RUMUoyak1vS1FmZWNhY0JEUURvTkFQMGxadzJQRVpvTFgxeEpSSWNvTllJWjFyYXJzV2xhTnFZVW9EbWxmZFZORUxxYUVWU3dOeUZjbDdpV2UxbjFqTVNwMVNEeW4xOHlqR0l0TDJNbWt1VWU3c1ppZHB3ODg1YWRPZGRkaFp0dk45VGVUTXJsc1h2N05aWkxWWmotNzhYNlhyNW9zVXFWTmU0UTh0S0tYUWdCRmRiaWJDd2VBUENrYzhtNHh0bUZzOTExc0dVQ2VSczJ6ZVhpY1VxMHBiN3JiT0ZLbXc1cDI3ajdZTnBUenhmZmQza0I3V3FiNHg5eVhRamtzbVNrSWxYejBGeWdpVVpfWlF0VjM1dk42ZExWbTAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h3 id="_10">次のステップ<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<p>Part VI では、以下のトピックを学びます:</p>
+<ul>
+<li>実践的なアプリケーション構築</li>
+<li>外部 API との連携</li>
+<li>テスト戦略</li>
+</ul>
+<hr />
+<h2 id="_11">演習問題<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h3 id="1-ref">問題 1: Ref の基本<a class="headerlink" href="#1-ref" title="Permanent link">&para;</a></h3>
+<p>以下のプログラムを実装してください。カウンターを 0 から始めて、3回インクリメントした結果を返します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">incrementThreeTimes</span><span class="p">():</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">???</span>
+
+<span class="c1">// 期待される動作</span>
+<span class="n">incrementThreeTimes</span><span class="p">().</span><span class="n">unsafeRunSync</span><span class="p">()</span><span class="w">  </span><span class="c1">// 3</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">incrementThreeTimes</span><span class="p">():</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">counter</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">](</span><span class="mi">0</span><span class="p">)</span>
+<span class="w">    </span><span class="n">_</span><span class="w">       </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="n">_</span><span class="w">       </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="n">_</span><span class="w">       </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">    </span><span class="n">result</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">get</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">result</span>
+<span class="p">}</span>
+</code></pre></div>
+
+</details>
+
+<h3 id="2">問題 2: 並列実行<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
+<p>以下のプログラムを実装してください。3つの IO を並列実行し、結果の合計を返します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sumParallel</span><span class="p">(</span><span class="n">io1</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">],</span><span class="w"> </span><span class="n">io2</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">],</span><span class="w"> </span><span class="n">io3</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">???</span>
+
+<span class="c1">// 期待される動作</span>
+<span class="n">sumParallel</span><span class="p">(</span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">pure</span><span class="p">(</span><span class="mi">3</span><span class="p">)).</span><span class="n">unsafeRunSync</span><span class="p">()</span><span class="w">  </span><span class="c1">// 6</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nn">cats</span><span class="p">.</span><span class="nn">implicits</span><span class="p">.</span><span class="n">_</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sumParallel</span><span class="p">(</span><span class="n">io1</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">],</span><span class="w"> </span><span class="n">io2</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">],</span><span class="w"> </span><span class="n">io3</span><span class="p">:</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nc">List</span><span class="p">(</span><span class="n">io1</span><span class="p">,</span><span class="w"> </span><span class="n">io2</span><span class="p">,</span><span class="w"> </span><span class="n">io3</span><span class="p">).</span><span class="n">parSequence</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="n">sum</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+</details>
+
+<h3 id="3_1">問題 3: 並行カウント<a class="headerlink" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>以下のプログラムを実装してください。100個の IO を並行実行し、そのうち偶数を返した回数をカウントします。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">countEvens</span><span class="p">(</span><span class="n">ios</span><span class="p">:</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">???</span>
+
+<span class="c1">// 使用例</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">ios</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">List</span><span class="p">.</span><span class="n">fill</span><span class="p">(</span><span class="mi">100</span><span class="p">)(</span><span class="nc">IO</span><span class="p">.</span><span class="n">delay</span><span class="p">(</span><span class="n">scala</span><span class="p">.</span><span class="n">util</span><span class="p">.</span><span class="nc">Random</span><span class="p">.</span><span class="n">nextInt</span><span class="p">(</span><span class="mi">10</span><span class="p">)))</span>
+<span class="n">countEvens</span><span class="p">(</span><span class="n">ios</span><span class="p">).</span><span class="n">unsafeRunSync</span><span class="p">()</span><span class="w">  </span><span class="c1">// 約50（ランダム）</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">countEvens</span><span class="p">(</span><span class="n">ios</span><span class="p">:</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Int</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">counter</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">](</span><span class="mi">0</span><span class="p">)</span>
+<span class="w">    </span><span class="n">_</span><span class="w">       </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">ios</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">io</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">                 </span><span class="n">io</span><span class="p">.</span><span class="n">flatMap</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">                   </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">                   </span><span class="k">else</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">unit</span>
+<span class="w">                 </span><span class="p">)</span>
+<span class="w">               </span><span class="p">).</span><span class="n">parSequence</span>
+<span class="w">    </span><span class="n">result</span><span class="w">  </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">counter</span><span class="p">.</span><span class="n">get</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">result</span>
+<span class="p">}</span>
+</code></pre></div>
+
+</details>
+
+<h3 id="4">問題 4: タイムアウト付き実行<a class="headerlink" href="#4" title="Permanent link">&para;</a></h3>
+<p>以下のプログラムを実装してください。指定時間後に Fiber をキャンセルし、それまでに蓄積された結果を返します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">collectFor</span><span class="p">(</span><span class="n">duration</span><span class="p">:</span><span class="w"> </span><span class="nc">FiniteDuration</span><span class="p">):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">List</span><span class="p">[</span><span class="nc">Int</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">???</span>
+
+<span class="c1">// 期待される動作</span>
+<span class="c1">// 1秒間、100msごとに乱数を生成してリストに追加</span>
+<span class="c1">// 約10個の要素が返される</span>
+<span class="n">collectFor</span><span class="p">(</span><span class="mi">1</span><span class="p">.</span><span class="n">second</span><span class="p">).</span><span class="n">unsafeRunSync</span><span class="p">()</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nn">scala</span><span class="p">.</span><span class="nn">concurrent</span><span class="p">.</span><span class="nn">duration</span><span class="p">.</span><span class="n">_</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">collectFor</span><span class="p">(</span><span class="n">duration</span><span class="p">:</span><span class="w"> </span><span class="nc">FiniteDuration</span><span class="p">):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">List</span><span class="p">[</span><span class="nc">Int</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">collected</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">Int</span><span class="p">]](</span><span class="nc">List</span><span class="p">.</span><span class="n">empty</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c1">// 100msごとに乱数を追加するプログラム</span>
+<span class="w">    </span><span class="n">producer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">100</span><span class="p">.</span><span class="n">millis</span><span class="p">)</span><span class="w"> </span><span class="o">*&gt;</span>
+<span class="w">                </span><span class="nc">IO</span><span class="p">.</span><span class="n">delay</span><span class="p">(</span><span class="n">scala</span><span class="p">.</span><span class="n">util</span><span class="p">.</span><span class="nc">Random</span><span class="p">.</span><span class="n">nextInt</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+<span class="w">                  </span><span class="p">.</span><span class="n">flatMap</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="n">collected</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="n">appended</span><span class="p">(</span><span class="n">n</span><span class="p">))))</span>
+<span class="w">                </span><span class="p">.</span><span class="n">foreverM</span>
+
+<span class="w">    </span><span class="c1">// Fiber として起動</span>
+<span class="w">    </span><span class="n">fiber</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">producer</span><span class="p">.</span><span class="n">start</span>
+
+<span class="w">    </span><span class="c1">// 指定時間待機</span>
+<span class="w">    </span><span class="n">_</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">IO</span><span class="p">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>
+
+<span class="w">    </span><span class="c1">// キャンセル</span>
+<span class="w">    </span><span class="n">_</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fiber</span><span class="p">.</span><span class="n">cancel</span>
+
+<span class="w">    </span><span class="c1">// 結果を取得</span>
+<span class="w">    </span><span class="n">result</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">collected</span><span class="p">.</span><span class="n">get</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">result</span>
+<span class="p">}</span>
+</code></pre></div>
+
+</details>
+
+<h3 id="5">問題 5: 並行マップ更新<a class="headerlink" href="#5" title="Permanent link">&para;</a></h3>
+<p>以下のプログラムを実装してください。複数の更新を並行して Map に適用し、最終的な Map を返します。</p>
+<div class="highlight"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Update</span><span class="p">(</span><span class="n">key</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">applyUpdates</span><span class="p">(</span><span class="n">updates</span><span class="p">:</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">Update</span><span class="p">]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Map</span><span class="p">[</span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">???</span>
+
+<span class="c1">// 期待される動作</span>
+<span class="kd">val</span><span class="w"> </span><span class="n">updates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">List</span><span class="p">(</span>
+<span class="w">  </span><span class="nc">Update</span><span class="p">(</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">  </span><span class="nc">Update</span><span class="p">(</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="nc">Update</span><span class="p">(</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">),</span><span class="w">  </span><span class="c1">// &quot;a&quot; を上書き</span>
+<span class="w">  </span><span class="nc">Update</span><span class="p">(</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">applyUpdates</span><span class="p">(</span><span class="n">updates</span><span class="p">).</span><span class="n">unsafeRunSync</span><span class="p">()</span><span class="w">  </span><span class="c1">// Map(&quot;a&quot; -&gt; 3, &quot;b&quot; -&gt; 2, &quot;c&quot; -&gt; 4)</span>
+</code></pre></div>
+<details>
+<summary>解答</summary>
+
+<div class="highlight"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Update</span><span class="p">(</span><span class="n">key</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="nc">Int</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">applyUpdates</span><span class="p">(</span><span class="n">updates</span><span class="p">:</span><span class="w"> </span><span class="nc">List</span><span class="p">[</span><span class="nc">Update</span><span class="p">]):</span><span class="w"> </span><span class="nc">IO</span><span class="p">[</span><span class="nc">Map</span><span class="p">[</span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">mapRef</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nc">Ref</span><span class="p">.</span><span class="n">of</span><span class="p">[</span><span class="nc">IO</span><span class="p">,</span><span class="w"> </span><span class="nc">Map</span><span class="p">[</span><span class="nc">String</span><span class="p">,</span><span class="w"> </span><span class="nc">Int</span><span class="p">]](</span><span class="nc">Map</span><span class="p">.</span><span class="n">empty</span><span class="p">)</span>
+<span class="w">    </span><span class="n">_</span><span class="w">      </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">updates</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="n">update</span><span class="w"> </span><span class="o">=&gt;</span>
+<span class="w">                </span><span class="n">mapRef</span><span class="p">.</span><span class="n">update</span><span class="p">(</span><span class="n">_</span><span class="p">.</span><span class="n">updated</span><span class="p">(</span><span class="n">update</span><span class="p">.</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="p">.</span><span class="n">value</span><span class="p">))</span>
+<span class="w">              </span><span class="p">).</span><span class="n">parSequence</span>
+<span class="w">    </span><span class="n">result</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mapRef</span><span class="p">.</span><span class="n">get</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">yield</span><span class="w"> </span><span class="n">result</span>
+<span class="p">}</span>
+</code></pre></div>
+
+注意: 並行実行なので、同じキーへの複数の更新がある場合、最終的な値は実行順序に依存します。
+
+</details>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+        <script src="../../../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>
