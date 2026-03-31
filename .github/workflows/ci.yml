@@ -28,6 +28,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x apps/cargo-tracker/gradlew
+
       - name: Build with Gradle
         working-directory: apps/cargo-tracker
         run: ./gradlew build -x checkstyleMain -x checkstyleTest -x spotbugsMain -x spotbugsTest
