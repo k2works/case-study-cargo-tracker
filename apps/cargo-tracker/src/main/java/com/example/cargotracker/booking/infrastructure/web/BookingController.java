@@ -1,18 +1,21 @@
 package com.example.cargotracker.booking.infrastructure.web;
 
+import com.example.cargotracker.booking.application.BookingNotFoundException;
+import com.example.cargotracker.booking.application.FindBookingUseCase;
 import com.example.cargotracker.booking.application.RegisterBookingUseCase;
 import com.example.cargotracker.booking.application.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.Booking;
 import com.example.cargotracker.booking.domain.BookingId;
-import com.example.cargotracker.booking.domain.BookingRepository;
 import com.example.cargotracker.booking.domain.CargoType;
 import com.example.cargotracker.shipper.domain.ShipperId;
 import com.example.cargotracker.shipper.domain.ShipperRepository;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
@@ -23,14 +26,14 @@ import java.util.UUID;
 public class BookingController {
 
     private final RegisterBookingUseCase registerBookingUseCase;
-    private final BookingRepository bookingRepository;
+    private final FindBookingUseCase findBookingUseCase;
     private final ShipperRepository shipperRepository;
 
     public BookingController(RegisterBookingUseCase registerBookingUseCase,
-                              BookingRepository bookingRepository,
+                              FindBookingUseCase findBookingUseCase,
                               ShipperRepository shipperRepository) {
         this.registerBookingUseCase = registerBookingUseCase;
-        this.bookingRepository = bookingRepository;
+        this.findBookingUseCase = findBookingUseCase;
         this.shipperRepository = shipperRepository;
     }
 
@@ -62,11 +65,7 @@ public class BookingController {
             redirectAttributes.addFlashAttribute("successMessage",
                     "予約を登録しました（予約番号: " + bookingId + "）");
             return "redirect:/bookings/" + bookingId;
-        } catch (ShipperNotFoundException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("cargoTypes", CargoType.values());
-            return "booking/register";
-        } catch (IllegalArgumentException e) {
+        } catch (ShipperNotFoundException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("cargoTypes", CargoType.values());
             return "booking/register";
@@ -75,11 +74,22 @@ public class BookingController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable("id") String id, Model model) {
-        BookingId bookingId = new BookingId(UUID.fromString(id));
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("予約が見つかりません: " + id));
+        BookingId bookingId;
+        try {
+            bookingId = new BookingId(UUID.fromString(id));
+        } catch (IllegalArgumentException e) {
+            throw new BookingNotFoundException(id);
+        }
+        Booking booking = findBookingUseCase.execute(bookingId);
         model.addAttribute("booking", booking);
         return "booking/detail";
+    }
+
+    @ExceptionHandler(BookingNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String handleBookingNotFound(BookingNotFoundException e, Model model) {
+        model.addAttribute("errorMessage", e.getMessage());
+        return "error/404";
     }
 
     @PostMapping("/lookup-shipper")
