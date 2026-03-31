@@ -10,5 +10,6 @@
 | [ADR-002](002-transactional-event-listener.md) | ドメインイベントに @TransactionalEventListener(AFTER_COMMIT) を使用する | 承認済み |
 | [ADR-003](003-discount-policy-as-entity.md) | DiscountPolicy をエンティティとして設計し、ドメインサービスへの昇格を Phase 2 以降に保留 | 承認済み |
 | [ADR-004](004-shipper-self-service-out-of-scope.md) | 荷主セルフサービス機能を Phase 1 スコープ外とする | 承認済み |
+| [ADR-005](005-windows-docker-desktop-testcontainers.md) | Windows Docker Desktop では Testcontainers を docker_engine_linux に接続する | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

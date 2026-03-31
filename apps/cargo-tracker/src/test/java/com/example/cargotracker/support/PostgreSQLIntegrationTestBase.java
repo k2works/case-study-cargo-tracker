@@ -4,12 +4,14 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * 統合テスト用の PostgreSQL Testcontainers 共通基底クラス。
  * このクラスを継承すると PostgreSQL コンテナが自動起動され、
  * Spring の DataSource 設定がコンテナに向けられる。
  */
+@Testcontainers
 public abstract class PostgreSQLIntegrationTestBase {
 
     @Container

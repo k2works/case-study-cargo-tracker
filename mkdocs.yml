@@ -103,6 +103,7 @@ nav:
       - "ADR-002: TransactionalEventListener": adr/002-transactional-event-listener.md
       - "ADR-003: DiscountPolicy 設計": adr/003-discount-policy-as-entity.md
       - "ADR-004: 荷主セルフサービス スコープ": adr/004-shipper-self-service-out-of-scope.md
+      - "ADR-005: Windows Docker Desktop と Testcontainers": adr/005-windows-docker-desktop-testcontainers.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

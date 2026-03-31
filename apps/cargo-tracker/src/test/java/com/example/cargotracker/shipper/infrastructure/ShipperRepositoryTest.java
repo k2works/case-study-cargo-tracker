@@ -15,7 +15,6 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("ShipperRepository 統合テスト")
 class ShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
 

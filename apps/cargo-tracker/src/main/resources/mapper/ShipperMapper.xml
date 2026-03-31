@@ -4,16 +4,18 @@
 <mapper namespace="com.example.cargotracker.shipper.infrastructure.persistence.ShipperMapper">
 
     <resultMap id="shipperResultMap" type="com.example.cargotracker.shipper.infrastructure.persistence.ShipperRecord">
-        <id property="id" column="id" javaType="java.util.UUID"/>
-        <result property="name" column="name"/>
-        <result property="email" column="email"/>
-        <result property="phone" column="phone"/>
-        <result property="address" column="address"/>
-        <result property="category" column="category"/>
-        <result property="contractNumber" column="contract_number"/>
-        <result property="discountRate" column="discount_rate"/>
-        <result property="createdAt" column="created_at"/>
-        <result property="updatedAt" column="updated_at"/>
+        <constructor>
+            <idArg column="id" javaType="java.util.UUID"/>
+            <arg column="name" javaType="java.lang.String"/>
+            <arg column="email" javaType="java.lang.String"/>
+            <arg column="phone" javaType="java.lang.String"/>
+            <arg column="address" javaType="java.lang.String"/>
+            <arg column="category" javaType="java.lang.String"/>
+            <arg column="contract_number" javaType="java.lang.String"/>
+            <arg column="discount_rate" javaType="java.math.BigDecimal"/>
+            <arg column="created_at" javaType="java.time.LocalDateTime"/>
+            <arg column="updated_at" javaType="java.time.LocalDateTime"/>
+        </constructor>
     </resultMap>
 
     <insert id="insert">
@@ -32,7 +34,7 @@
         SELECT id, name, email, phone, address, category,
                contract_number, discount_rate, created_at, updated_at
         FROM shippers
-        WHERE id = #{id}::uuid
+        WHERE id = #{id}
     </select>
 
     <select id="findByEmail" resultMap="shipperResultMap">
