@@ -1,0 +1,20 @@
+CREATE TABLE bookings (
+    id                      UUID         NOT NULL,
+    shipper_id              UUID         NOT NULL,
+    cargo_type              VARCHAR(30)  NOT NULL,
+    cargo_weight_kg         NUMERIC(10, 2) NOT NULL,
+    cargo_length_cm         NUMERIC(8, 2),
+    cargo_width_cm          NUMERIC(8, 2),
+    cargo_height_cm         NUMERIC(8, 2),
+    cargo_quantity          INT          NOT NULL DEFAULT 1,
+    cargo_description       TEXT,
+    origin_location         VARCHAR(200) NOT NULL,
+    destination_location    VARCHAR(200) NOT NULL,
+    requested_pickup_date   DATE         NOT NULL,
+    requested_delivery_date DATE         NOT NULL,
+    status                  VARCHAR(20)  NOT NULL DEFAULT 'PROVISIONAL',
+    created_at              TIMESTAMP    NOT NULL,
+    updated_at              TIMESTAMP    NOT NULL,
+    CONSTRAINT pk_bookings PRIMARY KEY (id),
+    CONSTRAINT fk_bookings_shipper FOREIGN KEY (shipper_id) REFERENCES shippers(id)
+);

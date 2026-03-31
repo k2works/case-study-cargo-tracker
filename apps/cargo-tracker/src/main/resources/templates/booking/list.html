@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>予約一覧 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">Cargo Tracker</a>
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text text-white me-3" sec:authentication="name"></span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>予約一覧</h4>
+        <a th:href="@{/bookings/new}" class="btn btn-primary">新規予約</a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>予約番号</th>
+                    <th>荷主 ID</th>
+                    <th>貨物種別</th>
+                    <th>出発地</th>
+                    <th>目的地</th>
+                    <th>希望引渡日</th>
+                    <th>状態</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(bookings)}">
+                    <td colspan="7" class="text-center text-muted py-4">予約が登録されていません</td>
+                </tr>
+                <tr th:each="booking : ${bookings}">
+                    <td>
+                        <a th:href="@{/bookings/{id}(id=${booking.id})}" th:text="${booking.id}"></a>
+                    </td>
+                    <td><code th:text="${booking.shipperId}"></code></td>
+                    <td th:text="${booking.cargoSpecification.cargoType}"></td>
+                    <td th:text="${booking.transportCondition.originLocation}"></td>
+                    <td th:text="${booking.transportCondition.destinationLocation}"></td>
+                    <td th:text="${booking.transportCondition.requestedPickupDate}"></td>
+                    <td>
+                        <span class="badge bg-warning text-dark"
+                              th:text="${booking.status}"></span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>予約詳細 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">Cargo Tracker</a>
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text text-white me-3" sec:authentication="name"></span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>予約詳細</h4>
+        <a th:href="@{/bookings}" class="btn btn-outline-secondary">一覧に戻る</a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">予約番号: <code th:text="${booking.id}"></code></h5>
+            <span class="badge bg-warning text-dark fs-6" th:text="${booking.status}"></span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">荷主情報</h6>
+                    <dl class="row">
+                        <dt class="col-sm-4">荷主 ID</dt>
+                        <dd class="col-sm-8"><code th:text="${booking.shipperId}"></code></dd>
+                    </dl>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">貨物仕様</h6>
+                    <dl class="row">
+                        <dt class="col-sm-5">貨物種別</dt>
+                        <dd class="col-sm-7" th:text="${booking.cargoSpecification.cargoType}"></dd>
+
+                        <dt class="col-sm-5">重量 (kg)</dt>
+                        <dd class="col-sm-7" th:text="${booking.cargoSpecification.weightKg}"></dd>
+
+                        <dt class="col-sm-5">寸法 (cm)</dt>
+                        <dd class="col-sm-7">
+                            <span th:if="${booking.cargoSpecification.lengthCm != null}"
+                                  th:text="${booking.cargoSpecification.lengthCm + ' × ' + booking.cargoSpecification.widthCm + ' × ' + booking.cargoSpecification.heightCm}"></span>
+                            <span th:if="${booking.cargoSpecification.lengthCm == null}" class="text-muted">-</span>
+                        </dd>
+
+                        <dt class="col-sm-5">個数</dt>
+                        <dd class="col-sm-7" th:text="${booking.cargoSpecification.quantity}"></dd>
+
+                        <dt class="col-sm-5">品名</dt>
+                        <dd class="col-sm-7" th:text="${booking.cargoSpecification.description ?: '-'}"></dd>
+                    </dl>
+                </div>
+
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">輸送条件</h6>
+                    <dl class="row">
+                        <dt class="col-sm-5">出発地</dt>
+                        <dd class="col-sm-7" th:text="${booking.transportCondition.originLocation}"></dd>
+
+                        <dt class="col-sm-5">目的地</dt>
+                        <dd class="col-sm-7" th:text="${booking.transportCondition.destinationLocation}"></dd>
+
+                        <dt class="col-sm-5">希望引渡日</dt>
+                        <dd class="col-sm-7" th:text="${booking.transportCondition.requestedPickupDate}"></dd>
+
+                        <dt class="col-sm-5">希望着日</dt>
+                        <dd class="col-sm-7" th:text="${booking.transportCondition.requestedDeliveryDate}"></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

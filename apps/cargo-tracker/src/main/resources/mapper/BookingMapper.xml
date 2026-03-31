@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.BookingMapper">
+
+    <resultMap id="bookingResultMap" type="com.example.cargotracker.booking.infrastructure.persistence.BookingRecord">
+        <constructor>
+            <idArg column="id"                      javaType="java.util.UUID"/>
+            <arg  column="shipper_id"               javaType="java.util.UUID"/>
+            <arg  column="cargo_type"               javaType="java.lang.String"/>
+            <arg  column="cargo_weight_kg"          javaType="java.math.BigDecimal"/>
+            <arg  column="cargo_length_cm"          javaType="java.math.BigDecimal"/>
+            <arg  column="cargo_width_cm"           javaType="java.math.BigDecimal"/>
+            <arg  column="cargo_height_cm"          javaType="java.math.BigDecimal"/>
+            <arg  column="cargo_quantity"           javaType="int"/>
+            <arg  column="cargo_description"        javaType="java.lang.String"/>
+            <arg  column="origin_location"          javaType="java.lang.String"/>
+            <arg  column="destination_location"     javaType="java.lang.String"/>
+            <arg  column="requested_pickup_date"    javaType="java.time.LocalDate"/>
+            <arg  column="requested_delivery_date"  javaType="java.time.LocalDate"/>
+            <arg  column="status"                   javaType="java.lang.String"/>
+            <arg  column="created_at"               javaType="java.time.LocalDateTime"/>
+            <arg  column="updated_at"               javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO bookings (
+            id, shipper_id,
+            cargo_type, cargo_weight_kg, cargo_length_cm, cargo_width_cm, cargo_height_cm,
+            cargo_quantity, cargo_description,
+            origin_location, destination_location,
+            requested_pickup_date, requested_delivery_date,
+            status, created_at, updated_at
+        ) VALUES (
+            #{record.id}, #{record.shipperId},
+            #{record.cargoType}, #{record.cargoWeightKg}, #{record.cargoLengthCm},
+            #{record.cargoWidthCm}, #{record.cargoHeightCm},
+            #{record.cargoQuantity}, #{record.cargoDescription},
+            #{record.originLocation}, #{record.destinationLocation},
+            #{record.requestedPickupDate}, #{record.requestedDeliveryDate},
+            #{record.status}, #{record.createdAt}, #{record.updatedAt}
+        )
+    </insert>
+
+    <select id="findById" resultMap="bookingResultMap">
+        SELECT id, shipper_id,
+               cargo_type, cargo_weight_kg, cargo_length_cm, cargo_width_cm, cargo_height_cm,
+               cargo_quantity, cargo_description,
+               origin_location, destination_location,
+               requested_pickup_date, requested_delivery_date,
+               status, created_at, updated_at
+        FROM bookings
+        WHERE id = #{id}
+    </select>
+
+</mapper>

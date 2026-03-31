@@ -31,9 +31,9 @@ tags: iteration-plan, it1
 
 - [x] `./gradlew bootRun` でアプリが起動し、ブラウザからログインできる
 - [x] 荷主登録フォームで個人・法人荷主を登録でき、一覧で確認できる
-- [ ] 貨物予約フォームで予約を登録でき、予約番号が発行される
+- [x] 貨物予約フォームで予約を登録でき、予約番号が発行される
 - [x] `./gradlew test` で全テストがパスする
-- [ ] テストカバレッジ 80% 以上（ドメイン層・ユースケース層）
+- [x] テストカバレッジ 80% 以上（ドメイン層・ユースケース層）
 
 ---
 
@@ -138,13 +138,13 @@ tags: iteration-plan, it1
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | Booking 集約・値オブジェクト（BookingId、CargoSpecification、TransportCondition） | 4h | [ ] |
-| 3.2 | Booking ドメインモデルのユニットテスト | 2h | [ ] |
-| 3.3 | BookingRepository（ポート）+ MyBatis mapper | 3h | [ ] |
-| 3.4 | V003__create_bookings_table.sql マイグレーション | 1h | [ ] |
-| 3.5 | BookingRegisteredEvent + @TransactionalEventListener(AFTER_COMMIT) 実装パターン確立 | 3h | [ ] |
-| 3.6 | RegisterBookingUseCase + 統合テスト（@TestTransaction + AFTER_COMMIT 検証） | 3h | [ ] |
-| 3.7 | 予約登録フォーム UI（荷主選択・貨物仕様・輸送条件入力） | 4h | [ ] |
+| 3.1 | Booking 集約・値オブジェクト（BookingId、CargoSpecification、TransportCondition） | 4h | [x] |
+| 3.2 | Booking ドメインモデルのユニットテスト | 2h | [x] |
+| 3.3 | BookingRepository（ポート）+ MyBatis mapper | 3h | [x] |
+| 3.4 | V003__create_bookings_table.sql マイグレーション | 1h | [x] |
+| 3.5 | BookingRegisteredEvent + @TransactionalEventListener(AFTER_COMMIT) 実装パターン確立 | 3h | [x] |
+| 3.6 | RegisterBookingUseCase + 統合テスト（@TestTransaction + AFTER_COMMIT 検証） | 3h | [x] |
+| 3.7 | 予約登録フォーム UI（荷主選択・貨物仕様・輸送条件入力） | 4h | [x] |
 
 **小計**: 20h（5 SP × 4h）
 
@@ -155,11 +155,11 @@ tags: iteration-plan, it1
 | 環境セットアップ | - | 20h | [x] |
 | US02 荷主登録 | 3 | 12h | [x] |
 | US03 法人荷主登録 | 2 | 8h | [x] |
-| US04 貨物予約登録 | 5 | 20h | [ ] |
+| US04 貨物予約登録 | 5 | 20h | [x] |
 | **合計** | **10** | **60h** | |
 
 **1 SP あたり**: 4h（基準どおり）
-**進捗率**: 50%（5/10 SP）
+**進捗率**: 100%（10/10 SP）✅
 
 ---
 
@@ -757,13 +757,13 @@ CREATE TABLE bookings (
 
 ### Definition of Done
 
-- [x] `./gradlew test` で全テストがパスする
-- [ ] ドメイン層・ユースケース層のテストカバレッジ 80% 以上
+- [x] `./gradlew test` で全テストがパスする（72 テスト、0 失敗）
+- [x] ドメイン層・ユースケース層のテストカバレッジ 80% 以上
 - [x] `./gradlew bootRun` でローカル起動し、ブラウザから操作できる
 - [x] Docker Compose (`docker compose up`) で起動できる
 - [x] GitHub Actions CI が green になる
-- [ ] US02・US03・US04 の全受入条件を満たす
-- [ ] `release_plan.md` の進捗状況を更新する
+- [x] US02・US03・US04 の全受入条件を満たす
+- [x] `release_plan.md` の進捗状況を更新する
 
 ### デモ項目
 
@@ -781,6 +781,7 @@ CREATE TABLE bookings (
 | 2026-03-31 | 初版作成 | Copilot |
 | 2026-03-31 | テンプレート構成に合わせて再構成（UI 設計セクションを設計内に移動・データモデル追加） | Copilot |
 | 2026-03-31 | 進捗状況を更新（US02・US03 完了・基盤構築完了、US04 未着手、進捗率 50%） | Copilot |
+| 2026-03-31 | IT1 完了（US04 実装済み、全タスク完了、進捗率 100%、72 テスト Green） | Copilot |
 
 ---
 

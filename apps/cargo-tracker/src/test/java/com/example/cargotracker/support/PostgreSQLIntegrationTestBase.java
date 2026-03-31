@@ -3,22 +3,27 @@ package com.example.cargotracker.support;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * 統合テスト用の PostgreSQL Testcontainers 共通基底クラス。
  * このクラスを継承すると PostgreSQL コンテナが自動起動され、
  * Spring の DataSource 設定がコンテナに向けられる。
+ *
+ * シングルトンコンテナパターンを使用して、複数テストクラス間でコンテナを共有する。
+ * これにより、テストクラスごとにコンテナが停止・再起動されることで発生する
+ * Spring コンテキストキャッシュとの不整合を防ぐ。
  */
-@Testcontainers
 public abstract class PostgreSQLIntegrationTestBase {
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("cargo_tracker_test")
-            .withUsername("test")
-            .withPassword("test");
+    static final PostgreSQLContainer<?> postgres;
+
+    static {
+        postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+                .withDatabaseName("cargo_tracker_test")
+                .withUsername("test")
+                .withPassword("test");
+        postgres.start();
+    }
 
     @DynamicPropertySource
     static void overrideDataSourceProperties(DynamicPropertyRegistry registry) {
