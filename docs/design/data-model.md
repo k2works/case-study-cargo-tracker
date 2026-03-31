@@ -11,7 +11,8 @@ tags: design,data-model
 ## 概要
 
 本ドキュメントは、国際貨物輸送管理システムの永続化層データモデルを定義する。
-ドメインモデル分析で識別した 6 つの境界付けられたコンテキスト（Booking / Routing / Tracking / Handling / Billing / Shared Domain）に対応する 13 テーブルを設計する。
+ドメインモデル分析で識別した 6 つの境界付けられたコンテキスト（Booking / Routing / Tracking / Handling / Billing / Shared Domain）に対応する 16 テーブルを設計する。
+`shipper`（荷主）テーブルと、Spring Security 用の `users` / `user_roles` テーブルを含む。
 
 ### 設計方針
 
@@ -44,16 +45,43 @@ package "Shared Domain" #lightgray {
     * unlocode : VARCHAR(5) <<UK>>
     * name : VARCHAR(100)
   }
+
+  entity "users\n（ユーザー）" as users {
+    * id : BIGINT <<PK>>
+    --
+    * username : VARCHAR(50) <<UK>>
+    * email : VARCHAR(200) <<UK>>
+    * password : VARCHAR(255)
+    * enabled : BOOLEAN
+  }
+
+  entity "user_roles\n（ユーザーロール）" as user_roles {
+    * user_id : BIGINT <<FK, PK>>
+    * role : VARCHAR(50) <<PK>>
+  }
 }
 
 package "Booking Context" #lightblue {
+  entity "shipper\n（荷主）" as shipper {
+    * id : BIGINT <<PK>>
+    --
+    * shipper_code : VARCHAR(20) <<UK>>
+    * shipper_type : VARCHAR(20)
+    * name : VARCHAR(200)
+    * email : VARCHAR(200)
+  }
+
   entity "cargo\n（貨物）" as cargo {
     * id : BIGINT <<PK>>
     --
     * booking_id : VARCHAR(20) <<UK>>
+    * shipper_id : BIGINT <<FK>>
     * booking_status : VARCHAR(30)
     * transport_status : VARCHAR(30)
     * routing_status : VARCHAR(30)
+    * cargo_type : VARCHAR(20)
+    * weight_kg : NUMERIC(10,3)
+    declared_value : NUMERIC(15,2)
     * booking_amount_value : INTEGER
     * booking_amount_currency : VARCHAR(3)
   }
@@ -113,7 +141,10 @@ package "Tracking Context" #lightyellow {
     * tracking_id : BIGINT <<FK>>
     * exception_type : VARCHAR(50)
     * occurred_at : TIMESTAMP
-    * description : VARCHAR(500)
+    * escalation_flag : BOOLEAN
+    description : VARCHAR(500)
+    resolved_at : TIMESTAMP
+    resolution_notes : TEXT
   }
 }
 
@@ -143,9 +174,11 @@ package "Billing Context" #lightpink {
     * id : BIGINT <<PK>>
     --
     * invoice_number : VARCHAR(30) <<UK>>
-    * booking_id : VARCHAR(20)
+    * booking_id : VARCHAR(20) <<UK>>
     * total_amount_value : INTEGER
     * total_amount_currency : VARCHAR(3)
+    * tax_rate : NUMERIC(5,4)
+    * tax_amount : NUMERIC(15,2)
     * payment_status : VARCHAR(30)
   }
 
@@ -170,6 +203,7 @@ package "Billing Context" #lightpink {
 }
 
 ' Booking Context relations
+cargo }o--|| shipper : "荷主"
 cargo ||--o{ leg : "旅程を持つ"
 leg }o--|| voyage : "航海を参照"
 leg }o--|| location : "積込場所"
@@ -194,6 +228,9 @@ handling_activity }o--|| location : "作業場所"
 ' Billing Context relations
 invoice ||--o{ invoice_line_item : "明細を持つ"
 invoice ||--o{ payment : "支払を持つ"
+
+' Security relations
+users ||--o{ user_roles : "ロールを持つ"
 
 @enduml
 ```
@@ -228,27 +265,43 @@ entity "location\n（場所）" as location {
 
 ### Booking Context
 
-貨物の予約・旅程情報を管理する。`cargo` が集約ルートで、`leg` が旅程の各区間を表す。
+貨物の予約・旅程情報を管理する。`cargo` が集約ルートで、`leg` が旅程の各区間を表す。荷主情報は `shipper` テーブルに正規化し、FK 参照とする。
 
 ```plantuml
 @startuml
 title 論理データモデル - Booking Context
 
+entity "shipper\n（荷主）" as shipper {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * shipper_code : VARCHAR(20) <<UK, NOT NULL>>
+  * shipper_type : VARCHAR(20) <<NOT NULL>>
+  * name : VARCHAR(200) <<NOT NULL>>
+  * email : VARCHAR(200) <<NOT NULL>>
+  phone : VARCHAR(50)
+  contract_number : VARCHAR(50)
+  discount_rate : NUMERIC(5,4)
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
 entity "cargo\n（貨物）" as cargo {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * booking_id : VARCHAR(20) <<UK, NOT NULL>>
+  * shipper_id : BIGINT <<FK, NOT NULL>>
   * booking_status : VARCHAR(30) <<NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
   * routing_status : VARCHAR(30) <<NOT NULL>>
+  * cargo_type : VARCHAR(20) <<NOT NULL, DEFAULT 'GENERAL'>>
+  * weight_kg : NUMERIC(10,3) <<NOT NULL>>
+  declared_value : NUMERIC(15,2)
   spec_origin_unlocode : VARCHAR(5) <<FK>>
   spec_destination_unlocode : VARCHAR(5) <<FK>>
   spec_arrival_deadline : DATE
   origin_unlocode : VARCHAR(5) <<FK>>
   * booking_amount_value : INTEGER <<NOT NULL>>
   * booking_amount_currency : VARCHAR(3) <<NOT NULL>>
-  shipper_name : VARCHAR(200)
-  shipper_email : VARCHAR(200)
   consignee_name : VARCHAR(200)
   consignee_email : VARCHAR(200)
   tracking_number : VARCHAR(20)
@@ -278,6 +331,7 @@ entity "leg\n（輸送区間）" as leg {
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
 
+cargo }o--|| shipper : "荷主"
 cargo ||--o{ leg : "旅程を持つ"
 
 @enduml
@@ -357,8 +411,10 @@ entity "tracking_exception_event\n（追跡例外イベント）" as tracking_ex
   * tracking_id : BIGINT <<FK, NOT NULL>>
   * exception_type : VARCHAR(50) <<NOT NULL>>
   * occurred_at : TIMESTAMP <<NOT NULL>>
+  * escalation_flag : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
   description : VARCHAR(500)
-  resolved_at : TIMESTAMP
+  resolved_at : TIMESTAMP WITH TIME ZONE
+  resolution_notes : TEXT
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
@@ -424,9 +480,11 @@ entity "invoice\n（精算書）" as invoice {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * invoice_number : VARCHAR(30) <<UK, NOT NULL>>
-  * booking_id : VARCHAR(20) <<NOT NULL>>
+  * booking_id : VARCHAR(20) <<UK, NOT NULL>>
   * total_amount_value : INTEGER <<NOT NULL>>
   * total_amount_currency : VARCHAR(3) <<NOT NULL>>
+  * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
+  * tax_amount : NUMERIC(15,2) <<NOT NULL, DEFAULT 0>>
   * payment_status : VARCHAR(30) <<NOT NULL>>
   issued_at : TIMESTAMP
   due_date : DATE
@@ -469,6 +527,36 @@ invoice ||--o{ payment : "支払を持つ"
 
 ---
 
+### Security Context
+
+Spring Security の `UserDetailsService` が利用するユーザー認証・認可テーブル。
+
+```plantuml
+@startuml
+title 論理データモデル - Security Context
+
+entity "users\n（ユーザー）" as users {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * username : VARCHAR(50) <<UK, NOT NULL>>
+  * email : VARCHAR(200) <<UK, NOT NULL>>
+  * password : VARCHAR(255) <<NOT NULL>>
+  * enabled : BOOLEAN <<NOT NULL, DEFAULT TRUE>>
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
+entity "user_roles\n（ユーザーロール）" as user_roles {
+  * user_id : BIGINT <<FK, PK>>
+  * role : VARCHAR(50) <<PK>>
+}
+
+users ||--o{ user_roles : "ロールを持つ"
+
+@enduml
+```
+
+---
+
 ## テーブル定義
 
 ### `location`（場所マスタ）
@@ -480,28 +568,68 @@ invoice ||--o{ payment : "支払を持つ"
 | `name` | `VARCHAR(100)` | `NOT NULL` | 場所名称（例: `Tokyo`） |
 | `country_code` | `VARCHAR(2)` | | ISO 3166-1 alpha-2 国コード |
 | `time_zone` | `VARCHAR(50)` | | タイムゾーン（例: `Asia/Tokyo`） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `shipper`（荷主）
+
+> **注記**: 旧設計で `cargo` テーブルに存在した `shipper_name`・`shipper_email` カラムは本テーブルへの正規化に伴い削除した。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `shipper_code` | `VARCHAR(20)` | `UK, NOT NULL` | 荷主コード（業務キー。SHP-XXXXXX 形式） |
+| `shipper_type` | `VARCHAR(20)` | `NOT NULL` | 荷主種別（`INDIVIDUAL` / `CORPORATE`） |
+| `name` | `VARCHAR(200)` | `NOT NULL` | 荷主名称 |
+| `email` | `VARCHAR(200)` | `NOT NULL` | メールアドレス |
+| `phone` | `VARCHAR(50)` | | 電話番号 |
+| `contract_number` | `VARCHAR(50)` | | 契約番号（法人のみ。NULLable） |
+| `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.1500、最大 15%） |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+#### DDL
+
+```sql
+CREATE TABLE shipper (
+    id              BIGSERIAL PRIMARY KEY,
+    shipper_code    VARCHAR(20)  NOT NULL UNIQUE,  -- SHP-XXXXXX 形式
+    shipper_type    VARCHAR(20)  NOT NULL,          -- INDIVIDUAL / CORPORATE
+    name            VARCHAR(200) NOT NULL,
+    email           VARCHAR(200) NOT NULL,
+    phone           VARCHAR(50),
+    contract_number VARCHAR(50),                   -- 法人のみ（NULLable）
+    discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.1500 (最大 15%)
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+```
 
 ---
 
 ### `cargo`（貨物）
 
+> **注記**: `shipper_name`・`shipper_email` カラムは削除し、`shipper_id`（FK → `shipper.id`）による参照に変更した。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `booking_id` | `VARCHAR(20)` | `UK, NOT NULL` | 予約 ID（業務キー） |
+| `shipper_id` | `BIGINT` | `FK → shipper.id, NOT NULL` | 荷主 ID |
 | `booking_status` | `VARCHAR(30)` | `NOT NULL` | 予約状態（BookingStatus 列挙値） |
 | `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値） |
 | `routing_status` | `VARCHAR(30)` | `NOT NULL` | 経路決定状態（例: `ROUTED`, `MISROUTED`, `NOT_ROUTED`） |
+| `cargo_type` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'GENERAL'` | 貨物種別（`GENERAL` / `PERISHABLE` / `HAZARDOUS` / `REFRIGERATED`） |
+| `weight_kg` | `NUMERIC(10,3)` | `NOT NULL` | 重量（kg） |
+| `declared_value` | `NUMERIC(15,2)` | | 申告価格（保険料算出用） |
 | `spec_origin_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | 出荷元（RouteSpecification） |
 | `spec_destination_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | 仕向地（RouteSpecification） |
 | `spec_arrival_deadline` | `DATE` | | 到着期限（RouteSpecification） |
 | `origin_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | 実際の出発地 |
 | `booking_amount_value` | `INTEGER` | `NOT NULL` | 予約金額（最小通貨単位、例: 円） |
 | `booking_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217、例: `JPY`） |
-| `shipper_name` | `VARCHAR(200)` | | 荷主名 |
-| `shipper_email` | `VARCHAR(200)` | | 荷主メールアドレス |
 | `consignee_name` | `VARCHAR(200)` | | 荷受人名 |
 | `consignee_email` | `VARCHAR(200)` | | 荷受人メールアドレス |
 | `tracking_number` | `VARCHAR(20)` | | 追跡番号（発行後に設定） |
@@ -513,8 +641,8 @@ invoice ||--o{ payment : "支払を持つ"
 | `last_handling_event_type` | `VARCHAR(30)` | | 最後の荷役タイプ |
 | `last_handling_event_location` | `VARCHAR(5)` | | 最後の荷役場所（UN/LOCODE） |
 | `last_handling_event_voyage` | `VARCHAR(20)` | | 最後の荷役航海番号 |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -597,11 +725,13 @@ invoice ||--o{ payment : "支払を持つ"
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `tracking_id` | `BIGINT` | `FK → tracking_activity.id, NOT NULL` | 親追跡レコード ID |
 | `exception_type` | `VARCHAR(50)` | `NOT NULL` | 例外種別（例: `CUSTOMS_HOLD`, `DAMAGE`, `DELAY`） |
-| `occurred_at` | `TIMESTAMP` | `NOT NULL` | 例外発生日時 |
+| `occurred_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 例外発生日時 |
+| `escalation_flag` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US15 紛失時） |
 | `description` | `VARCHAR(500)` | | 例外内容の詳細 |
-| `resolved_at` | `TIMESTAMP` | | 例外解消日時（NULL = 未解消） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `resolved_at` | `TIMESTAMP WITH TIME ZONE` | | 解決日時（NULL = 未解決） |
+| `resolution_notes` | `TEXT` | | 対応内容メモ |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -643,16 +773,18 @@ invoice ||--o{ payment : "支払を持つ"
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 精算書番号（業務キー） |
-| `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
+| `booking_id` | `VARCHAR(20)` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止） |
 | `total_amount_value` | `INTEGER` | `NOT NULL` | 合計金額（最小通貨単位） |
 | `total_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
-| `payment_status` | `VARCHAR(30)` | `NOT NULL` | 支払状態（例: `UNPAID`, `PARTIAL`, `PAID`） |
-| `issued_at` | `TIMESTAMP` | | 発行日時 |
+| `tax_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.1000` | 消費税率（デフォルト 10%） |
+| `tax_amount` | `NUMERIC(15,2)` | `NOT NULL, DEFAULT 0` | 消費税額 |
+| `payment_status` | `VARCHAR(30)` | `NOT NULL` | 支払状態（`PENDING` / `CONFIRMED` / `OVERDUE` / `REFUNDED`） |
+| `issued_at` | `TIMESTAMP WITH TIME ZONE` | | 発行日時 |
 | `due_date` | `DATE` | | 支払期日 |
 | `discount_amount_value` | `INTEGER` | | 割引金額（最小通貨単位） |
 | `discount_amount_currency` | `VARCHAR(3)` | | 割引通貨コード |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
 ---
 
@@ -682,8 +814,55 @@ invoice ||--o{ payment : "支払を持つ"
 | `paid_at` | `TIMESTAMP` | `NOT NULL` | 支払日時 |
 | `payment_method` | `VARCHAR(30)` | `NOT NULL` | 支払方法（例: `BANK_TRANSFER`, `CREDIT_CARD`） |
 | `transaction_reference` | `VARCHAR(100)` | | 取引参照番号（外部決済システムの ID） |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `users`（ユーザー）
+
+Spring Security の `UserDetailsService` が参照するユーザー認証テーブル。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `username` | `VARCHAR(50)` | `UK, NOT NULL` | ログイン名 |
+| `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス |
+| `password` | `VARCHAR(255)` | `NOT NULL` | パスワード（BCrypt ハッシュ） |
+| `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+
+#### DDL
+
+```sql
+CREATE TABLE users (
+    id           BIGSERIAL PRIMARY KEY,
+    username     VARCHAR(50)  NOT NULL UNIQUE,
+    email        VARCHAR(200) NOT NULL UNIQUE,
+    password     VARCHAR(255) NOT NULL,  -- BCrypt ハッシュ
+    enabled      BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+### `user_roles`（ユーザーロール）
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `user_id` | `BIGINT` | `PK, FK → users.id, NOT NULL` | 親ユーザー ID |
+| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`ROLE_ADMIN` / `ROLE_OPERATOR` / `ROLE_SHIPPER` 等） |
+
+#### DDL
+
+```sql
+CREATE TABLE user_roles (
+    user_id  BIGINT      NOT NULL REFERENCES users(id),
+    role     VARCHAR(50) NOT NULL,  -- ROLE_ADMIN / ROLE_OPERATOR / ROLE_SHIPPER 等
+    PRIMARY KEY (user_id, role)
+);
+```
 
 ---
 
@@ -769,8 +948,13 @@ src/main/resources/db/migration/
 -- Shared Domain
 CREATE TABLE location ( ... );
 
+-- Security Context
+CREATE TABLE users ( ... );
+CREATE TABLE user_roles ( ... );
+
 -- Booking Context
-CREATE TABLE cargo ( ... );
+CREATE TABLE shipper ( ... );
+CREATE TABLE cargo ( ... );   -- shipper_id FK あり
 CREATE TABLE leg ( ... );
 
 -- Routing Context
@@ -780,14 +964,14 @@ CREATE TABLE carrier_movement ( ... );
 -- Tracking Context
 CREATE TABLE tracking_activity ( ... );
 CREATE TABLE tracking_handling_event ( ... );
-CREATE TABLE tracking_exception_event ( ... );
+CREATE TABLE tracking_exception_event ( ... );  -- escalation_flag / resolution_notes あり
 
 -- Handling Context
 CREATE TABLE handling_activity ( ... );
 CREATE TABLE customs_declaration ( ... );
 
 -- Billing Context
-CREATE TABLE invoice ( ... );
+CREATE TABLE invoice ( ... );  -- tax_rate / tax_amount / booking_id UNIQUE あり
 CREATE TABLE invoice_line_item ( ... );
 CREATE TABLE payment ( ... );
 ```
