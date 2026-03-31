@@ -76,6 +76,10 @@ Booking 1 ─── 1 Invoice
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 | - |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 | US16, US17 |
 | 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | 経理担当者 | US18 |
+| 割引ポリシー一覧 | `/admin/discount-policies` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US-ADM-01 |
+| 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
+| 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |
+| 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US13 |
 
 ---
 
@@ -93,6 +97,7 @@ Booking 1 ─── 1 Invoice
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 航路管理 | `/voyages` | ROLE_ROUTE_DESIGNER |
 | 請求管理 | `/billing/invoices` | ROLE_BILLING |
+| 管理設定 | `/admin/discount-policies` | ROLE_ADMIN |
 | ログアウト | `/logout` | 全ロール |
 
 ### 共通レイアウト ワイヤーフレーム
@@ -228,6 +233,34 @@ state 航路一覧 {
   航路一覧 : /voyages
   航路一覧 : 航路・スケジュール一覧
 }
+
+state "管理フロー" as admin_flow {
+  state 割引ポリシー一覧 {
+    割引ポリシー一覧 : /admin/discount-policies
+    割引ポリシー一覧 : 一覧テーブル・有効期限フィルタ
+  }
+  state 割引ポリシー登録 {
+    割引ポリシー登録 : /admin/discount-policies/new
+    割引ポリシー登録 : 登録フォーム
+  }
+  state 割引ポリシー編集 {
+    割引ポリシー編集 : /admin/discount-policies/{id}/edit
+    割引ポリシー編集 : 編集フォーム
+  }
+
+  割引ポリシー一覧 --> 割引ポリシー登録 : [新規登録] ボタン
+  割引ポリシー一覧 --> 割引ポリシー編集 : 行の [編集] リンク
+  割引ポリシー登録 --> 割引ポリシー一覧 : 登録成功（PRG）
+  割引ポリシー編集 --> 割引ポリシー一覧 : 更新成功（PRG）
+}
+
+state 公開貨物追跡 {
+  公開貨物追跡 : /public/tracking/{trackingId}
+  公開貨物追跡 : 認証不要・シンプルステータス
+}
+
+ダッシュボード --> 割引ポリシー一覧 : [管理設定] クリック
+[*] --> 公開貨物追跡 : 直接 URL アクセス（認証不要）
 
 @enduml
 ```
@@ -794,7 +827,126 @@ state 航路一覧 {
 
 ---
 
-## インタラクション設計
+### 割引ポリシー一覧 (/admin/discount-policies)
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 管理設定 | [ログアウト] }
+  ==
+  <b>割引ポリシー一覧</b>
+  ==
+  {
+    検索: | "貨物種別または顧客カテゴリ  " | [検索]
+  }
+  {#
+    **ID** | **ポリシー名** | **貨物種別** | **顧客区分** | **割引率** | **有効開始** | **有効終了** | **操作**
+    DP-001 | 一般顧客基本割引 | GENERAL | STANDARD | 0% | 2026-01-01 | -（無期限） | [編集][無効化]
+    DP-002 | 契約顧客割引 | ALL | CONTRACT | 5% | 2026-01-01 | -（無期限） | [編集][無効化]
+    DP-003 | ボリューム顧客割引 | ALL | VOLUME | 10% | 2026-01-01 | -（無期限） | [編集][無効化]
+    DP-004 | 危険物割増 | DANGEROUS | ALL | -3% | 2026-01-01 | -（無期限） | [編集][無効化]
+  }
+  ==
+  [+ 新規ポリシー登録]
+}
+@endsalt
+```
+
+#### 仕様
+
+- **一覧**: 有効期間・有効 / 無効ステータスでフィルタリング可能
+- **[編集]**: `/admin/discount-policies/{id}/edit` に遷移
+- **[無効化]**: `POST /admin/discount-policies/{id}/disable` で論理削除（PRG パターン）
+- **[+ 新規ポリシー登録]**: `/admin/discount-policies/new` に遷移
+- **アクセス制御**: `ROLE_ADMIN` のみアクセス可能。他ロールは 403 画面を表示
+
+---
+
+### 割引ポリシー登録 (/admin/discount-policies/new)
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 管理設定 | [ログアウト] }
+  ==
+  <b>割引ポリシー登録</b>
+  ==
+  {
+    ポリシー名       | "                              "
+    対象貨物種別     | ^GENERAL（一般）▼^
+    対象顧客区分     | ^STANDARD（通常）▼^
+    割引率（%）      | "    "  （プラス: 割引 / マイナス: 割増）
+    有効開始日       | "YYYY-MM-DD  "
+    有効終了日       | "YYYY-MM-DD  " （空欄 = 無期限）
+  }
+  ==
+  [  登録する  ] | [キャンセル]
+}
+@endsalt
+```
+
+#### 仕様
+
+- **バリデーション**: 割引率は -50〜100% の範囲、有効開始日 ≤ 有効終了日
+- **重複チェック**: 同一の「貨物種別 × 顧客区分 × 期間」のポリシーが既に存在する場合はエラー表示
+- **[登録する]**: `POST /admin/discount-policies` に送信。PRG パターンで一覧にリダイレクト
+- **[キャンセル]**: `/admin/discount-policies` に戻る
+
+---
+
+### 公開貨物追跡 (/public/tracking/{trackingId})
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  ==
+  {
+    .
+    <b>CargoTracker 公開追跡</b>
+    貨物の現在状況をご確認いただけます
+    .
+  }
+  ==
+  {
+    追跡番号 | "TRK-20260328-1234          " | [追跡]
+  }
+  ==
+  <b>追跡結果</b>
+  {+
+    追跡番号: TRK-20260328-1234
+    ステータス: <b>輸送中（IN_TRANSIT）</b>
+    現在地: JPOSA → USLAX
+    ----
+    <b>イベント履歴</b>
+    {#
+      **日時** | **イベント** | **場所**
+      2026-03-31 09:15 | 積込（LOAD） | JPOSA
+      2026-03-30 14:00 | 受取（RECEIVE） | JPOSA
+    }
+  }
+  ==
+  <i>お問い合わせ: support@cargotracker.example.com</i>
+}
+@endsalt
+```
+
+#### 仕様
+
+- **認証**: 不要（Spring Security の `permitAll()` で `/public/**` を許可）
+- **追跡番号フォーム**: `GET /public/tracking/{trackingId}` でページ表示。結果は同一ページ内に表示
+- **404 処理**: 存在しない追跡番号は「該当する貨物が見つかりません。追跡番号を確認の上、再度お試しください」を表示
+- **連絡先**: フッターに問い合わせメールアドレスを表示（荷主への導線確保）
+- **レスポンシブ**: モバイルファースト（スマートフォンで QR コードから直接アクセスを想定）
+- **表示情報の制限**: TransportStatus・最終イベント・現在地のみ（荷主名・住所等の個人情報は非表示）
+- **AFTER_COMMIT タイムラグ**: ステータス反映に最大 30 秒かかる旨を画面下部に注記する
+
+---
 
 ### htmx 部分更新パターン
 

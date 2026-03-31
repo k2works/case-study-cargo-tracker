@@ -91,8 +91,8 @@ ArchUnit によるコンプライアンスチェック：
 ```java
 @Test
 void domainEventListeners_mustUseTransactionalEventListener() {
-    noClasses()
-        .that().resideInAPackage("..application..")
+    noMethods()
+        .that().areDeclaredInClassesThat().resideInAPackage("..application..")
         .should().beAnnotatedWith(EventListener.class)
         .because("ドメインイベントリスナーは @TransactionalEventListener(AFTER_COMMIT) を使用すること")
         .check(importedClasses);
@@ -120,6 +120,33 @@ void domainEventListeners_mustUseTransactionalEventListener() {
 - `@TransactionalEventListener(AFTER_COMMIT)` のリスナーはトランザクション外で実行される。リスナー内で新たなトランザクションが必要な場合は `@Transactional(propagation = REQUIRES_NEW)` を明示的に付与する必要がある
 - リスナー実行失敗時のリトライ機構がない（デフォルト）。重要なサイドエフェクト（メール送信等）は try-catch でエラーハンドリングを実装すること
 - イベント発行とリスナー実行の間に僅かなタイムラグが生じる（テスト時に注意: `@TestTransaction` との組み合わせでリスナーが呼ばれない場合がある）
+
+### 失敗時のリカバリ方針
+
+AFTER_COMMIT 後にリスナーが例外を投げた場合、トランザクションはコミット済みのためロールバック不可。
+
+**Phase 1 の方針（try-catch + 手動リカバリ）**:
+
+```java
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void handle(CargoBookedEvent event) {
+    try {
+        notificationService.sendBookingConfirmation(event.getBookingId());
+    } catch (Exception e) {
+        log.error("CargoBookedEvent listener failed for bookingId={}", event.getBookingId(), e);
+        failedEventRepository.save(
+            new FailedEvent(event.getEventType(), event.toJson(), Instant.now())
+        );
+    }
+}
+```
+
+`failed_events` テーブル（`event_type VARCHAR`, `event_payload JSONB`, `failed_at TIMESTAMP`, `resolved_at TIMESTAMP`）を作成し、手動リカバリの起点とする。重大イベント（追跡番号通知等）は CloudWatch Alarm → Slack 通知を設定する。
+
+**Phase 2 以降の検討事項**:
+
+- 通知系イベント（`CargoBookedEvent` 等）: Spring Retry（最大 3 回・指数バックオフ）
+- 重要業務イベント（`HandlingEventRegisteredEvent` 等）: Transactional Outbox パターンへの移行
 
 ## コンプライアンス
 

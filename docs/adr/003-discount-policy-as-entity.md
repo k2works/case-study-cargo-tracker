@@ -21,7 +21,7 @@ tags: adr, ddd, domain-model, billing
 請求コンテキスト（Billing Context）には、運賃への割引適用ロジックが存在する。現在の要件（US-17: 請求書発行）では以下の割引ルールが想定される。
 
 - 貨物種別（GENERAL / PERISHABLE / DANGEROUS）による基本割引率
-- 取引量（過去 6 ヵ月の予約件数）に基づくボリューム割引
+- 顧客の契約種別（`VOLUME` カテゴリ）による固定割引率（管理者が `CustomerCategory` として手動設定。動的な予約件数集計は Phase 2 以降）
 - 契約顧客向け固定割引率
 
 **設計の選択肢**:
@@ -56,7 +56,7 @@ public class DiscountPolicy {
     private final DiscountPolicyId id;
     private final String policyName;
     private final CargoType applicableCargoType;   // GENERAL / PERISHABLE / DANGEROUS
-    private final CustomerCategory customerCategory; // STANDARD / CONTRACT / VOLUME
+    private final CustomerCategory customerCategory; // STANDARD: 通常顧客 / CONTRACT: 契約顧客（固定割引）/ VOLUME: ボリューム顧客（管理者が手動設定）
     private final DiscountRate discountRate;         // 0〜100% の値オブジェクト
     private final LocalDate validFrom;
     private final LocalDate validTo;
@@ -114,6 +114,7 @@ public class Invoice {
 
 ### ネガティブ
 
+- Phase 1 のボリューム割引は「管理者が手動設定した `VOLUME` カテゴリ」に基づく固定割引率で実装する。動的な予約件数参照（過去 N ヵ月の履歴集計）は Phase 2 以降に対応する
 - 複雑な割引計算ニーズが発生した場合、エンティティからドメインサービスへのリファクタリングが必要になる（ただし、テストが整備されていれば安全にリファクタリング可能）
 - 「エンティティが計算ロジックを持つ」ことへの設計上の違和感が生じる場合がある（Fat Entity になりやすい）
 
