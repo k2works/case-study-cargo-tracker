@@ -88,6 +88,7 @@ nav:
   - 開発:
       - 概要: development/index.md
       - リリース計画: development/release_plan.md
+      - "IT1 計画（US02・03・04）": development/iteration_plan-1.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
