@@ -31,6 +31,15 @@ public class Shipper {
         return new Shipper(id, name, contactInfo, CustomerCategory.INDIVIDUAL, null);
     }
 
+    public static Shipper registerCorporate(ShipperId id, ShipperName name, ContactInfo contactInfo,
+                                            CorporateContractInfo corporateContractInfo) {
+        if (id == null) throw new IllegalArgumentException("ID は null にできません");
+        if (name == null) throw new IllegalArgumentException("名前は null にできません");
+        if (contactInfo == null) throw new IllegalArgumentException("連絡先は null にできません");
+        if (corporateContractInfo == null) throw new IllegalArgumentException("法人契約情報は null にできません");
+        return new Shipper(id, name, contactInfo, CustomerCategory.CORPORATE, corporateContractInfo);
+    }
+
     public ShipperId getId() {
         return id;
     }

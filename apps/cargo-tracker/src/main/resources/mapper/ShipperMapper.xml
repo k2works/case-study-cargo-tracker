@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.shipper.infrastructure.persistence.ShipperMapper">
+
+    <resultMap id="shipperResultMap" type="com.example.cargotracker.shipper.infrastructure.persistence.ShipperRecord">
+        <id property="id" column="id" javaType="java.util.UUID"/>
+        <result property="name" column="name"/>
+        <result property="email" column="email"/>
+        <result property="phone" column="phone"/>
+        <result property="address" column="address"/>
+        <result property="category" column="category"/>
+        <result property="contractNumber" column="contract_number"/>
+        <result property="discountRate" column="discount_rate"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO shippers (
+            id, name, email, phone, address, category,
+            contract_number, discount_rate, created_at, updated_at
+        ) VALUES (
+            #{record.id}, #{record.name}, #{record.email}, #{record.phone},
+            #{record.address}, #{record.category},
+            #{record.contractNumber}, #{record.discountRate},
+            #{record.createdAt}, #{record.updatedAt}
+        )
+    </insert>
+
+    <select id="findById" resultMap="shipperResultMap">
+        SELECT id, name, email, phone, address, category,
+               contract_number, discount_rate, created_at, updated_at
+        FROM shippers
+        WHERE id = #{id}::uuid
+    </select>
+
+    <select id="findByEmail" resultMap="shipperResultMap">
+        SELECT id, name, email, phone, address, category,
+               contract_number, discount_rate, created_at, updated_at
+        FROM shippers
+        WHERE email = #{email}
+    </select>
+
+</mapper>

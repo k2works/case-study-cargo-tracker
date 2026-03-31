@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>荷主登録 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">Cargo Tracker</a>
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text text-white me-3" sec:authentication="name"></span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="card-title mb-0">荷主登録</h4>
+                </div>
+                <div class="card-body">
+                    <!-- エラーメッセージ -->
+                    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+                    <form th:action="@{/shippers}" method="post" th:object="${form}">
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">荷主種別 <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="category" id="individual"
+                                           value="INDIVIDUAL" th:checked="${form.category == 'INDIVIDUAL'}"
+                                           hx-on:change="document.getElementById('corporateSection').classList.add('d-none')">
+                                    <label class="form-check-label" for="individual">個人</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="category" id="corporate"
+                                           value="CORPORATE" th:checked="${form.category == 'CORPORATE'}"
+                                           hx-on:change="document.getElementById('corporateSection').classList.remove('d-none')">
+                                    <label class="form-check-label" for="corporate">法人</label>
+                                </div>
+                                <div th:if="${#fields.hasErrors('category')}" class="text-danger small"
+                                     th:errors="*{category}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="name" class="col-sm-3 col-form-label">氏名/社名 <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="name" name="name"
+                                       th:value="${form.name}" th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                                       placeholder="山田 太郎" maxlength="200" required>
+                                <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback"
+                                     th:errors="*{name}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="email" class="col-sm-3 col-form-label">メールアドレス <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="email" class="form-control" id="email" name="email"
+                                       th:value="${form.email}" th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"
+                                       placeholder="yamada@example.com" maxlength="254" required>
+                                <div th:if="${#fields.hasErrors('email')}" class="invalid-feedback"
+                                     th:errors="*{email}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="phone" class="col-sm-3 col-form-label">電話番号</label>
+                            <div class="col-sm-9">
+                                <input type="tel" class="form-control" id="phone" name="phone"
+                                       th:value="${form.phone}" placeholder="03-0000-0000" maxlength="20">
+                            </div>
+                        </div>
+
+                        <!-- 法人情報セクション -->
+                        <div id="corporateSection" th:classappend="${form.category != 'CORPORATE'} ? 'd-none'">
+                            <hr>
+                            <h6 class="text-muted mb-3">法人契約情報</h6>
+
+                            <div class="mb-3 row">
+                                <label for="contractNumber" class="col-sm-3 col-form-label">契約番号</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="contractNumber" name="contractNumber"
+                                           th:value="${form.contractNumber}"
+                                           th:classappend="${#fields.hasErrors('contractNumber')} ? 'is-invalid'"
+                                           placeholder="CONTRACT-001" maxlength="50">
+                                    <div th:if="${#fields.hasErrors('contractNumber')}" class="invalid-feedback"
+                                         th:errors="*{contractNumber}"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 row">
+                                <label for="discountRate" class="col-sm-3 col-form-label">割引率 (%)</label>
+                                <div class="col-sm-9">
+                                    <input type="number" class="form-control" id="discountRate" name="discountRate"
+                                           th:value="${form.discountRate}"
+                                           th:classappend="${#fields.hasErrors('discountRate')} ? 'is-invalid'"
+                                           min="0" max="30" step="0.1" placeholder="0〜30">
+                                    <div th:if="${#fields.hasErrors('discountRate')}" class="invalid-feedback"
+                                         th:errors="*{discountRate}"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a th:href="@{/shippers}" class="btn btn-outline-secondary">キャンセル</a>
+                            <button type="submit" class="btn btn-primary">登録</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
+<script>
+    // 荷主種別ラジオボタンの初期状態を設定
+    document.addEventListener('DOMContentLoaded', function() {
+        const categoryRadios = document.querySelectorAll('input[name="category"]');
+        const corporateSection = document.getElementById('corporateSection');
+        categoryRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'CORPORATE') {
+                    corporateSection.classList.remove('d-none');
+                } else {
+                    corporateSection.classList.add('d-none');
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>
