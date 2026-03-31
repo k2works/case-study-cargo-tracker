@@ -196,7 +196,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `Cargo` |
 | 主要概念 | `RouteSpecification`, `CargoItinerary`, `Delivery` |
-| `BookingStatus` | `DRAFT` / `CONFIRMED` / `ROUTED` / `IN_TRANSIT` / `ARRIVED` / `CUSTOMS_HOLD` / `DELIVERED` / `CANCELLED` |
+| `BookingStatus` | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED` |
 | アクター | 荷主、営業担当者 |
 
 #### 2. Routing Context（経路コンテキスト）
@@ -217,7 +217,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `TrackingActivity` |
 | 主要概念 | `TrackingNumber`, `TransportStatus`, `TrackingExceptionEvent` |
-| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `ONBOARD_CARRIER` / `IN_PORT` / `UNLOADED` / `CUSTOMS_INSPECTION` / `AWAITING_PICKUP` / `CLAIMED` / `EXCEPTION` |
+| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `IN_TRANSIT` / `UNLOADED` / `CUSTOMS_INSPECTION` / `AWAITING_CLAIM` / `DELIVERED` / `MISROUTED` |
 | アクター | 追跡管理者、荷主、荷受人 |
 
 #### 4. Handling Context（荷役コンテキスト）
@@ -408,6 +408,11 @@ public class TrackingEventListener {
     }
 }
 ```
+
+> **設計注意**: `@EventListener` はデフォルトでトランザクションコミット前に実行される。
+> コミット前にリスナーが実行されるリスクを避けるため、ドメインイベントのリスナーには
+> `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)` を使用すること。
+> 高可用性が必要なシステムへ移行する際は Transactional Outbox パターンへの移行を検討すること。
 
 ## Jakarta EE → Spring Boot 移行マッピング
 
