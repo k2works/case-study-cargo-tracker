@@ -309,7 +309,7 @@ state 航路一覧 {
       <b>未払い請求</b>
       ----
       3 件
-      （UNPAID）
+      （PENDING）
     }
   }
   ==
@@ -407,7 +407,7 @@ state 航路一覧 {
 
 - **入力項目**: 出発地・目的地（UNLOCODE 形式 5 文字）・希望到着期限・貨物種別・重量
 - **バリデーション**: htmx で `hx-post` 送信前にクライアントサイドチェック、サーバー側は Bean Validation
-- **貨物種別**: `GENERAL_CARGO`, `REFRIGERATED`, `HAZARDOUS`, `OVERSIZED` から選択
+- **貨物種別**: `GENERAL_CARGO`, `REFRIGERATED`, `HAZARDOUS`, `PERISHABLE` から選択
 - **登録成功**: PRG パターンで `/bookings/{bookingId}` へリダイレクト
 - **エラー時**: 同画面を再描画し、エラーフィールドを赤ボーダーで強調
 
@@ -560,6 +560,8 @@ state 航路一覧 {
   <b>追跡詳細</b>  TRK-20260328-1234
   --
   現在のステータス: <color:green>ONBOARD_CARRIER</color>　　現在地: 太平洋上
+  推定到着日: 2026-04-10 頃
+  通関ステータス: <color:blue>PENDING</color>
   ==
   <b>輸送ステータスタイムライン</b>
   {
@@ -580,6 +582,8 @@ state 航路一覧 {
 - **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
 - **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に
 - **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`
+- **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
+- **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
 - **EXCEPTION**: 異常発生時は赤色バッジで表示し、内容を詳細表示
 - **[予約詳細を表示]**: ROLE_SALES, ROLE_SHIPPER のみ表示
 
@@ -597,11 +601,11 @@ state 航路一覧 {
   <b>荷役作業登録</b>
   ==
   {
-    貨物 ID（予約番号） | "BK-1234         "
-    荷役種別            | ^LOAD^
-    場所（港コード）    | "JPOSA           "
-    実施日時            | "2026-04-01 08:30"
-    担当者メモ          | "                "
+    追跡番号（TRK-YYYYMMDD-NNNN） | "TRK-20260401-    " | [📷 カメラスキャン]
+    荷役種別                       | ^LOAD^
+    場所（港コード）               | "JPOSA            "
+    実施日時                       | "2026-04-01 08:30 "
+    担当者メモ                     | "                 "
   }
   ==
   {
@@ -616,7 +620,7 @@ state 航路一覧 {
 #### 仕様
 
 - **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS_CLEARANCE`, `CLAIM` から選択
-- **貨物 ID**: `hx-get="/api/bookings/{id}/summary"` で貨物情報をサジェスト表示
+- **追跡番号**: `TRK-YYYYMMDD-NNNN` 形式。`[📷 カメラスキャン]` ボタンでバーコード・QR スキャン入力に対応
 - **実施日時**: 未来日時は警告表示（投機的な登録は許可）
 - **登録成功**: PRG パターンで `/handling` へリダイレクト
 
@@ -709,13 +713,14 @@ state 航路一覧 {
   <b>請求書一覧</b>
   --
   {
-    ステータス | ^UNPAID^ | 発行日 | "2026-03-  " | [検索]
+    ステータス | ^PENDING^ | 発行日 | "2026-03-  " | [検索]
   }
   ==
+  [+ 新規請求書発行]
   {#
     **請求書 ID** | **予約 ID** | **金額** | **発行日**   | **支払期限** | **ステータス**
-    INV-0021      | BK-1234     | ¥450,000 | 2026-03-28   | 2026-04-28   | <color:red>UNPAID</color>
-    INV-0020      | BK-1230     | ¥320,000 | 2026-03-25   | 2026-04-25   | <color:red>UNPAID</color>
+    INV-0021      | BK-1234     | ¥450,000 | 2026-03-28   | 2026-04-28   | <color:red>PENDING</color>
+    INV-0020      | BK-1230     | ¥320,000 | 2026-03-25   | 2026-04-25   | <color:red>PENDING</color>
     INV-0019      | BK-1225     | ¥580,000 | 2026-03-20   | 2026-04-20   | <color:green>CONFIRMED</color>
     INV-0018      | BK-1220     | ¥210,000 | 2026-03-15   | 2026-04-15   | <color:green>CONFIRMED</color>
   }
@@ -727,8 +732,8 @@ state 航路一覧 {
 
 #### 仕様
 
-- **フィルタ**: PaymentStatus（`UNPAID`, `CONFIRMED`, `OVERDUE`）・発行日でフィルタリング
-- **ステータスバッジ**: `UNPAID` は赤、`CONFIRMED` は緑、`OVERDUE` は濃い赤で表示
+- **フィルタ**: PaymentStatus（`PENDING`, `CONFIRMED`, `OVERDUE`）・発行日でフィルタリング
+- **ステータスバッジ**: `PENDING` は赤、`CONFIRMED` は緑、`OVERDUE` は濃い赤で表示
 - **支払期限超過**: 期限超過かつ未払いの場合は行を赤色ハイライト
 - **アクセス制御**: ROLE_BILLING のみアクセス可能
 
@@ -743,7 +748,7 @@ state 航路一覧 {
 {+
   {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | <b>請求管理</b> | [ログアウト] }
   ==
-  <b>請求書詳細</b>  INV-0021  |  <color:red>UNPAID</color>
+  <b>請求書詳細</b>  INV-0021  |  <color:red>PENDING</color>
   ==
   {
     {+
