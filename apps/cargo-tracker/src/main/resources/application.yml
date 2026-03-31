@@ -9,19 +9,20 @@ spring:
     locations: classpath:db/migration
   h2:
     console:
-      enabled: true
+      enabled: true  # 開発用 H2 コンソール。本番（product プロファイル）では無効化すること
       path: /h2-console
   security:
     user:
       name: admin
-      password: admin
+      password: admin  # 開発用固定値。本番は環境変数 SPRING_SECURITY_USER_PASSWORD で注入すること
+  # ── 以下は開発環境専用設定（本番プロファイルでは上書きまたは無効化される）──
   thymeleaf:
-    cache: false
+    cache: false  # テンプレート変更の即時反映。本番は true に変更すること
   devtools:
     restart:
-      enabled: true
+      enabled: true   # ホットリロード。本番 JAR には devtools が含まれないため実質無効
     livereload:
-      enabled: true
+      enabled: true   # ブラウザライブリロード。本番 JAR には devtools が含まれないため実質無効
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml

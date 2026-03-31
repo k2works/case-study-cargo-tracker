@@ -12,6 +12,7 @@ public class BookingEventHandler {
 
     private static final Logger log = LoggerFactory.getLogger(BookingEventHandler.class);
 
+    // cf. ADR-002: AFTER_COMMIT を使用することでロールバック時のサイドエフェクトを防止
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onBookingRegistered(BookingRegisteredEvent event) {
         log.info("予約登録イベントを受信しました: bookingId={}, shipperId={}",
