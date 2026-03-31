@@ -86,4 +86,15 @@ class BookingRepositoryTest extends PostgreSQLIntegrationTestBase {
         Optional<Booking> found = bookingRepository.findById(BookingId.generate());
         assertThat(found).isEmpty();
     }
+
+    @Test
+    @DisplayName("取得した予約はドメインイベントを持たない")
+    void findByIdShouldNotContainDomainEvents() {
+        ShipperId shipperId = createShipper();
+        Booking booking = Booking.register(BookingId.generate(), shipperId, anyCargo(), anyTransport());
+        bookingRepository.save(booking);
+
+        Booking found = bookingRepository.findById(booking.getId()).orElseThrow();
+        assertThat(found.getDomainEvents()).isEmpty();
+    }
 }
