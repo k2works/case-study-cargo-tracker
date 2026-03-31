@@ -66,6 +66,6 @@ public class BookingRepositoryImpl implements BookingRepository {
                 record.requestedPickupDate(),
                 record.requestedDeliveryDate()
         );
-        return Booking.register(id, shipperId, cargo, transport);
+        return Booking.reconstitute(id, shipperId, cargo, transport, BookingStatus.valueOf(record.status()));
     }
 }

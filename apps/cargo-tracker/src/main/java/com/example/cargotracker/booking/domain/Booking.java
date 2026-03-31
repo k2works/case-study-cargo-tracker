@@ -17,7 +17,7 @@ public class Booking {
     private final CargoSpecification cargoSpecification;
     private final TransportCondition transportCondition;
     private final BookingStatus status;
-    private final List<Object> domainEvents = new ArrayList<>();
+    private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Booking(BookingId id, ShipperId shipperId,
                     CargoSpecification cargoSpecification,
@@ -46,13 +46,23 @@ public class Booking {
         return booking;
     }
 
+    /**
+     * 永続化ストアから予約を再構成する。ドメインイベントは発行しない。
+     */
+    public static Booking reconstitute(BookingId id, ShipperId shipperId,
+                                       CargoSpecification cargoSpecification,
+                                       TransportCondition transportCondition,
+                                       BookingStatus status) {
+        return new Booking(id, shipperId, cargoSpecification, transportCondition, status);
+    }
+
     public BookingId getId() { return id; }
     public ShipperId getShipperId() { return shipperId; }
     public CargoSpecification getCargoSpecification() { return cargoSpecification; }
     public TransportCondition getTransportCondition() { return transportCondition; }
     public BookingStatus getStatus() { return status; }
 
-    public List<Object> getDomainEvents() {
+    public List<DomainEvent> getDomainEvents() {
         return Collections.unmodifiableList(domainEvents);
     }
 }
