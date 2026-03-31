@@ -93,11 +93,9 @@ tags: iteration-plan, it1
 5. 経路設計者に予約登録の通知が送信される（`@TransactionalEventListener(AFTER_COMMIT)` 経由）
 6. 見積情報との整合性が確認される
 
----
+### タスク
 
-## タスク
-
-### 0. プロジェクト基盤構築（環境セットアップ）
+#### 0. プロジェクト基盤構築（環境セットアップ）
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
@@ -111,7 +109,7 @@ tags: iteration-plan, it1
 
 **小計**: 20h（環境セットアップ）
 
-### 1. US02: 荷主を登録する（3 SP）
+#### 1. US02: 荷主を登録する（3 SP）
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
@@ -124,7 +122,7 @@ tags: iteration-plan, it1
 
 **小計**: 12h（3 SP × 4h）
 
-### 2. US03: 法人荷主を登録する（2 SP）
+#### 2. US03: 法人荷主を登録する（2 SP）
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
@@ -136,7 +134,7 @@ tags: iteration-plan, it1
 
 **小計**: 8h（2 SP × 4h）
 
-### 3. US04: 貨物予約を登録する（5 SP）
+#### 3. US04: 貨物予約を登録する（5 SP）
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
@@ -150,7 +148,7 @@ tags: iteration-plan, it1
 
 **小計**: 20h（5 SP × 4h）
 
-### タスク合計
+#### タスク合計
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|-----|---------|------|
@@ -215,287 +213,9 @@ gantt
 
 ---
 
-## ユーザーインターフェース設計
-
-### IT1 対象画面
-
-| 画面名 | パス | 対象 US | ロール |
-|--------|------|---------|--------|
-| ログイン | `/login` | - | 全ロール |
-| 荷主一覧 | `/shippers` | US02 | ROLE_SALES |
-| 荷主登録フォーム | `/shippers/new` | US02・US03 | ROLE_SALES |
-| 荷主詳細 | `/shippers/{id}` | US02・US03 | ROLE_SALES |
-| 貨物予約一覧 | `/bookings` | US04 | ROLE_SALES |
-| 貨物予約登録フォーム | `/bookings/new` | US04 | ROLE_SALES |
-| 予約詳細 | `/bookings/{id}` | US04 | ROLE_SALES |
-| 法人フィールド（htmx フラグメント） | `/htmx/shippers/corporate-fields` | US03 | ROLE_SALES |
-
----
-
-### 画面遷移図（IT1 スコープ）
-
-```plantuml
-@startuml IT1_screen_transition
-title IT1 画面遷移 - 荷主登録・貨物予約登録
-
-[*] --> ログイン画面
-
-state ログイン画面 {
-  ログイン画面 : /login
-}
-
-ログイン画面 --> 荷主一覧 : ログイン成功
-ログイン画面 --> ログイン画面 : 認証失敗（エラー）
-
-state "荷主管理フロー" as shipper_flow {
-  state 荷主一覧 {
-    荷主一覧 : /shippers
-    荷主一覧 : 一覧テーブル
-  }
-  state 荷主登録フォーム {
-    荷主登録フォーム : /shippers/new
-    荷主登録フォーム : 個人/法人切替（htmx）
-  }
-  state 荷主詳細 {
-    荷主詳細 : /shippers/{id}
-    荷主詳細 : 登録情報表示
-  }
-
-  荷主一覧 --> 荷主登録フォーム : [新規登録] ボタン
-  荷主登録フォーム --> 荷主詳細 : 登録成功（PRG）
-  荷主登録フォーム --> 荷主登録フォーム : バリデーションエラー
-  荷主詳細 --> 荷主一覧 : [一覧へ戻る]
-}
-
-state "貨物予約フロー" as booking_flow {
-  state 貨物予約一覧 {
-    貨物予約一覧 : /bookings
-    貨物予約一覧 : 一覧テーブル
-  }
-  state 貨物予約登録フォーム {
-    貨物予約登録フォーム : /bookings/new
-    貨物予約登録フォーム : 荷主選択・貨物仕様入力
-  }
-  state 予約詳細 {
-    予約詳細 : /bookings/{id}
-    予約詳細 : 予約番号・ステータス PROVISIONAL
-  }
-
-  貨物予約一覧 --> 貨物予約登録フォーム : [新規登録] ボタン
-  貨物予約登録フォーム --> 予約詳細 : 登録成功（PRG）
-  貨物予約登録フォーム --> 貨物予約登録フォーム : バリデーションエラー
-  予約詳細 --> 貨物予約一覧 : [一覧へ戻る]
-}
-
-荷主一覧 --> 貨物予約登録フォーム : [この荷主で予約登録]
-@enduml
-```
-
----
-
-### ワイヤーフレーム
-
-#### ログイン画面 (`/login`)
-
-```plantuml
-@startsalt
-{+
-  <b>CargoTracker</b>
-  ==
-  {
-    ユーザー名 | "sales01           "
-    パスワード | "***               "
-  }
-  ==
-  [  ログイン  ]
-  --
-  <color:gray><i>国際貨物輸送管理システム</i></color>
-}
-@endsalt
-```
-
-**仕様**:
-
-- Spring Security の `formLogin()` で実装
-- 認証失敗: 同画面を再表示し「ユーザー名またはパスワードが正しくありません」を表示
-- 認証成功: ロール別にリダイレクト先を決定（ROLE_SALES → `/bookings`）
-
----
-
-#### 荷主登録フォーム (`/shippers/new`) ― US02・US03
-
-```plantuml
-@startsalt
-{+
-  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
-  ==
-  <b>荷主登録</b>
-  ==
-  {
-    氏名 / 社名 *              | "田中　太郎                  "
-    メールアドレス *            | "taro@example.com           "
-    電話番号                   | "090-1234-5678              "
-    住所                       | "東京都港区...               "
-    荷主種別 *                 | (X) 個人  () 法人
-  }
-  ==
-  -- 法人情報（荷主種別が「法人」のとき htmx で表示） --
-  {
-    契約番号 *                 | "CTR-2026-001               "
-    割引率（0〜30%）*          | "10                         "
-  }
-  ==
-  {
-    <color:red>* 必須項目</color>
-  }
-  ==
-  [登録する] | [キャンセル]
-}
-@endsalt
-```
-
-**仕様**:
-
-- 荷主種別「法人」を選択すると htmx (`hx-get="/htmx/shippers/corporate-fields" hx-trigger="change" hx-target="#corporate-section"`) で法人情報フィールドを動的挿入
-- 荷主種別「個人」に戻すと法人情報フィールドを非表示
-- メールアドレス重複チェック: `hx-post="/htmx/shippers/check-email"` でリアルタイム重複確認
-- バリデーションエラー: 入力欄に `is-invalid` クラスを付与し赤ボーダー表示
-- 登録成功: PRG パターンで `/shippers/{id}` へリダイレクト
-- キャンセル: `/shippers` へリダイレクト
-
----
-
-#### 荷主詳細 (`/shippers/{id}`)
-
-```plantuml
-@startsalt
-{+
-  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
-  ==
-  <b>荷主詳細</b>  SHP-00001
-  ==
-  {
-    氏名 / 社名    | 田中　太郎
-    メール        | taro@example.com
-    電話番号      | 090-1234-5678
-    住所          | 東京都港区...
-    荷主種別      | 個人
-    登録日時      | 2026-03-31 10:00
-  }
-  ==
-  [この荷主で予約登録] | [一覧へ戻る]
-}
-@endsalt
-```
-
----
-
-#### 貨物予約登録フォーム (`/bookings/new`) ― US04
-
-```plantuml
-@startsalt
-{+
-  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
-  ==
-  <b>貨物予約登録</b>
-  ==
-  -- 荷主情報 --
-  {
-    荷主 ID *  | "SHP-00001          " | [検索]
-    氏名 / 社名 | 田中　太郎（自動表示）
-  }
-  ==
-  -- 貨物仕様 --
-  {
-    貨物種別 *            | ^GENERAL_CARGO^
-    重量（kg）*           | "1200.00           "
-    長さ（cm）            | "200               "
-    幅（cm）              | "150               "
-    高さ（cm）            | "120               "
-    個数 *                | "1                 "
-    品名 / 特記事項       | "自動車部品         "
-  }
-  ==
-  -- 輸送条件 --
-  {
-    出発地（UNLOCODE）*   | "JPOSA             "
-    目的地（UNLOCODE）*   | "USLAX             "
-    希望引渡日 *          | "2026-04-10        "
-    希望着日 *            | "2026-04-30        "
-  }
-  ==
-  {
-    <color:red>* 必須項目</color>
-  }
-  ==
-  [登録する] | [キャンセル]
-}
-@endsalt
-```
-
-**仕様**:
-
-- 荷主 ID 欄に入力後 `[検索]` ボタンで荷主名を自動表示（htmx: `hx-post="/htmx/bookings/lookup-shipper"`）
-- 貨物種別: `GENERAL_CARGO`, `REFRIGERATED`, `HAZARDOUS`, `PERISHABLE` から選択
-- 出発地・目的地: UNLOCODE 形式（5 文字）。`hx-get="/htmx/locations/validate"` でリアルタイムチェック
-- 希望引渡日は当日以降のみ許可（クライアントサイドチェック）
-- 登録成功: PRG パターンで `/bookings/{id}` へリダイレクト（`BookingRegisteredEvent` 発行）
-- エラー時: 同画面再描画、エラーフィールドを赤ボーダー強調
-
----
-
-### インタラクション設計（htmx）
-
-#### 法人フィールド動的表示（US03）
-
-```html
-<!-- 荷主登録フォームの種別ラジオボタン -->
-<div class="form-check form-check-inline">
-  <input type="radio" name="category" value="CORPORATE"
-         hx-get="/htmx/shippers/corporate-fields"
-         hx-trigger="change"
-         hx-target="#corporate-section"
-         hx-swap="innerHTML">
-  <label>法人</label>
-</div>
-<div class="form-check form-check-inline">
-  <input type="radio" name="category" value="INDIVIDUAL"
-         hx-get="/htmx/shippers/corporate-fields-empty"
-         hx-trigger="change"
-         hx-target="#corporate-section"
-         hx-swap="innerHTML">
-  <label>個人</label>
-</div>
-<div id="corporate-section"></div>
-```
-
-**サーバー側レスポンス（Thymeleaf fragment）**:
-
-- `GET /htmx/shippers/corporate-fields` → `shipper/fragments :: corporateFields` fragment を返す
-- `GET /htmx/shippers/corporate-fields-empty` → 空の HTML を返す
-
-#### 荷主 ID 検索（US04）
-
-```html
-<input type="text" name="shipperId"
-       hx-post="/htmx/bookings/lookup-shipper"
-       hx-trigger="blur"
-       hx-target="#shipper-name-display"
-       hx-swap="innerHTML">
-<span id="shipper-name-display">（荷主 ID を入力後に表示）</span>
-```
-
-#### バリデーションエラー表示パターン
-
-- **サーバーサイド**: Bean Validation（`@NotBlank`, `@Email`, `@Min`, `@Max`）でチェック
-- **エラーモデル**: `BindingResult` → `th:errors` で各フィールドにインラインエラーを表示
-- **スタイル**: エラー時 `is-invalid` クラス付与（Bootstrap 5 の赤ボーダー）、エラーメッセージを `invalid-feedback` div で表示
-
----
-
 ## 設計
 
-### ドメインモデル（IT1 対象集約）
+### ドメインモデル
 
 ```plantuml
 @startuml IT1_domain_model
@@ -581,10 +301,351 @@ package "Booking Context" {
   Booking --> BookingStatus
 }
 
+note right of Booking
+  BookingRegisteredEvent を
+  @TransactionalEventListener(AFTER_COMMIT)
+  で経路設計者へ通知（ADR-002 準拠）
+end note
+
 @enduml
 ```
 
-### ヘキサゴナルアーキテクチャ パッケージ構造
+### データモデル
+
+```plantuml
+@startuml IT1_data_model
+hide circle
+skinparam linetype ortho
+
+entity "shippers" as shippers {
+  *id : UUID <<PK>>
+  --
+  *name : VARCHAR(200)
+  *email : VARCHAR(254) <<UNIQUE>>
+  phone : VARCHAR(20)
+  address : TEXT
+  *category : VARCHAR(20)
+  contract_number : VARCHAR(50)
+  discount_rate : NUMERIC(5,2)
+  *created_at : TIMESTAMP
+  *updated_at : TIMESTAMP
+}
+
+entity "bookings" as bookings {
+  *id : UUID <<PK>>
+  --
+  *shipper_id : UUID <<FK>>
+  *cargo_type : VARCHAR(30)
+  *cargo_weight_kg : NUMERIC(10,2)
+  cargo_length_cm : NUMERIC(8,2)
+  cargo_width_cm : NUMERIC(8,2)
+  cargo_height_cm : NUMERIC(8,2)
+  *cargo_quantity : INT
+  cargo_description : TEXT
+  *origin_location : VARCHAR(200)
+  *destination_location : VARCHAR(200)
+  *requested_pickup_date : DATE
+  *requested_delivery_date : DATE
+  *status : VARCHAR(20)
+  *created_at : TIMESTAMP
+  *updated_at : TIMESTAMP
+}
+
+shippers ||--o{ bookings : "1 荷主 : N 予約"
+
+@enduml
+```
+
+### ユーザーインターフェース
+
+#### ビュー
+
+IT1 対象画面一覧:
+
+| 画面名 | パス | 対象 US | ロール |
+|--------|------|---------|--------|
+| ログイン | `/login` | - | 全ロール |
+| 荷主一覧 | `/shippers` | US02 | ROLE_SALES |
+| 荷主登録フォーム | `/shippers/new` | US02・US03 | ROLE_SALES |
+| 荷主詳細 | `/shippers/{id}` | US02・US03 | ROLE_SALES |
+| 貨物予約一覧 | `/bookings` | US04 | ROLE_SALES |
+| 貨物予約登録フォーム | `/bookings/new` | US04 | ROLE_SALES |
+| 予約詳細 | `/bookings/{id}` | US04 | ROLE_SALES |
+| 法人フィールド（htmx フラグメント） | `/htmx/shippers/corporate-fields` | US03 | ROLE_SALES |
+
+**ログイン画面 (`/login`)**
+
+```plantuml
+@startsalt
+{+
+  <b>CargoTracker</b>
+  ==
+  {
+    ユーザー名 | "sales01           "
+    パスワード | "***               "
+  }
+  ==
+  [  ログイン  ]
+  --
+  <color:gray><i>国際貨物輸送管理システム</i></color>
+}
+@endsalt
+```
+
+- 認証失敗: 「ユーザー名またはパスワードが正しくありません」を表示
+- 認証成功: ROLE_SALES → `/bookings` へリダイレクト
+
+**荷主登録フォーム (`/shippers/new`) ― US02・US03**
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
+  ==
+  <b>荷主登録</b>
+  ==
+  {
+    氏名 / 社名 *              | "田中　太郎                  "
+    メールアドレス *            | "taro@example.com           "
+    電話番号                   | "090-1234-5678              "
+    住所                       | "東京都港区...               "
+    荷主種別 *                 | (X) 個人  () 法人
+  }
+  ==
+  -- 法人情報（荷主種別が「法人」のとき htmx で表示） --
+  {
+    契約番号 *                 | "CTR-2026-001               "
+    割引率（0〜30%）*          | "10                         "
+  }
+  ==
+  {
+    <color:red>* 必須項目</color>
+  }
+  ==
+  [登録する] | [キャンセル]
+}
+@endsalt
+```
+
+- 荷主種別「法人」選択で htmx により法人情報フィールドを動的挿入
+- メールアドレス重複チェック: `hx-post="/htmx/shippers/check-email"` でリアルタイム確認
+- 登録成功: PRG パターンで `/shippers/{id}` へリダイレクト
+
+**荷主詳細 (`/shippers/{id}`)**
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
+  ==
+  <b>荷主詳細</b>  SHP-00001
+  ==
+  {
+    氏名 / 社名    | 田中　太郎
+    メール        | taro@example.com
+    電話番号      | 090-1234-5678
+    住所          | 東京都港区...
+    荷主種別      | 個人
+    登録日時      | 2026-03-31 10:00
+  }
+  ==
+  [この荷主で予約登録] | [一覧へ戻る]
+}
+@endsalt
+```
+
+**貨物予約登録フォーム (`/bookings/new`) ― US04**
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
+  ==
+  <b>貨物予約登録</b>
+  ==
+  -- 荷主情報 --
+  {
+    荷主 ID *  | "SHP-00001          " | [検索]
+    氏名 / 社名 | 田中　太郎（自動表示）
+  }
+  ==
+  -- 貨物仕様 --
+  {
+    貨物種別 *            | ^GENERAL_CARGO^
+    重量（kg）*           | "1200.00           "
+    長さ（cm）            | "200               "
+    幅（cm）              | "150               "
+    高さ（cm）            | "120               "
+    個数 *                | "1                 "
+    品名 / 特記事項       | "自動車部品         "
+  }
+  ==
+  -- 輸送条件 --
+  {
+    出発地（UNLOCODE）*   | "JPOSA             "
+    目的地（UNLOCODE）*   | "USLAX             "
+    希望引渡日 *          | "2026-04-10        "
+    希望着日 *            | "2026-04-30        "
+  }
+  ==
+  {
+    <color:red>* 必須項目</color>
+  }
+  ==
+  [登録する] | [キャンセル]
+}
+@endsalt
+```
+
+- 荷主 ID 入力後 `[検索]` で荷主名を自動表示（htmx: `hx-post="/htmx/bookings/lookup-shipper"`）
+- 登録成功: PRG パターンで `/bookings/{id}` へリダイレクト（`BookingRegisteredEvent` 発行）
+- エラー時: 同画面再描画・`is-invalid` クラスで赤ボーダー表示
+
+#### モデル
+
+Web アダプター層のフォームモデル（View Model）:
+
+```plantuml
+@startuml IT1_view_model
+skinparam classBackgroundColor #EEF6FF
+
+package "Web Adapter (infrastructure/web)" {
+  class ShipperForm {
+    +name: String
+    +email: String
+    +phone: String
+    +address: String
+    +category: CustomerCategory
+    +contractNumber: String
+    +discountRate: BigDecimal
+    +toCommand(): RegisterShipperCommand
+  }
+
+  class BookingForm {
+    +shipperId: String
+    +cargoType: CargoType
+    +weightKg: BigDecimal
+    +lengthCm: BigDecimal
+    +widthCm: BigDecimal
+    +heightCm: BigDecimal
+    +quantity: int
+    +description: String
+    +originLocation: String
+    +destinationLocation: String
+    +requestedPickupDate: LocalDate
+    +requestedDeliveryDate: LocalDate
+    +toCommand(): RegisterBookingCommand
+  }
+
+  class ShipperController {
+    +showList(): ModelAndView
+    +showForm(): ModelAndView
+    +register(form, result): RedirectView
+    +showDetail(id): ModelAndView
+  }
+
+  class BookingController {
+    +showList(): ModelAndView
+    +showForm(): ModelAndView
+    +register(form, result): RedirectView
+    +showDetail(id): ModelAndView
+  }
+
+  ShipperController ..> ShipperForm
+  BookingController ..> BookingForm
+}
+@enduml
+```
+
+#### インタラクション
+
+**画面遷移図（IT1 スコープ）**
+
+```plantuml
+@startuml IT1_screen_transition
+title IT1 画面遷移 - 荷主登録・貨物予約登録
+
+[*] --> ログイン画面
+
+state ログイン画面 {
+  ログイン画面 : /login
+}
+
+ログイン画面 --> 荷主一覧 : ログイン成功
+ログイン画面 --> ログイン画面 : 認証失敗（エラー）
+
+state "荷主管理フロー" as shipper_flow {
+  state 荷主一覧 {
+    荷主一覧 : /shippers
+    荷主一覧 : 一覧テーブル
+  }
+  state 荷主登録フォーム {
+    荷主登録フォーム : /shippers/new
+    荷主登録フォーム : 個人/法人切替（htmx）
+  }
+  state 荷主詳細 {
+    荷主詳細 : /shippers/{id}
+    荷主詳細 : 登録情報表示
+  }
+
+  荷主一覧 --> 荷主登録フォーム : [新規登録] ボタン
+  荷主登録フォーム --> 荷主詳細 : 登録成功（PRG）
+  荷主登録フォーム --> 荷主登録フォーム : バリデーションエラー
+  荷主詳細 --> 荷主一覧 : [一覧へ戻る]
+}
+
+state "貨物予約フロー" as booking_flow {
+  state 貨物予約一覧 {
+    貨物予約一覧 : /bookings
+    貨物予約一覧 : 一覧テーブル
+  }
+  state 貨物予約登録フォーム {
+    貨物予約登録フォーム : /bookings/new
+    貨物予約登録フォーム : 荷主選択・貨物仕様入力
+  }
+  state 予約詳細 {
+    予約詳細 : /bookings/{id}
+    予約詳細 : 予約番号・ステータス PROVISIONAL
+  }
+
+  貨物予約一覧 --> 貨物予約登録フォーム : [新規登録] ボタン
+  貨物予約登録フォーム --> 予約詳細 : 登録成功（PRG）
+  貨物予約登録フォーム --> 貨物予約登録フォーム : バリデーションエラー
+  予約詳細 --> 貨物予約一覧 : [一覧へ戻る]
+}
+
+荷主一覧 --> 貨物予約登録フォーム : [この荷主で予約登録]
+@enduml
+```
+
+**htmx インタラクション（US03: 法人フィールド動的表示）**
+
+```html
+<input type="radio" name="category" value="CORPORATE"
+       hx-get="/htmx/shippers/corporate-fields"
+       hx-trigger="change"
+       hx-target="#corporate-section"
+       hx-swap="innerHTML">
+<input type="radio" name="category" value="INDIVIDUAL"
+       hx-get="/htmx/shippers/corporate-fields-empty"
+       hx-trigger="change"
+       hx-target="#corporate-section"
+       hx-swap="innerHTML">
+<div id="corporate-section"></div>
+```
+
+**htmx インタラクション（US04: 荷主 ID 検索）**
+
+```html
+<input type="text" name="shipperId"
+       hx-post="/htmx/bookings/lookup-shipper"
+       hx-trigger="blur"
+       hx-target="#shipper-name-display"
+       hx-swap="innerHTML">
+<span id="shipper-name-display">（荷主 ID を入力後に表示）</span>
+```
+
+### ディレクトリ構成
 
 ```
 src/main/java/com/example/cargotracker/
@@ -613,7 +674,25 @@ src/main/java/com/example/cargotracker/
     └── infrastructure/     # Spring Security 設定, Flyway 設定
 ```
 
-### データベーススキーマ（IT1 マイグレーション）
+### API 設計
+
+| メソッド | パス | 説明 | ロール |
+|---------|------|------|--------|
+| GET | `/login` | ログイン画面 | - |
+| POST | `/login` | 認証処理（Spring Security） | - |
+| GET | `/shippers` | 荷主一覧 | ROLE_SALES |
+| GET | `/shippers/new` | 荷主登録フォーム | ROLE_SALES |
+| POST | `/shippers` | 荷主登録 | ROLE_SALES |
+| GET | `/shippers/{id}` | 荷主詳細 | ROLE_SALES |
+| GET | `/bookings` | 貨物予約一覧 | ROLE_SALES |
+| GET | `/bookings/new` | 貨物予約登録フォーム | ROLE_SALES |
+| POST | `/bookings` | 貨物予約登録 | ROLE_SALES |
+| GET | `/bookings/{id}` | 予約詳細 | ROLE_SALES |
+| GET | `/htmx/shippers/corporate-fields` | 法人フィールド fragment（htmx） | ROLE_SALES |
+| POST | `/htmx/shippers/check-email` | メールアドレス重複チェック（htmx） | ROLE_SALES |
+| POST | `/htmx/bookings/lookup-shipper` | 荷主 ID 検索（htmx） | ROLE_SALES |
+
+### データベーススキーマ
 
 ```sql
 -- V001__create_shippers_table.sql
@@ -654,34 +733,7 @@ CREATE TABLE bookings (
 );
 ```
 
-### 主要 URL
-
-| メソッド | パス | 説明 | ロール |
-|---------|------|------|--------|
-| GET | `/shippers` | 荷主一覧 | ROLE_SALES |
-| GET | `/shippers/new` | 荷主登録フォーム | ROLE_SALES |
-| POST | `/shippers` | 荷主登録 | ROLE_SALES |
-| GET | `/shippers/{id}` | 荷主詳細 | ROLE_SALES |
-| GET | `/bookings/new` | 貨物予約登録フォーム | ROLE_SALES |
-| POST | `/bookings` | 貨物予約登録 | ROLE_SALES |
-| GET | `/htmx/shippers/corporate-fields` | 法人フィールド（htmx swap） | ROLE_SALES |
-
-### @TransactionalEventListener パターン（ADR-002 準拠）
-
-```java
-// BookingRegisteredEvent を AFTER_COMMIT で受信
-@Component
-public class BookingEventHandler {
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleBookingRegistered(BookingRegisteredEvent event) {
-        // 経路設計者への通知（IT1 ではログ出力のみ）
-        log.info("Booking registered: {}", event.bookingId());
-    }
-}
-```
-
-### ADR 参照
+### ADR
 
 | ADR | タイトル | 適用箇所 |
 |-----|---------|---------|
@@ -695,7 +747,7 @@ public class BookingEventHandler {
 | リスク | 影響度 | 対策 |
 |--------|--------|------|
 | Spring Boot 3.4 + Java 21 の依存関係解決に時間がかかる | 中 | Day 1 に Spring Initializr で最小構成を確認してから拡張 |
-| Testcontainers の初回起動が遅くテスト時間が増大 | 低 | `@Container` を `@BeforeAll` で 1 回起動し再利用（Singleton コンテナパターン）|
+| Testcontainers の初回起動が遅くテスト時間が増大 | 低 | `@Container` を `@BeforeAll` で 1 回起動し再利用（Singleton コンテナパターン） |
 | htmx の Thymeleaf 連携で fragment 実装が複雑化 | 低 | IT1 では法人フィールドの動的表示のみに限定し、複雑な htmx は IT2 以降で対応 |
 | @TransactionalEventListener のテスト検証方法が不明 | 中 | ADR-002 の `@Commit` パターンを Day 9 に先行検証し、テストパターンを確立する |
 
@@ -727,11 +779,13 @@ public class BookingEventHandler {
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-03-31 | 初版作成 | Copilot |
+| 2026-03-31 | テンプレート構成に合わせて再構成（UI 設計セクションを設計内に移動・データモデル追加） | Copilot |
 
 ---
 
 ## 関連ドキュメント
 
+- [イテレーション 1 ふりかえり](./retrospective-1.md)
 - [リリース計画](./release_plan.md)
 - [ユーザーストーリー](../requirements/user_story.md)
 - [ADR-002: @TransactionalEventListener](../adr/002-transactional-event-listener.md)
