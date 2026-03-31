@@ -23,7 +23,7 @@ tags: iteration-plan, it1
 
 ### イテレーション終了時の達成状態
 
-1. **プロジェクト基盤**: Spring Boot 3.4 + ヘキサゴナルアーキテクチャのパッケージ構造が確立し、Docker Compose でローカル起動できる
+1. **プロジェクト基盤**: Spring Boot 4.0.5 + ヘキサゴナルアーキテクチャのパッケージ構造が確立し、Docker Compose でローカル起動できる
 2. **荷主登録（US02・US03）**: 個人・法人荷主を登録フォームから登録でき、荷主 ID が発行される
 3. **貨物予約登録（US04）**: 荷主 ID を指定して貨物仕様と輸送条件を入力し、予約番号が発行される
 
@@ -99,9 +99,9 @@ tags: iteration-plan, it1
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 0.1 | Spring Boot 3.4 + Java 21 プロジェクト初期化（Gradle、Kotlin DSL） | 4h | [ ] |
+| 0.1 | Spring Boot 4.0.5 + Java 25 プロジェクト初期化（Gradle, Groovy DSL） | 4h | [x] |
 | 0.2 | ヘキサゴナルアーキテクチャのパッケージ構造作成（6 コンテキスト分） | 2h | [ ] |
-| 0.3 | Docker Compose 設定（PostgreSQL 16 + app） | 2h | [ ] |
+| 0.3 | Docker Compose 設定（PostgreSQL 16 + app） | 2h | [x] |
 | 0.4 | Flyway マイグレーション基盤（`db/migration/` ディレクトリ） | 2h | [ ] |
 | 0.5 | Spring Security ログイン認証基盤（ROLE ベース、ログイン画面） | 4h | [ ] |
 | 0.6 | GitHub Actions CI 設定（test + build） | 2h | [ ] |
@@ -746,7 +746,7 @@ CREATE TABLE bookings (
 
 | リスク | 影響度 | 対策 |
 |--------|--------|------|
-| Spring Boot 3.4 + Java 21 の依存関係解決に時間がかかる | 中 | Day 1 に Spring Initializr で最小構成を確認してから拡張 |
+| Spring Boot 4.0.5 + Java 25 の依存関係解決に時間がかかる | 中 | ADR-001 の採用バージョンを確定済み。Spring Initializr で最小構成を確認してから拡張 |
 | Testcontainers の初回起動が遅くテスト時間が増大 | 低 | `@Container` を `@BeforeAll` で 1 回起動し再利用（Singleton コンテナパターン） |
 | htmx の Thymeleaf 連携で fragment 実装が複雑化 | 低 | IT1 では法人フィールドの動的表示のみに限定し、複雑な htmx は IT2 以降で対応 |
 | @TransactionalEventListener のテスト検証方法が不明 | 中 | ADR-002 の `@Commit` パターンを Day 9 に先行検証し、テストパターンを確立する |
