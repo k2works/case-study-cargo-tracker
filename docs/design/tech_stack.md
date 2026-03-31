@@ -27,6 +27,11 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | Spring Events | - | ドメインイベント発行 | `ApplicationEventPublisher` による CDI Events の代替、疎結合なコンテキスト間通信 | Apache 2.0 | GA（Spring Boot に同梱） |
 | Thymeleaf Security | 3.x | テンプレートへの権限連携 | `sec:authorize` タグによるロール別 UI 制御 | Apache 2.0 | GA（Spring Boot に同梱） |
 
+> **バージョン採用方針**: Java 25 / Spring Boot 4.0 はリリース直後であるため、エコシステムの成熟状況を監視しながら採用する。
+> プロジェクト開始時点で GA が不安定な場合は、Java 21 LTS + Spring Boot 3.4.x で開発を開始し、
+> Spring Boot 4.0 GA リリース後に移行するロードマップを ADR に記録する。
+> 詳細は `docs/adr/` を参照すること。
+
 ## フロントエンド
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
@@ -44,6 +49,9 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | H2 | 2.x | テスト・開発用インメモリ DB | MyBatis 互換、テスト実行の高速化、セットアップ不要 | MPL 2.0 / EPL 1.0 | GA（アクティブ開発中） |
 | Flyway | 10.x | DB マイグレーション | バージョン管理されたスキーマ変更、Spring Boot 統合、コンテキスト別マイグレーション管理 | Apache 2.0 | GA（Community Edition） |
 
+> **テスト環境の DB 設定**: H2 は PostgreSQL 互換モード（`MODE=PostgreSQL`）で使用する。
+> `spring.datasource.url=jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE`
+
 ## テスト
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
@@ -55,6 +63,14 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | Spring MockMvc | - | Controller テスト | Spring MVC エンドポイントのテスト、Thymeleaf テンプレートのレンダリング検証 | Apache 2.0 | GA（Spring Boot に同梱） |
 | ArchUnit | 1.x | アーキテクチャテスト | ヘキサゴナルアーキテクチャの依存関係ルール自動検証（ドメイン層がインフラ層に依存しないこと等） | Apache 2.0 | GA（アクティブ開発中） |
 | WireMock | 3.x | 外部 API スタブ | ExternalRoutingServicePort・CustomsClearancePort 等の外部システムスタブ | Apache 2.0 | GA（アクティブ開発中） |
+| Playwright | 1.44+ | E2E テスト・ブラウザ自動テスト | htmx の動的更新・ポーリングを含む画面の E2E テストに適しているため | Apache 2.0 | GA（アクティブ開発中） |
+
+> **ArchUnit 最低限の検証ルール**:
+>
+> 1. ドメイン層がインフラ層に依存しないこと（`domain` パッケージが `infrastructure` パッケージを import しない）
+> 2. ドメイン層に Spring アノテーションを使用しないこと（`@Component`, `@Service`, `@Repository` 等）
+> 3. アプリケーション層がインフラ層を直接参照しないこと（Port 経由で参照する）
+> 4. 異なる Bounded Context 間でクラスを直接参照しないこと（ACL/Event 経由のみ）
 
 ## ビルド・CI/CD
 
