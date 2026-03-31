@@ -67,7 +67,7 @@
                                     <option value="">-- 選択してください --</option>
                                     <option th:each="type : ${cargoTypes}"
                                             th:value="${type}"
-                                            th:text="${type}"
+                                            th:text="${type.displayName}"
                                             th:selected="${form.cargoType == type}"></option>
                                 </select>
                                 <div th:if="${#fields.hasErrors('cargoType')}" class="invalid-feedback"
