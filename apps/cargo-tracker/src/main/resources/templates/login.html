@@ -23,12 +23,14 @@
                         <div class="mb-3">
                             <label for="username" class="form-label">ユーザー名</label>
                             <input type="text" id="username" name="username"
-                                   class="form-control" required autofocus/>
+                                   class="form-control" th:value="${devUsername}"
+                                   required autofocus/>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">パスワード</label>
                             <input type="password" id="password" name="password"
-                                   class="form-control" required/>
+                                   class="form-control" th:value="${devPassword}"
+                                   required/>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">ログイン</button>
                     </form>
