@@ -17,10 +17,10 @@
 | :--- | :--- | :--- |
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
-| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
+| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 7 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 2 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
@@ -42,11 +42,25 @@
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 12 件（完全形式） |
 | [ユーザーストーリー](./requirements/user_story.md) | US 18 件・受け入れ基準・トレーサビリティマトリックス |
 
+### 設計ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [バックエンドアーキテクチャ](./design/architecture_backend.md) | DDD + ヘキサゴナル + CQRS、Spring Boot 4、6 コンテキスト |
+| [フロントエンドアーキテクチャ](./design/architecture_frontend.md) | Thymeleaf SSR + htmx、Bootstrap 5、画面遷移設計 |
+| [インフラストラクチャ](./design/architecture_infrastructure.md) | AWS ECS/RDS、Docker、GitHub Actions CI/CD |
+| [データモデル設計](./design/data-model.md) | 概念・論理データモデル、テーブル定義（16 テーブル）、ER 図 |
+| [ドメインモデル設計](./design/domain-model.md) | 6 コンテキスト、集約・エンティティ・値オブジェクト・ドメインイベント |
+| [UI 設計](./design/ui_design.md) | 画面一覧・画面遷移図・ワイヤーフレーム・インタラクション設計（13 画面） |
+| [テスト戦略](./design/test_strategy.md) | ピラミッド型テスト、ツール選定、カバレッジ目標、WireMock 契約テスト |
+| [技術スタック選定](./design/tech_stack.md) | バックエンド・フロントエンド・インフラ・テスト全技術スタック一覧 |
+
 ### レビュードキュメント
 
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
+| [設計ドキュメントレビュー](./review/設計ドキュメント_review_20260331.md) | 設計ドキュメント全体のマルチパースペクティブレビュー結果（高 20 件・中 9 件・低 3 件） |
 
 ## 補足
 
