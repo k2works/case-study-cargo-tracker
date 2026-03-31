@@ -215,6 +215,284 @@ gantt
 
 ---
 
+## ユーザーインターフェース設計
+
+### IT1 対象画面
+
+| 画面名 | パス | 対象 US | ロール |
+|--------|------|---------|--------|
+| ログイン | `/login` | - | 全ロール |
+| 荷主一覧 | `/shippers` | US02 | ROLE_SALES |
+| 荷主登録フォーム | `/shippers/new` | US02・US03 | ROLE_SALES |
+| 荷主詳細 | `/shippers/{id}` | US02・US03 | ROLE_SALES |
+| 貨物予約一覧 | `/bookings` | US04 | ROLE_SALES |
+| 貨物予約登録フォーム | `/bookings/new` | US04 | ROLE_SALES |
+| 予約詳細 | `/bookings/{id}` | US04 | ROLE_SALES |
+| 法人フィールド（htmx フラグメント） | `/htmx/shippers/corporate-fields` | US03 | ROLE_SALES |
+
+---
+
+### 画面遷移図（IT1 スコープ）
+
+```plantuml
+@startuml IT1_screen_transition
+title IT1 画面遷移 - 荷主登録・貨物予約登録
+
+[*] --> ログイン画面
+
+state ログイン画面 {
+  ログイン画面 : /login
+}
+
+ログイン画面 --> 荷主一覧 : ログイン成功
+ログイン画面 --> ログイン画面 : 認証失敗（エラー）
+
+state "荷主管理フロー" as shipper_flow {
+  state 荷主一覧 {
+    荷主一覧 : /shippers
+    荷主一覧 : 一覧テーブル
+  }
+  state 荷主登録フォーム {
+    荷主登録フォーム : /shippers/new
+    荷主登録フォーム : 個人/法人切替（htmx）
+  }
+  state 荷主詳細 {
+    荷主詳細 : /shippers/{id}
+    荷主詳細 : 登録情報表示
+  }
+
+  荷主一覧 --> 荷主登録フォーム : [新規登録] ボタン
+  荷主登録フォーム --> 荷主詳細 : 登録成功（PRG）
+  荷主登録フォーム --> 荷主登録フォーム : バリデーションエラー
+  荷主詳細 --> 荷主一覧 : [一覧へ戻る]
+}
+
+state "貨物予約フロー" as booking_flow {
+  state 貨物予約一覧 {
+    貨物予約一覧 : /bookings
+    貨物予約一覧 : 一覧テーブル
+  }
+  state 貨物予約登録フォーム {
+    貨物予約登録フォーム : /bookings/new
+    貨物予約登録フォーム : 荷主選択・貨物仕様入力
+  }
+  state 予約詳細 {
+    予約詳細 : /bookings/{id}
+    予約詳細 : 予約番号・ステータス PROVISIONAL
+  }
+
+  貨物予約一覧 --> 貨物予約登録フォーム : [新規登録] ボタン
+  貨物予約登録フォーム --> 予約詳細 : 登録成功（PRG）
+  貨物予約登録フォーム --> 貨物予約登録フォーム : バリデーションエラー
+  予約詳細 --> 貨物予約一覧 : [一覧へ戻る]
+}
+
+荷主一覧 --> 貨物予約登録フォーム : [この荷主で予約登録]
+@enduml
+```
+
+---
+
+### ワイヤーフレーム
+
+#### ログイン画面 (`/login`)
+
+```plantuml
+@startsalt
+{+
+  <b>CargoTracker</b>
+  ==
+  {
+    ユーザー名 | "sales01           "
+    パスワード | "***               "
+  }
+  ==
+  [  ログイン  ]
+  --
+  <color:gray><i>国際貨物輸送管理システム</i></color>
+}
+@endsalt
+```
+
+**仕様**:
+
+- Spring Security の `formLogin()` で実装
+- 認証失敗: 同画面を再表示し「ユーザー名またはパスワードが正しくありません」を表示
+- 認証成功: ロール別にリダイレクト先を決定（ROLE_SALES → `/bookings`）
+
+---
+
+#### 荷主登録フォーム (`/shippers/new`) ― US02・US03
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
+  ==
+  <b>荷主登録</b>
+  ==
+  {
+    氏名 / 社名 *              | "田中　太郎                  "
+    メールアドレス *            | "taro@example.com           "
+    電話番号                   | "090-1234-5678              "
+    住所                       | "東京都港区...               "
+    荷主種別 *                 | (X) 個人  () 法人
+  }
+  ==
+  -- 法人情報（荷主種別が「法人」のとき htmx で表示） --
+  {
+    契約番号 *                 | "CTR-2026-001               "
+    割引率（0〜30%）*          | "10                         "
+  }
+  ==
+  {
+    <color:red>* 必須項目</color>
+  }
+  ==
+  [登録する] | [キャンセル]
+}
+@endsalt
+```
+
+**仕様**:
+
+- 荷主種別「法人」を選択すると htmx (`hx-get="/htmx/shippers/corporate-fields" hx-trigger="change" hx-target="#corporate-section"`) で法人情報フィールドを動的挿入
+- 荷主種別「個人」に戻すと法人情報フィールドを非表示
+- メールアドレス重複チェック: `hx-post="/htmx/shippers/check-email"` でリアルタイム重複確認
+- バリデーションエラー: 入力欄に `is-invalid` クラスを付与し赤ボーダー表示
+- 登録成功: PRG パターンで `/shippers/{id}` へリダイレクト
+- キャンセル: `/shippers` へリダイレクト
+
+---
+
+#### 荷主詳細 (`/shippers/{id}`)
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
+  ==
+  <b>荷主詳細</b>  SHP-00001
+  ==
+  {
+    氏名 / 社名    | 田中　太郎
+    メール        | taro@example.com
+    電話番号      | 090-1234-5678
+    住所          | 東京都港区...
+    荷主種別      | 個人
+    登録日時      | 2026-03-31 10:00
+  }
+  ==
+  [この荷主で予約登録] | [一覧へ戻る]
+}
+@endsalt
+```
+
+---
+
+#### 貨物予約登録フォーム (`/bookings/new`) ― US04
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 荷主 | <b>貨物予約</b> | [ログアウト] }
+  ==
+  <b>貨物予約登録</b>
+  ==
+  -- 荷主情報 --
+  {
+    荷主 ID *  | "SHP-00001          " | [検索]
+    氏名 / 社名 | 田中　太郎（自動表示）
+  }
+  ==
+  -- 貨物仕様 --
+  {
+    貨物種別 *            | ^GENERAL_CARGO^
+    重量（kg）*           | "1200.00           "
+    長さ（cm）            | "200               "
+    幅（cm）              | "150               "
+    高さ（cm）            | "120               "
+    個数 *                | "1                 "
+    品名 / 特記事項       | "自動車部品         "
+  }
+  ==
+  -- 輸送条件 --
+  {
+    出発地（UNLOCODE）*   | "JPOSA             "
+    目的地（UNLOCODE）*   | "USLAX             "
+    希望引渡日 *          | "2026-04-10        "
+    希望着日 *            | "2026-04-30        "
+  }
+  ==
+  {
+    <color:red>* 必須項目</color>
+  }
+  ==
+  [登録する] | [キャンセル]
+}
+@endsalt
+```
+
+**仕様**:
+
+- 荷主 ID 欄に入力後 `[検索]` ボタンで荷主名を自動表示（htmx: `hx-post="/htmx/bookings/lookup-shipper"`）
+- 貨物種別: `GENERAL_CARGO`, `REFRIGERATED`, `HAZARDOUS`, `PERISHABLE` から選択
+- 出発地・目的地: UNLOCODE 形式（5 文字）。`hx-get="/htmx/locations/validate"` でリアルタイムチェック
+- 希望引渡日は当日以降のみ許可（クライアントサイドチェック）
+- 登録成功: PRG パターンで `/bookings/{id}` へリダイレクト（`BookingRegisteredEvent` 発行）
+- エラー時: 同画面再描画、エラーフィールドを赤ボーダー強調
+
+---
+
+### インタラクション設計（htmx）
+
+#### 法人フィールド動的表示（US03）
+
+```html
+<!-- 荷主登録フォームの種別ラジオボタン -->
+<div class="form-check form-check-inline">
+  <input type="radio" name="category" value="CORPORATE"
+         hx-get="/htmx/shippers/corporate-fields"
+         hx-trigger="change"
+         hx-target="#corporate-section"
+         hx-swap="innerHTML">
+  <label>法人</label>
+</div>
+<div class="form-check form-check-inline">
+  <input type="radio" name="category" value="INDIVIDUAL"
+         hx-get="/htmx/shippers/corporate-fields-empty"
+         hx-trigger="change"
+         hx-target="#corporate-section"
+         hx-swap="innerHTML">
+  <label>個人</label>
+</div>
+<div id="corporate-section"></div>
+```
+
+**サーバー側レスポンス（Thymeleaf fragment）**:
+
+- `GET /htmx/shippers/corporate-fields` → `shipper/fragments :: corporateFields` fragment を返す
+- `GET /htmx/shippers/corporate-fields-empty` → 空の HTML を返す
+
+#### 荷主 ID 検索（US04）
+
+```html
+<input type="text" name="shipperId"
+       hx-post="/htmx/bookings/lookup-shipper"
+       hx-trigger="blur"
+       hx-target="#shipper-name-display"
+       hx-swap="innerHTML">
+<span id="shipper-name-display">（荷主 ID を入力後に表示）</span>
+```
+
+#### バリデーションエラー表示パターン
+
+- **サーバーサイド**: Bean Validation（`@NotBlank`, `@Email`, `@Min`, `@Max`）でチェック
+- **エラーモデル**: `BindingResult` → `th:errors` で各フィールドにインラインエラーを表示
+- **スタイル**: エラー時 `is-invalid` クラス付与（Bootstrap 5 の赤ボーダー）、エラーメッセージを `invalid-feedback` div で表示
+
+---
+
 ## 設計
 
 ### ドメインモデル（IT1 対象集約）
