@@ -32,6 +32,7 @@ dependencies {
     implementation 'org.webjars:bootstrap:5.3.3'
     implementation 'org.webjars.npm:htmx.org:2.0.4'
     implementation 'org.webjars:webjars-locator-lite:1.0.1'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
