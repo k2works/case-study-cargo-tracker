@@ -95,6 +95,10 @@ nav:
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260331.md
   - ADR:
       - 概要: adr/index.md
+      - "ADR-001: Java/Spring Boot バージョン戦略": adr/001-java-springboot-version-strategy.md
+      - "ADR-002: TransactionalEventListener": adr/002-transactional-event-listener.md
+      - "ADR-003: DiscountPolicy 設計": adr/003-discount-policy-as-entity.md
+      - "ADR-004: 荷主セルフサービス スコープ": adr/004-shipper-self-service-out-of-scope.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
