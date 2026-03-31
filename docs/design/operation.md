@@ -789,19 +789,50 @@ aws ecs wait services-stable \
 curl -f https://<ALB-DOMAIN>/actuator/health
 ```
 
-#### DB マイグレーションのロールバック（Flyway undo）
+#### DB マイグレーションのロールバック（Forward マイグレーション方式）
+
+> **注記**: Flyway の `undo` コマンド（`U{n}__{説明}.sql`）は **Flyway Teams / Enterprise ライセンス**が必要であり、Community 版では動作しない。本プロジェクトでは Community 版を前提とし、以下の **Forward マイグレーション方式** を採用する。
+
+**Forward マイグレーション方式**:
+
+スキーマ変更のロールバックは「新しいマイグレーションファイルで元の状態に戻す」ことで実現する。
+
+```sql
+-- 例: カラム追加のロールバックは新しいファイルでカラムを削除する
+-- V3__add_cargo_status_column.sql  （本番反映済み）
+ALTER TABLE cargos ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'PRELIMINARY';
+
+-- V4__remove_cargo_status_column.sql  （ロールバック相当の forward マイグレーション）
+ALTER TABLE cargos DROP COLUMN status;
+```
+
+**スキーマ変更を含むリリースの推奨パターン（Expand-Contract）**:
+
+| フェーズ | 内容 | マイグレーション |
+|---|---|---|
+| **Expand** | 新しいカラム・テーブルを追加（旧コードと共存可能な形で） | `V{n}__expand_*.sql` |
+| **Migrate** | データ移行・新コードへの切り替え | アプリケーションコードの更新 |
+| **Contract** | 旧カラム・テーブルを削除（新コード完全切り替え後） | `V{n}__contract_*.sql` |
+
+このパターンにより、ECS タスクのロールバック時でも旧コードが新スキーマと共存できる。
 
 ```bash
-# Undo マイグレーションの命名規則: U{バージョン}__{説明}.sql
-# 例: U2__add_cargo_status_column.sql
+# スキーマ変更を含むリリースのロールバック手順
 
-# ECS タスクとして Flyway undo を実行
-aws ecs run-task \
+# Step 1: ECS タスクを旧バージョンイメージに戻す（アプリのみ）
+aws ecs update-service \
   --cluster cargo-tracker-cluster \
-  --task-definition cargo-tracker-migration \
-  --overrides '{"containerOverrides":[{"name":"migration","command":["flyway","undo"]}]}' \
-  --launch-type FARGATE \
-  --network-configuration "awsvpcConfiguration={subnets=[<SUBNET-ID>],securityGroups=[<SG-ID>],assignPublicIp=DISABLED}"
+  --service cargo-tracker-service \
+  --task-definition cargo-tracker:<旧リビジョン番号>
+
+# Step 2: DB スキーマは旧コードと共存可能であることを確認
+# （Expand フェーズのマイグレーションが適用済みなら旧コードも動作する）
+
+# Step 3: Contract フェーズのマイグレーションはロールバック完了を確認後に実施
+# ※ Contract 前であれば旧コードで動作継続が可能
+
+# Step 4: 動作確認
+curl -f https://<ALB-DOMAIN>/actuator/health
 ```
 
 ### 6.4 変更承認フロー
