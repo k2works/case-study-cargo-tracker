@@ -532,20 +532,17 @@ ctrl --> User : レスポンス
 @startuml
 title テストピラミッド
 
-rectangle "E2E テスト\n（少量）" as e2e #LightCoral {
-  note right : Selenium / Playwright\n主要ユーザーシナリオ
+package "E2E テスト（少量）" #LightCoral {
+  [Selenium / Playwright\n主要ユーザーシナリオ] as e2e
 }
 
-rectangle "統合テスト\n（中程度）" as integration #LightYellow {
-  note right : Testcontainers（PostgreSQL）\nMyBatis マッパー\nSpring MockMvc
+package "統合テスト（中程度）" #LightYellow {
+  [Testcontainers（PostgreSQL）\nMyBatis マッパー / Spring MockMvc] as integration
 }
 
-rectangle "単体テスト\n（多数）" as unit #LightGreen {
-  note right : JUnit 5 + Mockito 5 + AssertJ 3\nドメインモデル・サービス
+package "単体テスト（多数）" #LightGreen {
+  [JUnit 5 + Mockito 5 + AssertJ 3\nドメインモデル・サービス] as unit
 }
-
-e2e -[hidden]-> integration
-integration -[hidden]-> unit
 
 @enduml
 ```

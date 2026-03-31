@@ -82,16 +82,17 @@ developer --> [S3\n(Terraform State)] : terraform state
 title Dockerfile マルチステージビルド
 
 package "Stage 1: Build" as build {
-  [gradle:9-jdk25-alpine\n（ビルドステージ）]
-  note right : Gradle 依存解決・コンパイル\nJar ファイルの生成
+  [gradle:9-jdk25-alpine\n（ビルドステージ）] as builder
 }
 
 package "Stage 2: Runtime" as runtime {
-  [eclipse-temurin:25-jre-alpine\n（実行ステージ）]
-  note right : JRE のみ。JDK 不要\nビルド成果物のみコピー\n非 root ユーザーで実行
+  [eclipse-temurin:25-jre-alpine\n（実行ステージ）] as runner
 }
 
-[gradle:9-jdk25-alpine\n（ビルドステージ）] --> [eclipse-temurin:25-jre-alpine\n（実行ステージ）] : COPY --from=build
+note right of builder : Gradle 依存解決・コンパイル\nJar ファイルの生成
+note right of runner : JRE のみ。JDK 不要\nビルド成果物のみコピー\n非 root ユーザーで実行
+
+builder --> runner : COPY --from=build
 
 @enduml
 ```
@@ -387,16 +388,18 @@ package "CI 環境 (GitHub Actions)" as ci {
 }
 
 package "ステージング環境 (AWS)" as staging {
-  [ECS Fargate\n(1 タスク)]
-  database "RDS PostgreSQL\n(Single-AZ)"
-  note right : 本番と同等構成\n自動デプロイ（main push）\n手動テストに使用
+  [ECS Fargate\n(1 タスク)] as stg_ecs
+  database "RDS PostgreSQL\n(Single-AZ)" as stg_db
 }
 
+note right of stg_db : 本番と同等構成\n自動デプロイ（main push）\n手動テストに使用
+
 package "本番環境 (AWS)" as production {
-  [ECS Fargate\n(2+ タスク / Auto Scaling)]
-  database "RDS PostgreSQL\n(Multi-AZ)"
-  note right : 高可用性構成\n手動承認後デプロイ\n監視・アラート完備
+  [ECS Fargate\n(2+ タスク / Auto Scaling)] as prod_ecs
+  database "RDS PostgreSQL\n(Multi-AZ)" as prod_db
 }
+
+note right of prod_db : 高可用性構成\n手動承認後デプロイ\n監視・アラート完備
 
 [IntelliJ IDEA] --> [Spring Boot\n(localhost:8080)]
 [Spring Boot\n(localhost:8080)] --> [Docker Compose\nPostgreSQL:5432]
