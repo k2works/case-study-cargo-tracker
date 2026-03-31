@@ -29,10 +29,10 @@ tags: iteration-plan, it1
 
 ### 成功基準
 
-- [ ] `./gradlew bootRun` でアプリが起動し、ブラウザからログインできる
-- [ ] 荷主登録フォームで個人・法人荷主を登録でき、一覧で確認できる
+- [x] `./gradlew bootRun` でアプリが起動し、ブラウザからログインできる
+- [x] 荷主登録フォームで個人・法人荷主を登録でき、一覧で確認できる
 - [ ] 貨物予約フォームで予約を登録でき、予約番号が発行される
-- [ ] `./gradlew test` で全テストがパスする
+- [x] `./gradlew test` で全テストがパスする
 - [ ] テストカバレッジ 80% 以上（ドメイン層・ユースケース層）
 
 ---
@@ -100,12 +100,12 @@ tags: iteration-plan, it1
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
 | 0.1 | Spring Boot 4.0.5 + Java 25 プロジェクト初期化（Gradle, Groovy DSL） | 4h | [x] |
-| 0.2 | ヘキサゴナルアーキテクチャのパッケージ構造作成（6 コンテキスト分） | 2h | [ ] |
+| 0.2 | ヘキサゴナルアーキテクチャのパッケージ構造作成（6 コンテキスト分） | 2h | [x] |
 | 0.3 | Docker Compose 設定（PostgreSQL 16 + app） | 2h | [x] |
-| 0.4 | Flyway マイグレーション基盤（`db/migration/` ディレクトリ） | 2h | [ ] |
-| 0.5 | Spring Security ログイン認証基盤（ROLE ベース、ログイン画面） | 4h | [ ] |
-| 0.6 | GitHub Actions CI 設定（test + build） | 2h | [ ] |
-| 0.7 | テスト基盤構築（Testcontainers + JUnit5 + Mockito + WireMock） | 4h | [ ] |
+| 0.4 | Flyway マイグレーション基盤（`db/migration/` ディレクトリ） | 2h | [x] |
+| 0.5 | Spring Security ログイン認証基盤（ROLE ベース、ログイン画面） | 4h | [x] |
+| 0.6 | GitHub Actions CI 設定（test + build） | 2h | [x] |
+| 0.7 | テスト基盤構築（Testcontainers + JUnit5 + Mockito + WireMock） | 4h | [x] |
 
 **小計**: 20h（環境セットアップ）
 
@@ -113,12 +113,12 @@ tags: iteration-plan, it1
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | Shipper 集約・値オブジェクト実装（ShipperId、ShipperName、ContactInfo） | 3h | [ ] |
-| 1.2 | Shipper ドメインモデルのユニットテスト | 2h | [ ] |
-| 1.3 | ShipperRepository（ポート）+ MyBatis mapper（アダプター） | 2h | [ ] |
-| 1.4 | V001__create_shippers_table.sql マイグレーション | 1h | [ ] |
-| 1.5 | RegisterShipperUseCase + テスト（Testcontainers 統合テスト） | 2h | [ ] |
-| 1.6 | 荷主登録フォーム UI（Thymeleaf + Bootstrap 5、バリデーション表示） | 2h | [ ] |
+| 1.1 | Shipper 集約・値オブジェクト実装（ShipperId、ShipperName、ContactInfo） | 3h | [x] |
+| 1.2 | Shipper ドメインモデルのユニットテスト | 2h | [x] |
+| 1.3 | ShipperRepository（ポート）+ MyBatis mapper（アダプター） | 2h | [x] |
+| 1.4 | V001__create_shippers_table.sql マイグレーション | 1h | [x] |
+| 1.5 | RegisterShipperUseCase + テスト（Testcontainers 統合テスト） | 2h | [x] |
+| 1.6 | 荷主登録フォーム UI（Thymeleaf + Bootstrap 5、バリデーション表示） | 2h | [x] |
 
 **小計**: 12h（3 SP × 4h）
 
@@ -126,11 +126,11 @@ tags: iteration-plan, it1
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | CustomerCategory 値オブジェクト（INDIVIDUAL / CORPORATE）追加 | 1h | [ ] |
-| 2.2 | CorporateContractInfo 値オブジェクト（契約番号・割引率 0-30% バリデーション） | 2h | [ ] |
-| 2.3 | 法人フォーム動的表示（htmx swap で法人情報フィールドを表示/非表示） | 2h | [ ] |
-| 2.4 | US03 ユニットテスト + 統合テスト追加 | 2h | [ ] |
-| 2.5 | V002__add_corporate_info_to_shippers.sql マイグレーション | 1h | [ ] |
+| 2.1 | CustomerCategory 値オブジェクト（INDIVIDUAL / CORPORATE）追加 | 1h | [x] |
+| 2.2 | CorporateContractInfo 値オブジェクト（契約番号・割引率 0-30% バリデーション） | 2h | [x] |
+| 2.3 | 法人フォーム動的表示（htmx swap で法人情報フィールドを表示/非表示） | 2h | [x] |
+| 2.4 | US03 ユニットテスト + 統合テスト追加 | 2h | [x] |
+| 2.5 | V002__add_corporate_info_to_shippers.sql マイグレーション | 1h | [x] |
 
 **小計**: 8h（2 SP × 4h）
 
@@ -152,14 +152,14 @@ tags: iteration-plan, it1
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|-----|---------|------|
-| 環境セットアップ | - | 20h | [ ] |
-| US02 荷主登録 | 3 | 12h | [ ] |
-| US03 法人荷主登録 | 2 | 8h | [ ] |
+| 環境セットアップ | - | 20h | [x] |
+| US02 荷主登録 | 3 | 12h | [x] |
+| US03 法人荷主登録 | 2 | 8h | [x] |
 | US04 貨物予約登録 | 5 | 20h | [ ] |
 | **合計** | **10** | **60h** | |
 
 **1 SP あたり**: 4h（基準どおり）
-**進捗率**: 0%（0/10 SP）
+**進捗率**: 50%（5/10 SP）
 
 ---
 
@@ -757,11 +757,11 @@ CREATE TABLE bookings (
 
 ### Definition of Done
 
-- [ ] `./gradlew test` で全テストがパスする
+- [x] `./gradlew test` で全テストがパスする
 - [ ] ドメイン層・ユースケース層のテストカバレッジ 80% 以上
-- [ ] `./gradlew bootRun` でローカル起動し、ブラウザから操作できる
-- [ ] Docker Compose (`docker compose up`) で起動できる
-- [ ] GitHub Actions CI が green になる
+- [x] `./gradlew bootRun` でローカル起動し、ブラウザから操作できる
+- [x] Docker Compose (`docker compose up`) で起動できる
+- [x] GitHub Actions CI が green になる
 - [ ] US02・US03・US04 の全受入条件を満たす
 - [ ] `release_plan.md` の進捗状況を更新する
 
@@ -780,6 +780,7 @@ CREATE TABLE bookings (
 |------|---------|--------|
 | 2026-03-31 | 初版作成 | Copilot |
 | 2026-03-31 | テンプレート構成に合わせて再構成（UI 設計セクションを設計内に移動・データモデル追加） | Copilot |
+| 2026-03-31 | 進捗状況を更新（US02・US03 完了・基盤構築完了、US04 未着手、進捗率 50%） | Copilot |
 
 ---
 
