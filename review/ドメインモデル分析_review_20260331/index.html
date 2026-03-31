@@ -1,0 +1,3686 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="tmp/国際貨物輸送システムのケーススタディ/ドメインモデル分析.md のマルチパースペクティブレビュー">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../../adr/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>レビュー結果 - ドメインモデル分析 - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#-" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              レビュー結果 - ドメインモデル分析
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../article/" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/business_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/inception-deck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/requirements_definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/business_usecase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/system_usecase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    システムユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/user_story/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユーザーストーリー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル分析レビュー
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル分析レビュー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        レビュー対象
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        総合評価
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        改善提案（重要度順）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="改善提案（重要度順）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        高
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        中
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        低
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        矛盾事項
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        エージェント別フィードバック詳細
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        改善アクションの推奨順序
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="改善アクションの推奨順序">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        フェーズ 1（ドメインモデル設計書作成前に必須）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        フェーズ 2（設計ドキュメント完成に向けて）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        フェーズ 3（品質向上）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/getting-start-tdd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト駆動開発から始める XX 入門
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/grokkingfp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Functional Programming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/grokking-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-desgin-ppp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型デザイン - 原則、パターン、実践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="-">レビュー結果 - ドメインモデル分析<a class="headerlink" href="#-" title="Permanent link">&para;</a></h1>
+<h2 id="_1">レビュー対象<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>ファイル</strong>: <code>tmp/国際貨物輸送システムのケーススタディ/ドメインモデル分析.md</code></li>
+<li><strong>比較対象</strong>: <code>docs/strategy/business_architecture.md</code>、<code>docs/requirements/requirements_definition.md</code></li>
+<li><strong>レビュー日</strong>: 2026-03-31</li>
+<li><strong>レビュー方式</strong>: マルチパースペクティブ（5 エージェント並列）</li>
+</ul>
+<h2 id="_2">総合評価<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>JIG ツールによる既存 OSS（jakartaee/cargotracker）のドメインモデル分析として DDD パターンの適用精度は高く、Booking / Routing / Tracking / Handling / Shared Domain の 5 コンテキスト分割は本プロジェクトのビジネス境界と概ね整合する。</p>
+<p>ただし<strong>本ドキュメントはオリジナル Cargo Tracker サンプルアプリの分析結果であり、本プロジェクト固有のビジネス要件（精算・税関・通知・荷主エンティティ・例外処理）への対応が未着手</strong>である。<code>TransportStatus</code> の 5 値と要件定義の 9 状態の乖離、集約ルートの誤分類、循環依存など実装フェーズで深刻な問題になる設計課題も複数ある。本プロジェクトのドメインモデル設計書として使用する前に、下記「高」優先度の指摘すべてを反映したプロジェクト固有版への書き直しが必要。</p>
+<hr />
+<h2 id="_3">改善提案（重要度順）<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="_4">高<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>提案</th>
+<th>指摘元</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H1</td>
+<td><code>TransportStatus</code> を 9 値に拡張し要件定義の状態遷移と整合させる</td>
+<td>architect / designer / tester</td>
+<td><code>IN_PORT</code> が受領済・荷降し済・引取待ちを区別できず、受け入れテストの Given-When-Then が成立しない</td>
+</tr>
+<tr>
+<td>H2</td>
+<td>精算コンテキスト（Billing Context）を 6 番目のコンテキストとして追加する</td>
+<td>PM / designer / user-rep</td>
+<td>UC10〜12（料金算出・割引・精算）と外部システム「決済機関」連携を担うモデルが完全に欠落している</td>
+</tr>
+<tr>
+<td>H3</td>
+<td>荷主（Shipper）・荷受人（Consignee）エンティティを Booking Context に追加する</td>
+<td>PM / designer / user-rep / tester</td>
+<td>法人割引判定・通知先・引取確認の起点が存在せず、5 件以上のユーザーストーリーが実現不可能になる</td>
+</tr>
+<tr>
+<td>H4</td>
+<td><code>BookingId</code>・<code>TrackingNumber</code> を値オブジェクトに格下げする</td>
+<td>architect / designer / tester</td>
+<td>識別子クラスが集約ルートになると、不要なリポジトリが増生し DDD の基本制約に反する</td>
+</tr>
+<tr>
+<td>H5</td>
+<td><code>HandlingActivity.isValidFor(cargo: Cargo)</code> を ACL 経由に変更する</td>
+<td>architect</td>
+<td>Handling Context が Booking Context の <code>Cargo</code> 型に直接依存しており、コンテキスト境界を侵食している</td>
+</tr>
+<tr>
+<td>H6</td>
+<td>Handling Context 内の循環依存（<code>h_agg ↔ h_vo</code>）を解消する</td>
+<td>architect / designer</td>
+<td><code>HandlingActivityHistory</code>（VO）が <code>HandlingActivity</code>（集約ルート）を参照する構造は DDD の根本的な制約違反</td>
+</tr>
+<tr>
+<td>H7</td>
+<td><code>BookingStatus</code> 列挙型を追加し予約業務状態を表現する</td>
+<td>tester / PM</td>
+<td><code>RoutingStatus</code>（3 値）は経路設定状態であり、予約の業務状態（仮受付→経路提案中→予約確定→…）を表現できない</td>
+</tr>
+<tr>
+<td>H8</td>
+<td>税関（Customs）連携の ACL・概念をモデルに追加する</td>
+<td>PM / architect</td>
+<td>国際貨物輸送の要件として税関が外部システムに明記されているが、モデルに通関関連の概念が一切ない</td>
+</tr>
+<tr>
+<td>H9</td>
+<td>例外概念（ExceptionEvent / ExceptionType）を Tracking Context に追加する</td>
+<td>designer / tester / user-rep</td>
+<td>US14（遅延）・US15（破損・紛失）の受け入れ基準を実装できない</td>
+</tr>
+<tr>
+<td>H10</td>
+<td><code>HandlingActivity.isValidFor()</code> の荷役タイプ別検証ルールを定義する</td>
+<td>tester</td>
+<td>何を検証しているか不明のため、単体テストの期待値が決まらない</td>
+</tr>
+<tr>
+<td>H11</td>
+<td><code>BookingAmount</code> の計算ロジック・通貨情報を明示する</td>
+<td>PM / architect / tester</td>
+<td>US16（料金算出）のテストが書けない。<code>Integer</code> 型では多通貨・割引計算を表現できない</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_5">中<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>提案</th>
+<th>指摘元</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>Shared Domain の設計方針（共有カーネル vs ACL）を統一する</td>
+<td>architect</td>
+<td><code>Location</code> を Shared Domain に置きながら各コンテキストで独自型（<code>TrackingLocation</code> 等）も定義しており、方針が混在している</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>Tracking ↔ Handling の双方向依存をメッセージブローカー経由に変更する</td>
+<td>architect</td>
+<td>双方向依存は独立デプロイを妨げる。Handling → イベント発行 → Tracking が subscribe する一方向に整理</td>
+</tr>
+<tr>
+<td>M3</td>
+<td><code>TrackingBookingId</code> を値オブジェクトに変更する</td>
+<td>architect</td>
+<td>識別子の保持のみを目的としており、エンティティとしての性質（状態変化・ライフサイクル）がない</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>通知のドメインイベント（<code>CargoStatusChangedNotification</code> 等）を定義する</td>
+<td>PM / user-rep</td>
+<td><code>CargoStatusUpdated</code> が発生した後に誰に・どのように通知されるかのフローが存在しない</td>
+</tr>
+<tr>
+<td>M5</td>
+<td>アクターとコンテキストの対応表を追加する</td>
+<td>designer</td>
+<td>7 アクター（荷主・荷受人・営業担当者・経路設計者・追跡管理者・荷役作業員・経理担当者）がどのコンテキストを使うか不明</td>
+</tr>
+<tr>
+<td>M6</td>
+<td>英語用語と日本語ユビキタス言語の対応表を追加する</td>
+<td>designer</td>
+<td><code>LOAD / UNLOAD / RECEIVE / CLAIM</code> と「積込・荷降し・受領・引取」の対応が文書化されておらず、ビジネス担当者との認識齟齬リスクがある</td>
+</tr>
+<tr>
+<td>M7</td>
+<td>外部システム連携の ACL を Port として定義する</td>
+<td>architect</td>
+<td>外部経路システム・税関・決済機関・港湾管理システムとの統合境界がモデル上に存在しない</td>
+</tr>
+<tr>
+<td>M8</td>
+<td><code>CargoItinerary</code> の Leg 制約（最小数・順序・時刻整合性）を明示する</td>
+<td>tester</td>
+<td>境界値テストの期待値が「Leg が 1 個の直行便は有効か」から始まって決まらない</td>
+</tr>
+<tr>
+<td>M9</td>
+<td><code>TrackingActivity.currentStatus()</code> の返却型 <code>TrackingStatus</code> を定義する</td>
+<td>tester</td>
+<td>戻り値の型定義が存在せず、<code>TransportStatus</code> と別物かどうかも不明</td>
+</tr>
+<tr>
+<td>M10</td>
+<td>貨物種別（CargoType: 一般 / 危険物 / 冷凍）を <code>Cargo</code> 集約に追加する</td>
+<td>PM / architect</td>
+<td>貨物種別は荷役制約・ルート制約・料金計算に影響するビジネスルール。未定義のままだと「危険物を一般ルートで予約」などのビジネスバグが発生しうる</td>
+</tr>
+<tr>
+<td>M11</td>
+<td><code>CargoStatusUpdated</code> のイベント依存方向を逆転させる</td>
+<td>architect</td>
+<td>Tracking が Booking を呼ぶ構造（<code>tracking → booking</code>）は Tracking が Booking に依存することを意味し、独立デプロイを妨げる</td>
+</tr>
+<tr>
+<td>M12</td>
+<td><code>TrackingActivity</code>・<code>TrackingEvent</code>（Entity と VO の重複）の役割の違いを明記する</td>
+<td>tester</td>
+<td>フィールド構成がほぼ同一で 2 つが存在し、テスト時にどちらを検証すべきか判断できない</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">低<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>提案</th>
+<th>指摘元</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>見積（Quotation / Quote）概念を Booking Context に追加するか判断する</td>
+<td>PM / designer</td>
+<td>US01「輸送見積作成」は業務の起点だが、<code>Cargo</code> 集約（予約確定後）から設計が始まっており見積段階が漏れている</td>
+</tr>
+<tr>
+<td>L2</td>
+<td><code>UNKNOWN</code> TransportStatus の設定トリガーを明示する</td>
+<td>tester</td>
+<td>いつ UNKNOWN になるかの仕様がなく、テストの Given が書けない</td>
+</tr>
+<tr>
+<td>L3</td>
+<td><code>BookCargoCommand</code> 等の入力値検証ルール（UN/LOCODE 形式・日付範囲等）を明示する</td>
+<td>tester</td>
+<td>バリデーションエラーの期待値が定まらない</td>
+</tr>
+<tr>
+<td>L4</td>
+<td><code>CargoItinerary</code> の用語「Leg → 輸送区間」を日本語対応表に追加する</td>
+<td>designer</td>
+<td>US06「経由港」と <code>Leg.unloadLocation</code> の対応が暗黙的</td>
+</tr>
+<tr>
+<td>L5</td>
+<td><code>HandlingActivityHistory</code>（VO）の不変性の扱いを明確化する</td>
+<td>designer</td>
+<td>イベント追加のたびに変化するコレクションを値オブジェクトで表現することの矛盾を解消する</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_7">矛盾事項<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<p>複数エージェントで相反する指摘はなし。主要な論点として以下を記録する。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>論点</th>
+<th>推奨判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Shared Domain を共有カーネルにするか各コンテキストが ACL で隔離するか</td>
+<td><code>Location</code>（UN/LOCODE）は変更頻度が低いため共有カーネルとして維持し、<code>VoyageNumber</code> 等は各コンテキストの独自型に統一することを推奨</td>
+</tr>
+<tr>
+<td>2</td>
+<td>精算は Booking Context の拡張か、独立した Billing Context か</td>
+<td>業務ルールの複雑さ（割引・税務・入金管理）と外部システム（決済機関）との境界を考慮し、独立した Billing Context を推奨</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_8">エージェント別フィードバック詳細<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<details>
+<summary>xp-product-manager（高: 7 / 中: 3 / 低: 2）</summary>
+
+### 評価サマリー
+
+DDD の設計パターンは適切に適用されており、コア輸送業務（予約・経路・荷役・追跡）の骨格は概ね正しく表現されている。ただし、本プロジェクトのビジネス要件で明示されている「決済」「税関」「通知」「貨物種別」「荷主エンティティ」が未モデル化であり、このままではユースケース 12 件のうち少なくとも 4 件（UC10〜12、UC09）が実現できない。
+
+### 良い点
+
+- DDD パターンの正確な適用（集約・値オブジェクト・エンティティ・コマンドの正しい識別）
+- UN/LOCODE の採用（ビジネスアーキテクチャの「標準準拠と相互運用性」原則との整合）
+- `HandlingActivity` の荷役タイプが要件定義の荷役作業種別（積込・荷降し・受領・引取）と対応
+- コンテキスト間ドメインイベント（`RouteRequested → RouteAssigned`）が業務フローと整合
+- `BookingAmount` の存在により後の精算コンテキストへの拡張基盤がある
+
+### 主な改善提案
+
+- **【高】精算コンテキスト（Payment/Settlement Context）が完全に欠落** — UC10〜12 と「決済機関」外部システム連携が実現できない
+- **【高】TransportStatus の状態値が要件定義と不整合** — 元の Cargo Tracker サンプルの値がそのまま使われており、プロジェクト固有の状態（受領済・積込済・荷降し済・引取待ち・例外発生・対応中）が表現できない
+- **【高】税関（Customs）連携の概念がない** — 国際貨物輸送で通関は業務遂行の前提条件
+- **【高】荷主（Shipper）エンティティが存在しない** — 法人割引判定・UC02（荷主登録）が実現できない
+- **【中】通知ドメインイベントが未定義** — `CargoStatusUpdated` 後に誰がどう受け取るかのフローがない
+- **【中】貨物種別（CargoType）の欠落** — 危険物・冷凍貨物の制約がモデルに反映されない
+
+### スコープ外の発見
+
+本ドキュメントは「JIG ツールによる既存 OSS サンプルアプリの分析結果」であり「本プロジェクトのドメインモデル設計書」ではないことを明確化すべき。自己評価「品質指標すべて高」は本プロジェクト要件との整合性を考慮しておらず過大評価。
+
+</details>
+
+<details>
+<summary>xp-architect（高: 6 / 中: 5 / 低: 2）</summary>
+
+### 評価サマリー
+
+全体として DDD の基本構造を適切に捉えており、5 つのコンテキスト分割は理にかなっている。一方で、集約ルートの誤分類・循環依存・TransportStatus の状態不整合・外部システム連携のモデル欠如という実装フェーズで深刻な問題となりうる設計課題が複数確認されており、早期に修正すべき点がある。
+
+### 良い点
+
+- コンテキスト分割の方向性が妥当（業務の自然な境界に沿い、各コンテキストが単一責務）
+- コンテキストごとに専用の識別子型を定義（ACL の意図が感じられる）
+- コマンドが明示されており CQRS 設計の基盤になりえる
+- ドメインイベントフローが記述されており業務の流れを正確に表現
+- UN/LOCODE による国際標準準拠
+
+### 主な改善提案
+
+- **【高】`BookingId`・`TrackingNumber` の集約ルート誤分類** — 識別子は値オブジェクトであり、独立した集約ルートにすると不要なリポジトリが増生する
+- **【高】`h_agg ↔ h_vo` 循環依存の解消** — `HandlingActivityHistory`（VO）が集約ルートを参照する構造は DDD の根本的な制約違反
+- **【高】TransportStatus と要件定義の状態モデルの不整合** — `IN_PORT` が 3 つの業務状態を区別できない
+- **【高】`HandlingActivity.isValidFor(cargo: Cargo)` によるコンテキスト境界違反** — ACL を導入して `CargoSnapshot` 値オブジェクト経由に変更すること
+- **【中】Shared Domain の設計方針の不一貫性** — 共有カーネルと ACL が混在
+- **【中】外部システム連携の ACL が未定義** — `ExternalRoutingServicePort`・`CustomsClearancePort`・`PaymentGatewayPort`・`PortManagementPort` を Port として定義すること
+
+### 懸念事項
+
+- `CargoStatusUpdated` の流れが `tracking → booking` となっており依存方向が逆
+- `TrackingActivity` の高頻度イベント追記での楽観的ロック競合リスク
+- 精算業務のドメインモデルが完全に欠落
+
+</details>
+
+<details>
+<summary>xp-interaction-designer（高: 4 / 中: 4 / 低: 2）</summary>
+
+### 評価サマリー
+
+DDD の構造的骨格（境界付けられたコンテキスト、集約、値オブジェクト）は適切に分離されており技術品質は高い。しかし、ユーザーストーリーで定義された日本語ユビキタス言語と英語ドメイン用語の対応関係が文書化されておらず、荷主が画面で見る状態名（「積込済」「荷降し済」等）がコードの列挙値（`IN_PORT` 等）に正確に対応しているかが追跡不能な状態にある。精算コンテキスト・例外概念・アクター-コンテキスト対応の欠如も、ユーザーストーリー実現の障壁となる。
+
+### 良い点
+
+- 境界付けられたコンテキストの分離が要件定義書の業務区分と概ね整合
+- コマンドが各コンテキストに定義されており、ユーザーストーリーの操作との対応が取りやすい
+- Shared Domain（Location・VoyageNumber）が要件定義の UN/LOCODE 受け入れ基準と整合
+- ドメインイベントフローが可視化されており US04〜US10 の業務フローと対応
+
+### TransportStatus と業務状態の対応表（整合状況）
+
+| ユーザーが見る状態 | TransportStatus | 対応 |
+|---|---|---|
+| 受領待ち | `NOT_RECEIVED` | ✅ |
+| 受領済 | — | ❌ 欠落 |
+| 積込済 | — | ❌ 欠落 |
+| 輸送中 | `ONBOARD_CARRIER` | ✅ |
+| 荷降し済 | `IN_PORT` | ⚠️ 受領済・引取待ちと区別不能 |
+| 引取待ち | `IN_PORT` | ⚠️ 上と同じ |
+| 引取済 | `CLAIMED` | ✅ |
+| 例外発生 | `UNKNOWN` | ⚠️ 意味が異なる |
+
+### 主な改善提案
+
+- **【高】TransportStatus の粒度がユーザー体験の状態と不一致** — `IN_PORT` を分割し 8〜9 値に拡張、英日対応表を追記すること
+- **【高】英語用語と日本語ユビキタス言語の対応表が存在しない** — ドキュメント冒頭にユビキタス言語対応表を追加すること
+- **【高】精算コンテキストが存在しない** — `Invoice`・`PaymentStatus`・`DiscountPolicy` を含む Billing Context を追加すること
+- **【高】例外概念（ExceptionEvent / ExceptionType）が存在しない** — `TrackingExceptionEvent` エンティティを Tracking Context に追加すること
+
+</details>
+
+<details>
+<summary>xp-tester（高: 5 / 中: 5 / 低: 2）</summary>
+
+### 評価サマリー
+
+DDD の構造的分離は適切でテストの独立性を確保する土台は整っている。しかし状態モデルの不整合・ビジネスルールの曖昧さ・計算ロジックの欠落が複数あり、このまま実装を進めると受け入れテストが書けない箇所が多数発生する。
+
+### 良い点
+
+- 集約の境界が明確でコンテキスト隔離のユニットテストが可能
+- コマンドが定義されており Given 側のテストデータ設計の起点として使える
+- 列挙型による状態の明示で状態遷移テストの期待値が枚挙しやすい
+- `isValidFor()` メソッドが定義されており妥当性検証の単体テスト設計ポイントとして明確
+
+### TransportStatus 対応表（テスト観点）
+
+| 要件定義の状態 | TransportStatus | テスト可否 |
+|---|---|---|
+| 受領待ち | `NOT_RECEIVED` | ✅ |
+| 受領済 | — | ❌ 定義なし |
+| 積込済 | — | ❌ 定義なし |
+| 輸送中 | `ONBOARD_CARRIER` | ✅ |
+| 荷降し済 | `IN_PORT` | ⚠️ 曖昧 |
+| 引取待ち | `IN_PORT` | ⚠️ 区別不能 |
+| 引取済 | `CLAIMED` | ✅ |
+| 例外発生 | `UNKNOWN`（推測） | ⚠️ 根拠なし |
+| 対応中 | — | ❌ 定義なし |
+
+### 主な改善提案
+
+- **【高】`TransportStatus` 5 値 vs 要件定義 9 状態の乖離** — 対応表とともに状態を拡張すること
+- **【高】`RoutingStatus` 3 値では予約業務状態を表現できない** — `BookingStatus` 列挙型の追加が必要
+- **【高】`BookingAmount` の計算ロジックが未定義** — US16 のテストの Given-When-Then が成立しない
+- **【高】`isValidFor()` の検証ルールが未定義** — 荷役タイプ別のデシジョンテーブルを定義すること
+- **【中】`CargoItinerary` の Leg 制約が曖昧** — 最小数・順序制約・時刻整合性を明示すること
+
+</details>
+
+<details>
+<summary>xp-user-representative（高: 5 / 中: 2 / 低: 1）</summary>
+
+### 評価サマリー
+
+予約・経路設計・追跡・荷役の中核業務フローは概ねモデル化されており、DDD 的な構造としては整理されている。ただし、「通知」「精算・Invoice」「荷受人」「キャンセル・ルート変更」という日常業務で頻繁に使う概念が根本的に欠落しており、現状では実際の輸送業務を支えるシステムとして不十分。
+
+### 良い点
+
+- 荷役タイプ（RECEIVE / LOAD / UNLOAD / CLAIM）が現場作業員の業務（受領・積込・荷降し・引取）と完全に一致
+- TransportStatus の状態遷移が現場の感覚と概ね合っている（`UNKNOWN` も現場で必要）
+- `RoutingStatus.MISROUTED` は追跡管理者の誤配送検知に有用
+- `CargoItinerary` の Leg 分割は多港経由の実務に合っている
+
+### 主な改善提案
+
+- **【高】Notification（通知）コンテキストまたは概念が完全に欠落** — 荷受人の最大のニーズ「貨物到着通知」が実現できない
+- **【高】精算・Invoice のドメイン概念が存在しない** — 請求書発行・精算の業務フローを支える概念がない
+- **【高】荷主（Shipper）・荷受人（Consignee）のエンティティが存在しない** — 顧客の特定ができず通知先・請求先が不明
+- **【高】キャンセル・ルート緊急変更のコマンドが存在しない** — 台風・港湾ストライキ等の例外は国際輸送では日常茶飯事
+- **【高】業務フロー「予約→引取→精算」が完結していない** — 精算クローズまでの後半が丸ごと設計対象外
+
+### 懸念事項
+
+- アーキテクチャ品質評価「表現力: 高」は過大評価。荷主・荷受人・通知・精算という主要なビジネス概念が欠けた状態での評価は実態に合わない
+
+</details>
+
+<hr />
+<h2 id="_9">改善アクションの推奨順序<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<h3 id="1">フェーズ 1（ドメインモデル設計書作成前に必須）<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
+<p>本ドキュメントを「参照事例分析」から「本プロジェクトのドメインモデル設計書」へ格上げするための最低限の作業：</p>
+<ol>
+<li><strong>TransportStatus を 9 値に拡張</strong>し、要件定義の状態遷移と 1:1 で対応させる（H1）</li>
+<li><strong><code>BookingStatus</code> 列挙型を追加</strong>し予約の業務状態を表現する（H7）</li>
+<li><strong>荷主（Shipper）・荷受人（Consignee）を Booking Context に追加</strong>する（H3）</li>
+<li><strong><code>BookingId</code>・<code>TrackingNumber</code> を値オブジェクトに格下げ</strong>する（H4）</li>
+<li><strong>循環依存（<code>HandlingActivityHistory</code>）を解消</strong>する（H6）</li>
+<li><strong>ユビキタス言語対応表</strong>を追加する（M6）</li>
+</ol>
+<h3 id="2">フェーズ 2（設計ドキュメント完成に向けて）<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>精算コンテキスト（Billing Context）を追加</strong>する（H2）</li>
+<li><strong>例外概念（ExceptionEvent / ExceptionType）を追加</strong>する（H9）</li>
+<li><strong>外部システム連携の ACL（4 種の Port）を定義</strong>する（M7）</li>
+<li><strong>通知ドメインイベントのフローを追加</strong>する（M4）</li>
+<li><strong>アクターとコンテキストの対応表を追加</strong>する（M5）</li>
+</ol>
+<h3 id="3">フェーズ 3（品質向上）<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong><code>isValidFor()</code> の検証ルール（デシジョンテーブル）を定義</strong>する（H10）</li>
+<li><strong><code>BookingAmount</code> の計算ロジック・通貨情報を明示</strong>する（H11）</li>
+<li><strong>貨物種別（CargoType）を <code>Cargo</code> 集約に追加</strong>する（M10）</li>
+<li><strong>Leg の整合性制約を明示</strong>する（M8）</li>
+</ol>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+        <script src="../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,3848 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="システム境界視点のユースケース（完全形式）">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+        <link rel="prev" href="../business_usecase/">
+      
+      
+        <link rel="next" href="../user_story/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>システムユースケース - 国際貨物輸送管理システム - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#-" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              システムユースケース - 国際貨物輸送管理システム
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../article/" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/business_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/inception-deck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../requirements_definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../business_usecase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    システムユースケース
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    システムユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ユースケース一覧
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc01" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC01: 💻輸送見積を作成する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc02" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC02: 💻荷主を登録する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC03: 💻貨物予約を登録する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc04" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC04: 💻最適ルートを検索・選択する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC05: 💻予約を確定する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc06" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC06: 💻追跡番号を発行する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc07" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC07: 💻荷役作業を記録する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc08" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC08: 💻貨物状態を更新する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC09: 💻追跡情報を照会する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC10: 💻例外を処理する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC11: 💻輸送料金を算出する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uc12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC12: 💻精算を処理する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        参照
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user_story/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユーザーストーリー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../review/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E5%88%86%E6%9E%90_review_20260331/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル分析レビュー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/getting-start-tdd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト駆動開発から始める XX 入門
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/grokkingfp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Functional Programming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/grokking-concurrency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grokking Concurrency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-desgin-ppp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型デザイン - 原則、パターン、実践
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="-">システムユースケース - 国際貨物輸送管理システム<a class="headerlink" href="#-" title="Permanent link">&para;</a></h1>
+<p>ビジネスユースケースをシステム境界の視点で詳細化する。
+完全形式テンプレート（<code>docs/template/完全形式のユースケース.md</code>）に従い記述する。</p>
+<h2 id="_1">ユースケース一覧<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">ユースケース名</th>
+<th style="text-align: left;">BUC</th>
+<th style="text-align: center;">レベル</th>
+<th style="text-align: center;">優先度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">UC01</td>
+<td style="text-align: left;">💻輸送見積を作成する🌊</td>
+<td style="text-align: left;">BUC01, BUC02</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC02</td>
+<td style="text-align: left;">💻荷主を登録する🌊</td>
+<td style="text-align: left;">BUC03</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC03</td>
+<td style="text-align: left;">💻貨物予約を登録する🌊</td>
+<td style="text-align: left;">BUC03</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC04</td>
+<td style="text-align: left;">💻最適ルートを検索・選択する🌊</td>
+<td style="text-align: left;">BUC04</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC05</td>
+<td style="text-align: left;">💻予約を確定する🌊</td>
+<td style="text-align: left;">BUC05</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC06</td>
+<td style="text-align: left;">💻追跡番号を発行する🌊</td>
+<td style="text-align: left;">BUC06</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC07</td>
+<td style="text-align: left;">💻荷役作業を記録する🌊</td>
+<td style="text-align: left;">BUC07</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC08</td>
+<td style="text-align: left;">💻貨物状態を更新する🌊</td>
+<td style="text-align: left;">BUC08</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC09</td>
+<td style="text-align: left;">💻追跡情報を照会する🌊</td>
+<td style="text-align: left;">BUC09</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC10</td>
+<td style="text-align: left;">💻例外を処理する🌊</td>
+<td style="text-align: left;">BUC10</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC11</td>
+<td style="text-align: left;">💻輸送料金を算出する🌊</td>
+<td style="text-align: left;">BUC11, BUC12</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">中</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC12</td>
+<td style="text-align: left;">💻精算を処理する🌊</td>
+<td style="text-align: left;">BUC13</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">中</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="uc01">UC01: 💻輸送見積を作成する🌊<a class="headerlink" href="#uc01" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 荷主から輸送依頼を受けた営業担当者が、輸送要件（出発地・目的地・期限・貨物種別）を確認し、輸送料金の見積書を作成する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 営業担当者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 輸送料金と所要日数の事前確認により、意思決定できる</li>
+<li>営業担当者: 見積作成業務を効率化し、正確な料金を提示できる</li>
+<li>経路設計者: 見積段階でルート候補の確認が行われ、後続の経路設計がスムーズになる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>荷主から輸送要件（出発地・目的地・期限・貨物種別・重量）が提示されている</li>
+</ul>
+<p><strong>最低保証</strong>: 見積依頼の内容が記録され、後続の予約登録に引き継げる</p>
+<p><strong>成功保証時</strong>: 輸送料金・所要日数・推奨ルート案を含む見積書が作成され、荷主に提示できる状態になる</p>
+<p><strong>トリガー</strong>: 営業担当者が見積作成操作を開始する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>営業担当者が荷主情報・輸送要件（出発地・目的地・希望期限・貨物種別・重量・寸法）を入力する</li>
+<li>システムが貨物種別と重量をもとに基本輸送料金を算出する</li>
+<li>システムが外部経路システムに対してルート候補を照会する</li>
+<li>システムがルート候補ごとの所要日数と概算料金を一覧表示する</li>
+<li>営業担当者が推奨ルートと料金を確認し、見積書として保存する</li>
+<li>システムが見積番号を発行して見積情報を登録する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>3a. 外部経路システムへの接続が失敗した場合:<ul>
+<li>3a1. システムが過去の実績データから代替ルート候補を提示する</li>
+<li>3a2. 主シナリオのステップ 4 に戻る</li>
+</ul>
+</li>
+<li>4a. 希望期限に間に合うルートが存在しない場合:<ul>
+<li>4a1. システムが「指定期限に間に合うルートなし」を通知する</li>
+<li>4a2. 営業担当者が荷主に期限延長または代替案を提案してユースケース終了</li>
+</ul>
+</li>
+<li>1a. 危険物が含まれる場合:<ul>
+<li>1a1. システムが危険物申告フォームへの入力を促す</li>
+<li>1a2. 主シナリオのステップ 2 に戻る</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 1: 貨物種別は「一般貨物」「危険物」「冷凍・冷蔵貨物」のいずれかを選択</li>
+<li>ステップ 2: 料金算出は貨物種別・重量・距離・特別取扱いオプションに基づく</li>
+</ul>
+<p><strong>関連情報</strong>: BUC01（輸送見積依頼）、BUC02（見積作成）に対応</p>
+<hr />
+<h2 id="uc02">UC02: 💻荷主を登録する🌊<a class="headerlink" href="#uc02" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 初回取引の荷主情報をシステムに登録する。既存荷主の場合はスキップ。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 営業担当者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 次回以降の予約時に情報入力を省略できる</li>
+<li>営業担当者: 荷主情報が一元管理され、過去の取引履歴も参照できる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>荷主が新規取引であり、システムに登録されていない</li>
+</ul>
+<p><strong>最低保証</strong>: 入力された荷主情報がシステムに保存される</p>
+<p><strong>成功保証時</strong>: 荷主 ID が発行され、予約登録・精算管理に活用できる状態になる</p>
+<p><strong>トリガー</strong>: 営業担当者が新規荷主の登録操作を開始する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>営業担当者が荷主の基本情報（氏名/社名・住所・連絡先・メールアドレス）を入力する</li>
+<li>営業担当者が荷主種別（個人/法人）を選択する</li>
+<li>法人の場合、営業担当者が法人契約情報（契約番号・割引率）を入力する</li>
+<li>システムが入力内容を検証し、重複登録がないか確認する</li>
+<li>システムが荷主 ID を採番して荷主情報を登録する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>4a. 同一メールアドレスが既に登録されている場合:<ul>
+<li>4a1. システムが「既存荷主」として既存レコードを表示する</li>
+<li>4a2. 営業担当者が既存荷主を使用するか新規登録するかを選択する</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 2: 荷主種別は「個人」「法人」のいずれか</li>
+</ul>
+<p><strong>関連情報</strong>: BUC03（荷主・貨物登録）に対応</p>
+<hr />
+<h2 id="uc03">UC03: 💻貨物予約を登録する🌊<a class="headerlink" href="#uc03" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 荷主が見積を承認した後、営業担当者が貨物仕様と予約情報をシステムに登録する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 営業担当者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 予約が正式に受付され、番号により追跡できる</li>
+<li>経路設計者: 予約情報をもとにルート設計を開始できる</li>
+<li>追跡管理者: 追跡情報管理の準備ができる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>荷主が見積を承認している</li>
+<li>荷主がシステムに登録されている</li>
+</ul>
+<p><strong>最低保証</strong>: 貨物予約が「仮受付」状態で保存される</p>
+<p><strong>成功保証時</strong>: 貨物予約が登録され、予約番号が発行されてルート設計フェーズに進める状態になる</p>
+<p><strong>トリガー</strong>: 営業担当者が予約登録操作を開始する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>営業担当者が荷主 ID を入力して荷主を選択する</li>
+<li>営業担当者が貨物仕様（種別・重量・寸法・個数・品名）を入力する</li>
+<li>営業担当者が輸送条件（出発地・目的地・希望引渡日・希望着日）を入力する</li>
+<li>システムが見積情報と照合して整合性を確認する</li>
+<li>システムが予約番号を採番し、貨物予約を「仮受付」状態で登録する</li>
+<li>システムが経路設計者に予約登録を通知する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>2a. 危険物が含まれる場合:<ul>
+<li>2a1. システムが危険物申告情報の入力を必須とする</li>
+<li>2a2. 主シナリオのステップ 3 に戻る</li>
+</ul>
+</li>
+<li>2b. 冷凍・冷蔵貨物の場合:<ul>
+<li>2b1. システムが温度管理条件の入力を必須とする</li>
+<li>2b2. 主シナリオのステップ 3 に戻る</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 2: 貨物種別は「一般貨物」「危険物」「冷凍・冷蔵貨物」のいずれか</li>
+</ul>
+<p><strong>関連情報</strong>: BUC03（荷主・貨物登録）に対応</p>
+<hr />
+<h2 id="uc04">UC04: 💻最適ルートを検索・選択する🌊<a class="headerlink" href="#uc04" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 経路設計者が仮受付された予約に対して最適ルートを設計し、候補を荷主に提案する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 経路設計者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 複数のルート候補から条件に合うものを選択できる</li>
+<li>経路設計者: 最適ルートを効率よく設計できる</li>
+<li>営業担当者: ルート確定後の予約確定処理に進める</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>貨物予約が「仮受付」状態で登録されている</li>
+<li>航海スケジュール情報が登録されている</li>
+</ul>
+<p><strong>最低保証</strong>: ルート候補の検索結果が保存される</p>
+<p><strong>成功保証時</strong>: ルートが選択・確定され、予約が「経路提案中」状態に移行する</p>
+<p><strong>トリガー</strong>: 経路設計者が予約に対してルート設計操作を開始する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>経路設計者が予約番号を指定して予約情報を確認する</li>
+<li>システムが出発地・目的地・希望着日をもとに外部経路システムへルート候補を照会する</li>
+<li>システムがルート候補（経由港・所要日数・費用・航海番号）を一覧表示する</li>
+<li>経路設計者が最適ルートを選択する</li>
+<li>システムが選択ルートを航海スケジュールに組み込み、予約状態を「経路提案中」に更新する</li>
+<li>システムが荷主にルート提案を通知する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>3a. 希望着日に間に合うルートが存在しない場合:<ul>
+<li>3a1. システムが「条件を満たすルートなし」を表示する</li>
+<li>3a2. 経路設計者が代替条件（到着日延長等）で再検索する</li>
+</ul>
+</li>
+<li>4a. 貨物種別が危険物または冷凍の場合:<ul>
+<li>4a1. システムが取扱い可能な船舶・ルートのみをフィルタリングして表示する</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 2: UN/LOCODE 形式で出発地・目的地を指定する</li>
+</ul>
+<p><strong>関連情報</strong>: BUC04（ルート設計・提案）に対応</p>
+<hr />
+<h2 id="uc05">UC05: 💻予約を確定する🌊<a class="headerlink" href="#uc05" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 荷主がルート提案を承認し、営業担当者が予約を正式確定する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 営業担当者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 予約が正式確定し、輸送が確約される</li>
+<li>経路設計者: 確定予約をもとに追跡番号発行に進める</li>
+<li>経理担当者: 確定予約に基づき精算準備ができる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>予約が「経路提案中」状態にある</li>
+<li>荷主がルート提案を承認している</li>
+</ul>
+<p><strong>最低保証</strong>: 荷主の承認意思が記録される</p>
+<p><strong>成功保証時</strong>: 予約状態が「予約確定」に移行し、追跡番号発行フェーズに進める</p>
+<p><strong>トリガー</strong>: 営業担当者が予約確定操作を開始する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>営業担当者が予約番号を指定して予約内容と選択ルートを確認する</li>
+<li>営業担当者が荷主の承認を確認し、確定操作を行う</li>
+<li>システムが予約状態を「予約確定」に更新する</li>
+<li>システムが経路設計者に追跡番号発行を依頼する通知を送信する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>2a. 荷主がルート変更を希望する場合:<ul>
+<li>2a1. 営業担当者が予約を「経路提案中」に戻してルート再設計を依頼する</li>
+<li>2a2. ユースケース終了（UC04 に戻る）</li>
+</ul>
+</li>
+<li>2b. 荷主がキャンセルを希望する場合:<ul>
+<li>2b1. 営業担当者が予約をキャンセル状態に変更する</li>
+<li>2b2. システムが荷主にキャンセル確認通知を送信する</li>
+</ul>
+</li>
+</ul>
+<p><strong>関連情報</strong>: BUC05（予約確定）に対応</p>
+<hr />
+<h2 id="uc06">UC06: 💻追跡番号を発行する🌊<a class="headerlink" href="#uc06" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 予約確定後、経路設計者が追跡番号を採番し荷主に通知する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 経路設計者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 追跡番号により貨物の輸送状況を常時確認できる</li>
+<li>追跡管理者: 追跡番号をキーに貨物状態管理を行える</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>予約状態が「予約確定」である</li>
+</ul>
+<p><strong>最低保証</strong>: 追跡番号が採番・記録される</p>
+<p><strong>成功保証時</strong>: 追跡番号が発行され、貨物状態が「受領待ち」に設定される。荷主に追跡番号が通知される</p>
+<p><strong>トリガー</strong>: 予約確定通知を受けた経路設計者が追跡番号発行操作を行う</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>経路設計者が予約番号を指定して予約情報を確認する</li>
+<li>システムが一意の追跡番号を採番する</li>
+<li>システムが追跡番号と予約を紐付け、貨物状態を「受領待ち」に設定する</li>
+<li>システムが追跡番号を荷主にメール通知する</li>
+</ol>
+<p><strong>関連情報</strong>: BUC06（追跡番号発行）に対応</p>
+<hr />
+<h2 id="uc07">UC07: 💻荷役作業を記録する🌊<a class="headerlink" href="#uc07" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 荷役作業員が各港湾での積込・荷降し・受領・引取作業完了時に記録を登録する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 荷役作業員</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 荷役作業の完了がリアルタイムで貨物状態に反映される</li>
+<li>追跡管理者: 手動による状態更新負担が軽減される</li>
+<li>経理担当者: 荷役実績データが精算処理に活用できる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>追跡番号が発行され、貨物が「受領待ち」以降の状態にある</li>
+<li>作業員が担当の荷役作業を完了している</li>
+</ul>
+<p><strong>最低保証</strong>: 荷役作業の記録がシステムに保存される</p>
+<p><strong>成功保証時</strong>: 荷役作業が記録され、貨物状態が更新される。荷主に状態変更通知が送信される</p>
+<p><strong>トリガー</strong>: 荷役作業員が作業完了後に記録登録操作を行う</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>荷役作業員が追跡番号を入力（またはスキャン）して貨物を特定する</li>
+<li>荷役作業員が作業種別（受領・積込・荷降し・引取）を選択する</li>
+<li>荷役作業員が作業日時・作業場所（港湾コード）を確認・入力する</li>
+<li>システムが作業記録を登録し、貨物状態を更新する</li>
+<li>システムが荷主に状態変更通知を送信する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>1a. 追跡番号が見つからない場合:<ul>
+<li>1a1. システムがエラーを表示し、番号の再入力を促す</li>
+</ul>
+</li>
+<li>3a. 作業場所が予定ルートと異なる場合:<ul>
+<li>3a1. システムが「予定外の作業場所」として警告を表示する</li>
+<li>3a2. 荷役作業員が警告を確認して続行するか中断するかを選択する</li>
+</ul>
+</li>
+<li>2a. 作業種別が「引取」の場合:<ul>
+<li>2a1. システムが荷受人情報を確認し、署名または確認コードの入力を要求する</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 2: 作業種別は「受領」「積込」「荷降し」「引取」のいずれか</li>
+<li>ステップ 3: 作業場所は UN/LOCODE 形式の港湾コード</li>
+</ul>
+<p><strong>関連情報</strong>: BUC07（荷役作業記録）に対応</p>
+<hr />
+<h2 id="uc08">UC08: 💻貨物状態を更新する🌊<a class="headerlink" href="#uc08" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 追跡管理者が荷役作業記録や外部情報をもとに貨物の状態と追跡情報を更新する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 追跡管理者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主・荷受人: 最新の貨物状態を確認できる</li>
+<li>経路設計者: 予定ルートとの差異を把握できる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>追跡番号が発行されている</li>
+<li>状態変更の根拠情報（荷役記録・出入港情報等）がある</li>
+</ul>
+<p><strong>最低保証</strong>: 状態変更操作の記録が残る</p>
+<p><strong>成功保証時</strong>: 貨物状態が更新され、追跡イベントが記録される。必要に応じて荷主へ通知される</p>
+<p><strong>トリガー</strong>: 追跡管理者が貨物状態の更新操作を行う</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>追跡管理者が追跡番号を指定して現在の貨物情報を確認する</li>
+<li>追跡管理者が新しい状態・位置・更新日時を入力する</li>
+<li>システムが追跡情報を更新し、追跡イベントを記録する</li>
+<li>システムが状態変更に応じて荷主へ通知を送信する</li>
+</ol>
+<p><strong>関連情報</strong>: BUC08（貨物状態更新）に対応</p>
+<hr />
+<h2 id="uc09">UC09: 💻追跡情報を照会する🌊<a class="headerlink" href="#uc09" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 荷主または荷受人が追跡番号を使って貨物の現在位置・状態・到着予定を確認する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 荷主</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: いつでも貨物の現在状態を把握でき、不安を解消できる</li>
+<li>荷受人: 到着予定日を把握して受け取り準備ができる</li>
+<li>カスタマーサポート: 問い合わせ対応の効率化</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>追跡番号が発行されている</li>
+</ul>
+<p><strong>最低保証</strong>: 照会操作のログが記録される</p>
+<p><strong>成功保証時</strong>: 貨物の現在位置・状態・追跡イベント履歴・推定到着日が表示される</p>
+<p><strong>トリガー</strong>: 荷主または荷受人が追跡番号を入力して照会操作を行う</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>荷主が追跡番号を入力する</li>
+<li>システムが追跡番号を検証する</li>
+<li>システムが現在の貨物位置・状態・追跡イベント履歴・推定到着日を表示する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>2a. 追跡番号が存在しない場合:<ul>
+<li>2a1. システムが「追跡番号が見つかりません」を表示する</li>
+</ul>
+</li>
+</ul>
+<p><strong>関連情報</strong>: BUC09（追跡情報確認）に対応</p>
+<hr />
+<h2 id="uc10">UC10: 💻例外を処理する🌊<a class="headerlink" href="#uc10" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 輸送中に遅延・破損・紛失等の例外が発生した際に記録し、関係者への報告と対応を管理する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 追跡管理者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 例外発生を速やかに知り、対応策を協議できる</li>
+<li>追跡管理者: 例外の記録・報告・対応を一元管理できる</li>
+<li>経理担当者: 例外内容に基づく料金調整の根拠が残る</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>追跡番号が発行されている</li>
+<li>例外事象が発生・確認されている</li>
+</ul>
+<p><strong>最低保証</strong>: 例外事象の記録が残る</p>
+<p><strong>成功保証時</strong>: 例外が記録・分類され、荷主に通知される。対応ステータスが管理される</p>
+<p><strong>トリガー</strong>: 追跡管理者または荷役作業員が例外発生を検知・報告する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>追跡管理者が追跡番号を入力して予約情報を確認する</li>
+<li>追跡管理者が例外種別（遅延・破損・紛失）と発生状況を入力する</li>
+<li>システムが例外情報を記録し、貨物状態を「例外発生」に更新する</li>
+<li>システムが荷主に例外発生通知を送信する</li>
+<li>追跡管理者が対応内容（代替ルート・補償等）を入力する</li>
+<li>システムが対応状況を記録し、荷主に対応報告を通知する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>2a. 例外種別が「紛失」の場合:<ul>
+<li>2a1. システムが緊急フラグを設定し、管理職に escalation 通知を送信する</li>
+</ul>
+</li>
+<li>5a. 代替ルートへの変更が必要な場合:<ul>
+<li>5a1. UC04（最適ルートを検索・選択する）を起動する</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 2: 例外種別は「遅延」「破損」「紛失」のいずれか</li>
+</ul>
+<p><strong>関連情報</strong>: BUC10（例外処理）に対応</p>
+<hr />
+<h2 id="uc11">UC11: 💻輸送料金を算出する🌊<a class="headerlink" href="#uc11" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 配送完了後に経理担当者が輸送実績をもとに料金を算出し、法人割引を適用する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 経理担当者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 正確な料金を把握して支払い計画を立てられる</li>
+<li>経理担当者: 料金算出と割引適用を自動化し、ミスを防げる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>貨物状態が「引取済」である</li>
+<li>輸送実績情報（実際の経路・重量・荷役作業記録）が揃っている</li>
+</ul>
+<p><strong>最低保証</strong>: 料金計算の根拠情報が記録される</p>
+<p><strong>成功保証時</strong>: 輸送料金が確定し、割引適用後の請求金額が確定する</p>
+<p><strong>トリガー</strong>: 経理担当者が料金算出操作を行う</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>経理担当者が予約番号を指定して輸送実績を確認する</li>
+<li>システムが輸送実績（経路・距離・重量・貨物種別・荷役作業実績）をもとに基本料金を算出する</li>
+<li>システムが荷主種別を確認し、法人契約の場合は割引率を適用して割引後料金を算出する</li>
+<li>経理担当者が算出結果を確認して確定する</li>
+<li>システムが輸送料金を確定状態で登録する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>3a. 例外（遅延・破損等）が発生した場合:<ul>
+<li>3a1. システムが例外に関連する料金調整（減額・補償費用）の入力を促す</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーションリスト</strong>:</p>
+<ul>
+<li>ステップ 3: 個人荷主の場合は割引なし。法人荷主は契約割引率（0〜30%）を適用</li>
+</ul>
+<p><strong>関連情報</strong>: BUC11（輸送料金算出）、BUC12（割引適用）に対応</p>
+<hr />
+<h2 id="uc12">UC12: 💻精算を処理する🌊<a class="headerlink" href="#uc12" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 輸送料金確定後に経理担当者が精算書を発行し、荷主からの支払いを確認して精算を完了する。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 経理担当者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>荷主: 正確な精算書を受け取り、安全に支払いができる</li>
+<li>経理担当者: 精算処理を効率化し、入金確認を一元管理できる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>輸送料金が確定状態で登録されている</li>
+</ul>
+<p><strong>最低保証</strong>: 精算書の発行記録が残る</p>
+<p><strong>成功保証時</strong>: 精算が完了し、予約状態が「精算済」に移行する</p>
+<p><strong>トリガー</strong>: 経理担当者が精算処理操作を行う</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>経理担当者が予約番号を指定して確定済み輸送料金を確認する</li>
+<li>システムが精算書（請求番号・請求金額・支払い期限）を発行する</li>
+<li>システムが精算書を荷主にメール通知する</li>
+<li>荷主が支払いを実行する（決済機関と連携）</li>
+<li>システムが入金を確認し、精算状態を「精算済」に更新する</li>
+<li>システムが予約状態を「精算済」に更新する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>5a. 支払い期限を超過した場合:<ul>
+<li>5a1. システムが経理担当者に未払い通知を送信する</li>
+<li>5a2. 経理担当者が荷主に督促連絡を行う</li>
+</ul>
+</li>
+</ul>
+<p><strong>関連情報</strong>: BUC13（精算処理）に対応</p>
+<hr />
+<h2 id="_2">参照<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../business_usecase/">ビジネスユースケース</a></li>
+<li><a href="../requirements_definition/">要件定義書</a></li>
+<li><a href="../user_story/">ユーザーストーリー</a></li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+        <script src="../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>
