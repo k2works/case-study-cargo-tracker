@@ -8,9 +8,9 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| バックエンドアーキテクチャ | バックエンドの責務分割、レイヤ、連携方式を整理 | 未作成 |
-| フロントエンドアーキテクチャ | UI 構成、状態管理、画面遷移を整理 | 未作成 |
-| インフラストラクチャ | 実行環境、ネットワーク、デプロイ構成を整理 | 未作成 |
+| [バックエンドアーキテクチャ](architecture_backend.md) | DDD + ヘキサゴナル + CQRS、Spring Boot 4、6 コンテキスト | 作成済 |
+| [フロントエンドアーキテクチャ](architecture_frontend.md) | Thymeleaf SSR + htmx、Bootstrap 5、画面遷移設計 | 作成済 |
+| [インフラストラクチャ](architecture_infrastructure.md) | AWS ECS/RDS、Docker、GitHub Actions CI/CD | 作成済 |
 
 ### モデル設計
 

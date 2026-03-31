@@ -75,6 +75,9 @@ nav:
       - ユーザーストーリー: requirements/user_story.md
   - 設計:
       - 概要: design/index.md
+      - バックエンドアーキテクチャ: design/architecture_backend.md
+      - フロントエンドアーキテクチャ: design/architecture_frontend.md
+      - インフラストラクチャ: design/architecture_infrastructure.md
   - 開発:
       - 概要: development/index.md
   - 運用:
