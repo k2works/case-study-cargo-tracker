@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}"/>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">CargoTracker</a>
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text me-3" sec:authentication="name">ユーザー名</span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </div>
+</nav>
+<div class="container mt-5">
+    <h1>国際貨物輸送管理システム</h1>
+    <p class="lead">ようこそ、CargoTracker へ。</p>
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">荷主管理</h5>
+                    <p class="card-text">荷主の登録・照会を行います。</p>
+                    <a th:href="@{/shippers}" class="btn btn-primary">荷主一覧</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">貨物予約</h5>
+                    <p class="card-text">貨物予約の登録・照会を行います。</p>
+                    <a th:href="@{/bookings}" class="btn btn-primary">予約一覧</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
+</body>
+</html>

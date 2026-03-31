@@ -91,6 +91,7 @@ nav:
       - "IT1 計画（US02・03・04）": development/iteration_plan-1.md
   - 運用:
       - 概要: operation/index.md
+      - アプリ開発環境セットアップ: operation/dev_app_instrunction.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
