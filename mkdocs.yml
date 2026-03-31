@@ -83,6 +83,7 @@ nav:
       - UI 設計: design/ui_design.md
       - テスト戦略: design/test_strategy.md
       - 非機能要件: design/non_functional.md
+      - 運用要件: design/operation.md
       - 技術スタック選定: design/tech_stack.md
   - 開発:
       - 概要: development/index.md
