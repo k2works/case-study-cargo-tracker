@@ -78,4 +78,6 @@ jacocoTestReport {
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
+    // Docker Desktop 使用時に DOCKER_HOST が設定されていると接続エラーが発生するため除外する
+    environment.remove('DOCKER_HOST')
 }
