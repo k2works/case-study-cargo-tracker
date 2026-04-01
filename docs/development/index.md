@@ -14,7 +14,7 @@
 
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
-| IT1（US02・03・04, 10SP） | [iteration_plan-1.md](./iteration_plan-1.md) | - | - | 完了 ✅ |
+| IT1（US02・03・04, 10SP） | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | [iteration_report-1.md](./iteration_report-1.md) | 完了 ✅ |
 
 ### 進捗サマリー
 
@@ -38,5 +38,5 @@
 ## 補足
 
 - リリース計画は [release_plan.md](./release_plan.md) を参照してください。
-- IT1 完了後に、E2E 強化、荷主 / 予約の Web・REST 分離、Swagger UI、default seed data 追加まで実施済みです。
+- IT1 完了後に、E2E 強化、荷主 / 予約の Web・REST 分離、Swagger UI、default seed data、レビュー指摘反映まで実施済みです。
 - テンプレートは [template/リリース計画.md](../template/リリース計画.md)、[template/イテレーション計画.md](../template/イテレーション計画.md)、[template/イテレーション完了報告書.md](../template/イテレーション完了報告書.md)、[template/リリース完了報告書.md](../template/リリース完了報告書.md) を利用できます。

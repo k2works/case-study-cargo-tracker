@@ -406,7 +406,7 @@ xychart-beta
 
 1. **IT2 計画具体化**: US01 / US06 の詳細タスクと受入基準を確定する
 2. **GitHub Project 同期**: IT2 対象 Issue・Milestone・Label を最新計画に同期する
-3. **品質維持**: backend 108 テスト Green、E2E 9 件 Green を維持したまま IT2 に着手する
+3. **品質維持**: backend 113 テスト Green、E2E 9 件 Green、SonarQube Quality Gate PASS を維持したまま IT2 に着手する
 
 ---
 
@@ -418,3 +418,4 @@ xychart-beta
 | 2026-03-31 | IT1 進捗更新（5/10 SP 完了・US02・US03 実装済み） | Copilot |
 | 2026-03-31 | IT1 完了（10/10 SP・US02・US03・US04 全実装済み・72 テスト Green） | Copilot |
 | 2026-04-01 | IT1 完了後の改善を反映（108 テスト Green、E2E 9 件 Green、Swagger UI、default seed data、Web・REST 分離） | Copilot |
+| 2026-04-01 | IT1 完了報告書とふりかえりを追加（113 テスト Green、Quality Gate PASS） | Copilot |
