@@ -11,6 +11,9 @@ import { cleanDockerEnv, isDockerAvailable } from './shared.js';
 /** アプリケーションルートディレクトリ */
 const APP_DIR = path.join(process.cwd(), 'apps', 'cargo-tracker');
 
+/** E2E テストディレクトリ */
+const E2E_DIR = path.join(process.cwd(), 'apps', 'e2e');
+
 /** PostgreSQL サービス名（docker-compose.yml に合わせる） */
 const DB_SERVICE = 'postgres';
 
@@ -321,6 +324,47 @@ export default function (gulp) {
   });
 
   // --------------------------------------------
+  // E2E テストタスク
+  // --------------------------------------------
+
+  gulp.task('dev:e2e:install', (done) => {
+    try {
+      console.log('Installing E2E test dependencies...');
+      execSync('npm ci', { cwd: E2E_DIR, stdio: 'inherit' });
+      console.log('Installing Playwright browsers (chromium)...');
+      execSync('npx playwright install chromium', { cwd: E2E_DIR, stdio: 'inherit' });
+      console.log('E2E dependencies installed.');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:e2e:run', (done) => {
+    try {
+      console.log('Running E2E tests (headless)...');
+      console.log('Make sure the app is running at http://localhost:8080');
+      execSync('npx playwright test', { cwd: E2E_DIR, stdio: 'inherit' });
+      console.log('E2E tests completed.');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:e2e:ui', (done) => {
+    try {
+      console.log('Starting Playwright UI mode...');
+      console.log('Make sure the app is running at http://localhost:8080');
+      console.log('Press Ctrl+C to stop.');
+      execSync('npx playwright test --ui', { cwd: E2E_DIR, stdio: 'inherit' });
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  // --------------------------------------------
   // ヘルプ
   // --------------------------------------------
 
@@ -343,6 +387,11 @@ export default function (gulp) {
     dev:db:start                PostgreSQL コンテナ起動（ポート 5432）
     dev:db:stop                 PostgreSQL コンテナ停止
     dev:db:logs                 PostgreSQL ログを表示
+
+  E2E テスト:
+    dev:e2e:install             依存パッケージと Playwright ブラウザをインストール
+    dev:e2e:run                 E2E テスト実行（headless）※アプリ起動が必要
+    dev:e2e:ui                  Playwright UI モードで E2E テスト実行 ※アプリ起動が必要
 
   ヘルプ:
     dev:help                    このヘルプを表示
