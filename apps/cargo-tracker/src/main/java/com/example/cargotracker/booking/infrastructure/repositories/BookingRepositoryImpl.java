@@ -11,6 +11,7 @@ import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -52,6 +53,13 @@ public class BookingRepositoryImpl implements BookingRepository {
     public Optional<Booking> findById(BookingId id) {
         return bookingMapper.findById(id.value())
                 .map(this::toBooking);
+    }
+
+    @Override
+    public List<Booking> findAll() {
+        return bookingMapper.findAll().stream()
+                .map(this::toBooking)
+                .toList();
     }
 
     private Booking toBooking(BookingRecord row) {

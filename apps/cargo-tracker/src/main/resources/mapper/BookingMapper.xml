@@ -54,4 +54,15 @@
         WHERE id = #{id}
     </select>
 
+    <select id="findAll" resultMap="bookingResultMap">
+        SELECT id, shipper_id,
+               cargo_type, cargo_weight_kg, cargo_length_cm, cargo_width_cm, cargo_height_cm,
+               cargo_quantity, cargo_description,
+               origin_location, destination_location,
+               requested_pickup_date, requested_delivery_date,
+               status, created_at, updated_at
+        FROM bookings
+        ORDER BY created_at DESC, id DESC
+    </select>
+
 </mapper>

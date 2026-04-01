@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 /** 予約登録フォームに渡すデータ */
 export interface BookingData {
@@ -43,6 +43,45 @@ export class BookingPage {
   /** 予約一覧に遷移する */
   async gotoList() {
     await this.page.goto('/bookings');
+  }
+
+  /** 成功メッセージから予約 UUID を抽出して返す */
+  async extractBookingId(): Promise<string> {
+    const message = await this.getSuccessMessage();
+    const match = message.match(
+      /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+    );
+    if (!match) {
+      throw new Error(`予約 ID が成功メッセージから取得できませんでした: ${message}`);
+    }
+    return match[1];
+  }
+
+  /** 予約一覧の対象行を返す */
+  bookingRow(bookingId: string): Locator {
+    return this.page.locator('tbody tr').filter({ hasText: bookingId });
+  }
+
+  /** 予約一覧に登録内容が表示されることを確認する */
+  async expectBookingListed(params: {
+    bookingId: string;
+    shipperId: string;
+    cargoType: string;
+    originLocation: string;
+    destinationLocation: string;
+    requestedPickupDate: string;
+    status: string;
+  }) {
+    const row = this.bookingRow(params.bookingId);
+
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('td').nth(0)).toContainText(params.bookingId);
+    await expect(row.locator('td').nth(1)).toHaveText(params.shipperId);
+    await expect(row.locator('td').nth(2)).toHaveText(params.cargoType);
+    await expect(row.locator('td').nth(3)).toHaveText(params.originLocation);
+    await expect(row.locator('td').nth(4)).toHaveText(params.destinationLocation);
+    await expect(row.locator('td').nth(5)).toHaveText(params.requestedPickupDate);
+    await expect(row.locator('td').nth(6)).toContainText(params.status);
   }
 
   /**

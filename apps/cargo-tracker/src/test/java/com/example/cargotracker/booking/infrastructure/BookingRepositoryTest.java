@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -41,7 +42,7 @@ class BookingRepositoryTest extends PostgreSQLIntegrationTestBase {
         ShipperId shipperId = ShipperId.generate();
         ShipperRecord row = new ShipperRecord(
                 shipperId.value(),
-                "テスト荷主", "test@example.com", null, null,
+                "テスト荷主", "test-" + shipperId.value() + "@example.com", null, null,
                 "INDIVIDUAL", null, null,
                 LocalDateTime.now(), LocalDateTime.now()
         );
@@ -102,5 +103,23 @@ class BookingRepositoryTest extends PostgreSQLIntegrationTestBase {
 
         Booking found = bookingRepository.findById(booking.getId()).orElseThrow();
         assertThat(found.getDomainEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("保存済みの予約一覧を取得できる")
+    void findAll() {
+        ShipperId firstShipperId = createShipper();
+        ShipperId secondShipperId = createShipper();
+        Booking first = Booking.register(BookingId.generate(), firstShipperId, anyCargo(), anyTransport());
+        Booking second = Booking.register(BookingId.generate(), secondShipperId, anyCargo(), anyTransport());
+
+        bookingRepository.save(first);
+        bookingRepository.save(second);
+
+        List<Booking> found = bookingRepository.findAll();
+
+        assertThat(found)
+                .extracting(booking -> booking.getId().value())
+                .contains(first.getId().value(), second.getId().value());
     }
 }

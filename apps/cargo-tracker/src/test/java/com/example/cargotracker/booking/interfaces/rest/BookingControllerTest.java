@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +48,17 @@ class BookingControllerTest {
     private ShipperExistencePort shipperExistencePort;
 
     // ── GET /bookings/new ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("予約一覧を表示できる")
+    void showList() throws Exception {
+        when(findBookingQueryService.findAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/bookings"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/list"))
+                .andExpect(model().attributeExists("bookings"));
+    }
 
     @Test
     @DisplayName("予約登録フォームを表示できる")

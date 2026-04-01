@@ -17,7 +17,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
 import java.util.UUID;
 
 @Controller
@@ -42,7 +41,7 @@ public class BookingController {
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("bookings", List.of());
+        model.addAttribute("bookings", findBookingQueryService.findAll());
         return "booking/list";
     }
 

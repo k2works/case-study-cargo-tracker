@@ -6,6 +6,8 @@ import com.example.cargotracker.booking.domain.repository.BookingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional(readOnly = true)
 public class FindBookingQueryService {
@@ -19,5 +21,9 @@ public class FindBookingQueryService {
     public Booking execute(BookingId id) {
         return bookingRepository.findById(id)
                 .orElseThrow(() -> new BookingNotFoundException(id.value().toString()));
+    }
+
+    public List<Booking> findAll() {
+        return bookingRepository.findAll();
     }
 }

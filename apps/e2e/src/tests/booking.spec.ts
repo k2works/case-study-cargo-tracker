@@ -15,17 +15,9 @@ test.describe('E04: 貨物予約登録', () => {
     shipperId = await shipperPage.extractShipperId();
   });
 
-  test('登録済み荷主を選択して貨物予約を登録できる', async ({ page }) => {
+  test('登録済み荷主を選択して貨物予約を登録でき、一覧で確認できる', async ({ page }) => {
     const bookingPage = new BookingPage(page);
-
-    // 予約登録フォームに遷移する
-    await bookingPage.goto();
-
-    // フォームが表示されることを確認する
-    await expect(page.locator('h4')).toContainText('予約登録');
-
-    // 予約を登録する
-    await bookingPage.register({
+    const bookingData = {
       shipperId,
       cargoType: 'GENERAL_CARGO',
       weightKg: '500',
@@ -35,7 +27,16 @@ test.describe('E04: 貨物予約登録', () => {
       requestedPickupDate: '2025-09-01',
       requestedDeliveryDate: '2025-10-15',
       description: '電子機器',
-    });
+    } as const;
+
+    // 予約登録フォームに遷移する
+    await bookingPage.goto();
+
+    // フォームが表示されることを確認する
+    await expect(page.locator('h4')).toContainText('予約登録');
+
+    // 予約を登録する
+    await bookingPage.register(bookingData);
 
     // 予約詳細ページ（/bookings/{uuid}）にリダイレクトされる
     await expect(page).toHaveURL(/\/bookings\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/);
@@ -45,6 +46,21 @@ test.describe('E04: 貨物予約登録', () => {
 
     // 登録成功メッセージが表示される
     await expect(page.locator('.alert-success')).toContainText('予約を登録しました');
+
+    const bookingId = await bookingPage.extractBookingId();
+
+    // 予約一覧で登録内容を確認できる
+    await bookingPage.gotoList();
+    await expect(page).toHaveURL('/bookings');
+    await bookingPage.expectBookingListed({
+      bookingId,
+      shipperId,
+      cargoType: 'GENERAL_CARGO',
+      originLocation: 'JPTYO',
+      destinationLocation: 'USNYC',
+      requestedPickupDate: '2025-09-01',
+      status: 'PROVISIONAL',
+    });
   });
 
   test('予約番号が発行される', async ({ page }) => {
