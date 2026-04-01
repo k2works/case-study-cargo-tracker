@@ -7,16 +7,25 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ProfileConfigurationTest {
 
     @Nested
-    @SpringBootTest
+    @SpringBootTest(properties = "app.seed.enabled=true")
     class DefaultProfile {
 
         @Autowired
         private Environment env;
+
+        @Autowired
+        private ShipperRepository shipperRepository;
+
+        @Autowired
+        private BookingRepository bookingRepository;
 
         @Test
         void h2DatabaseConfigured() {
@@ -28,6 +37,12 @@ class ProfileConfigurationTest {
         void flywayEnabled() {
             String enabled = env.getProperty("spring.flyway.enabled");
             assertThat(enabled).isEqualTo("true");
+        }
+
+        @Test
+        void seedDataLoaded() {
+            assertThat(shipperRepository.findAll()).isNotEmpty();
+            assertThat(bookingRepository.findAll()).isNotEmpty();
         }
     }
 

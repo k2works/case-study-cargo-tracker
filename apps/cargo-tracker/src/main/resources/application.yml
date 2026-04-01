@@ -33,3 +33,7 @@ mybatis:
   type-handlers-package: com.example.cargotracker.shared.infrastructure
   configuration:
     map-underscore-to-camel-case: true
+
+app:
+  seed:
+    enabled: true

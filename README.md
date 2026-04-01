@@ -44,6 +44,8 @@ npm install
 npm start
 ```
 
+デフォルトプロファイルで `apps/cargo-tracker` を起動すると、荷主と貨物予約のシードデータが自動で投入されます。
+
 ### API ドキュメント
 
 `apps/cargo-tracker` を起動すると、以下の URL で OpenAPI ドキュメントを参照できます。
