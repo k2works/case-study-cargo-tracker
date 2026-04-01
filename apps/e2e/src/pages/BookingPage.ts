@@ -92,7 +92,7 @@ export class BookingPage {
     await this.goto();
 
     // 荷主情報
-    await this.page.locator('input[name="shipperId"]').fill(data.shipperId);
+    await this.page.locator('select[name="shipperId"]').selectOption(data.shipperId);
 
     // 貨物仕様
     await this.page.locator('select[name="cargoType"]').selectOption(data.cargoType);

@@ -36,22 +36,19 @@
                         <!-- 荷主情報 -->
                         <h6 class="text-muted mb-3">荷主情報</h6>
                         <div class="mb-3 row">
-                            <label for="shipperId" class="col-sm-3 col-form-label">荷主 ID <span class="text-danger">*</span></label>
-                            <div class="col-sm-7">
-                                <input type="text" class="form-control" id="shipperId" name="shipperId"
-                                       th:value="*{shipperId}"
-                                       th:classappend="${#fields.hasErrors('shipperId')} ? 'is-invalid'"
-                                       placeholder="UUID を入力"
-                                       hx-post="/bookings/lookup-shipper"
-                                       hx-trigger="blur"
-                                       hx-target="#shipper-name-display"
-                                       hx-include="[name='shipperId']"
-                                       required>
+                            <label for="shipperId" class="col-sm-3 col-form-label">荷主名 <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="shipperId" name="shipperId"
+                                        th:classappend="${#fields.hasErrors('shipperId')} ? 'is-invalid'"
+                                        required>
+                                    <option value="">-- 荷主を選択してください --</option>
+                                    <option th:each="shipper : ${shippers}"
+                                            th:value="${shipper.id}"
+                                            th:text="${shipper.name}"
+                                            th:selected="${form.shipperId == shipper.id.toString()}"></option>
+                                </select>
                                 <div th:if="${#fields.hasErrors('shipperId')}" class="invalid-feedback"
-                                     th:errors="*{shipperId}"></div>
-                            </div>
-                            <div class="col-sm-2">
-                                <span id="shipper-name-display" class="form-text text-muted"></span>
+                                      th:errors="*{shipperId}"></div>
                             </div>
                         </div>
 
@@ -197,6 +194,5 @@
 </div>
 
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
-<script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
 </body>
 </html>

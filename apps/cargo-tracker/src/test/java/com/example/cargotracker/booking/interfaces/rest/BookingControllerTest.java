@@ -63,11 +63,16 @@ class BookingControllerTest {
     @Test
     @DisplayName("予約登録フォームを表示できる")
     void showRegisterForm() throws Exception {
+        when(shipperExistencePort.findAll()).thenReturn(List.of(
+                new ShipperExistencePort.ShipperOption(UUID.randomUUID(), "山田 太郎")
+        ));
+
         mockMvc.perform(get("/bookings/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("booking/register"))
                 .andExpect(model().attributeExists("form"))
-                .andExpect(model().attributeExists("cargoTypes"));
+                .andExpect(model().attributeExists("cargoTypes"))
+                .andExpect(model().attributeExists("shippers"));
     }
 
     // ── POST /bookings ─────────────────────────────────────────────────────
@@ -75,13 +80,16 @@ class BookingControllerTest {
     @Test
     @DisplayName("バリデーションエラーがある場合は登録フォームに戻る")
     void returnRegisterFormOnValidationError() throws Exception {
+        when(shipperExistencePort.findAll()).thenReturn(List.of());
+
         mockMvc.perform(post("/bookings")
                         .param("shipperId", "")         // 必須項目が空
                         .param("quantity", "1")
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("booking/register"))
-                .andExpect(model().attributeHasErrors("form"));
+                .andExpect(model().attributeHasErrors("form"))
+                .andExpect(model().attributeExists("shippers"));
     }
 
     @Test
@@ -89,6 +97,7 @@ class BookingControllerTest {
     void returnRegisterFormWhenShipperNotFound() throws Exception {
         when(registerBookingCommandService.execute(any()))
                 .thenThrow(new ShipperNotFoundException("荷主が見つかりません"));
+        when(shipperExistencePort.findAll()).thenReturn(List.of());
 
         mockMvc.perform(post("/bookings")
                         .param("shipperId", UUID.randomUUID().toString())
@@ -102,7 +111,8 @@ class BookingControllerTest {
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("booking/register"))
-                .andExpect(model().attributeExists("errorMessage"));
+                .andExpect(model().attributeExists("errorMessage"))
+                .andExpect(model().attributeExists("shippers"));
     }
 
     @Test

@@ -34,6 +34,10 @@ test.describe('E04: 貨物予約登録', () => {
 
     // フォームが表示されることを確認する
     await expect(page.locator('h4')).toContainText('予約登録');
+    await expect(page.locator('select[name="shipperId"]')).toBeVisible();
+    await expect(page.locator('select[name="shipperId"] option')).toContainText([
+      '予約テスト荷主',
+    ]);
 
     // 予約を登録する
     await bookingPage.register(bookingData);

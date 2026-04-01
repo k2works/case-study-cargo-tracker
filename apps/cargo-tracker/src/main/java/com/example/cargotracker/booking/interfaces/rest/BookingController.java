@@ -25,6 +25,7 @@ public class BookingController {
 
     private static final String VIEW_REGISTER = "booking/register";
     private static final String ATTR_CARGO_TYPES = "cargoTypes";
+    private static final String ATTR_SHIPPERS = "shippers";
     private static final String ATTR_SHIPPER_NAME = "shipperName";
 
     private final RegisterBookingCommandService registerBookingCommandService;
@@ -48,7 +49,7 @@ public class BookingController {
     @GetMapping("/new")
     public String showRegisterForm(Model model) {
         model.addAttribute("form", new BookingRegisterForm());
-        model.addAttribute(ATTR_CARGO_TYPES, CargoType.values());
+        populateRegisterFormOptions(model);
         return VIEW_REGISTER;
     }
 
@@ -58,7 +59,7 @@ public class BookingController {
                            RedirectAttributes redirectAttributes,
                            Model model) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute(ATTR_CARGO_TYPES, CargoType.values());
+            populateRegisterFormOptions(model);
             return VIEW_REGISTER;
         }
 
@@ -69,9 +70,14 @@ public class BookingController {
             return "redirect:/bookings/" + bookingId;
         } catch (ShipperNotFoundException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute(ATTR_CARGO_TYPES, CargoType.values());
+            populateRegisterFormOptions(model);
             return VIEW_REGISTER;
         }
+    }
+
+    private void populateRegisterFormOptions(Model model) {
+        model.addAttribute(ATTR_CARGO_TYPES, CargoType.values());
+        model.addAttribute(ATTR_SHIPPERS, shipperExistencePort.findAll());
     }
 
     @GetMapping("/{id}")
