@@ -6,6 +6,8 @@ import com.example.cargotracker.quote.domain.model.valueobjects.RouteOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -20,21 +22,22 @@ import java.util.List;
 
 /**
  * HTTP 経由でルート候補を取得するアダプター。
- * product プロファイルで有効になる。テスト時は WireMock でスタブ化できる。
+ * product プロファイルで有効になる。
  */
 @Component
 @Profile("product")
-public class WireMockQuoteRouteProviderAdapter implements QuoteRouteProviderPort {
+public class RouteProviderRestAdapter implements QuoteRouteProviderPort {
 
     private static final Logger log =
-            LoggerFactory.getLogger(WireMockQuoteRouteProviderAdapter.class);
+            LoggerFactory.getLogger(RouteProviderRestAdapter.class);
 
     private final RestTemplate restTemplate;
     private final String routeProviderUrl;
 
-    public WireMockQuoteRouteProviderAdapter(
+    public RouteProviderRestAdapter(
+            RestTemplate routeProviderRestTemplate,
             @Value("${app.route-provider.url}") String routeProviderUrl) {
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = routeProviderRestTemplate;
         this.routeProviderUrl = routeProviderUrl;
     }
 
@@ -80,5 +83,18 @@ public class WireMockQuoteRouteProviderAdapter implements QuoteRouteProviderPort
             BigDecimal estimatedPrice,
             String voyageNumber
     ) {
+    }
+
+    /**
+     * RouteProviderRestAdapter が利用する RestTemplate Bean。
+     * product プロファイルでのみ生成される。
+     */
+    @Configuration
+    @Profile("product")
+    static class RestTemplateConfig {
+        @Bean
+        public RestTemplate routeProviderRestTemplate() {
+            return new RestTemplate();
+        }
     }
 }

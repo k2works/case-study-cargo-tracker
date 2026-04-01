@@ -3,12 +3,13 @@ package com.example.cargotracker.quote.infrastructure;
 import com.example.cargotracker.quote.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.quote.domain.model.valueobjects.QuoteCondition;
 import com.example.cargotracker.quote.domain.model.valueobjects.RouteOption;
-import com.example.cargotracker.quote.infrastructure.adapters.WireMockQuoteRouteProviderAdapter;
+import com.example.cargotracker.quote.infrastructure.adapters.RouteProviderRestAdapter;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,19 +21,20 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DisplayName("WireMockQuoteRouteProviderAdapter")
-class WireMockQuoteRouteProviderAdapterTest {
+@DisplayName("RouteProviderRestAdapter")
+class RouteProviderRestAdapterTest {
 
     @RegisterExtension
     static WireMockExtension wm = WireMockExtension.newInstance()
             .options(wireMockConfig().dynamicPort())
             .build();
 
-    private WireMockQuoteRouteProviderAdapter adapter;
+    private RouteProviderRestAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        adapter = new WireMockQuoteRouteProviderAdapter(
+        adapter = new RouteProviderRestAdapter(
+                new RestTemplate(),
                 "http://localhost:" + wm.getPort()
         );
     }
