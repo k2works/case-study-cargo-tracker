@@ -2,18 +2,21 @@ package com.example.cargotracker.quote.interfaces.web;
 
 import com.example.cargotracker.quote.domain.model.aggregates.Quote;
 import com.example.cargotracker.quote.domain.repository.QuoteRepository;
+import com.example.cargotracker.quote.application.internal.commandservices.NoRouteAvailableException;
 import com.example.cargotracker.quote.application.internal.commandservices.RegisterQuoteCommand;
 import com.example.cargotracker.quote.application.internal.commandservices.RegisterQuoteCommandService;
 import com.example.cargotracker.quote.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +24,11 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -176,5 +182,60 @@ class QuoteRegisterIntegrationTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isOk())
                 .andExpect(view().name("quote/list"))
                 .andExpect(model().attributeExists("quotes"));
+    }
+
+    // ── エラーハンドリング統合テスト ────────────────────────────────────────
+
+    @Test
+    @WithMockUser
+    @DisplayName("存在しない UUID で GET /quotes/{id} にアクセスすると 404 を返す")
+    void detail_存在しないUUIDで404() throws Exception {
+        mockMvc.perform(get("/quotes/" + UUID.randomUUID()))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * NoRouteAvailableException のハンドリングを検証する統合テスト。
+     * RegisterQuoteCommandService をモック化して例外をスローさせる。
+     */
+    @Nested
+    @SpringBootTest
+    @ActiveProfiles("test")
+    @DisplayName("NoRouteAvailableException ハンドリング統合テスト")
+    class NoRouteAvailableHandlingTest extends PostgreSQLIntegrationTestBase {
+
+        @Autowired
+        private WebApplicationContext nestedContext;
+
+        @MockitoBean
+        private RegisterQuoteCommandService mockRegisterQuoteCommandService;
+
+        private MockMvc nestedMockMvc;
+
+        @BeforeEach
+        void setup() {
+            nestedMockMvc = MockMvcBuilders.webAppContextSetup(nestedContext)
+                    .apply(SecurityMockMvcConfigurers.springSecurity())
+                    .build();
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("NoRouteAvailableException 発生時はフォームページに戻りエラーメッセージが表示される")
+        void register_NoRouteAvailable_フォームに戻りエラーメッセージ表示() throws Exception {
+            when(mockRegisterQuoteCommandService.register(any()))
+                    .thenThrow(new NoRouteAvailableException("JPTYO", "USNYC"));
+
+            nestedMockMvc.perform(post("/quotes")
+                            .param("originLocode", "JPTYO")
+                            .param("destinationLocode", "USNYC")
+                            .param("requestedArrivalDate", "2025-12-01")
+                            .param("cargoType", "GENERAL_CARGO")
+                            .param("weightKg", "1000.0")
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("quote/register"))
+                    .andExpect(model().attributeExists("errorMessage"));
+        }
     }
 }
