@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 export class ShipperPage {
   readonly page: Page;
@@ -15,6 +15,27 @@ export class ShipperPage {
   /** 荷主一覧に遷移する */
   async gotoList() {
     await this.page.goto('/shippers');
+  }
+
+  /** 荷主一覧の対象行を返す */
+  shipperRow(email: string): Locator {
+    return this.page.locator('tbody tr').filter({ hasText: email });
+  }
+
+  /** 荷主一覧に登録内容が表示されることを確認する */
+  async expectShipperListed(params: {
+    name: string;
+    email: string;
+    phone?: string;
+    categoryLabel: '個人' | '法人';
+  }) {
+    const row = this.shipperRow(params.email);
+
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('td').nth(1)).toHaveText(params.name);
+    await expect(row.locator('td').nth(2)).toContainText(params.categoryLabel);
+    await expect(row.locator('td').nth(3)).toHaveText(params.email);
+    await expect(row.locator('td').nth(4)).toHaveText(params.phone ?? '-');
   }
 
   /**

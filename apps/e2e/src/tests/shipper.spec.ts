@@ -2,8 +2,11 @@ import { test, expect } from '../fixtures';
 import { ShipperPage } from '../pages/ShipperPage';
 
 test.describe('E02: 個人荷主登録', () => {
-  test('氏名・連絡先・メールアドレスで個人荷主を登録できる', async ({ page, loggedIn }) => {
+  test('氏名・連絡先・メールアドレスで個人荷主を登録でき、一覧で確認できる', async ({ page, loggedIn }) => {
     const shipperPage = new ShipperPage(page);
+    const name = '山田 太郎';
+    const email = `yamada-${Date.now()}@example.com`;
+    const phone = '03-1234-5678';
 
     // 荷主登録フォームに遷移する
     await shipperPage.goto();
@@ -15,17 +18,21 @@ test.describe('E02: 個人荷主登録', () => {
     await expect(page.locator('#corporateSection')).toBeHidden();
 
     // フォームを入力して送信する
-    await shipperPage.registerIndividual(
-      '山田 太郎',
-      `yamada-${Date.now()}@example.com`,
-      '03-1234-5678',
-    );
+    await shipperPage.registerIndividual(name, email, phone);
 
     // 荷主一覧にリダイレクトされる
     await expect(page).toHaveURL('/shippers');
 
     // 登録成功メッセージが表示される
     await expect(page.locator('.alert-success')).toContainText('荷主を登録しました');
+
+    // 登録した個人荷主が一覧に表示される
+    await shipperPage.expectShipperListed({
+      name,
+      email,
+      phone,
+      categoryLabel: '個人',
+    });
   });
 });
 
@@ -48,14 +55,17 @@ test.describe('E03: 法人荷主登録', () => {
     await expect(page.locator('input[name="discountRate"]')).toBeVisible();
   });
 
-  test('法人荷主を登録できる', async ({ page, loggedIn }) => {
+  test('法人荷主を登録でき、一覧で確認できる', async ({ page, loggedIn }) => {
     const shipperPage = new ShipperPage(page);
+    const name = '株式会社テスト物流';
+    const email = `corp-${Date.now()}@example.com`;
+    const phone = '03-9876-5432';
 
     // 法人荷主を登録する
     await shipperPage.registerCorporate(
-      '株式会社テスト物流',
-      `corp-${Date.now()}@example.com`,
-      '03-9876-5432',
+      name,
+      email,
+      phone,
       'CONTRACT-001',
       '10',
     );
@@ -65,5 +75,13 @@ test.describe('E03: 法人荷主登録', () => {
 
     // 登録成功メッセージが表示される
     await expect(page.locator('.alert-success')).toContainText('荷主を登録しました');
+
+    // 登録した法人荷主が一覧に表示される
+    await shipperPage.expectShipperListed({
+      name,
+      email,
+      phone,
+      categoryLabel: '法人',
+    });
   });
 });

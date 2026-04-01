@@ -12,8 +12,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
-
 @Controller
 @RequestMapping("/shippers")
 public class ShipperController {
@@ -28,7 +26,7 @@ public class ShipperController {
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("shippers", List.of());
+        model.addAttribute("shippers", registerShipperCommandService.findAll());
         return "shipper/list";
     }
 

@@ -48,11 +48,12 @@
                     <td><code th:text="${shipper.id}"></code></td>
                     <td th:text="${shipper.name}"></td>
                     <td>
-                        <span th:if="${shipper.category == 'INDIVIDUAL'}" class="badge bg-secondary">個人</span>
-                        <span th:if="${shipper.category == 'CORPORATE'}" class="badge bg-primary">法人</span>
+                        <span class="badge"
+                              th:classappend="${shipper.category == T(com.example.cargotracker.shipper.domain.model.valueobjects.CustomerCategory).CORPORATE} ? 'bg-primary' : 'bg-secondary'"
+                              th:text="${shipper.category == T(com.example.cargotracker.shipper.domain.model.valueobjects.CustomerCategory).CORPORATE} ? '法人' : '個人'">個人</span>
                     </td>
-                    <td th:text="${shipper.email}"></td>
-                    <td th:text="${shipper.phone ?: '-'}"></td>
+                    <td th:text="${shipper.contactInfo.email}"></td>
+                    <td th:text="${shipper.contactInfo.phone ?: '-'}"></td>
                 </tr>
                 </tbody>
             </table>

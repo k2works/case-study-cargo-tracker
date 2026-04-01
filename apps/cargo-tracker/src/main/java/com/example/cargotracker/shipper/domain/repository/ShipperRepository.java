@@ -3,6 +3,7 @@ package com.example.cargotracker.shipper.domain.repository;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -16,4 +17,6 @@ public interface ShipperRepository {
     Optional<Shipper> findById(ShipperId id);
 
     Optional<Shipper> findByEmail(String email);
+
+    List<Shipper> findAll();
 }

@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -69,5 +70,29 @@ class ShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
     void findByEmailNotFound() {
         Optional<Shipper> found = shipperRepository.findByEmail("notfound@example.com");
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("保存済みの荷主一覧を取得できる")
+    void findAll() {
+        Shipper first = Shipper.registerIndividual(
+                ShipperId.generate(),
+                new ShipperName("田中 太郎"),
+                new ContactInfo("tanaka-list@example.com", "03-0000-0001")
+        );
+        Shipper second = Shipper.registerIndividual(
+                ShipperId.generate(),
+                new ShipperName("鈴木 花子"),
+                new ContactInfo("suzuki-list@example.com", "03-0000-0002")
+        );
+
+        shipperRepository.save(first);
+        shipperRepository.save(second);
+
+        List<Shipper> found = shipperRepository.findAll();
+
+        assertThat(found)
+                .extracting(shipper -> shipper.getContactInfo().email())
+                .contains("tanaka-list@example.com", "suzuki-list@example.com");
     }
 }

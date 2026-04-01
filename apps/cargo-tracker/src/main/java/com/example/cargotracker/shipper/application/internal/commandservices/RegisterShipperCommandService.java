@@ -11,6 +11,8 @@ import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional
 public class RegisterShipperCommandService {
@@ -41,5 +43,10 @@ public class RegisterShipperCommandService {
 
         shipperRepository.save(shipper);
         return id;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Shipper> findAll() {
+        return shipperRepository.findAll();
     }
 }

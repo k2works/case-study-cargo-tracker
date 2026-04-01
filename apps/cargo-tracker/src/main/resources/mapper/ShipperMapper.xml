@@ -44,4 +44,11 @@
         WHERE email = #{email}
     </select>
 
+    <select id="findAll" resultMap="shipperResultMap">
+        SELECT id, name, email, phone, address, category,
+               contract_number, discount_rate, created_at, updated_at
+        FROM shippers
+        ORDER BY created_at DESC, id DESC
+    </select>
+
 </mapper>

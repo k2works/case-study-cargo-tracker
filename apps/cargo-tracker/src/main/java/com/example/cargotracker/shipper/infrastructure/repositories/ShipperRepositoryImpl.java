@@ -10,6 +10,7 @@ import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -49,6 +50,13 @@ public class ShipperRepositoryImpl implements ShipperRepository {
     public Optional<Shipper> findByEmail(String email) {
         return shipperMapper.findByEmail(email)
                 .map(this::toShipper);
+    }
+
+    @Override
+    public List<Shipper> findAll() {
+        return shipperMapper.findAll().stream()
+                .map(this::toShipper)
+                .toList();
     }
 
     private Shipper toShipper(ShipperRecord row) {
