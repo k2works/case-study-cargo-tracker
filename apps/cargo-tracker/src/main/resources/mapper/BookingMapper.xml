@@ -33,13 +33,13 @@
             requested_pickup_date, requested_delivery_date,
             status, created_at, updated_at
         ) VALUES (
-            #{record.id}, #{record.shipperId},
-            #{record.cargoType}, #{record.cargoWeightKg}, #{record.cargoLengthCm},
-            #{record.cargoWidthCm}, #{record.cargoHeightCm},
-            #{record.cargoQuantity}, #{record.cargoDescription},
-            #{record.originLocation}, #{record.destinationLocation},
-            #{record.requestedPickupDate}, #{record.requestedDeliveryDate},
-            #{record.status}, #{record.createdAt}, #{record.updatedAt}
+            #{row.id}, #{row.shipperId},
+            #{row.cargoType}, #{row.cargoWeightKg}, #{row.cargoLengthCm},
+            #{row.cargoWidthCm}, #{row.cargoHeightCm},
+            #{row.cargoQuantity}, #{row.cargoDescription},
+            #{row.originLocation}, #{row.destinationLocation},
+            #{row.requestedPickupDate}, #{row.requestedDeliveryDate},
+            #{row.status}, #{row.createdAt}, #{row.updatedAt}
         )
     </insert>
 

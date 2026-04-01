@@ -39,13 +39,13 @@ class BookingRepositoryTest extends PostgreSQLIntegrationTestBase {
 
     private ShipperId createShipper() {
         ShipperId shipperId = ShipperId.generate();
-        ShipperRecord record = new ShipperRecord(
+        ShipperRecord row = new ShipperRecord(
                 shipperId.value(),
                 "テスト荷主", "test@example.com", null, null,
                 "INDIVIDUAL", null, null,
                 LocalDateTime.now(), LocalDateTime.now()
         );
-        shipperMapper.insert(record);
+        shipperMapper.insert(row);
         return shipperId;
     }
 

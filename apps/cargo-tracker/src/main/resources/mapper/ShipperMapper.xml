@@ -23,10 +23,10 @@
             id, name, email, phone, address, category,
             contract_number, discount_rate, created_at, updated_at
         ) VALUES (
-            #{record.id}, #{record.name}, #{record.email}, #{record.phone},
-            #{record.address}, #{record.category},
-            #{record.contractNumber}, #{record.discountRate},
-            #{record.createdAt}, #{record.updatedAt}
+            #{row.id}, #{row.name}, #{row.email}, #{row.phone},
+            #{row.address}, #{row.category},
+            #{row.contractNumber}, #{row.discountRate},
+            #{row.createdAt}, #{row.updatedAt}
         )
     </insert>
 

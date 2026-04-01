@@ -24,7 +24,7 @@ public class ShipperRepositoryImpl implements ShipperRepository {
     @Override
     public void save(Shipper shipper) {
         CorporateContractInfo corp = shipper.getCorporateContractInfo();
-        ShipperRecord record = new ShipperRecord(
+        ShipperRecord row = new ShipperRecord(
                 shipper.getId().value(),
                 shipper.getName().value(),
                 shipper.getContactInfo().email(),
@@ -36,7 +36,7 @@ public class ShipperRepositoryImpl implements ShipperRepository {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
-        shipperMapper.insert(record);
+        shipperMapper.insert(row);
     }
 
     @Override
@@ -51,15 +51,15 @@ public class ShipperRepositoryImpl implements ShipperRepository {
                 .map(this::toShipper);
     }
 
-    private Shipper toShipper(ShipperRecord record) {
-        ShipperId id = new ShipperId(record.id());
-        ShipperName name = new ShipperName(record.name());
-        ContactInfo contactInfo = new ContactInfo(record.email(), record.phone());
-        CustomerCategory category = CustomerCategory.valueOf(record.category());
+    private Shipper toShipper(ShipperRecord row) {
+        ShipperId id = new ShipperId(row.id());
+        ShipperName name = new ShipperName(row.name());
+        ContactInfo contactInfo = new ContactInfo(row.email(), row.phone());
+        CustomerCategory category = CustomerCategory.valueOf(row.category());
 
-        if (category == CustomerCategory.CORPORATE && record.contractNumber() != null) {
+        if (category == CustomerCategory.CORPORATE && row.contractNumber() != null) {
             CorporateContractInfo corp = new CorporateContractInfo(
-                    record.contractNumber(), record.discountRate());
+                    row.contractNumber(), row.discountRate());
             return Shipper.registerCorporate(id, name, contactInfo, corp);
         }
         return Shipper.registerIndividual(id, name, contactInfo);

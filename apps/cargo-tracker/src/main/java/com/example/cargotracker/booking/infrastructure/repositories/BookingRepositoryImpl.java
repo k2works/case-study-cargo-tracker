@@ -27,7 +27,7 @@ public class BookingRepositoryImpl implements BookingRepository {
         CargoSpecification cargo = booking.getCargoSpecification();
         TransportCondition transport = booking.getTransportCondition();
 
-        BookingRecord record = new BookingRecord(
+        BookingRecord row = new BookingRecord(
                 booking.getId().value(),
                 booking.getShipperId().value(),
                 cargo.cargoType().name(),
@@ -45,7 +45,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
-        bookingMapper.insert(record);
+        bookingMapper.insert(row);
     }
 
     @Override
@@ -54,24 +54,24 @@ public class BookingRepositoryImpl implements BookingRepository {
                 .map(this::toBooking);
     }
 
-    private Booking toBooking(BookingRecord record) {
-        BookingId id = new BookingId(record.id());
-        ShipperId shipperId = new ShipperId(record.shipperId());
+    private Booking toBooking(BookingRecord row) {
+        BookingId id = new BookingId(row.id());
+        ShipperId shipperId = new ShipperId(row.shipperId());
         CargoSpecification cargo = new CargoSpecification(
-                CargoType.valueOf(record.cargoType()),
-                record.cargoWeightKg(),
-                record.cargoLengthCm(),
-                record.cargoWidthCm(),
-                record.cargoHeightCm(),
-                record.cargoQuantity(),
-                record.cargoDescription()
+                CargoType.valueOf(row.cargoType()),
+                row.cargoWeightKg(),
+                row.cargoLengthCm(),
+                row.cargoWidthCm(),
+                row.cargoHeightCm(),
+                row.cargoQuantity(),
+                row.cargoDescription()
         );
         TransportCondition transport = new TransportCondition(
-                record.originLocation(),
-                record.destinationLocation(),
-                record.requestedPickupDate(),
-                record.requestedDeliveryDate()
+                row.originLocation(),
+                row.destinationLocation(),
+                row.requestedPickupDate(),
+                row.requestedDeliveryDate()
         );
-        return Booking.reconstitute(id, shipperId, cargo, transport, BookingStatus.valueOf(record.status()));
+        return Booking.reconstitute(id, shipperId, cargo, transport, BookingStatus.valueOf(row.status()));
     }
 }

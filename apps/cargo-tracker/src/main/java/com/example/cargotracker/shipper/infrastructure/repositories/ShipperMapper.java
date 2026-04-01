@@ -9,7 +9,7 @@ import java.util.UUID;
 @Mapper
 public interface ShipperMapper {
 
-    void insert(@Param("record") ShipperRecord record);
+    void insert(@Param("row") ShipperRecord row);
 
     Optional<ShipperRecord> findById(@Param("id") UUID id);
 

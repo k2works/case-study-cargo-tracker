@@ -9,7 +9,7 @@ import java.util.UUID;
 @Mapper
 public interface BookingMapper {
 
-    void insert(@Param("record") BookingRecord record);
+    void insert(@Param("row") BookingRecord row);
 
     Optional<BookingRecord> findById(@Param("id") UUID id);
 }
