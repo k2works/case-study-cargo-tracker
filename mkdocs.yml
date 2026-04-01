@@ -101,6 +101,8 @@ nav:
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260331.md
       - ADR・非機能・運用レビュー: "review/ADR_非機能_運用_review_20260331.md"
+      - US04 コードレビュー: review/US04_review_20260331.md
+      - IT2 US01 開発レビュー: review/IT2_US01_review_20260401.md
   - ADR:
       - 概要: adr/index.md
       - "ADR-001: Java/Spring Boot バージョン戦略": adr/001-java-springboot-version-strategy.md
