@@ -50,7 +50,7 @@ class QuoteRestControllerTest {
         Quote quote = anyQuote();
         when(findQuoteQueryService.findAll()).thenReturn(List.of(quote));
 
-        mockMvc.perform(get("/api/quotes"))
+        mockMvc.perform(get("/api/v1/quotes"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(quote.getId().value().toString()))
                 .andExpect(jsonPath("$[0].quoteNumber").value(quote.getQuoteNumber().value()))
@@ -63,7 +63,7 @@ class QuoteRestControllerTest {
         Quote quote = anyQuote();
         when(findQuoteQueryService.findById(quote.getId())).thenReturn(quote);
 
-        mockMvc.perform(get("/api/quotes/" + quote.getId().value()))
+        mockMvc.perform(get("/api/v1/quotes/" + quote.getId().value()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(quote.getId().value().toString()))
                 .andExpect(jsonPath("$.condition.destinationLocode").value("USNYC"));
@@ -76,7 +76,7 @@ class QuoteRestControllerTest {
         when(findQuoteQueryService.findById(any()))
                 .thenThrow(new QuoteNotFoundException(quoteId.value().toString()));
 
-        mockMvc.perform(get("/api/quotes/" + quoteId.value()))
+        mockMvc.perform(get("/api/v1/quotes/" + quoteId.value()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("見積が見つかりません: " + quoteId.value()));
     }
@@ -87,7 +87,7 @@ class QuoteRestControllerTest {
         Quote quote = anyQuote();
         when(registerQuoteCommandService.register(any())).thenReturn(quote);
 
-        mockMvc.perform(post("/api/quotes")
+        mockMvc.perform(post("/api/v1/quotes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -100,7 +100,7 @@ class QuoteRestControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location",
-                        "http://localhost/api/quotes/" + quote.getId().value()))
+                        "http://localhost/api/v1/quotes/" + quote.getId().value()))
                 .andExpect(jsonPath("$.id").value(quote.getId().value().toString()));
     }
 
@@ -110,7 +110,7 @@ class QuoteRestControllerTest {
         when(registerQuoteCommandService.register(any()))
                 .thenThrow(new NoRouteAvailableException("JPTYO", "USNYC"));
 
-        mockMvc.perform(post("/api/quotes")
+        mockMvc.perform(post("/api/v1/quotes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
