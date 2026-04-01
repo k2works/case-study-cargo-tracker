@@ -32,7 +32,7 @@ tags: iteration-plan, it2
 - [ ] 見積作成画面で出発地・目的地・希望期限・貨物種別・重量を入力し、見積番号を発行できる
 - [ ] 外部ルート照会の結果として、経由港・所要日数・概算料金・航海番号を含む複数候補を表示できる
 - [ ] 希望期限に間に合うルートがない場合のメッセージ表示と代替候補提示ができる
-- [ ] ルート照会失敗時に stub / 代替候補で動作確認できる
+- [x] ルート照会失敗時に stub / 代替候補で動作確認できる（StubQuoteRouteProviderAdapter 実装済み）
 - [ ] backend テスト、E2E、SonarQube Quality Gate が Green を維持する
 - [ ] テストカバレッジ 80% 以上
 
@@ -84,11 +84,11 @@ tags: iteration-plan, it2
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | Quote 集約・値オブジェクト（QuoteId、QuoteCondition、QuoteOption）を設計する | 4h | Copilot | [ ] |
-| 1.2 | 見積ドメインモデルと料金算出ルールのユニットテストを追加する | 3h | Copilot | [ ] |
-| 1.3 | 外部ルート照会ポートと WireMock / stub アダプターを実装する | 4h | Copilot | [ ] |
-| 1.4 | QuoteRepository・MyBatis mapper・Flyway migration を追加する | 3h | Copilot | [ ] |
-| 1.5 | 見積作成ユースケース、Web / REST エンドポイント、保存後の見積番号表示を実装する | 4h | Copilot | [ ] |
+| 1.1 | Quote 集約・値オブジェクト（QuoteId、QuoteCondition、QuoteOption）を設計する | 4h | Copilot | [x] |
+| 1.2 | 見積ドメインモデルと料金算出ルールのユニットテストを追加する | 3h | Copilot | [x] |
+| 1.3 | 外部ルート照会ポートと WireMock / stub アダプターを実装する | 4h | Copilot | [x] |
+| 1.4 | QuoteRepository・MyBatis mapper・Flyway migration を追加する | 3h | Copilot | [x] |
+| 1.5 | 見積作成ユースケース、Web / REST エンドポイント、保存後の見積番号表示を実装する | 4h | Copilot | [x] |
 | 1.6 | 見積作成画面と候補一覧 UI、統合テスト、E2E を追加する | 2h | Copilot | [ ] |
 
 **小計**: 20h（理想時間）
@@ -97,8 +97,8 @@ tags: iteration-plan, it2
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 予約番号起点のルート検索クエリと Read Model を設計する | 3h | Copilot | [ ] |
-| 2.2 | Booking 情報と route provider を接続する検索サービスを実装する | 4h | Copilot | [ ] |
+| 2.1 | 予約番号起点のルート検索クエリと Read Model を設計する | 3h | Copilot | [x] |
+| 2.2 | Booking 情報と route provider を接続する検索サービスを実装する | 4h | Copilot | [x] |
 | 2.3 | 希望着日不一致・危険物 / 冷凍貨物の絞り込みルールを実装しテストする | 4h | Copilot | [ ] |
 | 2.4 | ルート候補一覧 UI、代替条件での再検索導線、404 / 業務エラー表示を実装する | 4h | Copilot | [ ] |
 | 2.5 | REST API / MVC テスト、E2E、Swagger 表示確認を追加する | 3h | Copilot | [ ] |
@@ -110,12 +110,12 @@ tags: iteration-plan, it2
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| US01 輸送見積 | 5 | 20h | [ ] |
-| US06 最適ルート検索 | 5 | 20h | [ ] |
+| US01 輸送見積 | 5 | 20h | 進行中（5/6 タスク完了） |
+| US06 最適ルート検索 | 5 | 20h | 進行中（2/6 タスク完了） |
 | **合計** | **10** | **40h** | |
 
 **1 SP あたり**: 4h  
-**進捗率**: 0%（0/10 SP）
+**進捗率**: 58%（7/12 タスク完了）
 
 ---
 
@@ -303,3 +303,4 @@ QuoteForm --> QuoteResultView
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-01 | IT2 計画を作成 | Copilot |
+| 2026-04-01 | タスク 1.5, 2.2 完了を反映（進捗 58%） | Copilot |
