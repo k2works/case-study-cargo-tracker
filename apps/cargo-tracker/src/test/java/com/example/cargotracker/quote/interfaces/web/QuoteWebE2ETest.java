@@ -1,11 +1,13 @@
 package com.example.cargotracker.quote.interfaces.web;
 
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.context.ActiveProfiles;
@@ -14,6 +16,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -39,13 +42,32 @@ class QuoteWebE2ETest extends PostgreSQLIntegrationTestBase {
     @Autowired
     private WebApplicationContext context;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private MockMvc mockMvc;
+    private MockHttpSession session;
 
     @BeforeEach
-    void setup() {
+    void setUp() throws Exception {
         mockMvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(SecurityMockMvcConfigurers.springSecurity())
                 .build();
+        session = loginAsUser();
+    }
+
+    @AfterEach
+    void cleanUp() {
+        jdbcTemplate.execute("DELETE FROM quote_route_options");
+        jdbcTemplate.execute("DELETE FROM quotes");
+    }
+
+    private MockHttpSession loginAsUser() throws Exception {
+        return (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn()
+                .getRequest()
+                .getSession();
     }
 
     // ── 未認証アクセス ─────────────────────────────────────────────────────
@@ -71,15 +93,7 @@ class QuoteWebE2ETest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("ログイン後に見積登録フォームにアクセスできる")
     void ログイン後_見積登録フォームにアクセスできる() throws Exception {
-        // Step 1: フォームログイン
-        var session = mockMvc.perform(formLogin("/login").user("admin").password("admin"))
-                .andExpect(status().is3xxRedirection())
-                .andReturn()
-                .getRequest()
-                .getSession();
-
-        // Step 2: セッションを使って見積登録フォームにアクセス
-        mockMvc.perform(get("/quotes/new").session((MockHttpSession) session))
+        mockMvc.perform(get("/quotes/new").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("見積登録")))
                 .andExpect(content().string(containsString("出発地")))
@@ -92,16 +106,8 @@ class QuoteWebE2ETest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("見積作成フォームを送信すると見積詳細ページにリダイレクトされる")
     void 見積フォーム送信_詳細ページへリダイレクト() throws Exception {
-        // Step 1: フォームログイン
-        var session = mockMvc.perform(formLogin("/login").user("admin").password("admin"))
-                .andExpect(status().is3xxRedirection())
-                .andReturn()
-                .getRequest()
-                .getSession();
-
-        // Step 2: 見積フォーム送信
         mockMvc.perform(post("/quotes")
-                        .session((MockHttpSession) session)
+                        .session(session)
                         .param("originLocode", "JPTYO")
                         .param("destinationLocode", "USNYC")
                         .param("requestedArrivalDate", "2025-12-01")
@@ -115,16 +121,9 @@ class QuoteWebE2ETest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("見積詳細ページにはルート候補・経由港・所要日数・概算料金が表示される")
     void 見積詳細ページ_ルート候補が表示される() throws Exception {
-        // Step 1: ログイン
-        var session = mockMvc.perform(formLogin("/login").user("admin").password("admin"))
-                .andExpect(status().is3xxRedirection())
-                .andReturn()
-                .getRequest()
-                .getSession();
-
-        // Step 2: 見積作成してリダイレクト先を取得
+        // Step 1: 見積作成してリダイレクト先を取得
         var redirectUrl = mockMvc.perform(post("/quotes")
-                        .session((MockHttpSession) session)
+                        .session(session)
                         .param("originLocode", "JPTYO")
                         .param("destinationLocode", "USNYC")
                         .param("requestedArrivalDate", "2025-12-01")
@@ -136,28 +135,24 @@ class QuoteWebE2ETest extends PostgreSQLIntegrationTestBase {
                 .getResponse()
                 .getRedirectedUrl();
 
-        // Step 3: 詳細ページを取得し内容を確認
-        mockMvc.perform(get(redirectUrl).session((MockHttpSession) session))
+        assertNotNull(redirectUrl, "リダイレクト URL が null です");
+
+        // Step 2: 詳細ページを取得し内容を確認
+        mockMvc.perform(get(redirectUrl).session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("見積詳細")))
                 .andExpect(content().string(containsString("ルート候補")))
                 .andExpect(content().string(containsString("所要日数")))
-                .andExpect(content().string(containsString("概算料金")));
+                .andExpect(content().string(containsString("概算料金")))
+                .andExpect(content().string(containsString("JPTYO")))
+                .andExpect(content().string(containsString("USNYC")));
     }
 
     @Test
     @DisplayName("見積一覧ページにアクセスできる")
     void 見積一覧ページにアクセスできる() throws Exception {
-        // Step 1: ログイン
-        var session = mockMvc.perform(formLogin("/login").user("admin").password("admin"))
-                .andExpect(status().is3xxRedirection())
-                .andReturn()
-                .getRequest()
-                .getSession();
-
-        // Step 2: 見積一覧にアクセス
-        mockMvc.perform(get("/quotes").session((MockHttpSession) session))
+        mockMvc.perform(get("/quotes").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("見積")));
+                .andExpect(content().string(containsString("見積一覧")));
     }
 }
