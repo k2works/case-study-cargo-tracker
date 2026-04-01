@@ -2,7 +2,10 @@ package com.example.cargotracker.booking.interfaces.web.dto;
 
 import com.example.cargotracker.booking.domain.model.commands.RegisterBookingCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

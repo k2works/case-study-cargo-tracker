@@ -52,7 +52,7 @@ public class DefaultProfileSeedDataConfiguration {
             if (bookingRepository.findAll().isEmpty()) {
                 ShipperId seedShipperId = shipperRepository.findAll().stream()
                         .findFirst()
-                        .map(shipper -> shipper.getId())
+                        .map(com.example.cargotracker.shipper.domain.model.aggregates.Shipper::getId)
                         .orElseThrow(() -> new IllegalStateException("シード用の荷主が存在しません。"));
 
                 LocalDate pickupDate = LocalDate.now().plusDays(3);
