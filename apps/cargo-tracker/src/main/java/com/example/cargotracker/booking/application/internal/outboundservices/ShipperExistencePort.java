@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.application.internal.outboundservices;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -15,4 +16,12 @@ public interface ShipperExistencePort {
      * @param shipperId 確認する荷主 ID
      */
     void verifyExists(UUID shipperId);
+
+    /**
+     * 指定した荷主 ID の名前を返す。
+     *
+     * @param shipperId 荷主 ID
+     * @return 荷主名（存在しない場合は empty）
+     */
+    Optional<String> findNameById(UUID shipperId);
 }

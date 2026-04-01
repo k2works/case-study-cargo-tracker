@@ -10,7 +10,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecifica
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
 import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
+import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistencePort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +44,7 @@ class BookingControllerTest {
     private FindBookingQueryService findBookingQueryService;
 
     @MockitoBean
-    private ShipperRepository shipperRepository;
+    private ShipperExistencePort shipperExistencePort;
 
     // ── GET /bookings/new ──────────────────────────────────────────────────
 
@@ -142,5 +142,46 @@ class BookingControllerTest {
 
         mockMvc.perform(get("/bookings/" + bookingId))
                 .andExpect(status().isNotFound());
+    }
+
+    // ── POST /bookings/lookup-shipper ───────────────────────────────────────
+
+    @Test
+    @DisplayName("荷主名が見つかった場合はフラグメントに名前をセットする")
+    void lookupShipperFound() throws Exception {
+        UUID shipperId = UUID.randomUUID();
+        when(shipperExistencePort.findNameById(shipperId)).thenReturn(java.util.Optional.of("山田太郎"));
+
+        mockMvc.perform(post("/bookings/lookup-shipper")
+                        .param("shipperId", shipperId.toString())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/fragments/shipper-name"))
+                .andExpect(model().attribute("shipperName", "山田太郎"));
+    }
+
+    @Test
+    @DisplayName("荷主が見つからない場合はフラグメントに「見つかりません」をセットする")
+    void lookupShipperNotFound() throws Exception {
+        UUID shipperId = UUID.randomUUID();
+        when(shipperExistencePort.findNameById(shipperId)).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(post("/bookings/lookup-shipper")
+                        .param("shipperId", shipperId.toString())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/fragments/shipper-name"))
+                .andExpect(model().attribute("shipperName", "（荷主が見つかりません）"));
+    }
+
+    @Test
+    @DisplayName("無効な UUID の場合はフラグメントにエラーメッセージをセットする")
+    void lookupShipperInvalidId() throws Exception {
+        mockMvc.perform(post("/bookings/lookup-shipper")
+                        .param("shipperId", "invalid-uuid")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/fragments/shipper-name"))
+                .andExpect(model().attribute("shipperName", "（無効な荷主 ID です）"));
     }
 }

@@ -4,8 +4,6 @@ import com.example.cargotracker.shipper.application.internal.commandservices.Dup
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommandService;
 import com.example.cargotracker.shipper.domain.model.commands.RegisterShipperCommand;
 import com.example.cargotracker.shipper.domain.model.valueobjects.CustomerCategory;
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import com.example.cargotracker.shipper.interfaces.rest.dto.ShipperRegisterForm;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -20,13 +18,12 @@ import java.util.List;
 @RequestMapping("/shippers")
 public class ShipperController {
 
-    private final RegisterShipperCommandService registerShipperCommandService;
-    private final ShipperRepository shipperRepository;
+    private static final String VIEW_REGISTER = "shipper/register";
 
-    public ShipperController(RegisterShipperCommandService registerShipperCommandService,
-                              ShipperRepository shipperRepository) {
+    private final RegisterShipperCommandService registerShipperCommandService;
+
+    public ShipperController(RegisterShipperCommandService registerShipperCommandService) {
         this.registerShipperCommandService = registerShipperCommandService;
-        this.shipperRepository = shipperRepository;
     }
 
     @GetMapping
@@ -47,7 +44,7 @@ public class ShipperController {
                            RedirectAttributes redirectAttributes,
                            Model model) {
         if (bindingResult.hasErrors()) {
-            return "shipper/register";
+            return VIEW_REGISTER;
         }
 
         try {
@@ -59,14 +56,14 @@ public class ShipperController {
                     form.getContractNumber(),
                     form.getDiscountRate()
             );
-            ShipperId shipperId = registerShipperCommandService.execute(command);
+            var shipperId = registerShipperCommandService.execute(command);
             redirectAttributes.addFlashAttribute("successMessage",
                     "荷主を登録しました（ID: " + shipperId + "）");
             return "redirect:/shippers";
         } catch (DuplicateShipperException e) {
             model.addAttribute("errorMessage",
                     "同一メールアドレスの荷主が既に登録されています（ID: " + e.getExistingShipperId() + "）");
-            return "shipper/register";
+            return VIEW_REGISTER;
         }
     }
 }

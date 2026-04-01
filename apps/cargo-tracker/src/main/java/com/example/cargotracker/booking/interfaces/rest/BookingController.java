@@ -2,14 +2,13 @@ package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
+import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistencePort;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingNotFoundException;
 import com.example.cargotracker.booking.application.internal.queryservices.FindBookingQueryService;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingRegisterForm;
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -25,16 +24,20 @@ import java.util.UUID;
 @RequestMapping("/bookings")
 public class BookingController {
 
+    private static final String VIEW_REGISTER = "booking/register";
+    private static final String ATTR_CARGO_TYPES = "cargoTypes";
+    private static final String ATTR_SHIPPER_NAME = "shipperName";
+
     private final RegisterBookingCommandService registerBookingCommandService;
     private final FindBookingQueryService findBookingQueryService;
-    private final ShipperRepository shipperRepository;
+    private final ShipperExistencePort shipperExistencePort;
 
     public BookingController(RegisterBookingCommandService registerBookingCommandService,
                               FindBookingQueryService findBookingQueryService,
-                              ShipperRepository shipperRepository) {
+                              ShipperExistencePort shipperExistencePort) {
         this.registerBookingCommandService = registerBookingCommandService;
         this.findBookingQueryService = findBookingQueryService;
-        this.shipperRepository = shipperRepository;
+        this.shipperExistencePort = shipperExistencePort;
     }
 
     @GetMapping
@@ -46,8 +49,8 @@ public class BookingController {
     @GetMapping("/new")
     public String showRegisterForm(Model model) {
         model.addAttribute("form", new BookingRegisterForm());
-        model.addAttribute("cargoTypes", CargoType.values());
-        return "booking/register";
+        model.addAttribute(ATTR_CARGO_TYPES, CargoType.values());
+        return VIEW_REGISTER;
     }
 
     @PostMapping
@@ -56,8 +59,8 @@ public class BookingController {
                            RedirectAttributes redirectAttributes,
                            Model model) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("cargoTypes", CargoType.values());
-            return "booking/register";
+            model.addAttribute(ATTR_CARGO_TYPES, CargoType.values());
+            return VIEW_REGISTER;
         }
 
         try {
@@ -67,8 +70,8 @@ public class BookingController {
             return "redirect:/bookings/" + bookingId;
         } catch (ShipperNotFoundException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("cargoTypes", CargoType.values());
-            return "booking/register";
+            model.addAttribute(ATTR_CARGO_TYPES, CargoType.values());
+            return VIEW_REGISTER;
         }
     }
 
@@ -77,7 +80,7 @@ public class BookingController {
         BookingId bookingId;
         try {
             bookingId = new BookingId(UUID.fromString(id));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             throw new BookingNotFoundException(id);
         }
         Booking booking = findBookingQueryService.execute(bookingId);
@@ -95,13 +98,13 @@ public class BookingController {
     @PostMapping("/lookup-shipper")
     public String lookupShipper(@RequestParam("shipperId") String shipperId, Model model) {
         try {
-            ShipperId id = new ShipperId(UUID.fromString(shipperId));
-            shipperRepository.findById(id).ifPresentOrElse(
-                    shipper -> model.addAttribute("shipperName", shipper.getName().value()),
-                    () -> model.addAttribute("shipperName", "（荷主が見つかりません）")
+            UUID id = UUID.fromString(shipperId);
+            shipperExistencePort.findNameById(id).ifPresentOrElse(
+                    name -> model.addAttribute(ATTR_SHIPPER_NAME, name),
+                    () -> model.addAttribute(ATTR_SHIPPER_NAME, "（荷主が見つかりません）")
             );
-        } catch (Exception e) {
-            model.addAttribute("shipperName", "（無効な荷主 ID です）");
+        } catch (Exception _) {
+            model.addAttribute(ATTR_SHIPPER_NAME, "（無効な荷主 ID です）");
         }
         return "booking/fragments/shipper-name";
     }

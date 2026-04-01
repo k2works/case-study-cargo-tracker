@@ -6,6 +6,7 @@ import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -25,5 +26,11 @@ public class ShipperExistenceAdapter implements ShipperExistencePort {
     public void verifyExists(UUID shipperId) {
         shipperRepository.findById(new ShipperId(shipperId))
                 .orElseThrow(() -> new ShipperNotFoundException(shipperId.toString()));
+    }
+
+    @Override
+    public Optional<String> findNameById(UUID shipperId) {
+        return shipperRepository.findById(new ShipperId(shipperId))
+                .map(s -> s.getName().value());
     }
 }
