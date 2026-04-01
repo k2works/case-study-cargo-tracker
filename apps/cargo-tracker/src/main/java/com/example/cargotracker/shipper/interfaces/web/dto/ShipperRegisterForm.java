@@ -1,4 +1,4 @@
-package com.example.cargotracker.shipper.interfaces.rest.dto;
+package com.example.cargotracker.shipper.interfaces.web.dto;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;

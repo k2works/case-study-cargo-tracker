@@ -1,10 +1,11 @@
-package com.example.cargotracker.shipper.interfaces.rest;
+package com.example.cargotracker.shipper.interfaces.web;
 
 import com.example.cargotracker.shipper.application.internal.commandservices.DuplicateShipperException;
+import com.example.cargotracker.shipper.application.internal.queryservices.FindShipperQueryService;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommandService;
 import com.example.cargotracker.shipper.domain.model.commands.RegisterShipperCommand;
 import com.example.cargotracker.shipper.domain.model.valueobjects.CustomerCategory;
-import com.example.cargotracker.shipper.interfaces.rest.dto.ShipperRegisterForm;
+import com.example.cargotracker.shipper.interfaces.web.dto.ShipperRegisterForm;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,19 +15,22 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/shippers")
-public class ShipperController {
+public class ShipperWebController {
 
     private static final String VIEW_REGISTER = "shipper/register";
 
     private final RegisterShipperCommandService registerShipperCommandService;
+    private final FindShipperQueryService findShipperQueryService;
 
-    public ShipperController(RegisterShipperCommandService registerShipperCommandService) {
+    public ShipperWebController(RegisterShipperCommandService registerShipperCommandService,
+                                FindShipperQueryService findShipperQueryService) {
         this.registerShipperCommandService = registerShipperCommandService;
+        this.findShipperQueryService = findShipperQueryService;
     }
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("shippers", registerShipperCommandService.findAll());
+        model.addAttribute("shippers", findShipperQueryService.findAll());
         return "shipper/list";
     }
 
