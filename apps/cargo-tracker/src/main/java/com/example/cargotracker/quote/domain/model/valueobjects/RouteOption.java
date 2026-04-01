@@ -1,6 +1,7 @@
 package com.example.cargotracker.quote.domain.model.valueobjects;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -42,6 +43,28 @@ public final class RouteOption {
     public int transitDays() { return transitDays; }
     public BigDecimal estimatedPrice() { return estimatedPrice; }
     public String voyageNumber() { return voyageNumber; }
+
+    /**
+     * 基準日から所要日数後の到着予定日が希望着日以内かどうかを返す。
+     *
+     * @param baseDate            基準日（通常は見積作成日 = 今日）
+     * @param requestedArrivalDate 希望着日
+     * @return 間に合う場合 {@code true}
+     */
+    public boolean isOnTime(LocalDate baseDate, LocalDate requestedArrivalDate) {
+        LocalDate estimatedArrival = baseDate.plusDays(transitDays);
+        return !estimatedArrival.isAfter(requestedArrivalDate);
+    }
+
+    /**
+     * 今日を基準日として希望着日に間に合うかどうかを返す。
+     *
+     * @param requestedArrivalDate 希望着日
+     * @return 間に合う場合 {@code true}
+     */
+    public boolean isOnTime(LocalDate requestedArrivalDate) {
+        return isOnTime(LocalDate.now(), requestedArrivalDate);
+    }
 
     @Override
     public boolean equals(Object o) {

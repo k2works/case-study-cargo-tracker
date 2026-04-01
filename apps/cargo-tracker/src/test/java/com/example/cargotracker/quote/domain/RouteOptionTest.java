@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -121,5 +122,37 @@ class RouteOptionTest {
 
         assertThat(a).isEqualTo(b);
         assertThat(a.hashCode()).isEqualTo(b.hashCode());
+    }
+
+    // ── isOnTime ───────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("基準日 + 所要日数 が希望着日以内なら間に合う")
+    void isOnTime_間に合う() {
+        RouteOption option = new RouteOption(List.of(), 10, new BigDecimal("100000"), "V-001");
+        LocalDate baseDate = LocalDate.of(2025, 11, 1);
+        LocalDate requestedArrivalDate = LocalDate.of(2025, 11, 11); // 10 日後
+
+        assertThat(option.isOnTime(baseDate, requestedArrivalDate)).isTrue();
+    }
+
+    @Test
+    @DisplayName("基準日 + 所要日数 が希望着日と同日なら間に合う")
+    void isOnTime_ちょうど同日() {
+        RouteOption option = new RouteOption(List.of(), 10, new BigDecimal("100000"), "V-001");
+        LocalDate baseDate = LocalDate.of(2025, 11, 1);
+        LocalDate requestedArrivalDate = LocalDate.of(2025, 11, 11);
+
+        assertThat(option.isOnTime(baseDate, requestedArrivalDate)).isTrue();
+    }
+
+    @Test
+    @DisplayName("基準日 + 所要日数 が希望着日を超えるなら間に合わない")
+    void isOnTime_超過する() {
+        RouteOption option = new RouteOption(List.of(), 14, new BigDecimal("100000"), "V-001");
+        LocalDate baseDate = LocalDate.of(2025, 11, 1);
+        LocalDate requestedArrivalDate = LocalDate.of(2025, 11, 11); // 10 日後（14 日では超過）
+
+        assertThat(option.isOnTime(baseDate, requestedArrivalDate)).isFalse();
     }
 }

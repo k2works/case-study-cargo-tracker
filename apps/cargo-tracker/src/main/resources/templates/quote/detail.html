@@ -94,6 +94,14 @@
                 <dd class="col-sm-8">
                     <span class="fw-bold" th:text="${#numbers.formatDecimal(option.estimatedPrice(), 1, 'COMMA', 0, 'POINT') + ' 円'}"></span>
                 </dd>
+
+                <dt class="col-sm-4">希望着日との適合</dt>
+                <dd class="col-sm-8">
+                    <span th:if="${option.isOnTime(quote.condition.requestedArrivalDate())}"
+                          class="badge bg-success">✅ 間に合います</span>
+                    <span th:unless="${option.isOnTime(quote.condition.requestedArrivalDate())}"
+                          class="badge bg-warning text-dark">⚠️ 希望着日を超過します</span>
+                </dd>
             </dl>
         </div>
     </div>
