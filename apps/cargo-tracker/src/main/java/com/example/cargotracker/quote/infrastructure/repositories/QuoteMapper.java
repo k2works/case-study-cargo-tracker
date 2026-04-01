@@ -18,5 +18,7 @@ public interface QuoteMapper {
 
     List<QuoteRouteOptionRecord> findRouteOptionsByQuoteId(@Param("quoteId") UUID quoteId);
 
+    List<QuoteRouteOptionRecord> findRouteOptionsByQuoteIds(@Param("quoteIds") List<UUID> quoteIds);
+
     List<QuoteRecord> findAll();
 }

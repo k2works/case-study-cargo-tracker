@@ -7,24 +7,27 @@ import com.example.cargotracker.quote.domain.model.valueobjects.QuoteCondition;
 import com.example.cargotracker.quote.domain.model.valueobjects.QuoteNumber;
 import com.example.cargotracker.quote.domain.model.valueobjects.RouteOption;
 import com.example.cargotracker.quote.domain.repository.QuoteRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Repository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 public class QuoteRepositoryImpl implements QuoteRepository {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
     private final QuoteMapper quoteMapper;
+    private final ObjectMapper objectMapper;
 
-    public QuoteRepositoryImpl(QuoteMapper quoteMapper) {
+    public QuoteRepositoryImpl(QuoteMapper quoteMapper, ObjectMapper objectMapper) {
         this.quoteMapper = quoteMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -71,12 +74,17 @@ public class QuoteRepositoryImpl implements QuoteRepository {
 
     @Override
     public List<Quote> findAll() {
-        return quoteMapper.findAll().stream()
-                .map(quoteRow -> {
-                    List<QuoteRouteOptionRecord> optionRows =
-                            quoteMapper.findRouteOptionsByQuoteId(quoteRow.id());
-                    return toQuote(quoteRow, optionRows);
-                })
+        List<QuoteRecord> quoteRows = quoteMapper.findAll();
+        if (quoteRows.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> quoteIds = quoteRows.stream().map(QuoteRecord::id).toList();
+        Map<UUID, List<QuoteRouteOptionRecord>> optionsByQuoteId =
+                quoteMapper.findRouteOptionsByQuoteIds(quoteIds).stream()
+                        .collect(Collectors.groupingBy(QuoteRouteOptionRecord::quoteId));
+
+        return quoteRows.stream()
+                .map(quoteRow -> toQuote(quoteRow, optionsByQuoteId.getOrDefault(quoteRow.id(), List.of())))
                 .toList();
     }
 
@@ -103,16 +111,16 @@ public class QuoteRepositoryImpl implements QuoteRepository {
 
     private String serializeViaLocodes(List<String> viaLocodes) {
         try {
-            return OBJECT_MAPPER.writeValueAsString(viaLocodes);
-        } catch (JsonProcessingException e) {
+            return objectMapper.writeValueAsString(viaLocodes);
+        } catch (JacksonException e) {
             throw new IllegalStateException("viaLocodes のシリアライズに失敗しました", e);
         }
     }
 
     private List<String> deserializeViaLocodes(String json) {
         try {
-            return OBJECT_MAPPER.readValue(json, new TypeReference<List<String>>() {});
-        } catch (JsonProcessingException e) {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (JacksonException e) {
             throw new IllegalStateException("viaLocodes のデシリアライズに失敗しました", e);
         }
     }

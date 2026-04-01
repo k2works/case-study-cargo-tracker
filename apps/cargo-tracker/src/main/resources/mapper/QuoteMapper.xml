@@ -74,6 +74,17 @@
         ORDER BY sort_order ASC
     </select>
 
+    <select id="findRouteOptionsByQuoteIds" resultMap="routeOptionResultMap">
+        SELECT id, quote_id, voyage_number, via_locodes,
+               transit_days, estimated_price, sort_order
+        FROM quote_route_options
+        WHERE quote_id IN
+        <foreach collection="quoteIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY quote_id, sort_order ASC
+    </select>
+
     <select id="findAll" resultMap="quoteResultMap">
         SELECT id, quote_number,
                origin_locode, destination_locode,
