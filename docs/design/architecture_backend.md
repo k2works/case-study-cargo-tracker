@@ -430,41 +430,44 @@ public class TrackingEventListener {
 ## パッケージ構造
 
 ```
-apps/backend/src/main/java/com/example/cargotracker/
+apps/cargo-tracker/src/main/java/com/example/cargotracker/
 ├── booking/
 │   ├── domain/
-│   │   ├── model/             # 集約（Cargo）、エンティティ、値オブジェクト（BookingStatus 等）
-│   │   ├── event/             # CargoBookedEvent, CargoRoutedEvent
-│   │   └── repository/        # CargoRepository インターフェース（出力ポート）
+│   │   ├── model/             # Booking 集約、BookingId、CargoSpecification、BookingStatus 等
+│   │   ├── event/             # BookingRegisteredEvent, DomainEvent
+│   │   └── repository/        # BookingRepository（出力ポート）
 │   ├── application/
-│   │   ├── command/           # CargoBookingCommandService（ユースケース実装）
-│   │   └── query/             # CargoBookingQueryService（CQRS クエリ側）
+│   │   └── internal/
+│   │       ├── commandservices/   # RegisterBookingCommandService
+│   │       ├── queryservices/     # FindBookingQueryService
+│   │       └── outboundservices/  # ShipperExistencePort / ACL Adapter
 │   └── infrastructure/
-│       ├── persistence/       # MyBatisCargoRepository（リポジトリ実装）
-│       │   └── mapper/        # CargoMapper.java, CargoMapper.xml
-│       ├── web/               # BookingRestController, BookingController（入力アダプター）
-│       └── event/             # BookingEventListener（@EventListener）
-├── routing/
+│       ├── repositories/      # BookingRepositoryImpl, BookingMapper, BookingRecord
+│       ├── brokers/           # BookingEventHandler
+│       └── config/            # DefaultProfileBookingSeedConfiguration
+├── shipper/
 │   ├── domain/
+│   │   ├── model/             # Shipper 集約、ShipperName、ContactInfo 等
+│   │   ├── event/             # ShipperRegisteredEvent
+│   │   └── repository/        # ShipperRepository（出力ポート）
 │   ├── application/
+│   │   └── internal/
+│   │       ├── commandservices/   # RegisterShipperCommandService
+│   │       └── queryservices/     # FindShipperQueryService
 │   └── infrastructure/
-├── tracking/
-│   ├── domain/
-│   ├── application/
-│   └── infrastructure/
-├── handling/
-│   ├── domain/
-│   │   └── model/             # CargoSnapshot（ACL）を含む
-│   ├── application/
-│   └── infrastructure/
-├── billing/
-│   ├── domain/
-│   │   └── model/             # Money 値オブジェクト
-│   ├── application/
-│   └── infrastructure/
+│       ├── repositories/      # ShipperRepositoryImpl, ShipperMapper, ShipperRecord
+│       └── config/            # DefaultProfileShipperSeedConfiguration
+├── routing/                   # package-info のみ（将来実装予定）
+├── tracking/                  # package-info のみ（将来実装予定）
+├── handling/                  # package-info のみ（将来実装予定）
+├── billing/                   # package-info のみ（将来実装予定）
 └── shared/
-    └── domain/
-        └── model/             # Location（UN/LOCODE）共有カーネル
+    ├── domain/
+    │   └── model/             # 共有 ID 型（ShipperId など）
+    └── infrastructure/
+        ├── config/            # SecurityConfig, OpenApiConfig
+        ├── web/               # HomeController
+        └── UUIDTypeHandler    # MyBatis TypeHandler
 ```
 
 ## API 設計方針
