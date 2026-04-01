@@ -44,6 +44,13 @@ npm install
 npm start
 ```
 
+### API ドキュメント
+
+`apps/cargo-tracker` を起動すると、以下の URL で OpenAPI ドキュメントを参照できます。
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
 ### 構築
 
 ```bash

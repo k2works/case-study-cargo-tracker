@@ -57,6 +57,21 @@ class SecurityConfigTest {
             mockMvc.perform(get("/webjars/bootstrap/css/bootstrap.min.css"))
                     .andExpect(status().isOk());
         }
+
+        @Test
+        @DisplayName("Swagger UI は認証なしでアクセスできる")
+        void swaggerUiIsPublic() throws Exception {
+            mockMvc.perform(get("/swagger-ui/index.html"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("OpenAPI JSON は認証なしでアクセスできる")
+        void openApiDocsArePublic() throws Exception {
+            mockMvc.perform(get("/v3/api-docs"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith("application/json"));
+        }
     }
 
     @Nested
