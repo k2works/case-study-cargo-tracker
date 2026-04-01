@@ -1,21 +1,20 @@
 package com.example.cargotracker.booking.infrastructure.web;
 
 import com.example.cargotracker.booking.application.BookingNotFoundException;
-import com.example.cargotracker.booking.application.FindBookingUseCase;
-import com.example.cargotracker.booking.application.RegisterBookingUseCase;
+import com.example.cargotracker.booking.application.query.FindBookingUseCase;
+import com.example.cargotracker.booking.application.command.RegisterBookingUseCase;
 import com.example.cargotracker.booking.application.ShipperNotFoundException;
-import com.example.cargotracker.booking.domain.Booking;
-import com.example.cargotracker.booking.domain.BookingId;
-import com.example.cargotracker.booking.domain.CargoType;
-import com.example.cargotracker.shipper.domain.ShipperId;
-import com.example.cargotracker.shipper.domain.ShipperRepository;
+import com.example.cargotracker.booking.domain.model.Booking;
+import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.model.CargoType;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;

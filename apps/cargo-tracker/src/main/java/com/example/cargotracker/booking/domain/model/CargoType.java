@@ -1,4 +1,4 @@
-package com.example.cargotracker.booking.domain;
+package com.example.cargotracker.booking.domain.model;
 
 public enum CargoType {
     GENERAL_CARGO("一般貨物"),

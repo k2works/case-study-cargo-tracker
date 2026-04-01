@@ -1,7 +1,17 @@
 package com.example.cargotracker.booking.application;
 
-import com.example.cargotracker.booking.domain.*;
-import com.example.cargotracker.shipper.domain.*;
+import com.example.cargotracker.booking.application.command.RegisterBookingCommand;
+import com.example.cargotracker.booking.application.command.RegisterBookingUseCase;
+import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
+import com.example.cargotracker.booking.domain.model.Booking;
+import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.model.CargoType;
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
+import com.example.cargotracker.shipper.domain.model.ContactInfo;
+import com.example.cargotracker.shipper.domain.model.Shipper;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shipper.domain.model.ShipperName;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

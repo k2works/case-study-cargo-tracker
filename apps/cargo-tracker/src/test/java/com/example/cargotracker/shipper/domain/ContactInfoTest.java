@@ -1,5 +1,6 @@
 package com.example.cargotracker.shipper.domain;
 
+import com.example.cargotracker.shipper.domain.model.ContactInfo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

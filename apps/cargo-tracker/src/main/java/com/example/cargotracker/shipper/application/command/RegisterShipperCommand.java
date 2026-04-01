@@ -1,6 +1,6 @@
-package com.example.cargotracker.shipper.application;
+package com.example.cargotracker.shipper.application.command;
 
-import com.example.cargotracker.shipper.domain.CustomerCategory;
+import com.example.cargotracker.shipper.domain.model.CustomerCategory;
 
 import java.math.BigDecimal;
 

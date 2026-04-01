@@ -1,7 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.web;
 
-import com.example.cargotracker.booking.application.RegisterBookingCommand;
-import com.example.cargotracker.booking.domain.CargoType;
+import com.example.cargotracker.booking.application.command.RegisterBookingCommand;
+import com.example.cargotracker.booking.domain.model.CargoType;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;

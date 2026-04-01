@@ -1,4 +1,4 @@
-package com.example.cargotracker.booking.domain;
+package com.example.cargotracker.booking.domain.model;
 
 import java.util.Objects;
 import java.util.UUID;

@@ -1,11 +1,12 @@
-package com.example.cargotracker.booking.domain;
+package com.example.cargotracker.booking.domain.model;
 
-import com.example.cargotracker.shipper.domain.ShipperId;
+import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
+import com.example.cargotracker.booking.domain.event.DomainEvent;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 予約集約ルート。

@@ -1,4 +1,7 @@
-package com.example.cargotracker.booking.domain;
+package com.example.cargotracker.booking.domain.repository;
+
+import com.example.cargotracker.booking.domain.model.Booking;
+import com.example.cargotracker.booking.domain.model.BookingId;
 
 import java.util.Optional;
 

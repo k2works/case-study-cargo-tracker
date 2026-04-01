@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.event;
 
-import com.example.cargotracker.booking.domain.BookingRegisteredEvent;
+import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

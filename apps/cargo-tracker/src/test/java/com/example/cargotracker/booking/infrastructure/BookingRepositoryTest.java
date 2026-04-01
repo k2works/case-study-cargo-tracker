@@ -1,7 +1,8 @@
 package com.example.cargotracker.booking.infrastructure;
 
-import com.example.cargotracker.booking.domain.*;
-import com.example.cargotracker.shipper.domain.*;
+import com.example.cargotracker.booking.domain.model.*;
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
 import com.example.cargotracker.shipper.infrastructure.persistence.ShipperMapper;
 import com.example.cargotracker.shipper.infrastructure.persistence.ShipperRecord;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;

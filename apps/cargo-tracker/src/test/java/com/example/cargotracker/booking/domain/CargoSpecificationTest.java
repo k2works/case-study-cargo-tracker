@@ -1,5 +1,7 @@
 package com.example.cargotracker.booking.domain;
 
+import com.example.cargotracker.booking.domain.model.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.CargoType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

@@ -1,7 +1,11 @@
 package com.example.cargotracker.shipper.infrastructure.web;
 
 import com.example.cargotracker.shipper.application.*;
-import com.example.cargotracker.shipper.domain.*;
+import com.example.cargotracker.shipper.application.command.RegisterShipperCommand;
+import com.example.cargotracker.shipper.application.command.RegisterShipperUseCase;
+import com.example.cargotracker.shipper.domain.model.CustomerCategory;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

@@ -1,5 +1,7 @@
 package com.example.cargotracker.shipper.domain;
 
+import com.example.cargotracker.shipper.domain.event.ShipperRegisteredEvent;
+import com.example.cargotracker.shipper.domain.model.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

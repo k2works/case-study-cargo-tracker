@@ -1,12 +1,12 @@
 package com.example.cargotracker.booking.infrastructure.web;
 
 import com.example.cargotracker.booking.application.BookingNotFoundException;
-import com.example.cargotracker.booking.application.FindBookingUseCase;
-import com.example.cargotracker.booking.application.RegisterBookingUseCase;
+import com.example.cargotracker.booking.application.query.FindBookingUseCase;
+import com.example.cargotracker.booking.application.command.RegisterBookingUseCase;
 import com.example.cargotracker.booking.application.ShipperNotFoundException;
-import com.example.cargotracker.booking.domain.*;
-import com.example.cargotracker.shipper.domain.ShipperId;
-import com.example.cargotracker.shipper.domain.ShipperRepository;
+import com.example.cargotracker.booking.domain.model.*;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

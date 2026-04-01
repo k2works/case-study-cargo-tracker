@@ -1,6 +1,6 @@
 package com.example.cargotracker.shipper.application;
 
-import com.example.cargotracker.shipper.domain.ShipperId;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
 
 public class DuplicateShipperException extends RuntimeException {
 

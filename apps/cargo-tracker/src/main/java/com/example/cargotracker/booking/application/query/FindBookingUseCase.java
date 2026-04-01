@@ -1,8 +1,9 @@
-package com.example.cargotracker.booking.application;
+package com.example.cargotracker.booking.application.query;
 
-import com.example.cargotracker.booking.domain.Booking;
-import com.example.cargotracker.booking.domain.BookingId;
-import com.example.cargotracker.booking.domain.BookingRepository;
+import com.example.cargotracker.booking.application.BookingNotFoundException;
+import com.example.cargotracker.booking.domain.model.Booking;
+import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

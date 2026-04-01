@@ -1,8 +1,13 @@
-package com.example.cargotracker.booking.application;
+package com.example.cargotracker.booking.application.command;
 
-import com.example.cargotracker.booking.domain.*;
-import com.example.cargotracker.shipper.domain.ShipperId;
-import com.example.cargotracker.shipper.domain.ShipperRepository;
+import com.example.cargotracker.booking.application.ShipperNotFoundException;
+import com.example.cargotracker.booking.domain.model.Booking;
+import com.example.cargotracker.booking.domain.model.BookingId;
+import com.example.cargotracker.booking.domain.model.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.TransportCondition;
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

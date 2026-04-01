@@ -1,6 +1,6 @@
-package com.example.cargotracker.booking.application;
+package com.example.cargotracker.booking.application.command;
 
-import com.example.cargotracker.booking.domain.CargoType;
+import com.example.cargotracker.booking.domain.model.CargoType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

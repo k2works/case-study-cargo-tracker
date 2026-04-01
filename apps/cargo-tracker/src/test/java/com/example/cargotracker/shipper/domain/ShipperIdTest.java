@@ -1,7 +1,7 @@
 package com.example.cargotracker.shipper.domain;
 
+import com.example.cargotracker.shipper.domain.model.ShipperId;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;

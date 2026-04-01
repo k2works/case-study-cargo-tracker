@@ -1,4 +1,6 @@
-package com.example.cargotracker.shipper.domain;
+package com.example.cargotracker.shipper.domain.model;
+
+import com.example.cargotracker.shipper.domain.event.ShipperRegisteredEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;

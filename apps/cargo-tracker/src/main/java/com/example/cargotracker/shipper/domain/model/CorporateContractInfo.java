@@ -1,4 +1,4 @@
-package com.example.cargotracker.shipper.domain;
+package com.example.cargotracker.shipper.domain.model;
 
 import java.math.BigDecimal;
 import java.util.Objects;

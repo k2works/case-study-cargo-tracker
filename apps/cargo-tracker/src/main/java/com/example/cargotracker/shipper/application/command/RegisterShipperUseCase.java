@@ -1,6 +1,8 @@
-package com.example.cargotracker.shipper.application;
+package com.example.cargotracker.shipper.application.command;
 
-import com.example.cargotracker.shipper.domain.*;
+import com.example.cargotracker.shipper.application.DuplicateShipperException;
+import com.example.cargotracker.shipper.domain.model.*;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

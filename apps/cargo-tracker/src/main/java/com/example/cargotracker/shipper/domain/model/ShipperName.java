@@ -1,4 +1,4 @@
-package com.example.cargotracker.shipper.domain;
+package com.example.cargotracker.shipper.domain.model;
 
 import java.util.Objects;
 

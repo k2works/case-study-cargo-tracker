@@ -1,7 +1,8 @@
 package com.example.cargotracker.booking.infrastructure.persistence;
 
-import com.example.cargotracker.booking.domain.*;
-import com.example.cargotracker.shipper.domain.ShipperId;
+import com.example.cargotracker.booking.domain.model.*;
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
+import com.example.cargotracker.shipper.domain.model.ShipperId;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;

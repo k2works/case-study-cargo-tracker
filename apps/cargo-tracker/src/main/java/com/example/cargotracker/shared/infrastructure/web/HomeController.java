@@ -1,4 +1,4 @@
-package com.example.cargotracker.presentation;
+package com.example.cargotracker.shared.infrastructure.web;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;

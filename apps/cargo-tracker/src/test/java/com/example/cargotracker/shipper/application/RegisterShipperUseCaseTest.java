@@ -1,6 +1,9 @@
 package com.example.cargotracker.shipper.application;
 
-import com.example.cargotracker.shipper.domain.*;
+import com.example.cargotracker.shipper.application.command.RegisterShipperCommand;
+import com.example.cargotracker.shipper.application.command.RegisterShipperUseCase;
+import com.example.cargotracker.shipper.domain.model.*;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

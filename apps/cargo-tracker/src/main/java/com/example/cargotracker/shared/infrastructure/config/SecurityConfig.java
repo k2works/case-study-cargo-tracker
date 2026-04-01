@@ -1,4 +1,4 @@
-package com.example.cargotracker.config;
+package com.example.cargotracker.shared.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
