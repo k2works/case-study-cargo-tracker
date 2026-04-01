@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>見積詳細 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">Cargo Tracker</a>
+        <div class="navbar-nav me-auto">
+            <a class="nav-link text-white" th:href="@{/bookings}">予約</a>
+            <a class="nav-link text-white" th:href="@{/quotes}">見積</a>
+        </div>
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text text-white me-3" sec:authentication="name"></span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>見積詳細</h4>
+        <a th:href="@{/quotes}" class="btn btn-outline-secondary">一覧に戻る</a>
+    </div>
+
+    <div th:if="${createdQuoteNumber}" class="alert alert-success">
+        見積を登録しました（見積番号: <span th:text="${createdQuoteNumber}"></span>）
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">見積番号: <code th:text="${quote.quoteNumber.value()}"></code></h5>
+        </div>
+        <div class="card-body">
+            <h6 class="text-muted mb-3">見積条件</h6>
+            <dl class="row">
+                <dt class="col-sm-4">出発地 (UN/LOCODE)</dt>
+                <dd class="col-sm-8" th:text="${quote.condition.originLocode()}"></dd>
+
+                <dt class="col-sm-4">目的地 (UN/LOCODE)</dt>
+                <dd class="col-sm-8" th:text="${quote.condition.destinationLocode()}"></dd>
+
+                <dt class="col-sm-4">希望着日</dt>
+                <dd class="col-sm-8" th:text="${quote.condition.requestedArrivalDate()}"></dd>
+
+                <dt class="col-sm-4">貨物種別</dt>
+                <dd class="col-sm-8" th:text="${quote.condition.cargoType().displayName}"></dd>
+
+                <dt class="col-sm-4">重量 (kg)</dt>
+                <dd class="col-sm-8" th:text="${quote.condition.weightKg()}"></dd>
+            </dl>
+        </div>
+    </div>
+
+    <h5 class="mb-3">ルート候補</h5>
+    <div th:each="option, stat : ${quote.routeOptions}" class="card shadow-sm mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">ルート <span th:text="${stat.count}"></span></span>
+            <span class="badge bg-primary" th:text="${option.voyageNumber()}"></span>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">経由港</dt>
+                <dd class="col-sm-8">
+                    <span th:if="${#lists.isEmpty(option.viaLocodes())}" class="text-muted">（直行）</span>
+                    <span th:unless="${#lists.isEmpty(option.viaLocodes())}"
+                          th:text="${#strings.listJoin(option.viaLocodes(), ' → ')}"></span>
+                </dd>
+
+                <dt class="col-sm-4">所要日数</dt>
+                <dd class="col-sm-8" th:text="${option.transitDays() + ' 日'}"></dd>
+
+                <dt class="col-sm-4">概算料金</dt>
+                <dd class="col-sm-8">
+                    <span class="fw-bold" th:text="${#numbers.formatDecimal(option.estimatedPrice(), 1, 'COMMA', 0, 'POINT') + ' 円'}"></span>
+                </dd>
+            </dl>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

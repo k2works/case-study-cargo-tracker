@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.quote.infrastructure.repositories.QuoteMapper">
+
+    <resultMap id="quoteResultMap"
+               type="com.example.cargotracker.quote.infrastructure.repositories.QuoteRecord">
+        <constructor>
+            <idArg column="id"                       javaType="java.util.UUID"/>
+            <arg   column="quote_number"             javaType="java.lang.String"/>
+            <arg   column="origin_locode"            javaType="java.lang.String"/>
+            <arg   column="destination_locode"       javaType="java.lang.String"/>
+            <arg   column="requested_arrival_date"   javaType="java.time.LocalDate"/>
+            <arg   column="cargo_type"               javaType="java.lang.String"/>
+            <arg   column="weight_kg"                javaType="java.math.BigDecimal"/>
+            <arg   column="created_at"               javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="routeOptionResultMap"
+               type="com.example.cargotracker.quote.infrastructure.repositories.QuoteRouteOptionRecord">
+        <constructor>
+            <idArg column="id"              javaType="java.lang.Long"/>
+            <arg   column="quote_id"        javaType="java.util.UUID"/>
+            <arg   column="voyage_number"   javaType="java.lang.String"/>
+            <arg   column="via_locodes"     javaType="java.lang.String"/>
+            <arg   column="transit_days"    javaType="java.lang.Integer"/>
+            <arg   column="estimated_price" javaType="java.math.BigDecimal"/>
+            <arg   column="sort_order"      javaType="java.lang.Integer"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insertQuote">
+        INSERT INTO quotes (
+            id, quote_number,
+            origin_locode, destination_locode,
+            requested_arrival_date,
+            cargo_type, weight_kg,
+            created_at
+        ) VALUES (
+            #{row.id}, #{row.quoteNumber},
+            #{row.originLocode}, #{row.destinationLocode},
+            #{row.requestedArrivalDate},
+            #{row.cargoType}, #{row.weightKg},
+            #{row.createdAt}
+        )
+    </insert>
+
+    <insert id="insertRouteOption">
+        INSERT INTO quote_route_options (
+            quote_id, voyage_number, via_locodes,
+            transit_days, estimated_price, sort_order
+        ) VALUES (
+            #{row.quoteId}, #{row.voyageNumber}, #{row.viaLocodes},
+            #{row.transitDays}, #{row.estimatedPrice}, #{row.sortOrder}
+        )
+    </insert>
+
+    <select id="findById" resultMap="quoteResultMap">
+        SELECT id, quote_number,
+               origin_locode, destination_locode,
+               requested_arrival_date,
+               cargo_type, weight_kg,
+               created_at
+        FROM quotes
+        WHERE id = #{id}
+    </select>
+
+    <select id="findRouteOptionsByQuoteId" resultMap="routeOptionResultMap">
+        SELECT id, quote_id, voyage_number, via_locodes,
+               transit_days, estimated_price, sort_order
+        FROM quote_route_options
+        WHERE quote_id = #{quoteId}
+        ORDER BY sort_order ASC
+    </select>
+
+    <select id="findAll" resultMap="quoteResultMap">
+        SELECT id, quote_number,
+               origin_locode, destination_locode,
+               requested_arrival_date,
+               cargo_type, weight_kg,
+               created_at
+        FROM quotes
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+</mapper>

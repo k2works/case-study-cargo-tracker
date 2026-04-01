@@ -1,0 +1,84 @@
+package com.example.cargotracker.quote.infrastructure.adapters;
+
+import com.example.cargotracker.quote.application.internal.outboundservices.QuoteRouteProviderPort;
+import com.example.cargotracker.quote.domain.model.valueobjects.QuoteCondition;
+import com.example.cargotracker.quote.domain.model.valueobjects.RouteOption;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * HTTP 経由でルート候補を取得するアダプター。
+ * product プロファイルで有効になる。テスト時は WireMock でスタブ化できる。
+ */
+@Component
+@Profile("product")
+public class WireMockQuoteRouteProviderAdapter implements QuoteRouteProviderPort {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(WireMockQuoteRouteProviderAdapter.class);
+
+    private final RestTemplate restTemplate;
+    private final String routeProviderUrl;
+
+    public WireMockQuoteRouteProviderAdapter(
+            @Value("${app.route-provider.url}") String routeProviderUrl) {
+        this.restTemplate = new RestTemplate();
+        this.routeProviderUrl = routeProviderUrl;
+    }
+
+    @Override
+    public List<RouteOption> findRouteOptions(QuoteCondition condition) {
+        String url = UriComponentsBuilder
+                .fromUriString(routeProviderUrl + "/route-options")
+                .queryParam("origin", condition.originLocode())
+                .queryParam("destination", condition.destinationLocode())
+                .toUriString();
+
+        try {
+            ResponseEntity<List<RouteOptionDto>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+
+            if (response.getBody() == null) {
+                return Collections.emptyList();
+            }
+
+            return response.getBody().stream()
+                    .map(dto -> new RouteOption(
+                            dto.viaLocodes(),
+                            dto.transitDays(),
+                            dto.estimatedPrice(),
+                            dto.voyageNumber()
+                    ))
+                    .toList();
+
+        } catch (Exception e) {
+            log.warn("ルートプロバイダーへの接続に失敗しました: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    record RouteOptionDto(
+            List<String> viaLocodes,
+            int transitDays,
+            BigDecimal estimatedPrice,
+            String voyageNumber
+    ) {
+    }
+}

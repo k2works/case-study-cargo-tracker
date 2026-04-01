@@ -8,10 +8,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
-import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
@@ -26,7 +27,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain apiFilterChain(HttpSecurity http) {
         http
                 .securityMatcher("/api/**")
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
@@ -40,15 +41,15 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
-    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain webFilterChain(HttpSecurity http) {
         RequestMatcher h2ConsoleMatcher = new OrRequestMatcher(
-                RegexRequestMatcher.regexMatcher("^/h2-console/?$"),
+                PathPatternRequestMatcher.pathPattern("/h2-console"),
                 PathRequest.toH2Console()
         );
 
         http
                 .csrf(csrf -> csrf.ignoringRequestMatchers(h2ConsoleMatcher))
-                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
+                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(h2ConsoleMatcher).permitAll();
                     auth.requestMatchers(

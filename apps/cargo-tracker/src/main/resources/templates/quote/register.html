@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>見積登録 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">Cargo Tracker</a>
+        <div class="navbar-nav me-auto">
+            <a class="nav-link text-white" th:href="@{/bookings}">予約</a>
+            <a class="nav-link text-white" th:href="@{/quotes}">見積</a>
+        </div>
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text text-white me-3" sec:authentication="name"></span>
+            <form th:action="@{/logout}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="card-title mb-0">見積登録</h4>
+                </div>
+                <div class="card-body">
+                    <!-- エラーメッセージ -->
+                    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+                    <form th:action="@{/quotes}" method="post" th:object="${form}">
+
+                        <h6 class="text-muted mb-3">輸送条件</h6>
+
+                        <div class="mb-3 row">
+                            <label for="originLocode" class="col-sm-3 col-form-label">出発地 (UN/LOCODE) <span class="text-danger">*</span></label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" id="originLocode" name="originLocode"
+                                       th:value="*{originLocode}"
+                                       th:classappend="${#fields.hasErrors('originLocode')} ? 'is-invalid'"
+                                       placeholder="例: JPTYO" maxlength="10" required>
+                                <div th:if="${#fields.hasErrors('originLocode')}" class="invalid-feedback"
+                                     th:errors="*{originLocode}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="destinationLocode" class="col-sm-3 col-form-label">目的地 (UN/LOCODE) <span class="text-danger">*</span></label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" id="destinationLocode" name="destinationLocode"
+                                       th:value="*{destinationLocode}"
+                                       th:classappend="${#fields.hasErrors('destinationLocode')} ? 'is-invalid'"
+                                       placeholder="例: USNYC" maxlength="10" required>
+                                <div th:if="${#fields.hasErrors('destinationLocode')}" class="invalid-feedback"
+                                     th:errors="*{destinationLocode}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="requestedArrivalDate" class="col-sm-3 col-form-label">希望着日 <span class="text-danger">*</span></label>
+                            <div class="col-sm-4">
+                                <input type="date" class="form-control" id="requestedArrivalDate"
+                                       name="requestedArrivalDate"
+                                       th:value="*{requestedArrivalDate}"
+                                       th:classappend="${#fields.hasErrors('requestedArrivalDate')} ? 'is-invalid'"
+                                       required>
+                                <div th:if="${#fields.hasErrors('requestedArrivalDate')}" class="invalid-feedback"
+                                     th:errors="*{requestedArrivalDate}"></div>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6 class="text-muted mb-3">貨物情報</h6>
+
+                        <div class="mb-3 row">
+                            <label for="cargoType" class="col-sm-3 col-form-label">貨物種別 <span class="text-danger">*</span></label>
+                            <div class="col-sm-4">
+                                <select class="form-select" id="cargoType" name="cargoType"
+                                        th:classappend="${#fields.hasErrors('cargoType')} ? 'is-invalid'">
+                                    <option value="">-- 選択してください --</option>
+                                    <option th:each="type : ${cargoTypes}"
+                                            th:value="${type}"
+                                            th:text="${type.displayName}"
+                                            th:selected="${form.cargoType == type}"></option>
+                                </select>
+                                <div th:if="${#fields.hasErrors('cargoType')}" class="invalid-feedback"
+                                     th:errors="*{cargoType}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="weightKg" class="col-sm-3 col-form-label">重量 (kg) <span class="text-danger">*</span></label>
+                            <div class="col-sm-4">
+                                <input type="number" class="form-control" id="weightKg" name="weightKg"
+                                       th:value="*{weightKg}"
+                                       th:classappend="${#fields.hasErrors('weightKg')} ? 'is-invalid'"
+                                       min="0.01" step="0.01" placeholder="例: 1000.0">
+                                <div th:if="${#fields.hasErrors('weightKg')}" class="invalid-feedback"
+                                     th:errors="*{weightKg}"></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a th:href="@{/quotes}" class="btn btn-outline-secondary">キャンセル</a>
+                            <button type="submit" class="btn btn-primary">見積登録</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

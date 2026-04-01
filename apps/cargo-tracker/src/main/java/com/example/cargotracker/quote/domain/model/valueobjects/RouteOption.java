@@ -1,0 +1,60 @@
+package com.example.cargotracker.quote.domain.model.valueobjects;
+
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * ルート候補を表す値オブジェクト。
+ */
+public final class RouteOption {
+
+    private final List<String> viaLocodes;
+    private final int transitDays;
+    private final BigDecimal estimatedPrice;
+    private final String voyageNumber;
+
+    public RouteOption(List<String> viaLocodes, int transitDays,
+                       BigDecimal estimatedPrice, String voyageNumber) {
+        if (viaLocodes == null) {
+            throw new IllegalArgumentException("経由港リストは null にできません");
+        }
+        if (transitDays <= 0) {
+            throw new IllegalArgumentException("所要日数は 0 より大きくなければなりません");
+        }
+        if (estimatedPrice == null) {
+            throw new IllegalArgumentException("概算料金は null にできません");
+        }
+        if (estimatedPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("概算料金は 0 より大きくなければなりません");
+        }
+        if (voyageNumber == null || voyageNumber.isBlank()) {
+            throw new IllegalArgumentException("航海番号は null または空にできません");
+        }
+        this.viaLocodes = Collections.unmodifiableList(viaLocodes);
+        this.transitDays = transitDays;
+        this.estimatedPrice = estimatedPrice;
+        this.voyageNumber = voyageNumber;
+    }
+
+    public List<String> viaLocodes() { return viaLocodes; }
+    public int transitDays() { return transitDays; }
+    public BigDecimal estimatedPrice() { return estimatedPrice; }
+    public String voyageNumber() { return voyageNumber; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof RouteOption that)) return false;
+        return transitDays == that.transitDays
+                && Objects.equals(viaLocodes, that.viaLocodes)
+                && estimatedPrice.compareTo(that.estimatedPrice) == 0
+                && Objects.equals(voyageNumber, that.voyageNumber);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(viaLocodes, transitDays, estimatedPrice.stripTrailingZeros(), voyageNumber);
+    }
+}

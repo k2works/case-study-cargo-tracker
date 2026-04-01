@@ -35,7 +35,10 @@ springdoc:
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.example.cargotracker
+  type-aliases-package: >
+    com.example.cargotracker.booking.infrastructure.repositories,
+    com.example.cargotracker.shipper.infrastructure.repositories,
+    com.example.cargotracker.quote.infrastructure.repositories
   type-handlers-package: com.example.cargotracker.shared.infrastructure
   configuration:
     map-underscore-to-camel-case: true
@@ -45,3 +48,5 @@ app:
     enabled: true
   seed:
     enabled: true
+  route-provider:
+    url: http://localhost:8089

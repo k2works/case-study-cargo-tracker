@@ -49,6 +49,11 @@ dependencies {
     testImplementation 'com.github.docker-java:docker-java-transport-zerodep:3.7.0'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation('org.wiremock:wiremock-standalone:3.5.4') {
+        exclude group: 'com.fasterxml.jackson.core'
+        exclude group: 'com.fasterxml.jackson.datatype'
+        exclude group: 'com.fasterxml.jackson.dataformat'
+    }
 }
 
 dependencyManagement {
@@ -102,8 +107,12 @@ tasks.named('test') {
     systemProperty 'DOCKER_HOST', 'npipe:////./pipe/docker_engine_linux'
     systemProperty 'DOCKER_API_VERSION', '1.43'
     systemProperty 'api.version', '1.43'
+    // Java 25 で Byte Buddy が ClassFileVersion を解決できない問題への対応
+    jvmArgs '-Dnet.bytebuddy.experimental=true'
 }
 
 tasks.named('sonar') {
     dependsOn test
 }
+
+
