@@ -423,19 +423,19 @@ docs: IT1 計画を更新する
 
 ```bash
 # 手動でセットアップする場合
-npx husky init
+npm run prepare
 ```
 
 #### pre-commit フック
 
-Java ソースファイルに変更がある場合、以下のチェックが自動実行されます。
+staged な Java ソースファイルがある場合、以下のチェックが自動実行されます。
 
 | ツール | 目的 |
 |--------|------|
 | Checkstyle | コーディング規約の検証 |
 | SpotBugs | バグパターン検出 |
 
-いずれかのチェックが失敗すると、コミットがブロックされます。
+実装上は `.husky/pre-commit` から `lint-staged` を起動し、`apps/cargo-tracker/src/**/*.java` が staged に含まれると `node ops/scripts/pre_commit_gradle_check.mjs` が `apps/cargo-tracker` で `./gradlew check` を実行します。いずれかのチェックが失敗すると、コミットがブロックされます。
 
 #### フックをスキップする場合
 
@@ -593,4 +593,4 @@ cd apps/cargo-tracker
 - [技術スタック選定](../design/tech_stack.md)
 - [バックエンドアーキテクチャ設計](../design/architecture_backend.md)
 - [IT1 計画（US02・US03・US04）](../development/iteration_plan-1.md)
-- [開発環境セットアップ手順書](./開発環境セットアップ手順書.md)
+- [開発環境セットアップ手順書](./dev_infa_instruction.md)
