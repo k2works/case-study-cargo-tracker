@@ -165,6 +165,7 @@ gantt
     dateFormat  YYYY-MM-DD
     section Phase 1
     IT1 基盤・荷主・予約 (完了 100%)   :done, it1a, 2026-03-31, 14d
+    IT1 後改善（E2E・REST 分離・Swagger・seed） :done, it1b, 2026-04-01, 1d
     section Phase 2
 ```
 
@@ -192,7 +193,7 @@ gantt
 - [ ] E2E テスト（主要ハッピーパス）がパス
 - [ ] US01〜US15 の受入基準をすべて満たす
 - [ ] セキュリティレビュー完了（OWASP Top 10 基本対策）
-- [ ] `mvn spring-boot:run` でローカル起動確認
+- [ ] `./gradlew bootRun` でローカル起動確認
 
 #### v1.0.0（Phase 2 完了）: 一般提供リリース
 
@@ -403,9 +404,9 @@ xychart-beta
 
 ## 次のステップ
 
-1. **IT1 計画作成**: `iteration_plan-1.md` を作成して開発を開始する
-2. **GitHub Project 同期**: Issue・Milestone・Label を作成する
-3. **環境構築**: Spring Boot プロジェクト初期化・Docker 構成・GitHub Actions CI
+1. **IT2 計画具体化**: US01 / US06 の詳細タスクと受入基準を確定する
+2. **GitHub Project 同期**: IT2 対象 Issue・Milestone・Label を最新計画に同期する
+3. **品質維持**: backend 108 テスト Green、E2E 9 件 Green を維持したまま IT2 に着手する
 
 ---
 
@@ -416,3 +417,4 @@ xychart-beta
 | 2026-03-31 | 初版作成（Phase 1・2、6 イテレーション計画） | Copilot |
 | 2026-03-31 | IT1 進捗更新（5/10 SP 完了・US02・US03 実装済み） | Copilot |
 | 2026-03-31 | IT1 完了（10/10 SP・US02・US03・US04 全実装済み・72 テスト Green） | Copilot |
+| 2026-04-01 | IT1 完了後の改善を反映（108 テスト Green、E2E 9 件 Green、Swagger UI、default seed data、Web・REST 分離） | Copilot |

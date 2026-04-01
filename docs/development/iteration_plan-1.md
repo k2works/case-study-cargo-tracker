@@ -782,6 +782,7 @@ CREATE TABLE bookings (
 | 2026-03-31 | テンプレート構成に合わせて再構成（UI 設計セクションを設計内に移動・データモデル追加） | Copilot |
 | 2026-03-31 | 進捗状況を更新（US02・US03 完了・基盤構築完了、US04 未着手、進捗率 50%） | Copilot |
 | 2026-03-31 | IT1 完了（US04 実装済み、全タスク完了、進捗率 100%、72 テスト Green） | Copilot |
+| 2026-04-01 | IT1 完了後の品質改善を反映（108 テスト Green、E2E 9 件 Green、Swagger UI、default seed data、荷主 / 予約の Web・REST 分離） | Copilot |
 
 ---
 
