@@ -21,7 +21,7 @@
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 16 件のテンプレートを配置 |
@@ -74,6 +74,7 @@
 | [ADR-003](./adr/003-discount-policy-as-entity.md) | DiscountPolicy をエンティティとして設計し、Phase 2 以降に昇格保留 |
 | [ADR-004](./adr/004-shipper-self-service-out-of-scope.md) | 荷主セルフサービス機能を Phase 1 スコープ外とする |
 | [ADR-005](./adr/005-windows-docker-desktop-testcontainers.md) | Windows Docker Desktop では Testcontainers を `docker_engine_linux` に接続する |
+| [ADR-006](./adr/006-enable-h2-console-on-spring-boot-4.md) | Spring Boot 4 の開発環境では H2 Console 専用モジュールと security 例外を明示設定する |
 
 ### 運用ドキュメント
 
