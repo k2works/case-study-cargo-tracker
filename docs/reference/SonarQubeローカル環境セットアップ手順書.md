@@ -296,6 +296,26 @@ SONAR_TOKEN=<YOUR_TOKEN>
 ```
 
 > **重要**: トークンは一度しか表示されません。紛失した場合は再発行が必要です。
+> **重要**: ターミナルログや CI ログにトークンが出力された場合は、そのトークンを失効し、新しいトークンを再発行してください。
+
+#### 6.2.1 トークンの動作確認
+
+スキャン前に、生成したトークンが SonarQube に受理されるかを API で確認できます。
+
+```bash
+# 認証確認
+curl -u <YOUR_TOKEN>: http://localhost:9000/api/authentication/validate
+
+# プロジェクト参照確認
+curl -u <YOUR_TOKEN>: "http://localhost:9000/api/projects/search?projects=<YOUR_PROJECT_KEY>"
+```
+
+期待結果:
+
+- `/api/authentication/validate` が `{ "valid": true }` を返す
+- `/api/projects/search` で対象の `projectKey` が参照できる
+
+> **補足**: `401 Unauthorized` の場合は、トークン未設定・無効・失効・空白混入のいずれかを疑ってください。
 
 #### 6.3 日本語プラグインのインストール（任意）
 
@@ -316,6 +336,26 @@ SONAR_TOKEN=<YOUR_TOKEN>
 
    - 付与方法 A: 管理者でログイン > Administration > Security > Users で対象ユーザーに `Execute Analysis` を付与
    - 付与方法 B: プロジェクト画面 > Project Settings > Permissions で `Execute Analysis` を付与
+
+#### プロジェクト固有の設定例: case-study-cargo-tracker
+
+このリポジトリでは `sonarqube.config.json` で次の設定を使用します。
+
+```json
+{
+  "projects": [
+    {
+      "name": "cargo-tracker",
+      "label": "Cargo Tracker",
+      "projectKey": "cargo-tracker",
+      "scanType": "gradle",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}
+```
+
+SonarQube 側でも `projectKey=cargo-tracker` のプロジェクトを作成し、スキャンに使うユーザーまたは token に `Execute Analysis` を付与してください。
 
 ### スキャンツール別の設定
 
@@ -406,6 +446,34 @@ gradle sonar \
   -Dsonar.host.url=http://localhost:9000 \
   -Dsonar.token=<YOUR_TOKEN>
 ```
+
+JaCoCo を使っている場合は、XML レポートを SonarQube に渡します。
+
+```groovy
+plugins {
+  id "jacoco"
+  id "org.sonarqube" version "6.3.1.5724"
+}
+
+jacocoTestReport {
+  reports {
+    xml.required = true
+  }
+}
+
+sonar {
+  properties {
+    property "sonar.coverage.jacoco.xmlReportPaths",
+      layout.buildDirectory.file("reports/jacoco/test/jacocoTestReport.xml").get().asFile.absolutePath
+  }
+}
+
+tasks.named("sonar") {
+  dependsOn test
+}
+```
+
+> **補足**: ローカルに Gradle が入っていない場合は `gradle` ではなく `./gradlew` または `gradlew.bat` を使用してください。
 
 ---
 
@@ -586,6 +654,41 @@ ports:
 ```
 
 > **ヒント**: ポートを変更した場合は `.env` の `SONAR_HOST_URL` も合わせて変更してください。
+
+### スキャン時に 401 Unauthorized が発生する
+
+例:
+
+```text
+Failed to query server version: GET http://localhost:9000/api/v2/analysis/version failed with HTTP 401
+```
+
+主な原因:
+
+- `SONAR_TOKEN` が未設定、または無効
+- token 文字列の前後に空白や改行が混入している
+- SonarQube 上の対象プロジェクトが未作成
+- token に紐づくユーザーへ `Execute Analysis` 権限が付与されていない
+
+確認手順:
+
+```bash
+# token 自体の妥当性
+curl -u <YOUR_TOKEN>: http://localhost:9000/api/authentication/validate
+
+# 対象プロジェクトへの参照可否
+curl -u <YOUR_TOKEN>: "http://localhost:9000/api/projects/search?projects=<YOUR_PROJECT_KEY>"
+```
+
+対処:
+
+1. SonarQube で新しい token を再発行する
+2. `projectKey` が `sonarqube.config.json` と一致しているか確認する
+3. 対象ユーザーに `Execute Analysis` または `Global Execute Analysis` を付与する
+4. `.env` の `SONAR_TOKEN` を更新して再実行する
+5. ログに token を出してしまった場合は、旧 token を失効する
+
+> **補足**: 認証は通っても、対象プロジェクトの権限不足だと分析 API 呼び出しで失敗します。
 
 ### コンテナが起動しない
 
