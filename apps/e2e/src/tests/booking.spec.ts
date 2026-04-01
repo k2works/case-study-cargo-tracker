@@ -36,7 +36,7 @@ test.describe('E04: 貨物予約登録', () => {
     await expect(page.locator('h4')).toContainText('予約登録');
     await expect(page.locator('select[name="shipperId"]')).toBeVisible();
     await expect(page.locator('select[name="shipperId"] option')).toContainText([
-      '予約テスト荷主',
+      `予約テスト荷主 / booking-test-`,
     ]);
 
     // 予約を登録する
@@ -50,6 +50,7 @@ test.describe('E04: 貨物予約登録', () => {
 
     // 登録成功メッセージが表示される
     await expect(page.locator('.alert-success')).toContainText('予約を登録しました');
+    await expect(page.locator('dd').filter({ hasText: '予約テスト荷主' })).toBeVisible();
 
     const bookingId = await bookingPage.extractBookingId();
 
@@ -58,7 +59,7 @@ test.describe('E04: 貨物予約登録', () => {
     await expect(page).toHaveURL('/bookings');
     await bookingPage.expectBookingListed({
       bookingId,
-      shipperId,
+      shipperName: '予約テスト荷主',
       cargoType: 'GENERAL_CARGO',
       originLocation: 'JPTYO',
       destinationLocation: 'USNYC',

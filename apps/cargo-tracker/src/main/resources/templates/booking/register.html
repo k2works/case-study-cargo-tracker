@@ -44,11 +44,12 @@
                                     <option value="">-- 荷主を選択してください --</option>
                                     <option th:each="shipper : ${shippers}"
                                             th:value="${shipper.id}"
-                                            th:text="${shipper.name}"
+                                            th:text="${shipper.name + ' / ' + shipper.email}"
                                             th:selected="${form.shipperId == shipper.id.toString()}"></option>
                                 </select>
                                 <div th:if="${#fields.hasErrors('shipperId')}" class="invalid-feedback"
-                                      th:errors="*{shipperId}"></div>
+                                       th:errors="*{shipperId}"></div>
+                                <div class="form-text">同名の荷主がある場合はメールアドレスで見分けてください。</div>
                             </div>
                         </div>
 

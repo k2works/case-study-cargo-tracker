@@ -34,7 +34,7 @@
                 <thead class="table-light">
                 <tr>
                     <th>予約番号</th>
-                    <th>荷主 ID</th>
+                    <th>荷主</th>
                     <th>貨物種別</th>
                     <th>出発地</th>
                     <th>目的地</th>
@@ -50,7 +50,10 @@
                     <td>
                         <a th:href="@{/bookings/{id}(id=${booking.id})}" th:text="${booking.id}"></a>
                     </td>
-                    <td><code th:text="${booking.shipperId}"></code></td>
+                    <td>
+                        <div class="fw-semibold" th:text="${shipperNames[booking.id.toString()]}"></div>
+                        <div class="small text-muted">ID: <code th:text="${booking.shipperId}"></code></div>
+                    </td>
                     <td th:text="${booking.cargoSpecification.cargoType}"></td>
                     <td th:text="${booking.transportCondition.originLocation}"></td>
                     <td th:text="${booking.transportCondition.destinationLocation}"></td>

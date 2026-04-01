@@ -26,6 +26,8 @@ test.describe('E02: 個人荷主登録', () => {
     // 登録成功メッセージが表示される
     await expect(page.locator('.alert-success')).toContainText('荷主を登録しました');
 
+    const shipperId = await shipperPage.extractShipperId();
+
     // 登録した個人荷主が一覧に表示される
     await shipperPage.expectShipperListed({
       name,
@@ -33,6 +35,11 @@ test.describe('E02: 個人荷主登録', () => {
       phone,
       categoryLabel: '個人',
     });
+
+    await expect(page.getByRole('link', { name: 'この荷主で予約登録' })).toHaveAttribute(
+      'href',
+      `/bookings/new?shipperId=${shipperId}`,
+    );
   });
 });
 

@@ -17,6 +17,10 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Controller
@@ -42,13 +46,20 @@ public class BookingWebController {
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("bookings", findBookingQueryService.findAll());
+        var bookings = findBookingQueryService.findAll();
+        model.addAttribute("bookings", bookings);
+        model.addAttribute("shipperNames", resolveShipperNames(bookings));
         return "booking/list";
     }
 
     @GetMapping("/new")
-    public String showRegisterForm(Model model) {
-        model.addAttribute("form", new BookingRegisterForm());
+    public String showRegisterForm(@RequestParam(value = "shipperId", required = false) String shipperId,
+                                   Model model) {
+        BookingRegisterForm form = new BookingRegisterForm();
+        if (shipperId != null && isValidUuid(shipperId)) {
+            form.setShipperId(shipperId);
+        }
+        model.addAttribute("form", form);
         populateRegisterFormOptions(model);
         return VIEW_REGISTER;
     }
@@ -90,7 +101,30 @@ public class BookingWebController {
         }
         Booking booking = findBookingQueryService.execute(bookingId);
         model.addAttribute("booking", booking);
+        model.addAttribute("shipperName", resolveShipperName(booking.getShipperId().value()));
         return "booking/detail";
+    }
+
+    private Map<String, String> resolveShipperNames(List<Booking> bookings) {
+        Map<String, String> shipperNames = new LinkedHashMap<>();
+        for (Booking booking : bookings) {
+            shipperNames.put(booking.getId().toString(), resolveShipperName(booking.getShipperId().value()));
+        }
+        return shipperNames;
+    }
+
+    private String resolveShipperName(UUID shipperId) {
+        return shipperExistencePort.findNameById(shipperId)
+                .orElse("（不明な荷主）");
+    }
+
+    private boolean isValidUuid(String rawValue) {
+        try {
+            UUID.fromString(rawValue);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     @ExceptionHandler(BookingNotFoundException.class)

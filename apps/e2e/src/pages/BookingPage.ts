@@ -65,7 +65,7 @@ export class BookingPage {
   /** 予約一覧に登録内容が表示されることを確認する */
   async expectBookingListed(params: {
     bookingId: string;
-    shipperId: string;
+    shipperName: string;
     cargoType: string;
     originLocation: string;
     destinationLocation: string;
@@ -76,7 +76,7 @@ export class BookingPage {
 
     await expect(row).toHaveCount(1);
     await expect(row.locator('td').nth(0)).toContainText(params.bookingId);
-    await expect(row.locator('td').nth(1)).toHaveText(params.shipperId);
+    await expect(row.locator('td').nth(1)).toContainText(params.shipperName);
     await expect(row.locator('td').nth(2)).toHaveText(params.cargoType);
     await expect(row.locator('td').nth(3)).toHaveText(params.originLocation);
     await expect(row.locator('td').nth(4)).toHaveText(params.destinationLocation);

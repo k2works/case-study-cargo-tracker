@@ -61,6 +61,8 @@ public class ShipperWebController {
             var shipperId = registerShipperCommandService.execute(command);
             redirectAttributes.addFlashAttribute("successMessage",
                     "荷主を登録しました（ID: " + shipperId + "）");
+            redirectAttributes.addFlashAttribute("createdShipperId", shipperId.toString());
+            redirectAttributes.addFlashAttribute("createdShipperName", form.getName());
             return "redirect:/shippers";
         } catch (DuplicateShipperException e) {
             model.addAttribute("errorMessage",

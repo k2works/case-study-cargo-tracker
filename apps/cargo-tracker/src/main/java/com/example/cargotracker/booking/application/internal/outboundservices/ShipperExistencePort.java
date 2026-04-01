@@ -10,7 +10,7 @@ import java.util.List;
  */
 public interface ShipperExistencePort {
 
-    record ShipperOption(UUID id, String name) {}
+    record ShipperOption(UUID id, String name, String email) {}
 
     /**
      * 指定した荷主 ID が存在することを確認する。

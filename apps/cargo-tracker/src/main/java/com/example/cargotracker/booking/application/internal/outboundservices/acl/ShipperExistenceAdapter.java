@@ -40,7 +40,8 @@ public class ShipperExistenceAdapter implements ShipperExistencePort {
         return shipperRepository.findAll().stream()
                 .map(shipper -> new ShipperExistencePort.ShipperOption(
                         shipper.getId().value(),
-                        shipper.getName().value()
+                        shipper.getName().value(),
+                        shipper.getContactInfo().email()
                 ))
                 .toList();
     }

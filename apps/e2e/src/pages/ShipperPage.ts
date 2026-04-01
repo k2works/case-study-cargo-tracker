@@ -32,10 +32,10 @@ export class ShipperPage {
     const row = this.shipperRow(params.email);
 
     await expect(row).toHaveCount(1);
-    await expect(row.locator('td').nth(1)).toHaveText(params.name);
-    await expect(row.locator('td').nth(2)).toContainText(params.categoryLabel);
-    await expect(row.locator('td').nth(3)).toHaveText(params.email);
-    await expect(row.locator('td').nth(4)).toHaveText(params.phone ?? '-');
+    await expect(row.locator('td').nth(0)).toContainText(params.name);
+    await expect(row.locator('td').nth(1)).toContainText(params.categoryLabel);
+    await expect(row.locator('td').nth(2)).toHaveText(params.email);
+    await expect(row.locator('td').nth(3)).toHaveText(params.phone ?? '-');
   }
 
   /**

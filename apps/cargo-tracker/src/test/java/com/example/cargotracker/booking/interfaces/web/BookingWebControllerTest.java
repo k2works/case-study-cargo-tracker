@@ -24,6 +24,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -52,19 +56,23 @@ class BookingWebControllerTest {
     @Test
     @DisplayName("予約一覧を表示できる")
     void showList() throws Exception {
-        when(findBookingQueryService.findAll()).thenReturn(List.of());
+        Booking booking = anyBooking();
+        when(findBookingQueryService.findAll()).thenReturn(List.of(booking));
+        when(shipperExistencePort.findNameById(booking.getShipperId().value()))
+                .thenReturn(java.util.Optional.of("山田 太郎"));
 
         mockMvc.perform(get("/bookings"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("booking/list"))
-                .andExpect(model().attributeExists("bookings"));
+                .andExpect(model().attributeExists("bookings"))
+                .andExpect(model().attribute("shipperNames", hasEntry(booking.getId().toString(), "山田 太郎")));
     }
 
     @Test
     @DisplayName("予約登録フォームを表示できる")
     void showRegisterForm() throws Exception {
         when(shipperExistencePort.findAll()).thenReturn(List.of(
-                new ShipperExistencePort.ShipperOption(UUID.randomUUID(), "山田 太郎")
+                new ShipperExistencePort.ShipperOption(UUID.randomUUID(), "山田 太郎", "yamada@example.com")
         ));
 
         mockMvc.perform(get("/bookings/new"))
@@ -73,6 +81,20 @@ class BookingWebControllerTest {
                 .andExpect(model().attributeExists("form"))
                 .andExpect(model().attributeExists("cargoTypes"))
                 .andExpect(model().attributeExists("shippers"));
+    }
+
+    @Test
+    @DisplayName("予約登録フォームで荷主を事前選択できる")
+    void showRegisterFormWithPreselectedShipper() throws Exception {
+        UUID shipperId = UUID.randomUUID();
+        when(shipperExistencePort.findAll()).thenReturn(List.of(
+                new ShipperExistencePort.ShipperOption(shipperId, "山田 太郎", "yamada@example.com")
+        ));
+
+        mockMvc.perform(get("/bookings/new").param("shipperId", shipperId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/register"))
+                .andExpect(model().attribute("form", hasProperty("shipperId", is(shipperId.toString()))));
     }
 
     // ── POST /bookings ─────────────────────────────────────────────────────
@@ -140,19 +162,17 @@ class BookingWebControllerTest {
     @Test
     @DisplayName("予約詳細を表示できる")
     void showDetail() throws Exception {
-        BookingId bookingId = BookingId.generate();
-        ShipperId shipperId = ShipperId.generate();
-        Booking booking = Booking.register(
-                bookingId, shipperId,
-                new CargoSpecification(CargoType.GENERAL_CARGO, new BigDecimal("100"), null, null, null, 1, null),
-                new TransportCondition("JPTYO", "USNYC", LocalDate.of(2025, 8, 1), LocalDate.of(2025, 9, 1))
-        );
+        Booking booking = anyBooking();
+        BookingId bookingId = booking.getId();
         when(findBookingQueryService.execute(bookingId)).thenReturn(booking);
+        when(shipperExistencePort.findNameById(booking.getShipperId().value()))
+                .thenReturn(java.util.Optional.of("山田 太郎"));
 
         mockMvc.perform(get("/bookings/" + bookingId))
                 .andExpect(status().isOk())
                 .andExpect(view().name("booking/detail"))
-                .andExpect(model().attributeExists("booking"));
+                .andExpect(model().attributeExists("booking"))
+                .andExpect(model().attribute("shipperName", "山田 太郎"));
     }
 
     @Test
@@ -205,5 +225,14 @@ class BookingWebControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("booking/fragments/shipper-name"))
                 .andExpect(model().attribute("shipperName", "（無効な荷主 ID です）"));
+    }
+
+    private Booking anyBooking() {
+        return Booking.register(
+                BookingId.generate(),
+                ShipperId.generate(),
+                new CargoSpecification(CargoType.GENERAL_CARGO, new BigDecimal("100"), null, null, null, 1, null),
+                new TransportCondition("JPTYO", "USNYC", LocalDate.of(2025, 8, 1), LocalDate.of(2025, 9, 1))
+        );
     }
 }
