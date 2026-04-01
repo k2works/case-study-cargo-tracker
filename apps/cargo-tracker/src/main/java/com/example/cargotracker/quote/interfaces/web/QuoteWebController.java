@@ -19,9 +19,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -49,8 +52,19 @@ public class QuoteWebController {
     }
 
     @GetMapping("/new")
-    public String showRegisterForm(Model model) {
-        model.addAttribute("form", new QuoteRegisterForm());
+    public String showRegisterForm(@RequestParam(value = "originLocode", required = false) String originLocode,
+                                   @RequestParam(value = "destinationLocode", required = false) String destinationLocode,
+                                   @RequestParam(value = "requestedArrivalDate", required = false) LocalDate requestedArrivalDate,
+                                   @RequestParam(value = "cargoType", required = false) CargoType cargoType,
+                                   @RequestParam(value = "weightKg", required = false) BigDecimal weightKg,
+                                   Model model) {
+        QuoteRegisterForm form = new QuoteRegisterForm();
+        form.setOriginLocode(originLocode);
+        form.setDestinationLocode(destinationLocode);
+        form.setRequestedArrivalDate(requestedArrivalDate);
+        form.setCargoType(cargoType);
+        form.setWeightKg(weightKg);
+        model.addAttribute("form", form);
         model.addAttribute("cargoTypes", CargoType.values());
         return VIEW_REGISTER;
     }

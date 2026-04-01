@@ -93,4 +93,31 @@ test.describe('E04: 貨物予約登録', () => {
     const bookingIdText = await bookingIdCode.innerText();
     expect(uuidPattern.test(bookingIdText)).toBeTruthy();
   });
+
+  test('予約詳細から見積登録へ遷移すると条件が初期入力される', async ({ page }) => {
+    const bookingPage = new BookingPage(page);
+
+    await bookingPage.register({
+      shipperId,
+      cargoType: 'REFRIGERATED',
+      weightKg: '200',
+      quantity: '1',
+      originLocation: 'JPOSA',
+      destinationLocation: 'DEHAM',
+      requestedPickupDate: '2025-10-01',
+      requestedDeliveryDate: '2025-11-01',
+    });
+
+    const quoteLink = page.getByRole('link', { name: 'この条件で見積を作成' });
+    await expect(quoteLink).toBeVisible();
+    await quoteLink.click();
+
+    await expect(page).toHaveURL(/\/quotes\/new/);
+    await expect(page.locator('h4')).toContainText('見積登録');
+    await expect(page.locator('input[name="originLocode"]')).toHaveValue('JPOSA');
+    await expect(page.locator('input[name="destinationLocode"]')).toHaveValue('DEHAM');
+    await expect(page.locator('input[name="requestedArrivalDate"]')).toHaveValue('2025-11-01');
+    await expect(page.locator('select[name="cargoType"]')).toHaveValue('REFRIGERATED');
+    await expect(page.locator('input[name="weightKg"]')).toHaveValue(/200(?:\.0+)?/);
+  });
 });
