@@ -1,4 +1,4 @@
-package com.example.cargotracker.booking.interfaces.rest;
+package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
@@ -30,10 +30,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(BookingController.class)
+@WebMvcTest(BookingWebController.class)
 @WithMockUser
-@DisplayName("BookingController")
-class BookingControllerTest {
+@DisplayName("BookingWebController")
+class BookingWebControllerTest {
 
     @Autowired
     private MockMvc mockMvc;

@@ -1,4 +1,4 @@
-package com.example.cargotracker.booking.interfaces.rest.dto;
+package com.example.cargotracker.booking.interfaces.web.dto;
 
 import com.example.cargotracker.booking.domain.model.commands.RegisterBookingCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;

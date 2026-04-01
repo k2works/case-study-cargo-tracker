@@ -1,4 +1,4 @@
-package com.example.cargotracker.booking.interfaces.rest;
+package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
@@ -8,7 +8,7 @@ import com.example.cargotracker.booking.application.internal.queryservices.FindB
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
-import com.example.cargotracker.booking.interfaces.rest.dto.BookingRegisterForm;
+import com.example.cargotracker.booking.interfaces.web.dto.BookingRegisterForm;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -21,7 +21,7 @@ import java.util.UUID;
 
 @Controller
 @RequestMapping("/bookings")
-public class BookingController {
+public class BookingWebController {
 
     private static final String VIEW_REGISTER = "booking/register";
     private static final String ATTR_CARGO_TYPES = "cargoTypes";
@@ -32,9 +32,9 @@ public class BookingController {
     private final FindBookingQueryService findBookingQueryService;
     private final ShipperExistencePort shipperExistencePort;
 
-    public BookingController(RegisterBookingCommandService registerBookingCommandService,
-                              FindBookingQueryService findBookingQueryService,
-                              ShipperExistencePort shipperExistencePort) {
+    public BookingWebController(RegisterBookingCommandService registerBookingCommandService,
+                                FindBookingQueryService findBookingQueryService,
+                                ShipperExistencePort shipperExistencePort) {
         this.registerBookingCommandService = registerBookingCommandService;
         this.findBookingQueryService = findBookingQueryService;
         this.shipperExistencePort = shipperExistencePort;
