@@ -4,6 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "gulp dev",
+    "deploy:dev": "gulp deploy:dev",
+    "deploy:dev:setup": "gulp deploy:dev:setup",
+    "deploy:dev:logs": "gulp deploy:dev:logs",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
