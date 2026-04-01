@@ -44,6 +44,7 @@ dependencies {
     testImplementation 'com.github.docker-java:docker-java-api:3.7.0'
     testImplementation 'com.github.docker-java:docker-java-transport:3.7.0'
     testImplementation 'com.github.docker-java:docker-java-transport-zerodep:3.7.0'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

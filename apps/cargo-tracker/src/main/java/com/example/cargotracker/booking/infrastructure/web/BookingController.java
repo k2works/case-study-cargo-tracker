@@ -7,7 +7,7 @@ import com.example.cargotracker.booking.application.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.Booking;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.CargoType;
-import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

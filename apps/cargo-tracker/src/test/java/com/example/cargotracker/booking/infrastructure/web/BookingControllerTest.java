@@ -5,7 +5,7 @@ import com.example.cargotracker.booking.application.query.FindBookingUseCase;
 import com.example.cargotracker.booking.application.command.RegisterBookingUseCase;
 import com.example.cargotracker.booking.application.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.*;
-import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

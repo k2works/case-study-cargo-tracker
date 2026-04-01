@@ -1,8 +1,12 @@
-package com.example.cargotracker.shipper.domain.model;
+package com.example.cargotracker.shared.domain.model;
 
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * 荷主識別子。
+ * Shared Kernel として booking / shipper の両コンテキストから参照される。
+ */
 public final class ShipperId {
 
     private final UUID value;

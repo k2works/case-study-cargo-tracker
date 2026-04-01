@@ -1,13 +1,12 @@
 package com.example.cargotracker.booking.application.command;
 
-import com.example.cargotracker.booking.application.ShipperNotFoundException;
+import com.example.cargotracker.booking.application.ShipperExistencePort;
 import com.example.cargotracker.booking.domain.model.Booking;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.TransportCondition;
 import com.example.cargotracker.booking.domain.repository.BookingRepository;
-import com.example.cargotracker.shipper.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,24 +18,22 @@ import java.util.UUID;
 public class RegisterBookingUseCase {
 
     private final BookingRepository bookingRepository;
-    private final ShipperRepository shipperRepository;
+    private final ShipperExistencePort shipperExistencePort;
     private final ApplicationEventPublisher eventPublisher;
 
     public RegisterBookingUseCase(BookingRepository bookingRepository,
-                                  ShipperRepository shipperRepository,
+                                  ShipperExistencePort shipperExistencePort,
                                   ApplicationEventPublisher eventPublisher) {
         this.bookingRepository = bookingRepository;
-        this.shipperRepository = shipperRepository;
+        this.shipperExistencePort = shipperExistencePort;
         this.eventPublisher = eventPublisher;
     }
 
     public BookingId execute(RegisterBookingCommand command) {
         UUID rawShipperId = command.shipperId();
-        ShipperId shipperId = new ShipperId(rawShipperId);
 
-        // 荷主の存在確認
-        shipperRepository.findById(shipperId)
-                .orElseThrow(() -> new ShipperNotFoundException(rawShipperId.toString()));
+        // 荷主の存在確認（ACL ポート経由）
+        shipperExistencePort.verifyExists(rawShipperId);
 
         // 貨物仕様・輸送条件の生成
         CargoSpecification cargoSpecification = new CargoSpecification(
@@ -57,6 +54,7 @@ public class RegisterBookingUseCase {
 
         // 予約集約の生成
         BookingId bookingId = BookingId.generate();
+        ShipperId shipperId = new ShipperId(rawShipperId);
         Booking booking = Booking.register(bookingId, shipperId, cargoSpecification, transportCondition);
 
         // 永続化
@@ -68,3 +66,4 @@ public class RegisterBookingUseCase {
         return bookingId;
     }
 }
+

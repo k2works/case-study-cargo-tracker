@@ -1,5 +1,6 @@
 package com.example.cargotracker.shipper.infrastructure.persistence;
 
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.*;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.springframework.stereotype.Repository;

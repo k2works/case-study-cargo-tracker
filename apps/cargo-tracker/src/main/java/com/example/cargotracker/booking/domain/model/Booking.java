@@ -2,7 +2,7 @@ package com.example.cargotracker.booking.domain.model;
 
 import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
 import com.example.cargotracker.booking.domain.event.DomainEvent;
-import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 
 import java.util.ArrayList;
 import java.util.Collections;

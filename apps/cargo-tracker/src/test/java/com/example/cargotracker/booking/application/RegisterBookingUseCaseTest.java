@@ -7,11 +7,7 @@ import com.example.cargotracker.booking.domain.model.Booking;
 import com.example.cargotracker.booking.domain.model.BookingId;
 import com.example.cargotracker.booking.domain.model.CargoType;
 import com.example.cargotracker.booking.domain.repository.BookingRepository;
-import com.example.cargotracker.shipper.domain.model.ContactInfo;
-import com.example.cargotracker.shipper.domain.model.Shipper;
-import com.example.cargotracker.shipper.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.ShipperName;
-import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +19,6 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -38,7 +33,7 @@ class RegisterBookingUseCaseTest {
     private BookingRepository bookingRepository;
 
     @Mock
-    private ShipperRepository shipperRepository;
+    private ShipperExistencePort shipperExistencePort;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -47,7 +42,7 @@ class RegisterBookingUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new RegisterBookingUseCase(bookingRepository, shipperRepository, eventPublisher);
+        useCase = new RegisterBookingUseCase(bookingRepository, shipperExistencePort, eventPublisher);
     }
 
     private RegisterBookingCommand validCommand(UUID shipperId) {
@@ -63,17 +58,11 @@ class RegisterBookingUseCaseTest {
         );
     }
 
-    private Shipper anyShipper(ShipperId id) {
-        return Shipper.registerIndividual(id,
-                new ShipperName("テスト荷主"),
-                new ContactInfo("test@example.com", null));
-    }
-
     @Test
     @DisplayName("予約を登録すると BookingId が返される")
     void registerBookingReturnsId() {
         ShipperId shipperId = ShipperId.generate();
-        when(shipperRepository.findById(shipperId)).thenReturn(Optional.of(anyShipper(shipperId)));
+        doNothing().when(shipperExistencePort).verifyExists(shipperId.value());
 
         BookingId result = useCase.execute(validCommand(shipperId.value()));
 
@@ -85,7 +74,8 @@ class RegisterBookingUseCaseTest {
     @DisplayName("荷主が存在しない場合は ShipperNotFoundException を投げる")
     void throwWhenShipperNotFound() {
         UUID unknownId = UUID.randomUUID();
-        when(shipperRepository.findById(new ShipperId(unknownId))).thenReturn(Optional.empty());
+        doThrow(new ShipperNotFoundException(unknownId.toString()))
+                .when(shipperExistencePort).verifyExists(unknownId);
 
         assertThatThrownBy(() -> useCase.execute(validCommand(unknownId)))
                 .isInstanceOf(ShipperNotFoundException.class);
@@ -96,7 +86,7 @@ class RegisterBookingUseCaseTest {
     @DisplayName("登録後に BookingRegisteredEvent が発行される")
     void publishEventAfterRegistration() {
         ShipperId shipperId = ShipperId.generate();
-        when(shipperRepository.findById(shipperId)).thenReturn(Optional.of(anyShipper(shipperId)));
+        doNothing().when(shipperExistencePort).verifyExists(shipperId.value());
 
         useCase.execute(validCommand(shipperId.value()));
 
@@ -106,3 +96,4 @@ class RegisterBookingUseCaseTest {
                 .anyMatch(e -> e instanceof BookingRegisteredEvent);
     }
 }
+

@@ -1,7 +1,7 @@
 package com.example.cargotracker.shipper.domain.repository;
 
 import com.example.cargotracker.shipper.domain.model.Shipper;
-import com.example.cargotracker.shipper.domain.model.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 
 import java.util.Optional;
 
