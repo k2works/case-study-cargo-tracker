@@ -27,6 +27,12 @@ spring:
     livereload:
       enabled: true   # ブラウザライブリロード。本番 JAR には devtools が含まれないため実質無効
 
+springdoc:
+  api-docs:
+    enabled: ${app.openapi.enabled:false}
+  swagger-ui:
+    enabled: ${app.openapi.enabled:false}
+
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.example.cargotracker
@@ -35,5 +41,7 @@ mybatis:
     map-underscore-to-camel-case: true
 
 app:
+  openapi:
+    enabled: true
   seed:
     enabled: true

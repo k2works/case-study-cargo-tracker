@@ -4,7 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.web.client.RestClient;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,11 +16,11 @@ class ThymeleafConfigurationTest {
     private int port;
 
     @Autowired
-    private org.springframework.security.web.SecurityFilterChain filterChain;
+    private Map<String, org.springframework.security.web.SecurityFilterChain> filterChains;
 
     @Test
     void securityFilterChainConfigured() {
-        assertThat(filterChain).isNotNull();
+        assertThat(filterChains).isNotEmpty();
     }
 
     @Test

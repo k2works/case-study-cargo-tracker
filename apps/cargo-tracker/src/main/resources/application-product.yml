@@ -12,5 +12,7 @@ spring:
       enabled: false
 
 app:
+  openapi:
+    enabled: false
   seed:
     enabled: false

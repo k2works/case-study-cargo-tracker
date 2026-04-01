@@ -1,11 +1,13 @@
 package com.example.cargotracker.config;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
@@ -15,11 +17,16 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.logout;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "app.seed.enabled=true",
+        "spring.security.user.name=admin",
+        "spring.security.user.password=admin"
+})
 class SecurityConfigTest {
 
     @Autowired
@@ -50,7 +57,9 @@ class SecurityConfigTest {
         @DisplayName("ログイン画面は認証なしでアクセスできる")
         void loginPageIsPublic() throws Exception {
             mockMvc.perform(get("/login"))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(Matchers.containsString("この画面はデモ環境です。")))
+                    .andExpect(content().string(Matchers.containsString("シード済みの荷主・予約サンプルデータ")));
         }
 
         @Test
@@ -73,6 +82,13 @@ class SecurityConfigTest {
             mockMvc.perform(get("/v3/api-docs"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentTypeCompatibleWith("application/json"));
+        }
+
+        @Test
+        @DisplayName("未認証の API アクセスは 401 を返す")
+        void unauthenticatedApiAccessReturnsUnauthorized() throws Exception {
+            mockMvc.perform(get("/api/bookings"))
+                    .andExpect(status().isUnauthorized());
         }
     }
 
@@ -116,6 +132,16 @@ class SecurityConfigTest {
             mockMvc.perform(logout("/logout"))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/login?logout"));
+        }
+
+        @Test
+        @WithMockUser(username = "admin", roles = "USER")
+        @DisplayName("認証済みでも不正な API 書き込みは 403 を返す")
+        void forbiddenApiAccessReturnsForbidden() throws Exception {
+            mockMvc.perform(post("/api/bookings")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isForbidden());
         }
     }
 }

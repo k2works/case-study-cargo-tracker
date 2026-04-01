@@ -19,6 +19,9 @@ public class HomeController {
     @Value("${spring.security.user.password:}")
     private String devPassword;
 
+    @Value("${app.seed.enabled:false}")
+    private boolean seedDataEnabled;
+
     public HomeController(Environment env) {
         this.env = env;
     }
@@ -30,10 +33,13 @@ public class HomeController {
 
     @GetMapping("/login")
     public String login(Model model) {
-        boolean isDevProfile = !Arrays.asList(env.getActiveProfiles()).contains("product");
-        if (isDevProfile && !devUsername.isEmpty()) {
+        boolean showDemoNotice = seedDataEnabled
+                && !Arrays.asList(env.getActiveProfiles()).contains("product")
+                && !devUsername.isBlank();
+        if (showDemoNotice) {
             model.addAttribute("devUsername", devUsername);
             model.addAttribute("devPassword", devPassword);
+            model.addAttribute("showDemoNotice", true);
         }
         return "login";
     }

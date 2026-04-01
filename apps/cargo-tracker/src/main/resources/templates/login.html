@@ -13,6 +13,14 @@
             <div class="card shadow-sm">
                 <div class="card-body p-4">
                     <h4 class="card-title text-center mb-4">CargoTracker</h4>
+                    <div th:if="${showDemoNotice}" class="alert alert-info" role="alert">
+                        <p class="mb-2"><strong>この画面はデモ環境です。</strong></p>
+                        <p class="mb-2">下記のデモ認証情報でログインでき、シード済みの荷主・予約サンプルデータを確認できます。</p>
+                        <ul class="mb-0 ps-3">
+                            <li>ユーザー名: <code th:text="${devUsername}">admin</code></li>
+                            <li>パスワード: <code th:text="${devPassword}">admin</code></li>
+                        </ul>
+                    </div>
                     <div th:if="${param.error}" class="alert alert-danger" role="alert">
                         ユーザー名またはパスワードが正しくありません。
                     </div>
