@@ -54,9 +54,12 @@
                                 <input type="text" class="form-control" id="originLocode" name="originLocode"
                                        th:value="*{originLocode}"
                                        th:classappend="${#fields.hasErrors('originLocode')} ? 'is-invalid'"
-                                       placeholder="例: JPTYO" maxlength="10" required>
+                                       placeholder="例: JPTYO"
+                                       pattern="[A-Z]{2}[A-Z0-9]{3}"
+                                       minlength="5" maxlength="5" required>
                                 <div th:if="${#fields.hasErrors('originLocode')}" class="invalid-feedback"
                                      th:errors="*{originLocode}"></div>
+                                <div class="form-text">UN/LOCODE（例: JPTYO = 東京、SGSIN = シンガポール）</div>
                             </div>
                         </div>
 
@@ -66,9 +69,12 @@
                                 <input type="text" class="form-control" id="destinationLocode" name="destinationLocode"
                                        th:value="*{destinationLocode}"
                                        th:classappend="${#fields.hasErrors('destinationLocode')} ? 'is-invalid'"
-                                       placeholder="例: USNYC" maxlength="10" required>
+                                       placeholder="例: JPTYO"
+                                       pattern="[A-Z]{2}[A-Z0-9]{3}"
+                                       minlength="5" maxlength="5" required>
                                 <div th:if="${#fields.hasErrors('destinationLocode')}" class="invalid-feedback"
                                      th:errors="*{destinationLocode}"></div>
+                                <div class="form-text">UN/LOCODE（例: JPTYO = 東京、SGSIN = シンガポール）</div>
                             </div>
                         </div>
 
