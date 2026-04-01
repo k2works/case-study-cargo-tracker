@@ -45,6 +45,11 @@ public class QuoteWebController {
         this.findQuoteQueryService = findQuoteQueryService;
     }
 
+    @ModelAttribute("cargoTypes")
+    public CargoType[] cargoTypes() {
+        return CargoType.values();
+    }
+
     @GetMapping
     public String list(Model model) {
         model.addAttribute("quotes", findQuoteQueryService.findAll());
@@ -65,7 +70,6 @@ public class QuoteWebController {
         form.setCargoType(cargoType);
         form.setWeightKg(weightKg);
         model.addAttribute("form", form);
-        model.addAttribute("cargoTypes", CargoType.values());
         return VIEW_REGISTER;
     }
 
@@ -75,7 +79,6 @@ public class QuoteWebController {
                            RedirectAttributes redirectAttributes,
                            Model model) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("cargoTypes", CargoType.values());
             return VIEW_REGISTER;
         }
 
@@ -85,7 +88,6 @@ public class QuoteWebController {
             return "redirect:/quotes/" + quote.getId().value();
         } catch (NoRouteAvailableException e) {
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("cargoTypes", CargoType.values());
             return VIEW_REGISTER;
         }
     }
