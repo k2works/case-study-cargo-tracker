@@ -6,73 +6,74 @@ import com.tngtech.archunit.lang.ArchRule;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
-/**
- * ヘキサゴナルアーキテクチャの依存関係ルールを検証するアーキテクチャテスト。
- * <p>
- * docs/design/tech_stack.md の「ArchUnit 最低限の検証ルール」に基づく。
- */
 @AnalyzeClasses(packages = "com.example.cargotracker")
 class ArchitectureTest {
 
-    /**
-     * A01: ドメイン層がインフラ層に依存しないこと。
-     * domain パッケージは infrastructure パッケージを import してはならない。
-     */
+    // A01: ドメイン層（aggregates/entities/valueobjects）はアプリ/インフラ/インターフェース層に依存しない
     @ArchTest
-    static final ArchRule A01_ドメイン層はインフラ層に依存しない =
+    static final ArchRule A01_ドメイン層はアプリケーション_インフラ_インターフェース層に依存しない =
             noClasses()
-                    .that().resideInAPackage("..domain..")
-                    .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
-                    .as("[A01] ドメイン層はインフラ層に依存してはならない");
+                    .that().resideInAnyPackage(
+                            "..domain.model.aggregates..",
+                            "..domain.model.entities..",
+                            "..domain.model.valueobjects.."
+                    )
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "..application.internal..",
+                            "..infrastructure..",
+                            "..interfaces.."
+                    )
+                    .as("[A01] ドメイン層（aggregates/entities/valueobjects）はアプリケーション層・インフラ層・インターフェース層のクラスに依存してはならない");
 
-    /**
-     * A02: ドメイン層に Spring アノテーションを使用しないこと。
-     * @Component, @Service, @Repository 等は infrastructure/application 層にのみ使用する。
-     */
+    // A02: ドメイン層に Spring の stereotype アノテーション（@Service, @Component, @Repository）を使用しない
     @ArchTest
     static final ArchRule A02_ドメイン層にSpringアノテーションを使用しない =
             noClasses()
                     .that().resideInAPackage("..domain..")
-                    .should().dependOnClassesThat()
-                    .resideInAnyPackage(
-                            "org.springframework.stereotype..",
-                            "org.springframework.context.annotation..",
-                            "org.springframework.beans.factory.annotation.."
+                    .should().beAnnotatedWith(org.springframework.stereotype.Service.class)
+                    .orShould().beAnnotatedWith(org.springframework.stereotype.Component.class)
+                    .orShould().beAnnotatedWith(org.springframework.stereotype.Repository.class)
+                    .as("[A02] ドメイン層のクラスに Spring の stereotype アノテーションを使用してはならない");
+
+    // A03: application.internal.commandservices / queryservices はインフラ層を直接参照しない
+    //      （outboundservices ポート経由のみ許可）
+    @ArchTest
+    static final ArchRule A03_コマンド_クエリサービスはインフラ層を直接参照しない =
+            noClasses()
+                    .that().resideInAnyPackage(
+                            "..application.internal.commandservices..",
+                            "..application.internal.queryservices.."
                     )
-                    .as("[A02] ドメイン層は Spring ステレオタイプアノテーション（@Component, @Service, @Repository 等）を使用してはならない");
-
-    /**
-     * A03: アプリケーション層がインフラ層を直接参照しないこと。
-     * application パッケージから infrastructure パッケージへの直接依存は禁止。Port 経由で参照する。
-     */
-    @ArchTest
-    static final ArchRule A03_アプリケーション層はインフラ層を直接参照しない =
-            noClasses()
-                    .that().resideInAPackage("..application..")
                     .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
-                    .as("[A03] アプリケーション層はインフラ層を直接参照してはならない（Port 経由のみ）");
+                    .as("[A03] commandservices/queryservices はインフラ層を直接参照してはならない（outboundservices ポート経由のみ）");
 
-    /**
-     * A04: booking の domain/application 層が shipper コンテキストを直接参照しないこと。
-     * booking.infrastructure 層は ACL アダプターとして shipper への参照を許可する。
-     */
+    // A04: interfaces.rest はインフラ層を直接参照しない
     @ArchTest
-    static final ArchRule A04_bookingのドメイン_アプリケーション層はshipperを直接参照しない =
+    static final ArchRule A04_インターフェース層はインフラ層を直接参照しない =
             noClasses()
-                    .that().resideInAPackage("com.example.cargotracker.booking.domain..")
-                    .or().resideInAPackage("com.example.cargotracker.booking.application..")
+                    .that().resideInAPackage("..interfaces.rest..")
+                    .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
+                    .as("[A04] interfaces.rest はインフラ層（infrastructure）を直接参照してはならない");
+
+    // A05: booking の domain/application.internal（commandservices/queryservices）は shipper を直接参照しない
+    @ArchTest
+    static final ArchRule A05_bookingのドメイン_サービス層はshipperを直接参照しない =
+            noClasses()
+                    .that().resideInAnyPackage(
+                            "com.example.cargotracker.booking.domain..",
+                            "com.example.cargotracker.booking.application.internal.commandservices..",
+                            "com.example.cargotracker.booking.application.internal.queryservices.."
+                    )
                     .should().dependOnClassesThat()
                     .resideInAPackage("com.example.cargotracker.shipper..")
-                    .as("[A04] booking の domain/application 層は shipper コンテキストを直接参照してはならない（ACL/Event 経由のみ）");
+                    .as("[A05] booking の domain/commandservices/queryservices は shipper コンテキストを直接参照してはならない（ACL 経由のみ）");
 
-    /**
-     * A04b: shipper コンテキストは booking コンテキストのクラスを直接参照してはならない。
-     */
+    // A05b: shipper は booking を直接参照しない
     @ArchTest
-    static final ArchRule A04b_shipperはbookingを直接参照しない =
+    static final ArchRule A05b_shipperはbookingを直接参照しない =
             noClasses()
                     .that().resideInAPackage("com.example.cargotracker.shipper..")
                     .should().dependOnClassesThat()
                     .resideInAPackage("com.example.cargotracker.booking..")
-                    .as("[A04b] shipper コンテキストは booking コンテキストのクラスを直接参照してはならない（ACL/Event 経由のみ）");
+                    .as("[A05b] shipper コンテキストは booking コンテキストのクラスを直接参照してはならない（ACL/Event 経由のみ）");
 }

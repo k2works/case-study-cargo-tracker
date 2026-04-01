@@ -1,7 +1,12 @@
 package com.example.cargotracker.booking.domain;
 
 import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
-import com.example.cargotracker.booking.domain.model.*;
+import com.example.cargotracker.booking.domain.model.aggregates.Booking;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

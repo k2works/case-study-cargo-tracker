@@ -1,10 +1,15 @@
 package com.example.cargotracker.booking.infrastructure;
 
-import com.example.cargotracker.booking.domain.model.*;
+import com.example.cargotracker.booking.domain.model.aggregates.Booking;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
 import com.example.cargotracker.booking.domain.repository.BookingRepository;
 import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.infrastructure.persistence.ShipperMapper;
-import com.example.cargotracker.shipper.infrastructure.persistence.ShipperRecord;
+import com.example.cargotracker.shipper.infrastructure.repositories.ShipperMapper;
+import com.example.cargotracker.shipper.infrastructure.repositories.ShipperRecord;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

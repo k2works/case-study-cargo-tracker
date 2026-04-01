@@ -1,6 +1,6 @@
 package com.example.cargotracker.booking.domain;
 
-import com.example.cargotracker.booking.domain.model.TransportCondition;
+import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

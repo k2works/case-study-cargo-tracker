@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.cargotracker.shipper.infrastructure.persistence.ShipperMapper">
+<mapper namespace="com.example.cargotracker.shipper.infrastructure.repositories.ShipperMapper">
 
-    <resultMap id="shipperResultMap" type="com.example.cargotracker.shipper.infrastructure.persistence.ShipperRecord">
+    <resultMap id="shipperResultMap" type="com.example.cargotracker.shipper.infrastructure.repositories.ShipperRecord">
         <constructor>
             <idArg column="id" javaType="java.util.UUID"/>
             <arg column="name" javaType="java.lang.String"/>

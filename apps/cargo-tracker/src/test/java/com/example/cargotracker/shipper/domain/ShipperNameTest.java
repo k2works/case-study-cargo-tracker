@@ -1,6 +1,6 @@
 package com.example.cargotracker.shipper.domain;
 
-import com.example.cargotracker.shipper.domain.model.ShipperName;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

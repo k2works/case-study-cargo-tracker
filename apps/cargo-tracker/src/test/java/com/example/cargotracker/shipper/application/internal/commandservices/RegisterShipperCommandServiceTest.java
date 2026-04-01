@@ -1,0 +1,82 @@
+package com.example.cargotracker.shipper.application.internal.commandservices;
+
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
+import com.example.cargotracker.shipper.domain.model.commands.RegisterShipperCommand;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ContactInfo;
+import com.example.cargotracker.shipper.domain.model.valueobjects.CustomerCategory;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
+import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
+import com.example.cargotracker.shared.domain.model.ShipperId;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("RegisterShipperCommandService")
+class RegisterShipperCommandServiceTest {
+
+    @Mock
+    private ShipperRepository shipperRepository;
+
+    private RegisterShipperCommandService commandService;
+
+    @BeforeEach
+    void setUp() {
+        commandService = new RegisterShipperCommandService(shipperRepository);
+    }
+
+    @Test
+    @DisplayName("個人荷主を登録すると荷主 ID が返される")
+    void registerIndividualShipperReturnsId() {
+        when(shipperRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+
+        RegisterShipperCommand command = new RegisterShipperCommand(
+                "山田 太郎", "test@example.com", "090-0000-0000",
+                CustomerCategory.INDIVIDUAL, null, null);
+
+        ShipperId result = commandService.execute(command);
+
+        assertThat(result).isNotNull();
+        verify(shipperRepository).save(any(Shipper.class));
+    }
+
+    @Test
+    @DisplayName("同一メールアドレスが既に登録されている場合は例外を投げる")
+    void rejectDuplicateEmail() {
+        ShipperId existingId = ShipperId.generate();
+        Shipper existing = Shipper.registerIndividual(existingId,
+                new ShipperName("既存 荷主"), new ContactInfo("dup@example.com", null));
+        when(shipperRepository.findByEmail("dup@example.com")).thenReturn(Optional.of(existing));
+
+        RegisterShipperCommand command = new RegisterShipperCommand(
+                "新規 荷主", "dup@example.com", null,
+                CustomerCategory.INDIVIDUAL, null, null);
+
+        assertThatThrownBy(() -> commandService.execute(command))
+                .isInstanceOf(DuplicateShipperException.class);
+        verify(shipperRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("登録時に重複チェックを行う")
+    void checkDuplicateBeforeSave() {
+        when(shipperRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+
+        RegisterShipperCommand command = new RegisterShipperCommand(
+                "テスト 太郎", "check@example.com", null,
+                CustomerCategory.INDIVIDUAL, null, null);
+
+        commandService.execute(command);
+
+        verify(shipperRepository).findByEmail("check@example.com");
+    }
+}

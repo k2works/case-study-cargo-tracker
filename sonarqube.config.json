@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "cargo-tracker",
+      "label": "Cargo Tracker",
+      "projectKey": "cargo-tracker",
+      "scanType": "gradle",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}
