@@ -266,6 +266,14 @@ function requireSonarToken() {
  */
 function runScan(project, token, hostUrl) {
   const cwd = path.join(process.cwd(), project.srcDir);
+  const gradleWrapper = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+  const mavenWrapper = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
+  const gradleCommand = fs.existsSync(path.join(cwd, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew'))
+    ? gradleWrapper
+    : 'gradle';
+  const mavenCommand = fs.existsSync(path.join(cwd, process.platform === 'win32' ? 'mvnw.cmd' : 'mvnw'))
+    ? mavenWrapper
+    : 'mvn';
 
   switch (project.scanType) {
     case 'sbt':
@@ -277,7 +285,7 @@ function runScan(project, token, hostUrl) {
 
     case 'maven':
       execSync(
-        `mvn sonar:sonar ` +
+        `${mavenCommand} sonar:sonar ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
@@ -288,7 +296,7 @@ function runScan(project, token, hostUrl) {
 
     case 'gradle':
       execSync(
-        `gradle sonar ` +
+        `${gradleCommand} sonar ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
