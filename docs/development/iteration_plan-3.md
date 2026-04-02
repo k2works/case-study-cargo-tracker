@@ -31,7 +31,7 @@ tags: iteration-plan, it3
 
 ### 成功基準
 
-- [ ] 危険物予約で UN 番号が必須入力となり、冷凍貨物で温度帯（最低・最高温度）が必須入力となる
+- [x] 危険物予約で UN 番号が必須入力となり、冷凍貨物で温度帯（最低・最高温度）が必須入力となる
 - [ ] ルート検索結果一覧から「この予約に割り当てる」ボタンで選択したルートが予約に紐付く
 - [ ] ルート未割り当ての予約では確定操作ができない（バリデーションエラー）
 - [ ] ルートが割り当て済みの予約を確定すると、予約ステータスが CONFIRMED になる
@@ -115,10 +115,10 @@ tags: iteration-plan, it3
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | CargoSpecification に危険物条件（UnNumber、HazardClass）と冷凍条件（MinTemp、MaxTemp）を追加し、CargoType 別バリデーション規則をユニットテストする | 3h | Copilot | [ ] |
-| 1.2 | Booking 集約の register() で危険物・冷凍条件の不整合を検証するロジックを追加し、テストする | 3h | Copilot | [ ] |
-| 1.3 | 予約登録フォームに危険物・冷凍の条件入力 UI（動的表示）を追加し、バリデーションエラーを確認する | 3h | Copilot | [ ] |
-| 1.4 | Booking テーブルに危険物・冷凍カラムを追加する（Flyway migration）。REST API・MVC テスト・E2E を追加する | 3h | Copilot | [ ] |
+| 1.1 | CargoSpecification に危険物条件（UnNumber、HazardClass）と冷凍条件（MinTemp、MaxTemp）を追加し、CargoType 別バリデーション規則をユニットテストする | 3h | Copilot | [x] |
+| 1.2 | Booking 集約の register() で危険物・冷凍条件の不整合を検証するロジックを追加し、テストする | 3h | Copilot | [x] |
+| 1.3 | 予約登録フォームに危険物・冷凍の条件入力 UI（動的表示）を追加し、バリデーションエラーを確認する | 3h | Copilot | [x] |
+| 1.4 | Booking テーブルに危険物・冷凍カラムを追加する（Flyway migration V005）。REST API・MVC テスト・E2E を追加する | 3h | Copilot | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -127,7 +127,7 @@ tags: iteration-plan, it3
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | AssignedRoute 値オブジェクトと assignRoute() コマンドを Booking 集約に追加し、ユニットテストする | 4h | Copilot | [ ] |
-| 2.2 | Booking テーブルに assigned_voyage_no・route_path・estimated_arrival カラムを追加する（Flyway migration V005） | 2h | Copilot | [ ] |
+| 2.2 | Booking テーブルに assigned_voyage_no・route_path・estimated_arrival カラムを追加する（Flyway migration V006） | 2h | Copilot | [ ] |
 | 2.3 | ルート検索結果画面に「割り当て」ボタンと確認・完了画面を実装し、予約詳細に割り当て済みルートを表示する | 4h | Copilot | [ ] |
 | 2.4 | AssignRoute REST API・MVC テスト・E2E を追加する | 2h | Copilot | [ ] |
 
@@ -159,14 +159,14 @@ tags: iteration-plan, it3
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| US05 危険物・冷凍貨物予約 | 3 | 12h | 未着手 |
+| US05 危険物・冷凍貨物予約 | 3 | 12h | ✅ 完了 |
 | US07 ルート確定 | 3 | 12h | 未着手 |
 | US08 予約確定 | 3 | 12h | 未着手 |
 | US09 追跡番号発行 | 3 | 12h | 未着手 |
 | **合計** | **12** | **48h** | |
 
 **1 SP あたり**: 4h
-**進捗率**: 0%（0/16 タスク完了）
+**進捗率**: 25%（4/16 タスク完了）
 
 ---
 

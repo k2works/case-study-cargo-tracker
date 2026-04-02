@@ -105,6 +105,28 @@
             </div>
         </div>
     </div>
+
+    <!-- 割り当て済みルート -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">割り当て済みルート</div>
+        <div class="card-body">
+            <div th:if="${booking.assignedRoute != null}">
+                <div class="row mb-2">
+                    <div class="col-sm-3 fw-bold">航海番号</div>
+                    <div class="col-sm-9" th:text="${booking.assignedRoute.voyageNumber}"></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-3 fw-bold">ルートパス</div>
+                    <div class="col-sm-9" th:text="${booking.assignedRoute.routePath}"></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-sm-3 fw-bold">推定着日</div>
+                    <div class="col-sm-9" th:text="${booking.assignedRoute.estimatedArrival}"></div>
+                </div>
+            </div>
+            <div th:if="${booking.assignedRoute == null}" class="text-muted">未割り当て</div>
+        </div>
+    </div>
 </div>
 
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>

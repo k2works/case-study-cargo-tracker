@@ -152,6 +152,17 @@
                         </span>
                     </dd>
                 </dl>
+
+                <!-- 割り当てボタン（bookingId が指定されている場合のみ表示） -->
+                <div th:if="${bookingId != null}" class="mt-3">
+                    <form th:action="@{/bookings/{id}/assign-route(id=${bookingId})}" method="post">
+                        <input type="hidden" name="voyageNumber" th:value="${candidate.voyageNumber()}">
+                        <input type="hidden" name="routePath"
+                               th:value="${form.originLocode + (#lists.isEmpty(candidate.viaLocodes()) ? '' : '/' + #strings.listJoin(candidate.viaLocodes(), '/')) + '/' + form.destinationLocode}">
+                        <input type="hidden" name="estimatedArrival" th:value="${candidate.estimatedArrival()}">
+                        <button type="submit" class="btn btn-primary btn-sm">この予約に割り当てる</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
