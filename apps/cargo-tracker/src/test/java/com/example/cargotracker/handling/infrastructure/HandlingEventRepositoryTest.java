@@ -72,7 +72,7 @@ class HandlingEventRepositoryTest extends PostgreSQLIntegrationTestBase {
         HandlingEventId eventId = HandlingEventId.generate();
         LocalDateTime completionTime = LocalDateTime.of(2026, 5, 12, 9, 0);
 
-        HandlingEvent event = HandlingEvent.record(eventId, bookingId.value(), HandlingEventType.LOAD, "JPTYO", completionTime, null);
+        HandlingEvent event = HandlingEvent.recordEvent(eventId, bookingId.value(), HandlingEventType.LOAD, "JPTYO", completionTime, null);
         handlingEventRepository.save(event);
 
         List<HandlingEvent> found = handlingEventRepository.findByBookingId(bookingId.value());
@@ -90,7 +90,7 @@ class HandlingEventRepositoryTest extends PostgreSQLIntegrationTestBase {
     void saveManualUpdateWithMemo() {
         BookingId bookingId = createBooking();
         String memo = "台風のため保管中";
-        HandlingEvent event = HandlingEvent.record(HandlingEventId.generate(), bookingId.value(),
+        HandlingEvent event = HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
                 HandlingEventType.MANUAL_UPDATE, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), memo);
         handlingEventRepository.save(event);
 
@@ -106,9 +106,9 @@ class HandlingEventRepositoryTest extends PostgreSQLIntegrationTestBase {
         LocalDateTime t1 = LocalDateTime.of(2026, 5, 10, 8, 0);
         LocalDateTime t2 = LocalDateTime.of(2026, 5, 12, 9, 0);
 
-        handlingEventRepository.save(HandlingEvent.record(HandlingEventId.generate(), bookingId.value(),
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
                 HandlingEventType.CUSTOMS, "JPTYO", t1, null));
-        handlingEventRepository.save(HandlingEvent.record(HandlingEventId.generate(), bookingId.value(),
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
                 HandlingEventType.LOAD, "JPTYO", t2, null));
 
         List<HandlingEvent> found = handlingEventRepository.findByBookingId(bookingId.value());
@@ -126,7 +126,7 @@ class HandlingEventRepositoryTest extends PostgreSQLIntegrationTestBase {
     @DisplayName("取得した荷役イベントはドメインイベントを持たない")
     void findShouldNotContainDomainEvents() {
         BookingId bookingId = createBooking();
-        handlingEventRepository.save(HandlingEvent.record(HandlingEventId.generate(), bookingId.value(),
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
                 HandlingEventType.LOAD, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), null));
 
         HandlingEvent found = handlingEventRepository.findByBookingId(bookingId.value()).get(0);
