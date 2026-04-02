@@ -1,12 +1,14 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
-import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
+import com.example.cargotracker.tracking.application.internal.outboundservices.BookingInfoQueryPort;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,9 +18,12 @@ import java.util.UUID;
 public class TrackingQueryService {
 
     private final TrackingRepository trackingRepository;
+    private final BookingInfoQueryPort bookingInfoQueryPort;
 
-    public TrackingQueryService(TrackingRepository trackingRepository) {
+    public TrackingQueryService(TrackingRepository trackingRepository,
+                                BookingInfoQueryPort bookingInfoQueryPort) {
         this.trackingRepository = trackingRepository;
+        this.bookingInfoQueryPort = bookingInfoQueryPort;
     }
 
     public Optional<TrackingEntry> findByTrackingNumber(String trackingNumberValue) {
@@ -47,9 +52,25 @@ public class TrackingQueryService {
                                             r.memo()
                                     ))
                                     .toList();
+
+                    BookingInfoQueryPort.BookingSummary bookingSummary =
+                            bookingInfoQueryPort.findById(entry.getBookingId()).orElse(null);
+
+                    String originLocation = bookingSummary != null ? bookingSummary.originLocation() : "";
+                    String destinationLocation = bookingSummary != null ? bookingSummary.destinationLocation() : "";
+                    LocalDate estimatedArrival = bookingSummary != null ? bookingSummary.requestedDeliveryDate() : null;
+
+                    String currentState = history.isEmpty() ? "未受取" : history.get(0).eventTypeDisplayName();
+                    String currentLocation = history.isEmpty() ? originLocation : history.get(0).locationCode();
+
                     return new TrackingInfoDto(
                             entry.getTrackingNumber().value(),
                             entry.getBookingId(),
+                            originLocation,
+                            destinationLocation,
+                            estimatedArrival,
+                            currentState,
+                            currentLocation,
                             history
                     );
                 });
@@ -57,7 +78,7 @@ public class TrackingQueryService {
 
     private String resolveDisplayName(String eventType) {
         try {
-            return HandlingEventType.valueOf(eventType).getDisplayName();
+            return TrackingEventType.valueOf(eventType).getDisplayName();
         } catch (IllegalArgumentException e) {
             return eventType;
         }
