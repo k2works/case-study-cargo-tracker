@@ -50,11 +50,11 @@ test.describe('E07: 危険物予約', () => {
     await bookingPage.expectBookingListed({
       bookingId,
       shipperName: '危険物テスト荷主',
-      cargoType: 'DANGEROUS_GOODS',
+      cargoType: '危険物',
       originLocation: 'JPTYO',
       destinationLocation: 'USNYC',
       requestedPickupDate: futureDateStr(1),
-      status: 'PROVISIONAL',
+      status: '仮予約',
     });
   });
 

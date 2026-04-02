@@ -86,7 +86,7 @@ test.describe.serial('E09〜E11: ルート割り当て・予約確定・追跡�
 
     // 予約詳細にリダイレクトされ、CONFIRMED バッジが表示される
     await expect(page).toHaveURL(`/bookings/${bookingId}`);
-    await expect(page.locator('.badge.bg-success')).toContainText('CONFIRMED');
+    await expect(page.locator('.badge.bg-success')).toContainText('確定済');
 
     // 確定済みの予約には「予約を確定する」ボタンが表示されない
     await expect(confirmButton).not.toBeVisible();

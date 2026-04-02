@@ -60,11 +60,11 @@ test.describe('E04: 貨物予約登録', () => {
     await bookingPage.expectBookingListed({
       bookingId,
       shipperName: '予約テスト荷主',
-      cargoType: 'GENERAL_CARGO',
+      cargoType: '一般貨物',
       originLocation: 'JPTYO',
       destinationLocation: 'USNYC',
       requestedPickupDate: '2025-09-01',
-      status: 'PROVISIONAL',
+      status: '仮予約',
     });
   });
 

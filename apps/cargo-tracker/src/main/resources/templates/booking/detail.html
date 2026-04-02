@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
 <body class="bg-light">
 <nav th:replace="~{fragments/header :: appHeader}"></nav>
 
+<main>
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>予約詳細</h4>
@@ -39,7 +41,7 @@
             <h5 class="mb-0">予約番号: <code th:text="${booking.id}"></code></h5>
             <span class="badge fs-6"
                   th:classappend="${booking.status.name() == 'CONFIRMED'} ? 'bg-success' : 'bg-warning text-dark'"
-                  th:text="${booking.status.name()}"></span>
+                  th:text="${booking.status.displayName}"></span>
         </div>
         <div class="card-body">
             <div class="row">
@@ -62,7 +64,7 @@
                     <h6 class="text-muted mb-3">貨物仕様</h6>
                     <dl class="row">
                         <dt class="col-sm-5">貨物種別</dt>
-                        <dd class="col-sm-7" th:text="${booking.cargoSpecification.cargoType}"></dd>
+                        <dd class="col-sm-7" th:text="${booking.cargoSpecification.cargoType.displayName}"></dd>
 
                         <dt class="col-sm-5">重量 (kg)</dt>
                         <dd class="col-sm-7" th:text="${booking.cargoSpecification.weightKg}"></dd>
@@ -79,6 +81,20 @@
 
                         <dt class="col-sm-5">品名</dt>
                         <dd class="col-sm-7" th:text="${booking.cargoSpecification.description ?: '-'}"></dd>
+
+                        <!-- 危険物条件 -->
+                        <dt class="col-sm-5" th:if="${booking.cargoSpecification.unNumber != null}">UN 番号</dt>
+                        <dd class="col-sm-7" th:if="${booking.cargoSpecification.unNumber != null}"
+                            th:text="${booking.cargoSpecification.unNumber}"></dd>
+
+                        <dt class="col-sm-5" th:if="${booking.cargoSpecification.hazardClass != null}">危険品等級</dt>
+                        <dd class="col-sm-7" th:if="${booking.cargoSpecification.hazardClass != null}"
+                            th:text="${booking.cargoSpecification.hazardClass}"></dd>
+
+                        <!-- 冷凍条件 -->
+                        <dt class="col-sm-5" th:if="${booking.cargoSpecification.minTempCelsius != null}">温度帯 (℃)</dt>
+                        <dd class="col-sm-7" th:if="${booking.cargoSpecification.minTempCelsius != null}"
+                            th:text="${booking.cargoSpecification.minTempCelsius + ' 〜 ' + booking.cargoSpecification.maxTempCelsius}"></dd>
                     </dl>
                 </div>
 
@@ -137,6 +153,7 @@
         </div>
     </div>
 </div>
+</main>
 
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
 </body>

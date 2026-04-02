@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
 <body class="bg-light">
 <nav th:replace="~{fragments/header :: appHeader}"></nav>
 
+<main>
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-10">
@@ -64,12 +66,14 @@
                         </div>
 
                         <!-- 危険物条件フィールド（cargoType=DANGEROUS_GOODS の時のみ表示） -->
-                        <div id="dangerousGoodsFields" class="d-none">
+                        <div id="dangerousGoodsFields" class="d-none" role="region" aria-label="危険物条件" aria-hidden="true">
                           <div class="row mb-3">
                             <label for="unNumber" class="col-sm-3 col-form-label">UN 番号 <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                               <input type="text" class="form-control" id="unNumber" name="unNumber"
-                                     th:value="${form.unNumber}" placeholder="例: UN1234" maxlength="10">
+                                     th:value="${form.unNumber}"
+                                     th:classappend="${#fields.hasErrors('unNumber')} ? 'is-invalid'"
+                                     placeholder="例: UN1234" maxlength="10">
                               <div class="invalid-feedback" th:if="${#fields.hasErrors('unNumber')}"
                                    th:errors="*{unNumber}"></div>
                             </div>
@@ -84,12 +88,14 @@
                         </div>
 
                         <!-- 冷凍条件フィールド（cargoType=REFRIGERATED の時のみ表示） -->
-                        <div id="refrigeratedFields" class="d-none">
+                        <div id="refrigeratedFields" class="d-none" role="region" aria-label="冷凍・冷蔵条件" aria-hidden="true">
                           <div class="row mb-3">
                             <label for="minTempCelsius" class="col-sm-3 col-form-label">最低温度 (℃) <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                               <input type="number" class="form-control" id="minTempCelsius" name="minTempCelsius"
-                                     th:value="${form.minTempCelsius}" step="0.1">
+                                     th:value="${form.minTempCelsius}"
+                                     th:classappend="${#fields.hasErrors('minTempCelsius')} ? 'is-invalid'"
+                                     step="0.1" placeholder="例: -18.0">
                               <div class="invalid-feedback" th:if="${#fields.hasErrors('minTempCelsius')}"
                                    th:errors="*{minTempCelsius}"></div>
                             </div>
@@ -98,7 +104,9 @@
                             <label for="maxTempCelsius" class="col-sm-3 col-form-label">最高温度 (℃) <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                               <input type="number" class="form-control" id="maxTempCelsius" name="maxTempCelsius"
-                                     th:value="${form.maxTempCelsius}" step="0.1">
+                                     th:value="${form.maxTempCelsius}"
+                                     th:classappend="${#fields.hasErrors('maxTempCelsius')} ? 'is-invalid'"
+                                     step="0.1" placeholder="例: -15.0">
                               <div class="invalid-feedback" th:if="${#fields.hasErrors('maxTempCelsius')}"
                                    th:errors="*{maxTempCelsius}"></div>
                             </div>
@@ -106,16 +114,6 @@
                         </div>
 
                         <!-- 動的表示スクリプト -->
-                        <script>
-                          function updateCargoTypeFields() {
-                            const cargoType = document.getElementById('cargoType').value;
-                            document.getElementById('dangerousGoodsFields').classList.toggle('d-none', cargoType !== 'DANGEROUS_GOODS');
-                            document.getElementById('refrigeratedFields').classList.toggle('d-none', cargoType !== 'REFRIGERATED');
-                          }
-                          document.getElementById('cargoType').addEventListener('change', updateCargoTypeFields);
-                          // 初期表示（バリデーションエラー後の再表示時）
-                          updateCargoTypeFields();
-                        </script>
 
                         <div class="mb-3 row">
                             <label for="weightKg" class="col-sm-3 col-form-label">重量 (kg) <span class="text-danger">*</span></label>
@@ -237,7 +235,28 @@
         </div>
     </div>
 </div>
+</main>
 
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script>
+  function updateCargoTypeFields() {
+    const cargoType = document.getElementById('cargoType').value;
+    const dangerousEl = document.getElementById('dangerousGoodsFields');
+    const refrigeratedEl = document.getElementById('refrigeratedFields');
+    const isDangerous = cargoType === 'DANGEROUS_GOODS';
+    const isRefrigerated = cargoType === 'REFRIGERATED';
+
+    dangerousEl.classList.toggle('d-none', !isDangerous);
+    dangerousEl.setAttribute('aria-hidden', !isDangerous);
+    document.getElementById('unNumber').required = isDangerous;
+
+    refrigeratedEl.classList.toggle('d-none', !isRefrigerated);
+    refrigeratedEl.setAttribute('aria-hidden', !isRefrigerated);
+    document.getElementById('minTempCelsius').required = isRefrigerated;
+    document.getElementById('maxTempCelsius').required = isRefrigerated;
+  }
+  document.getElementById('cargoType').addEventListener('change', updateCargoTypeFields);
+  updateCargoTypeFields();
+</script>
 </body>
 </html>
