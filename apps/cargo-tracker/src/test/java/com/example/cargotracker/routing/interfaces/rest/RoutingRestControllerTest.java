@@ -82,6 +82,18 @@ class RoutingRestControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    @DisplayName("ルート検索サービスが利用できない場合は 503 を返す")
+    void search_サービス利用不可() throws Exception {
+        RoutingRestController controller = new RoutingRestController(java.util.Optional.empty());
+
+        mockMvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(get("/api/v1/routings/search").param("bookingId", UUID.randomUUID().toString()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("ルート検索サービスは現在利用できません"));
+    }
+
     private RouteCandidate anyCandidate() {
         return new RouteCandidate(
                 "SG001",

@@ -37,17 +37,19 @@ public class RoutingRestController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "予約 ID によるルート候補検索", description = "指定した予約の輸送条件に合うルート候補を返す")
-    @ApiResponse(responseCode = "200", description = "取得成功")
-    @ApiResponse(responseCode = "400", description = "bookingId パラメータなし")
-    @ApiResponse(responseCode = "404", description = "予約が見つからない")
-    @ApiResponse(responseCode = "503", description = "ルート検索サービスが利用できない")
-    public ResponseEntity<Object> search(@RequestParam("bookingId") UUID bookingId) {
+    @Operation(
+            summary = "予約 ID によるルート候補検索",
+            description = "指定した予約の輸送条件に合うルート候補を返す",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "取得成功"),
+                    @ApiResponse(responseCode = "400", description = "bookingId パラメータなし"),
+                    @ApiResponse(responseCode = "404", description = "予約が見つからない"),
+                    @ApiResponse(responseCode = "503", description = "ルート検索サービスが利用できない")
+            }
+    )
+    public ResponseEntity<List<RoutingCandidateResponse>> search(@RequestParam("bookingId") UUID bookingId) {
         if (routeSearchService.isEmpty()) {
-            ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                    HttpStatus.SERVICE_UNAVAILABLE, "ルート検索サービスは現在利用できません");
-            problem.setTitle(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase());
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
+            throw new RouteSearchServiceUnavailableException();
         }
 
         List<RoutingCandidateResponse> candidates = routeSearchService.get()
@@ -63,5 +65,18 @@ public class RoutingRestController {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
         problem.setTitle(HttpStatus.NOT_FOUND.getReasonPhrase());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
+
+    @ExceptionHandler(RouteSearchServiceUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleServiceUnavailable(RouteSearchServiceUnavailableException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+        problem.setTitle(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
+    }
+
+    private static final class RouteSearchServiceUnavailableException extends RuntimeException {
+        private RouteSearchServiceUnavailableException() {
+            super("ルート検索サービスは現在利用できません");
+        }
     }
 }
