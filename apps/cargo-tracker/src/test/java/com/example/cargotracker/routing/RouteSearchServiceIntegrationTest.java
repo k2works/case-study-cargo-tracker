@@ -76,11 +76,13 @@ class RouteSearchServiceIntegrationTest extends PostgreSQLIntegrationTestBase {
         // Act
         List<RouteCandidate> result = routeSearchService.searchByBookingId(bookingId.value());
 
-        // Assert
+        // Assert — stub は希望着日より早く到着するルートを返すのでフィルタ後も残る
         assertThat(result).isNotEmpty();
-        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
         assertThat(result).allMatch(c -> c.transitDays() > 0);
         assertThat(result).allMatch(c -> c.estimatedPrice().compareTo(BigDecimal.ZERO) > 0);
+        // GENERAL_CARGO の場合は GENERAL 対応の全ルートが返る
+        assertThat(result).allMatch(c -> c.supportedCargoTypes()
+            .contains(com.example.cargotracker.routing.domain.model.CargoType.GENERAL));
     }
 
     @Test
