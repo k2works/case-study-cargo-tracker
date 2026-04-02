@@ -20,6 +20,9 @@ import java.time.LocalDate;
 @ConditionalOnProperty(prefix = "app.seed", name = "enabled", havingValue = "true")
 public class DefaultProfileBookingSeedConfiguration {
 
+    private static final String TOKYO_UNLOCODE = "JPTYO";
+    private static final String SINGAPORE_UNLOCODE = "SGSIN";
+
     @Bean
     @Order(1)
     public ApplicationRunner defaultProfileBookingSeedDataRunner(
@@ -45,8 +48,8 @@ public class DefaultProfileBookingSeedConfiguration {
                     new BigDecimal("160.0"),
                     12,
                     "電子部品",
-                    "東京港",
-                    "シンガポール港",
+                    TOKYO_UNLOCODE,
+                    SINGAPORE_UNLOCODE,
                     pickupDate,
                     pickupDate.plusDays(10),
                     null,

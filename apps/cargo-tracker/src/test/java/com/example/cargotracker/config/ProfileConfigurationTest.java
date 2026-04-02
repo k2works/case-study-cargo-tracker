@@ -55,6 +55,14 @@ class ProfileConfigurationTest {
             assertThat(shipperRepository.findAll()).isNotEmpty();
             assertThat(bookingRepository.findAll()).isNotEmpty();
         }
+
+        @Test
+        void seedBookingUsesUnlocodeFormat() {
+            var booking = bookingRepository.findAll().getFirst();
+
+            assertThat(booking.getTransportCondition().originLocation()).matches("[A-Z]{2}[A-Z0-9]{3}");
+            assertThat(booking.getTransportCondition().destinationLocation()).matches("[A-Z]{2}[A-Z0-9]{3}");
+        }
     }
 
     @Nested
