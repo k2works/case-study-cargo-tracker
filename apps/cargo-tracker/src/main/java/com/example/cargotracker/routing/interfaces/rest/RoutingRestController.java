@@ -5,7 +5,6 @@ import com.example.cargotracker.routing.application.internal.queryservices.Route
 import com.example.cargotracker.routing.interfaces.rest.dto.RoutingCandidateResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -39,13 +38,11 @@ public class RoutingRestController {
 
     @GetMapping("/search")
     @Operation(summary = "予約 ID によるルート候補検索", description = "指定した予約の輸送条件に合うルート候補を返す")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "取得成功"),
-            @ApiResponse(responseCode = "400", description = "bookingId パラメータなし"),
-            @ApiResponse(responseCode = "404", description = "予約が見つからない"),
-            @ApiResponse(responseCode = "503", description = "ルート検索サービスが利用できない")
-    })
-    public ResponseEntity<?> search(@RequestParam("bookingId") UUID bookingId) {
+    @ApiResponse(responseCode = "200", description = "取得成功")
+    @ApiResponse(responseCode = "400", description = "bookingId パラメータなし")
+    @ApiResponse(responseCode = "404", description = "予約が見つからない")
+    @ApiResponse(responseCode = "503", description = "ルート検索サービスが利用できない")
+    public ResponseEntity<Object> search(@RequestParam("bookingId") UUID bookingId) {
         if (routeSearchService.isEmpty()) {
             ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                     HttpStatus.SERVICE_UNAVAILABLE, "ルート検索サービスは現在利用できません");
