@@ -6,6 +6,8 @@ import com.example.cargotracker.handling.domain.model.events.HandlingEventRecord
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -67,15 +69,12 @@ class HandlingEventTest {
         assertThat(event.getDomainEvents()).isEmpty();
     }
 
-    @Test
-    @DisplayName("全荷役イベント種別（LOAD/UNLOAD/CUSTOMS/TRANSHIP）を記録できる")
-    void recordAllHandlingEventTypes() {
-        for (HandlingEventType type : new HandlingEventType[]{
-                HandlingEventType.LOAD, HandlingEventType.UNLOAD,
-                HandlingEventType.CUSTOMS, HandlingEventType.TRANSHIP}) {
-            HandlingEvent event = HandlingEvent.recordEvent(anyId(), anyBookingId(), type, "JPTYO", anyCompletionTime(), null);
-            assertThat(event.getEventType()).isEqualTo(type);
-        }
+    @ParameterizedTest(name = "{0} を記録できる")
+    @EnumSource(HandlingEventType.class)
+    @DisplayName("全荷役イベント種別を記録できる")
+    void recordAllHandlingEventTypes(HandlingEventType type) {
+        HandlingEvent event = HandlingEvent.recordEvent(anyId(), anyBookingId(), type, "JPTYO", anyCompletionTime(), null);
+        assertThat(event.getEventType()).isEqualTo(type);
     }
 
     @Test
@@ -148,6 +147,14 @@ class HandlingEventTest {
         UUID bookingId = anyBookingId();
         assertThatThrownBy(() ->
                 HandlingEvent.recordEvent(id, bookingId, HandlingEventType.LOAD, "JPTYO", null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("reconstitute で id が null の場合は再構成できない")
+    void reconstitute_nullId_throwsException() {
+        assertThatThrownBy(() ->
+                HandlingEvent.reconstitute(null, anyBookingId(), HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

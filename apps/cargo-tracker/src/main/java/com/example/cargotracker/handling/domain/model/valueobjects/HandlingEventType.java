@@ -5,15 +5,25 @@ package com.example.cargotracker.handling.domain.model.valueobjects;
  */
 public enum HandlingEventType {
     /** 積み込み */
-    LOAD,
+    LOAD("積み込み"),
     /** 荷降ろし */
-    UNLOAD,
+    UNLOAD("荷降ろし"),
     /** 通関 */
-    CUSTOMS,
+    CUSTOMS("通関"),
     /** 積み替え */
-    TRANSHIP,
+    TRANSHIP("積み替え"),
     /** 引取 */
-    RECEIVE,
-    /** 手動更新 */
-    MANUAL_UPDATE
+    RECEIVE("引取"),
+    /** 手動更新 — システム自動連携外の訂正・補正イベントを後から記録する場合に使用 */
+    MANUAL_UPDATE("手動更新");
+
+    private final String displayName;
+
+    HandlingEventType(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
 }

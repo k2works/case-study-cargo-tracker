@@ -4,6 +4,7 @@ import com.example.cargotracker.handling.domain.model.commands.RecordHandlingEve
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,8 @@ import java.util.UUID;
 public class HandlingEventForm {
 
     @NotBlank(message = "予約 ID は必須です")
+    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+             message = "予約 ID は UUID 形式（xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx）で入力してください")
     private String bookingId;
 
     @NotNull(message = "荷役イベント種別は必須です")

@@ -26,6 +26,11 @@ public class HandlingEvent {
 
     private HandlingEvent(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
                           String locationCode, LocalDateTime completionTime, String memo) {
+        if (id == null) throw new IllegalArgumentException("荷役イベント ID は null にできません");
+        if (bookingId == null) throw new IllegalArgumentException("予約 ID は null にできません");
+        if (eventType == null) throw new IllegalArgumentException("荷役イベント種別は null にできません");
+        if (locationCode == null || locationCode.isBlank()) throw new IllegalArgumentException("場所コードは null または空にできません");
+        if (completionTime == null) throw new IllegalArgumentException("完了日時は null にできません");
         this.id = id;
         this.bookingId = bookingId;
         this.eventType = eventType;
@@ -39,12 +44,6 @@ public class HandlingEvent {
      */
     public static HandlingEvent recordEvent(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
                                             String locationCode, LocalDateTime completionTime, String memo) {
-        if (id == null) throw new IllegalArgumentException("荷役イベント ID は null にできません");
-        if (bookingId == null) throw new IllegalArgumentException("予約 ID は null にできません");
-        if (eventType == null) throw new IllegalArgumentException("荷役イベント種別は null にできません");
-        if (locationCode == null || locationCode.isBlank()) throw new IllegalArgumentException("場所コードは null または空にできません");
-        if (completionTime == null) throw new IllegalArgumentException("完了日時は null にできません");
-
         HandlingEvent event = new HandlingEvent(id, bookingId, eventType, locationCode, completionTime, memo);
         event.domainEvents.add(new HandlingEventRecordedEvent(id, bookingId, eventType));
         return event;
@@ -55,12 +54,6 @@ public class HandlingEvent {
      */
     public static HandlingEvent reconstitute(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
                                               String locationCode, LocalDateTime completionTime, String memo) {
-        if (id == null) throw new IllegalArgumentException("荷役イベント ID は null にできません");
-        if (bookingId == null) throw new IllegalArgumentException("予約 ID は null にできません");
-        if (eventType == null) throw new IllegalArgumentException("荷役イベント種別は null にできません");
-        if (locationCode == null || locationCode.isBlank()) throw new IllegalArgumentException("場所コードは null または空にできません");
-        if (completionTime == null) throw new IllegalArgumentException("完了日時は null にできません");
-
         return new HandlingEvent(id, bookingId, eventType, locationCode, completionTime, memo);
     }
 

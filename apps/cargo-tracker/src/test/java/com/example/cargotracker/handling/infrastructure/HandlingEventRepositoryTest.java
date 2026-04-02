@@ -132,4 +132,87 @@ class HandlingEventRepositoryTest extends PostgreSQLIntegrationTestBase {
         HandlingEvent found = handlingEventRepository.findByBookingId(bookingId.value()).get(0);
         assertThat(found.getDomainEvents()).isEmpty();
     }
+
+    // ── findFiltered ───────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("findFiltered: bookingId フィルタで該当 booking のみ返す")
+    void findFiltered_byBookingId() {
+        BookingId bookingId1 = createBooking();
+        BookingId bookingId2 = createBooking();
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId1.value(),
+                HandlingEventType.LOAD, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), null));
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId2.value(),
+                HandlingEventType.UNLOAD, "USNYC", LocalDateTime.of(2026, 5, 20, 14, 0), null));
+
+        List<HandlingEvent> found = handlingEventRepository.findFiltered(bookingId1.value(), null, null);
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getBookingId()).isEqualTo(bookingId1.value());
+    }
+
+    @Test
+    @DisplayName("findFiltered: eventType フィルタで LOAD のみ返す")
+    void findFiltered_byEventType() {
+        BookingId bookingId = createBooking();
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.LOAD, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), null));
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.UNLOAD, "USNYC", LocalDateTime.of(2026, 5, 20, 14, 0), null));
+
+        List<HandlingEvent> found = handlingEventRepository.findFiltered(null, HandlingEventType.LOAD, null);
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getEventType()).isEqualTo(HandlingEventType.LOAD);
+    }
+
+    @Test
+    @DisplayName("findFiltered: locationCode 部分一致フィルタで JPTYO のみ返す")
+    void findFiltered_byLocationCode() {
+        BookingId bookingId = createBooking();
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.LOAD, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), null));
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.UNLOAD, "USNYC", LocalDateTime.of(2026, 5, 20, 14, 0), null));
+
+        List<HandlingEvent> found = handlingEventRepository.findFiltered(null, null, "JPTYO");
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getLocationCode()).isEqualTo("JPTYO");
+    }
+
+    @Test
+    @DisplayName("findFiltered: 複数条件 AND でフィルタできる")
+    void findFiltered_byAllConditions() {
+        BookingId bookingId = createBooking();
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.LOAD, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), null));
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.LOAD, "USNYC", LocalDateTime.of(2026, 5, 20, 14, 0), null));
+
+        List<HandlingEvent> found = handlingEventRepository.findFiltered(bookingId.value(), HandlingEventType.LOAD, "JPTYO");
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getLocationCode()).isEqualTo("JPTYO");
+    }
+
+    @Test
+    @DisplayName("findFiltered: 全条件 null で全件返す")
+    void findFiltered_allNull_returnsAll() {
+        BookingId bookingId = createBooking();
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.LOAD, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), null));
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.CUSTOMS, "JPTYO", LocalDateTime.of(2026, 5, 13, 10, 0), null));
+
+        List<HandlingEvent> found = handlingEventRepository.findFiltered(null, null, null);
+        assertThat(found).hasSizeGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("findFiltered: 一致なしの場合は空リストを返す")
+    void findFiltered_noMatch_returnsEmpty() {
+        BookingId bookingId = createBooking();
+        handlingEventRepository.save(HandlingEvent.recordEvent(HandlingEventId.generate(), bookingId.value(),
+                HandlingEventType.LOAD, "JPTYO", LocalDateTime.of(2026, 5, 12, 9, 0), null));
+
+        List<HandlingEvent> found = handlingEventRepository.findFiltered(bookingId.value(), HandlingEventType.UNLOAD, null);
+        assertThat(found).isEmpty();
+    }
 }

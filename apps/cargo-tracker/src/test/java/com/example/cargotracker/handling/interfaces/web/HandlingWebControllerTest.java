@@ -148,6 +148,20 @@ class HandlingWebControllerTest {
                 .andExpect(model().attributeExists("errorMessage"));
     }
 
+    @Test
+    @DisplayName("POST /handling で無効な UUID 形式の bookingId はバリデーションエラーを返す")
+    void record_invalidUuidBookingId_showsFieldError() throws Exception {
+        mockMvc.perform(post("/handling")
+                        .with(csrf())
+                        .param("bookingId", "not-a-valid-uuid")
+                        .param("eventType", "LOAD")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2025-01-15T10:00"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/new"))
+                .andExpect(model().attributeHasFieldErrors("form", "bookingId"));
+    }
+
     // ── ヘルパー ──────────────────────────────────────────────────────────
 
     private HandlingEvent anyHandlingEvent(UUID bookingId) {

@@ -49,7 +49,7 @@
                                     <option value="">-- 選択してください --</option>
                                     <option th:each="type : ${eventTypes}"
                                             th:value="${type}"
-                                            th:text="${type.name()}"
+                                            th:text="${type.displayName}"
                                             th:selected="${form.eventType == type}"></option>
                                 </select>
                                 <div th:if="${#fields.hasErrors('eventType')}" class="invalid-feedback"
@@ -93,6 +93,7 @@
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a th:href="@{/handling}" class="btn btn-outline-secondary">戻る</a>
                             <button type="submit" class="btn btn-primary">荷役作業を記録</button>
                         </div>
                     </form>

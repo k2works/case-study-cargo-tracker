@@ -36,7 +36,7 @@
                         <option value="">すべて</option>
                         <option th:each="type : ${eventTypes}"
                                 th:value="${type}"
-                                th:text="${type.name()}"
+                                th:text="${type.displayName}"
                                 th:selected="${searchEventType == type}"></option>
                     </select>
                 </div>
@@ -86,7 +86,7 @@
                                              (${event.eventType.name() == 'UNLOAD'} ? 'bg-warning text-dark' :
                                              (${event.eventType.name() == 'CUSTOMS'} ? 'bg-secondary' :
                                              (${event.eventType.name() == 'TRANSHIP'} ? 'bg-primary' : 'bg-dark'))))"
-                              th:text="${event.eventType.name()}"></span>
+                              th:text="${event.eventType.displayName}"></span>
                     </td>
                     <td th:text="${event.locationCode}"></td>
                     <td th:text="${#temporals.format(event.completionTime, 'yyyy-MM-dd HH:mm')}"></td>
