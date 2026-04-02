@@ -3,6 +3,7 @@ package com.example.cargotracker.tracking.interfaces.rest.dto;
 import com.example.cargotracker.tracking.application.internal.queryservices.TrackingInfoDto;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -10,10 +11,17 @@ import java.util.UUID;
 public record TrackingResponse(
         String trackingNumber,
         UUID bookingId,
+        String originLocation,
+        String destinationLocation,
+        LocalDate estimatedArrival,
+        String currentState,
+        String currentLocation,
         List<HandlingEventSummaryResponse> handlingHistory
 ) {
     public static TrackingResponse from(TrackingEntry entry) {
-        return new TrackingResponse(entry.getTrackingNumber().value(), entry.getBookingId(), List.of());
+        return new TrackingResponse(
+                entry.getTrackingNumber().value(), entry.getBookingId(),
+                null, null, null, null, null, List.of());
     }
 
     public static TrackingResponse from(TrackingInfoDto dto) {
@@ -26,7 +34,15 @@ public record TrackingResponse(
                         s.memo()
                 ))
                 .toList();
-        return new TrackingResponse(dto.trackingNumber(), dto.bookingId(), history);
+        return new TrackingResponse(
+                dto.trackingNumber(),
+                dto.bookingId(),
+                dto.originLocation(),
+                dto.destinationLocation(),
+                dto.estimatedArrival(),
+                dto.currentState(),
+                dto.currentLocation(),
+                history);
     }
 
     public record HandlingEventSummaryResponse(

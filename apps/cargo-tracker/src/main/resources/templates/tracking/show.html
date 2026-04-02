@@ -21,6 +21,15 @@
                 </dd>
                 <dt class="col-sm-3">予約 ID</dt>
                 <dd class="col-sm-9" data-testid="booking-id" th:text="${trackingInfo.bookingId}"></dd>
+                <dt class="col-sm-3">出発地</dt>
+                <dd class="col-sm-9" data-testid="origin-location" th:text="${trackingInfo.originLocation}"></dd>
+                <dt class="col-sm-3">目的地</dt>
+                <dd class="col-sm-9" data-testid="destination-location" th:text="${trackingInfo.destinationLocation}"></dd>
+                <dt class="col-sm-3">現在状態</dt>
+                <dd class="col-sm-9" data-testid="current-state" th:text="${trackingInfo.currentState}"></dd>
+                <dt class="col-sm-3">推定到着日</dt>
+                <dd class="col-sm-9" data-testid="estimated-arrival"
+                    th:text="${trackingInfo.estimatedArrival != null ? #temporals.format(trackingInfo.estimatedArrival, 'yyyy/MM/dd') : '—'}"></dd>
             </dl>
         </div>
     </div>

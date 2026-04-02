@@ -10,6 +10,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +39,11 @@ class TrackingRestControllerTest {
         TrackingInfoDto dto = new TrackingInfoDto(
                 "TRK-ABC12345",
                 bookingId,
+                "JPTYO",
+                "SGSIN",
+                LocalDate.of(2026, 6, 1),
+                "積み込み",
+                "JPTYO",
                 List.of(new TrackingInfoDto.HandlingEventSummary(
                         LocalDateTime.of(2026, 5, 1, 9, 0),
                         "JPTYO",
@@ -64,7 +70,7 @@ class TrackingRestControllerTest {
     @WithMockUser
     void getByValidTrackingNumber_noHistory() throws Exception {
         UUID bookingId = UUID.randomUUID();
-        TrackingInfoDto dto = new TrackingInfoDto("TRK-ABC12345", bookingId, List.of());
+        TrackingInfoDto dto = new TrackingInfoDto("TRK-ABC12345", bookingId, "JPTYO", "SGSIN", null, "未受取", "JPTYO", List.of());
         when(trackingQueryService.findTrackingInfo("TRK-ABC12345"))
                 .thenReturn(Optional.of(dto));
 
