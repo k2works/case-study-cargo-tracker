@@ -32,12 +32,12 @@ tags: iteration-plan, it3
 ### 成功基準
 
 - [x] 危険物予約で UN 番号が必須入力となり、冷凍貨物で温度帯（最低・最高温度）が必須入力となる
-- [ ] ルート検索結果一覧から「この予約に割り当てる」ボタンで選択したルートが予約に紐付く
-- [ ] ルート未割り当ての予約では確定操作ができない（バリデーションエラー）
-- [ ] ルートが割り当て済みの予約を確定すると、予約ステータスが CONFIRMED になる
-- [ ] 予約確定時に追跡番号（英数字 10 桁）が自動発行される
-- [ ] 追跡番号で予約情報（出発地・目的地・ステータス）を検索できる（REST API）
-- [ ] backend テスト Green・テストカバレッジ 80% 以上・SonarQube Quality Gate PASS
+- [x] ルート検索結果一覧から「この予約に割り当てる」ボタンで選択したルートが予約に紐付く
+- [x] ルート未割り当ての予約では確定操作ができない（バリデーションエラー）
+- [x] ルートが割り当て済みの予約を確定すると、予約ステータスが CONFIRMED になる
+- [x] 予約確定時に追跡番号（英数字 10 桁）が自動発行される
+- [x] 追跡番号で予約情報（出発地・目的地・ステータス）を検索できる（REST API）
+- [x] backend テスト Green・テストカバレッジ 80% 以上・SonarQube Quality Gate PASS
 
 ---
 
@@ -126,10 +126,10 @@ tags: iteration-plan, it3
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | AssignedRoute 値オブジェクトと assignRoute() コマンドを Booking 集約に追加し、ユニットテストする | 4h | Copilot | [ ] |
-| 2.2 | Booking テーブルに assigned_voyage_no・route_path・estimated_arrival カラムを追加する（Flyway migration V006） | 2h | Copilot | [ ] |
-| 2.3 | ルート検索結果画面に「割り当て」ボタンと確認・完了画面を実装し、予約詳細に割り当て済みルートを表示する | 4h | Copilot | [ ] |
-| 2.4 | AssignRoute REST API・MVC テスト・E2E を追加する | 2h | Copilot | [ ] |
+| 2.1 | AssignedRoute 値オブジェクトと assignRoute() コマンドを Booking 集約に追加し、ユニットテストする | 4h | Copilot | [x] |
+| 2.2 | Booking テーブルに assigned_voyage_no・route_path・estimated_arrival カラムを追加する（Flyway migration V006） | 2h | Copilot | [x] |
+| 2.3 | ルート検索結果画面に「割り当て」ボタンと確認・完了画面を実装し、予約詳細に割り当て済みルートを表示する | 4h | Copilot | [x] |
+| 2.4 | AssignRoute REST API・MVC テスト・E2E を追加する | 2h | Copilot | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -137,10 +137,10 @@ tags: iteration-plan, it3
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | BookingStatus に CONFIRMED を追加し、confirm() ドメインメソッドと BookingConfirmedEvent を Booking 集約に実装してユニットテストする | 4h | Copilot | [ ] |
-| 3.2 | ConfirmBookingCommandService と確定ユースケースを実装する。ルート未割り当て時の業務例外を含める | 3h | Copilot | [ ] |
-| 3.3 | 予約詳細画面に「予約を確定する」ボタンを追加し、確定後の状態表示と変更不可 UI を実装する | 3h | Copilot | [ ] |
-| 3.4 | MVC テスト・REST テスト・E2E を追加する | 2h | Copilot | [ ] |
+| 3.1 | BookingStatus に CONFIRMED を追加し、confirm() ドメインメソッドと BookingConfirmedEvent を Booking 集約に実装してユニットテストする | 4h | Copilot | [x] |
+| 3.2 | ConfirmBookingCommandService と確定ユースケースを実装する。ルート未割り当て時の業務例外を含める | 3h | Copilot | [x] |
+| 3.3 | 予約詳細画面に「予約を確定する」ボタンを追加し、確定後の状態表示と変更不可 UI を実装する | 3h | Copilot | [x] |
+| 3.4 | MVC テスト・REST テスト・E2E を追加する | 2h | Copilot | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -148,10 +148,10 @@ tags: iteration-plan, it3
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | TrackingNumber 値オブジェクト（TRK-XXXXXXXX 形式）と tracking_numbers テーブル（Flyway migration V006）を追加する | 3h | Copilot | [ ] |
-| 4.2 | BookingConfirmedEvent を受けて TrackingNumber を発行する TrackingNumberIssueService を実装し、ユニットテストする | 4h | Copilot | [ ] |
-| 4.3 | 追跡番号検索 REST API（GET /api/v1/tracking/{trackingNumber}）と予約詳細への追跡番号表示を実装する | 3h | Copilot | [ ] |
-| 4.4 | ユニットテスト・REST テスト・E2E を追加する。SonarQube・docs 更新を含めた品質ゲート確認を行う | 2h | Copilot | [ ] |
+| 4.1 | TrackingNumber 値オブジェクト（TRK-XXXXXXXX 形式）と tracking_numbers テーブル（Flyway migration V006）を追加する | 3h | Copilot | [x] |
+| 4.2 | BookingConfirmedEvent を受けて TrackingNumber を発行する TrackingNumberIssueService を実装し、ユニットテストする | 4h | Copilot | [x] |
+| 4.3 | 追跡番号検索 REST API（GET /api/v1/tracking/{trackingNumber}）と予約詳細への追跡番号表示を実装する | 3h | Copilot | [x] |
+| 4.4 | ユニットテスト・REST テスト・E2E を追加する。SonarQube・docs 更新を含めた品質ゲート確認を行う | 2h | Copilot | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -160,13 +160,13 @@ tags: iteration-plan, it3
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
 | US05 危険物・冷凍貨物予約 | 3 | 12h | ✅ 完了 |
-| US07 ルート確定 | 3 | 12h | 未着手 |
-| US08 予約確定 | 3 | 12h | 未着手 |
-| US09 追跡番号発行 | 3 | 12h | 未着手 |
+| US07 ルート確定 | 3 | 12h | ✅ 完了 |
+| US08 予約確定 | 3 | 12h | ✅ 完了 |
+| US09 追跡番号発行 | 3 | 12h | ✅ 完了 |
 | **合計** | **12** | **48h** | |
 
 **1 SP あたり**: 4h
-**進捗率**: 25%（4/16 タスク完了）
+**進捗率**: 100%（16/16 タスク完了）
 
 ---
 
