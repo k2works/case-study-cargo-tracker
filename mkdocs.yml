@@ -92,6 +92,8 @@ nav:
       - "IT2 計画（US01・06）": development/iteration_plan-2.md
       - "IT1 ふりかえり": development/retrospective-1.md
       - "IT1 完了報告書": development/iteration_report-1.md
+      - "IT2 ふりかえり": development/retrospective-2.md
+      - "IT2 完了報告書": development/iteration_report-2.md
   - 運用:
       - 概要: operation/index.md
       - アプリ開発環境セットアップ: operation/dev_app_instrunction.md

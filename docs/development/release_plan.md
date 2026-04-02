@@ -166,7 +166,7 @@ gantt
     section Phase 1
     IT1 基盤・荷主・予約 (完了 100%)   :done, it1a, 2026-03-31, 14d
     IT1 後改善（E2E・REST 分離・Swagger・seed） :done, it1b, 2026-04-01, 1d
-    IT2 見積・ルート検索（進行中 67%）          :active, it2a, 2026-04-02, 1d
+    IT2 見積・ルート検索（完了 100%）            :done, it2a, 2026-04-01, 2d
     section Phase 2
 ```
 
@@ -371,12 +371,12 @@ gantt
 | イテレーション | 期間 | 計画 SP | 実績 SP | 達成率 | 状態 |
 |--------------|------|---------|---------|--------|------|
 | IT1 | 2026-03-31〜04-13 | 10 | 10 | 100% | **完了** ✅ |
-| IT2 | 2026-04-14〜04-27 | 10 | 5 | 67%（進行中） | **進行中** 🚧 |
+| IT2 | 2026-04-14〜04-27 | 10 | 10 | 100% | **完了** ✅ |
 | IT3 | 2026-04-28〜05-11 | 12 | - | - | 未着手 |
 | IT4 | 2026-05-12〜05-25 | 13 | - | - | 未着手 |
 | IT5 | 2026-05-26〜06-08 | 11 | - | - | 未着手 |
 | IT6 | 2026-06-09〜06-22 | 8 | - | - | 未着手 |
-| **合計** | | **64** | **15** | **23%** | |
+| **合計** | | **64** | **20** | **31%** | |
 
 ### バーンダウンチャート（計画）
 
@@ -405,10 +405,10 @@ xychart-beta
 
 ## 次のステップ
 
-1. **IT2 計画具体化**: US01 / US06 の詳細タスクと受入基準を確定する
-2. **GitHub Project 同期**: IT2 対象 Issue・Milestone・Label を最新計画へ反映する
-3. **実装開始準備**: route provider stub と quote モデルの TDD 着手順を確認する
-4. **品質維持**: backend 113 テスト Green、E2E 9 件 Green、SonarQube Quality Gate PASS を維持したまま IT2 に着手する
+1. **IT3 計画具体化**: US05 / US07 / US08 / US09 の詳細タスクと受入基準を確定する
+2. **GitHub Project 同期**: IT3 対象 Issue・Milestone を最新計画へ反映する
+3. **実装開始準備**: ルート選択と予約確定の TDD 着手順を確認する
+4. **品質維持**: backend 239 テスト Green、E2E 17 件、SonarQube Quality Gate PASS を維持したまま IT3 に着手する
 
 ---
 
@@ -422,4 +422,4 @@ xychart-beta
 | 2026-04-01 | IT1 完了後の改善を反映（108 テスト Green、E2E 9 件 Green、Swagger UI、default seed data、Web・REST 分離） | Copilot |
 | 2026-04-01 | IT1 完了報告書とふりかえりを追加（113 テスト Green、Quality Gate PASS） | Copilot |
 | 2026-04-01 | IT2 計画を追加（US01 / US06、10 SP、見積・ルート検索） | Copilot |
-| 2026-04-02 | IT2 進行中に更新（US01 完了 5SP、US06 進行中、累計 15SP・23%） | Copilot |
+| 2026-04-02 | IT2 完了（20SP 累計、239 テスト Green、カバレッジ 89.8%、SonarQube Quality Gate PASS） | Copilot |
