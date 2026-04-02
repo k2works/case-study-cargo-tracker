@@ -24,6 +24,16 @@ export class HandlingPage {
     await this.page.goto(`/handling/new${suffix}`);
   }
 
+  async gotoReceive(bookingId?: string) {
+    const suffix = bookingId ? `?bookingId=${bookingId}` : '';
+    await this.page.goto(`/handling/receive${suffix}`);
+  }
+
+  async gotoManualUpdate(bookingId?: string) {
+    const suffix = bookingId ? `?bookingId=${bookingId}` : '';
+    await this.page.goto(`/handling/manual-update${suffix}`);
+  }
+
   async register(data: HandlingEventData) {
     await this.gotoNew(data.bookingId);
     await this.page.locator('input[name="bookingId"]').fill(data.bookingId);
@@ -40,6 +50,28 @@ export class HandlingPage {
     await this.gotoList();
     await this.page.locator('input[name="bookingId"]').fill(bookingId);
     await this.page.locator('form[action="/handling"] button[type="submit"]').click();
+  }
+
+  async registerReceive(data: Omit<HandlingEventData, 'eventType'>) {
+    await this.gotoReceive(data.bookingId);
+    await this.page.locator('input[name="bookingId"]').fill(data.bookingId);
+    await this.page.locator('input[name="locationCode"]').fill(data.locationCode);
+    await this.page.locator('input[name="completionTime"]').fill(data.completionTime);
+    if (data.memo) {
+      await this.page.locator('textarea[name="memo"]').fill(data.memo);
+    }
+    await this.page.locator('[data-testid="submit-receive"]').click();
+  }
+
+  async registerManualUpdate(data: Omit<HandlingEventData, 'eventType'>) {
+    await this.gotoManualUpdate(data.bookingId);
+    await this.page.locator('input[name="bookingId"]').fill(data.bookingId);
+    await this.page.locator('input[name="locationCode"]').fill(data.locationCode);
+    await this.page.locator('input[name="completionTime"]').fill(data.completionTime);
+    if (data.memo !== undefined) {
+      await this.page.locator('[data-testid="memo-input"]').fill(data.memo);
+    }
+    await this.page.locator('[data-testid="submit-manual-update"]').click();
   }
 
   private displayEventType(eventType: string): string {
