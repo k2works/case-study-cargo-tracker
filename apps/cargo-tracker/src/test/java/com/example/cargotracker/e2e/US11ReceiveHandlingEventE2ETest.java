@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -166,5 +167,13 @@ class US11ReceiveHandlingEventE2ETest extends PostgreSQLIntegrationTestBase {
                         .param("bookingId", bookingId))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("引取記録")));
+    }
+
+    @Test
+    @DisplayName("US11 未認証ユーザーは引取記録ページにアクセスすると /login にリダイレクトされる")
+    void US11_unauthenticated_access_redirectsToLogin() throws Exception {
+        mockMvc.perform(get("/handling/receive"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", containsString("/login")));
     }
 }

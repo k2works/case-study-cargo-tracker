@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -155,5 +156,13 @@ class US12ManualUpdateE2ETest extends PostgreSQLIntegrationTestBase {
                         .param("bookingId", bookingId))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("手動更新記録")));
+    }
+
+    @Test
+    @DisplayName("US12 未認証ユーザーは手動更新ページにアクセスすると /login にリダイレクトされる")
+    void US12_unauthenticated_access_redirectsToLogin() throws Exception {
+        mockMvc.perform(get("/handling/manual-update"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", containsString("/login")));
     }
 }
