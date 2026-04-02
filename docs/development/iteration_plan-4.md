@@ -125,9 +125,9 @@ tags: iteration-plan, it4
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | RECEIVE イベントタイプ追加・重複登録防止ロジック（`HandlingEvent.canReceive()`）とユニットテストを実装する | 3h | Copilot | [ ] |
-| 2.2 | 引取作業登録 Web フォーム UI（`/handling/new`）と登録フローを実装する | 4h | Copilot | [ ] |
-| 2.3 | 引取作業の統合テスト・E2E テスト（E12: 引取作業を記録して追跡情報に反映される）を追加する | 5h | Copilot | [ ] |
+| 2.1 | RECEIVE イベントタイプ追加・重複登録防止ロジック（`HandlingEvent.canReceive()`）とユニットテストを実装する | 3h | Copilot | [x] |
+| 2.2 | 引取作業登録 Web フォーム UI（`/handling/receive`）と登録フローを実装する | 4h | Copilot | [x] |
+| 2.3 | 引取作業の統合テスト・E2E テスト（E12: 引取作業を記録して追跡情報に反映される）を追加する | 5h | Copilot | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -135,8 +135,8 @@ tags: iteration-plan, it4
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | MANUAL_UPDATE イベントタイプ追加・カスタムメモフィールド追加・管理者専用フォーム（要認証）を実装する | 4h | Copilot | [ ] |
-| 3.2 | MVC/REST テストと E2E テスト（E13: 手動更新で追跡情報が変わる）を追加する | 4h | Copilot | [ ] |
+| 3.1 | MANUAL_UPDATE イベントタイプ追加・カスタムメモフィールド追加・管理者専用フォーム（要認証）を実装する | 4h | Copilot | [x] |
+| 3.2 | MVC/REST テストと E2E テスト（E13: 手動更新で追跡情報が変わる）を追加する | 4h | Copilot | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -144,11 +144,11 @@ tags: iteration-plan, it4
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `TrackingEntry` に荷役履歴を結合する `TrackingQueryService.findTrackingInfo()` を設計し、`TrackingInfoDto` を追加する。`handling_events` JOIN クエリの MyBatis マッパーを実装する | 4h | Copilot | [ ] |
-| 4.2 | 追跡情報 REST API（`GET /api/v1/tracking/{trackingNumber}`）を荷役履歴込みに拡充し、REST テストを更新する | 3h | Copilot | [ ] |
-| 4.3 | 公開追跡ページ（`GET /tracking/{trackingNumber}`）を Thymeleaf テンプレートで実装する。認証不要、404 エラーページ対応 | 5h | Copilot | [ ] |
-| 4.4 | `detail.html` の「追跡機能準備中」を追跡ページへのリンクに変更する | 2h | Copilot | [ ] |
-| 4.5 | E2E テスト（E14: 追跡番号で追跡ページを照会・荷役履歴が表示）・SonarQube・docs 更新を実施する | 6h | Copilot | [ ] |
+| 4.1 | `TrackingEntry` に荷役履歴を結合する `TrackingQueryService.findTrackingInfo()` を設計し、`TrackingInfoDto` を追加する。`handling_events` JOIN クエリの MyBatis マッパーを実装する | 4h | Copilot | [x] |
+| 4.2 | 追跡情報 REST API（`GET /api/v1/tracking/{trackingNumber}`）を荷役履歴込みに拡充し、REST テストを更新する | 3h | Copilot | [x] |
+| 4.3 | 公開追跡ページ（`GET /tracking/{trackingNumber}`）を Thymeleaf テンプレートで実装する。認証不要、404 エラーページ対応 | 5h | Copilot | [x] |
+| 4.4 | `detail.html` の「追跡機能準備中」を追跡ページへのリンクに変更する | 2h | Copilot | [x] |
+| 4.5 | E2E テスト（E14: 追跡番号で追跡ページを照会・荷役履歴が表示）・SonarQube・docs 更新を実施する | 6h | Copilot | [x] |
 
 **小計**: 20h（理想時間）
 
