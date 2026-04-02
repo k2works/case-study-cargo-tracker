@@ -122,7 +122,7 @@ class RecordHandlingEventCommandServiceTest {
 
         RecordHandlingEventCommand command = new RecordHandlingEventCommand(
                 bookingId, HandlingEventType.RECEIVE, "JPTYO",
-                LocalDateTime.of(2026, 5, 12, 9, 0), null);
+                LocalDateTime.of(2026, 5, 12, 9, 0), null, "RC-TEST-001");
 
         HandlingEventId result = commandService.execute(command);
         assertThat(result).isNotNull();
@@ -135,16 +135,32 @@ class RecordHandlingEventCommandServiceTest {
         doNothing().when(bookingExistencePort).verifyExists(bookingId);
         HandlingEvent existing = HandlingEvent.reconstitute(
                 HandlingEventId.generate(), bookingId, HandlingEventType.RECEIVE,
-                "JPTYO", LocalDateTime.of(2026, 5, 1, 9, 0), null);
+                "JPTYO", LocalDateTime.of(2026, 5, 1, 9, 0), null, "RC-OLD-001");
         when(handlingEventRepository.findByBookingId(bookingId)).thenReturn(List.of(existing));
 
         RecordHandlingEventCommand command = new RecordHandlingEventCommand(
                 bookingId, HandlingEventType.RECEIVE, "JPTYO",
-                LocalDateTime.of(2026, 5, 12, 9, 0), null);
+                LocalDateTime.of(2026, 5, 12, 9, 0), null, "RC-TEST-001");
 
         assertThatThrownBy(() -> commandService.execute(command))
                 .isInstanceOf(DuplicateReceiveException.class)
                 .hasMessageContaining(bookingId.toString());
         verify(handlingEventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("RECEIVE で確認コードがない場合は記録できない")
+    void receiveEvent_withoutConfirmationCode_fails() {
+        UUID bookingId = UUID.randomUUID();
+        doNothing().when(bookingExistencePort).verifyExists(bookingId);
+        when(handlingEventRepository.findByBookingId(bookingId)).thenReturn(List.of());
+
+        RecordHandlingEventCommand command = new RecordHandlingEventCommand(
+                bookingId, HandlingEventType.RECEIVE, "JPTYO",
+                LocalDateTime.of(2026, 5, 12, 9, 0), null, null);
+
+        assertThatThrownBy(() -> commandService.execute(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("引取確認コード");
     }
 }

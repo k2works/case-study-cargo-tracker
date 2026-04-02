@@ -58,6 +58,18 @@
                             </div>
                         </div>
                         <div class="mb-3 row">
+                            <label for="receiveConfirmationCode" class="col-sm-3 col-form-label">引取確認コード <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="receiveConfirmationCode" name="receiveConfirmationCode"
+                                       th:value="*{receiveConfirmationCode}"
+                                       th:classappend="${#fields.hasErrors('receiveConfirmationCode')} ? 'is-invalid'"
+                                       placeholder="例: RC-20260403-001" data-testid="receive-confirmation-code" required>
+                                <div th:if="${#fields.hasErrors('receiveConfirmationCode')}" class="invalid-feedback"
+                                     th:errors="*{receiveConfirmationCode}" data-testid="receive-confirmation-code-error"></div>
+                                <div class="form-text">荷受人確認のため、署名または確認コードの代わりに確認コードを記録します。</div>
+                            </div>
+                        </div>
+                        <div class="mb-3 row">
                             <label for="memo" class="col-sm-3 col-form-label">メモ</label>
                             <div class="col-sm-9">
                                 <textarea class="form-control" id="memo" name="memo" rows="3"

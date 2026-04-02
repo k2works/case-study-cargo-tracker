@@ -17,6 +17,10 @@ export class TrackingPage {
     return code.innerText();
   }
 
+  currentState(): Locator {
+    return this.page.locator('[data-testid="current-state"]');
+  }
+
   historyRows(): Locator {
     return this.page.locator('[data-testid="handling-history-table"] tbody tr');
   }

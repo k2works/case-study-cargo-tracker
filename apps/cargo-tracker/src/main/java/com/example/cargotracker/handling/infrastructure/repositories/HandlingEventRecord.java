@@ -10,6 +10,7 @@ public record HandlingEventRecord(
         String locationCode,
         LocalDateTime completionTime,
         String memo,
+        String receiveConfirmationCode,
         LocalDateTime registeredAt
 ) {
 }

@@ -28,6 +28,7 @@ public class HandlingEventRepositoryImpl implements HandlingEventRepository {
                 handlingEvent.getLocationCode(),
                 handlingEvent.getCompletionTime(),
                 handlingEvent.getMemo(),
+                handlingEvent.getReceiveConfirmationCode(),
                 LocalDateTime.now()
         );
         handlingEventMapper.insert(row);
@@ -55,7 +56,8 @@ public class HandlingEventRepositoryImpl implements HandlingEventRepository {
                 HandlingEventType.valueOf(row.eventType()),
                 row.locationCode(),
                 row.completionTime(),
-                row.memo()
+                row.memo(),
+                row.receiveConfirmationCode()
         );
     }
 }

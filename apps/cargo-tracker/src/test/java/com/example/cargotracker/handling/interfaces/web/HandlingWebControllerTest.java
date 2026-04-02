@@ -217,10 +217,12 @@ class HandlingWebControllerTest {
                         .param("bookingId", bookingId.toString())
                         .param("eventType", "RECEIVE")
                         .param("locationCode", "JPTYO")
-                        .param("completionTime", "2025-01-15T10:00"))
+                        .param("completionTime", "2025-01-15T10:00")
+                        .param("receiveConfirmationCode", "RC-TEST-001"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/handling?bookingId=" + bookingId))
-                .andExpect(flash().attributeExists("successMessage"));
+                .andExpect(flash().attribute("successMessage",
+                        org.hamcrest.Matchers.containsString("精算処理を開始できます")));
     }
 
     @Test
@@ -235,10 +237,26 @@ class HandlingWebControllerTest {
                         .param("bookingId", bookingId.toString())
                         .param("eventType", "RECEIVE")
                         .param("locationCode", "JPTYO")
-                        .param("completionTime", "2025-01-15T10:00"))
+                        .param("completionTime", "2025-01-15T10:00")
+                        .param("receiveConfirmationCode", "RC-TEST-001"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("handling/receive"))
                 .andExpect(model().attributeHasFieldErrors("form", "bookingId"));
+    }
+
+    @Test
+    @DisplayName("POST /handling/receive で確認コードが空の場合はフィールドエラーを返す")
+    void createReceive_emptyConfirmationCode_showsFieldError() throws Exception {
+        mockMvc.perform(post("/handling/receive")
+                        .with(csrf())
+                        .param("bookingId", UUID.randomUUID().toString())
+                        .param("eventType", "RECEIVE")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2025-01-15T10:00")
+                        .param("receiveConfirmationCode", ""))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/receive"))
+                .andExpect(model().attributeHasFieldErrors("form", "receiveConfirmationCode"));
     }
 
     // ── GET /handling/manual-update ───────────────────────────────────────

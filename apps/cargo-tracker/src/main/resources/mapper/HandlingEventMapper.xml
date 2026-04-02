@@ -12,25 +12,26 @@
             <arg  column="location_code"     javaType="java.lang.String"/>
             <arg  column="completion_time"   javaType="java.time.LocalDateTime"/>
             <arg  column="memo"              javaType="java.lang.String"/>
+            <arg  column="receive_confirmation_code" javaType="java.lang.String"/>
             <arg  column="registered_at"     javaType="java.time.LocalDateTime"/>
         </constructor>
     </resultMap>
 
     <insert id="insert">
-        INSERT INTO handling_events (id, booking_id, event_type, location_code, completion_time, memo, registered_at)
+        INSERT INTO handling_events (id, booking_id, event_type, location_code, completion_time, memo, receive_confirmation_code, registered_at)
         VALUES (#{row.id}, #{row.bookingId}, #{row.eventType}, #{row.locationCode},
-                #{row.completionTime}, #{row.memo}, #{row.registeredAt})
+                #{row.completionTime}, #{row.memo}, #{row.receiveConfirmationCode}, #{row.registeredAt})
     </insert>
 
     <select id="findByBookingId" resultMap="handlingEventResultMap">
-        SELECT id, booking_id, event_type, location_code, completion_time, memo, registered_at
+        SELECT id, booking_id, event_type, location_code, completion_time, memo, receive_confirmation_code, registered_at
         FROM handling_events
         WHERE booking_id = #{bookingId}
         ORDER BY completion_time DESC, id DESC
     </select>
 
     <select id="findFiltered" resultMap="handlingEventResultMap">
-        SELECT id, booking_id, event_type, location_code, completion_time, memo, registered_at
+        SELECT id, booking_id, event_type, location_code, completion_time, memo, receive_confirmation_code, registered_at
         FROM handling_events
         <where>
             <if test="bookingId != null">

@@ -127,10 +127,11 @@ class US11ReceiveHandlingEventE2ETest extends PostgreSQLIntegrationTestBase {
                         .param("bookingId", bookingId)
                         .param("eventType", "RECEIVE")
                         .param("locationCode", "JPTYO")
-                        .param("completionTime", "2026-05-01T09:00"))
+                        .param("completionTime", "2026-05-01T09:00")
+                        .param("receiveConfirmationCode", "RC-E2E-001"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("/handling?bookingId=*"))
-                .andExpect(flash().attributeExists("successMessage"));
+                .andExpect(flash().attribute("successMessage", containsString("引取済")));
     }
 
     @Test
@@ -143,7 +144,8 @@ class US11ReceiveHandlingEventE2ETest extends PostgreSQLIntegrationTestBase {
                         .param("bookingId", bookingId)
                         .param("eventType", "RECEIVE")
                         .param("locationCode", "JPTYO")
-                        .param("completionTime", "2026-05-01T09:00"))
+                        .param("completionTime", "2026-05-01T09:00")
+                        .param("receiveConfirmationCode", "RC-E2E-001"))
                 .andExpect(status().is3xxRedirection());
 
         // 2 回目の RECEIVE 登録 → エラー
@@ -153,7 +155,8 @@ class US11ReceiveHandlingEventE2ETest extends PostgreSQLIntegrationTestBase {
                         .param("bookingId", bookingId)
                         .param("eventType", "RECEIVE")
                         .param("locationCode", "JPTYO")
-                        .param("completionTime", "2026-05-02T09:00"))
+                        .param("completionTime", "2026-05-02T09:00")
+                        .param("receiveConfirmationCode", "RC-E2E-002"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("handling/receive"))
                 .andExpect(model().attributeHasFieldErrors("form", "bookingId"));
@@ -166,7 +169,24 @@ class US11ReceiveHandlingEventE2ETest extends PostgreSQLIntegrationTestBase {
                         .session(session)
                         .param("bookingId", bookingId))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("引取記録")));
+                .andExpect(content().string(containsString("引取記録")))
+                .andExpect(content().string(containsString("引取確認コード")));
+    }
+
+    @Test
+    @DisplayName("E12 引取確認コードなしでは引取記録できない")
+    void E12_receiveWithoutConfirmationCode_shouldShowError() throws Exception {
+        mockMvc.perform(post("/handling/receive")
+                        .session(session)
+                        .with(csrf())
+                        .param("bookingId", bookingId)
+                        .param("eventType", "RECEIVE")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2026-05-01T09:00")
+                        .param("receiveConfirmationCode", ""))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/receive"))
+                .andExpect(model().attributeHasFieldErrors("form", "receiveConfirmationCode"));
     }
 
     @Test

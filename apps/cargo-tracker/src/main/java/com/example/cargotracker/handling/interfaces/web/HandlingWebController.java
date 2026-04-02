@@ -132,13 +132,19 @@ public class HandlingWebController {
         if (form.getEventType() != HandlingEventType.RECEIVE) {
             form.setEventType(HandlingEventType.RECEIVE);
         }
+        if (form.getReceiveConfirmationCode() == null || form.getReceiveConfirmationCode().isBlank()) {
+            bindingResult.rejectValue("receiveConfirmationCode", "required.receiveConfirmationCode",
+                    "引取確認コードは必須です");
+        }
         if (bindingResult.hasErrors()) {
             return VIEW_RECEIVE;
         }
 
         try {
             recordHandlingEventCommandService.execute(form.toCommand());
-            redirectAttributes.addFlashAttribute("successMessage", "引取を記録しました。");
+            redirectAttributes.addFlashAttribute(
+                    "successMessage",
+                    "引取を記録しました。貨物状態は引取済となり、配送完了のため精算処理を開始できます。");
             return "redirect:" + UriComponentsBuilder.fromPath("/handling")
                     .queryParam("bookingId", form.getBookingId())
                     .build()

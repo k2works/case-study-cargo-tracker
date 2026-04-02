@@ -13,6 +13,16 @@ public record RecordHandlingEventCommand(
         HandlingEventType eventType,
         String locationCode,
         LocalDateTime completionTime,
-        String memo
+        String memo,
+        String receiveConfirmationCode
 ) {
+    public RecordHandlingEventCommand(
+            UUID bookingId,
+            HandlingEventType eventType,
+            String locationCode,
+            LocalDateTime completionTime,
+            String memo
+    ) {
+        this(bookingId, eventType, locationCode, completionTime, memo, null);
+    }
 }

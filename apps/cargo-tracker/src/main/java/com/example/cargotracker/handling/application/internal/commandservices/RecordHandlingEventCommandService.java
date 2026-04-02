@@ -51,7 +51,8 @@ public class RecordHandlingEventCommandService {
                 command.eventType(),
                 command.locationCode(),
                 command.completionTime(),
-                command.memo()
+                command.memo(),
+                command.receiveConfirmationCode()
         );
 
         // 永続化

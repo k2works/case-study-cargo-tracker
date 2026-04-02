@@ -64,7 +64,7 @@ test.describe.serial('E13〜E15: US11 引取・US12 手動更新・US13 追跡�
     await context.close();
   });
 
-  test('E13: 引取を記録すると追跡履歴に表示され、重複登録はエラーになる', async ({
+  test('E13: 引取確認コード付きで引取を記録すると引取済になり、重複登録はエラーになる', async ({
     page,
     loggedIn,
   }) => {
@@ -73,16 +73,20 @@ test.describe.serial('E13〜E15: US11 引取・US12 手動更新・US13 追跡�
 
     await handlingPage.gotoReceive(bookingId);
     await expect(page.locator('h4')).toContainText('引取記録');
+    await expect(page.locator('[data-testid="receive-confirmation-code"]')).toBeVisible();
 
     await handlingPage.registerReceive({
       bookingId,
       locationCode: 'SGSIN',
       completionTime: futureDateTimeLocal(2),
+      receiveConfirmationCode: 'RC-20260403-001',
       memo: '荷受人へ引き渡し完了',
     });
 
     await expect(page).toHaveURL(`/handling?bookingId=${bookingId}`);
+    await expect(page.locator('.alert-success')).toContainText('精算処理を開始できます');
     await trackingPage.goto(trackingNumber);
+    await expect(trackingPage.currentState()).toHaveText('引取済');
     await trackingPage.expectHistoryRow(0, {
       locationCode: 'SGSIN',
       eventType: '引取',
@@ -93,11 +97,13 @@ test.describe.serial('E13〜E15: US11 引取・US12 手動更新・US13 追跡�
       bookingId,
       locationCode: 'SGSIN',
       completionTime: futureDateTimeLocal(3),
+      receiveConfirmationCode: 'RC-20260403-002',
       memo: '重複引取',
     });
 
     await expect(page).toHaveURL(/\/handling\/receive/);
     await expect(page.locator('[data-testid="booking-id-error"]')).toContainText('引取');
+    await expect(page.locator('[data-testid="receive-confirmation-code"]')).toHaveValue('RC-20260403-002');
   });
 
   test('E14: 手動更新はメモ必須で、登録後に追跡履歴へ反映される', async ({
@@ -118,7 +124,7 @@ test.describe.serial('E13〜E15: US11 引取・US12 手動更新・US13 追跡�
     });
 
     await expect(page).toHaveURL(/\/handling\/manual-update/);
-    await expect(page.locator('[data-testid="memo-error"]')).toContainText('メモ');
+    await expect(page.locator('textarea[name="memo"]:invalid')).toHaveCount(1);
 
     await handlingPage.registerManualUpdate({
       bookingId,

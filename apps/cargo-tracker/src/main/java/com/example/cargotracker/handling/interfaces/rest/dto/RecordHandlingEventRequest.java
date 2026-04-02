@@ -17,9 +17,11 @@ public record RecordHandlingEventRequest(
         String locationCode,
         @NotNull(message = "完了日時は必須です")
         LocalDateTime completionTime,
-        String memo
+        String memo,
+        String receiveConfirmationCode
 ) {
     public RecordHandlingEventCommand toCommand() {
-        return new RecordHandlingEventCommand(bookingId, eventType, locationCode, completionTime, memo);
+        return new RecordHandlingEventCommand(
+                bookingId, eventType, locationCode, completionTime, memo, receiveConfirmationCode);
     }
 }

@@ -28,6 +28,7 @@ public class HandlingEventForm {
     private LocalDateTime completionTime;
 
     private String memo;
+    private String receiveConfirmationCode;
 
     public RecordHandlingEventCommand toCommand() {
         return new RecordHandlingEventCommand(
@@ -35,7 +36,8 @@ public class HandlingEventForm {
                 eventType,
                 locationCode,
                 completionTime,
-                memo
+                memo,
+                receiveConfirmationCode
         );
     }
 
@@ -49,4 +51,6 @@ public class HandlingEventForm {
     public void setCompletionTime(LocalDateTime completionTime) { this.completionTime = completionTime; }
     public String getMemo() { return memo; }
     public void setMemo(String memo) { this.memo = memo; }
+    public String getReceiveConfirmationCode() { return receiveConfirmationCode; }
+    public void setReceiveConfirmationCode(String receiveConfirmationCode) { this.receiveConfirmationCode = receiveConfirmationCode; }
 }

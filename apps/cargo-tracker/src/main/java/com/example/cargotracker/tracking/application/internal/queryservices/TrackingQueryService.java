@@ -60,7 +60,7 @@ public class TrackingQueryService {
                     String destinationLocation = bookingSummary != null ? bookingSummary.destinationLocation() : "";
                     LocalDate estimatedArrival = bookingSummary != null ? bookingSummary.requestedDeliveryDate() : null;
 
-                    String currentState = history.isEmpty() ? "未受取" : history.get(0).eventTypeDisplayName();
+                    String currentState = resolveCurrentState(history);
                     String currentLocation = history.isEmpty() ? originLocation : history.get(0).locationCode();
 
                     return new TrackingInfoDto(
@@ -82,5 +82,16 @@ public class TrackingQueryService {
         } catch (IllegalArgumentException e) {
             return eventType;
         }
+    }
+
+    private String resolveCurrentState(List<TrackingInfoDto.HandlingEventSummary> history) {
+        if (history.isEmpty()) {
+            return "未受取";
+        }
+        TrackingInfoDto.HandlingEventSummary latest = history.get(0);
+        if ("RECEIVE".equals(latest.eventType())) {
+            return "引取済";
+        }
+        return latest.eventTypeDisplayName();
     }
 }

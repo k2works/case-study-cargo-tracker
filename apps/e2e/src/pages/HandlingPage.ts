@@ -6,6 +6,7 @@ export interface HandlingEventData {
   locationCode: string;
   completionTime: string;
   memo?: string;
+  receiveConfirmationCode?: string;
 }
 
 export class HandlingPage {
@@ -57,6 +58,9 @@ export class HandlingPage {
     await this.page.locator('input[name="bookingId"]').fill(data.bookingId);
     await this.page.locator('input[name="locationCode"]').fill(data.locationCode);
     await this.page.locator('input[name="completionTime"]').fill(data.completionTime);
+    if (data.receiveConfirmationCode !== undefined) {
+      await this.page.locator('[data-testid="receive-confirmation-code"]').fill(data.receiveConfirmationCode);
+    }
     if (data.memo) {
       await this.page.locator('textarea[name="memo"]').fill(data.memo);
     }

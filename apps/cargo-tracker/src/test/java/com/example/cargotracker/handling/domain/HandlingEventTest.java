@@ -74,7 +74,9 @@ class HandlingEventTest {
     @EnumSource(HandlingEventType.class)
     @DisplayName("全荷役イベント種別を記録できる")
     void recordAllHandlingEventTypes(HandlingEventType type) {
-        HandlingEvent event = HandlingEvent.recordEvent(anyId(), anyBookingId(), type, "JPTYO", anyCompletionTime(), null);
+        String receiveConfirmationCode = type == HandlingEventType.RECEIVE ? "RC-20260403-001" : null;
+        HandlingEvent event = HandlingEvent.recordEvent(
+                anyId(), anyBookingId(), type, "JPTYO", anyCompletionTime(), null, receiveConfirmationCode);
         assertThat(event.getEventType()).isEqualTo(type);
     }
 
@@ -86,6 +88,25 @@ class HandlingEventTest {
 
         assertThat(event.getEventType()).isEqualTo(HandlingEventType.MANUAL_UPDATE);
         assertThat(event.getMemo()).isEqualTo(memo);
+    }
+
+    @Test
+    @DisplayName("RECEIVE は確認コード付きで記録できる")
+    void recordReceiveWithConfirmationCode() {
+        HandlingEvent event = HandlingEvent.recordEvent(
+                anyId(), anyBookingId(), HandlingEventType.RECEIVE, "JPTYO", anyCompletionTime(), null, "RC-20260403-001");
+
+        assertThat(event.getEventType()).isEqualTo(HandlingEventType.RECEIVE);
+        assertThat(event.getReceiveConfirmationCode()).isEqualTo("RC-20260403-001");
+    }
+
+    @Test
+    @DisplayName("RECEIVE は確認コードなしでは記録できない")
+    void rejectReceiveWithoutConfirmationCode() {
+        assertThatThrownBy(() ->
+                HandlingEvent.recordEvent(anyId(), anyBookingId(), HandlingEventType.RECEIVE, "JPTYO", anyCompletionTime(), null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("引取確認コード");
     }
 
     @Test
@@ -166,7 +187,7 @@ class HandlingEventTest {
     void canReceive_existingReceive_returnsFalse() {
         UUID bookingId = anyBookingId();
         HandlingEvent existing = HandlingEvent.reconstitute(
-                anyId(), bookingId, HandlingEventType.RECEIVE, "JPTYO", anyCompletionTime(), null);
+                anyId(), bookingId, HandlingEventType.RECEIVE, "JPTYO", anyCompletionTime(), null, "RC-20260403-001");
 
         boolean result = HandlingEvent.canReceive(List.of(existing));
 

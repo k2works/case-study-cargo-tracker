@@ -22,39 +22,59 @@ public class HandlingEvent {
     private final String locationCode;
     private final LocalDateTime completionTime;
     private final String memo;
+    private final String receiveConfirmationCode;
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private HandlingEvent(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
-                          String locationCode, LocalDateTime completionTime, String memo) {
+                          String locationCode, LocalDateTime completionTime, String memo,
+                          String receiveConfirmationCode) {
         if (id == null) throw new IllegalArgumentException("荷役イベント ID は null にできません");
         if (bookingId == null) throw new IllegalArgumentException("予約 ID は null にできません");
         if (eventType == null) throw new IllegalArgumentException("荷役イベント種別は null にできません");
         if (locationCode == null || locationCode.isBlank()) throw new IllegalArgumentException("場所コードは null または空にできません");
         if (completionTime == null) throw new IllegalArgumentException("完了日時は null にできません");
+        if (eventType == HandlingEventType.RECEIVE
+                && (receiveConfirmationCode == null || receiveConfirmationCode.isBlank())) {
+            throw new IllegalArgumentException("引取確認コードは必須です");
+        }
         this.id = id;
         this.bookingId = bookingId;
         this.eventType = eventType;
         this.locationCode = locationCode;
         this.completionTime = completionTime;
         this.memo = memo;
+        this.receiveConfirmationCode = receiveConfirmationCode;
     }
 
     /**
      * 荷役イベントを記録する（新規発生）。ドメインイベントを発行する。
      */
     public static HandlingEvent recordEvent(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
-                                            String locationCode, LocalDateTime completionTime, String memo) {
-        HandlingEvent event = new HandlingEvent(id, bookingId, eventType, locationCode, completionTime, memo);
+                                            String locationCode, LocalDateTime completionTime, String memo,
+                                            String receiveConfirmationCode) {
+        HandlingEvent event = new HandlingEvent(
+                id, bookingId, eventType, locationCode, completionTime, memo, receiveConfirmationCode);
         event.domainEvents.add(new HandlingEventRecordedEvent(id, bookingId, eventType));
         return event;
+    }
+
+    public static HandlingEvent recordEvent(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
+                                            String locationCode, LocalDateTime completionTime, String memo) {
+        return recordEvent(id, bookingId, eventType, locationCode, completionTime, memo, null);
     }
 
     /**
      * ストレージから荷役イベントを再構成する。ドメインイベントは発行しない。
      */
     public static HandlingEvent reconstitute(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
-                                              String locationCode, LocalDateTime completionTime, String memo) {
-        return new HandlingEvent(id, bookingId, eventType, locationCode, completionTime, memo);
+                                              String locationCode, LocalDateTime completionTime, String memo,
+                                              String receiveConfirmationCode) {
+        return new HandlingEvent(id, bookingId, eventType, locationCode, completionTime, memo, receiveConfirmationCode);
+    }
+
+    public static HandlingEvent reconstitute(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
+                                             String locationCode, LocalDateTime completionTime, String memo) {
+        return reconstitute(id, bookingId, eventType, locationCode, completionTime, memo, null);
     }
 
     public HandlingEventId getId() {
@@ -79,6 +99,10 @@ public class HandlingEvent {
 
     public String getMemo() {
         return memo;
+    }
+
+    public String getReceiveConfirmationCode() {
+        return receiveConfirmationCode;
     }
 
     public List<DomainEvent> getDomainEvents() {
