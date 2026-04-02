@@ -10,4 +10,7 @@ import java.util.UUID;
 public interface HandlingEventMapper {
     void insert(@Param("row") HandlingEventRecord row);
     List<HandlingEventRecord> findByBookingId(@Param("bookingId") UUID bookingId);
+    List<HandlingEventRecord> findFiltered(@Param("bookingId") UUID bookingId,
+                                           @Param("eventType") String eventType,
+                                           @Param("locationCode") String locationCode);
 }

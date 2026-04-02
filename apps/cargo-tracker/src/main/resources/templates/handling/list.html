@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>荷役作業一覧 - CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
+
+<main>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>荷役作業一覧</h4>
+        <a th:href="@{/handling/new}" class="btn btn-primary">+ 新規荷役登録</a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+
+    <!-- 検索フォーム -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <form th:action="@{/handling}" method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label for="bookingId" class="form-label small mb-1">予約 ID</label>
+                    <input type="text" class="form-control form-control-sm" id="bookingId" name="bookingId"
+                           th:value="${searchBookingId}"
+                           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                </div>
+                <div class="col-md-3">
+                    <label for="eventType" class="form-label small mb-1">荷役種別</label>
+                    <select class="form-select form-select-sm" id="eventType" name="eventType">
+                        <option value="">すべて</option>
+                        <option th:each="type : ${eventTypes}"
+                                th:value="${type}"
+                                th:text="${type.name()}"
+                                th:selected="${searchEventType == type}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="locationCode" class="form-label small mb-1">場所コード</label>
+                    <input type="text" class="form-control form-control-sm" id="locationCode" name="locationCode"
+                           th:value="${searchLocationCode}"
+                           placeholder="例: JPTYO">
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">検索</button>
+                    <a th:href="@{/handling}" class="btn btn-outline-secondary btn-sm">クリア</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 一覧テーブル -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">作業 ID</th>
+                    <th scope="col">予約 ID</th>
+                    <th scope="col">荷役種別</th>
+                    <th scope="col">場所コード</th>
+                    <th scope="col">完了日時</th>
+                    <th scope="col">メモ</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(handlingEvents)}">
+                    <td colspan="6" class="text-center text-muted py-4">荷役作業が登録されていません</td>
+                </tr>
+                <tr th:each="event : ${handlingEvents}">
+                    <td><code class="small" th:text="${event.id}"></code></td>
+                    <td>
+                        <a th:href="@{/bookings/{id}(id=${event.bookingId})}"
+                           class="small font-monospace"
+                           th:text="${event.bookingId}"></a>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${event.eventType.name() == 'RECEIVE'} ? 'bg-info text-dark' :
+                                             (${event.eventType.name() == 'LOAD'} ? 'bg-success' :
+                                             (${event.eventType.name() == 'UNLOAD'} ? 'bg-warning text-dark' :
+                                             (${event.eventType.name() == 'CUSTOMS'} ? 'bg-secondary' :
+                                             (${event.eventType.name() == 'TRANSHIP'} ? 'bg-primary' : 'bg-dark'))))"
+                              th:text="${event.eventType.name()}"></span>
+                    </td>
+                    <td th:text="${event.locationCode}"></td>
+                    <td th:text="${#temporals.format(event.completionTime, 'yyyy-MM-dd HH:mm')}"></td>
+                    <td class="small text-muted" th:text="${event.memo != null ? event.memo : '—'}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

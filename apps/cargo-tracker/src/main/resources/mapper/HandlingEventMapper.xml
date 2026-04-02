@@ -29,4 +29,21 @@
         ORDER BY completion_time DESC, id DESC
     </select>
 
+    <select id="findFiltered" resultMap="handlingEventResultMap">
+        SELECT id, booking_id, event_type, location_code, completion_time, memo, registered_at
+        FROM handling_events
+        <where>
+            <if test="bookingId != null">
+                AND booking_id = #{bookingId}
+            </if>
+            <if test="eventType != null and eventType != ''">
+                AND event_type = #{eventType}
+            </if>
+            <if test="locationCode != null and locationCode != ''">
+                AND LOWER(location_code) LIKE LOWER(CONCAT('%', #{locationCode}, '%'))
+            </if>
+        </where>
+        ORDER BY completion_time DESC, id DESC
+    </select>
+
 </mapper>

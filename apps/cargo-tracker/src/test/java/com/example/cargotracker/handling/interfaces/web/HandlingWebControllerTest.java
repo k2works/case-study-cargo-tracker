@@ -2,7 +2,10 @@ package com.example.cargotracker.handling.interfaces.web;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
+import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
+import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +14,8 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -35,6 +40,42 @@ class HandlingWebControllerTest {
     @MockitoBean
     private RecordHandlingEventCommandService recordHandlingEventCommandService;
 
+    @MockitoBean
+    private FindHandlingEventsQueryService findHandlingEventsQueryService;
+
+    // ── GET /handling ──────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("GET /handling は荷役作業一覧を表示する")
+    void list_returnsListView() throws Exception {
+        when(findHandlingEventsQueryService.findFiltered(any(), any(), any()))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/handling"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/list"))
+                .andExpect(model().attributeExists("handlingEvents", "eventTypes"));
+    }
+
+    @Test
+    @DisplayName("GET /handling はフィルタ付きで荷役イベントを返す")
+    void list_withFilter_returnsFilteredEvents() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        HandlingEvent event = anyHandlingEvent(bookingId);
+        when(findHandlingEventsQueryService.findFiltered(any(), any(), any()))
+                .thenReturn(List.of(event));
+
+        mockMvc.perform(get("/handling")
+                        .param("bookingId", bookingId.toString())
+                        .param("eventType", "LOAD")
+                        .param("locationCode", "JPTYO"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/list"))
+                .andExpect(model().attributeExists("handlingEvents"));
+    }
+
+    // ── GET /handling/new ──────────────────────────────────────────────────
+
     @Test
     @DisplayName("GET /handling/new は荷役作業記録フォームを表示する")
     void showForm_returnsNewView() throws Exception {
@@ -56,9 +97,11 @@ class HandlingWebControllerTest {
                         org.hamcrest.Matchers.hasProperty("bookingId", org.hamcrest.Matchers.is(bookingId))));
     }
 
+    // ── POST /handling ─────────────────────────────────────────────────────
+
     @Test
-    @DisplayName("POST /handling は正常に記録してリダイレクトする")
-    void record_success_redirectsWithMessage() throws Exception {
+    @DisplayName("POST /handling は正常に記録して一覧へリダイレクトする")
+    void record_success_redirectsToList() throws Exception {
         when(recordHandlingEventCommandService.execute(any()))
                 .thenReturn(HandlingEventId.generate());
 
@@ -69,7 +112,7 @@ class HandlingWebControllerTest {
                         .param("locationCode", "JPTYO")
                         .param("completionTime", "2025-01-15T10:00"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/handling/new"))
+                .andExpect(redirectedUrl("/handling"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
@@ -103,5 +146,18 @@ class HandlingWebControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("handling/new"))
                 .andExpect(model().attributeExists("errorMessage"));
+    }
+
+    // ── ヘルパー ──────────────────────────────────────────────────────────
+
+    private HandlingEvent anyHandlingEvent(UUID bookingId) {
+        return HandlingEvent.reconstitute(
+                HandlingEventId.generate(),
+                bookingId,
+                HandlingEventType.LOAD,
+                "JPTYO",
+                LocalDateTime.of(2025, 1, 15, 10, 0),
+                null
+        );
     }
 }

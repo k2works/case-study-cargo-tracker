@@ -40,6 +40,14 @@ public class HandlingEventRepositoryImpl implements HandlingEventRepository {
                 .toList();
     }
 
+    @Override
+    public List<HandlingEvent> findFiltered(UUID bookingId, HandlingEventType eventType, String locationCode) {
+        String eventTypeName = eventType != null ? eventType.name() : null;
+        return handlingEventMapper.findFiltered(bookingId, eventTypeName, locationCode).stream()
+                .map(this::toHandlingEvent)
+                .toList();
+    }
+
     private HandlingEvent toHandlingEvent(HandlingEventRecord row) {
         return HandlingEvent.reconstitute(
                 new HandlingEventId(row.id()),

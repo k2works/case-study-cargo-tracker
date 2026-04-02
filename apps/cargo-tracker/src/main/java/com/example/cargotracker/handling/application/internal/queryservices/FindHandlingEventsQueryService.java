@@ -2,6 +2,7 @@ package com.example.cargotracker.handling.application.internal.queryservices;
 
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
 import com.example.cargotracker.handling.domain.model.repository.HandlingEventRepository;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,5 +24,9 @@ public class FindHandlingEventsQueryService {
 
     public List<HandlingEvent> findByBookingId(UUID bookingId) {
         return handlingEventRepository.findByBookingId(bookingId);
+    }
+
+    public List<HandlingEvent> findFiltered(UUID bookingId, HandlingEventType eventType, String locationCode) {
+        return handlingEventRepository.findFiltered(bookingId, eventType, locationCode);
     }
 }
