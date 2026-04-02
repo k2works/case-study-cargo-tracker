@@ -82,15 +82,19 @@ public class BookingRepositoryImpl implements BookingRepository {
         CargoSpecification cargo = new CargoSpecification(
                 CargoType.valueOf(row.cargoType()),
                 row.cargoWeightKg(),
-                row.cargoLengthCm(),
-                row.cargoWidthCm(),
-                row.cargoHeightCm(),
+                new CargoSpecification.CargoDimensions(
+                        row.cargoLengthCm(),
+                        row.cargoWidthCm(),
+                        row.cargoHeightCm()
+                ),
                 row.cargoQuantity(),
                 row.cargoDescription(),
-                row.cargoUnNumber(),
-                row.cargoHazardClass(),
-                row.cargoMinTempCelsius(),
-                row.cargoMaxTempCelsius()
+                new CargoSpecification.SpecialHandling(
+                        row.cargoUnNumber(),
+                        row.cargoHazardClass(),
+                        row.cargoMinTempCelsius(),
+                        row.cargoMaxTempCelsius()
+                )
         );
         TransportCondition transport = new TransportCondition(
                 row.originLocation(),

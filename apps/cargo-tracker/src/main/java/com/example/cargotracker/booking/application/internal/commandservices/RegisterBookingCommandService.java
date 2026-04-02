@@ -40,15 +40,19 @@ public class RegisterBookingCommandService {
         CargoSpecification cargoSpecification = new CargoSpecification(
                 command.cargoType(),
                 command.weightKg(),
-                command.lengthCm(),
-                command.widthCm(),
-                command.heightCm(),
+                new CargoSpecification.CargoDimensions(
+                        command.lengthCm(),
+                        command.widthCm(),
+                        command.heightCm()
+                ),
                 command.quantity(),
                 command.description(),
-                command.unNumber(),
-                command.hazardClass(),
-                command.minTempCelsius(),
-                command.maxTempCelsius()
+                new CargoSpecification.SpecialHandling(
+                        command.unNumber(),
+                        command.hazardClass(),
+                        command.minTempCelsius(),
+                        command.maxTempCelsius()
+                )
         );
         TransportCondition transportCondition = new TransportCondition(
                 command.originLocation(),

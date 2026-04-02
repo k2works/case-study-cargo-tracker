@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -138,6 +139,44 @@ class BookingRestControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("荷主が見つかりません: missing-shipper"));
+    }
+
+    @Test
+    @DisplayName("ルート割り当て API は 200 を返す")
+    void assignRoute() throws Exception {
+        Booking booking = anyBooking();
+
+        mockMvc.perform(post("/api/bookings/" + booking.getId() + "/route")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "voyageNumber": "VOY-001",
+                                  "routePath": "JPTYO/USNYC",
+                                  "estimatedArrival": "2025-09-01"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        verify(assignRouteCommandService).execute(any());
+    }
+
+    @Test
+    @DisplayName("予約確定 API は 200 を返す")
+    void confirm() throws Exception {
+        Booking booking = anyBooking();
+
+        mockMvc.perform(post("/api/bookings/" + booking.getId() + "/confirm"))
+                .andExpect(status().isOk());
+
+        verify(confirmBookingCommandService).execute(any());
+    }
+
+    @Test
+    @DisplayName("不正な予約 ID の詳細取得は 404 を返す")
+    void detailWithInvalidId() throws Exception {
+        mockMvc.perform(get("/api/bookings/invalid-id"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("予約が見つかりません: invalid-id"));
     }
 
     private Booking anyBooking() {

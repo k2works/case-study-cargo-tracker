@@ -14,6 +14,8 @@ import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondi
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistencePort;
 import com.example.cargotracker.tracking.application.internal.queryservices.TrackingQueryService;
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -192,6 +195,23 @@ class BookingWebControllerTest {
     }
 
     @Test
+    @DisplayName("追跡番号が存在する場合は予約詳細に表示用モデルを追加する")
+    void showDetailWithTrackingNumber() throws Exception {
+        Booking booking = anyBooking();
+        BookingId bookingId = booking.getId();
+        when(findBookingQueryService.execute(bookingId)).thenReturn(booking);
+        when(shipperExistencePort.findNameById(booking.getShipperId().value()))
+                .thenReturn(java.util.Optional.of("山田 太郎"));
+        when(trackingQueryService.findByBookingId(bookingId.value()))
+                .thenReturn(java.util.Optional.of(new TrackingEntry(new TrackingNumber("TRK-ABC12345"), bookingId.value())));
+
+        mockMvc.perform(get("/bookings/" + bookingId))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/detail"))
+                .andExpect(model().attribute("trackingNumber", "TRK-ABC12345"));
+    }
+
+    @Test
     @DisplayName("存在しない予約 ID を指定した場合は 404 を返す")
     void returnNotFoundWhenBookingNotFound() throws Exception {
         BookingId bookingId = BookingId.generate();
@@ -200,6 +220,36 @@ class BookingWebControllerTest {
 
         mockMvc.perform(get("/bookings/" + bookingId))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("ルート割り当て後は予約詳細へリダイレクトする")
+    void assignRouteRedirectsToDetail() throws Exception {
+        BookingId bookingId = BookingId.generate();
+
+        mockMvc.perform(post("/bookings/" + bookingId + "/assign-route")
+                        .param("voyageNumber", "VOY-001")
+                        .param("routePath", "JPTYO/USNYC")
+                        .param("estimatedArrival", "2025-09-01")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/bookings/" + bookingId));
+
+        verify(assignRouteCommandService).execute(any());
+    }
+
+    @Test
+    @DisplayName("予約確定後は予約詳細へリダイレクトする")
+    void confirmRedirectsToDetail() throws Exception {
+        BookingId bookingId = BookingId.generate();
+
+        mockMvc.perform(post("/bookings/" + bookingId + "/confirm")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/bookings/" + bookingId));
+
+        verify(confirmBookingCommandService)
+                .execute(new com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand(bookingId.value()));
     }
 
     // ── POST /bookings/lookup-shipper ───────────────────────────────────────

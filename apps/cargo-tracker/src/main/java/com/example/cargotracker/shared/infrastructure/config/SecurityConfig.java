@@ -1,7 +1,6 @@
 package com.example.cargotracker.shared.infrastructure.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.security.autoconfigure.web.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -11,9 +10,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
-import org.springframework.security.web.util.matcher.OrRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -42,16 +38,9 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain webFilterChain(HttpSecurity http) {
-        RequestMatcher h2ConsoleMatcher = new OrRequestMatcher(
-                PathPatternRequestMatcher.pathPattern("/h2-console"),
-                PathRequest.toH2Console()
-        );
-
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers(h2ConsoleMatcher))
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers(h2ConsoleMatcher).permitAll();
                     auth.requestMatchers(
                             "/login",
                             "/webjars/**",

@@ -165,7 +165,7 @@ class BookingTest {
         booking.confirm();
 
         long confirmedEventCount = booking.getDomainEvents().stream()
-                .filter(e -> e instanceof BookingConfirmedEvent)
+                .filter(BookingConfirmedEvent.class::isInstance)
                 .count();
         assertThat(confirmedEventCount).isEqualTo(1);
     }

@@ -82,8 +82,9 @@ class RegisterBookingCommandServiceTest {
         UUID unknownId = UUID.randomUUID();
         doThrow(new ShipperNotFoundException(unknownId.toString()))
                 .when(shipperExistencePort).verifyExists(unknownId);
+        RegisterBookingCommand command = validCommand(unknownId);
 
-        assertThatThrownBy(() -> commandService.execute(validCommand(unknownId)))
+        assertThatThrownBy(() -> commandService.execute(command))
                 .isInstanceOf(ShipperNotFoundException.class);
         verify(bookingRepository, never()).save(any());
     }

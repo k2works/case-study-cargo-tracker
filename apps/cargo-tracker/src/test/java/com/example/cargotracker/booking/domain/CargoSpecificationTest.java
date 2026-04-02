@@ -24,14 +24,18 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("重量が負の場合も例外を投げる")
     void rejectNegativeWeight() {
-        assertThatThrownBy(() -> createCargoSpecification(new BigDecimal("-1.0"), 1))
+        BigDecimal negativeWeight = new BigDecimal("-1.0");
+
+        assertThatThrownBy(() -> createCargoSpecification(negativeWeight, 1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("個数が 0 の場合は例外を投げる")
     void rejectZeroQuantity() {
-        assertThatThrownBy(() -> createCargoSpecification(new BigDecimal("10.0"), 0))
+        BigDecimal weight = new BigDecimal("10.0");
+
+        assertThatThrownBy(() -> createCargoSpecification(weight, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("個数");
     }
@@ -39,7 +43,9 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("個数が負の場合も例外を投げる")
     void rejectNegativeQuantity() {
-        assertThatThrownBy(() -> createCargoSpecification(new BigDecimal("10.0"), -1))
+        BigDecimal weight = new BigDecimal("10.0");
+
+        assertThatThrownBy(() -> createCargoSpecification(weight, -1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -49,15 +55,19 @@ class CargoSpecificationTest {
         CargoSpecification spec = new CargoSpecification(
                 CargoType.REFRIGERATED,
                 new BigDecimal("50.5"),
-                new BigDecimal("100"),
-                new BigDecimal("80"),
-                new BigDecimal("60"),
+                new CargoSpecification.CargoDimensions(
+                        new BigDecimal("100"),
+                        new BigDecimal("80"),
+                        new BigDecimal("60")
+                ),
                 3,
                 "冷凍食品",
-                null,
-                null,
-                new BigDecimal("-18"),
-                new BigDecimal("0")
+                new CargoSpecification.SpecialHandling(
+                        null,
+                        null,
+                        new BigDecimal("-18"),
+                        new BigDecimal("0")
+                )
         );
 
         assertThat(spec.cargoType()).isEqualTo(CargoType.REFRIGERATED);
@@ -69,14 +79,10 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("DANGEROUS_GOODS で unNumber が null の場合は例外を投げる")
     void rejectDangerousGoodsWithoutUnNumber() {
-        assertThatThrownBy(() -> new CargoSpecification(
-                CargoType.DANGEROUS_GOODS,
-                new BigDecimal("100.0"),
-                null, null, null,
-                1, "危険物",
-                null, null,
-                null, null
-        ))
+        CargoSpecification.SpecialHandling specialHandling =
+                new CargoSpecification.SpecialHandling(null, null, null, null);
+
+        assertThatThrownBy(() -> createSpecialCargoSpecification(CargoType.DANGEROUS_GOODS, specialHandling))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("UN 番号");
     }
@@ -84,14 +90,10 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("REFRIGERATED で温度範囲が null の場合は例外を投げる")
     void rejectRefrigeratedWithoutTemperatureRange() {
-        assertThatThrownBy(() -> new CargoSpecification(
-                CargoType.REFRIGERATED,
-                new BigDecimal("100.0"),
-                null, null, null,
-                1, "冷凍貨物",
-                null, null,
-                null, null
-        ))
+        CargoSpecification.SpecialHandling specialHandling =
+                new CargoSpecification.SpecialHandling(null, null, null, null);
+
+        assertThatThrownBy(() -> createSpecialCargoSpecification(CargoType.REFRIGERATED, specialHandling))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("温度");
     }
@@ -99,14 +101,10 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("REFRIGERATED で minTemp >= maxTemp の場合は例外を投げる")
     void rejectRefrigeratedWithInvalidTemperatureRange() {
-        assertThatThrownBy(() -> new CargoSpecification(
-                CargoType.REFRIGERATED,
-                new BigDecimal("100.0"),
-                null, null, null,
-                1, "冷凍貨物",
-                null, null,
-                new BigDecimal("0"), new BigDecimal("-18")
-        ))
+        CargoSpecification.SpecialHandling specialHandling =
+                new CargoSpecification.SpecialHandling(null, null, new BigDecimal("0"), new BigDecimal("-18"));
+
+        assertThatThrownBy(() -> createSpecialCargoSpecification(CargoType.REFRIGERATED, specialHandling))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("温度");
     }
@@ -117,10 +115,9 @@ class CargoSpecificationTest {
         CargoSpecification spec = new CargoSpecification(
                 CargoType.DANGEROUS_GOODS,
                 new BigDecimal("200.0"),
-                null, null, null,
+                new CargoSpecification.CargoDimensions(null, null, null),
                 1, "危険物",
-                "UN1234", "クラス3",
-                null, null
+                new CargoSpecification.SpecialHandling("UN1234", "クラス3", null, null)
         );
 
         assertThat(spec.cargoType()).isEqualTo(CargoType.DANGEROUS_GOODS);
@@ -132,11 +129,24 @@ class CargoSpecificationTest {
         return new CargoSpecification(
                 CargoType.GENERAL_CARGO,
                 weightKg,
-                null,
-                null,
-                null,
+                new CargoSpecification.CargoDimensions(null, null, null),
                 quantity,
+                null,
                 null
+        );
+    }
+
+    private CargoSpecification createSpecialCargoSpecification(
+            CargoType cargoType,
+            CargoSpecification.SpecialHandling specialHandling
+    ) {
+        return new CargoSpecification(
+                cargoType,
+                new BigDecimal("100.0"),
+                new CargoSpecification.CargoDimensions(null, null, null),
+                1,
+                "特殊貨物",
+                specialHandling
         );
     }
 }

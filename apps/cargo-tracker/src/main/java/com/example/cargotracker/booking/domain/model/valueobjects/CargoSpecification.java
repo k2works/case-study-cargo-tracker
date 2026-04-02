@@ -8,6 +8,13 @@ import java.util.Objects;
  */
 public final class CargoSpecification {
 
+    public record CargoDimensions(BigDecimal lengthCm, BigDecimal widthCm, BigDecimal heightCm) {
+    }
+
+    public record SpecialHandling(String unNumber, String hazardClass,
+                                  BigDecimal minTempCelsius, BigDecimal maxTempCelsius) {
+    }
+
     private final CargoType cargoType;
     private final BigDecimal weightKg;
     private final BigDecimal lengthCm;
@@ -23,15 +30,13 @@ public final class CargoSpecification {
     public CargoSpecification(CargoType cargoType, BigDecimal weightKg,
                                BigDecimal lengthCm, BigDecimal widthCm, BigDecimal heightCm,
                                int quantity, String description) {
-        this(cargoType, weightKg, lengthCm, widthCm, heightCm, quantity, description,
-                null, null, null, null);
+        this(cargoType, weightKg, new CargoDimensions(lengthCm, widthCm, heightCm), quantity, description, null);
     }
 
     public CargoSpecification(CargoType cargoType, BigDecimal weightKg,
-                               BigDecimal lengthCm, BigDecimal widthCm, BigDecimal heightCm,
+                               CargoDimensions dimensions,
                                int quantity, String description,
-                               String unNumber, String hazardClass,
-                               BigDecimal minTempCelsius, BigDecimal maxTempCelsius) {
+                               SpecialHandling specialHandling) {
         if (cargoType == null) throw new IllegalArgumentException("貨物種別は null にできません");
         if (weightKg == null) throw new IllegalArgumentException("重量は null にできません");
         if (weightKg.compareTo(BigDecimal.ZERO) <= 0) {
@@ -40,26 +45,30 @@ public final class CargoSpecification {
         if (quantity < 1) {
             throw new IllegalArgumentException("個数は 1 以上でなければなりません");
         }
-        if (cargoType == CargoType.DANGEROUS_GOODS && (unNumber == null || unNumber.isBlank())) {
+        SpecialHandling handling = specialHandling == null ? new SpecialHandling(null, null, null, null) : specialHandling;
+        CargoDimensions size = dimensions == null ? new CargoDimensions(null, null, null) : dimensions;
+        if (cargoType == CargoType.DANGEROUS_GOODS && (handling.unNumber() == null || handling.unNumber().isBlank())) {
             throw new IllegalArgumentException("UN 番号は危険物の場合に必須です");
         }
-        if (cargoType == CargoType.REFRIGERATED && (minTempCelsius == null || maxTempCelsius == null)) {
+        if (cargoType == CargoType.REFRIGERATED
+                && (handling.minTempCelsius() == null || handling.maxTempCelsius() == null)) {
             throw new IllegalArgumentException("温度範囲は冷凍貨物の場合に必須です");
         }
-        if (cargoType == CargoType.REFRIGERATED && minTempCelsius.compareTo(maxTempCelsius) >= 0) {
+        if (cargoType == CargoType.REFRIGERATED
+                && handling.minTempCelsius().compareTo(handling.maxTempCelsius()) >= 0) {
             throw new IllegalArgumentException("最低温度は最高温度より低くなければなりません");
         }
         this.cargoType = cargoType;
         this.weightKg = weightKg;
-        this.lengthCm = lengthCm;
-        this.widthCm = widthCm;
-        this.heightCm = heightCm;
+        this.lengthCm = size.lengthCm();
+        this.widthCm = size.widthCm();
+        this.heightCm = size.heightCm();
         this.quantity = quantity;
         this.description = description;
-        this.unNumber = unNumber;
-        this.hazardClass = hazardClass;
-        this.minTempCelsius = minTempCelsius;
-        this.maxTempCelsius = maxTempCelsius;
+        this.unNumber = handling.unNumber();
+        this.hazardClass = handling.hazardClass();
+        this.minTempCelsius = handling.minTempCelsius();
+        this.maxTempCelsius = handling.maxTempCelsius();
     }
 
     public CargoType cargoType() { return cargoType; }

@@ -44,6 +44,7 @@ public class BookingWebController {
     private static final String ATTR_CARGO_TYPES = "cargoTypes";
     private static final String ATTR_SHIPPERS = "shippers";
     private static final String ATTR_SHIPPER_NAME = "shipperName";
+    private static final String REDIRECT_BOOKINGS = "redirect:/bookings/";
 
     private final RegisterBookingCommandService registerBookingCommandService;
     private final AssignRouteCommandService assignRouteCommandService;
@@ -100,7 +101,7 @@ public class BookingWebController {
             BookingId bookingId = registerBookingCommandService.execute(form.toCommand());
             redirectAttributes.addFlashAttribute("successMessage",
                     "予約を登録しました（予約番号: " + bookingId + "）");
-            return "redirect:/bookings/" + bookingId;
+            return REDIRECT_BOOKINGS + bookingId;
         } catch (ShipperNotFoundException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
             populateRegisterFormOptions(model);
@@ -137,13 +138,13 @@ public class BookingWebController {
         AssignRouteCommand command = new AssignRouteCommand(
                 UUID.fromString(id), voyageNumber, routePath, estimatedArrival);
         assignRouteCommandService.execute(command);
-        return "redirect:/bookings/" + id;
+        return REDIRECT_BOOKINGS + id;
     }
 
     @PostMapping("/{id}/confirm")
     public String confirm(@PathVariable("id") String id) {
         confirmBookingCommandService.execute(new ConfirmBookingCommand(UUID.fromString(id)));
-        return "redirect:/bookings/" + id;
+        return REDIRECT_BOOKINGS + id;
     }
 
     private Map<String, String> resolveShipperNames(List<Booking> bookings) {
