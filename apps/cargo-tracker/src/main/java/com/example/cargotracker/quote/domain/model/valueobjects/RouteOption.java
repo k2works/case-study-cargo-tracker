@@ -1,6 +1,7 @@
 package com.example.cargotracker.quote.domain.model.valueobjects;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +55,17 @@ public final class RouteOption {
     public boolean isOnTime(LocalDate baseDate, LocalDate requestedArrivalDate) {
         LocalDate estimatedArrival = baseDate.plusDays(transitDays);
         return !estimatedArrival.isAfter(requestedArrivalDate);
+    }
+
+    /**
+     * 指定されたクロックから現在日を取得し、希望着日に間に合うかどうかを返す。
+     *
+     * @param clock               現在日取得に使用するクロック（テスト時は {@link Clock#fixed} を渡す）
+     * @param requestedArrivalDate 希望着日
+     * @return 間に合う場合 {@code true}
+     */
+    public boolean isOnTime(Clock clock, LocalDate requestedArrivalDate) {
+        return isOnTime(LocalDate.now(clock), requestedArrivalDate);
     }
 
     /**
