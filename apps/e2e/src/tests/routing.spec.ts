@@ -3,12 +3,23 @@ import { ShipperPage } from '../pages/ShipperPage';
 import { BookingPage } from '../pages/BookingPage';
 import { RoutingPage } from '../pages/RoutingPage';
 
+function futureDateStr(monthsAhead: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + monthsAhead);
+  return d.toISOString().slice(0, 10);
+}
+
 test.describe('E06: 最適ルート検索', () => {
   let shipperId: string;
   let bookingId: string;
+  let pickupDate: string;
+  let deliveryDate: string;
 
   // 各テストの前に荷主と一般貨物の予約を登録する
   test.beforeEach(async ({ page, loggedIn }) => {
+    pickupDate = futureDateStr(1);
+    deliveryDate = futureDateStr(3);
+
     const shipperPage = new ShipperPage(page);
     await shipperPage.registerIndividual(
       'ルートテスト荷主',
@@ -24,8 +35,8 @@ test.describe('E06: 最適ルート検索', () => {
       quantity: '1',
       originLocation: 'JPTYO',
       destinationLocation: 'SGSIN',
-      requestedPickupDate: '2026-05-01',
-      requestedDeliveryDate: '2026-06-30',
+      requestedPickupDate: pickupDate,
+      requestedDeliveryDate: deliveryDate,
     });
     bookingId = await bookingPage.extractBookingId();
   });
@@ -84,8 +95,8 @@ test.describe('E06: 最適ルート検索', () => {
       quantity: '1',
       originLocation: 'JPTYO',
       destinationLocation: 'SGSIN',
-      requestedPickupDate: '2026-05-01',
-      requestedDeliveryDate: '2026-06-30',
+      requestedPickupDate: pickupDate,
+      requestedDeliveryDate: deliveryDate,
     });
     const refrigeratedBookingId = await bookingPage.extractBookingId();
 
@@ -110,6 +121,6 @@ test.describe('E06: 最適ルート検索', () => {
     const conditionCard = page.locator('.card.shadow-sm.mb-4').first();
     await expect(conditionCard).toContainText('JPTYO');
     await expect(conditionCard).toContainText('SGSIN');
-    await expect(conditionCard).toContainText('2026-06-30');
+    await expect(conditionCard).toContainText(deliveryDate);
   });
 });

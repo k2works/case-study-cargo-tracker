@@ -1,16 +1,23 @@
 import { test, expect } from '../fixtures';
 import { QuotePage } from '../pages/QuotePage';
 
+function futureDateStr(monthsAhead: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + monthsAhead);
+  return d.toISOString().slice(0, 10);
+}
+
 test.describe('E05: 見積作成', () => {
   test('見積を作成すると詳細画面に遷移し、候補一覧が表示される', async ({ page, loggedIn }) => {
     const quotePage = new QuotePage(page);
+    const arrivalDate = futureDateStr(2);
     const quoteData = {
       originLocode: 'JPTYO',
       destinationLocode: 'USNYC',
-      requestedArrivalDate: '2026-05-15',
+      requestedArrivalDate: arrivalDate,
       cargoType: 'GENERAL_CARGO',
       weightKg: '500.5',
-    } as const;
+    };
 
     await quotePage.goto();
 
@@ -30,7 +37,7 @@ test.describe('E05: 見積作成', () => {
     const quoteConditionCard = page.locator('.card.shadow-sm.mb-4');
     await expect(quoteConditionCard.locator('dd').filter({ hasText: /^JPTYO$/ })).toBeVisible();
     await expect(quoteConditionCard.locator('dd').filter({ hasText: /^USNYC$/ })).toBeVisible();
-    await expect(quoteConditionCard.locator('dd').filter({ hasText: /^2026-05-15$/ })).toBeVisible();
+    await expect(quoteConditionCard.locator('dd').filter({ hasText: new RegExp(`^${arrivalDate}$`) })).toBeVisible();
     await expect(quoteConditionCard.locator('dd').filter({ hasText: /^一般貨物$/ })).toBeVisible();
     await expect(quoteConditionCard.locator('dd').filter({ hasText: /500\.5/ })).toBeVisible();
 
@@ -59,13 +66,14 @@ test.describe('E05: 見積作成', () => {
 
   test('見積作成後に一覧画面で見積番号と条件を確認できる', async ({ page, loggedIn }) => {
     const quotePage = new QuotePage(page);
+    const arrivalDate = futureDateStr(3);
     const quoteData = {
       originLocode: 'NLRTM',
       destinationLocode: 'JPTYO',
-      requestedArrivalDate: '2026-05-20',
+      requestedArrivalDate: arrivalDate,
       cargoType: 'REFRIGERATED',
       weightKg: '1200',
-    } as const;
+    };
 
     await quotePage.register(quoteData);
 
@@ -81,7 +89,7 @@ test.describe('E05: 見積作成', () => {
       destinationLocode: quoteData.destinationLocode,
       cargoTypeDisplayName: '冷凍・冷蔵',
       weightKg: quoteData.weightKg,
-      requestedArrivalDate: quoteData.requestedArrivalDate,
+      requestedArrivalDate: arrivalDate,
     });
   });
 });
