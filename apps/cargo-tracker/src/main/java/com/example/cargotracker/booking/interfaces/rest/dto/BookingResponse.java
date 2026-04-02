@@ -24,7 +24,10 @@ public record BookingResponse(
         String unNumber,
         String hazardClass,
         BigDecimal minTempCelsius,
-        BigDecimal maxTempCelsius
+        BigDecimal maxTempCelsius,
+        String assignedVoyageNo,
+        String routePath,
+        LocalDate estimatedArrival
 ) {
     public static BookingResponse from(Booking booking) {
         return new BookingResponse(
@@ -46,7 +49,10 @@ public record BookingResponse(
                 booking.getCargoSpecification().unNumber(),
                 booking.getCargoSpecification().hazardClass(),
                 booking.getCargoSpecification().minTempCelsius(),
-                booking.getCargoSpecification().maxTempCelsius()
+                booking.getCargoSpecification().maxTempCelsius(),
+                booking.getAssignedRoute() != null ? booking.getAssignedRoute().voyageNumber() : null,
+                booking.getAssignedRoute() != null ? booking.getAssignedRoute().routePath() : null,
+                booking.getAssignedRoute() != null ? booking.getAssignedRoute().estimatedArrival() : null
         );
     }
 }

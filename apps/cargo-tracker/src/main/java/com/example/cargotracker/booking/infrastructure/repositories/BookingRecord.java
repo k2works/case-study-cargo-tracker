@@ -24,6 +24,9 @@ public record BookingRecord(
         LocalDate requestedPickupDate,
         LocalDate requestedDeliveryDate,
         String status,
+        String assignedVoyageNo,      // nullable
+        String routePath,             // nullable
+        LocalDate estimatedArrival,   // nullable
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

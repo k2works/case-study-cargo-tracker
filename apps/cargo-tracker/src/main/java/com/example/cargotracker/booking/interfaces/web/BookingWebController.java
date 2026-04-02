@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.interfaces.web;
 
+import com.example.cargotracker.booking.application.internal.commandservices.AssignRouteCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistencePort;
@@ -7,9 +8,11 @@ import com.example.cargotracker.booking.application.internal.queryservices.Booki
 import com.example.cargotracker.booking.application.internal.queryservices.FindBookingQueryService;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.interfaces.web.dto.BookingRegisterForm;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,13 +43,16 @@ public class BookingWebController {
     private static final String ATTR_SHIPPER_NAME = "shipperName";
 
     private final RegisterBookingCommandService registerBookingCommandService;
+    private final AssignRouteCommandService assignRouteCommandService;
     private final FindBookingQueryService findBookingQueryService;
     private final ShipperExistencePort shipperExistencePort;
 
     public BookingWebController(RegisterBookingCommandService registerBookingCommandService,
+                                AssignRouteCommandService assignRouteCommandService,
                                 FindBookingQueryService findBookingQueryService,
                                 ShipperExistencePort shipperExistencePort) {
         this.registerBookingCommandService = registerBookingCommandService;
+        this.assignRouteCommandService = assignRouteCommandService;
         this.findBookingQueryService = findBookingQueryService;
         this.shipperExistencePort = shipperExistencePort;
     }
@@ -109,6 +116,17 @@ public class BookingWebController {
         model.addAttribute("booking", booking);
         model.addAttribute(ATTR_SHIPPER_NAME, resolveShipperName(booking.getShipperId().value()));
         return "booking/detail";
+    }
+
+    @PostMapping("/{id}/assign-route")
+    public String assignRoute(@PathVariable("id") String id,
+                              @RequestParam String voyageNumber,
+                              @RequestParam String routePath,
+                              @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate estimatedArrival) {
+        AssignRouteCommand command = new AssignRouteCommand(
+                UUID.fromString(id), voyageNumber, routePath, estimatedArrival);
+        assignRouteCommandService.execute(command);
+        return "redirect:/bookings/" + id;
     }
 
     private Map<String, String> resolveShipperNames(List<Booking> bookings) {

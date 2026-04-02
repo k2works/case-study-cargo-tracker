@@ -23,6 +23,9 @@
             <arg  column="requested_pickup_date"    javaType="java.time.LocalDate"/>
             <arg  column="requested_delivery_date"  javaType="java.time.LocalDate"/>
             <arg  column="status"                   javaType="java.lang.String"/>
+            <arg  column="assigned_voyage_no"       javaType="java.lang.String"/>
+            <arg  column="route_path"               javaType="java.lang.String"/>
+            <arg  column="estimated_arrival"        javaType="java.time.LocalDate"/>
             <arg  column="created_at"               javaType="java.time.LocalDateTime"/>
             <arg  column="updated_at"               javaType="java.time.LocalDateTime"/>
         </constructor>
@@ -36,7 +39,9 @@
             cargo_un_number, cargo_hazard_class, cargo_min_temp_celsius, cargo_max_temp_celsius,
             origin_location, destination_location,
             requested_pickup_date, requested_delivery_date,
-            status, created_at, updated_at
+            status,
+            assigned_voyage_no, route_path, estimated_arrival,
+            created_at, updated_at
         ) VALUES (
             #{row.id}, #{row.shipperId},
             #{row.cargoType}, #{row.cargoWeightKg}, #{row.cargoLengthCm},
@@ -46,9 +51,36 @@
             #{row.cargoMinTempCelsius}, #{row.cargoMaxTempCelsius},
             #{row.originLocation}, #{row.destinationLocation},
             #{row.requestedPickupDate}, #{row.requestedDeliveryDate},
-            #{row.status}, #{row.createdAt}, #{row.updatedAt}
+            #{row.status},
+            #{row.assignedVoyageNo}, #{row.routePath}, #{row.estimatedArrival},
+            #{row.createdAt}, #{row.updatedAt}
         )
     </insert>
+
+    <update id="update">
+        UPDATE bookings SET
+            cargo_type               = #{row.cargoType},
+            cargo_weight_kg          = #{row.cargoWeightKg},
+            cargo_length_cm          = #{row.cargoLengthCm},
+            cargo_width_cm           = #{row.cargoWidthCm},
+            cargo_height_cm          = #{row.cargoHeightCm},
+            cargo_quantity           = #{row.cargoQuantity},
+            cargo_description        = #{row.cargoDescription},
+            cargo_un_number          = #{row.cargoUnNumber},
+            cargo_hazard_class       = #{row.cargoHazardClass},
+            cargo_min_temp_celsius   = #{row.cargoMinTempCelsius},
+            cargo_max_temp_celsius   = #{row.cargoMaxTempCelsius},
+            origin_location          = #{row.originLocation},
+            destination_location     = #{row.destinationLocation},
+            requested_pickup_date    = #{row.requestedPickupDate},
+            requested_delivery_date  = #{row.requestedDeliveryDate},
+            status                   = #{row.status},
+            assigned_voyage_no       = #{row.assignedVoyageNo},
+            route_path               = #{row.routePath},
+            estimated_arrival        = #{row.estimatedArrival},
+            updated_at               = #{row.updatedAt}
+        WHERE id = #{row.id}
+    </update>
 
     <select id="findById" resultMap="bookingResultMap">
         SELECT id, shipper_id,
@@ -57,7 +89,9 @@
                cargo_un_number, cargo_hazard_class, cargo_min_temp_celsius, cargo_max_temp_celsius,
                origin_location, destination_location,
                requested_pickup_date, requested_delivery_date,
-               status, created_at, updated_at
+               status,
+               assigned_voyage_no, route_path, estimated_arrival,
+               created_at, updated_at
         FROM bookings
         WHERE id = #{id}
     </select>
@@ -69,7 +103,9 @@
                cargo_un_number, cargo_hazard_class, cargo_min_temp_celsius, cargo_max_temp_celsius,
                origin_location, destination_location,
                requested_pickup_date, requested_delivery_date,
-               status, created_at, updated_at
+               status,
+               assigned_voyage_no, route_path, estimated_arrival,
+               created_at, updated_at
         FROM bookings
         ORDER BY created_at DESC, id DESC
     </select>

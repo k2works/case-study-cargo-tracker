@@ -1,11 +1,14 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
+import com.example.cargotracker.booking.application.internal.commandservices.AssignRouteCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingNotFoundException;
 import com.example.cargotracker.booking.application.internal.queryservices.FindBookingQueryService;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.interfaces.rest.dto.AssignRouteRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingResponse;
 import jakarta.validation.Valid;
@@ -32,11 +35,14 @@ import java.util.UUID;
 public class BookingRestController {
 
     private final RegisterBookingCommandService registerBookingCommandService;
+    private final AssignRouteCommandService assignRouteCommandService;
     private final FindBookingQueryService findBookingQueryService;
 
     public BookingRestController(RegisterBookingCommandService registerBookingCommandService,
+                                 AssignRouteCommandService assignRouteCommandService,
                                  FindBookingQueryService findBookingQueryService) {
         this.registerBookingCommandService = registerBookingCommandService;
+        this.assignRouteCommandService = assignRouteCommandService;
         this.findBookingQueryService = findBookingQueryService;
     }
 
@@ -61,6 +67,19 @@ public class BookingRestController {
                 .buildAndExpand(bookingId)
                 .toUri();
         return ResponseEntity.created(location).body(BookingResponse.from(booking));
+    }
+
+    @PostMapping("/{id}/route")
+    public ResponseEntity<Void> assignRoute(@PathVariable("id") String id,
+                                            @RequestBody AssignRouteRequest request) {
+        AssignRouteCommand command = new AssignRouteCommand(
+                UUID.fromString(id),
+                request.voyageNumber(),
+                request.routePath(),
+                request.estimatedArrival()
+        );
+        assignRouteCommandService.execute(command);
+        return ResponseEntity.ok().build();
     }
 
     @ExceptionHandler(BookingNotFoundException.class)

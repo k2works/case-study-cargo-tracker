@@ -12,6 +12,8 @@ public interface BookingMapper {
 
     void insert(@Param("row") BookingRecord row);
 
+    void update(@Param("row") BookingRecord row);
+
     Optional<BookingRecord> findById(@Param("id") UUID id);
 
     List<BookingRecord> findAll();

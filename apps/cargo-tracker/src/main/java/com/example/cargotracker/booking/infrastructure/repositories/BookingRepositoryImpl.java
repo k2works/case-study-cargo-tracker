@@ -2,6 +2,7 @@ package com.example.cargotracker.booking.infrastructure.repositories;
 
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.AssignedRoute;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
@@ -27,6 +28,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     public void save(Booking booking) {
         CargoSpecification cargo = booking.getCargoSpecification();
         TransportCondition transport = booking.getTransportCondition();
+        AssignedRoute ar = booking.getAssignedRoute();
 
         BookingRecord row = new BookingRecord(
                 booking.getId().value(),
@@ -47,10 +49,18 @@ public class BookingRepositoryImpl implements BookingRepository {
                 transport.requestedPickupDate(),
                 transport.requestedDeliveryDate(),
                 booking.getStatus().name(),
+                ar != null ? ar.voyageNumber() : null,
+                ar != null ? ar.routePath() : null,
+                ar != null ? ar.estimatedArrival() : null,
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
-        bookingMapper.insert(row);
+
+        if (bookingMapper.findById(booking.getId().value()).isPresent()) {
+            bookingMapper.update(row);
+        } else {
+            bookingMapper.insert(row);
+        }
     }
 
     @Override
@@ -88,6 +98,15 @@ public class BookingRepositoryImpl implements BookingRepository {
                 row.requestedPickupDate(),
                 row.requestedDeliveryDate()
         );
-        return Booking.reconstitute(id, shipperId, cargo, transport, BookingStatus.valueOf(row.status()));
+        AssignedRoute assignedRoute = null;
+        if (row.assignedVoyageNo() != null) {
+            assignedRoute = new AssignedRoute(
+                    row.assignedVoyageNo(),
+                    row.routePath(),
+                    row.estimatedArrival()
+            );
+        }
+        return Booking.reconstitute(id, shipperId, cargo, transport,
+                BookingStatus.valueOf(row.status()), assignedRoute);
     }
 }
