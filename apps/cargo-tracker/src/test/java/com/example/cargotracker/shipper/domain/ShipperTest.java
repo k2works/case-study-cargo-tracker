@@ -14,6 +14,10 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Shipper 集約")
 class ShipperTest {
 
+    private Shipper createShipper(ShipperId shipperId, ShipperName shipperName, ContactInfo contactInfo) {
+        return Shipper.registerIndividual(shipperId, shipperName, contactInfo);
+    }
+
     private ShipperId anyId() {
         return ShipperId.generate();
     }
@@ -29,7 +33,7 @@ class ShipperTest {
     @Test
     @DisplayName("個人荷主を登録できる")
     void registerIndividualShipper() {
-        Shipper shipper = Shipper.registerIndividual(anyId(), anyName(), anyContact());
+        Shipper shipper = createShipper(anyId(), anyName(), anyContact());
 
         assertThat(shipper.getId()).isNotNull();
         assertThat(shipper.getName().value()).isEqualTo("山田 太郎");
@@ -41,7 +45,7 @@ class ShipperTest {
     @Test
     @DisplayName("登録時に ShipperRegisteredEvent が発行される")
     void registrationEmitsEvent() {
-        Shipper shipper = Shipper.registerIndividual(anyId(), anyName(), anyContact());
+        Shipper shipper = createShipper(anyId(), anyName(), anyContact());
 
         assertThat(shipper.getDomainEvents()).hasSize(1);
         assertThat(shipper.getDomainEvents().get(0)).isInstanceOf(ShipperRegisteredEvent.class);
@@ -53,21 +57,21 @@ class ShipperTest {
     @Test
     @DisplayName("ID が null の場合は登録できない")
     void rejectNullId() {
-        assertThatThrownBy(() -> Shipper.registerIndividual(null, anyName(), anyContact()))
+        assertThatThrownBy(() -> createShipper(null, anyName(), anyContact()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("名前が null の場合は登録できない")
     void rejectNullName() {
-        assertThatThrownBy(() -> Shipper.registerIndividual(anyId(), null, anyContact()))
+        assertThatThrownBy(() -> createShipper(anyId(), null, anyContact()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("連絡先が null の場合は登録できない")
     void rejectNullContactInfo() {
-        assertThatThrownBy(() -> Shipper.registerIndividual(anyId(), anyName(), null))
+        assertThatThrownBy(() -> createShipper(anyId(), anyName(), null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

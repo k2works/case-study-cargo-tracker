@@ -57,12 +57,12 @@ public class RouteProviderRestAdapter implements QuoteRouteProviderPort {
                     new ParameterizedTypeReference<>() {
                     }
             );
-
-            if (response.getBody() == null) {
+            List<RouteOptionDto> responseBody = response.getBody();
+            if (responseBody == null) {
                 return Collections.emptyList();
             }
 
-            return response.getBody().stream()
+            return responseBody.stream()
                     .map(dto -> new RouteOption(
                             dto.viaLocodes(),
                             dto.transitDays(),

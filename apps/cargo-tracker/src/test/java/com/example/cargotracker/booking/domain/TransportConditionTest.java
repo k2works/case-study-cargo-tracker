@@ -6,7 +6,8 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("TransportCondition 値オブジェクト")
 class TransportConditionTest {
@@ -17,7 +18,7 @@ class TransportConditionTest {
     @Test
     @DisplayName("希望着日が希望引渡日と同日の場合は例外を投げる")
     void rejectSameDates() {
-        assertThatThrownBy(() -> new TransportCondition("JPTYO", "USNYC", PICKUP, PICKUP))
+        assertThatThrownBy(() -> createTransportCondition("JPTYO", "USNYC", PICKUP, PICKUP))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("希望着日");
     }
@@ -25,7 +26,7 @@ class TransportConditionTest {
     @Test
     @DisplayName("希望着日が希望引渡日より前の場合は例外を投げる")
     void rejectDeliveryBeforePickup() {
-        assertThatThrownBy(() -> new TransportCondition("JPTYO", "USNYC", PICKUP, PICKUP.minusDays(1)))
+        assertThatThrownBy(() -> createTransportCondition("JPTYO", "USNYC", PICKUP, PICKUP.minusDays(1)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("希望着日");
     }
@@ -33,7 +34,7 @@ class TransportConditionTest {
     @Test
     @DisplayName("正常な値で生成できる")
     void createValidCondition() {
-        TransportCondition condition = new TransportCondition("JPTYO", "USNYC", PICKUP, DELIVERY);
+        TransportCondition condition = createTransportCondition("JPTYO", "USNYC", PICKUP, DELIVERY);
 
         assertThat(condition.originLocation()).isEqualTo("JPTYO");
         assertThat(condition.destinationLocation()).isEqualTo("USNYC");
@@ -44,14 +45,23 @@ class TransportConditionTest {
     @Test
     @DisplayName("出発地が空の場合は例外を投げる")
     void rejectBlankOrigin() {
-        assertThatThrownBy(() -> new TransportCondition("", "USNYC", PICKUP, DELIVERY))
+        assertThatThrownBy(() -> createTransportCondition("", "USNYC", PICKUP, DELIVERY))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("目的地が空の場合は例外を投げる")
     void rejectBlankDestination() {
-        assertThatThrownBy(() -> new TransportCondition("JPTYO", "", PICKUP, DELIVERY))
+        assertThatThrownBy(() -> createTransportCondition("JPTYO", "", PICKUP, DELIVERY))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private TransportCondition createTransportCondition(
+            String origin,
+            String destination,
+            LocalDate pickup,
+            LocalDate delivery
+    ) {
+        return new TransportCondition(origin, destination, pickup, delivery);
     }
 }

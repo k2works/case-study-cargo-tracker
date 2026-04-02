@@ -17,9 +17,12 @@ class RouteSearchQueryTest {
     @Test
     @DisplayName("有効な値で RouteSearchQuery を生成できる")
     void 有効な値でRouteSearchQueryを生成できる() {
-        var query = new RouteSearchQuery(
-            "JPTYO", "USNYC", LocalDate.of(2025, 12, 31),
-            CargoType.GENERAL, new BigDecimal("100.0")
+        var query = createQuery(
+                "JPTYO",
+                "USNYC",
+                LocalDate.of(2025, 12, 31),
+                CargoType.GENERAL,
+                new BigDecimal("100.0")
         );
 
         assertThat(query.originLocode()).isEqualTo("JPTYO");
@@ -32,91 +35,89 @@ class RouteSearchQueryTest {
     @Test
     @DisplayName("危険物・冷凍など全 CargoType を指定できる")
     void 全CargoTypeを指定できる() {
-        assertThat(new RouteSearchQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30),
-            CargoType.HAZARDOUS, BigDecimal.TEN).cargoType()).isEqualTo(CargoType.HAZARDOUS);
-
-        assertThat(new RouteSearchQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30),
-            CargoType.REFRIGERATED, BigDecimal.TEN).cargoType()).isEqualTo(CargoType.REFRIGERATED);
+        assertThat(createQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30), CargoType.HAZARDOUS, BigDecimal.TEN).cargoType())
+                .isEqualTo(CargoType.HAZARDOUS);
+        assertThat(createQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30), CargoType.REFRIGERATED, BigDecimal.TEN).cargoType())
+                .isEqualTo(CargoType.REFRIGERATED);
     }
 
     @Test
     @DisplayName("出発地 LOCODE が null の場合は例外をスローする")
     void 出発地LOCODEがnullの場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            null, "USNYC", LocalDate.now().plusDays(30),
-            CargoType.GENERAL, BigDecimal.TEN
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery(null, "USNYC", LocalDate.now().plusDays(30), CargoType.GENERAL, BigDecimal.TEN);
     }
 
     @Test
     @DisplayName("出発地 LOCODE が空文字の場合は例外をスローする")
     void 出発地LOCODEが空文字の場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "  ", "USNYC", LocalDate.now().plusDays(30),
-            CargoType.GENERAL, BigDecimal.TEN
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery("  ", "USNYC", LocalDate.now().plusDays(30), CargoType.GENERAL, BigDecimal.TEN);
     }
 
     @Test
     @DisplayName("目的地 LOCODE が null の場合は例外をスローする")
     void 目的地LOCODEがnullの場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "JPTYO", null, LocalDate.now().plusDays(30),
-            CargoType.GENERAL, BigDecimal.TEN
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery("JPTYO", null, LocalDate.now().plusDays(30), CargoType.GENERAL, BigDecimal.TEN);
     }
 
     @Test
     @DisplayName("目的地 LOCODE が空文字の場合は例外をスローする")
     void 目的地LOCODEが空文字の場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "JPTYO", "", LocalDate.now().plusDays(30),
-            CargoType.GENERAL, BigDecimal.TEN
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery("JPTYO", "", LocalDate.now().plusDays(30), CargoType.GENERAL, BigDecimal.TEN);
     }
 
     @Test
     @DisplayName("希望着日が null の場合は例外をスローする")
     void 希望着日がnullの場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "JPTYO", "USNYC", null,
-            CargoType.GENERAL, BigDecimal.TEN
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery("JPTYO", "USNYC", null, CargoType.GENERAL, BigDecimal.TEN);
     }
 
     @Test
     @DisplayName("貨物種別が null の場合は例外をスローする")
     void 貨物種別がnullの場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "JPTYO", "USNYC", LocalDate.now().plusDays(30),
-            null, BigDecimal.TEN
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30), null, BigDecimal.TEN);
     }
 
     @Test
     @DisplayName("重量が 0 の場合は例外をスローする")
     void 重量が0の場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "JPTYO", "USNYC", LocalDate.now().plusDays(30),
-            CargoType.GENERAL, BigDecimal.ZERO
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30), CargoType.GENERAL, BigDecimal.ZERO);
     }
 
     @Test
     @DisplayName("重量が負の場合は例外をスローする")
     void 重量が負の場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "JPTYO", "USNYC", LocalDate.now().plusDays(30),
-            CargoType.GENERAL, new BigDecimal("-1")
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertInvalidQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30), CargoType.GENERAL, new BigDecimal("-1"));
     }
 
     @Test
     @DisplayName("重量が null の場合は例外をスローする")
     void 重量がnullの場合は例外をスローする() {
-        assertThatThrownBy(() -> new RouteSearchQuery(
-            "JPTYO", "USNYC", LocalDate.now().plusDays(30),
-            CargoType.GENERAL, null
+        assertInvalidQuery("JPTYO", "USNYC", LocalDate.now().plusDays(30), CargoType.GENERAL, null);
+    }
+
+    private RouteSearchQuery createQuery(
+            String originLocode,
+            String destinationLocode,
+            LocalDate requestedArrivalDate,
+            CargoType cargoType,
+            BigDecimal weightKg
+    ) {
+        return new RouteSearchQuery(originLocode, destinationLocode, requestedArrivalDate, cargoType, weightKg);
+    }
+
+    private void assertInvalidQuery(
+            String originLocode,
+            String destinationLocode,
+            LocalDate requestedArrivalDate,
+            CargoType cargoType,
+            BigDecimal weightKg
+    ) {
+        assertThatThrownBy(() -> createQuery(
+                originLocode,
+                destinationLocode,
+                requestedArrivalDate,
+                cargoType,
+                weightKg
         )).isInstanceOf(IllegalArgumentException.class);
     }
 }

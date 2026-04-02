@@ -17,6 +17,19 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("法人荷主（US03）")
 class CorporateShipperTest {
 
+    private CorporateContractInfo createCorporateContractInfo(String contractNumber, BigDecimal discountRate) {
+        return new CorporateContractInfo(contractNumber, discountRate);
+    }
+
+    private Shipper createCorporateShipper(CorporateContractInfo corporateContractInfo) {
+        return Shipper.registerCorporate(
+                ShipperId.generate(),
+                new ShipperName("テスト"),
+                new ContactInfo("t@t.com", null),
+                corporateContractInfo
+        );
+    }
+
     @Test
     @DisplayName("法人荷主を法人契約情報付きで登録できる")
     void registerCorporateShipperWithContractInfo() {
@@ -54,30 +67,28 @@ class CorporateShipperTest {
         @Test
         @DisplayName("割引率が負の値は受け入れない")
         void rejectNegativeDiscountRate() {
-            assertThatThrownBy(() -> new CorporateContractInfo("C001", new BigDecimal("-0.1")))
+            assertThatThrownBy(() -> createCorporateContractInfo("C001", new BigDecimal("-0.1")))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("割引率が 30% 超は受け入れない")
         void rejectDiscountRateOver30() {
-            assertThatThrownBy(() -> new CorporateContractInfo("C001", new BigDecimal("30.1")))
+            assertThatThrownBy(() -> createCorporateContractInfo("C001", new BigDecimal("30.1")))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("契約番号が空は受け入れない")
         void rejectEmptyContractNumber() {
-            assertThatThrownBy(() -> new CorporateContractInfo("", new BigDecimal("10")))
+            assertThatThrownBy(() -> createCorporateContractInfo("", new BigDecimal("10")))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("法人契約情報 null で法人荷主を登録しようとすると例外")
         void rejectNullCorporateContractInfo() {
-            assertThatThrownBy(() -> Shipper.registerCorporate(
-                    ShipperId.generate(), new ShipperName("テスト"),
-                    new ContactInfo("t@t.com", null), null))
+            assertThatThrownBy(() -> createCorporateShipper(null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

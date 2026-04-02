@@ -7,7 +7,8 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("CargoSpecification 値オブジェクト")
 class CargoSpecificationTest {
@@ -15,11 +16,7 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("重量が 0 以下の場合は例外を投げる")
     void rejectNonPositiveWeight() {
-        assertThatThrownBy(() -> new CargoSpecification(
-                CargoType.GENERAL_CARGO,
-                BigDecimal.ZERO,
-                null, null, null,
-                1, null))
+        assertThatThrownBy(() -> createCargoSpecification(BigDecimal.ZERO, 1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("重量");
     }
@@ -27,22 +24,14 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("重量が負の場合も例外を投げる")
     void rejectNegativeWeight() {
-        assertThatThrownBy(() -> new CargoSpecification(
-                CargoType.GENERAL_CARGO,
-                new BigDecimal("-1.0"),
-                null, null, null,
-                1, null))
+        assertThatThrownBy(() -> createCargoSpecification(new BigDecimal("-1.0"), 1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("個数が 0 の場合は例外を投げる")
     void rejectZeroQuantity() {
-        assertThatThrownBy(() -> new CargoSpecification(
-                CargoType.GENERAL_CARGO,
-                new BigDecimal("10.0"),
-                null, null, null,
-                0, null))
+        assertThatThrownBy(() -> createCargoSpecification(new BigDecimal("10.0"), 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("個数");
     }
@@ -50,11 +39,7 @@ class CargoSpecificationTest {
     @Test
     @DisplayName("個数が負の場合も例外を投げる")
     void rejectNegativeQuantity() {
-        assertThatThrownBy(() -> new CargoSpecification(
-                CargoType.GENERAL_CARGO,
-                new BigDecimal("10.0"),
-                null, null, null,
-                -1, null))
+        assertThatThrownBy(() -> createCargoSpecification(new BigDecimal("10.0"), -1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -64,12 +49,28 @@ class CargoSpecificationTest {
         CargoSpecification spec = new CargoSpecification(
                 CargoType.REFRIGERATED,
                 new BigDecimal("50.5"),
-                new BigDecimal("100"), new BigDecimal("80"), new BigDecimal("60"),
-                3, "冷凍食品");
+                new BigDecimal("100"),
+                new BigDecimal("80"),
+                new BigDecimal("60"),
+                3,
+                "冷凍食品"
+        );
 
         assertThat(spec.cargoType()).isEqualTo(CargoType.REFRIGERATED);
         assertThat(spec.weightKg()).isEqualByComparingTo("50.5");
         assertThat(spec.quantity()).isEqualTo(3);
         assertThat(spec.description()).isEqualTo("冷凍食品");
+    }
+
+    private CargoSpecification createCargoSpecification(BigDecimal weightKg, int quantity) {
+        return new CargoSpecification(
+                CargoType.GENERAL_CARGO,
+                weightKg,
+                null,
+                null,
+                null,
+                quantity,
+                null
+        );
     }
 }

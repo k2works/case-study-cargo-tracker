@@ -21,9 +21,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RegisterBookingCommandService")
@@ -93,6 +98,6 @@ class RegisterBookingCommandServiceTest {
         ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
         verify(eventPublisher, atLeastOnce()).publishEvent(eventCaptor.capture());
         assertThat(eventCaptor.getAllValues())
-                .anyMatch(e -> e instanceof BookingRegisteredEvent);
+                .anyMatch(BookingRegisteredEvent.class::isInstance);
     }
 }

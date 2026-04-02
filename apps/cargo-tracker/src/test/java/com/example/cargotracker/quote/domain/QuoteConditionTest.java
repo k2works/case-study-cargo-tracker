@@ -8,18 +8,24 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("QuoteCondition 値オブジェクト")
 class QuoteConditionTest {
 
     private static final LocalDate FUTURE_DATE = LocalDate.of(2025, 9, 1);
+    private static final BigDecimal DEFAULT_WEIGHT = new BigDecimal("100.0");
 
     @Test
     @DisplayName("正常な値で生成できる")
     void createValidCondition() {
-        QuoteCondition condition = new QuoteCondition(
-                "JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
+        QuoteCondition condition = createCondition(
+                "JPTYO",
+                "USNYC",
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                DEFAULT_WEIGHT
         );
 
         assertThat(condition.originLocode()).isEqualTo("JPTYO");
@@ -32,8 +38,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("originLocode が null の場合は例外を投げる")
     void rejectNullOriginLocode() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                null, "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
+        assertThatThrownBy(() -> createCondition(
+                null,
+                "USNYC",
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                DEFAULT_WEIGHT
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("出発地");
     }
@@ -41,8 +51,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("originLocode が空文字の場合は例外を投げる")
     void rejectBlankOriginLocode() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "  ", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
+        assertThatThrownBy(() -> createCondition(
+                "  ",
+                "USNYC",
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                DEFAULT_WEIGHT
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("出発地");
     }
@@ -50,8 +64,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("destinationLocode が null の場合は例外を投げる")
     void rejectNullDestinationLocode() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "JPTYO", null, FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
+        assertThatThrownBy(() -> createCondition(
+                "JPTYO",
+                null,
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                DEFAULT_WEIGHT
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("目的地");
     }
@@ -59,8 +77,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("destinationLocode が空文字の場合は例外を投げる")
     void rejectBlankDestinationLocode() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "JPTYO", "", FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
+        assertThatThrownBy(() -> createCondition(
+                "JPTYO",
+                "",
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                DEFAULT_WEIGHT
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("目的地");
     }
@@ -68,8 +90,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("requestedArrivalDate が null の場合は例外を投げる")
     void rejectNullRequestedArrivalDate() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "JPTYO", "USNYC", null, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
+        assertThatThrownBy(() -> createCondition(
+                "JPTYO",
+                "USNYC",
+                null,
+                CargoType.GENERAL_CARGO,
+                DEFAULT_WEIGHT
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("希望着日");
     }
@@ -77,8 +103,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("cargoType が null の場合は例外を投げる")
     void rejectNullCargoType() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "JPTYO", "USNYC", FUTURE_DATE, null, new BigDecimal("100.0")
+        assertThatThrownBy(() -> createCondition(
+                "JPTYO",
+                "USNYC",
+                FUTURE_DATE,
+                null,
+                DEFAULT_WEIGHT
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("貨物種別");
     }
@@ -86,8 +116,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("weightKg が null の場合は例外を投げる")
     void rejectNullWeightKg() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, null
+        assertThatThrownBy(() -> createCondition(
+                "JPTYO",
+                "USNYC",
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                null
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("重量");
     }
@@ -95,8 +129,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("weightKg が 0 の場合は例外を投げる")
     void rejectZeroWeightKg() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, BigDecimal.ZERO
+        assertThatThrownBy(() -> createCondition(
+                "JPTYO",
+                "USNYC",
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                BigDecimal.ZERO
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("重量");
     }
@@ -104,8 +142,12 @@ class QuoteConditionTest {
     @Test
     @DisplayName("weightKg が負の場合は例外を投げる")
     void rejectNegativeWeightKg() {
-        assertThatThrownBy(() -> new QuoteCondition(
-                "JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("-10.0")
+        assertThatThrownBy(() -> createCondition(
+                "JPTYO",
+                "USNYC",
+                FUTURE_DATE,
+                CargoType.GENERAL_CARGO,
+                new BigDecimal("-10.0")
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("重量");
     }
@@ -113,14 +155,20 @@ class QuoteConditionTest {
     @Test
     @DisplayName("equals と hashCode が正しく動作する")
     void equalsAndHashCode() {
-        QuoteCondition a = new QuoteCondition(
-                "JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
-        );
-        QuoteCondition b = new QuoteCondition(
-                "JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, new BigDecimal("100.0")
-        );
+        QuoteCondition a = createCondition("JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, DEFAULT_WEIGHT);
+        QuoteCondition b = createCondition("JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, DEFAULT_WEIGHT);
 
         assertThat(a).isEqualTo(b);
-        assertThat(a.hashCode()).isEqualTo(b.hashCode());
+        assertThat(a).hasSameHashCodeAs(b);
+    }
+
+    private QuoteCondition createCondition(
+            String originLocode,
+            String destinationLocode,
+            LocalDate requestedArrivalDate,
+            CargoType cargoType,
+            BigDecimal weightKg
+    ) {
+        return new QuoteCondition(originLocode, destinationLocode, requestedArrivalDate, cargoType, weightKg);
     }
 }

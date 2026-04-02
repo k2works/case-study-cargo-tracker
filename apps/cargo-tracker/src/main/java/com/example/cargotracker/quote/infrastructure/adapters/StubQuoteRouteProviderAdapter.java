@@ -17,23 +17,25 @@ import java.util.List;
 @Profile("!product")
 public class StubQuoteRouteProviderAdapter implements QuoteRouteProviderPort {
 
+    private static final String JPTYO = "JPTYO";
+
     @Override
     public List<RouteOption> findRouteOptions(QuoteCondition condition) {
         return List.of(
                 new RouteOption(
-                        List.of("SGSIN", "JPTYO"),
+                        List.of("SGSIN", JPTYO),
                         14,
                         new BigDecimal("150000"),
                         "SG001"
                 ),
                 new RouteOption(
-                        List.of("SGSIN", "KRPUS", "JPTYO"),
+                        List.of("SGSIN", "KRPUS", JPTYO),
                         18,
                         new BigDecimal("120000"),
                         "SG002"
                 ),
                 new RouteOption(
-                        List.of("JPTYO"),
+                        List.of(JPTYO),
                         7,
                         new BigDecimal("200000"),
                         "JP001"

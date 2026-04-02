@@ -1,11 +1,11 @@
 package com.example.cargotracker.quote.domain;
 
+import com.example.cargotracker.quote.domain.event.QuoteIssuedEvent;
 import com.example.cargotracker.quote.domain.model.aggregates.Quote;
 import com.example.cargotracker.quote.domain.model.aggregates.QuoteId;
 import com.example.cargotracker.quote.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.quote.domain.model.valueobjects.QuoteCondition;
 import com.example.cargotracker.quote.domain.model.valueobjects.RouteOption;
-import com.example.cargotracker.quote.domain.event.QuoteIssuedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,35 +14,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("Quote 集約")
 class QuoteTest {
-
-    private QuoteId anyQuoteId() {
-        return QuoteId.generate();
-    }
-
-    private QuoteCondition anyCondition() {
-        return new QuoteCondition(
-                "JPTYO",
-                "USNYC",
-                LocalDate.of(2025, 9, 1),
-                CargoType.GENERAL_CARGO,
-                new BigDecimal("500.0")
-        );
-    }
-
-    private List<RouteOption> anyRouteOptions() {
-        return List.of(
-                new RouteOption(
-                        List.of("SGSIN"),
-                        25,
-                        new BigDecimal("150000"),
-                        "V-2025-001"
-                )
-        );
-    }
 
     @Nested
     @DisplayName("issue ファクトリメソッド")
@@ -75,7 +51,6 @@ class QuoteTest {
         void quoteNumberHasExpectedFormat() {
             Quote quote = Quote.issue(anyQuoteId(), anyCondition(), anyRouteOptions());
 
-            // 例: Q-20250101-A3F9 のような形式
             assertThat(quote.getQuoteNumber().value()).matches("Q-\\d{8}-[A-Z0-9]{4}");
         }
 
@@ -97,29 +72,25 @@ class QuoteTest {
         @Test
         @DisplayName("id が null の場合は発行できない")
         void rejectNullId() {
-            assertThatThrownBy(() -> Quote.issue(null, anyCondition(), anyRouteOptions()))
-                    .isInstanceOf(IllegalArgumentException.class);
+            assertInvalidQuoteIssue(null, anyCondition(), anyRouteOptions());
         }
 
         @Test
         @DisplayName("condition が null の場合は発行できない")
         void rejectNullCondition() {
-            assertThatThrownBy(() -> Quote.issue(anyQuoteId(), null, anyRouteOptions()))
-                    .isInstanceOf(IllegalArgumentException.class);
+            assertInvalidQuoteIssue(anyQuoteId(), null, anyRouteOptions());
         }
 
         @Test
         @DisplayName("routeOptions が null の場合は発行できない")
         void rejectNullRouteOptions() {
-            assertThatThrownBy(() -> Quote.issue(anyQuoteId(), anyCondition(), null))
-                    .isInstanceOf(IllegalArgumentException.class);
+            assertInvalidQuoteIssue(anyQuoteId(), anyCondition(), null);
         }
 
         @Test
         @DisplayName("routeOptions が空の場合は発行できない")
         void rejectEmptyRouteOptions() {
-            assertThatThrownBy(() -> Quote.issue(anyQuoteId(), anyCondition(), List.of()))
-                    .isInstanceOf(IllegalArgumentException.class);
+            assertInvalidQuoteIssue(anyQuoteId(), anyCondition(), List.of());
         }
     }
 
@@ -148,5 +119,35 @@ class QuoteTest {
             assertThat(reconstituted.getRouteOptions()).isEqualTo(options);
             assertThat(reconstituted.getDomainEvents()).isEmpty();
         }
+    }
+
+    private void assertInvalidQuoteIssue(QuoteId id, QuoteCondition condition, List<RouteOption> routeOptions) {
+        assertThatThrownBy(() -> Quote.issue(id, condition, routeOptions))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private QuoteId anyQuoteId() {
+        return QuoteId.generate();
+    }
+
+    private QuoteCondition anyCondition() {
+        return new QuoteCondition(
+                "JPTYO",
+                "USNYC",
+                LocalDate.of(2025, 9, 1),
+                CargoType.GENERAL_CARGO,
+                new BigDecimal("500.0")
+        );
+    }
+
+    private List<RouteOption> anyRouteOptions() {
+        return List.of(
+                new RouteOption(
+                        List.of("SGSIN"),
+                        25,
+                        new BigDecimal("150000"),
+                        "V-2025-001"
+                )
+        );
     }
 }
