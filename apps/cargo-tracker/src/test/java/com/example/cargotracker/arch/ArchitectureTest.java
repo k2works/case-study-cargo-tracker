@@ -76,4 +76,30 @@ class ArchitectureTest {
                     .should().dependOnClassesThat()
                     .resideInAPackage("com.example.cargotracker.booking..")
                     .as("[A05b] shipper コンテキストは booking コンテキストのクラスを直接参照してはならない（ACL/Event 経由のみ）");
+
+    // A06: routing の domain/application 層は booking を直接参照しない
+    //      （BookingQueryPort インターフェース経由のみ許可）
+    @ArchTest
+    static final ArchRule A06_routingのドメイン_サービス層はbookingを直接参照しない =
+            noClasses()
+                    .that().resideInAnyPackage(
+                            "com.example.cargotracker.routing.domain..",
+                            "com.example.cargotracker.routing.application.internal.commandservices..",
+                            "com.example.cargotracker.routing.application.internal.queryservices.."
+                    )
+                    .should().dependOnClassesThat()
+                    .resideInAPackage("com.example.cargotracker.booking..")
+                    .as("[A06] routing の domain/commandservices/queryservices は booking コンテキストを直接参照してはならない（BookingQueryPort 経由のみ）");
+
+    // A07: quote の domain 層は routing/booking を直接参照しない
+    @ArchTest
+    static final ArchRule A07_quoteのドメイン層はrouting_bookingを直接参照しない =
+            noClasses()
+                    .that().resideInAPackage("com.example.cargotracker.quote.domain..")
+                    .should().dependOnClassesThat()
+                    .resideInAnyPackage(
+                            "com.example.cargotracker.routing..",
+                            "com.example.cargotracker.booking.."
+                    )
+                    .as("[A07] quote の domain 層は routing・booking コンテキストのクラスを直接参照してはならない");
 }
