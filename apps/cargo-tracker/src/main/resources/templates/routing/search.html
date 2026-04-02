@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ルート検索結果 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">Cargo Tracker</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="ナビゲーションメニューを開く">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="navbar-nav me-auto">
+                <a class="nav-link text-white" th:href="@{/bookings}">予約</a>
+                <a class="nav-link text-white" th:href="@{/quotes}">見積</a>
+            </div>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text text-white me-3" sec:authentication="name"></span>
+                <form th:action="@{/logout}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>ルート検索結果</h4>
+        <a th:if="${bookingId}" th:href="@{/bookings/{id}(id=${bookingId})}"
+           class="btn btn-outline-secondary">予約詳細に戻る</a>
+        <a th:unless="${bookingId}" th:href="@{/bookings}" class="btn btn-outline-secondary">予約一覧へ</a>
+    </div>
+
+    <!-- 検索条件 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h6 class="mb-0">検索条件</h6>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">出発地 (UN/LOCODE)</dt>
+                <dd class="col-sm-8"><code th:text="${form.originLocode}"></code></dd>
+
+                <dt class="col-sm-4">目的地 (UN/LOCODE)</dt>
+                <dd class="col-sm-8"><code th:text="${form.destinationLocode}"></code></dd>
+
+                <dt class="col-sm-4">希望着日</dt>
+                <dd class="col-sm-8" th:text="${form.requestedArrivalDate}"></dd>
+
+                <dt class="col-sm-4">貨物種別</dt>
+                <dd class="col-sm-8" th:text="${form.cargoType}"></dd>
+
+                <dt class="col-sm-4">重量 (kg)</dt>
+                <dd class="col-sm-8" th:text="${form.weightKg}"></dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- ルート候補一覧 -->
+    <h5 class="mb-3">ルート候補</h5>
+
+    <!-- 候補なし: 警告 + 再検索フォーム -->
+    <div th:if="${#lists.isEmpty(candidates)}">
+        <div class="alert alert-warning" role="alert" aria-live="polite">
+            希望着日（<span th:text="${form.requestedArrivalDate}"></span>）に間に合うルートが見つかりませんでした。
+            希望着日を変更して再検索できます。
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">条件を変更して再検索</h6>
+            </div>
+            <div class="card-body">
+                <form th:action="@{/routings/search}" method="get">
+                    <input type="hidden" name="originLocode" th:value="${form.originLocode}">
+                    <input type="hidden" name="destinationLocode" th:value="${form.destinationLocode}">
+                    <input type="hidden" name="cargoType" th:value="${form.cargoType}">
+                    <input type="hidden" name="weightKg" th:value="${form.weightKg}">
+
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="requestedArrivalDate" class="form-label">希望着日</label>
+                            <input type="date" class="form-control" id="requestedArrivalDate"
+                                   name="requestedArrivalDate"
+                                   th:value="${form.requestedArrivalDate}"
+                                   required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="cargoTypeSelect" class="form-label">貨物種別</label>
+                            <select class="form-select" id="cargoTypeSelect" name="cargoType">
+                                <option th:each="ct : ${cargoTypes}"
+                                        th:value="${ct}"
+                                        th:text="${ct}"
+                                        th:selected="${ct == form.cargoType}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">再検索</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 候補あり: 一覧表示 -->
+    <div th:unless="${#lists.isEmpty(candidates)}">
+        <div th:each="candidate, stat : ${candidates}" class="card shadow-sm mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">ルート <span th:text="${stat.count}"></span></span>
+                <span class="badge bg-primary" th:text="${candidate.voyageNumber()}"></span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">経由港</dt>
+                    <dd class="col-sm-8">
+                        <span th:if="${#lists.isEmpty(candidate.viaLocodes())}" class="text-muted">（直行）</span>
+                        <span th:unless="${#lists.isEmpty(candidate.viaLocodes())}"
+                              th:text="${#strings.listJoin(candidate.viaLocodes(), ' → ')}"></span>
+                    </dd>
+
+                    <dt class="col-sm-4">所要日数</dt>
+                    <dd class="col-sm-8" th:text="${candidate.transitDays() + ' 日'}"></dd>
+
+                    <dt class="col-sm-4">概算料金</dt>
+                    <dd class="col-sm-8">
+                        <span class="fw-bold"
+                              th:text="${#numbers.formatDecimal(candidate.estimatedPrice(), 1, 'COMMA', 0, 'POINT') + ' 円'}"></span>
+                    </dd>
+
+                    <dt class="col-sm-4">推定着日</dt>
+                    <dd class="col-sm-8">
+                        <span th:text="${candidate.estimatedArrival()}"></span>
+                        <span class="badge bg-success ms-1"
+                              th:if="${!candidate.estimatedArrival().isAfter(form.requestedArrivalDate)}">✅ 間に合います</span>
+                    </dd>
+
+                    <dt class="col-sm-4">対応貨物種別</dt>
+                    <dd class="col-sm-8">
+                        <span th:each="ct, i : ${candidate.supportedCargoTypes()}">
+                            <span class="badge bg-secondary" th:text="${ct}"></span>
+                        </span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
