@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
+import com.example.cargotracker.booking.domain.event.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
 import com.example.cargotracker.booking.domain.event.BookingRouteAssignedEvent;
 import com.example.cargotracker.booking.domain.event.DomainEvent;
@@ -84,6 +85,20 @@ public class Booking {
         if (assignedRoute == null) throw new IllegalArgumentException("割り当てルートは null にできません");
         this.assignedRoute = assignedRoute;
         this.domainEvents.add(new BookingRouteAssignedEvent(id, assignedRoute));
+    }
+
+    /**
+     * 予約を確定する。ルートが未割り当ての場合は例外を投げる。
+     */
+    public void confirm() {
+        if (assignedRoute == null) {
+            throw new IllegalStateException("ルートが割り当てられていない予約は確定できません");
+        }
+        if (status == BookingStatus.CONFIRMED) {
+            throw new IllegalStateException("既に確定済みの予約です");
+        }
+        this.status = BookingStatus.CONFIRMED;
+        this.domainEvents.add(new BookingConfirmedEvent(id));
     }
 
     public BookingId getId() { return id; }

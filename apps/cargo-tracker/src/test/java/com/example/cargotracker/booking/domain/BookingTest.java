@@ -1,6 +1,8 @@
 package com.example.cargotracker.booking.domain;
 
+import com.example.cargotracker.booking.domain.event.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
+
 import com.example.cargotracker.booking.domain.event.BookingRouteAssignedEvent;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
@@ -141,5 +143,51 @@ class BookingTest {
     void assignedRouteIsNullAfterRegister() {
         Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
         assertThat(booking.getAssignedRoute()).isNull();
+    }
+
+    @Test
+    @DisplayName("ルート割り当て済み予約を確定できる")
+    void confirmBooking() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        booking.assignRoute(new AssignedRoute("VOY-001", "JPTYO/USNYC", LocalDate.of(2025, 9, 1)));
+
+        booking.confirm();
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+    }
+
+    @Test
+    @DisplayName("予約確定時に BookingConfirmedEvent が発行される")
+    void confirmEmitsEvent() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        booking.assignRoute(new AssignedRoute("VOY-001", "JPTYO/USNYC", LocalDate.of(2025, 9, 1)));
+
+        booking.confirm();
+
+        long confirmedEventCount = booking.getDomainEvents().stream()
+                .filter(e -> e instanceof BookingConfirmedEvent)
+                .count();
+        assertThat(confirmedEventCount).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("ルート未割り当ての予約は確定できない")
+    void cannotConfirmWithoutRoute() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+
+        assertThatThrownBy(booking::confirm)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ルート");
+    }
+
+    @Test
+    @DisplayName("既に確定済みの予約は再確定できない")
+    void cannotConfirmAlreadyConfirmed() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        booking.assignRoute(new AssignedRoute("VOY-001", "JPTYO/USNYC", LocalDate.of(2025, 9, 1)));
+        booking.confirm();
+
+        assertThatThrownBy(booking::confirm)
+                .isInstanceOf(IllegalStateException.class);
     }
 }
