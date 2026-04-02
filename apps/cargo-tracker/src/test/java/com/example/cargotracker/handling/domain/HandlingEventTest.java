@@ -34,7 +34,7 @@ class HandlingEventTest {
         UUID bookingId = anyBookingId();
         LocalDateTime completionTime = anyCompletionTime();
 
-        HandlingEvent event = HandlingEvent.record(id, bookingId, HandlingEventType.LOAD, "JPTYO", completionTime, null);
+        HandlingEvent event = HandlingEvent.recordEvent(id, bookingId, HandlingEventType.LOAD, "JPTYO", completionTime, null);
 
         assertThat(event.getId()).isEqualTo(id);
         assertThat(event.getBookingId()).isEqualTo(bookingId);
@@ -47,7 +47,7 @@ class HandlingEventTest {
     @Test
     @DisplayName("記録時に HandlingEventRecordedEvent が発行される")
     void recordEmitsEvent() {
-        HandlingEvent event = HandlingEvent.record(anyId(), anyBookingId(), HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null);
+        HandlingEvent event = HandlingEvent.recordEvent(anyId(), anyBookingId(), HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null);
 
         assertThat(event.getDomainEvents()).hasSize(1);
         assertThat(event.getDomainEvents().get(0)).isInstanceOf(HandlingEventRecordedEvent.class);
@@ -73,7 +73,7 @@ class HandlingEventTest {
         for (HandlingEventType type : new HandlingEventType[]{
                 HandlingEventType.LOAD, HandlingEventType.UNLOAD,
                 HandlingEventType.CUSTOMS, HandlingEventType.TRANSHIP}) {
-            HandlingEvent event = HandlingEvent.record(anyId(), anyBookingId(), type, "JPTYO", anyCompletionTime(), null);
+            HandlingEvent event = HandlingEvent.recordEvent(anyId(), anyBookingId(), type, "JPTYO", anyCompletionTime(), null);
             assertThat(event.getEventType()).isEqualTo(type);
         }
     }
@@ -82,7 +82,7 @@ class HandlingEventTest {
     @DisplayName("メモ付きで手動更新イベントを記録できる")
     void recordManualUpdateWithMemo() {
         String memo = "台風のため保管中";
-        HandlingEvent event = HandlingEvent.record(anyId(), anyBookingId(), HandlingEventType.MANUAL_UPDATE, "JPTYO", anyCompletionTime(), memo);
+        HandlingEvent event = HandlingEvent.recordEvent(anyId(), anyBookingId(), HandlingEventType.MANUAL_UPDATE, "JPTYO", anyCompletionTime(), memo);
 
         assertThat(event.getEventType()).isEqualTo(HandlingEventType.MANUAL_UPDATE);
         assertThat(event.getMemo()).isEqualTo(memo);
@@ -91,48 +91,63 @@ class HandlingEventTest {
     @Test
     @DisplayName("id が null の場合は記録できない")
     void rejectNullId() {
+        UUID bookingId = anyBookingId();
+        LocalDateTime completionTime = anyCompletionTime();
         assertThatThrownBy(() ->
-                HandlingEvent.record(null, anyBookingId(), HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null))
+                HandlingEvent.recordEvent(null, bookingId, HandlingEventType.LOAD, "JPTYO", completionTime, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("bookingId が null の場合は記録できない")
     void rejectNullBookingId() {
+        HandlingEventId id = anyId();
+        LocalDateTime completionTime = anyCompletionTime();
         assertThatThrownBy(() ->
-                HandlingEvent.record(anyId(), null, HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null))
+                HandlingEvent.recordEvent(id, null, HandlingEventType.LOAD, "JPTYO", completionTime, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("eventType が null の場合は記録できない")
     void rejectNullEventType() {
+        HandlingEventId id = anyId();
+        UUID bookingId = anyBookingId();
+        LocalDateTime completionTime = anyCompletionTime();
         assertThatThrownBy(() ->
-                HandlingEvent.record(anyId(), anyBookingId(), null, "JPTYO", anyCompletionTime(), null))
+                HandlingEvent.recordEvent(id, bookingId, null, "JPTYO", completionTime, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("locationCode が null の場合は記録できない")
     void rejectNullLocationCode() {
+        HandlingEventId id = anyId();
+        UUID bookingId = anyBookingId();
+        LocalDateTime completionTime = anyCompletionTime();
         assertThatThrownBy(() ->
-                HandlingEvent.record(anyId(), anyBookingId(), HandlingEventType.LOAD, null, anyCompletionTime(), null))
+                HandlingEvent.recordEvent(id, bookingId, HandlingEventType.LOAD, null, completionTime, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("locationCode が空文字の場合は記録できない")
     void rejectBlankLocationCode() {
+        HandlingEventId id = anyId();
+        UUID bookingId = anyBookingId();
+        LocalDateTime completionTime = anyCompletionTime();
         assertThatThrownBy(() ->
-                HandlingEvent.record(anyId(), anyBookingId(), HandlingEventType.LOAD, "", anyCompletionTime(), null))
+                HandlingEvent.recordEvent(id, bookingId, HandlingEventType.LOAD, "", completionTime, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("completionTime が null の場合は記録できない")
     void rejectNullCompletionTime() {
+        HandlingEventId id = anyId();
+        UUID bookingId = anyBookingId();
         assertThatThrownBy(() ->
-                HandlingEvent.record(anyId(), anyBookingId(), HandlingEventType.LOAD, "JPTYO", null, null))
+                HandlingEvent.recordEvent(id, bookingId, HandlingEventType.LOAD, "JPTYO", null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -34,7 +34,7 @@ public class RecordHandlingEventCommandService {
 
         // 荷役イベント集約の生成
         HandlingEventId id = HandlingEventId.generate();
-        HandlingEvent event = HandlingEvent.record(
+        HandlingEvent event = HandlingEvent.recordEvent(
                 id,
                 command.bookingId(),
                 command.eventType(),

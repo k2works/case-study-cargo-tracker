@@ -37,8 +37,8 @@ public class HandlingEvent {
     /**
      * 荷役イベントを記録する（新規発生）。ドメインイベントを発行する。
      */
-    public static HandlingEvent record(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
-                                       String locationCode, LocalDateTime completionTime, String memo) {
+    public static HandlingEvent recordEvent(HandlingEventId id, UUID bookingId, HandlingEventType eventType,
+                                            String locationCode, LocalDateTime completionTime, String memo) {
         if (id == null) throw new IllegalArgumentException("荷役イベント ID は null にできません");
         if (bookingId == null) throw new IllegalArgumentException("予約 ID は null にできません");
         if (eventType == null) throw new IllegalArgumentException("荷役イベント種別は null にできません");

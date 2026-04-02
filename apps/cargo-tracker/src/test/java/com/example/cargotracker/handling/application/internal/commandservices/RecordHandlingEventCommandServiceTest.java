@@ -18,9 +18,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RecordHandlingEventCommandService")
@@ -70,8 +75,9 @@ class RecordHandlingEventCommandServiceTest {
         UUID unknownId = UUID.randomUUID();
         doThrow(new BookingNotFoundException(unknownId.toString()))
                 .when(bookingExistencePort).verifyExists(unknownId);
+        RecordHandlingEventCommand command = validCommand(unknownId);
 
-        assertThatThrownBy(() -> commandService.execute(validCommand(unknownId)))
+        assertThatThrownBy(() -> commandService.execute(command))
                 .isInstanceOf(BookingNotFoundException.class);
         verify(handlingEventRepository, never()).save(any());
     }
