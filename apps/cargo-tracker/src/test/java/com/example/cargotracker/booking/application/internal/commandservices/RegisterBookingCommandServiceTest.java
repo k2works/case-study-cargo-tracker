@@ -59,7 +59,8 @@ class RegisterBookingCommandServiceTest {
                 1, "テスト品",
                 "JPTYO", "USNYC",
                 LocalDate.of(2025, 8, 1),
-                LocalDate.of(2025, 9, 1)
+                LocalDate.of(2025, 9, 1),
+                null, null, null, null
         );
     }
 

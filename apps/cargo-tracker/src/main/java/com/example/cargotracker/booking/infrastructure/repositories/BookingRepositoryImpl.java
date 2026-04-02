@@ -38,6 +38,10 @@ public class BookingRepositoryImpl implements BookingRepository {
                 cargo.heightCm(),
                 cargo.quantity(),
                 cargo.description(),
+                cargo.unNumber(),
+                cargo.hazardClass(),
+                cargo.minTempCelsius(),
+                cargo.maxTempCelsius(),
                 transport.originLocation(),
                 transport.destinationLocation(),
                 transport.requestedPickupDate(),
@@ -72,7 +76,11 @@ public class BookingRepositoryImpl implements BookingRepository {
                 row.cargoWidthCm(),
                 row.cargoHeightCm(),
                 row.cargoQuantity(),
-                row.cargoDescription()
+                row.cargoDescription(),
+                row.cargoUnNumber(),
+                row.cargoHazardClass(),
+                row.cargoMinTempCelsius(),
+                row.cargoMaxTempCelsius()
         );
         TransportCondition transport = new TransportCondition(
                 row.originLocation(),

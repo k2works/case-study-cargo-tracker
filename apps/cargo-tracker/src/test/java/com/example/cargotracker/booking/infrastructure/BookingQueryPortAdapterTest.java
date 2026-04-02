@@ -95,7 +95,9 @@ class BookingQueryPortAdapterTest extends PostgreSQLIntegrationTestBase {
             com.example.cargotracker.booking.domain.model.valueobjects.CargoType.DANGEROUS_GOODS,
             new BigDecimal("200.00"),
             new BigDecimal("100.00"), new BigDecimal("80.00"), new BigDecimal("60.00"),
-            1, "危険物"
+            1, "危険物",
+            "UN1234", null,
+            null, null
         );
         var transport = new TransportCondition(
             "SGSIN", "JPTYO",
@@ -121,7 +123,9 @@ class BookingQueryPortAdapterTest extends PostgreSQLIntegrationTestBase {
             com.example.cargotracker.booking.domain.model.valueobjects.CargoType.REFRIGERATED,
             new BigDecimal("300.00"),
             new BigDecimal("100.00"), new BigDecimal("80.00"), new BigDecimal("60.00"),
-            1, "冷凍貨物"
+            1, "冷凍貨物",
+            null, null,
+            new BigDecimal("-18"), new BigDecimal("0")
         );
         var transport = new TransportCondition(
             "HKHKG", "JPTYO",

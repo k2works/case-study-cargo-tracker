@@ -14,6 +14,10 @@
             <arg  column="cargo_height_cm"          javaType="java.math.BigDecimal"/>
             <arg  column="cargo_quantity"           javaType="int"/>
             <arg  column="cargo_description"        javaType="java.lang.String"/>
+            <arg  column="cargo_un_number"          javaType="java.lang.String"/>
+            <arg  column="cargo_hazard_class"       javaType="java.lang.String"/>
+            <arg  column="cargo_min_temp_celsius"   javaType="java.math.BigDecimal"/>
+            <arg  column="cargo_max_temp_celsius"   javaType="java.math.BigDecimal"/>
             <arg  column="origin_location"          javaType="java.lang.String"/>
             <arg  column="destination_location"     javaType="java.lang.String"/>
             <arg  column="requested_pickup_date"    javaType="java.time.LocalDate"/>
@@ -29,6 +33,7 @@
             id, shipper_id,
             cargo_type, cargo_weight_kg, cargo_length_cm, cargo_width_cm, cargo_height_cm,
             cargo_quantity, cargo_description,
+            cargo_un_number, cargo_hazard_class, cargo_min_temp_celsius, cargo_max_temp_celsius,
             origin_location, destination_location,
             requested_pickup_date, requested_delivery_date,
             status, created_at, updated_at
@@ -37,6 +42,8 @@
             #{row.cargoType}, #{row.cargoWeightKg}, #{row.cargoLengthCm},
             #{row.cargoWidthCm}, #{row.cargoHeightCm},
             #{row.cargoQuantity}, #{row.cargoDescription},
+            #{row.cargoUnNumber}, #{row.cargoHazardClass},
+            #{row.cargoMinTempCelsius}, #{row.cargoMaxTempCelsius},
             #{row.originLocation}, #{row.destinationLocation},
             #{row.requestedPickupDate}, #{row.requestedDeliveryDate},
             #{row.status}, #{row.createdAt}, #{row.updatedAt}
@@ -47,6 +54,7 @@
         SELECT id, shipper_id,
                cargo_type, cargo_weight_kg, cargo_length_cm, cargo_width_cm, cargo_height_cm,
                cargo_quantity, cargo_description,
+               cargo_un_number, cargo_hazard_class, cargo_min_temp_celsius, cargo_max_temp_celsius,
                origin_location, destination_location,
                requested_pickup_date, requested_delivery_date,
                status, created_at, updated_at
@@ -58,6 +66,7 @@
         SELECT id, shipper_id,
                cargo_type, cargo_weight_kg, cargo_length_cm, cargo_width_cm, cargo_height_cm,
                cargo_quantity, cargo_description,
+               cargo_un_number, cargo_hazard_class, cargo_min_temp_celsius, cargo_max_temp_celsius,
                origin_location, destination_location,
                requested_pickup_date, requested_delivery_date,
                status, created_at, updated_at

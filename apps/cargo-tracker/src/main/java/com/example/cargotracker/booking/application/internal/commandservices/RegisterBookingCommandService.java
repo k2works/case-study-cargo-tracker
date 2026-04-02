@@ -44,7 +44,11 @@ public class RegisterBookingCommandService {
                 command.widthCm(),
                 command.heightCm(),
                 command.quantity(),
-                command.description()
+                command.description(),
+                command.unNumber(),
+                command.hazardClass(),
+                command.minTempCelsius(),
+                command.maxTempCelsius()
         );
         TransportCondition transportCondition = new TransportCondition(
                 command.originLocation(),

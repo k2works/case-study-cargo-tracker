@@ -48,7 +48,11 @@ public class DefaultProfileBookingSeedConfiguration {
                     "東京港",
                     "シンガポール港",
                     pickupDate,
-                    pickupDate.plusDays(10)
+                    pickupDate.plusDays(10),
+                    null,
+                    null,
+                    null,
+                    null
             ));
         };
     }
