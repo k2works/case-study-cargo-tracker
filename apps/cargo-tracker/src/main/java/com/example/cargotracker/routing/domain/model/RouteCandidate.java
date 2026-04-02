@@ -3,6 +3,7 @@ package com.example.cargotracker.routing.domain.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 /**
  * ルート候補を表す Read Model。
@@ -12,7 +13,8 @@ public record RouteCandidate(
     List<String> viaLocodes,
     int transitDays,
     BigDecimal estimatedPrice,
-    LocalDate estimatedArrival
+    LocalDate estimatedArrival,
+    Set<CargoType> supportedCargoTypes
 ) {
     public RouteCandidate {
         if (voyageNumber == null || voyageNumber.isBlank()) {
@@ -30,7 +32,10 @@ public record RouteCandidate(
         if (estimatedArrival == null) {
             throw new IllegalArgumentException("推定到着日は null にできません");
         }
-        // List をイミュータブルにコピー
+        if (supportedCargoTypes == null || supportedCargoTypes.isEmpty()) {
+            throw new IllegalArgumentException("対応貨物種別は null または空にできません");
+        }
         viaLocodes = List.copyOf(viaLocodes);
+        supportedCargoTypes = Set.copyOf(supportedCargoTypes);
     }
 }

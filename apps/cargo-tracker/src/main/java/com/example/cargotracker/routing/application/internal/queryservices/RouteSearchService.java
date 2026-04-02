@@ -14,7 +14,11 @@ import java.util.UUID;
  * <p>予約番号起点でルートを検索する {@link #searchByBookingId} と、
  * 直接条件を指定して検索する {@link #searchByCondition} の 2 つの操作を提供する。
  *
- * <p>フィルタリングルールは後続タスク（2.3）で追加するため、現時点では全件を返す。
+ * <p>両メソッドとも以下のフィルタリングを適用する:
+ * <ul>
+ *   <li>希望着日フィルタ: {@code estimatedArrival <= requestedArrivalDate} のルートのみ返す</li>
+ *   <li>貨物種別フィルタ: {@code supportedCargoTypes} にクエリの貨物種別が含まれるルートのみ返す</li>
+ * </ul>
  */
 public class RouteSearchService {
 
@@ -30,8 +34,8 @@ public class RouteSearchService {
      * 予約 ID をもとに予約の輸送条件を取得し、ルート候補を検索する。
      *
      * @param bookingId 予約 ID
-     * @return ルート候補リスト
-     * @throws BookingNotFoundException 指定した予約が存在しない場合
+     * @return フィルタ済みルート候補リスト
+     * @throws BookingDataNotFoundException 指定した予約が存在しない場合
      */
     public List<RouteCandidate> searchByBookingId(UUID bookingId) {
         var snapshot = bookingQueryPort.findById(bookingId)
@@ -45,16 +49,23 @@ public class RouteSearchService {
             snapshot.weightKg()
         );
 
-        return routeProviderPort.findRoutes(query);
+        return applyFilters(routeProviderPort.findRoutes(query), query);
     }
 
     /**
      * 検索条件を直接指定してルート候補を検索する。
      *
      * @param query ルート検索条件
-     * @return ルート候補リスト
+     * @return フィルタ済みルート候補リスト
      */
     public List<RouteCandidate> searchByCondition(RouteSearchQuery query) {
-        return routeProviderPort.findRoutes(query);
+        return applyFilters(routeProviderPort.findRoutes(query), query);
+    }
+
+    private List<RouteCandidate> applyFilters(List<RouteCandidate> candidates, RouteSearchQuery query) {
+        return candidates.stream()
+            .filter(c -> !c.estimatedArrival().isAfter(query.requestedArrivalDate()))
+            .filter(c -> c.supportedCargoTypes().contains(query.cargoType()))
+            .toList();
     }
 }
