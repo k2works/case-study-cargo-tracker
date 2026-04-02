@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling.interfaces.rest;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
+import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
@@ -105,6 +106,29 @@ class HandlingRestControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("RECEIVE イベントの重複登録は 409 Conflict を返す")
+    void record_duplicateReceive_returns409() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        when(recordHandlingEventCommandService.execute(any()))
+                .thenThrow(new DuplicateReceiveException(bookingId));
+
+        String requestBody = """
+                {
+                  "bookingId": "%s",
+                  "eventType": "RECEIVE",
+                  "locationCode": "JPTYO",
+                  "completionTime": "2025-01-15T10:00:00"
+                }
+                """.formatted(bookingId);
+
+        mockMvc.perform(post("/api/v1/handling-events")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isConflict());
     }
 
     @Test
