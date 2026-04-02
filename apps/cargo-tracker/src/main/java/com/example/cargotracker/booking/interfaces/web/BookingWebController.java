@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.AssignRouteCommandService;
+import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistencePort;
@@ -9,6 +10,7 @@ import com.example.cargotracker.booking.application.internal.queryservices.FindB
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.interfaces.web.dto.BookingRegisterForm;
 import jakarta.validation.Valid;
@@ -44,15 +46,18 @@ public class BookingWebController {
 
     private final RegisterBookingCommandService registerBookingCommandService;
     private final AssignRouteCommandService assignRouteCommandService;
+    private final ConfirmBookingCommandService confirmBookingCommandService;
     private final FindBookingQueryService findBookingQueryService;
     private final ShipperExistencePort shipperExistencePort;
 
     public BookingWebController(RegisterBookingCommandService registerBookingCommandService,
                                 AssignRouteCommandService assignRouteCommandService,
+                                ConfirmBookingCommandService confirmBookingCommandService,
                                 FindBookingQueryService findBookingQueryService,
                                 ShipperExistencePort shipperExistencePort) {
         this.registerBookingCommandService = registerBookingCommandService;
         this.assignRouteCommandService = assignRouteCommandService;
+        this.confirmBookingCommandService = confirmBookingCommandService;
         this.findBookingQueryService = findBookingQueryService;
         this.shipperExistencePort = shipperExistencePort;
     }
@@ -126,6 +131,12 @@ public class BookingWebController {
         AssignRouteCommand command = new AssignRouteCommand(
                 UUID.fromString(id), voyageNumber, routePath, estimatedArrival);
         assignRouteCommandService.execute(command);
+        return "redirect:/bookings/" + id;
+    }
+
+    @PostMapping("/{id}/confirm")
+    public String confirm(@PathVariable("id") String id) {
+        confirmBookingCommandService.execute(new ConfirmBookingCommand(UUID.fromString(id)));
         return "redirect:/bookings/" + id;
     }
 

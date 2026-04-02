@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.application.internal.commandservices.AssignRouteCommandService;
+import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingNotFoundException;
@@ -8,6 +9,7 @@ import com.example.cargotracker.booking.application.internal.queryservices.FindB
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.booking.interfaces.rest.dto.AssignRouteRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingResponse;
@@ -36,13 +38,16 @@ public class BookingRestController {
 
     private final RegisterBookingCommandService registerBookingCommandService;
     private final AssignRouteCommandService assignRouteCommandService;
+    private final ConfirmBookingCommandService confirmBookingCommandService;
     private final FindBookingQueryService findBookingQueryService;
 
     public BookingRestController(RegisterBookingCommandService registerBookingCommandService,
                                  AssignRouteCommandService assignRouteCommandService,
+                                 ConfirmBookingCommandService confirmBookingCommandService,
                                  FindBookingQueryService findBookingQueryService) {
         this.registerBookingCommandService = registerBookingCommandService;
         this.assignRouteCommandService = assignRouteCommandService;
+        this.confirmBookingCommandService = confirmBookingCommandService;
         this.findBookingQueryService = findBookingQueryService;
     }
 
@@ -79,6 +84,12 @@ public class BookingRestController {
                 request.estimatedArrival()
         );
         assignRouteCommandService.execute(command);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<Void> confirm(@PathVariable("id") String id) {
+        confirmBookingCommandService.execute(new ConfirmBookingCommand(UUID.fromString(id)));
         return ResponseEntity.ok().build();
     }
 

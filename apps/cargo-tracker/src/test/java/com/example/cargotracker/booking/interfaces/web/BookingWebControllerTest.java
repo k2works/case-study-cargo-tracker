@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.AssignRouteCommandService;
+import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.RegisterBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ShipperNotFoundException;
 import com.example.cargotracker.booking.application.internal.queryservices.BookingNotFoundException;
@@ -51,6 +52,9 @@ class BookingWebControllerTest {
 
     @MockitoBean
     private AssignRouteCommandService assignRouteCommandService;
+
+    @MockitoBean
+    private ConfirmBookingCommandService confirmBookingCommandService;
 
     @MockitoBean
     private FindBookingQueryService findBookingQueryService;

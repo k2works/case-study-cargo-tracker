@@ -34,6 +34,10 @@
                     weightKg=${booking.cargoSpecification.weightKg}
                 )}"
                class="btn btn-primary">この条件で見積を作成</a>
+            <form th:if="${booking.status.name() == 'PROVISIONAL' and booking.assignedRoute != null}"
+                  th:action="@{/bookings/{id}/confirm(id=${booking.id})}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-success">予約を確定する</button>
+            </form>
             <a th:href="@{/bookings}" class="btn btn-outline-secondary">一覧に戻る</a>
         </div>
     </div>
@@ -43,7 +47,9 @@
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">予約番号: <code th:text="${booking.id}"></code></h5>
-            <span class="badge bg-warning text-dark fs-6" th:text="${booking.status}"></span>
+            <span class="badge fs-6"
+                  th:classappend="${booking.status.name() == 'CONFIRMED'} ? 'bg-success' : 'bg-warning text-dark'"
+                  th:text="${booking.status.name()}"></span>
         </div>
         <div class="card-body">
             <div class="row">
