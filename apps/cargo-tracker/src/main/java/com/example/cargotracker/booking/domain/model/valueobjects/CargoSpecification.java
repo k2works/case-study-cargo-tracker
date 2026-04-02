@@ -15,10 +15,23 @@ public final class CargoSpecification {
     private final BigDecimal heightCm;
     private final int quantity;
     private final String description;
+    private final String unNumber;
+    private final String hazardClass;
+    private final BigDecimal minTempCelsius;
+    private final BigDecimal maxTempCelsius;
 
     public CargoSpecification(CargoType cargoType, BigDecimal weightKg,
                                BigDecimal lengthCm, BigDecimal widthCm, BigDecimal heightCm,
                                int quantity, String description) {
+        this(cargoType, weightKg, lengthCm, widthCm, heightCm, quantity, description,
+                null, null, null, null);
+    }
+
+    public CargoSpecification(CargoType cargoType, BigDecimal weightKg,
+                               BigDecimal lengthCm, BigDecimal widthCm, BigDecimal heightCm,
+                               int quantity, String description,
+                               String unNumber, String hazardClass,
+                               BigDecimal minTempCelsius, BigDecimal maxTempCelsius) {
         if (cargoType == null) throw new IllegalArgumentException("貨物種別は null にできません");
         if (weightKg == null) throw new IllegalArgumentException("重量は null にできません");
         if (weightKg.compareTo(BigDecimal.ZERO) <= 0) {
@@ -27,6 +40,15 @@ public final class CargoSpecification {
         if (quantity < 1) {
             throw new IllegalArgumentException("個数は 1 以上でなければなりません");
         }
+        if (cargoType == CargoType.DANGEROUS_GOODS && (unNumber == null || unNumber.isBlank())) {
+            throw new IllegalArgumentException("UN 番号は危険物の場合に必須です");
+        }
+        if (cargoType == CargoType.REFRIGERATED && (minTempCelsius == null || maxTempCelsius == null)) {
+            throw new IllegalArgumentException("温度範囲は冷凍貨物の場合に必須です");
+        }
+        if (cargoType == CargoType.REFRIGERATED && minTempCelsius.compareTo(maxTempCelsius) >= 0) {
+            throw new IllegalArgumentException("最低温度は最高温度より低くなければなりません");
+        }
         this.cargoType = cargoType;
         this.weightKg = weightKg;
         this.lengthCm = lengthCm;
@@ -34,6 +56,10 @@ public final class CargoSpecification {
         this.heightCm = heightCm;
         this.quantity = quantity;
         this.description = description;
+        this.unNumber = unNumber;
+        this.hazardClass = hazardClass;
+        this.minTempCelsius = minTempCelsius;
+        this.maxTempCelsius = maxTempCelsius;
     }
 
     public CargoType cargoType() { return cargoType; }
@@ -43,6 +69,10 @@ public final class CargoSpecification {
     public BigDecimal heightCm() { return heightCm; }
     public int quantity() { return quantity; }
     public String description() { return description; }
+    public String unNumber() { return unNumber; }
+    public String hazardClass() { return hazardClass; }
+    public BigDecimal minTempCelsius() { return minTempCelsius; }
+    public BigDecimal maxTempCelsius() { return maxTempCelsius; }
 
     @Override
     public boolean equals(Object o) {
@@ -54,11 +84,16 @@ public final class CargoSpecification {
                 && Objects.equals(lengthCm, that.lengthCm)
                 && Objects.equals(widthCm, that.widthCm)
                 && Objects.equals(heightCm, that.heightCm)
-                && Objects.equals(description, that.description);
+                && Objects.equals(description, that.description)
+                && Objects.equals(unNumber, that.unNumber)
+                && Objects.equals(hazardClass, that.hazardClass)
+                && Objects.equals(minTempCelsius, that.minTempCelsius)
+                && Objects.equals(maxTempCelsius, that.maxTempCelsius);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(cargoType, weightKg, lengthCm, widthCm, heightCm, quantity, description);
+        return Objects.hash(cargoType, weightKg, lengthCm, widthCm, heightCm, quantity, description,
+                unNumber, hazardClass, minTempCelsius, maxTempCelsius);
     }
 }

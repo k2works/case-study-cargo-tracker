@@ -53,13 +53,79 @@ class CargoSpecificationTest {
                 new BigDecimal("80"),
                 new BigDecimal("60"),
                 3,
-                "冷凍食品"
+                "冷凍食品",
+                null,
+                null,
+                new BigDecimal("-18"),
+                new BigDecimal("0")
         );
 
         assertThat(spec.cargoType()).isEqualTo(CargoType.REFRIGERATED);
         assertThat(spec.weightKg()).isEqualByComparingTo("50.5");
         assertThat(spec.quantity()).isEqualTo(3);
         assertThat(spec.description()).isEqualTo("冷凍食品");
+    }
+
+    @Test
+    @DisplayName("DANGEROUS_GOODS で unNumber が null の場合は例外を投げる")
+    void rejectDangerousGoodsWithoutUnNumber() {
+        assertThatThrownBy(() -> new CargoSpecification(
+                CargoType.DANGEROUS_GOODS,
+                new BigDecimal("100.0"),
+                null, null, null,
+                1, "危険物",
+                null, null,
+                null, null
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("UN 番号");
+    }
+
+    @Test
+    @DisplayName("REFRIGERATED で温度範囲が null の場合は例外を投げる")
+    void rejectRefrigeratedWithoutTemperatureRange() {
+        assertThatThrownBy(() -> new CargoSpecification(
+                CargoType.REFRIGERATED,
+                new BigDecimal("100.0"),
+                null, null, null,
+                1, "冷凍貨物",
+                null, null,
+                null, null
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("温度");
+    }
+
+    @Test
+    @DisplayName("REFRIGERATED で minTemp >= maxTemp の場合は例外を投げる")
+    void rejectRefrigeratedWithInvalidTemperatureRange() {
+        assertThatThrownBy(() -> new CargoSpecification(
+                CargoType.REFRIGERATED,
+                new BigDecimal("100.0"),
+                null, null, null,
+                1, "冷凍貨物",
+                null, null,
+                new BigDecimal("0"), new BigDecimal("-18")
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("温度");
+    }
+
+    @Test
+    @DisplayName("DANGEROUS_GOODS で unNumber と hazardClass を指定して生成できる")
+    void createValidDangerousGoods() {
+        CargoSpecification spec = new CargoSpecification(
+                CargoType.DANGEROUS_GOODS,
+                new BigDecimal("200.0"),
+                null, null, null,
+                1, "危険物",
+                "UN1234", "クラス3",
+                null, null
+        );
+
+        assertThat(spec.cargoType()).isEqualTo(CargoType.DANGEROUS_GOODS);
+        assertThat(spec.unNumber()).isEqualTo("UN1234");
+        assertThat(spec.hazardClass()).isEqualTo("クラス3");
     }
 
     private CargoSpecification createCargoSpecification(BigDecimal weightKg, int quantity) {

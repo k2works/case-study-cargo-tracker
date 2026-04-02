@@ -18,6 +18,10 @@ public record RegisterBookingCommand(
         String originLocation,
         String destinationLocation,
         LocalDate requestedPickupDate,
-        LocalDate requestedDeliveryDate
+        LocalDate requestedDeliveryDate,
+        String unNumber,
+        String hazardClass,
+        BigDecimal minTempCelsius,
+        BigDecimal maxTempCelsius
 ) {
 }
