@@ -17,7 +17,7 @@
                     <h4 class="card-title mb-0">手動更新記録</h4>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-warning small" role="note">
+                    <div class="alert alert-warning small">
                         この画面では管理者のみが手動更新（MANUAL_UPDATE）イベントを記録します。メモは必須です。
                     </div>
                     <div th:if="${errorMessage}" class="alert alert-danger" data-testid="error-message"
@@ -63,7 +63,8 @@
                                 <textarea class="form-control" id="memo" name="memo" rows="3"
                                           th:text="*{memo}"
                                           th:classappend="${#fields.hasErrors('memo')} ? 'is-invalid'"
-                                          placeholder="手動更新の理由・詳細を入力してください" data-testid="memo-input"></textarea>
+                                          placeholder="手動更新の理由・詳細を入力してください" data-testid="memo-input"
+                                          required></textarea>
                                 <div th:if="${#fields.hasErrors('memo')}" class="invalid-feedback"
                                      th:errors="*{memo}" data-testid="memo-error"></div>
                             </div>
