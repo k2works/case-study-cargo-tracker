@@ -18,7 +18,11 @@
             <h4 class="mb-1">荷役作業一覧</h4>
             <p class="text-muted small mb-0">積み込み・荷降ろし・通関・積み替えの記録と確認を行います。</p>
         </div>
-        <a th:href="@{/handling/new}" class="btn btn-primary align-self-start align-self-md-center">+ 新規荷役登録</a>
+        <div class="d-flex gap-2 align-self-start align-self-md-center">
+            <a th:href="@{/handling/new}" class="btn btn-primary">+ 新規荷役登録</a>
+            <a th:href="@{/handling/receive}" class="btn btn-outline-info">引取記録</a>
+            <a th:href="@{/handling/manual-update}" class="btn btn-outline-warning">手動更新</a>
+        </div>
     </div>
 
     <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
