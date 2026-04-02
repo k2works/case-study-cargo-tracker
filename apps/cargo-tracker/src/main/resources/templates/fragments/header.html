@@ -11,12 +11,21 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="globalNavbar">
-            <div class="navbar-nav me-auto">
-                <a class="nav-link text-white" th:href="@{/shippers}">荷主</a>
-                <a class="nav-link text-white" th:href="@{/bookings}">予約</a>
-                <a class="nav-link text-white" th:href="@{/quotes}">見積</a>
-                <a class="nav-link text-white" th:href="@{/handling}">荷役</a>
-            </div>
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link text-white" th:href="@{/shippers}">荷主</a></li>
+                <li class="nav-item"><a class="nav-link text-white" th:href="@{/bookings}">予約</a></li>
+                <li class="nav-item"><a class="nav-link text-white" th:href="@{/quotes}">見積</a></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link text-white dropdown-toggle" href="#" role="button"
+                       data-bs-toggle="dropdown" aria-expanded="false">荷役</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/handling}">荷役一覧</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/handling/receive}">引取記録</a></li>
+                        <li><a class="dropdown-item" th:href="@{/handling/manual-update}">手動更新</a></li>
+                    </ul>
+                </li>
+            </ul>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text text-white me-3" sec:authentication="name"></span>
                 <form th:action="@{/logout}" method="post" class="d-inline">
