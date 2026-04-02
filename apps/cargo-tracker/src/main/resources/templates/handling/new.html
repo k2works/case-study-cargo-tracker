@@ -20,6 +20,11 @@
                     <h4 class="card-title mb-0">荷役作業記録</h4>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info small" role="note">
+                        この画面では港湾オペレーター向けの荷役作業のみを記録します。
+                        引取記録と手動更新は別導線で扱います。
+                    </div>
+
                     <!-- 成功メッセージ -->
                     <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
                     <!-- エラーメッセージ -->
@@ -34,7 +39,13 @@
                                        th:value="*{bookingId}"
                                        th:classappend="${#fields.hasErrors('bookingId')} ? 'is-invalid'"
                                        placeholder="例: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                       inputmode="text"
+                                       spellcheck="false"
+                                       aria-describedby="bookingIdHelp"
                                        required>
+                                <div id="bookingIdHelp" class="form-text">
+                                    予約詳細画面に表示される UUID 形式の予約 ID を入力してください。
+                                </div>
                                 <div th:if="${#fields.hasErrors('bookingId')}" class="invalid-feedback"
                                      th:errors="*{bookingId}"></div>
                             </div>
@@ -64,7 +75,16 @@
                                        th:value="*{locationCode}"
                                        th:classappend="${#fields.hasErrors('locationCode')} ? 'is-invalid'"
                                        placeholder="例: JPTYO"
+                                       pattern="[A-Z]{2}[A-Z0-9]{3}"
+                                       maxlength="5"
+                                       style="text-transform: uppercase;"
+                                       inputmode="text"
+                                       spellcheck="false"
+                                       aria-describedby="locationCodeHelp"
                                        required>
+                                <div id="locationCodeHelp" class="form-text">
+                                    5 文字の UN/LOCODE を入力してください。例: JPTYO
+                                </div>
                                 <div th:if="${#fields.hasErrors('locationCode')}" class="invalid-feedback"
                                      th:errors="*{locationCode}"></div>
                             </div>
@@ -76,7 +96,11 @@
                                 <input type="datetime-local" class="form-control" id="completionTime" name="completionTime"
                                        th:value="*{completionTime}"
                                        th:classappend="${#fields.hasErrors('completionTime')} ? 'is-invalid'"
+                                       aria-describedby="completionTimeHelp"
                                        required>
+                                <div id="completionTimeHelp" class="form-text">
+                                    港湾オペレーションで確定した現地時刻を入力してください。
+                                </div>
                                 <div th:if="${#fields.hasErrors('completionTime')}" class="invalid-feedback"
                                      th:errors="*{completionTime}"></div>
                             </div>

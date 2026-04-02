@@ -42,8 +42,22 @@ export class HandlingPage {
     await this.page.locator('form[action="/handling"] button[type="submit"]').click();
   }
 
+  private displayEventType(eventType: string): string {
+    const eventTypeLabels: Record<string, string> = {
+      LOAD: '積み込み',
+      UNLOAD: '荷降ろし',
+      CUSTOMS: '通関',
+      TRANSHIP: '積み替え',
+      RECEIVE: '引取',
+      MANUAL_UPDATE: '手動更新',
+    };
+    return eventTypeLabels[eventType] ?? eventType;
+  }
+
   eventRow(bookingId: string, eventType: string): Locator {
-    return this.page.locator('tbody tr').filter({ hasText: bookingId }).filter({ hasText: eventType });
+    return this.page.locator('tbody tr')
+      .filter({ hasText: bookingId })
+      .filter({ hasText: this.displayEventType(eventType) });
   }
 
   async expectEventListed(params: {
@@ -57,7 +71,7 @@ export class HandlingPage {
 
     await expect(row).toHaveCount(1);
     await expect(row).toContainText(params.bookingId);
-    await expect(row).toContainText(params.eventType);
+    await expect(row).toContainText(this.displayEventType(params.eventType));
     await expect(row).toContainText(params.locationCode);
     await expect(row).toContainText(params.completionDateTime);
     await expect(row).toContainText(params.memo ?? '—');

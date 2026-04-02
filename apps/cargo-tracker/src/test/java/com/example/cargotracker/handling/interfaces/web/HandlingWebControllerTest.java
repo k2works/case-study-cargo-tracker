@@ -82,7 +82,10 @@ class HandlingWebControllerTest {
         mockMvc.perform(get("/handling/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("handling/new"))
-                .andExpect(model().attributeExists("form", "eventTypes"));
+                .andExpect(model().attributeExists("form", "eventTypes"))
+                .andExpect(model().attribute("eventTypes", org.hamcrest.Matchers.hasSize(4)))
+                .andExpect(model().attribute("eventTypes", org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.hasItem(HandlingEventType.RECEIVE))));
     }
 
     @Test
@@ -104,16 +107,31 @@ class HandlingWebControllerTest {
     void record_success_redirectsToList() throws Exception {
         when(recordHandlingEventCommandService.execute(any()))
                 .thenReturn(HandlingEventId.generate());
+        UUID bookingId = UUID.randomUUID();
 
         mockMvc.perform(post("/handling")
                         .with(csrf())
-                        .param("bookingId", UUID.randomUUID().toString())
+                        .param("bookingId", bookingId.toString())
                         .param("eventType", "LOAD")
                         .param("locationCode", "JPTYO")
                         .param("completionTime", "2025-01-15T10:00"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/handling"))
+                .andExpect(redirectedUrl("/handling?bookingId=" + bookingId))
                 .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    @DisplayName("POST /handling で対象外イベント種別はフォームエラーを返す")
+    void record_nonHandlingOperationType_returnsFormError() throws Exception {
+        mockMvc.perform(post("/handling")
+                        .with(csrf())
+                        .param("bookingId", UUID.randomUUID().toString())
+                        .param("eventType", "RECEIVE")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2025-01-15T10:00"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/new"))
+                .andExpect(model().attributeHasFieldErrors("form", "eventType"));
     }
 
     @Test

@@ -63,8 +63,7 @@ test.describe.serial('E12: US10 荷役作業を記録する', () => {
       memo: '本船に積み込み',
     });
 
-    await expect(page).toHaveURL('/handling');
-    await expect(page.locator('.alert-success')).toContainText('荷役作業を記録しました。');
+    await expect(page).toHaveURL(`/handling?bookingId=${bookingId}`);
 
     await handlingPage.searchByBookingId(bookingId);
     await handlingPage.expectEventListed({

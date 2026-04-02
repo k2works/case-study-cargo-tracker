@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.UUID;
 
 @Controller
@@ -24,9 +26,14 @@ import java.util.UUID;
 public class HandlingWebController {
 
     private static final String EVENT_TYPES_ATTRIBUTE = "eventTypes";
+    private static final List<HandlingEventType> HANDLING_OPERATION_EVENT_TYPES = List.of(
+            HandlingEventType.LOAD,
+            HandlingEventType.UNLOAD,
+            HandlingEventType.CUSTOMS,
+            HandlingEventType.TRANSHIP
+    );
     private static final String VIEW_LIST = "handling/list";
     private static final String VIEW_NEW = "handling/new";
-    private static final String REDIRECT_NEW = "redirect:/handling/new";
 
     private final RecordHandlingEventCommandService recordHandlingEventCommandService;
     private final FindHandlingEventsQueryService findHandlingEventsQueryService;
@@ -44,11 +51,17 @@ public class HandlingWebController {
                        Model model) {
         UUID bookingUuid = parseUuidOrNull(bookingId);
         model.addAttribute("handlingEvents",
-                findHandlingEventsQueryService.findFiltered(bookingUuid, eventType, locationCode));
-        model.addAttribute(EVENT_TYPES_ATTRIBUTE, HandlingEventType.values());
+                findHandlingEventsQueryService.findFiltered(bookingUuid, eventType, locationCode).stream()
+                        .filter(event -> HANDLING_OPERATION_EVENT_TYPES.contains(event.getEventType()))
+                        .toList());
+        model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
         model.addAttribute("searchBookingId", bookingId != null ? bookingId : "");
-        model.addAttribute("searchEventType", eventType);
+        model.addAttribute("searchEventType",
+                eventType != null && HANDLING_OPERATION_EVENT_TYPES.contains(eventType) ? eventType : null);
         model.addAttribute("searchLocationCode", locationCode != null ? locationCode : "");
+        model.addAttribute("hasSearchFilter",
+                (bookingId != null && !bookingId.isBlank()) || eventType != null
+                        || (locationCode != null && !locationCode.isBlank()));
         return VIEW_LIST;
     }
 
@@ -60,7 +73,7 @@ public class HandlingWebController {
             form.setBookingId(bookingId);
         }
         model.addAttribute("form", form);
-        model.addAttribute(EVENT_TYPES_ATTRIBUTE, HandlingEventType.values());
+        model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
         return VIEW_NEW;
     }
 
@@ -69,18 +82,26 @@ public class HandlingWebController {
                                       BindingResult bindingResult,
                                       RedirectAttributes redirectAttributes,
                                       Model model) {
+        if (form.getEventType() != null && !HANDLING_OPERATION_EVENT_TYPES.contains(form.getEventType())) {
+            bindingResult.rejectValue("eventType", "invalid.operationType",
+                    "この画面では積み込み・荷降ろし・通関・積み替えのみ記録できます");
+        }
         if (bindingResult.hasErrors()) {
-            model.addAttribute(EVENT_TYPES_ATTRIBUTE, HandlingEventType.values());
+            model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
             return VIEW_NEW;
         }
 
         try {
             recordHandlingEventCommandService.execute(form.toCommand());
-            redirectAttributes.addFlashAttribute("successMessage", "荷役作業を記録しました。");
-            return "redirect:/handling";
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "%s を記録しました。".formatted(form.getEventType().getDisplayName()));
+            return "redirect:" + UriComponentsBuilder.fromPath("/handling")
+                    .queryParam("bookingId", form.getBookingId())
+                    .build()
+                    .toUriString();
         } catch (BookingNotFoundException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute(EVENT_TYPES_ATTRIBUTE, HandlingEventType.values());
+            model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
             return VIEW_NEW;
         }
     }
@@ -88,7 +109,7 @@ public class HandlingWebController {
     @ExceptionHandler(BookingNotFoundException.class)
     public String handleBookingNotFound(BookingNotFoundException e, Model model) {
         model.addAttribute("errorMessage", e.getMessage());
-        model.addAttribute(EVENT_TYPES_ATTRIBUTE, HandlingEventType.values());
+        model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
         return VIEW_NEW;
     }
 

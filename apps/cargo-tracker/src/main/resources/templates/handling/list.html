@@ -13,9 +13,12 @@
 
 <main>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>荷役作業一覧</h4>
-        <a th:href="@{/handling/new}" class="btn btn-primary">+ 新規荷役登録</a>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+            <h4 class="mb-1">荷役作業一覧</h4>
+            <p class="text-muted small mb-0">積み込み・荷降ろし・通関・積み替えの記録と確認を行います。</p>
+        </div>
+        <a th:href="@{/handling/new}" class="btn btn-primary align-self-start align-self-md-center">+ 新規荷役登録</a>
     </div>
 
     <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
@@ -57,29 +60,39 @@
     <!-- 一覧テーブル -->
     <div class="card shadow-sm">
         <div class="card-body p-0">
-            <table class="table table-hover mb-0">
+            <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                 <tr>
-                    <th scope="col">作業 ID</th>
+                    <th scope="col">作業</th>
                     <th scope="col">予約 ID</th>
-                    <th scope="col">荷役種別</th>
-                    <th scope="col">場所コード</th>
-                    <th scope="col">完了日時</th>
+                    <th scope="col">状態</th>
                     <th scope="col">メモ</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${#lists.isEmpty(handlingEvents)}">
-                    <td colspan="6" class="text-center text-muted py-4">荷役作業が登録されていません</td>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        <span th:if="${hasSearchFilter}">検索条件に一致する荷役作業はありません。条件を見直してください。</span>
+                        <span th:unless="${hasSearchFilter}">荷役作業が登録されていません。新規荷役登録から記録を開始してください。</span>
+                    </td>
                 </tr>
                 <tr th:each="event : ${handlingEvents}">
-                    <td><code class="small" th:text="${event.id}"></code></td>
+                    <td>
+                        <div class="fw-semibold small" th:text="${event.eventType.displayName}"></div>
+                        <div class="text-muted small" th:text="${#temporals.format(event.completionTime, 'yyyy-MM-dd HH:mm')}"></div>
+                        <div class="text-muted small">場所: <span th:text="${event.locationCode}"></span></div>
+                        <code class="small"
+                              th:title="${event.id}"
+                              th:text="${#strings.substring(event.id.toString(), 0, 8) + '...'}"></code>
+                    </td>
                     <td>
                         <a th:href="@{/bookings/{id}(id=${event.bookingId})}"
                            class="small font-monospace"
+                           th:title="${event.bookingId}"
                            th:text="${event.bookingId}"></a>
                     </td>
-                    <td>
+                    <td class="text-nowrap">
                         <span class="badge"
                               th:classappend="${event.eventType.name() == 'RECEIVE'} ? 'bg-info text-dark' :
                                              (${event.eventType.name() == 'LOAD'} ? 'bg-success' :
@@ -87,13 +100,13 @@
                                              (${event.eventType.name() == 'CUSTOMS'} ? 'bg-secondary' :
                                              (${event.eventType.name() == 'TRANSHIP'} ? 'bg-primary' : 'bg-dark'))))"
                               th:text="${event.eventType.displayName}"></span>
+                        <div class="small text-muted mt-2" th:text="${event.locationCode}"></div>
                     </td>
-                    <td th:text="${event.locationCode}"></td>
-                    <td th:text="${#temporals.format(event.completionTime, 'yyyy-MM-dd HH:mm')}"></td>
                     <td class="small text-muted" th:text="${event.memo != null ? event.memo : '—'}"></td>
                 </tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>
