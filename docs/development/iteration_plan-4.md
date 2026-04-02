@@ -31,13 +31,13 @@ tags: iteration-plan, it4
 
 ### 成功基準
 
-- [x] 荷役イベント（積み込み・荷降ろし・通関・積み替え）を登録でき、予約 ID で一覧確認できる
-- [x] 引取完了（RECEIVE）を登録すると、追跡情報で「引取済み」として表示される
-- [x] 管理者が MANUAL_UPDATE でカスタム状態メモを記録できる
-- [x] 追跡番号（TRK-XXXXXXXX）で `/tracking/{trackingNumber}` ページを公開照会できる
-- [x] 追跡ページに「現在状態・荷役履歴（日時・場所・イベント種別）」が表示される
-- [x] 予約詳細画面の「追跡機能準備中」が追跡ページへのリンクに変わる
-- [x] backend テスト Green・カバレッジ 80% 以上・SonarQube Quality Gate PASS
+- [x] 荷役イベント（積み込み・荷降ろし・通関・積み替え）を登録でき、予約 ID で一覧確認できる ✅ US10 完了
+- [ ] 引取完了（RECEIVE）を登録すると、追跡情報で「引取済み」として表示される（US11 未着手）
+- [ ] 管理者が MANUAL_UPDATE でカスタム状態メモを記録できる（US12 未着手）
+- [ ] 追跡番号（TRK-XXXXXXXX）で `/tracking/{trackingNumber}` ページを公開照会できる（US13 未着手）
+- [ ] 追跡ページに「現在状態・荷役履歴（日時・場所・イベント種別）」が表示される（US13 未着手）
+- [ ] 予約詳細画面の「追跡機能準備中」が追跡ページへのリンクに変わる（US13 未着手）
+- [ ] backend テスト Green・カバレッジ 80% 以上・SonarQube Quality Gate PASS（US13 完了後に確認）
 
 > **テストフィクスチャポリシー（IT3 Try 反映）**: `HandlingEvent.record()` はイベント発行を含むため、テストフィクスチャは `reconstitute()` を使用すること。新規作成の場合のみ `record()` を使う。
 
@@ -114,10 +114,10 @@ tags: iteration-plan, it4
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `HandlingEvent` 集約・`HandlingEventType` enum（LOAD/UNLOAD/CUSTOMS/TRANSHIP）・`HandlingEventId` 値オブジェクトを実装し、ドメインテストを追加する | 3h | Copilot | [ ] |
-| 1.2 | Flyway migration `V008__create_handling_events.sql` と `HandlingEventMapper`（MyBatis）を実装する | 2h | Copilot | [ ] |
-| 1.3 | `RecordHandlingEventCommandService` と `HandlingEventRepository` を実装し、予約存在確認（`BookingExistencePort` ACL）と登録テストを追加する | 4h | Copilot | [ ] |
-| 1.4 | 荷役作業登録 REST API（`POST /api/v1/handling-events`）・Web フォームと MVC/REST テストを追加する | 3h | Copilot | [ ] |
+| 1.1 | `HandlingEvent` 集約・`HandlingEventType` enum（LOAD/UNLOAD/CUSTOMS/TRANSHIP）・`HandlingEventId` 値オブジェクトを実装し、ドメインテストを追加する | 3h | Copilot | [x] |
+| 1.2 | Flyway migration `V008__create_handling_events.sql` と `HandlingEventMapper`（MyBatis）を実装する | 2h | Copilot | [x] |
+| 1.3 | `RecordHandlingEventCommandService` と `HandlingEventRepository` を実装し、予約存在確認（`BookingExistencePort` ACL）と登録テストを追加する | 4h | Copilot | [x] |
+| 1.4 | 荷役作業登録 REST API（`POST /api/v1/handling-events`）・Web フォームと MVC/REST テストを追加する | 3h | Copilot | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -156,16 +156,18 @@ tags: iteration-plan, it4
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| US10 荷役作業記録 | 3 | 12h | [ ] 未着手 |
+| US10 荷役作業記録 | 3 | 12h | [x] **完了** ✅ |
 | US11 引取作業記録 | 3 | 12h | [ ] 未着手 |
 | US12 貨物状態手動更新 | 2 | 8h | [ ] 未着手 |
 | US13 追跡情報照会 | 5 | 20h | [ ] 未着手 |
 | **合計** | **13** | **52h** | |
 
 **1 SP あたり**: 4h
-**進捗率**: 0%（0/16 タスク完了）
+**進捗率**: 23%（3/13 SP 完了・4/16 タスク完了）
 
-> **⚠️ ベロシティ注意**: IT4 の 13 SP は実績平均 10.7 SP を超える。Day 3 時点（US10 完了後）で進捗を評価し、遅延時は US12 を US11 と統合するか IT5 に延期する。
+> **📝 レビュー対応（US10 完了後実施）**: H-1/H-4〜H-8 の高優先度指摘対応（バリデーション集約・OpenAPI・日本語化・テスト拡充）と H-9（予約詳細→荷役登録動線）を完了。コードレビュー・UI/UX レビューレポートも作成済み。
+
+> **⚠️ ベロシティ注意**: IT4 の 13 SP は実績平均 10.7 SP を超える。US11 完了後で進捗を評価し、遅延時は US12 を IT5 に延期してスコープを 11 SP に縮小する。
 
 ---
 
@@ -413,3 +415,4 @@ TrackingQueryService ..> HandlingEventMapper : query
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-02 | IT4 計画を作成 | Copilot |
+| 2026-04-02 | US10 完了（3/13 SP）・タスク 1.1〜1.4 完了・レビュー高優先度指摘 H-1/H-4〜H-9 対応済み | Copilot |
