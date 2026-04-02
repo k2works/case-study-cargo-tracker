@@ -5,9 +5,19 @@ package com.example.cargotracker.routing.domain.model;
  */
 public enum CargoType {
     /** 一般貨物 */
-    GENERAL,
+    GENERAL("一般貨物"),
     /** 危険物 */
-    HAZARDOUS,
+    HAZARDOUS("危険物"),
     /** 冷凍貨物 */
-    REFRIGERATED
+    REFRIGERATED("冷凍・冷蔵");
+
+    private final String displayName;
+
+    CargoType(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
 }

@@ -50,8 +50,9 @@ public class RoutingWebController {
      * ルート候補を検索して一覧表示する。
      *
      * <ul>
-     *   <li>{@code bookingId} 指定時: 予約情報を取得してルート検索する</li>
-     *   <li>{@code originLocode} 指定時: 入力条件をそのままルート検索する（再検索）</li>
+     *   <li>{@code originLocode} 指定時: 入力条件をそのままルート検索する（再検索）。
+     *       {@code bookingId} も同時に指定された場合は「予約詳細に戻る」リンク用に model へ保持する。</li>
+     *   <li>{@code bookingId} のみ指定時: 予約情報を取得してルート検索する</li>
      *   <li>いずれも指定なし: 予約一覧へリダイレクトする</li>
      * </ul>
      */
@@ -65,21 +66,24 @@ public class RoutingWebController {
             @RequestParam(required = false) BigDecimal weightKg,
             Model model) {
 
+        if (routeSearchService.isEmpty()) {
+            return "redirect:/bookings";
+        }
+
         RoutingSearchForm form;
 
-        if (bookingId != null) {
+        if (originLocode != null) {
+            form = new RoutingSearchForm(
+                    originLocode, destinationLocode, requestedArrivalDate, cargoType, weightKg);
+            if (bookingId != null) {
+                model.addAttribute("bookingId", bookingId);
+            }
+        } else if (bookingId != null) {
             var snapshot = bookingQueryPort.findById(bookingId)
                     .orElseThrow(() -> new BookingDataNotFoundException(bookingId));
             form = RoutingSearchForm.from(snapshot);
             model.addAttribute("bookingId", bookingId);
-        } else if (originLocode != null) {
-            form = new RoutingSearchForm(
-                    originLocode, destinationLocode, requestedArrivalDate, cargoType, weightKg);
         } else {
-            return "redirect:/bookings";
-        }
-
-        if (routeSearchService.isEmpty()) {
             return "redirect:/bookings";
         }
 

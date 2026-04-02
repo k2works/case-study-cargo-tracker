@@ -57,7 +57,7 @@
                 <dd class="col-sm-8" th:text="${form.requestedArrivalDate}"></dd>
 
                 <dt class="col-sm-4">貨物種別</dt>
-                <dd class="col-sm-8" th:text="${form.cargoType}"></dd>
+                <dd class="col-sm-8" th:text="${form.cargoType?.displayName}"></dd>
 
                 <dt class="col-sm-4">重量 (kg)</dt>
                 <dd class="col-sm-8" th:text="${form.weightKg}"></dd>
@@ -85,6 +85,7 @@
                     <input type="hidden" name="destinationLocode" th:value="${form.destinationLocode}">
                     <input type="hidden" name="cargoType" th:value="${form.cargoType}">
                     <input type="hidden" name="weightKg" th:value="${form.weightKg}">
+                    <input type="hidden" name="bookingId" th:value="${bookingId}" th:if="${bookingId != null}">
 
                     <div class="row g-3 align-items-end">
                         <div class="col-md-4">
@@ -99,7 +100,7 @@
                             <select class="form-select" id="cargoTypeSelect" name="cargoType">
                                 <option th:each="ct : ${cargoTypes}"
                                         th:value="${ct}"
-                                        th:text="${ct}"
+                                        th:text="${ct.displayName}"
                                         th:selected="${ct == form.cargoType}"></option>
                             </select>
                         </div>
@@ -147,7 +148,7 @@
                     <dt class="col-sm-4">対応貨物種別</dt>
                     <dd class="col-sm-8">
                         <span th:each="ct, i : ${candidate.supportedCargoTypes()}">
-                            <span class="badge bg-secondary" th:text="${ct}"></span>
+                            <span class="badge bg-secondary" th:text="${ct.displayName}"></span>
                         </span>
                     </dd>
                 </dl>
