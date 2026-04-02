@@ -4,6 +4,36 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に準拠し、
 バージョン管理は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [Unreleased] (IT4 完了)
+
+### Added
+
+- **US11**: 引取記録機能（`handling` コンテキスト）
+  - 予約 ID・場所コード・完了日時を入力して引取（RECEIVE）イベントを記録
+  - 同一予約での引取二重登録を防ぐバリデーション（409 Conflict）
+  - 引取記録画面（`/handling/receive`）
+- **US12**: 手動更新記録機能（`handling` コンテキスト）
+  - 管理者のみが MANUAL_UPDATE イベントを記録できる（Spring Security ロール制御）
+  - メモ必須バリデーション付き
+  - 手動更新記録画面（`/handling/manual-update`）
+- **US13**: 追跡情報照会機能（`tracking` コンテキスト）
+  - 追跡番号で荷役履歴・現在状態・位置を照会（認証不要の公開ページ）
+  - `TrackingRestController`（`/api/v1/tracking/{trackingNumber}`）
+  - `TrackingWebController`（`/tracking/{trackingNumber}`）
+
+---
+
+## [Unreleased] (IT3 完了)
+
+### Added
+
+- **US10**: 荷役作業登録機能（`handling` コンテキスト）
+  - 荷役種別（LOAD/UNLOAD/CUSTOMS/TRANSHIP）・予約 ID・場所・完了日時を記録
+  - 予約 BC との連携（`BookingExistencePort` ACL）
+  - 荷役作業一覧画面（検索フィルタ付き）・登録フォーム
+
+---
+
 ## [Unreleased] (IT2 完了)
 
 ### Added
