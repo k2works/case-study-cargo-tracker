@@ -75,8 +75,8 @@ test.describe('E07: 危険物予約', () => {
     await page.locator('form[action="/bookings"] button[type="submit"]').click();
 
     // バリデーションエラーで登録フォームに留まる
-    await expect(page).toHaveURL('/bookings');
-    await expect(page.locator('.alert-danger')).toContainText('UN 番号は危険物の場合に必須です');
+    await expect(page).toHaveURL('/bookings/new');
+    await expect(page.locator('input[name="unNumber"]:invalid')).toBeVisible();
   });
 });
 
@@ -133,7 +133,8 @@ test.describe('E08: 冷凍貨物予約', () => {
     await page.locator('form[action="/bookings"] button[type="submit"]').click();
 
     // バリデーションエラーで登録フォームに留まる
-    await expect(page).toHaveURL('/bookings');
-    await expect(page.locator('.alert-danger')).toContainText('温度範囲は冷凍貨物の場合に必須です');
+    await expect(page).toHaveURL('/bookings/new');
+    await expect(page.locator('input[name="minTempCelsius"]:invalid')).toBeVisible();
+    await expect(page.locator('input[name="maxTempCelsius"]:invalid')).toBeVisible();
   });
 });
