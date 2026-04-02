@@ -1,8 +1,10 @@
 package com.example.cargotracker.booking.domain;
 
 import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
+import com.example.cargotracker.booking.domain.event.BookingRouteAssignedEvent;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.AssignedRoute;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
@@ -101,5 +103,43 @@ class BookingTest {
     void rejectNullTransportCondition() {
         assertThatThrownBy(() -> Booking.register(anyBookingId(), anyShipperId(), anyCargo(), null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("ルートを割り当てられる")
+    void assignRoute() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        AssignedRoute route = new AssignedRoute("VOY-001", "JPTYO/SGSIN/USNYC", LocalDate.of(2025, 9, 1));
+
+        booking.assignRoute(route);
+
+        assertThat(booking.getAssignedRoute()).isEqualTo(route);
+    }
+
+    @Test
+    @DisplayName("ルート割り当て時に BookingRouteAssignedEvent が発行される")
+    void assignRouteEmitsEvent() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        AssignedRoute route = new AssignedRoute("VOY-001", "JPTYO/SGSIN/USNYC", LocalDate.of(2025, 9, 1));
+
+        booking.assignRoute(route);
+
+        assertThat(booking.getDomainEvents()).hasSize(2); // register + assignRoute
+        assertThat(booking.getDomainEvents().get(1)).isInstanceOf(BookingRouteAssignedEvent.class);
+    }
+
+    @Test
+    @DisplayName("null ルートは割り当てできない")
+    void rejectNullAssignedRoute() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        assertThatThrownBy(() -> booking.assignRoute(null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("登録直後はルートが未割り当て")
+    void assignedRouteIsNullAfterRegister() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        assertThat(booking.getAssignedRoute()).isNull();
     }
 }
