@@ -1,0 +1,106 @@
+package com.example.cargotracker.handling.application.internal.commandservices;
+
+import com.example.cargotracker.handling.application.internal.outboundservices.BookingExistencePort;
+import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
+import com.example.cargotracker.handling.domain.model.commands.RecordHandlingEventCommand;
+import com.example.cargotracker.handling.domain.model.events.HandlingEventRecordedEvent;
+import com.example.cargotracker.handling.domain.model.repository.HandlingEventRepository;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("RecordHandlingEventCommandService")
+class RecordHandlingEventCommandServiceTest {
+
+    @Mock
+    private HandlingEventRepository handlingEventRepository;
+
+    @Mock
+    private BookingExistencePort bookingExistencePort;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    private RecordHandlingEventCommandService commandService;
+
+    @BeforeEach
+    void setUp() {
+        commandService = new RecordHandlingEventCommandService(handlingEventRepository, bookingExistencePort, eventPublisher);
+    }
+
+    private RecordHandlingEventCommand validCommand(UUID bookingId) {
+        return new RecordHandlingEventCommand(
+                bookingId,
+                HandlingEventType.LOAD,
+                "JPTYO",
+                LocalDateTime.of(2026, 5, 12, 9, 0),
+                null
+        );
+    }
+
+    @Test
+    @DisplayName("荷役イベントを記録すると HandlingEventId が返される")
+    void recordEventReturnsId() {
+        UUID bookingId = UUID.randomUUID();
+        doNothing().when(bookingExistencePort).verifyExists(bookingId);
+
+        HandlingEventId result = commandService.execute(validCommand(bookingId));
+
+        assertThat(result).isNotNull();
+        verify(handlingEventRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("存在しない予約 ID の場合は BookingNotFoundException を投げる")
+    void throwWhenBookingNotFound() {
+        UUID unknownId = UUID.randomUUID();
+        doThrow(new BookingNotFoundException(unknownId.toString()))
+                .when(bookingExistencePort).verifyExists(unknownId);
+
+        assertThatThrownBy(() -> commandService.execute(validCommand(unknownId)))
+                .isInstanceOf(BookingNotFoundException.class);
+        verify(handlingEventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("記録後に HandlingEventRecordedEvent が発行される")
+    void publishEventAfterRecord() {
+        UUID bookingId = UUID.randomUUID();
+        doNothing().when(bookingExistencePort).verifyExists(bookingId);
+
+        commandService.execute(validCommand(bookingId));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, atLeastOnce()).publishEvent(captor.capture());
+        assertThat(captor.getAllValues())
+                .anyMatch(HandlingEventRecordedEvent.class::isInstance);
+    }
+
+    @Test
+    @DisplayName("メモ付き MANUAL_UPDATE イベントを記録できる")
+    void recordManualUpdateWithMemo() {
+        UUID bookingId = UUID.randomUUID();
+        doNothing().when(bookingExistencePort).verifyExists(bookingId);
+
+        RecordHandlingEventCommand command = new RecordHandlingEventCommand(
+                bookingId, HandlingEventType.MANUAL_UPDATE, "JPTYO",
+                LocalDateTime.of(2026, 5, 12, 9, 0), "台風のため保管中");
+
+        HandlingEventId result = commandService.execute(command);
+        assertThat(result).isNotNull();
+    }
+}

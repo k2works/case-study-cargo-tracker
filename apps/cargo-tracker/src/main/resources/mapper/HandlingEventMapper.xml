@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handling.infrastructure.repositories.HandlingEventMapper">
+
+    <resultMap id="handlingEventResultMap"
+               type="com.example.cargotracker.handling.infrastructure.repositories.HandlingEventRecord">
+        <constructor>
+            <idArg column="id"               javaType="java.util.UUID"/>
+            <arg  column="booking_id"        javaType="java.util.UUID"/>
+            <arg  column="event_type"        javaType="java.lang.String"/>
+            <arg  column="location_code"     javaType="java.lang.String"/>
+            <arg  column="completion_time"   javaType="java.time.LocalDateTime"/>
+            <arg  column="memo"              javaType="java.lang.String"/>
+            <arg  column="registered_at"     javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO handling_events (id, booking_id, event_type, location_code, completion_time, memo, registered_at)
+        VALUES (#{row.id}, #{row.bookingId}, #{row.eventType}, #{row.locationCode},
+                #{row.completionTime}, #{row.memo}, #{row.registeredAt})
+    </insert>
+
+    <select id="findByBookingId" resultMap="handlingEventResultMap">
+        SELECT id, booking_id, event_type, location_code, completion_time, memo, registered_at
+        FROM handling_events
+        WHERE booking_id = #{bookingId}
+        ORDER BY completion_time DESC, id DESC
+    </select>
+
+</mapper>
