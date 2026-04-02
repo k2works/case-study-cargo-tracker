@@ -429,3 +429,4 @@ xychart-beta
 | 2026-04-02 | IT3 完了（32SP 累計、278 テスト Green、コードレビュー・UI/UX レビュー対応済み） | Copilot |
 | 2026-04-02 | IT4 進捗更新（35SP 累計・23%、US10 完了・コードレビュー H-1/H-4〜H-9 対応済み） | Copilot |
 | 2026-04-02 | IT4 完了（48SP 累計・75%、US10〜US13 全完了・352 テスト Green・Coverage 93%） | Copilot |
+| 2026-04-02 | IT4 レビュー指摘 12 件対応完了・361 テスト Green・命令 Coverage 90%・分岐 Coverage 71% | Copilot |

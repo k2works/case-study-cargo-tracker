@@ -415,3 +415,4 @@ TrackingQueryService ..> HandlingEventMapper : query
 | 2026-04-02 | IT4 計画を作成 | Copilot |
 | 2026-04-02 | US10 完了（3/13 SP）・タスク 1.1〜1.4 完了・レビュー高優先度指摘 H-1/H-4〜H-9 対応済み | Copilot |
 | 2026-04-02 | IT4 完了（13/13 SP）・US11〜US13 全完了・352 テスト Green・ライン Coverage 93% | Copilot |
+| 2026-04-02 | レビュー指摘 12 件対応完了（H-1〜H-12）・361 テスト Green・命令 Coverage 90%・分岐 Coverage 71% | Copilot |
