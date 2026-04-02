@@ -4,6 +4,30 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に準拠し、
 バージョン管理は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [Unreleased] (IT2 完了)
+
+### Added
+
+- **US01**: 輸送見積作成機能（`quote` コンテキスト）
+  - 出発地・目的地（UN/LOCODE）・希望着日・貨物種別・重量を入力して見積を登録
+  - 登録時に `QuoteIssuedEvent` を発行（ADR-002 準拠）
+  - 見積番号（Q-YYYYMMDD-XXXX 形式）を自動採番
+  - 見積一覧・詳細画面（ルート候補の間に合う/超過バッジ表示）
+- **US06**: 最適ルート検索機能（`routing` コンテキスト）
+  - 予約 ID 起点のルート候補検索（予約詳細画面の「ルート検索」ボタン）
+  - 直接条件指定による再検索（候補なし時のフォーム）
+  - ルート候補のフィルタリング（希望着日・貨物種別対応）
+  - `BookingQueryPort`（ACL）による booking→routing コンテキスト連携
+- スタブルートプロバイダー（`StubRouteProviderAdapter`）- 非 product プロファイルでルート検索を模擬
+- RoutingRestController: `RouteSearchService` 未設定時 503 レスポンス
+
+### Changed
+
+- 予約詳細画面に「ルート検索」ボタンを追加
+- 見積登録フォームに予約 ID クエリパラメータ連携（`?shipperId=...` に加え `?bookingId=...`）
+
+---
+
 ## [0.1.0] - 2026-03-31 (IT1 完了)
 
 ### Added
