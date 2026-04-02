@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.interfaces.web;
 
 import com.example.cargotracker.tracking.application.internal.queryservices.TrackingQueryService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,12 +22,16 @@ public class TrackingWebController {
     }
 
     @GetMapping("/{trackingNumber}")
-    public String show(@PathVariable String trackingNumber, Model model) {
+    public String show(@PathVariable String trackingNumber, Model model,
+                       HttpServletResponse response) {
         return trackingQueryService.findTrackingInfo(trackingNumber)
                 .map(dto -> {
                     model.addAttribute("trackingInfo", dto);
                     return "tracking/show";
                 })
-                .orElse("error/404");
+                .orElseGet(() -> {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    return "error/404";
+                });
     }
 }

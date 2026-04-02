@@ -127,7 +127,7 @@ class US13TrackingInfoE2ETest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("E14 追跡ページは認証なしでアクセスできる")
     void E14_trackingPage_noAuth_shouldBeAccessible() throws Exception {
-        if (trackingNumber == null) return;
+        assertNotNull(trackingNumber, "tracking_numbers テーブルへの挿入が失敗したか、getTrackingNumber() が null を返した");
 
         mockMvc.perform(get("/tracking/" + trackingNumber))
                 .andExpect(status().isOk())
@@ -137,7 +137,7 @@ class US13TrackingInfoE2ETest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("E14 荷役イベント登録後に追跡ページで履歴が表示される")
     void E14_trackingPageShowsHandlingHistory() throws Exception {
-        if (trackingNumber == null) return;
+        assertNotNull(trackingNumber, "tracking_numbers テーブルへの挿入が失敗したか、getTrackingNumber() が null を返した");
 
         // LOAD イベントを登録
         mockMvc.perform(post("/api/v1/handling-events")
@@ -160,7 +160,7 @@ class US13TrackingInfoE2ETest extends PostgreSQLIntegrationTestBase {
     @DisplayName("E14 存在しない追跡番号は 404 ページを表示する")
     void E14_unknownTrackingNumber_shows404() throws Exception {
         mockMvc.perform(get("/tracking/TRK-UNKNOWN9"))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(content().string(containsString("404")));
     }
 }
