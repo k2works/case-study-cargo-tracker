@@ -8,17 +8,7 @@
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}"/>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" th:href="@{/}">CargoTracker</a>
-        <div class="navbar-nav ms-auto">
-            <span class="navbar-text me-3" sec:authentication="name">ユーザー名</span>
-            <form th:action="@{/logout}" method="post" class="d-inline">
-                <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
-            </form>
-        </div>
-    </div>
-</nav>
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
 <div class="container mt-5">
     <h1>国際貨物輸送管理システム</h1>
     <p class="lead">ようこそ、CargoTracker へ。</p>
