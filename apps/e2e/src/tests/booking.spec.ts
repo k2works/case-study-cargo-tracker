@@ -80,6 +80,8 @@ test.describe('E04: 貨物予約登録', () => {
       destinationLocation: 'DEHAM',
       requestedPickupDate: '2025-10-01',
       requestedDeliveryDate: '2025-11-01',
+      minTempCelsius: '-18',
+      maxTempCelsius: '-10',
     });
 
     // 詳細ページの URL に UUID 形式の予約番号が含まれる
@@ -106,6 +108,8 @@ test.describe('E04: 貨物予約登録', () => {
       destinationLocation: 'DEHAM',
       requestedPickupDate: '2025-10-01',
       requestedDeliveryDate: '2025-11-01',
+      minTempCelsius: '-18',
+      maxTempCelsius: '-10',
     });
 
     const quoteLink = page.getByRole('link', { name: 'この条件で見積を作成' });

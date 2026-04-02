@@ -26,6 +26,14 @@ export interface BookingData {
   heightCm?: string;
   /** 品名（省略可） */
   description?: string;
+  /** UN 番号（危険物のみ） */
+  unNumber?: string;
+  /** 危険品等級（危険物のみ、省略可） */
+  hazardClass?: string;
+  /** 最低温度℃（冷凍のみ） */
+  minTempCelsius?: string;
+  /** 最高温度℃（冷凍のみ） */
+  maxTempCelsius?: string;
 }
 
 export class BookingPage {
@@ -114,6 +122,22 @@ export class BookingPage {
       await this.page.locator('input[name="description"]').fill(data.description);
     }
 
+    // 危険物固有フィールド
+    if (data.unNumber) {
+      await this.page.locator('input[name="unNumber"]').fill(data.unNumber);
+    }
+    if (data.hazardClass) {
+      await this.page.locator('input[name="hazardClass"]').fill(data.hazardClass);
+    }
+
+    // 冷凍固有フィールド
+    if (data.minTempCelsius) {
+      await this.page.locator('input[name="minTempCelsius"]').fill(data.minTempCelsius);
+    }
+    if (data.maxTempCelsius) {
+      await this.page.locator('input[name="maxTempCelsius"]').fill(data.maxTempCelsius);
+    }
+
     // 輸送条件
     await this.page.locator('input[name="originLocation"]').fill(data.originLocation);
     await this.page.locator('input[name="destinationLocation"]').fill(data.destinationLocation);
@@ -128,5 +152,22 @@ export class BookingPage {
     const alert = this.page.locator('.alert-success');
     await alert.waitFor({ state: 'visible' });
     return await alert.innerText();
+  }
+
+  /** 予約詳細ページに遷移する */
+  async gotoDetail(bookingId: string) {
+    await this.page.goto(`/bookings/${bookingId}`);
+  }
+
+  /** 「予約を確定する」ボタンをクリックする */
+  async confirmBooking() {
+    await this.page.locator('button:has-text("予約を確定する")').click();
+  }
+
+  /** detail.html から追跡番号テキストを返す（TRK-XXXXXXXX 形式） */
+  async getTrackingNumber(): Promise<string> {
+    const el = this.page.locator('[data-testid="tracking-number"]');
+    await el.waitFor({ state: 'visible' });
+    return await el.innerText();
   }
 }

@@ -35,4 +35,10 @@ export class RoutingPage {
     await expect(card).toContainText(params.transitDaysText);
     await expect(card).toContainText(params.estimatedPriceText);
   }
+
+  /** 指定インデックスのルート候補の「この予約に割り当てる」ボタンをクリックする */
+  async assignRoute(index: number = 0) {
+    const card = this.routeCandidateCard(index);
+    await card.locator('button:has-text("この予約に割り当てる")').click();
+  }
 }

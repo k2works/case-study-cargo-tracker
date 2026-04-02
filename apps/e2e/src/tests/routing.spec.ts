@@ -97,6 +97,8 @@ test.describe('E06: 最適ルート検索', () => {
       destinationLocation: 'SGSIN',
       requestedPickupDate: pickupDate,
       requestedDeliveryDate: deliveryDate,
+      minTempCelsius: '-18',
+      maxTempCelsius: '-10',
     });
     const refrigeratedBookingId = await bookingPage.extractBookingId();
 
