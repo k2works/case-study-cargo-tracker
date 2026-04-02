@@ -13,6 +13,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistencePort;
+import com.example.cargotracker.tracking.application.internal.queryservices.TrackingQueryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +62,9 @@ class BookingWebControllerTest {
 
     @MockitoBean
     private ShipperExistencePort shipperExistencePort;
+
+    @MockitoBean
+    private TrackingQueryService trackingQueryService;
 
     // ── GET /bookings/new ──────────────────────────────────────────────────
 
@@ -178,6 +182,7 @@ class BookingWebControllerTest {
         when(findBookingQueryService.execute(bookingId)).thenReturn(booking);
         when(shipperExistencePort.findNameById(booking.getShipperId().value()))
                 .thenReturn(java.util.Optional.of("山田 太郎"));
+        when(trackingQueryService.findByBookingId(any())).thenReturn(java.util.Optional.empty());
 
         mockMvc.perform(get("/bookings/" + bookingId))
                 .andExpect(status().isOk())

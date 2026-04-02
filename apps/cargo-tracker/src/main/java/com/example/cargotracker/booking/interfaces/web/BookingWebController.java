@@ -13,6 +13,7 @@ import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand
 import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.interfaces.web.dto.BookingRegisterForm;
+import com.example.cargotracker.tracking.application.internal.queryservices.TrackingQueryService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -49,17 +50,20 @@ public class BookingWebController {
     private final ConfirmBookingCommandService confirmBookingCommandService;
     private final FindBookingQueryService findBookingQueryService;
     private final ShipperExistencePort shipperExistencePort;
+    private final TrackingQueryService trackingQueryService;
 
     public BookingWebController(RegisterBookingCommandService registerBookingCommandService,
                                 AssignRouteCommandService assignRouteCommandService,
                                 ConfirmBookingCommandService confirmBookingCommandService,
                                 FindBookingQueryService findBookingQueryService,
-                                ShipperExistencePort shipperExistencePort) {
+                                ShipperExistencePort shipperExistencePort,
+                                TrackingQueryService trackingQueryService) {
         this.registerBookingCommandService = registerBookingCommandService;
         this.assignRouteCommandService = assignRouteCommandService;
         this.confirmBookingCommandService = confirmBookingCommandService;
         this.findBookingQueryService = findBookingQueryService;
         this.shipperExistencePort = shipperExistencePort;
+        this.trackingQueryService = trackingQueryService;
     }
 
     @GetMapping
@@ -120,6 +124,8 @@ public class BookingWebController {
         Booking booking = findBookingQueryService.execute(bookingId);
         model.addAttribute("booking", booking);
         model.addAttribute(ATTR_SHIPPER_NAME, resolveShipperName(booking.getShipperId().value()));
+        trackingQueryService.findByBookingId(UUID.fromString(id))
+                .ifPresent(entry -> model.addAttribute("trackingNumber", entry.getTrackingNumber().value()));
         return "booking/detail";
     }
 

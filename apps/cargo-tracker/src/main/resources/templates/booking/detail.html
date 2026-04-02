@@ -112,6 +112,19 @@
         </div>
     </div>
 
+    <!-- 追跡番号 -->
+    <div th:if="${trackingNumber != null}" class="card shadow-sm mb-4">
+        <div class="card-header bg-white fw-semibold">追跡番号</div>
+        <div class="card-body">
+            <h5>
+                <code class="fs-5 text-success"
+                      data-testid="tracking-number"
+                      th:text="${trackingNumber}"></code>
+            </h5>
+            <small class="text-muted">この追跡番号で輸送状況を確認できます</small>
+        </div>
+    </div>
+
     <!-- 割り当て済みルート -->
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white">割り当て済みルート</div>
