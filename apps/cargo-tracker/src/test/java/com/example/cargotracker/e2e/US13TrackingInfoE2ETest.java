@@ -119,7 +119,7 @@ class US13TrackingInfoE2ETest extends PostgreSQLIntegrationTestBase {
             return jdbcTemplate.queryForObject(
                     "SELECT tracking_number FROM tracking_numbers WHERE booking_id = ?",
                     String.class, bookingId);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return null;
         }
     }

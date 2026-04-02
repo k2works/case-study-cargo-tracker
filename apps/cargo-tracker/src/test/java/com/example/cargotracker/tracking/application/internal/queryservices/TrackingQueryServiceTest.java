@@ -1,7 +1,6 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
 import com.example.cargotracker.tracking.application.internal.outboundservices.BookingInfoQueryPort;
-import com.example.cargotracker.tracking.application.internal.outboundservices.BookingInfoQueryPort;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
 import com.example.cargotracker.tracking.domain.model.valueobjects.HandlingEventView;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;

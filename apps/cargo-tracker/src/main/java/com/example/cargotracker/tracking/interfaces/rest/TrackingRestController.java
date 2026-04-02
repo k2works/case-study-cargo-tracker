@@ -4,7 +4,6 @@ import com.example.cargotracker.tracking.application.internal.queryservices.Trac
 import com.example.cargotracker.tracking.interfaces.rest.dto.TrackingResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,10 +24,8 @@ public class TrackingRestController {
 
     @GetMapping("/{trackingNumber}")
     @Operation(summary = "追跡情報取得", description = "追跡番号で貨物の追跡情報と荷役履歴を取得する。")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "取得成功"),
-        @ApiResponse(responseCode = "404", description = "指定した追跡番号が存在しない")
-    })
+    @ApiResponse(responseCode = "200", description = "取得成功")
+    @ApiResponse(responseCode = "404", description = "指定した追跡番号が存在しない")
     public ResponseEntity<TrackingResponse> getByTrackingNumber(@PathVariable String trackingNumber) {
         return trackingQueryService.findTrackingInfo(trackingNumber)
                 .map(dto -> ResponseEntity.ok(TrackingResponse.from(dto)))

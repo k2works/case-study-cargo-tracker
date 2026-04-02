@@ -34,7 +34,7 @@ public class BookingInfoQueryAdapter implements BookingInfoQueryPort {
                     bookingId
             );
             return Optional.ofNullable(summary);
-        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+        } catch (org.springframework.dao.EmptyResultDataAccessException _) {
             return Optional.empty();
         }
     }

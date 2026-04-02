@@ -103,8 +103,11 @@ class HandlingEventTest {
     @Test
     @DisplayName("RECEIVE は確認コードなしでは記録できない")
     void rejectReceiveWithoutConfirmationCode() {
+        HandlingEventId id = anyId();
+        UUID bookingId = anyBookingId();
+        LocalDateTime completionTime = anyCompletionTime();
         assertThatThrownBy(() ->
-                HandlingEvent.recordEvent(anyId(), anyBookingId(), HandlingEventType.RECEIVE, "JPTYO", anyCompletionTime(), null, null))
+                HandlingEvent.recordEvent(id, bookingId, HandlingEventType.RECEIVE, "JPTYO", completionTime, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("引取確認コード");
     }
@@ -175,8 +178,10 @@ class HandlingEventTest {
     @Test
     @DisplayName("reconstitute で id が null の場合は再構成できない")
     void reconstitute_nullId_throwsException() {
+        UUID bookingId = anyBookingId();
+        LocalDateTime completionTime = anyCompletionTime();
         assertThatThrownBy(() ->
-                HandlingEvent.reconstitute(null, anyBookingId(), HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null))
+                HandlingEvent.reconstitute(null, bookingId, HandlingEventType.LOAD, "JPTYO", completionTime, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

@@ -79,7 +79,7 @@ public class TrackingQueryService {
     private String resolveDisplayName(String eventType) {
         try {
             return TrackingEventType.valueOf(eventType).getDisplayName();
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return eventType;
         }
     }

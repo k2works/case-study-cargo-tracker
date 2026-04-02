@@ -27,6 +27,12 @@ import java.util.UUID;
 public class HandlingWebController {
 
     private static final String EVENT_TYPES_ATTRIBUTE = "eventTypes";
+    private static final String FORM_ATTRIBUTE = "form";
+    private static final String SUCCESS_MESSAGE_ATTRIBUTE = "successMessage";
+    private static final String ERROR_MESSAGE_ATTRIBUTE = "errorMessage";
+    private static final String REDIRECT_PREFIX = "redirect:";
+    private static final String HANDLING_PATH = "/handling";
+    private static final String BOOKING_ID_PARAM = "bookingId";
     private static final List<HandlingEventType> HANDLING_OPERATION_EVENT_TYPES = List.of(
             HandlingEventType.LOAD,
             HandlingEventType.UNLOAD,
@@ -75,7 +81,7 @@ public class HandlingWebController {
         if (bookingId != null && !bookingId.isBlank()) {
             form.setBookingId(bookingId);
         }
-        model.addAttribute("form", form);
+        model.addAttribute(FORM_ATTRIBUTE, form);
         model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
         return VIEW_NEW;
     }
@@ -96,14 +102,11 @@ public class HandlingWebController {
 
         try {
             recordHandlingEventCommandService.execute(form.toCommand());
-            redirectAttributes.addFlashAttribute("successMessage",
+            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE,
                     "%s を記録しました。".formatted(form.getEventType().getDisplayName()));
-            return "redirect:" + UriComponentsBuilder.fromPath("/handling")
-                    .queryParam("bookingId", form.getBookingId())
-                    .build()
-                    .toUriString();
+            return redirectToHandlingList(form.getBookingId());
         } catch (BookingNotFoundException | IllegalArgumentException e) {
-            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());
             model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
             return VIEW_NEW;
         }
@@ -119,7 +122,7 @@ public class HandlingWebController {
         if (bookingId != null && !bookingId.isBlank()) {
             form.setBookingId(bookingId);
         }
-        model.addAttribute("form", form);
+        model.addAttribute(FORM_ATTRIBUTE, form);
         return VIEW_RECEIVE;
     }
 
@@ -143,17 +146,14 @@ public class HandlingWebController {
         try {
             recordHandlingEventCommandService.execute(form.toCommand());
             redirectAttributes.addFlashAttribute(
-                    "successMessage",
+                    SUCCESS_MESSAGE_ATTRIBUTE,
                     "引取を記録しました。貨物状態は引取済となり、配送完了のため精算処理を開始できます。");
-            return "redirect:" + UriComponentsBuilder.fromPath("/handling")
-                    .queryParam("bookingId", form.getBookingId())
-                    .build()
-                    .toUriString();
+            return redirectToHandlingList(form.getBookingId());
         } catch (DuplicateReceiveException e) {
-            bindingResult.rejectValue("bookingId", "duplicate.receive", e.getMessage());
+            bindingResult.rejectValue(BOOKING_ID_PARAM, "duplicate.receive", e.getMessage());
             return VIEW_RECEIVE;
         } catch (BookingNotFoundException | IllegalArgumentException e) {
-            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());
             return VIEW_RECEIVE;
         }
     }
@@ -169,7 +169,7 @@ public class HandlingWebController {
         if (bookingId != null && !bookingId.isBlank()) {
             form.setBookingId(bookingId);
         }
-        model.addAttribute("form", form);
+        model.addAttribute(FORM_ATTRIBUTE, form);
         return VIEW_MANUAL_UPDATE;
     }
 
@@ -190,22 +190,26 @@ public class HandlingWebController {
             // MANUAL_UPDATE を強制セット
             form.setEventType(HandlingEventType.MANUAL_UPDATE);
             recordHandlingEventCommandService.execute(form.toCommand());
-            redirectAttributes.addFlashAttribute("successMessage", "手動更新を記録しました。");
-            return "redirect:" + UriComponentsBuilder.fromPath("/handling")
-                    .queryParam("bookingId", form.getBookingId())
-                    .build()
-                    .toUriString();
+            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE, "手動更新を記録しました。");
+            return redirectToHandlingList(form.getBookingId());
         } catch (BookingNotFoundException | IllegalArgumentException e) {
-            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());
             return VIEW_MANUAL_UPDATE;
         }
     }
 
     @ExceptionHandler(BookingNotFoundException.class)
     public String handleBookingNotFound(BookingNotFoundException e, Model model) {
-        model.addAttribute("errorMessage", e.getMessage());
+        model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());
         model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
         return VIEW_NEW;
+    }
+
+    private String redirectToHandlingList(String bookingId) {
+        return REDIRECT_PREFIX + UriComponentsBuilder.fromPath(HANDLING_PATH)
+                .queryParam(BOOKING_ID_PARAM, bookingId)
+                .build()
+                .toUriString();
     }
 
     private UUID parseUuidOrNull(String value) {
@@ -214,7 +218,7 @@ public class HandlingWebController {
         }
         try {
             return UUID.fromString(value);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return null;
         }
     }
