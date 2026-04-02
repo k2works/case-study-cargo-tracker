@@ -20,7 +20,7 @@
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT4 計画まで作成済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 10 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 11 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
@@ -71,6 +71,7 @@
 | [IT3 UI/UX レビュー](./review/it3_uiux_review_20260402.md) | IT3（特殊貨物予約・予約確定・追跡）の UI/UX マルチパースペクティブレビュー結果 |
 | [IT4 実装レビュー](./review/it4_review_20260402.md) | IT4 US10（handling BC 全レイヤー・荷役作業一覧・ナビゲーション）の実装レビュー結果 |
 | [IT4 UI/UX レビュー](./review/it4_uiux_review_20260402.md) | IT4 US10（荷役作業登録フォーム・一覧画面）の UI/UX マルチパースペクティブレビュー結果 |
+| [IT4 US11〜US13 実装・UI/UX レビュー](./review/it4_us11_us13_review_20260402.md) | IT4 US11（引取記録）・US12（手動更新）・US13（追跡情報照会）7 エージェント並列レビュー結果（高 12 件・中 16 件・低 7 件） |
 
 ### ADR
 

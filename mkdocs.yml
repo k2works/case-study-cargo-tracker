@@ -114,6 +114,7 @@ nav:
       - IT3 UI/UX レビュー: review/it3_uiux_review_20260402.md
       - IT4 実装レビュー: review/it4_review_20260402.md
       - IT4 UI/UX レビュー: review/it4_uiux_review_20260402.md
+      - IT4 US11〜US13 実装・UI/UX レビュー: review/it4_us11_us13_review_20260402.md
   - ADR:
       - 概要: adr/index.md
       - "ADR-001: Java/Spring Boot バージョン戦略": adr/001-java-springboot-version-strategy.md
