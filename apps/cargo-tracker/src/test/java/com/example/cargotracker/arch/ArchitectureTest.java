@@ -1,10 +1,18 @@
 package com.example.cargotracker.arch;
 
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 
 @AnalyzeClasses(packages = "com.example.cargotracker")
 class ArchitectureTest {
@@ -102,4 +110,42 @@ class ArchitectureTest {
                             "com.example.cargotracker.booking.."
                     )
                     .as("[A07] quote の domain 層は routing・booking コンテキストのクラスを直接参照してはならない");
+
+    // A08: ADR-002 に従い、ドメインイベントリスナーで @EventListener を使用しない
+    @ArchTest
+    static final ArchRule A08_ドメインイベントリスナーでEventListenerを使用しない =
+            methods()
+                    .that().areDeclaredInClassesThat().resideInAnyPackage(
+                            "..application..",
+                            "..infrastructure.."
+                    )
+                    .should().notBeAnnotatedWith(EventListener.class)
+                    .as("[A08] application/infrastructure のドメインイベントリスナーに @EventListener を使用してはならない");
+
+    // A09: ADR-002 に従い、ドメインイベントリスナーは AFTER_COMMIT を使用する
+    @ArchTest
+    static final ArchRule A09_ドメインイベントリスナーはAfterCommitで実行する =
+            methods()
+                    .that().areDeclaredInClassesThat().resideInAnyPackage(
+                            "..application..",
+                            "..infrastructure.."
+                    )
+                    .and().areAnnotatedWith(TransactionalEventListener.class)
+                    .should(haveAfterCommitTransactionalEventListener())
+                    .as("[A09] application/infrastructure のドメインイベントリスナーは @TransactionalEventListener(AFTER_COMMIT) を使用しなければならない");
+
+    private static ArchCondition<JavaMethod> haveAfterCommitTransactionalEventListener() {
+        return new ArchCondition<>("use @TransactionalEventListener(phase = AFTER_COMMIT)") {
+            @Override
+            public void check(JavaMethod method, ConditionEvents events) {
+                TransactionalEventListener annotation =
+                        method.reflect().getAnnotation(TransactionalEventListener.class);
+                boolean isAfterCommit = annotation != null
+                        && annotation.phase() == TransactionPhase.AFTER_COMMIT;
+                String message = method.getFullName()
+                        + " は @TransactionalEventListener(phase = AFTER_COMMIT) でなければなりません";
+                events.add(new SimpleConditionEvent(method, isAfterCommit, message));
+            }
+        };
+    }
 }
