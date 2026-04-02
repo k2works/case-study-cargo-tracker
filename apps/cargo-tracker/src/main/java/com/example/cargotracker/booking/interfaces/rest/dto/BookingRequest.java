@@ -32,7 +32,11 @@ public record BookingRequest(
         @NotNull(message = "希望引渡日は必須です")
         LocalDate requestedPickupDate,
         @NotNull(message = "希望着日は必須です")
-        LocalDate requestedDeliveryDate
+        LocalDate requestedDeliveryDate,
+        String unNumber,
+        String hazardClass,
+        BigDecimal minTempCelsius,
+        BigDecimal maxTempCelsius
 ) {
     public RegisterBookingCommand toCommand() {
         return new RegisterBookingCommand(
@@ -47,7 +51,11 @@ public record BookingRequest(
                 originLocation,
                 destinationLocation,
                 requestedPickupDate,
-                requestedDeliveryDate
+                requestedDeliveryDate,
+                unNumber,
+                hazardClass,
+                minTempCelsius,
+                maxTempCelsius
         );
     }
 }

@@ -44,6 +44,11 @@ public class BookingRegisterForm {
     @NotNull(message = "希望着日は必須です")
     private LocalDate requestedDeliveryDate;
 
+    private String unNumber;
+    private String hazardClass;
+    private BigDecimal minTempCelsius;
+    private BigDecimal maxTempCelsius;
+
     public RegisterBookingCommand toCommand() {
         return new RegisterBookingCommand(
                 UUID.fromString(shipperId),
@@ -57,7 +62,11 @@ public class BookingRegisterForm {
                 originLocation,
                 destinationLocation,
                 requestedPickupDate,
-                requestedDeliveryDate
+                requestedDeliveryDate,
+                unNumber,
+                hazardClass,
+                minTempCelsius,
+                maxTempCelsius
         );
     }
 
@@ -85,4 +94,12 @@ public class BookingRegisterForm {
     public void setRequestedPickupDate(LocalDate requestedPickupDate) { this.requestedPickupDate = requestedPickupDate; }
     public LocalDate getRequestedDeliveryDate() { return requestedDeliveryDate; }
     public void setRequestedDeliveryDate(LocalDate requestedDeliveryDate) { this.requestedDeliveryDate = requestedDeliveryDate; }
+    public String getUnNumber() { return unNumber; }
+    public void setUnNumber(String unNumber) { this.unNumber = unNumber; }
+    public String getHazardClass() { return hazardClass; }
+    public void setHazardClass(String hazardClass) { this.hazardClass = hazardClass; }
+    public BigDecimal getMinTempCelsius() { return minTempCelsius; }
+    public void setMinTempCelsius(BigDecimal minTempCelsius) { this.minTempCelsius = minTempCelsius; }
+    public BigDecimal getMaxTempCelsius() { return maxTempCelsius; }
+    public void setMaxTempCelsius(BigDecimal maxTempCelsius) { this.maxTempCelsius = maxTempCelsius; }
 }

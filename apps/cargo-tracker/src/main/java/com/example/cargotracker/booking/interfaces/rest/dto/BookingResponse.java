@@ -20,7 +20,11 @@ public record BookingResponse(
         String destinationLocation,
         LocalDate requestedPickupDate,
         LocalDate requestedDeliveryDate,
-        String status
+        String status,
+        String unNumber,
+        String hazardClass,
+        BigDecimal minTempCelsius,
+        BigDecimal maxTempCelsius
 ) {
     public static BookingResponse from(Booking booking) {
         return new BookingResponse(
@@ -38,7 +42,11 @@ public record BookingResponse(
                 booking.getTransportCondition().destinationLocation(),
                 booking.getTransportCondition().requestedPickupDate(),
                 booking.getTransportCondition().requestedDeliveryDate(),
-                booking.getStatus().name()
+                booking.getStatus().name(),
+                booking.getCargoSpecification().unNumber(),
+                booking.getCargoSpecification().hazardClass(),
+                booking.getCargoSpecification().minTempCelsius(),
+                booking.getCargoSpecification().maxTempCelsius()
         );
     }
 }
