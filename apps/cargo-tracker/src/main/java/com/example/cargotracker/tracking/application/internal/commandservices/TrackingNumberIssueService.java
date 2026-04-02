@@ -4,14 +4,15 @@ import com.example.cargotracker.booking.domain.event.BookingConfirmedEvent;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingRepository;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.UUID;
 
 @Service
-@Transactional
 public class TrackingNumberIssueService {
 
     private final TrackingRepository trackingRepository;
@@ -20,7 +21,9 @@ public class TrackingNumberIssueService {
         this.trackingRepository = trackingRepository;
     }
 
-    @EventListener
+    // ADR-002: 予約確定トランザクションの commit 後に追跡番号を発行する。
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void on(BookingConfirmedEvent event) {
         UUID bookingId = event.bookingId().value();
         // 冪等性：既に発行済みなら何もしない

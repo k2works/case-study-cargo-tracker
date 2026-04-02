@@ -17,6 +17,6 @@ public class BookingEventHandler {
     public void onBookingRegistered(BookingRegisteredEvent event) {
         log.info("予約登録イベントを受信しました: bookingId={}, shipperId={}",
                 event.bookingId(), event.shipperId());
-        // TODO: 経路設計者への通知は IT3 で実装
+        // IT3 時点では予約登録後の外部通知要件は未実装。監査ログのみを記録する。
     }
 }
