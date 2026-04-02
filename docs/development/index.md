@@ -16,7 +16,7 @@
 |---------------|------|-----------|-----------|------|
 | IT1（US02・03・04, 10SP） | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | [iteration_report-1.md](./iteration_report-1.md) | 完了 ✅ |
 | IT2（US01・06, 10SP） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | 完了 ✅ |
-| IT3（US05・07・08・09, 12SP） | [iteration_plan-3.md](./iteration_plan-3.md) | - | - | 進行中 🔄 |
+| IT3（US05・07・08・09, 12SP） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | 完了 ✅ |
 
 ### 進捗サマリー
 
@@ -24,13 +24,14 @@
 |---------------|---------|---------|--------|
 | IT1 | 10 | 10 | 100% |
 | IT2 | 10 | 10 | 100% |
-| **累計** | **64** | **20** | **31%** |
+| IT3 | 12 | 12 | 100% |
+| **累計** | **64** | **32** | **50%** |
 
 ### フェーズ進捗
 
 | フェーズ | 内容 | SP | 完了 SP | 状態 |
 |---------|------|-----|---------|------|
-| Phase 1 | コア輸送管理（US01〜US15） | 51 | 20 | 進行中 |
+| Phase 1 | コア輸送管理（US01〜US15） | 51 | 32 | 進行中 |
 | Phase 2 | 請求・精算（US16〜US18） | 13 | 0 | 未着手 |
 
 ### リリース完了報告書
