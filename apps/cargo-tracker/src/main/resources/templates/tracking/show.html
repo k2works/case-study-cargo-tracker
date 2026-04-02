@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>追跡情報 - CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<main>
+<div class="container py-4">
+    <h2 class="mb-4">追跡情報</h2>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white fw-semibold">基本情報</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">追跡番号</dt>
+                <dd class="col-sm-9">
+                    <code class="fs-5" data-testid="tracking-number" th:text="${trackingInfo.trackingNumber}"></code>
+                </dd>
+                <dt class="col-sm-3">予約 ID</dt>
+                <dd class="col-sm-9" data-testid="booking-id" th:text="${trackingInfo.bookingId}"></dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white fw-semibold">荷役履歴</div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(trackingInfo.handlingHistory)}" class="p-3 text-muted">
+                荷役履歴はまだありません。
+            </div>
+            <table th:unless="${#lists.isEmpty(trackingInfo.handlingHistory)}"
+                   class="table table-hover mb-0" data-testid="handling-history-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>完了日時</th>
+                        <th>場所コード</th>
+                        <th>種別</th>
+                        <th>メモ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="event : ${trackingInfo.handlingHistory}">
+                        <td th:text="${#temporals.format(event.completionTime, 'yyyy/MM/dd HH:mm')}"></td>
+                        <td th:text="${event.locationCode}"></td>
+                        <td>
+                            <span class="badge bg-secondary" th:text="${event.eventTypeDisplayName}"></span>
+                        </td>
+                        <td th:text="${event.memo}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</main>
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

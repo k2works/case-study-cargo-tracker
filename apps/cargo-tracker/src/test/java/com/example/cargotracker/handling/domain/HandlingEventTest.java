@@ -10,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -156,5 +157,37 @@ class HandlingEventTest {
         assertThatThrownBy(() ->
                 HandlingEvent.reconstitute(null, anyBookingId(), HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // ── canReceive ────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("RECEIVE が既に存在する場合は canReceive が false を返す")
+    void canReceive_existingReceive_returnsFalse() {
+        UUID bookingId = anyBookingId();
+        HandlingEvent existing = HandlingEvent.reconstitute(
+                anyId(), bookingId, HandlingEventType.RECEIVE, "JPTYO", anyCompletionTime(), null);
+
+        boolean result = HandlingEvent.canReceive(List.of(existing));
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("RECEIVE が存在しない場合は canReceive が true を返す")
+    void canReceive_noReceive_returnsTrue() {
+        UUID bookingId = anyBookingId();
+        HandlingEvent loadEvent = HandlingEvent.reconstitute(
+                anyId(), bookingId, HandlingEventType.LOAD, "JPTYO", anyCompletionTime(), null);
+
+        boolean result = HandlingEvent.canReceive(List.of(loadEvent));
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("イベントが空の場合は canReceive が true を返す")
+    void canReceive_emptyList_returnsTrue() {
+        assertThat(HandlingEvent.canReceive(List.of())).isTrue();
     }
 }

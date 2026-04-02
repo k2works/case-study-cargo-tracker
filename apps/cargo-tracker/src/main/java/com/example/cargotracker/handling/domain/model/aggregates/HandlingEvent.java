@@ -84,4 +84,13 @@ public class HandlingEvent {
     public List<DomainEvent> getDomainEvents() {
         return Collections.unmodifiableList(domainEvents);
     }
+
+    /**
+     * 指定された荷役イベントリストに RECEIVE イベントが存在しないことを確認する。
+     * RECEIVE は予約ごとに 1 回のみ記録できる。
+     */
+    public static boolean canReceive(List<HandlingEvent> existingEvents) {
+        return existingEvents.stream()
+                .noneMatch(e -> e.getEventType() == HandlingEventType.RECEIVE);
+    }
 }

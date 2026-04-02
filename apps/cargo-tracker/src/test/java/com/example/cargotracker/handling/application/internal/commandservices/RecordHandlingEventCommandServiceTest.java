@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling.application.internal.commandservices;
 
 import com.example.cargotracker.handling.application.internal.outboundservices.BookingExistencePort;
+import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
 import com.example.cargotracker.handling.domain.model.commands.RecordHandlingEventCommand;
 import com.example.cargotracker.handling.domain.model.events.HandlingEventRecordedEvent;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RecordHandlingEventCommandService")
@@ -108,5 +111,40 @@ class RecordHandlingEventCommandServiceTest {
 
         HandlingEventId result = commandService.execute(command);
         assertThat(result).isNotNull();
+    }
+
+    @Test
+    @DisplayName("RECEIVE イベントを初回は記録できる")
+    void receiveEvent_firstTime_succeeds() {
+        UUID bookingId = UUID.randomUUID();
+        doNothing().when(bookingExistencePort).verifyExists(bookingId);
+        when(handlingEventRepository.findByBookingId(bookingId)).thenReturn(List.of());
+
+        RecordHandlingEventCommand command = new RecordHandlingEventCommand(
+                bookingId, HandlingEventType.RECEIVE, "JPTYO",
+                LocalDateTime.of(2026, 5, 12, 9, 0), null);
+
+        HandlingEventId result = commandService.execute(command);
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    @DisplayName("RECEIVE イベントが既に存在する場合は DuplicateReceiveException をスローする")
+    void receiveEvent_alreadyExists_throwsDuplicateReceiveException() {
+        UUID bookingId = UUID.randomUUID();
+        doNothing().when(bookingExistencePort).verifyExists(bookingId);
+        HandlingEvent existing = HandlingEvent.reconstitute(
+                HandlingEventId.generate(), bookingId, HandlingEventType.RECEIVE,
+                "JPTYO", LocalDateTime.of(2026, 5, 1, 9, 0), null);
+        when(handlingEventRepository.findByBookingId(bookingId)).thenReturn(List.of(existing));
+
+        RecordHandlingEventCommand command = new RecordHandlingEventCommand(
+                bookingId, HandlingEventType.RECEIVE, "JPTYO",
+                LocalDateTime.of(2026, 5, 12, 9, 0), null);
+
+        assertThatThrownBy(() -> commandService.execute(command))
+                .isInstanceOf(DuplicateReceiveException.class)
+                .hasMessageContaining(bookingId.toString());
+        verify(handlingEventRepository, never()).save(any());
     }
 }

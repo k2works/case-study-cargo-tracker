@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手動更新記録 - CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
+<main>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="card-title mb-0">手動更新記録</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning small" role="note">
+                        この画面では管理者のみが手動更新（MANUAL_UPDATE）イベントを記録します。メモは必須です。
+                    </div>
+                    <div th:if="${errorMessage}" class="alert alert-danger" data-testid="error-message"
+                         th:text="${errorMessage}"></div>
+                    <form th:action="@{/handling/manual-update}" method="post" th:object="${form}">
+                        <input type="hidden" name="eventType" value="MANUAL_UPDATE">
+                        <div class="mb-3 row">
+                            <label for="bookingId" class="col-sm-3 col-form-label">予約 ID <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="bookingId" name="bookingId"
+                                       th:value="*{bookingId}"
+                                       th:classappend="${#fields.hasErrors('bookingId')} ? 'is-invalid'"
+                                       placeholder="例: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                       inputmode="text" spellcheck="false" required>
+                                <div th:if="${#fields.hasErrors('bookingId')}" class="invalid-feedback"
+                                     th:errors="*{bookingId}"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="locationCode" class="col-sm-3 col-form-label">場所コード <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="locationCode" name="locationCode"
+                                       th:value="*{locationCode}"
+                                       th:classappend="${#fields.hasErrors('locationCode')} ? 'is-invalid'"
+                                       placeholder="例: JPTYO" maxlength="5" required>
+                                <div th:if="${#fields.hasErrors('locationCode')}" class="invalid-feedback"
+                                     th:errors="*{locationCode}"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="completionTime" class="col-sm-3 col-form-label">完了日時 <span class="text-danger">*</span></label>
+                            <div class="col-sm-6">
+                                <input type="datetime-local" class="form-control" id="completionTime" name="completionTime"
+                                       th:value="*{completionTime}"
+                                       th:classappend="${#fields.hasErrors('completionTime')} ? 'is-invalid'" required>
+                                <div th:if="${#fields.hasErrors('completionTime')}" class="invalid-feedback"
+                                     th:errors="*{completionTime}"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3 row">
+                            <label for="memo" class="col-sm-3 col-form-label">メモ <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="memo" name="memo" rows="3"
+                                          th:text="*{memo}"
+                                          th:classappend="${#fields.hasErrors('memo')} ? 'is-invalid'"
+                                          placeholder="手動更新の理由・詳細を入力してください" data-testid="memo-input"></textarea>
+                                <div th:if="${#fields.hasErrors('memo')}" class="invalid-feedback"
+                                     th:errors="*{memo}" data-testid="memo-error"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a th:href="@{/handling}" class="btn btn-outline-secondary">戻る</a>
+                            <button type="submit" class="btn btn-warning" data-testid="submit-manual-update">手動更新を記録</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</main>
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

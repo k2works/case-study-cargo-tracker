@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling.interfaces.web;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
+import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
@@ -34,6 +35,8 @@ public class HandlingWebController {
     );
     private static final String VIEW_LIST = "handling/list";
     private static final String VIEW_NEW = "handling/new";
+    private static final String VIEW_RECEIVE = "handling/receive";
+    private static final String VIEW_MANUAL_UPDATE = "handling/manual-update";
 
     private final RecordHandlingEventCommandService recordHandlingEventCommandService;
     private final FindHandlingEventsQueryService findHandlingEventsQueryService;
@@ -103,6 +106,92 @@ public class HandlingWebController {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute(EVENT_TYPES_ATTRIBUTE, HANDLING_OPERATION_EVENT_TYPES);
             return VIEW_NEW;
+        }
+    }
+
+    // ── RECEIVE 専用フォーム ───────────────────────────────────────────────
+
+    @GetMapping("/receive")
+    public String showReceiveForm(@RequestParam(value = "bookingId", required = false) String bookingId,
+                                  Model model) {
+        HandlingEventForm form = new HandlingEventForm();
+        form.setEventType(HandlingEventType.RECEIVE);
+        if (bookingId != null && !bookingId.isBlank()) {
+            form.setBookingId(bookingId);
+        }
+        model.addAttribute("form", form);
+        return VIEW_RECEIVE;
+    }
+
+    @PostMapping("/receive")
+    public String createReceiveEvent(@Valid @ModelAttribute("form") HandlingEventForm form,
+                                     BindingResult bindingResult,
+                                     RedirectAttributes redirectAttributes,
+                                     Model model) {
+        // RECEIVE 以外の種別が送られた場合は上書き
+        if (form.getEventType() != HandlingEventType.RECEIVE) {
+            form.setEventType(HandlingEventType.RECEIVE);
+        }
+        if (bindingResult.hasErrors()) {
+            return VIEW_RECEIVE;
+        }
+
+        try {
+            recordHandlingEventCommandService.execute(form.toCommand());
+            redirectAttributes.addFlashAttribute("successMessage", "引取を記録しました。");
+            return "redirect:" + UriComponentsBuilder.fromPath("/handling")
+                    .queryParam("bookingId", form.getBookingId())
+                    .build()
+                    .toUriString();
+        } catch (DuplicateReceiveException e) {
+            bindingResult.rejectValue("bookingId", "duplicate.receive", e.getMessage());
+            return VIEW_RECEIVE;
+        } catch (BookingNotFoundException | IllegalArgumentException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            return VIEW_RECEIVE;
+        }
+    }
+
+
+    // ── MANUAL_UPDATE 専用フォーム ────────────────────────────────────────
+
+    @GetMapping("/manual-update")
+    public String showManualUpdateForm(@RequestParam(value = "bookingId", required = false) String bookingId,
+                                       Model model) {
+        HandlingEventForm form = new HandlingEventForm();
+        form.setEventType(HandlingEventType.MANUAL_UPDATE);
+        if (bookingId != null && !bookingId.isBlank()) {
+            form.setBookingId(bookingId);
+        }
+        model.addAttribute("form", form);
+        return VIEW_MANUAL_UPDATE;
+    }
+
+    @PostMapping("/manual-update")
+    public String createManualUpdateEvent(@Valid @ModelAttribute("form") HandlingEventForm form,
+                                          BindingResult bindingResult,
+                                          RedirectAttributes redirectAttributes,
+                                          Model model) {
+        // memo は MANUAL_UPDATE 必須
+        if (form.getMemo() == null || form.getMemo().isBlank()) {
+            bindingResult.rejectValue("memo", "required.memo", "手動更新にはメモが必須です");
+        }
+        if (bindingResult.hasErrors()) {
+            return VIEW_MANUAL_UPDATE;
+        }
+
+        try {
+            // MANUAL_UPDATE を強制セット
+            form.setEventType(HandlingEventType.MANUAL_UPDATE);
+            recordHandlingEventCommandService.execute(form.toCommand());
+            redirectAttributes.addFlashAttribute("successMessage", "手動更新を記録しました。");
+            return "redirect:" + UriComponentsBuilder.fromPath("/handling")
+                    .queryParam("bookingId", form.getBookingId())
+                    .build()
+                    .toUriString();
+        } catch (BookingNotFoundException | IllegalArgumentException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            return VIEW_MANUAL_UPDATE;
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling.interfaces.web;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
+import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
@@ -178,6 +179,113 @@ class HandlingWebControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("handling/new"))
                 .andExpect(model().attributeHasFieldErrors("form", "bookingId"));
+    }
+
+    // ── GET /handling/receive ──────────────────────────────────────────────
+
+    @Test
+    @DisplayName("GET /handling/receive は引取フォームを表示する")
+    void showReceiveForm_returnsReceiveView() throws Exception {
+        mockMvc.perform(get("/handling/receive"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/receive"))
+                .andExpect(model().attributeExists("form"));
+    }
+
+    @Test
+    @DisplayName("GET /handling/receive?bookingId= は bookingId を事前入力する")
+    void showReceiveForm_withBookingId_preselectsBookingId() throws Exception {
+        String bookingId = UUID.randomUUID().toString();
+        mockMvc.perform(get("/handling/receive").param("bookingId", bookingId))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/receive"))
+                .andExpect(model().attribute("form",
+                        org.hamcrest.Matchers.hasProperty("bookingId", org.hamcrest.Matchers.is(bookingId))));
+    }
+
+    // ── POST /handling/receive ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("POST /handling/receive は正常に引取を記録して一覧へリダイレクトする")
+    void createReceive_success_redirectsToList() throws Exception {
+        when(recordHandlingEventCommandService.execute(any()))
+                .thenReturn(HandlingEventId.generate());
+        UUID bookingId = UUID.randomUUID();
+
+        mockMvc.perform(post("/handling/receive")
+                        .with(csrf())
+                        .param("bookingId", bookingId.toString())
+                        .param("eventType", "RECEIVE")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2025-01-15T10:00"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/handling?bookingId=" + bookingId))
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    @DisplayName("POST /handling/receive で RECEIVE が重複する場合はフィールドエラーを返す")
+    void createReceive_duplicateReceive_showsFieldError() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        when(recordHandlingEventCommandService.execute(any()))
+                .thenThrow(new DuplicateReceiveException(bookingId));
+
+        mockMvc.perform(post("/handling/receive")
+                        .with(csrf())
+                        .param("bookingId", bookingId.toString())
+                        .param("eventType", "RECEIVE")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2025-01-15T10:00"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/receive"))
+                .andExpect(model().attributeHasFieldErrors("form", "bookingId"));
+    }
+
+    // ── GET /handling/manual-update ───────────────────────────────────────
+
+    @Test
+    @DisplayName("GET /handling/manual-update は手動更新フォームを表示する")
+    void showManualUpdateForm_returnsManualUpdateView() throws Exception {
+        mockMvc.perform(get("/handling/manual-update"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/manual-update"))
+                .andExpect(model().attributeExists("form"));
+    }
+
+    // ── POST /handling/manual-update ──────────────────────────────────────
+
+    @Test
+    @DisplayName("POST /handling/manual-update はメモ付きで正常に記録して一覧へリダイレクトする")
+    void createManualUpdate_withMemo_success() throws Exception {
+        when(recordHandlingEventCommandService.execute(any()))
+                .thenReturn(HandlingEventId.generate());
+        UUID bookingId = UUID.randomUUID();
+
+        mockMvc.perform(post("/handling/manual-update")
+                        .with(csrf())
+                        .param("bookingId", bookingId.toString())
+                        .param("eventType", "MANUAL_UPDATE")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2025-01-15T10:00")
+                        .param("memo", "台風のため保管中"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/handling?bookingId=" + bookingId))
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    @DisplayName("POST /handling/manual-update でメモが空の場合はフィールドエラーを返す")
+    void createManualUpdate_emptyMemo_showsFieldError() throws Exception {
+        mockMvc.perform(post("/handling/manual-update")
+                        .with(csrf())
+                        .param("bookingId", UUID.randomUUID().toString())
+                        .param("eventType", "MANUAL_UPDATE")
+                        .param("locationCode", "JPTYO")
+                        .param("completionTime", "2025-01-15T10:00")
+                        .param("memo", ""))
+                .andExpect(status().isOk())
+                .andExpect(view().name("handling/manual-update"))
+                .andExpect(model().attributeHasFieldErrors("form", "memo"));
     }
 
     // ── ヘルパー ──────────────────────────────────────────────────────────

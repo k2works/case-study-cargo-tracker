@@ -22,4 +22,13 @@
         WHERE booking_id = #{bookingId}
     </select>
 
+    <select id="findHandlingEventsByTrackingNumber"
+            resultType="com.example.cargotracker.tracking.infrastructure.repositories.HandlingEventRecord">
+        SELECT he.completion_time, he.location_code, he.event_type, he.memo
+        FROM handling_events he
+        INNER JOIN tracking_numbers tn ON he.booking_id = tn.booking_id::uuid
+        WHERE tn.tracking_number = #{trackingNumber}
+        ORDER BY he.completion_time DESC, he.id DESC
+    </select>
+
 </mapper>

@@ -1,10 +1,12 @@
 package com.example.cargotracker.tracking.infrastructure.repositories;
 
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
+import com.example.cargotracker.tracking.domain.model.valueobjects.HandlingEventView;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.repository.TrackingRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,5 +43,18 @@ public class TrackingRepositoryImpl implements TrackingRepository {
                         new TrackingNumber(r.trackingNumber()),
                         UUID.fromString(r.bookingId())
                 ));
+    }
+
+    @Override
+    public List<HandlingEventView> findHandlingEventsByTrackingNumber(TrackingNumber trackingNumber) {
+        return trackingMapper.findHandlingEventsByTrackingNumber(trackingNumber.value())
+                .stream()
+                .map(r -> new HandlingEventView(
+                        r.completionTime(),
+                        r.locationCode(),
+                        r.eventType(),
+                        r.memo()
+                ))
+                .toList();
     }
 }

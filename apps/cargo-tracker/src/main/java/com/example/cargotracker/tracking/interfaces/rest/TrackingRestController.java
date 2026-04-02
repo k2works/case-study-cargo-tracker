@@ -20,8 +20,8 @@ public class TrackingRestController {
 
     @GetMapping("/{trackingNumber}")
     public ResponseEntity<TrackingResponse> getByTrackingNumber(@PathVariable String trackingNumber) {
-        return trackingQueryService.findByTrackingNumber(trackingNumber)
-                .map(entry -> ResponseEntity.ok(TrackingResponse.from(entry)))
+        return trackingQueryService.findTrackingInfo(trackingNumber)
+                .map(dto -> ResponseEntity.ok(TrackingResponse.from(dto)))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

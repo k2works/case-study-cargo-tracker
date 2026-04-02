@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling.interfaces.rest;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
+import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
@@ -90,6 +91,12 @@ public class HandlingRestController {
     public ResponseEntity<ProblemDetail> handleBookingNotFound(BookingNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(problemDetail(HttpStatus.NOT_FOUND, e.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateReceiveException.class)
+    public ResponseEntity<ProblemDetail> handleDuplicateReceive(DuplicateReceiveException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(problemDetail(HttpStatus.CONFLICT, e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
