@@ -16,7 +16,8 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>予約詳細</h4>
         <div class="d-flex gap-2">
-            <a th:href="@{/routings/search(bookingId=${booking.id})}"
+            <a th:if="${booking.status.name() != 'CONFIRMED'}"
+               th:href="@{/routings/search(bookingId=${booking.id})}"
                class="btn btn-success">ルート検索</a>
             <a th:href="@{/quotes/new(
                     originLocode=${booking.transportCondition.originLocation},
@@ -127,7 +128,7 @@
                       data-testid="tracking-number"
                       th:text="${trackingNumber}"></code>
             </h5>
-            <small class="text-muted">この追跡番号で輸送状況を確認できます</small>
+            <small class="text-muted">この追跡番号で輸送状況を確認できます（追跡機能は準備中です）</small>
         </div>
     </div>
 

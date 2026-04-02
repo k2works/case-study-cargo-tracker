@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.domain.event.BookingRouteAssignedEvent;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
@@ -25,8 +26,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -80,7 +81,7 @@ class AssignRouteCommandServiceTest {
         commandService.execute(command);
 
         ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(eventPublisher, atLeastOnce()).publishEvent(eventCaptor.capture());
+        verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
         assertThat(eventCaptor.getAllValues()).anyMatch(BookingRouteAssignedEvent.class::isInstance);
     }
 
@@ -103,11 +104,12 @@ class AssignRouteCommandServiceTest {
     }
 
     private Booking provisionalBooking() {
-        return Booking.register(
+        return Booking.reconstitute(
                 BookingId.generate(),
                 ShipperId.generate(),
                 new CargoSpecification(CargoType.GENERAL_CARGO, new BigDecimal("100"), null, null, null, 1, null),
-                new TransportCondition("JPTYO", "USNYC", LocalDate.of(2025, 8, 1), LocalDate.of(2025, 9, 1))
+                new TransportCondition("JPTYO", "USNYC", LocalDate.of(2025, 8, 1), LocalDate.of(2025, 9, 1)),
+                BookingStatus.PROVISIONAL
         );
     }
 }

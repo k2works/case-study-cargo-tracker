@@ -5,12 +5,41 @@ import java.util.Objects;
 
 /**
  * 貨物仕様を表す値オブジェクト。
+ *
+ * <p>このクラスは {@link CargoDimensions} と {@link SpecialHandling} を引数型として受け取り、
+ * フラットフィールドに展開して保持する。これにより永続化レイヤーがネストした record に
+ * 依存しなくて済む設計となっている。
  */
 public final class CargoSpecification {
 
+    /**
+     * 荷物の外形寸法を表す補助 record。
+     *
+     * <p>寸法は任意項目であり、すべて {@code null} の場合は「寸法未指定」を意味する。
+     *
+     * @param lengthCm 長さ（cm）
+     * @param widthCm  幅（cm）
+     * @param heightCm 高さ（cm）
+     */
     public record CargoDimensions(BigDecimal lengthCm, BigDecimal widthCm, BigDecimal heightCm) {
     }
 
+    /**
+     * 特殊取り扱いが必要な貨物の追加情報を表す補助 record。
+     *
+     * <p>各フィールドの使用条件：
+     * <ul>
+     *   <li>{@code unNumber}       — {@link CargoType#DANGEROUS_GOODS}（危険物）の場合に必須</li>
+     *   <li>{@code hazardClass}    — {@link CargoType#DANGEROUS_GOODS}（危険物）の場合に任意</li>
+     *   <li>{@code minTempCelsius} — {@link CargoType#REFRIGERATED}（冷凍貨物）の場合に必須</li>
+     *   <li>{@code maxTempCelsius} — {@link CargoType#REFRIGERATED}（冷凍貨物）の場合に必須</li>
+     * </ul>
+     *
+     * @param unNumber       UN 番号（例: {@code UN1234}）
+     * @param hazardClass    危険品等級（例: {@code 3}）
+     * @param minTempCelsius 最低保管温度（℃）
+     * @param maxTempCelsius 最高保管温度（℃）
+     */
     public record SpecialHandling(String unNumber, String hazardClass,
                                   BigDecimal minTempCelsius, BigDecimal maxTempCelsius) {
     }

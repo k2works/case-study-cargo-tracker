@@ -13,9 +13,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistencePort;
-import com.example.cargotracker.tracking.application.internal.queryservices.TrackingQueryService;
-import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
-import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
+import com.example.cargotracker.booking.application.internal.outboundservices.TrackingLookupPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +65,7 @@ class BookingWebControllerTest {
     private ShipperExistencePort shipperExistencePort;
 
     @MockitoBean
-    private TrackingQueryService trackingQueryService;
+    private TrackingLookupPort trackingLookupPort;
 
     // ── GET /bookings/new ──────────────────────────────────────────────────
 
@@ -185,7 +183,7 @@ class BookingWebControllerTest {
         when(findBookingQueryService.execute(bookingId)).thenReturn(booking);
         when(shipperExistencePort.findNameById(booking.getShipperId().value()))
                 .thenReturn(java.util.Optional.of("山田 太郎"));
-        when(trackingQueryService.findByBookingId(any())).thenReturn(java.util.Optional.empty());
+        when(trackingLookupPort.findTrackingNumberByBookingId(any())).thenReturn(java.util.Optional.empty());
 
         mockMvc.perform(get("/bookings/" + bookingId))
                 .andExpect(status().isOk())
@@ -202,8 +200,8 @@ class BookingWebControllerTest {
         when(findBookingQueryService.execute(bookingId)).thenReturn(booking);
         when(shipperExistencePort.findNameById(booking.getShipperId().value()))
                 .thenReturn(java.util.Optional.of("山田 太郎"));
-        when(trackingQueryService.findByBookingId(bookingId.value()))
-                .thenReturn(java.util.Optional.of(new TrackingEntry(new TrackingNumber("TRK-ABC12345"), bookingId.value())));
+        when(trackingLookupPort.findTrackingNumberByBookingId(bookingId.value()))
+                .thenReturn(java.util.Optional.of("TRK-ABC12345"));
 
         mockMvc.perform(get("/bookings/" + bookingId))
                 .andExpect(status().isOk())
