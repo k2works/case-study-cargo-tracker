@@ -1,0 +1,70 @@
+package com.example.cargotracker.routing.interfaces.rest;
+
+import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
+import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
+import com.example.cargotracker.routing.interfaces.rest.dto.RoutingCandidateResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * ルート検索 REST API コントローラー。
+ *
+ * <p>product プロファイルでは {@link RouteSearchService} が未登録のため
+ * {@code Optional<RouteSearchService>} で注入し、未設定時は 503 を返す。
+ */
+@RestController
+@RequestMapping("/api/v1/routings")
+@Tag(name = "routings", description = "ルート検索 API")
+public class RoutingRestController {
+
+    private final Optional<RouteSearchService> routeSearchService;
+
+    public RoutingRestController(Optional<RouteSearchService> routeSearchService) {
+        this.routeSearchService = routeSearchService;
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "予約 ID によるルート候補検索", description = "指定した予約の輸送条件に合うルート候補を返す")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "取得成功"),
+            @ApiResponse(responseCode = "400", description = "bookingId パラメータなし"),
+            @ApiResponse(responseCode = "404", description = "予約が見つからない"),
+            @ApiResponse(responseCode = "503", description = "ルート検索サービスが利用できない")
+    })
+    public ResponseEntity<?> search(@RequestParam("bookingId") UUID bookingId) {
+        if (routeSearchService.isEmpty()) {
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                    HttpStatus.SERVICE_UNAVAILABLE, "ルート検索サービスは現在利用できません");
+            problem.setTitle(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
+        }
+
+        List<RoutingCandidateResponse> candidates = routeSearchService.get()
+                .searchByBookingId(bookingId)
+                .stream()
+                .map(RoutingCandidateResponse::from)
+                .toList();
+        return ResponseEntity.ok(candidates);
+    }
+
+    @ExceptionHandler(BookingDataNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleBookingNotFound(BookingDataNotFoundException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+        problem.setTitle(HttpStatus.NOT_FOUND.getReasonPhrase());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
+}
