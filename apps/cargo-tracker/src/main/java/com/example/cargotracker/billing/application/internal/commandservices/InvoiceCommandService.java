@@ -27,8 +27,20 @@ public class InvoiceCommandService {
     }
 
     public InvoiceId generateInvoice(GenerateInvoiceCommand command) {
+        // H2: 重複チェック — 同一 freightChargeId の精算書が既に存在する場合はエラー
+        invoiceRepository.findByFreightChargeId(command.freightChargeId())
+                .ifPresent(existing -> {
+                    throw new IllegalStateException(
+                            "この輸送料金の精算書はすでに存在します: " + command.freightChargeId());
+                });
+
         var charge = freightChargeRepository.findById(FreightId.of(command.freightChargeId()))
                 .orElseThrow(() -> new IllegalArgumentException("輸送料金が見つかりません: " + command.freightChargeId()));
+
+        // H3: bookingId 整合性検証 — FreightCharge 取得後、重複チェックの後
+        if (!charge.getBookingId().equals(command.bookingId())) {
+            throw new IllegalArgumentException("輸送料金の予約 ID とリクエストの予約 ID が一致しません");
+        }
 
         if (charge.getStatus() != ChargeStatus.CONFIRMED) {
             throw new IllegalStateException("輸送料金が確定されていません");

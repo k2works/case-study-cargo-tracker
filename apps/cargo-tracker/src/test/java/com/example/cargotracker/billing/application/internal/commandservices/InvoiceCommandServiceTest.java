@@ -132,4 +132,43 @@ class InvoiceCommandServiceTest {
                 .hasMessageContaining(invoiceId.value().toString());
         verify(invoiceRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("同一の輸送料金 ID で重複して精算書を生成しようとすると IllegalStateException をスローする")
+    void generateInvoice_重複した輸送料金IDではIllegalStateExceptionをスローする() {
+        // Given
+        FreightId freightId = FreightId.generate();
+        Invoice existingInvoice = Invoice.generate(
+                InvoiceId.generate(), "booking-001",
+                freightId.value().toString(), new BigDecimal("10000"),
+                LocalDate.now().plusDays(30));
+        when(invoiceRepository.findByFreightChargeId(freightId.value().toString()))
+                .thenReturn(Optional.of(existingInvoice));
+
+        GenerateInvoiceCommand command = new GenerateInvoiceCommand("booking-001", freightId.value().toString());
+
+        // When / Then
+        assertThatThrownBy(() -> commandService.generateInvoice(command))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(freightId.value().toString());
+        verify(invoiceRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("コマンドの bookingId が輸送料金の bookingId と一致しない場合 IllegalArgumentException をスローする")
+    void generateInvoice_bookingIdが一致しない場合はIllegalArgumentExceptionをスローする() {
+        // Given
+        FreightId freightId = FreightId.generate();
+        FreightCharge charge = FreightCharge.calculate(freightId, "booking-001", new BigDecimal("10000"));
+        charge.applyAdjustment(BigDecimal.ZERO);
+        charge.confirm();
+        when(freightChargeRepository.findById(freightId)).thenReturn(Optional.of(charge));
+
+        GenerateInvoiceCommand command = new GenerateInvoiceCommand("booking-WRONG", freightId.value().toString());
+
+        // When / Then
+        assertThatThrownBy(() -> commandService.generateInvoice(command))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(invoiceRepository, never()).save(any());
+    }
 }
