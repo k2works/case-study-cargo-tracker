@@ -121,11 +121,11 @@ tags: iteration-plan, it5
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `FreightCharge` 集約・`FreightCalculationService` ドメインサービス（基本料金 = 重量 × 単価 × 距離係数）・`ChargeStatus` enum を実装しドメインテストを追加する | 4h | Copilot | [ ] |
-| 3.2 | Flyway migration `V011__create_freight_charges.sql` と `FreightChargeMapper`（MyBatis）を実装する | 2h | Copilot | [ ] |
-| 3.3 | `CalculateFreightCommandService` を実装し、引取済み予約の輸送実績取得（`BookingInfoQueryPort`・`HandlingHistoryQueryPort`）と確定ロジックとテストを追加する | 4h | Copilot | [ ] |
-| 3.4 | 料金算出 Web フォーム（`/freight/calculate`）・料金一覧（`/freight`）・REST API（`POST /api/v1/freight-charges`）と MVC/REST テストを追加する | 5h | Copilot | [ ] |
-| 3.5 | E2E テスト（E17: 引取済み予約の料金算出と確定）・SonarQube・docs 更新を実施する | 5h | Copilot | [ ] |
+| 3.1 | `FreightCharge` 集約・`FreightCalculationService` ドメインサービス（基本料金 = 重量 × 単価 × 距離係数）・`ChargeStatus` enum を実装しドメインテストを追加する | 4h | Copilot | [x] |
+| 3.2 | Flyway migration `V011__create_freight_charges.sql` と `FreightChargeMapper`（MyBatis）を実装する | 2h | Copilot | [x] |
+| 3.3 | `CalculateFreightCommandService` を実装し、引取済み予約の輸送実績取得（`BookingInfoQueryPort`・`HandlingHistoryQueryPort`）と確定ロジックとテストを追加する | 4h | Copilot | [x] |
+| 3.4 | 料金算出 Web フォーム（`/freight/calculate`）・料金一覧（`/freight`）・REST API（`POST /api/v1/freight-charges`）と MVC/REST テストを追加する | 5h | Copilot | [x] |
+| 3.5 | E2E テスト（E17: 引取済み予約の料金算出と確定）・SonarQube・docs 更新を実施する | 5h | Copilot | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -135,11 +135,11 @@ tags: iteration-plan, it5
 |---------|----|---------|------|
 | US14 遅延例外処理 | 3 | 12h | [x] 完了 |
 | US15 破損・紛失例外処理 | 3 | 12h | [x] 完了 |
-| US16 輸送料金算出 | 5 | 20h | [ ] 未着手 |
+| US16 輸送料金算出 | 5 | 20h | [x] 完了 |
 | **合計** | **11** | **44h** | |
 
 **1 SP あたり**: 4h
-**進捗率**: 27%（3/11 SP 完了）
+**進捗率**: 100%（11/11 SP 完了）
 
 ---
 

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>輸送料金一覧 - CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
+
+<main>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>輸送料金一覧</h4>
+        <a th:href="@{/freight/calculate}" class="btn btn-primary">料金算出</a>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">予約 ID</th>
+                    <th scope="col">ステータス</th>
+                    <th scope="col">基本料金</th>
+                    <th scope="col">調整額</th>
+                    <th scope="col">合計</th>
+                    <th scope="col">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(freightCharges)}">
+                    <td colspan="7" class="text-center text-muted py-4">輸送料金が登録されていません</td>
+                </tr>
+                <tr th:each="charge : ${freightCharges}">
+                    <td><code th:text="${charge.id}"></code></td>
+                    <td th:text="${charge.bookingId}"></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${charge.status == '確定'} ? 'bg-success' : 'bg-warning text-dark'"
+                              th:text="${charge.status}"></span>
+                    </td>
+                    <td th:text="${#numbers.formatDecimal(charge.baseAmount, 1, 'COMMA', 0, 'POINT')}"></td>
+                    <td th:text="${#numbers.formatDecimal(charge.adjustmentAmount, 1, 'COMMA', 0, 'POINT')}"></td>
+                    <td th:text="${#numbers.formatDecimal(charge.totalAmount, 1, 'COMMA', 0, 'POINT')}"></td>
+                    <td>
+                        <form th:if="${charge.status == '算出中'}"
+                              th:action="@{/freight/{id}/confirm(id=${charge.id})}"
+                              method="post"
+                              class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-success">確定</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
