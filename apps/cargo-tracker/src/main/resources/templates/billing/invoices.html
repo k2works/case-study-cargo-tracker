@@ -47,7 +47,9 @@
                     <td th:text="${#temporals.format(invoice.dueDate, 'yyyy-MM-dd')}"></td>
                     <td>
                         <span class="badge"
-                              th:classappend="${invoice.paymentStatus == '支払い済み'} ? 'bg-success' : 'bg-warning text-dark'"
+                              th:classappend="${invoice.paymentStatus == '支払い済み'} ? 'bg-success' :
+                                             (${invoice.paymentStatus == '支払い期限超過'} ? 'bg-danger text-white' :
+                                             (${invoice.paymentStatus == '返金済み'} ? 'bg-secondary' : 'bg-warning text-dark'))"
                               th:text="${invoice.paymentStatus}"></span>
                     </td>
                     <td>

@@ -42,7 +42,9 @@
                 <dt class="col-sm-3">支払い状態</dt>
                 <dd class="col-sm-9">
                     <span class="badge"
-                          th:classappend="${invoice.paymentStatus == '支払い済み'} ? 'bg-success' : 'bg-warning text-dark'"
+                          th:classappend="${invoice.paymentStatus == '支払い済み'} ? 'bg-success' :
+                                         (${invoice.paymentStatus == '支払い期限超過'} ? 'bg-danger text-white' :
+                                         (${invoice.paymentStatus == '返金済み'} ? 'bg-secondary' : 'bg-warning text-dark'))"
                           th:text="${invoice.paymentStatus}"></span>
                 </dd>
             </dl>

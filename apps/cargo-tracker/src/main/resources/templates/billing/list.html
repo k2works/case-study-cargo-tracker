@@ -53,21 +53,24 @@
                     <td th:text="${#numbers.formatDecimal(charge.totalAmount, 1, 'COMMA', 0, 'POINT')}"></td>
                     <td>
                         <form th:if="${charge.status == '算出中'}"
-                              th:action="@{/freight/{id}/confirm(id=${charge.id})}"
-                              method="post"
-                              class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-success" data-testid="freight-confirm-submit"
-                                    th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の料金を確定'">確定</button>
-                        </form>
-                        <form th:if="${charge.status == '算出中'}"
                               th:action="@{/freight/{id}/apply-discount(id=${charge.id})}"
                               method="post"
-                              class="d-inline ms-1">
+                              class="d-inline">
                             <input type="hidden" name="bookingId" th:value="${charge.bookingId}" />
                             <button type="submit"
                                     class="btn btn-sm btn-outline-primary"
                                     data-testid="freight-discount-submit"
                                     th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の法人割引を適用'">割引適用</button>
+                        </form>
+                        <form th:if="${charge.status == '算出中'}"
+                              th:action="@{/freight/{id}/confirm(id=${charge.id})}"
+                              method="post"
+                              class="d-inline ms-1">
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-success"
+                                    data-testid="freight-confirm-submit"
+                                    th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の料金を確定'"
+                                    onclick="return confirm('この輸送料金を確定します。確定後は割引の変更ができません。よろしいですか？')">確定</button>
                         </form>
                         <form th:if="${charge.status == '確定'}"
                               th:action="@{/invoices}"
