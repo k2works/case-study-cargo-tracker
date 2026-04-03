@@ -18,7 +18,7 @@
 | IT2（US01・06, 10SP） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | 完了 ✅ |
 | IT3（US05・07・08・09, 12SP） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | 完了 ✅ |
 | IT4（US10・11・12・13, 13SP） | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | 完了 ✅ |
-| IT5（US14・15・16, 11SP） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | — | 完了 ✅ |
+| IT5（US14・15・16, 11SP） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | 完了 ✅ |
 
 ### 進捗サマリー
 
