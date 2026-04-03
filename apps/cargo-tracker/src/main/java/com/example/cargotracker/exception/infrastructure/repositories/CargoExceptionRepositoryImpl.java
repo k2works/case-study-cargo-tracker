@@ -43,15 +43,16 @@ public class CargoExceptionRepositoryImpl implements CargoExceptionRepository {
     }
 
     private CargoIncident toCargoException(CargoExceptionRecord row) {
-        return CargoIncident.reconstitute(
+        CargoIncident incident = CargoIncident.reconstitute(
                 new ExceptionId(java.util.UUID.fromString(row.id())),
                 row.trackingNumber(),
                 ExceptionType.valueOf(row.exceptionType()),
                 row.locationCode(),
                 row.occurredAt(),
                 row.reason(),
-                row.resolution(),
-                row.estimatedArrivalDate()
+                row.resolution()
         );
+        incident.setEstimatedArrivalDate(row.estimatedArrivalDate());
+        return incident;
     }
 }

@@ -22,7 +22,7 @@ function futureDateTimeLocal(hoursAhead: number): string {
   return `${year}-${month}-${day}T${hours}:00`;
 }
 
-test.describe.serial('E16: US14 遅延例外を処理する', () => {
+test.describe.serial('E16〜E18: US14 遅延例外・US15 破損紛失例外を処理する', () => {
   let bookingId = '';
   let trackingNumber = '';
 
@@ -97,7 +97,7 @@ test.describe.serial('E16: US14 遅延例外を処理する', () => {
     });
 
     await expect(page).toHaveURL('/exceptions/new');
-    await expect(page.locator('.alert-success')).toContainText('荷主へ通知しました');
+    await expect(page.locator('.alert-success')).toContainText('荷主への通知を手動で行ってください');
 
     await trackingPage.goto(trackingNumber);
     await expect(page.locator('h2')).toContainText('追跡情報');
@@ -110,7 +110,72 @@ test.describe.serial('E16: US14 遅延例外を処理する', () => {
       exceptionType: '遅延',
       reason: '悪天候による港湾閉鎖',
       resolution: '代替船を手配し、到着予定を 2026/06/05 に更新',
-      shipperNotificationStatus: '通知済み',
+      shipperNotificationStatus: '通知',
+    });
+  });
+
+  test('E17: 破損例外を記録すると例外発生になり、荷主通知付きの例外履歴を照会できる', async ({
+    page,
+    loggedIn,
+  }) => {
+    const exceptionPage = new ExceptionPage(page);
+    const trackingPage = new TrackingPage(page);
+
+    await exceptionPage.gotoNew(trackingNumber);
+    await exceptionPage.register({
+      trackingNumber,
+      exceptionType: 'DAMAGE',
+      locationCode: 'USNYC',
+      occurredAt: futureDateTimeLocal(8),
+      reason: '積み降ろし中に外装を破損',
+      resolution: '補償手続きを開始し、代替輸送の可否を確認',
+    });
+
+    await expect(page).toHaveURL('/exceptions/new');
+    await expect(page.locator('.alert-success')).toContainText('荷主への通知を手動で行ってください');
+
+    await trackingPage.goto(trackingNumber);
+    await expect(trackingPage.currentState()).toHaveText('例外発生');
+    await expect(trackingPage.exceptionRows()).toHaveCount(2);
+    await trackingPage.expectExceptionRow(0, {
+      locationCode: 'USNYC',
+      exceptionType: '破損',
+      reason: '積み降ろし中に外装を破損',
+      resolution: '補償手続きを開始し、代替輸送の可否を確認',
+      shipperNotificationStatus: '通知',
+    });
+  });
+
+  test('E18: 紛失例外を記録すると緊急フラグ付きで管理担当者通知が必要になり、履歴を照会できる', async ({
+    page,
+    loggedIn,
+  }) => {
+    const exceptionPage = new ExceptionPage(page);
+    const trackingPage = new TrackingPage(page);
+
+    await exceptionPage.gotoNew(trackingNumber);
+    await exceptionPage.register({
+      trackingNumber,
+      exceptionType: 'LOSS',
+      locationCode: 'SGSIN',
+      occurredAt: futureDateTimeLocal(9),
+      reason: '保管ヤードで所在不明',
+      resolution: '調査を開始し、補償方針を荷主へ案内予定',
+    });
+
+    await expect(page).toHaveURL('/exceptions/new');
+    await expect(page.locator('.alert-success')).toContainText('緊急フラグが設定されました');
+    await expect(page.locator('.alert-success')).toContainText('管理担当者への通知を手動で行ってください');
+
+    await trackingPage.goto(trackingNumber);
+    await expect(trackingPage.currentState()).toHaveText('例外発生');
+    await expect(trackingPage.exceptionRows()).toHaveCount(3);
+    await trackingPage.expectExceptionRow(0, {
+      locationCode: 'SGSIN',
+      exceptionType: '紛失',
+      reason: '保管ヤードで所在不明',
+      resolution: '調査を開始し、補償方針を荷主へ案内予定',
+      shipperNotificationStatus: '通知',
     });
   });
 });

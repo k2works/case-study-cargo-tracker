@@ -51,10 +51,9 @@ public class CargoIncident {
      */
     public static CargoIncident reconstitute(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
                                              String locationCode, LocalDateTime occurredAt, String reason,
-                                             String resolution, LocalDate estimatedArrivalDate) {
+                                             String resolution) {
         CargoIncident incident = new CargoIncident(id, trackingNumber, exceptionType, locationCode, occurredAt, reason);
         incident.resolution = resolution;
-        incident.estimatedArrivalDate = estimatedArrivalDate;
         return incident;
     }
 
