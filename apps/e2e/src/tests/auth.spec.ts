@@ -5,7 +5,7 @@ test.describe('E01: 認証', () => {
   test('正しい認証情報でログインできる', async ({ page, loggedIn }) => {
     // loggedIn フィクスチャがログインを完了しているため、ホームページにいることを確認する
     await expect(page).toHaveURL('/');
-    await expect(page.locator('h1')).toContainText('国際貨物輸送管理システム');
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
   });
 
   test('ログアウトできる', async ({ page, loggedIn }) => {
