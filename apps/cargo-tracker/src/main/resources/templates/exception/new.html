@@ -10,7 +10,7 @@
 <body class="bg-light">
 <nav th:replace="~{fragments/header :: appHeader}"></nav>
 
-<main>
+<main class="py-4">
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -19,7 +19,7 @@
                     <h4 class="card-title mb-0">例外事象記録</h4>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-warning small" role="note">
+                    <div class="alert alert-warning small" role="region" aria-label="業務説明">
                         この画面では輸送中に発生した遅延・破損・紛失の例外事象を記録します。
                         記録後、貨物の追跡情報に反映され、荷主への通知内容も履歴に残ります。
                     </div>
@@ -86,7 +86,9 @@
                                 <input type="datetime-local" class="form-control" id="occurredAt" name="occurredAt"
                                        th:value="*{occurredAt}"
                                        th:classappend="${#fields.hasErrors('occurredAt')} ? 'is-invalid'"
+                                       aria-describedby="occurredAtHelp"
                                        required>
+                                <div id="occurredAtHelp" class="form-text">ローカル時刻（JST）で入力してください</div>
                                 <div th:if="${#fields.hasErrors('occurredAt')}" class="invalid-feedback"
                                      th:errors="*{occurredAt}"></div>
                             </div>
@@ -119,8 +121,8 @@
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-4">
-                            <a th:href="@{/}" class="btn btn-outline-secondary">戻る</a>
-                            <button type="submit" class="btn btn-danger" data-testid="submit-exception">例外事象を記録</button>
+                            <a th:href="@{/exceptions/new}" class="btn btn-outline-secondary">キャンセル</a>
+                            <button type="submit" class="btn btn-primary" data-testid="submit-exception">例外事象を記録</button>
                         </div>
                     </form>
                 </div>

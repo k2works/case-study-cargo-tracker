@@ -6,20 +6,26 @@ package com.example.cargotracker.exception.domain.model.valueobjects;
  */
 public enum ExceptionType {
     /** 遅延 */
-    DELAY("遅延"),
+    DELAY("遅延", "badge bg-warning text-dark"),
     /** 破損 */
-    DAMAGE("破損"),
+    DAMAGE("破損", "badge bg-danger bg-opacity-75"),
     /** 紛失 */
-    LOSS("紛失");
+    LOSS("紛失", "badge bg-danger fw-bold");
 
     private final String displayName;
+    private final String badgeClass;
 
-    ExceptionType(String displayName) {
+    ExceptionType(String displayName, String badgeClass) {
         this.displayName = displayName;
+        this.badgeClass = badgeClass;
     }
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public String getBadgeClass() {
+        return badgeClass;
     }
 
     /** 緊急対応が必要な種別かどうかを返す。LOSS のみ true。 */

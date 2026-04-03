@@ -7,9 +7,14 @@
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
 </head>
 <body class="bg-light">
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
 <main>
 <div class="container py-4">
-    <h2 class="mb-4">追跡情報</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">追跡情報</h2>
+        <a th:href="@{/exceptions/new(trackingNumber=${trackingInfo.trackingNumber})}"
+           class="btn btn-outline-danger btn-sm">例外を記録する</a>
+    </div>
 
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white fw-semibold">基本情報</div>
@@ -90,7 +95,7 @@
                         <td th:text="${#temporals.format(event.occurredAt, 'yyyy/MM/dd HH:mm')}"></td>
                         <td th:text="${event.locationCode != null && !event.locationCode.isBlank() ? event.locationCode : '—'}"></td>
                         <td>
-                            <span class="badge bg-danger" th:text="${event.exceptionTypeDisplayName}"></span>
+                            <span th:class="${event.exceptionTypeBadgeClass}" th:text="${event.exceptionTypeDisplayName}"></span>
                         </td>
                         <td th:text="${event.reason != null && !event.reason.isBlank() ? event.reason : '—'}"></td>
                         <td th:text="${event.resolution}"></td>

@@ -101,6 +101,7 @@ public class TrackingQueryService {
                 incident.getLocationCode(),
                 incident.getExceptionType().name(),
                 incident.getExceptionType().getDisplayName(),
+                incident.getExceptionType().getBadgeClass(),
                 incident.getReason(),
                 incident.getResolution(),
                 "通知済み"

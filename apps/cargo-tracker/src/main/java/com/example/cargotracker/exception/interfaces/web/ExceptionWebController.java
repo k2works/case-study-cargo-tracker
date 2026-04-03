@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -42,6 +43,7 @@ public class ExceptionWebController {
         if (trackingNumber != null && !trackingNumber.isBlank()) {
             form.setTrackingNumber(trackingNumber);
         }
+        form.setOccurredAt(LocalDateTime.now());
         model.addAttribute(FORM_ATTRIBUTE, form);
         model.addAttribute(EXCEPTION_TYPES_ATTRIBUTE, ALL_EXCEPTION_TYPES);
         return VIEW_NEW;
@@ -59,8 +61,10 @@ public class ExceptionWebController {
 
         try {
             recordCargoExceptionCommandService.execute(form.toCommand());
-            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE,
-                    "例外（%s）を記録し、荷主へ通知しました。".formatted(form.getExceptionType().getDisplayName()));
+            String message = ExceptionType.LOSS == form.getExceptionType()
+                    ? "例外（%s）を記録しました。緊急フラグが設定され、管理担当者へ通知しました。".formatted(form.getExceptionType().getDisplayName())
+                    : "例外（%s）を記録し、荷主へ通知しました。".formatted(form.getExceptionType().getDisplayName());
+            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE, message);
             return "redirect:/exceptions/new";
         } catch (TrackingNotFoundException | IllegalArgumentException e) {
             model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());

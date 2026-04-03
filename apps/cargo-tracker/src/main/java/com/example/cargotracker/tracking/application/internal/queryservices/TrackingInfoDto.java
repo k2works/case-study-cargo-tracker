@@ -39,6 +39,7 @@ public record TrackingInfoDto(
             String locationCode,
             String exceptionType,
             String exceptionTypeDisplayName,
+            String exceptionTypeBadgeClass,
             String reason,
             String resolution,
             String shipperNotificationStatus
