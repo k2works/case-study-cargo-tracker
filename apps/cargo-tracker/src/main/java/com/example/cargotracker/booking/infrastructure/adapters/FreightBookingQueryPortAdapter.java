@@ -5,6 +5,8 @@ import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.repository.BookingRepository;
+import com.example.cargotracker.handling.domain.model.repository.HandlingEventRepository;
+import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -21,9 +23,12 @@ import java.util.UUID;
 public class FreightBookingQueryPortAdapter implements FreightBookingQueryPort {
 
     private final BookingRepository bookingRepository;
+    private final HandlingEventRepository handlingEventRepository;
 
-    public FreightBookingQueryPortAdapter(BookingRepository bookingRepository) {
+    public FreightBookingQueryPortAdapter(BookingRepository bookingRepository,
+                                          HandlingEventRepository handlingEventRepository) {
         this.bookingRepository = bookingRepository;
+        this.handlingEventRepository = handlingEventRepository;
     }
 
     @Override
@@ -37,13 +42,20 @@ public class FreightBookingQueryPortAdapter implements FreightBookingQueryPort {
 
         return bookingRepository.findById(id)
                 .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
-                .map(this::toSummary);
+                .flatMap(this::toCalculableSummary);
     }
 
-    private FreightBookingQueryPort.FreightBookingSummary toSummary(Booking booking) {
+    private Optional<FreightBookingQueryPort.FreightBookingSummary> toCalculableSummary(Booking booking) {
+        var handlingEvents = handlingEventRepository.findByBookingId(booking.getId().value());
+        boolean hasReceive = handlingEvents.stream()
+                .anyMatch(event -> event.getEventType() == HandlingEventType.RECEIVE);
+        if (!hasReceive) {
+            return Optional.empty();
+        }
+
         var cargo = booking.getCargoSpecification();
         var transport = booking.getTransportCondition();
-        return new FreightBookingQueryPort.FreightBookingSummary(
+        return Optional.of(new FreightBookingQueryPort.FreightBookingSummary(
                 booking.getId().value().toString(),
                 cargo.cargoType(),
                 cargo.weightKg(),
@@ -51,9 +63,9 @@ public class FreightBookingQueryPortAdapter implements FreightBookingQueryPort {
                 transport.destinationLocation(),
                 booking.getAssignedRoute() != null ? booking.getAssignedRoute().routePath() : "—",
                 booking.getAssignedRoute() != null ? booking.getAssignedRoute().estimatedArrival() : null,
-                0,
+                handlingEvents.size(),
                 estimateDistanceKm(transport.originLocation(), transport.destinationLocation())
-        );
+        ));
     }
 
     private BigDecimal estimateDistanceKm(String originLocation, String destinationLocation) {

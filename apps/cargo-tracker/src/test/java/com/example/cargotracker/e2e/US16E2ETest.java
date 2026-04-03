@@ -59,6 +59,7 @@ class US16E2ETest extends PostgreSQLIntegrationTestBase {
     @AfterEach
     void cleanUp() {
         jdbcTemplate.execute("DELETE FROM freight_charges");
+        jdbcTemplate.execute("DELETE FROM handling_events");
         jdbcTemplate.execute("DELETE FROM tracking_numbers");
         jdbcTemplate.execute("DELETE FROM bookings");
         jdbcTemplate.execute("DELETE FROM shippers");
@@ -115,6 +116,17 @@ class US16E2ETest extends PostgreSQLIntegrationTestBase {
                         .session(session)
                         .with(csrf()))
                 .andExpect(status().isOk());
+
+        // 5. RECEIVE 荷役イベントを登録する（料金算出の前提条件）
+        mockMvc.perform(post("/api/v1/handling-events")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(String.format(
+                                "{\"bookingId\": \"%s\", \"eventType\": \"RECEIVE\", \"locationCode\": \"SGSIN\", " +
+                                "\"completionTime\": \"2026-05-31T10:00:00\", \"memo\": \"E2E テスト用引取\", " +
+                                "\"receiveConfirmationCode\": \"RC-E2E-001\"}", bookingId))
+                        .with(csrf()))
+                .andExpect(status().isCreated());
 
         return bookingId;
     }

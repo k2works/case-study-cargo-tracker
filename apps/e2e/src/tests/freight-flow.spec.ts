@@ -81,7 +81,7 @@ test.describe.serial('E19〜E20: US16 輸送料金を算出する', () => {
     const freightPage = new FreightPage(page);
 
     await freightPage.gotoCalculate(bookingId);
-    await expect(page.locator('h4')).toContainText('輸送料金算出');
+    await expect(page.locator('h1, h4').first()).toContainText('輸送料金算出');
     await freightPage.expectSummary({
       routePath: 'JPTYO',
       distanceKm: '5,300',
