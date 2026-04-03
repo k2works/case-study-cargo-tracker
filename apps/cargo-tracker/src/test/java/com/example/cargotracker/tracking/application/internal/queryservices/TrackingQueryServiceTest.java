@@ -1,10 +1,7 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
-import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
-import com.example.cargotracker.exception.domain.model.aggregates.ExceptionId;
-import com.example.cargotracker.exception.domain.model.repository.CargoExceptionRepository;
-import com.example.cargotracker.exception.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.application.internal.outboundservices.BookingInfoQueryPort;
+import com.example.cargotracker.tracking.application.internal.outboundservices.ExceptionInfoQueryPort;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
 import com.example.cargotracker.tracking.domain.model.valueobjects.HandlingEventView;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
@@ -37,7 +34,7 @@ class TrackingQueryServiceTest {
     private BookingInfoQueryPort bookingInfoQueryPort;
 
     @Mock
-    private CargoExceptionRepository cargoExceptionRepository;
+    private ExceptionInfoQueryPort exceptionInfoQueryPort;
 
     private TrackingQueryService trackingQueryService;
 
@@ -46,7 +43,7 @@ class TrackingQueryServiceTest {
         trackingQueryService = new TrackingQueryService(
                 trackingRepository,
                 bookingInfoQueryPort,
-                cargoExceptionRepository
+                exceptionInfoQueryPort
         );
     }
 
@@ -77,7 +74,7 @@ class TrackingQueryServiceTest {
                 new HandlingEventView(completionTime, "JPTYO", "LOAD", null),
                 new HandlingEventView(completionTime.minusDays(1), "JPTYO", "RECEIVE", "引取メモ")
         ));
-        when(cargoExceptionRepository.findByTrackingNumber("TRK-ABC12345")).thenReturn(List.of());
+        when(exceptionInfoQueryPort.findByTrackingNumber("TRK-ABC12345")).thenReturn(List.of());
         when(bookingInfoQueryPort.findById(bookingId)).thenReturn(
                 Optional.of(new BookingInfoQueryPort.BookingSummary("JPTYO", "SGSIN", LocalDate.of(2026, 6, 1)))
         );
@@ -107,7 +104,7 @@ class TrackingQueryServiceTest {
         TrackingEntry entry = new TrackingEntry(tn, bookingId);
         when(trackingRepository.findByTrackingNumber(tn)).thenReturn(Optional.of(entry));
         when(trackingRepository.findHandlingEventsByTrackingNumber(tn)).thenReturn(List.of());
-        when(cargoExceptionRepository.findByTrackingNumber("TRK-ABC12345")).thenReturn(List.of());
+        when(exceptionInfoQueryPort.findByTrackingNumber("TRK-ABC12345")).thenReturn(List.of());
         when(bookingInfoQueryPort.findById(any())).thenReturn(
                 Optional.of(new BookingInfoQueryPort.BookingSummary("JPTYO", "SGSIN", LocalDate.of(2026, 6, 1)))
         );
@@ -143,17 +140,15 @@ class TrackingQueryServiceTest {
         when(trackingRepository.findHandlingEventsByTrackingNumber(tn)).thenReturn(List.of(
                 new HandlingEventView(completionTime, "JPTYO", "LOAD", "本船へ積み込み")
         ));
-        CargoIncident incident = CargoIncident.create(
-                ExceptionId.generate(),
-                "TRK-ABC12345",
-                ExceptionType.DELAY,
-                "SGSIN",
-                occurredAt,
-                "悪天候による港湾閉鎖"
-        );
-        incident.resolve("代替船を手配し、到着予定を 2026-06-05 に更新");
-        when(cargoExceptionRepository.findByTrackingNumber("TRK-ABC12345")).thenReturn(List.of(
-                incident
+        when(exceptionInfoQueryPort.findByTrackingNumber("TRK-ABC12345")).thenReturn(List.of(
+                new ExceptionInfoQueryPort.ExceptionInfo(
+                        occurredAt,
+                        "SGSIN",
+                        "DELAY",
+                        "遅延",
+                        "悪天候による港湾閉鎖",
+                        "代替船を手配し、到着予定を 2026-06-05 に更新"
+                )
         ));
         when(bookingInfoQueryPort.findById(bookingId)).thenReturn(
                 Optional.of(new BookingInfoQueryPort.BookingSummary("JPTYO", "SGSIN", LocalDate.of(2026, 6, 1)))
@@ -170,6 +165,6 @@ class TrackingQueryServiceTest {
         assertThat(dto.exceptionHistory().get(0).exceptionTypeDisplayName()).isEqualTo("遅延");
         assertThat(dto.exceptionHistory().get(0).reason()).isEqualTo("悪天候による港湾閉鎖");
         assertThat(dto.exceptionHistory().get(0).resolution()).contains("到着予定");
-        assertThat(dto.exceptionHistory().get(0).shipperNotificationStatus()).isEqualTo("通知済み");
+        assertThat(dto.exceptionHistory().get(0).shipperNotificationStatus()).isEqualTo("手動通知が必要");
     }
 }

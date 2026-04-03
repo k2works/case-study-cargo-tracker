@@ -2,6 +2,7 @@ package com.example.cargotracker.exception.domain.model.aggregates;
 
 import com.example.cargotracker.exception.domain.model.valueobjects.ExceptionType;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -18,6 +19,7 @@ public class CargoIncident {
     private final LocalDateTime occurredAt;
     private final String reason;
     private final boolean urgent;
+    private LocalDate estimatedArrivalDate;
     private String resolution;
 
     private CargoIncident(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
@@ -49,9 +51,10 @@ public class CargoIncident {
      */
     public static CargoIncident reconstitute(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
                                              String locationCode, LocalDateTime occurredAt, String reason,
-                                             String resolution) {
+                                             String resolution, LocalDate estimatedArrivalDate) {
         CargoIncident incident = new CargoIncident(id, trackingNumber, exceptionType, locationCode, occurredAt, reason);
         incident.resolution = resolution;
+        incident.estimatedArrivalDate = estimatedArrivalDate;
         return incident;
     }
 
@@ -62,6 +65,13 @@ public class CargoIncident {
         this.resolution = resolution;
     }
 
+    /**
+     * 遅延の場合の新しい到着予定日を設定する。
+     */
+    public void setEstimatedArrivalDate(LocalDate estimatedArrivalDate) {
+        this.estimatedArrivalDate = estimatedArrivalDate;
+    }
+
     public ExceptionId getId() { return id; }
     public String getTrackingNumber() { return trackingNumber; }
     public ExceptionType getExceptionType() { return exceptionType; }
@@ -69,5 +79,6 @@ public class CargoIncident {
     public LocalDateTime getOccurredAt() { return occurredAt; }
     public String getReason() { return reason; }
     public boolean isUrgent() { return urgent; }
+    public LocalDate getEstimatedArrivalDate() { return estimatedArrivalDate; }
     public String getResolution() { return resolution; }
 }

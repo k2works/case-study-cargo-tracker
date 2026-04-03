@@ -41,7 +41,8 @@ public record RecordCargoExceptionRequest(
                 locationCode,
                 occurredAt,
                 reason,
-                resolution
+                resolution,
+                null
         );
     }
 }

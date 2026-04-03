@@ -2,6 +2,7 @@ package com.example.cargotracker.exception.domain.model.commands;
 
 import com.example.cargotracker.exception.domain.model.valueobjects.ExceptionType;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -13,5 +14,6 @@ public record RecordCargoExceptionCommand(
         String locationCode,
         LocalDateTime occurredAt,
         String reason,
-        String resolution
+        String resolution,
+        LocalDate estimatedArrivalDate
 ) {}

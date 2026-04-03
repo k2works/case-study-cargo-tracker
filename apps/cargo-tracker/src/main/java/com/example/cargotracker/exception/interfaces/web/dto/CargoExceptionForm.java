@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -29,6 +30,9 @@ public class CargoExceptionForm {
     @NotBlank(message = "対応内容は必須です")
     private String resolution;
 
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate estimatedArrivalDate;
+
     public RecordCargoExceptionCommand toCommand() {
         return new RecordCargoExceptionCommand(
                 trackingNumber,
@@ -36,7 +40,8 @@ public class CargoExceptionForm {
                 locationCode,
                 occurredAt,
                 reason,
-                resolution
+                resolution,
+                estimatedArrivalDate
         );
     }
 
@@ -52,4 +57,6 @@ public class CargoExceptionForm {
     public void setReason(String reason) { this.reason = reason; }
     public String getResolution() { return resolution; }
     public void setResolution(String resolution) { this.resolution = resolution; }
+    public LocalDate getEstimatedArrivalDate() { return estimatedArrivalDate; }
+    public void setEstimatedArrivalDate(LocalDate estimatedArrivalDate) { this.estimatedArrivalDate = estimatedArrivalDate; }
 }

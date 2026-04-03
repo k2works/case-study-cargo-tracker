@@ -44,6 +44,7 @@ public class RecordCargoExceptionCommandService {
                 command.reason()
         );
         incident.resolve(command.resolution());
+        incident.setEstimatedArrivalDate(command.estimatedArrivalDate());
 
         // 永続化
         cargoExceptionRepository.save(incident);

@@ -120,6 +120,17 @@
                             </div>
                         </div>
 
+                        <div class="mb-3 row" id="estimatedArrivalDateRow" style="display: none;">
+                            <label for="estimatedArrivalDate" class="col-sm-3 col-form-label">到着予定日</label>
+                            <div class="col-sm-9">
+                                <input type="date" class="form-control" id="estimatedArrivalDate"
+                                       name="estimatedArrivalDate"
+                                       data-testid="exception-estimated-arrival-date"
+                                       th:value="*{estimatedArrivalDate}" />
+                                <div class="form-text">遅延の場合、更新後の到着予定日を入力してください。</div>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-end gap-2 mt-4">
                             <a th:href="@{/exceptions/new}" class="btn btn-outline-secondary">キャンセル</a>
                             <button type="submit" class="btn btn-primary" data-testid="submit-exception">例外事象を記録</button>
@@ -133,5 +144,21 @@
 </main>
 
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script>
+(function () {
+    var select = document.getElementById('exceptionType');
+    var row = document.getElementById('estimatedArrivalDateRow');
+    var input = document.getElementById('estimatedArrivalDate');
+
+    function toggle() {
+        var show = select.value === 'DELAY';
+        row.style.display = show ? '' : 'none';
+        if (!show) input.value = '';
+    }
+
+    select.addEventListener('change', toggle);
+    toggle();
+})();
+</script>
 </body>
 </html>

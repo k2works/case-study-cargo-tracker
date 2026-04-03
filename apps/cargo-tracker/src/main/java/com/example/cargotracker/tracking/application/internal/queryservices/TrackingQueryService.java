@@ -1,8 +1,7 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
-import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
-import com.example.cargotracker.exception.domain.model.repository.CargoExceptionRepository;
 import com.example.cargotracker.tracking.application.internal.outboundservices.BookingInfoQueryPort;
+import com.example.cargotracker.tracking.application.internal.outboundservices.ExceptionInfoQueryPort;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
@@ -21,14 +20,14 @@ public class TrackingQueryService {
 
     private final TrackingRepository trackingRepository;
     private final BookingInfoQueryPort bookingInfoQueryPort;
-    private final CargoExceptionRepository cargoExceptionRepository;
+    private final ExceptionInfoQueryPort exceptionInfoQueryPort;
 
     public TrackingQueryService(TrackingRepository trackingRepository,
                                 BookingInfoQueryPort bookingInfoQueryPort,
-                                CargoExceptionRepository cargoExceptionRepository) {
+                                ExceptionInfoQueryPort exceptionInfoQueryPort) {
         this.trackingRepository = trackingRepository;
         this.bookingInfoQueryPort = bookingInfoQueryPort;
-        this.cargoExceptionRepository = cargoExceptionRepository;
+        this.exceptionInfoQueryPort = exceptionInfoQueryPort;
     }
 
     public Optional<TrackingEntry> findByTrackingNumber(String trackingNumberValue) {
@@ -58,7 +57,7 @@ public class TrackingQueryService {
                                     ))
                                     .toList();
                     List<TrackingInfoDto.ExceptionEventSummary> exceptionHistory =
-                            cargoExceptionRepository.findByTrackingNumber(trackingNumber.value())
+                            exceptionInfoQueryPort.findByTrackingNumber(trackingNumber.value())
                                     .stream()
                                     .map(this::toExceptionSummary)
                                     .toList();
@@ -95,16 +94,25 @@ public class TrackingQueryService {
         }
     }
 
-    private TrackingInfoDto.ExceptionEventSummary toExceptionSummary(CargoIncident incident) {
+    private static String resolveBadgeClass(String exceptionType) {
+        return switch (exceptionType) {
+            case "DELAY" -> "badge bg-warning text-dark";
+            case "DAMAGE" -> "badge bg-danger bg-opacity-75";
+            case "LOSS" -> "badge bg-danger fw-bold";
+            default -> "badge bg-secondary";
+        };
+    }
+
+    private TrackingInfoDto.ExceptionEventSummary toExceptionSummary(ExceptionInfoQueryPort.ExceptionInfo info) {
         return new TrackingInfoDto.ExceptionEventSummary(
-                incident.getOccurredAt(),
-                incident.getLocationCode(),
-                incident.getExceptionType().name(),
-                incident.getExceptionType().getDisplayName(),
-                incident.getExceptionType().getBadgeClass(),
-                incident.getReason(),
-                incident.getResolution(),
-                "通知済み"
+                info.occurredAt(),
+                info.locationCode(),
+                info.exceptionType(),
+                info.displayName(),
+                resolveBadgeClass(info.exceptionType()),
+                info.reason(),
+                info.resolution(),
+                "手動通知が必要"
         );
     }
 

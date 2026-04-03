@@ -1,5 +1,6 @@
 package com.example.cargotracker.exception.infrastructure.repositories;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -14,5 +15,6 @@ public record CargoExceptionRecord(
         String reason,
         Boolean urgent,
         String resolution,
+        LocalDate estimatedArrivalDate,
         LocalDateTime createdAt
 ) {}

@@ -29,6 +29,7 @@ public class CargoExceptionRepositoryImpl implements CargoExceptionRepository {
                 incident.getReason(),
                 incident.isUrgent(),
                 incident.getResolution(),
+                incident.getEstimatedArrivalDate(),
                 LocalDateTime.now()
         );
         cargoExceptionMapper.insert(row);
@@ -49,7 +50,8 @@ public class CargoExceptionRepositoryImpl implements CargoExceptionRepository {
                 row.locationCode(),
                 row.occurredAt(),
                 row.reason(),
-                row.resolution()
+                row.resolution(),
+                row.estimatedArrivalDate()
         );
     }
 }

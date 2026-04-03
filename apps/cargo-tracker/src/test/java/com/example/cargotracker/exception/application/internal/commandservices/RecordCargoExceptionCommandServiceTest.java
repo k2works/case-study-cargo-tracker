@@ -50,7 +50,8 @@ class RecordCargoExceptionCommandServiceTest {
                 "JPTYO",
                 LocalDateTime.of(2026, 5, 28, 10, 0),
                 "悪天候",
-                "代替船を手配し、到着予定を 2026-06-05 に更新"
+                "代替船を手配し、到着予定を 2026-06-05 に更新",
+                java.time.LocalDate.of(2026, 6, 5)
         );
     }
 
@@ -96,7 +97,7 @@ class RecordCargoExceptionCommandServiceTest {
         doNothing().when(trackingExistencePort).verifyExists("TRK-AB123456");
         RecordCargoExceptionCommand lossCommand = new RecordCargoExceptionCommand(
                 "TRK-AB123456", ExceptionType.LOSS, "SGSIN",
-                LocalDateTime.of(2026, 5, 31, 8, 0), "保管中に紛失", "調査を開始"
+                LocalDateTime.of(2026, 5, 31, 8, 0), "保管中に紛失", "調査を開始", null
         );
 
         commandService.execute(lossCommand);
