@@ -23,12 +23,16 @@
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" th:href="@{/handling/receive}">引取記録</a></li>
                         <li><a class="dropdown-item" th:href="@{/handling/manual-update}">手動更新</a></li>
+                        <li><a class="dropdown-item" th:href="@{/exceptions/new}">例外記録</a></li>
                     </ul>
                 </li>
-                <li class="nav-item"><a class="nav-link text-white" th:href="@{/freight}">輸送料金</a></li>
-                <li class="nav-item"><a class="nav-link text-white" th:href="@{/invoices}">精算</a></li>
-                <li class="nav-item">
-                    <a class="nav-link text-white" th:href="@{/exceptions/new}">例外記録</a>
+                <li class="nav-item dropdown">
+                    <a class="nav-link text-white dropdown-toggle" href="#" role="button"
+                       data-bs-toggle="dropdown" aria-expanded="false">精算</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/freight}">輸送料金一覧</a></li>
+                        <li><a class="dropdown-item" th:href="@{/invoices}">精算書一覧</a></li>
+                    </ul>
                 </li>
             </ul>
             <div class="navbar-nav ms-auto">
