@@ -13,4 +13,5 @@ public interface HandlingEventMapper {
     List<HandlingEventRecord> findFiltered(@Param("bookingId") UUID bookingId,
                                            @Param("eventType") String eventType,
                                            @Param("locationCode") String locationCode);
+    List<HandlingEventRecord> findAll(@Param("limit") int limit);
 }

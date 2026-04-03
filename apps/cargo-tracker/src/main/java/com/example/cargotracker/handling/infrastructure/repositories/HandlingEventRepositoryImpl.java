@@ -49,6 +49,13 @@ public class HandlingEventRepositoryImpl implements HandlingEventRepository {
                 .toList();
     }
 
+    @Override
+    public List<HandlingEvent> findAll(int limit) {
+        return handlingEventMapper.findAll(limit).stream()
+                .map(this::toHandlingEvent)
+                .toList();
+    }
+
     private HandlingEvent toHandlingEvent(HandlingEventRecord row) {
         return HandlingEvent.reconstitute(
                 new HandlingEventId(row.id()),

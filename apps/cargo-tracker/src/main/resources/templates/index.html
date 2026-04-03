@@ -4,36 +4,97 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>CargoTracker</title>
+    <title>ダッシュボード - CargoTracker</title>
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}"/>
 </head>
 <body>
 <nav th:replace="~{fragments/header :: appHeader}"></nav>
-<div class="container mt-5">
-    <h1>国際貨物輸送管理システム</h1>
-    <p class="lead">ようこそ、CargoTracker へ。</p>
-    <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card">
+<div class="container-fluid mt-4 px-4">
+    <h2 class="mb-4">ダッシュボード</h2>
+
+    <!-- サマリーカード -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary">
                 <div class="card-body">
-                    <h5 class="card-title">荷主管理</h5>
-                    <p class="card-text">荷主の登録・照会を行います。</p>
-                    <a th:href="@{/shippers}" class="btn btn-primary">荷主一覧</a>
+                    <h6 class="card-title">予約件数</h6>
+                    <h2 class="card-text" th:text="${dashboard.totalBookings}">0</h2>
+                    <small>全件</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card">
+        <div class="col-md-3">
+            <div class="card text-bg-success">
                 <div class="card-body">
-                    <h5 class="card-title">貨物予約</h5>
-                    <p class="card-text">貨物予約の登録・照会を行います。</p>
-                    <a th:href="@{/bookings}" class="btn btn-primary">予約一覧</a>
+                    <h6 class="card-title">確定済</h6>
+                    <h2 class="card-text" th:text="${dashboard.confirmedBookings}">0</h2>
+                    <small>（CONFIRMED）</small>
                 </div>
             </div>
         </div>
+        <div class="col-md-3">
+            <div class="card text-bg-warning">
+                <div class="card-body">
+                    <h6 class="card-title">未確定</h6>
+                    <h2 class="card-text" th:text="${dashboard.provisionalBookings}">0</h2>
+                    <small>（PROVISIONAL）</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3" sec:authorize="hasRole('BILLING')">
+            <div class="card text-bg-danger">
+                <div class="card-body">
+                    <h6 class="card-title">未払い請求</h6>
+                    <h2 class="card-text" th:text="${dashboard.pendingInvoices}">0</h2>
+                    <small>（PENDING）</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最新荷役作業 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">最新荷役作業</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>作業 ID</th>
+                        <th>貨物 ID</th>
+                        <th>種別</th>
+                        <th>場所</th>
+                        <th>日時</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(dashboard.recentHandlingEvents)}">
+                        <td colspan="5" class="text-center text-muted py-3">荷役作業はまだありません</td>
+                    </tr>
+                    <tr th:each="event : ${dashboard.recentHandlingEvents}">
+                        <td th:text="${event.eventId}"></td>
+                        <td th:text="${event.bookingId}"></td>
+                        <td th:text="${event.eventTypeLabel}"></td>
+                        <td th:text="${event.locationCode}"></td>
+                        <td th:text="${#temporals.format(event.completionTime, 'yyyy-MM-dd HH:mm')}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- クイックアクション -->
+    <div class="d-flex gap-2">
+        <a th:href="@{/bookings}" class="btn btn-outline-primary">貨物予約一覧へ</a>
+        <a th:href="@{/tracking}" class="btn btn-outline-secondary">追跡入力へ</a>
+        <a th:href="@{/handling}" class="btn btn-outline-success">荷役登録へ</a>
     </div>
 </div>
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
 <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
 </body>
 </html>
+

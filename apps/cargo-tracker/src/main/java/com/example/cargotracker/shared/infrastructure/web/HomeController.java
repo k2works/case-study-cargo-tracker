@@ -12,6 +12,7 @@ import java.util.Arrays;
 public class HomeController {
 
     private final Environment env;
+    private final DashboardQueryService dashboardQueryService;
 
     @Value("${spring.security.user.name:}")
     private String devUsername;
@@ -22,12 +23,14 @@ public class HomeController {
     @Value("${app.seed.enabled:false}")
     private boolean seedDataEnabled;
 
-    public HomeController(Environment env) {
+    public HomeController(Environment env, DashboardQueryService dashboardQueryService) {
         this.env = env;
+        this.dashboardQueryService = dashboardQueryService;
     }
 
     @GetMapping("/")
-    public String index() {
+    public String index(Model model) {
+        model.addAttribute("dashboard", dashboardQueryService.getSummary());
         return "index";
     }
 

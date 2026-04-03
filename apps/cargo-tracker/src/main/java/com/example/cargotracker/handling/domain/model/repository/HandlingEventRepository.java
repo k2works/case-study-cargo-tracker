@@ -16,4 +16,6 @@ public interface HandlingEventRepository {
     List<HandlingEvent> findByBookingId(UUID bookingId);
 
     List<HandlingEvent> findFiltered(UUID bookingId, HandlingEventType eventType, String locationCode);
+
+    List<HandlingEvent> findAll(int limit);
 }

@@ -29,4 +29,8 @@ public class FindHandlingEventsQueryService {
     public List<HandlingEvent> findFiltered(UUID bookingId, HandlingEventType eventType, String locationCode) {
         return handlingEventRepository.findFiltered(bookingId, eventType, locationCode);
     }
+
+    public List<HandlingEvent> findAll(int limit) {
+        return handlingEventRepository.findAll(limit);
+    }
 }
