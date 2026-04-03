@@ -14,7 +14,7 @@
 <main>
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>輸送料金一覧</h4>
+        <h1 class="h4">輸送料金一覧</h1>
         <a th:href="@{/freight/calculate}" class="btn btn-primary">料金算出</a>
     </div>
 
@@ -23,7 +23,8 @@
 
     <div class="card shadow-sm">
         <div class="card-body p-0">
-            <table class="table table-hover mb-0" data-testid="freight-charge-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" data-testid="freight-charge-table">
                 <thead class="table-light">
                 <tr>
                     <th scope="col">ID</th>
@@ -55,12 +56,14 @@
                               th:action="@{/freight/{id}/confirm(id=${charge.id})}"
                               method="post"
                               class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-success" data-testid="freight-confirm-submit">確定</button>
+                            <button type="submit" class="btn btn-sm btn-outline-success" data-testid="freight-confirm-submit"
+                                    th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の料金を確定'">確定</button>
                         </form>
                     </td>
                 </tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>
