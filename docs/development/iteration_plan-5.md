@@ -98,10 +98,10 @@ tags: iteration-plan, it5
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `CargoException` 集約・`ExceptionType` enum（DELAY/DAMAGE/LOSS）・`ExceptionId` 値オブジェクトを実装し、ドメインテストを追加する | 3h | Copilot | [ ] |
-| 1.2 | Flyway migration `V010__create_cargo_exceptions.sql` と `CargoExceptionMapper`（MyBatis）を実装する | 2h | Copilot | [ ] |
-| 1.3 | `RecordCargoExceptionCommandService` を実装し、追跡番号存在確認・貨物状態「例外発生」更新ロジックとテストを追加する | 4h | Copilot | [ ] |
-| 1.4 | 例外記録 Web フォーム（`/exceptions/delay`）・REST API（`POST /api/v1/cargo-exceptions`）と MVC/REST テストを追加する | 3h | Copilot | [ ] |
+| 1.1 | `CargoException` 集約・`ExceptionType` enum（DELAY/DAMAGE/LOSS）・`ExceptionId` 値オブジェクトを実装し、ドメインテストを追加する | 3h | Copilot | [x] |
+| 1.2 | Flyway migration `V010__create_cargo_exceptions.sql` と `CargoExceptionMapper`（MyBatis）を実装する | 2h | Copilot | [x] |
+| 1.3 | `RecordCargoExceptionCommandService` を実装し、追跡番号存在確認・貨物状態「例外発生」更新ロジックとテストを追加する | 4h | Copilot | [x] |
+| 1.4 | 例外記録 Web フォーム（`/exceptions/delay`）・REST API（`POST /api/v1/cargo-exceptions`）と MVC/REST テストを追加する | 3h | Copilot | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -442,3 +442,4 @@ CalculateFreightCommandService --> HandlingHistoryQueryPort
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-02 | IT5 計画を作成 | Copilot |
+| 2026-04-03 | US14 完了・進捗率 27%（3/11 SP）・386 テスト Green・SonarQube 修正・UI/UX レビュー指摘対応（ナビゲーション追加・badge 深刻度別色・キャンセルボタン）| Copilot |
