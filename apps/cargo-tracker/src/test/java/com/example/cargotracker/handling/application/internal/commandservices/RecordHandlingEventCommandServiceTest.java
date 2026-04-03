@@ -5,6 +5,7 @@ import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
 import com.example.cargotracker.handling.domain.model.commands.RecordHandlingEventCommand;
 import com.example.cargotracker.handling.domain.model.events.HandlingEventRecordedEvent;
+import com.example.cargotracker.handling.domain.model.exceptions.DuplicateReceiveException;
 import com.example.cargotracker.handling.domain.model.repository.HandlingEventRepository;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
 import org.junit.jupiter.api.BeforeEach;
@@ -144,7 +145,7 @@ class RecordHandlingEventCommandServiceTest {
 
         assertThatThrownBy(() -> commandService.execute(command))
                 .isInstanceOf(DuplicateReceiveException.class)
-                .hasMessageContaining(bookingId.toString());
+                .hasMessageContaining("二重登録");
         verify(handlingEventRepository, never()).save(any());
     }
 

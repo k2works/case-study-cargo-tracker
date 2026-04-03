@@ -88,7 +88,7 @@ class TrackingQueryServiceTest {
     }
 
     @Test
-    @DisplayName("荷役履歴がない場合は空リストを返し currentState は「未受取」になる")
+    @DisplayName("荷役履歴がない場合は空リストを返し currentState は「引取待ち」になる")
     void findTrackingInfo_noHandlingHistory_returnsEmptyList() {
         UUID bookingId = UUID.randomUUID();
         TrackingNumber tn = new TrackingNumber("TRK-ABC12345");
@@ -103,7 +103,7 @@ class TrackingQueryServiceTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().handlingHistory()).isEmpty();
-        assertThat(result.get().currentState()).isEqualTo("未受取");
+        assertThat(result.get().currentState()).isEqualTo("引取待ち");
     }
 
     @Test

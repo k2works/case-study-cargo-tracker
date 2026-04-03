@@ -1,8 +1,8 @@
 package com.example.cargotracker.handling.interfaces.web;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
-import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
+import com.example.cargotracker.handling.domain.model.exceptions.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingEventType;
 import com.example.cargotracker.handling.interfaces.web.dto.HandlingEventForm;

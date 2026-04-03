@@ -134,17 +134,19 @@ class ArchitectureTest {
                     .should(haveAfterCommitTransactionalEventListener())
                     .as("[A09] application/infrastructure のドメインイベントリスナーは @TransactionalEventListener(AFTER_COMMIT) を使用しなければならない");
 
-    // A10: tracking の application.internal は handling の domain を直接参照しない
+    // A10: tracking の全層は handling の domain を直接参照しない
     @ArchTest
     static final ArchRule A10_trackingのアプリケーション層はhandlingのドメインを直接参照しない =
             noClasses()
                     .that().resideInAnyPackage(
                             "com.example.cargotracker.tracking.application.internal..",
-                            "com.example.cargotracker.tracking.domain.."
+                            "com.example.cargotracker.tracking.domain..",
+                            "com.example.cargotracker.tracking.infrastructure..",
+                            "com.example.cargotracker.tracking.interfaces.."
                     )
                     .should().dependOnClassesThat()
                     .resideInAPackage("com.example.cargotracker.handling.domain..")
-                    .as("[A10] tracking の application/domain 層は handling の domain 層を直接参照してはならない（ACL 経由のみ）");
+                    .as("[A10] tracking の全層は handling の domain 層を直接参照してはならない（ACL 経由のみ）");
 
     private static ArchCondition<JavaMethod> haveAfterCommitTransactionalEventListener() {
         return new ArchCondition<>("use @TransactionalEventListener(phase = AFTER_COMMIT)") {

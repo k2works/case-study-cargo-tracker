@@ -112,8 +112,12 @@ public class HandlingEvent {
     /**
      * 指定された荷役イベントリストに RECEIVE イベントが存在しないことを確認する。
      * RECEIVE は予約ごとに 1 回のみ記録できる。
+     * @throws NullPointerException existingEvents が null の場合
      */
     public static boolean canReceive(List<HandlingEvent> existingEvents) {
+        if (existingEvents == null) {
+            throw new NullPointerException("existingEvents は null にできません");
+        }
         return existingEvents.stream()
                 .noneMatch(e -> e.getEventType() == HandlingEventType.RECEIVE);
     }

@@ -86,10 +86,10 @@ public class TrackingQueryService {
 
     private String resolveCurrentState(List<TrackingInfoDto.HandlingEventSummary> history) {
         if (history.isEmpty()) {
-            return "未受取";
+            return "引取待ち";
         }
         TrackingInfoDto.HandlingEventSummary latest = history.get(0);
-        if ("RECEIVE".equals(latest.eventType())) {
+        if (TrackingEventType.RECEIVE.name().equals(latest.eventType())) {
             return "引取済";
         }
         return latest.eventTypeDisplayName();

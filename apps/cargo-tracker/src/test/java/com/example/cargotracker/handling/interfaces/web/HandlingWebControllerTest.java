@@ -1,8 +1,8 @@
 package com.example.cargotracker.handling.interfaces.web;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
-import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
+import com.example.cargotracker.handling.domain.model.exceptions.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
@@ -230,7 +230,7 @@ class HandlingWebControllerTest {
     void createReceive_duplicateReceive_showsFieldError() throws Exception {
         UUID bookingId = UUID.randomUUID();
         when(recordHandlingEventCommandService.execute(any()))
-                .thenThrow(new DuplicateReceiveException(bookingId));
+                .thenThrow(new DuplicateReceiveException());
 
         mockMvc.perform(post("/handling/receive")
                         .with(csrf())

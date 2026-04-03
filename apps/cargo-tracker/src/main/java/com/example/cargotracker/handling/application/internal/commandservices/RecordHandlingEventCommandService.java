@@ -2,6 +2,7 @@ package com.example.cargotracker.handling.application.internal.commandservices;
 
 import com.example.cargotracker.handling.application.internal.outboundservices.BookingExistencePort;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
+import com.example.cargotracker.handling.domain.model.exceptions.DuplicateReceiveException;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
 import com.example.cargotracker.handling.domain.model.commands.RecordHandlingEventCommand;
 import com.example.cargotracker.handling.domain.model.repository.HandlingEventRepository;
@@ -39,7 +40,7 @@ public class RecordHandlingEventCommandService {
         if (command.eventType() == HandlingEventType.RECEIVE) {
             List<HandlingEvent> existing = handlingEventRepository.findByBookingId(command.bookingId());
             if (!HandlingEvent.canReceive(existing)) {
-                throw new DuplicateReceiveException(command.bookingId());
+                throw new DuplicateReceiveException();
             }
         }
 

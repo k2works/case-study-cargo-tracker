@@ -1,8 +1,8 @@
 package com.example.cargotracker.handling.interfaces.rest;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
-import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
+import com.example.cargotracker.handling.domain.model.exceptions.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEvent;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
@@ -113,14 +113,15 @@ class HandlingRestControllerTest {
     void record_duplicateReceive_returns409() throws Exception {
         UUID bookingId = UUID.randomUUID();
         when(recordHandlingEventCommandService.execute(any()))
-                .thenThrow(new DuplicateReceiveException(bookingId));
+                .thenThrow(new DuplicateReceiveException());
 
         String requestBody = """
                 {
                   "bookingId": "%s",
                   "eventType": "RECEIVE",
                   "locationCode": "JPTYO",
-                  "completionTime": "2025-01-15T10:00:00"
+                  "completionTime": "2025-01-15T10:00:00",
+                  "receiveConfirmationCode": "RC-DUPLICATE-001"
                 }
                 """.formatted(bookingId);
 

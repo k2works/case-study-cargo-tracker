@@ -1,8 +1,8 @@
 package com.example.cargotracker.handling.interfaces.rest;
 
 import com.example.cargotracker.handling.application.internal.commandservices.BookingNotFoundException;
-import com.example.cargotracker.handling.application.internal.commandservices.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.commandservices.RecordHandlingEventCommandService;
+import com.example.cargotracker.handling.domain.model.exceptions.DuplicateReceiveException;
 import com.example.cargotracker.handling.application.internal.queryservices.FindHandlingEventsQueryService;
 import com.example.cargotracker.handling.domain.model.aggregates.HandlingEventId;
 import com.example.cargotracker.handling.interfaces.rest.dto.HandlingEventResponse;
@@ -56,7 +56,8 @@ public class HandlingRestController {
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "記録成功。Location ヘッダーに作成リソース URI を含む"),
         @ApiResponse(responseCode = "400", description = "バリデーションエラー"),
-        @ApiResponse(responseCode = "404", description = "指定した bookingId の予約が存在しない")
+        @ApiResponse(responseCode = "404", description = "指定した bookingId の予約が存在しない"),
+        @ApiResponse(responseCode = "409", description = "同一予約に RECEIVE イベントが既に存在する（RECEIVE は 1 回のみ登録可能）")
     })
     public ResponseEntity<HandlingEventResponse> createHandlingEvent(
             @Valid @RequestBody RecordHandlingEventRequest request,

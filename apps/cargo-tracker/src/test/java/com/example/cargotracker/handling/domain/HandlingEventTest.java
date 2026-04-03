@@ -216,4 +216,12 @@ class HandlingEventTest {
     void canReceive_emptyList_returnsTrue() {
         assertThat(HandlingEvent.canReceive(List.of())).isTrue();
     }
+
+    @Test
+    @DisplayName("null リストを渡すと canReceive は NullPointerException をスローする")
+    void canReceive_nullList_throwsNullPointerException() {
+        assertThatThrownBy(() -> HandlingEvent.canReceive(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("null");
+    }
 }
