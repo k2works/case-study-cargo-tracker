@@ -29,12 +29,12 @@ tags: iteration-plan, it6
 
 ### 成功基準
 
-- [ ] 法人荷主の予約に対して割引率（0〜30%）が自動適用され、割引後合計金額が算出される
-- [ ] 個人荷主の予約には割引が適用されない（割引率ゼロ扱い）
-- [ ] 確定済み輸送料金から精算書を発行でき、支払い状態が「PENDING」で登録される
-- [ ] 支払い確認操作により支払い状態が「CONFIRMED」に更新される
-- [ ] backend テスト Green・カバレッジ 80% 以上・SonarQube Quality Gate PASS
-- [ ] E2E テストが全件 Green
+- [x] 法人荷主の予約に対して割引率（0〜30%）が自動適用され、割引後合計金額が算出される
+- [x] 個人荷主の予約には割引が適用されない（割引率ゼロ扱い）
+- [x] 確定済み輸送料金から精算書を発行でき、支払い状態が「PENDING」で登録される
+- [x] 支払い確認操作により支払い状態が「CONFIRMED」に更新される
+- [x] backend テスト Green・カバレッジ 80% 以上・SonarQube Quality Gate PASS
+- [x] E2E テストが全件 Green
 
 ---
 
@@ -82,10 +82,10 @@ tags: iteration-plan, it6
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `DiscountPolicy` ドメインサービス + 単体テスト（TDD） | 4h | - | [ ] |
-| 1.2 | `ApplyDiscountCommand` + `ApplyDiscountCommandService`（Shipper ACL 連携） | 4h | - | [ ] |
-| 1.3 | REST API: `PUT /api/freight-charges/{id}/apply-discount` | 2h | - | [ ] |
-| 1.4 | Web UI: 割引適用ボタン・割引後金額表示（`billing/detail.html`） | 2h | - | [ ] |
+| 1.1 | `DiscountPolicy` ドメインサービス + 単体テスト（TDD） | 4h | - | [x] |
+| 1.2 | `ApplyDiscountCommand` + `ApplyDiscountCommandService`（Shipper ACL 連携） | 4h | - | [x] |
+| 1.3 | REST API: `PUT /api/freight-charges/{id}/apply-discount` | 2h | - | [x] |
+| 1.4 | Web UI: 割引適用ボタン・割引後金額表示（`billing/detail.html`） | 2h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -93,13 +93,13 @@ tags: iteration-plan, it6
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `Invoice` 集約 + `PaymentStatus` 値オブジェクト + 単体テスト（TDD） | 4h | - | [ ] |
-| 2.2 | `GenerateInvoiceCommand` + `GenerateInvoiceCommandService` | 4h | - | [ ] |
-| 2.3 | `ConfirmPaymentCommand` + `ConfirmPaymentCommandService` | 2h | - | [ ] |
-| 2.4 | `InvoiceRepository` + DB マイグレーション（`invoices` テーブル） | 2h | - | [ ] |
-| 2.5 | REST API: `POST /api/invoices`・`PUT /api/invoices/{id}/confirm-payment` | 3h | - | [ ] |
-| 2.6 | Web UI: 精算一覧（`billing/invoices.html`）・精算書詳細（`billing/invoice-detail.html`） | 3h | - | [ ] |
-| 2.7 | E2E テスト: `US17E2ETest`・`US18E2ETest` | 3h | - | [ ] |
+| 2.1 | `Invoice` 集約 + `PaymentStatus` 値オブジェクト + 単体テスト（TDD） | 4h | - | [x] |
+| 2.2 | `GenerateInvoiceCommand` + `GenerateInvoiceCommandService` | 4h | - | [x] |
+| 2.3 | `ConfirmPaymentCommand` + `ConfirmPaymentCommandService` | 2h | - | [x] |
+| 2.4 | `InvoiceRepository` + DB マイグレーション（`invoices` テーブル） | 2h | - | [x] |
+| 2.5 | REST API: `POST /api/invoices`・`PUT /api/invoices/{id}/confirm-payment` | 3h | - | [x] |
+| 2.6 | Web UI: 精算一覧（`billing/invoices.html`）・精算書詳細（`billing/invoice-detail.html`） | 3h | - | [x] |
+| 2.7 | E2E テスト: `US17E2ETest`・`US18E2ETest` | 3h | - | [x] |
 
 **小計**: 21h（理想時間）
 
@@ -107,12 +107,12 @@ tags: iteration-plan, it6
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US17 法人割引適用 | 3 | 12h | [ ] |
-| US18 精算処理 | 5 | 21h | [ ] |
+| US17 法人割引適用 | 3 | 12h | [x] |
+| US18 精算処理 | 5 | 21h | [x] |
 | **合計** | **8** | **33h** | |
 
 **1 SP あたり**: 約 4.1h
-**進捗率**: 0%（0/8 SP）
+**進捗率**: 100%（8/8 SP）✅
 
 ---
 
@@ -273,12 +273,12 @@ Billing BC は Shipper BC の法人契約情報を取得するため、ACL ポ�
 
 ### Definition of Done
 
-- [ ] `./gradlew test` 全件 GREEN
-- [ ] テストカバレッジ 80% 以上（分岐カバレッジ含む）
-- [ ] SonarQube Quality Gate PASS
-- [ ] E2E テスト（`US17E2ETest`・`US18E2ETest`）全件 GREEN
-- [ ] コードレビュー完了（`developing-review` スキル実行）
-- [ ] UI/UX レビュー完了（`developing-uiux-review` スキル実行）
+- [x] `./gradlew test` 全件 GREEN
+- [x] テストカバレッジ 80% 以上（分岐カバレッジ含む）
+- [x] SonarQube Quality Gate PASS
+- [x] E2E テスト（`US17E2ETest`・`US18E2ETest`）全件 GREEN
+- [x] コードレビュー完了（`developing-review` スキル実行）
+- [x] UI/UX レビュー完了（`developing-uiux-review` スキル実行）
 - [ ] ドキュメント更新完了（`mkdocs.yml`・`docs/index.md`）
 - [ ] v1.0.0 リリースタグ付与
 
@@ -295,6 +295,7 @@ Billing BC は Shipper BC の法人契約情報を取得するため、ACL ポ�
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-03 | 初版作成 | - |
+| 2026-04-03 | IT6 完了（8/8 SP・100%）・US17 法人割引・US18 精算処理全実装・E2E 全件 Green・SonarQube Quality Gate PASS | Copilot |
 
 ---
 
