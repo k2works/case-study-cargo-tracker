@@ -1,5 +1,7 @@
 package com.example.cargotracker.tracking.application.internal.queryservices;
 
+import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
+import com.example.cargotracker.exception.domain.model.repository.CargoExceptionRepository;
 import com.example.cargotracker.tracking.application.internal.outboundservices.BookingInfoQueryPort;
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingEntry;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
@@ -19,11 +21,14 @@ public class TrackingQueryService {
 
     private final TrackingRepository trackingRepository;
     private final BookingInfoQueryPort bookingInfoQueryPort;
+    private final CargoExceptionRepository cargoExceptionRepository;
 
     public TrackingQueryService(TrackingRepository trackingRepository,
-                                BookingInfoQueryPort bookingInfoQueryPort) {
+                                BookingInfoQueryPort bookingInfoQueryPort,
+                                CargoExceptionRepository cargoExceptionRepository) {
         this.trackingRepository = trackingRepository;
         this.bookingInfoQueryPort = bookingInfoQueryPort;
+        this.cargoExceptionRepository = cargoExceptionRepository;
     }
 
     public Optional<TrackingEntry> findByTrackingNumber(String trackingNumberValue) {
@@ -52,6 +57,11 @@ public class TrackingQueryService {
                                             r.memo()
                                     ))
                                     .toList();
+                    List<TrackingInfoDto.ExceptionEventSummary> exceptionHistory =
+                            cargoExceptionRepository.findByTrackingNumber(trackingNumber.value())
+                                    .stream()
+                                    .map(this::toExceptionSummary)
+                                    .toList();
 
                     BookingInfoQueryPort.BookingSummary bookingSummary =
                             bookingInfoQueryPort.findById(entry.getBookingId()).orElse(null);
@@ -60,8 +70,8 @@ public class TrackingQueryService {
                     String destinationLocation = bookingSummary != null ? bookingSummary.destinationLocation() : "";
                     LocalDate estimatedArrival = bookingSummary != null ? bookingSummary.requestedDeliveryDate() : null;
 
-                    String currentState = resolveCurrentState(history);
-                    String currentLocation = history.isEmpty() ? originLocation : history.get(0).locationCode();
+                    String currentState = resolveCurrentState(history, exceptionHistory);
+                    String currentLocation = resolveCurrentLocation(originLocation, history, exceptionHistory);
 
                     return new TrackingInfoDto(
                             entry.getTrackingNumber().value(),
@@ -71,7 +81,8 @@ public class TrackingQueryService {
                             estimatedArrival,
                             currentState,
                             currentLocation,
-                            history
+                            history,
+                            exceptionHistory
                     );
                 });
     }
@@ -84,7 +95,23 @@ public class TrackingQueryService {
         }
     }
 
-    private String resolveCurrentState(List<TrackingInfoDto.HandlingEventSummary> history) {
+    private TrackingInfoDto.ExceptionEventSummary toExceptionSummary(CargoIncident incident) {
+        return new TrackingInfoDto.ExceptionEventSummary(
+                incident.getOccurredAt(),
+                incident.getLocationCode(),
+                incident.getExceptionType().name(),
+                incident.getExceptionType().getDisplayName(),
+                incident.getReason(),
+                incident.getResolution(),
+                "通知済み"
+        );
+    }
+
+    private String resolveCurrentState(List<TrackingInfoDto.HandlingEventSummary> history,
+                                       List<TrackingInfoDto.ExceptionEventSummary> exceptionHistory) {
+        if (!exceptionHistory.isEmpty()) {
+            return "例外発生";
+        }
         if (history.isEmpty()) {
             return "引取待ち";
         }
@@ -93,5 +120,17 @@ public class TrackingQueryService {
             return "引取済";
         }
         return latest.eventTypeDisplayName();
+    }
+
+    private String resolveCurrentLocation(String originLocation,
+                                          List<TrackingInfoDto.HandlingEventSummary> history,
+                                          List<TrackingInfoDto.ExceptionEventSummary> exceptionHistory) {
+        if (!exceptionHistory.isEmpty()) {
+            String exceptionLocation = exceptionHistory.get(0).locationCode();
+            if (exceptionLocation != null && !exceptionLocation.isBlank()) {
+                return exceptionLocation;
+            }
+        }
+        return history.isEmpty() ? originLocation : history.get(0).locationCode();
     }
 }

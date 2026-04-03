@@ -1,6 +1,6 @@
 package com.example.cargotracker.exception.infrastructure.repositories;
 
-import com.example.cargotracker.exception.domain.model.aggregates.CargoException;
+import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
 import com.example.cargotracker.exception.domain.model.aggregates.ExceptionId;
 import com.example.cargotracker.exception.domain.model.repository.CargoExceptionRepository;
 import com.example.cargotracker.exception.domain.model.valueobjects.ExceptionType;
@@ -19,37 +19,36 @@ public class CargoExceptionRepositoryImpl implements CargoExceptionRepository {
     }
 
     @Override
-    public void save(CargoException cargoException) {
+    public void save(CargoIncident incident) {
         CargoExceptionRecord row = new CargoExceptionRecord(
-                cargoException.getId().value().toString(),
-                cargoException.getTrackingNumber(),
-                cargoException.getExceptionType().name(),
-                cargoException.getLocationCode(),
-                cargoException.getOccurredAt(),
-                cargoException.getReason(),
-                cargoException.isUrgent(),
-                cargoException.getResolution(),
+                incident.getId().value().toString(),
+                incident.getTrackingNumber(),
+                incident.getExceptionType().name(),
+                incident.getLocationCode(),
+                incident.getOccurredAt(),
+                incident.getReason(),
+                incident.isUrgent(),
+                incident.getResolution(),
                 LocalDateTime.now()
         );
         cargoExceptionMapper.insert(row);
     }
 
     @Override
-    public List<CargoException> findByTrackingNumber(String trackingNumber) {
+    public List<CargoIncident> findByTrackingNumber(String trackingNumber) {
         return cargoExceptionMapper.findByTrackingNumber(trackingNumber).stream()
                 .map(this::toCargoException)
                 .toList();
     }
 
-    private CargoException toCargoException(CargoExceptionRecord row) {
-        return CargoException.reconstitute(
+    private CargoIncident toCargoException(CargoExceptionRecord row) {
+        return CargoIncident.reconstitute(
                 new ExceptionId(java.util.UUID.fromString(row.id())),
                 row.trackingNumber(),
                 ExceptionType.valueOf(row.exceptionType()),
                 row.locationCode(),
                 row.occurredAt(),
                 row.reason(),
-                Boolean.TRUE.equals(row.urgent()),
                 row.resolution()
         );
     }

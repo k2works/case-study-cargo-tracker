@@ -12,5 +12,6 @@ public record RecordCargoExceptionCommand(
         ExceptionType exceptionType,
         String locationCode,
         LocalDateTime occurredAt,
-        String reason
+        String reason,
+        String resolution
 ) {}

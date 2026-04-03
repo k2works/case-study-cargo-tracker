@@ -1,6 +1,6 @@
 package com.example.cargotracker.exception.domain.model.repository;
 
-import com.example.cargotracker.exception.domain.model.aggregates.CargoException;
+import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
 
 import java.util.List;
 
@@ -9,7 +9,7 @@ import java.util.List;
  */
 public interface CargoExceptionRepository {
 
-    void save(CargoException cargoException);
+    void save(CargoIncident incident);
 
-    List<CargoException> findByTrackingNumber(String trackingNumber);
+    List<CargoIncident> findByTrackingNumber(String trackingNumber);
 }

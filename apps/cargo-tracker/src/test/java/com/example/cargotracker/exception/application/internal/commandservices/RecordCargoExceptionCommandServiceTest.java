@@ -1,7 +1,7 @@
 package com.example.cargotracker.exception.application.internal.commandservices;
 
 import com.example.cargotracker.exception.application.internal.outboundservices.TrackingExistencePort;
-import com.example.cargotracker.exception.domain.model.aggregates.CargoException;
+import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
 import com.example.cargotracker.exception.domain.model.aggregates.ExceptionId;
 import com.example.cargotracker.exception.domain.model.commands.RecordCargoExceptionCommand;
 import com.example.cargotracker.exception.domain.model.events.CargoExceptionRecordedEvent;
@@ -49,7 +49,8 @@ class RecordCargoExceptionCommandServiceTest {
                 ExceptionType.DELAY,
                 "JPTYO",
                 LocalDateTime.of(2026, 5, 28, 10, 0),
-                "悪天候"
+                "悪天候",
+                "代替船を手配し、到着予定を 2026-06-05 に更新"
         );
     }
 
@@ -61,7 +62,7 @@ class RecordCargoExceptionCommandServiceTest {
         ExceptionId result = commandService.execute(validCommand());
 
         assertThat(result).isNotNull();
-        verify(cargoExceptionRepository).save(any(CargoException.class));
+        verify(cargoExceptionRepository).save(any(CargoIncident.class));
     }
 
     @Test
@@ -70,7 +71,8 @@ class RecordCargoExceptionCommandServiceTest {
         doThrow(new TrackingNotFoundException("TRK-UNKNOWN"))
                 .when(trackingExistencePort).verifyExists("TRK-AB123456");
 
-        assertThatThrownBy(() -> commandService.execute(validCommand()))
+        RecordCargoExceptionCommand command = validCommand();
+        assertThatThrownBy(() -> commandService.execute(command))
                 .isInstanceOf(TrackingNotFoundException.class);
         verify(cargoExceptionRepository, never()).save(any());
     }
@@ -94,7 +96,7 @@ class RecordCargoExceptionCommandServiceTest {
         doNothing().when(trackingExistencePort).verifyExists("TRK-AB123456");
         RecordCargoExceptionCommand lossCommand = new RecordCargoExceptionCommand(
                 "TRK-AB123456", ExceptionType.LOSS, "SGSIN",
-                LocalDateTime.of(2026, 5, 31, 8, 0), "保管中に紛失"
+                LocalDateTime.of(2026, 5, 31, 8, 0), "保管中に紛失", "調査を開始"
         );
 
         commandService.execute(lossCommand);
@@ -107,5 +109,17 @@ class RecordCargoExceptionCommandServiceTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(event.urgent()).isTrue();
+    }
+
+    @Test
+    @DisplayName("対応内容付きで例外を記録すると保存対象にも引き継がれる")
+    void execute_withResolution_persistsResolution() {
+        doNothing().when(trackingExistencePort).verifyExists("TRK-AB123456");
+
+        commandService.execute(validCommand());
+
+        ArgumentCaptor<CargoIncident> captor = ArgumentCaptor.forClass(CargoIncident.class);
+        verify(cargoExceptionRepository).save(captor.capture());
+        assertThat(captor.getValue().getResolution()).isEqualTo("代替船を手配し、到着予定を 2026-06-05 に更新");
     }
 }

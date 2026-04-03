@@ -28,9 +28,20 @@ public record RecordCargoExceptionRequest(
         LocalDateTime occurredAt,
 
         @Schema(description = "発生理由・状況", example = "悪天候による港湾閉鎖")
-        String reason
+        String reason,
+
+        @NotBlank
+        @Schema(description = "対応内容（新 ETA / 対応方針）", example = "代替船を手配し、到着予定を 2026-06-05 に更新")
+        String resolution
 ) {
     public RecordCargoExceptionCommand toCommand() {
-        return new RecordCargoExceptionCommand(trackingNumber, exceptionType, locationCode, occurredAt, reason);
+        return new RecordCargoExceptionCommand(
+                trackingNumber,
+                exceptionType,
+                locationCode,
+                occurredAt,
+                reason,
+                resolution
+        );
     }
 }

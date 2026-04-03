@@ -50,7 +50,8 @@ class TrackingRestControllerTest {
                         "LOAD",
                         "積み込み",
                         null
-                ))
+                )),
+                List.of()
         );
         when(trackingQueryService.findTrackingInfo("TRK-ABC12345"))
                 .thenReturn(Optional.of(dto));
@@ -70,7 +71,7 @@ class TrackingRestControllerTest {
     @WithMockUser
     void getByValidTrackingNumber_noHistory() throws Exception {
         UUID bookingId = UUID.randomUUID();
-        TrackingInfoDto dto = new TrackingInfoDto("TRK-ABC12345", bookingId, "JPTYO", "SGSIN", null, "未受取", "JPTYO", List.of());
+        TrackingInfoDto dto = new TrackingInfoDto("TRK-ABC12345", bookingId, "JPTYO", "SGSIN", null, "未受取", "JPTYO", List.of(), List.of());
         when(trackingQueryService.findTrackingInfo("TRK-ABC12345"))
                 .thenReturn(Optional.of(dto));
 

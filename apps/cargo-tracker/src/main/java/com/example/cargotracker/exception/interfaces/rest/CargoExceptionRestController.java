@@ -8,7 +8,6 @@ import com.example.cargotracker.exception.interfaces.rest.dto.CargoExceptionResp
 import com.example.cargotracker.exception.interfaces.rest.dto.RecordCargoExceptionRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -42,11 +41,9 @@ public class CargoExceptionRestController {
     @PostMapping
     @Operation(summary = "貨物例外記録",
                description = "追跡番号に対して遅延・破損・紛失の例外事象を記録する。追跡番号が存在しない場合は 404 を返す。")
-    @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "記録成功。Location ヘッダーに作成リソース URI を含む"),
-        @ApiResponse(responseCode = "400", description = "バリデーションエラー"),
-        @ApiResponse(responseCode = "404", description = "指定した追跡番号が存在しない")
-    })
+    @ApiResponse(responseCode = "201", description = "記録成功。Location ヘッダーに作成リソース URI を含む")
+    @ApiResponse(responseCode = "400", description = "バリデーションエラー")
+    @ApiResponse(responseCode = "404", description = "指定した追跡番号が存在しない")
     public ResponseEntity<CargoExceptionResponse> createCargoException(
             @Valid @RequestBody RecordCargoExceptionRequest request,
             UriComponentsBuilder uriComponentsBuilder) {

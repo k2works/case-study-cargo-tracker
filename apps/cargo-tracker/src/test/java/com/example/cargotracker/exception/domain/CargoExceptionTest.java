@@ -1,9 +1,8 @@
 package com.example.cargotracker.exception.domain;
 
-import com.example.cargotracker.exception.domain.model.aggregates.CargoException;
+import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
 import com.example.cargotracker.exception.domain.model.aggregates.ExceptionId;
 import com.example.cargotracker.exception.domain.model.valueobjects.ExceptionType;
-import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +18,7 @@ class CargoExceptionTest {
     @Test
     @DisplayName("遅延例外を記録できる")
     void record_delay_createsCargoException() {
-        CargoException exception = CargoException.record(
+        CargoIncident exception = CargoIncident.create(
                 ExceptionId.generate(),
                 "TRK-AB123456",
                 ExceptionType.DELAY,
@@ -40,7 +39,7 @@ class CargoExceptionTest {
     @Test
     @DisplayName("破損例外を記録できる")
     void record_damage_createsCargoException() {
-        CargoException exception = CargoException.record(
+        CargoIncident exception = CargoIncident.create(
                 ExceptionId.generate(),
                 "TRK-AB123456",
                 ExceptionType.DAMAGE,
@@ -56,7 +55,7 @@ class CargoExceptionTest {
     @Test
     @DisplayName("紛失例外は urgent フラグが自動的に true になる")
     void record_loss_setsUrgentFlag() {
-        CargoException exception = CargoException.record(
+        CargoIncident exception = CargoIncident.create(
                 ExceptionId.generate(),
                 "TRK-AB123456",
                 ExceptionType.LOSS,
@@ -72,7 +71,7 @@ class CargoExceptionTest {
     @Test
     @DisplayName("例外に対応内容を記録できる")
     void resolve_updatesResolution() {
-        CargoException exception = CargoException.record(
+        CargoIncident exception = CargoIncident.create(
                 ExceptionId.generate(),
                 "TRK-AB123456",
                 ExceptionType.DELAY,
@@ -91,45 +90,45 @@ class CargoExceptionTest {
     @Test
     @DisplayName("id が null の場合は IllegalArgumentException をスローする")
     void record_nullId_throwsException() {
-        assertThatThrownBy(() -> CargoException.record(
-                null, "TRK-AB123456", ExceptionType.DELAY, "JPTYO",
-                LocalDateTime.now(), "理由"))
+        ExceptionId nullId = null;
+        LocalDateTime now = LocalDateTime.now();
+        assertThatThrownBy(() -> CargoIncident.create(nullId, "TRK-AB123456", ExceptionType.DELAY, "JPTYO", now, "理由"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("追跡番号が null の場合は IllegalArgumentException をスローする")
     void record_nullTrackingNumber_throwsException() {
-        assertThatThrownBy(() -> CargoException.record(
-                ExceptionId.generate(), null, ExceptionType.DELAY, "JPTYO",
-                LocalDateTime.now(), "理由"))
+        ExceptionId id = ExceptionId.generate();
+        LocalDateTime now = LocalDateTime.now();
+        assertThatThrownBy(() -> CargoIncident.create(id, null, ExceptionType.DELAY, "JPTYO", now, "理由"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("追跡番号が空文字の場合は IllegalArgumentException をスローする")
     void record_blankTrackingNumber_throwsException() {
-        assertThatThrownBy(() -> CargoException.record(
-                ExceptionId.generate(), "  ", ExceptionType.DELAY, "JPTYO",
-                LocalDateTime.now(), "理由"))
+        ExceptionId id = ExceptionId.generate();
+        LocalDateTime now = LocalDateTime.now();
+        assertThatThrownBy(() -> CargoIncident.create(id, "  ", ExceptionType.DELAY, "JPTYO", now, "理由"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("例外種別が null の場合は IllegalArgumentException をスローする")
     void record_nullExceptionType_throwsException() {
-        assertThatThrownBy(() -> CargoException.record(
-                ExceptionId.generate(), "TRK-AB123456", null, "JPTYO",
-                LocalDateTime.now(), "理由"))
+        ExceptionId id = ExceptionId.generate();
+        LocalDateTime now = LocalDateTime.now();
+        assertThatThrownBy(() -> CargoIncident.create(id, "TRK-AB123456", null, "JPTYO", now, "理由"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("発生日時が null の場合は IllegalArgumentException をスローする")
     void record_nullOccurredAt_throwsException() {
-        assertThatThrownBy(() -> CargoException.record(
-                ExceptionId.generate(), "TRK-AB123456", ExceptionType.DELAY, "JPTYO",
-                null, "理由"))
+        ExceptionId id = ExceptionId.generate();
+        LocalDateTime nullDateTime = null;
+        assertThatThrownBy(() -> CargoIncident.create(id, "TRK-AB123456", ExceptionType.DELAY, "JPTYO", nullDateTime, "理由"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

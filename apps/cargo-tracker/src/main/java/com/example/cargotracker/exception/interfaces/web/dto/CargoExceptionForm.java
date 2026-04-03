@@ -26,9 +26,18 @@ public class CargoExceptionForm {
     private LocalDateTime occurredAt;
 
     private String reason;
+    @NotBlank(message = "対応内容は必須です")
+    private String resolution;
 
     public RecordCargoExceptionCommand toCommand() {
-        return new RecordCargoExceptionCommand(trackingNumber, exceptionType, locationCode, occurredAt, reason);
+        return new RecordCargoExceptionCommand(
+                trackingNumber,
+                exceptionType,
+                locationCode,
+                occurredAt,
+                reason,
+                resolution
+        );
     }
 
     public String getTrackingNumber() { return trackingNumber; }
@@ -41,4 +50,6 @@ public class CargoExceptionForm {
     public void setOccurredAt(LocalDateTime occurredAt) { this.occurredAt = occurredAt; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
+    public String getResolution() { return resolution; }
+    public void setResolution(String resolution) { this.resolution = resolution; }
 }

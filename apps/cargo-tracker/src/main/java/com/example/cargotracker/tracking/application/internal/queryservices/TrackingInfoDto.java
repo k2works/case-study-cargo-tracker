@@ -16,7 +16,8 @@ public record TrackingInfoDto(
         LocalDate estimatedArrival,
         String currentState,
         String currentLocation,
-        List<HandlingEventSummary> handlingHistory
+        List<HandlingEventSummary> handlingHistory,
+        List<ExceptionEventSummary> exceptionHistory
 ) {
 
     /**
@@ -28,5 +29,18 @@ public record TrackingInfoDto(
             String eventType,
             String eventTypeDisplayName,
             String memo
+    ) {}
+
+    /**
+     * 例外履歴の 1 件分サマリー。
+     */
+    public record ExceptionEventSummary(
+            LocalDateTime occurredAt,
+            String locationCode,
+            String exceptionType,
+            String exceptionTypeDisplayName,
+            String reason,
+            String resolution,
+            String shipperNotificationStatus
     ) {}
 }

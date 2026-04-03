@@ -30,6 +30,9 @@
                 <dt class="col-sm-3">推定到着日</dt>
                 <dd class="col-sm-9" data-testid="estimated-arrival"
                     th:text="${trackingInfo.estimatedArrival != null ? #temporals.format(trackingInfo.estimatedArrival, 'yyyy/MM/dd') : '—'}"></dd>
+                <dt class="col-sm-3">現在位置</dt>
+                <dd class="col-sm-9" data-testid="current-location"
+                    th:text="${trackingInfo.currentLocation != null && !trackingInfo.currentLocation.isBlank() ? trackingInfo.currentLocation : '—'}"></dd>
             </dl>
         </div>
     </div>
@@ -47,6 +50,7 @@
                         <th>完了日時</th>
                         <th>場所コード</th>
                         <th>種別</th>
+                        <th>メモ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,6 +60,41 @@
                         <td>
                             <span class="badge bg-secondary" th:text="${event.eventTypeDisplayName}"></span>
                         </td>
+                        <td th:text="${event.memo != null && !event.memo.isBlank() ? event.memo : '—'}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white fw-semibold">例外対応履歴</div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(trackingInfo.exceptionHistory)}" class="p-3 text-muted">
+                例外対応履歴はまだありません。
+            </div>
+            <table th:unless="${#lists.isEmpty(trackingInfo.exceptionHistory)}"
+                   class="table table-hover mb-0" data-testid="exception-history-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>発生日時</th>
+                        <th>場所コード</th>
+                        <th>種別</th>
+                        <th>理由</th>
+                        <th>対応内容</th>
+                        <th>荷主通知</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="event : ${trackingInfo.exceptionHistory}">
+                        <td th:text="${#temporals.format(event.occurredAt, 'yyyy/MM/dd HH:mm')}"></td>
+                        <td th:text="${event.locationCode != null && !event.locationCode.isBlank() ? event.locationCode : '—'}"></td>
+                        <td>
+                            <span class="badge bg-danger" th:text="${event.exceptionTypeDisplayName}"></span>
+                        </td>
+                        <td th:text="${event.reason != null && !event.reason.isBlank() ? event.reason : '—'}"></td>
+                        <td th:text="${event.resolution}"></td>
+                        <td th:text="${event.shipperNotificationStatus}"></td>
                     </tr>
                 </tbody>
             </table>

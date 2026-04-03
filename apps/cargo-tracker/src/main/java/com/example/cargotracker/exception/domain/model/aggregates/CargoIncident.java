@@ -5,11 +5,11 @@ import com.example.cargotracker.exception.domain.model.valueobjects.ExceptionTyp
 import java.time.LocalDateTime;
 
 /**
- * 貨物例外集約ルート。
+ * 貨物例外（インシデント）集約ルート。
  * 遅延・破損・紛失などの輸送中に発生した例外事象を記録する。
  * 紛失（LOSS）は緊急フラグが自動設定される。
  */
-public class CargoException {
+public class CargoIncident {
 
     private final ExceptionId id;
     private final String trackingNumber;
@@ -20,8 +20,8 @@ public class CargoException {
     private final boolean urgent;
     private String resolution;
 
-    private CargoException(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
-                           String locationCode, LocalDateTime occurredAt, String reason) {
+    private CargoIncident(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
+                          String locationCode, LocalDateTime occurredAt, String reason) {
         if (id == null) throw new IllegalArgumentException("例外 ID は null にできません");
         if (trackingNumber == null || trackingNumber.isBlank()) throw new IllegalArgumentException("追跡番号は null または空にできません");
         if (exceptionType == null) throw new IllegalArgumentException("例外種別は null にできません");
@@ -36,22 +36,23 @@ public class CargoException {
     }
 
     /**
-     * 貨物例外を記録する。
+     * 貨物例外（インシデント）を記録する。
      */
-    public static CargoException record(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
-                                        String locationCode, LocalDateTime occurredAt, String reason) {
-        return new CargoException(id, trackingNumber, exceptionType, locationCode, occurredAt, reason);
+    public static CargoIncident create(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
+                                       String locationCode, LocalDateTime occurredAt, String reason) {
+        return new CargoIncident(id, trackingNumber, exceptionType, locationCode, occurredAt, reason);
     }
 
     /**
-     * ストレージから貨物例外を再構成する。
+     * ストレージから貨物例外（インシデント）を再構成する。
+     * urgent フラグは exceptionType から自動算出する。
      */
-    public static CargoException reconstitute(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
-                                              String locationCode, LocalDateTime occurredAt, String reason,
-                                              boolean urgent, String resolution) {
-        CargoException e = new CargoException(id, trackingNumber, exceptionType, locationCode, occurredAt, reason);
-        e.resolution = resolution;
-        return e;
+    public static CargoIncident reconstitute(ExceptionId id, String trackingNumber, ExceptionType exceptionType,
+                                             String locationCode, LocalDateTime occurredAt, String reason,
+                                             String resolution) {
+        CargoIncident incident = new CargoIncident(id, trackingNumber, exceptionType, locationCode, occurredAt, reason);
+        incident.resolution = resolution;
+        return incident;
     }
 
     /**

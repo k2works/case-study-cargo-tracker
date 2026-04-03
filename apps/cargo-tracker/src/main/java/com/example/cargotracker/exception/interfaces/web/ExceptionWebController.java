@@ -60,7 +60,7 @@ public class ExceptionWebController {
         try {
             recordCargoExceptionCommandService.execute(form.toCommand());
             redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE,
-                    "例外（%s）を記録しました。".formatted(form.getExceptionType().getDisplayName()));
+                    "例外（%s）を記録し、荷主へ通知しました。".formatted(form.getExceptionType().getDisplayName()));
             return "redirect:/exceptions/new";
         } catch (TrackingNotFoundException | IllegalArgumentException e) {
             model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());

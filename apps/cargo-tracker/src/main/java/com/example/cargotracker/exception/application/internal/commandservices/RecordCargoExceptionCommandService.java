@@ -1,7 +1,7 @@
 package com.example.cargotracker.exception.application.internal.commandservices;
 
 import com.example.cargotracker.exception.application.internal.outboundservices.TrackingExistencePort;
-import com.example.cargotracker.exception.domain.model.aggregates.CargoException;
+import com.example.cargotracker.exception.domain.model.aggregates.CargoIncident;
 import com.example.cargotracker.exception.domain.model.aggregates.ExceptionId;
 import com.example.cargotracker.exception.domain.model.commands.RecordCargoExceptionCommand;
 import com.example.cargotracker.exception.domain.model.events.CargoExceptionRecordedEvent;
@@ -35,7 +35,7 @@ public class RecordCargoExceptionCommandService {
 
         // 貨物例外集約の生成
         ExceptionId id = ExceptionId.generate();
-        CargoException cargoException = CargoException.record(
+        CargoIncident incident = CargoIncident.create(
                 id,
                 command.trackingNumber(),
                 command.exceptionType(),
@@ -43,16 +43,17 @@ public class RecordCargoExceptionCommandService {
                 command.occurredAt(),
                 command.reason()
         );
+        incident.resolve(command.resolution());
 
         // 永続化
-        cargoExceptionRepository.save(cargoException);
+        cargoExceptionRepository.save(incident);
 
         // ドメインイベント発行
         eventPublisher.publishEvent(new CargoExceptionRecordedEvent(
                 id,
                 command.trackingNumber(),
                 command.exceptionType(),
-                cargoException.isUrgent()
+                incident.isUrgent()
         ));
 
         return id;

@@ -3,9 +3,6 @@ package com.example.cargotracker.exception.interfaces.rest;
 import com.example.cargotracker.exception.application.internal.commandservices.RecordCargoExceptionCommandService;
 import com.example.cargotracker.exception.application.internal.commandservices.TrackingNotFoundException;
 import com.example.cargotracker.exception.domain.model.aggregates.ExceptionId;
-import com.example.cargotracker.exception.domain.model.valueobjects.ExceptionType;
-import com.example.cargotracker.exception.interfaces.rest.dto.CargoExceptionResponse;
-import com.example.cargotracker.exception.interfaces.rest.dto.RecordCargoExceptionRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,8 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -47,7 +42,8 @@ class CargoExceptionRestControllerTest {
                   "exceptionType": "DELAY",
                   "locationCode": "JPTYO",
                   "occurredAt": "2026-05-28T10:00:00",
-                  "reason": "悪天候"
+                  "reason": "悪天候",
+                  "resolution": "代替船を手配し、到着予定を 2026-06-05 に更新"
                 }
                 """;
 
@@ -89,7 +85,8 @@ class CargoExceptionRestControllerTest {
                   "exceptionType": "DELAY",
                   "locationCode": "JPTYO",
                   "occurredAt": "2026-05-28T10:00:00",
-                  "reason": "悪天候"
+                  "reason": "悪天候",
+                  "resolution": "代替船を手配し、到着予定を 2026-06-05 に更新"
                 }
                 """;
 
