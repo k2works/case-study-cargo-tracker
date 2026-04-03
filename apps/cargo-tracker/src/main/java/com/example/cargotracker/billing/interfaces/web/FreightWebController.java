@@ -4,9 +4,12 @@ import com.example.cargotracker.billing.application.internal.commandservices.App
 import com.example.cargotracker.billing.application.internal.commandservices.BookingNotFoundException;
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
+import com.example.cargotracker.billing.application.internal.outboundservices.ShipperDiscountQueryPort;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
 import com.example.cargotracker.billing.domain.model.commands.ApplyDiscountCommand;
+import com.example.cargotracker.billing.domain.model.services.DiscountPolicy;
+import com.example.cargotracker.billing.domain.model.services.FreightCalculationService;
 import com.example.cargotracker.billing.interfaces.web.dto.FreightChargeForm;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
@@ -36,20 +40,33 @@ public class FreightWebController {
     private static final String BOOKING_SUMMARY_ATTRIBUTE = "bookingSummary";
     private static final String ERROR_MESSAGE_ATTRIBUTE = "errorMessage";
     private static final String SUCCESS_MESSAGE_ATTRIBUTE = "successMessage";
+    private static final String DISCOUNT_RATE_ATTRIBUTE = "discountRate";
+    private static final String PREVIEW_BASE_AMOUNT_ATTRIBUTE = "previewBaseAmount";
+    private static final String PREVIEW_DISCOUNT_AMOUNT_ATTRIBUTE = "previewDiscountAmount";
+    private static final String PREVIEW_TOTAL_AMOUNT_ATTRIBUTE = "previewTotalAmount";
 
     private final CalculateFreightCommandService calculateFreightCommandService;
     private final ApplyDiscountCommandService applyDiscountCommandService;
     private final FreightChargeQueryService freightChargeQueryService;
     private final FreightBookingQueryPort freightBookingQueryPort;
+    private final ShipperDiscountQueryPort shipperDiscountQueryPort;
+    private final FreightCalculationService freightCalculationService;
+    private final DiscountPolicy discountPolicy;
 
     public FreightWebController(CalculateFreightCommandService calculateFreightCommandService,
                                 ApplyDiscountCommandService applyDiscountCommandService,
                                 FreightChargeQueryService freightChargeQueryService,
-                                FreightBookingQueryPort freightBookingQueryPort) {
+                                FreightBookingQueryPort freightBookingQueryPort,
+                                ShipperDiscountQueryPort shipperDiscountQueryPort,
+                                FreightCalculationService freightCalculationService,
+                                DiscountPolicy discountPolicy) {
         this.calculateFreightCommandService = calculateFreightCommandService;
         this.applyDiscountCommandService = applyDiscountCommandService;
         this.freightChargeQueryService = freightChargeQueryService;
         this.freightBookingQueryPort = freightBookingQueryPort;
+        this.shipperDiscountQueryPort = shipperDiscountQueryPort;
+        this.freightCalculationService = freightCalculationService;
+        this.discountPolicy = discountPolicy;
     }
 
     /**
@@ -71,7 +88,23 @@ public class FreightWebController {
         if (bookingId != null && !bookingId.isBlank()) {
             form.setBookingId(bookingId);
             freightBookingQueryPort.findCalculableBookingById(bookingId)
-                    .ifPresent(summary -> model.addAttribute(BOOKING_SUMMARY_ATTRIBUTE, summary));
+                    .ifPresent(summary -> {
+                        model.addAttribute(BOOKING_SUMMARY_ATTRIBUTE, summary);
+                        BigDecimal previewBaseAmount = freightCalculationService.calculateBaseAmount(
+                                summary.weightKg(), summary.cargoType());
+                        BigDecimal discountRate = shipperDiscountQueryPort.findDiscountRateByBookingId(bookingId);
+                        model.addAttribute(PREVIEW_BASE_AMOUNT_ATTRIBUTE, previewBaseAmount);
+                        model.addAttribute(DISCOUNT_RATE_ATTRIBUTE, discountRate);
+                        if (discountRate.compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal previewDiscountAmount =
+                                    discountPolicy.calculateDiscount(previewBaseAmount, discountRate);
+                            model.addAttribute(PREVIEW_DISCOUNT_AMOUNT_ATTRIBUTE, previewDiscountAmount);
+                            model.addAttribute(
+                                    PREVIEW_TOTAL_AMOUNT_ATTRIBUTE,
+                                    previewBaseAmount.add(previewDiscountAmount)
+                            );
+                        }
+                    });
         }
         model.addAttribute(FORM_ATTRIBUTE, form);
         return VIEW_CALCULATE;

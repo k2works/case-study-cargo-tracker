@@ -3,6 +3,7 @@ import { BookingPage } from '../pages/BookingPage';
 import { ExceptionPage } from '../pages/ExceptionPage';
 import { FreightPage } from '../pages/FreightPage';
 import { HandlingPage } from '../pages/HandlingPage';
+import { InvoicePage } from '../pages/InvoicePage';
 import { LoginPage } from '../pages/LoginPage';
 import { RoutingPage } from '../pages/RoutingPage';
 import { ShipperPage } from '../pages/ShipperPage';
@@ -144,5 +145,172 @@ test.describe.serial('E19〜E20: US16 輸送料金を算出する', () => {
       adjustmentAmount: '-30',
       totalAmount: '150',
     });
+  });
+});
+
+test.describe.serial('E21〜E22: US17 法人割引を適用する', () => {
+  let corporateBookingId = '';
+  let individualBookingId = '';
+
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    const loginPage = new LoginPage(page);
+    await loginPage.login('admin', 'admin');
+
+    const shipperPage = new ShipperPage(page);
+    await shipperPage.registerCorporate(
+      '法人割引テスト荷主',
+      `corporate-discount-${Date.now()}@example.com`,
+      '03-0000-0000',
+      'CONTRACT-US17-001',
+      '10',
+    );
+    const corporateShipperId = await shipperPage.extractShipperId();
+
+    const bookingPage = new BookingPage(page);
+    await bookingPage.register({
+      shipperId: corporateShipperId,
+      cargoType: 'GENERAL_CARGO',
+      weightKg: '180',
+      quantity: '1',
+      originLocation: 'JPTYO',
+      destinationLocation: 'SGSIN',
+      requestedPickupDate: futureDateStr(5),
+      requestedDeliveryDate: futureDateStr(17),
+    });
+    corporateBookingId = await bookingPage.extractBookingId();
+
+    const routingPage = new RoutingPage(page);
+    await routingPage.gotoByBookingId(corporateBookingId);
+    await routingPage.assignRoute(0);
+
+    await bookingPage.gotoDetail(corporateBookingId);
+    await bookingPage.confirmBooking();
+
+    const handlingPage = new HandlingPage(page);
+    await handlingPage.registerReceive({
+      bookingId: corporateBookingId,
+      locationCode: 'SGSIN',
+      completionTime: futureDateTimeLocal(4),
+      receiveConfirmationCode: 'RC-US17-001',
+      memo: '法人割引対象の配送完了',
+    });
+
+    await shipperPage.registerIndividual(
+      '個人割引なし荷主',
+      `individual-discount-${Date.now()}@example.com`,
+    );
+    const individualShipperId = await shipperPage.extractShipperId();
+
+    await bookingPage.register({
+      shipperId: individualShipperId,
+      cargoType: 'GENERAL_CARGO',
+      weightKg: '180',
+      quantity: '1',
+      originLocation: 'JPTYO',
+      destinationLocation: 'SGSIN',
+      requestedPickupDate: futureDateStr(6),
+      requestedDeliveryDate: futureDateStr(18),
+    });
+    individualBookingId = await bookingPage.extractBookingId();
+
+    await routingPage.gotoByBookingId(individualBookingId);
+    await routingPage.assignRoute(0);
+
+    await bookingPage.gotoDetail(individualBookingId);
+    await bookingPage.confirmBooking();
+
+    await handlingPage.registerReceive({
+      bookingId: individualBookingId,
+      locationCode: 'SGSIN',
+      completionTime: futureDateTimeLocal(5),
+      receiveConfirmationCode: 'RC-US17-002',
+      memo: '個人荷主の配送完了',
+    });
+
+    await context.close();
+  });
+
+  test('E21: 法人荷主は契約割引率が自動表示され、割引後料金が精算書に記載される', async ({
+    page,
+    loggedIn,
+  }) => {
+    const freightPage = new FreightPage(page);
+    const invoicePage = new InvoicePage(page);
+
+    await freightPage.gotoCalculate(corporateBookingId);
+    await freightPage.expectSummary({
+      routePath: 'JPTYO',
+      distanceKm: '5,300',
+      weightKg: '180',
+      cargoType: 'GENERAL_CARGO',
+      handlingCount: '1',
+      discountRate: '10',
+      previewTotalAmount: '162',
+    });
+
+    await freightPage.calculate({ bookingId: corporateBookingId });
+    await expect(page).toHaveURL('/freight');
+    await freightPage.expectChargeRow({
+      bookingId: corporateBookingId,
+      status: '算出中',
+      baseAmount: '180',
+      discountRate: '10',
+      adjustmentAmount: '-18',
+      totalAmount: '162',
+    });
+
+    await freightPage.confirmByBookingId(corporateBookingId);
+    await freightPage.expectChargeRow({
+      bookingId: corporateBookingId,
+      status: '確定',
+      baseAmount: '180',
+      discountRate: '10',
+      adjustmentAmount: '-18',
+      totalAmount: '162',
+    });
+
+    await freightPage.generateInvoiceByBookingId(corporateBookingId);
+    await expect(page).toHaveURL('/invoices');
+    await invoicePage.expectLatestInvoiceRow({
+      bookingId: corporateBookingId,
+      amount: '162',
+    });
+    await invoicePage.openLatestInvoiceByBookingId(corporateBookingId);
+    await invoicePage.expectDiscountBreakdown({
+      baseAmount: '180',
+      discountRate: '10',
+      adjustmentAmount: '-18',
+      totalAmount: '162',
+    });
+  });
+
+  test('E22: 個人荷主には法人割引が適用されない', async ({ page, loggedIn }) => {
+    const freightPage = new FreightPage(page);
+
+    await freightPage.gotoCalculate(individualBookingId);
+    await freightPage.expectSummary({
+      routePath: 'JPTYO',
+      distanceKm: '5,300',
+      weightKg: '180',
+      cargoType: 'GENERAL_CARGO',
+      handlingCount: '1',
+    });
+    await expect(page.locator('[data-testid="freight-discount-rate"]')).toHaveCount(0);
+
+    await freightPage.calculate({ bookingId: individualBookingId });
+    await expect(page).toHaveURL('/freight');
+    await freightPage.expectChargeRow({
+      bookingId: individualBookingId,
+      status: '算出中',
+      baseAmount: '180',
+      adjustmentAmount: '0',
+      totalAmount: '180',
+    });
+    await expect(
+      freightPage.rowByBookingId(individualBookingId).locator('[data-testid="freight-charge-discount-rate"]'),
+    ).toContainText('-');
   });
 });

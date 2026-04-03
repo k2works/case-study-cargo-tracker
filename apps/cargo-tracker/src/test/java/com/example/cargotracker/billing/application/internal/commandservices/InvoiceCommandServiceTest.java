@@ -8,6 +8,15 @@ import com.example.cargotracker.billing.domain.model.commands.ConfirmPaymentComm
 import com.example.cargotracker.billing.domain.model.commands.GenerateInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.repository.FreightChargeRepository;
 import com.example.cargotracker.billing.domain.model.repository.InvoiceRepository;
+import com.example.cargotracker.booking.domain.model.aggregates.Booking;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.AssignedRoute;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,11 +43,14 @@ class InvoiceCommandServiceTest {
     @Mock
     private FreightChargeRepository freightChargeRepository;
 
+    @Mock
+    private BookingRepository bookingRepository;
+
     private InvoiceCommandService commandService;
 
     @BeforeEach
     void setUp() {
-        commandService = new InvoiceCommandService(invoiceRepository, freightChargeRepository);
+        commandService = new InvoiceCommandService(invoiceRepository, freightChargeRepository, bookingRepository);
     }
 
     @Test
@@ -102,11 +114,14 @@ class InvoiceCommandServiceTest {
     void confirmPayment_精算書の支払いを確認できる() {
         // Given
         InvoiceId invoiceId = InvoiceId.generate();
-        Invoice invoice = Invoice.generate(invoiceId, "booking-001", "freight-001",
+        String bookingId = BookingId.generate().toString();
+        Invoice invoice = Invoice.generate(invoiceId, bookingId, "freight-001",
                 new BigDecimal("10000"), LocalDate.now().plusDays(30));
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
 
         ConfirmPaymentCommand command = new ConfirmPaymentCommand(invoiceId.value().toString());
+        Booking booking = confirmedBooking(bookingId);
+        when(bookingRepository.findById(BookingId.of(bookingId))).thenReturn(Optional.of(booking));
 
         // When
         commandService.confirmPayment(command);
@@ -115,6 +130,8 @@ class InvoiceCommandServiceTest {
         ArgumentCaptor<Invoice> captor = ArgumentCaptor.forClass(Invoice.class);
         verify(invoiceRepository).save(captor.capture());
         assertThat(captor.getValue().getPaymentStatus().name()).isEqualTo("CONFIRMED");
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.SETTLED);
+        verify(bookingRepository).save(booking);
     }
 
     @Test
@@ -130,6 +147,24 @@ class InvoiceCommandServiceTest {
         assertThatThrownBy(() -> commandService.confirmPayment(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(invoiceId.value().toString());
+        verify(invoiceRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("支払い確認時に予約が見つからない場合は IllegalArgumentException をスローする")
+    void confirmPayment_予約が見つからない場合はIllegalArgumentExceptionをスローする() {
+        InvoiceId invoiceId = InvoiceId.generate();
+        String bookingId = BookingId.generate().toString();
+        Invoice invoice = Invoice.generate(invoiceId, bookingId, "freight-001",
+                new BigDecimal("10000"), LocalDate.now().plusDays(30));
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(bookingRepository.findById(BookingId.of(bookingId))).thenReturn(Optional.empty());
+
+        ConfirmPaymentCommand command = new ConfirmPaymentCommand(invoiceId.value().toString());
+
+        assertThatThrownBy(() -> commandService.confirmPayment(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(bookingId);
         verify(invoiceRepository, never()).save(any());
     }
 
@@ -170,5 +205,43 @@ class InvoiceCommandServiceTest {
         assertThatThrownBy(() -> commandService.generateInvoice(command))
                 .isInstanceOf(IllegalArgumentException.class);
         verify(invoiceRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("支払期限を指定して精算書を生成できる")
+    void generateInvoice_支払期限を指定して精算書を生成できる() {
+        FreightId freightId = FreightId.generate();
+        FreightCharge charge = FreightCharge.calculate(freightId, "booking-001", new BigDecimal("10000"));
+        charge.applyAdjustment(BigDecimal.ZERO);
+        charge.confirm();
+        when(freightChargeRepository.findById(freightId)).thenReturn(Optional.of(charge));
+        LocalDate dueDate = LocalDate.now().plusDays(10);
+
+        commandService.generateInvoice(new GenerateInvoiceCommand("booking-001", freightId.value().toString(), dueDate));
+
+        ArgumentCaptor<Invoice> captor = ArgumentCaptor.forClass(Invoice.class);
+        verify(invoiceRepository).save(captor.capture());
+        assertThat(captor.getValue().getDueDate()).isEqualTo(dueDate);
+    }
+
+    private Booking confirmedBooking(String bookingId) {
+        return Booking.reconstitute(
+                BookingId.of(bookingId),
+                ShipperId.generate(),
+                new CargoSpecification(
+                        CargoType.GENERAL_CARGO,
+                        new BigDecimal("100.0"),
+                        null, null, null,
+                        1, "テスト品"
+                ),
+                new TransportCondition(
+                        "JPTYO",
+                        "SGSIN",
+                        LocalDate.now(),
+                        LocalDate.now().plusDays(10)
+                ),
+                BookingStatus.CONFIRMED,
+                new AssignedRoute("V001", "JPTYO -> SGSIN", LocalDate.now().plusDays(10))
+        );
     }
 }

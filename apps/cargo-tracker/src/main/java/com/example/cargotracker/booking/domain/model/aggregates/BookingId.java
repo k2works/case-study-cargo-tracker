@@ -18,6 +18,10 @@ public final class BookingId {
         return new BookingId(UUID.randomUUID());
     }
 
+    public static BookingId of(String value) {
+        return new BookingId(UUID.fromString(value));
+    }
+
     public UUID value() {
         return value;
     }

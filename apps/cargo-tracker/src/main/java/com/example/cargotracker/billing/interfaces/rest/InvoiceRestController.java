@@ -50,7 +50,7 @@ public class InvoiceRestController {
             UriComponentsBuilder uriComponentsBuilder) {
 
         InvoiceId invoiceId = invoiceCommandService.generateInvoice(
-                new GenerateInvoiceCommand(request.bookingId(), request.freightChargeId()));
+                new GenerateInvoiceCommand(request.bookingId(), request.freightChargeId(), request.dueDate()));
 
         InvoiceSummary summary = invoiceQueryService.findById(invoiceId.value().toString())
                 .orElseThrow(() -> new IllegalStateException("発行された精算書が見つかりません: " + invoiceId.value()));

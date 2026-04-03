@@ -45,21 +45,29 @@ class InvoiceRestControllerTest {
     @DisplayName("精算書を発行すると 201 Created を返す")
     void 精算書を発行すると201Createdを返す() throws Exception {
         InvoiceId invoiceId = InvoiceId.generate();
-        InvoiceSummary summary = anySummary(invoiceId);
+        InvoiceSummary summary = new InvoiceSummary(
+                invoiceId.value().toString(),
+                "booking-001",
+                "charge-001",
+                new BigDecimal("10000"),
+                LocalDate.of(2026, 5, 31),
+                "支払い待ち"
+        );
 
         when(invoiceCommandService.generateInvoice(any())).thenReturn(invoiceId);
         when(invoiceQueryService.findById(invoiceId.value().toString())).thenReturn(Optional.of(summary));
 
-        mockMvc.perform(post("/api/v1/invoices")
+                mockMvc.perform(post("/api/v1/invoices")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"bookingId": "booking-001", "freightChargeId": "charge-001"}
+                                {"bookingId": "booking-001", "freightChargeId": "charge-001", "dueDate": "2026-05-31"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("/api/v1/invoices/")))
                 .andExpect(jsonPath("$.id").value(invoiceId.value().toString()))
                 .andExpect(jsonPath("$.bookingId").value("booking-001"))
-                .andExpect(jsonPath("$.paymentStatus").value("支払い待ち"));
+                .andExpect(jsonPath("$.paymentStatus").value("支払い待ち"))
+                .andExpect(jsonPath("$.dueDate").value("2026-05-31"));
     }
 
     @Test

@@ -19,6 +19,9 @@
 
     <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
     <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${hasOverdueInvoices}" class="alert alert-warning" data-testid="invoice-overdue-alert">
+        支払い期限を超過した未払い精算書があります。経理担当者へ未払い通知を送信してください。
+    </div>
 
     <div class="card shadow-sm">
         <div class="card-body p-0">

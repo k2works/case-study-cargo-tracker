@@ -202,4 +202,16 @@ class BookingTest {
         assertThatThrownBy(booking::confirm)
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    @DisplayName("確定済み予約を精算済みにできる")
+    void settleBooking() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        booking.assignRoute(new AssignedRoute("VOY-001", "JPTYO/USNYC", LocalDate.of(2025, 9, 1)));
+        booking.confirm();
+
+        booking.settle();
+
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.SETTLED);
+    }
 }

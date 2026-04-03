@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.application.internal.queryservices;
 
+import com.example.cargotracker.billing.application.internal.outboundservices.ShipperDiscountQueryPort;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightCharge;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
 import com.example.cargotracker.billing.domain.model.repository.FreightChargeRepository;
@@ -19,9 +20,12 @@ import java.util.UUID;
 public class FreightChargeQueryService {
 
     private final FreightChargeRepository freightChargeRepository;
+    private final ShipperDiscountQueryPort shipperDiscountQueryPort;
 
-    public FreightChargeQueryService(FreightChargeRepository freightChargeRepository) {
+    public FreightChargeQueryService(FreightChargeRepository freightChargeRepository,
+                                     ShipperDiscountQueryPort shipperDiscountQueryPort) {
         this.freightChargeRepository = freightChargeRepository;
+        this.shipperDiscountQueryPort = shipperDiscountQueryPort;
     }
 
     /**
@@ -48,7 +52,8 @@ public class FreightChargeQueryService {
                 charge.getStatus().getDisplayName(),
                 charge.getBaseAmount(),
                 charge.getAdjustmentAmount(),
-                charge.getTotalAmount()
+                charge.getTotalAmount(),
+                shipperDiscountQueryPort.findDiscountRateByBookingId(charge.getBookingId())
         );
     }
 
@@ -63,6 +68,7 @@ public class FreightChargeQueryService {
             String status,
             BigDecimal baseAmount,
             BigDecimal adjustmentAmount,
-            BigDecimal totalAmount
+            BigDecimal totalAmount,
+            BigDecimal discountRate
     ) {}
 }

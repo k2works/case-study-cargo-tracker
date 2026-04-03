@@ -22,7 +22,9 @@ public class InvoiceQueryService {
     }
 
     public List<InvoiceSummary> findAll() {
-        return invoiceRepository.findAll().stream().map(this::toSummary).toList();
+        return invoiceRepository.findAll().stream()
+                .map(this::toSummary)
+                .toList();
     }
 
     public Optional<InvoiceSummary> findById(String id) {
@@ -36,8 +38,21 @@ public class InvoiceQueryService {
                 invoice.getFreightChargeId(),
                 invoice.getAmount(),
                 invoice.getDueDate(),
-                invoice.getPaymentStatus().getDisplayName()
+                resolvePaymentStatus(invoice)
         );
+    }
+
+    public boolean hasOverdueInvoices() {
+        return invoiceRepository.findAll().stream().anyMatch(this::isOverdue);
+    }
+
+    private String resolvePaymentStatus(Invoice invoice) {
+        return isOverdue(invoice) ? "支払い期限超過" : invoice.getPaymentStatus().getDisplayName();
+    }
+
+    private boolean isOverdue(Invoice invoice) {
+        return invoice.getPaymentStatus().name().equals("PENDING")
+                && invoice.getDueDate().isBefore(LocalDate.now());
     }
 
     public record InvoiceSummary(

@@ -170,4 +170,8 @@ export class BookingPage {
     await el.waitFor({ state: 'visible' });
     return await el.innerText();
   }
+
+  async expectStatus(status: string) {
+    await expect(this.page.locator('[data-testid="booking-status-badge"]')).toContainText(status);
+  }
 }

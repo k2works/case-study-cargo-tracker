@@ -101,6 +101,19 @@ public class Booking {
         this.domainEvents.add(new BookingConfirmedEvent(id));
     }
 
+    /**
+     * 精算を完了する。
+     */
+    public void settle() {
+        if (status == BookingStatus.SETTLED) {
+            throw new IllegalStateException("既に精算済みの予約です");
+        }
+        if (status != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException("確定済みの予約のみ精算済みにできます");
+        }
+        this.status = BookingStatus.SETTLED;
+    }
+
     public BookingId getId() { return id; }
     public ShipperId getShipperId() { return shipperId; }
     public CargoSpecification getCargoSpecification() { return cargoSpecification; }

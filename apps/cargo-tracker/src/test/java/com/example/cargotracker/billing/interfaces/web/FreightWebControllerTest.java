@@ -5,9 +5,12 @@ import com.example.cargotracker.billing.application.internal.commandservices.Boo
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort.FreightBookingSummary;
+import com.example.cargotracker.billing.application.internal.outboundservices.ShipperDiscountQueryPort;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService.FreightChargeSummary;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
+import com.example.cargotracker.billing.domain.model.services.DiscountPolicy;
+import com.example.cargotracker.billing.domain.model.services.FreightCalculationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +57,15 @@ class FreightWebControllerTest {
     @MockitoBean
     private FreightBookingQueryPort freightBookingQueryPort;
 
+    @MockitoBean
+    private ShipperDiscountQueryPort shipperDiscountQueryPort;
+
+    @MockitoBean
+    private FreightCalculationService freightCalculationService;
+
+    @MockitoBean
+    private DiscountPolicy discountPolicy;
+
     @Test
     @DisplayName("GET /freight — 一覧ページを表示する")
     void list() throws Exception {
@@ -79,6 +91,10 @@ class FreightWebControllerTest {
     void showCalculateForm_withBookingId_showsSummary() throws Exception {
         when(freightBookingQueryPort.findCalculableBookingById("booking-001"))
                 .thenReturn(Optional.of(calculableSummary()));
+        when(shipperDiscountQueryPort.findDiscountRateByBookingId("booking-001"))
+                .thenReturn(BigDecimal.ZERO);
+        when(freightCalculationService.calculateBaseAmount(any(), any()))
+                .thenReturn(new BigDecimal("100"));
 
         mockMvc.perform(get("/freight/calculate").param("bookingId", "booking-001"))
                 .andExpect(status().isOk())
@@ -175,7 +191,8 @@ class FreightWebControllerTest {
                 "算出中",
                 new BigDecimal("10000"),
                 BigDecimal.ZERO,
-                new BigDecimal("10000")
+                new BigDecimal("10000"),
+                BigDecimal.ZERO
         );
     }
 

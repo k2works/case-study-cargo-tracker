@@ -31,6 +31,7 @@
                     <th scope="col">予約 ID</th>
                     <th scope="col">ステータス</th>
                     <th scope="col">基本料金</th>
+                    <th scope="col">割引率</th>
                     <th scope="col">調整額</th>
                     <th scope="col">合計</th>
                     <th scope="col">操作</th>
@@ -38,7 +39,7 @@
                 </thead>
                 <tbody>
                 <tr th:if="${#lists.isEmpty(freightCharges)}">
-                    <td colspan="7" class="text-center text-muted py-4">輸送料金が登録されていません</td>
+                    <td colspan="8" class="text-center text-muted py-4">輸送料金が登録されていません</td>
                 </tr>
                 <tr th:each="charge : ${freightCharges}" data-testid="freight-charge-row">
                     <td><code th:text="${charge.id}"></code></td>
@@ -49,23 +50,17 @@
                               th:text="${charge.status}"></span>
                     </td>
                     <td th:text="${#numbers.formatDecimal(charge.baseAmount, 1, 'COMMA', 0, 'POINT')}"></td>
+                    <td data-testid="freight-charge-discount-rate"
+                        th:text="${charge.discountRate != null and charge.discountRate.compareTo(T(java.math.BigDecimal).ZERO) > 0}
+                                  ? ${#numbers.formatDecimal(charge.discountRate, 1, 'COMMA', 0, 'POINT')} + '%'
+                                  : '-'"></td>
                     <td th:text="${#numbers.formatDecimal(charge.adjustmentAmount, 1, 'COMMA', 0, 'POINT')}"></td>
                     <td th:text="${#numbers.formatDecimal(charge.totalAmount, 1, 'COMMA', 0, 'POINT')}"></td>
                     <td>
                         <form th:if="${charge.status == '算出中'}"
-                              th:action="@{/freight/{id}/apply-discount(id=${charge.id})}"
-                              method="post"
-                              class="d-inline">
-                            <input type="hidden" name="bookingId" th:value="${charge.bookingId}" />
-                            <button type="submit"
-                                    class="btn btn-sm btn-outline-primary"
-                                    data-testid="freight-discount-submit"
-                                    th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の法人割引を適用'">割引適用</button>
-                        </form>
-                        <form th:if="${charge.status == '算出中'}"
                               th:action="@{/freight/{id}/confirm(id=${charge.id})}"
                               method="post"
-                              class="d-inline ms-1">
+                              class="d-inline">
                             <button type="submit"
                                     class="btn btn-sm btn-outline-success"
                                     data-testid="freight-confirm-submit"
@@ -78,6 +73,12 @@
                               class="d-inline ms-1">
                             <input type="hidden" name="bookingId" th:value="${charge.bookingId}" />
                             <input type="hidden" name="freightChargeId" th:value="${charge.id}" />
+                            <input type="date"
+                                   name="dueDate"
+                                   class="form-control form-control-sm d-inline-block me-1"
+                                   style="width: 160px;"
+                                   data-testid="freight-invoice-due-date"
+                                   th:value="${#temporals.format(T(java.time.LocalDate).now().plusDays(30), 'yyyy-MM-dd')}" />
                             <button type="submit"
                                     class="btn btn-sm btn-outline-info"
                                     data-testid="freight-generate-invoice-submit"

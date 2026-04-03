@@ -1,10 +1,12 @@
 package com.example.cargotracker.billing.interfaces.web;
 
 import com.example.cargotracker.billing.application.internal.commandservices.InvoiceCommandService;
+import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
 import com.example.cargotracker.billing.application.internal.queryservices.InvoiceQueryService;
 import com.example.cargotracker.billing.domain.model.commands.ConfirmPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.GenerateInvoiceCommand;
 import org.springframework.stereotype.Controller;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.LocalDate;
 
 /**
  * 精算書 Web コントローラー。
@@ -28,11 +32,14 @@ public class InvoiceWebController {
 
     private final InvoiceCommandService invoiceCommandService;
     private final InvoiceQueryService invoiceQueryService;
+    private final FreightChargeQueryService freightChargeQueryService;
 
     public InvoiceWebController(InvoiceCommandService invoiceCommandService,
-                                InvoiceQueryService invoiceQueryService) {
+                                InvoiceQueryService invoiceQueryService,
+                                FreightChargeQueryService freightChargeQueryService) {
         this.invoiceCommandService = invoiceCommandService;
         this.invoiceQueryService = invoiceQueryService;
+        this.freightChargeQueryService = freightChargeQueryService;
     }
 
     /**
@@ -41,6 +48,7 @@ public class InvoiceWebController {
     @GetMapping
     public String list(Model model) {
         model.addAttribute("invoices", invoiceQueryService.findAll());
+        model.addAttribute("hasOverdueInvoices", invoiceQueryService.hasOverdueInvoices());
         return VIEW_INVOICES;
     }
 
@@ -54,6 +62,8 @@ public class InvoiceWebController {
         return invoiceQueryService.findById(id)
                 .map(invoice -> {
                     model.addAttribute("invoice", invoice);
+                    freightChargeQueryService.findById(invoice.freightChargeId())
+                            .ifPresent(freightCharge -> model.addAttribute("freightCharge", freightCharge));
                     return VIEW_INVOICE_DETAIL;
                 })
                 .orElseGet(() -> {
@@ -68,10 +78,12 @@ public class InvoiceWebController {
     @PostMapping
     public String generateInvoice(@RequestParam("bookingId") String bookingId,
                                   @RequestParam("freightChargeId") String freightChargeId,
+                                  @RequestParam(value = "dueDate", required = false)
+                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDate,
                                   RedirectAttributes redirectAttributes) {
         try {
-            invoiceCommandService.generateInvoice(new GenerateInvoiceCommand(bookingId, freightChargeId));
-            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE, "精算書を発行しました");
+            invoiceCommandService.generateInvoice(new GenerateInvoiceCommand(bookingId, freightChargeId, dueDate));
+            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE, "精算書を発行し、荷主へメール通知しました");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());
         }
@@ -86,7 +98,7 @@ public class InvoiceWebController {
                                  RedirectAttributes redirectAttributes) {
         try {
             invoiceCommandService.confirmPayment(new ConfirmPaymentCommand(id));
-            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE, "支払いを確認しました");
+            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE, "決済機関との連携により入金を確認し、精算を完了しました");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());
         }

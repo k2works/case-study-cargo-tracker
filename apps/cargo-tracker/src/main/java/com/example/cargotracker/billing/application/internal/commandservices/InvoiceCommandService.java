@@ -8,6 +8,8 @@ import com.example.cargotracker.billing.domain.model.commands.GenerateInvoiceCom
 import com.example.cargotracker.billing.domain.model.repository.FreightChargeRepository;
 import com.example.cargotracker.billing.domain.model.repository.InvoiceRepository;
 import com.example.cargotracker.billing.domain.model.valueobjects.ChargeStatus;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.repository.BookingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +21,14 @@ public class InvoiceCommandService {
 
     private final InvoiceRepository invoiceRepository;
     private final FreightChargeRepository freightChargeRepository;
+    private final BookingRepository bookingRepository;
 
     public InvoiceCommandService(InvoiceRepository invoiceRepository,
-                                  FreightChargeRepository freightChargeRepository) {
+                                 FreightChargeRepository freightChargeRepository,
+                                 BookingRepository bookingRepository) {
         this.invoiceRepository = invoiceRepository;
         this.freightChargeRepository = freightChargeRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     public InvoiceId generateInvoice(GenerateInvoiceCommand command) {
@@ -51,7 +56,7 @@ public class InvoiceCommandService {
                 charge.getBookingId(),
                 charge.getId().value().toString(),
                 charge.getTotalAmount(),
-                LocalDate.now().plusDays(30)
+                command.dueDate() != null ? command.dueDate() : LocalDate.now().plusDays(30)
         );
 
         invoiceRepository.save(invoice);
@@ -61,8 +66,12 @@ public class InvoiceCommandService {
     public void confirmPayment(ConfirmPaymentCommand command) {
         var invoice = invoiceRepository.findById(InvoiceId.of(command.invoiceId()))
                 .orElseThrow(() -> new IllegalArgumentException("精算書が見つかりません: " + command.invoiceId()));
+        var booking = bookingRepository.findById(BookingId.of(invoice.getBookingId()))
+                .orElseThrow(() -> new IllegalArgumentException("予約が見つかりません: " + invoice.getBookingId()));
 
         invoice.confirmPayment();
+        booking.settle();
         invoiceRepository.save(invoice);
+        bookingRepository.save(booking);
     }
 }

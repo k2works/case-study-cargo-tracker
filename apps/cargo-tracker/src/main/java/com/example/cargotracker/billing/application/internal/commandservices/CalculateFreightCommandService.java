@@ -2,10 +2,12 @@ package com.example.cargotracker.billing.application.internal.commandservices;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort.FreightBookingSummary;
+import com.example.cargotracker.billing.application.internal.outboundservices.ShipperDiscountQueryPort;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightCharge;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
 import com.example.cargotracker.billing.domain.model.commands.CalculateFreightCommand;
 import com.example.cargotracker.billing.domain.model.repository.FreightChargeRepository;
+import com.example.cargotracker.billing.domain.model.services.DiscountPolicy;
 import com.example.cargotracker.billing.domain.model.services.FreightCalculationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,13 +23,19 @@ public class CalculateFreightCommandService {
 
     private final FreightChargeRepository freightChargeRepository;
     private final FreightBookingQueryPort freightBookingQueryPort;
+    private final ShipperDiscountQueryPort shipperDiscountQueryPort;
+    private final DiscountPolicy discountPolicy;
     private final FreightCalculationService freightCalculationService;
 
     public CalculateFreightCommandService(FreightChargeRepository freightChargeRepository,
                                           FreightBookingQueryPort freightBookingQueryPort,
+                                          ShipperDiscountQueryPort shipperDiscountQueryPort,
+                                          DiscountPolicy discountPolicy,
                                           FreightCalculationService freightCalculationService) {
         this.freightChargeRepository = freightChargeRepository;
         this.freightBookingQueryPort = freightBookingQueryPort;
+        this.shipperDiscountQueryPort = shipperDiscountQueryPort;
+        this.discountPolicy = discountPolicy;
         this.freightCalculationService = freightCalculationService;
     }
 
@@ -45,11 +53,16 @@ public class CalculateFreightCommandService {
 
         BigDecimal baseAmount = freightCalculationService.calculateBaseAmount(
                 summary.weightKg(), summary.cargoType());
+        BigDecimal discountRate = shipperDiscountQueryPort.findDiscountRateByBookingId(summary.bookingId());
+        BigDecimal totalAdjustment = command.adjustmentAmount() != null ? command.adjustmentAmount() : BigDecimal.ZERO;
+        if (discountRate.compareTo(BigDecimal.ZERO) > 0) {
+            totalAdjustment = totalAdjustment.add(discountPolicy.calculateDiscount(baseAmount, discountRate));
+        }
 
         FreightCharge charge = FreightCharge.calculate(
                 FreightId.generate(), summary.bookingId(), baseAmount);
-        if (command.adjustmentAmount() != null) {
-            charge.applyAdjustment(command.adjustmentAmount());
+        if (totalAdjustment.compareTo(BigDecimal.ZERO) != 0) {
+            charge.applyAdjustment(totalAdjustment);
         }
 
         freightChargeRepository.save(charge);

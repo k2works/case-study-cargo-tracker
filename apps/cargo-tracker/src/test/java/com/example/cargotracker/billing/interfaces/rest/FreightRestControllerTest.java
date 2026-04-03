@@ -101,7 +101,8 @@ class FreightRestControllerTest {
                 "算出中",
                 new BigDecimal("10000"),
                 BigDecimal.ZERO,
-                new BigDecimal("10000")
+                new BigDecimal("10000"),
+                BigDecimal.ZERO
         );
     }
 
@@ -115,7 +116,8 @@ class FreightRestControllerTest {
                 "算出中",
                 new BigDecimal("10000"),
                 new BigDecimal("-1000"),
-                new BigDecimal("9000")
+                new BigDecimal("9000"),
+                new BigDecimal("10")
         );
 
         when(freightChargeQueryService.findById(freightId.value().toString()))

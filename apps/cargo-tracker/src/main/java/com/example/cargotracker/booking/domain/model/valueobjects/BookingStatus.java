@@ -2,7 +2,8 @@ package com.example.cargotracker.booking.domain.model.valueobjects;
 
 public enum BookingStatus {
     PROVISIONAL("仮予約"),
-    CONFIRMED("確定済");
+    CONFIRMED("確定済"),
+    SETTLED("精算済");
 
     private final String displayName;
 

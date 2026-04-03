@@ -54,6 +54,17 @@
                         <dd class="col-sm-8" data-testid="freight-cargo-type" th:text="${bookingSummary.cargoType}"></dd>
                         <dt class="col-sm-4">荷役作業実績</dt>
                         <dd class="col-sm-8" data-testid="freight-handling-count" th:text="${bookingSummary.handlingEventCount} + ' 件'"></dd>
+                        <dt class="col-sm-4">基本料金見込</dt>
+                        <dd class="col-sm-8" data-testid="freight-preview-base-amount"
+                            th:text="${#numbers.formatDecimal(previewBaseAmount, 1, 'COMMA', 0, 'POINT')}"></dd>
+                        <th:block th:if="${discountRate != null and discountRate.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                            <dt class="col-sm-4">法人契約割引率</dt>
+                            <dd class="col-sm-8" data-testid="freight-discount-rate"
+                                th:text="${#numbers.formatDecimal(discountRate, 1, 'COMMA', 0, 'POINT')} + '%'"></dd>
+                            <dt class="col-sm-4">割引後料金見込</dt>
+                            <dd class="col-sm-8" data-testid="freight-preview-total-amount"
+                                th:text="${#numbers.formatDecimal(previewTotalAmount, 1, 'COMMA', 0, 'POINT')}"></dd>
+                        </th:block>
                     </dl>
                 </div>
 

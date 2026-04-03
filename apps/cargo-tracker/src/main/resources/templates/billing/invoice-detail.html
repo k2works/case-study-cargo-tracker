@@ -28,26 +28,52 @@
                 <dd class="col-sm-9"><code th:text="${invoice.id}"></code></dd>
 
                 <dt class="col-sm-3">予約 ID</dt>
-                <dd class="col-sm-9" th:text="${invoice.bookingId}"></dd>
+                <dd class="col-sm-9" data-testid="invoice-booking-id" th:text="${invoice.bookingId}"></dd>
 
                 <dt class="col-sm-3">輸送料金 ID</dt>
                 <dd class="col-sm-9"><code th:text="${invoice.freightChargeId}"></code></dd>
 
                 <dt class="col-sm-3">金額</dt>
-                <dd class="col-sm-9" th:text="${#numbers.formatDecimal(invoice.amount, 1, 'COMMA', 0, 'POINT')}"></dd>
+                <dd class="col-sm-9" data-testid="invoice-amount"
+                    th:text="${#numbers.formatDecimal(invoice.amount, 1, 'COMMA', 0, 'POINT')}"></dd>
 
                 <dt class="col-sm-3">支払期限</dt>
-                <dd class="col-sm-9" th:text="${#temporals.format(invoice.dueDate, 'yyyy-MM-dd')}"></dd>
+                <dd class="col-sm-9" data-testid="invoice-due-date"
+                    th:text="${#temporals.format(invoice.dueDate, 'yyyy-MM-dd')}"></dd>
 
                 <dt class="col-sm-3">支払い状態</dt>
                 <dd class="col-sm-9">
                     <span class="badge"
+                          data-testid="invoice-payment-status"
                           th:classappend="${invoice.paymentStatus == '支払い済み'} ? 'bg-success' :
                                          (${invoice.paymentStatus == '支払い期限超過'} ? 'bg-danger text-white' :
                                          (${invoice.paymentStatus == '返金済み'} ? 'bg-secondary' : 'bg-warning text-dark'))"
                           th:text="${invoice.paymentStatus}"></span>
                 </dd>
             </dl>
+
+            <div th:if="${freightCharge}" class="border-top pt-3 mt-3" data-testid="invoice-discount-breakdown">
+                <h2 class="h6">割引計算の根拠</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">基本料金</dt>
+                    <dd class="col-sm-9" data-testid="invoice-base-amount"
+                        th:text="${#numbers.formatDecimal(freightCharge.baseAmount, 1, 'COMMA', 0, 'POINT')}"></dd>
+
+                    <dt class="col-sm-3">契約割引率</dt>
+                    <dd class="col-sm-9" data-testid="invoice-discount-rate"
+                        th:text="${freightCharge.discountRate != null and freightCharge.discountRate.compareTo(T(java.math.BigDecimal).ZERO) > 0}
+                                  ? ${#numbers.formatDecimal(freightCharge.discountRate, 1, 'COMMA', 0, 'POINT')} + '%'
+                                  : '-'"></dd>
+
+                    <dt class="col-sm-3">調整額</dt>
+                    <dd class="col-sm-9" data-testid="invoice-adjustment-amount"
+                        th:text="${#numbers.formatDecimal(freightCharge.adjustmentAmount, 1, 'COMMA', 0, 'POINT')}"></dd>
+
+                    <dt class="col-sm-3">割引後料金</dt>
+                    <dd class="col-sm-9" data-testid="invoice-total-amount"
+                        th:text="${#numbers.formatDecimal(freightCharge.totalAmount, 1, 'COMMA', 0, 'POINT')}"></dd>
+                </dl>
+            </div>
 
             <div class="mt-3">
                 <form th:if="${invoice.paymentStatus == '支払い待ち'}"

@@ -4,10 +4,12 @@ import com.example.cargotracker.billing.application.internal.commandservices.Boo
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort.FreightBookingSummary;
+import com.example.cargotracker.billing.application.internal.outboundservices.ShipperDiscountQueryPort;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightCharge;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
 import com.example.cargotracker.billing.domain.model.commands.CalculateFreightCommand;
 import com.example.cargotracker.billing.domain.model.repository.FreightChargeRepository;
+import com.example.cargotracker.billing.domain.model.services.DiscountPolicy;
 import com.example.cargotracker.billing.domain.model.services.FreightCalculationService;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +39,9 @@ class CalculateFreightCommandServiceTest {
     private FreightBookingQueryPort freightBookingQueryPort;
 
     @Mock
+    private ShipperDiscountQueryPort shipperDiscountQueryPort;
+
+    @Mock
     private FreightCalculationService freightCalculationService;
 
     private CalculateFreightCommandService commandService;
@@ -44,7 +49,12 @@ class CalculateFreightCommandServiceTest {
     @BeforeEach
     void setUp() {
         commandService = new CalculateFreightCommandService(
-                freightChargeRepository, freightBookingQueryPort, freightCalculationService);
+                freightChargeRepository,
+                freightBookingQueryPort,
+                shipperDiscountQueryPort,
+                new DiscountPolicy(),
+                freightCalculationService
+        );
     }
 
     @Test
@@ -60,6 +70,8 @@ class CalculateFreightCommandServiceTest {
 
         when(freightBookingQueryPort.findCalculableBookingById(bookingId))
                 .thenReturn(Optional.of(summary));
+        when(shipperDiscountQueryPort.findDiscountRateByBookingId(bookingId))
+                .thenReturn(BigDecimal.ZERO);
         when(freightCalculationService.calculateBaseAmount(weightKg, CargoType.GENERAL_CARGO))
                 .thenReturn(baseAmount);
         doNothing().when(freightChargeRepository).save(any(FreightCharge.class));
@@ -115,6 +127,8 @@ class CalculateFreightCommandServiceTest {
 
         when(freightBookingQueryPort.findCalculableBookingById(bookingId))
                 .thenReturn(Optional.of(summary));
+        when(shipperDiscountQueryPort.findDiscountRateByBookingId(bookingId))
+                .thenReturn(BigDecimal.ZERO);
         when(freightCalculationService.calculateBaseAmount(weightKg, CargoType.GENERAL_CARGO))
                 .thenReturn(baseAmount);
 
@@ -124,6 +138,31 @@ class CalculateFreightCommandServiceTest {
         verify(freightChargeRepository).save(captor.capture());
         assertThat(captor.getValue().getAdjustmentAmount()).isEqualByComparingTo(new BigDecimal("-20"));
         assertThat(captor.getValue().getTotalAmount()).isEqualByComparingTo(new BigDecimal("80"));
+    }
+
+    @Test
+    @DisplayName("法人荷主の割引率は料金算出時に自動適用される")
+    void calculate_法人荷主の割引率は料金算出時に自動適用される() {
+        String bookingId = "booking-corporate";
+        BigDecimal weightKg = new BigDecimal("180.0");
+        BigDecimal baseAmount = new BigDecimal("180");
+        FreightBookingSummary summary = new FreightBookingSummary(
+                bookingId, CargoType.GENERAL_CARGO, weightKg, "JPTYO", "SGSIN",
+                "JPTYO→SGSIN", LocalDate.of(2026, 6, 1), 1, new BigDecimal("5300"));
+
+        when(freightBookingQueryPort.findCalculableBookingById(bookingId))
+                .thenReturn(Optional.of(summary));
+        when(shipperDiscountQueryPort.findDiscountRateByBookingId(bookingId))
+                .thenReturn(new BigDecimal("10"));
+        when(freightCalculationService.calculateBaseAmount(weightKg, CargoType.GENERAL_CARGO))
+                .thenReturn(baseAmount);
+
+        commandService.calculate(new CalculateFreightCommand(bookingId, null));
+
+        ArgumentCaptor<FreightCharge> captor = ArgumentCaptor.forClass(FreightCharge.class);
+        verify(freightChargeRepository).save(captor.capture());
+        assertThat(captor.getValue().getAdjustmentAmount()).isEqualByComparingTo(new BigDecimal("-18.00"));
+        assertThat(captor.getValue().getTotalAmount()).isEqualByComparingTo(new BigDecimal("162.00"));
     }
 
     @Test

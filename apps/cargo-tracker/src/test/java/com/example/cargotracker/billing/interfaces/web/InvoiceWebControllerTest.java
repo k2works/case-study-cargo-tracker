@@ -1,6 +1,8 @@
 package com.example.cargotracker.billing.interfaces.web;
 
 import com.example.cargotracker.billing.application.internal.commandservices.InvoiceCommandService;
+import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
+import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService.FreightChargeSummary;
 import com.example.cargotracker.billing.application.internal.queryservices.InvoiceQueryService;
 import com.example.cargotracker.billing.application.internal.queryservices.InvoiceQueryService.InvoiceSummary;
 import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
@@ -44,6 +46,9 @@ class InvoiceWebControllerTest {
     @MockitoBean
     private InvoiceQueryService invoiceQueryService;
 
+    @MockitoBean
+    private FreightChargeQueryService freightChargeQueryService;
+
     @Test
     @DisplayName("GET /invoices — 精算一覧ページを表示する")
     void list() throws Exception {
@@ -62,6 +67,8 @@ class InvoiceWebControllerTest {
         InvoiceId invoiceId = InvoiceId.generate();
         when(invoiceQueryService.findById(invoiceId.value().toString()))
                 .thenReturn(Optional.of(anySummary(invoiceId)));
+        when(freightChargeQueryService.findById("charge-001"))
+                .thenReturn(Optional.of(anyFreightChargeSummary()));
 
         mockMvc.perform(get("/invoices/" + invoiceId.value()))
                 .andExpect(status().isOk())
@@ -85,13 +92,14 @@ class InvoiceWebControllerTest {
         InvoiceId invoiceId = InvoiceId.generate();
         when(invoiceCommandService.generateInvoice(any())).thenReturn(invoiceId);
 
-        mockMvc.perform(post("/invoices")
+                mockMvc.perform(post("/invoices")
                         .param("bookingId", "booking-001")
                         .param("freightChargeId", "charge-001")
+                        .param("dueDate", "2026-05-31")
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/invoices"))
-                .andExpect(flash().attributeExists("successMessage"));
+                .andExpect(flash().attribute("successMessage", "精算書を発行し、荷主へメール通知しました"));
 
         verify(invoiceCommandService).generateInvoice(any());
     }
@@ -120,7 +128,7 @@ class InvoiceWebControllerTest {
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/invoices"))
-                .andExpect(flash().attribute("successMessage", "支払いを確認しました"));
+                .andExpect(flash().attribute("successMessage", "決済機関との連携により入金を確認し、精算を完了しました"));
 
         verify(invoiceCommandService).confirmPayment(any());
     }
@@ -147,6 +155,18 @@ class InvoiceWebControllerTest {
                 new BigDecimal("10000"),
                 LocalDate.now().plusDays(30),
                 "支払い待ち"
+        );
+    }
+
+    private FreightChargeSummary anyFreightChargeSummary() {
+        return new FreightChargeSummary(
+                "charge-001",
+                "booking-001",
+                "確定",
+                new BigDecimal("10000"),
+                new BigDecimal("-1000"),
+                new BigDecimal("9000"),
+                new BigDecimal("10")
         );
     }
 }
