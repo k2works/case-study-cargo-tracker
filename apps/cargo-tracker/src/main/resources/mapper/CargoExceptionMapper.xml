@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.exception.infrastructure.repositories.CargoExceptionMapper">
+
+    <resultMap id="cargoExceptionResultMap"
+               type="com.example.cargotracker.exception.infrastructure.repositories.CargoExceptionRecord">
+        <constructor>
+            <idArg column="id"              javaType="java.lang.String"/>
+            <arg  column="tracking_number"  javaType="java.lang.String"/>
+            <arg  column="exception_type"   javaType="java.lang.String"/>
+            <arg  column="location_code"    javaType="java.lang.String"/>
+            <arg  column="occurred_at"      javaType="java.time.LocalDateTime"/>
+            <arg  column="reason"           javaType="java.lang.String"/>
+            <arg  column="urgent"           javaType="java.lang.Boolean"/>
+            <arg  column="resolution"       javaType="java.lang.String"/>
+            <arg  column="created_at"       javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO cargo_exceptions (id, tracking_number, exception_type, location_code,
+                                      occurred_at, reason, urgent, resolution, created_at)
+        VALUES (#{row.id}, #{row.trackingNumber}, #{row.exceptionType}, #{row.locationCode},
+                #{row.occurredAt}, #{row.reason}, #{row.urgent}, #{row.resolution}, #{row.createdAt})
+    </insert>
+
+    <select id="findByTrackingNumber" resultMap="cargoExceptionResultMap">
+        SELECT id, tracking_number, exception_type, location_code,
+               occurred_at, reason, urgent, resolution, created_at
+        FROM cargo_exceptions
+        WHERE tracking_number = #{trackingNumber}
+        ORDER BY occurred_at DESC, id DESC
+    </select>
+
+</mapper>
