@@ -9,7 +9,6 @@ import com.example.cargotracker.handling.interfaces.rest.dto.HandlingEventRespon
 import com.example.cargotracker.handling.interfaces.rest.dto.RecordHandlingEventRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -53,12 +52,10 @@ public class HandlingRestController {
     @PostMapping
     @Operation(summary = "荷役イベント記録",
                description = "港湾・輸送における荷役作業を記録する。bookingId に対応する予約が存在しない場合は 404 を返す。")
-    @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "記録成功。Location ヘッダーに作成リソース URI を含む"),
-        @ApiResponse(responseCode = "400", description = "バリデーションエラー"),
-        @ApiResponse(responseCode = "404", description = "指定した bookingId の予約が存在しない"),
-        @ApiResponse(responseCode = "409", description = "同一予約に RECEIVE イベントが既に存在する（RECEIVE は 1 回のみ登録可能）")
-    })
+    @ApiResponse(responseCode = "201", description = "記録成功。Location ヘッダーに作成リソース URI を含む")
+    @ApiResponse(responseCode = "400", description = "バリデーションエラー")
+    @ApiResponse(responseCode = "404", description = "指定した bookingId の予約が存在しない")
+    @ApiResponse(responseCode = "409", description = "同一予約に RECEIVE イベントが既に存在する（RECEIVE は 1 回のみ登録可能）")
     public ResponseEntity<HandlingEventResponse> createHandlingEvent(
             @Valid @RequestBody RecordHandlingEventRequest request,
             UriComponentsBuilder uriComponentsBuilder) {

@@ -41,8 +41,9 @@ class StubRouteProviderAdapterTest {
 
         List<RouteCandidate> result = adapter.findRoutes(query);
 
-        assertThat(result).isNotEmpty();
-        assertThat(result).allMatch(c -> c.transitDays() > 0);
+        assertThat(result)
+                .isNotEmpty()
+                .allMatch(c -> c.transitDays() > 0);
     }
 
     @Test
@@ -55,7 +56,8 @@ class StubRouteProviderAdapterTest {
 
         List<RouteCandidate> result = adapter.findRoutes(query);
 
-        assertThat(result).isNotEmpty();
-        assertThat(result).allMatch(c -> c.estimatedPrice().compareTo(BigDecimal.ZERO) > 0);
+        assertThat(result)
+                .isNotEmpty()
+                .allMatch(c -> c.estimatedPrice().compareTo(BigDecimal.ZERO) > 0);
     }
 }

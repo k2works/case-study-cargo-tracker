@@ -26,7 +26,8 @@ class TransportConditionTest {
     @Test
     @DisplayName("希望着日が希望引渡日より前の場合は例外を投げる")
     void rejectDeliveryBeforePickup() {
-        assertThatThrownBy(() -> createTransportCondition("JPTYO", "USNYC", PICKUP, PICKUP.minusDays(1)))
+        LocalDate deliveryDate = PICKUP.minusDays(1);
+        assertThatThrownBy(() -> createTransportCondition("JPTYO", "USNYC", PICKUP, deliveryDate))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("希望着日");
     }

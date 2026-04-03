@@ -82,28 +82,40 @@ class BookingTest {
     @Test
     @DisplayName("id が null の場合は登録できない")
     void rejectNullId() {
-        assertThatThrownBy(() -> Booking.register(null, anyShipperId(), anyCargo(), anyTransport()))
+        var shipperId = anyShipperId();
+        var cargo = anyCargo();
+        var transport = anyTransport();
+        assertThatThrownBy(() -> Booking.register(null, shipperId, cargo, transport))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("shipperId が null の場合は登録できない")
     void rejectNullShipperId() {
-        assertThatThrownBy(() -> Booking.register(anyBookingId(), null, anyCargo(), anyTransport()))
+        var bookingId = anyBookingId();
+        var cargo = anyCargo();
+        var transport = anyTransport();
+        assertThatThrownBy(() -> Booking.register(bookingId, null, cargo, transport))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("cargoSpecification が null の場合は登録できない")
     void rejectNullCargoSpecification() {
-        assertThatThrownBy(() -> Booking.register(anyBookingId(), anyShipperId(), null, anyTransport()))
+        var bookingId = anyBookingId();
+        var shipperId = anyShipperId();
+        var transport = anyTransport();
+        assertThatThrownBy(() -> Booking.register(bookingId, shipperId, null, transport))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("transportCondition が null の場合は登録できない")
     void rejectNullTransportCondition() {
-        assertThatThrownBy(() -> Booking.register(anyBookingId(), anyShipperId(), anyCargo(), null))
+        var bookingId = anyBookingId();
+        var shipperId = anyShipperId();
+        var cargo = anyCargo();
+        assertThatThrownBy(() -> Booking.register(bookingId, shipperId, cargo, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

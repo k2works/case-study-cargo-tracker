@@ -10,7 +10,6 @@ import com.example.cargotracker.quote.interfaces.rest.dto.QuoteRequest;
 import com.example.cargotracker.quote.interfaces.rest.dto.QuoteResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -50,9 +49,7 @@ public class QuoteRestController {
 
     @GetMapping
     @Operation(summary = "見積一覧取得", description = "登録済みの見積一覧を返す")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "取得成功")
-    })
+    @ApiResponse(responseCode = "200", description = "取得成功")
     public List<QuoteResponse> list() {
         return findQuoteQueryService.findAll().stream()
                 .map(QuoteResponse::from)
@@ -61,21 +58,17 @@ public class QuoteRestController {
 
     @GetMapping("/{id}")
     @Operation(summary = "見積詳細取得", description = "指定 ID の見積を返す")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "取得成功"),
-            @ApiResponse(responseCode = "404", description = "見積が見つからない")
-    })
+    @ApiResponse(responseCode = "200", description = "取得成功")
+    @ApiResponse(responseCode = "404", description = "見積が見つからない")
     public QuoteResponse detail(@PathVariable("id") String id) {
         return QuoteResponse.from(findQuote(id));
     }
 
     @PostMapping
     @Operation(summary = "見積登録", description = "新規見積を登録し、作成された見積を返す")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "登録成功"),
-            @ApiResponse(responseCode = "400", description = "バリデーションエラー"),
-            @ApiResponse(responseCode = "422", description = "利用可能なルートなし")
-    })
+    @ApiResponse(responseCode = "201", description = "登録成功")
+    @ApiResponse(responseCode = "400", description = "バリデーションエラー")
+    @ApiResponse(responseCode = "422", description = "利用可能なルートなし")
     public ResponseEntity<QuoteResponse> register(@Valid @RequestBody QuoteRequest request,
                                                   UriComponentsBuilder uriComponentsBuilder) {
         Quote quote = registerQuoteCommandService.register(request.toCommand());
@@ -93,8 +86,8 @@ public class QuoteRestController {
 
     @ExceptionHandler(NoRouteAvailableException.class)
     public ResponseEntity<ProblemDetail> handleNoRouteAvailable(NoRouteAvailableException e) {
-        return ResponseEntity.unprocessableEntity()
-                .body(problemDetail(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(problemDetail(HttpStatus.UNPROCESSABLE_CONTENT, e.getMessage()));
     }
 
     private Quote findQuote(String id) {

@@ -1,7 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.adapters;
 
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
-import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort.FreightBookingSummary;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
@@ -28,11 +27,11 @@ public class FreightBookingQueryPortAdapter implements FreightBookingQueryPort {
     }
 
     @Override
-    public Optional<FreightBookingSummary> findCalculableBookingById(String bookingId) {
+    public Optional<FreightBookingQueryPort.FreightBookingSummary> findCalculableBookingById(String bookingId) {
         BookingId id;
         try {
             id = new BookingId(UUID.fromString(bookingId));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return Optional.empty();
         }
 
@@ -41,10 +40,10 @@ public class FreightBookingQueryPortAdapter implements FreightBookingQueryPort {
                 .map(this::toSummary);
     }
 
-    private FreightBookingSummary toSummary(Booking booking) {
+    private FreightBookingQueryPort.FreightBookingSummary toSummary(Booking booking) {
         var cargo = booking.getCargoSpecification();
         var transport = booking.getTransportCondition();
-        return new FreightBookingSummary(
+        return new FreightBookingQueryPort.FreightBookingSummary(
                 booking.getId().value().toString(),
                 cargo.cargoType(),
                 cargo.weightKg(),

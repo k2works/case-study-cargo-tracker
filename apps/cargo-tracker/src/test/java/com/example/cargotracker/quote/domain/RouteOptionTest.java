@@ -49,7 +49,8 @@ class RouteOptionTest {
     @Test
     @DisplayName("viaLocodes が null の場合は例外を投げる")
     void rejectNullViaLocodes() {
-        assertThatThrownBy(() -> createRouteOption(null, 21, new BigDecimal("120000"), "V-2025-001"))
+        BigDecimal price = new BigDecimal("120000");
+        assertThatThrownBy(() -> createRouteOption(null, 21, price, "V-2025-001"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("経由港");
     }
@@ -57,7 +58,9 @@ class RouteOptionTest {
     @Test
     @DisplayName("transitDays が 0 の場合は例外を投げる")
     void rejectZeroTransitDays() {
-        assertThatThrownBy(() -> createRouteOption(List.of(), 0, new BigDecimal("120000"), "V-2025-001"))
+        List<String> emptyVia = List.of();
+        BigDecimal price = new BigDecimal("120000");
+        assertThatThrownBy(() -> createRouteOption(emptyVia, 0, price, "V-2025-001"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("所要日数");
     }
@@ -65,7 +68,9 @@ class RouteOptionTest {
     @Test
     @DisplayName("transitDays が負の場合は例外を投げる")
     void rejectNegativeTransitDays() {
-        assertThatThrownBy(() -> createRouteOption(List.of(), -1, new BigDecimal("120000"), "V-2025-001"))
+        List<String> emptyVia = List.of();
+        BigDecimal price = new BigDecimal("120000");
+        assertThatThrownBy(() -> createRouteOption(emptyVia, -1, price, "V-2025-001"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("所要日数");
     }
@@ -73,7 +78,8 @@ class RouteOptionTest {
     @Test
     @DisplayName("estimatedPrice が null の場合は例外を投げる")
     void rejectNullEstimatedPrice() {
-        assertThatThrownBy(() -> createRouteOption(List.of(), 21, null, "V-2025-001"))
+        List<String> emptyVia = List.of();
+        assertThatThrownBy(() -> createRouteOption(emptyVia, 21, null, "V-2025-001"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("概算料金");
     }
@@ -81,7 +87,8 @@ class RouteOptionTest {
     @Test
     @DisplayName("estimatedPrice が 0 の場合は例外を投げる")
     void rejectZeroEstimatedPrice() {
-        assertThatThrownBy(() -> createRouteOption(List.of(), 21, BigDecimal.ZERO, "V-2025-001"))
+        List<String> emptyVia = List.of();
+        assertThatThrownBy(() -> createRouteOption(emptyVia, 21, BigDecimal.ZERO, "V-2025-001"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("概算料金");
     }
@@ -89,7 +96,9 @@ class RouteOptionTest {
     @Test
     @DisplayName("estimatedPrice が負の場合は例外を投げる")
     void rejectNegativeEstimatedPrice() {
-        assertThatThrownBy(() -> createRouteOption(List.of(), 21, new BigDecimal("-100"), "V-2025-001"))
+        List<String> emptyVia = List.of();
+        BigDecimal negativePrice = new BigDecimal("-100");
+        assertThatThrownBy(() -> createRouteOption(emptyVia, 21, negativePrice, "V-2025-001"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("概算料金");
     }
@@ -97,7 +106,9 @@ class RouteOptionTest {
     @Test
     @DisplayName("voyageNumber が null の場合は例外を投げる")
     void rejectNullVoyageNumber() {
-        assertThatThrownBy(() -> createRouteOption(List.of(), 21, new BigDecimal("120000"), null))
+        List<String> emptyVia = List.of();
+        BigDecimal price = new BigDecimal("120000");
+        assertThatThrownBy(() -> createRouteOption(emptyVia, 21, price, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("航海番号");
     }
@@ -105,7 +116,9 @@ class RouteOptionTest {
     @Test
     @DisplayName("voyageNumber が空文字の場合は例外を投げる")
     void rejectBlankVoyageNumber() {
-        assertThatThrownBy(() -> createRouteOption(List.of(), 21, new BigDecimal("120000"), "  "))
+        List<String> emptyVia = List.of();
+        BigDecimal price = new BigDecimal("120000");
+        assertThatThrownBy(() -> createRouteOption(emptyVia, 21, price, "  "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("航海番号");
     }
@@ -116,8 +129,7 @@ class RouteOptionTest {
         RouteOption a = createRouteOption(List.of("SGSIN"), 21, new BigDecimal("120000"), "V-2025-001");
         RouteOption b = createRouteOption(List.of("SGSIN"), 21, new BigDecimal("120000"), "V-2025-001");
 
-        assertThat(a).isEqualTo(b);
-        assertThat(a).hasSameHashCodeAs(b);
+        assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
     }
 
     @Test

@@ -136,8 +136,7 @@ class RouteSearchServiceTest {
         var result = service.searchByCondition(query);
 
         // Assert
-        assertThat(result).containsExactly(onTime);
-        assertThat(result).doesNotContain(late);
+        assertThat(result).containsExactly(onTime).doesNotContain(late);
     }
 
     @Test
@@ -180,8 +179,7 @@ class RouteSearchServiceTest {
         var result = service.searchByCondition(query);
 
         // Assert
-        assertThat(result).containsExactly(hazOk);
-        assertThat(result).doesNotContain(generalOnly);
+        assertThat(result).containsExactly(hazOk).doesNotContain(generalOnly);
     }
 
     @Test
@@ -206,8 +204,7 @@ class RouteSearchServiceTest {
         var result = service.searchByCondition(query);
 
         // Assert
-        assertThat(result).containsExactly(refOk);
-        assertThat(result).doesNotContain(hazOnly);
+        assertThat(result).containsExactly(refOk).doesNotContain(hazOnly);
     }
 
     @Test

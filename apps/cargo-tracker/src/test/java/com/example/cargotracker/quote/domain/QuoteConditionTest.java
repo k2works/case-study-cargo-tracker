@@ -142,12 +142,13 @@ class QuoteConditionTest {
     @Test
     @DisplayName("weightKg が負の場合は例外を投げる")
     void rejectNegativeWeightKg() {
+        BigDecimal negativeWeight = new BigDecimal("-10.0");
         assertThatThrownBy(() -> createCondition(
                 "JPTYO",
                 "USNYC",
                 FUTURE_DATE,
                 CargoType.GENERAL_CARGO,
-                new BigDecimal("-10.0")
+                negativeWeight
         )).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("重量");
     }
@@ -158,8 +159,7 @@ class QuoteConditionTest {
         QuoteCondition a = createCondition("JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, DEFAULT_WEIGHT);
         QuoteCondition b = createCondition("JPTYO", "USNYC", FUTURE_DATE, CargoType.GENERAL_CARGO, DEFAULT_WEIGHT);
 
-        assertThat(a).isEqualTo(b);
-        assertThat(a).hasSameHashCodeAs(b);
+        assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
     }
 
     private QuoteCondition createCondition(

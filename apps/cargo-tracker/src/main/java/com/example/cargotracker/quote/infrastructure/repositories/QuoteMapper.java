@@ -10,9 +10,9 @@ import java.util.UUID;
 @Mapper
 public interface QuoteMapper {
 
-    void insertQuote(@Param("row") QuoteRecord record);
+    void insertQuote(@Param("row") QuoteRecord quoteRecord);
 
-    void insertRouteOption(@Param("row") QuoteRouteOptionRecord record);
+    void insertRouteOption(@Param("row") QuoteRouteOptionRecord routeOptionRecord);
 
     Optional<QuoteRecord> findById(@Param("id") UUID id);
 

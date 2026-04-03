@@ -33,8 +33,7 @@ class ShipperIdTest {
         UUID uuid = UUID.randomUUID();
         ShipperId a = new ShipperId(uuid);
         ShipperId b = new ShipperId(uuid);
-        assertThat(a).isEqualTo(b);
-        assertThat(a.hashCode()).isEqualTo(b.hashCode());
+        assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
     }
 
     @Test

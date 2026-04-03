@@ -57,21 +57,27 @@ class ShipperTest {
     @Test
     @DisplayName("ID が null の場合は登録できない")
     void rejectNullId() {
-        assertThatThrownBy(() -> createShipper(null, anyName(), anyContact()))
+        ShipperName name = anyName();
+        ContactInfo contact = anyContact();
+        assertThatThrownBy(() -> createShipper(null, name, contact))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("名前が null の場合は登録できない")
     void rejectNullName() {
-        assertThatThrownBy(() -> createShipper(anyId(), null, anyContact()))
+        ShipperId id = anyId();
+        ContactInfo contact = anyContact();
+        assertThatThrownBy(() -> createShipper(id, null, contact))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("連絡先が null の場合は登録できない")
     void rejectNullContactInfo() {
-        assertThatThrownBy(() -> createShipper(anyId(), anyName(), null))
+        ShipperId id = anyId();
+        ShipperName name = anyName();
+        assertThatThrownBy(() -> createShipper(id, name, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

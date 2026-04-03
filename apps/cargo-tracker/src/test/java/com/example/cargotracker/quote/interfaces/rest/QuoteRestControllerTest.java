@@ -121,7 +121,7 @@ class QuoteRestControllerTest {
                                   "weightKg": 1000.0
                                 }
                                 """))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().is(422))
                 .andExpect(jsonPath("$.detail").value("利用可能なルートが見つかりません: JPTYO → USNYC"));
     }
 

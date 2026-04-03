@@ -67,21 +67,24 @@ class CorporateShipperTest {
         @Test
         @DisplayName("割引率が負の値は受け入れない")
         void rejectNegativeDiscountRate() {
-            assertThatThrownBy(() -> createCorporateContractInfo("C001", new BigDecimal("-0.1")))
+            BigDecimal negativeRate = new BigDecimal("-0.1");
+            assertThatThrownBy(() -> createCorporateContractInfo("C001", negativeRate))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("割引率が 30% 超は受け入れない")
         void rejectDiscountRateOver30() {
-            assertThatThrownBy(() -> createCorporateContractInfo("C001", new BigDecimal("30.1")))
+            BigDecimal overRate = new BigDecimal("30.1");
+            assertThatThrownBy(() -> createCorporateContractInfo("C001", overRate))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("契約番号が空は受け入れない")
         void rejectEmptyContractNumber() {
-            assertThatThrownBy(() -> createCorporateContractInfo("", new BigDecimal("10")))
+            BigDecimal discountRate = new BigDecimal("10");
+            assertThatThrownBy(() -> createCorporateContractInfo("", discountRate))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
