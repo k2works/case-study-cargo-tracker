@@ -52,7 +52,7 @@ public class ShipperDiscountQueryPortAdapter implements ShipperDiscountQueryPort
         BookingId bId;
         try {
             bId = new BookingId(UUID.fromString(bookingId));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return BigDecimal.ZERO;
         }
 

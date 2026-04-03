@@ -11,7 +11,6 @@ import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ContactInfo;
 import com.example.cargotracker.shipper.domain.model.valueobjects.CorporateContractInfo;
-import com.example.cargotracker.shipper.domain.model.valueobjects.CustomerCategory;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import com.example.cargotracker.shipper.domain.repository.ShipperRepository;
 import org.junit.jupiter.api.BeforeEach;

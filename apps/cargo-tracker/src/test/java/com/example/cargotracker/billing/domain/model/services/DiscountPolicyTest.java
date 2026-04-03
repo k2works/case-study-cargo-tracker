@@ -48,28 +48,38 @@ class DiscountPolicyTest {
     @Test
     @DisplayName("基本料金がnullの場合はIllegalArgumentExceptionをスローする")
     void calculateDiscount_nullBaseAmount_throwsException() {
-        assertThatThrownBy(() -> policy.calculateDiscount(null, new BigDecimal("10")))
+        BigDecimal discountRate = new BigDecimal("10");
+
+        assertThatThrownBy(() -> policy.calculateDiscount(null, discountRate))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("割引率がnullの場合はIllegalArgumentExceptionをスローする")
     void calculateDiscount_nullDiscountRate_throwsException() {
-        assertThatThrownBy(() -> policy.calculateDiscount(new BigDecimal("1000"), null))
+        BigDecimal baseAmount = new BigDecimal("1000");
+
+        assertThatThrownBy(() -> policy.calculateDiscount(baseAmount, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("割引率が負の場合はIllegalArgumentExceptionをスローする")
     void calculateDiscount_negativeRate_throwsException() {
-        assertThatThrownBy(() -> policy.calculateDiscount(new BigDecimal("1000"), new BigDecimal("-1")))
+        BigDecimal baseAmount = new BigDecimal("1000");
+        BigDecimal discountRate = new BigDecimal("-1");
+
+        assertThatThrownBy(() -> policy.calculateDiscount(baseAmount, discountRate))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("割引率が30超の場合はIllegalArgumentExceptionをスローする")
     void calculateDiscount_rateExceeds30_throwsException() {
-        assertThatThrownBy(() -> policy.calculateDiscount(new BigDecimal("1000"), new BigDecimal("31")))
+        BigDecimal baseAmount = new BigDecimal("1000");
+        BigDecimal discountRate = new BigDecimal("31");
+
+        assertThatThrownBy(() -> policy.calculateDiscount(baseAmount, discountRate))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
