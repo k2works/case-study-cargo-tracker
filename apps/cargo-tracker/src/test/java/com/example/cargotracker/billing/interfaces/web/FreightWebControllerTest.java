@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.interfaces.web;
 
+import com.example.cargotracker.billing.application.internal.commandservices.ApplyDiscountCommandService;
 import com.example.cargotracker.billing.application.internal.commandservices.BookingNotFoundException;
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -42,6 +44,9 @@ class FreightWebControllerTest {
 
     @MockitoBean
     private CalculateFreightCommandService calculateFreightCommandService;
+
+    @MockitoBean
+    private ApplyDiscountCommandService applyDiscountCommandService;
 
     @MockitoBean
     private FreightChargeQueryService freightChargeQueryService;
@@ -131,6 +136,36 @@ class FreightWebControllerTest {
                 .andExpect(redirectedUrl("/freight"));
 
         verify(calculateFreightCommandService).confirm(any());
+    }
+
+    @Test
+    @DisplayName("POST /freight/{id}/apply-discount 正常 — successMessage 付きで /freight にリダイレクト")
+    void applyDiscountSuccess() throws Exception {
+        FreightId freightId = FreightId.generate();
+
+        mockMvc.perform(post("/freight/" + freightId.value() + "/apply-discount")
+                        .param("bookingId", "booking-001")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/freight"))
+                .andExpect(flash().attribute("successMessage", "法人割引を適用しました"));
+
+        verify(applyDiscountCommandService).applyDiscount(any());
+    }
+
+    @Test
+    @DisplayName("POST /freight/{id}/apply-discount 例外発生 — errorMessage 付きで /freight にリダイレクト")
+    void applyDiscountError() throws Exception {
+        FreightId freightId = FreightId.generate();
+        doThrow(new IllegalArgumentException("割引の適用に失敗しました"))
+                .when(applyDiscountCommandService).applyDiscount(any());
+
+        mockMvc.perform(post("/freight/" + freightId.value() + "/apply-discount")
+                        .param("bookingId", "booking-001")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/freight"))
+                .andExpect(flash().attributeExists("errorMessage"));
     }
 
     private FreightChargeSummary anySummary() {

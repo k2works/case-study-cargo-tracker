@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.infrastructure.config;
 
+import com.example.cargotracker.billing.domain.model.services.DiscountPolicy;
 import com.example.cargotracker.billing.domain.model.services.FreightCalculationService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,5 +17,10 @@ public class BillingConfig {
     @Bean
     public FreightCalculationService freightCalculationService() {
         return new FreightCalculationService();
+    }
+
+    @Bean
+    public DiscountPolicy discountPolicy() {
+        return new DiscountPolicy();
     }
 }

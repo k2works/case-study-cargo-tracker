@@ -59,6 +59,27 @@
                             <button type="submit" class="btn btn-sm btn-outline-success" data-testid="freight-confirm-submit"
                                     th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の料金を確定'">確定</button>
                         </form>
+                        <form th:if="${charge.status == '算出中'}"
+                              th:action="@{/freight/{id}/apply-discount(id=${charge.id})}"
+                              method="post"
+                              class="d-inline ms-1">
+                            <input type="hidden" name="bookingId" th:value="${charge.bookingId}" />
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-testid="freight-discount-submit"
+                                    th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の法人割引を適用'">割引適用</button>
+                        </form>
+                        <form th:if="${charge.status == '確定'}"
+                              th:action="@{/invoices}"
+                              method="post"
+                              class="d-inline ms-1">
+                            <input type="hidden" name="bookingId" th:value="${charge.bookingId}" />
+                            <input type="hidden" name="freightChargeId" th:value="${charge.id}" />
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-info"
+                                    data-testid="freight-generate-invoice-submit"
+                                    th:attr="aria-label='予約 ' + ${charge.bookingId} + ' の精算書を発行'">精算発行</button>
+                        </form>
                     </td>
                 </tr>
                 </tbody>

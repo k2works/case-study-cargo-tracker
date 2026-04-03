@@ -1,10 +1,12 @@
 package com.example.cargotracker.billing.interfaces.web;
 
+import com.example.cargotracker.billing.application.internal.commandservices.ApplyDiscountCommandService;
 import com.example.cargotracker.billing.application.internal.commandservices.BookingNotFoundException;
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
 import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
+import com.example.cargotracker.billing.domain.model.commands.ApplyDiscountCommand;
 import com.example.cargotracker.billing.interfaces.web.dto.FreightChargeForm;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -33,15 +35,19 @@ public class FreightWebController {
     private static final String FORM_ATTRIBUTE = "form";
     private static final String BOOKING_SUMMARY_ATTRIBUTE = "bookingSummary";
     private static final String ERROR_MESSAGE_ATTRIBUTE = "errorMessage";
+    private static final String SUCCESS_MESSAGE_ATTRIBUTE = "successMessage";
 
     private final CalculateFreightCommandService calculateFreightCommandService;
+    private final ApplyDiscountCommandService applyDiscountCommandService;
     private final FreightChargeQueryService freightChargeQueryService;
     private final FreightBookingQueryPort freightBookingQueryPort;
 
     public FreightWebController(CalculateFreightCommandService calculateFreightCommandService,
+                                ApplyDiscountCommandService applyDiscountCommandService,
                                 FreightChargeQueryService freightChargeQueryService,
                                 FreightBookingQueryPort freightBookingQueryPort) {
         this.calculateFreightCommandService = calculateFreightCommandService;
+        this.applyDiscountCommandService = applyDiscountCommandService;
         this.freightChargeQueryService = freightChargeQueryService;
         this.freightBookingQueryPort = freightBookingQueryPort;
     }
@@ -98,6 +104,22 @@ public class FreightWebController {
     @PostMapping("/{id}/confirm")
     public String confirm(@PathVariable("id") String id) {
         calculateFreightCommandService.confirm(new FreightId(UUID.fromString(id)));
+        return REDIRECT_FREIGHT;
+    }
+
+    /**
+     * 法人割引を適用する。
+     */
+    @PostMapping("/{id}/apply-discount")
+    public String applyDiscount(@PathVariable("id") String id,
+                                @RequestParam("bookingId") String bookingId,
+                                RedirectAttributes redirectAttributes) {
+        try {
+            applyDiscountCommandService.applyDiscount(new ApplyDiscountCommand(id, bookingId));
+            redirectAttributes.addFlashAttribute(SUCCESS_MESSAGE_ATTRIBUTE, "法人割引を適用しました");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute(ERROR_MESSAGE_ATTRIBUTE, e.getMessage());
+        }
         return REDIRECT_FREIGHT;
     }
 }

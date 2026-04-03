@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.interfaces.rest;
 
+import com.example.cargotracker.billing.application.internal.commandservices.ApplyDiscountCommandService;
 import com.example.cargotracker.billing.application.internal.commandservices.BookingNotFoundException;
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
@@ -21,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,6 +36,9 @@ class FreightRestControllerTest {
 
     @MockitoBean
     private CalculateFreightCommandService calculateFreightCommandService;
+
+    @MockitoBean
+    private ApplyDiscountCommandService applyDiscountCommandService;
 
     @MockitoBean
     private FreightChargeQueryService freightChargeQueryService;
@@ -97,5 +102,45 @@ class FreightRestControllerTest {
                 BigDecimal.ZERO,
                 new BigDecimal("10000")
         );
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/freight-charges/{id}/apply-discount 正常 — 200 と更新後の FreightChargeResponse を返す")
+    void applyDiscountSuccess() throws Exception {
+        FreightId freightId = FreightId.generate();
+        FreightChargeSummary summary = new FreightChargeSummary(
+                freightId.value().toString(),
+                "booking-001",
+                "算出中",
+                new BigDecimal("10000"),
+                new BigDecimal("-1000"),
+                new BigDecimal("9000")
+        );
+
+        when(freightChargeQueryService.findById(freightId.value().toString()))
+                .thenReturn(Optional.of(summary));
+
+        mockMvc.perform(put("/api/v1/freight-charges/" + freightId.value() + "/apply-discount")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bookingId": "booking-001"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(freightId.value().toString()))
+                .andExpect(jsonPath("$.adjustmentAmount").value(-1000))
+                .andExpect(jsonPath("$.totalAmount").value(9000));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/freight-charges/{id}/apply-discount bookingId が空 — 400 BadRequest を返す")
+    void applyDiscountBadRequest_emptyBookingId() throws Exception {
+        FreightId freightId = FreightId.generate();
+
+        mockMvc.perform(put("/api/v1/freight-charges/" + freightId.value() + "/apply-discount")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bookingId": ""}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 }
