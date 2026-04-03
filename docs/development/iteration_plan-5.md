@@ -31,10 +31,10 @@ tags: iteration-plan, it5
 ### 成功基準
 
 - [x] 追跡番号と例外種別「遅延」・発生状況を記録でき、貨物状態が「例外発生」に更新される
-- [ ] 例外種別「破損」または「紛失」を記録でき、「紛失」は緊急フラグが設定される
-- [ ] 「引取済」予約に対して輸送料金算出を開始し、基本料金が自動計算される
-- [ ] 算出結果を確認して確定操作でき、確定後に「確定」状態で登録される
-- [ ] backend テスト Green・カバレッジ 80% 以上・SonarQube Quality Gate PASS
+- [x] 例外種別「破損」または「紛失」を記録でき、「紛失」は緊急フラグが設定される
+- [x] 「引取済」予約に対して輸送料金算出を開始し、基本料金が自動計算される
+- [x] 算出結果を確認して確定操作でき、確定後に「確定」状態で登録される
+- [x] backend テスト Green・カバレッジ 80% 以上・SonarQube Quality Gate PASS
 
 ---
 
@@ -444,4 +444,4 @@ CalculateFreightCommandService --> HandlingHistoryQueryPort
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-02 | IT5 計画を作成 | Copilot |
-| 2026-04-03 | US14 完了・進捗率 27%（3/11 SP）・386 テスト Green・SonarQube 修正・UI/UX レビュー指摘対応（ナビゲーション追加・badge 深刻度別色・キャンセルボタン）| Copilot |
+| 2026-04-03 | IT5 完了（US15・US16 完了）・進捗率 100%（11/11 SP）・447 テスト Green・SonarQube Quality Gate PASS・UI/UX 改善（ナビゲーション・h1・table-responsive・aria-label）| Copilot |
