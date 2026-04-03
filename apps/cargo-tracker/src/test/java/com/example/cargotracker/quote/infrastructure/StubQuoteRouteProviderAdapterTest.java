@@ -45,10 +45,9 @@ class StubQuoteRouteProviderAdapterTest {
     void 各ルート候補の所要日数は正の値である() {
         List<RouteOption> result = adapter.findRouteOptions(anyCondition());
 
-        assertThat(result).isNotEmpty();
-        assertThat(result).allSatisfy(opt ->
-                assertThat(opt.transitDays()).isGreaterThan(0)
-        );
+        assertThat(result)
+                .isNotEmpty()
+                .allSatisfy(opt -> assertThat(opt.transitDays()).isGreaterThan(0));
     }
 
     @Test
@@ -56,10 +55,9 @@ class StubQuoteRouteProviderAdapterTest {
     void 各ルート候補の概算料金は正の値である() {
         List<RouteOption> result = adapter.findRouteOptions(anyCondition());
 
-        assertThat(result).isNotEmpty();
-        assertThat(result).allSatisfy(opt ->
-                assertThat(opt.estimatedPrice()).isGreaterThan(BigDecimal.ZERO)
-        );
+        assertThat(result)
+                .isNotEmpty()
+                .allSatisfy(opt -> assertThat(opt.estimatedPrice()).isGreaterThan(BigDecimal.ZERO));
     }
 
     private QuoteCondition anyCondition() {
