@@ -8,6 +8,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.repository.BookingRepository;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,7 +28,7 @@ public class FreightBookingQueryPortAdapter implements FreightBookingQueryPort {
     }
 
     @Override
-    public Optional<FreightBookingSummary> findConfirmedBookingById(String bookingId) {
+    public Optional<FreightBookingSummary> findCalculableBookingById(String bookingId) {
         BookingId id;
         try {
             id = new BookingId(UUID.fromString(bookingId));
@@ -48,7 +49,21 @@ public class FreightBookingQueryPortAdapter implements FreightBookingQueryPort {
                 cargo.cargoType(),
                 cargo.weightKg(),
                 transport.originLocation(),
-                transport.destinationLocation()
+                transport.destinationLocation(),
+                booking.getAssignedRoute() != null ? booking.getAssignedRoute().routePath() : "—",
+                booking.getAssignedRoute() != null ? booking.getAssignedRoute().estimatedArrival() : null,
+                0,
+                estimateDistanceKm(transport.originLocation(), transport.destinationLocation())
         );
+    }
+
+    private BigDecimal estimateDistanceKm(String originLocation, String destinationLocation) {
+        if ("JPTYO".equals(originLocation) && "SGSIN".equals(destinationLocation)) {
+            return new BigDecimal("5300");
+        }
+        if ("JPTYO".equals(originLocation) && "USNYC".equals(destinationLocation)) {
+            return new BigDecimal("10800");
+        }
+        return new BigDecimal("1000");
     }
 }

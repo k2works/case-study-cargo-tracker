@@ -2,6 +2,7 @@ package com.example.cargotracker.billing.interfaces.web;
 
 import com.example.cargotracker.billing.application.internal.commandservices.BookingNotFoundException;
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
+import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
 import com.example.cargotracker.billing.interfaces.web.dto.FreightChargeForm;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.UUID;
@@ -29,15 +31,19 @@ public class FreightWebController {
     private static final String VIEW_CALCULATE = "billing/calculate";
     private static final String REDIRECT_FREIGHT = "redirect:/freight";
     private static final String FORM_ATTRIBUTE = "form";
+    private static final String BOOKING_SUMMARY_ATTRIBUTE = "bookingSummary";
     private static final String ERROR_MESSAGE_ATTRIBUTE = "errorMessage";
 
     private final CalculateFreightCommandService calculateFreightCommandService;
     private final FreightChargeQueryService freightChargeQueryService;
+    private final FreightBookingQueryPort freightBookingQueryPort;
 
     public FreightWebController(CalculateFreightCommandService calculateFreightCommandService,
-                                FreightChargeQueryService freightChargeQueryService) {
+                                FreightChargeQueryService freightChargeQueryService,
+                                FreightBookingQueryPort freightBookingQueryPort) {
         this.calculateFreightCommandService = calculateFreightCommandService;
         this.freightChargeQueryService = freightChargeQueryService;
+        this.freightBookingQueryPort = freightBookingQueryPort;
     }
 
     /**
@@ -53,8 +59,15 @@ public class FreightWebController {
      * 料金算出フォームを表示する。
      */
     @GetMapping("/calculate")
-    public String showCalculateForm(Model model) {
-        model.addAttribute(FORM_ATTRIBUTE, new FreightChargeForm());
+    public String showCalculateForm(@RequestParam(value = "bookingId", required = false) String bookingId,
+                                    Model model) {
+        FreightChargeForm form = new FreightChargeForm();
+        if (bookingId != null && !bookingId.isBlank()) {
+            form.setBookingId(bookingId);
+            freightBookingQueryPort.findCalculableBookingById(bookingId)
+                    .ifPresent(summary -> model.addAttribute(BOOKING_SUMMARY_ATTRIBUTE, summary));
+        }
+        model.addAttribute(FORM_ATTRIBUTE, form);
         return VIEW_CALCULATE;
     }
 

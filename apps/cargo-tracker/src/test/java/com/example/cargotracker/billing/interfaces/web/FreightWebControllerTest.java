@@ -2,6 +2,8 @@ package com.example.cargotracker.billing.interfaces.web;
 
 import com.example.cargotracker.billing.application.internal.commandservices.BookingNotFoundException;
 import com.example.cargotracker.billing.application.internal.commandservices.CalculateFreightCommandService;
+import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort;
+import com.example.cargotracker.billing.application.internal.outboundservices.FreightBookingQueryPort.FreightBookingSummary;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService;
 import com.example.cargotracker.billing.application.internal.queryservices.FreightChargeQueryService.FreightChargeSummary;
 import com.example.cargotracker.billing.domain.model.aggregates.FreightId;
@@ -14,11 +16,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -44,6 +46,9 @@ class FreightWebControllerTest {
     @MockitoBean
     private FreightChargeQueryService freightChargeQueryService;
 
+    @MockitoBean
+    private FreightBookingQueryPort freightBookingQueryPort;
+
     @Test
     @DisplayName("GET /freight — 一覧ページを表示する")
     void list() throws Exception {
@@ -62,6 +67,18 @@ class FreightWebControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("billing/calculate"))
                 .andExpect(model().attributeExists("form"));
+    }
+
+    @Test
+    @DisplayName("GET /freight/calculate?bookingId= — 算出対象の輸送実績を表示する")
+    void showCalculateForm_withBookingId_showsSummary() throws Exception {
+        when(freightBookingQueryPort.findCalculableBookingById("booking-001"))
+                .thenReturn(Optional.of(calculableSummary()));
+
+        mockMvc.perform(get("/freight/calculate").param("bookingId", "booking-001"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("billing/calculate"))
+                .andExpect(model().attributeExists("bookingSummary"));
     }
 
     @Test
@@ -124,6 +141,20 @@ class FreightWebControllerTest {
                 new BigDecimal("10000"),
                 BigDecimal.ZERO,
                 new BigDecimal("10000")
+        );
+    }
+
+    private FreightBookingSummary calculableSummary() {
+        return new FreightBookingSummary(
+                "booking-001",
+                com.example.cargotracker.booking.domain.model.valueobjects.CargoType.GENERAL_CARGO,
+                new BigDecimal("100"),
+                "JPTYO",
+                "SGSIN",
+                "JPTYO→SGSIN",
+                LocalDate.of(2026, 6, 1),
+                1,
+                new BigDecimal("5300")
         );
     }
 }

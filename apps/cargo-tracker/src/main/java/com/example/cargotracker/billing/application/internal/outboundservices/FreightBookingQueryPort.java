@@ -3,6 +3,7 @@ package com.example.cargotracker.billing.application.internal.outboundservices;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 /**
@@ -18,7 +19,7 @@ public interface FreightBookingQueryPort {
      * @param bookingId 予約 ID 文字列
      * @return 確定済み予約サマリー
      */
-    Optional<FreightBookingSummary> findConfirmedBookingById(String bookingId);
+    Optional<FreightBookingSummary> findCalculableBookingById(String bookingId);
 
     /**
      * 料金算出に必要な予約情報のサマリー。
@@ -28,6 +29,10 @@ public interface FreightBookingQueryPort {
             CargoType cargoType,
             BigDecimal weightKg,
             String originLocation,
-            String destinationLocation
+            String destinationLocation,
+            String routePath,
+            LocalDate estimatedArrival,
+            int handlingEventCount,
+            BigDecimal distanceKm
     ) {}
 }

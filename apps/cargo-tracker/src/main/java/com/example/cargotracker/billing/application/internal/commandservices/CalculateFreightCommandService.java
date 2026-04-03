@@ -40,7 +40,7 @@ public class CalculateFreightCommandService {
      */
     public FreightId calculate(CalculateFreightCommand command) {
         FreightBookingSummary summary = freightBookingQueryPort
-                .findConfirmedBookingById(command.bookingId())
+                .findCalculableBookingById(command.bookingId())
                 .orElseThrow(() -> new BookingNotFoundException(command.bookingId()));
 
         BigDecimal baseAmount = freightCalculationService.calculateBaseAmount(
@@ -48,6 +48,9 @@ public class CalculateFreightCommandService {
 
         FreightCharge charge = FreightCharge.calculate(
                 FreightId.generate(), summary.bookingId(), baseAmount);
+        if (command.adjustmentAmount() != null) {
+            charge.applyAdjustment(command.adjustmentAmount());
+        }
 
         freightChargeRepository.save(charge);
 

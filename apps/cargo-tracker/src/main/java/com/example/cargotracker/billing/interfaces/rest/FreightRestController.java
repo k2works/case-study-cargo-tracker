@@ -46,7 +46,7 @@ public class FreightRestController {
     public ResponseEntity<FreightChargeResponse> calculate(@Valid @RequestBody CalculateFreightRequest request,
                                                            UriComponentsBuilder uriComponentsBuilder) {
         FreightId freightId = calculateFreightCommandService.calculate(
-                new CalculateFreightCommand(request.bookingId()));
+                new CalculateFreightCommand(request.bookingId(), request.adjustmentAmount()));
 
         FreightChargeSummary summary = freightChargeQueryService.findById(freightId.value().toString())
                 .orElseThrow(() -> new IllegalStateException("算出された輸送料金が見つかりません: " + freightId.value()));

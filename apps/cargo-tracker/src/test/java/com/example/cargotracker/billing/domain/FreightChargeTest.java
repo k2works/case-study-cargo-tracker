@@ -80,7 +80,8 @@ class FreightChargeTest {
         FreightCharge charge = FreightCharge.calculate(FreightId.generate(), "BK-005", new BigDecimal("1000"));
         charge.confirm();
 
-        assertThatThrownBy(() -> charge.applyAdjustment(new BigDecimal("100")))
+        BigDecimal adjustment = new BigDecimal("100");
+        assertThatThrownBy(() -> charge.applyAdjustment(adjustment))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -101,7 +102,7 @@ class FreightChargeTest {
         FreightCharge charge = FreightCharge.calculate(FreightId.generate(), "BK-007", new BigDecimal("1000"));
         charge.confirm();
 
-        assertThatThrownBy(() -> charge.confirm())
+        assertThatThrownBy(charge::confirm)
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -129,37 +130,46 @@ class FreightChargeTest {
     @Test
     @DisplayName("id が null の場合は IllegalArgumentException をスローする")
     void calculate_nullId_throwsException() {
-        assertThatThrownBy(() -> FreightCharge.calculate(null, "BK-009", new BigDecimal("1000")))
+        BigDecimal base = new BigDecimal("1000");
+        assertThatThrownBy(() -> FreightCharge.calculate(null, "BK-009", base))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("bookingId が null の場合は IllegalArgumentException をスローする")
     void calculate_nullBookingId_throwsException() {
-        assertThatThrownBy(() -> FreightCharge.calculate(FreightId.generate(), null, new BigDecimal("1000")))
+        FreightId id139 = FreightId.generate();
+        BigDecimal base139 = new BigDecimal("1000");
+        assertThatThrownBy(() -> FreightCharge.calculate(id139, null, base139))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("bookingId が空文字の場合は IllegalArgumentException をスローする")
     void calculate_blankBookingId_throwsException() {
-        assertThatThrownBy(() -> FreightCharge.calculate(FreightId.generate(), "  ", new BigDecimal("1000")))
+        FreightId id146 = FreightId.generate();
+        BigDecimal base146 = new BigDecimal("1000");
+        assertThatThrownBy(() -> FreightCharge.calculate(id146, "  ", base146))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("baseAmount が null の場合は IllegalArgumentException をスローする")
     void calculate_nullBaseAmount_throwsException() {
-        assertThatThrownBy(() -> FreightCharge.calculate(FreightId.generate(), "BK-010", null))
+        FreightId id153 = FreightId.generate();
+        assertThatThrownBy(() -> FreightCharge.calculate(id153, "BK-010", null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("baseAmount が 0 以下の場合は IllegalArgumentException をスローする")
     void calculate_nonPositiveBaseAmount_throwsException() {
-        assertThatThrownBy(() -> FreightCharge.calculate(FreightId.generate(), "BK-011", BigDecimal.ZERO))
+        FreightId id160 = FreightId.generate();
+        assertThatThrownBy(() -> FreightCharge.calculate(id160, "BK-011", BigDecimal.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> FreightCharge.calculate(FreightId.generate(), "BK-012", new BigDecimal("-1")))
+        FreightId id162 = FreightId.generate();
+        BigDecimal negOne = new BigDecimal("-1");
+        assertThatThrownBy(() -> FreightCharge.calculate(id162, "BK-012", negOne))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

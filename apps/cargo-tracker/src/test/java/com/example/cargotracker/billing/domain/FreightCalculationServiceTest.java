@@ -84,14 +84,16 @@ class FreightCalculationServiceTest {
     @Test
     @DisplayName("貨物種別が null の場合は IllegalArgumentException をスローする")
     void calculateBaseAmount_nullCargoType_throwsException() {
-        assertThatThrownBy(() -> service.calculateBaseAmount(new BigDecimal("100"), null))
+        BigDecimal weight100 = new BigDecimal("100");
+        assertThatThrownBy(() -> service.calculateBaseAmount(weight100, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("重量が負の場合は IllegalArgumentException をスローする")
     void calculateBaseAmount_negativeWeight_throwsException() {
-        assertThatThrownBy(() -> service.calculateBaseAmount(new BigDecimal("-1"), CargoType.GENERAL_CARGO))
+        BigDecimal negativeWeight = new BigDecimal("-1");
+        assertThatThrownBy(() -> service.calculateBaseAmount(negativeWeight, CargoType.GENERAL_CARGO))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -23,7 +23,7 @@
 
     <div class="card shadow-sm">
         <div class="card-body p-0">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0" data-testid="freight-charge-table">
                 <thead class="table-light">
                 <tr>
                     <th scope="col">ID</th>
@@ -39,7 +39,7 @@
                 <tr th:if="${#lists.isEmpty(freightCharges)}">
                     <td colspan="7" class="text-center text-muted py-4">輸送料金が登録されていません</td>
                 </tr>
-                <tr th:each="charge : ${freightCharges}">
+                <tr th:each="charge : ${freightCharges}" data-testid="freight-charge-row">
                     <td><code th:text="${charge.id}"></code></td>
                     <td th:text="${charge.bookingId}"></td>
                     <td>
@@ -55,7 +55,7 @@
                               th:action="@{/freight/{id}/confirm(id=${charge.id})}"
                               method="post"
                               class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-success">確定</button>
+                            <button type="submit" class="btn btn-sm btn-outline-success" data-testid="freight-confirm-submit">確定</button>
                         </form>
                     </td>
                 </tr>

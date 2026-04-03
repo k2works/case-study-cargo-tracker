@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -54,16 +55,17 @@ class CalculateFreightCommandServiceTest {
         BigDecimal weightKg = new BigDecimal("100.0");
         BigDecimal baseAmount = new BigDecimal("100");
         FreightBookingSummary summary = new FreightBookingSummary(
-                bookingId, CargoType.GENERAL_CARGO, weightKg, "JPTYO", "SGSIN");
+                bookingId, CargoType.GENERAL_CARGO, weightKg, "JPTYO", "SGSIN",
+                "JPTYO→SGSIN", LocalDate.of(2026, 6, 1), 1, new BigDecimal("5300"));
 
-        when(freightBookingQueryPort.findConfirmedBookingById(bookingId))
+        when(freightBookingQueryPort.findCalculableBookingById(bookingId))
                 .thenReturn(Optional.of(summary));
         when(freightCalculationService.calculateBaseAmount(weightKg, CargoType.GENERAL_CARGO))
                 .thenReturn(baseAmount);
         doNothing().when(freightChargeRepository).save(any(FreightCharge.class));
 
         // When
-        FreightId result = commandService.calculate(new CalculateFreightCommand(bookingId));
+        FreightId result = commandService.calculate(new CalculateFreightCommand(bookingId, null));
 
         // Then
         assertThat(result).isNotNull();
@@ -75,11 +77,12 @@ class CalculateFreightCommandServiceTest {
     void calculate_予約が見つからない場合はBookingNotFoundExceptionをスロー() {
         // Given
         String bookingId = "booking-not-found";
-        when(freightBookingQueryPort.findConfirmedBookingById(bookingId))
+        when(freightBookingQueryPort.findCalculableBookingById(bookingId))
                 .thenReturn(Optional.empty());
 
         // When / Then
-        assertThatThrownBy(() -> commandService.calculate(new CalculateFreightCommand(bookingId)))
+        CalculateFreightCommand cmd82 = new CalculateFreightCommand(bookingId, null);
+        assertThatThrownBy(() -> commandService.calculate(cmd82))
                 .isInstanceOf(BookingNotFoundException.class)
                 .hasMessageContaining(bookingId);
         verify(freightChargeRepository, never()).save(any());
@@ -90,13 +93,37 @@ class CalculateFreightCommandServiceTest {
     void calculate_予約が未確定の場合はBookingNotFoundExceptionをスロー() {
         // Given
         String bookingId = "booking-provisional";
-        when(freightBookingQueryPort.findConfirmedBookingById(bookingId))
+        when(freightBookingQueryPort.findCalculableBookingById(bookingId))
                 .thenReturn(Optional.empty());
 
         // When / Then
-        assertThatThrownBy(() -> commandService.calculate(new CalculateFreightCommand(bookingId)))
+        CalculateFreightCommand cmd97 = new CalculateFreightCommand(bookingId, null);
+        assertThatThrownBy(() -> commandService.calculate(cmd97))
                 .isInstanceOf(BookingNotFoundException.class);
         verify(freightChargeRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("調整額付きで料金を算出すると totalAmount に反映される")
+    void calculate_調整額付きで料金を算出するとTotalAmountに反映される() {
+        String bookingId = "booking-001";
+        BigDecimal weightKg = new BigDecimal("100.0");
+        BigDecimal baseAmount = new BigDecimal("100");
+        FreightBookingSummary summary = new FreightBookingSummary(
+                bookingId, CargoType.GENERAL_CARGO, weightKg, "JPTYO", "SGSIN",
+                "JPTYO→SGSIN", LocalDate.of(2026, 6, 1), 2, new BigDecimal("5300"));
+
+        when(freightBookingQueryPort.findCalculableBookingById(bookingId))
+                .thenReturn(Optional.of(summary));
+        when(freightCalculationService.calculateBaseAmount(weightKg, CargoType.GENERAL_CARGO))
+                .thenReturn(baseAmount);
+
+        commandService.calculate(new CalculateFreightCommand(bookingId, new BigDecimal("-20")));
+
+        ArgumentCaptor<FreightCharge> captor = ArgumentCaptor.forClass(FreightCharge.class);
+        verify(freightChargeRepository).save(captor.capture());
+        assertThat(captor.getValue().getAdjustmentAmount()).isEqualByComparingTo(new BigDecimal("-20"));
+        assertThat(captor.getValue().getTotalAmount()).isEqualByComparingTo(new BigDecimal("80"));
     }
 
     @Test

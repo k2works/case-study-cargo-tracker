@@ -23,11 +23,11 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <form th:action="@{/freight/calculate}" th:object="${form}" method="post">
-
                 <div class="mb-3">
                     <label for="bookingId" class="form-label">予約 ID <span class="text-danger">*</span></label>
                     <input type="text"
                            id="bookingId"
+                           data-testid="freight-booking-id"
                            th:field="*{bookingId}"
                            class="form-control"
                            th:classappend="${#fields.hasErrors('bookingId')} ? 'is-invalid'"
@@ -39,7 +39,37 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">算出</button>
+                <div th:if="${bookingSummary}" class="border rounded p-3 mb-3 bg-light" data-testid="freight-booking-summary">
+                    <h5 class="mb-3">輸送実績</h5>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">経路</dt>
+                        <dd class="col-sm-8" data-testid="freight-route-path" th:text="${bookingSummary.routePath}"></dd>
+                        <dt class="col-sm-4">距離</dt>
+                        <dd class="col-sm-8" data-testid="freight-distance-km"
+                            th:text="${#numbers.formatDecimal(bookingSummary.distanceKm, 1, 'COMMA', 0, 'POINT')} + ' km'"></dd>
+                        <dt class="col-sm-4">重量</dt>
+                        <dd class="col-sm-8" data-testid="freight-weight-kg"
+                            th:text="${#numbers.formatDecimal(bookingSummary.weightKg, 1, 'COMMA', 0, 'POINT')} + ' kg'"></dd>
+                        <dt class="col-sm-4">貨物種別</dt>
+                        <dd class="col-sm-8" data-testid="freight-cargo-type" th:text="${bookingSummary.cargoType}"></dd>
+                        <dt class="col-sm-4">荷役作業実績</dt>
+                        <dd class="col-sm-8" data-testid="freight-handling-count" th:text="${bookingSummary.handlingEventCount} + ' 件'"></dd>
+                    </dl>
+                </div>
+
+                <div class="mb-3">
+                    <label for="adjustmentAmount" class="form-label">料金調整額</label>
+                    <input type="number"
+                           step="1"
+                           id="adjustmentAmount"
+                           data-testid="freight-adjustment-amount"
+                           th:field="*{adjustmentAmount}"
+                           class="form-control"
+                           placeholder="例外発生時の減額や補償費用を入力">
+                    <div class="form-text">例外がある場合に、減額または補償費用を入力できます。</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" data-testid="freight-calculate-submit">算出</button>
             </form>
         </div>
     </div>
