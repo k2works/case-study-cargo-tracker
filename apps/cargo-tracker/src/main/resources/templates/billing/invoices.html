@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精算書一覧 - CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
+
+<main>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4">精算書一覧</h1>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" data-testid="invoice-table">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">予約 ID</th>
+                    <th scope="col">輸送料金 ID</th>
+                    <th scope="col">金額</th>
+                    <th scope="col">支払期限</th>
+                    <th scope="col">支払い状態</th>
+                    <th scope="col">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(invoices)}">
+                    <td colspan="7" class="text-center text-muted py-4">精算書が登録されていません</td>
+                </tr>
+                <tr th:each="invoice : ${invoices}" data-testid="invoice-row">
+                    <td><a th:href="@{/invoices/{id}(id=${invoice.id})}" th:text="${invoice.id}" class="text-truncate d-inline-block" style="max-width:120px;"><code></code></a></td>
+                    <td th:text="${invoice.bookingId}"></td>
+                    <td><code th:text="${invoice.freightChargeId}"></code></td>
+                    <td th:text="${#numbers.formatDecimal(invoice.amount, 1, 'COMMA', 0, 'POINT')}"></td>
+                    <td th:text="${#temporals.format(invoice.dueDate, 'yyyy-MM-dd')}"></td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${invoice.paymentStatus == '支払い済み'} ? 'bg-success' : 'bg-warning text-dark'"
+                              th:text="${invoice.paymentStatus}"></span>
+                    </td>
+                    <td>
+                        <form th:if="${invoice.paymentStatus == '支払い待ち'}"
+                              th:action="@{/invoices/{id}/confirm-payment(id=${invoice.id})}"
+                              method="post"
+                              class="d-inline">
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-success"
+                                    data-testid="invoice-confirm-payment-submit"
+                                    th:attr="aria-label='予約 ' + ${invoice.bookingId} + ' の支払いを確認'">支払い確認</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
