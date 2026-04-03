@@ -103,6 +103,7 @@ nav:
       - "IT5 計画（US14・15・16）": development/iteration_plan-5.md
       - "IT5 ふりかえり": development/retrospective-5.md
       - "IT5 完了報告書": development/iteration_report-5.md
+      - "IT6 計画（US17・18）": development/iteration_plan-6.md
   - 運用:
       - 概要: operation/index.md
       - アプリ開発環境セットアップ: operation/dev_app_instrunction.md
