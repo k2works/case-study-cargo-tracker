@@ -19,7 +19,7 @@
 | IT3（US05・07・08・09, 12SP） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | 完了 ✅ |
 | IT4（US10・11・12・13, 13SP） | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | 完了 ✅ |
 | IT5（US14・15・16, 11SP） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | 完了 ✅ |
-| IT6（US17・18, 8SP） | [iteration_plan-6.md](./iteration_plan-6.md) | - | - | 進行中 🔵 |
+| IT6（US17・18, 8SP） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | 完了 ✅ |
 
 ### 進捗サマリー
 
@@ -30,15 +30,15 @@
 | IT3 | 12 | 12 | 100% |
 | IT4 | 13 | 13 | 100% |
 | IT5 | 11 | 11 | 100% |
-| IT6 | 8 | - | 進行中 |
-| **累計** | **64** | **56** | **87.5%** |
+| IT6 | 8 | 8 | 100% |
+| **累計** | **64** | **64** | **100%** ✅ |
 
 ### フェーズ進捗
 
 | フェーズ | 内容 | SP | 完了 SP | 状態 |
 |---------|------|-----|---------|------|
 | Phase 1 | コア輸送管理（US01〜US15） | 51 | 51 | **完了** ✅ |
-| Phase 2 | 請求・精算（US16〜US18） | 13 | 5 | 進行中（US17・US18 残り → IT6） |
+| Phase 2 | 請求・精算（US16〜US18） | 13 | 13 | **完了** ✅ |
 
 ### リリース完了報告書
 
