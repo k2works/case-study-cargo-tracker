@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -142,5 +143,46 @@ class FreightRestControllerTest {
                                 {"bookingId": ""}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/freight-charges/{id}/apply-discount IllegalStateException — 409 Conflict を返す")
+    void applyDiscount_IllegalStateException_returns409() throws Exception {
+        FreightId freightId = FreightId.generate();
+        doThrow(new IllegalStateException("割引を適用できない状態です"))
+                .when(applyDiscountCommandService).applyDiscount(any());
+
+        mockMvc.perform(put("/api/v1/freight-charges/" + freightId.value() + "/apply-discount")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bookingId": "booking-001"}
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/freight-charges/{id}/apply-discount IllegalArgumentException — 404 Not Found を返す")
+    void applyDiscount_IllegalArgumentException_returns404() throws Exception {
+        FreightId freightId = FreightId.generate();
+        doThrow(new IllegalArgumentException("輸送料金が見つかりません"))
+                .when(applyDiscountCommandService).applyDiscount(any());
+
+        mockMvc.perform(put("/api/v1/freight-charges/" + freightId.value() + "/apply-discount")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bookingId": "booking-001"}
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/freight-charges/{id}/confirm IllegalStateException — 409 Conflict を返す")
+    void confirm_IllegalStateException_returns409() throws Exception {
+        FreightId freightId = FreightId.generate();
+        doThrow(new IllegalStateException("確定できない状態です"))
+                .when(calculateFreightCommandService).confirm(any());
+
+        mockMvc.perform(post("/api/v1/freight-charges/" + freightId.value() + "/confirm"))
+                .andExpect(status().isConflict());
     }
 }

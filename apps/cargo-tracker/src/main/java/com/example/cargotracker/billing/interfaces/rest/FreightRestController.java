@@ -111,6 +111,20 @@ public class FreightRestController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgument(IllegalArgumentException e) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+        pd.setTitle(HttpStatus.NOT_FOUND.getReasonPhrase());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(pd);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalState(IllegalStateException e) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+        pd.setTitle(HttpStatus.CONFLICT.getReasonPhrase());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(pd);
+    }
+
     private FreightChargeResponse toResponse(FreightChargeSummary summary) {
         return new FreightChargeResponse(
                 summary.id(),
