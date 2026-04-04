@@ -174,4 +174,14 @@ export class BookingPage {
   async expectStatus(status: string) {
     await expect(this.page.locator('[data-testid="booking-status-badge"]')).toContainText(status);
   }
+
+  /** 「割り当て済みルート」カード */
+  get assignedRouteCard(): Locator {
+    return this.page.locator('.card', { hasText: '割り当て済みルート' });
+  }
+
+  /** 「予約を確定する」ボタン */
+  get confirmButton(): Locator {
+    return this.page.locator('button:has-text("予約を確定する")');
+  }
 }
