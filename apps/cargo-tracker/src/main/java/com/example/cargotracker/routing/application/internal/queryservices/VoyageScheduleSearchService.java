@@ -40,6 +40,15 @@ public class VoyageScheduleSearchService {
             .toList();
     }
 
+    /**
+     * 全航海スケジュールを返す。
+     *
+     * @return 登録済みの全航海リスト（航海番号順）
+     */
+    public List<Voyage> findAll() {
+        return voyageQueryPort.findAll();
+    }
+
     /** 最終 leg の到着日が期限以前かを判定する。 */
     private boolean arrivesBy(Voyage voyage, LocalDate deadline) {
         return voyage.legs().stream()

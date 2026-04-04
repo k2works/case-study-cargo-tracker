@@ -29,4 +29,11 @@ public interface VoyageQueryPort {
      * @return 航海（存在しない場合は空の Optional）
      */
     Optional<Voyage> findByVoyageNumber(String voyageNumber);
+
+    /**
+     * 全航海を取得する。
+     *
+     * @return 登録済みの全航海リスト
+     */
+    List<Voyage> findAll();
 }

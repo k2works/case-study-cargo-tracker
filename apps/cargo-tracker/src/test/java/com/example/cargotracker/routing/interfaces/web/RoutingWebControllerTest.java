@@ -5,9 +5,12 @@ import com.example.cargotracker.routing.application.internal.outboundservices.Bo
 import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
 import com.example.cargotracker.routing.domain.model.CargoType;
 import com.example.cargotracker.routing.domain.model.RouteCandidate;
 import com.example.cargotracker.routing.domain.model.RouteDesignCondition;
+import com.example.cargotracker.routing.domain.model.Voyage;
+import com.example.cargotracker.routing.domain.model.VoyageLeg;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +25,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -47,6 +49,9 @@ class RoutingWebControllerTest {
 
     @MockitoBean
     private RouteDesignConditionQueryService routeDesignConditionQueryService;
+
+    @MockitoBean
+    private VoyageScheduleSearchService voyageScheduleSearchService;
 
     // ── GET /routings/search?bookingId={id} ───────────────────────────────
 
@@ -158,6 +163,30 @@ class RoutingWebControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // ── GET /routings/voyages ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("航路一覧を表示できる")
+    void voyages_一覧表示() throws Exception {
+        when(voyageScheduleSearchService.findAll()).thenReturn(List.of(anyVoyage()));
+
+        mockMvc.perform(get("/routings/voyages"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("routing/voyages"))
+                .andExpect(model().attributeExists("voyages"));
+    }
+
+    @Test
+    @DisplayName("航路が登録されていない場合も routing/voyages を表示する")
+    void voyages_空リスト() throws Exception {
+        when(voyageScheduleSearchService.findAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/routings/voyages"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("routing/voyages"))
+                .andExpect(model().attributeExists("voyages"));
+    }
+
     // ── ヘルパー ─────────────────────────────────────────────────────────────
 
     private BookingSnapshot anySnapshot() {
@@ -178,6 +207,16 @@ class RoutingWebControllerTest {
                 LocalDate.of(2026, 5, 28),
                 LocalDate.of(2026, 5, 14),
                 Set.of(CargoType.GENERAL)
+        );
+    }
+
+    private Voyage anyVoyage() {
+        return new Voyage(
+                "SG001",
+                "Ocean Carrier",
+                Set.of(CargoType.GENERAL),
+                List.of(new VoyageLeg("JPTYO", "SGSIN",
+                        LocalDate.of(2026, 5, 14), LocalDate.of(2026, 5, 28)))
         );
     }
 }

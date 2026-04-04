@@ -32,6 +32,11 @@
           AND vl_last.destination_locode = #{destinationLocode}
     </select>
 
+    <!-- 全航海番号を取得する -->
+    <select id="findAllVoyageNumbers" resultType="java.lang.String">
+        SELECT voyage_number FROM voyages ORDER BY voyage_number
+    </select>
+
     <!-- 航海番号で航海を取得する -->
     <select id="findVoyageByNumber" resultMap="voyageResultMap">
         SELECT voyage_number, carrier_name, supported_cargo_types

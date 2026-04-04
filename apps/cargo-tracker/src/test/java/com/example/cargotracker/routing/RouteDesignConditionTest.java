@@ -116,13 +116,16 @@ class RouteDesignConditionTest {
     @Test
     @DisplayName("bookingId が null の場合 IllegalArgumentException をスローする")
     void bookingId_null_throwsException() {
+        LocalDate requestedArrivalDate = LocalDate.of(2026, 6, 30);
+        BigDecimal weightKg = new BigDecimal("500.0");
+
         assertThatThrownBy(() -> new RouteDesignCondition(
             null,
             "JPTYO",
             "SGSIN",
-            LocalDate.of(2026, 6, 30),
+            requestedArrivalDate,
             CargoType.GENERAL,
-            new BigDecimal("500.0")
+            weightKg
         )).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("bookingId");
     }

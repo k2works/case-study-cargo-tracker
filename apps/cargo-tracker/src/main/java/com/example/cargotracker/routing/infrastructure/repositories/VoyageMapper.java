@@ -14,6 +14,8 @@ public interface VoyageMapper {
         @Param("destinationLocode") String destinationLocode
     );
 
+    List<String> findAllVoyageNumbers();
+
     Optional<VoyageRecord> findVoyageByNumber(@Param("voyageNumber") String voyageNumber);
 
     List<VoyageLegRecord> findLegsByVoyageNumber(@Param("voyageNumber") String voyageNumber);

@@ -5,7 +5,6 @@ import com.example.cargotracker.routing.application.internal.queryservices.Route
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
 import com.example.cargotracker.routing.domain.model.CargoType;
 import com.example.cargotracker.routing.domain.model.RouteDesignCondition;
-import com.example.cargotracker.routing.interfaces.rest.dto.RouteDesignConditionResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

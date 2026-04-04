@@ -27,8 +27,10 @@ class VoyageLegTest {
     @Test
     @DisplayName("originLocode が null の場合 IllegalArgumentException をスローする")
     void voyageLeg_originLocode_null() {
-        assertThatThrownBy(() -> new VoyageLeg(null, "SGSIN",
-            LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15)))
+        LocalDate departureDate = LocalDate.of(2026, 6, 1);
+        LocalDate arrivalDate = LocalDate.of(2026, 6, 15);
+
+        assertThatThrownBy(() -> new VoyageLeg(null, "SGSIN", departureDate, arrivalDate))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("originLocode");
     }
@@ -36,8 +38,10 @@ class VoyageLegTest {
     @Test
     @DisplayName("destinationLocode が null の場合 IllegalArgumentException をスローする")
     void voyageLeg_destinationLocode_null() {
-        assertThatThrownBy(() -> new VoyageLeg("JPTYO", null,
-            LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15)))
+        LocalDate departureDate = LocalDate.of(2026, 6, 1);
+        LocalDate arrivalDate = LocalDate.of(2026, 6, 15);
+
+        assertThatThrownBy(() -> new VoyageLeg("JPTYO", null, departureDate, arrivalDate))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("destinationLocode");
     }
@@ -45,7 +49,9 @@ class VoyageLegTest {
     @Test
     @DisplayName("departureDate が null の場合 IllegalArgumentException をスローする")
     void voyageLeg_departureDate_null() {
-        assertThatThrownBy(() -> new VoyageLeg("JPTYO", "SGSIN", null, LocalDate.of(2026, 6, 15)))
+        LocalDate arrivalDate = LocalDate.of(2026, 6, 15);
+
+        assertThatThrownBy(() -> new VoyageLeg("JPTYO", "SGSIN", null, arrivalDate))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("departureDate");
     }
@@ -53,7 +59,9 @@ class VoyageLegTest {
     @Test
     @DisplayName("arrivalDate が null の場合 IllegalArgumentException をスローする")
     void voyageLeg_arrivalDate_null() {
-        assertThatThrownBy(() -> new VoyageLeg("JPTYO", "SGSIN", LocalDate.of(2026, 6, 1), null))
+        LocalDate departureDate = LocalDate.of(2026, 6, 1);
+
+        assertThatThrownBy(() -> new VoyageLeg("JPTYO", "SGSIN", departureDate, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("arrivalDate");
     }
@@ -61,8 +69,10 @@ class VoyageLegTest {
     @Test
     @DisplayName("arrivalDate が departureDate より前の場合 IllegalArgumentException をスローする")
     void voyageLeg_arrivalDate_before_departureDate() {
-        assertThatThrownBy(() -> new VoyageLeg("JPTYO", "SGSIN",
-            LocalDate.of(2026, 6, 15), LocalDate.of(2026, 6, 1)))
+        LocalDate departureDate = LocalDate.of(2026, 6, 15);
+        LocalDate arrivalDate = LocalDate.of(2026, 6, 1);
+
+        assertThatThrownBy(() -> new VoyageLeg("JPTYO", "SGSIN", departureDate, arrivalDate))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("arrivalDate");
     }

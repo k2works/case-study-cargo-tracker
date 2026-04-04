@@ -4,8 +4,10 @@ import com.example.cargotracker.routing.application.internal.outboundservices.Bo
 import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
 import com.example.cargotracker.routing.domain.model.CargoType;
 import com.example.cargotracker.routing.domain.model.RouteCandidate;
+import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.interfaces.web.dto.RoutingSearchForm;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -32,22 +34,36 @@ import java.util.UUID;
 @Controller
 @RequestMapping("/routings")
 public class RoutingWebController {
+    private static final String BOOKING_ID_ATTRIBUTE = "bookingId";
 
     private final Optional<RouteSearchService> routeSearchService;
     private final BookingQueryPort bookingQueryPort;
     private final RouteDesignConditionQueryService routeDesignConditionQueryService;
+    private final VoyageScheduleSearchService voyageScheduleSearchService;
 
     public RoutingWebController(Optional<RouteSearchService> routeSearchService,
                                 BookingQueryPort bookingQueryPort,
-                                RouteDesignConditionQueryService routeDesignConditionQueryService) {
+                                RouteDesignConditionQueryService routeDesignConditionQueryService,
+                                VoyageScheduleSearchService voyageScheduleSearchService) {
         this.routeSearchService = routeSearchService;
         this.bookingQueryPort = bookingQueryPort;
         this.routeDesignConditionQueryService = routeDesignConditionQueryService;
+        this.voyageScheduleSearchService = voyageScheduleSearchService;
     }
 
     @ModelAttribute("cargoTypes")
     public CargoType[] cargoTypes() {
         return CargoType.values();
+    }
+
+    /**
+     * 航路（航海スケジュール）一覧を表示する。
+     */
+    @GetMapping("/voyages")
+    public String voyages(Model model) {
+        List<Voyage> voyages = voyageScheduleSearchService.findAll();
+        model.addAttribute("voyages", voyages);
+        return "routing/voyages";
     }
 
     /**
@@ -57,7 +73,7 @@ public class RoutingWebController {
     public String designCondition(@RequestParam UUID bookingId, Model model) {
         var condition = routeDesignConditionQueryService.findByBookingId(bookingId);
         model.addAttribute("condition", condition);
-        model.addAttribute("bookingId", bookingId);
+        model.addAttribute(BOOKING_ID_ATTRIBUTE, bookingId);
         return "routing/design-condition";
     }
 
@@ -91,13 +107,13 @@ public class RoutingWebController {
             form = new RoutingSearchForm(
                     originLocode, destinationLocode, requestedArrivalDate, cargoType, weightKg);
             if (bookingId != null) {
-                model.addAttribute("bookingId", bookingId);
+                model.addAttribute(BOOKING_ID_ATTRIBUTE, bookingId);
             }
         } else if (bookingId != null) {
             var snapshot = bookingQueryPort.findById(bookingId)
                     .orElseThrow(() -> new BookingDataNotFoundException(bookingId));
             form = RoutingSearchForm.from(snapshot);
-            model.addAttribute("bookingId", bookingId);
+            model.addAttribute(BOOKING_ID_ATTRIBUTE, bookingId);
         } else {
             return "redirect:/bookings";
         }

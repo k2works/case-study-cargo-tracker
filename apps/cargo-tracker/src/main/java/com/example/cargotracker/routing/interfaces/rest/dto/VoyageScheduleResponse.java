@@ -3,8 +3,6 @@ package com.example.cargotracker.routing.interfaces.rest.dto;
 import com.example.cargotracker.routing.domain.model.Voyage;
 
 import java.util.List;
-import java.util.stream.Collectors;
-
 /**
  * 航海スケジュール REST レスポンス DTO。
  */
@@ -27,7 +25,7 @@ public record VoyageScheduleResponse(
         List<String> cargoTypes = voyage.supportedCargoTypes().stream()
             .map(Enum::name)
             .sorted()
-            .collect(Collectors.toList());
+            .toList();
 
         List<VoyageLegResponse> legResponses = voyage.legs().stream()
             .map(l -> new VoyageLegResponse(

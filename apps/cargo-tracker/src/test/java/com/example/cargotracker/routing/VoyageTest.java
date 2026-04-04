@@ -39,7 +39,10 @@ class VoyageTest {
     void voyage_voyageNumber_null() {
         var leg = new VoyageLeg("JPTYO", "SGSIN",
             LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15));
-        assertThatThrownBy(() -> new Voyage(null, "Carrier", Set.of(CargoType.GENERAL), List.of(leg)))
+        Set<CargoType> supportedCargoTypes = Set.of(CargoType.GENERAL);
+        List<VoyageLeg> legs = List.of(leg);
+
+        assertThatThrownBy(() -> new Voyage(null, "Carrier", supportedCargoTypes, legs))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("voyageNumber");
     }
@@ -49,7 +52,10 @@ class VoyageTest {
     void voyage_voyageNumber_blank() {
         var leg = new VoyageLeg("JPTYO", "SGSIN",
             LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15));
-        assertThatThrownBy(() -> new Voyage("  ", "Carrier", Set.of(CargoType.GENERAL), List.of(leg)))
+        Set<CargoType> supportedCargoTypes = Set.of(CargoType.GENERAL);
+        List<VoyageLeg> legs = List.of(leg);
+
+        assertThatThrownBy(() -> new Voyage("  ", "Carrier", supportedCargoTypes, legs))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -58,7 +64,10 @@ class VoyageTest {
     void voyage_carrierName_null() {
         var leg = new VoyageLeg("JPTYO", "SGSIN",
             LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15));
-        assertThatThrownBy(() -> new Voyage("SG001", null, Set.of(CargoType.GENERAL), List.of(leg)))
+        Set<CargoType> supportedCargoTypes = Set.of(CargoType.GENERAL);
+        List<VoyageLeg> legs = List.of(leg);
+
+        assertThatThrownBy(() -> new Voyage("SG001", null, supportedCargoTypes, legs))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("carrierName");
     }
@@ -68,7 +77,9 @@ class VoyageTest {
     void voyage_supportedCargoTypes_empty() {
         var leg = new VoyageLeg("JPTYO", "SGSIN",
             LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15));
-        assertThatThrownBy(() -> new Voyage("SG001", "Carrier", Set.of(), List.of(leg)))
+        List<VoyageLeg> legs = List.of(leg);
+
+        assertThatThrownBy(() -> new Voyage("SG001", "Carrier", Set.of(), legs))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("supportedCargoTypes");
     }

@@ -27,10 +27,10 @@ public class VoyageRepositoryImpl implements VoyageRepository {
     public List<Voyage> searchVoyages(String originLocode, String destinationLocode) {
         return voyageMapper.searchVoyageNumbers(originLocode, destinationLocode)
             .stream()
-            .map(vn -> {
-                VoyageRecord vr = voyageMapper.findVoyageByNumber(vn).orElseThrow();
-                List<VoyageLegRecord> legs = voyageMapper.findLegsByVoyageNumber(vn);
-                return toVoyage(vr, legs);
+            .map(voyageNumber -> {
+                VoyageRecord voyageRecord = voyageMapper.findVoyageByNumber(voyageNumber).orElseThrow();
+                List<VoyageLegRecord> legs = voyageMapper.findLegsByVoyageNumber(voyageNumber);
+                return toVoyage(voyageRecord, legs);
             })
             .toList();
     }
@@ -38,10 +38,22 @@ public class VoyageRepositoryImpl implements VoyageRepository {
     @Override
     public Optional<Voyage> findByVoyageNumber(String voyageNumber) {
         return voyageMapper.findVoyageByNumber(voyageNumber)
-            .map(vr -> {
+            .map(voyageRecord -> {
                 List<VoyageLegRecord> legs = voyageMapper.findLegsByVoyageNumber(voyageNumber);
-                return toVoyage(vr, legs);
+                return toVoyage(voyageRecord, legs);
             });
+    }
+
+    @Override
+    public List<Voyage> findAll() {
+        return voyageMapper.findAllVoyageNumbers()
+            .stream()
+            .map(vn -> {
+                VoyageRecord vr = voyageMapper.findVoyageByNumber(vn).orElseThrow();
+                List<VoyageLegRecord> legs = voyageMapper.findLegsByVoyageNumber(vn);
+                return toVoyage(vr, legs);
+            })
+            .toList();
     }
 
     private Voyage toVoyage(VoyageRecord record, List<VoyageLegRecord> legRecords) {

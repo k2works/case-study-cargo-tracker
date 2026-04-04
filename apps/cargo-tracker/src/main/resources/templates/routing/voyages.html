@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>航路一覧 - CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-light">
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
+
+<main>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>
+            航路一覧
+            <span th:if="${!#lists.isEmpty(voyages)}"
+                  class="badge bg-primary ms-2 fs-6 align-middle"
+                  th:text="${#lists.size(voyages) + ' 件'}"></span>
+        </h4>
+    </div>
+
+    <!-- 航路なし -->
+    <div th:if="${#lists.isEmpty(voyages)}" class="alert alert-info" role="alert">
+        登録されている航路がありません。
+    </div>
+
+    <!-- 航路一覧テーブル -->
+    <div th:unless="${#lists.isEmpty(voyages)}" class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">航海番号</th>
+                        <th scope="col">運送会社</th>
+                        <th scope="col">航路</th>
+                        <th scope="col">出発日</th>
+                        <th scope="col">到着日</th>
+                        <th scope="col">所要日数</th>
+                        <th scope="col">対応貨物種別</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="voyage : ${voyages}">
+                        <td><span class="badge bg-primary" th:text="${voyage.voyageNumber()}"></span></td>
+                        <td th:text="${voyage.carrierName()}"></td>
+                        <td>
+                            <!-- 各区間を "ORIGIN → DEST" 形式で表示 -->
+                            <span th:each="leg, i : ${voyage.legs()}">
+                                <span th:if="${i.first}" th:text="${leg.originLocode()}"></span>
+                                <i class="bi bi-arrow-right text-muted mx-1"></i>
+                                <span th:text="${leg.destinationLocode()}"></span>
+                            </span>
+                        </td>
+                        <td th:text="${voyage.firstDepartureDate()}"></td>
+                        <td th:text="${voyage.latestArrivalDate()}"></td>
+                        <td>
+                            <span th:with="days=${voyage.latestArrivalDate().toEpochDay() - voyage.firstDepartureDate().toEpochDay()}"
+                                  th:text="${days + ' 日'}"></span>
+                        </td>
+                        <td>
+                            <span th:each="ct : ${voyage.supportedCargoTypes()}">
+                                <span class="badge bg-info" th:text="${ct.displayName}"></span>
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
