@@ -109,6 +109,8 @@ nav:
       - ADR-007 Playwright POM パターン: adr/007-playwright-e2e-pom-pattern.md
       - ADR-008 SonarQube 品質ゲート: adr/008-sonarqube-local-quality-gate.md
       - ADR-009 GitHub Actions CI: adr/009-github-actions-ci-pipeline.md
+      - ADR-010 Practical DDD パッケージ構成: adr/010-practical-ddd-package-structure.md
+      - ADR-011 ArchUnit ヘキサゴナルルール: adr/011-archunit-hexagonal-rules.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
