@@ -20,7 +20,7 @@
 | IT4（US10・11・12・13, 13SP） | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | 完了 ✅ |
 | IT5（US14・15・16, 11SP） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | 完了 ✅ |
 | IT6（US17・18, 8SP） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | 完了 ✅ |
-| IT7（US19・20・21, 10SP） | [iteration_plan-7.md](./iteration_plan-7.md) | - | - | 未着手 |
+| IT7（US19・20・21, 10SP） | [iteration_plan-7.md](./iteration_plan-7.md) | [retrospective-7.md](./retrospective-7.md) | [iteration_report-7.md](./iteration_report-7.md) | 完了 ✅ |
 | IT8（US22・23・24, 8SP） | - | - | - | 未着手 |
 
 ### 進捗サマリー
@@ -33,9 +33,9 @@
 | IT4 | 13 | 13 | 100% |
 | IT5 | 11 | 11 | 100% |
 | IT6 | 8 | 8 | 100% |
-| IT7 | 10 | - | - |
+| IT7 | 10 | 10 | 100% |
 | IT8 | 8 | - | - |
-| **累計** | **82** | **64** | **78%** |
+| **累計** | **82** | **74** | **90%** |
 
 ### フェーズ進捗
 
@@ -43,7 +43,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | コア輸送管理（US01〜US15） | 51 | 51 | **完了** ✅ |
 | Phase 2 | 請求・精算（US16〜US18） | 13 | 13 | **完了** ✅ |
-| Phase 3 | 経路設計高度化（US19〜US24） | 18 | 0 | **未着手** |
+| Phase 3 | 経路設計高度化（US19〜US24） | 18 | 10 | **進行中** 🔄（56%） |
 
 ### リリース完了報告書
 
