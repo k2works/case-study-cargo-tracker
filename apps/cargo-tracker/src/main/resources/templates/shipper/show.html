@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>荷主詳細 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/}">CargoTracker</a>
+        <div class="navbar-nav me-auto">
+            <a class="nav-link active" th:href="@{/shippers}">荷主管理</a>
+            <a class="nav-link" href="#">予約管理</a>
+        </div>
+        <form th:action="@{/logout}" method="post" class="d-flex">
+            <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+        </form>
+    </div>
+</nav>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1" th:text="${shipper.name}">荷主名</h1>
+            <p class="text-secondary mb-0">荷主コード: <span th:text="${shipper.code}">SHP-00000001</span></p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/shippers}">一覧へ戻る</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">メール</dt>
+                <dd class="col-sm-9" th:text="${shipper.email}">sample@example.com</dd>
+
+                <dt class="col-sm-3">電話番号</dt>
+                <dd class="col-sm-9" th:text="${shipper.phone ?: '-'}">03-1234-5678</dd>
+
+                <dt class="col-sm-3">種別</dt>
+                <dd class="col-sm-9" th:text="${shipper.shipperType == 'CORPORATE' ? '法人' : '個人'}">個人</dd>
+
+                <dt class="col-sm-3">契約番号</dt>
+                <dd class="col-sm-9" th:text="${shipper.contractNumber ?: '-'}">CN-001</dd>
+
+                <dt class="col-sm-3">割引率</dt>
+                <dd class="col-sm-9" th:text="${shipper.discountRate != null ? shipper.discountRate : '-'}">0.1</dd>
+            </dl>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

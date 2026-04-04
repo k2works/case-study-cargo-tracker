@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>荷主管理 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/}">CargoTracker</a>
+        <div class="navbar-nav me-auto">
+            <a class="nav-link active" th:href="@{/shippers}">荷主管理</a>
+            <a class="nav-link" href="#">予約管理</a>
+        </div>
+        <form th:action="@{/logout}" method="post" class="d-flex">
+            <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+        </form>
+    </div>
+</nav>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">荷主管理</h1>
+            <p class="text-secondary mb-0">登録済みの荷主を管理します。</p>
+        </div>
+        <a class="btn btn-primary" th:href="@{/shippers/new}">荷主を登録</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>荷主コード</th>
+                        <th>氏名/社名</th>
+                        <th>メール</th>
+                        <th>種別</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(shippers)}">
+                        <td colspan="5" class="text-center text-secondary py-4">登録済みの荷主はありません。</td>
+                    </tr>
+                    <tr th:each="shipper : ${shippers}">
+                        <td th:text="${shipper.code}">SHP-00000001</td>
+                        <td th:text="${shipper.name}">山田 太郎</td>
+                        <td th:text="${shipper.email}">sample@example.com</td>
+                        <td>
+                            <span class="badge text-bg-secondary" th:text="${shipper.shipperType == 'CORPORATE' ? '法人' : '個人'}">個人</span>
+                        </td>
+                        <td>
+                            <a class="btn btn-outline-primary btn-sm" th:href="@{/shippers/{id}(id=${shipper.id})}">詳細</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
