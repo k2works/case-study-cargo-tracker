@@ -128,8 +128,10 @@ Case Study Cargo Tracker は以下のサブシステムで構成されていま�
 | マイグレーション | Flyway | 10.x |
 | テスト | JUnit 5 / Mockito 5 / AssertJ 3 | 5.x / 5.x / 3.x |
 | 統合テスト | Testcontainers | 1.20.4 |
+| Docker クライアント | docker-java | 3.7.0 |
+| API E2E テスト | MockMvc + Testcontainers (PostgreSQL) | - |
 | アーキテクチャテスト | ArchUnit | 1.4.1 |
-| E2E テスト | Playwright | 1.44+ |
+| ブラウザ E2E テスト | Playwright | 1.44+ |
 | 品質管理 | Checkstyle / SpotBugs / JaCoCo | - |
 
 ### フロントエンド
@@ -275,12 +277,21 @@ cd apps/cargo-tracker
 
 ### テストの種類
 
-| テスト種別 | ツール | 説明 |
-|-----------|--------|------|
-| 単体テスト | JUnit 5 + Mockito | ドメインロジック・ユースケースのテスト |
-| 統合テスト | JUnit 5 + Testcontainers | PostgreSQL を使用した統合テスト |
-| アーキテクチャテスト | ArchUnit | ヘキサゴナルアーキテクチャのレイヤー依存関係検証 |
-| E2E テスト | Playwright | ブラウザ自動テスト |
+| テスト種別 | ツール | 説明 | 手順書 |
+|-----------|--------|------|--------|
+| 単体テスト | JUnit 5 + Mockito | ドメインロジック・ユースケースのテスト | - |
+| 統合テスト | JUnit 5 + Testcontainers | PostgreSQL を使用した統合テスト | - |
+| API E2E テスト | MockMvc + Testcontainers | REST API・Controller の結合フロー検証 | [手順書](./dev_e2e_api_instruction.md) |
+| アーキテクチャテスト | ArchUnit | ヘキサゴナルアーキテクチャのレイヤー依存関係検証 | - |
+| ブラウザ E2E テスト | Playwright | ブラウザ自動テスト（UI・JS 含む） | [手順書](./dev_e2e_instruction.md) |
+
+```bash
+# API E2E テストのみ実行
+./gradlew test --tests "com.example.cargotracker.e2e.*"
+
+# ブラウザ E2E テスト（アプリ起動中に別ターミナルで）
+cd apps/e2e && npm test
+```
 
 ### テストカバレッジ
 
@@ -375,6 +386,21 @@ case-study-cargo-tracker/
 │           │       ├── mapper/                    # MyBatis マッパー XML
 │           │       └── templates/                 # Thymeleaf テンプレート
 │           └── test/
+│               ├── java/com/example/cargotracker/
+│               │   ├── support/                   # テスト共通基盤
+│               │   │   └── PostgreSQLIntegrationTestBase.java
+│               │   └── e2e/                       # API E2E テスト
+│               │       └── AuthE2ETest.java
+│               └── resources/
+│                   └── application-test.yml       # テスト用プロファイル
+├── apps/
+│   └── e2e/                         # ブラウザ E2E テスト（Playwright）
+│       ├── package.json
+│       ├── playwright.config.ts
+│       └── src/
+│           ├── fixtures.ts
+│           ├── pages/               # Page Object Model
+│           └── tests/               # テストスペック
 ├── docs/                            # MkDocs ドキュメント
 ├── ops/                             # 運用スクリプト（Gulp タスク）
 ├── docker-compose.yml               # Docker サービス定義
@@ -600,5 +626,7 @@ cd apps/cargo-tracker
 
 - [技術スタック選定](../design/tech_stack.md)
 - [バックエンドアーキテクチャ設計](../design/architecture_backend.md)
+- [Playwright E2E テストセットアップ手順書](./dev_e2e_instruction.md)
+- [API E2E テストセットアップ手順書](./dev_e2e_api_instruction.md)
 - [IT1 計画（US02・US03・US04）](../development/iteration_plan-1.md)
 - [開発環境セットアップ手順書](./dev_infa_instruction.md)

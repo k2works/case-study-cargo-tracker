@@ -9,6 +9,8 @@
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
 | [アプリケーション開発環境セットアップ手順書](./dev_app_instrunction.md) | ローカルアプリケーション開発環境の構築手順 | 作成済 |
+| [Playwright E2E テストセットアップ手順書](./dev_e2e_instruction.md) | Playwright による E2E テスト環境の構築手順 | 作成済 |
+| [API E2E テストセットアップ手順書](./dev_e2e_api_instruction.md) | MockMvc + Testcontainers による API E2E テストの構築手順 | 作成済 |
 | [開発環境セットアップ手順書](./dev_infa_instruction.md) | Heroku コンテナを使った開発環境の構築手順 | 作成済 |
 | AWS ステージング環境セットアップ手順書 | ステージング環境の構築手順 | 未作成 |
 | AWS プロダクション環境セットアップ手順書 | 本番環境の構築手順 | 未作成 |
