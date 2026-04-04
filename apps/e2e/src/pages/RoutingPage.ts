@@ -66,13 +66,40 @@ export class RoutingPage {
     await expect(card).toContainText(params.estimatedPriceText);
   }
 
-  /** 指定インデックスのルート候補を割り当てる（モーダル確認まで実行） */
-  async assignRoute(index: number = 0) {
+  /** 指定インデックスのルート候補の「割り当てる」ボタンをクリックしてモーダルを開く（送信しない） */
+  async openAssignModal(index: number = 0) {
     const card = this.routeCandidateCard(index);
     await card.locator('button:has-text("この予約に割り当てる")').click();
-    // 確認モーダルが表示されてから「割り当てる」ボタンをクリックする
     const modal = this.page.locator('#assignModal');
     await expect(modal).toBeVisible();
+    return modal;
+  }
+
+  /** 指定インデックスのルート候補を割り当てる（モーダル確認まで実行） */
+  async assignRoute(index: number = 0) {
+    const modal = await this.openAssignModal(index);
     await modal.locator('button[type="submit"]').click();
+  }
+
+  /** モーダルに表示される航海番号テキスト */
+  get modalVoyageNumber(): Locator {
+    return this.page.locator('#modal-voyage-number');
+  }
+
+  /** モーダルに表示される推定着日テキスト */
+  get modalEstimatedArrival(): Locator {
+    return this.page.locator('#modal-estimated-arrival');
+  }
+
+  /** モーダルの区間詳細テーブルが表示されるまで待ち、Locator を返す */
+  async waitForLegsTable(): Promise<Locator> {
+    const table = this.page.locator('#modal-legs-table');
+    await expect(table).toBeVisible({ timeout: 10_000 });
+    return table;
+  }
+
+  /** モーダルの区間詳細テーブルの tbody 行一覧 */
+  get legsTableRows(): Locator {
+    return this.page.locator('#modal-legs-tbody tr');
   }
 }
