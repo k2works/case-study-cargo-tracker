@@ -3,6 +3,7 @@ package com.example.cargotracker.routing.interfaces.rest;
 import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageLegsQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
 import com.example.cargotracker.routing.domain.model.CargoType;
 import com.example.cargotracker.routing.domain.model.RouteCandidate;
@@ -42,6 +43,9 @@ class RoutingRestControllerTest {
 
     @MockitoBean
     private VoyageScheduleSearchService voyageScheduleSearchService;
+
+    @MockitoBean
+    private VoyageLegsQueryService voyageLegsQueryService;
 
     @Test
     @DisplayName("予約 ID でルート候補リストを JSON で取得できる")
@@ -96,7 +100,8 @@ class RoutingRestControllerTest {
         RoutingRestController controller = new RoutingRestController(
             java.util.Optional.empty(),
             routeDesignConditionQueryService,
-            voyageScheduleSearchService);
+            voyageScheduleSearchService,
+            voyageLegsQueryService);
 
         mockMvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller).build();
 

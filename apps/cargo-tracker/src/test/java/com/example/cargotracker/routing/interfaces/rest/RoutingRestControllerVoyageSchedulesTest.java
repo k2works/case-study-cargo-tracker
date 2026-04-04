@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.interfaces.rest;
 
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageLegsQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.domain.model.CargoType;
@@ -35,6 +36,9 @@ class RoutingRestControllerVoyageSchedulesTest {
 
     @MockitoBean
     private VoyageScheduleSearchService voyageScheduleSearchService;
+
+    @MockitoBean
+    private VoyageLegsQueryService voyageLegsQueryService;
 
     private final Voyage sg001 = new Voyage(
         "SG001", "Japan Pacific Lines",

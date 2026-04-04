@@ -2,6 +2,8 @@ package com.example.cargotracker.booking.infrastructure;
 
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.AssignedRoute;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingLeg;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
@@ -121,5 +123,55 @@ class BookingRepositoryTest extends PostgreSQLIntegrationTestBase {
         assertThat(found)
                 .extracting(booking -> booking.getId().value())
                 .contains(first.getId().value(), second.getId().value());
+    }
+
+    @Test
+    @DisplayName("区間詳細を含む予約を保存・取得できる")
+    void saveAndFindByIdWithLegs() {
+        ShipperId shipperId = createShipper();
+        BookingId bookingId = BookingId.generate();
+        Booking booking = Booking.register(bookingId, shipperId, anyCargo(), anyTransport());
+        AssignedRoute route = new AssignedRoute("VOY-001", "JPTYO/SGSIN/USNYC", LocalDate.of(2026, 9, 15));
+        List<BookingLeg> legs = List.of(
+                new BookingLeg("VOY-001", "JPTYO", "SGSIN",
+                        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 10), 0),
+                new BookingLeg("VOY-001", "SGSIN", "USNYC",
+                        LocalDate.of(2026, 8, 12), LocalDate.of(2026, 9, 15), 1)
+        );
+        booking.assignRouteWithLegs(route, legs);
+
+        bookingRepository.save(booking);
+
+        Booking found = bookingRepository.findById(bookingId).orElseThrow();
+        assertThat(found.getAssignedRoute()).isEqualTo(route);
+        assertThat(found.getLegs()).hasSize(2);
+        assertThat(found.getLegs())
+                .extracting(BookingLeg::originLocode)
+                .containsExactly("JPTYO", "SGSIN");
+        assertThat(found.getLegs())
+                .extracting(BookingLeg::legOrder)
+                .containsExactly(0, 1);
+    }
+
+    @Test
+    @DisplayName("区間詳細を含む予約の legs は legOrder 順で返る")
+    void legsReturnedInOrder() {
+        ShipperId shipperId = createShipper();
+        BookingId bookingId = BookingId.generate();
+        Booking booking = Booking.register(bookingId, shipperId, anyCargo(), anyTransport());
+        AssignedRoute route = new AssignedRoute("VOY-002", "JPTYO/SGSIN/USNYC", LocalDate.of(2026, 9, 15));
+        List<BookingLeg> legs = List.of(
+                new BookingLeg("VOY-002", "SGSIN", "USNYC",
+                        LocalDate.of(2026, 8, 12), LocalDate.of(2026, 9, 15), 1),
+                new BookingLeg("VOY-002", "JPTYO", "SGSIN",
+                        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 10), 0)
+        );
+        booking.assignRouteWithLegs(route, legs);
+        bookingRepository.save(booking);
+
+        Booking found = bookingRepository.findById(bookingId).orElseThrow();
+        assertThat(found.getLegs())
+                .extracting(BookingLeg::originLocode)
+                .containsExactly("JPTYO", "SGSIN");
     }
 }

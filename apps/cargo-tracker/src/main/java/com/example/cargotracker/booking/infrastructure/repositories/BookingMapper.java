@@ -17,4 +17,10 @@ public interface BookingMapper {
     Optional<BookingRecord> findById(@Param("id") UUID id);
 
     List<BookingRecord> findAll();
+
+    void insertLeg(@Param("row") BookingLegRecord row);
+
+    void deleteLegsByBookingId(@Param("bookingId") UUID bookingId);
+
+    List<BookingLegRecord> findLegsByBookingId(@Param("bookingId") UUID bookingId);
 }

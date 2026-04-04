@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.event.BookingRouteAssignedEvent;
 import com.example.cargotracker.booking.domain.model.aggregates.Booking;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.AssignedRoute;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingLeg;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -213,5 +215,58 @@ class BookingTest {
         booking.settle();
 
         assertThat(booking.getStatus()).isEqualTo(BookingStatus.SETTLED);
+    }
+
+    @Test
+    @DisplayName("区間詳細を含むルートを割り当てられる")
+    void assignRouteWithLegs() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        AssignedRoute route = new AssignedRoute("VOY-001", "JPTYO/SGSIN/USNYC", LocalDate.of(2026, 9, 15));
+        List<BookingLeg> legs = List.of(
+                new BookingLeg("VOY-001", "JPTYO", "SGSIN",
+                        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 10), 0),
+                new BookingLeg("VOY-001", "SGSIN", "USNYC",
+                        LocalDate.of(2026, 8, 12), LocalDate.of(2026, 9, 15), 1)
+        );
+
+        booking.assignRouteWithLegs(route, legs);
+
+        assertThat(booking.getAssignedRoute()).isEqualTo(route);
+        assertThat(booking.getLegs()).hasSize(2);
+        assertThat(booking.getLegs().get(0).originLocode()).isEqualTo("JPTYO");
+        assertThat(booking.getLegs().get(1).destinationLocode()).isEqualTo("USNYC");
+    }
+
+    @Test
+    @DisplayName("assignRouteWithLegs で null ルートは拒否される")
+    void rejectNullRouteWithLegs() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        assertThatThrownBy(() -> booking.assignRouteWithLegs(null, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("assignRouteWithLegs で null legs は拒否される")
+    void rejectNullLegs() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        AssignedRoute route = new AssignedRoute("VOY-001", "JPTYO/USNYC", LocalDate.of(2026, 9, 15));
+        assertThatThrownBy(() -> booking.assignRouteWithLegs(route, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("assignRouteWithLegs で BookingRouteAssignedEvent が発行される")
+    void assignRouteWithLegsEmitsEvent() {
+        Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
+        AssignedRoute route = new AssignedRoute("VOY-001", "JPTYO/USNYC", LocalDate.of(2026, 9, 15));
+        List<BookingLeg> legs = List.of(
+                new BookingLeg("VOY-001", "JPTYO", "USNYC",
+                        LocalDate.of(2026, 8, 1), LocalDate.of(2026, 9, 15), 0)
+        );
+
+        booking.assignRouteWithLegs(route, legs);
+
+        assertThat(booking.getDomainEvents()).hasSize(2); // register + assignRouteWithLegs
+        assertThat(booking.getDomainEvents().get(1)).isInstanceOf(BookingRouteAssignedEvent.class);
     }
 }

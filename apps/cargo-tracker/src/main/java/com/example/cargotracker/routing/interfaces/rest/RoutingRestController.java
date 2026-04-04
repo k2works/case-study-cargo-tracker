@@ -3,9 +3,11 @@ package com.example.cargotracker.routing.interfaces.rest;
 import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageLegsQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
 import com.example.cargotracker.routing.interfaces.rest.dto.RouteDesignConditionResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.RoutingCandidateResponse;
+import com.example.cargotracker.routing.interfaces.rest.dto.VoyageLegDetailResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageScheduleResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -15,6 +17,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,14 +41,31 @@ public class RoutingRestController {
     private final Optional<RouteSearchService> routeSearchService;
     private final RouteDesignConditionQueryService routeDesignConditionQueryService;
     private final VoyageScheduleSearchService voyageScheduleSearchService;
+    private final VoyageLegsQueryService voyageLegsQueryService;
 
     public RoutingRestController(
             Optional<RouteSearchService> routeSearchService,
             RouteDesignConditionQueryService routeDesignConditionQueryService,
-            VoyageScheduleSearchService voyageScheduleSearchService) {
+            VoyageScheduleSearchService voyageScheduleSearchService,
+            VoyageLegsQueryService voyageLegsQueryService) {
         this.routeSearchService = routeSearchService;
         this.routeDesignConditionQueryService = routeDesignConditionQueryService;
         this.voyageScheduleSearchService = voyageScheduleSearchService;
+        this.voyageLegsQueryService = voyageLegsQueryService;
+    }
+
+    @GetMapping("/voyages/{voyageNumber}/legs")
+    @Operation(
+            summary = "航海区間詳細の取得",
+            description = "指定した航海番号の区間詳細一覧（出発港・到着港・日程）を返す",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "取得成功（区間なしの場合は空リスト）")
+            }
+    )
+    public ResponseEntity<List<VoyageLegDetailResponse>> getVoyageLegs(
+            @PathVariable("voyageNumber") String voyageNumber) {
+        List<VoyageLegDetailResponse> legs = voyageLegsQueryService.findByVoyageNumber(voyageNumber);
+        return ResponseEntity.ok(legs);
     }
 
     @GetMapping("/design-condition")

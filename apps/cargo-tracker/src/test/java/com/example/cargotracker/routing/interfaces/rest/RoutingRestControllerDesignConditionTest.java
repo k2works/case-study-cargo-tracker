@@ -2,6 +2,7 @@ package com.example.cargotracker.routing.interfaces.rest;
 
 import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageLegsQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
 import com.example.cargotracker.routing.domain.model.CargoType;
 import com.example.cargotracker.routing.domain.model.RouteDesignCondition;
@@ -35,6 +36,9 @@ class RoutingRestControllerDesignConditionTest {
 
     @MockitoBean
     private VoyageScheduleSearchService voyageScheduleSearchService;
+
+    @MockitoBean
+    private VoyageLegsQueryService voyageLegsQueryService;
 
     @Test
     @DisplayName("bookingId に対応する経路設計条件を JSON で返す")

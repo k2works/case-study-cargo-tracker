@@ -109,5 +109,44 @@
         FROM bookings
         ORDER BY created_at DESC, id DESC
     </select>
+    <resultMap id="bookingLegResultMap" type="com.example.cargotracker.booking.infrastructure.repositories.BookingLegRecord">
+        <constructor>
+            <idArg column="id"                  javaType="java.lang.Long"/>
+            <arg  column="booking_id"           javaType="java.util.UUID"/>
+            <arg  column="voyage_number"        javaType="java.lang.String"/>
+            <arg  column="origin_locode"        javaType="java.lang.String"/>
+            <arg  column="destination_locode"   javaType="java.lang.String"/>
+            <arg  column="departure_date"       javaType="java.time.LocalDate"/>
+            <arg  column="arrival_date"         javaType="java.time.LocalDate"/>
+            <arg  column="leg_order"            javaType="java.lang.Integer"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insertLeg">
+        INSERT INTO booking_legs (
+            booking_id, voyage_number,
+            origin_locode, destination_locode,
+            departure_date, arrival_date,
+            leg_order
+        ) VALUES (
+            #{row.bookingId}, #{row.voyageNumber},
+            #{row.originLocode}, #{row.destinationLocode},
+            #{row.departureDate}, #{row.arrivalDate},
+            #{row.legOrder}
+        )
+    </insert>
+
+    <delete id="deleteLegsByBookingId">
+        DELETE FROM booking_legs WHERE booking_id = #{bookingId}
+    </delete>
+
+    <select id="findLegsByBookingId" resultMap="bookingLegResultMap">
+        SELECT id, booking_id, voyage_number,
+               origin_locode, destination_locode,
+               departure_date, arrival_date, leg_order
+        FROM booking_legs
+        WHERE booking_id = #{bookingId}
+        ORDER BY leg_order ASC
+    </select>
 
 </mapper>

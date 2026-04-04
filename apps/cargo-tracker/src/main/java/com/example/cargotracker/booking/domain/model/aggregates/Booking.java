@@ -5,6 +5,7 @@ import com.example.cargotracker.booking.domain.event.BookingRegisteredEvent;
 import com.example.cargotracker.booking.domain.event.BookingRouteAssignedEvent;
 import com.example.cargotracker.booking.domain.event.DomainEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.AssignedRoute;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingLeg;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.TransportCondition;
@@ -25,19 +26,22 @@ public class Booking {
     private final TransportCondition transportCondition;
     private BookingStatus status;          // 非 final: US08 confirm() で変化する
     private AssignedRoute assignedRoute;   // null = 未割り当て
+    private List<BookingLeg> legs;         // null = 区間詳細未設定
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Booking(BookingId id, ShipperId shipperId,
                     CargoSpecification cargoSpecification,
                     TransportCondition transportCondition,
                     BookingStatus status,
-                    AssignedRoute assignedRoute) {
+                    AssignedRoute assignedRoute,
+                    List<BookingLeg> legs) {
         this.id = id;
         this.shipperId = shipperId;
         this.cargoSpecification = cargoSpecification;
         this.transportCondition = transportCondition;
         this.status = status;
         this.assignedRoute = assignedRoute;
+        this.legs = legs != null ? new ArrayList<>(legs) : new ArrayList<>();
     }
 
     /**
@@ -52,7 +56,7 @@ public class Booking {
         if (transportCondition == null) throw new IllegalArgumentException("輸送条件は null にできません");
 
         Booking booking = new Booking(id, shipperId, cargoSpecification, transportCondition,
-                BookingStatus.PROVISIONAL, null);
+                BookingStatus.PROVISIONAL, null, null);
         booking.domainEvents.add(new BookingRegisteredEvent(id, shipperId));
         return booking;
     }
@@ -64,7 +68,7 @@ public class Booking {
                                        CargoSpecification cargoSpecification,
                                        TransportCondition transportCondition,
                                        BookingStatus status) {
-        return new Booking(id, shipperId, cargoSpecification, transportCondition, status, null);
+        return new Booking(id, shipperId, cargoSpecification, transportCondition, status, null, null);
     }
 
     /**
@@ -75,7 +79,19 @@ public class Booking {
                                        TransportCondition transportCondition,
                                        BookingStatus status,
                                        AssignedRoute assignedRoute) {
-        return new Booking(id, shipperId, cargoSpecification, transportCondition, status, assignedRoute);
+        return new Booking(id, shipperId, cargoSpecification, transportCondition, status, assignedRoute, null);
+    }
+
+    /**
+     * 永続化ストアから予約を再構成する（ルート情報・区間詳細含む）。
+     */
+    public static Booking reconstitute(BookingId id, ShipperId shipperId,
+                                       CargoSpecification cargoSpecification,
+                                       TransportCondition transportCondition,
+                                       BookingStatus status,
+                                       AssignedRoute assignedRoute,
+                                       List<BookingLeg> legs) {
+        return new Booking(id, shipperId, cargoSpecification, transportCondition, status, assignedRoute, legs);
     }
 
     /**
@@ -84,6 +100,17 @@ public class Booking {
     public void assignRoute(AssignedRoute assignedRoute) {
         if (assignedRoute == null) throw new IllegalArgumentException("割り当てルートは null にできません");
         this.assignedRoute = assignedRoute;
+        this.domainEvents.add(new BookingRouteAssignedEvent(id, assignedRoute));
+    }
+
+    /**
+     * 区間詳細を含むルートを割り当てる（US22）。
+     */
+    public void assignRouteWithLegs(AssignedRoute assignedRoute, List<BookingLeg> legs) {
+        if (assignedRoute == null) throw new IllegalArgumentException("割り当てルートは null にできません");
+        if (legs == null) throw new IllegalArgumentException("区間詳細は null にできません");
+        this.assignedRoute = assignedRoute;
+        this.legs = new ArrayList<>(legs);
         this.domainEvents.add(new BookingRouteAssignedEvent(id, assignedRoute));
     }
 
@@ -120,6 +147,7 @@ public class Booking {
     public TransportCondition getTransportCondition() { return transportCondition; }
     public BookingStatus getStatus() { return status; }
     public AssignedRoute getAssignedRoute() { return assignedRoute; }
+    public List<BookingLeg> getLegs() { return Collections.unmodifiableList(legs); }
 
     public List<DomainEvent> getDomainEvents() {
         return Collections.unmodifiableList(domainEvents);
