@@ -250,19 +250,21 @@ end note
 @startuml
 title ヘキサゴナルアーキテクチャ - Booking Context の例
 
-rectangle "Primary Adapters\n（入力側アダプター）" as primary #LightBlue {
-  [BookingRestController\n(web/)]
-  [BookingThymeleafController\n(web/)]
+rectangle "Interfaces（入力側）" as iface #LightBlue {
+  [CargoBookingController\n(interfaces/rest/)]
+  [BookingThymeleafController\n(interfaces/web/)]
 }
 
 hexagon "Application Core" as core {
-  rectangle "Application Layer" {
-    [CargoBookingCommandService]
-    [CargoBookingQueryService]
+  rectangle "Application Layer\n(application/internal/)" {
+    [CargoBookingCommandService\n(commandservices/)]
+    [CargoBookingQueryService\n(queryservices/)]
+    [ExternalCargoRoutingService\n(outboundservices/acl/)]
   }
-  rectangle "Domain Layer" {
-    [Cargo（集約）]
-    [BookingDomainService]
+  rectangle "Domain Layer\n(domain/model/)" {
+    [Cargo\n(aggregates/)]
+    [BookCargoCommand\n(commands/)]
+    [RouteSpecification\n(valueobjects/)]
   }
   rectangle "Port（インターフェース）" {
     interface "CargoRepository\n(出力ポート)" as repo_port
@@ -270,33 +272,63 @@ hexagon "Application Core" as core {
   }
 }
 
-rectangle "Secondary Adapters\n（出力側アダプター）" as secondary #LightGreen {
-  [MyBatisCargoRepository\n(persistence/)]
-  [HttpExternalRoutingService\n(external/)]
+rectangle "Infrastructure（出力側）" as infra #LightGreen {
+  [MyBatisCargoRepository\n(infrastructure/repositories/)]
+  [ExternalCargoRoutingClient\n(infrastructure/services/)]
 }
 
-[BookingRestController\n(web/)] --> [CargoBookingCommandService]
-[BookingRestController\n(web/)] --> [CargoBookingQueryService]
-[BookingThymeleafController\n(web/)] --> [CargoBookingQueryService]
+[CargoBookingController\n(interfaces/rest/)] --> [CargoBookingCommandService\n(commandservices/)]
+[CargoBookingController\n(interfaces/rest/)] --> [CargoBookingQueryService\n(queryservices/)]
+[BookingThymeleafController\n(interfaces/web/)] --> [CargoBookingQueryService\n(queryservices/)]
 
-[CargoBookingCommandService] --> [Cargo（集約）]
-[CargoBookingCommandService] --> repo_port
-[CargoBookingCommandService] --> routing_port
-[CargoBookingQueryService] --> repo_port
+[CargoBookingCommandService\n(commandservices/)] --> [Cargo\n(aggregates/)]
+[CargoBookingCommandService\n(commandservices/)] --> repo_port
+[ExternalCargoRoutingService\n(outboundservices/acl/)] --> routing_port
+[CargoBookingQueryService\n(queryservices/)] --> repo_port
 
-repo_port <|.. [MyBatisCargoRepository\n(persistence/)]
-routing_port <|.. [HttpExternalRoutingService\n(external/)]
+repo_port <|.. [MyBatisCargoRepository\n(infrastructure/repositories/)]
+routing_port <|.. [ExternalCargoRoutingClient\n(infrastructure/services/)]
 
 @enduml
 ```
 
 ### レイヤー責務一覧
 
+> Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する。
+
 | レイヤー | パッケージ | 責務 | 依存方向 |
 | :--- | :--- | :--- | :--- |
-| **Domain** | `domain/model/`, `domain/event/` | ビジネスルール・不変条件・ドメインイベント定義 | 外部に依存しない |
-| **Application** | `application/command/`, `application/query/` | ユースケース実行・集約操作・イベント発行 | Domain のみ依存 |
-| **Infrastructure** | `infrastructure/persistence/`, `infrastructure/web/`, `infrastructure/event/` | 永続化・HTTP・イベント処理の技術実装 | Application / Domain に依存 |
+| **Domain** | `domain/model/aggregates/`, `domain/model/valueobjects/`, `domain/model/commands/`, `domain/model/entities/` | ビジネスルール・不変条件・集約・値オブジェクト・コマンド定義 | 外部に依存しない |
+| **Application** | `application/internal/commandservices/`, `application/internal/queryservices/`, `application/internal/outboundservices/acl/` | ユースケース実行・集約操作・ACL 経由の外部連携 | Domain のみ依存 |
+| **Infrastructure** | `infrastructure/repositories/`, `infrastructure/services/` | 永続化（MyBatis）・外部サービスクライアント | Application / Domain に依存 |
+| **Interfaces** | `interfaces/rest/`, `interfaces/rest/dto/`, `interfaces/rest/transform/`, `interfaces/web/`, `interfaces/events/` | REST API Controller・DTO・DTO 変換・画面 Controller・イベントハンドラ | Application に依存 |
+
+### パッケージ構成例（Booking Context）
+
+```
+booking/
+├── domain/
+│   └── model/
+│       ├── aggregates/          集約ルート（Cargo, BookingId）
+│       ├── commands/            コマンド（BookCargoCommand, RouteCargoCommand）
+│       ├── entities/            エンティティ（Location）
+│       └── valueobjects/        値オブジェクト（RouteSpecification, Delivery, Leg 等）
+├── application/
+│   └── internal/
+│       ├── commandservices/     コマンドサービス（CargoBookingCommandService）
+│       ├── queryservices/       クエリサービス（CargoBookingQueryService）
+│       └── outboundservices/
+│           └── acl/             ACL（ExternalCargoRoutingService）
+├── infrastructure/
+│   ├── repositories/            リポジトリ実装（CargoRepository）
+│   └── services/                外部サービス実装（ExternalCargoRoutingClient）
+└── interfaces/
+    ├── rest/                    REST Controller（CargoBookingController）
+    │   ├── dto/                 リクエスト / レスポンス DTO
+    │   └── transform/           DTO ⇔ コマンド変換（Assembler）
+    ├── web/                     画面 Controller（BookingThymeleafController）
+    └── events/                  イベントハンドラ（CargoBookedEventHandler）
+```
 
 ## CQRS 設計
 
