@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ルート検索結果 - CargoTracker</title>
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="bg-light">
 <nav th:replace="~{fragments/header :: appHeader}"></nav>
@@ -49,7 +50,7 @@
     <h5 class="mb-3">
         ルート候補
         <span th:if="${!#lists.isEmpty(candidates)}"
-              class="badge bg-secondary ms-2 fs-6 align-middle"
+              class="badge bg-primary ms-2 fs-6 align-middle"
               th:text="${#lists.size(candidates) + ' 件'}"></span>
     </h5>
     <p th:unless="${#lists.isEmpty(candidates)}" class="text-muted small">
@@ -132,30 +133,34 @@
                               th:text="${#numbers.formatDecimal(candidate.estimatedPrice(), 1, 'COMMA', 0, 'POINT') + ' 円'}"></span>
                     </dd>
 
+                    <dt class="col-sm-4">出発予定日</dt>
+                    <dd class="col-sm-8" th:text="${candidate.estimatedDeparture()}"></dd>
+
                     <dt class="col-sm-4">推定着日</dt>
                     <dd class="col-sm-8">
                         <span th:text="${candidate.estimatedArrival()}"></span>
                         <span class="badge bg-success ms-1"
-                              th:if="${!candidate.estimatedArrival().isAfter(form.requestedArrivalDate)}">✅ 間に合います</span>
+                              th:if="${!candidate.estimatedArrival().isAfter(form.requestedArrivalDate)}">
+                            <i class="bi bi-check-circle-fill me-1"></i>間に合います</span>
                     </dd>
 
                     <dt class="col-sm-4">対応貨物種別</dt>
                     <dd class="col-sm-8">
                         <span th:each="ct, i : ${candidate.supportedCargoTypes()}">
-                            <span class="badge bg-secondary" th:text="${ct.displayName}"></span>
+                            <span class="badge bg-info" th:text="${ct.displayName}"></span>
                         </span>
                     </dd>
                 </dl>
 
                 <!-- 割り当てボタン（bookingId が指定されている場合のみ表示） -->
                 <div th:if="${bookingId != null}" class="mt-3">
-                    <form th:action="@{/bookings/{id}/assign-route(id=${bookingId})}" method="post">
-                        <input type="hidden" name="voyageNumber" th:value="${candidate.voyageNumber()}">
-                        <input type="hidden" name="routePath"
-                               th:value="${form.originLocode + (#lists.isEmpty(candidate.viaLocodes()) ? '' : '/' + #strings.listJoin(candidate.viaLocodes(), '/')) + '/' + form.destinationLocode}">
-                        <input type="hidden" name="estimatedArrival" th:value="${candidate.estimatedArrival()}">
-                        <button type="submit" class="btn btn-primary btn-sm">この予約に割り当てる</button>
-                    </form>
+                    <button type="button" class="btn btn-primary btn-sm"
+                            data-bs-toggle="modal" data-bs-target="#assignModal"
+                            th:attr="data-voyage-number=${candidate.voyageNumber()},
+                                     data-route-path=${form.originLocode + (#lists.isEmpty(candidate.viaLocodes()) ? '' : '/' + #strings.listJoin(candidate.viaLocodes(), '/')) + '/' + form.destinationLocode},
+                                     data-estimated-arrival=${candidate.estimatedArrival()}">
+                        この予約に割り当てる
+                    </button>
                 </div>
             </div>
         </div>
@@ -163,6 +168,51 @@
 </div>
 </main>
 
+<!-- 経路割り当て確認モーダル（ループ外に 1 つ配置） -->
+<div th:if="${bookingId != null}"
+     class="modal fade" id="assignModal" tabindex="-1"
+     aria-labelledby="assignModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignModalLabel">経路割り当ての確認</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+            </div>
+            <form th:action="@{/bookings/{id}/assign-route(id=${bookingId})}" method="post">
+                <div class="modal-body">
+                    <p>以下の経路をこの予約に割り当てます。よろしいですか？</p>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">航海番号</dt>
+                        <dd class="col-sm-8" id="modal-voyage-number">—</dd>
+                        <dt class="col-sm-4">推定着日</dt>
+                        <dd class="col-sm-8" id="modal-estimated-arrival">—</dd>
+                    </dl>
+                    <input type="hidden" name="voyageNumber" id="modal-input-voyage-number">
+                    <input type="hidden" name="routePath" id="modal-input-route-path">
+                    <input type="hidden" name="estimatedArrival" id="modal-input-estimated-arrival">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">割り当てる</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script>
+document.getElementById('assignModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const voyageNumber = button.getAttribute('data-voyage-number');
+    const routePath = button.getAttribute('data-route-path');
+    const estimatedArrival = button.getAttribute('data-estimated-arrival');
+    document.getElementById('modal-voyage-number').textContent = voyageNumber;
+    document.getElementById('modal-estimated-arrival').textContent = estimatedArrival;
+    document.getElementById('modal-input-voyage-number').value = voyageNumber;
+    document.getElementById('modal-input-route-path').value = routePath;
+    document.getElementById('modal-input-estimated-arrival').value = estimatedArrival;
+});
+</script>
 </body>
 </html>

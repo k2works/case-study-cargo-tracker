@@ -8,13 +8,15 @@ import java.util.List;
 
 /**
  * 複数の {@link RouteConstraintChecker} を AND 結合する複合チェッカー。
+ *
+ * <p>チェッカーが 0 件の場合、{@link #satisfies} は常に {@code true} を返す（AND 結合の恒等元）。
  */
 public class CompositeRouteConstraintChecker implements RouteConstraintChecker {
 
     private final List<RouteConstraintChecker> checkers;
 
     public CompositeRouteConstraintChecker(RouteConstraintChecker... checkers) {
-        this.checkers = Arrays.asList(checkers);
+        this.checkers = List.copyOf(Arrays.asList(checkers));
     }
 
     @Override

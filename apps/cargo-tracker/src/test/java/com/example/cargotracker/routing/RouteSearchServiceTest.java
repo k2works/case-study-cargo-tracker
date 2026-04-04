@@ -57,7 +57,7 @@ class RouteSearchServiceTest {
         );
         var expectedCandidates = List.of(new RouteCandidate(
             "VOY001", List.of("SGSIN"), 14,
-            new BigDecimal("1500.00"), arrivalDate,
+            new BigDecimal("1500.00"), arrivalDate, arrivalDate.minusDays(14),
             Set.of(CargoType.GENERAL)
         ));
 
@@ -101,7 +101,7 @@ class RouteSearchServiceTest {
         );
         var expectedCandidates = List.of(new RouteCandidate(
             "VOY002", List.of(), 7,
-            new BigDecimal("800.00"), LocalDate.of(2025, 12, 31),
+            new BigDecimal("800.00"), LocalDate.of(2025, 12, 31), LocalDate.of(2025, 12, 24),
             Set.of(CargoType.REFRIGERATED)
         ));
 
@@ -124,11 +124,11 @@ class RouteSearchServiceTest {
             "JPTYO", "USNYC", deadline, CargoType.GENERAL, BigDecimal.TEN
         );
         var onTime = new RouteCandidate(
-            "VOY-OK", List.of(), 10, BigDecimal.TEN, deadline, Set.of(CargoType.GENERAL)
+            "VOY-OK", List.of(), 10, BigDecimal.TEN, deadline, deadline.minusDays(10), Set.of(CargoType.GENERAL)
         );
         var late = new RouteCandidate(
             "VOY-LATE", List.of(), 35, BigDecimal.TEN,
-            deadline.plusDays(5), Set.of(CargoType.GENERAL)
+            deadline.plusDays(5), deadline.minusDays(30), Set.of(CargoType.GENERAL)
         );
         when(routeProviderPort.findRoutes(query)).thenReturn(List.of(onTime, late));
 
@@ -149,7 +149,7 @@ class RouteSearchServiceTest {
         );
         var late = new RouteCandidate(
             "VOY-LATE", List.of(), 35, BigDecimal.TEN,
-            deadline.plusDays(1), Set.of(CargoType.GENERAL)
+            deadline.plusDays(1), deadline.minusDays(34), Set.of(CargoType.GENERAL)
         );
         when(routeProviderPort.findRoutes(query)).thenReturn(List.of(late));
 
@@ -166,11 +166,11 @@ class RouteSearchServiceTest {
             "JPTYO", "USNYC", deadline, CargoType.HAZARDOUS, BigDecimal.TEN
         );
         var hazOk = new RouteCandidate(
-            "VOY-HAZ", List.of(), 10, BigDecimal.TEN, deadline,
+            "VOY-HAZ", List.of(), 10, BigDecimal.TEN, deadline, deadline.minusDays(10),
             Set.of(CargoType.GENERAL, CargoType.HAZARDOUS)
         );
         var generalOnly = new RouteCandidate(
-            "VOY-GEN", List.of(), 10, BigDecimal.TEN, deadline,
+            "VOY-GEN", List.of(), 10, BigDecimal.TEN, deadline, deadline.minusDays(10),
             Set.of(CargoType.GENERAL)
         );
         when(routeProviderPort.findRoutes(query)).thenReturn(List.of(hazOk, generalOnly));
@@ -191,11 +191,11 @@ class RouteSearchServiceTest {
             "JPTYO", "USNYC", deadline, CargoType.REFRIGERATED, BigDecimal.TEN
         );
         var refOk = new RouteCandidate(
-            "VOY-REF", List.of(), 10, BigDecimal.TEN, deadline,
+            "VOY-REF", List.of(), 10, BigDecimal.TEN, deadline, deadline.minusDays(10),
             Set.of(CargoType.GENERAL, CargoType.REFRIGERATED)
         );
         var hazOnly = new RouteCandidate(
-            "VOY-HAZ", List.of(), 10, BigDecimal.TEN, deadline,
+            "VOY-HAZ", List.of(), 10, BigDecimal.TEN, deadline, deadline.minusDays(10),
             Set.of(CargoType.GENERAL, CargoType.HAZARDOUS)
         );
         when(routeProviderPort.findRoutes(query)).thenReturn(List.of(refOk, hazOnly));
@@ -216,15 +216,15 @@ class RouteSearchServiceTest {
             "JPTYO", "USNYC", deadline, CargoType.HAZARDOUS, BigDecimal.TEN
         );
         var pass = new RouteCandidate(
-            "VOY-PASS", List.of(), 10, BigDecimal.TEN, deadline,
+            "VOY-PASS", List.of(), 10, BigDecimal.TEN, deadline, deadline.minusDays(10),
             Set.of(CargoType.GENERAL, CargoType.HAZARDOUS)
         );
         var lateButOk = new RouteCandidate(
             "VOY-LATE", List.of(), 35, BigDecimal.TEN,
-            deadline.plusDays(3), Set.of(CargoType.HAZARDOUS)
+            deadline.plusDays(3), deadline.minusDays(32), Set.of(CargoType.HAZARDOUS)
         );
         var onTimeWrongCargo = new RouteCandidate(
-            "VOY-WRONG", List.of(), 5, BigDecimal.TEN, deadline.minusDays(2),
+            "VOY-WRONG", List.of(), 5, BigDecimal.TEN, deadline.minusDays(2), deadline.minusDays(7),
             Set.of(CargoType.GENERAL)
         );
         when(routeProviderPort.findRoutes(query)).thenReturn(List.of(pass, lateButOk, onTimeWrongCargo));
@@ -245,15 +245,15 @@ class RouteSearchServiceTest {
             "JPTYO", "USNYC", deadline, CargoType.GENERAL, BigDecimal.TEN
         );
         var slowCheap = new RouteCandidate(
-            "VOY-SC", List.of(), 20, new BigDecimal("800"), deadline,
+            "VOY-SC", List.of(), 20, new BigDecimal("800"), deadline, deadline.minusDays(20),
             Set.of(CargoType.GENERAL)
         );
         var fastExpensive = new RouteCandidate(
-            "VOY-FE", List.of(), 10, new BigDecimal("1500"), deadline,
+            "VOY-FE", List.of(), 10, new BigDecimal("1500"), deadline, deadline.minusDays(10),
             Set.of(CargoType.GENERAL)
         );
         var fastCheap = new RouteCandidate(
-            "VOY-FC", List.of(), 10, new BigDecimal("800"), deadline,
+            "VOY-FC", List.of(), 10, new BigDecimal("800"), deadline, deadline.minusDays(10),
             Set.of(CargoType.GENERAL)
         );
         when(routeProviderPort.findRoutes(query))

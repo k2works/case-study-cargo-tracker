@@ -112,6 +112,7 @@ class RoutingRestControllerTest {
                 14,
                 new BigDecimal("150000"),
                 LocalDate.of(2026, 5, 28),
+                LocalDate.of(2026, 5, 14),
                 Set.of(CargoType.GENERAL)
         );
     }

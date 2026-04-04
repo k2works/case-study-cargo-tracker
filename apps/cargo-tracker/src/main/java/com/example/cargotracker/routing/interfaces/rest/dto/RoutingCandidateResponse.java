@@ -23,6 +23,8 @@ public record RoutingCandidateResponse(
         BigDecimal estimatedPrice,
         @Schema(description = "推定到着日", example = "2026-05-28")
         LocalDate estimatedArrival,
+        @Schema(description = "推定出発日", example = "2026-05-14")
+        LocalDate estimatedDeparture,
         @Schema(description = "対応貨物種別")
         List<String> supportedCargoTypes
 ) {
@@ -33,6 +35,7 @@ public record RoutingCandidateResponse(
                 candidate.transitDays(),
                 candidate.estimatedPrice(),
                 candidate.estimatedArrival(),
+                candidate.estimatedDeparture(),
                 candidate.supportedCargoTypes().stream()
                         .map(CargoType::name)
                         .sorted()

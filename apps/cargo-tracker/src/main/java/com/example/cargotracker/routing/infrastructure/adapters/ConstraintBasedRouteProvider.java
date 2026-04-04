@@ -6,12 +6,10 @@ import com.example.cargotracker.routing.domain.model.RouteCandidate;
 import com.example.cargotracker.routing.domain.model.RouteSearchQuery;
 import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageLeg;
-import com.example.cargotracker.routing.domain.services.RouteConstraintChecker;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,8 +17,9 @@ import java.util.List;
  * DB 内の航海データをもとにルート候補を算出する {@link RouteProviderPort} 実装。
  *
  * <p>{@code product} プロファイルで有効になる。
- * {@link VoyageQueryPort} で航海を検索し、{@link RouteConstraintChecker} でフィルタリング後
- * {@link RouteCandidate} へ変換して返す。
+ * {@link VoyageQueryPort} で検索した全航海を {@link RouteCandidate} へ変換して返す。
+ * 制約フィルタリングは呼び出し元の
+ * {@link com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService} が担う。
  */
 @Component
 @Profile("product")
@@ -32,39 +31,33 @@ public class ConstraintBasedRouteProvider implements RouteProviderPort {
     private static final BigDecimal DAY_RATE = new BigDecimal("1000");
 
     private final VoyageQueryPort voyageQueryPort;
-    private final RouteConstraintChecker constraintChecker;
 
-    public ConstraintBasedRouteProvider(VoyageQueryPort voyageQueryPort,
-                                        RouteConstraintChecker constraintChecker) {
+    public ConstraintBasedRouteProvider(VoyageQueryPort voyageQueryPort) {
         this.voyageQueryPort = voyageQueryPort;
-        this.constraintChecker = constraintChecker;
     }
 
     @Override
     public List<RouteCandidate> findRoutes(RouteSearchQuery query) {
         return voyageQueryPort.searchVoyages(query.originLocode(), query.destinationLocode())
             .stream()
-            .filter(v -> constraintChecker.satisfies(v, query))
             .map(v -> toRouteCandidate(v, query))
             .toList();
     }
 
     private RouteCandidate toRouteCandidate(Voyage voyage, RouteSearchQuery query) {
         List<String> viaLocodes = buildViaLocodes(voyage);
-        int transitDays = voyage.legs().stream().mapToInt(VoyageLeg::transitDays).sum();
-        LocalDate estimatedArrival = voyage.legs().stream()
-            .map(VoyageLeg::arrivalDate)
-            .max(LocalDate::compareTo)
-            .orElseThrow();
+        int rawTransitDays = voyage.legs().stream().mapToInt(VoyageLeg::transitDays).sum();
+        int transitDays = Math.max(rawTransitDays, 1);
         BigDecimal estimatedPrice = BASE_RATE_PER_KG.multiply(query.weightKg())
             .add(DAY_RATE.multiply(BigDecimal.valueOf(transitDays)));
 
         return new RouteCandidate(
             voyage.voyageNumber(),
             viaLocodes,
-            Math.max(transitDays, 1),
+            transitDays,
             estimatedPrice,
-            estimatedArrival,
+            voyage.latestArrivalDate(),
+            voyage.firstDepartureDate(),
             voyage.supportedCargoTypes()
         );
     }

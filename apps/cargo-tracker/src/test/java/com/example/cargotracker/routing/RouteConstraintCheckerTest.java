@@ -109,4 +109,22 @@ class RouteConstraintCheckerTest {
         // VOYAGE_GENERAL_LATE は期限超過
         assertThat(checker.satisfies(VOYAGE_GENERAL_LATE, QUERY_GENERAL)).isFalse();
     }
+
+    @Test
+    @DisplayName("CompositeRouteConstraintChecker: CargoType のみ不合格（Deadline 合格、CargoType 不合格）")
+    void composite_CargoType単独不合格() {
+        var checker = new CompositeRouteConstraintChecker(
+            new DeadlineConstraint(), new CargoTypeConstraint()
+        );
+        // VOYAGE_HAZARDOUS_ONLY は到着日 2026-06-15（期限 2026-06-20 以内）→ Deadline 合格
+        // QUERY_GENERAL は GENERAL → HAZARDOUS_ONLY は非対応 → CargoType 不合格
+        assertThat(checker.satisfies(VOYAGE_HAZARDOUS_ONLY, QUERY_GENERAL)).isFalse();
+    }
+
+    @Test
+    @DisplayName("CompositeRouteConstraintChecker: チェッカーなしは常に合格（AND 結合の恒等元）")
+    void composite_チェッカーなし() {
+        var checker = new CompositeRouteConstraintChecker();
+        assertThat(checker.satisfies(VOYAGE_GENERAL, QUERY_GENERAL)).isTrue();
+    }
 }

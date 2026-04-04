@@ -110,6 +110,9 @@ class US21E2ETest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("E2: ルート候補は transitDays 昇順にソートされている")
     void e2_ルート候補はtransitDays昇順にソートされている() throws Exception {
+        // Note: スタブデータが SG001（14 日）→ SG002（18 日）の固定昇順のため、
+        // ソートロジックが無効でもこのテストは GREEN になる。
+        // ソートの単体保証は RouteSearchServiceTest#searchByConditionは優先度ソートを適用する で行っている。
         // SG001: transitDays=14（先）, SG002: transitDays=18（後）
         mockMvc.perform(get("/api/v1/routings/search")
                         .session(session)

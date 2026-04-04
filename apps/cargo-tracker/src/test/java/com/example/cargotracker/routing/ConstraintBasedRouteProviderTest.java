@@ -6,9 +6,6 @@ import com.example.cargotracker.routing.domain.model.RouteCandidate;
 import com.example.cargotracker.routing.domain.model.RouteSearchQuery;
 import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.VoyageLeg;
-import com.example.cargotracker.routing.domain.services.CargoTypeConstraint;
-import com.example.cargotracker.routing.domain.services.CompositeRouteConstraintChecker;
-import com.example.cargotracker.routing.domain.services.DeadlineConstraint;
 import com.example.cargotracker.routing.infrastructure.adapters.ConstraintBasedRouteProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,15 +56,12 @@ class ConstraintBasedRouteProviderTest {
 
     @BeforeEach
     void setUp() {
-        var checker = new CompositeRouteConstraintChecker(
-            new DeadlineConstraint(), new CargoTypeConstraint()
-        );
-        provider = new ConstraintBasedRouteProvider(voyageQueryPort, checker);
+        provider = new ConstraintBasedRouteProvider(voyageQueryPort);
     }
 
     @Test
-    @DisplayName("制約を満たす航海をルート候補に変換して返す")
-    void findRoutes_制約を満たす候補を返す() {
+    @DisplayName("全航海をルート候補に変換して返す（フィルタなし）")
+    void findRoutes_全航海をルート候補に変換して返す() {
         var query = new RouteSearchQuery(
             "JPTYO", "SGSIN", LocalDate.of(2026, 6, 20),
             CargoType.GENERAL, new BigDecimal("100")
@@ -77,15 +71,15 @@ class ConstraintBasedRouteProviderTest {
 
         List<RouteCandidate> result = provider.findRoutes(query);
 
-        // SG003_LATE は期限超過（2026-06-28 > 2026-06-20）なので除外される
-        assertThat(result).hasSize(2)
+        // フィルタリングなし → SG003_LATE を含む全件返却
+        assertThat(result).hasSize(3)
             .extracting(RouteCandidate::voyageNumber)
-            .containsExactlyInAnyOrder("SG001", "SG002");
+            .containsExactlyInAnyOrder("SG001", "SG002", "SG003");
     }
 
     @Test
-    @DisplayName("貨物種別が非対応の航海は除外される")
-    void findRoutes_貨物種別非対応は除外() {
+    @DisplayName("貨物種別に関わらず全航海を変換する")
+    void findRoutes_貨物種別に関わらず全航海を変換する() {
         var query = new RouteSearchQuery(
             "JPTYO", "SGSIN", LocalDate.of(2026, 6, 25),
             CargoType.REFRIGERATED, new BigDecimal("100")
@@ -95,10 +89,10 @@ class ConstraintBasedRouteProviderTest {
 
         List<RouteCandidate> result = provider.findRoutes(query);
 
-        // SG002 は HAZARDOUS のみ対応（REFRIGERATED 非対応）→除外
-        assertThat(result).hasSize(1)
+        // 貨物種別フィルタなし → SG002（HAZARDOUS only）も含む全件返却
+        assertThat(result).hasSize(2)
             .extracting(RouteCandidate::voyageNumber)
-            .containsExactly("SG001");
+            .containsExactlyInAnyOrder("SG001", "SG002");
     }
 
     @Test
@@ -116,6 +110,23 @@ class ConstraintBasedRouteProviderTest {
         // SG002 の最終レグ到着日: 2026-06-19
         assertThat(result).hasSize(1);
         assertThat(result.get(0).estimatedArrival()).isEqualTo(LocalDate.of(2026, 6, 19));
+    }
+
+    @Test
+    @DisplayName("ルート候補の estimatedDeparture は先頭レグの出発日")
+    void findRoutes_estimatedDepartureは先頭レグ() {
+        var query = new RouteSearchQuery(
+            "JPTYO", "SGSIN", LocalDate.of(2026, 6, 25),
+            CargoType.GENERAL, new BigDecimal("100")
+        );
+        when(voyageQueryPort.searchVoyages("JPTYO", "SGSIN"))
+            .thenReturn(List.of(VOYAGE_SG002));
+
+        List<RouteCandidate> result = provider.findRoutes(query);
+
+        // SG002 の先頭レグ出発日: 2026-06-01
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).estimatedDeparture()).isEqualTo(LocalDate.of(2026, 6, 1));
     }
 
     @Test

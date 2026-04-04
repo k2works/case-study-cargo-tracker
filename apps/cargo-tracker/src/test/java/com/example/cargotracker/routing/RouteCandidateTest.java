@@ -25,6 +25,7 @@ class RouteCandidateTest {
                 14,
                 new BigDecimal("1500.00"),
                 LocalDate.of(2025, 12, 31),
+                LocalDate.of(2025, 12, 17),
                 Set.of(CargoType.GENERAL, CargoType.REFRIGERATED)
         );
 
@@ -33,6 +34,7 @@ class RouteCandidateTest {
         assertThat(candidate.transitDays()).isEqualTo(14);
         assertThat(candidate.estimatedPrice()).isEqualByComparingTo(new BigDecimal("1500.00"));
         assertThat(candidate.estimatedArrival()).isEqualTo(LocalDate.of(2025, 12, 31));
+        assertThat(candidate.estimatedDeparture()).isEqualTo(LocalDate.of(2025, 12, 17));
         assertThat(candidate.supportedCargoTypes()).containsExactlyInAnyOrder(CargoType.GENERAL, CargoType.REFRIGERATED);
     }
 
@@ -45,6 +47,7 @@ class RouteCandidateTest {
                 7,
                 BigDecimal.TEN,
                 LocalDate.now().plusDays(7),
+                LocalDate.now(),
                 Set.of(CargoType.GENERAL)
         );
 
@@ -54,67 +57,73 @@ class RouteCandidateTest {
     @Test
     @DisplayName("航海番号が null の場合は例外をスローする")
     void 航海番号がnullの場合は例外をスローする() {
-        assertInvalidCandidate(null, List.of(), 7, BigDecimal.TEN, LocalDate.now().plusDays(7), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate(null, List.of(), 7, BigDecimal.TEN, LocalDate.now().plusDays(7), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("航海番号が空文字の場合は例外をスローする")
     void 航海番号が空文字の場合は例外をスローする() {
-        assertInvalidCandidate("  ", List.of(), 7, BigDecimal.TEN, LocalDate.now().plusDays(7), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("  ", List.of(), 7, BigDecimal.TEN, LocalDate.now().plusDays(7), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("経由港リストが null の場合は例外をスローする")
     void 経由港リストがnullの場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", null, 7, BigDecimal.TEN, LocalDate.now().plusDays(7), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("VOY001", null, 7, BigDecimal.TEN, LocalDate.now().plusDays(7), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("所要日数が 0 の場合は例外をスローする")
     void 所要日数が0の場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), 0, BigDecimal.TEN, LocalDate.now().plusDays(1), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("VOY001", List.of(), 0, BigDecimal.TEN, LocalDate.now().plusDays(1), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("所要日数が負の場合は例外をスローする")
     void 所要日数が負の場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), -1, BigDecimal.TEN, LocalDate.now().plusDays(1), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("VOY001", List.of(), -1, BigDecimal.TEN, LocalDate.now().plusDays(1), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("概算料金が 0 の場合は例外をスローする")
     void 概算料金が0の場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.ZERO, LocalDate.now().plusDays(10), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.ZERO, LocalDate.now().plusDays(10), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("概算料金が負の場合は例外をスローする")
     void 概算料金が負の場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), 10, new BigDecimal("-100"), LocalDate.now().plusDays(10), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("VOY001", List.of(), 10, new BigDecimal("-100"), LocalDate.now().plusDays(10), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("概算料金が null の場合は例外をスローする")
     void 概算料金がnullの場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), 10, null, LocalDate.now().plusDays(10), Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("VOY001", List.of(), 10, null, LocalDate.now().plusDays(10), LocalDate.now(), Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("推定到着日が null の場合は例外をスローする")
     void 推定到着日がnullの場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.TEN, null, Set.of(CargoType.GENERAL));
+        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.TEN, null, LocalDate.now(), Set.of(CargoType.GENERAL));
+    }
+
+    @Test
+    @DisplayName("推定出発日が null の場合は例外をスローする")
+    void 推定出発日がnullの場合は例外をスローする() {
+        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.TEN, LocalDate.now().plusDays(10), null, Set.of(CargoType.GENERAL));
     }
 
     @Test
     @DisplayName("対応貨物種別が null の場合は例外をスローする")
     void 対応貨物種別がnullの場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.TEN, LocalDate.now().plusDays(10), null);
+        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.TEN, LocalDate.now().plusDays(10), LocalDate.now(), null);
     }
 
     @Test
     @DisplayName("対応貨物種別が空の場合は例外をスローする")
     void 対応貨物種別が空の場合は例外をスローする() {
-        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.TEN, LocalDate.now().plusDays(10), Set.of());
+        assertInvalidCandidate("VOY001", List.of(), 10, BigDecimal.TEN, LocalDate.now().plusDays(10), LocalDate.now(), Set.of());
     }
 
     private RouteCandidate createCandidate(
@@ -123,6 +132,7 @@ class RouteCandidateTest {
             int transitDays,
             BigDecimal estimatedPrice,
             LocalDate estimatedArrival,
+            LocalDate estimatedDeparture,
             Set<CargoType> supportedCargoTypes
     ) {
         return new RouteCandidate(
@@ -131,6 +141,7 @@ class RouteCandidateTest {
                 transitDays,
                 estimatedPrice,
                 estimatedArrival,
+                estimatedDeparture,
                 supportedCargoTypes
         );
     }
@@ -141,6 +152,7 @@ class RouteCandidateTest {
             int transitDays,
             BigDecimal estimatedPrice,
             LocalDate estimatedArrival,
+            LocalDate estimatedDeparture,
             Set<CargoType> supportedCargoTypes
     ) {
         assertThatThrownBy(() -> createCandidate(
@@ -149,6 +161,7 @@ class RouteCandidateTest {
                 transitDays,
                 estimatedPrice,
                 estimatedArrival,
+                estimatedDeparture,
                 supportedCargoTypes
         )).isInstanceOf(IllegalArgumentException.class);
     }

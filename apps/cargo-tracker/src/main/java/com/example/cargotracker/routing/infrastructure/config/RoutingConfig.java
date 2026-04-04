@@ -6,14 +6,9 @@ import com.example.cargotracker.routing.application.internal.outboundservices.Vo
 import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageScheduleSearchService;
-import com.example.cargotracker.routing.domain.services.CargoTypeConstraint;
-import com.example.cargotracker.routing.domain.services.CompositeRouteConstraintChecker;
-import com.example.cargotracker.routing.domain.services.DeadlineConstraint;
-import com.example.cargotracker.routing.domain.services.RouteConstraintChecker;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 
 /**
  * routing コンテキストの Spring Bean 設定クラス。
@@ -34,14 +29,6 @@ public class RoutingConfig {
     @Bean
     public VoyageScheduleSearchService voyageScheduleSearchService(VoyageQueryPort voyageQueryPort) {
         return new VoyageScheduleSearchService(voyageQueryPort);
-    }
-
-    @Bean
-    @Profile("product")
-    public RouteConstraintChecker routeConstraintChecker() {
-        return new CompositeRouteConstraintChecker(
-            new DeadlineConstraint(), new CargoTypeConstraint()
-        );
     }
 
     @Bean

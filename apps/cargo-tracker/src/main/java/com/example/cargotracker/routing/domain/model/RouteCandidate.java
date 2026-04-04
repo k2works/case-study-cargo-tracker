@@ -14,6 +14,7 @@ public record RouteCandidate(
     int transitDays,
     BigDecimal estimatedPrice,
     LocalDate estimatedArrival,
+    LocalDate estimatedDeparture,
     Set<CargoType> supportedCargoTypes
 ) {
     public RouteCandidate {
@@ -31,6 +32,9 @@ public record RouteCandidate(
         }
         if (estimatedArrival == null) {
             throw new IllegalArgumentException("推定到着日は null にできません");
+        }
+        if (estimatedDeparture == null) {
+            throw new IllegalArgumentException("推定出発日は null にできません");
         }
         if (supportedCargoTypes == null || supportedCargoTypes.isEmpty()) {
             throw new IllegalArgumentException("対応貨物種別は null または空にできません");

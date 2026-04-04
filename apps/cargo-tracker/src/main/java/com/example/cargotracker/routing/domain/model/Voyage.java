@@ -1,5 +1,7 @@
 package com.example.cargotracker.routing.domain.model;
 
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -39,5 +41,26 @@ public record Voyage(
      */
     public boolean supports(CargoType cargoType) {
         return supportedCargoTypes.contains(cargoType);
+    }
+
+    /**
+     * この航海の最終到着日（全レグの最大到着日）を返す。
+     *
+     * @return 最終到着日
+     */
+    public LocalDate latestArrivalDate() {
+        return legs.stream()
+            .map(VoyageLeg::arrivalDate)
+            .max(Comparator.naturalOrder())
+            .orElseThrow();
+    }
+
+    /**
+     * この航海の最初の出発日（先頭レグの出発日）を返す。
+     *
+     * @return 最初の出発日
+     */
+    public LocalDate firstDepartureDate() {
+        return legs.get(0).departureDate();
     }
 }

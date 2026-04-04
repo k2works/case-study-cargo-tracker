@@ -55,13 +55,20 @@ public class RouteSearchService {
     /**
      * 検索条件を直接指定してルート候補を検索する。
      *
-     * @param query ルート検索条件
-     * @return フィルタ済みルート候補リスト
+     * @param query ルート検索条件（出発地、目的地、希望着日、貨物種別、重量）
+     * @return 希望着日・貨物種別フィルタ適用後、所要日数昇順にソートされたルート候補リスト
+     *         （0 件の場合は空リスト）
      */
     public List<RouteCandidate> searchByCondition(RouteSearchQuery query) {
         return applyFilters(routeProviderPort.findRoutes(query), query);
     }
 
+    /**
+     * ルート候補に希望着日・貨物種別フィルタと所要日数ソートを適用する。
+     *
+     * <p>フィルタリングをここに集約することで、{@link RouteProviderPort} 実装を
+     * フィルタ責務から解放し、単なるルート変換ロジックに特化させる。
+     */
     private List<RouteCandidate> applyFilters(List<RouteCandidate> candidates, RouteSearchQuery query) {
         return candidates.stream()
             .filter(c -> !c.estimatedArrival().isAfter(query.requestedArrivalDate()))

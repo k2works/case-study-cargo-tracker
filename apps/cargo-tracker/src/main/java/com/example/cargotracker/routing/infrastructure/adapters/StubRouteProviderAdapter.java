@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
@@ -31,6 +32,7 @@ public class StubRouteProviderAdapter implements RouteProviderPort {
                 14,
                 new BigDecimal("150000"),
                 query.requestedArrivalDate().minusDays(2),
+                query.requestedArrivalDate().minusDays(16),
                 Set.of(CargoType.GENERAL, CargoType.REFRIGERATED)
             ),
             new RouteCandidate(
@@ -39,6 +41,7 @@ public class StubRouteProviderAdapter implements RouteProviderPort {
                 18,
                 new BigDecimal("120000"),
                 query.requestedArrivalDate().minusDays(1),
+                query.requestedArrivalDate().minusDays(19),
                 Set.of(CargoType.GENERAL, CargoType.HAZARDOUS)
             )
         );
