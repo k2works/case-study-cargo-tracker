@@ -48,16 +48,16 @@ public class VoyageRepositoryImpl implements VoyageRepository {
     public List<Voyage> findAll() {
         return voyageMapper.findAllVoyageNumbers()
             .stream()
-            .map(vn -> {
-                VoyageRecord vr = voyageMapper.findVoyageByNumber(vn).orElseThrow();
-                List<VoyageLegRecord> legs = voyageMapper.findLegsByVoyageNumber(vn);
-                return toVoyage(vr, legs);
+            .map(voyageNumber -> {
+                VoyageRecord voyageRecord = voyageMapper.findVoyageByNumber(voyageNumber).orElseThrow();
+                List<VoyageLegRecord> legs = voyageMapper.findLegsByVoyageNumber(voyageNumber);
+                return toVoyage(voyageRecord, legs);
             })
             .toList();
     }
 
-    private Voyage toVoyage(VoyageRecord record, List<VoyageLegRecord> legRecords) {
-        Set<CargoType> cargoTypes = Arrays.stream(record.supportedCargoTypes().split(","))
+    private Voyage toVoyage(VoyageRecord voyageRecord, List<VoyageLegRecord> legRecords) {
+        Set<CargoType> cargoTypes = Arrays.stream(voyageRecord.supportedCargoTypes().split(","))
             .map(String::trim)
             .map(CargoType::valueOf)
             .collect(Collectors.toSet());
@@ -72,6 +72,6 @@ public class VoyageRepositoryImpl implements VoyageRepository {
             ))
             .toList();
 
-        return new Voyage(record.voyageNumber(), record.carrierName(), cargoTypes, legs);
+        return new Voyage(voyageRecord.voyageNumber(), voyageRecord.carrierName(), cargoTypes, legs);
     }
 }

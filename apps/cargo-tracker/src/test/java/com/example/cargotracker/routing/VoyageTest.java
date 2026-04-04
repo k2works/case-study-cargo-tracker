@@ -78,8 +78,9 @@ class VoyageTest {
         var leg = new VoyageLeg("JPTYO", "SGSIN",
             LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15));
         List<VoyageLeg> legs = List.of(leg);
+        Set<CargoType> supportedCargoTypes = Set.of();
 
-        assertThatThrownBy(() -> new Voyage("SG001", "Carrier", Set.of(), legs))
+        assertThatThrownBy(() -> new Voyage("SG001", "Carrier", supportedCargoTypes, legs))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("supportedCargoTypes");
     }
@@ -87,7 +88,10 @@ class VoyageTest {
     @Test
     @DisplayName("legs が空の場合 IllegalArgumentException をスローする")
     void voyage_legs_empty() {
-        assertThatThrownBy(() -> new Voyage("SG001", "Carrier", Set.of(CargoType.GENERAL), List.of()))
+        Set<CargoType> supportedCargoTypes = Set.of(CargoType.GENERAL);
+        List<VoyageLeg> legs = List.of();
+
+        assertThatThrownBy(() -> new Voyage("SG001", "Carrier", supportedCargoTypes, legs))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("legs");
     }
