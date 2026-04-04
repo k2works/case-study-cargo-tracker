@@ -20,8 +20,8 @@
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 11 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 16 件のテンプレートを配置 |
@@ -68,18 +68,25 @@
 
 | ドキュメント | 概要 |
 | :--- | :--- |
-| [ADR-001](./adr/001-java-springboot-version-strategy.md) | Java 25 LTS / Spring Boot 4.0 採用と移行ロードマップ |
-| [ADR-002](./adr/002-transactional-event-listener.md) | ドメインイベントに @TransactionalEventListener(AFTER_COMMIT) を使用 |
-| [ADR-003](./adr/003-discount-policy-as-entity.md) | DiscountPolicy をエンティティとして設計 |
-| [ADR-004](./adr/004-shipper-self-service-out-of-scope.md) | 荷主セルフサービス機能を Phase 1 スコープ外 |
-| [ADR-005](./adr/005-windows-docker-desktop-testcontainers.md) | Windows Docker Desktop での Testcontainers 接続設定 |
-| [ADR-006](./adr/006-enable-h2-console-on-spring-boot-4.md) | Spring Boot 4 開発環境での H2 Console 設定 |
+| [ADR-001](./adr/001-spring-boot-4-java-25.md) | Spring Boot 4.0.5 + Java 25 を採用する |
+| [ADR-002](./adr/002-gradle-groovy-dsl.md) | ビルドツールに Gradle 9.x (Groovy DSL) を採用する |
+| [ADR-003](./adr/003-spotbugs-ignore-failures-java25.md) | SpotBugs を ignoreFailures=true で運用する（Java 25 対応） |
+| [ADR-004](./adr/004-swagger-ui-conditional.md) | Swagger UI を環境変数で条件付き有効化する |
+| [ADR-005](./adr/005-husky-lint-staged-precommit.md) | Husky + lint-staged で pre-commit 品質チェックを実施する |
+| [ADR-006](./adr/006-testcontainers-singleton-pattern.md) | Testcontainers でシングルトンコンテナパターンを採用する |
+| [ADR-007](./adr/007-playwright-e2e-pom-pattern.md) | Playwright E2E テストで Page Object Model パターンを採用する |
+| [ADR-008](./adr/008-sonarqube-local-quality-gate.md) | ローカル SonarQube で品質ゲートを管理する |
+| [ADR-009](./adr/009-github-actions-ci-pipeline.md) | GitHub Actions で Build & Test + E2E の 2 ジョブ CI を構成する |
+| [ADR-010](./adr/010-practical-ddd-package-structure.md) | Practical DDD in Enterprise Java のパッケージ構成を採用する |
+| [ADR-011](./adr/011-archunit-hexagonal-rules.md) | ArchUnit でヘキサゴナルアーキテクチャの依存関係ルールを自動検証する |
 
 ### レビュードキュメント
 
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
+| [IT1 実装成果物レビュー](./review/IT1_review_20260404.md) | IT1 荷主登録・貨物予約登録のコードレビュー結果（高 8 件・中 8 件・低 3 件） |
+| [IT1 UI/UX レビュー](./review/IT1_uiux_review_20260404.md) | IT1 Thymeleaf テンプレートの UI/UX レビュー結果（高 8 件・中 8 件・低 5 件） |
 
 ## 補足
 

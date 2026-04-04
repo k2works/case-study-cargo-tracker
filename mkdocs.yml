@@ -98,6 +98,8 @@ nav:
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - IT1 実装成果物レビュー: review/IT1_review_20260404.md
+      - IT1 UI/UX レビュー: review/IT1_uiux_review_20260404.md
   - ADR:
       - 概要: adr/index.md
       - ADR-001 Spring Boot 4 + Java 25: adr/001-spring-boot-4-java-25.md
