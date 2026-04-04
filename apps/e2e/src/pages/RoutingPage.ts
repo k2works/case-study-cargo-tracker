@@ -66,9 +66,13 @@ export class RoutingPage {
     await expect(card).toContainText(params.estimatedPriceText);
   }
 
-  /** 指定インデックスのルート候補の「この予約に割り当てる」ボタンをクリックする */
+  /** 指定インデックスのルート候補を割り当てる（モーダル確認まで実行） */
   async assignRoute(index: number = 0) {
     const card = this.routeCandidateCard(index);
     await card.locator('button:has-text("この予約に割り当てる")').click();
+    // 確認モーダルが表示されてから「割り当てる」ボタンをクリックする
+    const modal = this.page.locator('#assignModal');
+    await expect(modal).toBeVisible();
+    await modal.locator('button[type="submit"]').click();
   }
 }

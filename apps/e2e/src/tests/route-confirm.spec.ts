@@ -54,8 +54,8 @@ test.describe.serial('E09〜E11: ルート割り当て・予約確定・追跡�
     const routingPage = new RoutingPage(page);
     await routingPage.gotoByBookingId(bookingId);
 
-    // ルート候補が表示されている
-    await expect(page.locator('h5')).toContainText('ルート候補');
+    // ルート候補が表示されている（modal-title の h5 と重複しないよう main 内に限定）
+    await expect(page.locator('main h5')).toContainText('ルート候補');
     const count = await routingPage.countCandidates();
     expect(count).toBeGreaterThan(0);
 
