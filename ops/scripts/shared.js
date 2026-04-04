@@ -10,6 +10,20 @@ import { execSync } from 'child_process';
 export function cleanDockerEnv() {
   const env = { ...process.env };
   delete env.DOCKER_HOST;
+  delete env.GIT_DIR;
+  delete env.GIT_WORK_TREE;
+  delete env.GIT_EXEC_PATH;
+  env.SHELL = '/bin/bash';
+  env.TERM = 'dumb';
+  env.PATH = [
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin',
+    env.PATH || '',
+  ].join(':');
   return env;
 }
 

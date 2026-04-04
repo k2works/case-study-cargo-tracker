@@ -44,30 +44,30 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     private CargoRecord toRecord(Cargo cargo) {
-        CargoRecord record = new CargoRecord();
-        record.setBookingId(cargo.getBookingId().toString());
-        record.setShipperId(cargo.getShipperId().toString());
-        record.setCargoType(cargo.getCargoType().name());
-        record.setWeight(cargo.getWeight());
-        record.setOriginUnlocode(cargo.getRouteSpecification().getOrigin().getUnlocode());
-        record.setDestinationUnlocode(cargo.getRouteSpecification().getDestination().getUnlocode());
-        record.setArrivalDeadline(cargo.getRouteSpecification().getArrivalDeadline());
-        record.setBookingStatus(cargo.getStatus().name());
-        return record;
+        CargoRecord cargoRecord = new CargoRecord();
+        cargoRecord.setBookingId(cargo.getBookingId().toString());
+        cargoRecord.setShipperId(cargo.getShipperId().toString());
+        cargoRecord.setCargoType(cargo.getCargoType().name());
+        cargoRecord.setWeight(cargo.getWeight());
+        cargoRecord.setOriginUnlocode(cargo.getRouteSpecification().origin().unlocode());
+        cargoRecord.setDestinationUnlocode(cargo.getRouteSpecification().destination().unlocode());
+        cargoRecord.setArrivalDeadline(cargo.getRouteSpecification().arrivalDeadline());
+        cargoRecord.setBookingStatus(cargo.getStatus().name());
+        return cargoRecord;
     }
 
-    private Cargo toDomain(CargoRecord record) {
+    private Cargo toDomain(CargoRecord cargoRecord) {
         return new Cargo(
-                new BookingId(UUID.fromString(record.getBookingId())),
-                new ShipperId(UUID.fromString(record.getShipperId())),
-                CargoType.valueOf(record.getCargoType()),
-                record.getWeight(),
+                new BookingId(UUID.fromString(cargoRecord.getBookingId())),
+                new ShipperId(UUID.fromString(cargoRecord.getShipperId())),
+                CargoType.valueOf(cargoRecord.getCargoType()),
+                cargoRecord.getWeight(),
                 new RouteSpecification(
-                        new Location(record.getOriginUnlocode()),
-                        new Location(record.getDestinationUnlocode()),
-                        record.getArrivalDeadline()
+                        new Location(cargoRecord.getOriginUnlocode()),
+                        new Location(cargoRecord.getDestinationUnlocode()),
+                        cargoRecord.getArrivalDeadline()
                 ),
-                BookingStatus.valueOf(record.getBookingStatus())
+                BookingStatus.valueOf(cargoRecord.getBookingStatus())
         );
     }
 }

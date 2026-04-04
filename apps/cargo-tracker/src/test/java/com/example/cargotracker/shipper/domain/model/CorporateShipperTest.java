@@ -38,12 +38,16 @@ class CorporateShipperTest {
 
     @Test
     void shouldThrowWhenDiscountRateExceedsUpperBound() {
-        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(new BigDecimal("0.1501")));
+        BigDecimal tooLargeDiscountRate = new BigDecimal("0.1501");
+
+        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(tooLargeDiscountRate));
     }
 
     @Test
     void shouldThrowWhenDiscountRateIsNegative() {
-        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(new BigDecimal("-0.0001")));
+        BigDecimal negativeDiscountRate = new BigDecimal("-0.0001");
+
+        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(negativeDiscountRate));
     }
 
     @Test

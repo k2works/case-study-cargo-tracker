@@ -3,7 +3,7 @@
     {
       "name": "cargo-tracker",
       "label": "Cargo Tracker",
-      "projectKey": "cargo-tracker",
+      "projectKey": "cargo-tracker-local",
       "scanType": "gradle",
       "srcDir": "apps/cargo-tracker"
     }

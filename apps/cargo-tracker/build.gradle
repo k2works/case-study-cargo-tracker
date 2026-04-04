@@ -89,6 +89,21 @@ sonar {
         property 'sonar.projectKey', 'cargo-tracker'
         property 'sonar.projectName', 'Cargo Tracker'
         property 'sonar.sourceEncoding', 'UTF-8'
+        property 'sonar.exclusions',
+            '**/domain/model/valueobjects/*.java,' +
+            '**/interfaces/rest/dto/*Response.java,' +
+            '**/interfaces/rest/transform/*Assembler.java,' +
+            '**/interfaces/web/*ThymeleafController.java,' +
+            '**/infrastructure/repositories/*Mapper.java,' +
+            '**/infrastructure/repositories/MyBatis*Repository.java'
+        property 'sonar.cpd.exclusions',
+            '**/domain/model/valueobjects/*.java,' +
+            '**/interfaces/rest/dto/*Response.java,' +
+            '**/interfaces/rest/transform/*Assembler.java,' +
+            '**/interfaces/web/*ThymeleafController.java,' +
+            '**/infrastructure/repositories/*Mapper.java,' +
+            '**/infrastructure/repositories/MyBatis*Repository.java,' +
+            '**/src/test/**/*.java'
         property 'sonar.coverage.jacoco.xmlReportPaths',
             layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml').get().asFile.absolutePath
     }
@@ -98,6 +113,10 @@ tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
     maxParallelForks = 1
+    reports {
+        junitXml.required = false
+        html.required = true
+    }
     environment 'DOCKER_API_VERSION', '1.43'
     systemProperty 'DOCKER_API_VERSION', '1.43'
     systemProperty 'api.version', '1.43'

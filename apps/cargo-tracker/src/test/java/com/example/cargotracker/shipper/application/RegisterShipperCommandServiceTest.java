@@ -6,7 +6,6 @@ import com.example.cargotracker.shipper.domain.model.aggregates.CorporateShipper
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.aggregates.ShipperType;
 import com.example.cargotracker.shipper.domain.model.repository.ShipperRepository;
-import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
 import org.junit.jupiter.api.Test;
@@ -125,7 +124,7 @@ class RegisterShipperCommandServiceTest {
 
         verify(shipperRepository).save(shipperCaptor.capture());
         CorporateShipper shipper = (CorporateShipper) shipperCaptor.getValue();
-        assertEquals(command.contractNumber(), shipper.getContractNumber().getValue());
+        assertEquals(command.contractNumber(), shipper.getContractNumber().value());
     }
 
     @Test

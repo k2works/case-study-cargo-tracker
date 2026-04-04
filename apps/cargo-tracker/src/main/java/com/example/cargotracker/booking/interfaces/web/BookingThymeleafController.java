@@ -24,6 +24,10 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @RequestMapping("/bookings")
 public class BookingThymeleafController {
 
+    private static final String BOOKING_ATTRIBUTE = "booking";
+    private static final String CARGO_TYPES_ATTRIBUTE = "cargoTypes";
+    private static final String NEW_VIEW = "booking/new";
+
     private final CargoBookingCommandService cargoBookingCommandService;
     private final CargoBookingQueryService cargoBookingQueryService;
     private final CargoAssembler cargoAssembler;
@@ -48,22 +52,22 @@ public class BookingThymeleafController {
 
     @GetMapping("/new")
     public String newForm(Model model) {
-        if (!model.containsAttribute("booking")) {
-            model.addAttribute("booking", new BookCargoRequest());
+        if (!model.containsAttribute(BOOKING_ATTRIBUTE)) {
+            model.addAttribute(BOOKING_ATTRIBUTE, new BookCargoRequest());
         }
-        model.addAttribute("cargoTypes", CargoType.values());
-        return "booking/new";
+        model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
+        return NEW_VIEW;
     }
 
     @PostMapping
     public String create(
-            @Valid @ModelAttribute("booking") BookCargoRequest request,
+            @Valid @ModelAttribute(BOOKING_ATTRIBUTE) BookCargoRequest request,
             BindingResult bindingResult,
             Model model
     ) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("cargoTypes", CargoType.values());
-            return "booking/new";
+            model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
+            return NEW_VIEW;
         }
 
         try {
@@ -74,14 +78,14 @@ public class BookingThymeleafController {
                 throw exception;
             }
             bindingResult.rejectValue("shipperId", "notFound", "指定された荷主が見つかりません。");
-            model.addAttribute("cargoTypes", CargoType.values());
-            return "booking/new";
+            model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
+            return NEW_VIEW;
         }
     }
 
     @GetMapping("/{bookingId}")
     public String show(@PathVariable String bookingId, Model model) {
-        model.addAttribute("booking", cargoBookingQueryService.findByBookingId(bookingId)
+        model.addAttribute(BOOKING_ATTRIBUTE, cargoBookingQueryService.findByBookingId(bookingId)
                 .map(cargoAssembler::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
         return "booking/show";

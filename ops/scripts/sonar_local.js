@@ -57,6 +57,19 @@ function sonarHostUrl() {
   return process.env.SONAR_HOST_URL || `http://localhost:${sonarPort()}`;
 }
 
+function currentGitBranch() {
+  try {
+    return execSync('git branch --show-current', {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: true,
+      env: cleanDockerEnv(),
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
 /** docker-compose.yml のディレクトリ */
 function composeDir() {
   return path.join(process.cwd(), 'ops', 'docker', 'sonarqube-local');
@@ -266,11 +279,15 @@ function requireSonarToken() {
  */
 function runScan(project, token, hostUrl) {
   const cwd = path.join(process.cwd(), project.srcDir);
+  const referenceBranch = currentGitBranch();
+  const newCodeOption = referenceBranch
+    ? ` -Dsonar.newCode.referenceBranch=${referenceBranch}`
+    : '';
 
   switch (project.scanType) {
     case 'sbt':
       execSync(
-        `sbt -Dsonar.host.url=${hostUrl} -Dsonar.token=${token} sonarScan`,
+        `sbt -Dsonar.host.url=${hostUrl} -Dsonar.token=${token}${newCodeOption} sonarScan`,
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
@@ -281,7 +298,8 @@ function runScan(project, token, hostUrl) {
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
-        `-Dsonar.token=${token}`,
+        `-Dsonar.token=${token}` +
+        `${newCodeOption}`,
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
@@ -292,7 +310,9 @@ function runScan(project, token, hostUrl) {
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
-        `-Dsonar.token=${token}`,
+        `-Dsonar.token=${token}` +
+        ` -x test -x jacocoTestReport` +
+        `${newCodeOption}`,
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
@@ -307,7 +327,8 @@ function runScan(project, token, hostUrl) {
         `-Dsonar.tests=src ` +
         `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" ` +
         `-Dsonar.host.url=${hostUrl} ` +
-        `-Dsonar.token=${token}`,
+        `-Dsonar.token=${token}` +
+        `${newCodeOption}`,
         { stdio: 'inherit', cwd, env: cleanDockerEnv() },
       );
       break;

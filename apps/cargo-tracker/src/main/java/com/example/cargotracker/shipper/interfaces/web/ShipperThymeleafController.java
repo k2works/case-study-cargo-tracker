@@ -25,6 +25,9 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @RequestMapping("/shippers")
 public class ShipperThymeleafController {
 
+    private static final String SHIPPER_ATTRIBUTE = "shipper";
+    private static final String NEW_VIEW = "shipper/new";
+
     private final RegisterShipperCommandService registerShipperCommandService;
     private final FindShipperQueryService findShipperQueryService;
     private final ShipperAssembler shipperAssembler;
@@ -49,19 +52,19 @@ public class ShipperThymeleafController {
 
     @GetMapping("/new")
     public String newForm(Model model) {
-        if (!model.containsAttribute("shipper")) {
-            model.addAttribute("shipper", new RegisterShipperRequest());
+        if (!model.containsAttribute(SHIPPER_ATTRIBUTE)) {
+            model.addAttribute(SHIPPER_ATTRIBUTE, new RegisterShipperRequest());
         }
-        return "shipper/new";
+        return NEW_VIEW;
     }
 
     @PostMapping
     public String create(
-            @Valid @ModelAttribute("shipper") RegisterShipperRequest request,
+            @Valid @ModelAttribute(SHIPPER_ATTRIBUTE) RegisterShipperRequest request,
             BindingResult bindingResult
     ) {
         if (bindingResult.hasErrors()) {
-            return "shipper/new";
+            return NEW_VIEW;
         }
 
         try {
@@ -72,13 +75,13 @@ public class ShipperThymeleafController {
                 throw exception;
             }
             bindingResult.rejectValue("email", "duplicate", "このメールアドレスは既に登録されています。");
-            return "shipper/new";
+            return NEW_VIEW;
         }
     }
 
     @GetMapping("/{id}")
     public String show(@PathVariable String id, Model model) {
-        model.addAttribute("shipper", findShipperQueryService.findById(new ShipperId(UUID.fromString(id)))
+        model.addAttribute(SHIPPER_ATTRIBUTE, findShipperQueryService.findById(new ShipperId(UUID.fromString(id)))
                 .map(shipperAssembler::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
         return "shipper/show";

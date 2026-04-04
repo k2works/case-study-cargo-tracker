@@ -62,9 +62,9 @@ class CargoBookingCommandServiceTest {
         assertEquals(bookingId, savedCargo.getBookingId());
         assertEquals(shipperId, savedCargo.getShipperId());
         assertEquals(command.weight(), savedCargo.getWeight());
-        assertEquals(command.arrivalDeadline(), savedCargo.getRouteSpecification().getArrivalDeadline());
-        assertEquals(command.originUnlocode(), savedCargo.getRouteSpecification().getOrigin().getUnlocode());
-        assertEquals(command.destinationUnlocode(), savedCargo.getRouteSpecification().getDestination().getUnlocode());
+        assertEquals(command.arrivalDeadline(), savedCargo.getRouteSpecification().arrivalDeadline());
+        assertEquals(command.originUnlocode(), savedCargo.getRouteSpecification().origin().unlocode());
+        assertEquals(command.destinationUnlocode(), savedCargo.getRouteSpecification().destination().unlocode());
     }
 
     @Test

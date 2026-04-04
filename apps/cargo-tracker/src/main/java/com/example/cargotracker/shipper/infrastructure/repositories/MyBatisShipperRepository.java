@@ -38,12 +38,12 @@ public class MyBatisShipperRepository implements ShipperRepository {
 
     @Override
     public Optional<Shipper> findByEmail(Email email) {
-        return Optional.ofNullable(shipperMapper.findByEmail(email.getValue())).map(this::toDomain);
+        return Optional.ofNullable(shipperMapper.findByEmail(email.value())).map(this::toDomain);
     }
 
     @Override
     public Optional<Shipper> findByCode(ShipperCode code) {
-        return Optional.ofNullable(shipperMapper.findByCode(code.getValue())).map(this::toDomain);
+        return Optional.ofNullable(shipperMapper.findByCode(code.value())).map(this::toDomain);
     }
 
     @Override
@@ -52,39 +52,39 @@ public class MyBatisShipperRepository implements ShipperRepository {
     }
 
     private ShipperRecord toRecord(Shipper shipper) {
-        ShipperRecord record = new ShipperRecord();
-        record.setId(shipper.getId().toString());
-        record.setShipperCode(shipper.getCode().getValue());
-        record.setShipperType(shipper.getShipperType().name());
-        record.setName(shipper.getName().getValue());
-        record.setEmail(shipper.getEmail().getValue());
-        record.setPhone(shipper.getPhone() == null ? null : shipper.getPhone().getValue());
+        ShipperRecord shipperRecord = new ShipperRecord();
+        shipperRecord.setId(shipper.getId().toString());
+        shipperRecord.setShipperCode(shipper.getCode().value());
+        shipperRecord.setShipperType(shipper.getShipperType().name());
+        shipperRecord.setName(shipper.getName().value());
+        shipperRecord.setEmail(shipper.getEmail().value());
+        shipperRecord.setPhone(shipper.getPhone() == null ? null : shipper.getPhone().value());
         if (shipper instanceof CorporateShipper corporateShipper) {
-            record.setContractNumber(corporateShipper.getContractNumber().getValue());
-            record.setDiscountRate(corporateShipper.getDiscountRate().getValue());
+            shipperRecord.setContractNumber(corporateShipper.getContractNumber().value());
+            shipperRecord.setDiscountRate(corporateShipper.getDiscountRate().value());
         }
-        return record;
+        return shipperRecord;
     }
 
-    private Shipper toDomain(ShipperRecord record) {
-        ShipperType shipperType = ShipperType.valueOf(record.getShipperType());
+    private Shipper toDomain(ShipperRecord shipperRecord) {
+        ShipperType shipperType = ShipperType.valueOf(shipperRecord.getShipperType());
         if (shipperType == ShipperType.CORPORATE) {
             return new CorporateShipper(
-                    new ShipperId(UUID.fromString(record.getId())),
-                    new ShipperCode(record.getShipperCode()),
-                    new ShipperName(record.getName()),
-                    new Email(record.getEmail()),
-                    toPhone(record.getPhone()),
-                    new ContractNumber(record.getContractNumber()),
-                    new DiscountRate(record.getDiscountRate())
+                    new ShipperId(UUID.fromString(shipperRecord.getId())),
+                    new ShipperCode(shipperRecord.getShipperCode()),
+                    new ShipperName(shipperRecord.getName()),
+                    new Email(shipperRecord.getEmail()),
+                    toPhone(shipperRecord.getPhone()),
+                    new ContractNumber(shipperRecord.getContractNumber()),
+                    new DiscountRate(shipperRecord.getDiscountRate())
             );
         }
         return new Shipper(
-                new ShipperId(UUID.fromString(record.getId())),
-                new ShipperCode(record.getShipperCode()),
-                new ShipperName(record.getName()),
-                new Email(record.getEmail()),
-                toPhone(record.getPhone()),
+                new ShipperId(UUID.fromString(shipperRecord.getId())),
+                new ShipperCode(shipperRecord.getShipperCode()),
+                new ShipperName(shipperRecord.getName()),
+                new Email(shipperRecord.getEmail()),
+                toPhone(shipperRecord.getPhone()),
                 shipperType
         );
     }

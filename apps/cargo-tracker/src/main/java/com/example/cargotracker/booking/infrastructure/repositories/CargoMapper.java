@@ -7,7 +7,7 @@ import java.util.List;
 @Mapper
 public interface CargoMapper {
 
-    void insert(CargoRecord record);
+    void insert(CargoRecord cargoRecord);
 
     CargoRecord findByBookingId(String bookingId);
 

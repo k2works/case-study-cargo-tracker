@@ -66,20 +66,22 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenOriginAndDestinationAreSame() {
-        assertThrows(IllegalArgumentException.class, () -> new RouteSpecification(
-                new Location("JPTYO"),
-                new Location("JPTYO"),
-                LocalDate.now().plusDays(7)
-        ));
+        Location sameOrigin = new Location("JPTYO");
+        Location sameDestination = new Location("JPTYO");
+        LocalDate arrivalDeadline = LocalDate.now().plusDays(7);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                new RouteSpecification(sameOrigin, sameDestination, arrivalDeadline));
     }
 
     @Test
     void shouldThrowWhenArrivalDeadlineIsPast() {
-        assertThrows(IllegalArgumentException.class, () -> new RouteSpecification(
-                new Location("JPTYO"),
-                new Location("USLAX"),
-                LocalDate.now().minusDays(1)
-        ));
+        Location origin = new Location("JPTYO");
+        Location destination = new Location("USLAX");
+        LocalDate pastArrivalDeadline = LocalDate.now().minusDays(1);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                new RouteSpecification(origin, destination, pastArrivalDeadline));
     }
 
     @Test
@@ -90,12 +92,13 @@ class CargoTest {
                 new Location("USLAX"),
                 LocalDate.now().plusDays(7)
         );
+        BigDecimal weight = new BigDecimal("10.500");
 
         assertThrows(NullPointerException.class, () -> new Cargo(
                 null,
                 shipperId,
                 CargoType.GENERAL,
-                new BigDecimal("10.500"),
+                weight,
                 routeSpecification
         ));
     }

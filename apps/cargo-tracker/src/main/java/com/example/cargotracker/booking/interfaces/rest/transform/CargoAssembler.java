@@ -13,9 +13,9 @@ public class CargoAssembler {
                 cargo.getShipperId().toString(),
                 cargo.getCargoType().name(),
                 cargo.getWeight(),
-                cargo.getRouteSpecification().getOrigin().getUnlocode(),
-                cargo.getRouteSpecification().getDestination().getUnlocode(),
-                cargo.getRouteSpecification().getArrivalDeadline(),
+                cargo.getRouteSpecification().origin().unlocode(),
+                cargo.getRouteSpecification().destination().unlocode(),
+                cargo.getRouteSpecification().arrivalDeadline(),
                 cargo.getStatus().name()
         );
     }

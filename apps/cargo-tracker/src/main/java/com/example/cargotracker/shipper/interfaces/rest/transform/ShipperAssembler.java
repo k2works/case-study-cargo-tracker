@@ -13,16 +13,16 @@ public class ShipperAssembler {
         java.math.BigDecimal discountRate = null;
 
         if (shipper instanceof CorporateShipper corporateShipper) {
-            contractNumber = corporateShipper.getContractNumber().getValue();
-            discountRate = corporateShipper.getDiscountRate().getValue();
+            contractNumber = corporateShipper.getContractNumber().value();
+            discountRate = corporateShipper.getDiscountRate().value();
         }
 
         return new ShipperResponse(
                 shipper.getId().toString(),
-                shipper.getCode().getValue(),
-                shipper.getName().getValue(),
-                shipper.getEmail().getValue(),
-                shipper.getPhone() == null ? null : shipper.getPhone().getValue(),
+                shipper.getCode().value(),
+                shipper.getName().value(),
+                shipper.getEmail().value(),
+                shipper.getPhone() == null ? null : shipper.getPhone().value(),
                 shipper.getShipperType().name(),
                 contractNumber,
                 discountRate
