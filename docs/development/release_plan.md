@@ -363,7 +363,7 @@ gantt
 
 | イテレーション | 計画 SP | 実績 SP | 達成率 | 状態 |
 |---------------|---------|---------|--------|------|
-| 1 | 10 | 10 | 100% | 完了（一部受入基準は IT2 で対応） |
+| 1 | 10 | 10 | 100% | 完了（Java 60 件・E2E 27 件全パス、カバレッジ 89%、レビュー済み） |
 | 2 | 6 | - | - | 未着手 |
 | 3 | 20 | - | - | 未着手 |
 | 4 | 24 | - | - | 未着手 |
@@ -385,9 +385,10 @@ xychart-beta
 
 ## 次のステップ
 
-1. イテレーション 1 計画を作成する（`planning-releases --iteration 1`）
-2. GitHub Project に同期する（`syncing-github-project`）
-3. 開発を開始する（`orchestrating-development`）
+1. IT1 ふりかえりを実施する（`planning-releases --retrospective`）
+2. IT1 完了報告書を作成する（`planning-releases --iteration-report`）
+3. イテレーション 2 計画を作成する（`planning-releases --iteration 2`）
+4. GitHub Project に同期する（`syncing-github-project --sync`）
 
 ---
 
@@ -397,3 +398,4 @@ xychart-beta
 |------|---------|--------|
 | 2026-04-04 | 初版作成 | - |
 | 2026-04-04 | IT1 完了を反映（実績 10 SP、Playwright E2E 27 件パス、バーンダウン実績更新） | - |
+| 2026-04-04 | 進捗更新: IT1 メトリクス詳細（Java 60 件・カバレッジ 89%・レビュー完了）、次のステップを IT2 準備に更新 | - |

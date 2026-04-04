@@ -24,8 +24,8 @@
 - [x] US02: 個人荷主を登録し、荷主 ID が発行される（注: 住所フィールド・重複メール確認は IT2 で対応）
 - [x] US03: 法人荷主を登録し、契約番号・割引率が保存される（注: 割引率上限 30%→15% 乖離は IT2 で修正）
 - [x] US04: 荷主 ID を指定して貨物予約を登録し、予約番号が発行される（注: 寸法・個数・品名は IT2 で対応）
-- [ ] テストカバレッジ 80% 以上
-- [ ] SonarQube Quality Gate PASS
+- [x] テストカバレッジ 80% 以上（命令カバレッジ 89%、ブランチカバレッジ 65%）
+- [ ] SonarQube Quality Gate PASS（ローカル SonarQube 未実行）
 - [x] Playwright E2E テストが通過（27 件全パス）
 
 ---
@@ -560,14 +560,15 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 
 ### Definition of Done
 
-- [x] コードレビュー完了（`developing-review` 実施済み）
-- [x] 単体テストがパス
+- [x] コードレビュー完了（`developing-review` 実施済み、高 8 件 / 中 8 件 / 低 3 件）
+- [x] UI/UX レビュー完了（`developing-uiux-review` 実施済み、高 8 件 / 中 8 件 / 低 5 件）
+- [x] 単体テストがパス（Java 60 件全パス）
 - [x] API E2E テストがパス
 - [x] Playwright E2E テストがパス（27 件）
-- [ ] SonarQube Quality Gate PASS
-- [ ] テストカバレッジ 80% 以上
+- [ ] SonarQube Quality Gate PASS（ローカル SonarQube 未実行）
+- [x] テストカバレッジ 80% 以上（命令カバレッジ 89%）
 - [x] 機能がローカル環境で動作確認済み
-- [ ] ドキュメント更新完了
+- [x] ドキュメント更新完了
 
 ### デモ項目
 
@@ -588,6 +589,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | 2026-04-04 | ディレクトリ構成を Practical DDD Chapter3 に準拠（aggregates/valueobjects/commands/、application/internal/、interfaces/rest/dto/transform/） | - |
 | 2026-04-04 | データモデルを data-model.md と完全突合（location テーブル追加、cargo の全カラム反映、FK 関係追加） | - |
 | 2026-04-04 | 荷主登録・貨物予約登録の全タスク完了（1.1〜1.9, 2.1〜2.8）、Playwright E2E テスト 27 件パス | - |
+| 2026-04-04 | 進捗更新: Java テスト 60 件全パス、JaCoCo 命令カバレッジ 89%、コードレビュー・UI/UX レビュー完了、DoD 更新 | - |
 
 ---
 
