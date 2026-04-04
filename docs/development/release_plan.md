@@ -385,10 +385,9 @@ xychart-beta
 
 ## 次のステップ
 
-1. IT1 ふりかえりを実施する（`planning-releases --retrospective`）
-2. IT1 完了報告書を作成する（`planning-releases --iteration-report`）
-3. イテレーション 2 計画を作成する（`planning-releases --iteration 2`）
-4. GitHub Project に同期する（`syncing-github-project --sync`）
+1. IT2 計画の整合性検証を実施する（`validating-iteration-plan`）
+2. IT2 開発を開始する（`orchestrating-development`）
+3. GitHub Project に同期する（`syncing-github-project --sync`）
 
 ---
 
