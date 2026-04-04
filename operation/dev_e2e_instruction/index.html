@@ -13,10 +13,6 @@
       
       
       
-        <link rel="prev" href="../">
-      
-      
-        <link rel="next" href="../dev_infa_instruction/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>アプリケーション開発環境セットアップ - Case Study Cargo Tracker</title>
+        <title>Playwright E2E テストセットアップ手順書 - Case Study Cargo Tracker</title>
       
     
     
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#playwright-e2e" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              アプリケーション開発環境セットアップ
+              Playwright E2E テストセットアップ手順書
             
           </span>
         </div>
@@ -296,12 +292,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../" class="md-tabs__link">
           
   
@@ -1288,31 +1282,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -1330,7 +1319,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1373,37 +1362,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    アプリケーション開発環境セットアップ
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../dev_app_instrunction/" class="md-nav__link">
         
   
   
@@ -1419,698 +1381,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        概要
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. 前提条件
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="1. 前提条件">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#java" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Java のインストール
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#docker" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Docker のインストール
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nodejs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Node.js のインストール
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. プロジェクトの取得
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="2. プロジェクトの取得">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        リポジトリのクローン
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nodejs_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Node.js 依存パッケージのインストール
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. サブシステム一覧
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. 技術スタック
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4. 技術スタック">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        バックエンド
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        フロントエンド
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        インフラストラクチャ
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. プロファイル構成
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="5. プロファイル構成">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#default" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        default プロファイル（推奨：日常開発）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#product" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        product プロファイル（本番互換）
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        6. 開発サーバーの起動
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="6. 開発サーバーの起動">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        タスクランナー経由（推奨）
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#gradle" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gradle 直接実行
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        アクセス確認
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#7-docker-compose" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        7. Docker Compose のセットアップ
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="7. Docker Compose のセットアップ">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        データベースコンテナの起動
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#docker-compose" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Docker Compose の便利なコマンド
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mkdocs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MkDocs ドキュメントサーバーの起動
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        8. テストの実行
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="8. テストの実行">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        全テスト実行
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        テストの種類
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_12" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        テストカバレッジ
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        9. コード品質管理
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="9. コード品質管理">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_13" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        静的コード解析ツール
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_14" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        品質チェックの実行
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_15" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        コード複雑度の基準
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_16" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        レポートの確認
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#10" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        10. ディレクトリ構造
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#11" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        11. 命名規則
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#12-git" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        12. Git 規約
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="12. Git 規約">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_17" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        コミットメッセージ
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_18" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        スコープ
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#git-hookshusky-lint-staged" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Git Hooks（Husky + lint-staged）
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Git Hooks（Husky + lint-staged）">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_19" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        セットアップ
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pre-commit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pre-commit フック
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_20" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        フックをスキップする場合
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#13" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        13. セットアップの確認
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="13. セットアップの確認">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_21" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        アクセス確認
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#14-cicd" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        14. CI/CD
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="14. CI/CD">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_22" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ワークフロー一覧
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#backend-ci" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Backend CI
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#docker-image-publish" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Docker Image Publish
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_23" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        トラブルシューティング
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="トラブルシューティング">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#gradle-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gradle Wrapper が見つからない
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#testcontainers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testcontainers の起動に時間がかかる
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#h2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        H2 コンソールに接続できない
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pre-commit_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pre-commit フックが失敗する場合
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_24" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        関連ドキュメント
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -4202,927 +3472,405 @@
   
 
 
-<h1 id="_1">アプリケーション開発環境セットアップ手順書<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<h2 id="_2">概要<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p>本ドキュメントは、Case Study Cargo Tracker のアプリケーション開発環境をセットアップする手順を説明します。</p>
-<p>テスト駆動開発（TDD）のゴールは <strong>動作するきれいなコード</strong> です。それを実現するためには <a href="https://t-wada.hatenablog.jp/entry/clean-code-that-works">ソフトウェア開発の三種の神器</a> が必要です。</p>
-<blockquote>
-<p>今日のソフトウェア開発の世界において絶対になければならない 3 つの技術的な柱があります。
-三本柱と言ったり、三種の神器と言ったりしていますが、それらは</p>
-<ul>
-<li>バージョン管理</li>
-<li>テスティング</li>
-<li>自動化</li>
-</ul>
-<p>の 3 つです。</p>
-<p>— https://t-wada.hatenablog.jp/entry/clean-code-that-works</p>
-</blockquote>
-<hr />
-<h2 id="1">1. 前提条件<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>以下のツールがインストールされていることを確認してください。</p>
+<h1 id="playwright-e2e">Playwright E2E テストセットアップ手順書<a class="headerlink" href="#playwright-e2e" title="Permanent link">&para;</a></h1>
+<h2 id="_1">概要<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>本ドキュメントは、Case Study Cargo Tracker の E2E（End-to-End）テスト環境を Playwright でセットアップする手順を説明します。</p>
+<p>E2E テストはバックエンドアプリケーション（Spring Boot）が起動した状態でブラウザを自動操作し、ユーザー操作の一連のフローを検証します。</p>
 <table>
 <thead>
 <tr>
-<th>ツール</th>
-<th>バージョン</th>
-<th>確認コマンド</th>
+<th>項目</th>
+<th>内容</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Java</td>
-<td>25.x</td>
-<td><code>java -version</code></td>
+<td>テストフレームワーク</td>
+<td>Playwright</td>
 </tr>
 <tr>
-<td>Gradle</td>
-<td>9.x（Wrapper で自動取得）</td>
-<td><code>./gradlew -v</code></td>
+<td>言語</td>
+<td>TypeScript</td>
 </tr>
 <tr>
-<td>Docker</td>
-<td>24.x 以上</td>
-<td><code>docker -v</code></td>
+<td>テスト対象</td>
+<td><code>http://localhost:8080</code>（cargo-tracker）</td>
 </tr>
 <tr>
-<td>Docker Compose</td>
-<td>2.x</td>
-<td><code>docker compose version</code></td>
+<td>テストディレクトリ</td>
+<td><code>apps/e2e</code></td>
 </tr>
 <tr>
-<td>Git</td>
-<td>最新</td>
-<td><code>git -v</code></td>
+<td>ブラウザ</td>
+<td>Chromium</td>
 </tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1">1. 前提条件<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<p>以下が完了していることを確認してください。</p>
+<table>
+<thead>
 <tr>
-<td>Node.js</td>
-<td>22.x LTS</td>
+<th>前提</th>
+<th>確認方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Node.js 22.x LTS</td>
 <td><code>node -v</code></td>
 </tr>
 <tr>
-<td>npm</td>
-<td>10.x</td>
+<td>npm 10.x</td>
 <td><code>npm -v</code></td>
 </tr>
+<tr>
+<td>cargo-tracker が起動可能</td>
+<td><code>cd apps/cargo-tracker &amp;&amp; ./gradlew bootRun</code></td>
+</tr>
 </tbody>
 </table>
-<h3 id="java">Java のインストール<a class="headerlink" href="#java" title="Permanent link">&para;</a></h3>
-<p>SDKMAN を使用すると複数バージョンの管理が容易です。</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># SDKMAN のインストール</span>
-curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;https://get.sdkman.io&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
-
-<span class="c1"># Java 25 のインストール</span>
-sdk<span class="w"> </span>install<span class="w"> </span>java<span class="w"> </span><span class="m">25</span>-open
-
-<span class="c1"># バージョン確認</span>
-java<span class="w"> </span>-version
-</code></pre></div>
-<p>公式サイトから直接ダウンロードする場合：</p>
-<ul>
-<li>https://jdk.java.net/25/</li>
-</ul>
-<h3 id="docker">Docker のインストール<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h3>
-<p>Docker Desktop をインストールします。</p>
-<ul>
-<li><strong>Windows</strong>: https://docs.docker.com/desktop/install/windows-install/</li>
-<li><strong>macOS</strong>: https://docs.docker.com/desktop/install/mac-install/</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="c1"># バージョン確認</span>
-docker<span class="w"> </span>-v
-
-docker<span class="w"> </span>compose<span class="w"> </span>version
-</code></pre></div>
-<h3 id="nodejs">Node.js のインストール<a class="headerlink" href="#nodejs" title="Permanent link">&para;</a></h3>
-<p>コミット前の品質チェック（husky + lint-staged）と Gulp タスクランナーに Node.js が必要です。</p>
-<ul>
-<li>https://nodejs.org/</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="c1"># バージョン確認</span>
-node<span class="w"> </span>-v
-
-npm<span class="w"> </span>-v
+<hr />
+<h2 id="2">2. ディレクトリ構造<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>apps/e2e/
+├── package.json              # Playwright 依存関係・スクリプト
+├── playwright.config.ts      # Playwright 設定
+├── tsconfig.json             # TypeScript 設定
+└── src/
+    ├── fixtures.ts           # テストフィクスチャ（ログイン等の共通処理）
+    ├── pages/                # Page Object Model
+    │   └── LoginPage.ts      # ログインページ操作
+    └── tests/                # テストスペック
+        └── auth.spec.ts      # 認証テスト
 </code></pre></div>
 <hr />
-<h2 id="2">2. プロジェクトの取得<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<h3 id="_3">リポジトリのクローン<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/k2works/case-study-cargo-tracker.git
-<span class="nb">cd</span><span class="w"> </span><span class="k">case</span>-study-cargo-tracker
+<h2 id="3">3. セットアップ手順<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 プロジェクトの初期化<a class="headerlink" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>apps/e2e/src/pages<span class="w"> </span>apps/e2e/src/tests
+<span class="nb">cd</span><span class="w"> </span>apps/e2e
 </code></pre></div>
-<h3 id="nodejs_1">Node.js 依存パッケージのインストール<a class="headerlink" href="#nodejs_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>npm<span class="w"> </span>install
+<h3 id="32-packagejson">3.2 package.json の作成<a class="headerlink" href="#32-packagejson" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cargo-tracker-e2e&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;E2E tests for Cargo Tracker using Playwright&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scripts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;test&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;playwright test&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;test:ui&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;playwright test --ui-port=8932 --ui&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;test:headed&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;playwright test --headed&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;test:debug&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;playwright test --debug&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;report&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;playwright show-report&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;devDependencies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;@playwright/test&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;^1.44.0&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;@types/node&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;^20.0.0&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div>
-<blockquote>
-<p><strong>Note</strong>: husky（Git Hooks）が <code>prepare</code> スクリプトで自動的にセットアップされます。</p>
-</blockquote>
-<hr />
-<h2 id="3">3. サブシステム一覧<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
-<p>Case Study Cargo Tracker は以下のサブシステムで構成されています。</p>
+<h3 id="33">3.3 依存パッケージのインストール<a class="headerlink" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/e2e
+npm<span class="w"> </span>install
+
+<span class="c1"># Playwright ブラウザをインストール</span>
+npx<span class="w"> </span>playwright<span class="w"> </span>install<span class="w"> </span>chromium
+</code></pre></div>
+<h3 id="34-typescript">3.4 TypeScript 設定<a class="headerlink" href="#34-typescript" title="Permanent link">&para;</a></h3>
+<p><code>tsconfig.json</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;compilerOptions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ES2022&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;module&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;commonjs&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;lib&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ES2022&quot;</span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;strict&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;esModuleInterop&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;resolveJsonModule&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;outDir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./dist&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;rootDir&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;include&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;src/**/*&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;playwright.config.ts&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="35-playwright">3.5 Playwright 設定<a class="headerlink" href="#35-playwright" title="Permanent link">&para;</a></h3>
+<p><code>playwright.config.ts</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">defineConfig</span><span class="p">,</span><span class="w"> </span><span class="nx">devices</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@playwright/test&#39;</span><span class="p">;</span>
+
+<span class="k">export</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="nx">defineConfig</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">testDir</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;./src/tests&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">fullyParallel</span><span class="o">:</span><span class="w"> </span><span class="kt">false</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">forbidOnly</span><span class="o">:</span><span class="w"> </span><span class="o">!!</span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">CI</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">retries</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.CI</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="nx">2</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="kt">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">workers</span><span class="o">:</span><span class="w"> </span><span class="kt">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">reporter</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="s1">&#39;html&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">outputFolder</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;playwright-report&#39;</span><span class="w"> </span><span class="p">}],</span>
+<span class="w">    </span><span class="p">[</span><span class="s1">&#39;list&#39;</span><span class="p">],</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nx">use</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">baseURL</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.BASE_URL</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;http://localhost:8080&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">trace</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;on-first-retry&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">screenshot</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;only-on-failure&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">video</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;retain-on-failure&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">locale</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;ja-JP&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nx">projects</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;chromium&#39;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">use</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="nx">devices</span><span class="p">[</span><span class="s1">&#39;Desktop Chrome&#39;</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="p">});</span>
+</code></pre></div>
+<p><strong>主要な設定:</strong></p>
 <table>
 <thead>
 <tr>
-<th>システム</th>
-<th>ディレクトリ</th>
+<th>設定</th>
+<th>値</th>
 <th>説明</th>
-<th>ポート (DB / App)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>cargo-tracker</td>
-<td><code>apps/cargo-tracker</code></td>
-<td>国際貨物輸送管理システム本体</td>
-<td>5432 / 8080</td>
+<td><code>testDir</code></td>
+<td><code>./src/tests</code></td>
+<td>テストファイルの配置先</td>
+</tr>
+<tr>
+<td><code>fullyParallel</code></td>
+<td><code>false</code></td>
+<td>テスト間の状態依存を考慮して直列実行</td>
+</tr>
+<tr>
+<td><code>workers</code></td>
+<td><code>1</code></td>
+<td>単一ワーカーで実行</td>
+</tr>
+<tr>
+<td><code>baseURL</code></td>
+<td><code>http://localhost:8080</code></td>
+<td>テスト対象アプリケーション URL</td>
+</tr>
+<tr>
+<td><code>trace</code></td>
+<td><code>on-first-retry</code></td>
+<td>リトライ時にトレースを記録</td>
+</tr>
+<tr>
+<td><code>screenshot</code></td>
+<td><code>only-on-failure</code></td>
+<td>失敗時のみスクリーンショット取得</td>
+</tr>
+<tr>
+<td><code>video</code></td>
+<td><code>retain-on-failure</code></td>
+<td>失敗時のみ動画を保持</td>
 </tr>
 </tbody>
 </table>
-<hr />
-<h2 id="4">4. 技術スタック<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
-<h3 id="_4">バックエンド<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>カテゴリ</th>
-<th>技術</th>
-<th>バージョン</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>言語</td>
-<td>Java</td>
-<td>25.x</td>
-</tr>
-<tr>
-<td>フレームワーク</td>
-<td>Spring Boot</td>
-<td>4.0.5</td>
-</tr>
-<tr>
-<td>Web</td>
-<td>Spring MVC</td>
-<td>7.x</td>
-</tr>
-<tr>
-<td>セキュリティ</td>
-<td>Spring Security</td>
-<td>7.x</td>
-</tr>
-<tr>
-<td>ビルドツール</td>
-<td>Gradle</td>
-<td>9.x（Groovy DSL）</td>
-</tr>
-<tr>
-<td>O/R マッパー</td>
-<td>MyBatis</td>
-<td>4.0.1 (mybatis-spring-boot-starter)</td>
-</tr>
-<tr>
-<td>API ドキュメント</td>
-<td>springdoc-openapi (Swagger UI)</td>
-<td>3.0.2</td>
-</tr>
-<tr>
-<td>データベース（開発）</td>
-<td>H2</td>
-<td>2.x（インメモリ、PostgreSQL 互換モード）</td>
-</tr>
-<tr>
-<td>データベース（本番）</td>
-<td>PostgreSQL</td>
-<td>16.x</td>
-</tr>
-<tr>
-<td>マイグレーション</td>
-<td>Flyway</td>
-<td>10.x</td>
-</tr>
-<tr>
-<td>テスト</td>
-<td>JUnit 5 / Mockito 5 / AssertJ 3</td>
-<td>5.x / 5.x / 3.x</td>
-</tr>
-<tr>
-<td>統合テスト</td>
-<td>Testcontainers</td>
-<td>1.20.4</td>
-</tr>
-<tr>
-<td>Docker クライアント</td>
-<td>docker-java</td>
-<td>3.7.0</td>
-</tr>
-<tr>
-<td>API E2E テスト</td>
-<td>MockMvc + Testcontainers (PostgreSQL)</td>
-<td>-</td>
-</tr>
-<tr>
-<td>アーキテクチャテスト</td>
-<td>ArchUnit</td>
-<td>1.4.1</td>
-</tr>
-<tr>
-<td>ブラウザ E2E テスト</td>
-<td>Playwright</td>
-<td>1.44+</td>
-</tr>
-<tr>
-<td>品質管理</td>
-<td>Checkstyle / SpotBugs / JaCoCo</td>
-<td>-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_5">フロントエンド<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>カテゴリ</th>
-<th>技術</th>
-<th>バージョン</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>テンプレートエンジン</td>
-<td>Thymeleaf</td>
-<td>3.x</td>
-</tr>
-<tr>
-<td>テンプレートセキュリティ</td>
-<td>thymeleaf-extras-springsecurity6</td>
-<td>-</td>
-</tr>
-<tr>
-<td>CSS フレームワーク</td>
-<td>Bootstrap</td>
-<td>5.3.3</td>
-</tr>
-<tr>
-<td>動的 UI</td>
-<td>htmx</td>
-<td>2.0.4</td>
-</tr>
-<tr>
-<td>Webjars ロケーター</td>
-<td>webjars-locator-lite</td>
-<td>1.0.1</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_6">インフラストラクチャ<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>カテゴリ</th>
-<th>技術</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>コンテナ</td>
-<td>Docker / Docker Compose</td>
-</tr>
-<tr>
-<td>CI/CD</td>
-<td>GitHub Actions</td>
-</tr>
-<tr>
-<td>タスクランナー</td>
-<td>Gulp 5.x（Node.js）</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="5">5. プロファイル構成<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
-<p>開発効率を高めるため、複数のプロファイルを使い分けます。</p>
-<table>
-<thead>
-<tr>
-<th>プロファイル</th>
-<th>データベース</th>
-<th>Docker</th>
-<th>用途</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>default</td>
-<td>H2（インメモリ）</td>
-<td>不要</td>
-<td>日常開発・即座起動</td>
-</tr>
-<tr>
-<td>product</td>
-<td>PostgreSQL 16</td>
-<td>必要</td>
-<td>本番互換テスト</td>
-</tr>
-</tbody>
-</table>
-<h3 id="default">default プロファイル（推奨：日常開発）<a class="headerlink" href="#default" title="Permanent link">&para;</a></h3>
-<p>Docker なしで即座に起動できます。</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-./gradlew<span class="w"> </span>bootRun
+<h3 id="36-gitignore">3.6 .gitignore の作成<a class="headerlink" href="#36-gitignore" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>node_modules/
+playwright-report/
+test-results/
+dist/
 </code></pre></div>
-<h3 id="product">product プロファイル（本番互換）<a class="headerlink" href="#product" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># PostgreSQL コンテナを起動</span>
-docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
+<hr />
+<h2 id="4-page-object-model">4. Page Object Model<a class="headerlink" href="#4-page-object-model" title="Permanent link">&para;</a></h2>
+<p>テストコードの保守性を高めるため、Page Object Model（POM）パターンを採用します。画面操作を Page クラスに集約し、テストコードは Page クラスを通じて操作します。</p>
+<h3 id="loginpage">LoginPage の例<a class="headerlink" href="#loginpage" title="Permanent link">&para;</a></h3>
+<p><code>src/pages/LoginPage.ts</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Page</span><span class="p">,</span><span class="w"> </span><span class="nx">Locator</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@playwright/test&#39;</span><span class="p">;</span>
 
-<span class="c1"># product プロファイルで起動</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nx">LoginPage</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">page</span><span class="o">:</span><span class="w"> </span><span class="kt">Page</span><span class="p">;</span>
+<span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">usernameInput</span><span class="o">:</span><span class="w"> </span><span class="kt">Locator</span><span class="p">;</span>
+<span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">passwordInput</span><span class="o">:</span><span class="w"> </span><span class="kt">Locator</span><span class="p">;</span>
+<span class="w">  </span><span class="k">readonly</span><span class="w"> </span><span class="nx">submitButton</span><span class="o">:</span><span class="w"> </span><span class="kt">Locator</span><span class="p">;</span>
+
+<span class="w">  </span><span class="kr">constructor</span><span class="p">(</span><span class="nx">page</span><span class="o">:</span><span class="w"> </span><span class="kt">Page</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">page</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">page</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">usernameInput</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">page</span><span class="p">.</span><span class="nx">locator</span><span class="p">(</span><span class="s1">&#39;input[name=&quot;username&quot;]&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">passwordInput</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">page</span><span class="p">.</span><span class="nx">locator</span><span class="p">(</span><span class="s1">&#39;input[name=&quot;password&quot;]&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">submitButton</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">page</span><span class="p">.</span><span class="nx">locator</span><span class="p">(</span><span class="s1">&#39;button[type=&quot;submit&quot;]&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="k">async</span><span class="w"> </span><span class="kr">goto</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">page</span><span class="p">.</span><span class="kr">goto</span><span class="p">(</span><span class="s1">&#39;/login&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="k">async</span><span class="w"> </span><span class="nx">login</span><span class="p">(</span><span class="nx">username</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">password</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="kr">goto</span><span class="p">();</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">usernameInput</span><span class="p">.</span><span class="nx">fill</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">passwordInput</span><span class="p">.</span><span class="nx">fill</span><span class="p">(</span><span class="nx">password</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">submitButton</span><span class="p">.</span><span class="nx">click</span><span class="p">();</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="5">5. テストフィクスチャ<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<p>共通の前処理（ログイン等）はフィクスチャとして定義し、テスト間で再利用します。</p>
+<p><code>src/fixtures.ts</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="kr">as</span><span class="w"> </span><span class="nx">base</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@playwright/test&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">LoginPage</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;./pages/LoginPage&#39;</span><span class="p">;</span>
+
+<span class="kr">type</span><span class="w"> </span><span class="nx">Fixtures</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">loggedIn</span><span class="o">:</span><span class="w"> </span><span class="kt">void</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">base</span><span class="p">.</span><span class="nx">extend</span><span class="o">&lt;</span><span class="nx">Fixtures</span><span class="o">&gt;</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">loggedIn</span><span class="o">:</span><span class="w"> </span><span class="kt">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">use</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">loginPage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">LoginPage</span><span class="p">(</span><span class="nx">page</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">loginPage</span><span class="p">.</span><span class="nx">login</span><span class="p">(</span><span class="s1">&#39;admin&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;admin&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">use</span><span class="p">();</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="p">});</span>
+
+<span class="k">export</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">expect</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@playwright/test&#39;</span><span class="p">;</span>
+</code></pre></div>
+<p><strong>使い方:</strong> テストファイルで <code>@playwright/test</code> の代わりに <code>../fixtures</code> から <code>test</code> と <code>expect</code> をインポートし、<code>loggedIn</code> フィクスチャを引数に含めると、テスト実行前にログインが完了した状態になります。</p>
+<hr />
+<h2 id="6">6. テストの作成<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="_2">認証テストの例<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p><code>src/tests/auth.spec.ts</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">test</span><span class="p">,</span><span class="w"> </span><span class="nx">expect</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;../fixtures&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">LoginPage</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;../pages/LoginPage&#39;</span><span class="p">;</span>
+
+<span class="nx">test</span><span class="p">.</span><span class="nx">describe</span><span class="p">(</span><span class="s1">&#39;認証&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;正しい認証情報でログインできる&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="p">,</span><span class="w"> </span><span class="nx">loggedIn</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">expect</span><span class="p">(</span><span class="nx">page</span><span class="p">).</span><span class="nx">toHaveURL</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">});</span>
+
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;ログアウトできる&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="p">,</span><span class="w"> </span><span class="nx">loggedIn</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">page</span><span class="p">.</span><span class="nx">locator</span><span class="p">(</span><span class="s1">&#39;form[action=&quot;/logout&quot;] button[type=&quot;submit&quot;]&#39;</span><span class="p">).</span><span class="nx">click</span><span class="p">();</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">expect</span><span class="p">(</span><span class="nx">page</span><span class="p">).</span><span class="nx">toHaveURL</span><span class="p">(</span><span class="s1">&#39;/login?logout&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">});</span>
+
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;誤った認証情報でエラーが表示される&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">loginPage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">LoginPage</span><span class="p">(</span><span class="nx">page</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">loginPage</span><span class="p">.</span><span class="nx">login</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;wrongpassword&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">expect</span><span class="p">(</span><span class="nx">page</span><span class="p">).</span><span class="nx">toHaveURL</span><span class="p">(</span><span class="s1">&#39;/login?error&#39;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">});</span>
+
+<span class="w">  </span><span class="nx">test</span><span class="p">(</span><span class="s1">&#39;未認証でアクセスするとログインページにリダイレクトされる&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">page</span><span class="p">.</span><span class="kr">goto</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">expect</span><span class="p">(</span><span class="nx">page</span><span class="p">).</span><span class="nx">toHaveURL</span><span class="p">(</span><span class="sr">/\/login/</span><span class="p">);</span>
+<span class="w">  </span><span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div>
+<hr />
+<h2 id="7">7. テストの実行<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="cargo-tracker">事前準備: cargo-tracker の起動<a class="headerlink" href="#cargo-tracker" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># ターミナル 1: アプリケーション起動</span>
 <span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-./gradlew<span class="w"> </span>bootRun<span class="w"> </span>--args<span class="o">=</span><span class="s1">&#39;--spring.profiles.active=product&#39;</span>
-</code></pre></div>
-<hr />
-<h2 id="6">6. 開発サーバーの起動<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
-<h3 id="_7">タスクランナー経由（推奨）<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># 開発サーバー起動（default プロファイル）</span>
-npx<span class="w"> </span>gulp<span class="w"> </span>dev
-
-<span class="c1"># TDD モード（テスト自動再実行）</span>
-npx<span class="w"> </span>gulp<span class="w"> </span>tdd
-
-<span class="c1"># タスク一覧を表示</span>
-npx<span class="w"> </span>gulp<span class="w"> </span>--tasks
-</code></pre></div>
-<h3 id="gradle">Gradle 直接実行<a class="headerlink" href="#gradle" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-
-<span class="c1"># default プロファイルで起動</span>
 ./gradlew<span class="w"> </span>bootRun
-
-<span class="c1"># TDD モード（テストを常に再実行）</span>
-./gradlew<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--continuous
 </code></pre></div>
-<h3 id="_8">アクセス確認<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>サービス</th>
-<th>URL</th>
-<th>説明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>アプリケーション</td>
-<td>http://localhost:8080</td>
-<td>メインアプリケーション</td>
-</tr>
-<tr>
-<td>Swagger UI</td>
-<td>http://localhost:8080/swagger-ui/index.html</td>
-<td>API ドキュメント</td>
-</tr>
-<tr>
-<td>H2 コンソール</td>
-<td>http://localhost:8080/h2-console</td>
-<td>データベース管理（default プロファイル）</td>
-</tr>
-<tr>
-<td>ヘルスチェック</td>
-<td>http://localhost:8080/actuator/health</td>
-<td>ヘルスチェック</td>
-</tr>
-<tr>
-<td>MkDocs</td>
-<td>http://localhost:8000</td>
-<td>プロジェクトドキュメント</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="7-docker-compose">7. Docker Compose のセットアップ<a class="headerlink" href="#7-docker-compose" title="Permanent link">&para;</a></h2>
-<h3 id="_9">データベースコンテナの起動<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># PostgreSQL を起動</span>
-docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
+<h3 id="_3">テスト実行<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># ターミナル 2: E2E テスト</span>
+<span class="nb">cd</span><span class="w"> </span>apps/e2e
 
-<span class="c1"># コンテナの状態確認</span>
-docker<span class="w"> </span>compose<span class="w"> </span>ps
+<span class="c1"># 全テスト実行（ヘッドレス）</span>
+npm<span class="w"> </span><span class="nb">test</span>
+
+<span class="c1"># UI モード（ブラウザ上でテスト選択・実行）</span>
+npm<span class="w"> </span>run<span class="w"> </span>test:ui
+
+<span class="c1"># ブラウザ表示付きで実行</span>
+npm<span class="w"> </span>run<span class="w"> </span>test:headed
+
+<span class="c1"># デバッグモード（ステップ実行）</span>
+npm<span class="w"> </span>run<span class="w"> </span>test:debug
+
+<span class="c1"># テストレポート表示</span>
+npm<span class="w"> </span>run<span class="w"> </span>report
 </code></pre></div>
-<h3 id="docker-compose">Docker Compose の便利なコマンド<a class="headerlink" href="#docker-compose" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># PostgreSQL を起動</span>
-docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
-
-<span class="c1"># コンテナの停止と削除</span>
-docker<span class="w"> </span>compose<span class="w"> </span>down
-
-<span class="c1"># ログを確認</span>
-docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>postgres
-
-<span class="c1"># PostgreSQL に接続</span>
-docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>postgres<span class="w"> </span>psql<span class="w"> </span>-U<span class="w"> </span>cargo_tracker<span class="w"> </span>-d<span class="w"> </span>cargo_tracker
-</code></pre></div>
-<h3 id="mkdocs">MkDocs ドキュメントサーバーの起動<a class="headerlink" href="#mkdocs" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># MkDocs サーバー起動（ポート 8000）</span>
-docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>mkdocs
-
-<span class="c1"># ブラウザでアクセス</span>
-<span class="c1"># http://localhost:8000</span>
+<h3 id="_4">環境変数で接続先を変更<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 別のポートや環境に接続する場合</span>
+<span class="nv">BASE_URL</span><span class="o">=</span>http://localhost:9080<span class="w"> </span>npm<span class="w"> </span><span class="nb">test</span>
 </code></pre></div>
 <hr />
-<h2 id="8">8. テストの実行<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
-<h3 id="_10">全テスト実行<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-
-<span class="c1"># テスト実行（カバレッジレポート付き）</span>
-./gradlew<span class="w"> </span><span class="nb">test</span><span class="w"> </span>jacocoTestReport
-</code></pre></div>
-<h3 id="_11">テストの種類<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
+<h2 id="8">8. テストレポート<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<p>テスト実行後、HTML レポートが自動生成されます。</p>
 <table>
 <thead>
 <tr>
-<th>テスト種別</th>
-<th>ツール</th>
-<th>説明</th>
-<th>手順書</th>
+<th>レポート</th>
+<th>パス</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>単体テスト</td>
-<td>JUnit 5 + Mockito</td>
-<td>ドメインロジック・ユースケースのテスト</td>
-<td>-</td>
-</tr>
-<tr>
-<td>統合テスト</td>
-<td>JUnit 5 + Testcontainers</td>
-<td>PostgreSQL を使用した統合テスト</td>
-<td>-</td>
-</tr>
-<tr>
-<td>API E2E テスト</td>
-<td>MockMvc + Testcontainers</td>
-<td>REST API・Controller の結合フロー検証</td>
-<td><a href="../dev_e2e_api_instruction/">手順書</a></td>
-</tr>
-<tr>
-<td>アーキテクチャテスト</td>
-<td>ArchUnit</td>
-<td>ヘキサゴナルアーキテクチャのレイヤー依存関係検証</td>
-<td>-</td>
-</tr>
-<tr>
-<td>ブラウザ E2E テスト</td>
-<td>Playwright</td>
-<td>ブラウザ自動テスト（UI・JS 含む）</td>
-<td><a href="../dev_e2e_instruction/">手順書</a></td>
-</tr>
-</tbody>
-</table>
-<div class="highlight"><pre><span></span><code><span class="c1"># API E2E テストのみ実行</span>
-./gradlew<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--tests<span class="w"> </span><span class="s2">&quot;com.example.cargotracker.e2e.*&quot;</span>
-
-<span class="c1"># ブラウザ E2E テスト（アプリ起動中に別ターミナルで）</span>
-<span class="nb">cd</span><span class="w"> </span>apps/e2e<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span><span class="nb">test</span>
-</code></pre></div>
-<h3 id="_12">テストカバレッジ<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># テストを実行してカバレッジレポートを生成</span>
-./gradlew<span class="w"> </span><span class="nb">test</span><span class="w"> </span>jacocoTestReport
-
-<span class="c1"># レポートの表示</span>
-<span class="c1"># apps/cargo-tracker/build/reports/jacoco/test/html/index.html</span>
-</code></pre></div>
-<hr />
-<h2 id="9">9. コード品質管理<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
-<h3 id="_13">静的コード解析ツール<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>ツール</th>
-<th>目的</th>
-<th>コマンド</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Checkstyle</td>
-<td>コーディング規約の検証</td>
-<td><code>./gradlew checkstyleMain</code></td>
-</tr>
-<tr>
-<td>SpotBugs</td>
-<td>バグパターン検出</td>
-<td><code>./gradlew spotbugsMain</code></td>
-</tr>
-<tr>
-<td>JaCoCo</td>
-<td>テストカバレッジ</td>
-<td><code>./gradlew jacocoTestReport</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="_14">品質チェックの実行<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-
-<span class="c1"># 品質チェックのみ</span>
-./gradlew<span class="w"> </span>check
-
-<span class="c1"># すべてのテストと品質チェック</span>
-./gradlew<span class="w"> </span>build
-</code></pre></div>
-<h3 id="_15">コード複雑度の基準<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>指標</th>
-<th>閾値</th>
-<th>説明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>循環的複雑度</td>
-<td>10</td>
-<td>分岐・ループの複雑さ</td>
-</tr>
-<tr>
-<td>ファイルサイズ</td>
-<td>500 行</td>
-<td>1 ファイルの最大行数</td>
-</tr>
-<tr>
-<td>メソッドサイズ</td>
-<td>150 行</td>
-<td>1 メソッドの最大行数</td>
-</tr>
-<tr>
-<td>パラメータ数</td>
-<td>7</td>
-<td>メソッドの最大パラメータ数</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_16">レポートの確認<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
-<p>品質チェック後、以下のディレクトリにレポートが生成されます。</p>
-<table>
-<thead>
-<tr>
-<th>ツール</th>
-<th>レポートパス</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Checkstyle</td>
-<td><code>apps/cargo-tracker/build/reports/checkstyle/</code></td>
-</tr>
-<tr>
-<td>SpotBugs</td>
-<td><code>apps/cargo-tracker/build/reports/spotbugs/</code></td>
-</tr>
-<tr>
-<td>JaCoCo</td>
-<td><code>apps/cargo-tracker/build/reports/jacoco/test/html/</code></td>
+<td>HTML レポート</td>
+<td><code>apps/e2e/playwright-report/index.html</code></td>
 </tr>
 <tr>
 <td>テスト結果</td>
-<td><code>apps/cargo-tracker/build/reports/tests/test/</code></td>
+<td><code>apps/e2e/test-results/</code></td>
 </tr>
 </tbody>
 </table>
+<div class="highlight"><pre><span></span><code><span class="c1"># レポートをブラウザで開く</span>
+<span class="nb">cd</span><span class="w"> </span>apps/e2e
+npm<span class="w"> </span>run<span class="w"> </span>report
+</code></pre></div>
+<p>失敗したテストにはスクリーンショット・トレース・動画が添付されます。</p>
 <hr />
-<h2 id="10">10. ディレクトリ構造<a class="headerlink" href="#10" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>case-study-cargo-tracker/
-├── .husky/                          # Git Hooks (Husky)
-│   └── pre-commit                   # コミット前品質チェック
-├── apps/
-│   └── cargo-tracker/               # メインアプリケーション
-│       ├── build.gradle             # Gradle ビルドスクリプト（Groovy DSL）
-│       ├── settings.gradle          # Gradle 設定
-│       ├── Dockerfile               # アプリコンテナイメージ
-│       ├── config/                  # 品質管理ツール設定
-│       │   ├── checkstyle/          # Checkstyle 設定
-│       │   └── spotbugs/            # SpotBugs 除外フィルタ
-│       └── src/
-│           ├── main/
-│           │   ├── java/com/example/cargotracker/
-│           │   │   ├── shipper/                   # 荷主コンテキスト
-│           │   │   │   ├── domain/                # ドメイン層
-│           │   │   │   ├── application/           # アプリケーション層
-│           │   │   │   └── infrastructure/        # インフラストラクチャ層
-│           │   │   ├── booking/                   # 予約コンテキスト
-│           │   │   │   ├── domain/
-│           │   │   │   ├── application/
-│           │   │   │   └── infrastructure/
-│           │   │   └── shared/                    # 共有カーネル
-│           │   │       ├── domain/model/           # 共有ドメインモデル
-│           │   │       └── infrastructure/
-│           │   │           ├── config/             # SecurityConfig, OpenApiConfig
-│           │   │           └── web/                # HomeController
-│           │   └── resources/
-│           │       ├── application.yml            # 開発設定（H2）
-│           │       ├── application-product.yml    # 本番設定（PostgreSQL）
-│           │       ├── db/migration/              # Flyway マイグレーション
-│           │       ├── mapper/                    # MyBatis マッパー XML
-│           │       └── templates/                 # Thymeleaf テンプレート
-│           └── test/
-│               ├── java/com/example/cargotracker/
-│               │   ├── support/                   # テスト共通基盤
-│               │   │   └── PostgreSQLIntegrationTestBase.java
-│               │   └── e2e/                       # API E2E テスト
-│               │       └── AuthE2ETest.java
-│               └── resources/
-│                   └── application-test.yml       # テスト用プロファイル
-├── apps/
-│   └── e2e/                         # ブラウザ E2E テスト（Playwright）
-│       ├── package.json
-│       ├── playwright.config.ts
-│       └── src/
-│           ├── fixtures.ts
-│           ├── pages/               # Page Object Model
-│           └── tests/               # テストスペック
-├── docs/                            # MkDocs ドキュメント
-├── ops/                             # 運用スクリプト（Gulp タスク）
-├── docker-compose.yml               # Docker サービス定義
-└── package.json                     # Node.js 依存関係（Gulp, Husky）
+<h2 id="9-page-object">9. Page Object の追加ガイド<a class="headerlink" href="#9-page-object" title="Permanent link">&para;</a></h2>
+<p>新しい画面の E2E テストを追加する際は、以下の手順に従います。</p>
+<ol>
+<li><code>src/pages/</code> に Page Object クラスを作成</li>
+<li>画面の主要な Locator をコンストラクタで定義</li>
+<li>画面操作をメソッドとして実装</li>
+<li><code>src/tests/</code> にテストスペックを作成</li>
+<li>必要に応じて <code>src/fixtures.ts</code> に共通フィクスチャを追加</li>
+</ol>
+<div class="highlight"><pre><span></span><code>src/pages/ShipperPage.ts    ← Page Object
+src/tests/shipper.spec.ts   ← テストスペック
 </code></pre></div>
 <hr />
-<h2 id="11">11. 命名規則<a class="headerlink" href="#11" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>要素</th>
-<th>規則</th>
-<th>例</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>テーブル名</td>
-<td>snake_case（複数形）</td>
-<td><code>shippers</code>, <code>bookings</code></td>
-</tr>
-<tr>
-<td>カラム名</td>
-<td>snake_case</td>
-<td><code>shipper_id</code>, <code>created_at</code></td>
-</tr>
-<tr>
-<td>クラス名</td>
-<td>PascalCase</td>
-<td><code>ShipperController</code>, <code>BookingId</code></td>
-</tr>
-<tr>
-<td>フィールド名</td>
-<td>camelCase</td>
-<td><code>shipperId</code>, <code>requestedPickupDate</code></td>
-</tr>
-<tr>
-<td>パッケージ名</td>
-<td>ドット区切り小文字</td>
-<td><code>com.example.cargotracker.shipper.domain</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="12-git">12. Git 規約<a class="headerlink" href="#12-git" title="Permanent link">&para;</a></h2>
-<h3 id="_17">コミットメッセージ<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h3>
-<p><a href="https://www.conventionalcommits.org/ja/">Conventional Commits</a> に従います。</p>
-<table>
-<thead>
-<tr>
-<th>タイプ</th>
-<th>説明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>feat</code></td>
-<td>新機能</td>
-</tr>
-<tr>
-<td><code>fix</code></td>
-<td>バグ修正</td>
-</tr>
-<tr>
-<td><code>docs</code></td>
-<td>ドキュメントのみの変更</td>
-</tr>
-<tr>
-<td><code>style</code></td>
-<td>コードの意味に影響しない変更</td>
-</tr>
-<tr>
-<td><code>refactor</code></td>
-<td>バグ修正でも機能追加でもないコード変更</td>
-</tr>
-<tr>
-<td><code>perf</code></td>
-<td>パフォーマンス改善</td>
-</tr>
-<tr>
-<td><code>test</code></td>
-<td>テストの追加・修正</td>
-</tr>
-<tr>
-<td><code>chore</code></td>
-<td>ビルドプロセス・補助ツールの変更</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_18">スコープ<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h3>
-<p>サブシステムを示すスコープを使用します。</p>
-<div class="highlight"><pre><span></span><code>feat(shipper): 荷主登録機能を実装する
-feat(booking): 貨物予約登録機能を実装する
-fix(booking): 重量バリデーションのバグを修正する
-docs: IT1 計画を更新する
-</code></pre></div>
-<h3 id="git-hookshusky-lint-staged">Git Hooks（Husky + lint-staged）<a class="headerlink" href="#git-hookshusky-lint-staged" title="Permanent link">&para;</a></h3>
-<p>コミット時に自動で品質チェックが実行されます。</p>
-<h4 id="_19">セットアップ<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h4>
-<p><code>npm install</code> 実行時に Husky は自動的にセットアップされます（<code>prepare</code> スクリプト）。</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># 手動でセットアップする場合</span>
-npm<span class="w"> </span>run<span class="w"> </span>prepare
-</code></pre></div>
-<h4 id="pre-commit">pre-commit フック<a class="headerlink" href="#pre-commit" title="Permanent link">&para;</a></h4>
-<p>staged な Java ソースファイルがある場合、以下のチェックが自動実行されます。</p>
-<table>
-<thead>
-<tr>
-<th>ツール</th>
-<th>目的</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Checkstyle</td>
-<td>コーディング規約の検証</td>
-</tr>
-<tr>
-<td>SpotBugs</td>
-<td>バグパターン検出</td>
-</tr>
-</tbody>
-</table>
-<p>実装上は <code>.husky/pre-commit</code> から <code>lint-staged</code> を起動し、<code>apps/cargo-tracker/src/**/*.java</code> が staged に含まれると <code>node ops/scripts/pre_commit_gradle_check.mjs</code> が <code>apps/cargo-tracker</code> で <code>./gradlew check</code> を実行します。いずれかのチェックが失敗すると、コミットがブロックされます。</p>
-<h4 id="_20">フックをスキップする場合<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h4>
-<p>緊急時にフックをスキップしてコミットする場合（非推奨）：</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>commit<span class="w"> </span>--no-verify<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;メッセージ&quot;</span>
+<h2 id="10-cicd">10. CI/CD 連携<a class="headerlink" href="#10-cicd" title="Permanent link">&para;</a></h2>
+<p>GitHub Actions で E2E テストを実行する場合の設定例:</p>
+<div class="highlight"><pre><span></span><code><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install Playwright Browsers</span>
+<span class="w">  </span><span class="nt">working-directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/e2e</span>
+<span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">npx playwright install --with-deps chromium</span>
+
+<span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run E2E Tests</span>
+<span class="w">  </span><span class="nt">working-directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/e2e</span>
+<span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">npm test</span>
+<span class="w">  </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">BASE_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://localhost:8080</span>
 </code></pre></div>
 <blockquote>
-<p><strong>Warning</strong>: フックのスキップは緊急時のみ使用してください。品質チェックを通過しないコードはチームに影響を与える可能性があります。</p>
+<p><strong>Note</strong>: CI 環境では <code>--with-deps</code> オプションでシステム依存ライブラリも含めてインストールします。</p>
 </blockquote>
 <hr />
-<h2 id="13">13. セットアップの確認<a class="headerlink" href="#13" title="Permanent link">&para;</a></h2>
-<p>すべてのセットアップが完了したら、以下のコマンドで動作確認を行います。</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># 1. Node.js 依存パッケージのインストール</span>
-npm<span class="w"> </span>install
-
-<span class="c1"># 2. ビルド確認</span>
-<span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-./gradlew<span class="w"> </span>build<span class="w"> </span>-x<span class="w"> </span><span class="nb">test</span>
-
-<span class="c1"># 3. テスト実行</span>
-./gradlew<span class="w"> </span><span class="nb">test</span>
-
-<span class="c1"># 4. 品質チェック</span>
-./gradlew<span class="w"> </span>check
-
-<span class="c1"># 5. 開発サーバー起動（default プロファイル / H2 使用）</span>
-./gradlew<span class="w"> </span>bootRun
+<h2 id="_5">トラブルシューティング<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<h3 id="_6">ブラウザが見つからない<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p><strong>問題</strong>: <code>browserType.launch: Executable doesn't exist</code></p>
+<p><strong>解決策</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/e2e
+npx<span class="w"> </span>playwright<span class="w"> </span>install<span class="w"> </span>chromium
 </code></pre></div>
-<h3 id="_21">アクセス確認<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>サービス</th>
-<th>URL</th>
-<th>説明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>アプリケーション</td>
-<td>http://localhost:8080</td>
-<td>メインアプリケーション</td>
-</tr>
-<tr>
-<td>Swagger UI</td>
-<td>http://localhost:8080/swagger-ui/index.html</td>
-<td>API ドキュメント</td>
-</tr>
-<tr>
-<td>H2 コンソール</td>
-<td>http://localhost:8080/h2-console</td>
-<td>データベース管理ツール（dev のみ）</td>
-</tr>
-<tr>
-<td>ヘルスチェック</td>
-<td>http://localhost:8080/actuator/health</td>
-<td>ヘルスチェック</td>
-</tr>
-<tr>
-<td>MkDocs</td>
-<td>http://localhost:8000</td>
-<td>プロジェクトドキュメント</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="14-cicd">14. CI/CD<a class="headerlink" href="#14-cicd" title="Permanent link">&para;</a></h2>
-<p>CI/CD による継続的インテグレーション・デプロイを設定しています。</p>
-<h3 id="_22">ワークフロー一覧<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>ワークフロー</th>
-<th>ファイル</th>
-<th>トリガー</th>
-<th>説明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Backend CI</td>
-<td><code>.github/workflows/backend-ci.yml</code></td>
-<td><code>apps/cargo-tracker/**</code> 変更時</td>
-<td>品質チェック・テスト・ビルド</td>
-</tr>
-<tr>
-<td>Docker Publish</td>
-<td><code>.github/workflows/docker-publish.yml</code></td>
-<td>タグ push / 手動実行</td>
-<td>イメージを ECR に公開</td>
-</tr>
-<tr>
-<td>Docs Deploy</td>
-<td><code>.github/workflows/docs-deploy.yml</code></td>
-<td>main ブランチ push</td>
-<td>MkDocs を GitHub Pages にデプロイ</td>
-</tr>
-</tbody>
-</table>
-<h3 id="backend-ci">Backend CI<a class="headerlink" href="#backend-ci" title="Permanent link">&para;</a></h3>
-<p>バックエンドの変更時に自動実行されます。</p>
-<div class="highlight"><pre><span></span><code>実行内容:
-
-  1. Java 25 環境セットアップ
-  2. Gradle キャッシュ復元
-  3. 品質チェック（Checkstyle、SpotBugs）
-  4. テスト実行（単体・統合・アーキテクチャ）
-  5. JaCoCo カバレッジレポート生成
-  6. ビルド（JAR 生成）
-  7. レポートアップロード（GitHub Actions Artifacts）
+<h3 id="_7">アプリケーションに接続できない<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<p><strong>問題</strong>: <code>page.goto: net::ERR_CONNECTION_REFUSED</code></p>
+<p><strong>解決策</strong>: cargo-tracker が起動していることを確認する</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>http://localhost:8080/actuator/health
 </code></pre></div>
-<h3 id="docker-image-publish">Docker Image Publish<a class="headerlink" href="#docker-image-publish" title="Permanent link">&para;</a></h3>
-<p>タグ push 時または手動実行時に、Docker イメージをビルドして ECR に公開します。</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># タグによる自動実行</span>
-git<span class="w"> </span>tag<span class="w"> </span>v0.1.0
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.1.0
-
-<span class="c1"># イメージの取得</span>
-docker<span class="w"> </span>pull<span class="w"> </span><span class="o">{</span>AWS_ACCOUNT_ID<span class="o">}</span>.dkr.ecr.ap-northeast-1.amazonaws.com/cargo-tracker:latest
+<h3 id="_8">テストがタイムアウトする<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<p><strong>問題</strong>: テストが 30 秒でタイムアウトする</p>
+<p><strong>解決策</strong>: <code>playwright.config.ts</code> にタイムアウト設定を追加</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="nx">defineConfig</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">timeout</span><span class="o">:</span><span class="w"> </span><span class="kt">60000</span><span class="p">,</span><span class="w">        </span><span class="c1">// テスト全体のタイムアウト</span>
+<span class="w">  </span><span class="nx">expect</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">timeout</span><span class="o">:</span><span class="w"> </span><span class="kt">10000</span><span class="p">,</span><span class="w">      </span><span class="c1">// expect のタイムアウト</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="c1">// ...</span>
+<span class="p">});</span>
 </code></pre></div>
 <hr />
-<h2 id="_23">トラブルシューティング<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h2>
-<h3 id="gradle-wrapper">Gradle Wrapper が見つからない<a class="headerlink" href="#gradle-wrapper" title="Permanent link">&para;</a></h3>
-<p><strong>問題</strong>: <code>./gradlew</code> コマンドが実行できない</p>
-<div class="highlight"><pre><span></span><code>-bash: ./gradlew: No such file or directory
-</code></pre></div>
-<p><strong>解決策</strong>: <code>apps/cargo-tracker</code> ディレクトリで実行しているか確認する</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-./gradlew<span class="w"> </span>bootRun
-</code></pre></div>
-<h3 id="testcontainers">Testcontainers の起動に時間がかかる<a class="headerlink" href="#testcontainers" title="Permanent link">&para;</a></h3>
-<p><strong>問題</strong>: 統合テストが初回起動時に非常に遅い</p>
-<p><strong>解決策</strong>: Singleton コンテナパターンを使用して Docker コンテナを再利用する</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// 基底クラスで @Container をクラスレベルで定義</span>
-<span class="nd">@Testcontainers</span>
-<span class="kd">abstract</span><span class="w"> </span><span class="kd">class</span> <span class="nc">AbstractIntegrationTest</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nd">@Container</span>
-<span class="w">    </span><span class="kd">static</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;?&gt;</span><span class="w"> </span><span class="n">postgres</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PostgreSQLContainer</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="s">&quot;postgres:16&quot;</span><span class="p">)</span>
-<span class="w">            </span><span class="p">.</span><span class="na">withDatabaseName</span><span class="p">(</span><span class="s">&quot;cargo_tracker_test&quot;</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div>
-<h3 id="h2">H2 コンソールに接続できない<a class="headerlink" href="#h2" title="Permanent link">&para;</a></h3>
-<p><strong>問題</strong>: http://localhost:8080/h2-console にアクセスできない</p>
-<p><strong>解決策</strong>: <code>application.yml</code> で H2 コンソールが有効になっているか確認する。Spring Boot 4.0 では <code>spring-boot-h2console</code> モジュールとして提供される。</p>
-<div class="highlight"><pre><span></span><code><span class="nt">spring</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">h2</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">console</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/h2-console</span>
-</code></pre></div>
-<h3 id="pre-commit_1">pre-commit フックが失敗する場合<a class="headerlink" href="#pre-commit_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>apps/cargo-tracker
-
-<span class="c1"># 品質チェックを手動実行してエラーを確認</span>
-./gradlew<span class="w"> </span>check
-
-<span class="c1"># エラーを修正してから再度コミット</span>
-</code></pre></div>
-<hr />
-<h2 id="_24">関連ドキュメント<a class="headerlink" href="#_24" title="Permanent link">&para;</a></h2>
+<h2 id="_9">関連ドキュメント<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>
+<li><a href="../dev_app_instrunction/">アプリケーション開発環境セットアップ手順書</a></li>
+<li><a href="../../design/test_strategy/">テスト戦略</a></li>
 <li><a href="../../design/tech_stack/">技術スタック選定</a></li>
-<li><a href="../../design/architecture_backend/">バックエンドアーキテクチャ設計</a></li>
-<li><a href="../dev_e2e_instruction/">Playwright E2E テストセットアップ手順書</a></li>
-<li><a href="../dev_e2e_api_instruction/">API E2E テストセットアップ手順書</a></li>
-<li><a href="../development/iteration_plan-1.md">IT1 計画（US02・US03・US04）</a></li>
-<li><a href="../dev_infa_instruction/">開発環境セットアップ手順書</a></li>
 </ul>
 
 
