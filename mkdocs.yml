@@ -87,9 +87,12 @@ nav:
       - 技術スタック選定: design/tech_stack.md
   - 開発:
       - 概要: development/index.md
+      - リリース計画: development/release_plan.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ: operation/dev_app_instrunction.md
+      - Playwright E2E テスト: operation/dev_e2e_instruction.md
+      - API E2E テスト: operation/dev_e2e_api_instruction.md
       - 開発環境セットアップ: operation/dev_infa_instruction.md
   - レビュー:
       - 概要: review/index.md
