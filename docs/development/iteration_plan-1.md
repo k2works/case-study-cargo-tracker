@@ -272,10 +272,23 @@ Cargo --> ShipperId : 参照
 
 ### データモデル
 
+> data-model.md に完全準拠。IT1 で使用しないカラムもテーブル定義に含める（Flyway マイグレーションで一括作成するため）。
+
 ```plantuml
 @startuml
 hide circle
 skinparam linetype ortho
+
+entity "location" as loc {
+  *id : BIGINT <<PK>> (BIGSERIAL)
+  --
+  *unlocode : VARCHAR(5) <<UK>>
+  *name : VARCHAR(100)
+  country_code : VARCHAR(2)
+  time_zone : VARCHAR(50)
+  *created_at : TIMESTAMP WITH TIME ZONE
+  *updated_at : TIMESTAMP WITH TIME ZONE
+}
 
 entity "shipper" as s {
   *id : BIGINT <<PK>> (BIGSERIAL)
@@ -295,20 +308,37 @@ entity "cargo" as c {
   *id : BIGINT <<PK>> (BIGSERIAL)
   --
   *booking_id : VARCHAR(20) <<UK>>
-  *shipper_id : BIGINT <<FK>>
+  *shipper_id : BIGINT <<FK>> shipper.id
   *booking_status : VARCHAR(30)
-  *cargo_type : VARCHAR(30)
-  weight_kg : NUMERIC(10,2)
-  quantity : INTEGER
-  origin_unlocode : VARCHAR(5)
-  destination_unlocode : VARCHAR(5)
-  requested_pickup_date : DATE
-  requested_delivery_date : DATE
+  *transport_status : VARCHAR(30)
+  *routing_status : VARCHAR(30)
+  *cargo_type : VARCHAR(20)
+  *weight_kg : NUMERIC(10,3)
+  declared_value : NUMERIC(15,2)
+  spec_origin_unlocode : VARCHAR(5) <<FK>> location.unlocode
+  spec_destination_unlocode : VARCHAR(5) <<FK>> location.unlocode
+  spec_arrival_deadline : DATE
+  origin_unlocode : VARCHAR(5) <<FK>> location.unlocode
+  *booking_amount_value : INTEGER
+  *booking_amount_currency : VARCHAR(3)
+  consignee_name : VARCHAR(200)
+  consignee_email : VARCHAR(200)
+  tracking_number : VARCHAR(20)
+  next_expected_location_unlocode : VARCHAR(5)
+  next_expected_handling_event_type : VARCHAR(30)
+  next_expected_voyage_number : VARCHAR(20)
+  last_known_location_unlocode : VARCHAR(5)
+  current_voyage_number : VARCHAR(20)
+  last_handling_event_type : VARCHAR(30)
+  last_handling_event_location : VARCHAR(5)
+  last_handling_event_voyage : VARCHAR(20)
   *created_at : TIMESTAMP WITH TIME ZONE
   *updated_at : TIMESTAMP WITH TIME ZONE
 }
 
 s ||--o{ c : shipper_id
+c }o--o| loc : spec_origin_unlocode
+c }o--o| loc : spec_destination_unlocode
 
 @enduml
 ```
@@ -554,6 +584,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | 2026-04-04 | 整合性検証に基づく修正（US04 受入基準補完、データモデル data-model.md 準拠、UI 設計追加） | - |
 | 2026-04-04 | エージェント検証結果反映（BookingStatus 8 値、CargoType GENERAL、ShipperType、arrivalDeadline） | - |
 | 2026-04-04 | ディレクトリ構成を Practical DDD Chapter3 に準拠（aggregates/valueobjects/commands/、application/internal/、interfaces/rest/dto/transform/） | - |
+| 2026-04-04 | データモデルを data-model.md と完全突合（location テーブル追加、cargo の全カラム反映、FK 関係追加） | - |
 
 ---
 
