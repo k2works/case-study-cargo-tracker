@@ -47,31 +47,34 @@ package "Client Layer" {
 
 package "Spring Boot Application" {
 
-  package "Interface Layer (Primary Adapters)" {
-    [REST Controller\n(@RestController)]
-    [Thymeleaf Controller\n(@Controller)]
-    [Event Listener\n(@EventListener)]
+  package "interfaces/ (Primary Adapters)" {
+    [rest/ Controller\n(@RestController)]
+    [web/ Controller\n(@Controller)]
+    [events/ Handler\n(@EventListener)]
   }
 
-  package "Application Layer" {
-    [Command Service\n(ユースケース実行)]
-    [Query Service\n(読み取り最適化)]
-    [Application Event Publisher]
+  package "application/internal/" {
+    [commandservices/\n(ユースケース実行)]
+    [queryservices/\n(読み取り最適化)]
+    [outboundservices/acl/\n(ACL)]
   }
 
-  package "Domain Layer" {
-    [Booking Context]
-    [Routing Context]
-    [Tracking Context]
-    [Handling Context]
-    [Billing Context]
-    [Shared Domain]
+  package "domain/model/" {
+    [aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)]
+    [valueobjects/]
+    [commands/]
+    [entities/]
   }
 
-  package "Infrastructure Layer (Secondary Adapters)" {
-    [MyBatis Repository\n(永続化)]
-    [HTTP Client\n(外部 API)]
-    [Spring Security\n(認証・認可)]
+  package "infrastructure/" {
+    [repositories/\n(MyBatis 永続化)]
+    [services/\n(外部 API クライアント)]
+  }
+
+  package "shared/ (共有カーネル)" {
+    [shareddomain/model/]
+    [shareddomain/events/]
+    [shared/infrastructure/config/\n(Security, OpenAPI)]
   }
 }
 
@@ -82,31 +85,25 @@ package "Infrastructure" {
   [Port Management System]
 }
 
-[Web Browser\n(Thymeleaf SSR)] --> [REST Controller\n(@RestController)]
-[Web Browser\n(Thymeleaf SSR)] --> [Thymeleaf Controller\n(@Controller)]
-[External System\n(Port Management / Customs)] --> [REST Controller\n(@RestController)]
+[Web Browser\n(Thymeleaf SSR)] --> [rest/ Controller\n(@RestController)]
+[Web Browser\n(Thymeleaf SSR)] --> [web/ Controller\n(@Controller)]
+[External System\n(Port Management / Customs)] --> [rest/ Controller\n(@RestController)]
 
-[REST Controller\n(@RestController)] --> [Command Service\n(ユースケース実行)]
-[REST Controller\n(@RestController)] --> [Query Service\n(読み取り最適化)]
-[Thymeleaf Controller\n(@Controller)] --> [Query Service\n(読み取り最適化)]
-[Event Listener\n(@EventListener)] --> [Command Service\n(ユースケース実行)]
+[rest/ Controller\n(@RestController)] --> [commandservices/\n(ユースケース実行)]
+[rest/ Controller\n(@RestController)] --> [queryservices/\n(読み取り最適化)]
+[web/ Controller\n(@Controller)] --> [queryservices/\n(読み取り最適化)]
+[events/ Handler\n(@EventListener)] --> [commandservices/\n(ユースケース実行)]
 
-[Command Service\n(ユースケース実行)] --> [Booking Context]
-[Command Service\n(ユースケース実行)] --> [Tracking Context]
-[Command Service\n(ユースケース実行)] --> [Handling Context]
-[Command Service\n(ユースケース実行)] --> [Billing Context]
-[Command Service\n(ユースケース実行)] --> [Application Event Publisher]
+[commandservices/\n(ユースケース実行)] --> [aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)]
+[outboundservices/acl/\n(ACL)] --> [services/\n(外部 API クライアント)]
 
-[Query Service\n(読み取り最適化)] --> [MyBatis Repository\n(永続化)]
+[queryservices/\n(読み取り最適化)] --> [repositories/\n(MyBatis 永続化)]
 
-[Booking Context] --> [MyBatis Repository\n(永続化)]
-[Tracking Context] --> [MyBatis Repository\n(永続化)]
-[Handling Context] --> [MyBatis Repository\n(永続化)]
-[Billing Context] --> [MyBatis Repository\n(永続化)]
+[aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)] --> [repositories/\n(MyBatis 永続化)]
 
-[MyBatis Repository\n(永続化)] --> [PostgreSQL\n(本番)]
-[HTTP Client\n(外部 API)] --> [External Routing Service]
-[HTTP Client\n(外部 API)] --> [Port Management System]
+[repositories/\n(MyBatis 永続化)] --> [PostgreSQL\n(本番)]
+[services/\n(外部 API クライアント)] --> [External Routing Service]
+[services/\n(外部 API クライアント)] --> [Port Management System]
 
 @enduml
 ```
