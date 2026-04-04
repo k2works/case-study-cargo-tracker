@@ -936,7 +936,7 @@
   <a href="#us06" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US06: 最適ルートを検索する
+        US06: 予約情報を経路設計者に引き渡す
       
     </span>
   </a>
@@ -947,7 +947,7 @@
   <a href="#us07" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US07: ルートを選択して予約に紐付ける
+        US07: 航海スケジュールを検索する
       
     </span>
   </a>
@@ -958,7 +958,7 @@
   <a href="#us08" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US08: 予約を確定する
+        US08: 経路候補を算出する
       
     </span>
   </a>
@@ -969,7 +969,7 @@
   <a href="#us09" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US09: 追跡番号を発行する
+        US09: 経路を選択・確定する
       
     </span>
   </a>
@@ -980,7 +980,7 @@
   <a href="#us10" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US10: 荷役作業を記録する
+        US10: 経路条件を調整して再算出する
       
     </span>
   </a>
@@ -991,7 +991,7 @@
   <a href="#us11" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US11: 引取作業を記録する
+        US11: 経路情報を予約に紐付ける
       
     </span>
   </a>
@@ -1002,7 +1002,7 @@
   <a href="#us12" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US12: 貨物状態を手動更新する
+        US12: 確定経路を荷主に通知する
       
     </span>
   </a>
@@ -1013,7 +1013,7 @@
   <a href="#us13" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US13: 追跡情報を照会する
+        US13: 予約を確定する
       
     </span>
   </a>
@@ -1024,7 +1024,7 @@
   <a href="#us14" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US14: 遅延例外を処理する
+        US14: 追跡番号を発行する
       
     </span>
   </a>
@@ -1035,7 +1035,7 @@
   <a href="#us15" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US15: 破損・紛失例外を処理する
+        US15: 荷役作業を記録する
       
     </span>
   </a>
@@ -1046,7 +1046,7 @@
   <a href="#us16" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US16: 輸送料金を算出する
+        US16: 引取作業を記録する
       
     </span>
   </a>
@@ -1057,7 +1057,7 @@
   <a href="#us17" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US17: 法人割引を適用する
+        US17: 貨物状態を手動更新する
       
     </span>
   </a>
@@ -1068,7 +1068,62 @@
   <a href="#us18" class="md-nav__link">
     <span class="md-ellipsis">
       
-        US18: 精算を処理する
+        US18: 追跡情報を照会する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US19: 遅延例外を処理する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US20: 破損・紛失例外を処理する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US21: 輸送料金を算出する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US22: 法人割引を適用する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US23: 精算を処理する
       
     </span>
   </a>
@@ -3303,80 +3358,110 @@
 </tr>
 <tr>
 <td style="text-align: left;">US06</td>
-<td style="text-align: left;">最適ルートを検索する</td>
+<td style="text-align: left;">予約情報を経路設計者に引き渡す</td>
 <td style="text-align: left;">UC04</td>
 <td style="text-align: center;">高</td>
 </tr>
 <tr>
 <td style="text-align: left;">US07</td>
-<td style="text-align: left;">ルートを選択して予約に紐付ける</td>
-<td style="text-align: left;">UC04</td>
-<td style="text-align: center;">高</td>
-</tr>
-<tr>
-<td style="text-align: left;">US08</td>
-<td style="text-align: left;">予約を確定する</td>
+<td style="text-align: left;">航海スケジュールを検索する</td>
 <td style="text-align: left;">UC05</td>
 <td style="text-align: center;">高</td>
 </tr>
 <tr>
-<td style="text-align: left;">US09</td>
-<td style="text-align: left;">追跡番号を発行する</td>
+<td style="text-align: left;">US08</td>
+<td style="text-align: left;">経路候補を算出する</td>
 <td style="text-align: left;">UC06</td>
 <td style="text-align: center;">高</td>
 </tr>
 <tr>
+<td style="text-align: left;">US09</td>
+<td style="text-align: left;">経路を選択・確定する</td>
+<td style="text-align: left;">UC07</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
 <td style="text-align: left;">US10</td>
-<td style="text-align: left;">荷役作業を記録する</td>
-<td style="text-align: left;">UC07</td>
-<td style="text-align: center;">高</td>
-</tr>
-<tr>
-<td style="text-align: left;">US11</td>
-<td style="text-align: left;">引取作業を記録する</td>
-<td style="text-align: left;">UC07</td>
-<td style="text-align: center;">高</td>
-</tr>
-<tr>
-<td style="text-align: left;">US12</td>
-<td style="text-align: left;">貨物状態を手動更新する</td>
+<td style="text-align: left;">経路条件を調整して再算出する</td>
 <td style="text-align: left;">UC08</td>
 <td style="text-align: center;">高</td>
 </tr>
 <tr>
-<td style="text-align: left;">US13</td>
-<td style="text-align: left;">追跡情報を照会する</td>
+<td style="text-align: left;">US11</td>
+<td style="text-align: left;">経路情報を予約に紐付ける</td>
 <td style="text-align: left;">UC09</td>
 <td style="text-align: center;">高</td>
 </tr>
 <tr>
-<td style="text-align: left;">US14</td>
-<td style="text-align: left;">遅延例外を処理する</td>
+<td style="text-align: left;">US12</td>
+<td style="text-align: left;">確定経路を荷主に通知する</td>
 <td style="text-align: left;">UC10</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US13</td>
+<td style="text-align: left;">予約を確定する</td>
+<td style="text-align: left;">UC11</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US14</td>
+<td style="text-align: left;">追跡番号を発行する</td>
+<td style="text-align: left;">UC12</td>
 <td style="text-align: center;">高</td>
 </tr>
 <tr>
 <td style="text-align: left;">US15</td>
-<td style="text-align: left;">破損・紛失例外を処理する</td>
-<td style="text-align: left;">UC10</td>
+<td style="text-align: left;">荷役作業を記録する</td>
+<td style="text-align: left;">UC13</td>
 <td style="text-align: center;">高</td>
 </tr>
 <tr>
 <td style="text-align: left;">US16</td>
-<td style="text-align: left;">輸送料金を算出する</td>
-<td style="text-align: left;">UC11</td>
-<td style="text-align: center;">中</td>
+<td style="text-align: left;">引取作業を記録する</td>
+<td style="text-align: left;">UC13</td>
+<td style="text-align: center;">高</td>
 </tr>
 <tr>
 <td style="text-align: left;">US17</td>
-<td style="text-align: left;">法人割引を適用する</td>
-<td style="text-align: left;">UC11</td>
-<td style="text-align: center;">中</td>
+<td style="text-align: left;">貨物状態を手動更新する</td>
+<td style="text-align: left;">UC14</td>
+<td style="text-align: center;">高</td>
 </tr>
 <tr>
 <td style="text-align: left;">US18</td>
+<td style="text-align: left;">追跡情報を照会する</td>
+<td style="text-align: left;">UC15</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US19</td>
+<td style="text-align: left;">遅延例外を処理する</td>
+<td style="text-align: left;">UC16</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US20</td>
+<td style="text-align: left;">破損・紛失例外を処理する</td>
+<td style="text-align: left;">UC16</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US21</td>
+<td style="text-align: left;">輸送料金を算出する</td>
+<td style="text-align: left;">UC17</td>
+<td style="text-align: center;">中</td>
+</tr>
+<tr>
+<td style="text-align: left;">US22</td>
+<td style="text-align: left;">法人割引を適用する</td>
+<td style="text-align: left;">UC17</td>
+<td style="text-align: center;">中</td>
+</tr>
+<tr>
+<td style="text-align: left;">US23</td>
 <td style="text-align: left;">精算を処理する</td>
-<td style="text-align: left;">UC12</td>
+<td style="text-align: left;">UC18</td>
 <td style="text-align: center;">中</td>
 </tr>
 </tbody>
@@ -3390,11 +3475,10 @@
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 出発地・目的地・希望期限・貨物種別・重量を入力できる</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 外部経路システムへのルート照会が行われ、複数のルート候補が表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 航海スケジュール情報をもとにルート概算候補が表示される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ルート候補ごとに「経由港・所要日数・概算料金・航海番号」が表示される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 見積情報が保存され、見積番号が発行される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 希望期限に間に合うルートが存在しない場合、その旨が通知される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 外部経路システムへの接続失敗時は過去の実績データから代替候補が表示される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 危険物が含まれる場合、危険物申告情報の入力フォームが表示される</li>
 </ul>
 <hr />
@@ -3421,7 +3505,7 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主種別「法人」を選択すると、法人契約情報（契約番号・割引率）の入力フィールドが表示される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 割引率は 0〜30% の範囲で設定できる</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 法人荷主で登録完了後、荷主 ID が発行される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 登録した法人情報は US17（法人割引を適用する）で参照される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 登録した法人情報は US22（法人割引を適用する）で参照される</li>
 </ul>
 <hr />
 <h2 id="us04">US04: 貨物予約を登録する<a class="headerlink" href="#us04" title="Permanent link">&para;</a></h2>
@@ -3448,57 +3532,124 @@
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 貨物種別「危険物」を選択すると、危険物申告情報の入力フィールドが表示され入力が必須となる</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 貨物種別「冷凍・冷蔵貨物」を選択すると、温度管理条件の入力フィールドが表示され入力が必須となる</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 特別情報が登録された予約は、ルート検索時に対応可能な船舶・ルートのみが候補として表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 特別情報が登録された予約は、経路設計時に対応可能な航海・ルートのみが候補として表示される</li>
 </ul>
 <hr />
-<h2 id="us06">US06: 最適ルートを検索する<a class="headerlink" href="#us06" title="Permanent link">&para;</a></h2>
-<p><strong>として</strong>: 経路設計者</p>
-<p><strong>したい</strong>: 予約番号を指定して出発地・目的地・希望着日から最適ルート候補を検索したい</p>
-<p><strong>なぜなら</strong>: ルート候補を迅速に把握し、荷主に最適な輸送プランを提案できるからだ</p>
+<h2 id="us06">US06: 予約情報を経路設計者に引き渡す<a class="headerlink" href="#us06" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 営業担当者</p>
+<p><strong>したい</strong>: 仮受付された予約の出発地・目的地・期限・貨物仕様を確認し、経路設計者に引き渡したい</p>
+<p><strong>なぜなら</strong>: 経路設計者が正確な情報をもとに最適な経路設計を開始できるからだ</p>
 <p><strong>対応 UC</strong>: UC04</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約番号を指定して予約情報（出発地・目的地・希望着日・貨物種別）を確認できる</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 外部経路システムへのルート照会が行われる</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ルート候補が「経由港・所要日数・費用・航海番号」とともに一覧表示される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 希望着日に間に合うルートがない場合、その旨が表示され代替条件での再検索ができる</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 危険物または冷凍貨物の場合、取扱い可能なルートのみが表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約番号を指定して予約情報（出発地・目的地・期限・貨物仕様）を確認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路設計依頼を実行すると、予約状態が「経路設計中」に更新される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路設計者に経路設計依頼の通知が送信される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約情報に不備がある場合、修正してから引き渡せる</li>
+</ul>
+<hr />
+<h2 id="us07">US07: 航海スケジュールを検索する<a class="headerlink" href="#us07" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 経路設計者</p>
+<p><strong>したい</strong>: 予約の出発地・目的地・期限をもとに、利用可能な航海スケジュールを検索したい</p>
+<p><strong>なぜなら</strong>: 制約条件を満たす航海を特定し、経路候補算出の入力を準備できるからだ</p>
+<p><strong>対応 UC</strong>: UC05</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約番号を指定して出発地・目的地・期限・貨物仕様を確認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 検索条件（出発地・目的地・出発期間・貨物種別）を入力して検索できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 制約条件（航海スケジュール・寄港地接続・港湾制約・貨物種別対応）に基づいて利用可能な航海が表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 航海スケジュール一覧に航海番号・運送会社・出発日・到着日・寄港地が表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 条件を満たす航海がない場合、その旨が表示され条件を緩和して再検索できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 危険物・冷凍貨物の場合、対応可能な航海のみに絞り込まれる</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 出発地・目的地は UN/LOCODE 形式で指定できる</li>
 </ul>
 <hr />
-<h2 id="us07">US07: ルートを選択して予約に紐付ける<a class="headerlink" href="#us07" title="Permanent link">&para;</a></h2>
+<h2 id="us08">US08: 経路候補を算出する<a class="headerlink" href="#us08" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 経路設計者</p>
-<p><strong>したい</strong>: ルート候補から最適なものを選択し、航海スケジュールに組み込んで予約に紐付けたい</p>
-<p><strong>なぜなら</strong>: 選択したルートを正式な輸送計画として確定し、荷主への提案に進めるからだ</p>
-<p><strong>対応 UC</strong>: UC04</p>
+<p><strong>したい</strong>: 航海スケジュール検索結果をもとに、制約条件を考慮した経路候補を自動算出してほしい</p>
+<p><strong>なぜなら</strong>: 手作業の属人化を解消し、制約条件を漏れなく考慮した最適経路を効率的に見つけられるからだ</p>
+<p><strong>対応 UC</strong>: UC06</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ルート候補一覧から 1 件を選択できる</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 選択後、ルートが航海スケジュールに組み込まれる</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約状態が「経路提案中」に更新される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主にルート提案の通知が送信される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 航海スケジュール検索結果と出発地・目的地・期限を入力として経路候補が自動算出される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 寄港地の接続可能性が評価される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路候補ごとに所要日数・経由港・費用・航海番号が表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路候補が推奨順に並べられて提示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 直行便がある場合、最優先候補として提示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 期限内に到達可能な経路がない場合、その旨が通知され条件調整が促される</li>
 </ul>
 <hr />
-<h2 id="us08">US08: 予約を確定する<a class="headerlink" href="#us08" title="Permanent link">&para;</a></h2>
+<h2 id="us09">US09: 経路を選択・確定する<a class="headerlink" href="#us09" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 経路設計者</p>
+<p><strong>したい</strong>: 算出された経路候補から最適なものを選択し、経路を確定したい</p>
+<p><strong>なぜなら</strong>: 最適経路を正式に確定し、予約への紐付けに進めるからだ</p>
+<p><strong>対応 UC</strong>: UC07</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路候補一覧（経由港・所要日数・費用・航海番号）を確認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 最適な経路候補を 1 件選択できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 選択後、経路状態が「確定」になる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 最適な候補がない場合、経路条件調整（US10）に進める</li>
+</ul>
+<hr />
+<h2 id="us10">US10: 経路条件を調整して再算出する<a class="headerlink" href="#us10" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 経路設計者</p>
+<p><strong>したい</strong>: 経路候補に最適なものがない場合に、条件（期限・経由地等）を調整して経路候補を再算出したい</p>
+<p><strong>なぜなら</strong>: 条件を柔軟に調整することで実現可能な経路を見つけ、輸送を実現できるからだ</p>
+<p><strong>対応 UC</strong>: UC08</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 現在の制約条件（期限・経由地制限等）を確認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 条件を調整（期限延長・経由地追加・貨物種別変更等）して再算出を実行できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 調整後の条件で新たな経路候補が算出・提示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 調整後も条件を満たす経路がない場合、営業担当者に荷主との条件協議を依頼できる</li>
+</ul>
+<hr />
+<h2 id="us11">US11: 経路情報を予約に紐付ける<a class="headerlink" href="#us11" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 経路設計者</p>
+<p><strong>したい</strong>: 確定した経路情報を貨物予約に紐付けたい</p>
+<p><strong>なぜなら</strong>: 予約と経路の関連を確立し、営業担当者が荷主にルート提案できるようにするからだ</p>
+<p><strong>対応 UC</strong>: UC09</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 確定経路と予約番号を確認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路情報を予約に紐付ける操作を実行できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 紐付け後、予約状態が「経路提案中」に更新される</li>
+</ul>
+<hr />
+<h2 id="us12">US12: 確定経路を荷主に通知する<a class="headerlink" href="#us12" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 営業担当者</p>
+<p><strong>したい</strong>: 経路が予約に紐付けられた後、確定経路の詳細（経由港・所要日数・到着予定日）を荷主に通知したい</p>
+<p><strong>なぜなら</strong>: 荷主が確定経路の内容を確認し、承認または変更依頼を行えるようにするからだ</p>
+<p><strong>対応 UC</strong>: UC10</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約番号を指定して紐付けられた経路情報を確認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通知内容（経由港・所要日数・到着予定日・料金概算）を確認できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主への経路通知を送信できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 通知送信記録が登録される</li>
+</ul>
+<hr />
+<h2 id="us13">US13: 予約を確定する<a class="headerlink" href="#us13" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 営業担当者</p>
 <p><strong>したい</strong>: 荷主がルートを承認したことを確認して予約を正式確定したい</p>
 <p><strong>なぜなら</strong>: 荷主の同意を記録し、追跡番号発行・輸送手配に進めるからだ</p>
-<p><strong>対応 UC</strong>: UC05</p>
+<p><strong>対応 UC</strong>: UC11</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 予約番号を指定して予約内容と選択ルートを確認できる</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 確定操作を行うと予約状態が「予約確定」に更新される</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 経路設計者に追跡番号発行依頼の通知が送信される</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主がルート変更を希望する場合、予約を「経路提案中」に戻せる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主がルート変更を希望する場合、予約を「経路設計中」に戻せる</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主がキャンセルを希望する場合、予約をキャンセル状態に変更できる</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> キャンセル時、荷主にキャンセル確認通知が送信される</li>
 </ul>
 <hr />
-<h2 id="us09">US09: 追跡番号を発行する<a class="headerlink" href="#us09" title="Permanent link">&para;</a></h2>
+<h2 id="us14">US14: 追跡番号を発行する<a class="headerlink" href="#us14" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 経路設計者</p>
 <p><strong>したい</strong>: 確定した予約に対して一意の追跡番号を発行し、荷主に通知したい</p>
 <p><strong>なぜなら</strong>: 荷主が追跡番号を使って輸送状況をいつでも確認できるようになるからだ</p>
-<p><strong>対応 UC</strong>: UC06</p>
+<p><strong>対応 UC</strong>: UC12</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 「予約確定」状態の予約に対して追跡番号を発行できる</li>
@@ -3507,11 +3658,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主に追跡番号と追跡方法をメール通知する</li>
 </ul>
 <hr />
-<h2 id="us10">US10: 荷役作業を記録する<a class="headerlink" href="#us10" title="Permanent link">&para;</a></h2>
+<h2 id="us15">US15: 荷役作業を記録する<a class="headerlink" href="#us15" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 荷役作業員</p>
 <p><strong>したい</strong>: 追跡番号を入力して貨物を特定し、作業種別・日時・場所を登録したい</p>
 <p><strong>なぜなら</strong>: 荷役作業完了が即座に貨物状態に反映され、荷主がリアルタイムで確認できるからだ</p>
-<p><strong>対応 UC</strong>: UC07</p>
+<p><strong>対応 UC</strong>: UC13</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 追跡番号の入力（またはスキャン）で貨物を特定できる</li>
@@ -3523,11 +3674,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 作業場所が予定ルートと異なる場合、警告が表示される</li>
 </ul>
 <hr />
-<h2 id="us11">US11: 引取作業を記録する<a class="headerlink" href="#us11" title="Permanent link">&para;</a></h2>
+<h2 id="us16">US16: 引取作業を記録する<a class="headerlink" href="#us16" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 荷役作業員</p>
 <p><strong>したい</strong>: 荷受人が貨物を引き取る際に、荷受人の確認（署名または確認コード）を取得して引取作業を記録したい</p>
 <p><strong>なぜなら</strong>: 荷受人への正式な引き渡しを証明し、配送完了を記録できるからだ</p>
-<p><strong>対応 UC</strong>: UC07</p>
+<p><strong>対応 UC</strong>: UC13</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 作業種別「引取」を選択すると、荷受人確認フィールド（署名または確認コード）が表示される</li>
@@ -3536,11 +3687,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 貨物状態「引取済」は配送完了を意味し、精算処理の開始条件となる</li>
 </ul>
 <hr />
-<h2 id="us12">US12: 貨物状態を手動更新する<a class="headerlink" href="#us12" title="Permanent link">&para;</a></h2>
+<h2 id="us17">US17: 貨物状態を手動更新する<a class="headerlink" href="#us17" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 追跡管理者</p>
 <p><strong>したい</strong>: 追跡番号を指定して貨物の状態・位置・更新日時を手動で更新したい</p>
 <p><strong>なぜなら</strong>: 荷役作業員の記録だけでは捕捉できない状態変化（出港・入港等）を追跡情報に反映できるからだ</p>
-<p><strong>対応 UC</strong>: UC08</p>
+<p><strong>対応 UC</strong>: UC14</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 追跡番号を指定して現在の貨物情報を確認できる</li>
@@ -3549,11 +3700,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 状態変更の種類に応じて荷主への通知が送信される</li>
 </ul>
 <hr />
-<h2 id="us13">US13: 追跡情報を照会する<a class="headerlink" href="#us13" title="Permanent link">&para;</a></h2>
+<h2 id="us18">US18: 追跡情報を照会する<a class="headerlink" href="#us18" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 荷主（または荷受人）</p>
 <p><strong>したい</strong>: 追跡番号を入力して貨物の現在位置・状態・追跡イベント履歴・推定到着日を確認したい</p>
 <p><strong>なぜなら</strong>: 輸送状況をいつでも自分で確認でき、到着準備や業務計画に役立てるからだ</p>
-<p><strong>対応 UC</strong>: UC09</p>
+<p><strong>対応 UC</strong>: UC15</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 追跡番号を入力して貨物情報を照会できる</li>
@@ -3563,11 +3714,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> ログインなしでも追跡番号があれば照会できる</li>
 </ul>
 <hr />
-<h2 id="us14">US14: 遅延例外を処理する<a class="headerlink" href="#us14" title="Permanent link">&para;</a></h2>
+<h2 id="us19">US19: 遅延例外を処理する<a class="headerlink" href="#us19" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 追跡管理者</p>
 <p><strong>したい</strong>: 輸送中に遅延が発生した場合、例外種別「遅延」として記録し、荷主への通知と対応内容を管理したい</p>
 <p><strong>なぜなら</strong>: 遅延情報を速やかに荷主に伝え、対応策（代替ルート等）を迅速に提示できるからだ</p>
-<p><strong>対応 UC</strong>: UC10</p>
+<p><strong>対応 UC</strong>: UC16</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 追跡番号と例外種別「遅延」・発生状況（場所・日時・理由）を記録できる</li>
@@ -3577,11 +3728,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 例外対応履歴が記録される</li>
 </ul>
 <hr />
-<h2 id="us15">US15: 破損・紛失例外を処理する<a class="headerlink" href="#us15" title="Permanent link">&para;</a></h2>
+<h2 id="us20">US20: 破損・紛失例外を処理する<a class="headerlink" href="#us20" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 追跡管理者（または荷役作業員）</p>
 <p><strong>したい</strong>: 輸送中に破損または紛失が発生した場合、例外種別「破損」または「紛失」として記録し、関係者に緊急通知を送りたい</p>
 <p><strong>なぜなら</strong>: 重大な例外は即座に全関係者に共有し、保険手続き・補償対応・代替措置を迅速に開始できるからだ</p>
-<p><strong>対応 UC</strong>: UC10</p>
+<p><strong>対応 UC</strong>: UC16</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 追跡番号と例外種別「破損」または「紛失」・発生状況を記録できる</li>
@@ -3591,11 +3742,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 対応内容（補償方針等）を入力して荷主に報告を送信できる</li>
 </ul>
 <hr />
-<h2 id="us16">US16: 輸送料金を算出する<a class="headerlink" href="#us16" title="Permanent link">&para;</a></h2>
+<h2 id="us21">US21: 輸送料金を算出する<a class="headerlink" href="#us21" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 経理担当者</p>
 <p><strong>したい</strong>: 配送完了した予約に対して輸送実績（経路・重量・貨物種別・荷役実績）をもとに輸送料金を算出したい</p>
 <p><strong>なぜなら</strong>: 実際の輸送内容に基づく正確な料金を算出し、精算に進めるからだ</p>
-<p><strong>対応 UC</strong>: UC11</p>
+<p><strong>対応 UC</strong>: UC17</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 「引取済」状態の予約に対して料金算出を開始できる</li>
@@ -3606,11 +3757,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 例外（遅延・破損等）が発生している場合、料金調整（減額・補償費用）の入力ができる</li>
 </ul>
 <hr />
-<h2 id="us17">US17: 法人割引を適用する<a class="headerlink" href="#us17" title="Permanent link">&para;</a></h2>
+<h2 id="us22">US22: 法人割引を適用する<a class="headerlink" href="#us22" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 経理担当者</p>
 <p><strong>したい</strong>: 法人荷主の場合に、契約割引率を基本料金に自動適用して割引後の請求金額を確定したい</p>
 <p><strong>なぜなら</strong>: 法人契約条件に基づく正確な割引を自動化し、手計算ミスを防ぐからだ</p>
-<p><strong>対応 UC</strong>: UC11</p>
+<p><strong>対応 UC</strong>: UC17</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 荷主種別が「法人」の場合、料金算出時に契約割引率が自動的に取得・表示される</li>
@@ -3619,11 +3770,11 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 割引計算の根拠（割引率・基本料金・割引後料金）が精算書に記載される</li>
 </ul>
 <hr />
-<h2 id="us18">US18: 精算を処理する<a class="headerlink" href="#us18" title="Permanent link">&para;</a></h2>
+<h2 id="us23">US23: 精算を処理する<a class="headerlink" href="#us23" title="Permanent link">&para;</a></h2>
 <p><strong>として</strong>: 経理担当者</p>
 <p><strong>したい</strong>: 確定した輸送料金をもとに精算書を発行し、荷主への通知・入金確認・精算完了処理を行いたい</p>
 <p><strong>なぜなら</strong>: 精算業務を一元管理し、入金状況を追跡して確実に精算を完了できるからだ</p>
-<p><strong>対応 UC</strong>: UC12</p>
+<p><strong>対応 UC</strong>: UC18</p>
 <p><strong>受け入れ基準</strong>:</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる</li>
@@ -3663,57 +3814,93 @@
 <td style="text-align: left;">予約業務の効率化</td>
 </tr>
 <tr>
-<td style="text-align: left;">US06, US07</td>
+<td style="text-align: left;">US06</td>
 <td style="text-align: left;">UC04</td>
-<td style="text-align: left;">BUC04</td>
-<td style="text-align: left;">最適ルート提案</td>
+<td style="text-align: left;">BUC06</td>
+<td style="text-align: left;">最適ルート自動設計</td>
+</tr>
+<tr>
+<td style="text-align: left;">US07</td>
+<td style="text-align: left;">UC05</td>
+<td style="text-align: left;">BUC07, BUC08</td>
+<td style="text-align: left;">最適ルート自動設計</td>
 </tr>
 <tr>
 <td style="text-align: left;">US08</td>
-<td style="text-align: left;">UC05</td>
-<td style="text-align: left;">BUC05</td>
-<td style="text-align: left;">予約業務の効率化</td>
+<td style="text-align: left;">UC06</td>
+<td style="text-align: left;">BUC09</td>
+<td style="text-align: left;">最適ルート自動設計</td>
 </tr>
 <tr>
 <td style="text-align: left;">US09</td>
-<td style="text-align: left;">UC06</td>
-<td style="text-align: left;">BUC06</td>
-<td style="text-align: left;">リアルタイム貨物追跡</td>
+<td style="text-align: left;">UC07</td>
+<td style="text-align: left;">BUC10</td>
+<td style="text-align: left;">最適ルート自動設計</td>
 </tr>
 <tr>
-<td style="text-align: left;">US10, US11</td>
-<td style="text-align: left;">UC07</td>
-<td style="text-align: left;">BUC07</td>
-<td style="text-align: left;">リアルタイム貨物追跡、通知自動化</td>
+<td style="text-align: left;">US10</td>
+<td style="text-align: left;">UC08</td>
+<td style="text-align: left;">BUC11</td>
+<td style="text-align: left;">最適ルート自動設計</td>
+</tr>
+<tr>
+<td style="text-align: left;">US11</td>
+<td style="text-align: left;">UC09</td>
+<td style="text-align: left;">BUC12</td>
+<td style="text-align: left;">最適ルート自動設計</td>
 </tr>
 <tr>
 <td style="text-align: left;">US12</td>
-<td style="text-align: left;">UC08</td>
-<td style="text-align: left;">BUC08</td>
-<td style="text-align: left;">リアルタイム貨物追跡</td>
+<td style="text-align: left;">UC10</td>
+<td style="text-align: left;">BUC13</td>
+<td style="text-align: left;">最適ルート自動設計</td>
 </tr>
 <tr>
 <td style="text-align: left;">US13</td>
-<td style="text-align: left;">UC09</td>
-<td style="text-align: left;">BUC09</td>
+<td style="text-align: left;">UC11</td>
+<td style="text-align: left;">BUC04</td>
+<td style="text-align: left;">予約業務の効率化</td>
+</tr>
+<tr>
+<td style="text-align: left;">US14</td>
+<td style="text-align: left;">UC12</td>
+<td style="text-align: left;">BUC05</td>
 <td style="text-align: left;">リアルタイム貨物追跡</td>
 </tr>
 <tr>
-<td style="text-align: left;">US14, US15</td>
-<td style="text-align: left;">UC10</td>
-<td style="text-align: left;">BUC10</td>
-<td style="text-align: left;">例外対応の迅速化</td>
+<td style="text-align: left;">US15, US16</td>
+<td style="text-align: left;">UC13</td>
+<td style="text-align: left;">BUC14</td>
+<td style="text-align: left;">リアルタイム貨物追跡、通知自動化</td>
 </tr>
 <tr>
-<td style="text-align: left;">US16, US17</td>
-<td style="text-align: left;">UC11</td>
-<td style="text-align: left;">BUC11, BUC12</td>
-<td style="text-align: left;">精算業務の正確化</td>
+<td style="text-align: left;">US17</td>
+<td style="text-align: left;">UC14</td>
+<td style="text-align: left;">BUC15</td>
+<td style="text-align: left;">リアルタイム貨物追跡</td>
 </tr>
 <tr>
 <td style="text-align: left;">US18</td>
-<td style="text-align: left;">UC12</td>
-<td style="text-align: left;">BUC13</td>
+<td style="text-align: left;">UC15</td>
+<td style="text-align: left;">BUC16</td>
+<td style="text-align: left;">リアルタイム貨物追跡</td>
+</tr>
+<tr>
+<td style="text-align: left;">US19, US20</td>
+<td style="text-align: left;">UC16</td>
+<td style="text-align: left;">BUC17</td>
+<td style="text-align: left;">例外対応の迅速化</td>
+</tr>
+<tr>
+<td style="text-align: left;">US21, US22</td>
+<td style="text-align: left;">UC17</td>
+<td style="text-align: left;">BUC18, BUC19</td>
+<td style="text-align: left;">精算業務の正確化</td>
+</tr>
+<tr>
+<td style="text-align: left;">US23</td>
+<td style="text-align: left;">UC18</td>
+<td style="text-align: left;">BUC20</td>
 <td style="text-align: left;">精算業務の正確化</td>
 </tr>
 </tbody>
