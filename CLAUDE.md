@@ -67,6 +67,7 @@
 | `planning-releases` | リリース・イテレーション計画 |
 | `syncing-github-project` | GitHub Project 同期 |
 | `tracking-progress` | 進捗分析・レポート |
+| `validating-iteration-plan` | イテレーション計画の整合性検証 |
 
 ### 運用
 
