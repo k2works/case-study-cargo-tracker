@@ -110,6 +110,8 @@ nav:
       - "IT7 ふりかえり": development/retrospective-7.md
       - "IT7 完了報告書": development/iteration_report-7.md
       - "IT8 計画（US22・23・24）": development/iteration_plan-8.md
+      - "IT8 ふりかえり": development/retrospective-8.md
+      - "IT8 完了報告書": development/iteration_report-8.md
   - 運用:
       - 概要: operation/index.md
       - アプリ開発環境セットアップ: operation/dev_app_instrunction.md

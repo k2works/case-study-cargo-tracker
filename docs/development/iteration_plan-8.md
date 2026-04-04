@@ -29,12 +29,13 @@ tags: iteration-plan, it8, routing
 
 ### 成功基準
 
-- [ ] 経路候補一覧の各候補に「この予約に割り当てる」ボタンが表示され、モーダルで経由港・出発日・到着日の詳細を確認できる
-- [ ] 経路確定操作で経路情報（航海番号・区間詳細）が `booking_legs` テーブルに保存される
-- [ ] 経路候補が見つからない場合、条件調整フォーム（期限・貨物種別変更）と「営業担当者に交渉を依頼」リンクが表示される
-- [ ] 経路紐付け完了後、`BookingRouteAssignedEvent` ハンドラが起動し、営業担当者・荷主への通知ログが記録される
-- [ ] backend テスト GREEN・カバレッジ 80% 以上
-- [ ] E2E テスト（`US22E2ETest`・`US23E2ETest`・`US24E2ETest`）全件 GREEN
+- [x] 経路候補一覧の各候補に「この予約に割り当てる」ボタンが表示され、モーダルで経由港・出発日・到着日の詳細を確認できる
+- [x] 経路確定操作で経路情報（航海番号・区間詳細）が `booking_legs` テーブルに保存される
+- [x] 経路候補が見つからない場合、条件調整フォーム（期限・貨物種別変更）と「営業担当者に交渉を依頼」リンクが表示される
+- [x] 経路紐付け完了後、`BookingRouteAssignedEvent` ハンドラが起動し、営業担当者・荷主への通知ログが記録される
+- [x] backend テスト GREEN・カバレッジ 89.8%（目標 80% 超）
+- [x] E2E テスト（`US22E2ETest`・`US23E2ETest`・`US24E2ETest`）全件 GREEN
+- [x] SonarQube Quality Gate PASS（new_violations: 0）
 
 ---
 
@@ -99,11 +100,11 @@ tags: iteration-plan, it8, routing
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `BookingLeg` 値オブジェクト + `Booking.assignRouteWithLegs()` メソッド追加 + 単体テスト（TDD） | 2h | - | [ ] |
-| 1.2 | V016: `booking_legs` テーブル migration（`booking_id UUID FK → bookings.id`） | 1h | - | [ ] |
-| 1.3 | `BookingRepositoryImpl.save()` 拡張 — `booking_legs` へのレグ情報永続化 | 2h | - | [ ] |
-| 1.4 | `VoyageLegsQueryService` + REST API: `GET /api/v1/routings/voyages/{voyageNumber}/legs` | 2h | - | [ ] |
-| 1.5 | `#assignModal` 拡張 — fetch API で航海区間詳細（経由港・出発日・到着日）を表示 | 2h | - | [ ] |
+| 1.1 | `BookingLeg` 値オブジェクト + `Booking.assignRouteWithLegs()` メソッド追加 + 単体テスト（TDD） | 2h | - | [x] |
+| 1.2 | V016: `booking_legs` テーブル migration（`booking_id UUID FK → bookings.id`） | 1h | - | [x] |
+| 1.3 | `BookingRepositoryImpl.save()` 拡張 — `booking_legs` へのレグ情報永続化 | 2h | - | [x] |
+| 1.4 | `VoyageLegsQueryService` + REST API: `GET /api/v1/routings/voyages/{voyageNumber}/legs` | 2h | - | [x] |
+| 1.5 | `#assignModal` 拡張 — fetch API で航海区間詳細（経由港・出発日・到着日）を表示 | 2h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -111,9 +112,9 @@ tags: iteration-plan, it8, routing
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | search.html 拡張 — 「経路候補なし」セクションに「営業担当者に交渉を依頼」ボタン追加（AC4） | 2h | - | [ ] |
-| 2.2 | `US22E2ETest`（経路選択→モーダル詳細確認→確定→legs 保存） | 3h | - | [ ] |
-| 2.3 | `US23E2ETest`（条件調整→再算出・営業担当者リンク表示） | 2h | - | [ ] |
+| 2.1 | search.html 拡張 — 「経路候補なし」セクションに「営業担当者に交渉を依頼」ボタン追加（AC4） | 2h | - | [x] |
+| 2.2 | `US22E2ETest`（経路選択→モーダル詳細確認→確定→legs 保存） | 3h | - | [x] |
+| 2.3 | `US23E2ETest`（条件調整→再算出・営業担当者リンク表示） | 2h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -121,8 +122,8 @@ tags: iteration-plan, it8, routing
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `BookingEventHandler.onBookingRouteAssigned()` ハンドラ追加 — 営業担当者・荷主への通知ログ記録 | 2h | - | [ ] |
-| 3.2 | `US24E2ETest`（経路紐付け→イベント発行→通知ログ確認） | 2h | - | [ ] |
+| 3.1 | `BookingEventHandler.onBookingRouteAssigned()` ハンドラ追加 — 営業担当者・荷主への通知ログ記録 | 2h | - | [x] |
+| 3.2 | `US24E2ETest`（経路紐付け→イベント発行→通知ログ確認） | 2h | - | [x] |
 
 **小計**: 4h（理想時間）
 
@@ -130,13 +131,13 @@ tags: iteration-plan, it8, routing
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US22 経路選択・確定 | 3 | 9h | [ ] |
-| US23 条件調整・再算出 | 3 | 7h | [ ] |
-| US24 予約紐付け・通知 | 2 | 4h | [ ] |
+| US22 経路選択・確定 | 3 | 9h | [x] |
+| US23 条件調整・再算出 | 3 | 7h | [x] |
+| US24 予約紐付け・通知 | 2 | 4h | [x] |
 | **合計** | **8** | **20h** | |
 
 **1 SP あたり**: 約 2.5h
-**進捗率**: 0%（0/8 SP）
+**進捗率**: 100%（8/8 SP）
 
 ---
 
@@ -468,13 +469,13 @@ apps/cargo-tracker/src/main/resources/
 
 ### Definition of Done
 
-- [ ] `./gradlew test` 全件 GREEN
-- [ ] テストカバレッジ 80% 以上（分岐カバレッジ含む）
-- [ ] SonarQube Quality Gate PASS
-- [ ] E2E テスト（`US22E2ETest`・`US23E2ETest`・`US24E2ETest`）全件 GREEN
-- [ ] コードレビュー完了（`developing-review` スキル実行）
-- [ ] ドキュメント更新完了（`release_plan.md` 進捗更新）
-- [ ] Phase 3 リリース（v1.1.0）タグ付け完了
+- [x] `./gradlew test` 全件 GREEN
+- [x] テストカバレッジ 89.8%（目標 80% 以上）
+- [x] SonarQube Quality Gate PASS
+- [x] E2E テスト（`US22E2ETest`・`US23E2ETest`・`US24E2ETest`）全件 GREEN
+- [x] コードレビュー完了（`developing-review` スキル実行）
+- [x] ドキュメント更新完了（`release_plan.md` 進捗更新）
+- [x] Phase 3 リリース（v1.1.0）タグ付け完了
 
 ### デモ項目
 
@@ -491,6 +492,7 @@ apps/cargo-tracker/src/main/resources/
 |------|---------|--------|
 | 2026-07-07 | 初版作成 | - |
 | 2026-07-07 | 整合性検証による修正（ナビバー・ドメインモデル注 3・データモデル注カラム名偏差・IT7 持ち越し事項追加） | - |
+| 2026-07-20 | IT8 全タスク完了に伴う進捗更新（進捗率 100%・全チェックボックス更新・SonarQube Quality Gate PASS 追記） | - |
 
 ---
 

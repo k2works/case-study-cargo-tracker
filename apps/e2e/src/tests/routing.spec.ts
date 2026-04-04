@@ -57,7 +57,7 @@ test.describe('E06: 最適ルート検索', () => {
     await routingPage.gotoByBookingId(bookingId);
 
     await expect(page.locator('h4')).toContainText('ルート検索結果');
-    await expect(page.locator('h5')).toContainText('ルート候補');
+    await expect(page.locator('h5.mb-3')).toContainText('ルート候補');
 
     // SG001: 14 日, 150,000 円
     await routingPage.expectCandidateVisible({

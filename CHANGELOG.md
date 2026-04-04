@@ -4,6 +4,43 @@
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に準拠し、
 バージョン管理は [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.1.0] - 2026-07-20 (IT7-IT8 完了: Phase 3 経路設計高度化)
+
+### Added
+
+- **US19**: 経路設計条件確認機能（`routing` コンテキスト）
+  - 予約詳細画面から「経路設計」ボタンで設計条件（出発地・目的地・最終着日・貨物種別・重量）を表示
+  - `DesignConditionQueryService` + `GET /api/v1/routings/bookings/{id}/design-condition`
+  - `/routing/search?bookingId=...` 経由で経路候補算出へ遷移
+- **US20**: 航海スケジュール検索機能（`routing` コンテキスト）
+  - 出港地 UNLOCODE・出発日範囲で航海スケジュールを一覧表示
+  - `VoyageScheduleQueryService` + `GET /api/v1/routings/voyages`
+  - `/routing/voyages` 画面（検索フォーム + テーブル）
+- **US21**: 経路候補算出機能（`routing` コンテキスト）
+  - 制約条件（出発地・目的地・最終着日・貨物種別）を考慮した経路候補の自動算出
+  - `RouteSearchService` + `StubRouteProviderAdapter`（非 product プロファイル）
+  - `/routing/search` 画面（候補カード一覧）
+- **US22**: 経路選択・確定機能（`routing` + `booking` コンテキスト）
+  - 候補カードの「この予約に割り当てる」ボタンでモーダル表示
+  - モーダルで航海区間詳細（経由港・出発日・到着日）を確認してから確定
+  - `VoyageLegsQueryService` + `GET /api/v1/routings/voyages/{voyageNumber}/legs`
+  - 確定操作で `booking_legs` テーブルに区間詳細を永続化
+- **US23**: 経路条件調整・再算出機能（`routing` コンテキスト）
+  - 候補なし時に条件調整フォーム（期限延長・貨物種別変更）を表示
+  - フォーム送信で経路候補の再算出（US21）を自動実行
+  - 調整不能時は「営業担当者に交渉を依頼」リンクを表示
+- **US24**: 経路情報予約紐付け・通知機能（`booking` コンテキスト）
+  - 経路確定後に `BookingRouteAssignedEvent` を発行
+  - `BookingEventHandler` で営業担当者・荷主への通知ログを記録
+  - 予約詳細画面に「割り当て済みルート」カード（航海番号・ルートパス・推定着日）を表示
+- `BookingLeg` 値オブジェクト（voyageNumber・origin・destination・departure・arrival）
+- `booking_legs` テーブル（V016 マイグレーション）
+- Playwright E2E テスト: US22（E33〜E35）・US23（E36〜E38）・US24（E39〜E40）
+
+[1.1.0]: https://github.com/example/case-study-cargo-tracker-take-1/releases/tag/v1.1.0
+
+---
+
 ## [Unreleased] (IT4 完了)
 
 ### Added
