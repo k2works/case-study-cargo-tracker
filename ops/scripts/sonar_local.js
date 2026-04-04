@@ -288,7 +288,7 @@ function runScan(project, token, hostUrl) {
 
     case 'gradle':
       execSync(
-        `gradle sonar ` +
+        `./gradlew sonar ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
