@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.repositories.CargoMapper">
+
+    <resultMap id="cargoRecordMap" type="com.example.cargotracker.booking.infrastructure.repositories.CargoRecord">
+        <id property="id" column="id"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="shipperId" column="shipper_id"/>
+        <result property="cargoType" column="cargo_type"/>
+        <result property="weight" column="weight"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="arrivalDeadline" column="arrival_deadline"/>
+        <result property="bookingStatus" column="booking_status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.cargotracker.booking.infrastructure.repositories.CargoRecord">
+        INSERT INTO cargo (
+            booking_id,
+            shipper_id,
+            cargo_type,
+            weight,
+            origin_unlocode,
+            destination_unlocode,
+            arrival_deadline,
+            booking_status
+        )
+        VALUES (
+            CAST(#{bookingId} AS UUID),
+            CAST(#{shipperId} AS UUID),
+            #{cargoType},
+            #{weight},
+            #{originUnlocode},
+            #{destinationUnlocode},
+            #{arrivalDeadline},
+            #{bookingStatus}
+        )
+    </insert>
+
+    <select id="findByBookingId" resultMap="cargoRecordMap">
+        SELECT id, booking_id, shipper_id, cargo_type, weight, origin_unlocode,
+               destination_unlocode, arrival_deadline, booking_status
+        FROM cargo
+        WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </select>
+
+    <select id="findAll" resultMap="cargoRecordMap">
+        SELECT id, booking_id, shipper_id, cargo_type, weight, origin_unlocode,
+               destination_unlocode, arrival_deadline, booking_status
+        FROM cargo
+        ORDER BY id
+    </select>
+
+    <select id="findByShipperId" resultMap="cargoRecordMap">
+        SELECT id, booking_id, shipper_id, cargo_type, weight, origin_unlocode,
+               destination_unlocode, arrival_deadline, booking_status
+        FROM cargo
+        WHERE shipper_id = CAST(#{shipperId} AS UUID)
+        ORDER BY id
+    </select>
+</mapper>

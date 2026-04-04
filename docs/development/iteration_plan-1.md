@@ -23,7 +23,7 @@
 
 - [ ] US02: 個人荷主を登録し、荷主 ID が発行される
 - [ ] US03: 法人荷主を登録し、契約番号・割引率が保存される
-- [ ] US04: 荷主 ID を指定して貨物予約を登録し、予約番号が発行される
+- [x] US04: 荷主 ID を指定して貨物予約を登録し、予約番号が発行される
 - [ ] テストカバレッジ 80% 以上
 - [ ] SonarQube Quality Gate PASS
 - [ ] Playwright E2E テストが通過
@@ -109,9 +109,9 @@
 | 2.2 | CargoRepository ポート定義 + MyBatisCargoRepository 実装 | 3h | - | [ ] |
 | 2.3 | Flyway マイグレーション（cargo テーブル） | 1h | - | [ ] |
 | 2.4 | CargoBookingCommandService + CargoBookingQueryService 実装 | 2h | - | [ ] |
-| 2.5 | BookingRestController (POST /api/bookings) | 2h | - | [ ] |
-| 2.6 | BookingThymeleafController 一覧・登録画面 | 3h | - | [ ] |
-| 2.7 | 単体テスト + API E2E テスト | 3h | - | [ ] |
+| 2.5 | BookingRestController (POST /api/bookings) | 2h | - | [x] |
+| 2.6 | BookingThymeleafController 一覧・登録画面 | 3h | - | [x] |
+| 2.7 | 単体テスト + API E2E テスト | 3h | - | [x] |
 
 **小計**: 18h（理想時間）
 

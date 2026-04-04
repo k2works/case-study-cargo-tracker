@@ -1,4 +1,4 @@
-package com.example.cargotracker.shipper.interfaces;
+package com.example.cargotracker.booking.interfaces;
 
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +15,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.time.LocalDate;
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -29,8 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.security.user.password=admin"
 })
 @ActiveProfiles("test")
-@DisplayName("Shipper Thymeleaf Controller 統合テスト")
-class ShipperThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
+@DisplayName("Booking Thymeleaf Controller 統合テスト")
+class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
 
     @Autowired
     private WebApplicationContext context;
@@ -50,44 +53,62 @@ class ShipperThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
 
     @Test
     @WithMockUser
-    @DisplayName("GET /shippers で一覧画面がレンダリングされる")
-    void getShippers_shouldRenderIndexPage() throws Exception {
-        mockMvc.perform(get("/shippers"))
+    @DisplayName("GET /bookings で一覧画面がレンダリングされる")
+    void getBookings_shouldRenderIndexPage() throws Exception {
+        mockMvc.perform(get("/bookings"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("shipper/index"))
-                .andExpect(content().string(containsString("荷主管理")));
+                .andExpect(view().name("booking/index"))
+                .andExpect(content().string(containsString("予約管理")));
     }
 
     @Test
     @WithMockUser
-    @DisplayName("GET /shippers/new で登録フォームがレンダリングされる")
-    void getNewShipper_shouldRenderFormPage() throws Exception {
-        mockMvc.perform(get("/shippers/new"))
+    @DisplayName("GET /bookings/new で登録フォームがレンダリングされる")
+    void getNewBooking_shouldRenderFormPage() throws Exception {
+        mockMvc.perform(get("/bookings/new"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("shipper/new"))
-                .andExpect(content().string(containsString("荷主登録")));
+                .andExpect(view().name("booking/new"))
+                .andExpect(content().string(containsString("予約登録")));
     }
 
     @Test
     @WithMockUser
-    @DisplayName("POST /shippers で登録後に詳細画面へリダイレクトする")
-    void postShipper_shouldRedirectToShowPage() throws Exception {
-        MvcResult result = mockMvc.perform(post("/shippers")
+    @DisplayName("POST /bookings で登録後に詳細画面へリダイレクトする")
+    void postBooking_shouldRedirectToShowPage() throws Exception {
+        String shipperId = insertShipper("SHP-WEB01");
+
+        MvcResult result = mockMvc.perform(post("/bookings")
                         .with(csrf())
-                        .param("name", "画面テスト株式会社")
-                        .param("email", "web@example.com")
-                        .param("phone", "03-9999-9999")
-                        .param("shipperType", "CORPORATE")
-                        .param("contractNumber", "CN-WEB")
-                        .param("discountRate", "0.08"))
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "9.500")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", containsString("/shippers/")))
+                .andExpect(header().string("Location", containsString("/bookings/")))
                 .andReturn();
 
         String location = result.getResponse().getHeader("Location");
         mockMvc.perform(get(location))
                 .andExpect(status().isOk())
-                .andExpect(view().name("shipper/show"))
-                .andExpect(content().string(containsString("画面テスト株式会社")));
+                .andExpect(view().name("booking/show"))
+                .andExpect(content().string(containsString(shipperId)));
+    }
+
+    private String insertShipper(String shipperCode) {
+        String shipperId = UUID.randomUUID().toString();
+        jdbcTemplate.update(
+                """
+                INSERT INTO shipper (id, shipper_code, shipper_type, name, email, phone)
+                VALUES (CAST(? AS UUID), ?, 'INDIVIDUAL', ?, ?, ?)
+                """,
+                shipperId,
+                shipperCode,
+                "画面テスト荷主 " + shipperCode,
+                shipperCode.toLowerCase() + "@example.com",
+                "090-0000-0000"
+        );
+        return shipperId;
     }
 }

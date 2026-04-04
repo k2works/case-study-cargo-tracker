@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>予約詳細 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand fw-bold" th:href="@{/}">CargoTracker</a>
+        <div class="navbar-nav me-auto">
+            <a class="nav-link" th:href="@{/shippers}">荷主管理</a>
+            <a class="nav-link active" th:href="@{/bookings}">予約管理</a>
+        </div>
+        <form th:action="@{/logout}" method="post" class="d-flex">
+            <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+        </form>
+    </div>
+</nav>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">予約詳細</h1>
+            <p class="text-secondary mb-0">予約番号: <span th:text="${booking.bookingId}">booking-id</span></p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/bookings}">一覧へ戻る</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">荷主 ID</dt>
+                <dd class="col-sm-9" th:text="${booking.shipperId}">shipper-id</dd>
+
+                <dt class="col-sm-3">貨物種別</dt>
+                <dd class="col-sm-9" th:text="${booking.cargoType}">GENERAL</dd>
+
+                <dt class="col-sm-3">重量</dt>
+                <dd class="col-sm-9" th:text="${booking.weight}">10.500</dd>
+
+                <dt class="col-sm-3">出発地</dt>
+                <dd class="col-sm-9" th:text="${booking.originUnlocode}">JPTYO</dd>
+
+                <dt class="col-sm-3">目的地</dt>
+                <dd class="col-sm-9" th:text="${booking.destinationUnlocode}">USLAX</dd>
+
+                <dt class="col-sm-3">希望着日</dt>
+                <dd class="col-sm-9" th:text="${booking.arrivalDeadline}">2026-04-30</dd>
+
+                <dt class="col-sm-3">状態</dt>
+                <dd class="col-sm-9" th:text="${booking.status}">PRELIMINARY</dd>
+            </dl>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

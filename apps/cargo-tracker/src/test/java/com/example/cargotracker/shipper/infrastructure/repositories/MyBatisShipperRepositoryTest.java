@@ -41,7 +41,7 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("TRUNCATE TABLE shipper");
+        jdbcTemplate.execute("TRUNCATE TABLE cargo, shipper RESTART IDENTITY CASCADE");
     }
 
     @Test

@@ -44,7 +44,7 @@ class ShipperRestControllerTest extends PostgreSQLIntegrationTestBase {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update("DELETE FROM shipper");
+        jdbcTemplate.execute("TRUNCATE TABLE cargo, shipper RESTART IDENTITY CASCADE");
         mockMvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(SecurityMockMvcConfigurers.springSecurity())
                 .build();
