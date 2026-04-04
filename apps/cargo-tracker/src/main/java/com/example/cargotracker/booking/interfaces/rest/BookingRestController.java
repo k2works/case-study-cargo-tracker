@@ -3,6 +3,7 @@ package com.example.cargotracker.booking.interfaces.rest;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.CargoBookingQueryService;
+import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.CargoResponse;
@@ -58,12 +59,14 @@ public class BookingRestController {
                 .toList();
     }
 
+    @ExceptionHandler(ShipperNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleShipperNotFound(ShipperNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("SHIPPER_NOT_FOUND", "指定された荷主が見つかりません。"));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException exception) {
-        if ("SHIPPER_NOT_FOUND".equals(exception.getMessage())) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("SHIPPER_NOT_FOUND", "指定された荷主が見つかりません。"));
-        }
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("BAD_REQUEST", exception.getMessage()));
     }
@@ -79,6 +82,11 @@ public class BookingRestController {
                 request.getShipperId(),
                 request.getCargoType(),
                 request.getWeight(),
+                request.getDimensionLength(),
+                request.getDimensionWidth(),
+                request.getDimensionHeight(),
+                request.getQuantity(),
+                request.getDescription(),
                 request.getOriginUnlocode(),
                 request.getDestinationUnlocode(),
                 request.getArrivalDeadline()

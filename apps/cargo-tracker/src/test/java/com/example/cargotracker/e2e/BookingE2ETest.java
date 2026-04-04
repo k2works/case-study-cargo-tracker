@@ -18,11 +18,14 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,6 +71,85 @@ class BookingE2ETest extends PostgreSQLIntegrationTestBase {
                 .andExpect(jsonPath("$.shipperId", is(shipperId)))
                 .andExpect(jsonPath("$.cargoType", is("GENERAL")))
                 .andExpect(jsonPath("$.status", is("PRELIMINARY")));
+    }
+
+    @Test
+    @DisplayName("予約登録フォームに required 属性が設定されている")
+    void bookingNewForm_shouldHaveRequiredAttributes() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getRequest().getSession();
+
+        mockMvc.perform(get("/bookings/new").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("required")))
+                .andExpect(content().string(containsString("aria-describedby")));
+    }
+
+    @Test
+    @DisplayName("予約一覧でステータスバッジが日本語・色分けで表示される")
+    void bookingIndex_shouldDisplayJapaneseStatusBadge() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getRequest().getSession();
+
+        String shipperId = registerShipper(session);
+        registerBooking(session, shipperId);
+
+        mockMvc.perform(get("/bookings").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("仮受付")))
+                .andExpect(content().string(containsString("text-bg-warning")));
+    }
+
+    @Test
+    @DisplayName("予約登録フォームで貨物種別が日本語表示される")
+    void bookingNewForm_shouldDisplayJapaneseCargoTypes() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getRequest().getSession();
+
+        mockMvc.perform(get("/bookings/new").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("一般")))
+                .andExpect(content().string(containsString("危険物")))
+                .andExpect(content().string(containsString("冷凍・冷蔵")));
+    }
+
+    @Test
+    @DisplayName("予約登録成功時にフラッシュメッセージがリダイレクト先に渡される")
+    void bookingCreate_shouldSetFlashMessageOnSuccess() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getRequest().getSession();
+
+        String shipperId = registerShipper(session);
+
+        mockMvc.perform(post("/bookings").session(session).with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "10.5")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "NLRTM")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(21).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    @DisplayName("予約登録フォームに荷主ドロップダウンと UN/LOCODE ヘルプが表示される")
+    void bookingNewForm_shouldHaveShipperDropdownAndUnlocodeHelp() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getRequest().getSession();
+
+        registerShipper(session);
+
+        mockMvc.perform(get("/bookings/new").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<select")))
+                .andExpect(content().string(containsString("E2E 荷主")))
+                .andExpect(content().string(containsString("JPTYO")));
     }
 
     private String registerShipper(MockHttpSession session) throws Exception {

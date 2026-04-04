@@ -23,43 +23,84 @@
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="shipperId" class="form-label">荷主 ID</label>
-                                <input id="shipperId" type="text" th:field="*{shipperId}" class="form-control">
-                                <div class="invalid-feedback d-block" th:errors="*{shipperId}"></div>
+                                <label for="shipperId" class="form-label">荷主</label>
+                                <select id="shipperId" th:field="*{shipperId}" class="form-select"
+                                        required aria-describedby="shipperIdHelp">
+                                    <option value="">選択してください</option>
+                                    <option th:each="s : ${shippers}"
+                                            th:value="${s.id}"
+                                            th:text="${s.name + ' (' + s.code + ')'}">荷主名</option>
+                                </select>
+                                <div id="shipperIdHelp" class="invalid-feedback d-block" th:errors="*{shipperId}"></div>
                             </div>
 
                             <div class="col-md-6">
                                 <label for="cargoType" class="form-label">貨物種別</label>
-                                <select id="cargoType" th:field="*{cargoType}" class="form-select">
+                                <select id="cargoType" th:field="*{cargoType}" class="form-select"
+                                        required aria-describedby="cargoTypeHelp">
                                     <option value="">選択してください</option>
-                                    <option th:each="cargoType : ${cargoTypes}"
-                                            th:value="${cargoType.name()}"
-                                            th:text="${cargoType.name()}">GENERAL</option>
+                                    <option th:each="ct : ${cargoTypes}"
+                                            th:value="${ct.name()}"
+                                            th:text="${ct.displayName}">一般</option>
                                 </select>
-                                <div class="invalid-feedback d-block" th:errors="*{cargoType}"></div>
+                                <div id="cargoTypeHelp" class="invalid-feedback d-block" th:errors="*{cargoType}"></div>
                             </div>
 
                             <div class="col-md-6">
                                 <label for="weight" class="form-label">重量</label>
-                                <input id="weight" type="number" step="0.001" min="0.001" th:field="*{weight}" class="form-control">
-                                <div class="invalid-feedback d-block" th:errors="*{weight}"></div>
+                                <input id="weight" type="number" step="0.001" min="0.001" th:field="*{weight}" class="form-control"
+                                       required aria-describedby="weightHelp">
+                                <div id="weightHelp" class="invalid-feedback d-block" th:errors="*{weight}"></div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="dimensionLength" class="form-label">寸法 - 長さ (m)</label>
+                                <input id="dimensionLength" type="number" step="0.001" min="0.001" th:field="*{dimensionLength}" class="form-control">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="dimensionWidth" class="form-label">寸法 - 幅 (m)</label>
+                                <input id="dimensionWidth" type="number" step="0.001" min="0.001" th:field="*{dimensionWidth}" class="form-control">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="dimensionHeight" class="form-label">寸法 - 高さ (m)</label>
+                                <input id="dimensionHeight" type="number" step="0.001" min="0.001" th:field="*{dimensionHeight}" class="form-control">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="quantity" class="form-label">個数</label>
+                                <input id="quantity" type="number" min="1" th:field="*{quantity}" class="form-control">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="description" class="form-label">品名</label>
+                                <input id="description" type="text" th:field="*{description}" class="form-control"
+                                       maxlength="500" placeholder="例: 電子部品一式">
                             </div>
 
                             <div class="col-md-6">
                                 <label for="arrivalDeadline" class="form-label">希望着日</label>
-                                <input id="arrivalDeadline" type="date" th:field="*{arrivalDeadline}" class="form-control">
-                                <div class="invalid-feedback d-block" th:errors="*{arrivalDeadline}"></div>
+                                <input id="arrivalDeadline" type="date" th:field="*{arrivalDeadline}" class="form-control"
+                                       required aria-describedby="arrivalDeadlineHelp">
+                                <div id="arrivalDeadlineHelp" class="invalid-feedback d-block" th:errors="*{arrivalDeadline}"></div>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="originUnlocode" class="form-label">出発地</label>
-                                <input id="originUnlocode" type="text" th:field="*{originUnlocode}" class="form-control text-uppercase">
+                                <label for="originUnlocode" class="form-label">出発地（UN/LOCODE）</label>
+                                <input id="originUnlocode" type="text" th:field="*{originUnlocode}" class="form-control text-uppercase"
+                                       required aria-describedby="originUnlocodeHelp" placeholder="JPTYO"
+                                       maxlength="5" pattern="[A-Za-z]{5}">
+                                <div id="originUnlocodeHelp" class="form-text">例: JPTYO（東京）、JPOSA（大阪）、USLAX（ロサンゼルス）</div>
                                 <div class="invalid-feedback d-block" th:errors="*{originUnlocode}"></div>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="destinationUnlocode" class="form-label">目的地</label>
-                                <input id="destinationUnlocode" type="text" th:field="*{destinationUnlocode}" class="form-control text-uppercase">
+                                <label for="destinationUnlocode" class="form-label">目的地（UN/LOCODE）</label>
+                                <input id="destinationUnlocode" type="text" th:field="*{destinationUnlocode}" class="form-control text-uppercase"
+                                       required aria-describedby="destinationUnlocodeHelp" placeholder="NLRTM"
+                                       maxlength="5" pattern="[A-Za-z]{5}">
+                                <div id="destinationUnlocodeHelp" class="form-text">例: NLRTM（ロッテルダム）、CNSHA（上海）、SGSIN（シンガポール）</div>
                                 <div class="invalid-feedback d-block" th:errors="*{destinationUnlocode}"></div>
                             </div>
                         </div>

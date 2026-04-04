@@ -4,9 +4,12 @@ import com.example.cargotracker.booking.application.internal.commandservices.Boo
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
 import com.example.cargotracker.booking.application.internal.queryservices.CargoBookingQueryService;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
+import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.transform.CargoAssembler;
+import com.example.cargotracker.shipper.application.internal.queryservices.FindShipperQueryService;
+import com.example.cargotracker.shipper.interfaces.rest.transform.ShipperAssembler;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -26,20 +30,27 @@ public class BookingThymeleafController {
 
     private static final String BOOKING_ATTRIBUTE = "booking";
     private static final String CARGO_TYPES_ATTRIBUTE = "cargoTypes";
+    private static final String SHIPPERS_ATTRIBUTE = "shippers";
     private static final String NEW_VIEW = "booking/new";
 
     private final CargoBookingCommandService cargoBookingCommandService;
     private final CargoBookingQueryService cargoBookingQueryService;
     private final CargoAssembler cargoAssembler;
+    private final FindShipperQueryService findShipperQueryService;
+    private final ShipperAssembler shipperAssembler;
 
     public BookingThymeleafController(
             CargoBookingCommandService cargoBookingCommandService,
             CargoBookingQueryService cargoBookingQueryService,
-            CargoAssembler cargoAssembler
+            CargoAssembler cargoAssembler,
+            FindShipperQueryService findShipperQueryService,
+            ShipperAssembler shipperAssembler
     ) {
         this.cargoBookingCommandService = cargoBookingCommandService;
         this.cargoBookingQueryService = cargoBookingQueryService;
         this.cargoAssembler = cargoAssembler;
+        this.findShipperQueryService = findShipperQueryService;
+        this.shipperAssembler = shipperAssembler;
     }
 
     @GetMapping
@@ -56,6 +67,7 @@ public class BookingThymeleafController {
             model.addAttribute(BOOKING_ATTRIBUTE, new BookCargoRequest());
         }
         model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
+        addShippersToModel(model);
         return NEW_VIEW;
     }
 
@@ -63,22 +75,23 @@ public class BookingThymeleafController {
     public String create(
             @Valid @ModelAttribute(BOOKING_ATTRIBUTE) BookCargoRequest request,
             BindingResult bindingResult,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
             model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
+            addShippersToModel(model);
             return NEW_VIEW;
         }
 
         try {
             BookingId bookingId = cargoBookingCommandService.bookCargo(toCommand(request));
+            redirectAttributes.addFlashAttribute("successMessage", "予約を登録しました。（予約番号: " + bookingId + "）");
             return "redirect:/bookings/" + bookingId;
-        } catch (IllegalArgumentException exception) {
-            if (!"SHIPPER_NOT_FOUND".equals(exception.getMessage())) {
-                throw exception;
-            }
+        } catch (ShipperNotFoundException exception) {
             bindingResult.rejectValue("shipperId", "notFound", "指定された荷主が見つかりません。");
             model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
+            addShippersToModel(model);
             return NEW_VIEW;
         }
     }
@@ -91,11 +104,22 @@ public class BookingThymeleafController {
         return "booking/show";
     }
 
+    private void addShippersToModel(Model model) {
+        model.addAttribute(SHIPPERS_ATTRIBUTE, findShipperQueryService.findAll().stream()
+                .map(shipperAssembler::toResponse)
+                .toList());
+    }
+
     private BookCargoCommand toCommand(BookCargoRequest request) {
         return new BookCargoCommand(
                 request.getShipperId(),
                 request.getCargoType(),
                 request.getWeight(),
+                request.getDimensionLength(),
+                request.getDimensionWidth(),
+                request.getDimensionHeight(),
+                request.getQuantity(),
+                request.getDescription(),
                 request.getOriginUnlocode(),
                 request.getDestinationUnlocode(),
                 request.getArrivalDeadline()

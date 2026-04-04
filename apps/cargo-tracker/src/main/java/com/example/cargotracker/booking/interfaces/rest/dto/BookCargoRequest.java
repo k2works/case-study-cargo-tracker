@@ -21,6 +21,12 @@ public class BookCargoRequest {
     @DecimalMin("0.001")
     private BigDecimal weight;
 
+    private BigDecimal dimensionLength;
+    private BigDecimal dimensionWidth;
+    private BigDecimal dimensionHeight;
+    private Integer quantity;
+    private String description;
+
     @NotBlank
     @Size(min = 5, max = 5)
     private String originUnlocode;
@@ -56,6 +62,21 @@ public class BookCargoRequest {
     public void setWeight(BigDecimal weight) {
         this.weight = weight;
     }
+
+    public BigDecimal getDimensionLength() { return dimensionLength; }
+    public void setDimensionLength(BigDecimal dimensionLength) { this.dimensionLength = dimensionLength; }
+
+    public BigDecimal getDimensionWidth() { return dimensionWidth; }
+    public void setDimensionWidth(BigDecimal dimensionWidth) { this.dimensionWidth = dimensionWidth; }
+
+    public BigDecimal getDimensionHeight() { return dimensionHeight; }
+    public void setDimensionHeight(BigDecimal dimensionHeight) { this.dimensionHeight = dimensionHeight; }
+
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getOriginUnlocode() {
         return originUnlocode;

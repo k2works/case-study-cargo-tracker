@@ -7,7 +7,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.infrastructure.repositories.MyBatisCargoRepository;
 import com.example.cargotracker.shared.domain.model.Location;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

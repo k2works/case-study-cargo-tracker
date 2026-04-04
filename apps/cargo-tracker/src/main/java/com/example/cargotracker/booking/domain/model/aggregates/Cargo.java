@@ -1,8 +1,11 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.Description;
+import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
+import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -13,6 +16,9 @@ public class Cargo {
     private final ShipperId shipperId;
     private final CargoType cargoType;
     private final BigDecimal weight;
+    private final Dimensions dimensions;
+    private final Quantity quantity;
+    private final Description description;
     private final RouteSpecification routeSpecification;
     private final BookingStatus status;
 
@@ -23,14 +29,7 @@ public class Cargo {
             BigDecimal weight,
             RouteSpecification routeSpecification
     ) {
-        this(
-                bookingId,
-                shipperId,
-                cargoType,
-                weight,
-                routeSpecification,
-                BookingStatus.PRELIMINARY
-        );
+        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, BookingStatus.PRELIMINARY);
     }
 
     public Cargo(
@@ -41,10 +40,27 @@ public class Cargo {
             RouteSpecification routeSpecification,
             BookingStatus status
     ) {
+        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, status);
+    }
+
+    public Cargo(
+            BookingId bookingId,
+            ShipperId shipperId,
+            CargoType cargoType,
+            BigDecimal weight,
+            Dimensions dimensions,
+            Quantity quantity,
+            Description description,
+            RouteSpecification routeSpecification,
+            BookingStatus status
+    ) {
         this.bookingId = Objects.requireNonNull(bookingId, "bookingId must not be null");
         this.shipperId = Objects.requireNonNull(shipperId, "shipperId must not be null");
         this.cargoType = Objects.requireNonNull(cargoType, "cargoType must not be null");
         this.weight = Objects.requireNonNull(weight, "weight must not be null");
+        this.dimensions = dimensions;
+        this.quantity = quantity;
+        this.description = description;
         this.routeSpecification = Objects.requireNonNull(routeSpecification, "routeSpecification must not be null");
         this.status = Objects.requireNonNull(status, "status must not be null");
 
@@ -67,6 +83,18 @@ public class Cargo {
 
     public BigDecimal getWeight() {
         return weight;
+    }
+
+    public Dimensions getDimensions() {
+        return dimensions;
+    }
+
+    public Quantity getQuantity() {
+        return quantity;
+    }
+
+    public Description getDescription() {
+        return description;
     }
 
     public RouteSpecification getRouteSpecification() {

@@ -9,6 +9,11 @@
         <result property="shipperId" column="shipper_id"/>
         <result property="cargoType" column="cargo_type"/>
         <result property="weight" column="weight"/>
+        <result property="dimensionLength" column="dimension_length"/>
+        <result property="dimensionWidth" column="dimension_width"/>
+        <result property="dimensionHeight" column="dimension_height"/>
+        <result property="quantity" column="quantity"/>
+        <result property="description" column="description"/>
         <result property="originUnlocode" column="origin_unlocode"/>
         <result property="destinationUnlocode" column="destination_unlocode"/>
         <result property="arrivalDeadline" column="arrival_deadline"/>
@@ -21,6 +26,11 @@
             shipper_id,
             cargo_type,
             weight,
+            dimension_length,
+            dimension_width,
+            dimension_height,
+            quantity,
+            description,
             origin_unlocode,
             destination_unlocode,
             arrival_deadline,
@@ -31,6 +41,11 @@
             CAST(#{shipperId} AS UUID),
             #{cargoType},
             #{weight},
+            #{dimensionLength},
+            #{dimensionWidth},
+            #{dimensionHeight},
+            #{quantity},
+            #{description},
             #{originUnlocode},
             #{destinationUnlocode},
             #{arrivalDeadline},
@@ -39,22 +54,28 @@
     </insert>
 
     <select id="findByBookingId" resultMap="cargoRecordMap">
-        SELECT id, booking_id, shipper_id, cargo_type, weight, origin_unlocode,
-               destination_unlocode, arrival_deadline, booking_status
+        SELECT id, booking_id, shipper_id, cargo_type, weight,
+               dimension_length, dimension_width, dimension_height,
+               quantity, description,
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status
         FROM cargo
         WHERE booking_id = CAST(#{bookingId} AS UUID)
     </select>
 
     <select id="findAll" resultMap="cargoRecordMap">
-        SELECT id, booking_id, shipper_id, cargo_type, weight, origin_unlocode,
-               destination_unlocode, arrival_deadline, booking_status
+        SELECT id, booking_id, shipper_id, cargo_type, weight,
+               dimension_length, dimension_width, dimension_height,
+               quantity, description,
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status
         FROM cargo
         ORDER BY id
     </select>
 
     <select id="findByShipperId" resultMap="cargoRecordMap">
-        SELECT id, booking_id, shipper_id, cargo_type, weight, origin_unlocode,
-               destination_unlocode, arrival_deadline, booking_status
+        SELECT id, booking_id, shipper_id, cargo_type, weight,
+               dimension_length, dimension_width, dimension_height,
+               quantity, description,
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status
         FROM cargo
         WHERE shipper_id = CAST(#{shipperId} AS UUID)
         ORDER BY id

@@ -13,6 +13,11 @@ public class CargoRecord {
     private String originUnlocode;
     private String destinationUnlocode;
     private LocalDate arrivalDeadline;
+    private BigDecimal dimensionLength;
+    private BigDecimal dimensionWidth;
+    private BigDecimal dimensionHeight;
+    private Integer quantity;
+    private String description;
     private String bookingStatus;
 
     public Long getId() {
@@ -78,6 +83,21 @@ public class CargoRecord {
     public void setArrivalDeadline(LocalDate arrivalDeadline) {
         this.arrivalDeadline = arrivalDeadline;
     }
+
+    public BigDecimal getDimensionLength() { return dimensionLength; }
+    public void setDimensionLength(BigDecimal dimensionLength) { this.dimensionLength = dimensionLength; }
+
+    public BigDecimal getDimensionWidth() { return dimensionWidth; }
+    public void setDimensionWidth(BigDecimal dimensionWidth) { this.dimensionWidth = dimensionWidth; }
+
+    public BigDecimal getDimensionHeight() { return dimensionHeight; }
+    public void setDimensionHeight(BigDecimal dimensionHeight) { this.dimensionHeight = dimensionHeight; }
+
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getBookingStatus() {
         return bookingStatus;

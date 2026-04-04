@@ -7,6 +7,11 @@ public record BookCargoCommand(
         String shipperId,
         String cargoType,
         BigDecimal weight,
+        BigDecimal dimensionLength,
+        BigDecimal dimensionWidth,
+        BigDecimal dimensionHeight,
+        Integer quantity,
+        String description,
         String originUnlocode,
         String destinationUnlocode,
         LocalDate arrivalDeadline
