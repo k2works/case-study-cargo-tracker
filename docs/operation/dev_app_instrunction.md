@@ -367,18 +367,40 @@ case-study-cargo-tracker/
 │           ├── main/
 │           │   ├── java/com/example/cargotracker/
 │           │   │   ├── shipper/                   # 荷主コンテキスト
-│           │   │   │   ├── domain/                # ドメイン層
-│           │   │   │   ├── application/           # アプリケーション層
-│           │   │   │   └── infrastructure/        # インフラストラクチャ層
+│           │   │   │   ├── domain/model/
+│           │   │   │   │   ├── aggregates/        # 集約ルート
+│           │   │   │   │   ├── commands/          # コマンド
+│           │   │   │   │   └── valueobjects/      # 値オブジェクト
+│           │   │   │   ├── application/internal/
+│           │   │   │   │   ├── commandservices/   # コマンドサービス
+│           │   │   │   │   └── queryservices/     # クエリサービス
+│           │   │   │   ├── infrastructure/
+│           │   │   │   │   └── repositories/      # リポジトリ実装
+│           │   │   │   └── interfaces/
+│           │   │   │       ├── rest/              # REST Controller + dto/ + transform/
+│           │   │   │       └── web/               # 画面 Controller
 │           │   │   ├── booking/                   # 予約コンテキスト
-│           │   │   │   ├── domain/
-│           │   │   │   ├── application/
-│           │   │   │   └── infrastructure/
-│           │   │   └── shared/                    # 共有カーネル
-│           │   │       ├── domain/model/           # 共有ドメインモデル
-│           │   │       └── infrastructure/
-│           │   │           ├── config/             # SecurityConfig, OpenApiConfig
-│           │   │           └── web/                # HomeController
+│           │   │   │   ├── domain/model/
+│           │   │   │   │   ├── aggregates/
+│           │   │   │   │   ├── commands/
+│           │   │   │   │   ├── entities/
+│           │   │   │   │   └── valueobjects/
+│           │   │   │   ├── application/internal/
+│           │   │   │   │   ├── commandservices/
+│           │   │   │   │   ├── queryservices/
+│           │   │   │   │   └── outboundservices/acl/
+│           │   │   │   ├── infrastructure/
+│           │   │   │   │   ├── repositories/
+│           │   │   │   │   └── services/
+│           │   │   │   └── interfaces/
+│           │   │   │       ├── rest/
+│           │   │   │       └── web/
+│           │   │   ├── shareddomain/              # 共有カーネル
+│           │   │   │   ├── events/                # ドメインイベント
+│           │   │   │   └── model/                 # 共有値オブジェクト（ShipperId 等）
+│           │   │   └── shared/infrastructure/
+│           │   │       ├── config/                # SecurityConfig, OpenApiConfig
+│           │   │       └── web/                   # HomeController
 │           │   └── resources/
 │           │       ├── application.yml            # 開発設定（H2）
 │           │       ├── application-product.yml    # 本番設定（PostgreSQL）
