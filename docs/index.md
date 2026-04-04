@@ -18,8 +18,8 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
-| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 5 件作成済み（IT1 完了、IT2 計画済み） |
+| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 4 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
@@ -57,11 +57,24 @@
 | [運用要件](./design/operation.md) | 監視、バックアップ、デプロイ、障害対応 |
 | [技術スタック選定](./design/tech_stack.md) | バックエンド・フロントエンド・インフラ・テスト全技術スタック一覧 |
 
+### 開発ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [リリース計画](./development/release_plan.md) | リリース全体のスコープ、スケジュール、ベロシティ、バッファ戦略 |
+| [IT1 計画](./development/iteration_plan-1.md) | イテレーション 1 の詳細計画（US02・US03・US04） |
+| [IT1 ふりかえり](./development/retrospective-1.md) | IT1 の KPT 分析と IT2 への申し送り事項 |
+| [IT1 完了報告書](./development/iteration_report-1.md) | IT1 の実績メトリクス・成果物一覧・アクションアイテム |
+| [IT2 計画](./development/iteration_plan-2.md) | IT2 計画（US05・US13・IT1 改善、10 SP） |
+| [IT2 計画](./development/iteration_plan-2.md) | イテレーション 2 の詳細計画（US05・US13 + IT1 技術的負債） |
+
 ### 運用ドキュメント
 
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [アプリケーション開発環境セットアップ](./operation/dev_app_instrunction.md) | ローカルアプリケーション開発環境の構築手順 |
+| [Playwright E2E テスト](./operation/dev_e2e_instruction.md) | Playwright による E2E テスト環境の構築手順 |
+| [API E2E テスト](./operation/dev_e2e_api_instruction.md) | MockMvc + Testcontainers による API E2E テストの構築手順 |
 | [開発環境セットアップ](./operation/dev_infa_instruction.md) | Heroku コンテナを使った開発環境の構築手順 |
 
 ### ADR

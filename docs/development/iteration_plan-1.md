@@ -388,6 +388,69 @@ c }o--o| loc : spec_destination_unlocode
 @endsalt
 ```
 
+#### モデル
+
+```plantuml
+@startuml
+
+class 荷主一覧画面 {
+  荷主リスト: List<荷主行>
+  新規登録()
+  詳細表示(荷主コード)
+}
+
+class 荷主登録画面 {
+  名前: String
+  メール: String
+  電話番号: String
+  荷主種別: ShipperType
+  契約番号: String
+  割引率: BigDecimal
+  登録()
+  キャンセル()
+}
+
+class 荷主詳細画面 {
+  荷主コード: String
+  名前: String
+  メール: String
+  荷主種別: String
+}
+
+class 予約一覧画面 {
+  予約リスト: List<予約行>
+  新規登録()
+  詳細表示(予約番号)
+}
+
+class 予約登録画面 {
+  荷主コード: String
+  貨物種別: CargoType
+  重量: BigDecimal
+  出発地: String
+  目的地: String
+  希望着日: Date
+  登録()
+  キャンセル()
+}
+
+class 予約詳細画面 {
+  予約番号: String
+  荷主コード: String
+  貨物種別: String
+  状態: String
+}
+
+荷主一覧画面 --> 荷主登録画面 : 新規登録
+荷主一覧画面 --> 荷主詳細画面 : 詳細表示
+荷主登録画面 --> 荷主一覧画面 : 登録成功
+予約一覧画面 --> 予約登録画面 : 新規登録
+予約一覧画面 --> 予約詳細画面 : 詳細表示
+予約登録画面 --> 予約詳細画面 : 登録成功
+
+@enduml
+```
+
 #### インタラクション
 
 ```plantuml
@@ -468,6 +531,79 @@ state "予約フロー" as booking_flow {
 | POST | /api/bookings | 貨物予約を登録する |
 | GET | /api/bookings | 予約一覧を取得する |
 | GET | /api/bookings/{id} | 予約を取得する |
+
+### データベーススキーマ
+
+> Flyway マイグレーションで管理。IT1 では `location`、`shipper`、`cargo` の 3 テーブルを作成。
+
+```sql
+-- V1__create_location_table.sql
+CREATE TABLE location (
+    id BIGSERIAL PRIMARY KEY,
+    unlocode VARCHAR(5) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    country_code VARCHAR(2),
+    time_zone VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- V2__create_shipper_table.sql
+CREATE TABLE shipper (
+    id BIGSERIAL PRIMARY KEY,
+    shipper_code VARCHAR(20) NOT NULL UNIQUE,
+    shipper_type VARCHAR(20) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    email VARCHAR(200) NOT NULL,
+    phone VARCHAR(50),
+    contract_number VARCHAR(50),
+    discount_rate NUMERIC(5,4),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- V3__create_cargo_table.sql
+CREATE TABLE cargo (
+    id BIGSERIAL PRIMARY KEY,
+    booking_id VARCHAR(20) NOT NULL UNIQUE,
+    shipper_id BIGINT NOT NULL REFERENCES shipper(id),
+    booking_status VARCHAR(30) NOT NULL,
+    transport_status VARCHAR(30) NOT NULL,
+    routing_status VARCHAR(30) NOT NULL,
+    cargo_type VARCHAR(20) NOT NULL,
+    weight_kg NUMERIC(10,3) NOT NULL,
+    declared_value NUMERIC(15,2),
+    spec_origin_unlocode VARCHAR(5) REFERENCES location(unlocode),
+    spec_destination_unlocode VARCHAR(5) REFERENCES location(unlocode),
+    spec_arrival_deadline DATE,
+    origin_unlocode VARCHAR(5) REFERENCES location(unlocode),
+    booking_amount_value INTEGER NOT NULL,
+    booking_amount_currency VARCHAR(3) NOT NULL,
+    consignee_name VARCHAR(200),
+    consignee_email VARCHAR(200),
+    tracking_number VARCHAR(20),
+    next_expected_location_unlocode VARCHAR(5),
+    next_expected_handling_event_type VARCHAR(30),
+    next_expected_voyage_number VARCHAR(20),
+    last_known_location_unlocode VARCHAR(5),
+    current_voyage_number VARCHAR(20),
+    last_handling_event_type VARCHAR(30),
+    last_handling_event_location VARCHAR(5),
+    last_handling_event_voyage VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### ADR
+
+| ADR | タイトル | ステータス |
+|-----|---------|-----------|
+| [ADR-001](../adr/001-spring-boot-4-java-25.md) | Spring Boot 4.0.5 + Java 25 を採用する | 承認 |
+| [ADR-006](../adr/006-testcontainers-singleton-pattern.md) | Testcontainers でシングルトンコンテナパターンを採用する | 承認 |
+| [ADR-010](../adr/010-practical-ddd-package-structure.md) | Practical DDD in Enterprise Java のパッケージ構成を採用する | 承認 |
+| [ADR-011](../adr/011-archunit-hexagonal-rules.md) | ArchUnit でヘキサゴナルアーキテクチャの依存関係ルールを自動検証する | 承認 |
+| [ADR-012](../adr/012-default-profile-login-prefill.md) | デフォルトプロファイルでログインフォームに認証情報をプリセットする | 承認 |
 
 ### ディレクトリ構成
 
