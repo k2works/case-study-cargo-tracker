@@ -11,6 +11,7 @@ import journalTasks from './ops/scripts/journal.js';
 import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
+import cargoTrackerTasks from './ops/scripts/cargo_tracker.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -18,8 +19,10 @@ journalTasks(gulp);
 vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
+cargoTrackerTasks(gulp);
 
-export const dev = gulp.series('mkdocs:serve', 'mkdocs:open');
+export const dev = gulp.series('cargo-tracker:dev');
+export const tdd = gulp.series('cargo-tracker:tdd');
 
 // Export gulp to make it available to the gulp CLI
 export default gulp;

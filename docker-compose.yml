@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: cargo-tracker-postgres
+    environment:
+      POSTGRES_DB: cargo_tracker
+      POSTGRES_USER: cargo_tracker
+      POSTGRES_PASSWORD: cargo_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargo_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   dev:
     build:
       context: .
@@ -31,3 +48,6 @@ services:
     image: plantuml/plantuml-server:jetty
     environment:
       BASE_URL: plantuml
+
+volumes:
+  postgres_data:

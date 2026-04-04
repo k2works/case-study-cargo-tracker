@@ -1,0 +1,2 @@
+-- Initial schema
+-- Tables will be added as features are implemented

@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cargo_tracker
+    driver-class-name: org.postgresql.Driver
+    username: cargo_tracker
+    password: cargo_tracker
+  h2:
+    console:
+      enabled: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration

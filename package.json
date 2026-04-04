@@ -15,7 +15,13 @@
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
-    "gemini:yolo": "gemini --yolo"
+    "gemini:yolo": "gemini --yolo",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/cargo-tracker/src/**/*.java": [
+      "node ops/scripts/pre_commit_gradle_check.mjs"
+    ]
   },
   "repository": {
     "type": "git",
@@ -37,5 +43,9 @@
     "@k2works/claude-code-booster": "^3.4.1",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
   }
 }
