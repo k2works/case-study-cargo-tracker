@@ -6,7 +6,7 @@ import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import org.junit.jupiter.api.Test;
 
@@ -30,24 +30,32 @@ class CorporateShipperTest {
         DiscountRate discountRate = new DiscountRate(new BigDecimal("0.1000"));
 
         CorporateShipper shipper = assertDoesNotThrow(() ->
-                new CorporateShipper(shipperId, shipperCode, shipperName, email, phone, contractNumber, discountRate));
+                new CorporateShipper(shipperId, shipperCode, shipperName, email, phone, null, contractNumber, discountRate));
 
         assertEquals(contractNumber, shipper.getContractNumber());
         assertEquals(discountRate, shipper.getDiscountRate());
     }
 
     @Test
-    void shouldThrowWhenDiscountRateExceedsUpperBound() {
-        BigDecimal tooLargeDiscountRate = new BigDecimal("0.1501");
-
-        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(tooLargeDiscountRate));
+    void shouldThrowWhenDiscountRateIsNegative_boundary() {
+        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(new BigDecimal("-0.0001")));
     }
 
     @Test
-    void shouldThrowWhenDiscountRateIsNegative() {
-        BigDecimal negativeDiscountRate = new BigDecimal("-0.0001");
+    void shouldAcceptDiscountRateAtLowerBound() {
+        DiscountRate rate = assertDoesNotThrow(() -> new DiscountRate(new BigDecimal("0.0000")));
+        assertEquals(BigDecimal.ZERO, rate.value());
+    }
 
-        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(negativeDiscountRate));
+    @Test
+    void shouldAcceptDiscountRateAtUpperBound() {
+        DiscountRate rate = assertDoesNotThrow(() -> new DiscountRate(new BigDecimal("0.3000")));
+        assertEquals(new BigDecimal("0.3"), rate.value());
+    }
+
+    @Test
+    void shouldThrowWhenDiscountRateExceedsUpperBound_boundary() {
+        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(new BigDecimal("0.3001")));
     }
 
     @Test
@@ -59,6 +67,6 @@ class CorporateShipperTest {
         ContractNumber contractNumber = new ContractNumber("CN-2026-0001");
 
         assertThrows(IllegalArgumentException.class, () ->
-                new CorporateShipper(shipperId, shipperCode, shipperName, email, null, contractNumber, null));
+                new CorporateShipper(shipperId, shipperCode, shipperName, email, null, null, contractNumber, null));
     }
 }

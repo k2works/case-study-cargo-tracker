@@ -2,7 +2,7 @@ package com.example.cargotracker.booking.domain.model.repository;
 
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 
 import java.util.List;
 import java.util.Optional;

@@ -8,7 +8,7 @@ import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +53,7 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new ShipperName("山田 太郎"),
                 new Email("taro.yamada@example.com"),
                 new Phone("090-1111-2222"),
+                null,
                 ShipperType.INDIVIDUAL
         );
 
@@ -73,6 +74,7 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new ShipperName("テスト商事株式会社"),
                 new Email("sales@test-corp.example.com"),
                 new Phone("03-1234-5678"),
+                null,
                 new ContractNumber("CN-001"),
                 new DiscountRate(new BigDecimal("0.10"))
         );
@@ -95,6 +97,7 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new ShipperName("佐藤 花子"),
                 new Email("duplicated@example.com"),
                 new Phone("080-1111-2222"),
+                null,
                 ShipperType.INDIVIDUAL
         );
         Shipper second = new Shipper(
@@ -103,6 +106,7 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new ShipperName("田中 次郎"),
                 new Email("duplicated@example.com"),
                 new Phone("080-3333-4444"),
+                null,
                 ShipperType.INDIVIDUAL
         );
 
@@ -129,6 +133,7 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new ShipperName("個人 荷主"),
                 new Email("individual@example.com"),
                 new Phone("090-5555-6666"),
+                null,
                 ShipperType.INDIVIDUAL
         );
         CorporateShipper corporate = new CorporateShipper(
@@ -137,6 +142,7 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 new ShipperName("法人 荷主株式会社"),
                 new Email("corporate@example.com"),
                 new Phone("03-9999-8888"),
+                null,
                 new ContractNumber("CN-002"),
                 new DiscountRate(new BigDecimal("0.05"))
         );

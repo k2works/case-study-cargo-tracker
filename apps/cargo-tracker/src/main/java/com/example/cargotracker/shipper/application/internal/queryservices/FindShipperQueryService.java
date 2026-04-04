@@ -3,7 +3,7 @@ package com.example.cargotracker.shipper.application.internal.queryservices;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.repository.ShipperRepository;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

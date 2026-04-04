@@ -5,7 +5,7 @@ import com.example.cargotracker.shipper.domain.model.aggregates.ShipperType;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +26,7 @@ class ShipperTest {
         Phone phone = new Phone("03-1234-5678");
 
         Shipper shipper = assertDoesNotThrow(() ->
-                new Shipper(shipperId, shipperCode, shipperName, email, phone, ShipperType.INDIVIDUAL));
+                new Shipper(shipperId, shipperCode, shipperName, email, phone, null, ShipperType.INDIVIDUAL));
 
         assertEquals(shipperId, shipper.getId());
         assertEquals(shipperCode, shipper.getCode());
@@ -50,7 +50,7 @@ class ShipperTest {
         Email email = new Email("shipper@example.com");
 
         assertThrows(IllegalArgumentException.class, () ->
-                new Shipper(shipperId, shipperCode, null, email, null, ShipperType.INDIVIDUAL));
+                new Shipper(shipperId, shipperCode, null, email, null, null, ShipperType.INDIVIDUAL));
     }
 
     @Test

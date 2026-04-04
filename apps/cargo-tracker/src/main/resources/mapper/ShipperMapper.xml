@@ -10,6 +10,7 @@
         <result property="name" column="name"/>
         <result property="email" column="email"/>
         <result property="phone" column="phone"/>
+        <result property="address" column="address"/>
         <result property="contractNumber" column="contract_number"/>
         <result property="discountRate" column="discount_rate"/>
     </resultMap>
@@ -22,6 +23,7 @@
             name,
             email,
             phone,
+            address,
             contract_number,
             discount_rate
         )
@@ -32,31 +34,32 @@
             #{name},
             #{email},
             #{phone},
+            #{address},
             #{contractNumber},
             #{discountRate}
         )
     </insert>
 
     <select id="findById" resultMap="shipperRecordMap">
-        SELECT id, shipper_code, shipper_type, name, email, phone, contract_number, discount_rate
+        SELECT id, shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate
         FROM shipper
         WHERE id = CAST(#{id} AS UUID)
     </select>
 
     <select id="findByEmail" resultMap="shipperRecordMap">
-        SELECT id, shipper_code, shipper_type, name, email, phone, contract_number, discount_rate
+        SELECT id, shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate
         FROM shipper
         WHERE email = #{email}
     </select>
 
     <select id="findByCode" resultMap="shipperRecordMap">
-        SELECT id, shipper_code, shipper_type, name, email, phone, contract_number, discount_rate
+        SELECT id, shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate
         FROM shipper
         WHERE shipper_code = #{code}
     </select>
 
     <select id="findAll" resultMap="shipperRecordMap">
-        SELECT id, shipper_code, shipper_type, name, email, phone, contract_number, discount_rate
+        SELECT id, shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate
         FROM shipper
         ORDER BY shipper_code
     </select>

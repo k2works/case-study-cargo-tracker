@@ -3,7 +3,7 @@ package com.example.cargotracker.shipper.domain.model.repository;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 
 import java.util.List;
 import java.util.Optional;

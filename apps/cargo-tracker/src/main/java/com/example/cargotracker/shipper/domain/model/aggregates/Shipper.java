@@ -1,9 +1,10 @@
 package com.example.cargotracker.shipper.domain.model.aggregates;
 
+import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 
 public class Shipper {
@@ -13,6 +14,7 @@ public class Shipper {
     private final ShipperName name;
     private final Email email;
     private final Phone phone;
+    private final Address address;
     private final ShipperType shipperType;
 
     public Shipper(
@@ -21,6 +23,7 @@ public class Shipper {
             ShipperName name,
             Email email,
             Phone phone,
+            Address address,
             ShipperType shipperType
     ) {
         if (id == null) {
@@ -43,6 +46,7 @@ public class Shipper {
         this.name = name;
         this.email = email;
         this.phone = phone;
+        this.address = address;
         this.shipperType = shipperType;
     }
 
@@ -64,6 +68,10 @@ public class Shipper {
 
     public Phone getPhone() {
         return phone;
+    }
+
+    public Address getAddress() {
+        return address;
     }
 
     public ShipperType getShipperType() {

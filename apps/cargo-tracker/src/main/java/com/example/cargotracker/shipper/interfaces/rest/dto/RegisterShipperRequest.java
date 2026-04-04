@@ -21,13 +21,15 @@ public class RegisterShipperRequest {
 
     private String phone;
 
+    private String address;
+
     @NotNull
     private ShipperType shipperType;
 
     private String contractNumber;
 
     @DecimalMin("0.0")
-    @DecimalMax("0.15")
+    @DecimalMax("0.30")
     private BigDecimal discountRate;
 
     public String getName() {
@@ -52,6 +54,14 @@ public class RegisterShipperRequest {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public ShipperType getShipperType() {

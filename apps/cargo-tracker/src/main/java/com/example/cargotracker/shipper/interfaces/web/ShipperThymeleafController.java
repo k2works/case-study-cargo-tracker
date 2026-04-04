@@ -3,7 +3,7 @@ package com.example.cargotracker.shipper.interfaces.web;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommand;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommandService;
 import com.example.cargotracker.shipper.application.internal.queryservices.FindShipperQueryService;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.interfaces.rest.dto.RegisterShipperRequest;
 import com.example.cargotracker.shipper.interfaces.rest.transform.ShipperAssembler;
 import jakarta.validation.Valid;
@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.UUID;
 
@@ -61,7 +62,8 @@ public class ShipperThymeleafController {
     @PostMapping
     public String create(
             @Valid @ModelAttribute(SHIPPER_ATTRIBUTE) RegisterShipperRequest request,
-            BindingResult bindingResult
+            BindingResult bindingResult,
+            RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
             return NEW_VIEW;
@@ -69,11 +71,9 @@ public class ShipperThymeleafController {
 
         try {
             ShipperId shipperId = registerShipperCommandService.registerShipper(toCommand(request));
+            redirectAttributes.addFlashAttribute("successMessage", "荷主を登録しました。");
             return "redirect:/shippers/" + shipperId;
-        } catch (IllegalStateException exception) {
-            if (!"EMAIL_ALREADY_REGISTERED".equals(exception.getMessage())) {
-                throw exception;
-            }
+        } catch (com.example.cargotracker.shipper.domain.model.exceptions.EmailAlreadyRegisteredException exception) {
             bindingResult.rejectValue("email", "duplicate", "このメールアドレスは既に登録されています。");
             return NEW_VIEW;
         }
@@ -93,6 +93,7 @@ public class ShipperThymeleafController {
                 request.getName(),
                 request.getEmail(),
                 request.getPhone(),
+                request.getAddress(),
                 request.getShipperType(),
                 request.getContractNumber(),
                 request.getDiscountRate()

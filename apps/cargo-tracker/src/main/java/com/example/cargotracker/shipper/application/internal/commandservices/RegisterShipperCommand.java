@@ -9,6 +9,7 @@ public record RegisterShipperCommand(
         String name,
         String email,
         String phone,
+        String address,
         ShipperType shipperType,
         String contractNumber,
         BigDecimal discountRate

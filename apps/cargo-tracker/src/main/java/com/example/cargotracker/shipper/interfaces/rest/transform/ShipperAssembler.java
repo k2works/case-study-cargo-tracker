@@ -23,6 +23,7 @@ public class ShipperAssembler {
                 shipper.getName().value(),
                 shipper.getEmail().value(),
                 shipper.getPhone() == null ? null : shipper.getPhone().value(),
+                shipper.getAddress() == null ? null : shipper.getAddress().value(),
                 shipper.getShipperType().name(),
                 contractNumber,
                 discountRate

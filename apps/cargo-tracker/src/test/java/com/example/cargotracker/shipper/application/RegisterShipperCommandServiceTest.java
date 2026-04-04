@@ -6,8 +6,9 @@ import com.example.cargotracker.shipper.domain.model.aggregates.CorporateShipper
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.aggregates.ShipperType;
 import com.example.cargotracker.shipper.domain.model.repository.ShipperRepository;
+import com.example.cargotracker.shipper.domain.model.exceptions.EmailAlreadyRegisteredException;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -43,6 +44,7 @@ class RegisterShipperCommandServiceTest {
                 "山田 太郎",
                 "taro@example.com",
                 "090-1234-5678",
+                null,
                 ShipperType.INDIVIDUAL,
                 null,
                 null
@@ -62,6 +64,7 @@ class RegisterShipperCommandServiceTest {
                 "株式会社テスト",
                 "corp@example.com",
                 "03-1234-5678",
+                "東京都千代田区丸の内1-1-1",
                 ShipperType.CORPORATE,
                 "CN-001",
                 new BigDecimal("0.10")
@@ -83,6 +86,7 @@ class RegisterShipperCommandServiceTest {
                 "山田 花子",
                 "exists@example.com",
                 null,
+                null,
                 ShipperType.INDIVIDUAL,
                 null,
                 null
@@ -93,16 +97,17 @@ class RegisterShipperCommandServiceTest {
                 new com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName("既存ユーザー"),
                 new Email(command.email()),
                 null,
+                null,
                 ShipperType.INDIVIDUAL
         );
         when(shipperRepository.findByEmail(new Email(command.email()))).thenReturn(Optional.of(existing));
 
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
+        EmailAlreadyRegisteredException exception = assertThrows(
+                EmailAlreadyRegisteredException.class,
                 () -> registerShipperCommandService.registerShipper(command)
         );
 
-        assertEquals("EMAIL_ALREADY_REGISTERED", exception.getMessage());
+        assertEquals("exists@example.com", exception.getEmail());
         verify(shipperRepository, never()).save(any(Shipper.class));
     }
 
@@ -112,6 +117,7 @@ class RegisterShipperCommandServiceTest {
                 "SHP-00000004",
                 "株式会社契約",
                 "contract@example.com",
+                null,
                 null,
                 ShipperType.CORPORATE,
                 "CN-999",
@@ -128,15 +134,16 @@ class RegisterShipperCommandServiceTest {
     }
 
     @Test
-    void discountRateが015を超える場合IllegalArgumentExceptionが発生する() {
+    void discountRateが030を超える場合IllegalArgumentExceptionが発生する() {
         RegisterShipperCommand command = new RegisterShipperCommand(
                 "SHP-00000005",
                 "株式会社割引",
                 "discount@example.com",
                 null,
+                null,
                 ShipperType.CORPORATE,
                 "CN-150",
-                new BigDecimal("0.16")
+                new BigDecimal("0.31")
         );
         when(shipperRepository.findByEmail(new Email(command.email()))).thenReturn(Optional.empty());
 

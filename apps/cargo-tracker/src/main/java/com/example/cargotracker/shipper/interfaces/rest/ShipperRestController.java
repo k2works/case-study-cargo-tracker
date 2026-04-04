@@ -3,7 +3,8 @@ package com.example.cargotracker.shipper.interfaces.rest;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommand;
 import com.example.cargotracker.shipper.application.internal.commandservices.RegisterShipperCommandService;
 import com.example.cargotracker.shipper.application.internal.queryservices.FindShipperQueryService;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shipper.domain.model.exceptions.EmailAlreadyRegisteredException;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.interfaces.rest.dto.RegisterShipperRequest;
 import com.example.cargotracker.shipper.interfaces.rest.dto.ShipperResponse;
 import com.example.cargotracker.shipper.interfaces.rest.transform.ShipperAssembler;
@@ -61,11 +62,8 @@ public class ShipperRestController {
                 .toList();
     }
 
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException exception) {
-        if (!"EMAIL_ALREADY_REGISTERED".equals(exception.getMessage())) {
-            throw exception;
-        }
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyRegistered(EmailAlreadyRegisteredException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("EMAIL_ALREADY_REGISTERED", "このメールアドレスは既に登録されています。"));
     }
@@ -82,6 +80,7 @@ public class ShipperRestController {
                 request.getName(),
                 request.getEmail(),
                 request.getPhone(),
+                request.getAddress(),
                 request.getShipperType(),
                 request.getContractNumber(),
                 request.getDiscountRate()

@@ -4,12 +4,13 @@ import com.example.cargotracker.shipper.domain.model.aggregates.CorporateShipper
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.aggregates.ShipperType;
 import com.example.cargotracker.shipper.domain.model.repository.ShipperRepository;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ContractNumber;
 import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import org.springframework.stereotype.Repository;
 
@@ -59,6 +60,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
         shipperRecord.setName(shipper.getName().value());
         shipperRecord.setEmail(shipper.getEmail().value());
         shipperRecord.setPhone(shipper.getPhone() == null ? null : shipper.getPhone().value());
+        shipperRecord.setAddress(shipper.getAddress() == null ? null : shipper.getAddress().value());
         if (shipper instanceof CorporateShipper corporateShipper) {
             shipperRecord.setContractNumber(corporateShipper.getContractNumber().value());
             shipperRecord.setDiscountRate(corporateShipper.getDiscountRate().value());
@@ -68,6 +70,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
 
     private Shipper toDomain(ShipperRecord shipperRecord) {
         ShipperType shipperType = ShipperType.valueOf(shipperRecord.getShipperType());
+        Address address = toAddress(shipperRecord.getAddress());
         if (shipperType == ShipperType.CORPORATE) {
             return new CorporateShipper(
                     new ShipperId(UUID.fromString(shipperRecord.getId())),
@@ -75,6 +78,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
                     new ShipperName(shipperRecord.getName()),
                     new Email(shipperRecord.getEmail()),
                     toPhone(shipperRecord.getPhone()),
+                    address,
                     new ContractNumber(shipperRecord.getContractNumber()),
                     new DiscountRate(shipperRecord.getDiscountRate())
             );
@@ -85,6 +89,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 new ShipperName(shipperRecord.getName()),
                 new Email(shipperRecord.getEmail()),
                 toPhone(shipperRecord.getPhone()),
+                address,
                 shipperType
         );
     }
@@ -94,5 +99,12 @@ public class MyBatisShipperRepository implements ShipperRepository {
             return null;
         }
         return new Phone(phone);
+    }
+
+    private Address toAddress(String address) {
+        if (address == null) {
+            return null;
+        }
+        return new Address(address);
     }
 }

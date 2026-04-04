@@ -1,4 +1,4 @@
-package com.example.cargotracker.shipper.domain.model.valueobjects;
+package com.example.cargotracker.shared.domain.model;
 
 import java.util.UUID;
 

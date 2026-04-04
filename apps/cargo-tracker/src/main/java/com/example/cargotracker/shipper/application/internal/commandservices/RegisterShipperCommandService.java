@@ -3,13 +3,15 @@ package com.example.cargotracker.shipper.application.internal.commandservices;
 import com.example.cargotracker.shipper.domain.model.aggregates.CorporateShipper;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.aggregates.ShipperType;
+import com.example.cargotracker.shipper.domain.model.exceptions.EmailAlreadyRegisteredException;
 import com.example.cargotracker.shipper.domain.model.repository.ShipperRepository;
+import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ContractNumber;
 import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +34,7 @@ public class RegisterShipperCommandService {
     public ShipperId registerShipper(RegisterShipperCommand command) {
         Email email = new Email(command.email());
         if (shipperRepository.findByEmail(email).isPresent()) {
-            throw new IllegalStateException("EMAIL_ALREADY_REGISTERED");
+            throw new EmailAlreadyRegisteredException(command.email());
         }
 
         Shipper shipper = createShipper(command, email);
@@ -45,6 +47,7 @@ public class RegisterShipperCommandService {
         ShipperCode shipperCode = new ShipperCode(resolveCode(command.code()));
         ShipperName shipperName = new ShipperName(command.name());
         Phone phone = command.phone() == null ? null : new Phone(command.phone());
+        Address address = command.address() == null ? null : new Address(command.address());
 
         if (command.shipperType() == ShipperType.CORPORATE) {
             return new CorporateShipper(
@@ -53,6 +56,7 @@ public class RegisterShipperCommandService {
                     shipperName,
                     email,
                     phone,
+                    address,
                     new ContractNumber(command.contractNumber()),
                     new DiscountRate(command.discountRate())
             );
@@ -64,6 +68,7 @@ public class RegisterShipperCommandService {
                 shipperName,
                 email,
                 phone,
+                address,
                 command.shipperType()
         );
     }

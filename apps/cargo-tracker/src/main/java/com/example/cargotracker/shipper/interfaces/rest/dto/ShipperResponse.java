@@ -8,6 +8,7 @@ public record ShipperResponse(
         String name,
         String email,
         String phone,
+        String address,
         String shipperType,
         String contractNumber,
         BigDecimal discountRate
