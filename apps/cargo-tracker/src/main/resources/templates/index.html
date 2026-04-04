@@ -6,22 +6,29 @@
     <title>Cargo Tracker</title>
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="/">Cargo Tracker</a>
-        <form th:action="@{/logout}" method="post" class="d-flex">
-            <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-        </form>
-    </div>
-</nav>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('dashboard')}"></div>
 <div class="container mt-4">
-    <h1>Dashboard</h1>
-    <p class="lead">International Cargo Tracking System</p>
-    <div class="card mt-4">
-        <div class="card-body">
-            <h5 class="card-title">Welcome</h5>
-            <p class="card-text">The system is running.</p>
+    <h1 class="h3 mb-1">ダッシュボード</h1>
+    <p class="text-secondary lead">International Cargo Tracking System</p>
+    <div class="row mt-4 g-3">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">予約管理</h5>
+                    <p class="card-text text-secondary">貨物予約の登録・確認を行います。</p>
+                    <a th:href="@{/bookings}" class="btn btn-primary">予約管理へ</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">荷主管理</h5>
+                    <p class="card-text text-secondary">荷主情報の登録・管理を行います。</p>
+                    <a th:href="@{/shippers}" class="btn btn-primary">荷主管理へ</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

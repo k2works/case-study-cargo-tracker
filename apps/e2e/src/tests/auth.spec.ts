@@ -4,7 +4,7 @@ import { LoginPage } from '../pages/LoginPage';
 test.describe('E01: 認証', () => {
   test('正しい認証情報でログインできる', async ({ page, loggedIn }) => {
     await expect(page).toHaveURL('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
   });
 
   test('ログアウトできる', async ({ page, loggedIn }) => {
