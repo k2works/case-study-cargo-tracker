@@ -1,6 +1,6 @@
 ---
 title: ドメインモデル設計 - 国際貨物輸送管理システム
-description: DDD 戦術的設計。6 つの境界付けられたコンテキストのエンティティ・値オブジェクト・集約・ドメインサービスを定義する。
+description: DDD 戦術的設計。7 つの境界付けられたコンテキストのエンティティ・値オブジェクト・集約・ドメインサービスを定義する。
 published: true
 date: 2026-03-31T00:00:00.000Z
 tags: design, ddd, domain-model
@@ -10,16 +10,17 @@ tags: design, ddd, domain-model
 
 ## 概要
 
-本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。システムは以下の 6 つの境界付けられたコンテキスト（Bounded Context）で構成される。
+本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。システムは以下の 7 つの境界付けられたコンテキスト（Bounded Context）で構成される。
 
 | コンテキスト | 日本語名 | 主な責務 |
 |---|---|---|
 | Booking Context | 予約コンテキスト | 貨物予約の受付・旅程管理・状態遷移 |
+| Shipper Context | 荷主コンテキスト | 荷主の登録・管理・法人割引 |
 | Routing Context | 経路コンテキスト | 航海スケジュール・経路情報の管理 |
 | Tracking Context | 追跡コンテキスト | 貨物追跡・例外イベント管理 |
 | Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理 |
 | Billing Context | 精算コンテキスト | 請求書発行・割引・支払い管理 |
-| Shared Domain | 共有ドメイン | 共有カーネル（Location・TransportStatus） |
+| Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperId・TransportStatus） |
 
 各コンテキストは自律的に変更可能な集約を持ち、コンテキスト間の連携はドメインイベントおよび ACL（Anti-Corruption Layer）ポートを通じて行う。
 
@@ -28,7 +29,15 @@ tags: design, ddd, domain-model
 | 英語（コード名） | 日本語（業務用語） | 使用コンテキスト | 説明 |
 |---|---|---|---|
 | Cargo | 貨物 | Booking Context | 予約の中心的エンティティ。荷主から荷受人へ輸送される物品 |
-| Shipper | 荷主 | Booking Context | 貨物を発送する主体。個人・法人の 2 種別 |
+| Shipper | 荷主 | Shipper Context | 貨物を発送���る主体。���人・法人の 2 種別 |
+| CorporateShipper | 法人荷主 | Shipper Context | Shipper のサブタイプ。契約番号と割引率を持つ |
+| Address | 住所 | Shipper Context | 荷主���住所情報（最大 500 文字） |
+| Dimensions | ���法 | Booking Context | 貨物の長さ・幅���高さ（オプション） |
+| Quantity | 個数 | Booking Context | 貨物の個数（オプション、1 以上） |
+| Description | 品名 | Booking Context | 貨物の品名（オプション、最大 500 文字） |
+| HazardousDeclaration | 危険物申告 | Booking Context | 危険物クラス・UN 番号・正式輸送品名 |
+| TemperatureRequirement | 温度管理条件 | Booking Context | 最低温度・最高温度・温度単位 |
+| ShipperExistenceChecker | 荷主存在確認 ACL | Booking Context | 荷主コンテキストへの存在確認ポート |
 | Consignee | 荷受人 | Booking Context | 貨物を受け取る主体。氏名・住所・連絡先を保持 |
 | BookingId | 予約 ID | Booking Context | 予約を一意に識別する値オブジェクト |
 | RouteSpecification | ルート仕様 | Booking Context | 出発地・目的地・到着期限の要件定義 |
@@ -77,6 +86,11 @@ package "Booking Context" as booking #lightblue {
   class Cargo <<aggregate root>>
 }
 
+package "Shipper Context" as shipper #lightskyblue {
+  class Shipper <<aggregate root>>
+  class CorporateShipper
+}
+
 package "Routing Context" as routing #lightgreen {
   class Voyage <<aggregate root>>
 }
@@ -95,11 +109,14 @@ package "Billing Context" as billing #lightpink {
 
 package "Shared Domain\n（Shared Kernel）" as shared #lightgray {
   class Location
+  class ShipperId
   class TransportStatus
   class RoutingStatus
 }
 
-booking --> shared : uses Location
+booking --> shared : uses Location, ShipperId
+booking ..> shipper : (ACL) ShipperExistenceChecker
+shipper --> shared : uses ShipperId
 routing --> shared : uses Location
 tracking --> shared : (ACL) TrackingLocation
 handling --> shared : uses Location
@@ -142,6 +159,11 @@ package "Aggregate（集約）" {
     -bookingAmount: Money
     -bookingStatus: BookingStatus
     -cargoType: CargoType
+    -dimensions: Dimensions
+    -quantity: Quantity
+    -description: Description
+    -hazardousDeclaration: HazardousDeclaration
+    -temperatureRequirement: TemperatureRequirement
   }
 }
 
@@ -205,6 +227,27 @@ package "Value Objects（値オブジェクト）" {
     INDIVIDUAL
     CORPORATE
   }
+  class Dimensions <<value object>> {
+    -length: BigDecimal
+    -width: BigDecimal
+    -height: BigDecimal
+  }
+  class Quantity <<value object>> {
+    -value: int
+  }
+  class Description <<value object>> {
+    -value: String
+  }
+  class HazardousDeclaration <<value object>> {
+    -hazardousClass: String
+    -unNumber: String
+    -properShippingName: String
+  }
+  class TemperatureRequirement <<value object>> {
+    -minTemperature: BigDecimal
+    -maxTemperature: BigDecimal
+    -unit: TemperatureUnit
+  }
   enum CargoType {
     GENERAL
     HAZARDOUS
@@ -217,6 +260,10 @@ package "Value Objects（値オブジェクト）" {
   }
 }
 
+interface ShipperExistenceChecker <<ACL Port>> {
+  +exists(shipperId: ShipperId): boolean
+}
+
 Cargo *-- BookingId
 Cargo *-- ShipperId
 Cargo *-- Consignee
@@ -226,6 +273,11 @@ Cargo *-- Delivery
 Cargo *-- Money
 Cargo *-- BookingStatus
 Cargo *-- CargoType
+Cargo *-o Dimensions
+Cargo *-o Quantity
+Cargo *-o Description
+Cargo *-o HazardousDeclaration
+Cargo *-o TemperatureRequirement
 ShipperId *-- ShipperType
 CargoItinerary *-- Leg
 Delivery *-- RoutingStatus
@@ -249,8 +301,14 @@ Delivery *-- RoutingStatus
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
 | 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
+| 値オブジェクト | Dimensions | 寸法 | 貨物の長さ・幅・高さ（オプション） |
+| 値オブジェクト | Quantity | 個数 | 貨物の個数（1 以上、オプション） |
+| 値オブジェクト | Description | 品名 | 貨物の品名（最大 500 文字、オプション） |
+| 値オブジェクト | HazardousDeclaration | 危険物申告 | 危険物クラス・UN 番号・正式輸送品名 |
+| 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
 | 列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED |
+| ACL ポート | ShipperExistenceChecker | 荷主存在確認 | Shipper Context への ACL。荷主 ID の存在確認 |
 
 ### ビジネスルール
 
@@ -258,8 +316,11 @@ Delivery *-- RoutingStatus
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unloadLocation == Leg[n+1].loadLocation` の連結制約を満たす必要がある
 4. BookingStatus の遷移は `PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED → IN_TRANSIT → DELIVERED → SETTLED` の順に進む。いずれの状態からも CANCELLED に遷移可能
-5. CORPORATE ShipperType の荷主は割引適用の対象となる
+5. CORPORATE ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. HAZARDOUS / REFRIGERATED の CargoType は指定港のみ取扱可能
+7. HAZARDOUS CargoType の場合、HazardousDeclaration は必須
+8. REFRIGERATED CargoType の場合、TemperatureRequirement は必須
+9. Booking Context は Shipper Context に直接依存せず、ShipperExistenceChecker ACL ポートを通じて荷主の存在を確認する
 
 ### コマンド一覧
 
@@ -270,7 +331,109 @@ Delivery *-- RoutingStatus
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TRACKING_ISSUED に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
-## 2. Routing Context（経路コンテキスト）
+## 2. Shipper Context（荷主コンテキスト）
+
+### ドメインモデル図
+
+```plantuml
+@startuml
+title Shipper Context - ドメインモデル
+
+package "Aggregate（集約）" {
+  class Shipper <<aggregate root>> {
+    -id: ShipperId
+    -code: ShipperCode
+    -name: ShipperName
+    -email: Email
+    -phone: Phone
+    -address: Address
+    -shipperType: ShipperType
+  }
+
+  class CorporateShipper extends Shipper {
+    -contractNumber: ContractNumber
+    -discountRate: DiscountRate
+  }
+}
+
+package "Value Objects（値オブジェクト）" {
+  class ShipperCode <<value object>> {
+    -value: String
+  }
+  class ShipperName <<value object>> {
+    -value: String
+  }
+  class Email <<value object>> {
+    -value: String
+  }
+  class Phone <<value object>> {
+    -value: String
+  }
+  class Address <<value object>> {
+    -value: String
+  }
+  class ContractNumber <<value object>> {
+    -value: String
+  }
+  class DiscountRate <<value object>> {
+    -value: BigDecimal
+  }
+  enum ShipperType {
+    INDIVIDUAL
+    CORPORATE
+  }
+}
+
+package "Shared Kernel（参照）" {
+  class ShipperId <<shared kernel>> {
+    -id: UUID
+  }
+}
+
+Shipper *-- ShipperId
+Shipper *-- ShipperCode
+Shipper *-- ShipperName
+Shipper *-- Email
+Shipper *-o Phone
+Shipper *-o Address
+Shipper *-- ShipperType
+CorporateShipper *-- ContractNumber
+CorporateShipper *-- DiscountRate
+
+@enduml
+```
+
+### 集約・エンティティ・値オブジェクト一覧
+
+| 種別 | クラス名 | 日本語名 | 責務 |
+|---|---|---|---|
+| 集約ルート | Shipper | 荷主 | 荷主情報の管理。個人・法人の 2 種別 |
+| エンティティ | CorporateShipper | 法人荷主 | Shipper のサブタイプ。契約番号と割引率を追加保持 |
+| 値オブジェクト | ShipperCode | 荷主コード | 自動生成される荷主の業務識別コード |
+| 値オブジェクト | ShipperName | 荷主名 | 荷主の氏名または社名 |
+| 値オブジェクト | Email | メール | メールアドレス。一意制約あり |
+| 値オブジェクト | Phone | 電話番号 | 電話番号（オプション） |
+| 値オブジェクト | Address | 住所 | 住所（オプション、最大 500 文字） |
+| 値オブジェクト | ContractNumber | 契約番号 | 法人荷主の契約番号 |
+| 値オブジェクト | DiscountRate | 割引率 | 法人荷主の割引率（0〜30%） |
+| 列挙型 | ShipperType | 荷主種別 | INDIVIDUAL / CORPORATE |
+| 共有カーネル参照 | ShipperId | 荷主識別子 | UUID ベースの一意識別子。Shared Domain に配置 |
+
+### ビジネスルール
+
+1. 荷主は必ず ShipperId・ShipperCode・ShipperName・Email・ShipperType を持つ
+2. Email はシステム全体で一意（`EmailAlreadyRegisteredException` で重複検出）
+3. CORPORATE ShipperType の場合、CorporateShipper として ContractNumber と DiscountRate が必須
+4. DiscountRate の値域は 0.0000〜0.3000（0%〜30%）
+5. ShipperCode は自動生成（`SHP-` プレフィックス + UUID 先頭 8 文字）
+
+### コマンド一覧
+
+| コマンド | 実行アクター | 主な処理 |
+|---|---|---|
+| RegisterShipperCommand | 営業担当者 | 荷主の新規登録。Email 重複チェックと ShipperCode 自動生成 |
+
+## 3. Routing Context（経路コンテキスト）
 
 ### ドメインモデル図
 
@@ -348,7 +511,7 @@ CarrierMovement --> Location : arrival
 | RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録 |
 | UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更 |
 
-## 3. Tracking Context（追跡コンテキスト）
+## 4. Tracking Context（追跡コンテキスト）
 
 ### ドメインモデル図
 
@@ -462,7 +625,7 @@ TrackingExceptionEvent *-- TrackingLocation
 | RegisterExceptionCommand | 追跡管理者・税関システム | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
 
-## 4. Handling Context（荷役コンテキスト）
+## 5. Handling Context（荷役コンテキスト）
 
 ### ドメインモデル図
 
@@ -582,7 +745,7 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | RegisterCustomsDeclarationCommand | 荷役作業員 | 通関申告を新規登録（PENDING 状態で作成） |
 | UpdateCustomsStatusCommand | 税関システム（ACL） | 通関申告の状態を更新（CLEARED / HELD / REJECTED） |
 
-## 5. Billing Context（精算コンテキスト）
+## 6. Billing Context（精算コンテキスト）
 
 ### ドメインモデル図
 
@@ -700,7 +863,7 @@ DiscountPolicy *-- DiscountPolicyType
 | GenerateInvoiceCommand | 経理担当者 | 請求書を新規発行（PENDING 状態で作成） |
 | ConfirmPaymentCommand | 経理担当者 | 支払い確認を記録し CONFIRMED に遷移 |
 
-## 6. Shared Domain（共有ドメイン）
+## 7. Shared Domain（共有ドメイン）
 
 ### ドメインモデル図
 
@@ -714,6 +877,9 @@ package "Shared Kernel（共有カーネル）" {
     -name: String
     +sameAs(other: Location): boolean
     +validate(): boolean
+  }
+  class ShipperId <<shared kernel>> {
+    -id: UUID
   }
   enum TransportStatus {
     NOT_RECEIVED
@@ -753,6 +919,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 共有カーネル | Location | 位置情報 | UN/LOCODE で識別される港湾・地点。全コンテキストで共有 |
+| 共有カーネル | ShipperId | 荷主識別子 | UUID ベースの荷主 ID。Booking Context と Shipper Context で共有 |
 | 共有列挙型 | TransportStatus | 輸送状態 | 9 段階の輸送フェーズ。Booking・Tracking で共有 |
 | 共有列挙型 | RoutingStatus | 経路状態 | NOT_ROUTED / ROUTED / MISROUTED。Booking・Handling で共有 |
 
