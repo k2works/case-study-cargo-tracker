@@ -241,7 +241,8 @@ class BookingTest {
     @DisplayName("assignRouteWithLegs で null ルートは拒否される")
     void rejectNullRouteWithLegs() {
         Booking booking = Booking.register(anyBookingId(), anyShipperId(), anyCargo(), anyTransport());
-        assertThatThrownBy(() -> booking.assignRouteWithLegs(null, List.of()))
+        var emptyLegs = List.<BookingLeg>of();
+        assertThatThrownBy(() -> booking.assignRouteWithLegs(null, emptyLegs))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

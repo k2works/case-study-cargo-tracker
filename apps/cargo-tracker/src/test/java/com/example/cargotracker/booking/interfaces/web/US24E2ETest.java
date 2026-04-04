@@ -165,8 +165,9 @@ class US24E2ETest extends PostgreSQLIntegrationTestBase {
         var messages = logAppender.list.stream()
                 .map(ILoggingEvent::getFormattedMessage)
                 .toList();
-        assertThat(messages).anyMatch(m -> m.contains("経路確定イベントを受信しました"));
-        assertThat(messages).anyMatch(m -> m.contains("営業担当者への経路確定通知を送信しました"));
-        assertThat(messages).anyMatch(m -> m.contains("荷主への経路確定通知を送信しました"));
+        assertThat(messages)
+                .anyMatch(m -> m.contains("経路確定イベントを受信しました"))
+                .anyMatch(m -> m.contains("営業担当者への経路確定通知を送信しました"))
+                .anyMatch(m -> m.contains("荷主への経路確定通知を送信しました"));
     }
 }
