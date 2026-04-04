@@ -236,6 +236,38 @@ class RouteSearchServiceTest {
         assertThat(result).containsExactly(pass);
     }
 
+    @Test
+    @DisplayName("searchByCondition は transitDays の昇順・estimatedPrice の昇順でソートする")
+    void searchByConditionは優先度ソートを適用する() {
+        // Arrange
+        var deadline = LocalDate.of(2025, 12, 31);
+        var query = new RouteSearchQuery(
+            "JPTYO", "USNYC", deadline, CargoType.GENERAL, BigDecimal.TEN
+        );
+        var slowCheap = new RouteCandidate(
+            "VOY-SC", List.of(), 20, new BigDecimal("800"), deadline,
+            Set.of(CargoType.GENERAL)
+        );
+        var fastExpensive = new RouteCandidate(
+            "VOY-FE", List.of(), 10, new BigDecimal("1500"), deadline,
+            Set.of(CargoType.GENERAL)
+        );
+        var fastCheap = new RouteCandidate(
+            "VOY-FC", List.of(), 10, new BigDecimal("800"), deadline,
+            Set.of(CargoType.GENERAL)
+        );
+        when(routeProviderPort.findRoutes(query))
+            .thenReturn(List.of(slowCheap, fastExpensive, fastCheap));
+
+        // Act
+        var result = service.searchByCondition(query);
+
+        // Assert: transitDays 昇順 → 同じ場合は estimatedPrice 昇順
+        assertThat(result)
+            .extracting(RouteCandidate::voyageNumber)
+            .containsExactly("VOY-FC", "VOY-FE", "VOY-SC");
+    }
+
     // Mockito の argThat をスタティックインポートなしで使うためのヘルパー
     private static <T> T argThat(org.mockito.ArgumentMatcher<T> matcher) {
         return org.mockito.ArgumentMatchers.argThat(matcher);

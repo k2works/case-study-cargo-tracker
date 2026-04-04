@@ -29,14 +29,14 @@ tags: iteration-plan, it7, routing
 
 ### 成功基準
 
-- [ ] 予約番号から経路設計条件を一覧表示し、条件確認完了を記録できる
-- [ ] 航海マスタ（`voyage` テーブルに `carrier_name`・`supported_cargo_types` 追加）・港湾マスタ（`location` テーブルに `supported_cargo_types` 追加）のマイグレーションが完了し、シードデータが格納される
-- [ ] 出発地・目的地・期限を指定して航海スケジュールを検索し、該当する航海情報が一覧表示される
-- [ ] 制約条件（航海スケジュール・寄港地接続・期限・貨物種別・港湾制約）を考慮した経路候補が自動算出される
-- [ ] 危険物・冷凍貨物の場合、対応設備のある航海・港湾のみがフィルタリングされる
-- [ ] 制約条件を満たす経路候補がない場合、「条件を満たす経路候補なし」が表示される
-- [ ] backend テスト Green・カバレッジ 80% 以上
-- [ ] E2E テスト（`US19E2ETest`・`US20E2ETest`・`US21E2ETest`）全件 GREEN
+- [x] 予約番号から経路設計条件を一覧表示し、条件確認完了を記録できる
+- [x] 航海マスタ（`voyage` テーブルに `carrier_name`・`supported_cargo_types` 追加）・港湾マスタ（`location` テーブルに `supported_cargo_types` 追加）のマイグレーションが完了し、シードデータが格納される
+- [x] 出発地・目的地・期限を指定して航海スケジュールを検索し、該当する航海情報が一覧表示される
+- [x] 制約条件（航海スケジュール・寄港地接続・期限・貨物種別・港湾制約）を考慮した経路候補が自動算出される
+- [x] 危険物・冷凍貨物の場合、対応設備のある航海・港湾のみがフィルタリングされる
+- [x] 制約条件を満たす経路候補がない場合、「条件を満たす経路候補なし」が表示される
+- [x] backend テスト Green・カバレッジ 80% 以上
+- [x] E2E テスト（`US19E2ETest`・`US20E2ETest`・`US21E2ETest`）全件 GREEN
 
 ---
 
@@ -97,10 +97,10 @@ tags: iteration-plan, it7, routing
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `RouteDesignCondition` 読み取りモデル + 単体テスト（TDD） | 2h | - | [ ] |
-| 1.2 | `RouteDesignConditionQueryService`（Booking ACL 経由で予約情報取得） | 2h | - | [ ] |
-| 1.3 | Web UI: 経路設計条件確認画面（`routing/design-condition.html`）+ 条件不備時の補完依頼リンク | 2h | - | [ ] |
-| 1.4 | REST API: `GET /api/v1/routings/design-condition?bookingId={id}` | 2h | - | [ ] |
+| 1.1 | `RouteDesignCondition` 読み取りモデル + 単体テスト（TDD） | 2h | - | [x] |
+| 1.2 | `RouteDesignConditionQueryService`（Booking ACL 経由で予約情報取得） | 2h | - | [x] |
+| 1.3 | Web UI: 経路設計条件確認画面（`routing/design-condition.html`）+ 条件不備時の補完依頼リンク | 2h | - | [x] |
+| 1.4 | REST API: `GET /api/v1/routings/design-condition?bookingId={id}` | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -108,11 +108,11 @@ tags: iteration-plan, it7, routing
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `Voyage` 集約拡張（`carrierName`・`supportedCargoTypes` 追加）+ `Port` エンティティ + 単体テスト（TDD） | 4h | - | [ ] |
-| 2.2 | DB マイグレーション: `voyage` に `carrier_name`・`supported_cargo_types` 追加、`location` に `supported_cargo_types` 追加 + シードデータ | 3h | - | [ ] |
-| 2.3 | `VoyageRepository` + MyBatis マッパー実装 | 2h | - | [ ] |
-| 2.4 | `VoyageScheduleSearchService`（出発地・目的地・期限で検索、寄港地接続の経由ルート候補含む。IT7 では 1 回乗り継ぎに限定） | 2h | - | [ ] |
-| 2.5 | REST API: `GET /api/v1/routings/voyage-schedules?origin={}&dest={}&deadline={}` | 1h | - | [ ] |
+| 2.1 | `Voyage` 集約拡張（`carrierName`・`supportedCargoTypes` 追加）+ `Port` エンティティ + 単体テスト（TDD） | 4h | - | [x] |
+| 2.2 | DB マイグレーション: `voyage` に `carrier_name`・`supported_cargo_types` 追加、`location` に `supported_cargo_types` 追加 + シードデータ | 3h | - | [x] |
+| 2.3 | `VoyageRepository` + MyBatis マッパー実装 | 2h | - | [x] |
+| 2.4 | `VoyageScheduleSearchService`（出発地・目的地・期限で検索、寄港地接続の経由ルート候補含む。IT7 では 1 回乗り継ぎに限定） | 2h | - | [x] |
+| 2.5 | REST API: `GET /api/v1/routings/voyage-schedules?origin={}&dest={}&deadline={}` | 1h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -120,11 +120,11 @@ tags: iteration-plan, it7, routing
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `RouteConstraintChecker` ドメインサービス + 制約条件チェッカー群（TDD） | 6h | - | [ ] |
-| 3.2 | `ConstraintBasedRouteProvider` — `RouteProviderPort` の DB ベース実装（`StubRouteProviderAdapter` 置き換え） | 4h | - | [ ] |
-| 3.3 | `RouteSearchService` の拡張 — 制約条件ベースのフィルタリング・優先度ソート | 3h | - | [ ] |
-| 3.4 | Web UI: 経路候補一覧画面の更新（制約条件表示・候補なしメッセージ） | 3h | - | [ ] |
-| 3.5 | E2E テスト: `US19E2ETest`・`US20E2ETest`・`US21E2ETest` | 4h | - | [ ] |
+| 3.1 | `RouteConstraintChecker` ドメインサービス + 制約条件チェッカー群（TDD） | 6h | - | [x] |
+| 3.2 | `ConstraintBasedRouteProvider` — `RouteProviderPort` の DB ベース実装（`StubRouteProviderAdapter` 置き換え） | 4h | - | [x] |
+| 3.3 | `RouteSearchService` の拡張 — 制約条件ベースのフィルタリング・優先度ソート | 3h | - | [x] |
+| 3.4 | Web UI: 経路候補一覧画面の更新（制約条件表示・候補なしメッセージ） | 3h | - | [x] |
+| 3.5 | E2E テスト: `US19E2ETest`・`US20E2ETest`・`US21E2ETest` | 4h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -132,13 +132,13 @@ tags: iteration-plan, it7, routing
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US19 経路設計条件確認 | 2 | 8h | [ ] |
-| US20 航海スケジュール検索 | 3 | 12h | [ ] |
-| US21 経路候補算出 | 5 | 20h | [ ] |
+| US19 経路設計条件確認 | 2 | 8h | [x] |
+| US20 航海スケジュール検索 | 3 | 12h | [x] |
+| US21 経路候補算出 | 5 | 20h | [x] |
 | **合計** | **10** | **40h** | |
 
 **1 SP あたり**: 約 4.0h
-**進捗率**: 0%（0/10 SP）
+**進捗率**: 100%（10/10 SP）
 
 ---
 

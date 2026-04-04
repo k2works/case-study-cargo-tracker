@@ -66,6 +66,9 @@ public class RouteSearchService {
         return candidates.stream()
             .filter(c -> !c.estimatedArrival().isAfter(query.requestedArrivalDate()))
             .filter(c -> c.supportedCargoTypes().contains(query.cargoType()))
+            .sorted(java.util.Comparator
+                .comparingInt(RouteCandidate::transitDays)
+                .thenComparing(RouteCandidate::estimatedPrice))
             .toList();
     }
 }

@@ -46,13 +46,27 @@
     </div>
 
     <!-- ルート候補一覧 -->
-    <h5 class="mb-3">ルート候補</h5>
+    <h5 class="mb-3">
+        ルート候補
+        <span th:if="${!#lists.isEmpty(candidates)}"
+              class="badge bg-secondary ms-2 fs-6 align-middle"
+              th:text="${#lists.size(candidates) + ' 件'}"></span>
+    </h5>
+    <p th:unless="${#lists.isEmpty(candidates)}" class="text-muted small">
+        <i class="bi bi-funnel"></i>
+        制約条件フィルタ適用済み: 希望着日（<span th:text="${form.requestedArrivalDate}"></span>）以前に到着 かつ 貨物種別（<span th:text="${form.cargoType?.displayName}"></span>）対応のみ表示。所要日数の少ない順に並んでいます。
+    </p>
 
     <!-- 候補なし: 警告 + 再検索フォーム -->
     <div th:if="${#lists.isEmpty(candidates)}">
         <div class="alert alert-warning" role="alert" aria-live="polite">
-            希望着日（<span th:text="${form.requestedArrivalDate}"></span>）に間に合うルートが見つかりませんでした。
-            希望着日を変更して再検索できます。
+            <strong>ルート候補が見つかりませんでした。</strong><br>
+            以下の制約条件を満たす航海が存在しません:
+            <ul class="mb-0 mt-1">
+                <li>希望着日（<strong th:text="${form.requestedArrivalDate}"></strong>）までに到着すること</li>
+                <li>貨物種別（<strong th:text="${form.cargoType?.displayName}"></strong>）に対応していること</li>
+            </ul>
+            希望着日や貨物種別を変更して再検索してください。
         </div>
 
         <div class="card shadow-sm mb-4">
