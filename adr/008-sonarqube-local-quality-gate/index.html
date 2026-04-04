@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../005-windows-docker-desktop-testcontainers/">
+        <link rel="prev" href="../007-playwright-e2e-pom-pattern/">
       
       
-        <link rel="next" href="../../article/">
+        <link rel="next" href="../009-github-actions-ci-pipeline/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>ADR-006 H2 Console on Spring Boot 4 - Case Study Cargo Tracker</title>
+        <title>ADR-008 SonarQube 品質ゲート - Case Study Cargo Tracker</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-006-spring-boot-4-h2-console-security" class="md-skip">
+        <a href="#adr-008-sonarqube" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR-006 H2 Console on Spring Boot 4
+              ADR-008 SonarQube 品質ゲート
             
           </span>
         </div>
@@ -1634,14 +1634,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../001-java-springboot-version-strategy/" class="md-nav__link">
+      <a href="../001-spring-boot-4-java-25/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-001 Java/Spring Boot バージョン戦略
+    ADR-001 Spring Boot 4 + Java 25
   
 
     
@@ -1662,14 +1662,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../002-transactional-event-listener/" class="md-nav__link">
+      <a href="../002-gradle-groovy-dsl/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-002 TransactionalEventListener
+    ADR-002 Gradle Groovy DSL
   
 
     
@@ -1690,14 +1690,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../003-discount-policy-as-entity/" class="md-nav__link">
+      <a href="../003-spotbugs-ignore-failures-java25/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-003 DiscountPolicy エンティティ化
+    ADR-003 SpotBugs ignoreFailures
   
 
     
@@ -1718,14 +1718,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../004-shipper-self-service-out-of-scope/" class="md-nav__link">
+      <a href="../004-swagger-ui-conditional/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-004 荷主セルフサービス除外
+    ADR-004 Swagger UI 条件付き有効化
   
 
     
@@ -1746,14 +1746,70 @@
   
   
     <li class="md-nav__item">
-      <a href="../005-windows-docker-desktop-testcontainers/" class="md-nav__link">
+      <a href="../005-husky-lint-staged-precommit/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-005 Windows Testcontainers
+    ADR-005 Husky pre-commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../006-testcontainers-singleton-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-006 Testcontainers シングルトン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../007-playwright-e2e-pom-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-007 Playwright POM パターン
   
 
     
@@ -1790,7 +1846,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-006 H2 Console on Spring Boot 4
+    ADR-008 SonarQube 品質ゲート
   
 
     
@@ -1808,7 +1864,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-006 H2 Console on Spring Boot 4
+    ADR-008 SonarQube 品質ゲート
   
 
     
@@ -1959,6 +2015,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../009-github-actions-ci-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-009 GitHub Actions CI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3652,66 +3736,70 @@
   
 
 
-<h1 id="adr-006-spring-boot-4-h2-console-security">ADR-006: Spring Boot 4 の開発環境では H2 Console 専用モジュールと security 例外を明示設定する<a class="headerlink" href="#adr-006-spring-boot-4-h2-console-security" title="Permanent link">&para;</a></h1>
-<p>Spring Boot 4 の開発用 H2 Console は、専用モジュール追加と security 設定をセットで行います。</p>
-<p>日付: 2026-04-01</p>
+<h1 id="adr-008-sonarqube">ADR-008: ローカル SonarQube で品質ゲートを管理する<a class="headerlink" href="#adr-008-sonarqube" title="Permanent link">&para;</a></h1>
+<p>ローカル環境に SonarQube Community Build を Docker で構築し、コード品質の継続的計測と Quality Gate を運用する。</p>
+<p>日付: 2026-04-04</p>
 <h2 id="_1">ステータス<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>承認済み</p>
 <h2 id="_2">コンテキスト<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p>ローカル開発手順では <code>default</code> profile で H2 インメモリ DB を使い、<code>http://localhost:8080/h2-console</code> から内容を確認する前提でした。しかし実際には <code>spring.h2.console.enabled=true</code> を設定していても、<code>/h2-console</code> が 404 になっていました。</p>
+<p>コード品質（Bug・Vulnerability・Code Smell・カバレッジ・重複率）を継続的に計測し、品質基準を自動判定する仕組みが必要である。</p>
 <ul>
-<li><code>apps/cargo-tracker/src/main/resources/application.yml</code> では <code>spring.h2.console.enabled=true</code> と <code>path=/h2-console</code> を設定済みだった</li>
-<li>Spring Boot 4 では H2 Console 関連が別モジュール化されており、<code>com.h2database:h2</code> だけでは Console servlet が登録されない</li>
-<li>Spring Security を有効にしているため、H2 Console を表示するには <code>/h2-console</code> と配下へのアクセス許可、CSRF 除外、<code>frameOptions</code> 調整が必要だった</li>
-<li>開発者はドキュメント通りの URL にアクセスして DB 状態を確認できる必要がある</li>
+<li>Checkstyle / SpotBugs は個別のルール検証に留まり、総合的な品質判定ができない</li>
+<li>SonarCloud は外部サービスのため、オフライン環境や無料プランの制約がある</li>
+<li>ローカルで品質をリアルタイムに確認しながら開発したい</li>
 </ul>
 <h2 id="_3">決定<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p>Spring Boot 4 の <code>default</code> profile 開発環境では、H2 Console を利用するために専用ランタイム依存と H2 Console 向け security 例外を明示的に設定する。</p>
+<p><strong>SonarQube Community Build を Docker Compose でローカルに構築し、Gradle sonarqube プラグインでスキャンを実行する。</strong></p>
 <h3 id="_4">変更箇所<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>apps/cargo-tracker/build.gradle</code></li>
-<li><code>runtimeOnly 'org.springframework.boot:spring-boot-h2console'</code> を追加する</li>
-<li><code>apps/cargo-tracker/src/main/java/com/example/cargotracker/shared/infrastructure/config/SecurityConfig.java</code></li>
-<li><code>/h2-console</code> と <code>/h2-console/</code> を許可する matcher を追加する</li>
-<li>H2 Console 配下を security の認可対象から除外する</li>
-<li>H2 Console 向けに CSRF を除外する</li>
-<li>H2 Console の表示に必要な <code>frameOptions.sameOrigin()</code> を有効化する</li>
+<li><code>build.gradle</code> に <code>org.sonarqube</code> プラグイン 6.3.1 を追加</li>
+<li><code>build.gradle</code> に <code>sonar</code> プロパティ（projectKey、JaCoCo レポートパス等）を設定</li>
+<li><code>sonarqube.config.json</code> で cargo-tracker プロジェクトのスキャン設定を定義</li>
+<li><code>ops/docker/sonarqube-local/docker-compose.yml</code> で SonarQube + PostgreSQL コンテナを管理</li>
 </ul>
 <h3 id="_5">代替案<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>spring.h2.console.enabled=true</code> のみで運用する</li>
-<li>Spring Boot 4 では Console servlet が登録されず、<code>404</code> のままなので却下</li>
-<li>H2 Console を使わず SQL クライアントやログ確認だけで代替する</li>
-<li>既存ドキュメントと運用手順が崩れ、開発時の確認コストが上がるため却下</li>
-<li>H2 Console へのアクセスに認証を必須のまま残す</li>
-<li>開発用ユーティリティへの到達性が落ち、<code>/h2-console</code> の直接アクセス時に期待どおりの画面へ到達しにくいため却下</li>
-</ul>
+<table>
+<thead>
+<tr>
+<th>代替案</th>
+<th>却下理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SonarCloud</td>
+<td>オフライン環境で使えない、無料プランの制約</td>
+</tr>
+<tr>
+<td>Checkstyle + SpotBugs のみ</td>
+<td>総合的な品質判定・カバレッジ計測ができない</td>
+</tr>
+<tr>
+<td>CodeClimate</td>
+<td>SonarQube の方が Java エコシステムとの統合が深い</td>
+</tr>
+</tbody>
+</table>
 <h2 id="_6">影響<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <h3 id="_7">ポジティブ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>default</code> profile の起動後に <code>http://localhost:8080/h2-console</code> から H2 Console を利用できる</li>
-<li>ドキュメントに記載した開発 URL と実装が一致する</li>
-<li>Spring Boot 4 のモジュール分割を明示的にコードへ反映できる</li>
+<li>Quality Gate で Bug 0 / Vulnerability 0 / カバレッジ 80% 等の基準を自動判定できる</li>
+<li>Gulp タスク（<code>npx gulp sonar-local:scan</code>、<code>sonar-local:gate</code>、<code>sonar-local:issues</code>）で簡単に操作できる</li>
+<li>JaCoCo のカバレッジデータを SonarQube に統合できる</li>
 </ul>
 <h3 id="_8">ネガティブ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <ul>
-<li>開発用依存関係と security 例外が増える</li>
-<li>H2 Console は開発環境向け機能なので、本番プロファイルでは引き続き無効化を維持する必要がある</li>
-<li>Spring Boot / Spring Security のメジャー更新時は H2 Console の有効化方法を再確認する必要がある</li>
+<li>Docker Desktop が必要（RAM 4GB 以上推奨）</li>
+<li>初回起動に数分かかる</li>
 </ul>
 <h2 id="_9">コンプライアンス<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>apps/cargo-tracker</code> で <code>./gradlew.bat bootRun</code> を起動し、ログに <code>H2 console available at '/h2-console'</code> が出力されること</li>
-<li><code>http://localhost:8080/h2-console</code> が <code>302</code> で <code>/h2-console/</code> にリダイレクトされること</li>
-<li><code>http://localhost:8080/h2-console/</code> が <code>200</code> を返し、H2 Console の HTML を返すこと</li>
-<li><code>product</code> profile では <code>spring.h2.console.enabled=false</code> を維持すること</li>
+<li><code>npx gulp sonar-local:gate</code> で Quality Gate が PASS であること</li>
+<li><code>npx gulp sonar-local:issues</code> で未解決イシューが 0 件であること</li>
 </ul>
 <h2 id="_10">備考<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <ul>
-<li>著者: Codex</li>
-<li>関連コミット: 未コミット</li>
-<li>関連 ADR: ADR-001</li>
-<li>参照コミット: <code>5d09a3b</code></li>
+<li>関連コミット: <code>831eac0</code></li>
 </ul>
 
 

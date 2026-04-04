@@ -6,17 +6,17 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Java 25 LTS と Spring Boot 4.0 を採用し、エコシステム未成熟時の退路として Java 21 LTS + Spring Boot 3.4.x スタートを定義する。">
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
       
       
         <meta name="author" content="Project Team">
       
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../003-spotbugs-ignore-failures-java25/">
       
       
-        <link rel="next" href="../002-transactional-event-listener/">
+        <link rel="next" href="../005-husky-lint-staged-precommit/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>ADR-001: Java 25 / Spring Boot 4.0 採用と移行ロードマップ - Case Study Cargo Tracker</title>
+        <title>ADR-004 Swagger UI 条件付き有効化 - Case Study Cargo Tracker</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-001-java-25-spring-boot-40" class="md-skip">
+        <a href="#adr-004-swagger-ui" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR-001: Java 25 / Spring Boot 4.0 採用と移行ロードマップ
+              ADR-004 Swagger UI 条件付き有効化
             
           </span>
         </div>
@@ -1631,6 +1631,90 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../001-spring-boot-4-java-25/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001 Spring Boot 4 + Java 25
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../002-gradle-groovy-dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Gradle Groovy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../003-spotbugs-ignore-failures-java25/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 SpotBugs ignoreFailures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1650,7 +1734,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-001 Java/Spring Boot バージョン戦略
+    ADR-004 Swagger UI 条件付き有効化
   
 
     
@@ -1668,7 +1752,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-001 Java/Spring Boot バージョン戦略
+    ADR-004 Swagger UI 条件付き有効化
   
 
     
@@ -1731,17 +1815,6 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        段階的移行ロードマップ
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
         変更箇所
       
     </span>
@@ -1750,7 +1823,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         代替案
@@ -1766,7 +1839,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         影響
@@ -1778,7 +1851,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         ポジティブ
@@ -1789,7 +1862,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         ネガティブ
@@ -1805,7 +1878,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         コンプライアンス
@@ -1816,7 +1889,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         備考
@@ -1842,14 +1915,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../002-transactional-event-listener/" class="md-nav__link">
+      <a href="../005-husky-lint-staged-precommit/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-002 TransactionalEventListener
+    ADR-005 Husky pre-commit
   
 
     
@@ -1870,14 +1943,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../003-discount-policy-as-entity/" class="md-nav__link">
+      <a href="../006-testcontainers-singleton-pattern/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-003 DiscountPolicy エンティティ化
+    ADR-006 Testcontainers シングルトン
   
 
     
@@ -1898,14 +1971,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../004-shipper-self-service-out-of-scope/" class="md-nav__link">
+      <a href="../007-playwright-e2e-pom-pattern/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-004 荷主セルフサービス除外
+    ADR-007 Playwright POM パターン
   
 
     
@@ -1926,14 +1999,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../005-windows-docker-desktop-testcontainers/" class="md-nav__link">
+      <a href="../008-sonarqube-local-quality-gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-005 Windows Testcontainers
+    ADR-008 SonarQube 品質ゲート
   
 
     
@@ -1954,14 +2027,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../006-enable-h2-console-on-spring-boot-4/" class="md-nav__link">
+      <a href="../009-github-actions-ci-pipeline/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-006 H2 Console on Spring Boot 4
+    ADR-009 GitHub Actions CI
   
 
     
@@ -3663,101 +3736,29 @@
   
 
 
-<h1 id="adr-001-java-25-spring-boot-40">ADR-001: Java 25 / Spring Boot 4.0 採用と移行ロードマップ<a class="headerlink" href="#adr-001-java-25-spring-boot-40" title="Permanent link">&para;</a></h1>
-<p>Java 25 LTS と Spring Boot 4.0 を正式採用し、エコシステムが未成熟な場合は Java 21 LTS + Spring Boot 3.4.x でスタートして Spring Boot 4.0 GA 後に移行する段階的ロードマップを定義する。</p>
-<p>日付: 2026-03-31</p>
+<h1 id="adr-004-swagger-ui">ADR-004: Swagger UI を環境変数で条件付き有効化する<a class="headerlink" href="#adr-004-swagger-ui" title="Permanent link">&para;</a></h1>
+<p>springdoc-openapi 3.0.2 を導入し、<code>app.openapi.enabled</code> プロパティで環境別に Swagger UI を制御する。</p>
+<p>日付: 2026-04-04</p>
 <h2 id="_1">ステータス<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>承認済み</p>
 <h2 id="_2">コンテキスト<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p>本プロジェクトは Jakarta EE 実装（DDD ケーススタディ）を Spring Boot で再実装するケーススタディである。以下の状況が意思決定の背景となった。</p>
+<p>REST API の開発・テスト効率を向上させるため、API ドキュメント自動生成ツールが必要である。</p>
 <ul>
-<li><strong>Java のリリースモデル</strong>: Java は 6 ヵ月サイクルでリリースされ、LTS は 2 年ごと（Java 21: 2023-09、Java 25: 2025-09）。</li>
-<li><strong>Spring Boot 4.0</strong>: 2025 年後半に GA リリース。Jakarta EE 11 対応・JSpecify null safety 強化・Spring Framework 7.x を前提とする。Spring Boot 4.0 は Java 25 を minimum required JVM とする。</li>
-<li><strong>エコシステムの成熟度リスク</strong>: リリース直後のメジャーバージョンは、サードパーティライブラリ（MyBatis、Flyway、Testcontainers 等）の対応状況にラグが生じることがある。</li>
-<li><strong>開発効率の要件</strong>: ケーススタディとして DDD + ヘキサゴナル + CQRS を Spring Boot で実装するため、最新の自動構成機能（<code>@ServiceConnection</code>、Virtual Threads 等）を活用したい。</li>
+<li>開発環境では Swagger UI で API を直接テストしたい</li>
+<li>本番環境では Swagger UI を無効化してセキュリティリスクを排除したい</li>
+<li>Spring Security との統合が必要（認証なしでアクセス可能にする）</li>
 </ul>
-<p><strong>検討した Java バージョンの選択肢</strong>:</p>
-<table>
-<thead>
-<tr>
-<th>バージョン</th>
-<th>LTS</th>
-<th>Spring Boot 4 対応</th>
-<th>エコシステム成熟度</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Java 21</td>
-<td>○（2028 年まで）</td>
-<td>Spring Boot 3.x まで</td>
-<td>成熟</td>
-</tr>
-<tr>
-<td>Java 25</td>
-<td>○（2031 年まで）</td>
-<td>Spring Boot 4.0 対応</td>
-<td>成長中</td>
-</tr>
-<tr>
-<td>Java 24</td>
-<td>✗（短期）</td>
-<td>非推奨</td>
-<td>非推奨</td>
-</tr>
-</tbody>
-</table>
 <h2 id="_3">決定<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p><strong>Java 25 LTS + Spring Boot 4.0.x を正式採用する。</strong></p>
-<p>採用の根拠：</p>
+<p><strong>springdoc-openapi 3.0.2 を導入し、<code>app.openapi.enabled</code> プロパティで環境別に有効/無効を切り替える。</strong></p>
+<h3 id="_4">変更箇所<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Java 25 は LTS であり、2031 年まで Oracle Premier Support が提供される</li>
-<li>Spring Boot 4.0 は Virtual Threads（Project Loom）の正式統合により IO バウンドな Web アプリケーションのスループットが向上する</li>
-<li>Jakarta EE 11 / Spring Framework 7.x による JSpecify null safety 強化は、ドメインモデルの型安全性向上に寄与する</li>
-<li>Testcontainers 2.x、MyBatis Spring Boot Starter 4.0.1 の Spring Boot 4 対応が確認済み</li>
+<li><code>build.gradle</code> に <code>org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2</code> を追加</li>
+<li><code>OpenApiConfig.java</code> に <code>@ConditionalOnProperty(prefix = "app.openapi", name = "enabled", havingValue = "true")</code> を設定</li>
+<li><code>SecurityConfig.java</code> で <code>openApiEnabled</code> フラグに基づき Swagger UI パスを permitAll</li>
+<li><code>application.yml</code> に <code>app.openapi.enabled: true</code>（開発）</li>
+<li><code>application-product.yml</code> に <code>app.openapi.enabled: false</code>（本番）</li>
 </ul>
-<h3 id="_4">段階的移行ロードマップ<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<p>エコシステムの未成熟リスクへの対応として、以下の退路（フォールバック）を定義する。</p>
-<div class="highlight"><pre><span></span><code>Phase 1（フォールバック時）: Java 21 LTS + Spring Boot 3.4.x でスタート
-  ↓ Spring Boot 4.0 GA 安定確認後（GA 後 3 ヵ月目安）
-Phase 2: Java 25 LTS に JVM 切り替え
-  ↓ 依存ライブラリの Spring Boot 4 対応確認後
-Phase 3: Spring Boot 4.0.x へ移行（依存変更・自動構成見直し）
-  ↓ テスト全通過確認後
-Phase 4: Virtual Threads 対応・JSpecify null safety 段階適用
-</code></pre></div>
-<h3 id="_5">変更箇所<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>ファイル</th>
-<th>変更内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>build.gradle</code></td>
-<td><code>java.toolchain.languageVersion = JavaLanguageVersion.of(25)</code></td>
-</tr>
-<tr>
-<td><code>build.gradle</code></td>
-<td><code>id 'org.springframework.boot' version '4.0.x'</code></td>
-</tr>
-<tr>
-<td><code>docker-compose.yml</code></td>
-<td><code>eclipse-temurin:25-jre-alpine</code></td>
-</tr>
-<tr>
-<td><code>Dockerfile</code></td>
-<td><code>FROM gradle:9-jdk25-alpine</code> / <code>FROM eclipse-temurin:25-jre-alpine</code></td>
-</tr>
-<tr>
-<td>CI ワークフロー</td>
-<td><code>java-version: '25'</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="_6">代替案<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<h3 id="_5">代替案<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -3767,46 +3768,38 @@ Phase 4: Virtual Threads 対応・JSpecify null safety 段階適用
 </thead>
 <tbody>
 <tr>
-<td><strong>Java 21 LTS + Spring Boot 3.4.x のみ</strong></td>
-<td>Virtual Threads 正式統合・JSpecify null safety の恩恵を受けられない。ケーススタディとして最新 Spring Boot の実装パターン習得が目的の一つであるため</td>
+<td>Spring プロファイルで制御</td>
+<td>プロパティベースの方が柔軟（環境変数で上書き可能）</td>
 </tr>
 <tr>
-<td><strong>Java 24（非 LTS）+ Spring Boot 4.0</strong></td>
-<td>非 LTS バージョンはサポート期間が 6 ヵ月であり、本番利用に不適切</td>
+<td>Swagger UI を常時有効</td>
+<td>本番環境でのセキュリティリスク</td>
 </tr>
 <tr>
-<td><strong>Jakarta EE 11 + Payara/WildFly</strong></td>
-<td>Jakarta EE 参考実装の移植先として Spring Boot を選択した（元の決定）。本 ADR の範囲外</td>
+<td>API ドキュメントなし</td>
+<td>開発効率の低下</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_7">影響<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
-<h3 id="_8">ポジティブ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<h2 id="_6">影響<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="_7">ポジティブ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Java 25 LTS により 2031 年まで長期安定したプラットフォームを確保できる</li>
-<li>Virtual Threads による同時接続性能の向上（Tomcat スレッドプールが不要になりスループット改善）</li>
-<li>Spring Boot 4 の <code>@ServiceConnection</code> による Testcontainers 統合がシンプルになる</li>
-<li>JSpecify <code>@NonNull</code> / <code>@Nullable</code> による null 安全性の向上でドメイン層のバグが減少する</li>
+<li>開発時に <code>http://localhost:8080/swagger-ui/index.html</code> で API を確認・テストできる</li>
+<li>本番では自動的に無効化されるためセキュリティリスクがない</li>
 </ul>
-<h3 id="_9">ネガティブ<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<h3 id="_8">ネガティブ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Spring Boot 4.0 は 2026 年時点でリリース直後であり、コミュニティ Q&amp;A（Stack Overflow 等）が Spring Boot 3.x より少ない</li>
-<li>Jakarta EE 11 の <code>javax.*</code> → <code>jakarta.*</code> パッケージ移行が完了していない社内共有ライブラリがある場合、依存関係の調整が必要</li>
-<li>フォールバック（Phase 1）を選択した場合、後日の移行コストが発生する（依存ライブラリの変更・自動構成の見直し等）</li>
+<li>springdoc-openapi の依存関係が追加される</li>
 </ul>
-<h2 id="_10">コンプライアンス<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
-<p>以下を確認することで決定が正しく実装されていることを確認する。</p>
+<h2 id="_9">コンプライアンス<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>./gradlew -version</code> の出力で JVM バージョンが 25.x であること</li>
-<li><code>./gradlew bootRun</code> 起動ログに <code>Spring Boot 4.0.x</code> が表示されること</li>
-<li>CI の Java バージョンマトリクスに Java 25 が含まれること</li>
-<li>全単体テスト・統合テストが Java 25 環境で通過すること</li>
+<li>開発環境: <code>/swagger-ui/index.html</code> が 200 OK を返すこと</li>
+<li>product プロファイル: <code>/swagger-ui/index.html</code> がアクセス不可であること</li>
 </ul>
-<h2 id="_11">備考<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h2 id="_10">備考<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <ul>
-<li>著者: Project Team</li>
-<li>関連ドキュメント: <code>docs/design/tech_stack.md</code>（バージョン採用方針）</li>
-<li>関連 ADR: なし（本 ADR が初番）</li>
+<li>関連コミット: <code>cab0cb8</code></li>
+<li>関連 ADR: ADR-001</li>
 </ul>
 
 
@@ -3814,9 +3807,6 @@ Phase 4: Virtual Threads 対応・JSpecify null safety 段階適用
 
 
 
-
-  
-  
 
 
 

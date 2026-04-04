@@ -6,17 +6,17 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="荷主（顧客）が直接予約・追跡・問い合わせを行うセルフサービスポータルは Phase 1 スコープ外とし、営業担当者が代理操作する業務フローで実装する。">
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
       
       
         <meta name="author" content="Project Team">
       
       
       
-        <link rel="prev" href="../003-discount-policy-as-entity/">
+        <link rel="prev" href="../002-gradle-groovy-dsl/">
       
       
-        <link rel="next" href="../005-windows-docker-desktop-testcontainers/">
+        <link rel="next" href="../004-swagger-ui-conditional/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>ADR-004: 荷主セルフサービス機能を Phase 1 スコープ外とする - Case Study Cargo Tracker</title>
+        <title>ADR-003 SpotBugs ignoreFailures - Case Study Cargo Tracker</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-004-phase-1" class="md-skip">
+        <a href="#adr-003-spotbugs-ignorefailurestrue-java-25" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR-004: 荷主セルフサービス機能を Phase 1 スコープ外とする
+              ADR-003 SpotBugs ignoreFailures
             
           </span>
         </div>
@@ -1634,14 +1634,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../001-java-springboot-version-strategy/" class="md-nav__link">
+      <a href="../001-spring-boot-4-java-25/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-001 Java/Spring Boot バージョン戦略
+    ADR-001 Spring Boot 4 + Java 25
   
 
     
@@ -1662,42 +1662,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../002-transactional-event-listener/" class="md-nav__link">
+      <a href="../002-gradle-groovy-dsl/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-002 TransactionalEventListener
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../003-discount-policy-as-entity/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ADR-003 DiscountPolicy エンティティ化
+    ADR-002 Gradle Groovy DSL
   
 
     
@@ -1734,7 +1706,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-004 荷主セルフサービス除外
+    ADR-003 SpotBugs ignoreFailures
   
 
     
@@ -1752,7 +1724,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-004 荷主セルフサービス除外
+    ADR-003 SpotBugs ignoreFailures
   
 
     
@@ -1812,32 +1784,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 1 の代替実装
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        データモデルへの影響
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 2 以降の実装計画
+        変���箇所
       
     </span>
   </a>
@@ -1846,17 +1796,6 @@
         
           <li class="md-nav__item">
   <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        変更箇所
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         代替案
@@ -1872,7 +1811,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         影響
@@ -1884,7 +1823,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         ポジティブ
@@ -1895,7 +1834,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         ネガティブ
@@ -1911,10 +1850,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
-        コンプライアンス
+        コンプライ��ンス
       
     </span>
   </a>
@@ -1922,7 +1861,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         備考
@@ -1948,14 +1887,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../005-windows-docker-desktop-testcontainers/" class="md-nav__link">
+      <a href="../004-swagger-ui-conditional/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-005 Windows Testcontainers
+    ADR-004 Swagger UI 条件付き有効化
   
 
     
@@ -1976,14 +1915,126 @@
   
   
     <li class="md-nav__item">
-      <a href="../006-enable-h2-console-on-spring-boot-4/" class="md-nav__link">
+      <a href="../005-husky-lint-staged-precommit/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-006 H2 Console on Spring Boot 4
+    ADR-005 Husky pre-commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../006-testcontainers-singleton-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-006 Testcontainers シングルトン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../007-playwright-e2e-pom-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-007 Playwright POM パターン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../008-sonarqube-local-quality-gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-008 SonarQube 品質ゲート
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../009-github-actions-ci-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-009 GitHub Actions CI
   
 
     
@@ -3685,143 +3736,24 @@
   
 
 
-<h1 id="adr-004-phase-1">ADR-004: 荷主セルフサービス機能を Phase 1 スコープ外とする<a class="headerlink" href="#adr-004-phase-1" title="Permanent link">&para;</a></h1>
-<p>荷主（顧客）が Web ポータルから直接予約・追跡・問い合わせを行う「セルフサービス機能」は Phase 1 スコープ外とし、すべての操作は営業担当者・追跡管理者が代理で行う業務フローとして実装する。</p>
-<p>日付: 2026-03-31</p>
+<h1 id="adr-003-spotbugs-ignorefailurestrue-java-25">ADR-003: SpotBugs を ignoreFailures=true で運用する（Java 25 対��）<a class="headerlink" href="#adr-003-spotbugs-ignorefailurestrue-java-25" title="Permanent link">&para;</a></h1>
+<p>SpotBugs が Java 25 ���クラスファイルを未サポートのため、ignoreFailures=true でビルドを継続する。</p>
+<p>日付: 2026-04-04</p>
 <h2 id="_1">ステータス<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>承認済み</p>
 <h2 id="_2">コンテキスト<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p>本システムは国際貨物輸送管理のケーススタディであり、Jakarta EE 実装（<code>cargotracker</code>）の Spring Boot 移植を目的としている。エンドユーザーとしては以下の 2 種類が考えられる。</p>
-<p><strong>社内ユーザー</strong>（業務担当者）:</p>
+<p>SpotBugs 4.9.3 は Java 25 のクラスファイル（major version 69）をサポートしていない。<code>Unsupported class file major version 69</code> エラーが発生し、exit code 4 でビルドが失敗する。</p>
 <ul>
-<li>営業担当者: 貨物予約・ルート設計依頼</li>
-<li>経路設計者: 最適ルートの設計・割り当て</li>
-<li>追跡管理者: 追跡番号発行・ステータス更新</li>
-<li>荷役作業員: 荷役イベント登録（バーコードスキャン）</li>
-<li>経理担当者: 請求書発行・精算処理</li>
-</ul>
-<p><strong>外部ユーザー</strong>（顧客）:</p>
-<ul>
-<li>荷主（Shipper）: 貨物の依頼元。予約・ステータス確認・請求書受け取り</li>
-<li>荷受人（Consignee）: 配送先。到着通知・受け取り確認</li>
-</ul>
-<p><strong>荷主セルフサービスとして考えられる機能</strong>:</p>
-<table>
-<thead>
-<tr>
-<th>機能</th>
-<th>説明</th>
-<th>影響する画面・機能</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>荷主登録ポータル</td>
-<td>荷主が自分でアカウントを作成する</td>
-<td>荷主登録画面（新規追加）</td>
-</tr>
-<tr>
-<td>見積依頼フォーム</td>
-<td>荷主が見積もりを直接依頼する</td>
-<td>見積依頼画面（新規追加）</td>
-</tr>
-<tr>
-<td>予約ステータス確認</td>
-<td>荷主が予約状況を確認する</td>
-<td>貨物詳細画面への荷主アクセス</td>
-</tr>
-<tr>
-<td>追跡番号照会（公開）</td>
-<td>荷主・荷受人が追跡番号で現在地を確認</td>
-<td>公開追跡 API（部分的に対応済み）</td>
-</tr>
-<tr>
-<td>請求書ダウンロード</td>
-<td>荷主が請求書を直接ダウンロードする</td>
-<td>請求書発行画面への荷主アクセス</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Phase 1 でのスコープ判断の背景</strong>:</p>
-<ul>
-<li><strong>ケーススタディの目的</strong>: 本プロジェクトは DDD + ヘキサゴナル + CQRS の実装パターン習得が主目的であり、荷主向け外部ポータルの追加はスコープを大幅に拡大する</li>
-<li><strong>認証・認可の複雑化</strong>: 外部荷主のセルフ登録には、内部 RBAC（ROLE_SALES 等）とは別の認証フロー（メール確認、パスワードリセット等）が必要</li>
-<li><strong>マルチテナント化の課題</strong>: 荷主ごとのデータアクセス制御（自分の貨物のみ閲覧可能）は Spring Security の追加設定が必要</li>
-<li><strong>UI/UX の追加工数</strong>: 業務担当者向け UI と顧客向け UI は要件・デザインが異なり、別画面として設計・実装する必要がある</li>
+<li>SpotBugs を完全に無効化すると、将来 Java 25 対応時に再有効化を忘れるリスクがある</li>
+<li>参考プロジ���クトでは <code>ignoreFailures = true</code> を採用し、レポート出力のみ行う方針としている</li>
 </ul>
 <h2 id="_3">決定<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p><strong>Phase 1 では荷主セルフサービス機能をスコープ外とし、以下の方針で代替実装する。</strong></p>
-<h3 id="phase-1">Phase 1 の代替実装<a class="headerlink" href="#phase-1" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>荷主の操作ニーズ</th>
-<th>Phase 1 の対応</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>予約を依頼したい</td>
-<td>営業担当者が電話・メールを受けて代理で予約登録</td>
-</tr>
-<tr>
-<td>ステータスを確認したい</td>
-<td>追跡番号を使った公開追跡 API（認証不要・読み取り専用）</td>
-</tr>
-<tr>
-<td>見積もりを依頼したい</td>
-<td>営業担当者経由（システム外の業務フロー）</td>
-</tr>
-<tr>
-<td>請求書を受け取りたい</td>
-<td>経理担当者がシステムから印刷・PDF 出力して郵送・メール送付</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_4">データモデルへの影響<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<p><code>shipper</code> テーブルはシステムに登録された荷主マスタとして実装済み（ADR の影響外）。荷主のシステムログインは Phase 1 では不要なため、<code>users</code> テーブルとの外部キーは設けない。</p>
-<div class="highlight"><pre><span></span><code><span class="c1">-- Phase 1: shipper テーブルは管理データとして存在するが、ログイン機能なし</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">shipper</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w">         </span><span class="n">BIGSERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">name</span><span class="w">       </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">email</span><span class="w">      </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">phone</span><span class="w">      </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">TIMESTAMPTZ</span><span class="w">  </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span>
-<span class="p">);</span>
-<span class="c1">-- users テーブルとの外部キーは Phase 2 以降に追加</span>
-</code></pre></div>
-<h3 id="phase-2">Phase 2 以降の実装計画<a class="headerlink" href="#phase-2" title="Permanent link">&para;</a></h3>
-<p>荷主セルフサービスを実装する場合は以下の追加設計が必要。</p>
-<ol>
-<li><strong>認証</strong>: 荷主向けの <code>ROLE_SHIPPER</code> ロール追加 + メール確認フロー</li>
-<li><strong>認可</strong>: Spring Security の <code>@PreAuthorize("hasRole('SHIPPER') and #shipperId == authentication.principal.shipperId")</code> によるデータフィルタリング</li>
-<li><strong>外部向け API</strong>: 認証付き RESTful API（内部業務系と分離）</li>
-<li><strong>荷主ポータル UI</strong>: 業務担当者 UI とは別の Thymeleaf テンプレート群</li>
-</ol>
-<h3 id="_5">変更箇所<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>ファイル</th>
-<th>内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>docs/design/ui_design.md</code></td>
-<td>荷主ポータル画面（見積依頼、自己登録）を Phase 2 として注記</td>
-</tr>
-<tr>
-<td><code>docs/requirements/user_story.md</code></td>
-<td>荷主セルフサービス関連ストーリーを Phase 2 に移動</td>
-</tr>
-<tr>
-<td><code>shipper</code> テーブル</td>
-<td><code>users</code> テーブルとの外部キーなし（Phase 2 で追加）</td>
-</tr>
-</tbody>
-</table>
-<h3 id="_6">代替案<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p><strong><code>spotbugs { ignoreFailures = true }</code> を設定し、ビルド失敗させずレポートのみ出力する。</strong></p>
+<h3 id="_4">変���箇所<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>apps/cargo-tracker/build.gradle</code> の <code>spotbugs</code> ブロック</li>
+</ul>
+<h3 id="_5">代替案<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -3831,44 +3763,34 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>Phase 1 から荷主セルフサービスを実装</strong></td>
-<td>ケーススタディの目的（DDD パターン習得）に対してスコープが過大。荷主認証・認可・UI の追加工数が DDD コア実装の工数を上回る</td>
+<td>SpotBugs を完全無効化 (<code>enabled = false</code>)</td>
+<td>将来の再有効化忘れリスク、レポートが生成されない</td>
 </tr>
 <tr>
-<td><strong>追跡番号照会のみ公開</strong></td>
-<td>追跡 API（<code>GET /tracking/{trackingId}</code>）は認証不要の公開 API として Phase 1 でも実装する。これはセルフサービスではなく「公開情報の提供」として扱う</td>
-</tr>
-<tr>
-<td><strong>外部ポータルを別サービスとして分離</strong></td>
-<td>Phase 1 のケーススタディでは単一 Spring Boot アプリとして実装する（マイクロサービス化は Phase 3 以降の検討）</td>
+<td>SpotBugs を除外して Java 25 対応を待つ</td>
+<td>対応時期が不明、CI で差分を検知できない</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_7">影響<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
-<h3 id="_8">ポジティブ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<h2 id="_6">影響<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="_7">ポジティブ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Phase 1 の実装スコープを絞り、DDD + ヘキサゴナル + CQRS のコアパターン習得に集中できる</li>
-<li>Spring Security の設計が単純化される（内部 RBAC のみ）</li>
-<li>荷主向けの追加 UI・API が不要となり、開発・テスト工数が削減される</li>
+<li>ビルドが失敗しないためデベロッパーの生産性を維持できる</li>
+<li>SpotBugs レポートは HTML で生成されるため、手動確認は可能</li>
 </ul>
-<h3 id="_9">ネガティブ<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<h3 id="_8">ネガティブ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <ul>
-<li>荷主が直接システムにアクセスできないため、営業担当者への業務集中が生じる</li>
-<li>Phase 2 で荷主セルフサービスを追加する際、<code>shipper</code> テーブルと <code>users</code> テーブルの関連付け・既存データのマイグレーションが必要</li>
-<li>追跡番号照会（公開 API）は Phase 1 で実装するため、認証なし API のセキュリティ設計（レートリミット等）は Phase 1 から考慮すること</li>
+<li>SpotBugs の指摘がビルドで自動ブロックされないため、バグパターンが見逃される可能性がある</li>
 </ul>
-<h2 id="_10">コンプライアンス<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h2 id="_9">コンプライ��ンス<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>users</code> / <code>user_roles</code> テーブルに <code>ROLE_SHIPPER</code> が含まれていないこと</li>
-<li>業務担当者向け画面に荷主ログイン機能がないこと</li>
-<li>追跡 API（<code>GET /tracking/{trackingId}</code>）が認証不要で動作すること</li>
-<li>UI 設計ドキュメントに「荷主セルフサービスは Phase 2」の注記があること</li>
+<li>SpotBugs が Java 25 に対応した時点で <code>ignoreFailures = false</code> に戻すこと</li>
+<li>SonarQube の Quality Gate で代替的な品質チェックを行う��と</li>
 </ul>
-<h2 id="_11">備考<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<h2 id="_10">備考<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <ul>
-<li>著者: Project Team</li>
-<li>関連ドキュメント: <code>docs/design/ui_design.md</code>、<code>docs/design/data-model.md</code>、<code>docs/requirements/user_story.md</code></li>
-<li>関連 ADR: ADR-001、ADR-003</li>
+<li>関連コミット: <code>0eec9a8</code>, <code>cab0cb8</code></li>
+<li>Checkstyle も同様に <code>ignoreFailures = true</code> を設定している</li>
 </ul>
 
 
@@ -3876,9 +3798,6 @@
 
 
 
-
-  
-  
 
 
 

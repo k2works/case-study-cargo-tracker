@@ -6,17 +6,17 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Spring ApplicationEventPublisher によるドメインイベント発行に @TransactionalEventListener(phase = AFTER_COMMIT) を必須とし、コミット前リスナー実行によるデータ不整合を防止する。">
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
       
       
         <meta name="author" content="Project Team">
       
       
       
-        <link rel="prev" href="../001-java-springboot-version-strategy/">
+        <link rel="prev" href="../004-swagger-ui-conditional/">
       
       
-        <link rel="next" href="../003-discount-policy-as-entity/">
+        <link rel="next" href="../006-testcontainers-singleton-pattern/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>ADR-002: ドメインイベントに @TransactionalEventListener(AFTER_COMMIT) を使用する - Case Study Cargo Tracker</title>
+        <title>ADR-005 Husky pre-commit - Case Study Cargo Tracker</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-002-transactionaleventlistenerafter_commit" class="md-skip">
+        <a href="#adr-005-husky-lint-staged-pre-commit" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR-002: ドメインイベントに @TransactionalEventListener(AFTER_COMMIT) を使用する
+              ADR-005 Husky pre-commit
             
           </span>
         </div>
@@ -1634,14 +1634,98 @@
   
   
     <li class="md-nav__item">
-      <a href="../001-java-springboot-version-strategy/" class="md-nav__link">
+      <a href="../001-spring-boot-4-java-25/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-001 Java/Spring Boot バージョン戦略
+    ADR-001 Spring Boot 4 + Java 25
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../002-gradle-groovy-dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Gradle Groovy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../003-spotbugs-ignore-failures-java25/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 SpotBugs ignoreFailures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../004-swagger-ui-conditional/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Swagger UI 条件付き有効化
   
 
     
@@ -1678,7 +1762,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-002 TransactionalEventListener
+    ADR-005 Husky pre-commit
   
 
     
@@ -1696,7 +1780,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-002 TransactionalEventListener
+    ADR-005 Husky pre-commit
   
 
     
@@ -1816,24 +1900,13 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        失敗時のリカバリ方針
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_9" class="md-nav__link">
     <span class="md-ellipsis">
       
         コンプライアンス
@@ -1844,7 +1917,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_11" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         備考
@@ -1870,14 +1943,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../003-discount-policy-as-entity/" class="md-nav__link">
+      <a href="../006-testcontainers-singleton-pattern/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-003 DiscountPolicy エンティティ化
+    ADR-006 Testcontainers シングルトン
   
 
     
@@ -1898,14 +1971,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../004-shipper-self-service-out-of-scope/" class="md-nav__link">
+      <a href="../007-playwright-e2e-pom-pattern/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-004 荷主セルフサービス除外
+    ADR-007 Playwright POM パターン
   
 
     
@@ -1926,14 +1999,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../005-windows-docker-desktop-testcontainers/" class="md-nav__link">
+      <a href="../008-sonarqube-local-quality-gate/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-005 Windows Testcontainers
+    ADR-008 SonarQube 品質ゲート
   
 
     
@@ -1954,14 +2027,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../006-enable-h2-console-on-spring-boot-4/" class="md-nav__link">
+      <a href="../009-github-actions-ci-pipeline/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-006 H2 Console on Spring Boot 4
+    ADR-009 GitHub Actions CI
   
 
     
@@ -3663,118 +3736,27 @@
   
 
 
-<h1 id="adr-002-transactionaleventlistenerafter_commit">ADR-002: ドメインイベントに @TransactionalEventListener(AFTER_COMMIT) を使用する<a class="headerlink" href="#adr-002-transactionaleventlistenerafter_commit" title="Permanent link">&para;</a></h1>
-<p>Spring <code>ApplicationEventPublisher</code> によるドメインイベント発行では、リスナーに <code>@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)</code> を必須とし、トランザクションコミット前のリスナー実行によるデータ不整合を防止する。</p>
-<p>日付: 2026-03-31</p>
+<h1 id="adr-005-husky-lint-staged-pre-commit">ADR-005: Husky + lint-staged で pre-commit 品質チェックを実施する<a class="headerlink" href="#adr-005-husky-lint-staged-pre-commit" title="Permanent link">&para;</a></h1>
+<p>コミット前に Gradle check を自動実行し、品質基準を満たさないコードのコミットを防止する。</p>
+<p>日付: 2026-04-04</p>
 <h2 id="_1">ステータス<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>承認済み</p>
 <h2 id="_2">コンテキスト<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p>本システムは DDD + ヘキサゴナルアーキテクチャを採用し、コンテキスト間通信に Spring の <code>ApplicationEventPublisher</code> を使用する。ドメインイベント（<code>CargoBookedEvent</code>、<code>CargoRoutedEvent</code>、<code>HandlingEventRegisteredEvent</code> 等）は集約内で発生し、アプリケーション層で発行される。</p>
-<p><strong>問題の背景</strong>:</p>
-<p>Spring の <code>@EventListener</code>（デフォルト）はイベント発行時点（トランザクション実行中）に同期実行される。以下の問題が発生しうる。</p>
-<div class="highlight"><pre><span></span><code>1. アプリケーション層でトランザクション開始
-2. 集約（Cargo）を変更・保存
-3. ApplicationEventPublisher.publishEvent(CargoBookedEvent) を呼び出し
-4. @EventListener がトランザクション内で同期実行
-   - Notification コンテキストが DB に通知レコードを書き込む
-5. ★ ここでトランザクションがロールバック
-6. 結果: 貨物の DB 変更は消えたが、通知レコードだけ残る（不整合）
-</code></pre></div>
-<p>この問題は特に以下のシナリオで顕在化する。</p>
+<p>コード品質を維持するため、コミット前に自動的な品質チェックを実行する仕組みが必要である。</p>
 <ul>
-<li>通知コンテキストによるメール送信トリガー</li>
-<li>追跡コンテキストへの TrackingId 発行通知</li>
-<li>請求コンテキストへの配送完了通知</li>
+<li>Java ソースファイルが変更された場合のみ Gradle check を実行したい</li>
+<li>チーム全員に同じチェックを適用したい</li>
+<li>Node.js ベースの Gulp タスクランナーが既に導入されている</li>
 </ul>
-<p><strong>検討した代替アノテーション</strong>:</p>
-<table>
-<thead>
-<tr>
-<th>アノテーション</th>
-<th>実行タイミング</th>
-<th>問題</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>@EventListener</code></td>
-<td>イベント発行時（トランザクション中）</td>
-<td>ロールバック時にサイドエフェクトが残る</td>
-</tr>
-<tr>
-<td><code>@TransactionalEventListener(BEFORE_COMMIT)</code></td>
-<td>コミット直前</td>
-<td>ロールバック時のリスクは残る</td>
-</tr>
-<tr>
-<td><code>@TransactionalEventListener(AFTER_COMMIT)</code></td>
-<td>コミット確定後</td>
-<td>サイドエフェクトはコミット後にのみ発生</td>
-</tr>
-<tr>
-<td><code>@TransactionalEventListener(AFTER_ROLLBACK)</code></td>
-<td>ロールバック後</td>
-<td>補償処理用途に限定</td>
-</tr>
-</tbody>
-</table>
 <h2 id="_3">決定<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p><strong>すべてのドメインイベントリスナーに <code>@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)</code> を使用する。</strong></p>
-<p>実装パターン：</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// ✅ 正しい実装</span>
-<span class="nd">@Component</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CargoBookedEventHandler</span><span class="w"> </span><span class="p">{</span>
-
-<span class="w">    </span><span class="nd">@TransactionalEventListener</span><span class="p">(</span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TransactionPhase</span><span class="p">.</span><span class="na">AFTER_COMMIT</span><span class="p">)</span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="n">CargoBookedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// コミット確定後に実行されるため、貨物データが確実に永続化済み</span>
-<span class="w">        </span><span class="n">notificationService</span><span class="p">.</span><span class="na">sendBookingConfirmation</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="na">getBookingId</span><span class="p">());</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="c1">// ❌ 使用禁止（ロールバック時にサイドエフェクトが残るリスク）</span>
-<span class="nd">@Component</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CargoBookedEventHandler</span><span class="w"> </span><span class="p">{</span>
-
-<span class="w">    </span><span class="nd">@EventListener</span><span class="w">  </span><span class="c1">// ← 使用禁止</span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="n">CargoBookedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">notificationService</span><span class="p">.</span><span class="na">sendBookingConfirmation</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="na">getBookingId</span><span class="p">());</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
+<p><strong>Husky + lint-staged を導入し、Java ファイルの変更時に <code>./gradlew check</code> を自動実行する。</strong></p>
 <h3 id="_4">変更箇所<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>ファイル・クラス</th>
-<th>変更内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>*EventHandler.java</code></td>
-<td>すべてのリスナーを <code>@TransactionalEventListener(AFTER_COMMIT)</code> に統一</td>
-</tr>
-<tr>
-<td>ArchUnit ルール</td>
-<td><code>@EventListener</code> の使用を禁止するアーキテクチャテストを追加</td>
-</tr>
-<tr>
-<td>コーディング規約</td>
-<td><code>@EventListener</code> 使用禁止を明文化</td>
-</tr>
-</tbody>
-</table>
-<p>ArchUnit によるコンプライアンスチェック：</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@Test</span>
-<span class="kt">void</span><span class="w"> </span><span class="nf">domainEventListeners_mustUseTransactionalEventListener</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">noMethods</span><span class="p">()</span>
-<span class="w">        </span><span class="p">.</span><span class="na">that</span><span class="p">().</span><span class="na">areDeclaredInClassesThat</span><span class="p">().</span><span class="na">resideInAPackage</span><span class="p">(</span><span class="s">&quot;..application..&quot;</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">should</span><span class="p">().</span><span class="na">beAnnotatedWith</span><span class="p">(</span><span class="n">EventListener</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">because</span><span class="p">(</span><span class="s">&quot;ドメインイベントリスナーは @TransactionalEventListener(AFTER_COMMIT) を使用すること&quot;</span><span class="p">)</span>
-<span class="w">        </span><span class="p">.</span><span class="na">check</span><span class="p">(</span><span class="n">importedClasses</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div>
+<ul>
+<li><code>package.json</code> に <code>husky</code>、<code>lint-staged</code>、<code>prepare</code> スクリプトを追加</li>
+<li><code>.husky/pre-commit</code> で <code>npx lint-staged</code> を実行</li>
+<li><code>ops/scripts/pre_commit_gradle_check.mjs</code> で <code>apps/cargo-tracker</code> の <code>./gradlew check</code> を実行</li>
+<li><code>package.json</code> の <code>lint-staged</code> 設定で <code>apps/cargo-tracker/src/**/*.java</code> をトリガーに指定</li>
+</ul>
 <h3 id="_5">代替案<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3785,64 +3767,38 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>アウトボックスパターン（Transactional Outbox）</strong></td>
-<td>ドメインイベントを別テーブルに永続化し、バッチで処理する。信頼性は高いがインフラ複雑度が大幅に増加する。本ケーススタディのスコープでは過剰設計</td>
+<td>Git hooks を手動設定</td>
+<td>チームメンバー間で設定が異なるリスク</td>
 </tr>
 <tr>
-<td><strong>Spring ApplicationEvent のトランザクション外発行</strong></td>
-<td>ドメインロジックとトランザクション境界を分離する必要があり、ヘキサゴナルアーキテクチャの構造と相性が悪い</td>
+<td>CI のみでチェック</td>
+<td>プッシュ後に失敗が判明し手戻りが発生する</td>
 </tr>
 <tr>
-<td><strong>メッセージキュー（SQS / RabbitMQ）</strong></td>
-<td>ケーススタディとしての複雑度が過剰。将来的な拡張として検討</td>
+<td>pre-push フック</td>
+<td>コミット単位での品質担保ができない</td>
 </tr>
 </tbody>
 </table>
 <h2 id="_6">影響<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <h3 id="_7">ポジティブ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
-<li>トランザクションロールバック時にサイドエフェクトが残らないため、データ整合性が保証される</li>
-<li>ドメインイベントの発行タイミングが直感的に理解しやすくなる</li>
-<li>ArchUnit によるアーキテクチャテストで誤った <code>@EventListener</code> 使用を自動検出できる</li>
+<li>品質基準を満たさないコードがリポジトリに入ることを防止できる</li>
+<li><code>npm install</code> で自動セットアップされるため、手動設定が不要</li>
 </ul>
 <h3 id="_8">ネガティブ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>@TransactionalEventListener(AFTER_COMMIT)</code> のリスナーはトランザクション外で実行される。リスナー内で新たなトランザクションが必要な場合は <code>@Transactional(propagation = REQUIRES_NEW)</code> を明示的に付与する必要がある</li>
-<li>リスナー実行失敗時のリトライ機構がない（デフォルト）。重要なサイドエフェクト（メール送信等）は try-catch でエラーハンドリングを実装すること</li>
-<li>イベント発行とリスナー実行の間に僅かなタイムラグが生じる（テスト時に注意: <code>@TestTransaction</code> との組み合わせでリスナーが呼ばれない場合がある）</li>
+<li>Java ファイル変更時のコミットに数十秒かかる（Gradle check の実行時間）</li>
+<li>緊急時は <code>--no-verify</code> でスキップ可能だが非推奨</li>
 </ul>
-<h3 id="_9">失敗時のリカバリ方針<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
-<p>AFTER_COMMIT 後にリスナーが例外を投げた場合、トランザクションはコミット済みのためロールバック不可。</p>
-<p><strong>Phase 1 の方針（try-catch + 手動リカバリ）</strong>:</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@TransactionalEventListener</span><span class="p">(</span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TransactionPhase</span><span class="p">.</span><span class="na">AFTER_COMMIT</span><span class="p">)</span>
-<span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="n">CargoBookedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">notificationService</span><span class="p">.</span><span class="na">sendBookingConfirmation</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="na">getBookingId</span><span class="p">());</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">log</span><span class="p">.</span><span class="na">error</span><span class="p">(</span><span class="s">&quot;CargoBookedEvent listener failed for bookingId={}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">getBookingId</span><span class="p">(),</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
-<span class="w">        </span><span class="n">failedEventRepository</span><span class="p">.</span><span class="na">save</span><span class="p">(</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">FailedEvent</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="na">getEventType</span><span class="p">(),</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">toJson</span><span class="p">(),</span><span class="w"> </span><span class="n">Instant</span><span class="p">.</span><span class="na">now</span><span class="p">())</span>
-<span class="w">        </span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>failed_events</code> テーブル（<code>event_type VARCHAR</code>, <code>event_payload JSONB</code>, <code>failed_at TIMESTAMP</code>, <code>resolved_at TIMESTAMP</code>）を作成し、手動リカバリの起点とする。重大イベント（追跡番号通知等）は CloudWatch Alarm → Slack 通知を設定する。</p>
-<p><strong>Phase 2 以降の検討事項</strong>:</p>
+<h2 id="_9">コンプライアンス<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>
-<li>通知系イベント（<code>CargoBookedEvent</code> 等）: Spring Retry（最大 3 回・指数バックオフ）</li>
-<li>重要業務イベント（<code>HandlingEventRegisteredEvent</code> 等）: Transactional Outbox パターンへの移行</li>
+<li>Java ファイルを変更してコミットした際に Gradle check が自動実行されること</li>
+<li>check 失敗時にコミットがブロックされること</li>
 </ul>
-<h2 id="_10">コンプライアンス<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h2 id="_10">備考<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <ul>
-<li>ArchUnit テスト <code>domainEventListeners_mustUseTransactionalEventListener</code> が CI で全通過すること</li>
-<li>コードレビューチェックリストに「<code>@EventListener</code> 使用禁止」を追加すること</li>
-<li>統合テストで「コマンド実行 → ロールバック → イベントリスナーが呼ばれていないこと」を検証するテストケースを含めること</li>
-</ul>
-<h2 id="_11">備考<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
-<ul>
-<li>著者: Project Team</li>
-<li>関連ドキュメント: <code>docs/design/architecture_backend.md</code>（ドメインイベント発行パターン）</li>
-<li>関連 ADR: ADR-001（Spring Boot 4.0 採用）</li>
+<li>関連コミット: <code>0eec9a8</code></li>
 </ul>
 
 
@@ -3850,9 +3806,6 @@
 
 
 
-
-  
-  
 
 
 

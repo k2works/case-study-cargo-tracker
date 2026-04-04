@@ -16,7 +16,7 @@
         <link rel="prev" href="../review/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E5%88%86%E6%9E%90_review_20260331/">
       
       
-        <link rel="next" href="001-java-springboot-version-strategy/">
+        <link rel="next" href="001-spring-boot-4-java-25/">
       
       
         
@@ -1692,14 +1692,14 @@
   
   
     <li class="md-nav__item">
-      <a href="001-java-springboot-version-strategy/" class="md-nav__link">
+      <a href="001-spring-boot-4-java-25/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-001 Java/Spring Boot バージョン戦略
+    ADR-001 Spring Boot 4 + Java 25
   
 
     
@@ -1720,14 +1720,14 @@
   
   
     <li class="md-nav__item">
-      <a href="002-transactional-event-listener/" class="md-nav__link">
+      <a href="002-gradle-groovy-dsl/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-002 TransactionalEventListener
+    ADR-002 Gradle Groovy DSL
   
 
     
@@ -1748,14 +1748,14 @@
   
   
     <li class="md-nav__item">
-      <a href="003-discount-policy-as-entity/" class="md-nav__link">
+      <a href="003-spotbugs-ignore-failures-java25/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-003 DiscountPolicy エンティティ化
+    ADR-003 SpotBugs ignoreFailures
   
 
     
@@ -1776,14 +1776,14 @@
   
   
     <li class="md-nav__item">
-      <a href="004-shipper-self-service-out-of-scope/" class="md-nav__link">
+      <a href="004-swagger-ui-conditional/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-004 荷主セルフサービス除外
+    ADR-004 Swagger UI 条件付き有効化
   
 
     
@@ -1804,14 +1804,14 @@
   
   
     <li class="md-nav__item">
-      <a href="005-windows-docker-desktop-testcontainers/" class="md-nav__link">
+      <a href="005-husky-lint-staged-precommit/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-005 Windows Testcontainers
+    ADR-005 Husky pre-commit
   
 
     
@@ -1832,14 +1832,98 @@
   
   
     <li class="md-nav__item">
-      <a href="006-enable-h2-console-on-spring-boot-4/" class="md-nav__link">
+      <a href="006-testcontainers-singleton-pattern/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-006 H2 Console on Spring Boot 4
+    ADR-006 Testcontainers シングルトン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="007-playwright-e2e-pom-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-007 Playwright POM パターン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="008-sonarqube-local-quality-gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-008 SonarQube 品質ゲート
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="009-github-actions-ci-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-009 GitHub Actions CI
   
 
     
@@ -3542,7 +3626,7 @@
 
 
 <h1 id="adr-architecture-decision-records">ADR (Architecture Decision Records)<a class="headerlink" href="#adr-architecture-decision-records" title="Permanent link">&para;</a></h1>
-<p>技術的意思決定を記録した ADR です。</p>
+<p>アプリケーション開発環境セットアップにおける技術的意思決定を記録した ADR です。</p>
 <h2 id="adr">ADR 一覧<a class="headerlink" href="#adr" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3554,33 +3638,48 @@
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;"><a href="001-java-springboot-version-strategy/">ADR-001</a></td>
-<td style="text-align: left;">Java 25 LTS / Spring Boot 4.0 採用と移行ロードマップ</td>
+<td style="text-align: left;"><a href="001-spring-boot-4-java-25/">ADR-001</a></td>
+<td style="text-align: left;">Spring Boot 4.0.5 + Java 25 を採用する</td>
 <td style="text-align: left;">承認済み</td>
 </tr>
 <tr>
-<td style="text-align: left;"><a href="002-transactional-event-listener/">ADR-002</a></td>
-<td style="text-align: left;">ドメインイベントに @TransactionalEventListener(AFTER_COMMIT) を使用する</td>
+<td style="text-align: left;"><a href="002-gradle-groovy-dsl/">ADR-002</a></td>
+<td style="text-align: left;">ビルドツールに Gradle 9.x (Groovy DSL) を採用する</td>
 <td style="text-align: left;">承認済み</td>
 </tr>
 <tr>
-<td style="text-align: left;"><a href="003-discount-policy-as-entity/">ADR-003</a></td>
-<td style="text-align: left;">DiscountPolicy をエンティティとして設計し、ドメインサービスへの昇格を Phase 2 以降に保留</td>
+<td style="text-align: left;"><a href="003-spotbugs-ignore-failures-java25/">ADR-003</a></td>
+<td style="text-align: left;">SpotBugs を ignoreFailures=true で運用する（Java 25 対応）</td>
 <td style="text-align: left;">承認済み</td>
 </tr>
 <tr>
-<td style="text-align: left;"><a href="004-shipper-self-service-out-of-scope/">ADR-004</a></td>
-<td style="text-align: left;">荷主セルフサービス機能を Phase 1 スコープ外とする</td>
+<td style="text-align: left;"><a href="004-swagger-ui-conditional/">ADR-004</a></td>
+<td style="text-align: left;">Swagger UI を環境変数で条件付き有効化する</td>
 <td style="text-align: left;">承認済み</td>
 </tr>
 <tr>
-<td style="text-align: left;"><a href="005-windows-docker-desktop-testcontainers/">ADR-005</a></td>
-<td style="text-align: left;">Windows Docker Desktop では Testcontainers を docker_engine_linux に接続する</td>
+<td style="text-align: left;"><a href="005-husky-lint-staged-precommit/">ADR-005</a></td>
+<td style="text-align: left;">Husky + lint-staged で pre-commit 品質チェックを実施する</td>
 <td style="text-align: left;">承認済み</td>
 </tr>
 <tr>
-<td style="text-align: left;"><a href="006-enable-h2-console-on-spring-boot-4/">ADR-006</a></td>
-<td style="text-align: left;">Spring Boot 4 の開発環境では H2 Console 専用モジュールと security 例外を明示設定する</td>
+<td style="text-align: left;"><a href="006-testcontainers-singleton-pattern/">ADR-006</a></td>
+<td style="text-align: left;">Testcontainers でシングルトンコンテナパターンを採用する</td>
+<td style="text-align: left;">承認済み</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="007-playwright-e2e-pom-pattern/">ADR-007</a></td>
+<td style="text-align: left;">Playwright E2E テストで Page Object Model パターンを採用する</td>
+<td style="text-align: left;">承認済み</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="008-sonarqube-local-quality-gate/">ADR-008</a></td>
+<td style="text-align: left;">ローカル SonarQube で品質ゲートを管理する</td>
+<td style="text-align: left;">承認済み</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="009-github-actions-ci-pipeline/">ADR-009</a></td>
+<td style="text-align: left;">GitHub Actions で Build &amp; Test + E2E の 2 ジョブ CI を構成する</td>
 <td style="text-align: left;">承認済み</td>
 </tr>
 </tbody>

@@ -6,17 +6,17 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="請求コンテキストの DiscountPolicy は初期実装でエンティティとして設計し、割引ルールの複雑化に応じてドメインサービスへの昇格を Phase 2 以降に判断する。">
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
       
       
         <meta name="author" content="Project Team">
       
       
       
-        <link rel="prev" href="../002-transactional-event-listener/">
+        <link rel="prev" href="../008-sonarqube-local-quality-gate/">
       
       
-        <link rel="next" href="../004-shipper-self-service-out-of-scope/">
+        <link rel="next" href="../../article/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>ADR-003: DiscountPolicy をエンティティとして設計し、ドメインサービスへの昇格を Phase 2 以降に保留する - Case Study Cargo Tracker</title>
+        <title>ADR-009 GitHub Actions CI - Case Study Cargo Tracker</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-003-discountpolicy-phase-2" class="md-skip">
+        <a href="#adr-009-github-actions-build-test-e2e-2-ci" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR-003: DiscountPolicy をエンティティとして設計し、ドメインサービスへの昇格を Phase 2 以降に保留する
+              ADR-009 GitHub Actions CI
             
           </span>
         </div>
@@ -1634,14 +1634,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../001-java-springboot-version-strategy/" class="md-nav__link">
+      <a href="../001-spring-boot-4-java-25/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-001 Java/Spring Boot バージョン戦略
+    ADR-001 Spring Boot 4 + Java 25
   
 
     
@@ -1662,14 +1662,182 @@
   
   
     <li class="md-nav__item">
-      <a href="../002-transactional-event-listener/" class="md-nav__link">
+      <a href="../002-gradle-groovy-dsl/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ADR-002 TransactionalEventListener
+    ADR-002 Gradle Groovy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../003-spotbugs-ignore-failures-java25/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 SpotBugs ignoreFailures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../004-swagger-ui-conditional/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Swagger UI 条件付き有効化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../005-husky-lint-staged-precommit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005 Husky pre-commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../006-testcontainers-singleton-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-006 Testcontainers シングルトン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../007-playwright-e2e-pom-pattern/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-007 Playwright POM パターン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../008-sonarqube-local-quality-gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-008 SonarQube 品質ゲート
   
 
     
@@ -1706,7 +1874,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-003 DiscountPolicy エンティティ化
+    ADR-009 GitHub Actions CI
   
 
     
@@ -1724,7 +1892,7 @@
   <span class="md-ellipsis">
     
   
-    ADR-003 DiscountPolicy エンティティ化
+    ADR-009 GitHub Actions CI
   
 
     
@@ -1782,17 +1950,6 @@
   
     <nav class="md-nav" aria-label="決定">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#phase-2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 2 以降の昇格判断基準
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
@@ -1886,90 +2043,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../004-shipper-self-service-out-of-scope/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ADR-004 荷主セルフサービス除外
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../005-windows-docker-desktop-testcontainers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ADR-005 Windows Testcontainers
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../006-enable-h2-console-on-spring-boot-4/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ADR-006 H2 Console on Spring Boot 4
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -3663,133 +3736,27 @@
   
 
 
-<h1 id="adr-003-discountpolicy-phase-2">ADR-003: DiscountPolicy をエンティティとして設計し、ドメインサービスへの昇格を Phase 2 以降に保留する<a class="headerlink" href="#adr-003-discountpolicy-phase-2" title="Permanent link">&para;</a></h1>
-<p>請求コンテキストの <code>DiscountPolicy</code> は Phase 1 ではエンティティとして設計し、割引ルールの複雑化（複数ポリシーの組み合わせ・外部割引テーブル参照等）が発生した場合に限り、Phase 2 以降でドメインサービスへの昇格を判断する。</p>
-<p>日付: 2026-03-31</p>
+<h1 id="adr-009-github-actions-build-test-e2e-2-ci">ADR-009: GitHub Actions で Build &amp; Test + E2E の 2 ジョブ CI を構成する<a class="headerlink" href="#adr-009-github-actions-build-test-e2e-2-ci" title="Permanent link">&para;</a></h1>
+<p>GitHub Actions で Backend ビルド・テストと Playwright E2E テストを 2 ジョブ構成で自動実行する。</p>
+<p>日付: 2026-04-04</p>
 <h2 id="_1">ステータス<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>承認済み</p>
 <h2 id="_2">コンテキスト<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p>請求コンテキスト（Billing Context）には、運賃への割引適用ロジックが存在する。現在の要件（US-17: 請求書発行）では以下の割引ルールが想定される。</p>
+<p>コードの変更に対して自動的にビルド・テスト・品質チェックを実行する CI パイプラインが必要である。</p>
 <ul>
-<li>貨物種別（GENERAL / PERISHABLE / DANGEROUS）による基本割引率</li>
-<li>顧客の契約種別（<code>VOLUME</code> カテゴリ）による固定割引率（管理者が <code>CustomerCategory</code> として手動設定。動的な予約件数集計は Phase 2 以降）</li>
-<li>契約顧客向け固定割引率</li>
-</ul>
-<p><strong>設計の選択肢</strong>:</p>
-<table>
-<thead>
-<tr>
-<th>設計</th>
-<th>説明</th>
-<th>DDD パターン</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>値オブジェクト</strong></td>
-<td><code>DiscountRate</code> のような不変の割引率のみ保持</td>
-<td>Value Object</td>
-</tr>
-<tr>
-<td><strong>エンティティ</strong></td>
-<td><code>id</code> を持ち、割引ルールの CRUD 管理・DB 永続化が可能</td>
-<td>Entity</td>
-</tr>
-<tr>
-<td><strong>ドメインサービス</strong></td>
-<td>複数集約・外部システム参照・複雑なルール組み合わせを処理</td>
-<td>Domain Service</td>
-</tr>
-</tbody>
-</table>
-<p><strong>現時点の要件分析</strong>:</p>
-<p>Phase 1 の要件では、割引ルールは「貨物種別 × 顧客カテゴリ × ボリューム」の組み合わせであり、以下の特性を持つ。</p>
-<ul>
-<li>割引ポリシーは DB テーブルに保存・管理者が変更できる（→ 値オブジェクトより DB 参照可能なエンティティが適切）</li>
-<li>単一の <code>Invoice</code> 集約内の <code>calculateDiscount(cargo, customer)</code> メソッドで完結する（→ 複数集約を横断しない）</li>
-<li>外部システムへの参照は現時点で不要（→ ドメインサービスの必要性は低い）</li>
-</ul>
-<p><strong>ドメインサービスへの昇格が必要になる条件</strong>:</p>
-<ul>
-<li>割引計算に複数の集約（Customer + ContractHistory + CargoBatch 等）の参照が必要になった場合</li>
-<li>割引ルールエンジン（外部 API や BRMS）との統合が必要になった場合</li>
-<li>複数の割引ポリシーを組み合わせる「割引チェーン」が実装される場合</li>
+<li><code>apps/cargo-tracker/</code> と <code>apps/e2e/</code> の変更を検知して自動実行したい</li>
+<li>E2E テストはバックエンドのビルド・テスト成功後に実行したい</li>
+<li>テスト失敗時にレポートをアーティファクトとして保存したい</li>
 </ul>
 <h2 id="_3">決定<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
-<p><strong>Phase 1: <code>DiscountPolicy</code> をエンティティとして実装する。</strong></p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Phase 1 の実装（エンティティ）</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">DiscountPolicy</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">DiscountPolicyId</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">policyName</span><span class="p">;</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">CargoType</span><span class="w"> </span><span class="n">applicableCargoType</span><span class="p">;</span><span class="w">   </span><span class="c1">// GENERAL / PERISHABLE / DANGEROUS</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">CustomerCategory</span><span class="w"> </span><span class="n">customerCategory</span><span class="p">;</span><span class="w"> </span><span class="c1">// STANDARD: 通常顧客 / CONTRACT: 契約顧客（固定割引）/ VOLUME: ボリューム顧客（管理者が手動設定）</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">DiscountRate</span><span class="w"> </span><span class="n">discountRate</span><span class="p">;</span><span class="w">         </span><span class="c1">// 0〜100% の値オブジェクト</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">LocalDate</span><span class="w"> </span><span class="n">validFrom</span><span class="p">;</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">LocalDate</span><span class="w"> </span><span class="n">validTo</span><span class="p">;</span>
-
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Money</span><span class="w"> </span><span class="nf">applyDiscount</span><span class="p">(</span><span class="n">Money</span><span class="w"> </span><span class="n">baseAmount</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">baseAmount</span><span class="p">.</span><span class="na">multiply</span><span class="p">(</span><span class="n">BigDecimal</span><span class="p">.</span><span class="na">ONE</span><span class="p">.</span><span class="na">subtract</span><span class="p">(</span><span class="n">discountRate</span><span class="p">.</span><span class="na">value</span><span class="p">()));</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><code>Invoice</code> 集約内での使用：</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Invoice</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Money</span><span class="w"> </span><span class="nf">calculateDiscountedAmount</span><span class="p">(</span><span class="n">DiscountPolicy</span><span class="w"> </span><span class="n">policy</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">policy</span><span class="p">.</span><span class="na">applyDiscount</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">subtotal</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<h3 id="phase-2">Phase 2 以降の昇格判断基準<a class="headerlink" href="#phase-2" title="Permanent link">&para;</a></h3>
-<p>以下の条件が 1 つ以上発生した場合、<code>DiscountPolicyService</code>（ドメインサービス）への昇格を検討する。</p>
-<table>
-<thead>
-<tr>
-<th>条件</th>
-<th>昇格の根拠</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>割引計算に <code>Customer</code> 集約の Contract 情報が必要</td>
-<td>複数集約の参照 → ドメインサービス</td>
-</tr>
-<tr>
-<td>ボリューム割引のために過去 N ヵ月の請求履歴参照が必要</td>
-<td>リポジトリ参照 → ドメインサービス</td>
-</tr>
-<tr>
-<td>複数割引ポリシーの優先順位付き適用（チェーン）</td>
-<td>複雑なルール組み合わせ → ドメインサービス</td>
-</tr>
-</tbody>
-</table>
+<p><strong>GitHub Actions で <code>build</code> ジョブと <code>e2e</code> ジョブの 2 段構成 CI を構築する。<code>e2e</code> は <code>build</code> 成功後に実行する。</strong></p>
 <h3 id="_4">変更箇所<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>ファイル</th>
-<th>内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>billing/domain/DiscountPolicy.java</code></td>
-<td>エンティティとして実装</td>
-</tr>
-<tr>
-<td><code>billing/domain/Invoice.java</code></td>
-<td><code>calculateDiscountedAmount(DiscountPolicy)</code> メソッド</td>
-</tr>
-<tr>
-<td><code>billing/infrastructure/DiscountPolicyRepository.java</code></td>
-<td>MyBatis マッパー（CRUD）</td>
-</tr>
-<tr>
-<td><code>discount_policies</code> テーブル</td>
-<td>データモデルの <code>discount_policies</code> テーブルを参照</td>
-</tr>
-</tbody>
-</table>
+<ul>
+<li><code>.github/workflows/ci.yml</code> を新規作成</li>
+<li><code>build</code> ジョブ: JDK 25 + Gradle ビルド・テスト</li>
+<li><code>e2e</code> ジョブ: Spring Boot 起動 → Node.js + Playwright インストール → E2E テスト実行</li>
+<li>トリガー: <code>java/take-2</code> ブランチへの push / PR で <code>apps/cargo-tracker/**</code>、<code>apps/e2e/**</code> の変更時</li>
+</ul>
 <h3 id="_5">代替案<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3800,43 +3767,39 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>値オブジェクト</strong></td>
-<td>割引ポリシーは管理者が変更可能な永続化データであるため、<code>id</code> を持つエンティティが適切</td>
+<td>単一ジョブで全テスト実行</td>
+<td>E2E テスト失敗時にビルド・テスト結果が分かりにくい</td>
 </tr>
 <tr>
-<td><strong>Phase 1 からドメインサービス</strong></td>
-<td>現時点の要件では単一集約内で完結するため、ドメインサービスは過剰設計。YAGNI 原則に基づき保留</td>
+<td>E2E テストを別ワークフローに分離</td>
+<td>ワークフロー間の依存管理が複雑</td>
 </tr>
 <tr>
-<td><strong>アプリケーションサービスに割引ロジックを実装</strong></td>
-<td>割引ルールはビジネスロジックであり、ドメイン層に属すべき。アプリケーション層への漏れは DDD 違反</td>
+<td>CircleCI / GitLab CI</td>
+<td>GitHub リポジトリとの統合の容易さを優先</td>
 </tr>
 </tbody>
 </table>
 <h2 id="_6">影響<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <h3 id="_7">ポジティブ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Phase 1 の要件に対してシンプルで適切な設計を維持できる</li>
-<li><code>DiscountPolicy</code> のエンティティ管理により、管理者 UI から割引ルールを変更できる</li>
-<li>将来のドメインサービス昇格に備え、<code>Invoice.calculateDiscountedAmount()</code> のシグネチャを変えない設計にすることで、移行コストを最小化できる</li>
+<li>ビルド失敗時は E2E をスキップし、フィードバックが高速</li>
+<li>テスト失敗時にレポート（test-reports / playwright-report）がアーティファクトとして 7 日間保存される</li>
+<li>Gradle キャッシュにより 2 回目以降の実行が高速化</li>
 </ul>
 <h3 id="_8">ネガティブ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Phase 1 のボリューム割引は「管理者が手動設定した <code>VOLUME</code> カテゴリ」に基づく固定割引率で実装する。動的な予約件数参照（過去 N ヵ月の履歴集計）は Phase 2 以降に対応する</li>
-<li>複雑な割引計算ニーズが発生した場合、エンティティからドメインサービスへのリファクタリングが必要になる（ただし、テストが整備されていれば安全にリファクタリング可能）</li>
-<li>「エンティティが計算ロジックを持つ」ことへの設計上の違和感が生じる場合がある（Fat Entity になりやすい）</li>
+<li>E2E ジョブで Spring Boot 起動待ちに最大 2.5 分（30 回 × 5 秒のポーリング）かかる</li>
+<li>Playwright ブラウザのインストールに時間がかかる</li>
 </ul>
 <h2 id="_9">コンプライアンス<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>DiscountPolicy</code> クラスが <code>billing.domain</code> パッケージに配置されていること</li>
-<li><code>DiscountPolicy</code> は Spring アノテーション（<code>@Service</code> 等）を持たないこと（ArchUnit で検証）</li>
-<li><code>Invoice</code> の割引計算テストで <code>DiscountPolicy</code> のモックを使用できること</li>
+<li><code>java/take-2</code> ブランチへの push で CI が自動実行されること</li>
+<li>build ジョブ・e2e ジョブが共に成功すること</li>
 </ul>
 <h2 id="_10">備考<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <ul>
-<li>著者: Project Team</li>
-<li>関連ドキュメント: <code>docs/design/architecture_backend.md</code>（請求コンテキスト）、<code>docs/design/domain-model.md</code></li>
-<li>関連 ADR: ADR-001</li>
+<li>関連コミット: <code>4db8fca</code></li>
 </ul>
 
 
@@ -3844,9 +3807,6 @@
 
 
 
-
-  
-  
 
 
 
