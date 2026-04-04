@@ -3,9 +3,11 @@ package com.example.cargotracker.routing.interfaces.web;
 import com.example.cargotracker.routing.application.internal.outboundservices.BookingQueryPort;
 import com.example.cargotracker.routing.application.internal.outboundservices.BookingSnapshot;
 import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
+import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
 import com.example.cargotracker.routing.domain.model.CargoType;
 import com.example.cargotracker.routing.domain.model.RouteCandidate;
+import com.example.cargotracker.routing.domain.model.RouteDesignCondition;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,9 @@ class RoutingWebControllerTest {
 
     @MockitoBean
     private BookingQueryPort bookingQueryPort;
+
+    @MockitoBean
+    private RouteDesignConditionQueryService routeDesignConditionQueryService;
 
     // ── GET /routings/search?bookingId={id} ───────────────────────────────
 
@@ -112,6 +117,45 @@ class RoutingWebControllerTest {
         mockMvc.perform(get("/routings/search"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/bookings"));
+    }
+
+    // ── GET /routings/design-condition?bookingId={id} ────────────────────
+
+    @Test
+    @DisplayName("予約 ID 指定で経路設計条件画面を表示できる")
+    void designCondition_正常系() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        var condition = new RouteDesignCondition(
+            bookingId, "JPTYO", "SGSIN",
+            LocalDate.of(2026, 6, 30),
+            CargoType.GENERAL,
+            new BigDecimal("500.0")
+        );
+        when(routeDesignConditionQueryService.findByBookingId(bookingId)).thenReturn(condition);
+
+        mockMvc.perform(get("/routings/design-condition").param("bookingId", bookingId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("routing/design-condition"))
+                .andExpect(model().attributeExists("condition"))
+                .andExpect(model().attribute("bookingId", bookingId));
+    }
+
+    @Test
+    @DisplayName("存在しない予約 ID の場合は 404 を返す")
+    void designCondition_予約なし() throws Exception {
+        UUID bookingId = UUID.randomUUID();
+        when(routeDesignConditionQueryService.findByBookingId(bookingId))
+            .thenThrow(new BookingDataNotFoundException(bookingId));
+
+        mockMvc.perform(get("/routings/design-condition").param("bookingId", bookingId.toString()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("bookingId パラメータなしは 400 を返す")
+    void designCondition_パラメータなし() throws Exception {
+        mockMvc.perform(get("/routings/design-condition"))
+                .andExpect(status().isBadRequest());
     }
 
     // ── ヘルパー ─────────────────────────────────────────────────────────────

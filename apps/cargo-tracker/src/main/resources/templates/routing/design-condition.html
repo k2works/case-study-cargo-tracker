@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>経路設計条件確認 - CargoTracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<nav th:replace="~{fragments/header :: appHeader}"></nav>
+
+<main>
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>経路設計条件確認</h4>
+        <a th:href="@{/bookings/{id}(id=${bookingId})}" class="btn btn-outline-secondary">予約詳細に戻る</a>
+    </div>
+
+    <!-- 条件不完全の警告 -->
+    <div th:unless="${condition.isComplete()}" class="alert alert-warning" role="alert">
+        <strong>条件が不完全です。</strong>
+        以下の不足項目について、営業担当者に補完依頼を送ってください。
+        <ul class="mb-0 mt-1">
+            <li th:if="${condition.originLocode() == null or #strings.isEmpty(condition.originLocode())}">出発地 (UN/LOCODE)</li>
+            <li th:if="${condition.destinationLocode() == null or #strings.isEmpty(condition.destinationLocode())}">目的地 (UN/LOCODE)</li>
+            <li th:if="${condition.requestedArrivalDate() == null}">希望着日</li>
+            <li th:if="${condition.cargoType() == null}">貨物種別</li>
+            <li th:if="${condition.weightKg() == null}">重量</li>
+        </ul>
+    </div>
+
+    <!-- 経路設計条件 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h6 class="mb-0">経路設計条件</h6>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">予約番号</dt>
+                <dd class="col-sm-8"><code th:text="${condition.bookingId()}"></code></dd>
+
+                <dt class="col-sm-4">出発地 (UN/LOCODE)</dt>
+                <dd class="col-sm-8">
+                    <code th:if="${condition.originLocode() != null and !#strings.isEmpty(condition.originLocode())}"
+                          th:text="${condition.originLocode()}"></code>
+                    <span th:unless="${condition.originLocode() != null and !#strings.isEmpty(condition.originLocode())}"
+                          class="text-danger">未設定</span>
+                </dd>
+
+                <dt class="col-sm-4">目的地 (UN/LOCODE)</dt>
+                <dd class="col-sm-8">
+                    <code th:if="${condition.destinationLocode() != null and !#strings.isEmpty(condition.destinationLocode())}"
+                          th:text="${condition.destinationLocode()}"></code>
+                    <span th:unless="${condition.destinationLocode() != null and !#strings.isEmpty(condition.destinationLocode())}"
+                          class="text-danger">未設定</span>
+                </dd>
+
+                <dt class="col-sm-4">希望着日</dt>
+                <dd class="col-sm-8">
+                    <span th:if="${condition.requestedArrivalDate() != null}"
+                          th:text="${condition.requestedArrivalDate()}"></span>
+                    <span th:unless="${condition.requestedArrivalDate() != null}" class="text-danger">未設定</span>
+                </dd>
+
+                <dt class="col-sm-4">貨物種別</dt>
+                <dd class="col-sm-8">
+                    <span th:if="${condition.cargoType() != null}"
+                          th:text="${condition.cargoType().displayName}"></span>
+                    <span th:unless="${condition.cargoType() != null}" class="text-danger">未設定</span>
+                </dd>
+
+                <dt class="col-sm-4">重量 (kg)</dt>
+                <dd class="col-sm-8">
+                    <span th:if="${condition.weightKg() != null}"
+                          th:text="${condition.weightKg()}"></span>
+                    <span th:unless="${condition.weightKg() != null}" class="text-danger">未設定</span>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- アクション -->
+    <div class="d-flex gap-2">
+        <!-- 条件が揃っている場合: 航海スケジュール検索へ進む -->
+        <a th:if="${condition.isComplete()}"
+           th:href="@{/routings/search(bookingId=${bookingId})}"
+           class="btn btn-primary">
+            航海スケジュール検索へ進む
+        </a>
+
+        <!-- 条件が不完全な場合: 補完依頼リンク -->
+        <a th:unless="${condition.isComplete()}"
+           th:href="@{/bookings/{id}(id=${bookingId})}"
+           class="btn btn-warning">
+            補完依頼を行う
+        </a>
+    </div>
+</div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

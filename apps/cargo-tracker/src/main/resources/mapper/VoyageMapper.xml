@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.routing.infrastructure.repositories.VoyageMapper">
+
+    <resultMap id="voyageLegResultMap" type="com.example.cargotracker.routing.infrastructure.repositories.VoyageLegRecord">
+        <constructor>
+            <idArg  column="id"                  javaType="java.lang.Long"/>
+            <arg    column="voyage_number"       javaType="java.lang.String"/>
+            <arg    column="origin_locode"       javaType="java.lang.String"/>
+            <arg    column="destination_locode"  javaType="java.lang.String"/>
+            <arg    column="departure_date"      javaType="java.time.LocalDate"/>
+            <arg    column="arrival_date"        javaType="java.time.LocalDate"/>
+            <arg    column="leg_order"           javaType="java.lang.Integer"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="voyageResultMap" type="com.example.cargotracker.routing.infrastructure.repositories.VoyageRecord">
+        <constructor>
+            <idArg  column="voyage_number"         javaType="java.lang.String"/>
+            <arg    column="carrier_name"          javaType="java.lang.String"/>
+            <arg    column="supported_cargo_types" javaType="java.lang.String"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 出発地・目的地を持つ航海番号を検索する（直行便 + 経由便） -->
+    <select id="searchVoyageNumbers" resultType="java.lang.String">
+        SELECT DISTINCT vl_first.voyage_number
+        FROM voyage_legs vl_first
+        JOIN voyage_legs vl_last ON vl_first.voyage_number = vl_last.voyage_number
+        WHERE vl_first.origin_locode = #{originLocode}
+          AND vl_last.destination_locode = #{destinationLocode}
+    </select>
+
+    <!-- 航海番号で航海を取得する -->
+    <select id="findVoyageByNumber" resultMap="voyageResultMap">
+        SELECT voyage_number, carrier_name, supported_cargo_types
+        FROM voyages
+        WHERE voyage_number = #{voyageNumber}
+    </select>
+
+    <!-- 航海番号で航海区間リストを取得する -->
+    <select id="findLegsByVoyageNumber" resultMap="voyageLegResultMap">
+        SELECT id, voyage_number, origin_locode, destination_locode,
+               departure_date, arrival_date, leg_order
+        FROM voyage_legs
+        WHERE voyage_number = #{voyageNumber}
+        ORDER BY leg_order
+    </select>
+
+</mapper>

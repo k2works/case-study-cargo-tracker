@@ -2,6 +2,7 @@ package com.example.cargotracker.routing.interfaces.web;
 
 import com.example.cargotracker.routing.application.internal.outboundservices.BookingQueryPort;
 import com.example.cargotracker.routing.application.internal.queryservices.BookingDataNotFoundException;
+import com.example.cargotracker.routing.application.internal.queryservices.RouteDesignConditionQueryService;
 import com.example.cargotracker.routing.application.internal.queryservices.RouteSearchService;
 import com.example.cargotracker.routing.domain.model.CargoType;
 import com.example.cargotracker.routing.domain.model.RouteCandidate;
@@ -34,16 +35,30 @@ public class RoutingWebController {
 
     private final Optional<RouteSearchService> routeSearchService;
     private final BookingQueryPort bookingQueryPort;
+    private final RouteDesignConditionQueryService routeDesignConditionQueryService;
 
     public RoutingWebController(Optional<RouteSearchService> routeSearchService,
-                                BookingQueryPort bookingQueryPort) {
+                                BookingQueryPort bookingQueryPort,
+                                RouteDesignConditionQueryService routeDesignConditionQueryService) {
         this.routeSearchService = routeSearchService;
         this.bookingQueryPort = bookingQueryPort;
+        this.routeDesignConditionQueryService = routeDesignConditionQueryService;
     }
 
     @ModelAttribute("cargoTypes")
     public CargoType[] cargoTypes() {
         return CargoType.values();
+    }
+
+    /**
+     * 経路設計条件を表示する。
+     */
+    @GetMapping("/design-condition")
+    public String designCondition(@RequestParam UUID bookingId, Model model) {
+        var condition = routeDesignConditionQueryService.findByBookingId(bookingId);
+        model.addAttribute("condition", condition);
+        model.addAttribute("bookingId", bookingId);
+        return "routing/design-condition";
     }
 
     /**
