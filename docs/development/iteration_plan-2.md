@@ -25,10 +25,10 @@
 - [ ] US05: 冷凍・冷蔵を選択すると温度管理条件の入力が必須となる
 - [ ] US13: 予約状態を「仮受付」→「予約確定」に遷移できる
 - [ ] US13: 予約をキャンセル状態に変更できる
-- [ ] IT1 改善: ShipperId が shared.domain.model に配置され、ACL でコンテキスト間依存が解消されている
-- [ ] IT1 改善: DiscountRate 上限が 30%（0.3000）に修正されている
-- [ ] IT1 改善: 荷主登録に住所フィールドが追加されている
-- [ ] IT1 改善: ログイン画面が日本語化されている
+- [x] IT1 改善: ShipperId が shared.domain.model に配置され、ACL でコンテキスト間依存が解消されている
+- [x] IT1 改善: DiscountRate 上限が 30%（0.3000）に修正されている
+- [x] IT1 改善: 荷主登録に住所フィールドが追加されている
+- [x] IT1 改善: ログイン画面が日本語化されている
 - [ ] テストカバレッジ 80% 以上（ブランチカバレッジ含む）
 - [ ] Playwright E2E テストが通過
 
@@ -107,15 +107,15 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `ShipperId` を `shared.domain.model` に移動 + `ShipperExistenceChecker` ACL 導入 + ArchUnit コンテキスト間分離ルール追加 | 3h | - | [ ] |
-| 1.2 | `DiscountRate` 上限 30% 修正 + 境界値テスト 4 値（-0.0001, 0.0000, 0.3000, 0.3001） | 1h | - | [ ] |
-| 1.3 | Shipper 住所フィールド追加（Flyway マイグレーション + ドメインモデル + フォーム + テスト） | 2h | - | [ ] |
-| 1.4 | ドメイン固有例外クラス導入（`ShipperNotFoundException`, `EmailAlreadyRegisteredException`, `BookingNotFoundException`） | 1h | - | [ ] |
-| 1.5 | ログイン画面日本語化 + ナビバーハンバーガーメニュー追加 | 1h | - | [ ] |
-| 1.6 | フォーム `required`/`aria-describedby` + ステータスバッジ色分け + 状態・種別日本語化 | 2h | - | [ ] |
-| 1.7 | US04 未実装フィールド追加（寸法・個数・品名・希望引渡日）+ 荷主選択式 + フラッシュメッセージ + UN/LOCODE ヘルプ | 3h | - | [ ] |
-| 1.8 | E2E テスト日付相対化 + `Weight` 境界値テスト + ブランチカバレッジ向上 | 2h | - | [ ] |
-| 1.9 | domain-model.md 更新（Shipper Context 追加・CorporateShipper・Address・ShipperId 共有カーネル化・HazardousDeclaration/TemperatureRequirement/Dimensions/Quantity/Description 追加・ShipperExistenceChecker ACL 定義） | 1h | - | [ ] |
+| 1.1 | `ShipperId` を `shared.domain.model` に移動 + `ShipperExistenceChecker` ACL 導入 + ArchUnit コンテキスト間分離ルール追加 | 3h | - | [x] |
+| 1.2 | `DiscountRate` 上限 30% 修正 + 境界値テスト 4 値（-0.0001, 0.0000, 0.3000, 0.3001） | 1h | - | [x] |
+| 1.3 | Shipper 住所フィールド追加（Flyway マイグレーション + ドメインモデル + フォーム + テスト） | 2h | - | [x] |
+| 1.4 | ドメイン固有例外クラス導入（`ShipperNotFoundException`, `EmailAlreadyRegisteredException`, `BookingNotFoundException`） | 1h | - | [x] |
+| 1.5 | ログイン画面日本語化 + ナビバーハンバーガーメニュー追加 | 1h | - | [x] |
+| 1.6 | フォーム `required`/`aria-describedby` + ステータスバッジ色分け + 状態・種別日本語化 | 2h | - | [x] |
+| 1.7 | US04 未実装フィールド追加（寸法・個数・品名・希望引渡日）+ 荷主選択式 + フラッシュメッセージ + UN/LOCODE ヘルプ | 3h | - | [x] |
+| 1.8 | E2E テスト日付相対化 + `Weight` 境界値テスト + ブランチカバレッジ向上 | 2h | - | [x] |
+| 1.9 | domain-model.md 更新（Shipper Context 追加・CorporateShipper・Address・ShipperId 共有カーネル化・HazardousDeclaration/TemperatureRequirement/Dimensions/Quantity/Description 追加・ShipperExistenceChecker ACL 定義） | 1h | - | [x] |
 
 **小計**: 16h（理想時間）
 
@@ -153,13 +153,13 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| IT1 品質改善 (IT1-改善) | 4 | 16h | [ ] |
+| IT1 品質改善 (IT1-改善) | 4 | 16h | [x] |
 | 危険物・冷凍貨物 (US05) | 3 | 12h | [ ] |
 | 予約確定 (US13) | 3 | 11h | [ ] |
 | **合計** | **10** | **39h** | |
 
 **1 SP あたり**: 約 3.9h
-**進捗率**: 0% (0/10 SP)
+**進捗率**: 40% (4/10 SP)
 
 ---
 
@@ -819,6 +819,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-04 | 初版作成 | - |
+| 2026-04-04 | IT1 品質改善（4 SP）完了を反映。テスト 95 件全 Green、JaCoCo カバレッジ 63% | - |
 
 ---
 
