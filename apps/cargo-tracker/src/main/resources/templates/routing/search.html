@@ -58,7 +58,7 @@
         制約条件フィルタ適用済み: 希望着日（<span th:text="${form.requestedArrivalDate}"></span>）以前に到着 かつ 貨物種別（<span th:text="${form.cargoType?.displayName}"></span>）対応のみ表示。所要日数の少ない順に並んでいます。
     </p>
 
-    <!-- 候補なし: 警告 + 再検索フォーム -->
+    <!-- 候補なし: 警告 + 再検索フォーム + 営業担当者リンク -->
     <div th:if="${#lists.isEmpty(candidates)}">
         <div class="alert alert-warning" role="alert" aria-live="polite">
             <strong>ルート候補が見つかりませんでした。</strong><br>
@@ -104,6 +104,20 @@
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- US23 AC4: 営業担当者に交渉を依頼 -->
+        <div th:if="${bookingId != null}" class="card shadow-sm mb-4 border-warning">
+            <div class="card-header bg-warning bg-opacity-25">
+                <h6 class="mb-0">それでも候補が見つからない場合</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">条件の緩和が困難な場合は、営業担当者に荷主との条件交渉を依頼してください。</p>
+                <a th:href="@{/bookings/{id}(id=${bookingId})}"
+                   class="btn btn-outline-warning">
+                    <i class="bi bi-person-lines-fill me-1"></i>営業担当者に条件交渉を依頼
+                </a>
             </div>
         </div>
     </div>
@@ -181,12 +195,31 @@
             <form th:action="@{/bookings/{id}/assign-route(id=${bookingId})}" method="post">
                 <div class="modal-body">
                     <p>以下の経路をこの予約に割り当てます。よろしいですか？</p>
-                    <dl class="row mb-0">
+                    <dl class="row mb-3">
                         <dt class="col-sm-4">航海番号</dt>
                         <dd class="col-sm-8" id="modal-voyage-number">—</dd>
                         <dt class="col-sm-4">推定着日</dt>
                         <dd class="col-sm-8" id="modal-estimated-arrival">—</dd>
                     </dl>
+
+                    <!-- 区間詳細（Vanilla JS fetch で動的ロード） -->
+                    <h6 class="mt-2">区間詳細</h6>
+                    <div id="modal-legs-container">
+                        <div id="modal-legs-loading" class="text-muted small">読み込み中...</div>
+                        <div id="modal-legs-error" class="text-danger small d-none">区間詳細を取得できませんでした。</div>
+                        <table id="modal-legs-table" class="table table-sm table-bordered d-none">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>出発港</th>
+                                    <th>到着港</th>
+                                    <th>出発日</th>
+                                    <th>到着日</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-legs-tbody"></tbody>
+                        </table>
+                    </div>
+
                     <input type="hidden" name="voyageNumber" id="modal-input-voyage-number">
                     <input type="hidden" name="routePath" id="modal-input-route-path">
                     <input type="hidden" name="estimatedArrival" id="modal-input-estimated-arrival">
@@ -207,11 +240,45 @@ document.getElementById('assignModal').addEventListener('show.bs.modal', functio
     const voyageNumber = button.getAttribute('data-voyage-number');
     const routePath = button.getAttribute('data-route-path');
     const estimatedArrival = button.getAttribute('data-estimated-arrival');
+
     document.getElementById('modal-voyage-number').textContent = voyageNumber;
     document.getElementById('modal-estimated-arrival').textContent = estimatedArrival;
     document.getElementById('modal-input-voyage-number').value = voyageNumber;
     document.getElementById('modal-input-route-path').value = routePath;
     document.getElementById('modal-input-estimated-arrival').value = estimatedArrival;
+
+    // 区間詳細を fetch で取得
+    const loading = document.getElementById('modal-legs-loading');
+    const error = document.getElementById('modal-legs-error');
+    const table = document.getElementById('modal-legs-table');
+    const tbody = document.getElementById('modal-legs-tbody');
+
+    loading.classList.remove('d-none');
+    error.classList.add('d-none');
+    table.classList.add('d-none');
+    tbody.innerHTML = '';
+
+    fetch('/api/v1/routings/voyages/' + encodeURIComponent(voyageNumber) + '/legs')
+        .then(function(res) {
+            if (!res.ok) { throw new Error('HTTP ' + res.status); }
+            return res.json();
+        })
+        .then(function(legs) {
+            loading.classList.add('d-none');
+            legs.forEach(function(leg) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td>' + leg.originLocode + '</td>'
+                             + '<td>' + leg.destinationLocode + '</td>'
+                             + '<td>' + leg.departureDate + '</td>'
+                             + '<td>' + leg.arrivalDate + '</td>';
+                tbody.appendChild(tr);
+            });
+            table.classList.remove('d-none');
+        })
+        .catch(function() {
+            loading.classList.add('d-none');
+            error.classList.remove('d-none');
+        });
 });
 </script>
 </body>
