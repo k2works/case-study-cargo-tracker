@@ -7,9 +7,17 @@ public record CargoResponse(
         String bookingId,
         String shipperId,
         String cargoType,
+        String cargoTypeDisplayName,
         BigDecimal weight,
+        BigDecimal dimensionLength,
+        BigDecimal dimensionWidth,
+        BigDecimal dimensionHeight,
+        Integer quantity,
+        String description,
         String originUnlocode,
         String destinationUnlocode,
         LocalDate arrivalDeadline,
-        String status
+        String status,
+        String statusDisplayName,
+        String statusBadgeColor
 ) {}

@@ -44,7 +44,9 @@
                         <td th:text="${booking.destinationUnlocode}">USLAX</td>
                         <td th:text="${booking.arrivalDeadline}">2026-04-30</td>
                         <td>
-                            <span class="badge text-bg-secondary" th:text="${booking.status}">PRELIMINARY</span>
+                            <span class="badge"
+                                  th:classappend="'text-bg-' + ${booking.statusBadgeColor}"
+                                  th:text="${booking.statusDisplayName}">仮受付</span>
                         </td>
                         <td>
                             <a class="btn btn-outline-primary btn-sm"

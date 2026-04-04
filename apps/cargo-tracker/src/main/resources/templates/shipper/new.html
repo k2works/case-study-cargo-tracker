@@ -24,14 +24,16 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="name" class="form-label">氏名/社名</label>
-                                <input id="name" type="text" th:field="*{name}" class="form-control">
-                                <div class="invalid-feedback d-block" th:errors="*{name}"></div>
+                                <input id="name" type="text" th:field="*{name}" class="form-control"
+                                       required aria-describedby="nameHelp">
+                                <div id="nameHelp" class="invalid-feedback d-block" th:errors="*{name}"></div>
                             </div>
 
                             <div class="col-md-6">
                                 <label for="email" class="form-label">メール</label>
-                                <input id="email" type="email" th:field="*{email}" class="form-control">
-                                <div class="invalid-feedback d-block" th:errors="*{email}"></div>
+                                <input id="email" type="email" th:field="*{email}" class="form-control"
+                                       required aria-describedby="emailHelp">
+                                <div id="emailHelp" class="invalid-feedback d-block" th:errors="*{email}"></div>
                             </div>
 
                             <div class="col-md-6">
@@ -41,12 +43,13 @@
 
                             <div class="col-md-6">
                                 <label for="shipperType" class="form-label">種別</label>
-                                <select id="shipperType" th:field="*{shipperType}" class="form-select">
+                                <select id="shipperType" th:field="*{shipperType}" class="form-select"
+                                        required aria-describedby="shipperTypeHelp">
                                     <option value="">選択してください</option>
                                     <option value="INDIVIDUAL">個人</option>
                                     <option value="CORPORATE">法人</option>
                                 </select>
-                                <div class="invalid-feedback d-block" th:errors="*{shipperType}"></div>
+                                <div id="shipperTypeHelp" class="invalid-feedback d-block" th:errors="*{shipperType}"></div>
                             </div>
                         </div>
 
@@ -59,7 +62,7 @@
 
                             <div class="col-md-6">
                                 <label for="discountRate" class="form-label">割引率</label>
-                                <input id="discountRate" type="number" step="0.01" min="0" max="0.15" th:field="*{discountRate}" class="form-control">
+                                <input id="discountRate" type="number" step="0.01" min="0" max="0.30" th:field="*{discountRate}" class="form-control">
                                 <div class="invalid-feedback d-block" th:errors="*{discountRate}"></div>
                                 <div class="invalid-feedback d-block" th:errors="*{discountRateValid}"></div>
                             </div>

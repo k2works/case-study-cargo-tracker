@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Cargo Tracker</title>
+    <title>ログイン - Cargo Tracker</title>
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
 </head>
 <body class="bg-light">
@@ -14,23 +14,23 @@
                 <div class="card-body">
                     <h3 class="card-title text-center mb-4">Cargo Tracker</h3>
                     <div th:if="${param.error}" class="alert alert-danger">
-                        Invalid username or password.
+                        ユーザー名またはパスワードが正しくありません。
                     </div>
                     <div th:if="${param.logout}" class="alert alert-success">
-                        You have been logged out.
+                        ログアウトしました。
                     </div>
                     <form th:action="@{/login}" method="post">
                         <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
+                            <label for="username" class="form-label">ユーザー名</label>
                             <input type="text" class="form-control" id="username" name="username" autofocus
                                    th:value="${@environment.getProperty('app.login.default-username')}">
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
+                            <label for="password" class="form-label">パスワード</label>
                             <input type="password" class="form-control" id="password" name="password"
                                    th:value="${@environment.getProperty('app.login.default-password')}">
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                        <button type="submit" class="btn btn-primary w-100">ログイン</button>
                     </form>
                 </div>
             </div>

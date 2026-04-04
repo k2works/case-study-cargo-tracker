@@ -18,6 +18,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,5 +103,47 @@ class AuthE2ETest extends PostgreSQLIntegrationTestBase {
     void e01_healthCheck_shouldBeAccessibleWithoutAuth() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("E01 ログイン画面が日本語で表示される")
+    void e01_loginPage_shouldDisplayJapaneseLabels() throws Exception {
+        mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("ユーザー名")))
+                .andExpect(content().string(containsString("パスワード")))
+                .andExpect(content().string(containsString("ログイン")));
+    }
+
+    @Test
+    @DisplayName("E01 ログイン失敗時に日本語エラーメッセージが表示される")
+    void e01_loginError_shouldDisplayJapaneseMessage() throws Exception {
+        mockMvc.perform(get("/login?error"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("ユーザー名またはパスワードが正しくありません。")));
+    }
+
+    @Test
+    @DisplayName("E01 ログアウト後に日本語メッセージが表示される")
+    void e01_logoutMessage_shouldDisplayJapanese() throws Exception {
+        mockMvc.perform(get("/login?logout"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("ログアウトしました。")));
+    }
+
+    @Test
+    @DisplayName("E01 ナビバーにハンバーガーメニューが含まれる")
+    void e01_navbar_shouldContainHamburgerToggler() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc
+                .perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn()
+                .getRequest()
+                .getSession();
+
+        mockMvc.perform(get("/").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("navbar-toggler")))
+                .andExpect(content().string(containsString("navbarContent")));
     }
 }
