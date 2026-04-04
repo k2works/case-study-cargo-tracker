@@ -19,13 +19,14 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Java | 25 | アプリケーション実装言語 | 長期サポート、豊富なエコシステム、Spring Boot 4 との親和性 | Oracle Free Terms | GA（LTS: Java 21、Java 25 は LTS 候補） |
-| Spring Boot | 4.0.x | アプリケーションフレームワーク | 自動構成による開発効率、Spring エコシステムの活用、DDD 実装との親和性 | Apache 2.0 | GA（4.0.5 リリース済み） |
+| Spring Boot | 4.0.5 | アプリケーションフレームワーク | 自動構成による開発効率、Spring エコシステムの活用、DDD 実装との親和性 | Apache 2.0 | GA（4.0.5 リリース済み） |
 | Spring Framework | 7.x | コアフレームワーク | Spring Boot 4 の基盤、JSpecify による null safety 強化、Jakarta EE 11 対応 | Apache 2.0 | GA（Spring Boot 4 に同梱） |
 | Spring MVC | 7.x | Web フレームワーク | Thymeleaf Controller・REST Controller の統合、ヘキサゴナルの Primary Adapter として機能 | Apache 2.0 | GA（Spring Boot に同梱） |
 | Spring Security | 7.x | 認証・認可 | フォームベース認証、RBAC（ROLE_SALES / ROLE_HANDLER 等）、CSRF 保護、セッション管理 | Apache 2.0 | GA（Spring Boot に同梱） |
-| MyBatis | 3.x | データアクセス | XML マッパーによる SQL の明示的管理、CQRS の Read Model クエリ最適化との親和性 | Apache 2.0 | GA（mybatis-spring-boot-starter 4.0.1 で Spring Boot 4 対応済み） |
+| MyBatis | 4.0.1 | データアクセス | XML マッパーによる SQL の明示的管理、CQRS の Read Model クエリ最適化との親和性（mybatis-spring-boot-starter 4.0.1 で Spring Boot 4 対応済み） | Apache 2.0 | GA |
+| springdoc-openapi | 3.0.2 | API ドキュメント（Swagger UI） | REST API の自動ドキュメント生成、`@ConditionalOnProperty` による環境別有効化 | Apache 2.0 | GA（Spring Boot 4 対応済み） |
 | Spring Events | - | ドメインイベント発行 | `ApplicationEventPublisher` による CDI Events の代替、疎結合なコンテキスト間通信 | Apache 2.0 | GA（Spring Boot に同梱） |
-| Thymeleaf Security | 3.x | テンプレートへの権限連携 | `sec:authorize` タグによるロール別 UI 制御 | Apache 2.0 | GA（Spring Boot に同梱） |
+| Thymeleaf Security | 3.x | テンプレートへの権限連携 | `sec:authorize` タグによるロール別 UI 制御（thymeleaf-extras-springsecurity6） | Apache 2.0 | GA（Spring Boot に同梱） |
 
 > **バージョン採用方針**: Java 25 / Spring Boot 4.0 はリリース直後であるため、エコシステムの成熟状況を監視しながら採用する。
 > プロジェクト開始時点で GA が不安定な場合は、Java 21 LTS + Spring Boot 3.4.x で開発を開始し、
@@ -37,9 +38,9 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Thymeleaf | 3.x | テンプレートエンジン（SSR） | Spring Boot との統合、サーバーサイドレンダリングによるシンプルな構成、SEO 対応 | Apache 2.0 | GA（安定版） |
-| Bootstrap | 5.x | CSS フレームワーク | レスポンシブデザイン、豊富な業務系コンポーネント、学習コストの低さ | MIT | GA（LTS） |
-| htmx | 2.x | 部分更新・動的 UI | SSR 構成を維持しつつ追跡ステータス自動更新・フォームバリデーション等を実現、JS 最小化 | BSD 2-Clause | GA（アクティブ開発中） |
-| Alpine.js | 3.x | 最小 JavaScript | モーダル・ドロップダウン等の軽量 JS インタラクション（htmx の補完） | MIT | GA（アクティブ開発中） |
+| Bootstrap | 5.3.3 | CSS フレームワーク | レスポンシブデザイン、豊富な業務系コンポーネント、学習コストの低さ | MIT | GA（LTS） |
+| htmx | 2.0.4 | 部分更新・動的 UI | SSR 構成を維持しつつ追跡ステータス自動更新・フォームバリデーション等を実現、JS 最小化 | BSD 2-Clause | GA（アクティブ開発中） |
+| webjars-locator-lite | 1.0.1 | WebJars バージョン解決 | WebJars リソースパスのバージョン番号省略を実現 | MIT | GA |
 
 ## データベース
 
@@ -59,9 +60,9 @@ tags: design, tech-stack, java, spring-boot, postgresql
 | JUnit 5 | 5.x | テストフレームワーク | Java 標準のテストフレームワーク、パラメータ化テスト・入れ子テストクラス対応 | EPL 2.0 | GA（アクティブ開発中） |
 | Mockito | 5.x | モックライブラリ | Spring Boot Test との統合、ドメインサービス・ポートのモック実装 | MIT | GA（アクティブ開発中） |
 | AssertJ | 3.x | アサーションライブラリ | 流暢な API、集約・値オブジェクトのテストコードの可読性向上 | Apache 2.0 | GA（アクティブ開発中） |
-| Testcontainers | 2.x | 統合テスト用コンテナ | 実 PostgreSQL を使用した統合テスト、Spring Boot 4 の `@ServiceConnection` 対応 | Apache 2.0 | GA（2.0 リリース済み） |
+| Testcontainers | 1.20.4 | 統合テスト用コンテナ | 実 PostgreSQL を使用した統合テスト、Spring Boot 4 の `@ServiceConnection` 対応 | Apache 2.0 | GA |
 | Spring MockMvc | - | Controller テスト | Spring MVC エンドポイントのテスト、Thymeleaf テンプレートのレンダリング検証 | Apache 2.0 | GA（Spring Boot に同梱） |
-| ArchUnit | 1.x | アーキテクチャテスト | ヘキサゴナルアーキテクチャの依存関係ルール自動検証（ドメイン層がインフラ層に依存しないこと等） | Apache 2.0 | GA（アクティブ開発中） |
+| ArchUnit | 1.4.1 | アーキテクチャテスト | ヘキサゴナルアーキテクチャの依存関係ルール自動検証（ドメイン層がインフラ層に依存しないこと等） | Apache 2.0 | GA（アクティブ開発中） |
 | WireMock | 3.x | 外部 API スタブ | ExternalRoutingServicePort・CustomsClearancePort 等の外部システムスタブ | Apache 2.0 | GA（アクティブ開発中） |
 | Playwright | 1.44+ | E2E テスト・ブラウザ自動テスト | htmx の動的更新・ポーリングを含む画面の E2E テストに適しているため | Apache 2.0 | GA（アクティブ開発中） |
 
@@ -76,7 +77,7 @@ tags: design, tech-stack, java, spring-boot, postgresql
 
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Gradle | 9.x | ビルドツール | 柔軟なビルド設定・依存関係管理・Spring Boot 4 プラグイン対応 | Apache 2.0 | GA（9.2.1 使用中） |
+| Gradle | 9.2.1 | ビルドツール（Groovy DSL） | 柔軟なビルド設定・依存関係管理・Spring Boot 4 プラグイン対応 | Apache 2.0 | GA |
 | GitHub Actions | - | CI/CD パイプライン | GitHub リポジトリとの統合、ワークフロー定義の柔軟性、OIDC 認証による AWS デプロイ | - | GA（GitHub マネージド） |
 | SonarQube | - | コード品質管理 | 静的解析・カバレッジ計測・Quality Gate による品質担保 | LGPL 3.0 | GA（Community Edition） |
 | Checkstyle | - | Java コードスタイルチェック | コーディング規約の自動チェック | LGPL 2.1 | GA（アクティブ開発中） |

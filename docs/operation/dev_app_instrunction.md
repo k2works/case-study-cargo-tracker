@@ -117,17 +117,18 @@ Case Study Cargo Tracker は以下のサブシステムで構成されていま�
 | カテゴリ | 技術 | バージョン |
 |---------|------|-----------|
 | 言語 | Java | 25.x |
-| フレームワーク | Spring Boot | 4.0.x |
+| フレームワーク | Spring Boot | 4.0.5 |
 | Web | Spring MVC | 7.x |
 | セキュリティ | Spring Security | 7.x |
-| ビルドツール | Gradle | 9.x（Kotlin DSL） |
-| O/R マッパー | MyBatis | 3.x |
-| データベース（開発） | H2 | 2.x（インメモリ） |
+| ビルドツール | Gradle | 9.x（Groovy DSL） |
+| O/R マッパー | MyBatis | 4.0.1 (mybatis-spring-boot-starter) |
+| API ドキュメント | springdoc-openapi (Swagger UI) | 3.0.2 |
+| データベース（開発） | H2 | 2.x（インメモリ、PostgreSQL 互換モード） |
 | データベース（本番） | PostgreSQL | 16.x |
 | マイグレーション | Flyway | 10.x |
 | テスト | JUnit 5 / Mockito 5 / AssertJ 3 | 5.x / 5.x / 3.x |
-| 統合テスト | Testcontainers | 2.x |
-| アーキテクチャテスト | ArchUnit | 1.x |
+| 統合テスト | Testcontainers | 1.20.4 |
+| アーキテクチャテスト | ArchUnit | 1.4.1 |
 | E2E テスト | Playwright | 1.44+ |
 | 品質管理 | Checkstyle / SpotBugs / JaCoCo | - |
 
@@ -136,9 +137,10 @@ Case Study Cargo Tracker は以下のサブシステムで構成されていま�
 | カテゴリ | 技術 | バージョン |
 |---------|------|-----------|
 | テンプレートエンジン | Thymeleaf | 3.x |
-| CSS フレームワーク | Bootstrap | 5.x |
-| 動的 UI | htmx | 2.x |
-| JavaScript | Alpine.js | 3.x |
+| テンプレートセキュリティ | thymeleaf-extras-springsecurity6 | - |
+| CSS フレームワーク | Bootstrap | 5.3.3 |
+| 動的 UI | htmx | 2.0.4 |
+| Webjars ロケーター | webjars-locator-lite | 1.0.1 |
 
 ### インフラストラクチャ
 
@@ -213,6 +215,7 @@ cd apps/cargo-tracker
 | サービス | URL | 説明 |
 |---------|-----|------|
 | アプリケーション | http://localhost:8080 | メインアプリケーション |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html | API ドキュメント |
 | H2 コンソール | http://localhost:8080/h2-console | データベース管理（default プロファイル） |
 | ヘルスチェック | http://localhost:8080/actuator/health | ヘルスチェック |
 | MkDocs | http://localhost:8000 | プロジェクトドキュメント |
@@ -343,9 +346,12 @@ case-study-cargo-tracker/
 │   └── pre-commit                   # コミット前品質チェック
 ├── apps/
 │   └── cargo-tracker/               # メインアプリケーション
-│       ├── build.gradle.kts         # Gradle ビルドスクリプト（Kotlin DSL）
-│       ├── settings.gradle.kts      # Gradle 設定
+│       ├── build.gradle             # Gradle ビルドスクリプト（Groovy DSL）
+│       ├── settings.gradle          # Gradle 設定
 │       ├── Dockerfile               # アプリコンテナイメージ
+│       ├── config/                  # 品質管理ツール設定
+│       │   ├── checkstyle/          # Checkstyle 設定
+│       │   └── spotbugs/            # SpotBugs 除外フィルタ
 │       └── src/
 │           ├── main/
 │           │   ├── java/com/example/cargotracker/
@@ -358,6 +364,10 @@ case-study-cargo-tracker/
 │           │   │   │   ├── application/
 │           │   │   │   └── infrastructure/
 │           │   │   └── shared/                    # 共有カーネル
+│           │   │       ├── domain/model/           # 共有ドメインモデル
+│           │   │       └── infrastructure/
+│           │   │           ├── config/             # SecurityConfig, OpenApiConfig
+│           │   │           └── web/                # HomeController
 │           │   └── resources/
 │           │       ├── application.yml            # 開発設定（H2）
 │           │       ├── application-product.yml    # 本番設定（PostgreSQL）
@@ -476,6 +486,7 @@ cd apps/cargo-tracker
 | サービス | URL | 説明 |
 |---------|-----|------|
 | アプリケーション | http://localhost:8080 | メインアプリケーション |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html | API ドキュメント |
 | H2 コンソール | http://localhost:8080/h2-console | データベース管理ツール（dev のみ） |
 | ヘルスチェック | http://localhost:8080/actuator/health | ヘルスチェック |
 | MkDocs | http://localhost:8000 | プロジェクトドキュメント |
@@ -552,12 +563,9 @@ cd apps/cargo-tracker
 // 基底クラスで @Container をクラスレベルで定義
 @Testcontainers
 abstract class AbstractIntegrationTest {
-    companion object {
-        @Container
-        @JvmField
-        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16")
-            .withDatabaseName("cargo_tracker_test")
-    }
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+            .withDatabaseName("cargo_tracker_test");
 }
 ```
 
@@ -565,7 +573,7 @@ abstract class AbstractIntegrationTest {
 
 **問題**: http://localhost:8080/h2-console にアクセスできない
 
-**解決策**: `application.yml` で H2 コンソールが有効になっているか確認する
+**解決策**: `application.yml` で H2 コンソールが有効になっているか確認する。Spring Boot 4.0 では `spring-boot-h2console` モジュールとして提供される。
 
 ```yaml
 spring:
