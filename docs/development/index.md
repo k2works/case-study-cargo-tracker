@@ -21,7 +21,7 @@
 | IT5（US14・15・16, 11SP） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | 完了 ✅ |
 | IT6（US17・18, 8SP） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | 完了 ✅ |
 | IT7（US19・20・21, 10SP） | [iteration_plan-7.md](./iteration_plan-7.md) | [retrospective-7.md](./retrospective-7.md) | [iteration_report-7.md](./iteration_report-7.md) | 完了 ✅ |
-| IT8（US22・23・24, 8SP） | - | - | - | 未着手 |
+| IT8（US22・23・24, 8SP） | [iteration_plan-8.md](./iteration_plan-8.md) | - | - | 計画中 📋 |
 
 ### 進捗サマリー
 

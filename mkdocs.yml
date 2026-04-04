@@ -109,6 +109,7 @@ nav:
       - "IT7 計画（US19・20・21）": development/iteration_plan-7.md
       - "IT7 ふりかえり": development/retrospective-7.md
       - "IT7 完了報告書": development/iteration_report-7.md
+      - "IT8 計画（US22・23・24）": development/iteration_plan-8.md
   - 運用:
       - 概要: operation/index.md
       - アプリ開発環境セットアップ: operation/dev_app_instrunction.md
@@ -129,6 +130,8 @@ nav:
       - IT4 第 2 回コードレビュー: review/it4_review2_20260403.md
       - IT5 UI/UX レビュー: review/it5_uiux_review_20260403.md
       - IT5 分析成果物レビュー: review/it5_analysis_review_20260403.md
+      - IT7 実装レビュー: review/it7_review_20260404.md
+      - IT7 UI/UX レビュー: review/it7_uiux_review_20260404.md
   - ADR:
       - 概要: adr/index.md
       - "ADR-001: Java/Spring Boot バージョン戦略": adr/001-java-springboot-version-strategy.md

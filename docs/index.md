@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT6 完了・Phase 1&2 完了（64/82SP）・v1.0.0 リリース済み・IT7 計画済み（Phase 3 開始待ち） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT7 完了・Phase 3 進行中（74/82SP）・IT8 計画済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 14 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
@@ -75,6 +75,8 @@
 | [IT4 第 2 回コードレビュー](./review/it4_review2_20260403.md) | IT4 第 2 回コードレビュー（例外 BC・追跡画面 US11〜US13 レビュー対応後）の結果 |
 | [IT5 UI/UX レビュー](./review/it5_uiux_review_20260403.md) | IT5 US14（例外事象記録）の UI/UX マルチパースペクティブレビュー結果（高 5 件・中 4 件・低 2 件） |
 | [IT5 分析成果物レビュー](./review/it5_analysis_review_20260403.md) | IT5（US14/US15/US16）ユーザーストーリー・ドメインモデル・データモデル・UI 設計の 5 エージェント並列レビュー結果（高 9 件・中 13 件・低 6 件） |
+| [IT7 実装レビュー](./review/it7_review_20260404.md) | IT7（US19/US20/US21 経路候補算出）全体実装の 5 エージェント並列レビュー結果（高 7 件・中 11 件・低 6 件） |
+| [IT7 UI/UX レビュー](./review/it7_uiux_review_20260404.md) | IT7（routing/search.html・design-condition.html）の UI/UX マルチパースペクティブレビュー結果（高 4 件・中 6 件・低 3 件） |
 
 ### ADR
 
