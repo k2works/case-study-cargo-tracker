@@ -98,8 +98,9 @@
 | 1.6 | Shipper REST API (POST /api/shippers) | 2h | - | [ ] |
 | 1.7 | Shipper 一覧・登録画面（Thymeleaf） | 3h | - | [ ] |
 | 1.8 | 単体テスト + API E2E テスト | 2h | - | [ ] |
+| 1.9 | Playwright E2E テスト（荷主登録・一覧・詳細画面） | 2h | - | [x] |
 
-**小計**: 18h（理想時間）
+**小計**: 20h（理想時間）
 
 #### 2. 貨物予約登録（US04: 5 SP）
 
@@ -112,8 +113,9 @@
 | 2.5 | BookingRestController (POST /api/bookings) | 2h | - | [x] |
 | 2.6 | BookingThymeleafController 一覧・登録画面 | 3h | - | [x] |
 | 2.7 | 単体テスト + API E2E テスト | 3h | - | [x] |
+| 2.8 | Playwright E2E テスト（貨物予約登録・一覧・詳細画面） | 2h | - | [x] |
 
-**小計**: 18h（理想時間）
+**小計**: 20h（理想時間）
 
 #### タスク合計
 
