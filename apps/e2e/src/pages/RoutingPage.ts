@@ -102,4 +102,9 @@ export class RoutingPage {
   get legsTableRows(): Locator {
     return this.page.locator('#modal-legs-tbody tr');
   }
+
+  /** 候補なし時に表示される「営業担当者に条件交渉を依頼」カード（border-warning） */
+  get negotiationRequestCard(): Locator {
+    return this.page.locator('.card.border-warning');
+  }
 }
