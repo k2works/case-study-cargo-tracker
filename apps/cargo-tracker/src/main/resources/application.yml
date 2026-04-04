@@ -46,3 +46,6 @@ management:
 app:
   openapi:
     enabled: true
+  login:
+    default-username: admin
+    default-password: admin
