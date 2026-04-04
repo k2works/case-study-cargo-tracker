@@ -17,6 +17,11 @@ export class RoutingPage {
     await this.page.goto(`/routings/design-condition?bookingId=${bookingId}`);
   }
 
+  /** 航路一覧ページに遷移する */
+  async gotoVoyages() {
+    await this.page.goto('/routings/voyages');
+  }
+
   /** 経路設計条件カード */
   get conditionCard(): Locator {
     return this.page.locator('.card.shadow-sm.mb-4');
