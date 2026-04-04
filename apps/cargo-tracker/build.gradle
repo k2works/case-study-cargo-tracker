@@ -45,6 +45,9 @@ dependencies {
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:4.0.1'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'com.github.docker-java:docker-java-api:3.7.0'
+    testImplementation 'com.github.docker-java:docker-java-transport:3.7.0'
+    testImplementation 'com.github.docker-java:docker-java-transport-zerodep:3.7.0'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -94,6 +97,10 @@ sonar {
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
+    maxParallelForks = 1
+    environment 'DOCKER_API_VERSION', '1.43'
+    systemProperty 'DOCKER_API_VERSION', '1.43'
+    systemProperty 'api.version', '1.43'
     // Java 25 で Byte Buddy が ClassFileVersion を解決できない問題への対応
     jvmArgs '-Dnet.bytebuddy.experimental=true'
 }
