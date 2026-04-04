@@ -21,7 +21,7 @@
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 11 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 16 件のテンプレートを配置 |
@@ -79,6 +79,7 @@
 | [ADR-009](./adr/009-github-actions-ci-pipeline.md) | GitHub Actions で Build & Test + E2E の 2 ジョブ CI を構成する |
 | [ADR-010](./adr/010-practical-ddd-package-structure.md) | Practical DDD in Enterprise Java のパッケージ構成を採用する |
 | [ADR-011](./adr/011-archunit-hexagonal-rules.md) | ArchUnit でヘキサゴナルアーキテクチャの依存関係ルールを自動検証する |
+| [ADR-012](./adr/012-default-profile-login-prefill.md) | デフォルトプロファイルでログインフォームに認証情報をプリセットする |
 
 ### レビュードキュメント
 

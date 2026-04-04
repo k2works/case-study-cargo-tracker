@@ -17,5 +17,6 @@
 | [ADR-009](009-github-actions-ci-pipeline.md) | GitHub Actions で Build & Test + E2E の 2 ジョブ CI を構成する | 承認済み |
 | [ADR-010](010-practical-ddd-package-structure.md) | Practical DDD in Enterprise Java のパッケージ構成を採用する | 承認済み |
 | [ADR-011](011-archunit-hexagonal-rules.md) | ArchUnit でヘキサゴナルアーキテクチャの依存関係ルールを自動検証する | 承認済み |
+| [ADR-012](012-default-profile-login-prefill.md) | デフォルトプロファイルでログインフォームに認証情報をプリセットする | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

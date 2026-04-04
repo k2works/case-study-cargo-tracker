@@ -113,6 +113,7 @@ nav:
       - ADR-009 GitHub Actions CI: adr/009-github-actions-ci-pipeline.md
       - ADR-010 Practical DDD パッケージ構成: adr/010-practical-ddd-package-structure.md
       - ADR-011 ArchUnit ヘキサゴナルルール: adr/011-archunit-hexagonal-rules.md
+      - ADR-012 デフォルトプロファイルログイン: adr/012-default-profile-login-prefill.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
