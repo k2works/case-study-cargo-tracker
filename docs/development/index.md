@@ -8,7 +8,7 @@
 
 | ドキュメント | 説明 |
 |-------------|------|
-| [リリース計画](./release_plan.md) | リリース全体のスコープ、スケジュール、ベロシティ、バッファ戦略（6 イテレーション・64 SP） |
+| [リリース計画](./release_plan.md) | リリース全体のスコープ、スケジュール、ベロシティ、バッファ戦略（8 イテレーション・82 SP） |
 
 ### イテレーション計画
 
@@ -21,6 +21,7 @@
 | IT5（US14・15・16, 11SP） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | 完了 ✅ |
 | IT6（US17・18, 8SP） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | 完了 ✅ |
 | IT7（US19・20・21, 10SP） | [iteration_plan-7.md](./iteration_plan-7.md) | - | - | 未着手 |
+| IT8（US22・23・24, 8SP） | - | - | - | 未着手 |
 
 ### 進捗サマリー
 
@@ -33,7 +34,8 @@
 | IT5 | 11 | 11 | 100% |
 | IT6 | 8 | 8 | 100% |
 | IT7 | 10 | - | - |
-| **累計** | **74** | **64** | **86%** |
+| IT8 | 8 | - | - |
+| **累計** | **82** | **64** | **78%** |
 
 ### フェーズ進捗
 
@@ -41,6 +43,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | コア輸送管理（US01〜US15） | 51 | 51 | **完了** ✅ |
 | Phase 2 | 請求・精算（US16〜US18） | 13 | 13 | **完了** ✅ |
+| Phase 3 | 経路設計高度化（US19〜US24） | 18 | 0 | **未着手** |
 
 ### リリース完了報告書
 

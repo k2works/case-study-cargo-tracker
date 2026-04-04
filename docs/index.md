@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT6 完了（計画・ふりかえり・完了報告書含む）・64SP 100% 達成・v1.0.0 リリース準備完了 |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT6 完了・Phase 1&2 完了（64/82SP）・v1.0.0 リリース済み・IT7 計画済み（Phase 3 開始待ち） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 14 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
@@ -40,7 +40,7 @@
 | [要件定義書](./requirements/requirements_definition.md) | RDRA 2.0 に基づく 4 層（システム価値・外部環境・境界・内部構造） |
 | [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 13 件・アクター目的リスト |
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 12 件（完全形式） |
-| [ユーザーストーリー](./requirements/user_story.md) | US 18 件・受け入れ基準・トレーサビリティマトリックス |
+| [ユーザーストーリー](./requirements/user_story.md) | US 24 件（Phase 1〜3）・受け入れ基準・トレーサビリティマトリックス |
 
 ### 設計ドキュメント
 
