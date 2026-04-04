@@ -2,12 +2,12 @@ package com.example.cargotracker.booking.application;
 
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
+import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistenceChecker;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
+import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.repository.CargoRepository;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
-import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
-import com.example.cargotracker.shipper.domain.model.repository.ShipperRepository;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -17,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +34,7 @@ class CargoBookingCommandServiceTest {
     private CargoRepository cargoRepository;
 
     @Mock
-    private ShipperRepository shipperRepository;
+    private ShipperExistenceChecker shipperExistenceChecker;
 
     @InjectMocks
     private CargoBookingCommandService cargoBookingCommandService;
@@ -47,11 +46,12 @@ class CargoBookingCommandServiceTest {
                 shipperId.toString(),
                 "GENERAL",
                 new BigDecimal("10.500"),
+                null, null, null, null, null,
                 "JPTYO",
                 "USLAX",
                 LocalDate.now().plusDays(10)
         );
-        when(shipperRepository.findById(shipperId)).thenReturn(Optional.of(org.mockito.Mockito.mock(Shipper.class)));
+        when(shipperExistenceChecker.exists(shipperId)).thenReturn(true);
         ArgumentCaptor<Cargo> cargoCaptor = ArgumentCaptor.forClass(Cargo.class);
 
         BookingId bookingId = cargoBookingCommandService.bookCargo(command);
@@ -74,18 +74,19 @@ class CargoBookingCommandServiceTest {
                 shipperId,
                 "GENERAL",
                 new BigDecimal("10.500"),
+                null, null, null, null, null,
                 "JPTYO",
                 "USLAX",
                 LocalDate.now().plusDays(10)
         );
-        when(shipperRepository.findById(new ShipperId(UUID.fromString(shipperId)))).thenReturn(Optional.empty());
+        when(shipperExistenceChecker.exists(new ShipperId(UUID.fromString(shipperId)))).thenReturn(false);
 
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        ShipperNotFoundException exception = assertThrows(
+                ShipperNotFoundException.class,
                 () -> cargoBookingCommandService.bookCargo(command)
         );
 
-        assertEquals("SHIPPER_NOT_FOUND", exception.getMessage());
+        assertEquals(new ShipperId(UUID.fromString(shipperId)), exception.getShipperId());
         verify(cargoRepository, never()).save(any(Cargo.class));
     }
 }
