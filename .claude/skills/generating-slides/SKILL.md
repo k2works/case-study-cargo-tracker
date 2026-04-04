@@ -13,9 +13,9 @@ description: インセプションデッキの Markdown から PowerPoint スラ
 |------|------|------|
 | テンプレート | @docs/template/インセプションデッキ.pptx | スライド構成のリファレンス（15 枚、4:3） |
 | 生成スクリプト | @.claude/scripts/generate-inception-deck.mjs | 内容の編集は可能 |
-| 入力 | @docs/analysis/inception-deck.md | `analyzing-inception-deck` の成果物 |
-| 入力（補足） | @docs/analysis/business_architecture.md | ビジネスアーキテクチャ分析書 |
-| 成果物 | `docs/analysis/slide/xxxxx_v0.1.0.pptx` | 生成された PowerPoint スライド |
+| 入力 | @docs/strategy/inception-deck.md | `analyzing-inception-deck` の成果物 |
+| 入力（補足） | @docs/strategy/business_architecture.md | ビジネスアーキテクチャ分析書 |
+| 成果物 | `docs/strategy/slide/xxxxx_v0.1.0.pptx` | 生成された PowerPoint スライド |
 
 ## スライド構成（12 枚）
 
@@ -47,14 +47,14 @@ description: インセプションデッキの Markdown から PowerPoint スラ
 ### 新規生成
 
 1. `npm install pptxgenjs`（初回のみ）
-2. `docs/analysis/inception-deck.md` の内容を確認する
+2. `docs/strategy/inception-deck.md` の内容を確認する
 3. `.claude/scripts/generate-inception-deck.mjs` の `SLIDE_DATA` をプロジェクト固有の内容に書き換える
 4. `node .claude/scripts/generate-inception-deck.mjs` を実行する
-5. `docs/analysis/slide/` に .pptx が生成されたことを確認する
+5. `docs/strategy/slide/` に .pptx が生成されたことを確認する
 
 ### 更新時の再生成
 
-1. `docs/analysis/inception-deck.md` の更新内容を確認する
+1. `docs/strategy/inception-deck.md` の更新内容を確認する
 2. `.claude/scripts/generate-inception-deck.mjs` の `SLIDE_DATA` を更新する
 3. `node .claude/scripts/generate-inception-deck.mjs` を実行する
 
@@ -82,7 +82,7 @@ description: インセプションデッキの Markdown から PowerPoint スラ
 
 ## 注意事項
 
-- `docs/analysis/inception-deck.md` が作成済みであること（`analyzing-inception-deck` を先に実行する）
+- `docs/strategy/inception-deck.md` が作成済みであること（`analyzing-inception-deck` を先に実行する）
 - テンプレート `docs/template/インセプションデッキ.pptx` は編集しない
 - 日本語フォントは Yu Gothic を使用する（Gill Sans 等の欧文フォントは文字化けする）
 - 出力ファイル名は `SLIDE_DATA.meta.outputFileName` で指定する。`meta.title` と同時に更新する

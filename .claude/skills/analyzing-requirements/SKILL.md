@@ -15,8 +15,8 @@ RDRA の価値は、要件を「何となくの要望リスト」ではなく「
 |------|------|------|
 | ガイド | @docs/reference/要件定義ガイド.md | RDRA 2.0 の進め方詳細 |
 | テンプレート | @docs/template/要件定義.md | 編集禁止。コピーして使用する |
-| 入力 | @docs/analysis/business_architecture.md | ビジネスアーキテクチャ分析書 |
-| 入力 | @docs/analysis/inception-deck.md | インセプションデッキ |
+| 入力 | @docs/strategy/business_architecture.md | ビジネスアーキテクチャ分析書 |
+| 入力 | @docs/strategy/inception-deck.md | インセプションデッキ |
 | 成果物 | `docs/requirements/requirements_definition.md` | テンプレートを基に作成 |
 
 ## RDRA の 4 層構造
