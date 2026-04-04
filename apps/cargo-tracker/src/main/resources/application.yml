@@ -2,23 +2,47 @@ server:
   port: ${PORT:8080}
 
 spring:
-  application:
-    name: cargo-tracker
   datasource:
-    url: jdbc:h2:mem:cargo_tracker
+    url: jdbc:h2:mem:cargo_tracker;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
   h2:
     console:
       enabled: true
       path: /h2-console
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
+  security:
+    user:
+      name: admin
+      password: admin
+  thymeleaf:
+    cache: false
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+springdoc:
+  api-docs:
+    enabled: ${app.openapi.enabled:false}
+  swagger-ui:
+    enabled: ${app.openapi.enabled:false}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+
+app:
+  openapi:
+    enabled: true

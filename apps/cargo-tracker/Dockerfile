@@ -1,37 +1,27 @@
-# Build stage
-FROM eclipse-temurin:25-jdk AS build
+FROM eclipse-temurin:25-jdk AS builder
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy gradle wrapper and build files
-COPY gradlew .
-COPY gradle/ gradle/
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
+COPY gradlew gradlew.bat settings.gradle build.gradle ./
+COPY gradle gradle
+COPY src src
 
-# Download dependencies
-RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
+RUN sed -i 's/\r$//' gradlew \
+    && chmod +x gradlew \
+    && ./gradlew --no-daemon bootJar -x test
 
-# Copy source code
-COPY src/ src/
-COPY config/ config/
-
-# Build the application (skip tests in Docker build)
-RUN ./gradlew bootJar --no-daemon -x test -x checkstyleMain -x checkstyleTest -x spotbugsMain -x spotbugsTest
-
-# Runtime stage
 FROM eclipse-temurin:25-jre
 
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
 WORKDIR /app
 
-COPY --from=build /app/build/libs/*.jar app.jar
+ENV PORT=8080
 
-RUN chown -R appuser:appuser /app
+RUN useradd --create-home --shell /bin/bash spring
 
-USER appuser
+COPY --from=builder /workspace/build/libs/*.jar /app/app.jar
+
+USER spring
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["sh", "-c", "java ${JAVA_OPTS} -jar /app/app.jar"]

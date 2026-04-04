@@ -5,12 +5,6 @@ build/
 # IDE
 .idea/
 *.iml
-.vscode/
-.settings/
-.project
-.classpath
-out/
 
 # OS
 .DS_Store
-Thumbs.db

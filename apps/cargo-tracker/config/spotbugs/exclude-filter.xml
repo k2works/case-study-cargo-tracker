@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Spring Boot auto-generated code -->
+    <Match>
+        <Class name="com.example.cargotracker.CargoTrackerApplication"/>
+    </Match>
+    <!-- Test files -->
+    <Match>
+        <Source name="~.*Test\.java"/>
+    </Match>
+    <Match>
+        <Source name="~.*Tests\.java"/>
+    </Match>
+</FindBugsFilter>
