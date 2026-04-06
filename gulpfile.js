@@ -23,6 +23,7 @@ cargoTrackerTasks(gulp);
 
 export const dev = gulp.series('cargo-tracker:dev');
 export const tdd = gulp.series('cargo-tracker:tdd');
+export const doc = gulp.series('mkdocs:serve', 'mkdocs:open');
 
 // Export gulp to make it available to the gulp CLI
 export default gulp;
