@@ -57,4 +57,45 @@ class ShipperTest {
     void shouldThrowWhenEmailFormatIsInvalid() {
         assertThrows(IllegalArgumentException.class, () -> new Email("invalid-email"));
     }
+
+    @Test
+    void shouldThrowWhenIdIsNull() {
+        ShipperCode code = new ShipperCode("SHP-0001");
+        ShipperName name = new ShipperName("テスト荷主");
+        Email email = new Email("shipper@example.com");
+
+        assertThrows(IllegalArgumentException.class, () ->
+                new Shipper(null, code, name, email, null, null, ShipperType.INDIVIDUAL));
+    }
+
+    @Test
+    void shouldThrowWhenCodeIsNull() {
+        ShipperId id = new ShipperId(UUID.randomUUID());
+        ShipperName name = new ShipperName("テスト荷主");
+        Email email = new Email("shipper@example.com");
+
+        assertThrows(IllegalArgumentException.class, () ->
+                new Shipper(id, null, name, email, null, null, ShipperType.INDIVIDUAL));
+    }
+
+    @Test
+    void shouldThrowWhenEmailIsNull() {
+        ShipperId id = new ShipperId(UUID.randomUUID());
+        ShipperCode code = new ShipperCode("SHP-0001");
+        ShipperName name = new ShipperName("テスト荷主");
+
+        assertThrows(IllegalArgumentException.class, () ->
+                new Shipper(id, code, name, null, null, null, ShipperType.INDIVIDUAL));
+    }
+
+    @Test
+    void shouldThrowWhenShipperTypeIsNull() {
+        ShipperId id = new ShipperId(UUID.randomUUID());
+        ShipperCode code = new ShipperCode("SHP-0001");
+        ShipperName name = new ShipperName("テスト荷主");
+        Email email = new Email("shipper@example.com");
+
+        assertThrows(IllegalArgumentException.class, () ->
+                new Shipper(id, code, name, email, null, null, null));
+    }
 }

@@ -158,6 +158,151 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(containsString("℃")));
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings でバリデーションエラーがあると登録フォームに戻る")
+    void postBooking_withValidationError_shouldReturnToForm() throws Exception {
+        mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", "")
+                        .param("cargoType", "")
+                        .param("weight", "")
+                        .param("originUnlocode", "")
+                        .param("destinationUnlocode", "")
+                        .param("arrivalDeadline", ""))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/new"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/confirm で予約を確定してリダイレクトする")
+    void postConfirmBooking_shouldRedirectWithSuccess() throws Exception {
+        String shipperId = insertShipper("SHP-CONF01");
+        MvcResult createResult = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "9.500")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = createResult.getResponse().getHeader("Location");
+        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+
+        mockMvc.perform(post("/bookings/" + bookingId + "/confirm")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/bookings/" + bookingId));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/confirm で存在しない予約は 404 になる")
+    void postConfirmBooking_notFound_shouldReturn404() throws Exception {
+        String unknownId = UUID.randomUUID().toString();
+        mockMvc.perform(post("/bookings/" + unknownId + "/confirm")
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/confirm で確定済み予約の再確定はエラーメッセージでリダイレクトする")
+    void postConfirmBooking_alreadyConfirmed_shouldRedirectWithError() throws Exception {
+        String shipperId = insertShipper("SHP-CONF02");
+        MvcResult createResult = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "9.500")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = createResult.getResponse().getHeader("Location");
+        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+
+        // 1回目の確定
+        mockMvc.perform(post("/bookings/" + bookingId + "/confirm").with(csrf()));
+        // 2回目の確定（IllegalStateException -> エラーメッセージでリダイレクト）
+        mockMvc.perform(post("/bookings/" + bookingId + "/confirm")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/cancel で予約をキャンセルしてリダイレクトする")
+    void postCancelBooking_shouldRedirectWithSuccess() throws Exception {
+        String shipperId = insertShipper("SHP-CAN01");
+        MvcResult createResult = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "9.500")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = createResult.getResponse().getHeader("Location");
+        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+
+        mockMvc.perform(post("/bookings/" + bookingId + "/cancel")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/bookings/" + bookingId));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/cancel で存在しない予約は 404 になる")
+    void postCancelBooking_notFound_shouldReturn404() throws Exception {
+        String unknownId = UUID.randomUUID().toString();
+        mockMvc.perform(post("/bookings/" + unknownId + "/cancel")
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/cancel でキャンセル済み予約の再キャンセルはエラーメッセージでリダイレクトする")
+    void postCancelBooking_alreadyCancelled_shouldRedirectWithError() throws Exception {
+        String shipperId = insertShipper("SHP-CAN02");
+        MvcResult createResult = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "9.500")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = createResult.getResponse().getHeader("Location");
+        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+
+        // 1回目のキャンセル
+        mockMvc.perform(post("/bookings/" + bookingId + "/cancel").with(csrf()));
+        // 2回目のキャンセル（IllegalStateException -> エラーメッセージでリダイレクト）
+        mockMvc.perform(post("/bookings/" + bookingId + "/cancel")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /bookings/{bookingId} で存在しない予約は 404 になる")
+    void getBookingShow_notFound_shouldReturn404() throws Exception {
+        String unknownId = UUID.randomUUID().toString();
+        mockMvc.perform(get("/bookings/" + unknownId))
+                .andExpect(status().isNotFound());
+    }
+
     private String insertShipper(String shipperCode) {
         String shipperId = UUID.randomUUID().toString();
         jdbcTemplate.update(

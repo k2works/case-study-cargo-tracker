@@ -14,7 +14,6 @@ import com.example.cargotracker.booking.domain.model.repository.CargoRepository;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
-import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -246,6 +245,99 @@ class CargoBookingCommandServiceTest {
     }
 
     @Test
+    void shouldThrowBookingNotFoundException_whenCancellingNonExistentBooking() {
+        String unknownId = UUID.randomUUID().toString();
+        CancelBookingCommand command = new CancelBookingCommand(unknownId);
+        when(cargoRepository.findByBookingId(any())).thenReturn(Optional.empty());
+
+        assertThrows(BookingNotFoundException.class, () -> cargoBookingCommandService.cancelBooking(command));
+        verify(cargoRepository, never()).updateStatus(any());
+    }
+
+    @Test
+    void shouldCreateCargoWithDimensionsQuantityAndDescription() {
+        ShipperId shipperId = new ShipperId(UUID.randomUUID());
+        BookCargoCommand command = new BookCargoCommand(
+                shipperId.toString(),
+                "GENERAL",
+                new BigDecimal("10.500"),
+                new BigDecimal("10"), new BigDecimal("5"), new BigDecimal("3"),
+                5,
+                "電子部品",
+                "JPTYO",
+                "USLAX",
+                LocalDate.now().plusDays(10),
+                null, null, null,
+                null, null, null
+        );
+        when(shipperExistenceChecker.exists(shipperId)).thenReturn(true);
+        ArgumentCaptor<Cargo> cargoCaptor = ArgumentCaptor.forClass(Cargo.class);
+
+        BookingId bookingId = cargoBookingCommandService.bookCargo(command);
+
+        assertNotNull(bookingId);
+        verify(cargoRepository).save(cargoCaptor.capture());
+        Cargo savedCargo = cargoCaptor.getValue();
+        assertNotNull(savedCargo.getDimensions());
+        assertEquals(new BigDecimal("10"), savedCargo.getDimensions().length());
+        assertEquals(new BigDecimal("5"), savedCargo.getDimensions().width());
+        assertEquals(new BigDecimal("3"), savedCargo.getDimensions().height());
+        assertNotNull(savedCargo.getQuantity());
+        assertEquals(5, savedCargo.getQuantity().value());
+        assertNotNull(savedCargo.getDescription());
+        assertEquals("電子部品", savedCargo.getDescription().value());
+    }
+
+    @Test
+    void shouldCreateCargoWithPartialDimensions_shouldBeNull() {
+        ShipperId shipperId = new ShipperId(UUID.randomUUID());
+        BookCargoCommand command = new BookCargoCommand(
+                shipperId.toString(),
+                "GENERAL",
+                new BigDecimal("10.500"),
+                new BigDecimal("10"), null, null,
+                null, null,
+                "JPTYO",
+                "USLAX",
+                LocalDate.now().plusDays(10),
+                null, null, null,
+                null, null, null
+        );
+        when(shipperExistenceChecker.exists(shipperId)).thenReturn(true);
+        ArgumentCaptor<Cargo> cargoCaptor = ArgumentCaptor.forClass(Cargo.class);
+
+        cargoBookingCommandService.bookCargo(command);
+
+        verify(cargoRepository).save(cargoCaptor.capture());
+        Cargo savedCargo = cargoCaptor.getValue();
+        assertEquals(null, savedCargo.getDimensions());
+    }
+
+    @Test
+    void shouldThrowWhenRefrigeratedCargoCommandMissingTemperature() {
+        ShipperId shipperId = new ShipperId(UUID.randomUUID());
+        BookCargoCommand command = new BookCargoCommand(
+                shipperId.toString(),
+                "REFRIGERATED",
+                new BigDecimal("10.500"),
+                null, null, null, null, null,
+                "JPTYO",
+                "USLAX",
+                LocalDate.now().plusDays(10),
+                null, null, null,
+                null, null, null
+        );
+        when(shipperExistenceChecker.exists(shipperId)).thenReturn(true);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> cargoBookingCommandService.bookCargo(command)
+        );
+
+        verify(cargoRepository, never()).save(any(Cargo.class));
+    }
+
+    @Test
     void shouldThrowWhenHazardousCargoCommandMissingDeclaration() {
         ShipperId shipperId = new ShipperId(UUID.randomUUID());
         BookCargoCommand command = new BookCargoCommand(
@@ -275,7 +367,7 @@ class CargoBookingCommandServiceTest {
                 new ShipperId(UUID.randomUUID()),
                 CargoType.GENERAL,
                 new BigDecimal("10.500"),
-                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
+                RouteSpecification.fromUnLocodes("JPTYO", "USLAX", LocalDate.now().plusDays(10)),
                 status
         );
     }

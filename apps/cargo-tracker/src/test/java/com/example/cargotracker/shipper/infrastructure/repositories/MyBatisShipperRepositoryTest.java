@@ -154,6 +154,67 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .containsExactlyInAnyOrder(individual, corporate);
     }
 
+    @Test
+    @DisplayName("Address 付きの荷主を保存して取得できる")
+    void shouldSaveAndFindShipperWithAddress() {
+        Shipper shipper = new Shipper(
+                new ShipperId(UUID.randomUUID()),
+                new ShipperCode("SHP-5001"),
+                new ShipperName("住所付き 荷主"),
+                new Email("address@example.com"),
+                new Phone("090-7777-8888"),
+                new com.example.cargotracker.shipper.domain.model.valueobjects.Address("東京都千代田区1-1-1"),
+                ShipperType.INDIVIDUAL
+        );
+
+        repository.save(shipper);
+
+        Optional<Shipper> actual = repository.findById(shipper.getId());
+        assertThat(actual).isPresent();
+        assertThat(actual.get().getAddress()).isNotNull();
+        assertThat(actual.get().getAddress().value()).isEqualTo("東京都千代田区1-1-1");
+    }
+
+    @Test
+    @DisplayName("Phone が null の荷主を保存して取得できる")
+    void shouldSaveAndFindShipperWithoutPhone() {
+        Shipper shipper = new Shipper(
+                new ShipperId(UUID.randomUUID()),
+                new ShipperCode("SHP-5002"),
+                new ShipperName("電話なし 荷主"),
+                new Email("nophone@example.com"),
+                null,
+                null,
+                ShipperType.INDIVIDUAL
+        );
+
+        repository.save(shipper);
+
+        Optional<Shipper> actual = repository.findById(shipper.getId());
+        assertThat(actual).isPresent();
+        assertThat(actual.get().getPhone()).isNull();
+    }
+
+    @Test
+    @DisplayName("ShipperCode で荷主を検索できる")
+    void shouldFindByShipperCode() {
+        Shipper shipper = new Shipper(
+                new ShipperId(UUID.randomUUID()),
+                new ShipperCode("SHP-5003"),
+                new ShipperName("コード検索テスト"),
+                new Email("codetest@example.com"),
+                new Phone("090-5555-5555"),
+                null,
+                ShipperType.INDIVIDUAL
+        );
+
+        repository.save(shipper);
+
+        Optional<Shipper> actual = repository.findByCode(shipper.getCode());
+        assertThat(actual).isPresent();
+        assertThat(actual.get().getCode().value()).isEqualTo("SHP-5003");
+    }
+
     private CorporateShipper corporateShipper(
             String code,
             String name,

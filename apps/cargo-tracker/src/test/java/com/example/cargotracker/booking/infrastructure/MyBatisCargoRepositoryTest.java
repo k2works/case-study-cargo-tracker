@@ -9,7 +9,6 @@ import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecifica
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
 import com.example.cargotracker.booking.infrastructure.repositories.MyBatisCargoRepository;
-import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;
@@ -112,6 +111,91 @@ class MyBatisCargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .containsExactlyInAnyOrder(first, second);
     }
 
+    @Test
+    @DisplayName("Cargo のステータスを更新できる")
+    void shouldUpdateCargoStatus() {
+        ShipperId shipperId = new ShipperId(UUID.randomUUID());
+        insertShipper(shipperId, "SHP-5001");
+        Cargo cargo = cargo(shipperId, CargoType.GENERAL, new BigDecimal("10.000"));
+
+        repository.save(cargo);
+
+        Cargo confirmed = cargo.confirm();
+        repository.updateStatus(confirmed);
+
+        Optional<Cargo> actual = repository.findByBookingId(cargo.getBookingId());
+        assertThat(actual).isPresent();
+        assertThat(actual.get().getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+    }
+
+    @Test
+    @DisplayName("Dimensions・Quantity・Description 付きの Cargo を保存・取得できる")
+    void shouldSaveAndFindCargoWithOptionalFields() {
+        ShipperId shipperId = new ShipperId(UUID.randomUUID());
+        insertShipper(shipperId, "SHP-6001");
+
+        var dimensions = new com.example.cargotracker.booking.domain.model.valueobjects.Dimensions(
+                new BigDecimal("10.000"), new BigDecimal("5.000"), new BigDecimal("3.000"));
+        var quantity = new com.example.cargotracker.booking.domain.model.valueobjects.Quantity(5);
+        var description = new com.example.cargotracker.booking.domain.model.valueobjects.Description("電子部品");
+
+        Cargo cargo = new Cargo(
+                new BookingId(UUID.randomUUID()),
+                shipperId,
+                CargoType.GENERAL,
+                new BigDecimal("10.000"),
+                Cargo.state(
+                        RouteSpecification.fromUnLocodes("JPTYO", "USLAX", LocalDate.now().plusDays(14)),
+                        BookingStatus.PRELIMINARY,
+                        Cargo.details(dimensions, quantity, description),
+                        null
+                )
+        );
+
+        repository.save(cargo);
+
+        Optional<Cargo> actual = repository.findByBookingId(cargo.getBookingId());
+        assertThat(actual).isPresent();
+        assertThat(actual.get().getDimensions()).isEqualTo(dimensions);
+        assertThat(actual.get().getQuantity()).isEqualTo(quantity);
+        assertThat(actual.get().getDescription()).isEqualTo(description);
+    }
+
+    @Test
+    @DisplayName("HazardousDeclaration 付きの HAZARDOUS Cargo を保存・取得できる")
+    void shouldSaveAndFindHazardousCargo() {
+        ShipperId shipperId = new ShipperId(UUID.randomUUID());
+        insertShipper(shipperId, "SHP-7001");
+        Cargo cargo = cargo(shipperId, CargoType.HAZARDOUS, new BigDecimal("7.500"));
+
+        repository.save(cargo);
+
+        Optional<Cargo> actual = repository.findByBookingId(cargo.getBookingId());
+        assertThat(actual).isPresent();
+        assertThat(actual.get().getCargoType()).isEqualTo(CargoType.HAZARDOUS);
+        assertThat(actual.get().getHazardousDeclaration()).isNotNull();
+        assertThat(actual.get().getHazardousDeclaration().hazardousClass()).isEqualTo("3");
+        assertThat(actual.get().getHazardousDeclaration().unNumber()).isEqualTo("UN1203");
+    }
+
+    @Test
+    @DisplayName("TemperatureRequirement 付きの REFRIGERATED Cargo を保存・取得できる")
+    void shouldSaveAndFindRefrigeratedCargo() {
+        ShipperId shipperId = new ShipperId(UUID.randomUUID());
+        insertShipper(shipperId, "SHP-7002");
+        Cargo cargo = cargo(shipperId, CargoType.REFRIGERATED, new BigDecimal("15.000"));
+
+        repository.save(cargo);
+
+        Optional<Cargo> actual = repository.findByBookingId(cargo.getBookingId());
+        assertThat(actual).isPresent();
+        assertThat(actual.get().getCargoType()).isEqualTo(CargoType.REFRIGERATED);
+        assertThat(actual.get().getTemperatureRequirement()).isNotNull();
+        assertThat(actual.get().getTemperatureRequirement().minTemperature()).isEqualByComparingTo(new BigDecimal("-25"));
+        assertThat(actual.get().getTemperatureRequirement().maxTemperature()).isEqualByComparingTo(new BigDecimal("-18"));
+        assertThat(actual.get().getTemperatureRequirement().unit()).isEqualTo(TemperatureUnit.CELSIUS);
+    }
+
     private Cargo cargo(ShipperId shipperId, CargoType cargoType, BigDecimal weight) {
         HazardousDeclaration hazardousDeclaration = cargoType == CargoType.HAZARDOUS
                 ? new HazardousDeclaration("3", "UN1203", "Gasoline") : null;
@@ -123,11 +207,7 @@ class MyBatisCargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 cargoType,
                 weight,
                 Cargo.state(
-                        new RouteSpecification(
-                                new Location("JPTYO"),
-                                new Location("USLAX"),
-                                LocalDate.now().plusDays(14)
-                        ),
+                        RouteSpecification.fromUnLocodes("JPTYO", "USLAX", LocalDate.now().plusDays(14)),
                         BookingStatus.PRELIMINARY,
                         null,
                         Cargo.handling(hazardousDeclaration, temperatureRequirement)
