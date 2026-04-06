@@ -11,3 +11,4 @@
 | [IT1 UI/UX レビュー](./IT1_uiux_review_20260404.md) | IT1 Thymeleaf テンプレート（navbar, ダッシュボード, ログイン, 荷主管理 3 画面, 予約管理 3 画面） | 2026-04-04 | 高 8 件 / 中 8 件 / 低 5 件 |
 | [IT2 US13 実装成果物レビュー](./US13_review_20260406.md) | US13 予約確定・キャンセル（Cargo 集約 State パターン、BookingStatus 遷移、Controller） | 2026-04-06 | - |
 | [IT2 予約管理画面 UI/UX レビュー](./booking_uiux_review_20260406.md) | IT2 予約管理 Thymeleaf テンプレート（予約登録フォーム、予約詳細画面、確定・キャンセルモーダル） | 2026-04-06 | - |
+| [ファクトリメソッドリファクタリング コードレビュー](./factory_method_review_20260406.md) | Shipper ファクトリメソッド・RouteSpecification.fromUnLocodes()・MyBatisShipperRepository 切り替え | 2026-04-06 | 高 1 件 / 中 2 件 / 低 2 件 |

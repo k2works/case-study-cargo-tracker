@@ -85,24 +85,17 @@ public class MyBatisShipperRepository implements ShipperRepository {
                     new DiscountRate(shipperRecord.getDiscountRate())
             );
         }
-        return shipperType == ShipperType.INDIVIDUAL
-                ? Shipper.individual(
-                new ShipperId(UUID.fromString(shipperRecord.getId())),
-                new ShipperCode(shipperRecord.getShipperCode()),
-                new ShipperName(shipperRecord.getName()),
-                new Email(shipperRecord.getEmail()),
-                toPhone(shipperRecord.getPhone()),
-                address
-        )
-                : new Shipper(
-                new ShipperId(UUID.fromString(shipperRecord.getId())),
-                new ShipperCode(shipperRecord.getShipperCode()),
-                new ShipperName(shipperRecord.getName()),
-                new Email(shipperRecord.getEmail()),
-                toPhone(shipperRecord.getPhone()),
-                address,
-                shipperType
-        );
+        if (shipperType == ShipperType.INDIVIDUAL) {
+            return Shipper.individual(
+                    new ShipperId(UUID.fromString(shipperRecord.getId())),
+                    new ShipperCode(shipperRecord.getShipperCode()),
+                    new ShipperName(shipperRecord.getName()),
+                    new Email(shipperRecord.getEmail()),
+                    toPhone(shipperRecord.getPhone()),
+                    address
+            );
+        }
+        throw new IllegalStateException("Unsupported shipperType: " + shipperType);
     }
 
     private Phone toPhone(String phone) {
