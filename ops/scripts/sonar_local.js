@@ -311,7 +311,6 @@ function runScan(project, token, hostUrl) {
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
         `-Dsonar.token=${token}` +
-        ` -x test -x jacocoTestReport` +
         `${newCodeOption}`,
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
