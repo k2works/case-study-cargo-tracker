@@ -4,7 +4,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 
 public class BookingNotFoundException extends RuntimeException {
 
-    private final BookingId bookingId;
+    private final transient BookingId bookingId;
 
     public BookingNotFoundException(BookingId bookingId) {
         super("Booking not found: " + bookingId);
