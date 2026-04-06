@@ -791,16 +791,16 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（`developing-review` 実施）
-- [ ] UI/UX レビュー完了（`developing-uiux-review` 実施）
+- [x] コードレビュー完了（`developing-review` 実施）
+- [x] UI/UX レビュー完了（`developing-uiux-review` 実施）
 - [x] 単体テストがパス
 - [x] API E2E テストがパス
-- [x] Playwright E2E テストがパス
-- [ ] テストカバレッジ 80% 以上（命令カバレッジ + ブランチカバレッジ）
+- [x] Playwright E2E テストがパス（31/31 件）
+- [x] テストカバレッジ 80% 以上（命令 93%・ブランチ 81%、テスト 166 件）
 - [ ] SonarQube Quality Gate PASS（ローカル実行）
-- [ ] 機能がローカル環境で動作確認済み
+- [x] 機能がローカル環境で動作確認済み
 - [ ] ドキュメント更新完了（domain-model.md、data-model.md、ui_design.md）
-- [ ] IT1 レビュー指摘の高優先度 10 件が全て解消済み
+- [x] IT1 レビュー指摘の高優先度 10 件が全て解消済み
 
 ### デモ項目
 
@@ -821,6 +821,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | 2026-04-04 | 初版作成 | - |
 | 2026-04-04 | IT1 品質改善（4 SP）完了を反映。テスト 95 件全 Green、JaCoCo カバレッジ 63% | - |
 | 2026-04-06 | US13 予約確定・キャンセル機能（3 SP）完了。テスト 140 件全 Green、進捗 100% (10/10 SP) | - |
+| 2026-04-06 | Playwright E2E テスト 31/31 件通過。ブランチカバレッジ 72% → 81%、テスト 166 件全 Green | - |
 
 ---
 
