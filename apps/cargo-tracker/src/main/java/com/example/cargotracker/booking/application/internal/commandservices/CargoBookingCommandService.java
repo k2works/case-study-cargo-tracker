@@ -18,7 +18,6 @@ import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
-import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,9 +55,9 @@ public class CargoBookingCommandService {
                 CargoType.valueOf(command.cargoType()),
                 command.weight(),
                 Cargo.state(
-                        new RouteSpecification(
-                                new Location(command.originUnlocode()),
-                                new Location(command.destinationUnlocode()),
+                        RouteSpecification.fromUnLocodes(
+                                command.originUnlocode(),
+                                command.destinationUnlocode(),
                                 command.arrivalDeadline()
                         ),
                         BookingStatus.PRELIMINARY,

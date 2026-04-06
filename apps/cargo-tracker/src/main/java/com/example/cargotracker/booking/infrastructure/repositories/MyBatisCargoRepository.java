@@ -92,9 +92,9 @@ public class MyBatisCargoRepository implements CargoRepository {
                 CargoType.valueOf(cargoRecord.getCargoType()),
                 cargoRecord.getWeight(),
                 Cargo.state(
-                        new RouteSpecification(
-                                new Location(cargoRecord.getOriginUnlocode()),
-                                new Location(cargoRecord.getDestinationUnlocode()),
+                        RouteSpecification.fromUnLocodes(
+                                cargoRecord.getOriginUnlocode(),
+                                cargoRecord.getDestinationUnlocode(),
                                 cargoRecord.getArrivalDeadline()
                         ),
                         BookingStatus.valueOf(cargoRecord.getBookingStatus()),
