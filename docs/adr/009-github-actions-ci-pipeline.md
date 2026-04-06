@@ -12,7 +12,7 @@ GitHub Actions で Backend ビルド・テストと Playwright E2E テストを 
 
 コードの変更に対して自動的にビルド・テスト・品質チェックを実行する CI パイプラインが必要である。
 
-- `apps/cargo-tracker/` と `apps/e2e/` の変更を検知して自動実行したい
+- `apps/cargo-tracker/` と `apps/cargo-tracker/e2e/` の変更を検知して自動実行したい
 - E2E テストはバックエンドのビルド・テスト成功後に実行したい
 - テスト失敗時にレポートをアーティファクトとして保存したい
 
@@ -25,7 +25,7 @@ GitHub Actions で Backend ビルド・テストと Playwright E2E テストを 
 - `.github/workflows/ci.yml` を新規作成
 - `build` ジョブ: JDK 25 + Gradle ビルド・テスト
 - `e2e` ジョブ: Spring Boot 起動 → Node.js + Playwright インストール → E2E テスト実行
-- トリガー: `java/take-2` ブランチへの push / PR で `apps/cargo-tracker/**`、`apps/e2e/**` の変更時
+- トリガー: `java/take-2` ブランチへの push / PR で `apps/cargo-tracker/**`、`apps/cargo-tracker/e2e/**` の変更時
 
 ### 代替案
 

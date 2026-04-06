@@ -5,13 +5,13 @@ on:
     branches: [ "java/take-2" ]
     paths:
       - "apps/cargo-tracker/**"
-      - "apps/e2e/**"
+      - "apps/cargo-tracker/e2e/**"
       - ".github/workflows/ci.yml"
   pull_request:
     branches: [ "java/take-2" ]
     paths:
       - "apps/cargo-tracker/**"
-      - "apps/e2e/**"
+      - "apps/cargo-tracker/e2e/**"
 
 jobs:
   build:
@@ -105,18 +105,18 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: apps/e2e/package-lock.json
+          cache-dependency-path: apps/cargo-tracker/e2e/package-lock.json
 
       - name: Install dependencies
-        working-directory: apps/e2e
+        working-directory: apps/cargo-tracker/e2e
         run: npm ci
 
       - name: Install Playwright browsers
-        working-directory: apps/e2e
+        working-directory: apps/cargo-tracker/e2e
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
-        working-directory: apps/e2e
+        working-directory: apps/cargo-tracker/e2e
         run: npx playwright test
 
       - name: Upload Playwright report
@@ -124,7 +124,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: apps/e2e/playwright-report/
+          path: apps/cargo-tracker/e2e/playwright-report/
           retention-days: 7
 
       - name: Upload Spring Boot log

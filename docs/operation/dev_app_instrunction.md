@@ -290,7 +290,7 @@ cd apps/cargo-tracker
 ./gradlew test --tests "com.example.cargotracker.e2e.*"
 
 # ブラウザ E2E テスト（アプリ起動中に別ターミナルで）
-cd apps/e2e && npm test
+cd apps/cargo-tracker/e2e && npm test
 ```
 
 ### テストカバレッジ
@@ -416,7 +416,7 @@ case-study-cargo-tracker/
 │               └── resources/
 │                   └── application-test.yml       # テスト用プロファイル
 ├── apps/
-│   └── e2e/                         # ブラウザ E2E テスト（Playwright）
+│   └── cargo-tracker/e2e/           # ブラウザ E2E テスト（Playwright）
 │       ├── package.json
 │       ├── playwright.config.ts
 │       └── src/

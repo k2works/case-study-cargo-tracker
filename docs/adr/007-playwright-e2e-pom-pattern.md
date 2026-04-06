@@ -18,14 +18,14 @@
 
 ## 決定
 
-**Playwright 1.44+ (TypeScript) を `apps/e2e/` に独立プロジェクトとして配置し、Page Object Model パターンを採用する。**
+**Playwright 1.44+ (TypeScript) を `apps/cargo-tracker/e2e/` に配置し、Page Object Model パターンを採用する。**
 
 ### 変更箇所
 
-- `apps/e2e/` にPlaywright プロジェクトを作成
-- `apps/e2e/src/pages/` に Page Object クラスを配置
-- `apps/e2e/src/tests/` にテストスペックを配置
-- `apps/e2e/src/fixtures.ts` で共通フィクスチャ（ログイン等）を定義
+- `apps/cargo-tracker/e2e/` に Playwright プロジェクトを作成
+- `apps/cargo-tracker/e2e/src/pages/` に Page Object クラスを配置
+- `apps/cargo-tracker/e2e/src/tests/` にテストスペックを配置
+- `apps/cargo-tracker/e2e/src/fixtures.ts` で共通フィクスチャ（ログイン等）を定義
 - `playwright.config.ts` で Chromium ブラウザ・`baseURL: http://localhost:8080` を設定
 
 ### 代替案
@@ -51,7 +51,7 @@
 
 ## コンプライアンス
 
-- cargo-tracker 起動状態で `cd apps/e2e && npm test` が全テスト通過すること
+- cargo-tracker 起動状態で `cd apps/cargo-tracker/e2e && npm test` が全テスト通過すること
 - CI ワークフロー（`.github/workflows/ci.yml`）の E2E ジョブが通過すること
 
 ## 備考

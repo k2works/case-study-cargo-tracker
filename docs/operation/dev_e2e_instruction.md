@@ -11,7 +11,7 @@ E2E テストはバックエンドアプリケーション（Spring Boot）が�
 | テストフレームワーク | Playwright |
 | 言語 | TypeScript |
 | テスト対象 | `http://localhost:8080`（cargo-tracker） |
-| テストディレクトリ | `apps/e2e` |
+| テストディレクトリ | `apps/cargo-tracker/e2e` |
 | ブラウザ | Chromium |
 
 ---
@@ -31,7 +31,7 @@ E2E テストはバックエンドアプリケーション（Spring Boot）が�
 ## 2. ディレクトリ構造
 
 ```
-apps/e2e/
+apps/cargo-tracker/e2e/
 ├── package.json              # Playwright 依存関係・スクリプト
 ├── playwright.config.ts      # Playwright 設定
 ├── tsconfig.json             # TypeScript 設定
@@ -50,8 +50,8 @@ apps/e2e/
 ### 3.1 プロジェクトの初期化
 
 ```bash
-mkdir -p apps/e2e/src/pages apps/e2e/src/tests
-cd apps/e2e
+mkdir -p apps/cargo-tracker/e2e/src/pages apps/cargo-tracker/e2e/src/tests
+cd apps/cargo-tracker/e2e
 ```
 
 ### 3.2 package.json の作成
@@ -78,7 +78,7 @@ cd apps/e2e
 ### 3.3 依存パッケージのインストール
 
 ```bash
-cd apps/e2e
+cd apps/cargo-tracker/e2e
 npm install
 
 # Playwright ブラウザをインストール
@@ -278,7 +278,7 @@ cd apps/cargo-tracker
 
 ```bash
 # ターミナル 2: E2E テスト
-cd apps/e2e
+cd apps/cargo-tracker/e2e
 
 # 全テスト実行（ヘッドレス）
 npm test
@@ -311,12 +311,12 @@ BASE_URL=http://localhost:9080 npm test
 
 | レポート | パス |
 |---------|------|
-| HTML レポート | `apps/e2e/playwright-report/index.html` |
-| テスト結果 | `apps/e2e/test-results/` |
+| HTML レポート | `apps/cargo-tracker/e2e/playwright-report/index.html` |
+| テスト結果 | `apps/cargo-tracker/e2e/test-results/` |
 
 ```bash
 # レポートをブラウザで開く
-cd apps/e2e
+cd apps/cargo-tracker/e2e
 npm run report
 ```
 
@@ -347,11 +347,11 @@ GitHub Actions で E2E テストを実行する場合の設定例:
 
 ```yaml
 - name: Install Playwright Browsers
-  working-directory: apps/e2e
+  working-directory: apps/cargo-tracker/e2e
   run: npx playwright install --with-deps chromium
 
 - name: Run E2E Tests
-  working-directory: apps/e2e
+  working-directory: apps/cargo-tracker/e2e
   run: npm test
   env:
     BASE_URL: http://localhost:8080
@@ -370,7 +370,7 @@ GitHub Actions で E2E テストを実行する場合の設定例:
 **解決策**:
 
 ```bash
-cd apps/e2e
+cd apps/cargo-tracker/e2e
 npx playwright install chromium
 ```
 
