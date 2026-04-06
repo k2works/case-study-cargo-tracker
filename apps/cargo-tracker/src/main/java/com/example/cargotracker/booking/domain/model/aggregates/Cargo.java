@@ -3,8 +3,10 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 
 import java.math.BigDecimal;
@@ -21,6 +23,8 @@ public class Cargo {
     private final Description description;
     private final RouteSpecification routeSpecification;
     private final BookingStatus status;
+    private final HazardousDeclaration hazardousDeclaration;
+    private final TemperatureRequirement temperatureRequirement;
 
     public Cargo(
             BookingId bookingId,
@@ -29,7 +33,7 @@ public class Cargo {
             BigDecimal weight,
             RouteSpecification routeSpecification
     ) {
-        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, BookingStatus.PRELIMINARY);
+        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, BookingStatus.PRELIMINARY, null, null);
     }
 
     public Cargo(
@@ -40,7 +44,7 @@ public class Cargo {
             RouteSpecification routeSpecification,
             BookingStatus status
     ) {
-        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, status);
+        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, status, null, null);
     }
 
     public Cargo(
@@ -54,6 +58,22 @@ public class Cargo {
             RouteSpecification routeSpecification,
             BookingStatus status
     ) {
+        this(bookingId, shipperId, cargoType, weight, dimensions, quantity, description, routeSpecification, status, null, null);
+    }
+
+    public Cargo(
+            BookingId bookingId,
+            ShipperId shipperId,
+            CargoType cargoType,
+            BigDecimal weight,
+            Dimensions dimensions,
+            Quantity quantity,
+            Description description,
+            RouteSpecification routeSpecification,
+            BookingStatus status,
+            HazardousDeclaration hazardousDeclaration,
+            TemperatureRequirement temperatureRequirement
+    ) {
         this.bookingId = Objects.requireNonNull(bookingId, "bookingId must not be null");
         this.shipperId = Objects.requireNonNull(shipperId, "shipperId must not be null");
         this.cargoType = Objects.requireNonNull(cargoType, "cargoType must not be null");
@@ -63,9 +83,17 @@ public class Cargo {
         this.description = description;
         this.routeSpecification = Objects.requireNonNull(routeSpecification, "routeSpecification must not be null");
         this.status = Objects.requireNonNull(status, "status must not be null");
+        this.hazardousDeclaration = hazardousDeclaration;
+        this.temperatureRequirement = temperatureRequirement;
 
         if (this.weight.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("weight must be greater than zero");
+        }
+        if (this.cargoType == CargoType.HAZARDOUS && this.hazardousDeclaration == null) {
+            throw new IllegalArgumentException("hazardousDeclaration is required for HAZARDOUS cargo");
+        }
+        if (this.cargoType == CargoType.REFRIGERATED && this.temperatureRequirement == null) {
+            throw new IllegalArgumentException("temperatureRequirement is required for REFRIGERATED cargo");
         }
     }
 
@@ -103,5 +131,13 @@ public class Cargo {
 
     public BookingStatus getStatus() {
         return status;
+    }
+
+    public HazardousDeclaration getHazardousDeclaration() {
+        return hazardousDeclaration;
+    }
+
+    public TemperatureRequirement getTemperatureRequirement() {
+        return temperatureRequirement;
     }
 }

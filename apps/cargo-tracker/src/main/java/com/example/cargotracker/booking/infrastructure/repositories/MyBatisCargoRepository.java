@@ -63,6 +63,16 @@ public class MyBatisCargoRepository implements CargoRepository {
         cargoRecord.setDestinationUnlocode(cargo.getRouteSpecification().destination().unlocode());
         cargoRecord.setArrivalDeadline(cargo.getRouteSpecification().arrivalDeadline());
         cargoRecord.setBookingStatus(cargo.getStatus().name());
+        if (cargo.getHazardousDeclaration() != null) {
+            cargoRecord.setHazardousClass(cargo.getHazardousDeclaration().hazardousClass());
+            cargoRecord.setUnNumber(cargo.getHazardousDeclaration().unNumber());
+            cargoRecord.setProperShippingName(cargo.getHazardousDeclaration().properShippingName());
+        }
+        if (cargo.getTemperatureRequirement() != null) {
+            cargoRecord.setMinTemperature(cargo.getTemperatureRequirement().minTemperature());
+            cargoRecord.setMaxTemperature(cargo.getTemperatureRequirement().maxTemperature());
+            cargoRecord.setTemperatureUnit(cargo.getTemperatureRequirement().unit().name());
+        }
         return cargoRecord;
     }
 
@@ -84,8 +94,27 @@ public class MyBatisCargoRepository implements CargoRepository {
                         new Location(cargoRecord.getDestinationUnlocode()),
                         cargoRecord.getArrivalDeadline()
                 ),
-                BookingStatus.valueOf(cargoRecord.getBookingStatus())
+                BookingStatus.valueOf(cargoRecord.getBookingStatus()),
+                toHazardousDeclaration(cargoRecord),
+                toTemperatureRequirement(cargoRecord)
         );
+    }
+
+    private com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration toHazardousDeclaration(CargoRecord record) {
+        if (record.getHazardousClass() != null && record.getUnNumber() != null && record.getProperShippingName() != null) {
+            return new com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration(
+                    record.getHazardousClass(), record.getUnNumber(), record.getProperShippingName());
+        }
+        return null;
+    }
+
+    private com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement toTemperatureRequirement(CargoRecord record) {
+        if (record.getMinTemperature() != null && record.getMaxTemperature() != null && record.getTemperatureUnit() != null) {
+            return new com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement(
+                    record.getMinTemperature(), record.getMaxTemperature(),
+                    com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit.valueOf(record.getTemperatureUnit()));
+        }
+        return null;
     }
 
     private Dimensions toDimensions(CargoRecord record) {

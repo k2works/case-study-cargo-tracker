@@ -57,7 +57,7 @@ test.describe('貨物予約管理', () => {
     await expect(bookingShowPage.heading).toHaveText('予約詳細');
     await expect(bookingShowPage.getDetailValue('出発地')).toHaveText('JPTYO');
     await expect(bookingShowPage.getDetailValue('目的地')).toHaveText('USLAX');
-    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('PRELIMINARY');
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('仮受付');
   });
 
   test('貨物予約詳細ページが表示される', async ({ page, loggedIn }) => {
@@ -72,13 +72,15 @@ test.describe('貨物予約管理', () => {
 
     await bookingNewPage.goto();
 
-    await bookingNewPage.fill(
+    await bookingNewPage.fillRefrigerated(
       shipperId,
-      'REFRIGERATED',
       '50.0',
       'JPOSA',
       'GBLON',
-      '2027-06-30'
+      '2027-06-30',
+      '-25',
+      '-18',
+      'CELSIUS'
     );
     await bookingNewPage.submit();
 
@@ -87,13 +89,85 @@ test.describe('貨物予約管理', () => {
     await expect(bookingShowPage.heading).toHaveText('予約詳細');
     await expect(bookingShowPage.getDetailValue('出発地')).toHaveText('JPOSA');
     await expect(bookingShowPage.getDetailValue('目的地')).toHaveText('GBLON');
-    await expect(bookingShowPage.getDetailValue('貨物種別')).toHaveText('REFRIGERATED');
-    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('PRELIMINARY');
+    await expect(bookingShowPage.getDetailValue('貨物種別')).toHaveText('冷凍・冷蔵');
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('仮受付');
     await expect(bookingShowPage.backButton).toBeVisible();
 
     // 一覧へ戻る
     await bookingShowPage.backButton.click();
     await expect(page).toHaveURL('/bookings');
+  });
+
+  test('危険物貨物の予約を登録できる', async ({ page, loggedIn }) => {
+    const timestamp = Date.now();
+    const shipperName = `危険物テスト荷主 ${timestamp}`;
+    const shipperEmail = `hazardous-booking-${timestamp}@example.com`;
+
+    const shipperId = await registerShipperAndGetId(page, shipperName, shipperEmail);
+
+    const bookingNewPage = new BookingNewPage(page);
+    const bookingShowPage = new BookingShowPage(page);
+
+    await bookingNewPage.goto();
+
+    await bookingNewPage.fillHazardous(
+      shipperId,
+      '50.0',
+      'JPTYO',
+      'USLAX',
+      '2027-12-31',
+      '3',
+      'UN1203',
+      'ガソリン'
+    );
+    await bookingNewPage.submit();
+
+    // 詳細ページにリダイレクトされ、貨物種別が HAZARDOUS であることを確認
+    await expect(page).toHaveURL(/\/bookings\/.+/);
+    await expect(bookingShowPage.heading).toHaveText('予約詳細');
+    await expect(bookingShowPage.getDetailValue('貨物種別')).toHaveText('危険物');
+    await expect(bookingShowPage.getDetailValue('出発地')).toHaveText('JPTYO');
+    await expect(bookingShowPage.getDetailValue('目的地')).toHaveText('USLAX');
+
+    // 危険物情報が表示されることを確認
+    await expect(bookingShowPage.getDetailValue('危険物クラス')).toHaveText('3');
+    await expect(bookingShowPage.getDetailValue('UN番号')).toHaveText('UN1203');
+  });
+
+  test('冷凍・冷蔵貨物の予約を登録できる', async ({ page, loggedIn }) => {
+    const timestamp = Date.now();
+    const shipperName = `冷凍テスト荷主 ${timestamp}`;
+    const shipperEmail = `refrigerated-booking-${timestamp}@example.com`;
+
+    const shipperId = await registerShipperAndGetId(page, shipperName, shipperEmail);
+
+    const bookingNewPage = new BookingNewPage(page);
+    const bookingShowPage = new BookingShowPage(page);
+
+    await bookingNewPage.goto();
+
+    await bookingNewPage.fillRefrigerated(
+      shipperId,
+      '30.0',
+      'JPOSA',
+      'SGSIN',
+      '2027-06-30',
+      '-25',
+      '-18',
+      'CELSIUS'
+    );
+    await bookingNewPage.submit();
+
+    // 詳細ページにリダイレクトされ、貨物種別が REFRIGERATED であることを確認
+    await expect(page).toHaveURL(/\/bookings\/.+/);
+    await expect(bookingShowPage.heading).toHaveText('予約詳細');
+    await expect(bookingShowPage.getDetailValue('貨物種別')).toHaveText('冷凍・冷蔵');
+    await expect(bookingShowPage.getDetailValue('出発地')).toHaveText('JPOSA');
+    await expect(bookingShowPage.getDetailValue('目的地')).toHaveText('SGSIN');
+
+    // 温度管理情報が表示されることを確認
+    await expect(bookingShowPage.getDetailValue('温度管理')).toContainText('-25');
+    await expect(bookingShowPage.getDetailValue('温度管理')).toContainText('-18');
   });
 
   test('予約登録フォームから一覧へ戻れる', async ({ page, loggedIn }) => {

@@ -24,7 +24,13 @@ public class CargoAssembler {
                 cargo.getRouteSpecification().arrivalDeadline(),
                 cargo.getStatus().name(),
                 cargo.getStatus().getDisplayName(),
-                cargo.getStatus().getBadgeColor()
+                cargo.getStatus().getBadgeColor(),
+                cargo.getHazardousDeclaration() != null ? cargo.getHazardousDeclaration().hazardousClass() : null,
+                cargo.getHazardousDeclaration() != null ? cargo.getHazardousDeclaration().unNumber() : null,
+                cargo.getHazardousDeclaration() != null ? cargo.getHazardousDeclaration().properShippingName() : null,
+                cargo.getTemperatureRequirement() != null ? cargo.getTemperatureRequirement().minTemperature() : null,
+                cargo.getTemperatureRequirement() != null ? cargo.getTemperatureRequirement().maxTemperature() : null,
+                cargo.getTemperatureRequirement() != null ? cargo.getTemperatureRequirement().unit().name() : null
         );
     }
 }

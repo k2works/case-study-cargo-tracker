@@ -37,7 +37,8 @@
                             <div class="col-md-6">
                                 <label for="cargoType" class="form-label">貨物種別</label>
                                 <select id="cargoType" th:field="*{cargoType}" class="form-select"
-                                        required aria-describedby="cargoTypeHelp">
+                                        required aria-describedby="cargoTypeHelp"
+                                        onchange="toggleSpecialFields()">
                                     <option value="">選択してください</option>
                                     <option th:each="ct : ${cargoTypes}"
                                             th:value="${ct.name()}"
@@ -103,6 +104,59 @@
                                 <div id="destinationUnlocodeHelp" class="form-text">例: NLRTM（ロッテルダム）、CNSHA（上海）、SGSIN（シンガポール）</div>
                                 <div class="invalid-feedback d-block" th:errors="*{destinationUnlocode}"></div>
                             </div>
+
+                            <!-- 危険物セクション -->
+                            <div id="hazardous-section" style="display:none;" class="col-12 border rounded p-3 bg-warning-subtle">
+                                <h6>危険物申告情報</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="hazardousClass" class="form-label">危険物クラス <span class="text-danger">*</span></label>
+                                        <input id="hazardousClass" type="text" th:field="*{hazardousClass}" class="form-control"
+                                               placeholder="例: 3">
+                                        <div class="invalid-feedback d-block" th:errors="*{hazardousClass}"></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="unNumber" class="form-label">UN番号 <span class="text-danger">*</span></label>
+                                        <input id="unNumber" type="text" th:field="*{unNumber}" class="form-control"
+                                               placeholder="例: UN1203">
+                                        <div class="invalid-feedback d-block" th:errors="*{unNumber}"></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="properShippingName" class="form-label">正式品名 <span class="text-danger">*</span></label>
+                                        <input id="properShippingName" type="text" th:field="*{properShippingName}" class="form-control"
+                                               placeholder="例: ガソリン">
+                                        <div class="invalid-feedback d-block" th:errors="*{properShippingName}"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 冷凍・冷蔵セクション -->
+                            <div id="refrigerated-section" style="display:none;" class="col-12 border rounded p-3 bg-info-subtle">
+                                <h6>温度管理条件</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="minTemperature" class="form-label">最低温度 <span class="text-danger">*</span></label>
+                                        <input id="minTemperature" type="number" step="0.1" th:field="*{minTemperature}" class="form-control"
+                                               placeholder="例: -25">
+                                        <div class="invalid-feedback d-block" th:errors="*{minTemperature}"></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="maxTemperature" class="form-label">最高温度 <span class="text-danger">*</span></label>
+                                        <input id="maxTemperature" type="number" step="0.1" th:field="*{maxTemperature}" class="form-control"
+                                               placeholder="例: -18">
+                                        <div class="invalid-feedback d-block" th:errors="*{maxTemperature}"></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="temperatureUnit" class="form-label">温度単位 <span class="text-danger">*</span></label>
+                                        <select id="temperatureUnit" th:field="*{temperatureUnit}" class="form-select">
+                                            <option value="">選択してください</option>
+                                            <option value="CELSIUS">&#8451; (摂氏)</option>
+                                            <option value="FAHRENHEIT">&#8457; (華氏)</option>
+                                        </select>
+                                        <div class="invalid-feedback d-block" th:errors="*{temperatureUnit}"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
@@ -117,5 +171,15 @@
 </main>
 
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script>
+  function toggleSpecialFields() {
+    var cargoType = document.getElementById('cargoType').value;
+    var hazardous = document.getElementById('hazardous-section');
+    var refrigerated = document.getElementById('refrigerated-section');
+    if (hazardous) hazardous.style.display = cargoType === 'HAZARDOUS' ? 'block' : 'none';
+    if (refrigerated) refrigerated.style.display = cargoType === 'REFRIGERATED' ? 'block' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', toggleSpecialFields);
+</script>
 </body>
 </html>

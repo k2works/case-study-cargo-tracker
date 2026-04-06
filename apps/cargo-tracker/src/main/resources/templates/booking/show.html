@@ -50,6 +50,19 @@
                 <dt class="col-sm-3">希望着日</dt>
                 <dd class="col-sm-9" th:text="${booking.arrivalDeadline}">2026-04-30</dd>
 
+                <dt class="col-sm-3" th:if="${booking.hazardousClass != null}">危険物クラス</dt>
+                <dd class="col-sm-9" th:if="${booking.hazardousClass != null}" th:text="${booking.hazardousClass}">3</dd>
+
+                <dt class="col-sm-3" th:if="${booking.unNumber != null}">UN番号</dt>
+                <dd class="col-sm-9" th:if="${booking.unNumber != null}" th:text="${booking.unNumber}">UN1203</dd>
+
+                <dt class="col-sm-3" th:if="${booking.properShippingName != null}">正式品名</dt>
+                <dd class="col-sm-9" th:if="${booking.properShippingName != null}" th:text="${booking.properShippingName}">ガソリン</dd>
+
+                <dt class="col-sm-3" th:if="${booking.minTemperature != null}">温度管理</dt>
+                <dd class="col-sm-9" th:if="${booking.minTemperature != null}"
+                    th:text="${booking.minTemperature + ' ～ ' + booking.maxTemperature + ' ' + booking.temperatureUnit}">-25 ～ -18 CELSIUS</dd>
+
                 <dt class="col-sm-3">状態</dt>
                 <dd class="col-sm-9">
                     <span class="badge"

@@ -19,5 +19,11 @@ public record CargoResponse(
         LocalDate arrivalDeadline,
         String status,
         String statusDisplayName,
-        String statusBadgeColor
+        String statusBadgeColor,
+        String hazardousClass,
+        String unNumber,
+        String properShippingName,
+        BigDecimal minTemperature,
+        BigDecimal maxTemperature,
+        String temperatureUnit
 ) {}

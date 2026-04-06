@@ -4,7 +4,10 @@ import com.example.cargotracker.booking.domain.model.aggregates.BookingStatus;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -187,5 +191,83 @@ class CargoTest {
     void shouldThrowWhenWeightIsNull() {
         assertThrows(NullPointerException.class, () -> new Cargo(
                 BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, null, ROUTE_SPEC));
+    }
+
+    // --- 危険物貨物テスト ---
+
+    private static final HazardousDeclaration HAZARDOUS_DECLARATION =
+            new HazardousDeclaration("3", "UN1203", "Gasoline");
+
+    private static final TemperatureRequirement TEMPERATURE_REQUIREMENT =
+            new TemperatureRequirement(new BigDecimal("-25"), new BigDecimal("-18"), TemperatureUnit.CELSIUS);
+
+    @Test
+    void shouldCreateHazardousCargo() {
+        Cargo cargo = assertDoesNotThrow(() -> new Cargo(
+                BOOKING_ID, SHIPPER_ID, CargoType.HAZARDOUS, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
+                HAZARDOUS_DECLARATION, null));
+        assertEquals(CargoType.HAZARDOUS, cargo.getCargoType());
+    }
+
+    @Test
+    void shouldGetHazardousDeclaration() {
+        Cargo cargo = new Cargo(
+                BOOKING_ID, SHIPPER_ID, CargoType.HAZARDOUS, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
+                HAZARDOUS_DECLARATION, null);
+        assertNotNull(cargo.getHazardousDeclaration());
+        assertEquals("3", cargo.getHazardousDeclaration().hazardousClass());
+        assertEquals("UN1203", cargo.getHazardousDeclaration().unNumber());
+    }
+
+    @Test
+    void shouldThrowWhenHazardousCargoMissingDeclaration() {
+        assertThrows(IllegalArgumentException.class, () -> new Cargo(
+                BOOKING_ID, SHIPPER_ID, CargoType.HAZARDOUS, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
+                null, null));
+    }
+
+    // --- 冷凍・冷蔵貨物テスト ---
+
+    @Test
+    void shouldCreateRefrigeratedCargo() {
+        Cargo cargo = assertDoesNotThrow(() -> new Cargo(
+                BOOKING_ID, SHIPPER_ID, CargoType.REFRIGERATED, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
+                null, TEMPERATURE_REQUIREMENT));
+        assertEquals(CargoType.REFRIGERATED, cargo.getCargoType());
+    }
+
+    @Test
+    void shouldGetTemperatureRequirement() {
+        Cargo cargo = new Cargo(
+                BOOKING_ID, SHIPPER_ID, CargoType.REFRIGERATED, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
+                null, TEMPERATURE_REQUIREMENT);
+        assertNotNull(cargo.getTemperatureRequirement());
+        assertEquals(new BigDecimal("-25"), cargo.getTemperatureRequirement().minTemperature());
+        assertEquals(new BigDecimal("-18"), cargo.getTemperatureRequirement().maxTemperature());
+    }
+
+    @Test
+    void shouldThrowWhenRefrigeratedCargoMissingTemperatureRequirement() {
+        assertThrows(IllegalArgumentException.class, () -> new Cargo(
+                BOOKING_ID, SHIPPER_ID, CargoType.REFRIGERATED, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
+                null, null));
+    }
+
+    // --- 一般貨物テスト ---
+
+    @Test
+    void shouldCreateGeneralCargoWithoutSpecialFields() {
+        Cargo cargo = assertDoesNotThrow(() -> new Cargo(
+                BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
+                null, null));
+        assertNull(cargo.getHazardousDeclaration());
+        assertNull(cargo.getTemperatureRequirement());
     }
 }

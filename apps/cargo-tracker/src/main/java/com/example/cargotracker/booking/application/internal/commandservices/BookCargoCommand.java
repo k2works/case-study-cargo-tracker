@@ -14,6 +14,12 @@ public record BookCargoCommand(
         String description,
         String originUnlocode,
         String destinationUnlocode,
-        LocalDate arrivalDeadline
+        LocalDate arrivalDeadline,
+        String hazardousClass,
+        String unNumber,
+        String properShippingName,
+        BigDecimal minTemperature,
+        BigDecimal maxTemperature,
+        String temperatureUnit
 ) {
 }

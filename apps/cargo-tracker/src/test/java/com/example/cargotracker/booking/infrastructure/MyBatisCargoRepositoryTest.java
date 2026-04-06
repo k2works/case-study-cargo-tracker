@@ -4,7 +4,10 @@ import com.example.cargotracker.booking.domain.model.aggregates.BookingStatus;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
 import com.example.cargotracker.booking.infrastructure.repositories.MyBatisCargoRepository;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
@@ -110,16 +113,24 @@ class MyBatisCargoRepositoryTest extends PostgreSQLIntegrationTestBase {
     }
 
     private Cargo cargo(ShipperId shipperId, CargoType cargoType, BigDecimal weight) {
+        HazardousDeclaration hazardousDeclaration = cargoType == CargoType.HAZARDOUS
+                ? new HazardousDeclaration("3", "UN1203", "Gasoline") : null;
+        TemperatureRequirement temperatureRequirement = cargoType == CargoType.REFRIGERATED
+                ? new TemperatureRequirement(new BigDecimal("-25.000"), new BigDecimal("-18.000"), TemperatureUnit.CELSIUS) : null;
         return new Cargo(
                 new BookingId(UUID.randomUUID()),
                 shipperId,
                 cargoType,
                 weight,
+                null, null, null,
                 new RouteSpecification(
                         new Location("JPTYO"),
                         new Location("USLAX"),
                         LocalDate.now().plusDays(14)
-                )
+                ),
+                BookingStatus.PRELIMINARY,
+                hazardousDeclaration,
+                temperatureRequirement
         );
     }
 

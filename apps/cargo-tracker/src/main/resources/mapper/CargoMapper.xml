@@ -18,6 +18,12 @@
         <result property="destinationUnlocode" column="destination_unlocode"/>
         <result property="arrivalDeadline" column="arrival_deadline"/>
         <result property="bookingStatus" column="booking_status"/>
+        <result property="hazardousClass" column="hazardous_class"/>
+        <result property="unNumber" column="un_number"/>
+        <result property="properShippingName" column="proper_shipping_name"/>
+        <result property="minTemperature" column="min_temperature"/>
+        <result property="maxTemperature" column="max_temperature"/>
+        <result property="temperatureUnit" column="temperature_unit"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.example.cargotracker.booking.infrastructure.repositories.CargoRecord">
@@ -34,7 +40,13 @@
             origin_unlocode,
             destination_unlocode,
             arrival_deadline,
-            booking_status
+            booking_status,
+            hazardous_class,
+            un_number,
+            proper_shipping_name,
+            min_temperature,
+            max_temperature,
+            temperature_unit
         )
         VALUES (
             CAST(#{bookingId} AS UUID),
@@ -49,7 +61,13 @@
             #{originUnlocode},
             #{destinationUnlocode},
             #{arrivalDeadline},
-            #{bookingStatus}
+            #{bookingStatus},
+            #{hazardousClass},
+            #{unNumber},
+            #{properShippingName},
+            #{minTemperature},
+            #{maxTemperature},
+            #{temperatureUnit}
         )
     </insert>
 
@@ -57,7 +75,9 @@
         SELECT id, booking_id, shipper_id, cargo_type, weight,
                dimension_length, dimension_width, dimension_height,
                quantity, description,
-               origin_unlocode, destination_unlocode, arrival_deadline, booking_status
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+               hazardous_class, un_number, proper_shipping_name,
+               min_temperature, max_temperature, temperature_unit
         FROM cargo
         WHERE booking_id = CAST(#{bookingId} AS UUID)
     </select>
@@ -66,7 +86,9 @@
         SELECT id, booking_id, shipper_id, cargo_type, weight,
                dimension_length, dimension_width, dimension_height,
                quantity, description,
-               origin_unlocode, destination_unlocode, arrival_deadline, booking_status
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+               hazardous_class, un_number, proper_shipping_name,
+               min_temperature, max_temperature, temperature_unit
         FROM cargo
         ORDER BY id
     </select>
@@ -75,7 +97,9 @@
         SELECT id, booking_id, shipper_id, cargo_type, weight,
                dimension_length, dimension_width, dimension_height,
                quantity, description,
-               origin_unlocode, destination_unlocode, arrival_deadline, booking_status
+               origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
+               hazardous_class, un_number, proper_shipping_name,
+               min_temperature, max_temperature, temperature_unit
         FROM cargo
         WHERE shipper_id = CAST(#{shipperId} AS UUID)
         ORDER BY id

@@ -96,6 +96,68 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(containsString(shipperId)));
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings で HAZARDOUS タイプの危険物フォーム送信で詳細ページにリダイレクトする")
+    void postHazardousBooking_shouldRedirectToShowPage() throws Exception {
+        String shipperId = insertShipper("SHP-HAZ01");
+
+        MvcResult result = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "HAZARDOUS")
+                        .param("weight", "5.000")
+                        .param("hazardousClass", "3")
+                        .param("unNumber", "UN1203")
+                        .param("properShippingName", "ガソリン")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", containsString("/bookings/")))
+                .andReturn();
+
+        String location = result.getResponse().getHeader("Location");
+        mockMvc.perform(get(location))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/show"))
+                .andExpect(content().string(containsString("危険物クラス")))
+                .andExpect(content().string(containsString("3")))
+                .andExpect(content().string(containsString("UN1203")))
+                .andExpect(content().string(containsString("ガソリン")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings で REFRIGERATED タイプの冷凍フォーム送信で詳細ページにリダイレクトする")
+    void postRefrigeratedBooking_shouldRedirectToShowPage() throws Exception {
+        String shipperId = insertShipper("SHP-REF01");
+
+        MvcResult result = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "REFRIGERATED")
+                        .param("weight", "12.000")
+                        .param("minTemperature", "-25")
+                        .param("maxTemperature", "-18")
+                        .param("temperatureUnit", "CELSIUS")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", containsString("/bookings/")))
+                .andReturn();
+
+        String location = result.getResponse().getHeader("Location");
+        mockMvc.perform(get(location))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/show"))
+                .andExpect(content().string(containsString("温度管理")))
+                .andExpect(content().string(containsString("-25")))
+                .andExpect(content().string(containsString("-18")))
+                .andExpect(content().string(containsString("CELSIUS")));
+    }
+
     private String insertShipper(String shipperCode) {
         String shipperId = UUID.randomUUID().toString();
         jdbcTemplate.update(

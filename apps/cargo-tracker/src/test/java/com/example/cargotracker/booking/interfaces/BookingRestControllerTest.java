@@ -157,6 +157,56 @@ class BookingRestControllerTest extends PostgreSQLIntegrationTestBase {
         return shipperId;
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings で危険物貨物の予約を登録すると 201 が返る")
+    void postHazardousBooking_shouldReturnCreated() throws Exception {
+        String shipperId = insertShipper("SHP-2001");
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(hazardousBookingRequest(shipperId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings で冷凍貨物の予約を登録すると 201 が返る")
+    void postRefrigeratedBooking_shouldReturnCreated() throws Exception {
+        String shipperId = insertShipper("SHP-2002");
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(refrigeratedBookingRequest(shipperId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings で HAZARDOUS タイプに hazardousClass なしは 400 が返る")
+    void postHazardousBooking_missingDeclaration_shouldReturn400() throws Exception {
+        String shipperId = insertShipper("SHP-2003");
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "shipperId": "%s",
+                                  "cargoType": "HAZARDOUS",
+                                  "weight": 10.500,
+                                  "originUnlocode": "JPTYO",
+                                  "destinationUnlocode": "USLAX",
+                                  "arrivalDeadline": "%s"
+                                }
+                                """.formatted(shipperId, LocalDate.now().plusDays(14))))
+                .andExpect(status().isBadRequest());
+    }
+
     private String validBookingRequest(String shipperId) {
         return """
                 {
@@ -166,6 +216,38 @@ class BookingRestControllerTest extends PostgreSQLIntegrationTestBase {
                   "originUnlocode": "JPTYO",
                   "destinationUnlocode": "USLAX",
                   "arrivalDeadline": "%s"
+                }
+                """.formatted(shipperId, LocalDate.now().plusDays(14));
+    }
+
+    private String hazardousBookingRequest(String shipperId) {
+        return """
+                {
+                  "shipperId": "%s",
+                  "cargoType": "HAZARDOUS",
+                  "weight": 10.500,
+                  "originUnlocode": "JPTYO",
+                  "destinationUnlocode": "USLAX",
+                  "arrivalDeadline": "%s",
+                  "hazardousClass": "3",
+                  "unNumber": "UN1203",
+                  "properShippingName": "ガソリン"
+                }
+                """.formatted(shipperId, LocalDate.now().plusDays(14));
+    }
+
+    private String refrigeratedBookingRequest(String shipperId) {
+        return """
+                {
+                  "shipperId": "%s",
+                  "cargoType": "REFRIGERATED",
+                  "weight": 10.500,
+                  "originUnlocode": "JPTYO",
+                  "destinationUnlocode": "USLAX",
+                  "arrivalDeadline": "%s",
+                  "minTemperature": -25,
+                  "maxTemperature": -18,
+                  "temperatureUnit": "CELSIUS"
                 }
                 """.formatted(shipperId, LocalDate.now().plusDays(14));
     }

@@ -8,8 +8,11 @@ import com.example.cargotracker.booking.domain.model.repository.CargoRepository;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.springframework.stereotype.Service;
@@ -52,7 +55,9 @@ public class CargoBookingCommandService {
                         new Location(command.destinationUnlocode()),
                         command.arrivalDeadline()
                 ),
-                com.example.cargotracker.booking.domain.model.aggregates.BookingStatus.PRELIMINARY
+                com.example.cargotracker.booking.domain.model.aggregates.BookingStatus.PRELIMINARY,
+                toHazardousDeclaration(command),
+                toTemperatureRequirement(command)
         );
         cargoRepository.save(cargo);
         return cargo.getBookingId();
@@ -63,5 +68,23 @@ public class CargoBookingCommandService {
             return new Dimensions(command.dimensionLength(), command.dimensionWidth(), command.dimensionHeight());
         }
         return null;
+    }
+
+    private HazardousDeclaration toHazardousDeclaration(BookCargoCommand command) {
+        if (hasText(command.hazardousClass()) && hasText(command.unNumber()) && hasText(command.properShippingName())) {
+            return new HazardousDeclaration(command.hazardousClass(), command.unNumber(), command.properShippingName());
+        }
+        return null;
+    }
+
+    private TemperatureRequirement toTemperatureRequirement(BookCargoCommand command) {
+        if (command.minTemperature() != null && command.maxTemperature() != null && hasText(command.temperatureUnit())) {
+            return new TemperatureRequirement(command.minTemperature(), command.maxTemperature(), TemperatureUnit.valueOf(command.temperatureUnit()));
+        }
+        return null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

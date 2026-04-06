@@ -89,7 +89,13 @@ public class BookingRestController {
                 request.getDescription(),
                 request.getOriginUnlocode(),
                 request.getDestinationUnlocode(),
-                request.getArrivalDeadline()
+                request.getArrivalDeadline(),
+                request.getHazardousClass(),
+                request.getUnNumber(),
+                request.getProperShippingName(),
+                request.getMinTemperature(),
+                request.getMaxTemperature(),
+                request.getTemperatureUnit()
         );
     }
 

@@ -46,6 +46,16 @@ export class BookingNewPage {
   readonly backButton: Locator;
   readonly errorAlert: Locator;
 
+  // 危険物フィールド用 locator
+  readonly hazardousClassInput: Locator;
+  readonly unNumberInput: Locator;
+  readonly properShippingNameInput: Locator;
+
+  // 冷凍・冷蔵フィールド用 locator
+  readonly minTemperatureInput: Locator;
+  readonly maxTemperatureInput: Locator;
+  readonly temperatureUnitSelect: Locator;
+
   constructor(page: Page) {
     this.page = page;
     this.heading = page.locator('h1');
@@ -58,6 +68,16 @@ export class BookingNewPage {
     this.submitButton = page.locator('button[type="submit"]', { hasText: '登録する' });
     this.backButton = page.locator('a.btn-outline-secondary', { hasText: '一覧へ戻る' });
     this.errorAlert = page.locator('.alert-danger');
+
+    // 危険物フィールド
+    this.hazardousClassInput = page.locator('#hazardousClass');
+    this.unNumberInput = page.locator('#unNumber');
+    this.properShippingNameInput = page.locator('#properShippingName');
+
+    // 冷凍・冷蔵フィールド
+    this.minTemperatureInput = page.locator('#minTemperature');
+    this.maxTemperatureInput = page.locator('#maxTemperature');
+    this.temperatureUnitSelect = page.locator('#temperatureUnit');
   }
 
   async goto() {
@@ -65,8 +85,36 @@ export class BookingNewPage {
   }
 
   async fill(shipperId: string, cargoType: string, weight: string, originUnlocode: string, destinationUnlocode: string, arrivalDeadline: string) {
-    await this.shipperIdInput.fill(shipperId);
+    await this.shipperIdInput.selectOption(shipperId);
     await this.cargoTypeSelect.selectOption(cargoType);
+    await this.weightInput.fill(weight);
+    await this.originUnlocodeInput.fill(originUnlocode);
+    await this.destinationUnlocodeInput.fill(destinationUnlocode);
+    await this.arrivalDeadlineInput.fill(arrivalDeadline);
+  }
+
+  async fillHazardous(shipperId: string, weight: string, originUnlocode: string, destinationUnlocode: string, arrivalDeadline: string, hazardousClass: string, unNumber: string, properShippingName: string) {
+    await this.shipperIdInput.selectOption(shipperId);
+    await this.cargoTypeSelect.selectOption('HAZARDOUS');
+    // 危険物セクションが表示されるのを待つ
+    await this.hazardousClassInput.waitFor({ state: 'visible' });
+    await this.hazardousClassInput.fill(hazardousClass);
+    await this.unNumberInput.fill(unNumber);
+    await this.properShippingNameInput.fill(properShippingName);
+    await this.weightInput.fill(weight);
+    await this.originUnlocodeInput.fill(originUnlocode);
+    await this.destinationUnlocodeInput.fill(destinationUnlocode);
+    await this.arrivalDeadlineInput.fill(arrivalDeadline);
+  }
+
+  async fillRefrigerated(shipperId: string, weight: string, originUnlocode: string, destinationUnlocode: string, arrivalDeadline: string, minTemperature: string, maxTemperature: string, temperatureUnit: string) {
+    await this.shipperIdInput.selectOption(shipperId);
+    await this.cargoTypeSelect.selectOption('REFRIGERATED');
+    // 冷凍セクションが表示されるのを待つ
+    await this.minTemperatureInput.waitFor({ state: 'visible' });
+    await this.minTemperatureInput.fill(minTemperature);
+    await this.maxTemperatureInput.fill(maxTemperature);
+    await this.temperatureUnitSelect.selectOption(temperatureUnit);
     await this.weightInput.fill(weight);
     await this.originUnlocodeInput.fill(originUnlocode);
     await this.destinationUnlocodeInput.fill(destinationUnlocode);
