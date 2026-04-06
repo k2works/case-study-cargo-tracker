@@ -24,6 +24,24 @@ tags: design, ddd, domain-model
 
 各コンテキストは自律的に変更可能な集約を持ち、コンテキスト間の連携はドメインイベントおよび ACL（Anti-Corruption Layer）ポートを通じて行う。
 
+```mermaid
+quadrantChart
+    title 差別化の度合いと業務ロジックの複雑さによる業務領域の分類
+    x-axis "低い差別化" --> "高い差別化"
+    y-axis "低い複雑さ" --> "高い複雑さ"
+    quadrant-1 "中核"
+    quadrant-2 "一般"
+    quadrant-3 "一般または補完"
+    quadrant-4 "補完"
+    Booking Context: [0.75, 0.82]
+    Tracking Context: [0.82, 0.68]
+    Routing Context: [0.62, 0.60]
+    Handling Context: [0.28, 0.42]
+    Shipper Context: [0.65, 0.28]
+    Billing Context: [0.30, 0.65]
+    Shared Domain: [0.18, 0.22]
+```
+
 ## ユビキタス言語
 
 | 英語（コード名） | 日本語（業務用語） | 使用コンテキスト | 説明 |
