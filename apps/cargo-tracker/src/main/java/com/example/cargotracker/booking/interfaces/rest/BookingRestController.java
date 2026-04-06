@@ -1,8 +1,11 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
+import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
+import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommand;
 import com.example.cargotracker.booking.application.internal.queryservices.CargoBookingQueryService;
+import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
 import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookCargoRequest;
@@ -57,6 +60,36 @@ public class BookingRestController {
         return cargoBookingQueryService.findAll().stream()
                 .map(cargoAssembler::toResponse)
                 .toList();
+    }
+
+    @PostMapping("/{bookingId}/confirm")
+    public ResponseEntity<CargoResponse> confirm(@PathVariable String bookingId) {
+        cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId));
+        return cargoBookingQueryService.findByBookingId(bookingId)
+                .map(cargoAssembler::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    @PostMapping("/{bookingId}/cancel")
+    public ResponseEntity<CargoResponse> cancel(@PathVariable String bookingId) {
+        cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId));
+        return cargoBookingQueryService.findByBookingId(bookingId)
+                .map(cargoAssembler::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    @ExceptionHandler(BookingNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleBookingNotFound(BookingNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("BOOKING_NOT_FOUND", "指定された予約が見つかりません。"));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("INVALID_STATE_TRANSITION", exception.getMessage()));
     }
 
     @ExceptionHandler(ShipperNotFoundException.class)

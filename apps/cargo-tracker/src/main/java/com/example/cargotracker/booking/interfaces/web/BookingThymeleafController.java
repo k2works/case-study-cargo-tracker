@@ -1,9 +1,12 @@
 package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
+import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
+import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommand;
 import com.example.cargotracker.booking.application.internal.queryservices.CargoBookingQueryService;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
+import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
 import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookCargoRequest;
@@ -102,6 +105,32 @@ public class BookingThymeleafController {
                 .map(cargoAssembler::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
         return "booking/show";
+    }
+
+    @PostMapping("/{bookingId}/confirm")
+    public String confirm(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
+        try {
+            cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId));
+            redirectAttributes.addFlashAttribute("successMessage", "予約を確定しました。");
+        } catch (BookingNotFoundException e) {
+            throw new ResponseStatusException(NOT_FOUND);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/bookings/" + bookingId;
+    }
+
+    @PostMapping("/{bookingId}/cancel")
+    public String cancel(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
+        try {
+            cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId));
+            redirectAttributes.addFlashAttribute("successMessage", "予約をキャンセルしました。");
+        } catch (BookingNotFoundException e) {
+            throw new ResponseStatusException(NOT_FOUND);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/bookings/" + bookingId;
     }
 
     private void addShippersToModel(Model model) {

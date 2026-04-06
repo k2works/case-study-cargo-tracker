@@ -140,4 +140,20 @@ public class Cargo {
     public TemperatureRequirement getTemperatureRequirement() {
         return temperatureRequirement;
     }
+
+    public Cargo confirm() {
+        if (status != BookingStatus.PRELIMINARY) {
+            throw new IllegalStateException("予約確定は仮受付状態からのみ可能です。現在の状態: " + status.getDisplayName());
+        }
+        return new Cargo(bookingId, shipperId, cargoType, weight, dimensions, quantity, description,
+                routeSpecification, BookingStatus.CONFIRMED, hazardousDeclaration, temperatureRequirement);
+    }
+
+    public Cargo cancel() {
+        if (status == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("すでにキャンセル済みです。");
+        }
+        return new Cargo(bookingId, shipperId, cargoType, weight, dimensions, quantity, description,
+                routeSpecification, BookingStatus.CANCELLED, hazardousDeclaration, temperatureRequirement);
+    }
 }

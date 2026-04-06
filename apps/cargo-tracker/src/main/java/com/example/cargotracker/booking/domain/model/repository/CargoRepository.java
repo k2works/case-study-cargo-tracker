@@ -11,6 +11,8 @@ public interface CargoRepository {
 
     void save(Cargo cargo);
 
+    void update(Cargo cargo);
+
     Optional<Cargo> findByBookingId(BookingId bookingId);
 
     List<Cargo> findAll();

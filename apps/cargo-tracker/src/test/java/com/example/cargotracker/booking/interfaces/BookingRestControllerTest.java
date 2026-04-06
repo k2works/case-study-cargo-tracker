@@ -207,6 +207,70 @@ class BookingRestControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings/{bookingId}/confirm で予約確定すると 200 と CONFIRMED 状態が返る")
+    void confirmBooking_shouldReturnConfirmedStatus() throws Exception {
+        String shipperId = insertShipper("SHP-3001");
+        String bookingId = registerBooking(shipperId);
+
+        mockMvc.perform(post("/api/v1/bookings/{bookingId}/confirm", bookingId)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("CONFIRMED")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings/{bookingId}/confirm で存在しない予約は 404 が返る")
+    void confirmBooking_unknownBooking_shouldReturn404() throws Exception {
+        mockMvc.perform(post("/api/v1/bookings/{bookingId}/confirm", UUID.randomUUID())
+                        .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code", is("BOOKING_NOT_FOUND")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings/{bookingId}/confirm で確定済み予約を再確定すると 409 が返る")
+    void confirmBooking_alreadyConfirmed_shouldReturn409() throws Exception {
+        String shipperId = insertShipper("SHP-3002");
+        String bookingId = registerBooking(shipperId);
+        mockMvc.perform(post("/api/v1/bookings/{bookingId}/confirm", bookingId).with(csrf()));
+
+        mockMvc.perform(post("/api/v1/bookings/{bookingId}/confirm", bookingId)
+                        .with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code", is("INVALID_STATE_TRANSITION")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings/{bookingId}/cancel で予約キャンセルすると 200 と CANCELLED 状態が返る")
+    void cancelBooking_shouldReturnCancelledStatus() throws Exception {
+        String shipperId = insertShipper("SHP-3003");
+        String bookingId = registerBooking(shipperId);
+
+        mockMvc.perform(post("/api/v1/bookings/{bookingId}/cancel", bookingId)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("CANCELLED")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /api/v1/bookings/{bookingId}/cancel でキャンセル済み予約を再キャンセルすると 409 が返る")
+    void cancelBooking_alreadyCancelled_shouldReturn409() throws Exception {
+        String shipperId = insertShipper("SHP-3004");
+        String bookingId = registerBooking(shipperId);
+        mockMvc.perform(post("/api/v1/bookings/{bookingId}/cancel", bookingId).with(csrf()));
+
+        mockMvc.perform(post("/api/v1/bookings/{bookingId}/cancel", bookingId)
+                        .with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code", is("INVALID_STATE_TRANSITION")));
+    }
+
     private String validBookingRequest(String shipperId) {
         return """
                 {

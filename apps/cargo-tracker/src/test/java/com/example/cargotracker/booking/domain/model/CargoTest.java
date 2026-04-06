@@ -259,6 +259,55 @@ class CargoTest {
                 null, null));
     }
 
+    // --- 状態遷移テスト ---
+
+    @Test
+    void shouldConfirmCargo_whenStatusIsPreliminary() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"), ROUTE_SPEC);
+        assertEquals(BookingStatus.PRELIMINARY, cargo.getStatus());
+
+        Cargo confirmed = cargo.confirm();
+
+        assertEquals(BookingStatus.CONFIRMED, confirmed.getStatus());
+        assertEquals(BOOKING_ID, confirmed.getBookingId());
+    }
+
+    @Test
+    void shouldThrowWhenConfirmingNonPreliminaryCargo() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.CONFIRMED, null, null);
+
+        assertThrows(IllegalStateException.class, cargo::confirm);
+    }
+
+    @Test
+    void shouldCancelCargo_fromPreliminaryStatus() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"), ROUTE_SPEC);
+
+        Cargo cancelled = cargo.cancel();
+
+        assertEquals(BookingStatus.CANCELLED, cancelled.getStatus());
+        assertEquals(BOOKING_ID, cancelled.getBookingId());
+    }
+
+    @Test
+    void shouldCancelCargo_fromConfirmedStatus() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.CONFIRMED, null, null);
+
+        Cargo cancelled = cargo.cancel();
+
+        assertEquals(BookingStatus.CANCELLED, cancelled.getStatus());
+    }
+
+    @Test
+    void shouldThrowWhenCancellingAlreadyCancelledCargo() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.CANCELLED, null, null);
+
+        assertThrows(IllegalStateException.class, cargo::cancel);
+    }
+
     // --- 一般貨物テスト ---
 
     @Test

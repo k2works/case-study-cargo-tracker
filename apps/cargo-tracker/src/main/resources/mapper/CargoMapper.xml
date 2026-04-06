@@ -93,6 +93,12 @@
         ORDER BY id
     </select>
 
+    <update id="updateStatus">
+        UPDATE cargo
+        SET booking_status = #{bookingStatus}
+        WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </update>
+
     <select id="findByShipperId" resultMap="cargoRecordMap">
         SELECT id, booking_id, shipper_id, cargo_type, weight,
                dimension_length, dimension_width, dimension_height,

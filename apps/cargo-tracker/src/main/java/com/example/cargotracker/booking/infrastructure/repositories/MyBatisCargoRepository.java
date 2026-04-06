@@ -32,6 +32,11 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
+    public void update(Cargo cargo) {
+        cargoMapper.updateStatus(cargo.getBookingId().toString(), cargo.getStatus().name());
+    }
+
+    @Override
     public Optional<Cargo> findByBookingId(BookingId bookingId) {
         return Optional.ofNullable(cargoMapper.findByBookingId(bookingId.toString())).map(this::toDomain);
     }

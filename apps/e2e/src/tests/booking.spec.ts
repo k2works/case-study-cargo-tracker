@@ -170,6 +170,56 @@ test.describe('貨物予約管理', () => {
     await expect(bookingShowPage.getDetailValue('温度管理')).toContainText('-18');
   });
 
+  test('予約を確定できる', async ({ page, loggedIn }) => {
+    const timestamp = Date.now();
+    const shipperId = await registerShipperAndGetId(page, `確定テスト荷主 ${timestamp}`, `confirm-${timestamp}@example.com`);
+
+    const bookingNewPage = new BookingNewPage(page);
+    const bookingShowPage = new BookingShowPage(page);
+
+    await bookingNewPage.goto();
+    await bookingNewPage.fill(shipperId, 'GENERAL', '10.0', 'JPTYO', 'USLAX', '2027-12-31');
+    await bookingNewPage.submit();
+
+    // 仮受付状態であることを確認
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('仮受付');
+    await expect(bookingShowPage.confirmButton).toBeVisible();
+
+    // 予約確定操作
+    await bookingShowPage.clickConfirm();
+
+    // 状態が「予約確定」になっていることを確認
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('予約確定');
+    await expect(bookingShowPage.successAlert).toBeVisible();
+    // 確定後は確定ボタンが非表示になる
+    await expect(bookingShowPage.confirmButton).not.toBeVisible();
+  });
+
+  test('予約をキャンセルできる', async ({ page, loggedIn }) => {
+    const timestamp = Date.now();
+    const shipperId = await registerShipperAndGetId(page, `キャンセルテスト荷主 ${timestamp}`, `cancel-${timestamp}@example.com`);
+
+    const bookingNewPage = new BookingNewPage(page);
+    const bookingShowPage = new BookingShowPage(page);
+
+    await bookingNewPage.goto();
+    await bookingNewPage.fill(shipperId, 'GENERAL', '10.0', 'JPTYO', 'USLAX', '2027-12-31');
+    await bookingNewPage.submit();
+
+    // 仮受付状態であることを確認
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('仮受付');
+    await expect(bookingShowPage.cancelButton).toBeVisible();
+
+    // キャンセル操作
+    await bookingShowPage.clickCancel();
+
+    // 状態が「キャンセル」になっていることを確認
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('キャンセル');
+    await expect(bookingShowPage.successAlert).toBeVisible();
+    // キャンセル後はキャンセルボタンが非表示になる
+    await expect(bookingShowPage.cancelButton).not.toBeVisible();
+  });
+
   test('予約登録フォームから一覧へ戻れる', async ({ page, loggedIn }) => {
     const bookingNewPage = new BookingNewPage(page);
 

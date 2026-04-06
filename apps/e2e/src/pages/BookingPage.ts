@@ -130,14 +130,36 @@ export class BookingShowPage {
   readonly page: Page;
   readonly heading: Locator;
   readonly backButton: Locator;
+  readonly confirmButton: Locator;
+  readonly cancelButton: Locator;
+  readonly successAlert: Locator;
+  readonly errorAlert: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.heading = page.locator('h1');
     this.backButton = page.locator('a.btn-outline-secondary', { hasText: '一覧へ戻る' });
+    this.confirmButton = page.locator('button.btn-success', { hasText: '予約確定' });
+    this.cancelButton = page.locator('button.btn-outline-danger', { hasText: 'キャンセル' });
+    this.successAlert = page.locator('.alert-success');
+    this.errorAlert = page.locator('.alert-danger');
   }
 
   getDetailValue(label: string): Locator {
     return this.page.locator('dt', { hasText: label }).locator('~ dd').first();
+  }
+
+  async clickConfirm() {
+    await this.confirmButton.click();
+    await this.page.locator('#confirmModal').waitFor({ state: 'visible' });
+    await this.page.locator('#confirmModal button.btn-success').click();
+    await this.page.waitForURL(/\/bookings\//);
+  }
+
+  async clickCancel() {
+    await this.cancelButton.click();
+    await this.page.locator('#cancelModal').waitFor({ state: 'visible' });
+    await this.page.locator('#cancelModal button.btn-danger').click();
+    await this.page.waitForURL(/\/bookings\//);
   }
 }

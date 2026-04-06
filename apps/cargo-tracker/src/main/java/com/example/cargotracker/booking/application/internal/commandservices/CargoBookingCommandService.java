@@ -3,9 +3,13 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistenceChecker;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
+import com.example.cargotracker.booking.domain.model.events.BookingCancelledEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
 import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.repository.CargoRepository;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
+import org.springframework.context.ApplicationEventPublisher;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
@@ -26,10 +30,13 @@ public class CargoBookingCommandService {
 
     private final CargoRepository cargoRepository;
     private final ShipperExistenceChecker shipperExistenceChecker;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public CargoBookingCommandService(CargoRepository cargoRepository, ShipperExistenceChecker shipperExistenceChecker) {
+    public CargoBookingCommandService(CargoRepository cargoRepository, ShipperExistenceChecker shipperExistenceChecker,
+                                      ApplicationEventPublisher eventPublisher) {
         this.cargoRepository = cargoRepository;
         this.shipperExistenceChecker = shipperExistenceChecker;
+        this.eventPublisher = eventPublisher;
     }
 
     public BookingId bookCargo(BookCargoCommand command) {
@@ -82,6 +89,24 @@ public class CargoBookingCommandService {
             return new TemperatureRequirement(command.minTemperature(), command.maxTemperature(), TemperatureUnit.valueOf(command.temperatureUnit()));
         }
         return null;
+    }
+
+    public void confirmBooking(ConfirmBookingCommand command) {
+        BookingId bookingId = new BookingId(UUID.fromString(command.bookingId()));
+        Cargo cargo = cargoRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+        Cargo confirmed = cargo.confirm();
+        cargoRepository.update(confirmed);
+        eventPublisher.publishEvent(new BookingConfirmedEvent(confirmed.getBookingId()));
+    }
+
+    public void cancelBooking(CancelBookingCommand command) {
+        BookingId bookingId = new BookingId(UUID.fromString(command.bookingId()));
+        Cargo cargo = cargoRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+        Cargo cancelled = cargo.cancel();
+        cargoRepository.update(cancelled);
+        eventPublisher.publishEvent(new BookingCancelledEvent(cancelled.getBookingId()));
     }
 
     private boolean hasText(String value) {
