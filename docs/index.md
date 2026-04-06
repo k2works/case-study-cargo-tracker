@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 5 件作成済み（IT1 完了、IT2 計画済み） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 8 件作成済み（IT1・IT2 完了、Phase 1 完了） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 4 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件作成済み |
@@ -65,8 +65,9 @@
 | [IT1 計画](./development/iteration_plan-1.md) | イテレーション 1 の詳細計画（US02・US03・US04） |
 | [IT1 ふりかえり](./development/retrospective-1.md) | IT1 の KPT 分析と IT2 への申し送り事項 |
 | [IT1 完了報告書](./development/iteration_report-1.md) | IT1 の実績メトリクス・成果物一覧・アクションアイテム |
-| [IT2 計画](./development/iteration_plan-2.md) | IT2 計画（US05・US13・IT1 改善、10 SP） |
 | [IT2 計画](./development/iteration_plan-2.md) | イテレーション 2 の詳細計画（US05・US13 + IT1 技術的負債） |
+| [IT2 ふりかえり](./development/retrospective-2.md) | IT2 の KPT 分析と IT3 への申し送り事項 |
+| [IT2 完了報告書](./development/iteration_report-2.md) | IT2 の実績メトリクス・成果物一覧・アクションアイテム |
 
 ### 運用ドキュメント
 
