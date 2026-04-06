@@ -1,6 +1,8 @@
 package com.example.cargotracker.shipper.domain.model.aggregates;
 
 import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
+import com.example.cargotracker.shipper.domain.model.valueobjects.ContractNumber;
+import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
@@ -48,6 +50,32 @@ public class Shipper {
         this.phone = phone;
         this.address = address;
         this.shipperType = shipperType;
+    }
+
+    public static Shipper individual(
+            ShipperId id,
+            ShipperCode code,
+            ShipperName name,
+            Email email,
+            Phone phone,
+            Address address
+    ) {
+        return new Shipper(id, code, name, email, phone, address, ShipperType.INDIVIDUAL);
+    }
+
+    public static Shipper corporateBase(
+            ShipperId id,
+            ShipperCode code,
+            ShipperName name,
+            Email email,
+            Phone phone,
+            Address address
+    ) {
+        return new Shipper(id, code, name, email, phone, address, ShipperType.CORPORATE);
+    }
+
+    public CorporateShipper asCorporate(ContractNumber contractNumber, DiscountRate discountRate) {
+        return new CorporateShipper(this, contractNumber, discountRate);
     }
 
     public ShipperId getId() {

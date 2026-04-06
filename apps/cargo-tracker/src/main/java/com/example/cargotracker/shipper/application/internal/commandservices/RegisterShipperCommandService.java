@@ -1,6 +1,5 @@
 package com.example.cargotracker.shipper.application.internal.commandservices;
 
-import com.example.cargotracker.shipper.domain.model.aggregates.CorporateShipper;
 import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
 import com.example.cargotracker.shipper.domain.model.aggregates.ShipperType;
 import com.example.cargotracker.shipper.domain.model.exceptions.EmailAlreadyRegisteredException;
@@ -50,30 +49,24 @@ public class RegisterShipperCommandService {
         Address address = command.address() == null ? null : new Address(command.address());
 
         if (command.shipperType() == ShipperType.CORPORATE) {
-            Shipper baseShipper = new Shipper(
+            Shipper baseShipper = Shipper.corporateBase(
                     shipperId,
                     shipperCode,
                     shipperName,
                     email,
                     phone,
-                    address,
-                    ShipperType.CORPORATE
+                    address
             );
-            return new CorporateShipper(
-                    baseShipper,
-                    new ContractNumber(command.contractNumber()),
-                    new DiscountRate(command.discountRate())
-            );
+            return baseShipper.asCorporate(new ContractNumber(command.contractNumber()), new DiscountRate(command.discountRate()));
         }
 
-        return new Shipper(
+        return Shipper.individual(
                 shipperId,
                 shipperCode,
                 shipperName,
                 email,
                 phone,
-                address,
-                command.shipperType()
+                address
         );
     }
 
