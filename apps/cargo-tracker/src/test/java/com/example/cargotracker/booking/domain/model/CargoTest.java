@@ -308,6 +308,14 @@ class CargoTest {
         assertThrows(IllegalStateException.class, cargo::cancel);
     }
 
+    @Test
+    void shouldThrowWhenCancellingSettledCargo() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
+                null, null, null, ROUTE_SPEC, BookingStatus.SETTLED, null, null);
+
+        assertThrows(IllegalStateException.class, cargo::cancel);
+    }
+
     // --- 一般貨物テスト ---
 
     @Test

@@ -99,7 +99,7 @@ class BookingE2ETest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(get("/bookings").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("仮受付")))
-                .andExpect(content().string(containsString("text-bg-warning")));
+                .andExpect(content().string(containsString("text-bg-primary")));
     }
 
     @Test

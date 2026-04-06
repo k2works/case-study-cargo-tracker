@@ -32,7 +32,7 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
-    public void update(Cargo cargo) {
+    public void updateStatus(Cargo cargo) {
         cargoMapper.updateStatus(cargo.getBookingId().toString(), cargo.getStatus().name());
     }
 

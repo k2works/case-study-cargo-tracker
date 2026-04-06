@@ -10,9 +10,14 @@ import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureReq
 import com.example.cargotracker.shared.domain.model.ShipperId;
 
 import java.math.BigDecimal;
+import java.util.EnumSet;
 import java.util.Objects;
 
 public class Cargo {
+
+    private static final EnumSet<BookingStatus> CANCELLABLE_STATUSES =
+            EnumSet.of(BookingStatus.PRELIMINARY, BookingStatus.ROUTE_PROPOSED, BookingStatus.CONFIRMED,
+                    BookingStatus.TRACKING_ISSUED, BookingStatus.IN_TRANSIT);
 
     private final BookingId bookingId;
     private final ShipperId shipperId;
@@ -150,8 +155,8 @@ public class Cargo {
     }
 
     public Cargo cancel() {
-        if (status == BookingStatus.CANCELLED) {
-            throw new IllegalStateException("すでにキャンセル済みです。");
+        if (!CANCELLABLE_STATUSES.contains(status)) {
+            throw new IllegalStateException("現在の状態ではキャンセルできません。現在の状態: " + status.getDisplayName());
         }
         return new Cargo(bookingId, shipperId, cargoType, weight, dimensions, quantity, description,
                 routeSpecification, BookingStatus.CANCELLED, hazardousDeclaration, temperatureRequirement);

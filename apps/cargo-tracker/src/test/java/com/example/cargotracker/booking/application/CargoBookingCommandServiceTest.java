@@ -175,7 +175,7 @@ class CargoBookingCommandServiceTest {
         cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId.toString()));
 
         ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
-        verify(cargoRepository).update(captor.capture());
+        verify(cargoRepository).updateStatus(captor.capture());
         assertEquals(BookingStatus.CONFIRMED, captor.getValue().getStatus());
     }
 
@@ -186,7 +186,7 @@ class CargoBookingCommandServiceTest {
 
         assertThrows(BookingNotFoundException.class,
                 () -> cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(unknownId)));
-        verify(cargoRepository, never()).update(any());
+        verify(cargoRepository, never()).updateStatus(any());
     }
 
     @Test
@@ -200,7 +200,7 @@ class CargoBookingCommandServiceTest {
 
         assertThrows(IllegalStateException.class,
                 () -> cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId.toString())));
-        verify(cargoRepository, never()).update(any());
+        verify(cargoRepository, never()).updateStatus(any());
     }
 
     @Test
@@ -215,8 +215,38 @@ class CargoBookingCommandServiceTest {
         cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString()));
 
         ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
-        verify(cargoRepository).update(captor.capture());
+        verify(cargoRepository).updateStatus(captor.capture());
         assertEquals(BookingStatus.CANCELLED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void shouldCancelBooking_fromConfirmedStatus() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
+                new BigDecimal("10.500"), null, null, null,
+                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
+                BookingStatus.CONFIRMED, null, null);
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
+
+        cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString()));
+
+        ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
+        verify(cargoRepository).updateStatus(captor.capture());
+        assertEquals(BookingStatus.CANCELLED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void shouldThrowIllegalStateException_whenCancellingSettledBooking() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
+                new BigDecimal("10.500"), null, null, null,
+                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
+                BookingStatus.SETTLED, null, null);
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
+
+        assertThrows(IllegalStateException.class,
+                () -> cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString())));
+        verify(cargoRepository, never()).updateStatus(any());
     }
 
     @Test
@@ -230,7 +260,7 @@ class CargoBookingCommandServiceTest {
 
         assertThrows(IllegalStateException.class,
                 () -> cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString())));
-        verify(cargoRepository, never()).update(any());
+        verify(cargoRepository, never()).updateStatus(any());
     }
 
     @Test

@@ -96,7 +96,7 @@ public class CargoBookingCommandService {
         Cargo cargo = cargoRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new BookingNotFoundException(bookingId));
         Cargo confirmed = cargo.confirm();
-        cargoRepository.update(confirmed);
+        cargoRepository.updateStatus(confirmed);
         eventPublisher.publishEvent(new BookingConfirmedEvent(confirmed.getBookingId()));
     }
 
@@ -105,7 +105,7 @@ public class CargoBookingCommandService {
         Cargo cargo = cargoRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new BookingNotFoundException(bookingId));
         Cargo cancelled = cargo.cancel();
-        cargoRepository.update(cancelled);
+        cargoRepository.updateStatus(cancelled);
         eventPublisher.publishEvent(new BookingCancelledEvent(cancelled.getBookingId()));
     }
 
