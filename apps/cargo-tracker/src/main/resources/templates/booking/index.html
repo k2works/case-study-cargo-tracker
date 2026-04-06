@@ -38,7 +38,10 @@
                         <td colspan="7" class="text-center text-secondary py-4">登録済みの予約はありません。</td>
                     </tr>
                     <tr th:each="booking : ${bookings}">
-                        <td th:text="${booking.bookingId}">booking-id</td>
+                        <td>
+                            <span th:title="${booking.bookingId}"
+                                  th:text="${#strings.substring(booking.bookingId, 0, 8) + '...'}">booking-id</span>
+                        </td>
                         <td th:text="${booking.shipperId}">shipper-id</td>
                         <td th:text="${booking.originUnlocode}">JPTYO</td>
                         <td th:text="${booking.destinationUnlocode}">USLAX</td>

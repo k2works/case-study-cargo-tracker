@@ -48,9 +48,12 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="weight" class="form-label">重量</label>
-                                <input id="weight" type="number" step="0.001" min="0.001" th:field="*{weight}" class="form-control"
-                                       required aria-describedby="weightHelp">
+                                <label for="weight" class="form-label">重量 <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input id="weight" type="number" step="0.001" min="0.001" th:field="*{weight}" class="form-control"
+                                           required aria-describedby="weightHelp">
+                                    <span class="input-group-text">kg</span>
+                                </div>
                                 <div id="weightHelp" class="invalid-feedback d-block" th:errors="*{weight}"></div>
                             </div>
 

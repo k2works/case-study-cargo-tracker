@@ -155,7 +155,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(content().string(containsString("温度管理")))
                 .andExpect(content().string(containsString("-25")))
                 .andExpect(content().string(containsString("-18")))
-                .andExpect(content().string(containsString("CELSIUS")));
+                .andExpect(content().string(containsString("℃")));
     }
 
     private String insertShipper(String shipperCode) {

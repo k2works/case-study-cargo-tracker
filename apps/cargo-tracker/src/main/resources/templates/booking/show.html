@@ -32,7 +32,7 @@
                             </div>
                             <div class="modal-body">予約を確定してもよろしいですか？確定後はキャンセルのみ可能です。</div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">戻る</button>
                                 <button type="submit" class="btn btn-success">確定する</button>
                             </div>
                         </div>
@@ -74,7 +74,7 @@
                 <dd class="col-sm-9" th:text="${booking.cargoTypeDisplayName}">一般</dd>
 
                 <dt class="col-sm-3">重量</dt>
-                <dd class="col-sm-9" th:text="${booking.weight}">10.500</dd>
+                <dd class="col-sm-9" th:text="${booking.weight + ' kg'}">10.500 kg</dd>
 
                 <dt class="col-sm-3" th:if="${booking.dimensionLength != null}">寸法 (長×幅×高)</dt>
                 <dd class="col-sm-9" th:if="${booking.dimensionLength != null}"
@@ -106,7 +106,7 @@
 
                 <dt class="col-sm-3" th:if="${booking.minTemperature != null}">温度管理</dt>
                 <dd class="col-sm-9" th:if="${booking.minTemperature != null}"
-                    th:text="${booking.minTemperature + ' ～ ' + booking.maxTemperature + ' ' + booking.temperatureUnit}">-25 ～ -18 CELSIUS</dd>
+                    th:text="${booking.minTemperature + ' ～ ' + booking.maxTemperature + (booking.temperatureUnit == 'CELSIUS' ? ' ℃' : ' ℉')}">-25 ～ -18 ℃</dd>
 
                 <dt class="col-sm-3">状態</dt>
                 <dd class="col-sm-9">
