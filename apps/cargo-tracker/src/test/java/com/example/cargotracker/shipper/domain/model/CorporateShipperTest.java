@@ -1,6 +1,8 @@
 package com.example.cargotracker.shipper.domain.model;
 
 import com.example.cargotracker.shipper.domain.model.aggregates.CorporateShipper;
+import com.example.cargotracker.shipper.domain.model.aggregates.Shipper;
+import com.example.cargotracker.shipper.domain.model.aggregates.ShipperType;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ContractNumber;
 import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
@@ -21,16 +23,11 @@ class CorporateShipperTest {
 
     @Test
     void shouldCreateCorporateShipper() {
-        ShipperId shipperId = new ShipperId(UUID.randomUUID());
-        ShipperCode shipperCode = new ShipperCode("SHP-0002");
-        ShipperName shipperName = new ShipperName("テスト商事株式会社");
-        Email email = new Email("corp@example.com");
-        Phone phone = new Phone("03-9999-0000");
         ContractNumber contractNumber = new ContractNumber("CN-2026-0001");
         DiscountRate discountRate = new DiscountRate(new BigDecimal("0.1000"));
 
         CorporateShipper shipper = assertDoesNotThrow(() ->
-                new CorporateShipper(shipperId, shipperCode, shipperName, email, phone, null, contractNumber, discountRate));
+                new CorporateShipper(corporateBaseShipper(), contractNumber, discountRate));
 
         assertEquals(contractNumber, shipper.getContractNumber());
         assertEquals(discountRate, shipper.getDiscountRate());
@@ -38,7 +35,8 @@ class CorporateShipperTest {
 
     @Test
     void shouldThrowWhenDiscountRateIsNegative_boundary() {
-        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(new BigDecimal("-0.0001")));
+        BigDecimal invalidRate = new BigDecimal("-0.0001");
+        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(invalidRate));
     }
 
     @Test
@@ -55,18 +53,28 @@ class CorporateShipperTest {
 
     @Test
     void shouldThrowWhenDiscountRateExceedsUpperBound_boundary() {
-        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(new BigDecimal("0.3001")));
+        BigDecimal invalidRate = new BigDecimal("0.3001");
+        assertThrows(IllegalArgumentException.class, () -> new DiscountRate(invalidRate));
     }
 
     @Test
     void shouldThrowWhenDiscountRateIsNull() {
-        ShipperId shipperId = new ShipperId(UUID.randomUUID());
-        ShipperCode shipperCode = new ShipperCode("SHP-0002");
-        ShipperName shipperName = new ShipperName("テスト商事株式会社");
-        Email email = new Email("corp@example.com");
         ContractNumber contractNumber = new ContractNumber("CN-2026-0001");
+        Shipper baseShipper = corporateBaseShipper();
 
         assertThrows(IllegalArgumentException.class, () ->
-                new CorporateShipper(shipperId, shipperCode, shipperName, email, null, null, contractNumber, null));
+                new CorporateShipper(baseShipper, contractNumber, null));
+    }
+
+    private Shipper corporateBaseShipper() {
+        return new Shipper(
+                new ShipperId(UUID.randomUUID()),
+                new ShipperCode("SHP-0002"),
+                new ShipperName("テスト商事株式会社"),
+                new Email("corp@example.com"),
+                new Phone("03-9999-0000"),
+                null,
+                ShipperType.CORPORATE
+        );
     }
 }

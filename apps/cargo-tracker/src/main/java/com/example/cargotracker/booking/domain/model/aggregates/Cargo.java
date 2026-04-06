@@ -31,6 +31,47 @@ public class Cargo {
     private final HazardousDeclaration hazardousDeclaration;
     private final TemperatureRequirement temperatureRequirement;
 
+    public record Details(
+            Dimensions dimensions,
+            Quantity quantity,
+            Description description
+    ) {
+    }
+
+    public record Handling(
+            HazardousDeclaration hazardousDeclaration,
+            TemperatureRequirement temperatureRequirement
+    ) {
+    }
+
+    public record State(
+            RouteSpecification routeSpecification,
+            BookingStatus status,
+            Details details,
+            Handling handling
+    ) {
+    }
+
+    public static Details details(Dimensions dimensions, Quantity quantity, Description description) {
+        return new Details(dimensions, quantity, description);
+    }
+
+    public static Handling handling(
+            HazardousDeclaration hazardousDeclaration,
+            TemperatureRequirement temperatureRequirement
+    ) {
+        return new Handling(hazardousDeclaration, temperatureRequirement);
+    }
+
+    public static State state(
+            RouteSpecification routeSpecification,
+            BookingStatus status,
+            Details details,
+            Handling handling
+    ) {
+        return new State(routeSpecification, status, details, handling);
+    }
+
     public Cargo(
             BookingId bookingId,
             ShipperId shipperId,
@@ -38,7 +79,7 @@ public class Cargo {
             BigDecimal weight,
             RouteSpecification routeSpecification
     ) {
-        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, BookingStatus.PRELIMINARY, null, null);
+        this(bookingId, shipperId, cargoType, weight, state(routeSpecification, BookingStatus.PRELIMINARY, null, null));
     }
 
     public Cargo(
@@ -49,7 +90,7 @@ public class Cargo {
             RouteSpecification routeSpecification,
             BookingStatus status
     ) {
-        this(bookingId, shipperId, cargoType, weight, null, null, null, routeSpecification, status, null, null);
+        this(bookingId, shipperId, cargoType, weight, state(routeSpecification, status, null, null));
     }
 
     public Cargo(
@@ -57,39 +98,20 @@ public class Cargo {
             ShipperId shipperId,
             CargoType cargoType,
             BigDecimal weight,
-            Dimensions dimensions,
-            Quantity quantity,
-            Description description,
-            RouteSpecification routeSpecification,
-            BookingStatus status
-    ) {
-        this(bookingId, shipperId, cargoType, weight, dimensions, quantity, description, routeSpecification, status, null, null);
-    }
-
-    public Cargo(
-            BookingId bookingId,
-            ShipperId shipperId,
-            CargoType cargoType,
-            BigDecimal weight,
-            Dimensions dimensions,
-            Quantity quantity,
-            Description description,
-            RouteSpecification routeSpecification,
-            BookingStatus status,
-            HazardousDeclaration hazardousDeclaration,
-            TemperatureRequirement temperatureRequirement
+            State state
     ) {
         this.bookingId = Objects.requireNonNull(bookingId, "bookingId must not be null");
         this.shipperId = Objects.requireNonNull(shipperId, "shipperId must not be null");
         this.cargoType = Objects.requireNonNull(cargoType, "cargoType must not be null");
         this.weight = Objects.requireNonNull(weight, "weight must not be null");
-        this.dimensions = dimensions;
-        this.quantity = quantity;
-        this.description = description;
-        this.routeSpecification = Objects.requireNonNull(routeSpecification, "routeSpecification must not be null");
-        this.status = Objects.requireNonNull(status, "status must not be null");
-        this.hazardousDeclaration = hazardousDeclaration;
-        this.temperatureRequirement = temperatureRequirement;
+        State cargoState = Objects.requireNonNull(state, "state must not be null");
+        this.dimensions = cargoState.details() != null ? cargoState.details().dimensions() : null;
+        this.quantity = cargoState.details() != null ? cargoState.details().quantity() : null;
+        this.description = cargoState.details() != null ? cargoState.details().description() : null;
+        this.routeSpecification = Objects.requireNonNull(cargoState.routeSpecification(), "routeSpecification must not be null");
+        this.status = Objects.requireNonNull(cargoState.status(), "status must not be null");
+        this.hazardousDeclaration = cargoState.handling() != null ? cargoState.handling().hazardousDeclaration() : null;
+        this.temperatureRequirement = cargoState.handling() != null ? cargoState.handling().temperatureRequirement() : null;
 
         if (this.weight.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("weight must be greater than zero");
@@ -150,15 +172,22 @@ public class Cargo {
         if (status != BookingStatus.PRELIMINARY) {
             throw new IllegalStateException("予約確定は仮受付状態からのみ可能です。現在の状態: " + status.getDisplayName());
         }
-        return new Cargo(bookingId, shipperId, cargoType, weight, dimensions, quantity, description,
-                routeSpecification, BookingStatus.CONFIRMED, hazardousDeclaration, temperatureRequirement);
+        return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.CONFIRMED));
     }
 
     public Cargo cancel() {
         if (!CANCELLABLE_STATUSES.contains(status)) {
             throw new IllegalStateException("現在の状態ではキャンセルできません。現在の状態: " + status.getDisplayName());
         }
-        return new Cargo(bookingId, shipperId, cargoType, weight, dimensions, quantity, description,
-                routeSpecification, BookingStatus.CANCELLED, hazardousDeclaration, temperatureRequirement);
+        return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.CANCELLED));
+    }
+
+    private State currentStateWith(BookingStatus nextStatus) {
+        return state(
+                routeSpecification,
+                nextStatus,
+                details(dimensions, quantity, description),
+                handling(hazardousDeclaration, temperatureRequirement)
+        );
     }
 }

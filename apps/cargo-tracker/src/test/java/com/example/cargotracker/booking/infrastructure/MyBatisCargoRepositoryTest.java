@@ -122,15 +122,16 @@ class MyBatisCargoRepositoryTest extends PostgreSQLIntegrationTestBase {
                 shipperId,
                 cargoType,
                 weight,
-                null, null, null,
-                new RouteSpecification(
-                        new Location("JPTYO"),
-                        new Location("USLAX"),
-                        LocalDate.now().plusDays(14)
-                ),
-                BookingStatus.PRELIMINARY,
-                hazardousDeclaration,
-                temperatureRequirement
+                Cargo.state(
+                        new RouteSpecification(
+                                new Location("JPTYO"),
+                                new Location("USLAX"),
+                                LocalDate.now().plusDays(14)
+                        ),
+                        BookingStatus.PRELIMINARY,
+                        null,
+                        Cargo.handling(hazardousDeclaration, temperatureRequirement)
+                )
         );
     }
 

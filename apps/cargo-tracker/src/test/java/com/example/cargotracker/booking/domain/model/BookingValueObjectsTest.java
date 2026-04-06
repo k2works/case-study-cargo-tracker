@@ -24,10 +24,14 @@ class BookingValueObjectsTest {
 
     @Test
     void shouldThrowWhenDimensionIsZeroOrNegative() {
+        BigDecimal width = new BigDecimal("5.0");
+        BigDecimal height = new BigDecimal("3.0");
+        BigDecimal length = new BigDecimal("10.0");
+        BigDecimal invalidWidth = new BigDecimal("-1");
         assertThrows(IllegalArgumentException.class, () ->
-                new Dimensions(BigDecimal.ZERO, new BigDecimal("5.0"), new BigDecimal("3.0")));
+                new Dimensions(BigDecimal.ZERO, width, height));
         assertThrows(IllegalArgumentException.class, () ->
-                new Dimensions(new BigDecimal("10.0"), new BigDecimal("-1"), new BigDecimal("3.0")));
+                new Dimensions(length, invalidWidth, height));
     }
 
     @Test

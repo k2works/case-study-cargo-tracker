@@ -71,7 +71,7 @@ class HexagonalArchitectureTest {
                     .should().dependOnClassesThat().resideInAPackage("..shipper.domain..")
                     .as("Booking アプリケーション層は Shipper コンテキストのドメイン層に直接依存してはならない（ACL ポート経由のみ許可）");
 
-    // ルール 6: Booking コンテキストは Shipper コンテキス���の application/infrastructure に依存しない
+    // ルール 6: Booking コンテキストは Shipper コンテキストの application/infrastructure に依存しない
     @ArchTest
     static final ArchRule booking_should_not_depend_on_shipper_application =
             noClasses().that().resideInAPackage("..booking..")

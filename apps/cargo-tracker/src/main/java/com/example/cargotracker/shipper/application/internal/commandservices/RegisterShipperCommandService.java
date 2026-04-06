@@ -50,13 +50,17 @@ public class RegisterShipperCommandService {
         Address address = command.address() == null ? null : new Address(command.address());
 
         if (command.shipperType() == ShipperType.CORPORATE) {
-            return new CorporateShipper(
+            Shipper baseShipper = new Shipper(
                     shipperId,
                     shipperCode,
                     shipperName,
                     email,
                     phone,
                     address,
+                    ShipperType.CORPORATE
+            );
+            return new CorporateShipper(
+                    baseShipper,
                     new ContractNumber(command.contractNumber()),
                     new DiscountRate(command.discountRate())
             );

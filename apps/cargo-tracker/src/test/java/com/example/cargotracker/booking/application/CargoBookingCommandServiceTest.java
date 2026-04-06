@@ -166,10 +166,7 @@ class CargoBookingCommandServiceTest {
     @Test
     void shouldConfirmBooking_whenStatusIsPreliminary() {
         BookingId bookingId = new BookingId(UUID.randomUUID());
-        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
-                new BigDecimal("10.500"), null, null, null,
-                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
-                BookingStatus.PRELIMINARY, null, null);
+        Cargo cargo = cargo(bookingId, BookingStatus.PRELIMINARY);
         when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
 
         cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId.toString()));
@@ -182,34 +179,28 @@ class CargoBookingCommandServiceTest {
     @Test
     void shouldThrowBookingNotFoundException_whenConfirmingNonExistentBooking() {
         String unknownId = UUID.randomUUID().toString();
+        ConfirmBookingCommand command = new ConfirmBookingCommand(unknownId);
         when(cargoRepository.findByBookingId(any())).thenReturn(Optional.empty());
 
-        assertThrows(BookingNotFoundException.class,
-                () -> cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(unknownId)));
+        assertThrows(BookingNotFoundException.class, () -> cargoBookingCommandService.confirmBooking(command));
         verify(cargoRepository, never()).updateStatus(any());
     }
 
     @Test
     void shouldThrowIllegalStateException_whenConfirmingAlreadyConfirmedBooking() {
         BookingId bookingId = new BookingId(UUID.randomUUID());
-        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
-                new BigDecimal("10.500"), null, null, null,
-                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
-                BookingStatus.CONFIRMED, null, null);
+        ConfirmBookingCommand command = new ConfirmBookingCommand(bookingId.toString());
+        Cargo cargo = cargo(bookingId, BookingStatus.CONFIRMED);
         when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
 
-        assertThrows(IllegalStateException.class,
-                () -> cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId.toString())));
+        assertThrows(IllegalStateException.class, () -> cargoBookingCommandService.confirmBooking(command));
         verify(cargoRepository, never()).updateStatus(any());
     }
 
     @Test
     void shouldCancelBooking_fromPreliminaryStatus() {
         BookingId bookingId = new BookingId(UUID.randomUUID());
-        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
-                new BigDecimal("10.500"), null, null, null,
-                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
-                BookingStatus.PRELIMINARY, null, null);
+        Cargo cargo = cargo(bookingId, BookingStatus.PRELIMINARY);
         when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
 
         cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString()));
@@ -222,10 +213,7 @@ class CargoBookingCommandServiceTest {
     @Test
     void shouldCancelBooking_fromConfirmedStatus() {
         BookingId bookingId = new BookingId(UUID.randomUUID());
-        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
-                new BigDecimal("10.500"), null, null, null,
-                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
-                BookingStatus.CONFIRMED, null, null);
+        Cargo cargo = cargo(bookingId, BookingStatus.CONFIRMED);
         when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
 
         cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString()));
@@ -238,28 +226,22 @@ class CargoBookingCommandServiceTest {
     @Test
     void shouldThrowIllegalStateException_whenCancellingSettledBooking() {
         BookingId bookingId = new BookingId(UUID.randomUUID());
-        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
-                new BigDecimal("10.500"), null, null, null,
-                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
-                BookingStatus.SETTLED, null, null);
+        CancelBookingCommand command = new CancelBookingCommand(bookingId.toString());
+        Cargo cargo = cargo(bookingId, BookingStatus.SETTLED);
         when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
 
-        assertThrows(IllegalStateException.class,
-                () -> cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString())));
+        assertThrows(IllegalStateException.class, () -> cargoBookingCommandService.cancelBooking(command));
         verify(cargoRepository, never()).updateStatus(any());
     }
 
     @Test
     void shouldThrowIllegalStateException_whenCancellingAlreadyCancelledBooking() {
         BookingId bookingId = new BookingId(UUID.randomUUID());
-        Cargo cargo = new Cargo(bookingId, new ShipperId(UUID.randomUUID()), CargoType.GENERAL,
-                new BigDecimal("10.500"), null, null, null,
-                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
-                BookingStatus.CANCELLED, null, null);
+        CancelBookingCommand command = new CancelBookingCommand(bookingId.toString());
+        Cargo cargo = cargo(bookingId, BookingStatus.CANCELLED);
         when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
 
-        assertThrows(IllegalStateException.class,
-                () -> cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId.toString())));
+        assertThrows(IllegalStateException.class, () -> cargoBookingCommandService.cancelBooking(command));
         verify(cargoRepository, never()).updateStatus(any());
     }
 
@@ -285,5 +267,16 @@ class CargoBookingCommandServiceTest {
         );
 
         verify(cargoRepository, never()).save(any(Cargo.class));
+    }
+
+    private Cargo cargo(BookingId bookingId, BookingStatus status) {
+        return new Cargo(
+                bookingId,
+                new ShipperId(UUID.randomUUID()),
+                CargoType.GENERAL,
+                new BigDecimal("10.500"),
+                new RouteSpecification(new Location("JPTYO"), new Location("USLAX"), LocalDate.now().plusDays(10)),
+                status
+        );
     }
 }

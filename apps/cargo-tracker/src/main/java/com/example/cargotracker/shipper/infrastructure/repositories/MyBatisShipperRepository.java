@@ -72,13 +72,17 @@ public class MyBatisShipperRepository implements ShipperRepository {
         ShipperType shipperType = ShipperType.valueOf(shipperRecord.getShipperType());
         Address address = toAddress(shipperRecord.getAddress());
         if (shipperType == ShipperType.CORPORATE) {
-            return new CorporateShipper(
+            Shipper corporateBase = new Shipper(
                     new ShipperId(UUID.fromString(shipperRecord.getId())),
                     new ShipperCode(shipperRecord.getShipperCode()),
                     new ShipperName(shipperRecord.getName()),
                     new Email(shipperRecord.getEmail()),
                     toPhone(shipperRecord.getPhone()),
                     address,
+                    ShipperType.CORPORATE
+            );
+            return new CorporateShipper(
+                    corporateBase,
                     new ContractNumber(shipperRecord.getContractNumber()),
                     new DiscountRate(shipperRecord.getDiscountRate())
             );

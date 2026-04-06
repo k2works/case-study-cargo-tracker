@@ -3,6 +3,7 @@ package com.example.cargotracker.booking.application.internal.commandservices;
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistenceChecker;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
+import com.example.cargotracker.booking.domain.model.aggregates.BookingStatus;
 import com.example.cargotracker.booking.domain.model.events.BookingCancelledEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
@@ -54,17 +55,16 @@ public class CargoBookingCommandService {
                 shipperId,
                 CargoType.valueOf(command.cargoType()),
                 command.weight(),
-                dimensions,
-                quantity,
-                description,
-                new RouteSpecification(
-                        new Location(command.originUnlocode()),
-                        new Location(command.destinationUnlocode()),
-                        command.arrivalDeadline()
-                ),
-                com.example.cargotracker.booking.domain.model.aggregates.BookingStatus.PRELIMINARY,
-                toHazardousDeclaration(command),
-                toTemperatureRequirement(command)
+                Cargo.state(
+                        new RouteSpecification(
+                                new Location(command.originUnlocode()),
+                                new Location(command.destinationUnlocode()),
+                                command.arrivalDeadline()
+                        ),
+                        BookingStatus.PRELIMINARY,
+                        Cargo.details(dimensions, quantity, description),
+                        Cargo.handling(toHazardousDeclaration(command), toTemperatureRequirement(command))
+                )
         );
         cargoRepository.save(cargo);
         return cargo.getBookingId();

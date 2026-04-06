@@ -1,13 +1,7 @@
 package com.example.cargotracker.shipper.domain.model.aggregates;
 
-import com.example.cargotracker.shipper.domain.model.valueobjects.Address;
 import com.example.cargotracker.shipper.domain.model.valueobjects.ContractNumber;
 import com.example.cargotracker.shipper.domain.model.valueobjects.DiscountRate;
-import com.example.cargotracker.shipper.domain.model.valueobjects.Email;
-import com.example.cargotracker.shipper.domain.model.valueobjects.Phone;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperCode;
-import com.example.cargotracker.shared.domain.model.ShipperId;
-import com.example.cargotracker.shipper.domain.model.valueobjects.ShipperName;
 
 public final class CorporateShipper extends Shipper {
 
@@ -15,16 +9,19 @@ public final class CorporateShipper extends Shipper {
     private final DiscountRate discountRate;
 
     public CorporateShipper(
-            ShipperId id,
-            ShipperCode code,
-            ShipperName name,
-            Email email,
-            Phone phone,
-            Address address,
+            Shipper shipper,
             ContractNumber contractNumber,
             DiscountRate discountRate
     ) {
-        super(id, code, name, email, phone, address, ShipperType.CORPORATE);
+        super(
+                shipper.getId(),
+                shipper.getCode(),
+                shipper.getName(),
+                shipper.getEmail(),
+                shipper.getPhone(),
+                shipper.getAddress(),
+                ShipperType.CORPORATE
+        );
         if (contractNumber == null) {
             throw new IllegalArgumentException("contractNumber must not be null");
         }

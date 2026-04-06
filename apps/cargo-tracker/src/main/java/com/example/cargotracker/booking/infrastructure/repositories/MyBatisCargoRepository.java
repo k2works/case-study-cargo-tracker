@@ -91,17 +91,16 @@ public class MyBatisCargoRepository implements CargoRepository {
                 new ShipperId(UUID.fromString(cargoRecord.getShipperId())),
                 CargoType.valueOf(cargoRecord.getCargoType()),
                 cargoRecord.getWeight(),
-                dimensions,
-                quantity,
-                description,
-                new RouteSpecification(
-                        new Location(cargoRecord.getOriginUnlocode()),
-                        new Location(cargoRecord.getDestinationUnlocode()),
-                        cargoRecord.getArrivalDeadline()
-                ),
-                BookingStatus.valueOf(cargoRecord.getBookingStatus()),
-                toHazardousDeclaration(cargoRecord),
-                toTemperatureRequirement(cargoRecord)
+                Cargo.state(
+                        new RouteSpecification(
+                                new Location(cargoRecord.getOriginUnlocode()),
+                                new Location(cargoRecord.getDestinationUnlocode()),
+                                cargoRecord.getArrivalDeadline()
+                        ),
+                        BookingStatus.valueOf(cargoRecord.getBookingStatus()),
+                        Cargo.details(dimensions, quantity, description),
+                        Cargo.handling(toHazardousDeclaration(cargoRecord), toTemperatureRequirement(cargoRecord))
+                )
         );
     }
 

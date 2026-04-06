@@ -88,29 +88,35 @@ class SpecialCargoValueObjectsTest {
 
     @Test
     void shouldThrowWhenMinTemperatureIsNull() {
+        BigDecimal maxTemperature = new BigDecimal("-18");
         assertThatThrownBy(() -> new TemperatureRequirement(
-                null, new BigDecimal("-18"), TemperatureUnit.CELSIUS))
+                null, maxTemperature, TemperatureUnit.CELSIUS))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void shouldThrowWhenMaxTemperatureIsNull() {
+        BigDecimal minTemperature = new BigDecimal("-25");
         assertThatThrownBy(() -> new TemperatureRequirement(
-                new BigDecimal("-25"), null, TemperatureUnit.CELSIUS))
+                minTemperature, null, TemperatureUnit.CELSIUS))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void shouldThrowWhenMinExceedsMax() {
+        BigDecimal minTemperature = new BigDecimal("10");
+        BigDecimal maxTemperature = new BigDecimal("5");
         assertThatThrownBy(() -> new TemperatureRequirement(
-                new BigDecimal("10"), new BigDecimal("5"), TemperatureUnit.CELSIUS))
+                minTemperature, maxTemperature, TemperatureUnit.CELSIUS))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void shouldThrowWhenUnitIsNull() {
+        BigDecimal minTemperature = new BigDecimal("-25");
+        BigDecimal maxTemperature = new BigDecimal("-18");
         assertThatThrownBy(() -> new TemperatureRequirement(
-                new BigDecimal("-25"), new BigDecimal("-18"), null))
+                minTemperature, maxTemperature, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

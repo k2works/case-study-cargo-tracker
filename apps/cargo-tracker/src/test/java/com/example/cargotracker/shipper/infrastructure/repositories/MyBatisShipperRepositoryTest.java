@@ -68,15 +68,13 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("法人荷主を保存してメールで取得できる")
     void shouldSaveAndFindCorporateShipperByEmail() {
-        CorporateShipper shipper = new CorporateShipper(
-                new ShipperId(UUID.randomUUID()),
-                new ShipperCode("SHP-2001"),
-                new ShipperName("テスト商事株式会社"),
-                new Email("sales@test-corp.example.com"),
-                new Phone("03-1234-5678"),
-                null,
-                new ContractNumber("CN-001"),
-                new DiscountRate(new BigDecimal("0.10"))
+        CorporateShipper shipper = corporateShipper(
+                "SHP-2001",
+                "テスト商事株式会社",
+                "sales@test-corp.example.com",
+                "03-1234-5678",
+                "CN-001",
+                "0.10"
         );
 
         repository.save(shipper);
@@ -136,15 +134,13 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 null,
                 ShipperType.INDIVIDUAL
         );
-        CorporateShipper corporate = new CorporateShipper(
-                new ShipperId(UUID.randomUUID()),
-                new ShipperCode("SHP-4002"),
-                new ShipperName("法人 荷主株式会社"),
-                new Email("corporate@example.com"),
-                new Phone("03-9999-8888"),
-                null,
-                new ContractNumber("CN-002"),
-                new DiscountRate(new BigDecimal("0.05"))
+        CorporateShipper corporate = corporateShipper(
+                "SHP-4002",
+                "法人 荷主株式会社",
+                "corporate@example.com",
+                "03-9999-8888",
+                "CN-002",
+                "0.05"
         );
 
         repository.save(individual);
@@ -156,5 +152,29 @@ class MyBatisShipperRepositoryTest extends PostgreSQLIntegrationTestBase {
                 .hasSize(2)
                 .usingRecursiveFieldByFieldElementComparator()
                 .containsExactlyInAnyOrder(individual, corporate);
+    }
+
+    private CorporateShipper corporateShipper(
+            String code,
+            String name,
+            String email,
+            String phone,
+            String contractNumber,
+            String discountRate
+    ) {
+        Shipper baseShipper = new Shipper(
+                new ShipperId(UUID.randomUUID()),
+                new ShipperCode(code),
+                new ShipperName(name),
+                new Email(email),
+                new Phone(phone),
+                null,
+                ShipperType.CORPORATE
+        );
+        return new CorporateShipper(
+                baseShipper,
+                new ContractNumber(contractNumber),
+                new DiscountRate(new BigDecimal(discountRate))
+        );
     }
 }

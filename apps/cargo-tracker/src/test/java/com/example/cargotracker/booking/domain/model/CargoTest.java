@@ -97,8 +97,9 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenBookingIdIsNull() {
-        assertThrows(NullPointerException.class, () -> new Cargo(
-                null, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10.500"), ROUTE_SPEC));
+        BigDecimal weight = new BigDecimal("10.500");
+        assertThrows(NullPointerException.class, () ->
+                createCargo(null, SHIPPER_ID, CargoType.GENERAL, weight, ROUTE_SPEC));
     }
 
     @Test
@@ -110,14 +111,14 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenWeightIsExactlyZero() {
-        assertThrows(IllegalArgumentException.class, () -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, BigDecimal.ZERO, ROUTE_SPEC));
+        BigDecimal invalidWeight = BigDecimal.ZERO;
+        assertThrows(IllegalArgumentException.class, () -> createCargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, invalidWeight, ROUTE_SPEC));
     }
 
     @Test
     void shouldThrowWhenWeightIsNegative() {
-        assertThrows(IllegalArgumentException.class, () -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("-0.001"), ROUTE_SPEC));
+        BigDecimal invalidWeight = new BigDecimal("-0.001");
+        assertThrows(IllegalArgumentException.class, () -> createCargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, invalidWeight, ROUTE_SPEC));
     }
 
     @Test
@@ -127,8 +128,13 @@ class CargoTest {
         var quantity = new com.example.cargotracker.booking.domain.model.valueobjects.Quantity(5);
         var description = new com.example.cargotracker.booking.domain.model.valueobjects.Description("電子部品");
 
-        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
-                dimensions, quantity, description, ROUTE_SPEC, BookingStatus.PRELIMINARY);
+        Cargo cargo = createCargo(
+                CargoType.GENERAL,
+                new BigDecimal("10"),
+                BookingStatus.PRELIMINARY,
+                Cargo.details(dimensions, quantity, description),
+                null
+        );
 
         assertEquals(dimensions, cargo.getDimensions());
         assertEquals(quantity, cargo.getQuantity());
@@ -153,14 +159,18 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenRouteSpecOriginIsNull() {
+        Location destination = new Location("USLAX");
+        LocalDate arrivalDeadline = LocalDate.now().plusDays(7);
         assertThrows(NullPointerException.class, () ->
-                new RouteSpecification(null, new Location("USLAX"), LocalDate.now().plusDays(7)));
+                new RouteSpecification(null, destination, arrivalDeadline));
     }
 
     @Test
     void shouldThrowWhenRouteSpecDestinationIsNull() {
+        Location origin = new Location("JPTYO");
+        LocalDate arrivalDeadline = LocalDate.now().plusDays(7);
         assertThrows(NullPointerException.class, () ->
-                new RouteSpecification(new Location("JPTYO"), null, LocalDate.now().plusDays(7)));
+                new RouteSpecification(origin, null, arrivalDeadline));
     }
 
     @Test
@@ -177,20 +187,22 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenShipperIdIsNull() {
-        assertThrows(NullPointerException.class, () -> new Cargo(
-                BOOKING_ID, null, CargoType.GENERAL, new BigDecimal("10"), ROUTE_SPEC));
+        BigDecimal weight = new BigDecimal("10");
+        assertThrows(NullPointerException.class, () ->
+                createCargo(BOOKING_ID, null, CargoType.GENERAL, weight, ROUTE_SPEC));
     }
 
     @Test
     void shouldThrowWhenCargoTypeIsNull() {
-        assertThrows(NullPointerException.class, () -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, null, new BigDecimal("10"), ROUTE_SPEC));
+        BigDecimal weight = new BigDecimal("10");
+        assertThrows(NullPointerException.class, () ->
+                createCargo(BOOKING_ID, SHIPPER_ID, null, weight, ROUTE_SPEC));
     }
 
     @Test
     void shouldThrowWhenWeightIsNull() {
-        assertThrows(NullPointerException.class, () -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, null, ROUTE_SPEC));
+        assertThrows(NullPointerException.class, () ->
+                createCargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, null, ROUTE_SPEC));
     }
 
     // --- 危険物貨物テスト ---
@@ -203,19 +215,25 @@ class CargoTest {
 
     @Test
     void shouldCreateHazardousCargo() {
-        Cargo cargo = assertDoesNotThrow(() -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.HAZARDOUS, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
-                HAZARDOUS_DECLARATION, null));
+        Cargo cargo = assertDoesNotThrow(() -> createCargo(
+                CargoType.HAZARDOUS,
+                new BigDecimal("10"),
+                BookingStatus.PRELIMINARY,
+                null,
+                Cargo.handling(HAZARDOUS_DECLARATION, null)
+        ));
         assertEquals(CargoType.HAZARDOUS, cargo.getCargoType());
     }
 
     @Test
     void shouldGetHazardousDeclaration() {
-        Cargo cargo = new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.HAZARDOUS, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
-                HAZARDOUS_DECLARATION, null);
+        Cargo cargo = createCargo(
+                CargoType.HAZARDOUS,
+                new BigDecimal("10"),
+                BookingStatus.PRELIMINARY,
+                null,
+                Cargo.handling(HAZARDOUS_DECLARATION, null)
+        );
         assertNotNull(cargo.getHazardousDeclaration());
         assertEquals("3", cargo.getHazardousDeclaration().hazardousClass());
         assertEquals("UN1203", cargo.getHazardousDeclaration().unNumber());
@@ -223,29 +241,34 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenHazardousCargoMissingDeclaration() {
-        assertThrows(IllegalArgumentException.class, () -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.HAZARDOUS, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
-                null, null));
+        BigDecimal weight = new BigDecimal("10");
+        assertThrows(IllegalArgumentException.class, () ->
+                createCargo(CargoType.HAZARDOUS, weight, BookingStatus.PRELIMINARY, null, null));
     }
 
     // --- 冷凍・冷蔵貨物テスト ---
 
     @Test
     void shouldCreateRefrigeratedCargo() {
-        Cargo cargo = assertDoesNotThrow(() -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.REFRIGERATED, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
-                null, TEMPERATURE_REQUIREMENT));
+        Cargo cargo = assertDoesNotThrow(() -> createCargo(
+                CargoType.REFRIGERATED,
+                new BigDecimal("10"),
+                BookingStatus.PRELIMINARY,
+                null,
+                Cargo.handling(null, TEMPERATURE_REQUIREMENT)
+        ));
         assertEquals(CargoType.REFRIGERATED, cargo.getCargoType());
     }
 
     @Test
     void shouldGetTemperatureRequirement() {
-        Cargo cargo = new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.REFRIGERATED, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
-                null, TEMPERATURE_REQUIREMENT);
+        Cargo cargo = createCargo(
+                CargoType.REFRIGERATED,
+                new BigDecimal("10"),
+                BookingStatus.PRELIMINARY,
+                null,
+                Cargo.handling(null, TEMPERATURE_REQUIREMENT)
+        );
         assertNotNull(cargo.getTemperatureRequirement());
         assertEquals(new BigDecimal("-25"), cargo.getTemperatureRequirement().minTemperature());
         assertEquals(new BigDecimal("-18"), cargo.getTemperatureRequirement().maxTemperature());
@@ -253,10 +276,9 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenRefrigeratedCargoMissingTemperatureRequirement() {
-        assertThrows(IllegalArgumentException.class, () -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.REFRIGERATED, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
-                null, null));
+        BigDecimal weight = new BigDecimal("10");
+        assertThrows(IllegalArgumentException.class, () ->
+                createCargo(CargoType.REFRIGERATED, weight, BookingStatus.PRELIMINARY, null, null));
     }
 
     // --- 状態遷移テスト ---
@@ -274,8 +296,7 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenConfirmingNonPreliminaryCargo() {
-        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.CONFIRMED, null, null);
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.CONFIRMED, null, null);
 
         assertThrows(IllegalStateException.class, cargo::confirm);
     }
@@ -292,8 +313,7 @@ class CargoTest {
 
     @Test
     void shouldCancelCargo_fromConfirmedStatus() {
-        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.CONFIRMED, null, null);
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.CONFIRMED, null, null);
 
         Cargo cancelled = cargo.cancel();
 
@@ -302,16 +322,14 @@ class CargoTest {
 
     @Test
     void shouldThrowWhenCancellingAlreadyCancelledCargo() {
-        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.CANCELLED, null, null);
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.CANCELLED, null, null);
 
         assertThrows(IllegalStateException.class, cargo::cancel);
     }
 
     @Test
     void shouldThrowWhenCancellingSettledCargo() {
-        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.SETTLED, null, null);
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.SETTLED, null, null);
 
         assertThrows(IllegalStateException.class, cargo::cancel);
     }
@@ -320,11 +338,29 @@ class CargoTest {
 
     @Test
     void shouldCreateGeneralCargoWithoutSpecialFields() {
-        Cargo cargo = assertDoesNotThrow(() -> new Cargo(
-                BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"),
-                null, null, null, ROUTE_SPEC, BookingStatus.PRELIMINARY,
-                null, null));
+        Cargo cargo = assertDoesNotThrow(() ->
+                createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.PRELIMINARY, null, null));
         assertNull(cargo.getHazardousDeclaration());
         assertNull(cargo.getTemperatureRequirement());
+    }
+
+    private Cargo createCargo(
+            BookingId bookingId,
+            ShipperId shipperId,
+            CargoType cargoType,
+            BigDecimal weight,
+            RouteSpecification routeSpecification
+    ) {
+        return new Cargo(bookingId, shipperId, cargoType, weight, routeSpecification);
+    }
+
+    private Cargo createCargo(
+            CargoType cargoType,
+            BigDecimal weight,
+            BookingStatus status,
+            Cargo.Details details,
+            Cargo.Handling handling
+    ) {
+        return new Cargo(BOOKING_ID, SHIPPER_ID, cargoType, weight, Cargo.state(ROUTE_SPEC, status, details, handling));
     }
 }
