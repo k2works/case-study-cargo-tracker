@@ -23,8 +23,8 @@
 
 - [x] US05: 危険物を選択すると危険物申告情報の入力が必須となる
 - [x] US05: 冷凍・冷蔵を選択すると温度管理条件の入力が必須となる
-- [ ] US13: 予約状態を「仮受付」→「予約確定」に遷移できる
-- [ ] US13: 予約をキャンセル状態に変更できる
+- [x] US13: 予約状態を「仮受付」→「予約確定」に遷移できる
+- [x] US13: 予約をキャンセル状態に変更できる
 - [x] IT1 改善: ShipperId が shared.domain.model に配置され、ACL でコンテキスト間依存が解消されている
 - [x] IT1 改善: DiscountRate 上限が 30%（0.3000）に修正されている
 - [x] IT1 改善: 荷主登録に住所フィールドが追加されている
@@ -138,14 +138,14 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `ConfirmBookingCommand` + `CancelBookingCommand` 実装 | 1h | - | [ ] |
-| 3.2 | `BookingStatus` 遷移ロジック実装（PRELIMINARY → CONFIRMED、任意 → CANCELLED） | 2h | - | [ ] |
-| 3.3 | `CargoBookingCommandService` に確定・キャンセルメソッド追加 | 1h | - | [ ] |
-| 3.4 | `BookingConfirmedEvent` + `BookingCancelledEvent` ドメインイベント発行 | 1h | - | [ ] |
-| 3.5 | REST API（POST `/api/bookings/{id}/confirm`、POST `/api/bookings/{id}/cancel`） | 1h | - | [ ] |
-| 3.6 | 予約詳細画面に確定・キャンセルボタン追加 + 確認ダイアログ | 2h | - | [ ] |
-| 3.7 | 単体テスト + API E2E テスト（状態遷移パターン） | 2h | - | [ ] |
-| 3.8 | Playwright E2E テスト（確定・キャンセル操作） | 1h | - | [ ] |
+| 3.1 | `ConfirmBookingCommand` + `CancelBookingCommand` 実装 | 1h | - | [x] |
+| 3.2 | `BookingStatus` 遷移ロジック実装（PRELIMINARY → CONFIRMED、任意 → CANCELLED） | 2h | - | [x] |
+| 3.3 | `CargoBookingCommandService` に確定・キャンセルメソッド追加 | 1h | - | [x] |
+| 3.4 | `BookingConfirmedEvent` + `BookingCancelledEvent` ドメインイベント発行 | 1h | - | [x] |
+| 3.5 | REST API（POST `/api/bookings/{id}/confirm`、POST `/api/bookings/{id}/cancel`） | 1h | - | [x] |
+| 3.6 | 予約詳細画面に確定・キャンセルボタン追加 + 確認ダイアログ | 2h | - | [x] |
+| 3.7 | 単体テスト + API E2E テスト（状態遷移パターン） | 2h | - | [x] |
+| 3.8 | Playwright E2E テスト（確定・キャンセル操作） | 1h | - | [x] |
 
 **小計**: 11h（理想時間）
 
@@ -155,11 +155,11 @@
 |---------|----|----|------|
 | IT1 品質改善 (IT1-改善) | 4 | 16h | [x] |
 | 危険物・冷凍貨物 (US05) | 3 | 12h | [x] |
-| 予約確定 (US13) | 3 | 11h | [ ] |
+| 予約確定 (US13) | 3 | 11h | [x] |
 | **合計** | **10** | **39h** | |
 
 **1 SP あたり**: 約 3.9h
-**進捗率**: 70% (7/10 SP)
+**進捗率**: 100% (10/10 SP)
 
 ---
 
@@ -793,9 +793,9 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 
 - [ ] コードレビュー完了（`developing-review` 実施）
 - [ ] UI/UX レビュー完了（`developing-uiux-review` 実施）
-- [ ] 単体テストがパス
-- [ ] API E2E テストがパス
-- [ ] Playwright E2E テストがパス
+- [x] 単体テストがパス
+- [x] API E2E テストがパス
+- [x] Playwright E2E テストがパス
 - [ ] テストカバレッジ 80% 以上（命令カバレッジ + ブランチカバレッジ）
 - [ ] SonarQube Quality Gate PASS（ローカル実行）
 - [ ] 機能がローカル環境で動作確認済み
@@ -820,6 +820,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 |------|---------|--------|
 | 2026-04-04 | 初版作成 | - |
 | 2026-04-04 | IT1 品質改善（4 SP）完了を反映。テスト 95 件全 Green、JaCoCo カバレッジ 63% | - |
+| 2026-04-06 | US13 予約確定・キャンセル機能（3 SP）完了。テスト 140 件全 Green、進捗 100% (10/10 SP) | - |
 
 ---
 
