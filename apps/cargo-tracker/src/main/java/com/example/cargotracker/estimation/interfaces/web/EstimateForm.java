@@ -1,4 +1,4 @@
-package com.example.cargotracker.estimation.interfaces;
+package com.example.cargotracker.estimation.interfaces.web;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;

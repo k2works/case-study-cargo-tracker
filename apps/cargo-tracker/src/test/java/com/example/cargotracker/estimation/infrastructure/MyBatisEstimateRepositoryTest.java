@@ -1,9 +1,11 @@
 package com.example.cargotracker.estimation.infrastructure;
 
+import com.example.cargotracker.estimation.domain.model.CargoType;
 import com.example.cargotracker.estimation.domain.model.Estimate;
 import com.example.cargotracker.estimation.domain.model.EstimateId;
 import com.example.cargotracker.estimation.domain.model.RouteCandidate;
 import com.example.cargotracker.estimation.infrastructure.repositories.MyBatisEstimateRepository;
+import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,9 +42,9 @@ class MyBatisEstimateRepositoryTest extends PostgreSQLIntegrationTestBase {
     @DisplayName("Estimate を保存して EstimateId で取得できる")
     void shouldSaveAndFindByEstimateId() {
         Estimate estimate = Estimate.create(
-                "JPTYO", "USNYC",
+                new Location("JPTYO"), new Location("USNYC"),
                 LocalDate.now().plusDays(30),
-                "GENERAL",
+                CargoType.GENERAL,
                 new BigDecimal("1000.000")
         );
 
@@ -50,21 +52,21 @@ class MyBatisEstimateRepositoryTest extends PostgreSQLIntegrationTestBase {
 
         Optional<Estimate> found = repository.findByEstimateId(estimate.getEstimateId());
         assertThat(found).isPresent();
-        assertThat(found.get().getOriginUnlocode()).isEqualTo("JPTYO");
-        assertThat(found.get().getDestinationUnlocode()).isEqualTo("USNYC");
-        assertThat(found.get().getCargoType()).isEqualTo("GENERAL");
+        assertThat(found.get().getOrigin().unlocode()).isEqualTo("JPTYO");
+        assertThat(found.get().getDestination().unlocode()).isEqualTo("USNYC");
+        assertThat(found.get().getCargoType()).isEqualTo(CargoType.GENERAL);
     }
 
     @Test
     @DisplayName("ルート候補を含む Estimate を保存して取得できる")
     void shouldSaveAndFindEstimateWithCandidates() {
         Estimate estimate = Estimate.create(
-                "JPTYO", "USNYC",
+                new Location("JPTYO"), new Location("USNYC"),
                 LocalDate.now().plusDays(30),
-                "GENERAL",
+                CargoType.GENERAL,
                 new BigDecimal("1000.000")
         );
-        estimate.addCandidates(List.of(
+        estimate.replaceCandidates(List.of(
                 new RouteCandidate("V001", "SGSIN", 21, new BigDecimal("500000.00")),
                 new RouteCandidate("V002", "HKHKG", 28, new BigDecimal("480000.00"))
         ));
@@ -79,8 +81,8 @@ class MyBatisEstimateRepositoryTest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("全件一覧を取得できる")
     void shouldFindAll() {
-        Estimate est1 = Estimate.create("JPTYO", "USNYC", LocalDate.now().plusDays(30), "GENERAL", new BigDecimal("1000.000"));
-        Estimate est2 = Estimate.create("JPTYO", "SGSIN", LocalDate.now().plusDays(45), "REFRIGERATED", new BigDecimal("500.000"));
+        Estimate est1 = Estimate.create(new Location("JPTYO"), new Location("USNYC"), LocalDate.now().plusDays(30), CargoType.GENERAL, new BigDecimal("1000.000"));
+        Estimate est2 = Estimate.create(new Location("JPTYO"), new Location("SGSIN"), LocalDate.now().plusDays(45), CargoType.REFRIGERATED, new BigDecimal("500.000"));
         repository.save(est1);
         repository.save(est2);
 

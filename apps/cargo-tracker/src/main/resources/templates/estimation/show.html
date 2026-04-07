@@ -29,10 +29,10 @@
                 <dd class="col-sm-9" th:text="${estimate.estimateId}">est-id</dd>
 
                 <dt class="col-sm-3">出発地</dt>
-                <dd class="col-sm-9" th:text="${estimate.originUnlocode}">JPTYO</dd>
+                <dd class="col-sm-9" th:text="${estimate.origin.unlocode}">JPTYO</dd>
 
                 <dt class="col-sm-3">目的地</dt>
-                <dd class="col-sm-9" th:text="${estimate.destinationUnlocode}">USNYC</dd>
+                <dd class="col-sm-9" th:text="${estimate.destination.unlocode}">USNYC</dd>
 
                 <dt class="col-sm-3">希望期限</dt>
                 <dd class="col-sm-9" th:text="${estimate.arrivalDeadline}">2026-06-30</dd>

@@ -1,4 +1,4 @@
-package com.example.cargotracker.estimation.interfaces;
+package com.example.cargotracker.estimation.interfaces.web;
 
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;

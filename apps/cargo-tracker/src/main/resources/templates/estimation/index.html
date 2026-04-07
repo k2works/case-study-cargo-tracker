@@ -42,8 +42,8 @@
                             <span th:title="${estimate.estimateId}"
                                   th:text="${#strings.substring(estimate.estimateId.toString(), 0, 8) + '...'}">est-id</span>
                         </td>
-                        <td th:text="${estimate.originUnlocode}">JPTYO</td>
-                        <td th:text="${estimate.destinationUnlocode}">USNYC</td>
+                        <td th:text="${estimate.origin.unlocode}">JPTYO</td>
+                        <td th:text="${estimate.destination.unlocode}">USNYC</td>
                         <td th:text="${estimate.arrivalDeadline}">2026-06-30</td>
                         <td th:text="${estimate.cargoType}">GENERAL</td>
                         <td>

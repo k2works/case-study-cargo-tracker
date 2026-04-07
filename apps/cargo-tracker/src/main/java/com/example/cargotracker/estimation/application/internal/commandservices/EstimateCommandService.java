@@ -1,9 +1,11 @@
-package com.example.cargotracker.estimation.application;
+package com.example.cargotracker.estimation.application.internal.commandservices;
 
+import com.example.cargotracker.estimation.domain.model.CargoType;
 import com.example.cargotracker.estimation.domain.model.Estimate;
 import com.example.cargotracker.estimation.domain.model.EstimateId;
 import com.example.cargotracker.estimation.domain.model.RouteCandidate;
 import com.example.cargotracker.estimation.domain.model.repository.EstimateRepository;
+import com.example.cargotracker.shared.domain.model.Location;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,28 +16,29 @@ import java.util.Optional;
 /**
  * 輸送見積アプリケーションサービス。
  * ルート候補はスタブ実装（固定値）で返す。
+ * TODO: 外部ルーティングサービスとの連携時に置換予定
  */
 @Service
 @Transactional
-public class EstimateService {
+public class EstimateCommandService {
 
     private final EstimateRepository estimateRepository;
 
-    public EstimateService(EstimateRepository estimateRepository) {
+    public EstimateCommandService(EstimateRepository estimateRepository) {
         this.estimateRepository = estimateRepository;
     }
 
     public EstimateId createEstimate(CreateEstimateCommand command) {
         Estimate estimate = Estimate.create(
-                command.originUnlocode(),
-                command.destinationUnlocode(),
+                new Location(command.originUnlocode()),
+                new Location(command.destinationUnlocode()),
                 command.arrivalDeadline(),
-                command.cargoType(),
+                CargoType.valueOf(command.cargoType()),
                 command.weightKg()
         );
 
         List<RouteCandidate> stubCandidates = generateStubCandidates(command.weightKg());
-        estimate.addCandidates(stubCandidates);
+        estimate.replaceCandidates(stubCandidates);
 
         estimateRepository.save(estimate);
         return estimate.getEstimateId();

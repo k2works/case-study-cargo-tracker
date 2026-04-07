@@ -1,7 +1,7 @@
-package com.example.cargotracker.estimation.interfaces;
+package com.example.cargotracker.estimation.interfaces.web;
 
-import com.example.cargotracker.estimation.application.CreateEstimateCommand;
-import com.example.cargotracker.estimation.application.EstimateService;
+import com.example.cargotracker.estimation.application.internal.commandservices.CreateEstimateCommand;
+import com.example.cargotracker.estimation.application.internal.commandservices.EstimateCommandService;
 import com.example.cargotracker.estimation.domain.model.Estimate;
 import com.example.cargotracker.estimation.domain.model.EstimateId;
 import jakarta.validation.Valid;
@@ -22,15 +22,15 @@ import java.util.UUID;
 @RequestMapping("/estimates")
 public class EstimationController {
 
-    private final EstimateService estimateService;
+    private final EstimateCommandService estimateCommandService;
 
-    public EstimationController(EstimateService estimateService) {
-        this.estimateService = estimateService;
+    public EstimationController(EstimateCommandService estimateCommandService) {
+        this.estimateCommandService = estimateCommandService;
     }
 
     @GetMapping
     public String index(Model model) {
-        model.addAttribute("estimates", estimateService.findAll());
+        model.addAttribute("estimates", estimateCommandService.findAll());
         return "estimation/index";
     }
 
@@ -50,7 +50,7 @@ public class EstimationController {
             return "estimation/new";
         }
 
-        EstimateId estimateId = estimateService.createEstimate(new CreateEstimateCommand(
+        EstimateId estimateId = estimateCommandService.createEstimate(new CreateEstimateCommand(
                 form.getOriginUnlocode(),
                 form.getDestinationUnlocode(),
                 form.getArrivalDeadline(),
@@ -65,7 +65,7 @@ public class EstimationController {
 
     @GetMapping("/{estimateId}")
     public String show(@PathVariable String estimateId, Model model) {
-        Estimate estimate = estimateService.findByEstimateId(new EstimateId(UUID.fromString(estimateId)))
+        Estimate estimate = estimateCommandService.findByEstimateId(new EstimateId(UUID.fromString(estimateId)))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("estimate", estimate);
         return "estimation/show";

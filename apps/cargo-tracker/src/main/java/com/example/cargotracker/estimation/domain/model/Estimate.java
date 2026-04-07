@@ -1,5 +1,7 @@
 package com.example.cargotracker.estimation.domain.model;
 
+import com.example.cargotracker.shared.domain.model.Location;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -9,25 +11,25 @@ import java.util.Objects;
 public class Estimate {
 
     private final EstimateId estimateId;
-    private final String originUnlocode;
-    private final String destinationUnlocode;
+    private final Location origin;
+    private final Location destination;
     private final LocalDate arrivalDeadline;
-    private final String cargoType;
+    private final CargoType cargoType;
     private final BigDecimal weightKg;
     private final List<RouteCandidate> candidates;
     private EstimateStatus status;
 
     private Estimate(
             EstimateId estimateId,
-            String originUnlocode,
-            String destinationUnlocode,
+            Location origin,
+            Location destination,
             LocalDate arrivalDeadline,
-            String cargoType,
+            CargoType cargoType,
             BigDecimal weightKg
     ) {
         this.estimateId = estimateId;
-        this.originUnlocode = originUnlocode;
-        this.destinationUnlocode = destinationUnlocode;
+        this.origin = origin;
+        this.destination = destination;
         this.arrivalDeadline = arrivalDeadline;
         this.cargoType = cargoType;
         this.weightKg = weightKg;
@@ -36,34 +38,28 @@ public class Estimate {
     }
 
     public static Estimate create(
-            String originUnlocode,
-            String destinationUnlocode,
+            Location origin,
+            Location destination,
             LocalDate arrivalDeadline,
-            String cargoType,
+            CargoType cargoType,
             BigDecimal weightKg
     ) {
-        if (originUnlocode == null || originUnlocode.isBlank()) {
-            throw new IllegalArgumentException("originUnlocode must not be blank");
-        }
-        if (destinationUnlocode == null || destinationUnlocode.isBlank()) {
-            throw new IllegalArgumentException("destinationUnlocode must not be blank");
-        }
-        if (Objects.equals(originUnlocode, destinationUnlocode)) {
+        Objects.requireNonNull(origin, "origin must not be null");
+        Objects.requireNonNull(destination, "destination must not be null");
+        if (Objects.equals(origin, destination)) {
             throw new IllegalArgumentException("origin and destination must be different");
         }
         if (arrivalDeadline == null) {
             throw new IllegalArgumentException("arrivalDeadline must not be null");
         }
-        if (cargoType == null || cargoType.isBlank()) {
-            throw new IllegalArgumentException("cargoType must not be blank");
-        }
+        Objects.requireNonNull(cargoType, "cargoType must not be null");
         if (weightKg == null || weightKg.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("weightKg must be positive");
         }
         return new Estimate(
                 EstimateId.generate(),
-                originUnlocode,
-                destinationUnlocode,
+                origin,
+                destination,
                 arrivalDeadline,
                 cargoType,
                 weightKg
@@ -73,16 +69,16 @@ public class Estimate {
     @SuppressWarnings("java:S107")
     public static Estimate reconstruct(
             EstimateId estimateId,
-            String originUnlocode,
-            String destinationUnlocode,
+            Location origin,
+            Location destination,
             LocalDate arrivalDeadline,
-            String cargoType,
+            CargoType cargoType,
             BigDecimal weightKg,
             EstimateStatus status,
             List<RouteCandidate> candidates
     ) {
         Estimate estimate = new Estimate(
-                estimateId, originUnlocode, destinationUnlocode,
+                estimateId, origin, destination,
                 arrivalDeadline, cargoType, weightKg
         );
         estimate.status = status;
@@ -90,7 +86,7 @@ public class Estimate {
         return estimate;
     }
 
-    public void addCandidates(List<RouteCandidate> newCandidates) {
+    public void replaceCandidates(List<RouteCandidate> newCandidates) {
         this.candidates.clear();
         this.candidates.addAll(newCandidates);
     }
@@ -99,19 +95,19 @@ public class Estimate {
         return estimateId;
     }
 
-    public String getOriginUnlocode() {
-        return originUnlocode;
+    public Location getOrigin() {
+        return origin;
     }
 
-    public String getDestinationUnlocode() {
-        return destinationUnlocode;
+    public Location getDestination() {
+        return destination;
     }
 
     public LocalDate getArrivalDeadline() {
         return arrivalDeadline;
     }
 
-    public String getCargoType() {
+    public CargoType getCargoType() {
         return cargoType;
     }
 

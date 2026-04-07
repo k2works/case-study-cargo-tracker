@@ -1,10 +1,12 @@
 package com.example.cargotracker.estimation.infrastructure.repositories;
 
+import com.example.cargotracker.estimation.domain.model.CargoType;
 import com.example.cargotracker.estimation.domain.model.Estimate;
 import com.example.cargotracker.estimation.domain.model.EstimateId;
 import com.example.cargotracker.estimation.domain.model.EstimateStatus;
 import com.example.cargotracker.estimation.domain.model.RouteCandidate;
 import com.example.cargotracker.estimation.domain.model.repository.EstimateRepository;
+import com.example.cargotracker.shared.domain.model.Location;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -55,10 +57,10 @@ public class MyBatisEstimateRepository implements EstimateRepository {
     private EstimateRecord toRecord(Estimate estimate) {
         EstimateRecord r = new EstimateRecord();
         r.estimateId = estimate.getEstimateId().toString();
-        r.originUnlocode = estimate.getOriginUnlocode();
-        r.destinationUnlocode = estimate.getDestinationUnlocode();
+        r.originUnlocode = estimate.getOrigin().unlocode();
+        r.destinationUnlocode = estimate.getDestination().unlocode();
         r.arrivalDeadline = estimate.getArrivalDeadline();
-        r.cargoType = estimate.getCargoType();
+        r.cargoType = estimate.getCargoType().name();
         r.weightKg = estimate.getWeightKg();
         r.status = estimate.getStatus().name();
         return r;
@@ -81,10 +83,10 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                 .toList();
         return Estimate.reconstruct(
                 new EstimateId(UUID.fromString(r.estimateId)),
-                r.originUnlocode,
-                r.destinationUnlocode,
+                new Location(r.originUnlocode),
+                new Location(r.destinationUnlocode),
                 r.arrivalDeadline,
-                r.cargoType,
+                CargoType.valueOf(r.cargoType),
                 r.weightKg,
                 EstimateStatus.valueOf(r.status),
                 candidates

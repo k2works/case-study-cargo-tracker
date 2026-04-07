@@ -1,10 +1,8 @@
-package com.example.cargotracker.estimation.application;
+package com.example.cargotracker.estimation.application.internal.commandservices;
 
 import com.example.cargotracker.estimation.domain.model.Estimate;
 import com.example.cargotracker.estimation.domain.model.EstimateId;
 import com.example.cargotracker.estimation.domain.model.EstimateStatus;
-import com.example.cargotracker.estimation.domain.model.repository.EstimateRepository;
-import com.example.cargotracker.estimation.infrastructure.repositories.MyBatisEstimateRepository;
 import com.example.cargotracker.support.PostgreSQLIntegrationTestBase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,15 +18,14 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@DisplayName("EstimateService 統合テスト")
-class EstimateServiceTest extends PostgreSQLIntegrationTestBase {
+@DisplayName("EstimateCommandService 統合テスト")
+class EstimateCommandServiceTest extends PostgreSQLIntegrationTestBase {
 
     @Autowired
-    private EstimateService estimateService;
+    private EstimateCommandService estimateCommandService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -48,10 +45,10 @@ class EstimateServiceTest extends PostgreSQLIntegrationTestBase {
                 new BigDecimal("1000.000")
         );
 
-        EstimateId estimateId = estimateService.createEstimate(command);
+        EstimateId estimateId = estimateCommandService.createEstimate(command);
 
         assertThat(estimateId).isNotNull();
-        Optional<Estimate> found = estimateService.findByEstimateId(estimateId);
+        Optional<Estimate> found = estimateCommandService.findByEstimateId(estimateId);
         assertThat(found).isPresent();
         assertThat(found.get().getCandidates()).isNotEmpty();
         assertThat(found.get().getStatus()).isEqualTo(EstimateStatus.CREATED);
@@ -60,12 +57,12 @@ class EstimateServiceTest extends PostgreSQLIntegrationTestBase {
     @Test
     @DisplayName("全件一覧を取得できる")
     void shouldFindAllEstimates() {
-        estimateService.createEstimate(new CreateEstimateCommand(
+        estimateCommandService.createEstimate(new CreateEstimateCommand(
                 "JPTYO", "USNYC", LocalDate.now().plusDays(30), "GENERAL", new BigDecimal("1000.000")));
-        estimateService.createEstimate(new CreateEstimateCommand(
+        estimateCommandService.createEstimate(new CreateEstimateCommand(
                 "JPTYO", "SGSIN", LocalDate.now().plusDays(45), "REFRIGERATED", new BigDecimal("500.000")));
 
-        List<Estimate> all = estimateService.findAll();
+        List<Estimate> all = estimateCommandService.findAll();
         assertThat(all).hasSize(2);
     }
 }
