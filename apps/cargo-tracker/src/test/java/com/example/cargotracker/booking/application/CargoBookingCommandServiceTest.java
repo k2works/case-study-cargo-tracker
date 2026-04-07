@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.application;
 
+import com.example.cargotracker.booking.application.internal.commandservices.AssignToRoutingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
@@ -359,6 +360,28 @@ class CargoBookingCommandServiceTest {
         );
 
         verify(cargoRepository, never()).save(any(Cargo.class));
+    }
+
+    @Test
+    void assignToRouting_仮受付状態から経路設計中に遷移する() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        Cargo preliminary = cargo(bookingId, BookingStatus.PRELIMINARY);
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(preliminary));
+
+        cargoBookingCommandService.assignToRouting(new AssignToRoutingCommand(bookingId.toString()));
+
+        ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
+        verify(cargoRepository).updateStatus(captor.capture());
+        assertEquals(BookingStatus.ROUTE_PROPOSED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void assignToRouting_存在しないBookingIdは例外() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+
+        assertThrows(BookingNotFoundException.class,
+                () -> cargoBookingCommandService.assignToRouting(new AssignToRoutingCommand(bookingId.toString())));
     }
 
     private Cargo cargo(BookingId bookingId, BookingStatus status) {

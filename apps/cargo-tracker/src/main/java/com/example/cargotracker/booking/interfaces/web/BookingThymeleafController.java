@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.interfaces.web;
 
+import com.example.cargotracker.booking.application.internal.commandservices.AssignToRoutingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
@@ -112,6 +113,19 @@ public class BookingThymeleafController {
         try {
             cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId));
             redirectAttributes.addFlashAttribute("successMessage", "予約を確定しました。");
+        } catch (BookingNotFoundException e) {
+            throw new ResponseStatusException(NOT_FOUND);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/bookings/" + bookingId;
+    }
+
+    @PostMapping("/{bookingId}/assign-to-routing")
+    public String assignToRouting(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
+        try {
+            cargoBookingCommandService.assignToRouting(new AssignToRoutingCommand(bookingId));
+            redirectAttributes.addFlashAttribute("successMessage", "経路設計者に引き渡しました。");
         } catch (BookingNotFoundException e) {
             throw new ResponseStatusException(NOT_FOUND);
         } catch (IllegalStateException e) {

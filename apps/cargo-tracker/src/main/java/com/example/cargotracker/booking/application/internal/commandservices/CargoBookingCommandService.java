@@ -108,6 +108,14 @@ public class CargoBookingCommandService {
         eventPublisher.publishEvent(new BookingCancelledEvent(cancelled.getBookingId()));
     }
 
+    public void assignToRouting(AssignToRoutingCommand command) {
+        BookingId bookingId = new BookingId(UUID.fromString(command.bookingId()));
+        Cargo cargo = cargoRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+        Cargo routed = cargo.assignToRouting();
+        cargoRepository.updateStatus(routed);
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
     }

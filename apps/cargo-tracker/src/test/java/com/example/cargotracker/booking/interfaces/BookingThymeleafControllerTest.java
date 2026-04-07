@@ -303,6 +303,44 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/assign-to-routing で仮受付予約が経路設計中になる")
+    void postAssignToRouting_shouldRedirectWithSuccess() throws Exception {
+        String shipperId = insertShipper("SHP-RTE01");
+        MvcResult createResult = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "10.000")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = createResult.getResponse().getHeader("Location");
+        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+
+        mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/bookings/" + bookingId));
+
+        mockMvc.perform(get("/bookings/" + bookingId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("経路提案済")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /bookings/{bookingId}/assign-to-routing で存在しない予約は 404 になる")
+    void postAssignToRouting_notFound_shouldReturn404() throws Exception {
+        String unknownId = UUID.randomUUID().toString();
+        mockMvc.perform(post("/bookings/" + unknownId + "/assign-to-routing")
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
     private String insertShipper(String shipperCode) {
         String shipperId = UUID.randomUUID().toString();
         jdbcTemplate.update(
