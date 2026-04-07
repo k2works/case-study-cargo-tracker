@@ -23,7 +23,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -66,9 +70,22 @@ public class BookingThymeleafController {
     }
 
     @GetMapping("/new")
-    public String newForm(Model model) {
+    public String newForm(
+            @RequestParam(required = false) String originUnlocode,
+            @RequestParam(required = false) String destinationUnlocode,
+            @RequestParam(required = false) String arrivalDeadline,
+            @RequestParam(required = false) String cargoType,
+            @RequestParam(required = false) BigDecimal weightKg,
+            Model model
+    ) {
         if (!model.containsAttribute(BOOKING_ATTRIBUTE)) {
-            model.addAttribute(BOOKING_ATTRIBUTE, new BookCargoRequest());
+            BookCargoRequest request = new BookCargoRequest();
+            if (originUnlocode != null) request.setOriginUnlocode(originUnlocode);
+            if (destinationUnlocode != null) request.setDestinationUnlocode(destinationUnlocode);
+            if (arrivalDeadline != null) request.setArrivalDeadline(LocalDate.parse(arrivalDeadline));
+            if (cargoType != null) request.setCargoType(cargoType);
+            if (weightKg != null) request.setWeight(weightKg);
+            model.addAttribute(BOOKING_ATTRIBUTE, request);
         }
         model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
         addShippersToModel(model);

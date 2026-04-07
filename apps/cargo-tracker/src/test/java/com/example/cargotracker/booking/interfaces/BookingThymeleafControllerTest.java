@@ -296,6 +296,23 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
 
     @Test
     @WithMockUser
+    @DisplayName("GET /bookings/new に見積パラメータを渡すと予約フォームが事前入力される")
+    void getNewBooking_withEstimateParams_shouldPreFillForm() throws Exception {
+        String deadline = LocalDate.now().plusDays(30).toString();
+        mockMvc.perform(get("/bookings/new")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USNYC")
+                        .param("arrivalDeadline", deadline)
+                        .param("cargoType", "GENERAL")
+                        .param("weightKg", "1000.000"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/new"))
+                .andExpect(content().string(containsString("JPTYO")))
+                .andExpect(content().string(containsString("USNYC")));
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("GET /bookings/{bookingId} で存在しない予約は 404 になる")
     void getBookingShow_notFound_shouldReturn404() throws Exception {
         String unknownId = UUID.randomUUID().toString();

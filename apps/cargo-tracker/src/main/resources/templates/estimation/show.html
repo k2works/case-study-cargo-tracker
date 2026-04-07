@@ -16,7 +16,11 @@
         <div>
             <h1 class="h3 mb-1">見積詳細</h1>
         </div>
-        <a class="btn btn-outline-secondary" th:href="@{/estimates}">一覧へ戻る</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary"
+               th:href="@{/bookings/new(originUnlocode=${estimate.origin.unlocode},destinationUnlocode=${estimate.destination.unlocode},arrivalDeadline=${estimate.arrivalDeadline},cargoType=${estimate.cargoType},weightKg=${estimate.weightKg})}">この見積で予約する</a>
+            <a class="btn btn-outline-secondary" th:href="@{/estimates}">一覧へ戻る</a>
+        </div>
     </div>
 
     <div class="card shadow-sm mb-4">
