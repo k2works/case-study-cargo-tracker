@@ -160,6 +160,11 @@ end note
 
 ## 1. Booking Context（予約コンテキスト）
 
+> **IT2 実装状況（2026-04-06 完了）**:
+>
+> - ✅ 実装済み: `Cargo`（集約）・`BookingId`・`ShipperId`・`RouteSpecification`・`BookingStatus`・`CargoType`・`Dimensions`・`Quantity`・`Description`・`HazardousDeclaration`・`TemperatureRequirement`・`ShipperExistenceChecker`（ACL）
+> - ⏳ IT4+ 実装予定: `Consignee`・`CargoItinerary`・`Leg`・`Delivery`・`Money`・`CargoHandlingActivity`・`RoutingStatus`
+
 ### ドメインモデル図
 
 ```plantuml
@@ -350,6 +355,10 @@ Delivery *-- RoutingStatus
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
 ## 2. Shipper Context（荷主コンテキスト）
+
+> **IT1 実装状況（2026-04-04 完了）**:
+>
+> - ✅ 実装済み（全クラス）: `Shipper`（集約）・`CorporateShipper`・`ShipperCode`・`ShipperName`・`Email`・`Phone`・`Address`・`ContractNumber`・`DiscountRate`・`ShipperType`・`ShipperRepository`（ポート）
 
 ### ドメインモデル図
 
