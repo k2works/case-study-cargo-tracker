@@ -182,6 +182,13 @@ public class Cargo {
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.CANCELLED));
     }
 
+    public Cargo assignToRouting() {
+        if (status != BookingStatus.PRELIMINARY) {
+            throw new IllegalStateException("経路設計依頼は仮受付状態からのみ可能です。現在の状態: " + status.getDisplayName());
+        }
+        return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.ROUTE_PROPOSED));
+    }
+
     private State currentStateWith(BookingStatus nextStatus) {
         return state(
                 routeSpecification,

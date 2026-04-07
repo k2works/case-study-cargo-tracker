@@ -344,6 +344,22 @@ class CargoTest {
         assertNull(cargo.getTemperatureRequirement());
     }
 
+    @Test
+    void shouldAssignToRoutingFromPreliminaryStatus() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.PRELIMINARY, null, null);
+
+        Cargo routed = cargo.assignToRouting();
+
+        assertEquals(BookingStatus.ROUTE_PROPOSED, routed.getStatus());
+    }
+
+    @Test
+    void shouldThrowWhenAssignToRoutingFromNonPreliminaryStatus() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.CONFIRMED, null, null);
+
+        assertThrows(IllegalStateException.class, cargo::assignToRouting);
+    }
+
     private Cargo createCargo(
             BookingId bookingId,
             ShipperId shipperId,
