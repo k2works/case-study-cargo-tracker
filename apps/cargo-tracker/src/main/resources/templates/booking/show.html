@@ -67,8 +67,8 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <dl class="row mb-0">
-                <dt class="col-sm-3">荷主 ID</dt>
-                <dd class="col-sm-9" th:text="${booking.shipperId}">shipper-id</dd>
+                <dt class="col-sm-3">荷主</dt>
+                <dd class="col-sm-9" th:text="${booking.shipperName != null} ? ${booking.shipperName} : ${booking.shipperId}">shipper-name</dd>
 
                 <dt class="col-sm-3">貨物種別</dt>
                 <dd class="col-sm-9" th:text="${booking.cargoTypeDisplayName}">一般</dd>

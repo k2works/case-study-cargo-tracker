@@ -93,7 +93,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
         mockMvc.perform(get(location))
                 .andExpect(status().isOk())
                 .andExpect(view().name("booking/show"))
-                .andExpect(content().string(containsString(shipperId)));
+                .andExpect(content().string(containsString("画面テスト荷主 SHP-WEB01")));
     }
 
     @Test
