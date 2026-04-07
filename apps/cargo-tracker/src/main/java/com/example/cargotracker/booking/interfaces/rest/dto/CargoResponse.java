@@ -6,6 +6,7 @@ import java.time.LocalDate;
 public record CargoResponse(
         String bookingId,
         String shipperId,
+        String shipperName,
         String cargoType,
         String cargoTypeDisplayName,
         BigDecimal weight,

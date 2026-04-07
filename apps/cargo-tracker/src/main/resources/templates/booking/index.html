@@ -42,7 +42,7 @@
                             <span th:title="${booking.bookingId}"
                                   th:text="${#strings.substring(booking.bookingId, 0, 8) + '...'}">booking-id</span>
                         </td>
-                        <td th:text="${booking.shipperId}">shipper-id</td>
+                        <td th:text="${booking.shipperName != null} ? ${booking.shipperName} : ${booking.shipperId}">shipper-name</td>
                         <td th:text="${booking.originUnlocode}">JPTYO</td>
                         <td th:text="${booking.destinationUnlocode}">USLAX</td>
                         <td th:text="${booking.arrivalDeadline}">2026-04-30</td>

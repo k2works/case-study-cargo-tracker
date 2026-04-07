@@ -2,15 +2,26 @@ package com.example.cargotracker.booking.interfaces.rest.transform;
 
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.interfaces.rest.dto.CargoResponse;
+import com.example.cargotracker.shipper.domain.model.repository.ShipperRepository;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CargoAssembler {
 
+    private final ShipperRepository shipperRepository;
+
+    public CargoAssembler(ShipperRepository shipperRepository) {
+        this.shipperRepository = shipperRepository;
+    }
+
     public CargoResponse toResponse(Cargo cargo) {
+        String shipperName = shipperRepository.findById(cargo.getShipperId())
+                .map(s -> s.getName().value())
+                .orElse(null);
         return new CargoResponse(
                 cargo.getBookingId().toString(),
                 cargo.getShipperId().toString(),
+                shipperName,
                 cargo.getCargoType().name(),
                 cargo.getCargoType().getDisplayName(),
                 cargo.getWeight(),

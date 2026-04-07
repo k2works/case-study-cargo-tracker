@@ -159,6 +159,18 @@ class BookingRestControllerTest extends PostgreSQLIntegrationTestBase {
 
     @Test
     @WithMockUser
+    @DisplayName("GET /api/v1/bookings/{bookingId} で shipperName が含まれる")
+    void getBookingById_shouldIncludeShipperName() throws Exception {
+        String shipperId = insertShipper("SHP-1005");
+        String bookingId = registerBooking(shipperId);
+
+        mockMvc.perform(get("/api/v1/bookings/{bookingId}", bookingId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shipperName", is("テスト荷主 SHP-1005")));
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("POST /api/v1/bookings で危険物貨物の予約を登録すると 201 が返る")
     void postHazardousBooking_shouldReturnCreated() throws Exception {
         String shipperId = insertShipper("SHP-2001");
