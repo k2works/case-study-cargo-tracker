@@ -80,6 +80,9 @@ Booking 1 ─── 1 Invoice
 | 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |
 | 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US13 |
+| 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
+| 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
+| 見積詳細 | `/estimates/{estimateId}` | 見積詳細・スタブルート候補一覧 | 営業担当者 | US01 |
 
 ---
 
@@ -261,6 +264,28 @@ state 公開貨物追跡 {
 
 ダッシュボード --> 割引ポリシー一覧 : [管理設定] クリック
 [*] --> 公開貨物追跡 : 直接 URL アクセス（認証不要）
+
+state "見積フロー" as estimation_flow {
+  state 見積一覧 {
+    見積一覧 : /estimates
+    見積一覧 : 一覧テーブル・検索
+  }
+  state 見積作成 {
+    見積作成 : /estimates/new
+    見積作成 : 入力フォーム
+  }
+  state 見積詳細 {
+    見積詳細 : /estimates/{estimateId}
+    見積詳細 : ルート候補一覧
+  }
+
+  見積一覧 --> 見積作成 : [新規見積作成] ボタン
+  見積一覧 --> 見積詳細 : 行クリック
+  見積作成 --> 見積詳細 : 作成成功（PRG）
+  見積作成 --> 見積作成 : バリデーションエラー
+}
+
+ダッシュボード --> 見積一覧 : [見積管理] クリック（US01）
 
 @enduml
 ```
@@ -498,6 +523,7 @@ state 公開貨物追跡 {
 - **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
 - **荷役履歴**: HandlingEvent を時系列降順で表示
+- **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTE_PROPOSED に遷移する
 - **[キャンセル]**: ROLE_SALES のみ表示。確認ダイアログ後に `POST /bookings/{bookingId}/cancel`
 - **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
 
