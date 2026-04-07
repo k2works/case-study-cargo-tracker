@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.estimation.infrastructure.repositories.EstimateMapper">
+
+    <resultMap id="EstimateResultMap" type="com.example.cargotracker.estimation.infrastructure.repositories.EstimateRecord">
+        <id property="id" column="id"/>
+        <result property="estimateId" column="estimate_id"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="arrivalDeadline" column="arrival_deadline"/>
+        <result property="cargoType" column="cargo_type"/>
+        <result property="weightKg" column="weight_kg"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <resultMap id="RouteCandidateResultMap" type="com.example.cargotracker.estimation.infrastructure.repositories.RouteCandidateRecord">
+        <id property="id" column="id"/>
+        <result property="estimateId" column="estimate_id"/>
+        <result property="voyageNumber" column="voyage_number"/>
+        <result property="transitPort" column="transit_port"/>
+        <result property="transitDays" column="transit_days"/>
+        <result property="estimatedCost" column="estimated_cost"/>
+        <result property="rank" column="rank"/>
+    </resultMap>
+
+    <insert id="insertEstimate" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO estimate (estimate_id, origin_unlocode, destination_unlocode, arrival_deadline,
+                              cargo_type, weight_kg, status)
+        VALUES (CAST(#{estimateId} AS UUID), #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline},
+                #{cargoType}, #{weightKg}, #{status})
+    </insert>
+
+    <insert id="insertRouteCandidates">
+        INSERT INTO route_candidate (estimate_id, voyage_number, transit_port, transit_days, estimated_cost, rank)
+        VALUES
+        <foreach collection="candidates" item="c" index="i" separator=",">
+            (#{estimateId}, #{c.voyageNumber}, #{c.transitPort}, #{c.transitDays}, #{c.estimatedCost}, #{i})
+        </foreach>
+    </insert>
+
+    <delete id="deleteRouteCandidatesByEstimateId">
+        DELETE FROM route_candidate WHERE estimate_id = #{estimateId}
+    </delete>
+
+    <select id="findEstimateByEstimateId" resultMap="EstimateResultMap">
+        SELECT * FROM estimate WHERE estimate_id = CAST(#{estimateId} AS UUID)
+    </select>
+
+    <select id="findCandidatesByEstimateId" resultMap="RouteCandidateResultMap">
+        SELECT * FROM route_candidate WHERE estimate_id = #{estimateId} ORDER BY rank
+    </select>
+
+    <select id="findAllEstimates" resultMap="EstimateResultMap">
+        SELECT * FROM estimate ORDER BY id
+    </select>
+
+</mapper>
