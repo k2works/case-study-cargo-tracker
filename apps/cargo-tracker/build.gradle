@@ -95,7 +95,10 @@ sonar {
             '**/interfaces/rest/transform/*Assembler.java,' +
             '**/interfaces/web/*ThymeleafController.java,' +
             '**/infrastructure/repositories/*Mapper.java,' +
-            '**/infrastructure/repositories/MyBatis*Repository.java'
+            '**/infrastructure/repositories/MyBatis*Repository.java,' +
+            '**/infrastructure/repositories/*Record.java,' +
+            'src/test/**/*.java,' +
+            '**/src/test/**/*.java'
         property 'sonar.cpd.exclusions',
             '**/domain/model/valueobjects/*.java,' +
             '**/domain/model/aggregates/Shipper.java,' +
@@ -109,6 +112,8 @@ sonar {
             '**/infrastructure/repositories/MyBatis*Repository.java,' +
             '**/infrastructure/repositories/*Record.java,' +
             '**/src/test/**/*.java,' +
+            'src/test/**/*.java'
+        property 'sonar.test.exclusions',
             'src/test/**/*.java'
         property 'sonar.coverage.jacoco.xmlReportPaths',
             layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml').get().asFile.absolutePath

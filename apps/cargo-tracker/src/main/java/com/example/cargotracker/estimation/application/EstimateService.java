@@ -34,8 +34,7 @@ public class EstimateService {
                 command.weightKg()
         );
 
-        List<RouteCandidate> stubCandidates = generateStubCandidates(
-                command.originUnlocode(), command.destinationUnlocode(), command.weightKg());
+        List<RouteCandidate> stubCandidates = generateStubCandidates(command.weightKg());
         estimate.addCandidates(stubCandidates);
 
         estimateRepository.save(estimate);
@@ -52,8 +51,7 @@ public class EstimateService {
         return estimateRepository.findAll();
     }
 
-    private List<RouteCandidate> generateStubCandidates(
-            String origin, String destination, BigDecimal weightKg) {
+    private List<RouteCandidate> generateStubCandidates(BigDecimal weightKg) {
         BigDecimal baseCost = weightKg.multiply(new BigDecimal("500"));
         return List.of(
                 new RouteCandidate("V001", "SGSIN", 21, baseCost),

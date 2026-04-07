@@ -70,6 +70,7 @@ public class Estimate {
         );
     }
 
+    @SuppressWarnings("java:S107")
     public static Estimate reconstruct(
             EstimateId estimateId,
             String originUnlocode,
