@@ -16,7 +16,10 @@
                 <div class="card-body p-4">
                     <h1 class="h3 mb-4">予約登録</h1>
 
-                    <form th:action="@{/bookings}" th:object="${booking}" method="post">
+                    <form th:action="${estimateId != null ? '/bookings?estimateId=' + estimateId : '/bookings'}" th:object="${booking}" method="post">
+                        <div th:if="${estimateId != null}" class="alert alert-info" role="alert">
+                            見積の内容が入力されています。荷主を選択して登録してください。
+                        </div>
                         <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger">
                             入力内容を確認してください。
                         </div>
