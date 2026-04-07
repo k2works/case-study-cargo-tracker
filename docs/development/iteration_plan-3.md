@@ -96,12 +96,12 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | SonarQube ローカルスキャン実行・Quality Gate 確認 | 2h | - | [ ] |
-| 1.2 | ドメインモデル・データモデル・UI 設計ドキュメント同期 | 2h | - | [ ] |
-| 1.3 | E2E テスト用 H2 DB リセット機構整備（test プロファイル設定） | 4h | - | [ ] |
-| 1.4 | テスト用ヘルパーメソッドを `TestFixtures` クラスへ集約 | 2h | - | [ ] |
-| 1.5 | CargoResponse に `shipperName` フィールドを追加し荷主名を一覧・詳細画面に表示（booking_uiux_review H4） | 2h | - | [ ] |
-| 1.6 | booking_uiux_review H1・H2・H3・H5 の IT2 対応を確認し、未対応の場合は修正（confirmModal「キャンセル」→「戻る」・重量単位 kg 表示・温度単位 CELSIUS→℃・予約番号短縮表示） | 2h | - | [ ] |
-| 1.7 | US13_review H4 の IT2 対応を確認し、未対応の場合は `CargoBookingCommandServiceTest` に「確定済みからのキャンセル」テストを追加 | 1h | - | [ ] |
+| 1.2 | ドメインモデル・データモデル・UI 設計ドキュメント同期 | 2h | - | [x] |
+| 1.3 | E2E テスト用 H2 DB リセット機構整備（test プロファイル設定） | 4h | - | [x] |
+| 1.4 | テスト用ヘルパーメソッドを `TestFixtures` クラスへ集約 | 2h | - | [x] |
+| 1.5 | CargoResponse に `shipperName` フィールドを追加し荷主名を一覧・詳細画面に表示（booking_uiux_review H4） | 2h | - | [x] |
+| 1.6 | booking_uiux_review H1・H2・H3・H5 の IT2 対応を確認し、未対応の場合は修正（confirmModal「キャンセル」→「戻る」・重量単位 kg 表示・温度単位 CELSIUS→℃・予約番号短縮表示） | 2h | - | [x] |
+| 1.7 | US13_review H4 の IT2 対応を確認し、未対応の場合は `CargoBookingCommandServiceTest` に「確定済みからのキャンセル」テストを追加 | 1h | - | [x] |
 
 **小計**: 15h（理想時間）
 
@@ -109,13 +109,13 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Estimate ドメインモデル設計（EstimateId・RouteSpecification・RouteCandidate） | 2h | - | [ ] |
-| 2.2 | DB スキーマ作成（estimate・route_candidate テーブル） | 2h | - | [ ] |
-| 2.3 | EstimateRepository（MyBatis）実装 | 3h | - | [ ] |
-| 2.4 | EstimateService 実装（見積作成・スタブルート候補算出） | 4h | - | [ ] |
-| 2.5 | 見積作成 UI（Thymeleaf）・EstimationController 実装 | 4h | - | [ ] |
-| 2.6 | 単体テスト・統合テスト（TDD: Red → Green → Refactor） | 3h | - | [ ] |
-| 2.7 | Playwright E2E テスト追加 | 2h | - | [ ] |
+| 2.1 | Estimate ドメインモデル設計（EstimateId・RouteSpecification・RouteCandidate） | 2h | - | [x] |
+| 2.2 | DB スキーマ作成（estimate・route_candidate テーブル） | 2h | - | [x] |
+| 2.3 | EstimateRepository（MyBatis）実装 | 3h | - | [x] |
+| 2.4 | EstimateService 実装（見積作成・スタブルート候補算出） | 4h | - | [x] |
+| 2.5 | 見積作成 UI（Thymeleaf）・EstimationController 実装 | 4h | - | [x] |
+| 2.6 | 単体テスト・統合テスト（TDD: Red → Green → Refactor） | 3h | - | [x] |
+| 2.7 | Playwright E2E テスト追加 | 2h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -123,10 +123,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Booking 状態遷移「仮受付」→「経路設計中」実装（State パターン拡張） | 2h | - | [ ] |
-| 3.2 | 予約引き渡し UI（引き渡しボタン・確認ダイアログ）・コントローラー実装 | 2h | - | [ ] |
-| 3.3 | 通知スタブ実装（ログ出力） + 単体テスト・E2E テスト | 2h | - | [ ] |
-| 3.4 | ドキュメント更新（ドメインモデル・UI 設計） | 2h | - | [ ] |
+| 3.1 | Booking 状態遷移「仮受付」→「経路設計中」実装（State パターン拡張） | 2h | - | [x] |
+| 3.2 | 予約引き渡し UI（引き渡しボタン・確認ダイアログ）・コントローラー実装 | 2h | - | [x] |
+| 3.3 | 通知スタブ実装（ログ出力） + 単体テスト・E2E テスト | 2h | - | [x] |
+| 3.4 | ドキュメント更新（ドメインモデル・UI 設計） | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -134,13 +134,13 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| IT2 申し送り改善 | 3 | 15h | [ ] |
-| US01: 輸送見積を作成する | 5 | 20h | [ ] |
-| US06: 予約情報を経路設計者に引き渡す | 2 | 8h | [ ] |
+| IT2 申し送り改善 | 3 | 15h | [x] ※1.1（SonarQube）のみ未実施 |
+| US01: 輸送見積を作成する | 5 | 20h | [x] |
+| US06: 予約情報を経路設計者に引き渡す | 2 | 8h | [x] |
 | **合計** | **10** | **43h** | |
 
 **1 SP あたり**: 約 4.3h
-**進捗率**: 0% (0/10 SP)
+**進捗率**: 90% (9/10 SP) ※SonarQube スキャン未実施
 
 ---
 
