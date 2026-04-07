@@ -34,6 +34,14 @@ public class MyBatisEstimateRepository implements EstimateRepository {
     }
 
     @Override
+    public void updateStatus(Estimate estimate) {
+        estimateMapper.updateEstimateStatus(
+                estimate.getEstimateId().toString(),
+                estimate.getStatus().name()
+        );
+    }
+
+    @Override
     public Optional<Estimate> findByEstimateId(EstimateId estimateId) {
         EstimateRecord record = estimateMapper.findEstimateByEstimateId(estimateId.toString());
         if (record == null) {

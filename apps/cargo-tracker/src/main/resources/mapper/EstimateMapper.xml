@@ -39,6 +39,10 @@
         </foreach>
     </insert>
 
+    <update id="updateEstimateStatus">
+        UPDATE estimate SET status = #{status} WHERE estimate_id = CAST(#{estimateId} AS UUID)
+    </update>
+
     <delete id="deleteRouteCandidatesByEstimateId">
         DELETE FROM route_candidate WHERE estimate_id = #{estimateId}
     </delete>

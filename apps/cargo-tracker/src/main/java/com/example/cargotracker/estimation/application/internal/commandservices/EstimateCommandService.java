@@ -44,6 +44,14 @@ public class EstimateCommandService {
         return estimate.getEstimateId();
     }
 
+    public void markAsBooked(String estimateIdValue) {
+        EstimateId estimateId = new EstimateId(java.util.UUID.fromString(estimateIdValue));
+        Estimate estimate = estimateRepository.findByEstimateId(estimateId)
+                .orElseThrow(() -> new IllegalArgumentException("見積が見つかりません: " + estimateIdValue));
+        estimate.markAsBooked();
+        estimateRepository.updateStatus(estimate);
+    }
+
     @Transactional(readOnly = true)
     public Optional<Estimate> findByEstimateId(EstimateId estimateId) {
         return estimateRepository.findByEstimateId(estimateId);

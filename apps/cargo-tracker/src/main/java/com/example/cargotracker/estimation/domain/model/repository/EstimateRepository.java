@@ -10,6 +10,8 @@ public interface EstimateRepository {
 
     void save(Estimate estimate);
 
+    void updateStatus(Estimate estimate);
+
     Optional<Estimate> findByEstimateId(EstimateId estimateId);
 
     List<Estimate> findAll();

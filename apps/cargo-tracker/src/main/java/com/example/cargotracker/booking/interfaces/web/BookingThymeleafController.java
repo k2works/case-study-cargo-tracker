@@ -12,6 +12,7 @@ import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundE
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.transform.CargoAssembler;
+import com.example.cargotracker.estimation.application.internal.commandservices.EstimateCommandService;
 import com.example.cargotracker.shipper.application.internal.queryservices.FindShipperQueryService;
 import com.example.cargotracker.shipper.interfaces.rest.transform.ShipperAssembler;
 import jakarta.validation.Valid;
@@ -46,19 +47,22 @@ public class BookingThymeleafController {
     private final CargoAssembler cargoAssembler;
     private final FindShipperQueryService findShipperQueryService;
     private final ShipperAssembler shipperAssembler;
+    private final EstimateCommandService estimateCommandService;
 
     public BookingThymeleafController(
             CargoBookingCommandService cargoBookingCommandService,
             CargoBookingQueryService cargoBookingQueryService,
             CargoAssembler cargoAssembler,
             FindShipperQueryService findShipperQueryService,
-            ShipperAssembler shipperAssembler
+            ShipperAssembler shipperAssembler,
+            EstimateCommandService estimateCommandService
     ) {
         this.cargoBookingCommandService = cargoBookingCommandService;
         this.cargoBookingQueryService = cargoBookingQueryService;
         this.cargoAssembler = cargoAssembler;
         this.findShipperQueryService = findShipperQueryService;
         this.shipperAssembler = shipperAssembler;
+        this.estimateCommandService = estimateCommandService;
     }
 
     @GetMapping
@@ -71,6 +75,7 @@ public class BookingThymeleafController {
 
     @GetMapping("/new")
     public String newForm(
+            @RequestParam(required = false) String estimateId,
             @RequestParam(required = false) String originUnlocode,
             @RequestParam(required = false) String destinationUnlocode,
             @RequestParam(required = false) String arrivalDeadline,
@@ -87,6 +92,9 @@ public class BookingThymeleafController {
             if (weightKg != null) request.setWeight(weightKg);
             model.addAttribute(BOOKING_ATTRIBUTE, request);
         }
+        if (estimateId != null) {
+            model.addAttribute("estimateId", estimateId);
+        }
         model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
         addShippersToModel(model);
         return NEW_VIEW;
@@ -94,12 +102,16 @@ public class BookingThymeleafController {
 
     @PostMapping
     public String create(
+            @RequestParam(required = false) String estimateId,
             @Valid @ModelAttribute(BOOKING_ATTRIBUTE) BookCargoRequest request,
             BindingResult bindingResult,
             Model model,
             RedirectAttributes redirectAttributes
     ) {
         if (bindingResult.hasErrors()) {
+            if (estimateId != null) {
+                model.addAttribute("estimateId", estimateId);
+            }
             model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
             addShippersToModel(model);
             return NEW_VIEW;
@@ -107,10 +119,16 @@ public class BookingThymeleafController {
 
         try {
             BookingId bookingId = cargoBookingCommandService.bookCargo(toCommand(request));
+            if (estimateId != null) {
+                estimateCommandService.markAsBooked(estimateId);
+            }
             redirectAttributes.addFlashAttribute("successMessage", "予約を登録しました。（予約番号: " + bookingId + "）");
             return "redirect:/bookings/" + bookingId;
         } catch (ShipperNotFoundException exception) {
             bindingResult.rejectValue("shipperId", "notFound", "指定された荷主が見つかりません。");
+            if (estimateId != null) {
+                model.addAttribute("estimateId", estimateId);
+            }
             model.addAttribute(CARGO_TYPES_ATTRIBUTE, CargoType.values());
             addShippersToModel(model);
             return NEW_VIEW;

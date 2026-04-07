@@ -10,6 +10,8 @@ public interface EstimateMapper {
 
     void insertEstimate(EstimateRecord record);
 
+    void updateEstimateStatus(@Param("estimateId") String estimateId, @Param("status") String status);
+
     void insertRouteCandidates(@Param("estimateId") Long estimateId,
                                @Param("candidates") List<RouteCandidateRecord> candidates);
 
