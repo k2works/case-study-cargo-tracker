@@ -86,6 +86,13 @@ public class Estimate {
         return estimate;
     }
 
+    public void markAsBooked() {
+        if (this.status != EstimateStatus.CREATED) {
+            throw new IllegalStateException("CREATED 状態の見積のみ予約済みにできます。現在の状態: " + this.status);
+        }
+        this.status = EstimateStatus.BOOKED;
+    }
+
     public void replaceCandidates(List<RouteCandidate> newCandidates) {
         this.candidates.clear();
         this.candidates.addAll(newCandidates);

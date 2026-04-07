@@ -95,6 +95,44 @@ class EstimateTest {
     }
 
     @Test
+    @DisplayName("CargoType が日本語表示名を返す")
+    void cargoTypeShouldReturnDisplayName() {
+        assertThat(CargoType.GENERAL.getDisplayName()).isEqualTo("一般");
+        assertThat(CargoType.HAZARDOUS.getDisplayName()).isEqualTo("危険物");
+        assertThat(CargoType.REFRIGERATED.getDisplayName()).isEqualTo("冷凍・冷蔵");
+    }
+
+    @Test
+    @DisplayName("CREATED 状態の Estimate を BOOKED に遷移できる")
+    void shouldMarkAsBooked() {
+        Estimate estimate = Estimate.create(
+                JPTYO, USNYC,
+                LocalDate.now().plusDays(30),
+                CargoType.GENERAL,
+                new BigDecimal("1000.000")
+        );
+
+        estimate.markAsBooked();
+
+        assertThat(estimate.getStatus()).isEqualTo(EstimateStatus.BOOKED);
+    }
+
+    @Test
+    @DisplayName("BOOKED 状態の Estimate を再度予約しようとすると例外が発生する")
+    void shouldThrowWhenMarkingAlreadyBookedEstimate() {
+        Estimate estimate = Estimate.create(
+                JPTYO, USNYC,
+                LocalDate.now().plusDays(30),
+                CargoType.GENERAL,
+                new BigDecimal("1000.000")
+        );
+        estimate.markAsBooked();
+
+        assertThatThrownBy(estimate::markAsBooked)
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     @DisplayName("replaceCandidates は既存の候補を置換する")
     void shouldReplaceExistingCandidatesOnSecondCall() {
         Estimate estimate = Estimate.create(
