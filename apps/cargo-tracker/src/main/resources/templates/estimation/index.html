@@ -58,7 +58,7 @@
                         <td th:text="${estimate.cargoType.displayName}">一般</td>
                         <td>
                             <span class="badge"
-                                  th:classappend="${estimate.status == T(com.example.cargotracker.estimation.domain.model.EstimateStatus).CREATED} ? 'text-bg-secondary' : (${estimate.status == T(com.example.cargotracker.estimation.domain.model.EstimateStatus).BOOKED} ? 'text-bg-success' : 'text-bg-light text-muted')"
+                                  th:classappend="${estimate.status.name() == 'CREATED' ? 'text-bg-secondary' : (estimate.status.name() == 'BOOKED' ? 'text-bg-success' : 'text-bg-light text-muted')}"
                                   th:text="${estimate.status.displayName}">作成済</span>
                         </td>
                         <td>
