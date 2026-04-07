@@ -17,6 +17,9 @@
                 <a class="nav-link"
                    th:classappend="${activeMenu == 'shippers'} ? 'active'"
                    th:href="@{/shippers}">荷主管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'estimates'} ? 'active'"
+                   th:href="@{/estimates}">見積管理</a>
             </div>
             <form th:action="@{/logout}" method="post" class="d-flex">
                 <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
