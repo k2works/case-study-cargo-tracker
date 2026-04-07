@@ -10,7 +10,7 @@ tags: design, ddd, domain-model
 
 ## 概要
 
-本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。システムは以下の 7 つの境界付けられたコンテキスト（Bounded Context）で構成される。
+本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。システムは以下の 8 つの境界付けられたコンテキスト（Bounded Context）で構成される。
 
 | コンテキスト | 日本語名 | 主な責務 |
 |---|---|---|
@@ -20,6 +20,7 @@ tags: design, ddd, domain-model
 | Tracking Context | 追跡コンテキスト | 貨物追跡・例外イベント管理 |
 | Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理 |
 | Billing Context | 精算コンテキスト | 請求書発行・割引・支払い管理 |
+| Estimation Context | 見積コンテキスト | 輸送見積の作成・ルート候補の管理 |
 | Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperId・TransportStatus） |
 
 各コンテキストは自律的に変更可能な集約を持ち、コンテキスト間の連携はドメインイベントおよび ACL（Anti-Corruption Layer）ポートを通じて行う。
@@ -39,6 +40,7 @@ quadrantChart
     Handling Context: [0.28, 0.42]
     Shipper Context: [0.65, 0.28]
     Billing Context: [0.30, 0.65]
+    Estimation Context: [0.50, 0.35]
     Shared Domain: [0.18, 0.22]
 ```
 
@@ -81,12 +83,17 @@ quadrantChart
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
 | PaymentStatus | 支払い状態 | Billing Context | PENDING / CONFIRMED / OVERDUE / REFUNDED |
+| Estimate | 見積 | Estimation Context | 輸送見積の中心エンティティ。出発地・仕向地・期限・貨物種別・重量を保持 |
+| EstimateId | 見積 ID | Estimation Context | UUID ベースの見積一意識別子 |
+| RouteCandidate | ルート候補 | Estimation Context | 見積に紐づく輸送ルート候補。航海番号・経由港・輸送日数・見積コストを保持 |
+| CargoType | 貨物種別 | Estimation Context | GENERAL / HAZARDOUS / REFRIGERATED（Booking Context と共通） |
+| EstimateStatus | 見積状態 | Estimation Context | CREATED（作成済）/ EXPIRED（期限切れ） |
 
 ## アクターとコンテキストの対応
 
 | アクター | 対話するコンテキスト | 主要コマンド / 操作 |
 |---|---|---|
-| 営業担当者 | Booking Context | `BookCargoCommand`・`RouteCargoCommand`・見積作成 |
+| 営業担当者 | Booking Context・Estimation Context | `BookCargoCommand`・`RouteCargoCommand`・`CreateEstimateCommand` |
 | 経路設計者 | Routing Context + Booking Context | `RouteCargoCommand`・`AssignTrackingNumberCommand` |
 | 荷役作業員 | Handling Context | `HandlingActivityRegistrationCommand` |
 | 追跡管理者 | Tracking Context | `AddTrackingEventCommand`・例外登録 |
@@ -125,6 +132,10 @@ package "Billing Context" as billing #lightpink {
   class Invoice <<aggregate root>>
 }
 
+package "Estimation Context" as estimation #wheat {
+  class Estimate <<aggregate root>>
+}
+
 package "Shared Domain\n（Shared Kernel）" as shared #lightgray {
   class Location
   class ShipperId
@@ -145,6 +156,8 @@ handling ..> booking : HandlingActivityRegisteredEvent
 tracking ..> booking : TrackingExceptionDetectedEvent
 booking ..> billing : InvoiceRequested（DELIVERED 後）
 billing ..> shared : (reference)
+estimation --> shared : uses Location
+estimation ..> booking : 見積→予約への引き継ぎ（将来）
 
 note as ACL_NOTE
   **外部システム ACL Ports**
@@ -893,7 +906,108 @@ DiscountPolicy *-- DiscountPolicyType
 | GenerateInvoiceCommand | 経理担当者 | 請求書を新規発行（PENDING 状態で作成） |
 | ConfirmPaymentCommand | 経理担当者 | 支払い確認を記録し CONFIRMED に遷移 |
 
-## 7. Shared Domain（共有ドメイン）
+## 7. Estimation Context（見積コンテキスト）
+
+> **IT2 実装状況（2026-04-06 完了）**:
+>
+> - 実装済み: `Estimate`（集約）・`EstimateId`・`CargoType`・`EstimateStatus`・`RouteCandidate`・`EstimateRepository`（ポート）・`EstimateCommandService`
+
+### ドメインモデル図
+
+```plantuml
+@startuml
+title Estimation Context - ドメインモデル
+
+package "Aggregate（集約）" {
+  class Estimate <<aggregate root>> {
+    -estimateId: EstimateId
+    -origin: Location
+    -destination: Location
+    -arrivalDeadline: LocalDate
+    -cargoType: CargoType
+    -weightKg: BigDecimal
+    -candidates: List<RouteCandidate>
+    -status: EstimateStatus
+    +{static} create(origin, destination, arrivalDeadline, cargoType, weightKg): Estimate
+    +{static} reconstruct(...): Estimate
+    +replaceCandidates(newCandidates): void
+  }
+}
+
+package "Value Objects（値オブジェクト）" {
+  class EstimateId <<value object>> {
+    -value: UUID
+    +{static} generate(): EstimateId
+  }
+  class RouteCandidate <<value object>> {
+    -voyageNumber: String
+    -transitPort: String
+    -transitDays: int
+    -estimatedCost: BigDecimal
+  }
+  enum CargoType {
+    GENERAL
+    HAZARDOUS
+    REFRIGERATED
+  }
+  enum EstimateStatus {
+    CREATED
+    EXPIRED
+  }
+}
+
+package "Shared Kernel（参照）" {
+  class Location <<shared kernel>> {
+    -unLocode: String
+  }
+}
+
+Estimate *-- EstimateId
+Estimate *-- CargoType
+Estimate *-- EstimateStatus
+Estimate *-- RouteCandidate
+Estimate --> Location : origin
+Estimate --> Location : destination
+
+@enduml
+```
+
+### 集約・エンティティ・値オブジェクト一覧
+
+| 種別 | クラス名 | 日本語名 | 責務 |
+|---|---|---|---|
+| 集約ルート | Estimate | 見積 | 輸送見積の中心エンティティ。出発地・仕向地・貨物種別・重量・ルート候補を管理 |
+| 値オブジェクト | EstimateId | 見積 ID | UUID ベースの見積一意識別子。`generate()` で自動生成 |
+| 値オブジェクト（record） | RouteCandidate | ルート候補 | 航海番号・経由港・輸送日数・見積コストを保持。Estimate に複数紐づく |
+| 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
+| 列挙型 | EstimateStatus | 見積状態 | CREATED（作成済）/ EXPIRED（期限切れ）。表示名（日本語）を保持 |
+| 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点。Shared Domain に配置 |
+| リポジトリ | EstimateRepository | 見積リポジトリ | `save` / `findByEstimateId` / `findAll` |
+
+### ビジネスルール
+
+1. 見積は必ず EstimateId・origin・destination・arrivalDeadline・CargoType・weightKg を持つ
+2. origin と destination は異なる（同一地点への見積は不可）
+3. weightKg は正の値でなければならない
+4. RouteCandidate の voyageNumber は空でない文字列、transitDays は正の値、estimatedCost は正の値
+5. 見積作成時のデフォルトステータスは `CREATED`
+6. ルート候補はスタブ実装（固定値）で生成される。将来、外部ルーティングサービスとの連携時に置換予定
+
+### コマンド一覧
+
+| コマンド | 実行アクター | 主な処理 |
+|---|---|---|
+| CreateEstimateCommand | 営業担当者 | 見積を新規作成し、スタブのルート候補を自動付与 |
+
+### Booking Context との関係
+
+Estimation Context は Booking Context と以下の関係を持つ。
+
+- **共有**: CargoType 列挙型は両コンテキストで同一の値（GENERAL / HAZARDOUS / REFRIGERATED）を使用する
+- **参照**: Location（Shared Domain）を経由して出発地・仕向地を共有する
+- **将来の連携**: 見積から予約への引き継ぎ（見積情報を基に Cargo を作成するフロー）は将来イテレーションで実装予定
+
+## 8. Shared Domain（共有ドメイン）
 
 ### ドメインモデル図
 
@@ -1068,3 +1182,9 @@ HandlingActivity を集約ルートとし、CustomsDeclaration を集約内エ�
 Invoice を集約ルートとし、DiscountPolicy はドメインサービスではなく値オブジェクトとして Invoice に委譲する設計とした。
 
 **根拠**：請求書 1 件の整合性（基本料金・割引率・最終金額の一貫性）は Invoice 集約内で保証される。DiscountPolicy の割引率計算ロジックは Invoice の `applyDiscount()` 内で完結するため、外部ドメインサービスとして切り出す必要はない。支払い状態（PaymentStatus）の遷移も Invoice 集約が責任を持つ。
+
+### Estimation Context：Estimate 集約
+
+Estimate を集約ルートとし、RouteCandidate（ルート候補）のリストを集約内に保持する設計とした。
+
+**根拠**：見積とルート候補は 1 対多の関係にあり、ルート候補は見積の文脈でのみ意味を持つ。`replaceCandidates()` でルート候補の一括入替を行うため、トランザクション整合性の観点から単一集約に含める。RouteCandidate は Java の `record` で実装し、不変性を保証する。現在のルート候補生成はスタブ実装（重量ベースの固定コスト計算）であり、将来の外部ルーティングサービス連携時にアダプターを差し替える設計とした。
