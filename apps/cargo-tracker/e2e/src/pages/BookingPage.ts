@@ -132,6 +132,7 @@ export class BookingShowPage {
   readonly backButton: Locator;
   readonly confirmButton: Locator;
   readonly cancelButton: Locator;
+  readonly routingButton: Locator;
   readonly successAlert: Locator;
   readonly errorAlert: Locator;
 
@@ -141,6 +142,7 @@ export class BookingShowPage {
     this.backButton = page.locator('a.btn-outline-secondary', { hasText: '一覧へ戻る' });
     this.confirmButton = page.locator('button.btn-success', { hasText: '予約確定' });
     this.cancelButton = page.locator('button.btn-outline-danger', { hasText: 'キャンセル' });
+    this.routingButton = page.locator('button.btn-primary', { hasText: '経路設計依頼' });
     this.successAlert = page.locator('.alert-success');
     this.errorAlert = page.locator('.alert-danger');
   }
@@ -160,6 +162,13 @@ export class BookingShowPage {
     await this.cancelButton.click();
     await this.page.locator('#cancelModal').waitFor({ state: 'visible' });
     await this.page.locator('#cancelModal button.btn-danger').click();
+    await this.page.waitForURL(/\/bookings\//);
+  }
+
+  async clickAssignToRouting() {
+    await this.routingButton.click();
+    await this.page.locator('#routingModal').waitFor({ state: 'visible' });
+    await this.page.locator('#routingModal button.btn-primary').click();
     await this.page.waitForURL(/\/bookings\//);
   }
 }

@@ -220,6 +220,31 @@ test.describe('貨物予約管理', () => {
     await expect(bookingShowPage.cancelButton).not.toBeVisible();
   });
 
+  test('予約を経路設計者に引き渡せる', async ({ page, loggedIn }) => {
+    const timestamp = Date.now();
+    const shipperId = await registerShipperAndGetId(page, `引き渡しテスト荷主 ${timestamp}`, `routing-${timestamp}@example.com`);
+
+    const bookingNewPage = new BookingNewPage(page);
+    const bookingShowPage = new BookingShowPage(page);
+
+    await bookingNewPage.goto();
+    await bookingNewPage.fill(shipperId, 'GENERAL', '10.0', 'JPTYO', 'USLAX', '2027-12-31');
+    await bookingNewPage.submit();
+
+    // 仮受付状態であることを確認
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('仮受付');
+    await expect(bookingShowPage.routingButton).toBeVisible();
+
+    // 経路設計依頼操作
+    await bookingShowPage.clickAssignToRouting();
+
+    // 状態が「経路提案済」になっていることを確認
+    await expect(bookingShowPage.getDetailValue('状態')).toHaveText('経路提案済');
+    await expect(bookingShowPage.successAlert).toBeVisible();
+    // 引き渡し後は経路設計依頼ボタンが非表示になる
+    await expect(bookingShowPage.routingButton).not.toBeVisible();
+  });
+
   test('予約登録フォームから一覧へ戻れる', async ({ page, loggedIn }) => {
     const bookingNewPage = new BookingNewPage(page);
 
