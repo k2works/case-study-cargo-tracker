@@ -13,3 +13,4 @@
 | [IT2 予約管理画面 UI/UX レビュー](./booking_uiux_review_20260406.md) | IT2 予約管理 Thymeleaf テンプレート（予約登録フォーム、予約詳細画面、確定・キャンセルモーダル） | 2026-04-06 | - |
 | [ファクトリメソッドリファクタリング コードレビュー](./factory_method_review_20260406.md) | Shipper ファクトリメソッド・RouteSpecification.fromUnLocodes()・MyBatisShipperRepository 切り替え | 2026-04-06 | 高 1 件 / 中 2 件 / 低 2 件 |
 | [IT3 実装成果物レビュー](./IT3_review_20260407.md) | IT3 US01（輸送見積管理）・US06（経路設計依頼）・Estimation コンテキスト新規追加 | 2026-04-07 | 高 7 件 / 中 9 件 / 低 6 件 |
+| [IT3 UI/UX レビュー](./IT3_uiux_review_20260407.md) | IT3 Estimation コンテキスト Thymeleaf テンプレート（見積一覧・作成・詳細）、booking/new.html pre-fill 対応 | 2026-04-07 | 高 5 件 / 中 7 件 / 低 3 件 |
