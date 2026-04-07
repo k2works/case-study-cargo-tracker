@@ -1,6 +1,9 @@
 package com.example.cargotracker.booking.application;
 
 import com.example.cargotracker.booking.application.internal.commandservices.AssignToRoutingCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingAssignedToRoutingEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingCancelledEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
@@ -174,6 +177,7 @@ class CargoBookingCommandServiceTest {
         ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
         verify(cargoRepository).updateStatus(captor.capture());
         assertEquals(BookingStatus.CONFIRMED, captor.getValue().getStatus());
+        verify(eventPublisher).publishEvent(any(BookingConfirmedEvent.class));
     }
 
     @Test
@@ -208,6 +212,7 @@ class CargoBookingCommandServiceTest {
         ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
         verify(cargoRepository).updateStatus(captor.capture());
         assertEquals(BookingStatus.CANCELLED, captor.getValue().getStatus());
+        verify(eventPublisher).publishEvent(any(BookingCancelledEvent.class));
     }
 
     @Test
@@ -373,6 +378,7 @@ class CargoBookingCommandServiceTest {
         ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
         verify(cargoRepository).updateStatus(captor.capture());
         assertEquals(BookingStatus.ROUTE_PROPOSED, captor.getValue().getStatus());
+        verify(eventPublisher).publishEvent(any(BookingAssignedToRoutingEvent.class));
     }
 
     @Test

@@ -11,6 +11,8 @@ import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUni
 import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -294,9 +296,10 @@ class CargoTest {
         assertEquals(BOOKING_ID, confirmed.getBookingId());
     }
 
-    @Test
-    void shouldThrowWhenConfirmingNonPreliminaryCargo() {
-        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.CONFIRMED, null, null);
+    @ParameterizedTest
+    @EnumSource(value = BookingStatus.class, names = "PRELIMINARY", mode = EnumSource.Mode.EXCLUDE)
+    void shouldThrowWhenConfirmingNonPreliminaryCargo(BookingStatus status) {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), status, null, null);
 
         assertThrows(IllegalStateException.class, cargo::confirm);
     }
@@ -351,11 +354,16 @@ class CargoTest {
         Cargo routed = cargo.assignToRouting();
 
         assertEquals(BookingStatus.ROUTE_PROPOSED, routed.getStatus());
+        assertEquals(BOOKING_ID, routed.getBookingId());
+        assertEquals(SHIPPER_ID, routed.getShipperId());
+        assertEquals(new BigDecimal("10"), routed.getWeight());
+        assertEquals(ROUTE_SPEC, routed.getRouteSpecification());
     }
 
-    @Test
-    void shouldThrowWhenAssignToRoutingFromNonPreliminaryStatus() {
-        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.CONFIRMED, null, null);
+    @ParameterizedTest
+    @EnumSource(value = BookingStatus.class, names = "PRELIMINARY", mode = EnumSource.Mode.EXCLUDE)
+    void shouldThrowWhenAssignToRoutingFromNonPreliminaryStatus(BookingStatus status) {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), status, null, null);
 
         assertThrows(IllegalStateException.class, cargo::assignToRouting);
     }
