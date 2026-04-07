@@ -17,3 +17,5 @@ app:
   login:
     default-username:
     default-password:
+  test-reset:
+    enabled: false

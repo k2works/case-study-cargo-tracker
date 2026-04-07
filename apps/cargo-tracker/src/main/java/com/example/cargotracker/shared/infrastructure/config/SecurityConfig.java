@@ -16,9 +16,13 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 public class SecurityConfig {
 
     private final boolean openApiEnabled;
+    private final boolean testResetEnabled;
 
-    public SecurityConfig(@Value("${app.openapi.enabled:false}") boolean openApiEnabled) {
+    public SecurityConfig(
+            @Value("${app.openapi.enabled:false}") boolean openApiEnabled,
+            @Value("${app.test-reset.enabled:false}") boolean testResetEnabled) {
         this.openApiEnabled = openApiEnabled;
+        this.testResetEnabled = testResetEnabled;
     }
 
     @Bean
@@ -26,7 +30,17 @@ public class SecurityConfig {
     public SecurityFilterChain apiFilterChain(HttpSecurity http) {
         http
                 .securityMatcher("/api/**")
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    if (testResetEnabled) {
+                        auth.requestMatchers("/api/test/reset").permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
+                .csrf(csrf -> {
+                    if (testResetEnabled) {
+                        csrf.ignoringRequestMatchers("/api/test/reset");
+                    }
+                })
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((request, response, accessDeniedException) ->

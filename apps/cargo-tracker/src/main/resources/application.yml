@@ -49,3 +49,5 @@ app:
   login:
     default-username: admin
     default-password: admin
+  test-reset:
+    enabled: true
