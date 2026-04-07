@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.application.internal.outboundservices.Sh
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingStatus;
+import com.example.cargotracker.booking.domain.model.events.BookingAssignedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingCancelledEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
@@ -114,6 +115,7 @@ public class CargoBookingCommandService {
                 .orElseThrow(() -> new BookingNotFoundException(bookingId));
         Cargo routed = cargo.assignToRouting();
         cargoRepository.updateStatus(routed);
+        eventPublisher.publishEvent(new BookingAssignedToRoutingEvent(routed.getBookingId()));
     }
 
     private boolean hasText(String value) {
