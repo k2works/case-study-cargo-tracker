@@ -33,6 +33,14 @@ class EstimateCommandServiceTest extends PostgreSQLIntegrationTestBase {
     @BeforeEach
     void setUp() {
         jdbcTemplate.execute("TRUNCATE TABLE route_candidate, estimate RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute("TRUNCATE TABLE carrier_movement, voyage RESTART IDENTITY CASCADE");
+        // テスト用航海データを挿入（JPTYO → USNYC、90 日以内に到着）
+        jdbcTemplate.execute("INSERT INTO voyage (voyage_number) VALUES ('TV001')");
+        jdbcTemplate.update(
+                "INSERT INTO carrier_movement (voyage_id, departure_location_unlocode, arrival_location_unlocode, departure_date, arrival_date) " +
+                "VALUES ((SELECT id FROM voyage WHERE voyage_number = 'TV001'), 'JPTYO', 'USNYC', ?, ?)",
+                java.sql.Timestamp.valueOf(LocalDate.now().plusDays(5).atStartOfDay()),
+                java.sql.Timestamp.valueOf(LocalDate.now().plusDays(35).atStartOfDay()));
     }
 
     @Test
@@ -40,7 +48,7 @@ class EstimateCommandServiceTest extends PostgreSQLIntegrationTestBase {
     void shouldCreateEstimateWithRouteCandidates() {
         CreateEstimateCommand command = new CreateEstimateCommand(
                 "JPTYO", "USNYC",
-                LocalDate.now().plusDays(30),
+                LocalDate.now().plusDays(90),
                 "GENERAL",
                 new BigDecimal("1000.000")
         );
