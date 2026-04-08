@@ -16,7 +16,7 @@
 |---------------|------|-----------|-----------|------|
 | IT1 | [計画](./iteration_plan-1.md) | [ふりかえり](./retrospective-1.md) | [報告書](./iteration_report-1.md) | 完了 |
 | IT2 | [計画](./iteration_plan-2.md) | [ふりかえり](./retrospective-2.md) | [報告書](./iteration_report-2.md) | 完了（Java 166 件・E2E 31 件全パス、カバレッジ 93%/81%） |
-| IT3 | [計画](./iteration_plan-3.md) | [ふりかえり](./retrospective-3.md) | - | 完了（約 184 件・E2E 41 件全パス） |
+| IT3 | [計画](./iteration_plan-3.md) | [ふりかえり](./retrospective-3.md) | [報告書](./iteration_report-3.md) | 完了（約 184 件・E2E 41 件全パス） |
 
 ### 進捗サマリー
 
