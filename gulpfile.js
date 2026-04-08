@@ -12,6 +12,7 @@ import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import cargoTrackerTasks from './ops/scripts/cargo_tracker.js';
+import deployDevTasks from './ops/scripts/deploy_dev.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -20,6 +21,7 @@ vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
 cargoTrackerTasks(gulp);
+deployDevTasks(gulp);
 
 export const dev = gulp.series('cargo-tracker:dev');
 export const tdd = gulp.series('cargo-tracker:tdd');
