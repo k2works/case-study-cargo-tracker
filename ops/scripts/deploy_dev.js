@@ -136,13 +136,16 @@ export default function deployDevTasks(gulp) {
     }
   });
 
-  // Docker イメージを Heroku Container Registry に push
+  // Heroku Container Registry にビルド & push（heroku container:push を使用）
+  // docker push より信頼性が高い: Heroku CLI の認証トークンを直接使用し
+  // Docker credential helper (osxkeychain / docker-desktop) を経由しない
   gulp.task('deploy:dev:push', (done) => {
     const app = requireAppName();
-    const tag = imageTag(app);
-    console.log(`Docker イメージを push します (${tag})...`);
+    const platform = dockerPlatform();
+    console.log(`Heroku Container Registry にビルド & push します (${app}, platform: ${platform})...`);
     try {
-      docker(`push ${tag}`);
+      const env = { ...cleanDockerEnv(), DOCKER_DEFAULT_PLATFORM: platform };
+      heroku(`container:push web -a ${app}`, { cwd: CARGO_TRACKER_DIR, env });
       done();
     } catch (e) {
       done(e);
@@ -200,22 +203,19 @@ export default function deployDevTasks(gulp) {
     }
   });
 
-  // 更新デプロイ（container:login → build → push → release）
+  // 更新デプロイ（push → release）
+  // heroku container:push がビルドも行うため build / container:login ステップは不要
   // 前提: heroku login 済みであること（! heroku login で手動実行）
   gulp.task('deploy:dev', gulp.series(
-    'deploy:dev:container:login',
-    'deploy:dev:build',
     'deploy:dev:push',
     'deploy:dev:release',
   ));
 
-  // 初回セットアップ（container:login → app:create → config → build → push → release）
+  // 初回セットアップ（app:create → config → push → release）
   // 前提: heroku login 済みであること（! heroku login で手動実行）
   gulp.task('deploy:dev:setup', gulp.series(
-    'deploy:dev:container:login',
     'deploy:dev:app:create',
     'deploy:dev:config',
-    'deploy:dev:build',
     'deploy:dev:push',
     'deploy:dev:release',
   ));
@@ -228,19 +228,19 @@ export default function deployDevTasks(gulp) {
 【前提】heroku login は自動化不可。初回のみ手動実行してください:
   ! heroku login
 
-  deploy:dev:container:login  Heroku Container Registry に Docker 認証情報を設定
-  deploy:dev:login        ログイン手順の案内を表示（手動実行が必要なため）
-  deploy:dev:app:create   Heroku アプリを作成（container stack）
-  deploy:dev:config       Config Vars を設定
-  deploy:dev:build        Docker イメージをビルド（linux/amd64）
-  deploy:dev:push         Docker イメージを Heroku Container Registry に push
-  deploy:dev:release      Heroku にリリース
-  deploy:dev:open         アプリをブラウザで開く
-  deploy:dev:logs         ログを表示（tail）
-  deploy:dev:status       デプロイ状態を確認
-  deploy:dev              更新デプロイ（container:login → build → push → release）
-  deploy:dev:setup        初回セットアップ（container:login → app:create → ... → release）
-  deploy:dev:help         このヘルプを表示
+  deploy:dev:login            ログイン手順の案内を表示（手動実行が必要なため）
+  deploy:dev:container:login  Docker に Heroku 認証情報を設定（単体実行用）
+  deploy:dev:app:create       Heroku アプリを作成（container stack）
+  deploy:dev:config           Config Vars を設定
+  deploy:dev:build            Docker イメージをローカルビルド（動作確認用）
+  deploy:dev:push             ビルド & Heroku Container Registry に push
+  deploy:dev:release          Heroku にリリース
+  deploy:dev:open             アプリをブラウザで開く
+  deploy:dev:logs             ログを表示（tail）
+  deploy:dev:status           デプロイ状態を確認
+  deploy:dev                  更新デプロイ（push → release）
+  deploy:dev:setup            初回セットアップ（app:create → config → push → release）
+  deploy:dev:help             このヘルプを表示
 
 必要な環境変数 (.env):
   DEV_HEROKU_APP_NAME     Heroku アプリ名（必須）
