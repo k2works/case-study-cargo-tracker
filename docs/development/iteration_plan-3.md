@@ -21,15 +21,15 @@
 
 ### 成功基準
 
-- [ ] SonarQube ローカルスキャンを実行し Quality Gate の状態を確認している
-- [ ] ドメインモデル・データモデル・UI 設計ドキュメントが IT2 実装と同期している
-- [ ] E2E テスト用 H2 DB の不整合問題が再現しない
-- [ ] US01: 出発地・目的地・希望期限・貨物仕様を入力して見積を作成できる
-- [ ] US01: ルート概算候補（経由港・所要日数・概算料金）が表示される
-- [ ] US01: 見積番号が発行され、見積情報が保存される
-- [ ] US06: 仮受付予約を経路設計依頼すると状態が「経路設計中」に更新される
-- [ ] テストカバレッジ 80% 以上（命令・ブランチ）
-- [ ] Playwright E2E テストが全件パス
+- [△] SonarQube ローカルスキャンを実行し Quality Gate の状態を確認している（スキャン未実行・指摘ベースのリファクタリングのみ実施）
+- [x] ドメインモデル・データモデル・UI 設計ドキュメントが IT2 実装と同期している
+- [x] E2E テスト用 H2 DB の不整合問題が再現しない
+- [x] US01: 出発地・目的地・希望期限・貨物仕様を入力して見積を作成できる
+- [x] US01: ルート概算候補（経由港・所要日数・概算料金）が表示される
+- [x] US01: 見積番号が発行され、見積情報が保存される
+- [x] US06: 仮受付予約を経路設計依頼すると状態が「経路設計中」に更新される
+- [△] テストカバレッジ 80% 以上（命令・ブランチ）（未計測）
+- [x] Playwright E2E テストが全件パス（41 件）
 
 ---
 
@@ -95,7 +95,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | SonarQube ローカルスキャン実行・Quality Gate 確認 | 2h | - | [ ] |
+| 1.1 | SonarQube ローカルスキャン実行・Quality Gate 確認 | 2h | - | [△] ※スキャン未実行、SonarQube 指摘ベースのリファクタリングのみ実施 |
 | 1.2 | ドメインモデル・データモデル・UI 設計ドキュメント同期 | 2h | - | [x] |
 | 1.3 | E2E テスト用 H2 DB リセット機構整備（test プロファイル設定） | 4h | - | [x] |
 | 1.4 | テスト用ヘルパーメソッドを `TestFixtures` クラスへ集約 | 2h | - | [x] |
@@ -680,6 +680,7 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 | 2026-04-07 | iteration_plan-2.md に合わせて構成を統一（ビュー/モデル/インタラクション分割・セクション順序修正・IT4保留指摘追加） | - |
 | 2026-04-07 | 整合性再検証（2 回目）: バッジ色修正（PRELIMINARY: secondary→primary, CANCELLED: danger→secondary）・booking_uiux H1-H3,H5 確認タスク追加（1.6）・US13 H4 確認タスク追加（1.7） | - |
 | 2026-04-07 | domain-model.md との整合性確認・ドメインモデル図修正（RouteSpecification を Booking Context の VO として修正・Cargo の識別子を BookingId に修正・Estimation Context の unlocode 保持方針を明記） | - |
+| 2026-04-08 | 全タスク完了・成功基準更新・ふりかえり実施（retrospective-3.md 作成） | - |
 
 ---
 
@@ -694,3 +695,6 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 - [UI 設計](../design/ui_design.md)
 - [IT2 US13 実装成果物レビュー](../review/US13_review_20260406.md)
 - [IT2 予約管理画面 UI/UX レビュー](../review/booking_uiux_review_20260406.md)
+- [IT3 開発成果物レビュー](../review/IT3_review_20260407.md)
+- [IT3 UI/UX レビュー](../review/IT3_uiux_review_20260407.md)
+- [イテレーション 3 ふりかえり](./retrospective-3.md)
