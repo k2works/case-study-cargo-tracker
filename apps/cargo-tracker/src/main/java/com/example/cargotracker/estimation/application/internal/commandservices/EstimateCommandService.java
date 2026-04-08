@@ -4,41 +4,49 @@ import com.example.cargotracker.estimation.domain.model.CargoType;
 import com.example.cargotracker.estimation.domain.model.Estimate;
 import com.example.cargotracker.estimation.domain.model.EstimateId;
 import com.example.cargotracker.estimation.domain.model.RouteCandidate;
+import com.example.cargotracker.estimation.domain.model.port.RouteCandidateProvider;
 import com.example.cargotracker.estimation.domain.model.repository.EstimateRepository;
 import com.example.cargotracker.shared.domain.model.Location;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * 輸送見積アプリケーションサービス。
- * ルート候補はスタブ実装（固定値）で返す。
- * TODO: 外部ルーティングサービスとの連携時に置換予定
+ * ルート候補の算出は RouteCandidateProvider ポートに委譲する（依存性逆転）。
  */
 @Service
 @Transactional
 public class EstimateCommandService {
 
     private final EstimateRepository estimateRepository;
+    private final RouteCandidateProvider routeCandidateProvider;
 
-    public EstimateCommandService(EstimateRepository estimateRepository) {
+    public EstimateCommandService(EstimateRepository estimateRepository,
+                                  RouteCandidateProvider routeCandidateProvider) {
         this.estimateRepository = estimateRepository;
+        this.routeCandidateProvider = routeCandidateProvider;
     }
 
     public EstimateId createEstimate(CreateEstimateCommand command) {
+        Location origin = new Location(command.originUnlocode());
+        Location destination = new Location(command.destinationUnlocode());
+        CargoType cargoType = CargoType.valueOf(command.cargoType());
+
         Estimate estimate = Estimate.create(
-                new Location(command.originUnlocode()),
-                new Location(command.destinationUnlocode()),
+                origin,
+                destination,
                 command.arrivalDeadline(),
-                CargoType.valueOf(command.cargoType()),
+                cargoType,
                 command.weightKg()
         );
 
-        List<RouteCandidate> stubCandidates = generateStubCandidates(command.weightKg());
-        estimate.replaceCandidates(stubCandidates);
+        List<RouteCandidate> candidates = routeCandidateProvider.findCandidates(
+                origin, destination, command.arrivalDeadline(), cargoType
+        );
+        estimate.replaceCandidates(candidates);
 
         estimateRepository.save(estimate);
         return estimate.getEstimateId();
@@ -60,13 +68,5 @@ public class EstimateCommandService {
     @Transactional(readOnly = true)
     public List<Estimate> findAll() {
         return estimateRepository.findAll();
-    }
-
-    private List<RouteCandidate> generateStubCandidates(BigDecimal weightKg) {
-        BigDecimal baseCost = weightKg.multiply(new BigDecimal("500"));
-        return List.of(
-                new RouteCandidate("V001", "SGSIN", 21, baseCost),
-                new RouteCandidate("V002", "HKHKG", 28, baseCost.multiply(new BigDecimal("0.96")))
-        );
     }
 }

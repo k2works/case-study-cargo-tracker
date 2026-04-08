@@ -84,4 +84,25 @@ class HexagonalArchitectureTest {
             noClasses().that().resideInAPackage("..booking..")
                     .should().dependOnClassesThat().resideInAPackage("..shipper.infrastructure..")
                     .as("Booking コンテキストは Shipper コンテキストの Infrastructure 層に依存してはならない");
+
+    // ルール 7: Estimation ドメイン層はインフラ層に依存しない
+    @ArchTest
+    static final ArchRule estimation_domain_should_not_depend_on_infrastructure =
+            noClasses().that().resideInAPackage("..estimation.domain..")
+                    .should().dependOnClassesThat().resideInAPackage("..estimation.infrastructure..")
+                    .as("Estimation ドメイン層は Infrastructure 層に依存してはならない");
+
+    // ルール 8: Estimation アプリケーション層はインターフェース層に依存しない
+    @ArchTest
+    static final ArchRule estimation_application_should_not_depend_on_interfaces =
+            noClasses().that().resideInAPackage("..estimation.application..")
+                    .should().dependOnClassesThat().resideInAPackage("..estimation.interfaces..")
+                    .as("Estimation アプリケーション層は Interfaces 層に依存してはならない");
+
+    // ルール 9: Estimation コンテキストは Booking コンテキストの内部実装に直接依存しない
+    @ArchTest
+    static final ArchRule estimation_should_not_depend_on_booking_internals =
+            noClasses().that().resideInAPackage("..estimation.domain..")
+                    .should().dependOnClassesThat().resideInAPackage("..booking..")
+                    .as("Estimation ドメイン層は Booking コンテキストに依存してはならない");
 }

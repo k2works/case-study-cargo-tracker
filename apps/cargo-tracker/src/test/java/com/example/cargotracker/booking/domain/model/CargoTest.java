@@ -296,6 +296,34 @@ class CargoTest {
         assertEquals(BOOKING_ID, confirmed.getBookingId());
     }
 
+    @Test
+    void shouldPreserveAllFieldsWhenConfirmed() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"), ROUTE_SPEC);
+
+        Cargo confirmed = cargo.confirm();
+
+        assertEquals(BOOKING_ID, confirmed.getBookingId());
+        assertEquals(SHIPPER_ID, confirmed.getShipperId());
+        assertEquals(CargoType.GENERAL, confirmed.getCargoType());
+        assertEquals(new BigDecimal("10"), confirmed.getWeight());
+        assertEquals(ROUTE_SPEC, confirmed.getRouteSpecification());
+        assertEquals(BookingStatus.CONFIRMED, confirmed.getStatus());
+    }
+
+    @Test
+    void shouldPreserveAllFieldsWhenCancelled() {
+        Cargo cargo = new Cargo(BOOKING_ID, SHIPPER_ID, CargoType.GENERAL, new BigDecimal("10"), ROUTE_SPEC);
+
+        Cargo cancelled = cargo.cancel();
+
+        assertEquals(BOOKING_ID, cancelled.getBookingId());
+        assertEquals(SHIPPER_ID, cancelled.getShipperId());
+        assertEquals(CargoType.GENERAL, cancelled.getCargoType());
+        assertEquals(new BigDecimal("10"), cancelled.getWeight());
+        assertEquals(ROUTE_SPEC, cancelled.getRouteSpecification());
+        assertEquals(BookingStatus.CANCELLED, cancelled.getStatus());
+    }
+
     @ParameterizedTest
     @EnumSource(value = BookingStatus.class, names = "PRELIMINARY", mode = EnumSource.Mode.EXCLUDE)
     void shouldThrowWhenConfirmingNonPreliminaryCargo(BookingStatus status) {
