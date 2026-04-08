@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>航路管理 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('voyages')}"></div>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">航路一覧</h1>
+            <p class="text-secondary mb-0">利用可能な航海スケジュールを検索・確認します。</p>
+        </div>
+    </div>
+
+    <!-- 検索フォーム -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h6 card-title mb-3">検索条件</h2>
+            <form th:action="@{/voyages}" method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="originUnlocode" class="form-label">出発地（UN/LOCODE）</label>
+                    <input type="text" class="form-control" id="originUnlocode" name="originUnlocode"
+                           placeholder="例: JPTYO" maxlength="5"
+                           th:value="${param.originUnlocode}">
+                </div>
+                <div class="col-md-3">
+                    <label for="destinationUnlocode" class="form-label">目的地（UN/LOCODE）</label>
+                    <input type="text" class="form-control" id="destinationUnlocode" name="destinationUnlocode"
+                           placeholder="例: USNYC" maxlength="5"
+                           th:value="${param.destinationUnlocode}">
+                </div>
+                <div class="col-md-2">
+                    <label for="fromDate" class="form-label">出発期間（開始）</label>
+                    <input type="date" class="form-control" id="fromDate" name="fromDate"
+                           th:value="${param.fromDate}">
+                </div>
+                <div class="col-md-2">
+                    <label for="arrivalDeadline" class="form-label">到着期限</label>
+                    <input type="date" class="form-control" id="arrivalDeadline" name="arrivalDeadline"
+                           th:value="${param.arrivalDeadline}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">検索</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 検索結果 -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" aria-label="航海一覧">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col">航海番号</th>
+                        <th scope="col">出発港</th>
+                        <th scope="col">到着港</th>
+                        <th scope="col">出発日</th>
+                        <th scope="col">到着日</th>
+                        <th scope="col">所要日数</th>
+                        <th scope="col">経由地数</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(voyages)}">
+                        <td colspan="7" class="text-center text-secondary py-4">
+                            条件に合致する航海スケジュールが見つかりません。条件を変更して再検索してください。
+                        </td>
+                    </tr>
+                    <tr th:each="voyage : ${voyages}">
+                        <td>
+                            <strong th:text="${voyage.voyageNumber.number()}">V001</strong>
+                        </td>
+                        <td th:text="${voyage.departureLocation != null ? voyage.departureLocation.displayName() : '-'}">
+                            東京 (JPTYO)
+                        </td>
+                        <td th:text="${voyage.arrivalLocation != null ? voyage.arrivalLocation.displayName() : '-'}">
+                            ニューヨーク (USNYC)
+                        </td>
+                        <td th:text="${voyage.departureTime != null ? #temporals.format(voyage.departureTime, 'yyyy-MM-dd') : '-'}">
+                            2026-05-10
+                        </td>
+                        <td th:text="${voyage.arrivalTime != null ? #temporals.format(voyage.arrivalTime, 'yyyy-MM-dd') : '-'}">
+                            2026-06-10
+                        </td>
+                        <td th:text="${voyage.durationDays + ' 日'}">31 日</td>
+                        <td th:text="${voyage.schedule.size()}">1</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
