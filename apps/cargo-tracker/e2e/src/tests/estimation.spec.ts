@@ -26,9 +26,9 @@ test.describe('輸送見積管理', () => {
     // 登録後は詳細ページへリダイレクト
     await expect(page).toHaveURL(/\/estimates\/.+/);
     await expect(showPage.heading).toHaveText('見積詳細');
-    await expect(showPage.getDetailValue('出発地')).toHaveText('JPTYO');
-    await expect(showPage.getDetailValue('目的地')).toHaveText('USLAX');
-    await expect(showPage.getDetailValue('貨物種別')).toHaveText('GENERAL');
+    await expect(showPage.getDetailValue('出発地')).toHaveText('東京 (JPTYO)');
+    await expect(showPage.getDetailValue('目的地')).toHaveText('ロサンゼルス (USLAX)');
+    await expect(showPage.getDetailValue('貨物種別')).toHaveText('一般');
   });
 
   test('見積詳細にルート候補が表示される', async ({ page, loggedIn }) => {
