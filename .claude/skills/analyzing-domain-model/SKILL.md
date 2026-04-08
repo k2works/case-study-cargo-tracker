@@ -72,13 +72,13 @@ quadrantChart
     quadrant-2 "一般"
     quadrant-3 "一般または補完"
     quadrant-4 "補完"
-    Booking Context: [0.75, 0.82]
-    Tracking Context: [0.82, 0.68]
-    Routing Context: [0.62, 0.60]
-    Handling Context: [0.28, 0.42]
-    Shipper Context: [0.65, 0.28]
-    Billing Context: [0.30, 0.65]
-    Shared Domain: [0.18, 0.22]
+    "Aコンテキスト": [0.75, 0.82]
+    "Bコンテキスト": [0.82, 0.68]
+    "Cコンテキスト": [0.62, 0.60]
+    "Dコンテキスト": [0.28, 0.42]
+    "Eコンテキスト": [0.65, 0.28]
+    "Fコンテキスト": [0.30, 0.65]
+    "Gコンテキスト": [0.18, 0.22]
 ```
 
 ## 作成の進め方
