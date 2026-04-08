@@ -91,9 +91,9 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | SonarQube ローカルスキャン実行・Quality Gate 確認・指摘対応 | 2h | - | [ ] |
-| 1.2 | `RouteCandidateProvider` ポートインターフェース抽出と `StubRouteCandidateProvider` 実装 | 3h | - | [ ] |
-| 1.3 | ArchUnit テストに Estimation コンテキストのアーキテクチャルール追加 | 2h | - | [ ] |
-| 1.4 | `CargoTest` に immutable コピーの属性保全検証を追加 | 1h | - | [ ] |
+| 1.2 | `RouteCandidateProvider` ポートインターフェース抽出と `StubRouteCandidateProvider` 実装 | 3h | - | [x] |
+| 1.3 | ArchUnit テストに Estimation コンテキストのアーキテクチャルール追加 | 2h | - | [x] |
+| 1.4 | `CargoTest` に immutable コピーの属性保全検証を追加 | 1h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -101,12 +101,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `Voyage` エンティティ・`VoyageNumber` / `CargoType` 対応フィールド設計と実装 | 4h | - | [ ] |
-| 2.2 | `VoyageRepository` インターフェースと `MyBatisVoyageRepository` 実装 | 4h | - | [ ] |
-| 2.3 | V8 DB マイグレーション（`voyage` テーブル作成・テストデータ投入） | 2h | - | [ ] |
-| 2.4 | `VoyageQueryService` 実装（出発地・目的地・期間・貨物種別フィルタ） | 4h | - | [ ] |
-| 2.5 | 航海スケジュール検索画面（検索フォーム・一覧）Thymeleaf テンプレート作成 | 3h | - | [ ] |
-| 2.6 | `VoyageController` 実装・ユニットテスト・E2E テスト作成 | 3h | - | [ ] |
+| 2.1 | `Voyage` エンティティ・`VoyageNumber` / `CargoType` 対応フィールド設計と実装 | 4h | - | [x] |
+| 2.2 | `VoyageRepository` インターフェースと `MyBatisVoyageRepository` 実装 | 4h | - | [x] |
+| 2.3 | V8 DB マイグレーション（`voyage` テーブル作成・テストデータ投入） | 2h | - | [x] |
+| 2.4 | `VoyageQueryService` 実装（出発地・目的地・期間・貨物種別フィルタ） | 4h | - | [x] |
+| 2.5 | 航海スケジュール検索画面（検索フォーム・一覧）Thymeleaf テンプレート作成 | 3h | - | [x] |
+| 2.6 | `VoyageController` 実装・ユニットテスト・E2E テスト作成 | 3h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -114,9 +114,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `VoyageRouteCandidateProvider` 実装（`RouteCandidateProvider` ポートを `VoyageRepository` で実装） | 4h | - | [ ] |
-| 3.2 | 直行便優先・推奨順ソートロジックの実装 | 3h | - | [ ] |
-| 3.3 | `EstimateService` をスタブから `VoyageRouteCandidateProvider` に差し替え・統合テスト更新 | 3h | - | [ ] |
+| 3.1 | `VoyageRouteCandidateProvider` 実装（`RouteCandidateProvider` ポートを `VoyageRepository` で実装） | 4h | - | [x] |
+| 3.2 | 直行便優先・推奨順ソートロジックの実装 | 3h | - | [x] |
+| 3.3 | `EstimateService` をスタブから `VoyageRouteCandidateProvider` に差し替え・統合テスト更新 | 3h | - | [x] |
 
 **小計**: 10h（理想時間）
 
@@ -124,13 +124,13 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| IT3 申し送り改善 | 2 | 8h | [ ] |
-| US07: 航海スケジュールを検索する | 5 | 20h | [ ] |
-| US08: 経路候補を算出する（基本実装） | 3 | 10h | [ ] |
+| IT3 申し送り改善 | 2 | 8h | △（SonarQube 以外完了） |
+| US07: 航海スケジュールを検索する | 5 | 20h | [x] 完了 |
+| US08: 経路候補を算出する（基本実装） | 3 | 10h | [x] 完了 |
 | **合計** | **10** | **38h** | |
 
 **1 SP あたり**: 約 3.8h（IT3 実績: 4.3h）
-**進捗率**: 0% (0/10 SP)
+**進捗率**: 80% (8/10 SP ※ SonarQube スキャン保留)
 
 ---
 
