@@ -64,10 +64,11 @@
 
 1. 予約番号を指定して出発地・目的地・期限・貨物仕様を確認できる
 2. 検索条件（出発地・目的地・出発期間・貨物種別）を入力して検索できる
-3. 航海スケジュール一覧に航海番号・運送会社・出発日・到着日・寄港地が表示される
-4. 条件を満たす航海がない場合、その旨が表示され条件を緩和して再検索できる
-5. 危険物・冷凍貨物の場合、対応可能な航海のみに絞り込まれる
-6. 出発地・目的地は UN/LOCODE 形式で指定できる
+3. 制約条件（航海スケジュール・寄港地接続・港湾制約・貨物種別対応）に基づいて利用可能な航海が表示される
+4. 航海スケジュール一覧に航海番号・運送会社・出発日・到着日・寄港地が表示される
+5. 条件を満たす航海がない場合、その旨が表示され条件を緩和して再検索できる
+6. 危険物・冷凍貨物の場合、対応可能な航海のみに絞り込まれる
+7. 出発地・目的地は UN/LOCODE 形式で指定できる
 
 #### US08: 経路候補を算出する（基本実装）
 
@@ -187,22 +188,38 @@ gantt
 
 ### ドメインモデル
 
+> **注**: `domain-model.md` Section 3「Routing Context」の構造に準拠。`Voyage` は `Schedule`（値オブジェクト）を介して `CarrierMovement`（エンティティ）を保持する。
+
 ```plantuml
 @startuml
 package "Routing Context" {
-  class Voyage {
-    + voyageId: VoyageId
-    + voyageNumber: VoyageNumber
-    + carrier: String
-    + departurePort: Location
-    + arrivalPort: Location
-    + departureDate: LocalDate
-    + arrivalDate: LocalDate
-    + cargoTypes: Set<CargoType>
-    + supportsCargoType(CargoType): boolean
+  class Voyage <<aggregate root>> {
+    -voyageNumber: VoyageNumber
+    -schedule: Schedule
+    +departureTime(location: Location): Date
+    +arrivalTime(location: Location): Date
   }
-  class VoyageId
-  class VoyageNumber
+  class VoyageNumber <<value object>> {
+    -number: String
+  }
+  class Schedule <<value object>> {
+    -carrierMovements: List<CarrierMovement>
+    +departures(): List<CarrierMovement>
+    +arrivals(): List<CarrierMovement>
+  }
+  class CarrierMovement {
+    -departureLocation: Location
+    -arrivalLocation: Location
+    -departureTime: Date
+    -arrivalTime: Date
+  }
+}
+
+package "Shared Kernel" {
+  class Location <<shared kernel>> {
+    -unLocode: String
+    -name: String
+  }
 }
 
 package "Estimation Context" {
@@ -220,6 +237,11 @@ package "Estimation Context" {
   }
 }
 
+Voyage *-- VoyageNumber
+Voyage *-- Schedule
+Schedule *-- CarrierMovement
+CarrierMovement --> Location : departure
+CarrierMovement --> Location : arrival
 VoyageRouteCandidateProvider ..|> RouteCandidateProvider
 VoyageRouteCandidateProvider --> Voyage
 StubRouteCandidateProvider ..|> RouteCandidateProvider
@@ -229,47 +251,91 @@ StubRouteCandidateProvider ..|> RouteCandidateProvider
 
 ### データモデル
 
+> **注**: `data-model.md` Section「Routing Context」に準拠。`voyage`（1 件: VoyageNumber のみ）と `carrier_movement`（N 件: 出発地・到着地・日時）の 2 テーブル構成。PK は `id`（BIGSERIAL）、業務キーは `voyage_number`（UK）。
+
 ```plantuml
 @startuml
 hide circle
 skinparam linetype ortho
 
-entity "voyage" as v {
-  *voyage_id : bigint <<PK>>
+entity "voyage\n（航海）" as v {
+  * id : BIGINT <<PK>>
   --
-  voyage_number : varchar(50) <<unique>>
-  carrier : varchar(100)
-  departure_port_code : varchar(5)
-  arrival_port_code : varchar(5)
-  departure_date : date
-  arrival_date : date
-  supported_cargo_types : varchar(50)
+  * voyage_number : VARCHAR(20) <<UK>>
 }
+
+entity "carrier_movement\n（運送区間）" as cm {
+  * id : BIGINT <<PK>>
+  --
+  * voyage_id : BIGINT <<FK>>
+  * departure_location_unlocode : VARCHAR(5) <<FK>>
+  * arrival_location_unlocode : VARCHAR(5) <<FK>>
+  * departure_date : TIMESTAMP
+  * arrival_date : TIMESTAMP
+}
+
+v ||--o{ cm : "運送区間を持つ"
+
 @enduml
 ```
 
 ### ユーザーインターフェース
 
-#### 航海スケジュール検索画面
+#### 航路一覧・検索画面（`/voyages`）
+
+> **注**: `ui_design.md` の画面一覧では `/voyages` が「航路・スケジュール一覧」として定義済み。経路設計者が事前に航海スケジュールを確認する画面として実装する。
 
 ```plantuml
 @startsalt
 {+
-  航海スケジュール検索
+  {/ <b>CargoTracker</b> | 貨物予約 | 見積管理 | 追跡 | 航路管理 | [ログアウト] }
+  ====
+  航路一覧
+  ====
   {+
     {
       出発地（UN/LOCODE）  | "JPTYO   "
       目的地（UN/LOCODE）  | "USNYC   "
       出発期間（開始）     | "2026-05-01"
-      出発期間（終了）     | "2026-05-31"
       貨物種別            | ^一般 v^
       [ 検索 ]
     }
     ========================
     {#
-      航海番号 | 運送会社 | 出発日 | 到着日 | 寄港地
-      V001  | MAERSK  | 2026-05-10 | 2026-06-10 | -
-      V002  | MSC     | 2026-05-15 | 2026-06-20 | HKG
+      **航海番号** | **運送会社** | **出発港** | **到着港** | **出発日** | **到着日**
+      V001  | MAERSK  | 東京 (JPTYO) | ニューヨーク (USNYC) | 2026-05-10 | 2026-06-10
+      V002  | MSC     | 東京 (JPTYO) | ニューヨーク (USNYC) | 2026-05-15 | 2026-06-20
+    }
+  }
+}
+@endsalt
+```
+
+#### 経路割り当て画面（`/bookings/{bookingId}/route`）
+
+> **注**: `ui_design.md` の画面一覧で US07・US08 が対応付けられている画面。予約詳細から「経路を割り当て」ボタンで遷移する。
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物予約 | 見積管理 | 追跡 | 航路管理 | [ログアウト] }
+  ====
+  経路割り当て - BK-XXXX
+  ====
+  {+
+    {
+      出発地 | 東京 (JPTYO)
+      目的地 | ニューヨーク (USNYC)
+      希望期限 | 2026-06-30
+      ---------
+      [ 航海を検索 ]
+    }
+    ========================
+    航路候補テーブル
+    {#
+      **航海番号** | **出発日** | **到着日** | **所要日数** | **操作**
+      V001  | 2026-05-10 | 2026-06-10 | 31 日 | [ この航路を選択 ]
+      V002  | 2026-05-15 | 2026-06-20 | 36 日 | [ この航路を選択 ]
     }
   }
 }
@@ -280,14 +346,30 @@ entity "voyage" as v {
 
 ```plantuml
 @startuml
-title 航海スケジュール検索・経路候補算出フロー
+title 航海スケジュール検索・経路候補算出フロー（ui_design.md 準拠）
 
-[*] --> 予約詳細
-予約詳細 --> 航海検索 : 「経路設計を開始」
-航海検索 --> 航海検索 : 条件変更・再検索
-航海検索 --> 見積作成 : 「この航海で見積作成」
-見積作成 --> 見積詳細 : 見積番号発行
-見積詳細 --> 予約作成 : プリフィル導線
+state "航路管理フロー" as routing_flow {
+  state 航路一覧 {
+    航路一覧 : /voyages
+    航路一覧 : 航路・スケジュール一覧
+  }
+  航路一覧 --> 航路一覧 : 条件変更・再検索
+}
+
+state "予約フロー" as booking_flow {
+  state 予約詳細 {
+    予約詳細 : /bookings/{bookingId}
+    予約詳細 : 予約情報・荷役履歴
+  }
+  state 経路割り当て {
+    経路割り当て : /bookings/{bookingId}/route
+    経路割り当て : 航路候補テーブル（US07・US08）
+  }
+  予約詳細 --> 経路割り当て : [経路を割り当て] ボタン
+  経路割り当て --> 予約詳細 : 割り当て成功（PRG）
+  経路割り当て --> 経路割り当て : バリデーションエラー・再検索
+}
+
 @enduml
 ```
 
@@ -298,9 +380,10 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 └── routing/
     ├── domain/
     │   ├── model/
-    │   │   ├── Voyage.java
-    │   │   ├── VoyageId.java
-    │   │   └── VoyageNumber.java
+    │   │   ├── Voyage.java           ← 集約ルート（voyageNumber + schedule のみ）
+    │   │   ├── VoyageNumber.java     ← 値オブジェクト
+    │   │   ├── Schedule.java         ← 値オブジェクト（CarrierMovement リスト）
+    │   │   └── CarrierMovement.java  ← エンティティ（出発地・到着地・日時）
     │   └── repository/
     │       └── VoyageRepository.java
     ├── application/
@@ -326,22 +409,33 @@ apps/cargo-tracker/src/main/java/com/example/cargotracker/
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| GET | `/voyages` | 航海スケジュール一覧・検索 |
-| GET | `/voyages/{voyageId}` | 航海スケジュール詳細 |
+| GET | `/voyages` | 航路一覧・検索（`ui_design.md` 定義済み画面） |
+| GET | `/bookings/{bookingId}/route` | 経路割り当て画面（航海検索・候補表示、US07・US08 対象） |
+| POST | `/bookings/{bookingId}/route` | 経路確定（選択した航路を予約に紐付け）|
 
 ### データベーススキーマ
 
+> **注**: data-model.md 設計方針に準拠。DB は PostgreSQL（`BIGSERIAL`）、H2 テスト環境では `BIGINT GENERATED BY DEFAULT AS IDENTITY` に読み替え。
+
 ```sql
--- V8__create_voyage_table.sql
+-- V8__create_voyage_tables.sql
 CREATE TABLE voyage (
-    voyage_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    voyage_number VARCHAR(50) NOT NULL UNIQUE,
-    carrier VARCHAR(100) NOT NULL,
-    departure_port_code VARCHAR(5) NOT NULL,
-    arrival_port_code VARCHAR(5) NOT NULL,
-    departure_date DATE NOT NULL,
-    arrival_date DATE NOT NULL,
-    supported_cargo_types VARCHAR(50) NOT NULL DEFAULT 'GENERAL'
+    id         BIGSERIAL PRIMARY KEY,
+    voyage_number VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT uk_voyage_number UNIQUE (voyage_number)
+);
+
+CREATE TABLE carrier_movement (
+    id                          BIGSERIAL PRIMARY KEY,
+    voyage_id                   BIGINT NOT NULL REFERENCES voyage(id),
+    departure_location_unlocode VARCHAR(5) NOT NULL,
+    arrival_location_unlocode   VARCHAR(5) NOT NULL,
+    departure_date              TIMESTAMP NOT NULL,
+    arrival_date                TIMESTAMP NOT NULL,
+    created_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 ```
 
