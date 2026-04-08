@@ -87,6 +87,7 @@
 | スキル | 用途 |
 | :--- | :--- |
 | `operating-docs` | ドキュメント管理・Lint |
+| `generating-bmc` | ビジネスモデルキャンバス SVG 生成 |
 | `generating-slides` | インセプションデッキのスライド生成 |
 | `git-commit` | Conventional Commits 準拠のコミット |
 | `creating-adr` | ADR 作成 |
