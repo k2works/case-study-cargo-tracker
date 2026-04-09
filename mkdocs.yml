@@ -100,6 +100,7 @@ nav:
       - IT4 計画: development/iteration_plan-4.md
       - IT4 ふりかえり: development/retrospective-4.md
       - IT4 完了報告書: development/iteration_report-4.md
+      - IT5 計画: development/iteration_plan-5.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ: operation/dev_app_instrunction.md
@@ -114,6 +115,8 @@ nav:
       - IT2 US13 実装成果物レビュー: review/US13_review_20260406.md
       - IT2 予約管理画面 UI/UX レビュー: review/booking_uiux_review_20260406.md
       - ファクトリメソッドリファクタリング コードレビュー: review/factory_method_review_20260406.md
+      - IT3 実装成果物レビュー: review/IT3_review_20260407.md
+      - IT3 UI/UX レビュー: review/IT3_uiux_review_20260407.md
   - ADR:
       - 概要: adr/index.md
       - ADR-001 Spring Boot 4 + Java 25: adr/001-spring-boot-4-java-25.md
