@@ -358,6 +358,64 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("GET /bookings/{bookingId}/route で条件変更フォームが表示される")
+    void getRouteForm_shouldShowSearchConditionForm() throws Exception {
+        String shipperId = insertShipper("SHP-COND01");
+        MvcResult createResult = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "10.000")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(30).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = createResult.getResponse().getHeader("Location");
+        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+
+        // assign-to-routing で ROUTE_PROPOSED 状態に遷移
+        mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing").with(csrf()));
+
+        mockMvc.perform(get("/bookings/" + bookingId + "/route"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/route"))
+                .andExpect(content().string(containsString("条件変更して再検索")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /bookings/{bookingId}/route に検索パラメータを渡すと画面に反映される")
+    void getRouteForm_withCustomParams_shouldReflectInForm() throws Exception {
+        String shipperId = insertShipper("SHP-COND02");
+        MvcResult createResult = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "10.000")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(30).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = createResult.getResponse().getHeader("Location");
+        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+
+        mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing").with(csrf()));
+
+        String customDeadline = "2027-06-30";
+        mockMvc.perform(get("/bookings/" + bookingId + "/route")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "NLRTM")
+                        .param("arrivalDeadline", customDeadline))
+                .andExpect(status().isOk())
+                .andExpect(view().name("booking/route"))
+                .andExpect(content().string(containsString("NLRTM")))
+                .andExpect(content().string(containsString(customDeadline)));
+    }
+
     private String insertShipper(String shipperCode) {
         String shipperId = UUID.randomUUID().toString();
         jdbcTemplate.update(

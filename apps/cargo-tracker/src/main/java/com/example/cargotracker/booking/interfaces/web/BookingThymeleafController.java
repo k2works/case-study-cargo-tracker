@@ -15,6 +15,7 @@ import com.example.cargotracker.booking.interfaces.rest.dto.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.transform.CargoAssembler;
 import com.example.cargotracker.estimation.application.internal.commandservices.EstimateCommandService;
 import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
+import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.shipper.application.internal.queryservices.FindShipperQueryService;
 import com.example.cargotracker.shipper.interfaces.rest.transform.ShipperAssembler;
 import jakarta.validation.Valid;
@@ -31,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Comparator;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -161,15 +163,45 @@ public class BookingThymeleafController {
     }
 
     @GetMapping("/{bookingId}/route")
-    public String routeForm(@PathVariable String bookingId, Model model) {
+    public String routeForm(
+            @PathVariable String bookingId,
+            @RequestParam(required = false) String originUnlocode,
+            @RequestParam(required = false) String destinationUnlocode,
+            @RequestParam(required = false) String arrivalDeadline,
+            Model model
+    ) {
         var booking = cargoBookingQueryService.findByBookingId(bookingId)
                 .map(cargoAssembler::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
-        var voyages = voyageQueryService.searchVoyages(
-                booking.originUnlocode(), booking.destinationUnlocode(), null, booking.arrivalDeadline());
+
+        String searchOrigin = originUnlocode != null ? originUnlocode : booking.originUnlocode();
+        String searchDestination = destinationUnlocode != null ? destinationUnlocode : booking.destinationUnlocode();
+        LocalDate searchDeadline = arrivalDeadline != null
+                ? LocalDate.parse(arrivalDeadline)
+                : booking.arrivalDeadline();
+
+        var voyages = voyageQueryService.searchVoyages(searchOrigin, searchDestination, null, searchDeadline)
+                .stream()
+                .sorted(Comparator.comparingLong(Voyage::getDurationDays))
+                .toList();
+
         model.addAttribute(BOOKING_ATTRIBUTE, booking);
         model.addAttribute("voyages", voyages);
+        model.addAttribute("searchOrigin", searchOrigin);
+        model.addAttribute("searchDestination", searchDestination);
+        model.addAttribute("searchDeadline", searchDeadline);
         return "booking/route";
+    }
+
+    @GetMapping("/{bookingId}/route/detail")
+    public String routeDetail(
+            @PathVariable String bookingId,
+            @RequestParam String voyageNumber,
+            Model model
+    ) {
+        voyageQueryService.findByVoyageNumber(voyageNumber)
+                .ifPresent(v -> model.addAttribute("selectedVoyage", v));
+        return "booking/route :: routeDetail";
     }
 
     @PostMapping("/{bookingId}/route")

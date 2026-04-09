@@ -136,6 +136,47 @@ class BookingE2ETest extends PostgreSQLIntegrationTestBase {
     }
 
     @Test
+    @DisplayName("経路割り当て画面で条件変更フォームが表示される（US10）")
+    void routeForm_shouldShowSearchConditionForm() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getRequest().getSession();
+
+        String shipperId = TestFixtures.registerShipper(mockMvc, session);
+        String bookingId = TestFixtures.registerBooking(mockMvc, session, shipperId);
+
+        // ROUTE_PROPOSED 状態に遷移
+        mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing").session(session).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(get("/bookings/" + bookingId + "/route").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("条件変更して再検索")))
+                .andExpect(content().string(containsString("経路検索条件")));
+    }
+
+    @Test
+    @DisplayName("経路割り当て画面で検索条件を変更すると再検索できる（US10）")
+    void routeForm_withChangedCondition_shouldReSearch() throws Exception {
+        MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getRequest().getSession();
+
+        String shipperId = TestFixtures.registerShipper(mockMvc, session);
+        String bookingId = TestFixtures.registerBooking(mockMvc, session, shipperId);
+
+        mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing").session(session).with(csrf()));
+
+        // 存在しない組み合わせの条件で検索 → 候補なし表示
+        mockMvc.perform(get("/bookings/" + bookingId + "/route").session(session)
+                        .param("originUnlocode", "ZZZXX")
+                        .param("destinationUnlocode", "YYYWW")
+                        .param("arrivalDeadline", "2020-01-01"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("条件に合致する航路が見つかりません")));
+    }
+
+    @Test
     @DisplayName("予約登録フォームに荷主ドロップダウンと UN/LOCODE ヘルプが表示される")
     void bookingNewForm_shouldHaveShipperDropdownAndUnlocodeHelp() throws Exception {
         MockHttpSession session = (MockHttpSession) mockMvc.perform(formLogin("/login").user("admin").password("admin"))

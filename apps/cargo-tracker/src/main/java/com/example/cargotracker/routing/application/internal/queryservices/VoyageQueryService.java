@@ -2,12 +2,14 @@ package com.example.cargotracker.routing.application.internal.queryservices;
 
 import com.example.cargotracker.routing.domain.model.Voyage;
 import com.example.cargotracker.routing.domain.model.repository.VoyageRepository;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.shared.domain.model.Location;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -24,6 +26,13 @@ public class VoyageQueryService {
      */
     public List<Voyage> findAll() {
         return voyageRepository.findAll();
+    }
+
+    /**
+     * 航海番号で航海を検索する。
+     */
+    public Optional<Voyage> findByVoyageNumber(String voyageNumber) {
+        return voyageRepository.findByVoyageNumber(new VoyageNumber(voyageNumber));
     }
 
     /**
