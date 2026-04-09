@@ -133,6 +133,7 @@ export class BookingShowPage {
   readonly confirmButton: Locator;
   readonly cancelButton: Locator;
   readonly routingButton: Locator;
+  readonly routeAssignLink: Locator;
   readonly successAlert: Locator;
   readonly errorAlert: Locator;
 
@@ -143,6 +144,7 @@ export class BookingShowPage {
     this.confirmButton = page.locator('button.btn-success', { hasText: '予約確定' });
     this.cancelButton = page.locator('button.btn-outline-danger', { hasText: 'キャンセル' });
     this.routingButton = page.locator('button.btn-primary', { hasText: '経路設計依頼' });
+    this.routeAssignLink = page.locator('a.btn-primary', { hasText: '経路を割り当て' });
     this.successAlert = page.locator('.alert-success');
     this.errorAlert = page.locator('.alert-danger');
   }
@@ -170,5 +172,56 @@ export class BookingShowPage {
     await this.page.locator('#routingModal').waitFor({ state: 'visible' });
     await this.page.locator('#routingModal button.btn-primary').click();
     await this.page.waitForURL(/\/bookings\//);
+  }
+
+  async clickRouteAssign() {
+    await this.routeAssignLink.click();
+    await this.page.waitForURL(/\/bookings\/.+\/route/);
+  }
+}
+
+export class BookingRoutePage {
+  readonly page: Page;
+  readonly heading: Locator;
+  readonly backToDetailLink: Locator;
+  // 検索条件フォーム
+  readonly originInput: Locator;
+  readonly destinationInput: Locator;
+  readonly arrivalDeadlineInput: Locator;
+  readonly searchButton: Locator;
+  // 航路一覧
+  readonly voyagesTable: Locator;
+  readonly noResultsMessage: Locator;
+  // 経路確定ボタン
+  readonly confirmRouteButton: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.locator('h1');
+    this.backToDetailLink = page.locator('a.btn-outline-secondary', { hasText: '詳細へ戻る' });
+    this.originInput = page.locator('#originUnlocode');
+    this.destinationInput = page.locator('#destinationUnlocode');
+    this.arrivalDeadlineInput = page.locator('#arrivalDeadline');
+    this.searchButton = page.locator('button[type="submit"]', { hasText: '条件変更して再検索' });
+    this.voyagesTable = page.locator('table');
+    this.noResultsMessage = page.locator('div.text-center.text-secondary');
+    this.confirmRouteButton = page.locator('button[type="submit"]', { hasText: 'この航路で経路を確定する' });
+  }
+
+  async selectVoyage(voyageNumber: string) {
+    await this.page.locator(`input[type="radio"][name="voyageNumber"][value="${voyageNumber}"]`).click();
+  }
+
+  async reSearch(originUnlocode: string, destinationUnlocode: string, arrivalDeadline: string) {
+    await this.originInput.fill(originUnlocode);
+    await this.destinationInput.fill(destinationUnlocode);
+    await this.arrivalDeadlineInput.fill(arrivalDeadline);
+    await this.searchButton.click();
+    await this.page.waitForURL(/\/bookings\/.+\/route/);
+  }
+
+  async submitRoute() {
+    await this.confirmRouteButton.click();
+    await this.page.waitForURL(/\/bookings\/[^/]+$/);
   }
 }

@@ -43,13 +43,15 @@ test.describe('共通ナビゲーション', () => {
       }
     });
 
-    test('ナビバーのリンク順序が 予約管理→荷主管理 である', async ({ page, loggedIn }) => {
+    test('ナビバーのリンク順序が 見積管理→予約管理→荷主管理→航路管理 である', async ({ page, loggedIn }) => {
       const navbar = new NavbarPage(page);
       await page.goto('/');
 
       const navLinks = page.locator('nav .navbar-nav a');
-      await expect(navLinks.nth(0)).toHaveText('予約管理');
-      await expect(navLinks.nth(1)).toHaveText('荷主管理');
+      await expect(navLinks.nth(0)).toHaveText('見積管理');
+      await expect(navLinks.nth(1)).toHaveText('予約管理');
+      await expect(navLinks.nth(2)).toHaveText('荷主管理');
+      await expect(navLinks.nth(3)).toHaveText('航路管理');
     });
 
     test('ブランドロゴからダッシュボードへ戻れる', async ({ page, loggedIn }) => {
