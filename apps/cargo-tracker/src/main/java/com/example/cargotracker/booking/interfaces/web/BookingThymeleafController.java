@@ -145,35 +145,31 @@ public class BookingThymeleafController {
 
     @PostMapping("/{bookingId}/confirm")
     public String confirm(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
-        try {
-            cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId));
-            redirectAttributes.addFlashAttribute("successMessage", "予約を確定しました。");
-        } catch (BookingNotFoundException e) {
-            throw new ResponseStatusException(NOT_FOUND);
-        } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        return "redirect:/bookings/" + bookingId;
+        return executeBookingCommand(bookingId, redirectAttributes, "予約を確定しました。",
+                () -> cargoBookingCommandService.confirmBooking(new ConfirmBookingCommand(bookingId)));
     }
 
     @PostMapping("/{bookingId}/assign-to-routing")
     public String assignToRouting(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
-        try {
-            cargoBookingCommandService.assignToRouting(new AssignToRoutingCommand(bookingId));
-            redirectAttributes.addFlashAttribute("successMessage", "経路設計者に引き渡しました。");
-        } catch (BookingNotFoundException e) {
-            throw new ResponseStatusException(NOT_FOUND);
-        } catch (IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        return "redirect:/bookings/" + bookingId;
+        return executeBookingCommand(bookingId, redirectAttributes, "経路設計者に引き渡しました。",
+                () -> cargoBookingCommandService.assignToRouting(new AssignToRoutingCommand(bookingId)));
     }
 
     @PostMapping("/{bookingId}/cancel")
     public String cancel(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
+        return executeBookingCommand(bookingId, redirectAttributes, "予約をキャンセルしました。",
+                () -> cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId)));
+    }
+
+    private String executeBookingCommand(
+            String bookingId,
+            RedirectAttributes redirectAttributes,
+            String successMessage,
+            Runnable command
+    ) {
         try {
-            cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId));
-            redirectAttributes.addFlashAttribute("successMessage", "予約をキャンセルしました。");
+            command.run();
+            redirectAttributes.addFlashAttribute("successMessage", successMessage);
         } catch (BookingNotFoundException e) {
             throw new ResponseStatusException(NOT_FOUND);
         } catch (IllegalStateException e) {

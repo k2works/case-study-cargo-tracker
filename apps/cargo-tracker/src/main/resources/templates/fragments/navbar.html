@@ -12,14 +12,14 @@
         <div class="collapse navbar-collapse" id="navbarContent">
             <div class="navbar-nav me-auto">
                 <a class="nav-link"
+                   th:classappend="${activeMenu == 'estimates'} ? 'active'"
+                   th:href="@{/estimates}">見積管理</a>
+                <a class="nav-link"
                    th:classappend="${activeMenu == 'bookings'} ? 'active'"
                    th:href="@{/bookings}">予約管理</a>
                 <a class="nav-link"
                    th:classappend="${activeMenu == 'shippers'} ? 'active'"
                    th:href="@{/shippers}">荷主管理</a>
-                <a class="nav-link"
-                   th:classappend="${activeMenu == 'estimates'} ? 'active'"
-                   th:href="@{/estimates}">見積管理</a>
                 <a class="nav-link"
                    th:classappend="${activeMenu == 'voyages'} ? 'active'"
                    th:href="@{/voyages}">航路管理</a>
