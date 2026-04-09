@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
@@ -30,6 +31,7 @@ public class Cargo {
     private final BookingStatus status;
     private final HazardousDeclaration hazardousDeclaration;
     private final TemperatureRequirement temperatureRequirement;
+    private final CargoItinerary cargoItinerary;
 
     public record Details(
             Dimensions dimensions,
@@ -48,7 +50,8 @@ public class Cargo {
             RouteSpecification routeSpecification,
             BookingStatus status,
             Details details,
-            Handling handling
+            Handling handling,
+            CargoItinerary cargoItinerary
     ) {
     }
 
@@ -69,7 +72,7 @@ public class Cargo {
             Details details,
             Handling handling
     ) {
-        return new State(routeSpecification, status, details, handling);
+        return new State(routeSpecification, status, details, handling, null);
     }
 
     public Cargo(
@@ -112,6 +115,7 @@ public class Cargo {
         this.status = Objects.requireNonNull(cargoState.status(), "status must not be null");
         this.hazardousDeclaration = cargoState.handling() != null ? cargoState.handling().hazardousDeclaration() : null;
         this.temperatureRequirement = cargoState.handling() != null ? cargoState.handling().temperatureRequirement() : null;
+        this.cargoItinerary = cargoState.cargoItinerary();
 
         if (this.weight.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("weight must be greater than zero");
@@ -168,6 +172,10 @@ public class Cargo {
         return temperatureRequirement;
     }
 
+    public CargoItinerary getCargoItinerary() {
+        return cargoItinerary;
+    }
+
     public void requireStatus(BookingStatus expected) {
         if (status != expected) {
             throw new IllegalStateException(
@@ -191,6 +199,19 @@ public class Cargo {
     public Cargo assignToRouting() {
         requireStatus(BookingStatus.PRELIMINARY);
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.ROUTE_PROPOSED));
+    }
+
+    public Cargo assignItinerary(CargoItinerary itinerary) {
+        Objects.requireNonNull(itinerary, "itinerary must not be null");
+        if (status != BookingStatus.PRELIMINARY && status != BookingStatus.ROUTE_PROPOSED) {
+            throw new IllegalStateException(
+                    "現在の状態では経路を割り当てできません。現在の状態: " + status.getDisplayName());
+        }
+        return new Cargo(bookingId, shipperId, cargoType, weight,
+                new State(routeSpecification, BookingStatus.ROUTE_PROPOSED,
+                        details(dimensions, quantity, description),
+                        handling(hazardousDeclaration, temperatureRequirement),
+                        itinerary));
     }
 
     private State currentStateWith(BookingStatus nextStatus) {

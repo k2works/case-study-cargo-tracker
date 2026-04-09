@@ -4,7 +4,9 @@ import com.example.cargotracker.booking.domain.model.aggregates.BookingStatus;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
@@ -16,6 +18,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -410,6 +414,71 @@ class CargoTest {
         Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), status, null, null);
 
         assertThrows(IllegalStateException.class, cargo::assignToRouting);
+    }
+
+    // --- 経路情報割り当てテスト ---
+
+    private static CargoItinerary createSampleItinerary() {
+        Leg leg = new Leg(
+                "V001",
+                new Location("JPTYO"),
+                new Location("USNYC"),
+                LocalDateTime.of(2026, 5, 10, 18, 0),
+                LocalDateTime.of(2026, 6, 10, 8, 0)
+        );
+        return new CargoItinerary(List.of(leg));
+    }
+
+    @Test
+    void assignItinerary_PRELIMINARY状態から経路情報を割り当てできる() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.PRELIMINARY, null, null);
+        CargoItinerary itinerary = createSampleItinerary();
+
+        Cargo result = cargo.assignItinerary(itinerary);
+
+        assertEquals(BookingStatus.ROUTE_PROPOSED, result.getStatus());
+        assertEquals(itinerary, result.getCargoItinerary());
+    }
+
+    @Test
+    void assignItinerary_ROUTE_PROPOSED状態から再割り当てできる() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.ROUTE_PROPOSED, null, null);
+        CargoItinerary itinerary = createSampleItinerary();
+
+        Cargo result = cargo.assignItinerary(itinerary);
+
+        assertEquals(BookingStatus.ROUTE_PROPOSED, result.getStatus());
+        assertEquals(itinerary, result.getCargoItinerary());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = BookingStatus.class, names = {"PRELIMINARY", "ROUTE_PROPOSED"}, mode = EnumSource.Mode.EXCLUDE)
+    void assignItinerary_他ステータスからは例外が発生する(BookingStatus status) {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), status, null, null);
+        CargoItinerary itinerary = createSampleItinerary();
+
+        assertThrows(IllegalStateException.class, () -> cargo.assignItinerary(itinerary));
+    }
+
+    @Test
+    void assignItinerary_nullを渡すと例外が発生する() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.PRELIMINARY, null, null);
+
+        assertThrows(NullPointerException.class, () -> cargo.assignItinerary(null));
+    }
+
+    @Test
+    void assignItinerary_元のフィールドが保持される() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.PRELIMINARY, null, null);
+        CargoItinerary itinerary = createSampleItinerary();
+
+        Cargo result = cargo.assignItinerary(itinerary);
+
+        assertEquals(BOOKING_ID, result.getBookingId());
+        assertEquals(SHIPPER_ID, result.getShipperId());
+        assertEquals(CargoType.GENERAL, result.getCargoType());
+        assertEquals(new BigDecimal("10"), result.getWeight());
+        assertEquals(ROUTE_SPEC, result.getRouteSpecification());
     }
 
     private Cargo createCargo(
