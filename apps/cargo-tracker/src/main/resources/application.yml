@@ -50,4 +50,4 @@ app:
     default-username: admin
     default-password: admin
   test-reset:
-    enabled: true
+    enabled: false
