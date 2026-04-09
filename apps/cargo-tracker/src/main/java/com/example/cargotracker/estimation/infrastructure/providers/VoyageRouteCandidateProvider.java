@@ -40,18 +40,18 @@ public class VoyageRouteCandidateProvider implements RouteCandidateProvider {
                 origin, destination, LocalDate.now(), arrivalDeadline);
 
         return voyages.stream()
-                .map(voyage -> toRouteCandidate(voyage, origin, destination))
+                .map(this::toRouteCandidate)
                 .sorted(Comparator
                         .comparingInt(RouteCandidate::transitDays))
                 .toList();
     }
 
-    private RouteCandidate toRouteCandidate(Voyage voyage, Location origin, Location destination) {
+    private RouteCandidate toRouteCandidate(Voyage voyage) {
         int durationDays = (int) voyage.getDurationDays();
         BigDecimal estimatedCost = BASE_COST_PER_DAY.multiply(new BigDecimal(durationDays));
 
         // 経由港: 出発地と到着地以外の寄港地を抽出（直行便は null）
-        String transitPort = extractTransitPort(voyage, origin, destination);
+        String transitPort = extractTransitPort(voyage);
 
         return new RouteCandidate(
                 voyage.getVoyageNumber().number(),
@@ -65,7 +65,7 @@ public class VoyageRouteCandidateProvider implements RouteCandidateProvider {
      * 直行便以外の場合、最初の中継港 UNLOCODE を返す。
      * 直行便（CarrierMovement が 1 件）の場合は null を返す。
      */
-    private String extractTransitPort(Voyage voyage, Location origin, Location destination) {
+    private String extractTransitPort(Voyage voyage) {
         var movements = voyage.getSchedule().carrierMovements();
         if (movements.size() <= 1) {
             return null;
