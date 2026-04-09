@@ -102,10 +102,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | SonarQube ローカルスキャン実行・Quality Gate 確認・指摘対応 | 3h | - | [ ] |
-| 1.2 | `Cargo.requireStatus()` メソッド抽出・既存 status チェック箇所をリファクタリング | 2h | - | [ ] |
-| 1.3 | `BookingThymeleafController` の try-catch 共通化 | 1h | - | [ ] |
-| 1.4 | ナビゲーション順序変更（見積管理→予約管理→荷主管理） | 1h | - | [ ] |
+| 1.1 | SonarQube ローカルスキャン実行・Quality Gate 確認・指摘対応 | 3h | - | [x] |
+| 1.2 | `Cargo.requireStatus()` メソッド抽出・既存 status チェック箇所をリファクタリング | 2h | - | [x] |
+| 1.3 | `BookingThymeleafController` の try-catch 共通化 | 1h | - | [x] |
+| 1.4 | ナビゲーション順序変更（見積管理→予約管理→荷主管理） | 1h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -113,11 +113,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `RouteCargoCommand` / `RouteCargoService` 設計・ユニットテスト作成（TDD） | 3h | - | [ ] |
-| 2.2 | 経路割り当て画面をラジオ選択 + 詳細パネル形式に更新（ui_design.md 準拠） | 3h | - | [ ] |
-| 2.3 | `POST /bookings/{bookingId}/route` エンドポイント実装（PRG パターン） | 3h | - | [ ] |
-| 2.4 | 予約詳細画面に「割り当て経路」セクション追加（`ROUTE_PROPOSED` 時に表示） | 2h | - | [ ] |
-| 2.5 | E2E テスト作成（経路選択 → 割り当て → 詳細で「経路提案済」バッジ確認） | 2h | - | [ ] |
+| 2.1 | `RouteCargoCommand` / `RouteCargoService` 設計・ユニットテスト作成（TDD） | 3h | - | [x] |
+| 2.2 | 経路割り当て画面をラジオ選択 + 詳細パネル形式に更新（ui_design.md 準拠） | 3h | - | [x] |
+| 2.3 | `POST /bookings/{bookingId}/route` エンドポイント実装（PRG パターン） | 3h | - | [x] |
+| 2.4 | 予約詳細画面に「割り当て経路」セクション追加（`ROUTE_PROPOSED` 時に表示） | 2h | - | [x] |
+| 2.5 | E2E テスト作成（経路選択 → 割り当て → 詳細で「経路提案済」バッジ確認） | 2h | - | [x] |
 
 **小計**: 13h（理想時間）
 
@@ -125,10 +125,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 経路割り当て画面の検索フォームに期限・条件変更フィールド追加 | 3h | - | [ ] |
-| 3.2 | `GET /bookings/{bookingId}/route/detail` エンドポイント追加（htmx 部分更新用） | 2h | - | [ ] |
-| 3.3 | `RouteCandidateProvider.findCandidates()` の条件パラメータ拡張 | 2h | - | [ ] |
-| 3.4 | E2E テスト作成（期限変更 → 再算出 → 候補更新確認、候補なし時のメッセージ確認） | 2h | - | [ ] |
+| 3.1 | 経路割り当て画面の検索フォームに期限・条件変更フィールド追加 | 3h | - | [x] |
+| 3.2 | `GET /bookings/{bookingId}/route/detail` エンドポイント追加（htmx 部分更新用） | 2h | - | [x] |
+| 3.3 | `RouteCandidateProvider.findCandidates()` の条件パラメータ拡張 | 2h | - | [x] |
+| 3.4 | E2E テスト作成（期限変更 → 再算出 → 候補更新確認、候補なし時のメッセージ確認） | 2h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -136,11 +136,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `CargoItinerary`・`Leg` 値オブジェクト実装（domain-model.md 準拠） | 2h | - | [ ] |
-| 4.2 | `Cargo.assignItinerary()` 実装（`BookingStatus` を `ROUTE_PROPOSED` に遷移） | 2h | - | [ ] |
-| 4.3 | V9 DB マイグレーション（`leg` テーブル新規作成） | 1h | - | [ ] |
-| 4.4 | `MyBatisLegRepository` 実装・統合テスト追加 | 2h | - | [ ] |
-| 4.5 | E2E テスト: 経路割り当て後に `ROUTE_PROPOSED`（経路提案済）バッジを確認 | 1h | - | [ ] |
+| 4.1 | `CargoItinerary`・`Leg` 値オブジェクト実装（domain-model.md 準拠） | 2h | - | [x] |
+| 4.2 | `Cargo.assignItinerary()` 実装（`BookingStatus` を `ROUTE_PROPOSED` に遷移） | 2h | - | [x] |
+| 4.3 | V9 DB マイグレーション（`leg` テーブル新規作成） | 1h | - | [x] |
+| 4.4 | `MyBatisLegRepository` 実装・統合テスト追加 | 2h | - | [x] |
+| 4.5 | E2E テスト: 経路割り当て後に `ROUTE_PROPOSED`（経路提案済）バッジを確認 | 1h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -513,7 +513,7 @@ CREATE TABLE leg (
 
 - [x] コードレビュー完了（`developing-review` 実施）
 - [x] ユニットテスト全パス（Java テスト 250 件全パス）
-- [x] E2E テスト全パス（BookingE2E テスト含む全パス）
+- [x] E2E テスト全パス（Playwright 56 件全パス — US09・US10・US11・ナビゲーション追加）
 - [x] SonarQube Quality Gate PASS（今イテレーション内で初回達成）
 - [x] テストカバレッジ 80% 以上（命令 88%・ブランチ 75%）
 - [x] SpotBugs・CheckStyle エラーなし
@@ -536,6 +536,7 @@ CREATE TABLE leg (
 | 2026-04-09 | 初版作成（IT4 ふりかえりを反映） | - |
 | 2026-04-09 | 整合性検証により 14 件の不整合を修正: `ROUTE_CONFIRMED`→`ROUTE_PROPOSED`、`RouteInfo`→`CargoItinerary`+`Leg`、`Booking`→`Cargo`、`booking` テーブル拡張→`leg` テーブル新規作成、UI ワイヤーフレームを ui_design.md 準拠に修正、htmx パターン・フィードバック定義追加 | - |
 | 2026-04-09 | IT5 完了を反映: 全タスク完了（10/10 SP）、成功基準・DoD を全チェック、テスト 250 件全パス・カバレッジ 88%/75% | - |
+| 2026-04-09 | 各タスク行の状態を [x] に更新、E2E テスト件数を実績値（56 件）に更新 | - |
 
 ---
 
