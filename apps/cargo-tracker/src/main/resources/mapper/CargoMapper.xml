@@ -99,6 +99,10 @@
         WHERE booking_id = CAST(#{bookingId} AS UUID)
     </update>
 
+    <select id="findIdByBookingId" resultType="java.lang.Long">
+        SELECT id FROM cargo WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </select>
+
     <select id="findByShipperId" resultMap="cargoRecordMap">
         SELECT id, booking_id, shipper_id, cargo_type, weight,
                dimension_length, dimension_width, dimension_height,

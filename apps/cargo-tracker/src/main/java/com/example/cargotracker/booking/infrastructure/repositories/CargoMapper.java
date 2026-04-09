@@ -14,6 +14,8 @@ public interface CargoMapper {
 
     CargoRecord findByBookingId(String bookingId);
 
+    Long findIdByBookingId(String bookingId);
+
     List<CargoRecord> findAll();
 
     List<CargoRecord> findByShipperId(String shipperId);

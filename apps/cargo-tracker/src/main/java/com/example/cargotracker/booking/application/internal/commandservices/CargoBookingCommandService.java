@@ -10,7 +10,10 @@ import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEven
 import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
 import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.repository.CargoRepository;
+import com.example.cargotracker.booking.domain.model.repository.LegRepository;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import org.springframework.context.ApplicationEventPublisher;
 import com.example.cargotracker.booking.domain.model.valueobjects.Description;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
@@ -19,10 +22,14 @@ import com.example.cargotracker.booking.domain.model.valueobjects.Quantity;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
+import com.example.cargotracker.routing.domain.model.Voyage;
+import com.example.cargotracker.routing.domain.model.repository.VoyageRepository;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -32,12 +39,17 @@ public class CargoBookingCommandService {
     private final CargoRepository cargoRepository;
     private final ShipperExistenceChecker shipperExistenceChecker;
     private final ApplicationEventPublisher eventPublisher;
+    private final VoyageRepository voyageRepository;
+    private final LegRepository legRepository;
 
     public CargoBookingCommandService(CargoRepository cargoRepository, ShipperExistenceChecker shipperExistenceChecker,
-                                      ApplicationEventPublisher eventPublisher) {
+                                      ApplicationEventPublisher eventPublisher,
+                                      VoyageRepository voyageRepository, LegRepository legRepository) {
         this.cargoRepository = cargoRepository;
         this.shipperExistenceChecker = shipperExistenceChecker;
         this.eventPublisher = eventPublisher;
+        this.voyageRepository = voyageRepository;
+        this.legRepository = legRepository;
     }
 
     public BookingId bookCargo(BookCargoCommand command) {
@@ -107,6 +119,25 @@ public class CargoBookingCommandService {
         Cargo cancelled = cargo.cancel();
         cargoRepository.updateStatus(cancelled);
         eventPublisher.publishEvent(new BookingCancelledEvent(cancelled.getBookingId()));
+    }
+
+    public void assignItinerary(RouteCargoCommand command) {
+        BookingId bookingId = new BookingId(UUID.fromString(command.bookingId()));
+        Cargo cargo = cargoRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+        Voyage voyage = voyageRepository.findByVoyageNumber(new VoyageNumber(command.voyageNumber()))
+                .orElseThrow(() -> new IllegalArgumentException("Voyage not found: " + command.voyageNumber()));
+        Leg leg = new Leg(
+                voyage.getVoyageNumber().number(),
+                voyage.getDepartureLocation(),
+                voyage.getArrivalLocation(),
+                voyage.getDepartureTime(),
+                voyage.getArrivalTime()
+        );
+        CargoItinerary itinerary = new CargoItinerary(List.of(leg));
+        Cargo routed = cargo.assignItinerary(itinerary);
+        cargoRepository.updateStatus(routed);
+        legRepository.saveAll(bookingId, itinerary.legs());
     }
 
     public void assignToRouting(AssignToRoutingCommand command) {

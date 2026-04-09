@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.repositories.LegMapper">
+
+    <resultMap id="legRecordMap" type="com.example.cargotracker.booking.infrastructure.repositories.LegRecord">
+        <id property="id" column="id"/>
+        <result property="cargoId" column="cargo_id"/>
+        <result property="voyageNumber" column="voyage_number"/>
+        <result property="loadLocationUnlocode" column="load_location_unlocode"/>
+        <result property="unloadLocationUnlocode" column="unload_location_unlocode"/>
+        <result property="loadTime" column="load_time"/>
+        <result property="unloadTime" column="unload_time"/>
+        <result property="seqNumber" column="seq_number"/>
+    </resultMap>
+
+    <insert id="insertAll">
+        INSERT INTO leg (cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode, load_time, unload_time, seq_number)
+        VALUES
+        <foreach collection="legs" item="leg" separator=",">
+            (#{cargoId}, #{leg.voyageNumber}, #{leg.loadLocationUnlocode}, #{leg.unloadLocationUnlocode},
+             #{leg.loadTime}, #{leg.unloadTime}, #{leg.seqNumber})
+        </foreach>
+    </insert>
+
+    <select id="findByCargoId" resultMap="legRecordMap">
+        SELECT id, cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode,
+               load_time, unload_time, seq_number
+        FROM leg
+        WHERE cargo_id = #{cargoId}
+        ORDER BY seq_number
+    </select>
+</mapper>

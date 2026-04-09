@@ -5,6 +5,7 @@ import com.example.cargotracker.booking.application.internal.commandservices.Boo
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
 import com.example.cargotracker.booking.application.internal.commandservices.ConfirmBookingCommand;
+import com.example.cargotracker.booking.application.internal.commandservices.RouteCargoCommand;
 import com.example.cargotracker.booking.application.internal.queryservices.CargoBookingQueryService;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
 import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
@@ -13,6 +14,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.transform.CargoAssembler;
 import com.example.cargotracker.estimation.application.internal.commandservices.EstimateCommandService;
+import com.example.cargotracker.routing.application.internal.queryservices.VoyageQueryService;
 import com.example.cargotracker.shipper.application.internal.queryservices.FindShipperQueryService;
 import com.example.cargotracker.shipper.interfaces.rest.transform.ShipperAssembler;
 import jakarta.validation.Valid;
@@ -48,6 +50,7 @@ public class BookingThymeleafController {
     private final FindShipperQueryService findShipperQueryService;
     private final ShipperAssembler shipperAssembler;
     private final EstimateCommandService estimateCommandService;
+    private final VoyageQueryService voyageQueryService;
 
     public BookingThymeleafController(
             CargoBookingCommandService cargoBookingCommandService,
@@ -55,7 +58,8 @@ public class BookingThymeleafController {
             CargoAssembler cargoAssembler,
             FindShipperQueryService findShipperQueryService,
             ShipperAssembler shipperAssembler,
-            EstimateCommandService estimateCommandService
+            EstimateCommandService estimateCommandService,
+            VoyageQueryService voyageQueryService
     ) {
         this.cargoBookingCommandService = cargoBookingCommandService;
         this.cargoBookingQueryService = cargoBookingQueryService;
@@ -63,6 +67,7 @@ public class BookingThymeleafController {
         this.findShipperQueryService = findShipperQueryService;
         this.shipperAssembler = shipperAssembler;
         this.estimateCommandService = estimateCommandService;
+        this.voyageQueryService = voyageQueryService;
     }
 
     @GetMapping
@@ -153,6 +158,35 @@ public class BookingThymeleafController {
     public String assignToRouting(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
         return executeBookingCommand(bookingId, redirectAttributes, "経路設計者に引き渡しました。",
                 () -> cargoBookingCommandService.assignToRouting(new AssignToRoutingCommand(bookingId)));
+    }
+
+    @GetMapping("/{bookingId}/route")
+    public String routeForm(@PathVariable String bookingId, Model model) {
+        var booking = cargoBookingQueryService.findByBookingId(bookingId)
+                .map(cargoAssembler::toResponse)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        var voyages = voyageQueryService.searchVoyages(
+                booking.originUnlocode(), booking.destinationUnlocode(), null, booking.arrivalDeadline());
+        model.addAttribute(BOOKING_ATTRIBUTE, booking);
+        model.addAttribute("voyages", voyages);
+        return "booking/route";
+    }
+
+    @PostMapping("/{bookingId}/route")
+    public String assignRoute(
+            @PathVariable String bookingId,
+            @RequestParam String voyageNumber,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            cargoBookingCommandService.assignItinerary(new RouteCargoCommand(bookingId, voyageNumber));
+            redirectAttributes.addFlashAttribute("successMessage", "経路を割り当てました。");
+        } catch (BookingNotFoundException e) {
+            throw new ResponseStatusException(NOT_FOUND);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/bookings/" + bookingId;
     }
 
     @PostMapping("/{bookingId}/cancel")

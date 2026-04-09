@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>経路割り当て - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('bookings')}"></div>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">経路割り当て</h1>
+            <p class="text-secondary mb-0">予約番号: <span th:text="${booking.bookingId}">booking-id</span></p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/bookings/{id}(id=${booking.bookingId})}">詳細へ戻る</a>
+    </div>
+
+    <!-- 経路要件 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h2 class="h6 mb-0">経路要件</h2>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">出発地</dt>
+                <dd class="col-sm-9" th:text="${booking.originUnlocode}">JPTYO</dd>
+                <dt class="col-sm-3">目的地</dt>
+                <dd class="col-sm-9" th:text="${booking.destinationUnlocode}">USLAX</dd>
+                <dt class="col-sm-3">希望着日</dt>
+                <dd class="col-sm-9" th:text="${booking.arrivalDeadline}">2026-04-30</dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- 航路選択フォーム -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h2 class="h6 mb-0">利用可能な航路</h2>
+        </div>
+        <div class="card-body p-0">
+            <div th:if="${voyages.isEmpty()}" class="p-4 text-center text-secondary">
+                条件に合致する航路が見つかりません。
+            </div>
+            <form th:if="${!voyages.isEmpty()}"
+                  th:action="@{/bookings/{id}/route(id=${booking.bookingId})}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 50px;"></th>
+                        <th scope="col">航海番号</th>
+                        <th scope="col">出発地</th>
+                        <th scope="col">到着地</th>
+                        <th scope="col">出発日時</th>
+                        <th scope="col">到着日時</th>
+                        <th scope="col">所要日数</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="voyage : ${voyages}">
+                        <td>
+                            <input type="radio" class="form-check-input" name="voyageNumber"
+                                   th:value="${voyage.voyageNumber.number}"
+                                   th:id="${'voyage-' + voyage.voyageNumber.number}" required/>
+                        </td>
+                        <td>
+                            <label th:for="${'voyage-' + voyage.voyageNumber.number}"
+                                   th:text="${voyage.voyageNumber.number}" class="fw-medium">V001</label>
+                        </td>
+                        <td th:text="${voyage.departureLocation?.unlocode}">JPTYO</td>
+                        <td th:text="${voyage.arrivalLocation?.unlocode}">USLAX</td>
+                        <td th:text="${voyage.departureTime}">2026-04-01T10:00</td>
+                        <td th:text="${voyage.arrivalTime}">2026-04-15T08:00</td>
+                        <td th:text="${voyage.durationDays + ' 日'}">14 日</td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div class="p-3 border-top">
+                    <button type="submit" class="btn btn-primary">この航路で経路を確定する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

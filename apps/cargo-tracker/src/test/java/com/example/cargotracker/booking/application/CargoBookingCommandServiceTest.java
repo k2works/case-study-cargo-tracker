@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.application;
 
 import com.example.cargotracker.booking.application.internal.commandservices.AssignToRoutingCommand;
+import com.example.cargotracker.booking.application.internal.commandservices.RouteCargoCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingAssignedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingCancelledEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
@@ -15,9 +16,16 @@ import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
 import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
 import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.repository.CargoRepository;
+import com.example.cargotracker.booking.domain.model.repository.LegRepository;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureUnit;
+import com.example.cargotracker.routing.domain.model.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.Voyage;
+import com.example.cargotracker.routing.domain.model.repository.VoyageRepository;
+import com.example.cargotracker.routing.domain.model.valueobjects.Schedule;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
+import com.example.cargotracker.shared.domain.model.Location;
 import com.example.cargotracker.shared.domain.model.ShipperId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +37,8 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +62,12 @@ class CargoBookingCommandServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private VoyageRepository voyageRepository;
+
+    @Mock
+    private LegRepository legRepository;
 
     @InjectMocks
     private CargoBookingCommandService cargoBookingCommandService;
@@ -388,6 +405,69 @@ class CargoBookingCommandServiceTest {
 
         assertThrows(BookingNotFoundException.class,
                 () -> cargoBookingCommandService.assignToRouting(new AssignToRoutingCommand(bookingId.toString())));
+    }
+
+    @Test
+    void assignItinerary_PRELIMINARY状態から経路を割り当てできる() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        Cargo cargo = cargo(bookingId, BookingStatus.PRELIMINARY);
+        Voyage voyage = voyage("V001");
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
+        when(voyageRepository.findByVoyageNumber(new VoyageNumber("V001"))).thenReturn(Optional.of(voyage));
+
+        cargoBookingCommandService.assignItinerary(new RouteCargoCommand(bookingId.toString(), "V001"));
+
+        ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
+        verify(cargoRepository).updateStatus(captor.capture());
+        assertEquals(BookingStatus.ROUTE_PROPOSED, captor.getValue().getStatus());
+        assertNotNull(captor.getValue().getCargoItinerary());
+        verify(legRepository).saveAll(eq(bookingId), any());
+    }
+
+    @Test
+    void assignItinerary_ROUTE_PROPOSED状態からも経路を割り当てできる() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        Cargo cargo = cargo(bookingId, BookingStatus.ROUTE_PROPOSED);
+        Voyage voyage = voyage("V001");
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
+        when(voyageRepository.findByVoyageNumber(new VoyageNumber("V001"))).thenReturn(Optional.of(voyage));
+
+        cargoBookingCommandService.assignItinerary(new RouteCargoCommand(bookingId.toString(), "V001"));
+
+        ArgumentCaptor<Cargo> captor = ArgumentCaptor.forClass(Cargo.class);
+        verify(cargoRepository).updateStatus(captor.capture());
+        assertEquals(BookingStatus.ROUTE_PROPOSED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void assignItinerary_存在しないBookingIdは例外() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+
+        assertThrows(BookingNotFoundException.class,
+                () -> cargoBookingCommandService.assignItinerary(new RouteCargoCommand(bookingId.toString(), "V001")));
+        verify(cargoRepository, never()).updateStatus(any());
+    }
+
+    @Test
+    void assignItinerary_存在しないVoyageNumberは例外() {
+        BookingId bookingId = new BookingId(UUID.randomUUID());
+        Cargo cargo = cargo(bookingId, BookingStatus.PRELIMINARY);
+        when(cargoRepository.findByBookingId(bookingId)).thenReturn(Optional.of(cargo));
+        when(voyageRepository.findByVoyageNumber(new VoyageNumber("UNKNOWN"))).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> cargoBookingCommandService.assignItinerary(new RouteCargoCommand(bookingId.toString(), "UNKNOWN")));
+        verify(cargoRepository, never()).updateStatus(any());
+    }
+
+    private Voyage voyage(String voyageNumber) {
+        CarrierMovement movement = new CarrierMovement(
+                new Location("JPTYO"), new Location("USLAX"),
+                LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(10)
+        );
+        Schedule schedule = new Schedule(List.of(movement));
+        return new Voyage(new VoyageNumber(voyageNumber), schedule);
     }
 
     private Cargo cargo(BookingId bookingId, BookingStatus status) {
