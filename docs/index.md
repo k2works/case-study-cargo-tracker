@@ -18,9 +18,9 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 9 件作成済み（IT1・IT2 完了、IT3 進行中） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 16 件作成済み（IT1〜IT5 完了） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 4 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
@@ -68,7 +68,15 @@
 | [IT2 計画](./development/iteration_plan-2.md) | イテレーション 2 の詳細計画（US05・US13 + IT1 技術的負債） |
 | [IT2 ふりかえり](./development/retrospective-2.md) | IT2 の KPT 分析と IT3 への申し送り事項 |
 | [IT2 完了報告書](./development/iteration_report-2.md) | IT2 の実績メトリクス・成果物一覧・アクションアイテム |
-| [IT3 計画](./development/iteration_plan-3.md) | イテレーション 3 の詳細計画（IT2改善・US01・US06）[進行中] |
+| [IT3 計画](./development/iteration_plan-3.md) | イテレーション 3 の詳細計画（IT2改善・US01・US06） |
+| [IT3 ふりかえり](./development/retrospective-3.md) | IT3 の KPT 分析と IT4 への申し送り事項 |
+| [IT3 完了報告書](./development/iteration_report-3.md) | IT3 の実績メトリクス・成果物一覧・アクションアイテム |
+| [IT4 計画](./development/iteration_plan-4.md) | イテレーション 4 の詳細計画（IT3改善・US07・US08） |
+| [IT4 ふりかえり](./development/retrospective-4.md) | IT4 の KPT 分析と IT5 への申し送り事項 |
+| [IT4 完了報告書](./development/iteration_report-4.md) | IT4 の実績メトリクス・成果物一覧・アクションアイテム |
+| [IT5 計画](./development/iteration_plan-5.md) | イテレーション 5 の詳細計画（IT4改善・US09・US10・US11） |
+| [IT5 ふりかえり](./development/retrospective-5.md) | IT5 の KPT 分析と IT6 への申し送り事項 |
+| [IT5 完了報告書](./development/iteration_report-5.md) | IT5 の実績メトリクス・成果物一覧・アクションアイテム |
 
 ### 運用ドキュメント
 
@@ -103,6 +111,12 @@
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
 | [IT1 実装成果物レビュー](./review/IT1_review_20260404.md) | IT1 荷主登録・貨物予約登録のコードレビュー結果（高 8 件・中 8 件・低 3 件） |
 | [IT1 UI/UX レビュー](./review/IT1_uiux_review_20260404.md) | IT1 Thymeleaf テンプレートの UI/UX レビュー結果（高 8 件・中 8 件・低 5 件） |
+| [IT2 US13 実装成果物レビュー](./review/US13_review_20260406.md) | US13 予約確定・キャンセルの実装レビュー結果 |
+| [IT2 予約管理画面 UI/UX レビュー](./review/booking_uiux_review_20260406.md) | IT2 予約管理 Thymeleaf テンプレートの UI/UX レビュー結果 |
+| [ファクトリメソッドリファクタリング コードレビュー](./review/factory_method_review_20260406.md) | Shipper ファクトリメソッド・RouteSpecification のリファクタリングレビュー（高 1 件・中 2 件・低 2 件） |
+| [IT3 実装成果物レビュー](./review/IT3_review_20260407.md) | IT3 US01・US06・Estimation コンテキストのコードレビュー結果（高 7 件・中 9 件・低 6 件） |
+| [IT3 UI/UX レビュー](./review/IT3_uiux_review_20260407.md) | IT3 Estimation コンテキスト Thymeleaf テンプレートの UI/UX レビュー結果（高 5 件・中 7 件・低 3 件） |
+| [IT5 実装成果物レビュー](./review/IT5_review_20260409.md) | IT5 US09・US10・US11 経路割り当て機能のコードレビュー結果（高 9 件・中 7 件・低 4 件） |
 
 ## 補足
 
