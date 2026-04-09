@@ -168,10 +168,16 @@ public class Cargo {
         return temperatureRequirement;
     }
 
-    public Cargo confirm() {
-        if (status != BookingStatus.PRELIMINARY) {
-            throw new IllegalStateException("予約確定は仮受付状態からのみ可能です。現在の状態: " + status.getDisplayName());
+    public void requireStatus(BookingStatus expected) {
+        if (status != expected) {
+            throw new IllegalStateException(
+                    "現在の状態では操作できません。期待: " + expected.getDisplayName()
+                    + "、現在: " + status.getDisplayName());
         }
+    }
+
+    public Cargo confirm() {
+        requireStatus(BookingStatus.PRELIMINARY);
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.CONFIRMED));
     }
 
@@ -183,9 +189,7 @@ public class Cargo {
     }
 
     public Cargo assignToRouting() {
-        if (status != BookingStatus.PRELIMINARY) {
-            throw new IllegalStateException("経路設計依頼は仮受付状態からのみ可能です。現在の状態: " + status.getDisplayName());
-        }
+        requireStatus(BookingStatus.PRELIMINARY);
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.ROUTE_PROPOSED));
     }
 

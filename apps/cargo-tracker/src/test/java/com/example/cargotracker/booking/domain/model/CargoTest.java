@@ -375,6 +375,22 @@ class CargoTest {
         assertNull(cargo.getTemperatureRequirement());
     }
 
+    // --- requireStatus テスト ---
+
+    @Test
+    void requireStatus_shouldPassWhenStatusMatches() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.PRELIMINARY, null, null);
+
+        assertDoesNotThrow(() -> cargo.requireStatus(BookingStatus.PRELIMINARY));
+    }
+
+    @Test
+    void requireStatus_shouldThrowWhenStatusDoesNotMatch() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.CONFIRMED, null, null);
+
+        assertThrows(IllegalStateException.class, () -> cargo.requireStatus(BookingStatus.PRELIMINARY));
+    }
+
     @Test
     void shouldAssignToRoutingFromPreliminaryStatus() {
         Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.PRELIMINARY, null, null);
