@@ -358,38 +358,94 @@ invoice ||--o{ payment : "支払を持つ"
 
 ### 画面遷移
 
+> **注**: `ui_design.md` 画面遷移仕様に準拠。IT5 の経路割り当てフローから精算フローへ続く全体の流れを示す。
+
 ```plantuml
 @startuml
-title 精算フロー画面遷移
+title IT6 画面遷移図（IT5-改善・US22・US23）
 
-[*] --> 精算書一覧
+[*] --> ログイン
 
-state "精算書一覧" as invoice_list {
-  invoice_list : /billing/invoices
-  invoice_list : 精算書テーブル・状態フィルタ
+state ログイン {
+  ログイン : /login
+  ログイン : 認証フォーム
 }
 
-state "精算書詳細" as invoice_detail {
-  invoice_detail : /billing/invoices/{invoiceId}
-  invoice_detail : 請求書・割引・支払い情報
+ログイン --> ダッシュボード : ログイン成功
+ログイン --> ログイン : 認証エラー
+
+state ダッシュボード {
+  ダッシュボード : /
+  ダッシュボード : サマリー表示
 }
 
-state "入金確認" as confirm {
-  confirm : /billing/invoices/{invoiceId}/confirm
-  confirm : 入金確認フォーム
+ダッシュボード --> 貨物予約一覧 : [貨物予約] クリック
+ダッシュボード --> 精算書一覧 : [請求管理] クリック
+
+state "予約フロー（IT5-改善）" as booking_flow {
+  state 貨物予約一覧 {
+    貨物予約一覧 : /bookings
+    貨物予約一覧 : 一覧テーブル
+  }
+  state 予約詳細_経路提案済 {
+    予約詳細_経路提案済 : /bookings/{bookingId}
+    予約詳細_経路提案済 : BookingStatus = ROUTE_PROPOSED
+    予約詳細_経路提案済 : 割り当て経路情報を表示（US11-AC1 対応）
+  }
+  state 予約詳細_精算済 {
+    予約詳細_精算済 : /bookings/{bookingId}
+    予約詳細_精算済 : BookingStatus = SETTLED
+    予約詳細_精算済 : 精算完了バッジ表示
+  }
+
+  貨物予約一覧 --> 予約詳細_経路提案済 : 行クリック（ROUTE_PROPOSED の予約）
+  貨物予約一覧 --> 予約詳細_精算済 : 行クリック（SETTLED の予約）
 }
 
-invoice_list --> invoice_detail : [詳細] クリック（GET）
-invoice_detail --> confirm : [入金確認] クリック（GET）
-confirm --> invoice_list : 確認完了（POST → リダイレクト, PRG パターン）
-confirm --> confirm : バリデーションエラー（自己ループ）
+state "経路設計フロー（IT5-改善）" as routing_flow {
+  state 経路割り当て {
+    経路割り当て : /bookings/{bookingId}/route
+    経路割り当て : ラジオ選択 + 費用情報（US09-AC1 対応）
+  }
 
-note right of confirm
-  フィードバックメッセージ:
-  成功: alert-success「精算完了しました」
-  エラー: alert-danger「入金確認に失敗しました」
-  超過: alert-warning「支払期限を超過しています」
-end note
+  経路割り当て --> 経路割り当て : 条件変更 → 再算出（US10）
+  経路割り当て --> 経路割り当て : バリデーションエラー\n→ alert-danger（IT5-改善）
+}
+
+予約詳細_経路提案済 --> 経路割り当て : [経路を割り当て]
+経路割り当て --> 予約詳細_経路提案済 : [この経路を割り当てる]\n→ PRG + alert-success（IT5-改善）
+経路割り当て --> 予約詳細_経路提案済 : [キャンセル]
+
+state "精算フロー（US22・US23）" as billing_flow {
+  state 精算書一覧 {
+    精算書一覧 : /billing/invoices
+    精算書一覧 : 精算書テーブル（PENDING / CONFIRMED / OVERDUE）
+    精算書一覧 : OVERDUE は alert-warning で強調表示
+  }
+  state 精算書詳細 {
+    精算書詳細 : /billing/invoices/{invoiceId}
+    精算書詳細 : 請求番号・合計金額・割引情報（US22）
+    精算書詳細 : PaymentStatus = PENDING or OVERDUE
+  }
+  state 入金確認フォーム {
+    入金確認フォーム : /billing/invoices/{invoiceId}/confirm
+    入金確認フォーム : 入金確認フォーム
+  }
+  state 精算書詳細_確認済 {
+    精算書詳細_確認済 : /billing/invoices/{invoiceId}
+    精算書詳細_確認済 : PaymentStatus = CONFIRMED
+    精算書詳細_確認済 : alert-success「精算が完了しました」
+  }
+
+  精算書一覧 --> 精算書詳細 : [詳細] クリック（GET）
+  精算書詳細 --> 入金確認フォーム : [入金確認] クリック（GET）
+  入金確認フォーム --> 精算書詳細_確認済 : 確認送信\n→ PRG + alert-success（US23）
+  入金確認フォーム --> 入金確認フォーム : バリデーションエラー\n→ alert-danger
+  精算書詳細_確認済 --> 精算書一覧 : [一覧に戻る]
+}
+
+予約詳細_精算済 --> 精算書詳細_確認済 : [精算書を確認]（BookingId 経由）
+
 @enduml
 ```
 
