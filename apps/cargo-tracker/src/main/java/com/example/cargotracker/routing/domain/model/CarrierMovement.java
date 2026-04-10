@@ -11,9 +11,17 @@ public class CarrierMovement {
     private final Location arrivalLocation;
     private final LocalDateTime departureTime;
     private final LocalDateTime arrivalTime;
+    private final int baseFareAmount;
+    private final String baseFareCurrency;
 
     public CarrierMovement(Location departureLocation, Location arrivalLocation,
                            LocalDateTime departureTime, LocalDateTime arrivalTime) {
+        this(departureLocation, arrivalLocation, departureTime, arrivalTime, 0, "JPY");
+    }
+
+    public CarrierMovement(Location departureLocation, Location arrivalLocation,
+                           LocalDateTime departureTime, LocalDateTime arrivalTime,
+                           int baseFareAmount, String baseFareCurrency) {
         this.departureLocation = Objects.requireNonNull(departureLocation, "departureLocation must not be null");
         this.arrivalLocation = Objects.requireNonNull(arrivalLocation, "arrivalLocation must not be null");
         this.departureTime = Objects.requireNonNull(departureTime, "departureTime must not be null");
@@ -21,6 +29,8 @@ public class CarrierMovement {
         if (!arrivalTime.isAfter(departureTime)) {
             throw new IllegalArgumentException("arrivalTime must be after departureTime");
         }
+        this.baseFareAmount = baseFareAmount;
+        this.baseFareCurrency = Objects.requireNonNull(baseFareCurrency, "baseFareCurrency must not be null");
     }
 
     public Location getDepartureLocation() {
@@ -37,5 +47,13 @@ public class CarrierMovement {
 
     public LocalDateTime getArrivalTime() {
         return arrivalTime;
+    }
+
+    public int getBaseFareAmount() {
+        return baseFareAmount;
+    }
+
+    public String getBaseFareCurrency() {
+        return baseFareCurrency;
     }
 }

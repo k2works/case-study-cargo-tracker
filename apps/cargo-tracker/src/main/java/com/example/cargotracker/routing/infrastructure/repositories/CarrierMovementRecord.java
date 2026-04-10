@@ -10,6 +10,8 @@ public class CarrierMovementRecord {
     private String arrivalLocationUnlocode;
     private LocalDateTime departureDate;
     private LocalDateTime arrivalDate;
+    private int baseFareAmount;
+    private String baseFareCurrency;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -32,4 +34,10 @@ public class CarrierMovementRecord {
 
     public LocalDateTime getArrivalDate() { return arrivalDate; }
     public void setArrivalDate(LocalDateTime arrivalDate) { this.arrivalDate = arrivalDate; }
+
+    public int getBaseFareAmount() { return baseFareAmount; }
+    public void setBaseFareAmount(int baseFareAmount) { this.baseFareAmount = baseFareAmount; }
+
+    public String getBaseFareCurrency() { return baseFareCurrency; }
+    public void setBaseFareCurrency(String baseFareCurrency) { this.baseFareCurrency = baseFareCurrency; }
 }

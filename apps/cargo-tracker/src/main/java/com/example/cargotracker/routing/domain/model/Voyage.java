@@ -83,4 +83,13 @@ public class Voyage {
         if (dep == null || arr == null) return 0;
         return ChronoUnit.DAYS.between(dep.toLocalDate(), arr.toLocalDate());
     }
+
+    /**
+     * 全運送区間の基本運賃合計を返す（円）。
+     */
+    public int getTotalBaseFare() {
+        return schedule.carrierMovements().stream()
+                .mapToInt(CarrierMovement::getBaseFareAmount)
+                .sum();
+    }
 }

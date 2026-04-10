@@ -144,9 +144,12 @@ public class BookingThymeleafController {
 
     @GetMapping("/{bookingId}")
     public String show(@PathVariable String bookingId, Model model) {
-        model.addAttribute(BOOKING_ATTRIBUTE, cargoBookingQueryService.findByBookingId(bookingId)
-                .map(cargoAssembler::toResponse)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND)));
+        var cargo = cargoBookingQueryService.findByBookingId(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND));
+        model.addAttribute(BOOKING_ATTRIBUTE, cargoAssembler.toResponse(cargo));
+        if (cargo.getCargoItinerary() != null) {
+            model.addAttribute("cargoItinerary", cargo.getCargoItinerary());
+        }
         return "booking/show";
     }
 
@@ -195,7 +198,6 @@ public class BookingThymeleafController {
 
     @GetMapping("/{bookingId}/route/detail")
     public String routeDetail(
-            @PathVariable String bookingId,
             @RequestParam String voyageNumber,
             Model model
     ) {
@@ -210,15 +212,8 @@ public class BookingThymeleafController {
             @RequestParam String voyageNumber,
             RedirectAttributes redirectAttributes
     ) {
-        try {
-            cargoBookingCommandService.assignItinerary(new RouteCargoCommand(bookingId, voyageNumber));
-            redirectAttributes.addFlashAttribute("successMessage", "経路を割り当てました。");
-        } catch (BookingNotFoundException e) {
-            throw new ResponseStatusException(NOT_FOUND);
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        return "redirect:/bookings/" + bookingId;
+        return executeBookingCommand(bookingId, redirectAttributes, "経路を割り当てました。",
+                () -> cargoBookingCommandService.assignItinerary(new RouteCargoCommand(bookingId, voyageNumber)));
     }
 
     @PostMapping("/{bookingId}/cancel")

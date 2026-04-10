@@ -69,6 +69,8 @@ public class MyBatisVoyageRepository implements VoyageRepository {
         record.setArrivalLocationUnlocode(movement.getArrivalLocation().unlocode());
         record.setDepartureDate(movement.getDepartureTime());
         record.setArrivalDate(movement.getArrivalTime());
+        record.setBaseFareAmount(movement.getBaseFareAmount());
+        record.setBaseFareCurrency(movement.getBaseFareCurrency());
         return record;
     }
 
@@ -79,7 +81,9 @@ public class MyBatisVoyageRepository implements VoyageRepository {
                         new Location(m.getDepartureLocationUnlocode()),
                         new Location(m.getArrivalLocationUnlocode()),
                         m.getDepartureDate(),
-                        m.getArrivalDate()
+                        m.getArrivalDate(),
+                        m.getBaseFareAmount(),
+                        m.getBaseFareCurrency() != null ? m.getBaseFareCurrency() : "JPY"
                 ))
                 .toList();
         return new Voyage(record.getId(), new VoyageNumber(record.getVoyageNumber()), Schedule.of(movements));

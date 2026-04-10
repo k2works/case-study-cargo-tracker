@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.model.aggregates.BookingStatus;
 import com.example.cargotracker.booking.domain.model.events.BookingAssignedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingCancelledEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.exceptions.BookingNotFoundException;
 import com.example.cargotracker.booking.domain.model.exceptions.ShipperNotFoundException;
 import com.example.cargotracker.booking.domain.model.repository.CargoRepository;
@@ -138,6 +139,7 @@ public class CargoBookingCommandService {
         Cargo routed = cargo.assignItinerary(itinerary);
         cargoRepository.updateStatus(routed);
         legRepository.saveAll(bookingId, itinerary.legs());
+        eventPublisher.publishEvent(new CargoRoutedEvent(routed.getBookingId()));
     }
 
     public void assignToRouting(AssignToRoutingCommand command) {

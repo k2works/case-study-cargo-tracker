@@ -178,19 +178,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
     @WithMockUser
     @DisplayName("POST /bookings/{bookingId}/confirm で予約を確定してリダイレクトする")
     void postConfirmBooking_shouldRedirectWithSuccess() throws Exception {
-        String shipperId = insertShipper("SHP-CONF01");
-        MvcResult createResult = mockMvc.perform(post("/bookings")
-                        .with(csrf())
-                        .param("shipperId", shipperId)
-                        .param("cargoType", "GENERAL")
-                        .param("weight", "9.500")
-                        .param("originUnlocode", "JPTYO")
-                        .param("destinationUnlocode", "USLAX")
-                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String location = createResult.getResponse().getHeader("Location");
-        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+        String bookingId = createGeneralBooking("SHP-CONF01");
 
         mockMvc.perform(post("/bookings/" + bookingId + "/confirm")
                         .with(csrf()))
@@ -212,19 +200,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
     @WithMockUser
     @DisplayName("POST /bookings/{bookingId}/confirm で確定済み予約の再確定はエラーメッセージでリダイレクトする")
     void postConfirmBooking_alreadyConfirmed_shouldRedirectWithError() throws Exception {
-        String shipperId = insertShipper("SHP-CONF02");
-        MvcResult createResult = mockMvc.perform(post("/bookings")
-                        .with(csrf())
-                        .param("shipperId", shipperId)
-                        .param("cargoType", "GENERAL")
-                        .param("weight", "9.500")
-                        .param("originUnlocode", "JPTYO")
-                        .param("destinationUnlocode", "USLAX")
-                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String location = createResult.getResponse().getHeader("Location");
-        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+        String bookingId = createGeneralBooking("SHP-CONF02");
 
         // 1回目の確定
         mockMvc.perform(post("/bookings/" + bookingId + "/confirm").with(csrf()));
@@ -238,19 +214,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
     @WithMockUser
     @DisplayName("POST /bookings/{bookingId}/cancel で予約をキャンセルしてリダイレクトする")
     void postCancelBooking_shouldRedirectWithSuccess() throws Exception {
-        String shipperId = insertShipper("SHP-CAN01");
-        MvcResult createResult = mockMvc.perform(post("/bookings")
-                        .with(csrf())
-                        .param("shipperId", shipperId)
-                        .param("cargoType", "GENERAL")
-                        .param("weight", "9.500")
-                        .param("originUnlocode", "JPTYO")
-                        .param("destinationUnlocode", "USLAX")
-                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String location = createResult.getResponse().getHeader("Location");
-        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+        String bookingId = createGeneralBooking("SHP-CAN01");
 
         mockMvc.perform(post("/bookings/" + bookingId + "/cancel")
                         .with(csrf()))
@@ -272,19 +236,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
     @WithMockUser
     @DisplayName("POST /bookings/{bookingId}/cancel でキャンセル済み予約の再キャンセルはエラーメッセージでリダイレクトする")
     void postCancelBooking_alreadyCancelled_shouldRedirectWithError() throws Exception {
-        String shipperId = insertShipper("SHP-CAN02");
-        MvcResult createResult = mockMvc.perform(post("/bookings")
-                        .with(csrf())
-                        .param("shipperId", shipperId)
-                        .param("cargoType", "GENERAL")
-                        .param("weight", "9.500")
-                        .param("originUnlocode", "JPTYO")
-                        .param("destinationUnlocode", "USLAX")
-                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String location = createResult.getResponse().getHeader("Location");
-        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+        String bookingId = createGeneralBooking("SHP-CAN02");
 
         // 1回目のキャンセル
         mockMvc.perform(post("/bookings/" + bookingId + "/cancel").with(csrf()));
@@ -324,19 +276,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
     @WithMockUser
     @DisplayName("POST /bookings/{bookingId}/assign-to-routing で仮受付予約が経路設計中になる")
     void postAssignToRouting_shouldRedirectWithSuccess() throws Exception {
-        String shipperId = insertShipper("SHP-RTE01");
-        MvcResult createResult = mockMvc.perform(post("/bookings")
-                        .with(csrf())
-                        .param("shipperId", shipperId)
-                        .param("cargoType", "GENERAL")
-                        .param("weight", "10.000")
-                        .param("originUnlocode", "JPTYO")
-                        .param("destinationUnlocode", "USLAX")
-                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String location = createResult.getResponse().getHeader("Location");
-        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+        String bookingId = createGeneralBooking("SHP-RTE01");
 
         mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing")
                         .with(csrf()))
@@ -362,19 +302,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
     @WithMockUser
     @DisplayName("GET /bookings/{bookingId}/route で条件変更フォームが表示される")
     void getRouteForm_shouldShowSearchConditionForm() throws Exception {
-        String shipperId = insertShipper("SHP-COND01");
-        MvcResult createResult = mockMvc.perform(post("/bookings")
-                        .with(csrf())
-                        .param("shipperId", shipperId)
-                        .param("cargoType", "GENERAL")
-                        .param("weight", "10.000")
-                        .param("originUnlocode", "JPTYO")
-                        .param("destinationUnlocode", "USLAX")
-                        .param("arrivalDeadline", LocalDate.now().plusDays(30).toString()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String location = createResult.getResponse().getHeader("Location");
-        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+        String bookingId = createGeneralBooking("SHP-COND01");
 
         // assign-to-routing で ROUTE_PROPOSED 状態に遷移
         mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing").with(csrf()));
@@ -389,19 +317,7 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
     @WithMockUser
     @DisplayName("GET /bookings/{bookingId}/route に検索パラメータを渡すと画面に反映される")
     void getRouteForm_withCustomParams_shouldReflectInForm() throws Exception {
-        String shipperId = insertShipper("SHP-COND02");
-        MvcResult createResult = mockMvc.perform(post("/bookings")
-                        .with(csrf())
-                        .param("shipperId", shipperId)
-                        .param("cargoType", "GENERAL")
-                        .param("weight", "10.000")
-                        .param("originUnlocode", "JPTYO")
-                        .param("destinationUnlocode", "USLAX")
-                        .param("arrivalDeadline", LocalDate.now().plusDays(30).toString()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String location = createResult.getResponse().getHeader("Location");
-        String bookingId = location.substring(location.lastIndexOf('/') + 1);
+        String bookingId = createGeneralBooking("SHP-COND02");
 
         mockMvc.perform(post("/bookings/" + bookingId + "/assign-to-routing").with(csrf()));
 
@@ -414,6 +330,22 @@ class BookingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(view().name("booking/route"))
                 .andExpect(content().string(containsString("NLRTM")))
                 .andExpect(content().string(containsString(customDeadline)));
+    }
+
+    private String createGeneralBooking(String shipperCode) throws Exception {
+        String shipperId = insertShipper(shipperCode);
+        MvcResult result = mockMvc.perform(post("/bookings")
+                        .with(csrf())
+                        .param("shipperId", shipperId)
+                        .param("cargoType", "GENERAL")
+                        .param("weight", "10.000")
+                        .param("originUnlocode", "JPTYO")
+                        .param("destinationUnlocode", "USLAX")
+                        .param("arrivalDeadline", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        String location = result.getResponse().getHeader("Location");
+        return location.substring(location.lastIndexOf('/') + 1);
     }
 
     private String insertShipper(String shipperCode) {

@@ -19,6 +19,8 @@ public class Cargo {
     private static final EnumSet<BookingStatus> CANCELLABLE_STATUSES =
             EnumSet.of(BookingStatus.PRELIMINARY, BookingStatus.ROUTE_PROPOSED, BookingStatus.CONFIRMED,
                     BookingStatus.TRACKING_ISSUED, BookingStatus.IN_TRANSIT);
+    private static final EnumSet<BookingStatus> ROUTABLE_STATUSES =
+            EnumSet.of(BookingStatus.PRELIMINARY, BookingStatus.ROUTE_PROPOSED);
 
     private final BookingId bookingId;
     private final ShipperId shipperId;
@@ -184,6 +186,15 @@ public class Cargo {
         }
     }
 
+    public void requireStatus(EnumSet<BookingStatus> expected) {
+        if (!expected.contains(status)) {
+            throw new IllegalStateException(
+                    "現在の状態では操作できません。許可された状態: "
+                    + expected.stream().map(BookingStatus::getDisplayName).toList()
+                    + "、現在: " + status.getDisplayName());
+        }
+    }
+
     public Cargo confirm() {
         requireStatus(BookingStatus.PRELIMINARY);
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.CONFIRMED));
@@ -203,10 +214,7 @@ public class Cargo {
 
     public Cargo assignItinerary(CargoItinerary itinerary) {
         Objects.requireNonNull(itinerary, "itinerary must not be null");
-        if (status != BookingStatus.PRELIMINARY && status != BookingStatus.ROUTE_PROPOSED) {
-            throw new IllegalStateException(
-                    "現在の状態では経路を割り当てできません。現在の状態: " + status.getDisplayName());
-        }
+        requireStatus(ROUTABLE_STATUSES);
         return new Cargo(bookingId, shipperId, cargoType, weight,
                 new State(routeSpecification, BookingStatus.ROUTE_PROPOSED,
                         details(dimensions, quantity, description),
