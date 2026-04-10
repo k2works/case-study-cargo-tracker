@@ -84,6 +84,7 @@
 2. 精算書が荷主にメール通知される（UI 上の通知メッセージで代替可）
 3. 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる
 4. 精算管理一覧画面で全精算の状態（未精算・精算済・支払期限超過）を確認できる
+5. 支払い期限超過時、経理担当者に未払い通知が送信される（UI 上のアラート表示で代替可）
 
 ### タスク
 
@@ -124,8 +125,8 @@
 | 3.3 | Billing Context: `GenerateInvoiceCommand`・`ConfirmPaymentCommand` 実装 | 2h | - | [ ] |
 | 3.4 | Billing Context: `CargoDeliveredEvent` を受け取り精算書を自動生成する `InvoiceEventHandler` 実装 | 1.5h | - | [ ] |
 | 3.5 | Booking Context: 精算完了時に `BookingStatus` を `SETTLED` に遷移させるイベントハンドラ実装 | 1h | - | [ ] |
-| 3.6 | UI: 精算管理一覧画面（`InvoiceThymeleafController`・`invoices/index.html`）実装 | 2h | - | [ ] |
-| 3.7 | UI: 精算書詳細・入金確認画面（`invoices/show.html`・`invoices/confirm.html`）実装 | 2h | - | [ ] |
+| 3.6 | UI: 精算管理一覧画面（`BillingThymeleafController`・`billing/invoices/index.html`）実装 | 2h | - | [ ] |
+| 3.7 | UI: 精算書詳細・入金確認画面（`billing/invoices/show.html`・`billing/invoices/confirm.html`）実装 | 2h | - | [ ] |
 | 3.8 | E2E テスト: 精算フロー全体（精算書発行→入金確認→精算完了）の Playwright テスト追加 | 2h | - | [ ] |
 | 3.9 | 全体統合テスト・パフォーマンステスト・リリース準備 | 2h | - | [ ] |
 
@@ -254,41 +255,76 @@ Invoice --> CorporateShipper : ACL (ShipperDiscountChecker)
 
 ### データモデル（追加テーブル）
 
+> **注**: `data-model.md` の命名規約（単数形テーブル名・`BIGSERIAL` PK + 業務 UK・`INTEGER` 金額型 + 通貨 VARCHAR(3)）に準拠する。
+
 ```plantuml
 @startuml
 hide circle
 skinparam linetype ortho
 
-entity "invoices" as inv {
-  *invoice_id : varchar(36)
+entity "invoice\n（精算書）" as invoice {
+  * id : BIGINT <<PK, BIGSERIAL>>
   --
-  booking_id : varchar(36)
-  base_amount : decimal(10,2)
-  discount_type : varchar(20)
-  discount_rate : decimal(5,2)
-  discounted_amount : decimal(10,2)
-  payment_status : varchar(20)
-  due_date : date
-  created_at : timestamp
-  updated_at : timestamp
+  * invoice_number : VARCHAR(30) <<UK, NOT NULL>>
+  * booking_id : VARCHAR(20) <<UK, NOT NULL>>
+  * total_amount_value : INTEGER <<NOT NULL>>
+  * total_amount_currency : VARCHAR(3) <<NOT NULL>>
+  * tax_rate : NUMERIC(5,4) <<NOT NULL>>
+  * tax_amount : NUMERIC(15,2) <<NOT NULL>>
+  discount_type : VARCHAR(20)
+  discount_rate : NUMERIC(5,4)
+  discounted_amount_value : INTEGER
+  discounted_amount_currency : VARCHAR(3)
+  * payment_status : VARCHAR(30) <<NOT NULL>>
+  due_date : DATE
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
+
+entity "invoice_line_item\n（精算明細）" as invoice_line_item {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * invoice_id : BIGINT <<FK, NOT NULL>>
+  * description : VARCHAR(200) <<NOT NULL>>
+  * amount_value : INTEGER <<NOT NULL>>
+  * amount_currency : VARCHAR(3) <<NOT NULL>>
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
+entity "payment\n（支払記録）" as payment {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * invoice_id : BIGINT <<FK, NOT NULL>>
+  * paid_amount_value : INTEGER <<NOT NULL>>
+  * paid_amount_currency : VARCHAR(3) <<NOT NULL>>
+  * paid_at : TIMESTAMP <<NOT NULL>>
+  payment_method : VARCHAR(30)
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
+invoice ||--o{ invoice_line_item : "明細を持つ"
+invoice ||--o{ payment : "支払を持つ"
 @enduml
 ```
 
 ### ユーザーインターフェース
 
-#### 精算管理一覧画面
+#### 精算管理一覧画面（ナビバー形式は `ui_design.md` 共通レイアウトに準拠）
 
 ```plantuml
 @startsalt
 {+
-  精算管理
+  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | 請求管理 | [ログアウト] }
+  ==
+  **請求管理**
+  ----
   {+
-    [精算書を発行]
-    ---------------------
-    | 予約番号 | 荷主 | 基本料金 | 割引後金額 | 状態 | 操作 |
+    | **予約番号** | **荷主** | **合計金額** | **割引後金額** | **状態** | **操作** |
     | BK-001 | 株式会社A | ¥100,000 | ¥90,000 | 未精算 | [詳細] |
     | BK-002 | 田中太郎 | ¥50,000 | ¥50,000 | 精算済 | [詳細] |
+    | BK-003 | 株式会社B | ¥200,000 | ¥180,000 | 支払期限超過 | [詳細] |
   }
 }
 @endsalt
@@ -299,18 +335,22 @@ entity "invoices" as inv {
 ```plantuml
 @startsalt
 {+
-  精算書詳細
+  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | 請求管理 | [ログアウト] }
+  ==
+  **精算書詳細**
+  ----
   {+
     請求番号: INV-20260507-001
     荷主: 株式会社A（法人）
     ---------------------
-    基本料金: ¥100,000
+    合計金額: ¥100,000
     割引率: 10%（法人契約）
     割引後金額: ¥90,000
+    消費税率: 10%
     支払期限: 2026-06-07
     状態: 未精算
     ---------------------
-    [入金確認]  [キャンセル]
+    [入金確認]  [戻る]
   }
 }
 @endsalt
@@ -322,38 +362,89 @@ entity "invoices" as inv {
 @startuml
 title 精算フロー画面遷移
 
-[*] --> 精算管理一覧
+[*] --> 精算書一覧
 
-精算管理一覧 --> 精算書詳細 : 詳細クリック
-精算書詳細 --> 入金確認画面 : 入金確認クリック
-入金確認画面 --> 精算管理一覧 : 確認完了（精算済に更新）
+state "精算書一覧" as invoice_list {
+  invoice_list : /billing/invoices
+  invoice_list : 精算書テーブル・状態フィルタ
+}
 
-精算管理一覧 --> [*]
+state "精算書詳細" as invoice_detail {
+  invoice_detail : /billing/invoices/{invoiceId}
+  invoice_detail : 請求書・割引・支払い情報
+}
+
+state "入金確認" as confirm {
+  confirm : /billing/invoices/{invoiceId}/confirm
+  confirm : 入金確認フォーム
+}
+
+invoice_list --> invoice_detail : [詳細] クリック（GET）
+invoice_detail --> confirm : [入金確認] クリック（GET）
+confirm --> invoice_list : 確認完了（POST → リダイレクト, PRG パターン）
+confirm --> confirm : バリデーションエラー（自己ループ）
+
+note right of confirm
+  フィードバックメッセージ:
+  成功: alert-success「精算完了しました」
+  エラー: alert-danger「入金確認に失敗しました」
+  超過: alert-warning「支払期限を超過しています」
+end note
 @enduml
 ```
 
 ### API 設計
 
+> **注**: `ui_design.md` の画面一覧規約に従い、精算関連 URL は `/billing/invoices` プレフィックスを使用する。
+
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| GET | /invoices | 精算管理一覧 |
-| GET | /invoices/{invoiceId} | 精算書詳細 |
-| POST | /invoices/{invoiceId}/confirm | 入金確認（PRG パターン） |
+| GET | /billing/invoices | 精算管理一覧 |
+| GET | /billing/invoices/{invoiceId} | 精算書詳細 |
+| POST | /billing/invoices/{invoiceId}/confirm | 入金確認（PRG パターン） |
 
 ### データベーススキーマ（V10 マイグレーション）
 
+> **注**: `data-model.md` の規約に従い、テーブル名は単数形・PK は `BIGSERIAL`・金額は `INTEGER` + 通貨 `VARCHAR(3)` ペアとする。
+
 ```sql
-CREATE TABLE invoices (
-    invoice_id VARCHAR(36) PRIMARY KEY,
-    booking_id VARCHAR(36) NOT NULL,
-    base_amount DECIMAL(10,2) NOT NULL,
-    discount_type VARCHAR(20) NOT NULL DEFAULT 'NONE',
-    discount_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-    discounted_amount DECIMAL(10,2) NOT NULL,
-    payment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-    due_date DATE NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE invoice (
+    id BIGSERIAL PRIMARY KEY,
+    invoice_number VARCHAR(30) NOT NULL UNIQUE,
+    booking_id VARCHAR(20) NOT NULL UNIQUE,
+    total_amount_value INTEGER NOT NULL,
+    total_amount_currency VARCHAR(3) NOT NULL DEFAULT 'JPY',
+    tax_rate NUMERIC(5,4) NOT NULL DEFAULT 0.10,
+    tax_amount NUMERIC(15,2) NOT NULL,
+    discount_type VARCHAR(20),
+    discount_rate NUMERIC(5,4),
+    discounted_amount_value INTEGER,
+    discounted_amount_currency VARCHAR(3),
+    payment_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    due_date DATE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE invoice_line_item (
+    id BIGSERIAL PRIMARY KEY,
+    invoice_id BIGINT NOT NULL REFERENCES invoice(id),
+    description VARCHAR(200) NOT NULL,
+    amount_value INTEGER NOT NULL,
+    amount_currency VARCHAR(3) NOT NULL DEFAULT 'JPY',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE payment (
+    id BIGSERIAL PRIMARY KEY,
+    invoice_id BIGINT NOT NULL REFERENCES invoice(id),
+    paid_amount_value INTEGER NOT NULL,
+    paid_amount_currency VARCHAR(3) NOT NULL DEFAULT 'JPY',
+    paid_at TIMESTAMP NOT NULL,
+    payment_method VARCHAR(30),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 ```
 
