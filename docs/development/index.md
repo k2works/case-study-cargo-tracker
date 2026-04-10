@@ -19,7 +19,7 @@
 | IT3 | [計画](./iteration_plan-3.md) | [ふりかえり](./retrospective-3.md) | [報告書](./iteration_report-3.md) | 完了（約 184 件・E2E 41 件全パス） |
 | IT4 | [計画](./iteration_plan-4.md) | [ふりかえり](./retrospective-4.md) | [報告書](./iteration_report-4.md) | 完了（190 件・E2E 40 件全パス、カバレッジ 91%/75%、US07・US08 完了） |
 | IT5 | [計画](./iteration_plan-5.md) | [ふりかえり](./retrospective-5.md) | [報告書](./iteration_report-5.md) | 完了（Java 250 件・E2E 56 件全パス、カバレッジ 88%/75%、US09・US10・US11 完了） |
-| IT6 | - | - | - | 未着手 |
+| IT6 | [計画](./iteration_plan-6.md) | - | - | 進行中（IT5-改善・US22・US23） |
 
 ### 進捗サマリー
 

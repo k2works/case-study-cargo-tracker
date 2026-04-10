@@ -315,16 +315,17 @@ gantt
 
 ### イテレーション 6（Week 11-12）
 
-**ゴール**: 精算機能を含む全機能が完成し、リリース準備が整うこと
+**ゴール**: IT5 レビュー高優先度対応と法人割引・精算処理を完成させ、プロジェクト全機能をリリース可能状態にする
 
 **主なタスク**:
 
-- [ ] US22: 法人割引適用
-- [ ] US23: 精算処理
+- [ ] IT5-改善: IT5 申し送り高優先度対応（受入条件充足・ドメインイベント・パターン統一・テスト品質）
+- [ ] US22: 法人割引を適用する
+- [ ] US23: 精算を処理する
 - [ ] 全体統合テスト・パフォーマンステスト
 - [ ] リリース準備
 
-**目標 SP**: 8 + リリース作業
+**目標 SP**: 10
 
 詳細は [iteration_plan-6.md](./iteration_plan-6.md) を参照。
 
@@ -390,8 +391,10 @@ xychart-beta
 
 1. IT5 ふりかえり・完了報告書を作成する（完了）→ [retrospective-5.md](./retrospective-5.md)・[iteration_report-5.md](./iteration_report-5.md) を参照
 2. GitHub Project 同期（完了）— US09・US10・US11 Issue をクローズ、IT5-改善 Issue #49 を作成
-3. IT6 計画を作成する（`planning-releases --iteration 6`）
+3. IT6 計画を作成する（完了）→ [iteration_plan-6.md](./iteration_plan-6.md) を参照
 4. IT6 開発を実行する（IT5 レビュー高優先度対応 + US22・US23）
+5. IT6 ふりかえり・完了報告書を作成する（`planning-releases --retrospective`・`planning-releases --report`）
+6. リリース完了報告書を作成する（`planning-releases --release-report`）
 
 ---
 
@@ -410,3 +413,4 @@ xychart-beta
 | 2026-04-09 | IT5 計画作成（US09・US10・US11・IT4 申し送り改善 = 10 SP）、GitHub Project 同期完了、次のステップ更新 | - |
 | 2026-04-09 | IT5 完了を反映（実績 10 SP、Java 250 件全パス、カバレッジ 88%/75%、バーンダウン 48→38） | - |
 | 2026-04-09 | IT5 ふりかえり・完了報告書を作成、GitHub Project 同期（US09・US10・US11 クローズ、IT5-改善 #49 作成）、次のステップを IT6 準備に更新 | - |
+| 2026-04-10 | IT6 計画作成（IT5-改善 3 SP・US22 3 SP・US23 4 SP = 10 SP）、次のステップを IT6 開発に更新 | - |
