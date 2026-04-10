@@ -5,6 +5,7 @@ export class NavbarPage {
   readonly brand: Locator;
   readonly bookingsLink: Locator;
   readonly shippersLink: Locator;
+  readonly billingLink: Locator;
   readonly logoutButton: Locator;
 
   constructor(page: Page) {
@@ -12,6 +13,7 @@ export class NavbarPage {
     this.brand = page.locator('nav .navbar-brand');
     this.bookingsLink = page.locator('nav .navbar-nav a', { hasText: '予約管理' });
     this.shippersLink = page.locator('nav .navbar-nav a', { hasText: '荷主管理' });
+    this.billingLink = page.locator('nav .navbar-nav a', { hasText: '請求管理' });
     this.logoutButton = page.locator('nav button[type="submit"]', { hasText: 'ログアウト' });
   }
 
@@ -25,6 +27,10 @@ export class NavbarPage {
 
   async clickShippers() {
     await this.shippersLink.click();
+  }
+
+  async clickBilling() {
+    await this.billingLink.click();
   }
 
   async clickLogout() {
