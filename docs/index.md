@@ -18,9 +18,9 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 16 件作成済み（IT1〜IT5 完了） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 17 件作成済み（IT1〜IT5 完了・IT6 進行中） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 4 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 10 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
@@ -77,6 +77,7 @@
 | [IT5 計画](./development/iteration_plan-5.md) | イテレーション 5 の詳細計画（IT4改善・US09・US10・US11） |
 | [IT5 ふりかえり](./development/retrospective-5.md) | IT5 の KPT 分析と IT6 への申し送り事項 |
 | [IT5 完了報告書](./development/iteration_report-5.md) | IT5 の実績メトリクス・成果物一覧・アクションアイテム |
+| [IT6 計画](./development/iteration_plan-6.md) | イテレーション 6 の詳細計画（IT5改善・US22・US23） |
 
 ### 運用ドキュメント
 
@@ -117,6 +118,7 @@
 | [IT3 実装成果物レビュー](./review/IT3_review_20260407.md) | IT3 US01・US06・Estimation コンテキストのコードレビュー結果（高 7 件・中 9 件・低 6 件） |
 | [IT3 UI/UX レビュー](./review/IT3_uiux_review_20260407.md) | IT3 Estimation コンテキスト Thymeleaf テンプレートの UI/UX レビュー結果（高 5 件・中 7 件・低 3 件） |
 | [IT5 実装成果物レビュー](./review/IT5_review_20260409.md) | IT5 US09・US10・US11 経路割り当て機能のコードレビュー結果（高 9 件・中 7 件・低 4 件） |
+| [IT5 UI/UX レビュー](./review/IT5_uiux_review_20260409.md) | IT5 US09・US10・US11 経路割り当て画面（route.html・show.html・navbar.html）の UI/UX レビュー結果（高 7 件・中 7 件・低 3 件） |
 
 ## 補足
 
