@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 17 件作成済み（IT1〜IT5 完了・IT6 進行中） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 19 件作成済み（IT1〜IT6 完了） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 4 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 10 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 12 件作成済み |
@@ -78,6 +78,8 @@
 | [IT5 ふりかえり](./development/retrospective-5.md) | IT5 の KPT 分析と IT6 への申し送り事項 |
 | [IT5 完了報告書](./development/iteration_report-5.md) | IT5 の実績メトリクス・成果物一覧・アクションアイテム |
 | [IT6 計画](./development/iteration_plan-6.md) | イテレーション 6 の詳細計画（IT5改善・US22・US23） |
+| [IT6 ふりかえり](./development/retrospective-6.md) | IT6 の KPT 分析とプロジェクト全体の振り返り |
+| [IT6 完了報告書](./development/iteration_report-6.md) | IT6 の実績メトリクス・成果物一覧（Java 272 件・E2E 67 件） |
 
 ### 運用ドキュメント
 

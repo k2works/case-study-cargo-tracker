@@ -19,7 +19,7 @@
 | IT3 | [計画](./iteration_plan-3.md) | [ふりかえり](./retrospective-3.md) | [報告書](./iteration_report-3.md) | 完了（約 184 件・E2E 41 件全パス） |
 | IT4 | [計画](./iteration_plan-4.md) | [ふりかえり](./retrospective-4.md) | [報告書](./iteration_report-4.md) | 完了（190 件・E2E 40 件全パス、カバレッジ 91%/75%、US07・US08 完了） |
 | IT5 | [計画](./iteration_plan-5.md) | [ふりかえり](./retrospective-5.md) | [報告書](./iteration_report-5.md) | 完了（Java 250 件・E2E 56 件全パス、カバレッジ 88%/75%、US09・US10・US11 完了） |
-| IT6 | [計画](./iteration_plan-6.md) | - | - | 進行中（IT5-改善・US22・US23） |
+| IT6 | [計画](./iteration_plan-6.md) | [ふりかえり](./retrospective-6.md) | [報告書](./iteration_report-6.md) | 完了（Java 272 件・E2E 67 件全パス、カバレッジ 81%、US22・US23 完了） |
 
 ### 進捗サマリー
 
@@ -30,8 +30,8 @@
 | IT3 | 10 | 10 | 100% |
 | IT4 | 10 | 8 | 80%（SonarQube 保留） |
 | IT5 | 10 | 10 | 100% |
-| IT6 | 10 | - | 未着手 |
-| **累計** | **60** | **48** | **80%** |
+| IT6 | 10 | 10 | 100% |
+| **累計** | **60** | **58** | **97%** |
 
 ### フェーズ進捗
 
@@ -39,7 +39,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | 予約・荷主管理基盤 | 16 | 16 | 完了（IT1-2 で全 US 完了） |
 | Phase 2 | 経路設計・追跡 | 44 | 23 | 進行中（IT3: US01・US06、IT4: US07・US08、IT5: US09・US10・US11 完了） |
-| Phase 3 | 精算・例外処理 | 26 | 0 | 未着手 |
+| Phase 3 | 精算・例外処理 | 26 | 8 | 進行中（IT6: US22・US23 完了） |
 
 ### リリース完了報告書
 

@@ -30,8 +30,8 @@
 - [x] `route.html` にフィードバックメッセージ表示領域が追加されている
 - [x] 法人荷主の精算時に割引率が自動取得・適用される
 - [x] 精算書（Invoice）が発行でき、請求番号・金額・支払い期限が表示される
-- [ ] Java テスト全パス・E2E テスト全パス
-- [ ] テストカバレッジ 80% 以上
+- [x] Java テスト全パス・E2E テスト全パス（Java: 272 件、E2E: 67 件）
+- [x] テストカバレッジ 80% 以上（実績: 81%）
 
 ---
 
@@ -107,12 +107,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Billing Context: `DiscountPolicy` ドメインモデル実装（`CorporateDiscountPolicy` record） | 2h | - | [ ] |
-| 2.2 | Billing Context: `ShipperDiscountChecker` ACL ポート設計・実装（荷主コンテキストへの割引率照会） | 2h | - | [ ] |
-| 2.3 | Billing Context: 法人割引適用ロジックを `Invoice` 集約に組み込む | 1.5h | - | [ ] |
-| 2.4 | Billing Context: `InvoiceApplicationService` に割引適用サービスを追加 | 1h | - | [ ] |
-| 2.5 | UI: 精算書詳細画面に割引情報（割引率・基本料金・割引後料金）を表示 | 1.5h | - | [ ] |
-| 2.6 | テスト: 法人割引適用の単体テスト・統合テスト追加 | 2h | - | [ ] |
+| 2.1 | Billing Context: `DiscountPolicy` ドメインモデル実装（`CorporateDiscountPolicy` record） | 2h | - | [x] |
+| 2.2 | Billing Context: `ShipperDiscountChecker` ACL ポート設計・実装（荷主コンテキストへの割引率照会） | 2h | - | [x] |
+| 2.3 | Billing Context: 法人割引適用ロジックを `Invoice` 集約に組み込む | 1.5h | - | [x] |
+| 2.4 | Billing Context: `InvoiceApplicationService` に割引適用サービスを追加 | 1h | - | [x] |
+| 2.5 | UI: 精算書詳細画面に割引情報（割引率・基本料金・割引後料金）を表示 | 1.5h | - | [x] |
+| 2.6 | テスト: 法人割引適用の単体テスト・統合テスト追加 | 2h | - | [x] |
 
 **小計**: 10h（理想時間）
 
@@ -120,14 +120,14 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Billing Context: `Invoice` 集約ルート設計・実装（`InvoiceId`・`PaymentStatus`） | 2h | - | [ ] |
-| 3.2 | Billing Context: `InvoiceRepository`・DB スキーマ（V10 マイグレーション）作成 | 1.5h | - | [ ] |
-| 3.3 | Billing Context: `GenerateInvoiceCommand`・`ConfirmPaymentCommand` 実装 | 2h | - | [ ] |
-| 3.4 | Billing Context: `CargoDeliveredEvent` を受け取り精算書を自動生成する `InvoiceEventHandler` 実装 | 1.5h | - | [ ] |
-| 3.5 | Booking Context: 精算完了時に `BookingStatus` を `SETTLED` に遷移させるイベントハンドラ実装 | 1h | - | [ ] |
-| 3.6 | UI: 精算管理一覧画面（`BillingThymeleafController`・`billing/invoices/index.html`）実装 | 2h | - | [ ] |
-| 3.7 | UI: 精算書詳細・入金確認画面（`billing/invoices/show.html`・`billing/invoices/confirm.html`）実装 | 2h | - | [ ] |
-| 3.8 | E2E テスト: 精算フロー全体（精算書発行→入金確認→精算完了）の Playwright テスト追加 | 2h | - | [ ] |
+| 3.1 | Billing Context: `Invoice` 集約ルート設計・実装（`InvoiceId`・`PaymentStatus`） | 2h | - | [x] |
+| 3.2 | Billing Context: `InvoiceRepository`・DB スキーマ（V12 マイグレーション）作成 | 1.5h | - | [x] |
+| 3.3 | Billing Context: `GenerateInvoiceCommand`・`ConfirmPaymentCommand` 実装 | 2h | - | [x] |
+| 3.4 | Billing Context: `CargoRoutedEvent` を受け取り精算書を自動生成する `InvoiceEventHandler` 実装 | 1.5h | - | [x] |
+| 3.5 | Booking Context: 入金確認後に `BookingStatus` を `SETTLED` に遷移させる `settleBooking()` 実装 | 1h | - | [x] |
+| 3.6 | UI: 精算管理一覧画面（`BillingThymeleafController`・`billing/invoices/index.html`）実装 | 2h | - | [x] |
+| 3.7 | UI: 精算書詳細・入金確認画面（`billing/invoices/show.html`・`billing/invoices/confirm.html`）実装 | 2h | - | [x] |
+| 3.8 | E2E テスト: 精算フロー全体（精算書発行→入金確認→精算完了）の Playwright テスト追加 | 2h | - | [x] |
 | 3.9 | 全体統合テスト・パフォーマンステスト・リリース準備 | 2h | - | [ ] |
 
 **小計**: 16h（理想時間）
@@ -527,11 +527,11 @@ CREATE TABLE payment (
 ### Definition of Done
 
 - [ ] コードレビュー完了（`developing-review` 実施）
-- [ ] Java ユニット・統合テストが全パス
-- [ ] Playwright E2E テストが全パス
+- [x] Java ユニット・統合テストが全パス（272 件）
+- [x] Playwright E2E テストが全パス（67 件）
 - [ ] SonarQube Quality Gate PASS
-- [ ] テストカバレッジ 80% 以上
-- [ ] 機能がローカル環境で動作確認済み
+- [x] テストカバレッジ 80% 以上（81%）
+- [x] 機能がローカル環境で動作確認済み
 - [ ] ドキュメント更新完了（`release_plan.md`・`docs/index.md`・`mkdocs.yml`）
 
 ### デモ項目
@@ -550,6 +550,7 @@ CREATE TABLE payment (
 | 2026-04-10 | IT5-改善 8 タスク完了を反映（3 SP 完了・進捗率 30%）。`6a99417 feat(routing): IT5 改善・基本運賃情報を経路割り当て画面に表示` で 1.1〜1.8 をまとめて実装 | - |
 | 2026-04-10 | US22 完了（3 SP）。`3b293df feat(billing): US22 法人割引を適用する Billing コンテキストを実装` | - |
 | 2026-04-10 | US23 完了（4 SP）。`2e6b1c9 feat(billing): US23 精算処理を実装（CargoRoutedEvent 自動精算・SETTLED 遷移）`。IT6 全 10 SP 完了（進捗率 100%） | - |
+| 2026-04-10 | E2E テスト追加（US22・US23 計 11 件）。テスト総件数: Java 272 件・E2E 67 件。カバレッジ 81%。Thymeleaf SpEL バグ（BigDecimal.valueOf 曖昧呼び出し）修正。`4ea0278 test(e2e): US22・US23 の請求管理 E2E テストを追加` | - |
 
 ---
 
@@ -557,3 +558,5 @@ CREATE TABLE payment (
 
 - [イテレーション 5 ふりかえり](./retrospective-5.md)
 - [イテレーション 5 完了報告書](./iteration_report-5.md)
+- [イテレーション 6 ふりかえり](./retrospective-6.md)
+- [イテレーション 6 完了報告書](./iteration_report-6.md)
