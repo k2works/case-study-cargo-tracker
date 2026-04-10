@@ -481,6 +481,23 @@ class CargoTest {
         assertEquals(ROUTE_SPEC, result.getRouteSpecification());
     }
 
+    @Test
+    void settle_ROUTE_PROPOSED状態から精算完了に遷移できる() {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), BookingStatus.ROUTE_PROPOSED, null, null);
+
+        Cargo settled = cargo.settle();
+
+        assertEquals(BookingStatus.SETTLED, settled.getStatus());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = BookingStatus.class, names = "ROUTE_PROPOSED", mode = EnumSource.Mode.EXCLUDE)
+    void settle_ROUTE_PROPOSED以外の状態からは例外が発生する(BookingStatus status) {
+        Cargo cargo = createCargo(CargoType.GENERAL, new BigDecimal("10"), status, null, null);
+
+        assertThrows(IllegalStateException.class, cargo::settle);
+    }
+
     private Cargo createCargo(
             BookingId bookingId,
             ShipperId shipperId,

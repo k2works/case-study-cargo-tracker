@@ -207,6 +207,11 @@ public class Cargo {
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.CANCELLED));
     }
 
+    public Cargo settle() {
+        requireStatus(BookingStatus.ROUTE_PROPOSED);
+        return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.SETTLED));
+    }
+
     public Cargo assignToRouting() {
         requireStatus(BookingStatus.PRELIMINARY);
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.ROUTE_PROPOSED));

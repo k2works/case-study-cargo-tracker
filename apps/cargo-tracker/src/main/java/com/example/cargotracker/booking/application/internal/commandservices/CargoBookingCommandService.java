@@ -139,7 +139,19 @@ public class CargoBookingCommandService {
         Cargo routed = cargo.assignItinerary(itinerary);
         cargoRepository.updateStatus(routed);
         legRepository.saveAll(bookingId, itinerary.legs());
-        eventPublisher.publishEvent(new CargoRoutedEvent(routed.getBookingId()));
+        eventPublisher.publishEvent(new CargoRoutedEvent(
+                routed.getBookingId(),
+                routed.getShipperId().toString(),
+                voyage.getTotalBaseFare()
+        ));
+    }
+
+    public void settleBooking(SettleBookingCommand command) {
+        BookingId bookingId = new BookingId(UUID.fromString(command.bookingId()));
+        Cargo cargo = cargoRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+        Cargo settled = cargo.settle();
+        cargoRepository.updateStatus(settled);
     }
 
     public void assignToRouting(AssignToRoutingCommand command) {

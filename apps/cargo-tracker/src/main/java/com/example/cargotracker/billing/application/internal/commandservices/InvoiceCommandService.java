@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.application.internal.commandservices;
 
+import com.example.cargotracker.billing.application.internal.outboundservices.acl.BookingSettlementPort;
 import com.example.cargotracker.billing.application.internal.outboundservices.acl.ShipperDiscountPort;
 import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
 import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
@@ -16,13 +17,16 @@ public class InvoiceCommandService {
 
     private final InvoiceRepository invoiceRepository;
     private final ShipperDiscountPort shipperDiscountPort;
+    private final BookingSettlementPort bookingSettlementPort;
 
     public InvoiceCommandService(
             InvoiceRepository invoiceRepository,
-            ShipperDiscountPort shipperDiscountPort
+            ShipperDiscountPort shipperDiscountPort,
+            BookingSettlementPort bookingSettlementPort
     ) {
         this.invoiceRepository = invoiceRepository;
         this.shipperDiscountPort = shipperDiscountPort;
+        this.bookingSettlementPort = bookingSettlementPort;
     }
 
     public InvoiceId generateInvoice(GenerateInvoiceCommand command) {
@@ -45,5 +49,6 @@ public class InvoiceCommandService {
                 .orElseThrow(() -> new IllegalArgumentException("請求書が見つかりません: " + command.invoiceId()));
         invoice.confirmPayment();
         invoiceRepository.update(invoice);
+        bookingSettlementPort.settleBooking(invoice.getBookingId());
     }
 }
