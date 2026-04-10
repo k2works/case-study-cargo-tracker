@@ -80,6 +80,7 @@
 | [IT6 計画](./development/iteration_plan-6.md) | イテレーション 6 の詳細計画（IT5改善・US22・US23） |
 | [IT6 ふりかえり](./development/retrospective-6.md) | IT6 の KPT 分析とプロジェクト全体の振り返り |
 | [IT6 完了報告書](./development/iteration_report-6.md) | IT6 の実績メトリクス・成果物一覧（Java 272 件・E2E 67 件） |
+| [リリース完了報告書 v1.0.0](./development/release_report-1_0_0.md) | プロジェクト全体の完了報告書（6 IT・155 コミット・339 テスト） |
 
 ### 運用ドキュメント
 

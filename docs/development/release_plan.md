@@ -395,7 +395,9 @@ xychart-beta
 3. IT6 計画を作成する（完了）→ [iteration_plan-6.md](./iteration_plan-6.md) を参照
 4. IT6 開発を実行する（完了）— IT5 レビュー高優先度対応・US22・US23 実装・E2E テスト作成
 5. IT6 ふりかえり・完了報告書を作成する（完了）→ [retrospective-6.md](./retrospective-6.md)・[iteration_report-6.md](./iteration_report-6.md) を参照
-6. リリース完了報告書を作成する（`planning-releases --release-report`）
+6. リリース完了報告書を作成する（完了）→ [release_report-1_0_0.md](./release_report-1_0_0.md) を参照
+
+**プロジェクト完了** — 全 6 イテレーション完走、Java 272 件・E2E 67 件全パス。
 
 ---
 
