@@ -23,6 +23,9 @@
                 <a class="nav-link"
                    th:classappend="${activeMenu == 'voyages'} ? 'active'"
                    th:href="@{/voyages}">航路管理</a>
+                <a class="nav-link"
+                   th:classappend="${activeMenu == 'billing'} ? 'active'"
+                   th:href="@{/billing/invoices}">請求管理</a>
             </div>
             <form th:action="@{/logout}" method="post" class="d-flex">
                 <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
