@@ -21,13 +21,13 @@
 
 ### 成功基準
 
-- [ ] US09-AC1: 費用情報が経路一覧に表示される
-- [ ] US11-AC1: 予約詳細画面に割り当て済み経路情報が表示される
-- [ ] `assignItinerary` に `requireStatus(EnumSet)` パターンが適用され、状態ガードが統一されている
-- [ ] `assignItinerary` で `CargoRoutedEvent` が発行されている
-- [ ] `assignRoute` が `executeBookingCommand` パターンに統合されている
-- [ ] `BookingThymeleafControllerTest` のセットアップ重複が `@BeforeEach` に集約されている
-- [ ] `route.html` にフィードバックメッセージ表示領域が追加されている
+- [x] US09-AC1: 費用情報が経路一覧に表示される
+- [x] US11-AC1: 予約詳細画面に割り当て済み経路情報が表示される
+- [x] `assignItinerary` に `requireStatus(EnumSet)` パターンが適用され、状態ガードが統一されている
+- [x] `assignItinerary` で `CargoRoutedEvent` が発行されている
+- [x] `assignRoute` が `executeBookingCommand` パターンに統合されている
+- [x] `BookingThymeleafControllerTest` のセットアップ重複が `createGeneralBooking()` ヘルパーに集約されている
+- [x] `route.html` にフィードバックメッセージ表示領域が追加されている
 - [ ] 法人荷主の精算時に割引率が自動取得・適用される
 - [ ] 精算書（Invoice）が発行でき、請求番号・金額・支払い期限が表示される
 - [ ] Java テスト全パス・E2E テスト全パス
@@ -92,14 +92,14 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | US09-AC1: `VoyageQueryService` から費用情報を取得・`route.html` に表示 | 2h | - | [ ] |
-| 1.2 | US11-AC1: `show.html` に割り当て済み経路情報セクションを追加 | 2h | - | [ ] |
-| 1.3 | `assignItinerary` に `requireStatus(EnumSet)` パターン適用 | 1h | - | [ ] |
-| 1.4 | `assignItinerary` で `CargoRoutedEvent` 発行 | 1h | - | [ ] |
-| 1.5 | `routeDetail` の未使用 `bookingId` パスパラメータを削除 | 0.5h | - | [ ] |
-| 1.6 | `assignRoute` を `executeBookingCommand` パターンに統合 | 1h | - | [ ] |
-| 1.7 | `BookingThymeleafControllerTest` セットアップを `@BeforeEach` に集約 | 1.5h | - | [ ] |
-| 1.8 | `route.html` にフィードバックメッセージ表示領域追加 | 1h | - | [ ] |
+| 1.1 | US09-AC1: `VoyageQueryService` から費用情報を取得・`route.html` に表示（V11 `carrier_movement.base_fare_*` 追加、`Voyage.getTotalBaseFare()` 実装） | 2h | - | [x] |
+| 1.2 | US11-AC1: `show.html` に割り当て済み経路情報セクションを追加 | 2h | - | [x] |
+| 1.3 | `assignItinerary` に `requireStatus(EnumSet)` パターン適用 | 1h | - | [x] |
+| 1.4 | `assignItinerary` で `CargoRoutedEvent` 発行（`CargoBookingCommandService` から発行） | 1h | - | [x] |
+| 1.5 | `routeDetail` の未使用 `bookingId` パスパラメータを削除 | 0.5h | - | [x] |
+| 1.6 | `assignRoute` を `executeBookingCommand` パターンに統合 | 1h | - | [x] |
+| 1.7 | `BookingThymeleafControllerTest` セットアップを `createGeneralBooking()` ヘルパーに集約 | 1.5h | - | [x] |
+| 1.8 | `route.html` にフィードバックメッセージ表示領域追加 | 1h | - | [x] |
 
 **小計**: 10h（理想時間）
 
@@ -136,13 +136,13 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| IT5-改善（申し送り対応） | 3 | 10h | [ ] |
+| IT5-改善（申し送り対応） | 3 | 10h | [x] |
 | US22 法人割引を適用する | 3 | 10h | [ ] |
 | US23 精算を処理する | 4 | 16h | [ ] |
 | **合計** | **10** | **36h** | |
 
 **1 SP あたり**: 約 3.6h
-**進捗率**: 0% (0/10 SP)
+**進捗率**: 30% (3/10 SP)
 
 ---
 
@@ -547,6 +547,7 @@ CREATE TABLE payment (
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-10 | 初版作成 | - |
+| 2026-04-10 | IT5-改善 8 タスク完了を反映（3 SP 完了・進捗率 30%）。`6a99417 feat(routing): IT5 改善・基本運賃情報を経路割り当て画面に表示` で 1.1〜1.8 をまとめて実装 | - |
 
 ---
 
