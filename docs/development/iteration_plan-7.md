@@ -439,12 +439,12 @@ apps/backend/src/main/java/.../
 
 ### Definition of Done
 
-- [ ] コードレビュー完了
-- [ ] ユニットテストがパス（Java テスト数 > 272 件）
-- [ ] E2E テストがパス（E2E テスト数 > 67 件）
-- [ ] SonarQube Quality Gate PASS
-- [ ] 機能がローカル環境で動作確認済み
-- [ ] ドキュメント更新完了
+- [x] コードレビュー完了
+- [x] ユニットテストがパス（Java テスト数 > 272 件）
+- [x] E2E テストがパス（E2E テスト数 > 67 件、実績 +8 件）
+- [x] SonarQube Quality Gate PASS
+- [x] 機能がローカル環境で動作確認済み
+- [x] ドキュメント更新完了
 
 ### デモ項目
 
