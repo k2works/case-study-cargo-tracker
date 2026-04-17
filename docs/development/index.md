@@ -20,7 +20,7 @@
 | IT4 | [計画](./iteration_plan-4.md) | [ふりかえり](./retrospective-4.md) | [報告書](./iteration_report-4.md) | 完了（190 件・E2E 40 件全パス、カバレッジ 91%/75%、US07・US08 完了） |
 | IT5 | [計画](./iteration_plan-5.md) | [ふりかえり](./retrospective-5.md) | [報告書](./iteration_report-5.md) | 完了（Java 250 件・E2E 56 件全パス、カバレッジ 88%/75%、US09・US10・US11 完了） |
 | IT6 | [計画](./iteration_plan-6.md) | [ふりかえり](./retrospective-6.md) | [報告書](./iteration_report-6.md) | 完了（Java 272 件・E2E 67 件全パス、カバレッジ 81%、US22・US23 完了） |
-| IT7 | [計画](./iteration_plan-7.md) | [ふりかえり](./retrospective-7.md) | - | 完了（Java テスト全パス・E2E +8 件・カバレッジ 81.7%・US14・US15 完了） |
+| IT7 | [計画](./iteration_plan-7.md) | [ふりかえり](./retrospective-7.md) | [報告書](./iteration_report-7.md) | 完了（Java テスト全パス・E2E 78 件・カバレッジ 81.7%・US14・US15 完了） |
 | IT8 | - | - | - | 未着手（US16・US18・US17 + IT7-改善） |
 | IT9 | - | - | - | 未着手（US19・US20） |
 | IT10 | - | - | - | 未着手（US21・Release 2.0 リリース準備） |
