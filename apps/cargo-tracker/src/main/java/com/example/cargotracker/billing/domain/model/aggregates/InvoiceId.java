@@ -2,12 +2,13 @@ package com.example.cargotracker.billing.domain.model.aggregates;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.security.SecureRandom;
 import java.util.HexFormat;
-import java.util.Random;
 
 public record InvoiceId(String value) {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public InvoiceId {
         if (value == null || value.isBlank()) {
@@ -18,7 +19,7 @@ public record InvoiceId(String value) {
     public static InvoiceId generate() {
         String datePart = LocalDate.now().format(DATE_FORMATTER);
         byte[] randomBytes = new byte[4];
-        new Random().nextBytes(randomBytes);
+        RANDOM.nextBytes(randomBytes);
         String randomPart = HexFormat.of().withUpperCase().formatHex(randomBytes);
         return new InvoiceId("INV-" + datePart + "-" + randomPart);
     }

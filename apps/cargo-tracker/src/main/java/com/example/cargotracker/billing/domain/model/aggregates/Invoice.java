@@ -42,7 +42,6 @@ public class Invoice {
             String bookingId,
             int totalAmountValue,
             DiscountPolicy discountPolicy,
-            int discountedAmountValue,
             PaymentStatus paymentStatus,
             LocalDate dueDate
     ) {

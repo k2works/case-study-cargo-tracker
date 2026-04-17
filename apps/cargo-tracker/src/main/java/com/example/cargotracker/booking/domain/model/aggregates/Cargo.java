@@ -13,6 +13,7 @@ import com.example.cargotracker.shared.domain.model.ShipperId;
 import java.math.BigDecimal;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class Cargo {
 
@@ -186,7 +187,7 @@ public class Cargo {
         }
     }
 
-    public void requireStatus(EnumSet<BookingStatus> expected) {
+    public void requireStatus(Set<BookingStatus> expected) {
         if (!expected.contains(status)) {
             throw new IllegalStateException(
                     "現在の状態では操作できません。許可された状態: "

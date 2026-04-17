@@ -21,8 +21,8 @@ public class ShipperDiscountAdapter implements ShipperDiscountPort {
     @Override
     public DiscountPolicy getDiscountPolicyForShipper(String shipperId) {
         return findShipperQueryService.findById(new ShipperId(UUID.fromString(shipperId)))
-                .filter(shipper -> shipper instanceof CorporateShipper)
-                .map(shipper -> (CorporateShipper) shipper)
+                .filter(CorporateShipper.class::isInstance)
+                .map(CorporateShipper.class::cast)
                 .map(corporate -> DiscountPolicy.corporate(corporate.getDiscountRate().value()))
                 .orElse(DiscountPolicy.none());
     }

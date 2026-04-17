@@ -69,7 +69,6 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                 record.getBookingId(),
                 record.getTotalAmountValue(),
                 discountPolicy,
-                record.getDiscountedAmountValue(),
                 paymentStatus,
                 record.getDueDate()
         );
