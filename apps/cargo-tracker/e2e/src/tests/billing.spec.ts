@@ -197,6 +197,50 @@ test.describe('US23: 精算を処理する', () => {
     const bookingShowPage = new BookingShowPage(page);
     await expect(bookingShowPage.getDetailValue('状態')).toHaveText('精算完了');
   });
+
+  test('受入条件5（異常系）: 精算済み精算書への再確認操作でエラーメッセージが表示される', async ({ page, loggedIn }) => {
+    const { bookingId } = await setupBillingFlow(page);
+
+    const billingIndexPage = new BillingIndexPage(page);
+    const billingShowPage = new BillingShowPage(page);
+    const billingConfirmPage = new BillingConfirmPage(page);
+
+    // まず正常に入金確認を行う
+    await billingIndexPage.goto();
+    await billingIndexPage.clickDetailByBookingId(bookingId);
+    await billingShowPage.clickConfirm();
+    await billingConfirmPage.submit();
+
+    // 精算済みになったことを確認
+    await expect(billingShowPage.getDetailValue('支払状態')).toContainText('精算済');
+
+    // 確認済み精算書の invoiceId を URL から取得
+    const invoiceUrl = page.url() as string;
+    const invoiceId = invoiceUrl.split('/').pop()!;
+
+    // 直接 confirm エンドポイントに POST して重複確認を試みる
+    await page.goto(`/billing/invoices/${invoiceId}/confirm`);
+    await billingConfirmPage.submitButton.click();
+
+    // PRG パターンで詳細画面にリダイレクトされる
+    await expect(page).toHaveURL(/\/billing\/invoices\/[^/]+$/);
+
+    // エラーメッセージが表示される
+    await expect(billingShowPage.errorAlert).toBeVisible();
+    await expect(billingShowPage.errorAlert).toContainText('精算済みまたは期限超過の請求書は確認できません');
+  });
+});
+
+test.describe('請求管理バリデーション', () => {
+  test('存在しない精算書 ID へのアクセスは 404 を返す', async ({ page, loggedIn }) => {
+    const response = await page.goto('/billing/invoices/INVALID-INVOICE-ID-00000000');
+    expect(response?.status()).toBe(404);
+  });
+
+  test('存在しない精算書 ID の確認画面へのアクセスは 404 を返す', async ({ page, loggedIn }) => {
+    const response = await page.goto('/billing/invoices/INVALID-INVOICE-ID-00000000/confirm');
+    expect(response?.status()).toBe(404);
+  });
 });
 
 test.describe('請求管理ナビゲーション', () => {
