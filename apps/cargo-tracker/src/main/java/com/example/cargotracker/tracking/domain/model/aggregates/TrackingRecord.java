@@ -1,14 +1,21 @@
 package com.example.cargotracker.tracking.domain.model.aggregates;
 
+import com.example.cargotracker.tracking.domain.model.entities.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class TrackingRecord {
 
     private final TrackingNumber trackingNumber;
     private final TrackingBookingId bookingId;
     private CargoTrackingStatus status;
+    private final List<TrackingActivityEvent> handlingEvents = new ArrayList<>();
 
     public TrackingRecord(TrackingNumber trackingNumber, TrackingBookingId bookingId) {
         if (trackingNumber == null) throw new IllegalArgumentException("trackingNumber must not be null");
@@ -28,6 +35,20 @@ public class TrackingRecord {
         return record;
     }
 
+    public void addHandlingEvent(TrackingActivityEvent event) {
+        if (event == null) throw new IllegalArgumentException("event must not be null");
+        handlingEvents.add(event);
+        this.status = deriveStatus(event.getEventType());
+    }
+
+    private CargoTrackingStatus deriveStatus(TrackingEventType eventType) {
+        return switch (eventType) {
+            case RECEIVE -> CargoTrackingStatus.RECEIVED;
+            case LOAD -> CargoTrackingStatus.LOADED;
+            case UNLOAD -> CargoTrackingStatus.UNLOADED;
+        };
+    }
+
     public TrackingNumber getTrackingNumber() {
         return trackingNumber;
     }
@@ -38,5 +59,9 @@ public class TrackingRecord {
 
     public CargoTrackingStatus getStatus() {
         return status;
+    }
+
+    public List<TrackingActivityEvent> getHandlingEvents() {
+        return Collections.unmodifiableList(handlingEvents);
     }
 }

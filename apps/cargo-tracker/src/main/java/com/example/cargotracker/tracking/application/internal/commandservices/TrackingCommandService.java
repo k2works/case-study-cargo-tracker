@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.application.internal.commandservices;
 
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingRecord;
+import com.example.cargotracker.tracking.domain.model.entities.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.repository.TrackingRepository;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
@@ -23,5 +24,22 @@ public class TrackingCommandService {
         TrackingRecord trackingRecord = new TrackingRecord(trackingNumber, bookingId);
         trackingRepository.save(trackingRecord);
         return trackingNumber;
+    }
+
+    @Transactional
+    public void recordHandlingEvent(RecordHandlingEventCommand command) {
+        TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
+        TrackingRecord record = trackingRepository.findByTrackingNumber(trackingNumber)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Tracking record not found: " + command.trackingNumber()));
+        TrackingActivityEvent event = new TrackingActivityEvent(
+                command.eventType(),
+                command.locationUnlocode(),
+                command.completionTime(),
+                command.voyageNumber()
+        );
+        record.addHandlingEvent(event);
+        trackingRepository.updateStatus(record);
+        trackingRepository.saveHandlingEvent(command.trackingNumber(), event);
     }
 }

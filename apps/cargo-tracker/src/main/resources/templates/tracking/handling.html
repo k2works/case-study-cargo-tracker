@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>荷役作業記録 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('tracking')}"></div>
+
+<main class="container py-4">
+    <div th:if="${successMessage}" class="alert alert-success" role="alert" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">荷役作業記録</h1>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form th:action="@{/tracking/handling}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <div class="mb-3">
+                    <label for="trackingNumber" class="form-label fw-bold">追跡番号</label>
+                    <input type="text" class="form-control" id="trackingNumber" name="trackingNumber"
+                           placeholder="TRK-YYYYMMDD-XXXXXXXX" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">作業種別</label>
+                    <div th:each="eventType : ${eventTypes}" class="form-check">
+                        <input class="form-check-input" type="radio" name="eventType"
+                               th:id="${'eventType_' + eventType.name()}"
+                               th:value="${eventType.name()}"
+                               th:required="true">
+                        <label class="form-check-label" th:for="${'eventType_' + eventType.name()}"
+                               th:text="${eventType.displayName}">受領</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="completionTime" class="form-label fw-bold">作業日時</label>
+                    <input type="datetime-local" class="form-control" id="completionTime" name="completionTime" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="locationUnlocode" class="form-label fw-bold">作業場所（UN/LOCODE）</label>
+                    <input type="text" class="form-control" id="locationUnlocode" name="locationUnlocode"
+                           placeholder="JPTYO" maxlength="10" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="voyageNumber" class="form-label fw-bold">航海番号（任意）</label>
+                    <input type="text" class="form-control" id="voyageNumber" name="voyageNumber"
+                           placeholder="V100">
+                </div>
+
+                <button type="submit" class="btn btn-primary">記録する</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

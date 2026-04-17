@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.infrastructure.repositories;
 
 import com.example.cargotracker.tracking.domain.model.aggregates.TrackingRecord;
+import com.example.cargotracker.tracking.domain.model.entities.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.repository.TrackingRepository;
 import com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
@@ -8,7 +9,6 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumbe
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 public class MyBatisTrackingRepository implements TrackingRepository {
@@ -35,6 +35,23 @@ public class MyBatisTrackingRepository implements TrackingRepository {
     public Optional<TrackingRecord> findByBookingId(TrackingBookingId bookingId) {
         return Optional.ofNullable(trackingMapper.findByBookingId(bookingId.toString()))
                 .map(this::toDomain);
+    }
+
+    @Override
+    public void updateStatus(TrackingRecord trackingRecord) {
+        trackingMapper.updateStatus(trackingRecord.getTrackingNumber().value(),
+                trackingRecord.getStatus().name());
+    }
+
+    @Override
+    public void saveHandlingEvent(String trackingNumber, TrackingActivityEvent event) {
+        HandlingEventRecord record = new HandlingEventRecord();
+        record.setTrackingNumber(trackingNumber);
+        record.setEventType(event.getEventType().name());
+        record.setLocationUnlocode(event.getLocationUnlocode());
+        record.setCompletionTime(event.getCompletionTime());
+        record.setVoyageNumber(event.getVoyageNumber());
+        trackingMapper.insertHandlingEvent(record);
     }
 
     private com.example.cargotracker.tracking.infrastructure.repositories.TrackingRecord toRecord(TrackingRecord domain) {

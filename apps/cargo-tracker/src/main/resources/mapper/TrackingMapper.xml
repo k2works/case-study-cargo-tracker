@@ -27,4 +27,16 @@
         WHERE booking_id = #{bookingId}
     </select>
 
+    <update id="updateStatus">
+        UPDATE tracking_record
+        SET cargo_status = #{cargoStatus},
+            updated_at   = NOW()
+        WHERE tracking_number = #{trackingNumber}
+    </update>
+
+    <insert id="insertHandlingEvent" parameterType="com.example.cargotracker.tracking.infrastructure.repositories.HandlingEventRecord">
+        INSERT INTO tracking_handling_event (tracking_number, event_type, location_unlocode, completion_time, voyage_number)
+        VALUES (#{trackingNumber}, #{eventType}, #{locationUnlocode}, #{completionTime}, #{voyageNumber})
+    </insert>
+
 </mapper>
