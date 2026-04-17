@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.application.internal.commandservices;
 
 import com.example.cargotracker.booking.application.internal.outboundservices.ShipperExistenceChecker;
+import com.example.cargotracker.booking.application.internal.outboundservices.acl.TrackingPort;
 import com.example.cargotracker.booking.domain.model.aggregates.Cargo;
 import com.example.cargotracker.booking.domain.model.aggregates.CargoType;
 import com.example.cargotracker.booking.domain.model.aggregates.BookingStatus;
@@ -42,15 +43,18 @@ public class CargoBookingCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final VoyageRepository voyageRepository;
     private final LegRepository legRepository;
+    private final TrackingPort trackingPort;
 
     public CargoBookingCommandService(CargoRepository cargoRepository, ShipperExistenceChecker shipperExistenceChecker,
                                       ApplicationEventPublisher eventPublisher,
-                                      VoyageRepository voyageRepository, LegRepository legRepository) {
+                                      VoyageRepository voyageRepository, LegRepository legRepository,
+                                      TrackingPort trackingPort) {
         this.cargoRepository = cargoRepository;
         this.shipperExistenceChecker = shipperExistenceChecker;
         this.eventPublisher = eventPublisher;
         this.voyageRepository = voyageRepository;
         this.legRepository = legRepository;
+        this.trackingPort = trackingPort;
     }
 
     public BookingId bookCargo(BookCargoCommand command) {
@@ -144,6 +148,16 @@ public class CargoBookingCommandService {
                 routed.getShipperId().toString(),
                 voyage.getTotalBaseFare()
         ));
+    }
+
+    public String issueTrackingNumber(IssueTrackingCommand command) {
+        BookingId bookingId = new BookingId(UUID.fromString(command.bookingId()));
+        Cargo cargo = cargoRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+        String trackingNumber = trackingPort.issueTrackingNumber(command.bookingId());
+        Cargo tracked = cargo.issueTracking(trackingNumber);
+        cargoRepository.updateTrackingNumber(tracked);
+        return trackingNumber;
     }
 
     public void settleBooking(SettleBookingCommand command) {

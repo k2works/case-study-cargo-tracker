@@ -35,6 +35,7 @@ public class Cargo {
     private final HazardousDeclaration hazardousDeclaration;
     private final TemperatureRequirement temperatureRequirement;
     private final CargoItinerary cargoItinerary;
+    private final String trackingNumber;
 
     public record Details(
             Dimensions dimensions,
@@ -119,6 +120,7 @@ public class Cargo {
         this.hazardousDeclaration = cargoState.handling() != null ? cargoState.handling().hazardousDeclaration() : null;
         this.temperatureRequirement = cargoState.handling() != null ? cargoState.handling().temperatureRequirement() : null;
         this.cargoItinerary = cargoState.cargoItinerary();
+        this.trackingNumber = null;
 
         if (this.weight.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("weight must be greater than zero");
@@ -179,6 +181,10 @@ public class Cargo {
         return cargoItinerary;
     }
 
+    public String getTrackingNumber() {
+        return trackingNumber;
+    }
+
     public void requireStatus(BookingStatus expected) {
         if (status != expected) {
             throw new IllegalStateException(
@@ -226,6 +232,47 @@ public class Cargo {
                         details(dimensions, quantity, description),
                         handling(hazardousDeclaration, temperatureRequirement),
                         itinerary));
+    }
+
+    public Cargo issueTracking(String trackingNumber) {
+        Objects.requireNonNull(trackingNumber, "trackingNumber must not be null");
+        requireStatus(BookingStatus.CONFIRMED);
+        return withTrackingNumber(trackingNumber, BookingStatus.TRACKING_ISSUED);
+    }
+
+    public static Cargo reconstruct(
+            BookingId bookingId,
+            ShipperId shipperId,
+            CargoType cargoType,
+            BigDecimal weight,
+            State state,
+            String trackingNumber
+    ) {
+        Cargo cargo = new Cargo(bookingId, shipperId, cargoType, weight, state);
+        return cargo.trackingNumber != null || trackingNumber == null
+                ? cargo
+                : cargo.withTrackingNumber(trackingNumber, cargo.status);
+    }
+
+    private Cargo withTrackingNumber(String trackingNumber, BookingStatus nextStatus) {
+        Cargo newCargo = new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(nextStatus));
+        return new Cargo(newCargo, trackingNumber);
+    }
+
+    private Cargo(Cargo source, String trackingNumber) {
+        this.bookingId = source.bookingId;
+        this.shipperId = source.shipperId;
+        this.cargoType = source.cargoType;
+        this.weight = source.weight;
+        this.dimensions = source.dimensions;
+        this.quantity = source.quantity;
+        this.description = source.description;
+        this.routeSpecification = source.routeSpecification;
+        this.status = source.status;
+        this.hazardousDeclaration = source.hazardousDeclaration;
+        this.temperatureRequirement = source.temperatureRequirement;
+        this.cargoItinerary = source.cargoItinerary;
+        this.trackingNumber = trackingNumber;
     }
 
     private State currentStateWith(BookingStatus nextStatus) {

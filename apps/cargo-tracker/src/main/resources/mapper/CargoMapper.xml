@@ -24,6 +24,7 @@
         <result property="minTemperature" column="min_temperature"/>
         <result property="maxTemperature" column="max_temperature"/>
         <result property="temperatureUnit" column="temperature_unit"/>
+        <result property="trackingNumber" column="tracking_number"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.example.cargotracker.booking.infrastructure.repositories.CargoRecord">
@@ -77,7 +78,7 @@
                quantity, description,
                origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
                hazardous_class, un_number, proper_shipping_name,
-               min_temperature, max_temperature, temperature_unit
+               min_temperature, max_temperature, temperature_unit, tracking_number
         FROM cargo
         WHERE booking_id = CAST(#{bookingId} AS UUID)
     </select>
@@ -88,7 +89,7 @@
                quantity, description,
                origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
                hazardous_class, un_number, proper_shipping_name,
-               min_temperature, max_temperature, temperature_unit
+               min_temperature, max_temperature, temperature_unit, tracking_number
         FROM cargo
         ORDER BY id
     </select>
@@ -96,6 +97,13 @@
     <update id="updateStatus">
         UPDATE cargo
         SET booking_status = #{bookingStatus}
+        WHERE booking_id = CAST(#{bookingId} AS UUID)
+    </update>
+
+    <update id="updateTrackingNumber">
+        UPDATE cargo
+        SET booking_status = #{bookingStatus},
+            tracking_number = #{trackingNumber}
         WHERE booking_id = CAST(#{bookingId} AS UUID)
     </update>
 
@@ -109,7 +117,7 @@
                quantity, description,
                origin_unlocode, destination_unlocode, arrival_deadline, booking_status,
                hazardous_class, un_number, proper_shipping_name,
-               min_temperature, max_temperature, temperature_unit
+               min_temperature, max_temperature, temperature_unit, tracking_number
         FROM cargo
         WHERE shipper_id = CAST(#{shipperId} AS UUID)
         ORDER BY id

@@ -134,6 +134,7 @@ export class BookingShowPage {
   readonly cancelButton: Locator;
   readonly routingButton: Locator;
   readonly routeAssignLink: Locator;
+  readonly issueTrackingButton: Locator;
   readonly successAlert: Locator;
   readonly errorAlert: Locator;
 
@@ -145,6 +146,7 @@ export class BookingShowPage {
     this.cancelButton = page.locator('button.btn-outline-danger', { hasText: 'キャンセル' });
     this.routingButton = page.locator('button.btn-primary', { hasText: '経路設計依頼' });
     this.routeAssignLink = page.locator('a.btn-primary', { hasText: '経路を割り当て' });
+    this.issueTrackingButton = page.locator('button.btn-info', { hasText: '追跡番号を発行' });
     this.successAlert = page.locator('.alert-success');
     this.errorAlert = page.locator('.alert-danger');
   }
@@ -177,6 +179,13 @@ export class BookingShowPage {
   async clickRouteAssign() {
     await this.routeAssignLink.click();
     await this.page.waitForURL(/\/bookings\/.+\/route/);
+  }
+
+  async clickIssueTracking() {
+    await this.issueTrackingButton.click();
+    await this.page.locator('#issueTrackingModal').waitFor({ state: 'visible' });
+    await this.page.locator('#issueTrackingModal button.btn-info').click();
+    await this.page.waitForURL(/\/bookings\//);
   }
 }
 

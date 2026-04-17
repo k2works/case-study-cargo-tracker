@@ -11,6 +11,7 @@ public interface CargoMapper {
     void insert(CargoRecord cargoRecord);
 
     void updateStatus(@Param("bookingId") String bookingId, @Param("bookingStatus") String bookingStatus);
+    void updateTrackingNumber(@Param("bookingId") String bookingId, @Param("bookingStatus") String bookingStatus, @Param("trackingNumber") String trackingNumber);
 
     CargoRecord findByBookingId(String bookingId);
 

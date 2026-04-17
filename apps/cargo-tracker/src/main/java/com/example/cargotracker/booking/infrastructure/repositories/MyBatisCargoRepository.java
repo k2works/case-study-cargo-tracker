@@ -37,6 +37,11 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
+    public void updateTrackingNumber(Cargo cargo) {
+        cargoMapper.updateTrackingNumber(cargo.getBookingId().toString(), cargo.getStatus().name(), cargo.getTrackingNumber());
+    }
+
+    @Override
     public Optional<Cargo> findByBookingId(BookingId bookingId) {
         return Optional.ofNullable(cargoMapper.findByBookingId(bookingId.toString())).map(this::toDomain);
     }
@@ -86,7 +91,7 @@ public class MyBatisCargoRepository implements CargoRepository {
         Quantity quantity = cargoRecord.getQuantity() != null ? new Quantity(cargoRecord.getQuantity()) : null;
         Description description = cargoRecord.getDescription() != null ? new Description(cargoRecord.getDescription()) : null;
 
-        return new Cargo(
+        return Cargo.reconstruct(
                 new BookingId(UUID.fromString(cargoRecord.getBookingId())),
                 new ShipperId(UUID.fromString(cargoRecord.getShipperId())),
                 CargoType.valueOf(cargoRecord.getCargoType()),
@@ -100,7 +105,8 @@ public class MyBatisCargoRepository implements CargoRepository {
                         BookingStatus.valueOf(cargoRecord.getBookingStatus()),
                         Cargo.details(dimensions, quantity, description),
                         Cargo.handling(toHazardousDeclaration(cargoRecord), toTemperatureRequirement(cargoRecord))
-                )
+                ),
+                cargoRecord.getTrackingNumber()
         );
     }
 

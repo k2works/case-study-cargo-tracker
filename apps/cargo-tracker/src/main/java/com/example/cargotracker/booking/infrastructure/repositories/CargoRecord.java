@@ -25,6 +25,7 @@ public class CargoRecord {
     private BigDecimal minTemperature;
     private BigDecimal maxTemperature;
     private String temperatureUnit;
+    private String trackingNumber;
 
     public Long getId() {
         return id;
@@ -130,4 +131,6 @@ public class CargoRecord {
 
     public String getTemperatureUnit() { return temperatureUnit; }
     public void setTemperatureUnit(String temperatureUnit) { this.temperatureUnit = temperatureUnit; }
+    public String getTrackingNumber() { return trackingNumber; }
+    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
 }

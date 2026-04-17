@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.tracking.infrastructure.repositories.TrackingMapper">
+
+    <resultMap id="trackingRecordMap" type="com.example.cargotracker.tracking.infrastructure.repositories.TrackingRecord">
+        <id property="id" column="id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="cargoStatus" column="cargo_status"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.cargotracker.tracking.infrastructure.repositories.TrackingRecord">
+        INSERT INTO tracking_record (tracking_number, booking_id, cargo_status)
+        VALUES (#{trackingNumber}, #{bookingId}, #{cargoStatus})
+    </insert>
+
+    <select id="findByTrackingNumber" resultMap="trackingRecordMap">
+        SELECT id, tracking_number, booking_id, cargo_status
+        FROM tracking_record
+        WHERE tracking_number = #{trackingNumber}
+    </select>
+
+    <select id="findByBookingId" resultMap="trackingRecordMap">
+        SELECT id, tracking_number, booking_id, cargo_status
+        FROM tracking_record
+        WHERE booking_id = #{bookingId}
+    </select>
+
+</mapper>

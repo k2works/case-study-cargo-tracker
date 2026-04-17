@@ -26,5 +26,6 @@ public record CargoResponse(
         String properShippingName,
         BigDecimal minTemperature,
         BigDecimal maxTemperature,
-        String temperatureUnit
+        String temperatureUnit,
+        String trackingNumber
 ) {}

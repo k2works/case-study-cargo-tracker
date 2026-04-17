@@ -13,6 +13,8 @@ public interface CargoRepository {
 
     void updateStatus(Cargo cargo);
 
+    void updateTrackingNumber(Cargo cargo);
+
     Optional<Cargo> findByBookingId(BookingId bookingId);
 
     List<Cargo> findAll();

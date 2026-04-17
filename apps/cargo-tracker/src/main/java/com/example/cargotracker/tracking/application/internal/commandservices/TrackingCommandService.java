@@ -1,0 +1,27 @@
+package com.example.cargotracker.tracking.application.internal.commandservices;
+
+import com.example.cargotracker.tracking.domain.model.aggregates.TrackingRecord;
+import com.example.cargotracker.tracking.domain.model.repository.TrackingRepository;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class TrackingCommandService {
+
+    private final TrackingRepository trackingRepository;
+
+    public TrackingCommandService(TrackingRepository trackingRepository) {
+        this.trackingRepository = trackingRepository;
+    }
+
+    @Transactional
+    public TrackingNumber issueTrackingNumber(IssueTrackingNumberCommand command) {
+        TrackingBookingId bookingId = TrackingBookingId.of(command.bookingId());
+        TrackingNumber trackingNumber = TrackingNumber.generate();
+        TrackingRecord trackingRecord = new TrackingRecord(trackingNumber, bookingId);
+        trackingRepository.save(trackingRecord);
+        return trackingNumber;
+    }
+}

@@ -41,7 +41,8 @@ public class CargoAssembler {
                 cargo.getHazardousDeclaration() != null ? cargo.getHazardousDeclaration().properShippingName() : null,
                 cargo.getTemperatureRequirement() != null ? cargo.getTemperatureRequirement().minTemperature() : null,
                 cargo.getTemperatureRequirement() != null ? cargo.getTemperatureRequirement().maxTemperature() : null,
-                cargo.getTemperatureRequirement() != null ? cargo.getTemperatureRequirement().unit().name() : null
+                cargo.getTemperatureRequirement() != null ? cargo.getTemperatureRequirement().unit().name() : null,
+                cargo.getTrackingNumber()
         );
     }
 }

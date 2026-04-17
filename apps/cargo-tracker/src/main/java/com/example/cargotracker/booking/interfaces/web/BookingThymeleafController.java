@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.web;
 
 import com.example.cargotracker.booking.application.internal.commandservices.AssignToRoutingCommand;
+import com.example.cargotracker.booking.application.internal.commandservices.IssueTrackingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
@@ -220,6 +221,12 @@ public class BookingThymeleafController {
     public String cancel(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
         return executeBookingCommand(bookingId, redirectAttributes, "予約をキャンセルしました。",
                 () -> cargoBookingCommandService.cancelBooking(new CancelBookingCommand(bookingId)));
+    }
+
+    @PostMapping("/{bookingId}/issue-tracking")
+    public String issueTracking(@PathVariable String bookingId, RedirectAttributes redirectAttributes) {
+        return executeBookingCommand(bookingId, redirectAttributes, "追跡番号を発行しました。",
+                () -> cargoBookingCommandService.issueTrackingNumber(new IssueTrackingCommand(bookingId)));
     }
 
     private String executeBookingCommand(
