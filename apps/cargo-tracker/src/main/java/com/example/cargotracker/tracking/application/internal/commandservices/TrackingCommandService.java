@@ -29,7 +29,7 @@ public class TrackingCommandService {
     @Transactional
     public void recordHandlingEvent(RecordHandlingEventCommand command) {
         TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
-        TrackingRecord record = trackingRepository.findByTrackingNumber(trackingNumber)
+        TrackingRecord trackingRecord = trackingRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Tracking record not found: " + command.trackingNumber()));
         TrackingActivityEvent event = new TrackingActivityEvent(
@@ -38,8 +38,8 @@ public class TrackingCommandService {
                 command.completionTime(),
                 command.voyageNumber()
         );
-        record.addHandlingEvent(event);
-        trackingRepository.updateStatus(record);
+        trackingRecord.addHandlingEvent(event);
+        trackingRepository.updateStatus(trackingRecord);
         trackingRepository.saveHandlingEvent(command.trackingNumber(), event);
     }
 }

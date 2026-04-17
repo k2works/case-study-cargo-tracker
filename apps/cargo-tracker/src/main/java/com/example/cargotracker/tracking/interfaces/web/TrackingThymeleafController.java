@@ -52,6 +52,8 @@ public class TrackingThymeleafController {
             redirectAttributes.addFlashAttribute("successMessage", "荷役作業を記録しました");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "荷役作業の記録に失敗しました: " + e.getMessage());
         }
         return "redirect:/tracking/handling";
     }

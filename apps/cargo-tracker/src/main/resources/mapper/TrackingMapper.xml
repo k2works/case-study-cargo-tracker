@@ -36,7 +36,7 @@
 
     <insert id="insertHandlingEvent" parameterType="com.example.cargotracker.tracking.infrastructure.repositories.HandlingEventRecord">
         INSERT INTO tracking_handling_event (tracking_number, event_type, location_unlocode, completion_time, voyage_number)
-        VALUES (#{trackingNumber}, #{eventType}, #{locationUnlocode}, #{completionTime}, #{voyageNumber})
+        VALUES (#{trackingNumber}, #{eventType}, #{locationUnlocode}, #{completionTime}, #{voyageNumber,jdbcType=VARCHAR})
     </insert>
 
 </mapper>

@@ -30,9 +30,9 @@ public class TrackingRecord {
             TrackingBookingId bookingId,
             CargoTrackingStatus status
     ) {
-        TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
-        record.status = status;
-        return record;
+        TrackingRecord trackingRecord = new TrackingRecord(trackingNumber, bookingId);
+        trackingRecord.status = status;
+        return trackingRecord;
     }
 
     public void addHandlingEvent(TrackingActivityEvent event) {
