@@ -72,9 +72,9 @@
 
 **受入条件**:
 
-- [ ] 追跡番号の入力で貨物を特定できる
+- [ ] 追跡番号の入力（またはスキャン）で貨物を特定できる
 - [ ] 作業種別（受領・積込・荷降し）を選択できる
-- [ ] 作業日時と作業場所（UN/LOCODE 形式）を入力できる
+- [ ] 作業日時と作業場所（UN/LOCODE 形式の港湾コード）を入力できる
 - [ ] 記録後、貨物状態が対応する状態（受領済・積込済・荷降し済）に自動更新される
 - [ ] 記録後、荷主に状態変更通知が送信される
 - [ ] 追跡番号が存在しない場合、エラーメッセージが表示される
@@ -97,8 +97,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Tracking コンテキスト: `TrackingId` 値オブジェクト実装（TDD） | 2h | - | [ ] |
-| 2.2 | Tracking コンテキスト: `TrackingNumber` 発行サービス実装（TDD） | 2h | - | [ ] |
+| 2.1 | Tracking コンテキスト: `TrackingNumber`・`TrackingBookingId` 値オブジェクト実装（TDD） | 2h | - | [ ] |
+| 2.2 | Tracking コンテキスト: `TrackingNumberIssuer` ドメインサービス実装（TDD） | 2h | - | [ ] |
 | 2.3 | Booking → Tracking: 追跡番号発行イベント連携（ACL ポート） | 2h | - | [ ] |
 | 2.4 | Tracking コントローラ: 追跡番号発行 API エンドポイント実装 | 1h | - | [ ] |
 | 2.5 | Thymeleaf: 追跡番号発行画面実装 | 1h | - | [ ] |
@@ -110,10 +110,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Tracking コンテキスト: `HandlingEvent`・`HandlingEventType` 値オブジェクト実装（TDD） | 2h | - | [ ] |
-| 3.2 | Tracking コンテキスト: `CargoStatus` 集約（受領済・積込済・荷降し済）実装（TDD） | 2h | - | [ ] |
+| 3.1 | Tracking コンテキスト: `TrackingActivityEvent`・`TrackingEventType` 実装（TDD） | 2h | - | [ ] |
+| 3.2 | Tracking コンテキスト: `TrackingActivity` 集約・`TrackingStatus` 遷移実装（TDD） | 2h | - | [ ] |
 | 3.3 | Tracking コンテキスト: 荷役記録アプリケーションサービス実装（TDD） | 2h | - | [ ] |
-| 3.4 | DB マイグレーション: `handling_event` テーブル作成（Flyway V11） | 1h | - | [ ] |
+| 3.4 | DB マイグレーション: `cargo.tracking_number` カラム追加（Flyway V11）+ MyBatis マッパー実装 | 1h | - | [ ] |
 | 3.5 | 荷役作業記録 API エンドポイント実装 | 1h | - | [ ] |
 | 3.6 | Thymeleaf: 荷役作業記録画面（作業種別選択・場所入力）実装 | 2h | - | [ ] |
 | 3.7 | E2E テスト: 荷役作業記録シナリオ（受領・積込・荷降し）作成 | 2h | - | [ ] |
@@ -188,106 +188,142 @@ gantt
 
 ### ドメインモデル
 
+> **注**: domain-model.md の Tracking Context 定義に準拠する。`TrackingActivity` が集約ルート、`TrackingNumber` が識別子、`TrackingStatus` が状態列挙型。
+
 ```plantuml
 @startuml
-package "Tracking コンテキスト" {
-  class CargoTracking {
-    + trackingId: TrackingId
-    + bookingNumber: BookingNumber (ref)
-    + status: CargoStatus
-    + handlingHistory: List<HandlingEvent>
-    + issueTrackingNumber()
-    + recordHandling(HandlingEvent)
+package "Tracking コンテキスト（IT7 実装対象）" {
+  class TrackingActivity <<aggregate root>> {
+    - trackingNumber: TrackingNumber
+    - bookingId: TrackingBookingId
+    - events: List<TrackingActivityEvent>
+    - exceptions: List<TrackingExceptionEvent>
+    + addEvent(event: TrackingActivityEvent)
+    + addException(ex: TrackingExceptionEvent)
+    + currentStatus(): TrackingStatus
+    + hasActiveException(): boolean
   }
 
-  class TrackingId {
-    + value: String (一意)
+  class TrackingNumber <<value object>> {
+    - number: String
   }
 
-  class HandlingEvent {
-    + eventType: HandlingEventType
-    + location: UnLocode
-    + occurredOn: LocalDateTime
+  class TrackingBookingId <<value object>> {
+    - bookingId: String
   }
 
-  enum HandlingEventType {
-    RECEIVE
-    LOAD
-    UNLOAD
-    CLAIM
+  class TrackingActivityEvent <<entity>> {
+    - eventType: TrackingEventType
+    - location: TrackingLocation
+    - completionTime: Date
+    - voyageNumber: TrackingVoyageNumber
   }
 
-  enum CargoStatus {
-    AWAITING_RECEIPT
+  class TrackingLocation <<value object>> {
+    - unLocode: String
+    - name: String
+  }
+
+  enum TrackingStatus {
+    NOT_RECEIVED
     RECEIVED
     LOADED
+    ONBOARD_CARRIER
     UNLOADED
+    AWAITING_CLAIM
     CLAIMED
+    EXCEPTION
     UNKNOWN
   }
 }
 
-CargoTracking *-- TrackingId
-CargoTracking *-- CargoStatus
-CargoTracking *-- HandlingEvent
-HandlingEvent *-- HandlingEventType
+TrackingActivity *-- TrackingNumber
+TrackingActivity *-- TrackingBookingId
+TrackingActivity *-- TrackingActivityEvent
+TrackingActivityEvent *-- TrackingLocation
 @enduml
 ```
 
 ### データモデル
+
+> **注**: data-model.md の Tracking Context 定義に準拠する。`tracking_activity` および `tracking_handling_event` は V1__init.sql で既に定義済みのテーブル。IT7 では新規テーブル作成は不要。既存テーブルを MyBatis マッパーで利用する。
 
 ```plantuml
 @startuml
 hide circle
 skinparam linetype ortho
 
-entity "cargo_tracking" as ct {
-  *id : BIGSERIAL
+entity "tracking_activity\n（既存テーブル・V1__init.sql）" as ta {
+  *id : BIGINT <<PK, BIGSERIAL>>
   --
-  tracking_id : VARCHAR(36) UK
-  booking_number : VARCHAR(50)
-  status : VARCHAR(30)
-  created_at : TIMESTAMP
-  updated_at : TIMESTAMP
+  * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
+  * booking_id : VARCHAR(20) <<NOT NULL>>
+  * transport_status : VARCHAR(30) <<NOT NULL>>
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
 
-entity "handling_event" as he {
-  *id : BIGSERIAL
+entity "tracking_handling_event\n（既存テーブル・V1__init.sql）" as the {
+  *id : BIGINT <<PK, BIGSERIAL>>
   --
-  cargo_tracking_id : BIGINT FK
-  event_type : VARCHAR(20)
-  location_unlocode : VARCHAR(5)
-  occurred_on : TIMESTAMP
-  created_at : TIMESTAMP
+  * tracking_id : BIGINT <<FK, NOT NULL>>
+  * event_type : VARCHAR(30) <<NOT NULL>>
+  * event_time : TIMESTAMP <<NOT NULL>>
+  * location_unlocode : VARCHAR(5) <<FK>>
+  voyage_number : VARCHAR(20)
+  * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
 
-ct ||--o{ he : "has"
+ta ||--o{ the : "イベントを持つ"
 @enduml
 ```
+
+**IT7 での DB マイグレーション方針**:
+
+- `tracking_activity` / `tracking_handling_event` は V1__init.sql 既定義のため新規テーブル作成不要
+- 追跡番号発行後に `cargo.tracking_number` カラムを更新する（V1__init.sql の `cargo` テーブルに `tracking_number VARCHAR(20)` カラムが「将来追加予定」として記載済み）
+- 必要に応じて `cargo` テーブルへの `tracking_number` カラム追加マイグレーション（V11）を実施する
 
 ### ユーザーインターフェース
 
 #### ビュー
 
+> **注**: ui_design.md の共通レイアウト（ナビバー形式）に準拠する。新規画面 `/tracking/issue` および `/tracking/handling` は ui_design.md 画面一覧への追加が必要（本イテレーション完了時に ui_design.md を更新する）。
+
+##### 追跡番号発行画面 (/tracking/issue)
+
 ```plantuml
 @startsalt
 {+
-  { / <b>CargoTracker</b> | 予約管理 | 経路設計 | 追跡管理 | 精算管理 | [ログアウト] }
+  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | 請求管理 | [ログアウト] }
   ==
-  追跡番号発行
+  <b>追跡番号発行</b>
+  ==
   {+
     予約番号     | "BKG-001   "
     予約状態     | 予約確定
     -----
     [追跡番号を発行]
   }
-  --
-  荷役作業記録
+}
+@endsalt
+```
+
+##### 荷役作業記録画面 (/tracking/handling)
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | 請求管理 | [ログアウト] }
+  ==
+  <b>荷役作業記録</b>
+  ==
   {+
     追跡番号     | "TRK-001   "
     作業種別     | (X) 受領  () 積込  () 荷降し
     作業日時     | "2026-04-21 10:00"
-    作業場所     | "JPTYO    "
+    作業場所（UN/LOCODE）| "JPTYO    "
     -----
     [記録する]
   }
@@ -303,25 +339,41 @@ title 画面遷移図（IT7）
 
 [*] --> 予約一覧
 
-state "予約一覧\n/bookings" as BL
-state "予約詳細\n/bookings/{id}" as BD
-state "追跡番号発行\n/tracking/issue" as TI {
-  state "発行フォーム" as TIF
-  state "発行確認" as TIC
-}
-state "荷役作業記録\n/tracking/handling" as TH {
-  state "記録フォーム" as THF
-}
+state "予約一覧\n/bookings\n予約一覧テーブル・検索" as BL
+state "予約詳細\n/bookings/{bookingId}\n予約情報・荷役履歴" as BD
+state "追跡番号発行\n/tracking/issue\n発行フォーム" as TIF
+state "追跡番号発行確認\n/tracking/issue/confirm\n発行確認" as TIC
+state "荷役作業記録\n/tracking/handling\n記録フォーム" as THF
 
 BL --> BD : GET（予約選択）
-BD --> TI : GET（追跡番号発行）
-TIF --> TIF : バリデーションエラー（PRG）
-TIF --> TIC : POST（発行） → GET（PRG）
-TH : 追跡番号入力・作業登録
-THF --> THF : バリデーションエラー（PRG）
-THF --> BL : POST（記録完了） → GET（PRG）
+BD --> TIF : GET（追跡番号発行ボタン）
+TIF --> TIF : POST バリデーションエラー（PRG）
+TIF --> TIC : POST 発行成功 → GET（PRG）
+TIC --> BL : GET（一覧に戻る）
+
+BL --> THF : GET（荷役作業記録ボタン）
+THF --> THF : POST バリデーションエラー（PRG）
+THF --> BL : POST 記録完了 → GET（PRG）
 @enduml
 ```
+
+**htmx パターン**:
+
+| 画面 | 操作 | htmx 属性 |
+|------|------|-----------|
+| 荷役作業記録フォーム | 追跡番号入力後に貨物情報を非同期照会 | `hx-get="/tracking/lookup" hx-target="#cargo-info" hx-swap="innerHTML"` |
+| 荷役作業記録フォーム | フォーム送信（htmx 使用しない・通常 POST/PRG） | - |
+
+**フィードバックメッセージ**:
+
+| 操作 | メッセージ | スタイル |
+|------|----------|---------|
+| 追跡番号発行成功 | 「追跡番号 {trackingNumber} を発行しました」 | `alert-success` |
+| 追跡番号発行失敗（予約状態不正） | 「予約確定状態の予約にのみ追跡番号を発行できます」 | `alert-danger` |
+| 荷役作業記録成功 | 「荷役作業を記録しました。貨物状態: {status}」 | `alert-success` |
+| 荷役作業記録失敗（追跡番号不在） | 「追跡番号が見つかりません」 | `alert-danger` |
+| 荷役作業記録警告（場所不一致） | 「作業場所が予定ルートと異なります」 | `alert-warning` |
+| バリデーションエラー | フィールド単位のインラインエラー | `is-invalid` + `invalid-feedback` |
 
 ### ディレクトリ構成
 
@@ -330,20 +382,21 @@ apps/backend/src/main/java/.../
 ├── tracking/
 │   ├── domain/
 │   │   ├── model/
-│   │   │   ├── cargo/
-│   │   │   │   ├── CargoTracking.java          (集約ルート)
-│   │   │   │   ├── TrackingId.java             (値オブジェクト)
-│   │   │   │   └── CargoStatus.java            (列挙型)
-│   │   │   └── handling/
-│   │   │       ├── HandlingEvent.java           (値オブジェクト)
-│   │   │       └── HandlingEventType.java       (列挙型)
+│   │   │   ├── TrackingActivity.java           (集約ルート)
+│   │   │   ├── TrackingNumber.java             (値オブジェクト)
+│   │   │   ├── TrackingBookingId.java          (値オブジェクト)
+│   │   │   ├── TrackingActivityEvent.java      (エンティティ)
+│   │   │   ├── TrackingLocation.java           (値オブジェクト)
+│   │   │   ├── TrackingVoyageNumber.java       (値オブジェクト)
+│   │   │   ├── TrackingStatus.java             (列挙型)
+│   │   │   └── TrackingEventType.java          (列挙型)
 │   │   └── service/
 │   │       └── TrackingNumberIssuer.java        (ドメインサービス)
 │   ├── application/
 │   │   └── TrackingApplicationService.java
 │   └── infrastructure/
 │       └── persistence/
-│           └── JpaCargoTrackingRepository.java
+│           └── MyBatisTrackingActivityRepository.java
 ```
 
 ### API 設計
@@ -356,13 +409,29 @@ apps/backend/src/main/java/.../
 
 ---
 
+## ストーリー間の依存関係
+
+| 依存元 | 依存先 | 理由 |
+|--------|--------|------|
+| US15 | US14 | 荷役作業記録には有効な追跡番号が必要。US14 で `TrackingActivity` が作成されていない状態では US15 の機能テストができない |
+
+実装順序: US14（`TrackingActivity` 作成・追跡番号発行）→ US15（追跡番号で特定して荷役記録）
+
+## IT5 レビュー指摘事項の対応方針
+
+| 指摘 # | 内容 | IT7 対応方針 |
+|--------|------|-------------|
+| H-4 | Routing コンテキストへのアクセスに ACL 導入 | US14/US15 の Booking → Tracking ACL 設計時に同様のパターンで `TrackingBookingIdPort` を実装する（本イテレーション対応） |
+| H-1〜H-3, H-5〜H-9 | Booking/Routing コンテキスト改善 | IT7 スコープ外（Tracking コンテキスト新規実装）のため保留。IT8 以降で対応を検討する |
+
 ## リスクと対策
 
 | リスク | 影響度 | 対策 |
 |--------|--------|------|
 | Tracking コンテキストの新規作成による工数増 | 高 | IT6 の Billing コンテキスト作成の経験を活かす |
 | Booking → Tracking の ACL 設計が複雑 | 中 | 既存の Routing ACL パターンを参考にする |
-| 荷役作業と貨物状態の整合性 | 中 | ドメインイベントで状態遷移を管理する |
+| 荷役作業と貨物状態の整合性 | 中 | `TrackingActivity.addEvent()` でドメインイベント駆動の状態遷移を管理する |
+| domain-model.md の `TrackingActivity` 集約との整合性 | 中 | 設計セクションの修正済み定義に従い、`CargoTracking` ではなく `TrackingActivity` を集約ルートとして実装する |
 
 ---
 
@@ -391,6 +460,7 @@ apps/backend/src/main/java/.../
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-10 | 初版作成 | - |
+| 2026-04-17 | 整合性検証結果に基づく修正: ドメインモデル（`CargoTracking`→`TrackingActivity`・`TrackingStatus` 9値修正）、データモデル（既存テーブル利用・V11 内容変更）、UI 設計（ナビバー・htmx パターン・フィードバック追加）、US15 受入条件省略を補完、IT5 指摘事項対応方針追加 | - |
 
 ---
 
