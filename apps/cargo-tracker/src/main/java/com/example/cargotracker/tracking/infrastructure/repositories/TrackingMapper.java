@@ -15,4 +15,6 @@ public interface TrackingMapper {
     void updateStatus(@Param("trackingNumber") String trackingNumber, @Param("cargoStatus") String cargoStatus);
 
     void insertHandlingEvent(HandlingEventRecord record);
+
+    java.util.List<HandlingEventRecord> findHandlingEventsByTrackingNumber(String trackingNumber);
 }

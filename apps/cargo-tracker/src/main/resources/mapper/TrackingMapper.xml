@@ -39,4 +39,20 @@
         VALUES (#{trackingNumber}, #{eventType}, #{locationUnlocode}, #{completionTime}, #{voyageNumber,jdbcType=VARCHAR})
     </insert>
 
+    <resultMap id="handlingEventRecordMap" type="com.example.cargotracker.tracking.infrastructure.repositories.HandlingEventRecord">
+        <id property="id" column="id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="eventType" column="event_type"/>
+        <result property="locationUnlocode" column="location_unlocode"/>
+        <result property="completionTime" column="completion_time"/>
+        <result property="voyageNumber" column="voyage_number"/>
+    </resultMap>
+
+    <select id="findHandlingEventsByTrackingNumber" resultMap="handlingEventRecordMap">
+        SELECT id, tracking_number, event_type, location_unlocode, completion_time, voyage_number
+        FROM tracking_handling_event
+        WHERE tracking_number = #{trackingNumber}
+        ORDER BY completion_time ASC
+    </select>
+
 </mapper>

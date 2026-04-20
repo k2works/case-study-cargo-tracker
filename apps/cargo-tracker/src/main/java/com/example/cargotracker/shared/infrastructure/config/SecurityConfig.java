@@ -60,7 +60,8 @@ public class SecurityConfig {
                             "/webjars/**",
                             "/css/**",
                             "/js/**",
-                            "/actuator/health"
+                            "/actuator/health",
+                            "/public/**"
                     ).permitAll();
                     if (openApiEnabled) {
                         auth.requestMatchers(

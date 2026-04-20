@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>追跡情報照会 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar('tracking')}"></div>
+
+<main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">追跡情報照会</h1>
+    </div>
+
+    <div class="card shadow-sm mb-4"
+         id="tracking-detail"
+         th:attr="hx-get=@{/tracking/{tn}(tn=${tracking.trackingNumber})},hx-trigger='every 30s',hx-target='#tracking-detail',hx-swap='outerHTML'">
+        <div class="card-header">
+            <h2 class="h6 mb-0">追跡番号: <span th:text="${tracking.trackingNumber}"></span></h2>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">現在の状態</dt>
+                <dd class="col-sm-9">
+                    <span class="badge bg-primary" th:text="${tracking.status.displayName}"></span>
+                </dd>
+                <dt class="col-sm-3">予約 ID</dt>
+                <dd class="col-sm-9" th:text="${tracking.bookingId}"></dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h2 class="h6 mb-0">荷役履歴</h2>
+        </div>
+        <div class="card-body p-0">
+            <div th:if="${tracking.events.isEmpty()}" class="p-4 text-center text-secondary">
+                荷役イベントがまだ記録されていません。
+            </div>
+            <table th:if="${!tracking.events.isEmpty()}" class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">日時</th>
+                    <th scope="col">作業種別</th>
+                    <th scope="col">場所</th>
+                    <th scope="col">航海番号</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="event : ${tracking.events}">
+                    <td th:text="${#temporals.format(event.completionTime, 'yyyy-MM-dd HH:mm')}"></td>
+                    <td th:text="${event.eventTypeDisplayName}"></td>
+                    <td th:text="${event.locationUnlocode}"></td>
+                    <td th:text="${event.voyageNumber != null ? event.voyageNumber : '-'}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
+</body>
+</html>
