@@ -106,3 +106,58 @@ test.describe('US15: 荷役作業を記録する', () => {
     await expect(handlingPage.errorAlert).toContainText('Tracking record not found');
   });
 });
+
+test.describe('US16: 引取作業を記録する', () => {
+  test('受入条件1: 作業種別「引取」を選択すると荷受人確認フィールドが表示される', async ({ page, loggedIn }) => {
+    const handlingPage = new HandlingPage(page);
+
+    await handlingPage.goto();
+
+    // 初期状態では荷受人確認フィールドは非表示
+    const claimSection = page.locator('#claim-section');
+    await expect(claimSection).toHaveClass(/d-none/);
+
+    // CLAIM を選択すると表示される
+    await handlingPage.selectEventType('CLAIM').check();
+    await expect(claimSection).not.toHaveClass(/d-none/);
+  });
+
+  test('受入条件2,3: 引取作業を記録すると貨物状態が「引取済み」に更新される', async ({ page, loggedIn }) => {
+    const trackingNumber = await setupTrackingIssuedBooking(page);
+    const handlingPage = new HandlingPage(page);
+
+    await handlingPage.goto();
+    // RECEIVE
+    await handlingPage.fill(trackingNumber, 'RECEIVE', '2027-01-01T10:00', 'JPTYO');
+    await handlingPage.submit();
+    await expect(handlingPage.successAlert).toBeVisible();
+
+    // LOAD
+    await handlingPage.fill(trackingNumber, 'LOAD', '2027-01-02T10:00', 'JPTYO', 'V100');
+    await handlingPage.submit();
+    await expect(handlingPage.successAlert).toBeVisible();
+
+    // UNLOAD
+    await handlingPage.fill(trackingNumber, 'UNLOAD', '2027-01-15T10:00', 'USLAX', 'V100');
+    await handlingPage.submit();
+    await expect(handlingPage.successAlert).toBeVisible();
+
+    // CLAIM（引取）
+    await handlingPage.fill(trackingNumber, 'CLAIM', '2027-01-16T10:00', 'USLAX', undefined, '確認コード-001');
+    await handlingPage.submit();
+
+    await expect(handlingPage.successAlert).toBeVisible();
+    await expect(handlingPage.successAlert).toContainText('荷役作業を記録しました');
+  });
+
+  test('受入条件5（異常系）: 存在しない追跡番号の場合エラーメッセージが表示される', async ({ page, loggedIn }) => {
+    const handlingPage = new HandlingPage(page);
+
+    await handlingPage.goto();
+    await handlingPage.fill('TRK-00000000-NOTEXIST', 'CLAIM', '2027-01-16T10:00', 'USLAX');
+    await handlingPage.submit();
+
+    await expect(handlingPage.errorAlert).toBeVisible();
+    await expect(handlingPage.errorAlert).toContainText('Tracking record not found');
+  });
+});
