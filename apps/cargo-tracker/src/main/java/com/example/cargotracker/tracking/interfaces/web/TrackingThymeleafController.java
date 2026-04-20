@@ -34,6 +34,15 @@ public class TrackingThymeleafController {
         this.trackingQueryService = trackingQueryService;
     }
 
+    @GetMapping
+    public String showTrackingSearch(
+            @RequestParam(required = false) String trackingNumber) {
+        if (trackingNumber != null && !trackingNumber.isBlank()) {
+            return "redirect:/tracking/" + trackingNumber.trim();
+        }
+        return "tracking/search";
+    }
+
     @GetMapping("/handling")
     public String showHandlingForm(Model model) {
         model.addAttribute("eventTypes", TrackingEventType.values());

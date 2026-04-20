@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 @Controller
@@ -17,6 +18,15 @@ public class PublicTrackingController {
 
     public PublicTrackingController(TrackingQueryService trackingQueryService) {
         this.trackingQueryService = trackingQueryService;
+    }
+
+    @GetMapping
+    public String showPublicSearch(
+            @RequestParam(required = false) String trackingNumber) {
+        if (trackingNumber != null && !trackingNumber.isBlank()) {
+            return "redirect:/public/tracking/" + trackingNumber.trim();
+        }
+        return "tracking/public-search";
     }
 
     @GetMapping("/{trackingNumber}")

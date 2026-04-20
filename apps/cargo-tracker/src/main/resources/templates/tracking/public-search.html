@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貨物追跡 - Cargo Tracker</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h1 class="h3 mb-4 text-center">貨物追跡</h1>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form th:action="@{/public/tracking}" method="get">
+                        <div class="mb-3">
+                            <label for="trackingNumber" class="form-label fw-bold">追跡番号</label>
+                            <input type="text" class="form-control" id="trackingNumber" name="trackingNumber"
+                                   placeholder="TRK-YYYYMMDD-XXXXXXXX" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">追跡する</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
