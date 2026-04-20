@@ -112,7 +112,7 @@
                             </div>
 
                             <!-- 危険物セクション -->
-                            <div id="hazardous-section" style="display:none;" class="col-12 border rounded p-3 bg-warning-subtle">
+                            <div id="hazardous-section" class="d-none col-12 border rounded p-3 bg-warning-subtle">
                                 <h6>危険物申告情報</h6>
                                 <div class="row g-3">
                                     <div class="col-md-4">
@@ -137,7 +137,7 @@
                             </div>
 
                             <!-- 冷凍・冷蔵セクション -->
-                            <div id="refrigerated-section" style="display:none;" class="col-12 border rounded p-3 bg-info-subtle">
+                            <div id="refrigerated-section" class="d-none col-12 border rounded p-3 bg-info-subtle">
                                 <h6>温度管理条件</h6>
                                 <div class="row g-3">
                                     <div class="col-md-4">
@@ -182,8 +182,8 @@
     var cargoType = document.getElementById('cargoType').value;
     var hazardous = document.getElementById('hazardous-section');
     var refrigerated = document.getElementById('refrigerated-section');
-    if (hazardous) hazardous.style.display = cargoType === 'HAZARDOUS' ? 'block' : 'none';
-    if (refrigerated) refrigerated.style.display = cargoType === 'REFRIGERATED' ? 'block' : 'none';
+    if (hazardous) hazardous.classList.toggle('d-none', cargoType !== 'HAZARDOUS');
+    if (refrigerated) refrigerated.classList.toggle('d-none', cargoType !== 'REFRIGERATED');
   }
   document.addEventListener('DOMContentLoaded', toggleSpecialFields);
 </script>
