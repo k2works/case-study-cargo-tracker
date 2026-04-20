@@ -63,6 +63,12 @@
                     </div>
                 </div>
             </form>
+            <a th:if="${booking.trackingNumber != null}"
+               th:href="@{/tracking/handling}"
+               class="btn btn-outline-info">荷役作業を登録</a>
+            <a th:if="${booking.trackingNumber != null}"
+               th:href="@{/tracking/{tn}(tn=${booking.trackingNumber})}"
+               class="btn btn-outline-secondary">追跡照会</a>
             <form th:if="${booking.status == 'CONFIRMED'}"
                   th:action="@{/bookings/{id}/issue-tracking(id=${booking.bookingId})}" method="post">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
