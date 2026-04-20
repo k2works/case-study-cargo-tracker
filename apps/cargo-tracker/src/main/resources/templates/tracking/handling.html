@@ -57,6 +57,12 @@
                            placeholder="V100">
                 </div>
 
+                <div id="claim-section" class="d-none mb-3">
+                    <label for="recipientConfirmation" class="form-label fw-bold">荷受人確認（署名または確認コード）</label>
+                    <input type="text" class="form-control" id="recipientConfirmation" name="recipientConfirmation"
+                           placeholder="署名または確認コード">
+                </div>
+
                 <button type="submit" class="btn btn-primary">記録する</button>
             </form>
         </div>
@@ -64,5 +70,13 @@
 </main>
 
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script>
+  document.querySelectorAll('input[name="eventType"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      var claimSection = document.getElementById('claim-section');
+      if (claimSection) claimSection.classList.toggle('d-none', this.value !== 'CLAIM');
+    });
+  });
+</script>
 </body>
 </html>

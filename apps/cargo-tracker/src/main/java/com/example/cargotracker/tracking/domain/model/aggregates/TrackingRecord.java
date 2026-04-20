@@ -6,6 +6,7 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBooki
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,11 +42,23 @@ public class TrackingRecord {
         this.status = deriveStatus(event.getEventType());
     }
 
+    public void addManualUpdateEvent(CargoTrackingStatus newStatus, String locationUnlocode, LocalDateTime dateTime) {
+        if (newStatus == null) throw new IllegalArgumentException("newStatus must not be null");
+        if (locationUnlocode == null || locationUnlocode.isBlank()) throw new IllegalArgumentException("locationUnlocode must not be blank");
+        if (dateTime == null) throw new IllegalArgumentException("dateTime must not be null");
+        TrackingActivityEvent event = new TrackingActivityEvent(
+                TrackingEventType.MANUAL_UPDATE, locationUnlocode, dateTime, null);
+        handlingEvents.add(event);
+        this.status = newStatus;
+    }
+
     private CargoTrackingStatus deriveStatus(TrackingEventType eventType) {
         return switch (eventType) {
             case RECEIVE -> CargoTrackingStatus.RECEIVED;
             case LOAD -> CargoTrackingStatus.LOADED;
             case UNLOAD -> CargoTrackingStatus.UNLOADED;
+            case CLAIM -> CargoTrackingStatus.CLAIMED;
+            case MANUAL_UPDATE -> this.status;
         };
     }
 

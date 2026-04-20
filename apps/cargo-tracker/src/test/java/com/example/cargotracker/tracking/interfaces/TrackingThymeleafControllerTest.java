@@ -92,4 +92,76 @@ class TrackingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(flash().attribute("successMessage",
                         containsString("荷役作業を記録しました")));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /tracking/handling に CLAIM イベントを送ると successMessage がセットされる")
+    void postHandling_withClaimEvent_shouldSetSuccessMessage() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO tracking_record (tracking_number, booking_id, cargo_status) VALUES (?, ?, ?)",
+                "TRK-20270101-TEST0002", "00000000-0000-0000-0000-000000000002", "UNLOADED");
+
+        mockMvc.perform(post("/tracking/handling").with(csrf())
+                        .param("trackingNumber", "TRK-20270101-TEST0002")
+                        .param("eventType", "CLAIM")
+                        .param("completionTime", "2027-01-16T10:00")
+                        .param("locationUnlocode", "USLAX"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/tracking/handling"))
+                .andExpect(flash().attribute("successMessage",
+                        containsString("荷役作業を記録しました")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /tracking/{trackingNumber} で追跡情報詳細ページが表示される")
+    void getTrackingDetail_shouldRenderDetailPage() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO tracking_record (tracking_number, booking_id, cargo_status) VALUES (?, ?, ?)",
+                "TRK-20270101-TEST0003", "00000000-0000-0000-0000-000000000003", "RECEIVED");
+
+        mockMvc.perform(get("/tracking/TRK-20270101-TEST0003"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tracking/detail"))
+                .andExpect(content().string(containsString("TRK-20270101-TEST0003")));
+    }
+
+    @Test
+    @DisplayName("GET /public/tracking/{trackingNumber} で認証なしでも追跡情報が表示される")
+    void getPublicTrackingDetail_shouldRenderDetailPageWithoutAuth() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO tracking_record (tracking_number, booking_id, cargo_status) VALUES (?, ?, ?)",
+                "TRK-20270101-TEST0004", "00000000-0000-0000-0000-000000000004", "LOADED");
+
+        mockMvc.perform(get("/public/tracking/TRK-20270101-TEST0004"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tracking/detail"))
+                .andExpect(content().string(containsString("TRK-20270101-TEST0004")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /tracking/{trackingNumber} で存在しない追跡番号の場合 404 が返る")
+    void getTrackingDetail_withNotFound_shouldReturn404() throws Exception {
+        mockMvc.perform(get("/tracking/TRK-00000000-NOTEXIST"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /tracking/status で貨物状態を手動更新できる")
+    void postTrackingStatus_shouldUpdateCargoStatus() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO tracking_record (tracking_number, booking_id, cargo_status) VALUES (?, ?, ?)",
+                "TRK-20270101-TEST0005", "00000000-0000-0000-0000-000000000005", "RECEIVED");
+
+        mockMvc.perform(post("/tracking/status").with(csrf())
+                        .param("trackingNumber", "TRK-20270101-TEST0005")
+                        .param("newStatus", "LOADED")
+                        .param("locationUnlocode", "JPTYO")
+                        .param("updateTime", "2027-01-02T10:00"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("successMessage",
+                        containsString("状態を更新しました")));
+    }
 }

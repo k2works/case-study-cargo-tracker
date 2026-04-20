@@ -54,4 +54,15 @@ class TrackingRecordHandlingTest {
         assertThat(record.getHandlingEvents()).hasSize(1);
         assertThat(record.getHandlingEvents().get(0).getEventType()).isEqualTo(TrackingEventType.RECEIVE);
     }
+
+    @Test
+    void 引取イベント追加後にステータスがCLAIMEDになる() {
+        TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
+        record.addHandlingEvent(new TrackingActivityEvent(TrackingEventType.RECEIVE, "JPTYO", now, null));
+        record.addHandlingEvent(new TrackingActivityEvent(TrackingEventType.LOAD, "JPTYO", now, "V100"));
+        record.addHandlingEvent(new TrackingActivityEvent(TrackingEventType.UNLOAD, "USLAX", now, "V100"));
+        record.addHandlingEvent(new TrackingActivityEvent(TrackingEventType.CLAIM, "USLAX", now, null));
+
+        assertThat(record.getStatus()).isEqualTo(CargoTrackingStatus.CLAIMED);
+    }
 }
