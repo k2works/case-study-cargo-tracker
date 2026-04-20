@@ -22,12 +22,12 @@
 
 ### 成功基準
 
-- [ ] `display:none` 廃止・`th:fragment` 化が完了している
-- [ ] 引取作業（CLAIM）を記録できる
-- [ ] 記録後、貨物状態が「引取済み（CLAIMED）」に更新される
-- [ ] 追跡番号で追跡情報（現在状態・荷役履歴）を照会できる
-- [ ] 追跡管理者が貨物状態を手動で更新できる
-- [ ] テストカバレッジ 80% 以上
+- [x] `display:none` 廃止・`th:fragment` 化が完了している
+- [x] 引取作業（CLAIM）を記録できる
+- [x] 記録後、貨物状態が「引取済み（CLAIMED）」に更新される
+- [x] 追跡番号で追跡情報（現在状態・荷役履歴）を照会できる
+- [x] 追跡管理者が貨物状態を手動で更新できる
+- [x] テストカバレッジ 80% 以上（81% 達成）
 
 ---
 
@@ -108,7 +108,7 @@
 | 2.1 | `TrackingEventType.CLAIM` 追加・`TrackingActivity` 状態遷移更新（UNLOADED → CLAIMED）（TDD） | 2h | - | [x] |
 | 2.2 | `TrackingApplicationService`: 引取作業記録処理追加（TDD） | 1h | - | [x] |
 | 2.3 | handling.html に CLAIM 種別を追加 | 1h | - | [x] |
-| 2.4 | E2E テスト: 引取作業記録シナリオ（handling.spec.ts 拡張） | 2h | - | [ ] |
+| 2.4 | E2E テスト: 引取作業記録シナリオ（handling.spec.ts 拡張） | 2h | - | [x] |
 | 2.5 | 統合テスト・バグ修正 | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
@@ -121,7 +121,7 @@
 | 3.2 | GET /tracking/{trackingNumber} エンドポイント実装（認証あり） | 1h | - | [x] |
 | 3.3 | GET /public/tracking/{trackingNumber} エンドポイント実装（認証なし） | 1h | - | [x] |
 | 3.4 | Thymeleaf: 追跡情報照会画面（tracking-detail.html）実装・30 秒 htmx 自動更新 | 2h | - | [x] |
-| 3.5 | E2E テスト: 追跡情報照会シナリオ（tracking.spec.ts 拡張） | 2h | - | [ ] |
+| 3.5 | E2E テスト: 追跡情報照会シナリオ（tracking.spec.ts 拡張） | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -132,7 +132,7 @@
 | 4.1 | `TrackingActivity.addManualUpdateEvent()` コマンド実装（状態・位置・日時を受け取る）（TDD） | 2h | - | [x] |
 | 4.2 | POST /tracking/status エンドポイント実装 | 1h | - | [x] |
 | 4.3 | Thymeleaf: 手動状態更新画面（tracking-status.html、位置・日時フィールド含む）実装 | 2h | - | [x] |
-| 4.4 | E2E テスト: 手動状態更新シナリオ（新規 status.spec.ts） | 2h | - | [ ] |
+| 4.4 | E2E テスト: 手動状態更新シナリオ（新規 status.spec.ts） | 2h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -141,13 +141,13 @@
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|------|------|
 | IT7-改善 | 1 | 3h | [x] |
-| US16 引取作業記録 | 3 | 8h | [x] (E2E 除く) |
-| US18 追跡情報照会 | 3 | 8h | [x] (E2E 除く) |
-| US17 貨物状態手動更新 | 3 | 7h | [x] (E2E 除く) |
+| US16 引取作業記録 | 3 | 8h | [x] |
+| US18 追跡情報照会 | 3 | 8h | [x] |
+| US17 貨物状態手動更新 | 3 | 7h | [x] |
 | **合計** | **10** | **26h** | |
 
 **1 SP あたり**: 約 2.6h
-**進捗率**: 80% (8/10 SP 相当 ※E2E 除く)
+**進捗率**: 100% (10/10 SP 完了)
 
 ---
 
