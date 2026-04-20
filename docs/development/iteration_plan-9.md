@@ -27,7 +27,7 @@
 - [ ] 遅延例外（EXCEPTION 状態）を記録できる
 - [ ] 破損・紛失例外を記録できる
 - [ ] 記録後、貨物状態が「例外発生（EXCEPTION）」に更新される
-- [ ] 例外対応履歴が記録される
+- [ ] 例外対応履歴（tracking_exception_event テーブル）が記録される
 - [ ] テストカバレッジ 80% 以上
 
 ---
@@ -75,7 +75,7 @@
 
 1. 追跡番号と例外種別「破損」または「紛失」・発生状況を記録できる
 2. 記録後、貨物状態が「例外発生（EXCEPTION）」に更新される
-3. 例外種別「紛失」の場合、緊急フラグが設定されて記録される
+3. 例外種別「紛失」の場合、緊急フラグ（escalation_flag）が設定され、管理職への escalation 通知が送信される
 4. 荷主に破損・紛失発生の通知が送信される（※メールインフラ未整備のため UI 上の通知記録のみ）
 5. 対応内容（補償方針等）を入力して荷主に報告を送信できる
 
@@ -96,8 +96,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `ExceptionType.DELAY` 追加・`TrackingActivity` 状態遷移更新（ANY → EXCEPTION）（TDD） | 2h | - | [ ] |
-| 2.2 | `TrackingCommandService`: 例外記録コマンド実装（`RecordExceptionCommand`）（TDD） | 1h | - | [ ] |
+| 2.1 | `ExceptionType.DELAY` 追加・`TrackingActivity.addException()` 状態遷移更新（ANY → EXCEPTION）（TDD） | 2h | - | [ ] |
+| 2.2 | `TrackingCommandService`: 例外記録コマンド実装（`RegisterExceptionCommand`）（TDD） | 1h | - | [ ] |
 | 2.3 | GET/POST /tracking/exception エンドポイント実装 | 1h | - | [ ] |
 | 2.4 | Thymeleaf: 例外記録画面（tracking/exception.html）実装（遅延・理由・対応内容フィールド） | 2h | - | [ ] |
 | 2.5 | E2E テスト: 遅延例外記録シナリオ（exception.spec.ts 新規） | 2h | - | [ ] |
@@ -108,8 +108,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `ExceptionType.DAMAGE`・`ExceptionType.LOSS` 追加・緊急フラグ（isEmergency）実装（TDD） | 2h | - | [ ] |
-| 3.2 | `TrackingCommandService`: 破損・紛失記録コマンド拡張（緊急フラグ対応）（TDD） | 1h | - | [ ] |
+| 3.1 | `ExceptionType.DAMAGE`・`ExceptionType.LOST` 追加・escalation_flag（LOST 時 true）実装（TDD） | 2h | - | [ ] |
+| 3.2 | `TrackingCommandService`: 破損・紛失記録コマンド拡張（escalation_flag 対応）（TDD） | 1h | - | [ ] |
 | 3.3 | exception.html に破損・紛失選択肢・緊急フラグ表示を追加 | 1h | - | [ ] |
 | 3.4 | E2E テスト: 破損・紛失例外記録シナリオ（exception.spec.ts 拡張） | 2h | - | [ ] |
 | 3.5 | 統合テスト・バグ修正 | 2h | - | [ ] |
@@ -189,28 +189,28 @@ gantt
 @startuml
 package "Tracking コンテキスト（IT9 拡張対象）" {
   class TrackingActivity <<aggregate root>> {
-    + recordException(type, location, reason, dateTime) /' US19・US20: 例外記録 '/
+    + addException(ex: TrackingExceptionEvent) /' US19・US20: 例外記録 '/
   }
 
   enum ExceptionType {
     DELAY       /' US19: 遅延 '/
     DAMAGE      /' US20: 破損 '/
-    LOSS        /' US20: 紛失・緊急フラグ設定 '/
+    LOST        /' US20: 紛失・escalation_flag 設定 '/
   }
 
   class TrackingExceptionEvent <<entity>> {
     - exceptionType: ExceptionType
-    - location: String
-    - reason: String
-    - isEmergency: boolean /' LOSS の場合 true '/
-    - occurredAt: LocalDateTime
+    - location: TrackingLocation
+    - description: String
+    - escalationFlag: boolean /' LOST の場合 true '/
+    - occurredAt: Date
   }
 
-  class RecordExceptionCommand <<command>> {
+  class RegisterExceptionCommand <<command>> {
     - trackingNumber: String
     - exceptionType: ExceptionType
     - locationUnlocode: String
-    - reason: String
+    - description: String
     - occurredAt: LocalDateTime
   }
 }
@@ -222,23 +222,34 @@ TrackingExceptionEvent *-- ExceptionType
 
 ### データモデル
 
-> **注**: IT9 での DB マイグレーションが必要。`tracking_handling_event` に `exception_type`・`reason`・`is_emergency` カラムを追加するか、`tracking_exception_event` テーブルを新設するかを検討する。既存テーブルへの追加（NULL 許容）で対応する方針とする。
+> **注**: IT9 での DB マイグレーションが必要。data-model.md では例外イベントは独立した `tracking_exception_event` テーブルで管理する設計となっているため、そのテーブルを新規作成する。既存の `tracking_handling_event` テーブルへの変更は行わない。
 
-**追加カラム案（tracking_handling_event テーブル）**:
+**新規テーブル（tracking_exception_event）**:
 
 ```sql
-ALTER TABLE tracking_handling_event
-  ADD COLUMN reason VARCHAR(500),
-  ADD COLUMN is_emergency BOOLEAN DEFAULT FALSE;
+CREATE TABLE tracking_exception_event (
+  id              BIGSERIAL PRIMARY KEY,
+  tracking_id     BIGINT NOT NULL REFERENCES tracking_activity(id),
+  exception_type  VARCHAR(50) NOT NULL,
+  occurred_at     TIMESTAMP NOT NULL,
+  escalation_flag BOOLEAN NOT NULL DEFAULT FALSE,
+  description     VARCHAR(500),
+  resolved_at     TIMESTAMP WITH TIME ZONE,
+  resolution_notes TEXT,
+  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
+);
 ```
 
-> EXCEPTION イベントは `event_type = 'EXCEPTION'` として既存テーブルに記録し、`reason` と `is_emergency` でコンテキスト情報を保持する。マイグレーションは `V9__add_exception_fields.sql` として追加する。
+> マイグレーションは `V9__create_tracking_exception_event.sql` として追加する。例外種別 `LOST` の場合、`escalation_flag = TRUE` を設定する（ドメインモデルのビジネスルール 3 に準拠）。
 
 ### ユーザーインターフェース
 
 #### ビュー
 
 ##### 例外記録画面 (/tracking/exception) — US19・US20 新規
+
+> **注**: `docs/design/ui_design.md` の画面一覧に未定義。IT9 完了時に ui_design.md に「例外記録 | `/tracking/exception` | 例外記録フォーム | 追跡管理者 | US19, US20」を追加する。
 
 ```plantuml
 @startsalt
@@ -252,9 +263,9 @@ ALTER TABLE tracking_handling_event
     例外種別     | () 遅延  () 破損  (X) 紛失
     発生場所（UN/LOCODE）| "JPTYO    "
     発生日時     | "2026-05-02 10:00"
-    理由・状況   | "コンテナ損傷を確認"
+    理由・状況（説明）| "コンテナ損傷を確認"
     -----
-    緊急フラグ   | [X] 緊急通知が必要（紛失の場合）
+    エスカレーション| [X] 管理職へのエスカレーションが必要（紛失の場合）
     -----
     [記録する]
   }
@@ -285,7 +296,7 @@ EXC --> TRK : POST 記録完了 → GET（PRG）
 |------|----------|---------|
 | 遅延例外記録成功 | 「遅延例外を記録しました。貨物状態: 例外発生」 | `alert-success` |
 | 破損例外記録成功 | 「破損例外を記録しました。貨物状態: 例外発生」 | `alert-success` |
-| 紛失例外記録成功（緊急） | 「紛失例外を記録しました【緊急】。貨物状態: 例外発生」 | `alert-warning` |
+| 紛失例外記録成功（escalation） | 「紛失例外を記録しました【緊急】。管理職に escalation 通知を送信しました。貨物状態: 例外発生」 | `alert-warning` |
 | 例外記録失敗（追跡番号不在） | 「追跡番号が見つかりません」 | `alert-danger` |
 
 ### ディレクトリ構成
@@ -299,7 +310,7 @@ apps/cargo-tracker/src/main/java/.../tracking/
 │       └── TrackingActivity.java      (recordException() 追加)
 ├── application/internal/commandservices/
 │   ├── TrackingCommandService.java    (recordException() 追加)
-│   └── RecordExceptionCommand.java    (IT9 新規)
+│   └── RegisterExceptionCommand.java  (IT9 新規)
 └── interfaces/web/
     └── TrackingThymeleafController.java (GET/POST /tracking/exception 追加)
 
@@ -307,7 +318,7 @@ apps/cargo-tracker/src/main/resources/templates/tracking/
 └── exception.html                     (IT9 新規)
 
 apps/cargo-tracker/src/main/resources/db/migration/
-└── V9__add_exception_fields.sql       (IT9 新規)
+└── V9__create_tracking_exception_event.sql  (IT9 新規)
 
 apps/cargo-tracker/e2e/src/tests/
 └── exception.spec.ts                  (IT9 新規: US19・US20)
@@ -323,10 +334,19 @@ apps/cargo-tracker/e2e/src/tests/
 ### データベーススキーマ
 
 ```sql
--- V9__add_exception_fields.sql
-ALTER TABLE tracking_handling_event
-  ADD COLUMN reason VARCHAR(500),
-  ADD COLUMN is_emergency BOOLEAN NOT NULL DEFAULT FALSE;
+-- V9__create_tracking_exception_event.sql
+CREATE TABLE tracking_exception_event (
+  id              BIGSERIAL PRIMARY KEY,
+  tracking_id     BIGINT NOT NULL REFERENCES tracking_activity(id),
+  exception_type  VARCHAR(50) NOT NULL,
+  occurred_at     TIMESTAMP NOT NULL,
+  escalation_flag BOOLEAN NOT NULL DEFAULT FALSE,
+  description     VARCHAR(500),
+  resolved_at     TIMESTAMP WITH TIME ZONE,
+  resolution_notes TEXT,
+  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
+);
 ```
 
 ---
@@ -398,6 +418,7 @@ ALTER TABLE tracking_handling_event
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-04-20 | 初版作成 | - |
+| 2026-04-20 | 整合性検証による修正: ExceptionType.LOSS→LOST、isEmergency→escalationFlag、reason→description、RecordExceptionCommand→RegisterExceptionCommand、データモデルをtracking_exception_event新規作成に変更 | - |
 
 ---
 
