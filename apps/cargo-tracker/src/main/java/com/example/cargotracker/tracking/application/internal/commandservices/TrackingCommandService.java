@@ -42,4 +42,16 @@ public class TrackingCommandService {
         trackingRepository.updateStatus(trackingRecord);
         trackingRepository.saveHandlingEvent(command.trackingNumber(), event);
     }
+
+    @Transactional
+    public void applyManualStatusUpdate(ManualStatusUpdateCommand command) {
+        TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
+        TrackingRecord trackingRecord = trackingRepository.findByTrackingNumber(trackingNumber)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Tracking record not found: " + command.trackingNumber()));
+        trackingRecord.addManualUpdateEvent(command.newStatus(), command.locationUnlocode(), command.updateTime());
+        trackingRepository.updateStatus(trackingRecord);
+        TrackingActivityEvent lastEvent = trackingRecord.getHandlingEvents().getLast();
+        trackingRepository.saveHandlingEvent(command.trackingNumber(), lastEvent);
+    }
 }
