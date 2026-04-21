@@ -42,7 +42,7 @@ class TrackingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("TRUNCATE TABLE tracking_handling_event, tracking_record RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute("TRUNCATE TABLE tracking_exception_event, tracking_handling_event, tracking_record RESTART IDENTITY CASCADE");
         mockMvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(SecurityMockMvcConfigurers.springSecurity())
                 .build();
@@ -163,5 +163,68 @@ class TrackingThymeleafControllerTest extends PostgreSQLIntegrationTestBase {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("successMessage",
                         containsString("状態を更新しました")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /tracking/exception で例外記録フォームが表示される")
+    void getException_shouldRenderExceptionForm() throws Exception {
+        mockMvc.perform(get("/tracking/exception"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("tracking/exception"))
+                .andExpect(content().string(containsString("例外処理記録")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /tracking/exception で遅延例外を記録できる")
+    void postException_withDelay_shouldRecordExceptionAndSetExceptionStatus() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO tracking_record (tracking_number, booking_id, cargo_status) VALUES (?, ?, ?)",
+                "TRK-20270101-TEST0006", "00000000-0000-0000-0000-000000000006", "LOADED");
+
+        mockMvc.perform(post("/tracking/exception").with(csrf())
+                        .param("trackingNumber", "TRK-20270101-TEST0006")
+                        .param("exceptionType", "DELAY")
+                        .param("locationUnlocode", "JPTYO")
+                        .param("occurrenceTime", "2027-01-05T10:00")
+                        .param("reason", "台風による遅延"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/tracking/exception"))
+                .andExpect(flash().attribute("successMessage",
+                        containsString("例外を記録しました")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /tracking/exception で紛失例外を記録すると緊急フラグが設定される")
+    void postException_withLost_shouldSetEscalationFlag() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO tracking_record (tracking_number, booking_id, cargo_status) VALUES (?, ?, ?)",
+                "TRK-20270101-TEST0007", "00000000-0000-0000-0000-000000000007", "LOADED");
+
+        mockMvc.perform(post("/tracking/exception").with(csrf())
+                        .param("trackingNumber", "TRK-20270101-TEST0007")
+                        .param("exceptionType", "LOST")
+                        .param("locationUnlocode", "HKHKG")
+                        .param("occurrenceTime", "2027-01-05T14:00")
+                        .param("reason", "配送中に紛失"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("successMessage",
+                        containsString("例外を記録しました")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /tracking/exception で存在しない追跡番号を送ると errorMessage がセットされる")
+    void postException_withInvalidTrackingNumber_shouldSetErrorMessage() throws Exception {
+        mockMvc.perform(post("/tracking/exception").with(csrf())
+                        .param("trackingNumber", "TRK-00000000-NOTEXIST")
+                        .param("exceptionType", "DELAY")
+                        .param("locationUnlocode", "JPTYO")
+                        .param("occurrenceTime", "2027-01-05T10:00"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("errorMessage",
+                        containsString("Tracking record not found")));
     }
 }

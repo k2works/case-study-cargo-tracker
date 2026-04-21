@@ -30,6 +30,9 @@
                    th:classappend="${activeMenu == 'tracking'} ? 'active'"
                    th:href="@{/tracking/handling}">荷役管理</a>
                 <a class="nav-link"
+                   th:classappend="${activeMenu == 'tracking-exception'} ? 'active'"
+                   th:href="@{/tracking/exception}">例外処理</a>
+                <a class="nav-link"
                    th:classappend="${activeMenu == 'tracking-search'} ? 'active'"
                    th:href="@{/tracking}">追跡照会</a>
             </div>

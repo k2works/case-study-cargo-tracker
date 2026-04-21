@@ -84,6 +84,62 @@ export class TrackingDetailPage {
   }
 }
 
+export class ExceptionPage {
+  readonly page: Page;
+  readonly heading: Locator;
+  readonly trackingNumberInput: Locator;
+  readonly exceptionTypeSelect: Locator;
+  readonly locationUnlocodeInput: Locator;
+  readonly occurrenceTimeInput: Locator;
+  readonly reasonTextarea: Locator;
+  readonly responseNoteTextarea: Locator;
+  readonly submitButton: Locator;
+  readonly successAlert: Locator;
+  readonly errorAlert: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.locator('h1');
+    this.trackingNumberInput = page.locator('#trackingNumber');
+    this.exceptionTypeSelect = page.locator('#exceptionType');
+    this.locationUnlocodeInput = page.locator('#locationUnlocode');
+    this.occurrenceTimeInput = page.locator('#occurrenceTime');
+    this.reasonTextarea = page.locator('#reason');
+    this.responseNoteTextarea = page.locator('#responseNote');
+    this.submitButton = page.locator('button[type="submit"]', { hasText: '例外を記録する' });
+    this.successAlert = page.locator('.alert-success');
+    this.errorAlert = page.locator('.alert-danger');
+  }
+
+  async goto() {
+    await this.page.goto('/tracking/exception');
+  }
+
+  async fill(
+    trackingNumber: string,
+    exceptionType: 'DELAY' | 'DAMAGE' | 'LOST',
+    locationUnlocode: string,
+    occurrenceTime: string,
+    reason?: string,
+    responseNote?: string
+  ) {
+    await this.trackingNumberInput.fill(trackingNumber);
+    await this.exceptionTypeSelect.selectOption(exceptionType);
+    await this.locationUnlocodeInput.fill(locationUnlocode);
+    await this.occurrenceTimeInput.fill(occurrenceTime);
+    if (reason) {
+      await this.reasonTextarea.fill(reason);
+    }
+    if (responseNote) {
+      await this.responseNoteTextarea.fill(responseNote);
+    }
+  }
+
+  async submit() {
+    await this.submitButton.click();
+  }
+}
+
 export class StatusUpdatePage {
   readonly page: Page;
   readonly heading: Locator;

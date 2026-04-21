@@ -2,9 +2,11 @@ package com.example.cargotracker.tracking.interfaces.web;
 
 import com.example.cargotracker.tracking.application.internal.commandservices.ManualStatusUpdateCommand;
 import com.example.cargotracker.tracking.application.internal.commandservices.RecordHandlingEventCommand;
+import com.example.cargotracker.tracking.application.internal.commandservices.RegisterExceptionCommand;
 import com.example.cargotracker.tracking.application.internal.commandservices.TrackingCommandService;
 import com.example.cargotracker.tracking.application.internal.queryservices.TrackingQueryService;
 import com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -85,6 +87,42 @@ public class TrackingThymeleafController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("tracking", detail);
         return "tracking/detail";
+    }
+
+    @GetMapping("/exception")
+    public String showExceptionForm(Model model) {
+        model.addAttribute("exceptionTypes", ExceptionType.values());
+        return "tracking/exception";
+    }
+
+    @PostMapping("/exception")
+    public String registerException(
+            @RequestParam String trackingNumber,
+            @RequestParam String exceptionType,
+            @RequestParam String locationUnlocode,
+            @RequestParam String occurrenceTime,
+            @RequestParam(required = false) String reason,
+            @RequestParam(required = false) String responseNote,
+            RedirectAttributes redirectAttributes) {
+        try {
+            LocalDateTime time = LocalDateTime.parse(occurrenceTime,
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
+            RegisterExceptionCommand command = new RegisterExceptionCommand(
+                    trackingNumber,
+                    ExceptionType.valueOf(exceptionType),
+                    locationUnlocode,
+                    time,
+                    reason,
+                    responseNote
+            );
+            trackingCommandService.registerException(command);
+            redirectAttributes.addFlashAttribute("successMessage", "例外を記録しました");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "例外の記録に失敗しました: " + e.getMessage());
+        }
+        return "redirect:/tracking/exception";
     }
 
     @GetMapping("/status")
