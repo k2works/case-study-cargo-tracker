@@ -44,6 +44,28 @@ public class TrackingCommandService {
     }
 
     @Transactional
+    public void registerException(RegisterExceptionCommand command) {
+        TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
+        TrackingRecord trackingRecord = trackingRepository.findByTrackingNumber(trackingNumber)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Tracking record not found: " + command.trackingNumber()));
+        trackingRecord.addException(command.exceptionType(), command.locationUnlocode(),
+                command.occurrenceTime(), command.reason());
+        trackingRepository.updateStatus(trackingRecord);
+        TrackingActivityEvent lastEvent = trackingRecord.getHandlingEvents().getLast();
+        trackingRepository.saveHandlingEvent(command.trackingNumber(), lastEvent);
+        trackingRepository.saveExceptionEvent(
+                command.trackingNumber(),
+                command.exceptionType(),
+                command.locationUnlocode(),
+                command.occurrenceTime(),
+                command.reason(),
+                command.responseNote(),
+                command.exceptionType().isEscalationRequired()
+        );
+    }
+
+    @Transactional
     public void applyManualStatusUpdate(ManualStatusUpdateCommand command) {
         TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
         TrackingRecord trackingRecord = trackingRepository.findByTrackingNumber(trackingNumber)
