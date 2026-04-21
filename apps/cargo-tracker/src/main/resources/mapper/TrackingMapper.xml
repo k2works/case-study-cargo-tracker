@@ -55,4 +55,12 @@
         ORDER BY completion_time ASC
     </select>
 
+    <insert id="insertExceptionEvent" parameterType="com.example.cargotracker.tracking.infrastructure.repositories.ExceptionEventRecord">
+        INSERT INTO tracking_exception_event
+            (tracking_number, exception_type, location_unlocode, occurrence_time, reason, response_note, escalation_flag)
+        VALUES
+            (#{trackingNumber}, #{exceptionType}, #{locationUnlocode}, #{occurrenceTime},
+             #{reason,jdbcType=VARCHAR}, #{responseNote,jdbcType=VARCHAR}, #{escalationFlag})
+    </insert>
+
 </mapper>

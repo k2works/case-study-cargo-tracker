@@ -17,4 +17,6 @@ public interface TrackingMapper {
     void insertHandlingEvent(HandlingEventRecord record);
 
     java.util.List<HandlingEventRecord> findHandlingEventsByTrackingNumber(String trackingNumber);
+
+    void insertExceptionEvent(ExceptionEventRecord record);
 }

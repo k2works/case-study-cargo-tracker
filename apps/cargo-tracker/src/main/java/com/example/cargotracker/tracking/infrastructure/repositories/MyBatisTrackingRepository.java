@@ -4,10 +4,12 @@ import com.example.cargotracker.tracking.domain.model.aggregates.TrackingRecord;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.repository.TrackingRepository;
 import com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -52,6 +54,21 @@ public class MyBatisTrackingRepository implements TrackingRepository {
         record.setCompletionTime(event.getCompletionTime());
         record.setVoyageNumber(event.getVoyageNumber());
         trackingMapper.insertHandlingEvent(record);
+    }
+
+    @Override
+    public void saveExceptionEvent(String trackingNumber, ExceptionType exceptionType,
+                                   String locationUnlocode, LocalDateTime occurrenceTime,
+                                   String reason, String responseNote, boolean escalationFlag) {
+        ExceptionEventRecord record = new ExceptionEventRecord();
+        record.setTrackingNumber(trackingNumber);
+        record.setExceptionType(exceptionType.name());
+        record.setLocationUnlocode(locationUnlocode);
+        record.setOccurrenceTime(occurrenceTime);
+        record.setReason(reason);
+        record.setResponseNote(responseNote);
+        record.setEscalationFlag(escalationFlag);
+        trackingMapper.insertExceptionEvent(record);
     }
 
     private com.example.cargotracker.tracking.infrastructure.repositories.TrackingRecord toRecord(TrackingRecord domain) {
