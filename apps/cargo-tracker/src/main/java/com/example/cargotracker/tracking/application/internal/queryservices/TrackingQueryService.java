@@ -30,7 +30,7 @@ public class TrackingQueryService {
                     String displayName;
                     try {
                         displayName = TrackingEventType.valueOf(e.getEventType()).getDisplayName();
-                    } catch (IllegalArgumentException ignored) {
+                    } catch (IllegalArgumentException _) {
                         displayName = e.getEventType();
                     }
                     return new TrackingDetailDto.TrackingEventDto(
