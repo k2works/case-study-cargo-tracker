@@ -24,7 +24,7 @@ class TrackingRecordExceptionTest {
         TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
         LocalDateTime now = LocalDateTime.now();
 
-        record.addException(ExceptionType.DELAY, "JPTYO", now, "台風による遅延");
+        record.addException(ExceptionType.DELAY, "JPTYO", now);
 
         assertThat(record.getStatus()).isEqualTo(CargoTrackingStatus.EXCEPTION);
         assertThat(record.getHandlingEvents()).hasSize(1);
@@ -37,7 +37,7 @@ class TrackingRecordExceptionTest {
         TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
         LocalDateTime now = LocalDateTime.now();
 
-        record.addException(ExceptionType.DAMAGE, "USNYC", now, "荷扱いによる破損");
+        record.addException(ExceptionType.DAMAGE, "USNYC", now);
 
         assertThat(record.getStatus()).isEqualTo(CargoTrackingStatus.EXCEPTION);
     }
@@ -47,7 +47,7 @@ class TrackingRecordExceptionTest {
         TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
         LocalDateTime now = LocalDateTime.now();
 
-        record.addException(ExceptionType.LOST, "HKHKG", now, "配送中の紛失");
+        record.addException(ExceptionType.LOST, "HKHKG", now);
 
         assertThat(record.getStatus()).isEqualTo(CargoTrackingStatus.EXCEPTION);
     }
@@ -57,7 +57,7 @@ class TrackingRecordExceptionTest {
         TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
 
         assertThatThrownBy(() ->
-                record.addException(null, "JPTYO", LocalDateTime.now(), "理由"))
+                record.addException(null, "JPTYO", LocalDateTime.now()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -66,7 +66,7 @@ class TrackingRecordExceptionTest {
         TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
 
         assertThatThrownBy(() ->
-                record.addException(ExceptionType.DELAY, "", LocalDateTime.now(), "理由"))
+                record.addException(ExceptionType.DELAY, "", LocalDateTime.now()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -75,7 +75,7 @@ class TrackingRecordExceptionTest {
         TrackingRecord record = new TrackingRecord(trackingNumber, bookingId);
 
         assertThatThrownBy(() ->
-                record.addException(ExceptionType.DELAY, "JPTYO", null, "理由"))
+                record.addException(ExceptionType.DELAY, "JPTYO", null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TrackingCommandService {
 
+    private static final String TRACKING_RECORD_NOT_FOUND = "Tracking record not found: ";
+
     private final TrackingRepository trackingRepository;
 
     public TrackingCommandService(TrackingRepository trackingRepository) {
@@ -31,7 +33,7 @@ public class TrackingCommandService {
         TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
         TrackingRecord trackingRecord = trackingRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Tracking record not found: " + command.trackingNumber()));
+                        TRACKING_RECORD_NOT_FOUND + command.trackingNumber()));
         TrackingActivityEvent event = new TrackingActivityEvent(
                 command.eventType(),
                 command.locationUnlocode(),
@@ -48,9 +50,9 @@ public class TrackingCommandService {
         TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
         TrackingRecord trackingRecord = trackingRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Tracking record not found: " + command.trackingNumber()));
+                        TRACKING_RECORD_NOT_FOUND + command.trackingNumber()));
         trackingRecord.addException(command.exceptionType(), command.locationUnlocode(),
-                command.occurrenceTime(), command.reason());
+                command.occurrenceTime());
         trackingRepository.updateStatus(trackingRecord);
         TrackingActivityEvent lastEvent = trackingRecord.getHandlingEvents().getLast();
         trackingRepository.saveHandlingEvent(command.trackingNumber(), lastEvent);
@@ -70,7 +72,7 @@ public class TrackingCommandService {
         TrackingNumber trackingNumber = TrackingNumber.of(command.trackingNumber());
         TrackingRecord trackingRecord = trackingRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Tracking record not found: " + command.trackingNumber()));
+                        TRACKING_RECORD_NOT_FOUND + command.trackingNumber()));
         trackingRecord.addManualUpdateEvent(command.newStatus(), command.locationUnlocode(), command.updateTime());
         trackingRepository.updateStatus(trackingRecord);
         TrackingActivityEvent lastEvent = trackingRecord.getHandlingEvents().getLast();

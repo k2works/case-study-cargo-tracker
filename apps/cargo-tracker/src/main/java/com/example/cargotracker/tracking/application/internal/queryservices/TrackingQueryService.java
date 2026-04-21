@@ -20,8 +20,8 @@ public class TrackingQueryService {
 
     @Transactional(readOnly = true)
     public Optional<TrackingDetailDto> findByTrackingNumber(String trackingNumber) {
-        var record = trackingMapper.findByTrackingNumber(trackingNumber);
-        if (record == null) {
+        var trackingRecord = trackingMapper.findByTrackingNumber(trackingNumber);
+        if (trackingRecord == null) {
             return Optional.empty();
         }
         List<HandlingEventRecord> events = trackingMapper.findHandlingEventsByTrackingNumber(trackingNumber);
@@ -30,7 +30,7 @@ public class TrackingQueryService {
                     String displayName;
                     try {
                         displayName = TrackingEventType.valueOf(e.getEventType()).getDisplayName();
-                    } catch (IllegalArgumentException ex) {
+                    } catch (IllegalArgumentException ignored) {
                         displayName = e.getEventType();
                     }
                     return new TrackingDetailDto.TrackingEventDto(
@@ -43,10 +43,10 @@ public class TrackingQueryService {
                 })
                 .toList();
         com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus status =
-                com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus.valueOf(record.getCargoStatus());
+                com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus.valueOf(trackingRecord.getCargoStatus());
         return Optional.of(new TrackingDetailDto(
-                record.getTrackingNumber(),
-                record.getBookingId(),
+                trackingRecord.getTrackingNumber(),
+                trackingRecord.getBookingId(),
                 status,
                 eventDtos
         ));

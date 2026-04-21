@@ -43,7 +43,7 @@ public class TrackingRecord {
         this.status = deriveStatus(event.getEventType());
     }
 
-    public void addException(ExceptionType exceptionType, String locationUnlocode, LocalDateTime dateTime, String reason) {
+    public void addException(ExceptionType exceptionType, String locationUnlocode, LocalDateTime dateTime) {
         if (exceptionType == null) throw new IllegalArgumentException("exceptionType must not be null");
         if (locationUnlocode == null || locationUnlocode.isBlank()) throw new IllegalArgumentException("locationUnlocode must not be blank");
         if (dateTime == null) throw new IllegalArgumentException("dateTime must not be null");
