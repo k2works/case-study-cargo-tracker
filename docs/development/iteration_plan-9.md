@@ -23,7 +23,7 @@
 
 - [x] H-8: `route.html` の経路一覧テーブルに費用情報（estimatedCost）が表示される
 - [x] H-9: `show.html` の予約詳細画面に割り当て済み経路情報（cargoItinerary legs）が表示される
-- [ ] SonarQube Quality Gate が PASS している
+- [x] SonarQube Quality Gate が PASS している
 - [x] 遅延例外（EXCEPTION 状態）を記録できる
 - [x] 破損・紛失例外を記録できる
 - [x] 記録後、貨物状態が「例外発生（EXCEPTION）」に更新される
@@ -85,7 +85,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | SonarQube スキャン実行・Quality Gate 確認・Critical/Major イシュー修正 | 1h | - | [ ] |
+| 1.1 | SonarQube スキャン実行・Quality Gate 確認・Critical/Major イシュー修正 | 1h | - | [x] |
 | 1.2 | H-8: `route.html` に概算費用カラム（`RouteCandidate.estimatedCost`）を追加（TDD） | 1h | - | [x] |
 | 1.3 | H-9: `show.html` に割り当て済み経路情報（cargoItinerary legs）表示を追加（TDD） | 1h | - | [x] |
 | 1.4 | E2E テスト: H-8・H-9 の受入条件を E2E で確認（booking.spec.ts 拡張） | 1h | - | [ ] |
@@ -120,7 +120,7 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| IT8-改善 | 2 | 4h | [x] H-8/H-9 完了・SonarQube 未確認 |
+| IT8-改善 | 2 | 4h | [x] |
 | US19 遅延例外処理 | 5 | 8h | [x] |
 | US20 破損・紛失例外処理 | 5 | 8h | [x] |
 | **合計** | **12** | **20h** | |
