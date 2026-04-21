@@ -24,10 +24,10 @@
 - [x] H-8: `route.html` の経路一覧テーブルに費用情報（estimatedCost）が表示される
 - [x] H-9: `show.html` の予約詳細画面に割り当て済み経路情報（cargoItinerary legs）が表示される
 - [ ] SonarQube Quality Gate が PASS している
-- [ ] 遅延例外（EXCEPTION 状態）を記録できる
-- [ ] 破損・紛失例外を記録できる
-- [ ] 記録後、貨物状態が「例外発生（EXCEPTION）」に更新される
-- [ ] 例外対応履歴（tracking_exception_event テーブル）が記録される
+- [x] 遅延例外（EXCEPTION 状態）を記録できる
+- [x] 破損・紛失例外を記録できる
+- [x] 記録後、貨物状態が「例外発生（EXCEPTION）」に更新される
+- [x] 例外対応履歴（tracking_exception_event テーブル）が記録される
 - [ ] テストカバレッジ 80% 以上
 
 ---
@@ -86,8 +86,8 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | SonarQube スキャン実行・Quality Gate 確認・Critical/Major イシュー修正 | 1h | - | [ ] |
-| 1.2 | H-8: `route.html` に概算費用カラム（`RouteCandidate.estimatedCost`）を追加（TDD） | 1h | - | [ ] |
-| 1.3 | H-9: `show.html` に割り当て済み経路情報（cargoItinerary legs）表示を追加（TDD） | 1h | - | [ ] |
+| 1.2 | H-8: `route.html` に概算費用カラム（`RouteCandidate.estimatedCost`）を追加（TDD） | 1h | - | [x] |
+| 1.3 | H-9: `show.html` に割り当て済み経路情報（cargoItinerary legs）表示を追加（TDD） | 1h | - | [x] |
 | 1.4 | E2E テスト: H-8・H-9 の受入条件を E2E で確認（booking.spec.ts 拡張） | 1h | - | [ ] |
 
 **小計**: 4h（理想時間）
@@ -96,11 +96,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `ExceptionType.DELAY` 追加・`TrackingActivity.addException()` 状態遷移更新（ANY → EXCEPTION）（TDD） | 2h | - | [ ] |
-| 2.2 | `TrackingCommandService`: 例外記録コマンド実装（`RegisterExceptionCommand`）（TDD） | 1h | - | [ ] |
-| 2.3 | GET/POST /tracking/exception エンドポイント実装 | 1h | - | [ ] |
-| 2.4 | Thymeleaf: 例外記録画面（tracking/exception.html）実装（遅延・理由・対応内容フィールド） | 2h | - | [ ] |
-| 2.5 | E2E テスト: 遅延例外記録シナリオ（exception.spec.ts 新規） | 2h | - | [ ] |
+| 2.1 | `ExceptionType.DELAY` 追加・`TrackingActivity.addException()` 状態遷移更新（ANY → EXCEPTION）（TDD） | 2h | - | [x] |
+| 2.2 | `TrackingCommandService`: 例外記録コマンド実装（`RegisterExceptionCommand`）（TDD） | 1h | - | [x] |
+| 2.3 | GET/POST /tracking/exception エンドポイント実装 | 1h | - | [x] |
+| 2.4 | Thymeleaf: 例外記録画面（tracking/exception.html）実装（遅延・理由・対応内容フィールド） | 2h | - | [x] |
+| 2.5 | E2E テスト: 遅延例外記録シナリオ（exception.spec.ts 新規） | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -108,11 +108,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `ExceptionType.DAMAGE`・`ExceptionType.LOST` 追加・escalation_flag（LOST 時 true）実装（TDD） | 2h | - | [ ] |
-| 3.2 | `TrackingCommandService`: 破損・紛失記録コマンド拡張（escalation_flag 対応）（TDD） | 1h | - | [ ] |
-| 3.3 | exception.html に破損・紛失選択肢・緊急フラグ表示を追加 | 1h | - | [ ] |
-| 3.4 | E2E テスト: 破損・紛失例外記録シナリオ（exception.spec.ts 拡張） | 2h | - | [ ] |
-| 3.5 | 統合テスト・バグ修正 | 2h | - | [ ] |
+| 3.1 | `ExceptionType.DAMAGE`・`ExceptionType.LOST` 追加・escalation_flag（LOST 時 true）実装（TDD） | 2h | - | [x] |
+| 3.2 | `TrackingCommandService`: 破損・紛失記録コマンド拡張（escalation_flag 対応）（TDD） | 1h | - | [x] |
+| 3.3 | exception.html に破損・紛失選択肢・緊急フラグ表示を追加 | 1h | - | [x] |
+| 3.4 | E2E テスト: 破損・紛失例外記録シナリオ（exception.spec.ts 拡張） | 2h | - | [x] |
+| 3.5 | 統合テスト・バグ修正 | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -120,9 +120,9 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| IT8-改善 | 2 | 4h | [ ] |
-| US19 遅延例外処理 | 5 | 8h | [ ] |
-| US20 破損・紛失例外処理 | 5 | 8h | [ ] |
+| IT8-改善 | 2 | 4h | [x] H-8/H-9 完了・SonarQube 未確認 |
+| US19 遅延例外処理 | 5 | 8h | [x] |
+| US20 破損・紛失例外処理 | 5 | 8h | [x] |
 | **合計** | **12** | **20h** | |
 
 **1 SP あたり**: 約 1.7h
