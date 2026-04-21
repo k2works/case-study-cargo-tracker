@@ -2,6 +2,7 @@ package com.example.cargotracker.tracking.domain.model.aggregates;
 
 import com.example.cargotracker.tracking.domain.model.entities.TrackingActivityEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.CargoTrackingStatus;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingBookingId;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingEventType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
@@ -42,6 +43,16 @@ public class TrackingRecord {
         this.status = deriveStatus(event.getEventType());
     }
 
+    public void addException(ExceptionType exceptionType, String locationUnlocode, LocalDateTime dateTime, String reason) {
+        if (exceptionType == null) throw new IllegalArgumentException("exceptionType must not be null");
+        if (locationUnlocode == null || locationUnlocode.isBlank()) throw new IllegalArgumentException("locationUnlocode must not be blank");
+        if (dateTime == null) throw new IllegalArgumentException("dateTime must not be null");
+        TrackingActivityEvent event = new TrackingActivityEvent(
+                TrackingEventType.EXCEPTION, locationUnlocode, dateTime, null);
+        handlingEvents.add(event);
+        this.status = CargoTrackingStatus.EXCEPTION;
+    }
+
     public void addManualUpdateEvent(CargoTrackingStatus newStatus, String locationUnlocode, LocalDateTime dateTime) {
         if (newStatus == null) throw new IllegalArgumentException("newStatus must not be null");
         if (locationUnlocode == null || locationUnlocode.isBlank()) throw new IllegalArgumentException("locationUnlocode must not be blank");
@@ -59,6 +70,7 @@ public class TrackingRecord {
             case UNLOAD -> CargoTrackingStatus.UNLOADED;
             case CLAIM -> CargoTrackingStatus.CLAIMED;
             case MANUAL_UPDATE -> this.status;
+            case EXCEPTION -> CargoTrackingStatus.EXCEPTION;
         };
     }
 

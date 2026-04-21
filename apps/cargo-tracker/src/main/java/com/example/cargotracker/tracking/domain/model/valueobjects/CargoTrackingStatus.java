@@ -6,7 +6,8 @@ public enum CargoTrackingStatus {
     LOADED("積込済"),
     UNLOADED("荷降し済"),
     CLAIMED("引取済"),
-    DELIVERED("配達完了");
+    DELIVERED("配達完了"),
+    EXCEPTION("例外発生");
 
     private final String displayName;
 

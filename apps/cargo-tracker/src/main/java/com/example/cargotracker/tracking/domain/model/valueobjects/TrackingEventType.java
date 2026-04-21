@@ -5,7 +5,8 @@ public enum TrackingEventType {
     LOAD("積込"),
     UNLOAD("荷降し"),
     CLAIM("引取"),
-    MANUAL_UPDATE("手動更新");
+    MANUAL_UPDATE("手動更新"),
+    EXCEPTION("例外発生");
 
     private final String displayName;
 
