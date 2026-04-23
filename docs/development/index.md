@@ -23,7 +23,7 @@
 | IT7 | [計画](./iteration_plan-7.md) | [ふりかえり](./retrospective-7.md) | [報告書](./iteration_report-7.md) | 完了（Java テスト全パス・E2E 78 件・カバレッジ 81.7%・US14・US15 完了） |
 | IT8 | [計画](./iteration_plan-8.md) | [ふりかえり](./retrospective-8.md) | [報告書](./iteration_report-8.md) | 完了（Java 301 件・E2E 87 件全パス・IT7-改善・US16・US17・US18 完了） |
 | IT9 | [計画](./iteration_plan-9.md) | [ふりかえり](./retrospective-9.md) | [報告書](./iteration_report-9.md) | 完了（Java 315 件・E2E 93 件全パス・カバレッジ 80%・SonarQube PASS・US19・US20 完了） |
-| IT10 | - | - | - | 未着手（US21・Release 2.0 リリース準備） |
+| IT10 | [計画](./iteration_plan-10.md) | - | - | 計画中（IT9-改善・US21・Release 2.0 リリース準備） |
 
 ### 進捗サマリー
 
