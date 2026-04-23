@@ -5,7 +5,9 @@ import com.example.cargotracker.billing.application.internal.outboundservices.ac
 import com.example.cargotracker.billing.domain.model.aggregates.Invoice;
 import com.example.cargotracker.billing.domain.model.aggregates.InvoiceId;
 import com.example.cargotracker.billing.domain.model.repository.InvoiceRepository;
+import com.example.cargotracker.billing.domain.model.services.FreightCalculationService;
 import com.example.cargotracker.billing.domain.model.valueobjects.DiscountPolicy;
+import com.example.cargotracker.billing.domain.model.valueobjects.FreightCalculationResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,5 +52,16 @@ public class InvoiceCommandService {
         invoice.confirmPayment();
         invoiceRepository.update(invoice);
         bookingSettlementPort.settleBooking(invoice.getBookingId());
+    }
+
+    public FreightCalculationResult calculateFreight(CalculateFreightCommand command) {
+        Invoice invoice = invoiceRepository.findByBookingId(command.bookingId())
+                .orElseThrow(() -> new IllegalArgumentException("請求書が見つかりません: " + command.bookingId()));
+        FreightCalculationService freightService = new FreightCalculationService();
+        FreightCalculationResult result = freightService.calculate(invoice, command.adjustmentAmount(), command.adjustmentReason());
+        invoice.confirmPayment();
+        invoiceRepository.update(invoice);
+        bookingSettlementPort.settleBooking(invoice.getBookingId());
+        return result;
     }
 }
