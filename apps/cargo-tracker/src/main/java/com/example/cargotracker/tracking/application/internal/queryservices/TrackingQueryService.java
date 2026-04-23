@@ -19,6 +19,24 @@ public class TrackingQueryService {
     }
 
     @Transactional(readOnly = true)
+    public List<DashboardHandlingEventDto> findLatestHandlingEvents(int limit) {
+        return trackingMapper.findLatestHandlingEvents(limit).stream()
+                .map(r -> {
+                    String displayName;
+                    try {
+                        displayName = TrackingEventType.valueOf(r.getEventType()).getDisplayName();
+                    } catch (IllegalArgumentException _) {
+                        displayName = r.getEventType();
+                    }
+                    return new DashboardHandlingEventDto(
+                            r.getId(), r.getTrackingNumber(), r.getBookingId(),
+                            r.getEventType(), displayName, r.getLocationUnlocode(), r.getCompletionTime()
+                    );
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public Optional<TrackingDetailDto> findByTrackingNumber(String trackingNumber) {
         var trackingRecord = trackingMapper.findByTrackingNumber(trackingNumber);
         if (trackingRecord == null) {

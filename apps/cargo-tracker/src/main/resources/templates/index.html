@@ -3,35 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cargo Tracker</title>
+    <title>ダッシュボード - Cargo Tracker</title>
     <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
 </head>
 <body class="bg-light">
 <div th:replace="~{fragments/navbar :: navbar('dashboard')}"></div>
-<div class="container mt-4">
-    <h1 class="h3 mb-1">ダッシュボード</h1>
-    <p class="text-secondary lead">International Cargo Tracking System</p>
-    <div class="row mt-4 g-3">
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
+
+<main class="container py-4">
+    <h1 class="h3 mb-4">ダッシュボード</h1>
+
+    <!-- サマリーカード -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100 text-center">
                 <div class="card-body">
-                    <h5 class="card-title">予約管理</h5>
-                    <p class="card-text text-secondary">貨物予約の登録・確認を行います。</p>
-                    <a th:href="@{/bookings}" class="btn btn-primary">予約管理へ</a>
+                    <div class="fs-2 fw-bold text-primary" th:text="${totalBookings}">0</div>
+                    <div class="text-secondary small mt-1">予約件数</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100 text-center">
                 <div class="card-body">
-                    <h5 class="card-title">荷主管理</h5>
-                    <p class="card-text text-secondary">荷主情報の登録・管理を行います。</p>
-                    <a th:href="@{/shippers}" class="btn btn-primary">荷主管理へ</a>
+                    <div class="fs-2 fw-bold text-primary" th:text="${inTransitCount}">0</div>
+                    <div class="text-secondary small mt-1">輸送中</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-warning" th:text="${unassignedCount}">0</div>
+                    <div class="text-secondary small mt-1">未割り当て</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-danger" th:text="${pendingInvoiceCount}">0</div>
+                    <div class="text-secondary small mt-1">未払い請求</div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- 最新荷役作業 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fw-semibold">最新荷役作業</div>
+        <div class="card-body p-0">
+            <div th:if="${latestHandlingEvents.isEmpty()}" class="p-4 text-center text-secondary">
+                荷役作業の記録がありません。
+            </div>
+            <table th:if="${!latestHandlingEvents.isEmpty()}" class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">作業 ID</th>
+                    <th scope="col">追跡番号</th>
+                    <th scope="col">予約 ID</th>
+                    <th scope="col">種別</th>
+                    <th scope="col">場所</th>
+                    <th scope="col">日時</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="event : ${latestHandlingEvents}">
+                    <td class="text-nowrap" th:text="${event.formattedId()}">HE-0001</td>
+                    <td class="text-nowrap small" th:text="${event.trackingNumber()}">TRK-...</td>
+                    <td class="text-nowrap small" th:text="${event.bookingId()}">BK-...</td>
+                    <td>
+                        <span class="badge bg-secondary" th:text="${event.eventTypeDisplayName()}">種別</span>
+                    </td>
+                    <td th:text="${event.locationUnlocode()}">JPOSA</td>
+                    <td class="text-nowrap small"
+                        th:text="${#temporals.format(event.completionTime(), 'yyyy-MM-dd HH:mm')}">
+                        2026-01-01 00:00
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- クイックリンク -->
+    <div class="d-flex gap-2 flex-wrap">
+        <a th:href="@{/bookings}" class="btn btn-outline-primary">貨物予約一覧へ</a>
+        <a th:href="@{/tracking}" class="btn btn-outline-secondary">追跡入力へ</a>
+        <a th:href="@{/handling/new}" class="btn btn-outline-secondary">荷役登録へ</a>
+    </div>
+</main>
+
 <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
 <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}"></script>
 </body>

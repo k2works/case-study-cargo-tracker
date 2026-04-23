@@ -19,4 +19,6 @@ public interface TrackingMapper {
     java.util.List<HandlingEventRecord> findHandlingEventsByTrackingNumber(String trackingNumber);
 
     void insertExceptionEvent(ExceptionEventRecord record);
+
+    java.util.List<HandlingEventWithBookingRecord> findLatestHandlingEvents(@org.apache.ibatis.annotations.Param("limit") int limit);
 }
