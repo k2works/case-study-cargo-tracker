@@ -10,10 +10,11 @@ test.describe('共通ナビゲーション', () => {
       await expect(page).toHaveURL('/');
       await expect(dashboard.heading).toHaveText('ダッシュボード');
       await expect(dashboard.bookingsCard).toBeVisible();
-      await expect(dashboard.shippersCard).toBeVisible();
+      await expect(dashboard.trackingCard).toBeVisible();
+      await expect(dashboard.handlingCard).toBeVisible();
     });
 
-    test('予約管理カードから予約一覧へ遷移できる', async ({ page, loggedIn }) => {
+    test('貨物予約一覧へリンクから予約一覧へ遷移できる', async ({ page, loggedIn }) => {
       const dashboard = new DashboardPage(page);
       await dashboard.goto();
       await dashboard.bookingsCard.click();
@@ -21,12 +22,12 @@ test.describe('共通ナビゲーション', () => {
       await expect(page).toHaveURL('/bookings');
     });
 
-    test('荷主管理カードから荷主一覧へ遷移できる', async ({ page, loggedIn }) => {
+    test('追跡入力へリンクから追跡画面へ遷移できる', async ({ page, loggedIn }) => {
       const dashboard = new DashboardPage(page);
       await dashboard.goto();
-      await dashboard.shippersCard.click();
+      await dashboard.trackingCard.click();
 
-      await expect(page).toHaveURL('/shippers');
+      await expect(page).toHaveURL('/tracking');
     });
   });
 

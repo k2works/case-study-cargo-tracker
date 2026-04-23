@@ -46,13 +46,15 @@ export class DashboardPage {
   readonly page: Page;
   readonly heading: Locator;
   readonly bookingsCard: Locator;
-  readonly shippersCard: Locator;
+  readonly trackingCard: Locator;
+  readonly handlingCard: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.heading = page.locator('h1');
-    this.bookingsCard = page.locator('a.btn-primary', { hasText: '予約管理へ' });
-    this.shippersCard = page.locator('a.btn-primary', { hasText: '荷主管理へ' });
+    this.bookingsCard = page.locator('a.btn-outline-primary', { hasText: '貨物予約一覧へ' });
+    this.trackingCard = page.locator('a.btn-outline-secondary', { hasText: '追跡入力へ' });
+    this.handlingCard = page.locator('a.btn-outline-secondary', { hasText: '荷役登録へ' });
   }
 
   async goto() {
