@@ -22,7 +22,7 @@
 | IT6 | [計画](./iteration_plan-6.md) | [ふりかえり](./retrospective-6.md) | [報告書](./iteration_report-6.md) | 完了（Java 272 件・E2E 67 件全パス、カバレッジ 81%、US22・US23 完了） |
 | IT7 | [計画](./iteration_plan-7.md) | [ふりかえり](./retrospective-7.md) | [報告書](./iteration_report-7.md) | 完了（Java テスト全パス・E2E 78 件・カバレッジ 81.7%・US14・US15 完了） |
 | IT8 | [計画](./iteration_plan-8.md) | [ふりかえり](./retrospective-8.md) | [報告書](./iteration_report-8.md) | 完了（Java 301 件・E2E 87 件全パス・IT7-改善・US16・US17・US18 完了） |
-| IT9 | [計画](./iteration_plan-9.md) | - | - | 計画中（IT8-改善・US19・US20） |
+| IT9 | [計画](./iteration_plan-9.md) | [ふりかえり](./retrospective-9.md) | [報告書](./iteration_report-9.md) | 完了（Java 315 件・E2E 93 件全パス・カバレッジ 80%・SonarQube PASS・US19・US20 完了） |
 | IT10 | - | - | - | 未着手（US21・Release 2.0 リリース準備） |
 
 ### 進捗サマリー
@@ -37,9 +37,9 @@
 | IT6 | 10 | 10 | 100% |
 | IT7 | 10 | 10 | 100% |
 | IT8 | 10 | 10 | 100% |
-| IT9 | 12 | - | 計画中 |
+| IT9 | 12 | 12 | 100% |
 | IT10 | 5 | - | 未着手 |
-| **累計** | **95** | **78** | **82%** |
+| **累計** | **95** | **90** | **95%** |
 
 ### フェーズ進捗
 
@@ -47,7 +47,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | 予約・荷主管理基盤 | 16 | 16 | 完了（IT1-2 で全 US 完了） |
 | Phase 2 | 経路設計・追跡 | 44 | 42 | 進行中（IT3-5: US01・US06-US11 完了、IT7: US14・US15 完了、IT8: US16・US18 完了、US12: 未着手） |
-| Phase 3 | 精算・例外処理 | 26 | 11 | 進行中（IT6: US22・US23 完了、IT8: US17 完了、US19-US21: IT9-10 で実施） |
+| Phase 3 | 精算・例外処理 | 26 | 21 | 進行中（IT6: US22・US23 完了、IT8: US17 完了、IT9: US19・US20 完了、US21: IT10 で実施） |
 
 ### リリース完了報告書
 
