@@ -5,6 +5,7 @@ import com.example.cargotracker.booking.application.internal.commandservices.Rou
 import com.example.cargotracker.booking.domain.model.events.BookingAssignedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingCancelledEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.application.internal.commandservices.BookCargoCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CancelBookingCommand;
 import com.example.cargotracker.booking.application.internal.commandservices.CargoBookingCommandService;
@@ -422,6 +423,7 @@ class CargoBookingCommandServiceTest {
         assertEquals(BookingStatus.ROUTE_PROPOSED, captor.getValue().getStatus());
         assertNotNull(captor.getValue().getCargoItinerary());
         verify(legRepository).saveAll(eq(bookingId), any());
+        verify(eventPublisher).publishEvent(any(CargoRoutedEvent.class));
     }
 
     @Test

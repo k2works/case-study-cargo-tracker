@@ -208,9 +208,7 @@ public class Cargo {
     }
 
     public Cargo cancel() {
-        if (!CANCELLABLE_STATUSES.contains(status)) {
-            throw new IllegalStateException("現在の状態ではキャンセルできません。現在の状態: " + status.getDisplayName());
-        }
+        requireStatus(CANCELLABLE_STATUSES);
         return new Cargo(bookingId, shipperId, cargoType, weight, currentStateWith(BookingStatus.CANCELLED));
     }
 

@@ -89,7 +89,7 @@
                             <input type="radio" class="form-check-input" name="voyageNumber"
                                    th:value="${voyage.voyageNumber.number}"
                                    th:id="${'voyage-' + voyage.voyageNumber.number}"
-                                   th:attr="hx-get=@{/bookings/{id}/route/detail(id=${booking.bookingId},voyageNumber=${voyage.voyageNumber.number})}"
+                                   th:attr="hx-get=@{/bookings/route/detail(voyageNumber=${voyage.voyageNumber.number})}"
                                    hx-target="#route-detail"
                                    hx-swap="innerHTML"
                                    required/>

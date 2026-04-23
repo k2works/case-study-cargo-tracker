@@ -197,7 +197,7 @@ public class BookingThymeleafController {
         return "booking/route";
     }
 
-    @GetMapping("/{bookingId}/route/detail")
+    @GetMapping("/route/detail")
     public String routeDetail(
             @RequestParam String voyageNumber,
             Model model
