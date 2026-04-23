@@ -85,6 +85,12 @@
 | [IT7 ふりかえり](./development/retrospective-7.md) | IT7 の KPT 分析（追跡番号発行・荷役作業記録・IT7 申し送り事項） |
 | [IT7 完了報告書](./development/iteration_report-7.md) | IT7 の実績メトリクス・成果物一覧（E2E 78 件・カバレッジ 81.7%） |
 | [IT8 計画](./development/iteration_plan-8.md) | イテレーション 8 の詳細計画（IT7-改善・US16・US18・US17） |
+| [IT8 ふりかえり](./development/retrospective-8.md) | IT8 の KPT 分析（引取作業記録・追跡情報照会・手動状態更新） |
+| [IT8 完了報告書](./development/iteration_report-8.md) | IT8 の実績メトリクス・成果物一覧（Java 301 件・E2E 87 件全パス） |
+| [IT9 計画](./development/iteration_plan-9.md) | イテレーション 9 の詳細計画（IT8-改善・US19・US20） |
+| [IT9 ふりかえり](./development/retrospective-9.md) | IT9 の KPT 分析（例外処理・SonarQube PASS・技術的負債） |
+| [IT9 完了報告書](./development/iteration_report-9.md) | IT9 の実績メトリクス・成果物一覧（Java 315 件・E2E 93 件全パス・カバレッジ 80%） |
+| [IT10 計画](./development/iteration_plan-10.md) | イテレーション 10 の詳細計画（IT9-改善・US21・Release 2.0 リリース準備） |
 
 ### 運用ドキュメント
 
