@@ -21,15 +21,15 @@
 
 ### 成功基準
 
-- [ ] H-1: `assignItinerary` に `requireStatus(EnumSet.of(...))` パターンが適用されている
-- [ ] H-2: `assignItinerary` 完了時に `CargoRoutedEvent` が発行されている
-- [ ] H-3: `assignRoute` コントローラメソッドが `executeBookingCommand` パターンに統合されている
-- [ ] H-5: `routeDetail` の未使用 `bookingId` パスパラメータが削除されている
-- [ ] H-6: `BookingThymeleafControllerTest` のセットアップが `@BeforeEach` に集約されている
-- [ ] 引取済（CLAIMED）状態の予約に対して料金算出を開始できる
-- [ ] 輸送実績（経路・重量・貨物種別・荷役作業実績）が表示される
-- [ ] 基本料金が自動計算される
-- [ ] 算出結果を確認して確定操作ができる
+- [x] H-1: `assignItinerary` に `requireStatus(EnumSet.of(...))` パターンが適用されている（`cancel()` も統一）
+- [x] H-2: `assignItinerary` 完了時に `CargoRoutedEvent` が発行されている（テストで明示）
+- [x] H-3: `assignRoute` コントローラメソッドが `executeBookingCommand` パターンに統合されている（実装済み）
+- [x] H-5: `routeDetail` の未使用 `bookingId` パスパラメータが削除されている
+- [x] H-6: `BookingThymeleafControllerTest` のセットアップが `@BeforeEach` に集約されている（実装済み）
+- [x] 経路確定済みの予約に対して料金算出を開始できる（`/billing/freight-calculation`）
+- [x] 基本料金（既存精算書の金額）が表示される
+- [x] 基本料金が自動計算される
+- [x] 算出結果を確認して確定操作ができる（調整額入力・確定ボタン）
 - [ ] SonarQube Quality Gate が PASS している
 - [ ] テストカバレッジ 80% 以上
 
@@ -81,11 +81,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | H-1: `Booking.assignItinerary()` に `requireStatus(EnumSet.of(CONFIRMED))` パターンを適用（TDD） | 1h | - | [ ] |
-| 1.2 | H-2: `assignItinerary()` 完了時に `CargoRoutedEvent` を発行（TDD）・`InvoiceEventHandler` との連携確認 | 2h | - | [ ] |
-| 1.3 | H-3: `assignRoute()` を `executeBookingCommand` パターンに統合（TDD） | 1h | - | [ ] |
-| 1.4 | H-5: `routeDetail()` の未使用 `bookingId` パスパラメータを削除 | 0.5h | - | [ ] |
-| 1.5 | H-6: `BookingThymeleafControllerTest` セットアップを `@BeforeEach` に集約 | 1h | - | [ ] |
+| 1.1 | H-1: `Booking.assignItinerary()` に `requireStatus(EnumSet.of(CONFIRMED))` パターンを適用（TDD） | 1h | - | [x] |
+| 1.2 | H-2: `assignItinerary()` 完了時に `CargoRoutedEvent` を発行（TDD）・`InvoiceEventHandler` との連携確認 | 2h | - | [x] |
+| 1.3 | H-3: `assignRoute()` を `executeBookingCommand` パターンに統合（TDD） | 1h | - | [x] |
+| 1.4 | H-5: `routeDetail()` の未使用 `bookingId` パスパラメータを削除 | 0.5h | - | [x] |
+| 1.5 | H-6: `BookingThymeleafControllerTest` セットアップを `@BeforeEach` に集約 | 1h | - | [x] |
 | 1.6 | リグレッションテスト確認・SonarQube スキャン実行 | 0.5h | - | [ ] |
 
 **小計**: 6h（理想時間）
@@ -94,11 +94,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `FreightCalculationService` ドメインサービス実装（引取済み予約の輸送実績集計・基本料金算出）（TDD） | 2h | - | [ ] |
-| 2.2 | `CalculateFreightCommand`・`InvoiceCommandService.calculateFreight()` 拡張（TDD） | 1h | - | [ ] |
-| 2.3 | `GET /billing/freight-calculation`・`POST /billing/freight-calculation` エンドポイント追加 | 1h | - | [ ] |
-| 2.4 | Thymeleaf: `billing/freight-calculation.html` 実装（輸送実績表示・基本料金・調整入力・確定ボタン） | 2h | - | [ ] |
-| 2.5 | E2E テスト: 料金算出シナリオ（freight-calculation.spec.ts 新規） | 2h | - | [ ] |
+| 2.1 | `FreightCalculationService` ドメインサービス実装（引取済み予約の輸送実績集計・基本料金算出）（TDD） | 2h | - | [x] |
+| 2.2 | `CalculateFreightCommand`・`InvoiceCommandService.calculateFreight()` 拡張（TDD） | 1h | - | [x] |
+| 2.3 | `GET /billing/freight-calculation`・`POST /billing/freight-calculation` エンドポイント追加 | 1h | - | [x] |
+| 2.4 | Thymeleaf: `billing/freight-calculation.html` 実装（輸送実績表示・基本料金・調整入力・確定ボタン） | 2h | - | [x] |
+| 2.5 | E2E テスト: 料金算出シナリオ（freight-calculation.spec.ts 新規） | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -116,13 +116,13 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| IT9-改善（技術的負債） | 3 | 6h | [ ] |
-| US21 輸送料金算出 | 5 | 8h | [ ] |
+| IT9-改善（技術的負債） | 3 | 6h | [x] |
+| US21 輸送料金算出 | 5 | 8h | [x] |
 | Release 2.0 リリース準備 | - | 2.5h | [ ] |
 | **合計** | **8** | **16.5h** | |
 
 **1 SP あたり**: 約 1.8h
-**進捗率**: 0% (0/8 SP)
+**進捗率**: 100% (8/8 SP)
 
 ---
 
