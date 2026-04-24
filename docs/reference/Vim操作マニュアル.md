@@ -35,6 +35,19 @@
 | `:tabclose` | 現在のタブを閉じる |
 | `:e!` | 現在のバッファを破棄してディスクから強制的に再読み込みする |
 
+## ファイルツリー
+
+- `,e` で `NERDTreeToggle`
+- `,ef` で現在ファイルのディレクトリを `NERDTreeFind`
+- 隠しファイルも表示します
+
+## タグ
+
+- `gutentags` を有効化しています。
+- `ctags` は `universal-ctags` を使います。
+- `tags` は `./tags;,tags` を読む設定です。
+- 保存時や必要時にタグが自動生成されます。
+
 ## 開発機能 (Plugins)
 
 ### [coc.nvim](https://github.com/neoclide/coc.nvim) (入力補完・LSP)

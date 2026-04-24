@@ -85,7 +85,7 @@ RDRA の価値は、要件を「何となくの要望リスト」ではなく「
 
 ## 関連スキル
 
-- `analyzing-business` — 前段のビジネスアーキテクチャ分析
+- `analyzing-business-architecture` — 前段のビジネスアーキテクチャ分析
 - `analyzing-inception-deck` — 前段のインセプションデッキ
 - `analyzing-usecases` — 後続のユースケース・ユーザーストーリー詳細化
 - `orchestrating-analysis` — 分析フェーズ全体のワークフロー案内

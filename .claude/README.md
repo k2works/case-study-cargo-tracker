@@ -33,7 +33,9 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 
 | スキル | 説明 |
 | :--- | :--- |
-| `analyzing-business` | ビジネスアーキテクチャ分析を支援。ビジネスモデルキャンバス、バリューストリーム、ケイパビリティマップ等の作成。 |
+| `analyzing-business-case` | 企業事例（ケーススタディ）の与件文作成を支援。経営戦略・マーケティング・生産管理・財務会計の 4 パターン対応。 |
+| `analyzing-business-strategy` | 企業事例を基に企業戦略・事業戦略・機能戦略の 3 階層を体系的に立案。SWOT・VRIO・BMC・価値連鎖・ケイパビリティマップを作成。 |
+| `analyzing-business-architecture` | ビジネスアーキテクチャ分析を支援。ビジネスモデルキャンバス、バリューストリーム、ケイパビリティマップ等の作成。 |
 | `analyzing-inception-deck` | インセプションデッキ作成。プロジェクトの「なぜ」「何を」「どうやって」を 10 の問いで整理。 |
 | `analyzing-requirements` | RDRA 2.0 に基づいた体系的な要件定義を作成。 |
 | `analyzing-usecases` | ユースケース・ユーザーストーリー作成を支援。 |
@@ -90,11 +92,18 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 
 | スキル | 説明 |
 | :--- | :--- |
+| `generating-bmc` | ビジネスモデルキャンバスの SVG 図を生成。ビジネスアーキテクチャ分析書のデータを反映。 |
 | `generating-slides` | インセプションデッキから PowerPoint スライドを生成。 |
 | `git-commit` | 意味のある変更単位ごとにコミットを作成。Conventional Commits 準拠。 |
 | `creating-adr` | Architecture Decision Record の作成を支援。 |
 | `creating-release-report` | リリース完了報告書を作成。release_plan・iteration_report・git log・CHANGELOG からデータ収集。 |
 | `creating-iteration-report` | イテレーション完了報告書を作成。iteration_plan・release_plan・テスト結果からデータ収集。 |
+
+#### 学習系
+
+| スキル | 説明 |
+| :--- | :--- |
+| `practicing-getting-start-tdd` | TDD プログラミング入門の対話式チュートリアル。FizzBuzz を題材に 14 言語で TDD を体験。 |
 
 #### 共通
 
@@ -120,20 +129,37 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 
 ### Hooks（自動化スクリプト）
 
-`settings.json` で設定して、開発作業を自動化できます。
+`settings.json` で Hooks を設定して、開発作業を自動化できます。Hooks はイベント（`PreToolUse`、`PostToolUse`、`Notification`、`Stop` など）に応じてスクリプトを自動実行する仕組みです。
 
-| 実行スクリプト | イベント | 説明 |
-| :--- | :--- | :--- |
-| `deny-check.sh` | `PreToolUse` | `rm -rf /` のような危険なコマンドの実行を未然に防ぐ。 |
-| `check-ai-commit.sh` | `PreToolUse` | `git commit` でコミットメッセージに AI の署名が含まれている場合にエラーを出す。 |
-| `preserve-file-permissions.sh` | `PreToolUse` / `PostToolUse` | ファイル編集前に元の権限を保存し、編集後に復元する。 |
-| `ja-space-format.sh` | `PostToolUse` | ファイル保存時に、日本語と英数字の間のスペースを自動で整形する。 |
-| `auto-comment.sh` | `PostToolUse` | 新規ファイル作成時や大幅な編集時に、docstring の追加を促す。 |
-| `(osascript)` | `Notification` | Claude がユーザーの確認を待っている時に、macOS の通知センターでお知らせする。 |
-| `check-continue.sh` | `Stop` | タスク完了時に、継続可能なタスクがないか確認する。 |
-| `(osascript)` | `Stop` | 全タスク完了時に、macOS の通知センターで完了を知らせる。 |
+現在のテンプレートでは `settings.json` に Hooks は未設定です。プロジェクトに合わせて `settings.json` の `hooks` セクションに追加してください。
 
-**注意**: スクリプトファイルは `scripts/` ディレクトリに配置する必要があります。このテンプレートには `.gitkeep` のみが含まれているため、実際のスクリプトは `~/.claude/scripts/` から参照するか、プロジェクトに合わせて作成してください。
+#### 設定例
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/deny-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### スクリプト
+
+`scripts/` ディレクトリにスクリプトを配置し、`settings.json` から参照します。
+
+| ファイル | 説明 |
+| :--- | :--- |
+| `generate-inception-deck.mjs` | インセプションデッキの PowerPoint スライドを生成する Node.js スクリプト。 |
 
 ---
 
@@ -144,13 +170,16 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 ├── agent-memory/                          # エージェントメモリ
 ├── agents/                                # XP チームロール定義（.md）
 ├── assets/                                # 通知音などのアセット
-├── scripts/                            # Hooks 用スクリプト
+├── scripts/                            # Hooks 用・ユーティリティスクリプト
 ├── skills/                             # スキル定義（SKILL.md + 参照ファイル）
 │   ├── ai-agent-guidelines/SKILL.md
 │   ├── git-commit/SKILL.md
 │   ├── creating-adr/SKILL.md
+│   ├── generating-bmc/SKILL.md
 │   ├── generating-slides/SKILL.md
-│   ├── analyzing-business/SKILL.md
+│   ├── analyzing-business-case/SKILL.md
+│   ├── analyzing-business-strategy/SKILL.md
+│   ├── analyzing-business-architecture/SKILL.md
 │   ├── analyzing-inception-deck/SKILL.md
 │   ├── analyzing-requirements/SKILL.md
 │   ├── analyzing-usecases/SKILL.md
@@ -187,7 +216,8 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 │   ├── orchestrating-development/SKILL.md
 │   ├── orchestrating-operation/SKILL.md
 │   ├── orchestrating-project/SKILL.md
-│   └── validating-iteration-plan/SKILL.md
+│   ├── validating-iteration-plan/SKILL.md
+│   └── practicing-getting-start-tdd/SKILL.md
 ├── README.md
 ├── settings.json                       # Claude Code 設定
 └── settings.local.json                 # ローカル環境用設定

@@ -91,4 +91,4 @@ description: インセプションデッキの Markdown から PowerPoint スラ
 ## 関連スキル
 
 - `analyzing-inception-deck` — 入力となるインセプションデッキの作成
-- `analyzing-business` — ビジネスアーキテクチャ分析（補足情報の参照元）
+- `analyzing-business-architecture` — ビジネスアーキテクチャ分析（補足情報の参照元）

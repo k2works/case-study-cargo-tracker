@@ -483,6 +483,7 @@ start build/jacocoHtml/index.html # Windows
 4. `Run tests using` を `Gradle` に設定
 
 **自動テスト実行の設定：**
+
 - `Run` → `Edit Configurations`
 - `+` → `Gradle`
 - `Tasks` に `test --continuous` を設定
