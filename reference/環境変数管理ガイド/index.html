@@ -3989,18 +3989,22 @@ npm<span class="w"> </span>run<span class="w"> </span>vault:rekey
 <div class="highlight"><pre><span></span><code>Error: Invalid password
 </code></pre></div>
 <p><strong>原因:</strong> パスワードが正しくない</p>
-<p><strong>解決策:</strong>
-1. パスワードを再確認
-2. Caps Lock がオフになっているか確認
-3. パスワードマネージャーから正しいパスワードをコピー</p>
+<p><strong>解決策:</strong></p>
+<ol>
+<li>パスワードを再確認</li>
+<li>Caps Lock がオフになっているか確認</li>
+<li>パスワードマネージャーから正しいパスワードをコピー</li>
+</ol>
 <h4 id="envvault_1">.env.vault が見つからない<a class="headerlink" href="#envvault_1" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code>Error: .env.vault not found
 </code></pre></div>
 <p><strong>原因:</strong> 暗号化ファイルが存在しない</p>
-<p><strong>解決策:</strong>
-1. <code>git pull</code> で最新を取得
-2. <code>.env.vault</code> がコミットされているか確認
-3. まだ暗号化されていない場合は <code>vault:encrypt</code> を実行</p>
+<p><strong>解決策:</strong></p>
+<ol>
+<li><code>git pull</code> で最新を取得</li>
+<li><code>.env.vault</code> がコミットされているか確認</li>
+<li>まだ暗号化されていない場合は <code>vault:encrypt</code> を実行</li>
+</ol>
 <h4 id="_21">パスワードが短すぎる<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h4>
 <div class="highlight"><pre><span></span><code>Error: Password must be at least 8 characters
 </code></pre></div>

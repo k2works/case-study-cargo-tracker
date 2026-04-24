@@ -2553,6 +2553,17 @@
   <a href="#codex" class="md-nav__link">
     <span class="md-ellipsis">
       
+        Codex が既存コードを意図せず書き換える問題（重要）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codex_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         Codex が書き込みできない場合の対処（重要）
       
     </span>
@@ -2577,7 +2588,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#codex_1" class="md-nav__link">
+  <a href="#codex_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         例: Codex への実装指示
@@ -2588,7 +2599,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#codex_2" class="md-nav__link">
+  <a href="#codex_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Codex 実行中の確認
@@ -3764,7 +3775,20 @@
 <li>長時間応答がない場合はタスクを中断</li>
 <li>より小さな単位に分割して再実行</li>
 </ol>
-<h4 id="codex">Codex が書き込みできない場合の対処（重要）<a class="headerlink" href="#codex" title="Permanent link">&para;</a></h4>
+<h4 id="codex">Codex が既存コードを意図せず書き換える問題（重要）<a class="headerlink" href="#codex" title="Permanent link">&para;</a></h4>
+<p>Codex は指示対象外のコードを勝手に書き換えることがある。IT1 で実際に発生した事例:</p>
+<ul>
+<li><code>localStorage</code> → <code>sessionStorage</code> への無断変更（authStore との整合性が崩れた）</li>
+<li>headers マージ方式のスプレッド構文を <code>Object.assign</code> に書き換え</li>
+</ul>
+<p><strong>対策</strong>:</p>
+<ol>
+<li><strong>受入レビューで <code>git diff</code> を必ず確認</strong> — 指示対象ファイル以外の変更がないか検証する</li>
+<li><strong>既存テストを先に実行</strong> — Codex の変更後に既存テストが壊れていないか即座に確認する</li>
+<li><strong>指示にはコード全文を含める</strong> — 曖昧な自然言語指示より、作成すべきファイルの完全なコードを渡す方が意図しない変更を防げる</li>
+<li><strong>「既存コードは変更しないでください」を明記</strong> — 既存ファイルへの追記指示時は必ず記載する</li>
+</ol>
+<h4 id="codex_1">Codex が書き込みできない場合の対処（重要）<a class="headerlink" href="#codex_1" title="Permanent link">&para;</a></h4>
 <p>Codex が read-only 制限やファイルロック等で書き込みできなかった場合：</p>
 <ol>
 <li><strong>Claude が勝手に直接編集を進めてはいけない</strong></li>
@@ -3785,13 +3809,13 @@ Claude: 「Codex が read-only 制限で書き込みできませんでした。
 </code></pre></div>
 <h3 id="_18">実装指示のベストプラクティス<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>明確な要件</strong>: 何を実装するか具体的に記述</li>
+<li><strong>1 ファイル 1 指示</strong>: 確実に完了する最小単位で指示する（複数ファイルの同時指示はタイムアウトリスクあり）</li>
+<li><strong>コード全文を渡す</strong>: 自然言語の説明より、作成すべきファイルの完全なコードを指示に含める方が確実</li>
 <li><strong>既存パターン参照</strong>: 既存ファイルを参照先として指定</li>
-<li><strong>型定義の明示</strong>: TypeScript の型を事前に定義</li>
-<li><strong>テスト要件</strong>: テストも同時に作成させる</li>
-<li><strong>適切な粒度</strong>: タスク単位（1-3 ファイル）で指示を分割</li>
+<li><strong>「既存コードは変更しない」を明記</strong>: 追記指示時に Codex が他の箇所を書き換えるのを防ぐ</li>
+<li><strong>受入で <code>git diff</code> 確認</strong>: Codex の変更後は必ず差分を検証し、意図しない変更を検出する</li>
 </ol>
-<h3 id="codex_1">例: Codex への実装指示<a class="headerlink" href="#codex_1" title="Permanent link">&para;</a></h3>
+<h3 id="codex_2">例: Codex への実装指示<a class="headerlink" href="#codex_2" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>prompt: |
   お知らせ管理機能を実装してください。
 
@@ -3818,7 +3842,7 @@ Claude: 「Codex が read-only 制限で書き込みできませんでした。
 sandbox: workspace-write
 approval-policy: never
 </code></pre></div>
-<h3 id="codex_2">Codex 実行中の確認<a class="headerlink" href="#codex_2" title="Permanent link">&para;</a></h3>
+<h3 id="codex_3">Codex 実行中の確認<a class="headerlink" href="#codex_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Codex の進捗は <code>codex-reply</code> ツールで確認</li>
 <li>問題発生時は追加指示で修正を依頼</li>
