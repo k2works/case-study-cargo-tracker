@@ -1048,6 +1048,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#uc19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UC19: 💻航海スケジュールを登録する🌊
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2607,6 +2618,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/%E7%B5%8C%E5%96%B6%E6%88%A6%E7%95%A5%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    経営戦略分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
         
   
@@ -3170,6 +3209,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../template/%E4%BA%8B%E4%BE%8B%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事例分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
         
   
@@ -3386,6 +3453,13 @@
 <td style="text-align: left;">BUC20</td>
 <td style="text-align: center;">ユーザー目的</td>
 <td style="text-align: center;">中</td>
+</tr>
+<tr>
+<td style="text-align: left;">UC19</td>
+<td style="text-align: left;">💻航海スケジュールを登録する🌊</td>
+<td style="text-align: left;">BUC21</td>
+<td style="text-align: center;">ユーザー目的</td>
+<td style="text-align: center;">高</td>
 </tr>
 </tbody>
 </table>
@@ -4063,6 +4137,59 @@
 </li>
 </ul>
 <p><strong>関連情報</strong>: BUC20（精算処理）に対応</p>
+<hr />
+<h2 id="uc19">UC19: 💻航海スケジュールを登録する🌊<a class="headerlink" href="#uc19" title="Permanent link">&para;</a></h2>
+<p><strong>使用時のコンテキスト</strong>: 経路設計者が各運送会社の公開スケジュール（ウェブサイト・EDI・メール等）から航海情報を収集し、経路設計システムに登録する。経路設計の条件確認フェーズに先立って行う準備作業。</p>
+<p><strong>スコープ</strong>: 国際貨物輸送管理システム</p>
+<p><strong>レベル</strong>: ユーザー目的</p>
+<p><strong>主アクター</strong>: 経路設計者</p>
+<p><strong>利害関係者と利益</strong>:</p>
+<ul>
+<li>経路設計者: 最新の航海スケジュールをシステムに反映し、正確な経路候補算出の基盤を整えられる</li>
+<li>荷主: 最新の運航情報に基づく正確な経路・所要日数を提案してもらえる</li>
+<li>営業担当者: 最新スケジュールをもとに作成した見積を荷主に提示できる</li>
+</ul>
+<p><strong>事前条件</strong>:</p>
+<ul>
+<li>経路設計者が運送会社の公開スケジュール情報を入手している</li>
+</ul>
+<p><strong>最低保証</strong>: 入力内容と操作ログが記録される</p>
+<p><strong>成功保証時</strong>: 航海スケジュール（航海番号・船名・運送会社・出発港・到着港・出発日・到着日・寄港地・対応貨物種別）がシステムに登録され、経路候補算出で利用可能になる</p>
+<p><strong>トリガー</strong>: 経路設計者が航海スケジュール登録操作を開始する</p>
+<p><strong>主成功シナリオ</strong>:</p>
+<ol>
+<li>経路設計者が運送会社を選択する</li>
+<li>経路設計者が航海情報（航海番号・船名・出発港・出発日・到着港・到着日・寄港地・対応貨物種別）を入力する</li>
+<li>システムが入力内容の形式と必須項目を検証する</li>
+<li>システムが同一航海番号の重複登録がないことを確認する</li>
+<li>システムが航海スケジュールを登録し、登録番号を発行する</li>
+<li>経路設計者が登録完了を確認する</li>
+</ol>
+<p><strong>拡張</strong>:</p>
+<ul>
+<li>3a. 必須項目が未入力の場合:<ul>
+<li>3a1. システムが未入力項目を明示したエラーを表示する</li>
+<li>3a2. 経路設計者が未入力項目を補完してステップ 3 に戻る</li>
+</ul>
+</li>
+<li>3b. 出発日が到着日より後になっている場合:<ul>
+<li>3b1. システムが日付の整合性エラーを表示する</li>
+<li>3b2. 経路設計者が日付を修正してステップ 3 に戻る</li>
+</ul>
+</li>
+<li>4a. 同一航海番号が既に登録済みの場合:<ul>
+<li>4a1. システムが既存登録との差分を表示し、更新するか確認する</li>
+<li>4a2. 経路設計者が「更新する」を選択した場合、システムが既存スケジュールを上書き更新する</li>
+<li>4a3. 経路設計者が「キャンセル」を選択した場合、登録を中断してステップ 1 に戻る</li>
+</ul>
+</li>
+</ul>
+<p><strong>技術およびデータのバリエーション</strong>:</p>
+<ul>
+<li>ステップ 1: 出発港・到着港は UN/LOCODE 形式（例: JPTYO, SGSIN）で指定</li>
+<li>ステップ 2: 複数の寄港地がある場合は順序付きリストで入力</li>
+</ul>
+<p><strong>関連情報</strong>: BUC21（航海スケジュール登録）に対応。UC05（航海スケジュール検索）の事前条件を満たす</p>
 <hr />
 <h2 id="_2">参照<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <ul>

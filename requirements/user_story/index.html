@@ -1131,6 +1131,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#us24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US24: 航海スケジュールを新規登録する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#us25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        US25: 既存航海スケジュールを更新する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2673,6 +2695,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/%E7%B5%8C%E5%96%B6%E6%88%A6%E7%95%A5%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    経営戦略分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
         
   
@@ -3236,6 +3286,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../template/%E4%BA%8B%E4%BE%8B%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事例分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
         
   
@@ -3463,6 +3541,18 @@
 <td style="text-align: left;">精算を処理する</td>
 <td style="text-align: left;">UC18</td>
 <td style="text-align: center;">中</td>
+</tr>
+<tr>
+<td style="text-align: left;">US24</td>
+<td style="text-align: left;">航海スケジュールを新規登録する</td>
+<td style="text-align: left;">UC19</td>
+<td style="text-align: center;">高</td>
+</tr>
+<tr>
+<td style="text-align: left;">US25</td>
+<td style="text-align: left;">既存航海スケジュールを更新する</td>
+<td style="text-align: left;">UC19</td>
+<td style="text-align: center;">高</td>
 </tr>
 </tbody>
 </table>
@@ -3784,6 +3874,35 @@
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 支払い期限超過時、経理担当者に未払い通知が送信される</li>
 </ul>
 <hr />
+<h2 id="us24">US24: 航海スケジュールを新規登録する<a class="headerlink" href="#us24" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 経路設計者</p>
+<p><strong>したい</strong>: 各運送会社が公開している航海スケジュール（航海番号・船名・出発港・到着港・出発日・到着日・寄港地・対応貨物種別）をシステムに新規登録したい</p>
+<p><strong>なぜなら</strong>: 最新の運航情報をシステムに反映することで、経路候補の算出精度が上がり荷主に正確な経路・所要日数を提案できるからだ</p>
+<p><strong>対応 UC</strong>: UC19</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 航海番号・船名・運送会社・出発港（UN/LOCODE）・到着港（UN/LOCODE）・出発日・到着日・対応貨物種別を入力できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 寄港地を複数かつ順序付きで入力できる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 必須項目が未入力の場合、未入力箇所を明示したエラーが表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 出発日が到着日より後の場合、日付の整合性エラーが表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 同一航海番号がシステムに存在しない場合、登録が完了し登録番号が発行される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 登録後、UC05（航海スケジュール検索）の検索対象として利用できる</li>
+</ul>
+<hr />
+<h2 id="us25">US25: 既存航海スケジュールを更新する<a class="headerlink" href="#us25" title="Permanent link">&para;</a></h2>
+<p><strong>として</strong>: 経路設計者</p>
+<p><strong>したい</strong>: 運送会社が運航変更を発表した場合に、システムに登録済みの航海スケジュールを最新情報に更新したい</p>
+<p><strong>なぜなら</strong>: スケジュール変更を即座にシステムに反映することで、変更後の経路候補算出に誤りが生じるのを防げるからだ</p>
+<p><strong>対応 UC</strong>: UC19</p>
+<p><strong>受け入れ基準</strong>:</p>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 既存の航海番号を指定して既登録スケジュールを呼び出せる</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 既存内容と更新内容の差分が確認画面に表示される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 差分確認後に「更新する」を選択することで既存スケジュールが上書き更新される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 更新後、UC05（航海スケジュール検索）の検索結果に更新内容が反映される</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> 「キャンセル」を選択した場合、既存スケジュールは変更されない</li>
+</ul>
+<hr />
 <h2 id="_2">トレーサビリティマトリックス<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3902,6 +4021,12 @@
 <td style="text-align: left;">UC18</td>
 <td style="text-align: left;">BUC20</td>
 <td style="text-align: left;">精算業務の正確化</td>
+</tr>
+<tr>
+<td style="text-align: left;">US24, US25</td>
+<td style="text-align: left;">UC19</td>
+<td style="text-align: left;">BUC21</td>
+<td style="text-align: left;">経路候補算出の精度向上</td>
 </tr>
 </tbody>
 </table>
