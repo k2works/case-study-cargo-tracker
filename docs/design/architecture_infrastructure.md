@@ -26,22 +26,26 @@ package "AWS" {
   package "VPC" {
     package "パブリックサブネット" {
       [ALB] as alb
-      [API Gateway\n(Spring Cloud Gateway)] as gw
     }
 
     package "プライベートサブネット" {
       package "ECS Cluster" {
+        node "Gateway Service\n(gatewayms)" as gw
+        node "Auth Service\n(authms)" as auths
         node "Booking Service" as bs
         node "Routing Service" as rs
         node "Tracking Service" as ts
+        node "Handling Service" as hs
         node "Billing Service" as bis
         node "Frontend (Nginx)" as fe
       }
 
       package "データストア" {
+        database "RDS (PostgreSQL)\nauth_db" as adb
         database "RDS (PostgreSQL)\nbooking_db" as bdb
         database "RDS (PostgreSQL)\nrouting_db" as rdb
         database "RDS (PostgreSQL)\ntracking_db" as tdb
+        database "RDS (PostgreSQL)\nhandling_db" as hdb
         database "RDS (PostgreSQL)\nbilling_db" as bidb
         queue "Amazon MQ\n(RabbitMQ)" as mq
       }
@@ -59,26 +63,37 @@ alb --> gw
 gw --> bs
 gw --> rs
 gw --> ts
+gw --> hs
 gw --> bis
+gw --> auths
 
+auths --> adb
 bs --> bdb
 rs --> rdb
 ts --> tdb
+hs --> hdb
 bis --> bidb
 
 bs --> mq
+hs --> mq
 mq --> ts
 mq --> bis
 
+ecr --> gw
+ecr --> auths
 ecr --> bs
 ecr --> rs
 ecr --> ts
+ecr --> hs
 ecr --> bis
 ecr --> fe
 
+gw --> cw
+auths --> cw
 bs --> cw
 rs --> cw
 ts --> cw
+hs --> cw
 bis --> cw
 
 @enduml
@@ -103,26 +118,35 @@ bis --> cw
 title ローカル開発環境
 
 package "Docker Compose" {
-  node "booking-service\n:8081" as bs
-  node "routing-service\n:8082" as rs
-  node "tracking-service\n:8083" as ts
-  node "billing-service\n:8084" as bis
+  node "gateway-service\n:8080" as gw
+  node "auth-service\n:8081" as auths
+  node "booking-service\n:8082" as bs
+  node "routing-service\n:8083" as rs
+  node "tracking-service\n:8084" as ts
+  node "handling-service\n:8085" as hs
+  node "billing-service\n:8086" as bis
   node "frontend\n:3000" as fe
-  database "mysql\n:3306" as db
+  database "postgresql\n:5432" as db
   queue "rabbitmq\n:5672/15672" as mq
 }
 
-fe --> bs : localhost:8081
-fe --> rs : localhost:8082
-fe --> ts : localhost:8083
-fe --> bis : localhost:8084
+fe --> gw : localhost:8080
+gw --> auths : /api/auth/**
+gw --> bs : /api/booking/**
+gw --> rs : /api/routing/**
+gw --> ts : /api/tracking/**
+gw --> hs : /api/handling/**
+gw --> bis : /api/billing/**
 
+auths --> db
 bs --> db
 rs --> db
 ts --> db
+hs --> db
 bis --> db
 
 bs --> mq
+hs --> mq
 mq --> ts
 mq --> bis
 
@@ -147,8 +171,8 @@ mq --> bis
 | セキュリティグループ | インバウンド | 用途 |
 | :--- | :--- | :--- |
 | alb-sg | 80, 443 from 0.0.0.0/0 | ALB |
-| ecs-sg | 8080-8084 from alb-sg | ECS タスク |
-| rds-sg | 3306 from ecs-sg | RDS |
+| ecs-sg | 8080-8086 from alb-sg | ECS タスク |
+| rds-sg | 5432 from ecs-sg | RDS |
 | mq-sg | 5672 from ecs-sg | Amazon MQ |
 
 ## コンテナ設計
@@ -183,9 +207,11 @@ EXPOSE 80
 
 | サービス | CPU | メモリ | 最小タスク数 | 最大タスク数 |
 | :--- | :--- | :--- | :--- | :--- |
+| Auth Service | 256 | 512 MB | 2 | 4 |
 | Booking Service | 512 | 1024 MB | 2 | 4 |
 | Routing Service | 256 | 512 MB | 2 | 4 |
 | Tracking Service | 512 | 1024 MB | 2 | 6 |
+| Handling Service | 512 | 1024 MB | 2 | 4 |
 | Billing Service | 256 | 512 MB | 1 | 2 |
 | Frontend | 256 | 512 MB | 2 | 4 |
 | API Gateway | 256 | 512 MB | 2 | 4 |
@@ -265,19 +291,27 @@ title Blue/Green デプロイメント
 cloud "ALB" as alb
 
 package "Blue 環境（現行）" {
+  node "Gateway v1.0" as g1
+  node "Auth v1.0" as a1
   node "Booking v1.0" as b1
   node "Routing v1.0" as r1
   node "Tracking v1.0" as t1
+  node "Handling v1.0" as h1
+  node "Billing v1.0" as bi1
 }
 
 package "Green 環境（新規）" {
+  node "Gateway v1.1" as g2
+  node "Auth v1.1" as a2
   node "Booking v1.1" as b2
   node "Routing v1.1" as r2
   node "Tracking v1.1" as t2
+  node "Handling v1.1" as h2
+  node "Billing v1.1" as bi2
 }
 
-alb --> b1 : 100% (切替前)
-alb ..> b2 : 0% → 100% (切替後)
+alb --> g1 : 100% (切替前)
+alb ..> g2 : 0% → 100% (切替後)
 
 @enduml
 ```
@@ -337,13 +371,13 @@ alb ..> b2 : 0% → 100% (切替後)
 
 | リソース | スペック | 月額概算 |
 | :--- | :--- | :--- |
-| ECS Fargate | 6 サービス × 2 タスク | $200 |
-| RDS PostgreSQL | db.t3.medium × 5 | $500 |
+| ECS Fargate | 8 サービス × 2 タスク（gateway/auth/booking/routing/tracking/handling/billing/frontend） | $280 |
+| RDS PostgreSQL | db.t3.medium × 6 | $600 |
 | Amazon MQ | mq.m5.large | $200 |
 | ALB | 1 台 | $30 |
 | CloudWatch | ログ・メトリクス | $50 |
 | ECR | イメージストレージ | $10 |
-| **合計** | | **$990** |
+| **合計** | | **$1,170** |
 
 ## 参照
 

@@ -564,6 +564,25 @@ date: 2026-04-04T00:00:00.000Z
 
 ---
 
+## 実装トレーサビリティ（US → UC → API → Test）
+
+| ストーリー | UC | 主要 API | テスト観点 |
+|:---------|:---|:---------|:---------|
+| US01 | UC01 | `POST /api/booking/estimates`, `GET /api/booking/estimates/:estimateId` | 入力バリデーション、見積番号発行、期限超過ルートなし |
+| US02, US03 | UC02 | `POST /api/booking/shippers`, `GET /api/booking/shippers/:shipperId` | 重複登録判定、法人契約情報の必須条件 |
+| US04, US05, US13 | UC03, UC11 | `POST /api/booking/cargos`, `PUT /api/booking/cargos/:bookingId/confirm` | 予約状態遷移、危険物/冷凍条件、見積整合性 |
+| US06 | UC04 | `POST /api/booking/cargos/:bookingId/handover` | 経路設計引き渡し、状態更新、通知発行 |
+| US07, US24, US25 | UC05, UC19 | `GET /api/routing/voyages`, `POST /api/routing/voyages`, `PUT /api/routing/voyages/:voyageNumber` | 航海検索条件、登録/更新差分、制約条件反映 |
+| US08, US09, US10, US11, US12, US14 | UC06-UC10, UC12 | `POST /api/routing/candidates`, `POST /api/routing/assignments`, `POST /api/tracking/numbers` | 経路候補算出順位、確定処理、追跡番号一意性 |
+| US15, US16, US17 | UC13, UC14 | `POST /api/handling/activities`, `PUT /api/tracking/:trackingNumber/status` | 荷役種別別バリデーション、状態遷移、履歴整合性 |
+| US18 | UC15 | `GET /api/tracking/:trackingNumber` | 認証必須、追跡情報時系列、30 秒ポーリング |
+| US19, US20 | UC16 | `POST /api/tracking/:trackingNumber/exceptions`, `PUT /api/tracking/exceptions/:id/resolve` | 例外登録、エスカレーション、解決後復帰 |
+| US21, US22, US23 | UC17, UC18 | `POST /api/billing/invoices/calculate`, `POST /api/billing/invoices/:invoiceId/confirm-payment` | 料金算出、割引上限、精算状態遷移 |
+
+> テストは `docs/design/test_strategy.md` のレベル定義（ユニット / 統合 / 契約 / E2E）に対応させる。
+
+---
+
 ## 参照
 
 - [システムユースケース](system_usecase.md)

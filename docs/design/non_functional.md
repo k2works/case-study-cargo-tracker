@@ -80,7 +80,7 @@ tags: design, non-functional, performance, security, availability
 | トークン有効期限 | アクセストークン: 1 時間、リフレッシュトークン: 7 日 | Zustand ストアで管理 |
 | パスワードポリシー | 8 文字以上、英数字混在必須 | BCrypt (strength 12) でハッシュ化 |
 | 認可モデル | RBAC（Role-Based Access Control） | Spring Security `@PreAuthorize` |
-| API エンドポイント保護 | 全 API に認証必須（追跡照会を除く） | API Gateway JWT フィルタ |
+| API エンドポイント保護 | 全 API に認証必須 | API Gateway JWT フィルタ |
 | CORS | フロントエンドオリジンのみ許可 | Spring Cloud Gateway CORS 設定 |
 
 ### 2.2 ロールと権限
@@ -88,7 +88,11 @@ tags: design, non-functional, performance, security, availability
 | ロール | 権限範囲 | 対応アクター |
 | :--- | :--- | :--- |
 | `ROLE_ADMIN` | 全操作 + ユーザー管理 | システム管理者 |
-| `ROLE_OPERATOR` | 予約・経路・荷役・精算の全操作 | 営業担当者・経路設計者・荷役作業員・追跡管理者・経理担当者 |
+| `ROLE_SALES` | 見積・荷主登録・予約登録/確定 | 営業担当者 |
+| `ROLE_ROUTING` | 航海スケジュール管理・経路設計・追跡番号発行 | 経路設計者 |
+| `ROLE_TRACKING` | 追跡情報更新・例外対応・荷役履歴照会 | 追跡管理者 |
+| `ROLE_HANDLING` | 荷役作業登録・荷役履歴照会 | 荷役作業員 |
+| `ROLE_BILLING` | 輸送料金算出・割引適用・精算処理 | 経理担当者 |
 | `ROLE_SHIPPER` | 自身の予約照会・追跡照会 | 荷主・荷受人 |
 
 ### 2.3 データ保護

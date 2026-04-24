@@ -35,6 +35,12 @@ tags: design, ui, ux, wireframe, react, spa
 - **アクセシビリティ**: ARIA ラベル・キーボードナビゲーション対応
 - **SPA UX**: ページ遷移はクライアントサイドルーティングで高速化
 
+### 認証・認可ポリシー（UI）
+
+- すべての業務画面はログイン必須とする
+- 追跡照会（`/tracking/:trackingNumber`）も認証必須とし、`ROLE_SHIPPER` または `ROLE_TRACKING` のユーザーのみ閲覧可能とする
+- 画面表示制御と API 実行可否は同一の RBAC マトリクスに従う
+
 ### API Gateway 経由のデータ取得
 
 React SPA はすべての API リクエストを API Gateway（`gatewayms`）経由で送信する。Gateway が JWT トークンを検証し、各マイクロサービスにルーティングする。
@@ -91,7 +97,7 @@ Estimate 1 ─── N RouteCandidate
 | 経路設計 | `/routing/design/:bookingId` | 経路候補選択・割り当て | 経路設計者 | US07-US11 |
 | 航海スケジュール管理 | `/routing/voyages` | 航海スケジュール一覧 | 経路設計者 | US24, US25 |
 | 航海スケジュール登録 | `/routing/voyages/new` | 新規航海登録フォーム | 経路設計者 | US24 |
-| 貨物追跡照会 | `/tracking/:trackingNumber` | 輸送ステータスタイムライン | 荷主、荷受人、追跡管理者 | US18 |
+| 貨物追跡照会 | `/tracking/:trackingNumber` | 輸送ステータスタイムライン（認証必須） | 荷主、荷受人、追跡管理者 | US18 |
 | 荷役作業記録 | `/tracking/handling` | 荷役イベント登録フォーム | 荷役作業員 | US15, US16 |
 | 荷役作業一覧 | `/tracking/handling/list` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15 |
 | 精算管理 | `/billing` | 請求書一覧・フィルタ | 経理担当者 | US21-US23 |
@@ -108,15 +114,27 @@ Estimate 1 ─── N RouteCandidate
 | メニュー項目 | 遷移先 | 表示ロール |
 | :--- | :--- | :--- |
 | ダッシュボード | `/dashboard` | 全ロール |
-| 荷主管理 | `/booking/shippers` | ROLE_OPERATOR |
-| 見積管理 | `/booking/estimates` | ROLE_OPERATOR |
-| 貨物予約 | `/booking` | ROLE_OPERATOR, ROLE_SHIPPER |
-| 航海スケジュール | `/routing/voyages` | ROLE_OPERATOR |
-| 経路設計 | `/routing/design` | ROLE_OPERATOR |
-| 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_OPERATOR |
-| 荷役管理 | `/tracking/handling` | ROLE_OPERATOR |
-| 精算管理 | `/billing` | ROLE_OPERATOR |
+| 荷主管理 | `/booking/shippers` | ROLE_SALES |
+| 見積管理 | `/booking/estimates` | ROLE_SALES |
+| 貨物予約 | `/booking` | ROLE_SALES, ROLE_SHIPPER |
+| 航海スケジュール | `/routing/voyages` | ROLE_ROUTING |
+| 経路設計 | `/routing/design` | ROLE_ROUTING |
+| 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_TRACKING |
+| 荷役管理 | `/tracking/handling` | ROLE_HANDLING, ROLE_TRACKING |
+| 精算管理 | `/billing` | ROLE_BILLING |
 | ログアウト | - | 全ロール |
+
+### 画面/API 権限マトリクス
+
+| 機能 | 画面パス | API プレフィックス | 実行ロール |
+| :--- | :--- | :--- | :--- |
+| 荷主管理 | `/booking/shippers*` | `/api/booking/shippers` | `ROLE_SALES` |
+| 見積管理 | `/booking/estimates*` | `/api/booking/estimates` | `ROLE_SALES` |
+| 予約管理 | `/booking*` | `/api/booking/cargos` | `ROLE_SALES`, `ROLE_SHIPPER`（参照のみ） |
+| 航海・経路設計 | `/routing*` | `/api/routing` | `ROLE_ROUTING` |
+| 追跡照会 | `/tracking/:trackingNumber` | `/api/tracking` | `ROLE_SHIPPER`, `ROLE_TRACKING` |
+| 荷役管理 | `/tracking/handling*` | `/api/handling` | `ROLE_HANDLING`, `ROLE_TRACKING`（参照のみ） |
+| 精算管理 | `/billing*` | `/api/billing` | `ROLE_BILLING` |
 
 ### 共通レイアウト ワイヤーフレーム
 
@@ -398,7 +416,7 @@ state "精算フロー" as billing_flow {
 
 - サマリーカード: React Query で `/api/booking/summary` を取得
 - 最新荷役作業: `/api/handling/recent` から直近 10 件を降順表示
-- ロール制御: `ROLE_OPERATOR` 以外は「未払い請求」カードを非表示
+- ロール制御: `ROLE_BILLING` 以外は「未払い請求」カードを非表示
 - 自動更新: React Query の `refetchInterval: 60000`（60 秒）でサマリーを更新
 
 ---
@@ -438,7 +456,7 @@ state "精算フロー" as billing_flow {
 - **検索フィルタ**: 出発地・目的地（UN/LOCODE）・BookingStatus でクエリパラメータ付与
 - **ステータスバッジ**: Tailwind CSS のバッジクラスで BookingStatus に応じた色分け
 - **ページネーション**: 1 ページ 20 件。React Query の `keepPreviousData` でちらつき防止
-- **新規登録**: `ROLE_OPERATOR` のみ表示
+- **新規登録**: `ROLE_SALES` のみ表示
 
 ---
 
@@ -537,8 +555,8 @@ state "精算フロー" as billing_flow {
 - **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
 - **荷役履歴**: `GET /api/handling/activities?bookingId=:bookingId` で取得。時系列降順表示
-- **[経路を割り当て]**: `ROLE_OPERATOR` かつ `PRELIMINARY` / `ROUTE_PROPOSED` のみ表示
-- **[キャンセル]**: `ROLE_OPERATOR` のみ表示。確認ダイアログ後に `PUT /api/booking/cargos/:bookingId/cancel`
+- **[経路を割り当て]**: `ROLE_ROUTING` かつ `PRELIMINARY` / `ROUTE_PROPOSED` のみ表示
+- **[キャンセル]**: `ROLE_SALES` のみ表示。確認ダイアログ後に `PUT /api/booking/cargos/:bookingId/cancel`
 - **[追跡を表示]**: `trackingNumber` が発行済みの場合のみ表示
 
 ---
@@ -622,7 +640,7 @@ state "精算フロー" as billing_flow {
 - **追跡番号入力**: URL パスパラメータまたは画面上部の入力フォームから検索
 - **未発見**: 404 の場合は「該当する貨物が見つかりません」トースト表示
 - **例外表示**: ExceptionType が存在する場合は赤色バッジで表示
-- **[予約詳細を表示]**: `ROLE_OPERATOR` のみ表示
+- **[予約詳細を表示]**: `ROLE_TRACKING` のみ表示
 
 ---
 
@@ -696,7 +714,7 @@ state "精算フロー" as billing_flow {
 
 - **データ取得**: `useVoyages()` で `GET /api/routing/voyages` をキャッシュ
 - **検索フィルタ**: 出発港・到着港でフィルタリング
-- **新規登録**: `ROLE_OPERATOR` のみ表示
+- **新規登録**: `ROLE_ROUTING` のみ表示
 - **行クリック**: 航海詳細（CarrierMovement 一覧）をモーダルで表示
 
 ---
@@ -734,7 +752,7 @@ state "精算フロー" as billing_flow {
 - **フィルタ**: PaymentStatus・発行日でフィルタリング
 - **ステータスバッジ**: `PENDING` は赤、`CONFIRMED` は緑、`OVERDUE` は濃い赤
 - **支払期限超過**: 期限超過かつ未払いの行を赤色ハイライト
-- **アクセス制御**: `ROLE_OPERATOR` のみ
+- **アクセス制御**: `ROLE_BILLING` のみ
 
 ---
 
