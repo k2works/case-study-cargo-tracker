@@ -119,6 +119,7 @@ nav:
       - Codex CLI MCP サーバー設定手順: reference/CodexCLIMCPサーバー設定手順.md
       - SonarQube ローカル環境セットアップ手順書: reference/SonarQubeローカル環境セットアップ手順書.md
       - Vim 操作マニュアル: reference/Vim操作マニュアル.md
+      - 経営戦略分析ガイド: reference/経営戦略分析ガイド.md
       - 企業経営論: reference/企業経営論.md
       - 運営管理: reference/運営管理.md
   - テンプレート:
@@ -138,5 +139,6 @@ nav:
       - 開発環境セットアップ手順書: template/開発環境セットアップ手順書.md
       - AWS ステージング環境セットアップ手順書: template/AWSステージング環境セットアップ手順書.md
       - AWS プロダクション環境セットアップ手順書: template/AWSプロダクション環境セットアップ手順書.md
+      - 事例分析: template/事例分析.md
       - 企業分析: template/企業分析.md
       - README: template/README.md

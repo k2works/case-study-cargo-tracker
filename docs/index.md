@@ -23,8 +23,8 @@
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
-| [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 28 件のドキュメントを配置 |
-| [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 16 件のテンプレートを配置 |
+| [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
+| [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
 
 ### 戦略ドキュメント
 
@@ -38,9 +38,9 @@
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [要件定義書](./requirements/requirements_definition.md) | RDRA 2.0 に基づく 4 層（システム価値・外部環境・境界・内部構造） |
-| [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 13 件・アクター目的リスト |
-| [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 12 件（完全形式） |
-| [ユーザーストーリー](./requirements/user_story.md) | US 18 件・受け入れ基準・トレーサビリティマトリックス |
+| [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 21 件・アクター目的リスト |
+| [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
+| [ユーザーストーリー](./requirements/user_story.md) | US 25 件・受け入れ基準・トレーサビリティマトリックス |
 
 ### レビュードキュメント
 
