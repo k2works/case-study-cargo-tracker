@@ -306,7 +306,161 @@ v ||--o{ cm
 | GET | /api/v1/voyages | 航海スケジュール一覧・検索 |
 | GET | /api/v1/voyages/{voyageNumber} | 航海スケジュール詳細 |
 
+### ユーザーインターフェース
+
+#### ビュー
+
+##### 航海スケジュール一覧（/routing/voyages）
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b>    |    yamada@example.com  [ログアウト] }
+  ==
+  <b>航海スケジュール一覧</b>
+  --
+  {
+    出発港 | "JPOSA    " | 到着港 | "USLAX    " | [検索]
+  }
+  ==
+  [+ 新規航海登録]
+  {#
+    **航路番号** | **出発港** | **到着港** | **出発予定**     | **到着予定**     | **区間数**
+    V0042        | JPOSA      | USLAX      | 2026-04-01 18:00 | 2026-04-14 08:00 | 1
+    V0043        | JPYOK      | GBFXT      | 2026-04-03 20:00 | 2026-04-22 10:00 | 3
+    V0044        | JPKIX      | DEHAM      | 2026-04-05 14:00 | 2026-04-25 08:00 | 2
+  }
+  ==
+  < 前へ | 1 / 3 | 次へ >
+}
+@endsalt
+```
+
+##### 航海スケジュール登録・更新（/routing/voyages/new, /routing/voyages/:voyageNumber/edit）
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b>    |    yamada@example.com  [ログアウト] }
+  ==
+  <b>航海スケジュール登録</b>
+  --
+  {+
+    航路番号     | "V0045      "
+    ==
+    <b>区間（CarrierMovement）</b>
+    {#
+      **#** | **出発港** | **到着港** | **出発予定**         | **到着予定**         | **操作**
+      1     | "JPOSA  "  | "CNSHA  "  | "2026-05-01 18:00 " | "2026-05-05 08:00 " | [削除]
+      2     | "CNSHA  "  | "USLAX  "  | "2026-05-06 14:00 " | "2026-05-18 10:00 " | [削除]
+    }
+    [+ 区間を追加]
+  }
+  ==
+  [登録] | [キャンセル]
+}
+@endsalt
+```
+
+#### モデル
+
+```plantuml
+@startuml
+class 航海スケジュール一覧 {
+    航路番号
+    出発港
+    到着港
+    出発予定
+    到着予定
+    区間数
+    検索()
+    新規登録()
+}
+
+class 航海スケジュールフォーム {
+    航路番号
+    区間リスト
+    登録()
+    更新()
+    区間追加()
+    区間削除()
+    キャンセル()
+}
+
+class ナビゲーション {
+    航海スケジュール()
+    ログアウト()
+}
+
+ナビゲーション -* 航海スケジュール一覧
+航海スケジュール一覧 --> 航海スケジュールフォーム : 新規登録 / 行クリック
+航海スケジュールフォーム --> 航海スケジュール一覧 : 登録成功 / キャンセル
+@enduml
+```
+
+#### インタラクション
+
+```plantuml
+@startuml
+
+title 航海スケジュール画面遷移図
+
+[*] --> 航海スケジュール一覧
+
+state 航海スケジュール一覧 {
+    航海スケジュール一覧 : /routing/voyages
+    航海スケジュール一覧 : useVoyages() で GET /api/v1/voyages
+    航海スケジュール一覧 : 出発港・到着港でフィルタ
+}
+
+state 航海スケジュール登録 {
+    航海スケジュール登録 : /routing/voyages/new
+    航海スケジュール登録 : VoyageForm + React Hook Form
+    航海スケジュール登録 : POST /api/v1/voyages
+}
+
+state 航海スケジュール更新 {
+    航海スケジュール更新 : /routing/voyages/:voyageNumber/edit
+    航海スケジュール更新 : VoyageForm（初期値プリロード）
+    航海スケジュール更新 : PUT /api/v1/voyages/:voyageNumber
+}
+
+航海スケジュール一覧 --> 航海スケジュール登録 : [新規登録] ボタン
+航海スケジュール一覧 --> 航海スケジュール更新 : 行クリック
+航海スケジュール登録 --> 航海スケジュール一覧 : 登録成功（トースト通知）
+航海スケジュール登録 --> 航海スケジュール登録 : バリデーションエラー
+航海スケジュール更新 --> 航海スケジュール一覧 : 更新成功（トースト通知）
+航海スケジュール更新 --> 航海スケジュール更新 : バリデーションエラー
+航海スケジュール登録 --> 航海スケジュール一覧 : キャンセル
+航海スケジュール更新 --> 航海スケジュール一覧 : キャンセル
+
+@enduml
+```
+
+#### フロントエンドコンポーネント構成
+
+```
+apps/frontend/src/
+├── features/routing/
+│   ├── components/
+│   │   ├── VoyageList.tsx            # 一覧テーブル（Presentational）
+│   │   ├── VoyageSearchForm.tsx      # 検索フィルタ（Presentational）
+│   │   └── VoyageForm.tsx            # 登録・更新フォーム（Container）
+│   ├── hooks/
+│   │   └── useVoyages.ts             # TanStack Query Hooks
+│   └── types/
+│       └── voyage.ts                 # 型定義（VoyageResponse 等）
+├── pages/
+│   ├── VoyageListPage.tsx            # 一覧ページ
+│   ├── VoyageNewPage.tsx             # 新規登録ページ
+│   └── VoyageEditPage.tsx            # 更新ページ
+└── layouts/
+    └── AppLayout.tsx                 # ナビゲーション追加
+```
+
 ### ディレクトリ構成
+
+#### バックエンド
 
 ```
 apps/backend/routingms/src/main/java/com/example/routingms/
