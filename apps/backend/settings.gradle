@@ -1,0 +1,19 @@
+rootProject.name = 'cargo-tracker-microservices'
+
+include 'shared'
+include 'gatewayms'
+include 'authms'
+include 'bookingms'
+include 'routingms'
+include 'trackingms'
+include 'handlingms'
+include 'billingms'
+
+project(':shared').projectDir = file('shared')
+project(':gatewayms').projectDir = file('gatewayms')
+project(':authms').projectDir = file('authms')
+project(':bookingms').projectDir = file('bookingms')
+project(':routingms').projectDir = file('routingms')
+project(':trackingms').projectDir = file('trackingms')
+project(':handlingms').projectDir = file('handlingms')
+project(':billingms').projectDir = file('billingms')
