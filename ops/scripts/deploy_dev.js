@@ -28,6 +28,12 @@ const FRONTEND_SERVICE = { name: 'frontend', port: 3000, label: 'Frontend (React
 /** 全サービス */
 const ALL_SERVICES = [...BACKEND_SERVICES, FRONTEND_SERVICE];
 
+/** RabbitMQ（CloudAMQP）を使用するサービス */
+const MESSAGING_SERVICES = ['bookingms', 'trackingms', 'handlingms', 'billingms'];
+
+/** CloudAMQP アドオンをプロビジョニングするプライマリアプリ */
+const CLOUDAMQP_PRIMARY = 'bookingms';
+
 // ============================================
 // ヘルパー関数
 // ============================================
@@ -181,6 +187,94 @@ export default function deployDevTasks(gulp) {
     });
 
     // --------------------------------------------------------
+    // CloudAMQP（RabbitMQ）
+    // --------------------------------------------------------
+
+    // CloudAMQP アドオンをプライマリアプリに追加
+    gulp.task('deploy:dev:amqp:add', (done) => {
+        const primary = appName(CLOUDAMQP_PRIMARY);
+        console.log(`CloudAMQP アドオンを追加します (${primary})...`);
+        try {
+            heroku(`addons:create cloudamqp -a ${primary}`);
+            console.log('CloudAMQP アドオンを追加しました。');
+        } catch (e) {
+            console.warn(`  スキップしました（既に追加済みの可能性）: ${e.message}`);
+        }
+        done();
+    });
+
+    // CloudAMQP URL をプライマリから取得し、他のメッセージングサービスに共有
+    gulp.task('deploy:dev:amqp:share', (done) => {
+        const primary = appName(CLOUDAMQP_PRIMARY);
+        console.log(`CloudAMQP URL を ${primary} から取得します...`);
+
+        let amqpUrl;
+        try {
+            amqpUrl = execSync(`heroku config:get CLOUDAMQP_URL -a ${primary}`, {
+                env: cleanDockerEnv(),
+            }).toString().trim();
+        } catch (e) {
+            done(new Error(`CLOUDAMQP_URL を取得できませんでした: ${e.message}`));
+            return;
+        }
+
+        if (!amqpUrl) {
+            done(new Error(`CLOUDAMQP_URL が空です。先に deploy:dev:amqp:add を実行してください。`));
+            return;
+        }
+
+        console.log(`CLOUDAMQP_URL を取得しました。メッセージングサービスに設定します...`);
+
+        for (const svcName of MESSAGING_SERVICES) {
+            if (svcName === CLOUDAMQP_PRIMARY) {
+                console.log(`  ${svcName}: プライマリアプリ（アドオン直接参照）- スキップ`);
+                continue;
+            }
+            const name = appName(svcName);
+            console.log(`  ${name} に CLOUDAMQP_URL を設定します...`);
+            try {
+                heroku(`config:set CLOUDAMQP_URL="${amqpUrl}" -a ${name}`);
+            } catch (e) {
+                console.warn(`    ${name} の設定をスキップしました: ${e.message}`);
+            }
+        }
+
+        done();
+    });
+
+    // CloudAMQP セットアップ（アドオン追加 → URL 共有）
+    gulp.task('deploy:dev:amqp:setup', gulp.series(
+        'deploy:dev:amqp:add',
+        'deploy:dev:amqp:share',
+    ));
+
+    // CloudAMQP の状態確認
+    gulp.task('deploy:dev:amqp:info', (done) => {
+        const primary = appName(CLOUDAMQP_PRIMARY);
+        console.log(`CloudAMQP アドオン情報 (${primary}):`);
+        try {
+            heroku(`addons:info cloudamqp -a ${primary}`);
+        } catch (e) {
+            console.warn(`  情報取得できませんでした: ${e.message}`);
+        }
+
+        console.log('\n各サービスの CLOUDAMQP_URL 設定状況:');
+        for (const svcName of MESSAGING_SERVICES) {
+            const name = appName(svcName);
+            try {
+                const url = execSync(`heroku config:get CLOUDAMQP_URL -a ${name}`, {
+                    env: cleanDockerEnv(),
+                }).toString().trim();
+                console.log(`  ${name}: ${url ? '設定済み' : '未設定'}`);
+            } catch (e) {
+                console.warn(`  ${name}: 取得失敗`);
+            }
+        }
+
+        done();
+    });
+
+    // --------------------------------------------------------
     // ビルド
     // --------------------------------------------------------
 
@@ -315,11 +409,12 @@ export default function deployDevTasks(gulp) {
         'deploy:dev:release',
     ));
 
-    // 初回セットアップ（container:login → app:create → config → build → push → release）
+    // 初回セットアップ（container:login → app:create → config → amqp → build → push → release）
     gulp.task('deploy:dev:setup', gulp.series(
         'deploy:dev:container:login',
         'deploy:dev:app:create',
         'deploy:dev:config',
+        'deploy:dev:amqp:setup',
         'deploy:dev:build',
         'deploy:dev:push',
         'deploy:dev:release',
@@ -344,7 +439,15 @@ export default function deployDevTasks(gulp) {
   deploy:dev:push             全サービスを Heroku に push
   deploy:dev:release          全サービスをリリース
   deploy:dev                  更新デプロイ（build → push → release）
-  deploy:dev:setup            初回セットアップ（create → config → build → push → release）
+  deploy:dev:setup            初回セットアップ（create → config → amqp → build → push → release）
+
+--- CloudAMQP（RabbitMQ） ---
+  deploy:dev:amqp:add         CloudAMQP アドオンを追加（${CLOUDAMQP_PRIMARY} に）
+  deploy:dev:amqp:share       CLOUDAMQP_URL をメッセージングサービスに共有
+  deploy:dev:amqp:setup       アドオン追加 → URL 共有（一括）
+  deploy:dev:amqp:info        CloudAMQP の設定状況を確認
+
+  対象サービス: ${MESSAGING_SERVICES.join(', ')}
 
 --- 個別サービス ---
   deploy:dev:push:<service>   特定サービスを push
