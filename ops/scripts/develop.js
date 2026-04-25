@@ -95,30 +95,70 @@ export default function developTasks(gulp) {
     // バックエンド: 開発サーバー
     // ----------------------------------------
 
-    gulp.task('dev:backend', (done) => {
-        console.log('Starting bookingms (default profile / H2)...');
-        spawnGradle([':bookingms:bootRun'], done);
-    });
-
-    gulp.task('dev:backend:product', (done) => {
-        console.log('Starting bookingms (product profile / PostgreSQL)...');
-        spawnGradle([':bookingms:bootRun', "--args='--spring.profiles.active=product'"], done);
-    });
-
-    // 個別サービス起動タスクを動的に生成
+    // 個別サービスタスクを動的に生成（起動・product・TDD・テスト・ビルド・チェック・クリーン）
     for (const svc of SERVICES) {
         gulp.task(`dev:backend:${svc.name}`, (done) => {
             console.log(`Starting ${svc.label} (${svc.name}, port ${svc.port})...`);
             spawnGradle([`:${svc.name}:bootRun`], done);
         });
+
+        gulp.task(`dev:backend:product:${svc.name}`, (done) => {
+            console.log(`Starting ${svc.label} (${svc.name}, product profile / PostgreSQL)...`);
+            spawnGradle([`:${svc.name}:bootRun`, "--args='--spring.profiles.active=product'"], done);
+        });
+
+        gulp.task(`dev:backend:tdd:${svc.name}`, (done) => {
+            console.log(`TDD mode: ${svc.label} (${svc.name})...`);
+            spawnGradle([`:${svc.name}:test`, '--continuous'], done);
+        });
+
+        gulp.task(`dev:backend:test:${svc.name}`, (done) => {
+            try {
+                runGradle(`:${svc.name}:test`, [`:${svc.name}:jacocoTestReport`]);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        });
+
+        gulp.task(`dev:backend:build:${svc.name}`, (done) => {
+            try {
+                runGradle(`:${svc.name}:build`);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        });
+
+        gulp.task(`dev:backend:check:${svc.name}`, (done) => {
+            try {
+                runGradle(`:${svc.name}:check`);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        });
+
+        gulp.task(`dev:backend:clean:${svc.name}`, (done) => {
+            try {
+                runGradle(`:${svc.name}:clean`);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        });
     }
 
+    // 全サービス集約タスク（ループ後に定義）
+    gulp.task('dev:backend', gulp.parallel(...SERVICES.map(svc => `dev:backend:${svc.name}`)));
+    gulp.task('dev:backend:product', gulp.parallel(...SERVICES.map(svc => `dev:backend:product:${svc.name}`)));
+
     // ----------------------------------------
-    // バックエンド: テスト
+    // バックエンド: テスト（全サービス）
     // ----------------------------------------
 
     gulp.task('dev:backend:tdd', (done) => {
-        console.log('Starting TDD mode (continuous test)...');
+        console.log('Starting TDD mode (continuous test / all services)...');
         spawnGradle(['test', '--continuous'], done);
     });
 
@@ -132,7 +172,7 @@ export default function developTasks(gulp) {
     });
 
     // ----------------------------------------
-    // バックエンド: ビルド・品質チェック
+    // バックエンド: ビルド・品質チェック（全サービス）
     // ----------------------------------------
 
     gulp.task('dev:backend:build', (done) => {
@@ -285,17 +325,25 @@ export default function developTasks(gulp) {
 ║                   開発タスク一覧                              ║
 ╚══════════════════════════════════════════════════════════════╝
 
-  バックエンド:
-    dev:backend                  開発サーバー起動（bookingms / H2）
-    dev:backend:product          開発サーバー起動（bookingms / PostgreSQL）
-    dev:backend:{service}        個別サービス起動
-                                 (gatewayms|authms|bookingms|routingms|
-                                  trackingms|handlingms|billingms)
-    dev:backend:tdd              TDD モード（テスト自動再実行）
-    dev:backend:test             テスト実行 + カバレッジ
-    dev:backend:build            ビルド
-    dev:backend:check            品質チェック（Checkstyle + SpotBugs + テスト）
-    dev:backend:clean            ビルド成果物削除
+  バックエンド（全サービス）:
+    dev:backend                  全サービス起動（並列 / H2）
+    dev:backend:product          全サービス起動（並列 / PostgreSQL）
+    dev:backend:tdd              TDD モード（全サービス / テスト自動再実行）
+    dev:backend:test             テスト実行 + カバレッジ（全サービス）
+    dev:backend:build            ビルド（全サービス）
+    dev:backend:check            品質チェック（全サービス）
+    dev:backend:clean            ビルド成果物削除（全サービス）
+
+  バックエンド（個別サービス）:
+    dev:backend:{service}            個別サービス起動（H2）
+    dev:backend:product:{service}    個別サービス起動（PostgreSQL）
+    dev:backend:tdd:{service}        個別サービス TDD モード
+    dev:backend:test:{service}       個別サービス テスト + カバレッジ
+    dev:backend:build:{service}      個別サービス ビルド
+    dev:backend:check:{service}      個別サービス 品質チェック
+    dev:backend:clean:{service}      個別サービス クリーン
+                                     {service}: gatewayms|authms|bookingms|routingms|
+                                                trackingms|handlingms|billingms
 
   フロントエンド:
     dev:frontend                 開発サーバー起動（port 3000）
