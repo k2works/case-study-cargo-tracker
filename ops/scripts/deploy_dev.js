@@ -107,6 +107,16 @@ function herokuCapture(command, options = {}) {
 }
 
 /**
+ * Heroku アプリの公開 URL を取得する
+ * @param {string} app - Heroku アプリ名
+ * @returns {string} 末尾スラッシュなしの URL
+ */
+function appWebUrl(app) {
+    const info = JSON.parse(herokuCapture(`apps:info -a ${app} --json`));
+    return (info?.app?.web_url || '').replace(/\/$/, '');
+}
+
+/**
  * Docker コマンドを実行する
  * @param {string} command - docker コマンド
  * @param {object} [options] - execSync オプション
@@ -191,6 +201,20 @@ export default function deployDevTasks(gulp) {
 
     gulp.task('deploy:dev:config', (done) => {
         const gatewayApp = appName('gatewayms');
+        const authApp = appName('authms');
+        const bookingApp = appName('bookingms');
+        const routingApp = appName('routingms');
+        const trackingApp = appName('trackingms');
+        const handlingApp = appName('handlingms');
+        const billingApp = appName('billingms');
+
+        const gatewayUrl = appWebUrl(gatewayApp);
+        const authUrl = appWebUrl(authApp);
+        const bookingUrl = appWebUrl(bookingApp);
+        const routingUrl = appWebUrl(routingApp);
+        const trackingUrl = appWebUrl(trackingApp);
+        const handlingUrl = appWebUrl(handlingApp);
+        const billingUrl = appWebUrl(billingApp);
 
         // バックエンドサービス共通設定
         for (const svc of BACKEND_SERVICES) {
@@ -203,11 +227,22 @@ export default function deployDevTasks(gulp) {
             }
         }
 
+        // Gateway: 各マイクロサービスのルーティング先 URL を設定
+        console.log(`Gateway のルーティング先を設定します (${gatewayApp})...`);
+        try {
+            heroku(
+                `config:set AUTHMS_URL=${authUrl} BOOKINGMS_URL=${bookingUrl} ROUTINGMS_URL=${routingUrl} ` +
+                `TRACKINGMS_URL=${trackingUrl} HANDLINGMS_URL=${handlingUrl} BILLINGMS_URL=${billingUrl} -a ${gatewayApp}`,
+            );
+        } catch (e) {
+            console.warn(`  ${gatewayApp} のルーティング設定をスキップしました: ${e.message}`);
+        }
+
         // フロントエンド: API Gateway の URL を設定
         const frontendApp = appName('frontend');
         console.log(`Config Vars を設定します (${frontendApp})...`);
         try {
-            heroku(`config:set API_GATEWAY_URL=https://${gatewayApp}.herokuapp.com/ -a ${frontendApp}`);
+            heroku(`config:set API_GATEWAY_URL=${gatewayUrl} -a ${frontendApp}`);
         } catch (e) {
             console.warn(`  ${frontendApp} の設定をスキップしました: ${e.message}`);
         }

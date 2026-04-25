@@ -2,10 +2,10 @@ import { Outlet, Link, useLocation } from 'react-router'
 import { useAuthStore } from '../stores/authStore'
 import { useLogout } from '../features/auth/hooks/useAuth'
 
-const NAV_ITEMS = [
+const NAV_ITEMS: Array<{ path: string; label: string; roles: string[] }> = [
   { path: '/dashboard', label: 'ダッシュボード', roles: [] },
   { path: '/routing/voyages', label: '航海スケジュール', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
-] as const
+]
 
 export function AppLayout() {
   const user = useAuthStore((s) => s.user)
@@ -13,7 +13,7 @@ export function AppLayout() {
   const location = useLocation()
 
   const visibleNavItems = NAV_ITEMS.filter(
-    (item) => item.roles.length === 0 || (user?.roles ?? []).some((r) => item.roles.includes(r as typeof item.roles[number]))
+    (item) => item.roles.length === 0 || (user?.roles ?? []).some((r) => item.roles.includes(r))
   )
 
   return (
