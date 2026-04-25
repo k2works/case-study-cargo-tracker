@@ -41,4 +41,22 @@ describe('AuthGuard', () => {
     expect(screen.getByText('保護されたページ')).toBeInTheDocument()
     expect(screen.queryByText('ログイン画面')).not.toBeInTheDocument()
   })
+
+  it('ログアウト後にトークンが破棄される', () => {
+    useAuthStore.getState().setAuth('test-token', { username: 'admin', roles: ['ROLE_ADMIN'] })
+    expect(useAuthStore.getState().token).toBe('test-token')
+
+    useAuthStore.getState().logout()
+    expect(useAuthStore.getState().token).toBeNull()
+    expect(useAuthStore.getState().user).toBeNull()
+    expect(sessionStorage.getItem('cargo_tracker_token')).toBeNull()
+  })
+
+  it('ログアウト後に保護されたページにアクセスするとリダイレクトされる', () => {
+    useAuthStore.getState().setAuth('test-token', { username: 'admin', roles: ['ROLE_ADMIN'] })
+    useAuthStore.getState().logout()
+    renderWithAuth()
+    expect(screen.getByText('ログイン画面')).toBeInTheDocument()
+    expect(screen.queryByText('保護されたページ')).not.toBeInTheDocument()
+  })
 })
