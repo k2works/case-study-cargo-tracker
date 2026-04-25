@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.authms.infrastructure.repositories.UserMapper">
+
+    <resultMap id="userResultMap" type="com.example.authms.infrastructure.repositories.UserRecord">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="email" column="email"/>
+        <result property="password" column="password"/>
+        <result property="enabled" column="enabled"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="roleResultMap" type="com.example.authms.infrastructure.repositories.RoleRecord">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+    </resultMap>
+
+    <select id="selectByUsername" resultMap="userResultMap">
+        SELECT id, username, email, password, enabled, created_at
+        FROM users
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectByEmail" resultMap="userResultMap">
+        SELECT id, username, email, password, enabled, created_at
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+    <select id="selectById" resultMap="userResultMap">
+        SELECT id, username, email, password, enabled, created_at
+        FROM users
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, email, password, enabled, created_at)
+        VALUES (#{username}, #{email}, #{password}, #{enabled}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="selectRolesByUserId" resultMap="roleResultMap">
+        SELECT r.id, r.name
+        FROM roles r
+        INNER JOIN user_roles ur ON r.id = ur.role_id
+        WHERE ur.user_id = #{userId}
+    </select>
+
+    <insert id="insertUserRole">
+        INSERT INTO user_roles (user_id, role_id)
+        VALUES (#{userId}, #{roleId})
+    </insert>
+
+    <select id="selectRoleByName" resultMap="roleResultMap">
+        SELECT id, name
+        FROM roles
+        WHERE name = #{name}
+    </select>
+
+</mapper>
