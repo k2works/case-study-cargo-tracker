@@ -4,6 +4,12 @@
   "main": "index.js",
   "scripts": {
     "start": "gulp dev",
+    "tdd": "gulp tdd",
+    "test": "gulp dev:backend:test",
+    "build": "gulp dev:backend:build",
+    "check": "gulp dev:backend:check",
+    "dev:frontend": "gulp dev:frontend",
+    "dev:help": "gulp dev:help",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
@@ -12,10 +18,16 @@
     "vault:decrypt": "gulp vault:decrypt",
     "vault:view": "gulp vault:view",
     "vault:rekey": "gulp vault:rekey",
+    "prepare": "husky",
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
     "gemini:yolo": "gemini --yolo"
+  },
+  "lint-staged": {
+    "apps/**/src/**/*.java": [
+      "node ops/scripts/pre_commit_gradle_check.mjs"
+    ]
   },
   "repository": {
     "type": "git",
@@ -37,5 +49,9 @@
     "@k2works/claude-code-booster": "^4.5.0",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
   }
 }
