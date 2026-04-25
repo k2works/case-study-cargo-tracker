@@ -18,13 +18,13 @@ function renderWithProviders() {
 }
 
 describe('App', () => {
-  it('renders dashboard heading', () => {
+  it('未認証時にログイン画面が表示される', () => {
     renderWithProviders()
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument()
   })
 
-  it('renders app name in header', () => {
+  it('未認証時にアプリ名が表示される', () => {
     renderWithProviders()
-    expect(screen.getByText('Cargo Tracker')).toBeInTheDocument()
+    expect(screen.getByText('CargoTracker')).toBeInTheDocument()
   })
 })
