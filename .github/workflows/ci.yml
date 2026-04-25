@@ -154,7 +154,7 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: [backend-build, frontend-build]
-    if: false  # 認証機能（US26）の実装完了後に有効化する
+    # US26 認証機能実装完了により有効化
 
     steps:
       - uses: actions/checkout@v4
@@ -213,11 +213,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install frontend dependencies and start preview
+      - name: Install frontend dependencies and start dev server
         working-directory: apps/frontend
         run: |
           npm install
-          npx vite preview --port 3000 &
+          npx vite --port 3000 &
 
       - name: Wait for frontend
         run: |

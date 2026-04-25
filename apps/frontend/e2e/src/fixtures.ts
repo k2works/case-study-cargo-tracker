@@ -8,7 +8,8 @@ type Fixtures = {
 export const test = base.extend<Fixtures>({
   loggedIn: async ({ page }, use) => {
     const loginPage = new LoginPage(page);
-    await loginPage.login('admin@example.com', 'admin');
+    await loginPage.login('admin', 'password');
+    await page.waitForURL('/dashboard');
     await use();
   },
 });
