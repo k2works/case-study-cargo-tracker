@@ -10,7 +10,7 @@ spring:
         - id: authms
           uri: http://localhost:8081
           predicates:
-            - Path=/api/auth/**
+            - Path=/api/v1/auth/**
         - id: bookingms
           uri: http://localhost:8082
           predicates:
