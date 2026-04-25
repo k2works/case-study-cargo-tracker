@@ -373,11 +373,13 @@ entity "carrier_movement" as cm {
     *id : bigint <<PK>>
     --
     *voyage_id : bigint <<FK>>
-    departure_location : varchar(5)
-    arrival_location : varchar(5)
-    departure_time : timestamp
-    arrival_time : timestamp
-    sort_order : int
+    departure_location_unlocode : varchar(5) <<FK>>
+    arrival_location_unlocode : varchar(5) <<FK>>
+    departure_date : timestamp
+    arrival_date : timestamp
+    seq_number : int
+    created_at : timestamp
+    updated_at : timestamp
 }
 
 v ||--o{ cm
@@ -619,7 +621,7 @@ apps/frontend/src/
 | リスク | 影響度 | 対策 |
 |--------|--------|------|
 | Spring Security + JWT の設定が複雑 | 高 | Day 1-3 で認証基盤を集中構築。参考プロジェクトのパターンを踏襲 |
-| IT1 の SP が大きい（35 SP） | 中 | Week 1（認証）と Week 2（航海スケジュール）に明確に分割。認証が遅延した場合は航海スケジュールの FE を IT2 に持ち越し |
+| IT1 の SP が大きい（35 SP、採用ベロシティ 18 SP の 194%） | 中 | 初回認証基盤構築（BE + FE 両面）による必然的な超過。Week 1（認証 17 SP）と Week 2（航海 18 SP）に分散。認証が遅延した場合は航海スケジュールの FE を IT2 に持ち越し |
 | MyBatis + ヘキサゴナルの組み合わせが未検証 | 中 | Week 2 の routingms で基盤を構築し早期に検証 |
 | React + TanStack Query のパターン未確立 | 中 | Week 1 の LoginForm で基準実装を確立 |
 
