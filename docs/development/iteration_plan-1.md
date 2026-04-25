@@ -350,6 +350,9 @@ apps/backend/routingms/src/main/java/com/example/routingms/
 |--------|--------|------|
 | MyBatis + ヘキサゴナルの組み合わせが未検証 | 中 | Day 1-2 で基盤を構築し早期に検証 |
 | CQRS の読み取り側 SQL が複雑になる | 低 | 初回は単純な SELECT で開始 |
+| React + TanStack Query のパターン未確立 | 中 | FE タスク 5-6 で航海スケジュール画面を基準実装として確立 |
+
+> **レビュー指摘対応（H3: 権限分離）**: IT1 では認証・認可は対象外。ROLE_ROUTING の権限制御は IT2 以降で authms 実装時に対応する。IT1 の FE 画面は認証なしで動作させる。
 
 ---
 
