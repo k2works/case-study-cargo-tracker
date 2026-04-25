@@ -1,0 +1,42 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: gatewayms
+  cloud:
+    gateway:
+      routes:
+        - id: authms
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+        - id: bookingms
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/booking/**
+        - id: routingms
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/routing/**
+        - id: trackingms
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/tracking/**
+        - id: handlingms
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/handling/**
+        - id: billingms
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/billing/**
+  devtools:
+    restart:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

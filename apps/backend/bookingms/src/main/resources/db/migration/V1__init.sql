@@ -1,0 +1,2 @@
+-- Booking Microservice initial schema
+-- This file is intentionally left minimal for the skeleton setup
