@@ -6,12 +6,14 @@ on:
     paths:
       - "apps/backend/**"
       - "apps/frontend/**"
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/**"
   pull_request:
     branches: [ "java/take-3" ]
     paths:
       - "apps/backend/**"
       - "apps/frontend/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
 
 jobs:
   # -------------------------------------------
