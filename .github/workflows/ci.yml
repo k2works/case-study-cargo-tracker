@@ -173,15 +173,29 @@ jobs:
 
       - name: Start Gateway Service
         run: |
-          java -jar apps/backend/gatewayms/build/libs/*.jar &
+          GATEWAY_JAR=$(find apps/backend/gatewayms/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+          if [ -z "$GATEWAY_JAR" ]; then
+            echo "Gateway executable jar not found"
+            ls -la apps/backend/gatewayms/build/libs || true
+            exit 1
+          fi
+          echo "Starting Gateway with $GATEWAY_JAR"
+          java -jar "$GATEWAY_JAR" > gateway.log 2>&1 &
         env:
-          SERVER_PORT: 8080
+          PORT: 8080
 
       - name: Start Auth Service
         run: |
-          java -jar apps/backend/authms/build/libs/*.jar &
+          AUTH_JAR=$(find apps/backend/authms/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+          if [ -z "$AUTH_JAR" ]; then
+            echo "Auth executable jar not found"
+            ls -la apps/backend/authms/build/libs || true
+            exit 1
+          fi
+          echo "Starting Auth with $AUTH_JAR"
+          java -jar "$AUTH_JAR" > auth.log 2>&1 &
         env:
-          SERVER_PORT: 8081
+          PORT: 8081
 
       - name: Wait for backend services
         run: |
@@ -195,6 +209,10 @@ jobs:
               fi
               if [ $i -eq 30 ]; then
                 echo "Service on port $port did not start in time"
+                echo "==== gateway.log ===="
+                cat gateway.log || true
+                echo "==== auth.log ===="
+                cat auth.log || true
                 exit 1
               fi
               echo "Attempt $i/30: port=$port status=$STATUS, retrying in 5s..."
