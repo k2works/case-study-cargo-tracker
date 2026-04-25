@@ -12,6 +12,7 @@ import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import developTasks from './ops/scripts/develop.js';
+import deployDevTasks from './ops/scripts/deploy_dev.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -20,6 +21,7 @@ vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
 developTasks(gulp);
+deployDevTasks(gulp);
 
 export const dev = gulp.series('dev:backend');
 export const tdd = gulp.series('dev:backend:tdd');
