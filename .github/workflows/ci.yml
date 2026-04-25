@@ -123,12 +123,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: apps/frontend/package-lock.json
 
       - name: Install dependencies
         working-directory: apps/frontend
-        run: npm ci
+        run: npm install
 
       - name: Lint
         working-directory: apps/frontend
@@ -213,13 +211,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: apps/frontend/e2e/package-lock.json
 
       - name: Install frontend dependencies and start preview
         working-directory: apps/frontend
         run: |
-          npm ci
+          npm install
           npx vite preview --port 3000 &
 
       - name: Wait for frontend
@@ -239,7 +235,7 @@ jobs:
 
       - name: Install E2E dependencies
         working-directory: apps/frontend/e2e
-        run: npm ci
+        run: npm install
 
       - name: Install Playwright browsers
         working-directory: apps/frontend/e2e
