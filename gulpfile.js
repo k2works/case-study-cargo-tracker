@@ -23,6 +23,7 @@ sonarLocalTasks(gulp);
 developTasks(gulp);
 deployDevTasks(gulp);
 
+export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 export const dev = gulp.series('dev:backend');
 export const tdd = gulp.series('dev:backend:tdd');
 export const doc = gulp.series('mkdocs:serve', 'mkdocs:open');
