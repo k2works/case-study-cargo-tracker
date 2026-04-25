@@ -23,8 +23,8 @@
 
 ### 成功基準
 
-- [ ] US26: ログイン API が JWT トークンを発行する
-- [ ] US27: ログアウト後、認証画面にリダイレクトされる
+- [x] US26: ログイン API が JWT トークンを発行する
+- [x] US27: ログアウト後、認証画面にリダイレクトされる
 - [ ] US24: 航海スケジュール新規登録 API が動作する（認証必須）
 - [ ] US25: 航海スケジュール更新 API が動作する（認証必須）
 - [ ] US07: 航海スケジュール検索 API が動作する（認証必須）
@@ -118,11 +118,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | Flyway マイグレーション（`V2__create_users.sql` を `authms/src/main/resources/db/migration/` に配置） | 2h | [ ] |
-| 1.2 | ドメインモデル: User 集約、Role エンティティ、Password・Email 値オブジェクト | 3h | [ ] |
-| 1.3 | MyBatis マッパー XML + UserMapper インターフェース | 2h | [ ] |
-| 1.4 | リポジトリインターフェース + MyBatis 実装 | 2h | [ ] |
-| 1.5 | Spring Security + JWT 設定（JwtTokenProvider, SecurityConfig） | 3h | [ ] |
+| 1.1 | Flyway マイグレーション（`V2__create_users.sql` を `authms/src/main/resources/db/migration/` に配置） | 2h | [x] |
+| 1.2 | ドメインモデル: User 集約、Role エンティティ、Password・Email 値オブジェクト | 3h | [x] |
+| 1.3 | MyBatis マッパー XML + UserMapper インターフェース | 2h | [x] |
+| 1.4 | リポジトリインターフェース + MyBatis 実装 | 2h | [x] |
+| 1.5 | Spring Security + JWT 設定（JwtTokenProvider, SecurityConfig） | 3h | [x] |
 
 **小計**: 12h
 
@@ -130,11 +130,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | AuthCommandService（ログイン・ユーザー登録） | 3h | [ ] |
-| 2.2 | AuthController（POST /api/v1/auth/login, POST /api/v1/auth/register） | 2h | [ ] |
-| 2.3 | DTO（LoginRequest, RegisterRequest, TokenResponse） | 1h | [ ] |
-| 2.4 | 統合テスト（MockMvc + H2: 正常ログイン、認証失敗） | 2h | [ ] |
-| 2.5 | 初期ユーザーデータ（Flyway V3__seed_users.sql） | 1h | [ ] |
+| 2.1 | AuthCommandService（ログイン・ユーザー登録） | 3h | [x] |
+| 2.2 | AuthController（POST /api/v1/auth/login, POST /api/v1/auth/register） | 2h | [x] |
+| 2.3 | DTO（LoginRequest, RegisterRequest, TokenResponse） | 1h | [x] |
+| 2.4 | 統合テスト（MockMvc + H2: 正常ログイン、認証失敗） | 2h | [x] |
+| 2.5 | 初期ユーザーデータ（Flyway V3__seed_users.sql） | 1h | [x] |
 
 **小計**: 9h
 
@@ -142,8 +142,8 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | gatewayms JWT 検証フィルタ設定 | 2h | [ ] |
-| 3.2 | 統合テスト（未認証リクエストの 401 応答） | 1h | [ ] |
+| 3.1 | gatewayms JWT 検証フィルタ設定 | 2h | [x] |
+| 3.2 | 統合テスト（未認証リクエストの 401 応答） | 1h | [x] |
 
 **小計**: 3h
 
@@ -151,14 +151,14 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | `features/auth/hooks/useAuth.ts`（ログイン/ログアウト Mutation） | 2h | [ ] |
-| 4.2 | `features/auth/components/LoginForm.tsx`（React Hook Form） | 3h | [ ] |
-| 4.3 | `pages/LoginPage.tsx` + AuthLayout | 2h | [ ] |
-| 4.4 | `stores/authStore.ts` に JWT トークン保存・復元ロジック追加 | 1h | [ ] |
-| 4.5 | `lib/api-client.ts` に JWT 自動付与を統合テスト | 1h | [ ] |
-| 4.6 | AppLayout にロール別ナビゲーション・ログアウトボタン追加 | 2h | [ ] |
-| 4.7 | ルートガード（未認証時リダイレクト）の実装 | 2h | [ ] |
-| 4.8 | Vitest コンポーネントテスト（LoginForm, AuthGuard） | 2h | [ ] |
+| 4.1 | `features/auth/hooks/useAuth.ts`（ログイン/ログアウト Mutation） | 2h | [x] |
+| 4.2 | `features/auth/components/LoginForm.tsx`（React Hook Form） | 3h | [x] |
+| 4.3 | `pages/LoginPage.tsx` + AuthLayout | 2h | [x] |
+| 4.4 | `stores/authStore.ts` に JWT トークン保存・復元ロジック追加 | 1h | [x] |
+| 4.5 | `lib/api-client.ts` に JWT 自動付与を統合テスト | 1h | [x] |
+| 4.6 | AppLayout にロール別ナビゲーション・ログアウトボタン追加 | 2h | [x] |
+| 4.7 | ルートガード（未認証時リダイレクト）の実装 | 2h | [x] |
+| 4.8 | Vitest コンポーネントテスト（LoginForm, AuthGuard） | 2h | [x] |
 
 **小計**: 15h
 
@@ -205,17 +205,17 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| BE: authms 基盤構築 | 3 | 12h | [ ] |
-| BE: US26 ログイン API | 5 | 9h | [ ] |
-| BE: US27 ログアウト + Gateway JWT | 2 | 3h | [ ] |
-| FE: US26 + US27 ログイン/ログアウト画面 | 7 | 15h | [ ] |
+| BE: authms 基盤構築 | 3 | 12h | [x] |
+| BE: US26 ログイン API | 5 | 9h | [x] |
+| BE: US27 ログアウト + Gateway JWT | 2 | 3h | [x] |
+| FE: US26 + US27 ログイン/ログアウト画面 | 7 | 15h | [x] |
 | BE: routingms 基盤構築 | 2 | 9h | [ ] |
 | BE: US24 + US25 + US07 航海スケジュール API | 8 | 12h | [ ] |
 | FE: US24 + US25 + US07 航海スケジュール画面 | 7 | 13h | [ ] |
 | **合計** | **34** | **73h** | |
 
 **1 SP あたり**: 約 2.1h
-**進捗率**: 0% (0/35 SP)
+**進捗率**: 49% (17/35 SP) — US26(13SP) + US27(4SP) 完了
 
 > **Note**: IT1 は認証基盤（authms + gatewayms）と業務機能（routingms）を同時に構築するため、SP が他イテレーションより大きい。Week 1 を認証、Week 2 を航海スケジュールに分けて集中的に取り組む。
 
@@ -658,6 +658,7 @@ apps/frontend/src/
 | 2026-04-25 | 初版作成 | - |
 | 2026-04-25 | フロントエンドタスクを追加 | - |
 | 2026-04-25 | 認証ストーリー（US26/US27）を IT1 先頭に追加。認証 + 航海スケジュールの 2 週間構成に再構成 | - |
+| 2026-04-25 | US26/US27 完了。BE 13 テスト + FE 9 テスト + E2E 5 テスト全パス。進捗率 49%（17/35 SP） | - |
 
 ---
 
