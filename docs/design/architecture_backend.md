@@ -2,7 +2,7 @@
 title: バックエンドアーキテクチャ
 description: 国際貨物輸送管理システムのバックエンドアーキテクチャ設計。DDD・ヘキサゴナル・CQRS パターンをマイクロサービスとして Spring Boot で実装する。
 published: true
-date: 2026-04-24T00:00:00.000Z
+date: 2026-04-25T00:00:00.000Z
 tags: architecture, backend, ddd, hexagonal, cqrs, microservices, spring-boot
 ---
 
@@ -12,7 +12,7 @@ tags: architecture, backend, ddd, hexagonal, cqrs, microservices, spring-boot
 
 本ドキュメントでは、国際貨物輸送管理システムのバックエンドアーキテクチャを定義する。
 Practical DDD in Enterprise Java（Chapter 5）のマイクロサービスアーキテクチャ思想（DDD・ヘキサゴナル・イベント駆動・CQRS）を継承しつつ、
-Spring Boot 4.x / Java 25 を基盤とし、データアクセスには MyBatis を採用した現代的な実装とする。
+Spring Boot 4.0.5 / Java 25 / Gradle 9.2.1 を基盤とし、データアクセスには MyBatis を採用した現代的な実装とする。
 
 ## アーキテクチャパターン選択
 
@@ -378,10 +378,10 @@ event_port <|.. [RabbitMQCargoEventPublisher\n(infrastructure/brokers/)]
 認証コンテキスト（authms）もビジネスコンテキストと同様に独立したマイクロサービスとする。
 
 ```
-cargo-tracker/                           ルートプロジェクト
+apps/backend/                            Gradle マルチプロジェクトルート
 │
 ├── authms/                              ★ 認証マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/cargotracker/authms/
+│   └── src/main/java/com/example/authms/
 │       ├── domain/
 │       │   └── model/
 │       │       ├── aggregates/          集約ルート（User, UserId）
@@ -400,7 +400,7 @@ cargo-tracker/                           ルートプロジェクト
 │               └── dto/                 LoginRequest, TokenResponse
 │
 ├── bookingms/                           ★ 予約マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/cargotracker/bookingms/
+│   └── src/main/java/com/example/bookingms/
 │       ├── domain/
 │       │   └── model/
 │       │       ├── aggregates/          集約ルート（Cargo, BookingId）
@@ -428,7 +428,7 @@ cargo-tracker/                           ルートプロジェクト
 │           └── events/
 │
 ├── routingms/                           ★ 経路設計マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/cargotracker/routingms/
+│   └── src/main/java/com/example/routingms/
 │       ├── domain/
 │       │   └── model/
 │       │       ├── aggregates/          集約ルート（Voyage, VoyageNumber）
@@ -446,7 +446,7 @@ cargo-tracker/                           ルートプロジェクト
 │               └── transform/
 │
 ├── trackingms/                          ★ 追跡マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/cargotracker/trackingms/
+│   └── src/main/java/com/example/trackingms/
 │       ├── domain/
 │       │   └── model/
 │       │       ├── aggregates/          集約ルート（TrackingActivity, TrackingNumber）
@@ -463,7 +463,7 @@ cargo-tracker/                           ルートプロジェクト
 │           └── events/                  イベント受信（CargoRoutedEventHandler）
 │
 ├── handlingms/                          ★ 荷役マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/cargotracker/handlingms/
+│   └── src/main/java/com/example/handlingms/
 │       ├── domain/
 │       │   └── model/
 │       │       ├── aggregates/          集約ルート（HandlingActivity）
@@ -480,7 +480,7 @@ cargo-tracker/                           ルートプロジェクト
 │           └── rest/                    REST Controller（HandlingController）
 │
 ├── billingms/                           ★ 請求マイクロサービス（独立デプロイ）
-│   └── src/main/java/com/cargotracker/billingms/
+│   └── src/main/java/com/example/billingms/
 │       ├── domain/
 │       │   └── model/
 │       │       ├── aggregates/          集約ルート（Invoice）
@@ -497,18 +497,27 @@ cargo-tracker/                           ルートプロジェクト
 │           └── events/                  イベント受信（CargoDeliveredEventHandler）
 │
 ├── gatewayms/                           ★ API Gateway（独立デプロイ）
-│   └── src/main/java/com/cargotracker/gatewayms/
+│   └── src/main/java/com/example/gatewayms/
 │       └── config/                      ルーティング定義、JWT フィルター
 │
-└── shared/                              ★ 共有ライブラリ（デプロイ単位ではない）
-    └── src/main/java/com/cargotracker/shared/
-        └── domain/
-            └── model/                   Location（UN/LOCODE）等
+├── shared/                              ★ 共有ライブラリ（デプロイ単位ではない）
+│   └── src/main/java/com/example/shared/
+│       └── domain/
+│           └── model/                   Location（UN/LOCODE）等
+│
+├── settings.gradle                      Gradle マルチプロジェクト設定
+├── build.gradle                         共通設定（Java 25, 品質管理, テスト）
+├── gradlew, gradlew.bat                 Gradle Wrapper (9.2.1)
+└── config/
+    ├── checkstyle/checkstyle.xml         Checkstyle ルール
+    └── spotbugs/exclude-filter.xml       SpotBugs 除外フィルター
 ```
 
-> **ポイント**: 各ディレクトリ（authms, bookingms, routingms, ...）は独立した Gradle サブプロジェクトであり、
+> **ポイント**: `apps/backend/` が Gradle マルチプロジェクトのルートであり、
+> 各ディレクトリ（authms, bookingms, routingms, ...）は独立した Gradle サブプロジェクトとなる。
 > それぞれが独自の `build.gradle`、`application.yml`、`Dockerfile` を持つ。
-> `shared/` のみライブラリとして各サービスが依存する。
+> `shared/` のみライブラリとして各サービスが `implementation project(':shared')` で依存する。
+> Docker Compose（`apps/docker-compose.yml`）とフロントエンド（`apps/frontend/`）は `apps/` 直下に配置する。
 
 ## CQRS 設計
 
@@ -890,17 +899,22 @@ package "単体テスト（多数）" #LightGreen {
 
 | カテゴリ | 技術 | バージョン |
 | :--- | :--- | :--- |
-| フレームワーク | Spring Boot | 4.x |
-| Java | OpenJDK | 25 |
-| データアクセス | MyBatis + MyBatis Spring Boot Starter | 4.x |
+| フレームワーク | Spring Boot | 4.0.5 |
+| Java | Eclipse Temurin | 25 |
+| データアクセス | MyBatis + MyBatis Spring Boot Starter | 4.0.1 |
 | メッセージング | Spring Cloud Stream + RabbitMQ | 4.x |
 | API ゲートウェイ | Spring Cloud Gateway | 4.x |
 | サービス間通信 | RestTemplate / WebClient | - |
-| データベース | PostgreSQL | 8.x |
+| データベース | PostgreSQL / H2（開発用） | 16.x / 2.x |
 | マイグレーション | Flyway | 10.x |
-| ビルドツール | Gradle | 8.x |
+| API ドキュメント | springdoc-openapi | 3.0.2 |
+| ビルドツール | Gradle (Wrapper) | 9.2.1 |
+| 品質管理 | Checkstyle / SpotBugs | 10.21.4 / 6.1.3 |
+| カバレッジ | JaCoCo | - |
+| 品質分析 | SonarQube | 6.3.1.5724（プラグイン） |
 | コンテナ | Docker / Docker Compose | - |
-| テスト | JUnit 5, Mockito, AssertJ, Testcontainers | - |
+| テスト | JUnit 5, Mockito, AssertJ, Testcontainers | 1.20.4 |
+| アーキテクチャテスト | ArchUnit | 1.4.1 |
 | Contract テスト | Spring Cloud Contract | 4.x |
 
 ## 参照
