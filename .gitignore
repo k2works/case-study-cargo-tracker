@@ -30,6 +30,10 @@ npm-debug.log*
 # Coverage
 coverage/
 
+# SonarQube
+.scannerwork/
+sonarqube.config.json
+
 # Temporary
 tmp/
 .tmp/
