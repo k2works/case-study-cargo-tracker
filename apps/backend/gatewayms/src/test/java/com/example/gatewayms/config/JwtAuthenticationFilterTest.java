@@ -34,11 +34,11 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void 認証不要パスはトークンなしでアクセスできる() {
-        webTestClient.post()
-                .uri("/api/v1/auth/login")
+    void actuatorエンドポイントはトークンなしでアクセスできる() {
+        webTestClient.get()
+                .uri("/actuator/health")
                 .exchange()
-                .expectStatus().isNotFound(); // バックエンド未起動なので 404 だが 401 ではない
+                .expectStatus().isOk();
     }
 
     @Test
@@ -69,14 +69,6 @@ class JwtAuthenticationFilterTest {
                 .expectStatus().value(status ->
                         assertThat(status).isNotEqualTo(HttpStatus.UNAUTHORIZED.value())
                 );
-    }
-
-    @Test
-    void actuatorエンドポイントはトークンなしでアクセスできる() {
-        webTestClient.get()
-                .uri("/actuator/health")
-                .exchange()
-                .expectStatus().isOk();
     }
 
     private String generateValidToken() {

@@ -36,8 +36,9 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
+        boolean publicPath = isPublicPath(path);
 
-        if (isPublicPath(path)) {
+        if (publicPath) {
             return chain.filter(exchange);
         }
 
