@@ -10,7 +10,7 @@ import { cleanDockerEnv, openUrl } from './shared.js';
 const BACKEND_DIR = 'apps/backend';
 const FRONTEND_DIR = 'apps/frontend';
 const APPS_DIR = 'apps';
-const GRADLEW = './gradlew';
+const GRADLEW = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
 
 /** バックエンドサービス定義 */
 const SERVICES = [

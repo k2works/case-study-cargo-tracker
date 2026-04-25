@@ -10,6 +10,7 @@ import { cleanDockerEnv, openUrl } from './shared.js';
 const PREFIX = 'DEV';
 const BACKEND_DIR = 'apps/backend';
 const FRONTEND_DIR = 'apps/frontend';
+const GRADLEW = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
 
 /** バックエンドサービス定義 */
 const BACKEND_SERVICES = [
@@ -93,12 +94,40 @@ function heroku(command, options = {}) {
 }
 
 /**
+ * Heroku CLI コマンドの標準出力を文字列で取得する
+ * @param {string} command - heroku コマンド
+ * @param {object} [options] - execSync オプション
+ * @returns {string} コマンド出力
+ */
+function herokuCapture(command, options = {}) {
+    return execSync(`heroku ${command}`, {
+        env: cleanDockerEnv(),
+        ...options,
+    }).toString().trim();
+}
+
+/**
  * Docker コマンドを実行する
  * @param {string} command - docker コマンド
  * @param {object} [options] - execSync オプション
  */
 function docker(command, options = {}) {
     execSync(`docker ${command}`, { stdio: 'inherit', env: cleanDockerEnv(), ...options });
+}
+
+/**
+ * Heroku アプリに紐づく CloudAMQP アドオン一覧を取得する
+ * @param {string} app - Heroku アプリ名
+ * @returns {Array<{name: string, plan?: {name?: string}}>} CloudAMQP アドオン一覧
+ */
+function getCloudAmqpAddons(app) {
+    const output = herokuCapture(`addons -a ${app} --json`);
+    const addons = JSON.parse(output);
+    return addons.filter((addon) => {
+        const serviceName = addon?.addon_service?.name;
+        const addonName = addon?.name || '';
+        return serviceName === 'cloudamqp' || addonName.startsWith('cloudamqp-');
+    });
 }
 
 // ============================================
@@ -195,6 +224,13 @@ export default function deployDevTasks(gulp) {
         const primary = appName(CLOUDAMQP_PRIMARY);
         console.log(`CloudAMQP アドオンを追加します (${primary})...`);
         try {
+            const existingAddons = getCloudAmqpAddons(primary);
+            if (existingAddons.length > 0) {
+                console.log(`CloudAMQP は既に追加済みです（${existingAddons.length} 件）。`);
+                console.log(`  ${existingAddons.map((addon) => addon.name).join(', ')}`);
+                done();
+                return;
+            }
             heroku(`addons:create cloudamqp -a ${primary}`);
             console.log('CloudAMQP アドオンを追加しました。');
         } catch (e) {
@@ -253,7 +289,18 @@ export default function deployDevTasks(gulp) {
         const primary = appName(CLOUDAMQP_PRIMARY);
         console.log(`CloudAMQP アドオン情報 (${primary}):`);
         try {
-            heroku(`addons:info cloudamqp -a ${primary}`);
+            const cloudAmqpAddons = getCloudAmqpAddons(primary);
+            if (cloudAmqpAddons.length === 0) {
+                console.log('  CloudAMQP アドオンは見つかりませんでした。');
+            } else {
+                if (cloudAmqpAddons.length > 1) {
+                    console.log(`  複数の CloudAMQP アドオンが見つかりました（${cloudAmqpAddons.length} 件）。`);
+                }
+                for (const addon of cloudAmqpAddons) {
+                    console.log(`\n  - ${addon.name}`);
+                    heroku(`addons:info ${addon.name} -a ${primary}`);
+                }
+            }
         } catch (e) {
             console.warn(`  情報取得できませんでした: ${e.message}`);
         }
@@ -282,7 +329,7 @@ export default function deployDevTasks(gulp) {
     gulp.task('deploy:dev:build:backend', (done) => {
         console.log('バックエンド JAR をビルドします...');
         try {
-            execSync('./gradlew bootJar', {
+            execSync(`${GRADLEW} bootJar`, {
                 cwd: BACKEND_DIR,
                 stdio: 'inherit',
             });
@@ -313,7 +360,7 @@ export default function deployDevTasks(gulp) {
     ));
 
     // --------------------------------------------------------
-    // Push（heroku container:push）
+    // Push（docker build + docker push）
     // --------------------------------------------------------
 
     // サービスごとの push タスクを動的生成
@@ -322,10 +369,15 @@ export default function deployDevTasks(gulp) {
             const name = appName(svc.name);
             const platform = dockerPlatform();
             const dir = serviceDir(svc);
+            const image = `registry.heroku.com/${name}/web`;
             console.log(`Heroku に push します: ${name} (${svc.label})...`);
             try {
                 const env = { ...cleanDockerEnv(), DOCKER_DEFAULT_PLATFORM: platform };
-                heroku(`container:push web -a ${name}`, { cwd: dir, env });
+                docker(
+                    `buildx build --platform ${platform} --provenance=false --sbom=false --load -t ${image} .`,
+                    { cwd: dir, env },
+                );
+                docker(`push --platform ${platform} ${image}`, { cwd: dir, env });
                 done();
             } catch (e) {
                 done(e);

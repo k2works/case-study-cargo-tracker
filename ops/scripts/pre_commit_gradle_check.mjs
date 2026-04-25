@@ -11,11 +11,12 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '../../apps/backend');
+const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
 
 console.log('Running Gradle check in apps/backend/...');
 
 try {
-    execSync('./gradlew check', {
+    execSync(`${gradlew} check`, {
         cwd: projectRoot,
         stdio: 'inherit',
         timeout: 300000,
