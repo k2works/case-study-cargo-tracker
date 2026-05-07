@@ -35,8 +35,7 @@ class VoyageNumberTest {
     void shouldBeEqualWhenSameNumber() {
         VoyageNumber v1 = new VoyageNumber("V001");
         VoyageNumber v2 = new VoyageNumber("V001");
-        assertThat(v1).isEqualTo(v2);
-        assertThat(v1.hashCode()).isEqualTo(v2.hashCode());
+        assertThat(v1).isEqualTo(v2).hasSameHashCodeAs(v2);
     }
 
     @Test
