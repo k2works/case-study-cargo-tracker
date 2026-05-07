@@ -21,11 +21,11 @@
 
 ### 成功基準
 
-- [ ] US04: 貨物予約の新規登録 API が動作する（認証必須）
-- [ ] US04: 貨物予約一覧・登録画面が動作する
-- [ ] US08: 経路候補算出 API が動作する（認証必須）
-- [ ] US08: 経路設計画面で候補が表示される
-- [ ] ArchUnit テストが通過する（ヘキサゴナル依存ルール）
+- [x] US04: 貨物予約の新規登録 API が動作する（認証必須）
+- [x] US04: 貨物予約一覧・登録画面が動作する
+- [x] US08: 経路候補算出 API が動作する（認証必須）
+- [x] US08: 経路設計画面で候補が表示される
+- [x] ArchUnit テストが通過する（ヘキサゴナル依存ルール）
 - [ ] テストカバレッジ 80% 以上（bookingms + routingms、JaCoCo / Vitest で測定）
 
 ---
@@ -82,11 +82,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | Flyway マイグレーション（cargo テーブル） | 1h | [ ] |
-| 1.2 | Cargo 集約ドメインモデル（BookingId / ShipperId / RouteSpecification / CargoType / Weight / BookingStatus）※IT2スコープ | 2h | [ ] |
-| 1.3 | BookingStatus 全状態値を定義（PRELIMINARY / ROUTE_PROPOSED / CONFIRMED / TRACKING_ISSUED / IN_TRANSIT / DELIVERED / SETTLED / CANCELLED） | 1h | [ ] |
-| 1.4 | CargoMapper（MyBatis）+ MyBatisCargoRepository | 2h | [ ] |
-| 1.5 | ArchUnit テスト（ヘキサゴナル依存ルール） | 1h | [ ] |
+| 1.1 | Flyway マイグレーション（cargo テーブル） | 1h | [x] |
+| 1.2 | Cargo 集約ドメインモデル（BookingId / ShipperId / RouteSpecification / CargoType / Weight / BookingStatus）※IT2スコープ | 2h | [x] |
+| 1.3 | BookingStatus 全状態値を定義（PRELIMINARY / ROUTE_PROPOSED / CONFIRMED / TRACKING_ISSUED / IN_TRANSIT / DELIVERED / SETTLED / CANCELLED） | 1h | [x] |
+| 1.4 | CargoMapper（MyBatis）+ MyBatisCargoRepository | 2h | [x] |
+| 1.5 | ArchUnit テスト（ヘキサゴナル依存ルール） | 1h | [x] |
 
 **小計**: 7h
 
@@ -94,12 +94,12 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | CargoCommandService（予約登録）TDD | 2h | [ ] |
-| 2.2 | CargoQueryService（一覧・詳細）TDD | 2h | [ ] |
-| 2.3 | CargoController（POST /api/booking/v1/cargos）+ DTO | 2h | [ ] |
-| 2.4 | CargoController（GET /api/booking/v1/cargos, GET /:bookingId）| 2h | [ ] |
-| 2.5 | Gateway ルート追加（/api/booking/**）| 1h | [ ] |
-| 2.6 | MockMvc 統合テスト | 2h | [ ] |
+| 2.1 | CargoCommandService（予約登録）TDD | 2h | [x] |
+| 2.2 | CargoQueryService（一覧・詳細）TDD | 2h | [x] |
+| 2.3 | CargoController（POST /api/booking/v1/cargos）+ DTO | 2h | [x] |
+| 2.4 | CargoController（GET /api/booking/v1/cargos, GET /:bookingId）| 2h | [x] |
+| 2.5 | Gateway ルート追加（/api/booking/**）| 1h | [x] |
+| 2.6 | MockMvc 統合テスト | 2h | [x] |
 
 **小計**: 11h
 
@@ -107,12 +107,12 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | Cargo 型定義 + useBookings / useCreateBooking hooks | 1h | [ ] |
-| 3.2 | BookingList コンポーネント（ステータスバッジ付きテーブル） | 2h | [ ] |
-| 3.3 | BookingForm コンポーネント（React Hook Form + バリデーション） | 2h | [ ] |
-| 3.4 | BookingListPage / BookingNewPage / App.tsx ルート追加 | 1h | [ ] |
-| 3.5 | ナビゲーションに「貨物予約」追加（ROLE_SALES） | 0.5h | [ ] |
-| 3.6 | Vitest コンポーネントテスト | 1.5h | [ ] |
+| 3.1 | Cargo 型定義 + useBookings / useCreateBooking hooks | 1h | [x] |
+| 3.2 | BookingList コンポーネント（ステータスバッジ付きテーブル） | 2h | [x] |
+| 3.3 | BookingForm コンポーネント（React Hook Form + バリデーション） | 2h | [x] |
+| 3.4 | BookingListPage / BookingNewPage / App.tsx ルート追加 | 1h | [x] |
+| 3.5 | ナビゲーションに「貨物予約」追加（ROLE_SALES） | 0.5h | [x] |
+| 3.6 | Vitest コンポーネントテスト | 1.5h | [x] |
 
 **小計**: 8h
 
@@ -120,11 +120,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | RoutingSpec 値オブジェクト（origin: String / destination: String / arrivalDeadline: LocalDate） | 1h | [ ] |
-| 4.2 | Itinerary / Leg ドメインモデル（Leg: voyage: VoyageNumber / loadLocation / unloadLocation / loadTime / unloadTime） | 2h | [ ] |
-| 4.3 | RouteFinderService TDD（接続可能航海の組み合わせ算出・直行便優先→所要日数昇順ソート） | 3h | [ ] |
-| 4.4 | RoutingController（POST /api/routing/v1/itineraries） + DTO（ItineraryResponse: legs / totalDays） | 2h | [ ] |
-| 4.5 | MockMvc 統合テスト（正常系: 直行便 / 乗継 / 経路なし） | 2h | [ ] |
+| 4.1 | RoutingSpec 値オブジェクト（origin: String / destination: String / arrivalDeadline: LocalDate） | 1h | [x] |
+| 4.2 | Itinerary / Leg ドメインモデル（Leg: voyage: VoyageNumber / loadLocation / unloadLocation / loadTime / unloadTime） | 2h | [x] |
+| 4.3 | RouteFinderService TDD（接続可能航海の組み合わせ算出・直行便優先→所要日数昇順ソート） | 3h | [x] |
+| 4.4 | RoutingController（POST /api/routing/v1/itineraries） + DTO（ItineraryResponse: legs / totalDays） | 2h | [x] |
+| 4.5 | MockMvc 統合テスト（正常系: 直行便 / 乗継 / 経路なし） | 2h | [x] |
 
 **小計**: 10h
 
@@ -132,10 +132,10 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 5.1 | Itinerary 型定義 + useItineraries hook | 1h | [ ] |
-| 5.2 | RoutingDesignPage（経路候補一覧・選択 UI） | 2h | [ ] |
-| 5.3 | App.tsx ルート追加（/routing/design/:bookingId） | 0.5h | [ ] |
-| 5.4 | Vitest コンポーネントテスト | 1.5h | [ ] |
+| 5.1 | Itinerary 型定義 + useItineraries hook | 1h | [x] |
+| 5.2 | RoutingDesignPage（経路候補一覧・選択 UI） | 2h | [x] |
+| 5.3 | App.tsx ルート追加（/routing/design/:bookingId） | 0.5h | [x] |
+| 5.4 | Vitest コンポーネントテスト | 1.5h | [x] |
 
 **小計**: 5h
 
@@ -143,16 +143,16 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| Task 1: bookingms 基盤構築 | 2 | 7h | [ ] |
-| Task 2: US04 BE 貨物予約 API | 8 | 11h | [ ] |
-| Task 3: US04 FE 貨物予約画面 | 5 | 8h | [ ] |
-| Task 4: US08 BE 経路候補算出 API | 8 | 10h | [ ] |
-| Task 5: US08 FE 経路設計画面 | 3 | 5h | [ ] |
+| Task 1: bookingms 基盤構築 | 2 | 7h | [x] |
+| Task 2: US04 BE 貨物予約 API | 8 | 11h | [x] |
+| Task 3: US04 FE 貨物予約画面 | 5 | 8h | [x] |
+| Task 4: US08 BE 経路候補算出 API | 8 | 10h | [x] |
+| Task 5: US08 FE 経路設計画面 | 3 | 5h | [x] |
 | **合計** | **26** | **41h** | |
 
 **1 SP あたり**: 約 1.6h（IT1 実績 2.1h より効率改善を期待）
 
-**進捗率**: 0% (0/24 SP)
+**進捗率**: 100% (24/24 SP)
 
 > **Note**: IT1 のふりかえり「Try」を踏まえ、API パスを事前に Gateway ルートと照合済み（`/api/booking/**`）。FE 実装時は `docs/design/ui-design.md` のワイヤーフレームを必ず参照する。
 
@@ -519,14 +519,14 @@ apps/frontend/src/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（AI エージェントによる多角的レビュー実施）
-- [ ] ユニットテスト（BE + FE）がパス
-- [ ] 統合テスト（MockMvc + H2）がパス
-- [ ] ArchUnit テストがパス
-- [ ] Checkstyle / SpotBugs エラーなし（BUILD SUCCESSFUL）
-- [ ] テストカバレッジ 80% 以上（JaCoCo / Vitest）
-- [ ] E2E テストがパス（新規シナリオ追加）
-- [ ] ドキュメント更新完了（iteration_plan-2.md 更新）
+- [x] コードレビュー完了（AI エージェントによる多角的レビュー実施）
+- [x] ユニットテスト（BE + FE）がパス
+- [x] 統合テスト（MockMvc + H2）がパス
+- [x] ArchUnit テストがパス
+- [x] Checkstyle / SpotBugs エラーなし（BUILD SUCCESSFUL）
+- [ ] テストカバレッジ 80% 以上（JaCoCo / Vitest）※未達成: bookingms 76.5%、routingms 77.6%、FE 37%（IT3 対応）
+- [x] E2E テストがパス（新規シナリオ追加）
+- [x] ドキュメント更新完了（iteration_plan-2.md 更新）
 
 ### デモ項目
 
@@ -553,6 +553,7 @@ apps/frontend/src/
 |------|---------|--------|
 | 2026-05-07 | 初版作成 | - |
 | 2026-05-07 | 整合性検証結果を反映: 受入基準の IT2 スコープ明示・IT3 持ち越し記載、BookingStatus 全状態値追加、データモデル DDL を data-model.md に合わせて修正（shipper_id BIGINT/カラム名統一/Money カラム追加）、Leg の型を VoyageNumber/Location に修正、RouteFinderService の優先順序ロジック明記、E2E テストシナリオ追加 | - |
+| 2026-05-07 | IT2 実装完了: US04/US08 BE+FE 実装、CI GREEN、タスク全完了（24/24 SP）。カバレッジ 80% 未達（bookingms 76.5%/routingms 77.6%/FE 37%）は IT3 対応 | - |
 
 ---
 
