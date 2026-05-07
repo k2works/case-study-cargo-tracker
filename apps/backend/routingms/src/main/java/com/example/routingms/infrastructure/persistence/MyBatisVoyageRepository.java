@@ -26,11 +26,11 @@ public class MyBatisVoyageRepository implements VoyageRepository {
 
     @Override
     public Voyage save(Voyage voyage) {
-        VoyageRecord record = new VoyageRecord();
-        record.setVoyageNumber(voyage.getVoyageNumber().getNumber());
-        voyageMapper.insertVoyage(record); // useGeneratedKeys=true → id がセットされる
+        VoyageRecord voyageRec = new VoyageRecord();
+        voyageRec.setVoyageNumber(voyage.getVoyageNumber().getNumber());
+        voyageMapper.insertVoyage(voyageRec); // useGeneratedKeys=true → id がセットされる
 
-        Long voyageId = record.getId();
+        Long voyageId = voyageRec.getId();
         List<CarrierMovement> movements = voyage.getSchedule().getCarrierMovements();
         for (CarrierMovement movement : movements) {
             CarrierMovementRecord cmRecord = toCarrierMovementRecord(voyageId, movement);
@@ -43,9 +43,9 @@ public class MyBatisVoyageRepository implements VoyageRepository {
     @Override
     public void update(Voyage voyage) {
         // voyage テーブルの updated_at を更新
-        VoyageRecord record = new VoyageRecord();
-        record.setId(voyage.getId());
-        voyageMapper.updateVoyage(record);
+        VoyageRecord voyageRec = new VoyageRecord();
+        voyageRec.setId(voyage.getId());
+        voyageMapper.updateVoyage(voyageRec);
 
         // carrier_movement を洗い替え
         voyageMapper.deleteCarrierMovementsByVoyageId(voyage.getId());
@@ -80,8 +80,8 @@ public class MyBatisVoyageRepository implements VoyageRepository {
     @Override
     public void deleteByVoyageNumber(VoyageNumber voyageNumber) {
         Optional<VoyageRecord> vr = voyageMapper.findVoyageByNumber(voyageNumber.getNumber());
-        vr.ifPresent(record -> {
-            voyageMapper.deleteCarrierMovementsByVoyageId(record.getId());
+        vr.ifPresent(voyageRec -> {
+            voyageMapper.deleteCarrierMovementsByVoyageId(voyageRec.getId());
             voyageMapper.deleteVoyageByNumber(voyageNumber.getNumber());
         });
     }

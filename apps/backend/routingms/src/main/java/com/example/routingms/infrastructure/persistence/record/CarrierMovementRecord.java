@@ -17,7 +17,9 @@ public class CarrierMovementRecord {
     private ZonedDateTime createdAt;
     private ZonedDateTime updatedAt;
 
-    public CarrierMovementRecord() {}
+    public CarrierMovementRecord() {
+        // Required for MyBatis result mapping
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

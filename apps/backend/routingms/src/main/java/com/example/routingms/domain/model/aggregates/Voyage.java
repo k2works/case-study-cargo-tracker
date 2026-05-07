@@ -2,9 +2,6 @@ package com.example.routingms.domain.model.aggregates;
 
 import com.example.routingms.domain.model.valueobjects.VoyageNumber;
 import com.example.routingms.domain.model.valueobjects.Schedule;
-import com.example.routingms.domain.model.entities.CarrierMovement;
-
-import java.util.List;
 import java.util.Objects;
 
 /**

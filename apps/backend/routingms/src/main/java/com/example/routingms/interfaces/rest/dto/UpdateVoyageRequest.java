@@ -9,7 +9,9 @@ public class UpdateVoyageRequest {
 
     private List<CarrierMovementRequest> carrierMovements;
 
-    public UpdateVoyageRequest() {}
+    public UpdateVoyageRequest() {
+        // Required for Jackson deserialization
+    }
 
     public List<CarrierMovementRequest> getCarrierMovements() { return carrierMovements; }
     public void setCarrierMovements(List<CarrierMovementRequest> carrierMovements) {

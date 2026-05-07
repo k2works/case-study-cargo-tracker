@@ -17,16 +17,16 @@ public interface VoyageMapper {
     /**
      * voyage テーブルに1件挿入する
      *
-     * @param record 挿入する VoyageRecord
+     * @param voyageRec 挿入する VoyageRecord
      */
-    void insertVoyage(VoyageRecord record);
+    void insertVoyage(VoyageRecord voyageRec);
 
     /**
      * carrier_movement テーブルに1件挿入する
      *
-     * @param record 挿入する CarrierMovementRecord
+     * @param cmRec 挿入する CarrierMovementRecord
      */
-    void insertCarrierMovement(CarrierMovementRecord record);
+    void insertCarrierMovement(CarrierMovementRecord cmRec);
 
     /**
      * 航海番号で voyage を検索する
@@ -54,9 +54,9 @@ public interface VoyageMapper {
     /**
      * voyage の updated_at を更新する（voyage_number で特定）
      *
-     * @param record 更新対象の VoyageRecord（id, updated_at を使用）
+     * @param voyageRec 更新対象の VoyageRecord（id, updated_at を使用）
      */
-    void updateVoyage(VoyageRecord record);
+    void updateVoyage(VoyageRecord voyageRec);
 
     /**
      * voyage_id に紐づく carrier_movement を全件削除する

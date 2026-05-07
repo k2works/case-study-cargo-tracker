@@ -13,7 +13,9 @@ public class CarrierMovementRequest {
     private ZonedDateTime arrivalDate;
     private int seqNumber;
 
-    public CarrierMovementRequest() {}
+    public CarrierMovementRequest() {
+        // Required for Jackson deserialization
+    }
 
     public String getDepartureLocationUnlocode() { return departureLocationUnlocode; }
     public void setDepartureLocationUnlocode(String departureLocationUnlocode) {

@@ -10,7 +10,9 @@ public class CreateVoyageRequest {
     private String voyageNumber;
     private List<CarrierMovementRequest> carrierMovements;
 
-    public CreateVoyageRequest() {}
+    public CreateVoyageRequest() {
+        // Required for Jackson deserialization
+    }
 
     public String getVoyageNumber() { return voyageNumber; }
     public void setVoyageNumber(String voyageNumber) { this.voyageNumber = voyageNumber; }

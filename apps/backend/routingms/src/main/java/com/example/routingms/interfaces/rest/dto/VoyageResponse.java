@@ -12,7 +12,9 @@ public class VoyageResponse {
     private String voyageNumber;
     private List<CarrierMovementResponse> carrierMovements;
 
-    public VoyageResponse() {}
+    public VoyageResponse() {
+        // Required for Jackson serialization
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -35,7 +37,9 @@ public class VoyageResponse {
         private ZonedDateTime arrivalDate;
         private int seqNumber;
 
-        public CarrierMovementResponse() {}
+        public CarrierMovementResponse() {
+            // Required for Jackson serialization
+        }
 
         public String getDepartureLocationUnlocode() { return departureLocationUnlocode; }
         public void setDepartureLocationUnlocode(String v) { this.departureLocationUnlocode = v; }
