@@ -6,7 +6,6 @@ import com.example.routingms.domain.model.valueobjects.Schedule;
 import com.example.routingms.domain.model.valueobjects.VoyageNumber;
 import com.example.routingms.interfaces.rest.dto.CarrierMovementRequest;
 import com.example.routingms.interfaces.rest.dto.CreateVoyageRequest;
-import com.example.routingms.interfaces.rest.dto.UpdateVoyageRequest;
 import com.example.routingms.interfaces.rest.dto.VoyageResponse;
 import org.springframework.stereotype.Component;
 
