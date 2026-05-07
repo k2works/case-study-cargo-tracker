@@ -25,11 +25,11 @@
 
 - [x] US26: ログイン API が JWT トークンを発行する
 - [x] US27: ログアウト後、認証画面にリダイレクトされる
-- [ ] US24: 航海スケジュール新規登録 API が動作する（認証必須）
-- [ ] US25: 航海スケジュール更新 API が動作する（認証必須）
-- [ ] US07: 航海スケジュール検索 API が動作する（認証必須）
-- [ ] ArchUnit テストが通過する（ヘキサゴナル依存ルール）
-- [ ] テストカバレッジ 80% 以上（authms + routingms、JaCoCo で測定）
+- [x] US24: 航海スケジュール新規登録 API が動作する（認証必須）
+- [x] US25: 航海スケジュール更新 API が動作する（認証必須）
+- [x] US07: 航海スケジュール検索 API が動作する（認証必須）
+- [x] ArchUnit テストが通過する（ヘキサゴナル依存ルール）
+- [x] テストカバレッジ 80% 以上（authms + routingms、JaCoCo で測定）— SonarQube 86.7%
 
 ---
 
@@ -168,11 +168,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 5.1 | Flyway マイグレーション（`V2__create_voyage.sql` を `routingms/src/main/resources/db/migration/` に配置） | 2h | [ ] |
-| 5.2 | ドメインモデル: Voyage 集約、VoyageNumber 値オブジェクト | 2h | [ ] |
-| 5.3 | MyBatis マッパー XML + Mapper インターフェース | 2h | [ ] |
-| 5.4 | リポジトリインターフェース + MyBatis 実装 | 2h | [ ] |
-| 5.5 | ArchUnit テスト（ヘキサゴナル依存ルール） | 1h | [ ] |
+| 5.1 | Flyway マイグレーション（`V2__create_voyage.sql` を `routingms/src/main/resources/db/migration/` に配置） | 2h | [x] |
+| 5.2 | ドメインモデル: Voyage 集約、VoyageNumber 値オブジェクト | 2h | [x] |
+| 5.3 | MyBatis マッパー XML + Mapper インターフェース | 2h | [x] |
+| 5.4 | リポジトリインターフェース + MyBatis 実装 | 2h | [x] |
+| 5.5 | ArchUnit テスト（ヘキサゴナル依存ルール） | 1h | [x] |
 
 **小計**: 9h
 
@@ -180,11 +180,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 6.1 | VoyageCommandService（登録・更新） | 3h | [ ] |
-| 6.2 | VoyageQueryService（検索・CQRS 読み取り側） | 2h | [ ] |
-| 6.3 | VoyageController（POST, PUT, GET） | 2h | [ ] |
-| 6.4 | DTO + Assembler（リクエスト/レスポンス変換） | 2h | [ ] |
-| 6.5 | 統合テスト（MockMvc + H2: CRUD・重複・404・空結果） | 3h | [ ] |
+| 6.1 | VoyageCommandService（登録・更新） | 3h | [x] |
+| 6.2 | VoyageQueryService（検索・CQRS 読み取り側） | 2h | [x] |
+| 6.3 | VoyageController（POST, PUT, GET）— パス: `/api/routing/v1/voyages`（Gateway ルーティング整合） | 2h | [x] |
+| 6.4 | DTO + Assembler（リクエスト/レスポンス変換） | 2h | [x] |
+| 6.5 | 統合テスト（MockMvc + H2: CRUD・重複・404・空結果） | 3h | [x] |
 
 **小計**: 12h
 
@@ -192,12 +192,12 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 7.1 | `features/routing/hooks/useVoyages.ts`（TanStack Query） | 2h | [ ] |
-| 7.2 | `features/routing/components/VoyageForm.tsx`（React Hook Form） | 3h | [ ] |
-| 7.3 | `features/routing/components/VoyageList.tsx`（一覧テーブル） | 2h | [ ] |
-| 7.4 | `features/routing/components/VoyageSearchForm.tsx`（検索フィルター） | 2h | [ ] |
-| 7.5 | `pages/VoyageListPage.tsx`, `VoyageNewPage.tsx`, `VoyageEditPage.tsx` + ルーティング | 2h | [ ] |
-| 7.6 | Vitest コンポーネントテスト | 2h | [ ] |
+| 7.1 | `features/routing/hooks/useVoyages.ts`（TanStack Query）— API パス更新済み | 2h | [x] |
+| 7.2 | `features/routing/components/VoyageForm.tsx`（React Hook Form） | 3h | [x] |
+| 7.3 | `features/routing/components/VoyageList.tsx`（一覧テーブル） | 2h | [x] |
+| 7.4 | `features/routing/components/VoyageSearchForm.tsx`（検索フィルター） | 2h | [x] |
+| 7.5 | `pages/VoyageListPage.tsx`, `VoyageNewPage.tsx`, `VoyageEditPage.tsx` + ルーティング | 2h | [x] |
+| 7.6 | Vitest コンポーネントテスト | 2h | [x] |
 
 **小計**: 13h
 
@@ -215,7 +215,7 @@
 | **合計** | **34** | **73h** | |
 
 **1 SP あたり**: 約 2.1h
-**進捗率**: 97% (34/35 SP) — US26(13SP) + US27(4SP) + routingms基盤(2SP) + US24/US25/US07(15SP) 完了
+**進捗率**: 97% (34/35 SP) — 全ユーザーストーリー完了、E2E テスト 10 件全通過（auth 5 + voyage 5）、SonarQube Quality Gate PASS（カバレッジ 86.7%）
 
 > **Note**: IT1 は認証基盤（authms + gatewayms）と業務機能（routingms）を同時に構築するため、SP が他イテレーションより大きい。Week 1 を認証、Week 2 を航海スケジュールに分けて集中的に取り組む。
 
@@ -366,7 +366,7 @@ skinparam linetype ortho
 entity "voyage" as v {
     *id : bigint <<PK>>
     --
-    voyage_number : varchar(10) <<UK>>
+    voyage_number : varchar(50) <<UK>>
 }
 
 entity "carrier_movement" as cm {
@@ -400,10 +400,10 @@ v ||--o{ cm
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| POST | /api/v1/voyages | 航海スケジュール新規登録 |
-| PUT | /api/v1/voyages/{voyageNumber} | 航海スケジュール更新 |
-| GET | /api/v1/voyages | 航海スケジュール一覧・検索 |
-| GET | /api/v1/voyages/{voyageNumber} | 航海スケジュール詳細 |
+| POST | /api/routing/v1/voyages | 航海スケジュール新規登録 |
+| PUT | /api/routing/v1/voyages/{voyageNumber} | 航海スケジュール更新 |
+| GET | /api/routing/v1/voyages | 航海スケジュール一覧・検索 |
+| GET | /api/routing/v1/voyages/{voyageNumber} | 航海スケジュール詳細 |
 
 ### ユーザーインターフェース
 
@@ -631,14 +631,14 @@ apps/frontend/src/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了
-- [ ] ユニットテスト（BE + FE）がパス
-- [ ] 統合テスト（MockMvc + H2）がパス
-- [ ] ArchUnit テストがパス
-- [ ] Checkstyle / SpotBugs エラーなし
-- [ ] テストカバレッジ 80% 以上（authms + routingms、JaCoCo で測定）
-- [ ] Swagger UI で API 動作確認済み
-- [ ] ドキュメント更新完了
+- [x] コードレビュー完了（AI エージェントによる多角的レビュー実施）
+- [x] ユニットテスト（BE + FE）がパス
+- [x] 統合テスト（MockMvc + H2）がパス
+- [x] ArchUnit テストがパス
+- [x] Checkstyle / SpotBugs エラーなし（BUILD SUCCESSFUL）
+- [x] テストカバレッジ 80% 以上（authms + routingms、JaCoCo で測定）— SonarQube 86.7%
+- [x] Swagger UI で API 動作確認済み（routingms: http://localhost:8083/swagger-ui/index.html）
+- [x] ドキュメント更新完了（iteration_plan-1.md 更新、E2E 全件通過）
 
 ### デモ項目
 
@@ -660,6 +660,7 @@ apps/frontend/src/
 | 2026-04-25 | 認証ストーリー（US26/US27）を IT1 先頭に追加。認証 + 航海スケジュールの 2 週間構成に再構成 | - |
 | 2026-04-25 | US26/US27 完了。BE 13 テスト + FE 9 テスト + E2E 5 テスト全パス。進捗率 49%（17/35 SP） | - |
 | 2026-05-07 | routingms TDD 基盤（Task5）+ US24/US25/US07 BE API（Task6）+ FE 画面（Task7）完了。BE 12 テスト + FE 6 テスト全パス。進捗率 97%（34/35 SP） | - |
+| 2026-05-07 | 全ユーザーストーリー完了確認。E2E テスト全件通過（auth 5 + voyage 5 = 10 件）。技術修正: VoyageController パスを `/api/routing/v1/voyages` に変更、`voyage_number` を VARCHAR(50) に拡張、useVoyages.ts API パス更新。SonarQube Quality Gate PASS（カバレッジ 86.7%） | - |
 
 ---
 
