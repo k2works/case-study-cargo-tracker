@@ -5,9 +5,14 @@ export function VoyageNewPage() {
   const navigate = useNavigate()
 
   return (
-    <div>
-      <h1>航海新規登録</h1>
-      <VoyageForm onSuccess={() => navigate('/voyages')} />
+    <div className="p-6">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">航海新規登録</h1>
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <VoyageForm
+          onSuccess={() => navigate('/voyages')}
+          onCancel={() => navigate('/voyages')}
+        />
+      </div>
     </div>
   )
 }
