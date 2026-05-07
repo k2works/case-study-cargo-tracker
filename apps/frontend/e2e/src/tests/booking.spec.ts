@@ -32,8 +32,8 @@ test.describe('貨物予約管理', () => {
     await bookingPage.fillBookingForm('JPTYO', 'CNSHA');
     await bookingPage.submitForm();
     await expect(page).toHaveURL('/bookings');
-    // 一覧にステータスバッジが表示されること
-    await expect(page.getByText('仮予約')).toBeVisible();
+    // 一覧にステータスバッジが1件以上表示されること
+    await expect(page.getByText('仮予約').first()).toBeVisible();
   });
 
   test('経路設計ページにアクセスできること', async ({ page, loggedIn }) => {
