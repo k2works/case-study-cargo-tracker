@@ -7,6 +7,8 @@ import { DashboardPage } from './pages/DashboardPage'
 import { VoyageListPage } from './pages/VoyageListPage'
 import { VoyageNewPage } from './pages/VoyageNewPage'
 import { VoyageEditPage } from './pages/VoyageEditPage'
+import { BookingListPage } from './pages/BookingListPage'
+import { BookingNewPage } from './pages/BookingNewPage'
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
           <Route path="/voyages" element={<VoyageListPage />} />
           <Route path="/voyages/new" element={<VoyageNewPage />} />
           <Route path="/voyages/:voyageNumber/edit" element={<VoyageEditPage />} />
+          <Route path="/bookings" element={<BookingListPage />} />
+          <Route path="/bookings/new" element={<BookingNewPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
