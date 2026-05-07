@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { VoyageListPage } from './pages/VoyageListPage'
 import { VoyageNewPage } from './pages/VoyageNewPage'
+import { VoyageEditPage } from './pages/VoyageEditPage'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/voyages" element={<VoyageListPage />} />
           <Route path="/voyages/new" element={<VoyageNewPage />} />
+          <Route path="/voyages/:voyageNumber/edit" element={<VoyageEditPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
