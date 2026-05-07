@@ -4,6 +4,8 @@ import { AuthLayout } from './layouts/AuthLayout'
 import { AuthGuard } from './providers/AuthGuard'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { VoyageListPage } from './pages/VoyageListPage'
+import { VoyageNewPage } from './pages/VoyageNewPage'
 
 export default function App() {
   return (
@@ -14,6 +16,8 @@ export default function App() {
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/voyages" element={<VoyageListPage />} />
+          <Route path="/voyages/new" element={<VoyageNewPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
