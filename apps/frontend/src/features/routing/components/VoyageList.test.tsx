@@ -43,7 +43,7 @@ describe('VoyageList', () => {
       data: undefined,
       isLoading: true,
       isError: false,
-    } as ReturnType<typeof useVoyagesModule.useVoyages>)
+    } as unknown as ReturnType<typeof useVoyagesModule.useVoyages>)
     vi.spyOn(useVoyagesModule, 'useDeleteVoyage').mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -58,7 +58,7 @@ describe('VoyageList', () => {
       data: [mockVoyage],
       isLoading: false,
       isError: false,
-    } as ReturnType<typeof useVoyagesModule.useVoyages>)
+    } as unknown as ReturnType<typeof useVoyagesModule.useVoyages>)
     vi.spyOn(useVoyagesModule, 'useDeleteVoyage').mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -73,7 +73,7 @@ describe('VoyageList', () => {
       data: [],
       isLoading: false,
       isError: false,
-    } as ReturnType<typeof useVoyagesModule.useVoyages>)
+    } as unknown as ReturnType<typeof useVoyagesModule.useVoyages>)
     vi.spyOn(useVoyagesModule, 'useDeleteVoyage').mockReturnValue({
       mutate: vi.fn(),
       isPending: false,

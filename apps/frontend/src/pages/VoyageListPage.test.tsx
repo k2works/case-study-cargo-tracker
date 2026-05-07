@@ -25,7 +25,7 @@ describe('VoyageListPage', () => {
       data: [],
       isLoading: false,
       isError: false,
-    } as ReturnType<typeof useVoyagesModule.useVoyages>)
+    } as unknown as ReturnType<typeof useVoyagesModule.useVoyages>)
     vi.spyOn(useVoyagesModule, 'useDeleteVoyage').mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
