@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.routingms.infrastructure.persistence.VoyageMapper">
+
+    <!-- ResultMap: voyage -->
+    <resultMap id="VoyageRecordMap" type="com.example.routingms.infrastructure.persistence.record.VoyageRecord">
+        <id     property="id"            column="id"/>
+        <result property="voyageNumber"  column="voyage_number"/>
+        <result property="createdAt"     column="created_at"/>
+        <result property="updatedAt"     column="updated_at"/>
+    </resultMap>
+
+    <!-- ResultMap: carrier_movement -->
+    <resultMap id="CarrierMovementRecordMap" type="com.example.routingms.infrastructure.persistence.record.CarrierMovementRecord">
+        <id     property="id"                         column="id"/>
+        <result property="voyageId"                   column="voyage_id"/>
+        <result property="departureLocationUnlocode"  column="departure_location_unlocode"/>
+        <result property="arrivalLocationUnlocode"    column="arrival_location_unlocode"/>
+        <result property="departureDate"              column="departure_date"/>
+        <result property="arrivalDate"                column="arrival_date"/>
+        <result property="seqNumber"                  column="seq_number"/>
+        <result property="createdAt"                  column="created_at"/>
+        <result property="updatedAt"                  column="updated_at"/>
+    </resultMap>
+
+    <!-- INSERT voyage -->
+    <insert id="insertVoyage" parameterType="com.example.routingms.infrastructure.persistence.record.VoyageRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO voyage (voyage_number, created_at, updated_at)
+        VALUES (#{voyageNumber}, NOW(), NOW())
+    </insert>
+
+    <!-- INSERT carrier_movement -->
+    <insert id="insertCarrierMovement"
+            parameterType="com.example.routingms.infrastructure.persistence.record.CarrierMovementRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO carrier_movement
+            (voyage_id, departure_location_unlocode, arrival_location_unlocode,
+             departure_date, arrival_date, seq_number, created_at, updated_at)
+        VALUES
+            (#{voyageId}, #{departureLocationUnlocode}, #{arrivalLocationUnlocode},
+             #{departureDate}, #{arrivalDate}, #{seqNumber}, NOW(), NOW())
+    </insert>
+
+    <!-- SELECT voyage by voyage_number -->
+    <select id="findVoyageByNumber" resultMap="VoyageRecordMap">
+        SELECT id, voyage_number, created_at, updated_at
+        FROM voyage
+        WHERE voyage_number = #{voyageNumber}
+    </select>
+
+    <!-- SELECT carrier_movements by voyage_id -->
+    <select id="findCarrierMovementsByVoyageId" resultMap="CarrierMovementRecordMap">
+        SELECT id, voyage_id, departure_location_unlocode, arrival_location_unlocode,
+               departure_date, arrival_date, seq_number, created_at, updated_at
+        FROM carrier_movement
+        WHERE voyage_id = #{voyageId}
+        ORDER BY seq_number ASC
+    </select>
+
+    <!-- SELECT all voyages -->
+    <select id="findAllVoyages" resultMap="VoyageRecordMap">
+        SELECT id, voyage_number, created_at, updated_at
+        FROM voyage
+        ORDER BY voyage_number ASC
+    </select>
+
+    <!-- UPDATE voyage updated_at -->
+    <update id="updateVoyage" parameterType="com.example.routingms.infrastructure.persistence.record.VoyageRecord">
+        UPDATE voyage
+        SET updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- DELETE carrier_movements by voyage_id -->
+    <delete id="deleteCarrierMovementsByVoyageId">
+        DELETE FROM carrier_movement WHERE voyage_id = #{voyageId}
+    </delete>
+
+    <!-- DELETE voyage by voyage_number -->
+    <delete id="deleteVoyageByNumber">
+        DELETE FROM voyage WHERE voyage_number = #{voyageNumber}
+    </delete>
+
+</mapper>
