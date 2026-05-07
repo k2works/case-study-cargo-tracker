@@ -48,12 +48,14 @@
 
 > 営業担当者として、荷主・貨物仕様（種別・重量・品名）・輸送条件（出発地・目的地・希望期限）を入力して予約を登録したい。なぜなら、荷主の見積承認後に正式な予約を受け付け、経路設計フェーズに引き継げるからだ。
 
-**受入条件**:
+**受入条件（IT2 実装スコープ）**:
 
-1. 荷主 ID・貨物種別（GENERAL / HAZARDOUS / REFRIGERATED）・重量・出発地・目的地・希望到着期限を入力できる
+1. 荷主 ID・貨物種別（GENERAL / HAZARDOUS / REFRIGERATED）・重量・出発地（UN/LOCODE）・目的地（UN/LOCODE）・希望到着期限を入力できる
 2. 登録完了後、予約番号（BK-XXXX 形式）が発行され状態が `PRELIMINARY` になる
 3. 重複や不正データがある場合、422 エラーとエラーメッセージを返す
 4. 認証なしのリクエストは 401 エラーを返す
+
+> **IT3 以降に持ち越し**: 寸法・個数・品名・荷受人情報の入力、経路設計者への通知（ドメインイベント）、見積情報との整合性確認、危険物申告・温度管理フィールド（US05）
 
 #### US08: 経路候補を算出する
 
@@ -61,13 +63,16 @@
 
 > 経路設計者として、貨物予約の出発地・目的地・希望期限をもとに経路候補を自動算出してほしい。なぜなら、手作業の属人化を解消し、接続可能な航海スケジュールを組み合わせた最適経路を効率的に見つけられるからだ。
 
-**受入条件**:
+**受入条件（IT2 実装スコープ）**:
 
 1. 出発地・目的地・希望到着期限を入力として経路候補が算出される
 2. 期限内に到達可能な航海スケジュールの組み合わせが候補として提示される
 3. 経路候補ごとに所要日数・経由港・航海番号が表示される
 4. 直行便がある場合は最優先候補として提示される
 5. 期限内に到達可能な経路がない場合、空リストを返す
+6. 経路候補は推奨順（直行便優先 → 所要日数の短い順）に並べられる
+
+> **IT3 以降に持ち越し**: 費用（estimated_cost）の表示、条件調整 UI（期限内経路なし時の再入力フロー）
 
 ---
 
@@ -78,8 +83,8 @@
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
 | 1.1 | Flyway マイグレーション（cargo テーブル） | 1h | [ ] |
-| 1.2 | Cargo 集約ドメインモデル（CargoId / CargoType / Weight / RouteSpecification） | 2h | [ ] |
-| 1.3 | BookingStatus 列挙型 | 1h | [ ] |
+| 1.2 | Cargo 集約ドメインモデル（BookingId / ShipperId / RouteSpecification / CargoType / Weight / BookingStatus）※IT2スコープ | 2h | [ ] |
+| 1.3 | BookingStatus 全状態値を定義（PRELIMINARY / ROUTE_PROPOSED / CONFIRMED / TRACKING_ISSUED / IN_TRANSIT / DELIVERED / SETTLED / CANCELLED） | 1h | [ ] |
 | 1.4 | CargoMapper（MyBatis）+ MyBatisCargoRepository | 2h | [ ] |
 | 1.5 | ArchUnit テスト（ヘキサゴナル依存ルール） | 1h | [ ] |
 
@@ -115,11 +120,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | RoutingSpec 値オブジェクト（出発地・目的地・期限） | 1h | [ ] |
-| 4.2 | Itinerary / Leg ドメインモデル（経路候補） | 2h | [ ] |
-| 4.3 | RouteFinderService TDD（接続可能航海の組み合わせ算出ロジック） | 3h | [ ] |
-| 4.4 | RoutingController（POST /api/routing/v1/itineraries） + DTO | 2h | [ ] |
-| 4.5 | MockMvc 統合テスト | 2h | [ ] |
+| 4.1 | RoutingSpec 値オブジェクト（origin: String / destination: String / arrivalDeadline: LocalDate） | 1h | [ ] |
+| 4.2 | Itinerary / Leg ドメインモデル（Leg: voyage: VoyageNumber / loadLocation / unloadLocation / loadTime / unloadTime） | 2h | [ ] |
+| 4.3 | RouteFinderService TDD（接続可能航海の組み合わせ算出・直行便優先→所要日数昇順ソート） | 3h | [ ] |
+| 4.4 | RoutingController（POST /api/routing/v1/itineraries） + DTO（ItineraryResponse: legs / totalDays） | 2h | [ ] |
+| 4.5 | MockMvc 統合テスト（正常系: 直行便 / 乗継 / 経路なし） | 2h | [ ] |
 
 **小計**: 10h
 
@@ -219,9 +224,10 @@ class Cargo <<Aggregate Root>> {
 }
 
 class RouteSpecification <<Value Object>> {
-    origin: String
-    destination: String
+    origin: Location
+    destination: Location
     arrivalDeadline: LocalDate
+    +isSatisfiedBy(itinerary): boolean
 }
 
 class Weight <<Value Object>> {
@@ -229,10 +235,16 @@ class Weight <<Value Object>> {
     unit: String
 }
 
+' IT2 では PRELIMINARY / ROUTE_PROPOSED を使用
+' 全状態値を定義して将来フェーズに備える
 enum BookingStatus {
     PRELIMINARY
     ROUTE_PROPOSED
     CONFIRMED
+    TRACKING_ISSUED
+    IN_TRANSIT
+    DELIVERED
+    SETTLED
     CANCELLED
 }
 
@@ -249,6 +261,8 @@ Cargo -- CargoType
 @enduml
 ```
 
+> **注**: Consignee・CargoItinerary・Delivery・HazardousDeclaration・TemperatureRequirement は domain-model.md に定義されているが IT2 スコープ外。IT3 以降で順次追加する。RouteSpecification.origin/destination は `Location` 値オブジェクト（共有カーネル）を参照するが、IT2 では UN/LOCODE 文字列として実装し、IT3 で Location VO に置き換える。
+
 #### Routing Context — 経路候補（routingms 追加分）
 
 ```plantuml
@@ -259,11 +273,11 @@ class Itinerary <<Value Object>> {
 }
 
 class Leg <<Value Object>> {
-    voyageNumber: String
-    loadLocation: String
-    unloadLocation: String
-    loadTime: ZonedDateTime
-    unloadTime: ZonedDateTime
+    voyage: VoyageNumber
+    loadLocation: Location
+    unloadLocation: Location
+    loadTime: Date
+    unloadTime: Date
 }
 
 class RoutingSpec <<Value Object>> {
@@ -279,21 +293,27 @@ Itinerary *-- Leg
 ### データモデル
 
 ```sql
--- bookingms: cargo テーブル
+-- bookingms: cargo テーブル（data-model.md に準拠、IT2 スコープ列のみ）
 CREATE TABLE cargo (
-    id              BIGSERIAL PRIMARY KEY,
-    booking_id      VARCHAR(20)  NOT NULL UNIQUE,
-    shipper_id      VARCHAR(50),
-    origin          VARCHAR(5)   NOT NULL,
-    destination     VARCHAR(5)   NOT NULL,
-    arrival_deadline DATE         NOT NULL,
-    cargo_type      VARCHAR(20)  NOT NULL DEFAULT 'GENERAL',
-    weight_kg       DECIMAL(10,2),
-    status          VARCHAR(30)  NOT NULL DEFAULT 'PRELIMINARY',
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    id                       BIGSERIAL PRIMARY KEY,
+    booking_id               VARCHAR(20)  NOT NULL UNIQUE,
+    shipper_id               BIGINT       NOT NULL,
+    booking_status           VARCHAR(30)  NOT NULL DEFAULT 'PRELIMINARY',
+    transport_status         VARCHAR(30)  NOT NULL DEFAULT 'NOT_RECEIVED',
+    routing_status           VARCHAR(30)  NOT NULL DEFAULT 'NOT_ROUTED',
+    cargo_type               VARCHAR(20)  NOT NULL DEFAULT 'GENERAL',
+    weight_kg                NUMERIC(10,3) NOT NULL,
+    spec_origin_unlocode     VARCHAR(5),
+    spec_destination_unlocode VARCHAR(5),
+    spec_arrival_deadline    DATE,
+    booking_amount_value     INTEGER      NOT NULL DEFAULT 0,
+    booking_amount_currency  VARCHAR(3)   NOT NULL DEFAULT 'JPY',
+    created_at               TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 ```
+
+> **注**: カラム名は data-model.md の規約に準拠（`spec_origin_unlocode` / `spec_destination_unlocode` / `spec_arrival_deadline`）。`shipper_id` は BIGINT（FK）。`booking_amount` は Money 値オブジェクト対応のため value + currency の 2 カラム構成。`consignee_*` / `tracking_number` 等は IT3 以降に追加する。
 
 ### API 設計
 
@@ -511,9 +531,19 @@ apps/frontend/src/
 ### デモ項目
 
 1. 貨物予約登録（出発地・目的地・希望期限・貨物種別・重量を入力して登録）
-2. 登録した予約が一覧に表示される
-3. 経路設計画面を開き、経路候補が表示される
-4. ログアウト → 認証画面にリダイレクト
+2. 登録した予約が一覧に表示される（ステータス: PRELIMINARY）
+3. 経路設計画面を開き、経路候補が推奨順に表示される
+4. 直行便が最優先候補として表示される
+
+### E2E テストシナリオ（新規追加）
+
+| # | シナリオ | 期待結果 |
+|---|---------|---------|
+| 1 | 貨物予約一覧ページにアクセスできること | /booking に遷移し見出しが表示される |
+| 2 | 新規予約登録フォームに遷移できること | /booking/new に遷移しフォームが表示される |
+| 3 | 貨物予約を新規登録できること | 登録後 /booking に遷移し予約番号が表示される |
+| 4 | 登録した予約を一覧で確認できること | PRELIMINARY ステータスで表示される |
+| 5 | 経路設計画面で経路候補が表示されること | /routing/design/:bookingId で候補一覧が表示される |
 
 ---
 
@@ -522,6 +552,7 @@ apps/frontend/src/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-05-07 | 初版作成 | - |
+| 2026-05-07 | 整合性検証結果を反映: 受入基準の IT2 スコープ明示・IT3 持ち越し記載、BookingStatus 全状態値追加、データモデル DDL を data-model.md に合わせて修正（shipper_id BIGINT/カラム名統一/Money カラム追加）、Leg の型を VoyageNumber/Location に修正、RouteFinderService の優先順序ロジック明記、E2E テストシナリオ追加 | - |
 
 ---
 
