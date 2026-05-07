@@ -36,9 +36,9 @@ class VoyageControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/voyages — 航海を正常に登録できること")
+    @DisplayName("POST /api/routing/v1/voyages — 航海を正常に登録できること")
     void shouldCreateVoyage() throws Exception {
-        mockMvc.perform(post("/api/v1/voyages")
+        mockMvc.perform(post("/api/routing/v1/voyages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("V001")))
                 .andExpect(status().isCreated())
@@ -48,57 +48,57 @@ class VoyageControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/voyages — 重複航海番号は 409 を返すこと")
+    @DisplayName("POST /api/routing/v1/voyages — 重複航海番号は 409 を返すこと")
     void shouldReturn409WhenDuplicateVoyageNumber() throws Exception {
-        mockMvc.perform(post("/api/v1/voyages")
+        mockMvc.perform(post("/api/routing/v1/voyages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("V002")))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/v1/voyages")
+        mockMvc.perform(post("/api/routing/v1/voyages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("V002")))
                 .andExpect(status().isConflict());
     }
 
     @Test
-    @DisplayName("GET /api/v1/voyages — 全航海一覧を取得できること")
+    @DisplayName("GET /api/routing/v1/voyages — 全航海一覧を取得できること")
     void shouldListVoyages() throws Exception {
-        mockMvc.perform(post("/api/v1/voyages")
+        mockMvc.perform(post("/api/routing/v1/voyages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("V003")))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/voyages"))
+        mockMvc.perform(get("/api/routing/v1/voyages"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[?(@.voyageNumber == 'V003')]").exists());
     }
 
     @Test
-    @DisplayName("GET /api/v1/voyages/{voyageNumber} — 航海詳細を取得できること")
+    @DisplayName("GET /api/routing/v1/voyages/{voyageNumber} — 航海詳細を取得できること")
     void shouldGetVoyageByNumber() throws Exception {
-        mockMvc.perform(post("/api/v1/voyages")
+        mockMvc.perform(post("/api/routing/v1/voyages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("V004")))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/v1/voyages/V004"))
+        mockMvc.perform(get("/api/routing/v1/voyages/V004"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.voyageNumber").value("V004"));
     }
 
     @Test
-    @DisplayName("GET /api/v1/voyages/{voyageNumber} — 存在しない場合は 404 を返すこと")
+    @DisplayName("GET /api/routing/v1/voyages/{voyageNumber} — 存在しない場合は 404 を返すこと")
     void shouldReturn404WhenVoyageNotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/voyages/NOTEXIST"))
+        mockMvc.perform(get("/api/routing/v1/voyages/NOTEXIST"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("PUT /api/v1/voyages/{voyageNumber} — スケジュールを更新できること")
+    @DisplayName("PUT /api/routing/v1/voyages/{voyageNumber} — スケジュールを更新できること")
     void shouldUpdateVoyageSchedule() throws Exception {
-        mockMvc.perform(post("/api/v1/voyages")
+        mockMvc.perform(post("/api/routing/v1/voyages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("V005")))
                 .andExpect(status().isCreated());
@@ -110,7 +110,7 @@ class VoyageControllerTest {
                 ]}
                 """;
 
-        mockMvc.perform(put("/api/v1/voyages/V005")
+        mockMvc.perform(put("/api/routing/v1/voyages/V005")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateBody))
                 .andExpect(status().isOk())
@@ -119,17 +119,17 @@ class VoyageControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /api/v1/voyages/{voyageNumber} — 航海を削除できること")
+    @DisplayName("DELETE /api/routing/v1/voyages/{voyageNumber} — 航海を削除できること")
     void shouldDeleteVoyage() throws Exception {
-        mockMvc.perform(post("/api/v1/voyages")
+        mockMvc.perform(post("/api/routing/v1/voyages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody("V006")))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(delete("/api/v1/voyages/V006"))
+        mockMvc.perform(delete("/api/routing/v1/voyages/V006"))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/v1/voyages/V006"))
+        mockMvc.perform(get("/api/routing/v1/voyages/V006"))
                 .andExpect(status().isNotFound());
     }
 }

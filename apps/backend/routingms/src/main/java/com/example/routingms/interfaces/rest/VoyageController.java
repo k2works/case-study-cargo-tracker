@@ -19,15 +19,15 @@ import java.util.List;
  * 航海スケジュール REST API コントローラー
  *
  * <pre>
- * POST   /api/v1/voyages               — 航海登録
- * GET    /api/v1/voyages               — 航海一覧
- * GET    /api/v1/voyages/{voyageNumber} — 航海詳細
- * PUT    /api/v1/voyages/{voyageNumber} — 航海更新
- * DELETE /api/v1/voyages/{voyageNumber} — 航海削除
+ * POST   /api/routing/v1/voyages               — 航海登録
+ * GET    /api/routing/v1/voyages               — 航海一覧
+ * GET    /api/routing/v1/voyages/{voyageNumber} — 航海詳細
+ * PUT    /api/routing/v1/voyages/{voyageNumber} — 航海更新
+ * DELETE /api/routing/v1/voyages/{voyageNumber} — 航海削除
  * </pre>
  */
 @RestController
-@RequestMapping("/api/v1/voyages")
+@RequestMapping("/api/routing/v1/voyages")
 public class VoyageController {
 
     private final VoyageCommandService commandService;

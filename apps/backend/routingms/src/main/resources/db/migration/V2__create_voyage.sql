@@ -12,7 +12,7 @@ CREATE TABLE location (
 
 CREATE TABLE voyage (
     id             BIGSERIAL PRIMARY KEY,
-    voyage_number  VARCHAR(20) NOT NULL UNIQUE,
+    voyage_number  VARCHAR(50) NOT NULL UNIQUE,
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
