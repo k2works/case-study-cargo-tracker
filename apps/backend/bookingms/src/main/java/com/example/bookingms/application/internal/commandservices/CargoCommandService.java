@@ -1,5 +1,6 @@
 package com.example.bookingms.application.internal.commandservices;
 
+import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
 import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
@@ -7,6 +8,7 @@ import com.example.bookingms.domain.model.valueobjects.CargoType;
 import com.example.bookingms.domain.model.valueobjects.Leg;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.bookingms.domain.model.valueobjects.Weight;
+import com.example.bookingms.domain.ports.CargoEventPublisher;
 import com.example.bookingms.domain.ports.CargoRepository;
 import org.springframework.stereotype.Service;
 
@@ -22,9 +24,11 @@ import java.util.UUID;
 public class CargoCommandService {
 
     private final CargoRepository cargoRepository;
+    private final CargoEventPublisher cargoEventPublisher;
 
-    public CargoCommandService(CargoRepository cargoRepository) {
+    public CargoCommandService(CargoRepository cargoRepository, CargoEventPublisher cargoEventPublisher) {
         this.cargoRepository = cargoRepository;
+        this.cargoEventPublisher = cargoEventPublisher;
     }
 
     /**
@@ -66,6 +70,13 @@ public class CargoCommandService {
         CargoItinerary itinerary = new CargoItinerary(legs);
         cargo.assignRoute(itinerary);
         cargoRepository.update(cargo);
+
+        cargoEventPublisher.publishCargoRouted(new CargoRoutedEvent(
+                cargo.getBookingId().getId(),
+                cargo.getRouteSpecification().getOriginUnlocode(),
+                cargo.getRouteSpecification().getDestinationUnlocode()
+        ));
+
         return cargo;
     }
 
