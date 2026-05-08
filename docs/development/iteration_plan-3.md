@@ -102,7 +102,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | bookingms: CargoRoutedEvent 発行ロジック実装（RabbitMQ → trackingms 同期） | 3h | - | [ ] |
+| 2.1 | bookingms: CargoRoutedEvent 発行ロジック実装（RabbitMQ → trackingms 同期） | 3h | - | [x] |
 | 2.2 | bookingms: PUT /api/booking/cargos/:id/route レスポンス + テスト補完 | 2h | - | [x] |
 | 2.3 | FE: 予約詳細画面（/booking/:bookingId）に ROUTE_PROPOSED バッジ + 経路情報表示 | 2h | - | [x] |
 
@@ -124,13 +124,13 @@
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|-----|---------|------|
 | US09 経路選択・確定 | 8 | 12h | [x] |
-| US11 経路紐付け（2.1 のみ未完） | 5 | 7h | 実施中 |
+| US11 経路紐付け | 5 | 7h | [x] |
 | US13 予約確定 | 5 | 10h | [x] |
 | **合計** | **18** | **29h** | |
 
 **1 SP あたり**: 約 1.6h（IT2 実績 2.1h より効率化を目標）
 
-**進捗率**: 約 94%（17/18 SP 相当 — CargoRoutedEvent が残り）
+**進捗率**: 100%（18/18 SP 完了）
 
 ---
 
