@@ -29,4 +29,31 @@ export class BookingPage {
   async submitForm() {
     await this.submitButton.click();
   }
+
+  /**
+   * 予約一覧から最初の仮予約リンクをクリックして詳細ページへ遷移する
+   */
+  async clickFirstPreliminaryBooking() {
+    await this.page.getByText('仮予約').first().waitFor();
+    // 仮予約バッジと同じ行の予約 ID リンクをクリック
+    const row = this.page.locator('tbody tr').filter({ hasText: '仮予約' }).first();
+    await row.getByRole('link').first().click();
+  }
+
+  /**
+   * 経路設計画面で経路を検索して最初の候補を選択・割り当てる
+   */
+  async searchAndAssignRoute(originUnlocode: string, destinationUnlocode: string) {
+    // 経路設計画面が表示されるまで待機
+    await this.page.getByRole('heading', { name: /経路設計/ }).waitFor();
+    await this.page.getByPlaceholder('JPTYO').fill(originUnlocode);
+    await this.page.getByPlaceholder('CNSHA').fill(destinationUnlocode);
+    await this.page.getByRole('button', { name: '経路を検索' }).click();
+    // 経路候補が表示されるまで待機
+    await this.page.getByText('経路候補').waitFor({ timeout: 15000 });
+    // 最初の経路候補 div をクリックして選択
+    await this.page.locator('.cursor-pointer').first().click();
+    // 「この経路を割り当てる」ボタンをクリック
+    await this.page.getByRole('button', { name: 'この経路を割り当てる' }).click();
+  }
 }

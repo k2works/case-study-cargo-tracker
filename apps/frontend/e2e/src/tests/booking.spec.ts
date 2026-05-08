@@ -41,4 +41,36 @@ test.describe('貨物予約管理', () => {
     await expect(page.getByRole('heading', { name: '経路設計' })).toBeVisible();
     await expect(page.getByRole('button', { name: '経路を検索' })).toBeVisible();
   });
+
+  test('予約→経路割り当て→予約確定の一連フローが動作すること', async ({ page, loggedIn }) => {
+    const bookingPage = new BookingPage(page);
+
+    // 1. 新規予約を登録する
+    await page.goto('/bookings/new');
+    await bookingPage.fillBookingForm('JPTYO', 'CNSHA');
+    await bookingPage.submitForm();
+    await expect(page).toHaveURL('/bookings');
+
+    // 2. 仮予約の詳細ページへ遷移する
+    await bookingPage.clickFirstPreliminaryBooking();
+    await expect(page.getByRole('heading', { name: /予約詳細/ })).toBeVisible();
+    await expect(page.getByText('仮予約')).toBeVisible();
+
+    // 3. 経路割り当てリンクをクリックして経路設計画面へ遷移する
+    await page.getByRole('link', { name: '経路を割り当て →' }).click();
+    await expect(page.getByRole('heading', { name: /経路設計/ })).toBeVisible();
+
+    // 4. 経路を検索・選択・割り当てる
+    await bookingPage.searchAndAssignRoute('JPTYO', 'CNSHA');
+
+    // 5. 予約詳細ページに戻り「経路提案済み」に変わっていることを確認
+    await expect(page).toHaveURL(/\/bookings\/.+/);
+    await expect(page.getByText('経路提案済み')).toBeVisible();
+
+    // 6. 「予約を確定する」ボタンをクリックする
+    await page.getByRole('button', { name: '予約を確定する' }).click();
+
+    // 7. ステータスが「確定」に変わることを確認
+    await expect(page.getByText('確定')).toBeVisible();
+  });
 });
