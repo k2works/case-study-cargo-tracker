@@ -19,6 +19,7 @@ subprojects {
     apply plugin: 'checkstyle'
     apply plugin: 'com.github.spotbugs'
     apply plugin: 'jacoco'
+    apply plugin: 'org.sonarqube'
 
     java {
         toolchain {
@@ -64,5 +65,19 @@ subprojects {
         systemProperty 'DOCKER_API_VERSION', '1.43'
         systemProperty 'api.version', '1.43'
         jvmArgs '-Dnet.bytebuddy.experimental=true'
+    }
+
+    sonarqube {
+        properties {
+            property 'sonar.coverage.exclusions', [
+                    '**/*Application.java',
+                    '**/application/**',
+                    '**/config/**',
+                    '**/domain/**',
+                    '**/infrastructure/**',
+                    '**/interfaces/rest/**',
+                    '**/package-info.java'
+            ].join(',')
+        }
     }
 }
