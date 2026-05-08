@@ -95,4 +95,32 @@ public class CargoController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    /**
+     * 予約を確定する（UpdateBookingStatusCommand）
+     */
+    @PutMapping("/{bookingId}/confirm")
+    public ResponseEntity<CargoResponse> confirmBooking(@PathVariable String bookingId) {
+        try {
+            Cargo cargo = cargoCommandService.confirmBooking(bookingId);
+            return ResponseEntity.ok(CargoResponse.from(cargo));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * 予約をキャンセルする
+     */
+    @PutMapping("/{bookingId}/cancel")
+    public ResponseEntity<CargoResponse> cancelBooking(@PathVariable String bookingId) {
+        try {
+            Cargo cargo = cargoCommandService.cancelBooking(bookingId);
+            return ResponseEntity.ok(CargoResponse.from(cargo));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
-import { useBooking } from '../features/booking/hooks/useBookings'
+import { useBooking, useConfirmBooking, useCancelBooking } from '../features/booking/hooks/useBookings'
 import type { BookingStatus } from '../features/booking/types/cargo'
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -28,9 +29,27 @@ export function BookingDetailPage() {
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
   const { data: cargo, isLoading, isError } = useBooking(bookingId ?? '')
+  const { mutate: confirmBooking, isPending: isConfirming } = useConfirmBooking(bookingId ?? '')
+  const { mutate: cancelBooking, isPending: isCancelling } = useCancelBooking(bookingId ?? '')
+  const [actionError, setActionError] = useState<string | null>(null)
 
   if (isLoading) return <p className="p-6 text-center text-gray-500">読み込み中...</p>
   if (isError || !cargo) return <p className="p-6 text-center text-red-500">データの取得に失敗しました。</p>
+
+  const handleConfirm = () => {
+    setActionError(null)
+    confirmBooking(undefined, {
+      onError: () => setActionError('予約確定に失敗しました。'),
+    })
+  }
+
+  const handleCancel = () => {
+    if (!window.confirm('予約をキャンセルしますか？')) return
+    setActionError(null)
+    cancelBooking(undefined, {
+      onError: () => setActionError('予約キャンセルに失敗しました。'),
+    })
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -40,6 +59,12 @@ export function BookingDetailPage() {
           {STATUS_LABELS[cargo.bookingStatus]}
         </span>
       </div>
+
+      {actionError && (
+        <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+          {actionError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* 予約情報 */}
@@ -107,13 +132,31 @@ export function BookingDetailPage() {
       </div>
 
       {/* アクションボタン */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <button
           onClick={() => navigate('/bookings')}
           className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           予約一覧に戻る
         </button>
+        {cargo.bookingStatus === 'ROUTE_PROPOSED' && (
+          <button
+            onClick={handleConfirm}
+            disabled={isConfirming}
+            className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            {isConfirming ? '確定中...' : '予約を確定する'}
+          </button>
+        )}
+        {(cargo.bookingStatus === 'PRELIMINARY' || cargo.bookingStatus === 'ROUTE_PROPOSED') && (
+          <button
+            onClick={handleCancel}
+            disabled={isCancelling}
+            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            {isCancelling ? 'キャンセル中...' : 'キャンセル'}
+          </button>
+        )}
       </div>
     </div>
   )

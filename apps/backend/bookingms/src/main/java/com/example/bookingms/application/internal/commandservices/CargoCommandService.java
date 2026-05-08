@@ -69,6 +69,34 @@ public class CargoCommandService {
         return cargo;
     }
 
+    /**
+     * 予約を確定する（UpdateBookingStatusCommand）
+     *
+     * @param bookingId 予約 ID
+     * @return 更新後の貨物
+     */
+    public Cargo confirmBooking(String bookingId) {
+        Cargo cargo = cargoRepository.findByBookingId(new BookingId(bookingId))
+                .orElseThrow(() -> new IllegalArgumentException("Cargo not found: " + bookingId));
+        cargo.confirm();
+        cargoRepository.update(cargo);
+        return cargo;
+    }
+
+    /**
+     * 予約をキャンセルする
+     *
+     * @param bookingId 予約 ID
+     * @return 更新後の貨物
+     */
+    public Cargo cancelBooking(String bookingId) {
+        Cargo cargo = cargoRepository.findByBookingId(new BookingId(bookingId))
+                .orElseThrow(() -> new IllegalArgumentException("Cargo not found: " + bookingId));
+        cargo.cancel();
+        cargoRepository.update(cargo);
+        return cargo;
+    }
+
     private String generateBookingId() {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
     }

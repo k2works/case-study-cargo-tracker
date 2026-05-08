@@ -110,6 +110,25 @@ public class Cargo {
         this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
     }
 
+    /**
+     * 予約を確定する（UpdateBookingStatusCommand）
+     * ROUTE_PROPOSED のときのみ CONFIRMED に遷移できる
+     */
+    public void confirm() {
+        if (this.bookingStatus != BookingStatus.ROUTE_PROPOSED) {
+            throw new IllegalStateException(
+                    "Cannot confirm cargo that is not in ROUTE_PROPOSED state: " + this.bookingStatus);
+        }
+        this.bookingStatus = BookingStatus.CONFIRMED;
+    }
+
+    /**
+     * 予約をキャンセルする
+     */
+    public void cancel() {
+        this.bookingStatus = BookingStatus.CANCELLED;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

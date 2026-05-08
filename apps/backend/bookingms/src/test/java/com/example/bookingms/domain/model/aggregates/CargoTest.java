@@ -61,4 +61,28 @@ class CargoTest {
         assertThatThrownBy(() -> cargo.assignRoute(null))
                 .isInstanceOf(NullPointerException.class);
     }
+
+    @Test
+    @DisplayName("confirm を呼ぶとステータスが CONFIRMED に遷移すること")
+    void shouldConfirmAndChangeStatusToConfirmed() {
+        cargo.assignRoute(itinerary);
+        cargo.confirm();
+
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+    }
+
+    @Test
+    @DisplayName("ROUTE_PROPOSED でない状態から confirm を呼ぶと例外が発生すること")
+    void shouldThrowExceptionWhenConfirmingNotRouteProposedCargo() {
+        assertThatThrownBy(() -> cargo.confirm())
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("cancel を呼ぶとステータスが CANCELLED に遷移すること")
+    void shouldCancelAndChangeStatusToCancelled() {
+        cargo.cancel();
+
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.CANCELLED);
+    }
 }

@@ -50,3 +50,25 @@ export function useAssignRoute(bookingId: string) {
     },
   })
 }
+
+export function useConfirmBooking(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => apiClient.put<Cargo>(`/api/booking/v1/cargos/${bookingId}/confirm`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...BOOKINGS_KEY, bookingId] })
+      queryClient.invalidateQueries({ queryKey: BOOKINGS_KEY })
+    },
+  })
+}
+
+export function useCancelBooking(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => apiClient.put<Cargo>(`/api/booking/v1/cargos/${bookingId}/cancel`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...BOOKINGS_KEY, bookingId] })
+      queryClient.invalidateQueries({ queryKey: BOOKINGS_KEY })
+    },
+  })
+}
