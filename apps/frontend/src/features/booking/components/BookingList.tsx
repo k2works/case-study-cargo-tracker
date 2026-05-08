@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { useBookings } from '../hooks/useBookings'
 import type { BookingStatus } from '../types/cargo'
 
@@ -49,7 +50,11 @@ export function BookingList() {
         <tbody className="bg-white divide-y divide-gray-200">
           {cargos.map((cargo) => (
             <tr key={cargo.bookingId} className="hover:bg-gray-50">
-              <td className="px-4 py-3 text-sm font-mono text-gray-900">{cargo.bookingId}</td>
+              <td className="px-4 py-3 text-sm font-mono">
+                <Link to={`/bookings/${cargo.bookingId}`} className="text-blue-600 hover:underline">
+                  {cargo.bookingId}
+                </Link>
+              </td>
               <td className="px-4 py-3 text-sm">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[cargo.bookingStatus]}`}>
                   {STATUS_LABELS[cargo.bookingStatus]}

@@ -6,6 +6,7 @@ const NAV_ITEMS: Array<{ path: string; label: string; roles: string[] }> = [
   { path: '/dashboard', label: 'ダッシュボード', roles: [] },
   { path: '/bookings', label: '貨物予約', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   { path: '/voyages', label: '航海スケジュール', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
+  { path: '/routing/design', label: '経路設計', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
 ]
 
 export function AppLayout() {
