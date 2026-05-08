@@ -17,7 +17,7 @@
 | IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [完了報告書](iteration_report-1.md) | 完了 |
 | IT2 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [完了報告書](iteration_report-2.md) | 完了 |
 | IT3 | [計画](iteration_plan-3.md) | [ふりかえり](retrospective-3.md) | [完了報告書](iteration_report-3.md) | 完了 |
-| IT4 | - | - | - | 未着手 |
+| IT4 | [計画](iteration_plan-4.md) | - | - | 計画済 |
 | IT5 | - | - | - | 未着手 |
 | IT6 | - | - | - | 未着手 |
 | IT7 | - | - | - | 未着手 |
@@ -32,7 +32,7 @@
 | IT1 | 35 | 21 | 14 | 34 | 97% |
 | IT2 | 24 | 16 | 8 | 24 | 100% |
 | IT3 | 18 | 11 | 7 | 18 | 100% |
-| IT4 | 18 | 11 | 7 | - | - |
+| IT4 | 21 | 14 | 7 | - | - |
 | IT5 | 20 | 11 | 9 | - | - |
 | IT6 | - | - | - | - | - |
 | IT7 | 21 | 13 | 8 | - | - |
