@@ -90,11 +90,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | bookingms: RouteCargoCommand ドメインロジック実装（CargoItinerary 割当 → ROUTE_PROPOSED） | 4h | - | [ ] |
-| 1.2 | bookingms: PUT /api/booking/cargos/:id/route エンドポイント実装 | 2h | - | [ ] |
-| 1.3 | bookingms: ArchUnit テスト追加 | 1h | - | [ ] |
-| 1.4 | FE: 経路設計画面に「この経路を割り当てる」ボタン追加（TanStack Query mutation） | 3h | - | [ ] |
-| 1.5 | FE: 割り当て成功後に /booking/:bookingId へ遷移（React Router）・フィードバック UI 実装 | 2h | - | [ ] |
+| 1.1 | bookingms: RouteCargoCommand ドメインロジック実装（CargoItinerary 割当 → ROUTE_PROPOSED） | 4h | - | [x] |
+| 1.2 | bookingms: PUT /api/booking/cargos/:id/route エンドポイント実装 | 2h | - | [x] |
+| 1.3 | bookingms: ArchUnit テスト追加 | 1h | - | [x] |
+| 1.4 | FE: 経路設計画面に「この経路を割り当てる」ボタン追加（TanStack Query mutation） | 3h | - | [x] |
+| 1.5 | FE: 割り当て成功後に /booking/:bookingId へ遷移（React Router）・フィードバック UI 実装 | 2h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -103,8 +103,8 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | bookingms: CargoRoutedEvent 発行ロジック実装（RabbitMQ → trackingms 同期） | 3h | - | [ ] |
-| 2.2 | bookingms: PUT /api/booking/cargos/:id/route レスポンス + テスト補完 | 2h | - | [ ] |
-| 2.3 | FE: 予約詳細画面（/booking/:bookingId）に ROUTE_PROPOSED バッジ + 経路情報表示 | 2h | - | [ ] |
+| 2.2 | bookingms: PUT /api/booking/cargos/:id/route レスポンス + テスト補完 | 2h | - | [x] |
+| 2.3 | FE: 予約詳細画面（/booking/:bookingId）に ROUTE_PROPOSED バッジ + 経路情報表示 | 2h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -112,9 +112,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | bookingms: 予約確定ドメインロジック実装（予約状態 → CONFIRMED） | 3h | - | [ ] |
-| 3.2 | bookingms: PUT /api/booking/cargos/:id/confirm エンドポイント実装 | 2h | - | [ ] |
-| 3.3 | FE: 予約詳細画面に確定・キャンセルボタン実装 | 3h | - | [ ] |
+| 3.1 | bookingms: 予約確定ドメインロジック実装（予約状態 → CONFIRMED） | 3h | - | [x] |
+| 3.2 | bookingms: PUT /api/booking/cargos/:id/confirm エンドポイント実装 | 2h | - | [x] |
+| 3.3 | FE: 予約詳細画面に確定・キャンセルボタン実装 | 3h | - | [x] |
 | 3.4 | E2E: 予約→経路→確定の一連フロー Playwright テスト作成 | 2h | - | [ ] |
 
 **小計**: 10h（理想時間）
@@ -123,14 +123,14 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|-----|---------|------|
-| US09 経路選択・確定 | 8 | 12h | [ ] |
-| US11 経路紐付け | 5 | 7h | [ ] |
-| US13 予約確定 | 5 | 10h | [ ] |
+| US09 経路選択・確定 | 8 | 12h | [x] |
+| US11 経路紐付け（2.1 のみ未完） | 5 | 7h | 実施中 |
+| US13 予約確定（E2E 未完） | 5 | 10h | 実施中 |
 | **合計** | **18** | **29h** | |
 
 **1 SP あたり**: 約 1.6h（IT2 実績 2.1h より効率化を目標）
 
-**進捗率**: 0%（0/18 SP）
+**進捗率**: 約 89%（16/18 SP 相当 — E2E テストと CargoRoutedEvent が残り）
 
 ---
 
