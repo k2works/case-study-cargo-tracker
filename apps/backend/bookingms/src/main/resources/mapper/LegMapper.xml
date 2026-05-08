@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bookingms.infrastructure.repositories.LegMapper">
+
+    <!-- ResultMap: leg -->
+    <resultMap id="LegRecordMap" type="com.example.bookingms.infrastructure.repositories.LegRecord">
+        <id     property="id"                       column="id"/>
+        <result property="cargoId"                  column="cargo_id"/>
+        <result property="voyageNumber"             column="voyage_number"/>
+        <result property="loadLocationUnlocode"     column="load_location_unlocode"/>
+        <result property="unloadLocationUnlocode"   column="unload_location_unlocode"/>
+        <result property="loadTime"                 column="load_time"/>
+        <result property="unloadTime"               column="unload_time"/>
+        <result property="seqNumber"                column="seq_number"/>
+    </resultMap>
+
+    <!-- INSERT leg -->
+    <insert id="insertLeg" parameterType="com.example.bookingms.infrastructure.repositories.LegRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO leg (
+            cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode,
+            load_time, unload_time, seq_number, created_at, updated_at
+        ) VALUES (
+            #{cargoId}, #{voyageNumber}, #{loadLocationUnlocode}, #{unloadLocationUnlocode},
+            #{loadTime}, #{unloadTime}, #{seqNumber}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <!-- SELECT legs by cargo_id -->
+    <select id="findByCargoId" resultMap="LegRecordMap">
+        SELECT id, cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode,
+               load_time, unload_time, seq_number
+        FROM leg
+        WHERE cargo_id = #{cargoId}
+        ORDER BY seq_number ASC
+    </select>
+
+    <!-- DELETE legs by cargo_id -->
+    <delete id="deleteByCargoId">
+        DELETE FROM leg WHERE cargo_id = #{cargoId}
+    </delete>
+
+</mapper>

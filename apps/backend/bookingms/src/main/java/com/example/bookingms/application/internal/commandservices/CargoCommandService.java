@@ -2,7 +2,9 @@ package com.example.bookingms.application.internal.commandservices;
 
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.Leg;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoRepository;
@@ -10,10 +12,11 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * 貨物コマンドサービス（予約登録）
+ * 貨物コマンドサービス（予約登録・経路割当）
  */
 @Service
 public class CargoCommandService {
@@ -26,14 +29,6 @@ public class CargoCommandService {
 
     /**
      * 貨物予約を登録する
-     *
-     * @param shipperId                荷主 ID
-     * @param cargoType                貨物種別
-     * @param weightKg                 重量（kg）
-     * @param originUnlocode           出発地 UNLOCODE
-     * @param destinationUnlocode      到着地 UNLOCODE
-     * @param arrivalDeadline          到着期限
-     * @return 登録された貨物
      */
     public Cargo registerBooking(Long shipperId, String cargoType, BigDecimal weightKg,
                                   String originUnlocode, String destinationUnlocode,
@@ -45,6 +40,33 @@ public class CargoCommandService {
 
         Cargo cargo = new Cargo(bookingId, shipperId, type, weight, spec);
         return cargoRepository.save(cargo);
+    }
+
+    /**
+     * 経路を割り当てる（RouteCargoCommand）
+     * CargoItinerary を Cargo に設定し、予約状態を ROUTE_PROPOSED に遷移させる
+     *
+     * @param bookingId 予約 ID
+     * @param command   経路割当コマンド
+     * @return 更新後の貨物
+     */
+    public Cargo assignRoute(String bookingId, RouteCargoCommand command) {
+        Cargo cargo = cargoRepository.findByBookingId(new BookingId(bookingId))
+                .orElseThrow(() -> new IllegalArgumentException("Cargo not found: " + bookingId));
+
+        List<Leg> legs = command.legs().stream()
+                .map(l -> new Leg(
+                        l.voyageNumber(),
+                        l.loadLocationUnlocode(),
+                        l.unloadLocationUnlocode(),
+                        l.loadTime(),
+                        l.unloadTime()))
+                .toList();
+
+        CargoItinerary itinerary = new CargoItinerary(legs);
+        cargo.assignRoute(itinerary);
+        cargoRepository.update(cargo);
+        return cargo;
     }
 
     private String generateBookingId() {

@@ -2,6 +2,7 @@ package com.example.bookingms.domain.model.aggregates;
 
 import com.example.bookingms.domain.model.valueobjects.BookingId;
 import com.example.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.bookingms.domain.model.valueobjects.Weight;
@@ -20,6 +21,7 @@ public class Cargo {
     private final CargoType cargoType;
     private final Weight weight;
     private RouteSpecification routeSpecification;
+    private CargoItinerary cargoItinerary;
 
     /**
      * 新規貨物作成コンストラクタ
@@ -46,6 +48,16 @@ public class Cargo {
         this(bookingId, shipperId, cargoType, weight, routeSpecification);
         this.id = id;
         this.bookingStatus = bookingStatus;
+    }
+
+    /**
+     * 永続化済み貨物再構成コンストラクタ（CargoItinerary あり）
+     */
+    public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
+                 CargoType cargoType, Weight weight, RouteSpecification routeSpecification,
+                 CargoItinerary cargoItinerary) {
+        this(id, bookingId, shipperId, bookingStatus, cargoType, weight, routeSpecification);
+        this.cargoItinerary = cargoItinerary;
     }
 
     public Long getId() {
@@ -76,12 +88,26 @@ public class Cargo {
         return routeSpecification;
     }
 
+    public CargoItinerary getCargoItinerary() {
+        return cargoItinerary;
+    }
+
     /**
      * 経路仕様を更新する
      */
     public void specifyRoute(RouteSpecification routeSpecification) {
         Objects.requireNonNull(routeSpecification, "routeSpecification must not be null");
         this.routeSpecification = routeSpecification;
+    }
+
+    /**
+     * 経路を割り当てる（RouteCargoCommand）
+     * CargoItinerary を設定し、予約状態を ROUTE_PROPOSED に遷移させる
+     */
+    public void assignRoute(CargoItinerary itinerary) {
+        Objects.requireNonNull(itinerary, "itinerary must not be null");
+        this.cargoItinerary = itinerary;
+        this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
     }
 
     @Override

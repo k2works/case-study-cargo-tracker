@@ -1,8 +1,10 @@
 package com.example.bookingms.interfaces.rest;
 
 import com.example.bookingms.application.internal.commandservices.CargoCommandService;
+import com.example.bookingms.application.internal.commandservices.RouteCargoCommand;
 import com.example.bookingms.application.internal.queryservices.CargoQueryService;
 import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.interfaces.rest.dto.AssignRouteRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoResponse;
 import com.example.bookingms.interfaces.rest.dto.CreateCargoRequest;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -67,5 +70,29 @@ public class CargoController {
                 .map(CargoResponse::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 経路を割り当てる（RouteCargoCommand）
+     */
+    @PutMapping("/{bookingId}/route")
+    public ResponseEntity<CargoResponse> assignRoute(
+            @PathVariable String bookingId,
+            @RequestBody AssignRouteRequest request) {
+        try {
+            RouteCargoCommand command = new RouteCargoCommand(
+                    request.legs().stream()
+                            .map(l -> new RouteCargoCommand.LegData(
+                                    l.voyageNumber(),
+                                    l.loadLocationUnlocode(),
+                                    l.unloadLocationUnlocode(),
+                                    l.loadTime(),
+                                    l.unloadTime()))
+                            .toList());
+            Cargo cargo = cargoCommandService.assignRoute(bookingId, command);
+            return ResponseEntity.ok(CargoResponse.from(cargo));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

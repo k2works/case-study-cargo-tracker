@@ -20,6 +20,13 @@ public interface CargoRepository {
     Cargo save(Cargo cargo);
 
     /**
+     * 貨物を更新する（経路割当・状態遷移など）
+     *
+     * @param cargo 更新する貨物
+     */
+    void update(Cargo cargo);
+
+    /**
      * 予約 ID で貨物を検索する
      *
      * @param bookingId 予約 ID

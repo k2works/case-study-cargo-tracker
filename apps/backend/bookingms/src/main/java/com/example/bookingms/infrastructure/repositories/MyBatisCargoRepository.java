@@ -3,12 +3,15 @@ package com.example.bookingms.infrastructure.repositories;
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
 import com.example.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.Leg;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,9 +22,11 @@ import java.util.Optional;
 public class MyBatisCargoRepository implements CargoRepository {
 
     private final CargoMapper cargoMapper;
+    private final LegMapper legMapper;
 
-    public MyBatisCargoRepository(CargoMapper cargoMapper) {
+    public MyBatisCargoRepository(CargoMapper cargoMapper, LegMapper legMapper) {
         this.cargoMapper = cargoMapper;
+        this.legMapper = legMapper;
     }
 
     @Override
@@ -32,15 +37,47 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
+    public void update(Cargo cargo) {
+        CargoRecord record = new CargoRecord();
+        record.setId(cargo.getId());
+        record.setBookingStatus(cargo.getBookingStatus().name());
+        record.setRoutingStatus(cargo.getCargoItinerary() != null ? "ROUTED" : "NOT_ROUTED");
+        cargoMapper.updateCargo(record);
+
+        if (cargo.getCargoItinerary() != null) {
+            legMapper.deleteByCargoId(cargo.getId());
+            List<Leg> legs = cargo.getCargoItinerary().getLegs();
+            for (int i = 0; i < legs.size(); i++) {
+                Leg leg = legs.get(i);
+                LegRecord lr = new LegRecord();
+                lr.setCargoId(cargo.getId());
+                lr.setVoyageNumber(leg.getVoyageNumber());
+                lr.setLoadLocationUnlocode(leg.getLoadLocationUnlocode());
+                lr.setUnloadLocationUnlocode(leg.getUnloadLocationUnlocode());
+                lr.setLoadTime(leg.getLoadTime());
+                lr.setUnloadTime(leg.getUnloadTime());
+                lr.setSeqNumber(i + 1);
+                legMapper.insertLeg(lr);
+            }
+        }
+    }
+
+    @Override
     public Optional<Cargo> findByBookingId(BookingId bookingId) {
         return cargoMapper.findByBookingId(bookingId.getId())
-                .map(this::reconstruct);
+                .map(r -> {
+                    List<LegRecord> legRecords = legMapper.findByCargoId(r.getId());
+                    return reconstruct(r, legRecords);
+                });
     }
 
     @Override
     public List<Cargo> findAll() {
         return cargoMapper.findAll().stream()
-                .map(this::reconstruct)
+                .map(r -> {
+                    List<LegRecord> legRecords = legMapper.findByCargoId(r.getId());
+                    return reconstruct(r, legRecords);
+                })
                 .toList();
     }
 
@@ -66,6 +103,10 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     private Cargo reconstruct(CargoRecord r) {
+        return reconstruct(r, List.of());
+    }
+
+    private Cargo reconstruct(CargoRecord r, List<LegRecord> legRecords) {
         RouteSpecification spec = null;
         if (r.getSpecOriginUnlocode() != null && r.getSpecDestinationUnlocode() != null) {
             spec = new RouteSpecification(
@@ -73,6 +114,21 @@ public class MyBatisCargoRepository implements CargoRepository {
                     r.getSpecDestinationUnlocode(),
                     r.getSpecArrivalDeadline());
         }
+
+        CargoItinerary itinerary = null;
+        if (!legRecords.isEmpty()) {
+            List<Leg> legs = new ArrayList<>();
+            for (LegRecord lr : legRecords) {
+                legs.add(new Leg(
+                        lr.getVoyageNumber(),
+                        lr.getLoadLocationUnlocode(),
+                        lr.getUnloadLocationUnlocode(),
+                        lr.getLoadTime(),
+                        lr.getUnloadTime()));
+            }
+            itinerary = new CargoItinerary(legs);
+        }
+
         return new Cargo(
                 r.getId(),
                 new BookingId(r.getBookingId()),
@@ -80,6 +136,7 @@ public class MyBatisCargoRepository implements CargoRepository {
                 BookingStatus.valueOf(r.getBookingStatus()),
                 CargoType.valueOf(r.getCargoType()),
                 new Weight(r.getWeightKg()),
-                spec);
+                spec,
+                itinerary);
     }
 }

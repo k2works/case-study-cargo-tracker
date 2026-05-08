@@ -59,4 +59,13 @@
         ORDER BY id ASC
     </select>
 
+    <!-- UPDATE cargo status and routing_status -->
+    <update id="updateCargo" parameterType="com.example.bookingms.infrastructure.repositories.CargoRecord">
+        UPDATE cargo
+        SET booking_status  = #{bookingStatus},
+            routing_status  = #{routingStatus},
+            updated_at      = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
 </mapper>

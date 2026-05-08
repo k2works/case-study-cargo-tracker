@@ -33,4 +33,11 @@ public interface CargoMapper {
      * @return CargoRecord リスト
      */
     List<CargoRecord> findAll();
+
+    /**
+     * cargo のステータスと routing_status を更新する
+     *
+     * @param cargoRecord 更新する CargoRecord（id, bookingStatus, routingStatus が必須）
+     */
+    void updateCargo(CargoRecord cargoRecord);
 }
