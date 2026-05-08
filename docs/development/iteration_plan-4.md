@@ -22,13 +22,13 @@
 
 ### 成功基準
 
-- [ ] US14: CONFIRMED 状態の予約に対して追跡番号を発行できる API が動作する（trackingms）
-- [ ] US14: 追跡番号発行後、貨物状態が「受領待ち」に遷移する
-- [ ] US15: 追跡番号を指定して荷役作業（受領・積込・荷降し）を記録できる API が動作する
-- [ ] US15: 荷役記録後、貨物状態が対応する状態に自動更新される
-- [ ] US17: 追跡番号を指定して貨物状態を手動更新できる API + 画面が動作する
-- [ ] IT3 コードレビュー高優先度指摘（#1, #2, #4）が解消されている
-- [ ] テストカバレッジ 80% 以上（trackingms + bookingms、JaCoCo / Vitest）
+- [x] US14: CONFIRMED 状態の予約に対して追跡番号を発行できる API が動作する（trackingms）
+- [x] US14: 追跡番号発行後、貨物状態が「受領待ち」に遷移する
+- [x] US15: 追跡番号を指定して荷役作業（受領・積込・荷降し）を記録できる API が動作する
+- [x] US15: 荷役記録後、貨物状態が対応する状態に自動更新される
+- [x] US17: 追跡番号を指定して貨物状態を手動更新できる API + 画面が動作する
+- [x] IT3 コードレビュー高優先度指摘（#1, #2, #4）が解消されている
+- [x] テストカバレッジ 80% 以上（trackingms + bookingms、JaCoCo / Vitest）
 
 ---
 
@@ -104,9 +104,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | bookingms: `@Transactional` を assignRoute / confirmBooking / cancelBooking に付与 + テスト確認 | 1h | - | [ ] |
-| 0.2 | bookingms: `Cargo.cancel()` に状態ガード追加（DELIVERED/SETTLED 拒否）+ 状態遷移テスト（デシジョンテーブル） | 2h | - | [ ] |
-| 0.3 | bookingms: `CargoController` エラーレスポンスにメッセージボディ追加 + Controller 異常系テスト | 2h | - | [ ] |
+| 0.1 | bookingms: `@Transactional` を assignRoute / confirmBooking / cancelBooking に付与 + テスト確認 | 1h | - | [x] |
+| 0.2 | bookingms: `Cargo.cancel()` に状態ガード追加（DELIVERED/SETTLED 拒否）+ 状態遷移テスト（デシジョンテーブル） | 2h | - | [x] |
+| 0.3 | bookingms: `CargoController` エラーレスポンスにメッセージボディ追加 + Controller 異常系テスト | 2h | - | [x] |
 
 **小計**: 5h（理想時間）
 
@@ -114,11 +114,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | trackingms: TrackingNumber 値オブジェクト + TrackingActivity 集約ルート ドメインモデル TDD | 3h | - | [ ] |
-| 1.2 | trackingms: TrackingNumberService アプリケーション層（追跡番号発行ロジック）TDD | 2h | - | [ ] |
-| 1.3 | trackingms: POST /api/tracking/numbers エンドポイント + Controller テスト | 2h | - | [ ] |
-| 1.4 | trackingms: MyBatis マッパー + スキーマ（tracking_db）+ 統合テスト | 2h | - | [ ] |
-| 1.5 | FE: 予約詳細画面に「追跡番号を発行する」ボタン追加（CONFIRMED 状態のみ表示）+ mutation | 2h | - | [ ] |
+| 1.1 | trackingms: TrackingNumber 値オブジェクト + TrackingActivity 集約ルート ドメインモデル TDD | 3h | - | [x] |
+| 1.2 | trackingms: TrackingNumberService アプリケーション層（追跡番号発行ロジック）TDD | 2h | - | [x] |
+| 1.3 | trackingms: POST /api/tracking/numbers エンドポイント + Controller テスト | 2h | - | [x] |
+| 1.4 | trackingms: MyBatis マッパー + スキーマ（tracking_db）+ 統合テスト | 2h | - | [x] |
+| 1.5 | FE: 予約詳細画面に「追跡番号を発行する」ボタン追加（CONFIRMED 状態のみ表示）+ mutation | 2h | - | [x] |
 
 **小計**: 11h（理想時間）
 
@@ -126,12 +126,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | trackingms: TrackingActivityEvent ドメインモデル（受領・積込・荷降し）+ 状態遷移ロジック TDD | 3h | - | [ ] |
-| 2.2 | trackingms: TrackingActivityEventService アプリケーション層 TDD | 2h | - | [ ] |
-| 2.3 | trackingms: POST /api/handling/activities エンドポイント + Controller テスト | 2h | - | [ ] |
-| 2.4 | trackingms: MyBatis マッパー（tracking_handling_event テーブル）+ 統合テスト | 2h | - | [ ] |
-| 2.5 | FE: 荷役記録画面（HandlingActivityPage）— 追跡番号入力 + 作業種別選択 + 記録フォーム | 3h | - | [ ] |
-| 2.6 | FE: 荷役記録成功後のフィードバック UI + バリデーションエラー表示 | 1h | - | [ ] |
+| 2.1 | trackingms: TrackingActivityEvent ドメインモデル（受領・積込・荷降し）+ 状態遷移ロジック TDD | 3h | - | [x] |
+| 2.2 | trackingms: TrackingActivityEventService アプリケーション層 TDD | 2h | - | [x] |
+| 2.3 | trackingms: POST /api/handling/activities エンドポイント + Controller テスト | 2h | - | [x] |
+| 2.4 | trackingms: MyBatis マッパー（tracking_handling_event テーブル）+ 統合テスト | 2h | - | [x] |
+| 2.5 | FE: 荷役記録画面（HandlingActivityPage）— 追跡番号入力 + 作業種別選択 + 記録フォーム | 3h | - | [x] |
+| 2.6 | FE: 荷役記録成功後のフィードバック UI + バリデーションエラー表示 | 1h | - | [x] |
 
 **小計**: 13h（理想時間）
 
@@ -139,10 +139,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | trackingms: StatusUpdateCommand ドメインロジック TDD | 2h | - | [ ] |
-| 3.2 | trackingms: PUT /api/tracking/:trackingNumber/status エンドポイント + テスト | 2h | - | [ ] |
-| 3.3 | FE: 追跡管理画面に状態手動更新フォーム実装（TrackingStatusUpdatePage） | 2h | - | [ ] |
-| 3.4 | E2E: 追跡番号発行→荷役記録→状態更新の一連フロー Playwright テスト | 2h | - | [ ] |
+| 3.1 | trackingms: StatusUpdateCommand ドメインロジック TDD | 2h | - | [x] |
+| 3.2 | trackingms: PUT /api/tracking/:trackingNumber/status エンドポイント + テスト | 2h | - | [x] |
+| 3.3 | FE: 追跡管理画面に状態手動更新フォーム実装（TrackingStatusUpdatePage） | 2h | - | [x] |
+| 3.4 | E2E: 追跡番号発行→荷役記録→状態更新の一連フロー Playwright テスト | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -150,15 +150,15 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|-----|---------|------|
-| TI01 IT3 コードレビュー指摘解消 | 3 | 5h | [ ] |
-| US14 追跡番号発行 | 5 | 11h | [ ] |
-| US15 荷役作業記録 | 8 | 13h | [ ] |
-| US17 貨物状態手動更新 | 5 | 8h | [ ] |
+| TI01 IT3 コードレビュー指摘解消 | 3 | 5h | [x] |
+| US14 追跡番号発行 | 5 | 11h | [x] |
+| US15 荷役作業記録 | 8 | 13h | [x] |
+| US17 貨物状態手動更新 | 5 | 8h | [x] |
 | **合計** | **21** | **37h** | |
 
 **1 SP あたり**: 約 1.8h（IT3 実績 1.6h を考慮し、新規ドメイン構築のためやや余裕を持たせる）
 
-**進捗率**: 0%（0/21 SP）
+**進捗率**: 100%（21/21 SP）
 
 ---
 
@@ -547,14 +547,14 @@ AWAITING_CLAIM --> CLAIMED : 引取（US16, IT5 以降）
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（AI ペアレビュー）
-- [ ] ユニットテストがパス（trackingms + bookingms）
-- [ ] ArchUnit テストがパス（trackingms ヘキサゴナル依存ルール）
-- [ ] E2E テストがパス（追跡番号発行→荷役記録→状態更新の一連フロー）
-- [ ] テストカバレッジ 80% 以上（JaCoCo）
-- [ ] SonarQube Quality Gate PASS
-- [ ] 機能がローカル環境で動作確認済み
-- [ ] ドキュメント更新完了
+- [x] コードレビュー完了（AI ペアレビュー）
+- [x] ユニットテストがパス（trackingms + bookingms）
+- [x] ArchUnit テストがパス（trackingms ヘキサゴナル依存ルール）
+- [x] E2E テストがパス（追跡番号発行→荷役記録→状態更新の一連フロー）
+- [x] テストカバレッジ 80% 以上（JaCoCo）
+- [x] SonarQube Quality Gate PASS（new_violations: 0）
+- [x] 機能がローカル環境で動作確認済み
+- [x] ドキュメント更新完了
 
 ### デモ項目
 
@@ -571,6 +571,7 @@ AWAITING_CLAIM --> CLAIMED : 引取（US16, IT5 以降）
 |------|---------|--------|
 | 2026-05-08 | 初版作成 | - |
 | 2026-05-08 | 整合性検証による修正：ドメインモデル名（TrackingActivity/TrackingActivityEvent）・テーブル名（tracking_activity/tracking_handling_event）・TrackingStatus 値・US14/15/17 受入基準追加・IT3 レビュー#5/#6 対応方針追記 | - |
+| 2026-05-08 | IT4 完了: 全タスク完了（21/21 SP = 100%）。TI01・US14・US15・US17 全完了。SonarQube Quality Gate PASS（new_violations: 0） | - |
 
 ---
 
