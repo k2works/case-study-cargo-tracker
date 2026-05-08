@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
 import { useBooking, useConfirmBooking, useCancelBooking } from '../features/booking/hooks/useBookings'
+import { useIssueTrackingNumber } from '../features/tracking/hooks/useTracking'
 import type { BookingStatus } from '../features/booking/types/cargo'
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -31,6 +32,7 @@ export function BookingDetailPage() {
   const { data: cargo, isLoading, isError } = useBooking(bookingId ?? '')
   const { mutate: confirmBooking, isPending: isConfirming } = useConfirmBooking(bookingId ?? '')
   const { mutate: cancelBooking, isPending: isCancelling } = useCancelBooking(bookingId ?? '')
+  const { mutate: issueTrackingNumber, isPending: isIssuingTracking } = useIssueTrackingNumber()
   const [actionError, setActionError] = useState<string | null>(null)
 
   if (isLoading) return <p className="p-6 text-center text-gray-500">読み込み中...</p>
@@ -49,6 +51,17 @@ export function BookingDetailPage() {
     cancelBooking(undefined, {
       onError: () => setActionError('予約キャンセルに失敗しました。'),
     })
+  }
+
+  const handleIssueTracking = () => {
+    if (!cargo) return
+    setActionError(null)
+    issueTrackingNumber(
+      { bookingId: cargo.bookingId },
+      {
+        onError: () => setActionError('追跡番号の発行に失敗しました。'),
+      },
+    )
   }
 
   return (
@@ -146,6 +159,15 @@ export function BookingDetailPage() {
             className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             {isConfirming ? '確定中...' : '予約を確定する'}
+          </button>
+        )}
+        {cargo.bookingStatus === 'CONFIRMED' && (
+          <button
+            onClick={handleIssueTracking}
+            disabled={isIssuingTracking}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isIssuingTracking ? '発行中...' : '追跡番号を発行する'}
           </button>
         )}
         {(cargo.bookingStatus === 'PRELIMINARY' || cargo.bookingStatus === 'ROUTE_PROPOSED') && (

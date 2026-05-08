@@ -11,6 +11,8 @@ import { BookingListPage } from './pages/BookingListPage'
 import { BookingNewPage } from './pages/BookingNewPage'
 import { BookingDetailPage } from './pages/BookingDetailPage'
 import { RoutingDesignPage } from './pages/RoutingDesignPage'
+import { HandlingActivityPage } from './pages/HandlingActivityPage'
+import { TrackingStatusPage } from './pages/TrackingStatusPage'
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
           <Route path="/bookings/:bookingId" element={<BookingDetailPage />} />
           <Route path="/routing/design/:bookingId" element={<RoutingDesignPage />} />
           <Route path="/routing/design" element={<RoutingDesignPage />} />
+          <Route path="/handling/activities" element={<HandlingActivityPage />} />
+          <Route path="/tracking/:trackingNumber/status" element={<TrackingStatusPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
