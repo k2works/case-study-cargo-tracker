@@ -11,6 +11,7 @@ import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoEventPublisher;
 import com.example.bookingms.domain.ports.CargoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,6 +36,7 @@ public class CargoCommandService {
     /**
      * 貨物予約を登録する
      */
+    @Transactional
     public Cargo registerBooking(Long shipperId, String cargoType, BigDecimal weightKg,
                                   String originUnlocode, String destinationUnlocode,
                                   LocalDate arrivalDeadline) {
@@ -55,6 +57,7 @@ public class CargoCommandService {
      * @param command   経路割当コマンド
      * @return 更新後の貨物
      */
+    @Transactional
     public Cargo assignRoute(String bookingId, RouteCargoCommand command) {
         Cargo cargo = findCargoOrThrow(bookingId);
 
@@ -86,6 +89,7 @@ public class CargoCommandService {
      * @param bookingId 予約 ID
      * @return 更新後の貨物
      */
+    @Transactional
     public Cargo confirmBooking(String bookingId) {
         Cargo cargo = findCargoOrThrow(bookingId);
         cargo.confirm();
@@ -99,6 +103,7 @@ public class CargoCommandService {
      * @param bookingId 予約 ID
      * @return 更新後の貨物
      */
+    @Transactional
     public Cargo cancelBooking(String bookingId) {
         Cargo cargo = findCargoOrThrow(bookingId);
         cargo.cancel();

@@ -196,6 +196,40 @@ class CargoControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/route — 存在しない貨物の 404 レスポンスにメッセージが含まれること")
+    void shouldReturn404WithMessageWhenAssigningRouteToNonExistentCargo() throws Exception {
+        String assignRouteBody = """
+                {
+                  "legs": [
+                    {
+                      "voyageNumber": "V0042",
+                      "loadLocationUnlocode": "JPTYO",
+                      "unloadLocationUnlocode": "CNSHA",
+                      "loadTime": "2026-04-01T18:00:00",
+                      "unloadTime": "2026-04-14T08:00:00"
+                    }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(put("/api/booking/v1/cargos/NOTEXIST/route")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(assignRouteBody))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/confirm — 未経路割当の 400 レスポンスにメッセージが含まれること")
+    void shouldReturn400WithMessageWhenConfirmingWithoutRoute() throws Exception {
+        String bookingId = createCargo();
+
+        mockMvc.perform(put("/api/booking/v1/cargos/" + bookingId + "/confirm"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
     private String createCargo() throws Exception {
         String responseBody = mockMvc.perform(post("/api/booking/v1/cargos")
                         .contentType(MediaType.APPLICATION_JSON)

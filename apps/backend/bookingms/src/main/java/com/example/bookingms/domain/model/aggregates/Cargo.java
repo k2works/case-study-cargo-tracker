@@ -126,8 +126,14 @@ public class Cargo {
 
     /**
      * 予約をキャンセルする
+     * DELIVERED または SETTLED 状態の場合はキャンセル不可
      */
     public void cancel() {
+        if (this.bookingStatus == BookingStatus.DELIVERED
+                || this.bookingStatus == BookingStatus.SETTLED) {
+            throw new IllegalStateException(
+                    "Cannot cancel cargo in status: " + this.bookingStatus);
+        }
         this.bookingStatus = BookingStatus.CANCELLED;
     }
 

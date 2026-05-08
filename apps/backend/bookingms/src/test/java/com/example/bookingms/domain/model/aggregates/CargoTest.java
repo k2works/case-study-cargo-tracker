@@ -87,6 +87,33 @@ class CargoTest {
     }
 
     @Test
+    @DisplayName("DELIVERED 状態から cancel を呼ぶと例外が発生すること")
+    void shouldThrowExceptionWhenCancellingDeliveredCargo() {
+        // DELIVERED 状態を直接設定するため再構成コンストラクタを使用
+        Cargo delivered = new Cargo(1L, new BookingId("TESTDELIVER1"), 1L,
+                BookingStatus.DELIVERED, CargoType.GENERAL,
+                new Weight(BigDecimal.valueOf(100)),
+                new RouteSpecification("JPOSA", "USLAX", LocalDate.of(2026, 6, 30)));
+
+        assertThatThrownBy(delivered::cancel)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("DELIVERED");
+    }
+
+    @Test
+    @DisplayName("SETTLED 状態から cancel を呼ぶと例外が発生すること")
+    void shouldThrowExceptionWhenCancellingSettledCargo() {
+        Cargo settled = new Cargo(2L, new BookingId("TESTSETTLED1"), 1L,
+                BookingStatus.SETTLED, CargoType.GENERAL,
+                new Weight(BigDecimal.valueOf(100)),
+                new RouteSpecification("JPOSA", "USLAX", LocalDate.of(2026, 6, 30)));
+
+        assertThatThrownBy(settled::cancel)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SETTLED");
+    }
+
+    @Test
     @DisplayName("specifyRoute で経路仕様を更新できること")
     void shouldUpdateRouteSpecification() {
         RouteSpecification newSpecification =
