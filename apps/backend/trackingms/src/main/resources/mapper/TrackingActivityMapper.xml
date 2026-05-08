@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.trackingms.infrastructure.repositories.TrackingActivityMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.trackingms.infrastructure.repositories.TrackingActivityRecord">
+        INSERT INTO tracking_activity (tracking_number, booking_id, transport_status, created_at, updated_at)
+        VALUES (#{trackingNumber}, #{bookingId}, #{transportStatus}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="findByTrackingNumber" resultType="com.example.trackingms.infrastructure.repositories.TrackingActivityRecord">
+        SELECT id, tracking_number, booking_id, transport_status
+        FROM tracking_activity
+        WHERE tracking_number = #{trackingNumber}
+    </select>
+
+    <select id="findByBookingId" resultType="com.example.trackingms.infrastructure.repositories.TrackingActivityRecord">
+        SELECT id, tracking_number, booking_id, transport_status
+        FROM tracking_activity
+        WHERE booking_id = #{bookingId}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE tracking_activity
+        SET transport_status = #{transportStatus},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertEvent" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.trackingms.infrastructure.repositories.TrackingHandlingEventRecord">
+        INSERT INTO tracking_handling_event
+            (tracking_id, event_type, event_time, location_unlocode, voyage_number, created_at, updated_at)
+        VALUES
+            (#{trackingId}, #{eventType}, #{eventTime}, #{locationUnlocode}, #{voyageNumber},
+             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="findEventsByTrackingId" resultType="com.example.trackingms.infrastructure.repositories.TrackingHandlingEventRecord">
+        SELECT id, tracking_id, event_type, event_time, location_unlocode, voyage_number
+        FROM tracking_handling_event
+        WHERE tracking_id = #{trackingId}
+        ORDER BY event_time ASC
+    </select>
+
+</mapper>
