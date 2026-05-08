@@ -31,8 +31,8 @@ public record TrackingActivityResponse(
                 .toList();
 
         return new TrackingActivityResponse(
-                activity.getTrackingNumber().getNumber(),
-                activity.getBookingId().getBookingId(),
+                activity.getTrackingNumber().number(),
+                activity.getBookingId().bookingId(),
                 activity.getTransportStatus().name(),
                 eventResponses
         );

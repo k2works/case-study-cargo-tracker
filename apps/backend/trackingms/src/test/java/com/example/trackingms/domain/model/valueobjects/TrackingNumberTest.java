@@ -13,7 +13,7 @@ class TrackingNumberTest {
     @DisplayName("正しい形式（TRK-XXXXXX）で生成できること")
     void shouldCreateValidTrackingNumber() {
         TrackingNumber tn = new TrackingNumber("TRK-123456");
-        assertThat(tn.getNumber()).isEqualTo("TRK-123456");
+        assertThat(tn.number()).isEqualTo("TRK-123456");
     }
 
     @Test
@@ -41,6 +41,6 @@ class TrackingNumberTest {
     @Test
     @DisplayName("toString は追跡番号文字列を返すこと")
     void shouldReturnNumberAsString() {
-        assertThat(new TrackingNumber("TRK-999999").toString()).isEqualTo("TRK-999999");
+        assertThat(new TrackingNumber("TRK-999999")).hasToString("TRK-999999");
     }
 }

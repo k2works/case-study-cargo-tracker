@@ -80,7 +80,7 @@ public class CargoController {
      * 経路を割り当てる（RouteCargoCommand）
      */
     @PutMapping("/{bookingId}/route")
-    public ResponseEntity<?> assignRoute(
+    public ResponseEntity<Object> assignRoute(
             @PathVariable String bookingId,
             @RequestBody AssignRouteRequest request) {
         try {
@@ -104,7 +104,7 @@ public class CargoController {
      * 予約を確定する（UpdateBookingStatusCommand）
      */
     @PutMapping("/{bookingId}/confirm")
-    public ResponseEntity<?> confirmBooking(@PathVariable String bookingId) {
+    public ResponseEntity<Object> confirmBooking(@PathVariable String bookingId) {
         try {
             Cargo cargo = cargoCommandService.confirmBooking(bookingId);
             return ResponseEntity.ok(CargoResponse.from(cargo));
@@ -119,7 +119,7 @@ public class CargoController {
      * 予約をキャンセルする
      */
     @PutMapping("/{bookingId}/cancel")
-    public ResponseEntity<?> cancelBooking(@PathVariable String bookingId) {
+    public ResponseEntity<Object> cancelBooking(@PathVariable String bookingId) {
         try {
             Cargo cargo = cargoCommandService.cancelBooking(bookingId);
             return ResponseEntity.ok(CargoResponse.from(cargo));
@@ -130,13 +130,13 @@ public class CargoController {
         }
     }
 
-    private ResponseEntity<?> notFound(IllegalArgumentException exception) {
+    private ResponseEntity<Object> notFound(IllegalArgumentException exception) {
         log.debug("Cargo operation failed with not found", exception);
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(exception.getMessage()));
     }
 
-    private ResponseEntity<?> badRequest(IllegalStateException exception) {
+    private ResponseEntity<Object> badRequest(IllegalStateException exception) {
         log.debug("Cargo operation failed with bad request", exception);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(exception.getMessage()));

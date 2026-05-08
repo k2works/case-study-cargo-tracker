@@ -35,7 +35,7 @@ public class HandlingActivityController {
      * POST /api/handling/v1/activities
      */
     @PostMapping
-    public ResponseEntity<?> recordHandlingActivity(
+    public ResponseEntity<Object> recordHandlingActivity(
             @Valid @RequestBody RecordHandlingActivityRequest request) {
         try {
             RecordHandlingActivityCommand command = new RecordHandlingActivityCommand(

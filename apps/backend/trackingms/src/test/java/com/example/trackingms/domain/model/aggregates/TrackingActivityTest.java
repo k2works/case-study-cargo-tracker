@@ -87,9 +87,9 @@ class TrackingActivityTest {
     @Test
     @DisplayName("getEvents は変更不可能なリストを返すこと")
     void shouldReturnUnmodifiableEventsList() {
-        assertThatThrownBy(() -> activity.getEvents().add(
-                new TrackingActivityEvent(TrackingEventType.RECEIVE, "JPTYO",
-                        LocalDateTime.now(), null)))
+        TrackingActivityEvent newEvent = new TrackingActivityEvent(
+                TrackingEventType.RECEIVE, "JPTYO", LocalDateTime.now(), null);
+        assertThatThrownBy(() -> activity.getEvents().add(newEvent))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 }

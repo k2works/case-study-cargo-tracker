@@ -48,7 +48,7 @@ class TrackingNumberServiceTest {
         TrackingActivity result = trackingNumberService.issueTrackingNumber(bookingId);
 
         assertThat(result.getTransportStatus()).isEqualTo(TrackingStatus.NOT_RECEIVED);
-        assertThat(result.getTrackingNumber().getNumber()).startsWith("TRK-");
+        assertThat(result.getTrackingNumber().number()).startsWith("TRK-");
         verify(trackingActivityRepository).save(any());
     }
 

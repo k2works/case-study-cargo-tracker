@@ -26,17 +26,17 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
 
     @Override
     public TrackingActivity save(TrackingActivity activity) {
-        TrackingActivityRecord record = new TrackingActivityRecord(
-                activity.getTrackingNumber().getNumber(),
-                activity.getBookingId().getBookingId(),
+        TrackingActivityRecord activityRecord = new TrackingActivityRecord(
+                activity.getTrackingNumber().number(),
+                activity.getBookingId().bookingId(),
                 activity.getTransportStatus().name()
         );
-        mapper.insert(record);
+        mapper.insert(activityRecord);
 
         // イベントを保存
         for (TrackingActivityEvent event : activity.getEvents()) {
             TrackingHandlingEventRecord eventRecord = new TrackingHandlingEventRecord(
-                    record.getId(),
+                    activityRecord.getId(),
                     event.getEventType().name(),
                     event.getEventTime(),
                     event.getLocationUnlocode(),
@@ -45,26 +45,26 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
             mapper.insertEvent(eventRecord);
         }
 
-        return toEntity(record, List.of());
+        return toEntity(activityRecord, List.of());
     }
 
     @Override
     public Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber) {
-        return mapper.findByTrackingNumber(trackingNumber.getNumber())
-                .map(record -> {
+        return mapper.findByTrackingNumber(trackingNumber.number())
+                .map(activityRecord -> {
                     List<TrackingHandlingEventRecord> eventRecords =
-                            mapper.findEventsByTrackingId(record.getId());
-                    return toEntity(record, eventRecords);
+                            mapper.findEventsByTrackingId(activityRecord.getId());
+                    return toEntity(activityRecord, eventRecords);
                 });
     }
 
     @Override
     public Optional<TrackingActivity> findByBookingId(TrackingBookingId bookingId) {
-        return mapper.findByBookingId(bookingId.getBookingId())
-                .map(record -> {
+        return mapper.findByBookingId(bookingId.bookingId())
+                .map(activityRecord -> {
                     List<TrackingHandlingEventRecord> eventRecords =
-                            mapper.findEventsByTrackingId(record.getId());
-                    return toEntity(record, eventRecords);
+                            mapper.findEventsByTrackingId(activityRecord.getId());
+                    return toEntity(activityRecord, eventRecords);
                 });
     }
 
@@ -87,7 +87,7 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
         }
     }
 
-    private TrackingActivity toEntity(TrackingActivityRecord record,
+    private TrackingActivity toEntity(TrackingActivityRecord activityRecord,
                                       List<TrackingHandlingEventRecord> eventRecords) {
         List<TrackingActivityEvent> events = eventRecords.stream()
                 .map(e -> new TrackingActivityEvent(
@@ -99,10 +99,10 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                 .toList();
 
         return new TrackingActivity(
-                record.getId(),
-                new TrackingNumber(record.getTrackingNumber()),
-                new TrackingBookingId(record.getBookingId()),
-                TrackingStatus.valueOf(record.getTransportStatus()),
+                activityRecord.getId(),
+                new TrackingNumber(activityRecord.getTrackingNumber()),
+                new TrackingBookingId(activityRecord.getBookingId()),
+                TrackingStatus.valueOf(activityRecord.getTransportStatus()),
                 events
         );
     }

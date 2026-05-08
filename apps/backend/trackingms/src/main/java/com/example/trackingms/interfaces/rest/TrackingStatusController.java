@@ -37,7 +37,7 @@ public class TrackingStatusController {
      * GET /api/tracking/v1/{trackingNumber}
      */
     @GetMapping("/{trackingNumber}")
-    public ResponseEntity<?> getTrackingActivity(@PathVariable String trackingNumber) {
+    public ResponseEntity<Object> getTrackingActivity(@PathVariable String trackingNumber) {
         try {
             TrackingActivity activity = trackingStatusUpdateService.findByTrackingNumber(trackingNumber);
             return ResponseEntity.ok(TrackingActivityResponse.from(activity));
@@ -53,7 +53,7 @@ public class TrackingStatusController {
      * PUT /api/tracking/v1/{trackingNumber}/status
      */
     @PutMapping("/{trackingNumber}/status")
-    public ResponseEntity<?> updateTrackingStatus(
+    public ResponseEntity<Object> updateTrackingStatus(
             @PathVariable String trackingNumber,
             @Valid @RequestBody UpdateTrackingStatusRequest request) {
         try {

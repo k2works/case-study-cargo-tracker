@@ -10,7 +10,7 @@ import java.util.Optional;
  */
 @Mapper
 public interface TrackingActivityMapper {
-    void insert(TrackingActivityRecord record);
+    void insert(TrackingActivityRecord activityRecord);
 
     Optional<TrackingActivityRecord> findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 

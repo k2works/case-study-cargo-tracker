@@ -38,7 +38,7 @@ public class TrackingStatusUpdateService {
         TrackingStatus newStatus;
         try {
             newStatus = TrackingStatus.valueOf(command.newStatus());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             throw new IllegalArgumentException("Invalid tracking status: " + command.newStatus());
         }
 
