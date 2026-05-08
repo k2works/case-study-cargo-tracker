@@ -16,7 +16,7 @@
 |---------------|------|-----------|-----------|------|
 | IT1 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [完了報告書](iteration_report-1.md) | 完了 |
 | IT2 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [完了報告書](iteration_report-2.md) | 完了 |
-| IT3 | - | - | - | 未着手 |
+| IT3 | [計画](iteration_plan-3.md) | - | - | 実施中 |
 | IT4 | - | - | - | 未着手 |
 | IT5 | - | - | - | 未着手 |
 | IT6 | - | - | - | 未着手 |
