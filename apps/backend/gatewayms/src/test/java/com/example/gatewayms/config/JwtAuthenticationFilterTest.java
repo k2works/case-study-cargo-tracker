@@ -59,6 +59,15 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void Bearer以外のAuthorizationヘッダーなら401を返す() {
+        webTestClient.get()
+                .uri("/api/routing/voyages")
+                .header("Authorization", "Basic abcdef")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
     void 有効なトークンでアクセスするとフィルタを通過する() {
         String token = generateValidToken();
 

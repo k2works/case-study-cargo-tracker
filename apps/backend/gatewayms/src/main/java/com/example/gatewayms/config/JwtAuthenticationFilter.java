@@ -2,6 +2,8 @@ package com.example.gatewayms.config;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +21,7 @@ import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter implements WebFilter, Ordered {
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/login",
@@ -56,8 +59,8 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
                     .build()
                     .parseSignedClaims(token);
             return chain.filter(exchange);
-        } catch (Exception e) {
-            return unauthorized(exchange);
+        } catch (RuntimeException exception) {
+            return unauthorizedFor(exception, exchange);
         }
     }
 
@@ -72,6 +75,11 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
         return exchange.getResponse().writeWith(
                 Mono.just(exchange.getResponse().bufferFactory().wrap(body))
         );
+    }
+
+    private Mono<Void> unauthorizedFor(RuntimeException exception, ServerWebExchange exchange) {
+        log.debug("Rejecting request because JWT validation failed", exception);
+        return unauthorized(exchange);
     }
 
     @Override
