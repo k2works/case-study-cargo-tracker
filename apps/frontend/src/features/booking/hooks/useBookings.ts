@@ -29,3 +29,24 @@ export function useCreateBooking() {
     },
   })
 }
+
+export interface AssignRouteRequest {
+  legs: {
+    voyageNumber: string
+    loadLocationUnlocode: string
+    unloadLocationUnlocode: string
+    loadTime: string
+    unloadTime: string
+  }[]
+}
+
+export function useAssignRoute(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: AssignRouteRequest) =>
+      apiClient.put<Cargo>(`/api/booking/v1/cargos/${bookingId}/route`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...BOOKINGS_KEY, bookingId] })
+    },
+  })
+}

@@ -1,30 +1,69 @@
 import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router'
 import { useItineraries } from '../features/routing/hooks/useItineraries'
+import { useAssignRoute } from '../features/booking/hooks/useBookings'
 import type { Itinerary } from '../features/routing/types/itinerary'
 
 export function RoutingDesignPage() {
+  const { bookingId } = useParams<{ bookingId: string }>()
+  const navigate = useNavigate()
+
   const [originUnlocode, setOriginUnlocode] = useState('')
   const [destinationUnlocode, setDestinationUnlocode] = useState('')
   const [arrivalDeadline, setArrivalDeadline] = useState('')
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const { mutate, data: itineraries, isPending, isError } = useItineraries()
+  const { mutate: searchItineraries, data: itineraries, isPending: isSearching, isError: isSearchError } = useItineraries()
+  const { mutate: assignRoute, isPending: isAssigning } = useAssignRoute(bookingId ?? '')
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setSelectedIndex(null)
-    mutate({
+    setSuccessMessage(null)
+    setErrorMessage(null)
+    searchItineraries({
       originUnlocode,
       destinationUnlocode,
       arrivalDeadline: arrivalDeadline || null,
     })
   }
 
+  const handleAssign = () => {
+    if (selectedIndex === null || !itineraries || !bookingId) return
+    const selected = itineraries[selectedIndex]
+    assignRoute(
+      { legs: selected.legs },
+      {
+        onSuccess: () => {
+          navigate(`/bookings/${bookingId}`)
+        },
+        onError: () => {
+          setErrorMessage('経路の割り当てに失敗しました。')
+        },
+      }
+    )
+  }
+
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">経路設計</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          経路設計{bookingId ? ` — ${bookingId}` : ''}
+        </h1>
       </div>
+
+      {successMessage && (
+        <div className="mb-4 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
+          {successMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+          {errorMessage}
+        </div>
+      )}
 
       <form onSubmit={handleSearch} className="bg-white border border-gray-200 rounded-lg p-4 mb-6 flex items-end gap-4">
         <div>
@@ -60,15 +99,15 @@ export function RoutingDesignPage() {
         </div>
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isSearching}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           経路を検索
         </button>
       </form>
 
-      {isPending && <p className="py-4 text-center text-gray-500">検索中...</p>}
-      {isError && <p className="py-4 text-center text-red-500">経路の取得に失敗しました。</p>}
+      {isSearching && <p className="py-4 text-center text-gray-500">検索中...</p>}
+      {isSearchError && <p className="py-4 text-center text-red-500">経路の取得に失敗しました。</p>}
 
       {itineraries && itineraries.length === 0 && (
         <p className="py-8 text-center text-gray-500">該当する経路が見つかりませんでした。</p>
@@ -125,6 +164,24 @@ export function RoutingDesignPage() {
               </div>
             </div>
           ))}
+
+          {bookingId && selectedIndex !== null && (
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => navigate(`/bookings/${bookingId}`)}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleAssign}
+                disabled={isAssigning}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isAssigning ? '割り当て中...' : 'この経路を割り当てる'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

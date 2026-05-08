@@ -25,6 +25,7 @@ export default function App() {
           <Route path="/voyages/:voyageNumber/edit" element={<VoyageEditPage />} />
           <Route path="/bookings" element={<BookingListPage />} />
           <Route path="/bookings/new" element={<BookingNewPage />} />
+          <Route path="/routing/design/:bookingId" element={<RoutingDesignPage />} />
           <Route path="/routing/design" element={<RoutingDesignPage />} />
         </Route>
       </Route>
