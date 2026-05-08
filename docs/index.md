@@ -21,7 +21,7 @@
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 2 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 2 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 4 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -76,6 +76,8 @@
 | :--- | :--- |
 | [ADR-001: Heroku API ルーティングと CORS 設定](./adr/001-heroku-api-routing-and-cors.md) | Heroku 環境で発生した `404` / `403` を解消するための設定方針と実装判断 |
 | [ADR-002: Vite dev プロキシの二段階構成](./adr/002-vite-dev-proxy-authms-passthrough.md) | 開発環境で `/api/v1/auth` を `authms` 直結、`/api` を Gateway 経由とする方針 |
+| [ADR-003: CargoEventPublisher ポート・アダプタ](./adr/003-cargo-event-publisher-port-adapter.md) | 貨物イベント発行のポート・アダプタ設計方針 |
+| [ADR-004: Testcontainers RabbitMQ 統合テスト](./adr/004-testcontainers-rabbitmq-integration-test.md) | RabbitMQ 統合テストに Testcontainers を採用する方針 |
 
 ## 補足
 

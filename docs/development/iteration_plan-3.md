@@ -474,6 +474,7 @@ apps/
 | 2026-05-08 | 初版作成 | - |
 | 2026-05-08 | 整合性検証による修正（BookingStatus・API 設計・US受入条件・データモデル追加） | - |
 | 2026-05-08 | 進捗更新: US09/US11/US13 主要実装完了（16/18 SP = 89%）。残: CargoRoutedEvent・E2E テスト | - |
+| 2026-05-08 | IT3 完了: 全 18 SP 完了（100%）。CargoRoutedEvent・E2E テスト完了。SonarQube Quality Gate PASS | - |
 
 ---
 

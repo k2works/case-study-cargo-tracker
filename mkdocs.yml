@@ -95,6 +95,8 @@ nav:
       - イテレーション 2 ふりかえり: development/retrospective-2.md
       - イテレーション 2 完了報告書: development/iteration_report-2.md
       - イテレーション 3 計画: development/iteration_plan-3.md
+      - イテレーション 3 ふりかえり: development/retrospective-3.md
+      - イテレーション 3 完了報告書: development/iteration_report-3.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ: operation/アプリケーション開発環境セットアップ手順書.md
@@ -106,6 +108,8 @@ nav:
       - 概要: adr/index.md
       - ADR-001 Heroku API ルーティングと CORS 設定: adr/001-heroku-api-routing-and-cors.md
       - ADR-002 Vite dev プロキシの二段階構成: adr/002-vite-dev-proxy-authms-passthrough.md
+      - ADR-003 CargoEventPublisher ポート・アダプタ: adr/003-cargo-event-publisher-port-adapter.md
+      - ADR-004 Testcontainers RabbitMQ 統合テスト: adr/004-testcontainers-rabbitmq-integration-test.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
