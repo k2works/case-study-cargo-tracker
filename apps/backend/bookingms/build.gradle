@@ -24,6 +24,7 @@ dependencies {
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:4.0.1'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:rabbitmq'
     testImplementation 'com.github.docker-java:docker-java-api:3.7.0'
     testImplementation 'com.github.docker-java:docker-java-transport:3.7.0'
     testImplementation 'com.github.docker-java:docker-java-transport-zerodep:3.7.0'
