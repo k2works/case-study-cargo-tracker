@@ -10,7 +10,7 @@ public interface UserMapper {
     UserRecord selectByUsername(@Param("username") String username);
     UserRecord selectByEmail(@Param("email") String email);
     UserRecord selectById(@Param("id") Long id);
-    void insertUser(UserRecord record);
+    void insertUser(UserRecord userRecord);
     List<RoleRecord> selectRolesByUserId(@Param("userId") Long userId);
     void insertUserRole(@Param("userId") Long userId, @Param("roleId") Long roleId);
     RoleRecord selectRoleByName(@Param("name") String name);

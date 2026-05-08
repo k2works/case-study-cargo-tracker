@@ -25,6 +25,9 @@ class AuthControllerTest {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @Autowired
+    private AuthController authController;
+
     @Test
     void 正しい認証情報でログインできる() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
@@ -98,5 +101,36 @@ class AuthControllerTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void roleを指定してユーザー登録できる() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "shipper2", "email": "shipper2@example.com", "password": "password123", "role": "ROLE_SHIPPER"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("shipper2"));
+    }
+
+    @Test
+    void 存在しないユーザーのmeは404を返す() throws Exception {
+        String token = jwtTokenProvider.generateToken("ghost-user", List.of("ROLE_ADMIN"));
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("ユーザーが見つかりません"));
+    }
+
+    @Test
+    void meで認証情報がnullなら401レスポンスを返す() {
+        var response = authController.me(null);
+
+        org.assertj.core.api.Assertions.assertThat(response.getStatusCode())
+                .isEqualTo(org.springframework.http.HttpStatus.UNAUTHORIZED);
+        org.assertj.core.api.Assertions.assertThat(response.getBody())
+                .isEqualTo(java.util.Map.of("message", "認証が必要です"));
     }
 }

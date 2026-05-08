@@ -3,6 +3,8 @@ package com.example.authms.infrastructure.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +15,7 @@ import java.util.List;
 
 @Component
 public class JwtTokenProvider {
+    private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     private final SecretKey key;
     private final long expirationMs;
@@ -50,9 +53,14 @@ public class JwtTokenProvider {
         try {
             parseClaims(token);
             return true;
-        } catch (Exception e) {
-            return false;
+        } catch (RuntimeException exception) {
+            return invalidToken(exception);
         }
+    }
+
+    private boolean invalidToken(RuntimeException exception) {
+        log.debug("JWT validation failed", exception);
+        return false;
     }
 
     private Claims parseClaims(String token) {

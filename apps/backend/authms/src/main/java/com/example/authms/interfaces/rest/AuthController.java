@@ -20,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
+    private static final String MESSAGE_KEY = "message";
 
     private final AuthCommandService authCommandService;
     private final UserRepository userRepository;
@@ -34,20 +35,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<Object> login(@Valid @RequestBody LoginRequest request) {
         try {
             String token = authCommandService.login(request.username(), request.password());
             String username = jwtTokenProvider.getUsernameFromToken(token);
             List<String> roles = jwtTokenProvider.getRolesFromToken(token);
-            return ResponseEntity.ok(new TokenResponse(token, username, roles));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseEntity.ok().body(new TokenResponse(token, username, roles));
+        } catch (IllegalArgumentException error) {
+            return errorResponse(HttpStatus.UNAUTHORIZED, error.getMessage());
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequest request) {
         try {
             Role role = request.role() != null ? Role.valueOf(request.role()) : Role.ROLE_SHIPPER;
             User user = authCommandService.register(
@@ -58,17 +58,15 @@ public class AuthController {
                             "username", user.getUsername().getValue(),
                             "email", user.getEmail().getValue()
                     ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", e.getMessage()));
+        } catch (IllegalArgumentException error) {
+            return errorResponse(HttpStatus.CONFLICT, error.getMessage());
         }
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> me(Authentication authentication) {
+    public ResponseEntity<Object> me(Authentication authentication) {
         if (authentication == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "認証が必要です"));
+            return errorResponse(HttpStatus.UNAUTHORIZED, "認証が必要です");
         }
         String username = authentication.getName();
         return userRepository.findByUsername(username)
@@ -76,13 +74,16 @@ public class AuthController {
                     List<String> roles = user.getRoles().stream()
                             .map(Role::name)
                             .toList();
-                    return ResponseEntity.ok(Map.of(
+                    return ResponseEntity.ok().<Object>body(Map.of(
                             "username", user.getUsername().getValue(),
                             "email", user.getEmail().getValue(),
                             "roles", roles
                     ));
                 })
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "ユーザーが見つかりません")));
+                .orElseGet(() -> errorResponse(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
+    }
+
+    private ResponseEntity<Object> errorResponse(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(Map.of(MESSAGE_KEY, message));
     }
 }
