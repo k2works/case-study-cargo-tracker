@@ -9,6 +9,7 @@ import { VoyageNewPage } from './pages/VoyageNewPage'
 import { VoyageEditPage } from './pages/VoyageEditPage'
 import { BookingListPage } from './pages/BookingListPage'
 import { BookingNewPage } from './pages/BookingNewPage'
+import { BookingDetailPage } from './pages/BookingDetailPage'
 import { RoutingDesignPage } from './pages/RoutingDesignPage'
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/voyages/:voyageNumber/edit" element={<VoyageEditPage />} />
           <Route path="/bookings" element={<BookingListPage />} />
           <Route path="/bookings/new" element={<BookingNewPage />} />
+          <Route path="/bookings/:bookingId" element={<BookingDetailPage />} />
           <Route path="/routing/design/:bookingId" element={<RoutingDesignPage />} />
           <Route path="/routing/design" element={<RoutingDesignPage />} />
         </Route>

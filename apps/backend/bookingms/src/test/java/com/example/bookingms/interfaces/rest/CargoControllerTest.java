@@ -87,4 +87,62 @@ class CargoControllerTest {
         mockMvc.perform(get("/api/booking/v1/cargos/NOTEXIST"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/route — 経路を割り当てると ROUTE_PROPOSED になること")
+    void shouldAssignRoute() throws Exception {
+        // 貨物を登録
+        String responseBody = mockMvc.perform(post("/api/booking/v1/cargos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CREATE_CARGO_BODY))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String bookingId = responseBody.replaceAll(".*\"bookingId\":\"([^\"]+)\".*", "$1");
+
+        // 経路を割り当てる
+        String assignRouteBody = """
+                {
+                  "legs": [
+                    {
+                      "voyageNumber": "V0042",
+                      "loadLocationUnlocode": "JPTYO",
+                      "unloadLocationUnlocode": "CNSHA",
+                      "loadTime": "2026-04-01T18:00:00",
+                      "unloadTime": "2026-04-14T08:00:00"
+                    }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(put("/api/booking/v1/cargos/" + bookingId + "/route")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(assignRouteBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value(bookingId))
+                .andExpect(jsonPath("$.bookingStatus").value("ROUTE_PROPOSED"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/route — 存在しない貨物の場合は 404 を返すこと")
+    void shouldReturn404WhenAssigningRouteToNonExistentCargo() throws Exception {
+        String assignRouteBody = """
+                {
+                  "legs": [
+                    {
+                      "voyageNumber": "V0042",
+                      "loadLocationUnlocode": "JPTYO",
+                      "unloadLocationUnlocode": "CNSHA",
+                      "loadTime": "2026-04-01T18:00:00",
+                      "unloadTime": "2026-04-14T08:00:00"
+                    }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(put("/api/booking/v1/cargos/NOTEXIST/route")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(assignRouteBody))
+                .andExpect(status().isNotFound());
+    }
 }

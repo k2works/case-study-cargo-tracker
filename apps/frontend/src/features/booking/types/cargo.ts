@@ -19,6 +19,15 @@ export interface Cargo {
   originUnlocode: string
   destinationUnlocode: string
   arrivalDeadline: string | null
+  legs: LegInfo[]
+}
+
+export interface LegInfo {
+  voyageNumber: string
+  loadLocationUnlocode: string
+  unloadLocationUnlocode: string
+  loadTime: string
+  unloadTime: string
 }
 
 export interface CreateCargoRequest {
