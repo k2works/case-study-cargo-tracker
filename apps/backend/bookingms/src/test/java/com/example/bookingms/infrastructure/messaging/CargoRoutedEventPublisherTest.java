@@ -13,7 +13,7 @@ import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -68,7 +68,7 @@ class CargoRoutedEventPublisherTest {
         @Bean
         @Primary
         CargoEventPublisher testCargoEventPublisher(RabbitTemplate rabbitTemplate) {
-            Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+            JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter();
             rabbitTemplate.setMessageConverter(converter);
             return new RabbitMqCargoEventPublisher(rabbitTemplate);
         }

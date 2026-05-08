@@ -1,9 +1,8 @@
 package com.example.bookingms.infrastructure.messaging;
 
 import com.example.bookingms.domain.ports.CargoEventPublisher;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -22,8 +21,8 @@ public class MessagingConfiguration {
 
     @Bean
     @ConditionalOnBean(RabbitTemplate.class)
-    public MessageConverter jacksonMessageConverter(ObjectMapper objectMapper) {
-        return new Jackson2JsonMessageConverter(objectMapper);
+    public MessageConverter jacksonMessageConverter() {
+        return new JacksonJsonMessageConverter();
     }
 
     @Bean
