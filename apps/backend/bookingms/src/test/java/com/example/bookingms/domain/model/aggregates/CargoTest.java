@@ -85,4 +85,48 @@ class CargoTest {
 
         assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.CANCELLED);
     }
+
+    @Test
+    @DisplayName("specifyRoute で経路仕様を更新できること")
+    void shouldUpdateRouteSpecification() {
+        RouteSpecification newSpecification =
+                new RouteSpecification("NLRTM", "USNYC", LocalDate.of(2026, 7, 31));
+
+        cargo.specifyRoute(newSpecification);
+
+        assertThat(cargo.getRouteSpecification()).isEqualTo(newSpecification);
+    }
+
+    @Test
+    @DisplayName("同じ bookingId の Cargo は等価であること")
+    void shouldCompareByBookingId() {
+        Cargo sameBookingId = new Cargo(
+                new BookingId("TESTBOOKING1"),
+                99L,
+                CargoType.HAZARDOUS,
+                new Weight(BigDecimal.valueOf(200)),
+                null
+        );
+
+        assertThat(cargo)
+                .isEqualTo(sameBookingId)
+                .hasSameHashCodeAs(sameBookingId);
+        assertThat(cargo.toString()).contains("TESTBOOKING1");
+    }
+
+    @Test
+    @DisplayName("異なる bookingId や別型とは等価でないこと")
+    void shouldNotBeEqualWhenBookingIdDiffersOrTypeDiffers() {
+        Cargo differentBookingId = new Cargo(
+                new BookingId("DIFFERENT001"),
+                1L,
+                CargoType.GENERAL,
+                new Weight(BigDecimal.valueOf(100)),
+                null
+        );
+
+        assertThat(cargo)
+                .isNotEqualTo(differentBookingId)
+                .isNotEqualTo("cargo");
+    }
 }

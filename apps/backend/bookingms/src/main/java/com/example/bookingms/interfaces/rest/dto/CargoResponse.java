@@ -1,7 +1,6 @@
 package com.example.bookingms.interfaces.rest.dto;
 
 import com.example.bookingms.domain.model.aggregates.Cargo;
-import com.example.bookingms.domain.model.valueobjects.Leg;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

@@ -22,6 +22,7 @@ import java.util.UUID;
  */
 @Service
 public class CargoCommandService {
+    private static final String CARGO_NOT_FOUND_PREFIX = "Cargo not found: ";
 
     private final CargoRepository cargoRepository;
     private final CargoEventPublisher cargoEventPublisher;
@@ -55,8 +56,7 @@ public class CargoCommandService {
      * @return 更新後の貨物
      */
     public Cargo assignRoute(String bookingId, RouteCargoCommand command) {
-        Cargo cargo = cargoRepository.findByBookingId(new BookingId(bookingId))
-                .orElseThrow(() -> new IllegalArgumentException("Cargo not found: " + bookingId));
+        Cargo cargo = findCargoOrThrow(bookingId);
 
         List<Leg> legs = command.legs().stream()
                 .map(l -> new Leg(
@@ -87,8 +87,7 @@ public class CargoCommandService {
      * @return 更新後の貨物
      */
     public Cargo confirmBooking(String bookingId) {
-        Cargo cargo = cargoRepository.findByBookingId(new BookingId(bookingId))
-                .orElseThrow(() -> new IllegalArgumentException("Cargo not found: " + bookingId));
+        Cargo cargo = findCargoOrThrow(bookingId);
         cargo.confirm();
         cargoRepository.update(cargo);
         return cargo;
@@ -101,11 +100,15 @@ public class CargoCommandService {
      * @return 更新後の貨物
      */
     public Cargo cancelBooking(String bookingId) {
-        Cargo cargo = cargoRepository.findByBookingId(new BookingId(bookingId))
-                .orElseThrow(() -> new IllegalArgumentException("Cargo not found: " + bookingId));
+        Cargo cargo = findCargoOrThrow(bookingId);
         cargo.cancel();
         cargoRepository.update(cargo);
         return cargo;
+    }
+
+    private Cargo findCargoOrThrow(String bookingId) {
+        return cargoRepository.findByBookingId(new BookingId(bookingId))
+                .orElseThrow(() -> new IllegalArgumentException(CARGO_NOT_FOUND_PREFIX + bookingId));
     }
 
     private String generateBookingId() {

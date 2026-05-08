@@ -54,10 +54,12 @@ public class Cargo {
      * 永続化済み貨物再構成コンストラクタ（CargoItinerary あり）
      */
     public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
-                 CargoType cargoType, Weight weight, RouteSpecification routeSpecification,
-                 CargoItinerary cargoItinerary) {
-        this(id, bookingId, shipperId, bookingStatus, cargoType, weight, routeSpecification);
-        this.cargoItinerary = cargoItinerary;
+                 CargoType cargoType, Weight weight, RouteDetails routeDetails) {
+        this(id, bookingId, shipperId, bookingStatus, cargoType, weight, routeDetails.routeSpecification());
+        this.cargoItinerary = routeDetails.cargoItinerary();
+    }
+
+    public record RouteDetails(RouteSpecification routeSpecification, CargoItinerary cargoItinerary) {
     }
 
     public Long getId() {

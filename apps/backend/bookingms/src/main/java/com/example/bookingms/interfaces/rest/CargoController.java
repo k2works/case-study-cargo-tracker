@@ -7,6 +7,8 @@ import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.interfaces.rest.dto.AssignRouteRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoResponse;
 import com.example.bookingms.interfaces.rest.dto.CreateCargoRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/booking/v1/cargos")
 public class CargoController {
+    private static final Logger log = LoggerFactory.getLogger(CargoController.class);
 
     private final CargoCommandService cargoCommandService;
     private final CargoQueryService cargoQueryService;
@@ -91,8 +94,8 @@ public class CargoController {
                             .toList());
             Cargo cargo = cargoCommandService.assignRoute(bookingId, command);
             return ResponseEntity.ok(CargoResponse.from(cargo));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException exception) {
+            return notFound(exception);
         }
     }
 
@@ -104,10 +107,10 @@ public class CargoController {
         try {
             Cargo cargo = cargoCommandService.confirmBooking(bookingId);
             return ResponseEntity.ok(CargoResponse.from(cargo));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().build();
+        } catch (IllegalArgumentException exception) {
+            return notFound(exception);
+        } catch (IllegalStateException exception) {
+            return badRequest(exception);
         }
     }
 
@@ -119,8 +122,18 @@ public class CargoController {
         try {
             Cargo cargo = cargoCommandService.cancelBooking(bookingId);
             return ResponseEntity.ok(CargoResponse.from(cargo));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException exception) {
+            return notFound(exception);
         }
+    }
+
+    private ResponseEntity<CargoResponse> notFound(IllegalArgumentException exception) {
+        log.debug("Cargo operation failed with not found", exception);
+        return ResponseEntity.notFound().build();
+    }
+
+    private ResponseEntity<CargoResponse> badRequest(IllegalStateException exception) {
+        log.debug("Cargo operation failed with bad request", exception);
+        return ResponseEntity.badRequest().build();
     }
 }

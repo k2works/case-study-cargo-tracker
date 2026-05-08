@@ -31,33 +31,33 @@ public class MyBatisCargoRepository implements CargoRepository {
 
     @Override
     public Cargo save(Cargo cargo) {
-        CargoRecord record = toRecord(cargo);
-        cargoMapper.insertCargo(record);
-        return reconstruct(record);
+        CargoRecord cargoRecord = toRecord(cargo);
+        cargoMapper.insertCargo(cargoRecord);
+        return reconstruct(cargoRecord);
     }
 
     @Override
     public void update(Cargo cargo) {
-        CargoRecord record = new CargoRecord();
-        record.setId(cargo.getId());
-        record.setBookingStatus(cargo.getBookingStatus().name());
-        record.setRoutingStatus(cargo.getCargoItinerary() != null ? "ROUTED" : "NOT_ROUTED");
-        cargoMapper.updateCargo(record);
+        CargoRecord cargoRecord = new CargoRecord();
+        cargoRecord.setId(cargo.getId());
+        cargoRecord.setBookingStatus(cargo.getBookingStatus().name());
+        cargoRecord.setRoutingStatus(cargo.getCargoItinerary() != null ? "ROUTED" : "NOT_ROUTED");
+        cargoMapper.updateCargo(cargoRecord);
 
         if (cargo.getCargoItinerary() != null) {
             legMapper.deleteByCargoId(cargo.getId());
             List<Leg> legs = cargo.getCargoItinerary().getLegs();
             for (int i = 0; i < legs.size(); i++) {
                 Leg leg = legs.get(i);
-                LegRecord lr = new LegRecord();
-                lr.setCargoId(cargo.getId());
-                lr.setVoyageNumber(leg.getVoyageNumber());
-                lr.setLoadLocationUnlocode(leg.getLoadLocationUnlocode());
-                lr.setUnloadLocationUnlocode(leg.getUnloadLocationUnlocode());
-                lr.setLoadTime(leg.getLoadTime());
-                lr.setUnloadTime(leg.getUnloadTime());
-                lr.setSeqNumber(i + 1);
-                legMapper.insertLeg(lr);
+                LegRecord legRecord = new LegRecord();
+                legRecord.setCargoId(cargo.getId());
+                legRecord.setVoyageNumber(leg.getVoyageNumber());
+                legRecord.setLoadLocationUnlocode(leg.getLoadLocationUnlocode());
+                legRecord.setUnloadLocationUnlocode(leg.getUnloadLocationUnlocode());
+                legRecord.setLoadTime(leg.getLoadTime());
+                legRecord.setUnloadTime(leg.getUnloadTime());
+                legRecord.setSeqNumber(i + 1);
+                legMapper.insertLeg(legRecord);
             }
         }
     }
@@ -65,18 +65,18 @@ public class MyBatisCargoRepository implements CargoRepository {
     @Override
     public Optional<Cargo> findByBookingId(BookingId bookingId) {
         return cargoMapper.findByBookingId(bookingId.getId())
-                .map(r -> {
-                    List<LegRecord> legRecords = legMapper.findByCargoId(r.getId());
-                    return reconstruct(r, legRecords);
+                .map(cargoRecord -> {
+                    List<LegRecord> legRecords = legMapper.findByCargoId(cargoRecord.getId());
+                    return reconstruct(cargoRecord, legRecords);
                 });
     }
 
     @Override
     public List<Cargo> findAll() {
         return cargoMapper.findAll().stream()
-                .map(r -> {
-                    List<LegRecord> legRecords = legMapper.findByCargoId(r.getId());
-                    return reconstruct(r, legRecords);
+                .map(cargoRecord -> {
+                    List<LegRecord> legRecords = legMapper.findByCargoId(cargoRecord.getId());
+                    return reconstruct(cargoRecord, legRecords);
                 })
                 .toList();
     }
@@ -84,59 +84,58 @@ public class MyBatisCargoRepository implements CargoRepository {
     // --- private helpers ---
 
     private CargoRecord toRecord(Cargo cargo) {
-        CargoRecord r = new CargoRecord();
-        r.setBookingId(cargo.getBookingId().getId());
-        r.setShipperId(cargo.getShipperId());
-        r.setBookingStatus(cargo.getBookingStatus().name());
-        r.setTransportStatus("NOT_RECEIVED");
-        r.setRoutingStatus("NOT_ROUTED");
-        r.setCargoType(cargo.getCargoType().name());
-        r.setWeightKg(cargo.getWeight().getKg());
-        r.setBookingAmountValue(0);
-        r.setBookingAmountCurrency("JPY");
+        CargoRecord cargoRecord = new CargoRecord();
+        cargoRecord.setBookingId(cargo.getBookingId().getId());
+        cargoRecord.setShipperId(cargo.getShipperId());
+        cargoRecord.setBookingStatus(cargo.getBookingStatus().name());
+        cargoRecord.setTransportStatus("NOT_RECEIVED");
+        cargoRecord.setRoutingStatus("NOT_ROUTED");
+        cargoRecord.setCargoType(cargo.getCargoType().name());
+        cargoRecord.setWeightKg(cargo.getWeight().getKg());
+        cargoRecord.setBookingAmountValue(0);
+        cargoRecord.setBookingAmountCurrency("JPY");
         if (cargo.getRouteSpecification() != null) {
-            r.setSpecOriginUnlocode(cargo.getRouteSpecification().getOriginUnlocode());
-            r.setSpecDestinationUnlocode(cargo.getRouteSpecification().getDestinationUnlocode());
-            r.setSpecArrivalDeadline(cargo.getRouteSpecification().getArrivalDeadline());
+            cargoRecord.setSpecOriginUnlocode(cargo.getRouteSpecification().getOriginUnlocode());
+            cargoRecord.setSpecDestinationUnlocode(cargo.getRouteSpecification().getDestinationUnlocode());
+            cargoRecord.setSpecArrivalDeadline(cargo.getRouteSpecification().getArrivalDeadline());
         }
-        return r;
+        return cargoRecord;
     }
 
-    private Cargo reconstruct(CargoRecord r) {
-        return reconstruct(r, List.of());
+    private Cargo reconstruct(CargoRecord cargoRecord) {
+        return reconstruct(cargoRecord, List.of());
     }
 
-    private Cargo reconstruct(CargoRecord r, List<LegRecord> legRecords) {
+    private Cargo reconstruct(CargoRecord cargoRecord, List<LegRecord> legRecords) {
         RouteSpecification spec = null;
-        if (r.getSpecOriginUnlocode() != null && r.getSpecDestinationUnlocode() != null) {
+        if (cargoRecord.getSpecOriginUnlocode() != null && cargoRecord.getSpecDestinationUnlocode() != null) {
             spec = new RouteSpecification(
-                    r.getSpecOriginUnlocode(),
-                    r.getSpecDestinationUnlocode(),
-                    r.getSpecArrivalDeadline());
+                    cargoRecord.getSpecOriginUnlocode(),
+                    cargoRecord.getSpecDestinationUnlocode(),
+                    cargoRecord.getSpecArrivalDeadline());
         }
 
         CargoItinerary itinerary = null;
         if (!legRecords.isEmpty()) {
             List<Leg> legs = new ArrayList<>();
-            for (LegRecord lr : legRecords) {
+            for (LegRecord legRecord : legRecords) {
                 legs.add(new Leg(
-                        lr.getVoyageNumber(),
-                        lr.getLoadLocationUnlocode(),
-                        lr.getUnloadLocationUnlocode(),
-                        lr.getLoadTime(),
-                        lr.getUnloadTime()));
+                        legRecord.getVoyageNumber(),
+                        legRecord.getLoadLocationUnlocode(),
+                        legRecord.getUnloadLocationUnlocode(),
+                        legRecord.getLoadTime(),
+                        legRecord.getUnloadTime()));
             }
             itinerary = new CargoItinerary(legs);
         }
 
         return new Cargo(
-                r.getId(),
-                new BookingId(r.getBookingId()),
-                r.getShipperId(),
-                BookingStatus.valueOf(r.getBookingStatus()),
-                CargoType.valueOf(r.getCargoType()),
-                new Weight(r.getWeightKg()),
-                spec,
-                itinerary);
+                cargoRecord.getId(),
+                new BookingId(cargoRecord.getBookingId()),
+                cargoRecord.getShipperId(),
+                BookingStatus.valueOf(cargoRecord.getBookingStatus()),
+                CargoType.valueOf(cargoRecord.getCargoType()),
+                new Weight(cargoRecord.getWeightKg()),
+                new Cargo.RouteDetails(spec, itinerary));
     }
 }

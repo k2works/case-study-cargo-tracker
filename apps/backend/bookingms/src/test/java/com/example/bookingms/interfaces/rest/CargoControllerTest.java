@@ -150,4 +150,80 @@ class CargoControllerTest {
                         .content(assignRouteBody))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/confirm — 経路割当後に予約を確定できること")
+    void shouldConfirmBooking() throws Exception {
+        String bookingId = createCargoAndAssignRoute();
+
+        mockMvc.perform(put("/api/booking/v1/cargos/" + bookingId + "/confirm"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value(bookingId))
+                .andExpect(jsonPath("$.bookingStatus").value("CONFIRMED"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/confirm — 存在しない貨物なら 404 を返すこと")
+    void shouldReturn404WhenConfirmingNonExistentCargo() throws Exception {
+        mockMvc.perform(put("/api/booking/v1/cargos/NOTEXIST/confirm"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/confirm — 未経路割当なら 400 を返すこと")
+    void shouldReturn400WhenConfirmingWithoutRoute() throws Exception {
+        String bookingId = createCargo();
+
+        mockMvc.perform(put("/api/booking/v1/cargos/" + bookingId + "/confirm"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/cancel — 予約をキャンセルできること")
+    void shouldCancelBooking() throws Exception {
+        String bookingId = createCargo();
+
+        mockMvc.perform(put("/api/booking/v1/cargos/" + bookingId + "/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value(bookingId))
+                .andExpect(jsonPath("$.bookingStatus").value("CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/cancel — 存在しない貨物なら 404 を返すこと")
+    void shouldReturn404WhenCancellingNonExistentCargo() throws Exception {
+        mockMvc.perform(put("/api/booking/v1/cargos/NOTEXIST/cancel"))
+                .andExpect(status().isNotFound());
+    }
+
+    private String createCargo() throws Exception {
+        String responseBody = mockMvc.perform(post("/api/booking/v1/cargos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CREATE_CARGO_BODY))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return responseBody.replaceAll(".*\"bookingId\":\"([^\"]+)\".*", "$1");
+    }
+
+    private String createCargoAndAssignRoute() throws Exception {
+        String bookingId = createCargo();
+        String assignRouteBody = """
+                {
+                  "legs": [
+                    {
+                      "voyageNumber": "V0042",
+                      "loadLocationUnlocode": "JPTYO",
+                      "unloadLocationUnlocode": "CNSHA",
+                      "loadTime": "2026-04-01T18:00:00",
+                      "unloadTime": "2026-04-14T08:00:00"
+                    }
+                  ]
+                }
+                """;
+        mockMvc.perform(put("/api/booking/v1/cargos/" + bookingId + "/route")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(assignRouteBody))
+                .andExpect(status().isOk());
+        return bookingId;
+    }
 }
