@@ -89,7 +89,8 @@ class TrackingActivityTest {
     void shouldReturnUnmodifiableEventsList() {
         TrackingActivityEvent newEvent = new TrackingActivityEvent(
                 TrackingEventType.RECEIVE, "JPTYO", LocalDateTime.now(), null);
-        assertThatThrownBy(() -> activity.getEvents().add(newEvent))
+        var events = activity.getEvents();
+        assertThatThrownBy(() -> events.add(newEvent))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 }
