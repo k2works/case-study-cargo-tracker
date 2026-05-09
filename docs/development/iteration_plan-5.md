@@ -7,7 +7,7 @@
 | **イテレーション** | 5 |
 | **期間** | Week 9-10（2026-06-23〜2026-07-04） |
 | **ゴール** | 追跡照会・予約引渡・経路通知の API + 画面を実装し、IT4 コードレビュー高優先度指摘（追跡番号生成・例外クラス導入）を解消する |
-| **目標 SP** | 20（US: 18 SP + 技術改善: 2 SP） |
+| **目標 SP** | 22（US: 20 SP + 技術改善: 2 SP） |
 
 ---
 
@@ -54,41 +54,44 @@
 
 **ストーリー**:
 
-> 荷主として、追跡番号を入力して貨物の現在状態とイベント履歴を確認したい。なぜなら、輸送中の貨物がどこにあり、何が起きているかをリアルタイムに把握できるからだ。
+> 荷主（または荷受人）として、追跡番号を入力して貨物の現在位置・状態・追跡イベント履歴・推定到着日を確認したい。なぜなら、輸送状況をいつでも自分で確認でき、到着準備や業務計画に役立てるからだ。
 
 **受入条件**:
 
-1. 追跡番号を入力すると現在の貨物状態（transportStatus）が表示される
-2. 荷役イベントの履歴（種別・場所・日時）が時系列で表示される
-3. 追跡番号が存在しない場合、404 エラーとわかりやすいメッセージが表示される
-4. 認証なしのリクエストは 401 エラーを返す（IT5 で実装）
-5. 照会は読み取り専用であり、状態を変更しない
+1. 追跡番号を入力して貨物情報を照会できる
+2. 現在の状態・位置（港湾名）・推定到着日が表示される
+3. 追跡イベント履歴（日時・場所・作業種別）が時系列で表示される
+4. 追跡番号が存在しない場合、「追跡番号が見つかりません」と表示される
+5. 認証なしのリクエストは 401 エラーを返す（IT5 で実装）
+6. 照会は読み取り専用であり、状態を変更しない
+7. 30 秒ごとに自動更新される（`refetchInterval: 30000`）
+8. 例外（ExceptionType）が存在する場合は赤色バッジで表示される
 
 #### US06: 予約情報を経路設計者に引き渡す
 
 **ストーリー**:
 
-> 営業担当者として、予約が確定した際に自動的に経路設計者へ作業依頼が通知されるようにしたい。なぜなら、手動での引渡しによる連絡漏れを防ぎ、スムーズに経路設計に着手できるからだ。
+> 営業担当者として、仮受付された予約の出発地・目的地・期限・貨物仕様を確認し、経路設計者に引き渡したい。なぜなら、経路設計者が正確な情報をもとに最適な経路設計を開始できるからだ。
 
 **受入条件**:
 
-1. 予約確定（CONFIRMED 遷移）時に経路設計者向けの引渡しイベントが発行される
-2. 経路設計者が担当案件の一覧を確認できる画面が表示される
-3. 引渡し済みの予約一覧に予約 ID・荷主・出発地・目的地・希望到着日が表示される
-4. イベント発行失敗時、予約確定処理はロールバックされる
+1. 予約番号を指定して予約情報（出発地・目的地・期限・貨物仕様）を確認できる
+2. 経路設計依頼を実行すると、予約状態が「経路設計中」に更新される
+3. 経路設計者に経路設計依頼の通知が送信される
+4. 予約情報に不備がある場合、修正してから引き渡せる
 
 #### US12: 確定経路を荷主に通知する
 
 **ストーリー**:
 
-> 経路設計者として、経路を確定した際に荷主へ自動的にメール通知を送りたい。なぜなら、荷主が経路確定を即座に把握でき、追跡番号発行の準備ができるからだ。
+> 営業担当者として、経路が予約に紐付けられた後、確定経路の詳細（経由港・所要日数・到着予定日）を荷主に通知したい。なぜなら、荷主が確定経路の内容を確認し、承認または変更依頼を行えるようにするからだ。
 
 **受入条件**:
 
-1. 経路確定（bookingms の ROUTE_ASSIGNED 遷移）時に荷主へのメール通知 stub が実行される
-2. 通知には予約 ID・確定経路（出発→経由→目的地）・到着予定日が含まれる
-3. 通知失敗時は非同期でリトライする（stub 実装：ログ出力のみ）
-4. 荷主のメールアドレスが未登録の場合はスキップされる（stub 対応）
+1. 予約番号を指定して紐付けられた経路情報を確認できる
+2. 通知内容（経由港・所要日数・到着予定日・料金概算）を確認できる
+3. 荷主への経路通知を送信できる（stub 実装：ログ出力のみ）
+4. 通知送信記録が登録される
 
 #### TI02: IT4 コードレビュー高優先度指摘解消
 
@@ -130,8 +133,9 @@ IT4 コードレビュー（`docs/review/it4_trackingms_review_20260509.md`）�
 | 2.3 | **[TDD]** `TrackingQueryServiceTest` でドメインロジックのテストを書く | 2h | - | [ ] |
 | 2.4 | **[TDD]** `TrackingStatusControllerTest` に GET テストを追加する | 1h | - | [ ] |
 | 2.5 | FE: `TrackingPage.tsx` の照会画面を実装する（追跡番号入力 → 状態・履歴表示） | 3h | - | [ ] |
-| 2.6 | FE: `useTracking` フックに照会用クエリを追加する（TanStack Query） | 1h | - | [ ] |
-| 2.7 | FE: `TrackingPage.test.tsx` を作成する（正常・404・入力バリデーション） | 2h | - | [ ] |
+| 2.6 | FE: `useTracking` フックに照会用クエリを追加する（`refetchInterval: 30000`、TanStack Query） | 1h | - | [ ] |
+| 2.7 | FE: 例外（ExceptionType）が存在する場合に赤色バッジを表示する | 0.5h | - | [ ] |
+| 2.8 | FE: `TrackingPage.test.tsx` を作成する（正常・404・自動更新・例外バッジ） | 2h | - | [ ] |
 
 **小計**: 12h（理想時間）
 
@@ -235,23 +239,31 @@ gantt
 title IT5 追加ドメインモデル
 
 package "trackingms" {
-  class TrackingActivity {
-    + trackingNumber: TrackingNumber
-    + bookingId: TrackingBookingId
-    + transportStatus: TrackingStatus
-    + events: List<TrackingActivityEvent>
-    + addEvent(event)
-    + updateStatus(status)
+  class TrackingActivity <<aggregate root>> {
+    - trackingNumber: TrackingNumber
+    - bookingId: TrackingBookingId
+    - transportStatus: TransportStatus
+    - events: List<TrackingActivityEvent>
+    - exceptions: List<TrackingExceptionEvent>
+    + addEvent(event: TrackingActivityEvent)
+    + addException(ex: TrackingExceptionEvent)
+    + updateStatus(status: TransportStatus)
+    + currentStatus(): TransportStatus
+    + hasActiveException(): boolean
   }
   class TrackingActivityEvent {
-    + eventType: TrackingEventType
-    + locationUnlocode: String
-    + eventTime: LocalDateTime
-    + voyageNumber: String
+    - eventType: TrackingEventType
+    - locationUnlocode: String
+    - eventTime: LocalDateTime
+    - voyageNumber: String
   }
   exception TrackingActivityNotFoundException {
     + trackingNumber: String
   }
+  note bottom of TrackingActivityNotFoundException
+    IT5 新規追加。domain.exceptions パッケージを新設。
+    domain-model.md への反映が必要。
+  end note
   TrackingActivity "1" *-- "*" TrackingActivityEvent
 }
 
@@ -303,43 +315,109 @@ CREATE SEQUENCE IF NOT EXISTS tracking_number_seq
 
 ### ユーザーインターフェース
 
-#### 追跡照会画面（US18）
+#### ビュー
+
+##### 追跡照会画面（US18: `/tracking/:trackingNumber`）
+
+ui-design.md 「貨物追跡照会」仕様に準拠。
 
 ```plantuml
 @startsalt
 {+
-  追跡情報照会
-  {+
-    追跡番号 | "TRK-000001   "
-    [ 照会する ]
-    --------------------
-    現在の状態: 積込済み (LOADED)
-    --------------------
-    {
-      日時 | 場所 | 作業種別 | 航路
-      2026-07-01 10:00 | JPTYO | 受領 | -
-      2026-07-02 14:00 | JPTYO | 積込 | VOY-001
-    }
+  {/ <b>CargoTracker</b>    |    yamada@example.com  [ログアウト] }
+  ==
+  <b>貨物追跡</b>
+  --
+  追跡番号: | "TRK-000001          " | [追跡する]
+  ==
+  現在のステータス: <color:green>LOADED</color>　　現在地: JPTYO（東京）
+  推定到着日: 2026-08-01 頃
+  ==
+  <b>輸送ステータスタイムライン</b>
+  {
+    **日時** | **状態** | **場所** | **作業種別** | **航路**
+    2026-07-02 14:00 | LOADED | JPTYO（東京） | 積込 | VOY-001
+    2026-07-01 10:00 | RECEIVED | JPTYO（東京） | 受領 | -
+  }
+  ==
+  <i>30 秒ごとに自動更新中...</i>
+  ==
+  [別の貨物を追跡] | [予約詳細を表示]
+}
+@endsalt
+```
+
+##### 経路設計担当一覧画面（US06）
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b>    |    suzuki@example.com  [ログアウト] }
+  ==
+  <b>経路設計担当一覧</b>
+  --
+  {
+    **予約 ID** | **荷主** | **出発地** | **目的地** | **希望到着日**
+    BK-001 | 田中物流 | JPTYO | USLAX | 2026-08-01
+    BK-002 | 山田商事 | JPOSA | DEHAM | 2026-08-15
   }
 }
 @endsalt
 ```
 
-#### 経路設計担当一覧画面（US06）
+#### モデル
 
 ```plantuml
-@startsalt
-{+
-  経路設計担当一覧
-  {+
-    {
-      予約 ID | 荷主 | 出発地 | 目的地 | 希望到着日
-      BK-001 | 田中物流 | JPTYO | USLAX | 2026-08-01
-      BK-002 | 山田商事 | JPOSA | DEHAM | 2026-08-15
-    }
+@startuml
+  class 貨物追跡照会 {
+    追跡番号
+    transportStatus
+    位置（港湾名）
+    推定到着日
+    追跡番号照会()
   }
+
+  class 輸送ステータスタイムライン {
+    イベント履歴一覧
+    自動更新()
+  }
+
+  class 経路設計担当一覧 {
+    担当予約一覧
+  }
+
+  貨物追跡照会 *-- 輸送ステータスタイムライン
+@enduml
+```
+
+#### インタラクション
+
+```plantuml
+@startuml
+
+title IT5 画面遷移図
+
+[*] --> ダッシュボード
+
+ダッシュボード --> 貨物追跡照会 : [貨物追跡] クリック
+
+state 貨物追跡照会 {
+  貨物追跡照会 : /tracking/:trackingNumber
+  貨物追跡照会 : ステータスタイムライン\nReact Query 30 秒ポーリング
 }
-@endsalt
+
+予約詳細 --> 貨物追跡照会 : [追跡を表示]
+貨物追跡照会 --> 予約詳細 : [予約詳細を表示]（ROLE_TRACKING のみ）
+
+ダッシュボード --> 経路設計担当一覧 : [担当案件] クリック
+
+state 経路設計担当一覧 {
+  経路設計担当一覧 : /routing/assignments
+}
+
+経路設計担当一覧 --> 経路設計 : [経路設計を開始]
+
+@enduml
 ```
 
 ### ディレクトリ構成
@@ -418,3 +496,16 @@ apps/frontend/src/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-05-09 | 初版作成（IT5 計画） | - |
+| 2026-05-09 | 整合性検証による修正: US18/US06/US12 ストーリー文・受入条件・アクターを user_story.md に合わせて修正。ドメインモデルを domain-model.md 準拠に修正（TransportStatus/exceptions）。UI にビュー・モデル・インタラクションを追加。関連ドキュメントを追加 | - |
+
+---
+
+## 関連ドキュメント
+
+- [イテレーション 5 ふりかえり](./retrospective-5.md)
+- [リリース計画](./release_plan.md)
+- [IT4 コードレビュー結果](../review/it4_trackingms_review_20260509.md)
+- [ユーザーストーリー](../requirements/user_story.md)
+- [ドメインモデル設計](../design/domain-model.md)
+- [データモデル設計](../design/data-model.md)
+- [UI 設計](../design/ui-design.md)
