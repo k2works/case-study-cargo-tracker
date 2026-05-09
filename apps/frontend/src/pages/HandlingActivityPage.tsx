@@ -40,6 +40,18 @@ export function HandlingActivityPage() {
     setErrorMessage(null)
   }
 
+  const clearExceptTrackingNumber = () => {
+    setForm((prev) => ({
+      ...prev,
+      eventType: 'RECEIVE',
+      locationUnlocode: '',
+      eventTime: '',
+      voyageNumber: '',
+    }))
+    setSuccessMessage(null)
+    setErrorMessage(null)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.trackingNumber || !form.locationUnlocode || !form.eventTime) {
@@ -60,7 +72,7 @@ export function HandlingActivityPage() {
           setSuccessMessage(
             `荷役作業を記録しました。追跡番号: ${data.trackingNumber} / 状態: ${data.transportStatus}`,
           )
-          handleClear()
+          clearExceptTrackingNumber()
         },
         onError: (err) => {
           setErrorMessage(

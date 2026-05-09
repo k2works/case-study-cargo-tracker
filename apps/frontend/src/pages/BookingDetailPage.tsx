@@ -71,7 +71,7 @@ export function BookingDetailPage() {
         <span className={`inline-flex px-2 py-0.5 rounded-full text-sm font-medium ${STATUS_COLORS[cargo.bookingStatus]}`}>
           {STATUS_LABELS[cargo.bookingStatus]}
         </span>
-        {['ROUTE_PROPOSED', 'CONFIRMED', 'TRACKING_ISSUED', 'IN_TRANSIT', 'DELIVERED', 'SETTLED'].includes(cargo.bookingStatus) && (
+        {['CONFIRMED', 'TRACKING_ISSUED', 'IN_TRANSIT', 'DELIVERED', 'SETTLED'].includes(cargo.bookingStatus) && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
             ✓ 経路通知送信済み
           </span>

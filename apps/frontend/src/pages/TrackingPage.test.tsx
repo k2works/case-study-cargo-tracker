@@ -77,6 +77,43 @@ describe('TrackingPage', () => {
     expect(screen.getByText(/追跡番号が見つかりません/)).toBeInTheDocument()
   })
 
+  it('イベント履歴の状態列は各イベント種別に対応した状態を表示する', () => {
+    vi.spyOn(useTrackingModule, 'useTrackingQuery').mockReturnValue({
+      data: {
+        trackingNumber: 'TRK-000001',
+        bookingId: 'BK-001234',
+        transportStatus: 'LOADED',
+        events: [
+          {
+            eventType: 'RECEIVE',
+            locationUnlocode: 'JPTYO',
+            eventTime: '2026-01-01T10:00:00',
+            voyageNumber: null,
+          },
+          {
+            eventType: 'LOAD',
+            locationUnlocode: 'JPTYO',
+            eventTime: '2026-01-02T10:00:00',
+            voyageNumber: 'V0001',
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useTrackingModule.useTrackingQuery>)
+
+    renderPage()
+    fireEvent.change(screen.getByPlaceholderText(/TRK-/), {
+      target: { value: 'TRK-000001' },
+    })
+    fireEvent.submit(screen.getByRole('button', { name: '追跡する' }))
+
+    // RECEIVE イベント行は「受領済み」を表示すること（現在の状態は積込済みなので、受領済みはイベント行のみ）
+    expect(screen.getByText('受領済み')).toBeInTheDocument()
+    // LOAD イベント行は「積込済み」を表示すること（現在の状態も積込済みなので複数存在する）
+    expect(screen.getAllByText('積込済み').length).toBeGreaterThanOrEqual(2)
+  })
+
   it('例外状態の場合に赤色バッジが表示される', () => {
     vi.spyOn(useTrackingModule, 'useTrackingQuery').mockReturnValue({
       data: {

@@ -34,6 +34,14 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   CLAIM: '引渡し',
 }
 
+const EVENT_TYPE_TO_STATUS: Record<string, TrackingStatus> = {
+  RECEIVE: 'RECEIVED',
+  LOAD: 'LOADED',
+  UNLOAD: 'UNLOADED',
+  CUSTOMS: 'UNKNOWN',
+  CLAIM: 'CLAIMED',
+}
+
 function TrackingResult({ trackingNumber }: { trackingNumber: string }) {
   const { data: activity, isLoading, isError } = useTrackingQuery(trackingNumber)
 
@@ -103,7 +111,9 @@ function TrackingResult({ trackingNumber }: { trackingNumber: string }) {
                       timeStyle: 'short',
                     })}
                   </td>
-                  <td className="py-2 text-gray-900">{activity.transportStatus}</td>
+                  <td className="py-2 text-gray-900">
+                    {STATUS_LABELS[EVENT_TYPE_TO_STATUS[event.eventType] ?? 'UNKNOWN'] ?? event.eventType}
+                  </td>
                   <td className="py-2 text-gray-700 font-mono">{event.locationUnlocode}</td>
                   <td className="py-2 text-gray-900">
                     {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}

@@ -35,6 +35,24 @@ const ALL_STATUSES: TrackingStatus[] = [
   'UNKNOWN',
 ]
 
+// 順行遷移のみ許可する状態順序（EXCEPTION/UNKNOWN は逆行制限なし）
+const STATUS_ORDER: TrackingStatus[] = [
+  'NOT_RECEIVED',
+  'RECEIVED',
+  'LOADED',
+  'ONBOARD_CARRIER',
+  'UNLOADED',
+  'AWAITING_CLAIM',
+  'CLAIMED',
+]
+
+function isRegressionStatus(current: TrackingStatus, target: TrackingStatus): boolean {
+  const currentIndex = STATUS_ORDER.indexOf(current)
+  const targetIndex = STATUS_ORDER.indexOf(target)
+  if (currentIndex === -1 || targetIndex === -1) return false
+  return targetIndex <= currentIndex
+}
+
 export function TrackingStatusPage() {
   const { trackingNumber } = useParams<{ trackingNumber: string }>()
   const { data: activity, isLoading, isError, refetch } = useTrackingActivity(trackingNumber ?? '')
@@ -125,7 +143,7 @@ export function TrackingStatusPage() {
             >
               <option value="">選択してください</option>
               {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>
+                <option key={s} value={s} disabled={isRegressionStatus(activity.transportStatus, s)}>
                   {STATUS_LABELS[s]}
                 </option>
               ))}
