@@ -36,6 +36,7 @@ export interface RecordHandlingActivityRequest {
   locationUnlocode: string
   eventTime: string
   voyageNumber?: string
+  consigneeConfirmation?: string
 }
 
 export interface UpdateTrackingStatusRequest {

@@ -7,7 +7,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   LOAD: '積込',
   UNLOAD: '荷降し',
   CUSTOMS: '通関',
-  CLAIM: '引渡し',
+  CLAIM: '引取',
 }
 
 export function HandlingActivityPage() {
@@ -19,6 +19,7 @@ export function HandlingActivityPage() {
     locationUnlocode: '',
     eventTime: '',
     voyageNumber: '',
+    consigneeConfirmation: '',
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -32,6 +33,7 @@ export function HandlingActivityPage() {
       locationUnlocode: '',
       eventTime: '',
       voyageNumber: '',
+      consigneeConfirmation: '',
     })
   }
 
@@ -42,6 +44,7 @@ export function HandlingActivityPage() {
       locationUnlocode: '',
       eventTime: '',
       voyageNumber: '',
+      consigneeConfirmation: '',
     }))
   }
 
@@ -49,6 +52,10 @@ export function HandlingActivityPage() {
     e.preventDefault()
     if (!form.trackingNumber || !form.locationUnlocode || !form.eventTime) {
       toast.error('追跡番号・作業場所・作業日時は必須です。')
+      return
+    }
+    if (form.eventType === 'CLAIM' && !form.consigneeConfirmation) {
+      toast.error('引取の場合、荷受人確認情報は必須です。')
       return
     }
 
@@ -59,6 +66,7 @@ export function HandlingActivityPage() {
         locationUnlocode: form.locationUnlocode,
         eventTime: form.eventTime,
         voyageNumber: form.voyageNumber || undefined,
+        consigneeConfirmation: form.eventType === 'CLAIM' ? form.consigneeConfirmation : undefined,
       },
       {
         onSuccess: (data) => {
@@ -168,6 +176,26 @@ export function HandlingActivityPage() {
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
+
+        {form.eventType === 'CLAIM' && (
+          <div>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="consigneeConfirmation"
+            >
+              荷受人確認 <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="consigneeConfirmation"
+              name="consigneeConfirmation"
+              type="text"
+              value={form.consigneeConfirmation}
+              onChange={handleChange}
+              placeholder="荷受人氏名または署名"
+              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button
