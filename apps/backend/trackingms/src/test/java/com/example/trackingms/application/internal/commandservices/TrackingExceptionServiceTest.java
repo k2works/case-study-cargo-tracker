@@ -1,6 +1,7 @@
 package com.example.trackingms.application.internal.commandservices;
 
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.aggregates.TrackingExceptionEvent;
 import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
@@ -113,5 +114,43 @@ class TrackingExceptionServiceTest {
         assertThatThrownBy(() -> service.recordException(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("TRK-999999");
+    }
+
+    @Test
+    @DisplayName("例外対応内容を更新できること")
+    void shouldRespondToException() {
+        // 例外イベントが ID 付きで存在する状態を再構成
+        TrackingExceptionEvent existingException =
+                new TrackingExceptionEvent(
+                        10L, "DELAY",
+                        java.time.LocalDateTime.of(2026, 6, 20, 10, 0),
+                        "JPTYO", "悪天候による遅延", false,
+                        null, null, "OPEN"
+                );
+
+        TrackingActivity activity = new TrackingActivity(
+                1L,
+                new TrackingNumber("TRK-000001"),
+                new TrackingBookingId("BK-001234"),
+                TrackingStatus.EXCEPTION,
+                List.of(),
+                List.of(existingException)
+        );
+
+        when(trackingActivityRepository.findByTrackingNumber(any())).thenReturn(Optional.of(activity));
+
+        RespondToExceptionCommand command = new RespondToExceptionCommand(
+                "TRK-000001",
+                10L,
+                "代替航路を手配しました",
+                java.time.LocalDate.of(2026, 6, 25)
+        );
+
+        TrackingActivity result = service.respondToException(command);
+
+        assertThat(result.getExceptions()).hasSize(1);
+        assertThat(result.getExceptions().get(0).getResponseContent()).isEqualTo("代替航路を手配しました");
+        assertThat(result.getExceptions().get(0).getStatus()).isEqualTo("IN_PROGRESS");
+        verify(trackingActivityRepository).update(activity);
     }
 }

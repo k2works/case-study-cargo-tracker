@@ -21,10 +21,6 @@ public class TrackingExceptionService {
 
     /**
      * 遅延例外を記録し、貨物状態を EXCEPTION に更新する
-     *
-     * @param command 例外記録コマンド
-     * @return 更新後の追跡アクティビティ
-     * @throws IllegalArgumentException 追跡番号が存在しない場合
      */
     @Transactional
     public TrackingActivity recordException(RecordTrackingExceptionCommand command) {
@@ -43,6 +39,29 @@ public class TrackingExceptionService {
         );
 
         activity.addException(exception);
+        trackingActivityRepository.update(activity);
+
+        return activity;
+    }
+
+    /**
+     * 例外対応内容を更新する
+     */
+    @Transactional
+    public TrackingActivity respondToException(RespondToExceptionCommand command) {
+        TrackingNumber trackingNumber = new TrackingNumber(command.trackingNumber());
+        TrackingActivity activity = trackingActivityRepository
+                .findByTrackingNumber(trackingNumber)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Tracking activity not found: " + command.trackingNumber()));
+
+        TrackingExceptionEvent exception = activity.getExceptions().stream()
+                .filter(e -> command.exceptionId().equals(e.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Exception not found: " + command.exceptionId()));
+
+        exception.respond(command.responseContent(), command.newEstimatedArrival());
         trackingActivityRepository.update(activity);
 
         return activity;
