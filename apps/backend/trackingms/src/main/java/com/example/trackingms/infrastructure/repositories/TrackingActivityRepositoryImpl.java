@@ -2,6 +2,7 @@ package com.example.trackingms.infrastructure.repositories;
 
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import com.example.trackingms.domain.model.aggregates.TrackingActivityEvent;
+import com.example.trackingms.domain.model.aggregates.TrackingExceptionEvent;
 import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
 import com.example.trackingms.domain.model.valueobjects.TrackingEventType;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
@@ -19,9 +20,12 @@ import java.util.Optional;
 public class TrackingActivityRepositoryImpl implements TrackingActivityRepository {
 
     private final TrackingActivityMapper mapper;
+    private final TrackingExceptionEventMapper exceptionMapper;
 
-    public TrackingActivityRepositoryImpl(TrackingActivityMapper mapper) {
+    public TrackingActivityRepositoryImpl(TrackingActivityMapper mapper,
+                                          TrackingExceptionEventMapper exceptionMapper) {
         this.mapper = mapper;
+        this.exceptionMapper = exceptionMapper;
     }
 
     @Override
@@ -33,7 +37,6 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
         );
         mapper.insert(activityRecord);
 
-        // イベントを保存
         for (TrackingActivityEvent event : activity.getEvents()) {
             TrackingHandlingEventRecord eventRecord = new TrackingHandlingEventRecord(
                     activityRecord.getId(),
@@ -46,7 +49,11 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
             mapper.insertEvent(eventRecord);
         }
 
-        return toEntity(activityRecord, List.of());
+        for (TrackingExceptionEvent exception : activity.getExceptions()) {
+            insertExceptionRecord(activityRecord.getId(), exception);
+        }
+
+        return toEntity(activityRecord, List.of(), List.of());
     }
 
     @Override
@@ -55,7 +62,9 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                 .map(activityRecord -> {
                     List<TrackingHandlingEventRecord> eventRecords =
                             mapper.findEventsByTrackingId(activityRecord.getId());
-                    return toEntity(activityRecord, eventRecords);
+                    List<TrackingExceptionEventRecord> exceptionRecords =
+                            exceptionMapper.findExceptionsByTrackingId(activityRecord.getId());
+                    return toEntity(activityRecord, eventRecords, exceptionRecords);
                 });
     }
 
@@ -65,7 +74,9 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                 .map(activityRecord -> {
                     List<TrackingHandlingEventRecord> eventRecords =
                             mapper.findEventsByTrackingId(activityRecord.getId());
-                    return toEntity(activityRecord, eventRecords);
+                    List<TrackingExceptionEventRecord> exceptionRecords =
+                            exceptionMapper.findExceptionsByTrackingId(activityRecord.getId());
+                    return toEntity(activityRecord, eventRecords, exceptionRecords);
                 });
     }
 
@@ -73,7 +84,6 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
     public void update(TrackingActivity activity) {
         mapper.updateStatus(activity.getId(), activity.getTransportStatus().name());
 
-        // 新しいイベントを保存（追記のみ）
         for (TrackingActivityEvent event : activity.getEvents()) {
             if (event.getId() == null) {
                 TrackingHandlingEventRecord eventRecord = new TrackingHandlingEventRecord(
@@ -87,6 +97,19 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                 mapper.insertEvent(eventRecord);
             }
         }
+
+        for (TrackingExceptionEvent exception : activity.getExceptions()) {
+            if (exception.getId() == null) {
+                insertExceptionRecord(activity.getId(), exception);
+            } else if (exception.getResponseContent() != null) {
+                TrackingExceptionEventRecord record = new TrackingExceptionEventRecord();
+                record.setId(exception.getId());
+                record.setResponseContent(exception.getResponseContent());
+                record.setNewEstimatedArrival(exception.getNewEstimatedArrival());
+                record.setStatus(exception.getStatus());
+                exceptionMapper.updateExceptionResponse(record);
+            }
+        }
     }
 
     @Override
@@ -94,8 +117,23 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
         return mapper.nextTrackingNumberSequence();
     }
 
+    private void insertExceptionRecord(Long trackingId, TrackingExceptionEvent exception) {
+        TrackingExceptionEventRecord record = new TrackingExceptionEventRecord();
+        record.setTrackingId(trackingId);
+        record.setExceptionType(exception.getExceptionType());
+        record.setOccurredAt(exception.getOccurredAt());
+        record.setLocationUnlocode(exception.getLocationUnlocode());
+        record.setReason(exception.getReason());
+        record.setEscalationFlag(exception.isEscalationFlag());
+        record.setResponseContent(exception.getResponseContent());
+        record.setNewEstimatedArrival(exception.getNewEstimatedArrival());
+        record.setStatus(exception.getStatus());
+        exceptionMapper.insertException(record);
+    }
+
     private TrackingActivity toEntity(TrackingActivityRecord activityRecord,
-                                      List<TrackingHandlingEventRecord> eventRecords) {
+                                      List<TrackingHandlingEventRecord> eventRecords,
+                                      List<TrackingExceptionEventRecord> exceptionRecords) {
         List<TrackingActivityEvent> events = eventRecords.stream()
                 .map(e -> new TrackingActivityEvent(
                         e.getId(),
@@ -106,12 +144,26 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                         e.getConsigneeConfirmation()))
                 .toList();
 
+        List<TrackingExceptionEvent> exceptions = exceptionRecords.stream()
+                .map(e -> new TrackingExceptionEvent(
+                        e.getId(),
+                        e.getExceptionType(),
+                        e.getOccurredAt(),
+                        e.getLocationUnlocode(),
+                        e.getReason(),
+                        e.isEscalationFlag(),
+                        e.getResponseContent(),
+                        e.getNewEstimatedArrival(),
+                        e.getStatus()))
+                .toList();
+
         return new TrackingActivity(
                 activityRecord.getId(),
                 new TrackingNumber(activityRecord.getTrackingNumber()),
                 new TrackingBookingId(activityRecord.getBookingId()),
                 TrackingStatus.valueOf(activityRecord.getTransportStatus()),
-                events
+                events,
+                exceptions
         );
     }
 }

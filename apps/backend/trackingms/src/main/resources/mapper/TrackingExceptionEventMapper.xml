@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.trackingms.infrastructure.repositories.TrackingExceptionEventMapper">
+
+    <insert id="insertException" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.trackingms.infrastructure.repositories.TrackingExceptionEventRecord">
+        INSERT INTO tracking_exception_event
+            (tracking_id, exception_type, occurred_at, location_unlocode, reason,
+             escalation_flag, response_content, new_estimated_arrival, status, created_at, updated_at)
+        VALUES
+            (#{trackingId}, #{exceptionType}, #{occurredAt}, #{locationUnlocode}, #{reason},
+             #{escalationFlag}, #{responseContent}, #{newEstimatedArrival}, #{status},
+             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="findExceptionsByTrackingId" resultType="com.example.trackingms.infrastructure.repositories.TrackingExceptionEventRecord">
+        SELECT id, tracking_id, exception_type, occurred_at, location_unlocode, reason,
+               escalation_flag, response_content, new_estimated_arrival, status
+        FROM tracking_exception_event
+        WHERE tracking_id = #{trackingId}
+        ORDER BY occurred_at ASC
+    </select>
+
+    <update id="updateExceptionResponse"
+            parameterType="com.example.trackingms.infrastructure.repositories.TrackingExceptionEventRecord">
+        UPDATE tracking_exception_event
+        SET response_content      = #{responseContent},
+            new_estimated_arrival = #{newEstimatedArrival},
+            status                = #{status},
+            updated_at            = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+</mapper>
