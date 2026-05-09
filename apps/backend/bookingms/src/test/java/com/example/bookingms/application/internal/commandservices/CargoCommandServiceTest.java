@@ -1,5 +1,6 @@
 package com.example.bookingms.application.internal.commandservices;
 
+import com.example.bookingms.domain.events.CargoAssignedForRoutingEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
@@ -9,6 +10,7 @@ import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoEventPublisher;
 import com.example.bookingms.domain.ports.CargoRepository;
+import com.example.bookingms.domain.ports.ShipperNotificationPort;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -24,8 +26,7 @@ class CargoCommandServiceTest {
 
     @Test
     void 存在しない貨物の確定は予約ID付きで失敗する() {
-        CargoCommandService service = new CargoCommandService(new StubCargoRepository(), event -> {
-        });
+        CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
 
         assertThatThrownBy(() -> service.confirmBooking("MISSING123"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -36,8 +37,7 @@ class CargoCommandServiceTest {
     void 予約をキャンセルできる() {
         Cargo cargo = cargoWithStatus("BOOKING123", BookingStatus.PRELIMINARY);
         StubCargoRepository repository = new StubCargoRepository(cargo);
-        CargoCommandService service = new CargoCommandService(repository, event -> {
-        });
+        CargoCommandService service = new CargoCommandService(repository, new NoOpEventPublisher(), c -> {});
 
         Cargo cancelled = service.cancelBooking("BOOKING123");
 
@@ -50,7 +50,7 @@ class CargoCommandServiceTest {
         Cargo cargo = cargoWithStatus("BOOKING123", BookingStatus.PRELIMINARY);
         StubCargoRepository repository = new StubCargoRepository(cargo);
         RecordingCargoEventPublisher eventPublisher = new RecordingCargoEventPublisher();
-        CargoCommandService service = new CargoCommandService(repository, eventPublisher);
+        CargoCommandService service = new CargoCommandService(repository, eventPublisher, c -> {});
 
         RouteCargoCommand command = new RouteCargoCommand(List.of(new RouteCargoCommand.LegData(
                 "V001",
@@ -118,6 +118,14 @@ class CargoCommandServiceTest {
         }
     }
 
+    private static final class NoOpEventPublisher implements CargoEventPublisher {
+        @Override
+        public void publishCargoRouted(CargoRoutedEvent event) {}
+
+        @Override
+        public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {}
+    }
+
     private static final class RecordingCargoEventPublisher implements CargoEventPublisher {
         private CargoRoutedEvent lastEvent;
 
@@ -125,5 +133,8 @@ class CargoCommandServiceTest {
         public void publishCargoRouted(CargoRoutedEvent event) {
             this.lastEvent = event;
         }
+
+        @Override
+        public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {}
     }
 }

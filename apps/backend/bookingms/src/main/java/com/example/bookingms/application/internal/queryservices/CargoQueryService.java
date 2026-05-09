@@ -2,6 +2,7 @@ package com.example.bookingms.application.internal.queryservices;
 
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.bookingms.domain.ports.CargoRepository;
 import org.springframework.stereotype.Service;
 
@@ -37,5 +38,16 @@ public class CargoQueryService {
      */
     public Optional<Cargo> findByBookingId(String bookingId) {
         return cargoRepository.findByBookingId(new BookingId(bookingId));
+    }
+
+    /**
+     * 経路設計担当一覧を取得する（CONFIRMED 状態の貨物）
+     *
+     * @return 経路設計待ちの貨物リスト
+     */
+    public List<Cargo> findRoutingAssignments() {
+        return cargoRepository.findAll().stream()
+                .filter(c -> c.getBookingStatus() == BookingStatus.CONFIRMED)
+                .toList();
     }
 }

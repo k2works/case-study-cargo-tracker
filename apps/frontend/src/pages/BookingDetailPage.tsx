@@ -66,11 +66,16 @@ export function BookingDetailPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">予約詳細 — {cargo.bookingId}</h1>
         <span className={`inline-flex px-2 py-0.5 rounded-full text-sm font-medium ${STATUS_COLORS[cargo.bookingStatus]}`}>
           {STATUS_LABELS[cargo.bookingStatus]}
         </span>
+        {['ROUTE_PROPOSED', 'CONFIRMED', 'TRACKING_ISSUED', 'IN_TRANSIT', 'DELIVERED', 'SETTLED'].includes(cargo.bookingStatus) && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+            ✓ 経路通知送信済み
+          </span>
+        )}
       </div>
 
       {actionError && (

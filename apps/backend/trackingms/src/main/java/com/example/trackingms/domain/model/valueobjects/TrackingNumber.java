@@ -7,11 +7,12 @@ import java.util.Objects;
  * 形式: TRK-XXXXXX（X は数字 6 桁）
  */
 public record TrackingNumber(String number) {
-    private static final String PREFIX = "TRK-";
+    private static final java.util.regex.Pattern PATTERN =
+            java.util.regex.Pattern.compile("^TRK-\\d{6}$");
 
     public TrackingNumber {
         Objects.requireNonNull(number, "number must not be null");
-        if (!number.startsWith(PREFIX) || number.length() != 10) {
+        if (!PATTERN.matcher(number).matches()) {
             throw new IllegalArgumentException("Invalid tracking number format: " + number);
         }
     }

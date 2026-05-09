@@ -87,6 +87,11 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
         }
     }
 
+    @Override
+    public long nextTrackingNumberSequence() {
+        return mapper.nextTrackingNumberSequence();
+    }
+
     private TrackingActivity toEntity(TrackingActivityRecord activityRecord,
                                       List<TrackingHandlingEventRecord> eventRecords) {
         List<TrackingActivityEvent> events = eventRecords.stream()

@@ -62,6 +62,13 @@ export function useConfirmBooking(bookingId: string) {
   })
 }
 
+export function useRoutingAssignments() {
+  return useQuery<Cargo[]>({
+    queryKey: [...BOOKINGS_KEY, 'routing-assignments'],
+    queryFn: () => apiClient.get<Cargo[]>('/api/booking/v1/cargos/routing-assignments'),
+  })
+}
+
 export function useCancelBooking(bookingId: string) {
   const queryClient = useQueryClient()
   return useMutation({

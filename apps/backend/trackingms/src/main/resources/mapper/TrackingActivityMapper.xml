@@ -9,6 +9,10 @@
         VALUES (#{trackingNumber}, #{bookingId}, #{transportStatus}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
+    <select id="nextTrackingNumberSequence" resultType="long">
+        SELECT nextval('tracking_number_seq')
+    </select>
+
     <select id="findByTrackingNumber" resultType="com.example.trackingms.infrastructure.repositories.TrackingActivityRecord">
         SELECT id, tracking_number, booking_id, transport_status
         FROM tracking_activity

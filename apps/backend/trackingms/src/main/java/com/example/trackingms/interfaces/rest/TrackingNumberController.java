@@ -2,6 +2,7 @@ package com.example.trackingms.interfaces.rest;
 
 import com.example.trackingms.application.internal.commandservices.TrackingNumberService;
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.interfaces.rest.dto.ErrorResponse;
 import com.example.trackingms.interfaces.rest.dto.IssueTrackingNumberRequest;
 import com.example.trackingms.interfaces.rest.dto.TrackingActivityResponse;
 import jakarta.validation.Valid;
@@ -33,7 +34,7 @@ public class TrackingNumberController {
      * POST /api/tracking/v1/numbers
      */
     @PostMapping
-    public ResponseEntity<TrackingActivityResponse> issueTrackingNumber(
+    public ResponseEntity<Object> issueTrackingNumber(
             @Valid @RequestBody IssueTrackingNumberRequest request) {
         try {
             TrackingActivity activity = trackingNumberService.issueTrackingNumber(request.bookingId());
@@ -41,7 +42,8 @@ public class TrackingNumberController {
                     .body(TrackingActivityResponse.from(activity));
         } catch (IllegalArgumentException e) {
             log.debug("Failed to issue tracking number", e);
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse(e.getMessage()));
         }
     }
 }

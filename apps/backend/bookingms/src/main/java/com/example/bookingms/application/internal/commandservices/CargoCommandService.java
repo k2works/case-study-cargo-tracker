@@ -1,5 +1,6 @@
 package com.example.bookingms.application.internal.commandservices;
 
+import com.example.bookingms.domain.events.CargoAssignedForRoutingEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
@@ -10,6 +11,7 @@ import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoEventPublisher;
 import com.example.bookingms.domain.ports.CargoRepository;
+import com.example.bookingms.domain.ports.ShipperNotificationPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,10 +29,13 @@ public class CargoCommandService {
 
     private final CargoRepository cargoRepository;
     private final CargoEventPublisher cargoEventPublisher;
+    private final ShipperNotificationPort shipperNotificationPort;
 
-    public CargoCommandService(CargoRepository cargoRepository, CargoEventPublisher cargoEventPublisher) {
+    public CargoCommandService(CargoRepository cargoRepository, CargoEventPublisher cargoEventPublisher,
+                               ShipperNotificationPort shipperNotificationPort) {
         this.cargoRepository = cargoRepository;
         this.cargoEventPublisher = cargoEventPublisher;
+        this.shipperNotificationPort = shipperNotificationPort;
     }
 
     /**
@@ -80,6 +85,8 @@ public class CargoCommandService {
                 cargo.getRouteSpecification().getDestinationUnlocode()
         ));
 
+        shipperNotificationPort.notifyRouteAssigned(cargo);
+
         return cargo;
     }
 
@@ -94,6 +101,14 @@ public class CargoCommandService {
         Cargo cargo = findCargoOrThrow(bookingId);
         cargo.confirm();
         cargoRepository.update(cargo);
+
+        cargoEventPublisher.publishCargoAssignedForRouting(new CargoAssignedForRoutingEvent(
+                cargo.getBookingId().getId(),
+                cargo.getRouteSpecification().getOriginUnlocode(),
+                cargo.getRouteSpecification().getDestinationUnlocode(),
+                cargo.getRouteSpecification().getArrivalDeadline().toString()
+        ));
+
         return cargo;
     }
 

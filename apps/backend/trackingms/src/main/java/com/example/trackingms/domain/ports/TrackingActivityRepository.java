@@ -14,4 +14,5 @@ public interface TrackingActivityRepository {
     Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber);
     Optional<TrackingActivity> findByBookingId(TrackingBookingId bookingId);
     void update(TrackingActivity activity);
+    long nextTrackingNumberSequence();
 }

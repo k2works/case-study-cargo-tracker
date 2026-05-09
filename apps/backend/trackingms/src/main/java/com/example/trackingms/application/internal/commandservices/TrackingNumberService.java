@@ -39,10 +39,10 @@ public class TrackingNumberService {
     }
 
     /**
-     * 追跡番号を生成する（TRK-XXXXXX 形式、6 桁連番）
+     * 追跡番号を生成する（TRK-XXXXXX 形式、DB シーケンス使用）
      */
     private TrackingNumber generateTrackingNumber() {
-        String sequence = String.format("%06d", System.currentTimeMillis() % 1_000_000);
-        return new TrackingNumber("TRK-" + sequence);
+        long seq = trackingActivityRepository.nextTrackingNumberSequence();
+        return new TrackingNumber(String.format("TRK-%06d", seq));
     }
 }

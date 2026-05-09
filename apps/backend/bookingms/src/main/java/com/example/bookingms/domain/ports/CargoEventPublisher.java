@@ -1,5 +1,6 @@
 package com.example.bookingms.domain.ports;
 
+import com.example.bookingms.domain.events.CargoAssignedForRoutingEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 
 /**
@@ -15,4 +16,11 @@ public interface CargoEventPublisher {
      * @param event 経路割当イベント
      */
     void publishCargoRouted(CargoRoutedEvent event);
+
+    /**
+     * 予約引渡しイベントを発行する
+     *
+     * @param event 予約引渡しイベント
+     */
+    void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event);
 }

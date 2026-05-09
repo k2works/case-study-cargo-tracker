@@ -36,6 +36,6 @@ public class MessagingConfiguration {
     @Bean
     @ConditionalOnMissingBean(CargoEventPublisher.class)
     public CargoEventPublisher noOpCargoEventPublisher() {
-        return event -> { /* RabbitMQ 未設定: イベントを破棄 */ };
+        return new NoOpCargoEventPublisher();
     }
 }

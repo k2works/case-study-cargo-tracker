@@ -21,6 +21,18 @@ export function useTrackingActivity(trackingNumber: string) {
 }
 
 /**
+ * 追跡番号で追跡情報を照会する（30 秒ごとに自動更新）
+ */
+export function useTrackingQuery(trackingNumber: string) {
+  return useQuery<TrackingActivity>({
+    queryKey: [...TRACKING_KEY, 'query', trackingNumber],
+    queryFn: () => apiClient.get<TrackingActivity>(`/api/tracking/v1/${trackingNumber}`),
+    enabled: !!trackingNumber,
+    refetchInterval: 30000,
+  })
+}
+
+/**
  * 追跡番号を発行する（予約 ID → 追跡番号）
  */
 export function useIssueTrackingNumber() {

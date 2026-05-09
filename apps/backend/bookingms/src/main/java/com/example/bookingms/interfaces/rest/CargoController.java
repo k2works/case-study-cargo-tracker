@@ -130,6 +130,18 @@ public class CargoController {
         }
     }
 
+    /**
+     * 経路設計担当一覧を取得する（CONFIRMED 状態の貨物）
+     * GET /api/booking/v1/cargos/routing-assignments
+     */
+    @GetMapping("/routing-assignments")
+    public ResponseEntity<List<CargoResponse>> getRoutingAssignments() {
+        List<CargoResponse> responses = cargoQueryService.findRoutingAssignments().stream()
+                .map(CargoResponse::from)
+                .toList();
+        return ResponseEntity.ok(responses);
+    }
+
     private ResponseEntity<Object> notFound(IllegalArgumentException exception) {
         log.debug("Cargo operation failed with not found", exception);
         return ResponseEntity.status(HttpStatus.NOT_FOUND)

@@ -1,5 +1,6 @@
 package com.example.trackingms.application.internal.commandservices;
 
+import com.example.trackingms.domain.exceptions.TrackingActivityNotFoundException;
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
@@ -32,8 +33,7 @@ public class TrackingStatusUpdateService {
         TrackingNumber trackingNumber = new TrackingNumber(command.trackingNumber());
         TrackingActivity activity = trackingActivityRepository
                 .findByTrackingNumber(trackingNumber)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tracking activity not found: " + command.trackingNumber()));
+                .orElseThrow(() -> new TrackingActivityNotFoundException(command.trackingNumber()));
 
         TrackingStatus newStatus;
         try {
@@ -55,7 +55,6 @@ public class TrackingStatusUpdateService {
     public TrackingActivity findByTrackingNumber(String trackingNumber) {
         return trackingActivityRepository
                 .findByTrackingNumber(new TrackingNumber(trackingNumber))
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tracking activity not found: " + trackingNumber));
+                .orElseThrow(() -> new TrackingActivityNotFoundException(trackingNumber));
     }
 }

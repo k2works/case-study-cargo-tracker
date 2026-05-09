@@ -2,6 +2,8 @@ package com.example.trackingms.interfaces.rest;
 
 import com.example.trackingms.application.internal.commandservices.TrackingStatusUpdateService;
 import com.example.trackingms.application.internal.commandservices.UpdateTrackingStatusCommand;
+import com.example.trackingms.application.internal.queryservices.TrackingQueryService;
+import com.example.trackingms.domain.exceptions.TrackingActivityNotFoundException;
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import com.example.trackingms.interfaces.rest.dto.ErrorResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingActivityResponse;
@@ -27,9 +29,12 @@ public class TrackingStatusController {
     private static final Logger log = LoggerFactory.getLogger(TrackingStatusController.class);
 
     private final TrackingStatusUpdateService trackingStatusUpdateService;
+    private final TrackingQueryService trackingQueryService;
 
-    public TrackingStatusController(TrackingStatusUpdateService trackingStatusUpdateService) {
+    public TrackingStatusController(TrackingStatusUpdateService trackingStatusUpdateService,
+                                    TrackingQueryService trackingQueryService) {
         this.trackingStatusUpdateService = trackingStatusUpdateService;
+        this.trackingQueryService = trackingQueryService;
     }
 
     /**
@@ -39,11 +44,15 @@ public class TrackingStatusController {
     @GetMapping("/{trackingNumber}")
     public ResponseEntity<Object> getTrackingActivity(@PathVariable String trackingNumber) {
         try {
-            TrackingActivity activity = trackingStatusUpdateService.findByTrackingNumber(trackingNumber);
+            TrackingActivity activity = trackingQueryService.findByTrackingNumber(trackingNumber);
             return ResponseEntity.ok(TrackingActivityResponse.from(activity));
-        } catch (IllegalArgumentException e) {
+        } catch (TrackingActivityNotFoundException e) {
             log.debug("Tracking activity not found: {}", trackingNumber);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            log.debug("Invalid tracking number format: {}", trackingNumber);
+            return ResponseEntity.badRequest()
                     .body(new ErrorResponse(e.getMessage()));
         }
     }
@@ -61,15 +70,14 @@ public class TrackingStatusController {
                     trackingNumber, request.newStatus());
             TrackingActivity activity = trackingStatusUpdateService.updateStatus(command);
             return ResponseEntity.ok(TrackingActivityResponse.from(activity));
+        } catch (TrackingActivityNotFoundException e) {
+            log.debug("Tracking activity not found for status update: {}", trackingNumber);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
         } catch (IllegalArgumentException e) {
             log.debug("Failed to update tracking status", e);
-            String message = e.getMessage();
-            if (message != null && message.startsWith("Tracking activity not found")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse(message));
-            }
             return ResponseEntity.badRequest()
-                    .body(new ErrorResponse(message));
+                    .body(new ErrorResponse(e.getMessage()));
         }
     }
 }

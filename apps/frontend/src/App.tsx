@@ -13,6 +13,8 @@ import { BookingDetailPage } from './pages/BookingDetailPage'
 import { RoutingDesignPage } from './pages/RoutingDesignPage'
 import { HandlingActivityPage } from './pages/HandlingActivityPage'
 import { TrackingStatusPage } from './pages/TrackingStatusPage'
+import { TrackingPage } from './pages/TrackingPage'
+import { RoutingAssignmentPage } from './pages/RoutingAssignmentPage'
 
 export default function App() {
   return (
@@ -33,6 +35,8 @@ export default function App() {
           <Route path="/routing/design" element={<RoutingDesignPage />} />
           <Route path="/handling/activities" element={<HandlingActivityPage />} />
           <Route path="/tracking/:trackingNumber/status" element={<TrackingStatusPage />} />
+          <Route path="/tracking" element={<TrackingPage />} />
+          <Route path="/routing/assignments" element={<RoutingAssignmentPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

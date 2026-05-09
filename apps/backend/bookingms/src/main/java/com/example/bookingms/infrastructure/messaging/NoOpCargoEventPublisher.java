@@ -1,5 +1,6 @@
 package com.example.bookingms.infrastructure.messaging;
 
+import com.example.bookingms.domain.events.CargoAssignedForRoutingEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.ports.CargoEventPublisher;
 
@@ -12,6 +13,11 @@ public class NoOpCargoEventPublisher implements CargoEventPublisher {
 
     @Override
     public void publishCargoRouted(CargoRoutedEvent event) {
+        // メッセージブローカー未設定のため、イベントを発行しない
+    }
+
+    @Override
+    public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {
         // メッセージブローカー未設定のため、イベントを発行しない
     }
 }

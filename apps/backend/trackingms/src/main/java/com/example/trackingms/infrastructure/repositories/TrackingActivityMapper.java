@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface TrackingActivityMapper {
     void insert(TrackingActivityRecord activityRecord);
 
+    long nextTrackingNumberSequence();
+
     Optional<TrackingActivityRecord> findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 
     Optional<TrackingActivityRecord> findByBookingId(@Param("bookingId") String bookingId);
