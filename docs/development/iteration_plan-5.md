@@ -22,15 +22,15 @@
 
 ### 成功基準
 
-- [ ] US18: 追跡番号で貨物の現在状態・イベント履歴を照会できる API が動作する
-- [ ] US18: 荷主向け追跡照会画面が動作する
-- [ ] US06: bookingms 経由で予約情報が経路設計者に引き渡される（RabbitMQ イベント or API 連携）
-- [ ] US12: 経路確定時に荷主メール通知が stub 実装で動作する
-- [ ] TI02: `TrackingNumber` 生成を DB SEQUENCE ベースに変更し、一意性が保証される
-- [ ] TI02: `TrackingActivityNotFoundException` を導入し、文字列比較による分岐を排除する
-- [ ] TI02: `TrackingNumberController` のエラー時レスポンスに `ErrorResponse` を付与する
-- [ ] テストカバレッジ 80% 以上（trackingms、JaCoCo / Vitest）
-- [ ] SonarQube Quality Gate PASS
+- [x] US18: 追跡番号で貨物の現在状態・イベント履歴を照会できる API が動作する
+- [x] US18: 荷主向け追跡照会画面が動作する
+- [x] US06: bookingms 経由で予約情報が経路設計者に引き渡される（RabbitMQ イベント or API 連携）
+- [x] US12: 経路確定時に荷主メール通知が stub 実装で動作する
+- [x] TI02: `TrackingNumber` 生成を DB SEQUENCE ベースに変更し、一意性が保証される
+- [x] TI02: `TrackingActivityNotFoundException` を導入し、文字列比較による分岐を排除する
+- [x] TI02: `TrackingNumberController` のエラー時レスポンスに `ErrorResponse` を付与する
+- [x] テストカバレッジ 80% 以上（trackingms、JaCoCo / Vitest）
+- [x] SonarQube Quality Gate PASS
 
 ---
 
@@ -116,11 +116,11 @@ IT4 コードレビュー（`docs/review/it4_trackingms_review_20260509.md`）�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `TrackingActivityNotFoundException` を作成し `TrackingStatusController` の文字列分岐を置き換える | 1h | - | [ ] |
-| 1.2 | `TrackingNumberService` の番号生成を DB SEQUENCE（Flyway migration）に変更する | 2h | - | [ ] |
-| 1.3 | `TrackingNumber` バリデーションに正規表現チェック（`TRK-\d{6}`）を追加し、テストを更新する | 1h | - | [ ] |
-| 1.4 | `TrackingNumberController` のエラー時レスポンスに `ErrorResponse` を付与する | 0.5h | - | [ ] |
-| 1.5 | リグレッションテスト実施・SonarQube Quality Gate 確認 | 0.5h | - | [ ] |
+| 1.1 | `TrackingActivityNotFoundException` を作成し `TrackingStatusController` の文字列分岐を置き換える | 1h | - | [x] |
+| 1.2 | `TrackingNumberService` の番号生成を DB SEQUENCE（Flyway migration）に変更する | 2h | - | [x] |
+| 1.3 | `TrackingNumber` バリデーションに正規表現チェック（`TRK-\d{6}`）を追加し、テストを更新する | 1h | - | [x] |
+| 1.4 | `TrackingNumberController` のエラー時レスポンスに `ErrorResponse` を付与する | 0.5h | - | [x] |
+| 1.5 | リグレッションテスト実施・SonarQube Quality Gate 確認 | 0.5h | - | [x] |
 
 **小計**: 5h（理想時間）
 
@@ -128,14 +128,14 @@ IT4 コードレビュー（`docs/review/it4_trackingms_review_20260509.md`）�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | **[TDD]** `GET /api/tracking/v1/{trackingNumber}` クエリサービスを実装する（`TrackingQueryService`） | 2h | - | [ ] |
-| 2.2 | **[TDD]** `TrackingStatusController` に GET エンドポイントのクエリ専用ハンドラを追加する | 1h | - | [ ] |
-| 2.3 | **[TDD]** `TrackingQueryServiceTest` でドメインロジックのテストを書く | 2h | - | [ ] |
-| 2.4 | **[TDD]** `TrackingStatusControllerTest` に GET テストを追加する | 1h | - | [ ] |
-| 2.5 | FE: `TrackingPage.tsx` の照会画面を実装する（追跡番号入力 → 状態・履歴表示） | 3h | - | [ ] |
-| 2.6 | FE: `useTracking` フックに照会用クエリを追加する（`refetchInterval: 30000`、TanStack Query） | 1h | - | [ ] |
-| 2.7 | FE: 例外（ExceptionType）が存在する場合に赤色バッジを表示する | 0.5h | - | [ ] |
-| 2.8 | FE: `TrackingPage.test.tsx` を作成する（正常・404・自動更新・例外バッジ） | 2h | - | [ ] |
+| 2.1 | **[TDD]** `GET /api/tracking/v1/{trackingNumber}` クエリサービスを実装する（`TrackingQueryService`） | 2h | - | [x] |
+| 2.2 | **[TDD]** `TrackingStatusController` に GET エンドポイントのクエリ専用ハンドラを追加する | 1h | - | [x] |
+| 2.3 | **[TDD]** `TrackingQueryServiceTest` でドメインロジックのテストを書く | 2h | - | [x] |
+| 2.4 | **[TDD]** `TrackingStatusControllerTest` に GET テストを追加する | 1h | - | [x] |
+| 2.5 | FE: `TrackingPage.tsx` の照会画面を実装する（追跡番号入力 → 状態・履歴表示） | 3h | - | [x] |
+| 2.6 | FE: `useTracking` フックに照会用クエリを追加する（`refetchInterval: 30000`、TanStack Query） | 1h | - | [x] |
+| 2.7 | FE: 例外（ExceptionType）が存在する場合に赤色バッジを表示する | 0.5h | - | [x] |
+| 2.8 | FE: `TrackingPage.test.tsx` を作成する（正常・404・自動更新・例外バッジ） | 2h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -143,11 +143,11 @@ IT4 コードレビュー（`docs/review/it4_trackingms_review_20260509.md`）�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | **[TDD]** bookingms の `CargoCommandService.confirmBooking` で引渡しイベントを発行するロジックを追加する | 2h | - | [ ] |
-| 3.2 | **[TDD]** 引渡しイベント用のドメインイベントクラスを作成する（`CargoAssignedForRoutingEvent`） | 1h | - | [ ] |
-| 3.3 | routingms または bookingms に「経路設計担当一覧」クエリ API を追加する | 2h | - | [ ] |
-| 3.4 | FE: `RoutingAssignmentPage.tsx` を作成する（担当案件一覧画面） | 2h | - | [ ] |
-| 3.5 | FE: 一覧テストを追加する | 1h | - | [ ] |
+| 3.1 | **[TDD]** bookingms の `CargoCommandService.confirmBooking` で引渡しイベントを発行するロジックを追加する | 2h | - | [x] |
+| 3.2 | **[TDD]** 引渡しイベント用のドメインイベントクラスを作成する（`CargoAssignedForRoutingEvent`） | 1h | - | [x] |
+| 3.3 | routingms または bookingms に「経路設計担当一覧」クエリ API を追加する | 2h | - | [x] |
+| 3.4 | FE: `RoutingAssignmentPage.tsx` を作成する（担当案件一覧画面） | 2h | - | [x] |
+| 3.5 | FE: 一覧テストを追加する | 1h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -155,12 +155,12 @@ IT4 コードレビュー（`docs/review/it4_trackingms_review_20260509.md`）�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | **[TDD]** bookingms に通知サービスの stub インターフェース（`ShipperNotificationPort`）を作成する | 1h | - | [ ] |
-| 4.2 | **[TDD]** `RouteAssignedNotificationService`（stub: ログ出力のみ）を実装する | 1h | - | [ ] |
-| 4.3 | `CargoCommandService.assignRoute` で通知サービスを呼び出す | 1h | - | [ ] |
-| 4.4 | 通知サービスのテストを作成する（stub 呼び出し確認） | 1h | - | [ ] |
-| 4.5 | FE: `BookingDetailPage` に「通知送信済み」バッジを表示する（状態連動） | 1h | - | [ ] |
-| 4.6 | FE: 通知バッジのテストを追加する | 0.5h | - | [ ] |
+| 4.1 | **[TDD]** bookingms に通知サービスの stub インターフェース（`ShipperNotificationPort`）を作成する | 1h | - | [x] |
+| 4.2 | **[TDD]** `RouteAssignedNotificationService`（stub: ログ出力のみ）を実装する | 1h | - | [x] |
+| 4.3 | `CargoCommandService.assignRoute` で通知サービスを呼び出す | 1h | - | [x] |
+| 4.4 | 通知サービスのテストを作成する（stub 呼び出し確認） | 1h | - | [x] |
+| 4.5 | FE: `BookingDetailPage` に「通知送信済み」バッジを表示する（状態連動） | 1h | - | [x] |
+| 4.6 | FE: 通知バッジのテストを追加する | 0.5h | - | [x] |
 
 **小計**: 5.5h（理想時間）
 
@@ -168,15 +168,15 @@ IT4 コードレビュー（`docs/review/it4_trackingms_review_20260509.md`）�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| TI02: IT4 コードレビュー指摘解消 | 2 | 5h | [ ] |
-| US18: 追跡情報を照会する | 10 | 12h | [ ] |
-| US06: 予約情報を経路設計者に引き渡す | 5 | 8h | [ ] |
-| US12: 確定経路を荷主に通知する | 5 | 5.5h | [ ] |
+| TI02: IT4 コードレビュー指摘解消 | 2 | 5h | [x] |
+| US18: 追跡情報を照会する | 10 | 12h | [x] |
+| US06: 予約情報を経路設計者に引き渡す | 5 | 8h | [x] |
+| US12: 確定経路を荷主に通知する | 5 | 5.5h | [x] |
 | **合計** | **22** | **30.5h** | |
 
 **1 SP あたり**: 約 1.4h
 
-**進捗率**: 0% (0/22 SP)
+**進捗率**: 100% (22/22 SP 完了)
 
 ---
 
@@ -474,13 +474,13 @@ apps/frontend/src/
 
 ### Definition of Done
 
-- [ ] 全ユニットテスト・統合テストがパス（Backend: JUnit 5, Frontend: Vitest）
-- [ ] SonarQube Quality Gate PASS（new_violations: 0）
-- [ ] テストカバレッジ 80% 以上（JaCoCo / Vitest）
-- [ ] TI02 の高優先度指摘 4 件が解消されている（文字列比較分岐の排除・SEQUENCE ベース番号生成）
-- [ ] US18 の追跡照会画面がローカルで動作確認済み
-- [ ] US06 の引渡しイベントが bookingms 経由で発行・受信できる
-- [ ] US12 の通知 stub が経路確定時に実行される
+- [x] 全ユニットテスト・統合テストがパス（Backend: JUnit 5, Frontend: Vitest）
+- [x] SonarQube Quality Gate PASS（new_violations: 0）
+- [x] テストカバレッジ 80% 以上（JaCoCo / Vitest）
+- [x] TI02 の高優先度指摘 4 件が解消されている（文字列比較分岐の排除・SEQUENCE ベース番号生成）
+- [x] US18 の追跡照会画面がローカルで動作確認済み
+- [x] US06 の引渡しイベントが bookingms 経由で発行・受信できる
+- [x] US12 の通知 stub が経路確定時に実行される
 
 ### デモ項目
 
