@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useRecordHandlingActivity } from '../features/tracking/hooks/useTracking'
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -19,13 +20,9 @@ export function HandlingActivityPage() {
     eventTime: '',
     voyageNumber: '',
   })
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-    setSuccessMessage(null)
-    setErrorMessage(null)
   }
 
   const handleClear = () => {
@@ -36,8 +33,6 @@ export function HandlingActivityPage() {
       eventTime: '',
       voyageNumber: '',
     })
-    setSuccessMessage(null)
-    setErrorMessage(null)
   }
 
   const clearExceptTrackingNumber = () => {
@@ -48,14 +43,12 @@ export function HandlingActivityPage() {
       eventTime: '',
       voyageNumber: '',
     }))
-    setSuccessMessage(null)
-    setErrorMessage(null)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.trackingNumber || !form.locationUnlocode || !form.eventTime) {
-      setErrorMessage('追跡番号・作業場所・作業日時は必須です。')
+      toast.error('追跡番号・作業場所・作業日時は必須です。')
       return
     }
 
@@ -69,13 +62,13 @@ export function HandlingActivityPage() {
       },
       {
         onSuccess: (data) => {
-          setSuccessMessage(
+          toast.success(
             `荷役作業を記録しました。追跡番号: ${data.trackingNumber} / 状態: ${data.transportStatus}`,
           )
           clearExceptTrackingNumber()
         },
         onError: (err) => {
-          setErrorMessage(
+          toast.error(
             err instanceof Error ? err.message : '荷役作業の記録に失敗しました。',
           )
         },
@@ -86,17 +79,6 @@ export function HandlingActivityPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">荷役作業記録</h1>
-
-      {successMessage && (
-        <div className="mb-4 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
-          {errorMessage}
-        </div>
-      )}
 
       <form
         onSubmit={handleSubmit}

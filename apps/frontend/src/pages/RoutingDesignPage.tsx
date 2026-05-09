@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Navigate } from 'react-router'
+import { toast } from 'sonner'
 import { useItineraries } from '../features/routing/hooks/useItineraries'
 import { useAssignRoute } from '../features/booking/hooks/useBookings'
 import type { Itinerary } from '../features/routing/types/itinerary'
@@ -15,8 +16,6 @@ export function RoutingDesignPage() {
   const [destinationUnlocode, setDestinationUnlocode] = useState(DEFAULT_DESTINATION)
   const [arrivalDeadline, setArrivalDeadline] = useState('')
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const { mutate: searchItineraries, data: itineraries, isPending: isSearching, isError: isSearchError } = useItineraries()
   const { mutate: assignRoute, isPending: isAssigning } = useAssignRoute(bookingId ?? '')
@@ -36,8 +35,6 @@ export function RoutingDesignPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setSelectedIndex(null)
-    setSuccessMessage(null)
-    setErrorMessage(null)
     searchItineraries({
       originUnlocode,
       destinationUnlocode,
@@ -55,7 +52,7 @@ export function RoutingDesignPage() {
           navigate(`/bookings/${bookingId}`)
         },
         onError: () => {
-          setErrorMessage('経路の割り当てに失敗しました。')
+          toast.error('経路の割り当てに失敗しました。')
         },
       }
     )
@@ -68,17 +65,6 @@ export function RoutingDesignPage() {
           経路設計{bookingId ? ` — ${bookingId}` : ''}
         </h1>
       </div>
-
-      {successMessage && (
-        <div className="mb-4 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
-          {errorMessage}
-        </div>
-      )}
 
       <form onSubmit={handleSearch} className="bg-white border border-gray-200 rounded-lg p-4 mb-6 flex items-end gap-4">
         <div>

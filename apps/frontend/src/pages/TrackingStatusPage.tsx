@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router'
+import { toast } from 'sonner'
 import { useTrackingActivity, useUpdateTrackingStatus } from '../features/tracking/hooks/useTracking'
 import type { TrackingStatus } from '../features/tracking/types/tracking'
 
@@ -59,8 +60,6 @@ export function TrackingStatusPage() {
   const { mutate: updateStatus, isPending } = useUpdateTrackingStatus(trackingNumber ?? '')
 
   const [selectedStatus, setSelectedStatus] = useState<string>('')
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   if (isLoading) return <p className="p-6 text-center text-gray-500">読み込み中...</p>
   if (isError || !activity)
@@ -69,22 +68,20 @@ export function TrackingStatusPage() {
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedStatus) {
-      setErrorMessage('新しい状態を選択してください。')
+      toast.error('新しい状態を選択してください。')
       return
     }
-    setSuccessMessage(null)
-    setErrorMessage(null)
 
     updateStatus(
       { newStatus: selectedStatus },
       {
         onSuccess: () => {
-          setSuccessMessage('貨物状態を更新しました。')
+          toast.success('貨物状態を更新しました。')
           setSelectedStatus('')
           refetch()
         },
         onError: (err) => {
-          setErrorMessage(
+          toast.error(
             err instanceof Error ? err.message : '貨物状態の更新に失敗しました。',
           )
         },
@@ -115,17 +112,6 @@ export function TrackingStatusPage() {
       <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
         <h2 className="text-base font-semibold text-gray-800 mb-3">状態を更新する</h2>
 
-        {successMessage && (
-          <div className="mb-3 rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
-            {successMessage}
-          </div>
-        )}
-        {errorMessage && (
-          <div className="mb-3 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
-            {errorMessage}
-          </div>
-        )}
-
         <form onSubmit={handleUpdate} className="flex gap-3 items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="newStatus">
@@ -134,11 +120,7 @@ export function TrackingStatusPage() {
             <select
               id="newStatus"
               value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value)
-                setSuccessMessage(null)
-                setErrorMessage(null)
-              }}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">選択してください</option>
