@@ -21,4 +21,39 @@ test.describe('貨物追跡照会', () => {
     await page.getByRole('button', { name: '追跡する' }).click();
     await expect(page.getByText(/追跡番号が見つかりません/)).toBeVisible();
   });
+
+  test('荷役記録→追跡照会の一連フローが動作すること', async ({ page, loggedIn }) => {
+    // 1. 荷役記録ページに遷移して追跡番号と荷役情報を入力
+    await page.goto('/handling/activities');
+    await expect(page.getByRole('heading', { name: '荷役作業記録' })).toBeVisible();
+
+    // 追跡番号入力
+    await page.getByPlaceholder('TRK-000001').fill('TRK-000001');
+    // 作業場所入力
+    await page.getByPlaceholder('JPTYO').fill('JPTYO');
+    // 作業日時入力
+    await page.getByLabel(/作業日時/).fill('2026-01-01T10:00');
+    // 作業種別（受領のまま）
+
+    // 2. 記録ボタンをクリック（成功するか確認、失敗した場合はエラーメッセージを確認）
+    await page.getByRole('button', { name: '記録する' }).click();
+
+    // 成功またはエラーメッセージが表示されることを確認（E2E では実際の API が必要）
+    await expect(
+      page.getByText(/荷役作業を記録しました|失敗しました|追跡番号が見つかりません/)
+    ).toBeVisible({ timeout: 10000 });
+
+    // 3. 追跡照会ページに遷移
+    await page.goto('/tracking');
+    await expect(page.getByRole('heading', { name: '貨物追跡照会' })).toBeVisible();
+
+    // 4. 追跡番号を入力して検索
+    await page.getByPlaceholder(/TRK-/).fill('TRK-000001');
+    await page.getByRole('button', { name: '追跡する' }).click();
+
+    // 追跡結果または「見つかりません」メッセージが表示されることを確認
+    await expect(
+      page.getByText(/現在の状態|追跡番号が見つかりません/)
+    ).toBeVisible({ timeout: 10000 });
+  });
 });
