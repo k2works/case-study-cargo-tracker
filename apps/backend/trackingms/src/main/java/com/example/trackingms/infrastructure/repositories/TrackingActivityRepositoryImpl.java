@@ -40,7 +40,8 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                     event.getEventType().name(),
                     event.getEventTime(),
                     event.getLocationUnlocode(),
-                    event.getVoyageNumber()
+                    event.getVoyageNumber(),
+                    event.getConsigneeConfirmation()
             );
             mapper.insertEvent(eventRecord);
         }
@@ -80,7 +81,8 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                         event.getEventType().name(),
                         event.getEventTime(),
                         event.getLocationUnlocode(),
-                        event.getVoyageNumber()
+                        event.getVoyageNumber(),
+                        event.getConsigneeConfirmation()
                 );
                 mapper.insertEvent(eventRecord);
             }
@@ -100,7 +102,8 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                         TrackingEventType.valueOf(e.getEventType()),
                         e.getLocationUnlocode(),
                         e.getEventTime(),
-                        e.getVoyageNumber()))
+                        e.getVoyageNumber(),
+                        e.getConsigneeConfirmation()))
                 .toList();
 
         return new TrackingActivity(

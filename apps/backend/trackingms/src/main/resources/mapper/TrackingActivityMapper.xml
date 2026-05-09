@@ -35,14 +35,14 @@
     <insert id="insertEvent" useGeneratedKeys="true" keyProperty="id"
             parameterType="com.example.trackingms.infrastructure.repositories.TrackingHandlingEventRecord">
         INSERT INTO tracking_handling_event
-            (tracking_id, event_type, event_time, location_unlocode, voyage_number, created_at, updated_at)
+            (tracking_id, event_type, event_time, location_unlocode, voyage_number, consignee_confirmation, created_at, updated_at)
         VALUES
-            (#{trackingId}, #{eventType}, #{eventTime}, #{locationUnlocode}, #{voyageNumber},
+            (#{trackingId}, #{eventType}, #{eventTime}, #{locationUnlocode}, #{voyageNumber}, #{consigneeConfirmation},
              CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <select id="findEventsByTrackingId" resultType="com.example.trackingms.infrastructure.repositories.TrackingHandlingEventRecord">
-        SELECT id, tracking_id, event_type, event_time, location_unlocode, voyage_number
+        SELECT id, tracking_id, event_type, event_time, location_unlocode, voyage_number, consignee_confirmation
         FROM tracking_handling_event
         WHERE tracking_id = #{trackingId}
         ORDER BY event_time ASC

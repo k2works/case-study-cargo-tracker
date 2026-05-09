@@ -14,11 +14,14 @@ public class TrackingActivityEvent {
     private final String locationUnlocode;
     private final LocalDateTime eventTime;
     private final String voyageNumber;
+    /** 荷受人確認情報（CLAIM 種別のみ必須） */
+    private final String consigneeConfirmation;
 
     public TrackingActivityEvent(TrackingEventType eventType,
                                   String locationUnlocode,
                                   LocalDateTime eventTime,
-                                  String voyageNumber) {
+                                  String voyageNumber,
+                                  String consigneeConfirmation) {
         Objects.requireNonNull(eventType, "eventType must not be null");
         Objects.requireNonNull(locationUnlocode, "locationUnlocode must not be null");
         Objects.requireNonNull(eventTime, "eventTime must not be null");
@@ -26,14 +29,16 @@ public class TrackingActivityEvent {
         this.locationUnlocode = locationUnlocode;
         this.eventTime = eventTime;
         this.voyageNumber = voyageNumber;
+        this.consigneeConfirmation = consigneeConfirmation;
     }
 
     /** 永続化済みエンティティ再構成コンストラクタ */
     public TrackingActivityEvent(Long id, TrackingEventType eventType,
                                   String locationUnlocode,
                                   LocalDateTime eventTime,
-                                  String voyageNumber) {
-        this(eventType, locationUnlocode, eventTime, voyageNumber);
+                                  String voyageNumber,
+                                  String consigneeConfirmation) {
+        this(eventType, locationUnlocode, eventTime, voyageNumber, consigneeConfirmation);
         this.id = id;
     }
 
@@ -42,4 +47,5 @@ public class TrackingActivityEvent {
     public String getLocationUnlocode() { return locationUnlocode; }
     public LocalDateTime getEventTime() { return eventTime; }
     public String getVoyageNumber() { return voyageNumber; }
+    public String getConsigneeConfirmation() { return consigneeConfirmation; }
 }

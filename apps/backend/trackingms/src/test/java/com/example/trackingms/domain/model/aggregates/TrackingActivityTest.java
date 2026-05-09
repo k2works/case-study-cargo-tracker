@@ -37,7 +37,7 @@ class TrackingActivityTest {
     void shouldTransitionToReceivedAfterReceiveEvent() {
         TrackingActivityEvent event = new TrackingActivityEvent(
                 TrackingEventType.RECEIVE, "JPTYO",
-                LocalDateTime.of(2026, 6, 15, 10, 0), null);
+                LocalDateTime.of(2026, 6, 15, 10, 0), null, null);
 
         activity.addEvent(event);
 
@@ -50,7 +50,7 @@ class TrackingActivityTest {
     void shouldTransitionToLoadedAfterLoadEvent() {
         TrackingActivityEvent event = new TrackingActivityEvent(
                 TrackingEventType.LOAD, "JPTYO",
-                LocalDateTime.of(2026, 6, 16, 8, 0), "V0042");
+                LocalDateTime.of(2026, 6, 16, 8, 0), "V0042", null);
 
         activity.addEvent(event);
 
@@ -62,7 +62,7 @@ class TrackingActivityTest {
     void shouldTransitionToUnloadedAfterUnloadEvent() {
         TrackingActivityEvent event = new TrackingActivityEvent(
                 TrackingEventType.UNLOAD, "CNSHA",
-                LocalDateTime.of(2026, 6, 30, 8, 0), "V0042");
+                LocalDateTime.of(2026, 6, 30, 8, 0), "V0042", null);
 
         activity.addEvent(event);
 
@@ -88,7 +88,7 @@ class TrackingActivityTest {
     @DisplayName("getEvents は変更不可能なリストを返すこと")
     void shouldReturnUnmodifiableEventsList() {
         TrackingActivityEvent newEvent = new TrackingActivityEvent(
-                TrackingEventType.RECEIVE, "JPTYO", LocalDateTime.now(), null);
+                TrackingEventType.RECEIVE, "JPTYO", LocalDateTime.now(), null, null);
         var events = activity.getEvents();
         assertThatThrownBy(() -> events.add(newEvent))
                 .isInstanceOf(UnsupportedOperationException.class);

@@ -43,7 +43,8 @@ public class HandlingActivityController {
                     request.eventType(),
                     request.locationUnlocode(),
                     request.eventTime(),
-                    request.voyageNumber()
+                    request.voyageNumber(),
+                    request.consigneeConfirmation()
             );
             TrackingActivity activity = trackingActivityEventService.recordHandlingActivity(command);
             return ResponseEntity.status(HttpStatus.CREATED)

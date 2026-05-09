@@ -40,7 +40,8 @@ public class TrackingActivityEventService {
                 eventType,
                 command.locationUnlocode(),
                 command.eventTime(),
-                command.voyageNumber()
+                command.voyageNumber(),
+                command.consigneeConfirmation()
         );
 
         activity.addEvent(event);

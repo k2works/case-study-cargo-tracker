@@ -10,5 +10,6 @@ public record RecordHandlingActivityCommand(
         String eventType,
         String locationUnlocode,
         LocalDateTime eventTime,
-        String voyageNumber
+        String voyageNumber,
+        String consigneeConfirmation
 ) {}

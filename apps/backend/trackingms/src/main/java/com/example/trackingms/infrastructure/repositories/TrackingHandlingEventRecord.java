@@ -12,6 +12,7 @@ public class TrackingHandlingEventRecord {
     private LocalDateTime eventTime;
     private String locationUnlocode;
     private String voyageNumber;
+    private String consigneeConfirmation;
 
     public TrackingHandlingEventRecord() {}
 
@@ -20,59 +21,34 @@ public class TrackingHandlingEventRecord {
             String eventType,
             LocalDateTime eventTime,
             String locationUnlocode,
-            String voyageNumber) {
+            String voyageNumber,
+            String consigneeConfirmation) {
         this.trackingId = trackingId;
         this.eventType = eventType;
         this.eventTime = eventTime;
         this.locationUnlocode = locationUnlocode;
         this.voyageNumber = voyageNumber;
+        this.consigneeConfirmation = consigneeConfirmation;
     }
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Long getTrackingId() { return trackingId; }
+    public void setTrackingId(Long trackingId) { this.trackingId = trackingId; }
 
-    public Long getTrackingId() {
-        return trackingId;
-    }
+    public String getEventType() { return eventType; }
+    public void setEventType(String eventType) { this.eventType = eventType; }
 
-    public void setTrackingId(Long trackingId) {
-        this.trackingId = trackingId;
-    }
+    public LocalDateTime getEventTime() { return eventTime; }
+    public void setEventTime(LocalDateTime eventTime) { this.eventTime = eventTime; }
 
-    public String getEventType() {
-        return eventType;
-    }
+    public String getLocationUnlocode() { return locationUnlocode; }
+    public void setLocationUnlocode(String locationUnlocode) { this.locationUnlocode = locationUnlocode; }
 
-    public void setEventType(String eventType) {
-        this.eventType = eventType;
-    }
+    public String getVoyageNumber() { return voyageNumber; }
+    public void setVoyageNumber(String voyageNumber) { this.voyageNumber = voyageNumber; }
 
-    public LocalDateTime getEventTime() {
-        return eventTime;
-    }
-
-    public void setEventTime(LocalDateTime eventTime) {
-        this.eventTime = eventTime;
-    }
-
-    public String getLocationUnlocode() {
-        return locationUnlocode;
-    }
-
-    public void setLocationUnlocode(String locationUnlocode) {
-        this.locationUnlocode = locationUnlocode;
-    }
-
-    public String getVoyageNumber() {
-        return voyageNumber;
-    }
-
-    public void setVoyageNumber(String voyageNumber) {
-        this.voyageNumber = voyageNumber;
-    }
+    public String getConsigneeConfirmation() { return consigneeConfirmation; }
+    public void setConsigneeConfirmation(String consigneeConfirmation) { this.consigneeConfirmation = consigneeConfirmation; }
 }

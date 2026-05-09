@@ -13,5 +13,6 @@ public record RecordHandlingActivityRequest(
         @NotBlank String eventType,
         @NotBlank String locationUnlocode,
         @NotNull LocalDateTime eventTime,
-        String voyageNumber
+        String voyageNumber,
+        String consigneeConfirmation
 ) {}
