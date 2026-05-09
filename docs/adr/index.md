@@ -10,5 +10,6 @@
 | [ADR-002](./002-vite-dev-proxy-authms-passthrough.md) | 開発環境の Vite dev サーバーで authms を直接プロキシする二段階構成 | 承認済み |
 | [ADR-003](./003-cargo-event-publisher-port-adapter.md) | CargoRoutedEvent 発行にポート/アダプタパターンを採用する | 承認済み |
 | [ADR-004](./004-testcontainers-rabbitmq-integration-test.md) | RabbitMQ 連携テストに Testcontainers を採用する | 承認済み |
+| [ADR-005](./005-tracking-number-issued-event-contract.md) | TrackingNumberIssuedEvent のマイクロサービス間契約管理方針 | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
