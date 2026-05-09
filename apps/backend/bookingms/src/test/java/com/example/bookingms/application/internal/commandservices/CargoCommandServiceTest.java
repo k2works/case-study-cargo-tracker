@@ -10,7 +10,6 @@ import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoEventPublisher;
 import com.example.bookingms.domain.ports.CargoRepository;
-import com.example.bookingms.domain.ports.ShipperNotificationPort;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -120,10 +119,14 @@ class CargoCommandServiceTest {
 
     private static final class NoOpEventPublisher implements CargoEventPublisher {
         @Override
-        public void publishCargoRouted(CargoRoutedEvent event) {}
+        public void publishCargoRouted(CargoRoutedEvent event) {
+            // no-op for testing
+        }
 
         @Override
-        public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {}
+        public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {
+            // no-op for testing
+        }
     }
 
     private static final class RecordingCargoEventPublisher implements CargoEventPublisher {
@@ -135,6 +138,8 @@ class CargoCommandServiceTest {
         }
 
         @Override
-        public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {}
+        public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {
+            // no-op for testing
+        }
     }
 }
