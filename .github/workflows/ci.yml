@@ -208,7 +208,9 @@ jobs:
             exit 1
           fi
           echo "Starting Booking with $BOOKING_JAR"
-          java -jar "$BOOKING_JAR" > booking.log 2>&1 &
+          java -jar "$BOOKING_JAR" \
+            --management.health.rabbit.enabled=false \
+            > booking.log 2>&1 &
         env:
           PORT: 8082
 
