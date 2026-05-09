@@ -184,7 +184,7 @@ gantt
     IT3 (完了)                    :done, a3, after a2, 14d
     IT4 (完了)                    :done, a4, after a3, 14d
     IT5 (完了)                    :done, a5, after a4, 14d
-    IT6 (予定)                    :a6, after a5, 14d
+    IT6 (計画済)                  :active, a6, after a5, 14d
     Release 0.1.0                 :milestone, ma1, after a6, 0d
 ```
 
@@ -324,17 +324,20 @@ gantt
 
 **目標 SP**: 22（BE 13 + FE 9）
 
-### イテレーション 6（Week 11-12: 2026-07-07〜2026-07-18）
+### イテレーション 6（Week 11-12: 2026-05-11〜2026-05-22）
 
-**ゴール**: MVP 統合テスト・E2E テスト・品質向上
+**ゴール**: MVP 統合テスト（Playwright E2E）・品質改善・IT4/IT5 持ち越し指摘解消・Release 0.1.0 リリース準備
 
 **主なタスク**:
 
-- [ ] E2E テスト: 予約→経路設計→追跡の基幹フロー（Playwright）
-- [ ] バグ修正・品質向上
-- [ ] Release 0.1.0 MVP リリース準備
+- [ ] TI03: Playwright E2E テスト整備 — 基幹フロー 5 シナリオ（8 SP）
+- [ ] TI04: bookingms → trackingms RabbitMQ イベント連携（3 SP）
+- [ ] TI05: IT4 コードレビュー保留指摘解消 H5/H6/H7（4 SP）
+- [ ] TI06: Release 0.1.0 リリース準備（3 SP）
 
-**目標 SP**: バッファ消費
+**目標 SP**: 18
+
+詳細は [iteration_plan-6.md](./iteration_plan-6.md) を参照。
 
 ### イテレーション 7（Week 13-14: 2026-07-21〜2026-08-01）
 
@@ -428,7 +431,7 @@ gantt
 | IT3 | 18 | 11 | 7 | 18 | 100% | 完了 |
 | IT4 | 21 | 14 | 7 | 21 | 100% | 完了 |
 | IT5 | 22 | 13 | 9 | 22 | 100% | 完了 |
-| IT6 | - | - | - | - | - | 未着手 |
+| IT6 | 18 | 5 | 13 | - | - | 計画済 |
 | IT7 | 21 | 13 | 8 | - | - | 未着手 |
 | IT8 | 16 | 10 | 6 | - | - | 未着手 |
 | IT9 | 21 | 13 | 8 | - | - | 未着手 |
@@ -449,7 +452,7 @@ xychart-beta
 
 ## 次のステップ
 
-1. IT6: MVP 統合テスト・E2E テスト・品質向上・Release 0.1.0 準備
+1. IT6: Playwright E2E テスト整備・RabbitMQ イベント連携・IT4 保留指摘解消・Release 0.1.0 リリース準備（2026-05-11〜2026-05-22）
 2. IT7: 荷役拡張（US16）・危険物予約（US05）・遅延例外（US19）の BE + FE 実装
 
 ---
@@ -466,3 +469,4 @@ xychart-beta
 | 2026-05-08 | IT3 完了: 全 18 SP 完了（100%）。累計 76 SP 完了。SonarQube Quality Gate PASS | - |
 | 2026-05-08 | IT4 完了: 全 21 SP 完了（100%）。累計 97 SP 完了。trackingms 新規構築完了。SonarQube Quality Gate PASS | - |
 | 2026-05-09 | IT5 完了: 全 22 SP 完了（100%）。累計 119 SP 完了。追跡照会・予約引渡・経路通知・IT4 コードレビュー指摘解消。SonarQube Quality Gate PASS | - |
+| 2026-05-09 | IT6 計画作成: E2E テスト整備・RabbitMQ 連携・保留指摘解消・Release 0.1.0 準備（18 SP） | - |
