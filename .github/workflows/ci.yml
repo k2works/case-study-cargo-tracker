@@ -227,10 +227,40 @@ jobs:
         env:
           PORT: 8083
 
+      - name: Start Tracking Service
+        run: |
+          TRACKING_JAR=$(find apps/backend/trackingms/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+          if [ -z "$TRACKING_JAR" ]; then
+            echo "Tracking executable jar not found"
+            ls -la apps/backend/trackingms/build/libs || true
+            exit 1
+          fi
+          echo "Starting Tracking with $TRACKING_JAR"
+          java -jar "$TRACKING_JAR" \
+            --management.health.rabbit.enabled=false \
+            > tracking.log 2>&1 &
+        env:
+          PORT: 8086
+
+      - name: Start Handling Service
+        run: |
+          HANDLING_JAR=$(find apps/backend/handlingms/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+          if [ -z "$HANDLING_JAR" ]; then
+            echo "Handling executable jar not found"
+            ls -la apps/backend/handlingms/build/libs || true
+            exit 1
+          fi
+          echo "Starting Handling with $HANDLING_JAR"
+          java -jar "$HANDLING_JAR" \
+            --management.health.rabbit.enabled=false \
+            > handling.log 2>&1 &
+        env:
+          PORT: 8085
+
       - name: Wait for backend services
         run: |
           echo "Waiting for backend services..."
-          for port in 8080 8081 8082 8083; do
+          for port in 8080 8081 8082 8083 8085 8086; do
             for i in $(seq 1 30); do
               STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/actuator/health || true)
               if [ "$STATUS" = "200" ]; then
@@ -247,6 +277,10 @@ jobs:
                 cat booking.log || true
                 echo "==== routing.log ===="
                 cat routing.log || true
+                echo "==== tracking.log ===="
+                cat tracking.log || true
+                echo "==== handling.log ===="
+                cat handling.log || true
                 exit 1
               fi
               echo "Attempt $i/30: port=$port status=$STATUS, retrying in 5s..."
