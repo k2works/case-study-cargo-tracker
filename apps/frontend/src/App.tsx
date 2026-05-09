@@ -14,6 +14,7 @@ import { RoutingDesignPage } from './pages/RoutingDesignPage'
 import { HandlingActivityPage } from './pages/HandlingActivityPage'
 import { TrackingStatusPage } from './pages/TrackingStatusPage'
 import { TrackingPage } from './pages/TrackingPage'
+import { TrackingExceptionPage } from './pages/TrackingExceptionPage'
 import { RoutingAssignmentPage } from './pages/RoutingAssignmentPage'
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/routing/design" element={<Navigate to="/routing/assignments" replace />} />
           <Route path="/handling/activities" element={<HandlingActivityPage />} />
           <Route path="/tracking/:trackingNumber/status" element={<TrackingStatusPage />} />
+          <Route path="/tracking/:trackingNumber/exceptions" element={<TrackingExceptionPage />} />
           <Route path="/tracking" element={<TrackingPage />} />
           <Route path="/routing/assignments" element={<RoutingAssignmentPage />} />
         </Route>

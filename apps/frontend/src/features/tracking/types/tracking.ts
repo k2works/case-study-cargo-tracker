@@ -8,11 +8,24 @@ export interface TrackingActivityEvent {
   voyageNumber: string | null
 }
 
+export interface TrackingExceptionEvent {
+  id?: number
+  exceptionType: string
+  occurredAt: string
+  locationUnlocode: string | null
+  reason: string | null
+  escalationFlag: boolean
+  responseContent: string | null
+  newEstimatedArrival: string | null
+  status: string
+}
+
 export interface TrackingActivity {
   trackingNumber: string
   bookingId: string
   transportStatus: TrackingStatus
   events: TrackingActivityEvent[]
+  exceptions?: TrackingExceptionEvent[]
 }
 
 export type TrackingStatus =
@@ -41,4 +54,12 @@ export interface RecordHandlingActivityRequest {
 
 export interface UpdateTrackingStatusRequest {
   newStatus: string
+}
+
+export interface RecordTrackingExceptionRequest {
+  exceptionType: string
+  occurredAt: string
+  locationUnlocode?: string
+  reason?: string
+  escalationFlag?: boolean
 }
