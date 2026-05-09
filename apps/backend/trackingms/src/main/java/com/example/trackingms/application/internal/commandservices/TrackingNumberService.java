@@ -1,9 +1,11 @@
 package com.example.trackingms.application.internal.commandservices;
 
+import com.example.trackingms.domain.events.TrackingNumberIssuedEvent;
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.trackingms.domain.ports.TrackingActivityRepository;
+import com.example.trackingms.domain.ports.TrackingEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,9 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TrackingNumberService {
     private final TrackingActivityRepository trackingActivityRepository;
+    private final TrackingEventPublisher trackingEventPublisher;
 
-    public TrackingNumberService(TrackingActivityRepository trackingActivityRepository) {
+    public TrackingNumberService(TrackingActivityRepository trackingActivityRepository,
+                                 TrackingEventPublisher trackingEventPublisher) {
         this.trackingActivityRepository = trackingActivityRepository;
+        this.trackingEventPublisher = trackingEventPublisher;
     }
 
     /**
@@ -34,7 +39,10 @@ public class TrackingNumberService {
                 .orElseGet(() -> {
                     TrackingNumber trackingNumber = generateTrackingNumber();
                     TrackingActivity activity = new TrackingActivity(trackingNumber, trackingBookingId);
-                    return trackingActivityRepository.save(activity);
+                    TrackingActivity saved = trackingActivityRepository.save(activity);
+                    trackingEventPublisher.publishTrackingNumberIssued(
+                            new TrackingNumberIssuedEvent(bookingId, saved.getTrackingNumber().number()));
+                    return saved;
                 });
     }
 

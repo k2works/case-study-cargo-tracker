@@ -96,6 +96,24 @@ class CargoRoutedEventPublisherTest {
             admin.setAutoStartup(true);
             return admin;
         }
+
+        @Bean
+        Queue trackingNumberIssuedQueue() {
+            return new Queue(TrackingNumberIssuedEventListener.QUEUE, false, false, false);
+        }
+
+        @Bean
+        TopicExchange trackingEventsExchange() {
+            return new TopicExchange("tracking.events", false, false);
+        }
+
+        @Bean
+        Binding trackingNumberIssuedBinding(Queue trackingNumberIssuedQueue,
+                                             TopicExchange trackingEventsExchange) {
+            return BindingBuilder.bind(trackingNumberIssuedQueue)
+                    .to(trackingEventsExchange)
+                    .with("tracking.number.issued");
+        }
     }
 
     @Autowired

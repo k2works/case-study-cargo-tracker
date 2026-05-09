@@ -125,6 +125,18 @@ public class Cargo {
     }
 
     /**
+     * 追跡番号発行済みに遷移する
+     * CONFIRMED のときのみ TRACKING_ISSUED に遷移できる
+     */
+    public void markTrackingIssued() {
+        if (this.bookingStatus != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException(
+                    "Cannot mark tracking issued for cargo that is not in CONFIRMED state: " + this.bookingStatus);
+        }
+        this.bookingStatus = BookingStatus.TRACKING_ISSUED;
+    }
+
+    /**
      * 予約をキャンセルする
      * DELIVERED または SETTLED 状態の場合はキャンセル不可
      */
