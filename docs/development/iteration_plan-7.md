@@ -31,7 +31,7 @@
 - [x] US05: 貨物種別「冷凍・冷蔵」選択時に温度管理条件フィールドが表示・必須入力となる
 - [x] US19: 遅延例外（追跡番号・例外種別・発生日時・場所・理由）を記録できる
 - [x] US19: 例外記録後に貨物状態が「例外発生 (EXCEPTION)」に更新される
-- [ ] US19: 対応内容（新到着予定日・対応方針）を入力して更新できる
+- [x] US19: 対応内容（新到着予定日・対応方針）を入力して更新できる
 - [x] 全ユニットテスト（BE + FE）がパス
 - [x] BE テストカバレッジ 80% 以上（JaCoCo）
 
@@ -131,7 +131,7 @@
 | 3.1 | **[TDD]** BE: `TrackingExceptionEvent` ドメインモデルを trackingms で拡張する（location・newEstimatedArrival・status フィールド追加） | 2h | - | [x] |
 | 3.2 | **[TDD]** BE: 遅延例外記録 API（POST /api/tracking/{trackingNumber}/exceptions）を実装する | 1.5h | - | [x] |
 | 3.3 | **[TDD]** BE: 例外記録後に貨物状態を EXCEPTION に更新する | 1h | - | [x] |
-| 3.4 | **[TDD]** BE: 対応内容更新 API（PUT /api/tracking/{trackingNumber}/exceptions/{id}/response）を実装する | 1.5h | - | [ ] |
+| 3.4 | **[TDD]** BE: 対応内容更新 API（PUT /api/tracking/{trackingNumber}/exceptions/{id}/response）を実装する | 1.5h | - | [x] |
 | 3.5 | BE: DB マイグレーション（tracking_exception_event テーブルに location_unlocode・new_estimated_arrival・status カラムを追加） | 0.5h | - | [x] |
 | 3.6 | **[TDD]** FE: 遅延例外記録画面（追跡番号検索・例外情報入力・対応内容入力）を実装する | 2h | - | [x] |
 | 3.7 | FE: US19 の FE テストを追加する | 1h | - | [x] |
@@ -145,11 +145,11 @@
 | IT6 持ち越し | 3 | 3h | [ ] |
 | US16: 引取作業記録 | 5 | 6.5h | [x] |
 | US05: 危険物・冷凍貨物予約 | 8 | 8h | [x] |
-| US19: 遅延例外処理 | 8 | 9.5h | [ ] |
+| US19: 遅延例外処理 | 8 | 9.5h | [x] |
 | **合計** | **24** | **27h** | |
 
 **1 SP あたり**: 約 1.1h
-**進捗率**: 0% (0/24 SP)
+**進捗率**: 88% (21/24 SP)（IT6 持ち越し 3 SP を除く）
 
 ---
 
