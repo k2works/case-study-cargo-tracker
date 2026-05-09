@@ -6,6 +6,7 @@
 
 | ドキュメント | 対象成果物 | レビュー日 | 指摘件数 |
 | :--- | :--- | :--- | :--- |
+| [IT5 コードレビュー](./it5_review_20260509.md) | IT5 実装（TI02/US18/US06/US12） | 2026-05-09 | 高 5 件 / 中 9 件 / 低 4 件 |
 | [IT4 trackingms コードレビュー](./it4_trackingms_review_20260509.md) | trackingms IT4 実装（US14/US15/US17） | 2026-05-09 | 高 7 件 / 中 12 件 / 低 7 件 |
 | [IT3 コードレビュー](./it3_review_20260508.md) | bookingms IT3 実装（US09/US11/US13 + CargoRoutedEvent） | 2026-05-08 | 高 6 件 / 中 7 件 / 低 7 件 |
 | [分析成果物レビュー（要件定義・設計）](./分析成果物レビュー_review_20260424.md) | `docs/requirements/*.md`, `docs/design/*.md` | 2026-04-24 | 高 5 件 / 中 5 件 / 低 3 件 |
