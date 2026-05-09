@@ -96,8 +96,9 @@
 | 0.1 | FE: API エラーレスポンスの具体メッセージをトースト通知に表示する（H6 FE） | 1h | - | [ ] |
 | 0.2 | BE: RabbitMQ イベント連携の Testcontainers 統合テストを実装する（TI04 2.4） | 1h | - | [ ] |
 | 0.3 | CI: GitHub Actions に Playwright E2E テストを統合する（TI03 1.7） | 1h | - | [ ] |
+| 0.4 | ADR: bookingms/trackingms 間の `TrackingNumberIssuedEvent` 契約管理方針を ADR-005 として記録する（IT6 レビュー高優先度 #4） | 0.5h | - | [ ] |
 
-**小計**: 3h（理想時間）
+**小計**: 3.5h（理想時間）
 
 #### 1. US16: 引取作業を記録する（5 SP）
 
@@ -127,11 +128,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | **[TDD]** BE: `ExceptionRecord` ドメインモデルを trackingms に作成する（追跡番号・例外種別・発生情報） | 2h | - | [ ] |
+| 3.1 | **[TDD]** BE: `TrackingExceptionEvent` ドメインモデルを trackingms で拡張する（location・newEstimatedArrival・status フィールド追加） | 2h | - | [ ] |
 | 3.2 | **[TDD]** BE: 遅延例外記録 API（POST /api/tracking/{trackingNumber}/exceptions）を実装する | 1.5h | - | [ ] |
 | 3.3 | **[TDD]** BE: 例外記録後に貨物状態を EXCEPTION に更新する | 1h | - | [ ] |
 | 3.4 | **[TDD]** BE: 対応内容更新 API（PUT /api/tracking/{trackingNumber}/exceptions/{id}/response）を実装する | 1.5h | - | [ ] |
-| 3.5 | BE: DB マイグレーション（exception_record テーブル作成） | 0.5h | - | [ ] |
+| 3.5 | BE: DB マイグレーション（tracking_exception_event テーブルに location_unlocode・new_estimated_arrival・status カラムを追加） | 0.5h | - | [ ] |
 | 3.6 | **[TDD]** FE: 遅延例外記録画面（追跡番号検索・例外情報入力・対応内容入力）を実装する | 2h | - | [ ] |
 | 3.7 | FE: US19 の FE テストを追加する | 1h | - | [ ] |
 
@@ -252,7 +253,7 @@ package "bookingms" {
 
   enum CargoType {
     GENERAL
-    HAZMAT
+    HAZARDOUS
     REFRIGERATED
   }
 
@@ -278,43 +279,59 @@ package "bookingms" {
 title US19 遅延例外処理ドメインモデル
 
 package "trackingms" {
-  class ExceptionRecord {
-    + id: Long
+  class TrackingActivity {
     + trackingNumber: TrackingNumber
-    + exceptionType: ExceptionType  ← DELAY, DAMAGE, LOSS
+    + transportStatus: TransportStatus
+    + exceptions: List<TrackingExceptionEvent>
+    + addException(ex: TrackingExceptionEvent): void
+  }
+
+  class TrackingExceptionEvent {
+    + id: Long
+    + exceptionType: ExceptionType
     + occurredAt: LocalDateTime
-    + locationUnlocode: String
-    + reason: String
-    + responseContent: String
-    + newEstimatedArrival: LocalDate
-    + status: ExceptionStatus  ← OPEN, IN_PROGRESS, RESOLVED
+    + locationUnlocode: String  ← 既存フィールド拡張
+    + reason: String            ← 既存 description を活用
+    + responseContent: String   ← 既存 resolution_notes を活用
+    + newEstimatedArrival: LocalDate  ← 新規フィールド
+    + status: ExceptionStatus   ← 新規フィールド（OPEN, IN_PROGRESS, RESOLVED）
+    + escalationFlag: Boolean
   }
 
   enum ExceptionType {
     DELAY
     DAMAGE
-    LOSS
+    LOST
+    CUSTOMS_HOLD
   }
 }
+
+TrackingActivity *-- TrackingExceptionEvent
+TrackingExceptionEvent *-- ExceptionType
 @enduml
 ```
 
+> **注**: `TrackingExceptionEvent` は trackingms の既存エンティティ（`docs/design/domain-model.md` 準拠）。US19 では `location_unlocode`・`new_estimated_arrival`・`status` フィールドを追加拡張する。
+
 ### データモデル
 
-#### US16: handling_event テーブル拡張
+#### US16: tracking_handling_event テーブル拡張
 
 ```prisma
-model handling_event {
+model tracking_handling_event {
   id                 BigInt    @id @default(autoincrement())
-  tracking_activity_id BigInt
+  tracking_id        BigInt    // FK → tracking_activity.id
   event_type         String    // RECEIVE, LOAD, UNLOAD, CUSTOMS, CLAIM
-  location_unlocode  String
   event_time         DateTime
+  location_unlocode  String
+  voyage_number      String?
   claimant_reference String?   // ← 新規追加（引取時の荷受人確認コード）
   created_at         DateTime  @default(now())
   updated_at         DateTime  @updatedAt
 }
 ```
+
+> **注**: データモデルの実テーブル名は `tracking_handling_event`（`docs/design/data-model.md` 準拠）。`handling_event` という名称は存在しない。
 
 #### US05: cargo テーブル拡張
 
@@ -323,7 +340,7 @@ model cargo {
   id               BigInt   @id @default(autoincrement())
   booking_id       String   @unique
   // ... 既存フィールド
-  cargo_type       String   @default("GENERAL")  // ← 新規
+  cargo_type       String   @default("GENERAL")  // ← 新規（GENERAL / HAZARDOUS / REFRIGERATED）
   hazmat_info      Json?    // ← 新規（危険物情報）
   temperature_info Json?    // ← 新規（温度管理情報）
   created_at       DateTime @default(now())
@@ -331,29 +348,35 @@ model cargo {
 }
 ```
 
-#### US19: exception_record テーブル新規作成
+> **注**: `CargoType` の値は `GENERAL / HAZARDOUS / REFRIGERATED`（`docs/design/domain-model.md` 準拠）。`HAZMAT` という値は存在しない。
+
+#### US19: tracking_exception_event テーブル拡張
 
 ```prisma
-model exception_record {
-  id                     BigInt    @id @default(autoincrement())
-  tracking_number        String
-  exception_type         String    // DELAY, DAMAGE, LOSS
-  occurred_at            DateTime
-  location_unlocode      String
-  reason                 String
-  response_content       String?
-  new_estimated_arrival  Date?
-  status                 String    @default("OPEN")  // OPEN, IN_PROGRESS, RESOLVED
-  created_at             DateTime  @default(now())
-  updated_at             DateTime  @updatedAt
+model tracking_exception_event {
+  id                    BigInt    @id @default(autoincrement())
+  tracking_id           BigInt    // FK → tracking_activity.id（既存）
+  exception_type        String    // DELAY, DAMAGE, LOST, CUSTOMS_HOLD（既存）
+  occurred_at           DateTime  // 既存
+  escalation_flag       Boolean   // 既存
+  description           String?   // 既存（reason として利用）
+  resolved_at           DateTime? // 既存
+  resolution_notes      String?   // 既存（response_content として利用）
+  location_unlocode     String?   // ← 新規追加（発生場所）
+  new_estimated_arrival Date?     // ← 新規追加（新到着予定日）
+  status                String    @default("OPEN")  // ← 新規追加（OPEN, IN_PROGRESS, RESOLVED）
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
 }
 ```
+
+> **注**: データモデルの実テーブル名は `tracking_exception_event`（`docs/design/data-model.md` 準拠）。`exception_record` という名称は存在しない。既存テーブルに `location_unlocode`・`new_estimated_arrival`・`status` カラムを追加拡張する。`reason` は既存 `description` を、`response_content` は既存 `resolution_notes` を活用する。
 
 ### ユーザーインターフェース
 
 #### ビュー
 
-**US16: 荷役記録フォーム拡張**
+**US16: 荷役記録フォーム拡張（/tracking/handling）**
 
 ```plantuml
 @startsalt
@@ -431,7 +454,7 @@ title IT7 画面遷移図
 
 [*] --> 荷役記録 : /handling
 
-state 荷役記録 : /handling\nPOST /api/tracking/{tn}/events
+state 荷役記録 : /tracking/handling\nPOST /api/handling/activities
 荷役記録 --> 荷役記録 : CLAIM以外の作業記録成功\n追跡番号保持
 荷役記録 --> 荷役完了 : CLAIM記録成功
 荷役記録 --> 荷役記録 : バリデーションエラー
@@ -456,7 +479,7 @@ state 例外記録 : /exceptions/new\nPOST /api/tracking/{tn}/exceptions
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| POST | `/api/tracking/{trackingNumber}/events` | 荷役記録（既存）。`claimantReference` フィールドを追加 |
+| POST | `/api/handling/activities` | 荷役記録（既存 US15）。`claimantReference` フィールドを追加 |
 
 #### US05 拡張 API（既存 API 拡張）
 
