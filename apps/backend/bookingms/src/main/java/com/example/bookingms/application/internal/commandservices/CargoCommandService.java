@@ -6,8 +6,10 @@ import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
 import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.HazmatInfo;
 import com.example.bookingms.domain.model.valueobjects.Leg;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
+import com.example.bookingms.domain.model.valueobjects.TemperatureInfo;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoEventPublisher;
 import com.example.bookingms.domain.ports.CargoRepository;
@@ -44,13 +46,21 @@ public class CargoCommandService {
     @Transactional
     public Cargo registerBooking(Long shipperId, String cargoType, BigDecimal weightKg,
                                   String originUnlocode, String destinationUnlocode,
-                                  LocalDate arrivalDeadline) {
+                                  LocalDate arrivalDeadline,
+                                  HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
         BookingId bookingId = new BookingId(generateBookingId());
         Weight weight = new Weight(weightKg);
         CargoType type = CargoType.valueOf(cargoType);
         RouteSpecification spec = new RouteSpecification(originUnlocode, destinationUnlocode, arrivalDeadline);
 
-        Cargo cargo = new Cargo(bookingId, shipperId, type, weight, spec);
+        if (type == CargoType.HAZARDOUS && hazmatInfo == null) {
+            throw new IllegalArgumentException("危険物貨物には危険物申告情報が必須です");
+        }
+        if (type == CargoType.REFRIGERATED && temperatureInfo == null) {
+            throw new IllegalArgumentException("冷凍・冷蔵貨物には温度管理条件が必須です");
+        }
+
+        Cargo cargo = new Cargo(bookingId, shipperId, type, weight, spec, hazmatInfo, temperatureInfo);
         return cargoRepository.save(cargo);
     }
 

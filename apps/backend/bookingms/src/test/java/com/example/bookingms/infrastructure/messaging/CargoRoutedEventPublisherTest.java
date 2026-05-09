@@ -136,7 +136,7 @@ class CargoRoutedEventPublisherTest {
         // 1. 貨物を登録
         var cargo = cargoCommandService.registerBooking(
                 1L, "GENERAL", BigDecimal.valueOf(100),
-                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30));
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null);
 
         // 2. 経路を割り当てる
         var command = new RouteCargoCommand(List.of(new LegData(

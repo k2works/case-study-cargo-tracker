@@ -4,7 +4,9 @@ import com.example.bookingms.domain.model.valueobjects.BookingId;
 import com.example.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.HazmatInfo;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
+import com.example.bookingms.domain.model.valueobjects.TemperatureInfo;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 
 import java.util.Objects;
@@ -22,12 +24,23 @@ public class Cargo {
     private final Weight weight;
     private RouteSpecification routeSpecification;
     private CargoItinerary cargoItinerary;
+    private final HazmatInfo hazmatInfo;
+    private final TemperatureInfo temperatureInfo;
 
     /**
      * 新規貨物作成コンストラクタ
      */
     public Cargo(BookingId bookingId, Long shipperId, CargoType cargoType,
                  Weight weight, RouteSpecification routeSpecification) {
+        this(bookingId, shipperId, cargoType, weight, routeSpecification, null, null);
+    }
+
+    /**
+     * 新規貨物作成コンストラクタ（特別情報あり）
+     */
+    public Cargo(BookingId bookingId, Long shipperId, CargoType cargoType,
+                 Weight weight, RouteSpecification routeSpecification,
+                 HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
         Objects.requireNonNull(bookingId, "bookingId must not be null");
         Objects.requireNonNull(shipperId, "shipperId must not be null");
         Objects.requireNonNull(cargoType, "cargoType must not be null");
@@ -38,6 +51,8 @@ public class Cargo {
         this.weight = weight;
         this.routeSpecification = routeSpecification;
         this.bookingStatus = BookingStatus.PRELIMINARY;
+        this.hazmatInfo = hazmatInfo;
+        this.temperatureInfo = temperatureInfo;
     }
 
     /**
@@ -45,7 +60,18 @@ public class Cargo {
      */
     public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
                  CargoType cargoType, Weight weight, RouteSpecification routeSpecification) {
-        this(bookingId, shipperId, cargoType, weight, routeSpecification);
+        this(bookingId, shipperId, cargoType, weight, routeSpecification, null, null);
+        this.id = id;
+        this.bookingStatus = bookingStatus;
+    }
+
+    /**
+     * 永続化済み貨物再構成コンストラクタ（特別情報あり）
+     */
+    public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
+                 CargoType cargoType, Weight weight, RouteSpecification routeSpecification,
+                 HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
+        this(bookingId, shipperId, cargoType, weight, routeSpecification, hazmatInfo, temperatureInfo);
         this.id = id;
         this.bookingStatus = bookingStatus;
     }
@@ -55,7 +81,21 @@ public class Cargo {
      */
     public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
                  CargoType cargoType, Weight weight, RouteDetails routeDetails) {
-        this(id, bookingId, shipperId, bookingStatus, cargoType, weight, routeDetails.routeSpecification());
+        this(bookingId, shipperId, cargoType, weight, routeDetails.routeSpecification(), null, null);
+        this.id = id;
+        this.bookingStatus = bookingStatus;
+        this.cargoItinerary = routeDetails.cargoItinerary();
+    }
+
+    /**
+     * 永続化済み貨物再構成コンストラクタ（CargoItinerary + 特別情報あり）
+     */
+    public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
+                 CargoType cargoType, Weight weight, RouteDetails routeDetails,
+                 HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
+        this(bookingId, shipperId, cargoType, weight, routeDetails.routeSpecification(), hazmatInfo, temperatureInfo);
+        this.id = id;
+        this.bookingStatus = bookingStatus;
         this.cargoItinerary = routeDetails.cargoItinerary();
     }
 
@@ -92,6 +132,14 @@ public class Cargo {
 
     public CargoItinerary getCargoItinerary() {
         return cargoItinerary;
+    }
+
+    public HazmatInfo getHazmatInfo() {
+        return hazmatInfo;
+    }
+
+    public TemperatureInfo getTemperatureInfo() {
+        return temperatureInfo;
     }
 
     /**

@@ -24,6 +24,12 @@ public class CargoRecord {
     private String bookingAmountCurrency;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String hazmatUnCode;
+    private String hazmatHazardClass;
+    private String hazmatPackingGroup;
+    private Double tempMinCelsius;
+    private Double tempMaxCelsius;
+    private String tempUnit;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -69,4 +75,22 @@ public class CargoRecord {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getHazmatUnCode() { return hazmatUnCode; }
+    public void setHazmatUnCode(String hazmatUnCode) { this.hazmatUnCode = hazmatUnCode; }
+
+    public String getHazmatHazardClass() { return hazmatHazardClass; }
+    public void setHazmatHazardClass(String hazmatHazardClass) { this.hazmatHazardClass = hazmatHazardClass; }
+
+    public String getHazmatPackingGroup() { return hazmatPackingGroup; }
+    public void setHazmatPackingGroup(String hazmatPackingGroup) { this.hazmatPackingGroup = hazmatPackingGroup; }
+
+    public Double getTempMinCelsius() { return tempMinCelsius; }
+    public void setTempMinCelsius(Double tempMinCelsius) { this.tempMinCelsius = tempMinCelsius; }
+
+    public Double getTempMaxCelsius() { return tempMaxCelsius; }
+    public void setTempMaxCelsius(Double tempMaxCelsius) { this.tempMaxCelsius = tempMaxCelsius; }
+
+    public String getTempUnit() { return tempUnit; }
+    public void setTempUnit(String tempUnit) { this.tempUnit = tempUnit; }
 }

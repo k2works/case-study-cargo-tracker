@@ -12,6 +12,10 @@ public record CreateCargoRequest(
         BigDecimal weightKg,
         String originUnlocode,
         String destinationUnlocode,
-        LocalDate arrivalDeadline
+        LocalDate arrivalDeadline,
+        HazmatInfoRequest hazmatInfo,
+        TemperatureInfoRequest temperatureInfo
 ) {
+    public record HazmatInfoRequest(String unCode, String hazardClass, String packingGroup) {}
+    public record TemperatureInfoRequest(double minTemperature, double maxTemperature, String unit) {}
 }

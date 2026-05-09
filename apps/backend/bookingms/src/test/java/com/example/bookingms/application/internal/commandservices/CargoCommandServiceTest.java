@@ -6,7 +6,9 @@ import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.BookingId;
 import com.example.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.HazmatInfo;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
+import com.example.bookingms.domain.model.valueobjects.TemperatureInfo;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoEventPublisher;
 import com.example.bookingms.domain.ports.CargoRepository;
@@ -22,6 +24,54 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CargoCommandServiceTest {
+
+    @Test
+    void 危険物貨物の登録時に危険物申告情報がない場合は例外が発生する() {
+        CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
+
+        assertThatThrownBy(() -> service.registerBooking(
+                1L, "HAZARDOUS", BigDecimal.valueOf(100),
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("危険物貨物には危険物申告情報が必須です");
+    }
+
+    @Test
+    void 冷凍冷蔵貨物の登録時に温度管理条件がない場合は例外が発生する() {
+        CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
+
+        assertThatThrownBy(() -> service.registerBooking(
+                1L, "REFRIGERATED", BigDecimal.valueOf(100),
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("冷凍・冷蔵貨物には温度管理条件が必須です");
+    }
+
+    @Test
+    void 危険物貨物の登録時に危険物申告情報がある場合は正常に登録される() {
+        CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
+        HazmatInfo hazmatInfo = new HazmatInfo("UN1203", "3", "II");
+
+        Cargo cargo = service.registerBooking(
+                1L, "HAZARDOUS", BigDecimal.valueOf(100),
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), hazmatInfo, null);
+
+        assertThat(cargo.getCargoType()).isEqualTo(CargoType.HAZARDOUS);
+        assertThat(cargo.getHazmatInfo()).isEqualTo(hazmatInfo);
+    }
+
+    @Test
+    void 冷凍冷蔵貨物の登録時に温度管理条件がある場合は正常に登録される() {
+        CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
+        TemperatureInfo temperatureInfo = new TemperatureInfo(-20.0, 4.0, "CELSIUS");
+
+        Cargo cargo = service.registerBooking(
+                1L, "REFRIGERATED", BigDecimal.valueOf(100),
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, temperatureInfo);
+
+        assertThat(cargo.getCargoType()).isEqualTo(CargoType.REFRIGERATED);
+        assertThat(cargo.getTemperatureInfo()).isEqualTo(temperatureInfo);
+    }
 
     @Test
     void 存在しない貨物の確定は予約ID付きで失敗する() {

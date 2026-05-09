@@ -5,8 +5,10 @@ import com.example.bookingms.domain.model.valueobjects.BookingId;
 import com.example.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.HazmatInfo;
 import com.example.bookingms.domain.model.valueobjects.Leg;
 import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
+import com.example.bookingms.domain.model.valueobjects.TemperatureInfo;
 import com.example.bookingms.domain.model.valueobjects.Weight;
 import com.example.bookingms.domain.ports.CargoRepository;
 import org.springframework.stereotype.Repository;
@@ -99,6 +101,16 @@ public class MyBatisCargoRepository implements CargoRepository {
             cargoRecord.setSpecDestinationUnlocode(cargo.getRouteSpecification().getDestinationUnlocode());
             cargoRecord.setSpecArrivalDeadline(cargo.getRouteSpecification().getArrivalDeadline());
         }
+        if (cargo.getHazmatInfo() != null) {
+            cargoRecord.setHazmatUnCode(cargo.getHazmatInfo().unCode());
+            cargoRecord.setHazmatHazardClass(cargo.getHazmatInfo().hazardClass());
+            cargoRecord.setHazmatPackingGroup(cargo.getHazmatInfo().packingGroup());
+        }
+        if (cargo.getTemperatureInfo() != null) {
+            cargoRecord.setTempMinCelsius(cargo.getTemperatureInfo().minTemperature());
+            cargoRecord.setTempMaxCelsius(cargo.getTemperatureInfo().maxTemperature());
+            cargoRecord.setTempUnit(cargo.getTemperatureInfo().unit());
+        }
         return cargoRecord;
     }
 
@@ -129,6 +141,15 @@ public class MyBatisCargoRepository implements CargoRepository {
             itinerary = new CargoItinerary(legs);
         }
 
+        HazmatInfo hazmatInfo = null;
+        if (cargoRecord.getHazmatUnCode() != null) {
+            hazmatInfo = new HazmatInfo(cargoRecord.getHazmatUnCode(), cargoRecord.getHazmatHazardClass(), cargoRecord.getHazmatPackingGroup());
+        }
+        TemperatureInfo temperatureInfo = null;
+        if (cargoRecord.getTempUnit() != null) {
+            temperatureInfo = new TemperatureInfo(cargoRecord.getTempMinCelsius(), cargoRecord.getTempMaxCelsius(), cargoRecord.getTempUnit());
+        }
+
         return new Cargo(
                 cargoRecord.getId(),
                 new BookingId(cargoRecord.getBookingId()),
@@ -136,6 +157,8 @@ public class MyBatisCargoRepository implements CargoRepository {
                 BookingStatus.valueOf(cargoRecord.getBookingStatus()),
                 CargoType.valueOf(cargoRecord.getCargoType()),
                 new Weight(cargoRecord.getWeightKg()),
-                new Cargo.RouteDetails(spec, itinerary));
+                new Cargo.RouteDetails(spec, itinerary),
+                hazmatInfo,
+                temperatureInfo);
     }
 }

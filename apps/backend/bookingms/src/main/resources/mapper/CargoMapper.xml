@@ -21,6 +21,12 @@
         <result property="bookingAmountCurrency"    column="booking_amount_currency"/>
         <result property="createdAt"                column="created_at"/>
         <result property="updatedAt"                column="updated_at"/>
+        <result property="hazmatUnCode"             column="hazmat_un_code"/>
+        <result property="hazmatHazardClass"        column="hazmat_hazard_class"/>
+        <result property="hazmatPackingGroup"       column="hazmat_packing_group"/>
+        <result property="tempMinCelsius"           column="temp_min_celsius"/>
+        <result property="tempMaxCelsius"           column="temp_max_celsius"/>
+        <result property="tempUnit"                 column="temp_unit"/>
     </resultMap>
 
     <!-- INSERT cargo -->
@@ -30,11 +36,15 @@
             booking_id, shipper_id, booking_status, transport_status, routing_status,
             cargo_type, weight_kg, spec_origin_unlocode, spec_destination_unlocode,
             spec_arrival_deadline, booking_amount_value, booking_amount_currency,
+            hazmat_un_code, hazmat_hazard_class, hazmat_packing_group,
+            temp_min_celsius, temp_max_celsius, temp_unit,
             created_at, updated_at
         ) VALUES (
             #{bookingId}, #{shipperId}, #{bookingStatus}, #{transportStatus}, #{routingStatus},
             #{cargoType}, #{weightKg}, #{specOriginUnlocode}, #{specDestinationUnlocode},
             #{specArrivalDeadline}, #{bookingAmountValue}, #{bookingAmountCurrency},
+            #{hazmatUnCode}, #{hazmatHazardClass}, #{hazmatPackingGroup},
+            #{tempMinCelsius}, #{tempMaxCelsius}, #{tempUnit},
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
     </insert>
@@ -44,6 +54,8 @@
         SELECT id, booking_id, shipper_id, booking_status, transport_status, routing_status,
                cargo_type, weight_kg, spec_origin_unlocode, spec_destination_unlocode,
                spec_arrival_deadline, booking_amount_value, booking_amount_currency,
+               hazmat_un_code, hazmat_hazard_class, hazmat_packing_group,
+               temp_min_celsius, temp_max_celsius, temp_unit,
                created_at, updated_at
         FROM cargo
         WHERE booking_id = #{bookingId}
@@ -54,6 +66,8 @@
         SELECT id, booking_id, shipper_id, booking_status, transport_status, routing_status,
                cargo_type, weight_kg, spec_origin_unlocode, spec_destination_unlocode,
                spec_arrival_deadline, booking_amount_value, booking_amount_currency,
+               hazmat_un_code, hazmat_hazard_class, hazmat_packing_group,
+               temp_min_celsius, temp_max_celsius, temp_unit,
                created_at, updated_at
         FROM cargo
         ORDER BY id ASC

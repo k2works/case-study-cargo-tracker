@@ -4,6 +4,8 @@ import com.example.bookingms.application.internal.commandservices.CargoCommandSe
 import com.example.bookingms.application.internal.commandservices.RouteCargoCommand;
 import com.example.bookingms.application.internal.queryservices.CargoQueryService;
 import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.valueobjects.HazmatInfo;
+import com.example.bookingms.domain.model.valueobjects.TemperatureInfo;
 import com.example.bookingms.interfaces.rest.dto.AssignRouteRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoResponse;
 import com.example.bookingms.interfaces.rest.dto.CreateCargoRequest;
@@ -43,13 +45,21 @@ public class CargoController {
      */
     @PostMapping
     public ResponseEntity<CargoResponse> createCargo(@RequestBody CreateCargoRequest request) {
+        HazmatInfo hazmatInfo = request.hazmatInfo() != null
+                ? new HazmatInfo(request.hazmatInfo().unCode(), request.hazmatInfo().hazardClass(), request.hazmatInfo().packingGroup())
+                : null;
+        TemperatureInfo temperatureInfo = request.temperatureInfo() != null
+                ? new TemperatureInfo(request.temperatureInfo().minTemperature(), request.temperatureInfo().maxTemperature(), request.temperatureInfo().unit())
+                : null;
         Cargo cargo = cargoCommandService.registerBooking(
                 request.shipperId(),
                 request.cargoType(),
                 request.weightKg(),
                 request.originUnlocode(),
                 request.destinationUnlocode(),
-                request.arrivalDeadline()
+                request.arrivalDeadline(),
+                hazmatInfo,
+                temperatureInfo
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(CargoResponse.from(cargo));
     }
