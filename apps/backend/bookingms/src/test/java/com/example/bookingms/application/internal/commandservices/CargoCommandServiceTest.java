@@ -68,6 +68,23 @@ class CargoCommandServiceTest {
         assertThat(eventPublisher.lastEvent.destinationUnlocode()).isEqualTo("CNSHA");
     }
 
+    @Test
+    void 予約確定時にCargoAssignedForRoutingEventを発行する() {
+        Cargo cargo = cargoWithStatus("BOOKING456", BookingStatus.ROUTE_PROPOSED);
+        StubCargoRepository repository = new StubCargoRepository(cargo);
+        RecordingCargoEventPublisher eventPublisher = new RecordingCargoEventPublisher();
+        CargoCommandService service = new CargoCommandService(repository, eventPublisher, c -> {});
+
+        Cargo confirmed = service.confirmBooking("BOOKING456");
+
+        assertThat(confirmed.getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+        assertThat(eventPublisher.lastAssignedEvent).isNotNull();
+        assertThat(eventPublisher.lastAssignedEvent.bookingId()).isEqualTo("BOOKING456");
+        assertThat(eventPublisher.lastAssignedEvent.originUnlocode()).isEqualTo("JPTYO");
+        assertThat(eventPublisher.lastAssignedEvent.destinationUnlocode()).isEqualTo("CNSHA");
+        assertThat(eventPublisher.lastAssignedEvent.arrivalDeadline()).isEqualTo("2026-02-01");
+    }
+
     private static Cargo cargoWithStatus(String bookingId, BookingStatus status) {
         return new Cargo(
                 1L,
@@ -131,6 +148,7 @@ class CargoCommandServiceTest {
 
     private static final class RecordingCargoEventPublisher implements CargoEventPublisher {
         private CargoRoutedEvent lastEvent;
+        private CargoAssignedForRoutingEvent lastAssignedEvent;
 
         @Override
         public void publishCargoRouted(CargoRoutedEvent event) {
@@ -139,7 +157,7 @@ class CargoCommandServiceTest {
 
         @Override
         public void publishCargoAssignedForRouting(CargoAssignedForRoutingEvent event) {
-            // no-op for testing
+            this.lastAssignedEvent = event;
         }
     }
 }
