@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useCreateBooking } from '../hooks/useBookings'
-import type { CargoType } from '../types/cargo'
+import type { CargoType, HazmatInfo, TemperatureInfo } from '../types/cargo'
 
 interface BookingFormProps {
   onSuccess?: () => void
@@ -14,6 +14,8 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
   const [originUnlocode, setOriginUnlocode] = useState('')
   const [destinationUnlocode, setDestinationUnlocode] = useState('')
   const [arrivalDeadline, setArrivalDeadline] = useState('')
+  const [hazmatInfo, setHazmatInfo] = useState<HazmatInfo>({ unCode: '', hazardClass: '', packingGroup: '' })
+  const [temperatureInfo, setTemperatureInfo] = useState<TemperatureInfo>({ minTemperature: -25, maxTemperature: 5, unit: 'CELSIUS' })
 
   const createMutation = useCreateBooking()
 
@@ -27,6 +29,8 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
         originUnlocode,
         destinationUnlocode,
         arrivalDeadline: arrivalDeadline || null,
+        hazmatInfo: cargoType === 'HAZARDOUS' ? hazmatInfo : undefined,
+        temperatureInfo: cargoType === 'REFRIGERATED' ? temperatureInfo : undefined,
       },
       { onSuccess }
     )
@@ -65,6 +69,103 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
           <option value="HEAVY">重量貨物</option>
         </select>
       </div>
+
+      {cargoType === 'HAZARDOUS' && (
+        <div className="border border-orange-200 rounded-md p-4 bg-orange-50 space-y-3">
+          <p className="text-sm font-medium text-orange-800">危険物申告情報 <span className="text-red-500">*</span></p>
+          <div>
+            <label htmlFor="hazmatUnCode" className="block text-sm font-medium text-gray-700 mb-1">
+              UN コード <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="hazmatUnCode"
+              type="text"
+              value={hazmatInfo.unCode}
+              onChange={(e) => setHazmatInfo((prev) => ({ ...prev, unCode: e.target.value }))}
+              required
+              placeholder="UN1203"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label htmlFor="hazmatHazardClass" className="block text-sm font-medium text-gray-700 mb-1">
+              危険物クラス <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="hazmatHazardClass"
+              type="text"
+              value={hazmatInfo.hazardClass}
+              onChange={(e) => setHazmatInfo((prev) => ({ ...prev, hazardClass: e.target.value }))}
+              required
+              placeholder="3"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label htmlFor="hazmatPackingGroup" className="block text-sm font-medium text-gray-700 mb-1">
+              梱包等級
+            </label>
+            <input
+              id="hazmatPackingGroup"
+              type="text"
+              value={hazmatInfo.packingGroup}
+              onChange={(e) => setHazmatInfo((prev) => ({ ...prev, packingGroup: e.target.value }))}
+              placeholder="II"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {cargoType === 'REFRIGERATED' && (
+        <div className="border border-blue-200 rounded-md p-4 bg-blue-50 space-y-3">
+          <p className="text-sm font-medium text-blue-800">温度管理条件 <span className="text-red-500">*</span></p>
+          <div className="flex gap-4">
+            <div>
+              <label htmlFor="tempMin" className="block text-sm font-medium text-gray-700 mb-1">
+                最低温度 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="tempMin"
+                type="number"
+                step={0.1}
+                value={temperatureInfo.minTemperature}
+                onChange={(e) => setTemperatureInfo((prev) => ({ ...prev, minTemperature: Number(e.target.value) }))}
+                required
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm w-28 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="tempMax" className="block text-sm font-medium text-gray-700 mb-1">
+                最高温度 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="tempMax"
+                type="number"
+                step={0.1}
+                value={temperatureInfo.maxTemperature}
+                onChange={(e) => setTemperatureInfo((prev) => ({ ...prev, maxTemperature: Number(e.target.value) }))}
+                required
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm w-28 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="tempUnit" className="block text-sm font-medium text-gray-700 mb-1">
+                単位 <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="tempUnit"
+                value={temperatureInfo.unit}
+                onChange={(e) => setTemperatureInfo((prev) => ({ ...prev, unit: e.target.value }))}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm w-32 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="CELSIUS">℃</option>
+                <option value="FAHRENHEIT">℉</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div>
         <label htmlFor="weightKg" className="block text-sm font-medium text-gray-700 mb-1">

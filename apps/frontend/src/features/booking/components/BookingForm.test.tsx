@@ -58,4 +58,32 @@ describe('BookingForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'キャンセル' }))
     expect(onCancel).toHaveBeenCalled()
   })
+
+  it('危険物を選択すると危険物申告情報フィールドが表示される', () => {
+    renderForm()
+
+    // 初期状態では非表示
+    expect(screen.queryByLabelText(/UN コード/)).not.toBeInTheDocument()
+
+    // 危険物を選択
+    fireEvent.change(screen.getByLabelText('貨物種別'), { target: { value: 'HAZARDOUS' } })
+
+    // 危険物申告情報フィールドが表示される
+    expect(screen.getByLabelText(/UN コード/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/危険物クラス/)).toBeInTheDocument()
+  })
+
+  it('冷蔵貨物を選択すると温度管理条件フィールドが表示される', () => {
+    renderForm()
+
+    // 初期状態では非表示
+    expect(screen.queryByLabelText(/最低温度/)).not.toBeInTheDocument()
+
+    // 冷蔵貨物を選択
+    fireEvent.change(screen.getByLabelText('貨物種別'), { target: { value: 'REFRIGERATED' } })
+
+    // 温度管理条件フィールドが表示される
+    expect(screen.getByLabelText(/最低温度/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/最高温度/)).toBeInTheDocument()
+  })
 })

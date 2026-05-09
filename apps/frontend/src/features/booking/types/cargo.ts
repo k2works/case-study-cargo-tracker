@@ -30,6 +30,18 @@ export interface LegInfo {
   unloadTime: string
 }
 
+export interface HazmatInfo {
+  unCode: string
+  hazardClass: string
+  packingGroup: string
+}
+
+export interface TemperatureInfo {
+  minTemperature: number
+  maxTemperature: number
+  unit: string
+}
+
 export interface CreateCargoRequest {
   shipperId: number
   cargoType: CargoType
@@ -37,4 +49,6 @@ export interface CreateCargoRequest {
   originUnlocode: string
   destinationUnlocode: string
   arrivalDeadline: string | null
+  hazmatInfo?: HazmatInfo
+  temperatureInfo?: TemperatureInfo
 }
