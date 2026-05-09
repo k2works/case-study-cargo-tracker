@@ -1,19 +1,22 @@
 import { render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router'
+import { MemoryRouter, Routes, Route } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RoutingDesignPage } from './RoutingDesignPage'
 import * as useItinerariesModule from '../features/routing/hooks/useItineraries'
 
-function renderPage() {
+function renderPage(bookingId = 'BK001') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <RoutingDesignPage />
-      </BrowserRouter>
+      <MemoryRouter initialEntries={[`/routing/design/${bookingId}`]}>
+        <Routes>
+          <Route path="/routing/design/:bookingId" element={<RoutingDesignPage />} />
+          <Route path="/routing/assignments" element={<div>経路設計担当一覧</div>} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -31,7 +34,7 @@ describe('RoutingDesignPage', () => {
 
   it('ページタイトルが表示される', () => {
     renderPage()
-    expect(screen.getByText('経路設計')).toBeInTheDocument()
+    expect(screen.getByText(/経路設計/)).toBeInTheDocument()
   })
 
   it('検索フォームが表示される', () => {
@@ -60,6 +63,21 @@ describe('RoutingDesignPage', () => {
       destinationUnlocode: 'CNSHA',
       arrivalDeadline: null,
     })
+  })
+
+  it('bookingId なしでアクセスすると経路設計担当一覧にリダイレクトされる', () => {
+    const queryClient = new QueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/routing/design']}>
+          <Routes>
+            <Route path="/routing/design" element={<RoutingDesignPage />} />
+            <Route path="/routing/assignments" element={<div>経路設計担当一覧</div>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(screen.getByText('経路設計担当一覧')).toBeInTheDocument()
   })
 
   it('経路が存在しない場合メッセージが表示される', () => {

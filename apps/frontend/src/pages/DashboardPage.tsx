@@ -21,12 +21,6 @@ const MENU_ITEMS = [
     roles: ['ROLE_ADMIN', 'ROLE_ROUTING'],
   },
   {
-    path: '/routing/design',
-    label: '経路設計',
-    description: '貨物への経路割り当て',
-    roles: ['ROLE_ADMIN', 'ROLE_ROUTING'],
-  },
-  {
     path: '/handling/activities',
     label: '荷役記録',
     description: '荷役作業の記録・管理',

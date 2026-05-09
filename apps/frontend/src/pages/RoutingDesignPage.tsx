@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router'
+import { useParams, useNavigate, Navigate } from 'react-router'
 import { useItineraries } from '../features/routing/hooks/useItineraries'
 import { useAssignRoute } from '../features/booking/hooks/useBookings'
 import type { Itinerary } from '../features/routing/types/itinerary'
@@ -20,6 +20,10 @@ export function RoutingDesignPage() {
 
   const { mutate: searchItineraries, data: itineraries, isPending: isSearching, isError: isSearchError } = useItineraries()
   const { mutate: assignRoute, isPending: isAssigning } = useAssignRoute(bookingId ?? '')
+
+  if (!bookingId) {
+    return <Navigate to="/routing/assignments" replace />
+  }
 
   useEffect(() => {
     searchItineraries({

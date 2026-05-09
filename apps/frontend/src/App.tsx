@@ -32,7 +32,7 @@ export default function App() {
           <Route path="/bookings/new" element={<BookingNewPage />} />
           <Route path="/bookings/:bookingId" element={<BookingDetailPage />} />
           <Route path="/routing/design/:bookingId" element={<RoutingDesignPage />} />
-          <Route path="/routing/design" element={<RoutingDesignPage />} />
+          <Route path="/routing/design" element={<Navigate to="/routing/assignments" replace />} />
           <Route path="/handling/activities" element={<HandlingActivityPage />} />
           <Route path="/tracking/:trackingNumber/status" element={<TrackingStatusPage />} />
           <Route path="/tracking" element={<TrackingPage />} />
