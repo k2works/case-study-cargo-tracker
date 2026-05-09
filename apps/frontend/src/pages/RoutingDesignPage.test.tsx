@@ -39,6 +39,29 @@ describe('RoutingDesignPage', () => {
     expect(screen.getByRole('button', { name: '経路を検索' })).toBeInTheDocument()
   })
 
+  it('フォームにデフォルト値（JPTYO/CNSHA）が入力されている', () => {
+    renderPage()
+    expect(screen.getByDisplayValue('JPTYO')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('CNSHA')).toBeInTheDocument()
+  })
+
+  it('ページ表示時にデフォルト値で自動検索が実行される', () => {
+    const mockMutate = vi.fn()
+    vi.spyOn(useItinerariesModule, 'useItineraries').mockReturnValue({
+      mutate: mockMutate,
+      data: undefined,
+      isPending: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useItinerariesModule.useItineraries>)
+
+    renderPage()
+    expect(mockMutate).toHaveBeenCalledWith({
+      originUnlocode: 'JPTYO',
+      destinationUnlocode: 'CNSHA',
+      arrivalDeadline: null,
+    })
+  })
+
   it('経路が存在しない場合メッセージが表示される', () => {
     vi.spyOn(useItinerariesModule, 'useItineraries').mockReturnValue({
       mutate: vi.fn(),

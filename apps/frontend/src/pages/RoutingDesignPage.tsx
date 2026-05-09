@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useItineraries } from '../features/routing/hooks/useItineraries'
 import { useAssignRoute } from '../features/booking/hooks/useBookings'
 import type { Itinerary } from '../features/routing/types/itinerary'
 
+const DEFAULT_ORIGIN = 'JPTYO'
+const DEFAULT_DESTINATION = 'CNSHA'
+
 export function RoutingDesignPage() {
   const { bookingId } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
 
-  const [originUnlocode, setOriginUnlocode] = useState('')
-  const [destinationUnlocode, setDestinationUnlocode] = useState('')
+  const [originUnlocode, setOriginUnlocode] = useState(DEFAULT_ORIGIN)
+  const [destinationUnlocode, setDestinationUnlocode] = useState(DEFAULT_DESTINATION)
   const [arrivalDeadline, setArrivalDeadline] = useState('')
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -17,6 +20,14 @@ export function RoutingDesignPage() {
 
   const { mutate: searchItineraries, data: itineraries, isPending: isSearching, isError: isSearchError } = useItineraries()
   const { mutate: assignRoute, isPending: isAssigning } = useAssignRoute(bookingId ?? '')
+
+  useEffect(() => {
+    searchItineraries({
+      originUnlocode: DEFAULT_ORIGIN,
+      destinationUnlocode: DEFAULT_DESTINATION,
+      arrivalDeadline: null,
+    })
+  }, [])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
