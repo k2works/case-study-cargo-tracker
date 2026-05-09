@@ -25,15 +25,15 @@
 - [ ] IT6 持ち越し: H6 FE API エラーメッセージのトースト通知が表示される
 - [ ] IT6 持ち越し: RabbitMQ イベント統合テスト（Testcontainers）がパスする
 - [ ] IT6 持ち越し: CI パイプラインで Playwright E2E テストが自動実行される
-- [ ] US16: 「引取」荷役種別で荷受人確認フィールドが表示される
-- [ ] US16: 引取記録後に貨物状態が「引取済 (CLAIMED)」に更新される
-- [ ] US05: 貨物種別「危険物」選択時に危険物申告情報フィールドが表示・必須入力となる
-- [ ] US05: 貨物種別「冷凍・冷蔵」選択時に温度管理条件フィールドが表示・必須入力となる
-- [ ] US19: 遅延例外（追跡番号・例外種別・発生日時・場所・理由）を記録できる
-- [ ] US19: 例外記録後に貨物状態が「例外発生 (EXCEPTION)」に更新される
+- [x] US16: 「引取」荷役種別で荷受人確認フィールドが表示される
+- [x] US16: 引取記録後に貨物状態が「引取済 (CLAIMED)」に更新される
+- [x] US05: 貨物種別「危険物」選択時に危険物申告情報フィールドが表示・必須入力となる
+- [x] US05: 貨物種別「冷凍・冷蔵」選択時に温度管理条件フィールドが表示・必須入力となる
+- [x] US19: 遅延例外（追跡番号・例外種別・発生日時・場所・理由）を記録できる
+- [x] US19: 例外記録後に貨物状態が「例外発生 (EXCEPTION)」に更新される
 - [ ] US19: 対応内容（新到着予定日・対応方針）を入力して更新できる
-- [ ] 全ユニットテスト（BE + FE）がパス
-- [ ] BE テストカバレッジ 80% 以上（JaCoCo）
+- [x] 全ユニットテスト（BE + FE）がパス
+- [x] BE テストカバレッジ 80% 以上（JaCoCo）
 
 ---
 
@@ -93,10 +93,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | FE: API エラーレスポンスの具体メッセージをトースト通知に表示する（H6 FE） | 1h | - | [ ] |
-| 0.2 | BE: RabbitMQ イベント連携の Testcontainers 統合テストを実装する（TI04 2.4） | 1h | - | [ ] |
-| 0.3 | CI: GitHub Actions に Playwright E2E テストを統合する（TI03 1.7） | 1h | - | [ ] |
-| 0.4 | ADR: bookingms/trackingms 間の `TrackingNumberIssuedEvent` 契約管理方針を ADR-005 として記録する（IT6 レビュー高優先度 #4） | 0.5h | - | [ ] |
+| 0.1 | FE: API エラーレスポンスの具体メッセージをトースト通知に表示する（H6 FE） | 1h | - | [x] |
+| 0.2 | BE: RabbitMQ イベント連携の Testcontainers 統合テストを実装する（TI04 2.4） | 1h | - | [x] |
+| 0.3 | CI: GitHub Actions に Playwright E2E テストを統合する（TI03 1.7） | 1h | - | [x] |
+| 0.4 | ADR: bookingms/trackingms 間の `TrackingNumberIssuedEvent` 契約管理方針を ADR-005 として記録する（IT6 レビュー高優先度 #4） | 0.5h | - | [x] |
 
 **小計**: 3.5h（理想時間）
 
@@ -104,11 +104,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | **[TDD]** BE: `HandlingEvent.CLAIM` イベント種別のドメインモデル拡張（荷受人確認フィールド追加） | 1.5h | - | [ ] |
-| 1.2 | **[TDD]** BE: 荷役作業 API で CLAIM 種別を受け付け、荷受人確認情報を保存する | 1.5h | - | [ ] |
-| 1.3 | **[TDD]** BE: CLAIM 記録後に貨物状態を CLAIMED に更新するロジックを実装する | 1h | - | [ ] |
-| 1.4 | **[TDD]** FE: 荷役記録フォームで「引取」選択時に荷受人確認フィールドを動的表示する | 1.5h | - | [ ] |
-| 1.5 | FE: US16 の FE テストを追加する | 1h | - | [ ] |
+| 1.1 | **[TDD]** BE: `HandlingEvent.CLAIM` イベント種別のドメインモデル拡張（荷受人確認フィールド追加） | 1.5h | - | [x] |
+| 1.2 | **[TDD]** BE: 荷役作業 API で CLAIM 種別を受け付け、荷受人確認情報を保存する | 1.5h | - | [x] |
+| 1.3 | **[TDD]** BE: CLAIM 記録後に貨物状態を CLAIMED に更新するロジックを実装する | 1h | - | [x] |
+| 1.4 | **[TDD]** FE: 荷役記録フォームで「引取」選択時に荷受人確認フィールドを動的表示する | 1.5h | - | [x] |
+| 1.5 | FE: US16 の FE テストを追加する | 1h | - | [x] |
 
 **小計**: 6.5h（理想時間）
 
@@ -116,11 +116,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | **[TDD]** BE: Cargo ドメインモデルに `cargoType`（GENERAL/HAZMAT/REFRIGERATED）と特別情報フィールドを追加する | 2h | - | [ ] |
-| 2.2 | **[TDD]** BE: 予約登録 API で `cargoType` を受け付け、HAZMAT/REFRIGERATED 時に追加情報を必須バリデーションする | 2h | - | [ ] |
-| 2.3 | BE: DB マイグレーション（cargo テーブルに cargo_type・hazmat_info・temperature_info カラム追加） | 1h | - | [ ] |
-| 2.4 | **[TDD]** FE: 予約フォームで貨物種別選択時に条件付きフィールドを動的表示する | 2h | - | [ ] |
-| 2.5 | FE: US05 の FE テストを追加する | 1h | - | [ ] |
+| 2.1 | **[TDD]** BE: Cargo ドメインモデルに `cargoType`（GENERAL/HAZMAT/REFRIGERATED）と特別情報フィールドを追加する | 2h | - | [x] |
+| 2.2 | **[TDD]** BE: 予約登録 API で `cargoType` を受け付け、HAZMAT/REFRIGERATED 時に追加情報を必須バリデーションする | 2h | - | [x] |
+| 2.3 | BE: DB マイグレーション（cargo テーブルに cargo_type・hazmat_info・temperature_info カラム追加） | 1h | - | [x] |
+| 2.4 | **[TDD]** FE: 予約フォームで貨物種別選択時に条件付きフィールドを動的表示する | 2h | - | [x] |
+| 2.5 | FE: US05 の FE テストを追加する | 1h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -128,13 +128,13 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | **[TDD]** BE: `TrackingExceptionEvent` ドメインモデルを trackingms で拡張する（location・newEstimatedArrival・status フィールド追加） | 2h | - | [ ] |
-| 3.2 | **[TDD]** BE: 遅延例外記録 API（POST /api/tracking/{trackingNumber}/exceptions）を実装する | 1.5h | - | [ ] |
-| 3.3 | **[TDD]** BE: 例外記録後に貨物状態を EXCEPTION に更新する | 1h | - | [ ] |
+| 3.1 | **[TDD]** BE: `TrackingExceptionEvent` ドメインモデルを trackingms で拡張する（location・newEstimatedArrival・status フィールド追加） | 2h | - | [x] |
+| 3.2 | **[TDD]** BE: 遅延例外記録 API（POST /api/tracking/{trackingNumber}/exceptions）を実装する | 1.5h | - | [x] |
+| 3.3 | **[TDD]** BE: 例外記録後に貨物状態を EXCEPTION に更新する | 1h | - | [x] |
 | 3.4 | **[TDD]** BE: 対応内容更新 API（PUT /api/tracking/{trackingNumber}/exceptions/{id}/response）を実装する | 1.5h | - | [ ] |
-| 3.5 | BE: DB マイグレーション（tracking_exception_event テーブルに location_unlocode・new_estimated_arrival・status カラムを追加） | 0.5h | - | [ ] |
-| 3.6 | **[TDD]** FE: 遅延例外記録画面（追跡番号検索・例外情報入力・対応内容入力）を実装する | 2h | - | [ ] |
-| 3.7 | FE: US19 の FE テストを追加する | 1h | - | [ ] |
+| 3.5 | BE: DB マイグレーション（tracking_exception_event テーブルに location_unlocode・new_estimated_arrival・status カラムを追加） | 0.5h | - | [x] |
+| 3.6 | **[TDD]** FE: 遅延例外記録画面（追跡番号検索・例外情報入力・対応内容入力）を実装する | 2h | - | [x] |
+| 3.7 | FE: US19 の FE テストを追加する | 1h | - | [x] |
 
 **小計**: 9.5h（理想時間）
 
@@ -143,8 +143,8 @@
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | IT6 持ち越し | 3 | 3h | [ ] |
-| US16: 引取作業記録 | 5 | 6.5h | [ ] |
-| US05: 危険物・冷凍貨物予約 | 8 | 8h | [ ] |
+| US16: 引取作業記録 | 5 | 6.5h | [x] |
+| US05: 危険物・冷凍貨物予約 | 8 | 8h | [x] |
 | US19: 遅延例外処理 | 8 | 9.5h | [ ] |
 | **合計** | **24** | **27h** | |
 
