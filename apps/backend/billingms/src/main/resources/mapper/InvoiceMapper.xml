@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.billingms.infrastructure.repositories.InvoiceMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.billingms.infrastructure.repositories.InvoiceRecord">
+        INSERT INTO invoice
+            (invoice_number, booking_id, shipper_id,
+             base_amount_value, base_amount_currency,
+             final_amount_value, final_amount_currency,
+             tax_rate, tax_amount_value,
+             payment_status, issued_at, due_date, created_at, updated_at)
+        VALUES
+            (#{invoiceNumber}, #{bookingId}, #{shipperId},
+             #{baseAmountValue}, #{baseAmountCurrency},
+             #{finalAmountValue}, #{finalAmountCurrency},
+             #{taxRate}, #{taxAmountValue},
+             #{paymentStatus}, #{issuedAt}, #{dueDate},
+             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="findById" resultType="com.example.billingms.infrastructure.repositories.InvoiceRecord">
+        SELECT id, invoice_number, booking_id, shipper_id,
+               base_amount_value, base_amount_currency,
+               final_amount_value, final_amount_currency,
+               tax_rate, tax_amount_value,
+               payment_status, issued_at, due_date
+        FROM invoice
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByBookingId" resultType="com.example.billingms.infrastructure.repositories.InvoiceRecord">
+        SELECT id, invoice_number, booking_id, shipper_id,
+               base_amount_value, base_amount_currency,
+               final_amount_value, final_amount_currency,
+               tax_rate, tax_amount_value,
+               payment_status, issued_at, due_date
+        FROM invoice
+        WHERE booking_id = #{bookingId}
+    </select>
+
+    <update id="updateStatus"
+            parameterType="com.example.billingms.infrastructure.repositories.InvoiceRecord">
+        UPDATE invoice
+        SET final_amount_value    = #{finalAmountValue},
+            final_amount_currency = #{finalAmountCurrency},
+            tax_amount_value      = #{taxAmountValue},
+            payment_status        = #{paymentStatus},
+            updated_at            = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertLineItem" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.billingms.infrastructure.repositories.InvoiceLineItemRecord">
+        INSERT INTO invoice_line_item
+            (invoice_id, description, amount_value, amount_currency, seq_number, created_at, updated_at)
+        VALUES
+            (#{invoiceId}, #{description}, #{amountValue}, #{amountCurrency}, #{seqNumber},
+             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <select id="findLineItemsByInvoiceId" resultType="com.example.billingms.infrastructure.repositories.InvoiceLineItemRecord">
+        SELECT id, invoice_id, description, amount_value, amount_currency, seq_number
+        FROM invoice_line_item
+        WHERE invoice_id = #{invoiceId}
+        ORDER BY seq_number ASC
+    </select>
+
+</mapper>
