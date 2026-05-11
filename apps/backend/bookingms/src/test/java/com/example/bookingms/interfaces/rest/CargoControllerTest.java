@@ -230,6 +230,39 @@ class CargoControllerTest {
                 .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/route-spec — 経路条件を再設定するとステータスが PRELIMINARY に戻ること")
+    void shouldUpdateRouteSpecAndResetToPreliminary() throws Exception {
+        String bookingId = createCargoAndAssignRoute();
+
+        mockMvc.perform(put("/api/booking/v1/cargos/" + bookingId + "/route-spec")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "originUnlocode": "JPOSA",
+                                  "destinationUnlocode": "USNYC",
+                                  "arrivalDeadline": "2026-09-30"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingStatus").value("PRELIMINARY"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/booking/v1/cargos/{bookingId}/route-spec — 存在しない貨物は 404 を返すこと")
+    void shouldReturn404WhenUpdateRouteSpecForNonExistentCargo() throws Exception {
+        mockMvc.perform(put("/api/booking/v1/cargos/NOTEXIST/route-spec")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "originUnlocode": "JPOSA",
+                                  "destinationUnlocode": "USNYC",
+                                  "arrivalDeadline": "2026-09-30"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
     private String createCargo() throws Exception {
         String responseBody = mockMvc.perform(post("/api/booking/v1/cargos")
                         .contentType(MediaType.APPLICATION_JSON)

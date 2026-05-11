@@ -143,6 +143,25 @@ public class Cargo {
     }
 
     /**
+     * 経路条件を再設定する
+     * CONFIRMED 以降の状態では変更不可。旅程をクリアして PRELIMINARY に戻す
+     */
+    public void updateRouteSpec(RouteSpecification routeSpecification) {
+        Objects.requireNonNull(routeSpecification, "routeSpecification must not be null");
+        if (this.bookingStatus == BookingStatus.CONFIRMED
+                || this.bookingStatus == BookingStatus.TRACKING_ISSUED
+                || this.bookingStatus == BookingStatus.IN_TRANSIT
+                || this.bookingStatus == BookingStatus.DELIVERED
+                || this.bookingStatus == BookingStatus.SETTLED) {
+            throw new IllegalStateException(
+                    "Cannot update route spec for cargo in status: " + this.bookingStatus);
+        }
+        this.routeSpecification = routeSpecification;
+        this.cargoItinerary = null;
+        this.bookingStatus = BookingStatus.PRELIMINARY;
+    }
+
+    /**
      * 経路仕様を更新する
      */
     public void specifyRoute(RouteSpecification routeSpecification) {

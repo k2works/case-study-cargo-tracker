@@ -159,6 +159,39 @@ class CargoTest {
     }
 
     @Test
+    @DisplayName("updateRouteSpec を呼ぶと経路仕様が更新されステータスが PRELIMINARY に戻ること")
+    void shouldUpdateRouteSpecAndResetStatusToPreliminary() {
+        cargo.assignRoute(itinerary);
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
+
+        RouteSpecification newSpec = new RouteSpecification("JPOSA", "USNYC", LocalDate.of(2026, 9, 30));
+        cargo.updateRouteSpec(newSpec);
+
+        assertThat(cargo.getRouteSpecification()).isEqualTo(newSpec);
+        assertThat(cargo.getCargoItinerary()).isNull();
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.PRELIMINARY);
+    }
+
+    @Test
+    @DisplayName("updateRouteSpec に null を渡すと例外が発生すること")
+    void shouldThrowExceptionWhenUpdateRouteSpecWithNull() {
+        assertThatThrownBy(() -> cargo.updateRouteSpec(null))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 状態から updateRouteSpec を呼ぶと例外が発生すること")
+    void shouldThrowExceptionWhenUpdateRouteSpecFromConfirmedState() {
+        cargo.assignRoute(itinerary);
+        cargo.confirm();
+
+        RouteSpecification newSpec = new RouteSpecification("JPOSA", "USNYC", LocalDate.of(2026, 9, 30));
+        assertThatThrownBy(() -> cargo.updateRouteSpec(newSpec))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("CONFIRMED");
+    }
+
+    @Test
     @DisplayName("異なる bookingId や別型とは等価でないこと")
     void shouldNotBeEqualWhenBookingIdDiffersOrTypeDiffers() {
         Cargo differentBookingId = new Cargo(

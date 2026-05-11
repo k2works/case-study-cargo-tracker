@@ -135,6 +135,23 @@ class CargoCommandServiceTest {
         assertThat(eventPublisher.lastAssignedEvent.arrivalDeadline()).isEqualTo("2026-02-01");
     }
 
+    @Test
+    void 経路条件再設定時にステータスがPRELIMINARYに戻り旅程がクリアされる() {
+        Cargo cargo = cargoWithStatus("BOOKING789", BookingStatus.ROUTE_PROPOSED);
+        StubCargoRepository repository = new StubCargoRepository(cargo);
+        RecordingCargoEventPublisher eventPublisher = new RecordingCargoEventPublisher();
+        CargoCommandService service = new CargoCommandService(repository, eventPublisher, c -> {});
+
+        UpdateRouteSpecCommand command = new UpdateRouteSpecCommand("JPOSA", "USNYC", LocalDate.of(2026, 9, 30));
+        Cargo updated = service.updateRouteSpec("BOOKING789", command);
+
+        assertThat(updated.getBookingStatus()).isEqualTo(BookingStatus.PRELIMINARY);
+        assertThat(updated.getCargoItinerary()).isNull();
+        assertThat(updated.getRouteSpecification().getOriginUnlocode()).isEqualTo("JPOSA");
+        assertThat(updated.getRouteSpecification().getDestinationUnlocode()).isEqualTo("USNYC");
+        assertThat(eventPublisher.lastAssignedEvent).isNotNull();
+    }
+
     private static Cargo cargoWithStatus(String bookingId, BookingStatus status) {
         return new Cargo(
                 1L,

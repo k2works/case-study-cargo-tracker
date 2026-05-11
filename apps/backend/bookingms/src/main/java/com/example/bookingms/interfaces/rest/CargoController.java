@@ -6,10 +6,12 @@ import com.example.bookingms.application.internal.queryservices.CargoQueryServic
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.valueobjects.HazmatInfo;
 import com.example.bookingms.domain.model.valueobjects.TemperatureInfo;
+import com.example.bookingms.application.internal.commandservices.UpdateRouteSpecCommand;
 import com.example.bookingms.interfaces.rest.dto.AssignRouteRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoResponse;
 import com.example.bookingms.interfaces.rest.dto.CreateCargoRequest;
 import com.example.bookingms.interfaces.rest.dto.ErrorResponse;
+import com.example.bookingms.interfaces.rest.dto.UpdateRouteSpecRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -132,6 +134,27 @@ public class CargoController {
     public ResponseEntity<Object> cancelBooking(@PathVariable String bookingId) {
         try {
             Cargo cargo = cargoCommandService.cancelBooking(bookingId);
+            return ResponseEntity.ok(CargoResponse.from(cargo));
+        } catch (IllegalArgumentException exception) {
+            return notFound(exception);
+        } catch (IllegalStateException exception) {
+            return badRequest(exception);
+        }
+    }
+
+    /**
+     * 経路条件を再設定する（US10）
+     */
+    @PutMapping("/{bookingId}/route-spec")
+    public ResponseEntity<Object> updateRouteSpec(
+            @PathVariable String bookingId,
+            @RequestBody UpdateRouteSpecRequest request) {
+        try {
+            UpdateRouteSpecCommand command = new UpdateRouteSpecCommand(
+                    request.originUnlocode(),
+                    request.destinationUnlocode(),
+                    request.arrivalDeadline());
+            Cargo cargo = cargoCommandService.updateRouteSpec(bookingId, command);
             return ResponseEntity.ok(CargoResponse.from(cargo));
         } catch (IllegalArgumentException exception) {
             return notFound(exception);

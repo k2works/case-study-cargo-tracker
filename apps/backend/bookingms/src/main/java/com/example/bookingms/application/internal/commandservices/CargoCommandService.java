@@ -136,6 +136,33 @@ public class CargoCommandService {
         return cargo;
     }
 
+    /**
+     * 経路条件を再設定する（US10）
+     *
+     * @param bookingId 予約 ID
+     * @param command   経路条件再設定コマンド
+     * @return 更新後の貨物
+     */
+    @Transactional
+    public Cargo updateRouteSpec(String bookingId, UpdateRouteSpecCommand command) {
+        Cargo cargo = findCargoOrThrow(bookingId);
+        RouteSpecification newSpec = new RouteSpecification(
+                command.originUnlocode(),
+                command.destinationUnlocode(),
+                command.arrivalDeadline());
+        cargo.updateRouteSpec(newSpec);
+        cargoRepository.update(cargo);
+
+        cargoEventPublisher.publishCargoAssignedForRouting(new CargoAssignedForRoutingEvent(
+                cargo.getBookingId().getId(),
+                cargo.getRouteSpecification().getOriginUnlocode(),
+                cargo.getRouteSpecification().getDestinationUnlocode(),
+                cargo.getRouteSpecification().getArrivalDeadline().toString()
+        ));
+
+        return cargo;
+    }
+
     private Cargo findCargoOrThrow(String bookingId) {
         return cargoRepository.findByBookingId(new BookingId(bookingId))
                 .orElseThrow(() -> new IllegalArgumentException(CARGO_NOT_FOUND_PREFIX + bookingId));
