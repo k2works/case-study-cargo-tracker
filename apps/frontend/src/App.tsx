@@ -17,6 +17,7 @@ import { TrackingPage } from './pages/TrackingPage'
 import { TrackingExceptionPage } from './pages/TrackingExceptionPage'
 import { RoutingAssignmentPage } from './pages/RoutingAssignmentPage'
 import { InvoiceCalculatePage } from './pages/InvoiceCalculatePage'
+import { RouteSpecUpdatePage } from './pages/RouteSpecUpdatePage'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/bookings/new" element={<BookingNewPage />} />
           <Route path="/bookings/:bookingId" element={<BookingDetailPage />} />
           <Route path="/routing/design/:bookingId" element={<RoutingDesignPage />} />
+          <Route path="/routing/respec/:bookingId" element={<RouteSpecUpdatePage />} />
           <Route path="/routing/design" element={<Navigate to="/routing/assignments" replace />} />
           <Route path="/handling/activities" element={<HandlingActivityPage />} />
           <Route path="/tracking/:trackingNumber/status" element={<TrackingStatusPage />} />

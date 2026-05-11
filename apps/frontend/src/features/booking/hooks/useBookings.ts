@@ -69,6 +69,24 @@ export function useRoutingAssignments() {
   })
 }
 
+export interface UpdateRouteSpecRequest {
+  originUnlocode: string
+  destinationUnlocode: string
+  arrivalDeadline: string
+}
+
+export function useUpdateRouteSpec(bookingId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: UpdateRouteSpecRequest) =>
+      apiClient.put<Cargo>(`/api/booking/v1/cargos/${bookingId}/route-spec`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...BOOKINGS_KEY, bookingId] })
+      queryClient.invalidateQueries({ queryKey: BOOKINGS_KEY })
+    },
+  })
+}
+
 export function useCancelBooking(bookingId: string) {
   const queryClient = useQueryClient()
   return useMutation({
