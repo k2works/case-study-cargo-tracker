@@ -31,6 +31,10 @@ export function TrackingExceptionPage() {
     locationUnlocode: '',
     reason: '',
     escalationFlag: false,
+    damageDescription: '',
+    photoUrl: '',
+    lastKnownLocation: '',
+    lastSeenAt: '',
   })
 
   if (isLoading) return <p className="p-6 text-center text-gray-500">読み込み中...</p>
@@ -63,11 +67,15 @@ export function TrackingExceptionPage() {
         locationUnlocode: form.locationUnlocode || undefined,
         reason: form.reason,
         escalationFlag: form.escalationFlag,
+        damageDescription: form.damageDescription || undefined,
+        photoUrl: form.photoUrl || undefined,
+        lastKnownLocation: form.lastKnownLocation || undefined,
+        lastSeenAt: form.lastSeenAt || undefined,
       },
       {
         onSuccess: () => {
-          toast.success('遅延例外を記録しました。貨物状態が EXCEPTION に更新されました。')
-          setForm({ exceptionType: 'DELAY', locationUnlocode: '', reason: '', escalationFlag: false })
+          toast.success('例外を記録しました。貨物状態が EXCEPTION に更新されました。')
+          setForm({ exceptionType: 'DELAY', locationUnlocode: '', reason: '', escalationFlag: false, damageDescription: '', photoUrl: '', lastKnownLocation: '', lastSeenAt: '' })
         },
         onError: (err) => {
           toast.error(err instanceof Error ? err.message : '遅延例外の記録に失敗しました。')
@@ -141,6 +149,73 @@ export function TrackingExceptionPage() {
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
+
+        {form.exceptionType === 'DAMAGE' && (
+          <div className="space-y-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
+            <p className="text-xs font-semibold text-orange-700">破損詳細</p>
+            <div>
+              <label htmlFor="damageDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                損傷状況 <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="damageDescription"
+                name="damageDescription"
+                value={form.damageDescription}
+                onChange={handleChange}
+                rows={2}
+                placeholder="損傷の状況を詳しく記述してください"
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="photoUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                証拠写真 URL
+              </label>
+              <input
+                id="photoUrl"
+                name="photoUrl"
+                type="url"
+                value={form.photoUrl}
+                onChange={handleChange}
+                placeholder="https://..."
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          </div>
+        )}
+
+        {form.exceptionType === 'LOST' && (
+          <div className="space-y-3 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-xs font-semibold text-red-700">紛失詳細</p>
+            <div>
+              <label htmlFor="lastKnownLocation" className="block text-sm font-medium text-gray-700 mb-1">
+                最終確認場所 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="lastKnownLocation"
+                name="lastKnownLocation"
+                type="text"
+                value={form.lastKnownLocation}
+                onChange={handleChange}
+                placeholder="例: 東京港コンテナターミナル"
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="lastSeenAt" className="block text-sm font-medium text-gray-700 mb-1">
+                最終確認日時
+              </label>
+              <input
+                id="lastSeenAt"
+                name="lastSeenAt"
+                type="datetime-local"
+                value={form.lastSeenAt}
+                onChange={handleChange}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           <input

@@ -62,6 +62,10 @@ export interface RecordTrackingExceptionRequest {
   locationUnlocode?: string
   reason?: string
   escalationFlag?: boolean
+  damageDescription?: string
+  photoUrl?: string
+  lastKnownLocation?: string
+  lastSeenAt?: string
 }
 
 export interface RespondToExceptionRequest {
