@@ -244,20 +244,21 @@ package billingms {
     +bookingId: String
     +shipperId: String
     +baseAmount: Money
-    +discountRate: BigDecimal
+    +discountAmount: Money
     +finalAmount: Money
     +paymentStatus: PaymentStatus
     +dueDate: LocalDate
-    +paidAt: LocalDate
-    +applyDiscount(rate: BigDecimal): void
-    +settle(paidAt: LocalDate): void
+    +applyDiscount(discountAmount: Money): void
+    +settle(): void
     +markOverdue(): void
   }
 
+  ' 注: domain-model.md の PaymentStatus は PENDING/CONFIRMED/OVERDUE/REFUNDED の 4 値。
+  ' IT9 で PAID を追加し domain-model.md も更新する。
   enum PaymentStatus {
     PENDING
     CONFIRMED
-    PAID
+    PAID   ← IT9 で追加
     OVERDUE
     REFUNDED
   }
@@ -285,29 +286,35 @@ skinparam linetype ortho
 entity "invoice" as inv {
   *id : BIGSERIAL PK
   --
-  invoice_number : VARCHAR(50) UK
-  booking_id : VARCHAR(50)
-  shipper_id : VARCHAR(50)
-  base_amount : DECIMAL(12,2)
-  discount_rate : DECIMAL(5,4) DEFAULT 0  ← 新規追加
-  final_amount : DECIMAL(12,2)
-  tax_rate : DECIMAL(5,4)
-  payment_status : VARCHAR(20)
-  issued_at : DATE
+  invoice_number : VARCHAR(30) UK
+  booking_id : VARCHAR(20) UK
+  shipper_id : VARCHAR(20)
+  total_amount_value : INTEGER
+  total_amount_currency : VARCHAR(3)
+  tax_rate : NUMERIC(5,4) DEFAULT 0.1000
+  tax_amount : NUMERIC(15,2) DEFAULT 0
+  payment_status : VARCHAR(30)
+  issued_at : TIMESTAMP WITH TIME ZONE
   due_date : DATE
-  paid_at : DATE  ← 新規追加
-  created_at : TIMESTAMP
-  updated_at : TIMESTAMP
+  discount_amount_value : INTEGER  ← IT9 で追加（data-model.md 準拠）
+  discount_amount_currency : VARCHAR(3)  ← IT9 で追加
+  created_at : TIMESTAMP WITH TIME ZONE
+  updated_at : TIMESTAMP WITH TIME ZONE
 }
+
+' 注: paid_at は data-model.md では別テーブル payment に存在する。
+' IT9 の精算処理はシンプル化のため invoice.payment_status を PAID に更新する方式を採用。
 
 entity "invoice_line_item" as item {
   *id : BIGSERIAL PK
   --
   invoice_id : BIGINT FK
   description : VARCHAR(200)
-  amount : DECIMAL(12,2)
+  amount_value : INTEGER
+  amount_currency : VARCHAR(3)
   seq_number : INTEGER
-  created_at : TIMESTAMP
+  created_at : TIMESTAMP WITH TIME ZONE
+  updated_at : TIMESTAMP WITH TIME ZONE
 }
 
 inv ||--|{ item
@@ -318,7 +325,7 @@ inv ||--|{ item
 
 #### ビュー
 
-**US10: 経路条件再算出画面** (`/booking/routing/:bookingId/respec`)
+**US10: 経路条件再算出画面** (`/routing/design/:bookingId` — 既存経路設計画面に条件変更フォームを追加)
 
 ```plantuml
 @startsalt
@@ -342,7 +349,7 @@ inv ||--|{ item
 @endsalt
 ```
 
-**US22: 法人割引適用画面** (既存 `/billing/calculate` に割引率を追加)
+**US22: 法人割引適用画面** (既存 `/billing/calculate` の料金算出フォームに割引金額入力を追加)
 
 ```plantuml
 @startsalt
@@ -365,7 +372,7 @@ inv ||--|{ item
 @endsalt
 ```
 
-**US23: 精算処理画面** (`/billing/settle/:invoiceId`)
+**US23: 精算処理画面** (`/billing/:invoiceId` — 既存請求書詳細画面に精算処理操作を追加)
 
 ```plantuml
 @startsalt
@@ -391,28 +398,28 @@ inv ||--|{ item
 
 ```plantuml
 @startuml
-title 画面遷移図（IT9 新規画面）
+title 画面遷移図（IT9 追加・拡張）
 
-[*] --> 経路候補一覧
+[*] --> 経路設計
 
-state 経路候補一覧 : GET /booking/routing
-経路候補一覧 --> 経路条件再算出 : 条件を変更して再算出
-
-state 経路条件再算出 : GET /booking/routing/:bookingId/respec
-経路条件再算出 --> 経路条件再算出 : バリデーションエラー（自己ループ）
-経路条件再算出 --> 経路候補一覧 : 再算出成功 (PUT /api/booking/v1/cargos/{bookingId}/route-spec)
+state 経路設計 : /routing/design/:bookingId
+note right of 経路設計 : 既存画面に「条件を変更して再算出」\nフォームを追加（US10）
+経路設計 --> 経路設計 : バリデーションエラー（自己ループ）
+経路設計 --> 経路設計 : 条件更新・再算出成功\n(PUT /api/booking/v1/cargos/{bookingId}/route-spec)
 
 [*] --> 料金算出
 
-state 料金算出 : GET /billing/calculate
+state 料金算出 : /billing/calculate
+note right of 料金算出 : 既存画面に割引金額入力を追加（US22）
 料金算出 --> 料金算出 : バリデーションエラー（自己ループ）
-料金算出 --> 精算処理 : 料金確定 (POST /api/billing/v1/invoices/calculate)
+料金算出 --> 請求書詳細 : 料金算出・確定\n(POST /api/billing/v1/invoices/calculate)
 
-state 精算処理 : GET /billing/settle/:invoiceId
-精算処理 --> 精算処理 : バリデーションエラー（自己ループ）
-精算処理 --> 精算完了 : 入金確認 (POST /api/billing/v1/invoices/{invoiceId}/settle)
+state 請求書詳細 : /billing/:invoiceId
+note right of 請求書詳細 : 既存画面に「精算処理」操作を追加（US23）
+請求書詳細 --> 請求書詳細 : バリデーションエラー（自己ループ）
+請求書詳細 --> 精算一覧 : 入金確認・精算完了\n(POST /api/billing/v1/invoices/{invoiceId}/settle)
 
-state 精算完了 : 精算済み状態表示
+state 精算一覧 : /billing
 
 @enduml
 ```
@@ -435,33 +442,33 @@ apps/backend/bookingms/src/
 apps/backend/billingms/src/
   main/java/com/example/billingms/
     domain/model/aggregates/
-      Invoice.java                            ← applyDiscount() / settle() / markOverdue() 追加
+      Invoice.java                            ← applyDiscount(Money) / settle() / markOverdue() 追加
     domain/model/valueobjects/
-      PaymentStatus.java                      ← PAID ステータス追加（OVERDUE は既存）
+      PaymentStatus.java                      ← PAID ステータス追加（domain-model.md も更新）
     application/internal/commandservices/
-      CalculateInvoiceCommand.java            ← discountRate フィールド追加
+      CalculateInvoiceCommand.java            ← discountAmountValue フィールド追加
       SettleInvoiceCommand.java               ← 新規
       InvoiceCommandService.java              ← settle() 追加
     interfaces/rest/
       InvoiceController.java                  ← POST /{id}/settle 追加
       dto/
-        CalculateInvoiceRequest.java          ← discountRate フィールド追加
-        SettleInvoiceRequest.java             ← 新規
+        CalculateInvoiceRequest.java          ← discountAmountValue フィールド追加
+        SettleInvoiceRequest.java             ← 新規（支払日・支払方法）
+        InvoiceResponse.java                  ← discountAmount フィールド追加
   resources/db/migration/
-    V3__add_discount_rate.sql                 ← 新規
-    V4__add_paid_at.sql                       ← 新規
+    V3__add_discount_amount.sql               ← 新規（discount_amount_value / currency）
 
 apps/frontend/src/
-  features/booking/
+  features/routing/
     pages/
-      RouteSpecUpdatePage.tsx                 ← 新規
-    hooks/useBooking.ts                       ← useUpdateRouteSpec 追加
+      RouteDesignPage.tsx                     ← 既存。条件変更フォーム追加（US10）
+    hooks/useRouting.ts                       ← useUpdateRouteSpec 追加
   features/billing/
     pages/
-      InvoiceCalculatePage.tsx                ← discountRate 対応
-      InvoiceSettlePage.tsx                   ← 新規
+      InvoiceCalculatePage.tsx                ← discountAmount 対応（US22）
+      InvoiceDetailPage.tsx                   ← 精算処理ボタン追加（US23）
     hooks/useBilling.ts                       ← useSettleInvoice 追加
-    types/billing.ts                          ← SettleInvoiceRequest・discountRate 追加
+    types/billing.ts                          ← SettleInvoiceRequest・discountAmount 追加
 ```
 
 ### API 設計
@@ -469,17 +476,18 @@ apps/frontend/src/
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
 | `PUT` | `/api/booking/v1/cargos/{bookingId}/route-spec` | 経路条件を更新して再算出待ちにする |
-| `POST` | `/api/billing/v1/invoices/calculate` | 法人割引込みで料金算出（既存を拡張） |
-| `POST` | `/api/billing/v1/invoices/{invoiceId}/settle` | 精算完了（CONFIRMED → PAID） |
+| `POST` | `/api/billing/v1/invoices/calculate` | 法人割引金額込みで料金算出（既存を拡張） |
+| `POST` | `/api/billing/v1/invoices/{invoiceId}/settle` | 精算完了（CONFIRMED → PAID）。domain-model.md に PAID を追記する。 |
 
 ### データベーススキーマ
 
 ```sql
--- V3: invoice テーブルに discount_rate 追加
-ALTER TABLE invoice ADD COLUMN discount_rate DECIMAL(5,4) NOT NULL DEFAULT 0;
-
--- V4: invoice テーブルに paid_at 追加
-ALTER TABLE invoice ADD COLUMN paid_at DATE;
+-- V3: invoice テーブルに discount_amount を追加（data-model.md 準拠）
+-- 注: data-model.md では discount_amount_value (INTEGER) + discount_amount_currency (VARCHAR(3)) 形式
+ALTER TABLE invoice ADD COLUMN discount_amount_value INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE invoice ADD COLUMN discount_amount_currency VARCHAR(3) NOT NULL DEFAULT 'JPY';
+-- 注: paid_at は data-model.md では別テーブル payment に存在するが、
+-- IT9 のシンプル化実装では invoice.payment_status = 'PAID' で表現する。
 ```
 
 ---
@@ -488,10 +496,12 @@ ALTER TABLE invoice ADD COLUMN paid_at DATE;
 
 | リスク | 影響度 | 対策 |
 |--------|--------|------|
-| PaymentStatus に PAID が未定義 | 中 | IT8 実装の PaymentStatus enum に PAID を追加する（既存は PENDING/CONFIRMED/OVERDUE/REFUNDED） |
-| H2 の ALTER TABLE 制限 | 低 | V3/V4 を個別 SQL 文に分割（IT8 の実績パターンを踏襲） |
-| billingms の V マイグレーション番号衝突 | 中 | 既存 V1/V2 を確認してから V3/V4 を採番する |
+| PaymentStatus に PAID が未定義 | 中 | PAID を enum に追加し domain-model.md の PaymentStatus 定義も更新する |
+| invoice カラム形式の乖離 | 中 | 既存実装（IT8）は `baseAmount/finalAmount` だが data-model.md は `total_amount_value/currency`。IT9 では既存実装を拡張する形で `discountAmount` を追加し、data-model.md への反映は後続イテレーションで対応する。 |
+| H2 の ALTER TABLE 制限 | 低 | V3 の ALTER TABLE を個別文に分割（IT8 の実績パターンを踏襲） |
+| billingms の V マイグレーション番号衝突 | 中 | 既存 V1/V2 を確認してから V3 を採番する（IT8 で V5 まで使用済みの trackingms とは別） |
 | US23 外部連携（メール通知・決済機関）の実装範囲 | 中 | 本イテレーションではログ出力で代替し、受入基準に明記する |
+| US10 の routingms 未実装 | 高 | US10 は bookingms の RouteSpecification 更新で実装。routingms 経路再算出は既存の `/api/booking/v1/cargos/routing-assignments` を活用する |
 
 ---
 
