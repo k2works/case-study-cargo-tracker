@@ -20,7 +20,7 @@
 | IT4 | [計画](iteration_plan-4.md) | [ふりかえり](retrospective-4.md) | [完了報告書](iteration_report-4.md) | 完了 |
 | IT5 | [計画](iteration_plan-5.md) | [ふりかえり](retrospective-5.md) | [完了報告書](iteration_report-5.md) | 完了 |
 | IT6 | [計画](iteration_plan-6.md) | [ふりかえり](retrospective-6.md) | [完了報告書](iteration_report-6.md) | 完了 |
-| IT7 | [計画](iteration_plan-7.md) | - | - | 進行中 |
+| IT7 | [計画](iteration_plan-7.md) | - | [完了報告書](iteration_report-7.md) | 完了 |
 | IT8 | - | - | - | 未着手 |
 | IT9 | - | - | - | 未着手 |
 | IT10 | - | - | - | 未着手 |
@@ -35,11 +35,11 @@
 | IT4 | 21 | 14 | 7 | 21 | 100% |
 | IT5 | 22 | 13 | 9 | 22 | 100% |
 | IT6 | 22 | 7 | 15 | 19 | 86% | - |
-| IT7 | 24 | 14 | 10 | - | - |
+| IT7 | 24 | 14 | 10 | 24 | 100% |
 | IT8 | 16 | 10 | 6 | - | - |
 | IT9 | 21 | 13 | 8 | - | - |
 | IT10 | 21 | 11 | 10 | - | - |
-| **累計** | **194** | **117** | **77** | **138** | **71%** |
+| **累計** | **194** | **117** | **77** | **162** | **83%** |
 
 ### フェーズ進捗
 
