@@ -65,6 +65,9 @@ public class TrackingActivity {
      */
     public TrackingExceptionEvent addException(TrackingExceptionEvent exception) {
         Objects.requireNonNull(exception, "exception must not be null");
+        if (this.transportStatus == TrackingStatus.CLAIMED) {
+            throw new IllegalStateException("引取済みの貨物には例外を記録できません");
+        }
         exceptions.add(exception);
         this.transportStatus = TrackingStatus.EXCEPTION;
         return exception;
