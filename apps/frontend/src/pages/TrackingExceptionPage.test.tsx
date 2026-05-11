@@ -40,6 +40,10 @@ describe('TrackingExceptionPage', () => {
       mutate: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof useTrackingModule.useRecordTrackingException>)
+    vi.spyOn(useTrackingModule, 'useRespondToException').mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useTrackingModule.useRespondToException>)
   })
 
   it('遅延例外記録フォームが表示される', () => {
@@ -85,5 +89,29 @@ describe('TrackingExceptionPage', () => {
 
     renderPage()
     expect(screen.getByRole('button', { name: '記録中...' })).toBeDisabled()
+  })
+
+  it('DAMAGE 選択時に破損詳細フィールドが表示される', () => {
+    renderPage()
+    const select = screen.getByLabelText(/例外種別/)
+    fireEvent.change(select, { target: { value: 'DAMAGE' } })
+    expect(screen.getByText('破損詳細')).toBeInTheDocument()
+    expect(screen.getByLabelText(/損傷状況/)).toBeInTheDocument()
+  })
+
+  it('LOST 選択時に紛失詳細フィールドが表示される', () => {
+    renderPage()
+    const select = screen.getByLabelText(/例外種別/)
+    fireEvent.change(select, { target: { value: 'LOST' } })
+    expect(screen.getByText('紛失詳細')).toBeInTheDocument()
+    expect(screen.getByLabelText(/最終確認場所/)).toBeInTheDocument()
+  })
+
+  it('DELAY 選択時は種別固有フィールドが表示されない', () => {
+    renderPage()
+    const select = screen.getByLabelText(/例外種別/)
+    fireEvent.change(select, { target: { value: 'DELAY' } })
+    expect(screen.queryByText('破損詳細')).not.toBeInTheDocument()
+    expect(screen.queryByText('紛失詳細')).not.toBeInTheDocument()
   })
 })
