@@ -21,7 +21,7 @@
 
 ### 成功基準
 
-- [ ] US10: 経路条件を更新して再算出できる
+- [x] US10: 経路条件を更新して再算出できる
 - [ ] US22: 法人割引が自動適用された請求金額が確認できる
 - [ ] US23: 精算書発行・精算状態更新ができる
 - [ ] bookingms テスト全通過（カバレッジ 80% 以上）
@@ -87,11 +87,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | ドメイン: `Cargo.updateRouteSpec()` メソッド追加（条件更新・ステータスを ROUTE_REQUIRED に戻す） | 2h | - | [ ] |
-| 1.2 | アプリ: `UpdateRouteSpecCommand` + `CargoCommandService.updateRouteSpec()` 実装 | 2h | - | [ ] |
-| 1.3 | プレゼン: `PUT /api/booking/v1/cargos/{bookingId}/route-spec` エンドポイント追加 | 2h | - | [ ] |
-| 1.4 | テスト: ドメイン・サービス・コントローラー単体テスト | 2h | - | [ ] |
-| 1.5 | DB: `booking` テーブルに `arrival_deadline` カラムが既存であることを確認（変更不要） | 1h | - | [ ] |
+| 1.1 | ドメイン: `Cargo.updateRouteSpec()` メソッド追加（条件更新・ステータスを ROUTE_REQUIRED に戻す） | 2h | - | [x] |
+| 1.2 | アプリ: `UpdateRouteSpecCommand` + `CargoCommandService.updateRouteSpec()` 実装 | 2h | - | [x] |
+| 1.3 | プレゼン: `PUT /api/booking/v1/cargos/{bookingId}/route-spec` エンドポイント追加 | 2h | - | [x] |
+| 1.4 | テスト: ドメイン・サービス・コントローラー単体テスト | 2h | - | [x] |
+| 1.5 | DB: `booking` テーブルに `arrival_deadline` カラムが既存であることを確認（変更不要） | 1h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -99,9 +99,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `RouteSpecUpdatePage.tsx`: 条件確認・条件変更フォーム・再算出ボタン実装 | 3h | - | [ ] |
-| 2.2 | `useBooking.ts` に `useUpdateRouteSpec` hook 追加 | 2h | - | [ ] |
-| 2.3 | `App.tsx` に `/booking/routing/:bookingId/respec` ルート追加 | 1h | - | [ ] |
+| 2.1 | `RouteSpecUpdatePage.tsx`: 条件確認・条件変更フォーム・再算出ボタン実装 | 3h | - | [x] |
+| 2.2 | `useBooking.ts` に `useUpdateRouteSpec` hook 追加 | 2h | - | [x] |
+| 2.3 | `App.tsx` に `/booking/routing/:bookingId/respec` ルート追加 | 1h | - | [x] |
 
 **小計**: 6h（理想時間）
 
@@ -154,13 +154,13 @@
 
 | カテゴリ | BE SP | FE SP | SP | 理想時間 | 状態 |
 |---------|-------|-------|----|---------|------|
-| US10 経路条件再算出 | 5 | 3 | 8 | 15h | [ ] |
+| US10 経路条件再算出 | 5 | 3 | 8 | 15h | [x] |
 | US22 法人割引 | 3 | 2 | 5 | 12h | [ ] |
 | US23 精算処理 | 5 | 3 | 8 | 17h | [ ] |
 | **合計** | **13** | **8** | **21** | **44h** | |
 
 **1 SP あたり**: 約 2.1h
-**進捗率**: 0% (0/21 SP)
+**進捗率**: 38% (8/21 SP)
 
 ---
 
