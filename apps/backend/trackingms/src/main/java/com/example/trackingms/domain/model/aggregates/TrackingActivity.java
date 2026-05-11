@@ -19,6 +19,7 @@ public class TrackingActivity {
     private final TrackingBookingId bookingId;
     private TrackingStatus transportStatus;
     private final List<TrackingActivityEvent> events = new ArrayList<>();
+    private final List<TrackingExceptionEvent> exceptions = new ArrayList<>();
 
     /** 新規作成コンストラクタ（NOT_RECEIVED で初期化） */
     public TrackingActivity(TrackingNumber trackingNumber, TrackingBookingId bookingId) {
@@ -40,6 +41,16 @@ public class TrackingActivity {
         }
     }
 
+    /** 永続化済み集約再構成コンストラクタ（例外イベントあり） */
+    public TrackingActivity(Long id, TrackingNumber trackingNumber, TrackingBookingId bookingId,
+                             TrackingStatus transportStatus, List<TrackingActivityEvent> events,
+                             List<TrackingExceptionEvent> exceptions) {
+        this(id, trackingNumber, bookingId, transportStatus, events);
+        if (exceptions != null) {
+            this.exceptions.addAll(exceptions);
+        }
+    }
+
     /**
      * 追跡イベントを追加し、貨物状態を更新する
      */
@@ -47,6 +58,16 @@ public class TrackingActivity {
         Objects.requireNonNull(event, "event must not be null");
         events.add(event);
         this.transportStatus = deriveStatus(event.getEventType());
+    }
+
+    /**
+     * 例外イベントを記録し、貨物状態を EXCEPTION に更新する
+     */
+    public TrackingExceptionEvent addException(TrackingExceptionEvent exception) {
+        Objects.requireNonNull(exception, "exception must not be null");
+        exceptions.add(exception);
+        this.transportStatus = TrackingStatus.EXCEPTION;
+        return exception;
     }
 
     /**
@@ -75,4 +96,5 @@ public class TrackingActivity {
     public TrackingBookingId getBookingId() { return bookingId; }
     public TrackingStatus getTransportStatus() { return transportStatus; }
     public List<TrackingActivityEvent> getEvents() { return Collections.unmodifiableList(events); }
+    public List<TrackingExceptionEvent> getExceptions() { return Collections.unmodifiableList(exceptions); }
 }

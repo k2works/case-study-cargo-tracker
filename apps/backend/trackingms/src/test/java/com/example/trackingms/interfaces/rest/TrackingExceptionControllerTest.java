@@ -11,6 +11,7 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -79,5 +80,33 @@ class TrackingExceptionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /exceptions/{id}/response — 対応内容を更新すると 200 で IN_PROGRESS が返る")
+    @Sql(statements = {
+            "DELETE FROM tracking_exception_event",
+            "DELETE FROM tracking_handling_event",
+            "DELETE FROM tracking_activity",
+            "INSERT INTO tracking_activity (tracking_number, booking_id, transport_status, created_at, updated_at) " +
+            "VALUES ('TRK-000001', 'BK-001234', 'EXCEPTION', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+            "INSERT INTO tracking_exception_event (tracking_id, exception_type, occurred_at, location_unlocode, reason, escalation_flag, response_content, new_estimated_arrival, status, created_at) " +
+            "VALUES ((SELECT id FROM tracking_activity WHERE tracking_number = 'TRK-000001'), 'DELAY', CURRENT_TIMESTAMP, 'JPTYO', '悪天候による遅延', false, NULL, NULL, 'OPEN', CURRENT_TIMESTAMP)"
+    }, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void shouldRespondToExceptionAndReturnInProgress() throws Exception {
+        String requestBody = """
+                {
+                    "responseContent": "代替航路を手配しました",
+                    "newEstimatedArrival": "2026-06-25"
+                }
+                """;
+
+        mockMvc.perform(put("/api/tracking/v1/TRK-000001/exceptions/1/response")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackingNumber").value("TRK-000001"))
+                .andExpect(jsonPath("$.exceptions[0].status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.exceptions[0].responseContent").value("代替航路を手配しました"));
     }
 }

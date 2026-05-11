@@ -2,6 +2,7 @@ package com.example.trackingms.application.internal.commandservices;
 
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import com.example.trackingms.domain.model.aggregates.TrackingExceptionEvent;
+import com.example.trackingms.domain.model.valueobjects.ExceptionType;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.trackingms.domain.ports.TrackingActivityRepository;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,7 @@ public class TrackingExceptionService {
                         "Tracking activity not found: " + command.trackingNumber()));
 
         TrackingExceptionEvent exception = new TrackingExceptionEvent(
-                command.exceptionType(),
+                ExceptionType.valueOf(command.exceptionType()),
                 command.occurredAt(),
                 command.locationUnlocode(),
                 command.reason(),

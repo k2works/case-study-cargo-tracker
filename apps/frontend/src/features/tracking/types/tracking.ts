@@ -63,3 +63,8 @@ export interface RecordTrackingExceptionRequest {
   reason?: string
   escalationFlag?: boolean
 }
+
+export interface RespondToExceptionRequest {
+  responseContent: string
+  newEstimatedArrival?: string
+}

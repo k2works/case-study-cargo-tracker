@@ -2,6 +2,8 @@ package com.example.trackingms.application.internal.commandservices;
 
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import com.example.trackingms.domain.model.aggregates.TrackingExceptionEvent;
+import com.example.trackingms.domain.model.valueobjects.ExceptionStatus;
+import com.example.trackingms.domain.model.valueobjects.ExceptionType;
 import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
@@ -63,9 +65,9 @@ class TrackingExceptionServiceTest {
 
         assertThat(result.getTransportStatus()).isEqualTo(TrackingStatus.EXCEPTION);
         assertThat(result.getExceptions()).hasSize(1);
-        assertThat(result.getExceptions().get(0).getExceptionType()).isEqualTo("DELAY");
+        assertThat(result.getExceptions().get(0).getExceptionType()).isEqualTo(ExceptionType.DELAY);
         assertThat(result.getExceptions().get(0).getReason()).isEqualTo("悪天候による遅延");
-        assertThat(result.getExceptions().get(0).getStatus()).isEqualTo("OPEN");
+        assertThat(result.getExceptions().get(0).getStatus()).isEqualTo(ExceptionStatus.OPEN);
         verify(trackingActivityRepository).update(activity);
     }
 
@@ -119,13 +121,12 @@ class TrackingExceptionServiceTest {
     @Test
     @DisplayName("例外対応内容を更新できること")
     void shouldRespondToException() {
-        // 例外イベントが ID 付きで存在する状態を再構成
         TrackingExceptionEvent existingException =
                 new TrackingExceptionEvent(
-                        10L, "DELAY",
+                        10L, ExceptionType.DELAY,
                         java.time.LocalDateTime.of(2026, 6, 20, 10, 0),
                         "JPTYO", "悪天候による遅延", false,
-                        null, null, "OPEN"
+                        null, null, ExceptionStatus.OPEN
                 );
 
         TrackingActivity activity = new TrackingActivity(
@@ -150,7 +151,32 @@ class TrackingExceptionServiceTest {
 
         assertThat(result.getExceptions()).hasSize(1);
         assertThat(result.getExceptions().get(0).getResponseContent()).isEqualTo("代替航路を手配しました");
-        assertThat(result.getExceptions().get(0).getStatus()).isEqualTo("IN_PROGRESS");
+        assertThat(result.getExceptions().get(0).getStatus()).isEqualTo(ExceptionStatus.IN_PROGRESS);
         verify(trackingActivityRepository).update(activity);
+    }
+
+    @Test
+    @DisplayName("存在しない exceptionId の場合は例外が発生すること")
+    void shouldThrowExceptionForNonExistentExceptionId() {
+        TrackingActivity activity = new TrackingActivity(
+                1L,
+                new TrackingNumber("TRK-000001"),
+                new TrackingBookingId("BK-001234"),
+                TrackingStatus.EXCEPTION,
+                List.of(),
+                List.of()
+        );
+
+        when(trackingActivityRepository.findByTrackingNumber(any())).thenReturn(Optional.of(activity));
+
+        RespondToExceptionCommand command = new RespondToExceptionCommand(
+                "TRK-000001",
+                999L,
+                "対応内容",
+                java.time.LocalDate.of(2026, 6, 25)
+        );
+
+        assertThatThrownBy(() -> service.respondToException(command))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

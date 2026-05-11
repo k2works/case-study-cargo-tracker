@@ -3,6 +3,8 @@ package com.example.trackingms.infrastructure.repositories;
 import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import com.example.trackingms.domain.model.aggregates.TrackingActivityEvent;
 import com.example.trackingms.domain.model.aggregates.TrackingExceptionEvent;
+import com.example.trackingms.domain.model.valueobjects.ExceptionStatus;
+import com.example.trackingms.domain.model.valueobjects.ExceptionType;
 import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
 import com.example.trackingms.domain.model.valueobjects.TrackingEventType;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
@@ -101,12 +103,12 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
         for (TrackingExceptionEvent exception : activity.getExceptions()) {
             if (exception.getId() == null) {
                 insertExceptionRecord(activity.getId(), exception);
-            } else if (exception.getResponseContent() != null) {
+            } else if (exception.hasBeenResponded()) {
                 TrackingExceptionEventRecord record = new TrackingExceptionEventRecord();
                 record.setId(exception.getId());
                 record.setResponseContent(exception.getResponseContent());
                 record.setNewEstimatedArrival(exception.getNewEstimatedArrival());
-                record.setStatus(exception.getStatus());
+                record.setStatus(exception.getStatus().name());
                 exceptionMapper.updateExceptionResponse(record);
             }
         }
@@ -120,14 +122,14 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
     private void insertExceptionRecord(Long trackingId, TrackingExceptionEvent exception) {
         TrackingExceptionEventRecord record = new TrackingExceptionEventRecord();
         record.setTrackingId(trackingId);
-        record.setExceptionType(exception.getExceptionType());
+        record.setExceptionType(exception.getExceptionType().name());
         record.setOccurredAt(exception.getOccurredAt());
         record.setLocationUnlocode(exception.getLocationUnlocode());
         record.setReason(exception.getReason());
         record.setEscalationFlag(exception.isEscalationFlag());
         record.setResponseContent(exception.getResponseContent());
         record.setNewEstimatedArrival(exception.getNewEstimatedArrival());
-        record.setStatus(exception.getStatus());
+        record.setStatus(exception.getStatus().name());
         exceptionMapper.insertException(record);
     }
 
@@ -147,14 +149,14 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
         List<TrackingExceptionEvent> exceptions = exceptionRecords.stream()
                 .map(e -> new TrackingExceptionEvent(
                         e.getId(),
-                        e.getExceptionType(),
+                        ExceptionType.valueOf(e.getExceptionType()),
                         e.getOccurredAt(),
                         e.getLocationUnlocode(),
                         e.getReason(),
                         e.isEscalationFlag(),
                         e.getResponseContent(),
                         e.getNewEstimatedArrival(),
-                        e.getStatus()))
+                        ExceptionStatus.valueOf(e.getStatus())))
                 .toList();
 
         return new TrackingActivity(

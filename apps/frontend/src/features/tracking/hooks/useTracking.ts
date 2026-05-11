@@ -6,6 +6,7 @@ import type {
   RecordHandlingActivityRequest,
   UpdateTrackingStatusRequest,
   RecordTrackingExceptionRequest,
+  RespondToExceptionRequest,
 } from '../types/tracking'
 
 const TRACKING_KEY = ['tracking']
@@ -85,6 +86,23 @@ export function useRecordTrackingException(trackingNumber: string) {
     mutationFn: (data: RecordTrackingExceptionRequest) =>
       apiClient.post<{ trackingNumber: string; transportStatus: string; exceptions: unknown[] }>(
         `/api/tracking/v1/${trackingNumber}/exceptions`,
+        data,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...TRACKING_KEY, trackingNumber] })
+    },
+  })
+}
+
+/**
+ * 例外対応内容を更新する
+ */
+export function useRespondToException(trackingNumber: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ exceptionId, data }: { exceptionId: number; data: RespondToExceptionRequest }) =>
+      apiClient.put<{ trackingNumber: string; transportStatus: string; exceptions: unknown[] }>(
+        `/api/tracking/v1/${trackingNumber}/exceptions/${exceptionId}/response`,
         data,
       ),
     onSuccess: () => {

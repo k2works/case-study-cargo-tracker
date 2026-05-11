@@ -73,9 +73,9 @@ public class TrackingExceptionController {
                 .map(e -> {
                     var map = new java.util.LinkedHashMap<String, Object>();
                     map.put("id", e.getId());
-                    map.put("exceptionType", e.getExceptionType());
+                    map.put("exceptionType", e.getExceptionType().name());
                     map.put("occurredAt", e.getOccurredAt().toString());
-                    map.put("status", e.getStatus());
+                    map.put("status", e.getStatus().name());
                     if (e.getResponseContent() != null) {
                         map.put("responseContent", e.getResponseContent());
                     }

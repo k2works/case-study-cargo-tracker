@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { useTrackingActivity, useUpdateTrackingStatus } from '../features/tracking/hooks/useTracking'
 import type { TrackingStatus } from '../features/tracking/types/tracking'
@@ -107,6 +107,18 @@ export function TrackingStatusPage() {
             <dd className="text-gray-900">{activity.bookingId}</dd>
           </div>
         </dl>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-gray-800">例外処理</h2>
+          <Link
+            to={`/tracking/${trackingNumber}/exceptions`}
+            className="text-sm text-red-600 hover:text-red-800 font-medium"
+          >
+            例外を記録する →
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">

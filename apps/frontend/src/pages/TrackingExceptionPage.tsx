@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import {
   useTrackingActivity,
   useRecordTrackingException,
+  useRespondToException,
 } from '../features/tracking/hooks/useTracking'
+import type { TrackingExceptionEvent } from '../features/tracking/types/tracking'
 
 const EXCEPTION_TYPE_LABELS: Record<string, string> = {
   DELAY: '遅延',
@@ -20,6 +22,9 @@ export function TrackingExceptionPage() {
   const { trackingNumber } = useParams<{ trackingNumber: string }>()
   const { data: activity, isLoading, isError } = useTrackingActivity(trackingNumber ?? '')
   const { mutate: recordException, isPending } = useRecordTrackingException(trackingNumber ?? '')
+  const { mutate: respondToException, isPending: isResponding } = useRespondToException(trackingNumber ?? '')
+
+  const [respondForms, setRespondForms] = useState<Record<number, { responseContent: string; newEstimatedArrival: string }>>({})
 
   const [form, setForm] = useState({
     exceptionType: 'DELAY',
@@ -161,6 +166,90 @@ export function TrackingExceptionPage() {
           </button>
         </div>
       </form>
+
+      {activity.exceptions && activity.exceptions.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 mt-6">
+          <h2 className="text-base font-semibold text-gray-800 mb-4">記録済み例外一覧</h2>
+          {activity.exceptions.map((exception: TrackingExceptionEvent) => (
+            <div key={exception.id ?? Math.random()} className="border border-gray-100 rounded-md p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-800">
+                  {EXCEPTION_TYPE_LABELS[exception.exceptionType] ?? exception.exceptionType}
+                </span>
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                  exception.status === 'OPEN' ? 'bg-red-100 text-red-800' :
+                  exception.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-green-100 text-green-800'
+                }`}>{exception.status}</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-1">{exception.reason}</p>
+              {exception.responseContent && (
+                <p className="text-xs text-gray-700 mt-2">対応: {exception.responseContent}</p>
+              )}
+              {exception.status === 'OPEN' && exception.id && (
+                <form onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!exception.id) return
+                  const f = respondForms[exception.id] ?? { responseContent: '', newEstimatedArrival: '' }
+                  if (!f.responseContent.trim()) {
+                    toast.error('対応内容を入力してください。')
+                    return
+                  }
+                  respondToException(
+                    {
+                      exceptionId: exception.id,
+                      data: {
+                        responseContent: f.responseContent,
+                        newEstimatedArrival: f.newEstimatedArrival || undefined,
+                      },
+                    },
+                    {
+                      onSuccess: () => {
+                        toast.success('対応内容を更新しました。')
+                        setRespondForms(prev => {
+                          const next = { ...prev }
+                          if (exception.id) delete next[exception.id]
+                          return next
+                        })
+                      },
+                      onError: (err) => {
+                        toast.error(err instanceof Error ? err.message : '対応内容の更新に失敗しました。')
+                      },
+                    },
+                  )
+                }} className="mt-3 space-y-2">
+                  <textarea
+                    value={respondForms[exception.id]?.responseContent ?? ''}
+                    onChange={(e) => setRespondForms(prev => ({
+                      ...prev,
+                      [exception.id!]: { ...(prev[exception.id!] ?? { responseContent: '', newEstimatedArrival: '' }), responseContent: e.target.value }
+                    }))}
+                    placeholder="対応内容を入力"
+                    rows={2}
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <input
+                    type="date"
+                    value={respondForms[exception.id]?.newEstimatedArrival ?? ''}
+                    onChange={(e) => setRespondForms(prev => ({
+                      ...prev,
+                      [exception.id!]: { ...(prev[exception.id!] ?? { responseContent: '', newEstimatedArrival: '' }), newEstimatedArrival: e.target.value }
+                    }))}
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isResponding}
+                    className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {isResponding ? '更新中...' : '対応内容を更新する'}
+                  </button>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
