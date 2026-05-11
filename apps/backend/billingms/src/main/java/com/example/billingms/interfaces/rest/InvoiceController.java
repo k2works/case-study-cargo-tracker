@@ -50,6 +50,15 @@ public class InvoiceController {
         return ResponseEntity.ok(toResponse(invoice));
     }
 
+    /**
+     * POST /api/billing/v1/invoices/{invoiceId}/settle — 精算する（US23）
+     */
+    @PostMapping("/{invoiceId}/settle")
+    public ResponseEntity<InvoiceResponse> settle(@PathVariable Long invoiceId) {
+        Invoice invoice = invoiceCommandService.settle(invoiceId);
+        return ResponseEntity.ok(toResponse(invoice));
+    }
+
     private InvoiceResponse toResponse(Invoice invoice) {
         List<LineItemResponse> items = invoice.getLineItems().stream()
                 .map(i -> new LineItemResponse(i.getDescription(), i.getAmount().toLong(), i.getAmount().currency()))
@@ -67,6 +76,7 @@ public class InvoiceController {
                 invoice.getPaymentStatus().name(),
                 invoice.getIssuedAt().toString(),
                 invoice.getDueDate().toString(),
+                invoice.getPaidAt() != null ? invoice.getPaidAt().toString() : null,
                 items
         );
     }
@@ -92,6 +102,7 @@ public class InvoiceController {
             String paymentStatus,
             String issuedAt,
             String dueDate,
+            String paidAt,
             List<LineItemResponse> lineItems
     ) {}
 

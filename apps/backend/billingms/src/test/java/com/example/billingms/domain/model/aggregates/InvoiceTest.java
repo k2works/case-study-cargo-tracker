@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -85,6 +86,42 @@ class InvoiceTest {
 
         assertThat(invoice.getDiscountAmount().toLong()).isEqualTo(0L);
         assertThat(invoice.calculateFinalAmount().toLong()).isEqualTo(110_000L);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 状態から settle を呼ぶと PAID に遷移する")
+    void shouldSettleConfirmedInvoice() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        invoice.confirm();
+
+        LocalDateTime paidAt = LocalDateTime.of(2026, 6, 1, 10, 0);
+        invoice.settle(paidAt);
+
+        assertThat(invoice.getPaymentStatus()).isEqualTo(PaymentStatus.PAID);
+        assertThat(invoice.getPaidAt()).isEqualTo(paidAt);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 以外の状態から settle を呼ぶと例外が発生する")
+    void shouldThrowWhenSettlingNonConfirmedInvoice() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+
+        assertThatThrownBy(() -> invoice.settle(LocalDateTime.now()))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("CONFIRMED 状態から markOverdue を呼ぶと OVERDUE に遷移する")
+    void shouldMarkOverdueFromConfirmedState() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        invoice.confirm();
+
+        invoice.markOverdue();
+
+        assertThat(invoice.getPaymentStatus()).isEqualTo(PaymentStatus.OVERDUE);
     }
 
     @Test

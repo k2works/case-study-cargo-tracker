@@ -5,6 +5,7 @@ import com.example.billingms.domain.model.valueobjects.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,6 +26,7 @@ public class Invoice {
     private PaymentStatus paymentStatus;
     private final LocalDate issuedAt;
     private final LocalDate dueDate;
+    private LocalDateTime paidAt;
     private BigDecimal discountRate;
     private Money discountAmount;
     private final List<InvoiceLineItem> lineItems = new ArrayList<>();
@@ -96,6 +98,28 @@ public class Invoice {
     }
 
     /**
+     * 精算する（CONFIRMED → PAID）
+     */
+    public void settle(LocalDateTime paidAt) {
+        if (this.paymentStatus != PaymentStatus.CONFIRMED) {
+            throw new IllegalStateException("精算できるのは CONFIRMED 状態の請求書のみです: " + this.paymentStatus);
+        }
+        Objects.requireNonNull(paidAt, "paidAt must not be null");
+        this.paidAt = paidAt;
+        this.paymentStatus = PaymentStatus.PAID;
+    }
+
+    /**
+     * 延滞処理（CONFIRMED → OVERDUE）
+     */
+    public void markOverdue() {
+        if (this.paymentStatus != PaymentStatus.CONFIRMED) {
+            throw new IllegalStateException("延滞処理できるのは CONFIRMED 状態の請求書のみです: " + this.paymentStatus);
+        }
+        this.paymentStatus = PaymentStatus.OVERDUE;
+    }
+
+    /**
      * 料金を確定する
      */
     public void confirm() {
@@ -118,5 +142,6 @@ public class Invoice {
     public LocalDate getDueDate() { return dueDate; }
     public BigDecimal getDiscountRate() { return discountRate; }
     public Money getDiscountAmount() { return discountAmount; }
+    public LocalDateTime getPaidAt() { return paidAt; }
     public List<InvoiceLineItem> getLineItems() { return Collections.unmodifiableList(lineItems); }
 }

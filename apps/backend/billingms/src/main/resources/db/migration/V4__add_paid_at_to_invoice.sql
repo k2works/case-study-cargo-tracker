@@ -1,0 +1,1 @@
+ALTER TABLE invoice ADD COLUMN paid_at TIMESTAMP;

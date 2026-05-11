@@ -51,6 +51,7 @@
             final_amount_currency = #{finalAmountCurrency},
             tax_amount_value      = #{taxAmountValue},
             payment_status        = #{paymentStatus},
+            paid_at               = #{paidAt},
             updated_at            = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>

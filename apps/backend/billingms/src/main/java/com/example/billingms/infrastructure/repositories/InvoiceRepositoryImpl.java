@@ -74,6 +74,7 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
         record.setTaxAmountValue(tax.toLong());
         record.setDiscountRate(invoice.getDiscountRate());
         record.setDiscountAmountValue(invoice.getDiscountAmount().toLong());
+        record.setPaidAt(invoice.getPaidAt());
         record.setPaymentStatus(invoice.getPaymentStatus().name());
         record.setIssuedAt(invoice.getIssuedAt());
         record.setDueDate(invoice.getDueDate());

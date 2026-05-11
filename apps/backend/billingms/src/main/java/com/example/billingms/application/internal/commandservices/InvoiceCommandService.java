@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -65,6 +66,20 @@ public class InvoiceCommandService {
                 .orElseThrow(() -> new IllegalArgumentException("Invoice not found: " + invoiceId));
 
         invoice.confirm();
+        invoiceRepository.update(invoice);
+
+        return invoice;
+    }
+
+    /**
+     * 精算する（US23）
+     */
+    @Transactional
+    public Invoice settle(Long invoiceId) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Invoice not found: " + invoiceId));
+
+        invoice.settle(LocalDateTime.now());
         invoiceRepository.update(invoice);
 
         return invoice;
