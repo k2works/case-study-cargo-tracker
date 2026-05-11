@@ -16,6 +16,7 @@ import { TrackingStatusPage } from './pages/TrackingStatusPage'
 import { TrackingPage } from './pages/TrackingPage'
 import { TrackingExceptionPage } from './pages/TrackingExceptionPage'
 import { RoutingAssignmentPage } from './pages/RoutingAssignmentPage'
+import { InvoiceCalculatePage } from './pages/InvoiceCalculatePage'
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/tracking/:trackingNumber/exceptions" element={<TrackingExceptionPage />} />
           <Route path="/tracking" element={<TrackingPage />} />
           <Route path="/routing/assignments" element={<RoutingAssignmentPage />} />
+          <Route path="/billing/calculate" element={<InvoiceCalculatePage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
