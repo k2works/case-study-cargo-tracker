@@ -53,13 +53,15 @@ public class Invoice {
     public Invoice(Long id, String invoiceNumber, String bookingId, String shipperId,
                    Money baseAmount, Money finalAmount, BigDecimal taxRate,
                    PaymentStatus paymentStatus, LocalDate issuedAt, LocalDate dueDate,
+                   BigDecimal discountRate, Money discountAmount, LocalDateTime paidAt,
                    List<InvoiceLineItem> lineItems) {
         this(invoiceNumber, bookingId, shipperId, issuedAt, dueDate);
         this.id = id;
         this.baseAmount = baseAmount;
         this.finalAmount = finalAmount;
-        this.discountRate = BigDecimal.ZERO;
-        this.discountAmount = Money.ofJpy(0);
+        this.discountRate = discountRate != null ? discountRate : BigDecimal.ZERO;
+        this.discountAmount = discountAmount != null ? discountAmount : Money.ofJpy(0);
+        this.paidAt = paidAt;
         if (lineItems != null) {
             this.lineItems.addAll(lineItems);
         }
@@ -82,6 +84,12 @@ public class Invoice {
      */
     public void applyDiscount(BigDecimal rate) {
         Objects.requireNonNull(rate, "discountRate must not be null");
+        if (rate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("割引率は 0 以上でなければなりません: " + rate);
+        }
+        if (rate.compareTo(BigDecimal.ONE) > 0) {
+            throw new IllegalArgumentException("割引率は 1.0 (100%) 以下でなければなりません: " + rate);
+        }
         this.discountRate = rate;
         this.discountAmount = baseAmount.multiply(rate);
     }

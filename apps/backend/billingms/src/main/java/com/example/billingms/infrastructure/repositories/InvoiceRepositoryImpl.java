@@ -70,7 +70,8 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
         record.setFinalAmountValue(invoice.getFinalAmount().toLong());
         record.setFinalAmountCurrency(invoice.getFinalAmount().currency());
         record.setTaxRate(invoice.getTaxRate());
-        Money tax = invoice.getBaseAmount().multiply(invoice.getTaxRate());
+        long discountedBase = invoice.getBaseAmount().toLong() - invoice.getDiscountAmount().toLong();
+        Money tax = Money.ofJpy(discountedBase).multiply(invoice.getTaxRate());
         record.setTaxAmountValue(tax.toLong());
         record.setDiscountRate(invoice.getDiscountRate());
         record.setDiscountAmountValue(invoice.getDiscountAmount().toLong());
@@ -100,6 +101,10 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
                         i.getSeqNumber()))
                 .toList();
 
+        Money discountAmount = r.getDiscountAmountValue() != null
+                ? Money.ofJpy(r.getDiscountAmountValue())
+                : Money.ofJpy(0);
+
         return new Invoice(
                 r.getId(),
                 r.getInvoiceNumber(),
@@ -111,6 +116,9 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
                 PaymentStatus.valueOf(r.getPaymentStatus()),
                 r.getIssuedAt(),
                 r.getDueDate(),
+                r.getDiscountRate(),
+                discountAmount,
+                r.getPaidAt(),
                 lineItems
         );
     }

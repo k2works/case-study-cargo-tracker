@@ -134,4 +134,57 @@ class InvoiceTest {
         assertThatThrownBy(invoice::confirm)
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    @DisplayName("割引率が最大値（30%）の境界値でも正常に適用される")
+    void shouldApplyMaxDiscountRate() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+
+        invoice.applyDiscount(new BigDecimal("0.30"));
+
+        assertThat(invoice.getDiscountAmount().toLong()).isEqualTo(30_000L);
+    }
+
+    @Test
+    @DisplayName("割引率が負の値の場合は例外が発生する")
+    void shouldThrowWhenDiscountRateIsNegative() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+
+        assertThatThrownBy(() -> invoice.applyDiscount(new BigDecimal("-0.01")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("割引率が 100% 超の場合は例外が発生する")
+    void shouldThrowWhenDiscountRateExceedsOne() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+
+        assertThatThrownBy(() -> invoice.applyDiscount(new BigDecimal("1.01")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("PAID 状態から markOverdue を呼ぶと例外が発生する")
+    void shouldThrowWhenMarkingOverdueFromPaidState() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        invoice.confirm();
+        invoice.settle(LocalDateTime.of(2026, 6, 1, 10, 0));
+
+        assertThatThrownBy(invoice::markOverdue)
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("PENDING 状態から markOverdue を呼ぶと例外が発生する")
+    void shouldThrowWhenMarkingOverdueFromPendingState() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+
+        assertThatThrownBy(invoice::markOverdue)
+                .isInstanceOf(IllegalStateException.class);
+    }
 }

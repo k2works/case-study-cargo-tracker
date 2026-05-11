@@ -98,7 +98,7 @@ export function InvoiceSettlePage() {
             disabled={isCalculating}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {isCalculating ? '検索中...' : '精算書を取得'}
+            {isCalculating ? '算出中...' : '料金を算出する'}
           </button>
         </div>
       </form>
