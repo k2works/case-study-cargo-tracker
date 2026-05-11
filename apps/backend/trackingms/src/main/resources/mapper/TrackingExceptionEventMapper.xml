@@ -7,16 +7,20 @@
             parameterType="com.example.trackingms.infrastructure.repositories.TrackingExceptionEventRecord">
         INSERT INTO tracking_exception_event
             (tracking_id, exception_type, occurred_at, location_unlocode, reason,
-             escalation_flag, response_content, new_estimated_arrival, status, created_at, updated_at)
+             escalation_flag, response_content, new_estimated_arrival, status,
+             damage_description, photo_url, last_known_location, last_seen_at,
+             created_at, updated_at)
         VALUES
             (#{trackingId}, #{exceptionType}, #{occurredAt}, #{locationUnlocode}, #{reason},
              #{escalationFlag}, #{responseContent}, #{newEstimatedArrival}, #{status},
+             #{damageDescription}, #{photoUrl}, #{lastKnownLocation}, #{lastSeenAt},
              CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <select id="findExceptionsByTrackingId" resultType="com.example.trackingms.infrastructure.repositories.TrackingExceptionEventRecord">
         SELECT id, tracking_id, exception_type, occurred_at, location_unlocode, reason,
-               escalation_flag, response_content, new_estimated_arrival, status
+               escalation_flag, response_content, new_estimated_arrival, status,
+               damage_description, photo_url, last_known_location, last_seen_at
         FROM tracking_exception_event
         WHERE tracking_id = #{trackingId}
         ORDER BY occurred_at ASC

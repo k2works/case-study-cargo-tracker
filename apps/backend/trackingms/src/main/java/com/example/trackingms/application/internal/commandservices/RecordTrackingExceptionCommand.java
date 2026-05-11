@@ -3,7 +3,7 @@ package com.example.trackingms.application.internal.commandservices;
 import java.time.LocalDateTime;
 
 /**
- * 遅延例外記録コマンド
+ * 例外記録コマンド
  */
 public record RecordTrackingExceptionCommand(
         String trackingNumber,
@@ -11,5 +11,9 @@ public record RecordTrackingExceptionCommand(
         LocalDateTime occurredAt,
         String locationUnlocode,
         String reason,
-        boolean escalationFlag
+        boolean escalationFlag,
+        String damageDescription,
+        String photoUrl,
+        String lastKnownLocation,
+        LocalDateTime lastSeenAt
 ) {}

@@ -58,7 +58,8 @@ class TrackingExceptionServiceTest {
                 LocalDateTime.of(2026, 6, 20, 10, 0),
                 "JPTYO",
                 "悪天候による遅延",
-                false
+                false,
+                null, null, null, null
         );
 
         TrackingActivity result = service.recordException(command);
@@ -90,7 +91,8 @@ class TrackingExceptionServiceTest {
                 LocalDateTime.of(2026, 6, 21, 9, 0),
                 "JPOSA",
                 "通関書類不備",
-                true
+                true,
+                null, null, null, null
         );
 
         TrackingActivity result = service.recordException(command);
@@ -110,7 +112,8 @@ class TrackingExceptionServiceTest {
                 LocalDateTime.of(2026, 6, 20, 10, 0),
                 "JPTYO",
                 "遅延理由",
-                false
+                false,
+                null, null, null, null
         );
 
         assertThatThrownBy(() -> service.recordException(command))

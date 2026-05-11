@@ -39,6 +39,15 @@ public class TrackingExceptionService {
                 command.escalationFlag()
         );
 
+        // DAMAGE 固有情報の設定
+        if ("DAMAGE".equals(command.exceptionType()) && command.damageDescription() != null) {
+            exception.recordDamageDetails(command.damageDescription(), command.photoUrl());
+        }
+        // LOST 固有情報の設定
+        if ("LOST".equals(command.exceptionType()) && command.lastKnownLocation() != null) {
+            exception.recordLostDetails(command.lastKnownLocation(), command.lastSeenAt());
+        }
+
         activity.addException(exception);
         trackingActivityRepository.update(activity);
 

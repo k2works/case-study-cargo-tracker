@@ -20,6 +20,12 @@ public class TrackingExceptionEventRecord {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    // DAMAGE 固有フィールド
+    private String damageDescription;
+    private String photoUrl;
+    // LOST 固有フィールド
+    private String lastKnownLocation;
+    private LocalDateTime lastSeenAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -56,4 +62,16 @@ public class TrackingExceptionEventRecord {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getDamageDescription() { return damageDescription; }
+    public void setDamageDescription(String damageDescription) { this.damageDescription = damageDescription; }
+
+    public String getPhotoUrl() { return photoUrl; }
+    public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    public String getLastKnownLocation() { return lastKnownLocation; }
+    public void setLastKnownLocation(String lastKnownLocation) { this.lastKnownLocation = lastKnownLocation; }
+
+    public LocalDateTime getLastSeenAt() { return lastSeenAt; }
+    public void setLastSeenAt(LocalDateTime lastSeenAt) { this.lastSeenAt = lastSeenAt; }
 }

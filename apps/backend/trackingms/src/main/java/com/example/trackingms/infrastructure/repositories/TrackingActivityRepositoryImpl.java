@@ -130,6 +130,10 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
         record.setResponseContent(exception.getResponseContent());
         record.setNewEstimatedArrival(exception.getNewEstimatedArrival());
         record.setStatus(exception.getStatus().name());
+        record.setDamageDescription(exception.getDamageDescription());
+        record.setPhotoUrl(exception.getPhotoUrl());
+        record.setLastKnownLocation(exception.getLastKnownLocation());
+        record.setLastSeenAt(exception.getLastSeenAt());
         exceptionMapper.insertException(record);
     }
 
@@ -156,7 +160,11 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
                         e.isEscalationFlag(),
                         e.getResponseContent(),
                         e.getNewEstimatedArrival(),
-                        ExceptionStatus.valueOf(e.getStatus())))
+                        ExceptionStatus.valueOf(e.getStatus()),
+                        e.getDamageDescription(),
+                        e.getPhotoUrl(),
+                        e.getLastKnownLocation(),
+                        e.getLastSeenAt()))
                 .toList();
 
         return new TrackingActivity(

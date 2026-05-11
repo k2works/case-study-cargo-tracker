@@ -22,6 +22,12 @@ public class TrackingExceptionEvent {
     private LocalDate newEstimatedArrival;
     private ExceptionStatus status;
     private boolean responded = false;
+    // DAMAGE 固有フィールド
+    private String damageDescription;
+    private String photoUrl;
+    // LOST 固有フィールド
+    private String lastKnownLocation;
+    private LocalDateTime lastSeenAt;
 
     /**
      * 新規例外イベント作成コンストラクタ
@@ -52,6 +58,22 @@ public class TrackingExceptionEvent {
     }
 
     /**
+     * 新フィールド対応の永続化済み再構成コンストラクタ
+     */
+    public TrackingExceptionEvent(Long id, ExceptionType exceptionType, LocalDateTime occurredAt,
+                                   String locationUnlocode, String reason, boolean escalationFlag,
+                                   String responseContent, LocalDate newEstimatedArrival, ExceptionStatus status,
+                                   String damageDescription, String photoUrl,
+                                   String lastKnownLocation, LocalDateTime lastSeenAt) {
+        this(id, exceptionType, occurredAt, locationUnlocode, reason, escalationFlag,
+                responseContent, newEstimatedArrival, status);
+        this.damageDescription = damageDescription;
+        this.photoUrl = photoUrl;
+        this.lastKnownLocation = lastKnownLocation;
+        this.lastSeenAt = lastSeenAt;
+    }
+
+    /**
      * 対応内容を更新する
      */
     public void respond(String responseContent, LocalDate newEstimatedArrival) {
@@ -62,6 +84,16 @@ public class TrackingExceptionEvent {
         this.newEstimatedArrival = newEstimatedArrival;
         this.status = ExceptionStatus.IN_PROGRESS;
         this.responded = true;
+    }
+
+    public void recordDamageDetails(String damageDescription, String photoUrl) {
+        this.damageDescription = damageDescription;
+        this.photoUrl = photoUrl;
+    }
+
+    public void recordLostDetails(String lastKnownLocation, LocalDateTime lastSeenAt) {
+        this.lastKnownLocation = lastKnownLocation;
+        this.lastSeenAt = lastSeenAt;
     }
 
     public boolean hasBeenResponded() { return responded; }
@@ -75,4 +107,8 @@ public class TrackingExceptionEvent {
     public String getResponseContent() { return responseContent; }
     public LocalDate getNewEstimatedArrival() { return newEstimatedArrival; }
     public ExceptionStatus getStatus() { return status; }
+    public String getDamageDescription() { return damageDescription; }
+    public String getPhotoUrl() { return photoUrl; }
+    public String getLastKnownLocation() { return lastKnownLocation; }
+    public LocalDateTime getLastSeenAt() { return lastSeenAt; }
 }
