@@ -15,16 +15,17 @@
 
 ### イテレーション終了時の達成状態
 
-1. **破損・紛失例外処理（US20）**: 追跡管理者が破損・紛失例外を記録し、貨物状態が「例外発生」に更新され、対応内容を入力できる
-2. **輸送料金算出（US21）**: 経理担当者が予約 ID から輸送料金を算出し、内訳を確認して料金を確定できる
+1. **破損・紛失例外処理（US20）**: 追跡管理者（または荷役作業員）が破損・紛失例外を記録し、貨物状態が「例外発生」に更新され、紛失時には escalation 通知が送信される
+2. **輸送料金算出（US21）**: 経理担当者が「引取済」状態の予約に対して輸送実績から料金を算出し、確定できる
 
 ### 成功基準
 
-- [ ] US20: 例外種別「破損（DAMAGE）」「紛失（LOST）」を選択して例外を記録できる
+- [ ] US20: 追跡番号と例外種別「破損」または「紛失」・発生状況を記録できる
 - [ ] US20: 例外記録後に貨物状態が「例外発生（EXCEPTION）」に更新される
-- [ ] US20: 例外の対応内容（処理方針・補償方針）を入力して更新できる
-- [ ] US21: 予約 ID を入力して輸送料金を算出できる
-- [ ] US21: 料金の内訳（基本料金・距離料金・危険物割増）が表示される
+- [ ] US20: 紛失時に緊急フラグが設定され管理職への escalation 通知が送信される
+- [ ] US20: 対応内容（補償方針等）を入力して荷主に報告を送信できる
+- [ ] US21: 「引取済」状態の予約に対して料金算出を開始できる
+- [ ] US21: 輸送実績（経路・距離・重量・貨物種別）が表示され、基本料金が自動計算される
 - [ ] US21: 算出した料金を確定（保存）できる
 - [ ] 全ユニットテスト（BE + FE）がパス
 - [ ] BE テストカバレッジ 80% 以上（JaCoCo）
@@ -46,24 +47,29 @@
 #### US20: 破損・紛失例外を処理する
 
 **ストーリー**:
-> 追跡管理者として、配送中に発生した破損・紛失例外を記録・処理したい。なぜなら、損害情報を速やかに荷主・関係者に伝える必要があるからだ。
+> 追跡管理者（または荷役作業員）として、輸送中に破損または紛失が発生した場合、例外種別「破損」または「紛失」として記録し、関係者に緊急通知を送りたい。なぜなら、重大な例外は即座に全関係者に共有し、保険手続き・補償対応・代替措置を迅速に開始できるからだ。
 
 **受入条件**:
 
-- [ ] 例外種別「破損（DAMAGE）」「紛失（LOST）」を選択して例外を記録できる
+- [ ] 追跡番号と例外種別「破損」または「紛失」・発生状況を記録できる
 - [ ] 例外記録後に貨物状態が「例外発生（EXCEPTION）」に更新される
-- [ ] 例外の対応内容（処理方針・補償方針）を入力して更新できる
+- [ ] 例外種別「紛失」の場合、緊急フラグが設定されて管理職への escalation 通知が送信される
+- [ ] 荷主に破損・紛失発生の通知が送信される
+- [ ] 対応内容（補償方針等）を入力して荷主に報告を送信できる
 
 #### US21: 輸送料金を算出する
 
 **ストーリー**:
-> 経理担当者として、確定した輸送ルートと貨物情報から輸送料金を算出したい。なぜなら、精算処理の基礎データが必要だからだ。
+> 経理担当者として、配送完了した予約に対して輸送実績（経路・重量・貨物種別・荷役実績）をもとに輸送料金を算出したい。なぜなら、実際の輸送内容に基づく正確な料金を算出し、精算に進めるからだ。
 
 **受入条件**:
 
-- [ ] 予約 ID を入力して輸送料金を算出できる
-- [ ] 料金の内訳（基本料金・距離料金・危険物割増）が表示される
-- [ ] 算出した料金を確定（保存）できる
+- [ ] 「引取済」状態の予約に対して料金算出を開始できる
+- [ ] 輸送実績（経路・距離・重量・貨物種別・荷役作業実績）が表示される
+- [ ] 基本料金が自動計算される
+- [ ] 算出結果を確認して確定操作ができる
+- [ ] 確定後、輸送料金が「確定」状態で登録される
+- [ ] 例外（遅延・破損等）が発生している場合、料金調整（減額・補償費用）の入力ができる
 
 ### タスク
 
@@ -71,6 +77,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
+| 1.0a | **[リファクタリング]** BE: `TrackingExceptionController` のレスポンスを `Map<String, Object>` から DTO（record）に変更する（IT7 レビュー M1） | 0.5h | - | [ ] |
+| 1.0b | **[TDD]** BE: `addException()` に前状態ガード追加（CLAIMED 等の完了状態からは例外追加不可）（IT7 レビュー M2） | 0.5h | - | [ ] |
+| 1.0c | **[TDD]** BE: `respond()` メソッドに responseContent の null/空文字バリデーション追加（IT7 レビュー M3） | 0.5h | - | [ ] |
 | 1.1 | **[TDD]** BE: IT7 で構築した `TrackingExceptionEvent` を活用し、DAMAGE・LOST 種別での例外記録ロジックを実装する | 1h | - | [ ] |
 | 1.2 | **[TDD]** BE: DAMAGE 時に損傷詳細フィールド（damageDescription・photoUrl）を追加・保存する | 1.5h | - | [ ] |
 | 1.3 | **[TDD]** BE: LOST 時に最終確認場所・最終確認日時フィールドを追加・保存する | 1h | - | [ ] |
@@ -78,17 +87,17 @@
 | 1.5 | **[TDD]** FE: 例外記録画面で DAMAGE・LOST 選択時に種別固有フィールドを動的表示する | 2h | - | [ ] |
 | 1.6 | FE: US20 の FE テストを追加する | 1h | - | [ ] |
 
-**小計**: 7h（理想時間）
+**小計**: 8.5h（理想時間）
 
 #### 2. US21: 輸送料金を算出する（8 SP）
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | **[TDD]** BE: `billingms` マイクロサービスの雛形を構築する（Spring Boot アプリケーション・DB 接続・MyBatis 設定） | 1.5h | - | [ ] |
-| 2.2 | **[TDD]** BE: `TransportCharge` ドメインモデルを実装する（基本料金・距離料金・割増料金・合計） | 1.5h | - | [ ] |
-| 2.3 | **[TDD]** BE: 料金算出ロジックを実装する（距離 x 重量 x 基本単価、HAZARDOUS +20%、REFRIGERATED +15%） | 1.5h | - | [ ] |
-| 2.4 | **[TDD]** BE: 料金算出 API（POST /api/billing/v1/charges/calculate）と料金確定 API（POST /api/billing/v1/charges/confirm）を実装する | 1.5h | - | [ ] |
-| 2.5 | BE: DB マイグレーション（transport_charge テーブル作成） | 0.5h | - | [ ] |
+| 2.2 | **[TDD]** BE: `Invoice` 集約ルート・`InvoiceLineItem`・`Money` 値オブジェクトを実装する | 1.5h | - | [ ] |
+| 2.3 | **[TDD]** BE: 料金算出ロジック（`calculateFinalAmount()`）を実装する | 1.5h | - | [ ] |
+| 2.4 | **[TDD]** BE: 料金算出 API（POST /api/billing/v1/invoices/calculate）と料金確定 API（POST /api/billing/v1/invoices/{invoiceId}/confirm）を実装する | 1.5h | - | [ ] |
+| 2.5 | BE: DB マイグレーション（invoice・invoice_line_item テーブル作成） | 0.5h | - | [ ] |
 | 2.6 | **[TDD]** FE: 料金算出画面（予約 ID 入力・内訳表示・確定ボタン）を実装する | 2h | - | [ ] |
 | 2.7 | FE: US21 の FE テストを追加する | 1h | - | [ ] |
 
@@ -98,11 +107,11 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US20: 破損・紛失例外処理 | 8 | 7h | [ ] |
+| US20: 破損・紛失例外処理（IT7 レビュー対応含む） | 8 | 8.5h | [ ] |
 | US21: 輸送料金算出 | 8 | 9.5h | [ ] |
-| **合計** | **16** | **16.5h** | |
+| **合計** | **16** | **18h** | |
 
-**1 SP あたり**: 約 1.0h
+**1 SP あたり**: 約 1.1h
 **進捗率**: 0% (0/16 SP)
 
 ---
@@ -199,37 +208,46 @@ TrackingActivity *-- TrackingExceptionEvent
 
 #### US21: 輸送料金算出
 
+> **注**: Billing Context のドメインモデル（`docs/design/domain-model.md`）では集約ルートは `Invoice` である。IT8 では Invoice 集約の `calculateFinalAmount()` を活用して料金算出を実装する。US21 スコープでは Invoice の作成・基本料金算出・確定までを対象とし、割引（US22）・精算（US23）は後続イテレーションで対応する。
+
 ```plantuml
 @startuml
-title US21 輸送料金ドメインモデル
+title US21 輸送料金ドメインモデル（Invoice 集約）
 
 package "billingms" {
-  class TransportCharge {
-    + id: Long
-    + bookingId: String
-    + baseFare: BigDecimal
-    + distanceFare: BigDecimal
-    + surcharge: BigDecimal
-    + totalAmount: BigDecimal
-    + surchargeType: SurchargeType
-    + status: ChargeStatus
-    + calculatedAt: LocalDateTime
-    + confirmedAt: LocalDateTime
-    + calculate(distance, weight, cargoType): void
-    + confirm(): void
+  class Invoice <<aggregate root>> {
+    + invoiceId: InvoiceId
+    + cargoBookingId: BillingBookingId
+    + shipperId: BillingShipperId
+    + baseAmount: Money
+    + finalAmount: Money
+    + paymentStatus: PaymentStatus
+    + issuedAt: Date
+    + lineItems: List<InvoiceLineItem>
+    + calculateFinalAmount(): Money
   }
 
-  enum SurchargeType {
-    NONE
-    HAZARDOUS_20PCT
-    REFRIGERATED_15PCT
+  class InvoiceLineItem {
+    + description: String
+    + amount: Money
+    + seqNumber: int
   }
 
-  enum ChargeStatus {
-    CALCULATED
+  class Money <<value object>> {
+    + amount: BigDecimal
+    + currency: CurrencyCode
+  }
+
+  enum PaymentStatus {
+    PENDING
     CONFIRMED
+    OVERDUE
+    REFUNDED
   }
 }
+
+Invoice *-- InvoiceLineItem
+Invoice *-- Money
 @enduml
 ```
 
@@ -247,20 +265,37 @@ model tracking_exception_event {
 }
 ```
 
-#### US21: transport_charge テーブル（新規）
+#### US21: invoice / invoice_line_item テーブル（新規 — `docs/design/data-model.md` の billing_db 定義に準拠）
+
+> `data-model.md` で定義済みの `invoice`・`invoice_line_item`・`payment` テーブルを使用する。IT8 では invoice と invoice_line_item の作成までをスコープとし、payment は US23 で対応する。
 
 ```prisma
-model transport_charge {
+model invoice {
+  id                BigInt    @id @default(autoincrement())
+  invoice_number    String    @unique       // 精算書番号（業務キー）
+  booking_id        String                  // 予約 ID（論理参照）
+  shipper_id        String                  // 荷主 ID（論理参照）
+  base_amount_value Integer                 // 基本料金（最小通貨単位）
+  base_amount_currency String @default("JPY")
+  discount_rate     Decimal   @default(0)   // 割引率（IT8 では 0 固定）
+  final_amount_value Integer                // 最終金額（最小通貨単位）
+  final_amount_currency String @default("JPY")
+  tax_rate          Decimal   @default(0.10)
+  tax_amount_value  Integer                 // 税額
+  payment_status    String    @default("PENDING") // PENDING / CONFIRMED
+  issued_at         DateTime
+  due_date          DateTime
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+}
+
+model invoice_line_item {
   id              BigInt    @id @default(autoincrement())
-  booking_id      String    @unique
-  base_fare       Decimal   // 基本料金
-  distance_fare   Decimal   // 距離料金
-  surcharge       Decimal   // 割増料金
-  total_amount    Decimal   // 合計金額
-  surcharge_type  String    @default("NONE")  // NONE / HAZARDOUS_20PCT / REFRIGERATED_15PCT
-  status          String    @default("CALCULATED")  // CALCULATED / CONFIRMED
-  calculated_at   DateTime
-  confirmed_at    DateTime?
+  invoice_id      BigInt                    // FK → invoice.id
+  description     String                    // 明細説明（基本料金・距離料金等）
+  amount_value    Integer                   // 金額（最小通貨単位）
+  amount_currency String    @default("JPY")
+  seq_number      Integer                   // 表示順
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
 }
@@ -360,12 +395,12 @@ state 例外記録 : /exceptions/new\nPOST /api/tracking/v1/{tn}/exceptions
 例外記録 --> 例外記録 : バリデーションエラー
 例外記録 --> 例外管理 : 記録成功（PRG）
 
-state 料金算出 : /billing/calculate\nPOST /api/billing/v1/charges/calculate
+state 料金算出 : /billing/calculate\nPOST /api/billing/v1/invoices/calculate
 料金算出 --> 料金算出 : 内訳表示
 料金算出 --> 料金算出 : バリデーションエラー
 料金算出 --> 料金確定 : 確定成功
 
-state 料金確定 : POST /api/billing/v1/charges/confirm
+state 料金確定 : POST /api/billing/v1/invoices/{invoiceId}/confirm
 @enduml
 ```
 
@@ -382,15 +417,15 @@ state 料金確定 : POST /api/billing/v1/charges/confirm
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| POST | `/api/billing/v1/charges/calculate` | 予約 ID から輸送料金を算出する |
-| POST | `/api/billing/v1/charges/confirm` | 算出した料金を確定（保存）する |
-| GET | `/api/billing/v1/charges/{bookingId}` | 予約 ID の料金情報を取得する |
+| POST | `/api/billing/v1/invoices/calculate` | 予約 ID から輸送料金を算出し Invoice を作成する |
+| POST | `/api/billing/v1/invoices/{invoiceId}/confirm` | 算出した料金を確定する |
+| GET | `/api/billing/v1/invoices?bookingId={bookingId}` | 予約 ID の精算書情報を取得する |
 
 ### ADR
 
 | ADR | タイトル | ステータス |
 |-----|---------|--------------|
-| ADR-006 | billingms を独立マイクロサービスとして構築する（bookingms への料金計算混入を避ける） | 提案 |
+| ADR-006 | billingms を独立マイクロサービスとして構築する（Invoice 集約を中心とした精算ドメイン） | 提案 |
 
 ---
 
@@ -412,7 +447,7 @@ state 料金確定 : POST /api/billing/v1/charges/confirm
 - [ ] US20: 破損・紛失例外が記録され、EXCEPTION 状態に遷移する
 - [ ] US20: 破損時の損傷詳細・紛失時の最終確認情報が保存される
 - [ ] US21: 予約 ID から料金が算出され、内訳が表示される
-- [ ] US21: 料金確定後に transport_charge テーブルに保存される
+- [ ] US21: 料金確定後に invoice テーブルに保存される
 - [ ] 全ユニットテスト・BE テストカバレッジ 80%+
 - [ ] ESLint / SonarQube Quality Gate PASS
 - [ ] ドキュメント更新完了
