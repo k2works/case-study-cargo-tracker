@@ -7,6 +7,7 @@ export interface CalculateInvoiceRequest {
   bookingId: string
   shipperId?: string
   lineItems: LineItemInput[]
+  discountRate?: number
 }
 
 export interface LineItemResponse {
@@ -20,6 +21,8 @@ export interface InvoiceResponse {
   invoiceNumber: string
   bookingId: string
   baseAmountValue: number
+  discountRate: number
+  discountAmountValue: number
   finalAmountValue: number
   currency: string
   paymentStatus: string

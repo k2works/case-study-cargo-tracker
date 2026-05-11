@@ -14,6 +14,7 @@ function formatJpy(value: number): string {
 
 export function InvoiceCalculatePage() {
   const [bookingId, setBookingId] = useState('')
+  const [discountRateStr, setDiscountRateStr] = useState('')
   const [invoice, setInvoice] = useState<InvoiceResponse | null>(null)
 
   const { mutate: calculate, isPending: isCalculating } = useCalculateInvoice()
@@ -25,10 +26,12 @@ export function InvoiceCalculatePage() {
       toast.error('予約 ID を入力してください。')
       return
     }
+    const discountRate = discountRateStr ? parseFloat(discountRateStr) / 100 : undefined
     calculate(
       {
         bookingId: bookingId.trim(),
         lineItems: DEFAULT_LINE_ITEMS.filter((i) => i.amountValue > 0),
+        discountRate,
       },
       {
         onSuccess: (data) => {
@@ -74,6 +77,22 @@ export function InvoiceCalculatePage() {
               className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          <div>
+            <label htmlFor="discountRate" className="block text-sm font-medium text-gray-700 mb-1">
+              割引率（%）
+            </label>
+            <input
+              id="discountRate"
+              type="number"
+              min="0"
+              max="30"
+              step="1"
+              value={discountRateStr}
+              onChange={(e) => setDiscountRateStr(e.target.value)}
+              placeholder="0"
+              className="block w-24 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
           <button
             type="submit"
             disabled={isCalculating}
@@ -117,10 +136,20 @@ export function InvoiceCalculatePage() {
                   <td className="py-2 text-right text-gray-700">{formatJpy(item.amountValue)}</td>
                 </tr>
               ))}
+              {invoice.discountAmountValue > 0 && (
+                <tr className="border-b border-gray-100">
+                  <td className="py-2 text-gray-600">
+                    法人割引（{(invoice.discountRate * 100).toFixed(0)}%）
+                  </td>
+                  <td className="py-2 text-right text-red-600">
+                    -{formatJpy(invoice.discountAmountValue)}
+                  </td>
+                </tr>
+              )}
               <tr className="border-b border-gray-200 bg-gray-50">
                 <td className="py-2 text-gray-600">消費税（10%）</td>
                 <td className="py-2 text-right text-gray-600">
-                  {formatJpy(invoice.finalAmountValue - invoice.baseAmountValue)}
+                  {formatJpy(invoice.finalAmountValue - (invoice.baseAmountValue - invoice.discountAmountValue))}
                 </td>
               </tr>
             </tbody>
