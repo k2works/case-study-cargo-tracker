@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 遅延例外処理 REST コントローラー
@@ -29,7 +28,7 @@ public class TrackingExceptionController {
      * POST /api/tracking/v1/{trackingNumber}/exceptions — 遅延例外を記録する
      */
     @PostMapping("/{trackingNumber}/exceptions")
-    public ResponseEntity<Map<String, Object>> recordException(
+    public ResponseEntity<ExceptionResponse> recordException(
             @PathVariable String trackingNumber,
             @RequestBody RecordExceptionRequest request) {
 
@@ -39,7 +38,11 @@ public class TrackingExceptionController {
                 request.occurredAt() != null ? request.occurredAt() : LocalDateTime.now(),
                 request.locationUnlocode(),
                 request.reason(),
-                Boolean.TRUE.equals(request.escalationFlag())
+                Boolean.TRUE.equals(request.escalationFlag()),
+                request.damageDescription(),
+                request.photoUrl(),
+                request.lastKnownLocation(),
+                request.lastSeenAt()
         );
 
         TrackingActivity activity = trackingExceptionService.recordException(command);
@@ -51,7 +54,7 @@ public class TrackingExceptionController {
      * PUT /api/tracking/v1/{trackingNumber}/exceptions/{id}/response — 対応内容を更新する
      */
     @PutMapping("/{trackingNumber}/exceptions/{id}/response")
-    public ResponseEntity<Map<String, Object>> respondToException(
+    public ResponseEntity<ExceptionResponse> respondToException(
             @PathVariable String trackingNumber,
             @PathVariable Long id,
             @RequestBody RespondRequest request) {
@@ -68,29 +71,24 @@ public class TrackingExceptionController {
         return ResponseEntity.ok(toExceptionResponse(trackingNumber, activity));
     }
 
-    private Map<String, Object> toExceptionResponse(String trackingNumber, TrackingActivity activity) {
-        List<Map<String, Object>> exceptions = activity.getExceptions().stream()
-                .map(e -> {
-                    var map = new java.util.LinkedHashMap<String, Object>();
-                    map.put("id", e.getId());
-                    map.put("exceptionType", e.getExceptionType().name());
-                    map.put("occurredAt", e.getOccurredAt().toString());
-                    map.put("status", e.getStatus().name());
-                    if (e.getResponseContent() != null) {
-                        map.put("responseContent", e.getResponseContent());
-                    }
-                    if (e.getNewEstimatedArrival() != null) {
-                        map.put("newEstimatedArrival", e.getNewEstimatedArrival().toString());
-                    }
-                    return (Map<String, Object>) map;
-                })
+    private ExceptionResponse toExceptionResponse(String trackingNumber, TrackingActivity activity) {
+        List<ExceptionItemResponse> exceptions = activity.getExceptions().stream()
+                .map(e -> new ExceptionItemResponse(
+                        e.getId(),
+                        e.getExceptionType().name(),
+                        e.getOccurredAt().toString(),
+                        e.getLocationUnlocode(),
+                        e.getReason(),
+                        e.getStatus().name(),
+                        e.getResponseContent(),
+                        e.getNewEstimatedArrival() != null ? e.getNewEstimatedArrival().toString() : null,
+                        e.getDamageDescription(),
+                        e.getPhotoUrl(),
+                        e.getLastKnownLocation(),
+                        e.getLastSeenAt() != null ? e.getLastSeenAt().toString() : null
+                ))
                 .toList();
-
-        return Map.of(
-                "trackingNumber", trackingNumber,
-                "transportStatus", activity.getTransportStatus().name(),
-                "exceptions", exceptions
-        );
+        return new ExceptionResponse(trackingNumber, activity.getTransportStatus().name(), exceptions);
     }
 
     record RecordExceptionRequest(
@@ -98,11 +96,36 @@ public class TrackingExceptionController {
             LocalDateTime occurredAt,
             String locationUnlocode,
             String reason,
-            Boolean escalationFlag
+            Boolean escalationFlag,
+            String damageDescription,
+            String photoUrl,
+            String lastKnownLocation,
+            LocalDateTime lastSeenAt
     ) {}
 
     record RespondRequest(
             String responseContent,
             LocalDate newEstimatedArrival
+    ) {}
+
+    record ExceptionItemResponse(
+            Long id,
+            String exceptionType,
+            String occurredAt,
+            String locationUnlocode,
+            String reason,
+            String status,
+            String responseContent,
+            String newEstimatedArrival,
+            String damageDescription,
+            String photoUrl,
+            String lastKnownLocation,
+            String lastSeenAt
+    ) {}
+
+    record ExceptionResponse(
+            String trackingNumber,
+            String transportStatus,
+            List<ExceptionItemResponse> exceptions
     ) {}
 }
