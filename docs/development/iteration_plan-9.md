@@ -22,8 +22,8 @@
 ### 成功基準
 
 - [x] US10: 経路条件を更新して再算出できる
-- [ ] US22: 法人割引が自動適用された請求金額が確認できる
-- [ ] US23: 精算書発行・精算状態更新ができる
+- [x] US22: 法人割引が自動適用された請求金額が確認できる
+- [x] US23: 精算書発行・精算状態更新ができる
 - [ ] bookingms テスト全通過（カバレッジ 80% 以上）
 - [ ] billingms テスト全通過（カバレッジ 80% 以上）
 - [ ] フロントエンド テスト全通過
@@ -109,11 +109,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | ドメイン: `Invoice.applyDiscount(BigDecimal discountRate)` メソッド追加 | 2h | - | [ ] |
-| 3.2 | アプリ: `CalculateInvoiceCommand` に `discountRate` フィールド追加、サービスで割引適用 | 2h | - | [ ] |
-| 3.3 | プレゼン: `calculate` エンドポイントの `CalculateInvoiceRequest` に `discountRate` 追加 | 1h | - | [ ] |
-| 3.4 | DB: `invoice` テーブルに `discount_rate` カラム追加（V3 マイグレーション） | 1h | - | [ ] |
-| 3.5 | テスト: 割引計算・適用ロジックのユニットテスト | 2h | - | [ ] |
+| 3.1 | ドメイン: `Invoice.applyDiscount(BigDecimal discountRate)` メソッド追加 | 2h | - | [x] |
+| 3.2 | アプリ: `CalculateInvoiceCommand` に `discountRate` フィールド追加、サービスで割引適用 | 2h | - | [x] |
+| 3.3 | プレゼン: `calculate` エンドポイントの `CalculateInvoiceRequest` に `discountRate` 追加 | 1h | - | [x] |
+| 3.4 | DB: `invoice` テーブルに `discount_rate` カラム追加（V3 マイグレーション） | 1h | - | [x] |
+| 3.5 | テスト: 割引計算・適用ロジックのユニットテスト | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -121,8 +121,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `InvoiceCalculatePage.tsx` に割引率入力フィールドを追加、割引後金額・根拠を表示 | 3h | - | [ ] |
-| 4.2 | `billing/types/billing.ts` に `discountRate` フィールド追加 | 1h | - | [ ] |
+| 4.1 | `InvoiceCalculatePage.tsx` に割引率入力フィールドを追加、割引後金額・根拠を表示 | 3h | - | [x] |
+| 4.2 | `billing/types/billing.ts` に `discountRate` フィールド追加 | 1h | - | [x] |
 
 **小計**: 4h（理想時間）
 
@@ -130,12 +130,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | ドメイン: `Invoice.settle(LocalDate paidAt)` メソッド追加（CONFIRMED → PAID 遷移） | 2h | - | [ ] |
-| 5.2 | ドメイン: `Invoice.markOverdue()` メソッド追加（CONFIRMED → OVERDUE 遷移） | 1h | - | [ ] |
-| 5.3 | アプリ: `SettleInvoiceCommand` + `InvoiceCommandService.settle()` 実装 | 2h | - | [ ] |
-| 5.4 | プレゼン: `POST /api/billing/v1/invoices/{invoiceId}/settle` エンドポイント追加 | 2h | - | [ ] |
-| 5.5 | DB: `invoice` テーブルに `paid_at` カラム追加（V4 マイグレーション） | 1h | - | [ ] |
-| 5.6 | テスト: settle・markOverdue のユニットテスト・コントローラーテスト | 2h | - | [ ] |
+| 5.1 | ドメイン: `Invoice.settle(LocalDate paidAt)` メソッド追加（CONFIRMED → PAID 遷移） | 2h | - | [x] |
+| 5.2 | ドメイン: `Invoice.markOverdue()` メソッド追加（CONFIRMED → OVERDUE 遷移） | 1h | - | [x] |
+| 5.3 | アプリ: `SettleInvoiceCommand` + `InvoiceCommandService.settle()` 実装 | 2h | - | [x] |
+| 5.4 | プレゼン: `POST /api/billing/v1/invoices/{invoiceId}/settle` エンドポイント追加 | 2h | - | [x] |
+| 5.5 | DB: `invoice` テーブルに `paid_at` カラム追加（V4 マイグレーション） | 1h | - | [x] |
+| 5.6 | テスト: settle・markOverdue のユニットテスト・コントローラーテスト | 2h | - | [x] |
 
 **小計**: 10h（理想時間）
 
@@ -143,10 +143,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 6.1 | `InvoiceSettlePage.tsx`: 精算書表示・入金確認ボタン実装 | 3h | - | [ ] |
-| 6.2 | `useBilling.ts` に `useSettleInvoice` hook 追加 | 2h | - | [ ] |
-| 6.3 | `billing/types/billing.ts` に `SettleInvoiceRequest`・`paidAt` 追加 | 1h | - | [ ] |
-| 6.4 | `App.tsx` に `/billing/settle/:invoiceId` ルート追加 | 1h | - | [ ] |
+| 6.1 | `InvoiceSettlePage.tsx`: 精算書表示・入金確認ボタン実装 | 3h | - | [x] |
+| 6.2 | `useBilling.ts` に `useSettleInvoice` hook 追加 | 2h | - | [x] |
+| 6.3 | `billing/types/billing.ts` に `SettleInvoiceRequest`・`paidAt` 追加 | 1h | - | [x] |
+| 6.4 | `App.tsx` に `/billing/settle/:invoiceId` ルート追加 | 1h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -155,12 +155,12 @@
 | カテゴリ | BE SP | FE SP | SP | 理想時間 | 状態 |
 |---------|-------|-------|----|---------|------|
 | US10 経路条件再算出 | 5 | 3 | 8 | 15h | [x] |
-| US22 法人割引 | 3 | 2 | 5 | 12h | [ ] |
-| US23 精算処理 | 5 | 3 | 8 | 17h | [ ] |
+| US22 法人割引 | 3 | 2 | 5 | 12h | [x] |
+| US23 精算処理 | 5 | 3 | 8 | 17h | [x] |
 | **合計** | **13** | **8** | **21** | **44h** | |
 
 **1 SP あたり**: 約 2.1h
-**進捗率**: 38% (8/21 SP)
+**進捗率**: 100% (21/21 SP)
 
 ---
 
