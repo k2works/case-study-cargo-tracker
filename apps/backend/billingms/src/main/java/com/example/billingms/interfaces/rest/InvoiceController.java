@@ -7,6 +7,7 @@ import com.example.billingms.domain.model.aggregates.InvoiceLineItem;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -32,7 +33,8 @@ public class InvoiceController {
                 request.shipperId(),
                 request.lineItems().stream()
                         .map(i -> new CalculateInvoiceCommand.LineItemInput(i.description(), i.amountValue()))
-                        .toList()
+                        .toList(),
+                request.discountRate()
         );
 
         Invoice invoice = invoiceCommandService.calculate(command);
@@ -58,6 +60,8 @@ public class InvoiceController {
                 invoice.getInvoiceNumber(),
                 invoice.getBookingId(),
                 invoice.getBaseAmount().toLong(),
+                invoice.getDiscountRate(),
+                invoice.getDiscountAmount().toLong(),
                 invoice.getFinalAmount().toLong(),
                 invoice.getFinalAmount().currency(),
                 invoice.getPaymentStatus().name(),
@@ -70,7 +74,8 @@ public class InvoiceController {
     record CalculateRequest(
             String bookingId,
             String shipperId,
-            List<LineItemInput> lineItems
+            List<LineItemInput> lineItems,
+            BigDecimal discountRate
     ) {}
 
     record LineItemInput(String description, long amountValue) {}
@@ -80,6 +85,8 @@ public class InvoiceController {
             String invoiceNumber,
             String bookingId,
             long baseAmountValue,
+            BigDecimal discountRate,
+            long discountAmountValue,
             long finalAmountValue,
             String currency,
             String paymentStatus,

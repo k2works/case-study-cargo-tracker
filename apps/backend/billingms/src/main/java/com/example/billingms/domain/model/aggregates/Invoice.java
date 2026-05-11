@@ -25,6 +25,8 @@ public class Invoice {
     private PaymentStatus paymentStatus;
     private final LocalDate issuedAt;
     private final LocalDate dueDate;
+    private BigDecimal discountRate;
+    private Money discountAmount;
     private final List<InvoiceLineItem> lineItems = new ArrayList<>();
 
     /** 新規作成コンストラクタ */
@@ -38,6 +40,8 @@ public class Invoice {
         this.baseAmount = Money.ofJpy(0);
         this.finalAmount = Money.ofJpy(0);
         this.taxRate = new BigDecimal("0.10");
+        this.discountRate = BigDecimal.ZERO;
+        this.discountAmount = Money.ofJpy(0);
         this.paymentStatus = PaymentStatus.PENDING;
         this.issuedAt = issuedAt;
         this.dueDate = dueDate;
@@ -52,6 +56,8 @@ public class Invoice {
         this.id = id;
         this.baseAmount = baseAmount;
         this.finalAmount = finalAmount;
+        this.discountRate = BigDecimal.ZERO;
+        this.discountAmount = Money.ofJpy(0);
         if (lineItems != null) {
             this.lineItems.addAll(lineItems);
         }
@@ -70,11 +76,22 @@ public class Invoice {
     }
 
     /**
-     * 最終金額を計算する（基本料金 + 消費税）
+     * 割引率を適用する（US22 法人割引）
+     */
+    public void applyDiscount(BigDecimal rate) {
+        Objects.requireNonNull(rate, "discountRate must not be null");
+        this.discountRate = rate;
+        this.discountAmount = baseAmount.multiply(rate);
+    }
+
+    /**
+     * 最終金額を計算する（割引後基本料金 + 消費税）
      */
     public Money calculateFinalAmount() {
-        Money tax = baseAmount.multiply(taxRate);
-        this.finalAmount = baseAmount.add(tax);
+        long discountedBaseAmount = baseAmount.toLong() - discountAmount.toLong();
+        Money discountedBase = Money.ofJpy(discountedBaseAmount);
+        Money tax = discountedBase.multiply(taxRate);
+        this.finalAmount = discountedBase.add(tax);
         return this.finalAmount;
     }
 
@@ -99,5 +116,7 @@ public class Invoice {
     public PaymentStatus getPaymentStatus() { return paymentStatus; }
     public LocalDate getIssuedAt() { return issuedAt; }
     public LocalDate getDueDate() { return dueDate; }
+    public BigDecimal getDiscountRate() { return discountRate; }
+    public Money getDiscountAmount() { return discountAmount; }
     public List<InvoiceLineItem> getLineItems() { return Collections.unmodifiableList(lineItems); }
 }

@@ -10,12 +10,14 @@
              base_amount_value, base_amount_currency,
              final_amount_value, final_amount_currency,
              tax_rate, tax_amount_value,
+             discount_rate, discount_amount,
              payment_status, issued_at, due_date, created_at, updated_at)
         VALUES
             (#{invoiceNumber}, #{bookingId}, #{shipperId},
              #{baseAmountValue}, #{baseAmountCurrency},
              #{finalAmountValue}, #{finalAmountCurrency},
              #{taxRate}, #{taxAmountValue},
+             #{discountRate}, #{discountAmountValue},
              #{paymentStatus}, #{issuedAt}, #{dueDate},
              CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
@@ -25,6 +27,7 @@
                base_amount_value, base_amount_currency,
                final_amount_value, final_amount_currency,
                tax_rate, tax_amount_value,
+               discount_rate, discount_amount AS discount_amount_value,
                payment_status, issued_at, due_date
         FROM invoice
         WHERE id = #{id}
@@ -35,6 +38,7 @@
                base_amount_value, base_amount_currency,
                final_amount_value, final_amount_currency,
                tax_rate, tax_amount_value,
+               discount_rate, discount_amount AS discount_amount_value,
                payment_status, issued_at, due_date
         FROM invoice
         WHERE booking_id = #{bookingId}

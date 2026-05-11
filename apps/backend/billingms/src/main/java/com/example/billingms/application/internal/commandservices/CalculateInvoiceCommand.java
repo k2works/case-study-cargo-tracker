@@ -1,5 +1,6 @@
 package com.example.billingms.application.internal.commandservices;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -8,7 +9,8 @@ import java.util.List;
 public record CalculateInvoiceCommand(
         String bookingId,
         String shipperId,
-        List<LineItemInput> lineItems
+        List<LineItemInput> lineItems,
+        BigDecimal discountRate
 ) {
     public record LineItemInput(String description, long amountValue) {}
 }

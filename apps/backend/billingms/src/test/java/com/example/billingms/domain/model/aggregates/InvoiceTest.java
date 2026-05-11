@@ -5,6 +5,7 @@ import com.example.billingms.domain.model.valueobjects.PaymentStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +49,42 @@ class InvoiceTest {
         invoice.confirm();
 
         assertThat(invoice.getPaymentStatus()).isEqualTo(PaymentStatus.CONFIRMED);
+    }
+
+    @Test
+    @DisplayName("割引率を適用すると割引後の基本料金が設定される")
+    void shouldApplyDiscountToBaseAmount() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+
+        invoice.applyDiscount(new BigDecimal("0.10"));
+
+        assertThat(invoice.getDiscountRate()).isEqualByComparingTo(new BigDecimal("0.10"));
+        assertThat(invoice.getDiscountAmount().toLong()).isEqualTo(10_000L);
+    }
+
+    @Test
+    @DisplayName("割引適用後の最終金額に割引が反映される")
+    void shouldCalculateFinalAmountWithDiscount() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        invoice.applyDiscount(new BigDecimal("0.10"));
+
+        Money finalAmount = invoice.calculateFinalAmount();
+
+        // 割引後基本料金 90,000 + 消費税 9,000 = 99,000
+        assertThat(finalAmount.toLong()).isEqualTo(99_000L);
+    }
+
+    @Test
+    @DisplayName("割引率が 0 の場合は割引が適用されない")
+    void shouldNotApplyDiscountWhenRateIsZero() {
+        Invoice invoice = createInvoice();
+        invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        invoice.applyDiscount(BigDecimal.ZERO);
+
+        assertThat(invoice.getDiscountAmount().toLong()).isEqualTo(0L);
+        assertThat(invoice.calculateFinalAmount().toLong()).isEqualTo(110_000L);
     }
 
     @Test

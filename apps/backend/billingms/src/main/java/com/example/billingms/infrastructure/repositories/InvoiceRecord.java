@@ -19,6 +19,8 @@ public class InvoiceRecord {
     private String finalAmountCurrency;
     private BigDecimal taxRate;
     private Long taxAmountValue;
+    private BigDecimal discountRate;
+    private Long discountAmountValue;
     private String paymentStatus;
     private LocalDate issuedAt;
     private LocalDate dueDate;
@@ -54,6 +56,12 @@ public class InvoiceRecord {
 
     public Long getTaxAmountValue() { return taxAmountValue; }
     public void setTaxAmountValue(Long taxAmountValue) { this.taxAmountValue = taxAmountValue; }
+
+    public BigDecimal getDiscountRate() { return discountRate; }
+    public void setDiscountRate(BigDecimal discountRate) { this.discountRate = discountRate; }
+
+    public Long getDiscountAmountValue() { return discountAmountValue; }
+    public void setDiscountAmountValue(Long discountAmountValue) { this.discountAmountValue = discountAmountValue; }
 
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }

@@ -7,6 +7,7 @@ import com.example.billingms.domain.ports.InvoiceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,6 +46,10 @@ public class InvoiceCommandService {
                     Money.ofJpy(item.amountValue()),
                     seq.getAndIncrement()
             ));
+        }
+        BigDecimal rate = command.discountRate() != null ? command.discountRate() : BigDecimal.ZERO;
+        if (rate.compareTo(BigDecimal.ZERO) > 0) {
+            invoice.applyDiscount(rate);
         }
         invoice.calculateFinalAmount();
 
