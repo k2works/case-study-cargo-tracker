@@ -18,6 +18,7 @@ import { TrackingExceptionPage } from './pages/TrackingExceptionPage'
 import { RoutingAssignmentPage } from './pages/RoutingAssignmentPage'
 import { InvoiceCalculatePage } from './pages/InvoiceCalculatePage'
 import { RouteSpecUpdatePage } from './pages/RouteSpecUpdatePage'
+import { InvoiceSettlePage } from './pages/InvoiceSettlePage'
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/tracking" element={<TrackingPage />} />
           <Route path="/routing/assignments" element={<RoutingAssignmentPage />} />
           <Route path="/billing/calculate" element={<InvoiceCalculatePage />} />
+          <Route path="/billing/settle" element={<InvoiceSettlePage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

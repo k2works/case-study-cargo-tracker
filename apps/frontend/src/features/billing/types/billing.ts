@@ -28,5 +28,6 @@ export interface InvoiceResponse {
   paymentStatus: string
   issuedAt: string
   dueDate: string
+  paidAt?: string
   lineItems: LineItemResponse[]
 }

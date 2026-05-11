@@ -15,3 +15,10 @@ export function useConfirmInvoice() {
       apiClient.post<InvoiceResponse>(`/api/billing/v1/invoices/${invoiceId}/confirm`, {}),
   })
 }
+
+export function useSettleInvoice() {
+  return useMutation({
+    mutationFn: (invoiceId: number) =>
+      apiClient.post<InvoiceResponse>(`/api/billing/v1/invoices/${invoiceId}/settle`, {}),
+  })
+}
