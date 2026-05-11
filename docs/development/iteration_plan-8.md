@@ -77,14 +77,14 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.0a | **[リファクタリング]** BE: `TrackingExceptionController` のレスポンスを `Map<String, Object>` から DTO（record）に変更する（IT7 レビュー M1） | 0.5h | - | [ ] |
-| 1.0b | **[TDD]** BE: `addException()` に前状態ガード追加（CLAIMED 等の完了状態からは例外追加不可）（IT7 レビュー M2） | 0.5h | - | [ ] |
-| 1.0c | **[TDD]** BE: `respond()` メソッドに responseContent の null/空文字バリデーション追加（IT7 レビュー M3） | 0.5h | - | [ ] |
-| 1.1 | **[TDD]** BE: IT7 で構築した `TrackingExceptionEvent` を活用し、DAMAGE・LOST 種別での例外記録ロジックを実装する | 1h | - | [ ] |
-| 1.2 | **[TDD]** BE: DAMAGE 時に損傷詳細フィールド（damageDescription・photoUrl）を追加・保存する | 1.5h | - | [ ] |
-| 1.3 | **[TDD]** BE: LOST 時に最終確認場所・最終確認日時フィールドを追加・保存する | 1h | - | [ ] |
-| 1.4 | BE: DB マイグレーション（tracking_exception_event テーブルに damage_description・photo_url・last_known_location・last_seen_at カラム追加） | 0.5h | - | [ ] |
-| 1.5 | **[TDD]** FE: 例外記録画面で DAMAGE・LOST 選択時に種別固有フィールドを動的表示する | 2h | - | [ ] |
+| 1.0a | **[リファクタリング]** BE: `TrackingExceptionController` のレスポンスを `Map<String, Object>` から DTO（record）に変更する（IT7 レビュー M1） | 0.5h | - | [x] |
+| 1.0b | **[TDD]** BE: `addException()` に前状態ガード追加（CLAIMED 等の完了状態からは例外追加不可）（IT7 レビュー M2） | 0.5h | - | [x] |
+| 1.0c | **[TDD]** BE: `respond()` メソッドに responseContent の null/空文字バリデーション追加（IT7 レビュー M3） | 0.5h | - | [x] |
+| 1.1 | **[TDD]** BE: IT7 で構築した `TrackingExceptionEvent` を活用し、DAMAGE・LOST 種別での例外記録ロジックを実装する | 1h | - | [x] |
+| 1.2 | **[TDD]** BE: DAMAGE 時に損傷詳細フィールド（damageDescription・photoUrl）を追加・保存する | 1.5h | - | [x] |
+| 1.3 | **[TDD]** BE: LOST 時に最終確認場所・最終確認日時フィールドを追加・保存する | 1h | - | [x] |
+| 1.4 | BE: DB マイグレーション（tracking_exception_event テーブルに damage_description・photo_url・last_known_location・last_seen_at カラム追加） | 0.5h | - | [x] |
+| 1.5 | **[TDD]** FE: 例外記録画面で DAMAGE・LOST 選択時に種別固有フィールドを動的表示する | 2h | - | [x] |
 | 1.6 | FE: US20 の FE テストを追加する | 1h | - | [ ] |
 
 **小計**: 8.5h（理想時間）
@@ -93,12 +93,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | **[TDD]** BE: `billingms` マイクロサービスの雛形を構築する（Spring Boot アプリケーション・DB 接続・MyBatis 設定） | 1.5h | - | [ ] |
-| 2.2 | **[TDD]** BE: `Invoice` 集約ルート・`InvoiceLineItem`・`Money` 値オブジェクトを実装する | 1.5h | - | [ ] |
-| 2.3 | **[TDD]** BE: 料金算出ロジック（`calculateFinalAmount()`）を実装する | 1.5h | - | [ ] |
-| 2.4 | **[TDD]** BE: 料金算出 API（POST /api/billing/v1/invoices/calculate）と料金確定 API（POST /api/billing/v1/invoices/{invoiceId}/confirm）を実装する | 1.5h | - | [ ] |
-| 2.5 | BE: DB マイグレーション（invoice・invoice_line_item テーブル作成） | 0.5h | - | [ ] |
-| 2.6 | **[TDD]** FE: 料金算出画面（予約 ID 入力・内訳表示・確定ボタン）を実装する | 2h | - | [ ] |
+| 2.1 | **[TDD]** BE: `billingms` マイクロサービスの雛形を構築する（Spring Boot アプリケーション・DB 接続・MyBatis 設定） | 1.5h | - | [x] |
+| 2.2 | **[TDD]** BE: `Invoice` 集約ルート・`InvoiceLineItem`・`Money` 値オブジェクトを実装する | 1.5h | - | [x] |
+| 2.3 | **[TDD]** BE: 料金算出ロジック（`calculateFinalAmount()`）を実装する | 1.5h | - | [x] |
+| 2.4 | **[TDD]** BE: 料金算出 API（POST /api/billing/v1/invoices/calculate）と料金確定 API（POST /api/billing/v1/invoices/{invoiceId}/confirm）を実装する | 1.5h | - | [x] |
+| 2.5 | BE: DB マイグレーション（invoice・invoice_line_item テーブル作成） | 0.5h | - | [x] |
+| 2.6 | **[TDD]** FE: 料金算出画面（予約 ID 入力・内訳表示・確定ボタン）を実装する | 2h | - | [x] |
 | 2.7 | FE: US21 の FE テストを追加する | 1h | - | [ ] |
 
 **小計**: 9.5h（理想時間）
@@ -107,12 +107,12 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US20: 破損・紛失例外処理（IT7 レビュー対応含む） | 8 | 8.5h | [ ] |
-| US21: 輸送料金算出 | 8 | 9.5h | [ ] |
+| US20: 破損・紛失例外処理（IT7 レビュー対応含む） | 8 | 8.5h | [x] FE テスト（1.6）のみ残 |
+| US21: 輸送料金算出 | 8 | 9.5h | [x] FE テスト（2.7）のみ残 |
 | **合計** | **16** | **18h** | |
 
 **1 SP あたり**: 約 1.1h
-**進捗率**: 0% (0/16 SP)
+**進捗率**: 93% (14.5/16 SP、FE テスト 1.6・2.7 のみ残)
 
 ---
 
