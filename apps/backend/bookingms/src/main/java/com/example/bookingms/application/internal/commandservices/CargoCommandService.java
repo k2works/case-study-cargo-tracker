@@ -117,11 +117,12 @@ public class CargoCommandService {
         cargo.confirm();
         cargoRepository.update(cargo);
 
+        var spec = cargo.getRouteSpecification();
         cargoEventPublisher.publishCargoAssignedForRouting(new CargoAssignedForRoutingEvent(
                 cargo.getBookingId().getId(),
-                cargo.getRouteSpecification().getOriginUnlocode(),
-                cargo.getRouteSpecification().getDestinationUnlocode(),
-                cargo.getRouteSpecification().getArrivalDeadline().toString()
+                spec.getOriginUnlocode(),
+                spec.getDestinationUnlocode(),
+                spec.getArrivalDeadline() != null ? spec.getArrivalDeadline().toString() : null
         ));
 
         return cargo;
@@ -158,11 +159,12 @@ public class CargoCommandService {
         cargo.updateRouteSpec(newSpec);
         cargoRepository.update(cargo);
 
+        var updatedSpec = cargo.getRouteSpecification();
         cargoEventPublisher.publishCargoAssignedForRouting(new CargoAssignedForRoutingEvent(
                 cargo.getBookingId().getId(),
-                cargo.getRouteSpecification().getOriginUnlocode(),
-                cargo.getRouteSpecification().getDestinationUnlocode(),
-                cargo.getRouteSpecification().getArrivalDeadline().toString()
+                updatedSpec.getOriginUnlocode(),
+                updatedSpec.getDestinationUnlocode(),
+                updatedSpec.getArrivalDeadline() != null ? updatedSpec.getArrivalDeadline().toString() : null
         ));
 
         return cargo;
