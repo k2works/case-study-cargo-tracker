@@ -20,17 +20,18 @@ export function RoutingDesignPage() {
   const { mutate: searchItineraries, data: itineraries, isPending: isSearching, isError: isSearchError } = useItineraries()
   const { mutate: assignRoute, isPending: isAssigning } = useAssignRoute(bookingId ?? '')
 
-  if (!bookingId) {
-    return <Navigate to="/routing/assignments" replace />
-  }
-
   useEffect(() => {
+    if (!bookingId) return
     searchItineraries({
       originUnlocode: DEFAULT_ORIGIN,
       destinationUnlocode: DEFAULT_DESTINATION,
       arrivalDeadline: null,
     })
-  }, [])
+  }, [bookingId, searchItineraries])
+
+  if (!bookingId) {
+    return <Navigate to="/routing/assignments" replace />
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
