@@ -55,5 +55,7 @@ export class BookingPage {
     await this.page.locator('.cursor-pointer').first().click();
     // 「この経路を割り当てる」ボタンをクリック
     await this.page.getByRole('button', { name: 'この経路を割り当てる' }).click();
+    // 割り当て後に予約詳細ページへリダイレクトされるまで待機
+    await this.page.waitForURL(/\/bookings\/.+/, { timeout: 10000 });
   }
 }

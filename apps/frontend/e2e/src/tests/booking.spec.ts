@@ -45,14 +45,19 @@ test.describe('貨物予約管理', () => {
   test('予約→経路割り当て→予約確定の一連フローが動作すること', async ({ page, loggedIn }) => {
     const bookingPage = new BookingPage(page);
 
-    // 1. 新規予約を登録する
+    // 1. 新規予約を登録する（登録後は /bookings に遷移する）
     await page.goto('/bookings/new');
     await bookingPage.fillBookingForm('JPTYO', 'CNSHA');
-    await bookingPage.submitForm();
-    await expect(page).toHaveURL('/bookings');
+    // フォーム送信後に詳細ページへの URL を確保するため、ナビゲーションを待機する
+    await Promise.all([
+      page.waitForURL('/bookings'),
+      bookingPage.submitForm(),
+    ]);
 
-    // 2. 仮予約の詳細ページへ遷移する
+    // 2. 一覧から自分が登録した最新の仮予約詳細ページへ直接遷移する
     await bookingPage.clickFirstPreliminaryBooking();
+    // URL から bookingId を取得
+    const bookingDetailUrl = page.url();
     await expect(page.getByRole('heading', { name: /予約詳細/ })).toBeVisible();
     await expect(page.getByText('仮予約')).toBeVisible();
 
@@ -64,8 +69,8 @@ test.describe('貨物予約管理', () => {
     await bookingPage.searchAndAssignRoute('JPTYO', 'CNSHA');
 
     // 5. 予約詳細ページに戻り「経路提案済み」に変わっていることを確認
-    await expect(page).toHaveURL(/\/bookings\/.+/);
-    await expect(page.getByText('経路提案済み')).toBeVisible();
+    // waitForURL は BookingPage.searchAndAssignRoute 内で実行済み
+    await expect(page.getByText('経路提案済み')).toBeVisible({ timeout: 10000 });
 
     // 6. 「予約を確定する」ボタンをクリックする
     await page.getByRole('button', { name: '予約を確定する' }).click();
