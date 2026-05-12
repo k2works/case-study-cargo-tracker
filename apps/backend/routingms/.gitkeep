@@ -1,0 +1,4 @@
+# 経路計算マイクロサービス（routingms）配置予定地
+#
+# Phase 0 では雛形のみ。実装は Phase 1 で開始する。
+# 参照: docs/design/architecture_backend.md

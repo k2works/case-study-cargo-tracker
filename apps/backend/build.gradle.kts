@@ -1,0 +1,39 @@
+// 国際貨物輸送管理システム ルートビルドスクリプト
+//
+// ルートプロジェクトには java プラグインを適用しない（ルートにソースを置かないため）。
+// サブプロジェクトに共通設定を流し込み、サービス固有設定は各 build.gradle.kts に記述する。
+
+import org.gradle.api.plugins.JavaPluginExtension
+
+allprojects {
+    group = "com.example.cargotracker"
+    version = "0.1.0-SNAPSHOT"
+
+    // repositories はここでは宣言しない。
+    // settings.gradle.kts の dependencyResolutionManagement.repositories に一元化されており、
+    // FAIL_ON_PROJECT_REPOS が有効なため、プロジェクト側で宣言すると build が失敗する。
+}
+
+subprojects {
+    apply(plugin = "java")
+
+    // `subprojects { java { ... } }` の型付きアクセサは Kotlin DSL では解決できないため
+    // `configure<JavaPluginExtension>` で明示的に拡張に触れる。
+    configure<JavaPluginExtension> {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(25))
+        }
+    }
+
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+        testLogging {
+            events("passed", "skipped", "failed")
+        }
+    }
+
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+        options.compilerArgs.addAll(listOf("-Xlint:unchecked", "-Xlint:deprecation"))
+    }
+}

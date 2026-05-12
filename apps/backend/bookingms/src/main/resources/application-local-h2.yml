@@ -1,0 +1,16 @@
+# ローカル開発：H2 インメモリ + Axon ダミー
+#
+# 用途: IDE 起動・最速 TDD ループ。
+# Axon Server は接続できないため bootRun 起動時にリトライログが出るが、
+# ヘルスチェック自体は H2 のみで成立する。
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:bookingms;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
