@@ -16,7 +16,7 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| データモデル設計 | 概念・論理データモデル、テーブル定義、ER 図を整理 | 未作成 |
+| [データモデル設計](data-model.md) | Database per Service の概念・物理データモデル、Event Store / Read Model / Auth DB の ER 図とテーブル定義（Axon 5 / PostgreSQL） | 作成済み |
 | [ドメインモデル設計](domain-model.md) | 7 コンテキストの集約・値オブジェクト・ドメインイベント・コマンド・Saga（Axon 5 対応、過去レビュー指摘事項 28 件を反映） | 作成済み |
 
 ### UI/UX設計
