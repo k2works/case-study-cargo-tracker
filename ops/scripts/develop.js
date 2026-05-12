@@ -107,6 +107,11 @@ export default function developTasks(gulp) {
             spawnGradle([`:${svc.name}:bootRun`, "--args='--spring.profiles.active=product'"], done);
         });
 
+        gulp.task(`dev:backend:local-prod:${svc.name}`, (done) => {
+            console.log(`Starting ${svc.label} (${svc.name}, local-prod profile / Local PostgreSQL:5442)...`);
+            spawnGradle([`:${svc.name}:bootRun`, "--args='--spring.profiles.active=local-prod'"], done);
+        });
+
         gulp.task(`dev:backend:tdd:${svc.name}`, (done) => {
             console.log(`TDD mode: ${svc.label} (${svc.name})...`);
             spawnGradle([`:${svc.name}:test`, '--continuous'], done);
@@ -152,6 +157,7 @@ export default function developTasks(gulp) {
     // 全サービス集約タスク（ループ後に定義）
     gulp.task('dev:backend', gulp.parallel(...SERVICES.map(svc => `dev:backend:${svc.name}`)));
     gulp.task('dev:backend:product', gulp.parallel(...SERVICES.map(svc => `dev:backend:product:${svc.name}`)));
+    gulp.task('dev:backend:local-prod', gulp.parallel(...SERVICES.map(svc => `dev:backend:local-prod:${svc.name}`)));
 
     // ----------------------------------------
     // バックエンド: テスト（全サービス）
@@ -326,8 +332,9 @@ export default function developTasks(gulp) {
 ╚══════════════════════════════════════════════════════════════╝
 
   バックエンド（全サービス）:
-    dev:backend                  全サービス起動（並列 / H2）
-    dev:backend:product          全サービス起動（並列 / PostgreSQL）
+    dev:backend                  全サービス起動（並列 / H2 メモリ DB）
+    dev:backend:local-prod       全サービス起動（並列 / ローカル PostgreSQL:5442・本番擬似検証）
+    dev:backend:product          全サービス起動（並列 / クラウド本番想定・環境変数で接続先注入）
     dev:backend:tdd              TDD モード（全サービス / テスト自動再実行）
     dev:backend:test             テスト実行 + カバレッジ（全サービス）
     dev:backend:build            ビルド（全サービス）
@@ -335,15 +342,16 @@ export default function developTasks(gulp) {
     dev:backend:clean            ビルド成果物削除（全サービス）
 
   バックエンド（個別サービス）:
-    dev:backend:{service}            個別サービス起動（H2）
-    dev:backend:product:{service}    個別サービス起動（PostgreSQL）
-    dev:backend:tdd:{service}        個別サービス TDD モード
-    dev:backend:test:{service}       個別サービス テスト + カバレッジ
-    dev:backend:build:{service}      個別サービス ビルド
-    dev:backend:check:{service}      個別サービス 品質チェック
-    dev:backend:clean:{service}      個別サービス クリーン
-                                     {service}: gatewayms|authms|bookingms|routingms|
-                                                trackingms|handlingms|billingms
+    dev:backend:{service}              個別サービス起動（H2 メモリ DB）
+    dev:backend:local-prod:{service}   個別サービス起動（ローカル PostgreSQL:5442）
+    dev:backend:product:{service}      個別サービス起動（クラウド本番想定）
+    dev:backend:tdd:{service}          個別サービス TDD モード
+    dev:backend:test:{service}         個別サービス テスト + カバレッジ
+    dev:backend:build:{service}        個別サービス ビルド
+    dev:backend:check:{service}        個別サービス 品質チェック
+    dev:backend:clean:{service}        個別サービス クリーン
+                                       {service}: gatewayms|authms|bookingms|routingms|
+                                                  trackingms|handlingms|billingms
 
   フロントエンド:
     dev:frontend                 開発サーバー起動（port 3000）

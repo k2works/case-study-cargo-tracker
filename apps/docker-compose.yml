@@ -6,8 +6,9 @@ services:
       POSTGRES_USER: cargo_tracker
       POSTGRES_PASSWORD: cargo_tracker
       POSTGRES_DB: cargo_tracker
+    # ホスト側 5432 は他プロジェクト（sms-postgres 等）と競合しやすいため 5442 で公開する
     ports:
-      - "5432:5432"
+      - "5442:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
