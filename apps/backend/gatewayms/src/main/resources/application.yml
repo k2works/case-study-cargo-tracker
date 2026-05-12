@@ -26,7 +26,10 @@ spring:
               predicates:
                 - Path=/api/tracking/**
             - id: handlingms
-              uri: ${HANDLINGMS_URL:http://localhost:8085}
+              # NOTE: 現状 HandlingActivityController は trackingms に同居している。
+              # handlingms (8085) はスケルトンのみで未実装のため、暫定的に trackingms に向ける。
+              # handlingms 独立後は HANDLINGMS_URL の既定値を 8085 に戻す。
+              uri: ${HANDLINGMS_URL:http://localhost:8084}
               predicates:
                 - Path=/api/handling/**
             - id: billingms
