@@ -126,6 +126,32 @@ function docker(command, options = {}) {
 }
 
 /**
+ * CloudAMQP URL（amqp://user:pass@host:port/vhost あるいは amqps:// 版）を
+ * Spring Boot 互換の個別環境変数に分解する。
+ * Heroku CloudAMQP は単一 URL を提供するが、application-product.yml は
+ * RABBITMQ_HOST / RABBITMQ_PORT / RABBITMQ_USERNAME / RABBITMQ_PASSWORD / RABBITMQ_VIRTUAL_HOST /
+ * RABBITMQ_SSL_ENABLED で接続情報を読むため、ここで分解して個別変数に橋渡しする。
+ *
+ * @param {string} amqpUrl - amqp:// または amqps:// 形式の URL
+ * @returns {{host: string, port: string, username: string, password: string, vhost: string, sslEnabled: string}}
+ */
+function parseAmqpUrl(amqpUrl) {
+    const url = new URL(amqpUrl);
+    const sslEnabled = url.protocol === 'amqps:';
+    const port = url.port || (sslEnabled ? '5671' : '5672');
+    // pathname は '/vhost' 形式。先頭スラッシュを除去し、URL デコード（vhost は '/' 等が % エスケープされて来る）
+    const vhost = decodeURIComponent(url.pathname.replace(/^\//, '') || '/');
+    return {
+        host: url.hostname,
+        port,
+        username: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+        vhost,
+        sslEnabled: sslEnabled ? 'true' : 'false',
+    };
+}
+
+/**
  * Heroku アプリに紐づく CloudAMQP アドオン一覧を取得する
  * @param {string} app - Heroku アプリ名
  * @returns {Array<{name: string, plan?: {name?: string}}>} CloudAMQP アドオン一覧
@@ -217,22 +243,43 @@ export default function deployDevTasks(gulp) {
         const billingUrl = appWebUrl(billingApp);
 
         // バックエンドサービス共通設定
+        // SPRING_PROFILES_ACTIVE=product を設定して application-product.yml を有効化する。
+        // 未設定だと default プロファイル（H2 メモリ DB・localhost RabbitMQ 既定値）で起動して
+        // Heroku 上の CloudAMQP に接続できない。
+        //
+        // JAVA_OPTS は Heroku Eco/Basic dyno（512MB）に収めるための設定:
+        //   - MaxRAMPercentage=50.0: ヒープ上限を約 256MB に抑え、JVM 非ヒープ領域とのバランスを取る
+        //   - ReservedCodeCacheSize=64m: コードキャッシュを 64MB に制限
+        //   - MaxMetaspaceSize=128m: メタスペース上限を 128MB に制限
+        //   - 文字エンコーディング・タイムゾーンの明示
+        const javaOpts = [
+            '-XX:MaxRAMPercentage=50.0',
+            '-XX:ReservedCodeCacheSize=64m',
+            '-XX:MaxMetaspaceSize=128m',
+            '-Dfile.encoding=UTF-8',
+            '-Duser.timezone=Asia/Tokyo',
+        ].join(' ');
         for (const svc of BACKEND_SERVICES) {
             const name = appName(svc.name);
             console.log(`Config Vars を設定します (${name})...`);
             try {
-                heroku(`config:set JAVA_OPTS="-XX:MaxRAMPercentage=75.0" -a ${name}`);
+                heroku(`config:set JAVA_OPTS="${javaOpts}" SPRING_PROFILES_ACTIVE=product -a ${name}`);
             } catch (e) {
                 console.warn(`  ${name} の設定をスキップしました: ${e.message}`);
             }
         }
 
         // Gateway: 各マイクロサービスのルーティング先 URL を設定
+        // NOTE: 現状 HandlingActivityController は trackingms に同居しているため、
+        //       HANDLINGMS_URL は handlingms (スケルトン) ではなく trackingms に向ける。
+        //       handlingms 独立後は HANDLINGMS_URL=${handlingUrl} に戻す。
+        //       handlingUrl 変数は手順の対称性維持のために計算したまま残し、ログにのみ出す。
         console.log(`Gateway のルーティング先を設定します (${gatewayApp})...`);
+        console.log(`  HANDLINGMS_URL を暫定的に trackingms (${trackingUrl}) に向けます（handlingms: ${handlingUrl} は未実装）。`);
         try {
             heroku(
                 `config:set AUTHMS_URL=${authUrl} BOOKINGMS_URL=${bookingUrl} ROUTINGMS_URL=${routingUrl} ` +
-                `TRACKINGMS_URL=${trackingUrl} HANDLINGMS_URL=${handlingUrl} BILLINGMS_URL=${billingUrl} -a ${gatewayApp}`,
+                `TRACKINGMS_URL=${trackingUrl} HANDLINGMS_URL=${trackingUrl} BILLINGMS_URL=${billingUrl} -a ${gatewayApp}`,
             );
         } catch (e) {
             console.warn(`  ${gatewayApp} のルーティング設定をスキップしました: ${e.message}`);
@@ -274,7 +321,10 @@ export default function deployDevTasks(gulp) {
         done();
     });
 
-    // CloudAMQP URL をプライマリから取得し、他のメッセージングサービスに共有
+    // CloudAMQP URL をプライマリから取得し、Spring Boot 互換の個別変数に分解して
+    // 全メッセージングサービス（プライマリ含む）に設定する。
+    // application-product.yml は RABBITMQ_HOST / PORT / USERNAME / PASSWORD / VIRTUAL_HOST を読むため、
+    // 単一の CLOUDAMQP_URL のままでは spring.rabbitmq に渡らず localhost にフォールバックしてしまう。
     gulp.task('deploy:dev:amqp:share', (done) => {
         const primary = appName(CLOUDAMQP_PRIMARY);
         console.log(`CloudAMQP URL を ${primary} から取得します...`);
@@ -294,17 +344,35 @@ export default function deployDevTasks(gulp) {
             return;
         }
 
-        console.log(`CLOUDAMQP_URL を取得しました。メッセージングサービスに設定します...`);
+        let parsed;
+        try {
+            parsed = parseAmqpUrl(amqpUrl);
+        } catch (e) {
+            done(new Error(`CLOUDAMQP_URL のパースに失敗しました: ${e.message}`));
+            return;
+        }
+
+        console.log(
+            `CLOUDAMQP_URL を分解しました` +
+            `（host=${parsed.host}, port=${parsed.port}, vhost=${parsed.vhost}, ssl=${parsed.sslEnabled}）。`,
+        );
+        console.log('全メッセージングサービスに個別環境変数として設定します...');
 
         for (const svcName of MESSAGING_SERVICES) {
-            if (svcName === CLOUDAMQP_PRIMARY) {
-                console.log(`  ${svcName}: プライマリアプリ（アドオン直接参照）- スキップ`);
-                continue;
-            }
             const name = appName(svcName);
-            console.log(`  ${name} に CLOUDAMQP_URL を設定します...`);
+            console.log(`  ${name} に RABBITMQ_* / CLOUDAMQP_URL を設定します...`);
             try {
-                heroku(`config:set CLOUDAMQP_URL="${amqpUrl}" -a ${name}`);
+                heroku(
+                    `config:set ` +
+                    `CLOUDAMQP_URL="${amqpUrl}" ` +
+                    `RABBITMQ_HOST="${parsed.host}" ` +
+                    `RABBITMQ_PORT="${parsed.port}" ` +
+                    `RABBITMQ_USERNAME="${parsed.username}" ` +
+                    `RABBITMQ_PASSWORD="${parsed.password}" ` +
+                    `RABBITMQ_VIRTUAL_HOST="${parsed.vhost}" ` +
+                    `RABBITMQ_SSL_ENABLED="${parsed.sslEnabled}" ` +
+                    `-a ${name}`,
+                );
             } catch (e) {
                 console.warn(`    ${name} の設定をスキップしました: ${e.message}`);
             }
