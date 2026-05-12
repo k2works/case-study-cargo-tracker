@@ -33,10 +33,6 @@ class TrackingExceptionControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private static final String SETUP_SQL_INSERT_ACTIVITY =
-            "INSERT INTO tracking_activity (tracking_number, booking_id, transport_status, created_at, updated_at) " +
-            "VALUES ('TRK-000001', 'BK-001234', 'LOADED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-
     @Test
     @DisplayName("POST /exceptions — 遅延例外を記録すると 200 で EXCEPTION 状態が返る")
     @Sql(statements = {

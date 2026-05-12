@@ -41,26 +41,31 @@ public class CargoCommandService {
     }
 
     /**
+     * 予約登録コマンド
+     */
+    public record RegisterBookingCommand(Long shipperId, String cargoType, BigDecimal weightKg,
+                                          String originUnlocode, String destinationUnlocode,
+                                          LocalDate arrivalDeadline,
+                                          HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {}
+
+    /**
      * 貨物予約を登録する
      */
     @Transactional
-    public Cargo registerBooking(Long shipperId, String cargoType, BigDecimal weightKg,
-                                  String originUnlocode, String destinationUnlocode,
-                                  LocalDate arrivalDeadline,
-                                  HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
+    public Cargo registerBooking(RegisterBookingCommand command) {
         BookingId bookingId = new BookingId(generateBookingId());
-        Weight weight = new Weight(weightKg);
-        CargoType type = CargoType.valueOf(cargoType);
-        RouteSpecification spec = new RouteSpecification(originUnlocode, destinationUnlocode, arrivalDeadline);
+        Weight weight = new Weight(command.weightKg());
+        CargoType type = CargoType.valueOf(command.cargoType());
+        RouteSpecification spec = new RouteSpecification(command.originUnlocode(), command.destinationUnlocode(), command.arrivalDeadline());
 
-        if (type == CargoType.HAZARDOUS && hazmatInfo == null) {
+        if (type == CargoType.HAZARDOUS && command.hazmatInfo() == null) {
             throw new IllegalArgumentException("危険物貨物には危険物申告情報が必須です");
         }
-        if (type == CargoType.REFRIGERATED && temperatureInfo == null) {
+        if (type == CargoType.REFRIGERATED && command.temperatureInfo() == null) {
             throw new IllegalArgumentException("冷凍・冷蔵貨物には温度管理条件が必須です");
         }
 
-        Cargo cargo = new Cargo(bookingId, shipperId, type, weight, spec, hazmatInfo, temperatureInfo);
+        Cargo cargo = new Cargo(bookingId, command.shipperId(), type, weight, spec, command.hazmatInfo(), command.temperatureInfo());
         return cargoRepository.save(cargo);
     }
 

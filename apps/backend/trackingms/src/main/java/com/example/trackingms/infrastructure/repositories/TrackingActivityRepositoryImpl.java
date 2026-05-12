@@ -104,12 +104,12 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
             if (exception.getId() == null) {
                 insertExceptionRecord(activity.getId(), exception);
             } else if (exception.hasBeenResponded()) {
-                TrackingExceptionEventRecord record = new TrackingExceptionEventRecord();
-                record.setId(exception.getId());
-                record.setResponseContent(exception.getResponseContent());
-                record.setNewEstimatedArrival(exception.getNewEstimatedArrival());
-                record.setStatus(exception.getStatus().name());
-                exceptionMapper.updateExceptionResponse(record);
+                TrackingExceptionEventRecord responseRecord = new TrackingExceptionEventRecord();
+                responseRecord.setId(exception.getId());
+                responseRecord.setResponseContent(exception.getResponseContent());
+                responseRecord.setNewEstimatedArrival(exception.getNewEstimatedArrival());
+                responseRecord.setStatus(exception.getStatus().name());
+                exceptionMapper.updateExceptionResponse(responseRecord);
             }
         }
     }
@@ -120,21 +120,21 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
     }
 
     private void insertExceptionRecord(Long trackingId, TrackingExceptionEvent exception) {
-        TrackingExceptionEventRecord record = new TrackingExceptionEventRecord();
-        record.setTrackingId(trackingId);
-        record.setExceptionType(exception.getExceptionType().name());
-        record.setOccurredAt(exception.getOccurredAt());
-        record.setLocationUnlocode(exception.getLocationUnlocode());
-        record.setReason(exception.getReason());
-        record.setEscalationFlag(exception.isEscalationFlag());
-        record.setResponseContent(exception.getResponseContent());
-        record.setNewEstimatedArrival(exception.getNewEstimatedArrival());
-        record.setStatus(exception.getStatus().name());
-        record.setDamageDescription(exception.getDamageDescription());
-        record.setPhotoUrl(exception.getPhotoUrl());
-        record.setLastKnownLocation(exception.getLastKnownLocation());
-        record.setLastSeenAt(exception.getLastSeenAt());
-        exceptionMapper.insertException(record);
+        TrackingExceptionEventRecord exceptionRecord = new TrackingExceptionEventRecord();
+        exceptionRecord.setTrackingId(trackingId);
+        exceptionRecord.setExceptionType(exception.getExceptionType().name());
+        exceptionRecord.setOccurredAt(exception.getOccurredAt());
+        exceptionRecord.setLocationUnlocode(exception.getLocationUnlocode());
+        exceptionRecord.setReason(exception.getReason());
+        exceptionRecord.setEscalationFlag(exception.isEscalationFlag());
+        exceptionRecord.setResponseContent(exception.getResponseContent());
+        exceptionRecord.setNewEstimatedArrival(exception.getNewEstimatedArrival());
+        exceptionRecord.setStatus(exception.getStatus().name());
+        exceptionRecord.setDamageDescription(exception.getDamageDescription());
+        exceptionRecord.setPhotoUrl(exception.getPhotoUrl());
+        exceptionRecord.setLastKnownLocation(exception.getLastKnownLocation());
+        exceptionRecord.setLastSeenAt(exception.getLastSeenAt());
+        exceptionMapper.insertException(exceptionRecord);
     }
 
     private TrackingActivity toEntity(TrackingActivityRecord activityRecord,
@@ -152,19 +152,17 @@ public class TrackingActivityRepositoryImpl implements TrackingActivityRepositor
 
         List<TrackingExceptionEvent> exceptions = exceptionRecords.stream()
                 .map(e -> new TrackingExceptionEvent(
-                        e.getId(),
+                        new TrackingExceptionEvent.PersistedState(
+                                e.getId(), e.getResponseContent(),
+                                e.getNewEstimatedArrival(), ExceptionStatus.valueOf(e.getStatus())),
                         ExceptionType.valueOf(e.getExceptionType()),
                         e.getOccurredAt(),
                         e.getLocationUnlocode(),
                         e.getReason(),
                         e.isEscalationFlag(),
-                        e.getResponseContent(),
-                        e.getNewEstimatedArrival(),
-                        ExceptionStatus.valueOf(e.getStatus()),
-                        e.getDamageDescription(),
-                        e.getPhotoUrl(),
-                        e.getLastKnownLocation(),
-                        e.getLastSeenAt()))
+                        new TrackingExceptionEvent.ExtendedDetails(
+                                e.getDamageDescription(), e.getPhotoUrl(),
+                                e.getLastKnownLocation(), e.getLastSeenAt())))
                 .toList();
 
         return new TrackingActivity(

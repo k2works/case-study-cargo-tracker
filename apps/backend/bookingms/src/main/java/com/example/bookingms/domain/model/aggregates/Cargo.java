@@ -68,38 +68,52 @@ public class Cargo {
     /**
      * 永続化済み貨物再構成コンストラクタ（特別情報あり）
      */
-    public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
-                 CargoType cargoType, Weight weight, RouteSpecification routeSpecification,
-                 HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
-        this(bookingId, shipperId, cargoType, weight, routeSpecification, hazmatInfo, temperatureInfo);
-        this.id = id;
-        this.bookingStatus = bookingStatus;
+    public Cargo(PersistedCargoState state, RouteSpecification routeSpecification,
+                 SpecialCargoInfo specialCargoInfo) {
+        this(state.bookingId(), state.shipperId(), state.cargoType(), state.weight(), routeSpecification,
+                specialCargoInfo.hazmatInfo(), specialCargoInfo.temperatureInfo());
+        this.id = state.id();
+        this.bookingStatus = state.bookingStatus();
     }
 
     /**
      * 永続化済み貨物再構成コンストラクタ（CargoItinerary あり）
      */
-    public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
-                 CargoType cargoType, Weight weight, RouteDetails routeDetails) {
-        this(bookingId, shipperId, cargoType, weight, routeDetails.routeSpecification(), null, null);
-        this.id = id;
-        this.bookingStatus = bookingStatus;
+    public Cargo(PersistedCargoState state, RouteDetails routeDetails) {
+        this(state.bookingId(), state.shipperId(), state.cargoType(), state.weight(),
+                routeDetails.routeSpecification(), null, null);
+        this.id = state.id();
+        this.bookingStatus = state.bookingStatus();
         this.cargoItinerary = routeDetails.cargoItinerary();
     }
 
     /**
      * 永続化済み貨物再構成コンストラクタ（CargoItinerary + 特別情報あり）
      */
-    public Cargo(Long id, BookingId bookingId, Long shipperId, BookingStatus bookingStatus,
-                 CargoType cargoType, Weight weight, RouteDetails routeDetails,
-                 HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
-        this(bookingId, shipperId, cargoType, weight, routeDetails.routeSpecification(), hazmatInfo, temperatureInfo);
-        this.id = id;
-        this.bookingStatus = bookingStatus;
+    public Cargo(PersistedCargoState state, RouteDetails routeDetails,
+                 SpecialCargoInfo specialCargoInfo) {
+        this(state.bookingId(), state.shipperId(), state.cargoType(), state.weight(),
+                routeDetails.routeSpecification(),
+                specialCargoInfo.hazmatInfo(), specialCargoInfo.temperatureInfo());
+        this.id = state.id();
+        this.bookingStatus = state.bookingStatus();
         this.cargoItinerary = routeDetails.cargoItinerary();
     }
 
+    /**
+     * 永続化済み貨物の基本情報をまとめた record
+     */
+    public record PersistedCargoState(Long id, BookingId bookingId, Long shipperId,
+                                      BookingStatus bookingStatus, CargoType cargoType, Weight weight) {
+    }
+
     public record RouteDetails(RouteSpecification routeSpecification, CargoItinerary cargoItinerary) {
+    }
+
+    /**
+     * 特殊貨物情報（危険物・温度管理）
+     */
+    public record SpecialCargoInfo(HazmatInfo hazmatInfo, TemperatureInfo temperatureInfo) {
     }
 
     public Long getId() {

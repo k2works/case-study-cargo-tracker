@@ -126,10 +126,10 @@ class TrackingExceptionServiceTest {
     void shouldRespondToException() {
         TrackingExceptionEvent existingException =
                 new TrackingExceptionEvent(
-                        10L, ExceptionType.DELAY,
+                        new TrackingExceptionEvent.PersistedState(10L, null, null, ExceptionStatus.OPEN),
+                        ExceptionType.DELAY,
                         java.time.LocalDateTime.of(2026, 6, 20, 10, 0),
-                        "JPTYO", "悪天候による遅延", false,
-                        null, null, ExceptionStatus.OPEN
+                        "JPTYO", "悪天候による遅延", false
                 );
 
         TrackingActivity activity = new TrackingActivity(

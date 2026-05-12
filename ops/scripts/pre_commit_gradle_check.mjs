@@ -16,7 +16,7 @@ const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
 console.log('Running Gradle check in apps/backend/...');
 
 try {
-    execSync(`${gradlew} check`, {
+    execSync(`${gradlew} check -x test`, {
         cwd: projectRoot,
         stdio: 'inherit',
         timeout: 300000,

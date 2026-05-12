@@ -24,15 +24,15 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
 
     @Override
     public Invoice save(Invoice invoice) {
-        InvoiceRecord record = toRecord(invoice);
-        mapper.insert(record);
+        InvoiceRecord invoiceRecord = toRecord(invoice);
+        mapper.insert(invoiceRecord);
 
         for (InvoiceLineItem item : invoice.getLineItems()) {
-            InvoiceLineItemRecord itemRecord = toLineItemRecord(record.getId(), item);
+            InvoiceLineItemRecord itemRecord = toLineItemRecord(invoiceRecord.getId(), item);
             mapper.insertLineItem(itemRecord);
         }
 
-        return findById(record.getId()).orElseThrow();
+        return findById(invoiceRecord.getId()).orElseThrow();
     }
 
     @Override
@@ -55,31 +55,31 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
 
     @Override
     public void update(Invoice invoice) {
-        InvoiceRecord record = toRecord(invoice);
-        record.setId(invoice.getId());
-        mapper.updateStatus(record);
+        InvoiceRecord invoiceRecord = toRecord(invoice);
+        invoiceRecord.setId(invoice.getId());
+        mapper.updateStatus(invoiceRecord);
     }
 
     private InvoiceRecord toRecord(Invoice invoice) {
-        InvoiceRecord record = new InvoiceRecord();
-        record.setInvoiceNumber(invoice.getInvoiceNumber());
-        record.setBookingId(invoice.getBookingId());
-        record.setShipperId(invoice.getShipperId());
-        record.setBaseAmountValue(invoice.getBaseAmount().toLong());
-        record.setBaseAmountCurrency(invoice.getBaseAmount().currency());
-        record.setFinalAmountValue(invoice.getFinalAmount().toLong());
-        record.setFinalAmountCurrency(invoice.getFinalAmount().currency());
-        record.setTaxRate(invoice.getTaxRate());
+        InvoiceRecord invoiceRecord = new InvoiceRecord();
+        invoiceRecord.setInvoiceNumber(invoice.getInvoiceNumber());
+        invoiceRecord.setBookingId(invoice.getBookingId());
+        invoiceRecord.setShipperId(invoice.getShipperId());
+        invoiceRecord.setBaseAmountValue(invoice.getBaseAmount().toLong());
+        invoiceRecord.setBaseAmountCurrency(invoice.getBaseAmount().currency());
+        invoiceRecord.setFinalAmountValue(invoice.getFinalAmount().toLong());
+        invoiceRecord.setFinalAmountCurrency(invoice.getFinalAmount().currency());
+        invoiceRecord.setTaxRate(invoice.getTaxRate());
         long discountedBase = invoice.getBaseAmount().toLong() - invoice.getDiscountAmount().toLong();
         Money tax = Money.ofJpy(discountedBase).multiply(invoice.getTaxRate());
-        record.setTaxAmountValue(tax.toLong());
-        record.setDiscountRate(invoice.getDiscountRate());
-        record.setDiscountAmountValue(invoice.getDiscountAmount().toLong());
-        record.setPaidAt(invoice.getPaidAt());
-        record.setPaymentStatus(invoice.getPaymentStatus().name());
-        record.setIssuedAt(invoice.getIssuedAt());
-        record.setDueDate(invoice.getDueDate());
-        return record;
+        invoiceRecord.setTaxAmountValue(tax.toLong());
+        invoiceRecord.setDiscountRate(invoice.getDiscountRate());
+        invoiceRecord.setDiscountAmountValue(invoice.getDiscountAmount().toLong());
+        invoiceRecord.setPaidAt(invoice.getPaidAt());
+        invoiceRecord.setPaymentStatus(invoice.getPaymentStatus().name());
+        invoiceRecord.setIssuedAt(invoice.getIssuedAt());
+        invoiceRecord.setDueDate(invoice.getDueDate());
+        return invoiceRecord;
     }
 
     private InvoiceLineItemRecord toLineItemRecord(Long invoiceId, InvoiceLineItem item) {
@@ -106,20 +106,21 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
                 : Money.ofJpy(0);
 
         return new Invoice(
-                r.getId(),
                 r.getInvoiceNumber(),
                 r.getBookingId(),
                 r.getShipperId(),
-                new Money(java.math.BigDecimal.valueOf(r.getBaseAmountValue()), r.getBaseAmountCurrency()),
-                new Money(java.math.BigDecimal.valueOf(r.getFinalAmountValue()), r.getFinalAmountCurrency()),
-                r.getTaxRate(),
-                PaymentStatus.valueOf(r.getPaymentStatus()),
                 r.getIssuedAt(),
                 r.getDueDate(),
-                r.getDiscountRate(),
-                discountAmount,
-                r.getPaidAt(),
-                lineItems
+                new Invoice.PersistedState(
+                        r.getId(),
+                        new Money(java.math.BigDecimal.valueOf(r.getBaseAmountValue()), r.getBaseAmountCurrency()),
+                        new Money(java.math.BigDecimal.valueOf(r.getFinalAmountValue()), r.getFinalAmountCurrency()),
+                        PaymentStatus.valueOf(r.getPaymentStatus()),
+                        r.getDiscountRate(),
+                        discountAmount,
+                        r.getPaidAt(),
+                        lineItems
+                )
         );
     }
 }

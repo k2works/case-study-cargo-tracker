@@ -150,15 +150,15 @@ public class MyBatisCargoRepository implements CargoRepository {
             temperatureInfo = new TemperatureInfo(cargoRecord.getTempMinCelsius(), cargoRecord.getTempMaxCelsius(), cargoRecord.getTempUnit());
         }
 
-        return new Cargo(
+        Cargo.PersistedCargoState state = new Cargo.PersistedCargoState(
                 cargoRecord.getId(),
                 new BookingId(cargoRecord.getBookingId()),
                 cargoRecord.getShipperId(),
                 BookingStatus.valueOf(cargoRecord.getBookingStatus()),
                 CargoType.valueOf(cargoRecord.getCargoType()),
-                new Weight(cargoRecord.getWeightKg()),
+                new Weight(cargoRecord.getWeightKg()));
+        return new Cargo(state,
                 new Cargo.RouteDetails(spec, itinerary),
-                hazmatInfo,
-                temperatureInfo);
+                new Cargo.SpecialCargoInfo(hazmatInfo, temperatureInfo));
     }
 }

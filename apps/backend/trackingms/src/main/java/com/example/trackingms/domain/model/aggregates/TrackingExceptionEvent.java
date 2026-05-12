@@ -30,6 +30,17 @@ public class TrackingExceptionEvent {
     private LocalDateTime lastSeenAt;
 
     /**
+     * 永続化済み再構成データ
+     */
+    public record PersistedState(Long id, String responseContent, LocalDate newEstimatedArrival, ExceptionStatus status) {}
+
+    /**
+     * 拡張フィールド（DAMAGE/LOST 固有）
+     */
+    public record ExtendedDetails(String damageDescription, String photoUrl,
+                                  String lastKnownLocation, LocalDateTime lastSeenAt) {}
+
+    /**
      * 新規例外イベント作成コンストラクタ
      */
     public TrackingExceptionEvent(ExceptionType exceptionType, LocalDateTime occurredAt,
@@ -47,30 +58,26 @@ public class TrackingExceptionEvent {
     /**
      * 永続化済み再構成コンストラクタ
      */
-    public TrackingExceptionEvent(Long id, ExceptionType exceptionType, LocalDateTime occurredAt,
-                                   String locationUnlocode, String reason, boolean escalationFlag,
-                                   String responseContent, LocalDate newEstimatedArrival, ExceptionStatus status) {
+    public TrackingExceptionEvent(PersistedState state, ExceptionType exceptionType, LocalDateTime occurredAt,
+                                   String locationUnlocode, String reason, boolean escalationFlag) {
         this(exceptionType, occurredAt, locationUnlocode, reason, escalationFlag);
-        this.id = id;
-        this.responseContent = responseContent;
-        this.newEstimatedArrival = newEstimatedArrival;
-        this.status = status != null ? status : ExceptionStatus.OPEN;
+        this.id = state.id();
+        this.responseContent = state.responseContent();
+        this.newEstimatedArrival = state.newEstimatedArrival();
+        this.status = state.status() != null ? state.status() : ExceptionStatus.OPEN;
     }
 
     /**
      * 新フィールド対応の永続化済み再構成コンストラクタ
      */
-    public TrackingExceptionEvent(Long id, ExceptionType exceptionType, LocalDateTime occurredAt,
+    public TrackingExceptionEvent(PersistedState state, ExceptionType exceptionType, LocalDateTime occurredAt,
                                    String locationUnlocode, String reason, boolean escalationFlag,
-                                   String responseContent, LocalDate newEstimatedArrival, ExceptionStatus status,
-                                   String damageDescription, String photoUrl,
-                                   String lastKnownLocation, LocalDateTime lastSeenAt) {
-        this(id, exceptionType, occurredAt, locationUnlocode, reason, escalationFlag,
-                responseContent, newEstimatedArrival, status);
-        this.damageDescription = damageDescription;
-        this.photoUrl = photoUrl;
-        this.lastKnownLocation = lastKnownLocation;
-        this.lastSeenAt = lastSeenAt;
+                                   ExtendedDetails details) {
+        this(state, exceptionType, occurredAt, locationUnlocode, reason, escalationFlag);
+        this.damageDescription = details.damageDescription();
+        this.photoUrl = details.photoUrl();
+        this.lastKnownLocation = details.lastKnownLocation();
+        this.lastSeenAt = details.lastSeenAt();
     }
 
     /**

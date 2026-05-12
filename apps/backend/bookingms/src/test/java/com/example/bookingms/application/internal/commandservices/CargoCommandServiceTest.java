@@ -28,10 +28,11 @@ class CargoCommandServiceTest {
     @Test
     void 危険物貨物の登録時に危険物申告情報がない場合は例外が発生する() {
         CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
-
-        assertThatThrownBy(() -> service.registerBooking(
+        CargoCommandService.RegisterBookingCommand command = new CargoCommandService.RegisterBookingCommand(
                 1L, "HAZARDOUS", BigDecimal.valueOf(100),
-                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null))
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null);
+
+        assertThatThrownBy(() -> service.registerBooking(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("危険物貨物には危険物申告情報が必須です");
     }
@@ -39,10 +40,11 @@ class CargoCommandServiceTest {
     @Test
     void 冷凍冷蔵貨物の登録時に温度管理条件がない場合は例外が発生する() {
         CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
-
-        assertThatThrownBy(() -> service.registerBooking(
+        CargoCommandService.RegisterBookingCommand command = new CargoCommandService.RegisterBookingCommand(
                 1L, "REFRIGERATED", BigDecimal.valueOf(100),
-                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null))
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null);
+
+        assertThatThrownBy(() -> service.registerBooking(command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("冷凍・冷蔵貨物には温度管理条件が必須です");
     }
@@ -52,9 +54,10 @@ class CargoCommandServiceTest {
         CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
         HazmatInfo hazmatInfo = new HazmatInfo("UN1203", "3", "II");
 
-        Cargo cargo = service.registerBooking(
+        CargoCommandService.RegisterBookingCommand cmd = new CargoCommandService.RegisterBookingCommand(
                 1L, "HAZARDOUS", BigDecimal.valueOf(100),
                 "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), hazmatInfo, null);
+        Cargo cargo = service.registerBooking(cmd);
 
         assertThat(cargo.getCargoType()).isEqualTo(CargoType.HAZARDOUS);
         assertThat(cargo.getHazmatInfo()).isEqualTo(hazmatInfo);
@@ -65,9 +68,10 @@ class CargoCommandServiceTest {
         CargoCommandService service = new CargoCommandService(new StubCargoRepository(), new NoOpEventPublisher(), c -> {});
         TemperatureInfo temperatureInfo = new TemperatureInfo(-20.0, 4.0, "CELSIUS");
 
-        Cargo cargo = service.registerBooking(
+        CargoCommandService.RegisterBookingCommand cmd = new CargoCommandService.RegisterBookingCommand(
                 1L, "REFRIGERATED", BigDecimal.valueOf(100),
                 "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, temperatureInfo);
+        Cargo cargo = service.registerBooking(cmd);
 
         assertThat(cargo.getCargoType()).isEqualTo(CargoType.REFRIGERATED);
         assertThat(cargo.getTemperatureInfo()).isEqualTo(temperatureInfo);
@@ -153,18 +157,11 @@ class CargoCommandServiceTest {
     }
 
     private static Cargo cargoWithStatus(String bookingId, BookingStatus status) {
-        return new Cargo(
-                1L,
-                new BookingId(bookingId),
-                100L,
-                status,
-                CargoType.GENERAL,
-                new Weight(BigDecimal.valueOf(100)),
-                new Cargo.RouteDetails(
-                        new RouteSpecification("JPTYO", "CNSHA", LocalDate.of(2026, 2, 1)),
-                        null
-                )
-        );
+        Cargo.PersistedCargoState state = new Cargo.PersistedCargoState(
+                1L, new BookingId(bookingId), 100L, status,
+                CargoType.GENERAL, new Weight(BigDecimal.valueOf(100)));
+        return new Cargo(state, new Cargo.RouteDetails(
+                new RouteSpecification("JPTYO", "CNSHA", LocalDate.of(2026, 2, 1)), null));
     }
 
     private static final class StubCargoRepository implements CargoRepository {

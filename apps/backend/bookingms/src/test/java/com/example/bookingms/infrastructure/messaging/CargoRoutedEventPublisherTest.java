@@ -134,9 +134,9 @@ class CargoRoutedEventPublisherTest {
     @DisplayName("assignRoute 後に CargoRoutedEvent がキューに届くこと")
     void shouldPublishCargoRoutedEventAfterAssigningRoute() throws Exception {
         // 1. 貨物を登録
-        var cargo = cargoCommandService.registerBooking(
+        var cargo = cargoCommandService.registerBooking(new CargoCommandService.RegisterBookingCommand(
                 1L, "GENERAL", BigDecimal.valueOf(100),
-                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null);
+                "JPTYO", "CNSHA", LocalDate.of(2026, 6, 30), null, null));
 
         // 2. 経路を割り当てる
         var command = new RouteCargoCommand(List.of(new LegData(

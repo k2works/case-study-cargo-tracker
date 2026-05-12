@@ -11,11 +11,11 @@ import java.util.Optional;
  */
 @Mapper
 public interface InvoiceMapper {
-    void insert(InvoiceRecord record);
+    void insert(InvoiceRecord invoiceRecord);
     Optional<InvoiceRecord> findById(@Param("id") Long id);
     Optional<InvoiceRecord> findByBookingId(@Param("bookingId") String bookingId);
-    void updateStatus(InvoiceRecord record);
+    void updateStatus(InvoiceRecord invoiceRecord);
 
-    void insertLineItem(InvoiceLineItemRecord record);
+    void insertLineItem(InvoiceLineItemRecord lineItemRecord);
     List<InvoiceLineItemRecord> findLineItemsByInvoiceId(@Param("invoiceId") Long invoiceId);
 }

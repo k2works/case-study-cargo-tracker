@@ -84,7 +84,7 @@ class InvoiceTest {
         invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
         invoice.applyDiscount(BigDecimal.ZERO);
 
-        assertThat(invoice.getDiscountAmount().toLong()).isEqualTo(0L);
+        assertThat(invoice.getDiscountAmount().toLong()).isZero();
         assertThat(invoice.calculateFinalAmount().toLong()).isEqualTo(110_000L);
     }
 
@@ -107,8 +107,9 @@ class InvoiceTest {
     void shouldThrowWhenSettlingNonConfirmedInvoice() {
         Invoice invoice = createInvoice();
         invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        LocalDateTime now = LocalDateTime.now();
 
-        assertThatThrownBy(() -> invoice.settle(LocalDateTime.now()))
+        assertThatThrownBy(() -> invoice.settle(now))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -151,8 +152,9 @@ class InvoiceTest {
     void shouldThrowWhenDiscountRateIsNegative() {
         Invoice invoice = createInvoice();
         invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        BigDecimal negativeRate = new BigDecimal("-0.01");
 
-        assertThatThrownBy(() -> invoice.applyDiscount(new BigDecimal("-0.01")))
+        assertThatThrownBy(() -> invoice.applyDiscount(negativeRate))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -161,8 +163,9 @@ class InvoiceTest {
     void shouldThrowWhenDiscountRateExceedsOne() {
         Invoice invoice = createInvoice();
         invoice.addLineItem(new InvoiceLineItem("基本料金", Money.ofJpy(100_000), 1));
+        BigDecimal excessiveRate = new BigDecimal("1.01");
 
-        assertThatThrownBy(() -> invoice.applyDiscount(new BigDecimal("1.01")))
+        assertThatThrownBy(() -> invoice.applyDiscount(excessiveRate))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

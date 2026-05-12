@@ -53,7 +53,7 @@ public class CargoController {
         TemperatureInfo temperatureInfo = request.temperatureInfo() != null
                 ? new TemperatureInfo(request.temperatureInfo().minTemperature(), request.temperatureInfo().maxTemperature(), request.temperatureInfo().unit())
                 : null;
-        Cargo cargo = cargoCommandService.registerBooking(
+        var command = new CargoCommandService.RegisterBookingCommand(
                 request.shipperId(),
                 request.cargoType(),
                 request.weightKg(),
@@ -63,6 +63,7 @@ public class CargoController {
                 hazmatInfo,
                 temperatureInfo
         );
+        Cargo cargo = cargoCommandService.registerBooking(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(CargoResponse.from(cargo));
     }
 

@@ -49,23 +49,28 @@ public class Invoice {
         this.dueDate = dueDate;
     }
 
+    /**
+     * 永続化済み再構成データ
+     */
+    public record PersistedState(Long id, Money baseAmount, Money finalAmount,
+                                 PaymentStatus paymentStatus, BigDecimal discountRate,
+                                 Money discountAmount, LocalDateTime paidAt,
+                                 List<InvoiceLineItem> lineItems) {}
+
     /** 永続化済み再構成コンストラクタ */
-    public Invoice(Long id, String invoiceNumber, String bookingId, String shipperId,
-                   Money baseAmount, Money finalAmount, BigDecimal taxRate,
-                   PaymentStatus paymentStatus, LocalDate issuedAt, LocalDate dueDate,
-                   BigDecimal discountRate, Money discountAmount, LocalDateTime paidAt,
-                   List<InvoiceLineItem> lineItems) {
+    public Invoice(String invoiceNumber, String bookingId, String shipperId,
+                   LocalDate issuedAt, LocalDate dueDate, PersistedState state) {
         this(invoiceNumber, bookingId, shipperId, issuedAt, dueDate);
-        this.id = id;
-        this.baseAmount = baseAmount;
-        this.finalAmount = finalAmount;
-        this.discountRate = discountRate != null ? discountRate : BigDecimal.ZERO;
-        this.discountAmount = discountAmount != null ? discountAmount : Money.ofJpy(0);
-        this.paidAt = paidAt;
-        if (lineItems != null) {
-            this.lineItems.addAll(lineItems);
+        this.id = state.id();
+        this.baseAmount = state.baseAmount();
+        this.finalAmount = state.finalAmount();
+        this.discountRate = state.discountRate() != null ? state.discountRate() : BigDecimal.ZERO;
+        this.discountAmount = state.discountAmount() != null ? state.discountAmount() : Money.ofJpy(0);
+        this.paidAt = state.paidAt();
+        if (state.lineItems() != null) {
+            this.lineItems.addAll(state.lineItems());
         }
-        this.paymentStatus = paymentStatus;
+        this.paymentStatus = state.paymentStatus();
     }
 
     /**
