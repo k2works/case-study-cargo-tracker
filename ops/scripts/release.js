@@ -423,9 +423,15 @@ export default function (gulp, options = {}) {
 
   // ──────────────────────────────────────────────
   // release:deploy:* (release + deploy)
+  //
+  // deploy:prd タスクが他モジュール（例: deploy_prd.js）で登録されている場合のみ
+  // 連結タスクを登録する。未実装の環境で gulp.series() に未定義タスクを渡すと
+  // 登録時点でエラーになり、release.js 自体がロードできなくなるため。
   // ──────────────────────────────────────────────
 
-  gulp.task('release:deploy:patch', gulp.series('release:patch', 'deploy:prd'));
-  gulp.task('release:deploy:minor', gulp.series('release:minor', 'deploy:prd'));
-  gulp.task('release:deploy:major', gulp.series('release:major', 'deploy:prd'));
+  if (gulp.task('deploy:prd')) {
+    gulp.task('release:deploy:patch', gulp.series('release:patch', 'deploy:prd'));
+    gulp.task('release:deploy:minor', gulp.series('release:minor', 'deploy:prd'));
+    gulp.task('release:deploy:major', gulp.series('release:major', 'deploy:prd'));
+  }
 }

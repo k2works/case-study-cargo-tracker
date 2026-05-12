@@ -13,6 +13,7 @@ import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import developTasks from './ops/scripts/develop.js';
 import deployDevTasks from './ops/scripts/deploy_dev.js';
+import releaseTasks from './ops/scripts/release.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -22,6 +23,7 @@ sshTasks(gulp);
 sonarLocalTasks(gulp);
 developTasks(gulp);
 deployDevTasks(gulp);
+releaseTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 export const dev = gulp.series('dev:backend');
