@@ -20,7 +20,7 @@ tags: architecture, frontend, react, vite, typescript, react-query, zustand, tai
 
 | 判断項目 | 判定 | 理由 |
 | :--- | :--- | :--- |
-| SEO 重要度 | 低 | 社内業務ツール。追跡照会も認証あり前提のため SEO 不要 |
+| SEO 重要度 | 低 | 社内業務ツール。追跡照会は時限署名トークン経由のため SEO 不要 |
 | インタラクティビティ | 高 | リアルタイム追跡、フォーム操作が中心 |
 | 更新頻度 | 高 | 追跡情報はリアルタイム更新 |
 
@@ -277,7 +277,7 @@ rq -- cmd : invalidate / refetch
 | 予約詳細 | /booking/:id | UC04, UC11 | 営業担当者 | `GET /api/v1/bookings/{id}` |
 | 航海スケジュール管理 | /routing/voyages | UC19 | 経路設計者 | `POST/PUT /api/v1/voyages` |
 | 経路設計 | /routing/design/:bookingId | UC05-UC10 | 経路設計者 | `GET /api/v1/routes/optimal`, `PUT /api/v1/bookings/{id}/route` |
-| 追跡照会 | /tracking/:trackingNumber | UC15 | 荷主、荷受人 | `GET /api/v1/tracking/{tn}` |
+| 追跡照会 | /tracking/:trackingNumber?token=&lt;JWT&gt; | UC15 | 荷主、荷受人 | `GET /api/v1/tracking/{tn}`（時限署名トークン検証） |
 | 荷役作業記録 | /tracking/handling | UC13 | 荷役作業員 | `POST /api/v1/handling` |
 | 例外対応 | /tracking/exceptions | UC16 | 追跡管理者 | `POST /api/v1/tracking/{tn}/exceptions` |
 | 精算管理 | /billing | UC17, UC18 | 経理担当者 | `POST /api/v1/billing/{id}/calculate`, `POST /api/v1/billing/{id}/settlement` |

@@ -20,6 +20,49 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 
 サポート期限（EOL）の最新情報は各プロジェクトの公式サイトで確認すること。本ドキュメントは作成時点（2026-05）の情報。
 
+## 実装着手前の確認チェックリスト（バージョン実在性）
+
+主要技術のバージョン採用前に **公式情報源で GA 時期と EOL を確認** する。チェックは IT0（着手準備イテレーション）で SRE リードが実施する。
+
+| 技術 | 採用バージョン | 公式情報源 | 確認すべき項目 |
+| :--- | :--- | :--- | :--- |
+| Java（OpenJDK） | 25 LTS | <https://openjdk.org/projects/jdk/25/>, <https://endoflife.date/java> | 25 が LTS であること、Premier Support 期限、Eclipse Temurin の対応有無 |
+| Eclipse Temurin | 25 LTS | <https://adoptium.net/temurin/releases/> | `eclipse-temurin:25-jre-alpine` イメージの GA、Long Term Support 表記 |
+| Spring Boot | 4.0.x | <https://spring.io/projects/spring-boot>, <https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-Versions> | 4.0 GA 日付、Spring Framework 7 対応、OSS サポート期限 |
+| Spring Framework | 7.x | <https://spring.io/projects/spring-framework> | 7.x GA 日付、Spring Boot 4 との互換 |
+| Spring Security | 7.x | <https://spring.io/projects/spring-security> | 7.x GA、Spring Boot 4 同梱 |
+| Spring Cloud Gateway | 4.x | <https://spring.io/projects/spring-cloud-gateway> | Spring Boot 4 対応版 |
+| Axon Framework | 5.x | <https://www.axoniq.io/products/axon-framework>, <https://github.com/AxonFramework/AxonFramework/releases> | 5.x GA、Spring Boot 4 公式サポート、Maven Central 公開状況 |
+| Axon Server SE | 2024.x LTS | <https://www.axoniq.io/products/axon-server>, <https://docs.axoniq.io/axon-server-reference/> | LTS 版の指定、`axoniq/axonserver:2024.x-LTS` Docker タグ、Axon 5 クライアント互換 |
+| Hibernate ORM（参考のみ、未採用） | - | - | MyBatis 採用のため不要（ADR-0002） |
+| MyBatis | 3.5.x | <https://mybatis.org/mybatis-3/>, <https://github.com/mybatis/mybatis-3/releases> | 3.5.x 最新パッチ、JDK 25 対応 |
+| mybatis-spring-boot-starter | 3.0.x | <https://github.com/mybatis/spring-boot-starter/releases> | Spring Boot 4 対応版 |
+| PostgreSQL | 16.x | <https://www.postgresql.org/support/versioning/>, <https://endoflife.date/postgresql> | EOL 2028-11、AWS RDS 対応 |
+| Flyway | 10.x | <https://documentation.red-gate.com/fd/release-notes-and-older-versions-179732572.html> | 10.x 最新、PostgreSQL 16 対応 |
+| Gradle | 9.2.x | <https://docs.gradle.org/current/release-notes.html>, <https://endoflife.date/gradle> | 9.2.x GA、JDK 25 対応 |
+| Node.js | 22 LTS | <https://nodejs.org/en/about/previous-releases>, <https://endoflife.date/nodejs> | LTS 名称（Jod 等）、EOL 2027-04 |
+| React | 19.x | <https://react.dev/blog>, <https://github.com/facebook/react/releases> | 19.x GA、Concurrent Mode 安定 |
+| Vite | 6.x | <https://vitejs.dev/guide/migration.html>, <https://github.com/vitejs/vite/releases> | 6.x GA、React 19 対応 |
+| TypeScript | 5.6+ | <https://www.typescriptlang.org/docs/handbook/release-notes/overview.html> | 5.6+ Stable |
+| TanStack Query | 5.x | <https://tanstack.com/query/latest> | 5.x Stable、React 19 対応 |
+| Tailwind CSS | 4.x | <https://tailwindcss.com/blog>, <https://github.com/tailwindlabs/tailwindcss/releases> | 4.x GA、Vite 6 / PostCSS 連携 |
+| Testcontainers (Java) | 1.20.x | <https://www.testcontainers.org/>, <https://github.com/testcontainers/testcontainers-java/releases> | JDK 25 対応、PostgreSQL 16 イメージ |
+| Playwright | 1.50+ | <https://playwright.dev/docs/release-notes> | Chrome / Firefox / WebKit 最新版 |
+| Terraform | 1.10+ | <https://github.com/hashicorp/terraform/releases>, <https://www.hashicorp.com/blog/terraform-license-update>（BSL 注意） | 1.10+ Stable、AWS Provider 5.x |
+
+> **重要**: 本表のバージョン番号と日付は分析時点（2026-05）の **想定値** であり、実装着手前に **必ず公式情報源で検証** すること。検証結果に基づき本表と関連 ADR を更新する。
+>
+> **代替案の準備**: 上記いずれかの技術が GA 未達 or 互換性問題で採用不可となった場合の代替案：
+>
+> | 採用技術 | 代替案 |
+> | :--- | :--- |
+> | Spring Boot 4.0 | Spring Boot 3.3 LTS（Java 17・Spring Framework 6 系列） |
+> | Java 25 LTS | Java 21 LTS（2031-09 EOL） |
+> | Axon Framework 5 | Axon Framework 4.10.x（Spring Boot 3.3 と組合せ） |
+> | Axon Server 2024.x LTS | Axon Server 2024.0 GA 版（LTS 未指定でも互換確保） |
+> | React 19 | React 18.3（LTS 風サポート） |
+> | Tailwind CSS 4 | Tailwind CSS 3.4（成熟版） |
+
 ## バックエンド技術スタック
 
 ### 言語・ランタイム

@@ -53,6 +53,9 @@
 具体的には次のとおりとする。
 
 - **採用バージョン**: Axon Framework 5.x（最新の安定版）、Axon Server 2024.x LTS（Standard Edition）
+  - 実装着手前に **公式情報源で GA 時期と EOL を確認** する。確認チェックリストは [tech_stack.md §実装着手前の確認チェックリスト](../design/tech_stack.md) 参照
+  - 主要情報源: <https://www.axoniq.io/products/axon-framework>, <https://github.com/AxonFramework/AxonFramework/releases>, <https://docs.axoniq.io/axon-server-reference/>
+  - GA 未達の場合の代替案: Axon Framework 4.10.x + Spring Boot 3.3 LTS の組合せ
 - **集約は Event Sourcing で永続化**：`@Aggregate` + `@CommandHandler` + `@EventSourcingHandler` を使用し、Axon Server の Event Store に永続化する（authms を除く）
 - **Read Model は MyBatis + PostgreSQL**：`@EventHandler` で Event Store のイベントを購読し、各サービス専用 DB の Read Model テーブルを MyBatis Mapper で更新する。Axon の `JdbcTokenStore` / `JdbcSagaStore` は同一 DataSource を共有し、Projection 更新と同一 JDBC トランザクションで処理する
 - **マイクロサービス間連携は Axon Server 経由の分散 Event Bus**：RabbitMQ / Kafka は採用しない
@@ -103,6 +106,39 @@
 - 大規模化 / HA 要件発生時は Axon Server Enterprise Edition への移行で対応可能（フォーマット互換性あり）
 - 監査・透明性要求が強まった場合、Event Sourcing による完全な履歴を活用できる
 - 業務プロセスが複雑化しても Saga の追加で対応可能
+
+## フェーズ別稼働率と EE 移行計画
+
+Axon Server Standard Edition は単一ノード前提のため、フェーズ 1 では稼働率目標を **業務時間内 99.9% / 24 時間 99.5%** に設定する。これは SE の MTTR（EBS 再アタッチ運用で数分〜十数分）と整合する現実的目標。99.95% 以上を求める場合はクラスタ構成（EE）が必須となるため、フェーズ 2 で EE への移行を計画する。
+
+| フェーズ | Axon Server | SLA（業務時間内） | SLA（24h） | RPO（Event Store） | 想定時期 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **フェーズ 1（v1.0）** | Standard Edition（単一ノード） | 99.9% | 99.5% | 1 時間 | リリース初年度 |
+| **フェーズ 2** | Enterprise Edition（3 ノードクラスタ） | 99.95% | 99.9% | < 5 分 | 利用者 500 名超過 or 重大障害 1 件発生時 |
+| **フェーズ 3（必要時）** | EE マルチリージョン | 99.99% | 99.95% | < 1 分 | グローバル展開時 |
+
+### EE 移行のトリガー条件（いずれか 1 つで開始）
+
+- 同時利用者ピークが 500 名を 3 ヶ月連続で超過
+- Axon Server SE 起因の SEV-1 または SEV-2 障害が四半期に 1 件以上発生
+- 業務要件として 99.95% SLA を契約で約束する顧客が発生
+- RPO 1 時間を下回るデータ保全要求（金融・行政連携など）
+
+### EE 移行の主要作業
+
+| 作業 | 内容 | 所要 |
+| :--- | :--- | :--- |
+| ライセンス契約 | AxonIQ から EE ライセンス取得 | 1〜2 ヶ月（営業・契約） |
+| クラスタ構築 | 3 ノード ECS EC2 起動タイプ、AZ 分散、共有ストレージなし（各ノード EBS） | 2 週間 |
+| データ移行 | SE の Event Store を EE クラスタへインポート、整合性確認 | 1 日（メンテナンス時間帯） |
+| クライアント更新 | `axon.axonserver.servers` を複数ノード指定に変更 | 1 日 |
+| 監視・運用更新 | EE 固有メトリクス（リーダー選出・レプリケーション遅延）の追加 | 1 週間 |
+| 検証 | リーダー停止 → フェイルオーバー訓練 | 半日 |
+
+### コスト影響
+
+- SE → EE 移行で月額コストが約 $80 → 約 $1,500（ライセンス + 3 ノード分のインフラ）に増加見込み
+- SLA 99.95% の業務価値（クレーム削減・顧客信頼）と費用対効果を都度評価する
 
 ## コプライアンス
 

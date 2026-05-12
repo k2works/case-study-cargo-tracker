@@ -1,6 +1,6 @@
 ---
 title: 運用要件 - 国際貨物輸送管理システム
-description: 運用フロー、監視、バックアップ、障害対応、変更管理、オンコール体制を非機能要件（SLA 99.95% / RTO 4h / RPO 1h）を満たす形で定義する。
+description: 運用フロー、監視、バックアップ、障害対応、変更管理、オンコール体制を非機能要件（フェーズ 1 SLA 99.9% / RTO 4h / RPO 1h）を満たす形で定義する。
 published: true
 date: 2026-05-12T00:00:00.000Z
 tags: design, operation, sre, monitoring, incident-response, backup, runbook
@@ -10,7 +10,10 @@ tags: design, operation, sre, monitoring, incident-response, backup, runbook
 
 ## 概要
 
-国際貨物輸送管理システムの運用設計書。非機能要件（[`non_functional.md`](non_functional.md)）の SLA / SLO（業務時間内可用率 99.95%、RTO < 4h、RPO Read Model < 1h / Event Store < 24h）を達成するため、運用フロー・監視・バックアップ・障害対応・変更管理を定義する。
+国際貨物輸送管理システムの運用設計書。非機能要件（[`non_functional.md`](non_functional.md)）の SLA / SLO を達成するため、運用フロー・監視・バックアップ・障害対応・変更管理を定義する。
+
+- **フェーズ 1（v1.0、Axon Server SE）**: 業務時間内可用率 99.9%、RTO < 4h、RPO Read Model < 1h / Event Store < 1h（1 時間ごとの EBS スナップショット + 連続 S3 ストリーミングエクスポート）
+- **フェーズ 2（Axon Server EE 移行後）**: 業務時間内可用率 99.95%、RPO Event Store < 5 分
 
 設計の指針：
 
@@ -52,8 +55,10 @@ tags: design, operation, sre, monitoring, incident-response, backup, runbook
 | 時刻 | 作業 | 担当 | 自動化 |
 | :--- | :--- | :--- | :--- |
 | 03:00 | RDS 自動スナップショット | AWS | ✅ |
-| 03:30 | Axon Server EBS スナップショット（AWS Backup） | AWS | ✅ |
-| 04:00 | Event Store の S3 エクスポート（Lambda） | Lambda | ✅ |
+| 毎時 00 分 | **Axon Server EBS スナップショット（AWS Backup、1h 頻度、24h 短期保持）** | AWS | ✅ |
+| 03:30 | Axon Server EBS スナップショット（日次保持 7 日） | AWS | ✅ |
+| 連続（5 分間隔） | **Event Store の S3 ストリーミングエクスポート（Lambda がポーリング）** | Lambda | ✅ |
+| 04:00 | Event Store の S3 フルエクスポート（日次） | Lambda | ✅ |
 | 04:30 | ログローテーション・古いログの S3 アーカイブ | CloudWatch + Lambda | ✅ |
 | 06:00 | バックアップ整合性チェック（最新スナップショットの存在確認） | Lambda → Slack 通知 | ✅ |
 | 09:00 | 前日の SLO ダッシュボード確認、異常があれば調査開始 | SRE | 手動 |
@@ -288,9 +293,11 @@ stop
 | RDS（Read Model） | 自動スナップショット | 日次（03:00 JST） | 7 日 | KMS |
 | RDS（Read Model） | 手動スナップショット | リリース前 | 30 日 | KMS |
 | RDS（Read Model） | Point-in-time Recovery（WAL） | 連続 | 7 日 | KMS |
-| Axon Server EBS | AWS Backup（EBS スナップショット） | 日次（03:30 JST） | 7 日 | KMS |
+| **Axon Server EBS（短期）** | **AWS Backup（EBS スナップショット）** | **1 時間ごと** | **24 時間（24 件）** | KMS |
+| Axon Server EBS（日次） | AWS Backup（EBS スナップショット） | 日次（03:30 JST） | 7 日 | KMS |
 | Axon Server EBS | 手動スナップショット | リリース前・スキーマ変更前 | 30 日 | KMS |
-| Event Store エクスポート | Axon REST API → S3（Lambda） | 日次（04:00 JST） | **7 年** | SSE-KMS + Object Lock |
+| **Event Store ストリーミングエクスポート** | **Axon REST API → Lambda（5 分間隔ポーリング） → S3** | **連続（5 分以内）** | 1 年（オンライン）+ 7 年（Glacier） | SSE-KMS + Object Lock |
+| Event Store フルエクスポート | Axon REST API → S3（Lambda） | 日次（04:00 JST） | **7 年** | SSE-KMS + Object Lock |
 | アプリログ | CloudWatch Logs | 連続 | 30 日 → S3 へ 90 日 | KMS |
 | 監査ログ | S3（Object Lock） | 連続 | 1 年（オンライン）+ 7 年（Glacier） | SSE-KMS |
 | Terraform State | S3 + DynamoDB ロック | 変更時 | 全履歴 | SSE-KMS |
@@ -739,7 +746,7 @@ SLO 99.95%（業務時間内）に対し、月間エラーバジェットは約 
 | US | 関連する運用要件 |
 | :--- | :--- |
 | US15 / US16 荷役記録 | モバイル想定の高可用性、業務時間内 99.95%、Read Model 反映ラグ監視 |
-| US18 追跡照会（公開） | 24 時間 99.95%、スパイク対応（500 req/s）、CloudFront キャッシュ |
+| US18 追跡照会（公開） | 24 時間 99.9%（フェーズ 1）／ 99.95%（フェーズ 2）、スパイク対応（500 req/s）、CloudFront キャッシュ |
 | US19 / US20 例外処理 | 紛失検知時の escalation（即時 PagerDuty）、監査ログ 7 年保持 |
 | US23 精算 | 決済機関連携の Circuit Breaker、入金確認バッチ、SOX 監査対応のログ保持 |
 | US24 / US25 航海登録 | スケジュール変更時の影響範囲分析（Read Model 全件の Token リセット必要性検討） |

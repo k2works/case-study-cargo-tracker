@@ -473,9 +473,17 @@ b2 --> axon
 | :--- | :--- | :--- | :--- |
 | RDS (Read Model) | 自動スナップショット | 日次 | 7 日 |
 | RDS (Read Model) | 手動スナップショット | リリース前 | 30 日 |
-| Axon Server EBS | AWS Backup（EBS スナップショット） | 日次（夜間） | 7 日 |
+| **Axon Server EBS** | **AWS Backup（EBS スナップショット）** | **1 時間ごと** | 24 時間（短期 24 件）+ 日次保持 7 日 |
 | Axon Server EBS | 手動スナップショット | リリース前 | 30 日 |
-| Event Store S3 エクスポート | Axon REST API + Lambda | 日次 | 7 年（コンプライアンス対応） |
+| **Event Store S3 ストリーミングエクスポート** | **Axon REST API + Lambda（イベント追記検知）** | **連続（5 分以内）** | 1 年（オンライン）+ 7 年（Glacier アーカイブ） |
+| Event Store S3 フルエクスポート | Axon REST API + Lambda | 日次 | 7 年（コンプライアンス対応） |
+
+> **RPO 1 時間達成の構成**:
+>
+> 1. **EBS スナップショット**を 1 時間ごとに取得（AWS Backup プラン）。24 時間で 24 件、日次集約で 7 件保持
+> 2. **Event Store ストリーミングエクスポート**: Axon Server の REST API（`/v1/events`）を Lambda が 5 分間隔でポーリングし、追記イベントを S3 へ JSON Lines 形式で書き込み。AZ 障害時の最終手段
+> 3. **障害時の復旧**: EBS スナップショットから新ボリューム作成（数分）→ S3 ストリーミングから差分イベントを再投入（最大 5 分相当）→ 合計 RPO < 1 時間
+> 4. **コスト**: EBS スナップショット 1h 頻度で月額 $20、S3 ストリーミングで月額 $10 増加（合計 +$25/月）
 
 ### 復旧手順
 
@@ -490,7 +498,8 @@ b2 --> axon
 
 | 指標 | 目標値 |
 | :--- | :--- |
-| RPO（Axon Event Store） | 24 時間（EBS スナップショット粒度。Standard Edition の制約） |
+| RPO（Axon Event Store、フェーズ 1 / SE） | **1 時間以内**（1h EBS スナップショット + 連続 S3 ストリーミングエクスポート） |
+| RPO（Axon Event Store、フェーズ 2 / EE 移行後） | 5 分以内（クラスタレプリケーション） |
 | RPO（Read Model） | 1 時間以内（RDS 自動スナップショット） |
 | RTO | 4 時間以内 |
 
@@ -517,9 +526,10 @@ b2 --> axon
 | RDS PostgreSQL | db.t3.medium × 6（Read Model 用） | $600 |
 | ALB | 1 台 | $30 |
 | CloudWatch | ログ・メトリクス | $50 |
-| AWS Backup（Axon EBS スナップショット） | 日次 7 日保持 | $5 |
+| AWS Backup（Axon EBS スナップショット） | 1h 頻度 24h 短期 + 日次 7 日保持 | $20 |
+| S3 ストリーミングエクスポート | Lambda 5 分間隔ポーリング + S3 PUT | $10 |
 | ECR | イメージストレージ | $10 |
-| **合計** | | **$1,055** |
+| **合計** | | **$1,080** |
 
 > **比較**: RabbitMQ 採用案（Amazon MQ mq.m5.large $200）から **Axon Server ECS EC2 $80** に置き換わることで月額約 $120 削減。一方で運用責任（バックアップ・スキーマ進化）は自社側に移る点を考慮する必要がある。
 
