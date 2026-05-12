@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * MyBatis を使用した見積リポジトリ実装
@@ -34,7 +33,7 @@ public class MyBatisEstimateRepository implements EstimateRepository {
             estimateMapper.insertRouteCandidate(candidateRecord);
         }
 
-        return new Estimate(
+        return new Estimate(new Estimate.PersistedState(
                 estimateRecord.getId(),
                 estimate.getEstimateId(),
                 estimate.getOriginUnlocode(),
@@ -44,7 +43,7 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                 estimate.getWeightKg(),
                 estimate.getStatus(),
                 estimate.getCandidates()
-        );
+        ));
     }
 
     @Override
@@ -54,8 +53,8 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                     estimateMapper.findCandidatesByEstimateDbId(estimateRecord.getId());
             List<RouteCandidate> candidates = candidateRecords.stream()
                     .map(this::toCandidateDomain)
-                    .collect(Collectors.toList());
-            return new Estimate(
+                    .toList();
+            return new Estimate(new Estimate.PersistedState(
                     estimateRecord.getId(),
                     UUID.fromString(estimateRecord.getEstimateId()),
                     estimateRecord.getOriginUnlocode(),
@@ -65,7 +64,7 @@ public class MyBatisEstimateRepository implements EstimateRepository {
                     estimateRecord.getWeightKg(),
                     EstimateStatus.valueOf(estimateRecord.getStatus()),
                     candidates
-            );
+            ));
         });
     }
 

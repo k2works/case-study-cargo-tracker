@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * MyBatis を使用した荷主リポジトリ実装
@@ -24,11 +23,9 @@ public class MyBatisShipperRepository implements ShipperRepository {
     @Override
     public Shipper save(Shipper shipper) {
         ShipperRecord shipperRecord = toRecord(shipper);
-        // shipper_code はシーケンスで採番（INSERT後に設定できないため、DBで自動生成する）
-        // ここでは仮として shipperCode を生成してセットする
         shipperRecord.setShipperCode(generateShipperCode());
         shipperMapper.insertShipper(shipperRecord);
-        return new Shipper(
+        return new Shipper(new Shipper.PersistedState(
                 shipperRecord.getId(),
                 shipperRecord.getShipperCode(),
                 ShipperType.valueOf(shipperRecord.getShipperType()),
@@ -37,7 +34,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 shipperRecord.getPhone(),
                 shipperRecord.getContractNumber(),
                 shipperRecord.getDiscountRate()
-        );
+        ));
     }
 
     @Override
@@ -49,7 +46,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
     public List<Shipper> findAll() {
         return shipperMapper.findAll().stream()
                 .map(this::toDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private ShipperRecord toRecord(Shipper shipper) {
@@ -64,7 +61,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
     }
 
     private Shipper toDomain(ShipperRecord shipperRecord) {
-        return new Shipper(
+        return new Shipper(new Shipper.PersistedState(
                 shipperRecord.getId(),
                 shipperRecord.getShipperCode(),
                 ShipperType.valueOf(shipperRecord.getShipperType()),
@@ -73,7 +70,7 @@ public class MyBatisShipperRepository implements ShipperRepository {
                 shipperRecord.getPhone(),
                 shipperRecord.getContractNumber(),
                 shipperRecord.getDiscountRate()
-        );
+        ));
     }
 
     private String generateShipperCode() {

@@ -25,7 +25,7 @@ public class Shipper {
     public static Shipper createIndividual(String name, String email, String phone) {
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(email, "email must not be null");
-        return new Shipper(null, null, ShipperType.INDIVIDUAL, name, email, phone, null, null);
+        return new Shipper(new PersistedState(null, null, ShipperType.INDIVIDUAL, name, email, phone, null, null));
     }
 
     /**
@@ -40,23 +40,28 @@ public class Shipper {
         if (discountRate.compareTo(BigDecimal.ZERO) < 0 || discountRate.compareTo(new BigDecimal("0.30")) > 0) {
             throw new IllegalArgumentException("discountRate must be between 0 and 0.30");
         }
-        return new Shipper(null, null, ShipperType.CORPORATE, name, email, phone, contractNumber, discountRate);
+        return new Shipper(new PersistedState(null, null, ShipperType.CORPORATE, name, email, phone, contractNumber, discountRate));
     }
+
+    /**
+     * DB からの復元に使用する状態 record
+     */
+    public record PersistedState(Long id, String shipperCode, ShipperType shipperType,
+                                  String name, String email, String phone,
+                                  String contractNumber, BigDecimal discountRate) {}
 
     /**
      * DBからの復元コンストラクタ
      */
-    public Shipper(Long id, String shipperCode, ShipperType shipperType,
-                   String name, String email, String phone,
-                   String contractNumber, BigDecimal discountRate) {
-        this.id = id;
-        this.shipperCode = shipperCode;
-        this.shipperType = shipperType;
-        this.name = name;
-        this.email = email;
-        this.phone = phone;
-        this.contractNumber = contractNumber;
-        this.discountRate = discountRate;
+    public Shipper(PersistedState state) {
+        this.id = state.id();
+        this.shipperCode = state.shipperCode();
+        this.shipperType = state.shipperType();
+        this.name = state.name();
+        this.email = state.email();
+        this.phone = state.phone();
+        this.contractNumber = state.contractNumber();
+        this.discountRate = state.discountRate();
     }
 
     public Long getId() { return id; }

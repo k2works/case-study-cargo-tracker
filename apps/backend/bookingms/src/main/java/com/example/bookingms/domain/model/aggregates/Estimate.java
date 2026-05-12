@@ -36,26 +36,32 @@ public class Estimate {
         Objects.requireNonNull(arrivalDeadline, "arrivalDeadline must not be null");
         Objects.requireNonNull(cargoType, "cargoType must not be null");
         Objects.requireNonNull(weightKg, "weightKg must not be null");
-        return new Estimate(null, UUID.randomUUID(), originUnlocode, destinationUnlocode,
+        return new Estimate(new PersistedState(null, UUID.randomUUID(), originUnlocode, destinationUnlocode,
                 arrivalDeadline, CargoType.valueOf(cargoType), weightKg,
-                EstimateStatus.CREATED, new ArrayList<>());
+                EstimateStatus.CREATED, new ArrayList<>()));
     }
 
     /**
-     * DBからの復元コンストラクタ
+     * DB からの復元に使用する状態 record
      */
-    public Estimate(Long id, UUID estimateId, String originUnlocode, String destinationUnlocode,
-                    LocalDate arrivalDeadline, CargoType cargoType, BigDecimal weightKg,
-                    EstimateStatus status, List<RouteCandidate> candidates) {
-        this.id = id;
-        this.estimateId = estimateId;
-        this.originUnlocode = originUnlocode;
-        this.destinationUnlocode = destinationUnlocode;
-        this.arrivalDeadline = arrivalDeadline;
-        this.cargoType = cargoType;
-        this.weightKg = weightKg;
-        this.status = status;
-        this.candidates = candidates != null ? candidates : new ArrayList<>();
+    public record PersistedState(Long id, UUID estimateId, String originUnlocode,
+                                  String destinationUnlocode, LocalDate arrivalDeadline,
+                                  CargoType cargoType, BigDecimal weightKg,
+                                  EstimateStatus status, List<RouteCandidate> candidates) {}
+
+    /**
+     * 全フィールドコンストラクタ
+     */
+    public Estimate(PersistedState state) {
+        this.id = state.id();
+        this.estimateId = state.estimateId();
+        this.originUnlocode = state.originUnlocode();
+        this.destinationUnlocode = state.destinationUnlocode();
+        this.arrivalDeadline = state.arrivalDeadline();
+        this.cargoType = state.cargoType();
+        this.weightKg = state.weightKg();
+        this.status = state.status();
+        this.candidates = state.candidates() != null ? state.candidates() : new ArrayList<>();
     }
 
     /**
