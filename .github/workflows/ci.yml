@@ -210,6 +210,8 @@ jobs:
           echo "Starting Booking with $BOOKING_JAR"
           java -jar "$BOOKING_JAR" \
             --management.health.rabbit.enabled=false \
+            --spring.rabbitmq.listener.simple.auto-startup=false \
+            --spring.rabbitmq.listener.simple.missing-queues-fatal=false \
             > booking.log 2>&1 &
         env:
           PORT: 8082
