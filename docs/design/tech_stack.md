@@ -44,9 +44,9 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 
 | カテゴリ | 技術 | バージョン | 用途 | サポート期限 | 選定理由 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| ORM / JPA 実装 | Spring Data JPA | 4.0.x | Read Model（Projection）アクセス | 2027-12 | Axon の `@EventHandler` Projection 実装の慣例 |
-| JPA プロバイダ | Hibernate ORM | 7.0.x | JPA 実装 | コミュニティ | Spring Data JPA の既定実装 |
-| 永続化 API | Jakarta Persistence | 3.2 | JPA 標準 API | コミュニティ | `jakarta.persistence.*`（Axon 5 / Spring Boot 4 必須） |
+| SQL マッパー | **MyBatis** | 3.5.x | Read Model / Auth DB の永続化（Projection 更新・Query） | コミュニティ | SQL の見える化・チューニング容易性、参考プロジェクト（Practical DDD in Enterprise Java）との整合 |
+| Spring 統合 | **mybatis-spring-boot-starter** | 3.0.x | Spring Boot との統合（DataSource・トランザクション・Mapper スキャン） | コミュニティ | 標準的な統合方法 |
+| Axon 永続化 | `JdbcTokenStore` / `JdbcSagaStore` | Axon 5 同梱 | Event Processor の Token・Saga インスタンスの永続化 | コミュニティ | MyBatis と同一 DataSource を共有し、Projection 更新と同一トランザクションで処理 |
 | データベース | **PostgreSQL** | **16.x** | Read Model / Auth DB | **2028-11** | Read Model の関係型ストア。インデックス・JSON 型・FTS 等の機能が豊富 |
 | 組込み DB（開発・テスト） | H2 Database | 2.x | 開発・統合テスト用 | コミュニティ | Testcontainers が利用できない局面の代替 |
 | マイグレーション | Flyway | 10.x | Read Model / Auth DB スキーマ管理 | コミュニティ | `V<num>__<desc>.sql` 命名規則で運用 |

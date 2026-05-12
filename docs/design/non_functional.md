@@ -203,7 +203,7 @@ OWASP Top 10（2021）を網羅。
 | :--- | :--- |
 | A01 アクセス制御の不備 | RBAC + Spring Security `@PreAuthorize` + Aggregate 側での権限チェック |
 | A02 暗号化の失敗 | TLS 1.3 強制、AES-256、強力なパスワードハッシュ |
-| A03 インジェクション | Bind 変数（JPA / MyBatis）、Bean Validation、テンプレート文字列禁止 |
+| A03 インジェクション | MyBatis の `#{...}` バインド変数のみ使用（`${...}` の文字列連結禁止）、Bean Validation、テンプレート文字列禁止 |
 | A04 セキュアでない設計 | 脅威モデリング（STRIDE）、ADR で記録 |
 | A05 セキュリティ設定ミス | Terraform で IaC、設定の構成ドリフト検出 |
 | A06 脆弱なコンポーネント | Snyk / Dependabot で週次自動スキャン、CVSS 7.0+ は即対応 |

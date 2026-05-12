@@ -13,11 +13,13 @@ tags: architecture, backend, ddd, hexagonal, cqrs, event-sourcing, saga, microse
 本ドキュメントでは、国際貨物輸送管理システムのバックエンドアーキテクチャを定義する。
 Practical DDD in Enterprise Java（Chapter 6）の Axon Framework によるマイクロサービス実装思想（DDD・ヘキサゴナル・CQRS・Event Sourcing・Saga）を継承しつつ、フレームワークは最新の **Axon Framework 5 系** を採用し、Spring Boot 4.0.5 / Java 25 / Gradle 9.2.1 を基盤とした現代的な実装とする。
 
-メッセージングは **Axon Framework 5 + Axon Server（2024.x 系）** を採用し、マイクロサービス間のコマンド・イベント・クエリを統一的なバスで疎結合に連携する。集約は Event Sourcing で永続化し、参照モデル（Projection）は JPA + PostgreSQL で構築する。
+メッセージングは **Axon Framework 5 + Axon Server（2024.x 系）** を採用し、マイクロサービス間のコマンド・イベント・クエリを統一的なバスで疎結合に連携する。集約は Event Sourcing で永続化し、参照モデル（Projection）は **MyBatis + PostgreSQL** で構築する。
 
-> **注記（参考実装との差分）**: 参照プロジェクトの Chapter 6 は Axon Framework 4.2 系の実装である。本プロジェクトでは Axon Framework 5 を採用するため、以下のような点で参考実装からの読み替えが必要となる。実装時は Axon 5 公式ドキュメントに従う。
+> **注記（参考実装との差分）**: 参照プロジェクトの Chapter 6 は Axon Framework 4.2 系 + JPA の実装である。本プロジェクトでは Axon Framework 5 + **MyBatis** を採用するため、以下のような点で参考実装からの読み替えが必要となる。実装時は Axon 5 公式ドキュメントと MyBatis-Spring-Boot-Starter のリファレンスに従う。
 >
-> - パッケージ移行: `javax.persistence.*` → `jakarta.persistence.*`（Spring Boot 3 系以降）
+> - 参考実装の `@Entity` / `EntityManager`（JPA）→ 本プロジェクトでは **MyBatis Mapper + Mapper XML（または Annotation）** に置換
+> - Aggregate の永続化は Axon Event Store（変更なし、JPA / MyBatis のいずれにも依存しない）
+> - **Axon の Token Store / Saga Store は JDBC ベース実装**（`JdbcTokenStore` / `JdbcSagaStore`）を採用（MyBatis 採用時の標準的選択）
 > - Annotation 中心 API から **機能ベース API（Configurer / Component Registry）** への移行が推奨される領域あり
 > - `@Aggregate` / `@CommandHandler` / `@EventHandler` / `@QueryHandler` / `@Saga` は維持されるが、設定 API は刷新されている
 > - イベントメッセージのシリアライザは Jackson が推奨デフォルト
@@ -74,7 +76,7 @@ package "API Gateway (gatewayms)" {
 package "Auth Microservice (authms)" {
   [Auth REST Controller] as auth_rest
   [Domain Model\n(User, Role)] as auth_domain
-  [JPA Repository] as auth_repo
+  [MyBatis Mapper] as auth_repo
   [JWT Provider] as jwt
 }
 
@@ -100,26 +102,26 @@ package "Booking Microservice (bookingms)" {
 package "Routing Microservice (routingms)" {
   [REST Controller] as routing_rest
   [Voyage @Aggregate] as routing_agg
-  [Projection (JPA)] as routing_proj
+  [Projection (MyBatis)] as routing_proj
 }
 
 package "Tracking Microservice (trackingms)" {
   [REST Controller] as tracking_rest
   [TrackingActivity @Aggregate] as tracking_agg
-  [Projection (JPA)] as tracking_proj
+  [Projection (MyBatis)] as tracking_proj
   [Saga Manager] as tracking_saga
 }
 
 package "Handling Microservice (handlingms)" {
   [REST Controller] as handling_rest
   [HandlingActivity @Aggregate] as handling_agg
-  [Projection (JPA)] as handling_proj
+  [Projection (MyBatis)] as handling_proj
 }
 
 package "Billing Microservice (billingms)" {
   [REST Controller] as billing_rest
   [Invoice @Aggregate] as billing_agg
-  [Projection (JPA)] as billing_proj
+  [Projection (MyBatis)] as billing_proj
 }
 
 cloud "Axon Server\n(Command Bus / Event Bus / Query Bus / Event Store)" as AS
@@ -180,7 +182,7 @@ end note
 > **設計上のポイント**:
 >
 > - 各マイクロサービスは **Command 側のイベントを Axon Server の Event Store に永続化** する（Event Sourcing）
-> - **Projection（Read Model）は各サービス専用の PostgreSQL** に JPA で保存する
+> - **Projection（Read Model）は各サービス専用の PostgreSQL** に MyBatis で保存する
 > - サービス間のイベント連携は **Axon Server を介した分散 Event Bus** で行う（RabbitMQ・Kafka 不要）
 > - 同期通信が必要なクエリ（例: 経路候補取得）は ACL 経由の REST API、または Axon の分散 Query Gateway で実現する
 
@@ -285,13 +287,13 @@ end note
 
 #### 1. Auth Context（認証コンテキスト）― authms
 
-ユーザー認証・認可の中核ロジックを担う。JWT トークンの発行と検証を責務とする。ビジネスドメインとは独立した支援コンテキスト。認証データは状態指向のため Event Sourcing を適用せず、JPA で直接管理する。
+ユーザー認証・認可の中核ロジックを担う。JWT トークンの発行と検証を責務とする。ビジネスドメインとは独立した支援コンテキスト。認証データは状態指向のため Event Sourcing を適用せず、MyBatis で直接管理する。
 
 | 要素 | 内容 |
 | :--- | :--- |
 | 集約ルート | `User` |
 | 主要概念 | `Role`, `Password`, `Email`, `UserName` |
-| 永続化 | JPA + PostgreSQL（Event Sourcing 適用外） |
+| 永続化 | MyBatis + PostgreSQL（Event Sourcing 適用外） |
 | アクター | 全ユーザー（認証時） |
 | DB | `auth_db` |
 
@@ -304,7 +306,7 @@ end note
 | 集約ルート | `Cargo` |
 | 主要概念 | `RouteSpecification`, `CargoItinerary`, `Delivery` |
 | `BookingStatus` | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED` |
-| 永続化 | Event Store（Axon Server）+ JPA Projection |
+| 永続化 | Event Store（Axon Server）+ MyBatis Projection |
 | Saga | `BookingSagaManager`（`CargoBookedEvent` → `AssignRouteToCargoCommand` → `AssignTrackingDetailsToCargoCommand`） |
 | アクター | 荷主、営業担当者 |
 | DB | `booking_read_db` |
@@ -317,7 +319,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `Voyage` |
 | 主要概念 | `CarrierMovement`, `Schedule`, `VoyageNumber` |
-| 永続化 | Event Store（Axon Server）+ JPA Projection |
+| 永続化 | Event Store（Axon Server）+ MyBatis Projection |
 | アクター | 経路設計者 |
 | DB | `routing_read_db` |
 
@@ -330,7 +332,7 @@ end note
 | 集約ルート | `TrackingActivity` |
 | 主要概念 | `TrackingNumber`, `TransportStatus`, `TrackingExceptionEvent` |
 | `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `IN_TRANSIT` / `UNLOADED` / `AWAITING_CLAIM` / `DELIVERED` / `MISROUTED` |
-| 永続化 | Event Store（Axon Server）+ JPA Projection |
+| 永続化 | Event Store（Axon Server）+ MyBatis Projection |
 | アクター | 追跡管理者、荷主、荷受人 |
 | DB | `tracking_read_db` |
 
@@ -342,7 +344,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `HandlingActivity` |
 | 主要概念 | `HandlingType`, `CargoSnapshot`（ACL） |
-| 永続化 | Event Store（Axon Server）+ JPA Projection |
+| 永続化 | Event Store（Axon Server）+ MyBatis Projection |
 | アクター | 荷役作業員 |
 | DB | `handling_read_db` |
 
@@ -354,7 +356,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `Invoice` |
 | 主要概念 | `Money`, `DiscountPolicy`, `PaymentStatus` |
-| 永続化 | Event Store（Axon Server）+ JPA Projection |
+| 永続化 | Event Store（Axon Server）+ MyBatis Projection |
 | アクター | 経理担当者、荷主、決済機関 |
 | DB | `billing_read_db` |
 
@@ -394,12 +396,12 @@ rectangle "Axon Framework / Spring（出力側）" as infra #LightGreen {
   [CommandGateway]
   [QueryGateway]
   [EventStore (Axon Server)]
-  [JPA EntityManager\n(Projection DB)]
+  [MyBatis SqlSession / Mapper\n(Projection DB)]
   [RestTemplate / WebClient\n(Routing 同期呼出)]
 }
 
 [CargoBookingController\n(interfaces/rest/)] --> [CargoBookingService\n(commandgateways/)]
-[CargoProjectionsEventHandler\n(interfaces/events/)\n@EventHandler] --> [JPA EntityManager\n(Projection DB)]
+[CargoProjectionsEventHandler\n(interfaces/events/)\n@EventHandler] --> [MyBatis SqlSession / Mapper\n(Projection DB)]
 
 [CargoBookingService\n(commandgateways/)] --> [CommandGateway]
 [CommandGateway] --> [Cargo @Aggregate\n(model/)]
@@ -407,7 +409,7 @@ rectangle "Axon Framework / Spring（出力側）" as infra #LightGreen {
 
 [CargoProjectionService\n(querygateways/)] --> [QueryGateway]
 [QueryGateway] --> [CargoAggregateQueryHandler\n(queryhandlers/)\n@QueryHandler]
-[CargoAggregateQueryHandler\n(queryhandlers/)\n@QueryHandler] --> [JPA EntityManager\n(Projection DB)]
+[CargoAggregateQueryHandler\n(queryhandlers/)\n@QueryHandler] --> [MyBatis SqlSession / Mapper\n(Projection DB)]
 
 [BookingSagaManager\n(sagaparticipants/)\n@Saga] --> [CommandGateway]
 [ExternalCargoRoutingService\n(outboundservices/acl/)] --> [RestTemplate / WebClient\n(Routing 同期呼出)]
@@ -423,7 +425,7 @@ rectangle "Axon Framework / Spring（出力側）" as infra #LightGreen {
 | :--- | :--- | :--- | :--- |
 | **Domain** | `domain/model/`（Aggregate）、`domain/commands/`、`domain/events/`、`domain/queries/`、`domain/queryhandlers/`、`domain/projections/` | 集約・コマンド・イベント・クエリ・クエリハンドラ・Projection 定義 | 外部に依存しない（Axon の `@Aggregate` 等のアノテーションのみ依存） |
 | **Application** | `application/internal/commandgateways/`、`application/internal/querygateways/`、`application/internal/sagaparticipants/`、`application/internal/outboundservices/acl/` | コマンド送信・クエリ発行・Saga・ACL 経由の外部マイクロサービス連携 | Domain と Axon Gateway に依存 |
-| **Infrastructure** | `infrastructure/repositories/jpa/`、`infrastructure/services/`、`infrastructure/config/` | JPA リポジトリ（Projection 用）、外部サービスクライアント、Axon 設定 | Application / Domain に依存 |
+| **Infrastructure** | `infrastructure/repositories/mybatis/`、`infrastructure/services/`、`infrastructure/config/` | MyBatis Mapper（Projection 用）、外部サービスクライアント、Axon 設定 | Application / Domain に依存 |
 | **Interfaces** | `interfaces/rest/`、`interfaces/rest/dto/`、`interfaces/rest/transform/`、`interfaces/events/` | REST API Controller・DTO・DTO 変換・Projection 更新用 `@EventHandler` | Application に依存 |
 
 ### パッケージ構成（全マイクロサービス）
@@ -446,7 +448,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │       ├── commandservices/     コマンドサービス（AuthCommandService）
 │       │       └── queryservices/       クエリサービス（AuthQueryService）
 │       ├── infrastructure/
-│       │   ├── repositories/jpa/        JPA リポジトリ（UserRepository）
+│       │   ├── repositories/mybatis/        MyBatis Mapper（UserMapper, UserRepository 実装）
 │       │   ├── security/                JWT 発行・検証（JwtTokenProvider）
 │       │   └── config/                  SecurityConfig, CorsConfig
 │       └── interfaces/
@@ -462,7 +464,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │   ├── events/                  CargoBookedEvent, CargoRoutedEvent 他
 │       │   ├── queries/                 CargoSummaryQuery, ListCargoSummariesQuery
 │       │   ├── queryhandlers/           CargoAggregateQueryHandler（@QueryHandler）
-│       │   └── projections/             CargoSummary（JPA Entity）
+│       │   └── projections/             CargoSummary（POJO、MyBatis ResultMap でマッピング）
 │       ├── application/
 │       │   └── internal/
 │       │       ├── commandgateways/     CargoBookingService（CommandGateway ラッパー）
@@ -471,7 +473,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │       └── outboundservices/
 │       │           └── acl/             ExternalCargoRoutingService（Routing 同期呼出）
 │       ├── infrastructure/
-│       │   ├── repositories/jpa/        Projection 用 JPA リポジトリ
+│       │   ├── repositories/mybatis/        Projection 用 MyBatis Mapper（XML / Annotation）
 │       │   ├── services/                Routing サービスクライアント実装
 │       │   └── config/                  AxonConfig, JpaConfig
 │       ├── interfaces/
@@ -489,13 +491,13 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │   ├── events/                  VoyageRegisteredEvent, VoyageScheduleUpdatedEvent
 │       │   ├── queries/                 VoyageQuery, ListVoyagesQuery, OptimalRouteQuery
 │       │   ├── queryhandlers/           VoyageQueryHandler
-│       │   └── projections/             VoyageProjection（JPA）
+│       │   └── projections/             VoyageProjection（POJO + MyBatis ResultMap）
 │       ├── application/
 │       │   └── internal/
 │       │       ├── commandgateways/     VoyageCommandService
 │       │       └── querygateways/       VoyageQueryService
 │       ├── infrastructure/
-│       │   ├── repositories/jpa/
+│       │   ├── repositories/mybatis/
 │       │   └── config/
 │       └── interfaces/
 │           └── rest/                    REST Controller（VoyageController, RoutingController）
@@ -508,14 +510,14 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │   ├── events/                  TrackingInitializedEvent, TransportStatusUpdatedEvent, CargoDeliveredEvent
 │       │   ├── queries/                 TrackingQuery, TrackingHistoryQuery
 │       │   ├── queryhandlers/
-│       │   └── projections/             TrackingProjection（JPA）
+│       │   └── projections/             TrackingProjection（POJO + MyBatis ResultMap）
 │       ├── application/
 │       │   └── internal/
 │       │       ├── commandgateways/     TrackingCommandService
 │       │       ├── querygateways/       TrackingQueryService
 │       │       └── sagaparticipants/    TrackingSagaManager（必要に応じて）
 │       ├── infrastructure/
-│       │   ├── repositories/jpa/
+│       │   ├── repositories/mybatis/
 │       │   └── config/
 │       └── interfaces/
 │           ├── rest/                    REST Controller（TrackingController）
@@ -534,7 +536,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │       ├── commandgateways/     HandlingCommandService
 │       │       └── querygateways/
 │       ├── infrastructure/
-│       │   ├── repositories/jpa/
+│       │   ├── repositories/mybatis/
 │       │   └── config/
 │       └── interfaces/
 │           └── rest/                    REST Controller（HandlingController）
@@ -551,7 +553,7 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │       ├── commandgateways/     BillingCommandService
 │       │       └── querygateways/       BillingQueryService
 │       ├── infrastructure/
-│       │   ├── repositories/jpa/
+│       │   ├── repositories/mybatis/
 │       │   └── config/
 │       └── interfaces/
 │           ├── rest/                    REST Controller（BillingController）
@@ -629,9 +631,9 @@ note right of ES
 end note
 
 note right of RM
-  Projection は JPA Entity として
+  Projection は POJO + MyBatis Mapper として
   Event Handler で更新される
-  Query Handler は Named Query 等で
+  Query Handler は MyBatis Mapper の SQL（XML / Annotation）で
   画面表示に最適化したデータを返す
 end note
 
@@ -641,8 +643,8 @@ end note
 ### CQRS 適用方針
 
 - **コマンド側**: ドメインモデル（集約）を通じて状態変更。`@CommandHandler` が不変条件を検証し、`AggregateLifecycle.apply()` でイベントを発行する。イベントは Axon Server の Event Store に永続化される
-- **イベント駆動の Projection 更新**: `@EventHandler` が Event Store のイベントを購読し、JPA Entity（Projection）を更新する。結果整合性ベース
-- **クエリ側**: `@QueryHandler` が JPA Named Query 等で Projection から画面表示用 DTO を返す。集約モデルを経由しない
+- **イベント駆動の Projection 更新**: `@EventHandler` が Event Store のイベントを購読し、MyBatis Mapper 経由で Projection テーブルを更新する。結果整合性ベース
+- **クエリ側**: `@QueryHandler` が MyBatis Mapper の SQL（XML またはアノテーション）で Projection から画面表示用 DTO を返す。集約モデルを経由しない
 - **CQRS が特に有効なコンテキスト**: Booking（一覧・詳細の頻繁な参照）、Tracking（リアルタイム状態確認・履歴照会）
 
 ### Aggregate 実装例（Booking Context）
@@ -704,84 +706,133 @@ public class Cargo {
 }
 ```
 
-### Projection 実装例（Booking Context）
+### Projection 実装例（Booking Context、MyBatis）
 
 ```java
-@Entity
-@Table(name = "cargo_summary_projection")
+// 1) Projection 用の POJO（純粋なドメイン値、JPA アノテーション無し）
 public class CargoSummary {
-
-    @Id
     private String bookingId;
-    @Column private String transportStatus;
-    @Enumerated(EnumType.STRING)
+    private String transportStatus;
     private RoutingStatus routingStatus;
-    @Column private String specOriginId;
-    @Column private String specDestinationId;
-    @Temporal(TemporalType.DATE)
-    private Date deadline;
-
-    // getters / setters / constructors
+    private String specOriginUnlocode;
+    private String specDestinationUnlocode;
+    private LocalDate deadline;
+    // getters / setters / constructors / equals / hashCode
 }
 
+// 2) MyBatis Mapper（XML またはアノテーション）
+@Mapper
+public interface CargoSummaryMapper {
+
+    @Insert("""
+        INSERT INTO cargo_summary (
+            booking_id, transport_status, routing_status,
+            spec_origin_unlocode, spec_destination_unlocode, deadline,
+            created_at, updated_at, version
+        ) VALUES (
+            #{bookingId}, #{transportStatus}, #{routingStatus},
+            #{specOriginUnlocode}, #{specDestinationUnlocode}, #{deadline},
+            NOW(), NOW(), 0
+        )
+        """)
+    void insert(CargoSummary summary);
+
+    @Update("""
+        UPDATE cargo_summary
+        SET routing_status = #{routingStatus},
+            updated_at = NOW(),
+            version = version + 1
+        WHERE booking_id = #{bookingId}
+        """)
+    void updateRoutingStatus(@Param("bookingId") String bookingId,
+                             @Param("routingStatus") RoutingStatus routingStatus);
+
+    @Select("SELECT * FROM cargo_summary WHERE booking_id = #{bookingId}")
+    @ResultMap("cargoSummaryResultMap")
+    CargoSummary findByBookingId(@Param("bookingId") String bookingId);
+
+    @Select("""
+        SELECT * FROM cargo_summary
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+        """)
+    @ResultMap("cargoSummaryResultMap")
+    List<CargoSummary> findAll(@Param("offset") int offset, @Param("limit") int limit);
+}
+
+// 3) Event Handler（Axon @EventHandler で Projection を更新）
 @Service
 public class CargoProjectionsEventHandler {
 
-    private final EntityManager entityManager;
+    private final CargoSummaryMapper cargoSummaryMapper;
 
-    public CargoProjectionsEventHandler(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public CargoProjectionsEventHandler(CargoSummaryMapper mapper) {
+        this.cargoSummaryMapper = mapper;
     }
 
     @EventHandler
+    @Transactional
     public void on(CargoBookedEvent event) {
         CargoSummary summary = new CargoSummary(
-            event.getBookingId(), "", RoutingStatus.NOT_ROUTED,
+            event.getBookingId(), "",
+            RoutingStatus.NOT_ROUTED,
             event.getOriginLocation().getUnLocCode(),
             event.getRouteSpecification().getDestination().getUnLocCode(),
             event.getRouteSpecification().getArrivalDeadline());
-        entityManager.persist(summary);
+        cargoSummaryMapper.insert(summary);
     }
 
     @EventHandler
+    @Transactional
     public void on(CargoRoutedEvent event) {
-        CargoSummary summary = entityManager.find(CargoSummary.class, event.getBookingId());
-        summary.setRoutingStatus(RoutingStatus.ROUTED);
+        cargoSummaryMapper.updateRoutingStatus(event.getBookingId(), RoutingStatus.ROUTED);
     }
 }
 ```
 
-### Query Handler 実装例
+> **ResultMap**: 複雑なオブジェクトはアノテーションよりも **XML マッパー** (`src/main/resources/mybatis/CargoSummaryMapper.xml`) に `<resultMap>` を定義する方が保守性が高い。本プロジェクトでは Read Model は XML マッパー方式を基本とする。
+
+### Query Handler 実装例（MyBatis）
 
 ```java
 @Component
 public class CargoAggregateQueryHandler {
 
-    private final EntityManager entityManager;
+    private final CargoSummaryMapper cargoSummaryMapper;
 
-    public CargoAggregateQueryHandler(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public CargoAggregateQueryHandler(CargoSummaryMapper mapper) {
+        this.cargoSummaryMapper = mapper;
     }
 
     @QueryHandler
     public CargoSummaryResult handle(CargoSummaryQuery query) {
-        CargoSummary summary = entityManager.createNamedQuery(
-                "CargoSummary.findByBookingId", CargoSummary.class)
-            .setParameter("bookingId", query.getBookingId())
-            .getSingleResult();
+        CargoSummary summary = cargoSummaryMapper.findByBookingId(query.getBookingId());
+        if (summary == null) {
+            throw new CargoNotFoundException(query.getBookingId());
+        }
         return new CargoSummaryResult(summary);
     }
 
     @QueryHandler
     public ListCargoSummaryResult handle(ListCargoSummariesQuery query) {
-        List<CargoSummary> list = entityManager.createNamedQuery(
-                "CargoSummary.findAll", CargoSummary.class)
-            .setFirstResult(query.getOffset())
-            .setMaxResults(query.getLimit())
-            .getResultList();
+        List<CargoSummary> list = cargoSummaryMapper.findAll(query.getOffset(), query.getLimit());
         return new ListCargoSummaryResult(list);
     }
 }
+```
+
+### MyBatis 設定例
+
+```yaml
+# application.yml
+mybatis:
+  mapper-locations: classpath:mybatis/*.xml
+  type-aliases-package: com.example.bookingms.domain.projections
+  configuration:
+    map-underscore-to-camel-case: true   # DB の snake_case → Java の camelCase
+    default-fetch-size: 100
+    default-statement-timeout: 5
+    cache-enabled: false                  # Read Model の整合性を優先
 ```
 
 ## イベント駆動設計（Axon Event Bus）
@@ -985,7 +1036,8 @@ public class ExternalCargoRoutingService {
 ### トランザクション管理
 
 - **集約単位**: 単一の集約に対するコマンド処理は Axon が自動的にトランザクションを管理する
-- **Projection 更新**: `@EventHandler` の処理は `@Transactional` で保護し、Token Store と Read Model を同一トランザクションで更新する
+- **Projection 更新**: `@EventHandler` の処理は `@Transactional`（Spring）で保護し、Axon Token Store（JDBC）と MyBatis による Read Model 更新を **同一 JDBC トランザクション** で実行する
+- **MyBatis SqlSession**: Spring の `DataSourceTransactionManager` で管理。Token Store も同一 DataSource を共有することで at-least-once 配信時の冪等性を担保
 - **サービス間**: 結果整合性（Eventual Consistency）。Saga による補償アクションで整合性を担保する
 
 ### Event Store の運用方針
@@ -993,6 +1045,7 @@ public class ExternalCargoRoutingService {
 - イベントのスキーマ変更は **アップキャスター（Upcaster）** で吸収する
 - 巨大な集約は **スナップショット** を定期取得し、再生コストを抑制する
 - Read Model の再構築が必要な場合は **Token をリセット** してイベントを再生する
+- Axon の `JdbcTokenStore` / `JdbcSagaStore` は Read Model と同じ PostgreSQL 内に `token_entry` / `saga_entry` テーブルを持つ（Read Model DB の Flyway マイグレーションで作成）
 
 ## API 設計方針
 
@@ -1117,7 +1170,7 @@ package "E2E テスト（少量）" #LightCoral {
 }
 
 package "統合テスト（中程度）" #LightYellow {
-  [Testcontainers（PostgreSQL, Axon Server）\nSpring MockMvc / JPA / WebTestClient\nContract テスト（イベント契約）] as integration
+  [Testcontainers（PostgreSQL, Axon Server）\nSpring MockMvc / MyBatis Mapper / WebTestClient\nContract テスト（イベント契約）] as integration
 }
 
 package "Axon Test（中程度）" #LightCyan {
@@ -1178,7 +1231,8 @@ class CargoAggregateTest {
 | Java | Eclipse Temurin | 25 |
 | CQRS / Event Sourcing / Saga | Axon Framework | 5.x |
 | メッセージング基盤 | Axon Server | 2024.x（Standard Edition、Axon 5 互換版） |
-| データアクセス（Projection） | Spring Data JPA + Hibernate | 4.0.x / 7.0.x |
+| データアクセス（Projection / Auth） | **MyBatis + mybatis-spring-boot-starter** | 3.5.x / 3.0.x |
+| Axon Token / Saga Store | `JdbcTokenStore` / `JdbcSagaStore` | Axon 5 同梱 |
 | API ゲートウェイ | Spring Cloud Gateway | 4.x |
 | サービス間通信（同期） | RestTemplate / WebClient | - |
 | データベース | PostgreSQL / H2（開発用） | 16.x / 2.x |

@@ -85,7 +85,7 @@ axon -[hidden]down-> unit
 | :--- | :--- | :--- | :--- |
 | 値オブジェクト | `UnLocode`, `Money`, `RouteSpecification`, `CargoItinerary` | JUnit 5 + AssertJ | 不変条件・等価性・境界値・例外を網羅 |
 | ドメインサービス | `OptimalRouteService`, `FareCalculator`, `TransportStatusTransition` | JUnit 5 + Mockito | リポジトリをモック化、純粋ロジックを検証 |
-| Projection Event Handler | `CargoProjectionsEventHandler` | JUnit 5 + Mockito | EntityManager をモック、状態反映を検証 |
+| Projection Event Handler | `CargoProjectionsEventHandler` | JUnit 5 + Mockito | MyBatis Mapper をモック、INSERT / UPDATE 呼出と引数を検証 |
 | QueryHandler | `CargoAggregateQueryHandler` | JUnit 5 + Mockito | Named Query 呼出と結果変換を検証 |
 | Application Service | `CargoBookingService`（CommandGateway ラッパー） | JUnit 5 + Mockito | CommandGateway をモックして送信パラメータを検証 |
 | ACL | `ExternalCargoRoutingService` | JUnit 5 + Mockito | RestTemplate をモック、変換ロジックを検証 |
@@ -194,9 +194,9 @@ class BookingSagaManagerTest {
 | 対象 | 範囲 | ツール |
 | :--- | :--- | :--- |
 | REST API（Command 側） | Controller → CommandGateway → Aggregate → Event Store | Spring MockMvc + Testcontainers（Axon Server + PostgreSQL） |
-| REST API（Query 側） | Controller → QueryGateway → QueryHandler → JPA Projection | Spring MockMvc + Testcontainers |
-| Projection 更新（E2E 内部版） | Event Store → @EventHandler → JPA Projection 反映 | Testcontainers（Axon Server + PostgreSQL） |
-| Repository / JPA | Read Model のクエリ・マイグレーション | Testcontainers + Flyway |
+| REST API（Query 側） | Controller → QueryGateway → QueryHandler → MyBatis Mapper → Projection | Spring MockMvc + Testcontainers |
+| Projection 更新（E2E 内部版） | Event Store → @EventHandler → MyBatis Mapper → Projection 反映 | Testcontainers（Axon Server + PostgreSQL） |
+| MyBatis Mapper | Read Model のクエリ・マイグレーション・SQL 検証 | `@MybatisTest` + Testcontainers + Flyway |
 | サービス間 Contract | イベント契約・REST 契約 | Spring Cloud Contract |
 | フロント統合 | Container コンポーネント + Command / Query API モック | Vitest + Testing Library + MSW |
 
@@ -594,7 +594,7 @@ stop
 | **集約自体** | モックしない（Axon Test Fixture でイベント列を直接検証） |
 | Axon CommandGateway / QueryGateway | Application Service のテストで Mockito モック |
 | Axon Server | 統合テストは Testcontainers で実体起動。ユニットは使わない |
-| PostgreSQL | 統合テストは Testcontainers。ユニットでは EntityManager をモック |
+| PostgreSQL | 統合テストは Testcontainers。ユニットでは MyBatis Mapper をモック |
 | 外部 ACL（Routing / Notification / Payment / Customs） | ユニット・統合では Mockito モック。E2E はスタブサーバ（WireMock） |
 | Front: React Query | テストでは `QueryClientProvider` を生成し、API 部分のみ MSW で intercept |
 

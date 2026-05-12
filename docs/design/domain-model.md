@@ -952,7 +952,7 @@ Invoice "1" *-- "3" Money
 
 ## Auth Context（支援）
 
-ユーザー認証・認可。Event Sourcing は適用せず、JPA で状態管理する。
+ユーザー認証・認可。Event Sourcing は適用せず、MyBatis で状態管理する。
 
 ```plantuml
 @startuml
@@ -1285,7 +1285,7 @@ end note
 - すべての集約は `@Aggregate` を付与
 - コマンドハンドラは `@CommandHandler`、状態再構築は `@EventSourcingHandler`
 - Saga は `@Saga` + `@StartSaga` + `@SagaEventHandler(associationProperty=...)`
-- 永続化注釈は `jakarta.persistence.*`（Axon 5 / Spring Boot 3+ 必須）
+- 永続化は **MyBatis Mapper**（XML / Annotation）で実装。Projection はプレーンな POJO とし、JPA アノテーションは付与しない
 
 ## 参照
 

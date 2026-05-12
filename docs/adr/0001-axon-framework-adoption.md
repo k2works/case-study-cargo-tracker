@@ -39,7 +39,7 @@
   - **Saga 実装が宣言的**：`@Saga` + `associationProperty` で長期プロセスを宣言的に記述可能
   - **テスト容易性**：`AggregateTestFixture` / `SagaTestFixture` で Given-When-Then 形式のテストが書ける
   - **Spring Boot Starter**：`axon-spring-boot-starter` 一つで統合完了
-  - **Axon 5 の追加メリット**：Jakarta EE 対応（`jakarta.persistence.*`）、機能ベース設定 API（Configurer / Component Registry）、改善された Saga / Event Processor、Java 17+ の言語機能の活用
+  - **Axon 5 の追加メリット**：Spring Boot 3 系以降との整合、機能ベース設定 API（Configurer / Component Registry）、改善された Saga / Event Processor、Java 17+ の言語機能の活用
 - 短所：
   - フレームワーク固有の学習コスト
   - Axon Server がメッセージング基盤のシングルポイント。Standard Edition は単一ノード（HA は Enterprise Edition）
@@ -54,11 +54,11 @@
 
 - **採用バージョン**: Axon Framework 5.x（最新の安定版）、Axon Server 2024.x LTS（Standard Edition）
 - **集約は Event Sourcing で永続化**：`@Aggregate` + `@CommandHandler` + `@EventSourcingHandler` を使用し、Axon Server の Event Store に永続化する（authms を除く）
-- **Read Model は JPA + PostgreSQL**：`@EventHandler` で Event Store のイベントを購読し、各サービス専用 DB に Projection を書き込む。永続化 API は **Jakarta Persistence**（`jakarta.persistence.*`）に統一する
+- **Read Model は MyBatis + PostgreSQL**：`@EventHandler` で Event Store のイベントを購読し、各サービス専用 DB の Read Model テーブルを MyBatis Mapper で更新する。Axon の `JdbcTokenStore` / `JdbcSagaStore` は同一 DataSource を共有し、Projection 更新と同一 JDBC トランザクションで処理する
 - **マイクロサービス間連携は Axon Server 経由の分散 Event Bus**：RabbitMQ / Kafka は採用しない
 - **業務プロセスは `@Saga`**：複数集約・複数サービスにまたがる業務プロセスは Saga で調整する。例: `BookingSagaManager`（予約 → 経路 → 追跡）
 - **同期クエリは REST**：経路候補取得など Saga 内で必要となる同期クエリは ACL 経由の REST API で行う（または Axon 分散 Query Gateway の利用を検討する）
-- **authms は Event Sourcing 対象外**：認証データは状態指向のため通常の JPA で管理する
+- **authms は Event Sourcing 対象外**：認証データは状態指向のため通常の MyBatis CRUD で管理する
 - **Java / Spring Boot バージョン**: Axon 5 は Java 17 以上を要求する。本プロジェクトは Java 25 / Spring Boot 4.x で運用する
 
 ### 採用判断の根拠
@@ -76,7 +76,7 @@
 - 各マイクロサービスは Axon 5 の依存関係（`org.axonframework:axon-spring-boot-starter:5.x`）を導入する
 - パッケージ構成を Axon 標準（`commandgateways/`, `querygateways/`, `sagaparticipants/`, `commands/`, `events/`, `queries/`, `queryhandlers/`, `projections/`）に揃える
 - Aggregate は Axon のアノテーションでマークし、`AggregateLifecycle.apply()` でイベントを発行する
-- Read Model（Projection）は JPA Entity として **`jakarta.persistence.*`** を用いて実装する（`javax.persistence.*` ではない）
+- Read Model（Projection）は **MyBatis Mapper + POJO** で実装する（JPA `@Entity` は使用しない）
 - 参考実装（Chapter 6・Axon 4.2）からの移植時は、`javax → jakarta` への置換、設定 API の刷新箇所（Configurer / Component Registry）への追従が必要
 
 ### インフラへの影響
@@ -108,7 +108,7 @@
 
 - バックエンドアーキテクチャドキュメント（`docs/design/architecture_backend.md`）が Axon Framework 5 ベースで記述されていること
 - 各マイクロサービスの `build.gradle` に `axon-spring-boot-starter:5.x` 依存が含まれていること
-- 永続化 API として `jakarta.persistence.*` が使用され、`javax.persistence.*` が使用されていないこと
+- 永続化は MyBatis Mapper（XML / Annotation）で実装され、JPA（`jakarta.persistence.*`）への依存が無いこと（ArchUnit で検証）
 - Aggregate を持つマイクロサービスにおいて、`@Aggregate` を付与した集約が存在し、対応する `@EventSourcingHandler` を持つこと
 - Read Model は `@EventHandler` で更新され、Query Side は `@QueryHandler` 経由で参照されること
 - メッセージング基盤として RabbitMQ / Kafka を追加で導入していないこと

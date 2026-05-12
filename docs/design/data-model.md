@@ -182,13 +182,15 @@ end note
 
 | サービス | データベース名 | 用途 | 主要テーブル |
 | :--- | :--- | :--- | :--- |
-| Axon Server | （Axon 内部ストレージ） | Event Store / Saga Store | `domain_event_entry`, `snapshot_event_entry`, `saga_entry` |
-| authms | `auth_db` | 認証・認可（CRUD） | `users`, `roles`, `user_roles` |
-| bookingms | `booking_read_db` | 予約 Read Model | `cargo_summary`, `cargo_leg`, `shipper`, `quotation`, `quotation_candidate` |
-| routingms | `routing_read_db` | 航海 Read Model | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` |
-| trackingms | `tracking_read_db` | 追跡 Read Model | `tracking_summary`, `tracking_event`, `tracking_exception` |
-| handlingms | `handling_read_db` | 荷役 Read Model | `handling_activity`, `claim_verification` |
-| billingms | `billing_read_db` | 精算 Read Model | `invoice`, `payment` |
+| Axon Server | （Axon 内部ストレージ） | Event Store | `domain_event_entry`, `snapshot_event_entry` |
+| authms | `auth_db` | 認証・認可（CRUD）+ Axon Token Store | `users`, `roles`, `user_roles` + `token_entry`, `saga_entry`, `association_value_entry` |
+| bookingms | `booking_read_db` | 予約 Read Model + Axon Token / Saga Store | `cargo_summary`, `cargo_leg`, `shipper`, `quotation`, `quotation_candidate` + `token_entry`, `saga_entry`, `association_value_entry` |
+| routingms | `routing_read_db` | 航海 Read Model + Axon Token Store | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` + `token_entry`, `saga_entry`, `association_value_entry` |
+| trackingms | `tracking_read_db` | 追跡 Read Model + Axon Token Store | `tracking_summary`, `tracking_event`, `tracking_exception` + `token_entry`, `saga_entry`, `association_value_entry` |
+| handlingms | `handling_read_db` | 荷役 Read Model + Axon Token Store | `handling_activity`, `claim_verification` + `token_entry`, `saga_entry`, `association_value_entry` |
+| billingms | `billing_read_db` | 精算 Read Model + Axon Token Store | `invoice`, `payment` + `token_entry`, `saga_entry`, `association_value_entry` |
+
+> **データアクセス方式**: 本プロジェクトは **MyBatis** を採用する。Read Model / Auth DB のすべてのテーブルは MyBatis Mapper（XML / Annotation）でアクセスする。Axon の `JdbcTokenStore` / `JdbcSagaStore` は標準実装を使用し、Read Model と同一 DataSource を共有することで `@EventHandler` 内の Projection 更新と Token 更新が **同一 JDBC トランザクション** で処理される。
 
 すべてのテーブルに共通で監査カラムを持たせる。
 
