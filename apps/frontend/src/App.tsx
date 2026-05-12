@@ -19,6 +19,9 @@ import { RoutingAssignmentPage } from './pages/RoutingAssignmentPage'
 import { InvoiceCalculatePage } from './pages/InvoiceCalculatePage'
 import { RouteSpecUpdatePage } from './pages/RouteSpecUpdatePage'
 import { InvoiceSettlePage } from './pages/InvoiceSettlePage'
+import { EstimatePage } from './pages/EstimatePage'
+import { ShipperNewPage } from './pages/ShipperNewPage'
+import { ShipperListPage } from './pages/ShipperListPage'
 
 export default function App() {
   return (
@@ -45,6 +48,9 @@ export default function App() {
           <Route path="/routing/assignments" element={<RoutingAssignmentPage />} />
           <Route path="/billing/calculate" element={<InvoiceCalculatePage />} />
           <Route path="/billing/settle" element={<InvoiceSettlePage />} />
+          <Route path="/estimates" element={<EstimatePage />} />
+          <Route path="/shippers" element={<ShipperListPage />} />
+          <Route path="/shippers/new" element={<ShipperNewPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

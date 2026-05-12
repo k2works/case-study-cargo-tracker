@@ -10,6 +10,8 @@ const NAV_ITEMS: Array<{ path: string; label: string; roles: string[] }> = [
   { path: '/handling/activities', label: '荷役記録', roles: [] },
   { path: '/tracking', label: '貨物追跡', roles: [] },
   { path: '/billing/settle', label: '精算処理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
+  { path: '/estimates', label: '輸送見積', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
+  { path: '/shippers', label: '荷主管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
 ]
 
 export function AppLayout() {
