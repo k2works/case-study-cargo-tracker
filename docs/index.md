@@ -69,6 +69,14 @@
 | :--- | :--- |
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
 | [分析成果物レビュー](./review/分析成果物レビュー_review_20260424.md) | 分析成果物全体のマルチパースペクティブレビュー結果 |
+| [IT3 レビュー](./review/it3_review_20260508.md) | IT3 実装成果物のマルチパースペクティブレビュー結果 |
+| [IT4 trackingms レビュー](./review/it4_trackingms_review_20260509.md) | IT4 trackingms 実装成果物のマルチパースペクティブレビュー結果 |
+| [CI E2E 修正レビュー](./review/ci_e2e_fix_review_20260509.md) | CI E2E テスト修正のマルチパースペクティブレビュー結果 |
+| [IT5 レビュー](./review/it5_review_20260509.md) | IT5 実装成果物のマルチパースペクティブレビュー結果 |
+| [IT6 レビュー](./review/it6_review_20260509.md) | IT6 実装成果物のマルチパースペクティブレビュー結果 |
+| [IT7 レビュー](./review/it7_review_20260511.md) | IT7 実装成果物のマルチパースペクティブレビュー結果 |
+| [IT9 レビュー](./review/it9_review_20260511.md) | IT9 実装成果物のマルチパースペクティブレビュー結果 |
+| [IT10 レビュー](./review/it10_review_20260512.md) | IT10 実装成果物のマルチパースペクティブレビュー結果 |
 
 ### ADR ドキュメント
 
@@ -78,6 +86,7 @@
 | [ADR-002: Vite dev プロキシの二段階構成](./adr/002-vite-dev-proxy-authms-passthrough.md) | 開発環境で `/api/v1/auth` を `authms` 直結、`/api` を Gateway 経由とする方針 |
 | [ADR-003: CargoEventPublisher ポート・アダプタ](./adr/003-cargo-event-publisher-port-adapter.md) | 貨物イベント発行のポート・アダプタ設計方針 |
 | [ADR-004: Testcontainers RabbitMQ 統合テスト](./adr/004-testcontainers-rabbitmq-integration-test.md) | RabbitMQ 統合テストに Testcontainers を採用する方針 |
+| [ADR-005: TrackingNumberIssuedEvent 契約管理](./adr/005-tracking-number-issued-event-contract.md) | bookingms と trackingms 間のイベントスキーマ乖離リスクの管理方針 |
 
 ## 補足
 
