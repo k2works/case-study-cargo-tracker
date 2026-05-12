@@ -11,7 +11,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '../../apps/backend');
-const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+// Windows の cmd は cwd を PATH に含めないため、.bat も明示的に相対パスで指定する必要がある
+const gradlew = process.platform === 'win32' ? '.\\gradlew.bat' : './gradlew';
 
 console.log('Running Gradle check in apps/backend/...');
 
