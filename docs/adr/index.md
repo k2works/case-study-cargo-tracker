@@ -11,5 +11,6 @@
 | [ADR-003](./003-cargo-event-publisher-port-adapter.md) | CargoRoutedEvent 発行にポート/アダプタパターンを採用する | 承認済み |
 | [ADR-004](./004-testcontainers-rabbitmq-integration-test.md) | RabbitMQ 連携テストに Testcontainers を採用する | 承認済み |
 | [ADR-005](./005-tracking-number-issued-event-contract.md) | TrackingNumberIssuedEvent のマイクロサービス間契約管理方針 | 承認済み |
+| [ADR-006](./006-heroku-production-profile-setup.md) | 本番 Heroku 環境のプロファイル設計と CloudAMQP 接続セットアップ手順 | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

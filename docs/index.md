@@ -21,7 +21,7 @@
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT10 完了・全イテレーション完了 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 6 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -87,6 +87,7 @@
 | [ADR-003: CargoEventPublisher ポート・アダプタ](./adr/003-cargo-event-publisher-port-adapter.md) | 貨物イベント発行のポート・アダプタ設計方針 |
 | [ADR-004: Testcontainers RabbitMQ 統合テスト](./adr/004-testcontainers-rabbitmq-integration-test.md) | RabbitMQ 統合テストに Testcontainers を採用する方針 |
 | [ADR-005: TrackingNumberIssuedEvent 契約管理](./adr/005-tracking-number-issued-event-contract.md) | bookingms と trackingms 間のイベントスキーマ乖離リスクの管理方針 |
+| [ADR-006: 本番 Heroku プロファイル設計と CloudAMQP セットアップ](./adr/006-heroku-production-profile-setup.md) | Heroku 上で DB は H2 メモリ、RabbitMQ は CloudAMQP (AMQPS) を使う 3 階層プロファイル設計とデプロイ手順 |
 
 ## 補足
 

@@ -139,6 +139,7 @@ nav:
       - ADR-003 CargoEventPublisher ポート・アダプタ: adr/003-cargo-event-publisher-port-adapter.md
       - ADR-004 Testcontainers RabbitMQ 統合テスト: adr/004-testcontainers-rabbitmq-integration-test.md
       - ADR-005 TrackingNumberIssuedEvent 契約管理: adr/005-tracking-number-issued-event-contract.md
+      - ADR-006 本番 Heroku プロファイル設計と CloudAMQP セットアップ: adr/006-heroku-production-profile-setup.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
