@@ -1,0 +1,162 @@
+# 国際貨物輸送管理システム ローカル開発環境
+#
+# 起動順:
+#   1. axonserver + postgresql（基盤）
+#   2. authms / bookingms / routingms / trackingms / handlingms / billingms（アプリ）
+#   3. gatewayms（API Gateway）
+#   4. frontend（React SPA）
+#
+# 推奨利用:
+#   - 日常 TDD: `docker compose -f apps/docker-compose.yml up -d axonserver postgresql`
+#               + 個別サービスは Gradle bootRun で起動
+#   - フル起動: `docker compose -f apps/docker-compose.yml up -d`
+#
+# 注意:
+#   - ADR-0003 によりシークレットは .env 経由で読込（ハードコード禁止）
+#   - AXONIQ_AXONSERVER_DEVMODE_ENABLED はローカル限定。本番では false
+#   - 完全リセット: `docker compose down -v`（Event Store も消える）
+
+services:
+  # =========================
+  # 基盤サービス
+  # =========================
+  axonserver:
+    # Axon Server 2026.0.0 (Standard Edition)
+    # Docker Hub の実在タグは <MAJOR>.<MINOR>.<PATCH> 形式（`-LTS` サフィックスは存在しない）
+    # 最新ラインは Axon Framework 5.1.0 と同時期にリリースされた 2026.0.0
+    image: axoniq/axonserver:2026.0.0
+    container_name: cargo-axonserver
+    ports:
+      - "${AXON_SERVER_HTTP_PORT:-8024}:8024"
+      - "${AXON_SERVER_GRPC_PORT:-8124}:8124"
+    volumes:
+      - axonserver-data:/axonserver/data
+      - axonserver-events:/axonserver/events
+      - axonserver-config:/axonserver/config
+    environment:
+      AXONIQ_AXONSERVER_NAME: axonserver
+      AXONIQ_AXONSERVER_HOSTNAME: axonserver
+      AXONIQ_AXONSERVER_DEVMODE_ENABLED: "${AXONIQ_AXONSERVER_DEVMODE_ENABLED:-true}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8024/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  postgresql:
+    image: postgres:16
+    container_name: cargo-postgresql
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER not set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_MULTIPLE_DATABASES: >-
+        auth_db,booking_read_db,routing_read_db,
+        tracking_read_db,handling_read_db,billing_read_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./ops/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =========================
+  # マイクロサービス（Phase 0 では bookingms のみ実装）
+  # =========================
+  bookingms:
+    build:
+      context: ./backend
+      dockerfile: bookingms/Dockerfile
+    container_name: cargo-bookingms
+    # Phase 0 では bookingms のみが実装済みのため、profile を付けずに常時対象とする。
+    # `up:basics` でサービス名指定（axonserver postgresql のみ）すれば基盤限定起動も可能。
+    # Phase 1 で他サービスが追加されたら profiles: ["full"] を再導入する。
+    depends_on:
+      axonserver:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      AXON_AXONSERVER_SERVERS: axonserver:8124
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/booking_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "8082:8082"
+
+  # =========================
+  # Phase 1 で実装予定（雛形ディレクトリは存在するが Dockerfile / ソース未配置）
+  # 実装が揃ったタイミングでアンコメントして compose に組み入れる。
+  # ポート割り当て: authms=8081, routingms=8083, trackingms=8084,
+  #                 handlingms=8085, billingms=8086, gatewayms=8080, frontend=3000
+  # =========================
+  # authms:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: authms/Dockerfile
+  #   container_name: cargo-authms
+  #   profiles: ["full"]
+  #   depends_on:
+  #     postgresql:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: local-docker
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/auth_db
+  #     SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+  #     SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+  #     JWT_SECRET: ${JWT_SECRET}
+  #     JWT_ISSUER: ${JWT_ISSUER:-case-study-cargo-tracker}
+  #   ports:
+  #     - "8081:8081"
+
+  # routingms / trackingms / handlingms / billingms:
+  #   ほぼ同じテンプレートで、Dockerfile・SPRING_DATASOURCE_URL の DB 名・ポートを差し替える。
+  #   ・routingms  : routing_read_db  / 8083
+  #   ・trackingms : tracking_read_db / 8084
+  #   ・handlingms : handling_read_db / 8085
+  #   ・billingms  : billing_read_db  / 8086
+
+  # gatewayms:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: gatewayms/Dockerfile
+  #   container_name: cargo-gatewayms
+  #   profiles: ["full"]
+  #   depends_on:
+  #     authms:
+  #       condition: service_started
+  #     bookingms:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: local-docker
+  #     JWT_SECRET: ${JWT_SECRET}
+  #     JWT_ISSUER: ${JWT_ISSUER:-case-study-cargo-tracker}
+  #   ports:
+  #     - "8080:8080"
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: cargo-frontend
+  #   profiles: ["full"]
+  #   depends_on:
+  #     gatewayms:
+  #       condition: service_started
+  #   environment:
+  #     VITE_API_BASE_URL: http://localhost:8080
+  #   ports:
+  #     - "3000:80"
+
+volumes:
+  axonserver-data:
+  axonserver-events:
+  axonserver-config:
+  postgres-data:
