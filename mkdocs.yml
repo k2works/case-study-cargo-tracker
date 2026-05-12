@@ -93,6 +93,7 @@ nav:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 分析成果物レビュー: review/分析成果物_review_20260512.md
+      - 運用成果物レビュー: review/運用成果物_review_20260512.md
   - ADR:
       - 概要: adr/index.md
       - "ADR-0001 Axon Framework 5 採用": adr/0001-axon-framework-adoption.md
