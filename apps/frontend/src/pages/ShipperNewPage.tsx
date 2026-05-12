@@ -40,8 +40,9 @@ export function ShipperNewPage() {
       <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">氏名/社名</label>
+            <label htmlFor="shipper-name" className="block text-sm font-medium text-gray-700">氏名/社名</label>
             <input
+              id="shipper-name"
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -50,8 +51,9 @@ export function ShipperNewPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
+            <label htmlFor="shipper-email" className="block text-sm font-medium text-gray-700">メールアドレス</label>
             <input
+              id="shipper-email"
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -60,8 +62,9 @@ export function ShipperNewPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">電話番号</label>
+            <label htmlFor="shipper-phone" className="block text-sm font-medium text-gray-700">電話番号</label>
             <input
+              id="shipper-phone"
               type="tel"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -69,7 +72,7 @@ export function ShipperNewPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">荷主種別</label>
+            <span className="block text-sm font-medium text-gray-700">荷主種別</span>
             <div className="mt-1 flex gap-4">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -94,8 +97,9 @@ export function ShipperNewPage() {
           {form.shipperType === 'CORPORATE' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700">契約番号</label>
+                <label htmlFor="shipper-contract" className="block text-sm font-medium text-gray-700">契約番号</label>
                 <input
+                  id="shipper-contract"
                   type="text"
                   value={form.contractNumber}
                   onChange={(e) => setForm({ ...form, contractNumber: e.target.value })}
@@ -104,8 +108,9 @@ export function ShipperNewPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">割引率（0〜30%）</label>
+                <label htmlFor="shipper-discount" className="block text-sm font-medium text-gray-700">割引率（0〜30%）</label>
                 <input
+                  id="shipper-discount"
                   type="number"
                   value={form.discountRate}
                   onChange={(e) => setForm({ ...form, discountRate: e.target.value })}

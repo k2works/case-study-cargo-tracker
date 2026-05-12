@@ -21,6 +21,10 @@ spring:
       enabled: true
     livereload:
       enabled: true
+  rabbitmq:
+    listener:
+      simple:
+        missing-queues-fatal: false
 
 springdoc:
   api-docs:
