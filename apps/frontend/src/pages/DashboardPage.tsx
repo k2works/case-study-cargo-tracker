@@ -32,6 +32,24 @@ const MENU_ITEMS = [
     description: '追跡番号による貨物状態照会',
     roles: [],
   },
+  {
+    path: '/billing/settle',
+    label: '精算処理',
+    description: '請求書の精算・完了処理',
+    roles: ['ROLE_ADMIN', 'ROLE_SALES'],
+  },
+  {
+    path: '/estimates',
+    label: '輸送見積',
+    description: '輸送ルート・料金の見積作成',
+    roles: ['ROLE_ADMIN', 'ROLE_SALES'],
+  },
+  {
+    path: '/shippers',
+    label: '荷主管理',
+    description: '荷主の登録・一覧管理',
+    roles: ['ROLE_ADMIN', 'ROLE_SALES'],
+  },
 ]
 
 export function DashboardPage() {
