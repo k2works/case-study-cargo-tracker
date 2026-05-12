@@ -113,8 +113,8 @@ class CargoControllerTest {
                       "voyageNumber": "V0042",
                       "loadLocationUnlocode": "JPTYO",
                       "unloadLocationUnlocode": "CNSHA",
-                      "loadTime": "2026-04-01T18:00:00",
-                      "unloadTime": "2026-04-14T08:00:00"
+                      "loadTime": "2026-04-01T18:00:00+09:00",
+                      "unloadTime": "2026-04-14T08:00:00+09:00"
                     }
                   ]
                 }
@@ -138,8 +138,8 @@ class CargoControllerTest {
                       "voyageNumber": "V0042",
                       "loadLocationUnlocode": "JPTYO",
                       "unloadLocationUnlocode": "CNSHA",
-                      "loadTime": "2026-04-01T18:00:00",
-                      "unloadTime": "2026-04-14T08:00:00"
+                      "loadTime": "2026-04-01T18:00:00+09:00",
+                      "unloadTime": "2026-04-14T08:00:00+09:00"
                     }
                   ]
                 }
@@ -206,8 +206,8 @@ class CargoControllerTest {
                       "voyageNumber": "V0042",
                       "loadLocationUnlocode": "JPTYO",
                       "unloadLocationUnlocode": "CNSHA",
-                      "loadTime": "2026-04-01T18:00:00",
-                      "unloadTime": "2026-04-14T08:00:00"
+                      "loadTime": "2026-04-01T18:00:00+09:00",
+                      "unloadTime": "2026-04-14T08:00:00+09:00"
                     }
                   ]
                 }
@@ -281,8 +281,8 @@ class CargoControllerTest {
                       "voyageNumber": "V0042",
                       "loadLocationUnlocode": "JPTYO",
                       "unloadLocationUnlocode": "CNSHA",
-                      "loadTime": "2026-04-01T18:00:00",
-                      "unloadTime": "2026-04-14T08:00:00"
+                      "loadTime": "2026-04-01T18:00:00+09:00",
+                      "unloadTime": "2026-04-14T08:00:00+09:00"
                     }
                   ]
                 }

@@ -103,8 +103,8 @@ public class CargoController {
                                     l.voyageNumber(),
                                     l.loadLocationUnlocode(),
                                     l.unloadLocationUnlocode(),
-                                    l.loadTime(),
-                                    l.unloadTime()))
+                                    l.loadTime().toLocalDateTime(),
+                                    l.unloadTime().toLocalDateTime()))
                             .toList());
             Cargo cargo = cargoCommandService.assignRoute(bookingId, command);
             return ResponseEntity.ok(CargoResponse.from(cargo));
