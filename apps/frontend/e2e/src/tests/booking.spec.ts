@@ -37,9 +37,9 @@ test.describe('貨物予約管理', () => {
   });
 
   test('経路設計ページにアクセスできること', async ({ page, loggedIn }) => {
+    // bookingId なしで直接アクセスすると経路設計担当一覧にリダイレクトされる
     await page.goto('/routing/design');
-    await expect(page.getByRole('heading', { name: '経路設計' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '経路を検索' })).toBeVisible();
+    await expect(page).toHaveURL('/routing/assignments');
   });
 
   test('予約→経路割り当て→予約確定の一連フローが動作すること', async ({ page, loggedIn }) => {
