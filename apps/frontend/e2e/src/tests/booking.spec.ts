@@ -68,16 +68,19 @@ test.describe('貨物予約管理', () => {
     await page.getByRole('link', { name: '経路を割り当て →' }).click();
     await expect(page.getByRole('heading', { name: /経路設計/ })).toBeVisible();
 
-    // 4. 経路を検索・選択・割り当てる
+    // 4. 経路を検索・選択・割り当てる（割り当て後は /bookings/:id にリダイレクト）
     await bookingPage.searchAndAssignRoute('JPTYO', 'CNSHA');
 
-    // 5. 予約詳細ページに戻り「経路提案済み」に変わっていることを確認
+    // 5. 予約詳細ページへリダイレクトを待機（最大 15 秒）
+    await page.waitForURL(/\/bookings\/.+/, { timeout: 15000 });
+
+    // 6. 「経路提案済み」に変わっていることを確認
     await expect(page.getByText('経路提案済み')).toBeVisible({ timeout: 10000 });
 
-    // 6. 「予約を確定する」ボタンをクリックする
+    // 7. 「予約を確定する」ボタンをクリックする
     await page.getByRole('button', { name: '予約を確定する' }).click();
 
-    // 7. ステータスが「確定」に変わることを確認
+    // 8. ステータスが「確定」に変わることを確認
     await expect(page.getByText('確定')).toBeVisible();
   });
 });

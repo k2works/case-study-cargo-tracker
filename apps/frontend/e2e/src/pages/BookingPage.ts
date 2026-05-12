@@ -53,9 +53,16 @@ export class BookingPage {
     await this.page.getByText('経路候補').waitFor({ timeout: 30000 });
     // 最初の経路候補 div をクリックして選択
     await this.page.locator('.cursor-pointer').first().click();
-    // 「この経路を割り当てる」ボタンをクリック
-    await this.page.getByRole('button', { name: 'この経路を割り当てる' }).click();
-    // 割り当て後に予約詳細ページへリダイレクトされるまで待機
-    await this.page.waitForURL(/\/bookings\/.+/, { timeout: 10000 });
+    // 「この経路を割り当てる」ボタンをクリック（割り当て API のレスポンスを待つ）
+    const [assignResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (res) => res.url().includes('/api/booking/v1/cargos') && res.request().method() === 'PUT',
+        { timeout: 15000 }
+      ),
+      this.page.getByRole('button', { name: 'この経路を割り当てる' }).click(),
+    ]);
+    if (!assignResponse.ok()) {
+      throw new Error(`経路割り当て API が失敗しました: ${assignResponse.status()} ${await assignResponse.text()}`);
+    }
   }
 }
