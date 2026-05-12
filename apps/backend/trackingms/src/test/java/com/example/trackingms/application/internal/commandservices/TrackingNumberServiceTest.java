@@ -99,8 +99,8 @@ class TrackingNumberServiceTest {
     }
 
     @Test
-    @DisplayName("既に発行済みの場合はイベントを publish しないこと")
-    void shouldNotPublishEventWhenTrackingNumberAlreadyIssued() {
+    @DisplayName("既に発行済みの場合でも bookingms 側の状態追従のためイベントを再 publish すること")
+    void shouldRepublishEventEvenWhenTrackingNumberAlreadyIssued() {
         String bookingId = "BK-001234";
         TrackingActivity existing = new TrackingActivity(
                 1L,
@@ -113,6 +113,11 @@ class TrackingNumberServiceTest {
 
         trackingNumberService.issueTrackingNumber(bookingId);
 
-        verify(trackingEventPublisher, never()).publishTrackingNumberIssued(any());
+        ArgumentCaptor<TrackingNumberIssuedEvent> captor = ArgumentCaptor.forClass(TrackingNumberIssuedEvent.class);
+        verify(trackingEventPublisher).publishTrackingNumberIssued(captor.capture());
+
+        TrackingNumberIssuedEvent event = captor.getValue();
+        assertThat(event.bookingId()).isEqualTo(bookingId);
+        assertThat(event.trackingNumber()).isEqualTo("TRK-000001");
     }
 }

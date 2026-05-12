@@ -69,11 +69,6 @@ class TrackingNumberIssuedEventPublisherTest {
         }
 
         @Bean
-        TopicExchange trackingEventsExchange() {
-            return new TopicExchange(RabbitMqTrackingEventPublisher.EXCHANGE, false, false);
-        }
-
-        @Bean
         Binding testQueueBinding(Queue testTrackingNumberIssuedQueue, TopicExchange trackingEventsExchange) {
             return BindingBuilder.bind(testTrackingNumberIssuedQueue)
                     .to(trackingEventsExchange)
@@ -119,17 +114,21 @@ class TrackingNumberIssuedEventPublisherTest {
     }
 
     @Test
-    @DisplayName("既に発行済みの追跡番号に対してはイベントがキューに届かないこと")
-    void shouldNotPublishEventWhenTrackingNumberAlreadyIssued() throws Exception {
+    @DisplayName("既に発行済みの追跡番号に対しても bookingms 側の状態追従のためイベントが再 publish されること")
+    void shouldRepublishEventWhenTrackingNumberAlreadyIssued() throws Exception {
         // 1回目: 追跡番号を発行（イベントが届く）
-        trackingNumberService.issueTrackingNumber("BK-001235");
+        var first = trackingNumberService.issueTrackingNumber("BK-001235");
         // キューを空にする
         rabbitTemplate.receiveAndConvert(TEST_QUEUE, 2000);
 
-        // 2回目: 同じ bookingId で呼び出し（イベントは届かないはず）
+        // 2回目: 同じ bookingId で呼び出し（既存の追跡番号でイベントが再送される）
         trackingNumberService.issueTrackingNumber("BK-001235");
 
-        var message = rabbitTemplate.receiveAndConvert(TEST_QUEUE, 2000);
-        assertThat(message).isNull();
+        var message = rabbitTemplate.receiveAndConvert(TEST_QUEUE, 5000);
+        assertThat(message).isNotNull().isInstanceOf(TrackingNumberIssuedEvent.class);
+
+        var event = (TrackingNumberIssuedEvent) message;
+        assertThat(event.bookingId()).isEqualTo("BK-001235");
+        assertThat(event.trackingNumber()).isEqualTo(first.getTrackingNumber().number());
     }
 }

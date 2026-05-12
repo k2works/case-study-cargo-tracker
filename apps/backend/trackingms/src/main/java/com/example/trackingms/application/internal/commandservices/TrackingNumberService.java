@@ -27,6 +27,12 @@ public class TrackingNumberService {
      * 予約 ID に対して追跡番号を発行する
      * 既に発行済みの場合は既存の追跡番号を返す
      *
+     * <p>新規発行・既存返却のどちらの場合でも TrackingNumberIssuedEvent を発行する。
+     * bookingms 側のリスナーは CONFIRMED 状態のときのみ TRACKING_ISSUED に遷移する
+     * 冪等な実装になっているため、再送による副作用はない。
+     * これにより bookingms と trackingms の DB が再起動などで非対称にリセットされた場合でも、
+     * ユーザーが再度発行ボタンを押すことで bookingms 側のステータスを追いつかせられる。
+     *
      * @param bookingId 予約 ID
      * @return 追跡アクティビティ（追跡番号を含む）
      */
@@ -34,16 +40,17 @@ public class TrackingNumberService {
     public TrackingActivity issueTrackingNumber(String bookingId) {
         TrackingBookingId trackingBookingId = new TrackingBookingId(bookingId);
 
-        // 既に発行済みの場合は既存を返す
-        return trackingActivityRepository.findByBookingId(trackingBookingId)
+        TrackingActivity activity = trackingActivityRepository.findByBookingId(trackingBookingId)
                 .orElseGet(() -> {
                     TrackingNumber trackingNumber = generateTrackingNumber();
-                    TrackingActivity activity = new TrackingActivity(trackingNumber, trackingBookingId);
-                    TrackingActivity saved = trackingActivityRepository.save(activity);
-                    trackingEventPublisher.publishTrackingNumberIssued(
-                            new TrackingNumberIssuedEvent(bookingId, saved.getTrackingNumber().number()));
-                    return saved;
+                    TrackingActivity newActivity = new TrackingActivity(trackingNumber, trackingBookingId);
+                    return trackingActivityRepository.save(newActivity);
                 });
+
+        trackingEventPublisher.publishTrackingNumberIssued(
+                new TrackingNumberIssuedEvent(bookingId, activity.getTrackingNumber().number()));
+
+        return activity;
     }
 
     /**
