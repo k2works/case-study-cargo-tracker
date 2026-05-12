@@ -1,9 +1,17 @@
+# Heroku 等のクラウド本番想定プロファイル
+# DB は H2 メモリ DB（Heroku の dyno 再起動でデータが消える前提）。
+# DB_URL などの環境変数で将来 PostgreSQL 等に切り替えられるようにする。
+# Heroku 512MB dyno に収めるため Bean 遅延初期化を有効化し、未使用機能の生成を抑制する。
 spring:
+  main:
+    lazy-initialization: true
+  jmx:
+    enabled: false
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/routing_db}
-    driver-class-name: org.postgresql.Driver
-    username: ${DB_USERNAME:cargo_tracker}
-    password: ${DB_PASSWORD:cargo_tracker}
+    url: ${DB_URL:jdbc:h2:mem:routing_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
   flyway:
     enabled: true
     locations: classpath:db/migration
