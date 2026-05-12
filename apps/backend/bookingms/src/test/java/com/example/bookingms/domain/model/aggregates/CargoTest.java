@@ -142,19 +142,20 @@ class CargoTest {
     }
 
     @Test
-    @DisplayName("CONFIRMED 状態から markTrackingIssued を呼ぶとステータスが TRACKING_ISSUED に遷移すること")
+    @DisplayName("CONFIRMED 状態から markTrackingIssued を呼ぶとステータスが TRACKING_ISSUED に遷移し追跡番号が保持されること")
     void shouldMarkTrackingIssuedFromConfirmedState() {
         cargo.assignRoute(itinerary);
         cargo.confirm();
-        cargo.markTrackingIssued();
+        cargo.markTrackingIssued("TRK-000123");
 
         assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.TRACKING_ISSUED);
+        assertThat(cargo.getTrackingNumber()).isEqualTo("TRK-000123");
     }
 
     @Test
     @DisplayName("CONFIRMED でない状態から markTrackingIssued を呼ぶと例外が発生すること")
     void shouldThrowExceptionWhenMarkTrackingIssuedFromNonConfirmedState() {
-        assertThatThrownBy(() -> cargo.markTrackingIssued())
+        assertThatThrownBy(() -> cargo.markTrackingIssued("TRK-000123"))
                 .isInstanceOf(IllegalStateException.class);
     }
 

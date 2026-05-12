@@ -38,9 +38,10 @@ public class TrackingNumberIssuedEventListener {
                 .ifPresentOrElse(
                         cargo -> {
                             if (cargo.getBookingStatus() == BookingStatus.CONFIRMED) {
-                                cargo.markTrackingIssued();
+                                cargo.markTrackingIssued(event.trackingNumber());
                                 cargoRepository.update(cargo);
-                                log.info("予約 {} の状態を TRACKING_ISSUED に遷移しました", event.bookingId());
+                                log.info("予約 {} の状態を TRACKING_ISSUED に遷移しました（追跡番号: {}）",
+                                        event.bookingId(), event.trackingNumber());
                             } else {
                                 log.warn("予約 {} は CONFIRMED 状態ではないため状態遷移をスキップしました: {}",
                                         event.bookingId(), cargo.getBookingStatus());

@@ -44,6 +44,7 @@ public class MyBatisCargoRepository implements CargoRepository {
         cargoRecord.setId(cargo.getId());
         cargoRecord.setBookingStatus(cargo.getBookingStatus().name());
         cargoRecord.setRoutingStatus(cargo.getCargoItinerary() != null ? "ROUTED" : "NOT_ROUTED");
+        cargoRecord.setTrackingNumber(cargo.getTrackingNumber());
         cargoMapper.updateCargo(cargoRecord);
 
         if (cargo.getCargoItinerary() != null) {
@@ -156,7 +157,8 @@ public class MyBatisCargoRepository implements CargoRepository {
                 cargoRecord.getShipperId(),
                 BookingStatus.valueOf(cargoRecord.getBookingStatus()),
                 CargoType.valueOf(cargoRecord.getCargoType()),
-                new Weight(cargoRecord.getWeightKg()));
+                new Weight(cargoRecord.getWeightKg()),
+                cargoRecord.getTrackingNumber());
         return new Cargo(state,
                 new Cargo.RouteDetails(spec, itinerary),
                 new Cargo.SpecialCargoInfo(hazmatInfo, temperatureInfo));

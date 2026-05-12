@@ -30,6 +30,7 @@ public class CargoRecord {
     private Double tempMinCelsius;
     private Double tempMaxCelsius;
     private String tempUnit;
+    private String trackingNumber;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -93,4 +94,7 @@ public class CargoRecord {
 
     public String getTempUnit() { return tempUnit; }
     public void setTempUnit(String tempUnit) { this.tempUnit = tempUnit; }
+
+    public String getTrackingNumber() { return trackingNumber; }
+    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
 }

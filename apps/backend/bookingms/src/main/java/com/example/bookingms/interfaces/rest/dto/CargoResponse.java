@@ -19,6 +19,7 @@ public record CargoResponse(
         String originUnlocode,
         String destinationUnlocode,
         LocalDate arrivalDeadline,
+        String trackingNumber,
         List<LegResponse> legs
 ) {
     /**
@@ -63,6 +64,7 @@ public record CargoResponse(
                 origin,
                 destination,
                 deadline,
+                cargo.getTrackingNumber(),
                 legs
         );
     }

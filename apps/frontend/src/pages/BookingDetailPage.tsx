@@ -84,6 +84,23 @@ export function BookingDetailPage() {
         </div>
       )}
 
+      {cargo.trackingNumber && (
+        <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <p className="text-xs text-indigo-700 font-medium mb-1">追跡番号</p>
+              <p className="font-mono text-lg text-indigo-900 font-semibold">{cargo.trackingNumber}</p>
+            </div>
+            <Link
+              to={`/tracking?trackingNumber=${encodeURIComponent(cargo.trackingNumber)}`}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
+            >
+              追跡画面で照会
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* 予約情報 */}
         <div className="bg-white border border-gray-200 rounded-lg p-4">

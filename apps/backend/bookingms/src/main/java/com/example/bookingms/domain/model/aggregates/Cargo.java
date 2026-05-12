@@ -26,6 +26,7 @@ public class Cargo {
     private CargoItinerary cargoItinerary;
     private final HazmatInfo hazmatInfo;
     private final TemperatureInfo temperatureInfo;
+    private String trackingNumber;
 
     /**
      * 新規貨物作成コンストラクタ
@@ -74,6 +75,7 @@ public class Cargo {
                 specialCargoInfo.hazmatInfo(), specialCargoInfo.temperatureInfo());
         this.id = state.id();
         this.bookingStatus = state.bookingStatus();
+        this.trackingNumber = state.trackingNumber();
     }
 
     /**
@@ -85,6 +87,7 @@ public class Cargo {
         this.id = state.id();
         this.bookingStatus = state.bookingStatus();
         this.cargoItinerary = routeDetails.cargoItinerary();
+        this.trackingNumber = state.trackingNumber();
     }
 
     /**
@@ -98,13 +101,19 @@ public class Cargo {
         this.id = state.id();
         this.bookingStatus = state.bookingStatus();
         this.cargoItinerary = routeDetails.cargoItinerary();
+        this.trackingNumber = state.trackingNumber();
     }
 
     /**
      * 永続化済み貨物の基本情報をまとめた record
      */
     public record PersistedCargoState(Long id, BookingId bookingId, Long shipperId,
-                                      BookingStatus bookingStatus, CargoType cargoType, Weight weight) {
+                                      BookingStatus bookingStatus, CargoType cargoType, Weight weight,
+                                      String trackingNumber) {
+        public PersistedCargoState(Long id, BookingId bookingId, Long shipperId,
+                                   BookingStatus bookingStatus, CargoType cargoType, Weight weight) {
+            this(id, bookingId, shipperId, bookingStatus, cargoType, weight, null);
+        }
     }
 
     public record RouteDetails(RouteSpecification routeSpecification, CargoItinerary cargoItinerary) {
@@ -154,6 +163,10 @@ public class Cargo {
 
     public TemperatureInfo getTemperatureInfo() {
         return temperatureInfo;
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
     }
 
     /**
@@ -209,12 +222,14 @@ public class Cargo {
      * 追跡番号発行済みに遷移する
      * CONFIRMED のときのみ TRACKING_ISSUED に遷移できる
      */
-    public void markTrackingIssued() {
+    public void markTrackingIssued(String trackingNumber) {
+        Objects.requireNonNull(trackingNumber, "trackingNumber must not be null");
         if (this.bookingStatus != BookingStatus.CONFIRMED) {
             throw new IllegalStateException(
                     "Cannot mark tracking issued for cargo that is not in CONFIRMED state: " + this.bookingStatus);
         }
         this.bookingStatus = BookingStatus.TRACKING_ISSUED;
+        this.trackingNumber = trackingNumber;
     }
 
     /**

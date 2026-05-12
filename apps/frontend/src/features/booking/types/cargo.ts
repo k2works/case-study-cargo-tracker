@@ -19,6 +19,7 @@ export interface Cargo {
   originUnlocode: string
   destinationUnlocode: string
   arrivalDeadline: string | null
+  trackingNumber: string | null
   legs: LegInfo[]
 }
 

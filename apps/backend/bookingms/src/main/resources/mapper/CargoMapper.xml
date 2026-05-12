@@ -27,6 +27,7 @@
         <result property="tempMinCelsius"           column="temp_min_celsius"/>
         <result property="tempMaxCelsius"           column="temp_max_celsius"/>
         <result property="tempUnit"                 column="temp_unit"/>
+        <result property="trackingNumber"           column="tracking_number"/>
     </resultMap>
 
     <!-- INSERT cargo -->
@@ -56,6 +57,7 @@
                spec_arrival_deadline, booking_amount_value, booking_amount_currency,
                hazmat_un_code, hazmat_hazard_class, hazmat_packing_group,
                temp_min_celsius, temp_max_celsius, temp_unit,
+               tracking_number,
                created_at, updated_at
         FROM cargo
         WHERE booking_id = #{bookingId}
@@ -68,6 +70,7 @@
                spec_arrival_deadline, booking_amount_value, booking_amount_currency,
                hazmat_un_code, hazmat_hazard_class, hazmat_packing_group,
                temp_min_celsius, temp_max_celsius, temp_unit,
+               tracking_number,
                created_at, updated_at
         FROM cargo
         ORDER BY id ASC
@@ -78,6 +81,7 @@
         UPDATE cargo
         SET booking_status  = #{bookingStatus},
             routing_status  = #{routingStatus},
+            tracking_number = #{trackingNumber},
             updated_at      = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>

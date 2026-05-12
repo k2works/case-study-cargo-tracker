@@ -45,6 +45,11 @@ export function useIssueTrackingNumber() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [...TRACKING_KEY, data.trackingNumber] })
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      // trackingms → bookingms の AMQP イベント処理（数十〜数百ms 遅延）を待って再フェッチし、
+      // 予約詳細の bookingStatus と trackingNumber を最新化する
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      }, 1500)
     },
   })
 }
