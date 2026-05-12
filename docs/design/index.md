@@ -8,9 +8,9 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| バックエンドアーキテクチャ | バックエンドの責務分割、レイヤ、連携方式を整理 | 未作成 |
-| フロントエンドアーキテクチャ | UI 構成、状態管理、画面遷移を整理 | 未作成 |
-| インフラストラクチャ | 実行環境、ネットワーク、デプロイ構成を整理 | 未作成 |
+| [バックエンドアーキテクチャ](architecture_backend.md) | Axon Framework 5 + Spring Boot による DDD・ヘキサゴナル・CQRS・Event Sourcing・Saga のマイクロサービス設計 | 作成済み |
+| [フロントエンドアーキテクチャ](architecture_frontend.md) | React SPA・React Query・Zustand・Tailwind による CQRS バックエンド対応の SPA 設計 | 作成済み |
+| [インフラストラクチャ](architecture_infrastructure.md) | Docker Compose（ローカル） / AWS ECS + Axon Server 2024.x LTS による実行環境・デプロイ設計 | 作成済み |
 
 ### モデル設計
 
