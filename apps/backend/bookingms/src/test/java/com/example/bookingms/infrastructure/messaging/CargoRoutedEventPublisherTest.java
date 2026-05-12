@@ -79,11 +79,6 @@ class CargoRoutedEventPublisherTest {
         }
 
         @Bean
-        TopicExchange cargoEventsExchange() {
-            return new TopicExchange(RabbitMqCargoEventPublisher.EXCHANGE, false, false);
-        }
-
-        @Bean
         Binding testQueueBinding(Queue testCargoRoutedQueue, TopicExchange cargoEventsExchange) {
             return BindingBuilder.bind(testCargoRoutedQueue)
                     .to(cargoEventsExchange)
@@ -95,24 +90,6 @@ class CargoRoutedEventPublisherTest {
             RabbitAdmin admin = new RabbitAdmin(cf);
             admin.setAutoStartup(true);
             return admin;
-        }
-
-        @Bean
-        Queue trackingNumberIssuedQueue() {
-            return new Queue(TrackingNumberIssuedEventListener.QUEUE, false, false, false);
-        }
-
-        @Bean
-        TopicExchange trackingEventsExchange() {
-            return new TopicExchange("tracking.events", false, false);
-        }
-
-        @Bean
-        Binding trackingNumberIssuedBinding(Queue trackingNumberIssuedQueue,
-                                             TopicExchange trackingEventsExchange) {
-            return BindingBuilder.bind(trackingNumberIssuedQueue)
-                    .to(trackingEventsExchange)
-                    .with("tracking.number.issued");
         }
     }
 
