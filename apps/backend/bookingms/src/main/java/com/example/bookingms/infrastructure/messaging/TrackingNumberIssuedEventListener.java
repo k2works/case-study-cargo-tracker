@@ -6,6 +6,7 @@ import com.example.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.bookingms.domain.ports.CargoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.annotation.Queue;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,7 @@ public class TrackingNumberIssuedEventListener {
         this.cargoRepository = cargoRepository;
     }
 
-    @RabbitListener(queues = QUEUE)
+    @RabbitListener(queuesToDeclare = @Queue(name = QUEUE, durable = "true"))
     @Transactional
     public void handleTrackingNumberIssued(TrackingNumberIssuedEvent event) {
         log.info("TrackingNumberIssuedEvent 受信: bookingId={}, trackingNumber={}",

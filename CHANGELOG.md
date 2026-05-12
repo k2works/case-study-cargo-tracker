@@ -1,5 +1,25 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-05-12
+
+### 追加
+
+- IT1: 認証機能（ログイン・ログアウト）
+- IT2: 貨物予約管理（US11/US12/US13/US14/US15）
+- IT3: 航海スケジュール管理（US16/US17）
+- IT4: 経路設計（US03/US04/US05/US06）
+- IT5: 荷役記録・貨物追跡（US07/US08）
+- IT6: 経路変更・例外管理（US09）
+- IT7: 精算計算（US18）
+- IT8: 経路設計担当管理（US19/US20）
+- IT9: 請求精算・ダッシュボード（US10/US22/US23）
+- IT10: 輸送見積・荷主管理（US01/US02/US21）
+
 ## [0.1.0] - 2026-05-09
 
 ### Features
@@ -44,10 +64,3 @@
 
 - ADR-003/004 追加（CargoRoutedEvent・Testcontainers RabbitMQ テスト戦略） (bf1ae100)
 - IT4〜IT6 イテレーション計画・完了報告書・ふりかえり
-
----
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
