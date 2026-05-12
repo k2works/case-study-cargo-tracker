@@ -11,3 +11,12 @@ dependencyManagement {
 
 // shared は bootJar を生成しないため Spring Boot プラグインは適用しない
 // jar だけ生成する
+
+dependencies {
+    // MyBatis TypeHandler の共通実装を提供するため、コア API を api スコープで公開する
+    api 'org.mybatis:mybatis:3.5.19'
+    // ConfigurationCustomizer インターフェース（mybatis-spring-boot-autoconfigure 由来）
+    api 'org.mybatis.spring.boot:mybatis-spring-boot-autoconfigure:4.0.1'
+    // @Configuration / @Bean を使うため compileOnly で取り込む（実行時は利用側で提供される）
+    compileOnly 'org.springframework:spring-context'
+}
