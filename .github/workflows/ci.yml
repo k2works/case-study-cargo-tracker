@@ -341,3 +341,15 @@ jobs:
           name: playwright-report
           path: apps/frontend/e2e/playwright-report/
           retention-days: 7
+
+      - name: Upload backend logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-logs
+          path: |
+            booking.log
+            routing.log
+            tracking.log
+            gateway.log
+          retention-days: 3
