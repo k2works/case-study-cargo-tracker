@@ -246,7 +246,7 @@ export function TrackingExceptionPage() {
         <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 mt-6">
           <h2 className="text-base font-semibold text-gray-800 mb-4">記録済み例外一覧</h2>
           {activity.exceptions.map((exception: TrackingExceptionEvent) => (
-            <div key={exception.id ?? `exception-${exception.exceptionType}-${exception.occurredOn}`} className="border border-gray-100 rounded-md p-4">
+            <div key={exception.id ?? `exception-${exception.exceptionType}-${exception.occurredAt}`} className="border border-gray-100 rounded-md p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-800">
                   {EXCEPTION_TYPE_LABELS[exception.exceptionType] ?? exception.exceptionType}
