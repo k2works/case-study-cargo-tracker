@@ -20,10 +20,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、UI、テスト、非機能、運用、技術スタック | 10 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 2 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 3 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 3 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
-| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
+| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み（アプリ開発環境）|
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -50,7 +50,7 @@
 | :--- | :--- |
 | [バックエンドアーキテクチャ](./design/architecture_backend.md) | Axon Framework 5 + Spring Boot による DDD・ヘキサゴナル・CQRS・Event Sourcing・Saga のマイクロサービス設計 |
 | [フロントエンドアーキテクチャ](./design/architecture_frontend.md) | React SPA・React Query・Zustand・Tailwind による CQRS バックエンド対応の SPA 設計 |
-| [インフラストラクチャアーキテクチャ](./design/architecture_infrastructure.md) | Docker Compose（ローカル） / AWS ECS + Axon Server 2024.x LTS による実行環境・デプロイ設計 |
+| [インフラストラクチャアーキテクチャ](./design/architecture_infrastructure.md) | Docker Compose（ローカル） / AWS ECS + Axon Server 2026.0.0 による実行環境・デプロイ設計 |
 | [ドメインモデル設計](./design/domain-model.md) | 7 コンテキストの集約・値オブジェクト・ドメインイベント・コマンド・Saga（Axon 5 対応、過去レビュー指摘事項 28 件反映） |
 | [データモデル設計](./design/data-model.md) | Database per Service の概念・物理データモデル、Event Store / Read Model / Auth DB の ER 図とテーブル定義 |
 | [UI 設計](./design/ui_design.md) | OOUX に基づく画面一覧（27 画面）・画面遷移図・salt 画面イメージ・インタラクション設計 |
@@ -65,6 +65,13 @@
 | :--- | :--- |
 | [ADR-0001](./adr/0001-axon-framework-adoption.md) | メッセージング基盤として Axon Framework 5 を採用する（フェーズ別稼働率・EE 移行計画を含む） |
 | [ADR-0002](./adr/0002-mybatis-adoption.md) | データアクセスとして MyBatis を採用する |
+| [ADR-0003](./adr/0003-phase0-skeleton-and-ghcr-adoption.md) | Phase 0 Walking Skeleton 整備と GitHub Container Registry + GITHUB_TOKEN を採用する |
+
+### 運用ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [アプリケーション開発環境セットアップ手順書](./operation/アプリケーション開発環境セットアップ手順書.md) | Java 25 + Spring Boot 4 + Axon 5.1 + MyBatis + React 19 のローカル開発環境構築手順、Phase 0 Walking Skeleton（bookingms + Swagger UI）の起動確認まで |
 
 ### レビュードキュメント
 
