@@ -212,7 +212,7 @@ class CargoApiIntegrationTest {
         .withDatabaseName("booking_read_db");
 
     @Container
-    static GenericContainer<?> axonServer = new GenericContainer<>("axoniq/axonserver:2024.2-LTS")
+    static GenericContainer<?> axonServer = new GenericContainer<>("axoniq/axonserver:2026.0.0")
         .withExposedPorts(8024, 8124)
         .waitingFor(Wait.forHttp("/actuator/health").forPort(8024));
 

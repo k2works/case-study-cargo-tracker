@@ -33,7 +33,7 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 | Spring Security | 7.x | <https://spring.io/projects/spring-security> | 7.x GA、Spring Boot 4 同梱 |
 | Spring Cloud Gateway | 4.x | <https://spring.io/projects/spring-cloud-gateway> | Spring Boot 4 対応版 |
 | Axon Framework | 5.x | <https://www.axoniq.io/products/axon-framework>, <https://github.com/AxonFramework/AxonFramework/releases> | 5.x GA、Spring Boot 4 公式サポート、Maven Central 公開状況 |
-| Axon Server SE | 2024.x LTS | <https://www.axoniq.io/products/axon-server>, <https://docs.axoniq.io/axon-server-reference/> | LTS 版の指定、`axoniq/axonserver:2024.x-LTS` Docker タグ、Axon 5 クライアント互換 |
+| Axon Server SE | 2026.0.0 | <https://www.axoniq.io/products/axon-server>, <https://docs.axoniq.io/axon-server-reference/>, <https://hub.docker.com/r/axoniq/axonserver/tags> | Docker タグの実在確認（`axoniq/axonserver:2026.0.0`、`-LTS` サフィックスは現リリースモデルには存在せず連番タグのみ）、Axon Framework 5.1 クライアント互換 |
 | Hibernate ORM（参考のみ、未採用） | - | - | MyBatis 採用のため不要（ADR-0002） |
 | MyBatis | 3.5.x | <https://mybatis.org/mybatis-3/>, <https://github.com/mybatis/mybatis-3/releases> | 3.5.x 最新パッチ、JDK 25 対応 |
 | mybatis-spring-boot-starter | 3.0.x | <https://github.com/mybatis/spring-boot-starter/releases> | Spring Boot 4 対応版 |
@@ -59,7 +59,7 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 > | Spring Boot 4.0 | Spring Boot 3.3 LTS（Java 17・Spring Framework 6 系列） |
 > | Java 25 LTS | Java 21 LTS（2031-09 EOL） |
 > | Axon Framework 5 | Axon Framework 4.10.x（Spring Boot 3.3 と組合せ） |
-> | Axon Server 2024.x LTS | Axon Server 2024.0 GA 版（LTS 未指定でも互換確保） |
+> | Axon Server 2026.0.0 | Axon Server 2024.2.22（過去 LTS ラインの最新パッチ、保守的選択） |
 > | React 19 | React 18.3（LTS 風サポート） |
 > | Tailwind CSS 4 | Tailwind CSS 3.4（成熟版） |
 
@@ -78,7 +78,7 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | アプリケーションフレームワーク | Spring Boot | **4.0.x** | マイクロサービスの基盤 | 2027-12（コミュニティ） | Jakarta EE 11 対応、Java 17+ 必須、Axon 5 と整合 |
 | CQRS / Event Sourcing / Saga | **Axon Framework** | **5.x** | コマンド・イベント・クエリ・Saga | コミュニティ | ADR-0001 に基づく中核選択。アノテーション + 機能ベース API |
-| メッセージング基盤 | **Axon Server** | **2024.x LTS** (Standard Edition) | Event Store / Command Bus / Event Bus / Query Bus | 2027 頃まで（LTS） | Axon Framework 5 クライアント互換、単一ノードで運用 |
+| メッセージング基盤 | **Axon Server** | **2026.0.0** (Standard Edition) | Event Store / Command Bus / Event Bus / Query Bus | コミュニティ | Axon Framework 5.1 同時期リリース、単一ノードで運用。Docker タグは `axoniq/axonserver:2026.0.0`（連番リリースモデル） |
 | API ゲートウェイ | Spring Cloud Gateway | 4.x | リバースプロキシ・JWT 検証 | 2027-12 | Spring Boot 4 系列と整合 |
 | セキュリティ | Spring Security | 7.x | 認証・認可・JWT 検証 | コミュニティ | Spring Boot 4 と整合 |
 | JWT ライブラリ | jjwt | 0.12.x | JWT 発行・検証 | コミュニティ | Spring Security との組合せで標準的 |
@@ -100,7 +100,7 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 | カテゴリ | 技術 | バージョン | 用途 | サポート期限 | 選定理由 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 同期通信 | RestTemplate / WebClient | （Spring 同梱） | サービス間 REST 同期通信 | 2027-12 | ACL（`ExternalCargoRoutingService` 等）で使用 |
-| API ドキュメント | springdoc-openapi | 3.0.x | OpenAPI 3 仕様書自動生成 | コミュニティ | フロントエンドの型生成にも使用 |
+| API ドキュメント | springdoc-openapi | 3.0.3 | OpenAPI 3 仕様書自動生成・Swagger UI 提供 | コミュニティ | Spring Boot 4 対応版（3.x 系）。`/swagger-ui.html` と `/v3/api-docs` を自動公開。フロントエンドの型生成にも使用 |
 | JSON ライブラリ | Jackson | 2.18.x | シリアライズ・デシリアライズ | コミュニティ | Axon の既定シリアライザ |
 
 ### ビルド・依存管理
@@ -191,7 +191,7 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 | コンテナランタイム | Docker | 27.x | コンテナ実行 | コミュニティ | デファクト |
 | ローカルオーケストレーション | Docker Compose | v2.30+ | 開発環境のサービス起動 | コミュニティ | Single-host で複数サービス |
 | 本番オーケストレーション | **AWS ECS** | - | アプリ層は Fargate、Axon Server は EC2 起動タイプ | - | サーバレス + ステートフル併用が可能 |
-| プライベートレジストリ | Amazon ECR | - | Docker イメージ管理 | - | AWS 内に閉じた配信 |
+| コンテナレジストリ | **GitHub Container Registry (GHCR)** | - | Docker イメージ管理（`ghcr.io/<owner>/...`） | コミュニティ | リポジトリと統合、CI で `GITHUB_TOKEN` を直接利用可（ADR-0003） |
 
 ### クラウドサービス（AWS）
 
@@ -218,7 +218,8 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 | IaC | **Terraform** | 1.10+ | AWS インフラ定義 | コミュニティ | マルチクラウド可、エコシステム最大 |
 | CI/CD | **GitHub Actions** | - | ビルド・テスト・デプロイ自動化 | - | リポジトリ統合、ランナー柔軟 |
 | デプロイ補助 | AWS CDK（任意） | 2.x | TS でのインフラ補助 | - | アプリケーション固有のリソース定義 |
-| 認証連携 | OIDC（GitHub → AWS） | - | キーレスデプロイ | - | アクセスキー不要 |
+| イメージ Publish 認証 | `GITHUB_TOKEN`（GHCR push） | - | CI から GHCR への push | - | Phase 0 採用、追加シークレット不要（ADR-0003） |
+| AWS デプロイ認証 | OIDC（GitHub → AWS） | - | キーレスデプロイ（ECS/RDS 操作） | - | Phase 1 で設定、アクセスキー不要 |
 | シークレット管理（CI） | GitHub Actions Secrets / OIDC | - | CI/CD のシークレット | - | リポジトリ単位の安全管理 |
 
 ### 監視・ロギング・トレーシング
@@ -237,7 +238,7 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 
 | カテゴリ | 技術 | バージョン | 用途 | サポート期限 |
 | :--- | :--- | :--- | :--- | :--- |
-| メッセージング | Axon Server (Standard Edition) | 2024.x LTS | Command/Event/Query Bus + Event Store | コミュニティ |
+| メッセージング | Axon Server (Standard Edition) | 2026.0.0 | Command/Event/Query Bus + Event Store | コミュニティ |
 | RDBMS | PostgreSQL | 16.x | Read Model / Auth DB | 2028-11 |
 | 接続ドライバ | PostgreSQL JDBC Driver | 42.7+ | Java からのアクセス | コミュニティ |
 
@@ -300,7 +301,7 @@ Axon Server Standard Edition のライセンス（AxonIQ Open Source License）�
 | Java JRE | Temurin 25 | Temurin 25 | Temurin 25 | Temurin 25 |
 | Node | 22 LTS | 22 LTS | 22 LTS | 22 LTS |
 | PostgreSQL | 16（Docker） | RDS 16 | RDS 16 | RDS 16 |
-| Axon Server | 2024.2-LTS（Docker） | ECS EC2 2024.2-LTS | ECS EC2 2024.2-LTS | ECS EC2 2024.2-LTS |
+| Axon Server | 2026.0.0（Docker） | ECS EC2 2026.0.0 | ECS EC2 2026.0.0 | ECS EC2 2026.0.0 |
 | Spring Boot | 4.0.x | 4.0.x | 4.0.x | 4.0.x |
 
 すべての環境でメジャー・マイナーバージョンを揃え、Docker イメージタグで管理する。

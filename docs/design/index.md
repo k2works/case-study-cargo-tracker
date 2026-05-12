@@ -6,6 +6,7 @@
 
 - **ADR-0001**: メッセージング基盤として Axon Framework 5 を採用（CQRS + Event Sourcing + Saga）
 - **ADR-0002**: データアクセスとして MyBatis を採用（Read Model / Auth DB）
+- **ADR-0003**: Phase 0 Walking Skeleton 整備とコンテナレジストリとして GHCR + GITHUB_TOKEN を採用
 
 ## ドキュメント一覧
 
@@ -15,7 +16,7 @@
 | :--- | :--- | :--- |
 | [バックエンドアーキテクチャ](architecture_backend.md) | Axon Framework 5 + Spring Boot による DDD・ヘキサゴナル・CQRS・Event Sourcing・Saga のマイクロサービス設計 | 作成済み |
 | [フロントエンドアーキテクチャ](architecture_frontend.md) | React SPA・React Query・Zustand・Tailwind による CQRS バックエンド対応の SPA 設計 | 作成済み |
-| [インフラストラクチャ](architecture_infrastructure.md) | Docker Compose（ローカル） / AWS ECS + Axon Server 2024.x LTS による実行環境・デプロイ設計 | 作成済み |
+| [インフラストラクチャ](architecture_infrastructure.md) | Docker Compose（ローカル） / AWS ECS + Axon Server 2026.0.0 による実行環境・デプロイ設計 | 作成済み |
 
 ### モデル設計
 

@@ -61,9 +61,12 @@ package "AWS" {
     }
   }
 
-  [ECR] as ecr
   [CloudWatch] as cw
   [S3] as s3
+}
+
+cloud "GitHub" {
+  [GHCR\nghcr.io] as ghcr
 }
 
 internet --> alb
@@ -90,15 +93,15 @@ hs -[#FF8C00]-> axon
 bis -[#FF8C00]-> axon
 axon --> ebs : Event Store 永続化
 
-ecr --> gw
-ecr --> auths
-ecr --> bs
-ecr --> rs
-ecr --> ts
-ecr --> hs
-ecr --> bis
-ecr --> fe
-ecr --> axon
+ghcr --> gw
+ghcr --> auths
+ghcr --> bs
+ghcr --> rs
+ghcr --> ts
+ghcr --> hs
+ghcr --> bis
+ghcr --> fe
+ghcr --> axon
 
 gw --> cw
 auths --> cw
@@ -180,7 +183,7 @@ bis --> axon
 ```yaml
 services:
   axonserver:
-    image: axoniq/axonserver:2024.2-LTS
+    image: axoniq/axonserver:2026.0.0
     ports:
       - "8024:8024"   # HTTP（管理 UI / REST）
       - "8124:8124"   # gRPC（クライアント接続）
@@ -282,10 +285,10 @@ EXPOSE 80
 
 ### Axon Server コンテナ
 
-Axon Server は公式コンテナイメージ `axoniq/axonserver`（Axon Framework 5 互換の 2024.x 系 LTS）を利用する。Event Store の永続化のため、専用ボリュームをアタッチして運用する。
+Axon Server は公式コンテナイメージ `axoniq/axonserver`（Axon Framework 5.1 と同時期リリースの 2026.0.0、Standard Edition）を利用する。Event Store の永続化のため、専用ボリュームをアタッチして運用する。Docker タグは連番リリースモデル（`<MAJOR>.<MINOR>.<PATCH>`）で、`-LTS` サフィックスは存在しない。
 
 ```text
-axoniq/axonserver:2024.2-LTS
+axoniq/axonserver:2026.0.0
 - 8024/tcp  : HTTP（管理 UI / REST API / Actuator）
 - 8124/tcp  : gRPC（クライアント接続、Axon Framework 5 クライアント対応）
 - 8224/tcp  : クラスタ間通信（Enterprise Edition）
@@ -342,7 +345,7 @@ end fork
 
 if (テスト成功?) then (yes)
   :Docker イメージビルド;
-  :ECR にプッシュ;
+  :GHCR にプッシュ (GITHUB_TOKEN);
 
   if (ブランチ) then (main)
     :開発環境デプロイ;
@@ -377,7 +380,7 @@ stop
 | :--- | :--- | :--- |
 | CI | GitHub Actions | ビルド・テスト・静的解析 |
 | CD | GitHub Actions + AWS CDK / Terraform | デプロイ自動化 |
-| コンテナレジストリ | Amazon ECR | Docker イメージ管理 |
+| コンテナレジストリ | GitHub Container Registry (GHCR) | Docker イメージ管理（CI で `GITHUB_TOKEN` 認証、ADR-0003） |
 | IaC | Terraform | インフラプロビジョニング |
 | 品質ゲート | SonarQube | コード品質・カバレッジ |
 
@@ -528,8 +531,8 @@ b2 --> axon
 | CloudWatch | ログ・メトリクス | $50 |
 | AWS Backup（Axon EBS スナップショット） | 1h 頻度 24h 短期 + 日次 7 日保持 | $20 |
 | S3 ストリーミングエクスポート | Lambda 5 分間隔ポーリング + S3 PUT | $10 |
-| ECR | イメージストレージ | $10 |
-| **合計** | | **$1,080** |
+| GHCR | イメージストレージ（パブリック無料、プライベートは GitHub プラン枠内に収まる想定） | $0 |
+| **合計** | | **$1,070** |
 
 > **比較**: RabbitMQ 採用案（Amazon MQ mq.m5.large $200）から **Axon Server ECS EC2 $80** に置き換わることで月額約 $120 削減。一方で運用責任（バックアップ・スキーマ進化）は自社側に移る点を考慮する必要がある。
 
