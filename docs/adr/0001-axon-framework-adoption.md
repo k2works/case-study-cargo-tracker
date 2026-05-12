@@ -52,7 +52,7 @@
 
 具体的には次のとおりとする。
 
-- **採用バージョン**: Axon Framework 5.x（最新の安定版）、Axon Server 2024.x LTS（Standard Edition）
+- **採用バージョン**: Axon Framework 5.1.0 GA、Axon Server 2026.0.0（Standard Edition）
   - 実装着手前に **公式情報源で GA 時期と EOL を確認** する。確認チェックリストは [tech_stack.md §実装着手前の確認チェックリスト](../design/tech_stack.md) 参照
   - 主要情報源: <https://www.axoniq.io/products/axon-framework>, <https://github.com/AxonFramework/AxonFramework/releases>, <https://docs.axoniq.io/axon-server-reference/>
   - GA 未達の場合の代替案: Axon Framework 4.10.x + Spring Boot 3.3 LTS の組合せ
@@ -148,7 +148,7 @@ Axon Server Standard Edition は単一ノード前提のため、フェーズ 1 
 - Aggregate を持つマイクロサービスにおいて、`@Aggregate` を付与した集約が存在し、対応する `@EventSourcingHandler` を持つこと
 - Read Model は `@EventHandler` で更新され、Query Side は `@QueryHandler` 経由で参照されること
 - メッセージング基盤として RabbitMQ / Kafka を追加で導入していないこと
-- Docker Compose / インフラ定義に `axoniq/axonserver:2024.x-LTS` コンテナが定義されていること
+- Docker Compose / インフラ定義に `axoniq/axonserver:2026.0.0` コンテナが定義されていること（Docker Hub の実在タグを使用。`-LTS` サフィックスは現リリースモデルには存在しない）
 
 ArchUnit による静的検証（パッケージ依存・アノテーション利用ルール）で上記を自動チェックする。
 

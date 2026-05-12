@@ -8,5 +8,6 @@
 | :--- | :--- | :--- |
 | [ADR-0001](0001-axon-framework-adoption.md) | メッセージング基盤として Axon Framework 5 を採用する | 受け入れ済み |
 | [ADR-0002](0002-mybatis-adoption.md) | データアクセスとして MyBatis を採用する | 受け入れ済み |
+| [ADR-0003](0003-phase0-skeleton-and-ghcr-adoption.md) | Phase 0 雛形生成とコンテナレジストリとして GHCR を採用する | 受け入れ済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
