@@ -47,9 +47,19 @@ function sonarPort() {
   return process.env.LOCAL_SONAR_PORT || '9000';
 }
 
-/** DB パスワード */
+/**
+ * DB パスワード
+ * ADR-0003 に基づき、ハードコードのデフォルト値は廃止。`.env` で必須設定とする。
+ * @throws 環境変数 LOCAL_SONAR_DB_PASSWORD が未設定の場合
+ */
 function sonarDbPassword() {
-  return process.env.LOCAL_SONAR_DB_PASSWORD || 'sonarqube_password';
+  const password = process.env.LOCAL_SONAR_DB_PASSWORD;
+  if (!password) {
+    throw new Error(
+      '環境変数 LOCAL_SONAR_DB_PASSWORD が未設定です。.env.example を参照して .env に LOCAL_SONAR_DB_PASSWORD を設定してください。'
+    );
+  }
+  return password;
 }
 
 /** SonarQube ホスト URL */
@@ -709,7 +719,7 @@ ${projectList}
 
 環境変数（.env に設定）:
   LOCAL_SONAR_PORT           SonarQube ポート（デフォルト: 9000）
-  LOCAL_SONAR_DB_PASSWORD    DB パスワード（デフォルト: sonarqube_password）
+  LOCAL_SONAR_DB_PASSWORD    DB パスワード（必須、.env で設定。ADR-0003 によりハードコード値は廃止）
   SONAR_HOST_URL             SonarQube URL（デフォルト: http://localhost:9000）
   SONAR_TOKEN                分析トークン（スキャン時に必須）
   SONAR_PROJECT_KEY          Quality Gate / Issues 確認対象のプロジェクトキー

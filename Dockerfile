@@ -140,9 +140,8 @@ RUN apt-get update && apt-get install -y \
 # すべてのインストールが完了した後、ユーザーのホームディレクトリの所有権を確保
 RUN chown -R $USERNAME:$USERNAME /home/$USERNAME
 
-# Git safe.directory 設定（マウントされたボリューム対応）
-RUN git config --global --add safe.directory /srv \
-    && git config --global --add safe.directory '*'
+# Git safe.directory 設定（マウントされたボリューム対応、ADR-0003 により /srv のみ許可）
+RUN git config --global --add safe.directory /srv
 
 # 作業ディレクトリの設定
 WORKDIR /srv

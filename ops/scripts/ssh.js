@@ -36,7 +36,7 @@ export function getSSHConfig(prefix = 'PRD') {
 export function sshExec(command, options = {}) {
   const { host, user, port, keyFile } = getSSHConfig(options.prefix || 'PRD');
 
-  const sshCliArgs = ['-o', 'StrictHostKeyChecking=accept-new', '-p', port];
+  const sshCliArgs = ['-o', 'StrictHostKeyChecking=yes', '-p', port];
   if (keyFile) {
     sshCliArgs.push('-i', keyFile);
   }
@@ -67,7 +67,7 @@ export function sshExec(command, options = {}) {
 export function scpUpload(localPath, remotePath, options = {}) {
   const { host, user, port, keyFile } = getSSHConfig(options.prefix || 'PRD');
 
-  const scpCliArgs = ['-O', '-o', 'StrictHostKeyChecking=accept-new', '-P', port];
+  const scpCliArgs = ['-O', '-o', 'StrictHostKeyChecking=yes', '-P', port];
   if (keyFile) {
     scpCliArgs.push('-i', keyFile);
   }
@@ -92,7 +92,7 @@ export function scpUpload(localPath, remotePath, options = {}) {
 export function scpDownload(remotePath, localPath, options = {}) {
   const { host, user, port, keyFile } = getSSHConfig(options.prefix || 'PRD');
 
-  const scpCliArgs = ['-O', '-o', 'StrictHostKeyChecking=accept-new', '-P', port];
+  const scpCliArgs = ['-O', '-o', 'StrictHostKeyChecking=yes', '-P', port];
   if (keyFile) {
     scpCliArgs.push('-i', keyFile);
   }
@@ -134,7 +134,7 @@ export default function (gulp, options = {}) {
       const { host, user, port, keyFile } = getSSHConfig(prefix);
       console.log(`=== ${host} にログイン ===`);
 
-      const sshArgs = ['-o StrictHostKeyChecking=accept-new', `-p ${port}`];
+      const sshArgs = ['-o StrictHostKeyChecking=yes', `-p ${port}`];
       if (keyFile) {
         sshArgs.push(`-i "${keyFile}"`);
       }
