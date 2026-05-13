@@ -15,7 +15,8 @@
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
-    "gemini:yolo": "gemini --yolo"
+    "gemini:yolo": "gemini --yolo",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "repository": {
     "type": "git",

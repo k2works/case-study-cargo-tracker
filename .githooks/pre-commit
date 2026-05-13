@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# pre-commit フック
+# コミット前にバックエンドの静的解析とテストを実行する。
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BACKEND_DIR="${REPO_ROOT}/apps/backend"
+
+echo "==> [pre-commit] バックエンド静的解析・テストを実行中..."
+
+# ステージされた Java ファイルが存在する場合のみ実行
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.java$' || true)
+
+if [ -z "${STAGED_JAVA}" ]; then
+  echo "==> [pre-commit] Java ファイルの変更なし。スキップします。"
+  exit 0
+fi
+
+echo "==> [pre-commit] 変更された Java ファイル:"
+echo "${STAGED_JAVA}" | sed 's/^/    /'
+
+# Checkstyle + SpotBugs + テスト
+(
+  cd "${BACKEND_DIR}"
+  ./gradlew check --daemon --parallel --quiet
+)
+
+echo "==> [pre-commit] 全チェック通過。コミットを続行します。"

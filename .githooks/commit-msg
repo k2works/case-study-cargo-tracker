@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# commit-msg フック
+# Conventional Commits フォーマットを検証する。
+#
+# 許可される形式:
+#   <type>(<scope>): <subject>
+#   <type>: <subject>
+#
+# type: feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert
+
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "${COMMIT_MSG_FILE}")
+
+# マージコミット・rebase は検証をスキップ
+if echo "${COMMIT_MSG}" | grep -qE "^(Merge|Revert|fixup!|squash!)"; then
+  exit 0
+fi
+
+# Conventional Commits パターン
+PATTERN='^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([^)]+\))?: .+'
+
+if ! echo "${COMMIT_MSG}" | grep -qE "${PATTERN}"; then
+  echo "ERROR: コミットメッセージが Conventional Commits フォーマットに従っていません。"
+  echo ""
+  echo "  期待される形式: <type>(<scope>): <subject>"
+  echo "  例: feat(auth): ユーザー認証機能を追加"
+  echo "  例: fix(booking): 予約登録時のバリデーションエラーを修正"
+  echo ""
+  echo "  利用可能な type:"
+  echo "    feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
+  echo ""
+  echo "  入力されたメッセージ: ${COMMIT_MSG}"
+  exit 1
+fi
+
+exit 0
