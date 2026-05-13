@@ -1,6 +1,5 @@
+import { env } from '../config/env'
 import { useAuthStore } from '../stores/authStore'
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export class ApiError extends Error {
   status: number
@@ -12,7 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(baseUrl: string, path: string, options: RequestInit = {}): Promise<T> {
   const token = useAuthStore.getState().token
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -20,7 +19,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options.headers,
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+  const response = await fetch(`${baseUrl}${path}`, { ...options, headers })
 
   if (response.status === 401) {
     useAuthStore.getState().logout()
@@ -35,12 +34,25 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json()
 }
 
-export const apiClient = {
-  get: <T>(path: string) => request<T>(path),
+export const authApiClient = {
+  get: <T>(path: string) => request<T>(env.authApiBaseUrl, path),
   post: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+    request<T>(env.authApiBaseUrl, path, { method: 'POST', body: JSON.stringify(body) }),
   put: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+    request<T>(env.authApiBaseUrl, path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T>(path: string) =>
-    request<T>(path, { method: 'DELETE' }),
+    request<T>(env.authApiBaseUrl, path, { method: 'DELETE' }),
 }
+
+export const bookingApiClient = {
+  get: <T>(path: string) => request<T>(env.bookingApiBaseUrl, path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(env.bookingApiBaseUrl, path, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(env.bookingApiBaseUrl, path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T>(path: string) =>
+    request<T>(env.bookingApiBaseUrl, path, { method: 'DELETE' }),
+}
+
+// 後方互換（認証系デフォルト）
+export const apiClient = authApiClient
