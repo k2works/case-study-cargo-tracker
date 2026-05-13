@@ -23,7 +23,7 @@
  * @param {import('gulp').Gulp} gulp
  */
 
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { cleanDockerEnv } from './shared.js';
@@ -48,6 +48,18 @@ function appName(service) {
   return `${getPrefix()}-${service}`;
 }
 
+function getAppDomain(service) {
+  const name = appName(service);
+  try {
+    const result = execSync(`heroku domains -a ${name} --json`, { encoding: 'utf8' });
+    const domains = JSON.parse(result);
+    const herokuDomain = domains.find(d => d.hostname && d.hostname.includes('herokuapp.com'));
+    return herokuDomain ? `https://${herokuDomain.hostname}` : `https://${name}.herokuapp.com`;
+  } catch {
+    return `https://${name}.herokuapp.com`;
+  }
+}
+
 function runStreaming(cmd, args, opts = {}) {
   return new Promise((resolve) => {
     console.log(`> ${cmd} ${args.join(' ')}${opts.cwd ? ` (cwd=${opts.cwd})` : ''}`);
@@ -69,7 +81,7 @@ export default function (gulp) {
   gulp.task('deploy:dev:build:backend', async (done) => {
     const err = await runStreaming(
       gradlewCmd,
-      [':authms:bootJar', ':bookingms:bootJar'],
+      [':authms:bootJar', ':bookingms:bootJar', ':gatewayms:bootJar'],
       { cwd: backendDir }
     );
     done(err);
@@ -136,6 +148,36 @@ export default function (gulp) {
     done(err);
   });
 
+  // ── gatewayms ────────────────────────────────────────────────
+  gulp.task('deploy:dev:push:gatewayms', async (done) => {
+    const app = appName('gatewayms');
+    const image = `registry.heroku.com/${app}/web`;
+    const buildErr = await runStreaming(
+      'docker',
+      ['build', '--platform', getPlatform(), '--provenance=false', '-f', 'Dockerfile.heroku', '-t', image, '.'],
+      { cwd: path.join(backendDir, 'gatewayms') }
+    );
+    if (buildErr) { done(buildErr); return; }
+    const pushErr = await runStreaming('docker', ['push', image]);
+    done(pushErr);
+  });
+
+  gulp.task('deploy:dev:release:gatewayms', async (done) => {
+    const err = await runStreaming(
+      'heroku',
+      ['container:release', 'web', '-a', appName('gatewayms')]
+    );
+    done(err);
+  });
+
+  gulp.task('deploy:dev:logs:gatewayms', async (done) => {
+    const err = await runStreaming(
+      'heroku',
+      ['logs', '--tail', '-a', appName('gatewayms')]
+    );
+    done(err);
+  });
+
   // ── frontend ─────────────────────────────────────────────────
   gulp.task('deploy:dev:push:frontend', async (done) => {
     const app = appName('frontend');
@@ -195,12 +237,32 @@ export default function (gulp) {
     done(err);
   });
 
-  gulp.task('deploy:dev:config:frontend', async (done) => {
+  gulp.task('deploy:dev:config:gatewayms', async (done) => {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      done(new Error('JWT_SECRET が .env に設定されていません'));
+      return;
+    }
     const prefix = getPrefix();
     const err = await runStreaming('heroku', [
       'config:set',
-      `AUTH_API_URL=https://${prefix}-authms.herokuapp.com`,
-      `BOOKING_API_URL=https://${prefix}-bookingms.herokuapp.com`,
+      'SPRING_PROFILES_ACTIVE=heroku',
+      'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
+      `JWT_SECRET=${jwtSecret}`,
+      `AUTHMS_URL=${getAppDomain('authms')}`,
+      `BOOKINGMS_URL=${getAppDomain('bookingms')}`,
+      '-a', appName('gatewayms'),
+    ]);
+    done(err);
+  });
+
+  gulp.task('deploy:dev:config:frontend', async (done) => {
+    const gatewayUrl = getAppDomain('gatewayms');
+    const gatewayHost = gatewayUrl.replace(/^https?:\/\//, '');
+    const err = await runStreaming('heroku', [
+      'config:set',
+      `GATEWAY_URL=${gatewayUrl}`,
+      `GATEWAY_HOST=${gatewayHost}`,
       '-a', appName('frontend'),
     ]);
     done(err);
@@ -211,6 +273,7 @@ export default function (gulp) {
     gulp.parallel(
       'deploy:dev:config:authms',
       'deploy:dev:config:bookingms',
+      'deploy:dev:config:gatewayms',
       'deploy:dev:config:frontend'
     )
   );
@@ -230,6 +293,7 @@ export default function (gulp) {
       gulp.parallel(
         gulp.series('deploy:dev:push:authms', 'deploy:dev:release:authms'),
         gulp.series('deploy:dev:push:bookingms', 'deploy:dev:release:bookingms'),
+        gulp.series('deploy:dev:push:gatewayms', 'deploy:dev:release:gatewayms'),
         gulp.series('deploy:dev:push:frontend', 'deploy:dev:release:frontend')
       )
     )
@@ -238,7 +302,7 @@ export default function (gulp) {
   // ── アプリを開く ─────────────────────────────────────────────
   gulp.task('deploy:dev:open', async (done) => {
     const prefix = getPrefix();
-    const apps = ['authms', 'bookingms', 'frontend'];
+    const apps = ['authms', 'bookingms', 'gatewayms', 'frontend'];
     for (const svc of apps) {
       const err = await runStreaming('heroku', ['open', '-a', `${prefix}-${svc}`]);
       if (err) { done(err); return; }
