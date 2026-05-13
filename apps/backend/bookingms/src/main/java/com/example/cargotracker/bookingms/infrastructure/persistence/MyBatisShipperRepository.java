@@ -19,10 +19,10 @@ public class MyBatisShipperRepository implements ShipperRepository {
 
     @Override
     public Shipper save(Shipper shipper) {
-        ShipperRecord record = toRecord(shipper);
-        mapper.insert(record);
+        ShipperRecord shipperRow = toRecord(shipper);
+        mapper.insert(shipperRow);
         return new Shipper(new Shipper.PersistedState(
-                record.getId(),
+                shipperRow.getId(),
                 shipper.getShipperCode(),
                 shipper.getShipperType(),
                 shipper.getName(),
@@ -34,8 +34,8 @@ public class MyBatisShipperRepository implements ShipperRepository {
 
     @Override
     public Optional<Shipper> findByEmail(String email) {
-        ShipperRecord record = mapper.findByEmail(email);
-        return Optional.ofNullable(record).map(this::toDomain);
+        ShipperRecord shipperRow = mapper.findByEmail(email);
+        return Optional.ofNullable(shipperRow).map(this::toDomain);
     }
 
     @Override

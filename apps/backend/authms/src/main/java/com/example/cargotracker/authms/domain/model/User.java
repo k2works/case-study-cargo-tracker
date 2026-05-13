@@ -17,6 +17,7 @@ public class User {
     private LocalDateTime updatedAt;
     private final Set<Role> roles;
 
+    @SuppressWarnings("java:S107")
     private User(UserId id, UserName username, Email email, PasswordHash passwordHash,
                  boolean enabled, LocalDateTime createdAt, LocalDateTime updatedAt, Set<Role> roles) {
         this.id = id;
@@ -43,6 +44,7 @@ public class User {
         return new User(id, username, email, passwordHash, enabled, createdAt, updatedAt, new HashSet<>());
     }
 
+    @SuppressWarnings("java:S107")
     public static User reconstruct(UserId id, UserName username, Email email,
                                    PasswordHash passwordHash, boolean enabled,
                                    LocalDateTime createdAt, LocalDateTime updatedAt, Set<Role> roles) {

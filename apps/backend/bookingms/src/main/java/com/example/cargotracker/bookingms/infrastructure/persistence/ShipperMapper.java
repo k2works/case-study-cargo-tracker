@@ -6,7 +6,7 @@ import java.util.List;
 
 @Mapper
 public interface ShipperMapper {
-    void insert(ShipperRecord record);
+    void insert(ShipperRecord shipperRow);
     ShipperRecord findByEmail(String email);
     List<ShipperRecord> findAll();
 }

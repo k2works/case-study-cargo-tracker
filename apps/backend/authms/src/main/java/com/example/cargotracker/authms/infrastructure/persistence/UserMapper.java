@@ -12,7 +12,7 @@ public interface UserMapper {
             INSERT INTO users (id, username, email, password, enabled, created_at, updated_at)
             VALUES (#{id}, #{username}, #{email}, #{password}, #{enabled}, #{createdAt}, #{updatedAt})
             """)
-    void insert(UserRecord record);
+    void insert(UserRecord userRow);
 
     @Insert("""
             INSERT INTO user_roles (user_id, role_id)
@@ -21,24 +21,18 @@ public interface UserMapper {
     void insertUserRole(@Param("userId") String userId, @Param("roleName") String roleName);
 
     @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users WHERE id = #{id}")
-    @Results({
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
+    @Result(property = "createdAt", column = "created_at")
+    @Result(property = "updatedAt", column = "updated_at")
     Optional<UserRecord> findById(String id);
 
     @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users WHERE username = #{username}")
-    @Results({
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
+    @Result(property = "createdAt", column = "created_at")
+    @Result(property = "updatedAt", column = "updated_at")
     Optional<UserRecord> findByUsername(String username);
 
     @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users WHERE email = #{email}")
-    @Results({
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
+    @Result(property = "createdAt", column = "created_at")
+    @Result(property = "updatedAt", column = "updated_at")
     Optional<UserRecord> findByEmail(String email);
 
     @Select("SELECT COUNT(*) > 0 FROM users WHERE username = #{username}")
@@ -51,17 +45,15 @@ public interface UserMapper {
     List<String> findRolesByUserId(String userId);
 
     @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users")
-    @Results({
-        @Result(property = "createdAt", column = "created_at"),
-        @Result(property = "updatedAt", column = "updated_at")
-    })
+    @Result(property = "createdAt", column = "created_at")
+    @Result(property = "updatedAt", column = "updated_at")
     List<UserRecord> findAll();
 
     @Update("""
             UPDATE users SET enabled = #{enabled}, updated_at = #{updatedAt}
             WHERE id = #{id}
             """)
-    void update(UserRecord record);
+    void update(UserRecord userRow);
 
     @Delete("DELETE FROM user_roles WHERE user_id = #{userId}")
     void deleteRolesByUserId(String userId);

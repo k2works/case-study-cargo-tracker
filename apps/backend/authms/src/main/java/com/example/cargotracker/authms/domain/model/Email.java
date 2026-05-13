@@ -1,6 +1,5 @@
 package com.example.cargotracker.authms.domain.model;
 
-import java.util.Objects;
 import java.util.regex.Pattern;
 
 public record Email(String value) {

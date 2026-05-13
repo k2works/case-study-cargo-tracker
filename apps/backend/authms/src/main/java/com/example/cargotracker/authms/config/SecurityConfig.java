@@ -27,6 +27,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings({"java:S112", "java:S1130"})
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))

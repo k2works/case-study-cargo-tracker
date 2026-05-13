@@ -20,8 +20,8 @@ public class MyBatisUserRepository implements UserRepository {
 
     @Override
     public void save(User user) {
-        var record = toRecord(user);
-        mapper.insert(record);
+        var userRow = toRecord(user);
+        mapper.insert(userRow);
         for (Role role : user.getRoles()) {
             mapper.insertUserRole(user.id().value(), role.name());
         }
@@ -44,8 +44,8 @@ public class MyBatisUserRepository implements UserRepository {
 
     @Override
     public void update(User user) {
-        var record = toRecord(user);
-        mapper.update(record);
+        var userRow = toRecord(user);
+        mapper.update(userRow);
         mapper.deleteRolesByUserId(user.id().value());
         for (Role role : user.getRoles()) {
             mapper.insertUserRole(user.id().value(), role.name());
@@ -68,30 +68,30 @@ public class MyBatisUserRepository implements UserRepository {
     }
 
     private UserRecord toRecord(User user) {
-        var r = new UserRecord();
-        r.id = user.id().value();
-        r.username = user.username().value();
-        r.email = user.email().value();
-        r.password = user.passwordHash().value();
-        r.enabled = user.isEnabled();
-        r.createdAt = user.createdAt();
-        r.updatedAt = user.updatedAt();
-        return r;
+        var userRow = new UserRecord();
+        userRow.setId(user.id().value());
+        userRow.setUsername(user.username().value());
+        userRow.setEmail(user.email().value());
+        userRow.setPassword(user.passwordHash().value());
+        userRow.setEnabled(user.isEnabled());
+        userRow.setCreatedAt(user.createdAt());
+        userRow.setUpdatedAt(user.updatedAt());
+        return userRow;
     }
 
-    private User toDomain(UserRecord r) {
-        var roleNames = mapper.findRolesByUserId(r.id);
+    private User toDomain(UserRecord userRow) {
+        var roleNames = mapper.findRolesByUserId(userRow.getId());
         Set<Role> roles = roleNames.stream()
                 .map(Role::valueOf)
                 .collect(Collectors.toSet());
         return User.reconstruct(
-                new UserId(r.id),
-                new UserName(r.username),
-                new Email(r.email),
-                new PasswordHash(r.password),
-                r.enabled,
-                r.createdAt,
-                r.updatedAt,
+                new UserId(userRow.getId()),
+                new UserName(userRow.getUsername()),
+                new Email(userRow.getEmail()),
+                new PasswordHash(userRow.getPassword()),
+                userRow.isEnabled(),
+                userRow.getCreatedAt(),
+                userRow.getUpdatedAt(),
                 roles
         );
     }

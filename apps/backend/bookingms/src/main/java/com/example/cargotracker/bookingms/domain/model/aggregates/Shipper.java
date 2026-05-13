@@ -62,11 +62,9 @@ public class Shipper {
     }
 
     private static void validateDiscountRate(BigDecimal discountRate) {
-        if (discountRate != null) {
-            if (discountRate.compareTo(BigDecimal.ZERO) < 0 ||
-                discountRate.compareTo(new BigDecimal("0.30")) > 0) {
-                throw new IllegalArgumentException("割引率は 0 から 0.30 の範囲で指定してください");
-            }
+        if (discountRate != null && (discountRate.compareTo(BigDecimal.ZERO) < 0 ||
+                discountRate.compareTo(new BigDecimal("0.30")) > 0)) {
+            throw new IllegalArgumentException("割引率は 0 から 0.30 の範囲で指定してください");
         }
     }
 
