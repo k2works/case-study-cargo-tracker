@@ -12,7 +12,7 @@ import java.util.Objects;
  *
  * <p>不変条件: jti は token と 1 対 1。revoked は false → true の単方向遷移のみ。</p>
  */
-public class UserSession {
+public final class UserSession {
 
     private final String jti;
     private final UserId userId;
