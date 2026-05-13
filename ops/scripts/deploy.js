@@ -17,7 +17,7 @@
  *   - deploy:dev:logs:frontend   : frontend のログを表示
  *
  * 必要な環境変数（.env）:
- *   - DEV_HEROKU_APP_PREFIX   : Heroku アプリ名のプレフィックス（例: ct）
+ *   - DEV_HEROKU_APP_PREFIX   : Heroku アプリ名のプレフィックス（例: cargo-tracker-4）
  *   - DEV_DOCKER_PLATFORM     : Docker プラットフォーム（デフォルト: linux/amd64）
  *
  * @param {import('gulp').Gulp} gulp
