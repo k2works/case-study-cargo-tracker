@@ -58,11 +58,11 @@ bookingms / routingms における Aggregate を Axon Framework 5.1 の Event So
 公式マイグレーションガイドと SaaSForge ブログのサンプルから、Axon 5.1 の Event Sourcing Entity 実装パターンが確定した。以下が本プロジェクトで採用する標準パターンである。
 
 ```java
-import org.axonframework.commandhandling.annotation.CommandHandler;
-import org.axonframework.eventhandling.gateway.EventAppender;
 import org.axonframework.eventsourcing.annotation.EventSourcedEntity;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
+import org.axonframework.messaging.commandhandling.annotation.CommandHandler;
+import org.axonframework.messaging.eventhandling.gateway.EventAppender;
 import org.axonframework.modelling.annotation.TargetEntityId;
 
 @EventSourcedEntity(tagKey = "bookingId")
@@ -124,7 +124,10 @@ public record BookCargoCommand(
 `AggregateTestFixture` は **`AxonTestFixture`** に置き換えられた。Given-When-Then のチェーン形式も大幅に変更されている。
 
 ```java
-import org.axonframework.test.AxonTestFixture;
+// 注: 実装で判明した不一致: AxonTestFixture は test.fixture サブパッケージかつ
+//     with() は ApplicationConfigurer を要求するため、本サンプルは IT2 時点では
+//     コンパイル不可。代替として Mockito + EventAppender mock で同等のテストが可能。
+import org.axonframework.test.fixture.AxonTestFixture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -170,10 +173,12 @@ class CargoTest {
 | `@org.axonframework.spring.stereotype.Aggregate` | `@org.axonframework.eventsourcing.annotation.EventSourcedEntity(tagKey = "...")` | Spring stereotype ではなく Event Sourcing 専用。`tagKey` で DCB のイベント識別 |
 | `@AggregateIdentifier`（フィールド上） | **不要**（`tagKey` でイベント側の識別子を指定するため、フィールドアノテーションは省略可能） | 必要なら `@InjectEntityId` でコンストラクタ引数経由で受け取る |
 | `@TargetAggregateIdentifier`（Command 上） | `@org.axonframework.modelling.annotation.TargetEntityId` | Command 上の識別子マーカー、必須 |
-| `@CommandHandler`（4 系のインスタンスメソッド） | `@org.axonframework.commandhandling.annotation.CommandHandler` | アノテーション維持。**作成系は static 推奨**、更新系はインスタンスメソッド |
+| `@CommandHandler`（4 系のインスタンスメソッド） | **`@org.axonframework.messaging.commandhandling.annotation.CommandHandler`** | アノテーション維持。**作成系は static 推奨**、更新系はインスタンスメソッド。**※ パッケージは `messaging.` を前置く（IT2 US04 実装で判明）** |
 | `@EventSourcingHandler` | `@org.axonframework.eventsourcing.annotation.EventSourcingHandler` | パッケージ移動のみで維持 |
-| `AggregateLifecycle.apply(event)` | `EventAppender appender` パラメータ + `appender.append(event)` | ThreadLocal 廃止、依存性注入で明示。非同期・リアクティブ対応 |
-| `AggregateTestFixture<T>` | `org.axonframework.test.AxonTestFixture` | チェーン構造変更: `.given().noPriorActivity()`, `.when().command(...)`, `.then().success().events(...)` |
+| `AggregateLifecycle.apply(event)` | `EventAppender appender` パラメータ + `appender.append(event)` | ThreadLocal 廃止、依存性注入で明示。非同期・リアクティブ対応。**パッケージは `org.axonframework.messaging.eventhandling.gateway.EventAppender`**（IT2 US04 実装で判明） |
+| `AggregateTestFixture<T>` | `org.axonframework.test.fixture.AxonTestFixture` | チェーン構造変更: `.given().noPriorActivity()`, `.when().command(...)`, `.then().success().events(...)`。**`with()` は `Class<>` ではなく `ApplicationConfigurer` を要求**（IT2 US04 実装で判明、Mockito ベースのユニットテストで代替可能） |
+| `@EventHandler`（Projection 用） | `@org.axonframework.messaging.eventhandling.annotation.EventHandler` | 同名アノテーション。**`@Component` 登録された `@EventHandler` は Axon Event Processor を自動起動し Axon Server 接続を要求する**ため、ローカル H2 / SpringBootTest 時は `@Profile("!springboot-integration-test")` 等で除外する（IT2 US04 実装で判明） |
+| `CommandGateway` | `org.axonframework.messaging.commandhandling.gateway.CommandGateway` | `sendAndWait(command)` で同期送信可能 |
 | （なし） | `@EntityCreator`（コンストラクタ上） | **新規必須**。Axon がリフレクションで Entity を生成するため。コレクション初期化もここ |
 
 ### 採用方針
@@ -224,7 +229,22 @@ class CargoTest {
 - **タスク 0.1 Event Sourcing スパイク**: ✅ 完了（本 ADR 作成）
 - **タスク 0.2 ADR-0007 起案**: ✅ 完了
 - **タスク 0.8（追加）5.1 系 API 確認**: ✅ 完了（IT2 Day 2 で公式マイグレーションガイドおよび SaaSForge ブログから具体パターンを取得し、本 ADR に反映）
-- **Day 3 以降の実装**: 本 ADR の「採用する 5.1 系 API パターン」セクションをそのまま Codex 指示の雛形として使用する
+- **タスク 1.x US04 Cargo Aggregate 実装**: ✅ 完了（IT2 Day 3 で実施、ADR 内のサンプルコードと実装の差分を本 ADR に反映済み）
+
+### IT2 US04 実装で判明した API 不一致（本 ADR へ反映済み）
+
+| 項目 | ADR 初期記述 | 実装で判明した正しい値 |
+|---|---|---|
+| `@CommandHandler` のパッケージ | `org.axonframework.commandhandling.annotation` | **`org.axonframework.messaging.commandhandling.annotation`**（`messaging.` 前置き） |
+| `EventAppender` のパッケージ | `org.axonframework.eventhandling.gateway` | **`org.axonframework.messaging.eventhandling.gateway`** |
+| `AxonTestFixture` のパッケージ | `org.axonframework.test` | **`org.axonframework.test.fixture`**（サブパッケージ） |
+| `AxonTestFixture.with()` の引数 | `Class<T>` を直接 | **`ApplicationConfigurer` を要求**（Mockito + EventAppender mock で代替可能） |
+| `@EventHandler` の起動挙動 | 言及なし | **`@Component` 登録された `@EventHandler` は Event Processor を自動起動し Axon Server 接続を要求する**ため、ローカル H2 + SpringBootTest 時は profile で除外する |
+
+### Day 4 以降の実装方針
+
+- 本 ADR の「採用する 5.1 系 API パターン」セクションと「マッピング表」をそのまま実装の参照として使用する
+- US04 Round 4 で確立した `BookingController + CommandGateway.sendAndWait()` パターンと、`@MockitoBean CommandGateway` による統合テストパターンを US05 / US24 にも適用する
 
 ## 関連リソース
 

@@ -179,16 +179,16 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `cargo_summary` / `cargo_leg` Flyway マイグレーション作成（`booking_read_db`、data-model.md 準拠） | 2h | - | [ ] |
-| 1.2 | `BookingId` / `TrackingNumber` / `Dimensions` / `Money` / `RouteSpecification` 値オブジェクト実装 | 3h | - | [ ] |
-| 1.3 | `Cargo` Aggregate 実装（`@Aggregate` + `@CommandHandler(BookCargoCommand)` + `@EventSourcingHandler(CargoBookedEvent)`） | 4h | - | [ ] |
-| 1.4 | `BookCargoCommand` / `CargoBookedEvent` 定義 + `BookingSagaManager` スケルトン（IT3-IT4 用） | 2h | - | [ ] |
-| 1.5 | `CargoProjectionsEventHandler`（`@EventHandler` → `cargo_summary` テーブル更新） | 3h | - | [ ] |
-| 1.6 | `POST /api/v1/bookings` コントローラー + DTO + バリデーション | 3h | - | [ ] |
-| 1.7 | 荷主 ID 存在チェック（`ShipperReadService` を bookingms 内で参照、Query 経由） | 2h | - | [ ] |
-| 1.8 | `BookingId` 採番ロジック（UUID v7 推奨、VARCHAR(36)）| 1h | - | [ ] |
-| 1.9 | `Cargo` Aggregate Axon `AggregateTestFixture` ユニットテスト | 3h | - | [ ] |
-| 1.10 | `POST /api/v1/bookings` 統合テスト（Testcontainers PostgreSQL + Axon Server） | 3h | - | [ ] |
+| 1.1 | `cargo_summary` / `cargo_leg` Flyway マイグレーション作成（`booking_read_db`、data-model.md 準拠） | 2h | Claude | [x] |
+| 1.2 | `BookingId` / `TrackingNumber` / `Dimensions` / `Money` / `RouteSpecification` 等の値オブジェクト 14 件実装 | 3h | Claude | [x] |
+| 1.3 | `Cargo` Aggregate 実装（`@EventSourcedEntity(tagKey="bookingId")` + `@CommandHandler` static + `@EventSourcingHandler` + `@EntityCreator`、ADR-0007 Axon 5.1 新 API 準拠） | 4h | Claude | [x] |
+| 1.4 | `BookCargoCommand` (`@TargetEntityId`) / `CargoBookedEvent` 定義（`BookingSagaManager` スケルトンは IT3 で実装） | 2h | Claude | [x] |
+| 1.5 | `CargoProjectionsEventHandler`（`@EventHandler` → `cargo_summary` テーブル更新、`@Profile("!springboot-integration-test")` 付き） | 3h | Claude | [x] |
+| 1.6 | `POST /api/v1/bookings` コントローラー + `BookCargoRequest` DTO（jakarta.validation）+ `BookingResponse` | 3h | Claude | [x] |
+| 1.7 | 荷主 ID 存在チェック（`ShipperRepository.existsById` 追加、`ShipperMapper.existsById` 実装） | 2h | Claude | [x] |
+| 1.8 | `BookingId` 採番ロジック（`UUID.randomUUID()` で VARCHAR(36)） | 1h | Claude | [x] |
+| 1.9 | `Cargo` Aggregate ユニットテスト（AxonTestFixture API 不一致のため Mockito + EventAppender mock で代替、ADR-0007 注記） | 3h | Claude | [x] |
+| 1.10 | `POST /api/v1/bookings` 統合テスト（`@SpringBootTest @ActiveProfiles({"local-h2", "springboot-integration-test"})` + `@MockitoBean CommandGateway`、Testcontainers / Axon Server 不使用） | 3h | Claude | [x] |
 
 **小計**: 26h
 
