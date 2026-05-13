@@ -47,7 +47,7 @@ public class AuthController {
             Role role = request.role() != null ? Role.valueOf(request.role()) : Role.ROLE_SHIPPER;
             commandService.register(request.username(), request.email(), request.password(), role);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of(MESSAGE_KEY, "ユーザー登録が完了しました"));
+                    .body(Map.of("username", request.username(), "email", request.email()));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of(MESSAGE_KEY, e.getMessage()));
