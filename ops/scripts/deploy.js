@@ -77,12 +77,16 @@ export default function (gulp) {
 
   // ── authms ──────────────────────────────────────────────────
   gulp.task('deploy:dev:push:authms', async (done) => {
-    const err = await runStreaming(
-      'heroku',
-      ['container:push', 'web', '-a', appName('authms')],
+    const app = appName('authms');
+    const image = `registry.heroku.com/${app}/web`;
+    const buildErr = await runStreaming(
+      'docker',
+      ['build', '--platform', getPlatform(), '-t', image, '.'],
       { cwd: path.join(backendDir, 'authms') }
     );
-    done(err);
+    if (buildErr) { done(buildErr); return; }
+    const pushErr = await runStreaming('docker', ['push', image]);
+    done(pushErr);
   });
 
   gulp.task('deploy:dev:release:authms', async (done) => {
@@ -103,12 +107,16 @@ export default function (gulp) {
 
   // ── bookingms ────────────────────────────────────────────────
   gulp.task('deploy:dev:push:bookingms', async (done) => {
-    const err = await runStreaming(
-      'heroku',
-      ['container:push', 'web', '-a', appName('bookingms')],
+    const app = appName('bookingms');
+    const image = `registry.heroku.com/${app}/web`;
+    const buildErr = await runStreaming(
+      'docker',
+      ['build', '--platform', getPlatform(), '-t', image, '.'],
       { cwd: path.join(backendDir, 'bookingms') }
     );
-    done(err);
+    if (buildErr) { done(buildErr); return; }
+    const pushErr = await runStreaming('docker', ['push', image]);
+    done(pushErr);
   });
 
   gulp.task('deploy:dev:release:bookingms', async (done) => {
@@ -129,12 +137,17 @@ export default function (gulp) {
 
   // ── frontend ─────────────────────────────────────────────────
   gulp.task('deploy:dev:push:frontend', async (done) => {
-    const err = await runStreaming(
-      'heroku',
-      ['container:push', 'web', '-a', appName('frontend'), '-f', 'Dockerfile.heroku'],
+    const app = appName('frontend');
+    const image = `registry.heroku.com/${app}/web`;
+    // heroku container:push は -f 非対応のため docker build/push で代替
+    const buildErr = await runStreaming(
+      'docker',
+      ['build', '--platform', getPlatform(), '-f', 'Dockerfile.heroku', '-t', image, '.'],
       { cwd: frontendDir }
     );
-    done(err);
+    if (buildErr) { done(buildErr); return; }
+    const pushErr = await runStreaming('docker', ['push', image]);
+    done(pushErr);
   });
 
   gulp.task('deploy:dev:release:frontend', async (done) => {
