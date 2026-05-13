@@ -5,6 +5,8 @@ import com.example.cargotracker.authms.domain.repository.UserRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 public class MyBatisUserRepository implements UserRepository {
@@ -19,6 +21,9 @@ public class MyBatisUserRepository implements UserRepository {
     public void save(User user) {
         var record = toRecord(user);
         mapper.insert(record);
+        for (Role role : user.getRoles()) {
+            mapper.insertUserRole(user.id().value(), role.name());
+        }
     }
 
     @Override
@@ -59,6 +64,10 @@ public class MyBatisUserRepository implements UserRepository {
     }
 
     private User toDomain(UserRecord r) {
+        var roleNames = mapper.findRolesByUserId(r.id);
+        Set<Role> roles = roleNames.stream()
+                .map(Role::valueOf)
+                .collect(Collectors.toSet());
         return User.reconstruct(
                 new UserId(r.id),
                 new UserName(r.username),
@@ -66,7 +75,8 @@ public class MyBatisUserRepository implements UserRepository {
                 new PasswordHash(r.password),
                 r.enabled,
                 r.createdAt,
-                r.updatedAt
+                r.updatedAt,
+                roles
         );
     }
 }

@@ -1,5 +1,6 @@
 package com.example.cargotracker.authms.application;
 
+import com.example.cargotracker.authms.domain.model.Role;
 import com.example.cargotracker.authms.domain.model.UserName;
 import com.example.cargotracker.authms.domain.repository.UserRepository;
 import com.example.cargotracker.authms.infrastructure.security.JwtTokenProvider;
@@ -30,6 +31,7 @@ public class AuthQueryService {
             throw new IllegalArgumentException("ユーザー名またはパスワードが正しくありません");
         }
 
-        return jwtTokenProvider.generateToken(user.username().value());
+        var roles = user.getRoles().stream().map(Role::name).toList();
+        return jwtTokenProvider.generateToken(user.username().value(), roles);
     }
 }

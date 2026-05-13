@@ -1,7 +1,10 @@
 package com.example.cargotracker.authms.domain.model;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class User {
 
@@ -12,9 +15,10 @@ public class User {
     private boolean enabled;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private final Set<Role> roles;
 
     private User(UserId id, UserName username, Email email, PasswordHash passwordHash,
-                 boolean enabled, LocalDateTime createdAt, LocalDateTime updatedAt) {
+                 boolean enabled, LocalDateTime createdAt, LocalDateTime updatedAt, Set<Role> roles) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -22,6 +26,7 @@ public class User {
         this.enabled = enabled;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.roles = new HashSet<>(roles);
     }
 
     public static User create(UserName username, Email email, PasswordHash passwordHash) {
@@ -29,13 +34,27 @@ public class User {
         if (email == null) throw new IllegalArgumentException("email は必須です");
         if (passwordHash == null) throw new IllegalArgumentException("passwordHash は必須です");
         var now = LocalDateTime.now();
-        return new User(UserId.generate(), username, email, passwordHash, true, now, now);
+        return new User(UserId.generate(), username, email, passwordHash, true, now, now, new HashSet<>());
     }
 
     public static User reconstruct(UserId id, UserName username, Email email,
                                    PasswordHash passwordHash, boolean enabled,
                                    LocalDateTime createdAt, LocalDateTime updatedAt) {
-        return new User(id, username, email, passwordHash, enabled, createdAt, updatedAt);
+        return new User(id, username, email, passwordHash, enabled, createdAt, updatedAt, new HashSet<>());
+    }
+
+    public static User reconstruct(UserId id, UserName username, Email email,
+                                   PasswordHash passwordHash, boolean enabled,
+                                   LocalDateTime createdAt, LocalDateTime updatedAt, Set<Role> roles) {
+        return new User(id, username, email, passwordHash, enabled, createdAt, updatedAt, roles);
+    }
+
+    public void addRole(Role role) {
+        roles.add(role);
+    }
+
+    public Set<Role> getRoles() {
+        return Collections.unmodifiableSet(roles);
     }
 
     public UserId id() { return id; }

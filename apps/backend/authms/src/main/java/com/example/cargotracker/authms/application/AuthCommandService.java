@@ -19,6 +19,10 @@ public class AuthCommandService {
     }
 
     public void register(String username, String email, String rawPassword) {
+        register(username, email, rawPassword, Role.ROLE_SHIPPER);
+    }
+
+    public void register(String username, String email, String rawPassword, Role role) {
         var userName = new UserName(username);
         var emailVO = new Email(email);
 
@@ -31,6 +35,7 @@ public class AuthCommandService {
 
         var passwordHash = new PasswordHash(passwordEncoder.encode(rawPassword));
         var user = User.create(userName, emailVO, passwordHash);
+        user.addRole(role);
         userRepository.save(user);
     }
 }
