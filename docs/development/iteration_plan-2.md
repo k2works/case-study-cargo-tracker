@@ -664,14 +664,16 @@ state ダッシュボード
 ダッシュボード --> 航海スケジュール一覧 : 経路設計ロール / `/routing/voyages`
 
 state 予約一覧 : URL `/bookings`
+state 予約登録 : URL `/bookings/new`
+state 予約詳細 : URL `/bookings/:id`
 予約一覧 --> 予約登録 : 「新規」(GET)
-predicate 予約登録 : URL `/bookings/new`
 予約登録 --> 予約登録 : バリデーションエラー (自己ループ)
 予約登録 --> 予約詳細 : 送信成功 (POST → 201 → GET /bookings/:id)
 
 state 航海スケジュール一覧 : URL `/routing/voyages`
+state 航海スケジュール登録 : URL `/routing/voyages/new` (S12, 新規専用)
+state 航海スケジュール詳細 : URL `/routing/voyages/:vn`
 航海スケジュール一覧 --> 航海スケジュール登録 : 「新規」(GET)
-航海スケジュール登録 : URL `/routing/voyages/new` (S12, 新規専用)
 航海スケジュール登録 --> 航海スケジュール登録 : バリデーション/日付整合性エラー (自己ループ)
 航海スケジュール登録 --> 航海スケジュール詳細 : 送信成功
 

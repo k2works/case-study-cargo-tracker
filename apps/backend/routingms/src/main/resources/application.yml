@@ -11,6 +11,11 @@ spring:
     name: routingms
   profiles:
     default: local-h2
+  main:
+    # Axon 5.1 JacksonConverterAutoConfiguration ↔ Flyway 11 Converter ↔
+    # Spring Boot 4 JacksonAutoConfiguration の Bean 循環参照を回避する。
+    # SpringBootTest では Bean 解決順が異なるため発生しないが、bootRun では落ちる。
+    allow-circular-references: true
 
 server:
   port: 8083

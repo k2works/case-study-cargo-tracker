@@ -17,9 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>ADR-0007 採用パターン: Axon Server の Event Bus から購読し、
  * MyBatis Mapper 経由で cargo_summary テーブルを更新する。</p>
+ *
+ * <p>Profile 除外:</p>
+ * <ul>
+ *   <li>{@code springboot-integration-test}: SpringBootTest 統合テスト時。Axon Event Processor 起動を避ける</li>
+ *   <li>{@code local-h2}: ローカル H2 / bootRun 時。Axon Server が未起動のため Event Processor 接続リトライ尽きを避ける</li>
+ * </ul>
+ *
+ * <p>本 Bean が有効になるのは {@code local-docker}（Axon Server 起動済み）・{@code heroku}・{@code prod} 等のプロファイル。</p>
  */
 @Component
-@Profile("!springboot-integration-test")
+@Profile("!springboot-integration-test & !local-h2")
 public class CargoProjectionsEventHandler {
 
     private final CargoSummaryMapper cargoSummaryMapper;

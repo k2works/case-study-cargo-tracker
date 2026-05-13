@@ -16,10 +16,16 @@ import org.springframework.transaction.annotation.Transactional;
  * VoyageRegisteredEvent を購読し、routing_read_db の Read Model を更新する EventHandler。
  *
  * <p>ADR-0007 ノート: {@code @EventHandler} は Axon Event Processor を自動起動し
- * Axon Server 接続を要求するため、SpringBootTest 時には {@code @Profile} で除外する。</p>
+ * Axon Server 接続を要求するため、Axon Server が未起動の profile では除外する。</p>
+ *
+ * <p>Profile 除外:</p>
+ * <ul>
+ *   <li>{@code springboot-integration-test}: SpringBootTest 統合テスト時</li>
+ *   <li>{@code local-h2}: ローカル H2 / bootRun 時。Axon Server が未起動</li>
+ * </ul>
  */
 @Component
-@Profile("!springboot-integration-test")
+@Profile("!springboot-integration-test & !local-h2")
 public class VoyageProjectionsEventHandler {
 
     private final VoyageMapper mapper;
