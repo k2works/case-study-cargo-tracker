@@ -13,7 +13,7 @@ import java.util.Date;
 import java.util.List;
 
 @Component
-public class JwtTokenProvider {
+public final class JwtTokenProvider {
 
     private final SecretKey secretKey;
     private final long expirationMs;

@@ -72,12 +72,35 @@ public class Shipper {
         return "SHP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    public Long getId() { return id; }
-    public String getShipperCode() { return shipperCode; }
-    public ShipperType getShipperType() { return shipperType; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
-    public String getPhone() { return phone; }
-    public String getContractNumber() { return contractNumber; }
-    public BigDecimal getDiscountRate() { return discountRate; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getShipperCode() {
+        return shipperCode;
+    }
+
+    public ShipperType getShipperType() {
+        return shipperType;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getContractNumber() {
+        return contractNumber;
+    }
+
+    public BigDecimal getDiscountRate() {
+        return discountRate;
+    }
 }

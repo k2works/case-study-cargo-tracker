@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  国際貨物輸送管理システム Checkstyle 抑制フィルター
+  テストコードの日本語メソッド名などプロダクションコードには適用しないルールを除外する。
+-->
+<suppressions>
+
+    <!-- テストコード: 日本語テストメソッド名を許容するため MethodName チェックを除外 -->
+    <suppress checks="MethodName" files=".*[/\\]src[/\\]test[/\\].*\.java$"/>
+
+    <!-- テストコード: 変数名ルールを緩和（テスト用の記述的な変数名を許容） -->
+    <suppress checks="LocalVariableName" files=".*[/\\]src[/\\]test[/\\].*\.java$"/>
+
+</suppressions>

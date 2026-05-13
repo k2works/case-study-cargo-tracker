@@ -31,9 +31,15 @@ public class User {
     }
 
     public static User create(UserName username, Email email, PasswordHash passwordHash) {
-        if (username == null) throw new IllegalArgumentException("username は必須です");
-        if (email == null) throw new IllegalArgumentException("email は必須です");
-        if (passwordHash == null) throw new IllegalArgumentException("passwordHash は必須です");
+        if (username == null) {
+            throw new IllegalArgumentException("username は必須です");
+        }
+        if (email == null) {
+            throw new IllegalArgumentException("email は必須です");
+        }
+        if (passwordHash == null) {
+            throw new IllegalArgumentException("passwordHash は必須です");
+        }
         var now = LocalDateTime.now();
         return new User(UserId.generate(), username, email, passwordHash, true, now, now, new HashSet<>());
     }
@@ -75,21 +81,47 @@ public class User {
         return Collections.unmodifiableSet(roles);
     }
 
-    public UserId id() { return id; }
-    public UserName username() { return username; }
-    public Email email() { return email; }
-    public PasswordHash passwordHash() { return passwordHash; }
-    public boolean isEnabled() { return enabled; }
-    public LocalDateTime createdAt() { return createdAt; }
-    public LocalDateTime updatedAt() { return updatedAt; }
+    public UserId id() {
+        return id;
+    }
+
+    public UserName username() {
+        return username;
+    }
+
+    public Email email() {
+        return email;
+    }
+
+    public PasswordHash passwordHash() {
+        return passwordHash;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public LocalDateTime createdAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime updatedAt() {
+        return updatedAt;
+    }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof User u)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof User u)) {
+            return false;
+        }
         return Objects.equals(id, u.id);
     }
 
     @Override
-    public int hashCode() { return Objects.hash(id); }
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }

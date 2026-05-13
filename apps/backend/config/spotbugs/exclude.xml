@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  国際貨物輸送管理システム SpotBugs 除外フィルター
+  Spring Boot / Axon Framework / MyBatis / JPA の既知の誤検知パターンを除外する。
+-->
+<FindBugsFilter>
+
+    <!-- テストコード全体を除外（*Test, *Tests クラス） -->
+    <Match>
+        <Class name="~.*Test$"/>
+    </Match>
+    <Match>
+        <Class name="~.*Tests$"/>
+    </Match>
+    <Match>
+        <Class name="~.*IT$"/>
+    </Match>
+
+    <!-- Lombok / Record: 自動生成コードの誤検知 -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Spring Security: CSRF 無効化は REST API では意図的 -->
+    <Match>
+        <Bug pattern="SPRING_CSRF_PROTECTION_DISABLED"/>
+    </Match>
+
+    <!-- セキュリティ: BCrypt はハードコードパスワードではない -->
+    <Match>
+        <Bug pattern="HARD_CODE_PASSWORD"/>
+        <Class name="~.*SecurityConfig.*"/>
+    </Match>
+
+</FindBugsFilter>

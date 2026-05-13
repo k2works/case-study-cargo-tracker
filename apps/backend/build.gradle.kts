@@ -4,9 +4,11 @@
 // サブプロジェクトに共通設定を流し込み、サービス固有設定は各 build.gradle.kts に記述する。
 
 import org.gradle.api.plugins.JavaPluginExtension
+import com.github.spotbugs.snom.SpotBugsTask
 
 plugins {
     alias(libs.plugins.sonarqube)
+    alias(libs.plugins.spotbugs) apply false
 }
 
 sonar {
@@ -33,6 +35,8 @@ allprojects {
 
 subprojects {
     apply(plugin = "java")
+    apply(plugin = "checkstyle")
+    apply(plugin = "com.github.spotbugs")
 
     // `subprojects { java { ... } }` の型付きアクセサは Kotlin DSL では解決できないため
     // `configure<JavaPluginExtension>` で明示的に拡張に触れる。
@@ -40,6 +44,26 @@ subprojects {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(25))
         }
+    }
+
+    // Checkstyle 設定
+    configure<CheckstyleExtension> {
+        toolVersion = "10.21.4"
+        configFile = rootProject.file("config/checkstyle/checkstyle.xml")
+        isIgnoreFailures = false
+        maxWarnings = 0
+    }
+
+    // SpotBugs 設定
+    configure<com.github.spotbugs.snom.SpotBugsExtension> {
+        toolVersion = "4.9.8"
+        excludeFilter = rootProject.file("config/spotbugs/exclude.xml")
+        ignoreFailures = false
+    }
+
+    tasks.withType<SpotBugsTask>().configureEach {
+        reports.create("html") { required.set(true) }
+        reports.create("xml") { required.set(true) }
     }
 
     tasks.withType<Test>().configureEach {
