@@ -209,12 +209,12 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `routingms` Gradle サブモジュール作成 + `settings.gradle.kts` 追加 | 2h | - | [ ] |
-| 3.2 | Spring Boot 4 + Axon Framework 5 + MyBatis 3 の依存関係設定 | 2h | - | [ ] |
-| 3.3 | `routing_read_db` 作成 + Flyway マイグレーション（`voyage` / `carrier_movement` / `voyage_accepted_cargo_type` / `location_master`） | 3h | - | [ ] |
-| 3.4 | `RoutingApplication` メインクラス + Actuator + Swagger UI 設定 | 2h | - | [ ] |
-| 3.5 | gatewayms に `routingms` ルーティング設定追加（JWT 検証付き） | 1h | - | [ ] |
-| 3.6 | routingms 起動確認の統合テスト（`PingControllerIntegrationTest` 相当） | 2h | - | [ ] |
+| 3.1 | `routingms` Gradle サブモジュール作成 + `settings.gradle.kts` で include | 2h | Claude | [x] |
+| 3.2 | Spring Boot 4 + Axon 5 + MyBatis + Flyway + OpenAPI 依存関係設定（bookingms テンプレ流用、Security 依存は除く） | 2h | Claude | [x] |
+| 3.3 | `routing_read_db` 用 Flyway V001（`voyage` / `carrier_movement` / `voyage_accepted_cargo_type` / `location_master` + 初期マスタデータ 5 件） | 3h | Claude | [x] |
+| 3.4 | `RoutingApplication` メインクラス + Actuator + Swagger UI 設定（port 8083、application-local-h2.yml） | 2h | Claude | [x] |
+| 3.5 | gatewayms の application.yml に `routingms` ルート（`Path=/api/v1/voyages/**`、`ROUTINGMS_URL` 環境変数） | 1h | Claude | [x] |
+| 3.6 | routingms 起動確認テスト（`RoutingApplicationTests` + `PingControllerIntegrationTest`、`@Profile("!springboot-integration-test")` パターン採用） | 2h | Claude | [x] |
 
 **小計**: 12h（SP 外、計画外バッファ枠）
 
@@ -222,12 +222,12 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `Voyage` Aggregate + `VoyageNumber` / `CarrierMovement` 値オブジェクト実装 | 4h | - | [ ] |
-| 4.2 | `RegisterVoyageCommand` / `VoyageRegisteredEvent` 定義 + Aggregate ハンドラ | 3h | - | [ ] |
-| 4.3 | `VoyageProjectionsEventHandler`（Read Model 反映: voyage / carrier_movement / voyage_accepted_cargo_type） | 3h | - | [ ] |
-| 4.4 | `POST /api/v1/voyages` コントローラー + DTO + 日付整合性バリデーション | 3h | - | [ ] |
-| 4.5 | 同一 `voyage_number` の重複チェック（Aggregate ロード時の存在確認） | 1h | - | [ ] |
-| 4.6 | 航海スケジュール登録のユニットテスト（`AggregateTestFixture`）+ 統合テスト | 3h | - | [ ] |
+| 4.1 | `Voyage` Aggregate (`@EventSourcedEntity(tagKey="voyageNumber")` + `@EntityCreator` + `@CommandHandler` static + `@EventSourcingHandler`) + `VoyageNumber` / `Carrier` / `CarrierMovement` / `UnLocode` / `Location` / `CargoType` / `VoyageStatus` 値オブジェクト | 4h | Claude | [x] |
+| 4.2 | `RegisterVoyageCommand` (`@TargetEntityId`) / `VoyageRegisteredEvent` 定義（日付整合性・origin!=destination・寄港地 1+ を Command の不変条件で担保） | 3h | Claude | [x] |
+| 4.3 | `VoyageProjectionsEventHandler` + `VoyageMapper` + `VoyageRecord` / `CarrierMovementRecord`（voyage / carrier_movement / voyage_accepted_cargo_type への INSERT） | 3h | Claude | [x] |
+| 4.4 | `POST /api/v1/voyages` `VoyageController` + `RegisterVoyageRequest` DTO（jakarta.validation）+ `VoyageResponse` | 3h | Claude | [x] |
+| 4.5 | 同一 `voyage_number` の重複チェック（`VoyageMapper.existsByVoyageNumber` → 409 Conflict） | 1h | Claude | [x] |
+| 4.6 | 航海スケジュール登録のユニットテスト（`VoyageTest` Mockito ベース 5 件）+ Projection テスト 1 件 + 統合テスト 4 件 | 3h | Claude | [x] |
 
 **小計**: 17h
 
