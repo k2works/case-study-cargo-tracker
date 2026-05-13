@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # pre-commit フック
 # コミット前にバックエンド・フロントエンドの静的解析とテストを実行する。
+# .github/workflows/ 配下の YAML 構文検証も行う。
 
 set -euo pipefail
 
@@ -9,6 +10,46 @@ BACKEND_DIR="${REPO_ROOT}/apps/backend"
 FRONTEND_DIR="${REPO_ROOT}/apps/frontend"
 
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# ── GitHub Actions ワークフロー YAML 検証 ─────────────────────
+STAGED_WORKFLOWS=$(echo "${STAGED_FILES}" | grep -E '^\.github/workflows/.*\.ya?ml$' || true)
+
+if [ -n "${STAGED_WORKFLOWS}" ]; then
+  echo "==> [pre-commit] GitHub Actions ワークフローの構文検証..."
+  echo "${STAGED_WORKFLOWS}" | sed 's/^/    /'
+
+  # 1) YAML 構文チェック（Python yaml が利用可能なら使用、なければスキップ警告）
+  if command -v python3 >/dev/null 2>&1; then
+    PY=python3
+  elif command -v python >/dev/null 2>&1; then
+    PY=python
+  else
+    PY=""
+  fi
+
+  if [ -n "${PY}" ]; then
+    for wf in ${STAGED_WORKFLOWS}; do
+      ${PY} -c "import sys, yaml; yaml.safe_load(open('${wf}', encoding='utf-8'))" || {
+        echo "ERROR: ${wf} は有効な YAML ではありません"
+        exit 1
+      }
+    done
+  else
+    echo "WARN: python/python3 が見つかりません。YAML 構文検証をスキップします"
+  fi
+
+  # 2) actionlint があれば追加検証（インストール任意）
+  if command -v actionlint >/dev/null 2>&1; then
+    actionlint ${STAGED_WORKFLOWS} || {
+      echo "ERROR: actionlint がワークフローのエラーを検出しました"
+      exit 1
+    }
+  else
+    echo "INFO: actionlint 未インストール（より厳密な検証をしたい場合は導入を推奨）"
+  fi
+
+  echo "==> [pre-commit] GitHub Actions ワークフローの構文 OK。"
+fi
 
 # ── バックエンド（Java）チェック ──────────────────────────────
 STAGED_JAVA=$(echo "${STAGED_FILES}" | grep -E '\.java$' || true)
