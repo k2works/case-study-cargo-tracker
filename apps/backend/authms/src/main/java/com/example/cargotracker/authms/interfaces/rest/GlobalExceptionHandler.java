@@ -1,0 +1,32 @@
+package com.example.cargotracker.authms.interfaces.rest;
+
+import com.example.cargotracker.authms.interfaces.rest.dto.ValidationErrorResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.List;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ValidationErrorResponse> handleValidationErrors(
+            MethodArgumentNotValidException ex) {
+        List<ValidationErrorResponse.FieldError> fieldErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(fe -> new ValidationErrorResponse.FieldError(
+                        fe.getField(), fe.getDefaultMessage()))
+                .toList();
+
+        var response = new ValidationErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "バリデーションエラー",
+                fieldErrors
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+}
