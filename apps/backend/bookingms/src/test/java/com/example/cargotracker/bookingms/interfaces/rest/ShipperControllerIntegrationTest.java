@@ -17,7 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@ActiveProfiles("local-h2")
+@ActiveProfiles({"local-h2", "springboot-integration-test"})
 @Transactional
 @DisplayName("ShipperController 統合テスト")
 class ShipperControllerIntegrationTest {

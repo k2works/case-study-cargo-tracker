@@ -9,4 +9,5 @@ public interface ShipperRepository {
     Shipper save(Shipper shipper);
     Optional<Shipper> findByEmail(String email);
     List<Shipper> findAll();
+    boolean existsById(Long id);
 }

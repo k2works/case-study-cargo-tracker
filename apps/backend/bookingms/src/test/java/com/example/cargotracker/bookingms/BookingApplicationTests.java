@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
  * <p>Phase 0 の Walking Skeleton。Bean 解決のみ確認し、外部リソースには接続しない。
  */
 @SpringBootTest
-@ActiveProfiles("local-h2")
+@ActiveProfiles({"local-h2", "springboot-integration-test"})
 @DisplayName("BookingApplication コンテキスト起動確認")
 class BookingApplicationTests {
 

@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * レスポンス構造を検証する。
  */
 @SpringBootTest
-@ActiveProfiles("local-h2")
+@ActiveProfiles({"local-h2", "springboot-integration-test"})
 @DisplayName("PingController 統合テスト")
 class PingControllerIntegrationTest {
 

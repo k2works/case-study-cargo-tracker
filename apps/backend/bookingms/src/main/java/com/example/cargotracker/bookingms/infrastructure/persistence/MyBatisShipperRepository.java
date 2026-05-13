@@ -43,6 +43,11 @@ public class MyBatisShipperRepository implements ShipperRepository {
         return mapper.findAll().stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public boolean existsById(Long id) {
+        return mapper.existsById(id);
+    }
+
     private ShipperRecord toRecord(Shipper shipper) {
         ShipperRecord r = new ShipperRecord();
         r.setShipperCode(shipper.getShipperCode());
