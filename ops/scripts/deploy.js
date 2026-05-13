@@ -235,6 +235,17 @@ export default function (gulp) {
     )
   );
 
+  // ── アプリを開く ─────────────────────────────────────────────
+  gulp.task('deploy:dev:open', async (done) => {
+    const prefix = getPrefix();
+    const apps = ['authms', 'bookingms', 'frontend'];
+    for (const svc of apps) {
+      const err = await runStreaming('heroku', ['open', '-a', `${prefix}-${svc}`]);
+      if (err) { done(err); return; }
+    }
+    done();
+  });
+
   // ── 初回セットアップ ──────────────────────────────────────────
   // Note: heroku create / heroku config:set は対話的操作が含まれるため
   //       ガイド表示のみ行い、手動実行を促す
