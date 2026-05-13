@@ -153,6 +153,54 @@ export default function (gulp) {
     done(err);
   });
 
+  // ── Config Vars 設定 ─────────────────────────────────────────
+  gulp.task('deploy:dev:config:authms', async (done) => {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      done(new Error('JWT_SECRET が .env に設定されていません'));
+      return;
+    }
+    const err = await runStreaming('heroku', [
+      'config:set',
+      'SPRING_PROFILES_ACTIVE=heroku',
+      'JAVA_OPTS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
+      `JWT_SECRET=${jwtSecret}`,
+      'JWT_ISSUER=case-study-cargo-tracker',
+      '-a', appName('authms'),
+    ]);
+    done(err);
+  });
+
+  gulp.task('deploy:dev:config:bookingms', async (done) => {
+    const err = await runStreaming('heroku', [
+      'config:set',
+      'SPRING_PROFILES_ACTIVE=heroku',
+      'JAVA_OPTS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
+      '-a', appName('bookingms'),
+    ]);
+    done(err);
+  });
+
+  gulp.task('deploy:dev:config:frontend', async (done) => {
+    const prefix = getPrefix();
+    const err = await runStreaming('heroku', [
+      'config:set',
+      `AUTH_API_URL=https://${prefix}-authms.herokuapp.com`,
+      `BOOKING_API_URL=https://${prefix}-bookingms.herokuapp.com`,
+      '-a', appName('frontend'),
+    ]);
+    done(err);
+  });
+
+  gulp.task(
+    'deploy:dev:config',
+    gulp.parallel(
+      'deploy:dev:config:authms',
+      'deploy:dev:config:bookingms',
+      'deploy:dev:config:frontend'
+    )
+  );
+
   // ── 複合タスク ────────────────────────────────────────────────
   gulp.task(
     'deploy:dev',
@@ -185,26 +233,13 @@ PREFIX: ${prefix}
    heroku create ${prefix}-bookingms --stack container
    heroku create ${prefix}-frontend --stack container
 
-3. authms Config Vars:
-   heroku config:set \\
-     SPRING_PROFILES_ACTIVE=heroku \\
-     JAVA_OPTS="-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m" \\
-     JWT_SECRET="$(openssl rand -base64 64)" \\
-     -a ${prefix}-authms
+3. .env に JWT_SECRET を設定:
+   JWT_SECRET="$(openssl rand -base64 64)"
 
-4. bookingms Config Vars（ローカルバスモード）:
-   heroku config:set \\
-     SPRING_PROFILES_ACTIVE=heroku \\
-     JAVA_OPTS="-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m" \\
-     -a ${prefix}-bookingms
+4. Config Vars を一括設定（.env の JWT_SECRET を使用）:
+   npx gulp deploy:dev:config
 
-5. frontend Config Vars:
-   heroku config:set \\
-     AUTH_API_URL=https://${prefix}-authms.herokuapp.com \\
-     BOOKING_API_URL=https://${prefix}-bookingms.herokuapp.com \\
-     -a ${prefix}-frontend
-
-6. ビルドとデプロイ:
+5. ビルドとデプロイ:
    npx gulp deploy:dev
 
 詳細: docs/operation/開発環境セットアップ手順書.md
