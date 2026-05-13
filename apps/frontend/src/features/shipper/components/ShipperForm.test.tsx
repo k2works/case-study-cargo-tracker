@@ -2,8 +2,16 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { ShipperForm } from './ShipperForm'
+
+vi.mock('../hooks/useShippers', () => ({
+  useRegisterShipper: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+  }),
+}))
 
 function renderShipperForm() {
   const queryClient = new QueryClient({
@@ -55,5 +63,41 @@ describe('ShipperForm', () => {
     renderShipperForm()
     expect(screen.getByRole('button', { name: '登録する' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'キャンセル' })).toBeInTheDocument()
+  })
+
+  it('各入力欄に値を入力できる', async () => {
+    const user = userEvent.setup()
+    renderShipperForm()
+
+    await user.type(screen.getByLabelText('氏名/社名'), '山田太郎')
+    await user.type(screen.getByLabelText('メールアドレス'), 'test@example.com')
+    await user.type(screen.getByLabelText('電話番号'), '090-1234-5678')
+
+    expect(screen.getByLabelText('氏名/社名')).toHaveValue('山田太郎')
+    expect(screen.getByLabelText('メールアドレス')).toHaveValue('test@example.com')
+    expect(screen.getByLabelText('電話番号')).toHaveValue('090-1234-5678')
+  })
+
+  it('法人選択時に契約番号と割引率を入力できる', async () => {
+    const user = userEvent.setup()
+    renderShipperForm()
+
+    await user.click(screen.getByLabelText('法人'))
+    await user.type(screen.getByLabelText('契約番号'), 'C-001')
+    await user.type(screen.getByLabelText('割引率（0〜30%）'), '10')
+
+    expect(screen.getByLabelText('契約番号')).toHaveValue('C-001')
+    expect(screen.getByLabelText('割引率（0〜30%）')).toHaveValue(10)
+  })
+
+  it('フォーム送信時に登録するボタンが存在する', async () => {
+    const user = userEvent.setup()
+    renderShipperForm()
+
+    await user.type(screen.getByLabelText('氏名/社名'), '山田太郎')
+    await user.type(screen.getByLabelText('メールアドレス'), 'test@example.com')
+    await user.click(screen.getByRole('button', { name: '登録する' }))
+
+    expect(screen.getByRole('button', { name: '登録する' })).toBeInTheDocument()
   })
 })

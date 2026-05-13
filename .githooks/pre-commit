@@ -32,6 +32,7 @@ if [ -n "${STAGED_FRONTEND}" ]; then
   (
     cd "${FRONTEND_DIR}"
     npm run lint -- --max-warnings=0
+    npm test
     npm run build
   )
   echo "==> [pre-commit] フロントエンドチェック通過。"
