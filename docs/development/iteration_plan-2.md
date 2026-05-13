@@ -196,12 +196,12 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `HazardInfo`（`imoClass`・`unNumber`・`declaration`）値オブジェクト実装 | 2h | - | [ ] |
-| 2.2 | `TemperatureCondition`（`minCelsius`・`maxCelsius`）値オブジェクト実装 + 不変条件（max >= min） | 2h | - | [ ] |
-| 2.3 | `CargoSpecification` を `hazardInfo` / `temperatureCondition` を optional で保持するよう拡張 | 2h | - | [ ] |
-| 2.4 | `Cargo` Aggregate の貨物種別分岐 + 特別情報必須バリデーション | 2h | - | [ ] |
-| 2.5 | `CargoProjectionsEventHandler` 拡張（`cargo_summary` の hazard_* / temperature_* カラム反映） | 2h | - | [ ] |
-| 2.6 | 危険物・冷凍貨物のユニットテスト + 統合テスト + **温度境界値テスト**（過去レビュー指摘 反映） | 3h | - | [ ] |
+| 2.1 | `HazardInfo`（`imoClass`・`unNumber`・`declaration`）値オブジェクト実装（US04 Round 1 で先行実装） | 2h | Claude | [x] |
+| 2.2 | `TemperatureCondition`（`minCelsius`・`maxCelsius`）値オブジェクト実装 + 不変条件（max >= min、US04 Round 1 で先行実装） | 2h | Claude | [x] |
+| 2.3 | `CargoSpecification` を `hazardInfo` / `temperatureCondition` を optional で保持するよう拡張（US04 Round 1 で先行実装） | 2h | Claude | [x] |
+| 2.4 | `Cargo` Aggregate の貨物種別分岐 + 特別情報必須バリデーション（CargoSpecification 側で実装、Cargo は CargoSpecification を保持する設計） | 2h | Claude | [x] |
+| 2.5 | `CargoProjectionsEventHandler` 拡張（`cargo_summary` の hazard_* / temperature_* カラム反映、US04 Round 3 で先行実装、US05 Round で REFRIGERATED 投影テスト追加） | 2h | Claude | [x] |
+| 2.6 | 危険物・冷凍貨物のユニットテスト + 統合テスト + **温度境界値テスト**: HAZARDOUS 正常登録/REFRIGERATED 正常登録/REFRIGERATED 温度なし 400/逆転 400/min==max 境界値/冷蔵帯範囲を ValueObjectsTest と BookingControllerIntegrationTest に追加（過去レビュー指摘 反映） | 3h | Claude | [x] |
 
 **小計**: 13h
 

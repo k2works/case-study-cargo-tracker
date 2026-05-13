@@ -84,4 +84,29 @@ class CargoProjectionsEventHandlerTest {
         assertThat(r.getHazardUnNumber()).isEqualTo("1170");
         assertThat(r.getHazardDeclaration()).isEqualTo("引火性液体");
     }
+
+    @Test
+    @DisplayName("REFRIGERATED 貨物では TemperatureCondition カラムも保存される（US05）")
+    void 冷凍貨物の温度条件も保存される() {
+        var temp = new com.example.cargotracker.bookingms.domain.model.valueobjects.TemperatureCondition(
+                new BigDecimal("-25"), new BigDecimal("-18"));
+        var spec = new CargoSpecification(
+                com.example.cargotracker.bookingms.domain.model.valueobjects.CargoType.REFRIGERATED,
+                new BigDecimal("200"), new Dimensions(150, 80, 80), 1, "冷凍マグロ",
+                null, temp);
+        var route = new RouteSpecification(
+                Location.of("JPYOK"), Location.of("USLAX"), LocalDate.of(2026, 12, 31));
+        var event = new CargoBookedEvent("B-003", new ShipperId(7L), spec, route);
+
+        handler.on(event);
+
+        ArgumentCaptor<CargoSummaryRecord> captor = ArgumentCaptor.forClass(CargoSummaryRecord.class);
+        verify(mapper).insert(captor.capture());
+        CargoSummaryRecord r = captor.getValue();
+
+        assertThat(r.getCargoType()).isEqualTo("REFRIGERATED");
+        assertThat(r.getTemperatureMinC()).isEqualByComparingTo("-25");
+        assertThat(r.getTemperatureMaxC()).isEqualByComparingTo("-18");
+        assertThat(r.getHazardImoClass()).isNull();
+    }
 }

@@ -120,19 +120,41 @@ class ValueObjectsTest {
     }
 
     @Nested
-    @DisplayName("TemperatureCondition")
+    @DisplayName("TemperatureCondition（US05 冷凍貨物境界値、レビュー H 系指摘の反映）")
     class TemperatureConditionTest {
         @Test
-        @DisplayName("min <= max は受け入れる")
+        @DisplayName("min < max（範囲あり）は受け入れる")
         void 正常範囲() {
             var t = new TemperatureCondition(new BigDecimal("-20"), new BigDecimal("-10"));
             assertThat(t.maxCelsius()).isEqualByComparingTo("-10");
         }
 
         @Test
+        @DisplayName("min == max（境界値、固定温度）は受け入れる")
+        void 境界値同一温度() {
+            var t = new TemperatureCondition(new BigDecimal("-18"), new BigDecimal("-18"));
+            assertThat(t.minCelsius()).isEqualByComparingTo(t.maxCelsius());
+        }
+
+        @Test
+        @DisplayName("0℃ を跨ぐ範囲（冷蔵帯）も受け入れる")
+        void 冷蔵帯範囲() {
+            var t = new TemperatureCondition(new BigDecimal("-2"), new BigDecimal("5"));
+            assertThat(t.minCelsius()).isNegative();
+            assertThat(t.maxCelsius()).isPositive();
+        }
+
+        @Test
         @DisplayName("min > max は拒否")
         void 逆転拒否() {
             assertThatThrownBy(() -> new TemperatureCondition(new BigDecimal("10"), new BigDecimal("5")))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("min > max が僅差でも拒否（境界値）")
+        void 逆転拒否境界値() {
+            assertThatThrownBy(() -> new TemperatureCondition(new BigDecimal("-17.99"), new BigDecimal("-18")))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

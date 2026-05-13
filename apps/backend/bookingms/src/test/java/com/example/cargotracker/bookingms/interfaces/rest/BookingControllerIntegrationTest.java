@@ -184,4 +184,145 @@ class BookingControllerIntegrationTest {
                                 """.formatted(shipperId)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("US05: HAZARDOUS で HazardInfo を含めて登録できる（201）")
+    void 危険物予約を登録できる() throws Exception {
+        Long shipperId = registerShipper();
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "shipperId": %d,
+                                    "cargoSpec": {
+                                        "cargoType": "HAZARDOUS",
+                                        "weightKg": 50,
+                                        "quantity": 1,
+                                        "productName": "燃料",
+                                        "dimensions": {"lengthCm": 50, "widthCm": 50, "heightCm": 50},
+                                        "hazardInfo": {
+                                            "imoClass": "3",
+                                            "unNumber": "1170",
+                                            "declaration": "引火性液体"
+                                        }
+                                    },
+                                    "routeSpec": {
+                                        "originUnLocode": "JPYOK",
+                                        "destinationUnLocode": "USLAX",
+                                        "arrivalDeadline": "2099-12-31"
+                                    }
+                                }
+                                """.formatted(shipperId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").isNotEmpty())
+                .andExpect(jsonPath("$.bookingStatus").value("PRELIMINARY"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+        BookCargoCommand cmd = (BookCargoCommand) captor.getValue();
+        assertThat(cmd.cargoSpec().cargoType().name()).isEqualTo("HAZARDOUS");
+        assertThat(cmd.cargoSpec().hazardInfo()).isNotNull();
+        assertThat(cmd.cargoSpec().hazardInfo().imoClass()).isEqualTo("3");
+        assertThat(cmd.cargoSpec().hazardInfo().unNumber()).isEqualTo("1170");
+    }
+
+    @Test
+    @DisplayName("US05: REFRIGERATED で TemperatureCondition を含めて登録できる（201）")
+    void 冷凍貨物予約を登録できる() throws Exception {
+        Long shipperId = registerShipper();
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "shipperId": %d,
+                                    "cargoSpec": {
+                                        "cargoType": "REFRIGERATED",
+                                        "weightKg": 200,
+                                        "quantity": 1,
+                                        "productName": "冷凍マグロ",
+                                        "dimensions": {"lengthCm": 150, "widthCm": 80, "heightCm": 80},
+                                        "temperatureCondition": {
+                                            "minCelsius": -20,
+                                            "maxCelsius": -10
+                                        }
+                                    },
+                                    "routeSpec": {
+                                        "originUnLocode": "JPYOK",
+                                        "destinationUnLocode": "USLAX",
+                                        "arrivalDeadline": "2099-12-31"
+                                    }
+                                }
+                                """.formatted(shipperId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingId").isNotEmpty())
+                .andExpect(jsonPath("$.bookingStatus").value("PRELIMINARY"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+        BookCargoCommand cmd = (BookCargoCommand) captor.getValue();
+        assertThat(cmd.cargoSpec().cargoType().name()).isEqualTo("REFRIGERATED");
+        assertThat(cmd.cargoSpec().temperatureCondition()).isNotNull();
+        assertThat(cmd.cargoSpec().temperatureCondition().minCelsius()).isEqualByComparingTo("-20");
+        assertThat(cmd.cargoSpec().temperatureCondition().maxCelsius()).isEqualByComparingTo("-10");
+    }
+
+    @Test
+    @DisplayName("US05: REFRIGERATED で TemperatureCondition が無いと 400")
+    void 冷凍貨物で温度なしは400() throws Exception {
+        Long shipperId = registerShipper();
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "shipperId": %d,
+                                    "cargoSpec": {
+                                        "cargoType": "REFRIGERATED",
+                                        "weightKg": 200,
+                                        "quantity": 1,
+                                        "productName": "冷凍マグロ",
+                                        "dimensions": {"lengthCm": 150, "widthCm": 80, "heightCm": 80}
+                                    },
+                                    "routeSpec": {
+                                        "originUnLocode": "JPYOK",
+                                        "destinationUnLocode": "USLAX",
+                                        "arrivalDeadline": "2099-12-31"
+                                    }
+                                }
+                                """.formatted(shipperId)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("US05: REFRIGERATED で min > max は 400（温度範囲整合性）")
+    void 温度範囲逆転は400() throws Exception {
+        Long shipperId = registerShipper();
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "shipperId": %d,
+                                    "cargoSpec": {
+                                        "cargoType": "REFRIGERATED",
+                                        "weightKg": 200,
+                                        "quantity": 1,
+                                        "productName": "冷凍マグロ",
+                                        "dimensions": {"lengthCm": 150, "widthCm": 80, "heightCm": 80},
+                                        "temperatureCondition": {
+                                            "minCelsius": 10,
+                                            "maxCelsius": -10
+                                        }
+                                    },
+                                    "routeSpec": {
+                                        "originUnLocode": "JPYOK",
+                                        "destinationUnLocode": "USLAX",
+                                        "arrivalDeadline": "2099-12-31"
+                                    }
+                                }
+                                """.formatted(shipperId)))
+                .andExpect(status().isBadRequest());
+    }
 }
