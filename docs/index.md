@@ -20,10 +20,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、UI、テスト、非機能、運用、技術スタック | 10 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 3 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 4 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT） |
-| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み（アプリ開発環境）|
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1 完了 |
+| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み（アプリ開発環境、開発環境）|
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -75,6 +75,7 @@
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [アプリケーション開発環境セットアップ手順書](./operation/アプリケーション開発環境セットアップ手順書.md) | Java 25 + Spring Boot 4 + Axon 5.1 + MyBatis + React 19 のローカル開発環境構築手順、Phase 0 Walking Skeleton（bookingms + Swagger UI）の起動確認まで |
+| [開発環境セットアップ手順書](./operation/開発環境セットアップ手順書.md) | Heroku Container Registry を用いた開発環境（authms / bookingms / gatewayms / frontend）のデプロイ手順、IT1 完了状態まで |
 
 ### レビュードキュメント
 
