@@ -66,6 +66,9 @@
 | [ADR-0001](./adr/0001-axon-framework-adoption.md) | メッセージング基盤として Axon Framework 5 を採用する（フェーズ別稼働率・EE 移行計画を含む） |
 | [ADR-0002](./adr/0002-mybatis-adoption.md) | データアクセスとして MyBatis を採用する |
 | [ADR-0003](./adr/0003-phase0-skeleton-and-ghcr-adoption.md) | Phase 0 Walking Skeleton 整備と GitHub Container Registry + GITHUB_TOKEN を採用する |
+| [ADR-0004](./adr/0004-microservice-decomposition.md) | マイクロサービス分解方針を決定する |
+| [ADR-0005](./adr/0005-shared-module-role.md) | shared モジュールは共有カーネルとして Location・UnLocode のみを提供する |
+| [ADR-0006](./adr/0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成 |
 
 ### 運用ドキュメント
 
