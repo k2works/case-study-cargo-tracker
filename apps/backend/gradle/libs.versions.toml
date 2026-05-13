@@ -88,6 +88,7 @@ archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+sonarqube = { id = "org.sonarqube", version = "6.2.0.5505" }
 
 [bundles]
 spring-web = [

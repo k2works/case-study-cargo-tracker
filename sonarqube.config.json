@@ -1,0 +1,18 @@
+{
+  "projects": [
+    {
+      "name": "backend",
+      "label": "Backend",
+      "projectKey": "cargo-tracker-backend",
+      "scanType": "gradle",
+      "srcDir": "apps/backend"
+    },
+    {
+      "name": "frontend",
+      "label": "Frontend",
+      "projectKey": "cargo-tracker-frontend",
+      "scanType": "sonar-scanner",
+      "srcDir": "apps/frontend"
+    }
+  ]
+}

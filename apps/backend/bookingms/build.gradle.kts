@@ -6,6 +6,7 @@
 plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
+    jacoco
 }
 
 dependencies {
@@ -47,4 +48,12 @@ springBoot {
 
 tasks.bootJar {
     archiveFileName.set("bookingms.jar")
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
 }

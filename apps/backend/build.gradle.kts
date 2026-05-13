@@ -5,6 +5,23 @@
 
 import org.gradle.api.plugins.JavaPluginExtension
 
+plugins {
+    alias(libs.plugins.sonarqube)
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "cargo-tracker-backend")
+        property("sonar.projectName", "Backend")
+        property("sonar.host.url", System.getenv("SONAR_HOST_URL") ?: "http://localhost:9000")
+        property("sonar.token", System.getenv("SONAR_TOKEN") ?: "")
+        property("sonar.sourceEncoding", "UTF-8")
+        property("sonar.sources", "src/main/java")
+        property("sonar.tests", "src/test/java")
+        property("sonar.coverage.jacoco.xmlReportPaths", "**/build/reports/jacoco/test/jacocoTestReport.xml")
+    }
+}
+
 allprojects {
     group = "com.example.cargotracker"
     version = "0.1.0-SNAPSHOT"
