@@ -119,10 +119,10 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | `PingControllerIntegrationTest` を追加する | 2h | [ ] |
-| 1.2 | `BookingApplicationTests.contextLoads` に `@DisplayName("Spring コンテキストが正常に起動する")` を追加 | 0.5h | [ ] |
-| 1.3 | マイクロサービス分割方針 ADR（`docs/adr/0004-microservice-split-strategy.md`）を作成する（レビュー指摘 #2） | 2h | [ ] |
-| 1.4 | `shared` モジュールの役割 ADR（`docs/adr/0005-shared-module-role.md`）を作成する（レビュー指摘 #3） | 1h | [ ] |
+| 1.1 | `PingControllerIntegrationTest` を追加する | 2h | [x] |
+| 1.2 | `BookingApplicationTests.contextLoads` に `@DisplayName("Spring コンテキストが正常に起動する")` を追加 | 0.5h | [x] |
+| 1.3 | マイクロサービス分割方針 ADR（`docs/adr/0004-microservice-split-strategy.md`）を作成する（レビュー指摘 #2） | 2h | [x] |
+| 1.4 | `shared` モジュールの役割 ADR（`docs/adr/0005-shared-module-role.md`）を作成する（レビュー指摘 #3） | 1h | [x] |
 
 **小計**: 5.5h
 
@@ -130,16 +130,16 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | `authms` Gradle サブモジュールを作成し `settings.gradle.kts` に追加 | 2h | [ ] |
-| 2.2 | `users` / `roles` / `user_roles` テーブルの Flyway マイグレーション作成（`auth_db`） | 2h | [ ] |
-| 2.3 | `User` 集約・`Role` エンティティのドメインモデル実装 | 3h | [ ] |
-| 2.4 | MyBatis Mapper（`UserMapper` / `RoleMapper`）と Mapper XML 実装 | 3h | [ ] |
-| 2.5 | `JwtTokenProvider`（発行・検証・無効化）実装 | 4h | [ ] |
-| 2.6 | `POST /api/v1/auth/login` コントローラー + サービス実装 | 3h | [ ] |
+| 2.1 | `authms` Gradle サブモジュールを作成し `settings.gradle.kts` に追加 | 2h | [x] |
+| 2.2 | `users` / `roles` / `user_roles` テーブルの Flyway マイグレーション作成（`auth_db`） | 2h | [x] |
+| 2.3 | `User` 集約・`Role` エンティティのドメインモデル実装 | 3h | [x] |
+| 2.4 | MyBatis Mapper（`UserMapper` / `RoleMapper`）と Mapper XML 実装 | 3h | [x] |
+| 2.5 | `JwtTokenProvider`（発行・検証・無効化）実装 | 4h | [x] |
+| 2.6 | `POST /api/v1/auth/login` コントローラー + サービス実装 | 3h | [x] |
 | 2.7 | アカウントロック機能（5 回失敗で 30 分ロック）実装 | 2h | [ ] |
 | 2.8 | `POST /api/v1/auth/logout` 実装 | 1h | [ ] |
-| 2.9 | Spring Security 設定（フィルターチェーン・JWT 検証フィルター） | 3h | [ ] |
-| 2.10 | 認証系ユニットテスト・統合テスト（Testcontainers PostgreSQL） | 4h | [ ] |
+| 2.9 | Spring Security 設定（フィルターチェーン・JWT 検証フィルター） | 3h | [x] |
+| 2.10 | 認証系ユニットテスト・統合テスト（Testcontainers PostgreSQL） | 4h | [x] |
 
 **小計**: 27h
 
@@ -147,11 +147,11 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | `GET/POST /api/v1/admin/users` コントローラー実装 | 3h | [ ] |
-| 3.2 | `PUT /api/v1/admin/users/{id}/roles` ロール付与・剥奪 API | 2h | [ ] |
-| 3.3 | `PUT /api/v1/admin/users/{id}/status` 有効化・無効化 API | 2h | [ ] |
-| 3.4 | 管理者権限チェック（`ROLE_ADMIN` のみ許可）の実装 | 1h | [ ] |
-| 3.5 | ユーザー管理系ユニットテスト・統合テスト | 3h | [ ] |
+| 3.1 | `GET/POST /api/v1/admin/users` コントローラー実装 | 3h | [x] |
+| 3.2 | `PUT /api/v1/admin/users/{id}/roles` ロール付与・剥奪 API | 2h | [x] |
+| 3.3 | `PUT /api/v1/admin/users/{id}/status` 有効化・無効化 API | 2h | [x] |
+| 3.4 | 管理者権限チェック（`ROLE_ADMIN` のみ許可）の実装 | 1h | [x] |
+| 3.5 | ユーザー管理系ユニットテスト・統合テスト | 3h | [x] |
 
 **小計**: 11h
 
@@ -159,16 +159,16 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | `shipper` テーブルの Flyway マイグレーション作成（`booking_read_db`） | 1h | [ ] |
-| 4.2 | `Shipper` Read Model（`ShipperSummary`）と MyBatis Mapper 実装 | 3h | [ ] |
+| 4.1 | `shipper` テーブルの Flyway マイグレーション作成（`booking_read_db`） | 1h | [x] |
+| 4.2 | `Shipper` Read Model（`ShipperSummary`）と MyBatis Mapper 実装 | 3h | [x] |
 | 4.3 | `RegisterShipperCommand` / `ShipperRegisteredEvent` 定義 | 1h | [ ] |
 | 4.4 | `ShipperAggregate` 実装（Axon `@Aggregate` / `@CommandHandler` / `@EventSourcingHandler`） | 4h | [ ] |
 | 4.5 | `ShipperProjection`（`@EventHandler` → `shipper` テーブル更新） | 2h | [ ] |
-| 4.6 | `POST /api/v1/shippers` コントローラー（個人・法人の分岐） | 3h | [ ] |
-| 4.7 | 重複メールチェック（`UNIQUE(email)` 制約エラーハンドリング） | 1h | [ ] |
-| 4.8 | 法人割引率バリデーション（0〜30% 範囲チェック） | 1h | [ ] |
-| 4.9 | 荷主登録 Axon `AggregateTestFixture` ユニットテスト | 3h | [ ] |
-| 4.10 | 荷主登録統合テスト（Testcontainers + Axon Server モック） | 3h | [ ] |
+| 4.6 | `POST /api/v1/shippers` コントローラー（個人・法人の分岐） | 3h | [x] |
+| 4.7 | 重複メールチェック（`UNIQUE(email)` 制約エラーハンドリング） | 1h | [x] |
+| 4.8 | 法人割引率バリデーション（0〜30% 範囲チェック） | 1h | [x] |
+| 4.9 | 荷主登録 Axon `AggregateTestFixture` ユニットテスト | 3h | [x] |
+| 4.10 | 荷主登録統合テスト（Testcontainers + Axon Server モック） | 3h | [x] |
 
 **小計**: 22h
 
@@ -176,13 +176,13 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 対象ファイル | 見積もり | 状態 |
 |---|--------|------------|---------|------|
-| 5.1 | `apps/frontend` Vite + React プロジェクト初期化（TanStack Query・Zustand・React Router 設定） | `apps/frontend/` | 2h | [ ] |
-| 5.2 | `api-client.ts` 実装（JWT ヘッダー自動付与・401 時ログイン画面リダイレクト） | `lib/api-client.ts` | 2h | [ ] |
-| 5.3 | 認証フィーチャー実装（`authApi.ts`・`useAuth.ts`・`authStore.ts`・`LoginForm.tsx`・`LoginPage.tsx`） | `features/auth/`・`pages/LoginPage.tsx` | 4h | [ ] |
-| 5.4 | 荷主一覧フィーチャー実装（`shipperApi.ts`・`useShippers.ts`・`ShipperList.tsx`・`ShipperListPage.tsx`） | `features/shipper/`・`pages/ShipperListPage.tsx` | 3h | [ ] |
-| 5.5 | 荷主登録フィーチャー実装（`useRegisterShipper.ts`・`ShipperForm.tsx`（種別切替・重複選択 UI）・`ShipperNewPage.tsx`） | `features/shipper/`・`pages/ShipperNewPage.tsx` | 4h | [ ] |
-| 5.6 | 荷主詳細フィーチャー実装（`ShipperDetail.tsx`・`ShipperDetailPage.tsx`） | `features/shipper/`・`pages/ShipperDetailPage.tsx` | 2h | [ ] |
-| 5.7 | 共通レイアウト実装（`AppLayout.tsx`・`AuthLayout.tsx`・`Sidebar`・ロール別メニュー表示制御） | `layouts/`・`components/layout/` | 2h | [ ] |
+| 5.1 | `apps/frontend` Vite + React プロジェクト初期化（TanStack Query・Zustand・React Router 設定） | `apps/frontend/` | 2h | [x] |
+| 5.2 | `api-client.ts` 実装（JWT ヘッダー自動付与・401 時ログイン画面リダイレクト） | `lib/api-client.ts` | 2h | [x] |
+| 5.3 | 認証フィーチャー実装（`authApi.ts`・`useAuth.ts`・`authStore.ts`・`LoginForm.tsx`・`LoginPage.tsx`） | `features/auth/`・`pages/LoginPage.tsx` | 4h | [x] |
+| 5.4 | 荷主一覧フィーチャー実装（`shipperApi.ts`・`useShippers.ts`・`ShipperList.tsx`・`ShipperListPage.tsx`） | `features/shipper/`・`pages/ShipperListPage.tsx` | 3h | [x] |
+| 5.5 | 荷主登録フィーチャー実装（`useRegisterShipper.ts`・`ShipperForm.tsx`（種別切替・重複選択 UI）・`ShipperNewPage.tsx`） | `features/shipper/`・`pages/ShipperNewPage.tsx` | 4h | [x] |
+| 5.6 | 荷主詳細フィーチャー実装（`ShipperDetail.tsx`・`ShipperDetailPage.tsx`） | `features/shipper/`・`pages/ShipperDetailPage.tsx` | 2h | [x] |
+| 5.7 | 共通レイアウト実装（`AppLayout.tsx`・`AuthLayout.tsx`・`Sidebar`・ロール別メニュー表示制御） | `layouts/`・`components/layout/` | 2h | [x] |
 | 5.8 | フロントエンド E2E テスト（ログイン〜荷主登録フロー） | `e2e/` | 3h | [ ] |
 
 **小計**: 22h
@@ -204,7 +204,7 @@ date: 2026-05-13T00:00:00.000Z
 
 > **依存関係注記**: US00（認証基盤）の完成（Week 1 終了目安）が US02/US03 の受け入れテスト実施の前提となる。US02/US03 の受け入れ検証は Week 2 以降に実施する。
 
-**進捗率**: 0%（0/16 SP）
+**進捗率**: 約 75%（12/16 SP 相当）
 
 ---
 
