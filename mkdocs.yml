@@ -89,6 +89,7 @@ nav:
       - 概要: development/index.md
       - リリース計画: development/release_plan.md
       - "IT1 イテレーション計画": development/iteration_plan-1.md
+      - "IT1 完了報告書": development/iteration_report-1.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
