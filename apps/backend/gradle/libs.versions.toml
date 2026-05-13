@@ -25,6 +25,9 @@ mybatis = "3.5.19"
 # OpenAPI / Swagger UI（Spring Boot 4 対応は 3.x 系）
 springdoc = "3.0.3"
 
+# JWT
+jjwt = "0.12.6"
+
 # ロガー
 slf4j = "2.0.16"
 
@@ -52,6 +55,20 @@ axon-test = { module = "org.axonframework:axon-test", version.ref = "axon" }
 # MyBatis
 mybatis-spring-boot-starter = { module = "org.mybatis.spring.boot:mybatis-spring-boot-starter", version.ref = "mybatis-spring-boot" }
 mybatis-spring-boot-starter-test = { module = "org.mybatis.spring.boot:mybatis-spring-boot-starter-test", version.ref = "mybatis-spring-boot" }
+
+# Spring Security
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security", version.ref = "spring-boot" }
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
+
+# JWT (jjwt 0.12.x)
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+# Flyway（DB マイグレーション）
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway", version.ref = "spring-boot" }
+flyway-core = { module = "org.flywaydb:flyway-core" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 
 # OpenAPI / Swagger UI
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }

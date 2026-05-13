@@ -29,8 +29,9 @@ dependencyResolutionManagement {
 
 // 実装済みサービス
 include("bookingms")
+include("authms")
 
-// 雛形のみ（Phase 1 以降に実装）
+// 雛形のみ（Phase 2 以降に実装）
 // include("authms")
 // include("routingms")
 // include("trackingms")
