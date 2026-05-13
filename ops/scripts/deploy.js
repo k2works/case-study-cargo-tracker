@@ -79,9 +79,10 @@ export default function (gulp) {
   gulp.task('deploy:dev:push:authms', async (done) => {
     const app = appName('authms');
     const image = `registry.heroku.com/${app}/web`;
+    // Dockerfile.heroku はローカルビルド済み JAR のみコピーする軽量イメージ
     const buildErr = await runStreaming(
       'docker',
-      ['build', '--platform', getPlatform(), '-t', image, '.'],
+      ['build', '--platform', getPlatform(), '--provenance=false', '-f', 'Dockerfile.heroku', '-t', image, '.'],
       { cwd: path.join(backendDir, 'authms') }
     );
     if (buildErr) { done(buildErr); return; }
@@ -111,7 +112,7 @@ export default function (gulp) {
     const image = `registry.heroku.com/${app}/web`;
     const buildErr = await runStreaming(
       'docker',
-      ['build', '--platform', getPlatform(), '-t', image, '.'],
+      ['build', '--platform', getPlatform(), '--provenance=false', '-f', 'Dockerfile.heroku', '-t', image, '.'],
       { cwd: path.join(backendDir, 'bookingms') }
     );
     if (buildErr) { done(buildErr); return; }
@@ -142,7 +143,7 @@ export default function (gulp) {
     // heroku container:push は -f 非対応のため docker build/push で代替
     const buildErr = await runStreaming(
       'docker',
-      ['build', '--platform', getPlatform(), '-f', 'Dockerfile.heroku', '-t', image, '.'],
+      ['build', '--platform', getPlatform(), '--provenance=false', '-f', 'Dockerfile.heroku', '-t', image, '.'],
       { cwd: frontendDir }
     );
     if (buildErr) { done(buildErr); return; }
@@ -214,10 +215,17 @@ export default function (gulp) {
     )
   );
 
+  // ── Heroku Container Registry ログイン ───────────────────────
+  gulp.task('deploy:dev:login', async (done) => {
+    const err = await runStreaming('heroku', ['container:login']);
+    done(err);
+  });
+
   // ── 複合タスク ────────────────────────────────────────────────
   gulp.task(
     'deploy:dev',
     gulp.series(
+      'deploy:dev:login',
       'deploy:dev:build:backend',
       gulp.parallel(
         gulp.series('deploy:dev:push:authms', 'deploy:dev:release:authms'),

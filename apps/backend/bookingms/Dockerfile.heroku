@@ -1,0 +1,19 @@
+# bookingms Heroku デプロイ用イメージ
+#
+# ローカルで bootJar 済みの JAR をコピーして起動するだけの軽量イメージ。
+# deploy:dev:build:backend（Gradle）で JAR を生成してからこの Dockerfile を使う。
+
+FROM eclipse-temurin:25-jre
+
+RUN groupadd --system --gid 10001 cargo \
+    && useradd --system --uid 10001 --gid cargo --create-home cargo
+
+WORKDIR /app
+
+COPY build/libs/bookingms.jar /app/bookingms.jar
+
+USER cargo
+
+ENV JAVA_OPTS=""
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/bookingms.jar"]
