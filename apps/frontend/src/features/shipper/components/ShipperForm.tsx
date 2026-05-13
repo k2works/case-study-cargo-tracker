@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useRegisterShipper } from '../hooks/useShippers'
 
@@ -14,9 +14,9 @@ export function ShipperForm() {
   })
   const register = useRegisterShipper()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    register.mutate(
+    void register.mutate(
       {
         name: form.name,
         email: form.email,
@@ -27,7 +27,7 @@ export function ShipperForm() {
           discountRate: Number(form.discountRate) / 100,
         }),
       },
-      { onSuccess: () => navigate('/shippers') }
+      { onSuccess: () => void navigate('/shippers') }
     )
   }
 
@@ -74,7 +74,7 @@ export function ShipperForm() {
               value="INDIVIDUAL"
               checked={form.shipperType === 'INDIVIDUAL'}
               onChange={() => setForm({ ...form, shipperType: 'INDIVIDUAL' })}
-            />
+            />{' '}
             個人
           </label>
           <label className="flex items-center gap-2 text-sm">
@@ -83,7 +83,7 @@ export function ShipperForm() {
               value="CORPORATE"
               checked={form.shipperType === 'CORPORATE'}
               onChange={() => setForm({ ...form, shipperType: 'CORPORATE' })}
-            />
+            />{' '}
             法人
           </label>
         </div>

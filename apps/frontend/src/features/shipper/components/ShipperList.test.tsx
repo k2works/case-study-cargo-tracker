@@ -31,7 +31,7 @@ describe('ShipperList', () => {
       data: undefined,
       isLoading: true,
       isError: false,
-    } as ReturnType<typeof useShippers>)
+    } as unknown as ReturnType<typeof useShippers>)
 
     renderShipperList()
     expect(screen.getByText('読み込み中...')).toBeInTheDocument()
@@ -42,7 +42,7 @@ describe('ShipperList', () => {
       data: undefined,
       isLoading: false,
       isError: true,
-    } as ReturnType<typeof useShippers>)
+    } as unknown as ReturnType<typeof useShippers>)
 
     renderShipperList()
     expect(screen.getByText('データの取得に失敗しました。')).toBeInTheDocument()
@@ -53,7 +53,7 @@ describe('ShipperList', () => {
       data: [],
       isLoading: false,
       isError: false,
-    } as ReturnType<typeof useShippers>)
+    } as unknown as ReturnType<typeof useShippers>)
 
     renderShipperList()
     expect(screen.getByText('荷主が登録されていません。')).toBeInTheDocument()
@@ -85,7 +85,7 @@ describe('ShipperList', () => {
       ],
       isLoading: false,
       isError: false,
-    } as ReturnType<typeof useShippers>)
+    } as unknown as ReturnType<typeof useShippers>)
 
     renderShipperList()
     expect(screen.getByText('SHP001')).toBeInTheDocument()
