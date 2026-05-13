@@ -177,7 +177,7 @@ export default function (gulp) {
     const err = await runStreaming('heroku', [
       'config:set',
       'SPRING_PROFILES_ACTIVE=heroku',
-      'JAVA_OPTS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
+      'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
       `JWT_SECRET=${jwtSecret}`,
       'JWT_ISSUER=case-study-cargo-tracker',
       '-a', appName('authms'),
@@ -189,7 +189,7 @@ export default function (gulp) {
     const err = await runStreaming('heroku', [
       'config:set',
       'SPRING_PROFILES_ACTIVE=heroku',
-      'JAVA_OPTS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
+      'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
       '-a', appName('bookingms'),
     ]);
     done(err);
