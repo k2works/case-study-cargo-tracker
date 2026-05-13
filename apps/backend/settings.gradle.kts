@@ -31,9 +31,9 @@ dependencyResolutionManagement {
 include("bookingms")
 include("authms")
 include("gatewayms")
+include("routingms")
 
 // 雛形のみ（Phase 2 以降に実装）
-// include("routingms")
 // include("trackingms")
 // include("handlingms")
 // include("billingms")

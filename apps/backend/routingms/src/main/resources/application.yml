@@ -1,0 +1,51 @@
+# routingms ベース設定
+#
+# プロファイル戦略（docs/operation/アプリケーション開発環境セットアップ手順書.md 準拠）:
+#   - local-h2     : H2 インメモリ（IDE 起動・最速 TDD）
+#   - local-docker : PostgreSQL + Axon Server（docker compose 起動）
+#   - test         : テスト時。Testcontainers で PostgreSQL 起動
+#   - staging/prod : 環境変数からシークレットを読み込む
+
+spring:
+  application:
+    name: routingms
+  profiles:
+    default: local-h2
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.example.cargotracker: DEBUG
+    org.axonframework: INFO
+
+axon:
+  axonserver:
+    # local-h2 ではダミーアドレス、local-docker / staging / prod では環境変数で上書き
+    servers: ${AXON_AXONSERVER_SERVERS:localhost:8124}
+
+# OpenAPI / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false
+  packages-to-scan: com.example.cargotracker.routingms
