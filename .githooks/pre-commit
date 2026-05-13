@@ -1,29 +1,43 @@
 #!/usr/bin/env bash
 # pre-commit フック
-# コミット前にバックエンドの静的解析とテストを実行する。
+# コミット前にバックエンド・フロントエンドの静的解析とテストを実行する。
 
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 BACKEND_DIR="${REPO_ROOT}/apps/backend"
+FRONTEND_DIR="${REPO_ROOT}/apps/frontend"
 
-echo "==> [pre-commit] バックエンド静的解析・テストを実行中..."
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-# ステージされた Java ファイルが存在する場合のみ実行
-STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.java$' || true)
+# ── バックエンド（Java）チェック ──────────────────────────────
+STAGED_JAVA=$(echo "${STAGED_FILES}" | grep -E '\.java$' || true)
 
-if [ -z "${STAGED_JAVA}" ]; then
-  echo "==> [pre-commit] Java ファイルの変更なし。スキップします。"
-  exit 0
+if [ -n "${STAGED_JAVA}" ]; then
+  echo "==> [pre-commit] バックエンド静的解析・テストを実行中..."
+  echo "${STAGED_JAVA}" | sed 's/^/    /'
+  (
+    cd "${BACKEND_DIR}"
+    ./gradlew check --daemon --parallel --quiet
+  )
+  echo "==> [pre-commit] バックエンドチェック通過。"
 fi
 
-echo "==> [pre-commit] 変更された Java ファイル:"
-echo "${STAGED_JAVA}" | sed 's/^/    /'
+# ── フロントエンド（TypeScript/TSX）チェック ──────────────────
+STAGED_FRONTEND=$(echo "${STAGED_FILES}" | grep -E 'apps/frontend/.*\.(ts|tsx|js|jsx)$' || true)
 
-# Checkstyle + SpotBugs + テスト
-(
-  cd "${BACKEND_DIR}"
-  ./gradlew check --daemon --parallel --quiet
-)
+if [ -n "${STAGED_FRONTEND}" ]; then
+  echo "==> [pre-commit] フロントエンド静的解析を実行中..."
+  echo "${STAGED_FRONTEND}" | sed 's/^/    /'
+  (
+    cd "${FRONTEND_DIR}"
+    npm run lint -- --max-warnings=0
+  )
+  echo "==> [pre-commit] フロントエンドチェック通過。"
+fi
+
+if [ -z "${STAGED_JAVA}" ] && [ -z "${STAGED_FRONTEND}" ]; then
+  echo "==> [pre-commit] チェック対象ファイルなし。スキップします。"
+fi
 
 echo "==> [pre-commit] 全チェック通過。コミットを続行します。"

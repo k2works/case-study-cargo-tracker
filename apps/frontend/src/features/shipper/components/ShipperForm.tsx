@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useRegisterShipper } from '../hooks/useShippers'
 
@@ -14,9 +14,9 @@ export function ShipperForm() {
   })
   const register = useRegisterShipper()
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault()
-    void register.mutate(
+    register.mutate(
       {
         name: form.name,
         email: form.email,
@@ -27,7 +27,7 @@ export function ShipperForm() {
           discountRate: Number(form.discountRate) / 100,
         }),
       },
-      { onSuccess: () => void navigate('/shippers') }
+      { onSuccess: () => { navigate('/shippers') } }
     )
   }
 
