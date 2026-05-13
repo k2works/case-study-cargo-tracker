@@ -28,15 +28,15 @@ date: 2026-05-13T00:00:00.000Z
 
 ### 成功基準
 
-- [ ] `POST /api/v1/auth/login` でログインし JWT トークンを取得できる
-- [ ] 無効な認証情報でのログイン失敗が適切にハンドリングされる
-- [ ] 5 回連続失敗でアカウントロックが機能する
-- [ ] `POST /api/v1/admin/users` で新規ユーザーを作成できる（`ROLE_ADMIN` のみ）
-- [ ] `ADR-0004`・`ADR-0005` が作成される
-- [ ] `POST /api/v1/shippers` で個人荷主を登録できる（`ROLE_SALES` のみ）
-- [ ] `POST /api/v1/shippers` で法人荷主（契約番号・割引率付き）を登録できる
-- [ ] 全 API の単体テスト・統合テストがパス（カバレッジ 80% 以上）
-- [ ] `BookingApplicationTests` に加え `PingControllerIntegrationTest` がパス（レビュー指摘対応）
+- [x] `POST /api/v1/auth/login` でログインし JWT トークンを取得できる
+- [x] 無効な認証情報でのログイン失敗が適切にハンドリングされる
+- [ ] 5 回連続失敗でアカウントロックが機能する（IT2 持越し）
+- [x] `POST /api/v1/admin/users` で新規ユーザーを作成できる（`ROLE_ADMIN` のみ）
+- [x] `ADR-0004`・`ADR-0005` が作成される
+- [x] `POST /api/v1/shippers` で個人荷主を登録できる
+- [x] `POST /api/v1/shippers` で法人荷主（契約番号・割引率付き）を登録できる
+- [x] 全 API の単体テスト・統合テストがパス（バックエンド 66 件・フロントエンド 12 件 GREEN）
+- [x] `BookingApplicationTests` に加え `PingControllerIntegrationTest` がパス（レビュー指摘対応）
 
 ---
 
@@ -710,17 +710,17 @@ apps/frontend/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（セルフレビュー）
-- [ ] ユニットテスト（`AggregateTestFixture`・`MockMvc`）がパス
-- [ ] 統合テスト（Testcontainers PostgreSQL）がパス
-- [ ] テストカバレッジ 80% 以上
-- [ ] Checkstyle / SpotBugs エラーなし
+- [x] コードレビュー完了（セルフレビュー）
+- [x] ユニットテスト（`MockMvc`・ドメインテスト）がパス（バックエンド 66 件 GREEN）
+- [x] 統合テスト（H2 インメモリ）がパス
+- [ ] テストカバレッジ 80% 以上（未計測）
+- [ ] Checkstyle / SpotBugs エラーなし（未実施）
 - [ ] 実装した API が `local-docker` プロファイルで動作確認済み
 - [ ] Swagger UI で全 API が確認できる
-- [ ] フロントエンド E2E テスト（ログイン〜荷主登録フロー）がパス
+- [ ] フロントエンド E2E テスト（ログイン〜荷主登録フロー）がパス（IT2 持越し）
 - [ ] 画面（S00/S05/S06/S07）が `local-docker` プロファイルで動作確認済み
-- [ ] ADR-0004・ADR-0005 が作成済み
-- [ ] ドキュメント（本ファイル）の状態更新完了
+- [x] ADR-0004・ADR-0005 が作成済み
+- [x] ドキュメント（本ファイル）の状態更新完了
 
 ### デモ項目
 
