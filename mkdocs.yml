@@ -91,6 +91,7 @@ nav:
       - "IT1 イテレーション計画": development/iteration_plan-1.md
       - "IT1 完了報告書": development/iteration_report-1.md
       - "IT1 ふりかえり": development/retrospective-1.md
+      - "IT2 イテレーション計画": development/iteration_plan-2.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
