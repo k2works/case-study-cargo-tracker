@@ -110,6 +110,7 @@ nav:
       - "ADR-0004 マイクロサービス分割方針": adr/0004-microservice-decomposition.md
       - "ADR-0005 shared モジュールの役割": adr/0005-shared-module-role.md
       - "ADR-0006 Heroku デプロイ構成": adr/0006-heroku-deployment-setup.md
+      - "ADR-0007 Axon 5.1 Event Sourcing API": adr/0007-axon-5-event-sourcing-api.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

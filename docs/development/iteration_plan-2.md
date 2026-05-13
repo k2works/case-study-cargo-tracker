@@ -826,7 +826,7 @@ IT2 計画で明らかになった、設計ドキュメント側に反映が必�
 | # | 変更内容 | 反映先 | タイミング |
 |---|---------|-------|-----------|
 | 1 | `users.lock_until` / `users.failed_attempts` カラム追加 | `docs/design/data-model.md` Auth DB セクション | IT2 完了時 |
-| 2 | ADR-0007 Event Sourcing 導入方針 | `docs/adr/0007-*.md` 新規 + `docs/adr/index.md` + `mkdocs.yml` | IT2 Day 1 起案、Day 10 確定 |
+| 2 | ADR-0007 Event Sourcing 導入方針 | `docs/adr/0007-axon-5-event-sourcing-api.md` 新規 + `docs/adr/index.md` + `mkdocs.yml` | ✅ **IT2 Day 1 起案完了**（2026-05-13）。Axon 5.1 で 4 系 API は削除されており、5.1 系新 API（`@EventSourcedEntity`/`@InjectEntityId`/`@TargetEntityId`）を採用。要追加検証 3 項目は IT2 Day 2 で実施予定 |
 | 3 | PIT 75%（主） + 行 90%（副）の品質指標 | `docs/design/test_strategy.md` および `docs/design/non_functional.md` のカバレッジ目標 | ✅ **IT2 着手前に事前反映済み**（2026-05-13） |
 
 ---
