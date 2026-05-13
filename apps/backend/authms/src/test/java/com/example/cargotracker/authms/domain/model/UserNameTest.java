@@ -40,7 +40,8 @@ class UserNameTest {
     @Test
     @DisplayName("50 文字を超えると拒否する")
     void 文字数が最大超過は拒否する() {
-        assertThatThrownBy(() -> new UserName("a".repeat(51)))
+        String tooLong = "a".repeat(51);
+        assertThatThrownBy(() -> new UserName(tooLong))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

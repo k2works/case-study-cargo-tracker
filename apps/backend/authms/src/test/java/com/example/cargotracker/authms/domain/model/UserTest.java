@@ -26,10 +26,9 @@ class UserTest {
     @Test
     @DisplayName("username が null は拒否する")
     void usernameがnullは拒否する() {
-        assertThatThrownBy(() -> User.create(
-                null,
-                new Email("alice@example.com"),
-                new PasswordHash("$2a$10$hashed")
-        )).isInstanceOf(IllegalArgumentException.class);
+        var email = new Email("alice@example.com");
+        var hash = new PasswordHash("$2a$10$hashed");
+        assertThatThrownBy(() -> User.create(null, email, hash))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

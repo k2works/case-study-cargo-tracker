@@ -56,8 +56,9 @@ class AdminUserCommandServiceTest {
     @DisplayName("存在しないユーザーのロール更新は例外を投げる")
     void 存在しないユーザーのロール更新は例外を投げる() {
         when(userRepository.findById(new UserId("missing"))).thenReturn(Optional.empty());
+        var adminRoles = List.of("ROLE_ADMIN");
 
-        assertThatThrownBy(() -> service.updateRoles("missing", List.of("ROLE_ADMIN")))
+        assertThatThrownBy(() -> service.updateRoles("missing", adminRoles))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("ユーザーが見つかりません");
     }

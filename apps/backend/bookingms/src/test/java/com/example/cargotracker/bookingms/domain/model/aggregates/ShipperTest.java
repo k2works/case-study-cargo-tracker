@@ -43,9 +43,9 @@ class ShipperTest {
     @Test
     @DisplayName("割引率が範囲外（0.30 超）の場合例外")
     void 割引率が範囲外の場合例外() {
+        BigDecimal overRate = new BigDecimal("0.31");
         assertThatThrownBy(() -> Shipper.createCorporate(
-                "株式会社テスト", "corp@example.com", "03-1234-5678",
-                "CNT-001", new BigDecimal("0.31")))
+                "株式会社テスト", "corp@example.com", "03-1234-5678", "CNT-001", overRate))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("割引率");
     }
@@ -53,9 +53,9 @@ class ShipperTest {
     @Test
     @DisplayName("割引率が負の場合例外")
     void 割引率が負の場合例外() {
+        BigDecimal negativeRate = new BigDecimal("-0.01");
         assertThatThrownBy(() -> Shipper.createCorporate(
-                "株式会社テスト", "corp@example.com", "03-1234-5678",
-                "CNT-001", new BigDecimal("-0.01")))
+                "株式会社テスト", "corp@example.com", "03-1234-5678", "CNT-001", negativeRate))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("割引率");
     }
