@@ -250,10 +250,10 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 対象ファイル | 見積もり | 状態 |
 |---|--------|------------|---------|------|
-| 6.1 | Playwright インストール + プロジェクト初期化（`apps/frontend/e2e/`） | `apps/frontend/e2e/` | 2h | [ ] |
-| 6.2 | テスト用ユーザー・荷主のフィクスチャ作成（Testcontainers + Flyway） | `e2e/fixtures/` | 2h | [ ] |
-| 6.3 | 「ログイン → 荷主登録 → 一覧確認」シナリオ実装 | `e2e/login-shipper.spec.ts` | 3h | [ ] |
-| 6.4 | GitHub Actions ワークフロー追加（PR 時に E2E 実行） | `.github/workflows/e2e.yml` | 2h | [ ] |
+| 6.1 | Playwright インストール + プロジェクト初期化（`apps/frontend/e2e/`） | `apps/frontend/e2e/` | 2h | [x] |
+| 6.2 | テスト用ユーザー・荷主のフィクスチャ作成 → 当初の Testcontainers + Flyway は重く 1 SP 枠を超えるため、V005 投入済み admin/password + `Date.now()` ベースの一意荷主データで代替 | `e2e/fixtures/` | 2h | [x]（方針切替で達成） |
+| 6.3 | 「ログイン → 荷主登録 → 一覧確認」シナリオ実装 | `e2e/login-shipper.spec.ts` | 3h | [x] |
+| 6.4 | GitHub Actions ワークフロー追加（PR 時に E2E 実行）→ docker-compose の authms/gatewayms 統合が未完了のため IT3 へ持越し | `.github/workflows/e2e.yml` | 2h | [ ] IT3 持越し |
 
 **小計**: 9h
 
