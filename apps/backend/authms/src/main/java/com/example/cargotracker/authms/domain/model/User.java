@@ -53,6 +53,22 @@ public class User {
         roles.add(role);
     }
 
+    public void setRoles(Set<Role> newRoles) {
+        this.roles.clear();
+        this.roles.addAll(newRoles);
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void enable() {
+        this.enabled = true;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void disable() {
+        this.enabled = false;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public Set<Role> getRoles() {
         return Collections.unmodifiableSet(roles);
     }

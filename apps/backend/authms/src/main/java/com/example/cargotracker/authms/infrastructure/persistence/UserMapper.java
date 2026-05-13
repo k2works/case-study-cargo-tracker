@@ -49,4 +49,20 @@ public interface UserMapper {
 
     @Select("SELECT r.name FROM roles r INNER JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = #{userId}")
     List<String> findRolesByUserId(String userId);
+
+    @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users")
+    @Results({
+        @Result(property = "createdAt", column = "created_at"),
+        @Result(property = "updatedAt", column = "updated_at")
+    })
+    List<UserRecord> findAll();
+
+    @Update("""
+            UPDATE users SET enabled = #{enabled}, updated_at = #{updatedAt}
+            WHERE id = #{id}
+            """)
+    void update(UserRecord record);
+
+    @Delete("DELETE FROM user_roles WHERE user_id = #{userId}")
+    void deleteRolesByUserId(String userId);
 }

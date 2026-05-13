@@ -4,6 +4,7 @@ import com.example.cargotracker.authms.domain.model.*;
 import com.example.cargotracker.authms.domain.repository.UserRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,6 +40,21 @@ public class MyBatisUserRepository implements UserRepository {
     @Override
     public Optional<User> findByEmail(Email email) {
         return mapper.findByEmail(email.value()).map(this::toDomain);
+    }
+
+    @Override
+    public void update(User user) {
+        var record = toRecord(user);
+        mapper.update(record);
+        mapper.deleteRolesByUserId(user.id().value());
+        for (Role role : user.getRoles()) {
+            mapper.insertUserRole(user.id().value(), role.name());
+        }
+    }
+
+    @Override
+    public List<User> findAll() {
+        return mapper.findAll().stream().map(this::toDomain).toList();
     }
 
     @Override

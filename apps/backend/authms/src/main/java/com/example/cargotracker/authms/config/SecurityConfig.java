@@ -44,6 +44,7 @@ public class SecurityConfig {
                     "/actuator/**",
                     "/h2-console/**"
                 ).permitAll()
+                .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
@@ -51,6 +52,11 @@ public class SecurityConfig {
                     response.setStatus(401);
                     response.setContentType("application/json");
                     response.getWriter().write("{\"message\":\"認証が必要です\"}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(403);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"権限がありません\"}");
                 })
             )
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
