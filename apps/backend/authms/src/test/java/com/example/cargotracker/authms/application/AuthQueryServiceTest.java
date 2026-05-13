@@ -2,6 +2,7 @@ package com.example.cargotracker.authms.application;
 
 import com.example.cargotracker.authms.domain.model.*;
 import com.example.cargotracker.authms.domain.repository.UserRepository;
+import com.example.cargotracker.authms.domain.repository.UserSessionRepository;
 import com.example.cargotracker.authms.domain.service.LoginAttemptTracker;
 import com.example.cargotracker.authms.infrastructure.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,9 @@ class AuthQueryServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private UserSessionRepository userSessionRepository;
+
     private AuthQueryService service;
 
     private PasswordEncoder encoder;
@@ -40,7 +44,8 @@ class AuthQueryServiceTest {
                 86400000L
         );
         var loginAttemptTracker = new LoginAttemptTracker(userRepository, Clock.systemDefaultZone());
-        service = new AuthQueryService(userRepository, encoder, jwtProvider, loginAttemptTracker);
+        service = new AuthQueryService(userRepository, userSessionRepository, encoder, jwtProvider,
+                loginAttemptTracker);
     }
 
     @Test

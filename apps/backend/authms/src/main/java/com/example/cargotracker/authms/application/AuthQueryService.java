@@ -4,7 +4,9 @@ import com.example.cargotracker.authms.domain.model.AccountLockedException;
 import com.example.cargotracker.authms.domain.model.Role;
 import com.example.cargotracker.authms.domain.model.User;
 import com.example.cargotracker.authms.domain.model.UserName;
+import com.example.cargotracker.authms.domain.model.UserSession;
 import com.example.cargotracker.authms.domain.repository.UserRepository;
+import com.example.cargotracker.authms.domain.repository.UserSessionRepository;
 import com.example.cargotracker.authms.domain.service.LoginAttemptTracker;
 import com.example.cargotracker.authms.infrastructure.security.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,13 +21,16 @@ public class AuthQueryService {
     private static final String ACCOUNT_LOCKED_MESSAGE = "アカウントがロックされています。しばらく時間をおいてから再度お試しください。";
 
     private final UserRepository userRepository;
+    private final UserSessionRepository userSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final LoginAttemptTracker loginAttemptTracker;
 
-    public AuthQueryService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                            JwtTokenProvider jwtTokenProvider, LoginAttemptTracker loginAttemptTracker) {
+    public AuthQueryService(UserRepository userRepository, UserSessionRepository userSessionRepository,
+                            PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider,
+                            LoginAttemptTracker loginAttemptTracker) {
         this.userRepository = userRepository;
+        this.userSessionRepository = userSessionRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.loginAttemptTracker = loginAttemptTracker;
@@ -54,6 +59,16 @@ public class AuthQueryService {
 
         loginAttemptTracker.recordSuccess(user);
         var roles = user.getRoles().stream().map(Role::name).toList();
-        return jwtTokenProvider.generateToken(user.username().value(), roles);
+        String token = jwtTokenProvider.generateToken(user.username().value(), roles);
+
+        // US00-r2: ログイン成功時に user_sessions レコードを作成し、ログアウト管理の起点とする
+        var session = UserSession.issue(
+                jwtTokenProvider.getJtiFromToken(token),
+                user.id(),
+                jwtTokenProvider.getIssuedAtFromToken(token),
+                jwtTokenProvider.getExpirationFromToken(token));
+        userSessionRepository.save(session);
+
+        return token;
     }
 }

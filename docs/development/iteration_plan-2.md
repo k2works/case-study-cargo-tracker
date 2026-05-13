@@ -169,9 +169,9 @@ date: 2026-05-13T00:00:00.000Z
 | 0.2 | ADR-0007 起案（Event Sourcing 導入方針・PIT 主指標の根拠を含む） | 2h | - | [ ] |
 | 0.3 | US00-r1: `users.lock_until` カラム追加 Flyway マイグレーション + `LoginAttemptTracker` 実装 | 4h | Claude | [x] |
 | 0.4 | US00-r1: アカウントロック統合テスト（5 回失敗 → 423 / 30 分後解除） | 2h | Claude | [x] |
-| 0.5 | US00-r2: `user_sessions.revoked` 更新ロジック + `TokenRevocationService` 実装（既存テーブル拡張） | 3h | - | [ ] |
-| 0.6 | US00-r2: `POST /auth/logout` コントローラー + Spring Security 検証フィルター連携 | 2h | - | [ ] |
-| 0.7 | US00-r2: ログアウト統合テスト（無効化トークンで 401） | 2h | - | [ ] |
+| 0.5 | US00-r2: `user_sessions` テーブル新規作成（V007）+ `TokenRevocationService` 実装。当初計画では `user_sessions` を既存テーブル前提としたが、data-model.md 設計上の存在のみで実装は新規作成だったため V007 で追加 | 3h | Claude | [x] |
+| 0.6 | US00-r2: `POST /auth/logout` コントローラー + JwtAuthenticationFilter での revoked 判定（jti ベース） | 2h | Claude | [x] |
+| 0.7 | US00-r2: ログアウト統合テスト（無効化トークンで 401） | 2h | Claude | [x] |
 
 **小計**: 19h
 

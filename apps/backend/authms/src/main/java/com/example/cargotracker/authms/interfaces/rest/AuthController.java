@@ -6,6 +6,7 @@ import com.example.cargotracker.authms.domain.model.AccountLockedException;
 import com.example.cargotracker.authms.domain.model.Role;
 import com.example.cargotracker.authms.domain.model.UserName;
 import com.example.cargotracker.authms.domain.repository.UserRepository;
+import com.example.cargotracker.authms.domain.service.TokenRevocationService;
 import com.example.cargotracker.authms.infrastructure.security.JwtTokenProvider;
 import com.example.cargotracker.authms.interfaces.rest.dto.LoginRequest;
 import com.example.cargotracker.authms.interfaces.rest.dto.RegisterRequest;
@@ -32,13 +33,16 @@ public class AuthController {
     private final AuthQueryService queryService;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenRevocationService tokenRevocationService;
 
     public AuthController(AuthCommandService commandService, AuthQueryService queryService,
-                          UserRepository userRepository, JwtTokenProvider jwtTokenProvider) {
+                          UserRepository userRepository, JwtTokenProvider jwtTokenProvider,
+                          TokenRevocationService tokenRevocationService) {
         this.commandService = commandService;
         this.queryService = queryService;
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.tokenRevocationService = tokenRevocationService;
     }
 
     @PostMapping("/register")
@@ -70,6 +74,21 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(MESSAGE_KEY, e.getMessage()));
         }
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "ログアウト（JWT トークン無効化）")
+    public ResponseEntity<Void> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String token = authHeader.substring(7);
+        if (!jwtTokenProvider.isTokenValid(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String jti = jwtTokenProvider.getJtiFromToken(token);
+        tokenRevocationService.revoke(jti);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

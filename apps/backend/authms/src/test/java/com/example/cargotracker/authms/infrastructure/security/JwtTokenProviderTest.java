@@ -45,4 +45,30 @@ class JwtTokenProviderTest {
     void 改ざんしたトークンは無効と判定される() {
         assertThat(provider.isTokenValid("invalid.token.here")).isFalse();
     }
+
+    @Test
+    @DisplayName("生成したトークンには jti（UUID 形式）が含まれる")
+    void トークンにjtiが含まれる() {
+        String token = provider.generateToken("alice");
+        String jti = provider.getJtiFromToken(token);
+        assertThat(jti).isNotBlank();
+        // UUID は 36 文字（ハイフン込み）
+        assertThat(jti).hasSize(36);
+    }
+
+    @Test
+    @DisplayName("生成したトークンごとに異なる jti が発行される")
+    void トークンごとに異なるjtiが発行される() {
+        String token1 = provider.generateToken("alice");
+        String token2 = provider.generateToken("alice");
+        assertThat(provider.getJtiFromToken(token1)).isNotEqualTo(provider.getJtiFromToken(token2));
+    }
+
+    @Test
+    @DisplayName("トークンから期限（expiration）を取り出せる")
+    void トークンから期限を取り出せる() {
+        String token = provider.generateToken("alice");
+        var expiration = provider.getExpirationFromToken(token);
+        assertThat(expiration).isAfter(java.time.LocalDateTime.now());
+    }
 }

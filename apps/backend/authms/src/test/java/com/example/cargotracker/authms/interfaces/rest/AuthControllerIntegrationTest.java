@@ -184,6 +184,58 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("認証済みユーザーがログアウトできる（US00-r2）")
+    void 認証済みユーザーがログアウトできる() throws Exception {
+        // ログインしてトークンを取得
+        var loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "admin", "password": "password"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        String body = loginResult.getResponse().getContentAsString();
+        String token = body.replaceAll(".*\"token\"\\s*:\\s*\"([^\"]+)\".*", "$1");
+
+        // ログアウト
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("ログアウト後のトークンで /me にアクセスすると 401（US00-r2）")
+    void ログアウト後のトークンは401を返す() throws Exception {
+        // ログイン
+        var loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "admin", "password": "password"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        String body = loginResult.getResponse().getContentAsString();
+        String token = body.replaceAll(".*\"token\"\\s*:\\s*\"([^\"]+)\".*", "$1");
+
+        // ログアウト
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+
+        // 同じトークンで /me を呼ぶと 401
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("未認証でログアウトすると 401（US00-r2）")
+    void 未認証でログアウトは401を返す() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("失敗の後にログイン成功すると失敗カウンタがリセットされる（US00-r1）")
     void 成功でカウンタリセットされる() throws Exception {
         // 3 回失敗
