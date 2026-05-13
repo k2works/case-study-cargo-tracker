@@ -53,64 +53,138 @@ bookingms / routingms における Aggregate を Axon Framework 5.1 の Event So
 
 **Axon Framework 5.1 の新アノテーション API を採用し、参考実装（Axon 4 系）からの読み替え方針を確立する。**
 
-### 採用する 5.1 系 API パターン
+### 採用する 5.1 系 API パターン（IT2 Day 2 追加検証で確定）
 
-`@EventSourcedEntity` を用いた Event Sourcing Entity（旧称 Aggregate）として実装する。
+公式マイグレーションガイドと SaaSForge ブログのサンプルから、Axon 5.1 の Event Sourcing Entity 実装パターンが確定した。以下が本プロジェクトで採用する標準パターンである。
 
 ```java
+import org.axonframework.commandhandling.annotation.CommandHandler;
+import org.axonframework.eventhandling.gateway.EventAppender;
 import org.axonframework.eventsourcing.annotation.EventSourcedEntity;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
-import org.axonframework.eventsourcing.annotation.reflection.InjectEntityId;
 import org.axonframework.modelling.annotation.TargetEntityId;
 
-@EventSourcedEntity
+@EventSourcedEntity(tagKey = "bookingId")
 public class Cargo {
 
-    @InjectEntityId
     private String bookingId;
     private String shipperId;
     // ...
 
     @EntityCreator
-    public Cargo() {
-        // Axon Framework が Event 再生で呼び出すデフォルトコンストラクタ
+    protected Cargo() {
+        // Axon が Event 再生で呼び出すデフォルトコンストラクタ。
+        // コレクション型のフィールドは必ずここで初期化する
+        // （Axon はリフレクションで生成するため、Lombok Builder を通らない）。
     }
 
-    // Command Handler は @EventSourcingHandler ではなく
-    // EventSourcingConfigurer で機能ベース API で登録する想定（要追加検証）
+    // Aggregate 作成系の Command は static メソッドとして実装する
+    @CommandHandler
+    public static String book(BookCargoCommand cmd, EventAppender appender) {
+        // バリデーション
+        if (cmd.shipperId() == null || cmd.shipperId().isBlank()) {
+            throw new IllegalArgumentException("shipperId は必須です");
+        }
+        // イベント発行（EventAppender 経由、AggregateLifecycle.apply() の代替）
+        appender.append(new CargoBookedEvent(
+                cmd.bookingId(), cmd.shipperId(), cmd.originUnLocode(), cmd.destinationUnLocode()));
+        return cmd.bookingId();
+    }
 
+    // Aggregate 更新系の Command はインスタンスメソッドとして実装する
+    @CommandHandler
+    public void changeDestination(ChangeDestinationCommand cmd, EventAppender appender) {
+        appender.append(new CargoDestinationChangedEvent(this.bookingId, cmd.newDestination()));
+    }
+
+    // イベント再生で状態を復元する
     @EventSourcingHandler
     public void on(CargoBookedEvent event) {
         this.bookingId = event.bookingId();
         this.shipperId = event.shipperId();
+    }
+
+    @EventSourcingHandler
+    public void on(CargoDestinationChangedEvent event) {
+        // 状態更新
     }
 }
 
 public record BookCargoCommand(
         @TargetEntityId String bookingId,
         String shipperId,
-        // ...
-) {}
+        String originUnLocode,
+        String destinationUnLocode) {
+}
 ```
 
-### 4 系 → 5.1 系 API マッピング表
+### テスト API（`AxonTestFixture`）
+
+`AggregateTestFixture` は **`AxonTestFixture`** に置き換えられた。Given-When-Then のチェーン形式も大幅に変更されている。
+
+```java
+import org.axonframework.test.AxonTestFixture;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+class CargoTest {
+
+    private AxonTestFixture fixture;
+
+    @BeforeEach
+    void setUp() {
+        fixture = AxonTestFixture.with(Cargo.class);
+    }
+
+    @AfterEach
+    void tearDown() {
+        fixture.stop(); // ★ リソースリーク防止のため必須
+    }
+
+    @Test
+    void 予約登録イベントが発行される() {
+        fixture.given().noPriorActivity()
+                .when().command(new BookCargoCommand("B-001", "S-001", "JPYOK", "USLAX"))
+                .then().success().events(
+                        new CargoBookedEvent("B-001", "S-001", "JPYOK", "USLAX"));
+    }
+
+    @Test
+    void 既存予約の仕向地を変更できる() {
+        fixture.given().events(new CargoBookedEvent("B-001", "S-001", "JPYOK", "USLAX"))
+                .when().command(new ChangeDestinationCommand("B-001", "USNYC"))
+                .then().success().events(
+                        new CargoDestinationChangedEvent("B-001", "USNYC"));
+    }
+}
+```
+
+> **注**: `@EventSourced(idType = String.class)` も併用可能（SaaSForge サンプル）。`@EventSourcedEntity(tagKey = "bookingId")` の `tagKey` は **DCB（Dynamic Consistency Boundaries）** のためのイベントメタデータキーで、同一の `bookingId` を持つイベント列を Aggregate として識別する。本プロジェクトでは `tagKey` を必須としつつ、`@EventSourced(idType=)` の併用要否は実装時に検証する。
+
+### 4 系 → 5.1 系 API マッピング表（確定版）
 
 | Axon 4 系 | Axon 5.1 系 | 備考 |
 |---|---|---|
-| `@org.axonframework.spring.stereotype.Aggregate` | `@org.axonframework.eventsourcing.annotation.EventSourcedEntity` | Spring stereotype ではなく Event Sourcing 専用に独立 |
-| `@AggregateIdentifier` | `@org.axonframework.eventsourcing.annotation.reflection.InjectEntityId` | Entity 識別子の注入 |
-| `@TargetAggregateIdentifier`（Command 上） | `@org.axonframework.modelling.annotation.TargetEntityId` | Command 上の識別子マーカー |
-| `@CommandHandler`（4 系の Aggregate メソッド上） | **要追加検証**（`EventSourcingConfigurer` 経由の機能ベース API が主軸の可能性） | 5.1 でアノテーション形式が維持されているかは別途調査 |
-| `@EventSourcingHandler` | 同名で維持（パッケージは `eventsourcing.annotation`） | 維持 |
-| `AggregateLifecycle.apply(event)` | **要追加検証**（`EventAppender` 等の Bean 注入か機能ベース API） | スパイクでは未検証 |
-| `AggregateTestFixture<T>` | **要追加検証**（Axon Test 5.1 の Given-When-Then 代替 API） | テスト戦略への影響大 |
+| `@org.axonframework.spring.stereotype.Aggregate` | `@org.axonframework.eventsourcing.annotation.EventSourcedEntity(tagKey = "...")` | Spring stereotype ではなく Event Sourcing 専用。`tagKey` で DCB のイベント識別 |
+| `@AggregateIdentifier`（フィールド上） | **不要**（`tagKey` でイベント側の識別子を指定するため、フィールドアノテーションは省略可能） | 必要なら `@InjectEntityId` でコンストラクタ引数経由で受け取る |
+| `@TargetAggregateIdentifier`（Command 上） | `@org.axonframework.modelling.annotation.TargetEntityId` | Command 上の識別子マーカー、必須 |
+| `@CommandHandler`（4 系のインスタンスメソッド） | `@org.axonframework.commandhandling.annotation.CommandHandler` | アノテーション維持。**作成系は static 推奨**、更新系はインスタンスメソッド |
+| `@EventSourcingHandler` | `@org.axonframework.eventsourcing.annotation.EventSourcingHandler` | パッケージ移動のみで維持 |
+| `AggregateLifecycle.apply(event)` | `EventAppender appender` パラメータ + `appender.append(event)` | ThreadLocal 廃止、依存性注入で明示。非同期・リアクティブ対応 |
+| `AggregateTestFixture<T>` | `org.axonframework.test.AxonTestFixture` | チェーン構造変更: `.given().noPriorActivity()`, `.when().command(...)`, `.then().success().events(...)` |
+| （なし） | `@EntityCreator`（コンストラクタ上） | **新規必須**。Axon がリフレクションで Entity を生成するため。コレクション初期化もここ |
 
 ### 採用方針
 
-1. **5.1 系 API を採用する**: Axon 4 系の参考実装をそのまま使うことは不可能。新 API を学習しながら実装する。
-2. **IT2 Day 3 以降の本実装着手前に追加検証**: 上表の「要追加検証」項目（`CommandHandler` の登録方式、`AggregateLifecycle.apply()` 代替、テスト Fixture）を IT2 Day 2 までに公式ドキュメント・サンプルで確認する。
-3. **Codex への実装指示は新 API のコード全文を渡す**: 自然言語で「Aggregate を作って」と指示すると Codex が 4 系 API を学習データから出力するリスクが高い。指示には 5.1 系のコード全文を含める（[CodexCLIMCPアプリケーション開発フロー.md](../reference/CodexCLIMCPアプリケーション開発フロー.md) の「コード全文を渡す」原則を遵守）。
+1. **5.1 系 API を採用する**: 上記の確定パターンを bookingms / routingms の全 Aggregate で適用する。
+2. **作成系 Command は static メソッド** で記述する（公式パターン）。更新系は通常のインスタンスメソッド。
+3. **`EventAppender` を Command Handler の引数で受け取る**: `AggregateLifecycle.apply()` の static 呼び出しは禁止。
+4. **`@EntityCreator` を必ず宣言する**: コレクション型フィールド（`List` / `Map` 等）はここで初期化する。
+5. **テストは `AxonTestFixture` + `fixture.stop()` をペアで使う**: `@AfterEach` で必ず `stop()` を呼ぶ。Spock 連携も将来検討。
+6. **Codex への実装指示は 5.1 系コード全文を渡す**: 自然言語で「Aggregate を作って」と指示すると 4 系 API を出力するリスク高。指示には本 ADR のコードパターン全文を含める（[CodexCLIMCPアプリケーション開発フロー.md](../reference/CodexCLIMCPアプリケーション開発フロー.md) の「コード全文を渡す」原則）。
+7. **`@EventSourced(idType=)` 併用要否は実装時検証**: SaaSForge サンプルでは両アノテーションを付与している。JAR では `EventSourcedEntity` のみ確認できたため、実装時に併用の必要性を再評価する。
 
 ### 検討した代替案
 
@@ -138,22 +212,29 @@ public record BookCargoCommand(
 
 | リスク | 影響度 | 対策 |
 |---|---|---|
-| 5.1 系 API の公式ドキュメント不足 | 高 | AxonIQ 公式 GitHub サンプル・JavaDoc・JAR 内クラス構造を参照。最悪 4.10.x ダウングレード（代替案 B） |
-| `CommandHandler` の登録方式が機能ベース API のみで、アノテーションが完全廃止されている可能性 | 中 | IT2 Day 2 で `EventSourcingConfigurer` の使用例を確認。アノテーション併用が可能か検証 |
-| Axon Test 5.1 の Given-When-Then 代替 API が不安定 | 中 | テストは統合テスト（Testcontainers + 実 Axon Server）寄りに重心を移す可能性。test_strategy.md の修正で対応 |
-| Codex が 5.1 系 API を学習データに含まない可能性 | 高 | 指示には 5.1 系のコード全文を必ず含める。`/codex:rescue` の使用も検討 |
+| ~~5.1 系 API の公式ドキュメント不足~~ | ~~高~~ | ✅ **解消**（IT2 Day 2 で公式マイグレーションガイド + SaaSForge ブログから具体パターン取得済み） |
+| ~~`CommandHandler` の登録方式が機能ベース API のみで、アノテーションが完全廃止されている可能性~~ | ~~中~~ | ✅ **解消**（アノテーション維持を確認。作成系は static、更新系はインスタンスメソッド） |
+| ~~Axon Test 5.1 の Given-When-Then 代替 API が不安定~~ | ~~中~~ | ✅ **解消**（`AxonTestFixture` を使用、`fixture.stop()` のリソース解放に注意） |
+| Codex が 5.1 系 API を学習データに含まない可能性 | 高 | 指示には本 ADR の 5.1 系コードパターン全文を必ず含める。`/codex:rescue` の使用も検討 |
+| `@EventSourced(idType=)` の併用要否が不明 | 低 | 実装時に併用版・単独版の両方で試し、動く方を採用 |
+| DCB（`tagKey`）の動作仕様詳細 | 中 | IT2 Day 3 の Cargo Aggregate 実装で実機検証。問題があれば本 ADR を更新 |
 
 ### IT2 への波及
 
-- **タスク 0.1 Event Sourcing スパイク**: 完了（本 ADR 作成）
-- **タスク 0.2 ADR-0007 起案**: 完了
-- **追加タスク（IT2 Day 2）**: 5.1 系 API の「要追加検証」3 項目を確認し、本 ADR を更新する。タスク番号は 0.8 として `iteration_plan-2.md` に追加する想定（または `users.lock_until` 実装と並行）
+- **タスク 0.1 Event Sourcing スパイク**: ✅ 完了（本 ADR 作成）
+- **タスク 0.2 ADR-0007 起案**: ✅ 完了
+- **タスク 0.8（追加）5.1 系 API 確認**: ✅ 完了（IT2 Day 2 で公式マイグレーションガイドおよび SaaSForge ブログから具体パターンを取得し、本 ADR に反映）
+- **Day 3 以降の実装**: 本 ADR の「採用する 5.1 系 API パターン」セクションをそのまま Codex 指示の雛形として使用する
 
 ## 関連リソース
 
 - スパイク実施日: 2026-05-13（IT2 Day 1 タイムボックス）
+- 追加検証実施日: 2026-05-13（IT2 Day 2 想定タスクを前倒し実施）
 - スパイクコード: 一時的に `apps/backend/bookingms/src/test/java/.../spike/` 配下に作成→ 削除済み（コンパイル失敗を確認し本 ADR に学びを集約）
 - Axon 5.1 JAR 確認: `axon-modelling-5.1.0.jar` / `axon-eventsourcing-5.1.0.jar` のクラス一覧
+- 公式マイグレーションガイド: <https://docs.axoniq.io/axon-framework-reference/5.0/migration/>
+- マイグレーション実例: <https://saasforge.cz/blog/axon-framework-4-to-5-migration/>（具体的な before/after コード）
+- AxonIQ Discuss（Spock 連携）: <https://discuss.axoniq.io/t/testing-axon-5-aggregates-with-spock-patterns-and-gotchas/6654>
 - 参考: [ADR-0001 メッセージング基盤として Axon Framework 5 を採用する](0001-axon-framework-adoption.md)
 - 参考: [Practical DDD in Enterprise Java Chapter 6](https://www.amazon.com/Practical-DDD-Enterprise-Java/dp/1484272250)（Axon 4.2 系の参考実装、本プロジェクトでは読み替えが必要）
 - 影響を受ける IT2 タスク: 1.3（`Cargo` Aggregate）、1.4（Command/Event）、4.1（`Voyage` Aggregate）、4.2（Command/Event）、7.2（PITest）テスト戦略連動
