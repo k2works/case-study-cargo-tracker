@@ -103,6 +103,8 @@ nav:
       - "ADR-0001 Axon Framework 5 採用": adr/0001-axon-framework-adoption.md
       - "ADR-0002 MyBatis 採用": adr/0002-mybatis-adoption.md
       - "ADR-0003 Phase 0 Skeleton + GHCR 採用": adr/0003-phase0-skeleton-and-ghcr-adoption.md
+      - "ADR-0004 マイクロサービス分割方針": adr/0004-microservice-decomposition.md
+      - "ADR-0005 shared モジュールの役割": adr/0005-shared-module-role.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
