@@ -9,6 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -68,5 +70,45 @@ class UserRepositoryTest {
 
         assertThat(repository.existsByUsername(new UserName("dave"))).isTrue();
         assertThat(repository.existsByUsername(new UserName("nobody"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("新規ユーザーは failedAttempts=0 で永続化される")
+    void 新規ユーザーは失敗カウンタ0で保存される() {
+        var user = User.create(
+                new UserName("eve"),
+                new Email("eve@example.com"),
+                new PasswordHash("$2a$10$hashed")
+        );
+        repository.save(user);
+
+        var found = repository.findByUsername(new UserName("eve"));
+        assertThat(found).isPresent();
+        assertThat(found.get().failedAttempts()).isZero();
+        assertThat(found.get().lockUntil()).isNull();
+    }
+
+    @Test
+    @DisplayName("failedAttempts と lockUntil が update で永続化される")
+    void 失敗カウンタとロック時刻が永続化される() {
+        var user = User.create(
+                new UserName("frank"),
+                new Email("frank@example.com"),
+                new PasswordHash("$2a$10$hashed")
+        );
+        repository.save(user);
+
+        // 5 回失敗を記録
+        var now = LocalDateTime.of(2026, 5, 13, 10, 0);
+        for (int i = 0; i < 5; i++) {
+            user.recordFailedAttempt(now);
+        }
+        repository.update(user);
+
+        var found = repository.findByUsername(new UserName("frank"));
+        assertThat(found).isPresent();
+        assertThat(found.get().failedAttempts()).isEqualTo(5);
+        assertThat(found.get().lockUntil()).isEqualTo(now.plusMinutes(30));
+        assertThat(found.get().isLocked(now)).isTrue();
     }
 }

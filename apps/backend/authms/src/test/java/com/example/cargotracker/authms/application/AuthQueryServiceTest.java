@@ -2,6 +2,7 @@ package com.example.cargotracker.authms.application;
 
 import com.example.cargotracker.authms.domain.model.*;
 import com.example.cargotracker.authms.domain.repository.UserRepository;
+import com.example.cargotracker.authms.domain.service.LoginAttemptTracker;
 import com.example.cargotracker.authms.infrastructure.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Clock;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +39,8 @@ class AuthQueryServiceTest {
                 "test-secret-key-at-least-32-characters-long",
                 86400000L
         );
-        service = new AuthQueryService(userRepository, encoder, jwtProvider);
+        var loginAttemptTracker = new LoginAttemptTracker(userRepository, Clock.systemDefaultZone());
+        service = new AuthQueryService(userRepository, encoder, jwtProvider, loginAttemptTracker);
     }
 
     @Test

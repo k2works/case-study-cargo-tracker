@@ -8,9 +8,13 @@ import java.util.Optional;
 @Mapper
 public interface UserMapper {
 
+    String SELECT_COLUMNS = "id, username, email, password, enabled, created_at, updated_at, failed_attempts, lock_until";
+
     @Insert("""
-            INSERT INTO users (id, username, email, password, enabled, created_at, updated_at)
-            VALUES (#{id}, #{username}, #{email}, #{password}, #{enabled}, #{createdAt}, #{updatedAt})
+            INSERT INTO users (id, username, email, password, enabled, created_at, updated_at,
+                               failed_attempts, lock_until)
+            VALUES (#{id}, #{username}, #{email}, #{password}, #{enabled}, #{createdAt}, #{updatedAt},
+                    #{failedAttempts}, #{lockUntil})
             """)
     void insert(UserRecord userRow);
 
@@ -20,19 +24,25 @@ public interface UserMapper {
             """)
     void insertUserRole(@Param("userId") String userId, @Param("roleName") String roleName);
 
-    @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users WHERE id = #{id}")
+    @Select("SELECT " + SELECT_COLUMNS + " FROM users WHERE id = #{id}")
     @Result(property = "createdAt", column = "created_at")
     @Result(property = "updatedAt", column = "updated_at")
+    @Result(property = "failedAttempts", column = "failed_attempts")
+    @Result(property = "lockUntil", column = "lock_until")
     Optional<UserRecord> findById(String id);
 
-    @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users WHERE username = #{username}")
+    @Select("SELECT " + SELECT_COLUMNS + " FROM users WHERE username = #{username}")
     @Result(property = "createdAt", column = "created_at")
     @Result(property = "updatedAt", column = "updated_at")
+    @Result(property = "failedAttempts", column = "failed_attempts")
+    @Result(property = "lockUntil", column = "lock_until")
     Optional<UserRecord> findByUsername(String username);
 
-    @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users WHERE email = #{email}")
+    @Select("SELECT " + SELECT_COLUMNS + " FROM users WHERE email = #{email}")
     @Result(property = "createdAt", column = "created_at")
     @Result(property = "updatedAt", column = "updated_at")
+    @Result(property = "failedAttempts", column = "failed_attempts")
+    @Result(property = "lockUntil", column = "lock_until")
     Optional<UserRecord> findByEmail(String email);
 
     @Select("SELECT COUNT(*) > 0 FROM users WHERE username = #{username}")
@@ -44,13 +54,19 @@ public interface UserMapper {
     @Select("SELECT r.name FROM roles r INNER JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = #{userId}")
     List<String> findRolesByUserId(String userId);
 
-    @Select("SELECT id, username, email, password, enabled, created_at, updated_at FROM users")
+    @Select("SELECT " + SELECT_COLUMNS + " FROM users")
     @Result(property = "createdAt", column = "created_at")
     @Result(property = "updatedAt", column = "updated_at")
+    @Result(property = "failedAttempts", column = "failed_attempts")
+    @Result(property = "lockUntil", column = "lock_until")
     List<UserRecord> findAll();
 
     @Update("""
-            UPDATE users SET enabled = #{enabled}, updated_at = #{updatedAt}
+            UPDATE users
+            SET enabled = #{enabled},
+                updated_at = #{updatedAt},
+                failed_attempts = #{failedAttempts},
+                lock_until = #{lockUntil}
             WHERE id = #{id}
             """)
     void update(UserRecord userRow);

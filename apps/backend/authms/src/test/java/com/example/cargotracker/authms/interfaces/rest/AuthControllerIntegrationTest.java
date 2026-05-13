@@ -160,4 +160,56 @@ class AuthControllerIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(response.getBody())
                 .isEqualTo(java.util.Map.of("message", "認証が必要です"));
     }
+
+    @Test
+    @DisplayName("5 回連続失敗で 6 回目以降は 423 Locked を返す（US00-r1）")
+    void 五回失敗で六回目は423を返す() throws Exception {
+        // 5 回失敗
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"username": "admin", "password": "wrongpassword"}
+                                    """))
+                    .andExpect(status().isUnauthorized());
+        }
+        // 6 回目（正しいパスワードでも 423）
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "admin", "password": "password"}
+                                """))
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    @DisplayName("失敗の後にログイン成功すると失敗カウンタがリセットされる（US00-r1）")
+    void 成功でカウンタリセットされる() throws Exception {
+        // 3 回失敗
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"username": "admin", "password": "wrongpassword"}
+                                    """))
+                    .andExpect(status().isUnauthorized());
+        }
+        // 成功
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "admin", "password": "password"}
+                                """))
+                .andExpect(status().isOk());
+        // さらに 5 回失敗してもまだロックされない（カウンタリセット後、5 回でロック）
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"username": "admin", "password": "wrongpassword"}
+                                    """))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
 }

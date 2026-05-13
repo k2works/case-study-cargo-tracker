@@ -14,6 +14,8 @@ public class UserRecord {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<String> roles = new ArrayList<>();
+    private int failedAttempts;
+    private LocalDateTime lockUntil;
 
     public String getId() {
         return id;
@@ -77,5 +79,21 @@ public class UserRecord {
 
     public void setRoles(List<String> roles) {
         this.roles = roles;
+    }
+
+    public int getFailedAttempts() {
+        return failedAttempts;
+    }
+
+    public void setFailedAttempts(int failedAttempts) {
+        this.failedAttempts = failedAttempts;
+    }
+
+    public LocalDateTime getLockUntil() {
+        return lockUntil;
+    }
+
+    public void setLockUntil(LocalDateTime lockUntil) {
+        this.lockUntil = lockUntil;
     }
 }

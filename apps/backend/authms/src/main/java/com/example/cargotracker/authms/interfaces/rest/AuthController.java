@@ -2,6 +2,7 @@ package com.example.cargotracker.authms.interfaces.rest;
 
 import com.example.cargotracker.authms.application.AuthCommandService;
 import com.example.cargotracker.authms.application.AuthQueryService;
+import com.example.cargotracker.authms.domain.model.AccountLockedException;
 import com.example.cargotracker.authms.domain.model.Role;
 import com.example.cargotracker.authms.domain.model.UserName;
 import com.example.cargotracker.authms.domain.repository.UserRepository;
@@ -62,6 +63,9 @@ public class AuthController {
             String username = jwtTokenProvider.getUsernameFromToken(token);
             List<String> roles = jwtTokenProvider.getRolesFromToken(token);
             return ResponseEntity.ok(new TokenResponse(token, username, roles));
+        } catch (AccountLockedException e) {
+            return ResponseEntity.status(HttpStatus.LOCKED)
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(MESSAGE_KEY, e.getMessage()));

@@ -76,6 +76,8 @@ public class MyBatisUserRepository implements UserRepository {
         userRow.setEnabled(user.isEnabled());
         userRow.setCreatedAt(user.createdAt());
         userRow.setUpdatedAt(user.updatedAt());
+        userRow.setFailedAttempts(user.failedAttempts());
+        userRow.setLockUntil(user.lockUntil());
         return userRow;
     }
 
@@ -92,7 +94,9 @@ public class MyBatisUserRepository implements UserRepository {
                 userRow.isEnabled(),
                 userRow.getCreatedAt(),
                 userRow.getUpdatedAt(),
-                roles
+                roles,
+                userRow.getFailedAttempts(),
+                userRow.getLockUntil()
         );
     }
 }
