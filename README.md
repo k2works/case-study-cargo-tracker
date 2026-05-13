@@ -44,6 +44,23 @@ npm install
 npm start
 ```
 
+#### 初回セットアップ（Git pre-commit フック）
+
+CI で検出される静的解析・テストエラーを **コミット前にローカルで検出** するため、pre-commit フックを有効化します。
+
+```bash
+git config core.hooksPath .githooks
+```
+
+これにより、Java の変更時には `./gradlew check`（Checkstyle / SpotBugs / Test）、TypeScript の変更時には `npm run lint && npm test && npm run build` が自動実行されます。GitHub Actions ワークフロー（`.github/workflows/*.yml`）の変更時は YAML 構文も検証されます。
+
+設定が有効か確認:
+
+```bash
+git config --get core.hooksPath
+# → .githooks
+```
+
 ### 構築
 
 ```bash
