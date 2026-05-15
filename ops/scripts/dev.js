@@ -2,6 +2,7 @@
 
 import { spawn, spawnSync } from 'child_process';
 import path from 'path';
+import readline from 'readline';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -11,6 +12,28 @@ const backendDir = path.join(repoRoot, 'apps', 'backend');
 
 const isWindows = process.platform === 'win32';
 const gradlewCmd = isWindows ? 'gradlew.bat' : './gradlew';
+
+/**
+ * 破壊的操作の前に y/n 確認を取る。
+ *
+ * - TTY 接続時は readline で対話的にプロンプトを出す（y を入力すると続行、それ以外は中断）。
+ * - 非対話実行（CI 等で stdin が TTY でない）の場合は、誤実行防止のため自動的に false を返す。
+ */
+function confirmDestructive(message) {
+  if (!process.stdin.isTTY) {
+    console.error(
+      `${message} 非対話環境では実行を中断します。対話端末から再実行してください。`,
+    );
+    return Promise.resolve(false);
+  }
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(`${message} [y/N]: `, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase() === 'y');
+    });
+  });
+}
 
 /**
  * 子プロセスを継承 stdio で起動し、終了コードを Promise で返す。
@@ -104,11 +127,14 @@ export default function (gulp) {
   });
 
   gulp.task('local-docker:clean', async (done) => {
-    // ボリュームを含めた完全リセット（Event Store・PostgreSQL データを破棄）。
-    // CONFIRM_CLEAN=yes を必須とし、誤実行を防止する。
-    if (process.env.CONFIRM_CLEAN !== 'yes') {
-      console.error('local-docker:clean はボリュームを破棄します。実行するには CONFIRM_CLEAN=yes を設定してください。');
-      done(new Error('Confirmation required'));
+    // ボリュームを含めた完全リセット（Axon Server Event Store・PostgreSQL データを破棄）。
+    // 誤実行を防ぐため、対話的に y/n 確認を取る。
+    const ok = await confirmDestructive(
+      'local-docker:clean は Axon Server Event Store と PostgreSQL データを破棄します。続行しますか？',
+    );
+    if (!ok) {
+      console.log('local-docker:clean をキャンセルしました。');
+      done();
       return;
     }
     const err = await runStreaming('docker', [
@@ -162,12 +188,12 @@ export default function (gulp) {
   local-docker:build   全サービスの Docker イメージをビルド
   local-docker:up      全サービス起動（基盤 + authms + bookingms + routingms + gatewayms）
   local-docker:down    コンテナ停止（ボリュームは保持）
-  local-docker:clean   完全リセット（要 CONFIRM_CLEAN=yes、Event Store・DB を破棄）
+  local-docker:clean   完全リセット（実行前に y/n 確認、Event Store・DB を破棄）
   local-docker:smoke   Axon Server + 4 ms の health 疎通確認
 
 注意:
   - local-docker:* は .env で POSTGRES_PASSWORD・JWT_SECRET 等のシークレット必須
-  - local-docker:clean は Event Store も削除する破壊的操作（ADR-0003 参照）
+  - local-docker:clean は Event Store も削除する破壊的操作。実行前に y/n 確認あり（ADR-0003 参照）
   - local-h2 では SubscribingEventProcessor、local-docker では Axon Server 接続前提
     （ADR-0008 参照）
 `);

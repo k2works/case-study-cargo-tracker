@@ -167,8 +167,8 @@ environment:
 ### 検証手順と結果
 
 ```bash
-# 完全リセット → 起動
-CONFIRM_CLEAN=yes gulp local-docker:clean
+# 完全リセット → 起動（clean は実行直前に y/n 確認）
+gulp local-docker:clean
 gulp local-docker:up
 
 # シナリオ A: AxonServer UP で POST → 201
