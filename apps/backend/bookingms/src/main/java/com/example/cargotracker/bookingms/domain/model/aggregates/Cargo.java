@@ -7,11 +7,12 @@ import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecifi
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.ShipperId;
-import org.axonframework.eventsourcing.annotation.EventSourcedEntity;
-import org.axonframework.messaging.commandhandling.annotation.CommandHandler;
-import org.axonframework.messaging.eventhandling.gateway.EventAppender;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
+import org.axonframework.extension.spring.stereotype.EventSourced;
+import org.axonframework.messaging.commandhandling.annotation.CommandHandler;
+import org.axonframework.messaging.eventhandling.gateway.EventAppender;
+import org.springframework.context.annotation.Profile;
 
 /**
  * 貨物予約 Aggregate（US04）。
@@ -25,7 +26,8 @@ import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
  *   <li>登録直後は {@code BookingStatus.PRELIMINARY} / {@code RoutingStatus.NOT_ROUTED}</li>
  * </ul>
  */
-@EventSourcedEntity(tagKey = "bookingId")
+@EventSourced(idType = String.class, tagKey = "bookingId")
+@Profile("!springboot-integration-test")
 public final class Cargo {
 
     private String bookingId;

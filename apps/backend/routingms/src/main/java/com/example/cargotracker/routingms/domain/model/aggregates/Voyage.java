@@ -7,11 +7,12 @@ import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CarrierMovement;
 import com.example.cargotracker.routingms.domain.model.valueobjects.UnLocode;
 import com.example.cargotracker.routingms.domain.model.valueobjects.VoyageStatus;
-import org.axonframework.eventsourcing.annotation.EventSourcedEntity;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
+import org.axonframework.extension.spring.stereotype.EventSourced;
 import org.axonframework.messaging.commandhandling.annotation.CommandHandler;
 import org.axonframework.messaging.eventhandling.gateway.EventAppender;
+import org.springframework.context.annotation.Profile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,7 +29,8 @@ import java.util.List;
  *   <li>同一 voyage_number で 2 回目の登録は Axon イベントストアで重複検知</li>
  * </ul>
  */
-@EventSourcedEntity(tagKey = "voyageNumber")
+@EventSourced(idType = String.class, tagKey = "voyageNumber")
+@Profile("!springboot-integration-test")
 public final class Voyage {
 
     private String voyageNumber;

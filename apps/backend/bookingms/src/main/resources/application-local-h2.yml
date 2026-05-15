@@ -3,6 +3,12 @@
 # 用途: IDE 起動・最速 TDD ループ。
 # Axon Server は接続できないため bootRun 起動時にリトライログが出るが、
 # ヘルスチェック自体は H2 のみで成立する。
+#
+# Event Processor は subscribing モード（in-memory EventBus 購読）で動作させる。
+# PooledStreamingEventProcessor は Event Store を必要とし Axon Server 接続が
+# 必要なため local-h2 では起動できない。subscribing なら Command 発行と同じ
+# スレッドで Projection が即時実行されるため、Read Model 更新も in-memory で
+# 完結する。E2E では JWT 認証 + Cargo 集約 + cargo_summary 投影まで一気通貫。
 
 spring:
   datasource:
@@ -17,3 +23,21 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  # Spring Boot DevTools（bootRun 時の自動再起動 + LiveReload）。
+  # 別ターミナルで `./gradlew :bookingms:classes -t` を実行するとクラスパスが
+  # 更新され、DevTools が自動再起動する。
+  devtools:
+    restart:
+      enabled: true
+      poll-interval: 2s
+      quiet-period: 1s
+    livereload:
+      enabled: true
+
+axon:
+  eventhandling:
+    processors:
+      # processor 名はデフォルトでパッケージ名となる。ドット入りキーは
+      # Spring Boot Map binding のために [] 記法でクォートする。
+      "[com.example.cargotracker.bookingms.interfaces.events]":
+        mode: subscribing

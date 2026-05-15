@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>本 Bean が有効になるのは {@code local-docker}（Axon Server 起動済み）・{@code heroku}・{@code prod} 等のプロファイル。</p>
  */
 @Component
-@Profile("!springboot-integration-test & !local-h2")
+@Profile("!springboot-integration-test")
 public class CargoProjectionsEventHandler {
 
     private final CargoSummaryMapper cargoSummaryMapper;

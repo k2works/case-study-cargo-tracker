@@ -17,3 +17,18 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  # Spring Boot DevTools。詳細は bookingms 側の application-local-h2.yml を参照。
+  devtools:
+    restart:
+      enabled: true
+      poll-interval: 2s
+      quiet-period: 1s
+    livereload:
+      enabled: true
+
+# bookingms 側と同じ理由で voyage の Projection も subscribing モードで動作させる。
+axon:
+  eventhandling:
+    processors:
+      "[com.example.cargotracker.routingms.interfaces.events]":
+        mode: subscribing

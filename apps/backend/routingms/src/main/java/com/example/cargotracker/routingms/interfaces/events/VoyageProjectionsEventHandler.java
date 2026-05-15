@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </ul>
  */
 @Component
-@Profile("!springboot-integration-test & !local-h2")
+@Profile("!springboot-integration-test")
 public class VoyageProjectionsEventHandler {
 
     private final VoyageMapper mapper;
