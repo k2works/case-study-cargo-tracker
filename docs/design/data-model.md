@@ -756,6 +756,7 @@ entity "users" as u {
   password_hash: VARCHAR(255) NOT NULL
   status: VARCHAR(16) NOT NULL ' ACTIVE / LOCKED / DEACTIVATED
   failed_attempts: INTEGER NOT NULL DEFAULT 0
+  lock_until: TIMESTAMP NULL  ' 5 回連続失敗で 30 分ロック（NULL = 未ロック、IT2 / V006）
   last_login_at: TIMESTAMPTZ
   password_changed_at: TIMESTAMPTZ
   created_at: TIMESTAMPTZ
@@ -805,7 +806,8 @@ u ||--o{ us : "0..*"
 
 note right of u
   状態 DB。Event Sourcing は適用しない。
-  失敗回数（failed_attempts）はアカウントロック判定に使用。
+  失敗回数（failed_attempts）と lock_until でアカウントロック判定（IT2 / US00-r1）。
+  5 回連続失敗で lock_until = NOW() + 30 分、成功時に failed_attempts = 0 / lock_until = NULL にリセット。
 end note
 
 note right of us
