@@ -234,7 +234,10 @@ function waitForSonarHealthy() {
  */
 function sonarProjectKey() {
   const projects = loadProjects();
-  return process.env.SONAR_PROJECT_KEY || (projects.length > 0 ? projects[0].projectKey : 'my-project');
+  const raw = process.env.SONAR_PROJECT_KEY || (projects.length > 0 ? projects[0].projectKey : 'my-project');
+  // .env で末尾に `/` が混入していると `cargo-tracker-backend%2F` のような
+  // 無効な URL になり SonarQube API が 404 を返すため、末尾の `/` を除去する。
+  return raw.replace(/\/+$/, '');
 }
 
 /**
@@ -296,9 +299,12 @@ function runScan(project, token, hostUrl) {
       );
       break;
 
-    case 'gradle':
+    case 'gradle': {
+      // システムワイドの gradle ではなくプロジェクト同梱の Gradle Wrapper を使う。
+      // Windows は gradlew.bat、それ以外は ./gradlew。
+      const gradleCmd = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
       execSync(
-        `gradle sonar ` +
+        `${gradleCmd} sonar ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
@@ -306,6 +312,7 @@ function runScan(project, token, hostUrl) {
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
+    }
 
     case 'sonar-scanner':
     default:
