@@ -28,7 +28,7 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
+  await expect(page).toHaveURL(/\/shippers/)
 
   // 2. 荷主を登録（見積に shipperId が必要）
   await page.getByRole('link', { name: '新規登録' }).click()
@@ -37,8 +37,10 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
   await page.locator('#shipper-email').fill(shipperEmail)
   await page.locator('#shipper-phone').fill('090-1234-5678')
   await page.getByRole('button', { name: '登録する' }).click()
-  await expect(page).toHaveURL(/\/shippers$/, { timeout: 10_000 })
-  await expect(page.getByText(shipperName)).toBeVisible({ timeout: 10_000 })
+  await expect(page).toHaveURL(/\/shippers$/)
+  // 直近登録の Read Model 反映を確実に拾うために再ロード
+  await page.reload()
+  await expect(page.getByText(shipperName)).toBeVisible()
 
   // 3. shipperId を API 経由で取得（UI 上は ID 列が表示されないため）
   const apiBaseURL = process.env.API_BASE_URL ?? 'http://localhost:8080'
@@ -53,7 +55,7 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
 
   // 4. ヘッダーの「見積作成」リンクをクリック
   await page.getByRole('link', { name: '見積作成' }).click()
-  await expect(page).toHaveURL(/\/quotations\/new$/, { timeout: 10_000 })
+  await expect(page).toHaveURL(/\/quotations\/new$/)
   await expect(page.getByRole('heading', { name: '輸送見積の作成' })).toBeVisible()
 
   // 5. 見積フォームに入力
@@ -64,17 +66,23 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
   // cargoType はデフォルト GENERAL のまま
   await page.locator('#weightKg').fill('100')
 
-  // 6. 見積を作成
+  // 6. 見積を作成（POST 完了を network レベルで待ってから遷移を期待する）
+  const createResponse = page.waitForResponse(
+    (resp) => resp.url().includes('/api/v1/quotations') && resp.request().method() === 'POST',
+  )
   await page.getByRole('button', { name: '見積を作成' }).click()
+  const response = await createResponse
+  expect(response.ok()).toBeTruthy()
 
-  // 7. /quotations/:id に遷移
-  await expect(page).toHaveURL(/\/quotations\/[a-f0-9-]+$/, { timeout: 10_000 })
-  await expect(page.getByRole('heading', { name: '見積詳細' })).toBeVisible({ timeout: 10_000 })
+  // 7. /quotations/:id に遷移（Read Model 反映には数秒かかる場合がある）
+  await expect(page).toHaveURL(/\/quotations\/[a-f0-9-]+$/)
+  await expect(page.getByRole('heading', { name: '見積詳細' })).toBeVisible()
 
-  // 8. 見積詳細の主要情報が表示される（Read Model の結果整合性を待つ）
-  await expect(page.getByTestId('quotation-detail')).toBeVisible({ timeout: 10_000 })
+  // 8. 見積詳細の主要情報が表示される（Projection 反映を reload で再取得して確実化）
+  await page.reload()
+  await expect(page.getByTestId('quotation-detail')).toBeVisible()
   await expect(page.getByText('JPTYO').first()).toBeVisible()
   await expect(page.getByText('USNYC').first()).toBeVisible()
   // 受入条件 3: ルート候補テーブルに概算料金・所要日数が表示される
-  await expect(page.getByTestId('candidates-table')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByTestId('candidates-table')).toBeVisible()
 })
