@@ -57,8 +57,10 @@ npm run test:e2e:report
 | `login-shipper.spec.ts` | ログイン → 個人荷主登録 → 一覧表示 | US00（ログイン）+ US02（荷主登録） |
 | `login-booking.spec.ts` | ログイン → 貨物予約登録 → 一覧表示 | US00 + US04（貨物予約） |
 | `login-voyage.spec.ts` | ログイン → 航海スケジュール新規登録 → 一覧表示 | US00 + US24（航海登録） |
+| `login-quotation.spec.ts` | ログイン → 荷主登録 → 見積作成 → 詳細で候補テーブル表示 | US00 + US02 + US01（見積作成） |
+| `login-voyage-edit.spec.ts` | ログイン → 航海登録 → 編集 → 一覧で更新反映 / キャンセルで破棄 | US00 + US24 + US25（既存航海更新） |
 
-IT3 以降の追加予定: US01 見積（S03/S04）、US06 予約引き渡し（S10）、US07 航海検索（S11）、US25 既存航海更新（S12 編集 URL）。
+IT3 以降の追加予定: US06 予約引き渡し（S10）、US07 航海検索（S11）。
 
 ## 失敗時の調査
 
@@ -69,4 +71,4 @@ IT3 以降の追加予定: US01 見積（S03/S04）、US06 予約引き渡し（
 ## 既知の制約
 
 - **CI 統合は未完了**: IT2 時点では GitHub Actions ワークフローへの組み込みは見送り。IT3 以降で local-docker をベースとした CI ジョブを検討する。
-- **シナリオの拡充は IT3 以降**: IT2 で 3 シナリオ（荷主 / 予約 / 航海）まで整備。US01 / US06 / US07 / US25 等は IT3 以降で順次追加する。
+- **シナリオの拡充は段階的に**: IT2 で 3 シナリオ、IT3 で US01 見積（`login-quotation.spec.ts`）と US25 航海編集（`login-voyage-edit.spec.ts`）を追加し計 5 ファイル 6 テスト。US06 / US07 は IT3 後半で順次追加する。
