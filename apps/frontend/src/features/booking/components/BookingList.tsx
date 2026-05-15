@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { useBookings } from '../hooks/useBookings'
 
 const CARGO_TYPE_LABEL: Record<string, string> = {
@@ -28,6 +29,7 @@ export function BookingList() {
             <th className="px-4 py-3 text-left text-gray-700">目的地</th>
             <th className="px-4 py-3 text-left text-gray-700">到着期限</th>
             <th className="px-4 py-3 text-left text-gray-700">状態</th>
+            <th className="px-4 py-3 text-left text-gray-700">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -47,6 +49,15 @@ export function BookingList() {
                 <span className="inline-block px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
                   {booking.bookingStatus}
                 </span>
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  to={`/bookings/${booking.bookingId}`}
+                  className="text-sm text-blue-600 underline"
+                  data-testid={`booking-detail-link-${booking.bookingId}`}
+                >
+                  詳細
+                </Link>
               </td>
             </tr>
           ))}

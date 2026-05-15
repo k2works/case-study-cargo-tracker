@@ -21,3 +21,15 @@ export function useBookCargo() {
     },
   })
 }
+
+// US06: 経路設計引き渡し（PRELIMINARY -> ROUTING）。
+export function useHandOffBooking() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (bookingId: string) =>
+      bookingApiClient.post<BookingResponse>(`/api/v1/bookings/${bookingId}/handoff`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOOKINGS_KEY })
+    },
+  })
+}

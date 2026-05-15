@@ -7,6 +7,7 @@ import { ShipperListPage } from './pages/ShipperListPage'
 import { ShipperNewPage } from './pages/ShipperNewPage'
 import { BookingListPage } from './pages/BookingListPage'
 import { BookingNewPage } from './pages/BookingNewPage'
+import { BookingDetailPage } from './pages/BookingDetailPage'
 import { VoyageListPage } from './pages/VoyageListPage'
 import { VoyageNewPage } from './pages/VoyageNewPage'
 import { VoyageEditPage } from './pages/VoyageEditPage'
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/shippers/new" element={<ShipperNewPage />} />
           <Route path="/bookings" element={<BookingListPage />} />
           <Route path="/bookings/new" element={<BookingNewPage />} />
+          <Route path="/bookings/:bookingId" element={<BookingDetailPage />} />
           <Route path="/quotations" element={<QuotationListPage />} />
           <Route path="/quotations/new" element={<QuotationNewPage />} />
           <Route path="/quotations/:quotationId" element={<QuotationDetailPage />} />
