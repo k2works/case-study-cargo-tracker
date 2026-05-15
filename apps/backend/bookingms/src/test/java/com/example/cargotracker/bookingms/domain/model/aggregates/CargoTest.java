@@ -1,7 +1,9 @@
 package com.example.cargotracker.bookingms.domain.model.aggregates;
 
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Dimensions;
@@ -19,8 +21,10 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * Cargo Aggregate のユニットテスト。
@@ -79,5 +83,57 @@ class CargoTest {
         assertThat(cargo.getBookingId()).isEqualTo(bookingId);
         assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.PRELIMINARY);
         assertThat(cargo.getRoutingStatus()).isEqualTo(RoutingStatus.NOT_ROUTED);
+    }
+
+    private Cargo preliminaryCargo(String bookingId) {
+        var cargo = new Cargo();
+        var spec = CargoSpecification.general(
+                new BigDecimal("100"), new Dimensions(100, 100, 100), 1, "産業機械");
+        var route = new RouteSpecification(
+                Location.of("JPYOK"), Location.of("USLAX"), LocalDate.of(2026, 12, 31));
+        cargo.on(new CargoBookedEvent(bookingId, new ShipperId(1L), spec, route));
+        return cargo;
+    }
+
+    @Test
+    @DisplayName("handOffToRouting は EventAppender に CargoHandedOffToRoutingEvent を追加する")
+    void handOff_イベント追加() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = preliminaryCargo(bookingId);
+        EventAppender appender = mock(EventAppender.class);
+
+        cargo.handOffToRouting(new HandOffToRoutingCommand(bookingId), appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(CargoHandedOffToRoutingEvent.class);
+        CargoHandedOffToRoutingEvent event = (CargoHandedOffToRoutingEvent) captor.getValue();
+        assertThat(event.bookingId()).isEqualTo(bookingId);
+    }
+
+    @Test
+    @DisplayName("CargoHandedOffToRoutingEvent を再生すると ROUTING に遷移する")
+    void on_引き渡しで状態遷移() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = preliminaryCargo(bookingId);
+
+        cargo.on(new CargoHandedOffToRoutingEvent(bookingId));
+
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.ROUTING);
+    }
+
+    @Test
+    @DisplayName("PRELIMINARY 以外の状態では handOffToRouting は IllegalStateException")
+    void handOff_PRELIMINARY以外は拒否() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = preliminaryCargo(bookingId);
+        cargo.on(new CargoHandedOffToRoutingEvent(bookingId)); // PRELIMINARY -> ROUTING
+
+        EventAppender appender = mock(EventAppender.class);
+
+        assertThatThrownBy(() -> cargo.handOffToRouting(new HandOffToRoutingCommand(bookingId), appender))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PRELIMINARY");
+        verifyNoInteractions(appender);
     }
 }

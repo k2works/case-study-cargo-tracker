@@ -2,10 +2,12 @@ package com.example.cargotracker.bookingms.infrastructure.persistence;
 
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.ResultMap;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 import java.util.Optional;
@@ -92,4 +94,30 @@ public interface CargoSummaryMapper {
             """)
     @ResultMap("cargoSummaryResultMap")
     List<CargoSummaryRecord> findAll();
+
+    @Select("""
+            SELECT booking_id, shipper_id, tracking_number, origin_unlocode, destination_unlocode,
+                   arrival_deadline, cargo_type, weight_kg, length_cm, width_cm, height_cm,
+                   quantity, product_name,
+                   hazard_imo_class, hazard_un_number, hazard_declaration,
+                   temperature_min_c, temperature_max_c,
+                   booking_status, routing_status, estimated_amount, estimated_currency,
+                   last_event_at, created_at, updated_at, version
+            FROM cargo_summary
+            WHERE booking_status = #{bookingStatus}
+            ORDER BY created_at DESC
+            """)
+    @ResultMap("cargoSummaryResultMap")
+    List<CargoSummaryRecord> findByBookingStatus(@Param("bookingStatus") String bookingStatus);
+
+    @Update("""
+            UPDATE cargo_summary
+               SET booking_status = #{bookingStatus},
+                   updated_at = CURRENT_TIMESTAMP,
+                   version = version + 1
+             WHERE booking_id = #{bookingId}
+            """)
+    int updateBookingStatus(
+            @Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus);
 }

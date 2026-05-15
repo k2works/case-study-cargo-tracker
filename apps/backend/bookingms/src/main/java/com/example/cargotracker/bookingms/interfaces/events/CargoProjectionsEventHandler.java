@@ -1,6 +1,7 @@
 package com.example.cargotracker.bookingms.interfaces.events;
 
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RoutingStatus;
@@ -74,5 +75,16 @@ public class CargoProjectionsEventHandler {
         summary.setRoutingStatus(RoutingStatus.NOT_ROUTED.name());
 
         cargoSummaryMapper.insert(summary);
+    }
+
+    /**
+     * 経路設計引き渡しを Read Model に反映する（US06）。
+     *
+     * <p>cargo_summary.booking_status を {@code ROUTING} に更新する。</p>
+     */
+    @EventHandler
+    @Transactional
+    public void on(CargoHandedOffToRoutingEvent event) {
+        cargoSummaryMapper.updateBookingStatus(event.bookingId(), BookingStatus.ROUTING.name());
     }
 }

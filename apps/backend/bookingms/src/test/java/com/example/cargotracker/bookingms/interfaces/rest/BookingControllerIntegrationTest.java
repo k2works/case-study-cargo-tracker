@@ -1,6 +1,7 @@
 package com.example.cargotracker.bookingms.interfaces.rest;
 
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryRecord;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
@@ -345,6 +346,80 @@ class BookingControllerIntegrationTest {
                         .value("GENERAL"))
                 .andExpect(jsonPath("$[?(@.bookingId == 'test-booking-list-1')].bookingStatus")
                         .value("PRELIMINARY"));
+    }
+
+    @Test
+    @DisplayName("US06: POST /api/v1/bookings/{id}/handoff で HandOffToRoutingCommand が送信される")
+    void 経路設計引き渡しを実行できる() throws Exception {
+        Long shipperId = registerShipper();
+        CargoSummaryRecord summary = new CargoSummaryRecord();
+        summary.setBookingId("handoff-booking-1");
+        summary.setShipperId(shipperId);
+        summary.setOriginUnlocode("JPYOK");
+        summary.setDestinationUnlocode("USLAX");
+        summary.setArrivalDeadline(LocalDate.of(2099, 12, 31));
+        summary.setCargoType("GENERAL");
+        summary.setWeightKg(BigDecimal.valueOf(100));
+        summary.setLengthCm(100);
+        summary.setWidthCm(50);
+        summary.setHeightCm(30);
+        summary.setQuantity(1);
+        summary.setProductName("引き渡しテスト");
+        summary.setBookingStatus("PRELIMINARY");
+        summary.setRoutingStatus("NOT_ROUTED");
+        cargoSummaryMapper.insert(summary);
+
+        mockMvc.perform(post("/api/v1/bookings/handoff-booking-1/handoff"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value("handoff-booking-1"))
+                .andExpect(jsonPath("$.bookingStatus").value("ROUTING"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(HandOffToRoutingCommand.class);
+        assertThat(((HandOffToRoutingCommand) captor.getValue()).bookingId())
+                .isEqualTo("handoff-booking-1");
+    }
+
+    @Test
+    @DisplayName("US06: 存在しない bookingId への handoff は 404")
+    void 存在しない予約への引き渡しは404() throws Exception {
+        mockMvc.perform(post("/api/v1/bookings/not-exist/handoff"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("US06: GET /api/v1/bookings?status=ROUTING で経路設計待ち一覧を取得できる")
+    void 経路設計待ち一覧を取得できる() throws Exception {
+        Long shipperId = registerShipper();
+        CargoSummaryRecord pre = baseSummary(shipperId, "preliminary-only", "PRELIMINARY");
+        cargoSummaryMapper.insert(pre);
+        CargoSummaryRecord rt = baseSummary(shipperId, "routing-waiting", "ROUTING");
+        cargoSummaryMapper.insert(rt);
+
+        mockMvc.perform(get("/api/v1/bookings?status=ROUTING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.bookingId == 'routing-waiting')]").exists())
+                .andExpect(jsonPath("$[?(@.bookingId == 'preliminary-only')]").doesNotExist());
+    }
+
+    private CargoSummaryRecord baseSummary(Long shipperId, String bookingId, String bookingStatus) {
+        CargoSummaryRecord s = new CargoSummaryRecord();
+        s.setBookingId(bookingId);
+        s.setShipperId(shipperId);
+        s.setOriginUnlocode("JPYOK");
+        s.setDestinationUnlocode("USLAX");
+        s.setArrivalDeadline(LocalDate.of(2099, 12, 31));
+        s.setCargoType("GENERAL");
+        s.setWeightKg(BigDecimal.valueOf(100));
+        s.setLengthCm(100);
+        s.setWidthCm(50);
+        s.setHeightCm(30);
+        s.setQuantity(1);
+        s.setProductName(bookingId);
+        s.setBookingStatus(bookingStatus);
+        s.setRoutingStatus("NOT_ROUTED");
+        return s;
     }
 
     @Test

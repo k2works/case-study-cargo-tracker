@@ -1,7 +1,9 @@
 package com.example.cargotracker.bookingms.domain.model.aggregates;
 
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
@@ -66,6 +68,26 @@ public final class Cargo {
         this.routeSpec = event.routeSpec();
         this.bookingStatus = BookingStatus.PRELIMINARY;
         this.routingStatus = RoutingStatus.NOT_ROUTED;
+    }
+
+    /**
+     * 予約引き渡し（US06 / UC04）。
+     *
+     * <p>仮受付状態の予約を経路設計者に引き渡す。受け付けるのは {@code PRELIMINARY}
+     * 状態のみ。既に経路設計中・確定済み・キャンセル等の状態では拒否する。</p>
+     */
+    @CommandHandler
+    public void handOffToRouting(HandOffToRoutingCommand command, EventAppender appender) {
+        if (bookingStatus != BookingStatus.PRELIMINARY) {
+            throw new IllegalStateException(
+                    "PRELIMINARY 状態の予約のみ経路設計に引き渡せます。現状態: " + bookingStatus);
+        }
+        appender.append(new CargoHandedOffToRoutingEvent(command.bookingId()));
+    }
+
+    @EventSourcingHandler
+    public void on(CargoHandedOffToRoutingEvent event) {
+        this.bookingStatus = BookingStatus.ROUTING;
     }
 
     public String getBookingId() {

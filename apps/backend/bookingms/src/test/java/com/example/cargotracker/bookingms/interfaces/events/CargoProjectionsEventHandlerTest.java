@@ -1,6 +1,7 @@
 package com.example.cargotracker.bookingms.interfaces.events;
 
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
@@ -108,5 +109,15 @@ class CargoProjectionsEventHandlerTest {
         assertThat(r.getTemperatureMinC()).isEqualByComparingTo("-25");
         assertThat(r.getTemperatureMaxC()).isEqualByComparingTo("-18");
         assertThat(r.getHazardImoClass()).isNull();
+    }
+
+    @Test
+    @DisplayName("CargoHandedOffToRoutingEvent を受けて cargo_summary.booking_status を ROUTING に更新する（US06）")
+    void 経路設計引き渡しでROUTINGに更新() {
+        var event = new CargoHandedOffToRoutingEvent("B-100");
+
+        handler.on(event);
+
+        verify(mapper).updateBookingStatus("B-100", "ROUTING");
     }
 }

@@ -1,6 +1,7 @@
 package com.example.cargotracker.bookingms.interfaces.rest;
 
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
@@ -22,9 +23,11 @@ import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -54,8 +57,21 @@ public class BookingController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BookingListResponse>> list() {
-        List<BookingListResponse> bookings = cargoSummaryMapper.findAll().stream()
+    public ResponseEntity<List<BookingListResponse>> list(
+            @RequestParam(value = "status", required = false) String status) {
+        List<CargoSummaryRecord> records;
+        if (status == null || status.isBlank()) {
+            records = cargoSummaryMapper.findAll();
+        } else {
+            // バリデーション: BookingStatus 列挙値以外は 400
+            try {
+                BookingStatus.valueOf(status);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().build();
+            }
+            records = cargoSummaryMapper.findByBookingStatus(status);
+        }
+        List<BookingListResponse> bookings = records.stream()
                 .map(this::toListResponse)
                 .toList();
         return ResponseEntity.ok(bookings);
@@ -105,6 +121,27 @@ public class BookingController {
         // 4. レスポンス（PRELIMINARY は Cargo Aggregate のイベント処理直後の規定状態）
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new BookingResponse(bookingId.value(), BookingStatus.PRELIMINARY.name()));
+    }
+
+    /**
+     * 経路設計引き渡し（US06 / UC04）。
+     *
+     * <p>仮受付状態の予約を経路設計者に引き渡し、状態を {@code ROUTING} に遷移させる。</p>
+     */
+    @PostMapping("/{bookingId}/handoff")
+    public ResponseEntity<Object> handoff(@PathVariable("bookingId") String bookingId) {
+        var record = cargoSummaryMapper.findByBookingId(bookingId);
+        if (record.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "予約が存在しません: " + bookingId));
+        }
+        try {
+            commandGateway.sendAndWait(new HandOffToRoutingCommand(bookingId));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", e.getMessage()));
+        }
+        return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTING.name()));
     }
 
     private CargoSpecification toCargoSpecification(BookCargoRequest.CargoSpecDto dto) {
