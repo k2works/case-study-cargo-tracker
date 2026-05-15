@@ -115,6 +115,7 @@ nav:
       - "ADR-0006 Heroku デプロイ構成": adr/0006-heroku-deployment-setup.md
       - "ADR-0007 Axon 5.1 Event Sourcing API": adr/0007-axon-5-event-sourcing-api.md
       - "ADR-0008 Axon 5.1 Spring Boot 統合パターン": adr/0008-axon-5-spring-boot-integration-pattern.md
+      - "ADR-0009 Axon Server Connector 明示依存と pooled-streaming 復帰": adr/0009-axon-server-connector-explicit-dependency.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

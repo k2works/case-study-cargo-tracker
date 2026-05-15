@@ -71,6 +71,7 @@
 | [ADR-0006](./adr/0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成 |
 | [ADR-0007](./adr/0007-axon-5-event-sourcing-api.md) | Axon Framework 5.1 の Event Sourcing 採用と新アノテーション API への対応 |
 | [ADR-0008](./adr/0008-axon-5-spring-boot-integration-pattern.md) | Axon 5.1 Aggregate を Spring Boot 4 に統合する具体パターン（`@EventSourced` + `subscribing` モード） |
+| [ADR-0009](./adr/0009-axon-server-connector-explicit-dependency.md) | `axon-server-connector` を明示依存にし `local-docker` を pooled-streaming に復帰させる |
 
 ### 運用ドキュメント
 
