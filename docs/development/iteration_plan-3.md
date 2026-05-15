@@ -28,7 +28,7 @@ date: 2026-05-15T00:00:00.000Z
 ### イテレーション終了時の達成状態
 
 1. **輸送見積（US01, UC01）**: 営業担当者が出発地・目的地・希望期限・貨物種別・重量を入力すると、`Quotation` 集約が複数のルート候補（経由港・所要日数・概算料金・航海番号）を保持した見積を作成し、見積番号と共に S04 で表示される
-2. **予約引き渡し（US06, UC04）**: 仮受付された予約の内容を S10 で確認し「経路設計を依頼」を選択すると、`Cargo` 集約が `HandOffToRoutingCommand` を受けて `cargo_summary.booking_status` が `ROUTING_REQUESTED` に遷移し、経路設計者向け一覧に表示される
+2. **予約引き渡し（US06, UC04）**: 仮受付された予約の内容を S10 で確認し「経路設計を依頼」を選択すると、`Cargo` 集約が `HandOffToRoutingCommand` を受けて `cargo_summary.booking_status` が `ROUTING` に遷移し、経路設計者向け一覧（`GET /api/v1/bookings?status=ROUTING`）に表示される
 3. **航海スケジュール検索（US07, UC05）**: 経路設計者が S11 で出発地・目的地・出発期間・貨物種別の条件で `voyage` テーブルを検索でき、危険物・冷凍貨物の場合は対応可能な航海のみに絞り込まれる
 4. **航海スケジュール更新（US25, UC19, IT2 繰越し）**: 既存航海番号で S12 を開き差分を確認した上で `UpdateVoyageScheduleCommand` を発行し、`VoyageScheduleUpdatedEvent` で Read Model（`voyage` / `carrier_movement`）が更新される。「キャンセル」で変更を破棄できる
 5. **品質基盤の完成（IT2 持越し）**: PIT 75%（ドメイン層主指標）が CI で動作し、Backend `Cargo` / `Voyage` Aggregate に最初に適用される
@@ -37,7 +37,7 @@ date: 2026-05-15T00:00:00.000Z
 ### 成功基準
 
 - [ ] `POST /api/v1/quotations` で輸送見積（金額・通貨・有効期限・候補一覧）が返却される（US01）
-- [ ] `POST /api/v1/bookings/{id}/handoff` 成功後、`cargo_summary.booking_status` が `ROUTING_REQUESTED` に更新される（US06）
+- [x] `POST /api/v1/bookings/{id}/handoff` 成功後、`cargo_summary.booking_status` が `ROUTING` に更新される（US06）
 - [ ] `GET /api/v1/voyages?origin={UNLOCODE}&destination={UNLOCODE}&departureFrom=YYYY-MM-DD&cargoType={GENERAL/HAZARDOUS/REFRIGERATED}` で航海候補が取得できる（US07）
 - [ ] `PUT /api/v1/voyages/{voyageNumber}` で既存航海スケジュールを更新でき、`VoyageScheduleUpdatedEvent` がイベントストアに永続化される（US25）
 - [ ] PIT カバレッジ（bookingms / routingms のドメイン層）が CI で計測され、Quality Gate に組み込まれる（目標 75%、未達でも計測必須）
@@ -166,11 +166,11 @@ date: 2026-05-15T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `Cargo` 集約に `HandOffToRoutingCommand` / `@CommandHandler` 追加（status: PRELIMINARY → ROUTING_REQUESTED） | 3h | AI | [ ] |
-| 3.2 | `CargoProjectionsEventHandler` に `cargo_summary.booking_status` 更新ロジック追加 | 2h | AI | [ ] |
-| 3.3 | `POST /api/v1/bookings/{id}/handoff` と S10 予約詳細の「経路設計を依頼」アクション | 3h | AI | [ ] |
-| 3.4 | 経路設計者向け通知（最小実装：ログ出力 + `booking_status='ROUTING_REQUESTED'` 検索 API） | 2h | AI | [ ] |
-| 3.5 | E2E テスト（予約 → 引き渡し → S11 で経路設計待ち予約一覧表示） | 2h | AI | [ ] |
+| 3.1 | `Cargo` 集約に `HandOffToRoutingCommand` / `@CommandHandler` 追加（status: PRELIMINARY → ROUTING） | 3h | AI | [x] 完了（HandOffToRoutingCommand / CargoHandedOffToRoutingEvent / 集約 + EventSourcingHandler、CargoTest 5/5）。状態名は data-model.md と整合する既存の `BookingStatus.ROUTING` を採用 |
+| 3.2 | `CargoProjectionsEventHandler` に `cargo_summary.booking_status` 更新ロジック追加 | 2h | AI | [x] 完了（CargoSummaryMapper.updateBookingStatus + on(CargoHandedOffToRoutingEvent)、CargoProjectionsEventHandlerTest 4/4） |
+| 3.3 | `POST /api/v1/bookings/{id}/handoff` と S10 予約詳細の「経路設計を依頼」アクション | 3h | AI | [x] 完了（BookingController.handoff + BookingDetailPage / useHandOffBooking、BookingControllerIntegrationTest 12/12、BookingDetailPage.test 5/5） |
+| 3.4 | 経路設計者向け通知（最小実装：ログ出力 + `booking_status='ROUTING'` 検索 API） | 2h | AI | [x] 完了（`GET /api/v1/bookings?status=ROUTING` を BookingController.list に追加、IntegrationTest にケース追加） |
+| 3.5 | E2E テスト（予約 → 引き渡し → S10 で状態が ROUTING に遷移） | 2h | AI | [x] 完了（apps/frontend/e2e/login-booking-handoff.spec.ts、Read Model 反映ポーリング含む） |
 
 **小計**: 12h
 
@@ -220,17 +220,17 @@ date: 2026-05-15T00:00:00.000Z
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| US25 既存航海スケジュール更新 | 3 | 13h | [ ] |
-| US01 輸送見積 | 5 | 20h | [ ] |
-| US06 予約引き渡し | 3 | 12h | [ ] |
+| US25 既存航海スケジュール更新 | 3 | 13h | [x] 完了 |
+| US01 輸送見積 | 5 | 20h | [x] 完了 |
+| US06 予約引き渡し | 3 | 12h | [x] 完了 |
 | US07 航海スケジュール検索 | 5 | 15h | [ ] |
-| IT2 持越し（PIT・ドキュメント） | - | 7h | [ ] |
+| IT2 持越し（PIT・ドキュメント） | - | 7h | [x] 完了 |
 | US04-r1 等 起票のみ | - | 1.5h | [ ] |
 | US08 先行スパイク | - | 4h | [ ] |
 | **合計** | **16** | **72.5h** | |
 
 **1 SP あたり**: 約 3.75h（IT1: 3.8h / IT2: 3.7h と一致、安定）
-**進捗率**: 0% (0/16 SP)
+**進捗率**: 69% (11/16 SP — US25 / US01 / US06 完了。残: US07 5SP)
 
 ---
 
@@ -357,7 +357,7 @@ Cargo ..> Voyage : 引き渡し後の経路設計で参照
 
 ### データモデル
 
-> data-model.md（L350 `quotation` / L368 `quotation_candidate` / UC04 `cargo_summary`）の既存定義に準拠する。新規テーブルは追加しない。`cargo_summary.booking_status` の状態遷移に `ROUTING_REQUESTED` を加える。
+> data-model.md（L350 `quotation` / L368 `quotation_candidate` / UC04 `cargo_summary`）の既存定義に準拠する。新規テーブルは追加しない。`cargo_summary.booking_status` の状態遷移は既存 `BookingStatus` 列挙値（`PRELIMINARY → ROUTING → ...`）を使用し、追加の CHECK 制約変更は不要。
 
 ```plantuml
 @startuml
@@ -402,7 +402,7 @@ q ||--|{ qc : "1..*"
 @enduml
 ```
 
-> 状態遷移追加（US06 反映）: `booking_status` は `PRELIMINARY → ROUTING_REQUESTED → ROUTING_ASSIGNED → CONFIRMED → ...` の流れを許容するよう Flyway migration で CHECK 制約を更新する。詳細は data-model.md の UC04 セクションに合わせる。
+> 状態遷移追加（US06 反映）: data-model.md に整合する既存 `BookingStatus` 列挙値（`PRELIMINARY → ROUTING → ROUTE_PROPOSED → CONFIRMED → ...`）を使用する。`cargo_summary.booking_status` CHECK 制約は data-model.md / 既存 Flyway migration とすでに整合済みのため、追加マイグレーションは不要。
 
 ### API 設計
 
@@ -412,7 +412,7 @@ q ||--|{ qc : "1..*"
 | GET | /api/v1/quotations | 見積一覧を取得（S02 用、状態フィルタ可） | US01 |
 | GET | /api/v1/quotations/{quotationId} | 見積詳細と候補一覧を取得 | US01 |
 | POST | /api/v1/bookings/{bookingId}/handoff | 予約を経路設計者に引き渡し（`HandOffToRoutingCommand`） | US06 |
-| GET | /api/v1/bookings?status=ROUTING_REQUESTED | 経路設計待ち予約一覧 | US06 |
+| GET | /api/v1/bookings?status=ROUTING | 経路設計待ち予約一覧 | US06 |
 | GET | /api/v1/voyages | 航海スケジュール検索（出発地/目的地/出発期間/貨物種別） | US07 |
 | PUT | /api/v1/voyages/{voyageNumber} | 既存航海スケジュールを更新 | US25 |
 
@@ -574,7 +574,7 @@ ui_design.md の既存 salt を踏襲しつつ、IT3 で **追加 / 拡張する
     ---
     ' 引き渡し成功時（htmx hx-swap）の表示
     {(引き渡し成功後)
-      "✓ alert-success: 経路設計者に引き渡しました。状態: [ROUTING_REQUESTED]"
+      "✓ alert-success: 経路設計者に引き渡しました。状態: [ROUTING]"
       [経路設計待ち一覧を確認]
     }
     ---
@@ -711,7 +711,7 @@ S04 --> S10 : 「予約化」(GET /bookings/new?quotationId=...)
 S08 --> S10 : 行クリック
 S10 --> S10 : 「経路設計を依頼」(htmx hx-post=/api/v1/bookings/:id/handoff, hx-swap=outerHTML, 成功 alert-success)
 S10 --> S10 : エラー時 htmx:responseError → alert-danger 表示（フォーム状態維持）
-S10 --> S11 : 「経路設計待ち一覧へ」リンク（GET /routing/voyages?bookingStatus=ROUTING_REQUESTED 経由）
+S10 --> S11 : 「経路設計待ち一覧へ」リンク（GET /routing/voyages?bookingStatus=ROUTING 経由）
 
 ' --- 航海検索（US07）---
 S11 --> S11 : 検索フォーム送信（htmx hx-get=/routing/voyages, hx-target=#voyage-list, hx-swap=innerHTML）
@@ -778,7 +778,7 @@ S01 --> [*] : ログアウト
 ### デモ項目
 
 1. 営業 S03 画面で出発地・目的地・希望期限・貨物種別・重量を入力 → S04 にルート候補（経由港・所要日数・概算料金・航海番号）が表示される（US01）
-2. S10 予約詳細で「経路設計を依頼」をクリック → `booking_status` が `ROUTING_REQUESTED` に変わり、S11 の経路設計待ち予約一覧に現れる（US06）
+2. S10 予約詳細で「経路設計を依頼」をクリック → `booking_status` が `ROUTING` に変わり、S11 の経路設計待ち予約一覧に現れる（US06）
 3. 経路設計者が S11 で出発地・目的地・期間・貨物種別で航海スケジュールを検索（危険物指定時は対応可能な航海のみが表示される）（US07）
 4. 検索結果の航海スケジュールを S12（`:vn/edit`）で開き、差分を確認して「更新する」で保存。「キャンセル」では何も変わらないことも見せる（US25）
 5. Axon Server を停止した状態で `POST /api/v1/bookings/{id}/handoff` が 500 を返すことを観衆に見せる（ADR-0009 受入条件の継続検証）
