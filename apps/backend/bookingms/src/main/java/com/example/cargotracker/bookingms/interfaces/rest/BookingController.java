@@ -61,19 +61,19 @@ public class BookingController {
         return ResponseEntity.ok(bookings);
     }
 
-    private BookingListResponse toListResponse(CargoSummaryRecord record) {
+    private BookingListResponse toListResponse(CargoSummaryRecord summary) {
         return new BookingListResponse(
-                record.getBookingId(),
-                record.getShipperId(),
-                record.getTrackingNumber(),
-                record.getCargoType(),
-                record.getProductName(),
-                record.getOriginUnlocode(),
-                record.getDestinationUnlocode(),
-                record.getArrivalDeadline(),
-                record.getBookingStatus(),
-                record.getRoutingStatus(),
-                record.getCreatedAt());
+                summary.getBookingId(),
+                summary.getShipperId(),
+                summary.getTrackingNumber(),
+                summary.getCargoType(),
+                summary.getProductName(),
+                summary.getOriginUnlocode(),
+                summary.getDestinationUnlocode(),
+                summary.getArrivalDeadline(),
+                summary.getBookingStatus(),
+                summary.getRoutingStatus(),
+                summary.getCreatedAt());
     }
 
     @PostMapping

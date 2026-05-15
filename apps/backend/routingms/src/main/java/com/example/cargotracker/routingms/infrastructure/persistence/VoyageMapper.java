@@ -4,7 +4,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
@@ -24,7 +23,7 @@ public interface VoyageMapper {
                 #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
             )
             """)
-    void insertVoyage(VoyageRecord record);
+    void insertVoyage(VoyageRecord entity);
 
     @Insert("""
             INSERT INTO carrier_movement (
@@ -35,7 +34,7 @@ public interface VoyageMapper {
                 #{departureTime}, #{arrivalTime}
             )
             """)
-    void insertCarrierMovement(CarrierMovementRecord record);
+    void insertCarrierMovement(CarrierMovementRecord entity);
 
     @Insert("""
             INSERT INTO voyage_accepted_cargo_type (voyage_number, cargo_type)
@@ -53,16 +52,14 @@ public interface VoyageMapper {
             FROM voyage
             ORDER BY departure_date DESC
             """)
-    @Results({
-            @Result(property = "voyageNumber", column = "voyage_number"),
-            @Result(property = "carrierCode", column = "carrier_code"),
-            @Result(property = "carrierName", column = "carrier_name"),
-            @Result(property = "shipName", column = "ship_name"),
-            @Result(property = "departureDate", column = "departure_date"),
-            @Result(property = "arrivalDate", column = "arrival_date"),
-            @Result(property = "originUnlocode", column = "origin_unlocode"),
-            @Result(property = "destinationUnlocode", column = "destination_unlocode"),
-            @Result(property = "status", column = "status")
-    })
+    @Result(property = "voyageNumber", column = "voyage_number")
+    @Result(property = "carrierCode", column = "carrier_code")
+    @Result(property = "carrierName", column = "carrier_name")
+    @Result(property = "shipName", column = "ship_name")
+    @Result(property = "departureDate", column = "departure_date")
+    @Result(property = "arrivalDate", column = "arrival_date")
+    @Result(property = "originUnlocode", column = "origin_unlocode")
+    @Result(property = "destinationUnlocode", column = "destination_unlocode")
+    @Result(property = "status", column = "status")
     List<VoyageRecord> findAll();
 }

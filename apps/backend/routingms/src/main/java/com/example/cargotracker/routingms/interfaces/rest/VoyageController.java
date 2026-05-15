@@ -52,17 +52,17 @@ public class VoyageController {
         return ResponseEntity.ok(voyages);
     }
 
-    private VoyageListResponse toListResponse(VoyageRecord record) {
+    private VoyageListResponse toListResponse(VoyageRecord entity) {
         return new VoyageListResponse(
-                record.getVoyageNumber(),
-                record.getCarrierCode(),
-                record.getCarrierName(),
-                record.getShipName(),
-                record.getOriginUnlocode(),
-                record.getDestinationUnlocode(),
-                record.getDepartureDate(),
-                record.getArrivalDate(),
-                record.getStatus());
+                entity.getVoyageNumber(),
+                entity.getCarrierCode(),
+                entity.getCarrierName(),
+                entity.getShipName(),
+                entity.getOriginUnlocode(),
+                entity.getDestinationUnlocode(),
+                entity.getDepartureDate(),
+                entity.getArrivalDate(),
+                entity.getStatus());
     }
 
     @PostMapping

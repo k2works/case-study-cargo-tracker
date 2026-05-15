@@ -91,14 +91,11 @@ class VoyageTest {
     @Test
     @DisplayName("Command の日付逆転（arrival <= departure）は拒否される")
     void 日付整合性違反は拒否() {
+        var carrier = new Carrier("MOL", "MOL");
+        var movements = List.of(new CarrierMovement(JPYOK, USLAX, DEPART, ARRIVE));
+        var cargoTypes = List.of(CargoType.GENERAL);
         assertThatThrownBy(() -> new RegisterVoyageCommand(
-                "V99",
-                new Carrier("MOL", "MOL"),
-                "Ship",
-                JPYOK, USLAX,
-                ARRIVE, DEPART, // 逆転
-                List.of(new CarrierMovement(JPYOK, USLAX, DEPART, ARRIVE)),
-                List.of(CargoType.GENERAL)))
+                "V99", carrier, "Ship", JPYOK, USLAX, ARRIVE, DEPART, movements, cargoTypes))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("arrivalDate");
     }
@@ -106,28 +103,22 @@ class VoyageTest {
     @Test
     @DisplayName("Command の origin == destination は拒否される")
     void 同一OriginDestinationは拒否() {
+        var carrier = new Carrier("MOL", "MOL");
+        var movements = List.of(new CarrierMovement(JPYOK, USLAX, DEPART, ARRIVE));
+        var cargoTypes = List.of(CargoType.GENERAL);
         assertThatThrownBy(() -> new RegisterVoyageCommand(
-                "V99",
-                new Carrier("MOL", "MOL"),
-                "Ship",
-                JPYOK, JPYOK,
-                DEPART, ARRIVE,
-                List.of(new CarrierMovement(JPYOK, USLAX, DEPART, ARRIVE)),
-                List.of(CargoType.GENERAL)))
+                "V99", carrier, "Ship", JPYOK, JPYOK, DEPART, ARRIVE, movements, cargoTypes))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("Command の carrierMovements が空は拒否される")
     void 寄港地空は拒否() {
+        var carrier = new Carrier("MOL", "MOL");
+        var emptyMovements = List.<CarrierMovement>of();
+        var cargoTypes = List.of(CargoType.GENERAL);
         assertThatThrownBy(() -> new RegisterVoyageCommand(
-                "V99",
-                new Carrier("MOL", "MOL"),
-                "Ship",
-                JPYOK, USLAX,
-                DEPART, ARRIVE,
-                List.of(),
-                List.of(CargoType.GENERAL)))
+                "V99", carrier, "Ship", JPYOK, USLAX, DEPART, ARRIVE, emptyMovements, cargoTypes))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -39,6 +39,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles({"local-h2", "springboot-integration-test"})
 @Transactional
 @DisplayName("BookingController 統合テスト")
+// 各 @Test は cargoType / hazardInfo / temperatureCondition の組合せをドキュメント的に
+// 示すため、@DisplayName 付きで個別ケースに分ける方針を採用（パラメータ化テストに統合
+// すると失敗時の追跡性と意図の伝達性が下がる）。
+@SuppressWarnings("java:S5976")
 class BookingControllerIntegrationTest {
 
     @Autowired
@@ -310,22 +314,22 @@ class BookingControllerIntegrationTest {
         Long shipperId = registerShipper();
 
         // Read Model に直接 INSERT（CommandGateway はモックのため Projection は走らない）
-        CargoSummaryRecord record = new CargoSummaryRecord();
-        record.setBookingId("test-booking-list-1");
-        record.setShipperId(shipperId);
-        record.setOriginUnlocode("JPYOK");
-        record.setDestinationUnlocode("USLAX");
-        record.setArrivalDeadline(LocalDate.of(2099, 12, 31));
-        record.setCargoType("GENERAL");
-        record.setWeightKg(BigDecimal.valueOf(100));
-        record.setLengthCm(100);
-        record.setWidthCm(50);
-        record.setHeightCm(30);
-        record.setQuantity(1);
-        record.setProductName("テスト貨物 A");
-        record.setBookingStatus("PRELIMINARY");
-        record.setRoutingStatus("NOT_ROUTED");
-        cargoSummaryMapper.insert(record);
+        CargoSummaryRecord summary = new CargoSummaryRecord();
+        summary.setBookingId("test-booking-list-1");
+        summary.setShipperId(shipperId);
+        summary.setOriginUnlocode("JPYOK");
+        summary.setDestinationUnlocode("USLAX");
+        summary.setArrivalDeadline(LocalDate.of(2099, 12, 31));
+        summary.setCargoType("GENERAL");
+        summary.setWeightKg(BigDecimal.valueOf(100));
+        summary.setLengthCm(100);
+        summary.setWidthCm(50);
+        summary.setHeightCm(30);
+        summary.setQuantity(1);
+        summary.setProductName("テスト貨物 A");
+        summary.setBookingStatus("PRELIMINARY");
+        summary.setRoutingStatus("NOT_ROUTED");
+        cargoSummaryMapper.insert(summary);
 
         mockMvc.perform(get("/api/v1/bookings"))
                 .andExpect(status().isOk())

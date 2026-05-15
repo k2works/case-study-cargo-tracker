@@ -37,7 +37,7 @@ public interface CargoSummaryMapper {
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
             )
             """)
-    void insert(CargoSummaryRecord record);
+    void insert(CargoSummaryRecord entity);
 
     @Select("""
             SELECT booking_id, shipper_id, tracking_number, origin_unlocode, destination_unlocode,

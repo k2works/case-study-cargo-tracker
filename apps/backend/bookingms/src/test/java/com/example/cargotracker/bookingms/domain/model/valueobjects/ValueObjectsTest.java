@@ -107,7 +107,8 @@ class ValueObjectsTest {
         @Test
         @DisplayName("負の金額は拒否")
         void 負の金額() {
-            assertThatThrownBy(() -> new Money(new BigDecimal("-1"), "JPY"))
+            var negativeAmount = new BigDecimal("-1");
+            assertThatThrownBy(() -> new Money(negativeAmount, "JPY"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -147,14 +148,18 @@ class ValueObjectsTest {
         @Test
         @DisplayName("min > max は拒否")
         void 逆転拒否() {
-            assertThatThrownBy(() -> new TemperatureCondition(new BigDecimal("10"), new BigDecimal("5")))
+            var min = new BigDecimal("10");
+            var max = new BigDecimal("5");
+            assertThatThrownBy(() -> new TemperatureCondition(min, max))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("min > max が僅差でも拒否（境界値）")
         void 逆転拒否境界値() {
-            assertThatThrownBy(() -> new TemperatureCondition(new BigDecimal("-17.99"), new BigDecimal("-18")))
+            var min = new BigDecimal("-17.99");
+            var max = new BigDecimal("-18");
+            assertThatThrownBy(() -> new TemperatureCondition(min, max))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -174,8 +179,9 @@ class ValueObjectsTest {
         @Test
         @DisplayName("HAZARDOUS で HazardInfo なしは拒否")
         void hazardousは申告必須() {
+            var weight = new BigDecimal("100");
             assertThatThrownBy(() -> new CargoSpecification(
-                    CargoType.HAZARDOUS, new BigDecimal("100"), dim, 1, "燃料",
+                    CargoType.HAZARDOUS, weight, dim, 1, "燃料",
                     null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("HazardInfo");
@@ -184,8 +190,9 @@ class ValueObjectsTest {
         @Test
         @DisplayName("REFRIGERATED で TemperatureCondition なしは拒否")
         void refrigeratedは温度必須() {
+            var weight = new BigDecimal("100");
             assertThatThrownBy(() -> new CargoSpecification(
-                    CargoType.REFRIGERATED, new BigDecimal("100"), dim, 1, "冷凍食品",
+                    CargoType.REFRIGERATED, weight, dim, 1, "冷凍食品",
                     null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("TemperatureCondition");
@@ -195,8 +202,9 @@ class ValueObjectsTest {
         @DisplayName("GENERAL で HazardInfo を設定すると拒否")
         void general整合性() {
             var hazard = new HazardInfo("3", "1170", "引火性液体");
+            var weight = new BigDecimal("100");
             assertThatThrownBy(() -> new CargoSpecification(
-                    CargoType.GENERAL, new BigDecimal("100"), dim, 1, "産業機械",
+                    CargoType.GENERAL, weight, dim, 1, "産業機械",
                     hazard, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -224,8 +232,9 @@ class ValueObjectsTest {
         @Test
         @DisplayName("origin と destination が同一は拒否")
         void 同一拒否() {
-            assertThatThrownBy(() -> new RouteSpecification(
-                    Location.of("JPYOK"), Location.of("JPYOK"), LocalDate.of(2026, 12, 31)))
+            var loc = Location.of("JPYOK");
+            var deadline = LocalDate.of(2026, 12, 31);
+            assertThatThrownBy(() -> new RouteSpecification(loc, loc, deadline))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

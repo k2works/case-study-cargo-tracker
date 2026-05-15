@@ -162,17 +162,17 @@ class VoyageControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/v1/voyages で航海スケジュール一覧を取得できる（200、voyage を投影）")
     void 航海一覧を取得できる() throws Exception {
-        VoyageRecord record = new VoyageRecord();
-        record.setVoyageNumber("V-LIST-001");
-        record.setCarrierCode("MOL");
-        record.setCarrierName("Mitsui O.S.K. Lines");
-        record.setShipName("Yokohama Express");
-        record.setDepartureDate(LocalDateTime.of(2026, 7, 1, 9, 0));
-        record.setArrivalDate(LocalDateTime.of(2026, 7, 15, 18, 0));
-        record.setOriginUnlocode("JPYOK");
-        record.setDestinationUnlocode("USLAX");
-        record.setStatus("SCHEDULED");
-        voyageMapper.insertVoyage(record);
+        VoyageRecord entity = new VoyageRecord();
+        entity.setVoyageNumber("V-LIST-001");
+        entity.setCarrierCode("MOL");
+        entity.setCarrierName("Mitsui O.S.K. Lines");
+        entity.setShipName("Yokohama Express");
+        entity.setDepartureDate(LocalDateTime.of(2026, 7, 1, 9, 0));
+        entity.setArrivalDate(LocalDateTime.of(2026, 7, 15, 18, 0));
+        entity.setOriginUnlocode("JPYOK");
+        entity.setDestinationUnlocode("USLAX");
+        entity.setStatus("SCHEDULED");
+        voyageMapper.insertVoyage(entity);
 
         mockMvc.perform(get("/api/v1/voyages"))
                 .andExpect(status().isOk())

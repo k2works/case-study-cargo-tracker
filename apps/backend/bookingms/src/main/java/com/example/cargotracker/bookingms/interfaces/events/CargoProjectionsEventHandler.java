@@ -39,40 +39,40 @@ public class CargoProjectionsEventHandler {
     @EventHandler
     @Transactional
     public void on(CargoBookedEvent event) {
-        var record = new CargoSummaryRecord();
-        record.setBookingId(event.bookingId());
-        record.setShipperId(event.shipperId().value());
+        var summary = new CargoSummaryRecord();
+        summary.setBookingId(event.bookingId());
+        summary.setShipperId(event.shipperId().value());
 
         var spec = event.cargoSpec();
-        record.setCargoType(spec.cargoType().name());
-        record.setWeightKg(spec.weightKg());
-        record.setLengthCm(spec.dimensions().lengthCm());
-        record.setWidthCm(spec.dimensions().widthCm());
-        record.setHeightCm(spec.dimensions().heightCm());
-        record.setQuantity(spec.quantity());
-        record.setProductName(spec.productName());
+        summary.setCargoType(spec.cargoType().name());
+        summary.setWeightKg(spec.weightKg());
+        summary.setLengthCm(spec.dimensions().lengthCm());
+        summary.setWidthCm(spec.dimensions().widthCm());
+        summary.setHeightCm(spec.dimensions().heightCm());
+        summary.setQuantity(spec.quantity());
+        summary.setProductName(spec.productName());
 
         // 危険物・冷凍貨物の付加情報（US05 でも利用）
         HazardInfo hazard = spec.hazardInfo();
         if (hazard != null) {
-            record.setHazardImoClass(hazard.imoClass());
-            record.setHazardUnNumber(hazard.unNumber());
-            record.setHazardDeclaration(hazard.declaration());
+            summary.setHazardImoClass(hazard.imoClass());
+            summary.setHazardUnNumber(hazard.unNumber());
+            summary.setHazardDeclaration(hazard.declaration());
         }
         TemperatureCondition temp = spec.temperatureCondition();
         if (temp != null) {
-            record.setTemperatureMinC(temp.minCelsius());
-            record.setTemperatureMaxC(temp.maxCelsius());
+            summary.setTemperatureMinC(temp.minCelsius());
+            summary.setTemperatureMaxC(temp.maxCelsius());
         }
 
         var route = event.routeSpec();
-        record.setOriginUnlocode(route.origin().unLocode().value());
-        record.setDestinationUnlocode(route.destination().unLocode().value());
-        record.setArrivalDeadline(route.arrivalDeadline());
+        summary.setOriginUnlocode(route.origin().unLocode().value());
+        summary.setDestinationUnlocode(route.destination().unLocode().value());
+        summary.setArrivalDeadline(route.arrivalDeadline());
 
-        record.setBookingStatus(BookingStatus.PRELIMINARY.name());
-        record.setRoutingStatus(RoutingStatus.NOT_ROUTED.name());
+        summary.setBookingStatus(BookingStatus.PRELIMINARY.name());
+        summary.setRoutingStatus(RoutingStatus.NOT_ROUTED.name());
 
-        cargoSummaryMapper.insert(record);
+        cargoSummaryMapper.insert(summary);
     }
 }

@@ -18,13 +18,13 @@ public class MyBatisUserSessionRepository implements UserSessionRepository {
 
     @Override
     public void save(UserSession session) {
-        var record = new UserSessionRecord();
-        record.setJti(session.jti());
-        record.setUserId(session.userId().value());
-        record.setIssuedAt(session.issuedAt());
-        record.setExpiresAt(session.expiresAt());
-        record.setRevoked(session.isRevoked());
-        mapper.insert(record);
+        var entity = new UserSessionRecord();
+        entity.setJti(session.jti());
+        entity.setUserId(session.userId().value());
+        entity.setIssuedAt(session.issuedAt());
+        entity.setExpiresAt(session.expiresAt());
+        entity.setRevoked(session.isRevoked());
+        mapper.insert(entity);
     }
 
     @Override
@@ -47,12 +47,12 @@ public class MyBatisUserSessionRepository implements UserSessionRepository {
                 .orElse(false);
     }
 
-    private UserSession toDomain(UserSessionRecord record) {
+    private UserSession toDomain(UserSessionRecord entity) {
         return UserSession.reconstruct(
-                record.getJti(),
-                new UserId(record.getUserId()),
-                record.getIssuedAt(),
-                record.getExpiresAt(),
-                record.isRevoked());
+                entity.getJti(),
+                new UserId(entity.getUserId()),
+                entity.getIssuedAt(),
+                entity.getExpiresAt(),
+                entity.isRevoked());
     }
 }

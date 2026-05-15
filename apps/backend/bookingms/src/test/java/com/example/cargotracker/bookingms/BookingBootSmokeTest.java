@@ -2,8 +2,12 @@ package com.example.cargotracker.bookingms;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * bootRun と同じ Bean 構成で ApplicationContext が起動できることを確認するスモークテスト。
@@ -20,9 +24,13 @@ import org.springframework.test.context.ActiveProfiles;
 @DisplayName("BookingApplication bootRun スモークテスト")
 class BookingBootSmokeTest {
 
+    @Autowired
+    private ApplicationContext context;
+
     @Test
     @DisplayName("bootRun と同じ Bean 構成で ApplicationContext が起動する")
     void bootRun構成でContextが起動する() {
-        // Context が起動できれば成功。
+        assertThat(context).isNotNull();
+        assertThat(context.getId()).isNotNull();
     }
 }

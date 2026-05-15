@@ -11,7 +11,7 @@ public interface UserSessionMapper {
             INSERT INTO user_sessions (jti, user_id, issued_at, expires_at, revoked)
             VALUES (#{jti}, #{userId}, #{issuedAt}, #{expiresAt}, #{revoked})
             """)
-    void insert(UserSessionRecord record);
+    void insert(UserSessionRecord entity);
 
     @Select("SELECT jti, user_id, issued_at, expires_at, revoked FROM user_sessions WHERE jti = #{jti}")
     @Result(property = "userId", column = "user_id")

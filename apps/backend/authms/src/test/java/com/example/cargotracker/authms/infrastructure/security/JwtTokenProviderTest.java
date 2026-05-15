@@ -51,9 +51,8 @@ class JwtTokenProviderTest {
     void トークンにjtiが含まれる() {
         String token = provider.generateToken("alice");
         String jti = provider.getJtiFromToken(token);
-        assertThat(jti).isNotBlank();
-        // UUID は 36 文字（ハイフン込み）
-        assertThat(jti).hasSize(36);
+        // 連続した assertion を 1 つに結合（UUID は 36 文字、ハイフン込み）
+        assertThat(jti).isNotBlank().hasSize(36);
     }
 
     @Test
