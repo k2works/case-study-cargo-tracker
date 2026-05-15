@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router'
 import { useRegisterVoyage } from '../hooks/useVoyages'
 import type { CargoType, Movement, RegisterVoyageRequest } from '../types/voyage'
 
+// React の key として配列 index を使うと並び替え時に再マウントが正しく行えないため、
+// 各 movement に UI ローカルの安定 ID を付与する（API には送らない）。
+type FormMovement = Movement & { _id: string }
+
 interface FormState {
   voyageNumber: string
   carrierCode: string
@@ -12,16 +16,20 @@ interface FormState {
   destinationUnLocode: string
   departureDate: string
   arrivalDate: string
-  movements: Movement[]
+  movements: FormMovement[]
   acceptedCargoTypes: Set<CargoType>
 }
 
-const EMPTY_MOVEMENT: Movement = {
+// UI ローカル用の安定 ID。crypto.randomUUID() は Node 19+ / 全モダンブラウザで標準。
+const newMovementId = (): string => crypto.randomUUID()
+
+const createEmptyMovement = (): FormMovement => ({
+  _id: newMovementId(),
   departureUnLocode: '',
   arrivalUnLocode: '',
   departureTime: '',
   arrivalTime: '',
-}
+})
 
 const INITIAL_STATE: FormState = {
   voyageNumber: '',
@@ -32,7 +40,7 @@ const INITIAL_STATE: FormState = {
   destinationUnLocode: '',
   departureDate: '',
   arrivalDate: '',
-  movements: [{ ...EMPTY_MOVEMENT }],
+  movements: [createEmptyMovement()],
   acceptedCargoTypes: new Set<CargoType>(['GENERAL']),
 }
 
@@ -55,7 +63,7 @@ export function VoyageForm() {
   }
 
   const addMovement = () => {
-    setForm({ ...form, movements: [...form.movements, { ...EMPTY_MOVEMENT }] })
+    setForm({ ...form, movements: [...form.movements, createEmptyMovement()] })
   }
 
   const removeMovement = (index: number) => {
@@ -84,10 +92,20 @@ export function VoyageForm() {
       destinationUnLocode: form.destinationUnLocode,
       departureDate: form.departureDate,
       arrivalDate: form.arrivalDate,
-      carrierMovements: form.movements,
+      // UI ローカルの _id は API へ送らないため除外
+      carrierMovements: form.movements.map((m): Movement => ({
+        departureUnLocode: m.departureUnLocode,
+        arrivalUnLocode: m.arrivalUnLocode,
+        departureTime: m.departureTime,
+        arrivalTime: m.arrivalTime,
+      })),
       acceptedCargoTypes: Array.from(form.acceptedCargoTypes),
     }
-    register.mutate(request, { onSuccess: () => navigate('/routing/voyages') })
+    register.mutate(request, {
+      onSuccess: () => {
+        navigate('/routing/voyages')
+      },
+    })
   }
 
   return (
@@ -231,7 +249,7 @@ export function VoyageForm() {
       <fieldset className="space-y-3 border border-gray-200 rounded-md p-3">
         <legend className="text-sm font-medium text-gray-700 px-1">寄港地</legend>
         {form.movements.map((m, index) => (
-          <div key={index} className="space-y-2 border-b border-gray-100 pb-3 last:border-b-0">
+          <div key={m._id} className="space-y-2 border-b border-gray-100 pb-3 last:border-b-0">
             <div className="flex gap-2">
               <div className="flex-1">
                 <label

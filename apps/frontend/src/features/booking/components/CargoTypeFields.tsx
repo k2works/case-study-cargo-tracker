@@ -1,11 +1,11 @@
 import type { CargoType, HazardInfo, TemperatureCondition } from '../types/booking'
 
 interface CargoTypeFieldsProps {
-  cargoType: CargoType
-  hazardInfo?: HazardInfo
-  temperatureCondition?: TemperatureCondition
-  onHazardChange: (value: HazardInfo) => void
-  onTemperatureChange: (value: TemperatureCondition) => void
+  readonly cargoType: CargoType
+  readonly hazardInfo?: HazardInfo
+  readonly temperatureCondition?: TemperatureCondition
+  readonly onHazardChange: (value: HazardInfo) => void
+  readonly onTemperatureChange: (value: TemperatureCondition) => void
 }
 
 const EMPTY_HAZARD: HazardInfo = { imoClass: '', unNumber: '', declaration: '' }

@@ -66,7 +66,11 @@ export function BookingForm() {
         arrivalDeadline: form.arrivalDeadline,
       },
     }
-    book.mutate(request, { onSuccess: () => navigate('/bookings') })
+    book.mutate(request, {
+      onSuccess: () => {
+        navigate('/bookings')
+      },
+    })
   }
 
   return (
