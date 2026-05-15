@@ -366,7 +366,7 @@ gantt
 | Spring Boot 4 / Axon Framework 5 未成熟 | 高 | 中 | Spring Boot 3.3 LTS へのフォールバック計画を維持 |
 | 経路候補算出アルゴリズム（US08）の複雑度 | 高 | 高 | IT3 で先行スパイク（PoC）を実施し IT4 に備える |
 | JWT 時限トークン実装（US18）のセキュリティ | 中 | 中 | OWASP JWT 実装ガイドラインに準拠し ADR に記録 |
-| Axon Server 2026.0.0 互換性 | 中 | 低 | IT0 チェックリスト（tech_stack.md）で事前確認済み |
+| Axon Server 2026.0.0 互換性 | 中 | 低 | IT0 チェックリスト（tech_stack.md）で事前確認済み。ADR-0009（2026-05-15）で Axon Framework 5.1-RC2 + `axon-server-connector` 明示依存 + `AXONIQ_AXONSERVER_STANDALONE_DCB` を確定 |
 
 ### スケジュールリスク
 
@@ -394,7 +394,7 @@ gantt
 |---------------|---------|---------|--------|------|
 | IT1 | 16 | 14 | 88% | 完了 |
 | IT2 | 14 | 14 | 100% | 完了 |
-| IT3 | 16 | - | - | 未着手（US25 + IT2 持越し: PIT 75% / data-model.md 同期） |
+| IT3 | 16 | - | - | 計画策定済み・着手前（[iteration_plan-3.md](./iteration_plan-3.md)、ADR-0009 事前完了） |
 | IT4 | 25 | - | - | 未着手 |
 | IT5 | 11 | - | - | 未着手 |
 | IT6 | 5 | - | - | 未着手 |
@@ -405,6 +405,8 @@ gantt
 > IT2 計画 14 SP は新規 11 SP（US04+US05+US24）+ 持越し 3 SP（US00-r1/US00-r2/US-UI-r）の構成。US25 は IT3 へ繰越し（+3 SP）したため、合計が 103 → 106 SP に増加した。
 >
 > **IT2 完了（2026-05-15）**: 全 6 ストーリー（US00-r1/US00-r2/US-UI-r/US04/US05/US24）が受入条件達成。フロントエンド UI / Playwright E2E / SonarQube Quality Gate PASS / Heroku デプロイ動作確認まで完了。詳細は [iteration_report-2.md](./iteration_report-2.md) 参照。IT3 持越し: PIT 75% 主指標導入、data-model.md カラム同期。
+>
+> **IT3 着手前完了（2026-05-15）**: ADR-0009（[`axon-server-connector` 明示依存と pooled-streaming 復帰](../adr/0009-axon-server-connector-explicit-dependency.md)）を IT3 着手前に解消。`local-docker` プロファイルで Axon Server 経由の Command Bus が正しく動作し、Axon Server 停止時に POST が 500 で失敗することを smoke 検証済み。これにより IT2 retrospective「IT3 で注意すべきリスク 1（Subscribing → Pooled 切替の確定）」を IT3 ストーリー実装前に解決。IT3 計画 16 SP は据え置き。
 
 ### バーンダウンチャート
 
@@ -421,9 +423,13 @@ xychart-beta
 
 ## 次のステップ
 
-1. IT1 イテレーション計画の作成（`/planning-releases --iteration 1`）
-2. GitHub Project の作成と同期（`/syncing-github-project`）
-3. IT1 開発の開始（`/developing-backend`）
+1. IT3 開発の開始（`/developing-backend` で US25 → US01 → US06 → US07 の順）
+2. IT3 タスク 5.1 で PIT 75% 主指標導入（IT2 持越し）
+3. IT3 タスク 5.2-5.4 でドキュメント陳腐化解消（data-model.md / e2e README / 運用手順書 §7）
+4. IT3 タスク 6 で US04-r1 / US05-r1 / US24-r1（業務的入力検証）を GitHub Issue として起票
+5. IT3 タスク 7 で US08 経路候補算出の先行スパイク（4h タイムボックス）
+6. IT3 完了時に `/planning-releases --retrospective` と `/planning-releases --report` を実施
+7. IT4 計画前に IT1〜IT3 のベロシティ実績で配分を再評価
 
 ---
 
@@ -434,3 +440,4 @@ xychart-beta
 | 2026-05-13 | 初版作成 | AI Agent |
 | 2026-05-15 | IT2 中間進捗反映（実装中ステータス、実績スケジュール gantt 追加） | AI Agent（XP PM） |
 | 2026-05-15 | IT2 完了反映（実績 14 SP、達成率 100%、累計 28/106 SP 26%、バーンダウン実績線追加、実績 gantt を done に） | AI Agent（XP PM） |
+| 2026-05-15 | IT3 計画策定済みステータス反映、ADR-0009 事前完了を進捗・リスク・次のステップに反映 | AI Agent（XP PM） |
