@@ -8,12 +8,15 @@ import com.example.cargotracker.routingms.domain.model.valueobjects.UnLocode;
 import com.example.cargotracker.routingms.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.routingms.domain.model.valueobjects.VoyageStatus;
 import com.example.cargotracker.routingms.infrastructure.persistence.VoyageMapper;
+import com.example.cargotracker.routingms.infrastructure.persistence.VoyageRecord;
 import com.example.cargotracker.routingms.interfaces.rest.dto.RegisterVoyageRequest;
+import com.example.cargotracker.routingms.interfaces.rest.dto.VoyageListResponse;
 import com.example.cargotracker.routingms.interfaces.rest.dto.VoyageResponse;
 import jakarta.validation.Valid;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +42,27 @@ public class VoyageController {
     public VoyageController(CommandGateway commandGateway, VoyageMapper voyageMapper) {
         this.commandGateway = commandGateway;
         this.voyageMapper = voyageMapper;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<VoyageListResponse>> list() {
+        List<VoyageListResponse> voyages = voyageMapper.findAll().stream()
+                .map(this::toListResponse)
+                .toList();
+        return ResponseEntity.ok(voyages);
+    }
+
+    private VoyageListResponse toListResponse(VoyageRecord record) {
+        return new VoyageListResponse(
+                record.getVoyageNumber(),
+                record.getCarrierCode(),
+                record.getCarrierName(),
+                record.getShipName(),
+                record.getOriginUnlocode(),
+                record.getDestinationUnlocode(),
+                record.getDepartureDate(),
+                record.getArrivalDate(),
+                record.getStatus());
     }
 
     @PostMapping

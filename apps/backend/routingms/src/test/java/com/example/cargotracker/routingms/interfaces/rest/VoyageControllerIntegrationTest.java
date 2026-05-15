@@ -1,6 +1,8 @@
 package com.example.cargotracker.routingms.interfaces.rest;
 
 import com.example.cargotracker.routingms.domain.model.commands.RegisterVoyageCommand;
+import com.example.cargotracker.routingms.infrastructure.persistence.VoyageMapper;
+import com.example.cargotracker.routingms.infrastructure.persistence.VoyageRecord;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,10 +18,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,6 +46,9 @@ class VoyageControllerIntegrationTest {
 
     @MockitoBean
     private CommandGateway commandGateway;
+
+    @Autowired
+    private VoyageMapper voyageMapper;
 
     private MockMvc mockMvc;
 
@@ -149,6 +157,37 @@ class VoyageControllerIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/voyages で航海スケジュール一覧を取得できる（200、voyage を投影）")
+    void 航海一覧を取得できる() throws Exception {
+        VoyageRecord record = new VoyageRecord();
+        record.setVoyageNumber("V-LIST-001");
+        record.setCarrierCode("MOL");
+        record.setCarrierName("Mitsui O.S.K. Lines");
+        record.setShipName("Yokohama Express");
+        record.setDepartureDate(LocalDateTime.of(2026, 7, 1, 9, 0));
+        record.setArrivalDate(LocalDateTime.of(2026, 7, 15, 18, 0));
+        record.setOriginUnlocode("JPYOK");
+        record.setDestinationUnlocode("USLAX");
+        record.setStatus("SCHEDULED");
+        voyageMapper.insertVoyage(record);
+
+        mockMvc.perform(get("/api/v1/voyages"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-LIST-001')]").exists())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-LIST-001')].shipName")
+                        .value("Yokohama Express"))
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-LIST-001')].carrierCode")
+                        .value("MOL"))
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-LIST-001')].originUnLocode")
+                        .value("JPYOK"))
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-LIST-001')].destinationUnLocode")
+                        .value("USLAX"))
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-LIST-001')].status")
+                        .value("SCHEDULED"));
     }
 
     @Test

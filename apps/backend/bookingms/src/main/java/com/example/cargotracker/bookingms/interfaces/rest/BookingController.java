@@ -12,17 +12,22 @@ import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecifi
 import com.example.cargotracker.bookingms.domain.model.valueobjects.ShipperId;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.TemperatureCondition;
 import com.example.cargotracker.bookingms.domain.ports.ShipperRepository;
+import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryMapper;
+import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryRecord;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.BookCargoRequest;
+import com.example.cargotracker.bookingms.interfaces.rest.dto.BookingListResponse;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.BookingResponse;
 import jakarta.validation.Valid;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -38,10 +43,37 @@ public class BookingController {
 
     private final CommandGateway commandGateway;
     private final ShipperRepository shipperRepository;
+    private final CargoSummaryMapper cargoSummaryMapper;
 
-    public BookingController(CommandGateway commandGateway, ShipperRepository shipperRepository) {
+    public BookingController(CommandGateway commandGateway,
+                             ShipperRepository shipperRepository,
+                             CargoSummaryMapper cargoSummaryMapper) {
         this.commandGateway = commandGateway;
         this.shipperRepository = shipperRepository;
+        this.cargoSummaryMapper = cargoSummaryMapper;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<BookingListResponse>> list() {
+        List<BookingListResponse> bookings = cargoSummaryMapper.findAll().stream()
+                .map(this::toListResponse)
+                .toList();
+        return ResponseEntity.ok(bookings);
+    }
+
+    private BookingListResponse toListResponse(CargoSummaryRecord record) {
+        return new BookingListResponse(
+                record.getBookingId(),
+                record.getShipperId(),
+                record.getTrackingNumber(),
+                record.getCargoType(),
+                record.getProductName(),
+                record.getOriginUnlocode(),
+                record.getDestinationUnlocode(),
+                record.getArrivalDeadline(),
+                record.getBookingStatus(),
+                record.getRoutingStatus(),
+                record.getCreatedAt());
     }
 
     @PostMapping

@@ -1,6 +1,8 @@
 package com.example.cargotracker.bookingms.interfaces.rest;
 
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryMapper;
+import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryRecord;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,10 +18,14 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -40,6 +46,9 @@ class BookingControllerIntegrationTest {
 
     @MockitoBean
     private CommandGateway commandGateway;
+
+    @Autowired
+    private CargoSummaryMapper cargoSummaryMapper;
 
     private MockMvc mockMvc;
 
@@ -293,6 +302,45 @@ class BookingControllerIntegrationTest {
                                 }
                                 """.formatted(shipperId)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/bookings で予約一覧を取得できる（200、cargo_summary を投影）")
+    void 予約一覧を取得できる() throws Exception {
+        Long shipperId = registerShipper();
+
+        // Read Model に直接 INSERT（CommandGateway はモックのため Projection は走らない）
+        CargoSummaryRecord record = new CargoSummaryRecord();
+        record.setBookingId("test-booking-list-1");
+        record.setShipperId(shipperId);
+        record.setOriginUnlocode("JPYOK");
+        record.setDestinationUnlocode("USLAX");
+        record.setArrivalDeadline(LocalDate.of(2099, 12, 31));
+        record.setCargoType("GENERAL");
+        record.setWeightKg(BigDecimal.valueOf(100));
+        record.setLengthCm(100);
+        record.setWidthCm(50);
+        record.setHeightCm(30);
+        record.setQuantity(1);
+        record.setProductName("テスト貨物 A");
+        record.setBookingStatus("PRELIMINARY");
+        record.setRoutingStatus("NOT_ROUTED");
+        cargoSummaryMapper.insert(record);
+
+        mockMvc.perform(get("/api/v1/bookings"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.bookingId == 'test-booking-list-1')]").exists())
+                .andExpect(jsonPath("$[?(@.bookingId == 'test-booking-list-1')].productName")
+                        .value("テスト貨物 A"))
+                .andExpect(jsonPath("$[?(@.bookingId == 'test-booking-list-1')].originUnLocode")
+                        .value("JPYOK"))
+                .andExpect(jsonPath("$[?(@.bookingId == 'test-booking-list-1')].destinationUnLocode")
+                        .value("USLAX"))
+                .andExpect(jsonPath("$[?(@.bookingId == 'test-booking-list-1')].cargoType")
+                        .value("GENERAL"))
+                .andExpect(jsonPath("$[?(@.bookingId == 'test-booking-list-1')].bookingStatus")
+                        .value("PRELIMINARY"));
     }
 
     @Test
