@@ -1,6 +1,8 @@
 package com.example.cargotracker.routingms.interfaces.rest;
 
 import com.example.cargotracker.routingms.domain.model.commands.RegisterVoyageCommand;
+import com.example.cargotracker.routingms.domain.model.commands.UpdateVoyageScheduleCommand;
+import com.example.cargotracker.routingms.infrastructure.persistence.CarrierMovementRecord;
 import com.example.cargotracker.routingms.infrastructure.persistence.VoyageMapper;
 import com.example.cargotracker.routingms.infrastructure.persistence.VoyageRecord;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -203,5 +206,151 @@ class VoyageControllerIntegrationTest {
         // 入らない（モック化された commandGateway は何もしない）。VoyageMapper.existsBy
         // を本テストでは確認できないため、別の Mapper Mock 戦略は IT3 で検討。
         // 本ケースは「コントローラの分岐は通る」確認のみ。
+    }
+
+    // ===== US25: 既存航海スケジュール更新 =====
+
+    private String validUpdateRequestJson() {
+        return """
+                {
+                    "departureDate": "2026-07-03T09:00:00",
+                    "arrivalDate": "2026-07-17T18:00:00",
+                    "carrierMovements": [
+                        {
+                            "departureUnLocode": "JPYOK",
+                            "arrivalUnLocode": "TWKHH",
+                            "departureTime": "2026-07-03T09:00:00",
+                            "arrivalTime": "2026-07-07T18:00:00"
+                        },
+                        {
+                            "departureUnLocode": "TWKHH",
+                            "arrivalUnLocode": "USLAX",
+                            "departureTime": "2026-07-08T09:00:00",
+                            "arrivalTime": "2026-07-17T18:00:00"
+                        }
+                    ],
+                    "acceptedCargoTypes": ["GENERAL", "HAZARDOUS"]
+                }
+                """;
+    }
+
+    private void seedVoyage(String voyageNumber) {
+        VoyageRecord entity = new VoyageRecord();
+        entity.setVoyageNumber(voyageNumber);
+        entity.setCarrierCode("MOL");
+        entity.setCarrierName("Mitsui O.S.K. Lines");
+        entity.setShipName("Yokohama Express");
+        entity.setDepartureDate(LocalDateTime.of(2026, 7, 1, 9, 0));
+        entity.setArrivalDate(LocalDateTime.of(2026, 7, 15, 18, 0));
+        entity.setOriginUnlocode("JPYOK");
+        entity.setDestinationUnlocode("USLAX");
+        entity.setStatus("SCHEDULED");
+        voyageMapper.insertVoyage(entity);
+
+        // 既存の carrier_movement も投入しておく（再投影テスト用）
+        var first = new CarrierMovementRecord();
+        first.setVoyageNumber(voyageNumber);
+        first.setMovementSeq(1);
+        first.setDepartureUnlocode("JPYOK");
+        first.setArrivalUnlocode("USLAX");
+        first.setDepartureTime(LocalDateTime.of(2026, 7, 1, 9, 0));
+        first.setArrivalTime(LocalDateTime.of(2026, 7, 15, 18, 0));
+        voyageMapper.insertCarrierMovement(first);
+        voyageMapper.insertAcceptedCargoType(voyageNumber, "GENERAL");
+    }
+
+    @Test
+    @DisplayName("US25: PUT で既存航海スケジュールを更新できる（200 + 更新後 Read Model）")
+    void 既存航海を更新できる() throws Exception {
+        seedVoyage("V-UPDATE-001");
+
+        mockMvc.perform(put("/api/v1/voyages/V-UPDATE-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validUpdateRequestJson()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.voyageNumber").value("V-UPDATE-001"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).sendAndWait(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(UpdateVoyageScheduleCommand.class);
+        UpdateVoyageScheduleCommand cmd = (UpdateVoyageScheduleCommand) captor.getValue();
+        assertThat(cmd.voyageNumber()).isEqualTo("V-UPDATE-001");
+        assertThat(cmd.departureDate()).isEqualTo(LocalDateTime.of(2026, 7, 3, 9, 0));
+        assertThat(cmd.arrivalDate()).isEqualTo(LocalDateTime.of(2026, 7, 17, 18, 0));
+        assertThat(cmd.carrierMovements()).hasSize(2);
+        assertThat(cmd.acceptedCargoTypes()).containsExactly(
+                com.example.cargotracker.routingms.domain.model.valueobjects.CargoType.GENERAL,
+                com.example.cargotracker.routingms.domain.model.valueobjects.CargoType.HAZARDOUS);
+    }
+
+    @Test
+    @DisplayName("US25: 存在しない voyage_number は 404 を返す")
+    void 存在しない航海更新は404() throws Exception {
+        mockMvc.perform(put("/api/v1/voyages/NOTFOUND")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validUpdateRequestJson()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("US25: 寄港地連続性違反は 400 を返す")
+    void 連続性違反は400() throws Exception {
+        seedVoyage("V-UPDATE-002");
+
+        // TWKHH → USLAX が抜けて JPYOK→TWKHH と USNYC→USLAX が連続しない
+        String disconnectedJson = """
+                {
+                    "departureDate": "2026-07-03T09:00:00",
+                    "arrivalDate": "2026-07-17T18:00:00",
+                    "carrierMovements": [
+                        {
+                            "departureUnLocode": "JPYOK",
+                            "arrivalUnLocode": "TWKHH",
+                            "departureTime": "2026-07-03T09:00:00",
+                            "arrivalTime": "2026-07-07T18:00:00"
+                        },
+                        {
+                            "departureUnLocode": "USNYC",
+                            "arrivalUnLocode": "USLAX",
+                            "departureTime": "2026-07-08T09:00:00",
+                            "arrivalTime": "2026-07-17T18:00:00"
+                        }
+                    ],
+                    "acceptedCargoTypes": ["GENERAL"]
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/voyages/V-UPDATE-002")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(disconnectedJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("連続性")));
+    }
+
+    @Test
+    @DisplayName("US25: 日付逆転は 400 を返す")
+    void 更新時_日付逆転で400() throws Exception {
+        seedVoyage("V-UPDATE-003");
+
+        String invertedJson = """
+                {
+                    "departureDate": "2026-07-17T18:00:00",
+                    "arrivalDate": "2026-07-03T09:00:00",
+                    "carrierMovements": [
+                        {
+                            "departureUnLocode": "JPYOK",
+                            "arrivalUnLocode": "USLAX",
+                            "departureTime": "2026-07-17T18:00:00",
+                            "arrivalTime": "2026-07-18T09:00:00"
+                        }
+                    ],
+                    "acceptedCargoTypes": ["GENERAL"]
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/voyages/V-UPDATE-003")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invertedJson))
+                .andExpect(status().isBadRequest());
     }
 }
