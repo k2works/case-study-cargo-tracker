@@ -3,6 +3,7 @@
 export const env = {
   authApiBaseUrl: import.meta.env.VITE_AUTH_API_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? '',
   bookingApiBaseUrl: import.meta.env.VITE_BOOKING_API_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? '',
+  routingApiBaseUrl: import.meta.env.VITE_ROUTING_API_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? '',
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,
 }

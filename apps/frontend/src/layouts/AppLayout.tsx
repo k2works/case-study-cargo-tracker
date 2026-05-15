@@ -2,14 +2,31 @@ import { Outlet, Link, useLocation } from 'react-router'
 import { useAuthStore } from '../stores/authStore'
 import { useLogout } from '../features/auth/hooks/useAuth'
 
-const NAV_ITEMS: Array<{ path: string; label: string }> = [
-  { path: '/shippers', label: '荷主管理' },
+interface NavItem {
+  path: string
+  label: string
+  roles: string[]
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { path: '/shippers', label: '荷主管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
+  { path: '/bookings', label: '予約管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
+  {
+    path: '/routing/voyages',
+    label: '航海スケジュール',
+    roles: ['ROLE_ADMIN', 'ROLE_ROUTING'],
+  },
 ]
+
+function visibleNavItems(userRoles: string[]): NavItem[] {
+  return NAV_ITEMS.filter((item) => item.roles.some((role) => userRoles.includes(role)))
+}
 
 export function AppLayout() {
   const user = useAuthStore((s) => s.user)
   const logout = useLogout()
   const location = useLocation()
+  const navItems = visibleNavItems(user?.roles ?? [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -20,7 +37,7 @@ export function AppLayout() {
               CargoTracker
             </Link>
             <nav className="flex gap-4">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}

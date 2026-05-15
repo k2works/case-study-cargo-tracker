@@ -54,5 +54,15 @@ export const bookingApiClient = {
     request<T>(env.bookingApiBaseUrl, path, { method: 'DELETE' }),
 }
 
+export const routingApiClient = {
+  get: <T>(path: string) => request<T>(env.routingApiBaseUrl, path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(env.routingApiBaseUrl, path, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(env.routingApiBaseUrl, path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T>(path: string) =>
+    request<T>(env.routingApiBaseUrl, path, { method: 'DELETE' }),
+}
+
 // 後方互換（認証系デフォルト）
 export const apiClient = authApiClient

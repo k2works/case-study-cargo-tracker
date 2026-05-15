@@ -5,6 +5,10 @@ import { AuthGuard } from './providers/AuthGuard'
 import { LoginPage } from './pages/LoginPage'
 import { ShipperListPage } from './pages/ShipperListPage'
 import { ShipperNewPage } from './pages/ShipperNewPage'
+import { BookingListPage } from './pages/BookingListPage'
+import { BookingNewPage } from './pages/BookingNewPage'
+import { VoyageListPage } from './pages/VoyageListPage'
+import { VoyageNewPage } from './pages/VoyageNewPage'
 
 export default function App() {
   return (
@@ -16,6 +20,10 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/shippers" element={<ShipperListPage />} />
           <Route path="/shippers/new" element={<ShipperNewPage />} />
+          <Route path="/bookings" element={<BookingListPage />} />
+          <Route path="/bookings/new" element={<BookingNewPage />} />
+          <Route path="/routing/voyages" element={<VoyageListPage />} />
+          <Route path="/routing/voyages/new" element={<VoyageNewPage />} />
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/login" replace />} />
