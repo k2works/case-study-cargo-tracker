@@ -19,9 +19,10 @@ dependencies {
     // MyBatis + JDBC
     implementation(libs.bundles.mybatis)
 
-    // Flyway
+    // Flyway（PostgreSQL ドライバはランタイムのみ。local-h2 では H2 を使うため不要）
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.flyway.core)
+    runtimeOnly(libs.flyway.database.postgresql)
 
     // OpenAPI / Swagger UI（/swagger-ui.html・/v3/api-docs を自動公開）
     implementation(libs.springdoc.openapi.starter.webmvc.ui)

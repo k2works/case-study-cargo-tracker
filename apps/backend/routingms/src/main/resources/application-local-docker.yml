@@ -1,0 +1,27 @@
+# ローカル開発：PostgreSQL + Axon Server（docker compose）
+#
+# 用途: docker compose up でフル起動した状態での結合確認。
+# シークレットは docker-compose.yml が .env から注入する。
+#
+# local-h2 と異なり Axon Server に接続できるため、PooledStreamingEventProcessor が
+# 利用可能（Event Store からトークン経由で読む）。Read Model 投影は本来モードである
+# pooled-streaming に戻る（local-h2 の subscribing 上書きは local-h2 プロファイル限定）。
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/routing_read_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+axon:
+  axonserver:
+    servers: ${AXON_AXONSERVER_SERVERS:localhost:8124}
+  eventhandling:
+    processors:
+      # IT2 暫定: PooledStreamingEventProcessor の JDBC token store 初期化が
+      # 整っていない（TokenEntry テーブル未作成）ため subscribing モードで運用。
+      # IT3 で Axon Server token store 連携または Flyway で TokenEntry を作成して
+      # pooled-streaming に戻す（ADR-0008 参照）。
+      "[com.example.cargotracker.routingms.interfaces.events]":
+        mode: subscribing

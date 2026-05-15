@@ -13,7 +13,10 @@ set -u
 function create_user_and_database() {
   local database=$1
   echo "  Creating database '$database'"
-  psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+  # psql のデフォルト接続先 DB は user 名と同じ DB だが、本コンテナでは
+  # POSTGRES_USER=cargo / POSTGRES_DB=postgres と分離しているため、
+  # 接続先 DB を明示する必要がある（明示しないと "cargo" DB を探して FATAL）。
+  psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "${POSTGRES_DB:-postgres}" <<-EOSQL
     CREATE DATABASE $database;
     GRANT ALL PRIVILEGES ON DATABASE $database TO $POSTGRES_USER;
 EOSQL

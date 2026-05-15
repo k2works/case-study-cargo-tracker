@@ -15,10 +15,16 @@ FROM gradle:9.5.0-jdk25 AS builder
 
 WORKDIR /workspace
 
-# バージョンカタログ + ビルドスクリプトを先にコピーして依存解決をキャッシュ
+# settings.gradle.kts が全サブプロジェクトを include しているため、
+# build 対象外のサブプロジェクトも build.gradle.kts ファイル（とディレクトリ）が必要。
+# config/ は subprojects { checkstyle / spotbugs } から rootProject.file で参照される。
 COPY gradle/ gradle/
+COPY config/ config/
 COPY settings.gradle.kts build.gradle.kts ./
+COPY authms/build.gradle.kts authms/build.gradle.kts
 COPY bookingms/build.gradle.kts bookingms/build.gradle.kts
+COPY routingms/build.gradle.kts routingms/build.gradle.kts
+COPY gatewayms/build.gradle.kts gatewayms/build.gradle.kts
 
 # 依存解決のみ先行（ソース変更時のキャッシュ効率化）
 RUN gradle :bookingms:dependencies --no-daemon || true

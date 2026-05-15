@@ -13,3 +13,8 @@ spring:
 axon:
   axonserver:
     servers: ${AXON_AXONSERVER_SERVERS:localhost:8124}
+  eventhandling:
+    processors:
+      # IT2 暫定: routingms 側と同じく subscribing モードで運用（ADR-0008 参照）。
+      "[com.example.cargotracker.bookingms.interfaces.events]":
+        mode: subscribing

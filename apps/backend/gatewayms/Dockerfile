@@ -1,11 +1,11 @@
-# authms コンテナイメージ
+# gatewayms コンテナイメージ
 #
 # マルチステージビルド:
 #   1. builder: Gradle で bootJar を生成
 #   2. runtime: Eclipse Temurin JRE 25 で軽量実行
 #
 # 非 root ユーザーで起動し、最小権限の原則に従う。
-# レジストリ: GHCR（ghcr.io/<org>/cargo-tracker-authms）
+# レジストリ: GHCR（ghcr.io/<org>/cargo-tracker-gatewayms）
 # 参照: ADR-0003
 
 # ===== Stage 1: builder =====
@@ -24,12 +24,12 @@ COPY bookingms/build.gradle.kts bookingms/build.gradle.kts
 COPY routingms/build.gradle.kts routingms/build.gradle.kts
 COPY gatewayms/build.gradle.kts gatewayms/build.gradle.kts
 
-# 依存解決のみ先行（ソース変更時のキャッシュ効率化）
-RUN gradle :authms:dependencies --no-daemon || true
+# 依存解決のみ先行
+RUN gradle :gatewayms:dependencies --no-daemon || true
 
 # ソースコードをコピーしてビルド
-COPY authms/src/ authms/src/
-RUN gradle :authms:bootJar --no-daemon -x test
+COPY gatewayms/src/ gatewayms/src/
+RUN gradle :gatewayms:bootJar --no-daemon -x test
 
 # ===== Stage 2: runtime =====
 FROM eclipse-temurin:25-jre
@@ -40,15 +40,15 @@ RUN groupadd --system --gid 10001 cargo \
 
 WORKDIR /app
 
-COPY --from=builder /workspace/authms/build/libs/authms.jar /app/authms.jar
+COPY --from=builder /workspace/gatewayms/build/libs/gatewayms.jar /app/gatewayms.jar
 
 USER cargo
 
-EXPOSE 8081
+EXPOSE 8080
 
 ENV JAVA_OPTS=""
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/authms.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/gatewayms.jar"]
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
-    CMD wget --spider -q http://localhost:8081/actuator/health/liveness || exit 1
+    CMD wget --spider -q http://localhost:8080/actuator/health/liveness || exit 1
