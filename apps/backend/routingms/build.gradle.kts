@@ -6,6 +6,7 @@
 plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.pitest)
     jacoco
 }
 
@@ -58,4 +59,26 @@ tasks.jacocoTestReport {
         xml.required.set(true)
         html.required.set(true)
     }
+}
+
+// PIT 変異テスト設定（ADR / test_strategy.md L334 のドメイン層主指標 75%）
+// IT3 タスク 5.1：計測のみを必須とし、CI ブロックは IT4 以降で検討
+pitest {
+    junit5PluginVersion.set(libs.versions.pitest.junit5.get())
+    targetClasses.set(listOf(
+        "com.example.cargotracker.routingms.domain.*"
+    ))
+    targetTests.set(listOf(
+        "com.example.cargotracker.routingms.domain.*"
+    ))
+    excludedClasses.set(listOf(
+        "com.example.cargotracker.routingms.domain.model.commands.*",
+        "com.example.cargotracker.routingms.domain.model.events.*"
+    ))
+    threads.set(4)
+    outputFormats.set(listOf("HTML", "XML"))
+    timestampedReports.set(false)
+    mutationThreshold.set(0)            // IT3 は計測のみ
+    coverageThreshold.set(0)
+    timeoutFactor.set(2.0.toBigDecimal())
 }

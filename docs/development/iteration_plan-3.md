@@ -190,7 +190,7 @@ date: 2026-05-15T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | PIT プラグイン導入（Backend gradle） + CI 統合（T3 反映） | 4h | AI | [ ] |
+| 5.1 | PIT プラグイン導入（Backend gradle） + CI 統合（T3 反映） | 4h | AI | [x] 完了（bookingms 78% / routingms 58%、目標 75% は bookingms で達成、routingms は US25 実装で改善見込み） |
 | 5.2 | `data-model.md` に `users.lock_until` / `users.failed_attempts` 反映 | 1h | AI | [ ] |
 | 5.3 | `apps/frontend/e2e/README.md` の「IT3 で予定」削除 + 現状反映 | 1h | AI | [ ] |
 | 5.4 | 運用手順書 §7 の「Phase 0」削除 + IT2 構成反映 | 1h | AI | [ ] |
