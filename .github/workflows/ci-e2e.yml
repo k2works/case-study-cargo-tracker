@@ -2,8 +2,8 @@ name: CI - E2E
 
 # US-UI-r で導入した Playwright E2E をリモート実行する。
 # local-h2 プロファイル前提（H2 インメモリ DB、Axon Server 不要）で
-# authms / bookingms / gatewayms を bootJar 起動し、フロントエンドの
-# Vite dev サーバーは Playwright の webServer で自動起動する。
+# authms / bookingms / routingms / gatewayms を bootJar 起動し、
+# フロントエンドの Vite dev サーバーは Playwright の webServer で自動起動する。
 
 on:
   push:
@@ -58,7 +58,7 @@ jobs:
 
       - name: Build backend bootJars
         working-directory: apps/backend
-        run: ./gradlew :authms:bootJar :bookingms:bootJar :gatewayms:bootJar --no-daemon
+        run: ./gradlew :authms:bootJar :bookingms:bootJar :routingms:bootJar :gatewayms:bootJar --no-daemon
 
       - name: Install frontend dependencies
         working-directory: apps/frontend
@@ -85,9 +85,15 @@ jobs:
             > logs/bookingms.log 2>&1 &
           echo $! > logs/bookingms.pid
 
+          # routingms (8083) - 同上
+          nohup java -jar apps/backend/routingms/build/libs/routingms.jar \
+            > logs/routingms.log 2>&1 &
+          echo $! > logs/routingms.pid
+
           # gatewayms (8080) - 環境変数で内部ルーティング先を上書き
           AUTHMS_URL=http://localhost:8081 \
           BOOKINGMS_URL=http://localhost:8082 \
+          ROUTINGMS_URL=http://localhost:8083 \
           nohup java -jar apps/backend/gatewayms/build/libs/gatewayms.jar \
             > logs/gatewayms.log 2>&1 &
           echo $! > logs/gatewayms.pid
@@ -98,6 +104,7 @@ jobs:
           for endpoint in \
             "authms http://localhost:8081/actuator/health" \
             "bookingms http://localhost:8082/actuator/health" \
+            "routingms http://localhost:8083/actuator/health" \
             "gatewayms http://localhost:8080/actuator/health"; do
             name=${endpoint%% *}
             url=${endpoint##* }
@@ -153,8 +160,8 @@ jobs:
             echo ""
             echo "| 項目 | 値 |"
             echo "|------|-----|"
-            echo "| Backend ビルド | bootJar (authms / bookingms / gatewayms) |"
+            echo "| Backend ビルド | bootJar (authms / bookingms / routingms / gatewayms) |"
             echo "| プロファイル | local-h2 (H2 + Axon ダミー) |"
             echo "| ブラウザ | Chromium |"
-            echo "| シナリオ | login-shipper.spec.ts |"
+            echo "| シナリオ | login-shipper / login-booking / login-voyage |"
           } >> "$GITHUB_STEP_SUMMARY"
