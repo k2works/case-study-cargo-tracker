@@ -1,6 +1,7 @@
 package com.example.cargotracker.bookingms.domain.model.events;
 
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Money;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.QuotationStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteCandidate;
@@ -25,6 +26,7 @@ public record QuotationCreatedEvent(
         RouteSpecification routeSpec,
         CargoType cargoType,
         BigDecimal weightKg,
+        HazardInfo hazardInfo,
         Money estimatedAmount,
         List<RouteCandidate> candidates,
         LocalDate validUntil,

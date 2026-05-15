@@ -155,10 +155,10 @@ date: 2026-05-15T00:00:00.000Z
 | 2.1 | `Quotation` 集約と関連 VO（`QuotationId` / `RouteRequirement` / `EstimatedAmount` / `EstimatedDays`）実装 | 3h | AI | [x] 完了（QuotationId / QuotationStatus / RouteCandidate 新規。Money / RouteSpecification 既存を再利用） |
 | 2.2 | `CreateQuotationCommand` / `QuotationCreatedEvent` と料金・所要日数算出ロジック実装（domain-model.md L1202） | 4h | AI | [x] 完了（重量×単価×貨物種別係数。IT3 は直行ルート仮実装、IT4 で routingms 連携。Mockito ベース TDD 6 ケース） |
 | 2.3 | `quotation` / `quotation_candidate` テーブル Flyway migration（data-model.md L350 / L368 既存定義に準拠） | 1h | AI | [x] 完了（V004__create_quotation.sql。shipper_id は BIGINT で cargo_summary と整合） |
-| 2.4 | `POST /api/v1/quotations` / `GET /api/v1/quotations/{quotationId}` 実装 | 3h | AI | [ ] |
+| 2.4 | `POST /api/v1/quotations` / `GET /api/v1/quotations/{quotationId}` 実装 | 3h | AI | [x] 完了（QuotationController + QuotationProjectionsEventHandler + Mapper + DTO。受入条件 6 を満たすため Event に HazardInfo を追加） |
 | 2.5 | フロント S03 見積作成（フォーム）と S04 見積詳細（シングルビュー）を実装 | 4h | AI | [ ] |
-| 2.6 | ユニットテスト（境界値・危険物含む条件・期限内ルート不在パターン） | 3h | AI | [ ] |
-| 2.7 | 統合テスト（S03 入力 → S04 詳細 → 予約化導線 S08/S09） | 2h | AI | [ ] |
+| 2.6 | ユニットテスト（境界値・危険物含む条件・期限内ルート不在パターン） | 3h | AI | [x] 完了（QuotationTest 6 ケース: 一般・期限内なし・HAZARDOUS 係数・申告無し拒否・重量 0 拒否・Event 再生） |
+| 2.7 | 統合テスト（S03 入力 → S04 詳細 → 予約化導線 S08/S09） | 2h | AI | [x] 完了（QuotationControllerIntegrationTest 4 件: POST 正常 / 存在しない荷主 / 危険物申告無し / GET 詳細 / GET 404） |
 
 **小計**: 20h
 

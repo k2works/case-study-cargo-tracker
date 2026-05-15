@@ -145,6 +145,7 @@ class QuotationTest {
                 route,
                 CargoType.GENERAL,
                 new BigDecimal("100"),
+                null,
                 new Money(new BigDecimal("100000.00"), "JPY"),
                 java.util.List.of(),
                 LocalDate.now().plusDays(7),

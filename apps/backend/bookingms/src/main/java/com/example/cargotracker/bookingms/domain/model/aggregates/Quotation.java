@@ -3,6 +3,7 @@ package com.example.cargotracker.bookingms.domain.model.aggregates;
 import com.example.cargotracker.bookingms.domain.model.commands.CreateQuotationCommand;
 import com.example.cargotracker.bookingms.domain.model.events.QuotationCreatedEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Money;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.QuotationStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteCandidate;
@@ -56,6 +57,7 @@ public final class Quotation {
     private RouteSpecification routeSpec;
     private CargoType cargoType;
     private BigDecimal weightKg;
+    private HazardInfo hazardInfo;
     private Money estimatedAmount;
     private List<RouteCandidate> candidates = new ArrayList<>();
     private LocalDate validUntil;
@@ -94,6 +96,7 @@ public final class Quotation {
                 command.routeSpec(),
                 command.cargoType(),
                 command.weightKg(),
+                command.hazardInfo(),
                 baseAmount,
                 List.copyOf(candidates),
                 validUntil,
@@ -108,6 +111,7 @@ public final class Quotation {
         this.routeSpec = event.routeSpec();
         this.cargoType = event.cargoType();
         this.weightKg = event.weightKg();
+        this.hazardInfo = event.hazardInfo();
         this.estimatedAmount = event.estimatedAmount();
         this.candidates = new ArrayList<>(event.candidates());
         this.validUntil = event.validUntil();
@@ -180,6 +184,10 @@ public final class Quotation {
 
     public LocalDate getValidUntil() {
         return validUntil;
+    }
+
+    public HazardInfo getHazardInfo() {
+        return hazardInfo;
     }
 
     public QuotationStatus getStatus() {
