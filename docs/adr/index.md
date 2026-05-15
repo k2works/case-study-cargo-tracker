@@ -13,5 +13,6 @@
 | [ADR-0005](0005-shared-module-role.md) | shared モジュールは共有カーネルとして Location・UnLocode のみを提供する | 承認済み |
 | [ADR-0006](0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成を採用する | 承認済み |
 | [ADR-0007](0007-axon-5-event-sourcing-api.md) | Axon Framework 5.1 の Event Sourcing 採用と新アノテーション API への対応 | 承認済み |
+| [ADR-0008](0008-axon-5-spring-boot-integration-pattern.md) | Axon 5.1 Aggregate を Spring Boot 4 に統合する具体パターン（`@EventSourced` + `subscribing` モード） | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

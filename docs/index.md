@@ -20,7 +20,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、UI、テスト、非機能、運用、技術スタック | 10 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 7 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 8 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 4 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1 完了 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み（アプリ開発環境、開発環境）|
@@ -70,6 +70,7 @@
 | [ADR-0005](./adr/0005-shared-module-role.md) | shared モジュールは共有カーネルとして Location・UnLocode のみを提供する |
 | [ADR-0006](./adr/0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成 |
 | [ADR-0007](./adr/0007-axon-5-event-sourcing-api.md) | Axon Framework 5.1 の Event Sourcing 採用と新アノテーション API への対応 |
+| [ADR-0008](./adr/0008-axon-5-spring-boot-integration-pattern.md) | Axon 5.1 Aggregate を Spring Boot 4 に統合する具体パターン（`@EventSourced` + `subscribing` モード） |
 
 ### 運用ドキュメント
 
