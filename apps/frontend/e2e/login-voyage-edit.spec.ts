@@ -1,4 +1,51 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+
+const apiBaseURL = process.env.API_BASE_URL ?? 'http://localhost:8080'
+
+/**
+ * Voyage Read Model に対象航海が反映されるまで API レベルで待機する。
+ *
+ * UI レイヤの React Query キャッシュや表示遅延を経由しないため、
+ * Axon Server の PooledStreamingEventProcessor 初回ウォームアップ
+ * （Token claim + Projection）を確実に待てる。
+ */
+async function waitForVoyageInReadModel(
+  page: Page,
+  voyageNumber: string,
+  predicate: (v: VoyageListItem) => boolean = () => true,
+  timeoutMs = 60_000,
+): Promise<VoyageListItem> {
+  let lastSnapshot: VoyageListItem | undefined
+  await expect
+    .poll(
+      async () => {
+        const token = await page.evaluate(() => sessionStorage.getItem('cargo_tracker_token'))
+        const resp = await page.request.get(`${apiBaseURL}/api/v1/voyages`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!resp.ok()) return 'api-error'
+        const list = (await resp.json()) as VoyageListItem[]
+        const target = list.find((v) => v.voyageNumber === voyageNumber)
+        lastSnapshot = target
+        return target && predicate(target) ? 'ready' : 'not yet'
+      },
+      {
+        message: `Read Model で voyage_number=${voyageNumber} が条件を満たすこと`,
+        timeout: timeoutMs,
+        intervals: [500, 1_000, 2_000, 3_000, 5_000],
+      },
+    )
+    .toBe('ready')
+  return lastSnapshot!
+}
+
+interface VoyageListItem {
+  voyageNumber: string
+  departureDate: string
+  arrivalDate: string
+  shipName: string
+  status: string
+}
 
 /**
  * US25 フロントエンド E2E シナリオ。
@@ -57,19 +104,11 @@ test('US25: ログイン → 航海登録 → 編集 → 一覧で更新内容�
   await page.getByRole('button', { name: '登録する' }).click()
   await expect(page).toHaveURL(/\/routing\/voyages$/)
 
-  // Read Model 反映を待ってから「編集」リンクをクリックする。
-  // PooledStreamingEventProcessor の遅延吸収のため reload + poll で再試行。
-  await expect.poll(
-    async () => {
-      await page.reload()
-      return await page.getByTestId(`edit-link-${voyageNumber}`).count()
-    },
-    {
-      message: `編集リンク edit-link-${voyageNumber} が一覧に表示されること`,
-      timeout: 30_000,
-      intervals: [1_000, 2_000, 3_000],
-    },
-  ).toBeGreaterThan(0)
+  // Read Model 反映を API レベルで確実に待ってから UI を再ロード。
+  // 初回 Token claim を含むため最大 60s 許容。
+  await waitForVoyageInReadModel(page, voyageNumber)
+  await page.reload()
+  await expect(page.getByTestId(`edit-link-${voyageNumber}`)).toBeVisible()
 
   // 4. 該当航海の「編集」リンクをクリック
   await page.getByTestId(`edit-link-${voyageNumber}`).click()
@@ -96,20 +135,19 @@ test('US25: ログイン → 航海登録 → 編集 → 一覧で更新内容�
   // 8. 一覧に戻る
   await expect(page).toHaveURL(/\/routing\/voyages$/)
 
-  // 9. 更新後の出発日（2099-07-03 09:00）が一覧に反映されるまで poll で待つ。
-  //    Projection 反映後にようやく VoyageList の formatDateTime が新しい値を出力する。
-  await expect.poll(
-    async () => {
-      await page.reload()
-      const text = await page.textContent('body')
-      return text?.includes('2099-07-03 09:00') ? 'found' : 'not yet'
-    },
-    {
-      message: '更新後の出発日 2099-07-03 09:00 が一覧に反映されること',
-      timeout: 30_000,
-      intervals: [1_000, 2_000, 3_000],
-    },
-  ).toBe('found')
+  // 9. Read Model 反映を API レベルで確認（VoyageScheduleUpdatedEvent → voyage テーブル）
+  await waitForVoyageInReadModel(
+    page,
+    voyageNumber,
+    (v) => v.departureDate.startsWith('2099-07-03'),
+  )
+
+  // 10. 画面でも対象行に新しい出発日が表示されることを行スコープで検証
+  //     （日付テキストはテーブル全体で重複しうるので tr 単位に絞る）
+  await page.reload()
+  const updatedRow = page.locator('tr', { hasText: voyageNumber })
+  await expect(updatedRow).toBeVisible()
+  await expect(updatedRow).toContainText('2099-07-03 09:00')
 })
 
 test('US25 受入条件 5: 編集画面で「キャンセル」を押すと変更が破棄される', async ({ page }) => {
@@ -148,18 +186,10 @@ test('US25 受入条件 5: 編集画面で「キャンセル」を押すと変�
   await page.getByRole('button', { name: '登録する' }).click()
   await expect(page).toHaveURL(/\/routing\/voyages$/)
 
-  // Projection 反映を待つ（編集リンクをクリックする前提）
-  await expect.poll(
-    async () => {
-      await page.reload()
-      return await page.getByTestId(`edit-link-${voyageNumber}`).count()
-    },
-    {
-      message: `編集リンク edit-link-${voyageNumber} が一覧に表示されること`,
-      timeout: 30_000,
-      intervals: [1_000, 2_000, 3_000],
-    },
-  ).toBeGreaterThan(0)
+  // Read Model 反映を API レベルで確実に待ってから UI を再ロード
+  await waitForVoyageInReadModel(page, voyageNumber)
+  await page.reload()
+  await expect(page.getByTestId(`edit-link-${voyageNumber}`)).toBeVisible()
 
   // 2. 編集画面で日付を変更（送信せず）
   await page.getByTestId(`edit-link-${voyageNumber}`).click()
@@ -170,8 +200,10 @@ test('US25 受入条件 5: 編集画面で「キャンセル」を押すと変�
   await page.getByRole('button', { name: 'キャンセル' }).click()
   await expect(page).toHaveURL(/\/routing\/voyages$/)
 
-  // 4. 一覧には元の出発日（2099-08-01）が表示される（更新されていない）
+  // 4. 一覧には元の出発日（2099-08-01）が表示される（更新されていない）。
+  //    過去 run の残データと衝突しないよう、tr 行を voyage_number で絞り込む。
   await page.reload()
-  await expect(page.getByText(voyageNumber)).toBeVisible()
-  await expect(page.getByText('2099-08-01 09:00')).toBeVisible()
+  const cancelledRow = page.locator('tr', { hasText: voyageNumber })
+  await expect(cancelledRow).toBeVisible()
+  await expect(cancelledRow).toContainText('2099-08-01 09:00')
 })
