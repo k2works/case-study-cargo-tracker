@@ -81,4 +81,29 @@ public interface QuotationMapper {
     @Result(property = "itinerarySummary", column = "itinerary_summary")
     @Result(property = "voyageNumbers", column = "voyage_numbers")
     List<QuotationCandidateRecord> findCandidatesByQuotationId(@Param("quotationId") String quotationId);
+
+    /** S02 見積一覧用。作成日時の降順で全件返す（ページネーションは IT4 以降に検討）。 */
+    @Select("""
+            SELECT quotation_id, shipper_id, origin_unlocode, destination_unlocode,
+                   arrival_deadline, cargo_type, weight_kg,
+                   estimated_amount, estimated_currency, valid_until, status,
+                   hazard_imo_class, hazard_un_number, hazard_declaration
+              FROM quotation
+             ORDER BY created_at DESC
+            """)
+    @Result(property = "quotationId", column = "quotation_id")
+    @Result(property = "shipperId", column = "shipper_id")
+    @Result(property = "originUnlocode", column = "origin_unlocode")
+    @Result(property = "destinationUnlocode", column = "destination_unlocode")
+    @Result(property = "arrivalDeadline", column = "arrival_deadline")
+    @Result(property = "cargoType", column = "cargo_type")
+    @Result(property = "weightKg", column = "weight_kg")
+    @Result(property = "estimatedAmount", column = "estimated_amount")
+    @Result(property = "estimatedCurrency", column = "estimated_currency")
+    @Result(property = "validUntil", column = "valid_until")
+    @Result(property = "status", column = "status")
+    @Result(property = "hazardImoClass", column = "hazard_imo_class")
+    @Result(property = "hazardUnNumber", column = "hazard_un_number")
+    @Result(property = "hazardDeclaration", column = "hazard_declaration")
+    List<QuotationRecord> findAll();
 }

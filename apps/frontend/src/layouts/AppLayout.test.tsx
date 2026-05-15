@@ -28,15 +28,15 @@ describe('AppLayout ロール別メニュー', () => {
   it('ROLE_ADMIN は全てのメニュー項目を表示する', () => {
     renderWithRoles(['ROLE_ADMIN'])
     expect(screen.getByText('荷主管理')).toBeInTheDocument()
-    expect(screen.getByText('見積作成')).toBeInTheDocument()
+    expect(screen.getByText('見積一覧')).toBeInTheDocument()
     expect(screen.getByText('予約管理')).toBeInTheDocument()
     expect(screen.getByText('航海スケジュール')).toBeInTheDocument()
   })
 
-  it('ROLE_SALES は荷主管理・見積作成・予約管理を表示する', () => {
+  it('ROLE_SALES は荷主管理・見積一覧・予約管理を表示する', () => {
     renderWithRoles(['ROLE_SALES'])
     expect(screen.getByText('荷主管理')).toBeInTheDocument()
-    expect(screen.getByText('見積作成')).toBeInTheDocument()
+    expect(screen.getByText('見積一覧')).toBeInTheDocument()
     expect(screen.getByText('予約管理')).toBeInTheDocument()
     expect(screen.queryByText('航海スケジュール')).not.toBeInTheDocument()
   })
@@ -44,7 +44,7 @@ describe('AppLayout ロール別メニュー', () => {
   it('ROLE_ROUTING は航海スケジュールのみ表示する', () => {
     renderWithRoles(['ROLE_ROUTING'])
     expect(screen.queryByText('荷主管理')).not.toBeInTheDocument()
-    expect(screen.queryByText('見積作成')).not.toBeInTheDocument()
+    expect(screen.queryByText('見積一覧')).not.toBeInTheDocument()
     expect(screen.queryByText('予約管理')).not.toBeInTheDocument()
     expect(screen.getByText('航海スケジュール')).toBeInTheDocument()
   })
@@ -59,14 +59,14 @@ describe('AppLayout ロール別メニュー', () => {
   it('該当ロールがない場合、メニュー項目を表示しない', () => {
     renderWithRoles(['ROLE_HANDLING'])
     expect(screen.queryByText('荷主管理')).not.toBeInTheDocument()
-    expect(screen.queryByText('見積作成')).not.toBeInTheDocument()
+    expect(screen.queryByText('見積一覧')).not.toBeInTheDocument()
     expect(screen.queryByText('予約管理')).not.toBeInTheDocument()
     expect(screen.queryByText('航海スケジュール')).not.toBeInTheDocument()
   })
 
-  it('見積作成リンクは /quotations/new を指す', () => {
+  it('見積一覧リンクは /quotations を指す', () => {
     renderWithRoles(['ROLE_SALES'])
-    const link = screen.getByText('見積作成').closest('a')
-    expect(link).toHaveAttribute('href', '/quotations/new')
+    const link = screen.getByText('見積一覧').closest('a')
+    expect(link).toHaveAttribute('href', '/quotations')
   })
 })

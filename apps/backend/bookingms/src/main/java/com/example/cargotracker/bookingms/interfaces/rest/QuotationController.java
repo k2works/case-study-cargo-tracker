@@ -13,6 +13,7 @@ import com.example.cargotracker.bookingms.infrastructure.persistence.QuotationMa
 import com.example.cargotracker.bookingms.infrastructure.persistence.QuotationRecord;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.CreateQuotationRequest;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.CreateQuotationResponse;
+import com.example.cargotracker.bookingms.interfaces.rest.dto.QuotationListResponse;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.QuotationResponse;
 import jakarta.validation.Valid;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
@@ -90,6 +91,18 @@ public class QuotationController {
                 .body(new CreateQuotationResponse(quotationId.value(), "CREATED"));
     }
 
+    /**
+     * S02 見積一覧（US01）。作成日時の降順で返す。
+     * 受入条件 4: 見積番号と概算料金を一覧で確認可能。
+     */
+    @GetMapping
+    public ResponseEntity<List<QuotationListResponse>> list() {
+        List<QuotationListResponse> quotations = quotationMapper.findAll().stream()
+                .map(this::toListResponse)
+                .toList();
+        return ResponseEntity.ok(quotations);
+    }
+
     @GetMapping("/{quotationId}")
     public ResponseEntity<Object> getOne(@PathVariable String quotationId) {
         QuotationRecord quotation = quotationMapper.findByQuotationId(quotationId);
@@ -100,6 +113,21 @@ public class QuotationController {
         List<QuotationCandidateRecord> candidates =
                 quotationMapper.findCandidatesByQuotationId(quotationId);
         return ResponseEntity.ok(toResponse(quotation, candidates));
+    }
+
+    private QuotationListResponse toListResponse(QuotationRecord q) {
+        return new QuotationListResponse(
+                q.getQuotationId(),
+                q.getShipperId(),
+                q.getOriginUnlocode(),
+                q.getDestinationUnlocode(),
+                q.getArrivalDeadline(),
+                q.getCargoType(),
+                q.getWeightKg(),
+                q.getEstimatedAmount(),
+                q.getEstimatedCurrency(),
+                q.getValidUntil(),
+                q.getStatus());
     }
 
     private HazardInfo toHazardInfo(CreateQuotationRequest.HazardInfoDto dto) {

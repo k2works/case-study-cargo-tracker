@@ -53,8 +53,11 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
   const newShipper = shippers.find((s) => s.email === shipperEmail)
   expect(newShipper).toBeDefined()
 
-  // 4. ヘッダーの「見積作成」リンクをクリック
-  await page.getByRole('link', { name: '見積作成' }).click()
+  // 4. ヘッダーの「見積一覧」 → 一覧画面「+ 新規見積」リンクで /quotations/new に遷移
+  await page.getByRole('link', { name: '見積一覧' }).click()
+  await expect(page).toHaveURL(/\/quotations$/)
+  await expect(page.getByRole('heading', { name: '見積一覧' })).toBeVisible()
+  await page.getByRole('link', { name: '+ 新規見積' }).click()
   await expect(page).toHaveURL(/\/quotations\/new$/)
   await expect(page.getByRole('heading', { name: '輸送見積の作成' })).toBeVisible()
 

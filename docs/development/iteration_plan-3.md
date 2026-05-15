@@ -155,10 +155,10 @@ date: 2026-05-15T00:00:00.000Z
 | 2.1 | `Quotation` 集約と関連 VO（`QuotationId` / `RouteRequirement` / `EstimatedAmount` / `EstimatedDays`）実装 | 3h | AI | [x] 完了（QuotationId / QuotationStatus / RouteCandidate 新規。Money / RouteSpecification 既存を再利用） |
 | 2.2 | `CreateQuotationCommand` / `QuotationCreatedEvent` と料金・所要日数算出ロジック実装（domain-model.md L1202） | 4h | AI | [x] 完了（重量×単価×貨物種別係数。IT3 は直行ルート仮実装、IT4 で routingms 連携。Mockito ベース TDD 6 ケース） |
 | 2.3 | `quotation` / `quotation_candidate` テーブル Flyway migration（data-model.md L350 / L368 既存定義に準拠） | 1h | AI | [x] 完了（V004__create_quotation.sql。shipper_id は BIGINT で cargo_summary と整合） |
-| 2.4 | `POST /api/v1/quotations` / `GET /api/v1/quotations/{quotationId}` 実装 | 3h | AI | [x] 完了（QuotationController + QuotationProjectionsEventHandler + Mapper + DTO。受入条件 6 を満たすため Event に HazardInfo を追加） |
-| 2.5 | フロント S03 見積作成（フォーム）と S04 見積詳細（シングルビュー）を実装 | 4h | AI | [x] 完了（QuotationForm + QuotationDetail + Page 各種、危険物選択時の動的フォーム展開、候補ゼロ時の警告表示、Vitest 7 件） |
+| 2.4 | `POST /api/v1/quotations` / `GET /api/v1/quotations/{quotationId}` / `GET /api/v1/quotations`（一覧） 実装 | 3h | AI | [x] 完了（QuotationController + QuotationProjectionsEventHandler + Mapper + DTO。受入条件 6 を満たすため Event に HazardInfo を追加） |
+| 2.5 | フロント S02 見積一覧 / S03 見積作成 / S04 見積詳細を実装 | 5h | AI | [x] 完了（QuotationList / QuotationForm / QuotationDetail + Page 各種。AppLayout のメニューを「見積一覧」に変更し /quotations を起点に S03/S04 へ遷移） |
 | 2.6 | ユニットテスト（境界値・危険物含む条件・期限内ルート不在パターン） | 3h | AI | [x] 完了（QuotationTest 6 ケース: 一般・期限内なし・HAZARDOUS 係数・申告無し拒否・重量 0 拒否・Event 再生） |
-| 2.7 | 統合テスト（S03 入力 → S04 詳細 → 予約化導線 S08/S09） | 2h | AI | [x] 完了（QuotationControllerIntegrationTest 4 件: POST 正常 / 存在しない荷主 / 危険物申告無し / GET 詳細 / GET 404） |
+| 2.7 | 統合テスト（一覧取得・S03 入力 → S04 詳細 → 予約化導線 S08/S09） | 2h | AI | [x] 完了（QuotationControllerIntegrationTest 4 件: POST 正常 / 存在しない荷主 / 危険物申告無し / GET 詳細 / GET 404） |
 
 **小計**: 20h
 
@@ -409,6 +409,7 @@ q ||--|{ qc : "1..*"
 | メソッド | エンドポイント | 説明 | US |
 |---------|---------------|------|---|
 | POST | /api/v1/quotations | 輸送見積を新規作成（`Quotation` 集約） | US01 |
+| GET | /api/v1/quotations | 見積一覧を取得（S02 用、状態フィルタ可） | US01 |
 | GET | /api/v1/quotations/{quotationId} | 見積詳細と候補一覧を取得 | US01 |
 | POST | /api/v1/bookings/{bookingId}/handoff | 予約を経路設計者に引き渡し（`HandOffToRoutingCommand`） | US06 |
 | GET | /api/v1/bookings?status=ROUTING_REQUESTED | 経路設計待ち予約一覧 | US06 |
@@ -423,6 +424,7 @@ ui_design.md（L85-103 主要画面一覧）の既存画面 ID を踏襲する�
 
 | 画面 ID | 画面名 | パス | 拡張内容 | US |
 |--------|-------|------|---------|----|
+| S02 | 見積一覧（コレクション） | `/quotations` | 既存（IT3 で実装） — 見積番号・荷主・出発地・目的地・期限・概算料金・状態を一覧表示。「新規」/「詳細」リンクで S03/S04 へ遷移。AppLayout サイドナビ「見積一覧」の主導線 | US01 |
 | S03 | 見積作成（フォーム） | `/quotations/new` | 既存 — 危険物入力フォーム条件表示を追加 | US01 |
 | S04 | 見積詳細（シングル） | `/quotations/:id` | 既存 — ルート候補テーブル（経由港・所要日数・概算料金・航海番号）を表示 | US01 |
 | S10 | 予約詳細（シングル） | `/bookings/:id` | 既存 — 「経路設計を依頼」アクションボタンを追加（status PRELIMINARY のときのみ表示） | US06 |
@@ -433,6 +435,34 @@ ui_design.md（L85-103 主要画面一覧）の既存画面 ID を踏襲する�
 #### ワイヤーフレーム（PlantUML salt）
 
 ui_design.md の既存 salt を踏襲しつつ、IT3 で **追加 / 拡張する箇所** を強調する。共通ヘッダー（`国際貨物輸送管理 | ユーザ名 (ロール) | [ログアウト]`）とサイドナビ（`ダッシュボード / 見積 / 荷主 / 予約 / 経路設計 / 追跡管理 / 荷役 / 精算`）は全画面共通のため省略する。
+
+##### S02: 見積一覧（US01）
+
+```plantuml
+@startsalt
+{
+  {
+    国際貨物輸送管理 | 田中 (営業) | [ログアウト]
+  } |
+  {+
+    "**見積**"
+    ---
+    [+ 新規見積]
+    ---
+    {#
+      見積番号 | 荷主 ID | 出発地 | 目的地 | 期限 | 概算料金 | 状態 | 操作
+      Q-2026-0001 | 1 | JPTYO | USNYC | 2026-06-30 | JPY 850,000 | OFFERED | [詳細]
+      Q-2026-0002 | 2 | JPOSA | SGSIN | 2026-07-15 | JPY 420,000 | DRAFT  | [詳細]
+      Q-2026-0003 | 3 | JPTYO | DEHAM | 2026-08-01 | JPY 1,200,000 | OFFERED | [詳細]
+    }
+    ---
+    "(該当なしの場合は『見積が登録されていません』を表示)"
+  }
+}
+@endsalt
+```
+
+> 受入条件 4: 見積番号（`Q-YYYY-NNNN`）と状態（DRAFT / OFFERED / ACCEPTED / EXPIRED）を一覧で確認できる。各行の「詳細」リンクで S04 に遷移する。
 
 ##### S03: 見積作成（US01）
 

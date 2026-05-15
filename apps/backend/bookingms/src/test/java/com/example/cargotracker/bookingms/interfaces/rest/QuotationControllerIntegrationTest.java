@@ -191,4 +191,31 @@ class QuotationControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/quotations/NOTFOUND"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("US01 S02: GET /api/v1/quotations で見積一覧を取得できる（作成日時降順）")
+    void 見積一覧を取得できる() throws Exception {
+        // Read Model に 2 件投入
+        for (int i = 0; i < 2; i++) {
+            var q = new QuotationRecord();
+            q.setQuotationId("Q-LIST-" + i);
+            q.setShipperId(1L);
+            q.setOriginUnlocode("JPTYO");
+            q.setDestinationUnlocode("USNYC");
+            q.setArrivalDeadline(LocalDate.of(2026, 12, 31));
+            q.setCargoType("GENERAL");
+            q.setWeightKg(new BigDecimal("100"));
+            q.setEstimatedAmount(new BigDecimal("100000.00"));
+            q.setEstimatedCurrency("JPY");
+            q.setValidUntil(LocalDate.of(2026, 12, 31));
+            q.setStatus("OFFERED");
+            quotationMapper.insertQuotation(q);
+        }
+
+        mockMvc.perform(get("/api/v1/quotations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.quotationId == 'Q-LIST-0')]").exists())
+                .andExpect(jsonPath("$[?(@.quotationId == 'Q-LIST-1')]").exists());
+    }
 }

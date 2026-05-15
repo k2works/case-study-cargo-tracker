@@ -33,6 +33,21 @@ export interface RouteCandidateDto {
   voyageNumbers: string
 }
 
+/** S02 見積一覧用の軽量型（候補・危険物詳細は含まない）。 */
+export interface QuotationListItem {
+  quotationId: string
+  shipperId: number
+  originUnLocode: string
+  destinationUnLocode: string
+  arrivalDeadline: string
+  cargoType: CargoType
+  weightKg: number
+  estimatedAmount: number | null
+  estimatedCurrency: string | null
+  validUntil: string
+  status: QuotationStatus
+}
+
 export interface QuotationResponse {
   quotationId: string
   shipperId: number
