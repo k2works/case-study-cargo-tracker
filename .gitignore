@@ -33,3 +33,4 @@ coverage/
 tmp/
 .tmp/
 .claude/agent-memory
+**/.claude/agent-memory
