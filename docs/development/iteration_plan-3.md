@@ -152,9 +152,9 @@ date: 2026-05-15T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `Quotation` 集約と関連 VO（`QuotationId` / `RouteRequirement` / `EstimatedAmount` / `EstimatedDays`）実装 | 3h | AI | [ ] |
-| 2.2 | `CreateQuotationCommand` / `QuotationCreatedEvent` と料金・所要日数算出ロジック実装（domain-model.md L1202） | 4h | AI | [ ] |
-| 2.3 | `quotation` / `quotation_candidate` テーブル Flyway migration（data-model.md L350 / L368 既存定義に準拠） | 1h | AI | [ ] |
+| 2.1 | `Quotation` 集約と関連 VO（`QuotationId` / `RouteRequirement` / `EstimatedAmount` / `EstimatedDays`）実装 | 3h | AI | [x] 完了（QuotationId / QuotationStatus / RouteCandidate 新規。Money / RouteSpecification 既存を再利用） |
+| 2.2 | `CreateQuotationCommand` / `QuotationCreatedEvent` と料金・所要日数算出ロジック実装（domain-model.md L1202） | 4h | AI | [x] 完了（重量×単価×貨物種別係数。IT3 は直行ルート仮実装、IT4 で routingms 連携。Mockito ベース TDD 6 ケース） |
+| 2.3 | `quotation` / `quotation_candidate` テーブル Flyway migration（data-model.md L350 / L368 既存定義に準拠） | 1h | AI | [x] 完了（V004__create_quotation.sql。shipper_id は BIGINT で cargo_summary と整合） |
 | 2.4 | `POST /api/v1/quotations` / `GET /api/v1/quotations/{quotationId}` 実装 | 3h | AI | [ ] |
 | 2.5 | フロント S03 見積作成（フォーム）と S04 見積詳細（シングルビュー）を実装 | 4h | AI | [ ] |
 | 2.6 | ユニットテスト（境界値・危険物含む条件・期限内ルート不在パターン） | 3h | AI | [ ] |
