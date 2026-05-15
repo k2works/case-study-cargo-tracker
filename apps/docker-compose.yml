@@ -40,6 +40,15 @@ services:
       AXONIQ_AXONSERVER_NAME: axonserver
       AXONIQ_AXONSERVER_HOSTNAME: axonserver
       AXONIQ_AXONSERVER_DEVMODE_ENABLED: "${AXONIQ_AXONSERVER_DEVMODE_ENABLED:-true}"
+      # Axon Server 2026.0.0 では standalone モードを明示しないと default Context が
+      # 自動作成されず、クライアントの gRPC 接続で AXONIQ-1302 "default: not found in
+      # any replication group" になる（ADR-0009 受入検証で判明）。本番では cluster 構成を
+      # 採るため別途検討する。
+      AXONIQ_AXONSERVER_STANDALONE: "true"
+      # Axon Framework 5 は DCB（Dynamic Consistency Boundary）対応の Event Store を
+      # 要求する。standalone-dcb=true で default Context を DCB 形式で生成し、
+      # AXONIQ-2308 "Operation not supported on non-DCB context" を回避する。
+      AXONIQ_AXONSERVER_STANDALONE_DCB: "true"
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8024/actuator/health || exit 1"]
       interval: 10s

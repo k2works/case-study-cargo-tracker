@@ -16,7 +16,10 @@ spring-boot = "4.0.6"
 spring-dependency-management = "1.1.7"
 
 # Axon Framework 5
-axon = "5.1.0"
+# axon-server-connector の Maven Central 公開最新が 5.1.0-RC2（GA 未公開）で、
+# starter / connector / axon-test の ABI 整合を取るため Axon 系を一括 5.1.0-RC2 に揃える（ADR-0009）。
+# GA 5.1.0 connector 公開後に 5.1.0 へ昇格予定。
+axon = "5.1.0-RC2"
 
 # MyBatis
 mybatis-spring-boot = "3.0.5"
@@ -57,6 +60,8 @@ spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-star
 # - Starter は extensions.spring 配下に分離（Axon 5 で groupId が変更）
 # - axon-test はコア groupId のまま
 axon-spring-boot-starter = { module = "org.axonframework.extensions.spring:axon-spring-boot-starter", version.ref = "axon" }
+# axon-spring-boot-starter は 5.x で server-connector を transitive に含まなくなったため明示依存（ADR-0009）。
+axon-server-connector = { module = "org.axonframework:axon-server-connector", version.ref = "axon" }
 axon-test = { module = "org.axonframework:axon-test", version.ref = "axon" }
 
 # MyBatis

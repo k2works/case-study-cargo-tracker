@@ -15,6 +15,8 @@ dependencies {
 
     // Axon Framework
     implementation(libs.axon.spring.boot.starter)
+    // Axon Server 接続 connector（ADR-0009: starter 5.x からは別 artifact 切り出し）
+    implementation(libs.axon.server.connector)
 
     // MyBatis + JDBC
     implementation(libs.bundles.mybatis)

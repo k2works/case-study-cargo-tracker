@@ -28,6 +28,10 @@ spring:
 
 # bookingms 側と同じ理由で voyage の Projection も subscribing モードで動作させる。
 axon:
+  # ADR-0009 以降: connector が classpath に常駐するため、local-h2 では autoconfig
+  # を明示的に無効化し、Axon Server への接続試行をスキップする。
+  axonserver:
+    enabled: false
   eventhandling:
     processors:
       "[com.example.cargotracker.routingms.interfaces.events]":

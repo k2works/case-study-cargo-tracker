@@ -17,11 +17,7 @@ spring:
 axon:
   axonserver:
     servers: ${AXON_AXONSERVER_SERVERS:localhost:8124}
-  eventhandling:
-    processors:
-      # IT2 暫定: PooledStreamingEventProcessor の JDBC token store 初期化が
-      # 整っていない（TokenEntry テーブル未作成）ため subscribing モードで運用。
-      # IT3 で Axon Server token store 連携または Flyway で TokenEntry を作成して
-      # pooled-streaming に戻す（ADR-0008 参照）。
-      "[com.example.cargotracker.routingms.interfaces.events]":
-        mode: subscribing
+  # IT3（ADR-0009）: pooled-streaming に復帰。axon-server-connector を依存に追加し、
+  # token_entry テーブルを Flyway（V002）で用意したため、Event Processor のデフォルト
+  # モード（pooled-streaming）で Axon Server 経由のイベント配信が成立する。
+  # 旧 IT2 暫定の subscribing 上書きは削除済み。
