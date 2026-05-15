@@ -1,6 +1,7 @@
 package com.example.cargotracker.routingms.interfaces.events;
 
 import com.example.cargotracker.routingms.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routingms.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routingms.domain.model.valueobjects.Carrier;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CarrierMovement;
@@ -76,5 +77,45 @@ class VoyageProjectionsEventHandlerTest {
         // accepted_cargo_type 2 件
         verify(mapper).insertAcceptedCargoType("V12345", "GENERAL");
         verify(mapper).insertAcceptedCargoType("V12345", "REFRIGERATED");
+    }
+
+    @Test
+    @DisplayName("US25: VoyageScheduleUpdatedEvent を受けて voyage を更新し movement / cargo_type を再投影する")
+    void 更新イベントで再投影される() {
+        var newMovements = List.of(
+                new CarrierMovement(new UnLocode("JPYOK"), new UnLocode("TWKHH"),
+                        LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 7, 18, 0)),
+                new CarrierMovement(new UnLocode("TWKHH"), new UnLocode("USLAX"),
+                        LocalDateTime.of(2026, 7, 8, 9, 0), LocalDateTime.of(2026, 7, 17, 18, 0)));
+        var event = new VoyageScheduleUpdatedEvent(
+                "V12345",
+                LocalDateTime.of(2026, 7, 3, 9, 0),
+                LocalDateTime.of(2026, 7, 17, 18, 0),
+                newMovements,
+                List.of(CargoType.GENERAL, CargoType.HAZARDOUS));
+
+        handler.on(event);
+
+        // 1. voyage 本体を update
+        ArgumentCaptor<VoyageRecord> voyageCaptor = ArgumentCaptor.forClass(VoyageRecord.class);
+        verify(mapper).updateVoyageSchedule(voyageCaptor.capture());
+        VoyageRecord v = voyageCaptor.getValue();
+        assertThat(v.getVoyageNumber()).isEqualTo("V12345");
+        assertThat(v.getDepartureDate()).isEqualTo(LocalDateTime.of(2026, 7, 3, 9, 0));
+        assertThat(v.getArrivalDate()).isEqualTo(LocalDateTime.of(2026, 7, 17, 18, 0));
+
+        // 2. 既存 carrier_movement を削除して再 INSERT
+        verify(mapper).deleteCarrierMovementsByVoyageNumber("V12345");
+        ArgumentCaptor<CarrierMovementRecord> movementCaptor = ArgumentCaptor.forClass(CarrierMovementRecord.class);
+        verify(mapper, times(2)).insertCarrierMovement(movementCaptor.capture());
+        var captured = movementCaptor.getAllValues();
+        assertThat(captured.get(0).getMovementSeq()).isEqualTo(1);
+        assertThat(captured.get(0).getDepartureUnlocode()).isEqualTo("JPYOK");
+        assertThat(captured.get(1).getMovementSeq()).isEqualTo(2);
+
+        // 3. 既存 accepted_cargo_type を削除して再 INSERT
+        verify(mapper).deleteAcceptedCargoTypesByVoyageNumber("V12345");
+        verify(mapper).insertAcceptedCargoType("V12345", "GENERAL");
+        verify(mapper).insertAcceptedCargoType("V12345", "HAZARDOUS");
     }
 }

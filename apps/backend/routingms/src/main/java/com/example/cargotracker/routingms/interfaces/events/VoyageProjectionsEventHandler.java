@@ -1,6 +1,7 @@
 package com.example.cargotracker.routingms.interfaces.events;
 
 import com.example.cargotracker.routingms.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routingms.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CarrierMovement;
 import com.example.cargotracker.routingms.domain.model.valueobjects.VoyageStatus;
@@ -64,6 +65,44 @@ public class VoyageProjectionsEventHandler {
         }
 
         // 3. voyage_accepted_cargo_type
+        for (CargoType cargoType : event.acceptedCargoTypes()) {
+            mapper.insertAcceptedCargoType(event.voyageNumber(), cargoType.name());
+        }
+    }
+
+    /**
+     * US25: 既存航海スケジュール更新の Read Model 再投影。
+     *
+     * <p>voyage 本体の departure_date / arrival_date を UPDATE し、
+     * carrier_movement と voyage_accepted_cargo_type は全削除→再 INSERT で
+     * 差分を反映する（行数が少なく順序依存があるため delete-then-insert が単純で安全）。</p>
+     */
+    @EventHandler
+    @Transactional
+    public void on(VoyageScheduleUpdatedEvent event) {
+        // 1. voyage 本体の日時を更新
+        var voyage = new VoyageRecord();
+        voyage.setVoyageNumber(event.voyageNumber());
+        voyage.setDepartureDate(event.departureDate());
+        voyage.setArrivalDate(event.arrivalDate());
+        mapper.updateVoyageSchedule(voyage);
+
+        // 2. carrier_movement を再投影
+        mapper.deleteCarrierMovementsByVoyageNumber(event.voyageNumber());
+        int seq = 1;
+        for (CarrierMovement movement : event.carrierMovements()) {
+            var movementRecord = new CarrierMovementRecord();
+            movementRecord.setVoyageNumber(event.voyageNumber());
+            movementRecord.setMovementSeq(seq++);
+            movementRecord.setDepartureUnlocode(movement.departure().value());
+            movementRecord.setArrivalUnlocode(movement.arrival().value());
+            movementRecord.setDepartureTime(movement.departureTime());
+            movementRecord.setArrivalTime(movement.arrivalTime());
+            mapper.insertCarrierMovement(movementRecord);
+        }
+
+        // 3. voyage_accepted_cargo_type を再投影
+        mapper.deleteAcceptedCargoTypesByVoyageNumber(event.voyageNumber());
         for (CargoType cargoType : event.acceptedCargoTypes()) {
             mapper.insertAcceptedCargoType(event.voyageNumber(), cargoType.name());
         }

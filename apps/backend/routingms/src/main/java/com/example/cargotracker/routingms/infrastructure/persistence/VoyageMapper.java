@@ -1,10 +1,12 @@
 package com.example.cargotracker.routingms.infrastructure.persistence;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -45,6 +47,43 @@ public interface VoyageMapper {
 
     @Select("SELECT COUNT(*) > 0 FROM voyage WHERE voyage_number = #{voyageNumber}")
     boolean existsByVoyageNumber(String voyageNumber);
+
+    /** US25: voyage の出発・到着日時を更新する（status は維持、version をインクリメント）。 */
+    @Update("""
+            UPDATE voyage
+               SET departure_date = #{departureDate},
+                   arrival_date   = #{arrivalDate},
+                   updated_at     = CURRENT_TIMESTAMP,
+                   version        = version + 1
+             WHERE voyage_number = #{voyageNumber}
+            """)
+    int updateVoyageSchedule(VoyageRecord entity);
+
+    /** US25: 既存の寄港地を全削除する（再投影前のクリーンアップ）。 */
+    @Delete("DELETE FROM carrier_movement WHERE voyage_number = #{voyageNumber}")
+    int deleteCarrierMovementsByVoyageNumber(@Param("voyageNumber") String voyageNumber);
+
+    /** US25: 既存の対応貨物種別を全削除する（再投影前のクリーンアップ）。 */
+    @Delete("DELETE FROM voyage_accepted_cargo_type WHERE voyage_number = #{voyageNumber}")
+    int deleteAcceptedCargoTypesByVoyageNumber(@Param("voyageNumber") String voyageNumber);
+
+    /** US25 / API レスポンス: 単一 Voyage を取得（存在しない場合 null）。 */
+    @Select("""
+            SELECT voyage_number, carrier_code, carrier_name, ship_name,
+                   departure_date, arrival_date, origin_unlocode, destination_unlocode, status
+              FROM voyage
+             WHERE voyage_number = #{voyageNumber}
+            """)
+    @Result(property = "voyageNumber", column = "voyage_number")
+    @Result(property = "carrierCode", column = "carrier_code")
+    @Result(property = "carrierName", column = "carrier_name")
+    @Result(property = "shipName", column = "ship_name")
+    @Result(property = "departureDate", column = "departure_date")
+    @Result(property = "arrivalDate", column = "arrival_date")
+    @Result(property = "originUnlocode", column = "origin_unlocode")
+    @Result(property = "destinationUnlocode", column = "destination_unlocode")
+    @Result(property = "status", column = "status")
+    VoyageRecord findByVoyageNumber(@Param("voyageNumber") String voyageNumber);
 
     @Select("""
             SELECT voyage_number, carrier_code, carrier_name, ship_name,
