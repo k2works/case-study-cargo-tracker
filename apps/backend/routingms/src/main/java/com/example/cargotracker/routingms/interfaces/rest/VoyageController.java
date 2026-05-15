@@ -56,6 +56,20 @@ public class VoyageController {
         return ResponseEntity.ok(voyages);
     }
 
+    /**
+     * US25: 単一の Voyage を取得（編集画面で既存値を表示するため）。
+     * 存在しなければ 404。
+     */
+    @GetMapping("/{voyageNumber}")
+    public ResponseEntity<Object> getOne(@PathVariable String voyageNumber) {
+        VoyageRecord entity = voyageMapper.findByVoyageNumber(voyageNumber);
+        if (entity == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "voyage_number が存在しません: " + voyageNumber));
+        }
+        return ResponseEntity.ok(toListResponse(entity));
+    }
+
     private VoyageListResponse toListResponse(VoyageRecord entity) {
         return new VoyageListResponse(
                 entity.getVoyageNumber(),

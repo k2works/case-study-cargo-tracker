@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { useVoyages } from '../hooks/useVoyages'
 
 function formatDateTime(value: string): string {
@@ -27,6 +28,7 @@ export function VoyageList() {
             <th className="px-4 py-3 text-left text-gray-700">出発日時</th>
             <th className="px-4 py-3 text-left text-gray-700">到着日時</th>
             <th className="px-4 py-3 text-left text-gray-700">状態</th>
+            <th className="px-4 py-3 text-left text-gray-700">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -45,6 +47,15 @@ export function VoyageList() {
                 <span className="inline-block px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">
                   {voyage.status}
                 </span>
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  to={`/routing/voyages/${voyage.voyageNumber}/edit`}
+                  className="text-sm text-blue-600 underline"
+                  data-testid={`edit-link-${voyage.voyageNumber}`}
+                >
+                  編集
+                </Link>
               </td>
             </tr>
           ))}

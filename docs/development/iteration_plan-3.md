@@ -143,7 +143,7 @@ date: 2026-05-15T00:00:00.000Z
 | 1.2 | `VoyageScheduleUpdatedEvent` と `@EventSourcingHandler` を実装（`Schedule` VO の差分検証含む） | 2h | AI | [x] 完了（1.1 と同時実装。再生で departureDate / arrivalDate / movements / acceptedCargoTypes 反映） |
 | 1.3 | `VoyageProjectionsEventHandler` の更新ロジック追加（`voyage` / `carrier_movement` 反映） | 2h | AI | [x] 完了（VoyageMapper に update/delete メソッド追加、carrier_movement と accepted_cargo_type は delete-then-insert で再投影） |
 | 1.4 | `PUT /api/v1/voyages/{voyageNumber}` エンドポイント実装 + 差分確認レスポンス | 2h | AI | [x] 完了（存在しなければ 404、不正入力 400、成功時は更新後 Read Model を返却。統合テストは 1.6 で追加） |
-| 1.5 | フロント S12（`/routing/voyages/:vn/edit` URL）に差分表示とキャンセル動作を追加 | 3h | AI | [ ] |
+| 1.5 | フロント S12（`/routing/voyages/:vn/edit` URL）に差分表示とキャンセル動作を追加 | 3h | AI | [x] 完了（VoyageEditForm + VoyageEditPage 新規、Carrier / shipName は read-only、出発・到着日時に差分バッジ表示、キャンセルで一覧に戻る。Vitest 4 件追加） |
 | 1.6 | 統合テスト（更新 → Read Model 反映 → S11 検索結果に反映確認） | 2h | AI | [x] 完了（PUT 4 ケース: 正常 200 / 404 / 連続性違反 400 / 日付逆転 400。S11 反映は 4.x の検索 API 実装と合わせて E2E で確認予定） |
 
 **小計**: 13h

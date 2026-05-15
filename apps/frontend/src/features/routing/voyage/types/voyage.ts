@@ -39,3 +39,11 @@ export interface VoyageListItem {
   arrivalDate: string
   status: string
 }
+
+// US25: 既存航海スケジュール更新（Carrier / shipName は更新対象外）
+export interface UpdateVoyageScheduleRequest {
+  departureDate: string
+  arrivalDate: string
+  carrierMovements: Movement[]
+  acceptedCargoTypes: CargoType[]
+}
