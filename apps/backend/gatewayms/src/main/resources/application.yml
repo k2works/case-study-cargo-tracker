@@ -17,7 +17,7 @@ spring:
             - id: bookingms
               uri: ${BOOKINGMS_URL:http://localhost:8082}
               predicates:
-                - Path=/api/v1/bookings/**,/api/v1/shippers/**,/api/ping
+                - Path=/api/v1/bookings/**,/api/v1/shippers/**,/api/v1/quotations/**,/api/ping
             - id: routingms
               uri: ${ROUTINGMS_URL:http://localhost:8083}
               predicates:
