@@ -10,6 +10,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { path: '/shippers', label: '荷主管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
+  { path: '/quotations/new', label: '見積作成', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   { path: '/bookings', label: '予約管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   {
     path: '/routing/voyages',
