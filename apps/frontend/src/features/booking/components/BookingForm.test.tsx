@@ -5,11 +5,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi } from 'vitest'
 import { BookingForm } from './BookingForm'
 
+const mutateMock = vi.fn()
+let pendingState = false
+let errorState = false
+
 vi.mock('../hooks/useBookings', () => ({
   useBookCargo: () => ({
-    mutate: vi.fn(),
-    isPending: false,
-    isError: false,
+    mutate: mutateMock,
+    get isPending() {
+      return pendingState
+    },
+    get isError() {
+      return errorState
+    },
   }),
 }))
 
@@ -68,5 +76,54 @@ describe('BookingForm', () => {
     renderBookingForm()
     expect(screen.getByRole('button', { name: '登録する' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'キャンセル' })).toBeInTheDocument()
+  })
+
+  it('GENERAL 貨物のフォームを送信すると mutate がリクエストペイロード付きで呼ばれる', async () => {
+    mutateMock.mockClear()
+    pendingState = false
+    errorState = false
+    const user = userEvent.setup()
+    renderBookingForm()
+
+    // ラベルの丸括弧（全角/半角）に依存しないよう id 経由で取得する
+    await user.type(document.getElementById('booking-shipper-id') as HTMLInputElement, '1')
+    await user.type(document.getElementById('booking-weight') as HTMLInputElement, '100')
+    const qty = document.getElementById('booking-quantity') as HTMLInputElement
+    await user.clear(qty)
+    await user.type(qty, '1')
+    await user.type(document.getElementById('booking-product-name') as HTMLInputElement, '機械')
+    await user.type(document.getElementById('booking-length') as HTMLInputElement, '10')
+    await user.type(document.getElementById('booking-width') as HTMLInputElement, '20')
+    await user.type(document.getElementById('booking-height') as HTMLInputElement, '30')
+    await user.type(document.getElementById('booking-origin') as HTMLInputElement, 'JPYOK')
+    await user.type(document.getElementById('booking-destination') as HTMLInputElement, 'USLAX')
+    await user.type(document.getElementById('booking-deadline') as HTMLInputElement, '2099-12-31')
+
+    await user.click(screen.getByRole('button', { name: '登録する' }))
+
+    expect(mutateMock).toHaveBeenCalledTimes(1)
+    const [request] = mutateMock.mock.calls[0]
+    expect(request).toMatchObject({
+      shipperId: 1,
+      cargoSpec: { cargoType: 'GENERAL', weightKg: 100, quantity: 1, productName: '機械' },
+      routeSpec: { originUnLocode: 'JPYOK', destinationUnLocode: 'USLAX' },
+    })
+  })
+
+  it('isPending のとき登録ボタンが「登録中...」になり disabled になる', () => {
+    pendingState = true
+    errorState = false
+    renderBookingForm()
+    const button = screen.getByRole('button', { name: '登録中...' })
+    expect(button).toBeDisabled()
+    pendingState = false
+  })
+
+  it('isError のときエラーメッセージが表示される', () => {
+    pendingState = false
+    errorState = true
+    renderBookingForm()
+    expect(screen.getByText('登録に失敗しました。')).toBeInTheDocument()
+    errorState = false
   })
 })
