@@ -69,34 +69,45 @@ export default function (gulp) {
     done(err);
   });
 
-  gulp.task('up:basics', async (done) => {
+  // ==========================================================================
+  // local-docker プロファイル運用タスク
+  //
+  // docker-compose.yml と application-local-docker.yml で構成する
+  // フルスタック（Axon Server + PostgreSQL + authms + bookingms + routingms +
+  // gatewayms）の構築・起動・停止・リセット・疎通確認を提供する。
+  // ==========================================================================
+
+  gulp.task('local-docker:build', async (done) => {
+    // 全サービスの Docker イメージをビルド（変更があるサービスのみ再ビルドされる）。
+    // `local-docker:up` は build を含むが、起動を伴わずビルドだけ実行したい場合に使う。
     const err = await runStreaming('docker', [
-      'compose', '-f', composeFile,
-      'up', '-d', 'axonserver', 'postgresql',
+      'compose', '-f', composeFile, 'build',
     ]);
     done(err);
   });
 
-  gulp.task('up:all', async (done) => {
-    // Phase 0: docker-compose.yml で実体定義されているのは bookingms のみ（他は雛形・コメントアウト）。
-    // profile 指定なしで全アクティブサービスを起動し、対の down:all とも対称になる。
-    // Phase 1 で他サービスが復活したら `--profile full` を再導入する。
+  gulp.task('local-docker:up', async (done) => {
+    // 基盤 + authms + bookingms + routingms + gatewayms を起動（IT2 時点の全構成）。
+    // frontend は IT3 で追加予定。docker-compose.yml の services セクションを参照。
     const err = await runStreaming('docker', [
       'compose', '-f', composeFile, 'up', '-d',
     ]);
     done(err);
   });
 
-  gulp.task('down:all', async (done) => {
+  gulp.task('local-docker:down', async (done) => {
+    // コンテナとネットワークを停止・削除（ボリュームは保持＝Event Store / DB は残る）。
     const err = await runStreaming('docker', [
       'compose', '-f', composeFile, 'down',
     ]);
     done(err);
   });
 
-  gulp.task('down:clean', async (done) => {
+  gulp.task('local-docker:clean', async (done) => {
+    // ボリュームを含めた完全リセット（Event Store・PostgreSQL データを破棄）。
+    // CONFIRM_CLEAN=yes を必須とし、誤実行を防止する。
     if (process.env.CONFIRM_CLEAN !== 'yes') {
-      console.error('down:clean はボリュームを破棄します。実行するには CONFIRM_CLEAN=yes を設定してください。');
+      console.error('local-docker:clean はボリュームを破棄します。実行するには CONFIRM_CLEAN=yes を設定してください。');
       done(new Error('Confirmation required'));
       return;
     }
@@ -106,11 +117,19 @@ export default function (gulp) {
     done(err);
   });
 
-  gulp.task('smoke', (done) => {
+  gulp.task('local-docker:smoke', (done) => {
+    // Axon Server + authms + bookingms + routingms + gatewayms の health 疎通を確認。
     const targets = [
       { name: 'Axon Server', url: `http://localhost:${process.env.AXON_SERVER_HTTP_PORT || 8024}/actuator/health` },
+      { name: 'authms',      url: 'http://localhost:8081/actuator/health' },
       { name: 'bookingms',   url: 'http://localhost:8082/actuator/health' },
+      { name: 'routingms',   url: 'http://localhost:8083/actuator/health' },
+      { name: 'gatewayms',   url: 'http://localhost:8080/actuator/health' },
     ];
+    runSmoke(targets, done);
+  });
+
+  function runSmoke(targets, done) {
     let failed = 0;
     for (const t of targets) {
       const result = spawnSync(
@@ -126,27 +145,31 @@ export default function (gulp) {
       }
     }
     done(failed === 0 ? null : new Error(`${failed} smoke check(s) failed`));
-  });
+  }
 
   gulp.task('dev:help', (done) => {
     console.log(`
 開発支援タスク一覧
 ==================
 
-  dev:bookingms   bookingms を local-h2 プロファイルで bootRun
-  tdd:bookingms   bookingms の Gradle test --continuous
+  local-h2 プロファイル（IDE 個別 bootRun・最速 TDD ループ）
+  -----------------------------------------------------------
+  dev:bookingms        bookingms を local-h2 プロファイルで bootRun
+  tdd:bookingms        bookingms の Gradle test --continuous
 
-  up:basics       Axon Server + PostgreSQL のみ起動
-  up:all          Phase 0 で起動可能な全サービス（基盤 + bookingms）を起動
-                  ※ Phase 1 で残り 6 サービス + Frontend を docker-compose.yml にアンコメント
-  down:all        compose down（ボリュームは保持）
-  down:clean      compose down -v（要 CONFIRM_CLEAN=yes、Event Store を破棄）
-
-  smoke           Axon Server / bookingms の health 疎通確認
+  local-docker プロファイル（Axon Server + PostgreSQL + 全 4 ms をフル起動）
+  ------------------------------------------------------------------------
+  local-docker:build   全サービスの Docker イメージをビルド
+  local-docker:up      全サービス起動（基盤 + authms + bookingms + routingms + gatewayms）
+  local-docker:down    コンテナ停止（ボリュームは保持）
+  local-docker:clean   完全リセット（要 CONFIRM_CLEAN=yes、Event Store・DB を破棄）
+  local-docker:smoke   Axon Server + 4 ms の health 疎通確認
 
 注意:
-  - up:basics / up:all は .env で POSTGRES_PASSWORD などのシークレット必須
-  - down:clean は Event Store も削除する破壊的操作（ADR-0003 参照）
+  - local-docker:* は .env で POSTGRES_PASSWORD・JWT_SECRET 等のシークレット必須
+  - local-docker:clean は Event Store も削除する破壊的操作（ADR-0003 参照）
+  - local-h2 では SubscribingEventProcessor、local-docker では Axon Server 接続前提
+    （ADR-0008 参照）
 `);
     done();
   });
