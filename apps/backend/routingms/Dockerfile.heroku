@@ -1,0 +1,19 @@
+# routingms Heroku デプロイ用イメージ
+#
+# ローカルで bootJar 済みの JAR をコピーして起動するだけの軽量イメージ。
+# deploy:dev:build:backend（Gradle）で JAR を生成してからこの Dockerfile を使う。
+
+FROM eclipse-temurin:25-jre
+
+RUN groupadd --system --gid 10001 cargo \
+    && useradd --system --uid 10001 --gid cargo --create-home cargo
+
+WORKDIR /app
+
+COPY build/libs/routingms.jar /app/routingms.jar
+
+USER cargo
+
+ENV JAVA_TOOL_OPTIONS=""
+
+ENTRYPOINT ["java", "-jar", "/app/routingms.jar"]
