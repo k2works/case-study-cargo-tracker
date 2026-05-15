@@ -277,14 +277,14 @@ date: 2026-05-13T00:00:00.000Z
 | US05 危険物・冷凍貨物（`CargoSpecification` 拡張） | 3 | 13h | [x] |
 | routingms スケルトン（SP 外、計画外バッファ） | - | 12h | [x] |
 | US24 航海スケジュール（routingms） | 3 | 17h | [x] |
-| フロントエンド UI（US04/US05/US24） | - | 17h | [ ] |
+| フロントエンド UI（US04/US05/US24） | - | 17h | [x] |
 | US-UI-r E2E テスト | 1 | 9h | [x] |
-| 品質基盤強化（DoD 段階導入 + PIT） | - | 10h（バッファ） | [ ]（Jacoco のみ完了、PIT/Checkstyle ブロック化/SonarQube は未完） |
+| 品質基盤強化（DoD 段階導入 + PIT） | - | 10h（バッファ） | [x]（Jacoco / SonarQube Quality Gate PASS 達成、PIT は IT3 持越し） |
 | **合計** | **14** | **123h** | |
 
 **1 SP あたり**: 約 8.8h（routingms 初期化と PIT 導入を含めた実工数ベース。AI エージェント協働前提）。実稼働は 40h 想定で AI 補完による効率化を見込む。
 
-**進捗率**: 74% (バックエンド US04/US05/US24/US00-r1/US00-r2/US-UI-r 受入条件達成 = 14/14 SP、ただし完全 DoD としてはフロントエンド UI 未着手・PIT/Checkstyle ブロック化未完のため約 74%)
+**進捗率**: 100% (14/14 SP 完了。US04/US05/US24/US00-r1/US00-r2/US-UI-r すべて受入条件達成、フロントエンド UI・E2E・SonarQube Quality Gate PASS。PIT は IT3 へ正式に持越し)
 
 ---
 
@@ -779,19 +779,19 @@ apps/frontend/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（PR 単位）
-- [x] バックエンド単体・統合テストがパス
-- [ ] **PIT カバレッジ 75% 以上**（ドメイン層、`Cargo` / `Voyage` Aggregate）または計測実施
-- [x] 行カバレッジ 90% 以上（副指標）または計測実施（Jacoco 統合済み）
-- [x] フロントエンド Vitest がパス（IT1 範囲、IT2 新規 UI は未実装）
-- [x] Playwright E2E（1 シナリオ）がパス
-- [ ] Checkstyle / SpotBugs エラーなし（CI ブロック化済み）
-- [ ] SonarQube Quality Gate 通過
+- [x] コードレビュー完了（XP 5 エージェント並列レビュー、`docs/review/IT2_実装成果物_review_20260515.md`）
+- [x] バックエンド単体・統合テストがパス（全 BUILD SUCCESSFUL）
+- [ ] **PIT カバレッジ 75% 以上**（ドメイン層、`Cargo` / `Voyage` Aggregate）→ IT3 持越し（タスク 7.2）
+- [x] 行カバレッジ 90% 以上（副指標）または計測実施（Backend new_coverage 88.6%, Frontend 83.8%）
+- [x] フロントエンド Vitest がパス（79 件全 GREEN）
+- [x] Playwright E2E がパス（3 シナリオ全 GREEN、CI でも success）
+- [x] Checkstyle / SpotBugs エラーなし（CI ブロック化済み、SonarQube も PASS）
+- [x] SonarQube Quality Gate 通過（両プロジェクト PASS、new_violations 0）
 - [x] Swagger UI で新規 API（auth/logout, bookings, voyages）が動作確認できる
-- [x] `local-docker` プロファイルで authms / bookingms / routingms / gatewayms / frontend が起動し、API が応答する
-- [x] ADR-0007 が作成され `docs/adr/index.md` と `mkdocs.yml` に反映される
-- [x] `iteration_plan-2.md` / `release_plan.md` / `index.md` が最新の進捗を反映（2026-05-15 更新）
-- [ ] **data-model.md に `users.lock_until` / `users.failed_attempts` カラム追加を反映**（IT2 完了時の同期）
+- [x] `local-docker` プロファイルで authms / bookingms / routingms / gatewayms が起動し、API が応答する（frontend Docker 化は IT3）
+- [x] ADR-0007 / ADR-0008 が作成され `docs/adr/index.md` と `mkdocs.yml` に反映される
+- [x] `iteration_plan-2.md` / `release_plan.md` / `index.md` が最新の進捗を反映（2026-05-15 最終化）
+- [ ] **data-model.md に `users.lock_until` / `users.failed_attempts` カラム追加を反映** → IT3 持越し
 
 ### デモ項目
 
@@ -840,6 +840,7 @@ IT2 計画で明らかになった、設計ドキュメント側に反映が必�
 | 2026-05-13 | 初版作成（IT1 ベロシティ反映、US25 を IT3 へ繰越し） | AI Agent（XP PM） |
 | 2026-05-13 | 整合性検証結果を反映：集約名を `Cargo` に修正、Read Model を `cargo_summary` / `carrier_movement` に修正、Voyage を routingms に配置（スケルトン作成タスク追加）、`user_sessions.revoked` 利用、H13 画面分離方針明記、H21 PIT カバレッジ指標反映 | AI Agent（XP PM） |
 | 2026-05-15 | 中間進捗反映：バックエンド US04/US05/US24/US00-r1/US00-r2/US-UI-r 完了、Jacoco 統合済みを反映。フロントエンド UI（タスク 5）と PIT/Checkstyle ブロック化/SonarQube（タスク 7.2-7.4）が残作業 | AI Agent（XP PM） |
+| 2026-05-15 | 最終化：フロントエンド UI 完了、SonarQube Quality Gate PASS、Heroku デプロイ動作確認まで完了。進捗 100%。PIT と data-model.md 同期は IT3 持越し | AI Agent（XP PM） |
 
 ---
 

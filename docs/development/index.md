@@ -15,7 +15,7 @@
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
 | IT1（2026-05-14〜05-27） | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | [iteration_report-1.md](./iteration_report-1.md) | 完了 |
-| IT2（2026-05-28〜06-10） | [iteration_plan-2.md](./iteration_plan-2.md) | - | - | 計画策定済み |
+| IT2（2026-05-28〜06-10） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | 完了 |
 | IT3（2026-06-11〜06-24） | - | - | - | 未着手（US25 繰越し含む） |
 | IT4（2026-06-25〜07-08） | - | - | - | 未着手 |
 | IT5（2026-07-09〜07-22） | - | - | - | 未着手 |
@@ -30,7 +30,7 @@
 | イテレーション | 計画 SP | 実績 SP | 達成率 |
 |---------------|---------|---------|--------|
 | IT1 | 16 | 14 | 88% |
-| IT2 | 14 | - | - |
+| IT2 | 14 | 14 | 100% |
 | IT3 | 16 | - | - |
 | IT4 | 25 | - | - |
 | IT5 | 11 | - | - |

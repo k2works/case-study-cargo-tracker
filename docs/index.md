@@ -21,8 +21,8 @@
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、UI、テスト、非機能、運用、技術スタック | 10 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 8 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 4 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1 完了 |
+| [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 5 件作成済み |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1・IT2 完了 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み（アプリ開発環境、開発環境）|
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -87,6 +87,7 @@
 | [分析成果物レビュー](./review/分析成果物_review_20260512.md) | ADR 2 件 + 設計 10 件に対する XP 5 エージェント並列レビュー結果（高 24 件・中 15 件・低 4 件、Phase 1 着手済み） |
 | [運用成果物レビュー](./review/運用成果物_review_20260512.md) | アプリ開発環境セットアップ手順書 + 既存運用ファイルに対する XP 3 エージェント並列レビュー結果（高 15 件・中 10 件・低 5 件、Phase 0 雛形整備が必須） |
 | [Phase 0 Walking Skeleton コードレビュー](./review/Phase0_WalkingSkeleton_review_20260513.md) | bookingms Phase 0 スケルトンの 5 エージェント並列レビュー結果（高 3 件・中 4 件・低 4 件、IT1 着手前対応推奨） |
+| [IT2 実装成果物レビュー](./review/IT2_実装成果物_review_20260515.md) | IT2 完了時点（Axon 5.1 Event Sourcing + routingms 新設 + Phase 1 進行 35%）の 5 エージェント並列レビュー結果（高 13 件・中 20 件・低 8 件） |
 
 ## 補足
 
