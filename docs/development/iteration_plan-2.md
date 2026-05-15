@@ -34,19 +34,19 @@ date: 2026-05-13T00:00:00.000Z
 
 ### 成功基準
 
-- [ ] `POST /api/v1/auth/login` で 5 回連続失敗するとアカウントが 30 分ロックされる（`users.lock_until` 管理）
-- [ ] `POST /api/v1/auth/logout` で `user_sessions.revoked = TRUE` に更新され、以降の認証で 401 を返す
-- [ ] `POST /api/v1/bookings` で貨物予約（`Cargo` Aggregate）を登録でき、`bookingId` と「PRELIMINARY」状態が発行される
-- [ ] 貨物種別「HAZARDOUS」を選択すると `HazardInfo`（IMO クラス・UN 番号・宣言）の入力が必須となる
-- [ ] 貨物種別「REFRIGERATED」を選択すると `TemperatureCondition`（最低・最高温度）の入力が必須となる
-- [ ] routingms サービスが起動し、Swagger UI / Actuator が応答する
-- [ ] `POST /api/v1/voyages` で `Voyage` Aggregate を登録でき、`carrier_movement`（寄港地）が複数登録できる
-- [ ] `Cargo` Aggregate が Axon Event Sourcing で実装され、`CargoBookedEvent` がイベントストアに永続化される
-- [ ] `CargoProjectionsEventHandler` が `cargo_summary` Read Model を更新する
-- [ ] Playwright で「ログイン → 荷主登録」シナリオの E2E テストが GREEN
-- [ ] ADR-0007（Event Sourcing 導入方針）が作成される
+- [x] `POST /api/v1/auth/login` で 5 回連続失敗するとアカウントが 30 分ロックされる（`users.lock_until` 管理）
+- [x] `POST /api/v1/auth/logout` で `user_sessions.revoked = TRUE` に更新され、以降の認証で 401 を返す
+- [x] `POST /api/v1/bookings` で貨物予約（`Cargo` Aggregate）を登録でき、`bookingId` と「PRELIMINARY」状態が発行される
+- [x] 貨物種別「HAZARDOUS」を選択すると `HazardInfo`（IMO クラス・UN 番号・宣言）の入力が必須となる（API 層、UI は未実装）
+- [x] 貨物種別「REFRIGERATED」を選択すると `TemperatureCondition`（最低・最高温度）の入力が必須となる（API 層、UI は未実装）
+- [x] routingms サービスが起動し、Swagger UI / Actuator が応答する
+- [x] `POST /api/v1/voyages` で `Voyage` Aggregate を登録でき、`carrier_movement`（寄港地）が複数登録できる
+- [x] `Cargo` Aggregate が Axon Event Sourcing で実装され、`CargoBookedEvent` がイベントストアに永続化される
+- [x] `CargoProjectionsEventHandler` が `cargo_summary` Read Model を更新する
+- [x] Playwright で「ログイン → 荷主登録」シナリオの E2E テストが GREEN
+- [x] ADR-0007（Event Sourcing 導入方針）が作成される
 - [ ] PIT カバレッジ（バックエンド集約）が CI で計測される（基準 75%、未達でも計測必須）
-- [ ] 行カバレッジが副指標として計測される（基準 90%、未達でも計測必須）
+- [x] 行カバレッジが副指標として計測される（基準 90%、未達でも計測必須）
 - [ ] Checkstyle / SpotBugs が CI で自動チェックされ、PR 単位でブロックされる
 
 ---
@@ -261,7 +261,7 @@ date: 2026-05-13T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 7.1 | Jacoco（行カバレッジ副指標 90%）の CI 統合 | 2h | - | [ ] |
+| 7.1 | Jacoco（行カバレッジ副指標 90%）の CI 統合 | 2h | Claude | [x] |
 | 7.2 | **PITest（PIT 主指標 75%）の Gradle プラグイン導入 + CI 統合**（H21 反映、ドメイン層対象） | 4h | - | [ ] |
 | 7.3 | Checkstyle / SpotBugs を PR で自動ブロック化（既存セットアップを CI 必須チェックへ昇格） | 2h | - | [ ] |
 | 7.4 | SonarQube スキャン安定化 + Quality Gate 結果の CI 表示 | 2h | - | [ ] |
@@ -272,19 +272,19 @@ date: 2026-05-13T00:00:00.000Z
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|-----|---------|------|
-| IT1 持越し（ロック・ログアウト）+ ES スパイク | 2 | 19h | [ ] |
-| US04 `Cargo` Aggregate（bookingms） | 5 | 26h | [ ] |
-| US05 危険物・冷凍貨物（`CargoSpecification` 拡張） | 3 | 13h | [ ] |
-| routingms スケルトン（SP 外、計画外バッファ） | - | 12h | [ ] |
-| US24 航海スケジュール（routingms） | 3 | 17h | [ ] |
+| IT1 持越し（ロック・ログアウト）+ ES スパイク | 2 | 19h | [x] |
+| US04 `Cargo` Aggregate（bookingms） | 5 | 26h | [x] |
+| US05 危険物・冷凍貨物（`CargoSpecification` 拡張） | 3 | 13h | [x] |
+| routingms スケルトン（SP 外、計画外バッファ） | - | 12h | [x] |
+| US24 航海スケジュール（routingms） | 3 | 17h | [x] |
 | フロントエンド UI（US04/US05/US24） | - | 17h | [ ] |
-| US-UI-r E2E テスト | 1 | 9h | [ ] |
-| 品質基盤強化（DoD 段階導入 + PIT） | - | 10h（バッファ） | [ ] |
+| US-UI-r E2E テスト | 1 | 9h | [x] |
+| 品質基盤強化（DoD 段階導入 + PIT） | - | 10h（バッファ） | [ ]（Jacoco のみ完了、PIT/Checkstyle ブロック化/SonarQube は未完） |
 | **合計** | **14** | **123h** | |
 
 **1 SP あたり**: 約 8.8h（routingms 初期化と PIT 導入を含めた実工数ベース。AI エージェント協働前提）。実稼働は 40h 想定で AI 補完による効率化を見込む。
 
-**進捗率**: 0% (0/14 SP)
+**進捗率**: 74% (バックエンド US04/US05/US24/US00-r1/US00-r2/US-UI-r 受入条件達成 = 14/14 SP、ただし完全 DoD としてはフロントエンド UI 未着手・PIT/Checkstyle ブロック化未完のため約 74%)
 
 ---
 
@@ -780,17 +780,17 @@ apps/frontend/
 ### Definition of Done
 
 - [ ] コードレビュー完了（PR 単位）
-- [ ] バックエンド単体・統合テストがパス
+- [x] バックエンド単体・統合テストがパス
 - [ ] **PIT カバレッジ 75% 以上**（ドメイン層、`Cargo` / `Voyage` Aggregate）または計測実施
-- [ ] 行カバレッジ 90% 以上（副指標）または計測実施
-- [ ] フロントエンド Vitest がパス
-- [ ] Playwright E2E（1 シナリオ）がパス
+- [x] 行カバレッジ 90% 以上（副指標）または計測実施（Jacoco 統合済み）
+- [x] フロントエンド Vitest がパス（IT1 範囲、IT2 新規 UI は未実装）
+- [x] Playwright E2E（1 シナリオ）がパス
 - [ ] Checkstyle / SpotBugs エラーなし（CI ブロック化済み）
 - [ ] SonarQube Quality Gate 通過
-- [ ] Swagger UI で新規 API（auth/logout, bookings, voyages）が動作確認できる
-- [ ] `local-docker` プロファイルで authms / bookingms / routingms / gatewayms / frontend が起動し、API が応答する
-- [ ] ADR-0007 が作成され `docs/adr/index.md` と `mkdocs.yml` に反映される
-- [ ] `iteration_plan-2.md` / `release_plan.md` / `index.md` が最新の進捗を反映
+- [x] Swagger UI で新規 API（auth/logout, bookings, voyages）が動作確認できる
+- [x] `local-docker` プロファイルで authms / bookingms / routingms / gatewayms / frontend が起動し、API が応答する
+- [x] ADR-0007 が作成され `docs/adr/index.md` と `mkdocs.yml` に反映される
+- [x] `iteration_plan-2.md` / `release_plan.md` / `index.md` が最新の進捗を反映（2026-05-15 更新）
 - [ ] **data-model.md に `users.lock_until` / `users.failed_attempts` カラム追加を反映**（IT2 完了時の同期）
 
 ### デモ項目
@@ -839,6 +839,7 @@ IT2 計画で明らかになった、設計ドキュメント側に反映が必�
 |------|---------|--------|
 | 2026-05-13 | 初版作成（IT1 ベロシティ反映、US25 を IT3 へ繰越し） | AI Agent（XP PM） |
 | 2026-05-13 | 整合性検証結果を反映：集約名を `Cargo` に修正、Read Model を `cargo_summary` / `carrier_movement` に修正、Voyage を routingms に配置（スケルトン作成タスク追加）、`user_sessions.revoked` 利用、H13 画面分離方針明記、H21 PIT カバレッジ指標反映 | AI Agent（XP PM） |
+| 2026-05-15 | 中間進捗反映：バックエンド US04/US05/US24/US00-r1/US00-r2/US-UI-r 完了、Jacoco 統合済みを反映。フロントエンド UI（タスク 5）と PIT/Checkstyle ブロック化/SonarQube（タスク 7.2-7.4）が残作業 | AI Agent（XP PM） |
 
 ---
 
