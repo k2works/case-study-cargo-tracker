@@ -1,7 +1,9 @@
 package com.example.cargotracker.routingms.domain.model.aggregates;
 
 import com.example.cargotracker.routingms.domain.model.commands.RegisterVoyageCommand;
+import com.example.cargotracker.routingms.domain.model.commands.UpdateVoyageScheduleCommand;
 import com.example.cargotracker.routingms.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routingms.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routingms.domain.model.valueobjects.Carrier;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CarrierMovement;
@@ -83,6 +85,32 @@ public final class Voyage {
         this.carrierMovements = new ArrayList<>(event.carrierMovements());
         this.acceptedCargoTypes = new ArrayList<>(event.acceptedCargoTypes());
         this.status = VoyageStatus.SCHEDULED;
+    }
+
+    /**
+     * 航海スケジュール更新（US25 / UC19）。
+     *
+     * <p>Carrier と shipName は更新対象外。出発・到着日時、寄港地リスト、対応貨物種別を
+     * 上書きする。差分確認とキャンセル動作（受入条件 2 / 5）は UI 側で扱い、ドメインは
+     * 確定済みの更新内容を受け取ってイベントを発行する。</p>
+     */
+    @CommandHandler
+    public void updateSchedule(UpdateVoyageScheduleCommand command, EventAppender appender) {
+        appender.append(new VoyageScheduleUpdatedEvent(
+                command.voyageNumber(),
+                command.departureDate(),
+                command.arrivalDate(),
+                List.copyOf(command.carrierMovements()),
+                List.copyOf(command.acceptedCargoTypes())));
+    }
+
+    @EventSourcingHandler
+    public void on(VoyageScheduleUpdatedEvent event) {
+        this.departureDate = event.departureDate();
+        this.arrivalDate = event.arrivalDate();
+        this.carrierMovements = new ArrayList<>(event.carrierMovements());
+        this.acceptedCargoTypes = new ArrayList<>(event.acceptedCargoTypes());
+        // status は SCHEDULED 維持（DEPARTED / ARRIVED 後の更新可否は IT4 以降で検討）
     }
 
     public String getVoyageNumber() {

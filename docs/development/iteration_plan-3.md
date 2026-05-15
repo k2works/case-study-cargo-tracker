@@ -139,8 +139,8 @@ date: 2026-05-15T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `Voyage` Aggregate に `UpdateVoyageScheduleCommand` / `@CommandHandler` を追加 | 2h | AI | [ ] |
-| 1.2 | `VoyageScheduleUpdatedEvent` と `@EventSourcingHandler` を実装（`Schedule` VO の差分検証含む） | 2h | AI | [ ] |
+| 1.1 | `Voyage` Aggregate に `UpdateVoyageScheduleCommand` / `@CommandHandler` を追加 | 2h | AI | [x] 完了（連続性検証含む。routingms PIT 58%→77% に改善し主指標 75% 達成） |
+| 1.2 | `VoyageScheduleUpdatedEvent` と `@EventSourcingHandler` を実装（`Schedule` VO の差分検証含む） | 2h | AI | [x] 完了（1.1 と同時実装。再生で departureDate / arrivalDate / movements / acceptedCargoTypes 反映） |
 | 1.3 | `VoyageProjectionsEventHandler` の更新ロジック追加（`voyage` / `carrier_movement` 反映） | 2h | AI | [ ] |
 | 1.4 | `PUT /api/v1/voyages/{voyageNumber}` エンドポイント実装 + 差分確認レスポンス | 2h | AI | [ ] |
 | 1.5 | フロント S12（`/routing/voyages/:vn/edit` URL）に差分表示とキャンセル動作を追加 | 3h | AI | [ ] |

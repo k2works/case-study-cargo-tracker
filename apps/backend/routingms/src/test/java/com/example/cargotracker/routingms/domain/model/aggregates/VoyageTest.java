@@ -1,7 +1,9 @@
 package com.example.cargotracker.routingms.domain.model.aggregates;
 
 import com.example.cargotracker.routingms.domain.model.commands.RegisterVoyageCommand;
+import com.example.cargotracker.routingms.domain.model.commands.UpdateVoyageScheduleCommand;
 import com.example.cargotracker.routingms.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routingms.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routingms.domain.model.valueobjects.Carrier;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CarrierMovement;
@@ -120,5 +122,115 @@ class VoyageTest {
         assertThatThrownBy(() -> new RegisterVoyageCommand(
                 "V99", carrier, "Ship", JPYOK, USLAX, DEPART, ARRIVE, emptyMovements, cargoTypes))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // ===== US25: 既存航海スケジュール更新 =====
+
+    private UpdateVoyageScheduleCommand validUpdateCommand() {
+        var newDepart = DEPART.plusDays(2);
+        var newArrive = ARRIVE.plusDays(2);
+        var movements = List.of(
+                new CarrierMovement(JPYOK, TWKHH, newDepart, newDepart.plusDays(4)),
+                new CarrierMovement(TWKHH, USLAX, newDepart.plusDays(5), newArrive));
+        return new UpdateVoyageScheduleCommand(
+                "V12345",
+                newDepart,
+                newArrive,
+                movements,
+                List.of(CargoType.GENERAL, CargoType.HAZARDOUS));
+    }
+
+    @Test
+    @DisplayName("updateSchedule は EventAppender に VoyageScheduleUpdatedEvent を追加する")
+    void updateSchedule_イベント追加() {
+        EventAppender appender = mock(EventAppender.class);
+        var voyage = registeredVoyage();
+        var command = validUpdateCommand();
+
+        voyage.updateSchedule(command, appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(VoyageScheduleUpdatedEvent.class);
+        VoyageScheduleUpdatedEvent event = (VoyageScheduleUpdatedEvent) captor.getValue();
+        assertThat(event.voyageNumber()).isEqualTo("V12345");
+        assertThat(event.carrierMovements()).hasSize(2);
+        assertThat(event.acceptedCargoTypes()).containsExactly(CargoType.GENERAL, CargoType.HAZARDOUS);
+    }
+
+    @Test
+    @DisplayName("VoyageScheduleUpdatedEvent を再生すると carrierMovements と日付が上書きされる")
+    void on_スケジュール更新で状態反映() {
+        var voyage = registeredVoyage();
+        var update = validUpdateCommand();
+        var event = new VoyageScheduleUpdatedEvent(
+                update.voyageNumber(),
+                update.departureDate(),
+                update.arrivalDate(),
+                update.carrierMovements(),
+                update.acceptedCargoTypes());
+
+        voyage.on(event);
+
+        assertThat(voyage.getDepartureDate()).isEqualTo(update.departureDate());
+        assertThat(voyage.getArrivalDate()).isEqualTo(update.arrivalDate());
+        assertThat(voyage.getCarrierMovements()).hasSize(2);
+        assertThat(voyage.getAcceptedCargoTypes()).containsExactly(CargoType.GENERAL, CargoType.HAZARDOUS);
+        // 登録時の Carrier / shipName は更新対象外なので維持される
+        assertThat(voyage.getShipName()).isEqualTo("Yokohama Express");
+    }
+
+    @Test
+    @DisplayName("Command の日付逆転（arrival <= departure）は拒否される")
+    void 更新Command_日付逆転は拒否() {
+        var movements = List.of(new CarrierMovement(JPYOK, USLAX, DEPART, ARRIVE));
+        var cargoTypes = List.of(CargoType.GENERAL);
+        assertThatThrownBy(() -> new UpdateVoyageScheduleCommand(
+                "V12345", ARRIVE, DEPART, movements, cargoTypes))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("arrivalDate");
+    }
+
+    @Test
+    @DisplayName("Command の carrierMovements が空は拒否される")
+    void 更新Command_寄港地空は拒否() {
+        var emptyMovements = List.<CarrierMovement>of();
+        var cargoTypes = List.of(CargoType.GENERAL);
+        assertThatThrownBy(() -> new UpdateVoyageScheduleCommand(
+                "V12345", DEPART, ARRIVE, emptyMovements, cargoTypes))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Command の carrierMovements の連続性違反（前の到着港 != 次の出発港）は拒否される")
+    void 更新Command_連続性違反は拒否() {
+        // 港湾連続性: [JPYOK→TWKHH], [USLAX→USNYC] は TWKHH != USLAX なので不正
+        var disconnected = List.of(
+                new CarrierMovement(JPYOK, TWKHH, DEPART, DEPART.plusDays(4)),
+                new CarrierMovement(USLAX, new UnLocode("USNYC"), DEPART.plusDays(5), ARRIVE));
+        var cargoTypes = List.of(CargoType.GENERAL);
+        assertThatThrownBy(() -> new UpdateVoyageScheduleCommand(
+                "V12345", DEPART, ARRIVE, disconnected, cargoTypes))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("連続性");
+    }
+
+    /**
+     * テスト用ヘルパ: 登録済みの Voyage を Event 再生で構築する。
+     */
+    private Voyage registeredVoyage() {
+        var voyage = new Voyage();
+        var register = validCommand();
+        voyage.on(new VoyageRegisteredEvent(
+                register.voyageNumber(),
+                register.carrier(),
+                register.shipName(),
+                register.origin(),
+                register.destination(),
+                register.departureDate(),
+                register.arrivalDate(),
+                register.carrierMovements(),
+                register.acceptedCargoTypes()));
+        return voyage;
     }
 }
