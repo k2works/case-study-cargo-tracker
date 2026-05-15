@@ -1,0 +1,14 @@
+# ローカル開発：gatewayms（DB なし、ルーティングのみ）
+#
+# 用途: IDE 起動・最速 TDD ループ。
+# Spring Boot DevTools による自動再起動を有効化。
+
+spring:
+  # Spring Boot DevTools。詳細は bookingms 側の application-local-h2.yml を参照。
+  devtools:
+    restart:
+      enabled: true
+      poll-interval: 2s
+      quiet-period: 1s
+    livereload:
+      enabled: true

@@ -15,6 +15,9 @@ dependencies {
     runtimeOnly(libs.jjwt.impl)
     runtimeOnly(libs.jjwt.jackson)
 
+    // DevTools（bootRun 自動再起動・LiveReload）
+    developmentOnly(libs.spring.boot.devtools)
+
     testImplementation(libs.spring.boot.starter.test)
 }
 

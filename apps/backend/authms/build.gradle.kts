@@ -35,6 +35,9 @@ dependencies {
     implementation(libs.postgresql)
     runtimeOnly(libs.h2)
 
+    // DevTools（bootRun 自動再起動・LiveReload）
+    developmentOnly(libs.spring.boot.devtools)
+
     // テスト
     testImplementation(libs.bundles.test.unit)
     testImplementation(libs.spring.security.test)
