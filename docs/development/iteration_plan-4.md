@@ -353,35 +353,391 @@ gantt
 
 ## 設計
 
+### ドメインモデル（US08〜US14 観点）
+
+> `domain-model.md` に準拠する。経路候補算出は routingms の `RouteCandidateFinder`（ドメインサービス。旧 `OptimalRouteService`）が `RouteSearchSpecification` を受け取り `List<TransitPath>` を返す。経路紐付け・予約確定・追跡番号発行はすべて bookingms の `Cargo` 集約に対するコマンドとして実装し、Read Model は `cargo_summary`（状態遷移）と `cargo_leg`（旅程 Leg）で表現する。routingms ↔ bookingms 間のデータ受け渡しは `AssignRouteToCargoCommand` の `CargoItinerary` ペイロードで行い、Saga 自動連携は IT5 以降とする。
+
+```plantuml
+@startuml
+package "bookingms" {
+  class Cargo <<Aggregate Root>> {
+    - bookingId: BookingId
+    - shipperId: ShipperId
+    - cargoSpec: CargoSpecification
+    - routeSpec: RouteSpecification
+    - itinerary: CargoItinerary
+    - bookingStatus: BookingStatus
+    - routingStatus: RoutingStatus
+    - trackingNumber: TrackingNumber
+    + handle(AssignRouteToCargoCommand)
+    + handle(ChangeDestinationCommand)
+    + handle(ConfirmBookingCommand)
+    + handle(CancelBookingCommand)
+    + handle(AssignTrackingDetailsCommand)
+  }
+
+  class CargoItinerary <<Value Object>> {
+    - legs: List<Leg>
+    + isEmpty(): boolean
+    + finalArrivalDate(): LocalDate
+    + finalDestination(): Location
+    + isExpected(handlingType, location): boolean
+  }
+
+  class Leg <<Value Object>> {
+    - voyageNumber: VoyageNumber
+    - loadLocation: Location
+    - unloadLocation: Location
+    - loadDate: LocalDateTime
+    - unloadDate: LocalDateTime
+  }
+
+  class TrackingNumber <<Value Object>> {
+    - value: String
+  }
+
+  enum BookingStatus {
+    PRELIMINARY
+    ROUTING
+    ROUTE_PROPOSED
+    CONFIRMED
+    TRACKING_ISSUED
+    IN_TRANSIT
+    DELIVERED
+    SETTLED
+    CANCELLED
+  }
+
+  Cargo *-- CargoItinerary
+  CargoItinerary "1" *-- "1..*" Leg
+}
+
+package "routingms" {
+  class RouteCandidateFinder <<Domain Service>> {
+    ' IT4 で OptimalRouteService から改名（ADR-0010）
+    + findCandidates(spec: RouteSearchSpecification): List<TransitPath>
+  }
+
+  class RouteSearchSpecification <<Value Object>> {
+    - origin: UnLocode
+    - destination: UnLocode
+    - arrivalDeadline: LocalDate
+    - cargoType: CargoType
+    - minTransferHours: int
+    - maxStops: int
+  }
+
+  class TransitPath <<Value Object>> {
+    - transitEdges: List<TransitEdge>
+    + totalDuration(): Duration
+    + estimatedCost(): Money
+  }
+
+  class TransitEdge <<Value Object>> {
+    ' IT4 で String → UnLocode VO に型安全化（ADR-0011）
+    - voyageNumber: VoyageNumber
+    - fromUnLocode: UnLocode
+    - toUnLocode: UnLocode
+    - fromDate: LocalDateTime
+    - toDate: LocalDateTime
+    - acceptedCargoTypes: Set<CargoType>
+  }
+
+  interface EdgeRepository <<Port>> {
+    ' ADR-0011: voyageテーブル + carrier_movementテーブル JOIN を MyBatis に閉じ込める
+    + findEdgesFrom(unlocode: UnLocode): List<TransitEdge>
+  }
+
+  TransitPath "1" *-- "1..*" TransitEdge
+  RouteCandidateFinder ..> RouteSearchSpecification : 受け取る
+  RouteCandidateFinder ..> TransitPath : 返却
+  RouteCandidateFinder --> EdgeRepository : 参照
+}
+
+RouteCandidateFinder ..> CargoItinerary : 経路候補を\nCargoItinerary に変換
+Cargo ..> RouteCandidateFinder : AssignRouteToCargoCommand\n経由で経路を受け取る
+@enduml
+```
+
+| UC | 主集約 / サービス | 主コマンド | 主イベント | 状態遷移 |
+|----|-----------------|-----------|-----------|---------|
+| UC06 経路候補算出（US08） | `RouteCandidateFinder` | （Query） | - | - |
+| UC07 経路選択確定（US09） | `Cargo` | `AssignRouteToCargoCommand` | `CargoRoutedEvent` | `ROUTING` → `ROUTE_PROPOSED` |
+| UC08 経路条件調整（US10） | `Cargo` | `ChangeDestinationCommand` | `CargoDestinationChangedEvent` | 再算出トリガー |
+| UC09 経路紐付け（US11） | `Cargo` | `AssignRouteToCargoCommand` | `CargoRoutedEvent` | `routing_status` → `ROUTED` |
+| UC10 確定経路通知（US12） | （Notification ACL） | - | - | - |
+| UC11 予約確定（US13） | `Cargo` | `ConfirmBookingCommand` | `BookingConfirmedEvent` | `ROUTE_PROPOSED` → `CONFIRMED` |
+| UC12 追跡番号発行（US14） | `Cargo` | `AssignTrackingDetailsCommand` | `CargoTrackedEvent` | `CONFIRMED` → `TRACKING_ISSUED` |
+
+### データモデル
+
+> `data-model.md` の既存テーブルを最大限活用する。`cargo_summary` は既存カラム（`booking_status` / `routing_status` / `tracking_number`）の値を IT4 でエンリッチする。`cargo_leg` テーブルが経路紐付け（UC09）の Read Model として機能する。`route_summary`（JSON）は IT4 で新規追加カラムとして Flyway migration で管理し、`data-model.md` への反映が必要。
+
+```plantuml
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "cargo_summary" as cargo {
+  * **booking_id**: VARCHAR(36) <<PK>>
+  --
+  shipper_id: VARCHAR(36) <<FK>>
+  tracking_number: VARCHAR(20) <<UNIQUE>>
+  origin_unlocode: VARCHAR(5)
+  destination_unlocode: VARCHAR(5)
+  arrival_deadline: DATE
+  cargo_type: VARCHAR(16)
+  weight_kg: NUMERIC(12,2)
+  booking_status: VARCHAR(20)
+  ' PRELIMINARY → ROUTING → ROUTE_PROPOSED
+  ' → CONFIRMED → TRACKING_ISSUED → ...
+  routing_status: VARCHAR(16)
+  ' NOT_ROUTED → ROUTED / MISROUTED
+  route_summary: TEXT
+  ' IT4 新規: 選択経路 JSON サマリー（NEW）
+  estimated_amount: NUMERIC(14,2)
+  estimated_currency: VARCHAR(3)
+  last_event_at: TIMESTAMPTZ
+  created_at: TIMESTAMPTZ
+  updated_at: TIMESTAMPTZ
+}
+
+entity "cargo_leg" as leg {
+  * **booking_id**: VARCHAR(36) <<PK>> <<FK>>
+  * **leg_seq**: INTEGER <<PK>>
+  --
+  voyage_number: VARCHAR(20)
+  load_unlocode: VARCHAR(5)
+  unload_unlocode: VARCHAR(5)
+  load_at: TIMESTAMPTZ
+  unload_at: TIMESTAMPTZ
+}
+
+cargo ||--|{ leg : "1..*"
+
+note right of cargo
+  IT4 で更新される既存カラム:
+  booking_status: ROUTE_PROPOSED / CONFIRMED / TRACKING_ISSUED
+  routing_status: ROUTED
+  tracking_number: TRK-YYYYMMDD-XXXXXXXX
+  route_summary: (新規追加カラム)
+end note
+
+note right of leg
+  US11 (UC09) で CargoItinerary の
+  各 Leg を cargo_leg に書き込む。
+  CargoRoutedEvent を購読して
+  CargoProjectionsEventHandler が挿入。
+end note
+@enduml
+```
+
+> **`cargo_summary.booking_status` 状態遷移（IT4 追加分）**:
+
+```plantuml
+@startuml
+hide empty description
+
+state "ROUTING\n（経路設計中）" as ROUTING
+state "ROUTE_PROPOSED\n（経路提案中）" as ROUTE_PROPOSED
+state "CONFIRMED\n（予約確定）" as CONFIRMED
+state "TRACKING_ISSUED\n（追跡番号発行済）" as TRACKING_ISSUED
+
+ROUTING --> ROUTE_PROPOSED : AssignRouteToCargoCommand\n（US09/US11: 経路紐付け）
+ROUTE_PROPOSED --> ROUTING : ChangeDestinationCommand\n（US10: 条件調整後再設計）
+ROUTE_PROPOSED --> CONFIRMED : ConfirmBookingCommand\n（US13: 予約確定）
+CONFIRMED --> TRACKING_ISSUED : AssignTrackingDetailsCommand\n（US14: 追跡番号発行）
+@enduml
+```
+
 ### API 設計
 
-| メソッド | エンドポイント | 説明 | SP |
-|---------|---------------|------|-----|
-| GET | `/api/v1/routing/candidates?bookingId={id}` | 経路候補算出（US08） | US08 |
-| POST | `/api/v1/routing/select` | 経路選択・確定（US09） | US09 |
-| POST | `/api/v1/routing/adjust` | 経路条件調整・再算出（US10） | US10 |
-| POST | `/api/v1/bookings/{id}/assign-route` | 経路情報の予約紐付け（US11） | US11 |
-| POST | `/api/v1/bookings/{id}/notify-route` | 荷主への経路通知（US12） | US12 |
-| POST | `/api/v1/bookings/{id}/confirm` | 予約確定（US13） | US13 |
-| POST | `/api/v1/bookings/{id}/issue-tracking` | 追跡番号発行（US14） | US14 |
+| メソッド | エンドポイント | 説明 | US |
+|---------|---------------|------|----|
+| GET | `/api/v1/routing/candidates?bookingId={id}` | 経路候補算出（DFS 全経路列挙）（US08） | US08 |
+| POST | `/api/v1/routing/select` | 経路選択・確定（US09）`AssignRouteToCargoCommand` 発行 | US09 |
+| POST | `/api/v1/routing/adjust` | 経路条件調整・再算出（US10）`ChangeDestinationCommand` 発行 | US10 |
+| POST | `/api/v1/bookings/{id}/assign-route` | 経路情報の予約紐付け（US11）`cargo_leg` 書き込み | US11 |
+| POST | `/api/v1/bookings/{id}/notify-route` | 荷主への経路通知（US12）IT4 はログ記録のみ | US12 |
+| POST | `/api/v1/bookings/{id}/confirm` | 予約確定（US13）`ConfirmBookingCommand` 発行 | US13 |
+| POST | `/api/v1/bookings/{id}/issue-tracking` | 追跡番号発行（US14）`AssignTrackingDetailsCommand` 発行 | US14 |
 
-### 主なドメインイベント
+### ユーザーインターフェース
 
-| コマンド | イベント | Aggregate | 状態遷移 |
-|---------|---------|-----------|---------|
-| `SelectRouteCommand` | `RouteSelectedEvent` | `CargoItinerary`（routingms） | → 確定 |
-| `AssignRouteCommand` | `RouteAssignedEvent` | `Cargo`（bookingms） | → `ROUTE_PROPOSED` |
-| `ConfirmBookingCommand` | `BookingConfirmedEvent` | `Cargo`（bookingms） | → `CONFIRMED` |
-| `IssueTrackingNumberCommand` | `TrackingNumberIssuedEvent` | `Cargo`（bookingms） | → `AWAITING_PICKUP` |
+#### ビュー（画面構成）
 
-### `cargo_summary` テーブルへの追加カラム
+`ui_design.md` の画面一覧（S14: 経路設計ワークベンチ）に準拠する。新規画面の追加はなく、S14 の機能拡張と S10 のアクション追加が中心となる。
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `tracking_number` | VARCHAR(20) | 追跡番号（`TRK-YYYYMMDD-XXXXXXXX`） |
-| `route_summary` | TEXT | 選択された経路サマリー（JSON） |
+| 画面 ID | 画面名 | パス | 拡張内容 | US |
+|--------|-------|------|---------|-----|
+| S10 | 予約詳細（シングル） | `/bookings/:id` | 既存 — 「経路設計 WB を開く」「荷主に通知」「予約確定」「追跡番号発行」アクションを状態に応じて表示 | US12, US13, US14 |
+| S11 | 航海スケジュール一覧 | `/routing/voyages` | 既存 — 変更なし。S14 への導線として経路設計待ち（`booking_status=ROUTING`）予約一覧を維持 | US08 前提 |
+| S14 | 経路設計ワークベンチ | `/routing/design/:bookingId` | IT4 で本実装 — 予約情報パネル・航海検索・経路候補算出・条件調整・経路選択・予約紐付け・追跡番号発行を統合 | US08, US09, US10, US11, US14 |
 
-> **注**: `booking_status` / `routing_status` は既存カラムとして `data-model.md` に定義済み。`AWAITING_PICKUP` は `booking_status` の追加値として管理する。`route_summary` は IT4 で新規追加するカラムのため、`data-model.md` への反映が必要。
+#### ワイヤーフレーム（PlantUML salt）
+
+共通ヘッダー（`国際貨物輸送管理 | ユーザ名 (ロール) | [ログアウト]`）とサイドナビは全画面共通のため省略する。
+
+##### S14: 経路設計ワークベンチ（US08/US09/US10/US11/US14）
+
+```plantuml
+@startsalt
+{+
+  経路設計ワークベンチ - B-2026-0512-003
+  ---
+  {
+    {
+      予約情報 |
+      {
+        出発地 | JPTYO 東京
+        目的地 | DEHAM ハンブルク
+        期限 | 2026-08-01
+        貨物種別 | 一般 / 8,500 kg
+      }
+    } |
+    {
+      検索条件 |
+      出発期間 | "2026-05-15 〜 2026-06-15"
+      経由地制限 | "[追加 +]"
+      乗継最小時間 | "24h（システム固定）"
+      [航海検索]
+    }
+  }
+  ---
+  "**航海候補（チェックして経路候補を算出）**"
+  {#
+    選択 | 航海番号 | 運送会社 | 出発地 / 日時 | 到着地 / 日時 | 対応貨物
+    ☐ | V-MOL-001 | MOL | JPTYO 5/20 09:00 | SGSIN 5/28 14:00 | 一般
+    ☐ | V-MOL-002 | MOL | SGSIN 6/02 02:00 | DEHAM 6/30 18:00 | 一般・冷凍
+    ☑ | V-MAERSK-220 | Maersk | JPTYO 5/22 08:00 | DEHAM 6/25 20:00 | 一般（直行）
+  }
+  [経路候補を算出]
+  ---
+  "**算出された経路候補（推奨順）**"
+  {#
+    候補 | 経由港 | 所要日数 | 費用（概算） | 推奨
+    1 | JPTYO → DEHAM（直行） | 34 日 | ¥1,650,000 | ★直行
+    2 | JPTYO → SGSIN → DEHAM | 41 日 | ¥1,200,000 |
+  }
+  ' 候補 0 件時（H5 対応）
+  {(候補 0 件時)
+    "⚠ alert-warning: 指定条件では経路が見つかりませんでした。"
+    [条件を調整] | [営業担当者に連絡]
+  }
+  ---
+  [選択して予約に紐付け] | [条件を調整（US10）]
+  ---
+  ' 紐付け成功後
+  {(紐付け成功後)
+    "✓ alert-success: 経路を予約 B-2026-0512-003 に紐付けました。booking_status: [ROUTE_PROPOSED]"
+    [S10 予約詳細へ]
+  }
+}
+@endsalt
+```
+
+##### S10: 予約詳細（US12/US13/US14）— アクション拡張
+
+```plantuml
+@startsalt
+{+
+  予約 B-2026-0512-003  状態: [経路提案中]  追跡番号: [-]
+  ---
+  {
+    {
+      基本情報 |
+      {
+        荷主 | 鈴木物産
+        出発地 | JPTYO 東京
+        目的地 | DEHAM ハンブルク
+        期限 | 2026-08-01
+        貨物種別 | 一般 / 8,500 kg / 30 個 / 電子部品
+      }
+    } |
+    {
+      予約状態 |
+      "○ 仮受付"
+      "● 経路設計中"
+      "● 経路提案中（現在）"
+      "○ 予約確定"
+      "○ 追跡番号発行"
+      "○ 輸送中"
+    }
+  }
+  ---
+  "**経路情報（cargo_leg）**"
+  {#
+    Leg | 航海番号 | 出発 | 到着 | 期間
+    1 | V-MOL-001 | JPTYO 2026-05-20 | SGSIN 2026-05-28 | 8 日
+    2 | V-MOL-002 | SGSIN 2026-06-02 | DEHAM 2026-06-30 | 28 日
+  }
+  ---
+  "**アクション（IT4 拡張）**"
+  ---
+  [経路設計 WB を開く（US08~US11）] | [荷主に経路通知（US12）] | [予約を確定（US13）] | [追跡番号を発行（US14）] | [キャンセル]
+  ---
+  ' 荷主通知成功時
+  {(通知送信後 US12)
+    "✓ alert-success: 荷主に経路を通知しました（IT4: ログ記録のみ）"
+  }
+  ' 予約確定成功時
+  {(確定後 US13)
+    "✓ alert-success: 予約を確定しました。booking_status: [CONFIRMED]"
+  }
+  ' 追跡番号発行後
+  {(追跡番号発行後 US14)
+    "✓ alert-success: 追跡番号 TRK-20260625-AB12CD3E を発行しました。"
+  }
+  ' エラー時
+  {(htmx:responseError)
+    "⚠ alert-danger: 操作に失敗しました。Axon Server への接続を確認してください。"
+  }
+}
+@endsalt
+```
+
+#### インタラクション（画面遷移と htmx パターン）
+
+```plantuml
+@startuml
+title IT4 で追加される画面遷移（経路設計フロー）
+
+state "航海スケジュール一覧 (S11)" as S11
+state "予約詳細 (S10)" as S10
+state "経路設計ワークベンチ (S14)" as S14 {
+  state "① 条件確認・航海検索" as S14_SEARCH
+  state "② 経路候補算出" as S14_CALC
+  state "③ 経路選択・紐付け" as S14_ASSIGN
+  state "④ 候補 0 件（条件調整）" as S14_ADJUST
+  S14_SEARCH --> S14_CALC : 「経路候補を算出」
+  S14_CALC --> S14_ASSIGN : 候補あり
+  S14_CALC --> S14_ADJUST : 候補 0 件（H5 対応）
+  S14_ADJUST --> S14_SEARCH : 「条件を調整」（自己ループ）
+}
+
+[*] --> S11 : サイドナビ「航海スケジュール」
+S11 --> S10 : 経路設計待ち予約を開く
+S10 --> S14 : 「経路設計 WB を開く」\n(GET /routing/design/:bookingId)
+S14_ASSIGN --> S10 : 「選択して予約に紐付け」\n(POST /bookings/:id/assign-route → 303 → GET /bookings/:id)
+
+S10 --> S10 : 「荷主に経路通知」\n(htmx hx-post=/bookings/:id/notify-route\nhx-swap=outerHTML → alert-success)
+S10 --> S10 : 「予約を確定」\n(htmx hx-post=/bookings/:id/confirm\nhx-swap=outerHTML → alert-success)
+S10 --> S10 : 「追跡番号を発行」\n(htmx hx-post=/bookings/:id/issue-tracking\nhx-swap=outerHTML → alert-success)
+S10 --> S10 : エラー時 htmx:responseError → alert-danger（状態維持）
+
+S14_SEARCH --> S14_SEARCH : 「航海検索」\n(htmx hx-get=/voyages, hx-target=#voyage-list)
+S14_CALC --> S14_CALC : バリデーションエラー（自己ループ、航海未選択など）
+@enduml
+```
+
+**htmx / PRG 規約**:
+
+- 経路候補算出（S14）は `GET /api/v1/routing/candidates?bookingId={id}` で部分更新（`hx-target=#candidate-list` / `hx-swap=innerHTML`）
+- 航海検索（S14）は `hx-get=/routing/voyages` で航海候補テーブルを部分更新
+- 経路紐付け（S14→S10）は PRG（`POST /bookings/:id/assign-route` → 303 → `GET /bookings/:id`）でブラウザ戻る防止
+- S10 上のアクション（通知・確定・追跡番号発行）は htmx `hx-post` + `hx-swap=outerHTML` でアクションボタン領域を差し替え
+- コマンド成功時は `alert-success`、サーバーエラーは `htmx:responseError` を捕捉して `alert-danger` を表示（ui_design.md インタラクション規約準拠）
+- Read Model 反映待ちは指数バックオフ最大 3 回（合計約 5 秒）で `invalidateQueries` 後に再フェッチ
 
 ### ADR
 
@@ -432,6 +788,7 @@ gantt
 |------|---------|--------|
 | 2026-05-16 | 初版作成（IT3 完了後・ADR-0010/0011 対応込み） | AI Agent（XP PM） |
 | 2026-05-16 | 整合性検証に基づく修正（S15/S16→S14・tracking_number VARCHAR(20)・CargoItinerary・H5/H6 対応方針追記） | AI Agent |
+| 2026-05-16 | 設計セクションを IT3 同水準に拡充（ドメインモデル図・状態遷移図・データモデル ER 図・S14/S10 ワイヤーフレーム・インタラクション遷移図を追加） | AI Agent |
 
 ---
 
