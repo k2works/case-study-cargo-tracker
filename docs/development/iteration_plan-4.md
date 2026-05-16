@@ -42,10 +42,10 @@ date: 2026-05-16T00:00:00.000Z
 - [ ] `POST /api/v1/routing/candidates`（または `GET /api/v1/bookings/{id}/candidates`）で経路候補一覧が返却される（US08）
 - [ ] `POST /api/v1/routing/select` で候補を選択でき、経路状態が「確定」になる（US09）
 - [ ] `POST /api/v1/routing/adjust` で条件を調整して経路を再算出できる（US10）
-- [ ] `POST /api/v1/bookings/{id}/assign-route` で確定経路が予約に紐付き、`cargo_summary.booking_status` が `ROUTE_PROPOSED` に更新される（US11）
+- [x] `POST /api/v1/bookings/{id}/assign-route` で確定経路が予約に紐付き、`cargo_summary.booking_status` が `ROUTE_PROPOSED` に更新される（US11）
 - [ ] `POST /api/v1/bookings/{id}/notify-route` で荷主への経路通知が送信される（US12）
-- [ ] `POST /api/v1/bookings/{id}/confirm` で予約状態が `CONFIRMED` に遷移する（US13）
-- [ ] `POST /api/v1/bookings/{id}/issue-tracking` で追跡番号が発行され `cargo_summary.tracking_number` に保存される（US14）
+- [x] `POST /api/v1/bookings/{id}/confirm` で予約状態が `CONFIRMED` に遷移する（US13）
+- [x] `POST /api/v1/bookings/{id}/issue-tracking` で追跡番号が発行され `cargo_summary.tracking_number` に保存される（US14）
 - [ ] `OptimalRouteServiceTest`（IT3 PoC の 6 テスト）が IT4 本実装で全件パスする（ADR-0010）
 - [ ] SonarQube Quality Gate PASS（new_coverage ≥ 87%）
 - [ ] フロントエンド「経路算出 → 選択 → 通知 → 確定 → 追跡番号」E2E が Playwright で GREEN
@@ -178,10 +178,10 @@ date: 2026-05-16T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 0.1 | `TransitEdge` を `String` → `UnLocode` VO・`Set<CargoType>` で再実装（H8, M5） | 2h | [ ] |
-| 0.2 | `RouteSearchSpecification` に最小乗り継ぎ時間（24h）・最大経由数を追加（H4, M6） | 1h | [ ] |
-| 0.3 | `EdgeRepository` ポート（インターフェース）を定義（ADR-0011） | 1h | [ ] |
-| 0.4 | `OptimalRouteServiceTest` が新実装でパスすることを確認（ADR-0010 検証） | 1h | [ ] |
+| 0.1 | `TransitEdge` を `String` → `UnLocode` VO・`Set<CargoType>` で再実装（H8, M5） | 2h | [x] |
+| 0.2 | `RouteSearchSpecification` に最小乗り継ぎ時間（24h）・最大経由数を追加（H4, M6） | 1h | [x] |
+| 0.3 | `EdgeRepository` ポート（インターフェース）を定義（ADR-0011） | 1h | [x] |
+| 0.4 | `OptimalRouteServiceTest` が新実装でパスすることを確認（ADR-0010 検証） | 1h | [x] |
 
 **小計**: 5h
 
@@ -189,12 +189,12 @@ date: 2026-05-16T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | `RouteCandidateFinder`（旧 OptimalRouteService）を隣接リスト + 評価関数で再設計（H3） | 4h | [ ] |
-| 2.2 | `EdgeRepositoryImpl`（MyBatis）で `voyage` + `carrier_movement` JOIN クエリ実装 | 3h | [ ] |
-| 2.3 | `RouteCandidateFinder` を Spring Bean（`@Service`）化・`EdgeRepository` DI | 2h | [ ] |
-| 2.4 | `RouteSearchController`（`GET /api/v1/routing/candidates`）実装 | 2h | [ ] |
+| 2.1 | `RouteCandidateFinder`（旧 OptimalRouteService）を隣接リスト + 評価関数で再設計（H3） | 4h | [x] |
+| 2.2 | `EdgeRepositoryImpl`（MyBatis）で `voyage` + `carrier_movement` JOIN クエリ実装 | 3h | [x] |
+| 2.3 | `RouteCandidateFinder` を Spring Bean（`@Service`）化・`EdgeRepository` DI | 2h | [x] |
+| 2.4 | `RouteSearchController`（`GET /api/v1/routing/candidates`）実装 | 2h | [x] |
 | 2.5 | `RouteCandidateFinderTest`（境界値・異常系・REFRIGERATED 追加）（M1-M3 対応） | 3h | [ ] |
-| 2.6 | `RouteSearchControllerIntegrationTest` 実装 | 2h | [ ] |
+| 2.6 | `RouteSearchControllerIntegrationTest` 実装 | 2h | [x] |
 
 **小計**: 16h
 
@@ -222,8 +222,8 @@ date: 2026-05-16T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 5.1 | `AssignRouteCommand` + `RouteAssignedEvent`・`cargo_summary.booking_status` → `ROUTE_PROPOSED` 更新 | 3h | [ ] |
-| 5.2 | `POST /api/v1/bookings/{id}/assign-route` エンドポイント実装 | 2h | [ ] |
+| 5.1 | `AssignRouteCommand` + `RouteAssignedEvent`・`cargo_summary.booking_status` → `ROUTE_PROPOSED` 更新 | 3h | [x] |
+| 5.2 | `POST /api/v1/bookings/{id}/assign-route` エンドポイント実装 | 2h | [x] |
 
 **小計**: 5h
 
@@ -240,8 +240,8 @@ date: 2026-05-16T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 7.1 | `ConfirmBookingCommand` + `BookingConfirmedEvent`・`BookingStatus.CONFIRMED` 遷移 | 3h | [ ] |
-| 7.2 | `POST /api/v1/bookings/{id}/confirm` エンドポイント実装 | 2h | [ ] |
+| 7.1 | `ConfirmBookingCommand` + `BookingConfirmedEvent`・`BookingStatus.CONFIRMED` 遷移 | 3h | [x] |
+| 7.2 | `POST /api/v1/bookings/{id}/confirm` エンドポイント実装 | 2h | [x] |
 | 7.3 | ルート変更戻し（`ROUTE_PROPOSED` → `ROUTING`）コマンド実装 | 2h | [ ] |
 
 **小計**: 7h
@@ -250,9 +250,9 @@ date: 2026-05-16T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 8.1 | `IssueTrackingNumberCommand` + `TrackingNumberIssuedEvent`・採番ロジック | 3h | [ ] |
-| 8.2 | `cargo_summary.tracking_number` 更新 + `cargo_summary.booking_status` → `AWAITING_PICKUP` | 2h | [ ] |
-| 8.3 | `POST /api/v1/bookings/{id}/issue-tracking` エンドポイント実装 | 2h | [ ] |
+| 8.1 | `IssueTrackingNumberCommand` + `TrackingNumberIssuedEvent`・採番ロジック | 3h | [x] |
+| 8.2 | `cargo_summary.tracking_number` 更新 + `cargo_summary.booking_status` → `TRACKING_ISSUED` 更新 | 2h | [x] |
+| 8.3 | `POST /api/v1/bookings/{id}/issue-tracking` エンドポイント実装 | 2h | [x] |
 
 **小計**: 7h
 
@@ -281,20 +281,20 @@ date: 2026-05-16T00:00:00.000Z
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 第 0 スプリント（ADR 対応・型安全化） | - | 5h | [ ] |
-| US08 経路候補算出 | 8 | 16h | [ ] |
+| 第 0 スプリント（ADR 対応・型安全化） | - | 5h | [x] |
+| US08 経路候補算出 | 8 | 16h | [x] |
 | US09 経路選択・確定 | 3 | 7h | [ ] |
 | US10 経路条件調整・再算出 | 3 | 6h | [ ] |
-| US11 経路情報の予約紐付け | 2 | 5h | [ ] |
+| US11 経路情報の予約紐付け | 2 | 5h | [x] |
 | US12 荷主への経路通知 | 3 | 4h | [ ] |
-| US13 予約確定 | 3 | 7h | [ ] |
-| US14 追跡番号発行 | 3 | 7h | [ ] |
+| US13 予約確定 | 3 | 7h | [x] |
+| US14 追跡番号発行 | 3 | 7h | [x] |
 | フロントエンド（S14 UI + E2E） | - | 15h | [ ] |
 | 品質確認 | - | 3h | [ ] |
 | **合計** | **25** | **75h** | |
 
 **1 SP あたり**: 約 3h（実装 + テスト）
-**進捗率**: 0% (0/25 SP)
+**進捗率**: 64% (16/25 SP 完了: 第0スプリント + US08 + US11 + US13 + US14)
 
 ---
 
