@@ -1,9 +1,12 @@
 package com.example.cargotracker.bookingms.domain.model.aggregates;
 
+import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
+import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
@@ -38,6 +41,7 @@ public final class Cargo {
     private RouteSpecification routeSpec;
     private BookingStatus bookingStatus;
     private RoutingStatus routingStatus;
+    private CargoItinerary itinerary;
 
     @EntityCreator
     public Cargo() {
@@ -90,6 +94,26 @@ public final class Cargo {
         this.bookingStatus = BookingStatus.ROUTING;
     }
 
+    /**
+     * 経路紐付け（US11 / UC09）。
+     *
+     * <p>ROUTING 状態の予約に確定経路を紐付け、ROUTE_PROPOSED に遷移する。</p>
+     */
+    @CommandHandler
+    public void assignRoute(AssignRouteToCargoCommand command, EventAppender appender) {
+        if (bookingStatus != BookingStatus.ROUTING) {
+            throw new IllegalStateException(
+                    "ROUTING 状態の予約のみ経路を紐付けできます。現状態: " + bookingStatus);
+        }
+        appender.append(new CargoRoutedEvent(command.bookingId(), command.itinerary()));
+    }
+
+    @EventSourcingHandler
+    public void on(CargoRoutedEvent event) {
+        this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
+        this.itinerary = event.itinerary();
+    }
+
     public String getBookingId() {
         return bookingId;
     }
@@ -112,5 +136,9 @@ public final class Cargo {
 
     public RoutingStatus getRoutingStatus() {
         return routingStatus;
+    }
+
+    public CargoItinerary getItinerary() {
+        return itinerary;
     }
 }

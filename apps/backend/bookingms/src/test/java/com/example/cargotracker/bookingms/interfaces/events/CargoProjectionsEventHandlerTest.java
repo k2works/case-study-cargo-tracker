@@ -2,6 +2,9 @@ package com.example.cargotracker.bookingms.interfaces.events;
 
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
+import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.Leg;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
@@ -17,6 +20,8 @@ import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -119,5 +124,17 @@ class CargoProjectionsEventHandlerTest {
         handler.on(event);
 
         verify(mapper).updateBookingStatus("B-100", "ROUTING");
+    }
+
+    @Test
+    @DisplayName("US11: CargoRoutedEvent を受けて cargo_summary.booking_status を ROUTE_PROPOSED に更新する")
+    void 経路紐付けでROUTE_PROPOSEDに更新() {
+        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
+                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
+        var event = new CargoRoutedEvent("B-200", new CargoItinerary(List.of(leg)));
+
+        handler.on(event);
+
+        verify(mapper).updateBookingStatus("B-200", "ROUTE_PROPOSED");
     }
 }

@@ -1,12 +1,16 @@
 package com.example.cargotracker.bookingms.domain.model.aggregates;
 
+import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
+import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Dimensions;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.Leg;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RoutingStatus;
@@ -18,6 +22,8 @@ import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -135,6 +141,66 @@ class CargoTest {
         assertThatThrownBy(() -> cargo.handOffToRouting(cmd, appender))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("PRELIMINARY");
+        verifyNoInteractions(appender);
+    }
+
+    private Cargo routingCargo(String bookingId) {
+        Cargo cargo = preliminaryCargo(bookingId);
+        cargo.on(new CargoHandedOffToRoutingEvent(bookingId));
+        return cargo;
+    }
+
+    @Test
+    @DisplayName("US11: assignRoute は CargoRoutedEvent を追加し ROUTE_PROPOSED に遷移する")
+    void assignRoute_イベント追加とROUTE_PROPOSED遷移() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = routingCargo(bookingId);
+        EventAppender appender = mock(EventAppender.class);
+
+        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
+                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
+        var itinerary = new CargoItinerary(List.of(leg));
+        var cmd = new AssignRouteToCargoCommand(bookingId, itinerary);
+
+        cargo.assignRoute(cmd, appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(CargoRoutedEvent.class);
+        CargoRoutedEvent event = (CargoRoutedEvent) captor.getValue();
+        assertThat(event.bookingId()).isEqualTo(bookingId);
+        assertThat(event.itinerary()).isEqualTo(itinerary);
+    }
+
+    @Test
+    @DisplayName("US11: CargoRoutedEvent を再生すると ROUTE_PROPOSED に遷移する")
+    void on_CargoRoutedEventでROUTE_PROPOSED遷移() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = routingCargo(bookingId);
+
+        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
+                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
+        var itinerary = new CargoItinerary(List.of(leg));
+        cargo.on(new CargoRoutedEvent(bookingId, itinerary));
+
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
+    }
+
+    @Test
+    @DisplayName("US11: ROUTING 以外では assignRoute は IllegalStateException")
+    void assignRoute_ROUTING以外は拒否() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = preliminaryCargo(bookingId); // PRELIMINARY state
+
+        EventAppender appender = mock(EventAppender.class);
+        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
+                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
+        var itinerary = new CargoItinerary(List.of(leg));
+        var cmd = new AssignRouteToCargoCommand(bookingId, itinerary);
+
+        assertThatThrownBy(() -> cargo.assignRoute(cmd, appender))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ROUTING");
         verifyNoInteractions(appender);
     }
 }

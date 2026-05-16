@@ -1,13 +1,16 @@
 package com.example.cargotracker.bookingms.interfaces.rest;
 
+import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.Leg;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.ShipperId;
@@ -15,6 +18,7 @@ import com.example.cargotracker.bookingms.domain.model.valueobjects.TemperatureC
 import com.example.cargotracker.bookingms.domain.ports.ShipperRepository;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryRecord;
+import com.example.cargotracker.bookingms.interfaces.rest.dto.AssignRouteRequest;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.BookCargoRequest;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.BookingListResponse;
 import com.example.cargotracker.bookingms.interfaces.rest.dto.BookingResponse;
@@ -144,6 +148,28 @@ public class BookingController {
                     .body(Map.of(MESSAGE_KEY, e.getMessage()));
         }
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTING.name()));
+    }
+
+    /**
+     * 経路紐付け（US11 / UC09）。
+     *
+     * <p>確定経路を予約に紐付け、{@code BookingStatus.ROUTE_PROPOSED} に遷移させる。</p>
+     */
+    @PostMapping("/{bookingId}/assign-route")
+    public ResponseEntity<Object> assignRoute(
+            @PathVariable("bookingId") String bookingId,
+            @RequestBody AssignRouteRequest request) {
+        var legs = request.legs().stream()
+                .map(dto -> new Leg(
+                        dto.voyageNumber(),
+                        Location.of(dto.loadUnlocode()),
+                        Location.of(dto.unloadUnlocode()),
+                        dto.loadTime(),
+                        dto.unloadTime()))
+                .toList();
+        var itinerary = new CargoItinerary(legs);
+        commandGateway.send(new AssignRouteToCargoCommand(bookingId, itinerary));
+        return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTE_PROPOSED.name()));
     }
 
     private CargoSpecification toCargoSpecification(BookCargoRequest.CargoSpecDto dto) {

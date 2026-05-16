@@ -1,5 +1,6 @@
 package com.example.cargotracker.bookingms.interfaces.rest;
 
+import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryMapper;
@@ -451,5 +452,36 @@ class BookingControllerIntegrationTest {
                                 }
                                 """.formatted(shipperId)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("US11: POST /api/v1/bookings/{id}/assign-route で AssignRouteToCargoCommand が送信される")
+    void 経路紐付けコマンドが送信される() throws Exception {
+        when(commandGateway.send(any())).thenReturn(null);
+
+        mockMvc.perform(post("/api/v1/bookings/B-TEST/assign-route")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "legs": [
+                                        {
+                                            "voyageNumber": "V001",
+                                            "loadUnlocode": "JPYOK",
+                                            "unloadUnlocode": "USLAX",
+                                            "loadTime": "2099-07-01T09:00:00",
+                                            "unloadTime": "2099-07-15T18:00:00"
+                                        }
+                                    ]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).send(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(AssignRouteToCargoCommand.class);
+        AssignRouteToCargoCommand cmd = (AssignRouteToCargoCommand) captor.getValue();
+        assertThat(cmd.bookingId()).isEqualTo("B-TEST");
+        assertThat(cmd.itinerary().legs()).hasSize(1);
+        assertThat(cmd.itinerary().legs().get(0).voyageNumber()).isEqualTo("V001");
     }
 }
