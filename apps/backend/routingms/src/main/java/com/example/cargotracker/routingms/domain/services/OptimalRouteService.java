@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * @deprecated IT4 で {@link RouteCandidateFinder} に置換。ADR-0010 参照。
  */
-@Deprecated
+@Deprecated(since = "IT4", forRemoval = true)
 public class OptimalRouteService {
 
     private final RouteCandidateFinder delegate;

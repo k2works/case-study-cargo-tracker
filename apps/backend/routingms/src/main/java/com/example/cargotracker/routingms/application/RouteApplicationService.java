@@ -36,7 +36,7 @@ public class RouteApplicationService {
                 origin, destination, arrivalDeadline, cargoType);
         List<TransitPath> paths = finder.findCandidates(spec);
         List<RouteCandidatesResponse.CandidateItem> items = paths.stream()
-                .map(p -> toItem(p, spec))
+                .map(this::toItem)
                 .toList();
         return new RouteCandidatesResponse(items);
     }
@@ -68,7 +68,7 @@ public class RouteApplicationService {
         return new SelectedRouteResponse(legs);
     }
 
-    private RouteCandidatesResponse.CandidateItem toItem(TransitPath path, RouteSearchSpecification spec) {
+    private RouteCandidatesResponse.CandidateItem toItem(TransitPath path) {
         List<String> voyageNumbers = path.edges().stream()
                 .map(TransitEdge::voyageNumber).toList();
         List<String> via = path.edges().stream()
