@@ -58,7 +58,7 @@ public class EdgeRepositoryImpl implements EdgeRepository {
         void addCargoType(String cargoType) {
             try {
                 cargoTypes.add(CargoType.valueOf(cargoType));
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException _) {
                 // DB に存在するが enum 定義にない cargo_type は無視する
             }
         }
