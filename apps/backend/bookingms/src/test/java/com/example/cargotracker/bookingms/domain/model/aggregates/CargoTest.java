@@ -2,10 +2,14 @@ package com.example.cargotracker.bookingms.domain.model.aggregates;
 
 import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.bookingms.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
@@ -202,5 +206,68 @@ class CargoTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("ROUTING");
         verifyNoInteractions(appender);
+    }
+
+    private Cargo routeProposedCargo(String bookingId) {
+        Cargo cargo = routingCargo(bookingId);
+        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
+                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
+        cargo.on(new CargoRoutedEvent(bookingId, new CargoItinerary(List.of(leg))));
+        return cargo;
+    }
+
+    @Test
+    @DisplayName("US13: confirmBooking は BookingConfirmedEvent を追加し CONFIRMED に遷移する")
+    void confirmBooking_イベント追加とCONFIRMED遷移() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = routeProposedCargo(bookingId);
+        EventAppender appender = mock(EventAppender.class);
+
+        cargo.confirmBooking(new ConfirmBookingCommand(bookingId), appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(BookingConfirmedEvent.class);
+    }
+
+    @Test
+    @DisplayName("US13: BookingConfirmedEvent を再生すると CONFIRMED に遷移する")
+    void on_BookingConfirmedEventでCONFIRMED遷移() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = routeProposedCargo(bookingId);
+
+        cargo.on(new BookingConfirmedEvent(bookingId));
+
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
+    }
+
+    @Test
+    @DisplayName("US14: issueTrackingNumber は TrackingNumberIssuedEvent を追加し TRACKING_ISSUED に遷移する")
+    void issueTrackingNumber_イベント追加とTRACKING_ISSUED遷移() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = routeProposedCargo(bookingId);
+        cargo.on(new BookingConfirmedEvent(bookingId)); // CONFIRMED state
+
+        EventAppender appender = mock(EventAppender.class);
+        cargo.issueTrackingNumber(new IssueTrackingNumberCommand(bookingId), appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(TrackingNumberIssuedEvent.class);
+        TrackingNumberIssuedEvent event = (TrackingNumberIssuedEvent) captor.getValue();
+        assertThat(event.trackingNumber()).startsWith("TRK-");
+    }
+
+    @Test
+    @DisplayName("US14: TrackingNumberIssuedEvent を再生すると TRACKING_ISSUED に遷移する")
+    void on_TrackingNumberIssuedEventでTRACKING_ISSUED遷移() {
+        String bookingId = UUID.randomUUID().toString();
+        Cargo cargo = routeProposedCargo(bookingId);
+        cargo.on(new BookingConfirmedEvent(bookingId));
+
+        cargo.on(new TrackingNumberIssuedEvent(bookingId, "TRK-20990701-ABCD1234"));
+
+        assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.TRACKING_ISSUED);
+        assertThat(cargo.getTrackingNumber()).isEqualTo("TRK-20990701-ABCD1234");
     }
 }
