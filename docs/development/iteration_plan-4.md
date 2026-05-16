@@ -700,10 +700,13 @@ CONFIRMED --> TRACKING_ISSUED : AssignTrackingDetailsCommand\n（US14: 追跡番
 
 ```plantuml
 @startuml
-title IT4 で追加される画面遷移（経路設計フロー）
+title IT4 で追加される画面遷移（ダッシュボード起点）
 
-state "航海スケジュール一覧 (S11)" as S11
+state "ログイン (S00)" as S00
+state "ダッシュボード (S01)" as S01
+state "予約一覧 (S08)" as S08
 state "予約詳細 (S10)" as S10
+state "航海スケジュール一覧 (S11)" as S11
 state "経路設計ワークベンチ (S14)" as S14 {
   state "① 条件確認・航海検索" as S14_SEARCH
   state "② 経路候補算出" as S14_CALC
@@ -715,20 +718,33 @@ state "経路設計ワークベンチ (S14)" as S14 {
   S14_ADJUST --> S14_SEARCH : 「条件を調整」（自己ループ）
 }
 
-[*] --> S11 : サイドナビ「航海スケジュール」
-S11 --> S10 : 経路設計待ち予約を開く
-S10 --> S14 : 「経路設計 WB を開く」\n(GET /routing/design/:bookingId)
-S14_ASSIGN --> S10 : 「選択して予約に紐付け」\n(POST /bookings/:id/assign-route → 303 → GET /bookings/:id)
+[*] --> S00
+S00 --> S01 : ログイン成功（PRG）
 
-S10 --> S10 : 「荷主に経路通知」\n(htmx hx-post=/bookings/:id/notify-route\nhx-swap=outerHTML → alert-success)
-S10 --> S10 : 「予約を確定」\n(htmx hx-post=/bookings/:id/confirm\nhx-swap=outerHTML → alert-success)
-S10 --> S10 : 「追跡番号を発行」\n(htmx hx-post=/bookings/:id/issue-tracking\nhx-swap=outerHTML → alert-success)
+' --- ダッシュボードからのナビゲーション ---
+S01 --> S08 : サイドナビ「予約」
+S01 --> S11 : サイドナビ「航海スケジュール」
+
+' --- 経路設計者: 航海スケジュール一覧 → 経路設計 WB （US08〜US11）---
+S11 --> S10 : 経路設計待ち予約を選択（booking_status=ROUTING）
+S10 --> S14 : 「経路設計 WB を開く」\n(GET /routing/design/:bookingId)
+S14_SEARCH --> S14_SEARCH : 「航海検索」\n(htmx hx-get=/api/v1/voyages\nhx-target=#voyage-list, hx-swap=innerHTML)
+S14_CALC --> S14_CALC : バリデーションエラー（自己ループ、航海未選択など）
+S14_ASSIGN --> S10 : 「選択して予約に紐付け」\n(PRG: POST /bookings/:id/assign-route\n→ 303 → GET /bookings/:id)
+
+' --- 営業担当者: 予約一覧 → 予約詳細（US12〜US14）---
+S08 --> S10 : 行クリック
+S10 --> S10 : 「荷主に経路通知」（US12）\n(htmx hx-post=/bookings/:id/notify-route\nhx-swap=outerHTML → alert-success)
+S10 --> S10 : 「予約を確定」（US13）\n(htmx hx-post=/bookings/:id/confirm\nhx-swap=outerHTML → alert-success)
+S10 --> S10 : 「追跡番号を発行」（US14）\n(htmx hx-post=/bookings/:id/issue-tracking\nhx-swap=outerHTML → alert-success)
 S10 --> S10 : エラー時 htmx:responseError → alert-danger（状態維持）
 
-S14_SEARCH --> S14_SEARCH : 「航海検索」\n(htmx hx-get=/voyages, hx-target=#voyage-list)
-S14_CALC --> S14_CALC : バリデーションエラー（自己ループ、航海未選択など）
+' --- ログアウト ---
+S01 --> [*] : ログアウト
 @enduml
 ```
+
+> ダッシュボード起点で IT4 の主要シナリオを示す。**経路設計者**はサイドナビ「航海スケジュール」→ S11 の経路設計待ち予約セクション → S10 → S14（WB）の順で操作する。**営業担当者**はサイドナビ「予約」→ S08 → S10 で荷主通知・確定・追跡番号発行を行う。S14 内の細粒度遷移（検索 → 算出 → 条件調整ループ）は `ui_design.md` 主要操作シナリオ B（経路設計者のワークベンチ）に準拠する。
 
 **htmx / PRG 規約**:
 
