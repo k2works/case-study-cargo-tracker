@@ -9,14 +9,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { path: '/dashboard', label: 'ダッシュボード', roles: ['ROLE_ADMIN', 'ROLE_SALES', 'ROLE_ROUTING'] },
+  { path: '/bookings', label: '予約', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
+  { path: '/routing/voyages', label: '航海スケジュール', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
   { path: '/shippers', label: '荷主管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
-  { path: '/quotations', label: '見積一覧', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
-  { path: '/bookings', label: '予約管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
-  {
-    path: '/routing/voyages',
-    label: '航海スケジュール',
-    roles: ['ROLE_ADMIN', 'ROLE_ROUTING'],
-  },
 ]
 
 function visibleNavItems(userRoles: string[]): NavItem[] {
@@ -34,8 +30,8 @@ export function AppLayout() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/shippers" className="text-lg font-bold text-gray-900">
-              CargoTracker
+            <Link to="/dashboard" className="text-lg font-bold text-gray-900">
+              国際貨物輸送管理
             </Link>
             <nav className="flex gap-4">
               {navItems.map((item) => (
@@ -55,7 +51,12 @@ export function AppLayout() {
           </div>
           <div className="flex items-center gap-4">
             {user && (
-              <span className="text-sm text-gray-600">{user.username}</span>
+              <span className="text-sm text-gray-600">
+                {user.username}
+                {user.roles.length > 0 && (
+                  <span className="ml-1 text-gray-400">({user.roles[0].replace('ROLE_', '')})</span>
+                )}
+              </span>
             )}
             <button
               onClick={logout}

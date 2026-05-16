@@ -32,7 +32,7 @@ test('US-UI-r: ログイン → 個人荷主登録 → 一覧表示', async ({ p
   await page.getByRole('button', { name: 'ログイン' }).click()
 
   // 3. 荷主一覧 (/shippers) へ自動遷移することを確認
-  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 })
   await expect(page.getByRole('heading', { name: '荷主一覧' })).toBeVisible()
 
   // 4. 新規登録リンクをクリック

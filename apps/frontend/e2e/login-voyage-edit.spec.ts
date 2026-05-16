@@ -80,7 +80,7 @@ test('US25: ログイン → 航海登録 → 編集 → 一覧で更新内容�
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/)
+  await expect(page).toHaveURL(/\/dashboard/)
 
   // 2. 航海スケジュールメニューへ遷移
   await page.getByRole('link', { name: '航海スケジュール' }).click()
@@ -165,7 +165,7 @@ test('US25 受入条件 5: 編集画面で「キャンセル」を押すと変�
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/)
+  await expect(page).toHaveURL(/\/dashboard/)
 
   await page.getByRole('link', { name: '航海スケジュール' }).click()
   await expect(page).toHaveURL(/\/routing\/voyages$/)

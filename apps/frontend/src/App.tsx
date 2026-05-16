@@ -15,6 +15,7 @@ import { QuotationListPage } from './pages/QuotationListPage'
 import { QuotationNewPage } from './pages/QuotationNewPage'
 import { QuotationDetailPage } from './pages/QuotationDetailPage'
 import { RoutingWorkbenchPage } from './pages/RoutingWorkbenchPage'
+import { DashboardPage } from './pages/DashboardPage'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
       </Route>
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/shippers" element={<ShipperListPage />} />
           <Route path="/shippers/new" element={<ShipperNewPage />} />
           <Route path="/bookings" element={<BookingListPage />} />
@@ -39,7 +41,7 @@ export default function App() {
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/shippers" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }

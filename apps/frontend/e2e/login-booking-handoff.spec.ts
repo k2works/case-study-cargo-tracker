@@ -26,7 +26,7 @@ test('US06: 予約引き渡しで PRELIMINARY → ROUTING に遷移する', asyn
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 })
 
   // 2. 荷主登録
   await page.getByRole('link', { name: '新規登録' }).click()

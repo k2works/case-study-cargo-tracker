@@ -28,7 +28,7 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/)
+  await expect(page).toHaveURL(/\/dashboard/)
 
   // 2. 荷主を登録（見積に shipperId が必要）
   await page.getByRole('link', { name: '新規登録' }).click()

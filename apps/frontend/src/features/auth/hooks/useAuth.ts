@@ -16,7 +16,7 @@ export function useLogin() {
         username: response.username,
         roles: response.roles,
       })
-      navigate('/shippers')
+      navigate('/dashboard')
     },
   })
 }

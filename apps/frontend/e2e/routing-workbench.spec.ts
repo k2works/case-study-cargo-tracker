@@ -57,7 +57,7 @@ test('US08-US14: 経路設計ワークベンチフルフロー', async ({ page }
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 })
 
   // 2. 荷主登録
   await page.getByRole('link', { name: '新規登録' }).click()
@@ -65,7 +65,7 @@ test('US08-US14: 経路設計ワークベンチフルフロー', async ({ page }
   await page.locator('#shipper-email').fill(shipperEmail)
   await page.locator('#shipper-phone').fill('090-9999-0000')
   await page.getByRole('button', { name: '登録する' }).click()
-  await expect(page).toHaveURL(/\/shippers$/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 })
 
   const token = await page.evaluate(() => sessionStorage.getItem('cargo_tracker_token'))
   const shippersResp = await page.request.get(`${API_BASE_URL}/api/v1/shippers`, {

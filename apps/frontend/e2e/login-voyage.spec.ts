@@ -22,7 +22,7 @@ test('US07: 航海スケジュール一覧で出発地・目的地フィルタ�
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 })
 
   // 2. 航海スケジュール一覧へ
   await page.getByRole('link', { name: '航海スケジュール' }).click()
@@ -50,7 +50,7 @@ test('US24: ログイン → 航海スケジュール登録 → 一覧で表示'
   await page.locator('#username').fill('admin')
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
-  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 })
 
   // 2. 航海スケジュールメニューへ遷移
   await page.getByRole('link', { name: '航海スケジュール' }).click()
