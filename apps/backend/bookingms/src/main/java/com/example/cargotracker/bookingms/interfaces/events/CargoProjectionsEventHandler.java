@@ -1,8 +1,10 @@
 package com.example.cargotracker.bookingms.interfaces.events;
 
+import com.example.cargotracker.bookingms.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RoutingStatus;
@@ -98,5 +100,28 @@ public class CargoProjectionsEventHandler {
     @Transactional
     public void on(CargoRoutedEvent event) {
         cargoSummaryMapper.updateBookingStatus(event.bookingId(), BookingStatus.ROUTE_PROPOSED.name());
+    }
+
+    /**
+     * 予約確定を Read Model に反映する（US13）。
+     *
+     * <p>cargo_summary.booking_status を {@code CONFIRMED} に更新する。</p>
+     */
+    @EventHandler
+    @Transactional
+    public void on(BookingConfirmedEvent event) {
+        cargoSummaryMapper.updateBookingStatus(event.bookingId(), BookingStatus.CONFIRMED.name());
+    }
+
+    /**
+     * 追跡番号発行を Read Model に反映する（US14）。
+     *
+     * <p>cargo_summary.tracking_number と booking_status を更新する。</p>
+     */
+    @EventHandler
+    @Transactional
+    public void on(TrackingNumberIssuedEvent event) {
+        cargoSummaryMapper.updateTrackingNumber(event.bookingId(), event.trackingNumber());
+        cargoSummaryMapper.updateBookingStatus(event.bookingId(), BookingStatus.TRACKING_ISSUED.name());
     }
 }

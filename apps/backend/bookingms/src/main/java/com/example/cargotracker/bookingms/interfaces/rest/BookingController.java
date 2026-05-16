@@ -2,7 +2,9 @@ package com.example.cargotracker.bookingms.interfaces.rest;
 
 import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
@@ -170,6 +172,18 @@ public class BookingController {
         var itinerary = new CargoItinerary(legs);
         commandGateway.send(new AssignRouteToCargoCommand(bookingId, itinerary));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTE_PROPOSED.name()));
+    }
+
+    @PostMapping("/{bookingId}/confirm")
+    public ResponseEntity<Object> confirmBooking(@PathVariable String bookingId) {
+        commandGateway.send(new ConfirmBookingCommand(bookingId));
+        return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.CONFIRMED.name()));
+    }
+
+    @PostMapping("/{bookingId}/issue-tracking")
+    public ResponseEntity<Object> issueTrackingNumber(@PathVariable String bookingId) {
+        commandGateway.send(new IssueTrackingNumberCommand(bookingId));
+        return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.TRACKING_ISSUED.name()));
     }
 
     private CargoSpecification toCargoSpecification(BookCargoRequest.CargoSpecDto dto) {

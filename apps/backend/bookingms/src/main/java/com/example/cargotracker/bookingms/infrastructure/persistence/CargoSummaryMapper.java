@@ -120,4 +120,13 @@ public interface CargoSummaryMapper {
     int updateBookingStatus(
             @Param("bookingId") String bookingId,
             @Param("bookingStatus") String bookingStatus);
+
+    @Update("""
+            UPDATE cargo_summary
+               SET tracking_number = #{trackingNumber}
+             WHERE booking_id = #{bookingId}
+            """)
+    int updateTrackingNumber(
+            @Param("bookingId") String bookingId,
+            @Param("trackingNumber") String trackingNumber);
 }

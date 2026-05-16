@@ -2,10 +2,17 @@ package com.example.cargotracker.bookingms.domain.model.aggregates;
 
 import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.IssueTrackingNumberCommand;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
+import com.example.cargotracker.bookingms.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
@@ -42,6 +49,7 @@ public final class Cargo {
     private BookingStatus bookingStatus;
     private RoutingStatus routingStatus;
     private CargoItinerary itinerary;
+    private String trackingNumber;
 
     @EntityCreator
     public Cargo() {
@@ -114,6 +122,48 @@ public final class Cargo {
         this.itinerary = event.itinerary();
     }
 
+    /**
+     * 予約確定（US13 / UC11）。
+     *
+     * <p>ROUTE_PROPOSED 状態の予約を確定する。</p>
+     */
+    @CommandHandler
+    public void confirmBooking(ConfirmBookingCommand command, EventAppender appender) {
+        if (bookingStatus != BookingStatus.ROUTE_PROPOSED) {
+            throw new IllegalStateException(
+                    "ROUTE_PROPOSED 状態の予約のみ確定できます。現状態: " + bookingStatus);
+        }
+        appender.append(new BookingConfirmedEvent(command.bookingId()));
+    }
+
+    @EventSourcingHandler
+    public void on(BookingConfirmedEvent event) {
+        this.bookingStatus = BookingStatus.CONFIRMED;
+    }
+
+    /**
+     * 追跡番号発行（US14 / UC12）。
+     *
+     * <p>CONFIRMED 状態の予約に追跡番号を発行する。形式: TRK-{YYYYMMDD}-{UUID前8桁大文字}</p>
+     */
+    @CommandHandler
+    public void issueTrackingNumber(IssueTrackingNumberCommand command, EventAppender appender) {
+        if (bookingStatus != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException(
+                    "CONFIRMED 状態の予約のみ追跡番号を発行できます。現状態: " + bookingStatus);
+        }
+        String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        String tracking = "TRK-" + date + "-" + suffix;
+        appender.append(new TrackingNumberIssuedEvent(command.bookingId(), tracking));
+    }
+
+    @EventSourcingHandler
+    public void on(TrackingNumberIssuedEvent event) {
+        this.bookingStatus = BookingStatus.TRACKING_ISSUED;
+        this.trackingNumber = event.trackingNumber();
+    }
+
     public String getBookingId() {
         return bookingId;
     }
@@ -140,5 +190,9 @@ public final class Cargo {
 
     public CargoItinerary getItinerary() {
         return itinerary;
+    }
+
+    public String getTrackingNumber() {
+        return trackingNumber;
     }
 }
