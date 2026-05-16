@@ -36,15 +36,15 @@ date: 2026-05-15T00:00:00.000Z
 
 ### 成功基準
 
-- [ ] `POST /api/v1/quotations` で輸送見積（金額・通貨・有効期限・候補一覧）が返却される（US01）
+- [x] `POST /api/v1/quotations` で輸送見積（金額・通貨・有効期限・候補一覧）が返却される（US01）
 - [x] `POST /api/v1/bookings/{id}/handoff` 成功後、`cargo_summary.booking_status` が `ROUTING` に更新される（US06）
 - [ ] `GET /api/v1/voyages?origin={UNLOCODE}&destination={UNLOCODE}&departureFrom=YYYY-MM-DD&cargoType={GENERAL/HAZARDOUS/REFRIGERATED}` で航海候補が取得できる（US07）
-- [ ] `PUT /api/v1/voyages/{voyageNumber}` で既存航海スケジュールを更新でき、`VoyageScheduleUpdatedEvent` がイベントストアに永続化される（US25）
-- [ ] PIT カバレッジ（bookingms / routingms のドメイン層）が CI で計測され、Quality Gate に組み込まれる（目標 75%、未達でも計測必須）
-- [ ] `apps/frontend/e2e/README.md` から「IT3 で予定」記述が消え、現状の Playwright シナリオに一致する
-- [ ] 運用手順書 §7（アプリケーション開発環境セットアップ）から「Phase 0」記述が消え、IT2 構成と一致する
-- [ ] `docs/design/data-model.md` に `users.lock_until` / `users.failed_attempts` カラムが反映される
-- [ ] フロントエンドの「見積→予約→引き渡し→航海検索」フローが Playwright E2E で GREEN
+- [x] `PUT /api/v1/voyages/{voyageNumber}` で既存航海スケジュールを更新でき、`VoyageScheduleUpdatedEvent` がイベントストアに永続化される（US25）
+- [x] PIT カバレッジ（bookingms / routingms のドメイン層）が CI で計測され、Quality Gate に組み込まれる（目標 75%、bookingms 78% 達成 / routingms 77% 達成）
+- [x] `apps/frontend/e2e/README.md` から「IT3 で予定」記述が消え、現状の Playwright シナリオに一致する
+- [x] 運用手順書 §7（アプリケーション開発環境セットアップ）から「Phase 0」記述が消え、IT2 構成と一致する
+- [x] `docs/design/data-model.md` に `users.lock_until` / `users.failed_attempts` カラムが反映される
+- [ ] フロントエンドの「見積→予約→引き渡し→航海検索」フローが Playwright E2E で GREEN（見積・予約・引き渡しは GREEN、航海検索は US07 実装待ち）
 - [ ] Axon Server を停止すると `POST /api/v1/bookings` が 500 で失敗することを smoke test で継続検証（ADR-0009 の receding regression 防止）
 
 ---
@@ -792,6 +792,7 @@ S01 --> [*] : ログアウト
 | 2026-05-15 | 初版作成（IT2 retrospective・ADR-0009 完了状況・release_plan.md IT3 スコープを反映） | AI Agent |
 | 2026-05-15 | 整合性検証で発見した不整合 14 件を修正（ストーリー本文を user_story.md 正本に置換、ドメインモデル命名を `Quotation` / `UpdateVoyageScheduleCommand` / `VoyageScheduleUpdatedEvent` / `Schedule` VO に統一、データモデルを既存 `quotation` / `quotation_candidate` に揃え `routing_assignment` 新設を撤回、画面 ID を S03/S04・S11 拡張・S12 既存 URL に修正、UI インタラクション節を追加） | AI Agent |
 | 2026-05-15 | UI 設計に PlantUML salt ワイヤーフレーム（S03/S04/S10/S11/S12）を追加し、画面遷移図をダッシュボード起点に再構成 | AI Agent |
+| 2026-05-16 | 進捗反映: 成功基準のうち US01 / US25 / PIT / e2e README / 運用手順書 / data-model.md を [x] へ更新（US25 + US01 + US06 + IT2 持越し 11 SP 完了、残 US07 5 SP） | AI Agent（XP PM） |
 
 ---
 
