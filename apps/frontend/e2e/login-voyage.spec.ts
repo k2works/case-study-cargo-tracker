@@ -16,6 +16,29 @@ import { test, expect } from '@playwright/test'
  *
  * 詳細は e2e/README.md を参照。
  */
+test('US07: 航海スケジュール一覧で出発地・目的地フィルタが機能する', async ({ page }) => {
+  // 1. ログイン
+  await page.goto('/login')
+  await page.locator('#username').fill('admin')
+  await page.locator('#password').fill('password')
+  await page.getByRole('button', { name: 'ログイン' }).click()
+  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
+
+  // 2. 航海スケジュール一覧へ
+  await page.getByRole('link', { name: '航海スケジュール' }).click()
+  await expect(page).toHaveURL(/\/routing\/voyages$/, { timeout: 10_000 })
+
+  // 3. 検索フォームが表示される
+  await expect(page.getByPlaceholder('出発港 (JPYOK)')).toBeVisible()
+  await expect(page.getByPlaceholder('到着港 (USLAX)')).toBeVisible()
+  await expect(page.getByRole('button', { name: '検索' })).toBeVisible()
+
+  // 4. 存在しない港コードで検索すると空リストになる
+  await page.getByPlaceholder('出発港 (JPYOK)').fill('ZZZZZ')
+  await page.getByRole('button', { name: '検索' }).click()
+  await expect(page.getByText('航海スケジュールが登録されていません。')).toBeVisible({ timeout: 5_000 })
+})
+
 test('US24: ログイン → 航海スケジュール登録 → 一覧で表示', async ({ page }) => {
   // 一意なテストデータ（航海番号 20 文字以内）
   const uniqueSuffix = Date.now().toString(36).toUpperCase().slice(-8)
