@@ -30,10 +30,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>乗り継ぎ時間（到着 + 24h &lt; 出発）の担保</li>
  * </ul>
  */
-@SuppressWarnings("removal")
-class OptimalRouteServiceTest {
 
-    private OptimalRouteService service;
+class RouteCandidateFinderTest {
+
+    private RouteCandidateFinder service;
 
     private List<TransitEdge> edges;
 
@@ -70,7 +70,7 @@ class OptimalRouteServiceTest {
                 Set.of(CargoType.GENERAL));
 
         edges = List.of(direct, leg1, leg2, late);
-        service = new OptimalRouteService(edges);
+        service = new RouteCandidateFinder(edges);
     }
 
     @Test
