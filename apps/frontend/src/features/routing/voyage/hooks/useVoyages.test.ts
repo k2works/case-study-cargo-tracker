@@ -95,4 +95,32 @@ describe('useVoyages', () => {
     expect(result.current.data).toEqual(mockVoyages)
     expect(apiClient.routingApiClient.get).toHaveBeenCalledWith('/api/v1/voyages')
   })
+
+  it('US07: 出発地・目的地を指定すると検索クエリパラメータ付きで取得する', async () => {
+    vi.mocked(apiClient.routingApiClient.get).mockResolvedValue([])
+
+    const { result } = renderHook(
+      () => useVoyages({ origin: 'JPYOK', destination: 'USLAX' }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(apiClient.routingApiClient.get).toHaveBeenCalledWith(
+      '/api/v1/voyages?origin=JPYOK&destination=USLAX',
+    )
+  })
+
+  it('US07: 貨物種別を指定すると cargoType クエリパラメータ付きで取得する', async () => {
+    vi.mocked(apiClient.routingApiClient.get).mockResolvedValue([])
+
+    const { result } = renderHook(
+      () => useVoyages({ cargoType: 'HAZARDOUS' }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(apiClient.routingApiClient.get).toHaveBeenCalledWith(
+      '/api/v1/voyages?cargoType=HAZARDOUS',
+    )
+  })
 })

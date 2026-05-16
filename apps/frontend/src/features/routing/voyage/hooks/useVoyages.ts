@@ -9,10 +9,30 @@ import type {
 
 const VOYAGES_KEY = ['voyages']
 
-export function useVoyages() {
+export interface VoyageSearchCriteria {
+  origin?: string
+  destination?: string
+  departureFrom?: string
+  departureTo?: string
+  cargoType?: string
+}
+
+function buildVoyagesUrl(criteria?: VoyageSearchCriteria): string {
+  if (!criteria) return '/api/v1/voyages'
+  const params = new URLSearchParams()
+  if (criteria.origin) params.set('origin', criteria.origin)
+  if (criteria.destination) params.set('destination', criteria.destination)
+  if (criteria.departureFrom) params.set('departureFrom', criteria.departureFrom)
+  if (criteria.departureTo) params.set('departureTo', criteria.departureTo)
+  if (criteria.cargoType) params.set('cargoType', criteria.cargoType)
+  const qs = params.toString()
+  return qs ? `/api/v1/voyages?${qs}` : '/api/v1/voyages'
+}
+
+export function useVoyages(criteria?: VoyageSearchCriteria) {
   return useQuery<VoyageListItem[]>({
-    queryKey: VOYAGES_KEY,
-    queryFn: () => routingApiClient.get<VoyageListItem[]>('/api/v1/voyages'),
+    queryKey: [...VOYAGES_KEY, criteria],
+    queryFn: () => routingApiClient.get<VoyageListItem[]>(buildVoyagesUrl(criteria)),
   })
 }
 

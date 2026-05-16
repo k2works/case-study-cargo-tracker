@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi } from 'vitest'
@@ -11,10 +11,14 @@ const mocks = vi.hoisted(() => ({
     isLoading: false,
     isError: false,
   },
+  lastCriteria: undefined as Record<string, string> | undefined,
 }))
 
 vi.mock('../hooks/useVoyages', () => ({
-  useVoyages: () => mocks.useVoyagesResult,
+  useVoyages: (criteria?: Record<string, string>) => {
+    mocks.lastCriteria = criteria
+    return mocks.useVoyagesResult
+  },
 }))
 
 function renderVoyageList() {
@@ -47,6 +51,24 @@ describe('VoyageList', () => {
     mocks.useVoyagesResult = { data: [], isLoading: false, isError: false }
     renderVoyageList()
     expect(screen.getByText('航海スケジュールが登録されていません。')).toBeInTheDocument()
+  })
+
+  it('US07: 検索フォームが表示される', () => {
+    mocks.useVoyagesResult = { data: [], isLoading: false, isError: false }
+    renderVoyageList()
+    expect(screen.getByPlaceholderText('出発港 (JPYOK)')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('到着港 (USLAX)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '検索' })).toBeInTheDocument()
+  })
+
+  it('US07: 出発地・目的地を入力して検索すると criteria が渡される', () => {
+    mocks.useVoyagesResult = { data: [], isLoading: false, isError: false }
+    mocks.lastCriteria = undefined
+    renderVoyageList()
+    fireEvent.change(screen.getByPlaceholderText('出発港 (JPYOK)'), { target: { value: 'JPYOK' } })
+    fireEvent.change(screen.getByPlaceholderText('到着港 (USLAX)'), { target: { value: 'USLAX' } })
+    fireEvent.click(screen.getByRole('button', { name: '検索' }))
+    expect(mocks.lastCriteria).toMatchObject({ origin: 'JPYOK', destination: 'USLAX' })
   })
 
   it('航海一覧をテーブル形式で表示する', () => {

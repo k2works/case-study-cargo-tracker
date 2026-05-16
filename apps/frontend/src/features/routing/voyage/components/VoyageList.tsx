@@ -1,21 +1,68 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { useVoyages } from '../hooks/useVoyages'
+import { useVoyages, type VoyageSearchCriteria } from '../hooks/useVoyages'
 
 function formatDateTime(value: string): string {
   return value.replace('T', ' ').slice(0, 16)
 }
 
 export function VoyageList() {
-  const { data: voyages, isLoading, isError } = useVoyages()
+  const [criteria, setCriteria] = useState<VoyageSearchCriteria | undefined>(undefined)
+  const [origin, setOrigin] = useState('')
+  const [destination, setDestination] = useState('')
+  const [cargoType, setCargoType] = useState('')
+
+  const { data: voyages, isLoading, isError } = useVoyages(criteria)
+
+  function handleSearch() {
+    const next: VoyageSearchCriteria = {}
+    if (origin) next.origin = origin
+    if (destination) next.destination = destination
+    if (cargoType) next.cargoType = cargoType
+    setCriteria(Object.keys(next).length > 0 ? next : undefined)
+  }
 
   if (isLoading) return <p className="text-gray-500">読み込み中...</p>
   if (isError) return <p className="text-red-600">データの取得に失敗しました。</p>
 
-  if (!voyages || voyages.length === 0) {
-    return <p className="text-gray-500">航海スケジュールが登録されていません。</p>
-  }
-
   return (
+    <div className="space-y-4">
+      <div className="flex gap-2 items-end flex-wrap">
+        <input
+          type="text"
+          placeholder="出発港 (JPYOK)"
+          value={origin}
+          onChange={(e) => setOrigin(e.target.value)}
+          className="border border-gray-300 rounded px-3 py-2 text-sm w-36"
+        />
+        <input
+          type="text"
+          placeholder="到着港 (USLAX)"
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
+          className="border border-gray-300 rounded px-3 py-2 text-sm w-36"
+        />
+        <select
+          value={cargoType}
+          onChange={(e) => setCargoType(e.target.value)}
+          className="border border-gray-300 rounded px-3 py-2 text-sm"
+        >
+          <option value="">貨物種別（全て）</option>
+          <option value="GENERAL">GENERAL</option>
+          <option value="REFRIGERATED">REFRIGERATED</option>
+          <option value="HAZARDOUS">HAZARDOUS</option>
+        </select>
+        <button
+          onClick={handleSearch}
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+        >
+          検索
+        </button>
+      </div>
+
+    {(!voyages || voyages.length === 0) ? (
+      <p className="text-gray-500">航海スケジュールが登録されていません。</p>
+    ) : (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-gray-50">
@@ -61,6 +108,8 @@ export function VoyageList() {
           ))}
         </tbody>
       </table>
+    </div>
+    )}
     </div>
   )
 }
