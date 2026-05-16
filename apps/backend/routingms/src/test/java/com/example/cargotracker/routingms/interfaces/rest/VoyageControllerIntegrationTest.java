@@ -327,6 +327,97 @@ class VoyageControllerIntegrationTest {
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("連続性")));
     }
 
+    // ===== US07: 航海スケジュール検索 =====
+
+    @Test
+    @DisplayName("US07: 出発地・目的地で絞り込める（200・該当件数のみ返却）")
+    void 出発地目的地で絞り込める() throws Exception {
+        // seed: JPYOK→USLAX と JPTYO→USNYC の 2 件
+        seedVoyageWithOriginDest("V-SEARCH-001", "JPYOK", "USLAX");
+        seedVoyageWithOriginDest("V-SEARCH-002", "JPTYO", "USNYC");
+
+        mockMvc.perform(get("/api/v1/voyages")
+                        .param("origin", "JPYOK")
+                        .param("destination", "USLAX"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-SEARCH-001')]").exists())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-SEARCH-002')]").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("US07: 貨物種別 HAZARDOUS で危険物対応航海のみ返却")
+    void 危険物貨物種別で絞り込める() throws Exception {
+        // V-HAZ-001 は HAZARDOUS 対応、V-HAZ-002 は GENERAL のみ
+        seedVoyageWithCargoType("V-HAZ-001", "JPYOK", "USLAX", "HAZARDOUS");
+        seedVoyageWithCargoType("V-HAZ-002", "JPYOK", "USLAX", "GENERAL");
+
+        mockMvc.perform(get("/api/v1/voyages")
+                        .param("cargoType", "HAZARDOUS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-HAZ-001')]").exists())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-HAZ-002')]").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("US07: 条件に一致する航海がない場合は空リストを返す（200）")
+    void 条件不一致は空リスト() throws Exception {
+        mockMvc.perform(get("/api/v1/voyages")
+                        .param("origin", "ZZZZZ")
+                        .param("destination", "YYYYY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @DisplayName("US07: 出発期間（departureFrom / departureTo）で絞り込める")
+    void 出発期間で絞り込める() throws Exception {
+        seedVoyageWithDate("V-DATE-001", "2026-07-01T09:00:00");
+        seedVoyageWithDate("V-DATE-002", "2026-09-01T09:00:00");
+
+        mockMvc.perform(get("/api/v1/voyages")
+                        .param("departureFrom", "2026-06-01T00:00:00")
+                        .param("departureTo",   "2026-08-01T00:00:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-DATE-001')]").exists())
+                .andExpect(jsonPath("$[?(@.voyageNumber == 'V-DATE-002')]").doesNotExist());
+    }
+
+    private void seedVoyageWithOriginDest(String voyageNumber, String origin, String dest) {
+        VoyageRecord entity = new VoyageRecord();
+        entity.setVoyageNumber(voyageNumber);
+        entity.setCarrierCode("MOL");
+        entity.setCarrierName("MOL");
+        entity.setShipName("Ship");
+        entity.setDepartureDate(LocalDateTime.of(2026, 7, 1, 9, 0));
+        entity.setArrivalDate(LocalDateTime.of(2026, 7, 15, 18, 0));
+        entity.setOriginUnlocode(origin);
+        entity.setDestinationUnlocode(dest);
+        entity.setStatus("SCHEDULED");
+        voyageMapper.insertVoyage(entity);
+    }
+
+    private void seedVoyageWithCargoType(String voyageNumber, String origin, String dest,
+                                         String cargoType) {
+        seedVoyageWithOriginDest(voyageNumber, origin, dest);
+        voyageMapper.insertAcceptedCargoType(voyageNumber, cargoType);
+    }
+
+    private void seedVoyageWithDate(String voyageNumber, String departureDate) {
+        VoyageRecord entity = new VoyageRecord();
+        entity.setVoyageNumber(voyageNumber);
+        entity.setCarrierCode("MOL");
+        entity.setCarrierName("MOL");
+        entity.setShipName("Ship");
+        entity.setDepartureDate(LocalDateTime.parse(departureDate));
+        entity.setArrivalDate(LocalDateTime.parse(departureDate).plusDays(14));
+        entity.setOriginUnlocode("JPYOK");
+        entity.setDestinationUnlocode("USLAX");
+        entity.setStatus("SCHEDULED");
+        voyageMapper.insertVoyage(entity);
+    }
+
     @Test
     @DisplayName("US25: 日付逆転は 400 を返す")
     void 更新時_日付逆転で400() throws Exception {
