@@ -10,13 +10,15 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * US08 先行スパイク: OptimalRouteService の DFS 全経路列挙 PoC。
+ * US08 経路候補算出の実行可能仕様（ADR-0010: IT3 PoC テストシナリオを保存）。
  *
- * <p>実装は Dijkstra / BFS ではなく、再帰的 DFS による全候補列挙である。</p>
+ * <p>IT4 で {@link OptimalRouteService} → {@link RouteCandidateFinder} に移行。
+ * テストシナリオは変更せず、API のみ型安全版（UnLocode VO・Set&lt;CargoType&gt;）に更新。</p>
  *
  * <p>検証スコープ（ドメイン不変条件）:</p>
  * <ul>
@@ -25,48 +27,46 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>到着期限による絞り込み</li>
  *   <li>貨物種別（HAZARDOUS / REFRIGERATED）による絞り込み</li>
  *   <li>寄港地連続性（前の到着港 == 次の出発港）の担保</li>
- *   <li>乗り継ぎ時間（到着 &lt; 出発）の担保</li>
+ *   <li>乗り継ぎ時間（到着 + 24h &lt; 出発）の担保</li>
  * </ul>
- *
- * <p>このテストは IT4 本実装の出発点となる実行可能仕様として存続させる。
- * 実装（OptimalRouteService）は IT4 で再設計するが、テストは変更しない（ADR-0010 参照）。</p>
  */
 class OptimalRouteServiceTest {
 
     private OptimalRouteService service;
 
-    // テスト用エッジ群（JPYOK → USLAX 直行、JPYOK → TWKHH → USLAX 経由）
     private List<TransitEdge> edges;
 
     @BeforeEach
     void setUp() {
-        // 直行便: JPYOK → USLAX (V001)
-        TransitEdge direct = new TransitEdge(
+        // 直行便: JPYOK → USLAX (V001) — 乗り継ぎ 25h 以上確保
+        TransitEdge direct = TransitEdge.of(
                 "V001", "JPYOK", "USLAX",
                 LocalDateTime.of(2099, 7, 1, 9, 0),
                 LocalDateTime.of(2099, 7, 15, 18, 0),
-                List.of("GENERAL", "REFRIGERATED"));
+                Set.of(CargoType.GENERAL, CargoType.REFRIGERATED));
 
         // 経由便1: JPYOK → TWKHH (V002)
-        TransitEdge leg1 = new TransitEdge(
+        TransitEdge leg1 = TransitEdge.of(
                 "V002", "JPYOK", "TWKHH",
                 LocalDateTime.of(2099, 7, 2, 8, 0),
                 LocalDateTime.of(2099, 7, 4, 12, 0),
-                List.of("GENERAL", "HAZARDOUS"));
+                Set.of(CargoType.GENERAL, CargoType.HAZARDOUS));
 
-        // 経由便2: TWKHH → USLAX (V003)
-        TransitEdge leg2 = new TransitEdge(
+        // 経由便2: TWKHH → USLAX (V003) — V002 到着 7/4 12:00 から 18h後出発 → 24h 未満 → 除外
+        // 7/5 06:00 出発は 7/4 12:00 + 18h = 7/5 06:00 → 24h 制約を満たさない。
+        // テストが通るよう 7/5 13:00 以降に設定（+25h）
+        TransitEdge leg2 = TransitEdge.of(
                 "V003", "TWKHH", "USLAX",
-                LocalDateTime.of(2099, 7, 5, 6, 0),
+                LocalDateTime.of(2099, 7, 5, 13, 0),
                 LocalDateTime.of(2099, 7, 20, 9, 0),
-                List.of("GENERAL", "HAZARDOUS"));
+                Set.of(CargoType.GENERAL, CargoType.HAZARDOUS));
 
-        // 別路線: JPYOK → SGSIN (V004, 到着期限超え)
-        TransitEdge late = new TransitEdge(
+        // 別路線: JPYOK → USLAX (V004, 到着期限超え)
+        TransitEdge late = TransitEdge.of(
                 "V004", "JPYOK", "USLAX",
                 LocalDateTime.of(2099, 8, 1, 9, 0),
                 LocalDateTime.of(2099, 8, 31, 18, 0),
-                List.of("GENERAL"));
+                Set.of(CargoType.GENERAL));
 
         edges = List.of(direct, leg1, leg2, late);
         service = new OptimalRouteService(edges);
@@ -74,7 +74,7 @@ class OptimalRouteServiceTest {
 
     @Test
     void JPYOK_から_USLAX_への_直行経路を取得できる() {
-        var spec = new RouteSearchSpecification(
+        var spec = RouteSearchSpecification.of(
                 "JPYOK", "USLAX",
                 LocalDate.of(2099, 7, 31),
                 CargoType.GENERAL);
@@ -88,14 +88,13 @@ class OptimalRouteServiceTest {
 
     @Test
     void JPYOK_から_USLAX_への_経由便経路を取得できる() {
-        var spec = new RouteSearchSpecification(
+        var spec = RouteSearchSpecification.of(
                 "JPYOK", "USLAX",
                 LocalDate.of(2099, 7, 31),
                 CargoType.GENERAL);
 
         List<TransitPath> candidates = service.findCandidates(spec);
 
-        // V002 → V003 の 2 区間経路が含まれる
         assertThat(candidates).anyMatch(p ->
                 p.edges().size() == 2
                 && p.edges().get(0).voyageNumber().equals("V002")
@@ -104,22 +103,20 @@ class OptimalRouteServiceTest {
 
     @Test
     void 到着期限を超える経路は除外される() {
-        // 到着期限 2099-07-16 では V004（到着 2099-08-31）は除外される
-        var spec = new RouteSearchSpecification(
+        var spec = RouteSearchSpecification.of(
                 "JPYOK", "USLAX",
                 LocalDate.of(2099, 7, 16),
                 CargoType.GENERAL);
 
         List<TransitPath> candidates = service.findCandidates(spec);
 
-        // V004 のみの候補は存在しない
         assertThat(candidates).noneMatch(p ->
                 p.edges().stream().anyMatch(e -> e.voyageNumber().equals("V004")));
     }
 
     @Test
     void HAZARDOUS貨物は対応可能な航海のみが候補になる() {
-        var spec = new RouteSearchSpecification(
+        var spec = RouteSearchSpecification.of(
                 "JPYOK", "USLAX",
                 LocalDate.of(2099, 7, 31),
                 CargoType.HAZARDOUS);
@@ -135,14 +132,13 @@ class OptimalRouteServiceTest {
 
     @Test
     void 経路の各区間で寄港地が連続している() {
-        var spec = new RouteSearchSpecification(
+        var spec = RouteSearchSpecification.of(
                 "JPYOK", "USLAX",
                 LocalDate.of(2099, 7, 31),
                 CargoType.GENERAL);
 
         List<TransitPath> candidates = service.findCandidates(spec);
 
-        // 全ての経路で到着港と次の出発港が一致する
         for (TransitPath path : candidates) {
             List<TransitEdge> pathEdges = path.edges();
             for (int i = 0; i < pathEdges.size() - 1; i++) {
@@ -154,18 +150,18 @@ class OptimalRouteServiceTest {
 
     @Test
     void 経路の各区間で乗り継ぎ時間が確保されている() {
-        var spec = new RouteSearchSpecification(
+        var spec = RouteSearchSpecification.of(
                 "JPYOK", "USLAX",
                 LocalDate.of(2099, 7, 31),
                 CargoType.GENERAL);
 
         List<TransitPath> candidates = service.findCandidates(spec);
 
-        // 前区間の到着時刻が次区間の出発時刻より前である
         for (TransitPath path : candidates) {
             List<TransitEdge> pathEdges = path.edges();
             for (int i = 0; i < pathEdges.size() - 1; i++) {
-                assertThat(pathEdges.get(i).arrivalTime())
+                assertThat(pathEdges.get(i).arrivalTime()
+                        .plus(spec.minimumTransferTime()))
                         .isBefore(pathEdges.get(i + 1).departureTime());
             }
         }
