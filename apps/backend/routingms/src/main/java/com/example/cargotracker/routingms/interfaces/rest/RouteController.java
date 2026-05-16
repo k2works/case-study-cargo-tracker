@@ -3,8 +3,12 @@ package com.example.cargotracker.routingms.interfaces.rest;
 import com.example.cargotracker.routingms.application.RouteApplicationService;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routingms.interfaces.rest.dto.RouteCandidatesResponse;
+import com.example.cargotracker.routingms.interfaces.rest.dto.SelectRouteRequest;
+import com.example.cargotracker.routingms.interfaces.rest.dto.SelectedRouteResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,5 +40,20 @@ public class RouteController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate arrivalDeadline,
             @RequestParam CargoType cargoType) {
         return routeService.findCandidates(origin, destination, arrivalDeadline, cargoType);
+    }
+
+    /**
+     * POST /api/v1/routing/select
+     *
+     * <p>US09: 候補インデックスで経路を選択し、選択した経路の Legs を返す。</p>
+     */
+    @PostMapping("/select")
+    public SelectedRouteResponse selectRoute(@RequestBody SelectRouteRequest request) {
+        return routeService.selectRoute(
+                request.origin(),
+                request.destination(),
+                request.arrivalDeadline(),
+                CargoType.valueOf(request.cargoType()),
+                request.selectedIndex());
     }
 }

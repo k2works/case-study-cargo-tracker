@@ -7,7 +7,10 @@ import com.example.cargotracker.routingms.domain.model.valueobjects.TransitPath;
 import com.example.cargotracker.routingms.domain.ports.EdgeRepository;
 import com.example.cargotracker.routingms.domain.services.RouteCandidateFinder;
 import com.example.cargotracker.routingms.interfaces.rest.dto.RouteCandidatesResponse;
+import com.example.cargotracker.routingms.interfaces.rest.dto.SelectedRouteResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -36,6 +39,33 @@ public class RouteApplicationService {
                 .map(p -> toItem(p, spec))
                 .toList();
         return new RouteCandidatesResponse(items);
+    }
+
+    public SelectedRouteResponse selectRoute(
+            String origin, String destination, LocalDate arrivalDeadline,
+            CargoType cargoType, int selectedIndex) {
+        List<TransitEdge> edges = edgeRepository.findAll();
+        RouteCandidateFinder finder = new RouteCandidateFinder(edges);
+        RouteSearchSpecification spec = RouteSearchSpecification.of(
+                origin, destination, arrivalDeadline, cargoType);
+        List<TransitPath> paths = finder.findCandidates(spec);
+        if (paths.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "経路候補が見つかりません");
+        }
+        if (selectedIndex < 0 || selectedIndex >= paths.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "selectedIndex が範囲外です: " + selectedIndex + " (候補数: " + paths.size() + ")");
+        }
+        TransitPath selected = paths.get(selectedIndex);
+        List<SelectedRouteResponse.LegDto> legs = selected.edges().stream()
+                .map(e -> new SelectedRouteResponse.LegDto(
+                        e.voyageNumber(),
+                        e.fromUnLocode().value(),
+                        e.toUnLocode().value(),
+                        e.departureTime(),
+                        e.arrivalTime()))
+                .toList();
+        return new SelectedRouteResponse(legs);
     }
 
     private RouteCandidatesResponse.CandidateItem toItem(TransitPath path, RouteSearchSpecification spec) {
