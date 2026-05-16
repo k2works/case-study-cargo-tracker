@@ -202,9 +202,9 @@ date: 2026-05-16T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | `SelectRouteCommand` + `RouteSelectedEvent`・`CargoItinerary` Aggregate（routingms） | 3h | [ ] |
-| 3.2 | `POST /api/v1/routing/select` REST エンドポイント実装 | 2h | [ ] |
-| 3.3 | `RouteSelectionTest`（正常系・候補なし誘導） | 2h | [ ] |
+| 3.1 | `SelectRouteCommand` + `RouteSelectedEvent`・`CargoItinerary` Aggregate（routingms） | 3h | [x] |
+| 3.2 | `POST /api/v1/routing/select` REST エンドポイント実装 | 2h | [x] |
+| 3.3 | `RouteSelectionTest`（正常系・候補なし誘導） | 2h | [x] |
 
 **小計**: 7h
 
@@ -283,7 +283,7 @@ date: 2026-05-16T00:00:00.000Z
 |---------|----|----|------|
 | 第 0 スプリント（ADR 対応・型安全化） | - | 5h | [x] |
 | US08 経路候補算出 | 8 | 16h | [x] |
-| US09 経路選択・確定 | 3 | 7h | [ ] |
+| US09 経路選択・確定 | 3 | 7h | [x] |
 | US10 経路条件調整・再算出 | 3 | 6h | [ ] |
 | US11 経路情報の予約紐付け | 2 | 5h | [x] |
 | US12 荷主への経路通知 | 3 | 4h | [ ] |
@@ -294,7 +294,7 @@ date: 2026-05-16T00:00:00.000Z
 | **合計** | **25** | **75h** | |
 
 **1 SP あたり**: 約 3h（実装 + テスト）
-**進捗率**: 64% (16/25 SP 完了: 第0スプリント + US08 + US11 + US13 + US14)
+**進捗率**: 76% (19/25 SP 完了: 第0スプリント + US08 + US09 + US11 + US13 + US14)
 
 ---
 
