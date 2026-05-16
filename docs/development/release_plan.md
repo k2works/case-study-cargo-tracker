@@ -301,7 +301,7 @@ gantt
 
 **目標 SP**: 25
 
-詳細は [iteration_plan-4.md](./iteration_plan-4.md) を参照。
+詳細は [iteration_plan-4.md](./iteration_plan-4.md) を参照。（ADR-0010/0011 対応を第 0 スプリントに含む）
 
 ### IT5（Week 9-10: 2026-07-09 〜 2026-07-22）
 

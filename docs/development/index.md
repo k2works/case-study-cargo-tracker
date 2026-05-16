@@ -17,7 +17,7 @@
 | IT1（2026-05-14〜05-27） | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | [iteration_report-1.md](./iteration_report-1.md) | 完了 |
 | IT2（2026-05-28〜06-10） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | 完了 |
 | IT3（2026-06-11〜06-24） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | 完了 |
-| IT4（2026-06-25〜07-08） | - | - | - | 未着手 |
+| IT4（2026-06-25〜07-08） | [iteration_plan-4.md](./iteration_plan-4.md) | - | - | 未着手 |
 | IT5（2026-07-09〜07-22） | - | - | - | 未着手 |
 | IT6（2026-07-23〜08-05） | - | - | - | 未着手 |
 | IT7（2026-08-06〜08-19） | - | - | - | 未着手 |
