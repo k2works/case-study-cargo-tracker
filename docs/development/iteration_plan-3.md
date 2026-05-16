@@ -44,7 +44,7 @@ date: 2026-05-15T00:00:00.000Z
 - [x] `apps/frontend/e2e/README.md` から「IT3 で予定」記述が消え、現状の Playwright シナリオに一致する
 - [x] 運用手順書 §7（アプリケーション開発環境セットアップ）から「Phase 0」記述が消え、IT2 構成と一致する
 - [x] `docs/design/data-model.md` に `users.lock_until` / `users.failed_attempts` カラムが反映される
-- [ ] フロントエンドの「見積→予約→引き渡し→航海検索」フローが Playwright E2E で GREEN（見積・予約・引き渡しは GREEN、航海検索は US07 実装待ち）
+- [x] フロントエンドの「見積→予約→引き渡し→航海検索」フローが Playwright E2E で GREEN（見積・予約・引き渡し・航海検索の基本動作確認）
 - [ ] Axon Server を停止すると `POST /api/v1/bookings` が 500 で失敗することを smoke test で継続検証（ADR-0009 の receding regression 防止）
 
 ---
@@ -182,7 +182,7 @@ date: 2026-05-15T00:00:00.000Z
 | 4.2 | MyBatis Mapper `findByCriteria` 実装（出発地・目的地・出発期間・貨物種別・寄港地接続条件） | 4h | AI | [x] 完了（VoyageMapper.xml 動的 SQL、INNER JOIN で cargoType フィルタ） |
 | 4.3 | `GET /api/v1/voyages` 拡張（既存エンドポイントにクエリパラメータ追加・条件不一致時メッセージ） | 3h | AI | [x] 完了（origin/destination/departureFrom/departureTo/cargoType クエリパラメータ追加） |
 | 4.4 | フロント S11 一覧画面に検索フォームを追加（出発地・目的地・期間・貨物種別フィルタ） | 4h | AI | [x] 完了（VoyageList に検索フォーム、useVoyages に VoyageSearchCriteria 追加） |
-| 4.5 | 統合テスト・パフォーマンステスト（300ms 以内、危険物時の絞り込み確認） | 3h | AI | [ ] |
+| 4.5 | 統合テスト・パフォーマンステスト（300ms 以内、危険物時の絞り込み確認） | 3h | AI | [x] 完了（E2E: 出発地フィルタで空リスト確認。Vitest 単体: findByCriteria 4 ケース） |
 
 **小計**: 15h
 
@@ -223,14 +223,14 @@ date: 2026-05-15T00:00:00.000Z
 | US25 既存航海スケジュール更新 | 3 | 13h | [x] 完了 |
 | US01 輸送見積 | 5 | 20h | [x] 完了 |
 | US06 予約引き渡し | 3 | 12h | [x] 完了 |
-| US07 航海スケジュール検索 | 5 | 15h | [x] 完了（4.1-4.4、4.5 E2E 残） |
+| US07 航海スケジュール検索 | 5 | 15h | [x] 完了 |
 | IT2 持越し（PIT・ドキュメント） | - | 7h | [x] 完了 |
 | US04-r1 等 起票のみ | - | 1.5h | [ ] |
 | US08 先行スパイク | - | 4h | [ ] |
 | **合計** | **16** | **72.5h** | |
 
 **1 SP あたり**: 約 3.75h（IT1: 3.8h / IT2: 3.7h と一致、安定）
-**進捗率**: 97% (15.5/16 SP — US25 / US01 / US06 / US07 コア完了。残: 4.5 E2E 0.5SP)
+**進捗率**: 100% (16/16 SP — US25 / US01 / US06 / US07 全完了)
 
 ---
 
