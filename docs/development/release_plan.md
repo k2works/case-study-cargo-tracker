@@ -166,7 +166,7 @@ gantt
     section Phase 1（予約・経路設計）
     IT1 認証基盤・荷主管理       :done, a1, 2026-05-14, 14d
     IT2 予約・航海登録           :done, a2, after a1, 14d
-    IT3 見積・経路設計前半       :active, a3, after a2, 14d
+    IT3 見積・経路設計前半       :done, a3, after a2, 14d
 ```
 
 ### リリース内容
@@ -395,13 +395,13 @@ gantt
 |---------------|---------|---------|--------|------|
 | IT1 | 16 | 14 | 88% | 完了 |
 | IT2 | 14 | 14 | 100% | 完了 |
-| IT3 | 16 | 11 | 69% | 実装中（US25 / US01 / US06 / IT2 持越し完了、US07 5 SP 残） |
+| IT3 | 16 | 16 | 100% | 完了 |
 | IT4 | 25 | - | - | 未着手 |
 | IT5 | 11 | - | - | 未着手 |
 | IT6 | 5 | - | - | 未着手 |
 | IT7 | 6 | - | - | 未着手 |
 | IT8 | 13 | - | - | 未着手 |
-| **合計** | **106** | **39** | **37%** | （IT3 進行中分 11 SP 含む） |
+| **合計** | **106** | **44** | **42%** | |
 
 > IT2 計画 14 SP は新規 11 SP（US04+US05+US24）+ 持越し 3 SP（US00-r1/US00-r2/US-UI-r）の構成。US25 は IT3 へ繰越し（+3 SP）したため、合計が 103 → 106 SP に増加した。
 >
@@ -419,20 +419,19 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8"]
     y-axis "残 SP" 0 --> 106
     line "計画" [106, 90, 76, 60, 35, 24, 19, 13, 0]
-    line "実績" [106, 92, 78, 67]
+    line "実績" [106, 92, 78, 62]
 ```
 
-> 実績バーンダウンの IT3 値（67 SP）は IT3 進行中分 11 SP を控除した暫定値。残 5 SP（US07）完了で IT3 終了予定。
+> IT3 完了（2026-05-16）: 全 4 ストーリー（US25/US01/US06/US07）+ IT2 持越し（PIT/ドキュメント）+ US08 先行スパイクが完了。実績 SP 16/16（達成率 100%）、累計 44/106 SP 42%。詳細は [iteration_report-3.md](./iteration_report-3.md) 参照。
 
 ---
 
 ## 次のステップ
 
-1. IT3 残タスク: US07（航海スケジュール検索、5 SP）の実装 — `/developing-backend` + `/developing-frontend`
-2. IT3 タスク 6 で US04-r1 / US05-r1 / US24-r1（業務的入力検証）を GitHub Issue として起票
-3. IT3 タスク 7 で US08 経路候補算出の先行スパイク（4h タイムボックス）
-4. IT3 完了時に `/planning-releases --retrospective` と `/planning-releases --report` を実施
-5. IT4 計画前に IT1〜IT3 のベロシティ実績で配分を再評価
+1. IT4 第 0 スプリント: PoC 処理方針 ADR 起票（捨てる / プロモート）、Javadoc BFS/DFS/Dijkstra 命名統一、CarrierMovement/TransitEdge 責務 ADR
+2. IT4 計画策定: `/planning-releases --iteration 4` — IT1〜IT3 の平均ベロシティ（14.7 SP）で IT4 計画を最終確定
+3. GitHub Project 同期: `/syncing-github-project --sync`
+4. US04-r1 / US05-r1 / US24-r1（業務的入力検証）の SP 見積後 IT4 計画に組込み
 
 ---
 
@@ -445,3 +444,4 @@ xychart-beta
 | 2026-05-15 | IT2 完了反映（実績 14 SP、達成率 100%、累計 28/106 SP 26%、バーンダウン実績線追加、実績 gantt を done に） | AI Agent（XP PM） |
 | 2026-05-15 | IT3 計画策定済みステータス反映、ADR-0009 事前完了を進捗・リスク・次のステップに反映 | AI Agent（XP PM） |
 | 2026-05-16 | IT3 進行中分 11 SP を進捗状況に反映（IT3 実績 11/16 SP 69%、累計 39/106 SP 37%）、バーンダウン実績線・実績 gantt・次のステップを US07 残のみに更新 | AI Agent（XP PM） |
+| 2026-05-16 | IT3 完了反映（実績 16 SP、達成率 100%、累計 44/106 SP 42%、バーンダウン実績線・gantt 完了）、次のステップを IT4 計画に更新 | AI Agent（XP PM） |

@@ -95,6 +95,8 @@ nav:
       - "IT2 完了報告書": development/iteration_report-2.md
       - "IT2 ふりかえり": development/retrospective-2.md
       - "IT3 イテレーション計画": development/iteration_plan-3.md
+      - "IT3 完了報告書": development/iteration_report-3.md
+      - "IT3 ふりかえり": development/retrospective-3.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -106,6 +108,7 @@ nav:
       - 運用成果物レビュー: review/運用成果物_review_20260512.md
       - "Phase 0 Walking Skeleton コードレビュー": review/Phase0_WalkingSkeleton_review_20260513.md
       - "IT2 実装成果物レビュー": review/IT2_実装成果物_review_20260515.md
+      - "US08 先行スパイク コードレビュー": review/us08_spike_review_20260516.md
   - ADR:
       - 概要: adr/index.md
       - "ADR-0001 Axon Framework 5 採用": adr/0001-axon-framework-adoption.md
