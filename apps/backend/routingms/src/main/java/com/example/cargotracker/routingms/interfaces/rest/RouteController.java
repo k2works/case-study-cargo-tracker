@@ -1,0 +1,40 @@
+package com.example.cargotracker.routingms.interfaces.rest;
+
+import com.example.cargotracker.routingms.application.RouteApplicationService;
+import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.routingms.interfaces.rest.dto.RouteCandidatesResponse;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+
+/**
+ * 経路算出 REST API（US08）。
+ */
+@RestController
+@RequestMapping("/api/v1/routing")
+public class RouteController {
+
+    private final RouteApplicationService routeService;
+
+    public RouteController(RouteApplicationService routeService) {
+        this.routeService = routeService;
+    }
+
+    /**
+     * GET /api/v1/routing/candidates
+     *
+     * <p>US08: 出発地・目的地・期限・貨物種別を条件に経路候補を算出して返す。</p>
+     */
+    @GetMapping("/candidates")
+    public RouteCandidatesResponse getCandidates(
+            @RequestParam String origin,
+            @RequestParam String destination,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate arrivalDeadline,
+            @RequestParam CargoType cargoType) {
+        return routeService.findCandidates(origin, destination, arrivalDeadline, cargoType);
+    }
+}
