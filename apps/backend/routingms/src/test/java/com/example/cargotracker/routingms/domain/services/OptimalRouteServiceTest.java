@@ -14,14 +14,22 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * US08 先行スパイク: OptimalRouteService の Dijkstra ベース PoC。
+ * US08 先行スパイク: OptimalRouteService の DFS 全経路列挙 PoC。
  *
- * 検証スコープ:
- * - 単一区間の経路候補算出
- * - 複数区間（中継港経由）の経路候補算出
- * - 到着期限による絞り込み
- * - 貨物種別（HAZARDOUS / REFRIGERATED）による絞り込み
- * - 寄港地連続性（前の到着港 == 次の出発港）の担保
+ * <p>実装は Dijkstra / BFS ではなく、再帰的 DFS による全候補列挙である。</p>
+ *
+ * <p>検証スコープ（ドメイン不変条件）:</p>
+ * <ul>
+ *   <li>単一区間の経路候補算出（直行便）</li>
+ *   <li>複数区間（中継港経由）の経路候補算出</li>
+ *   <li>到着期限による絞り込み</li>
+ *   <li>貨物種別（HAZARDOUS / REFRIGERATED）による絞り込み</li>
+ *   <li>寄港地連続性（前の到着港 == 次の出発港）の担保</li>
+ *   <li>乗り継ぎ時間（到着 &lt; 出発）の担保</li>
+ * </ul>
+ *
+ * <p>このテストは IT4 本実装の出発点となる実行可能仕様として存続させる。
+ * 実装（OptimalRouteService）は IT4 で再設計するが、テストは変更しない（ADR-0010 参照）。</p>
  */
 class OptimalRouteServiceTest {
 

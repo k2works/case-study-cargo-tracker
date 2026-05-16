@@ -15,5 +15,7 @@
 | [ADR-0007](0007-axon-5-event-sourcing-api.md) | Axon Framework 5.1 の Event Sourcing 採用と新アノテーション API への対応 | 承認済み |
 | [ADR-0008](0008-axon-5-spring-boot-integration-pattern.md) | Axon 5.1 Aggregate を Spring Boot 4 に統合する具体パターン（`@EventSourced` + `subscribing` モード） | 承認済み |
 | [ADR-0009](0009-axon-server-connector-explicit-dependency.md) | `axon-server-connector` を明示依存にし `local-docker` を pooled-streaming に復帰させる | 承認済み |
+| [ADR-0010](0010-us08-poc-promotion-policy.md) | US08 先行スパイク PoC の処理方針（テストは残し実装は IT4 でゼロから書き直す） | 承認済み |
+| [ADR-0011](0011-carrier-movement-and-transit-edge-responsibility.md) | `CarrierMovement`（Write Side VO）と `TransitEdge`（Read Side Query VO）の責務分離 | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

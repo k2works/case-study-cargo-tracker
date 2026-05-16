@@ -8,8 +8,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * US08 先行スパイク: BFS による経路候補算出サービス。
- * ポートをノード、TransitEdge を有向エッジとしてグラフ探索を行う。
+ * US08 先行スパイク: DFS（深さ優先全経路列挙）による経路候補算出サービス（PoC）。
+ *
+ * <p>ポートをノード、{@link TransitEdge} を有向エッジとしてグラフ探索を行う。
+ * 実装は再帰的 DFS で全候補を列挙する。BFS / Dijkstra ではない。</p>
+ *
+ * <p><b>PoC の制約と IT4 への引き継ぎ事項</b>:
+ * <ul>
+ *   <li>グラフ表現: {@code edges} 全件走査（O(|E|^d)）。IT4 では隣接リスト
+ *       {@code Map<String, List<TransitEdge>>} に変更すること（ADR-0010 参照）。</li>
+ *   <li>型安全性: {@code fromUnLocode} 等は {@code String} で管理。IT4 で {@code UnLocode} 値オブジェクトへ置換予定。</li>
+ *   <li>乗り継ぎ最小時間: 現状は「到着 &lt; 出発」のみ検証（1 分乗り継ぎも許容）。IT4 で 24h 制約を追加すること。</li>
+ *   <li>候補 0 件時: 空リストを返却するのみ。IT4 で代替案提示を仕様化すること。</li>
+ *   <li>本クラスの「捨てる / プロモート」方針は ADR-0010 を参照。</li>
+ * </ul>
+ * </p>
  */
 public class OptimalRouteService {
 
