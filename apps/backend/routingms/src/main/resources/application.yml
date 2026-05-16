@@ -6,6 +6,9 @@
 #   - test         : テスト時。Testcontainers で PostgreSQL 起動
 #   - staging/prod : 環境変数からシークレットを読み込む
 
+mybatis:
+  mapper-locations: classpath:mybatis/mapper/*.xml
+
 spring:
   application:
     name: routingms

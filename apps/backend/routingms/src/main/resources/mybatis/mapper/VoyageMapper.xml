@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.routingms.infrastructure.persistence.VoyageMapper">
+
+    <resultMap id="VoyageResultMap"
+               type="com.example.cargotracker.routingms.infrastructure.persistence.VoyageRecord">
+        <result property="voyageNumber"        column="voyage_number"/>
+        <result property="carrierCode"         column="carrier_code"/>
+        <result property="carrierName"         column="carrier_name"/>
+        <result property="shipName"            column="ship_name"/>
+        <result property="departureDate"       column="departure_date"/>
+        <result property="arrivalDate"         column="arrival_date"/>
+        <result property="originUnlocode"      column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="status"              column="status"/>
+    </resultMap>
+
+    <!-- US07: 動的条件検索 -->
+    <select id="findByCriteria" resultMap="VoyageResultMap">
+        SELECT DISTINCT v.voyage_number, v.carrier_code, v.carrier_name, v.ship_name,
+                        v.departure_date, v.arrival_date,
+                        v.origin_unlocode, v.destination_unlocode, v.status
+          FROM voyage v
+        <if test="cargoType != null">
+          INNER JOIN voyage_accepted_cargo_type vact
+                  ON vact.voyage_number = v.voyage_number
+                 AND vact.cargo_type = #{cargoType}
+        </if>
+        <where>
+            <if test="origin != null">
+                AND v.origin_unlocode = #{origin}
+            </if>
+            <if test="destination != null">
+                AND v.destination_unlocode = #{destination}
+            </if>
+            <if test="departureFrom != null">
+                AND v.departure_date &gt;= #{departureFrom}
+            </if>
+            <if test="departureTo != null">
+                AND v.departure_date &lt;= #{departureTo}
+            </if>
+        </where>
+        ORDER BY v.departure_date DESC
+    </select>
+
+</mapper>

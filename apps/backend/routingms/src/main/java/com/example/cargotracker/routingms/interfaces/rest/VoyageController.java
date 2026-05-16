@@ -18,14 +18,17 @@ import jakarta.validation.Valid;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -49,11 +52,19 @@ public class VoyageController {
     }
 
     @GetMapping
-    public ResponseEntity<List<VoyageListResponse>> list() {
-        List<VoyageListResponse> voyages = voyageMapper.findAll().stream()
-                .map(this::toListResponse)
-                .toList();
-        return ResponseEntity.ok(voyages);
+    public ResponseEntity<List<VoyageListResponse>> list(
+            @RequestParam(required = false) String origin,
+            @RequestParam(required = false) String destination,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime departureFrom,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime departureTo,
+            @RequestParam(required = false) String cargoType) {
+        List<VoyageRecord> records = (origin == null && destination == null
+                && departureFrom == null && departureTo == null && cargoType == null)
+                ? voyageMapper.findAll()
+                : voyageMapper.findByCriteria(origin, destination, departureFrom, departureTo, cargoType);
+        return ResponseEntity.ok(records.stream().map(this::toListResponse).toList());
     }
 
     /**

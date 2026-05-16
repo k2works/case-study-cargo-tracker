@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /** routing_read_db への MyBatis アクセス。 */
@@ -101,4 +102,12 @@ public interface VoyageMapper {
     @Result(property = "destinationUnlocode", column = "destination_unlocode")
     @Result(property = "status", column = "status")
     List<VoyageRecord> findAll();
+
+    /** US07: 動的条件で航海を検索する。null パラメータは条件から除外される。 */
+    List<VoyageRecord> findByCriteria(
+            @Param("origin") String origin,
+            @Param("destination") String destination,
+            @Param("departureFrom") LocalDateTime departureFrom,
+            @Param("departureTo") LocalDateTime departureTo,
+            @Param("cargoType") String cargoType);
 }
