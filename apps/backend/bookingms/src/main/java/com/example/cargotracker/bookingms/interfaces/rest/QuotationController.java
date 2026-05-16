@@ -42,6 +42,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/quotations")
 public class QuotationController {
 
+    private static final String MESSAGE_KEY = "message";
+
     private final CommandGateway commandGateway;
     private final ShipperRepository shipperRepository;
     private final QuotationMapper quotationMapper;
@@ -59,7 +61,7 @@ public class QuotationController {
         // 1. 荷主存在チェック
         if (!shipperRepository.existsById(request.shipperId())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "指定された荷主 ID が存在しません: " + request.shipperId()));
+                    .body(Map.of(MESSAGE_KEY, "指定された荷主 ID が存在しません: " + request.shipperId()));
         }
 
         // 2. Command 構築（VO の不変条件と整合性検証）
@@ -79,7 +81,7 @@ public class QuotationController {
                     toHazardInfo(request.hazardInfo()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
         }
 
         // 3. Axon CommandGateway 経由で送信
@@ -108,7 +110,7 @@ public class QuotationController {
         QuotationRecord quotation = quotationMapper.findByQuotationId(quotationId);
         if (quotation == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "quotation_id が存在しません: " + quotationId));
+                    .body(Map.of(MESSAGE_KEY, "quotation_id が存在しません: " + quotationId));
         }
         List<QuotationCandidateRecord> candidates =
                 quotationMapper.findCandidatesByQuotationId(quotationId);

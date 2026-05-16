@@ -131,7 +131,8 @@ class CargoTest {
 
         EventAppender appender = mock(EventAppender.class);
 
-        assertThatThrownBy(() -> cargo.handOffToRouting(new HandOffToRoutingCommand(bookingId), appender))
+        var cmd = new HandOffToRoutingCommand(bookingId);
+        assertThatThrownBy(() -> cargo.handOffToRouting(cmd, appender))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("PRELIMINARY");
         verifyNoInteractions(appender);

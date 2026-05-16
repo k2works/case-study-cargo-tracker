@@ -106,14 +106,10 @@ class QuotationTest {
     @Test
     @DisplayName("受入条件 6: HAZARDOUS で hazardInfo が無いと CreateQuotationCommand が拒否される")
     void HAZARDOUS_申告無しは拒否() {
-        assertThatThrownBy(() -> new CreateQuotationCommand(
-                UUID.randomUUID().toString(),
-                SHIPPER,
-                new RouteSpecification(
-                        Location.of("JPTYO"), Location.of("USNYC"), LocalDate.now().plusDays(30)),
-                CargoType.HAZARDOUS,
-                new BigDecimal("100"),
-                null))
+        String id = UUID.randomUUID().toString();
+        var route = new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"), LocalDate.now().plusDays(30));
+        var weight = new BigDecimal("100");
+        assertThatThrownBy(() -> new CreateQuotationCommand(id, SHIPPER, route, CargoType.HAZARDOUS, weight, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("hazardInfo");
     }
@@ -121,14 +117,9 @@ class QuotationTest {
     @Test
     @DisplayName("Command の weightKg <= 0 は拒否される")
     void 重量0以下は拒否() {
-        assertThatThrownBy(() -> new CreateQuotationCommand(
-                UUID.randomUUID().toString(),
-                SHIPPER,
-                new RouteSpecification(
-                        Location.of("JPTYO"), Location.of("USNYC"), LocalDate.now().plusDays(30)),
-                CargoType.GENERAL,
-                BigDecimal.ZERO,
-                null))
+        String id = UUID.randomUUID().toString();
+        var route = new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"), LocalDate.now().plusDays(30));
+        assertThatThrownBy(() -> new CreateQuotationCommand(id, SHIPPER, route, CargoType.GENERAL, BigDecimal.ZERO, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("weightKg");
     }

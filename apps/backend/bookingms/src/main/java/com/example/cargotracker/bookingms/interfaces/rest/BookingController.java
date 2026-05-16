@@ -44,6 +44,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/bookings")
 public class BookingController {
 
+    private static final String MESSAGE_KEY = "message";
+
     private final CommandGateway commandGateway;
     private final ShipperRepository shipperRepository;
     private final CargoSummaryMapper cargoSummaryMapper;
@@ -66,7 +68,7 @@ public class BookingController {
             // バリデーション: BookingStatus 列挙値以外は 400
             try {
                 BookingStatus.valueOf(status);
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException _) {
                 return ResponseEntity.badRequest().build();
             }
             records = cargoSummaryMapper.findByBookingStatus(status);
@@ -97,7 +99,7 @@ public class BookingController {
         // 1. 荷主存在チェック
         if (!shipperRepository.existsById(request.shipperId())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "指定された荷主 ID が存在しません: " + request.shipperId()));
+                    .body(Map.of(MESSAGE_KEY, "指定された荷主 ID が存在しません: " + request.shipperId()));
         }
 
         // 2. ドメイン値オブジェクトへ変換（バリデーション付き）
@@ -112,7 +114,7 @@ public class BookingController {
                     toRouteSpecification(request.routeSpec()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
         }
 
         // 3. Axon CommandGateway 経由で Cargo Aggregate に送信
@@ -130,16 +132,16 @@ public class BookingController {
      */
     @PostMapping("/{bookingId}/handoff")
     public ResponseEntity<Object> handoff(@PathVariable("bookingId") String bookingId) {
-        var record = cargoSummaryMapper.findByBookingId(bookingId);
-        if (record.isEmpty()) {
+        var summary = cargoSummaryMapper.findByBookingId(bookingId);
+        if (summary.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "予約が存在しません: " + bookingId));
+                    .body(Map.of(MESSAGE_KEY, "予約が存在しません: " + bookingId));
         }
         try {
             commandGateway.sendAndWait(new HandOffToRoutingCommand(bookingId));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
         }
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTING.name()));
     }

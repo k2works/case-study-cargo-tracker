@@ -28,32 +28,36 @@ public class OptimalRouteService {
     private void dfs(RouteSearchSpecification spec, String current,
                      List<TransitEdge> currentPath, List<TransitPath> results) {
         for (TransitEdge edge : edges) {
-            if (!edge.fromUnLocode().equals(current)) {
-                continue;
-            }
-            if (!acceptsCargo(edge, spec)) {
-                continue;
-            }
-            if (!hasValidTransfer(currentPath, edge)) {
-                continue;
-            }
-
-            List<TransitEdge> newPath = new ArrayList<>(currentPath);
-            newPath.add(edge);
-
-            if (edge.toUnLocode().equals(spec.destination())) {
-                if (!edge.arrivalTime().toLocalDate().isAfter(spec.arrivalDeadline())) {
-                    results.add(new TransitPath(newPath));
-                }
-            } else {
-                String nextNode = edge.toUnLocode();
-                boolean visited = currentPath.stream()
-                        .anyMatch(e -> e.fromUnLocode().equals(nextNode) || e.toUnLocode().equals(nextNode));
-                if (!visited) {
-                    dfs(spec, nextNode, newPath, results);
-                }
+            if (isEligible(edge, spec, current, currentPath)) {
+                explore(edge, spec, currentPath, results);
             }
         }
+    }
+
+    private boolean isEligible(TransitEdge edge, RouteSearchSpecification spec,
+                                String current, List<TransitEdge> currentPath) {
+        return edge.fromUnLocode().equals(current)
+                && acceptsCargo(edge, spec)
+                && hasValidTransfer(currentPath, edge);
+    }
+
+    private void explore(TransitEdge edge, RouteSearchSpecification spec,
+                         List<TransitEdge> currentPath, List<TransitPath> results) {
+        List<TransitEdge> newPath = new ArrayList<>(currentPath);
+        newPath.add(edge);
+
+        if (edge.toUnLocode().equals(spec.destination())) {
+            if (!edge.arrivalTime().toLocalDate().isAfter(spec.arrivalDeadline())) {
+                results.add(new TransitPath(newPath));
+            }
+        } else if (!isVisited(edge.toUnLocode(), currentPath)) {
+            dfs(spec, edge.toUnLocode(), newPath, results);
+        }
+    }
+
+    private boolean isVisited(String node, List<TransitEdge> path) {
+        return path.stream()
+                .anyMatch(e -> e.fromUnLocode().equals(node) || e.toUnLocode().equals(node));
     }
 
     private boolean acceptsCargo(TransitEdge edge, RouteSearchSpecification spec) {

@@ -139,6 +139,7 @@ public final class Quotation {
      * <p>現状は直行ルート 1 件のみ。IT4 で routingms 連携により複数候補を扱う。
      * 希望期限に間に合わないルートは除外する（受入条件 5）。</p>
      */
+    @SuppressWarnings("java:S1172")
     static List<RouteCandidate> generateCandidates(RouteSpecification routeSpec,
                                                    Money baseAmount,
                                                    BigDecimal weightKg,

@@ -58,15 +58,15 @@ public class QuotationProjectionsEventHandler {
         // 2. quotation_candidate 各行
         int seq = 1;
         for (RouteCandidate candidate : event.candidates()) {
-            var record = new QuotationCandidateRecord();
-            record.setQuotationId(event.quotationId());
-            record.setCandidateSeq(seq++);
-            record.setEstimatedDays(candidate.estimatedDays());
-            record.setEstimatedCost(candidate.estimatedAmount().amount());
-            record.setEstimatedCurrency(candidate.estimatedAmount().currency());
-            record.setItinerarySummary(candidate.itinerarySummary());
-            record.setVoyageNumbers(candidate.voyageNumbers());
-            mapper.insertCandidate(record);
+            var candidateRecord = new QuotationCandidateRecord();
+            candidateRecord.setQuotationId(event.quotationId());
+            candidateRecord.setCandidateSeq(seq++);
+            candidateRecord.setEstimatedDays(candidate.estimatedDays());
+            candidateRecord.setEstimatedCost(candidate.estimatedAmount().amount());
+            candidateRecord.setEstimatedCurrency(candidate.estimatedAmount().currency());
+            candidateRecord.setItinerarySummary(candidate.itinerarySummary());
+            candidateRecord.setVoyageNumbers(candidate.voyageNumbers());
+            mapper.insertCandidate(candidateRecord);
         }
     }
 }

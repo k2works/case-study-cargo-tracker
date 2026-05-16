@@ -73,10 +73,9 @@ class OptimalRouteServiceTest {
 
         List<TransitPath> candidates = service.findCandidates(spec);
 
-        assertThat(candidates).isNotEmpty();
-        // 直行便 V001 が含まれる
-        assertThat(candidates).anyMatch(p ->
-                p.edges().size() == 1 && p.edges().get(0).voyageNumber().equals("V001"));
+        assertThat(candidates)
+                .isNotEmpty()
+                .anyMatch(p -> p.edges().size() == 1 && p.edges().get(0).voyageNumber().equals("V001"));
     }
 
     @Test
@@ -119,14 +118,11 @@ class OptimalRouteServiceTest {
 
         List<TransitPath> candidates = service.findCandidates(spec);
 
-        // 直行便 V001（REFRIGERATED のみ対応）は除外される
-        assertThat(candidates).noneMatch(p ->
-                p.edges().stream().anyMatch(e -> e.voyageNumber().equals("V001")));
-        // V002 → V003 の HAZARDOUS 対応経路が含まれる
-        assertThat(candidates).anyMatch(p ->
-                p.edges().size() == 2
-                && p.edges().get(0).voyageNumber().equals("V002")
-                && p.edges().get(1).voyageNumber().equals("V003"));
+        assertThat(candidates)
+                .noneMatch(p -> p.edges().stream().anyMatch(e -> e.voyageNumber().equals("V001")))
+                .anyMatch(p -> p.edges().size() == 2
+                        && p.edges().get(0).voyageNumber().equals("V002")
+                        && p.edges().get(1).voyageNumber().equals("V003"));
     }
 
     @Test

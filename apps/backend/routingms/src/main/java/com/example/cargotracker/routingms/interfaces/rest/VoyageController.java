@@ -43,6 +43,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/voyages")
 public class VoyageController {
 
+    private static final String MESSAGE_KEY = "message";
+
     private final CommandGateway commandGateway;
     private final VoyageMapper voyageMapper;
 
@@ -76,7 +78,7 @@ public class VoyageController {
         VoyageRecord entity = voyageMapper.findByVoyageNumber(voyageNumber);
         if (entity == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "voyage_number が存在しません: " + voyageNumber));
+                    .body(Map.of(MESSAGE_KEY, "voyage_number が存在しません: " + voyageNumber));
         }
         return ResponseEntity.ok(toListResponse(entity));
     }
@@ -104,13 +106,13 @@ public class VoyageController {
             command = toCommand(request);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
         }
 
         // 2. 同一 voyage_number 重複チェック
         if (voyageMapper.existsByVoyageNumber(voyageNumber.value())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", "voyage_number は既に存在します: " + voyageNumber.value()));
+                    .body(Map.of(MESSAGE_KEY, "voyage_number は既に存在します: " + voyageNumber.value()));
         }
 
         // 3. Axon CommandGateway 経由で送信
@@ -133,7 +135,7 @@ public class VoyageController {
         // 1. 存在チェック
         if (!voyageMapper.existsByVoyageNumber(voyageNumber)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "voyage_number が存在しません: " + voyageNumber));
+                    .body(Map.of(MESSAGE_KEY, "voyage_number が存在しません: " + voyageNumber));
         }
 
         // 2. Command 構築（VO の不変条件と連続性検証はここで例外）
@@ -142,7 +144,7 @@ public class VoyageController {
             command = toUpdateCommand(voyageNumber, request);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
         }
 
         // 3. Axon CommandGateway 経由で送信
