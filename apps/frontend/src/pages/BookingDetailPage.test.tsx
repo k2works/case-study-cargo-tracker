@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../features/booking/hooks/useBookings', () => ({
   useBookings: () => mocks.useBookingsResult,
   useHandOffBooking: () => mocks.handOff,
+  useConfirmBooking: () => ({ mutate: vi.fn(), isPending: false }),
+  useIssueTracking: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 function renderAt(path: string) {

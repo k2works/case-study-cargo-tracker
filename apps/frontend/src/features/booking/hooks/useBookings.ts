@@ -33,3 +33,27 @@ export function useHandOffBooking() {
     },
   })
 }
+
+// US13: 予約確定（ROUTE_PROPOSED -> CONFIRMED）。
+export function useConfirmBooking() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (bookingId: string) =>
+      bookingApiClient.post<BookingResponse>(`/api/v1/bookings/${bookingId}/confirm`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOOKINGS_KEY })
+    },
+  })
+}
+
+// US14: 追跡番号発行（CONFIRMED -> TRACKING_ISSUED）。
+export function useIssueTracking() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (bookingId: string) =>
+      bookingApiClient.post<BookingResponse>(`/api/v1/bookings/${bookingId}/issue-tracking`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOOKINGS_KEY })
+    },
+  })
+}

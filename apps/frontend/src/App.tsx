@@ -14,6 +14,7 @@ import { VoyageEditPage } from './pages/VoyageEditPage'
 import { QuotationListPage } from './pages/QuotationListPage'
 import { QuotationNewPage } from './pages/QuotationNewPage'
 import { QuotationDetailPage } from './pages/QuotationDetailPage'
+import { RoutingWorkbenchPage } from './pages/RoutingWorkbenchPage'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/quotations" element={<QuotationListPage />} />
           <Route path="/quotations/new" element={<QuotationNewPage />} />
           <Route path="/quotations/:quotationId" element={<QuotationDetailPage />} />
+          <Route path="/routing/workbench/:bookingId" element={<RoutingWorkbenchPage />} />
           <Route path="/routing/voyages" element={<VoyageListPage />} />
           <Route path="/routing/voyages/new" element={<VoyageNewPage />} />
           <Route path="/routing/voyages/:voyageNumber/edit" element={<VoyageEditPage />} />
