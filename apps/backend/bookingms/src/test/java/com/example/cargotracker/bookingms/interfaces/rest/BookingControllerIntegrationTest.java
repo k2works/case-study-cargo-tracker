@@ -2,7 +2,9 @@ package com.example.cargotracker.bookingms.interfaces.rest;
 
 import com.example.cargotracker.bookingms.domain.model.commands.AssignRouteToCargoCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryRecord;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
@@ -22,9 +24,11 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -61,7 +65,10 @@ class BookingControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
-        when(commandGateway.sendAndWait(any())).thenReturn(null);
+        // BookingController は send(command, Object.class) を使い CompletableFuture をタイムアウト付きで join する
+        // （IT4 レビュー H2/H3 対応）。テストではモックで完了済み Future を返す。
+        when(commandGateway.send(any(), eq(Object.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
     }
 
     /** テスト用に荷主を作成して shipper.id を返す。 */
@@ -112,7 +119,7 @@ class BookingControllerIntegrationTest {
 
         // CommandGateway に BookCargoCommand が送信されたことを検証
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(commandGateway).sendAndWait(captor.capture());
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
         assertThat(captor.getValue()).isInstanceOf(BookCargoCommand.class);
         BookCargoCommand cmd = (BookCargoCommand) captor.getValue();
         assertThat(cmd.shipperId().value()).isEqualTo(shipperId);
@@ -234,7 +241,7 @@ class BookingControllerIntegrationTest {
                 .andExpect(jsonPath("$.bookingStatus").value("PRELIMINARY"));
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(commandGateway).sendAndWait(captor.capture());
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
         BookCargoCommand cmd = (BookCargoCommand) captor.getValue();
         assertThat(cmd.cargoSpec().cargoType().name()).isEqualTo("HAZARDOUS");
         assertThat(cmd.cargoSpec().hazardInfo()).isNotNull();
@@ -275,7 +282,7 @@ class BookingControllerIntegrationTest {
                 .andExpect(jsonPath("$.bookingStatus").value("PRELIMINARY"));
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(commandGateway).sendAndWait(captor.capture());
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
         BookCargoCommand cmd = (BookCargoCommand) captor.getValue();
         assertThat(cmd.cargoSpec().cargoType().name()).isEqualTo("REFRIGERATED");
         assertThat(cmd.cargoSpec().temperatureCondition()).isNotNull();
@@ -376,7 +383,7 @@ class BookingControllerIntegrationTest {
                 .andExpect(jsonPath("$.bookingStatus").value("ROUTING"));
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(commandGateway).sendAndWait(captor.capture());
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
         assertThat(captor.getValue()).isInstanceOf(HandOffToRoutingCommand.class);
         assertThat(((HandOffToRoutingCommand) captor.getValue()).bookingId())
                 .isEqualTo("handoff-booking-1");
@@ -457,7 +464,8 @@ class BookingControllerIntegrationTest {
     @Test
     @DisplayName("US11: POST /api/v1/bookings/{id}/assign-route で AssignRouteToCargoCommand が送信される")
     void 経路紐付けコマンドが送信される() throws Exception {
-        when(commandGateway.sendAndWait(any())).thenReturn(null);
+        when(commandGateway.send(any(), eq(Object.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
 
         mockMvc.perform(post("/api/v1/bookings/B-TEST/assign-route")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -477,7 +485,7 @@ class BookingControllerIntegrationTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(commandGateway).sendAndWait(captor.capture());
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
         assertThat(captor.getValue()).isInstanceOf(AssignRouteToCargoCommand.class);
         AssignRouteToCargoCommand cmd = (AssignRouteToCargoCommand) captor.getValue();
         assertThat(cmd.bookingId()).isEqualTo("B-TEST");
@@ -500,5 +508,38 @@ class BookingControllerIntegrationTest {
                 .isInstanceOf(com.example.cargotracker.bookingms.domain.model.commands.NotifyRouteCommand.class);
         assertThat(((com.example.cargotracker.bookingms.domain.model.commands.NotifyRouteCommand) captor.getValue())
                 .bookingId()).isEqualTo("B-NOTIFY");
+    }
+
+    @Test
+    @DisplayName("US13: POST /api/v1/bookings/{id}/confirm で ConfirmBookingCommand がタイムアウト付きで送信される")
+    void 予約確定コマンドが送信される() throws Exception {
+        // IT4 レビュー H3 対応: production は send(command, Object.class) を使うため
+        // テストも sendAndWait モックではなく send(any(), eq(Object.class)) で検証する
+
+        mockMvc.perform(post("/api/v1/bookings/B-CONFIRM/confirm"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value("B-CONFIRM"))
+                .andExpect(jsonPath("$.bookingStatus").value("CONFIRMED"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
+        assertThat(captor.getValue()).isInstanceOf(ConfirmBookingCommand.class);
+        assertThat(((ConfirmBookingCommand) captor.getValue()).bookingId()).isEqualTo("B-CONFIRM");
+    }
+
+    @Test
+    @DisplayName("US14: POST /api/v1/bookings/{id}/issue-tracking で IssueTrackingNumberCommand がタイムアウト付きで送信される")
+    void 追跡番号発行コマンドが送信される() throws Exception {
+        // IT4 レビュー H3 対応: production の send(command, Object.class) と一致
+
+        mockMvc.perform(post("/api/v1/bookings/B-TRACK/issue-tracking"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value("B-TRACK"))
+                .andExpect(jsonPath("$.bookingStatus").value("TRACKING_ISSUED"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
+        assertThat(captor.getValue()).isInstanceOf(IssueTrackingNumberCommand.class);
+        assertThat(((IssueTrackingNumberCommand) captor.getValue()).bookingId()).isEqualTo("B-TRACK");
     }
 }

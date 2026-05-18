@@ -37,8 +37,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 貨物予約 REST API（US04）。
@@ -52,6 +56,16 @@ import java.util.Map;
 public class BookingController {
 
     private static final String MESSAGE_KEY = "message";
+
+    /**
+     * コマンド実行のタイムアウト（IT4 レビュー H2 対応）。
+     *
+     * <p>Axon 5.1 の {@link CommandGateway#sendAndWait(Object)} はタイムアウト未指定だと
+     * 無限待機となりスレッドを枯渇させる恐れがある。{@code send(command, Class)} で
+     * {@link java.util.concurrent.CompletableFuture} を取得し {@code orTimeout} で明示的に
+     * 上限を設けることで、Axon Server / Aggregate 障害時のフェイルファストを保証する。</p>
+     */
+    private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(30);
 
     private final CommandGateway commandGateway;
     private final ShipperRepository shipperRepository;
@@ -125,7 +139,7 @@ public class BookingController {
         }
 
         // 3. Axon CommandGateway 経由で Cargo Aggregate に送信
-        commandGateway.sendAndWait(command);
+        sendAndWaitWithTimeout(command);
 
         // 4. レスポンス（PRELIMINARY は Cargo Aggregate のイベント処理直後の規定状態）
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -145,7 +159,7 @@ public class BookingController {
                     .body(Map.of(MESSAGE_KEY, "予約が存在しません: " + bookingId));
         }
         try {
-            commandGateway.sendAndWait(new HandOffToRoutingCommand(bookingId));
+            sendAndWaitWithTimeout(new HandOffToRoutingCommand(bookingId));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of(MESSAGE_KEY, e.getMessage()));
@@ -171,7 +185,7 @@ public class BookingController {
                         dto.unloadTime()))
                 .toList();
         var itinerary = new CargoItinerary(legs);
-        commandGateway.sendAndWait(new AssignRouteToCargoCommand(bookingId, itinerary));
+        sendAndWaitWithTimeout(new AssignRouteToCargoCommand(bookingId, itinerary));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTE_PROPOSED.name()));
     }
 
@@ -188,14 +202,43 @@ public class BookingController {
 
     @PostMapping("/{bookingId}/confirm")
     public ResponseEntity<Object> confirmBooking(@PathVariable String bookingId) {
-        commandGateway.sendAndWait(new ConfirmBookingCommand(bookingId));
+        sendAndWaitWithTimeout(new ConfirmBookingCommand(bookingId));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.CONFIRMED.name()));
     }
 
     @PostMapping("/{bookingId}/issue-tracking")
     public ResponseEntity<Object> issueTrackingNumber(@PathVariable String bookingId) {
-        commandGateway.sendAndWait(new IssueTrackingNumberCommand(bookingId));
+        sendAndWaitWithTimeout(new IssueTrackingNumberCommand(bookingId));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.TRACKING_ISSUED.name()));
+    }
+
+    /**
+     * タイムアウト付きコマンド送信ヘルパー（IT4 レビュー H2 対応）。
+     *
+     * <p>Axon 5.1 の {@code CommandGateway} はデフォルトでタイムアウトを持たないため、
+     * {@link java.util.concurrent.CompletableFuture#orTimeout} で 30 秒の上限を設定する。
+     * タイムアウト時は {@link TimeoutException} を {@link CompletionException} 経由で再スローする。
+     * ドメイン例外（{@link IllegalStateException}・{@link IllegalArgumentException}）は
+     * 既存のキャッチ節を維持するため原型のままアンラップして再スローする。</p>
+     *
+     * @param command Axon に送信するコマンド
+     */
+    private void sendAndWaitWithTimeout(Object command) {
+        try {
+            commandGateway.send(command, Object.class)
+                    .orTimeout(COMMAND_TIMEOUT.toSeconds(), TimeUnit.SECONDS)
+                    .join();
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException re) {
+                throw re;
+            }
+            if (cause instanceof TimeoutException) {
+                throw new IllegalStateException(
+                        "コマンド処理がタイムアウトしました（" + COMMAND_TIMEOUT.toSeconds() + "秒）", cause);
+            }
+            throw new IllegalStateException("コマンド実行に失敗しました", cause);
+        }
     }
 
     private CargoSpecification toCargoSpecification(BookCargoRequest.CargoSpecDto dto) {
