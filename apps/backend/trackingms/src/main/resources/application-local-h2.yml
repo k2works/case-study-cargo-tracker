@@ -13,6 +13,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # DevTools 再起動時に過去の失敗履歴が H2 in-memory DB に残ることがあるため、
+    # ローカル開発では検証エラー時に自動 clean → re-migrate する。
+    # 本番（heroku / staging / prod）プロファイルではこれらを設定しないこと。
+    clean-disabled: false
+    clean-on-validation-error: true
   h2:
     console:
       enabled: true
