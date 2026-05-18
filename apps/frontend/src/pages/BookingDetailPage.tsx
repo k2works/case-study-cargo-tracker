@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useBookings, useHandOffBooking, useConfirmBooking, useIssueTracking } from '../features/booking/hooks/useBookings'
+import { TrackingTokenIssuer } from '../features/tracking/components/TrackingTokenIssuer'
 
 // S10 予約詳細（US06）。
 // PRELIMINARY 状態のときに「経路設計を依頼」ボタンを表示し、
@@ -181,6 +182,10 @@ export function BookingDetailPage() {
             {booking.trackingNumber}
           </span>
         </div>
+      )}
+
+      {booking.bookingStatus === 'TRACKING_ISSUED' && booking.trackingNumber && (
+        <TrackingTokenIssuer trackingNumber={booking.trackingNumber} variant="issue" />
       )}
     </div>
   )
