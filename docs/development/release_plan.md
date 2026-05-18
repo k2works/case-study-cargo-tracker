@@ -397,7 +397,7 @@ gantt
 | IT2 | 14 | 14 | 100% | 完了 |
 | IT3 | 16 | 16 | 100% | 完了 |
 | IT4 | 25 | 25 | 100% | 完了 |
-| IT5 | 11 | - | - | 未着手 |
+| IT5 | 11 | - | - | 進行中 |
 | IT6 | 5 | - | - | 未着手 |
 | IT7 | 6 | - | - | 未着手 |
 | IT8 | 13 | - | - | 未着手 |
@@ -430,10 +430,10 @@ xychart-beta
 
 ## 次のステップ
 
-1. IT4 ふりかえり（KPT）: `/planning-releases --retrospective`
-2. IT5 計画策定: `/planning-releases --iteration 5` — US15/US16/US17（荷役作業記録）
-3. GitHub Project 同期: `/syncing-github-project --sync`
-4. IT4 完了報告書作成: `/creating-iteration-report`
+1. IT5 開発開始: `handlingms` 新設・US15/US16/US17 実装（TDD）
+2. IT4 コードレビュー H1〜H3 対応（TI04）: ArchUnit テスト・sendAndWait タイムアウト指定・統合テスト更新
+3. ADR-0012 起票: handlingms/trackingms 責務分離
+4. IT5 中間進捗確認: `/tracking-progress --iteration 5`
 
 ---
 
@@ -448,3 +448,4 @@ xychart-beta
 | 2026-05-16 | IT3 進行中分 11 SP を進捗状況に反映（IT3 実績 11/16 SP 69%、累計 39/106 SP 37%）、バーンダウン実績線・実績 gantt・次のステップを US07 残のみに更新 | AI Agent（XP PM） |
 | 2026-05-16 | IT3 完了反映（実績 16 SP、達成率 100%、累計 44/106 SP 42%、バーンダウン実績線・gantt 完了）、次のステップを IT4 計画に更新 | AI Agent（XP PM） |
 | 2026-05-18 | IT4 完了反映（実績 25 SP、達成率 100%、累計 69/106 SP 65%、バーンダウン実績線追加、次のステップを IT5 計画に更新） | AI Agent |
+| 2026-05-18 | IT5 計画策定（11 SP・handlingms 新設・US15/US16/US17）、IT5 進行中ステータスに更新、次のステップを IT5 開発開始に更新 | AI Agent |
