@@ -156,6 +156,13 @@ public class TrackingController {
             @PathVariable String trackingNumber,
             @RequestBody UpdateTrackingStatusRequest request) {
 
+        // 事前存在チェック: tracking_summary が無い状態で INSERT すると FK 制約違反になる
+        if (!queryService.exists(trackingNumber)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    ERROR_CODE, "TRACKING_NOT_FOUND",
+                    MESSAGE_KEY, "追跡情報が見つかりません: " + trackingNumber));
+        }
+
         TransportStatus newStatus;
         try {
             newStatus = TransportStatus.valueOf(request.newStatus());

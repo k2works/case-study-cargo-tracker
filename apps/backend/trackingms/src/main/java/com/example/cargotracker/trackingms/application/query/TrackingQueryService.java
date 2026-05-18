@@ -67,6 +67,16 @@ public class TrackingQueryService {
     }
 
     /**
+     * 追跡番号に対応する {@code tracking_summary} が存在するかを返す。
+     *
+     * <p>{@code PUT /api/v1/tracking/{tn}/status} の事前チェックに使用する。
+     * 未初期化の追跡集約への状態更新で発生する FK 制約違反を防ぐ。</p>
+     */
+    public boolean exists(String trackingNumber) {
+        return summaryMapper.findByTrackingNumber(trackingNumber).isPresent();
+    }
+
+    /**
      * S16 追跡管理一覧用の全件取得（最終更新日時降順）。
      */
     public List<TrackingListItemResponse> findAll() {
