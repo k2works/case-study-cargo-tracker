@@ -101,6 +101,7 @@ nav:
       - "IT4 完了報告書": development/iteration_report-4.md
       - "IT4 ふりかえり": development/retrospective-4.md
       - "IT5 イテレーション計画": development/iteration_plan-5.md
+      - "IT5 ふりかえり": development/retrospective-5.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md

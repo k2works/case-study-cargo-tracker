@@ -397,11 +397,11 @@ gantt
 | IT2 | 14 | 14 | 100% | 完了 |
 | IT3 | 16 | 16 | 100% | 完了 |
 | IT4 | 25 | 25 | 100% | 完了 |
-| IT5 | 11 | - | - | 進行中 |
+| IT5 | 11 | 11 | 100% | 受入待ち |
 | IT6 | 5 | - | - | 未着手 |
 | IT7 | 6 | - | - | 未着手 |
 | IT8 | 13 | - | - | 未着手 |
-| **合計** | **106** | **69** | **65%** | |
+| **合計** | **106** | **80** | **75%** | |
 
 > IT2 計画 14 SP は新規 11 SP（US04+US05+US24）+ 持越し 3 SP（US00-r1/US00-r2/US-UI-r）の構成。US25 は IT3 へ繰越し（+3 SP）したため、合計が 103 → 106 SP に増加した。
 >
@@ -419,21 +419,23 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8"]
     y-axis "残 SP" 0 --> 106
     line "計画" [106, 90, 76, 60, 35, 24, 19, 13, 0]
-    line "実績" [106, 92, 78, 62, 37]
+    line "実績" [106, 92, 78, 62, 37, 26]
 ```
 
 > IT3 完了（2026-05-16）: 全 4 ストーリー（US25/US01/US06/US07）+ IT2 持越し（PIT/ドキュメント）+ US08 先行スパイクが完了。実績 SP 16/16（達成率 100%）、累計 44/106 SP 42%。詳細は [iteration_report-3.md](./iteration_report-3.md) 参照。
 >
 > **IT4 完了（2026-05-18）**: 全 7 ストーリー（US08〜US14）+ US10/US12 フィーチャバッファを含む全 SP が完了。バックエンド 211 テスト・フロントエンド 108 テスト全通過。SonarQube Quality Gate PASS（new_coverage 81.6%・new_violations 0・Bug 0・Vulnerability 0・Code Smell 0）。実績 SP 25/25（達成率 100%）、累計 69/106 SP 65%。
+>
+> **IT5 完了（2026-05-18 受入待ち）**: TI04（handlingms 骨格・ArchUnit・sendAndWait タイムアウト・統合テスト整合）+ US15（荷役作業を記録する）+ US16（引取作業を記録する）+ US17（貨物状態を手動更新する）の全 11 SP が完了。バックエンド handlingms 25 テスト + 既存全 PASS、フロントエンド 121 テスト PASS、E2E 10/10 PASS（17.0s）、SonarQube Quality Gate PASS（new_coverage 82.7%・new_violations 0）、ArchUnit PASS。詳細は [retrospective-5.md](./retrospective-5.md) 参照。
 
 ---
 
 ## 次のステップ
 
-1. IT5 開発開始: `handlingms` 新設・US15/US16/US17 実装（TDD）
-2. IT4 コードレビュー H1〜H3 対応（TI04）: ArchUnit テスト・sendAndWait タイムアウト指定・統合テスト更新
-3. ADR-0012 起票: handlingms/trackingms 責務分離
-4. IT5 中間進捗確認: `/tracking-progress --iteration 5`
+1. IT5 完了報告書作成: `/creating-iteration-report 5`
+2. GitHub Project 同期: IT5 Issues（TI04#140 / US15#124 / US16#125 / US17#126）クローズ
+3. IT6 計画策定: `/planning-releases --iteration 6` — US18 追跡情報照会 + IT4 中優先度指摘 M1〜M6 取り込み + IT5 暫定実装の trackingms 移管
+4. IT5 ArchUnit ルール拡張（@CommandHandler 必須化）— IT6 第 0 スプリント
 
 ---
 
@@ -449,3 +451,4 @@ xychart-beta
 | 2026-05-16 | IT3 完了反映（実績 16 SP、達成率 100%、累計 44/106 SP 42%、バーンダウン実績線・gantt 完了）、次のステップを IT4 計画に更新 | AI Agent（XP PM） |
 | 2026-05-18 | IT4 完了反映（実績 25 SP、達成率 100%、累計 69/106 SP 65%、バーンダウン実績線追加、次のステップを IT5 計画に更新） | AI Agent |
 | 2026-05-18 | IT5 計画策定（11 SP・handlingms 新設・US15/US16/US17）、IT5 進行中ステータスに更新、次のステップを IT5 開発開始に更新 | AI Agent |
+| 2026-05-18 | IT5 完了反映（実績 11 SP、達成率 100%、累計 80/106 SP 75%、バーンダウン実績線追加、retrospective-5.md 作成、次のステップを IT6 計画に更新） | AI Agent |

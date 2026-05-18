@@ -18,7 +18,7 @@
 | IT2（2026-05-28〜06-10） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | 完了 |
 | IT3（2026-06-11〜06-24） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | 完了 |
 | IT4（2026-06-25〜07-08） | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | 完了 |
-| IT5（2026-07-09〜07-22） | [iteration_plan-5.md](./iteration_plan-5.md) | - | - | 進行中 |
+| IT5（2026-07-09〜07-22） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | - | 受入待ち |
 | IT6（2026-07-23〜08-05） | - | - | - | 未着手 |
 | IT7（2026-08-06〜08-19） | - | - | - | 未着手 |
 | IT8（2026-08-20〜09-02） | - | - | - | 未着手 |
@@ -33,11 +33,11 @@
 | IT2 | 14 | 14 | 100% |
 | IT3 | 16 | 16 | 100% |
 | IT4 | 25 | 25 | 100% |
-| IT5 | 11 | - | - |
+| IT5 | 11 | 11 | 100% |
 | IT6 | 5 | - | - |
 | IT7 | 6 | - | - |
 | IT8 | 13 | - | - |
-| **累計** | **106** | **69** | **65%** |
+| **累計** | **106** | **80** | **75%** |
 
 ### フェーズ進捗
 
@@ -45,7 +45,7 @@
 |---------|------|-----|---------|------|
 | 認証基盤 | US00 / US00a / US00-r1 / US00-r2 / US-UI-r | 8（IT1 持越し含み実績 11） | 11 | 完了 |
 | Phase 1 | 予約・経路設計コア（IT1〜IT4） | 57 | 61 | ✅ 完了（Release 1.0 MVP 達成） |
-| Phase 2 | 追跡・例外処理・精算（IT5〜IT8） | 35 | 0 | 未着手 |
+| Phase 2 | 追跡・例外処理・精算（IT5〜IT8） | 35 | 11 | 進行中（IT5 完了） |
 
 ### リリース完了報告書
 
