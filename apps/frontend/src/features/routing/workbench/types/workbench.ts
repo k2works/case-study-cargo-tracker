@@ -33,3 +33,16 @@ export interface LegDto {
 export interface AssignRouteRequest {
   legs: LegDto[]
 }
+
+export interface AdjustRouteRequest {
+  origin: string
+  destination: string
+  arrivalDeadline: string
+  cargoType: string
+  excludePorts?: string[]
+}
+
+export interface AdjustRouteResponse {
+  candidates: CandidateItem[]
+  noRoutesMessage: string | null
+}

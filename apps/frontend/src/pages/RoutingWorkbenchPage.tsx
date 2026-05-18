@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
 import { useBookings } from '../features/booking/hooks/useBookings'
-import { fetchRouteCandidates, selectRoute, useAssignRoute } from '../features/routing/workbench/hooks/useWorkbench'
+import { fetchRouteCandidates, adjustRouteCandidates, selectRoute, useAssignRoute } from '../features/routing/workbench/hooks/useWorkbench'
 import { RouteCandidateTable } from '../features/routing/workbench/components/RouteCandidateTable'
 import type { CandidateItem } from '../features/routing/workbench/types/workbench'
 
-// S14 経路設計ワークベンチ（US08/US09/US11）
+// S14 経路設計ワークベンチ（US08/US09/US10/US11）
 export function RoutingWorkbenchPage() {
   const { bookingId = '' } = useParams<{ bookingId: string }>()
   const navigate = useNavigate()
@@ -16,6 +16,9 @@ export function RoutingWorkbenchPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [noRoutesMessage, setNoRoutesMessage] = useState<string | null>(null)
+  const [excludePorts, setExcludePorts] = useState('')
+  const [isAdjusting, setIsAdjusting] = useState(false)
 
   const booking = bookings?.find((b) => b.bookingId === bookingId)
 
@@ -36,6 +39,7 @@ export function RoutingWorkbenchPage() {
     setIsSearching(true)
     setMessage(null)
     setErrorMessage(null)
+    setNoRoutesMessage(null)
     try {
       const res = await fetchRouteCandidates(
         booking.originUnLocode,
@@ -48,6 +52,31 @@ export function RoutingWorkbenchPage() {
       setErrorMessage('経路候補の取得に失敗しました。')
     } finally {
       setIsSearching(false)
+    }
+  }
+
+  const handleAdjust = async () => {
+    setIsAdjusting(true)
+    setNoRoutesMessage(null)
+    setErrorMessage(null)
+    const excludeList = excludePorts
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    try {
+      const res = await adjustRouteCandidates({
+        origin: booking.originUnLocode,
+        destination: booking.destinationUnLocode,
+        arrivalDeadline: booking.arrivalDeadline,
+        cargoType: booking.cargoType,
+        excludePorts: excludeList,
+      })
+      setCandidates(res.candidates)
+      if (res.noRoutesMessage) setNoRoutesMessage(res.noRoutesMessage)
+    } catch {
+      setErrorMessage('条件調整後の再算出に失敗しました。')
+    } finally {
+      setIsAdjusting(false)
     }
   }
 
@@ -142,7 +171,48 @@ export function RoutingWorkbenchPage() {
         </p>
       </section>
 
-      {candidates !== null && (
+      {candidates !== null && candidates.length === 0 && (
+        <section
+          data-testid="adjust-conditions-form"
+          className="mb-6 rounded border border-yellow-200 bg-yellow-50 p-4"
+        >
+          <h2 className="mb-2 text-sm font-semibold text-yellow-800">
+            条件に合う経路候補が見つかりませんでした。条件を調整してください。
+          </h2>
+          <div className="mb-3">
+            <label className="block text-xs text-gray-600 mb-1" htmlFor="exclude-ports">
+              除外する経由地（UN/LOCODE、カンマ区切り）
+            </label>
+            <input
+              id="exclude-ports"
+              type="text"
+              value={excludePorts}
+              onChange={(e) => setExcludePorts(e.target.value)}
+              placeholder="例: TWKHH, SGSIN"
+              className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm"
+            />
+          </div>
+          <button
+            type="button"
+            data-testid="adjust-search-button"
+            onClick={handleAdjust}
+            disabled={isAdjusting}
+            className="rounded bg-yellow-600 px-4 py-2 text-sm text-white hover:bg-yellow-700 disabled:opacity-50"
+          >
+            {isAdjusting ? '再算出中...' : '条件を調整して再算出'}
+          </button>
+          {noRoutesMessage && (
+            <p
+              data-testid="no-routes-message"
+              className="mt-3 text-sm text-red-700"
+            >
+              {noRoutesMessage}
+            </p>
+          )}
+        </section>
+      )}
+
+      {candidates !== null && candidates.length > 0 && (
         <section data-testid="candidates-section">
           <h2 className="mb-3 text-sm font-semibold text-gray-700">
             経路候補一覧（{candidates.length} 件）

@@ -5,6 +5,8 @@ import type {
   SelectRouteRequest,
   SelectedRouteResponse,
   AssignRouteRequest,
+  AdjustRouteRequest,
+  AdjustRouteResponse,
 } from '../types/workbench'
 import type { BookingResponse } from '../../../booking/types/booking'
 
@@ -17,6 +19,11 @@ export async function fetchRouteCandidates(
 ): Promise<RouteCandidatesResponse> {
   const params = new URLSearchParams({ origin, destination, arrivalDeadline, cargoType })
   return routingApiClient.get<RouteCandidatesResponse>(`/api/v1/routing/candidates?${params}`)
+}
+
+// 経路条件調整・再算出（US10）
+export async function adjustRouteCandidates(req: AdjustRouteRequest): Promise<AdjustRouteResponse> {
+  return routingApiClient.post<AdjustRouteResponse>('/api/v1/routing/adjust', req)
 }
 
 // 経路選択（US09）: 候補インデックスを指定して Legs を取得
