@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handlingms.infrastructure.persistence.ClaimVerificationMapper">
+
+    <resultMap id="claimVerificationResultMap"
+               type="com.example.cargotracker.handlingms.infrastructure.persistence.ClaimVerificationRecord">
+        <id property="activityId" column="activity_id"/>
+        <result property="consigneeName" column="consignee_name"/>
+        <result property="signatureRef" column="signature_ref"/>
+        <result property="confirmationCode" column="confirmation_code"/>
+        <result property="verifiedAt" column="verified_at"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.example.cargotracker.handlingms.infrastructure.persistence.ClaimVerificationRecord">
+        INSERT INTO claim_verification (
+            activity_id, consignee_name, signature_ref, confirmation_code, verified_at
+        ) VALUES (
+            #{activityId}, #{consigneeName}, #{signatureRef}, #{confirmationCode}, #{verifiedAt}
+        )
+    </insert>
+
+    <select id="findByActivityId" resultMap="claimVerificationResultMap">
+        SELECT * FROM claim_verification WHERE activity_id = #{activityId}
+    </select>
+
+</mapper>

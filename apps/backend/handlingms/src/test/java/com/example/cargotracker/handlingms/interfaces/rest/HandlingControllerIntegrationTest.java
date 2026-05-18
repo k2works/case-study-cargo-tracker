@@ -1,6 +1,7 @@
 package com.example.cargotracker.handlingms.interfaces.rest;
 
 import com.example.cargotracker.handlingms.domain.model.commands.RegisterHandlingActivityCommand;
+import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,9 @@ class HandlingControllerIntegrationTest {
 
     @MockitoBean
     private CommandGateway commandGateway;
+
+    @Autowired
+    private CargoSnapshotMapper cargoSnapshotMapper;
 
     private MockMvc mockMvc;
 
@@ -165,5 +169,78 @@ class HandlingControllerIntegrationTest {
     void 履歴照会_空() throws Exception {
         mockMvc.perform(get("/api/v1/handling/activities/TRK-EMPTY"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("US16 受入1/2: CLAIM 種別は claimVerification が必須でないと 400")
+    void CLAIM種別はclaimVerification必須() throws Exception {
+        String trk = "TRK-20260810-CLAIM001";
+        registerSnapshot(trk, "JPTYO", "DEHAM");
+
+        mockMvc.perform(post("/api/v1/handling/activities")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "trackingNumber": "%s",
+                                    "handlingType": "CLAIM",
+                                    "unlocode": "DEHAM",
+                                    "occurredAt": "2026-08-10T14:30:00",
+                                    "operatorId": "handler-002"
+                                }
+                                """.formatted(trk)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("CLAIM 種別の作業には claimVerification が必須です（US16）"));
+    }
+
+    @Test
+    @DisplayName("US16 受入1/2: CLAIM + 確認コードで引取作業を登録できる（201）")
+    void 引取作業_確認コード() throws Exception {
+        String trk = "TRK-20260810-CLAIM002";
+        registerSnapshot(trk, "JPTYO", "DEHAM");
+
+        mockMvc.perform(post("/api/v1/handling/activities")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "trackingNumber": "%s",
+                                    "handlingType": "CLAIM",
+                                    "unlocode": "DEHAM",
+                                    "occurredAt": "2026-08-10T14:30:00",
+                                    "operatorId": "handler-002",
+                                    "claimVerification": {
+                                        "consigneeName": "John Doe",
+                                        "confirmationCode": "AX9-2K7"
+                                    }
+                                }
+                                """.formatted(trk)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.handlingType").value("CLAIM"))
+                .andExpect(jsonPath("$.unexpected").value(false));
+    }
+
+    @Test
+    @DisplayName("US16 受入1: CLAIM + 署名 ref で引取作業を登録できる（confirmationCode 不要）")
+    void 引取作業_署名() throws Exception {
+        String trk = "TRK-20260810-CLAIM003";
+        registerSnapshot(trk, "JPTYO", "DEHAM");
+
+        mockMvc.perform(post("/api/v1/handling/activities")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "trackingNumber": "%s",
+                                    "handlingType": "CLAIM",
+                                    "unlocode": "DEHAM",
+                                    "occurredAt": "2026-08-10T14:30:00",
+                                    "operatorId": "handler-002",
+                                    "claimVerification": {
+                                        "consigneeName": "Jane Smith",
+                                        "signatureRef": "s3://signatures/2026/08/10/jane.png"
+                                    }
+                                }
+                                """.formatted(trk)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.handlingType").value("CLAIM"));
     }
 }

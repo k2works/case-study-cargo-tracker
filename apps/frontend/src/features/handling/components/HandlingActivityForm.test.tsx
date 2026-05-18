@@ -70,6 +70,40 @@ describe('HandlingActivityForm', () => {
     expect(screen.getByTestId('claim-code-input')).toBeInTheDocument()
   })
 
+  it('US16: CLAIM 選択時に確認方法を「署名画像」に切り替えると署名 URI 入力欄に変わる', async () => {
+    renderForm()
+    const user = userEvent.setup()
+    await user.selectOptions(screen.getByTestId('handling-type-select'), 'CLAIM')
+    expect(screen.getByTestId('claim-code-input')).toBeInTheDocument()
+    expect(screen.queryByTestId('claim-signature-input')).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId('claim-method-signature'))
+    expect(screen.queryByTestId('claim-code-input')).not.toBeInTheDocument()
+    expect(screen.getByTestId('claim-signature-input')).toBeInTheDocument()
+  })
+
+  it('US16: CLAIM + 確認コード入力で mutate に claimVerification.confirmationCode が含まれる', async () => {
+    renderForm()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('handling-tracking-number-input'), 'TRK-20260810-CLAIM001')
+    await user.selectOptions(screen.getByTestId('handling-type-select'), 'CLAIM')
+    await user.type(screen.getByTestId('handling-unlocode-input'), 'deham')
+    await user.type(screen.getByTestId('handling-occurred-at-input'), '2026-08-10T14:30')
+    await user.type(screen.getByTestId('handling-operator-input'), 'handler-002')
+    await user.type(screen.getByTestId('claim-consignee-input'), 'John Doe')
+    await user.type(screen.getByTestId('claim-code-input'), 'AX9-2K7')
+    await user.click(screen.getByTestId('handling-submit'))
+
+    expect(mutateMock).toHaveBeenCalledTimes(1)
+    const request = mutateMock.mock.calls[0][0]
+    expect(request.handlingType).toBe('CLAIM')
+    expect(request.claimVerification).toEqual({
+      consigneeName: 'John Doe',
+      confirmationCode: 'AX9-2K7',
+    })
+    expect(request.claimVerification.signatureRef).toBeUndefined()
+  })
+
   it('US15: 送信時に mutate へ整形済みリクエストを渡す', async () => {
     renderForm()
     const user = userEvent.setup()

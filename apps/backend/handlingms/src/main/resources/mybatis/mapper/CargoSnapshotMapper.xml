@@ -42,4 +42,11 @@
         WHERE booking_id = #{bookingId}
     </update>
 
+    <update id="updateBookingStatusByTrackingNumber">
+        UPDATE cargo_snapshot
+        SET booking_status = #{bookingStatus},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE tracking_number = #{trackingNumber}
+    </update>
+
 </mapper>
