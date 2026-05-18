@@ -319,13 +319,15 @@ gantt
 
 ### IT6（Week 11-12: 2026-07-23 〜 2026-08-05）
 
-**ゴール**: 貨物追跡照会（JWT 時限トークン）を実装する
+**ゴール**: trackingms を新設して貨物追跡照会（JWT 時限トークン）を実装し、IT5 暫定実装の US17 を trackingms に移管する
 
 **主なストーリー**:
 
+- TI05: IT6 第 0 スプリント（trackingms 骨格・ADR-0013・IT5 Try T1-T4 対応）（2 SP）
 - US18: 追跡情報を照会する（5 SP）
+- TI06: US17 を handlingms から trackingms へ移管 + Event 駆動 ACL 化（1 SP）
 
-**目標 SP**: 5（バッファ余剰は IT7 繰り越し）
+**目標 SP**: 8（IT5 暫定解消 3 SP を含む。バッファ余剰時は IT4 M1-M6 取り込み）
 
 詳細は [iteration_plan-6.md](./iteration_plan-6.md) を参照。
 
@@ -398,10 +400,10 @@ gantt
 | IT3 | 16 | 16 | 100% | 完了 |
 | IT4 | 25 | 25 | 100% | 完了 |
 | IT5 | 11 | 11 | 100% | 完了 |
-| IT6 | 5 | - | - | 未着手 |
+| IT6 | 8 | - | - | 進行中 |
 | IT7 | 6 | - | - | 未着手 |
 | IT8 | 13 | - | - | 未着手 |
-| **合計** | **106** | **80** | **75%** | |
+| **合計** | **109** | **80** | **73%** | |
 
 > IT2 計画 14 SP は新規 11 SP（US04+US05+US24）+ 持越し 3 SP（US00-r1/US00-r2/US-UI-r）の構成。US25 は IT3 へ繰越し（+3 SP）したため、合計が 103 → 106 SP に増加した。
 >
@@ -432,10 +434,10 @@ xychart-beta
 
 ## 次のステップ
 
-1. IT5 完了報告書作成: `/creating-iteration-report 5`
-2. GitHub Project 同期: IT5 Issues（TI04#140 / US15#124 / US16#125 / US17#126）クローズ
-3. IT6 計画策定: `/planning-releases --iteration 6` — US18 追跡情報照会 + IT4 中優先度指摘 M1〜M6 取り込み + IT5 暫定実装の trackingms 移管
-4. IT5 ArchUnit ルール拡張（@CommandHandler 必須化）— IT6 第 0 スプリント
+1. IT6 開発開始: TI05 第 0 スプリント（trackingms 骨格 + ADR-0013 + ArchUnit `@CommandHandler` 強制）
+2. US18 追跡情報照会の実装（JWT 時限トークン）
+3. TI06 US17 trackingms 移管 + Event 駆動 ACL 化（handlingms 暫定実装の正式化）
+4. IT6 中間進捗確認: `/tracking-progress --iteration 6`
 
 ---
 
@@ -452,3 +454,4 @@ xychart-beta
 | 2026-05-18 | IT4 完了反映（実績 25 SP、達成率 100%、累計 69/106 SP 65%、バーンダウン実績線追加、次のステップを IT5 計画に更新） | AI Agent |
 | 2026-05-18 | IT5 計画策定（11 SP・handlingms 新設・US15/US16/US17）、IT5 進行中ステータスに更新、次のステップを IT5 開発開始に更新 | AI Agent |
 | 2026-05-18 | IT5 完了反映（実績 11 SP、達成率 100%、累計 80/106 SP 75%、バーンダウン実績線追加、retrospective-5.md 作成、次のステップを IT6 計画に更新） | AI Agent |
+| 2026-05-18 | IT6 計画策定（8 SP・trackingms 新設・US18 + TI05/TI06）、計画 SP を 5→8 SP に拡張（IT5 暫定解消 3 SP を計上）、累計計画 SP を 106→109 に補正、IT6 を進行中ステータスに更新 | AI Agent |
