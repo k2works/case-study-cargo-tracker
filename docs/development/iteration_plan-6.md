@@ -234,9 +234,9 @@ gantt
 
 ## 設計
 
-### ドメインモデル（US18 観点）
+### ドメインモデル（US18 / TI06 観点）
 
-> `domain-model.md` の Tracking Context に準拠する。`TrackingActivity` Aggregate は `bookingms` の `CargoTrackedEvent`（追跡番号発行）で初期化され、`handlingms` の `HandlingActivityRegisteredEvent` で追跡イベントを追加し、状態を遷移させる。`CargoSnapshot` は handlingms と trackingms 双方で独自に Booking 依存を隔離する。
+> `domain-model.md` の Tracking Context（L637-773）に準拠する。`TrackingActivity` Aggregate は `bookingms` の `CargoTrackedEvent`（追跡番号発行）で初期化され、`handlingms` の `HandlingActivityRegisteredEvent` で追跡イベントを追加し、状態を遷移させる。`CargoSnapshot` は handlingms と trackingms 双方で独自に Booking 依存を隔離する（ADR-0012）。`TrackingTokenService` は IT6 で新規追加するドメインサービスで、`domain-model.md` への追記が必要（注記参照）。
 
 ```plantuml
 @startuml
@@ -250,10 +250,26 @@ package "trackingms" {
     - currentLocation: Location
     - itinerary: CargoItinerary
     - estimatedArrival: LocalDateTime
+    - deliveredAt: LocalDateTime (optional)
     - misrouted: boolean
     - exceptions: List<TrackingException>
     + handle(InitializeTrackingCommand)
     + handle(UpdateTransportStatusCommand)
+    + isExpected(handlingType: HandlingType, location: Location): boolean
+  }
+
+  class TrackingNumber <<Value Object>> {
+    - value: String  ' TRK-YYYYMMDD-XXXXXXXX
+  }
+
+  class BookingId <<Value Object>>
+
+  class CargoSnapshot <<ACL>> <<Value Object>> {
+    - bookingId: BookingId
+    - origin: Location
+    - destination: Location
+    - cargoType: CargoType
+    - itinerarySnapshot: CargoItinerary
   }
 
   enum TransportStatus {
@@ -279,20 +295,115 @@ package "trackingms" {
     + newStatus: TransportStatus
     + location: Location
     + updatedAt: LocalDateTime
+    + operatorId: HandlerId
   }
 
-  class TrackingInitializedEvent
-  class TransportStatusUpdatedEvent
+  class TrackingInitializedEvent {
+    + trackingNumber: TrackingNumber
+    + bookingId: BookingId
+    + itinerary: CargoItinerary
+    + initialStatus: TransportStatus
+  }
+
+  class TransportStatusUpdatedEvent {
+    + trackingNumber: TrackingNumber
+    + newStatus: TransportStatus
+    + location: Location
+    + updatedAt: LocalDateTime
+    + operatorId: HandlerId
+    + source: EventSource  ' HANDLING / MANUAL / SYSTEM
+  }
 
   class TrackingTokenService <<Domain Service>> {
-    + issue(trackingNumber: TrackingNumber, validUntil: LocalDateTime): JwtToken
-    + verify(token: String): TrackingNumber
+    + issue(trackingNumber: TrackingNumber): JwtToken
+    + verify(token: String, summary: TrackingSummary): TrackingNumber
+    - calculateValidUntil(deliveredAt: LocalDateTime): LocalDateTime
   }
+
+  class JwtToken <<Value Object>> {
+    - token: String
+    - issuedAt: LocalDateTime
+    - validUntil: LocalDateTime
+  }
+
+  enum EventSource {
+    HANDLING
+    MANUAL
+    SYSTEM
+  }
+
+  TrackingActivity *-- TrackingNumber
+  TrackingActivity *-- BookingId
+  TrackingActivity *-- TransportStatus
+  TrackingActivity *-- CargoSnapshot
+  TrackingActivity ..> TrackingInitializedEvent
+  TrackingActivity ..> TransportStatusUpdatedEvent
+  TrackingTokenService ..> JwtToken
+  TransportStatusUpdatedEvent *-- EventSource
 }
 
-TrackingActivity *-- TransportStatus
-TrackingActivity ..> TrackingInitializedEvent
-TrackingActivity ..> TransportStatusUpdatedEvent
+note bottom of CargoSnapshot
+  ADR-0012 ACL（腐敗防止層）
+  bookingms.CargoBookedEvent / CargoRoutedEvent を
+  購読して独自モデルに変換して保持。
+  handlingms 側にも同名の VO が存在する（IT6 で
+  両者が同じ Event を購読する）。
+end note
+
+note bottom of TrackingTokenService
+  IT6 新規追加（ADR-0013）。
+  validUntil = min(発行時 + 30 日, deliveredAt + 7 日)。
+end note
+@enduml
+```
+
+| UC | 主集約 / サービス | 主コマンド | 主イベント | 状態遷移 |
+|----|-----------------|-----------|-----------|---------|
+| UC12 追跡番号発行（IT4 既実装） | bookingms.`Cargo` | `IssueTrackingNumberCommand` | `CargoTrackedEvent` | bookingms `CONFIRMED` → `TRACKING_ISSUED` |
+| UC15 追跡情報照会（US18） | trackingms.`TrackingActivity` | （Query）`GetTrackingInfoQuery` | `TrackingInitializedEvent` | tracking 初期化（`CargoTrackedEvent` 購読契機）|
+| UC14 貨物状態更新（US17 移管） | trackingms.`TrackingActivity` | `UpdateTransportStatusCommand` | `TransportStatusUpdatedEvent` | 任意の `TransportStatus` 間遷移（管理者権限）|
+| UC13 荷役作業反映（IT5 既実装の連携） | trackingms.Projection EH | （Event 購読） | `HandlingActivityRegisteredEvent` | `RECEIVED` / `LOADED` / `UNLOADED` / `DELIVERED` への自動遷移 |
+
+> **domain-model.md への反映が必要な変更点（IT6 完了時に同期）**:
+>
+> - `TrackingTokenService` ドメインサービスを追加（JWT 発行・検証）
+> - `JwtToken` 値オブジェクトを追加
+> - `TransportStatusUpdatedEvent` に `source: EventSource` フィールドを追加
+> - `EventSource` enum（HANDLING / MANUAL / SYSTEM）を追加
+
+### TransportStatus 状態遷移
+
+```plantuml
+@startuml
+hide empty description
+
+state "NOT_RECEIVED\n（受領前）" as NR
+state "RECEIVED\n（受領済）" as RC
+state "LOADED\n（積込済）" as LD
+state "IN_TRANSIT\n（輸送中）" as IT
+state "UNLOADED\n（荷降し済）" as UL
+state "AWAITING_CLAIM\n（引取待ち）" as AC
+state "DELIVERED\n（引取済）" as DL
+state "MISROUTED\n（誤配送）" as MR
+state "EXCEPTION\n（例外）" as EX
+
+[*] --> NR : TrackingInitializedEvent\n（CargoTrackedEvent 購読契機）
+
+NR --> RC : HandlingActivity(RECEIVE)
+RC --> LD : HandlingActivity(LOAD)
+LD --> IT : 出港（自動 or MANUAL）
+IT --> UL : HandlingActivity(UNLOAD)
+UL --> IT : 次レグへ移行
+UL --> AC : UNLOAD @ 最終港
+AC --> DL : HandlingActivity(CLAIM)\n（US16 連携）
+
+IT --> MR : 予定外場所検知\n（UnexpectedHandlingDetectedEvent）
+IT --> EX : UpdateTransportStatusCommand\n（US17: 管理者手動）
+AC --> EX : （同上）
+EX --> IT : 例外解除 → 輸送再開
+MR --> IT : ルート修正後
+
+DL --> [*] : delivered_at 記録\n（JWT 失効カウントダウン開始）
 @enduml
 ```
 
@@ -300,36 +411,48 @@ TrackingActivity ..> TransportStatusUpdatedEvent
 
 ```plantuml
 @startuml
-title IT6 で確立する Event 連携
+title IT6 で確立する Event 連携（bookingms ↔ handlingms ↔ trackingms）
 
+participant "Frontend" as F
 participant "bookingms.Cargo" as B
 participant "Axon Server\n(Event Bus)" as AS
-participant "handlingms.CargoSnapshot EH" as H
+participant "handlingms.CargoSnapshot EH" as HS
+participant "handlingms.HandlingActivity" as HA
 participant "trackingms.TrackingActivity" as T
 participant "trackingms.Projection EH" as TP
 
-note over B,TP: ① 予約 → 経路設計 → 追跡番号発行
-B -> AS : CargoBookedEvent
-AS -> H : CargoSnapshot.upsert（旧 REST POST を廃止）
-AS -> T : InitializeTrackingCommand を内部発行
+== ① 予約登録 → 経路設計 → 追跡番号発行（IT4 既実装） ==
+F -> B : POST /bookings/{id}/issue-tracking
+B -> AS : CargoTrackedEvent\n（trackingNumber 採番）
+
+== ② handlingms / trackingms 双方の ACL 初期化（TI06 Event 駆動化） ==
+AS -> HS : @EventHandler(CargoBookedEvent)\n→ cargo_snapshot.upsert
+AS -> HS : @EventHandler(CargoRoutedEvent)\n→ cargo_snapshot.itinerary 更新
+AS -> T : @EventHandler(CargoTrackedEvent)\n→ InitializeTrackingCommand 内部発行
 T -> AS : TrackingInitializedEvent
-AS -> TP : tracking_summary INSERT
+AS -> TP : tracking_summary INSERT\n（current_status=NOT_RECEIVED）
 
-note over B,TP: ② 経路紐付け
-B -> AS : CargoRoutedEvent
-AS -> H : CargoSnapshot.itinerary 更新
-AS -> TP : tracking_summary.estimated_arrival 更新
+== ③ 荷役作業（IT5 既実装の Event 連携を強化） ==
+F -> HA : POST /handling/activities
+HA -> AS : HandlingActivityRegisteredEvent
+AS -> TP : tracking_event INSERT\n+ tracking_summary.current_status 更新\n+ event.source = 'HANDLING'
 
-note over H,TP: ③ 荷役作業
-H -> AS : HandlingActivityRegisteredEvent
-AS -> TP : tracking_event INSERT + tracking_summary.current_status 更新
-AS -> T : UpdateTransportStatusCommand を内部発行（LOAD/UNLOAD/...）
-T -> AS : TransportStatusUpdatedEvent
-
-note over T: ④ 状態手動更新（US17 移管後）
-"Frontend" -> T : PUT /tracking/{tn}/status
-T -> AS : TransportStatusUpdatedEvent
+== ④ 状態手動更新（US17 trackingms 移管） ==
+F -> T : PUT /api/v1/tracking/{tn}/status
+T -> AS : TransportStatusUpdatedEvent\n（source=MANUAL）
 AS -> TP : tracking_event INSERT
+
+== ⑤ 公開照会（US18） ==
+F -> T : GET /api/v1/tracking/{tn}?token=<JWT>
+T -> T : TrackingTokenService.verify(token)
+T -> TP : SELECT tracking_summary + tracking_event\n（QueryService 経由）
+T -> F : 200 OK\n{ currentStatus, events, ... }
+
+note over F,TP
+  旧 PUT /api/v1/handling/activities/{tn}/status は
+  TI06-3.3 で Deprecation/Sunset ヘッダー付きで
+  trackingms にプロキシ。1 イテレーション期間維持。
+end note
 @enduml
 ```
 
@@ -436,55 +559,298 @@ ts ||--o{ ex : "0..*"
 
 #### ビュー（画面構成）
 
-`ui_design.md` の S15（追跡照会・公開 URL）を本実装する。
+`ui_design.md` の画面一覧に準拠する。S15（追跡照会・公開 URL）が IT6 で本実装される新規画面。S16（追跡管理一覧）・S17（追跡詳細・管理）は IT5 既実装画面の API 切替のみ。
 
 | 画面 ID | 画面名 | パス | 実装内容 | US |
 |--------|-------|------|---------|-----|
-| S15 | 追跡照会（公開） | `/tracking/:trackingNumber?token=<JWT>` | IT6 で新規実装 — トークン検証・現在状態・履歴表示・期限切れエラー | US18 |
-| S17 | 追跡詳細・管理（既存） | `/tracking/:trackingNumber/manage` | IT5 で実装済み — 状態更新先 URL を `/api/v1/tracking/...` に変更 | TI06 |
+| S10 | 予約詳細（シングル）| `/bookings/:id` | 既存 — TRACKING_ISSUED 状態時に「追跡トークン発行（メール送信）」ボタンを追加 | US18 連携 |
+| S15 | 追跡照会（公開） | `/tracking/:trackingNumber?token=<JWT>` | IT6 で新規実装 — トークン検証・現在状態・履歴表示・期限切れ/不在エラー | US18 |
+| S16 | 追跡管理一覧 | `/tracking` | 既存 — 変更なし。S17 への導線として追跡番号一覧を維持 | TI06 前提 |
+| S17 | 追跡詳細・管理（既存） | `/tracking/:trackingNumber/manage` | IT5 で実装済み — 状態更新先 URL を `/api/v1/tracking/...` に変更（TI06）| TI06 |
 
-#### ワイヤーフレーム（S15）
+#### ワイヤーフレーム（PlantUML salt）
+
+共通ヘッダー（`国際貨物輸送管理 | ユーザ名 (ロール) | [ログアウト]`）とサイドナビは全画面共通のため省略する。**ただし S15 はログイン不要の公開画面のためサイドナビなし**（簡素なヘッダーのみ）。
+
+##### S15: 追跡照会（公開・US18）
 
 ```plantuml
 @startsalt
 {+
-  貨物追跡 - TRK-20260720-ABC12345
+  ' 公開画面: ログイン不要・簡素なヘッダー（ロゴ + 配送業者名のみ）
+  "国際貨物輸送管理 — 貨物追跡"
   ---
-  ' 通常時
-  {
-    現在の状態 | "IN_TRANSIT（輸送中）"
-    現在位置 | "Singapore (SGSIN)"
-    推定到着 | "2026-08-10 14:30"
-    誤配送 | "なし"
+  ' 通常時（トークン有効・追跡番号存在）
+  {(通常時)
+    貨物追跡 — TRK-20260720-ABC12345
+    ---
+    {
+      現在の状態 | "IN_TRANSIT（輸送中）"
+      現在位置 | "Singapore (SGSIN)"
+      推定到着 | "2026-08-10 14:30"
+      誤配送 | "なし"
+    } |
+    {
+      "リンク有効期限"
+      "2026-09-01 まで（あと 14 日）"
+    }
+    ---
+    "**追跡履歴**"
+    {#
+      **日時** | **種別** | **場所** | **航海番号** | **記録元**
+      2026-07-25 08:00 | 状態更新 | SGSIN | — | 管理者
+      2026-07-20 14:00 | 積込 | JPTYO | V-MOL-001 | 荷役
+      2026-07-20 09:00 | 受領 | JPTYO | — | 荷役
+    }
   }
   ---
-  "**追跡履歴**"
-  {#
-    日時 | 種別 | 場所 | 航海番号
-    2026-07-25 08:00 | 状態更新 | SGSIN | —
-    2026-07-20 14:00 | 積込 | JPTYO | V-MOL-001
-    2026-07-20 09:00 | 受領 | JPTYO | —
-  }
-  ---
-  ' トークン期限切れ時
+  ' トークン期限切れ時（exp 経過 or delivered_at + 7 日経過）
   {(token-expired)
     "⚠ alert-warning: リンクの有効期限が切れています"
     "再発行をご希望の場合は営業担当者までご連絡ください。"
+    [営業担当者に連絡] | [TOP へ]
+  }
+  ---
+  ' トークン署名不正・改ざん時
+  {(invalid-token)
+    "⚠ alert-danger: 無効なリンクです"
+    "正しい URL をご確認のうえ再度お試しください。"
   }
   ---
   ' 追跡番号不在時
   {(not-found)
     "⚠ alert-danger: 追跡番号が見つかりません"
+    "追跡番号をご確認ください: TRK-XXXXXXXX-XXXXXXXX"
   }
 }
 @endsalt
 ```
+
+##### S17: 追跡詳細・管理（IT5 既存 + TI06 API 切替）
+
+```plantuml
+@startsalt
+{+
+  TRK-20260720-ABC12345（B-2026-0512-001）
+  ---
+  {
+    現在の状態 | "IN_TRANSIT"
+    現在位置 | "Singapore (SGSIN)"
+    誤配送 | "False"
+    引取期限 | "2026-08-10"
+  } |
+  {
+    [状態を更新（US17）]
+    ' TI06: 送信先 PUT URL を /api/v1/tracking/:tn/status に切替
+    [例外を記録]
+    [代替ルート要求]
+    [追跡トークン再発行]
+    ' US18 連携: TrackingTokenService.issue() を呼び出してメール再送信
+  }
+  ---
+  ' 「状態を更新」クリック時のモーダル（htmx）
+  {(状態更新モーダル)
+    ---- 状態手動更新 ----
+    新しい状態 | "[ IN_TRANSIT▼ ]"
+    現在位置 (UN/LOCODE) | "SGSIN        "
+    更新日時 | "2026-07-25 08:00"
+    [更新] | [キャンセル]
+    ' PUT /api/v1/tracking/{tn}/status（trackingms 移管後）
+  }
+  ---
+  追跡イベント（時系列・全件）
+  {#
+    **日時** | **種別** | **場所** | **航海番号** | **手動更新** | **記録元**
+    2026-07-25 08:00 | STATUS_UPDATE | SGSIN | — | ✓ | trackingms（MANUAL）
+    2026-07-20 14:00 | LOADED | JPTYO | V-MOL-001 | — | handlingms（HANDLING）
+    2026-07-20 09:00 | RECEIVED | JPTYO | — | — | handlingms（HANDLING）
+    2026-07-15 10:00 | TRACKING_INITIALIZED | — | — | — | trackingms（SYSTEM）
+  }
+  ---
+  例外履歴
+  {#
+    例外 ID | 種別 | 発生日時 | 場所 | 対応状態
+    （なし）
+  }
+}
+@endsalt
+```
+
+##### S10: 予約詳細（IT4 既存 + US18 連携）
+
+```plantuml
+@startsalt
+{+
+  予約 B-2026-0512-001  状態: [TRACKING_ISSUED]  追跡番号: TRK-20260720-ABC12345
+  ---
+  ' 追跡番号発行済の状態でのみ表示される US18 連携ボタン
+  "**荷主への追跡情報通知**"
+  ---
+  {
+    "メール送信先" | "yamada@example.com"
+    "リンク有効期限" | "発行から 30 日（配送完了後 7 日で自動失効）"
+  }
+  ---
+  [追跡トークンを発行してメール送信（US18）] | [URL をクリップボードにコピー]
+  ---
+  ' 発行成功時
+  {(発行成功)
+    "✓ alert-success: 追跡トークン URL を荷主にメール送信しました"
+    "URL: https://example.com/tracking/TRK-20260720-ABC12345?token=eyJhbGc..."
+    "有効期限: 2026-09-01 23:59 JST"
+  }
+}
+@endsalt
+```
+
+#### インタラクション（画面遷移と htmx パターン）
+
+```plantuml
+@startuml
+title IT6 で追加される画面遷移（ログイン不要の公開フロー + 管理者フロー）
+
+state "公開フロー（ログイン不要・US18）" as PublicFlow {
+  state "メール URL クリック" as MailLink
+  state "S15 追跡照会（公開）" as S15 {
+    state "① トークン検証" as S15_VERIFY
+    state "② 通常表示" as S15_OK
+    state "③ 期限切れエラー" as S15_EXPIRED
+    state "④ 無効トークン" as S15_INVALID
+    state "⑤ 追跡番号不在" as S15_NOTFOUND
+    S15_VERIFY --> S15_OK : 有効
+    S15_VERIFY --> S15_EXPIRED : exp 経過 / delivered_at + 7d
+    S15_VERIFY --> S15_INVALID : 署名不正
+    S15_VERIFY --> S15_NOTFOUND : tracking_number 不在
+  }
+  MailLink --> S15 : GET /tracking/:tn?token=<JWT>
+}
+
+state "管理者フロー（要ログイン）" as AdminFlow {
+  state "ログイン (S00)" as S00
+  state "ダッシュボード (S01)" as S01
+  state "予約詳細 (S10)" as S10
+  state "追跡管理一覧 (S16)" as S16
+  state "S17 追跡詳細・管理" as S17 {
+    state "詳細表示" as S17_VIEW
+    state "状態更新モーダル（US17 trackingms 移管後）" as S17_UPDATE
+    state "トークン発行モーダル（US18 連携）" as S17_TOKEN
+    S17_VIEW --> S17_UPDATE : 「状態を更新」\n(htmx hx-get=/tracking/{tn}/status-update-form\nhx-target=#modal)
+    S17_VIEW --> S17_TOKEN : 「追跡トークン再発行」\n(htmx hx-post=/api/v1/tracking/_internal/issue-token\nhx-swap=outerHTML → alert-success)
+    S17_UPDATE --> S17_VIEW : 「更新」成功\n(PRG: PUT /api/v1/tracking/{tn}/status → 303 → GET /tracking/{tn}/manage)
+    S17_UPDATE --> S17_UPDATE : バリデーションエラー（自己ループ）
+  }
+}
+
+[*] --> S00 : 管理者ログイン
+S00 --> S01 : ログイン成功（PRG）
+S01 --> S16 : サイドナビ「追跡管理」
+S01 --> S10 : サイドナビ「予約」
+S16 --> S17 : 追跡番号リンク（行クリック）
+S10 --> S17 : 追跡番号リンク（IT5 既実装）
+S10 --> S10 : 「追跡トークンを発行してメール送信」\n(htmx hx-post=/api/v1/tracking/_internal/issue-token\nhx-swap=outerHTML → alert-success)
+
+' --- 公開フローは管理者ログインと完全に分離 ---
+[*] -[#blue]-> MailLink : 荷主がメール受領
+
+S15 --> [*] : 閉じる
+S01 --> [*] : ログアウト
+@enduml
+```
+
+> 公開フロー（青矢印）は管理者ログインフローと完全に分離している。S15 にはサイドナビなし・JWT クエリパラメタのみで認証する。管理者用 S17 → trackingms API への切替は TI06 で実施し、旧 handlingms エンドポイントは 1 イテレーション期間 Deprecation Warning を返す。
+
+**htmx / PRG 規約**:
+
+- 追跡照会（S15）は SPA ロードのみ。htmx 非使用（公開 URL のため不要な複雑化を避ける）。トークン検証は React 側で `/api/v1/tracking/{tn}?token=<JWT>` を `fetch` する
+- トークン期限切れ時は API レスポンス 403 + `errorCode: "TOKEN_EXPIRED"` をフックして `alert-warning` 表示
+- トークン署名不正時は 401 + `errorCode: "TOKEN_INVALID"` → `alert-danger` 表示
+- 追跡番号不在時は 404 → `alert-danger` 表示
+- S17 の状態更新（管理者用）は htmx `hx-post` で `/api/v1/tracking/{tn}/status` を呼び、`outerHTML` でモーダルを差し替え
+- S10 の「追跡トークン発行」は htmx `hx-post=/api/v1/tracking/_internal/issue-token`（管理者認証必須）で 200 + `{ url, validUntil }` を取得し、`alert-success` で URL を表示
+- Read Model 反映待ちは指数バックオフ最大 3 回（合計約 5 秒）で再フェッチ（ui_design.md 規約準拠）
+- ナビゲーション欠落の検出: S17 → S15 への遷移は管理者用ではないので存在しない（公開 URL は管理者 UI には現れない）
 
 ### ADR
 
 | ADR | タイトル | ステータス |
 |-----|---------|-----------|
 | ADR-0013（新規） | Tracking Number JWT 時限トークン設計 | 提案 |
+
+> **ADR-0013 要点**:
+>
+> - JWT クレーム: `tn`（追跡番号）・`exp`（発行時 + 30 日）・`iss`（`case-study-cargo-tracker`）・`sub`（`tracking-public-link`）
+> - 署名アルゴリズム: HMAC-SHA256（authms と同じ秘密鍵 `JWT_SECRET` を Heroku Config Vars 経由で trackingms に共有）
+> - 失効ルール: `min(exp, delivered_at + 7d)` で `TrackingTokenService.verify()` が検証
+> - 再発行: 営業担当者が S10 から `POST /api/v1/tracking/_internal/issue-token` を呼び出して新 JWT を生成 → メール送信
+> - **未採用案**: 永続トークン（再発行不可）/ DB 永続化トークン（JWT のステートレスメリットを失う）
+
+### ディレクトリ構成（新規）
+
+```
+apps/backend/trackingms/
+├── src/main/java/com/example/cargotracker/trackingms/
+│   ├── TrackingApplication.java
+│   ├── domain/
+│   │   ├── model/
+│   │   │   ├── aggregates/
+│   │   │   │   └── TrackingActivity.java
+│   │   │   ├── commands/
+│   │   │   │   ├── InitializeTrackingCommand.java
+│   │   │   │   └── UpdateTransportStatusCommand.java
+│   │   │   ├── events/
+│   │   │   │   ├── TrackingInitializedEvent.java
+│   │   │   │   └── TransportStatusUpdatedEvent.java
+│   │   │   ├── valueobjects/
+│   │   │   │   ├── TrackingNumber.java
+│   │   │   │   ├── BookingId.java
+│   │   │   │   ├── Location.java
+│   │   │   │   ├── CargoSnapshot.java
+│   │   │   │   ├── TransportStatus.java
+│   │   │   │   ├── JwtToken.java
+│   │   │   │   └── EventSource.java
+│   │   │   └── services/
+│   │   │       └── TrackingTokenService.java
+│   │   └── ports/
+│   │       └── TrackingSummaryRepository.java
+│   ├── application/
+│   │   └── eventhandlers/
+│   │       ├── CargoEventAclHandler.java       (CargoBookedEvent / CargoRoutedEvent / CargoTrackedEvent 購読)
+│   │       ├── HandlingEventProjectionHandler.java (HandlingActivityRegisteredEvent 購読)
+│   │       └── TrackingProjectionsEventHandler.java (Tracking* イベントから Read Model 更新)
+│   ├── infrastructure/
+│   │   ├── persistence/
+│   │   │   ├── TrackingSummaryMapper.java
+│   │   │   ├── TrackingSummaryRecord.java
+│   │   │   ├── TrackingEventMapper.java
+│   │   │   ├── TrackingEventRecord.java
+│   │   │   └── MyBatisTrackingSummaryRepository.java
+│   │   ├── security/
+│   │   │   └── JwtTrackingTokenService.java     (TrackingTokenService 実装、jjwt)
+│   │   └── config/
+│   │       └── AxonJdbcConfig.java
+│   └── interfaces/
+│       └── rest/
+│           ├── TrackingController.java
+│           ├── TrackingInternalController.java  (issue-token 用、認証必須)
+│           └── dto/
+│               ├── TrackingInfoResponse.java
+│               ├── UpdateTrackingStatusRequest.java
+│               └── IssueTrackingTokenResponse.java
+└── src/main/resources/
+    ├── application.yml
+    ├── application-local-h2.yml
+    ├── application-local-docker.yml
+    ├── application-heroku.yml
+    ├── mybatis/mapper/
+    │   ├── TrackingSummaryMapper.xml
+    │   └── TrackingEventMapper.xml
+    └── db/migration/
+        ├── V001__create_tracking_tables.sql
+        ├── V002__create_token_entry.sql
+        └── V003__migrate_cargo_status_history.sql  (TI06: handlingms.cargo_status_history → trackingms.tracking_event)
+```
+
+> handlingms（IT5）と同じ責務階層を踏襲（domain / application / infrastructure / interfaces）。IT6 では `CargoEventAclHandler` で bookingms の 3 イベントを購読する点が特徴。`MyBatisTrackingSummaryRepository` は CQRS の Query 側のリポジトリで、`TrackingActivity` Aggregate 自体は Axon Event Store に永続化される。
 
 ---
 
@@ -545,6 +911,7 @@ ts ||--o{ ex : "0..*"
 |------|---------|--------|
 | 2026-05-18 | 初版作成（IT5 完了後・8 SP・trackingms 新設・US18 + US17 trackingms 移管 + Event 駆動 ACL） | AI Agent（XP PM） |
 | 2026-05-18 | 整合性検証対応: US18 受入条件 5-7 を user_story.md に合わせて太字強調・data-model.md 反映が必要な追加カラム（delivered_at / source）を明記 | AI Agent |
+| 2026-05-18 | IT4 品質水準に合わせ設計セクションを全面拡充（ドメインモデル詳細化・UC↔Aggregate マッピング表・TransportStatus 状態遷移図・Aggregate 間 Event 連携図・S10/S15/S17 ワイヤーフレーム・公開フロー/管理者フロー分離の画面遷移図・htmx/PRG 規約・ADR-0013 要点・trackingms ディレクトリ構成） | AI Agent |
 
 ---
 
