@@ -32,9 +32,9 @@ include("bookingms")
 include("authms")
 include("gatewayms")
 include("routingms")
+include("handlingms")
 
 // 雛形のみ（Phase 2 以降に実装）
 // include("trackingms")
-// include("handlingms")
 // include("billingms")
 // include("shared")
