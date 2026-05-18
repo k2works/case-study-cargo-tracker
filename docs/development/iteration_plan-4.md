@@ -43,7 +43,7 @@ date: 2026-05-16T00:00:00.000Z
 - [x] `POST /api/v1/routing/select` で候補を選択でき、経路状態が「確定」になる（US09）
 - [x] `POST /api/v1/routing/adjust` で条件を調整して経路を再算出できる（US10）
 - [x] `POST /api/v1/bookings/{id}/assign-route` で確定経路が予約に紐付き、`cargo_summary.booking_status` が `ROUTE_PROPOSED` に更新される（US11）
-- [ ] `POST /api/v1/bookings/{id}/notify-route` で荷主への経路通知が送信される（US12）
+- [x] `POST /api/v1/bookings/{id}/notify-route` で荷主への経路通知が送信される（US12）
 - [x] `POST /api/v1/bookings/{id}/confirm` で予約状態が `CONFIRMED` に遷移する（US13）
 - [x] `POST /api/v1/bookings/{id}/issue-tracking` で追跡番号が発行され `cargo_summary.tracking_number` に保存される（US14）
 - [x] `RouteCandidateFinderTest`（IT3 PoC の 6 テスト）が IT4 本実装で全件パスする（ADR-0010）
@@ -231,8 +231,8 @@ date: 2026-05-16T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 6.1 | `NotifyRouteCommand` + 通知ログ記録（IT4 はログのみ・メール IT5+） | 2h | [ ] |
-| 6.2 | `POST /api/v1/bookings/{id}/notify-route` エンドポイント実装 | 2h | [ ] |
+| 6.1 | `NotifyRouteCommand` + 通知ログ記録（IT4 はログのみ・メール IT5+） | 2h | [x] |
+| 6.2 | `POST /api/v1/bookings/{id}/notify-route` エンドポイント実装 | 2h | [x] |
 
 **小計**: 4h
 
@@ -284,12 +284,12 @@ date: 2026-05-16T00:00:00.000Z
 | 第 0 スプリント（ADR 対応・型安全化） | - | 5h | [x] |
 | US08 経路候補算出 | 8 | 16h | [x] |
 | US09 経路選択・確定 | 3 | 7h | [x] |
-| US10 経路条件調整・再算出 | 3 | 6h | [ ] |
+| US10 経路条件調整・再算出 | 3 | 6h | [x] |
 | US11 経路情報の予約紐付け | 2 | 5h | [x] |
-| US12 荷主への経路通知 | 3 | 4h | [ ] |
+| US12 荷主への経路通知 | 3 | 4h | [x] |
 | US13 予約確定 | 3 | 7h | [x] |
 | US14 追跡番号発行 | 3 | 7h | [x] |
-| フロントエンド（S14 UI + E2E） | - | 15h | [ ] |
+| フロントエンド（S14 UI + E2E） | - | 15h | [x] |
 | 品質確認 | - | 3h | [ ] |
 | **合計** | **25** | **75h** | |
 
