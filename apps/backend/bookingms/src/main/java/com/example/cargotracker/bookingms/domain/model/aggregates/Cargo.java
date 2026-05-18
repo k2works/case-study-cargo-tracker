@@ -5,6 +5,7 @@ import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand
 import com.example.cargotracker.bookingms.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.NotifyRouteCommand;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import com.example.cargotracker.bookingms.domain.model.events.BookingConfirmedEv
 import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.bookingms.domain.model.events.RouteNotifiedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
@@ -146,6 +148,16 @@ public final class Cargo {
      *
      * <p>CONFIRMED 状態の予約に追跡番号を発行する。形式: TRK-{YYYYMMDD}-{UUID前8桁大文字}</p>
      */
+    @CommandHandler
+    public void notifyRoute(NotifyRouteCommand command, EventAppender appender) {
+        appender.append(new RouteNotifiedEvent(command.bookingId()));
+    }
+
+    @EventSourcingHandler
+    public void on(RouteNotifiedEvent event) {
+        // ログ記録のみ（IT4）。状態遷移なし
+    }
+
     @CommandHandler
     public void issueTrackingNumber(IssueTrackingNumberCommand command, EventAppender appender) {
         if (bookingStatus != BookingStatus.CONFIRMED) {

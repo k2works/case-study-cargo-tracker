@@ -5,6 +5,7 @@ import com.example.cargotracker.bookingms.domain.model.commands.BookCargoCommand
 import com.example.cargotracker.bookingms.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.bookingms.domain.model.commands.NotifyRouteCommand;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingId;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
@@ -172,6 +173,17 @@ public class BookingController {
         var itinerary = new CargoItinerary(legs);
         commandGateway.send(new AssignRouteToCargoCommand(bookingId, itinerary));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTE_PROPOSED.name()));
+    }
+
+    /**
+     * 荷主への経路通知（US12 / UC10）。
+     *
+     * <p>IT4 はログ記録のみ。メール送信は IT5+ で実装予定。</p>
+     */
+    @PostMapping("/{bookingId}/notify-route")
+    public ResponseEntity<Object> notifyRoute(@PathVariable String bookingId) {
+        commandGateway.send(new NotifyRouteCommand(bookingId));
+        return ResponseEntity.ok(new BookingResponse(bookingId, null));
     }
 
     @PostMapping("/{bookingId}/confirm")

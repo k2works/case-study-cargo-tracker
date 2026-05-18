@@ -484,4 +484,21 @@ class BookingControllerIntegrationTest {
         assertThat(cmd.itinerary().legs()).hasSize(1);
         assertThat(cmd.itinerary().legs().get(0).voyageNumber()).isEqualTo("V001");
     }
+
+    @Test
+    @DisplayName("US12: POST /api/v1/bookings/{id}/notify-route で NotifyRouteCommand が送信される")
+    void 荷主への経路通知コマンドが送信される() throws Exception {
+        when(commandGateway.send(any())).thenReturn(null);
+
+        mockMvc.perform(post("/api/v1/bookings/B-NOTIFY/notify-route"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value("B-NOTIFY"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).send(captor.capture());
+        assertThat(captor.getValue())
+                .isInstanceOf(com.example.cargotracker.bookingms.domain.model.commands.NotifyRouteCommand.class);
+        assertThat(((com.example.cargotracker.bookingms.domain.model.commands.NotifyRouteCommand) captor.getValue())
+                .bookingId()).isEqualTo("B-NOTIFY");
+    }
 }
