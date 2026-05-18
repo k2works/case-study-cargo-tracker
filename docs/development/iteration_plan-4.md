@@ -815,3 +815,4 @@ S01 --> [*] : ログアウト
 - [ADR-0010 US08 PoC 処理方針](../adr/0010-us08-poc-promotion-policy.md)
 - [ADR-0011 CarrierMovement と TransitEdge の責務分離](../adr/0011-carrier-movement-and-transit-edge-responsibility.md)
 - [US08 先行スパイク コードレビュー](../review/us08_spike_review_20260516.md)
+- [イテレーション 4 ふりかえり](./retrospective-4.md)
