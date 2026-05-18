@@ -78,6 +78,19 @@ class HandlingControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("CargoSnapshot 再登録時は bookingId で upsert され最新値に更新される")
+    void cargoSnapshot再登録でupsert更新() throws Exception {
+        registerSnapshot("TRK-20260720-FIRST001", "JPTYO", "DEHAM");
+        registerSnapshot("TRK-20260720-SECOND01", "JPTYO", "NLRTM");
+
+        var stored = cargoSnapshotMapper.findByBookingId("B-TEST-001");
+        assertThat(stored).isNotNull();
+        assertThat(stored.getTrackingNumber()).isEqualTo("TRK-20260720-SECOND01");
+        assertThat(stored.getDestinationUnlocode()).isEqualTo("NLRTM");
+        assertThat(stored.getBookingStatus()).isEqualTo("TRACKING_ISSUED");
+    }
+
+    @Test
     @DisplayName("US15: POST /api/v1/handling/activities で受領作業を登録できる（201）")
     void 荷役作業登録_受領() throws Exception {
         String trk = "TRK-20260720-ABC12345";

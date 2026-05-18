@@ -17,13 +17,35 @@
 
     <insert id="upsert"
             parameterType="com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord">
-        MERGE INTO cargo_snapshot (
+        MERGE INTO cargo_snapshot AS target
+        USING (
+            VALUES (
+                #{bookingId}, #{trackingNumber}, #{originUnlocode}, #{destinationUnlocode},
+                #{cargoType}, #{arrivalDeadline}, #{bookingStatus}
+            )
+        ) AS source (
             booking_id, tracking_number, origin_unlocode, destination_unlocode,
-            cargo_type, arrival_deadline, booking_status, updated_at
-        ) KEY (booking_id) VALUES (
-            #{bookingId}, #{trackingNumber}, #{originUnlocode}, #{destinationUnlocode},
-            #{cargoType}, #{arrivalDeadline}, #{bookingStatus}, CURRENT_TIMESTAMP
+            cargo_type, arrival_deadline, booking_status
         )
+        ON target.booking_id = source.booking_id
+        WHEN MATCHED THEN
+            UPDATE SET
+                tracking_number = source.tracking_number,
+                origin_unlocode = source.origin_unlocode,
+                destination_unlocode = source.destination_unlocode,
+                cargo_type = source.cargo_type,
+                arrival_deadline = source.arrival_deadline,
+                booking_status = source.booking_status,
+                updated_at = CURRENT_TIMESTAMP
+        WHEN NOT MATCHED THEN
+            INSERT (
+                booking_id, tracking_number, origin_unlocode, destination_unlocode,
+                cargo_type, arrival_deadline, booking_status, updated_at
+            )
+            VALUES (
+                source.booking_id, source.tracking_number, source.origin_unlocode, source.destination_unlocode,
+                source.cargo_type, source.arrival_deadline, source.booking_status, CURRENT_TIMESTAMP
+            )
     </insert>
 
     <select id="findByTrackingNumber" resultMap="cargoSnapshotResultMap">
