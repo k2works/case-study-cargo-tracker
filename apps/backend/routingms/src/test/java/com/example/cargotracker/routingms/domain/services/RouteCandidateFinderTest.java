@@ -150,6 +150,21 @@ class RouteCandidateFinderTest {
     }
 
     @Test
+    void excludePortsを指定すると該当経由地を含む経路が除外される() {
+        var spec = RouteSearchSpecification.of(
+                "JPYOK", "USLAX",
+                LocalDate.of(2099, 7, 31),
+                CargoType.GENERAL,
+                List.of("TWKHH"));
+
+        List<TransitPath> candidates = service.findCandidates(spec);
+
+        assertThat(candidates).noneMatch(p ->
+                p.edges().stream().anyMatch(e ->
+                        e.fromUnLocode().value().equals("TWKHH") || e.toUnLocode().value().equals("TWKHH")));
+    }
+
+    @Test
     void 経路の各区間で乗り継ぎ時間が確保されている() {
         var spec = RouteSearchSpecification.of(
                 "JPYOK", "USLAX",

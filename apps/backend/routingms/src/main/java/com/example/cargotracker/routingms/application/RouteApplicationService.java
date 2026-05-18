@@ -6,6 +6,7 @@ import com.example.cargotracker.routingms.domain.model.valueobjects.TransitEdge;
 import com.example.cargotracker.routingms.domain.model.valueobjects.TransitPath;
 import com.example.cargotracker.routingms.domain.ports.EdgeRepository;
 import com.example.cargotracker.routingms.domain.services.RouteCandidateFinder;
+import com.example.cargotracker.routingms.interfaces.rest.dto.AdjustRouteResponse;
 import com.example.cargotracker.routingms.interfaces.rest.dto.RouteCandidatesResponse;
 import com.example.cargotracker.routingms.interfaces.rest.dto.SelectedRouteResponse;
 import org.springframework.http.HttpStatus;
@@ -66,6 +67,23 @@ public class RouteApplicationService {
                         e.arrivalTime()))
                 .toList();
         return new SelectedRouteResponse(legs);
+    }
+
+    public AdjustRouteResponse adjustRoute(
+            String origin, String destination, LocalDate arrivalDeadline,
+            CargoType cargoType, List<String> excludePorts) {
+        List<TransitEdge> edges = edgeRepository.findAll();
+        RouteCandidateFinder finder = new RouteCandidateFinder(edges);
+        RouteSearchSpecification spec = RouteSearchSpecification.of(
+                origin, destination, arrivalDeadline, cargoType, excludePorts);
+        List<TransitPath> paths = finder.findCandidates(spec);
+        List<RouteCandidatesResponse.CandidateItem> items = paths.stream()
+                .map(this::toItem)
+                .toList();
+        String noRoutesMessage = paths.isEmpty()
+                ? "条件に合う経路が見つかりませんでした。期限延長・経由地変更・貨物種別変更をご検討いただくか、営業担当者にご連絡ください。"
+                : null;
+        return new AdjustRouteResponse(items, noRoutesMessage);
     }
 
     private RouteCandidatesResponse.CandidateItem toItem(TransitPath path) {

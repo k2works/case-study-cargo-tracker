@@ -57,7 +57,9 @@ public class RouteCandidateFinder {
     private boolean isEligible(TransitEdge edge, RouteSearchSpecification spec,
                                 List<TransitEdge> currentPath) {
         return edge.acceptedCargoTypes().contains(spec.cargoType())
-                && hasValidTransfer(currentPath, edge, spec);
+                && hasValidTransfer(currentPath, edge, spec)
+                && !spec.excludePorts().contains(edge.fromUnLocode())
+                && !spec.excludePorts().contains(edge.toUnLocode());
     }
 
     private void explore(TransitEdge edge, RouteSearchSpecification spec,

@@ -2,6 +2,8 @@ package com.example.cargotracker.routingms.interfaces.rest;
 
 import com.example.cargotracker.routingms.application.RouteApplicationService;
 import com.example.cargotracker.routingms.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.routingms.interfaces.rest.dto.AdjustRouteRequest;
+import com.example.cargotracker.routingms.interfaces.rest.dto.AdjustRouteResponse;
 import com.example.cargotracker.routingms.interfaces.rest.dto.RouteCandidatesResponse;
 import com.example.cargotracker.routingms.interfaces.rest.dto.SelectRouteRequest;
 import com.example.cargotracker.routingms.interfaces.rest.dto.SelectedRouteResponse;
@@ -40,6 +42,21 @@ public class RouteController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate arrivalDeadline,
             @RequestParam CargoType cargoType) {
         return routeService.findCandidates(origin, destination, arrivalDeadline, cargoType);
+    }
+
+    /**
+     * POST /api/v1/routing/adjust
+     *
+     * <p>US10: 経路条件を調整して再算出し、候補一覧を返す。候補ゼロ時は営業担当者向けメッセージを返す。</p>
+     */
+    @PostMapping("/adjust")
+    public AdjustRouteResponse adjustRoute(@RequestBody AdjustRouteRequest request) {
+        return routeService.adjustRoute(
+                request.origin(),
+                request.destination(),
+                request.arrivalDeadline(),
+                CargoType.valueOf(request.cargoType()),
+                request.excludePorts());
     }
 
     /**
