@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface CargoSnapshotMapper {
 
-    void upsert(CargoSnapshotRecord record);
+    void upsert(CargoSnapshotRecord snapshot);
 
     CargoSnapshotRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 

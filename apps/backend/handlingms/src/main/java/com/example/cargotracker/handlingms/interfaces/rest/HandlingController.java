@@ -55,6 +55,7 @@ import java.util.concurrent.TimeoutException;
 public class HandlingController {
 
     private static final String MESSAGE_KEY = "message";
+    private static final String TRACKING_NUMBER_NOT_FOUND_PREFIX = "追跡番号が存在しません: ";
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(30);
 
     private final CommandGateway commandGateway;
@@ -93,7 +94,7 @@ public class HandlingController {
         if (snapshotOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of(MESSAGE_KEY,
-                            "追跡番号が存在しません: " + request.trackingNumber()));
+                            TRACKING_NUMBER_NOT_FOUND_PREFIX + request.trackingNumber()));
         }
 
         // 2. コマンド構築（バリデーション付き）
@@ -158,7 +159,7 @@ public class HandlingController {
         var snapshotOpt = cargoSnapshotRepository.findByTrackingNumber(new TrackingNumber(trackingNumber));
         if (snapshotOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of(MESSAGE_KEY, "追跡番号が存在しません: " + trackingNumber));
+                    .body(Map.of(MESSAGE_KEY, TRACKING_NUMBER_NOT_FOUND_PREFIX + trackingNumber));
         }
         var snapshot = snapshotOpt.get();
         return ResponseEntity.ok(Map.of(
@@ -186,7 +187,7 @@ public class HandlingController {
         }
         if (cargoSnapshotRepository.findByTrackingNumber(trk).isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of(MESSAGE_KEY, "追跡番号が存在しません: " + trackingNumber));
+                    .body(Map.of(MESSAGE_KEY, TRACKING_NUMBER_NOT_FOUND_PREFIX + trackingNumber));
         }
 
         // 2. コマンド構築
@@ -221,15 +222,15 @@ public class HandlingController {
      */
     @PostMapping("/cargo-snapshots")
     public ResponseEntity<Object> registerCargoSnapshot(@Valid @RequestBody RegisterCargoSnapshotRequest request) {
-        var record = new CargoSnapshotRecord();
-        record.setBookingId(request.bookingId());
-        record.setTrackingNumber(request.trackingNumber());
-        record.setOriginUnlocode(request.originUnlocode());
-        record.setDestinationUnlocode(request.destinationUnlocode());
-        record.setCargoType(request.cargoType());
-        record.setArrivalDeadline(request.arrivalDeadline());
-        record.setBookingStatus(request.bookingStatus());
-        cargoSnapshotMapper.upsert(record);
+        var snapshot = new CargoSnapshotRecord();
+        snapshot.setBookingId(request.bookingId());
+        snapshot.setTrackingNumber(request.trackingNumber());
+        snapshot.setOriginUnlocode(request.originUnlocode());
+        snapshot.setDestinationUnlocode(request.destinationUnlocode());
+        snapshot.setCargoType(request.cargoType());
+        snapshot.setArrivalDeadline(request.arrivalDeadline());
+        snapshot.setBookingStatus(request.bookingStatus());
+        cargoSnapshotMapper.upsert(snapshot);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "bookingId", request.bookingId(),
                 "trackingNumber", request.trackingNumber() == null ? "" : request.trackingNumber()));

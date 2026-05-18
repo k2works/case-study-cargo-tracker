@@ -54,13 +54,13 @@ class HandlingActivityUpdateStatusTest {
     @Test
     @DisplayName("US17: 許可されていない状態への遷移は Command 生成時に拒否される")
     void 不正状態遷移は拒否() {
+        final String activityId = UUID.randomUUID().toString();
+        final Location location = Location.of("SGSIN");
+        final LocalDateTime now = LocalDateTime.now();
+        final HandlerId operator = new HandlerId("tracker-001");
+
         assertThatThrownBy(() -> new UpdateCargoStatusCommand(
-                UUID.randomUUID().toString(),
-                TRK,
-                "INVALID_STATUS",
-                Location.of("SGSIN"),
-                LocalDateTime.now(),
-                new HandlerId("tracker-001")))
+                activityId, TRK, "INVALID_STATUS", location, now, operator))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("許可されていない状態への遷移です: INVALID_STATUS");
     }

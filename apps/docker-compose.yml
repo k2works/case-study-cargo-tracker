@@ -145,6 +145,25 @@ services:
     ports:
       - "8083:8083"
 
+  handlingms:
+    build:
+      context: ./backend
+      dockerfile: handlingms/Dockerfile
+    container_name: cargo-handlingms
+    depends_on:
+      axonserver:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      AXON_AXONSERVER_SERVERS: axonserver:8124
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/handling_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "8085:8085"
+
   gatewayms:
     build:
       context: ./backend
@@ -157,11 +176,14 @@ services:
         condition: service_started
       routingms:
         condition: service_started
+      handlingms:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: local-docker
       AUTHMS_URL: http://authms:8081
       BOOKINGMS_URL: http://bookingms:8082
       ROUTINGMS_URL: http://routingms:8083
+      HANDLINGMS_URL: http://handlingms:8085
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-case-study-cargo-tracker}
     ports:

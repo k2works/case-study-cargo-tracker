@@ -13,7 +13,7 @@ import java.util.List;
 @Mapper
 public interface HandlingActivityMapper {
 
-    void insert(HandlingActivityRecord record);
+    void insert(HandlingActivityRecord activity);
 
     HandlingActivityRecord findByActivityId(@Param("activityId") String activityId);
 

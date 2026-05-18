@@ -25,15 +25,15 @@ public class MyBatisCargoSnapshotRepository implements CargoSnapshotRepository {
 
     @Override
     public Optional<CargoSnapshot> findByTrackingNumber(TrackingNumber trackingNumber) {
-        CargoSnapshotRecord record = mapper.findByTrackingNumber(trackingNumber.value());
-        if (record == null) {
+        CargoSnapshotRecord snapshot = mapper.findByTrackingNumber(trackingNumber.value());
+        if (snapshot == null) {
             return Optional.empty();
         }
         return Optional.of(new CargoSnapshot(
-                record.getBookingId(),
+                snapshot.getBookingId(),
                 trackingNumber,
-                Location.of(record.getOriginUnlocode()),
-                Location.of(record.getDestinationUnlocode()),
-                record.getCargoType()));
+                Location.of(snapshot.getOriginUnlocode()),
+                Location.of(snapshot.getDestinationUnlocode()),
+                snapshot.getCargoType()));
     }
 }

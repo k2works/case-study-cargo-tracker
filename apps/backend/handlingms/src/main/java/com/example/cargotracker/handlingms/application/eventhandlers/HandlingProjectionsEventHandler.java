@@ -55,25 +55,25 @@ public class HandlingProjectionsEventHandler {
     @EventHandler
     @Transactional
     public void on(HandlingActivityRegisteredEvent event) {
-        var record = new HandlingActivityRecord();
-        record.setActivityId(event.activityId());
+        var activity = new HandlingActivityRecord();
+        activity.setActivityId(event.activityId());
         // CargoSnapshot ACL の射影
-        record.setBookingId(event.cargoSnapshot().bookingId());
-        record.setTrackingNumber(event.trackingNumber().value());
-        record.setOriginUnlocode(event.cargoSnapshot().origin().unLocode().value());
-        record.setDestinationUnlocode(event.cargoSnapshot().destination().unLocode().value());
-        record.setCargoType(event.cargoSnapshot().cargoType());
+        activity.setBookingId(event.cargoSnapshot().bookingId());
+        activity.setTrackingNumber(event.trackingNumber().value());
+        activity.setOriginUnlocode(event.cargoSnapshot().origin().unLocode().value());
+        activity.setDestinationUnlocode(event.cargoSnapshot().destination().unLocode().value());
+        activity.setCargoType(event.cargoSnapshot().cargoType());
         // 荷役作業本体
-        record.setHandlingType(event.handlingType().name());
-        record.setOccurredAt(event.occurredAt());
-        record.setUnlocode(event.location().unLocode().value());
+        activity.setHandlingType(event.handlingType().name());
+        activity.setOccurredAt(event.occurredAt());
+        activity.setUnlocode(event.location().unLocode().value());
         if (event.voyageNumber() != null) {
-            record.setVoyageNumber(event.voyageNumber().value());
+            activity.setVoyageNumber(event.voyageNumber().value());
         }
-        record.setHandlerId(event.operatorId().value());
-        record.setUnexpected(event.unexpected());
+        activity.setHandlerId(event.operatorId().value());
+        activity.setUnexpected(event.unexpected());
 
-        handlingActivityMapper.insert(record);
+        handlingActivityMapper.insert(activity);
 
         // US16 受入3/4: CLAIM 種別は claim_verification 保存 + 貨物状態を DELIVERED に遷移
         if (event.handlingType() == HandlingType.CLAIM && event.claimVerification() != null) {
@@ -106,14 +106,14 @@ public class HandlingProjectionsEventHandler {
     @EventHandler
     @Transactional
     public void on(CargoStatusUpdatedEvent event) {
-        var record = new CargoStatusHistoryRecord();
-        record.setHistoryId(event.activityId());
-        record.setTrackingNumber(event.trackingNumber().value());
-        record.setNewStatus(event.newStatus());
-        record.setUnlocode(event.location().unLocode().value());
-        record.setUpdatedAt(event.updatedAt());
-        record.setOperatorId(event.operatorId().value());
-        cargoStatusHistoryMapper.insert(record);
+        var history = new CargoStatusHistoryRecord();
+        history.setHistoryId(event.activityId());
+        history.setTrackingNumber(event.trackingNumber().value());
+        history.setNewStatus(event.newStatus());
+        history.setUnlocode(event.location().unLocode().value());
+        history.setUpdatedAt(event.updatedAt());
+        history.setOperatorId(event.operatorId().value());
+        cargoStatusHistoryMapper.insert(history);
 
         cargoSnapshotMapper.updateBookingStatusByTrackingNumber(
                 event.trackingNumber().value(), event.newStatus());

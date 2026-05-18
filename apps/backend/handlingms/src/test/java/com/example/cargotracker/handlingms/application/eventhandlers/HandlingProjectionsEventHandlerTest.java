@@ -22,7 +22,6 @@ import org.mockito.ArgumentCaptor;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -99,7 +98,7 @@ class HandlingProjectionsEventHandlerTest {
 
         // cargo_snapshot.booking_status を DELIVERED に更新（US16 受入3）
         verify(cargoSnapshotMapper).updateBookingStatusByTrackingNumber(
-                eq("TRK-20260810-DELIVERY1"), eq("DELIVERED"));
+                "TRK-20260810-DELIVERY1", "DELIVERED");
     }
 
     @Test
@@ -125,7 +124,7 @@ class HandlingProjectionsEventHandlerTest {
         assertThat(saved.getOperatorId()).isEqualTo("tracker-001");
 
         verify(cargoSnapshotMapper).updateBookingStatusByTrackingNumber(
-                eq("TRK-20260810-DELIVERY1"), eq("IN_TRANSIT"));
+                "TRK-20260810-DELIVERY1", "IN_TRANSIT");
     }
 
     @Test

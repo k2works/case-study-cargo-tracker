@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface ClaimVerificationMapper {
 
-    void insert(ClaimVerificationRecord record);
+    void insert(ClaimVerificationRecord verification);
 
     ClaimVerificationRecord findByActivityId(@Param("activityId") String activityId);
 }

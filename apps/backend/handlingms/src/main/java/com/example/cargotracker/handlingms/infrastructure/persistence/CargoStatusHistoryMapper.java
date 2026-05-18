@@ -11,7 +11,7 @@ import java.util.List;
 @Mapper
 public interface CargoStatusHistoryMapper {
 
-    void insert(CargoStatusHistoryRecord record);
+    void insert(CargoStatusHistoryRecord history);
 
     List<CargoStatusHistoryRecord> findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 }
