@@ -9,9 +9,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/dashboard', label: 'ダッシュボード', roles: ['ROLE_ADMIN', 'ROLE_SALES', 'ROLE_ROUTING'] },
+  { path: '/dashboard', label: 'ダッシュボード', roles: ['ROLE_ADMIN', 'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_HANDLING'] },
   { path: '/bookings', label: '予約', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   { path: '/routing/voyages', label: '航海スケジュール', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
+  { path: '/handling', label: '荷役作業', roles: ['ROLE_ADMIN', 'ROLE_HANDLING'] },
   { path: '/shippers', label: '荷主管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
 ]
 

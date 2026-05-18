@@ -16,6 +16,8 @@ import { QuotationNewPage } from './pages/QuotationNewPage'
 import { QuotationDetailPage } from './pages/QuotationDetailPage'
 import { RoutingWorkbenchPage } from './pages/RoutingWorkbenchPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { HandlingActivityNewPage } from './pages/HandlingActivityNewPage'
+import { HandlingActivityListPage } from './pages/HandlingActivityListPage'
 
 export default function App() {
   return (
@@ -38,6 +40,8 @@ export default function App() {
           <Route path="/routing/voyages" element={<VoyageListPage />} />
           <Route path="/routing/voyages/new" element={<VoyageNewPage />} />
           <Route path="/routing/voyages/:voyageNumber/edit" element={<VoyageEditPage />} />
+          <Route path="/handling" element={<HandlingActivityListPage />} />
+          <Route path="/handling/new" element={<HandlingActivityNewPage />} />
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/login" replace />} />
