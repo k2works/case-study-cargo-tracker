@@ -171,7 +171,7 @@ public class BookingController {
                         dto.unloadTime()))
                 .toList();
         var itinerary = new CargoItinerary(legs);
-        commandGateway.send(new AssignRouteToCargoCommand(bookingId, itinerary));
+        commandGateway.sendAndWait(new AssignRouteToCargoCommand(bookingId, itinerary));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.ROUTE_PROPOSED.name()));
     }
 
@@ -188,13 +188,13 @@ public class BookingController {
 
     @PostMapping("/{bookingId}/confirm")
     public ResponseEntity<Object> confirmBooking(@PathVariable String bookingId) {
-        commandGateway.send(new ConfirmBookingCommand(bookingId));
+        commandGateway.sendAndWait(new ConfirmBookingCommand(bookingId));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.CONFIRMED.name()));
     }
 
     @PostMapping("/{bookingId}/issue-tracking")
     public ResponseEntity<Object> issueTrackingNumber(@PathVariable String bookingId) {
-        commandGateway.send(new IssueTrackingNumberCommand(bookingId));
+        commandGateway.sendAndWait(new IssueTrackingNumberCommand(bookingId));
         return ResponseEntity.ok(new BookingResponse(bookingId, BookingStatus.TRACKING_ISSUED.name()));
     }
 

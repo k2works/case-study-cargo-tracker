@@ -457,7 +457,7 @@ class BookingControllerIntegrationTest {
     @Test
     @DisplayName("US11: POST /api/v1/bookings/{id}/assign-route で AssignRouteToCargoCommand が送信される")
     void 経路紐付けコマンドが送信される() throws Exception {
-        when(commandGateway.send(any())).thenReturn(null);
+        when(commandGateway.sendAndWait(any())).thenReturn(null);
 
         mockMvc.perform(post("/api/v1/bookings/B-TEST/assign-route")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -477,7 +477,7 @@ class BookingControllerIntegrationTest {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(commandGateway).send(captor.capture());
+        verify(commandGateway).sendAndWait(captor.capture());
         assertThat(captor.getValue()).isInstanceOf(AssignRouteToCargoCommand.class);
         AssignRouteToCargoCommand cmd = (AssignRouteToCargoCommand) captor.getValue();
         assertThat(cmd.bookingId()).isEqualTo("B-TEST");
