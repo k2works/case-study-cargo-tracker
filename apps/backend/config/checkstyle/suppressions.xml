@@ -15,4 +15,7 @@
     <!-- テストコード: 変数名ルールを緩和（テスト用の記述的な変数名を許容） -->
     <suppress checks="LocalVariableName" files=".*[/\\]src[/\\]test[/\\].*\.java$"/>
 
+    <!-- アーキテクチャテスト: ArchUnit の @ArchTest フィールドは camelCase が慣例のため ConstantName を除外 -->
+    <suppress checks="ConstantName" files=".*[/\\]src[/\\]test[/\\].*[/\\]architecture[/\\].*\.java$"/>
+
 </suppressions>
