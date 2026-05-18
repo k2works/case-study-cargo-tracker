@@ -1,5 +1,6 @@
 package com.example.cargotracker.handlingms.application.eventhandlers;
 
+import com.example.cargotracker.handlingms.domain.model.events.CargoStatusUpdatedEvent;
 import com.example.cargotracker.handlingms.domain.model.events.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.CargoSnapshot;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.ClaimVerification;
@@ -8,7 +9,9 @@ import com.example.cargotracker.handlingms.domain.model.valueobjects.HandlingTyp
 import com.example.cargotracker.handlingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper;
+import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.ClaimVerificationMapper;
+import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.ClaimVerificationRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +42,7 @@ class HandlingProjectionsEventHandlerTest {
     private HandlingActivityMapper handlingActivityMapper;
     private ClaimVerificationMapper claimVerificationMapper;
     private CargoSnapshotMapper cargoSnapshotMapper;
+    private CargoStatusHistoryMapper cargoStatusHistoryMapper;
     private HandlingProjectionsEventHandler handler;
 
     @BeforeEach
@@ -46,10 +50,12 @@ class HandlingProjectionsEventHandlerTest {
         handlingActivityMapper = mock(HandlingActivityMapper.class);
         claimVerificationMapper = mock(ClaimVerificationMapper.class);
         cargoSnapshotMapper = mock(CargoSnapshotMapper.class);
+        cargoStatusHistoryMapper = mock(CargoStatusHistoryMapper.class);
         handler = new HandlingProjectionsEventHandler(
                 handlingActivityMapper,
                 claimVerificationMapper,
-                cargoSnapshotMapper);
+                cargoSnapshotMapper,
+                cargoStatusHistoryMapper);
     }
 
     private CargoSnapshot snapshot() {
@@ -94,6 +100,32 @@ class HandlingProjectionsEventHandlerTest {
         // cargo_snapshot.booking_status を DELIVERED に更新（US16 受入3）
         verify(cargoSnapshotMapper).updateBookingStatusByTrackingNumber(
                 eq("TRK-20260810-DELIVERY1"), eq("DELIVERED"));
+    }
+
+    @Test
+    @DisplayName("US17 受入3/4: CargoStatusUpdatedEvent で cargo_status_history 追記 + cargo_snapshot 更新")
+    void 状態手動更新で履歴とsnapshotが更新される() {
+        var event = new CargoStatusUpdatedEvent(
+                "ACT-003",
+                TRK,
+                "IN_TRANSIT",
+                Location.of("SGSIN"),
+                LocalDateTime.of(2026, 7, 25, 8, 0),
+                new HandlerId("tracker-001"));
+
+        handler.on(event);
+
+        ArgumentCaptor<CargoStatusHistoryRecord> captor =
+                ArgumentCaptor.forClass(CargoStatusHistoryRecord.class);
+        verify(cargoStatusHistoryMapper).insert(captor.capture());
+        var saved = captor.getValue();
+        assertThat(saved.getHistoryId()).isEqualTo("ACT-003");
+        assertThat(saved.getNewStatus()).isEqualTo("IN_TRANSIT");
+        assertThat(saved.getUnlocode()).isEqualTo("SGSIN");
+        assertThat(saved.getOperatorId()).isEqualTo("tracker-001");
+
+        verify(cargoSnapshotMapper).updateBookingStatusByTrackingNumber(
+                eq("TRK-20260810-DELIVERY1"), eq("IN_TRANSIT"));
     }
 
     @Test

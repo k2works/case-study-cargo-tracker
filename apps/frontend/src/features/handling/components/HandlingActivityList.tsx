@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useHandlingActivities } from '../hooks/useHandling'
 import { HANDLING_TYPE_LABELS, type HandlingType } from '../types/handling'
 
@@ -61,7 +61,15 @@ export function HandlingActivityList() {
             {activities.map((a) => (
               <tr key={a.activityId} className="border-t border-gray-100">
                 <td className="px-3 py-2">{a.occurredAt}</td>
-                <td className="px-3 py-2 font-mono">{a.trackingNumber}</td>
+                <td className="px-3 py-2 font-mono">
+                  <Link
+                    to={`/tracking/${a.trackingNumber}/manage`}
+                    className="text-indigo-600 hover:underline"
+                    data-testid={`tracking-link-${a.trackingNumber}`}
+                  >
+                    {a.trackingNumber}
+                  </Link>
+                </td>
                 <td className="px-3 py-2">
                   {HANDLING_TYPE_LABELS[a.handlingType as HandlingType] ?? a.handlingType}
                 </td>

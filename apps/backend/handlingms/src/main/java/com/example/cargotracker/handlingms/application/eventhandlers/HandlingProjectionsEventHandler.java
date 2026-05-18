@@ -1,9 +1,12 @@
 package com.example.cargotracker.handlingms.application.eventhandlers;
 
+import com.example.cargotracker.handlingms.domain.model.events.CargoStatusUpdatedEvent;
 import com.example.cargotracker.handlingms.domain.model.events.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.handlingms.domain.model.events.UnexpectedHandlingDetectedEvent;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper;
+import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryMapper;
+import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.ClaimVerificationMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.ClaimVerificationRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityMapper;
@@ -36,14 +39,17 @@ public class HandlingProjectionsEventHandler {
     private final HandlingActivityMapper handlingActivityMapper;
     private final ClaimVerificationMapper claimVerificationMapper;
     private final CargoSnapshotMapper cargoSnapshotMapper;
+    private final CargoStatusHistoryMapper cargoStatusHistoryMapper;
 
     public HandlingProjectionsEventHandler(
             HandlingActivityMapper handlingActivityMapper,
             ClaimVerificationMapper claimVerificationMapper,
-            CargoSnapshotMapper cargoSnapshotMapper) {
+            CargoSnapshotMapper cargoSnapshotMapper,
+            CargoStatusHistoryMapper cargoStatusHistoryMapper) {
         this.handlingActivityMapper = handlingActivityMapper;
         this.claimVerificationMapper = claimVerificationMapper;
         this.cargoSnapshotMapper = cargoSnapshotMapper;
+        this.cargoStatusHistoryMapper = cargoStatusHistoryMapper;
     }
 
     @EventHandler
@@ -91,6 +97,33 @@ public class HandlingProjectionsEventHandler {
                 event.trackingNumber().value(),
                 event.handlingType(),
                 event.location().unLocode().value());
+    }
+
+    /**
+     * 貨物状態手動更新イベントを受信し、cargo_status_history に追記 +
+     * cargo_snapshot.booking_status を更新する（US17 受入3/4）。
+     */
+    @EventHandler
+    @Transactional
+    public void on(CargoStatusUpdatedEvent event) {
+        var record = new CargoStatusHistoryRecord();
+        record.setHistoryId(event.activityId());
+        record.setTrackingNumber(event.trackingNumber().value());
+        record.setNewStatus(event.newStatus());
+        record.setUnlocode(event.location().unLocode().value());
+        record.setUpdatedAt(event.updatedAt());
+        record.setOperatorId(event.operatorId().value());
+        cargoStatusHistoryMapper.insert(record);
+
+        cargoSnapshotMapper.updateBookingStatusByTrackingNumber(
+                event.trackingNumber().value(), event.newStatus());
+
+        // US17 受入4: 状態変更通知（IT5 はログのみ、実送信は IT6+）
+        LOG.info("[STATUS UPDATE] 追跡管理者による貨物状態手動更新: tracking={} new_status={} location={} operator={}",
+                event.trackingNumber().value(),
+                event.newStatus(),
+                event.location().unLocode().value(),
+                event.operatorId().value());
     }
 
     @EventHandler

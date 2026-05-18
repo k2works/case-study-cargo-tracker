@@ -18,6 +18,7 @@ import { RoutingWorkbenchPage } from './pages/RoutingWorkbenchPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { HandlingActivityNewPage } from './pages/HandlingActivityNewPage'
 import { HandlingActivityListPage } from './pages/HandlingActivityListPage'
+import { CargoStatusUpdatePage } from './pages/CargoStatusUpdatePage'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/routing/voyages/:voyageNumber/edit" element={<VoyageEditPage />} />
           <Route path="/handling" element={<HandlingActivityListPage />} />
           <Route path="/handling/new" element={<HandlingActivityNewPage />} />
+          <Route path="/tracking/:trackingNumber/manage" element={<CargoStatusUpdatePage />} />
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/login" replace />} />

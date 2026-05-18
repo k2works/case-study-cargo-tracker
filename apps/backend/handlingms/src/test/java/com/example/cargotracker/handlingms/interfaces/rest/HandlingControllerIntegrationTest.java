@@ -1,6 +1,7 @@
 package com.example.cargotracker.handlingms.interfaces.rest;
 
 import com.example.cargotracker.handlingms.domain.model.commands.RegisterHandlingActivityCommand;
+import com.example.cargotracker.handlingms.domain.model.commands.UpdateCargoStatusCommand;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -217,6 +219,88 @@ class HandlingControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.handlingType").value("CLAIM"))
                 .andExpect(jsonPath("$.unexpected").value(false));
+    }
+
+    @Test
+    @DisplayName("US17 受入1: GET /activities/{trk}/snapshot で現在の貨物概要を返す")
+    void 貨物概要照会() throws Exception {
+        String trk = "TRK-20260725-SNAPSHOT1";
+        registerSnapshot(trk, "JPTYO", "DEHAM");
+
+        mockMvc.perform(get("/api/v1/handling/activities/" + trk + "/snapshot"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackingNumber").value(trk))
+                .andExpect(jsonPath("$.originUnlocode").value("JPTYO"))
+                .andExpect(jsonPath("$.destinationUnlocode").value("DEHAM"));
+    }
+
+    @Test
+    @DisplayName("US17 受入1: 追跡番号が存在しない貨物概要照会で 404")
+    void 貨物概要_追跡番号不在で404() throws Exception {
+        mockMvc.perform(get("/api/v1/handling/activities/TRK-20260725-NOTFOUND/snapshot"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("US17 受入2/3: PUT /activities/{trk}/status で UpdateCargoStatusCommand が送信される")
+    void 状態手動更新() throws Exception {
+        String trk = "TRK-20260725-UPDATE01";
+        registerSnapshot(trk, "JPTYO", "DEHAM");
+
+        mockMvc.perform(put("/api/v1/handling/activities/" + trk + "/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "newStatus": "IN_TRANSIT",
+                                    "unlocode": "SGSIN",
+                                    "updatedAt": "2026-07-25T08:00:00",
+                                    "operatorId": "tracker-001"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackingNumber").value(trk))
+                .andExpect(jsonPath("$.newStatus").value("IN_TRANSIT"))
+                .andExpect(jsonPath("$.unlocode").value("SGSIN"));
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway).send(captor.capture(), eq(Object.class));
+        assertThat(captor.getValue()).isInstanceOf(UpdateCargoStatusCommand.class);
+    }
+
+    @Test
+    @DisplayName("US17: 許可されていない状態への更新で 400")
+    void 状態手動更新_不正値で400() throws Exception {
+        String trk = "TRK-20260725-UPDATE02";
+        registerSnapshot(trk, "JPTYO", "DEHAM");
+
+        mockMvc.perform(put("/api/v1/handling/activities/" + trk + "/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "newStatus": "INVALID_STATUS",
+                                    "unlocode": "SGSIN",
+                                    "updatedAt": "2026-07-25T08:00:00",
+                                    "operatorId": "tracker-001"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("INVALID_STATUS")));
+    }
+
+    @Test
+    @DisplayName("US17: 追跡番号が存在しない状態手動更新で 404")
+    void 状態手動更新_追跡番号不在で404() throws Exception {
+        mockMvc.perform(put("/api/v1/handling/activities/TRK-20260725-NOTFOUND/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "newStatus": "IN_TRANSIT",
+                                    "unlocode": "SGSIN",
+                                    "updatedAt": "2026-07-25T08:00:00",
+                                    "operatorId": "tracker-001"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.example.cargotracker.handlingms.domain.model.aggregates;
 
 import com.example.cargotracker.handlingms.domain.model.commands.RegisterHandlingActivityCommand;
+import com.example.cargotracker.handlingms.domain.model.commands.UpdateCargoStatusCommand;
+import com.example.cargotracker.handlingms.domain.model.events.CargoStatusUpdatedEvent;
 import com.example.cargotracker.handlingms.domain.model.events.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.handlingms.domain.model.events.UnexpectedHandlingDetectedEvent;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.CargoSnapshot;
@@ -84,6 +86,30 @@ public final class HandlingActivity {
                     snapshot.destination()));
         }
 
+        return command.activityId();
+    }
+
+    /**
+     * 貨物状態手動更新（US17）。
+     *
+     * <p>追跡管理者の手動更新を独立した HandlingActivity Aggregate として記録する。
+     * IT5 暫定実装。IT6 で trackingms 新設時に当該責務を移管する（ADR-0012）。</p>
+     *
+     * @param command   更新コマンド
+     * @param appender  Event Appender
+     * @return 採番された activityId
+     */
+    public static String updateStatus(
+            UpdateCargoStatusCommand command,
+            EventAppender appender) {
+
+        appender.append(new CargoStatusUpdatedEvent(
+                command.activityId(),
+                command.trackingNumber(),
+                command.newStatus(),
+                command.location(),
+                command.updatedAt(),
+                command.operatorId()));
         return command.activityId();
     }
 

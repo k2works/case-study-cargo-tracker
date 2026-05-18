@@ -49,3 +49,44 @@ export const HANDLING_TYPE_LABELS: Record<HandlingType, string> = {
   CLAIM: '引取',
   CUSTOMS: '税関通過',
 }
+
+// US17: 貨物状態手動更新
+export type CargoStatus = 'IN_TRANSIT' | 'DELIVERED' | 'EXCEPTION'
+
+export const CARGO_STATUS_LABELS: Record<CargoStatus, string> = {
+  IN_TRANSIT: '輸送中',
+  DELIVERED: '引取済',
+  EXCEPTION: '例外',
+}
+
+export interface UpdateCargoStatusRequest {
+  newStatus: CargoStatus
+  unlocode: string
+  updatedAt: string
+  operatorId: string
+}
+
+export interface CargoStatusUpdateResponse {
+  historyId: string
+  trackingNumber: string
+  newStatus: string
+  unlocode: string
+}
+
+export interface CargoSnapshotResponse {
+  bookingId: string
+  trackingNumber: string
+  originUnlocode: string
+  destinationUnlocode: string
+  cargoType: string
+}
+
+export interface CargoStatusHistoryRecord {
+  historyId: string
+  trackingNumber: string
+  newStatus: string
+  unlocode: string
+  updatedAt: string
+  operatorId: string
+  recordedAt: string
+}

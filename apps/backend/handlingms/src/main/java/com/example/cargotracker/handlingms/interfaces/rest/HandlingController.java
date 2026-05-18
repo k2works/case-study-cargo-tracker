@@ -1,6 +1,7 @@
 package com.example.cargotracker.handlingms.interfaces.rest;
 
 import com.example.cargotracker.handlingms.domain.model.commands.RegisterHandlingActivityCommand;
+import com.example.cargotracker.handlingms.domain.model.commands.UpdateCargoStatusCommand;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.ClaimVerification;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.HandlerId;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.HandlingType;
@@ -10,11 +11,15 @@ import com.example.cargotracker.handlingms.domain.model.valueobjects.VoyageNumbe
 import com.example.cargotracker.handlingms.domain.ports.CargoSnapshotRepository;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord;
+import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryMapper;
+import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityRecord;
+import com.example.cargotracker.handlingms.interfaces.rest.dto.CargoStatusUpdateResponse;
 import com.example.cargotracker.handlingms.interfaces.rest.dto.HandlingActivityResponse;
 import com.example.cargotracker.handlingms.interfaces.rest.dto.RegisterCargoSnapshotRequest;
 import com.example.cargotracker.handlingms.interfaces.rest.dto.RegisterHandlingActivityRequest;
+import com.example.cargotracker.handlingms.interfaces.rest.dto.UpdateCargoStatusRequest;
 import jakarta.validation.Valid;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.springframework.http.HttpStatus;
@@ -22,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -55,16 +61,19 @@ public class HandlingController {
     private final CargoSnapshotRepository cargoSnapshotRepository;
     private final CargoSnapshotMapper cargoSnapshotMapper;
     private final HandlingActivityMapper handlingActivityMapper;
+    private final CargoStatusHistoryMapper cargoStatusHistoryMapper;
 
     public HandlingController(
             CommandGateway commandGateway,
             CargoSnapshotRepository cargoSnapshotRepository,
             CargoSnapshotMapper cargoSnapshotMapper,
-            HandlingActivityMapper handlingActivityMapper) {
+            HandlingActivityMapper handlingActivityMapper,
+            CargoStatusHistoryMapper cargoStatusHistoryMapper) {
         this.commandGateway = commandGateway;
         this.cargoSnapshotRepository = cargoSnapshotRepository;
         this.cargoSnapshotMapper = cargoSnapshotMapper;
         this.handlingActivityMapper = handlingActivityMapper;
+        this.cargoStatusHistoryMapper = cargoStatusHistoryMapper;
     }
 
     /**
@@ -128,6 +137,81 @@ public class HandlingController {
             @PathVariable("trackingNumber") String trackingNumber) {
         var records = handlingActivityMapper.findByTrackingNumber(trackingNumber);
         return ResponseEntity.ok(records);
+    }
+
+    /**
+     * 追跡番号別の貨物状態手動更新履歴を照会する（US17 受入3 + S17 履歴画面）。
+     */
+    @GetMapping("/activities/{trackingNumber}/status-history")
+    public ResponseEntity<List<CargoStatusHistoryRecord>> findStatusHistoryByTrackingNumber(
+            @PathVariable("trackingNumber") String trackingNumber) {
+        var records = cargoStatusHistoryMapper.findByTrackingNumber(trackingNumber);
+        return ResponseEntity.ok(records);
+    }
+
+    /**
+     * 追跡番号で現在の貨物概要を照会する（US17 受入1: 現在の貨物情報を確認）。
+     */
+    @GetMapping("/activities/{trackingNumber}/snapshot")
+    public ResponseEntity<Object> findCargoSnapshot(
+            @PathVariable("trackingNumber") String trackingNumber) {
+        var snapshotOpt = cargoSnapshotRepository.findByTrackingNumber(new TrackingNumber(trackingNumber));
+        if (snapshotOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(MESSAGE_KEY, "追跡番号が存在しません: " + trackingNumber));
+        }
+        var snapshot = snapshotOpt.get();
+        return ResponseEntity.ok(Map.of(
+                "bookingId", snapshot.bookingId(),
+                "trackingNumber", trackingNumber,
+                "originUnlocode", snapshot.origin().unLocode().value(),
+                "destinationUnlocode", snapshot.destination().unLocode().value(),
+                "cargoType", snapshot.cargoType()));
+    }
+
+    /**
+     * 貨物状態を手動更新する（US17）。
+     */
+    @PutMapping("/activities/{trackingNumber}/status")
+    public ResponseEntity<Object> updateStatus(
+            @PathVariable("trackingNumber") String trackingNumber,
+            @Valid @RequestBody UpdateCargoStatusRequest request) {
+        // 1. CargoSnapshot 引当（受入条件: 追跡番号が存在しない場合エラー）
+        final TrackingNumber trk;
+        try {
+            trk = new TrackingNumber(trackingNumber);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
+        }
+        if (cargoSnapshotRepository.findByTrackingNumber(trk).isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(MESSAGE_KEY, "追跡番号が存在しません: " + trackingNumber));
+        }
+
+        // 2. コマンド構築
+        final UpdateCargoStatusCommand command;
+        try {
+            command = new UpdateCargoStatusCommand(
+                    UUID.randomUUID().toString(),
+                    trk,
+                    request.newStatus(),
+                    Location.of(request.unlocode()),
+                    request.updatedAt(),
+                    new HandlerId(request.operatorId()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(MESSAGE_KEY, e.getMessage()));
+        }
+
+        // 3. CommandGateway 経由で Aggregate に送信
+        sendAndWaitWithTimeout(command);
+
+        return ResponseEntity.ok(new CargoStatusUpdateResponse(
+                command.activityId(),
+                trackingNumber,
+                request.newStatus(),
+                request.unlocode()));
     }
 
     /**
