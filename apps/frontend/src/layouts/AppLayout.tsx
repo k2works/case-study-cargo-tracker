@@ -13,6 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/bookings', label: '予約', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   { path: '/routing/voyages', label: '航海スケジュール', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
   { path: '/handling', label: '荷役作業', roles: ['ROLE_ADMIN', 'ROLE_HANDLING'] },
+  { path: '/tracking', label: '追跡管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   { path: '/shippers', label: '荷主管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
 ]
 

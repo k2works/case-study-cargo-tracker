@@ -12,6 +12,7 @@ import com.example.cargotracker.trackingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.InitializeTrackingRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.IssueTrackingTokenResponse;
+import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -64,6 +65,17 @@ public class TrackingController {
         this.tokenService = tokenService;
         this.queryService = queryService;
         this.commandGateway = commandGateway;
+    }
+
+    /**
+     * S16 追跡管理一覧（管理者用）。最終更新日時降順で tracking_summary 全件を返す。
+     *
+     * <p>gatewayms 側で {@code /api/v1/tracking}（完全一致）は管理者 JWT 認証必須として扱う。
+     * {@code /api/v1/tracking/{tn}} の公開照会と URL を共有するため、認証ルール側で切り分ける。</p>
+     */
+    @GetMapping
+    public ResponseEntity<List<TrackingListItemResponse>> listTrackings() {
+        return ResponseEntity.ok(queryService.findAll());
     }
 
     /**

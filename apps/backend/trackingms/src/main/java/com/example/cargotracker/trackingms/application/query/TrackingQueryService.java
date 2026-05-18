@@ -4,6 +4,7 @@ import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingEv
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryRecord;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingInfoResponse;
+import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -63,5 +64,26 @@ public class TrackingQueryService {
     public Optional<LocalDateTime> findDeliveredAt(String trackingNumber) {
         return summaryMapper.findByTrackingNumber(trackingNumber)
                 .map(TrackingSummaryRecord::deliveredAt);
+    }
+
+    /**
+     * S16 追跡管理一覧用の全件取得（最終更新日時降順）。
+     */
+    public List<TrackingListItemResponse> findAll() {
+        return summaryMapper.findAllOrderByUpdatedAtDesc()
+                .stream()
+                .map(summary -> new TrackingListItemResponse(
+                        summary.trackingNumber(),
+                        summary.bookingId(),
+                        summary.currentStatus(),
+                        summary.currentUnlocode(),
+                        summary.originUnlocode(),
+                        summary.destinationUnlocode(),
+                        summary.estimatedArrival(),
+                        summary.deliveredAt(),
+                        summary.misrouted(),
+                        summary.lastEventAt(),
+                        summary.updatedAt()))
+                .toList();
     }
 }

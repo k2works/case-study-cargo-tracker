@@ -1,7 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { env } from '../../../config/env'
 import { useAuthStore } from '../../../stores/authStore'
-import type { TrackingFetchError, TrackingInfo, TrackingErrorCode } from '../types/tracking'
+import type {
+  TrackingErrorCode,
+  TrackingFetchError,
+  TrackingInfo,
+  TrackingListItem,
+} from '../types/tracking'
 
 export type IssueTrackingTokenResponse = {
   url: string
@@ -51,6 +56,34 @@ export function useTrackingInfo(trackingNumber: string | undefined, token: strin
     queryFn: () => fetchTrackingInfo(trackingNumber as string, token as string),
     enabled: !!trackingNumber && !!token,
     retry: false,
+  })
+}
+
+/**
+ * S16 追跡管理一覧（管理者認証必須）。
+ *
+ * gatewayms 側で `/api/v1/tracking` 完全一致は管理者 JWT 必須として処理される。
+ */
+export function useTrackingList() {
+  return useQuery<TrackingListItem[]>({
+    queryKey: ['tracking', 'list'],
+    queryFn: async () => {
+      const adminToken = useAuthStore.getState().token
+      const response = await fetch(`${env.trackingApiBaseUrl}/api/v1/tracking`, {
+        headers: {
+          Accept: 'application/json',
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+        },
+      })
+      if (response.status === 401) {
+        useAuthStore.getState().logout()
+        throw new Error('Unauthorized')
+      }
+      if (!response.ok) {
+        throw new Error('追跡情報一覧の取得に失敗しました')
+      }
+      return (await response.json()) as TrackingListItem[]
+    },
   })
 }
 

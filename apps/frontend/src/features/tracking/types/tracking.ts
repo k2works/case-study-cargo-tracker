@@ -46,3 +46,20 @@ export type TrackingFetchError = {
   errorCode: TrackingErrorCode | null
   message: string
 }
+
+/**
+ * S16 追跡管理一覧の 1 行分（バックエンド {@code TrackingListItemResponse} に対応）。
+ */
+export type TrackingListItem = {
+  trackingNumber: string
+  bookingId: string
+  currentStatus: TransportStatus
+  currentUnlocode: string | null
+  originUnlocode: string
+  destinationUnlocode: string
+  estimatedArrival: string | null
+  deliveredAt: string | null
+  misrouted: boolean
+  lastEventAt: string | null
+  updatedAt: string | null
+}

@@ -565,7 +565,7 @@ ts ||--o{ ex : "0..*"
 |--------|-------|------|---------|-----|
 | S10 | 予約詳細（シングル）| `/bookings/:id` | 既存 — TRACKING_ISSUED 状態時に「追跡トークン発行（メール送信）」ボタンを追加 | US18 連携 |
 | S15 | 追跡照会（公開） | `/tracking/:trackingNumber?token=<JWT>` | IT6 で新規実装 — トークン検証・現在状態・履歴表示・期限切れ/不在エラー | US18 |
-| S16 | 追跡管理一覧 | `/tracking` | 既存 — 変更なし。S17 への導線として追跡番号一覧を維持 | TI06 前提 |
+| S16 | 追跡管理一覧 | `/tracking` | IT6 で新規実装（IT5 未実装漏れの補完） — tracking_summary 一覧 + S17 への遷移 | US18 連携 |
 | S17 | 追跡詳細・管理（既存） | `/tracking/:trackingNumber/manage` | IT5 で実装済み — 状態更新先 URL を `/api/v1/tracking/...` に変更（TI06）| TI06 |
 
 #### ワイヤーフレーム（PlantUML salt）
@@ -914,6 +914,7 @@ apps/backend/trackingms/
 | 2026-05-18 | IT4 品質水準に合わせ設計セクションを全面拡充（ドメインモデル詳細化・UC↔Aggregate マッピング表・TransportStatus 状態遷移図・Aggregate 間 Event 連携図・S10/S15/S17 ワイヤーフレーム・公開フロー/管理者フロー分離の画面遷移図・htmx/PRG 規約・ADR-0013 要点・trackingms ディレクトリ構成） | AI Agent |
 | 2026-05-18 | TI05 第 0 スプリント完了（ADR-0013・trackingms 骨格・ArchUnit 4 サービス共通化・コーディングガイド/tech_stack.md 更新・gatewayms ルーティング・docker-compose 拡張） | AI Agent |
 | 2026-05-18 | US18 完了（TrackingActivity Aggregate・TrackingTokenService・Projection EH・QueryService・REST Controller・S15 公開追跡画面・テスト 41 件追加） | AI Agent |
+| 2026-05-18 | S16 追跡管理一覧を IT6 で新規実装（IT5 漏れ補完）。GET /api/v1/tracking + gatewayms 認証ルール調整（/tracking/ 配下のみ公開、/tracking 完全一致は認証必須）・TrackingListPage + サイドナビ追加・テスト 8 件追加 | AI Agent |
 
 ---
 

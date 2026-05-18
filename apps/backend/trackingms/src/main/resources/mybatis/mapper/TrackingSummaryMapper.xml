@@ -38,6 +38,10 @@
         SELECT * FROM tracking_summary WHERE tracking_number = #{trackingNumber}
     </select>
 
+    <select id="findAllOrderByUpdatedAtDesc" resultMap="trackingSummaryResultMap">
+        SELECT * FROM tracking_summary ORDER BY updated_at DESC, tracking_number ASC
+    </select>
+
     <update id="updateCurrentStatus">
         UPDATE tracking_summary
         SET current_status = #{currentStatus},

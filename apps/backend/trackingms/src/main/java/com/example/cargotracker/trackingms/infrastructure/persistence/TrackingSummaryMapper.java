@@ -1,6 +1,7 @@
 package com.example.cargotracker.trackingms.infrastructure.persistence;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -16,6 +17,11 @@ public interface TrackingSummaryMapper {
     void insert(TrackingSummaryRecord summary);
 
     Optional<TrackingSummaryRecord> findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
+
+    /**
+     * S16 追跡管理一覧用に最終更新日時の降順で全件取得する。
+     */
+    List<TrackingSummaryRecord> findAllOrderByUpdatedAtDesc();
 
     void updateCurrentStatus(
             @Param("trackingNumber") String trackingNumber,

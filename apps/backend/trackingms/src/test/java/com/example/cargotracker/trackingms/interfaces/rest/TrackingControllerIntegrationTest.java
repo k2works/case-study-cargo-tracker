@@ -67,9 +67,13 @@ class TrackingControllerIntegrationTest {
     }
 
     private void seedTrackingSummary(String trackingNumber) {
+        seedTrackingSummary(trackingNumber, "B-TEST-" + trackingNumber);
+    }
+
+    private void seedTrackingSummary(String trackingNumber, String bookingId) {
         var summary = new TrackingSummaryRecord(
                 trackingNumber,
-                "B-TEST-001",
+                bookingId,
                 "IN_TRANSIT",
                 "SGSIN",
                 null,
@@ -183,6 +187,22 @@ class TrackingControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/tracking/{tn}", "TRK-Z9Y8X7W6V5").param("token", token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("TOKEN_TN_MISMATCH"));
+    }
+
+    @Test
+    @DisplayName("S16 GET /api/v1/tracking で全件が最終更新日時降順で返る")
+    void listTrackings_全件取得() throws Exception {
+        seedTrackingSummary("TRK-A1B2C3D4E5");
+        seedTrackingSummary("TRK-Z9Y8X7W6V5");
+
+        mockMvc.perform(get("/api/v1/tracking"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$[*].trackingNumber").exists())
+                .andExpect(jsonPath("$[*].currentStatus").exists())
+                .andExpect(jsonPath("$[*].originUnlocode").exists())
+                .andExpect(jsonPath("$[*].destinationUnlocode").exists());
     }
 
     @Test
