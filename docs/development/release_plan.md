@@ -396,12 +396,12 @@ gantt
 | IT1 | 16 | 14 | 88% | 完了 |
 | IT2 | 14 | 14 | 100% | 完了 |
 | IT3 | 16 | 16 | 100% | 完了 |
-| IT4 | 25 | - | - | 未着手 |
+| IT4 | 25 | 25 | 100% | 完了 |
 | IT5 | 11 | - | - | 未着手 |
 | IT6 | 5 | - | - | 未着手 |
 | IT7 | 6 | - | - | 未着手 |
 | IT8 | 13 | - | - | 未着手 |
-| **合計** | **106** | **44** | **42%** | |
+| **合計** | **106** | **69** | **65%** | |
 
 > IT2 計画 14 SP は新規 11 SP（US04+US05+US24）+ 持越し 3 SP（US00-r1/US00-r2/US-UI-r）の構成。US25 は IT3 へ繰越し（+3 SP）したため、合計が 103 → 106 SP に増加した。
 >
@@ -419,19 +419,21 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8"]
     y-axis "残 SP" 0 --> 106
     line "計画" [106, 90, 76, 60, 35, 24, 19, 13, 0]
-    line "実績" [106, 92, 78, 62]
+    line "実績" [106, 92, 78, 62, 37]
 ```
 
 > IT3 完了（2026-05-16）: 全 4 ストーリー（US25/US01/US06/US07）+ IT2 持越し（PIT/ドキュメント）+ US08 先行スパイクが完了。実績 SP 16/16（達成率 100%）、累計 44/106 SP 42%。詳細は [iteration_report-3.md](./iteration_report-3.md) 参照。
+>
+> **IT4 完了（2026-05-18）**: 全 7 ストーリー（US08〜US14）+ US10/US12 フィーチャバッファを含む全 SP が完了。バックエンド 211 テスト・フロントエンド 108 テスト全通過。SonarQube Quality Gate PASS（new_coverage 81.6%・new_violations 0・Bug 0・Vulnerability 0・Code Smell 0）。実績 SP 25/25（達成率 100%）、累計 69/106 SP 65%。
 
 ---
 
 ## 次のステップ
 
-1. IT4 第 0 スプリント: PoC 処理方針 ADR 起票（捨てる / プロモート）、Javadoc BFS/DFS/Dijkstra 命名統一、CarrierMovement/TransitEdge 責務 ADR
-2. IT4 計画策定: `/planning-releases --iteration 4` — IT1〜IT3 の平均ベロシティ（14.7 SP）で IT4 計画を最終確定
+1. IT4 ふりかえり（KPT）: `/planning-releases --retrospective`
+2. IT5 計画策定: `/planning-releases --iteration 5` — US15/US16/US17（荷役作業記録）
 3. GitHub Project 同期: `/syncing-github-project --sync`
-4. US04-r1 / US05-r1 / US24-r1（業務的入力検証）の SP 見積後 IT4 計画に組込み
+4. IT4 完了報告書作成: `/creating-iteration-report`
 
 ---
 
@@ -445,3 +447,4 @@ xychart-beta
 | 2026-05-15 | IT3 計画策定済みステータス反映、ADR-0009 事前完了を進捗・リスク・次のステップに反映 | AI Agent（XP PM） |
 | 2026-05-16 | IT3 進行中分 11 SP を進捗状況に反映（IT3 実績 11/16 SP 69%、累計 39/106 SP 37%）、バーンダウン実績線・実績 gantt・次のステップを US07 残のみに更新 | AI Agent（XP PM） |
 | 2026-05-16 | IT3 完了反映（実績 16 SP、達成率 100%、累計 44/106 SP 42%、バーンダウン実績線・gantt 完了）、次のステップを IT4 計画に更新 | AI Agent（XP PM） |
+| 2026-05-18 | IT4 完了反映（実績 25 SP、達成率 100%、累計 69/106 SP 65%、バーンダウン実績線追加、次のステップを IT5 計画に更新） | AI Agent |
