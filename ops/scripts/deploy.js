@@ -12,6 +12,8 @@
  *   - deploy:dev:release:bookingms : bookingms をリリース
  *   - deploy:dev:push:routingms  : routingms をビルド・プッシュ
  *   - deploy:dev:release:routingms : routingms をリリース
+ *   - deploy:dev:push:handlingms : handlingms をビルド・プッシュ
+ *   - deploy:dev:release:handlingms : handlingms をリリース
  *   - deploy:dev:push:gatewayms  : gatewayms をビルド・プッシュ
  *   - deploy:dev:release:gatewayms : gatewayms をリリース
  *   - deploy:dev:push:frontend   : frontend をビルド・プッシュ
@@ -19,6 +21,7 @@
  *   - deploy:dev:logs:authms     : authms のログを表示
  *   - deploy:dev:logs:bookingms  : bookingms のログを表示
  *   - deploy:dev:logs:routingms  : routingms のログを表示
+ *   - deploy:dev:logs:handlingms : handlingms のログを表示
  *   - deploy:dev:logs:gatewayms  : gatewayms のログを表示
  *   - deploy:dev:logs:frontend   : frontend のログを表示
  *
@@ -87,7 +90,7 @@ export default function (gulp) {
   gulp.task('deploy:dev:build:backend', async (done) => {
     const err = await runStreaming(
       gradlewCmd,
-      [':authms:bootJar', ':bookingms:bootJar', ':routingms:bootJar', ':gatewayms:bootJar'],
+      [':authms:bootJar', ':bookingms:bootJar', ':routingms:bootJar', ':handlingms:bootJar', ':gatewayms:bootJar'],
       { cwd: backendDir }
     );
     done(err);
@@ -180,6 +183,36 @@ export default function (gulp) {
     const err = await runStreaming(
       'heroku',
       ['logs', '--tail', '-a', appName('routingms')]
+    );
+    done(err);
+  });
+
+  // ── handlingms ───────────────────────────────────────────────
+  gulp.task('deploy:dev:push:handlingms', async (done) => {
+    const app = appName('handlingms');
+    const image = `registry.heroku.com/${app}/web`;
+    const buildErr = await runStreaming(
+      'docker',
+      ['build', '--platform', getPlatform(), '--provenance=false', '-f', 'Dockerfile.heroku', '-t', image, '.'],
+      { cwd: path.join(backendDir, 'handlingms') }
+    );
+    if (buildErr) { done(buildErr); return; }
+    const pushErr = await runStreaming('docker', ['push', image]);
+    done(pushErr);
+  });
+
+  gulp.task('deploy:dev:release:handlingms', async (done) => {
+    const err = await runStreaming(
+      'heroku',
+      ['container:release', 'web', '-a', appName('handlingms')]
+    );
+    done(err);
+  });
+
+  gulp.task('deploy:dev:logs:handlingms', async (done) => {
+    const err = await runStreaming(
+      'heroku',
+      ['logs', '--tail', '-a', appName('handlingms')]
     );
     done(err);
   });
@@ -283,6 +316,16 @@ export default function (gulp) {
     done(err);
   });
 
+  gulp.task('deploy:dev:config:handlingms', async (done) => {
+    const err = await runStreaming('heroku', [
+      'config:set',
+      'SPRING_PROFILES_ACTIVE=heroku',
+      'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo',
+      '-a', appName('handlingms'),
+    ]);
+    done(err);
+  });
+
   gulp.task('deploy:dev:config:gatewayms', async (done) => {
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
@@ -298,6 +341,7 @@ export default function (gulp) {
       `AUTHMS_URL=${getAppDomain('authms')}`,
       `BOOKINGMS_URL=${getAppDomain('bookingms')}`,
       `ROUTINGMS_URL=${getAppDomain('routingms')}`,
+      `HANDLINGMS_URL=${getAppDomain('handlingms')}`,
       '-a', appName('gatewayms'),
     ]);
     done(err);
@@ -321,6 +365,7 @@ export default function (gulp) {
       'deploy:dev:config:authms',
       'deploy:dev:config:bookingms',
       'deploy:dev:config:routingms',
+      'deploy:dev:config:handlingms',
       'deploy:dev:config:gatewayms',
       'deploy:dev:config:frontend'
     )
@@ -342,6 +387,7 @@ export default function (gulp) {
         gulp.series('deploy:dev:push:authms', 'deploy:dev:release:authms'),
         gulp.series('deploy:dev:push:bookingms', 'deploy:dev:release:bookingms'),
         gulp.series('deploy:dev:push:routingms', 'deploy:dev:release:routingms'),
+        gulp.series('deploy:dev:push:handlingms', 'deploy:dev:release:handlingms'),
         gulp.series('deploy:dev:push:gatewayms', 'deploy:dev:release:gatewayms'),
         gulp.series('deploy:dev:push:frontend', 'deploy:dev:release:frontend')
       )
@@ -351,7 +397,7 @@ export default function (gulp) {
   // ── アプリを開く ─────────────────────────────────────────────
   gulp.task('deploy:dev:open', async (done) => {
     const prefix = getPrefix();
-    const apps = ['authms', 'bookingms', 'routingms', 'gatewayms', 'frontend'];
+    const apps = ['authms', 'bookingms', 'routingms', 'handlingms', 'gatewayms', 'frontend'];
     for (const svc of apps) {
       const err = await runStreaming('heroku', ['open', '-a', `${prefix}-${svc}`]);
       if (err) { done(err); return; }
@@ -377,6 +423,7 @@ PREFIX: ${prefix}
    heroku create ${prefix}-authms --stack container
    heroku create ${prefix}-bookingms --stack container
    heroku create ${prefix}-routingms --stack container
+   heroku create ${prefix}-handlingms --stack container
    heroku create ${prefix}-gatewayms --stack container
    heroku create ${prefix}-frontend --stack container
 
