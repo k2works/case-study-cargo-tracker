@@ -812,6 +812,7 @@ S01 --> [*] : ログアウト
 - [リリース計画](./release_plan.md)
 - [イテレーション 3 計画](./iteration_plan-3.md)
 - [イテレーション 3 完了報告書](./iteration_report-3.md)
+- [イテレーション 4 完了報告書](./iteration_report-4.md)
 - [ADR-0010 US08 PoC 処理方針](../adr/0010-us08-poc-promotion-policy.md)
 - [ADR-0011 CarrierMovement と TransitEdge の責務分離](../adr/0011-carrier-movement-and-transit-edge-responsibility.md)
 - [US08 先行スパイク コードレビュー](../review/us08_spike_review_20260516.md)
