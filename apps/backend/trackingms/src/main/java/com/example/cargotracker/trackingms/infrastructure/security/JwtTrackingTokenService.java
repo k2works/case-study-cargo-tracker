@@ -108,7 +108,7 @@ public final class JwtTrackingTokenService implements TrackingTokenService {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (ExpiredJwtException e) {
+        } catch (ExpiredJwtException _) {
             throw new TrackingTokenExpiredException("JWT exp 経過");
         } catch (JwtException | IllegalArgumentException e) {
             throw new InvalidTrackingTokenException("JWT 検証に失敗しました", e);

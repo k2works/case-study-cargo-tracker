@@ -84,14 +84,22 @@ public final class TrackingActivity {
      *
      * <p>{@link com.example.cargotracker.trackingms.domain.model.valueobjects.EventSource#MANUAL}
      * として {@link TransportStatusUpdatedEvent} を発行する。</p>
+     *
+     * <p>IT6 暫定: 初期化前の Aggregate に対する呼び出しでも動作するよう、
+     * {@code this.trackingNumber} が未設定の場合は Command 引数の値をフォールバックに使う。
+     * TI06+ で {@code CargoTrackedEvent} 駆動の自動初期化が完成すれば、本フォールバックは不要となる。</p>
      */
     @CommandHandler
     public void updateStatus(
             UpdateTransportStatusCommand command,
             EventAppender appender) {
 
+        TrackingNumber tn = (this.trackingNumber != null)
+                ? this.trackingNumber
+                : new TrackingNumber(command.trackingNumber());
+
         appender.append(new TransportStatusUpdatedEvent(
-                this.trackingNumber,
+                tn,
                 command.newStatus(),
                 command.location(),
                 command.updatedAt(),

@@ -58,7 +58,7 @@ jobs:
 
       - name: Build backend bootJars
         working-directory: apps/backend
-        run: ./gradlew :authms:bootJar :bookingms:bootJar :routingms:bootJar :handlingms:bootJar :gatewayms:bootJar --no-daemon
+        run: ./gradlew :authms:bootJar :bookingms:bootJar :routingms:bootJar :handlingms:bootJar :trackingms:bootJar :gatewayms:bootJar --no-daemon
 
       - name: Install frontend dependencies
         working-directory: apps/frontend
@@ -95,11 +95,17 @@ jobs:
             > logs/handlingms.log 2>&1 &
           echo $! > logs/handlingms.pid
 
+          # trackingms (8086) - 同上（IT6 新設）
+          nohup java -jar apps/backend/trackingms/build/libs/trackingms.jar \
+            > logs/trackingms.log 2>&1 &
+          echo $! > logs/trackingms.pid
+
           # gatewayms (8080) - 環境変数で内部ルーティング先を上書き
           AUTHMS_URL=http://localhost:8081 \
           BOOKINGMS_URL=http://localhost:8082 \
           ROUTINGMS_URL=http://localhost:8083 \
           HANDLINGMS_URL=http://localhost:8085 \
+          TRACKINGMS_URL=http://localhost:8086 \
           nohup java -jar apps/backend/gatewayms/build/libs/gatewayms.jar \
             > logs/gatewayms.log 2>&1 &
           echo $! > logs/gatewayms.pid
@@ -112,6 +118,7 @@ jobs:
             "bookingms http://localhost:8082/actuator/health" \
             "routingms http://localhost:8083/actuator/health" \
             "handlingms http://localhost:8085/actuator/health" \
+            "trackingms http://localhost:8086/actuator/health" \
             "gatewayms http://localhost:8080/actuator/health"; do
             name=${endpoint%% *}
             url=${endpoint##* }
@@ -167,8 +174,8 @@ jobs:
             echo ""
             echo "| 項目 | 値 |"
             echo "|------|-----|"
-            echo "| Backend ビルド | bootJar (authms / bookingms / routingms / handlingms / gatewayms) |"
+            echo "| Backend ビルド | bootJar (authms / bookingms / routingms / handlingms / trackingms / gatewayms) |"
             echo "| プロファイル | local-h2 (H2 + Axon ダミー) |"
             echo "| ブラウザ | Chromium |"
-            echo "| シナリオ | login-shipper / login-booking / login-voyage / login-handling / routing-workbench |"
+            echo "| シナリオ | login-shipper / login-booking / login-voyage / login-handling / routing-workbench / login-tracking |"
           } >> "$GITHUB_STEP_SUMMARY"

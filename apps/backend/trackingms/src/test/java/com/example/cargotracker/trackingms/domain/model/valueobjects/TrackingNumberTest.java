@@ -42,7 +42,8 @@ class TrackingNumberTest {
     @Test
     @DisplayName("25 文字を超える値を拒否する")
     void rejectTooLong() {
-        assertThatThrownBy(() -> new TrackingNumber("TRK-" + "A".repeat(25)))
+        String tooLong = "TRK-" + "A".repeat(25);
+        assertThatThrownBy(() -> new TrackingNumber(tooLong))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("25 文字");
     }

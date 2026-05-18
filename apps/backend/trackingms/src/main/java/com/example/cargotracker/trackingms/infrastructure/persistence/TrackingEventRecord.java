@@ -25,6 +25,8 @@ public class TrackingEventRecord {
         // MyBatis default constructor
     }
 
+    // S107: Read Model POJO は tracking_event テーブルの全列を表現するため引数 7 個制限を緩和する
+    @SuppressWarnings("java:S107")
     public TrackingEventRecord(
             Long eventId,
             String trackingNumber,

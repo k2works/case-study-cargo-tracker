@@ -63,12 +63,12 @@ class TrackingTokenServiceTest {
     @DisplayName("delivered_at から 7 日経過後は TOKEN_EXPIRED")
     void verify_配送後7日経過で失効() {
         var issueService = createService(NOW);
-        JwtToken token = issueService.issue(TRK, null);
+        String jwtString = issueService.issue(TRK, null).token();
 
         var deliveredAt = NOW.plusDays(10);
         var verifyService = createService(deliveredAt.plusDays(8));
 
-        assertThatThrownBy(() -> verifyService.verify(token.token(), deliveredAt))
+        assertThatThrownBy(() -> verifyService.verify(jwtString, deliveredAt))
                 .isInstanceOf(TrackingTokenExpiredException.class);
     }
 
@@ -76,11 +76,11 @@ class TrackingTokenServiceTest {
     @DisplayName("exp 経過後は TOKEN_EXPIRED")
     void verify_exp経過で失効() {
         var issueService = createService(NOW);
-        JwtToken token = issueService.issue(TRK, null);
+        String jwtString = issueService.issue(TRK, null).token();
 
         var verifyService = createService(NOW.plusDays(31));
 
-        assertThatThrownBy(() -> verifyService.verify(token.token(), null))
+        assertThatThrownBy(() -> verifyService.verify(jwtString, null))
                 .isInstanceOf(TrackingTokenExpiredException.class);
     }
 
@@ -88,14 +88,14 @@ class TrackingTokenServiceTest {
     @DisplayName("署名が異なる秘密鍵で検証すると TOKEN_INVALID")
     void verify_署名改ざんを検出() {
         var service = createService(NOW);
-        JwtToken token = service.issue(TRK, null);
+        String jwtString = service.issue(TRK, null).token();
 
         var otherService = new JwtTrackingTokenService(
                 "different-secret-different-different-different-different-different-x",
                 "case-study-cargo-tracker", "tracking-public-link", 30, 7,
                 Clock.fixed(Instant.parse("2026-07-20T09:00:00Z"), ZoneId.systemDefault()));
 
-        assertThatThrownBy(() -> otherService.verify(token.token(), null))
+        assertThatThrownBy(() -> otherService.verify(jwtString, null))
                 .isInstanceOf(InvalidTrackingTokenException.class);
     }
 

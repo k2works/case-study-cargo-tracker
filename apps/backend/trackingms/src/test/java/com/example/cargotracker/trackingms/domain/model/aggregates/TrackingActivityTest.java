@@ -136,6 +136,27 @@ class TrackingActivityTest {
     }
 
     @Test
+    @DisplayName("未初期化 Aggregate に対する updateStatus は Command 引数の trackingNumber をフォールバックに使う（IT6 暫定）")
+    void updateStatus_未初期化Aggregateでも動作する() {
+        EventAppender appender = mock(EventAppender.class);
+        var activity = new TrackingActivity();
+
+        var command = new UpdateTransportStatusCommand(
+                TRK.value(),
+                TransportStatus.IN_TRANSIT,
+                Location.of("SGSIN"),
+                LocalDateTime.of(2026, 7, 25, 8, 0),
+                new HandlerId("admin-001"));
+
+        activity.updateStatus(command, appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        var event = (TransportStatusUpdatedEvent) captor.getValue();
+        assertThat(event.trackingNumber()).isEqualTo(TRK);
+    }
+
+    @Test
     @DisplayName("DELIVERED 状態に遷移すると deliveredAt が記録される")
     void on_updated_配送完了で記録() {
         var activity = new TrackingActivity();

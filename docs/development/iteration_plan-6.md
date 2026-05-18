@@ -170,12 +170,12 @@ date: 2026-05-18T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | Playwright E2E: US18 追跡照会フロー（トークン発行 → 照会 → 期限切れ検証） | 2h | [ ] |
-| 4.2 | ci-e2e.yml に trackingms (8086) を起動対象に追加 | 0.5h | [ ] |
-| 4.3 | SonarQube スキャン・violations 修正 | 1h | [ ] |
-| 4.4 | コードレビュー（`developing-review`） | 1h | [ ] |
+| 4.1 | Playwright E2E: US18 追跡照会フロー（トークン発行 → 照会 → 期限切れ検証 + S16 一覧） | 2h | [x] |
+| 4.2 | ci-e2e.yml に trackingms (8086) を起動対象に追加 | 0.5h | [x] |
+| 4.3 | SonarQube スキャン・violations 修正（new_coverage 83.5% / new_violations 0） | 1h | [x] |
+| 4.4 | コードレビュー（`developing-review`） | 1h | 持ち越し |
 
-**小計**: 4.5h
+**小計**: 4.5h（4.1-4.3 完了。4.4 はイテレーションふりかえりで実施）
 
 ### タスク合計
 

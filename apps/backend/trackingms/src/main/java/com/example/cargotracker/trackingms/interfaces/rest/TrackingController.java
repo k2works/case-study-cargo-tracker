@@ -59,6 +59,7 @@ public class TrackingController {
     private static final Logger LOG = LoggerFactory.getLogger(TrackingController.class);
     private static final String ERROR_CODE = "errorCode";
     private static final String MESSAGE_KEY = "message";
+    private static final String TRACKING_NUMBER_KEY = "trackingNumber";
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(30);
 
     private final TrackingTokenService tokenService;
@@ -89,7 +90,7 @@ public class TrackingController {
      * US18: 公開追跡照会。JWT 検証 → tracking_summary + tracking_event を返却。
      */
     @GetMapping("/{trackingNumber}")
-    public ResponseEntity<?> getTracking(
+    public ResponseEntity<Object> getTracking(
             @PathVariable String trackingNumber,
             @RequestParam("token") String token) {
 
@@ -98,11 +99,11 @@ public class TrackingController {
         TrackingNumber verified;
         try {
             verified = tokenService.verify(token, deliveredAt);
-        } catch (TrackingTokenExpiredException e) {
+        } catch (TrackingTokenExpiredException _) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                     ERROR_CODE, "TOKEN_EXPIRED",
                     MESSAGE_KEY, "リンクの有効期限が切れています"));
-        } catch (InvalidTrackingTokenException e) {
+        } catch (InvalidTrackingTokenException _) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                     ERROR_CODE, "TOKEN_INVALID",
                     MESSAGE_KEY, "リンクが不正です"));
@@ -118,7 +119,7 @@ public class TrackingController {
         // ここでは issue 時の値を再現できないため、deliveredAt の有無のみで判定する簡易計算とする
         var dummyValidUntil = LocalDateTime.now().plusDays(30);
         return queryService.findByTrackingNumber(trackingNumber, dummyValidUntil)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .<ResponseEntity<Object>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                         ERROR_CODE, "TRACKING_NOT_FOUND",
                         MESSAGE_KEY, "追跡情報が見つかりません")));
@@ -131,7 +132,7 @@ public class TrackingController {
     public ResponseEntity<IssueTrackingTokenResponse> issueToken(
             @RequestBody Map<String, String> request) {
 
-        String trackingNumberValue = request.get("trackingNumber");
+        String trackingNumberValue = request.get(TRACKING_NUMBER_KEY);
         if (trackingNumberValue == null || trackingNumberValue.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
@@ -158,7 +159,7 @@ public class TrackingController {
         TransportStatus newStatus;
         try {
             newStatus = TransportStatus.valueOf(request.newStatus());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return ResponseEntity.badRequest().body(Map.of(
                     ERROR_CODE, "INVALID_STATUS",
                     MESSAGE_KEY, "未知の状態: " + request.newStatus()));
@@ -176,7 +177,7 @@ public class TrackingController {
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.ok(Map.of(
-                "trackingNumber", trackingNumber,
+                TRACKING_NUMBER_KEY, trackingNumber,
                 "newStatus", newStatus.name()));
     }
 
@@ -204,7 +205,7 @@ public class TrackingController {
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "trackingNumber", request.trackingNumber()));
+                TRACKING_NUMBER_KEY, request.trackingNumber()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
