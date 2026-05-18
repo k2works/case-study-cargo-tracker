@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper">
+
+    <resultMap id="cargoSnapshotResultMap"
+               type="com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord">
+        <id property="bookingId" column="booking_id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="cargoType" column="cargo_type"/>
+        <result property="arrivalDeadline" column="arrival_deadline"/>
+        <result property="bookingStatus" column="booking_status"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="upsert"
+            parameterType="com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord">
+        MERGE INTO cargo_snapshot (
+            booking_id, tracking_number, origin_unlocode, destination_unlocode,
+            cargo_type, arrival_deadline, booking_status, updated_at
+        ) KEY (booking_id) VALUES (
+            #{bookingId}, #{trackingNumber}, #{originUnlocode}, #{destinationUnlocode},
+            #{cargoType}, #{arrivalDeadline}, #{bookingStatus}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="findByTrackingNumber" resultMap="cargoSnapshotResultMap">
+        SELECT * FROM cargo_snapshot WHERE tracking_number = #{trackingNumber}
+    </select>
+
+    <select id="findByBookingId" resultMap="cargoSnapshotResultMap">
+        SELECT * FROM cargo_snapshot WHERE booking_id = #{bookingId}
+    </select>
+
+    <update id="updateTrackingNumber">
+        UPDATE cargo_snapshot
+        SET tracking_number = #{trackingNumber},
+            booking_status = #{bookingStatus},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE booking_id = #{bookingId}
+    </update>
+
+</mapper>

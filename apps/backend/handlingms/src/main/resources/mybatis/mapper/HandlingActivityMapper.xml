@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityMapper">
+
+    <resultMap id="handlingActivityResultMap"
+               type="com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityRecord">
+        <id property="activityId" column="activity_id"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="cargoType" column="cargo_type"/>
+        <result property="handlingType" column="handling_type"/>
+        <result property="occurredAt" column="occurred_at"/>
+        <result property="recordedAt" column="recorded_at"/>
+        <result property="unlocode" column="unlocode"/>
+        <result property="voyageNumber" column="voyage_number"/>
+        <result property="handlerId" column="handler_id"/>
+        <result property="unexpected" column="unexpected"/>
+        <result property="version" column="version"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityRecord">
+        INSERT INTO handling_activity (
+            activity_id, booking_id, tracking_number, origin_unlocode, destination_unlocode,
+            cargo_type, handling_type, occurred_at, recorded_at, unlocode,
+            voyage_number, handler_id, unexpected, version
+        ) VALUES (
+            #{activityId}, #{bookingId}, #{trackingNumber}, #{originUnlocode}, #{destinationUnlocode},
+            #{cargoType}, #{handlingType}, #{occurredAt}, CURRENT_TIMESTAMP, #{unlocode},
+            #{voyageNumber}, #{handlerId}, #{unexpected}, 0
+        )
+    </insert>
+
+    <select id="findByActivityId" resultMap="handlingActivityResultMap">
+        SELECT * FROM handling_activity WHERE activity_id = #{activityId}
+    </select>
+
+    <select id="findByTrackingNumber" resultMap="handlingActivityResultMap">
+        SELECT * FROM handling_activity
+        WHERE tracking_number = #{trackingNumber}
+        ORDER BY occurred_at DESC
+    </select>
+
+    <select id="findAll" resultMap="handlingActivityResultMap">
+        SELECT * FROM handling_activity ORDER BY occurred_at DESC
+    </select>
+
+</mapper>
