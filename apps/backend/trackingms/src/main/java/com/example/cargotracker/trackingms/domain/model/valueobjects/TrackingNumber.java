@@ -1,23 +1,30 @@
 package com.example.cargotracker.trackingms.domain.model.valueobjects;
 
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 /**
- * 追跡番号。書式は {@code TRK-XXXXXXXXXX}（TRK- + 大文字英数 10 桁）。
+ * 追跡番号を表す値オブジェクト。
  *
- * <p>bookingms の {@code TrackingNumber} と同一書式。{@code CargoTrackedEvent} 経由で
- * 受領して trackingms 内でも値オブジェクトとして扱う。</p>
+ * <p>形式: {@code TRK-YYYYMMDD-XXXXXXXX}（IT4 bookingms 実装と整合・例: {@code TRK-20260518-3053F0B8}）。
+ * trackingms は bookingms から {@code CargoTrackedEvent} 経由で受け取るため、
+ * ここでは最小限の検証のみ行う（handlingms と同じ方針）。</p>
+ *
+ * <p>data-model.md には「{@code TRK-} + 大文字英数 10 桁」と記載されているが、
+ * bookingms の実際の生成ロジック {@code "TRK-" + YYYYMMDD + "-" + UUID 前 8 桁} と
+ * 整合しないため、サービス間で受け渡されるフォーマットを正としている。</p>
  */
 public record TrackingNumber(String value) {
 
-    private static final Pattern PATTERN = Pattern.compile("^TRK-[0-9A-Z]{10}$");
-
     public TrackingNumber {
         Objects.requireNonNull(value, "value");
-        if (!PATTERN.matcher(value).matches()) {
-            throw new IllegalArgumentException(
-                    "TrackingNumber は 'TRK-' + 大文字英数 10 桁である必要があります: " + value);
+        if (value.isBlank()) {
+            throw new IllegalArgumentException("TrackingNumber は空文字にできません");
+        }
+        if (!value.startsWith("TRK-")) {
+            throw new IllegalArgumentException("TrackingNumber は 'TRK-' で始まる必要があります: " + value);
+        }
+        if (value.length() > 25) {
+            throw new IllegalArgumentException("TrackingNumber は 25 文字以内である必要があります: " + value);
         }
     }
 }

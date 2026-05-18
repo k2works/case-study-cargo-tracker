@@ -10,8 +10,15 @@ import org.junit.jupiter.api.Test;
 class TrackingNumberTest {
 
     @Test
-    @DisplayName("正しい書式（TRK- + 大文字英数 10 桁）で生成できる")
-    void canCreateWithValidFormat() {
+    @DisplayName("bookingms 実装の TRK-YYYYMMDD-XXXXXXXX 形式を許容する")
+    void canCreateWithBookingmsFormat() {
+        TrackingNumber tn = new TrackingNumber("TRK-20260518-3053F0B8");
+        assertThat(tn.value()).isEqualTo("TRK-20260518-3053F0B8");
+    }
+
+    @Test
+    @DisplayName("シンプルな TRK- + 任意英数の形式も許容する")
+    void canCreateWithSimpleFormat() {
         TrackingNumber tn = new TrackingNumber("TRK-ABC1234567");
         assertThat(tn.value()).isEqualTo("TRK-ABC1234567");
     }
@@ -25,17 +32,19 @@ class TrackingNumberTest {
     }
 
     @Test
-    @DisplayName("英数 10 桁未満は拒否する")
-    void rejectTooShort() {
-        assertThatThrownBy(() -> new TrackingNumber("TRK-ABC123"))
-                .isInstanceOf(IllegalArgumentException.class);
+    @DisplayName("空文字を拒否する")
+    void rejectBlank() {
+        assertThatThrownBy(() -> new TrackingNumber(""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("空文字");
     }
 
     @Test
-    @DisplayName("小文字を含む場合は拒否する")
-    void rejectLowercase() {
-        assertThatThrownBy(() -> new TrackingNumber("TRK-abc1234567"))
-                .isInstanceOf(IllegalArgumentException.class);
+    @DisplayName("25 文字を超える値を拒否する")
+    void rejectTooLong() {
+        assertThatThrownBy(() -> new TrackingNumber("TRK-" + "A".repeat(25)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("25 文字");
     }
 
     @Test
