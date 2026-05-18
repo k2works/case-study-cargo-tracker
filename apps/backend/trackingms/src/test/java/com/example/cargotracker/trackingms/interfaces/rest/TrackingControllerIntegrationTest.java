@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -203,6 +204,44 @@ class TrackingControllerIntegrationTest {
                 .andExpect(jsonPath("$[*].currentStatus").exists())
                 .andExpect(jsonPath("$[*].originUnlocode").exists())
                 .andExpect(jsonPath("$[*].destinationUnlocode").exists());
+    }
+
+    @Test
+    @DisplayName("TI06 PUT /api/v1/tracking/{tn}/status で UpdateTransportStatusCommand が送信される")
+    void updateStatus_CommandGatewayへ送信() throws Exception {
+        var trackingNumber = "TRK-S1T2A3T4U5";
+
+        mockMvc.perform(put("/api/v1/tracking/{tn}/status", trackingNumber)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "newStatus": "IN_TRANSIT",
+                                    "unlocode": "SGSIN",
+                                    "updatedAt": "2026-07-25T08:00:00",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackingNumber").value(trackingNumber))
+                .andExpect(jsonPath("$.newStatus").value("IN_TRANSIT"));
+    }
+
+    @Test
+    @DisplayName("PUT /status で不正な状態を渡すと 400 INVALID_STATUS")
+    void updateStatus_未知の状態で400() throws Exception {
+        var trackingNumber = "TRK-S1T2A3T4U5";
+
+        mockMvc.perform(put("/api/v1/tracking/{tn}/status", trackingNumber)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "newStatus": "UNKNOWN_STATUS",
+                                    "unlocode": "SGSIN",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_STATUS"));
     }
 
     @Test

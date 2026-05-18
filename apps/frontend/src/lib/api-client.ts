@@ -74,5 +74,15 @@ export const handlingApiClient = {
     request<T>(env.handlingApiBaseUrl, path, { method: 'DELETE' }),
 }
 
+export const trackingApiClient = {
+  get: <T>(path: string) => request<T>(env.trackingApiBaseUrl, path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(env.trackingApiBaseUrl, path, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(env.trackingApiBaseUrl, path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T>(path: string) =>
+    request<T>(env.trackingApiBaseUrl, path, { method: 'DELETE' }),
+}
+
 // 後方互換（認証系デフォルト）
 export const apiClient = authApiClient

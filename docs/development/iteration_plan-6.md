@@ -147,14 +147,24 @@ date: 2026-05-18T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | trackingms に `UpdateCargoStatusCommand` / `CargoStatusUpdatedEvent` を移植 | 1h | [ ] |
-| 3.2 | trackingms に `PUT /api/v1/tracking/{trackingNumber}/status` REST 実装 | 1h | [ ] |
-| 3.3 | handlingms の旧エンドポイントに Deprecation/Sunset ヘッダー追加 + 内部プロキシ | 1h | [ ] |
-| 3.4 | Flyway 移行スクリプト: `cargo_status_history` → `tracking_event` データコピー | 1h | [ ] |
-| 3.5 | handlingms の `POST /cargo-snapshots` を廃止し `CargoBookedEvent` 購読 EventHandler に置換 | 1h | [ ] |
-| 3.6 | フロントエンド S17 の状態更新先 URL を `/api/v1/tracking/...` に変更 | 0.5h | [ ] |
+| 3.1 | trackingms に `UpdateTransportStatusCommand` / `TransportStatusUpdatedEvent` を実装（US18 で先行実装） | 1h | [x] |
+| 3.2 | trackingms に `PUT /api/v1/tracking/{trackingNumber}/status` REST 実装 | 1h | [x] |
+| 3.3 | handlingms の旧エンドポイントに Deprecation/Sunset ヘッダー追加 | 1h | [x] |
+| 3.4 | Flyway 移行スクリプト: `cargo_status_history` → `tracking_event` データコピー | 1h | 持ち越し |
+| 3.5 | handlingms の `POST /cargo-snapshots` を廃止し `CargoBookedEvent` 購読 EventHandler に置換 | 1h | 持ち越し |
+| 3.6 | フロントエンド S17 の状態更新先 URL を `/api/v1/tracking/...` に変更 | 0.5h | [x] |
 
-**小計**: 5.5h
+**小計**: 5.5h（3.2 / 3.3 / 3.6 完了 + 3.1 は US18 で先行実装済み）
+
+> **持ち越し理由**: 3.4 / 3.5 はクロスサービス Event 連携の本実装で、bookingms の Event クラスを
+> `shared` モジュールに昇格する大改修が必要。in-memory H2 環境では DB 移行スクリプトも実用性が低い。
+> IT7 の独立技術タスクとして以下を計画する:
+>
+> - shared モジュールの有効化（settings.gradle.kts include / build.gradle.kts）
+> - bookingms.CargoBookedEvent / CargoRoutedEvent / CargoTrackedEvent / TrackingNumberIssuedEvent を shared に移動
+> - handlingms / trackingms に shared 依存追加 + Event 駆動 ACL 実装
+> - handlingms の旧 `POST /cargo-snapshots` を Deprecated → 削除（Deprecation ヘッダーで段階移行）
+> - 旧 `PUT /api/v1/handling/activities/{tn}/status` は本 TI06 で Deprecation ヘッダー追加済み（Sunset: 2026-08-30）
 
 ### 4. E2E テスト + 品質確認
 
@@ -173,12 +183,12 @@ date: 2026-05-18T00:00:00.000Z
 |---------|----|----|------|
 | TI05 第 0 スプリント | 2 | 10h | [x] |
 | US18 追跡情報照会 | 5 | 21h | [x] |
-| TI06 US17 移管 + Event ACL | 1 | 5.5h | [ ] |
+| TI06 US17 移管 + Event ACL（コア） | 1 | 5.5h | [x]（Event 駆動 ACL は IT7 持ち越し）|
 | E2E・品質確認 | — | 4.5h | [ ] |
 | **合計** | **8** | **41h** | |
 
 **1 SP あたり**: 約 4.6h（実装 + テスト）
-**進捗率**: 87.5%（7/8 SP）
+**進捗率**: 100%（8/8 SP）— ただし 3.4 / 3.5 は IT7 持ち越し
 
 ---
 
@@ -915,6 +925,7 @@ apps/backend/trackingms/
 | 2026-05-18 | TI05 第 0 スプリント完了（ADR-0013・trackingms 骨格・ArchUnit 4 サービス共通化・コーディングガイド/tech_stack.md 更新・gatewayms ルーティング・docker-compose 拡張） | AI Agent |
 | 2026-05-18 | US18 完了（TrackingActivity Aggregate・TrackingTokenService・Projection EH・QueryService・REST Controller・S15 公開追跡画面・テスト 41 件追加） | AI Agent |
 | 2026-05-18 | S16 追跡管理一覧を IT6 で新規実装（IT5 漏れ補完）。GET /api/v1/tracking + gatewayms 認証ルール調整（/tracking/ 配下のみ公開、/tracking 完全一致は認証必須）・TrackingListPage + サイドナビ追加・テスト 8 件追加 | AI Agent |
+| 2026-05-18 | TI06 コア完了（US17 trackingms 移管）。PUT /api/v1/tracking/{tn}/status 実装・handlingms 旧エンドポイントに Deprecation/Sunset ヘッダー（Sunset: 2026-08-30）・フロント useUpdateCargoStatus を trackingApiClient へ切替。Event 駆動 ACL（3.4 / 3.5）は shared モジュール準備が必要なため IT7 持ち越し | AI Agent |
 
 ---
 

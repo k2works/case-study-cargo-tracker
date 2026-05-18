@@ -172,7 +172,12 @@ public class HandlingController {
     }
 
     /**
-     * 貨物状態を手動更新する（US17）。
+     * 貨物状態を手動更新する（US17・IT5 暫定実装）。
+     *
+     * <p><b>Deprecated（TI06 以降）</b>: IT6 で trackingms に移管されたため、本エンドポイントは
+     * 後方互換のためのみ維持される。新規呼び出しは {@code PUT /api/v1/tracking/{tn}/status} を
+     * 使用すること。レスポンスヘッダーで {@code Deprecation: true}, {@code Sunset}（次イテレーション末）,
+     * {@code Link: /api/v1/tracking/{tn}/status} を返す（RFC 9745 / RFC 8594）。</p>
      */
     @PutMapping("/activities/{trackingNumber}/status")
     public ResponseEntity<Object> updateStatus(
@@ -209,11 +214,19 @@ public class HandlingController {
         // 3. CommandGateway 経由で Aggregate に送信
         sendAndWaitWithTimeout(command);
 
-        return ResponseEntity.ok(new CargoStatusUpdateResponse(
-                command.activityId(),
-                trackingNumber,
-                request.newStatus(),
-                request.unlocode()));
+        return ResponseEntity.ok()
+                .header("Deprecation", "true")
+                .header("Sunset", "Sun, 30 Aug 2026 23:59:59 GMT")
+                .header("Link",
+                        "</api/v1/tracking/" + trackingNumber + "/status>; rel=\"successor-version\"")
+                .header("Warning",
+                        "299 - \"This endpoint is deprecated. Use PUT /api/v1/tracking/"
+                                + trackingNumber + "/status (TI06 移管)\"")
+                .body(new CargoStatusUpdateResponse(
+                        command.activityId(),
+                        trackingNumber,
+                        request.newStatus(),
+                        request.unlocode()));
     }
 
     /**

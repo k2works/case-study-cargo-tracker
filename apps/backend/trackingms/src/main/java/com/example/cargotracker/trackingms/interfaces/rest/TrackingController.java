@@ -2,17 +2,21 @@ package com.example.cargotracker.trackingms.interfaces.rest;
 
 import com.example.cargotracker.trackingms.application.query.TrackingQueryService;
 import com.example.cargotracker.trackingms.domain.model.commands.InitializeTrackingCommand;
+import com.example.cargotracker.trackingms.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.trackingms.domain.model.services.InvalidTrackingTokenException;
 import com.example.cargotracker.trackingms.domain.model.services.TrackingTokenExpiredException;
 import com.example.cargotracker.trackingms.domain.model.services.TrackingTokenService;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.trackingms.domain.model.valueobjects.HandlerId;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.JwtToken;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.Leg;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.cargotracker.trackingms.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.InitializeTrackingRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.IssueTrackingTokenResponse;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemResponse;
+import com.example.cargotracker.trackingms.interfaces.rest.dto.UpdateTrackingStatusRequest;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +33,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -38,12 +43,14 @@ import org.springframework.web.bind.annotation.RestController;
  * 追跡 REST API（US18 / TI06）。
  *
  * <ul>
+ *   <li>{@code GET /api/v1/tracking} — S16 追跡管理一覧（管理者）</li>
  *   <li>{@code GET /api/v1/tracking/{trackingNumber}?token=<JWT>} — 公開追跡照会（gatewayms 経由でログイン不要）</li>
+ *   <li>{@code PUT /api/v1/tracking/{trackingNumber}/status} — US17 移管後の貨物状態手動更新（管理者・TI06）</li>
  *   <li>{@code POST /api/v1/tracking/_internal/issue-token} — JWT 発行（gatewayms 経由で管理者認証）</li>
  *   <li>{@code POST /api/v1/tracking/_internal/initialize} — 追跡集約初期化（IT6 暫定。TI06 で Event 駆動化）</li>
  * </ul>
  *
- * <p>関連 ADR: ADR-0013 / iteration_plan-6.md API 設計セクション</p>
+ * <p>関連 ADR: ADR-0012 / ADR-0013 / iteration_plan-6.md API 設計セクション</p>
  */
 @RestController
 @RequestMapping("/api/v1/tracking")
@@ -135,6 +142,42 @@ public class TrackingController {
 
         var url = "/tracking/" + trackingNumberValue + "?token=" + jwt.token();
         return ResponseEntity.ok(new IssueTrackingTokenResponse(url, jwt.token(), jwt.validUntil()));
+    }
+
+    /**
+     * TI06: 貨物状態手動更新（US17 移管後）。
+     *
+     * <p>{@link UpdateTransportStatusCommand} を CommandGateway 経由で発行する。
+     * 管理者認証は gatewayms の JWT フィルタで保証される。</p>
+     */
+    @PutMapping("/{trackingNumber}/status")
+    public ResponseEntity<Map<String, String>> updateStatus(
+            @PathVariable String trackingNumber,
+            @RequestBody UpdateTrackingStatusRequest request) {
+
+        TransportStatus newStatus;
+        try {
+            newStatus = TransportStatus.valueOf(request.newStatus());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    ERROR_CODE, "INVALID_STATUS",
+                    MESSAGE_KEY, "未知の状態: " + request.newStatus()));
+        }
+
+        var command = new UpdateTransportStatusCommand(
+                trackingNumber,
+                newStatus,
+                Location.of(request.unlocode()),
+                request.updatedAt() != null ? request.updatedAt() : LocalDateTime.now(),
+                new HandlerId(
+                        (request.operatorId() == null || request.operatorId().isBlank())
+                                ? "system"
+                                : request.operatorId()));
+
+        sendAndWaitWithTimeout(command);
+        return ResponseEntity.ok(Map.of(
+                "trackingNumber", trackingNumber,
+                "newStatus", newStatus.name()));
     }
 
     /**

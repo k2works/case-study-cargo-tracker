@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { handlingApiClient } from '../../../lib/api-client'
+import { handlingApiClient, trackingApiClient } from '../../../lib/api-client'
 import type {
   CargoSnapshotResponse,
   CargoStatusHistoryRecord,
@@ -57,16 +57,23 @@ export function useStatusHistory(trackingNumber: string | undefined) {
   })
 }
 
+/**
+ * 貨物状態手動更新（US17）。
+ *
+ * <p>TI06 で trackingms に移管された {@code PUT /api/v1/tracking/{tn}/status} を呼び出す。
+ * 旧 handlingms エンドポイントは Deprecation 期間を経て削除予定。</p>
+ */
 export function useUpdateCargoStatus(trackingNumber: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: UpdateCargoStatusRequest) =>
-      handlingApiClient.put<CargoStatusUpdateResponse>(
-        `/api/v1/handling/activities/${trackingNumber}/status`,
+      trackingApiClient.put<CargoStatusUpdateResponse>(
+        `/api/v1/tracking/${trackingNumber}/status`,
         data,
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: HANDLING_KEY })
+      queryClient.invalidateQueries({ queryKey: ['tracking'] })
     },
   })
 }
