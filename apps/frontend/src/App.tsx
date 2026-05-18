@@ -19,10 +19,13 @@ import { DashboardPage } from './pages/DashboardPage'
 import { HandlingActivityNewPage } from './pages/HandlingActivityNewPage'
 import { HandlingActivityListPage } from './pages/HandlingActivityListPage'
 import { CargoStatusUpdatePage } from './pages/CargoStatusUpdatePage'
+import { TrackingPublicPage } from './pages/TrackingPublicPage'
 
 export default function App() {
   return (
     <Routes>
+      {/* US18: 公開追跡照会（ログイン不要・サイドナビなし） */}
+      <Route path="/tracking/:trackingNumber" element={<TrackingPublicPage />} />
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
       </Route>

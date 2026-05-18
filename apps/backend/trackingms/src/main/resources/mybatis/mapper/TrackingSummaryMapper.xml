@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryMapper">
+
+    <resultMap id="trackingSummaryResultMap"
+               type="com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryRecord">
+        <id property="trackingNumber" column="tracking_number"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="currentStatus" column="current_status"/>
+        <result property="currentUnlocode" column="current_unlocode"/>
+        <result property="currentVoyageNumber" column="current_voyage_number"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="estimatedArrival" column="estimated_arrival"/>
+        <result property="deliveredAt" column="delivered_at"/>
+        <result property="misrouted" column="misrouted"/>
+        <result property="lastEventAt" column="last_event_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="version" column="version"/>
+    </resultMap>
+
+    <insert id="insert"
+            parameterType="com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryRecord">
+        INSERT INTO tracking_summary (
+            tracking_number, booking_id, current_status, current_unlocode, current_voyage_number,
+            origin_unlocode, destination_unlocode, estimated_arrival, delivered_at,
+            misrouted, last_event_at, created_at, updated_at, version
+        ) VALUES (
+            #{trackingNumber}, #{bookingId}, #{currentStatus}, #{currentUnlocode}, #{currentVoyageNumber},
+            #{originUnlocode}, #{destinationUnlocode}, #{estimatedArrival}, #{deliveredAt},
+            #{misrouted}, #{lastEventAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
+        )
+    </insert>
+
+    <select id="findByTrackingNumber" resultMap="trackingSummaryResultMap">
+        SELECT * FROM tracking_summary WHERE tracking_number = #{trackingNumber}
+    </select>
+
+    <update id="updateCurrentStatus">
+        UPDATE tracking_summary
+        SET current_status = #{currentStatus},
+            current_unlocode = #{currentUnlocode},
+            current_voyage_number = #{currentVoyageNumber},
+            misrouted = #{misrouted},
+            last_event_at = #{lastEventAt},
+            updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE tracking_number = #{trackingNumber}
+    </update>
+
+    <update id="updateDeliveredAt">
+        UPDATE tracking_summary
+        SET delivered_at = #{deliveredAt},
+            updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE tracking_number = #{trackingNumber}
+    </update>
+
+</mapper>

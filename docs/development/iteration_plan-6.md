@@ -131,17 +131,17 @@ date: 2026-05-18T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | `TrackingActivity` Aggregate + `InitializeTrackingCommand` + `UpdateTransportStatusCommand` | 3h | [ ] |
-| 2.2 | `TrackingInitializedEvent` / `TransportStatusUpdatedEvent` 定義 | 1h | [ ] |
-| 2.3 | Flyway V001: `tracking_summary` / `tracking_event` / `tracking_exception` / `cargo_snapshot` テーブル作成 | 2h | [ ] |
-| 2.4 | `TrackingProjectionsEventHandler`: `CargoTrackedEvent` / `HandlingActivityRegisteredEvent` / `TrackingInitializedEvent` 購読 → Read Model 更新 | 3h | [ ] |
-| 2.5 | `TrackingQueryService`（Query Side）: tracking_summary + tracking_event の集約取得 | 2h | [ ] |
-| 2.6 | `TrackingTokenService`: JWT 生成（発行）・検証（exp + delivered_at + 7d） | 2h | [ ] |
-| 2.7 | `TrackingController` `GET /api/v1/tracking/{trackingNumber}` （トークンクエリパラメタ） | 2h | [ ] |
-| 2.8 | ユニットテスト（Aggregate + Token Service + Projection）+ 統合テスト | 3h | [ ] |
-| 2.9 | フロントエンド S15 追跡照会画面（公開 URL・ログイン不要・時限トークン検証） | 3h | [ ] |
+| 2.1 | `TrackingActivity` Aggregate + `InitializeTrackingCommand` + `UpdateTransportStatusCommand` | 3h | [x] |
+| 2.2 | `TrackingInitializedEvent` / `TransportStatusUpdatedEvent` 定義 | 1h | [x] |
+| 2.3 | Flyway V002: `tracking_summary` / `tracking_event` / `tracking_exception` / `cargo_snapshot` テーブル作成 | 2h | [x] |
+| 2.4 | `TrackingProjectionsEventHandler`: `TrackingInitializedEvent` / `TransportStatusUpdatedEvent` 購読 → Read Model 更新（クロスサービス Event 購読は TI06 で実装） | 3h | [x] |
+| 2.5 | `TrackingQueryService`（Query Side）: tracking_summary + tracking_event の集約取得 | 2h | [x] |
+| 2.6 | `TrackingTokenService`: JWT 生成（発行）・検証（exp + delivered_at + 7d） | 2h | [x] |
+| 2.7 | `TrackingController` `GET /api/v1/tracking/{trackingNumber}` （トークンクエリパラメタ）+ `_internal/issue-token` + `_internal/initialize` | 2h | [x] |
+| 2.8 | ユニットテスト（Aggregate + Token Service + Projection）+ 統合テスト | 3h | [x] |
+| 2.9 | フロントエンド S15 追跡照会画面（公開 URL・ログイン不要・時限トークン検証） | 3h | [x] |
 
-**小計**: 21h
+**小計**: 21h（完了）
 
 ### 3. TI06: US17 移管 + Event 駆動 ACL（1 SP）
 
@@ -172,13 +172,13 @@ date: 2026-05-18T00:00:00.000Z
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | TI05 第 0 スプリント | 2 | 10h | [x] |
-| US18 追跡情報照会 | 5 | 21h | [ ] |
+| US18 追跡情報照会 | 5 | 21h | [x] |
 | TI06 US17 移管 + Event ACL | 1 | 5.5h | [ ] |
 | E2E・品質確認 | — | 4.5h | [ ] |
 | **合計** | **8** | **41h** | |
 
 **1 SP あたり**: 約 4.6h（実装 + テスト）
-**進捗率**: 25%（2/8 SP）
+**進捗率**: 87.5%（7/8 SP）
 
 ---
 
@@ -913,6 +913,7 @@ apps/backend/trackingms/
 | 2026-05-18 | 整合性検証対応: US18 受入条件 5-7 を user_story.md に合わせて太字強調・data-model.md 反映が必要な追加カラム（delivered_at / source）を明記 | AI Agent |
 | 2026-05-18 | IT4 品質水準に合わせ設計セクションを全面拡充（ドメインモデル詳細化・UC↔Aggregate マッピング表・TransportStatus 状態遷移図・Aggregate 間 Event 連携図・S10/S15/S17 ワイヤーフレーム・公開フロー/管理者フロー分離の画面遷移図・htmx/PRG 規約・ADR-0013 要点・trackingms ディレクトリ構成） | AI Agent |
 | 2026-05-18 | TI05 第 0 スプリント完了（ADR-0013・trackingms 骨格・ArchUnit 4 サービス共通化・コーディングガイド/tech_stack.md 更新・gatewayms ルーティング・docker-compose 拡張） | AI Agent |
+| 2026-05-18 | US18 完了（TrackingActivity Aggregate・TrackingTokenService・Projection EH・QueryService・REST Controller・S15 公開追跡画面・テスト 41 件追加） | AI Agent |
 
 ---
 
