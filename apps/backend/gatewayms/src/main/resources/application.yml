@@ -21,7 +21,7 @@ spring:
             - id: routingms
               uri: ${ROUTINGMS_URL:http://localhost:8083}
               predicates:
-                - Path=/api/v1/voyages/**
+                - Path=/api/v1/voyages/**,/api/v1/routing/**
 
 server:
   port: ${PORT:8080}

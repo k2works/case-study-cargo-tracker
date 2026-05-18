@@ -31,11 +31,12 @@ test('US-UI-r: ログイン → 個人荷主登録 → 一覧表示', async ({ p
   await page.locator('#password').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
 
-  // 3. 荷主一覧 (/shippers) へ自動遷移することを確認
+  // 3. ダッシュボードへ遷移することを確認
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 })
-  await expect(page.getByRole('heading', { name: '荷主一覧' })).toBeVisible()
 
-  // 4. 新規登録リンクをクリック
+  // 4. 荷主管理カードから荷主一覧へ遷移し、新規登録をクリック
+  await page.getByRole('link', { name: '荷主管理', exact: true }).first().click()
+  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
   await page.getByRole('link', { name: '新規登録' }).click()
   await expect(page).toHaveURL(/\/shippers\/new/)
   await expect(page.getByRole('heading', { name: '荷主の登録' })).toBeVisible()

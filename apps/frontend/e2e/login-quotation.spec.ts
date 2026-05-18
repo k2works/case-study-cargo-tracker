@@ -31,6 +31,8 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
   await expect(page).toHaveURL(/\/dashboard/)
 
   // 2. 荷主を登録（見積に shipperId が必要）
+  await page.getByRole('link', { name: '荷主管理', exact: true }).first().click()
+  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
   await page.getByRole('link', { name: '新規登録' }).click()
   await expect(page).toHaveURL(/\/shippers\/new/)
   await page.locator('#shipper-name').fill(shipperName)
@@ -53,8 +55,8 @@ test('US01: ログイン → 荷主登録 → 見積作成 → 見積詳細で�
   const newShipper = shippers.find((s) => s.email === shipperEmail)
   expect(newShipper).toBeDefined()
 
-  // 4. ヘッダーの「見積一覧」 → 一覧画面「+ 新規見積」リンクで /quotations/new に遷移
-  await page.getByRole('link', { name: '見積一覧' }).click()
+  // 4. 見積一覧へ直接遷移 → 「+ 新規見積」リンクで /quotations/new に遷移
+  await page.goto('/quotations')
   await expect(page).toHaveURL(/\/quotations$/)
   await expect(page.getByRole('heading', { name: '見積一覧' })).toBeVisible()
   await page.getByRole('link', { name: '+ 新規見積' }).click()

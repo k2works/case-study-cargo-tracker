@@ -31,6 +31,8 @@ test('US04: ログイン → 荷主登録 → 予約登録 → 予約一覧で�
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 })
 
   // 2. 荷主を登録（予約に shipperId が必要）
+  await page.getByRole('link', { name: '荷主管理', exact: true }).first().click()
+  await expect(page).toHaveURL(/\/shippers/, { timeout: 10_000 })
   await page.getByRole('link', { name: '新規登録' }).click()
   await expect(page).toHaveURL(/\/shippers\/new/)
   await page.locator('#shipper-name').fill(shipperName)
@@ -46,8 +48,8 @@ test('US04: ログイン → 荷主登録 → 予約登録 → 予約一覧で�
   //    解決策: ナビゲーションから「予約管理」へ移動し、フォームで shipperId を直接入力する。
   //    まず荷主一覧から登録した荷主に紐づく shipperCode を取得（shipperCode は表示されているはず）。
 
-  // 4. 予約管理メニューへ遷移
-  await page.getByRole('link', { name: '予約管理' }).click()
+  // 4. 予約管理メニューへ遷移（ナビバーの「予約」リンクを使用）
+  await page.getByRole('link', { name: '予約', exact: true }).click()
   await expect(page).toHaveURL(/\/bookings$/, { timeout: 10_000 })
   await expect(page.getByRole('heading', { name: '予約一覧' })).toBeVisible()
 

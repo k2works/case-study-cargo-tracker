@@ -29,6 +29,8 @@ test('US06: 予約引き渡しで PRELIMINARY → ROUTING に遷移する', asyn
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 })
 
   // 2. 荷主登録
+  await page.getByRole('link', { name: '荷主管理', exact: true }).first().click()
+  await expect(page).toHaveURL(/\/shippers/, { timeout: 15_000 })
   await page.getByRole('link', { name: '新規登録' }).click()
   await page.locator('#shipper-name').fill(shipperName)
   await page.locator('#shipper-email').fill(shipperEmail)
@@ -50,7 +52,7 @@ test('US06: 予約引き渡しで PRELIMINARY → ROUTING に遷移する', asyn
   expect(newShipper).toBeDefined()
 
   // 4. 予約登録
-  await page.getByRole('link', { name: '予約管理' }).click()
+  await page.getByRole('link', { name: '予約', exact: true }).click()
   await expect(page).toHaveURL(/\/bookings$/, { timeout: 15_000 })
   await page.getByRole('link', { name: '新規登録' }).click()
   await expect(page).toHaveURL(/\/bookings\/new/)

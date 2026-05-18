@@ -60,12 +60,14 @@ test('US08-US14: 経路設計ワークベンチフルフロー', async ({ page }
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 })
 
   // 2. 荷主登録
+  await page.getByRole('link', { name: '荷主管理', exact: true }).first().click()
+  await expect(page).toHaveURL(/\/shippers/, { timeout: 15_000 })
   await page.getByRole('link', { name: '新規登録' }).click()
   await page.locator('#shipper-name').fill(shipperName)
   await page.locator('#shipper-email').fill(shipperEmail)
   await page.locator('#shipper-phone').fill('090-9999-0000')
   await page.getByRole('button', { name: '登録する' }).click()
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/shippers/, { timeout: 15_000 })
 
   const token = await page.evaluate(() => sessionStorage.getItem('cargo_tracker_token'))
   const shippersResp = await page.request.get(`${API_BASE_URL}/api/v1/shippers`, {
@@ -77,7 +79,7 @@ test('US08-US14: 経路設計ワークベンチフルフロー', async ({ page }
   expect(newShipper).toBeDefined()
 
   // 3. 予約登録（経路候補が存在する出発地・目的地・期限を指定）
-  await page.getByRole('link', { name: '予約管理' }).click()
+  await page.getByRole('link', { name: '予約', exact: true }).click()
   await page.getByRole('link', { name: '新規登録' }).click()
   await page.locator('#booking-shipper-id').fill(String(newShipper!.id))
   await page.locator('#booking-weight').fill('100')
