@@ -47,8 +47,12 @@ import java.util.concurrent.TimeoutException;
  * <p>POST /api/v1/handling/activities: 荷役作業を登録する。</p>
  * <p>GET  /api/v1/handling/activities/{trackingNumber}: 追跡番号別の作業履歴照会。</p>
  * <p>POST /api/v1/handling/cargo-snapshots: CargoSnapshot 登録（IT5 暫定 ACL、IT6 で Event 購読化）。</p>
+ * <p><b>PUT  /api/v1/handling/activities/{trackingNumber}/status: 貨物状態手動更新
+ * （US17・IT6 で trackingms へ移管・<b>Deprecated</b>・<b>Sunset: 2026-08-30</b>）。
+ * 新規呼び出しは {@code PUT /api/v1/tracking/{trackingNumber}/status} を使用すること。
+ * 移行詳細は ADR-0012 とイテレーション 6 計画書を参照。</b></p>
  *
- * <p>関連: ADR-0012 / iteration_plan-5.md</p>
+ * <p>関連: ADR-0012 / iteration_plan-5.md / iteration_plan-6.md</p>
  */
 @RestController
 @RequestMapping("/api/v1/handling")

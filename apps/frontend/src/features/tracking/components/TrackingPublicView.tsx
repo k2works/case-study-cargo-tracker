@@ -1,3 +1,4 @@
+import { HANDLING_TYPE_LABELS, type HandlingType } from '../../handling/types/handling'
 import type { TrackingFetchError, TrackingInfo } from '../types/tracking'
 
 type Props = {
@@ -23,6 +24,12 @@ const SOURCE_LABEL: Record<string, string> = {
   HANDLING: '荷役',
   MANUAL: '管理者',
   SYSTEM: 'システム',
+}
+
+const EVENT_TYPE_LABEL: Record<string, string> = {
+  TRACKING_INITIALIZED: '追跡開始',
+  STATUS_UPDATE: '状態更新',
+  HANDLING: '荷役作業',
 }
 
 /**
@@ -58,23 +65,33 @@ export function TrackingPublicView({ trackingNumber, data, isLoading, error }: P
         <p className="text-sm text-gray-500 font-mono">{trackingNumber}</p>
       </header>
 
+      {/* H-3: 誤配送状態の時のみバナーで案内（社内用語は荷主に出さない） */}
+      {data.currentStatus === 'MISROUTED' && (
+        <div
+          className="bg-yellow-50 border border-yellow-300 text-yellow-900 px-4 py-3 rounded"
+          role="alert"
+          data-testid="tracking-misrouted-banner"
+        >
+          <p className="font-bold">現在経路を調整中です</p>
+          <p className="text-sm">
+            予定外の経路が検知されました。詳細につきましては営業担当者までお問い合わせください。
+          </p>
+        </div>
+      )}
+
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DetailItem label="現在の状態" value={STATUS_LABEL[data.currentStatus] ?? data.currentStatus} />
+        <DetailItem
+          label="現在の状態"
+          value={STATUS_LABEL[data.currentStatus] ?? data.currentStatus}
+        />
         <DetailItem
           label="現在位置"
-          value={
-            data.currentLocation
-              ? data.currentLocation.portName
-                ? `${data.currentLocation.portName} (${data.currentLocation.unlocode})`
-                : data.currentLocation.unlocode
-              : '—'
-          }
+          value={formatLocation(data.currentLocation)}
         />
         <DetailItem
           label="推定到着"
-          value={data.estimatedArrival ? formatDateTime(data.estimatedArrival) : '—'}
+          value={formatDateTime(data.estimatedArrival)}
         />
-        <DetailItem label="誤配送" value={data.misrouted ? 'あり' : 'なし'} />
         {data.deliveredAt && (
           <DetailItem label="配送完了" value={formatDateTime(data.deliveredAt)} />
         )}
@@ -104,17 +121,21 @@ export function TrackingPublicView({ trackingNumber, data, isLoading, error }: P
                   </td>
                 </tr>
               ) : (
-                data.events.map((event, index) => (
-                  <tr key={`${event.occurredAt}-${index}`} className="border-t">
-                    <td className="p-2 border">{formatDateTime(event.occurredAt)}</td>
-                    <td className="p-2 border">{event.handlingType ?? event.type}</td>
-                    <td className="p-2 border">{event.unlocode ?? '—'}</td>
-                    <td className="p-2 border">{event.voyageNumber ?? '—'}</td>
-                    <td className="p-2 border">
-                      {event.source ? SOURCE_LABEL[event.source] ?? event.source : '—'}
-                    </td>
-                  </tr>
-                ))
+                // H-4: 最新が上になるよう降順固定
+                [...data.events]
+                  .slice()
+                  .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+                  .map((event, index) => (
+                    <tr key={`${event.occurredAt}-${index}`} className="border-t">
+                      <td className="p-2 border">{formatDateTime(event.occurredAt)}</td>
+                      <td className="p-2 border">{formatEventType(event.handlingType, event.type)}</td>
+                      <td className="p-2 border">{event.unlocode ?? '—'}</td>
+                      <td className="p-2 border">{event.voyageNumber ?? '—'}</td>
+                      <td className="p-2 border">
+                        {event.source ? SOURCE_LABEL[event.source] ?? event.source : '—'}
+                      </td>
+                    </tr>
+                  ))
               )}
             </tbody>
           </table>
@@ -134,10 +155,17 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 }
 
 function TrackingError({ error }: { error: TrackingFetchError }) {
-  if (error.status === 401 || error.errorCode === 'TOKEN_INVALID' || error.errorCode === 'TOKEN_TN_MISMATCH') {
+  if (
+    error.status === 401 ||
+    error.errorCode === 'TOKEN_INVALID' ||
+    error.errorCode === 'TOKEN_TN_MISMATCH'
+  ) {
     return (
       <div className="p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+          role="alert"
+        >
           <p className="font-bold">無効なリンクです</p>
           <p className="text-sm">正しい URL をご確認のうえ再度お試しください。</p>
         </div>
@@ -147,7 +175,10 @@ function TrackingError({ error }: { error: TrackingFetchError }) {
   if (error.status === 403 || error.errorCode === 'TOKEN_EXPIRED') {
     return (
       <div className="p-6">
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded" role="alert">
+        <div
+          className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded"
+          role="alert"
+        >
           <p className="font-bold">リンクの有効期限が切れています</p>
           <p className="text-sm">再発行をご希望の場合は営業担当者までご連絡ください。</p>
         </div>
@@ -157,7 +188,10 @@ function TrackingError({ error }: { error: TrackingFetchError }) {
   if (error.status === 404 || error.errorCode === 'TRACKING_NOT_FOUND') {
     return (
       <div className="p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+          role="alert"
+        >
           <p className="font-bold">追跡情報が見つかりません</p>
           <p className="text-sm">追跡番号をご確認ください。</p>
         </div>
@@ -166,7 +200,10 @@ function TrackingError({ error }: { error: TrackingFetchError }) {
   }
   return (
     <div className="p-6">
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+      <div
+        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+        role="alert"
+      >
         <p className="font-bold">エラーが発生しました</p>
         <p className="text-sm">{error.message}</p>
       </div>
@@ -174,13 +211,42 @@ function TrackingError({ error }: { error: TrackingFetchError }) {
   )
 }
 
-function formatDateTime(iso: string): string {
+/**
+ * H-2: 日時を日本時間（JST）で「YYYY-MM-DD HH:mm」表記に整形する。
+ * 旧実装の toISOString() は UTC を返すため日本表示で 9 時間ずれる問題があった。
+ */
+function formatDateTime(iso: string | null): string {
+  if (!iso) return '—'
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) {
     return iso
   }
-  return date
-    .toISOString()
-    .replace('T', ' ')
-    .slice(0, 16)
+  return date.toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+function formatLocation(location: TrackingInfo['currentLocation']): string {
+  if (!location) return '—'
+  if (location.portName) {
+    return `${location.portName} (${location.unlocode})`
+  }
+  return location.unlocode
+}
+
+/**
+ * M-13: 履歴の種別表示を日本語化。handlingType があれば HANDLING_TYPE_LABELS、
+ * なければイベント種別ラベルを優先する。
+ */
+function formatEventType(handlingType: string | null, type: string): string {
+  if (handlingType) {
+    return HANDLING_TYPE_LABELS[handlingType as HandlingType] ?? handlingType
+  }
+  return EVENT_TYPE_LABEL[type] ?? type
 }

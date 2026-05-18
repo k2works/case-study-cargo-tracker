@@ -85,6 +85,47 @@ class TrackingTokenServiceTest {
     }
 
     @Test
+    @DisplayName("H-10 境界値: exp 直前（1 秒前）は検証成功する")
+    void verify_exp直前は有効() {
+        var issueService = createService(NOW);
+        String jwtString = issueService.issue(TRK, null).token();
+
+        // exp = NOW + 30 日。その 1 秒前
+        var verifyService = createService(NOW.plusDays(30).minusSeconds(1));
+
+        TrackingNumber verified = verifyService.verify(jwtString, null);
+        assertThat(verified).isEqualTo(TRK);
+    }
+
+    @Test
+    @DisplayName("H-10 境界値: delivered_at + 7 日直前は検証成功する")
+    void verify_配送後7日直前は有効() {
+        var issueService = createService(NOW);
+        String jwtString = issueService.issue(TRK, null).token();
+
+        var deliveredAt = NOW.plusDays(10);
+        // delivered_at + 7 日のちょうど 1 秒前
+        var verifyService = createService(deliveredAt.plusDays(7).minusSeconds(1));
+
+        TrackingNumber verified = verifyService.verify(jwtString, deliveredAt);
+        assertThat(verified).isEqualTo(TRK);
+    }
+
+    @Test
+    @DisplayName("H-10 境界値: delivered_at + 7 日経過直後（1 秒後）で TOKEN_EXPIRED")
+    void verify_配送後7日経過直後で失効() {
+        var issueService = createService(NOW);
+        String jwtString = issueService.issue(TRK, null).token();
+
+        var deliveredAt = NOW.plusDays(10);
+        // delivered_at + 7 日 + 1 秒
+        var verifyService = createService(deliveredAt.plusDays(7).plusSeconds(1));
+
+        assertThatThrownBy(() -> verifyService.verify(jwtString, deliveredAt))
+                .isInstanceOf(TrackingTokenExpiredException.class);
+    }
+
+    @Test
     @DisplayName("署名が異なる秘密鍵で検証すると TOKEN_INVALID")
     void verify_署名改ざんを検出() {
         var service = createService(NOW);

@@ -75,6 +75,16 @@ location /api/ {
 | gatewayms | `JWT_SECRET` | JWT 検証キー（authms と同一値） |
 | gatewayms | `AUTHMS_URL` | authms の実際の Heroku ドメイン |
 | gatewayms | `BOOKINGMS_URL` | bookingms の実際の Heroku ドメイン |
+| gatewayms | `ROUTINGMS_URL` | routingms の実際の Heroku ドメイン |
+| gatewayms | `HANDLINGMS_URL` | handlingms の実際の Heroku ドメイン（IT5 追加） |
+| gatewayms | `TRACKINGMS_URL` | trackingms の実際の Heroku ドメイン（IT6 追加） |
+| handlingms | `SPRING_PROFILES_ACTIVE=heroku` | H2 インメモリ DB 構成（IT5 追加） |
+| handlingms | `JAVA_TOOL_OPTIONS` | JVM メモリ制限オプション |
+| trackingms | `SPRING_PROFILES_ACTIVE=heroku` | H2 インメモリ DB 構成（IT6 追加） |
+| trackingms | `JAVA_TOOL_OPTIONS` | JVM メモリ制限オプション |
+| trackingms | `JWT_SECRET` | JWT 署名キー（authms と同一値・ADR-0013） |
+| trackingms | `TRACKING_TOKEN_EXPIRATION_DAYS` | トークン有効期限（既定 30 日・ADR-0013） |
+| trackingms | `TRACKING_TOKEN_GRACE_DAYS` | 配送完了後の追加有効期間（既定 7 日・ADR-0013） |
 | frontend | `GATEWAY_URL` | gatewayms の `https://` URL |
 | frontend | `GATEWAY_HOST` | gatewayms のホスト名（URL からスキームを除いた値） |
 
