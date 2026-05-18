@@ -14,6 +14,7 @@ import com.example.cargotracker.handlingms.domain.model.valueobjects.VoyageNumbe
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
+import org.axonframework.messaging.commandhandling.annotation.CommandHandler;
 import org.axonframework.messaging.eventhandling.gateway.EventAppender;
 import org.springframework.context.annotation.Profile;
 
@@ -47,21 +48,24 @@ public final class HandlingActivity {
     }
 
     /**
-     * 荷役作業登録（作成系コマンド）。
+     * 荷役作業登録（作成系コマンド・US15）。
      *
      * <p>ADR-0007 推奨パターン: 作成系 Command は {@code static} メソッドとして実装し、
-     * {@link EventAppender} を引数で受け取る。</p>
+     * {@link EventAppender} を引数で受け取る。{@code @CommandHandler} で Axon に登録する。</p>
      *
-     * @param command   登録コマンド
-     * @param snapshot  追跡番号から引当した CargoSnapshot（ACL 経由で取得済み）
+     * <p>CargoSnapshot は Controller が ACL 経由で引当し、Command に含めて渡す
+     * （ADR-0012 の責務分離方針に従う）。</p>
+     *
+     * @param command   登録コマンド（CargoSnapshot 含む）
      * @param appender  Event Appender
      * @return 発番された activityId
      */
+    @CommandHandler
     public static String register(
             RegisterHandlingActivityCommand command,
-            CargoSnapshot snapshot,
             EventAppender appender) {
 
+        CargoSnapshot snapshot = command.cargoSnapshot();
         boolean isUnexpected = !snapshot.isExpectedHandling(command.handlingType(), command.location());
 
         appender.append(new HandlingActivityRegisteredEvent(
@@ -99,6 +103,7 @@ public final class HandlingActivity {
      * @param appender  Event Appender
      * @return 採番された activityId
      */
+    @CommandHandler
     public static String updateStatus(
             UpdateCargoStatusCommand command,
             EventAppender appender) {

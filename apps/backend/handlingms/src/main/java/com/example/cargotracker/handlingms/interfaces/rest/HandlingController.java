@@ -110,7 +110,8 @@ public class HandlingController {
                     request.occurredAt(),
                     request.voyageNumber() == null ? null : new VoyageNumber(request.voyageNumber()),
                     new HandlerId(request.operatorId()),
-                    toClaimVerification(request));
+                    toClaimVerification(request),
+                    snapshotOpt.get());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(MESSAGE_KEY, e.getMessage()));

@@ -1,5 +1,6 @@
 package com.example.cargotracker.handlingms.domain.model.commands;
 
+import com.example.cargotracker.handlingms.domain.model.valueobjects.CargoSnapshot;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.ClaimVerification;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.HandlerId;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.HandlingType;
@@ -31,6 +32,7 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  * @param voyageNumber        航海番号（LOAD/UNLOAD 時必須）
  * @param operatorId          作業員 ID
  * @param claimVerification   引取確認（CLAIM 時必須）
+ * @param cargoSnapshot       貨物スナップショット（ACL 経由で Controller が引当して渡す）
  */
 public record RegisterHandlingActivityCommand(
         @TargetEntityId String activityId,
@@ -40,7 +42,8 @@ public record RegisterHandlingActivityCommand(
         LocalDateTime occurredAt,
         VoyageNumber voyageNumber,
         HandlerId operatorId,
-        ClaimVerification claimVerification) {
+        ClaimVerification claimVerification,
+        CargoSnapshot cargoSnapshot) {
 
     public RegisterHandlingActivityCommand {
         Objects.requireNonNull(activityId, "activityId");
@@ -49,6 +52,7 @@ public record RegisterHandlingActivityCommand(
         Objects.requireNonNull(location, "location");
         Objects.requireNonNull(occurredAt, "occurredAt");
         Objects.requireNonNull(operatorId, "operatorId");
+        Objects.requireNonNull(cargoSnapshot, "cargoSnapshot");
         if (handlingType.requiresVoyageNumber() && voyageNumber == null) {
             throw new IllegalArgumentException(
                     handlingType + " 種別の作業には voyageNumber が必須です");

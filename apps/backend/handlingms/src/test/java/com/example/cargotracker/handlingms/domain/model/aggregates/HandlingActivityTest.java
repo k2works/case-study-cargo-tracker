@@ -53,7 +53,8 @@ class HandlingActivityTest {
                 LocalDateTime.of(2026, 7, 20, 9, 0),
                 null,
                 new HandlerId("handler-001"),
-                null);
+                null,
+                tokyoToHamburgSnapshot());
     }
 
     @Test
@@ -63,7 +64,7 @@ class HandlingActivityTest {
         var command = receiveAtTokyo();
         var snapshot = tokyoToHamburgSnapshot();
 
-        String returned = HandlingActivity.register(command, snapshot, appender);
+        String returned = HandlingActivity.register(command, appender);
 
         assertThat(returned).isEqualTo(command.activityId());
 
@@ -93,10 +94,10 @@ class HandlingActivityTest {
                 LocalDateTime.of(2026, 7, 20, 9, 0),
                 null,
                 new HandlerId("handler-001"),
-                null);
-        var snapshot = tokyoToHamburgSnapshot();
+                null,
+                tokyoToHamburgSnapshot());
 
-        HandlingActivity.register(unexpectedReceive, snapshot, appender);
+        HandlingActivity.register(unexpectedReceive, appender);
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         verify(appender, org.mockito.Mockito.times(2)).append(captor.capture());
@@ -125,10 +126,10 @@ class HandlingActivityTest {
                 LocalDateTime.of(2026, 7, 20, 14, 0),
                 new VoyageNumber("V-MOL-001"),
                 new HandlerId("handler-001"),
-                null);
-        var snapshot = tokyoToHamburgSnapshot();
+                null,
+                tokyoToHamburgSnapshot());
 
-        HandlingActivity.register(loadCommand, snapshot, appender);
+        HandlingActivity.register(loadCommand, appender);
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         verify(appender).append(captor.capture());
