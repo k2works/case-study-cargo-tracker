@@ -20,6 +20,7 @@ import { test, expect } from '@playwright/test'
  */
 
 const HANDLING_API_BASE_URL = process.env.HANDLING_API_BASE_URL ?? 'http://localhost:8080'
+const TRACKING_API_BASE_URL = process.env.TRACKING_API_BASE_URL ?? HANDLING_API_BASE_URL
 
 test('US15-US17: 荷役作業フルフロー（受領 → 状態手動更新）', async ({ page }) => {
   const suffix = Date.now().toString(36)
@@ -53,6 +54,26 @@ test('US15-US17: 荷役作業フルフロー（受領 → 状態手動更新）'
   )
   // gateway 経由で handlingms が起動していない場合はテストをスキップ
   if (!snapshotResp.ok()) {
+    test.skip()
+    return
+  }
+
+  // 2.1 trackingms にも追跡集約を初期化（TI06 移管後の状態更新で必要）
+  const trackingInitResp = await page.request.post(
+    `${TRACKING_API_BASE_URL}/api/v1/tracking/_internal/initialize`,
+    {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      data: {
+        trackingNumber,
+        bookingId: `B-E2E-${suffix}`,
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'DEHAM',
+        estimatedArrival: '2099-12-31T23:59:59',
+        voyageNumber: `V-E2E-${suffix}`,
+      },
+    },
+  )
+  if (!trackingInitResp.ok()) {
     test.skip()
     return
   }
