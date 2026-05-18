@@ -12,3 +12,4 @@
 | [Phase 0 Walking Skeleton コードレビュー](./Phase0_WalkingSkeleton_review_20260513.md) | bookingms Phase 0 スケルトン（BookingApplication / PingController / build.gradle.kts） | 2026-05-13 | 高 3 件 / 中 4 件 / 低 4 件 |
 | [IT2 実装成果物レビュー](./IT2_実装成果物_review_20260515.md) | IT2 完了時点の実装（bookingms / routingms / authms / gatewayms / frontend / docs） | 2026-05-15 | 高 13 件 / 中 20 件 / 低 8 件 |
 | [US08 先行スパイク コードレビュー](./us08_spike_review_20260516.md) | US08 PoC（OptimalRouteService / TransitEdge / TransitPath / RouteSearchSpecification / 関連テスト） | 2026-05-16 | 高 8 件 / 中 10 件 / 低 4 件 |
+| [IT4 バグ修正コードレビュー](./IT4_bugfix_review_20260518.md) | IT4 E2E 全通過のためのバグ修正 4 件（@TargetEntityId / sendAndWait / gateway / VARCHAR 拡張） | 2026-05-18 | 高 4 件 / 中 6 件 / 低 3 件 |
