@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { env } from '../../../config/env'
 import { useAuthStore } from '../../../stores/authStore'
 import type {
@@ -12,6 +12,20 @@ export type IssueTrackingTokenResponse = {
   url: string
   token: string
   validUntil: string
+}
+
+export type InitializeTrackingRequest = {
+  trackingNumber: string
+  bookingId: string
+  originUnlocode: string
+  destinationUnlocode: string
+  estimatedArrival: string
+  voyageNumber: string
+}
+
+export type InitializeTrackingResponse = {
+  trackingNumber: string
+  status: 'initialized' | 'already_initialized'
 }
 
 /**
@@ -83,6 +97,46 @@ export function useTrackingList() {
         throw new Error('追跡情報一覧の取得に失敗しました')
       }
       return (await response.json()) as TrackingListItem[]
+    },
+  })
+}
+
+/**
+ * IT6 暫定: trackingms 追跡集約初期化 mutation。
+ *
+ * bookingms の追跡番号発行後、Event 駆動 ACL が未実装のため、
+ * フロント側から POST /api/v1/tracking/_internal/initialize を明示的に呼んで
+ * trackingms 側の Read Model（tracking_summary）にも反映させる。
+ *
+ * 冪等性: trackingms 側で `exists` チェックがあり、既に初期化済みなら 200
+ * `status=already_initialized` を返すため、複数回呼ばれても安全。
+ *
+ * TI06+ で CargoTrackedEvent 駆動 ACL が完成すれば本フックは不要になる。
+ */
+export function useInitializeTracking() {
+  const queryClient = useQueryClient()
+  return useMutation<InitializeTrackingResponse, Error, InitializeTrackingRequest>({
+    mutationFn: async (request: InitializeTrackingRequest) => {
+      const adminToken = useAuthStore.getState().token
+      const response = await fetch(
+        `${env.trackingApiBaseUrl}/api/v1/tracking/_internal/initialize`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+          },
+          body: JSON.stringify(request),
+        },
+      )
+      if (!response.ok) {
+        const body: { message?: string } = await response.json().catch(() => ({}))
+        throw new Error(body.message ?? '追跡集約の初期化に失敗しました')
+      }
+      return response.json() as Promise<InitializeTrackingResponse>
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tracking', 'list'] })
     },
   })
 }

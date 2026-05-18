@@ -195,6 +195,14 @@ public class TrackingController {
     public ResponseEntity<Map<String, String>> initialize(
             @RequestBody InitializeTrackingRequest request) {
 
+        // 冪等性: 既に初期化済みの追跡番号への再呼び出しは何もせず 200 で返す。
+        // フロント側で booking.trackingNumber 取得時に自動呼び出しされても安全に動作させる。
+        if (queryService.exists(request.trackingNumber())) {
+            return ResponseEntity.ok(Map.of(
+                    TRACKING_NUMBER_KEY, request.trackingNumber(),
+                    "status", "already_initialized"));
+        }
+
         var itinerary = new CargoItinerary(List.of(new Leg(
                 request.voyageNumber(),
                 Location.of(request.originUnlocode()),
@@ -212,7 +220,8 @@ public class TrackingController {
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                TRACKING_NUMBER_KEY, request.trackingNumber()));
+                TRACKING_NUMBER_KEY, request.trackingNumber(),
+                "status", "initialized"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
