@@ -117,15 +117,15 @@ date: 2026-05-18T00:00:00.000Z
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | ADR-0013 起票（Tracking Number JWT 時限トークン設計） | 2h | [ ] |
-| 1.2 | trackingms 骨格作成（Spring Boot + Axon + Flyway 設定・ポート 8086） | 3h | [ ] |
-| 1.3 | ArchUnit ルール拡張: `@CommandHandler` 強制を 4 サービス共通化（IT5 T1） | 2h | [ ] |
-| 1.4 | コーディングガイド更新: Axon static handler 規約 + `*Record` 変数名規約（IT5 T2/T3） | 1h | [ ] |
-| 1.5 | tech_stack.md に Java major version 確認項目追加（IT5 T4） | 0.5h | [ ] |
-| 1.6 | gatewayms に `/api/v1/tracking/**` ルーティング追加 | 0.5h | [ ] |
-| 1.7 | docker-compose.yml に trackingms / tracking_read_db 追加 | 1h | [ ] |
+| 1.1 | ADR-0013 起票（Tracking Number JWT 時限トークン設計） | 2h | [x] |
+| 1.2 | trackingms 骨格作成（Spring Boot + Axon + Flyway 設定・ポート 8086） | 3h | [x] |
+| 1.3 | ArchUnit ルール拡張: `@CommandHandler` 強制を 4 サービス共通化（IT5 T1） | 2h | [x] |
+| 1.4 | コーディングガイド更新: Axon static handler 規約 + `*Record` 変数名規約（IT5 T2/T3） | 1h | [x] |
+| 1.5 | tech_stack.md に Java major version 確認項目追加（IT5 T4） | 0.5h | [x] |
+| 1.6 | gatewayms に `/api/v1/tracking/**` ルーティング追加 | 0.5h | [x] |
+| 1.7 | docker-compose.yml に trackingms / tracking_read_db 追加 | 1h | [x] |
 
-**小計**: 10h
+**小計**: 10h（完了）
 
 ### 2. US18: 追跡情報を照会する（5 SP）
 
@@ -171,14 +171,14 @@ date: 2026-05-18T00:00:00.000Z
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| TI05 第 0 スプリント | 2 | 10h | [ ] |
+| TI05 第 0 スプリント | 2 | 10h | [x] |
 | US18 追跡情報照会 | 5 | 21h | [ ] |
 | TI06 US17 移管 + Event ACL | 1 | 5.5h | [ ] |
 | E2E・品質確認 | — | 4.5h | [ ] |
 | **合計** | **8** | **41h** | |
 
 **1 SP あたり**: 約 4.6h（実装 + テスト）
-**進捗率**: 0%（0/8 SP）
+**進捗率**: 25%（2/8 SP）
 
 ---
 
@@ -912,6 +912,7 @@ apps/backend/trackingms/
 | 2026-05-18 | 初版作成（IT5 完了後・8 SP・trackingms 新設・US18 + US17 trackingms 移管 + Event 駆動 ACL） | AI Agent（XP PM） |
 | 2026-05-18 | 整合性検証対応: US18 受入条件 5-7 を user_story.md に合わせて太字強調・data-model.md 反映が必要な追加カラム（delivered_at / source）を明記 | AI Agent |
 | 2026-05-18 | IT4 品質水準に合わせ設計セクションを全面拡充（ドメインモデル詳細化・UC↔Aggregate マッピング表・TransportStatus 状態遷移図・Aggregate 間 Event 連携図・S10/S15/S17 ワイヤーフレーム・公開フロー/管理者フロー分離の画面遷移図・htmx/PRG 規約・ADR-0013 要点・trackingms ディレクトリ構成） | AI Agent |
+| 2026-05-18 | TI05 第 0 スプリント完了（ADR-0013・trackingms 骨格・ArchUnit 4 サービス共通化・コーディングガイド/tech_stack.md 更新・gatewayms ルーティング・docker-compose 拡張） | AI Agent |
 
 ---
 

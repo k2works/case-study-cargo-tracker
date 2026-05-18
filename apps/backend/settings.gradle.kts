@@ -33,8 +33,8 @@ include("authms")
 include("gatewayms")
 include("routingms")
 include("handlingms")
+include("trackingms")
 
 // 雛形のみ（Phase 2 以降に実装）
-// include("trackingms")
 // include("billingms")
 // include("shared")

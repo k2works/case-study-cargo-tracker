@@ -27,7 +27,19 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/login",
             "/api/v1/auth/register",
+            "/api/v1/tracking",
             "/actuator"
+    );
+
+    /**
+     * 公開接頭辞配下でも認証必須となる例外パス。
+     *
+     * <p>{@code /api/v1/tracking} は US18 で公開追跡照会のため認証不要だが、
+     * trackingms 内部用 API（{@code POST /api/v1/tracking/_internal/issue-token}）は
+     * 営業担当者の管理者 JWT が必須となる（ADR-0013）。</p>
+     */
+    private static final List<String> PRIVATE_PATH_OVERRIDES = List.of(
+            "/api/v1/tracking/_internal"
     );
 
     private final SecretKey key;
@@ -66,6 +78,9 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     }
 
     private boolean isPublicPath(String path) {
+        if (PRIVATE_PATH_OVERRIDES.stream().anyMatch(path::startsWith)) {
+            return false;
+        }
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 

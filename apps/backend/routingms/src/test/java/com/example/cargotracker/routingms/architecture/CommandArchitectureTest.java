@@ -1,4 +1,4 @@
-package com.example.cargotracker.bookingms.architecture;
+package com.example.cargotracker.routingms.architecture;
 
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaField;
@@ -13,16 +13,13 @@ import org.axonframework.modelling.annotation.TargetEntityId;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
 /**
- * IT4 バグ修正レビュー H1 対応: {@code @TargetEntityId} 未付与コマンドを CI で検出する ArchUnit ルール。
+ * 4 サービス共通の Command 構造ルール（IT6 TI05-1.3 で共通化）。
  *
- * <p>IT4 の本番障害（{@code AssignRouteToCargoCommand} の {@code @TargetEntityId} 欠落により
- * Axon がコマンドを Aggregate にルーティングできなかった）を再発させないため、
- * {@code *Command} で終わるレコード/クラスは必ず {@code @TargetEntityId} アノテーション付きの
- * フィールドを 1 つ以上持たなければならない。</p>
+ * <p>{@code *Command} クラスは必ず {@code @TargetEntityId} 付きフィールドを 1 つ以上持つ。</p>
  *
  * <p>参考: docs/review/IT4_bugfix_review_20260518.md H1</p>
  */
-@AnalyzeClasses(packages = "com.example.cargotracker.bookingms.domain.model.commands")
+@AnalyzeClasses(packages = "com.example.cargotracker.routingms.domain.model.commands")
 class CommandArchitectureTest {
 
     @ArchTest

@@ -47,8 +47,31 @@ tags: design, tech-stack, versions, lts, axon-5, spring-boot, react
 | TanStack Query | 5.x | <https://tanstack.com/query/latest> | 5.x Stable、React 19 対応 |
 | Tailwind CSS | 4.x | <https://tailwindcss.com/blog>, <https://github.com/tailwindlabs/tailwindcss/releases> | 4.x GA、Vite 6 / PostCSS 連携 |
 | Testcontainers (Java) | 1.20.x | <https://www.testcontainers.org/>, <https://github.com/testcontainers/testcontainers-java/releases> | JDK 25 対応、PostgreSQL 16 イメージ |
+| ArchUnit | 1.4.x | <https://github.com/TNG/ArchUnit/releases> | JDK 25 のクラスファイル（major version 69）パース対応。1.3.0 以前は非対応 |
 | Playwright | 1.50+ | <https://playwright.dev/docs/release-notes> | Chrome / Firefox / WebKit 最新版 |
 | Terraform | 1.10+ | <https://github.com/hashicorp/terraform/releases>, <https://www.hashicorp.com/blog/terraform-license-update>（BSL 注意） | 1.10+ Stable、AWS Provider 5.x |
+
+### Java major version 対応の事前検証
+
+JDK のメジャーバージョンを上げた場合、バイトコード操作系ライブラリ（ArchUnit / ByteBuddy / Mockito 等）が新しいクラスファイルバージョンをパースできずビルド失敗となる事象が発生する（IT5 P5: ArchUnit 1.3.0 が JDK 25 の major version 69 を非対応）。
+
+実装着手前 IT0 で以下を検証する。
+
+| 確認項目 | 確認方法 |
+|---------|---------|
+| ArchUnit が採用 JDK のクラスファイルをパース可能 | サンプルテストクラスを採用 JDK でコンパイルし、ArchTest 1 件以上が成功すること |
+| Mockito が採用 JDK で動作 | 任意の Mock オブジェクト生成テスト 1 件が成功すること |
+| ByteBuddy / Jakarta Persistence プロキシ動作 | Spring Boot のテストコンテキストロードが成功すること |
+| Gradle Wrapper の JVM 互換性 | `./gradlew --version` で JVM バージョンが採用 JDK と一致すること |
+
+JDK 更新時の手順:
+
+1. `tech_stack.md` の Java バージョンを更新
+2. `gradle/libs.versions.toml` の Java / Gradle / 関連ツールバージョンを更新
+3. 全サービスで `./gradlew test` を実行し、ArchUnit を含む既存テストが PASS することを確認
+4. 失敗する場合は依存ライブラリの対応バージョンへ更新（メジャーバージョン更新が必要なら ADR で意思決定）
+
+参考: IT5 ふりかえり P5・T4。
 
 > **重要**: 本表のバージョン番号と日付は分析時点（2026-05）の **想定値** であり、実装着手前に **必ず公式情報源で検証** すること。検証結果に基づき本表と関連 ADR を更新する。
 >

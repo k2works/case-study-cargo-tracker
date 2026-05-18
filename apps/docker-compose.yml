@@ -106,7 +106,9 @@ services:
   # =========================
   # IT2 完了時点で実装済みのマイクロサービス
   # ポート割り当て: authms=8081, bookingms=8082, routingms=8083, gatewayms=8080
-  # 未実装（IT5+ で追加予定）: trackingms=8084, handlingms=8085, billingms=8086
+  # IT5 追加: handlingms=8085
+  # IT6 追加: trackingms=8086
+  # 未実装（次イテレーション以降で追加予定）: billingms=8087
   # =========================
   authms:
     build:
@@ -164,6 +166,28 @@ services:
     ports:
       - "8085:8085"
 
+  trackingms:
+    build:
+      context: ./backend
+      dockerfile: trackingms/Dockerfile
+    container_name: cargo-trackingms
+    depends_on:
+      axonserver:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      AXON_AXONSERVER_SERVERS: axonserver:8124
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/tracking_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      TRACKING_TOKEN_EXPIRATION_DAYS: ${TRACKING_TOKEN_EXPIRATION_DAYS:-30}
+      TRACKING_TOKEN_GRACE_DAYS: ${TRACKING_TOKEN_GRACE_DAYS:-7}
+    ports:
+      - "8086:8086"
+
   gatewayms:
     build:
       context: ./backend
@@ -178,12 +202,15 @@ services:
         condition: service_started
       handlingms:
         condition: service_started
+      trackingms:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: local-docker
       AUTHMS_URL: http://authms:8081
       BOOKINGMS_URL: http://bookingms:8082
       ROUTINGMS_URL: http://routingms:8083
       HANDLINGMS_URL: http://handlingms:8085
+      TRACKINGMS_URL: http://trackingms:8086
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-case-study-cargo-tracker}
     ports:

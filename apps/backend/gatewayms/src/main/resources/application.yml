@@ -26,6 +26,10 @@ spring:
               uri: ${HANDLINGMS_URL:http://localhost:8085}
               predicates:
                 - Path=/api/v1/handling/**
+            - id: trackingms
+              uri: ${TRACKINGMS_URL:http://localhost:8086}
+              predicates:
+                - Path=/api/v1/tracking/**
 
 server:
   port: ${PORT:8080}
