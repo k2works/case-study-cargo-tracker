@@ -24,6 +24,7 @@ COPY settings.gradle.kts build.gradle.kts ./
 COPY authms/build.gradle.kts authms/build.gradle.kts
 COPY bookingms/build.gradle.kts bookingms/build.gradle.kts
 COPY routingms/build.gradle.kts routingms/build.gradle.kts
+COPY handlingms/build.gradle.kts handlingms/build.gradle.kts
 COPY gatewayms/build.gradle.kts gatewayms/build.gradle.kts
 
 # 依存解決のみ先行（ソース変更時のキャッシュ効率化）
