@@ -20,7 +20,7 @@
 | IT4（2026-06-25〜07-08） | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | 完了 |
 | IT5（2026-07-09〜07-22） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | 完了 |
 | IT6（2026-07-23〜08-05） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | 完了 |
-| IT7（2026-08-06〜08-19） | - | - | - | 未着手 |
+| IT7（2026-08-06〜08-19） | [iteration_plan-7.md](./iteration_plan-7.md) | - | - | 計画完了 |
 | IT8（2026-08-20〜09-02） | - | - | - | 未着手 |
 
 イテレーション開始時に行を更新します。
