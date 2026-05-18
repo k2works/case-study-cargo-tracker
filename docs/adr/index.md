@@ -17,5 +17,6 @@
 | [ADR-0009](0009-axon-server-connector-explicit-dependency.md) | `axon-server-connector` を明示依存にし `local-docker` を pooled-streaming に復帰させる | 承認済み |
 | [ADR-0010](0010-us08-poc-promotion-policy.md) | US08 先行スパイク PoC の処理方針（テストは残し実装は IT4 でゼロから書き直す） | 承認済み |
 | [ADR-0011](0011-carrier-movement-and-transit-edge-responsibility.md) | `CarrierMovement`（Write Side VO）と `TransitEdge`（Read Side Query VO）の責務分離 | 承認済み |
+| [ADR-0012](0012-handlingms-trackingms-responsibility-separation.md) | handlingms と trackingms の責務分離・Saga 適用方針 | 提案 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

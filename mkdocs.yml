@@ -126,6 +126,7 @@ nav:
       - "ADR-0009 Axon Server Connector 明示依存と pooled-streaming 復帰": adr/0009-axon-server-connector-explicit-dependency.md
       - "ADR-0010 US08 PoC 処理方針（テスト存続・実装再設計）": adr/0010-us08-poc-promotion-policy.md
       - "ADR-0011 CarrierMovement と TransitEdge の責務分離": adr/0011-carrier-movement-and-transit-edge-responsibility.md
+      - "ADR-0012 handlingms と trackingms の責務分離": adr/0012-handlingms-trackingms-responsibility-separation.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
