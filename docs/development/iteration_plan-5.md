@@ -27,10 +27,10 @@ description: IT5（荷役作業記録・追跡基盤）の詳細計画。handlin
 
 ### 成功基準
 
-- [ ] `POST /api/v1/handling/activities` が作業記録を受け付けて `HandlingActivityRecordedEvent` を発行する
+- [ ] `POST /api/v1/handling/activities` が作業記録を受け付けて `HandlingActivityRegisteredEvent` を発行する
 - [ ] `PUT /api/v1/handling/activities/{trackingNumber}/status` が状態手動更新を実行する
 - [ ] handlingms の全ユニット/統合テストがパス
-- [ ] フロントエンドの荷役作業記録画面（S15）・状態更新画面（S17）が動作する
+- [ ] フロントエンドの荷役作業記録フォーム（S20）・状態更新フォーム（S17 内モーダル）が動作する
 - [ ] Playwright E2E テストが追加・全通過する
 - [ ] SonarQube Quality Gate PASS（new_coverage ≥ 80%・violations 0）
 - [ ] IT4 コードレビュー指摘の高優先度 3 件を対応済みにする（H1 ArchUnit・H2 タイムアウト・H3 テスト更新）
@@ -72,35 +72,37 @@ description: IT5（荷役作業記録・追跡基盤）の詳細計画。handlin
 
 **受入条件**:
 
-1. 追跡番号の入力で貨物を特定できる
+1. 追跡番号の入力（またはスキャン）で貨物を特定できる
 2. 作業種別（受領・積込・荷降し）を選択できる
-3. 作業日時と作業場所（UN/LOCODE 形式）を入力できる
+3. 作業日時と作業場所（UN/LOCODE 形式の港湾コード）を入力できる
 4. 記録後、貨物状態が対応する状態（受領済・積込済・荷降し済）に自動更新される
-5. `HandlingActivityRecordedEvent` が Axon Event Store に記録される
+5. 記録後、荷主に状態変更通知が送信される（IT5 はログのみ、実送信は IT6+）
+6. 追跡番号が存在しない場合、エラーメッセージが表示される
+7. 作業場所が予定ルートと異なる場合、警告が表示される
 
 #### US16: 引取作業を記録する
 
 **ストーリー**:
-> 荷役作業員として、荷受人が貨物を引き取る際に確認コードを取得して引取作業を記録したい。なぜなら、配送完了を記録し精算処理の開始条件を満たせるからだ。
+> 荷役作業員として、荷受人が貨物を引き取る際に、荷受人の確認（署名または確認コード）を取得して引取作業を記録したい。なぜなら、荷受人への正式な引き渡しを証明し、配送完了を記録できるからだ。
 
 **受入条件**:
 
-1. 作業種別「引取」を選択すると荷受人確認フィールドが表示される
-2. 確認コードが取得されると引取作業が記録される
+1. 作業種別「引取」を選択すると、荷受人確認フィールド（署名または確認コード）が表示される
+2. 荷受人確認が取得されると引取作業が記録される
 3. 記録後、貨物状態が「引取済」に更新される
-4. 「引取済」は精算処理の開始条件となる
+4. 貨物状態「引取済」は配送完了を意味し、精算処理の開始条件となる
 
 #### US17: 貨物状態を手動更新する
 
 **ストーリー**:
-> 追跡管理者として、追跡番号を指定して貨物の状態・位置・更新日時を手動で更新したい。なぜなら、荷役作業員では捕捉できない状態変化を追跡情報に反映できるからだ。
+> 追跡管理者として、追跡番号を指定して貨物の状態・位置・更新日時を手動で更新したい。なぜなら、荷役作業員の記録だけでは捕捉できない状態変化（出港・入港等）を追跡情報に反映できるからだ。
 
 **受入条件**:
 
 1. 追跡番号を指定して現在の貨物情報を確認できる
 2. 新しい状態・位置・日時を入力して追跡情報を更新できる
 3. 更新後、追跡イベントが履歴に記録される
-4. 状態変更の種類に応じた通知ログが出力される（IT5 はログのみ、実送信は IT6+）
+4. 状態変更の種類に応じて荷主への通知が送信される（IT5 はログのみ、実送信は IT6+）
 
 ---
 
@@ -117,7 +119,7 @@ description: IT5（荷役作業記録・追跡基盤）の詳細計画。handlin
 | 1.5 | `BookingControllerIntegrationTest` confirm/issue-tracking を sendAndWait に更新 | 1h | - | [ ] |
 | 1.6 | gatewayms に `/api/v1/handling/**` ルーティング追加 | 1h | - | [ ] |
 
-**小計**: 10h
+**小計**: 11h
 
 ### 2. US15: 荷役作業を記録する（5 SP）
 
@@ -167,12 +169,12 @@ description: IT5（荷役作業記録・追跡基盤）の詳細計画。handlin
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| TI04 第 0 スプリント | 2 | 10h | [ ] |
+| TI04 第 0 スプリント | 2 | 11h | [ ] |
 | US15 荷役作業記録 | 5 | 16h | [ ] |
 | US16 引取作業記録 | 2 | 5h | [ ] |
 | US17 状態手動更新 | 2 | 8h | [ ] |
 | E2E・品質 | — | 5h | [ ] |
-| **合計** | **11** | **44h** | |
+| **合計** | **11** | **45h** | |
 
 **1 SP あたり**: 約 4h（実装 + テスト）
 **進捗率**: 0%（0/11 SP）
@@ -235,47 +237,67 @@ gantt
 
 ```plantuml
 @startuml
-package handlingms {
-  class HandlingActivity {
-    +activityId : String
-    +trackingNumber : String
-    +activityType : HandlingActivityType
-    +location : Location
-    +activityDateTime : LocalDateTime
-    +recipientConfirmation : String
-    +recordActivity(cmd)
-    +updateStatus(cmd)
-  }
+title Handling Context（IT5 実装スコープ）
 
-  enum HandlingActivityType {
-    RECEIVE
-    LOAD
-    UNLOAD
-    PICKUP
-    MANUAL_UPDATE
-  }
-
-  class HandlingActivityRecordedEvent {
-    +activityId : String
-    +trackingNumber : String
-    +activityType : HandlingActivityType
-    +location : Location
-    +activityDateTime : LocalDateTime
-  }
-
-  class StatusManuallyUpdatedEvent {
-    +trackingNumber : String
-    +newStatus : String
-    +location : Location
-    +updatedAt : LocalDateTime
-  }
+class HandlingActivity <<Aggregate Root>> {
+  - activityId: HandlingActivityId
+  - cargoSnapshot: CargoSnapshot
+  - handlingType: HandlingType
+  - occurredAt: LocalDateTime
+  - location: Location
+  - voyageNumber: VoyageNumber (optional)
+  - operatorId: HandlerId
+  - claimVerification: ClaimVerification (optional)
+  + handle(RegisterHandlingActivityCommand)
+  + isValidFor(snapshot: CargoSnapshot, type: HandlingType): boolean
 }
 
-HandlingActivity --> HandlingActivityType
-HandlingActivity ..> HandlingActivityRecordedEvent
-HandlingActivity ..> StatusManuallyUpdatedEvent
+class CargoSnapshot <<ACL>> <<Value Object>> {
+  - bookingId: BookingId
+  - trackingNumber: TrackingNumber
+  - origin: Location
+  - destination: Location
+  - cargoType: CargoType
+  - itinerarySnapshot: CargoItinerary
+  + isExpectedHandling(type: HandlingType, loc: Location): boolean
+}
+
+class ClaimVerification <<Value Object>> {
+  - consigneeName: String
+  - signatureRef: String (optional)
+  - confirmationCode: String (optional)
+  - verifiedAt: LocalDateTime
+}
+
+enum HandlingType {
+  RECEIVE
+  LOAD
+  UNLOAD
+  CLAIM
+  CUSTOMS
+}
+
+HandlingActivity *-- CargoSnapshot
+HandlingActivity *-- HandlingType
+HandlingActivity *-- "0..1" ClaimVerification
+HandlingActivity ..> HandlingActivityRegisteredEvent
+HandlingActivity ..> UnexpectedHandlingDetectedEvent
+
+note bottom of CargoSnapshot
+  ACL（腐敗防止層）
+  Booking Context の Cargo に直接依存せず、
+  CargoBookedEvent / CargoRoutedEvent を購読して
+  独自モデルに変換して保持する。
+end note
 @enduml
 ```
+
+> **ドメインモデルの注意点**:
+> - `HandlingType` の enum 名は `HandlingActivityType` ではなく `HandlingType`（domain-model.md 準拠）
+> - `PICKUP` は `CLAIM`（引取）が正しい用語。`MANUAL_UPDATE` は `HandlingType` ではなく US17 は `trackingms` 責務（IT5 では `handlingms` 内の projection で暫定対応）
+> - `trackingNumber` は直接フィールドではなく `CargoSnapshot` に内包
+> - `claimVerification` は `String` ではなく値オブジェクト `ClaimVerification`（`CLAIM` 時のみ必須）
+> - `voyageNumber` は `LOAD`/`UNLOAD` 時に必須
 
 ### データモデル
 
@@ -285,17 +307,57 @@ hide circle
 skinparam linetype ortho
 
 entity "handling_activity" as ha {
-    *activity_id : VARCHAR(36) PK
-    --
-    tracking_number : VARCHAR(25) NOT NULL
-    activity_type : VARCHAR(20) NOT NULL
-    location_unlocode : VARCHAR(10)
-    activity_datetime : TIMESTAMP NOT NULL
-    recipient_confirmation : VARCHAR(100)
-    created_at : TIMESTAMP NOT NULL
+  * **activity_id**: VARCHAR(36) <<PK>>
+  --
+  ' CargoSnapshot ACL の射影
+  booking_id: VARCHAR(36) NOT NULL
+  tracking_number: VARCHAR(20) NOT NULL
+  origin_unlocode: VARCHAR(5) NOT NULL
+  destination_unlocode: VARCHAR(5) NOT NULL
+  cargo_type: VARCHAR(16) NOT NULL
+  ' 荷役作業本体
+  handling_type: VARCHAR(16) NOT NULL
+  occurred_at: TIMESTAMPTZ NOT NULL
+  recorded_at: TIMESTAMPTZ NOT NULL
+  unlocode: VARCHAR(5) NOT NULL
+  voyage_number: VARCHAR(20)
+  handler_id: VARCHAR(36) NOT NULL
+  ' フラグ
+  unexpected: BOOLEAN NOT NULL DEFAULT FALSE
+  version: BIGINT
 }
+
+entity "handling_itinerary_snapshot" as his {
+  * **activity_id**: VARCHAR(36) <<PK>> <<FK>>
+  * **leg_seq**: INTEGER <<PK>>
+  --
+  voyage_number: VARCHAR(20) NOT NULL
+  load_unlocode: VARCHAR(5) NOT NULL
+  unload_unlocode: VARCHAR(5) NOT NULL
+  load_at: TIMESTAMPTZ NOT NULL
+  unload_at: TIMESTAMPTZ NOT NULL
+}
+
+entity "claim_verification" as cv {
+  * **activity_id**: VARCHAR(36) <<PK>> <<FK>>
+  --
+  consignee_name: VARCHAR(200) NOT NULL
+  signature_ref: VARCHAR(200)
+  confirmation_code: VARCHAR(50)
+  verified_at: TIMESTAMPTZ NOT NULL
+}
+
+ha ||--o{ his : "0..*"
+ha ||--o| cv : "0..1（CLAIM 時のみ）"
 @enduml
 ```
+
+> **データモデルの注意点（data-model.md 準拠）**:
+> - カラム名: `activity_type` → `handling_type`、`location_unlocode` → `unlocode`、`activity_datetime` → `occurred_at` + `recorded_at`
+> - `recipient_confirmation` は `claim_verification` テーブルに分離（`CLAIM` 種別時のみ）
+> - CargoSnapshot 情報（`booking_id`・`origin_unlocode`・`destination_unlocode`・`cargo_type`）は Read Model に射影
+> - `handler_id`・`unexpected`・`voyage_number` は必須カラム
+> - Flyway V001 では `handling_activity`・`handling_itinerary_snapshot`・`claim_verification` の 3 テーブルを作成
 
 ### API 設計
 
@@ -323,7 +385,9 @@ entity "handling_activity" as ha {
 |-----|---------|-----------|
 | ADR-0012（新規） | handlingms と trackingms の責務分離・Saga 方針 | 提案 |
 
-> **ADR-0012 要点**: US15〜US17 は `handlingms` で実装し `HandlingActivityRecordedEvent` を発行。将来の追跡照会（US18）は `trackingms` が当該イベントをサブスクライブして Read Model を構築する。IT5 では `trackingms` は作成せず、handlingms 内の projection で代替する。
+> **ADR-0012 要点**: US15〜US17 は `handlingms` で実装し `HandlingActivityRegisteredEvent` を発行。将来の追跡照会（US18）は `trackingms` が当該イベントをサブスクライブして Read Model を構築する。IT5 では `trackingms` は作成せず、handlingms 内の projection で代替する。
+>
+> **Saga 方針（IT4 コードレビュー H4 対応）**: bookingms の `sendAndWait()` 連鎖（booking → routing → handling）が増加した場合、Axon Saga または ProcessManager への移行を検討する。IT5 時点では handlingms のコマンド受付は単一 Aggregate 操作のため Saga 化は不要。IT6 以降で bookingms ↔ handlingms 連携が発生した時点で方針を確定する。
 
 ### ディレクトリ構成（新規）
 
@@ -376,9 +440,22 @@ apps/backend/handlingms/
 
 ### デモ項目
 
-1. 荷役作業記録フォーム（S15）で追跡番号を入力し「受領」作業を記録 → 成功
-2. 「引取」を選択すると確認コードフィールドが表示される
+1. 荷役作業記録フォーム（S20）で追跡番号を入力し「受領」作業を記録 → 成功
+2. 「引取（CLAIM）」を選択すると荷受人確認フィールド（署名または確認コード）が表示される
 3. 追跡番号を指定して貨物状態を「積込済」に手動更新 → 履歴に追記される
+
+### IT6 繰越し事項（IT5 スコープ外）
+
+以下は IT4 コードレビュー中優先度指摘（M1〜M6）の対応。IT5 では実装せず IT6 計画に引き継ぐ。
+
+| ID | 内容 | 指摘元 |
+|----|------|--------|
+| M1 | `data-testid` 属性を UI 要素に付与（E2E ロケーター強化） | xp-programmer / xp-tester |
+| M2 | gatewayms predicates を YAML リスト形式に変更 | xp-programmer |
+| M3 | Tracking Number フォーマット仕様を ADR に記録 | xp-architect |
+| M4 | `sendAndWait` 変更理由を Javadoc に追記 | xp-technical-writer |
+| M5 | `NotifyRouteCommand` に IT5+ メール送信予定を記載 | xp-technical-writer |
+| M6 | `sendAndWait` 遅延時の処理中インジケータ追加（二重送信防止） | xp-user-representative |
 
 ---
 
@@ -387,6 +464,7 @@ apps/backend/handlingms/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-05-18 | 初版作成（IT4 完了後・IT4 コードレビュー指摘反映） | AI Agent（XP PM） |
+| 2026-05-18 | 整合性検証対応: US15 受入条件 7 件に修正、US16/US17 ストーリー文を user_story.md 準拠に修正、ドメインモデルを domain-model.md 準拠（HandlingType・CargoSnapshot・ClaimVerification）に修正、データモデルを data-model.md 準拠（handling_type・occurred_at・claim_verification テーブル分離等）に修正、TI04 見積もり 11h に修正、ADR-0012 に Saga 方針（H4）追記、IT6 繰越し事項（M1〜M6）追記 | AI Agent |
 
 ---
 
