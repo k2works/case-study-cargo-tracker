@@ -6,6 +6,7 @@ import com.example.cargotracker.trackingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TransportStatus;
 import java.time.LocalDateTime;
+import org.axonframework.eventsourcing.annotation.EventTag;
 
 /**
  * 貨物の輸送状態が更新されたことを表すドメインイベント（US17 移管後・TI06）。
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
  * 管理者手動更新は {@code MANUAL}、システム自動は {@code SYSTEM}。</p>
  */
 public record TransportStatusUpdatedEvent(
-        TrackingNumber trackingNumber,
+        @EventTag TrackingNumber trackingNumber,
         TransportStatus newStatus,
         Location location,
         LocalDateTime updatedAt,

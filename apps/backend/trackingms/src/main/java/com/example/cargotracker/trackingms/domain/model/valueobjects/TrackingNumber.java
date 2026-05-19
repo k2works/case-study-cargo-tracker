@@ -20,4 +20,9 @@ public record TrackingNumber(String value) {
                     "TrackingNumber は 'TRK-YYYYMMDD-XXXXXXXX' 形式である必要があります: " + value);
         }
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

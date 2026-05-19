@@ -2,6 +2,7 @@ package com.example.cargotracker.trackingms.domain.model.events;
 
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.time.LocalDateTime;
+import org.axonframework.eventsourcing.annotation.EventTag;
 
 /**
  * 追跡例外が登録されたドメインイベント（US19）。
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
  * EXCEPTION への遷移は {@code tracking_event} テーブルには STATUS_UPDATE として記録されない。</p>
  */
 public record TrackingExceptionRegisteredEvent(
-        TrackingNumber trackingNumber,
+        @EventTag TrackingNumber trackingNumber,
         String exceptionId,
         String exceptionType,
         LocalDateTime occurredAt,
