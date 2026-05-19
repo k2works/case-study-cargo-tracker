@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * IT6 US18 / S16 / TI06 フロントエンド E2E シナリオ。
+ * IT7 US18 / S16 / TI06 フロントエンド E2E シナリオ。
  *
  * シナリオ:
  *   1. /login で admin/password でログイン
- *   2. trackingms に initialize で追跡集約を作成（IT6 暫定 ACL）
+ *   2. bookingms でフル予約フロー（book → handoff → assign-route → confirm → issue-tracking）
+ *      → CargoTrackedEvent → CargoEventAclHandler → trackingms 自動初期化
  *   3. POST /api/v1/tracking/_internal/issue-token でトークン URL 発行
  *   4. /tracking/{tn}?token=<JWT> にアクセス → S15 公開照会
  *   5. サイドナビ「追跡管理」→ S16 追跡管理一覧で表示確認
@@ -19,9 +20,105 @@ import { test, expect } from '@playwright/test'
 
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:8080'
 
-test('US18 + S16: 追跡照会フルフロー（トークン発行 → 公開照会 → 一覧 → 期限切れ）', async ({ page }) => {
+/** bookingms フル予約フローを実行し trackingNumber を返す。失敗時は null を返す。 */
+async function createFullyTrackedBooking(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+  suffix: string,
+): Promise<string | null> {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+  // 荷主登録
+  const shipperResp = await request.post(`${API_BASE_URL}/api/v1/shippers`, {
+    headers,
+    data: {
+      name: `E2E Shipper ${suffix}`,
+      email: `e2e-${suffix}@example.com`,
+      shipperType: 'CORPORATE',
+    },
+  })
+  if (!shipperResp.ok()) return null
+  const shipper = (await shipperResp.json()) as { id: number }
+
+  // 予約登録
+  const bookResp = await request.post(`${API_BASE_URL}/api/v1/bookings`, {
+    headers,
+    data: {
+      shipperId: shipper.id,
+      cargoSpec: {
+        cargoType: 'GENERAL',
+        weightKg: 500,
+        quantity: 10,
+        productName: `E2E Cargo ${suffix}`,
+      },
+      routeSpec: {
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'DEHAM',
+        arrivalDeadline: '2099-12-31',
+      },
+    },
+  })
+  if (!bookResp.ok()) return null
+  const booking = (await bookResp.json()) as { bookingId: string }
+  const bookingId = booking.bookingId
+
+  // 経路設計引き渡し
+  const handoffResp = await request.post(`${API_BASE_URL}/api/v1/bookings/${bookingId}/handoff`, {
+    headers,
+  })
+  if (!handoffResp.ok()) return null
+
+  // 経路紐付け
+  const assignResp = await request.post(
+    `${API_BASE_URL}/api/v1/bookings/${bookingId}/assign-route`,
+    {
+      headers,
+      data: {
+        legs: [
+          {
+            voyageNumber: `V-E2E-${suffix}`,
+            loadUnlocode: 'JPTYO',
+            unloadUnlocode: 'DEHAM',
+            loadTime: '2099-07-20T14:00:00',
+            unloadTime: '2099-08-10T14:00:00',
+          },
+        ],
+      },
+    },
+  )
+  if (!assignResp.ok()) return null
+
+  // 予約確定
+  const confirmResp = await request.post(
+    `${API_BASE_URL}/api/v1/bookings/${bookingId}/confirm`,
+    { headers },
+  )
+  if (!confirmResp.ok()) return null
+
+  // 追跡番号発行 → CargoTrackedEvent → CargoEventAclHandler → trackingms 自動初期化
+  const issueResp = await request.post(
+    `${API_BASE_URL}/api/v1/bookings/${bookingId}/issue-tracking`,
+    { headers },
+  )
+  if (!issueResp.ok()) return null
+
+  // 発行された追跡番号を bookingms 一覧から取得（Event 伝播を最大 5 秒待機）
+  for (let i = 0; i < 10; i++) {
+    const listResp = await request.get(`${API_BASE_URL}/api/v1/bookings`, { headers })
+    if (!listResp.ok()) return null
+    const bookings = (await listResp.json()) as Array<{ bookingId: string; trackingNumber: string }>
+    const found = bookings.find((b) => b.bookingId === bookingId)
+    if (found?.trackingNumber) return found.trackingNumber
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  return null
+}
+
+test('US18 + S16: 追跡照会フルフロー（トークン発行 → 公開照会 → 一覧 → 期限切れ）', async ({
+  page,
+  request,
+}) => {
   const suffix = Date.now().toString(36).toUpperCase().padEnd(8, 'X').slice(0, 8)
-  const trackingNumber = `TRK-20260720-${suffix}`
 
   // 1. ログイン
   await page.goto('/login')
@@ -33,32 +130,19 @@ test('US18 + S16: 追跡照会フルフロー（トークン発行 → 公開照
   const adminToken = await page.evaluate(() => sessionStorage.getItem('cargo_tracker_token'))
   expect(adminToken).toBeTruthy()
 
-  // 2. trackingms initialize で追跡集約を作成
-  const initResp = await page.request.post(
-    `${API_BASE_URL}/api/v1/tracking/_internal/initialize`,
-    {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'Content-Type': 'application/json',
-      },
-      data: {
-        trackingNumber,
-        bookingId: `B-E2E-${suffix}`,
-        originUnlocode: 'JPTYO',
-        destinationUnlocode: 'DEHAM',
-        estimatedArrival: '2026-08-10T14:30:00',
-        voyageNumber: 'V-E2E-001',
-      },
-    },
-  )
-  if (!initResp.ok()) {
-    console.log('initialize failed:', initResp.status(), await initResp.text())
+  // 2. bookingms フル予約フロー → CargoTrackedEvent → trackingms 自動初期化
+  const trackingNumber = await createFullyTrackedBooking(request, adminToken!, suffix)
+  if (!trackingNumber) {
+    console.log('booking flow failed, skipping test')
     test.skip()
     return
   }
 
+  // Event 伝播待機（Axon Event Bus 経由）
+  await page.waitForTimeout(2_000)
+
   // 3. 管理者用に JWT を発行
-  const issueResp = await page.request.post(
+  const issueResp = await request.post(
     `${API_BASE_URL}/api/v1/tracking/_internal/issue-token`,
     {
       headers: {

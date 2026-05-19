@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * IT5 US15-US17 フロントエンド E2E シナリオ（荷役作業フルフロー）。
+ * IT7 US15-US17 フロントエンド E2E シナリオ（荷役作業フルフロー）。
  *
  * シナリオ:
  *   1. /login で admin/password でログイン
- *   2. handlingms に CargoSnapshot を直接 POST（IT5 暫定 ACL）
+ *   2. bookingms でフル予約フロー（book → handoff → assign-route → confirm → issue-tracking）
+ *      → CargoTrackedEvent → BookingEventAclHandler → cargo_snapshot 自動登録
+ *      → CargoTrackedEvent → CargoEventAclHandler → trackingms 自動初期化
  *   3. サイドナビ「荷役作業」→ S21 履歴画面
  *   4. 「新規登録」→ S20 荷役作業記録フォーム（US15）
  *   5. 受領（RECEIVE）作業を登録 → handlingms 履歴に反映
@@ -15,16 +17,112 @@ import { test, expect } from '@playwright/test'
  *   9. 状態を IN_TRANSIT に手動更新 → 履歴に反映
  *
  * 実行前提:
- *   - authms (:8081), bookingms (:8082), routingms (:8083), handlingms (:8085), gatewayms (:8080) が起動済み
- *   - handlingms に CargoSnapshot ACL の REST API（IT5 暫定）が動作
+ *   - authms (:8081), bookingms (:8082), routingms (:8083), handlingms (:8085),
+ *     trackingms (:8086), gatewayms (:8080) が起動済み
  */
 
-const HANDLING_API_BASE_URL = process.env.HANDLING_API_BASE_URL ?? 'http://localhost:8080'
-const TRACKING_API_BASE_URL = process.env.TRACKING_API_BASE_URL ?? HANDLING_API_BASE_URL
+const BOOKING_API_BASE_URL = process.env.BOOKING_API_BASE_URL ?? 'http://localhost:8080'
 
-test('US15-US17: 荷役作業フルフロー（受領 → 状態手動更新）', async ({ page }) => {
-  const suffix = Date.now().toString(36)
-  const trackingNumber = `TRK-20260720-${suffix.toUpperCase().padEnd(8, 'X').slice(0, 8)}`
+/** bookingms フル予約フローを実行し trackingNumber を返す。失敗時は null を返す。 */
+async function createFullyTrackedBooking(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+  suffix: string,
+): Promise<{ bookingId: string; trackingNumber: string } | null> {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+  // 1. 荷主登録
+  const shipperResp = await request.post(`${BOOKING_API_BASE_URL}/api/v1/shippers`, {
+    headers,
+    data: {
+      name: `E2E Shipper ${suffix}`,
+      email: `e2e-${suffix}@example.com`,
+      shipperType: 'CORPORATE',
+    },
+  })
+  if (!shipperResp.ok()) return null
+  const shipper = (await shipperResp.json()) as { id: number }
+
+  // 2. 予約登録
+  const bookResp = await request.post(`${BOOKING_API_BASE_URL}/api/v1/bookings`, {
+    headers,
+    data: {
+      shipperId: shipper.id,
+      cargoSpec: {
+        cargoType: 'GENERAL',
+        weightKg: 500,
+        quantity: 10,
+        productName: `E2E Cargo ${suffix}`,
+      },
+      routeSpec: {
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'DEHAM',
+        arrivalDeadline: '2099-12-31',
+      },
+    },
+  })
+  if (!bookResp.ok()) return null
+  const booking = (await bookResp.json()) as { bookingId: string }
+  const bookingId = booking.bookingId
+
+  // 3. 経路設計引き渡し
+  const handoffResp = await request.post(
+    `${BOOKING_API_BASE_URL}/api/v1/bookings/${bookingId}/handoff`,
+    { headers },
+  )
+  if (!handoffResp.ok()) return null
+
+  // 4. 経路紐付け（簡易 1 leg）
+  const assignResp = await request.post(
+    `${BOOKING_API_BASE_URL}/api/v1/bookings/${bookingId}/assign-route`,
+    {
+      headers,
+      data: {
+        legs: [
+          {
+            voyageNumber: `V-E2E-${suffix}`,
+            loadUnlocode: 'JPTYO',
+            unloadUnlocode: 'DEHAM',
+            loadTime: '2099-07-20T14:00:00',
+            unloadTime: '2099-08-10T14:00:00',
+          },
+        ],
+      },
+    },
+  )
+  if (!assignResp.ok()) return null
+
+  // 5. 予約確定
+  const confirmResp = await request.post(
+    `${BOOKING_API_BASE_URL}/api/v1/bookings/${bookingId}/confirm`,
+    { headers },
+  )
+  if (!confirmResp.ok()) return null
+
+  // 6. 追跡番号発行 → CargoTrackedEvent により handlingms / trackingms が自動更新
+  const issueResp = await request.post(
+    `${BOOKING_API_BASE_URL}/api/v1/bookings/${bookingId}/issue-tracking`,
+    { headers },
+  )
+  if (!issueResp.ok()) return null
+
+  // 7. 発行された追跡番号を bookingms 一覧から取得
+  // Event 伝播のため最大 5 秒リトライ
+  for (let i = 0; i < 10; i++) {
+    const listResp = await request.get(`${BOOKING_API_BASE_URL}/api/v1/bookings`, { headers })
+    if (!listResp.ok()) return null
+    const bookings = (await listResp.json()) as Array<{ bookingId: string; trackingNumber: string }>
+    const found = bookings.find((b) => b.bookingId === bookingId)
+    if (found?.trackingNumber) {
+      return { bookingId, trackingNumber: found.trackingNumber }
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  return null
+}
+
+test('US15-US17: 荷役作業フルフロー（受領 → 状態手動更新）', async ({ page, request }) => {
+  const suffix = Date.now().toString(36).toUpperCase().padEnd(8, 'X').slice(0, 8)
 
   // 1. ログイン
   await page.goto('/login')
@@ -36,47 +134,16 @@ test('US15-US17: 荷役作業フルフロー（受領 → 状態手動更新）'
   const token = await page.evaluate(() => sessionStorage.getItem('cargo_tracker_token'))
   expect(token).toBeTruthy()
 
-  // 2. handlingms に CargoSnapshot 直接登録（IT5 暫定 ACL）
-  const snapshotResp = await page.request.post(
-    `${HANDLING_API_BASE_URL}/api/v1/handling/cargo-snapshots`,
-    {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      data: {
-        bookingId: `B-E2E-${suffix}`,
-        trackingNumber,
-        originUnlocode: 'JPTYO',
-        destinationUnlocode: 'DEHAM',
-        cargoType: 'GENERAL',
-        arrivalDeadline: '2099-12-31',
-        bookingStatus: 'TRACKING_ISSUED',
-      },
-    },
-  )
-  // gateway 経由で handlingms が起動していない場合はテストをスキップ
-  if (!snapshotResp.ok()) {
+  // 2. bookingms フル予約フロー（Event 駆動 ACL で handlingms / trackingms を自動初期化）
+  const result = await createFullyTrackedBooking(request, token!, suffix)
+  if (!result) {
     test.skip()
     return
   }
+  const { trackingNumber } = result
 
-  // 2.1 trackingms にも追跡集約を初期化（TI06 移管後の状態更新で必要）
-  const trackingInitResp = await page.request.post(
-    `${TRACKING_API_BASE_URL}/api/v1/tracking/_internal/initialize`,
-    {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      data: {
-        trackingNumber,
-        bookingId: `B-E2E-${suffix}`,
-        originUnlocode: 'JPTYO',
-        destinationUnlocode: 'DEHAM',
-        estimatedArrival: '2099-12-31T23:59:59',
-        voyageNumber: `V-E2E-${suffix}`,
-      },
-    },
-  )
-  if (!trackingInitResp.ok()) {
-    test.skip()
-    return
-  }
+  // Event 伝播待機（Axon Event Bus 経由）
+  await page.waitForTimeout(2_000)
 
   // 3. サイドナビ「荷役作業」→ S21
   await page.goto('/handling')
