@@ -20,7 +20,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、UI、テスト、非機能、運用、技術スタック | 10 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 13 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 13 件作成済み（ADR-0001〜0013） |
 | [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 8 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1〜IT6 完了・IT7 計画完了 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み（アプリ開発環境、開発環境）|
@@ -72,6 +72,10 @@
 | [ADR-0007](./adr/0007-axon-5-event-sourcing-api.md) | Axon Framework 5.1 の Event Sourcing 採用と新アノテーション API への対応 |
 | [ADR-0008](./adr/0008-axon-5-spring-boot-integration-pattern.md) | Axon 5.1 Aggregate を Spring Boot 4 に統合する具体パターン（`@EventSourced` + `subscribing` モード） |
 | [ADR-0009](./adr/0009-axon-server-connector-explicit-dependency.md) | `axon-server-connector` を明示依存にし `local-docker` を pooled-streaming に復帰させる |
+| [ADR-0010](./adr/0010-us08-poc-promotion-policy.md) | US08 PoC 処理方針（テスト存続・実装再設計） |
+| [ADR-0011](./adr/0011-carrier-movement-and-transit-edge-responsibility.md) | CarrierMovement と TransitEdge の責務分離 |
+| [ADR-0012](./adr/0012-handlingms-trackingms-responsibility-separation.md) | handlingms と trackingms の責務分離 |
+| [ADR-0013](./adr/0013-tracking-number-jwt-time-limited-token.md) | Tracking Number JWT 時限トークン設計 |
 
 ### 運用ドキュメント
 
@@ -89,6 +93,9 @@
 | [運用成果物レビュー](./review/運用成果物_review_20260512.md) | アプリ開発環境セットアップ手順書 + 既存運用ファイルに対する XP 3 エージェント並列レビュー結果（高 15 件・中 10 件・低 5 件、Phase 0 雛形整備が必須） |
 | [Phase 0 Walking Skeleton コードレビュー](./review/Phase0_WalkingSkeleton_review_20260513.md) | bookingms Phase 0 スケルトンの 5 エージェント並列レビュー結果（高 3 件・中 4 件・低 4 件、IT1 着手前対応推奨） |
 | [IT2 実装成果物レビュー](./review/IT2_実装成果物_review_20260515.md) | IT2 完了時点（Axon 5.1 Event Sourcing + routingms 新設 + Phase 1 進行 35%）の 5 エージェント並列レビュー結果（高 13 件・中 20 件・低 8 件） |
+| [US08 先行スパイク コードレビュー](./review/us08_spike_review_20260516.md) | US08 経路候補算出のスパイク実装に対するコードレビュー結果 |
+| [IT4 バグ修正コードレビュー](./review/IT4_bugfix_review_20260518.md) | IT4 バグ修正に対するコードレビュー結果 |
+| [IT6 実装成果物レビュー](./review/IT6_implementation_review_20260518.md) | IT6 完了時点（追跡・手動更新 Phase 2 進行）の実装成果物レビュー結果 |
 
 ## 補足
 
