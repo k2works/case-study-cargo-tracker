@@ -230,6 +230,24 @@ class TrackingActivityTest {
     }
 
     @Test
+    @DisplayName("TrackingExceptionResolvedEvent を再生しても currentStatus は EXCEPTION のまま維持される")
+    void on_exceptionResolved_状態は変わらない() {
+        var activity = new TrackingActivity();
+        activity.on(new TrackingInitializedEvent(
+                TRK, BOOKING_ID, tokyoToHamburgItinerary(), TOKYO, HAMBURG, ETA,
+                TransportStatus.NOT_RECEIVED));
+        activity.on(new TrackingExceptionRegisteredEvent(
+                TRK, "exc-001", "DAMAGE",
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "JPTYO", "破損が発生しました", "admin-001"));
+        activity.on(new TrackingExceptionResolvedEvent(
+                TRK, "exc-001", "補償手続き完了",
+                LocalDateTime.of(2026, 7, 30, 9, 0), "admin-001"));
+
+        assertThat(activity.getCurrentStatus()).isEqualTo(TransportStatus.EXCEPTION);
+    }
+
+    @Test
     @DisplayName("DELIVERED 状態に遷移すると deliveredAt が記録される")
     void on_updated_配送完了で記録() {
         var activity = new TrackingActivity();

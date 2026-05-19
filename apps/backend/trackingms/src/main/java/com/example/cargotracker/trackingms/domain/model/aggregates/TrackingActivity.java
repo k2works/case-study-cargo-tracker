@@ -173,7 +173,7 @@ public final class TrackingActivity {
                 this.trackingNumber,
                 command.exceptionId(),
                 command.resolution(),
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 command.operatorId()));
     }
 

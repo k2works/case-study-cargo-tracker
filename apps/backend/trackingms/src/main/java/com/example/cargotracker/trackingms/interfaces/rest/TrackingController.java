@@ -24,6 +24,7 @@ import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemR
 import com.example.cargotracker.trackingms.interfaces.rest.dto.UpdateTrackingStatusRequest;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
@@ -218,7 +219,7 @@ public class TrackingController {
             return ResponseEntity.notFound().build();
         }
 
-        var exceptionId = java.util.UUID.randomUUID().toString();
+        var exceptionId = UUID.randomUUID().toString();
         var command = new RegisterTrackingExceptionCommand(
                 trackingNumber,
                 exceptionId,

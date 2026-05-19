@@ -195,12 +195,15 @@ export function useRegisterTrackingException() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tracking', variables.trackingNumber] })
+      queryClient.invalidateQueries({
+        queryKey: ['tracking', variables.trackingNumber, 'exceptions'],
+      })
     },
   })
 }
 
 /**
- * 追跡例外一覧クエリ（US20 S19 画面用）。
+ * 追跡例外一覧クエリ（US20 / S17 例外対応タブ・S19 例外一覧画面用）。
  */
 export function useTrackingExceptions(trackingNumber: string) {
   return useQuery<TrackingException[]>({
