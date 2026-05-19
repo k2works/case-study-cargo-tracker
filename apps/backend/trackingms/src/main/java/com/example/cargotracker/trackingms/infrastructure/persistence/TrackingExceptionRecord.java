@@ -15,6 +15,6 @@ public record TrackingExceptionRecord(
         String responseStatus,
         String resolution,
         LocalDateTime resolvedAt,
-        boolean escalated,
+        Boolean escalated,
         LocalDateTime createdAt,
         LocalDateTime updatedAt) { }

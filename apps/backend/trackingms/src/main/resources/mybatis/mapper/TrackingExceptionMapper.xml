@@ -5,18 +5,20 @@
 
     <resultMap id="trackingExceptionResultMap"
                type="com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionRecord">
-        <id property="exceptionId" column="exception_id"/>
-        <result property="trackingNumber" column="tracking_number"/>
-        <result property="exceptionType" column="exception_type"/>
-        <result property="occurredAt" column="occurred_at"/>
-        <result property="occurredUnlocode" column="occurred_unlocode"/>
-        <result property="description" column="description"/>
-        <result property="responseStatus" column="response_status"/>
-        <result property="resolution" column="resolution"/>
-        <result property="resolvedAt" column="resolved_at"/>
-        <result property="escalated" column="escalated"/>
-        <result property="createdAt" column="created_at"/>
-        <result property="updatedAt" column="updated_at"/>
+        <constructor>
+            <idArg column="exception_id"      javaType="String"/>
+            <arg   column="tracking_number"   javaType="String"/>
+            <arg   column="exception_type"    javaType="String"/>
+            <arg   column="occurred_at"       javaType="java.time.LocalDateTime"/>
+            <arg   column="occurred_unlocode" javaType="String"/>
+            <arg   column="description"       javaType="String"/>
+            <arg   column="response_status"   javaType="String"/>
+            <arg   column="resolution"        javaType="String"/>
+            <arg   column="resolved_at"       javaType="java.time.LocalDateTime"/>
+            <arg   column="escalated"         javaType="boolean"/>
+            <arg   column="created_at"        javaType="java.time.LocalDateTime"/>
+            <arg   column="updated_at"        javaType="java.time.LocalDateTime"/>
+        </constructor>
     </resultMap>
 
     <insert id="insert"

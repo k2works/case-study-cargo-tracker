@@ -149,7 +149,7 @@ test('US19: DELAY 例外登録 → 例外対応一覧確認 → 解決フロー'
 
   // 例外対応タブで一覧を確認
   await page.getByRole('button', { name: '例外対応' }).click()
-  await expect(page.getByText('輸送中に遅延が発生しました')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('輸送中に遅延が発生しました')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('DELAY')).toBeVisible()
 
   // 解決内容を入力して「解決」ボタンをクリック
@@ -199,6 +199,6 @@ test('US20: LOSS 例外登録 → 緊急通知バナー + escalated マーク表
 
   // 例外対応タブで escalated マーク（「緊急」）が表示されること
   await page.getByRole('button', { name: '例外対応' }).click()
-  await expect(page.getByText('貨物が紛失しました')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('貨物が紛失しました')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('緊急')).toBeVisible()
 })

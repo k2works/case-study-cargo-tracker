@@ -223,6 +223,7 @@ export function useTrackingExceptions(trackingNumber: string) {
       return response.json() as Promise<TrackingException[]>
     },
     enabled: !!trackingNumber,
+    refetchOnMount: 'always',
   })
 }
 
