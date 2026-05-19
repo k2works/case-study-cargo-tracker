@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 /**
  * trackingms の Projection EventHandler（US18）。
  *
@@ -58,7 +60,7 @@ public class TrackingProjectionsEventHandler {
         eventMapper.insert(new TrackingEventRecord(
                 null,
                 event.trackingNumber().value(),
-                event.estimatedArrival(),
+                LocalDateTime.now(),
                 null,
                 "TRACKING_INITIALIZED",
                 event.initialStatus().name(),
