@@ -193,7 +193,7 @@ IT5 (T5) / IT6 (T1) 持ち越しの Event 駆動 ACL を完成させ、サービ
 | 4.4 | フロント S18 拡張: 例外種別選択時にラジオ表示・LOSS 選択時に「緊急通知が送信されます」警告バナー + 補償方針入力欄表示 | 3h | [x] |
 | 4.5 | フロント S19 例外対応一覧画面（`/tracking/exceptions`・追跡管理一覧からタブ遷移・response_status / escalated でフィルタ） | 2h | [x] |
 | 4.6 | サイドナビ「追跡管理」に例外対応サブメニュー追加 or タブ切替 UI 整備 | 0.5h | [x] |
-| 4.7 | Playwright E2E `login-tracking-exception.spec.ts`: 例外記録 → 対応 → 解決フルフロー（DELAY + LOSS の 2 シナリオ） | 2h | [ ] |
+| 4.7 | Playwright E2E `login-tracking-exception.spec.ts`: 例外記録 → 対応 → 解決フルフロー（DELAY + LOSS の 2 シナリオ） | 2h | [x] |
 | 4.8 | SonarQube スキャン + violations 修正 | 1.5h | [ ] |
 | 4.9 | コードレビュー（`developing-review`） | 1h | [ ] |
 
