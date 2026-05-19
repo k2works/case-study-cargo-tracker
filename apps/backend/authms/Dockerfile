@@ -19,10 +19,12 @@ WORKDIR /workspace
 COPY gradle/ gradle/
 COPY config/ config/
 COPY settings.gradle.kts build.gradle.kts ./
+COPY shared/build.gradle.kts shared/build.gradle.kts
 COPY authms/build.gradle.kts authms/build.gradle.kts
 COPY bookingms/build.gradle.kts bookingms/build.gradle.kts
 COPY routingms/build.gradle.kts routingms/build.gradle.kts
 COPY handlingms/build.gradle.kts handlingms/build.gradle.kts
+COPY trackingms/build.gradle.kts trackingms/build.gradle.kts
 COPY gatewayms/build.gradle.kts gatewayms/build.gradle.kts
 
 # 依存解決のみ先行（ソース変更時のキャッシュ効率化）

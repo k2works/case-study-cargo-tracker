@@ -15,6 +15,7 @@ WORKDIR /workspace
 COPY gradle/ gradle/
 COPY config/ config/
 COPY settings.gradle.kts build.gradle.kts ./
+COPY shared/build.gradle.kts shared/build.gradle.kts
 COPY authms/build.gradle.kts authms/build.gradle.kts
 COPY bookingms/build.gradle.kts bookingms/build.gradle.kts
 COPY routingms/build.gradle.kts routingms/build.gradle.kts
@@ -25,7 +26,8 @@ COPY gatewayms/build.gradle.kts gatewayms/build.gradle.kts
 # 依存解決のみ先行（ソース変更時のキャッシュ効率化）
 RUN gradle :trackingms:dependencies --no-daemon || true
 
-# ソースコードをコピーしてビルド
+# ソースコードをコピーしてビルド（shared は trackingms の依存モジュール）
+COPY shared/src/ shared/src/
 COPY trackingms/src/ trackingms/src/
 RUN gradle :trackingms:bootJar --no-daemon -x test
 
