@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS tracking_event (
     unlocode          VARCHAR(5),
     voyage_number     VARCHAR(20),
     handling_type     VARCHAR(16),
-    description       CLOB,
+    description       TEXT,
     source            VARCHAR(20)   NOT NULL,
     CONSTRAINT fk_tracking_event_summary
         FOREIGN KEY (tracking_number) REFERENCES tracking_summary(tracking_number)
@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS tracking_exception (
     exception_type    VARCHAR(16)   NOT NULL,
     occurred_at       TIMESTAMP     NOT NULL,
     occurred_unlocode VARCHAR(5),
-    description       CLOB          NOT NULL,
+    description       TEXT          NOT NULL,
     response_status   VARCHAR(16)   NOT NULL,
-    resolution        CLOB,
+    resolution        TEXT,
     resolved_at       TIMESTAMP,
     escalated         BOOLEAN       NOT NULL DEFAULT FALSE,
     created_at        TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
