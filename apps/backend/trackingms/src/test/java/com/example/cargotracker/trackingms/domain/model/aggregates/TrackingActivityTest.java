@@ -5,7 +5,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.example.cargotracker.trackingms.domain.model.commands.InitializeTrackingCommand;
+import com.example.cargotracker.trackingms.domain.model.commands.RegisterTrackingExceptionCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.UpdateTransportStatusCommand;
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.CargoItinerary;
@@ -151,6 +153,51 @@ class TrackingActivityTest {
         org.junit.jupiter.api.Assertions.assertThrows(
                 IllegalStateException.class,
                 () -> activity.updateStatus(command, appender));
+    }
+
+    @Test
+    @DisplayName("RegisterTrackingExceptionCommand で TrackingExceptionRegisteredEvent が発行される")
+    void registerException_発行イベント() {
+        EventAppender appender = mock(EventAppender.class);
+        var activity = new TrackingActivity();
+        activity.on(new TrackingInitializedEvent(
+                TRK, BOOKING_ID, tokyoToHamburgItinerary(), TOKYO, HAMBURG, ETA,
+                TransportStatus.NOT_RECEIVED));
+
+        var command = new RegisterTrackingExceptionCommand(
+                TRK.value(),
+                "exc-001",
+                "DELAY",
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "JPTYO",
+                "遅延が発生しました",
+                "admin-001");
+
+        activity.registerException(command, appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(TrackingExceptionRegisteredEvent.class);
+        var event = (TrackingExceptionRegisteredEvent) captor.getValue();
+        assertThat(event.trackingNumber()).isEqualTo(TRK);
+        assertThat(event.exceptionId()).isEqualTo("exc-001");
+        assertThat(event.exceptionType()).isEqualTo("DELAY");
+        assertThat(event.description()).isEqualTo("遅延が発生しました");
+    }
+
+    @Test
+    @DisplayName("TrackingExceptionRegisteredEvent を再生すると EXCEPTION 状態に遷移する")
+    void on_exceptionRegistered_状態遷移() {
+        var activity = new TrackingActivity();
+        activity.on(new TrackingInitializedEvent(
+                TRK, BOOKING_ID, tokyoToHamburgItinerary(), TOKYO, HAMBURG, ETA,
+                TransportStatus.NOT_RECEIVED));
+        activity.on(new TrackingExceptionRegisteredEvent(
+                TRK, "exc-001", "DELAY",
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "JPTYO", "遅延が発生しました", "admin-001"));
+
+        assertThat(activity.getCurrentStatus()).isEqualTo(TransportStatus.EXCEPTION);
     }
 
     @Test

@@ -1,10 +1,13 @@
 package com.example.cargotracker.trackingms.application.eventhandlers;
 
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingEventRecord;
+import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionMapper;
+import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionRecord;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryRecord;
 import org.axonframework.messaging.eventhandling.annotation.EventHandler;
@@ -30,12 +33,15 @@ public class TrackingProjectionsEventHandler {
 
     private final TrackingSummaryMapper summaryMapper;
     private final TrackingEventMapper eventMapper;
+    private final TrackingExceptionMapper exceptionMapper;
 
     public TrackingProjectionsEventHandler(
             TrackingSummaryMapper summaryMapper,
-            TrackingEventMapper eventMapper) {
+            TrackingEventMapper eventMapper,
+            TrackingExceptionMapper exceptionMapper) {
         this.summaryMapper = summaryMapper;
         this.eventMapper = eventMapper;
+        this.exceptionMapper = exceptionMapper;
     }
 
     @EventHandler
@@ -69,6 +75,47 @@ public class TrackingProjectionsEventHandler {
                 null,
                 "追跡が初期化されました",
                 "SYSTEM"));
+    }
+
+    @EventHandler
+    public void on(TrackingExceptionRegisteredEvent event) {
+        LOG.debug("TrackingExceptionRegisteredEvent received: trackingNumber={}, exceptionId={}, type={}",
+                event.trackingNumber().value(), event.exceptionId(), event.exceptionType());
+
+        exceptionMapper.insert(new TrackingExceptionRecord(
+                event.exceptionId(),
+                event.trackingNumber().value(),
+                event.exceptionType(),
+                event.occurredAt(),
+                event.occurredUnlocode(),
+                event.description(),
+                "PENDING",
+                null,
+                null,
+                false,
+                LocalDateTime.now(),
+                LocalDateTime.now()));
+
+        summaryMapper.updateCurrentStatus(
+                event.trackingNumber().value(),
+                TransportStatus.EXCEPTION.name(),
+                event.occurredUnlocode(),
+                null,
+                false,
+                event.occurredAt());
+
+        eventMapper.insert(new TrackingEventRecord(
+                null,
+                event.trackingNumber().value(),
+                event.occurredAt(),
+                null,
+                "EXCEPTION_REGISTERED",
+                TransportStatus.EXCEPTION.name(),
+                event.occurredUnlocode(),
+                null,
+                null,
+                event.exceptionType() + ": " + event.description(),
+                "MANUAL"));
     }
 
     @EventHandler

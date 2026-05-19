@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.CargoItinerary;
@@ -16,6 +17,8 @@ import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNum
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingEventRecord;
+import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionMapper;
+import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionRecord;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryRecord;
 import java.time.LocalDateTime;
@@ -43,11 +46,14 @@ class TrackingProjectionsEventHandlerTest {
     @Mock
     private TrackingEventMapper eventMapper;
 
+    @Mock
+    private TrackingExceptionMapper exceptionMapper;
+
     private TrackingProjectionsEventHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new TrackingProjectionsEventHandler(summaryMapper, eventMapper);
+        handler = new TrackingProjectionsEventHandler(summaryMapper, eventMapper, exceptionMapper);
     }
 
     private static CargoItinerary itinerary() {
@@ -129,5 +135,30 @@ class TrackingProjectionsEventHandlerTest {
 
         verify(summaryMapper).updateCurrentStatus(
                 TRK.value(), "MISROUTED", "SGSIN", null, true, updatedAt);
+    }
+
+    @Test
+    @DisplayName("TrackingExceptionRegisteredEvent で tracking_exception 挿入と EXCEPTION 状態更新が行われる")
+    void on_exceptionRegistered_挿入と状態更新() {
+        var occurredAt = LocalDateTime.of(2026, 7, 28, 10, 0);
+        var event = new TrackingExceptionRegisteredEvent(
+                TRK, "exc-001", "DELAY", occurredAt, "JPTYO",
+                "遅延が発生しました", "admin-001");
+
+        handler.on(event);
+
+        ArgumentCaptor<TrackingExceptionRecord> excCaptor =
+                ArgumentCaptor.forClass(TrackingExceptionRecord.class);
+        verify(exceptionMapper).insert(excCaptor.capture());
+        var rec = excCaptor.getValue();
+        assertThat(rec.exceptionId()).isEqualTo("exc-001");
+        assertThat(rec.trackingNumber()).isEqualTo(TRK.value());
+        assertThat(rec.exceptionType()).isEqualTo("DELAY");
+        assertThat(rec.responseStatus()).isEqualTo("PENDING");
+        assertThat(rec.escalated()).isFalse();
+
+        verify(summaryMapper).updateCurrentStatus(
+                TRK.value(), "EXCEPTION", "JPTYO", null, false, occurredAt);
+        verify(eventMapper).insert(any(TrackingEventRecord.class));
     }
 }

@@ -1,7 +1,9 @@
 package com.example.cargotracker.trackingms.domain.model.aggregates;
 
 import com.example.cargotracker.trackingms.domain.model.commands.InitializeTrackingCommand;
+import com.example.cargotracker.trackingms.domain.model.commands.RegisterTrackingExceptionCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.UpdateTransportStatusCommand;
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.CargoItinerary;
@@ -119,6 +121,37 @@ public final class TrackingActivity {
         this.estimatedArrival = event.estimatedArrival();
         this.misrouted = false;
         this.deliveredAt = null;
+    }
+
+    /**
+     * 追跡例外の登録（US19）。
+     *
+     * <p>EXCEPTION 状態への遷移は Projection 側の EventHandler がイベントを受けて行う。
+     * 集約は {@link TrackingExceptionRegisteredEvent} を発行し、自身の状態を更新する。</p>
+     */
+    @CommandHandler
+    public void registerException(
+            RegisterTrackingExceptionCommand command,
+            EventAppender appender) {
+
+        if (this.trackingNumber == null) {
+            throw new IllegalStateException(
+                    "追跡集約が初期化されていません。trackingNumber: " + command.trackingNumber());
+        }
+
+        appender.append(new TrackingExceptionRegisteredEvent(
+                this.trackingNumber,
+                command.exceptionId(),
+                command.exceptionType(),
+                command.occurredAt(),
+                command.occurredUnlocode(),
+                command.description(),
+                command.operatorId()));
+    }
+
+    @EventSourcingHandler
+    public void on(TrackingExceptionRegisteredEvent event) {
+        this.currentStatus = TransportStatus.EXCEPTION;
     }
 
     @EventSourcingHandler

@@ -2,6 +2,7 @@ package com.example.cargotracker.trackingms.interfaces.rest;
 
 import com.example.cargotracker.trackingms.application.query.TrackingQueryService;
 import com.example.cargotracker.trackingms.domain.model.commands.InitializeTrackingCommand;
+import com.example.cargotracker.trackingms.domain.model.commands.RegisterTrackingExceptionCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.trackingms.domain.model.services.InvalidTrackingTokenException;
 import com.example.cargotracker.trackingms.domain.model.services.TrackingTokenExpiredException;
@@ -16,6 +17,7 @@ import com.example.cargotracker.trackingms.domain.model.valueobjects.TransportSt
 import com.example.cargotracker.trackingms.domain.model.valueobjects.VerifiedToken;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.InitializeTrackingRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.IssueTrackingTokenResponse;
+import com.example.cargotracker.trackingms.interfaces.rest.dto.RegisterTrackingExceptionRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemResponse;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.UpdateTrackingStatusRequest;
 import java.time.Duration;
@@ -184,6 +186,37 @@ public class TrackingController {
         return ResponseEntity.ok(Map.of(
                 TRACKING_NUMBER_KEY, trackingNumber,
                 "newStatus", newStatus.name()));
+    }
+
+    /**
+     * US19 追跡例外登録。
+     *
+     * <p>{@code POST /api/v1/tracking/{trackingNumber}/exceptions} — 遅延・破損・紛失例外を登録する。</p>
+     */
+    @PostMapping("/{trackingNumber}/exceptions")
+    public ResponseEntity<Map<String, String>> registerException(
+            @PathVariable String trackingNumber,
+            @RequestBody RegisterTrackingExceptionRequest request) {
+
+        if (!queryService.exists(trackingNumber)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var exceptionId = java.util.UUID.randomUUID().toString();
+        var command = new RegisterTrackingExceptionCommand(
+                trackingNumber,
+                exceptionId,
+                request.exceptionType(),
+                request.occurredAt() != null ? request.occurredAt() : LocalDateTime.now(),
+                request.occurredUnlocode(),
+                request.description(),
+                (request.operatorId() == null || request.operatorId().isBlank())
+                        ? "system" : request.operatorId());
+
+        sendAndWaitWithTimeout(command);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                TRACKING_NUMBER_KEY, trackingNumber,
+                "exceptionId", exceptionId));
     }
 
     /**
