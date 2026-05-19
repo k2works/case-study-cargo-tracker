@@ -23,7 +23,7 @@ class TrackingTokenServiceTest {
 
     private static final String SECRET =
             "test-secret-please-change-in-production-must-be-at-least-256-bits-of-entropy";
-    private static final TrackingNumber TRK = new TrackingNumber("TRK-ABC1234567");
+    private static final TrackingNumber TRK = new TrackingNumber("TRK-20260101-ABC12345");
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 7, 20, 9, 0);
 
     private TrackingTokenService createService(LocalDateTime now) {

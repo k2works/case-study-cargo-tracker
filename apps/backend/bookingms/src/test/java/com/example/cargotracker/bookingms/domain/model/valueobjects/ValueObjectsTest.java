@@ -33,9 +33,10 @@ class ValueObjectsTest {
     @DisplayName("TrackingNumber")
     class TrackingNumberTest {
         @Test
-        @DisplayName("TRK- + 大文字英数 10 桁は受け入れる")
+        @DisplayName("TRK-YYYYMMDD-XXXXXXXX 形式は受け入れる")
         void 正常な書式は受け入れる() {
-            assertThat(new TrackingNumber("TRK-AB12CD3456").value()).isEqualTo("TRK-AB12CD3456");
+            assertThat(new TrackingNumber("TRK-20260101-AB12CD34").value())
+                    .isEqualTo("TRK-20260101-AB12CD34");
         }
 
         @Test
@@ -48,7 +49,14 @@ class ValueObjectsTest {
         @Test
         @DisplayName("小文字を含むと拒否")
         void 小文字は拒否() {
-            assertThatThrownBy(() -> new TrackingNumber("TRK-ab12CD3456"))
+            assertThatThrownBy(() -> new TrackingNumber("TRK-20260101-ab12cd34"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("旧書式 TRK-大文字英数10桁は拒否")
+        void 旧書式は拒否() {
+            assertThatThrownBy(() -> new TrackingNumber("TRK-AB12CD3456"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

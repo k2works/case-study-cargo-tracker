@@ -103,7 +103,7 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("管理者用 issue-token で URL とトークンが発行される")
     void issueToken_発行成功() throws Exception {
-        var trackingNumber = "TRK-A1B2C3D4E5";
+        var trackingNumber = "TRK-20260720-A1B2C3D4";
         seedTrackingSummary(trackingNumber);
 
         MvcResult result = mockMvc.perform(post("/api/v1/tracking/_internal/issue-token")
@@ -121,7 +121,7 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("発行したトークンで公開照会できる")
     void getTracking_発行から照会の往復が成功() throws Exception {
-        var trackingNumber = "TRK-A1B2C3D4E5";
+        var trackingNumber = "TRK-20260720-A1B2C3D4";
         seedTrackingSummary(trackingNumber);
 
         MvcResult issued = mockMvc.perform(post("/api/v1/tracking/_internal/issue-token")
@@ -143,7 +143,7 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("不正なトークンで照会すると 401 TOKEN_INVALID")
     void getTracking_不正トークンで401() throws Exception {
-        var trackingNumber = "TRK-A1B2C3D4E5";
+        var trackingNumber = "TRK-20260720-A1B2C3D4";
         seedTrackingSummary(trackingNumber);
 
         mockMvc.perform(get("/api/v1/tracking/{tn}", trackingNumber).param("token", "not.a.jwt"))
@@ -155,7 +155,7 @@ class TrackingControllerIntegrationTest {
     @DisplayName("追跡番号不在で 404 TRACKING_NOT_FOUND")
     void getTracking_存在しない追跡番号で404() throws Exception {
         // tracking_summary に存在しない追跡番号
-        var trackingNumber = "TRK-Z9Y8X7W6V5";
+        var trackingNumber = "TRK-20260720-Z9Y8X7W6";
 
         MvcResult issued = mockMvc.perform(post("/api/v1/tracking/_internal/issue-token")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -173,7 +173,7 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("URL の追跡番号と JWT 内 tn が異なる場合は 400 TOKEN_TN_MISMATCH")
     void getTracking_tn不一致で400() throws Exception {
-        var trackingNumber = "TRK-A1B2C3D4E5";
+        var trackingNumber = "TRK-20260720-A1B2C3D4";
         seedTrackingSummary(trackingNumber);
 
         MvcResult issued = mockMvc.perform(post("/api/v1/tracking/_internal/issue-token")
@@ -185,7 +185,7 @@ class TrackingControllerIntegrationTest {
                 .get("token").asText();
 
         // 別の追跡番号で照会
-        mockMvc.perform(get("/api/v1/tracking/{tn}", "TRK-Z9Y8X7W6V5").param("token", token))
+        mockMvc.perform(get("/api/v1/tracking/{tn}", "TRK-20260720-Z9Y8X7W6").param("token", token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("TOKEN_TN_MISMATCH"));
     }
@@ -193,8 +193,8 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("S16 GET /api/v1/tracking で全件が最終更新日時降順で返る")
     void listTrackings_全件取得() throws Exception {
-        seedTrackingSummary("TRK-A1B2C3D4E5");
-        seedTrackingSummary("TRK-Z9Y8X7W6V5");
+        seedTrackingSummary("TRK-20260720-A1B2C3D4");
+        seedTrackingSummary("TRK-20260720-Z9Y8X7W6");
 
         mockMvc.perform(get("/api/v1/tracking"))
                 .andExpect(status().isOk())
@@ -209,7 +209,7 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("TI06 PUT /api/v1/tracking/{tn}/status で UpdateTransportStatusCommand が送信される")
     void updateStatus_CommandGatewayへ送信() throws Exception {
-        var trackingNumber = "TRK-S1T2A3T4U5";
+        var trackingNumber = "TRK-20260810-S1T2A3T4";
         seedTrackingSummary(trackingNumber);
 
         mockMvc.perform(put("/api/v1/tracking/{tn}/status", trackingNumber)
@@ -230,7 +230,7 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("PUT /status で不正な状態を渡すと 400 INVALID_STATUS")
     void updateStatus_未知の状態で400() throws Exception {
-        var trackingNumber = "TRK-S1T2A3T4U5";
+        var trackingNumber = "TRK-20260810-S1T2A3T4";
         seedTrackingSummary(trackingNumber);
 
         mockMvc.perform(put("/api/v1/tracking/{tn}/status", trackingNumber)
@@ -250,7 +250,7 @@ class TrackingControllerIntegrationTest {
     @DisplayName("PUT /status で tracking_summary 未初期化なら 404 TRACKING_NOT_FOUND")
     void updateStatus_未初期化なら404() throws Exception {
         // seed しない（tracking_summary に行が無い状態）
-        var trackingNumber = "TRK-NOTFOUND123";
+        var trackingNumber = "TRK-20260810-NOTFOUND1";
 
         mockMvc.perform(put("/api/v1/tracking/{tn}/status", trackingNumber)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -268,7 +268,7 @@ class TrackingControllerIntegrationTest {
     @Test
     @DisplayName("内部 initialize API で CommandGateway に InitializeTrackingCommand が送信される")
     void initialize_CommandGatewayへ送信() throws Exception {
-        var trackingNumber = "TRK-N1E2W3T4R5";
+        var trackingNumber = "TRK-20260810-N1E2W3T4";
 
         mockMvc.perform(post("/api/v1/tracking/_internal/initialize")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -32,7 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("TrackingProjectionsEventHandler")
 class TrackingProjectionsEventHandlerTest {
 
-    private static final TrackingNumber TRK = new TrackingNumber("TRK-ABC1234567");
+    private static final TrackingNumber TRK = new TrackingNumber("TRK-20260101-ABC12345");
     private static final Location TOKYO = Location.of("JPTYO");
     private static final Location HAMBURG = Location.of("DEHAM");
     private static final LocalDateTime ETA = LocalDateTime.of(2026, 8, 10, 14, 30);

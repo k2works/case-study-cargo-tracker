@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useBookings, useHandOffBooking, useConfirmBooking, useIssueTracking } from '../features/booking/hooks/useBookings'
 import { TrackingTokenIssuer } from '../features/tracking/components/TrackingTokenIssuer'
-import { useInitializeTracking } from '../features/tracking/hooks/useTracking'
 
 // S10 予約詳細（US06）。
 // PRELIMINARY 状態のときに「経路設計を依頼」ボタンを表示し、
@@ -13,52 +12,10 @@ export function BookingDetailPage() {
   const handOff = useHandOffBooking()
   const confirmBooking = useConfirmBooking()
   const issueTracking = useIssueTracking()
-  const initializeTracking = useInitializeTracking()
-  const initializedRef = useRef<Set<string>>(new Set())
   const [message, setMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const booking = bookings?.find((b) => b.bookingId === bookingId)
-
-  // IT6 暫定: 追跡番号が発行されたら trackingms に自動的に initialize を呼ぶ。
-  // Event 駆動 ACL（IT7 持ち越し）が完成すれば本フックは不要になる。
-  // 冪等性は trackingms 側の exists チェックで担保している。
-  // mutate / ref は安定参照のため依存配列から除外する。
-  const trackingNumber = booking?.trackingNumber
-  const bookingStatus = booking?.bookingStatus
-  const originUnLocode = booking?.originUnLocode
-  const destinationUnLocode = booking?.destinationUnLocode
-  const arrivalDeadline = booking?.arrivalDeadline
-  const bookingIdForInit = booking?.bookingId
-  useEffect(() => {
-    if (
-      trackingNumber &&
-      bookingStatus === 'TRACKING_ISSUED' &&
-      bookingIdForInit &&
-      originUnLocode &&
-      destinationUnLocode &&
-      arrivalDeadline &&
-      !initializedRef.current.has(trackingNumber)
-    ) {
-      initializedRef.current.add(trackingNumber)
-      initializeTracking.mutate({
-        trackingNumber,
-        bookingId: bookingIdForInit,
-        originUnlocode: originUnLocode,
-        destinationUnlocode: destinationUnLocode,
-        estimatedArrival: `${arrivalDeadline}T23:59:59`,
-        voyageNumber: 'V-AUTO',
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    trackingNumber,
-    bookingStatus,
-    bookingIdForInit,
-    originUnLocode,
-    destinationUnLocode,
-    arrivalDeadline,
-  ])
 
   if (isLoading) return <p className="p-6 text-gray-500">読み込み中...</p>
   if (isError)
