@@ -18,4 +18,7 @@ public interface CargoSnapshotMapper {
 
     void updateBookingStatusByTrackingNumber(@Param("trackingNumber") String trackingNumber,
                                              @Param("bookingStatus") String bookingStatus);
+
+    void updateBookingStatusByBookingId(@Param("bookingId") String bookingId,
+                                        @Param("bookingStatus") String bookingStatus);
 }

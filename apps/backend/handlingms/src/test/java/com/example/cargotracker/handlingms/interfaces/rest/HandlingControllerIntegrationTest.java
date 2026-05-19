@@ -60,21 +60,16 @@ class HandlingControllerIntegrationTest {
                 .thenReturn(CompletableFuture.completedFuture(null));
     }
 
-    private void registerSnapshot(String trackingNumber, String origin, String destination) throws Exception {
-        mockMvc.perform(post("/api/v1/handling/cargo-snapshots")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "bookingId": "B-TEST-001",
-                                    "trackingNumber": "%s",
-                                    "originUnlocode": "%s",
-                                    "destinationUnlocode": "%s",
-                                    "cargoType": "GENERAL",
-                                    "arrivalDeadline": "2099-12-31",
-                                    "bookingStatus": "TRACKING_ISSUED"
-                                }
-                                """.formatted(trackingNumber, origin, destination)))
-                .andExpect(status().isCreated());
+    private void registerSnapshot(String trackingNumber, String origin, String destination) {
+        var record = new com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord();
+        record.setBookingId("B-TEST-001");
+        record.setTrackingNumber(trackingNumber);
+        record.setOriginUnlocode(origin);
+        record.setDestinationUnlocode(destination);
+        record.setCargoType("GENERAL");
+        record.setArrivalDeadline(java.time.LocalDate.of(2099, 12, 31));
+        record.setBookingStatus("TRACKING_ISSUED");
+        cargoSnapshotMapper.upsert(record);
     }
 
     @Test
