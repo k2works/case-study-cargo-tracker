@@ -192,6 +192,19 @@ public class TrackingController {
     }
 
     /**
+     * US20 追跡例外一覧取得。
+     *
+     * <p>{@code GET /api/v1/tracking/{trackingNumber}/exceptions}</p>
+     */
+    @GetMapping("/{trackingNumber}/exceptions")
+    public ResponseEntity<?> listExceptions(@PathVariable String trackingNumber) {
+        if (!queryService.exists(trackingNumber)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(queryService.findExceptions(trackingNumber));
+    }
+
+    /**
      * US19 追跡例外登録。
      *
      * <p>{@code POST /api/v1/tracking/{trackingNumber}/exceptions} — 遅延・破損・紛失例外を登録する。</p>

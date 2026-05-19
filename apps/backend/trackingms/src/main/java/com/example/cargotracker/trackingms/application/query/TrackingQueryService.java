@@ -1,6 +1,8 @@
 package com.example.cargotracker.trackingms.application.query;
 
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingEventMapper;
+import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionMapper;
+import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionRecord;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingSummaryRecord;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingInfoResponse;
@@ -21,12 +23,15 @@ public class TrackingQueryService {
 
     private final TrackingSummaryMapper summaryMapper;
     private final TrackingEventMapper eventMapper;
+    private final TrackingExceptionMapper exceptionMapper;
 
     public TrackingQueryService(
             TrackingSummaryMapper summaryMapper,
-            TrackingEventMapper eventMapper) {
+            TrackingEventMapper eventMapper,
+            TrackingExceptionMapper exceptionMapper) {
         this.summaryMapper = summaryMapper;
         this.eventMapper = eventMapper;
+        this.exceptionMapper = exceptionMapper;
     }
 
     public Optional<TrackingInfoResponse> findByTrackingNumber(
@@ -74,6 +79,13 @@ public class TrackingQueryService {
      */
     public boolean exists(String trackingNumber) {
         return summaryMapper.findByTrackingNumber(trackingNumber).isPresent();
+    }
+
+    /**
+     * US20 追跡例外一覧取得。
+     */
+    public List<TrackingExceptionRecord> findExceptions(String trackingNumber) {
+        return exceptionMapper.findByTrackingNumber(trackingNumber);
     }
 
     /**
