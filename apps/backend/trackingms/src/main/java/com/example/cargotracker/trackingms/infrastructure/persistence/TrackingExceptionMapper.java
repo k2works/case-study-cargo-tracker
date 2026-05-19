@@ -1,5 +1,6 @@
 package com.example.cargotracker.trackingms.infrastructure.persistence;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -15,4 +16,10 @@ public interface TrackingExceptionMapper {
     void insert(TrackingExceptionRecord record);
 
     List<TrackingExceptionRecord> findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
+
+    void resolve(
+            @Param("exceptionId") String exceptionId,
+            @Param("resolution") String resolution,
+            @Param("resolvedAt") LocalDateTime resolvedAt,
+            @Param("responseStatus") String responseStatus);
 }

@@ -6,8 +6,10 @@ import static org.mockito.Mockito.verify;
 
 import com.example.cargotracker.trackingms.domain.model.commands.InitializeTrackingCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.RegisterTrackingExceptionCommand;
+import com.example.cargotracker.trackingms.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.CargoItinerary;
@@ -198,6 +200,33 @@ class TrackingActivityTest {
                 "JPTYO", "遅延が発生しました", "admin-001"));
 
         assertThat(activity.getCurrentStatus()).isEqualTo(TransportStatus.EXCEPTION);
+    }
+
+    @Test
+    @DisplayName("ResolveTrackingExceptionCommand で TrackingExceptionResolvedEvent が発行される")
+    void resolveException_コマンド送信でイベント発行() {
+        var activity = new TrackingActivity();
+        activity.on(new TrackingInitializedEvent(
+                TRK, BOOKING_ID, tokyoToHamburgItinerary(), TOKYO, HAMBURG, ETA,
+                TransportStatus.NOT_RECEIVED));
+        activity.on(new TrackingExceptionRegisteredEvent(
+                TRK, "exc-001", "DAMAGE",
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "JPTYO", "破損が発生しました", "admin-001"));
+
+        var appender = mock(EventAppender.class);
+        var command = new ResolveTrackingExceptionCommand(
+                TRK.value(), "exc-001", "補償手続き完了", "admin-001");
+
+        activity.resolveException(command, appender);
+
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(appender).append(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(TrackingExceptionResolvedEvent.class);
+        var event = (TrackingExceptionResolvedEvent) captor.getValue();
+        assertThat(event.trackingNumber()).isEqualTo(TRK);
+        assertThat(event.exceptionId()).isEqualTo("exc-001");
+        assertThat(event.resolution()).isEqualTo("補償手続き完了");
     }
 
     @Test

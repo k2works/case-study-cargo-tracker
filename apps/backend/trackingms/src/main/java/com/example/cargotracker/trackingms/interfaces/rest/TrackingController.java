@@ -3,6 +3,7 @@ package com.example.cargotracker.trackingms.interfaces.rest;
 import com.example.cargotracker.trackingms.application.query.TrackingQueryService;
 import com.example.cargotracker.trackingms.domain.model.commands.InitializeTrackingCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.RegisterTrackingExceptionCommand;
+import com.example.cargotracker.trackingms.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.trackingms.domain.model.services.InvalidTrackingTokenException;
 import com.example.cargotracker.trackingms.domain.model.services.TrackingTokenExpiredException;
@@ -18,6 +19,7 @@ import com.example.cargotracker.trackingms.domain.model.valueobjects.VerifiedTok
 import com.example.cargotracker.trackingms.interfaces.rest.dto.InitializeTrackingRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.IssueTrackingTokenResponse;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.RegisterTrackingExceptionRequest;
+import com.example.cargotracker.trackingms.interfaces.rest.dto.ResolveTrackingExceptionRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemResponse;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.UpdateTrackingStatusRequest;
 import java.time.Duration;
@@ -35,6 +37,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -215,6 +218,34 @@ public class TrackingController {
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                TRACKING_NUMBER_KEY, trackingNumber,
+                "exceptionId", exceptionId));
+    }
+
+    /**
+     * US20 追跡例外解決。
+     *
+     * <p>{@code PATCH /api/v1/tracking/{trackingNumber}/exceptions/{exceptionId}/resolve}</p>
+     */
+    @PatchMapping("/{trackingNumber}/exceptions/{exceptionId}/resolve")
+    public ResponseEntity<Map<String, String>> resolveException(
+            @PathVariable String trackingNumber,
+            @PathVariable String exceptionId,
+            @RequestBody ResolveTrackingExceptionRequest request) {
+
+        if (!queryService.exists(trackingNumber)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var command = new ResolveTrackingExceptionCommand(
+                trackingNumber,
+                exceptionId,
+                request.resolution(),
+                (request.operatorId() == null || request.operatorId().isBlank())
+                        ? "system" : request.operatorId());
+
+        sendAndWaitWithTimeout(command);
+        return ResponseEntity.ok(Map.of(
                 TRACKING_NUMBER_KEY, trackingNumber,
                 "exceptionId", exceptionId));
     }

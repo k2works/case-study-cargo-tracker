@@ -1,6 +1,7 @@
 package com.example.cargotracker.trackingms.application.eventhandlers;
 
 import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TransportStatus;
@@ -116,6 +117,18 @@ public class TrackingProjectionsEventHandler {
                 null,
                 event.exceptionType() + ": " + event.description(),
                 "MANUAL"));
+    }
+
+    @EventHandler
+    public void on(TrackingExceptionResolvedEvent event) {
+        LOG.debug("TrackingExceptionResolvedEvent received: trackingNumber={}, exceptionId={}",
+                event.trackingNumber().value(), event.exceptionId());
+
+        exceptionMapper.resolve(
+                event.exceptionId(),
+                event.resolution(),
+                event.resolvedAt(),
+                "RESOLVED");
     }
 
     @EventHandler

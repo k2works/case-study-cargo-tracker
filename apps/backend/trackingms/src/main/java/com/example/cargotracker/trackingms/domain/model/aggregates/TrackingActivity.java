@@ -2,8 +2,10 @@ package com.example.cargotracker.trackingms.domain.model.aggregates;
 
 import com.example.cargotracker.trackingms.domain.model.commands.InitializeTrackingCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.RegisterTrackingExceptionCommand;
+import com.example.cargotracker.trackingms.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.trackingms.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.CargoItinerary;
@@ -152,6 +154,32 @@ public final class TrackingActivity {
     @EventSourcingHandler
     public void on(TrackingExceptionRegisteredEvent event) {
         this.currentStatus = TransportStatus.EXCEPTION;
+    }
+
+    /**
+     * 追跡例外の解決（US20）。
+     */
+    @CommandHandler
+    public void resolveException(
+            ResolveTrackingExceptionCommand command,
+            EventAppender appender) {
+
+        if (this.trackingNumber == null) {
+            throw new IllegalStateException(
+                    "追跡集約が初期化されていません。trackingNumber: " + command.trackingNumber());
+        }
+
+        appender.append(new TrackingExceptionResolvedEvent(
+                this.trackingNumber,
+                command.exceptionId(),
+                command.resolution(),
+                java.time.LocalDateTime.now(),
+                command.operatorId()));
+    }
+
+    @EventSourcingHandler
+    public void on(TrackingExceptionResolvedEvent event) {
+        // 解決後も EXCEPTION 状態を維持（別途 updateStatus で変更可能）
     }
 
     @EventSourcingHandler

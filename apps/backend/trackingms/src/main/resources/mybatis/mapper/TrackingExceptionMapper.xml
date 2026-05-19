@@ -32,6 +32,15 @@
         )
     </insert>
 
+    <update id="resolve">
+        UPDATE tracking_exception
+        SET resolution = #{resolution},
+            resolved_at = #{resolvedAt},
+            response_status = #{responseStatus},
+            updated_at = NOW()
+        WHERE exception_id = #{exceptionId}
+    </update>
+
     <select id="findByTrackingNumber" resultMap="trackingExceptionResultMap">
         SELECT * FROM tracking_exception
         WHERE tracking_number = #{trackingNumber}

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.trackingms.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TrackingInitializedEvent;
 import com.example.cargotracker.trackingms.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.CargoItinerary;
@@ -160,6 +161,18 @@ class TrackingProjectionsEventHandlerTest {
         verify(summaryMapper).updateCurrentStatus(
                 TRK.value(), "EXCEPTION", "JPTYO", null, false, occurredAt);
         verify(eventMapper).insert(any(TrackingEventRecord.class));
+    }
+
+    @Test
+    @DisplayName("TrackingExceptionResolvedEvent で tracking_exception が解決済みに更新される")
+    void on_exceptionResolved_解決済み更新() {
+        var resolvedAt = LocalDateTime.of(2026, 7, 30, 9, 0);
+        var event = new TrackingExceptionResolvedEvent(
+                TRK, "exc-001", "補償手続き完了", resolvedAt, "admin-001");
+
+        handler.on(event);
+
+        verify(exceptionMapper).resolve("exc-001", "補償手続き完了", resolvedAt, "RESOLVED");
     }
 
     @Test
