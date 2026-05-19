@@ -83,6 +83,29 @@ export default function (gulp) {
     done(err);
   });
 
+  // local-axon-h2: H2 + Axon Server（E2E テスト用）各サービス起動タスク
+  // Axon Server のみ `docker compose up axonserver` で別途起動しておくこと。
+  for (const ms of ['bookingms', 'handlingms', 'trackingms', 'routingms', 'authms']) {
+    const taskName = `e2e:${ms}`;
+    gulp.task(taskName, async (done) => {
+      const profile = ms === 'authms' ? 'local-h2' : 'local-axon-h2';
+      const err = await runStreaming(
+        gradlewCmd,
+        [`:${ms}:bootRun`, `--args=--spring.profiles.active=${profile}`],
+        { cwd: backendDir }
+      );
+      done(err);
+    });
+  }
+
+  gulp.task('e2e:axon', async (done) => {
+    // Axon Server のみを Docker で起動する（E2E テスト用基盤）。
+    const err = await runStreaming('docker', [
+      'compose', '-f', composeFile, 'up', '-d', 'axonserver',
+    ]);
+    done(err);
+  });
+
   gulp.task('tdd:bookingms', async (done) => {
     const err = await runStreaming(
       gradlewCmd,
@@ -183,6 +206,15 @@ export default function (gulp) {
   dev:bookingms        bookingms を local-h2 プロファイルで bootRun
   tdd:bookingms        bookingms の Gradle test --continuous
 
+  local-axon-h2 プロファイル（H2 + Axon Server のみ Docker・E2E テスト用）
+  -----------------------------------------------------------------------
+  e2e:axon             Axon Server のみ Docker で起動（8024/8124 ポート）
+  e2e:authms           authms を local-h2 プロファイルで bootRun
+  e2e:bookingms        bookingms を local-axon-h2 プロファイルで bootRun
+  e2e:handlingms       handlingms を local-axon-h2 プロファイルで bootRun
+  e2e:trackingms       trackingms を local-axon-h2 プロファイルで bootRun
+  e2e:routingms        routingms を local-axon-h2 プロファイルで bootRun
+
   local-docker プロファイル（Axon Server + PostgreSQL + 全 4 ms をフル起動）
   ------------------------------------------------------------------------
   local-docker:build   全サービスの Docker イメージをビルド
@@ -192,9 +224,10 @@ export default function (gulp) {
   local-docker:smoke   Axon Server + 4 ms の health 疎通確認
 
 注意:
+  - e2e:* タスクは事前に e2e:axon（Axon Server）の起動が必要
   - local-docker:* は .env で POSTGRES_PASSWORD・JWT_SECRET 等のシークレット必須
   - local-docker:clean は Event Store も削除する破壊的操作。実行前に y/n 確認あり（ADR-0003 参照）
-  - local-h2 では SubscribingEventProcessor、local-docker では Axon Server 接続前提
+  - local-h2 では SubscribingEventProcessor、local-docker/local-axon-h2 では Axon Server 接続前提
     （ADR-0008 参照）
 `);
     done();

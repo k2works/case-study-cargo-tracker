@@ -17,8 +17,10 @@ import { test, expect } from '@playwright/test'
  *   9. 状態を IN_TRANSIT に手動更新 → 履歴に反映
  *
  * 実行前提:
+ *   - axonserver (:8024/:8124) が Docker で起動済み（`gulp e2e:axon`）
  *   - authms (:8081), bookingms (:8082), routingms (:8083), handlingms (:8085),
- *     trackingms (:8086), gatewayms (:8080) が起動済み
+ *     trackingms (:8086), gatewayms (:8080) が local-axon-h2 プロファイルで起動済み
+ *     （例: `gulp e2e:bookingms`, `gulp e2e:trackingms` 等）
  */
 
 const BOOKING_API_BASE_URL = process.env.BOOKING_API_BASE_URL ?? 'http://localhost:8080'

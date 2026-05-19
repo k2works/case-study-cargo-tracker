@@ -1,0 +1,32 @@
+# ローカル開発：H2 インメモリ + Axon Server（E2E テスト用）
+#
+# 用途: E2E テスト・サービス間イベント伝播の確認。
+# H2 データベース（PostgreSQL 不要）と Axon Server（Docker で起動）を組み合わせる。
+# Axon Server のみ `docker compose up axonserver` で起動しておくこと。
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:trackingms;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    clean-disabled: false
+    clean-on-validation-error: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  devtools:
+    restart:
+      enabled: true
+      poll-interval: 2s
+      quiet-period: 1s
+    livereload:
+      enabled: true
+
+axon:
+  axonserver:
+    servers: ${AXON_AXONSERVER_SERVERS:localhost:8124}
