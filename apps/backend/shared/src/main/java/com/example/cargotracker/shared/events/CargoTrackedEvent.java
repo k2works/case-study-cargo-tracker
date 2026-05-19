@@ -8,5 +8,9 @@ import org.axonframework.eventsourcing.annotation.EventTag;
  * <p>bookingms から発行され、trackingms の CargoEventAclHandler が購読して
  * InitializeTrackingCommand を内部発行する（ADR-0012・ADR-0014）。</p>
  */
-public record CargoTrackedEvent(@EventTag String bookingId, String trackingNumber) {
+public record CargoTrackedEvent(
+        @EventTag String bookingId,
+        String trackingNumber,
+        String originUnlocode,
+        String destinationUnlocode) {
 }

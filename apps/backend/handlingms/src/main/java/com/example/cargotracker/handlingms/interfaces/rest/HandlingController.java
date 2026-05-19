@@ -10,14 +10,12 @@ import com.example.cargotracker.handlingms.domain.model.valueobjects.TrackingNum
 import com.example.cargotracker.handlingms.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.handlingms.domain.ports.CargoSnapshotRepository;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper;
-import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityRecord;
 import com.example.cargotracker.handlingms.interfaces.rest.dto.CargoStatusUpdateResponse;
 import com.example.cargotracker.handlingms.interfaces.rest.dto.HandlingActivityResponse;
-import com.example.cargotracker.handlingms.interfaces.rest.dto.RegisterCargoSnapshotRequest;
 import com.example.cargotracker.handlingms.interfaces.rest.dto.RegisterHandlingActivityRequest;
 import com.example.cargotracker.handlingms.interfaces.rest.dto.UpdateCargoStatusRequest;
 import jakarta.validation.Valid;
@@ -46,7 +44,6 @@ import java.util.concurrent.TimeoutException;
  *
  * <p>POST /api/v1/handling/activities: 荷役作業を登録する。</p>
  * <p>GET  /api/v1/handling/activities/{trackingNumber}: 追跡番号別の作業履歴照会。</p>
- * <p>POST /api/v1/handling/cargo-snapshots: CargoSnapshot 登録（IT5 暫定 ACL、IT6 で Event 購読化）。</p>
  * <p><b>PUT  /api/v1/handling/activities/{trackingNumber}/status: 貨物状態手動更新
  * （US17・IT6 で trackingms へ移管・<b>Deprecated</b>・<b>Sunset: 2026-08-30</b>）。
  * 新規呼び出しは {@code PUT /api/v1/tracking/{trackingNumber}/status} を使用すること。
@@ -231,27 +228,6 @@ public class HandlingController {
                         trackingNumber,
                         request.newStatus(),
                         request.unlocode()));
-    }
-
-    /**
-     * CargoSnapshot 登録（IT5 暫定 ACL）。
-     *
-     * <p>IT6 で Axon Event Bus 経由の CargoBookedEvent 購読に置き換える予定。</p>
-     */
-    @PostMapping("/cargo-snapshots")
-    public ResponseEntity<Object> registerCargoSnapshot(@Valid @RequestBody RegisterCargoSnapshotRequest request) {
-        var snapshot = new CargoSnapshotRecord();
-        snapshot.setBookingId(request.bookingId());
-        snapshot.setTrackingNumber(request.trackingNumber());
-        snapshot.setOriginUnlocode(request.originUnlocode());
-        snapshot.setDestinationUnlocode(request.destinationUnlocode());
-        snapshot.setCargoType(request.cargoType());
-        snapshot.setArrivalDeadline(request.arrivalDeadline());
-        snapshot.setBookingStatus(request.bookingStatus());
-        cargoSnapshotMapper.upsert(snapshot);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "bookingId", request.bookingId(),
-                "trackingNumber", request.trackingNumber() == null ? "" : request.trackingNumber()));
     }
 
     private static ClaimVerification toClaimVerification(RegisterHandlingActivityRequest request) {

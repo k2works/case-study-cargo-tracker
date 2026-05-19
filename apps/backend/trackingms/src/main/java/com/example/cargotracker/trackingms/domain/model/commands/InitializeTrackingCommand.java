@@ -32,9 +32,8 @@ public record InitializeTrackingCommand(
     public InitializeTrackingCommand {
         Objects.requireNonNull(trackingNumber, "trackingNumber");
         Objects.requireNonNull(bookingId, "bookingId");
-        Objects.requireNonNull(itinerary, "itinerary");
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(destination, "destination");
-        Objects.requireNonNull(estimatedArrival, "estimatedArrival");
+        // itinerary / estimatedArrival は CargoTrackedEvent 経由では取得できないため nullable
     }
 }

@@ -49,6 +49,8 @@ public final class Cargo {
     private RoutingStatus routingStatus;
     private CargoItinerary itinerary;
     private String trackingNumber;
+    private String originUnlocode;
+    private String destinationUnlocode;
 
     @EntityCreator
     public Cargo() {
@@ -92,6 +94,8 @@ public final class Cargo {
     @EventSourcingHandler
     public void on(CargoBookedEvent event) {
         this.bookingId = event.bookingId();
+        this.originUnlocode = event.originUnlocode();
+        this.destinationUnlocode = event.destinationUnlocode();
         this.bookingStatus = BookingStatus.PRELIMINARY;
         this.routingStatus = RoutingStatus.NOT_ROUTED;
     }
@@ -183,7 +187,8 @@ public final class Cargo {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         String tracking = "TRK-" + date + "-" + suffix;
         appender.append(new TrackingNumberIssuedEvent(command.bookingId(), tracking));
-        appender.append(new CargoTrackedEvent(command.bookingId(), tracking));
+        appender.append(new CargoTrackedEvent(command.bookingId(), tracking,
+                this.originUnlocode, this.destinationUnlocode));
     }
 
     @EventSourcingHandler
