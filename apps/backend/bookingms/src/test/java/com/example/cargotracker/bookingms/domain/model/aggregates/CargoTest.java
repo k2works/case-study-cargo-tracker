@@ -6,10 +6,7 @@ import com.example.cargotracker.bookingms.domain.model.commands.ConfirmBookingCo
 import com.example.cargotracker.bookingms.domain.model.commands.HandOffToRoutingCommand;
 import com.example.cargotracker.bookingms.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.bookingms.domain.model.events.BookingConfirmedEvent;
-import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
-import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
-import com.example.cargotracker.bookingms.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
@@ -19,6 +16,10 @@ import com.example.cargotracker.bookingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.shared.events.CargoBookedEvent;
+import com.example.cargotracker.shared.events.CargoRoutedEvent;
+import com.example.cargotracker.shared.events.CargoTrackedEvent;
+import com.example.cargotracker.shared.events.TrackingNumberIssuedEvent;
 import org.axonframework.messaging.eventhandling.gateway.EventAppender;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,18 +34,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-/**
- * Cargo Aggregate のユニットテスト。
- *
- * <p>{@code AxonTestFixture.with(Class)} の API は本プロジェクトの Axon 5.1 では
- * {@code ApplicationConfigurer} を要求し、{@code Class} を受け取らないため、ADR-0007 で
- * 想定したシグネチャと一致しなかった。フル機能の Aggregate Test は IT3 以降で
- * 統合テスト寄りに整備し、Round 2 では Mockito の {@link EventAppender} モックで
- * Command Handler と {@code @EventSourcingHandler} を直接検証する。</p>
- */
 @DisplayName("Cargo Aggregate（ユニット）")
 class CargoTest {
 
@@ -72,9 +65,10 @@ class CargoTest {
         assertThat(captor.getValue()).isInstanceOf(CargoBookedEvent.class);
         CargoBookedEvent event = (CargoBookedEvent) captor.getValue();
         assertThat(event.bookingId()).isEqualTo(bookingId);
-        assertThat(event.shipperId()).isEqualTo(command.shipperId());
-        assertThat(event.cargoSpec()).isEqualTo(command.cargoSpec());
-        assertThat(event.routeSpec()).isEqualTo(command.routeSpec());
+        assertThat(event.shipperId()).isEqualTo("1");
+        assertThat(event.originUnlocode()).isEqualTo("JPYOK");
+        assertThat(event.destinationUnlocode()).isEqualTo("USLAX");
+        assertThat(event.cargoType()).isEqualTo("GENERAL");
     }
 
     @Test
@@ -82,11 +76,9 @@ class CargoTest {
     void on_イベント再生で状態復元() {
         var cargo = new Cargo();
         String bookingId = UUID.randomUUID().toString();
-        var spec = CargoSpecification.general(
-                new BigDecimal("100"), new Dimensions(100, 100, 100), 1, "産業機械");
-        var route = new RouteSpecification(
-                Location.of("JPYOK"), Location.of("USLAX"), LocalDate.of(2026, 12, 31));
-        var event = new CargoBookedEvent(bookingId, new ShipperId(1L), spec, route);
+        var event = new CargoBookedEvent(bookingId, "1", "JPYOK", "USLAX", "GENERAL",
+                LocalDate.of(2026, 12, 31), new BigDecimal("100"),
+                100, 100, 100, 1, "産業機械", null, null, null, null, null);
 
         cargo.on(event);
 
@@ -97,11 +89,9 @@ class CargoTest {
 
     private Cargo preliminaryCargo(String bookingId) {
         var cargo = new Cargo();
-        var spec = CargoSpecification.general(
-                new BigDecimal("100"), new Dimensions(100, 100, 100), 1, "産業機械");
-        var route = new RouteSpecification(
-                Location.of("JPYOK"), Location.of("USLAX"), LocalDate.of(2026, 12, 31));
-        cargo.on(new CargoBookedEvent(bookingId, new ShipperId(1L), spec, route));
+        cargo.on(new CargoBookedEvent(bookingId, "1", "JPYOK", "USLAX", "GENERAL",
+                LocalDate.of(2026, 12, 31), new BigDecimal("100"),
+                100, 100, 100, 1, "産業機械", null, null, null, null, null));
         return cargo;
     }
 
@@ -137,10 +127,9 @@ class CargoTest {
     void handOff_PRELIMINARY以外は拒否() {
         String bookingId = UUID.randomUUID().toString();
         Cargo cargo = preliminaryCargo(bookingId);
-        cargo.on(new CargoHandedOffToRoutingEvent(bookingId)); // PRELIMINARY -> ROUTING
+        cargo.on(new CargoHandedOffToRoutingEvent(bookingId));
 
         EventAppender appender = mock(EventAppender.class);
-
         var cmd = new HandOffToRoutingCommand(bookingId);
         assertThatThrownBy(() -> cargo.handOffToRouting(cmd, appender))
                 .isInstanceOf(IllegalStateException.class)
@@ -173,7 +162,7 @@ class CargoTest {
         assertThat(captor.getValue()).isInstanceOf(CargoRoutedEvent.class);
         CargoRoutedEvent event = (CargoRoutedEvent) captor.getValue();
         assertThat(event.bookingId()).isEqualTo(bookingId);
-        assertThat(event.itinerary()).isEqualTo(itinerary);
+        assertThat(cargo.getItinerary()).isEqualTo(itinerary);
     }
 
     @Test
@@ -182,10 +171,7 @@ class CargoTest {
         String bookingId = UUID.randomUUID().toString();
         Cargo cargo = routingCargo(bookingId);
 
-        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
-                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
-        var itinerary = new CargoItinerary(List.of(leg));
-        cargo.on(new CargoRoutedEvent(bookingId, itinerary));
+        cargo.on(new CargoRoutedEvent(bookingId));
 
         assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
     }
@@ -194,7 +180,7 @@ class CargoTest {
     @DisplayName("US11: ROUTING 以外では assignRoute は IllegalStateException")
     void assignRoute_ROUTING以外は拒否() {
         String bookingId = UUID.randomUUID().toString();
-        Cargo cargo = preliminaryCargo(bookingId); // PRELIMINARY state
+        Cargo cargo = preliminaryCargo(bookingId);
 
         EventAppender appender = mock(EventAppender.class);
         var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
@@ -210,9 +196,7 @@ class CargoTest {
 
     private Cargo routeProposedCargo(String bookingId) {
         Cargo cargo = routingCargo(bookingId);
-        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
-                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
-        cargo.on(new CargoRoutedEvent(bookingId, new CargoItinerary(List.of(leg))));
+        cargo.on(new CargoRoutedEvent(bookingId));
         return cargo;
     }
 
@@ -242,20 +226,24 @@ class CargoTest {
     }
 
     @Test
-    @DisplayName("US14: issueTrackingNumber は TrackingNumberIssuedEvent を追加し TRACKING_ISSUED に遷移する")
+    @DisplayName("US14: issueTrackingNumber は TrackingNumberIssuedEvent と CargoTrackedEvent を追加する")
     void issueTrackingNumber_イベント追加とTRACKING_ISSUED遷移() {
         String bookingId = UUID.randomUUID().toString();
         Cargo cargo = routeProposedCargo(bookingId);
-        cargo.on(new BookingConfirmedEvent(bookingId)); // CONFIRMED state
+        cargo.on(new BookingConfirmedEvent(bookingId));
 
         EventAppender appender = mock(EventAppender.class);
         cargo.issueTrackingNumber(new IssueTrackingNumberCommand(bookingId), appender);
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(appender).append(captor.capture());
-        assertThat(captor.getValue()).isInstanceOf(TrackingNumberIssuedEvent.class);
-        TrackingNumberIssuedEvent event = (TrackingNumberIssuedEvent) captor.getValue();
-        assertThat(event.trackingNumber()).startsWith("TRK-");
+        verify(appender, times(2)).append(captor.capture());
+        List<Object> events = captor.getAllValues();
+        assertThat(events.get(0)).isInstanceOf(TrackingNumberIssuedEvent.class);
+        TrackingNumberIssuedEvent tEvent = (TrackingNumberIssuedEvent) events.get(0);
+        assertThat(tEvent.trackingNumber()).startsWith("TRK-");
+        assertThat(events.get(1)).isInstanceOf(CargoTrackedEvent.class);
+        CargoTrackedEvent ctEvent = (CargoTrackedEvent) events.get(1);
+        assertThat(ctEvent.trackingNumber()).isEqualTo(tEvent.trackingNumber());
     }
 
     @Test

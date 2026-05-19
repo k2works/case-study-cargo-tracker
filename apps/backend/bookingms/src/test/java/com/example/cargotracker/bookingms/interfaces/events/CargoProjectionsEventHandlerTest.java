@@ -1,18 +1,10 @@
 package com.example.cargotracker.bookingms.interfaces.events;
 
-import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
-import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.Leg;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.Dimensions;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.Location;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.ShipperId;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.bookingms.infrastructure.persistence.CargoSummaryRecord;
+import com.example.cargotracker.shared.events.CargoBookedEvent;
+import com.example.cargotracker.shared.events.CargoRoutedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,8 +12,6 @@ import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -42,11 +32,9 @@ class CargoProjectionsEventHandlerTest {
     @Test
     @DisplayName("CargoBookedEvent を受けて cargo_summary に PRELIMINARY で INSERT する")
     void 通常貨物の登録() {
-        var spec = CargoSpecification.general(
-                new BigDecimal("100"), new Dimensions(100, 50, 30), 1, "産業機械");
-        var route = new RouteSpecification(
-                Location.of("JPYOK"), Location.of("USLAX"), LocalDate.of(2026, 12, 31));
-        var event = new CargoBookedEvent("B-001", new ShipperId(7L), spec, route);
+        var event = new CargoBookedEvent("B-001", "7", "JPYOK", "USLAX", "GENERAL",
+                LocalDate.of(2026, 12, 31), new BigDecimal("100"),
+                100, 50, 30, 1, "産業機械", null, null, null, null, null);
 
         handler.on(event);
 
@@ -70,14 +58,9 @@ class CargoProjectionsEventHandlerTest {
     @Test
     @DisplayName("HAZARDOUS 貨物では HazardInfo カラムも保存される")
     void 危険物の付加情報も保存される() {
-        var hazard = new HazardInfo("3", "1170", "引火性液体");
-        var spec = new CargoSpecification(
-                com.example.cargotracker.bookingms.domain.model.valueobjects.CargoType.HAZARDOUS,
-                new BigDecimal("50"), new Dimensions(50, 50, 50), 2, "燃料",
-                hazard, null);
-        var route = new RouteSpecification(
-                Location.of("JPYOK"), Location.of("USLAX"), LocalDate.of(2026, 12, 31));
-        var event = new CargoBookedEvent("B-002", new ShipperId(7L), spec, route);
+        var event = new CargoBookedEvent("B-002", "7", "JPYOK", "USLAX", "HAZARDOUS",
+                LocalDate.of(2026, 12, 31), new BigDecimal("50"),
+                50, 50, 50, 2, "燃料", "3", "1170", "引火性液体", null, null);
 
         handler.on(event);
 
@@ -94,15 +77,10 @@ class CargoProjectionsEventHandlerTest {
     @Test
     @DisplayName("REFRIGERATED 貨物では TemperatureCondition カラムも保存される（US05）")
     void 冷凍貨物の温度条件も保存される() {
-        var temp = new com.example.cargotracker.bookingms.domain.model.valueobjects.TemperatureCondition(
+        var event = new CargoBookedEvent("B-003", "7", "JPYOK", "USLAX", "REFRIGERATED",
+                LocalDate.of(2026, 12, 31), new BigDecimal("200"),
+                150, 80, 80, 1, "冷凍マグロ", null, null, null,
                 new BigDecimal("-25"), new BigDecimal("-18"));
-        var spec = new CargoSpecification(
-                com.example.cargotracker.bookingms.domain.model.valueobjects.CargoType.REFRIGERATED,
-                new BigDecimal("200"), new Dimensions(150, 80, 80), 1, "冷凍マグロ",
-                null, temp);
-        var route = new RouteSpecification(
-                Location.of("JPYOK"), Location.of("USLAX"), LocalDate.of(2026, 12, 31));
-        var event = new CargoBookedEvent("B-003", new ShipperId(7L), spec, route);
 
         handler.on(event);
 
@@ -119,9 +97,7 @@ class CargoProjectionsEventHandlerTest {
     @Test
     @DisplayName("CargoHandedOffToRoutingEvent を受けて cargo_summary.booking_status を ROUTING に更新する（US06）")
     void 経路設計引き渡しでROUTINGに更新() {
-        var event = new CargoHandedOffToRoutingEvent("B-100");
-
-        handler.on(event);
+        handler.on(new CargoHandedOffToRoutingEvent("B-100"));
 
         verify(mapper).updateBookingStatus("B-100", "ROUTING");
     }
@@ -129,11 +105,7 @@ class CargoProjectionsEventHandlerTest {
     @Test
     @DisplayName("US11: CargoRoutedEvent を受けて cargo_summary.booking_status を ROUTE_PROPOSED に更新する")
     void 経路紐付けでROUTE_PROPOSEDに更新() {
-        var leg = new Leg("V001", Location.of("JPYOK"), Location.of("USLAX"),
-                LocalDateTime.of(2099, 7, 1, 9, 0), LocalDateTime.of(2099, 7, 15, 18, 0));
-        var event = new CargoRoutedEvent("B-200", new CargoItinerary(List.of(leg)));
-
-        handler.on(event);
+        handler.on(new CargoRoutedEvent("B-200"));
 
         verify(mapper).updateBookingStatus("B-200", "ROUTE_PROPOSED");
     }

@@ -28,6 +28,7 @@ dependencyResolutionManagement {
 }
 
 // 実装済みサービス
+include("shared")
 include("bookingms")
 include("authms")
 include("gatewayms")
@@ -37,4 +38,3 @@ include("trackingms")
 
 // 雛形のみ（Phase 2 以降に実装）
 // include("billingms")
-// include("shared")

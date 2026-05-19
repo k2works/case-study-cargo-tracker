@@ -10,17 +10,17 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import com.example.cargotracker.bookingms.domain.model.events.BookingConfirmedEvent;
-import com.example.cargotracker.bookingms.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.CargoHandedOffToRoutingEvent;
-import com.example.cargotracker.bookingms.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.bookingms.domain.model.events.RouteNotifiedEvent;
-import com.example.cargotracker.bookingms.domain.model.events.TrackingNumberIssuedEvent;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.BookingStatus;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoSpecification;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.HazardInfo;
 import com.example.cargotracker.bookingms.domain.model.valueobjects.RoutingStatus;
-import com.example.cargotracker.bookingms.domain.model.valueobjects.ShipperId;
+import com.example.cargotracker.bookingms.domain.model.valueobjects.TemperatureCondition;
+import com.example.cargotracker.shared.events.CargoBookedEvent;
+import com.example.cargotracker.shared.events.CargoRoutedEvent;
+import com.example.cargotracker.shared.events.CargoTrackedEvent;
+import com.example.cargotracker.shared.events.TrackingNumberIssuedEvent;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
@@ -45,9 +45,6 @@ import org.springframework.context.annotation.Profile;
 public final class Cargo {
 
     private String bookingId;
-    private ShipperId shipperId;
-    private CargoSpecification cargoSpec;
-    private RouteSpecification routeSpec;
     private BookingStatus bookingStatus;
     private RoutingStatus routingStatus;
     private CargoItinerary itinerary;
@@ -66,20 +63,35 @@ public final class Cargo {
      */
     @CommandHandler
     public static String book(BookCargoCommand command, EventAppender appender) {
+        var spec = command.cargoSpec();
+        var route = command.routeSpec();
+        HazardInfo hazard = spec.hazardInfo();
+        TemperatureCondition temp = spec.temperatureCondition();
+        var dim = spec.dimensions();
         appender.append(new CargoBookedEvent(
                 command.bookingId(),
-                command.shipperId(),
-                command.cargoSpec(),
-                command.routeSpec()));
+                String.valueOf(command.shipperId().value()),
+                route.origin().unLocode().value(),
+                route.destination().unLocode().value(),
+                spec.cargoType().name(),
+                route.arrivalDeadline(),
+                spec.weightKg(),
+                dim != null ? dim.lengthCm() : null,
+                dim != null ? dim.widthCm() : null,
+                dim != null ? dim.heightCm() : null,
+                spec.quantity(),
+                spec.productName(),
+                hazard != null ? hazard.imoClass() : null,
+                hazard != null ? hazard.unNumber() : null,
+                hazard != null ? hazard.declaration() : null,
+                temp != null ? temp.minCelsius() : null,
+                temp != null ? temp.maxCelsius() : null));
         return command.bookingId();
     }
 
     @EventSourcingHandler
     public void on(CargoBookedEvent event) {
         this.bookingId = event.bookingId();
-        this.shipperId = event.shipperId();
-        this.cargoSpec = event.cargoSpec();
-        this.routeSpec = event.routeSpec();
         this.bookingStatus = BookingStatus.PRELIMINARY;
         this.routingStatus = RoutingStatus.NOT_ROUTED;
     }
@@ -115,13 +127,13 @@ public final class Cargo {
             throw new IllegalStateException(
                     "ROUTING 状態の予約のみ経路を紐付けできます。現状態: " + bookingStatus);
         }
-        appender.append(new CargoRoutedEvent(command.bookingId(), command.itinerary()));
+        this.itinerary = command.itinerary();
+        appender.append(new CargoRoutedEvent(command.bookingId()));
     }
 
     @EventSourcingHandler
     public void on(CargoRoutedEvent event) {
         this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
-        this.itinerary = event.itinerary();
     }
 
     /**
@@ -144,9 +156,7 @@ public final class Cargo {
     }
 
     /**
-     * 追跡番号発行（US14 / UC12）。
-     *
-     * <p>CONFIRMED 状態の予約に追跡番号を発行する。形式: TRK-{YYYYMMDD}-{UUID前8桁大文字}</p>
+     * 経路通知（US13 / UC11）。
      */
     @CommandHandler
     public void notifyRoute(NotifyRouteCommand command, EventAppender appender) {
@@ -158,6 +168,11 @@ public final class Cargo {
         // ログ記録のみ（IT4）。状態遷移なし
     }
 
+    /**
+     * 追跡番号発行（US14 / UC12）。
+     *
+     * <p>CONFIRMED 状態の予約に追跡番号を発行する。形式: TRK-{YYYYMMDD}-{UUID前8桁大文字}</p>
+     */
     @CommandHandler
     public void issueTrackingNumber(IssueTrackingNumberCommand command, EventAppender appender) {
         if (bookingStatus != BookingStatus.CONFIRMED) {
@@ -168,6 +183,7 @@ public final class Cargo {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         String tracking = "TRK-" + date + "-" + suffix;
         appender.append(new TrackingNumberIssuedEvent(command.bookingId(), tracking));
+        appender.append(new CargoTrackedEvent(command.bookingId(), tracking));
     }
 
     @EventSourcingHandler
@@ -176,20 +192,13 @@ public final class Cargo {
         this.trackingNumber = event.trackingNumber();
     }
 
+    @EventSourcingHandler
+    public void on(CargoTrackedEvent event) {
+        // trackingms ACL 通知用。aggregate state は TrackingNumberIssuedEvent で更新済み。
+    }
+
     public String getBookingId() {
         return bookingId;
-    }
-
-    public ShipperId getShipperId() {
-        return shipperId;
-    }
-
-    public CargoSpecification getCargoSpec() {
-        return cargoSpec;
-    }
-
-    public RouteSpecification getRouteSpec() {
-        return routeSpec;
     }
 
     public BookingStatus getBookingStatus() {

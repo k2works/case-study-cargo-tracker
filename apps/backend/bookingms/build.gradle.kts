@@ -11,6 +11,9 @@ plugins {
 }
 
 dependencies {
+    // Shared Kernel（Event クラス共有）
+    implementation(project(":shared"))
+
     // Spring Web + Actuator
     implementation(libs.bundles.spring.web)
 
