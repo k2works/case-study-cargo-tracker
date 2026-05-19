@@ -174,12 +174,12 @@ IT5 (T5) / IT6 (T1) 持ち越しの Event 駆動 ACL を完成させ、サービ
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | `TrackingActivity` に `TrackingException` Entity（子）と `TrackingExceptionId` VO + `RegisterTrackingExceptionCommand` + `ResolveTrackingExceptionCommand` を追加（domain-model.md L656-680 準拠） | 3h | [ ] |
-| 3.2 | `TrackingExceptionRegisteredEvent` / `TrackingExceptionResolvedEvent` 定義 + Projection EH（`tracking_exception` 更新）+ `TransportStatusUpdatedEvent`(EXCEPTION) 連鎖発行 | 2h | [ ] |
-| 3.3 | `TrackingExceptionMapper` + XML + Read Model 拡張 + Flyway V003 マイグレーション | 2h | [ ] |
-| 3.4 | trackingms に `POST /api/v1/tracking/{tn}/exceptions` + `PATCH /api/v1/tracking/{tn}/exceptions/{exceptionId}/resolve` REST + DTO | 2h | [ ] |
-| 3.5 | ユニットテスト（TrackingActivity Exception Command Handler + Projection + Controller 統合） | 2h | [ ] |
-| 3.6 | フロントエンド S18 例外登録フォーム（`/tracking/:tn/exceptions/new`） + `useTrackingException` hook | 3h | [ ] |
+| 3.1 | `TrackingActivity` に `TrackingException` Entity（子）と `TrackingExceptionId` VO + `RegisterTrackingExceptionCommand` + `ResolveTrackingExceptionCommand` を追加（domain-model.md L656-680 準拠） | 3h | [x] |
+| 3.2 | `TrackingExceptionRegisteredEvent` / `TrackingExceptionResolvedEvent` 定義 + Projection EH（`tracking_exception` 更新）+ `TransportStatusUpdatedEvent`(EXCEPTION) 連鎖発行 | 2h | [x] |
+| 3.3 | `TrackingExceptionMapper` + XML + Read Model 拡張 + Flyway V003 マイグレーション | 2h | [x] |
+| 3.4 | trackingms に `POST /api/v1/tracking/{tn}/exceptions` + `PATCH /api/v1/tracking/{tn}/exceptions/{exceptionId}/resolve` REST + DTO | 2h | [x] |
+| 3.5 | ユニットテスト（TrackingActivity Exception Command Handler + Projection + Controller 統合） | 2h | [x] |
+| 3.6 | フロントエンド S18 例外登録フォーム（`/tracking/:tn/exceptions/new`） + `useTrackingException` hook | 3h | [x] |
 
 **小計**: 14h
 
@@ -187,12 +187,12 @@ IT5 (T5) / IT6 (T1) 持ち越しの Event 駆動 ACL を完成させ、サービ
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | `ExceptionType` enum に `DELAY` / `DAMAGE` / `LOSS` 3 値定義 + `TrackingException` Entity に `escalated` フィールド | 1h | [ ] |
-| 4.2 | `RegisterTrackingExceptionCommand` 内で `LOSS` 時に `escalated=true` を自動付与（Aggregate 内不変条件） | 1.5h | [ ] |
-| 4.3 | 緊急通知モック実装（ログ出力 + Projection で `tracking_exception.escalated` / `response_status=ESCALATED` 反映） | 1.5h | [ ] |
-| 4.4 | フロント S18 拡張: 例外種別選択時にラジオ表示・LOSS 選択時に「緊急通知が送信されます」警告バナー + 補償方針入力欄表示 | 3h | [ ] |
-| 4.5 | フロント S19 例外対応一覧画面（`/tracking/exceptions`・追跡管理一覧からタブ遷移・response_status / escalated でフィルタ） | 2h | [ ] |
-| 4.6 | サイドナビ「追跡管理」に例外対応サブメニュー追加 or タブ切替 UI 整備 | 0.5h | [ ] |
+| 4.1 | `ExceptionType` enum に `DELAY` / `DAMAGE` / `LOSS` 3 値定義 + `TrackingException` Entity に `escalated` フィールド | 1h | [x] |
+| 4.2 | `RegisterTrackingExceptionCommand` 内で `LOSS` 時に `escalated=true` を自動付与（Aggregate 内不変条件） | 1.5h | [x] |
+| 4.3 | 緊急通知モック実装（ログ出力 + Projection で `tracking_exception.escalated` / `response_status=ESCALATED` 反映） | 1.5h | [x] |
+| 4.4 | フロント S18 拡張: 例外種別選択時にラジオ表示・LOSS 選択時に「緊急通知が送信されます」警告バナー + 補償方針入力欄表示 | 3h | [x] |
+| 4.5 | フロント S19 例外対応一覧画面（`/tracking/exceptions`・追跡管理一覧からタブ遷移・response_status / escalated でフィルタ） | 2h | [x] |
+| 4.6 | サイドナビ「追跡管理」に例外対応サブメニュー追加 or タブ切替 UI 整備 | 0.5h | [x] |
 | 4.7 | Playwright E2E `login-tracking-exception.spec.ts`: 例外記録 → 対応 → 解決フルフロー（DELAY + LOSS の 2 シナリオ） | 2h | [ ] |
 | 4.8 | SonarQube スキャン + violations 修正 | 1.5h | [ ] |
 | 4.9 | コードレビュー（`developing-review`） | 1h | [ ] |
