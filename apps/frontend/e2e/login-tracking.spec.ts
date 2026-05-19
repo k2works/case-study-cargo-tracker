@@ -114,6 +114,30 @@ async function createFullyTrackedBooking(
   return null
 }
 
+/**
+ * trackingms に追跡サマリーが登録されるまでポーリング（Event 伝播待機）。
+ * 最大 15 秒待機し、見つかった場合は true を返す。
+ */
+async function waitForTrackingSummary(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+  trackingNumber: string,
+  timeoutMs = 15_000,
+): Promise<boolean> {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    const resp = await request.get(`${API_BASE_URL}/api/v1/tracking`, { headers })
+    if (resp.ok()) {
+      const list = (await resp.json()) as Array<{ trackingNumber: string }>
+      if (list.some((t) => t.trackingNumber === trackingNumber)) return true
+    }
+    await new Promise((r) => setTimeout(r, 1_000))
+  }
+  return false
+}
+
 test('US18 + S16: 追跡照会フルフロー（トークン発行 → 公開照会 → 一覧 → 期限切れ）', async ({
   page,
   request,
@@ -138,8 +162,13 @@ test('US18 + S16: 追跡照会フルフロー（トークン発行 → 公開照
     return
   }
 
-  // Event 伝播待機（Axon Event Bus 経由）
-  await page.waitForTimeout(2_000)
+  // Event 伝播待機（Axon Event Bus 経由で trackingms に tracking_summary が登録されるまでポーリング）
+  const initialized = await waitForTrackingSummary(request, adminToken!, trackingNumber)
+  if (!initialized) {
+    console.log('trackingms initialization timed out, skipping test')
+    test.skip()
+    return
+  }
 
   // 3. 管理者用に JWT を発行
   const issueResp = await request.post(

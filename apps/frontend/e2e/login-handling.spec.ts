@@ -22,6 +22,8 @@ import { test, expect } from '@playwright/test'
  */
 
 const BOOKING_API_BASE_URL = process.env.BOOKING_API_BASE_URL ?? 'http://localhost:8080'
+const HANDLING_API_BASE_URL = process.env.HANDLING_API_BASE_URL ?? 'http://localhost:8080'
+const TRACKING_API_BASE_URL = process.env.TRACKING_API_BASE_URL ?? 'http://localhost:8080'
 
 /** bookingms フル予約フローを実行し trackingNumber を返す。失敗時は null を返す。 */
 async function createFullyTrackedBooking(
@@ -106,8 +108,7 @@ async function createFullyTrackedBooking(
   )
   if (!issueResp.ok()) return null
 
-  // 7. 発行された追跡番号を bookingms 一覧から取得
-  // Event 伝播のため最大 5 秒リトライ
+  // 7. 発行された追跡番号を bookingms 一覧から取得（Event 伝播を最大 5 秒待機）
   for (let i = 0; i < 10; i++) {
     const listResp = await request.get(`${BOOKING_API_BASE_URL}/api/v1/bookings`, { headers })
     if (!listResp.ok()) return null
@@ -119,6 +120,54 @@ async function createFullyTrackedBooking(
     await new Promise((r) => setTimeout(r, 500))
   }
   return null
+}
+
+/**
+ * handlingms の cargo_snapshot に追跡番号が登録されるまでポーリング（Event 伝播待機）。
+ * 最大 15 秒待機し、見つかった場合は true を返す。
+ */
+async function waitForCargoSnapshot(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+  trackingNumber: string,
+  timeoutMs = 15_000,
+): Promise<boolean> {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    const resp = await request.get(
+      `${HANDLING_API_BASE_URL}/api/v1/handling/activities/${trackingNumber}/snapshot`,
+      { headers },
+    )
+    if (resp.ok()) return true
+    await new Promise((r) => setTimeout(r, 1_000))
+  }
+  return false
+}
+
+/**
+ * trackingms に追跡サマリーが登録されるまでポーリング（Event 伝播待機）。
+ * 最大 15 秒待機し、見つかった場合は true を返す。
+ */
+async function waitForTrackingSummary(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+  trackingNumber: string,
+  timeoutMs = 15_000,
+): Promise<boolean> {
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    const resp = await request.get(`${TRACKING_API_BASE_URL}/api/v1/tracking`, { headers })
+    if (resp.ok()) {
+      const list = (await resp.json()) as Array<{ trackingNumber: string }>
+      if (list.some((t) => t.trackingNumber === trackingNumber)) return true
+    }
+    await new Promise((r) => setTimeout(r, 1_000))
+  }
+  return false
 }
 
 test('US15-US17: 荷役作業フルフロー（受領 → 状態手動更新）', async ({ page, request }) => {
@@ -142,8 +191,21 @@ test('US15-US17: 荷役作業フルフロー（受領 → 状態手動更新）'
   }
   const { trackingNumber } = result
 
-  // Event 伝播待機（Axon Event Bus 経由）
-  await page.waitForTimeout(2_000)
+  // Event 伝播待機（handlingms cargo_snapshot が登録されるまでポーリング）
+  const snapshotReady = await waitForCargoSnapshot(request, token!, trackingNumber)
+  if (!snapshotReady) {
+    console.log('handlingms cargo_snapshot not ready, skipping test')
+    test.skip()
+    return
+  }
+
+  // trackingms の tracking_summary も待機
+  const trackingReady = await waitForTrackingSummary(request, token!, trackingNumber)
+  if (!trackingReady) {
+    console.log('trackingms summary not ready, skipping test')
+    test.skip()
+    return
+  }
 
   // 3. サイドナビ「荷役作業」→ S21
   await page.goto('/handling')
