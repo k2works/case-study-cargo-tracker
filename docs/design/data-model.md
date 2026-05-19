@@ -310,7 +310,7 @@ entity "cargo_summary" as cargo {
   * **booking_id**: VARCHAR(36) <<PK>>
   --
   shipper_id: VARCHAR(36) NOT NULL <<FK>>
-  tracking_number: VARCHAR(20) <<UNIQUE>>
+  tracking_number: VARCHAR(25) <<UNIQUE>>
   origin_unlocode: VARCHAR(5) NOT NULL
   destination_unlocode: VARCHAR(5) NOT NULL
   arrival_deadline: DATE NOT NULL
@@ -511,7 +511,7 @@ hide circle
 skinparam linetype ortho
 
 entity "tracking_summary" as ts {
-  * **tracking_number**: VARCHAR(20) <<PK>>
+  * **tracking_number**: VARCHAR(25) <<PK>>
   --
   booking_id: VARCHAR(36) NOT NULL <<UNIQUE>>
   current_status: VARCHAR(20) NOT NULL ' NOT_RECEIVED / RECEIVED / LOADED / IN_TRANSIT / UNLOADED / AWAITING_CLAIM / DELIVERED / MISROUTED / EXCEPTION
@@ -520,6 +520,7 @@ entity "tracking_summary" as ts {
   estimated_arrival: TIMESTAMPTZ
   misrouted: BOOLEAN NOT NULL DEFAULT FALSE
   last_event_at: TIMESTAMPTZ
+  delivered_at: TIMESTAMPTZ          ' 配送完了時刻（JWT 有効期限計算に使用: ADR-0013）
   created_at: TIMESTAMPTZ
   updated_at: TIMESTAMPTZ
   version: BIGINT
@@ -528,7 +529,7 @@ entity "tracking_summary" as ts {
 entity "tracking_event" as te {
   * **event_id**: BIGSERIAL <<PK>>
   --
-  tracking_number: VARCHAR(20) NOT NULL <<FK>>
+  tracking_number: VARCHAR(25) NOT NULL <<FK>>
   occurred_at: TIMESTAMPTZ NOT NULL
   recorded_at: TIMESTAMPTZ NOT NULL
   event_type: VARCHAR(40) NOT NULL ' TRACKING_INITIALIZED / STATUS_UPDATED / EXCEPTION_REGISTERED / ...
@@ -536,13 +537,14 @@ entity "tracking_event" as te {
   unlocode: VARCHAR(5)
   voyage_number: VARCHAR(20)
   handling_type: VARCHAR(16)         ' 関連する Handling の種別
+  source: VARCHAR(16)                ' 記録元: HANDLING / MANUAL / SYSTEM（IT6 追加）
   description: TEXT
 }
 
 entity "tracking_exception" as ex {
   * **exception_id**: VARCHAR(36) <<PK>>
   --
-  tracking_number: VARCHAR(20) NOT NULL <<FK>>
+  tracking_number: VARCHAR(25) NOT NULL <<FK>>
   exception_type: VARCHAR(16) NOT NULL ' DELAY / DAMAGE / LOSS
   occurred_at: TIMESTAMPTZ NOT NULL
   occurred_unlocode: VARCHAR(5)
@@ -602,7 +604,7 @@ entity "handling_activity" as ha {
   --
   ' CargoSnapshot ACL の射影
   booking_id: VARCHAR(36) NOT NULL
-  tracking_number: VARCHAR(20) NOT NULL
+  tracking_number: VARCHAR(25) NOT NULL
   origin_unlocode: VARCHAR(5) NOT NULL
   destination_unlocode: VARCHAR(5) NOT NULL
   cargo_type: VARCHAR(16) NOT NULL

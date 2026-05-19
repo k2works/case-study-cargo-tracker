@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.trackingms.domain.model.valueobjects.JwtToken;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.cargotracker.trackingms.domain.model.valueobjects.VerifiedToken;
 import com.example.cargotracker.trackingms.infrastructure.security.JwtTrackingTokenService;
 import java.time.Clock;
 import java.time.Instant;
@@ -39,9 +40,10 @@ class TrackingTokenServiceTest {
         var service = createService(NOW);
         JwtToken token = service.issue(TRK, null);
 
-        TrackingNumber verified = service.verify(token.token(), null);
+        VerifiedToken verified = service.verify(token.token(), null);
 
-        assertThat(verified).isEqualTo(TRK);
+        assertThat(verified.trackingNumber()).isEqualTo(TRK);
+        assertThat(verified.expiresAt()).isEqualTo(NOW.plusDays(30));
         assertThat(token.validUntil()).isEqualTo(NOW.plusDays(30));
     }
 
@@ -54,9 +56,9 @@ class TrackingTokenServiceTest {
         var deliveredAt = NOW.plusDays(20);
         // 配送 6 日後（delivered_at + 7d まで有効）
         var verifyService = createService(deliveredAt.plusDays(6));
-        TrackingNumber verified = verifyService.verify(token.token(), deliveredAt);
+        VerifiedToken verified = verifyService.verify(token.token(), deliveredAt);
 
-        assertThat(verified).isEqualTo(TRK);
+        assertThat(verified.trackingNumber()).isEqualTo(TRK);
     }
 
     @Test
@@ -93,8 +95,8 @@ class TrackingTokenServiceTest {
         // exp = NOW + 30 日。その 1 秒前
         var verifyService = createService(NOW.plusDays(30).minusSeconds(1));
 
-        TrackingNumber verified = verifyService.verify(jwtString, null);
-        assertThat(verified).isEqualTo(TRK);
+        VerifiedToken verified = verifyService.verify(jwtString, null);
+        assertThat(verified.trackingNumber()).isEqualTo(TRK);
     }
 
     @Test
@@ -107,8 +109,8 @@ class TrackingTokenServiceTest {
         // delivered_at + 7 日のちょうど 1 秒前
         var verifyService = createService(deliveredAt.plusDays(7).minusSeconds(1));
 
-        TrackingNumber verified = verifyService.verify(jwtString, deliveredAt);
-        assertThat(verified).isEqualTo(TRK);
+        VerifiedToken verified = verifyService.verify(jwtString, deliveredAt);
+        assertThat(verified.trackingNumber()).isEqualTo(TRK);
     }
 
     @Test

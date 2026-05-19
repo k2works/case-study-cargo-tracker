@@ -698,8 +698,30 @@ enum ResponseStatus {
   RESOLVED
 }
 
+enum EventSource {
+  HANDLING
+  MANUAL
+  SYSTEM
+}
+
 class TransportStatusTransition <<Domain Service>> {
   + canTransition(from: TransportStatus, to: TransportStatus): boolean
+}
+
+interface TrackingTokenService <<Domain Service>> {
+  + issue(trackingNumber: TrackingNumber, deliveredAt: LocalDateTime): JwtToken
+  + verify(token: String, deliveredAt: LocalDateTime): VerifiedToken
+}
+
+class JwtToken <<Value Object>> {
+  - token: String
+  - issuedAt: LocalDateTime
+  - validUntil: LocalDateTime
+}
+
+class VerifiedToken <<Value Object>> {
+  - trackingNumber: TrackingNumber
+  - expiresAt: LocalDateTime
 }
 
 TrackingActivity *-- TrackingNumber
@@ -712,6 +734,9 @@ TrackingException *-- TrackingExceptionId
 TrackingException *-- ExceptionType
 TrackingException *-- ResponseStatus
 TrackingException *-- Location
+
+TrackingTokenService ..> JwtToken
+TrackingTokenService ..> VerifiedToken
 
 @enduml
 ```

@@ -13,6 +13,7 @@ import com.example.cargotracker.trackingms.domain.model.valueobjects.Leg;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TransportStatus;
+import com.example.cargotracker.trackingms.domain.model.valueobjects.VerifiedToken;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.InitializeTrackingRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.IssueTrackingTokenResponse;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemResponse;
@@ -96,7 +97,7 @@ public class TrackingController {
 
         var deliveredAt = queryService.findDeliveredAt(trackingNumber).orElse(null);
 
-        TrackingNumber verified;
+        VerifiedToken verified;
         try {
             verified = tokenService.verify(token, deliveredAt);
         } catch (TrackingTokenExpiredException _) {
@@ -109,16 +110,13 @@ public class TrackingController {
                     MESSAGE_KEY, "リンクが不正です"));
         }
 
-        if (!verified.value().equals(trackingNumber)) {
+        if (!verified.trackingNumber().value().equals(trackingNumber)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                     ERROR_CODE, "TOKEN_TN_MISMATCH",
                     MESSAGE_KEY, "リンクが不正です"));
         }
 
-        // validUntil の再計算: クライアントへ表示する有効期限（min(exp, deliveredAt + grace)）
-        // ここでは issue 時の値を再現できないため、deliveredAt の有無のみで判定する簡易計算とする
-        var dummyValidUntil = LocalDateTime.now().plusDays(30);
-        return queryService.findByTrackingNumber(trackingNumber, dummyValidUntil)
+        return queryService.findByTrackingNumber(trackingNumber, verified.expiresAt())
                 .<ResponseEntity<Object>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                         ERROR_CODE, "TRACKING_NOT_FOUND",

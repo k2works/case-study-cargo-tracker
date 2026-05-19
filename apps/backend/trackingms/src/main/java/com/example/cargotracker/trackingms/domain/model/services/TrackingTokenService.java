@@ -2,6 +2,7 @@ package com.example.cargotracker.trackingms.domain.model.services;
 
 import com.example.cargotracker.trackingms.domain.model.valueobjects.JwtToken;
 import com.example.cargotracker.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.cargotracker.trackingms.domain.model.valueobjects.VerifiedToken;
 import java.time.LocalDateTime;
 
 /**
@@ -27,9 +28,9 @@ public interface TrackingTokenService {
      *
      * @param token       JWT 文字列
      * @param deliveredAt 配送完了日時（任意）。非 null の場合は配送完了 + grace 経過時刻も判定する。
-     * @return 検証成功時の追跡番号
+     * @return 検証成功時の追跡番号と実効有効期限
      * @throws InvalidTrackingTokenException 署名不正・改ざん・形式不正
      * @throws TrackingTokenExpiredException exp 経過、または delivered_at + grace 経過
      */
-    TrackingNumber verify(String token, LocalDateTime deliveredAt);
+    VerifiedToken verify(String token, LocalDateTime deliveredAt);
 }

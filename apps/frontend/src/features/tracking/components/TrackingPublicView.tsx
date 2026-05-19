@@ -173,6 +173,8 @@ function TrackingError({ error }: { error: TrackingFetchError }) {
     )
   }
   if (error.status === 403 || error.errorCode === 'TOKEN_EXPIRED') {
+    const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL as string | undefined
+    const supportPhone = import.meta.env.VITE_SUPPORT_PHONE as string | undefined
     return (
       <div className="p-6">
         <div
@@ -180,7 +182,20 @@ function TrackingError({ error }: { error: TrackingFetchError }) {
           role="alert"
         >
           <p className="font-bold">リンクの有効期限が切れています</p>
-          <p className="text-sm">再発行をご希望の場合は営業担当者までご連絡ください。</p>
+          <p className="text-sm">再発行をご希望の場合は担当者までご連絡ください。</p>
+          {(supportEmail || supportPhone) && (
+            <ul className="mt-2 text-sm list-none">
+              {supportEmail && (
+                <li>
+                  メール:{' '}
+                  <a href={`mailto:${supportEmail}`} className="underline">
+                    {supportEmail}
+                  </a>
+                </li>
+              )}
+              {supportPhone && <li>電話: {supportPhone}</li>}
+            </ul>
+          )}
         </div>
       </div>
     )
