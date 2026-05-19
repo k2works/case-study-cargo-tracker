@@ -31,7 +31,7 @@ import org.mockito.ArgumentCaptor;
 @DisplayName("TrackingActivity Aggregate（ユニット）")
 class TrackingActivityTest {
 
-    private static final TrackingNumber TRK = new TrackingNumber("TRK-ABC1234567");
+    private static final TrackingNumber TRK = new TrackingNumber("TRK-20260101-ABC12345");
     private static final String BOOKING_ID = "550e8400-e29b-41d4-a716-446655440000";
     private static final Location TOKYO = Location.of("JPTYO");
     private static final Location HAMBURG = Location.of("DEHAM");
@@ -136,8 +136,8 @@ class TrackingActivityTest {
     }
 
     @Test
-    @DisplayName("未初期化 Aggregate に対する updateStatus は Command 引数の trackingNumber をフォールバックに使う（IT6 暫定）")
-    void updateStatus_未初期化Aggregateでも動作する() {
+    @DisplayName("未初期化 Aggregate に対する updateStatus は IllegalStateException を送出する")
+    void updateStatus_未初期化AggregateはIllegalStateException() {
         EventAppender appender = mock(EventAppender.class);
         var activity = new TrackingActivity();
 
@@ -148,12 +148,9 @@ class TrackingActivityTest {
                 LocalDateTime.of(2026, 7, 25, 8, 0),
                 new HandlerId("admin-001"));
 
-        activity.updateStatus(command, appender);
-
-        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
-        verify(appender).append(captor.capture());
-        var event = (TransportStatusUpdatedEvent) captor.getValue();
-        assertThat(event.trackingNumber()).isEqualTo(TRK);
+        org.junit.jupiter.api.Assertions.assertThrows(
+                IllegalStateException.class,
+                () -> activity.updateStatus(command, appender));
     }
 
     @Test

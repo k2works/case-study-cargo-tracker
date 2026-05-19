@@ -80,26 +80,26 @@ public final class TrackingActivity {
     }
 
     /**
-     * 貨物状態手動更新（US17 移管後・TI06）。
+     * 貨物状態手動更新（US17 移管後）。
      *
      * <p>{@link com.example.cargotracker.trackingms.domain.model.valueobjects.EventSource#MANUAL}
      * として {@link TransportStatusUpdatedEvent} を発行する。</p>
      *
-     * <p>IT6 暫定: 初期化前の Aggregate に対する呼び出しでも動作するよう、
-     * {@code this.trackingNumber} が未設定の場合は Command 引数の値をフォールバックに使う。
-     * TI06+ で {@code CargoTrackedEvent} 駆動の自動初期化が完成すれば、本フォールバックは不要となる。</p>
+     * <p>InitializeTrackingCommand による初期化が完了していない Aggregate への呼び出しは
+     * 不正操作のため {@link IllegalStateException} を送出する（TI07 で正規化）。</p>
      */
     @CommandHandler
     public void updateStatus(
             UpdateTransportStatusCommand command,
             EventAppender appender) {
 
-        TrackingNumber tn = (this.trackingNumber != null)
-                ? this.trackingNumber
-                : new TrackingNumber(command.trackingNumber());
+        if (this.trackingNumber == null) {
+            throw new IllegalStateException(
+                    "追跡集約が初期化されていません。trackingNumber: " + command.trackingNumber());
+        }
 
         appender.append(new TransportStatusUpdatedEvent(
-                tn,
+                this.trackingNumber,
                 command.newStatus(),
                 command.location(),
                 command.updatedAt(),
