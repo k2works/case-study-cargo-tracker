@@ -161,4 +161,20 @@ class TrackingProjectionsEventHandlerTest {
                 TRK.value(), "EXCEPTION", "JPTYO", null, false, occurredAt);
         verify(eventMapper).insert(any(TrackingEventRecord.class));
     }
+
+    @Test
+    @DisplayName("LOSS 種別の TrackingExceptionRegisteredEvent で escalated=true が設定される")
+    void on_exceptionRegistered_LOSS種別はescalated() {
+        var occurredAt = LocalDateTime.of(2026, 7, 28, 10, 0);
+        var event = new TrackingExceptionRegisteredEvent(
+                TRK, "exc-002", "LOSS", occurredAt, "JPTYO",
+                "紛失が発生しました", "admin-001");
+
+        handler.on(event);
+
+        ArgumentCaptor<TrackingExceptionRecord> excCaptor =
+                ArgumentCaptor.forClass(TrackingExceptionRecord.class);
+        verify(exceptionMapper).insert(excCaptor.capture());
+        assertThat(excCaptor.getValue().escalated()).isTrue();
+    }
 }

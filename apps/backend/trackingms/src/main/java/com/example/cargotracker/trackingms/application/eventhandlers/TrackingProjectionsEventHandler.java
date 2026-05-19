@@ -92,7 +92,7 @@ public class TrackingProjectionsEventHandler {
                 "PENDING",
                 null,
                 null,
-                false,
+                "LOSS".equals(event.exceptionType()),
                 LocalDateTime.now(),
                 LocalDateTime.now()));
 
