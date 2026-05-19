@@ -48,6 +48,23 @@ export type TrackingFetchError = {
 }
 
 /**
+ * 追跡例外（US19/US20）。
+ */
+export type TrackingException = {
+  exceptionId: string
+  trackingNumber: string
+  exceptionType: 'DELAY' | 'DAMAGE' | 'LOSS'
+  occurredAt: string | null
+  occurredUnlocode: string | null
+  description: string
+  responseStatus: 'PENDING' | 'RESOLVED' | 'ESCALATED'
+  resolution: string | null
+  resolvedAt: string | null
+  escalated: boolean
+  createdAt: string | null
+}
+
+/**
  * S16 追跡管理一覧の 1 行分（バックエンド {@code TrackingListItemResponse} に対応）。
  */
 export type TrackingListItem = {

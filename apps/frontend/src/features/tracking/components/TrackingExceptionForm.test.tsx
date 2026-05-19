@@ -44,6 +44,18 @@ describe('TrackingExceptionForm', () => {
     })
   })
 
+  it('LOSS 種別選択時に緊急通知バナーが表示される', async () => {
+    render(<TrackingExceptionForm trackingNumber="TRK-001" onSuccess={mockOnSuccess} />, {
+      wrapper,
+    })
+    fireEvent.change(screen.getByRole('combobox', { name: /例外種別/ }), {
+      target: { value: 'LOSS' },
+    })
+    await waitFor(() => {
+      expect(screen.getByRole('alert', { name: /緊急通知/ })).toBeInTheDocument()
+    })
+  })
+
   it('フォーム送信で mutate が呼ばれる', async () => {
     render(<TrackingExceptionForm trackingNumber="TRK-001" onSuccess={mockOnSuccess} />, {
       wrapper,

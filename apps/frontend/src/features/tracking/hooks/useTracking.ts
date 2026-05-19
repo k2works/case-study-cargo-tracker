@@ -3,6 +3,7 @@ import { env } from '../../../config/env'
 import { useAuthStore } from '../../../stores/authStore'
 import type {
   TrackingErrorCode,
+  TrackingException,
   TrackingFetchError,
   TrackingInfo,
   TrackingListItem,
@@ -194,6 +195,78 @@ export function useRegisterTrackingException() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tracking', variables.trackingNumber] })
+    },
+  })
+}
+
+/**
+ * 追跡例外一覧クエリ（US20 S19 画面用）。
+ */
+export function useTrackingExceptions(trackingNumber: string) {
+  return useQuery<TrackingException[]>({
+    queryKey: ['tracking', trackingNumber, 'exceptions'],
+    queryFn: async () => {
+      const adminToken = useAuthStore.getState().token
+      const response = await fetch(
+        `${env.trackingApiBaseUrl}/api/v1/tracking/${encodeURIComponent(trackingNumber)}/exceptions`,
+        {
+          headers: {
+            Accept: 'application/json',
+            ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+          },
+        },
+      )
+      if (!response.ok) throw new Error('例外一覧の取得に失敗しました')
+      return response.json() as Promise<TrackingException[]>
+    },
+    enabled: !!trackingNumber,
+  })
+}
+
+export type ResolveTrackingExceptionRequest = {
+  trackingNumber: string
+  exceptionId: string
+  resolution: string
+  operatorId?: string
+}
+
+export type ResolveTrackingExceptionResponse = {
+  trackingNumber: string
+  exceptionId: string
+}
+
+/**
+ * US20 例外解決 mutation。
+ */
+export function useResolveTrackingException() {
+  const queryClient = useQueryClient()
+  return useMutation<ResolveTrackingExceptionResponse, Error, ResolveTrackingExceptionRequest>({
+    mutationFn: async (request) => {
+      const adminToken = useAuthStore.getState().token
+      const response = await fetch(
+        `${env.trackingApiBaseUrl}/api/v1/tracking/${encodeURIComponent(request.trackingNumber)}/exceptions/${encodeURIComponent(request.exceptionId)}/resolve`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+          },
+          body: JSON.stringify({
+            resolution: request.resolution,
+            operatorId: request.operatorId,
+          }),
+        },
+      )
+      if (!response.ok) {
+        const body: { message?: string } = await response.json().catch(() => ({}))
+        throw new Error(body.message ?? '例外の解決に失敗しました')
+      }
+      return response.json() as Promise<ResolveTrackingExceptionResponse>
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['tracking', variables.trackingNumber, 'exceptions'],
+      })
     },
   })
 }

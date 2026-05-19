@@ -59,6 +59,12 @@ export function TrackingExceptionForm({ trackingNumber, onSuccess }: Props) {
         {errors.exceptionType && <p role="alert">{errors.exceptionType}</p>}
       </div>
 
+      {exceptionType === 'LOSS' && (
+        <div role="alert" aria-label="緊急通知バナー">
+          紛失（LOSS）が選択されました。緊急通知が関係者に送信されます。
+        </div>
+      )}
+
       <div>
         <label htmlFor="occurredUnlocode">発生場所（UN/LOCODE）</label>
         <input
