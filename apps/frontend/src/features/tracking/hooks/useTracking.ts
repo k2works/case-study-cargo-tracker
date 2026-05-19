@@ -141,6 +141,63 @@ export function useInitializeTracking() {
   })
 }
 
+export type RegisterTrackingExceptionRequest = {
+  trackingNumber: string
+  exceptionType: string
+  description: string
+  occurredUnlocode?: string
+  occurredAt?: string
+  operatorId?: string
+}
+
+export type RegisterTrackingExceptionResponse = {
+  trackingNumber: string
+  exceptionId: string
+}
+
+/**
+ * US19 追跡例外登録 mutation。
+ *
+ * {@code POST /api/v1/tracking/{tn}/exceptions} を呼び出して例外を登録する。
+ */
+export function useRegisterTrackingException() {
+  const queryClient = useQueryClient()
+  return useMutation<
+    RegisterTrackingExceptionResponse,
+    Error,
+    RegisterTrackingExceptionRequest
+  >({
+    mutationFn: async (request) => {
+      const adminToken = useAuthStore.getState().token
+      const response = await fetch(
+        `${env.trackingApiBaseUrl}/api/v1/tracking/${encodeURIComponent(request.trackingNumber)}/exceptions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+          },
+          body: JSON.stringify({
+            exceptionType: request.exceptionType,
+            description: request.description,
+            occurredUnlocode: request.occurredUnlocode,
+            occurredAt: request.occurredAt,
+            operatorId: request.operatorId,
+          }),
+        },
+      )
+      if (!response.ok) {
+        const body: { message?: string } = await response.json().catch(() => ({}))
+        throw new Error(body.message ?? '例外の登録に失敗しました')
+      }
+      return response.json() as Promise<RegisterTrackingExceptionResponse>
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tracking', variables.trackingNumber] })
+    },
+  })
+}
+
 /**
  * 管理者用 JWT 発行 mutation（US18 連携）。
  *

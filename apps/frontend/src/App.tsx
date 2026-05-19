@@ -21,6 +21,7 @@ import { HandlingActivityListPage } from './pages/HandlingActivityListPage'
 import { CargoStatusUpdatePage } from './pages/CargoStatusUpdatePage'
 import { TrackingPublicPage } from './pages/TrackingPublicPage'
 import { TrackingListPage } from './pages/TrackingListPage'
+import { TrackingExceptionNewPage } from './pages/TrackingExceptionNewPage'
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/handling/new" element={<HandlingActivityNewPage />} />
           <Route path="/tracking" element={<TrackingListPage />} />
           <Route path="/tracking/:trackingNumber/manage" element={<CargoStatusUpdatePage />} />
+          <Route path="/tracking/:trackingNumber/exceptions/new" element={<TrackingExceptionNewPage />} />
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/login" replace />} />
