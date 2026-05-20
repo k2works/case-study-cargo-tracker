@@ -132,10 +132,10 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `billingms` Gradle モジュール作成・Spring Boot スケルトン + ArchUnit 設定 | 4h | - | [ ] |
-| 1.2 | `Invoice` 集約（コマンド・イベント・ハンドラー）+ `ChargeCalculationService` TDD | 4h | - | [ ] |
-| 1.3 | `InvoiceMapper`（MyBatis）+ `invoice` テーブル Flyway マイグレーション | 4h | - | [ ] |
-| 1.4 | `BillingController` エンドポイント 2 件（GET invoices / POST invoices/{id}/calculate）実装 | 4h | - | [ ] |
+| 1.1 | `billingms` Gradle モジュール作成・Spring Boot スケルトン + ArchUnit 設定 | 4h | - | [x] |
+| 1.2 | `Invoice` 集約（コマンド・イベント・ハンドラー）+ `ChargeCalculationService` TDD | 4h | - | [x] |
+| 1.3 | `InvoiceMapper`（MyBatis）+ `invoice` テーブル Flyway マイグレーション | 4h | - | [x] |
+| 1.4 | `BillingController` エンドポイント 2 件（GET invoices / POST invoices/{id}/calculate）実装 | 4h | - | [x] |
 | 1.5 | フロント S22 請求一覧（`BillingListPage.tsx`）+ S23 請求詳細・算出（`BillingDetailPage.tsx`）+ Vitest テスト | 4h | - | [ ] |
 
 **小計**: 20h（理想時間）
@@ -166,8 +166,8 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| TI09: IT7 技術的負債回収（TrackingController 分離 等） | 2 | 14h | [ ] |
-| US21: 輸送料金算出（Invoice 集約・S22/S23） | 5 | 20h | [ ] |
+| TI09: IT7 技術的負債回収（TrackingController 分離 等） | 2 | 14h | [x] |
+| US21: 輸送料金算出（Invoice 集約・S22/S23） | 5 | 20h | バックエンド完了 |
 | US22: 法人割引適用（DiscountPolicy・0〜30%） | 3 | 12h | [ ] |
 | US23: 精算処理（精算書発行・決済確認・S24/S25） | 5 | 20h | [ ] |
 | **合計** | **15** | **66h** | |
