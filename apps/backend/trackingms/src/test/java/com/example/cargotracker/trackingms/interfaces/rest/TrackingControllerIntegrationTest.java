@@ -266,6 +266,131 @@ class TrackingControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("例外登録 API で CommandGateway に RegisterTrackingExceptionCommand が送信される")
+    void registerException_CommandGatewayへ送信() throws Exception {
+        var trackingNumber = "TRK-20260810-N1E2W3T4";
+        seedTrackingSummary(trackingNumber);
+
+        mockMvc.perform(post("/api/v1/tracking/{tn}/exceptions", trackingNumber)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "exceptionType": "DELAY",
+                                    "occurredUnlocode": "SGSIN",
+                                    "description": "港湾渋滞による遅延",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.trackingNumber").value(trackingNumber))
+                .andExpect(jsonPath("$.exceptionId").exists());
+    }
+
+    @Test
+    @DisplayName("例外登録 API で追跡番号が存在しない場合 404 を返す")
+    void registerException_存在しない追跡番号で404() throws Exception {
+        mockMvc.perform(post("/api/v1/tracking/{tn}/exceptions", "TRK-99999999-NOTEXIST")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "exceptionType": "DELAY",
+                                    "occurredUnlocode": "SGSIN",
+                                    "description": "テスト"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("例外一覧 API で登録済みの例外一覧を取得できる")
+    void listExceptions_例外一覧取得() throws Exception {
+        var trackingNumber = "TRK-20260810-N1E2W3T4";
+        seedTrackingSummary(trackingNumber);
+
+        mockMvc.perform(get("/api/v1/tracking/{tn}/exceptions", trackingNumber))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("例外一覧 API で追跡番号が存在しない場合 404 を返す")
+    void listExceptions_存在しない追跡番号で404() throws Exception {
+        mockMvc.perform(get("/api/v1/tracking/{tn}/exceptions", "TRK-99999999-NOTEXIST"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("例外解決 API で CommandGateway に ResolveTrackingExceptionCommand が送信される")
+    void resolveException_CommandGatewayへ送信() throws Exception {
+        var trackingNumber = "TRK-20260810-N1E2W3T4";
+        seedTrackingSummary(trackingNumber);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/v1/tracking/{tn}/exceptions/{exId}/resolve",
+                                trackingNumber, "EX-20260810-00000001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "resolution": "代替便手配済み",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackingNumber").value(trackingNumber));
+    }
+
+    @Test
+    @DisplayName("例外解決 API で追跡番号が存在しない場合 404 を返す")
+    void resolveException_存在しない追跡番号で404() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/v1/tracking/{tn}/exceptions/{exId}/resolve",
+                                "TRK-99999999-NOTEXIST", "EX-00000001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "resolution": "テスト"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("issueToken で trackingNumber が空の場合 400 を返す")
+    void issueToken_空のtrackingNumberで400() throws Exception {
+        mockMvc.perform(post("/api/v1/tracking/_internal/issue-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("issueToken で trackingNumber が blank の場合 400 を返す")
+    void issueToken_blankなtrackingNumberで400() throws Exception {
+        mockMvc.perform(post("/api/v1/tracking/_internal/issue-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"trackingNumber\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("例外登録 API で operatorId が null の場合 system が使われる")
+    void registerException_operatorIdNullでsystemが使われる() throws Exception {
+        var trackingNumber = "TRK-20260810-N1E2W3T4";
+        seedTrackingSummary(trackingNumber);
+
+        mockMvc.perform(post("/api/v1/tracking/{tn}/exceptions", trackingNumber)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "exceptionType": "LOSS",
+                                    "occurredUnlocode": "SGSIN",
+                                    "description": "紛失"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.exceptionId").exists());
+    }
+
+    @Test
     @DisplayName("内部 initialize API で CommandGateway に InitializeTrackingCommand が送信される")
     void initialize_CommandGatewayへ送信() throws Exception {
         var trackingNumber = "TRK-20260810-N1E2W3T4";

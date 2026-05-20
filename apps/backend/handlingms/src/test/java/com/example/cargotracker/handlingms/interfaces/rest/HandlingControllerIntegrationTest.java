@@ -312,6 +312,30 @@ class HandlingControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("状態履歴照会で空リストが返る")
+    void 状態履歴照会() throws Exception {
+        mockMvc.perform(get("/api/v1/handling/activities/{tn}/status-history", "TRK-20260810-HIST001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    @DisplayName("deprecated updateStatus で追跡番号不在なら 404")
+    void 状態手動更新_deprecated_追跡番号不在で404() throws Exception {
+        mockMvc.perform(put("/api/v1/handling/activities/{tn}/status", "TRK-99999999-NOTEXIST")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "newStatus": "IN_TRANSIT",
+                                    "unlocode": "SGSIN",
+                                    "updatedAt": "2026-08-10T14:30:00",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("US16 受入1: CLAIM + 署名 ref で引取作業を登録できる（confirmationCode 不要）")
     void 引取作業_署名() throws Exception {
         String trk = "TRK-20260810-CLAIM003";

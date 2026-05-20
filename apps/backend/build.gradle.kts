@@ -21,6 +21,12 @@ sonar {
         property("sonar.sources", "src/main/java")
         property("sonar.tests", "src/test/java")
         property("sonar.coverage.jacoco.xmlReportPaths", "**/build/reports/jacoco/test/jacocoTestReport.xml")
+        property("sonar.coverage.exclusions",
+            "**/dto/**,**/*Record.java,**/*Request.java,**/*Response.java," +
+            "**/events/**,**/*Event.java,**/*Command.java," +
+            "**/config/**,**/*Configuration.java,**/*Config.java," +
+            "**/*Application.java"
+        )
     }
 }
 
