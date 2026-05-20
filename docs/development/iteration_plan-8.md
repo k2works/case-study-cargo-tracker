@@ -104,13 +104,13 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 **受入条件**:
 
-- [ ] 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる（S24 精算書発行）
+- [x] 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる（S24 精算書発行）
 - [ ] 精算書が荷主にメール通知される
 - [ ] 決済機関との連携により入金確認ができる
-- [ ] 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる
-- [ ] 支払い期限超過時、経理担当者に未払い通知が送信される（S25 督促一覧）
-- [ ] `POST /api/v1/billing/invoices/{invoiceId}/issue` で精算書を発行できる
-- [ ] `PATCH /api/v1/billing/invoices/{invoiceId}/settle` で精算完了できる
+- [x] 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる
+- [x] 支払い期限超過時、経理担当者に未払い通知が送信される（S25 督促一覧）
+- [x] `POST /api/v1/billing/invoices/{invoiceId}/issue` で精算書を発行できる
+- [x] `PATCH /api/v1/billing/invoices/{invoiceId}/settle` で精算完了できる
 
 ---
 
@@ -154,10 +154,10 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `Invoice` 状態遷移（`CALCULATED` → `INVOICED` → `PAID`/`OVERDUE`）集約 TDD | 4h | - | [ ] |
-| 3.2 | `PaymentMapper`（MyBatis）+ `payment` テーブル Flyway マイグレーション | 4h | - | [ ] |
-| 3.3 | `BillingController` エンドポイント 3 件（POST issue / PATCH settle / GET overdue）実装 | 4h | - | [ ] |
-| 3.4 | フロント S24 精算書発行（`BillingIssuePage.tsx`）+ S25 督促一覧（`BillingOverduePage.tsx`）+ テスト | 4h | - | [ ] |
+| 3.1 | `Invoice` 状態遷移（`CALCULATED` → `INVOICED` → `PAID`/`OVERDUE`）集約 TDD | 4h | - | [x] |
+| 3.2 | `PaymentMapper`（MyBatis）+ `payment` テーブル Flyway マイグレーション | 4h | - | [x] |
+| 3.3 | `BillingController` エンドポイント 3 件（POST issue / PATCH settle / GET overdue）実装 | 4h | - | [x] |
+| 3.4 | フロント S24 精算書発行（`BillingIssuePage.tsx`）+ S25 督促一覧（`BillingOverduePage.tsx`）+ テスト | 4h | - | [x] |
 | 3.5 | E2E テスト（精算フロー）+ SonarQube QG PASS 確認 | 4h | - | [ ] |
 
 **小計**: 20h（理想時間）
