@@ -48,10 +48,7 @@ public class Invoice {
      */
     @CommandHandler
     public static String create(CreateInvoiceCommand command, EventAppender appender) {
-        appender.append(new InvoiceCreatedEvent(
-                command.invoiceId(),
-                command.bookingId(),
-                command.shipperId()));
+        appender.append(new InvoiceCreatedEvent(command.invoiceId(), command.bookingId(), command.shipperId()));
         return command.invoiceId();
     }
 
@@ -96,11 +93,7 @@ public class Invoice {
                     "精算書発行は CALCULATED 状態のみ可能です。現在の状態: " + status);
         }
         String invoiceNumber = generateInvoiceNumber(command);
-        appender.append(new InvoiceIssuedEvent(
-                command.invoiceId(),
-                invoiceNumber,
-                command.paymentDue(),
-                command.operatorId()));
+        appender.append(new InvoiceIssuedEvent(command.invoiceId(), invoiceNumber, command.paymentDue(), command.operatorId()));
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.example.cargotracker.billingms.domain.model.events;
 
 import java.time.LocalDate;
+import org.axonframework.eventsourcing.annotation.EventTag;
 
 /**
  * 精算書発行イベント（US23）。
@@ -11,7 +12,7 @@ import java.time.LocalDate;
  * @param operatorId   操作者 ID
  */
 public record InvoiceIssuedEvent(
-        String invoiceId,
+        @EventTag String invoiceId,
         String invoiceNumber,
         LocalDate paymentDue,
         String operatorId) {

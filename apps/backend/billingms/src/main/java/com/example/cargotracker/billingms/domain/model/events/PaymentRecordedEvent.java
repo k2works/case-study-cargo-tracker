@@ -2,6 +2,7 @@ package com.example.cargotracker.billingms.domain.model.events;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import org.axonframework.eventsourcing.annotation.EventTag;
 
 /**
  * 入金確認・精算完了イベント（US23）。
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
  * @param operatorId    操作者 ID
  */
 public record PaymentRecordedEvent(
-        String invoiceId,
+        @EventTag String invoiceId,
         BigDecimal paidAmount,
         String paymentMethod,
         LocalDateTime paidAt,
