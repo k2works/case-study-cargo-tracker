@@ -13,7 +13,7 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface TrackingExceptionMapper {
 
-    void insert(TrackingExceptionRecord record);
+    void insert(TrackingExceptionRecord exception);
 
     List<TrackingExceptionRecord> findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 

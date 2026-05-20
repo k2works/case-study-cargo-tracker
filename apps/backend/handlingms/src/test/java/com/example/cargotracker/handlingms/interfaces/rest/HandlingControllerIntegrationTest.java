@@ -61,20 +61,20 @@ class HandlingControllerIntegrationTest {
     }
 
     private void registerSnapshot(String trackingNumber, String origin, String destination) {
-        var record = new com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord();
-        record.setBookingId("B-TEST-001");
-        record.setTrackingNumber(trackingNumber);
-        record.setOriginUnlocode(origin);
-        record.setDestinationUnlocode(destination);
-        record.setCargoType("GENERAL");
-        record.setArrivalDeadline(java.time.LocalDate.of(2099, 12, 31));
-        record.setBookingStatus("TRACKING_ISSUED");
-        cargoSnapshotMapper.upsert(record);
+        var snapshot = new com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotRecord();
+        snapshot.setBookingId("B-TEST-001");
+        snapshot.setTrackingNumber(trackingNumber);
+        snapshot.setOriginUnlocode(origin);
+        snapshot.setDestinationUnlocode(destination);
+        snapshot.setCargoType("GENERAL");
+        snapshot.setArrivalDeadline(java.time.LocalDate.of(2099, 12, 31));
+        snapshot.setBookingStatus("TRACKING_ISSUED");
+        cargoSnapshotMapper.upsert(snapshot);
     }
 
     @Test
     @DisplayName("CargoSnapshot 再登録時は bookingId で upsert され最新値に更新される")
-    void cargoSnapshot再登録でupsert更新() throws Exception {
+    void cargoSnapshot再登録でupsert更新() {
         registerSnapshot("TRK-20260720-FIRST001", "JPTYO", "DEHAM");
         registerSnapshot("TRK-20260720-SECOND01", "JPTYO", "NLRTM");
 

@@ -9,7 +9,6 @@ import com.example.cargotracker.handlingms.domain.model.valueobjects.Location;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.handlingms.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.handlingms.domain.ports.CargoSnapshotRepository;
-import com.example.cargotracker.handlingms.infrastructure.persistence.CargoSnapshotMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryMapper;
 import com.example.cargotracker.handlingms.infrastructure.persistence.CargoStatusHistoryRecord;
 import com.example.cargotracker.handlingms.infrastructure.persistence.HandlingActivityMapper;
@@ -61,19 +60,16 @@ public class HandlingController {
 
     private final CommandGateway commandGateway;
     private final CargoSnapshotRepository cargoSnapshotRepository;
-    private final CargoSnapshotMapper cargoSnapshotMapper;
     private final HandlingActivityMapper handlingActivityMapper;
     private final CargoStatusHistoryMapper cargoStatusHistoryMapper;
 
     public HandlingController(
             CommandGateway commandGateway,
             CargoSnapshotRepository cargoSnapshotRepository,
-            CargoSnapshotMapper cargoSnapshotMapper,
             HandlingActivityMapper handlingActivityMapper,
             CargoStatusHistoryMapper cargoStatusHistoryMapper) {
         this.commandGateway = commandGateway;
         this.cargoSnapshotRepository = cargoSnapshotRepository;
-        this.cargoSnapshotMapper = cargoSnapshotMapper;
         this.handlingActivityMapper = handlingActivityMapper;
         this.cargoStatusHistoryMapper = cargoStatusHistoryMapper;
     }

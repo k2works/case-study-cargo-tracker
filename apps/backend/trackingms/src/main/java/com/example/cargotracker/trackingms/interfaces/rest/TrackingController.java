@@ -22,6 +22,7 @@ import com.example.cargotracker.trackingms.interfaces.rest.dto.RegisterTrackingE
 import com.example.cargotracker.trackingms.interfaces.rest.dto.ResolveTrackingExceptionRequest;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.TrackingListItemResponse;
 import com.example.cargotracker.trackingms.interfaces.rest.dto.UpdateTrackingStatusRequest;
+import com.example.cargotracker.trackingms.infrastructure.persistence.TrackingExceptionRecord;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -67,6 +68,7 @@ public class TrackingController {
     private static final String ERROR_CODE = "errorCode";
     private static final String MESSAGE_KEY = "message";
     private static final String TRACKING_NUMBER_KEY = "trackingNumber";
+    private static final String SYSTEM_OPERATOR_ID = "system";
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(30);
 
     private final TrackingTokenService tokenService;
@@ -183,7 +185,7 @@ public class TrackingController {
                 request.updatedAt() != null ? request.updatedAt() : LocalDateTime.now(),
                 new HandlerId(
                         (request.operatorId() == null || request.operatorId().isBlank())
-                                ? "system"
+                                ? SYSTEM_OPERATOR_ID
                                 : request.operatorId()));
 
         sendAndWaitWithTimeout(command);
@@ -198,7 +200,7 @@ public class TrackingController {
      * <p>{@code GET /api/v1/tracking/{trackingNumber}/exceptions}</p>
      */
     @GetMapping("/{trackingNumber}/exceptions")
-    public ResponseEntity<?> listExceptions(@PathVariable String trackingNumber) {
+    public ResponseEntity<List<TrackingExceptionRecord>> listExceptions(@PathVariable String trackingNumber) {
         if (!queryService.exists(trackingNumber)) {
             return ResponseEntity.notFound().build();
         }
@@ -228,7 +230,7 @@ public class TrackingController {
                 request.occurredUnlocode(),
                 request.description(),
                 (request.operatorId() == null || request.operatorId().isBlank())
-                        ? "system" : request.operatorId());
+                        ? SYSTEM_OPERATOR_ID : request.operatorId());
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
@@ -256,7 +258,7 @@ public class TrackingController {
                 exceptionId,
                 request.resolution(),
                 (request.operatorId() == null || request.operatorId().isBlank())
-                        ? "system" : request.operatorId());
+                        ? SYSTEM_OPERATOR_ID : request.operatorId());
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.ok(Map.of(

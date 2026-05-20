@@ -29,14 +29,14 @@ public class BookingEventAclHandler {
     @EventHandler
     @Transactional
     public void on(CargoBookedEvent event) {
-        var record = new CargoSnapshotRecord();
-        record.setBookingId(event.bookingId());
-        record.setOriginUnlocode(event.originUnlocode());
-        record.setDestinationUnlocode(event.destinationUnlocode());
-        record.setCargoType(event.cargoType());
-        record.setArrivalDeadline(event.arrivalDeadline());
-        record.setBookingStatus("PRELIMINARY");
-        mapper.upsert(record);
+        var snapshot = new CargoSnapshotRecord();
+        snapshot.setBookingId(event.bookingId());
+        snapshot.setOriginUnlocode(event.originUnlocode());
+        snapshot.setDestinationUnlocode(event.destinationUnlocode());
+        snapshot.setCargoType(event.cargoType());
+        snapshot.setArrivalDeadline(event.arrivalDeadline());
+        snapshot.setBookingStatus("PRELIMINARY");
+        mapper.upsert(snapshot);
     }
 
     @EventHandler
