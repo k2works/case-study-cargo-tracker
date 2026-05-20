@@ -158,7 +158,7 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 | 3.2 | `PaymentMapper`（MyBatis）+ `payment` テーブル Flyway マイグレーション | 4h | - | [x] |
 | 3.3 | `BillingController` エンドポイント 3 件（POST issue / PATCH settle / GET overdue）実装 | 4h | - | [x] |
 | 3.4 | フロント S24 精算書発行（`BillingIssuePage.tsx`）+ S25 督促一覧（`BillingOverduePage.tsx`）+ テスト | 4h | - | [x] |
-| 3.5 | E2E テスト（精算フロー）+ SonarQube QG PASS 確認 | 4h | - | [ ] |
+| 3.5 | E2E テスト（精算フロー）+ SonarQube QG PASS 確認 | 4h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -169,7 +169,7 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 | TI09: IT7 技術的負債回収（TrackingController 分離 等） | 2 | 14h | [x] |
 | US21: 輸送料金算出（Invoice 集約・S22/S23） | 5 | 20h | [x] |
 | US22: 法人割引適用（DiscountPolicy・0〜30%） | 3 | 12h | [x] |
-| US23: 精算処理（精算書発行・決済確認・S24/S25） | 5 | 20h | [ ] |
+| US23: 精算処理（精算書発行・決済確認・S24/S25） | 5 | 20h | [x] |
 | **合計** | **15** | **66h** | |
 
 **1 SP あたり**: 約 4.4h
