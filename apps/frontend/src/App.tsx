@@ -24,6 +24,8 @@ import { TrackingListPage } from './pages/TrackingListPage'
 import { TrackingExceptionNewPage } from './pages/TrackingExceptionNewPage'
 import { BillingListPage } from './pages/BillingListPage'
 import { BillingDetailPage } from './pages/BillingDetailPage'
+import { BillingIssuePage } from './pages/BillingIssuePage'
+import { BillingOverduePage } from './pages/BillingOverduePage'
 
 export default function App() {
   return (
@@ -54,7 +56,9 @@ export default function App() {
           <Route path="/tracking/:trackingNumber/manage" element={<CargoStatusUpdatePage />} />
           <Route path="/tracking/:trackingNumber/exceptions/new" element={<TrackingExceptionNewPage />} />
           <Route path="/billing" element={<BillingListPage />} />
+          <Route path="/billing/overdue" element={<BillingOverduePage />} />
           <Route path="/billing/:invoiceId" element={<BillingDetailPage />} />
+          <Route path="/billing/:invoiceId/issue" element={<BillingIssuePage />} />
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/login" replace />} />

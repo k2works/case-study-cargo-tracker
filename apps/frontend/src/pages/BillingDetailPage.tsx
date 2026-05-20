@@ -144,6 +144,17 @@ export function BillingDetailPage() {
         </div>
       )}
 
+      {invoice.billingStatus === 'CALCULATED' && (
+        <div className="mb-4">
+          <Link
+            to={`/billing/${invoiceId}/issue`}
+            className="inline-block bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+          >
+            精算書を発行
+          </Link>
+        </div>
+      )}
+
       {successMsg && (
         <div className="bg-green-50 border border-green-200 text-green-700 rounded p-3 text-sm mb-4">
           {successMsg}
