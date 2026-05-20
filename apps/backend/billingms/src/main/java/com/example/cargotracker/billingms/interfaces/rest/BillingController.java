@@ -2,8 +2,12 @@ package com.example.cargotracker.billingms.interfaces.rest;
 
 import com.example.cargotracker.billingms.application.query.BillingQueryService;
 import com.example.cargotracker.billingms.domain.model.commands.CalculateChargeCommand;
+import com.example.cargotracker.billingms.domain.model.commands.IssueInvoiceCommand;
+import com.example.cargotracker.billingms.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billingms.interfaces.rest.dto.CalculateChargeRequest;
 import com.example.cargotracker.billingms.interfaces.rest.dto.InvoiceResponse;
+import com.example.cargotracker.billingms.interfaces.rest.dto.IssueInvoiceRequest;
+import com.example.cargotracker.billingms.interfaces.rest.dto.RecordPaymentRequest;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
@@ -18,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -96,6 +101,66 @@ public class BillingController {
         return ResponseEntity.ok(Map.of(
                 "invoiceId", invoiceId,
                 "status", "CALCULATED"));
+    }
+
+    /**
+     * US23 督促一覧（INVOICED かつ支払期限超過の Invoice）。
+     */
+    @GetMapping("/invoices/overdue")
+    public ResponseEntity<List<InvoiceResponse>> listOverdueInvoices() {
+        return ResponseEntity.ok(
+                queryService.findOverdue().stream()
+                        .map(InvoiceResponse::from)
+                        .toList());
+    }
+
+    /**
+     * US23 精算書発行（CALCULATED → INVOICED）。
+     */
+    @PostMapping("/invoices/{invoiceId}/issue")
+    public ResponseEntity<Map<String, String>> issueInvoice(
+            @PathVariable String invoiceId,
+            @RequestBody IssueInvoiceRequest request) {
+
+        if (!queryService.exists(invoiceId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var command = new IssueInvoiceCommand(
+                invoiceId,
+                request.paymentDue(),
+                (request.operatorId() == null || request.operatorId().isBlank())
+                        ? SYSTEM_OPERATOR_ID : request.operatorId());
+
+        sendAndWaitWithTimeout(command);
+        return ResponseEntity.ok(Map.of(
+                "invoiceId", invoiceId,
+                "status", "INVOICED"));
+    }
+
+    /**
+     * US23 入金確認・精算完了（INVOICED → PAID）。
+     */
+    @PatchMapping("/invoices/{invoiceId}/settle")
+    public ResponseEntity<Map<String, String>> recordPayment(
+            @PathVariable String invoiceId,
+            @RequestBody RecordPaymentRequest request) {
+
+        if (!queryService.exists(invoiceId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var command = new RecordPaymentCommand(
+                invoiceId,
+                request.paidAmount(),
+                request.paymentMethod() != null ? request.paymentMethod() : "BANK_TRANSFER",
+                (request.operatorId() == null || request.operatorId().isBlank())
+                        ? SYSTEM_OPERATOR_ID : request.operatorId());
+
+        sendAndWaitWithTimeout(command);
+        return ResponseEntity.ok(Map.of(
+                "invoiceId", invoiceId,
+                "status", "PAID"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
