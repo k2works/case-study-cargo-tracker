@@ -404,7 +404,7 @@ gantt
 | IT5 | 11 | 11 | 100% | 完了 |
 | IT6 | 8 | 8 | 100% | 完了 |
 | IT7 | 11 | 11 | 100% | 完了 |
-| IT8 | 13 | - | - | 未着手 |
+| IT8 | 13 | - | - | 進行中 |
 | **合計** | **114** | **99** | **87%** | |
 
 > IT2 計画 14 SP は新規 11 SP（US04+US05+US24）+ 持越し 3 SP（US00-r1/US00-r2/US-UI-r）の構成。US25 は IT3 へ繰越し（+3 SP）したため、合計が 103 → 106 SP に増加した。
@@ -440,9 +440,9 @@ xychart-beta
 
 ## 次のステップ
 
-1. IT8 計画策定: US21（輸送料金算出）/ US22（法人割引）/ US23（精算処理）+ TI09（IT7 技術的負債回収）
-2. TI09 スコープ確定: TrackingExceptionController 分離 / ExceptionType enum 化 / テスト ArgumentCaptor 追加 / LOSS 通知最小実装
-3. IT8 計画書作成: `/planning-releases --iteration 8`
+1. IT8 開発着手: TI09（IT7 技術的負債回収）から開始し、US21 → US22 → US23 の順で実装する
+2. Release 1.1 準備: IT8 完了後に `git tag Release-1.1` を打ち GitHub Release を作成する
+3. 詳細計画: [iteration_plan-8.md](./iteration_plan-8.md) を参照
 
 ---
 
@@ -461,3 +461,4 @@ xychart-beta
 | 2026-05-18 | IT5 完了反映（実績 11 SP、達成率 100%、累計 80/106 SP 75%、バーンダウン実績線追加、retrospective-5.md 作成、次のステップを IT6 計画に更新） | AI Agent |
 | 2026-05-18 | IT6 計画策定（8 SP・trackingms 新設・US18 + TI05/TI06）、計画 SP を 5→8 SP に拡張（IT5 暫定解消 3 SP を計上）、累計計画 SP を 106→109 に補正、IT6 を進行中ステータスに更新 | AI Agent |
 | 2026-05-20 | IT7 完了反映（実績 11 SP、達成率 100%、累計 99/114 SP 87%）、retrospective-7.md 作成、XP マルチパースペクティブレビュー 38 件集約、次のステップを IT8 計画に更新 | AI Agent |
+| 2026-05-20 | IT8 計画策定（13 SP・TI09 + US21/US22/US23）、IT8 を進行中ステータスに更新、次のステップを IT8 開発着手に更新 | AI Agent |
