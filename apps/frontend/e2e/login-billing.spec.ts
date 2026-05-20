@@ -159,9 +159,25 @@ test.describe('S23 料金算出 → S24 精算書発行 → 精算完了フロ�
     // 料金算出フォームが表示されること
     await expect(page.locator('h2').filter({ hasText: '料金算出' })).toBeVisible()
 
-    // 料金算出
-    await page.fill('input[type="number"]:first-of-type', '100000')
-    await page.click('button[type="submit"]')
+    // 料金算出（label テキストで入力フィールドを特定してから入力）
+    await page.locator('label', { hasText: '基本料金' }).waitFor()
+    await page.locator('input[type="number"]').first().fill('100000')
+
+    // フォーム送信して API レスポンスを待機
+    const calcResponsePromise = page.waitForResponse(
+      (res) => res.url().includes('/calculate') && res.request().method() === 'POST',
+      { timeout: 15000 },
+    )
+    await page.click('button:has-text("料金を算出・確定")')
+    const calcResponse = await calcResponsePromise
+    if (!calcResponse.ok()) {
+      throw new Error(`料金算出 API が失敗しました: ${calcResponse.status()}`)
+    }
+
+    // API 成功後、ページを再読み込みして最新状態を取得
+    // （Axon PSEP の非同期イベント処理が完了するまで短時間待機）
+    await page.waitForTimeout(2000)
+    await page.goto(`/billing/${invoiceId}`)
 
     // ステータスが CALCULATED に変わること
     await expect(page.locator('dd').filter({ hasText: 'CALCULATED' })).toBeVisible({ timeout: 10000 })
@@ -176,10 +192,17 @@ test.describe('S23 料金算出 → S24 精算書発行 → 精算完了フロ�
 
     // 精算書を発行
     await page.fill('input[type="date"]', '2099-12-31')
-    await page.click('button[type="submit"]')
+    const issueResponsePromise = page.waitForResponse(
+      (res) => res.url().includes('/issue') && res.request().method() === 'POST',
+      { timeout: 15000 },
+    )
+    await page.click('button:has-text("精算書を発行")')
+    await issueResponsePromise
 
-    // 詳細ページに戻り INVOICED になること
+    // 詳細ページに戻り INVOICED になること（PSEP 処理完了まで待機してリロード）
     await page.waitForURL(`/billing/${invoiceId}`, { timeout: 10000 })
+    await page.waitForTimeout(2000)
+    await page.goto(`/billing/${invoiceId}`)
     await expect(page.locator('dd').filter({ hasText: 'INVOICED' })).toBeVisible({ timeout: 10000 })
   })
 })
