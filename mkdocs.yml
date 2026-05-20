@@ -111,6 +111,7 @@ nav:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
       - 開発環境セットアップ手順書: operation/開発環境セットアップ手順書.md
+      - Deprecation 一覧: operation/Deprecation一覧.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
@@ -121,6 +122,8 @@ nav:
       - "US08 先行スパイク コードレビュー": review/us08_spike_review_20260516.md
       - "IT4 バグ修正コードレビュー": review/IT4_bugfix_review_20260518.md
       - "IT6 実装成果物レビュー": review/IT6_implementation_review_20260518.md
+      - "IT7 UI/UX レビュー": review/IT7_uiux_review_20260519.md
+      - "US19/US20 例外処理レビュー": review/US19_US20_exception_review_20260519.md
   - ADR:
       - 概要: adr/index.md
       - "ADR-0001 Axon Framework 5 採用": adr/0001-axon-framework-adoption.md
@@ -136,6 +139,7 @@ nav:
       - "ADR-0011 CarrierMovement と TransitEdge の責務分離": adr/0011-carrier-movement-and-transit-edge-responsibility.md
       - "ADR-0012 handlingms と trackingms の責務分離": adr/0012-handlingms-trackingms-responsibility-separation.md
       - "ADR-0013 Tracking Number JWT 時限トークン設計": adr/0013-tracking-number-jwt-time-limited-token.md
+      - "ADR-0014 shared モジュール Event クラス管理": adr/0014-shared-module-event-classes.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

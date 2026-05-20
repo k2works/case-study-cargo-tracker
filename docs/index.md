@@ -20,10 +20,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、UI、テスト、非機能、運用、技術スタック | 10 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 13 件作成済み（ADR-0001〜0013） |
-| [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 8 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1〜IT6 完了・IT7 計画完了 |
-| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み（アプリ開発環境、開発環境）|
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 14 件作成済み（ADR-0001〜0014） |
+| [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 10 件作成済み |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1〜IT6 完了・IT7 進行中 |
+| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 3 件作成済み（アプリ開発環境、開発環境、Deprecation 一覧）|
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -83,6 +83,7 @@
 | :--- | :--- |
 | [アプリケーション開発環境セットアップ手順書](./operation/アプリケーション開発環境セットアップ手順書.md) | Java 25 + Spring Boot 4 + Axon 5.1 + MyBatis + React 19 のローカル開発環境構築手順、Phase 0 Walking Skeleton（bookingms + Swagger UI）の起動確認まで |
 | [開発環境セットアップ手順書](./operation/開発環境セットアップ手順書.md) | Heroku Container Registry を用いた開発環境（authms / bookingms / gatewayms / frontend）のデプロイ手順、IT1 完了状態まで |
+| [Deprecation 一覧](./operation/Deprecation一覧.md) | 廃止予定 API・コード・設定の一覧と移行計画 |
 
 ### レビュードキュメント
 
@@ -96,6 +97,8 @@
 | [US08 先行スパイク コードレビュー](./review/us08_spike_review_20260516.md) | US08 経路候補算出のスパイク実装に対するコードレビュー結果 |
 | [IT4 バグ修正コードレビュー](./review/IT4_bugfix_review_20260518.md) | IT4 バグ修正に対するコードレビュー結果 |
 | [IT6 実装成果物レビュー](./review/IT6_implementation_review_20260518.md) | IT6 完了時点（追跡・手動更新 Phase 2 進行）の実装成果物レビュー結果 |
+| [IT7 UI/UX レビュー](./review/IT7_uiux_review_20260519.md) | IT7 例外登録・対応画面（S18/S19）の UI/UX 成果物レビュー結果 |
+| [US19/US20 例外処理レビュー](./review/US19_US20_exception_review_20260519.md) | 遅延・破損・紛失例外処理実装の開発成果物レビュー結果 |
 
 ## 補足
 
