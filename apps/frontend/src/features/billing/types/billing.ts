@@ -33,3 +33,14 @@ export type CalculateChargeResponse = {
   invoiceId: string
   status: string
 }
+
+export type IssueInvoiceRequest = {
+  paymentDue: string | null
+  operatorId: string
+}
+
+export type RecordPaymentRequest = {
+  paidAmount: number
+  paymentMethod: string
+  operatorId: string
+}

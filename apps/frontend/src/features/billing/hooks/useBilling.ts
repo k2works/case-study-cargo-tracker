@@ -4,6 +4,8 @@ import type {
   CalculateChargeRequest,
   CalculateChargeResponse,
   Invoice,
+  IssueInvoiceRequest,
+  RecordPaymentRequest,
 } from '../types/billing'
 
 // billingApiBaseUrl は env に存在しないため、trackingApiBaseUrl と同様のパターンで
@@ -47,6 +49,54 @@ async function postCalculateCharge(
     },
   )
   if (!res.ok) throw new Error(`料金算出に失敗しました (${res.status})`)
+  return res.json()
+}
+
+async function fetchOverdueInvoices(token: string): Promise<Invoice[]> {
+  const res = await fetch(`${billingApiBaseUrl}/api/v1/billing/invoices/overdue`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`督促一覧の取得に失敗しました (${res.status})`)
+  return res.json()
+}
+
+async function postIssueInvoice(
+  invoiceId: string,
+  body: IssueInvoiceRequest,
+  token: string,
+): Promise<{ invoiceId: string; status: string }> {
+  const res = await fetch(
+    `${billingApiBaseUrl}/api/v1/billing/invoices/${invoiceId}/issue`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) throw new Error(`精算書発行に失敗しました (${res.status})`)
+  return res.json()
+}
+
+async function patchSettleInvoice(
+  invoiceId: string,
+  body: RecordPaymentRequest,
+  token: string,
+): Promise<{ invoiceId: string; status: string }> {
+  const res = await fetch(
+    `${billingApiBaseUrl}/api/v1/billing/invoices/${invoiceId}/settle`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    },
+  )
+  if (!res.ok) throw new Error(`精算完了処理に失敗しました (${res.status})`)
   return res.json()
 }
 
@@ -95,6 +145,50 @@ export function useCalculateCharge() {
       invoiceId: string
       body: CalculateChargeRequest
     }) => postCalculateCharge(invoiceId, body, token),
+    onSuccess: (_, { invoiceId }) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices', invoiceId] })
+    },
+  })
+}
+
+/**
+ * S25 督促一覧（経理担当者）。
+ */
+export function useOverdueInvoiceList() {
+  const token = useAuthStore((s) => s.token) ?? ''
+  return useQuery({
+    queryKey: ['invoices', 'overdue'],
+    queryFn: () => fetchOverdueInvoices(token),
+    enabled: !!token,
+  })
+}
+
+/**
+ * S24 精算書発行（経理担当者）。
+ */
+export function useIssueInvoice() {
+  const token = useAuthStore((s) => s.token) ?? ''
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ invoiceId, body }: { invoiceId: string; body: IssueInvoiceRequest }) =>
+      postIssueInvoice(invoiceId, body, token),
+    onSuccess: (_, { invoiceId }) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices', invoiceId] })
+    },
+  })
+}
+
+/**
+ * US23 入金確認・精算完了（経理担当者）。
+ */
+export function useSettleInvoice() {
+  const token = useAuthStore((s) => s.token) ?? ''
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ invoiceId, body }: { invoiceId: string; body: RecordPaymentRequest }) =>
+      patchSettleInvoice(invoiceId, body, token),
     onSuccess: (_, { invoiceId }) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['invoices', invoiceId] })
