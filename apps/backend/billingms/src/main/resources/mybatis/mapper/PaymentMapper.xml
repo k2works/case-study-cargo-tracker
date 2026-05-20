@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.billingms.infrastructure.persistence.PaymentMapper">
+
+    <resultMap id="PaymentResultMap"
+               type="com.example.cargotracker.billingms.infrastructure.persistence.PaymentRecord">
+        <id     property="paymentId"          column="payment_id"/>
+        <result property="invoiceId"           column="invoice_id"/>
+        <result property="paidAmount"          column="paid_amount"/>
+        <result property="currency"            column="currency"/>
+        <result property="paidAt"              column="paid_at"/>
+        <result property="paymentMethod"       column="payment_method"/>
+        <result property="externalReference"   column="external_reference"/>
+        <result property="createdAt"           column="created_at"/>
+        <result property="updatedAt"           column="updated_at"/>
+        <result property="version"             column="version"/>
+    </resultMap>
+
+    <resultMap id="InvoiceResultMap"
+               type="com.example.cargotracker.billingms.infrastructure.persistence.InvoiceRecord">
+        <id     property="invoiceId"           column="invoice_id"/>
+        <result property="bookingId"           column="booking_id"/>
+        <result property="shipperId"           column="shipper_id"/>
+        <result property="basicAmount"         column="basic_amount"/>
+        <result property="discountAmount"      column="discount_amount"/>
+        <result property="adjustmentAmount"    column="adjustment_amount"/>
+        <result property="totalAmount"         column="total_amount"/>
+        <result property="currency"            column="currency"/>
+        <result property="billingStatus"       column="billing_status"/>
+        <result property="invoiceNumber"       column="invoice_number"/>
+        <result property="paymentDue"          column="payment_due"/>
+        <result property="paidAt"              column="paid_at"/>
+        <result property="cancellationReason"  column="cancellation_reason"/>
+        <result property="createdAt"           column="created_at"/>
+        <result property="updatedAt"           column="updated_at"/>
+        <result property="version"             column="version"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.cargotracker.billingms.infrastructure.persistence.PaymentRecord">
+        INSERT INTO payment (
+            payment_id, invoice_id, paid_amount, currency,
+            paid_at, payment_method, external_reference,
+            created_at, updated_at, version
+        ) VALUES (
+            #{paymentId}, #{invoiceId}, #{paidAmount}, #{currency},
+            #{paidAt}, #{paymentMethod}, #{externalReference},
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
+        )
+    </insert>
+
+    <select id="findByInvoiceId" resultMap="PaymentResultMap">
+        SELECT * FROM payment WHERE invoice_id = #{invoiceId} ORDER BY paid_at DESC
+    </select>
+
+    <update id="updateInvoiceIssued">
+        UPDATE invoice SET
+            invoice_number = #{invoiceNumber},
+            payment_due    = #{paymentDue},
+            billing_status = #{billingStatus},
+            updated_at     = CURRENT_TIMESTAMP,
+            version        = version + 1
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <update id="updateInvoicePaid">
+        UPDATE invoice SET
+            billing_status = #{billingStatus},
+            paid_at        = CURRENT_TIMESTAMP,
+            updated_at     = CURRENT_TIMESTAMP,
+            version        = version + 1
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <select id="findOverdueInvoices" resultMap="InvoiceResultMap">
+        SELECT * FROM invoice
+        WHERE billing_status = 'INVOICED'
+          AND payment_due IS NOT NULL
+          AND payment_due &lt; CURRENT_DATE
+        ORDER BY payment_due ASC
+    </select>
+
+</mapper>
