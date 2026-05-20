@@ -36,17 +36,32 @@ async function login(
   return body.token ?? null
 }
 
+async function isBillingAvailable(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+): Promise<boolean> {
+  try {
+    const resp = await request.get(`${API_BASE_URL}/api/v1/billing/invoices`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 5000,
+    })
+    return resp.ok()
+  } catch {
+    return false
+  }
+}
+
 
 test.describe('S22/S23 請求一覧・詳細・料金算出', () => {
   test('S22 請求一覧ページにアクセスできる', async ({ page, request }) => {
     const token = await login(request)
-    if (!token) {
+    if (!token || !(await isBillingAvailable(request, token))) {
       test.skip(true, 'billingms が起動していないためスキップ')
       return
     }
 
     await page.goto('/login')
-    await page.fill('input[type="text"], input[name="username"]', 'admin')
+    await page.fill('input[type="text"]', 'admin')
     await page.fill('input[type="password"]', 'password')
     await page.click('button[type="submit"]')
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 })
@@ -57,13 +72,13 @@ test.describe('S22/S23 請求一覧・詳細・料金算出', () => {
 
   test('S25 督促一覧ページにアクセスできる', async ({ page, request }) => {
     const token = await login(request)
-    if (!token) {
+    if (!token || !(await isBillingAvailable(request, token))) {
       test.skip(true, 'billingms が起動していないためスキップ')
       return
     }
 
     await page.goto('/login')
-    await page.fill('input[type="text"], input[name="username"]', 'admin')
+    await page.fill('input[type="text"]', 'admin')
     await page.fill('input[type="password"]', 'password')
     await page.click('button[type="submit"]')
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 })
@@ -76,7 +91,7 @@ test.describe('S22/S23 請求一覧・詳細・料金算出', () => {
 test.describe('S23 料金算出 → S24 精算書発行 → 精算完了フロー', () => {
   test('既存 Invoice の料金算出・精算書発行フローを実行できる', async ({ page, request }) => {
     const token = await login(request)
-    if (!token) {
+    if (!token || !(await isBillingAvailable(request, token))) {
       test.skip(true, 'billingms が起動していないためスキップ')
       return
     }

@@ -10,18 +10,18 @@ import { useInvoiceList } from '../features/billing/hooks/useBilling'
 export function BillingListPage() {
   const { data, isLoading, error } = useInvoiceList()
 
-  if (isLoading) return <div className="p-6">読み込み中...</div>
-  if (error) return <div className="p-6 text-red-600">{(error as Error).message}</div>
-
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">請求一覧</h1>
       <p className="text-sm text-gray-500 mb-4">
         輸送料金の請求一覧です。行をクリックして詳細・料金算出へ移動します。
       </p>
-      {!data || data.length === 0 ? (
+      {isLoading && <div className="text-gray-500 text-sm">読み込み中...</div>}
+      {error && <div className="text-red-600 text-sm">{(error as Error).message}</div>}
+      {!isLoading && !error && data?.length === 0 && (
         <p className="text-gray-500">請求情報がありません。</p>
-      ) : (
+      )}
+      {!isLoading && !error && data && data.length > 0 && (
         <div className="overflow-x-auto">
           <table className="min-w-full border border-gray-200 text-sm">
             <thead className="bg-gray-50">

@@ -9,9 +9,6 @@ import { useOverdueInvoiceList } from '../features/billing/hooks/useBilling'
 export function BillingOverduePage() {
   const { data: invoices, isLoading, error } = useOverdueInvoiceList()
 
-  if (isLoading) return <div className="p-6">読み込み中...</div>
-  if (error) return <div className="p-6 text-red-600">{(error as Error).message}</div>
-
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -25,17 +22,20 @@ export function BillingOverduePage() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">督促一覧</h1>
+        <h1 className="text-2xl font-bold" data-testid="page-title">督促一覧</h1>
         <Link to="/billing" className="text-blue-600 hover:underline text-sm">
           ← 請求一覧へ
         </Link>
       </div>
 
-      {invoices && invoices.length === 0 ? (
+      {isLoading && <div className="text-gray-500 text-sm">読み込み中...</div>}
+      {error && <div className="text-red-600 text-sm">{(error as Error).message}</div>}
+      {!isLoading && !error && invoices?.length === 0 && (
         <div className="bg-green-50 border border-green-200 text-green-700 rounded p-4 text-sm">
           支払期限超過の請求はありません。
         </div>
-      ) : (
+      )}
+      {!isLoading && !error && invoices && invoices.length > 0 && (
         <div className="bg-white border rounded overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
@@ -50,7 +50,7 @@ export function BillingOverduePage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {invoices?.map((inv) => {
+              {invoices.map((inv) => {
                 const overdueDays = calcOverdueDays(inv.paymentDue)
                 return (
                   <tr key={inv.invoiceId} className="hover:bg-gray-50">
