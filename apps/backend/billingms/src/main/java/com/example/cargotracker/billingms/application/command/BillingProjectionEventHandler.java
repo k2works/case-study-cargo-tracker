@@ -10,7 +10,7 @@ import com.example.cargotracker.billingms.infrastructure.persistence.PaymentMapp
 import com.example.cargotracker.billingms.infrastructure.persistence.PaymentRecord;
 import java.math.BigDecimal;
 import java.util.UUID;
-import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
+import org.axonframework.messaging.eventhandling.annotation.EventHandler;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +32,7 @@ public class BillingProjectionEventHandler {
         this.paymentMapper = paymentMapper;
     }
 
-    @EventSourcingHandler
+    @EventHandler
     @Transactional
     public void on(InvoiceCreatedEvent event) {
         var record = new InvoiceRecord(
@@ -49,7 +49,7 @@ public class BillingProjectionEventHandler {
         invoiceMapper.insert(record);
     }
 
-    @EventSourcingHandler
+    @EventHandler
     @Transactional
     public void on(ChargeCalculatedEvent event) {
         invoiceMapper.updateCharge(
@@ -60,7 +60,7 @@ public class BillingProjectionEventHandler {
                 "CALCULATED");
     }
 
-    @EventSourcingHandler
+    @EventHandler
     @Transactional
     public void on(InvoiceIssuedEvent event) {
         paymentMapper.updateInvoiceIssued(
@@ -70,7 +70,7 @@ public class BillingProjectionEventHandler {
                 "INVOICED");
     }
 
-    @EventSourcingHandler
+    @EventHandler
     @Transactional
     public void on(PaymentRecordedEvent event) {
         var payment = new PaymentRecord(

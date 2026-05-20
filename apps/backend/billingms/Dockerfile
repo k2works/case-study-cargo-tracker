@@ -48,11 +48,11 @@ COPY --from=builder /workspace/billingms/build/libs/billingms.jar /app/billingms
 
 USER cargo
 
-EXPOSE 8086
+EXPOSE 8087
 
 ENV JAVA_OPTS=""
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/billingms.jar"]
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
-    CMD wget --spider -q http://localhost:8086/actuator/health/liveness || exit 1
+    CMD wget --spider -q http://localhost:8087/actuator/health/liveness || exit 1
