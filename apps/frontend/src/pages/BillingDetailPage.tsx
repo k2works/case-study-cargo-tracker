@@ -62,10 +62,26 @@ export function BillingDetailPage() {
           <dd>{invoice.shipperId}</dd>
           <dt className="text-gray-500">現在ステータス</dt>
           <dd>{invoice.billingStatus}</dd>
+          {invoice.basicAmount != null && (
+            <>
+              <dt className="text-gray-500">基本料金</dt>
+              <dd>
+                {invoice.basicAmount.toLocaleString()} {invoice.currency}
+              </dd>
+            </>
+          )}
+          {invoice.discountAmount != null && invoice.discountAmount > 0 && (
+            <>
+              <dt className="text-gray-500">割引額</dt>
+              <dd className="text-red-600">
+                -{invoice.discountAmount.toLocaleString()} {invoice.currency}
+              </dd>
+            </>
+          )}
           {invoice.totalAmount != null && (
             <>
-              <dt className="text-gray-500">請求金額</dt>
-              <dd>
+              <dt className="text-gray-500 font-semibold">請求金額（割引後）</dt>
+              <dd className="font-semibold">
                 {invoice.totalAmount.toLocaleString()} {invoice.currency}
               </dd>
             </>
