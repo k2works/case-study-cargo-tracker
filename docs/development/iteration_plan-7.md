@@ -50,7 +50,7 @@ date: 2026-05-18T00:00:00.000Z
 - [x] ADR-0013 ステータスが「承認済み」に昇格している
 - [x] ADR-0014「shared モジュールの責務拡張」が起票・承認されている
 - [x] Playwright E2E（US19 / US20 含む 13 シナリオ以上）が全通過する
-- [ ] SonarQube Quality Gate PASS（new_coverage >= 80% / new_violations 0）
+- [x] SonarQube Quality Gate PASS（new_coverage >= 80% / new_violations 0）
 
 ---
 

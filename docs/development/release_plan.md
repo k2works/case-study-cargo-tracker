@@ -403,9 +403,9 @@ gantt
 | IT4 | 25 | 25 | 100% | 完了 |
 | IT5 | 11 | 11 | 100% | 完了 |
 | IT6 | 8 | 8 | 100% | 完了 |
-| IT7 | 11 | - | - | 計画完了 |
+| IT7 | 11 | 11 | 100% | 完了 |
 | IT8 | 13 | - | - | 未着手 |
-| **合計** | **114** | **88** | **77%** | |
+| **合計** | **114** | **99** | **87%** | |
 
 > IT2 計画 14 SP は新規 11 SP（US04+US05+US24）+ 持越し 3 SP（US00-r1/US00-r2/US-UI-r）の構成。US25 は IT3 へ繰越し（+3 SP）したため、合計が 103 → 106 SP に増加した。
 >
@@ -433,15 +433,16 @@ xychart-beta
 > **IT5 完了（2026-05-18 受入待ち）**: TI04（handlingms 骨格・ArchUnit・sendAndWait タイムアウト・統合テスト整合）+ US15（荷役作業を記録する）+ US16（引取作業を記録する）+ US17（貨物状態を手動更新する）の全 11 SP が完了。バックエンド handlingms 25 テスト + 既存全 PASS、フロントエンド 121 テスト PASS、E2E 10/10 PASS（17.0s）、SonarQube Quality Gate PASS（new_coverage 82.7%・new_violations 0）、ArchUnit PASS。詳細は [retrospective-5.md](./retrospective-5.md) 参照。
 >
 > **IT6 完了（2026-05-18）**: TI05（trackingms 骨格・ADR-0013・ArchUnit 4 サービス共通化）+ US18（公開追跡照会・JWT 時限トークン）+ TI06（US17 trackingms 移管コア）+ S16 追跡管理一覧（IT5 漏れ補完・SP 外）の全 8 SP が完了。バックエンド trackingms 49 テスト + 既存全 PASS（累計 314）、フロントエンド 142 テスト PASS、E2E 11/11 PASS、SonarQube Quality Gate PASS（new_coverage 83.5%・new_violations 0）、マルチパースペクティブレビュー（XP 5 エージェント並列）で 40 件指摘集約・高優先度 7 件即時対応。累計 88/106 SP 83%。詳細は [iteration_report-6.md](./iteration_report-6.md) / [retrospective-6.md](./retrospective-6.md) / [IT6_implementation_review_20260518.md](../review/IT6_implementation_review_20260518.md) 参照。Event 駆動 ACL（shared モジュール昇格）+ bookingms VO 修正 + レビュー高優先度残課題 5 件は IT7 持ち越し。
+>
+> **IT7 完了（2026-05-20）**: TI07（shared モジュール昇格・Event 駆動 ACL 本実装・bookingms.TrackingNumber 正規表現修正）+ TI08（IT6 レビュー高優先度残課題・ADR-0013/0014・設計書同期）+ US19（遅延例外登録）+ US20（破損・紛失例外解決）の全 11 SP が完了。SonarQube Quality Gate PASS（new_coverage 84.1%・violations 0）、E2E 13 シナリオ全通過、XP マルチパースペクティブレビュー 38 件指摘集約（高 10 / 中 18 / 低 10）。累計 99/114 SP 87%。詳細は [retrospective-7.md](./retrospective-7.md) / [IT7_xp_multiperspective_review_20260520.md](../review/IT7_xp_multiperspective_review_20260520.md) 参照。主要な技術的負債（TrackingExceptionController 分離・ExceptionType enum 化・テスト仕様化強化・LOSS 通知実装）は IT8（TI09）に持ち越し。
 
 ---
 
 ## 次のステップ
 
-1. IT7 計画策定: shared モジュール昇格 + Event 駆動 ACL 本実装 + IT4 由来 bookingms.TrackingNumber 修正 + レビュー高優先度残課題（H-1 港名 / H-5 問合せ先 / H-7 dummyValidUntil / H-8 JWT Fail-Fast）
-2. ADR-0013 ステータスを「提案」→「承認済み」に昇格
-3. data-model.md / domain-model.md に IT6 変更（`delivered_at` / `source` / `TrackingTokenService` 等）を同期
-4. IT7 計画書作成: `/planning-releases --iteration 7`
+1. IT8 計画策定: US21（輸送料金算出）/ US22（法人割引）/ US23（精算処理）+ TI09（IT7 技術的負債回収）
+2. TI09 スコープ確定: TrackingExceptionController 分離 / ExceptionType enum 化 / テスト ArgumentCaptor 追加 / LOSS 通知最小実装
+3. IT8 計画書作成: `/planning-releases --iteration 8`
 
 ---
 
@@ -459,3 +460,4 @@ xychart-beta
 | 2026-05-18 | IT5 計画策定（11 SP・handlingms 新設・US15/US16/US17）、IT5 進行中ステータスに更新、次のステップを IT5 開発開始に更新 | AI Agent |
 | 2026-05-18 | IT5 完了反映（実績 11 SP、達成率 100%、累計 80/106 SP 75%、バーンダウン実績線追加、retrospective-5.md 作成、次のステップを IT6 計画に更新） | AI Agent |
 | 2026-05-18 | IT6 計画策定（8 SP・trackingms 新設・US18 + TI05/TI06）、計画 SP を 5→8 SP に拡張（IT5 暫定解消 3 SP を計上）、累計計画 SP を 106→109 に補正、IT6 を進行中ステータスに更新 | AI Agent |
+| 2026-05-20 | IT7 完了反映（実績 11 SP、達成率 100%、累計 99/114 SP 87%）、retrospective-7.md 作成、XP マルチパースペクティブレビュー 38 件集約、次のステップを IT8 計画に更新 | AI Agent |
