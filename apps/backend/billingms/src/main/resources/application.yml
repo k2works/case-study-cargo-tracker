@@ -1,0 +1,53 @@
+# billingms ベース設定
+#
+# プロファイル戦略（trackingms と同規約）:
+#   - local-h2     : H2 インメモリ（IDE 起動・最速 TDD）
+#   - local-docker : PostgreSQL + Axon Server（docker compose 起動）
+#   - staging/prod : 環境変数からシークレットを読み込む
+
+mybatis:
+  mapper-locations: classpath:mybatis/mapper/*.xml
+
+spring:
+  application:
+    name: billingms
+  profiles:
+    default: local-h2
+  main:
+    allow-circular-references: true
+
+server:
+  port: 8087
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.example.cargotracker: DEBUG
+    org.axonframework: INFO
+
+axon:
+  axonserver:
+    servers: ${AXON_AXONSERVER_SERVERS:localhost:8124}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false
+  packages-to-scan: com.example.cargotracker.billingms

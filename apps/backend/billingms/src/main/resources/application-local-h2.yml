@@ -1,0 +1,28 @@
+# ローカル開発：H2 インメモリ + Axon ダミー
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:billingms;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    clean-disabled: false
+    clean-on-validation-error: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  devtools:
+    restart:
+      enabled: true
+
+axon:
+  axonserver:
+    enabled: false
+  eventhandling:
+    processors:
+      "[com.example.cargotracker.billingms.application.eventhandlers]":
+        mode: subscribing

@@ -36,5 +36,5 @@ include("routingms")
 include("handlingms")
 include("trackingms")
 
-// 雛形のみ（Phase 2 以降に実装）
-// include("billingms")
+// Phase 2: 精算コンテキスト（IT8 US21-US23）
+include("billingms")
