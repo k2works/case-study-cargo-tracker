@@ -30,9 +30,9 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 - [ ] `TrackingController` を `TrackingExceptionController` に分離し 330 行 → 各 150 行以下に削減
 - [ ] `ExceptionType enum` で String 流通を排除（`DELAY` / `DAMAGE` / `LOSS` を型安全に管理）
 - [ ] LOSS 緊急通知の最小実装（管理者への通知ログ明示化 or バッジ表示）
-- [ ] `POST /api/v1/billing/quotes/{quoteId}/charges` で料金計算が可能
-- [ ] 法人荷主に対して割引率が自動適用される
-- [ ] `POST /api/v1/billing/charges/{chargeId}/settle` で精算が完了できる
+- [ ] 「引取済」状態の予約に対して料金算出・確定が可能（S23 請求詳細・算出）
+- [ ] 法人荷主（`CORPORATE`）に対して割引率（0〜30%）が自動適用される
+- [ ] `POST /api/v1/billing/invoices/{invoiceId}/settle` で精算が完了できる
 - [ ] SonarQube Quality Gate PASS（new_coverage 80% 以上）
 - [ ] E2E テスト全通過（既存 13 + 新規追加分）
 
@@ -71,40 +71,46 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 #### US21: 輸送料金を算出する（5 SP）
 
 **ストーリー**:
-> 経理担当者として、確定した予約（trackingNumber 紐付き）に対して輸送料金を算出したい。なぜなら、貨物引き渡し後に正確な請求書を発行するためだ。
+> 経理担当者として、配送完了した予約に対して輸送実績（経路・重量・貨物種別・荷役実績）をもとに輸送料金を算出したい。なぜなら、実際の輸送内容に基づく正確な料金を算出し、精算に進めるからだ。
 
 **受入条件**:
 
-- [ ] `POST /api/v1/billing/quotes/{quoteId}/charges` で料金計算を実行できる
-- [ ] 料金は距離（km）× 重量（kg）× 品目カテゴリ係数で算出される
-- [ ] 危険物（`HAZMAT`）は係数 1.5 倍、冷凍貨物（`REFRIGERATED`）は 1.3 倍が適用される
-- [ ] `GET /api/v1/billing/quotes/{quoteId}/charges` で算出済み料金を確認できる
-- [ ] フロント S20 料金確認画面（`BillingChargePage.tsx`）で金額が表示される
+- [ ] 「引取済」状態の予約に対して料金算出を開始できる
+- [ ] 輸送実績（経路・距離・重量・貨物種別・荷役作業実績）が表示される
+- [ ] 基本料金が自動計算される
+- [ ] 算出結果を確認して確定操作ができる
+- [ ] 確定後、輸送料金が「確定」状態で登録される
+- [ ] 例外（遅延・破損等）が発生している場合、料金調整（減額・補償費用）の入力ができる
+- [ ] `GET /api/v1/billing/invoices` で算出済み料金一覧を確認できる（S22 請求一覧）
+- [ ] フロント S23 請求詳細・算出画面（`BillingInvoiceDetailPage.tsx`）で料金が表示・確定できる
 
 #### US22: 法人割引を適用する（3 SP）
 
 **ストーリー**:
-> 経理担当者として、法人荷主に対して契約に基づく割引率を適用した料金を算出したい。なぜなら、法人顧客との契約条件を正確に反映するためだ。
+> 経理担当者として、法人荷主の場合に、契約割引率を基本料金に自動適用して割引後の請求金額を確定したい。なぜなら、法人契約条件に基づく正確な割引を自動化し、手計算ミスを防ぐからだ。
 
 **受入条件**:
 
-- [ ] 法人荷主（`CORPORATE`）に対して割引率（5〜20%）が自動適用される
+- [ ] 荷主種別が「法人」の場合、料金算出時に契約割引率が自動的に取得・表示される
+- [ ] 割引率（0〜30%）が基本料金に適用され、割引後の金額が表示される
+- [ ] 個人荷主の場合は割引が適用されない（割引率 0%）
+- [ ] 割引計算の根拠（割引率・基本料金・割引後料金）が精算書に記載される
 - [ ] 割引率は荷主マスターの `discountRate` フィールドから取得される
-- [ ] 割引後金額・割引前金額・割引率が料金明細に記録される
-- [ ] 個人荷主には割引が適用されない（割引率 0%）
 
 #### US23: 精算を処理する（5 SP）
 
 **ストーリー**:
-> 経理担当者として、算出された料金に対して請求書を発行し、入金を確認して精算を完了したい。なぜなら、貨物輸送の収益を正確に管理するためだ。
+> 経理担当者として、確定した輸送料金をもとに精算書を発行し、荷主への通知・入金確認・精算完了処理を行いたい。なぜなら、精算業務を一元管理し、入金状況を追跡して確実に精算を完了できるからだ。
 
 **受入条件**:
 
-- [ ] `POST /api/v1/billing/charges/{chargeId}/invoice` で請求書を発行できる
-- [ ] `PATCH /api/v1/billing/charges/{chargeId}/settle` で入金確認・精算完了できる
-- [ ] 精算状態は `PENDING` → `INVOICED` → `SETTLED` と遷移する
-- [ ] `GET /api/v1/billing/charges` で精算一覧（フィルタ: 状態・期間）を取得できる
-- [ ] フロント S21 精算管理画面（`BillingSettlementPage.tsx`）で精算操作が可能
+- [ ] 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる（S24 精算書発行）
+- [ ] 精算書が荷主にメール通知される
+- [ ] 決済機関との連携により入金確認ができる
+- [ ] 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる
+- [ ] 支払い期限超過時、経理担当者に未払い通知が送信される（S25 督促一覧）
+- [ ] `POST /api/v1/billing/invoices/{invoiceId}/issue` で精算書を発行できる
+- [ ] `PATCH /api/v1/billing/invoices/{invoiceId}/settle` で精算完了できる
 
 ---
 
@@ -127,10 +133,10 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | `billingms` Gradle モジュール作成・Spring Boot スケルトン + ArchUnit 設定 | 4h | - | [ ] |
-| 1.2 | `Charge` 集約（コマンド・イベント・ハンドラー）+ `ChargeCalculationService` TDD | 4h | - | [ ] |
-| 1.3 | `ChargeMapper`（MyBatis）+ `charges` テーブル Flyway マイグレーション | 4h | - | [ ] |
-| 1.4 | `BillingController` エンドポイント 2 件（POST charges / GET charges/{id}）実装 | 4h | - | [ ] |
-| 1.5 | フロント `BillingChargePage.tsx`（S20）実装 + Vitest テスト | 4h | - | [ ] |
+| 1.2 | `Invoice` 集約（コマンド・イベント・ハンドラー）+ `ChargeCalculationService` TDD | 4h | - | [ ] |
+| 1.3 | `InvoiceMapper`（MyBatis）+ `invoice` テーブル Flyway マイグレーション | 4h | - | [ ] |
+| 1.4 | `BillingController` エンドポイント 2 件（GET invoices / POST invoices/{id}/calculate）実装 | 4h | - | [ ] |
+| 1.5 | フロント S22 請求一覧（`BillingListPage.tsx`）+ S23 請求詳細・算出（`BillingDetailPage.tsx`）+ Vitest テスト | 4h | - | [ ] |
 
 **小計**: 20h（理想時間）
 
@@ -138,9 +144,9 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `DiscountPolicy` ドメインサービス（法人/個人分岐・割引率適用）TDD | 4h | - | [ ] |
-| 2.2 | 荷主マスター `discountRate` フィールド追加 + `ChargeCalculationService` に統合 | 4h | - | [ ] |
-| 2.3 | フロント 割引表示（割引前・割引後・割引率）コンポーネント追加 + テスト | 4h | - | [ ] |
+| 2.1 | `DiscountPolicy` ドメインサービス（法人/個人分岐・割引率 0〜30% 適用）TDD | 4h | - | [ ] |
+| 2.2 | 荷主マスター `discountRate` フィールド参照 + `ChargeCalculationService` に統合 | 4h | - | [ ] |
+| 2.3 | フロント 割引表示（割引前・割引後・割引率・割引根拠）コンポーネント追加 + テスト | 4h | - | [ ] |
 
 **小計**: 12h（理想時間）
 
@@ -148,10 +154,10 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `Settlement` 状態遷移（`PENDING` → `INVOICED` → `SETTLED`）集約 TDD | 4h | - | [ ] |
-| 3.2 | `SettlementMapper`（MyBatis）+ `settlements` テーブル Flyway マイグレーション | 4h | - | [ ] |
-| 3.3 | `BillingController` エンドポイント 3 件（POST invoice / PATCH settle / GET charges）実装 | 4h | - | [ ] |
-| 3.4 | フロント `BillingSettlementPage.tsx`（S21）実装 + Vitest テスト | 4h | - | [ ] |
+| 3.1 | `Invoice` 状態遷移（`PENDING` → `CONFIRMED` → `SETTLED`）集約 TDD | 4h | - | [ ] |
+| 3.2 | `PaymentMapper`（MyBatis）+ `payment` テーブル Flyway マイグレーション | 4h | - | [ ] |
+| 3.3 | `BillingController` エンドポイント 3 件（POST issue / PATCH settle / GET overdue）実装 | 4h | - | [ ] |
+| 3.4 | フロント S24 精算書発行（`BillingIssuePage.tsx`）+ S25 督促一覧（`BillingOverduePage.tsx`）+ テスト | 4h | - | [ ] |
 | 3.5 | E2E テスト（精算フロー）+ SonarQube QG PASS 確認 | 4h | - | [ ] |
 
 **小計**: 20h（理想時間）
@@ -160,10 +166,10 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| TI09: IT7 技術的負債回収 | 2 | 14h | [ ] |
-| US21: 輸送料金算出 | 5 | 20h | [ ] |
-| US22: 法人割引適用 | 3 | 12h | [ ] |
-| US23: 精算処理 | 5 | 20h | [ ] |
+| TI09: IT7 技術的負債回収（TrackingController 分離 等） | 2 | 14h | [ ] |
+| US21: 輸送料金算出（Invoice 集約・S22/S23） | 5 | 20h | [ ] |
+| US22: 法人割引適用（DiscountPolicy・0〜30%） | 3 | 12h | [ ] |
+| US23: 精算処理（精算書発行・決済確認・S24/S25） | 5 | 20h | [ ] |
 | **合計** | **15** | **66h** | |
 
 **1 SP あたり**: 約 4.4h
@@ -235,79 +241,89 @@ gantt
 
 ### ドメインモデル（billingms）
 
+domain-model.md の Billing Context に準拠する。
+
 ```plantuml
 @startuml
 package "billingms" {
-  class Charge <<AggregateRoot>> {
-    + chargeId: ChargeId
-    + trackingNumber: TrackingNumber
+  class Invoice <<AggregateRoot>> {
+    + invoiceId: InvoiceId
+    + bookingId: BookingId
+    + shipperId: ShipperId
     + baseAmount: Money
-    + discountRate: Percentage
-    + finalAmount: Money
+    + discountAmount: Money
+    + adjustmentAmount: Money
+    + totalAmount: Money
+    + settlementStatus: SettlementStatus
+    + paymentDueDate: LocalDate
+    + paidAt: LocalDateTime
     + calculateCharge(command): void
-  }
-
-  class Settlement <<AggregateRoot>> {
-    + settlementId: SettlementId
-    + chargeId: ChargeId
-    + status: SettlementStatus
-    + invoiceAt: LocalDateTime
-    + settledAt: LocalDateTime
-    + invoice(): void
-    + settle(): void
+    + issue(command): void
+    + settle(command): void
   }
 
   enum SettlementStatus {
     PENDING
-    INVOICED
+    CONFIRMED
     SETTLED
   }
 
   class DiscountPolicy <<DomainService>> {
-    + apply(shipperType, baseAmount): Money
+    + apply(shipperType: ShipperType, baseAmount: Money, discountRate: Percentage): Money
   }
 
-  Charge --> DiscountPolicy
-  Settlement --> Charge
-  Settlement --> SettlementStatus
+  Invoice --> SettlementStatus
+  Invoice --> DiscountPolicy
 }
 @enduml
 ```
+
+> **注**: data-model.md の `invoice` / `payment` テーブルに合わせる。`Charge`/`Settlement` 独自集約ではなく、`Invoice` 集約 1 本で料金確定〜精算完了まで管理する。
 
 ### API 設計
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| POST | `/api/v1/billing/quotes/{quoteId}/charges` | 料金算出 |
-| GET | `/api/v1/billing/quotes/{quoteId}/charges` | 料金取得 |
-| POST | `/api/v1/billing/charges/{chargeId}/invoice` | 請求書発行 |
-| PATCH | `/api/v1/billing/charges/{chargeId}/settle` | 精算完了 |
-| GET | `/api/v1/billing/charges` | 精算一覧（フィルタ対応） |
+| GET | `/api/v1/billing/invoices` | 請求一覧（S22） |
+| GET | `/api/v1/billing/invoices/{invoiceId}` | 請求詳細・算出（S23） |
+| POST | `/api/v1/billing/invoices/{invoiceId}/calculate` | 料金算出・確定 |
+| POST | `/api/v1/billing/invoices/{invoiceId}/issue` | 精算書発行（S24） |
+| PATCH | `/api/v1/billing/invoices/{invoiceId}/settle` | 精算完了 |
+| GET | `/api/v1/billing/invoices/overdue` | 督促一覧（S25） |
 
 ### データベーススキーマ（billingms）
 
+data-model.md の `billingms（billing_read_db）` 定義（`invoice` / `payment` テーブル）に準拠する。
+
 ```sql
--- V001: charges テーブル
-CREATE TABLE charges (
-    charge_id        VARCHAR(36) PRIMARY KEY,
-    tracking_number  VARCHAR(50) NOT NULL,
+-- V001: invoice テーブル（data-model.md 準拠）
+CREATE TABLE invoice (
+    id               BIGSERIAL PRIMARY KEY,
+    invoice_id       VARCHAR(36) NOT NULL UNIQUE,
+    booking_id       VARCHAR(36) NOT NULL,
     shipper_id       VARCHAR(36) NOT NULL,
-    shipper_type     VARCHAR(20) NOT NULL,  -- INDIVIDUAL / CORPORATE
     base_amount      DECIMAL(10,2) NOT NULL,
-    discount_rate    DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-    final_amount     DECIMAL(10,2) NOT NULL,
-    calculated_at    TIMESTAMP NOT NULL,
-    created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    discount_amount  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    adjustment_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total_amount     DECIMAL(10,2) NOT NULL,
+    settlement_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    payment_due_date DATE,
+    paid_at          TIMESTAMP WITH TIME ZONE,
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    version          BIGINT NOT NULL DEFAULT 0
 );
 
--- V002: settlements テーブル
-CREATE TABLE settlements (
-    settlement_id   VARCHAR(36) PRIMARY KEY,
-    charge_id       VARCHAR(36) NOT NULL REFERENCES charges(charge_id),
-    status          VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-    invoice_at      TIMESTAMP,
-    settled_at      TIMESTAMP,
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- V002: payment テーブル（data-model.md 準拠）
+CREATE TABLE payment (
+    id               BIGSERIAL PRIMARY KEY,
+    payment_id       VARCHAR(36) NOT NULL UNIQUE,
+    invoice_id       BIGINT NOT NULL REFERENCES invoice(id),
+    paid_amount      DECIMAL(10,2) NOT NULL,
+    paid_at          TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    version          BIGINT NOT NULL DEFAULT 0
 );
 ```
 
@@ -339,9 +355,9 @@ CREATE TABLE settlements (
 ### デモ項目
 
 1. TrackingController 分離後の API 動作確認（例外登録・解決エンドポイント）
-2. 輸送料金算出（距離・重量・品目カテゴリ係数適用）
-3. 法人割引適用（割引前・後の金額表示）
-4. 精算フロー（PENDING → INVOICED → SETTLED）
+2. 輸送料金算出（「引取済」予約 → S23 料金算出・確定）
+3. 法人割引自動適用（割引前・割引後・割引率の根拠表示）
+4. 精算フロー（PENDING → CONFIRMED → SETTLED、S24 精算書発行・S25 督促一覧）
 5. SonarQube QG PASS ダッシュボード確認
 
 ---
@@ -351,6 +367,7 @@ CREATE TABLE settlements (
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-05-20 | 初版作成 | AI Agent |
+| 2026-05-20 | 整合性検証による修正: US21/US22/US23 ストーリー文・受入条件を user_story.md に合わせ修正（引取済状態・割引率 0〜30%・メール通知・督促通知）。エンティティ名を Charge/Settlement → Invoice（domain-model.md 準拠）に修正。DB スキーマを invoice/payment テーブル（data-model.md 準拠）に修正。画面 ID を S20/S21 → S22〜S25（ui_design.md 準拠）に修正。 | AI Agent |
 
 ---
 
