@@ -188,6 +188,26 @@ services:
     ports:
       - "8086:8086"
 
+  billingms:
+    build:
+      context: ./backend
+      dockerfile: billingms/Dockerfile
+    container_name: cargo-billingms
+    depends_on:
+      axonserver:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      AXON_AXONSERVER_SERVERS: axonserver:8124
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/billing_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8087:8087"
+
   gatewayms:
     build:
       context: ./backend
@@ -204,6 +224,8 @@ services:
         condition: service_started
       trackingms:
         condition: service_started
+      billingms:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: local-docker
       AUTHMS_URL: http://authms:8081
@@ -211,6 +233,7 @@ services:
       ROUTINGMS_URL: http://routingms:8083
       HANDLINGMS_URL: http://handlingms:8085
       TRACKINGMS_URL: http://trackingms:8086
+      BILLINGMS_URL: http://billingms:8087
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-case-study-cargo-tracker}
     ports:

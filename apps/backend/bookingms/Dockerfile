@@ -28,6 +28,7 @@ COPY routingms/build.gradle.kts routingms/build.gradle.kts
 COPY handlingms/build.gradle.kts handlingms/build.gradle.kts
 COPY gatewayms/build.gradle.kts gatewayms/build.gradle.kts
 COPY trackingms/build.gradle.kts trackingms/build.gradle.kts
+COPY billingms/build.gradle.kts billingms/build.gradle.kts
 
 # 依存解決のみ先行（ソース変更時のキャッシュ効率化）
 RUN gradle :bookingms:dependencies --no-daemon || true
