@@ -126,6 +126,7 @@ nav:
       - "IT6 実装成果物レビュー": review/IT6_implementation_review_20260518.md
       - "IT7 UI/UX レビュー": review/IT7_uiux_review_20260519.md
       - "US19/US20 例外処理レビュー": review/US19_US20_exception_review_20260519.md
+      - "IT7 XP マルチパースペクティブ コードレビュー": review/IT7_xp_multiperspective_review_20260520.md
   - ADR:
       - 概要: adr/index.md
       - "ADR-0001 Axon Framework 5 採用": adr/0001-axon-framework-adoption.md
