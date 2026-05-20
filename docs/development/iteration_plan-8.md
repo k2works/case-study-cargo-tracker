@@ -30,11 +30,11 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 - [ ] `TrackingController` を `TrackingExceptionController` に分離し 330 行 → 各 150 行以下に削減
 - [ ] `ExceptionType enum` で String 流通を排除（`DELAY` / `DAMAGE` / `LOSS` を型安全に管理）
 - [ ] LOSS 緊急通知の最小実装（管理者への通知ログ明示化 or バッジ表示）
-- [ ] 「引取済」状態の予約に対して料金算出・確定が可能（S23 請求詳細・算出）
-- [ ] 法人荷主（`CORPORATE`）に対して割引率（0〜30%）が自動適用される
-- [ ] `POST /api/v1/billing/invoices/{invoiceId}/settle` で精算が完了できる
+- [x] 「引取済」状態の予約に対して料金算出・確定が可能（S23 請求詳細・算出）
+- [x] 法人荷主（`CORPORATE`）に対して割引率（0〜30%）が自動適用される
+- [x] `POST /api/v1/billing/invoices/{invoiceId}/settle` で精算が完了できる
 - [ ] SonarQube Quality Gate PASS（new_coverage 80% 以上）
-- [ ] E2E テスト全通過（既存 13 + 新規追加分）
+- [x] E2E テスト全通過（既存 13 + 新規追加分）
 
 ---
 
