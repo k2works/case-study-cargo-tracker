@@ -96,27 +96,58 @@ test.describe('S23 料金算出 → S24 精算書発行 → 精算完了フロ�
       return
     }
 
-    // 請求一覧を確認
-    const invoicesResp = await request.get(`${API_BASE_URL}/api/v1/billing/invoices`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+    // 荷主と予約を作成して PENDING Invoice を生成する
+    const suffix = Date.now().toString()
+    const shipperResp = await request.post(`${API_BASE_URL}/api/v1/shippers`, {
+      headers,
+      data: { name: `E2E Billing ${suffix}`, email: `e2e-billing-${suffix}@example.com`, shipperType: 'CORPORATE' },
     })
-    if (!invoicesResp.ok()) {
-      test.skip(true, 'billing API が利用できないためスキップ')
+    if (!shipperResp.ok()) {
+      test.skip(true, '荷主の作成に失敗したためスキップ')
       return
     }
+    const shipper = (await shipperResp.json()) as { id: number; shipperId?: string }
+    const shipperId = shipper.id ?? shipper.shipperId
 
-    const invoices = (await invoicesResp.json()) as Array<{ invoiceId: string; billingStatus: string }>
-    const pendingInvoice = invoices.find((inv) => inv.billingStatus === 'PENDING')
-    if (!pendingInvoice) {
-      test.skip(true, 'PENDING 状態の Invoice がないためスキップ')
+    const bookResp = await request.post(`${API_BASE_URL}/api/v1/bookings`, {
+      headers,
+      data: {
+        shipperId,
+        cargoSpec: { cargoType: 'GENERAL', weightKg: 100, quantity: 1, productName: `E2E Cargo ${suffix}` },
+        routeSpec: { originUnLocode: 'JPTYO', destinationUnLocode: 'DEHAM', arrivalDeadline: '2099-12-31' },
+      },
+    })
+    if (!bookResp.ok()) {
+      test.skip(true, '予約の作成に失敗したためスキップ')
       return
     }
+    const booking = (await bookResp.json()) as { bookingId: string }
+    const bookingId = booking.bookingId
 
-    const invoiceId = pendingInvoice.invoiceId
+    // billingms が CargoBookedEvent を処理して PENDING Invoice を作成するまで待機
+    let invoiceId: string | null = null
+    for (let i = 0; i < 10; i++) {
+      await new Promise((r) => setTimeout(r, 1000))
+      const listResp = await request.get(`${API_BASE_URL}/api/v1/billing/invoices`, { headers })
+      if (listResp.ok()) {
+        const list = (await listResp.json()) as Array<{ invoiceId: string; bookingId: string; billingStatus: string }>
+        const found = list.find((inv) => inv.bookingId === bookingId && inv.billingStatus === 'PENDING')
+        if (found) {
+          invoiceId = found.invoiceId
+          break
+        }
+      }
+    }
+    if (!invoiceId) {
+      test.skip(true, `PENDING Invoice が生成されなかったためスキップ（bookingId=${bookingId}）`)
+      return
+    }
 
     // ログイン
     await page.goto('/login')
-    await page.fill('input[type="text"], input[name="username"]', 'admin')
+    await page.fill('input[type="text"]', 'admin')
     await page.fill('input[type="password"]', 'password')
     await page.click('button[type="submit"]')
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 })
