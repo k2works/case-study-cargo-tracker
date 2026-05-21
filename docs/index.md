@@ -19,9 +19,9 @@
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 11 件作成済み（Axon Kafka + Heroku + Aiven 構成） |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
-| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
+| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 3 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -42,6 +42,36 @@
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
 | [ユーザーストーリー](./requirements/user_story.md) | US 25 件・受け入れ基準・トレーサビリティマトリックス |
 
+### 設計ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [バックエンドアーキテクチャ](./design/architecture_backend.md) | Axon Framework 5 + Axon Kafka Extension + Aiven 構成のバックエンド設計 |
+| [フロントエンドアーキテクチャ](./design/architecture_frontend.md) | React 19 + Vite + TypeScript フロントエンド設計 |
+| [インフラストラクチャ](./design/architecture_infrastructure.md) | Heroku + Aiven Managed Kafka インフラ構成 |
+| [データモデル設計](./design/data-model.md) | ER 図・テーブル定義 |
+| [ドメインモデル設計](./design/domain-model.md) | エンティティ・値オブジェクト・集約 |
+| [UI 設計](./design/ui_design.md) | 画面遷移図・画面イメージ |
+| [テスト戦略](./design/test_strategy.md) | テストピラミッド・Testcontainers（Kafka）・カバレッジ目標 |
+| [非機能要件](./design/non_functional.md) | 性能・セキュリティ・可用性・保守性要件 |
+| [運用要件](./design/operation.md) | 運用フロー・監視設計・障害対応手順 |
+| [技術スタック選定](./design/tech_stack.md) | Spring Boot 4 / Java 25 / Axon Kafka / Heroku の技術選定 |
+
+### ADR ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [ADR-0001](./adr/0001-axon-kafka-aiven-adoption.md) | メッセージング基盤として Axon Kafka Extension + Aiven Managed Kafka を採用 |
+| [ADR-0002](./adr/0002-mybatis-adoption.md) | データアクセスとして MyBatis を採用 |
+| [ADR-0006](./adr/0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成 |
+
+### 運用ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [アプリケーション開発環境セットアップ手順書](./operation/アプリケーション開発環境セットアップ手順書.md) | ローカルアプリケーション開発環境の構築手順（Java 25 + Gradle + Kafka） |
+| [開発環境セットアップ手順書](./operation/開発環境セットアップ手順書.md) | Heroku Container Registry デプロイ手順（Axon Kafka + Aiven） |
+
 ### レビュードキュメント
 
 | ドキュメント | 概要 |
@@ -50,6 +80,6 @@
 
 ## 補足
 
-- `strategy/`、`requirements/`、`design/`、`development/`、`operation/` は現時点ではカテゴリ索引が中心です。
+- `development/` は現時点ではカテゴリ索引が中心です。
 - `journal/` は作業ログ用の予約ディレクトリです。
 - `assets/` は MkDocs 用のスタイル・スクリプトを格納しています。
