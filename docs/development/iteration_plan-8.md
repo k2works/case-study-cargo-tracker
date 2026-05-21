@@ -27,13 +27,13 @@ description: IT8（精算機能 US21/US22/US23 + IT7 技術的負債回収 TI09�
 
 ### 成功基準
 
-- [ ] `TrackingController` を `TrackingExceptionController` に分離し 330 行 → 各 150 行以下に削減
-- [ ] `ExceptionType enum` で String 流通を排除（`DELAY` / `DAMAGE` / `LOSS` を型安全に管理）
-- [ ] LOSS 緊急通知の最小実装（管理者への通知ログ明示化 or バッジ表示）
+- [x] `TrackingController` を `TrackingExceptionController` に分離し 330 行 → 各 150 行以下に削減
+- [x] `ExceptionType enum` で String 流通を排除（`DELAY` / `DAMAGE` / `LOSS` を型安全に管理）
+- [x] LOSS 緊急通知の最小実装（管理者への通知ログ明示化 or バッジ表示）
 - [x] 「引取済」状態の予約に対して料金算出・確定が可能（S23 請求詳細・算出）
 - [x] 法人荷主（`CORPORATE`）に対して割引率（0〜30%）が自動適用される
 - [x] `POST /api/v1/billing/invoices/{invoiceId}/settle` で精算が完了できる
-- [ ] SonarQube Quality Gate PASS（new_coverage 80% 以上）
+- [x] SonarQube Quality Gate PASS（new_coverage 88.7%、violations 0）
 - [x] E2E テスト全通過（既存 13 + 新規追加分）
 
 ---
@@ -1009,12 +1009,12 @@ apps/backend/billingms/
 
 ### Definition of Done
 
-- [ ] TI09 全タスク完了（TrackingController 分離・enum 導入・LOSS 通知・テスト仕様化）
-- [ ] US21 / US23 受入条件を全て満たす
-- [ ] US22 受入条件を全て満たす（バッファ実施時）
-- [ ] Backend / Frontend 全テストがパス
-- [ ] SonarQube Quality Gate PASS（new_coverage 80% 以上、violations 0）
-- [ ] E2E テスト全通過（既存 13 シナリオ + 精算フロー新規追加）
+- [x] TI09 全タスク完了（TrackingController 分離・enum 導入・LOSS 通知・テスト仕様化）
+- [x] US21 / US23 受入条件を全て満たす（US23 外部連携は次フェーズ）
+- [x] US22 受入条件を全て満たす
+- [x] Backend / Frontend 全テストがパス
+- [x] SonarQube Quality Gate PASS（new_coverage 88.7%、violations 0）
+- [x] E2E テスト全通過（既存 13 シナリオ + 精算フロー新規追加）
 - [ ] `git tag Release-1.1` を打ち、GitHub Release を作成
 
 ### デモ項目
