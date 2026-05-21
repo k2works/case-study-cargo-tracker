@@ -99,6 +99,7 @@
 | [IT6 実装成果物レビュー](./review/IT6_implementation_review_20260518.md) | IT6 完了時点（追跡・手動更新 Phase 2 進行）の実装成果物レビュー結果 |
 | [IT7 UI/UX レビュー](./review/IT7_uiux_review_20260519.md) | IT7 例外登録・対応画面（S18/S19）の UI/UX 成果物レビュー結果 |
 | [US19/US20 例外処理レビュー](./review/US19_US20_exception_review_20260519.md) | 遅延・破損・紛失例外処理実装の開発成果物レビュー結果 |
+| [IT7 XP マルチパースペクティブ コードレビュー](./review/IT7_xp_multiperspective_review_20260520.md) | IT7 完了時点の XP マルチパースペクティブ並列コードレビュー結果 |
 
 ## 補足
 
