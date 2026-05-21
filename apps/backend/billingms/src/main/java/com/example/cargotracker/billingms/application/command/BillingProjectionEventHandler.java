@@ -35,7 +35,7 @@ public class BillingProjectionEventHandler {
     @EventHandler
     @Transactional
     public void on(InvoiceCreatedEvent event) {
-        var record = new InvoiceRecord(
+        var invoiceRecord = new InvoiceRecord(
                 event.invoiceId(),
                 event.bookingId(),
                 event.shipperId(),
@@ -46,7 +46,7 @@ public class BillingProjectionEventHandler {
                 "JPY",
                 "PENDING",
                 null, null, null, null, null, null, 0L);
-        invoiceMapper.insert(record);
+        invoiceMapper.insert(invoiceRecord);
     }
 
     @EventHandler

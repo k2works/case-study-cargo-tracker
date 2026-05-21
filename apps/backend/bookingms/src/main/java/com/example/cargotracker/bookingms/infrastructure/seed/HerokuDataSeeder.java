@@ -33,6 +33,7 @@ import org.springframework.stereotype.Component;
 public class HerokuDataSeeder implements ApplicationRunner {
 
     private static final Logger LOG = LoggerFactory.getLogger(HerokuDataSeeder.class);
+    private static final String CORPORATE = "CORPORATE";
 
     private final ShipperCommandService shipperCommandService;
     private final ShipperRepository shipperRepository;
@@ -59,9 +60,9 @@ public class HerokuDataSeeder implements ApplicationRunner {
         record ShipperDef(String name, String email, String type) {}
 
         var defs = List.of(
-                new ShipperDef("東京海運株式会社", "info@tokyo-kaiu.example.com", "CORPORATE"),
-                new ShipperDef("大阪貿易商事", "trade@osaka-boeki.example.com", "CORPORATE"),
-                new ShipperDef("横浜インターナショナル", "contact@yokohama-intl.example.com", "CORPORATE"),
+                new ShipperDef("東京海運株式会社", "info@tokyo-kaiu.example.com", CORPORATE),
+                new ShipperDef("大阪貿易商事", "trade@osaka-boeki.example.com", CORPORATE),
+                new ShipperDef("横浜インターナショナル", "contact@yokohama-intl.example.com", CORPORATE),
                 new ShipperDef("田中物流", "tanaka@tanaka-butsuryu.example.com", "INDIVIDUAL"),
                 new ShipperDef("鈴木商会", "suzuki@suzuki-shokai.example.com", "INDIVIDUAL")
         );

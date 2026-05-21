@@ -47,6 +47,8 @@ public class BillingController {
     private static final String MESSAGE_KEY = "message";
     private static final String SYSTEM_OPERATOR_ID = "system";
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(30);
+    private static final String INVOICE_ID_KEY = "invoiceId";
+    private static final String STATUS_KEY = "status";
 
     private final BillingQueryService queryService;
     private final CommandGateway commandGateway;
@@ -73,7 +75,7 @@ public class BillingController {
     @GetMapping("/invoices/{invoiceId}")
     public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable String invoiceId) {
         return queryService.findById(invoiceId)
-                .map(record -> ResponseEntity.ok(InvoiceResponse.from(record)))
+                .map(invoiceRecord -> ResponseEntity.ok(InvoiceResponse.from(invoiceRecord)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -99,8 +101,8 @@ public class BillingController {
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.ok(Map.of(
-                "invoiceId", invoiceId,
-                "status", "CALCULATED"));
+                INVOICE_ID_KEY, invoiceId,
+                STATUS_KEY, "CALCULATED"));
     }
 
     /**
@@ -134,8 +136,8 @@ public class BillingController {
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.ok(Map.of(
-                "invoiceId", invoiceId,
-                "status", "INVOICED"));
+                INVOICE_ID_KEY, invoiceId,
+                STATUS_KEY, "INVOICED"));
     }
 
     /**
@@ -159,8 +161,8 @@ public class BillingController {
 
         sendAndWaitWithTimeout(command);
         return ResponseEntity.ok(Map.of(
-                "invoiceId", invoiceId,
-                "status", "PAID"));
+                INVOICE_ID_KEY, invoiceId,
+                STATUS_KEY, "PAID"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

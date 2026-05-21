@@ -23,20 +23,20 @@ public record InvoiceResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt) {
 
-    public static InvoiceResponse from(InvoiceRecord record) {
+    public static InvoiceResponse from(InvoiceRecord invoiceRecord) {
         return new InvoiceResponse(
-                record.getInvoiceId(),
-                record.getBookingId(),
-                record.getShipperId(),
-                record.getBasicAmount(),
-                record.getDiscountAmount(),
-                record.getTotalAmount(),
-                record.getCurrency(),
-                record.getBillingStatus(),
-                record.getInvoiceNumber(),
-                record.getPaymentDue(),
-                record.getPaidAt(),
-                record.getCreatedAt(),
-                record.getUpdatedAt());
+                invoiceRecord.getInvoiceId(),
+                invoiceRecord.getBookingId(),
+                invoiceRecord.getShipperId(),
+                invoiceRecord.getBasicAmount(),
+                invoiceRecord.getDiscountAmount(),
+                invoiceRecord.getTotalAmount(),
+                invoiceRecord.getCurrency(),
+                invoiceRecord.getBillingStatus(),
+                invoiceRecord.getInvoiceNumber(),
+                invoiceRecord.getPaymentDue(),
+                invoiceRecord.getPaidAt(),
+                invoiceRecord.getCreatedAt(),
+                invoiceRecord.getUpdatedAt());
     }
 }

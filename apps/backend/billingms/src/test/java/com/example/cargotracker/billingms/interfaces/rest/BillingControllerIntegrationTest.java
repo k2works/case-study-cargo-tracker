@@ -57,7 +57,7 @@ class BillingControllerIntegrationTest {
     }
 
     private void seedInvoice(String invoiceId, String billingStatus) {
-        var record = new InvoiceRecord(
+        var invoiceRecord = new InvoiceRecord(
                 invoiceId,
                 "B-2026-" + invoiceId,
                 "SHP-001",
@@ -68,7 +68,7 @@ class BillingControllerIntegrationTest {
                 "JPY",
                 billingStatus,
                 null, null, null, null, null, null, 0L);
-        invoiceMapper.insert(record);
+        invoiceMapper.insert(invoiceRecord);
     }
 
     @Test

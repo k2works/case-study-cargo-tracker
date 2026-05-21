@@ -23,19 +23,19 @@ public record TrackingExceptionResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt) {
 
-    public static TrackingExceptionResponse from(TrackingExceptionRecord record) {
+    public static TrackingExceptionResponse from(TrackingExceptionRecord exceptionRecord) {
         return new TrackingExceptionResponse(
-                record.exceptionId(),
-                record.trackingNumber(),
-                record.exceptionType(),
-                record.occurredAt(),
-                record.occurredUnlocode(),
-                record.description(),
-                record.responseStatus(),
-                record.resolution(),
-                record.resolvedAt(),
-                Boolean.TRUE.equals(record.escalated()),
-                record.createdAt(),
-                record.updatedAt());
+                exceptionRecord.exceptionId(),
+                exceptionRecord.trackingNumber(),
+                exceptionRecord.exceptionType(),
+                exceptionRecord.occurredAt(),
+                exceptionRecord.occurredUnlocode(),
+                exceptionRecord.description(),
+                exceptionRecord.responseStatus(),
+                exceptionRecord.resolution(),
+                exceptionRecord.resolvedAt(),
+                Boolean.TRUE.equals(exceptionRecord.escalated()),
+                exceptionRecord.createdAt(),
+                exceptionRecord.updatedAt());
     }
 }
