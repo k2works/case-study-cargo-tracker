@@ -56,8 +56,8 @@ class CorporateDiscountPolicyTest {
     @Test
     @DisplayName("割引率が 0.30 を超えると IllegalArgumentException")
     void apply_割引率上限超過() {
-        assertThatThrownBy(() ->
-                new CorporateContract("SHP-004", ShipperType.CORPORATE, new BigDecimal("0.31")))
+        var rate = new BigDecimal("0.31");
+        assertThatThrownBy(() -> new CorporateContract("SHP-004", ShipperType.CORPORATE, rate))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("割引率は 30%");
     }

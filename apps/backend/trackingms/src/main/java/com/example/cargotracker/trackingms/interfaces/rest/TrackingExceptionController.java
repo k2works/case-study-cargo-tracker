@@ -89,7 +89,7 @@ public class TrackingExceptionController {
         ExceptionType exceptionType;
         try {
             exceptionType = ExceptionType.valueOf(request.exceptionType());
-        } catch (IllegalArgumentException ignored) {
+        } catch (IllegalArgumentException _) {
             return ResponseEntity.badRequest().body(Map.of(
                     ERROR_CODE, "INVALID_EXCEPTION_TYPE",
                     MESSAGE_KEY, "未知の例外種別: " + request.exceptionType()));

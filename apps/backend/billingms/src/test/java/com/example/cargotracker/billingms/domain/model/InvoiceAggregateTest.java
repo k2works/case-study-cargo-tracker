@@ -95,13 +95,9 @@ class InvoiceAggregateTest {
     void calculateCharge_割引率超過でエラー() {
         EventAppender appender = mock(EventAppender.class);
         var invoice = invoicePending("INV-001");
+        var command = new CalculateChargeCommand("INV-001", new BigDecimal("100000"), "JPY", new BigDecimal("0.31"), "admin-001");
 
-        assertThatThrownBy(() -> invoice.calculateCharge(new CalculateChargeCommand(
-                "INV-001",
-                new BigDecimal("100000"),
-                "JPY",
-                new BigDecimal("0.31"),
-                "admin-001"), appender))
+        assertThatThrownBy(() -> invoice.calculateCharge(command, appender))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("30%");
     }
@@ -111,13 +107,9 @@ class InvoiceAggregateTest {
     void calculateCharge_CALCULATED状態に再算出はエラー() {
         EventAppender appender = mock(EventAppender.class);
         var invoice = invoiceCalculated("INV-001");
+        var command = new CalculateChargeCommand("INV-001", new BigDecimal("200000"), "JPY", BigDecimal.ZERO, "admin-001");
 
-        assertThatThrownBy(() -> invoice.calculateCharge(new CalculateChargeCommand(
-                "INV-001",
-                new BigDecimal("200000"),
-                "JPY",
-                BigDecimal.ZERO,
-                "admin-001"), appender))
+        assertThatThrownBy(() -> invoice.calculateCharge(command, appender))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("PENDING");
     }
@@ -146,9 +138,9 @@ class InvoiceAggregateTest {
     void issueInvoice_PENDING状態はエラー() {
         EventAppender appender = mock(EventAppender.class);
         var invoice = invoicePending("INV-001");
+        var command = new IssueInvoiceCommand("INV-001", LocalDate.of(2026, 9, 30), "admin-001");
 
-        assertThatThrownBy(() -> invoice.issueInvoice(
-                new IssueInvoiceCommand("INV-001", LocalDate.of(2026, 9, 30), "admin-001"), appender))
+        assertThatThrownBy(() -> invoice.issueInvoice(command, appender))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("CALCULATED");
     }
@@ -176,9 +168,9 @@ class InvoiceAggregateTest {
     void recordPayment_CALCULATED状態はエラー() {
         EventAppender appender = mock(EventAppender.class);
         var invoice = invoiceCalculated("INV-001");
+        var command = new RecordPaymentCommand("INV-001", new BigDecimal("100000"), "BANK_TRANSFER", "admin-001");
 
-        assertThatThrownBy(() -> invoice.recordPayment(
-                new RecordPaymentCommand("INV-001", new BigDecimal("100000"), "BANK_TRANSFER", "admin-001"), appender))
+        assertThatThrownBy(() -> invoice.recordPayment(command, appender))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("INVOICED");
     }
