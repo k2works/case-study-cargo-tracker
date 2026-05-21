@@ -25,7 +25,7 @@ sonar {
             "**/dto/**,**/*Record.java,**/*Request.java,**/*Response.java," +
             "**/events/**,**/*Event.java,**/*Command.java," +
             "**/config/**,**/*Configuration.java,**/*Config.java," +
-            "**/*Application.java"
+            "**/*Application.java,**/seed/**,**/*Seeder.java"
         )
     }
 }
