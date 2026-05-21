@@ -22,6 +22,10 @@ dist/
 build/
 site/
 
+# Gradle
+.gradle/
+apps/backend/.gradle/
+
 # Logs
 *.log
 npm-debug.log*
