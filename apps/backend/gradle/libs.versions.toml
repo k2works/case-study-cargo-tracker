@@ -5,7 +5,7 @@ java = "25"
 # Spring
 springBoot = "3.5.3"
 springDependencyManagement = "1.1.7"
-springCloud = "2024.0.1"
+springCloud = "2025.0.0"
 
 # Axon Framework
 axon = "4.11.2"
