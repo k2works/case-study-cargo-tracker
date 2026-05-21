@@ -22,7 +22,7 @@
 | [設計](./design/index.md) | アーキテクチャ、モデル、UI、テスト、非機能、運用、技術スタック | 10 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 14 件作成済み（ADR-0001〜0014） |
 | [レビュー](./review/index.md) | 分析・開発・運用レビュー結果の記録 | 11 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1〜IT8 全完了・Release 1.1 達成（累計 112/114 SP 98%） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み（Phase 1-2、8 IT）、IT1〜IT8 全完了・Release 1.0/1.1 達成・リリース完了報告書作成済み（累計 112/114 SP 98%） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 3 件作成済み（アプリ開発環境、開発環境、Deprecation 一覧）|
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |

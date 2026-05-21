@@ -51,8 +51,8 @@
 
 | リリース | 報告書 | 状態 |
 |---------|--------|------|
-| Release 1.0（Phase 1） | - | 未着手 |
-| Release 1.1（Phase 2） | - | 未着手 |
+| Release 1.0（Phase 1） | [release_report-1_0.md](./release_report-1_0.md) | 完了 |
+| Release 1.1（Phase 2） | [release_report-1_1.md](./release_report-1_1.md) | 完了 |
 
 ## 補足
 
