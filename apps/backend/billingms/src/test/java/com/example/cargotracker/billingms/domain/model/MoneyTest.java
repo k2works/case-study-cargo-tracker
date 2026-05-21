@@ -43,7 +43,8 @@ class MoneyTest {
     @Test
     @DisplayName("amount が負の場合は IllegalArgumentException")
     void constructor_negative_amount() {
-        assertThatThrownBy(() -> new Money(new BigDecimal("-1"), Money.JPY))
+        var negativeAmount = new BigDecimal("-1");
+        assertThatThrownBy(() -> new Money(negativeAmount, Money.JPY))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("0 以上");
     }
@@ -89,6 +90,6 @@ class MoneyTest {
     @DisplayName("toString で金額と通貨コードが表示される")
     void toString_正常() {
         var money = Money.ofJpy(1000L);
-        assertThat(money.toString()).isEqualTo("1000 JPY");
+        assertThat(money).hasToString("1000 JPY");
     }
 }
