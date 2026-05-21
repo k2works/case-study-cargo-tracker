@@ -12,6 +12,7 @@ const ROOT = path.resolve(process.cwd());
 const BACKEND_DIR = path.join(ROOT, 'apps', 'backend');
 const FRONTEND_DIR = path.join(ROOT, 'apps', 'frontend');
 const COMPOSE_FILE = path.join(ROOT, 'apps', 'docker-compose.yml');
+const ENV_FILE = path.join(ROOT, '.env');
 
 /** バックエンドサービス定義 */
 const SERVICES = [
@@ -52,7 +53,7 @@ function gradle(task, opts = {}) {
  * @param {string} subcommand - compose サブコマンド（例: 'up -d kafka'）
  */
 function compose(subcommand) {
-  const cmd = `docker compose -f ${COMPOSE_FILE} ${subcommand}`;
+  const cmd = `docker compose -f ${COMPOSE_FILE} --env-file ${ENV_FILE} ${subcommand}`;
   console.log(`[Docker Compose] ${cmd}`);
   execSync(cmd, { stdio: 'inherit', env: cleanDockerEnv() });
 }
