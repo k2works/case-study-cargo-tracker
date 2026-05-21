@@ -6,5 +6,8 @@
 
 | ADR | 決定内容 | ステータス |
 | :--- | :--- | :--- |
+| [ADR-0001](0001-axon-kafka-aiven-adoption.md) | メッセージング基盤として Axon Kafka Extension + Aiven Managed Kafka を採用する | 承認済み |
+| [ADR-0002](0002-mybatis-adoption.md) | データアクセスとして MyBatis を採用する | 承認済み |
+| [ADR-0006](0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成 | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
