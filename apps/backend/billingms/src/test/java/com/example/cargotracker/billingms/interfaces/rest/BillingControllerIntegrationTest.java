@@ -210,4 +210,44 @@ class BillingControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
     }
+
+    @Test
+    @DisplayName("calculate で CommandGateway が IllegalArgumentException を返した場合 400 Bad Request")
+    void calculateCharge_IllegalArgumentExceptionで400() throws Exception {
+        seedInvoice("INV-TEST-007", "PENDING");
+        when(commandGateway.send(any(), eq(Object.class)))
+                .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
+                        new IllegalArgumentException("割引率は 30% 以下")));
+
+        mockMvc.perform(post("/api/v1/billing/invoices/{id}/calculate", "INV-TEST-007")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "baseAmount": 100000,
+                                    "currencyCode": "JPY",
+                                    "discountRate": 0.31
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("calculate で CommandGateway が IllegalStateException を返した場合 409 Conflict")
+    void calculateCharge_IllegalStateExceptionで409() throws Exception {
+        seedInvoice("INV-TEST-008", "CALCULATED");
+        when(commandGateway.send(any(), eq(Object.class)))
+                .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
+                        new IllegalStateException("PENDING 状態でのみ実行可能")));
+
+        mockMvc.perform(post("/api/v1/billing/invoices/{id}/calculate", "INV-TEST-008")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "baseAmount": 100000,
+                                    "currencyCode": "JPY",
+                                    "discountRate": 0
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
 }
