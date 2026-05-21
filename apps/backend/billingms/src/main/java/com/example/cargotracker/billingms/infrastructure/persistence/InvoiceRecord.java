@@ -32,6 +32,7 @@ public class InvoiceRecord {
     public InvoiceRecord() {
     }
 
+    @SuppressWarnings("java:S107") // MyBatis POJO: invoice テーブルの全カラムに対応するため必要
     public InvoiceRecord(
             String invoiceId,
             String bookingId,
