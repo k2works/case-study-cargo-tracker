@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -135,5 +136,78 @@ class BillingControllerIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/billing/invoices/{id}/issue で IssueInvoiceCommand が送信される")
+    void issueInvoice_CommandGatewayへ送信() throws Exception {
+        seedInvoice("INV-TEST-005", "CALCULATED");
+
+        mockMvc.perform(post("/api/v1/billing/invoices/{id}/issue", "INV-TEST-005")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "paymentDue": "2026-09-30",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invoiceId").value("INV-TEST-005"))
+                .andExpect(jsonPath("$.status").value("INVOICED"));
+    }
+
+    @Test
+    @DisplayName("POST /issue で存在しない invoiceId の場合は 404 を返す")
+    void issueInvoice_存在しない場合404() throws Exception {
+        mockMvc.perform(post("/api/v1/billing/invoices/{id}/issue", "INV-NOTEXIST-999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "paymentDue": "2026-09-30",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/billing/invoices/{id}/settle で RecordPaymentCommand が送信される")
+    void recordPayment_CommandGatewayへ送信() throws Exception {
+        seedInvoice("INV-TEST-006", "INVOICED");
+
+        mockMvc.perform(patch("/api/v1/billing/invoices/{id}/settle", "INV-TEST-006")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "paidAmount": 100000,
+                                    "paymentMethod": "BANK_TRANSFER",
+                                    "operatorId": "admin-001"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invoiceId").value("INV-TEST-006"))
+                .andExpect(jsonPath("$.status").value("PAID"));
+    }
+
+    @Test
+    @DisplayName("PATCH /settle で存在しない invoiceId の場合は 404 を返す")
+    void recordPayment_存在しない場合404() throws Exception {
+        mockMvc.perform(patch("/api/v1/billing/invoices/{id}/settle", "INV-NOTEXIST-999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "paidAmount": 100000,
+                                    "paymentMethod": "BANK_TRANSFER"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/billing/invoices/overdue で督促一覧が返る")
+    void listOverdueInvoices_正常取得() throws Exception {
+        mockMvc.perform(get("/api/v1/billing/invoices/overdue"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 }
