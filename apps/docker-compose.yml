@@ -1,0 +1,79 @@
+# アプリケーション実行環境（local-docker プロファイル用）
+#
+# このファイルはアプリ実行環境を立ち上げる用途で、ドキュメントサイト
+# （MkDocs / PlantUML）用の ../docker-compose.yml とは分離している（ADR-0003）。
+#
+# 起動方法:
+#   docker compose -f apps/docker-compose.yml up -d
+# あるいはタスクランナー経由:
+#   npx gulp local-docker:up
+#
+# シークレットはすべてリポジトリ直下の .env から読み込む（ハードコード禁止）。
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: cargo-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep -q imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: cargo-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  postgresql:
+    image: postgres:16
+    container_name: cargo-postgresql
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER not set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set in .env}
+      # 複数 DB の作成は init-databases.sh が POSTGRES_MULTIPLE_DATABASES を読んで実行する
+      POSTGRES_MULTIPLE_DATABASES: >-
+        auth_db,booking_read_db,routing_read_db,tracking_read_db,handling_read_db,billing_read_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../ops/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+# 注: authms / routingms / gatewayms の各サービス定義は IT2 で
+# 個別 Dockerfile を整備した後に追加する（ADR-0003）。
+# IT1 の基盤構築段階では Kafka + PostgreSQL のみを compose で起動し、
+# 各バックエンドサービスは IDE もしくは `./gradlew :authms:bootRun` で
+# 個別起動する想定。
+
+volumes:
+  postgres-data:
+    name: cargo-postgres-data

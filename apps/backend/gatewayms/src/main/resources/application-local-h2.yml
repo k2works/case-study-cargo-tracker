@@ -1,0 +1,20 @@
+# local-h2 プロファイル: ローカル開発用ルーティング（各サービスは localhost）
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: authms
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/auth/**, /api/v1/users/**
+            - id: routingms
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/v1/voyages/**, /api/v1/routes/**
+
+logging:
+  level:
+    com.example.gatewayms: DEBUG
+    org.springframework.cloud.gateway: INFO

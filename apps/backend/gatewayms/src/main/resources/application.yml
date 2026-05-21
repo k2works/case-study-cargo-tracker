@@ -1,0 +1,20 @@
+# gatewayms 共通設定（Spring Cloud Gateway / WebFlux）
+spring:
+  application:
+    name: gatewayms
+  profiles:
+    active: local-h2
+  main:
+    web-application-type: reactive
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    health:
+      show-details: when_authorized

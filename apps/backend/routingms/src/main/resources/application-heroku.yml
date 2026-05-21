@@ -1,0 +1,35 @@
+# heroku プロファイル: Heroku Postgres + Aiven Managed Kafka（SSL 接続）
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+axon:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    default-topic: ${KAFKA_DEFAULT_TOPIC:cargo-events}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:SSL}
+      ssl.truststore.location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:}
+      ssl.truststore.password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:}
+      ssl.keystore.location: ${KAFKA_SSL_KEYSTORE_LOCATION:}
+      ssl.keystore.password: ${KAFKA_SSL_KEYSTORE_PASSWORD:}
+      ssl.key.password: ${KAFKA_SSL_KEY_PASSWORD:}
+    publisher:
+      enabled: true
+    fetcher:
+      enabled: true
+  eventhandling:
+    processors:
+      default:
+        mode: tracking
+
+logging:
+  level:
+    com.example.routingms: INFO
+    root: WARN

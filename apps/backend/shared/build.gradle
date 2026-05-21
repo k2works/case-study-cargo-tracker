@@ -1,0 +1,16 @@
+/*
+ * shared モジュール
+ *
+ * 各マイクロサービスが共有するドメインプリミティブ（Location 等）と
+ * 共通の値オブジェクト・例外を提供する。Spring Boot アプリケーションでは
+ * ないため bootJar は無効化し、ライブラリとして配布する。
+ */
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api libs.spring.boot.starter
+    api libs.spring.boot.starter.validation
+}

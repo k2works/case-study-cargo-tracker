@@ -1,0 +1,22 @@
+# authms 共通設定
+# プロファイル別の上書きは application-{profile}.yml で行う。
+spring:
+  application:
+    name: authms
+  profiles:
+    active: local-h2
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when_authorized

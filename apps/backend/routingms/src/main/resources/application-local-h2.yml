@@ -1,0 +1,36 @@
+# local-h2 プロファイル: H2 インメモリ + Axon の EmbeddedEventStore（Kafka 無し）
+# 単一サービスの最速 TDD ループに最適。
+spring:
+  datasource:
+    url: jdbc:h2:mem:routingdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  flyway:
+    enabled: false
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+# Kafka を無効化し、Axon は InMemory EventStore を使用する
+axon:
+  kafka:
+    publisher:
+      enabled: false
+    fetcher:
+      enabled: false
+  eventhandling:
+    processors:
+      default:
+        mode: subscribing
+
+logging:
+  level:
+    com.example.routingms: DEBUG
+    org.axonframework: INFO

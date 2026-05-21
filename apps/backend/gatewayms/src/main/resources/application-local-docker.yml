@@ -1,0 +1,19 @@
+# local-docker プロファイル: Docker Compose 内のサービス名でルーティング
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: authms
+              uri: http://authms:8081
+              predicates:
+                - Path=/api/auth/**, /api/v1/users/**
+            - id: routingms
+              uri: http://routingms:8083
+              predicates:
+                - Path=/api/v1/voyages/**, /api/v1/routes/**
+
+logging:
+  level:
+    com.example.gatewayms: INFO

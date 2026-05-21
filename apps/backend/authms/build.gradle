@@ -1,0 +1,41 @@
+/*
+ * authms（認証サービス）
+ *
+ * ユーザー認証・認可と JWT 発行を担う Spring Boot アプリケーション。
+ * Axon Framework は使用せず、伝統的な REST + JPA/MyBatis 構成。
+ */
+
+plugins {
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+dependencies {
+    implementation project(':shared')
+
+    // Spring Boot
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.security
+    implementation libs.spring.boot.starter.actuator
+    implementation libs.spring.boot.starter.validation
+    implementation libs.spring.boot.starter.jdbc
+
+    // データアクセス
+    implementation libs.mybatis.spring.boot.starter
+    implementation libs.flyway.core
+    implementation libs.flyway.database.postgresql
+    runtimeOnly libs.postgresql
+    runtimeOnly libs.h2
+
+    // 開発時のみ
+    developmentOnly libs.spring.boot.devtools
+
+    // テスト
+    testImplementation libs.mybatis.spring.boot.starter.test
+    testImplementation libs.testcontainers.junit.jupiter
+    testImplementation libs.testcontainers.postgresql
+}
+
+bootJar {
+    archiveBaseName = 'authms'
+}
