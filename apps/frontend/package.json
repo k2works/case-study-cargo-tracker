@@ -16,9 +16,11 @@
     "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.1"
+    "react-router-dom": "^7.1.1",
+    "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

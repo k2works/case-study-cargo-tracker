@@ -5,7 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 import LoginPage from './LoginPage';
 import { AuthContext } from '../contexts/AuthContext';
 
-// AuthContext の型をテスト用に再定義
 const mockLogin = vi.fn();
 const mockLogout = vi.fn();
 
@@ -32,19 +31,21 @@ describe('LoginPage', () => {
     vi.clearAllMocks();
   });
 
-  it('ログインフォームが表示される', () => {
+  it('ログインフォームがデフォルト値付きで表示される', () => {
     renderLoginPage();
-    expect(screen.getByLabelText('ユーザー ID')).toBeInTheDocument();
-    expect(screen.getByLabelText('パスワード')).toBeInTheDocument();
+    expect(screen.getByLabelText('ユーザー ID')).toHaveValue('admin');
+    expect(screen.getByLabelText('パスワード')).toHaveValue('password');
     expect(screen.getByRole('button', { name: 'ログイン' })).toBeInTheDocument();
   });
 
-  it('入力してログインボタンを押すと login が呼ばれる', async () => {
+  it('値を書き換えてログインボタンを押すと login が呼ばれる', async () => {
     mockLogin.mockResolvedValue(undefined);
     renderLoginPage();
     const user = userEvent.setup();
 
+    await user.clear(screen.getByLabelText('ユーザー ID'));
     await user.type(screen.getByLabelText('ユーザー ID'), 'admin01');
+    await user.clear(screen.getByLabelText('パスワード'));
     await user.type(screen.getByLabelText('パスワード'), 'password123');
     await user.click(screen.getByRole('button', { name: 'ログイン' }));
 
@@ -58,8 +59,6 @@ describe('LoginPage', () => {
     renderLoginPage();
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText('ユーザー ID'), 'user01');
-    await user.type(screen.getByLabelText('パスワード'), 'wrong');
     await user.click(screen.getByRole('button', { name: 'ログイン' }));
 
     await waitFor(() =>
