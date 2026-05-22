@@ -240,6 +240,43 @@ export default function(gulp) {
   });
 
   // ──────────────────────────────────────────
+  // バックエンド一括起動（local-docker）
+  // ──────────────────────────────────────────
+
+  /**
+   * 全バックエンドサービスを local-docker プロファイルで並列起動
+   * 起動順: authms → routingms → gatewayms（依存関係に配慮して 3 秒間隔）
+   */
+  gulp.task('dev:backend:start:docker', (done) => {
+    if (!isDockerAvailable()) {
+      console.error('Docker が起動していません。先に dev:infra:start を実行してください。');
+      process.exit(1);
+    }
+
+    const profile = 'local-docker';
+    const startOrder = ['authms', 'routingms', 'gatewayms'];
+    const delay = 3000;
+
+    console.log('[dev:backend:start:docker] local-docker プロファイルでバックエンドサービスを起動します...');
+
+    startOrder.forEach((name, i) => {
+      const svc = SERVICES.find(s => s.name === name);
+      setTimeout(() => {
+        console.log(`[${svc.label}] 起動中... (port ${svc.port})`);
+        const proc = spawn(
+          './gradlew',
+          [`:${name}:bootRun`, `--args=--spring.profiles.active=${profile}`],
+          { cwd: BACKEND_DIR, stdio: 'inherit', shell: false }
+        );
+        proc.on('error', (err) => console.error(`[${svc.label}] 起動エラー: ${err.message}`));
+      }, i * delay);
+    });
+
+    const totalWait = startOrder.length * delay + 1000;
+    setTimeout(done, totalWait);
+  });
+
+  // ──────────────────────────────────────────
   // 品質チェック
   // ──────────────────────────────────────────
 
@@ -284,10 +321,11 @@ export default function(gulp) {
 === アプリケーション開発タスク ===
 
 【バックエンド（全体）】
-  dev:backend:build         全サービスをコンパイル（local-h2）
-  dev:backend:test          全サービスのテストを実行（local-h2）
-  dev:backend:check         全サービスの品質チェック（Checkstyle + SpotBugs + テスト）
-  dev:backend:coverage      テストカバレッジレポートを生成
+  dev:backend:build              全サービスをコンパイル（local-h2）
+  dev:backend:test               全サービスのテストを実行（local-h2）
+  dev:backend:check              全サービスの品質チェック（Checkstyle + SpotBugs + テスト）
+  dev:backend:coverage           テストカバレッジレポートを生成
+  dev:backend:start:docker       全サービスを local-docker プロファイルで一括起動
 
 【バックエンド（サービス個別）】
   dev:authms:test           authms テスト実行
