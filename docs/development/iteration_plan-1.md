@@ -22,7 +22,7 @@
 ### 成功基準
 
 - [x] `./gradlew test` がすべて PASS する（local-h2 プロファイル）
-- [ ] `docker compose up` で Kafka + PostgreSQL が起動し local-docker プロファイルでサービスが動作する
+- [x] `docker compose up` で Kafka + PostgreSQL が起動し local-docker プロファイルでサービスが動作する
 - [x] 認証（ログイン・ログアウト・アカウントロック）が UI から操作できる
 - [x] 航海スケジュールの新規登録・更新が UI から操作できる
 - [ ] テストカバレッジ 80% 以上
