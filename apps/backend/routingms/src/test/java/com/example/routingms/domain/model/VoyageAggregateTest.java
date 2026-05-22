@@ -1,7 +1,9 @@
 package com.example.routingms.domain.model;
 
 import com.example.routingms.domain.commands.RegisterVoyageCommand;
+import com.example.routingms.domain.commands.UpdateVoyageScheduleCommand;
 import com.example.routingms.domain.events.VoyageRegisteredEvent;
+import com.example.routingms.domain.events.VoyageScheduleUpdatedEvent;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +61,53 @@ class VoyageAggregateTest {
                         command.getMovements(),
                         List.of("GENERAL")
                 ));
+    }
+
+    @Test
+    void 既存航海スケジュールを更新できる() {
+        // Given: 登録済みの航海
+        var dep1 = LocalDateTime.of(2026, 6, 1, 10, 0);
+        var arr1 = LocalDateTime.of(2026, 6, 10, 18, 0);
+        var registerCmd = new RegisterVoyageCommand(
+                "V001", "CARRIER-A", "運送会社A", "SHIPα",
+                "JPTYO", "USNYC", dep1, arr1, List.of(), List.of("GENERAL"));
+
+        // When: スケジュール更新コマンド
+        var dep2 = LocalDateTime.of(2026, 7, 1, 10, 0);
+        var arr2 = LocalDateTime.of(2026, 7, 15, 18, 0);
+        var updateCmd = new UpdateVoyageScheduleCommand(
+                "V001", dep2, arr2,
+                List.of(new RegisterVoyageCommand.CarrierMovementData("JPTYO", "USNYC", dep2, arr2)),
+                List.of("GENERAL", "REFRIGERATED"));
+
+        // Then: VoyageScheduleUpdatedEvent が発行される
+        fixture.given(new VoyageRegisteredEvent(
+                        "V001", "CARRIER-A", "運送会社A", "SHIPα",
+                        "JPTYO", "USNYC", dep1, arr1, List.of(), List.of("GENERAL")))
+                .when(updateCmd)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new VoyageScheduleUpdatedEvent(
+                        "V001", dep2, arr2, updateCmd.getMovements(), List.of("GENERAL", "REFRIGERATED")));
+    }
+
+    @Test
+    void 更新時に到着日が出発日以前の場合は例外が発生する() {
+        // Given: 登録済みの航海
+        var dep1 = LocalDateTime.of(2026, 6, 1, 10, 0);
+        var arr1 = LocalDateTime.of(2026, 6, 10, 18, 0);
+
+        // When: 日付不整合の更新コマンド
+        var dep2 = LocalDateTime.of(2026, 7, 15, 10, 0);
+        var arr2 = LocalDateTime.of(2026, 7, 1, 18, 0); // 出発より前
+        var updateCmd = new UpdateVoyageScheduleCommand(
+                "V001", dep2, arr2, List.of(), List.of());
+
+        // Then: IllegalArgumentException が発生する
+        fixture.given(new VoyageRegisteredEvent(
+                        "V001", "CARRIER-A", "運送会社A", "SHIPα",
+                        "JPTYO", "USNYC", dep1, arr1, List.of(), List.of("GENERAL")))
+                .when(updateCmd)
+                .expectException(IllegalArgumentException.class);
     }
 
     @Test

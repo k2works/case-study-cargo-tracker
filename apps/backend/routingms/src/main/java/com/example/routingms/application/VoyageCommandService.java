@@ -1,6 +1,7 @@
 package com.example.routingms.application;
 
 import com.example.routingms.domain.commands.RegisterVoyageCommand;
+import com.example.routingms.domain.commands.UpdateVoyageScheduleCommand;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,10 @@ public class VoyageCommandService {
     }
 
     public CompletableFuture<String> register(RegisterVoyageCommand command) {
+        return commandGateway.send(command);
+    }
+
+    public CompletableFuture<Void> update(UpdateVoyageScheduleCommand command) {
         return commandGateway.send(command);
     }
 }

@@ -1,7 +1,9 @@
 package com.example.routingms.domain.model;
 
 import com.example.routingms.domain.commands.RegisterVoyageCommand;
+import com.example.routingms.domain.commands.UpdateVoyageScheduleCommand;
 import com.example.routingms.domain.events.VoyageRegisteredEvent;
+import com.example.routingms.domain.events.VoyageScheduleUpdatedEvent;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
@@ -41,6 +43,27 @@ public class Voyage {
                 command.getMovements(),
                 command.getAcceptedCargoTypes()
         ));
+    }
+
+    @CommandHandler
+    public void handle(UpdateVoyageScheduleCommand command) {
+        if (command.getArrivalDate().isBefore(command.getDepartureDate()) ||
+                command.getArrivalDate().isEqual(command.getDepartureDate())) {
+            throw new IllegalArgumentException("到着日は出発日より後でなければなりません");
+        }
+        AggregateLifecycle.apply(new VoyageScheduleUpdatedEvent(
+                command.getVoyageNumber(),
+                command.getDepartureDate(),
+                command.getArrivalDate(),
+                command.getMovements(),
+                command.getAcceptedCargoTypes()
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(VoyageScheduleUpdatedEvent event) {
+        this.departureDate = event.getDepartureDate();
+        this.arrivalDate = event.getArrivalDate();
     }
 
     @EventSourcingHandler

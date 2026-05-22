@@ -2,6 +2,7 @@ package com.example.routingms.interfaces.events;
 
 import com.example.routingms.domain.commands.RegisterVoyageCommand.CarrierMovementData;
 import com.example.routingms.domain.events.VoyageRegisteredEvent;
+import com.example.routingms.domain.events.VoyageScheduleUpdatedEvent;
 import com.example.routingms.infrastructure.repositories.mybatis.VoyageMapper;
 import org.axonframework.eventhandling.EventHandler;
 import org.springframework.stereotype.Component;
@@ -43,6 +44,30 @@ public class VoyageProjectionEventHandler {
             );
         }
 
+        for (String cargoType : event.getAcceptedCargoTypes()) {
+            voyageMapper.insertAcceptedCargoType(event.getVoyageNumber(), cargoType);
+        }
+    }
+
+    @EventHandler
+    public void on(VoyageScheduleUpdatedEvent event) {
+        voyageMapper.updateVoyage(event.getVoyageNumber(), event.getDepartureDate(), event.getArrivalDate());
+
+        voyageMapper.deleteCarrierMovements(event.getVoyageNumber());
+        List<CarrierMovementData> movements = event.getMovements();
+        for (int i = 0; i < movements.size(); i++) {
+            CarrierMovementData m = movements.get(i);
+            voyageMapper.insertCarrierMovement(
+                    event.getVoyageNumber(),
+                    i,
+                    m.departureUnlocode(),
+                    m.arrivalUnlocode(),
+                    m.departureTime(),
+                    m.arrivalTime()
+            );
+        }
+
+        voyageMapper.deleteAcceptedCargoTypes(event.getVoyageNumber());
         for (String cargoType : event.getAcceptedCargoTypes()) {
             voyageMapper.insertAcceptedCargoType(event.getVoyageNumber(), cargoType);
         }

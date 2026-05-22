@@ -29,6 +29,14 @@ public interface VoyageMapper {
     void insertAcceptedCargoType(@Param("voyageNumber") String voyageNumber,
                                  @Param("cargoType") String cargoType);
 
+    void updateVoyage(@Param("voyageNumber") String voyageNumber,
+                      @Param("departureDate") LocalDateTime departureDate,
+                      @Param("arrivalDate") LocalDateTime arrivalDate);
+
+    void deleteCarrierMovements(@Param("voyageNumber") String voyageNumber);
+
+    void deleteAcceptedCargoTypes(@Param("voyageNumber") String voyageNumber);
+
     VoyageProjection findByVoyageNumber(@Param("voyageNumber") String voyageNumber);
 
     List<VoyageProjection> findAll();

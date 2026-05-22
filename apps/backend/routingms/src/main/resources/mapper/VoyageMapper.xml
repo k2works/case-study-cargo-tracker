@@ -51,6 +51,23 @@
         VALUES (#{voyageNumber}, #{cargoType})
     </insert>
 
+    <update id="updateVoyage">
+        UPDATE voyage
+        SET departure_date = #{departureDate},
+            arrival_date   = #{arrivalDate},
+            updated_at     = CURRENT_TIMESTAMP,
+            version        = version + 1
+        WHERE voyage_number = #{voyageNumber}
+    </update>
+
+    <delete id="deleteCarrierMovements">
+        DELETE FROM carrier_movement WHERE voyage_number = #{voyageNumber}
+    </delete>
+
+    <delete id="deleteAcceptedCargoTypes">
+        DELETE FROM voyage_accepted_cargo_type WHERE voyage_number = #{voyageNumber}
+    </delete>
+
     <select id="findByVoyageNumber" resultMap="voyageResultMap">
         SELECT voyage_number, carrier_code, carrier_name, ship_name,
                departure_date, arrival_date, origin_unlocode, dest_unlocode, status
