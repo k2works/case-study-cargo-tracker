@@ -5,54 +5,19 @@ import org.axonframework.modelling.command.TargetAggregateIdentifier;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public class RegisterVoyageCommand {
-
-    @TargetAggregateIdentifier
-    private final String voyageNumber;
-    private final String carrierCode;
-    private final String carrierName;
-    private final String shipName;
-    private final String originUnlocode;
-    private final String destUnlocode;
-    private final LocalDateTime departureDate;
-    private final LocalDateTime arrivalDate;
-    private final List<CarrierMovementData> movements;
-    private final List<String> acceptedCargoTypes;
-
-    public RegisterVoyageCommand(
-            String voyageNumber,
-            String carrierCode,
-            String carrierName,
-            String shipName,
-            String originUnlocode,
-            String destUnlocode,
-            LocalDateTime departureDate,
-            LocalDateTime arrivalDate,
-            List<CarrierMovementData> movements,
-            List<String> acceptedCargoTypes) {
-        this.voyageNumber = voyageNumber;
-        this.carrierCode = carrierCode;
-        this.carrierName = carrierName;
-        this.shipName = shipName;
-        this.originUnlocode = originUnlocode;
-        this.destUnlocode = destUnlocode;
-        this.departureDate = departureDate;
-        this.arrivalDate = arrivalDate;
-        this.movements = movements;
-        this.acceptedCargoTypes = acceptedCargoTypes;
-    }
-
-    public String getVoyageNumber() { return voyageNumber; }
-    public String getCarrierCode() { return carrierCode; }
-    public String getCarrierName() { return carrierName; }
-    public String getShipName() { return shipName; }
-    public String getOriginUnlocode() { return originUnlocode; }
-    public String getDestUnlocode() { return destUnlocode; }
-    public LocalDateTime getDepartureDate() { return departureDate; }
-    public LocalDateTime getArrivalDate() { return arrivalDate; }
-    public List<CarrierMovementData> getMovements() { return movements; }
-    public List<String> getAcceptedCargoTypes() { return acceptedCargoTypes; }
-
+@SuppressWarnings("java:S107") // Axon Command は全航海属性を必要とするため許容
+public record RegisterVoyageCommand(
+        @TargetAggregateIdentifier String voyageNumber,
+        String carrierCode,
+        String carrierName,
+        String shipName,
+        String originUnlocode,
+        String destUnlocode,
+        LocalDateTime departureDate,
+        LocalDateTime arrivalDate,
+        List<CarrierMovementData> movements,
+        List<String> acceptedCargoTypes
+) {
     public record CarrierMovementData(
             String departureUnlocode,
             String arrivalUnlocode,

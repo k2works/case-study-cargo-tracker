@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/voyages")
@@ -28,26 +27,26 @@ public class VoyageController {
 
     @PostMapping
     public ResponseEntity<Void> register(@RequestBody RegisterVoyageRequest request) {
-        List<CarrierMovementData> movements = request.getMovements() == null ? List.of() :
-                request.getMovements().stream()
+        List<CarrierMovementData> movements = request.movements() == null ? List.of() :
+                request.movements().stream()
                         .map(m -> new CarrierMovementData(
-                                m.getDepartureUnlocode(),
-                                m.getArrivalUnlocode(),
-                                m.getDepartureTime(),
-                                m.getArrivalTime()))
-                        .collect(Collectors.toList());
+                                m.departureUnlocode(),
+                                m.arrivalUnlocode(),
+                                m.departureTime(),
+                                m.arrivalTime()))
+                        .toList();
 
         RegisterVoyageCommand command = new RegisterVoyageCommand(
-                request.getVoyageNumber(),
-                request.getCarrierCode(),
-                request.getCarrierName(),
-                request.getShipName(),
-                request.getOriginUnlocode(),
-                request.getDestUnlocode(),
-                request.getDepartureDate(),
-                request.getArrivalDate(),
+                request.voyageNumber(),
+                request.carrierCode(),
+                request.carrierName(),
+                request.shipName(),
+                request.originUnlocode(),
+                request.destUnlocode(),
+                request.departureDate(),
+                request.arrivalDate(),
                 movements,
-                request.getAcceptedCargoTypes() == null ? List.of() : request.getAcceptedCargoTypes()
+                request.acceptedCargoTypes() == null ? List.of() : request.acceptedCargoTypes()
         );
 
         commandService.register(command).join();
@@ -57,21 +56,21 @@ public class VoyageController {
     @PutMapping("/{voyageNumber}")
     public ResponseEntity<Void> update(@PathVariable String voyageNumber,
                                        @RequestBody UpdateVoyageScheduleRequest request) {
-        List<CarrierMovementData> movements = request.getMovements() == null ? List.of() :
-                request.getMovements().stream()
+        List<CarrierMovementData> movements = request.movements() == null ? List.of() :
+                request.movements().stream()
                         .map(m -> new CarrierMovementData(
-                                m.getDepartureUnlocode(),
-                                m.getArrivalUnlocode(),
-                                m.getDepartureTime(),
-                                m.getArrivalTime()))
-                        .collect(Collectors.toList());
+                                m.departureUnlocode(),
+                                m.arrivalUnlocode(),
+                                m.departureTime(),
+                                m.arrivalTime()))
+                        .toList();
 
         UpdateVoyageScheduleCommand command = new UpdateVoyageScheduleCommand(
                 voyageNumber,
-                request.getDepartureDate(),
-                request.getArrivalDate(),
+                request.departureDate(),
+                request.arrivalDate(),
                 movements,
-                request.getAcceptedCargoTypes() == null ? List.of() : request.getAcceptedCargoTypes()
+                request.acceptedCargoTypes() == null ? List.of() : request.acceptedCargoTypes()
         );
 
         commandService.update(command).join();
@@ -82,7 +81,7 @@ public class VoyageController {
     public ResponseEntity<List<VoyageResponse>> findAll() {
         List<VoyageResponse> list = queryService.findAll().stream()
                 .map(VoyageResponse::from)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(list);
     }
 

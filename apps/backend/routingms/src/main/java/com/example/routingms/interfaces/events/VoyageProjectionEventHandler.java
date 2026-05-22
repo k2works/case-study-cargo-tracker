@@ -21,21 +21,21 @@ public class VoyageProjectionEventHandler {
     @EventHandler
     public void on(VoyageRegisteredEvent event) {
         voyageMapper.insertVoyage(
-                event.getVoyageNumber(),
-                event.getCarrierCode(),
-                event.getCarrierName(),
-                event.getShipName(),
-                event.getOriginUnlocode(),
-                event.getDestUnlocode(),
-                event.getDepartureDate(),
-                event.getArrivalDate()
+                event.voyageNumber(),
+                event.carrierCode(),
+                event.carrierName(),
+                event.shipName(),
+                event.originUnlocode(),
+                event.destUnlocode(),
+                event.departureDate(),
+                event.arrivalDate()
         );
 
-        List<CarrierMovementData> movements = event.getMovements();
+        List<CarrierMovementData> movements = event.movements();
         for (int i = 0; i < movements.size(); i++) {
             CarrierMovementData m = movements.get(i);
             voyageMapper.insertCarrierMovement(
-                    event.getVoyageNumber(),
+                    event.voyageNumber(),
                     i,
                     m.departureUnlocode(),
                     m.arrivalUnlocode(),
@@ -44,21 +44,21 @@ public class VoyageProjectionEventHandler {
             );
         }
 
-        for (String cargoType : event.getAcceptedCargoTypes()) {
-            voyageMapper.insertAcceptedCargoType(event.getVoyageNumber(), cargoType);
+        for (String cargoType : event.acceptedCargoTypes()) {
+            voyageMapper.insertAcceptedCargoType(event.voyageNumber(), cargoType);
         }
     }
 
     @EventHandler
     public void on(VoyageScheduleUpdatedEvent event) {
-        voyageMapper.updateVoyage(event.getVoyageNumber(), event.getDepartureDate(), event.getArrivalDate());
+        voyageMapper.updateVoyage(event.voyageNumber(), event.departureDate(), event.arrivalDate());
 
-        voyageMapper.deleteCarrierMovements(event.getVoyageNumber());
-        List<CarrierMovementData> movements = event.getMovements();
+        voyageMapper.deleteCarrierMovements(event.voyageNumber());
+        List<CarrierMovementData> movements = event.movements();
         for (int i = 0; i < movements.size(); i++) {
             CarrierMovementData m = movements.get(i);
             voyageMapper.insertCarrierMovement(
-                    event.getVoyageNumber(),
+                    event.voyageNumber(),
                     i,
                     m.departureUnlocode(),
                     m.arrivalUnlocode(),
@@ -67,9 +67,9 @@ public class VoyageProjectionEventHandler {
             );
         }
 
-        voyageMapper.deleteAcceptedCargoTypes(event.getVoyageNumber());
-        for (String cargoType : event.getAcceptedCargoTypes()) {
-            voyageMapper.insertAcceptedCargoType(event.getVoyageNumber(), cargoType);
+        voyageMapper.deleteAcceptedCargoTypes(event.voyageNumber());
+        for (String cargoType : event.acceptedCargoTypes()) {
+            voyageMapper.insertAcceptedCargoType(event.voyageNumber(), cargoType);
         }
     }
 }

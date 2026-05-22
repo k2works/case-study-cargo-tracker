@@ -11,14 +11,15 @@ import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Aggregate
 public class Voyage {
 
     @AggregateIdentifier
     private String voyageNumber;
+    @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
     private LocalDateTime departureDate;
+    @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
     private LocalDateTime arrivalDate;
 
     protected Voyage() {
@@ -27,50 +28,50 @@ public class Voyage {
 
     @CommandHandler
     public Voyage(RegisterVoyageCommand command) {
-        if (command.getArrivalDate().isBefore(command.getDepartureDate()) ||
-                command.getArrivalDate().isEqual(command.getDepartureDate())) {
+        if (command.arrivalDate().isBefore(command.departureDate()) ||
+                command.arrivalDate().isEqual(command.departureDate())) {
             throw new IllegalArgumentException("到着日は出発日より後でなければなりません");
         }
         AggregateLifecycle.apply(new VoyageRegisteredEvent(
-                command.getVoyageNumber(),
-                command.getCarrierCode(),
-                command.getCarrierName(),
-                command.getShipName(),
-                command.getOriginUnlocode(),
-                command.getDestUnlocode(),
-                command.getDepartureDate(),
-                command.getArrivalDate(),
-                command.getMovements(),
-                command.getAcceptedCargoTypes()
+                command.voyageNumber(),
+                command.carrierCode(),
+                command.carrierName(),
+                command.shipName(),
+                command.originUnlocode(),
+                command.destUnlocode(),
+                command.departureDate(),
+                command.arrivalDate(),
+                command.movements(),
+                command.acceptedCargoTypes()
         ));
     }
 
     @CommandHandler
     public void handle(UpdateVoyageScheduleCommand command) {
-        if (command.getArrivalDate().isBefore(command.getDepartureDate()) ||
-                command.getArrivalDate().isEqual(command.getDepartureDate())) {
+        if (command.arrivalDate().isBefore(command.departureDate()) ||
+                command.arrivalDate().isEqual(command.departureDate())) {
             throw new IllegalArgumentException("到着日は出発日より後でなければなりません");
         }
         AggregateLifecycle.apply(new VoyageScheduleUpdatedEvent(
-                command.getVoyageNumber(),
-                command.getDepartureDate(),
-                command.getArrivalDate(),
-                command.getMovements(),
-                command.getAcceptedCargoTypes()
+                command.voyageNumber(),
+                command.departureDate(),
+                command.arrivalDate(),
+                command.movements(),
+                command.acceptedCargoTypes()
         ));
     }
 
     @EventSourcingHandler
     public void on(VoyageScheduleUpdatedEvent event) {
-        this.departureDate = event.getDepartureDate();
-        this.arrivalDate = event.getArrivalDate();
+        this.departureDate = event.departureDate();
+        this.arrivalDate = event.arrivalDate();
     }
 
     @EventSourcingHandler
     public void on(VoyageRegisteredEvent event) {
-        this.voyageNumber = event.getVoyageNumber();
-        this.departureDate = event.getDepartureDate();
-        this.arrivalDate = event.getArrivalDate();
+        this.voyageNumber = event.voyageNumber();
+        this.departureDate = event.departureDate();
+        this.arrivalDate = event.arrivalDate();
     }
 
     public String getVoyageNumber() { return voyageNumber; }
