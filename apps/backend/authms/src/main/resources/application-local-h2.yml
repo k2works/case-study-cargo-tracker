@@ -11,10 +11,11 @@ spring:
       enabled: true
       path: /h2-console
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
   sql:
     init:
-      mode: always
+      mode: never
   devtools:
     restart:
       enabled: true

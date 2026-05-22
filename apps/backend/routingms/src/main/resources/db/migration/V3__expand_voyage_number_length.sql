@@ -1,5 +1,5 @@
-ALTER TABLE voyage_accepted_cargo_type DROP CONSTRAINT voyage_accepted_cargo_type_voyage_number_fkey;
-ALTER TABLE carrier_movement DROP CONSTRAINT carrier_movement_voyage_number_fkey;
+ALTER TABLE voyage_accepted_cargo_type DROP CONSTRAINT IF EXISTS voyage_accepted_cargo_type_voyage_number_fkey;
+ALTER TABLE carrier_movement DROP CONSTRAINT IF EXISTS carrier_movement_voyage_number_fkey;
 
 ALTER TABLE voyage ALTER COLUMN voyage_number TYPE VARCHAR(50);
 ALTER TABLE carrier_movement ALTER COLUMN voyage_number TYPE VARCHAR(50);
