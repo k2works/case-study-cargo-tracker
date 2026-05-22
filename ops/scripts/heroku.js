@@ -63,10 +63,9 @@ function getEnvVar(key) {
  */
 function pushAndRelease(appName, service) {
   const dockerfile = path.join(BACKEND_DIR, service, 'Dockerfile');
-  execSync(
-    `heroku container:push web --app ${appName} --context-path ${BACKEND_DIR} --dockerfile ${dockerfile}`,
-    { stdio: 'inherit' }
-  );
+  const image = `registry.heroku.com/${appName}/web`;
+  execSync(`docker build -t ${image} -f ${dockerfile} ${BACKEND_DIR}`, { stdio: 'inherit' });
+  execSync(`docker push ${image}`, { stdio: 'inherit' });
   execSync(`heroku container:release web --app ${appName}`, { stdio: 'inherit' });
 }
 
@@ -194,10 +193,12 @@ export default function (gulp) {
      */
     gulp.task(`deploy:dev:push:${service}`, (done) => {
       const dockerfile = path.join(BACKEND_DIR, service, 'Dockerfile');
+      const image = `registry.heroku.com/${name}/web`;
       execSync(
-        `heroku container:push web --app ${name} --context-path ${BACKEND_DIR} --dockerfile ${dockerfile}`,
+        `docker build -t ${image} -f ${dockerfile} ${BACKEND_DIR}`,
         { stdio: 'inherit' }
       );
+      execSync(`docker push ${image}`, { stdio: 'inherit' });
       done();
     });
 
