@@ -18,6 +18,15 @@ spring:
     livereload:
       enabled: true
 
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+jwt:
+  secret: "local-h2-dev-secret-key-must-be-at-least-32-bytes!!"
+  expiration-ms: 86400000
+
 logging:
   level:
     com.example.authms: DEBUG

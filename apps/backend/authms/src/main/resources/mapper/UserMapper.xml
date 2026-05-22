@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.authms.infrastructure.persistence.UserMapper">
+
+    <resultMap id="userResultMap" type="com.example.authms.domain.User">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="password" column="password"/>
+        <result property="role" column="role"
+                typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="failedLoginAttempts" column="failed_login_attempts"/>
+        <result property="lockedAt" column="locked_at"/>
+    </resultMap>
+
+    <select id="findByUsername" resultMap="userResultMap">
+        SELECT id, username, password, role, failed_login_attempts, locked_at
+        FROM users
+        WHERE username = #{username}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, password, role, failed_login_attempts, locked_at)
+        VALUES (#{username}, #{password}, #{role}, #{failedLoginAttempts}, #{lockedAt})
+    </insert>
+
+    <update id="updateFailedAttempts">
+        UPDATE users
+        SET failed_login_attempts = #{failedAttempts}
+        WHERE username = #{username}
+    </update>
+
+    <update id="lockUser">
+        UPDATE users
+        SET locked_at = #{lockedAt}
+        WHERE username = #{username}
+    </update>
+
+    <update id="unlockUser">
+        UPDATE users
+        SET failed_login_attempts = 0, locked_at = NULL
+        WHERE username = #{username}
+    </update>
+
+</mapper>

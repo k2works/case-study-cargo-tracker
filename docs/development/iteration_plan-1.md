@@ -93,11 +93,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | Gradle マルチモジュール構成（authms・routingms・shared）を作成 | 4h | - | [ ] |
-| 0.2 | Spring Boot 4 + Axon Kafka Extension 依存関係設定 | 2h | - | [ ] |
-| 0.3 | local-h2 / local-docker / heroku プロファイル設定 | 2h | - | [ ] |
-| 0.4 | Docker Compose（Kafka + Zookeeper + PostgreSQL）設定 | 2h | - | [ ] |
-| 0.5 | Gateway（gatewayms）最小構成 + フロントエンド（Vite）起動確認 | 2h | - | [ ] |
+| 0.1 | Gradle マルチモジュール構成（authms・routingms・shared）を作成 | 4h | - | [x] |
+| 0.2 | Spring Boot 4 + Axon Kafka Extension 依存関係設定 | 2h | - | [x] |
+| 0.3 | local-h2 / local-docker / heroku プロファイル設定 | 2h | - | [x] |
+| 0.4 | Docker Compose（Kafka + Zookeeper + PostgreSQL）設定 | 2h | - | [x] |
+| 0.5 | Gateway（gatewayms）最小構成 + フロントエンド（Vite）起動確認 | 2h | - | [x] |
 
 **小計**: 12h
 
@@ -105,12 +105,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | User エンティティ・ロール定義（TDD: Red） | 2h | - | [ ] |
-| 1.2 | User ドメインモデル実装（TDD: Green） | 2h | - | [ ] |
-| 1.3 | Spring Security 設定（JWT + ロールベースアクセス制御） | 4h | - | [ ] |
-| 1.4 | ログイン API（POST /auth/login）実装 | 2h | - | [ ] |
-| 1.5 | ログアウト API（POST /auth/logout）実装 | 1h | - | [ ] |
-| 1.6 | アカウントロック機能（失敗 5 回）実装 | 2h | - | [ ] |
+| 1.1 | User エンティティ・ロール定義（TDD: Red） | 2h | - | [x] |
+| 1.2 | User ドメインモデル実装（TDD: Green） | 2h | - | [x] |
+| 1.3 | Spring Security 設定（JWT + ロールベースアクセス制御） | 4h | - | [x] |
+| 1.4 | ログイン API（POST /auth/login）実装 | 2h | - | [x] |
+| 1.5 | ログアウト API（POST /auth/logout）実装 | 1h | - | [x] |
+| 1.6 | アカウントロック機能（失敗 5 回）実装 | 2h | - | [x] |
 | 1.7 | フロントエンド: ログイン画面・ナビゲーション実装 | 3h | - | [ ] |
 
 **小計**: 16h
@@ -142,7 +142,7 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 基盤構築 | 2 | 12h | [ ] |
+| 基盤構築 | 2 | 12h | [x] |
 | US00: 認証 | 3 | 16h | [ ] |
 | US24: 航海スケジュール新規登録 | 3 | 14h | [ ] |
 | US25: 既存航海スケジュール更新 | 2 | 7h | [ ] |
@@ -150,7 +150,7 @@
 
 **1 SP あたり**: 約 4.9h
 
-**進捗率**: 0%（0/10 SP）
+**進捗率**: 50%（5/10 SP）
 
 ---
 

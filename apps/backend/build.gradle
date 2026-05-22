@@ -50,6 +50,8 @@ subprojects {
         }
         // ローカル TDD ループは local-h2 プロファイルをデフォルトとする
         systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active', 'local-h2')
+        // Java 25 + Mockito/ByteBuddy 互換性のため実験的モードを有効化
+        jvmArgs '-Dnet.bytebuddy.experimental=true'
     }
 
     tasks.withType(JavaCompile).configureEach {

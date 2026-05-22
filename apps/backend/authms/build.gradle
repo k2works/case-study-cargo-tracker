@@ -27,6 +27,11 @@ dependencies {
     runtimeOnly libs.postgresql
     runtimeOnly libs.h2
 
+    // JWT
+    implementation libs.jjwt.api
+    runtimeOnly libs.jjwt.impl
+    runtimeOnly libs.jjwt.jackson
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
 
