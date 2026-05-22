@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Flyway が無効な H2 環境でのみ実行し、admin ユーザーを生成する。
  */
 @Component
-@Profile("local-h2")
+@Profile({"local-h2", "local-docker"})
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
