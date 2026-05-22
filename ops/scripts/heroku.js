@@ -1,45 +1,73 @@
 'use strict';
 
-import { execSync, spawnSync } from 'child_process';
+import { execSync } from 'child_process';
 import path from 'path';
+import { openUrl } from './shared.js';
 
-const ROOT = path.resolve(process.cwd());
+const ROOT        = path.resolve(process.cwd());
 const BACKEND_DIR = path.join(ROOT, 'apps', 'backend');
+const FRONTEND_DIR = path.join(ROOT, 'apps', 'frontend');
+const ENV_FILE    = path.join(ROOT, '.env');
 
-/** Heroku アプリ定義 */
-const APPS = [
-  { name: 'cargo-tracker-5-authms',    service: 'authms',    port: 8081, label: '認証サービス' },
-  { name: 'cargo-tracker-5-routingms', service: 'routingms', port: 8083, label: '経路設計サービス' },
-  { name: 'cargo-tracker-5-gatewayms', service: 'gatewayms', port: 8080, label: 'API Gateway' },
+const PREFIX = 'cargo-tracker-5';
+
+const JAVA_TOOL_OPTIONS =
+  '-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m ' +
+  '-XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo';
+
+/** IT1 で稼働しているサービス定義 */
+const SERVICES = [
+  { name: `${PREFIX}-authms`,    service: 'authms',    port: 8081 },
+  { name: `${PREFIX}-routingms`, service: 'routingms', port: 8083 },
+  { name: `${PREFIX}-gatewayms`, service: 'gatewayms', port: 8080 },
 ];
 
-// ゲートウェイは最後にデプロイ（依存サービスが先に起動している必要がある）
+/** デプロイ順（依存関係を考慮） */
 const DEPLOY_ORDER = ['authms', 'routingms', 'gatewayms'];
 
+// ============================================
+// ヘルパー
+// ============================================
+
 /**
- * Heroku CLI コマンドを実行する
- * @param {string} cmd
+ * Heroku domains から herokuapp.com ドメインを取得する
+ * @param {string} appName
+ * @returns {string}
  */
-function heroku(cmd) {
-  console.log(`[Heroku] ${cmd}`);
-  execSync(`heroku ${cmd}`, { stdio: 'inherit' });
+function getDomain(appName) {
+  const json = execSync(`heroku domains --app ${appName} --json`, { encoding: 'utf8' });
+  const domains = JSON.parse(json);
+  const found = domains.find(d => d.hostname && d.hostname.includes('herokuapp.com'));
+  if (!found) throw new Error(`[${appName}] herokuapp.com ドメインが見つかりません`);
+  return found.hostname;
 }
 
 /**
- * Container Registry にイメージを push してリリースする
- * @param {string} appName - Heroku アプリ名
- * @param {string} service - サービス名（Dockerfile のあるディレクトリ名）
+ * .env ファイルから変数を読み込む
+ * @param {string} key
+ * @returns {string}
  */
-function containerDeploy(appName, service) {
-  const contextDir = BACKEND_DIR;
+function getEnvVar(key) {
+  try {
+    const content = execSync(`grep -E "^${key}=" ${ENV_FILE}`, { encoding: 'utf8' }).trim();
+    return content.replace(/^[^=]+=["']?/, '').replace(/["']?\s*$/, '');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Container Registry に push してリリース
+ * @param {string} appName
+ * @param {string} service
+ */
+function pushAndRelease(appName, service) {
   const dockerfile = path.join(BACKEND_DIR, service, 'Dockerfile');
-  console.log(`\n[${appName}] Container デプロイ開始...`);
   execSync(
-    `heroku container:push web --app ${appName} --context-path ${contextDir} --dockerfile ${dockerfile}`,
+    `heroku container:push web --app ${appName} --context-path ${BACKEND_DIR} --dockerfile ${dockerfile}`,
     { stdio: 'inherit' }
   );
   execSync(`heroku container:release web --app ${appName}`, { stdio: 'inherit' });
-  console.log(`[${appName}] ✅ デプロイ完了`);
 }
 
 // ============================================
@@ -49,152 +77,173 @@ function containerDeploy(appName, service) {
 export default function (gulp) {
 
   // ──────────────────────────────────────────
-  // Stack 設定
+  // セットアップ
   // ──────────────────────────────────────────
 
   /**
-   * 全アプリの Stack を container に設定する（初回のみ実行）
+   * 初回セットアップガイドを表示
    */
-  gulp.task('heroku:stack:set', (done) => {
-    APPS.forEach(({ name }) => {
-      console.log(`[heroku:stack:set] ${name}`);
-      execSync(`heroku stack:set container --app ${name}`, { stdio: 'inherit' });
-    });
+  gulp.task('deploy:dev:setup', (done) => {
+    console.log(`
+=== Heroku 開発環境 初回セットアップ手順 ===
+
+1. Heroku ログイン（ブラウザ認証が必要）:
+   heroku login
+   heroku container:login
+
+2. アプリ作成（既存の場合はスキップ）:
+   heroku create ${PREFIX}-authms    --stack container
+   heroku create ${PREFIX}-routingms --stack container
+   heroku create ${PREFIX}-gatewayms --stack container
+
+3. JWT_SECRET を .env に追加:
+   echo 'JWT_SECRET="'$(openssl rand -base64 48)'"' >> .env
+
+4. Config Vars を一括設定:
+   npx gulp deploy:dev:config
+
+5. 全サービスをデプロイ:
+   npx gulp deploy:dev
+
+6. アプリを開く:
+   npx gulp deploy:dev:open
+    `);
     done();
   });
 
   // ──────────────────────────────────────────
-  // デプロイ（サービス個別）
+  // Config Vars 設定
   // ──────────────────────────────────────────
 
-  APPS.forEach(({ name, service, label }) => {
+  /**
+   * heroku domains から実ドメインを自動取得して Config Vars を一括設定
+   */
+  gulp.task('deploy:dev:config', (done) => {
+    const jwtSecret = getEnvVar('JWT_SECRET');
+    if (!jwtSecret) {
+      console.error('❌ .env に JWT_SECRET が設定されていません。先に追加してください。');
+      process.exit(1);
+    }
+
+    console.log('[deploy:dev:config] ドメインを取得中...');
+    const authDomain    = getDomain(`${PREFIX}-authms`);
+    const routingDomain = getDomain(`${PREFIX}-routingms`);
+    const gatewayDomain = getDomain(`${PREFIX}-gatewayms`);
+    console.log(`  authms:    ${authDomain}`);
+    console.log(`  routingms: ${routingDomain}`);
+    console.log(`  gatewayms: ${gatewayDomain}`);
+
+    // authms
+    execSync(
+      `heroku config:set ` +
+      `SPRING_PROFILES_ACTIVE=heroku ` +
+      `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
+      `JWT_SECRET="${jwtSecret}" ` +
+      `--app ${PREFIX}-authms`,
+      { stdio: 'inherit' }
+    );
+
+    // routingms
+    execSync(
+      `heroku config:set ` +
+      `SPRING_PROFILES_ACTIVE=heroku ` +
+      `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
+      `--app ${PREFIX}-routingms`,
+      { stdio: 'inherit' }
+    );
+
+    // gatewayms
+    execSync(
+      `heroku config:set ` +
+      `SPRING_PROFILES_ACTIVE=heroku ` +
+      `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
+      `JWT_SECRET="${jwtSecret}" ` +
+      `AUTHMS_URL="https://${authDomain}" ` +
+      `ROUTINGMS_URL="https://${routingDomain}" ` +
+      `--app ${PREFIX}-gatewayms`,
+      { stdio: 'inherit' }
+    );
+
+    console.log('\n✅ Config Vars 設定完了');
+    done();
+  });
+
+  // ──────────────────────────────────────────
+  // ビルド
+  // ──────────────────────────────────────────
+
+  /**
+   * バックエンド全サービスの bootJar を生成
+   */
+  gulp.task('deploy:dev:build:backend', (done) => {
+    const targets = DEPLOY_ORDER.filter(s => s !== 'gatewayms')
+      .concat('gatewayms')
+      .map(s => `:${s}:bootJar`)
+      .join(' ');
+    execSync(`./gradlew ${targets} -x test`, { cwd: BACKEND_DIR, stdio: 'inherit' });
+    done();
+  });
+
+  // ──────────────────────────────────────────
+  // push / release（サービス個別）
+  // ──────────────────────────────────────────
+
+  SERVICES.forEach(({ name, service }) => {
     /**
-     * 特定サービスを Heroku にデプロイ
+     * サービスのイメージをビルドして Container Registry に push
      */
-    gulp.task(`heroku:deploy:${service}`, (done) => {
-      containerDeploy(name, service);
+    gulp.task(`deploy:dev:push:${service}`, (done) => {
+      const dockerfile = path.join(BACKEND_DIR, service, 'Dockerfile');
+      execSync(
+        `heroku container:push web --app ${name} --context-path ${BACKEND_DIR} --dockerfile ${dockerfile}`,
+        { stdio: 'inherit' }
+      );
+      done();
+    });
+
+    /**
+     * push 済みイメージをリリース（dyno に反映）
+     */
+    gulp.task(`deploy:dev:release:${service}`, (done) => {
+      execSync(`heroku container:release web --app ${name}`, { stdio: 'inherit' });
+      done();
+    });
+
+    /**
+     * サービスのログを表示（直近 100 行）
+     */
+    gulp.task(`deploy:dev:logs:${service}`, (done) => {
+      execSync(`heroku logs --num=100 --app ${name}`, { stdio: 'inherit' });
       done();
     });
   });
 
   // ──────────────────────────────────────────
-  // デプロイ（全サービス順次）
+  // 全サービス一括デプロイ
   // ──────────────────────────────────────────
 
   /**
-   * 全バックエンドサービスを順次デプロイ（authms → routingms → gatewayms）
+   * 全サービスを順次デプロイ（authms → routingms → gatewayms）
    */
-  gulp.task('heroku:deploy', gulp.series(
-    ...DEPLOY_ORDER.map(svc => `heroku:deploy:${svc}`)
+  gulp.task('deploy:dev', gulp.series(
+    ...DEPLOY_ORDER.map(svc => `deploy:dev:push:${svc}`),
+    ...DEPLOY_ORDER.map(svc => `deploy:dev:release:${svc}`)
   ));
 
   // ──────────────────────────────────────────
-  // ステータス確認
+  // ブラウザで開く
   // ──────────────────────────────────────────
 
   /**
-   * 全アプリの稼働状態を確認
+   * gatewayms（API Gateway）をデフォルトブラウザで開く
    */
-  gulp.task('heroku:status', (done) => {
-    APPS.forEach(({ name, label }) => {
-      console.log(`\n--- ${label} (${name}) ---`);
-      try {
-        execSync(`heroku ps --app ${name}`, { stdio: 'inherit' });
-      } catch {
-        console.error(`[${name}] 状態取得失敗`);
-      }
-    });
-    done();
-  });
-
-  /**
-   * 全アプリのログを表示（直近 50 行）
-   */
-  gulp.task('heroku:logs', (done) => {
-    APPS.forEach(({ name, label }) => {
-      console.log(`\n=== ${label} (${name}) ===`);
-      try {
-        execSync(`heroku logs --tail=false --num=50 --app ${name}`, { stdio: 'inherit' });
-      } catch {
-        console.error(`[${name}] ログ取得失敗`);
-      }
-    });
-    done();
-  });
-
-  // ──────────────────────────────────────────
-  // ヘルスチェック
-  // ──────────────────────────────────────────
-
-  /**
-   * 全アプリの /actuator/health を確認
-   */
-  gulp.task('heroku:health', (done) => {
-    const urls = {
-      authms:    'https://cargo-tracker-5-authms-0b03518393c9.herokuapp.com/actuator/health',
-      routingms: 'https://cargo-tracker-5-routingms-06b1dc236f74.herokuapp.com/actuator/health',
-      gatewayms: 'https://cargo-tracker-5-gatewayms-87d9e927d00b.herokuapp.com/actuator/health',
-    };
-    Object.entries(urls).forEach(([svc, url]) => {
-      console.log(`\n[${svc}] ${url}`);
-      try {
-        execSync(`curl -sf ${url}`, { stdio: 'inherit' });
-        console.log(`\n✅ ${svc} 正常`);
-      } catch {
-        console.error(`❌ ${svc} 応答なし`);
-      }
-    });
-    done();
-  });
-
-  // ──────────────────────────────────────────
-  // 再起動・停止
-  // ──────────────────────────────────────────
-
-  /**
-   * 全アプリを再起動
-   */
-  gulp.task('heroku:restart', (done) => {
-    APPS.forEach(({ name }) => {
-      heroku(`restart --app ${name}`);
-    });
-    done();
-  });
-
-  /**
-   * 全アプリの dyno を停止（無料化のためスケールダウン）
-   */
-  gulp.task('heroku:stop', (done) => {
-    APPS.forEach(({ name }) => {
-      console.log(`[heroku:stop] ${name}`);
-      execSync(`heroku ps:scale web=0 --app ${name}`, { stdio: 'inherit' });
-    });
-    done();
-  });
-
-  /**
-   * 全アプリの dyno を起動（スケールアップ）
-   */
-  gulp.task('heroku:start', (done) => {
-    APPS.forEach(({ name }) => {
-      console.log(`[heroku:start] ${name}`);
-      execSync(`heroku ps:scale web=1 --app ${name}`, { stdio: 'inherit' });
-    });
-    done();
-  });
-
-  // ──────────────────────────────────────────
-  // 環境変数管理
-  // ──────────────────────────────────────────
-
-  /**
-   * 全アプリの環境変数一覧を表示
-   */
-  gulp.task('heroku:config', (done) => {
-    APPS.forEach(({ name, label }) => {
-      console.log(`\n--- ${label} (${name}) ---`);
-      execSync(`heroku config --app ${name}`, { stdio: 'inherit' });
-    });
+  gulp.task('deploy:dev:open', (done) => {
+    try {
+      const domain = getDomain(`${PREFIX}-gatewayms`);
+      openUrl(`https://${domain}`);
+    } catch {
+      execSync(`heroku open --app ${PREFIX}-gatewayms`, { stdio: 'inherit' });
+    }
     done();
   });
 
@@ -203,33 +252,37 @@ export default function (gulp) {
   // ──────────────────────────────────────────
 
   /**
-   * Heroku タスク一覧を表示
+   * Heroku デプロイタスク一覧を表示
    */
-  gulp.task('heroku:help', (done) => {
+  gulp.task('deploy:dev:help', (done) => {
     console.log(`
-=== Heroku デプロイタスク ===
+=== Heroku 開発環境デプロイタスク ===
 
-【初期セットアップ（初回のみ）】
-  heroku:stack:set          全アプリの Stack を container に設定
+【セットアップ】
+  deploy:dev:setup             初回セットアップガイドを表示
+  deploy:dev:config            Config Vars を一括設定（実ドメイン自動取得）
+  deploy:dev:build:backend     バックエンド全サービスの bootJar を生成
 
-【デプロイ】
-  heroku:deploy             全サービスを順次デプロイ（authms → routingms → gatewayms）
-  heroku:deploy:authms      authms のみデプロイ
-  heroku:deploy:routingms   routingms のみデプロイ
-  heroku:deploy:gatewayms   gatewayms のみデプロイ
+【デプロイ（全体）】
+  deploy:dev                   全サービスを順次デプロイ（push → release）
 
-【稼働確認】
-  heroku:status             全アプリの dyno 状態を確認
-  heroku:health             全アプリの /actuator/health を確認
-  heroku:logs               全アプリのログを表示（直近 50 行）
-  heroku:config             全アプリの環境変数一覧を表示
+【デプロイ（個別）】
+  deploy:dev:push:authms       authms をビルド・プッシュ
+  deploy:dev:release:authms    authms をリリース
+  deploy:dev:push:routingms    routingms をビルド・プッシュ
+  deploy:dev:release:routingms routingms をリリース
+  deploy:dev:push:gatewayms    gatewayms をビルド・プッシュ
+  deploy:dev:release:gatewayms gatewayms をリリース
 
-【制御】
-  heroku:start              全アプリの dyno を起動（web=1）
-  heroku:stop               全アプリの dyno を停止（web=0）
-  heroku:restart            全アプリを再起動
+【ログ確認】
+  deploy:dev:logs:authms       authms のログを表示
+  deploy:dev:logs:routingms    routingms のログを表示
+  deploy:dev:logs:gatewayms    gatewayms のログを表示
 
-  heroku:help               このヘルプを表示
+【ブラウザ】
+  deploy:dev:open              gatewayms をブラウザで開く
+
+  deploy:dev:help              このヘルプを表示
     `);
     done();
   });
