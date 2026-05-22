@@ -1,5 +1,5 @@
-# local-h2 プロファイル: H2 インメモリ + Axon の EmbeddedEventStore（Kafka 無し）
-# 単一サービスの最速 TDD ループに最適。
+# local-h2 プロファイル: H2 インメモリ DB + ローカル Kafka（Docker Compose）
+# DB は H2 で起動しつつ Kafka によるイベント伝搬を local-docker と同条件で検証できる。
 spring:
   datasource:
     url: jdbc:h2:mem:routingdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
@@ -21,15 +21,16 @@ spring:
     livereload:
       enabled: true
 
-# Kafka・Axon Server を無効化し、Axon は InMemory EventStore を使用する
 axon:
   axonserver:
     enabled: false
   kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    default-topic: cargo-events
     publisher:
-      enabled: false
+      enabled: true
     fetcher:
-      enabled: false
+      enabled: true
   eventhandling:
     processors:
       default:
