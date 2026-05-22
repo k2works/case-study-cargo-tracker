@@ -58,7 +58,7 @@ class VoyageAggregateTest {
                         "USNYC",
                         departure,
                         arrival,
-                        command.getMovements(),
+                        command.movements(),
                         List.of("GENERAL")
                 ));
     }
@@ -68,9 +68,6 @@ class VoyageAggregateTest {
         // Given: 登録済みの航海
         var dep1 = LocalDateTime.of(2026, 6, 1, 10, 0);
         var arr1 = LocalDateTime.of(2026, 6, 10, 18, 0);
-        var registerCmd = new RegisterVoyageCommand(
-                "V001", "CARRIER-A", "運送会社A", "SHIPα",
-                "JPTYO", "USNYC", dep1, arr1, List.of(), List.of("GENERAL"));
 
         // When: スケジュール更新コマンド
         var dep2 = LocalDateTime.of(2026, 7, 1, 10, 0);
@@ -87,7 +84,7 @@ class VoyageAggregateTest {
                 .when(updateCmd)
                 .expectSuccessfulHandlerExecution()
                 .expectEvents(new VoyageScheduleUpdatedEvent(
-                        "V001", dep2, arr2, updateCmd.getMovements(), List.of("GENERAL", "REFRIGERATED")));
+                        "V001", dep2, arr2, updateCmd.movements(), List.of("GENERAL", "REFRIGERATED")));
     }
 
     @Test
