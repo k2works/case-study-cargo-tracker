@@ -12,14 +12,19 @@ spring:
       path: /h2-console
   flyway:
     enabled: false
+  sql:
+    init:
+      mode: always
   devtools:
     restart:
       enabled: true
     livereload:
       enabled: true
 
-# Kafka を無効化し、Axon は InMemory EventStore を使用する
+# Kafka・Axon Server を無効化し、Axon は InMemory EventStore を使用する
 axon:
+  axonserver:
+    enabled: false
   kafka:
     publisher:
       enabled: false
@@ -29,6 +34,11 @@ axon:
     processors:
       default:
         mode: subscribing
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
 
 logging:
   level:

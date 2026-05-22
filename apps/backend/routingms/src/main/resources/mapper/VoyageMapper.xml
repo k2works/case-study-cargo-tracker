@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.routingms.infrastructure.repositories.mybatis.VoyageMapper">
+
+    <resultMap id="voyageResultMap" type="com.example.routingms.domain.projections.VoyageProjection">
+        <id property="voyageNumber" column="voyage_number"/>
+        <result property="carrierCode" column="carrier_code"/>
+        <result property="carrierName" column="carrier_name"/>
+        <result property="shipName" column="ship_name"/>
+        <result property="departureDate" column="departure_date"/>
+        <result property="arrivalDate" column="arrival_date"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destUnlocode" column="dest_unlocode"/>
+        <result property="status" column="status"/>
+        <collection property="movements"
+                    ofType="com.example.routingms.domain.projections.VoyageProjection$CarrierMovementProjection"
+                    select="findMovements"
+                    column="voyage_number"/>
+        <collection property="acceptedCargoTypes"
+                    ofType="string"
+                    select="findAcceptedCargoTypes"
+                    column="voyage_number"/>
+    </resultMap>
+
+    <resultMap id="movementResultMap"
+               type="com.example.routingms.domain.projections.VoyageProjection$CarrierMovementProjection">
+        <result property="departureUnlocode" column="departure_unlocode"/>
+        <result property="arrivalUnlocode" column="arrival_unlocode"/>
+        <result property="departureTime" column="departure_time"/>
+        <result property="arrivalTime" column="arrival_time"/>
+    </resultMap>
+
+    <insert id="insertVoyage">
+        INSERT INTO voyage (voyage_number, carrier_code, carrier_name, ship_name,
+                            origin_unlocode, dest_unlocode, departure_date, arrival_date)
+        VALUES (#{voyageNumber}, #{carrierCode}, #{carrierName}, #{shipName},
+                #{originUnlocode}, #{destUnlocode}, #{departureDate}, #{arrivalDate})
+    </insert>
+
+    <insert id="insertCarrierMovement">
+        INSERT INTO carrier_movement (voyage_number, movement_seq, departure_unlocode,
+                                      arrival_unlocode, departure_time, arrival_time)
+        VALUES (#{voyageNumber}, #{seq}, #{departureUnlocode},
+                #{arrivalUnlocode}, #{departureTime}, #{arrivalTime})
+    </insert>
+
+    <insert id="insertAcceptedCargoType">
+        INSERT INTO voyage_accepted_cargo_type (voyage_number, cargo_type)
+        VALUES (#{voyageNumber}, #{cargoType})
+    </insert>
+
+    <select id="findByVoyageNumber" resultMap="voyageResultMap">
+        SELECT voyage_number, carrier_code, carrier_name, ship_name,
+               departure_date, arrival_date, origin_unlocode, dest_unlocode, status
+        FROM voyage
+        WHERE voyage_number = #{voyageNumber}
+    </select>
+
+    <select id="findAll" resultMap="voyageResultMap">
+        SELECT voyage_number, carrier_code, carrier_name, ship_name,
+               departure_date, arrival_date, origin_unlocode, dest_unlocode, status
+        FROM voyage
+        ORDER BY registered_at DESC
+    </select>
+
+    <select id="findMovements" resultMap="movementResultMap">
+        SELECT departure_unlocode, arrival_unlocode, departure_time, arrival_time
+        FROM carrier_movement
+        WHERE voyage_number = #{voyageNumber}
+        ORDER BY movement_seq
+    </select>
+
+    <select id="findAcceptedCargoTypes" resultType="string">
+        SELECT cargo_type
+        FROM voyage_accepted_cargo_type
+        WHERE voyage_number = #{voyageNumber}
+    </select>
+
+</mapper>
