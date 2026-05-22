@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './features/auth/contexts/AuthContext';
 import LoginPage from './features/auth/pages/LoginPage';
 import PrivateRoute from './components/layout/PrivateRoute';
+import VoyageListPage from './features/voyage/pages/VoyageListPage';
+import VoyageFormPage from './features/voyage/pages/VoyageFormPage';
 
 function Dashboard() {
   return (
@@ -19,6 +21,9 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/voyages" element={<VoyageListPage />} />
+          <Route path="/voyages/new" element={<VoyageFormPage />} />
+          <Route path="/voyages/:voyageNumber/edit" element={<VoyageFormPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
