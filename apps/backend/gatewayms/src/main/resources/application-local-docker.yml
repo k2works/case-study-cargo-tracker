@@ -1,18 +1,16 @@
-# local-docker プロファイル: Docker Compose 内のサービス名でルーティング
+# local-docker プロファイル: Kafka/PostgreSQL は Docker、アプリは localhost 起動
 spring:
   cloud:
     gateway:
-      server:
-        webflux:
-          routes:
-            - id: authms
-              uri: http://authms:8081
-              predicates:
-                - Path=/api/auth/**, /api/v1/users/**
-            - id: routingms
-              uri: http://routingms:8083
-              predicates:
-                - Path=/api/v1/voyages/**, /api/v1/routes/**
+      routes:
+        - id: authms
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**, /api/v1/users/**
+        - id: routingms
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/voyages/**, /api/v1/routes/**
 
 logging:
   level:
