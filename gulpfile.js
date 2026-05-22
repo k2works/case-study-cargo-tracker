@@ -12,6 +12,7 @@ import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import developTasks from './ops/scripts/develop.js';
+import herokuTasks from './ops/scripts/heroku.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -20,6 +21,7 @@ vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
 developTasks(gulp);
+herokuTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 
