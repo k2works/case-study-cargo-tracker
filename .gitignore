@@ -36,4 +36,4 @@ coverage/
 # Temporary
 tmp/
 .tmp/
-.claude/agent-memory
+ops/aiven-certs
