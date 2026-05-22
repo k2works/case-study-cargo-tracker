@@ -21,10 +21,10 @@
 
 ### 成功基準
 
-- [ ] `./gradlew test` がすべて PASS する（local-h2 プロファイル）
+- [x] `./gradlew test` がすべて PASS する（local-h2 プロファイル）
 - [ ] `docker compose up` で Kafka + PostgreSQL が起動し local-docker プロファイルでサービスが動作する
-- [ ] 認証（ログイン・ログアウト・アカウントロック）が UI から操作できる
-- [ ] 航海スケジュールの新規登録・更新が UI から操作できる
+- [x] 認証（ログイン・ログアウト・アカウントロック）が UI から操作できる
+- [x] 航海スケジュールの新規登録・更新が UI から操作できる
 - [ ] テストカバレッジ 80% 以上
 
 ---
@@ -119,12 +119,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Voyage 集約定義（TDD: Red → Green） | 3h | - | [ ] |
-| 2.2 | RegisterVoyageCommand / VoyageRegisteredEvent 実装 | 2h | - | [ ] |
-| 2.3 | Voyage Read Model（voyage + carrier_movement + voyage_accepted_cargo_type）MyBatis Mapper 実装 | 2h | - | [ ] |
-| 2.4 | POST /api/voyage-schedules エンドポイント実装 | 2h | - | [ ] |
-| 2.5 | バリデーション（必須項目・日付整合性・重複チェック）実装 | 2h | - | [ ] |
-| 2.6 | フロントエンド: 航海スケジュール登録フォーム実装 | 3h | - | [ ] |
+| 2.1 | Voyage 集約定義（TDD: Red → Green） | 3h | - | [x] |
+| 2.2 | RegisterVoyageCommand / VoyageRegisteredEvent 実装 | 2h | - | [x] |
+| 2.3 | Voyage Read Model（voyage + carrier_movement + voyage_accepted_cargo_type）MyBatis Mapper 実装 | 2h | - | [x] |
+| 2.4 | POST /api/voyages エンドポイント実装 | 2h | - | [x] |
+| 2.5 | バリデーション（必須項目・日付整合性）実装 | 2h | - | [x] |
+| 2.6 | フロントエンド: 航海スケジュール登録フォーム実装 | 3h | - | [x] |
 
 **小計**: 14h
 
@@ -132,9 +132,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | UpdateVoyageScheduleCommand / VoyageScheduleUpdatedEvent 実装（TDD） | 2h | - | [ ] |
-| 3.2 | PUT /api/voyage-schedules/{voyageNumber} エンドポイント実装 | 2h | - | [ ] |
-| 3.3 | フロントエンド: 差分確認画面・更新フォーム実装 | 3h | - | [ ] |
+| 3.1 | UpdateVoyageScheduleCommand / VoyageScheduleUpdatedEvent 実装（TDD） | 2h | - | [x] |
+| 3.2 | PUT /api/voyages/{voyageNumber} エンドポイント実装 | 2h | - | [x] |
+| 3.3 | フロントエンド: 更新フォーム実装 | 3h | - | [x] |
 
 **小計**: 7h
 
@@ -143,14 +143,14 @@
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | 基盤構築 | 2 | 12h | [x] |
-| US00: 認証 | 3 | 16h | [ ] |
-| US24: 航海スケジュール新規登録 | 3 | 14h | [ ] |
-| US25: 既存航海スケジュール更新 | 2 | 7h | [ ] |
+| US00: 認証 | 3 | 16h | [x] |
+| US24: 航海スケジュール新規登録 | 3 | 14h | [x] |
+| US25: 既存航海スケジュール更新 | 2 | 7h | [x] |
 | **合計** | **10** | **49h** | |
 
 **1 SP あたり**: 約 4.9h
 
-**進捗率**: 80%（8/10 SP）
+**進捗率**: 100%（10/10 SP）
 
 ---
 
