@@ -1,8 +1,53 @@
 'use strict';
 
 import path from 'path';
-import { execSync, spawn } from 'child_process';
+import readline from 'readline';
+import { execSync, spawn, spawnSync } from 'child_process';
 import { cleanDockerEnv, isDockerAvailable, openUrl } from './shared.js';
+
+// ============================================
+// ヘルパー（破壊的操作の確認・smoke チェック）
+// ============================================
+
+/**
+ * 破壊的操作の前に y/n 確認を取る。
+ * 非対話環境（CI 等）では自動的に false を返す。
+ */
+function confirmDestructive(message) {
+  if (!process.stdin.isTTY) {
+    console.error(`${message} 非対話環境では実行を中断します。対話端末から再実行してください。`);
+    return Promise.resolve(false);
+  }
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(`${message} [y/N]: `, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase() === 'y');
+    });
+  });
+}
+
+/**
+ * 指定エンドポイント群に curl でヘルスチェックを実行する。
+ */
+function runSmoke(targets, done) {
+  const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+  let failed = 0;
+  for (const t of targets) {
+    const result = spawnSync(
+      curlCmd,
+      ['-fsS', '--max-time', '5', t.url],
+      { stdio: 'inherit' }
+    );
+    if (result.status === 0) {
+      console.log(`OK : ${t.name} (${t.url})`);
+    } else {
+      console.error(`NG : ${t.name} (${t.url})`);
+      failed += 1;
+    }
+  }
+  done(failed === 0 ? null : new Error(`${failed} smoke check(s) failed`));
+}
 
 // ============================================
 // 設定
@@ -277,6 +322,75 @@ export default function(gulp) {
   });
 
   // ──────────────────────────────────────────
+  // local-docker プロファイル運用タスク
+  //
+  // docker-compose.yml と application-local-docker.yml で構成する
+  // フルスタック（Kafka + ZooKeeper + PostgreSQL + authms + routingms +
+  // gatewayms）の構築・起動・停止・リセット・疎通確認を提供する。
+  // ──────────────────────────────────────────
+
+  /**
+   * 全サービスの Docker イメージをビルド
+   */
+  gulp.task('local-docker:build', (done) => {
+    if (!isDockerAvailable()) {
+      console.error('Docker が起動していません。Docker Desktop を起動してください。');
+      process.exit(1);
+    }
+    compose('build');
+    done();
+  });
+
+  /**
+   * 全サービスを起動（Kafka + ZooKeeper + PostgreSQL + authms + routingms + gatewayms）
+   */
+  gulp.task('local-docker:up', (done) => {
+    if (!isDockerAvailable()) {
+      console.error('Docker が起動していません。Docker Desktop を起動してください。');
+      process.exit(1);
+    }
+    compose('up -d');
+    done();
+  });
+
+  /**
+   * コンテナとネットワークを停止・削除（ボリュームは保持）
+   */
+  gulp.task('local-docker:down', (done) => {
+    compose('down');
+    done();
+  });
+
+  /**
+   * ボリュームを含めた完全リセット（Kafka / PostgreSQL データを破棄）
+   * 実行前に対話的に y/n 確認を取る。
+   */
+  gulp.task('local-docker:clean', async (done) => {
+    const ok = await confirmDestructive(
+      'local-docker:clean は Kafka / PostgreSQL データを完全削除します。続行しますか？',
+    );
+    if (!ok) {
+      console.log('local-docker:clean をキャンセルしました。');
+      done();
+      return;
+    }
+    compose('down -v');
+    done();
+  });
+
+  /**
+   * authms / routingms / gatewayms の health エンドポイント疎通確認
+   */
+  gulp.task('local-docker:smoke', (done) => {
+    const targets = [
+      { name: 'authms',    url: 'http://localhost:8081/actuator/health' },
+      { name: 'routingms', url: 'http://localhost:8083/actuator/health' },
+      { name: 'gatewayms', url: 'http://localhost:8080/actuator/health' },
+    ];
+    runSmoke(targets, done);
+  });
+
+  // ──────────────────────────────────────────
   // 品質チェック
   // ──────────────────────────────────────────
 
@@ -356,6 +470,13 @@ export default function(gulp) {
   dev:infra:stop            全インフラ停止
   dev:infra:status          コンテナ状態確認
   dev:infra:logs            コンテナログ表示
+
+【local-docker プロファイル（フルスタック）】
+  local-docker:build        全サービスの Docker イメージをビルド
+  local-docker:up           全サービス起動（インフラ + authms + routingms + gatewayms）
+  local-docker:down         コンテナ停止（ボリュームは保持）
+  local-docker:clean        完全リセット（実行前に y/n 確認、Kafka / DB データを破棄）
+  local-docker:smoke        authms / routingms / gatewayms の health 疎通確認
 
 【セットアップ確認】
   dev:setup:verify          ビルド → テスト → 型チェック 一括確認
