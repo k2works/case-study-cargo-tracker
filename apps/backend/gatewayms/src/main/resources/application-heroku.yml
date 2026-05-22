@@ -2,17 +2,15 @@
 spring:
   cloud:
     gateway:
-      server:
-        webflux:
-          routes:
-            - id: authms
-              uri: ${AUTHMS_URL}
-              predicates:
-                - Path=/api/auth/**, /api/v1/users/**
-            - id: routingms
-              uri: ${ROUTINGMS_URL}
-              predicates:
-                - Path=/api/v1/voyages/**, /api/v1/routes/**
+      routes:
+        - id: authms
+          uri: ${AUTHMS_URL}
+          predicates:
+            - Path=/api/auth/**, /api/v1/users/**
+        - id: routingms
+          uri: ${ROUTINGMS_URL}
+          predicates:
+            - Path=/api/v1/voyages/**, /api/v1/routes/**
 
 logging:
   level:
