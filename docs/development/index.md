@@ -14,7 +14,7 @@
 
 | イテレーション | 期間 | 計画 | ふりかえり | 状態 |
 |---------------|------|------|-----------|------|
-| IT1 | 2026-05-21 〜 2026-06-03 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | 完了 |
+| IT1 | 2026-05-21 〜 2026-06-03 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [報告書](iteration_report-1.md) 完了 |
 | IT2 | 2026-06-04 〜 2026-06-17 | 未作成 | - | 未着手 |
 | IT3 | 2026-06-18 〜 2026-07-01 | 未作成 | - | 未着手 |
 | IT4 | 2026-07-02 〜 2026-07-15 | 未作成 | - | 未着手 |
