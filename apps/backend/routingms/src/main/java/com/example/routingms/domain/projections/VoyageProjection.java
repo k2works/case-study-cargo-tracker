@@ -17,7 +17,7 @@ public class VoyageProjection {
     private List<CarrierMovementProjection> movements;
     private List<String> acceptedCargoTypes;
 
-    public VoyageProjection() {}
+    public VoyageProjection() { /* MyBatis result mapping */ }
 
     public String getVoyageNumber() { return voyageNumber; }
     public void setVoyageNumber(String voyageNumber) { this.voyageNumber = voyageNumber; }
@@ -58,7 +58,7 @@ public class VoyageProjection {
         private LocalDateTime departureTime;
         private LocalDateTime arrivalTime;
 
-        public CarrierMovementProjection() {}
+        public CarrierMovementProjection() { /* MyBatis result mapping */ }
 
         public String getDepartureUnlocode() { return departureUnlocode; }
         public void setDepartureUnlocode(String departureUnlocode) { this.departureUnlocode = departureUnlocode; }

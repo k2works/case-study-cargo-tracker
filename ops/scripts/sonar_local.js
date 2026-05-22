@@ -286,9 +286,10 @@ function runScan(project, token, hostUrl) {
       );
       break;
 
-    case 'gradle':
+    case 'gradle': {
+      const gradlew = path.join(process.cwd(), 'apps', 'backend', 'gradlew');
       execSync(
-        `gradle sonar ` +
+        `${gradlew} sonar ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
@@ -296,21 +297,27 @@ function runScan(project, token, hostUrl) {
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
+    }
 
     case 'sonar-scanner':
-    default:
+    default: {
+      // sonar-project.properties があればソース指定を省略（プロパティファイルが優先）
+      const hasSonarProps = fs.existsSync(path.join(cwd, 'sonar-project.properties'));
+      const sourceArgs = hasSonarProps ? '' :
+        `-Dsonar.sources=src ` +
+        `-Dsonar.tests=src ` +
+        `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" `;
       execSync(
         `npx sonarqube-scanner ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
-        `-Dsonar.sources=src ` +
-        `-Dsonar.tests=src ` +
-        `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" ` +
+        sourceArgs +
         `-Dsonar.host.url=${hostUrl} ` +
         `-Dsonar.token=${token}`,
         { stdio: 'inherit', cwd, env: cleanDockerEnv() },
       );
       break;
+    }
   }
 }
 

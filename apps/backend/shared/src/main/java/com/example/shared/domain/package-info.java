@@ -5,4 +5,4 @@
  * 配置する。Location（港湾コード）や Money（金額）など、ドメインを横断する
  * 概念のみを置き、特定の集約に閉じる概念は各サービス側で定義する。</p>
  */
-package com.example.shared.domain;
+package com.example.shared.domain; //NOSONAR java:S4228 - package-info.java は意図的なドキュメント用ファイル

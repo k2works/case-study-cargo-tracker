@@ -1,6 +1,7 @@
 [versions]
 # Languages / Build
 java = "25"
+sonarqube = "6.0.1.5171"
 
 # Spring
 springBoot = "3.4.7"
@@ -79,3 +80,4 @@ jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }

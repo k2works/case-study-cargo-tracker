@@ -10,6 +10,7 @@ import java.util.List;
 @Mapper
 public interface VoyageMapper {
 
+    @SuppressWarnings("java:S107") // MyBatis Mapper は SQL の全カラムをパラメータに必要とするため許容
     void insertVoyage(@Param("voyageNumber") String voyageNumber,
                       @Param("carrierCode") String carrierCode,
                       @Param("carrierName") String carrierName,
