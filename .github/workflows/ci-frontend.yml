@@ -1,0 +1,71 @@
+name: フロントエンド CI
+
+on:
+  push:
+    branches: [java/take-5, main]
+    paths:
+      - 'apps/frontend/**'
+      - '.github/workflows/ci-frontend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/frontend/**'
+
+jobs:
+  test:
+    name: テスト実行
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node.js 20 セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: 依存関係インストール
+        run: npm ci
+
+      - name: テスト実行
+        run: npm run test:run
+
+      - name: テスト結果アップロード
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-frontend
+          path: apps/frontend/coverage/
+
+  lint:
+    name: 型チェック・Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node.js 20 セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: 依存関係インストール
+        run: npm ci
+
+      - name: TypeScript 型チェック
+        run: npx tsc --noEmit
+
+      - name: ESLint チェック
+        run: npm run lint

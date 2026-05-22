@@ -1,0 +1,83 @@
+name: バックエンド CI
+
+on:
+  push:
+    branches: [java/take-5, main]
+    paths:
+      - 'apps/backend/**'
+      - '.github/workflows/ci-backend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+
+jobs:
+  test:
+    name: テスト実行
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 21 セットアップ
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle キャッシュ
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/backend/**/*.gradle*', 'apps/backend/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: テスト実行
+        run: ./gradlew test -Dspring.profiles.active=local-h2
+        env:
+          GRADLE_OPTS: -Dnet.bytebuddy.experimental=true
+
+      - name: テスト結果アップロード
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-backend
+          path: apps/backend/**/build/reports/tests/
+
+  build:
+    name: ビルド
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test
+    defaults:
+      run:
+        working-directory: apps/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 21 セットアップ
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle キャッシュ
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/backend/**/*.gradle*', 'apps/backend/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: ビルド
+        run: ./gradlew build -x test
