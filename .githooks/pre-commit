@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# pre-commit: ステージングされたファイルに応じて品質チェックを実行する
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BACKEND_DIR="$REPO_ROOT/apps/backend"
+FRONTEND_DIR="$REPO_ROOT/apps/frontend"
+
+# ステージングされたファイルを取得
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+
+# ────────────────────────────────────────────
+# Java: apps/backend 配下の .java ファイルがあれば check を実行
+# ────────────────────────────────────────────
+if echo "$STAGED" | grep -qE '^apps/backend/.*\.java$'; then
+  echo "[pre-commit] Java ファイルの変更を検出 → Gradle check を実行します..."
+  cd "$BACKEND_DIR"
+  ./gradlew check -x test -Dspring.profiles.active=local-h2
+  if [ $? -ne 0 ]; then
+    echo "[pre-commit] ❌ Gradle check が失敗しました。コミットを中止します。"
+    exit 1
+  fi
+  echo "[pre-commit] ✅ Gradle check 通過"
+fi
+
+# ────────────────────────────────────────────
+# Frontend: apps/frontend 配下の TS/TSX/JS/JSX ファイルがあれば lint + test + build
+# ────────────────────────────────────────────
+if echo "$STAGED" | grep -qE '^apps/frontend/.*\.(ts|tsx|js|jsx)$'; then
+  echo "[pre-commit] Frontend ファイルの変更を検出 → ESLint + テスト + ビルドを実行します..."
+  cd "$FRONTEND_DIR"
+
+  echo "[pre-commit] ESLint チェック中..."
+  npm run lint
+  if [ $? -ne 0 ]; then
+    echo "[pre-commit] ❌ ESLint が失敗しました。コミットを中止します。"
+    exit 1
+  fi
+
+  echo "[pre-commit] テスト実行中..."
+  npm run test:run
+  if [ $? -ne 0 ]; then
+    echo "[pre-commit] ❌ テストが失敗しました。コミットを中止します。"
+    exit 1
+  fi
+
+  echo "[pre-commit] ビルドチェック中..."
+  npm run build
+  if [ $? -ne 0 ]; then
+    echo "[pre-commit] ❌ ビルドが失敗しました。コミットを中止します。"
+    exit 1
+  fi
+
+  echo "[pre-commit] ✅ Frontend チェック通過"
+fi
+
+exit 0
