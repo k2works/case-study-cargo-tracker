@@ -12,6 +12,9 @@ spring:
       path: /h2-console
   flyway:
     enabled: false
+  sql:
+    init:
+      mode: always
   devtools:
     restart:
       enabled: true
