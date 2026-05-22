@@ -32,6 +32,9 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 
+server:
+  port: ${PORT:8083}
+
 logging:
   level:
     com.example.routingms: INFO

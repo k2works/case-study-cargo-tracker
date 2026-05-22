@@ -12,6 +12,9 @@ spring:
           predicates:
             - Path=/api/v1/voyages/**, /api/v1/routes/**
 
+server:
+  port: ${PORT:8080}
+
 logging:
   level:
     com.example.gatewayms: INFO

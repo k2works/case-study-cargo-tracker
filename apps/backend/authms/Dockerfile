@@ -18,11 +18,13 @@ COPY authms/build.gradle authms/build.gradle
 COPY routingms/build.gradle routingms/build.gradle
 COPY gatewayms/build.gradle gatewayms/build.gradle
 
-RUN gradle :authms:dependencies --no-daemon || true
+RUN sed -i 's/java = "25"/java = "21"/' gradle/libs.versions.toml && \
+    gradle :authms:dependencies --no-daemon || true
 
 COPY shared/src/ shared/src/
 COPY authms/src/ authms/src/
-RUN gradle :authms:bootJar --no-daemon -x test
+RUN gradle :authms:bootJar --no-daemon -x test && \
+    find authms/build/libs/ -name "authms*.jar" ! -name "*plain*" -exec cp {} authms/build/libs/authms.jar \;
 
 # ===== Stage 2: runtime =====
 FROM eclipse-temurin:21-jre
@@ -38,9 +40,7 @@ USER cargo
 
 EXPOSE 8081
 
-ENV JAVA_OPTS=""
+ENTRYPOINT ["java", "-jar", "/app/authms.jar"]
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/authms.jar --server.port=${PORT:-8081}"]
-
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
-    CMD wget --spider -q http://localhost:8081/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
+    CMD wget --spider -q http://localhost:${PORT:-8081}/actuator/health || exit 1

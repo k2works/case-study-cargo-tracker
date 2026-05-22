@@ -16,11 +16,13 @@ COPY authms/build.gradle authms/build.gradle
 COPY routingms/build.gradle routingms/build.gradle
 COPY gatewayms/build.gradle gatewayms/build.gradle
 
-RUN gradle :routingms:dependencies --no-daemon || true
+RUN sed -i 's/java = "25"/java = "21"/' gradle/libs.versions.toml && \
+    gradle :routingms:dependencies --no-daemon || true
 
 COPY shared/src/ shared/src/
 COPY routingms/src/ routingms/src/
-RUN gradle :routingms:bootJar --no-daemon -x test
+RUN gradle :routingms:bootJar --no-daemon -x test && \
+    find routingms/build/libs/ -name "routingms*.jar" ! -name "*plain*" -exec cp {} routingms/build/libs/routingms.jar \;
 
 # ===== Stage 2: runtime =====
 FROM eclipse-temurin:21-jre
@@ -36,9 +38,7 @@ USER cargo
 
 EXPOSE 8083
 
-ENV JAVA_OPTS=""
+ENTRYPOINT ["java", "-jar", "/app/routingms.jar"]
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/routingms.jar --server.port=${PORT:-8083}"]
-
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
-    CMD wget --spider -q http://localhost:8083/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
+    CMD wget --spider -q http://localhost:${PORT:-8083}/actuator/health || exit 1

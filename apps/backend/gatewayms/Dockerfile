@@ -16,11 +16,13 @@ COPY authms/build.gradle authms/build.gradle
 COPY routingms/build.gradle routingms/build.gradle
 COPY gatewayms/build.gradle gatewayms/build.gradle
 
-RUN gradle :gatewayms:dependencies --no-daemon || true
+RUN sed -i 's/java = "25"/java = "21"/' gradle/libs.versions.toml && \
+    gradle :gatewayms:dependencies --no-daemon || true
 
 COPY shared/src/ shared/src/
 COPY gatewayms/src/ gatewayms/src/
-RUN gradle :gatewayms:bootJar --no-daemon -x test
+RUN gradle :gatewayms:bootJar --no-daemon -x test && \
+    find gatewayms/build/libs/ -name "gatewayms*.jar" ! -name "*plain*" -exec cp {} gatewayms/build/libs/gatewayms.jar \;
 
 # ===== Stage 2: runtime =====
 FROM eclipse-temurin:21-jre
@@ -36,9 +38,7 @@ USER cargo
 
 EXPOSE 8080
 
-ENV JAVA_OPTS=""
+ENTRYPOINT ["java", "-jar", "/app/gatewayms.jar"]
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/gatewayms.jar --server.port=${PORT:-8080}"]
-
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
-    CMD wget --spider -q http://localhost:8080/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
+    CMD wget --spider -q http://localhost:${PORT:-8080}/actuator/health || exit 1
