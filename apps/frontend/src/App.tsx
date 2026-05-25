@@ -10,6 +10,7 @@ import BookingListPage from './features/booking/pages/BookingListPage';
 import BookingFormPage from './features/booking/pages/BookingFormPage';
 import QuotationListPage from './features/quote/pages/QuotationListPage';
 import QuotationFormPage from './features/quote/pages/QuotationFormPage';
+import QuotationDetailPage from './features/quote/pages/QuotationDetailPage';
 
 function Dashboard() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/bookings/new" element={<BookingFormPage />} />
           <Route path="/quotes" element={<QuotationListPage />} />
           <Route path="/quotes/new" element={<QuotationFormPage />} />
+          <Route path="/quotes/:quotationId" element={<QuotationDetailPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

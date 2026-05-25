@@ -95,7 +95,15 @@ export default function QuotationListPage() {
           <tbody className="divide-y divide-gray-200">
             {quotations.map((q) => (
               <tr key={q.quotationId}>
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{q.quotationId}</td>
+                <td className="px-4 py-3 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/quotes/${q.quotationId}`)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {q.quotationId}
+                  </button>
+                </td>
                 <td className={td}>{q.shipperId}</td>
                 <td className={td}>{q.originUnlocode}</td>
                 <td className={td}>{q.destinationUnlocode}</td>
