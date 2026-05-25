@@ -4,7 +4,9 @@ import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
+import com.example.bookingms.domain.model.HazardInfo;
 import com.example.bookingms.domain.model.RouteSpecification;
+import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,8 +30,8 @@ class CargoProjectionsEventHandlerTest {
     private CargoProjectionsEventHandler handler;
 
     @Test
-    @DisplayName("US04: CargoBookedEvent を受信すると cargo_summary に INSERT する")
-    void CargoBookedEvent受信でinsertCargoSummaryが呼ばれる() {
+    @DisplayName("US04: 一般貨物の CargoBookedEvent を受信すると hazard/temperature が null で INSERT する")
+    void 一般貨物のCargoBookedEvent受信でhazardとtemperatureがnullでinsertされる() {
         CargoBookedEvent event = new CargoBookedEvent(
                 "B-001",
                 "S-001",
@@ -58,6 +60,95 @@ class CargoProjectionsEventHandlerTest {
                 60,
                 10,
                 "電子部品",
+                null,
+                null,
+                null,
+                null,
+                null,
+                "PRELIMINARY",
+                "NOT_ROUTED");
+    }
+
+    @Test
+    @DisplayName("US05: 危険物貨物の CargoBookedEvent を受信すると hazard_* に値が設定されて INSERT する")
+    void 危険物貨物のCargoBookedEvent受信でhazardカラムが設定される() {
+        CargoBookedEvent event = new CargoBookedEvent(
+                "B-101",
+                "S-001",
+                new RouteSpecification("JPTYO", "USNYC", LocalDate.of(2026, 9, 30)),
+                new CargoSpecification(
+                        CargoType.HAZARDOUS,
+                        new BigDecimal("1500.00"),
+                        new Dimensions(120, 80, 60),
+                        10,
+                        "アセトン",
+                        new HazardInfo("3", "UN1090", "引火性液体・直射日光厳禁"),
+                        null),
+                "PRELIMINARY",
+                "NOT_ROUTED");
+
+        handler.on(event);
+
+        verify(cargoSummaryMapper).insertCargoSummary(
+                "B-101",
+                "S-001",
+                "JPTYO",
+                "USNYC",
+                LocalDate.of(2026, 9, 30),
+                "HAZARDOUS",
+                new BigDecimal("1500.00"),
+                120,
+                80,
+                60,
+                10,
+                "アセトン",
+                "3",
+                "UN1090",
+                "引火性液体・直射日光厳禁",
+                null,
+                null,
+                "PRELIMINARY",
+                "NOT_ROUTED");
+    }
+
+    @Test
+    @DisplayName("US05: 冷凍貨物の CargoBookedEvent を受信すると temperature_* に値が設定されて INSERT する")
+    void 冷凍貨物のCargoBookedEvent受信でtemperatureカラムが設定される() {
+        CargoBookedEvent event = new CargoBookedEvent(
+                "B-102",
+                "S-001",
+                new RouteSpecification("JPTYO", "USNYC", LocalDate.of(2026, 9, 30)),
+                new CargoSpecification(
+                        CargoType.REFRIGERATED,
+                        new BigDecimal("2000.00"),
+                        new Dimensions(150, 100, 80),
+                        20,
+                        "冷凍マグロ",
+                        null,
+                        new TemperatureCondition(new BigDecimal("-25.0"), new BigDecimal("-18.0"))),
+                "PRELIMINARY",
+                "NOT_ROUTED");
+
+        handler.on(event);
+
+        verify(cargoSummaryMapper).insertCargoSummary(
+                "B-102",
+                "S-001",
+                "JPTYO",
+                "USNYC",
+                LocalDate.of(2026, 9, 30),
+                "REFRIGERATED",
+                new BigDecimal("2000.00"),
+                150,
+                100,
+                80,
+                20,
+                "冷凍マグロ",
+                null,
+                null,
+                null,
+                new BigDecimal("-25.0"),
+                new BigDecimal("-18.0"),
                 "PRELIMINARY",
                 "NOT_ROUTED");
     }

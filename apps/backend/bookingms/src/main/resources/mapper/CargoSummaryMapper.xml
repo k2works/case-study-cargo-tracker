@@ -18,6 +18,11 @@
         <result property="heightCm" column="height_cm"/>
         <result property="quantity" column="quantity"/>
         <result property="productName" column="product_name"/>
+        <result property="hazardImoClass" column="hazard_imo_class"/>
+        <result property="hazardUnNumber" column="hazard_un_number"/>
+        <result property="hazardDeclaration" column="hazard_declaration"/>
+        <result property="temperatureMinC" column="temperature_min_c"/>
+        <result property="temperatureMaxC" column="temperature_max_c"/>
         <result property="bookingStatus" column="booking_status"/>
         <result property="routingStatus" column="routing_status"/>
         <result property="estimatedAmount" column="estimated_amount"/>
@@ -34,12 +39,16 @@
             origin_unlocode, destination_unlocode, arrival_deadline,
             cargo_type, weight_kg, length_cm, width_cm, height_cm,
             quantity, product_name,
+            hazard_imo_class, hazard_un_number, hazard_declaration,
+            temperature_min_c, temperature_max_c,
             booking_status, routing_status
         ) VALUES (
             #{bookingId}, #{shipperId},
             #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline},
             #{cargoType}, #{weightKg}, #{lengthCm}, #{widthCm}, #{heightCm},
             #{quantity}, #{productName},
+            #{hazardImoClass}, #{hazardUnNumber}, #{hazardDeclaration},
+            #{temperatureMinC}, #{temperatureMaxC},
             #{bookingStatus}, #{routingStatus}
         )
     </insert>

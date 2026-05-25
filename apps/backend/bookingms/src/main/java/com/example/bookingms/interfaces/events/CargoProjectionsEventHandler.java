@@ -1,14 +1,17 @@
 package com.example.bookingms.interfaces.events;
 
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.model.HazardInfo;
+import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper;
 import org.axonframework.eventhandling.EventHandler;
 import org.springframework.stereotype.Component;
 
 /**
- * 貨物予約 Read Model 更新用の EventHandler（US04）。
+ * 貨物予約 Read Model 更新用の EventHandler（US04 + US05）。
  *
- * <p>{@link CargoBookedEvent} を受信して {@code cargo_summary} に 1 行 INSERT する。</p>
+ * <p>{@link CargoBookedEvent} を受信して {@code cargo_summary} に 1 行 INSERT する。
+ * US05 で hazard_* / temperature_* カラムへの書き込みを追加。</p>
  */
 @Component
 public class CargoProjectionsEventHandler {
@@ -21,6 +24,8 @@ public class CargoProjectionsEventHandler {
 
     @EventHandler
     public void on(CargoBookedEvent event) {
+        HazardInfo hazard = event.cargoSpec().hazardInfo();
+        TemperatureCondition temp = event.cargoSpec().temperatureCondition();
         cargoSummaryMapper.insertCargoSummary(
                 event.bookingId(),
                 event.shipperId(),
@@ -34,6 +39,11 @@ public class CargoProjectionsEventHandler {
                 event.cargoSpec().dimensions().heightCm(),
                 event.cargoSpec().quantity(),
                 event.cargoSpec().productName(),
+                hazard == null ? null : hazard.imoClass(),
+                hazard == null ? null : hazard.unNumber(),
+                hazard == null ? null : hazard.declaration(),
+                temp == null ? null : temp.minCelsius(),
+                temp == null ? null : temp.maxCelsius(),
                 event.bookingStatus(),
                 event.routingStatus()
         );

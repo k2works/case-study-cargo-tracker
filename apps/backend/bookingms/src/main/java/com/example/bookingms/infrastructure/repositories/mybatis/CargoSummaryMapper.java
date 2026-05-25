@@ -11,7 +11,8 @@ import java.util.List;
 /**
  * 貨物予約 Read Model 用の MyBatis Mapper。
  *
- * <p>SQL は {@code resources/mapper/CargoSummaryMapper.xml} で定義する。</p>
+ * <p>SQL は {@code resources/mapper/CargoSummaryMapper.xml} で定義する。
+ * US05 で hazard_* / temperature_* パラメータを追加。</p>
  */
 @Mapper
 public interface CargoSummaryMapper {
@@ -29,6 +30,11 @@ public interface CargoSummaryMapper {
                             @Param("heightCm") Integer heightCm,
                             @Param("quantity") Integer quantity,
                             @Param("productName") String productName,
+                            @Param("hazardImoClass") String hazardImoClass,
+                            @Param("hazardUnNumber") String hazardUnNumber,
+                            @Param("hazardDeclaration") String hazardDeclaration,
+                            @Param("temperatureMinC") BigDecimal temperatureMinC,
+                            @Param("temperatureMaxC") BigDecimal temperatureMaxC,
                             @Param("bookingStatus") String bookingStatus,
                             @Param("routingStatus") String routingStatus);
 

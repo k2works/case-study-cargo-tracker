@@ -6,7 +6,9 @@ import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
+import com.example.bookingms.domain.model.HazardInfo;
 import com.example.bookingms.domain.model.RouteSpecification;
+import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
@@ -18,12 +20,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * 貨物予約 REST Controller（US04）。
+ * 貨物予約 REST Controller（US04 + US05）。
  */
 @RestController
 @RequestMapping("/api/v1/bookings")
@@ -58,11 +61,34 @@ public class CargoBookingController {
                                 request.widthCm() == null ? 0 : request.widthCm(),
                                 request.heightCm() == null ? 0 : request.heightCm()),
                         request.quantity() == null ? 0 : request.quantity(),
-                        request.productName())
+                        request.productName(),
+                        toHazardInfo(request),
+                        toTemperatureCondition(request))
         );
 
         commandService.book(command).join();
         return ResponseEntity.status(201).body(Map.of("bookingId", bookingId));
+    }
+
+    private HazardInfo toHazardInfo(BookCargoRequest request) {
+        if (request.hazardImoClass() == null
+                && request.hazardUnNumber() == null
+                && request.hazardDeclaration() == null) {
+            return null;
+        }
+        return new HazardInfo(
+                request.hazardImoClass(),
+                request.hazardUnNumber(),
+                request.hazardDeclaration());
+    }
+
+    private TemperatureCondition toTemperatureCondition(BookCargoRequest request) {
+        BigDecimal min = request.temperatureMinC();
+        BigDecimal max = request.temperatureMaxC();
+        if (min == null && max == null) {
+            return null;
+        }
+        return new TemperatureCondition(min, max);
     }
 
     @GetMapping("/{bookingId}")

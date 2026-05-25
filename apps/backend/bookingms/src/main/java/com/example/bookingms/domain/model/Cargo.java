@@ -12,10 +12,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * 貨物予約集約（US04 / Booking Context）。
+ * 貨物予約集約（US04 + US05 / Booking Context）。
  *
  * <p>Event Sourcing で永続化される Aggregate Root。
- * 状態は CargoBookedEvent から再生される。</p>
+ * 状態は CargoBookedEvent から再生される。
+ * US05 で CargoType 別の固有情報（HazardInfo / TemperatureCondition）の検証を追加。</p>
  */
 @Aggregate
 public class Cargo {
@@ -93,6 +94,59 @@ public class Cargo {
         }
         if (cargoSpec.productName() == null || cargoSpec.productName().isBlank()) {
             throw new IllegalArgumentException("品名は必須です");
+        }
+        validateCargoTypeSpecificInfo(cargoSpec);
+    }
+
+    private void validateCargoTypeSpecificInfo(CargoSpecification cargoSpec) {
+        switch (cargoSpec.cargoType()) {
+            case HAZARDOUS -> validateHazardInfo(cargoSpec);
+            case REFRIGERATED -> validateTemperatureCondition(cargoSpec);
+            case GENERAL -> validateNoSpecificInfo(cargoSpec);
+        }
+    }
+
+    private void validateHazardInfo(CargoSpecification cargoSpec) {
+        HazardInfo hazardInfo = cargoSpec.hazardInfo();
+        if (hazardInfo == null) {
+            throw new IllegalArgumentException("危険物貨物では危険物申告情報が必須です");
+        }
+        if (hazardInfo.imoClass() == null || hazardInfo.imoClass().isBlank()) {
+            throw new IllegalArgumentException("危険物の IMO 分類クラスは必須です");
+        }
+        if (hazardInfo.unNumber() == null || hazardInfo.unNumber().isBlank()) {
+            throw new IllegalArgumentException("危険物の国連番号は必須です");
+        }
+        if (hazardInfo.declaration() == null || hazardInfo.declaration().isBlank()) {
+            throw new IllegalArgumentException("危険物の申告文は必須です");
+        }
+        if (cargoSpec.temperatureCondition() != null) {
+            throw new IllegalArgumentException("危険物貨物に温度管理条件は指定できません");
+        }
+    }
+
+    private void validateTemperatureCondition(CargoSpecification cargoSpec) {
+        TemperatureCondition condition = cargoSpec.temperatureCondition();
+        if (condition == null) {
+            throw new IllegalArgumentException("冷凍貨物では温度管理条件が必須です");
+        }
+        if (condition.minCelsius() == null || condition.maxCelsius() == null) {
+            throw new IllegalArgumentException("温度管理条件の最低・最高温度は必須です");
+        }
+        if (condition.minCelsius().compareTo(condition.maxCelsius()) > 0) {
+            throw new IllegalArgumentException("温度管理条件の最低温度は最高温度以下である必要があります");
+        }
+        if (cargoSpec.hazardInfo() != null) {
+            throw new IllegalArgumentException("冷凍貨物に危険物申告情報は指定できません");
+        }
+    }
+
+    private void validateNoSpecificInfo(CargoSpecification cargoSpec) {
+        if (cargoSpec.hazardInfo() != null) {
+            throw new IllegalArgumentException("一般貨物に危険物申告情報は指定できません");
+        }
+        if (cargoSpec.temperatureCondition() != null) {
+            throw new IllegalArgumentException("一般貨物に温度管理条件は指定できません");
         }
     }
 

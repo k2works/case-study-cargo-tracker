@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
  * 貨物予約 Read Model (POJO + MyBatis ResultMap)。
  *
  * <p>cargo_summary テーブルの各カラムに対応するフィールドを持つ。
- * MyBatis が setter を呼び出して値を設定する。</p>
+ * MyBatis が setter を呼び出して値を設定する。
+ * US05 で hazard_* / temperature_* カラムに対応するフィールドを追加。</p>
  */
 public class CargoSummary {
 
@@ -25,6 +26,11 @@ public class CargoSummary {
     private Integer heightCm;
     private Integer quantity;
     private String productName;
+    private String hazardImoClass;
+    private String hazardUnNumber;
+    private String hazardDeclaration;
+    private BigDecimal temperatureMinC;
+    private BigDecimal temperatureMaxC;
     private String bookingStatus;
     private String routingStatus;
     private BigDecimal estimatedAmount;
@@ -74,6 +80,21 @@ public class CargoSummary {
 
     public String getProductName() { return productName; }
     public void setProductName(String productName) { this.productName = productName; }
+
+    public String getHazardImoClass() { return hazardImoClass; }
+    public void setHazardImoClass(String hazardImoClass) { this.hazardImoClass = hazardImoClass; }
+
+    public String getHazardUnNumber() { return hazardUnNumber; }
+    public void setHazardUnNumber(String hazardUnNumber) { this.hazardUnNumber = hazardUnNumber; }
+
+    public String getHazardDeclaration() { return hazardDeclaration; }
+    public void setHazardDeclaration(String hazardDeclaration) { this.hazardDeclaration = hazardDeclaration; }
+
+    public BigDecimal getTemperatureMinC() { return temperatureMinC; }
+    public void setTemperatureMinC(BigDecimal temperatureMinC) { this.temperatureMinC = temperatureMinC; }
+
+    public BigDecimal getTemperatureMaxC() { return temperatureMaxC; }
+    public void setTemperatureMaxC(BigDecimal temperatureMaxC) { this.temperatureMaxC = temperatureMaxC; }
 
     public String getBookingStatus() { return bookingStatus; }
     public void setBookingStatus(String bookingStatus) { this.bookingStatus = bookingStatus; }

@@ -115,4 +115,107 @@ class CargoBookingControllerTest {
         assertThat(response.getBody().get(0).bookingId()).isEqualTo("B-100");
         assertThat(response.getBody().get(0).bookingStatus()).isEqualTo("PRELIMINARY");
     }
+
+    @Test
+    @DisplayName("US05: 危険物予約リクエストで hazard 情報が Command に渡される")
+    void 危険物予約リクエストでhazard情報がCommandに渡される() {
+        when(commandService.book(any(BookCargoCommand.class)))
+                .thenReturn(CompletableFuture.completedFuture("ok"));
+
+        BookCargoRequest request = new BookCargoRequest(
+                null,
+                "S-001",
+                "JPTYO",
+                "USNYC",
+                LocalDate.of(2026, 9, 30),
+                "HAZARDOUS",
+                new BigDecimal("1500.00"),
+                120, 80, 60,
+                10,
+                "アセトン",
+                "3",
+                "UN1090",
+                "引火性液体・直射日光厳禁",
+                null,
+                null);
+
+        ResponseEntity<Map<String, String>> response = controller.book(request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        ArgumentCaptor<BookCargoCommand> captor = ArgumentCaptor.forClass(BookCargoCommand.class);
+        org.mockito.Mockito.verify(commandService).book(captor.capture());
+        BookCargoCommand cmd = captor.getValue();
+        assertThat(cmd.cargoSpec().cargoType().name()).isEqualTo("HAZARDOUS");
+        assertThat(cmd.cargoSpec().hazardInfo()).isNotNull();
+        assertThat(cmd.cargoSpec().hazardInfo().imoClass()).isEqualTo("3");
+        assertThat(cmd.cargoSpec().hazardInfo().unNumber()).isEqualTo("UN1090");
+        assertThat(cmd.cargoSpec().hazardInfo().declaration()).isEqualTo("引火性液体・直射日光厳禁");
+        assertThat(cmd.cargoSpec().temperatureCondition()).isNull();
+    }
+
+    @Test
+    @DisplayName("US05: 冷凍予約リクエストで temperatureCondition が Command に渡される")
+    void 冷凍予約リクエストでtemperatureConditionがCommandに渡される() {
+        when(commandService.book(any(BookCargoCommand.class)))
+                .thenReturn(CompletableFuture.completedFuture("ok"));
+
+        BookCargoRequest request = new BookCargoRequest(
+                null,
+                "S-001",
+                "JPTYO",
+                "USNYC",
+                LocalDate.of(2026, 9, 30),
+                "REFRIGERATED",
+                new BigDecimal("2000.00"),
+                150, 100, 80,
+                20,
+                "冷凍マグロ",
+                null,
+                null,
+                null,
+                new BigDecimal("-25.0"),
+                new BigDecimal("-18.0"));
+
+        ResponseEntity<Map<String, String>> response = controller.book(request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        ArgumentCaptor<BookCargoCommand> captor = ArgumentCaptor.forClass(BookCargoCommand.class);
+        org.mockito.Mockito.verify(commandService).book(captor.capture());
+        BookCargoCommand cmd = captor.getValue();
+        assertThat(cmd.cargoSpec().cargoType().name()).isEqualTo("REFRIGERATED");
+        assertThat(cmd.cargoSpec().temperatureCondition()).isNotNull();
+        assertThat(cmd.cargoSpec().temperatureCondition().minCelsius()).isEqualByComparingTo("-25.0");
+        assertThat(cmd.cargoSpec().temperatureCondition().maxCelsius()).isEqualByComparingTo("-18.0");
+        assertThat(cmd.cargoSpec().hazardInfo()).isNull();
+    }
+
+    @Test
+    @DisplayName("US05: CargoSummaryResponse.from で hazard / temperature を変換できる")
+    void CargoSummaryResponseFromでhazardとtemperatureが変換される() {
+        CargoSummary p = new CargoSummary();
+        p.setBookingId("B-200");
+        p.setShipperId("S-001");
+        p.setOriginUnlocode("JPTYO");
+        p.setDestinationUnlocode("USNYC");
+        p.setCargoType("HAZARDOUS");
+        p.setBookingStatus("PRELIMINARY");
+        p.setRoutingStatus("NOT_ROUTED");
+        p.setHazardImoClass("3");
+        p.setHazardUnNumber("UN1090");
+        p.setHazardDeclaration("引火性液体");
+        p.setTemperatureMinC(new BigDecimal("-25.0"));
+        p.setTemperatureMaxC(new BigDecimal("-18.0"));
+        when(queryService.findByBookingId("B-200")).thenReturn(p);
+
+        ResponseEntity<CargoSummaryResponse> response = controller.findByBookingId("B-200");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        CargoSummaryResponse body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.hazardImoClass()).isEqualTo("3");
+        assertThat(body.hazardUnNumber()).isEqualTo("UN1090");
+        assertThat(body.hazardDeclaration()).isEqualTo("引火性液体");
+        assertThat(body.temperatureMinC()).isEqualByComparingTo("-25.0");
+        assertThat(body.temperatureMaxC()).isEqualByComparingTo("-18.0");
+    }
 }
