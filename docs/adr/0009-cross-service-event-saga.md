@@ -6,7 +6,7 @@ bookingms ⇔ routingms ⇔ trackingms 間の業務連携を、Kafka tracking �
 
 ## ステータス
 
-提案中（IT3 で承認）
+承認済み（IT3 で承認）
 
 ## コンテキスト
 
