@@ -105,6 +105,7 @@ nav:
       - ADR-0002 MyBatis 採用: adr/0002-mybatis-adoption.md
       - ADR-0006 Heroku デプロイ構成: adr/0006-heroku-deployment-setup.md
       - ADR-0007 DB 初期化 Flyway 統一: adr/0007-unify-db-initialization-with-flyway.md
+      - ADR-0008 ページネーション戦略: adr/0008-pagination-strategy.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
