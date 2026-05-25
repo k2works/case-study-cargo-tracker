@@ -71,16 +71,6 @@ export async function fetchBookingsPage(page = 0, size = 20): Promise<PageRespon
   return res.json();
 }
 
-/**
- * 予約一覧（後方互換、items のみ）。
- *
- * <p>新規コードは {@link fetchBookingsPage} を使用すること。</p>
- */
-export async function fetchBookings(): Promise<CargoSummary[]> {
-  const page = await fetchBookingsPage(0, 200);
-  return page.items;
-}
-
 export async function fetchBooking(bookingId: string): Promise<CargoSummary> {
   const res = await fetch(`/api/v1/bookings/${bookingId}`, {
     headers: authHeader(),

@@ -51,7 +51,12 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
 describe('BookingFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(shipperApi.fetchShippers).mockResolvedValue(mockShippers);
+    vi.mocked(shipperApi.fetchShippersPage).mockResolvedValue({
+      items: mockShippers,
+      totalCount: mockShippers.length,
+      page: 0,
+      size: 200,
+    });
   });
 
   it('US04: 新規予約フォームが表示される', async () => {

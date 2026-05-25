@@ -1,3 +1,7 @@
+import type { PageResponse } from '../../../shared/api/types';
+
+export type { PageResponse };
+
 export type ShipperType = 'INDIVIDUAL' | 'CORPORATE';
 
 export interface Shipper {
@@ -34,13 +38,6 @@ export interface RegisterShipperResponse {
   shipperId: string;
 }
 
-export interface PageResponse<T> {
-  items: T[];
-  totalCount: number;
-  page: number;
-  size: number;
-}
-
 function authHeader(): Record<string, string> {
   const token = sessionStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -58,16 +55,6 @@ export async function fetchShippersPage(page = 0, size = 20): Promise<PageRespon
   });
   if (!res.ok) throw new Error('荷主の取得に失敗しました');
   return res.json();
-}
-
-/**
- * 荷主一覧（後方互換、items のみ）。
- *
- * <p>新規コードは {@link fetchShippersPage} を使用すること。</p>
- */
-export async function fetchShippers(): Promise<Shipper[]> {
-  const page = await fetchShippersPage(0, 200);
-  return page.items;
 }
 
 export async function fetchShippersByEmail(email: string): Promise<Shipper[]> {

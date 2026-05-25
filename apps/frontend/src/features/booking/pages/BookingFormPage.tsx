@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { bookCargo, type CargoType } from '../api/bookingApi';
-import { fetchShippers, type Shipper } from '../../shipper/api/shipperApi';
+import { fetchShippersPage, type Shipper } from '../../shipper/api/shipperApi';
 
 interface FormValues {
   shipperId: string;
@@ -49,8 +49,8 @@ export default function BookingFormPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchShippers()
-      .then(setShippers)
+    fetchShippersPage(0, 200)
+      .then((p) => setShippers(p.items))
       .catch((e) => setError(e instanceof Error ? e.message : '荷主一覧の取得に失敗しました'));
   }, []);
 
