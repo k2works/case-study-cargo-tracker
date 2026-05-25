@@ -1,3 +1,7 @@
+import type { PageResponse } from '../../../shared/api/types';
+
+export type { PageResponse };
+
 export type CargoType = 'GENERAL' | 'HAZARDOUS' | 'REFRIGERATED';
 
 export interface CargoSummary {
@@ -46,13 +50,6 @@ export interface BookCargoRequest {
 
 export interface BookCargoResponse {
   bookingId: string;
-}
-
-export interface PageResponse<T> {
-  items: T[];
-  totalCount: number;
-  page: number;
-  size: number;
 }
 
 function authHeader(): Record<string, string> {

@@ -1,3 +1,7 @@
+import type { PageResponse } from '../../../shared/api/types';
+
+export type { PageResponse };
+
 export interface RouteCandidateInput {
   itinerarySummary: string;
   estimatedDays: number;
@@ -38,13 +42,6 @@ export interface Quotation {
   validUntil: string;
   status: string;
   candidates: QuotationCandidate[];
-}
-
-export interface PageResponse<T> {
-  items: T[];
-  totalCount: number;
-  page: number;
-  size: number;
 }
 
 function authHeader(): Record<string, string> {

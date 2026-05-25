@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchQuotationsPage, type Quotation } from '../api/quoteApi';
 import Pagination from '../../../components/ui/Pagination';
+import { DEFAULT_PAGE_SIZE } from '../../../shared/api/types';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
 function statusLabel(status: string): string {
   switch (status) {
