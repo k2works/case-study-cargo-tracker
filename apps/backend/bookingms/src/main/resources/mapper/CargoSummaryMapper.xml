@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper">
+
+    <resultMap id="cargoSummaryResultMap" type="com.example.bookingms.domain.projections.CargoSummary">
+        <id property="bookingId" column="booking_id"/>
+        <result property="shipperId" column="shipper_id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="arrivalDeadline" column="arrival_deadline"/>
+        <result property="cargoType" column="cargo_type"/>
+        <result property="weightKg" column="weight_kg"/>
+        <result property="lengthCm" column="length_cm"/>
+        <result property="widthCm" column="width_cm"/>
+        <result property="heightCm" column="height_cm"/>
+        <result property="quantity" column="quantity"/>
+        <result property="productName" column="product_name"/>
+        <result property="bookingStatus" column="booking_status"/>
+        <result property="routingStatus" column="routing_status"/>
+        <result property="estimatedAmount" column="estimated_amount"/>
+        <result property="estimatedCurrency" column="estimated_currency"/>
+        <result property="lastEventAt" column="last_event_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="version" column="version"/>
+    </resultMap>
+
+    <insert id="insertCargoSummary">
+        INSERT INTO cargo_summary (
+            booking_id, shipper_id,
+            origin_unlocode, destination_unlocode, arrival_deadline,
+            cargo_type, weight_kg, length_cm, width_cm, height_cm,
+            quantity, product_name,
+            booking_status, routing_status
+        ) VALUES (
+            #{bookingId}, #{shipperId},
+            #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline},
+            #{cargoType}, #{weightKg}, #{lengthCm}, #{widthCm}, #{heightCm},
+            #{quantity}, #{productName},
+            #{bookingStatus}, #{routingStatus}
+        )
+    </insert>
+
+    <select id="findByBookingId" resultMap="cargoSummaryResultMap">
+        SELECT * FROM cargo_summary WHERE booking_id = #{bookingId}
+    </select>
+
+    <select id="findAll" resultMap="cargoSummaryResultMap">
+        SELECT * FROM cargo_summary ORDER BY created_at DESC
+    </select>
+
+</mapper>
