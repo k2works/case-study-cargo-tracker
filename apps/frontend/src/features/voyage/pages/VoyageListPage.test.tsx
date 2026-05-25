@@ -71,4 +71,37 @@ describe('VoyageListPage', () => {
 
     expect(screen.getByText('更新フォーム')).toBeInTheDocument();
   });
+
+  it('US07: 検索条件を指定して航海を絞り込める', async () => {
+    vi.mocked(voyageApi.fetchVoyages).mockResolvedValue(mockVoyages);
+    vi.mocked(voyageApi.searchVoyages).mockResolvedValue([]);
+    renderPage();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByText('V001'));
+    await user.type(screen.getByLabelText('出発地'), 'JPOSA');
+    await user.selectOptions(screen.getByLabelText('貨物種別'), 'HAZARDOUS');
+    await user.click(screen.getByRole('button', { name: '検索' }));
+
+    await waitFor(() =>
+      expect(voyageApi.searchVoyages).toHaveBeenCalledWith(
+        expect.objectContaining({ origin: 'JPOSA', cargoType: 'HAZARDOUS' })
+      )
+    );
+    await waitFor(() =>
+      expect(screen.getByText('条件に合致する航海スケジュールはありません')).toBeInTheDocument()
+    );
+  });
+
+  it('US07: 検索失敗時にエラーが表示される', async () => {
+    vi.mocked(voyageApi.fetchVoyages).mockResolvedValue(mockVoyages);
+    vi.mocked(voyageApi.searchVoyages).mockRejectedValue(new Error('検索ダウン'));
+    renderPage();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByText('V001'));
+    await user.click(screen.getByRole('button', { name: '検索' }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('検索ダウン'));
+  });
 });

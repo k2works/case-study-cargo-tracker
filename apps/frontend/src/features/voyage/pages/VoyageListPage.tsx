@@ -1,17 +1,53 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchVoyages, type Voyage } from '../api/voyageApi';
+import { fetchVoyages, searchVoyages, type Voyage } from '../api/voyageApi';
+
+interface SearchCriteria {
+  origin: string;
+  destination: string;
+  cargoType: string;
+}
+
+const EMPTY_CRITERIA: SearchCriteria = { origin: '', destination: '', cargoType: '' };
 
 export default function VoyageListPage() {
   const navigate = useNavigate();
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [criteria, setCriteria] = useState<SearchCriteria>(EMPTY_CRITERIA);
 
   useEffect(() => {
     fetchVoyages()
       .then(setVoyages)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e instanceof Error ? e.message : '取得に失敗しました'));
   }, []);
+
+  async function handleSearch() {
+    setError(null);
+    try {
+      const result = await searchVoyages({
+        origin: criteria.origin || undefined,
+        destination: criteria.destination || undefined,
+        cargoType: criteria.cargoType || undefined,
+      });
+      setVoyages(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '検索に失敗しました');
+    }
+  }
+
+  async function handleClear() {
+    setCriteria(EMPTY_CRITERIA);
+    setError(null);
+    try {
+      setVoyages(await fetchVoyages());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '取得に失敗しました');
+    }
+  }
+
+  const labelCls = 'block text-xs text-gray-500';
+  const inputCls = 'mt-1 block w-32 rounded-md border border-gray-300 px-2 py-1.5 text-sm';
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -23,6 +59,40 @@ export default function VoyageListPage() {
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           新規登録
+        </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-white p-3">
+        <div>
+          <label htmlFor="search-origin" className={labelCls}>出発地</label>
+          <input id="search-origin" className={inputCls}
+            value={criteria.origin}
+            onChange={(e) => setCriteria({ ...criteria, origin: e.target.value })} />
+        </div>
+        <div>
+          <label htmlFor="search-destination" className={labelCls}>目的地</label>
+          <input id="search-destination" className={inputCls}
+            value={criteria.destination}
+            onChange={(e) => setCriteria({ ...criteria, destination: e.target.value })} />
+        </div>
+        <div>
+          <label htmlFor="search-cargoType" className={labelCls}>貨物種別</label>
+          <select id="search-cargoType" className={inputCls}
+            value={criteria.cargoType}
+            onChange={(e) => setCriteria({ ...criteria, cargoType: e.target.value })}>
+            <option value="">すべて</option>
+            <option value="GENERAL">一般</option>
+            <option value="HAZARDOUS">危険物</option>
+            <option value="REFRIGERATED">冷凍</option>
+          </select>
+        </div>
+        <button type="button" onClick={handleSearch}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          検索
+        </button>
+        <button type="button" onClick={handleClear}
+          className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+          クリア
         </button>
       </div>
 
@@ -70,7 +140,7 @@ export default function VoyageListPage() {
             {voyages.length === 0 && !error && (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">
-                  登録されている航海スケジュールはありません
+                  条件に合致する航海スケジュールはありません
                 </td>
               </tr>
             )}
