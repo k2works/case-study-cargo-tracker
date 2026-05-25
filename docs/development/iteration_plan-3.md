@@ -127,12 +127,12 @@ IT2 ふりかえりの Try / 技術的負債を IT3 着手時に解消する。S
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | T1: 「新サービス追加チェックリスト」を `docs/reference/` に作成（gatewayms routes・deploy:dev SERVICES・docker-compose・sonar-project.properties） | 2h | - | [ ] |
-| 0.2 | T2: 設計ドキュメント整合（`architecture_backend.md` / `architecture_frontend.md` / `domain-model.md` / `data-model.md`）と ADR-0008「設計ドキュメントとの差分」解消 | 3h | - | [ ] |
+| 0.1 | T1: 「新サービス追加チェックリスト」を `docs/reference/` に作成（gatewayms routes・deploy:dev SERVICES・docker-compose・sonar-project.properties） | 2h | - | [x] |
+| 0.2 | T2: 設計ドキュメント整合（`architecture_backend.md` / `architecture_frontend.md` / `domain-model.md` / `data-model.md`）と ADR-0008「設計ドキュメントとの差分」解消 | 3h | - | [x] |
 | 0.3 | T3: `fetchBookings` / `fetchShippers` 後方互換ラッパを削除し `fetchBookingsPage` / `fetchShippersPage` に統一 | 2h | - | [ ] |
 | 0.4 | T4: `created_at DESC` インデックスを Flyway で追加し `data-model.md` に反映 | 1h | - | [ ] |
 | 0.5 | T5: `PageResponse<T>` 型・`PAGE_SIZE` 定数を `src/shared/api/types.ts` に共通化 | 2h | - | [ ] |
-| 0.6 | T6: マルチパースペクティブレビュー用プロンプトテンプレート（tester / user-representative 観点）を整備 | 1h | - | [ ] |
+| 0.6 | T6: マルチパースペクティブレビュー用プロンプトテンプレート（tester / user-representative 観点）を整備 | 1h | - | [x] |
 
 **小計**: 11h（理想時間）
 

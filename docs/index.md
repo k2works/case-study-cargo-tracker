@@ -23,7 +23,7 @@
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 2 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
-| [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
+| [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 32 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
 
 ### 戦略ドキュメント

@@ -142,6 +142,8 @@ nav:
       - Java アプリケーション環境構築ガイド: reference/Javaアプリケーション環境構築ガイド.md
       - TypeScript アプリケーション環境構築ガイド: reference/TypeScriptアプリケーション環境構築ガイド.md
       - 運用スクリプト作成ガイド: reference/運用スクリプト作成ガイド.md
+      - 新サービス追加チェックリスト: reference/新サービス追加チェックリスト.md
+      - マルチパースペクティブレビュープロンプトテンプレート: reference/マルチパースペクティブレビュープロンプトテンプレート.md
       - Codex CLI MCP アプリケーション開発フロー: reference/CodexCLIMCPアプリケーション開発フロー.md
       - Codex CLI MCP サーバー設定手順: reference/CodexCLIMCPサーバー設定手順.md
       - SonarQube ローカル環境セットアップ手順書: reference/SonarQubeローカル環境セットアップ手順書.md
