@@ -113,9 +113,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | bookingms Gradle サブモジュール作成 | 4h | - | [ ] |
-| 1.2 | Spring Boot + Axon 依存関係設定 | 2h | - | [ ] |
-| 1.3 | Flyway マイグレーション（shipper / cargo_summary テーブル） | 2h | - | [ ] |
+| 1.1 | bookingms Gradle サブモジュール作成 | 4h | - | [x] |
+| 1.2 | Spring Boot + Axon 依存関係設定 | 2h | - | [x] |
+| 1.3 | Flyway マイグレーション（shipper / cargo_summary テーブル） | 2h | - | [x] |
 
 **小計**: 8h（理想時間）
 
@@ -180,7 +180,7 @@
 
 **1 SP あたり**: 約 6.5h
 
-**進捗率**: 0% (0/10 SP)
+**進捗率**: 10% (1/10 SP) — 2026-05-25: 基盤構築完了（local-h2 smoke test PASS）
 
 ---
 
