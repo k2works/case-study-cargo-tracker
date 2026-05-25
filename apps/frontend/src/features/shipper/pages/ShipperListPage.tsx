@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchShippers, type Shipper } from '../api/shipperApi';
+import { fetchShippersPage, type Shipper } from '../api/shipperApi';
+import Pagination from '../../../components/ui/Pagination';
+
+const PAGE_SIZE = 20;
 
 function formatDiscountRate(rate: number | null): string {
   if (rate === null || rate === undefined) return '-';
@@ -10,13 +13,18 @@ function formatDiscountRate(rate: number | null): string {
 export default function ShipperListPage() {
   const navigate = useNavigate();
   const [shippers, setShippers] = useState<Shipper[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchShippers()
-      .then(setShippers)
+    fetchShippersPage(page, PAGE_SIZE)
+      .then((p) => {
+        setShippers(p.items);
+        setTotalCount(p.totalCount);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : '取得に失敗しました'));
-  }, []);
+  }, [page]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -76,6 +84,13 @@ export default function ShipperListPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        size={PAGE_SIZE}
+        totalCount={totalCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

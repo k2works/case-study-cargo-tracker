@@ -62,6 +62,45 @@ async function registerShipper(
   await expect(page).toHaveURL('/shippers', { timeout: 10_000 });
 }
 
+test.describe('IT2: ページネーション E2E', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('荷主一覧にページネーションが表示される', async ({ page }) => {
+    await page.goto('/shippers');
+    await expect(page.getByRole('navigation', { name: 'ページネーション' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '前へ' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '次へ' })).toBeVisible();
+  });
+
+  test('予約一覧にページネーションが表示される', async ({ page }) => {
+    await page.goto('/bookings');
+    await expect(page.getByRole('navigation', { name: 'ページネーション' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '前へ' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '次へ' })).toBeVisible();
+  });
+
+  test('荷主登録後にページネーションの件数表示が更新される', async ({ page }) => {
+    const before = await page.goto('/shippers').then(async () => {
+      const text = await page.getByRole('navigation', { name: 'ページネーション' })
+        .getByRole('status').textContent();
+      return text ?? '';
+    });
+    const beforeCount = parseInt(before.match(/\/\s*(\d+)\s*件/)?.[1] ?? '0', 10);
+
+    const name = `件数確認-${Date.now()}`;
+    const email = `e2e-count-${Date.now()}@example.com`;
+    await registerShipper(page, { type: 'INDIVIDUAL', name, email });
+    await waitForListEntry(page, '/shippers', name);
+
+    const after = await page.getByRole('navigation', { name: 'ページネーション' })
+      .getByRole('status').textContent();
+    const afterCount = parseInt(after?.match(/\/\s*(\d+)\s*件/)?.[1] ?? '0', 10);
+    expect(afterCount).toBeGreaterThan(beforeCount);
+  });
+});
+
 test.describe('IT2: ナビゲーション E2E', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);

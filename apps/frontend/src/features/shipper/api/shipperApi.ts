@@ -34,17 +34,40 @@ export interface RegisterShipperResponse {
   shipperId: string;
 }
 
+export interface PageResponse<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  size: number;
+}
+
 function authHeader(): Record<string, string> {
   const token = sessionStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function fetchShippers(): Promise<Shipper[]> {
-  const res = await fetch('/api/v1/shippers', {
+/**
+ * 荷主一覧（ページネーション対応）。
+ *
+ * @param page 0 始まりのページ番号
+ * @param size 1 ページあたり件数
+ */
+export async function fetchShippersPage(page = 0, size = 20): Promise<PageResponse<Shipper>> {
+  const res = await fetch(`/api/v1/shippers?page=${page}&size=${size}`, {
     headers: authHeader(),
   });
   if (!res.ok) throw new Error('荷主の取得に失敗しました');
   return res.json();
+}
+
+/**
+ * 荷主一覧（後方互換、items のみ）。
+ *
+ * <p>新規コードは {@link fetchShippersPage} を使用すること。</p>
+ */
+export async function fetchShippers(): Promise<Shipper[]> {
+  const page = await fetchShippersPage(0, 200);
+  return page.items;
 }
 
 export async function fetchShippersByEmail(email: string): Promise<Shipper[]> {

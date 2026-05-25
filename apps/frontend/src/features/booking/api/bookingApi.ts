@@ -48,17 +48,40 @@ export interface BookCargoResponse {
   bookingId: string;
 }
 
+export interface PageResponse<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  size: number;
+}
+
 function authHeader(): Record<string, string> {
   const token = sessionStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function fetchBookings(): Promise<CargoSummary[]> {
-  const res = await fetch('/api/v1/bookings', {
+/**
+ * 予約一覧（ページネーション対応、IT2）。
+ *
+ * @param page 0 始まりのページ番号
+ * @param size 1 ページあたり件数
+ */
+export async function fetchBookingsPage(page = 0, size = 20): Promise<PageResponse<CargoSummary>> {
+  const res = await fetch(`/api/v1/bookings?page=${page}&size=${size}`, {
     headers: authHeader(),
   });
   if (!res.ok) throw new Error('予約一覧の取得に失敗しました');
   return res.json();
+}
+
+/**
+ * 予約一覧（後方互換、items のみ）。
+ *
+ * <p>新規コードは {@link fetchBookingsPage} を使用すること。</p>
+ */
+export async function fetchBookings(): Promise<CargoSummary[]> {
+  const page = await fetchBookingsPage(0, 200);
+  return page.items;
 }
 
 export async function fetchBooking(bookingId: string): Promise<CargoSummary> {

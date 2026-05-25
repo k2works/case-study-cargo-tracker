@@ -45,13 +45,17 @@ function renderPage() {
   );
 }
 
+function pageOf(items: typeof mockBookings, totalCount = items.length) {
+  return { items, totalCount, page: 0, size: 20 };
+}
+
 describe('BookingListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('US04: 予約一覧が表示される', async () => {
-    vi.mocked(bookingApi.fetchBookings).mockResolvedValue(mockBookings);
+    vi.mocked(bookingApi.fetchBookingsPage).mockResolvedValue(pageOf(mockBookings));
     renderPage();
 
     await waitFor(() =>
@@ -64,7 +68,7 @@ describe('BookingListPage', () => {
   });
 
   it('US04: 新規登録ボタンを押すと予約フォームへ遷移する', async () => {
-    vi.mocked(bookingApi.fetchBookings).mockResolvedValue([]);
+    vi.mocked(bookingApi.fetchBookingsPage).mockResolvedValue(pageOf([]));
     renderPage();
     const user = userEvent.setup();
 
@@ -74,7 +78,7 @@ describe('BookingListPage', () => {
   });
 
   it('US04: 予約が 0 件の場合にメッセージが表示される', async () => {
-    vi.mocked(bookingApi.fetchBookings).mockResolvedValue([]);
+    vi.mocked(bookingApi.fetchBookingsPage).mockResolvedValue(pageOf([]));
     renderPage();
 
     await waitFor(() =>
@@ -83,11 +87,28 @@ describe('BookingListPage', () => {
   });
 
   it('US04: API 取得失敗時にエラーが表示される', async () => {
-    vi.mocked(bookingApi.fetchBookings).mockRejectedValue(new Error('API ダウン'));
+    vi.mocked(bookingApi.fetchBookingsPage).mockRejectedValue(new Error('API ダウン'));
     renderPage();
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent('API ダウン')
+    );
+  });
+
+  it('IT2 ページネーション: 「次へ」クリックで page=1 が API に渡される', async () => {
+    const firstPage = { items: mockBookings, totalCount: 47, page: 0, size: 20 };
+    const secondPage = { items: [], totalCount: 47, page: 1, size: 20 };
+    vi.mocked(bookingApi.fetchBookingsPage)
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce(secondPage);
+    renderPage();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByText('B-001'));
+    await user.click(screen.getByRole('button', { name: '次へ' }));
+
+    await waitFor(() =>
+      expect(bookingApi.fetchBookingsPage).toHaveBeenCalledWith(1, 20)
     );
   });
 });

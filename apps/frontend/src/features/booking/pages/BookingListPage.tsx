@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchBookings, type CargoSummary } from '../api/bookingApi';
+import { fetchBookingsPage, type CargoSummary } from '../api/bookingApi';
+import Pagination from '../../../components/ui/Pagination';
+
+const PAGE_SIZE = 20;
 
 function bookingStatusLabel(status: string): string {
   switch (status) {
@@ -43,13 +46,18 @@ function cargoTypeLabel(type: string): string {
 export default function BookingListPage() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<CargoSummary[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchBookings()
-      .then(setBookings)
+    fetchBookingsPage(page, PAGE_SIZE)
+      .then((p) => {
+        setBookings(p.items);
+        setTotalCount(p.totalCount);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : '取得に失敗しました'));
-  }, []);
+  }, [page]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -107,6 +115,13 @@ export default function BookingListPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        size={PAGE_SIZE}
+        totalCount={totalCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
