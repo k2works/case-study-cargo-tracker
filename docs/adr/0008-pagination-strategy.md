@@ -83,7 +83,21 @@ IT2 で `GET /api/v1/shippers` と `GET /api/v1/bookings` を実装した段階�
 - `GET /api/v1/bookings` / `GET /api/v1/shippers` のレスポンス形式が `List<T>` から `PageResponse<T>` に **破壊的変更** されました。フロントエンドは `fetchBookingsPage` / `fetchShippersPage` に移行する必要があり、既存の `fetchBookings` / `fetchShippers` は当面 `items` 抽出版として残しています (将来削除予定)。
 - 結果整合性 (Read Model 反映遅延) と Offset の相互作用で、新規挿入直後に同一ページを再フェッチした際に並びがズレる可能性があります。`ORDER BY created_at DESC` は決定的ですが、複数並行登録時は要注意です。
 - `LIMIT/OFFSET` は大きな `page` 値で性能が劣化します。将来 100 万行を超える Read Model (例: `tracking_event`) では Cursor 型への切り替えを別 ADR で検討します。
-- `email` パラメータと `page/size` を同じ `GET /shippers` で受け取るため、レスポンス型が `List` と `PageResponse` の **ユニオン** になりました。フロントは引き続き `fetchShippersByEmail` (List) と `fetchShippersPage` (Page) を使い分けます。
+- `GET /api/v1/shippers/search?email=` を独立エンドポイントに分離しました (レビュー H2 への対応、2026-05-25 更新)。`GET /api/v1/shippers` は `PageResponse<ShipperResponse>` 固定型を返し、重複検出は `/search` で `List<ShipperResponse>` を返します。
+
+## 設計ドキュメントとの差分
+
+`docs/design/` の既存記述と本 ADR の実装には以下の差分があります。IT3 で設計書側を更新するまでの間は、本 ADR が **Single Source of Truth** として優先されます。
+
+| 設計書 | 既存記述 | 実装 | 扱い |
+| :--- | :--- | :--- | :--- |
+| `architecture_backend.md` (L754-760, L818) | `Mapper.findAll(offset, limit)` 単独 + `@QueryHandler handle(ListCargoSummariesQuery)` を想定 | `findAllPaged(offset, limit)` + `countAll()` のペア。`@QueryHandler` は未採用で Controller → QueryService → Mapper の直行 | 本 ADR を優先。IT3 で設計書を更新 |
+| `architecture_backend.md` Mapper 例 | レスポンスが `CargoSummary` の `List<T>` | `PageResponse<T>` に変更 | 同上 |
+| `architecture_frontend.md` (L37, L229, L391) | React Query (TanStack Query) を採用宣言 | IT2 では `useState` + `useEffect` で実装 (素の React) | IT3 以降で React Query 移行を別タスクとして計画。Pagination コンポーネントは React Query 化しても再利用可能な設計 |
+| `domain-model.md` (L1171) | `ListCargoSummariesQuery(offset, limit, status?)` の `status?` フィルタを記述 | `status?` フィルタは未実装 | IT3 以降の絞り込み機能で実装。`PageRequest` を拡張して対応予定 |
+| `data-model.md` | `cargo_summary` / `shipper` に `(created_at DESC)` インデックスが未記載 | LIMIT/OFFSET + `ORDER BY created_at DESC` をクエリで使用 | IT3 で Flyway マイグレーションを追加し、`data-model.md` を更新 |
+
+これらは Negative Impact (技術的負債) として認識しており、フォローアップタスクは `docs/development/iteration_plan-3.md` (作成時) で消化します。
 
 ## コンプライアンス
 
@@ -91,6 +105,9 @@ IT2 で `GET /api/v1/shippers` と `GET /api/v1/bookings` を実装した段階�
 
 - `GET /api/v1/shippers?page=0&size=20` と `GET /api/v1/bookings?page=0&size=20` が `{ items, totalCount, page, size }` 形式の JSON を返すこと。
 - `?page=-1&size=0` 等の無効値で 200 OK を返し、`page=0, size=20` にサニタイズされたレスポンスとなること (ControllerTest で検証)。
+- サニタイズロジックは `PageRequest` (record) に集約されており、Controller / Service / Mapper のいずれにも重複していないこと (レビュー H1 対応)。
+- `GET /api/v1/shippers/search?email=` がメール検索専用エンドポイントとして `List<ShipperResponse>` を返し、`GET /api/v1/shippers` の戻り型が `PageResponse<ShipperResponse>` に固定されていること (レビュー H2 対応)。
+- `CargoQueryService` / `ShipperQueryService` に `@Transactional(readOnly = true)` が付与され、`findAll` と `count` が同一トランザクションで実行されること。
 - `Pagination` コンポーネントが「前へ」「次へ」と「X-Y / Z 件」表示を提供し、最初/最後で前後ボタンが無効化されること (ユニットテスト 8 件で検証)。
 - ShipperListPage / BookingListPage で「次へ」をクリックすると、対応する API へ `page=1` が渡ること (ユニットテスト各 1 件)。
 - E2E `booking.spec.ts` の「ページネーション E2E」3 件が PASS すること。

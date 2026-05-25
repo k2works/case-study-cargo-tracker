@@ -38,6 +38,8 @@ tags: architecture, frontend, react, vite, typescript, react-query, zustand, tai
 
 > **CQRS との整合**: React Query の `queryKey` をバックエンドの Query 名（例: `cargoSummary`、`listCargoSummaries`）と対応付ける。Command 送信後は `queryClient.invalidateQueries()` で関連 Query を再フェッチし、Read Model の最新化を待つ。
 
+> **実装状況 (IT2 時点)**: 設計上は React Query 採用だが、IT1/IT2 では素の `useState` + `useEffect` で実装している（[ADR-0008 設計ドキュメントとの差分](../adr/0008-pagination-strategy.md) を参照）。Pagination コンポーネントは `page`/`size`/`totalCount`/`onPageChange` の純粋な props として設計しており、IT3 以降で React Query 化しても再利用可能。React Query 移行は IT3 のフォローアップタスクで実施予定。
+
 ### スタイリング
 
 | 判断項目 | 判定 | 理由 |

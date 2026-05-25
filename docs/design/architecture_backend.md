@@ -792,6 +792,8 @@ public class CargoProjectionsEventHandler {
 
 > **ResultMap**: 複雑なオブジェクトはアノテーションよりも **XML マッパー** (`src/main/resources/mybatis/CargoSummaryMapper.xml`) に `<resultMap>` を定義する方が保守性が高い。本プロジェクトでは Read Model は XML マッパー方式を基本とする。
 
+> **IT2 実装との差分**: 上記コード例は `findAll(offset, limit)` 単独の単純なシグネチャだが、IT2 実装では `findAllPaged(offset, limit)` と `countAll()` のペアを採用し、Controller で `PageResponse<T> { items, totalCount, page, size }` を返却する。Axon `@QueryHandler` も採用せず、Controller → QueryService → Mapper を直行している。詳細は [ADR-0008](../adr/0008-pagination-strategy.md) を参照。
+
 ### Query Handler 実装例（MyBatis）
 
 ```java
