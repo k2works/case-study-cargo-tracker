@@ -16,16 +16,17 @@ const JAVA_TOOL_OPTIONS =
   '-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m ' +
   '-XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo';
 
-/** IT1 で稼働しているサービス定義 */
+/** 稼働中のサービス定義（IT2 で bookingms を追加） */
 const SERVICES = [
   { name: `${PREFIX}-authms`,    service: 'authms',    port: 8081, type: 'backend' },
+  { name: `${PREFIX}-bookingms`, service: 'bookingms', port: 8082, type: 'backend' },
   { name: `${PREFIX}-routingms`, service: 'routingms', port: 8083, type: 'backend' },
   { name: `${PREFIX}-gatewayms`, service: 'gatewayms', port: 8080, type: 'backend' },
   { name: `${PREFIX}-frontend`,  service: 'frontend',  port: 80,   type: 'frontend' },
 ];
 
-/** デプロイ順（依存関係を考慮） */
-const DEPLOY_ORDER = ['authms', 'routingms', 'gatewayms', 'frontend'];
+/** デプロイ順（依存関係を考慮: 業務サービス先行 → gatewayms → frontend） */
+const DEPLOY_ORDER = ['authms', 'bookingms', 'routingms', 'gatewayms', 'frontend'];
 
 // ============================================
 // ヘルパー
@@ -123,12 +124,14 @@ export default function (gulp) {
 
 2. アプリ作成（既存の場合はスキップ）:
    heroku create ${PREFIX}-authms    --stack container
+   heroku create ${PREFIX}-bookingms --stack container
    heroku create ${PREFIX}-routingms --stack container
    heroku create ${PREFIX}-gatewayms --stack container
    heroku create ${PREFIX}-frontend  --stack container
 
    既存アプリの場合はスタックを container に設定:
    heroku stack:set container --app ${PREFIX}-authms
+   heroku stack:set container --app ${PREFIX}-bookingms
    heroku stack:set container --app ${PREFIX}-routingms
    heroku stack:set container --app ${PREFIX}-gatewayms
    heroku stack:set container --app ${PREFIX}-frontend
@@ -235,11 +238,24 @@ export default function (gulp) {
 
     console.log('[deploy:dev:config] ドメインを取得中...');
     const authDomain     = getDomain(`${PREFIX}-authms`);
+    const bookingDomain  = getDomain(`${PREFIX}-bookingms`);
     const routingDomain  = getDomain(`${PREFIX}-routingms`);
     const gatewayDomain  = getDomain(`${PREFIX}-gatewayms`);
     console.log(`  authms:    ${authDomain}`);
+    console.log(`  bookingms: ${bookingDomain}`);
     console.log(`  routingms: ${routingDomain}`);
     console.log(`  gatewayms: ${gatewayDomain}`);
+
+    // 業務サービスに共通の Kafka 設定（KAFKA_BOOTSTRAP_SERVERS 指定時のみ付与）
+    let kafkaVars = '';
+    if (kafkaBootstrap) {
+      kafkaVars +=
+        `KAFKA_BOOTSTRAP_SERVERS="${kafkaBootstrap}" ` +
+        `KAFKA_SECURITY_PROTOCOL="${kafkaProtocol}" `;
+      if (kafkaCaCert)     kafkaVars += `KAFKA_SSL_CA_CERT="${kafkaCaCert}" `;
+      if (kafkaAccessCert) kafkaVars += `KAFKA_SSL_ACCESS_CERT="${kafkaAccessCert}" `;
+      if (kafkaAccessKey)  kafkaVars += `KAFKA_SSL_ACCESS_KEY="${kafkaAccessKey}" `;
+    }
 
     // authms
     execSync(
@@ -251,21 +267,22 @@ export default function (gulp) {
       { stdio: 'inherit' }
     );
 
-    // routingms（Kafka 設定を含む）
-    let routingKafkaVars = '';
-    if (kafkaBootstrap) {
-      routingKafkaVars +=
-        `KAFKA_BOOTSTRAP_SERVERS="${kafkaBootstrap}" ` +
-        `KAFKA_SECURITY_PROTOCOL="${kafkaProtocol}" `;
-      if (kafkaCaCert)     routingKafkaVars += `KAFKA_SSL_CA_CERT="${kafkaCaCert}" `;
-      if (kafkaAccessCert) routingKafkaVars += `KAFKA_SSL_ACCESS_CERT="${kafkaAccessCert}" `;
-      if (kafkaAccessKey)  routingKafkaVars += `KAFKA_SSL_ACCESS_KEY="${kafkaAccessKey}" `;
-    }
+    // bookingms（Kafka 設定を含む）
     execSync(
       `heroku config:set ` +
       `SPRING_PROFILES_ACTIVE=heroku ` +
       `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
-      routingKafkaVars +
+      kafkaVars +
+      `--app ${PREFIX}-bookingms`,
+      { stdio: 'inherit' }
+    );
+
+    // routingms（Kafka 設定を含む）
+    execSync(
+      `heroku config:set ` +
+      `SPRING_PROFILES_ACTIVE=heroku ` +
+      `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
+      kafkaVars +
       `--app ${PREFIX}-routingms`,
       { stdio: 'inherit' }
     );
@@ -277,6 +294,7 @@ export default function (gulp) {
       `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
       `JWT_SECRET="${jwtSecret}" ` +
       `AUTHMS_URL="https://${authDomain}" ` +
+      `BOOKINGMS_URL="https://${bookingDomain}" ` +
       `ROUTINGMS_URL="https://${routingDomain}" ` +
       `--app ${PREFIX}-gatewayms`,
       { stdio: 'inherit' }
@@ -300,10 +318,13 @@ export default function (gulp) {
   // ──────────────────────────────────────────
 
   /**
-   * バックエンド全サービスの bootJar を生成
+   * バックエンド全サービスの bootJar を生成（gatewayms は最後）
    */
   gulp.task('deploy:dev:build:backend', (done) => {
-    const targets = DEPLOY_ORDER.filter(s => s !== 'gatewayms')
+    const backendSvcs = SERVICES
+      .filter(svc => svc.type === 'backend')
+      .map(svc => svc.service);
+    const targets = backendSvcs.filter(s => s !== 'gatewayms')
       .concat('gatewayms')
       .map(s => `:${s}:bootJar`)
       .join(' ');
@@ -359,7 +380,7 @@ export default function (gulp) {
   // ──────────────────────────────────────────
 
   /**
-   * 全サービスを順次デプロイ（authms → routingms → gatewayms）
+   * 全サービスを順次デプロイ（authms → bookingms → routingms → gatewayms → frontend）
    */
   gulp.task('deploy:dev', gulp.series(
     ...DEPLOY_ORDER.map(svc => `deploy:dev:push:${svc}`),
