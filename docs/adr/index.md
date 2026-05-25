@@ -11,5 +11,6 @@
 | [ADR-0006](0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成 | 承認済み |
 | [ADR-0007](0007-unify-db-initialization-with-flyway.md) | `local-h2` を含む DB 初期化を Flyway に統一し、`schema.sql` を廃止する | 承認済み |
 | [ADR-0008](0008-pagination-strategy.md) | 一覧 API にページネーション (Offset/Limit + PageResponse) を採用する | 承認済み |
+| [ADR-0009](0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga を採用する（Kafka tracking モード） | 提案中 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

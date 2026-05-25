@@ -21,7 +21,7 @@
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 8 件作成済み（リリース計画・IT1/IT2/IT3 計画・ふりかえり・完了報告書） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 2 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -66,6 +66,7 @@
 | [ADR-0006](./adr/0006-heroku-deployment-setup.md) | Heroku Container Registry を用いた開発環境デプロイ構成 |
 | [ADR-0007](./adr/0007-unify-db-initialization-with-flyway.md) | `local-h2` を含む DB 初期化を Flyway に統一し、`schema.sql` を廃止 |
 | [ADR-0008](./adr/0008-pagination-strategy.md) | 一覧 API にページネーション (Offset/Limit + PageResponse) を採用 |
+| [ADR-0009](./adr/0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga を採用（Kafka tracking モード、提案中） |
 
 ### 運用ドキュメント
 
