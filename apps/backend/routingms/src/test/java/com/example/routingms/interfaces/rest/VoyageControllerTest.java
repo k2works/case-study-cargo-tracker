@@ -2,6 +2,7 @@ package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.VoyageCommandService;
 import com.example.routingms.application.VoyageQueryService;
+import com.example.routingms.application.VoyageSearchCriteria;
 import com.example.routingms.domain.commands.RegisterVoyageCommand;
 import com.example.routingms.domain.commands.UpdateVoyageScheduleCommand;
 import com.example.routingms.domain.projections.VoyageProjection;
@@ -110,6 +111,32 @@ class VoyageControllerTest {
         ResponseEntity<VoyageResponse> response = controller.findByVoyageNumber("UNKNOWN");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void 条件を指定して航海を検索できる() {
+        when(queryService.search(any(VoyageSearchCriteria.class)))
+                .thenReturn(List.of(makeProjection("V001")));
+
+        ResponseEntity<List<VoyageResponse>> response =
+                controller.search("JPTYO", "USNYC", DEPARTURE, ARRIVAL, "GENERAL");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().get(0).voyageNumber()).isEqualTo("V001");
+        verify(queryService).search(any(VoyageSearchCriteria.class));
+    }
+
+    @Test
+    void 検索条件なしでも全件検索として扱われる() {
+        when(queryService.search(any(VoyageSearchCriteria.class)))
+                .thenReturn(List.of(makeProjection("V001"), makeProjection("V002")));
+
+        ResponseEntity<List<VoyageResponse>> response =
+                controller.search(null, null, null, null, null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(2);
     }
 
     @Test

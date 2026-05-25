@@ -22,4 +22,13 @@ public class VoyageQueryService {
     public VoyageProjection findByVoyageNumber(String voyageNumber) {
         return voyageMapper.findByVoyageNumber(voyageNumber);
     }
+
+    public List<VoyageProjection> search(VoyageSearchCriteria criteria) {
+        return voyageMapper.search(
+                criteria.origin(),
+                criteria.destination(),
+                criteria.departureFrom(),
+                criteria.departureTo(),
+                criteria.cargoType());
+    }
 }

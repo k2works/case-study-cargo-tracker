@@ -82,6 +82,29 @@
         ORDER BY registered_at DESC
     </select>
 
+    <select id="search" resultMap="voyageResultMap">
+        SELECT voyage_number, carrier_code, carrier_name, ship_name,
+               departure_date, arrival_date, origin_unlocode, dest_unlocode, status
+        FROM voyage v
+        <where>
+            <if test="origin != null">AND v.origin_unlocode = #{origin}</if>
+            <if test="destination != null">AND v.dest_unlocode = #{destination}</if>
+            <if test="departureFrom != null">AND v.departure_date &gt;= #{departureFrom}</if>
+            <if test="departureTo != null">AND v.departure_date &lt;= #{departureTo}</if>
+            <if test="cargoType != null">
+                AND (
+                    (#{cargoType} = 'GENERAL'
+                        AND NOT EXISTS (SELECT 1 FROM voyage_accepted_cargo_type t
+                                        WHERE t.voyage_number = v.voyage_number))
+                    OR EXISTS (SELECT 1 FROM voyage_accepted_cargo_type t
+                               WHERE t.voyage_number = v.voyage_number
+                                 AND t.cargo_type = #{cargoType})
+                )
+            </if>
+        </where>
+        ORDER BY v.departure_date ASC
+    </select>
+
     <select id="findMovements" resultMap="movementResultMap">
         SELECT departure_unlocode, arrival_unlocode, departure_time, arrival_time
         FROM carrier_movement

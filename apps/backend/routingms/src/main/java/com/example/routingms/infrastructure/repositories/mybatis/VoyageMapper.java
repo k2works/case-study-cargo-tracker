@@ -41,4 +41,10 @@ public interface VoyageMapper {
     VoyageProjection findByVoyageNumber(@Param("voyageNumber") String voyageNumber);
 
     List<VoyageProjection> findAll();
+
+    List<VoyageProjection> search(@Param("origin") String origin,
+                                  @Param("destination") String destination,
+                                  @Param("departureFrom") LocalDateTime departureFrom,
+                                  @Param("departureTo") LocalDateTime departureTo,
+                                  @Param("cargoType") String cargoType);
 }

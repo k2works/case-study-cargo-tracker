@@ -2,15 +2,18 @@ package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.VoyageCommandService;
 import com.example.routingms.application.VoyageQueryService;
+import com.example.routingms.application.VoyageSearchCriteria;
 import com.example.routingms.domain.commands.RegisterVoyageCommand;
 import com.example.routingms.domain.commands.RegisterVoyageCommand.CarrierMovementData;
 import com.example.routingms.domain.commands.UpdateVoyageScheduleCommand;
 import com.example.routingms.interfaces.rest.dto.RegisterVoyageRequest;
 import com.example.routingms.interfaces.rest.dto.UpdateVoyageScheduleRequest;
 import com.example.routingms.interfaces.rest.dto.VoyageResponse;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -80,6 +83,23 @@ public class VoyageController {
     @GetMapping
     public ResponseEntity<List<VoyageResponse>> findAll() {
         List<VoyageResponse> list = queryService.findAll().stream()
+                .map(VoyageResponse::from)
+                .toList();
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<VoyageResponse>> search(
+            @RequestParam(required = false) String origin,
+            @RequestParam(required = false) String destination,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime departureFrom,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime departureTo,
+            @RequestParam(required = false) String cargoType) {
+        VoyageSearchCriteria criteria =
+                new VoyageSearchCriteria(origin, destination, departureFrom, departureTo, cargoType);
+        List<VoyageResponse> list = queryService.search(criteria).stream()
                 .map(VoyageResponse::from)
                 .toList();
         return ResponseEntity.ok(list);
