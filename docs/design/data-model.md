@@ -185,7 +185,7 @@ end note
 | Axon Server | （Axon 内部ストレージ） | Event Store | `domain_event_entry`, `snapshot_event_entry` |
 | authms | `auth_db` | 認証・認可（CRUD）+ Axon Token Store | `users`, `roles`, `user_roles` + `token_entry`, `saga_entry`, `association_value_entry` |
 | bookingms | `booking_read_db` | 予約 Read Model + Axon Token / Saga Store | `cargo_summary`, `cargo_leg`, `shipper`, `quotation`, `quotation_candidate` + `token_entry`, `saga_entry`, `association_value_entry` |
-| routingms | `routing_read_db` | 航海 Read Model + Axon Token Store | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` + `token_entry`, `saga_entry`, `association_value_entry` |
+| routingms | `routing_read_db` | 航海 Read Model + 経路設計依頼（cross-service）+ Axon Token Store | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `route_design_request` + `token_entry`, `saga_entry`, `association_value_entry` |
 | trackingms | `tracking_read_db` | 追跡 Read Model + Axon Token Store | `tracking_summary`, `tracking_event`, `tracking_exception` + `token_entry`, `saga_entry`, `association_value_entry` |
 | handlingms | `handling_read_db` | 荷役 Read Model + Axon Token Store | `handling_activity`, `claim_verification` + `token_entry`, `saga_entry`, `association_value_entry` |
 | billingms | `billing_read_db` | 精算 Read Model + Axon Token Store | `invoice`, `payment` + `token_entry`, `saga_entry`, `association_value_entry` |
@@ -474,6 +474,17 @@ entity "location_master" as locmaster {
   active: BOOLEAN NOT NULL DEFAULT TRUE
 }
 
+entity "route_design_request" as rdr {
+  * **booking_id**: VARCHAR(36) <<PK>>
+  --
+  origin_unlocode: VARCHAR(5) NOT NULL
+  destination_unlocode: VARCHAR(5) NOT NULL
+  arrival_deadline: DATE NOT NULL
+  cargo_type: VARCHAR(16) NOT NULL ' GENERAL / HAZARDOUS / REFRIGERATED
+  status: VARCHAR(16) NOT NULL ' PENDING ほか
+  requested_at: TIMESTAMPTZ NOT NULL
+}
+
 voyage ||--|{ movement : "1..*"
 voyage ||--o{ cargotype : "0..*"
 movement }o--|| locmaster : "出発港"
@@ -488,6 +499,13 @@ note right of locmaster
   UN/LOCODE マスタは Routing が
   集中管理する。国際標準データのため
   他コンテキストは値オブジェクト Location で参照する。
+end note
+
+note bottom of rdr
+  bookingms の RouteDesignRequestedEvent（cross-service、
+  ADR-0009）を Kafka tracking モードで購読して記録する
+  経路設計待ちリスト。経路設計者ワークベンチ（IT4/US08）の入力。
+  tracking 再処理に備え booking_id 単位で冪等に登録する。
 end note
 @enduml
 ```
