@@ -91,3 +91,30 @@ export async function bookCargo(req: BookCargoRequest): Promise<BookCargoRespons
   }
   return res.json();
 }
+
+/** 経路設計引き渡し（US06、仮受付 → 経路設計中）。 */
+export async function handoffBooking(bookingId: string): Promise<void> {
+  const res = await fetch(`/api/v1/bookings/${bookingId}/handoff`, {
+    method: 'POST',
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('経路設計の依頼に失敗しました');
+}
+
+/** 予約確定（US13、経路提案中 → 予約確定）。 */
+export async function confirmBooking(bookingId: string): Promise<void> {
+  const res = await fetch(`/api/v1/bookings/${bookingId}/confirm`, {
+    method: 'POST',
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('予約確定に失敗しました');
+}
+
+/** 予約キャンセル（US13）。 */
+export async function cancelBooking(bookingId: string): Promise<void> {
+  const res = await fetch(`/api/v1/bookings/${bookingId}/cancel`, {
+    method: 'POST',
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('予約キャンセルに失敗しました');
+}

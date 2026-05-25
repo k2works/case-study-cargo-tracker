@@ -96,7 +96,15 @@ export default function BookingListPage() {
           <tbody className="divide-y divide-gray-200">
             {bookings.map((b) => (
               <tr key={b.bookingId}>
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{b.bookingId}</td>
+                <td className="px-4 py-3 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/bookings/${b.bookingId}`)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {b.bookingId}
+                  </button>
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{b.shipperId}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{b.originUnlocode}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{b.destinationUnlocode}</td>
