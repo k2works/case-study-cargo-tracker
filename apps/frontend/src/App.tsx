@@ -6,6 +6,8 @@ import VoyageListPage from './features/voyage/pages/VoyageListPage';
 import VoyageFormPage from './features/voyage/pages/VoyageFormPage';
 import ShipperListPage from './features/shipper/pages/ShipperListPage';
 import ShipperFormPage from './features/shipper/pages/ShipperFormPage';
+import BookingListPage from './features/booking/pages/BookingListPage';
+import BookingFormPage from './features/booking/pages/BookingFormPage';
 
 function Dashboard() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="/voyages/:voyageNumber/edit" element={<VoyageFormPage />} />
           <Route path="/shippers" element={<ShipperListPage />} />
           <Route path="/shippers/new" element={<ShipperFormPage />} />
+          <Route path="/bookings" element={<BookingListPage />} />
+          <Route path="/bookings/new" element={<BookingFormPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
