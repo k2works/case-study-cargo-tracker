@@ -27,11 +27,13 @@
         INSERT INTO shipper (
             shipper_id, shipper_type, name,
             address_line1, address_line2, city, country_code, postal_code,
-            email, phone
+            email, phone,
+            contract_number, discount_rate
         ) VALUES (
             #{shipperId}, #{shipperType}, #{name},
             #{addressLine1}, #{addressLine2}, #{city}, #{countryCode}, #{postalCode},
-            #{email}, #{phone}
+            #{email}, #{phone},
+            #{contractNumber}, #{discountRate}
         )
     </insert>
 

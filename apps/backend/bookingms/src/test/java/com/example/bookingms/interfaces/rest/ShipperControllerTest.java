@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -53,7 +54,9 @@ class ShipperControllerTest {
                 "JP",
                 "100-0005",
                 "yamada@example.com",
-                "03-1234-5678");
+                "03-1234-5678",
+                null,
+                null);
 
         ResponseEntity<Map<String, String>> response = controller.register(request);
 
@@ -83,12 +86,42 @@ class ShipperControllerTest {
                 "JP",
                 "100-0005",
                 "yamada@example.com",
-                "03-1234-5678");
+                "03-1234-5678",
+                null,
+                null);
 
         ResponseEntity<Map<String, String>> response = controller.register(request);
 
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("shipperId")).isEqualTo("S-100");
+    }
+
+    @Test
+    @DisplayName("US03: 法人荷主登録時に契約番号・割引率が Command に渡される")
+    void 法人荷主登録時に契約情報がCommandに渡される() {
+        when(commandService.register(any(RegisterShipperCommand.class)))
+                .thenReturn(CompletableFuture.completedFuture("ok"));
+
+        RegisterShipperRequest request = new RegisterShipperRequest(
+                null,
+                ShipperType.CORPORATE,
+                "株式会社グローバル商事",
+                "東京都港区六本木 6-10-1",
+                "ミッドタウンタワー 30F",
+                "港区",
+                "JP",
+                "106-6130",
+                "biz@global.example.com",
+                "03-5555-0001",
+                "CONTRACT-2026-001",
+                new BigDecimal("0.150"));
+
+        controller.register(request);
+
+        ArgumentCaptor<RegisterShipperCommand> captor = ArgumentCaptor.forClass(RegisterShipperCommand.class);
+        org.mockito.Mockito.verify(commandService).register(captor.capture());
+        assertThat(captor.getValue().contractNumber()).isEqualTo("CONTRACT-2026-001");
+        assertThat(captor.getValue().discountRate()).isEqualByComparingTo(new BigDecimal("0.150"));
     }
 
     @Test

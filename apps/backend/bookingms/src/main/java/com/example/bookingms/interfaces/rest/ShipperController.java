@@ -20,9 +20,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 荷主 REST Controller（US02）。
+ * 荷主 REST Controller（US02 / US03）。
  *
- * <p>POST /api/v1/shippers で登録、GET /api/v1/shippers{?email=} で重複検出可能。</p>
+ * <p>POST /api/v1/shippers で登録、GET /api/v1/shippers{?email=} で重複検出可能。
+ * 法人荷主の場合は contractNumber / discountRate を含む。</p>
  */
 @RestController
 @RequestMapping("/api/v1/shippers")
@@ -52,7 +53,9 @@ public class ShipperController {
                 request.countryCode(),
                 request.postalCode(),
                 request.email(),
-                request.phone()
+                request.phone(),
+                request.contractNumber(),
+                request.discountRate()
         );
 
         commandService.register(command).join();

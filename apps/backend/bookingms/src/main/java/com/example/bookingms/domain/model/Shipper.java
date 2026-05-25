@@ -8,21 +8,27 @@ import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 
+import java.math.BigDecimal;
+
 /**
- * 荷主集約（US02 / Booking Context）。
+ * 荷主集約（US02 + US03 / Booking Context）。
  *
- * <p>個人荷主・法人荷主の共通骨格を担う Aggregate Root。
- * 法人特有の契約番号・割引率は US03 で別 Command として拡張する。</p>
+ * <p>個人荷主（INDIVIDUAL）と法人荷主（CORPORATE）の両方を扱う集約ルート。
+ * 法人荷主の場合のみ {@code contractNumber} / {@code discountRate} を持つ。</p>
  *
  * <p>不変条件:</p>
  * <ul>
- *   <li>{@code shipperId} は非 null かつ空文字列禁止</li>
- *   <li>{@code email} は非 null かつ空文字列禁止（一意性は Read Model 側で検証）</li>
+ *   <li>{@code shipperId}・{@code email}・{@code name} は非空</li>
  *   <li>{@code shipperType} は非 null</li>
+ *   <li>CORPORATE の場合: {@code contractNumber} 非空、{@code discountRate} 非 null かつ [0.0, 0.3]</li>
+ *   <li>INDIVIDUAL の場合: {@code contractNumber} / {@code discountRate} は両方 null</li>
  * </ul>
  */
 @Aggregate
 public class Shipper {
+
+    private static final BigDecimal MIN_DISCOUNT_RATE = new BigDecimal("0.000");
+    private static final BigDecimal MAX_DISCOUNT_RATE = new BigDecimal("0.300");
 
     @AggregateIdentifier
     private String shipperId;
@@ -30,6 +36,10 @@ public class Shipper {
     private ShipperType shipperType;
     @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
     private String email;
+    @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
+    private String contractNumber;
+    @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
+    private BigDecimal discountRate;
 
     protected Shipper() {
         // Axon required no-arg constructor
@@ -37,6 +47,25 @@ public class Shipper {
 
     @CommandHandler
     public Shipper(RegisterShipperCommand command) {
+        validateBasicFields(command);
+        validateCorporateContract(command);
+        AggregateLifecycle.apply(new ShipperRegisteredEvent(
+                command.shipperId(),
+                command.shipperType(),
+                command.name(),
+                command.addressLine1(),
+                command.addressLine2(),
+                command.city(),
+                command.countryCode(),
+                command.postalCode(),
+                command.email(),
+                command.phone(),
+                command.contractNumber(),
+                command.discountRate()
+        ));
+    }
+
+    private void validateBasicFields(RegisterShipperCommand command) {
         if (command.shipperId() == null || command.shipperId().isBlank()) {
             throw new IllegalArgumentException("荷主 ID は必須です");
         }
@@ -49,18 +78,28 @@ public class Shipper {
         if (command.name() == null || command.name().isBlank()) {
             throw new IllegalArgumentException("氏名/社名は必須です");
         }
-        AggregateLifecycle.apply(new ShipperRegisteredEvent(
-                command.shipperId(),
-                command.shipperType(),
-                command.name(),
-                command.addressLine1(),
-                command.addressLine2(),
-                command.city(),
-                command.countryCode(),
-                command.postalCode(),
-                command.email(),
-                command.phone()
-        ));
+    }
+
+    private void validateCorporateContract(RegisterShipperCommand command) {
+        if (command.shipperType() == ShipperType.CORPORATE) {
+            if (command.contractNumber() == null || command.contractNumber().isBlank()) {
+                throw new IllegalArgumentException("法人荷主の契約番号は必須です");
+            }
+            if (command.discountRate() == null) {
+                throw new IllegalArgumentException("法人荷主の割引率は必須です");
+            }
+            if (command.discountRate().compareTo(MIN_DISCOUNT_RATE) < 0
+                    || command.discountRate().compareTo(MAX_DISCOUNT_RATE) > 0) {
+                throw new IllegalArgumentException("割引率は 0.0 以上 0.3 以下である必要があります");
+            }
+        } else {
+            if (command.contractNumber() != null) {
+                throw new IllegalArgumentException("個人荷主は契約番号を持てません");
+            }
+            if (command.discountRate() != null) {
+                throw new IllegalArgumentException("個人荷主は割引率を持てません");
+            }
+        }
     }
 
     @EventSourcingHandler
@@ -68,6 +107,8 @@ public class Shipper {
         this.shipperId = event.shipperId();
         this.shipperType = event.shipperType();
         this.email = event.email();
+        this.contractNumber = event.contractNumber();
+        this.discountRate = event.discountRate();
     }
 
     public String getShipperId() { return shipperId; }

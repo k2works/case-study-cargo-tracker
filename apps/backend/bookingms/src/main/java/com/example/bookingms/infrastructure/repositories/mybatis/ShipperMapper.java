@@ -4,6 +4,7 @@ import com.example.bookingms.domain.projections.ShipperProjection;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -24,7 +25,9 @@ public interface ShipperMapper {
                        @Param("countryCode") String countryCode,
                        @Param("postalCode") String postalCode,
                        @Param("email") String email,
-                       @Param("phone") String phone);
+                       @Param("phone") String phone,
+                       @Param("contractNumber") String contractNumber,
+                       @Param("discountRate") BigDecimal discountRate);
 
     ShipperProjection findByShipperId(@Param("shipperId") String shipperId);
 

@@ -6,10 +6,10 @@ import org.axonframework.eventhandling.EventHandler;
 import org.springframework.stereotype.Component;
 
 /**
- * 荷主 Read Model 更新用の EventHandler（US02）。
+ * 荷主 Read Model 更新用の EventHandler（US02 / US03）。
  *
  * <p>{@link ShipperRegisteredEvent} を受信して {@code shipper} テーブルに
- * 1 行 INSERT する。</p>
+ * 1 行 INSERT する。法人荷主の場合は contract_number / discount_rate も書き込む。</p>
  */
 @Component
 public class ShipperProjectionEventHandler {
@@ -32,7 +32,9 @@ public class ShipperProjectionEventHandler {
                 event.countryCode(),
                 event.postalCode(),
                 event.email(),
-                event.phone()
+                event.phone(),
+                event.contractNumber(),
+                event.discountRate()
         );
     }
 }

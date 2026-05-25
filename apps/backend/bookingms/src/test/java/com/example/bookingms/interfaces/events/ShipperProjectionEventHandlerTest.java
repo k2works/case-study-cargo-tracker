@@ -10,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
+
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,9 +24,8 @@ class ShipperProjectionEventHandlerTest {
     private ShipperProjectionEventHandler handler;
 
     @Test
-    @DisplayName("US02: ShipperRegisteredEvent を受信すると shipper テーブルに INSERT する")
-    void ShipperRegisteredEvent受信でinsertShipperが呼ばれる() {
-        // Given
+    @DisplayName("US02: 個人荷主の ShipperRegisteredEvent で contractNumber / discountRate は null で INSERT")
+    void 個人荷主は契約情報なしでINSERT() {
         ShipperRegisteredEvent event = new ShipperRegisteredEvent(
                 "S-001",
                 ShipperType.INDIVIDUAL,
@@ -35,12 +36,12 @@ class ShipperProjectionEventHandlerTest {
                 "JP",
                 "100-0005",
                 "yamada@example.com",
-                "03-1234-5678");
+                "03-1234-5678",
+                null,
+                null);
 
-        // When
         handler.on(event);
 
-        // Then
         verify(shipperMapper).insertShipper(
                 "S-001",
                 "INDIVIDUAL",
@@ -51,6 +52,42 @@ class ShipperProjectionEventHandlerTest {
                 "JP",
                 "100-0005",
                 "yamada@example.com",
-                "03-1234-5678");
+                "03-1234-5678",
+                null,
+                null);
+    }
+
+    @Test
+    @DisplayName("US03: 法人荷主の ShipperRegisteredEvent で contractNumber / discountRate が INSERT される")
+    void 法人荷主は契約情報付きでINSERT() {
+        ShipperRegisteredEvent event = new ShipperRegisteredEvent(
+                "S-100",
+                ShipperType.CORPORATE,
+                "株式会社グローバル商事",
+                "東京都港区六本木 6-10-1",
+                "ミッドタウンタワー 30F",
+                "港区",
+                "JP",
+                "106-6130",
+                "biz@global.example.com",
+                "03-5555-0001",
+                "CONTRACT-2026-001",
+                new BigDecimal("0.150"));
+
+        handler.on(event);
+
+        verify(shipperMapper).insertShipper(
+                "S-100",
+                "CORPORATE",
+                "株式会社グローバル商事",
+                "東京都港区六本木 6-10-1",
+                "ミッドタウンタワー 30F",
+                "港区",
+                "JP",
+                "106-6130",
+                "biz@global.example.com",
+                "03-5555-0001",
+                "CONTRACT-2026-001",
+                new BigDecimal("0.150"));
     }
 }
