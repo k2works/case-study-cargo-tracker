@@ -147,12 +147,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | Cargo 集約（BookCargoCommand / CargoBookedEvent） | 4h | - | [ ] |
-| 4.2 | CargoCommandService + CargoQueryService | 2h | - | [ ] |
-| 4.3 | CargoMapper（MyBatis）+ cargo_summary EventHandler | 2h | - | [ ] |
-| 4.4 | CargoController（POST /api/v1/bookings / GET） | 2h | - | [ ] |
-| 4.5 | フロントエンド: 予約一覧（S08）・予約登録（S09） | 3h | - | [ ] |
-| 4.6 | テスト（Service / Controller / EventHandler） | 4h | - | [ ] |
+| 4.1 | Cargo 集約（BookCargoCommand / CargoBookedEvent） | 4h | - | [x] |
+| 4.2 | CargoCommandService + CargoQueryService | 2h | - | [x] |
+| 4.3 | CargoMapper（MyBatis）+ cargo_summary EventHandler | 2h | - | [x] |
+| 4.4 | CargoController（POST /api/v1/bookings / GET） | 2h | - | [x] |
+| 4.5 | フロントエンド: 予約一覧（S08）・予約登録（S09） | 3h | - | [x] |
+| 4.6 | テスト（Service / Controller / EventHandler） | 4h | - | [x] |
 
 **小計**: 17h（理想時間）
 
@@ -180,7 +180,7 @@
 
 **1 SP あたり**: 約 6.5h
 
-**進捗率**: 50% (5/10 SP) — 2026-05-25: 基盤構築 + US02 + US03 完了（バックエンド 16 テスト + フロントエンド 28 テスト PASS）
+**進捗率**: 80% (8/10 SP) — 2026-05-25: 基盤 + US02 + US03 + US04 完了（バックエンド 28 テスト + フロントエンド 37 テスト PASS、残 US05 2 SP）
 
 ---
 
