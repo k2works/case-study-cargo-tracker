@@ -97,7 +97,7 @@ IT2 で `GET /api/v1/shippers` と `GET /api/v1/bookings` を実装した段階�
 | `domain-model.md` (L1171) | `ListCargoSummariesQuery(offset, limit, status?)` の `status?` フィルタを記述 | `status?` フィルタは未実装 | IT3 以降の絞り込み機能で実装。`PageRequest` を拡張して対応予定 |
 | `data-model.md` | `cargo_summary` / `shipper` に `(created_at DESC)` インデックスが未記載 | LIMIT/OFFSET + `ORDER BY created_at DESC` をクエリで使用 | IT3 で Flyway マイグレーションを追加し、`data-model.md` を更新 |
 
-これらは Negative Impact (技術的負債) として認識しており、フォローアップタスクは `docs/development/iteration_plan-3.md` (作成時) で消化します。
+これらは Negative Impact (技術的負債) として認識し、IT3 タスク 0.2（T2）で設計書への反映を実施しました（`architecture_backend.md` の Mapper を `findAllPaged` + `countAll` に整合・`@QueryHandler` は参考扱いと明記、`domain-model.md` に `ListCargoSummariesQuery.status?` 未実装の注記、`data-model.md` に `cargo_summary(created_at DESC)` インデックスを追記）。`created_at DESC` インデックスの Flyway 適用（T4）と React Query 移行は IT3 のコード実装タスクで対応します。
 
 ## コンプライアンス
 

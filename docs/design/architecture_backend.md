@@ -757,7 +757,10 @@ public interface CargoSummaryMapper {
         LIMIT #{limit} OFFSET #{offset}
         """)
     @ResultMap("cargoSummaryResultMap")
-    List<CargoSummary> findAll(@Param("offset") int offset, @Param("limit") int limit);
+    List<CargoSummary> findAllPaged(@Param("offset") int offset, @Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM cargo_summary")
+    long countAll();
 }
 
 // 3) Event Handler（Axon @EventHandler で Projection を更新）
@@ -792,7 +795,7 @@ public class CargoProjectionsEventHandler {
 
 > **ResultMap**: 複雑なオブジェクトはアノテーションよりも **XML マッパー** (`src/main/resources/mybatis/CargoSummaryMapper.xml`) に `<resultMap>` を定義する方が保守性が高い。本プロジェクトでは Read Model は XML マッパー方式を基本とする。
 
-> **IT2 実装との差分**: 上記コード例は `findAll(offset, limit)` 単独の単純なシグネチャだが、IT2 実装では `findAllPaged(offset, limit)` と `countAll()` のペアを採用し、Controller で `PageResponse<T> { items, totalCount, page, size }` を返却する。Axon `@QueryHandler` も採用せず、Controller → QueryService → Mapper を直行している。詳細は [ADR-0008](../adr/0008-pagination-strategy.md) を参照。
+> **ページネーション（ADR-0008 整合・IT3 反映）**: 一覧取得は `findAllPaged(offset, limit)` と `countAll()` のペアで実装し、Controller は `PageResponse<T> { items, totalCount, page, size }` を返す。Query 側は Axon `@QueryHandler` を経由せず Controller → QueryService → Mapper を直行する（下記 Query Handler 例は Axon の標準パターンを示す参考であり、本プロジェクトの実装は QueryService 直行）。詳細は [ADR-0008](../adr/0008-pagination-strategy.md) を参照。
 
 ### Query Handler 実装例（MyBatis）
 
@@ -817,8 +820,9 @@ public class CargoAggregateQueryHandler {
 
     @QueryHandler
     public ListCargoSummaryResult handle(ListCargoSummariesQuery query) {
-        List<CargoSummary> list = cargoSummaryMapper.findAll(query.getOffset(), query.getLimit());
-        return new ListCargoSummaryResult(list);
+        List<CargoSummary> list = cargoSummaryMapper.findAllPaged(query.getOffset(), query.getLimit());
+        long totalCount = cargoSummaryMapper.countAll();
+        return new ListCargoSummaryResult(list, totalCount);
     }
 }
 ```

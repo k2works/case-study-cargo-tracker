@@ -422,6 +422,7 @@ end note
 | `cargo_summary` | `CHECK(arrival_deadline >= CURRENT_DATE - INTERVAL '5 years')` | 不正な期限の検出 |
 | `cargo_leg` | `INDEX(voyage_number)` | 航海変更時の影響範囲特定 |
 | `quotation` | `INDEX(shipper_id, status)` | 荷主別の見積検索 |
+| `cargo_summary` | `INDEX(created_at DESC)` | 一覧のデフォルトソート・LIMIT/OFFSET ページネーション（ADR-0008、IT3 で Flyway 追加予定） |
 
 ### Routing Read Model（`routing_read_db`）
 

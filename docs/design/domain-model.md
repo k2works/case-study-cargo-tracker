@@ -1180,6 +1180,8 @@ T -> N : (LOSS の場合) escalation
 | Billing | `InvoiceQuery(invoiceId)` | `InvoiceResult` | UC18 |
 | Billing | `ListInvoicesQuery(filter)` | `ListInvoiceResult` | UC18 |
 
+> **実装状況（ADR-0008 整合）**: `ListCargoSummariesQuery` の `status?` フィルタは IT2 時点で未実装。一覧は `offset` / `limit` のページネーションのみ対応し、Controller は `PageResponse<T> { items, totalCount, page, size }` を返す。状態絞り込みは IT3 以降で `PageRequest` を拡張して実装予定（[ADR-0008](../adr/0008-pagination-strategy.md)）。
+
 ## Saga（業務プロセス）
 
 ### BookingSagaManager（Booking Context）
