@@ -36,6 +36,10 @@ coverage/
 # SonarQube scanner work directory
 .scannerwork/
 
+# AI agent local memory (keep .gitkeep, ignore generated MEMORY.md etc.)
+.claude/agent-memory/*/*
+!.claude/agent-memory/*/.gitkeep
+
 # Temporary
 tmp/
 .tmp/
