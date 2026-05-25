@@ -67,4 +67,12 @@
         SELECT COUNT(*) FROM cargo_summary
     </select>
 
+    <update id="updateBookingStatus">
+        UPDATE cargo_summary
+        SET booking_status = #{bookingStatus},
+            updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE booking_id = #{bookingId}
+    </update>
+
 </mapper>

@@ -1,6 +1,7 @@
 package com.example.bookingms.interfaces.events;
 
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.HazardInfo;
 import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper;
@@ -47,5 +48,10 @@ public class CargoProjectionsEventHandler {
                 event.bookingStatus(),
                 event.routingStatus()
         );
+    }
+
+    @EventHandler
+    public void on(RouteDesignRequestedEvent event) {
+        cargoSummaryMapper.updateBookingStatus(event.bookingId(), event.bookingStatus());
     }
 }

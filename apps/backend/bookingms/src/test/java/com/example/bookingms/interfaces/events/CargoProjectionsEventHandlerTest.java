@@ -1,6 +1,7 @@
 package com.example.bookingms.interfaces.events;
 
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
@@ -151,5 +152,13 @@ class CargoProjectionsEventHandlerTest {
                 new BigDecimal("-18.0"),
                 "PRELIMINARY",
                 "NOT_ROUTED");
+    }
+
+    @Test
+    @DisplayName("US06: RouteDesignRequestedEvent 受信で booking_status が ROUTING に更新される")
+    void US06_経路設計依頼イベントでbookingStatusが更新される() {
+        handler.on(new RouteDesignRequestedEvent("B-001", "ROUTING"));
+
+        verify(cargoSummaryMapper).updateBookingStatus("B-001", "ROUTING");
     }
 }

@@ -3,6 +3,7 @@ package com.example.bookingms.interfaces.rest;
 import com.example.bookingms.application.CargoCommandService;
 import com.example.bookingms.application.CargoQueryService;
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
@@ -92,6 +93,12 @@ public class CargoBookingController {
             return null;
         }
         return new TemperatureCondition(min, max);
+    }
+
+    @PostMapping("/{bookingId}/handoff")
+    public ResponseEntity<Void> handoff(@PathVariable String bookingId) {
+        commandService.requestRouteDesign(new RequestRouteDesignCommand(bookingId)).join();
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{bookingId}")

@@ -3,6 +3,7 @@ package com.example.bookingms.interfaces.rest;
 import com.example.bookingms.application.CargoCommandService;
 import com.example.bookingms.application.CargoQueryService;
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
@@ -136,6 +137,18 @@ class CargoBookingControllerTest {
         assertThat(response.getBody().page()).isEqualTo(2);
         assertThat(response.getBody().size()).isEqualTo(10);
         org.mockito.Mockito.verify(queryService).findAll(new PageRequest(2, 10));
+    }
+
+    @Test
+    @DisplayName("US06: handoff で経路設計引き渡しコマンドが送信され 200 が返る")
+    void US06_handoffで経路設計引き渡しコマンドが送信される() {
+        when(commandService.requestRouteDesign(any(RequestRouteDesignCommand.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        ResponseEntity<Void> response = controller.handoff("B-001");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        org.mockito.Mockito.verify(commandService).requestRouteDesign(any(RequestRouteDesignCommand.class));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.example.bookingms.application;
 
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,10 @@ public class CargoCommandService {
     }
 
     public CompletableFuture<String> book(BookCargoCommand command) {
+        return commandGateway.send(command);
+    }
+
+    public CompletableFuture<Void> requestRouteDesign(RequestRouteDesignCommand command) {
         return commandGateway.send(command);
     }
 }

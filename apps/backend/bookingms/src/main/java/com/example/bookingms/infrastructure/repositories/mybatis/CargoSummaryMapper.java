@@ -43,4 +43,7 @@ public interface CargoSummaryMapper {
     List<CargoSummary> findAllPaged(@Param("offset") int offset, @Param("limit") int limit);
 
     long countAll();
+
+    void updateBookingStatus(@Param("bookingId") String bookingId,
+                             @Param("bookingStatus") String bookingStatus);
 }
