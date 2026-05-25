@@ -62,6 +62,7 @@ const ENV_FILE = path.join(ROOT, '.env');
 /** バックエンドサービス定義 */
 const SERVICES = [
   { name: 'authms',    port: 8081, label: '認証サービス' },
+  { name: 'bookingms', port: 8082, label: '予約サービス' },
   { name: 'routingms', port: 8083, label: '経路設計サービス' },
   { name: 'gatewayms', port: 8080, label: 'API Gateway' },
 ];
@@ -379,11 +380,12 @@ export default function(gulp) {
   });
 
   /**
-   * authms / routingms / gatewayms の health エンドポイント疎通確認
+   * authms / bookingms / routingms / gatewayms の health エンドポイント疎通確認
    */
   gulp.task('local-docker:smoke', (done) => {
     const targets = [
       { name: 'authms',    url: 'http://localhost:8081/actuator/health' },
+      { name: 'bookingms', url: 'http://localhost:8082/actuator/health' },
       { name: 'routingms', url: 'http://localhost:8083/actuator/health' },
       { name: 'gatewayms', url: 'http://localhost:8080/actuator/health' },
     ];
