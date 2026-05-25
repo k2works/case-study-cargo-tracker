@@ -25,4 +25,14 @@ public class CargoQueryService {
     public List<CargoSummary> findAll() {
         return cargoSummaryMapper.findAll();
     }
+
+    public List<CargoSummary> findAll(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
+        return cargoSummaryMapper.findAllPaged(safePage * safeSize, safeSize);
+    }
+
+    public long count() {
+        return cargoSummaryMapper.countAll();
+    }
 }

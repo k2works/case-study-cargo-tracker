@@ -6,6 +6,7 @@ import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
+import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -96,8 +97,8 @@ class CargoBookingControllerTest {
     }
 
     @Test
-    @DisplayName("US04: GET /api/v1/bookings は予約一覧を返す")
-    void GET一覧で予約リストを返す() {
+    @DisplayName("US04: GET /api/v1/bookings は予約のページレスポンスを返す")
+    void GET一覧で予約のページレスポンスを返す() {
         CargoSummary p = new CargoSummary();
         p.setBookingId("B-100");
         p.setShipperId("S-001");
@@ -106,14 +107,47 @@ class CargoBookingControllerTest {
         p.setCargoType("GENERAL");
         p.setBookingStatus("PRELIMINARY");
         p.setRoutingStatus("NOT_ROUTED");
-        when(queryService.findAll()).thenReturn(List.of(p));
+        when(queryService.findAll(0, 20)).thenReturn(List.of(p));
+        when(queryService.count()).thenReturn(1L);
 
-        ResponseEntity<List<CargoSummaryResponse>> response = controller.findAll();
+        ResponseEntity<PageResponse<CargoSummaryResponse>> response = controller.findAll(0, 20);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().get(0).bookingId()).isEqualTo("B-100");
-        assertThat(response.getBody().get(0).bookingStatus()).isEqualTo("PRELIMINARY");
+        PageResponse<CargoSummaryResponse> body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.items()).hasSize(1);
+        assertThat(body.items().get(0).bookingId()).isEqualTo("B-100");
+        assertThat(body.totalCount()).isEqualTo(1L);
+        assertThat(body.page()).isEqualTo(0);
+        assertThat(body.size()).isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("IT2 ページネーション: page=2, size=10 が QueryService に渡される")
+    void ページネーションパラメータがQueryServiceに渡される() {
+        when(queryService.findAll(2, 10)).thenReturn(List.of());
+        when(queryService.count()).thenReturn(0L);
+
+        ResponseEntity<PageResponse<CargoSummaryResponse>> response = controller.findAll(2, 10);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().page()).isEqualTo(2);
+        assertThat(response.getBody().size()).isEqualTo(10);
+        org.mockito.Mockito.verify(queryService).findAll(2, 10);
+    }
+
+    @Test
+    @DisplayName("IT2 ページネーション: page=-1, size=0 のサニタイズ")
+    void 無効なページパラメータがサニタイズされる() {
+        when(queryService.findAll(0, 20)).thenReturn(List.of());
+        when(queryService.count()).thenReturn(0L);
+
+        ResponseEntity<PageResponse<CargoSummaryResponse>> response = controller.findAll(-1, 0);
+
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().page()).isEqualTo(0);
+        assertThat(response.getBody().size()).isEqualTo(20);
     }
 
     @Test

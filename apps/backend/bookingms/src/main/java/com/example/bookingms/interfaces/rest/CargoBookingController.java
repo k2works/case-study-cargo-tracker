@@ -12,12 +12,14 @@ import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
+import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
@@ -101,10 +103,15 @@ public class CargoBookingController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CargoSummaryResponse>> findAll() {
-        List<CargoSummaryResponse> list = queryService.findAll().stream()
+    public ResponseEntity<PageResponse<CargoSummaryResponse>> findAll(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
+        List<CargoSummaryResponse> items = queryService.findAll(safePage, safeSize).stream()
                 .map(CargoSummaryResponse::from)
                 .toList();
-        return ResponseEntity.ok(list);
+        long totalCount = queryService.count();
+        return ResponseEntity.ok(PageResponse.of(items, totalCount, safePage, safeSize));
     }
 }

@@ -61,4 +61,14 @@
         SELECT * FROM cargo_summary ORDER BY created_at DESC
     </select>
 
+    <select id="findAllPaged" resultMap="cargoSummaryResultMap">
+        SELECT * FROM cargo_summary
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM cargo_summary
+    </select>
+
 </mapper>

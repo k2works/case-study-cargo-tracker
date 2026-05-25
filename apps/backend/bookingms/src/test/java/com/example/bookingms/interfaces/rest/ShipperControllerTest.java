@@ -5,6 +5,7 @@ import com.example.bookingms.application.ShipperQueryService;
 import com.example.bookingms.domain.commands.RegisterShipperCommand;
 import com.example.bookingms.domain.model.ShipperType;
 import com.example.bookingms.domain.projections.ShipperProjection;
+import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import com.example.bookingms.interfaces.rest.dto.RegisterShipperRequest;
 import com.example.bookingms.interfaces.rest.dto.ShipperResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -144,10 +145,50 @@ class ShipperControllerTest {
         p.setName("山田太郎");
         when(queryService.findByEmail("yamada@example.com")).thenReturn(List.of(p));
 
-        ResponseEntity<List<ShipperResponse>> response = controller.find("yamada@example.com");
+        ResponseEntity<?> response = controller.find("yamada@example.com", 0, 20);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().get(0).email()).isEqualTo("yamada@example.com");
+        @SuppressWarnings("unchecked")
+        List<ShipperResponse> body = (List<ShipperResponse>) response.getBody();
+        assertThat(body).hasSize(1);
+        assertThat(body.get(0).email()).isEqualTo("yamada@example.com");
+    }
+
+    @Test
+    @DisplayName("IT2 ページネーション: email 未指定で page=0, size=20 のページレスポンスを返す")
+    void ページネーション付き荷主一覧を返す() {
+        ShipperProjection p = new ShipperProjection();
+        p.setShipperId("S-001");
+        p.setShipperType("INDIVIDUAL");
+        p.setName("山田太郎");
+        when(queryService.findAll(0, 20)).thenReturn(List.of(p));
+        when(queryService.count()).thenReturn(1L);
+
+        ResponseEntity<?> response = controller.find(null, 0, 20);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        @SuppressWarnings("unchecked")
+        PageResponse<ShipperResponse> body = (PageResponse<ShipperResponse>) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.items()).hasSize(1);
+        assertThat(body.totalCount()).isEqualTo(1L);
+        assertThat(body.page()).isEqualTo(0);
+        assertThat(body.size()).isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("IT2 ページネーション: page=3, size=5 が QueryService に渡される")
+    void ページパラメータが委譲される() {
+        when(queryService.findAll(3, 5)).thenReturn(List.of());
+        when(queryService.count()).thenReturn(0L);
+
+        ResponseEntity<?> response = controller.find(null, 3, 5);
+
+        @SuppressWarnings("unchecked")
+        PageResponse<ShipperResponse> body = (PageResponse<ShipperResponse>) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.page()).isEqualTo(3);
+        assertThat(body.size()).isEqualTo(5);
+        org.mockito.Mockito.verify(queryService).findAll(3, 5);
     }
 }

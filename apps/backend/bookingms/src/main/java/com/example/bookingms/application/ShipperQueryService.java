@@ -31,4 +31,14 @@ public class ShipperQueryService {
     public List<ShipperProjection> findAll() {
         return shipperMapper.findAll();
     }
+
+    public List<ShipperProjection> findAll(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
+        return shipperMapper.findAllPaged(safePage * safeSize, safeSize);
+    }
+
+    public long count() {
+        return shipperMapper.countAll();
+    }
 }

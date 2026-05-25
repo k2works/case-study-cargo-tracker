@@ -4,6 +4,7 @@ import com.example.bookingms.application.ShipperCommandService;
 import com.example.bookingms.application.ShipperQueryService;
 import com.example.bookingms.domain.commands.RegisterShipperCommand;
 import com.example.bookingms.domain.projections.ShipperProjection;
+import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import com.example.bookingms.interfaces.rest.dto.RegisterShipperRequest;
 import com.example.bookingms.interfaces.rest.dto.ShipperResponse;
 import org.springframework.http.ResponseEntity;
@@ -71,14 +72,30 @@ public class ShipperController {
         return ResponseEntity.ok(ShipperResponse.from(projection));
     }
 
+    /**
+     * 荷主一覧。
+     *
+     * <p>{@code email} 指定時は重複検出用に list を返す。指定なしの場合は
+     * ページネーション付きの {@link PageResponse} を返す。
+     * フロントエンドは email クエリ有無で戻り型を切り替える。</p>
+     */
     @GetMapping
-    public ResponseEntity<List<ShipperResponse>> find(@RequestParam(value = "email", required = false) String email) {
-        List<ShipperProjection> projections = email == null || email.isBlank()
-                ? queryService.findAll()
-                : queryService.findByEmail(email);
-        List<ShipperResponse> responses = projections.stream()
+    public ResponseEntity<?> find(
+            @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        if (email != null && !email.isBlank()) {
+            List<ShipperResponse> responses = queryService.findByEmail(email).stream()
+                    .map(ShipperResponse::from)
+                    .toList();
+            return ResponseEntity.ok(responses);
+        }
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
+        List<ShipperResponse> items = queryService.findAll(safePage, safeSize).stream()
                 .map(ShipperResponse::from)
                 .toList();
-        return ResponseEntity.ok(responses);
+        long totalCount = queryService.count();
+        return ResponseEntity.ok(PageResponse.of(items, totalCount, safePage, safeSize));
     }
 }
