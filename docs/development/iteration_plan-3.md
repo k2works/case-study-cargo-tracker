@@ -154,26 +154,26 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | routingms に `VoyageSearchQuery`（出発地・目的地・出発期間・貨物種別）+ `VoyageQueryService` | 3h | - | [ ] |
-| 2.2 | `VoyageMapper` に制約検索（寄港地接続・港湾制約・貨物種別対応・危険物/冷凍絞り込み） | 3h | - | [ ] |
-| 2.3 | `GET /api/v1/voyages/search` エンドポイント（PageResponse 形式） | 2h | - | [ ] |
-| 2.4 | フロントエンド: S14 経路設計ワークベンチの航海検索パネル + S11 一覧検索フィルタ | 3h | - | [ ] |
-| 2.5 | テスト（検索条件・絞り込み・該当なし時の再検索案内） | 4h | - | [ ] |
+| 2.1 | routingms に `VoyageSearchCriteria` + `VoyageQueryService.search`（出発地・目的地・出発期間・貨物種別） | 3h | - | [x] |
+| 2.2 | `VoyageMapper.search` に貨物種別対応・危険物/冷凍絞り込み（寄港地接続・港湾制約は US08/IT4 へ委譲） | 3h | - | [x] |
+| 2.3 | `GET /api/v1/voyages/search` エンドポイント（List 形式。PageResponse 化は将来） | 2h | - | [x] |
+| 2.4 | フロントエンド: S11 一覧検索フィルタ + 見積フォーム内航海検索（S14 独立 WB は US08/IT4 と一体のため見送り） | 3h | - | [x] |
+| 2.5 | テスト（QueryService / Controller / Mapper 統合 / フロント、該当なし案内） | 4h | - | [x] |
 
-**小計**: 15h（理想時間）
+**小計**: 15h（理想時間、コミット `1dd1081c` / `52f9ba77` / `f6877af8`）
 
 ### 3. US01: 輸送見積（3 SP）
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | bookingms に `Quotation` 集約（`CreateQuotationCommand` / `QuotationCreatedEvent` / 見積番号採番） | 4h | - | [ ] |
-| 3.2 | `QuotationService` — US07 航海検索を入力にルート概算（経由港・所要日数・概算料金） | 3h | - | [ ] |
-| 3.3 | `QuotationMapper` + `quotation` / `quotation_candidate` read model EventHandler + Flyway | 2h | - | [ ] |
-| 3.4 | `QuotationController`（POST /api/v1/quotes / GET 一覧 / GET 詳細） | 2h | - | [ ] |
-| 3.5 | フロントエンド: S02 見積一覧・S03 見積作成（危険物フォーム切替）・S04 見積詳細 | 4h | - | [ ] |
-| 3.6 | テスト（概算ロジック・期限未達通知・見積番号発行） | 4h | - | [ ] |
+| 3.1 | bookingms に `Quotation` 集約（`CreateQuotationCommand` / `QuotationCreatedEvent` / 見積番号採番） | 4h | - | [x] |
+| 3.2 | ルート概算: フロントが US07 検索結果から選んだ候補を受け取り最安費用を概算金額とする（cross-service 同期呼び出しは回避） | 3h | - | [x] |
+| 3.3 | `QuotationMapper` + `quotation` / `quotation_candidate` read model EventHandler + Flyway | 2h | - | [x] |
+| 3.4 | `QuotationController`（POST /api/v1/quotes / GET 一覧 / GET 詳細） | 2h | - | [x] |
+| 3.5 | フロントエンド: S02 見積一覧・S03 見積作成（US07 検索連携）・S04 見積詳細 + ルーティング | 4h | - | [x] |
+| 3.6 | テスト（集約 / EventHandler / Controller / フロント各ページ） | 4h | - | [x] |
 
-**小計**: 19h（理想時間）
+**小計**: 19h（理想時間、コミット `8d65362e` / `cbb105b4` / `18f1145c` / `4a8e24f4` / `754c264a` / `b3c07204`）
 
 ### 4. US06: 予約引渡し（2 SP）
 
@@ -217,8 +217,8 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 |---------|----|---------|------|
 | IT2 フォローアップ・負債返済 | 0 | 11h | [ ] |
 | cross-service イベント基盤 / Axon Saga | 0 | 11h | [ ] |
-| US07: 航海スケジュール検索 | 3 | 15h | [ ] |
-| US01: 輸送見積 | 3 | 19h | [ ] |
+| US07: 航海スケジュール検索 | 3 | 15h | [x] |
+| US01: 輸送見積 | 3 | 19h | [x] |
 | US06: 予約引渡し | 2 | 12h | [ ] |
 | US13: 予約確定 | 2 | 13h | [ ] |
 | E2E テスト整備（DoD） | 0 | 7h | [ ] |
@@ -226,7 +226,7 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 **1 SP あたり**: 約 8.8h（うち SP 外基盤・負債返済 29h を含む。新規ストーリー実装のみでは約 5.9h/SP）
 
-**進捗率**: 0% (0/10 SP)
+**進捗率**: 60% (6/10 SP) — US07・US01 のバックエンド + フロントを完成。US06・US13（4 SP）は ADR-0009 承認待ち。負債返済は T1/T2/T6 完了、T3/T4/T5/T7 未着手。
 
 ---
 
@@ -972,6 +972,7 @@ apps/frontend/src/
 | 2026-05-25 | 初版作成（IT3: 見積・引渡し・航海検索・予約確定 + cross-service 基盤） | k2works |
 | 2026-05-25 | 整合性検証による設計修正（ドメインモデル・データモデル・UI 命名を SSOT に整合） | k2works |
 | 2026-05-25 | 設計セクションを IT2 粒度に拡充（VO 詳細・周辺データモデル・UI ビュー/モデル/インタラクション/フィードバック） | k2works |
+| 2026-05-25 | US07・US01 の実装完了を反映（進捗 60%、6/10 SP）。実装での簡略化を各タスクに注記 | k2works |
 
 ---
 
