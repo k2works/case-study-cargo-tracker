@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bookingms.infrastructure.repositories.mybatis.QuotationMapper">
+
+    <resultMap id="quotationResultMap" type="com.example.bookingms.domain.projections.QuotationSummary">
+        <id property="quotationId" column="quotation_id"/>
+        <result property="shipperId" column="shipper_id"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="arrivalDeadline" column="arrival_deadline"/>
+        <result property="cargoType" column="cargo_type"/>
+        <result property="weightKg" column="weight_kg"/>
+        <result property="estimatedAmount" column="estimated_amount"/>
+        <result property="estimatedCurrency" column="estimated_currency"/>
+        <result property="validUntil" column="valid_until"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="version" column="version"/>
+        <collection property="candidates"
+                    ofType="com.example.bookingms.domain.projections.QuotationSummary$Candidate"
+                    select="findCandidates"
+                    column="quotation_id"/>
+    </resultMap>
+
+    <resultMap id="candidateResultMap"
+               type="com.example.bookingms.domain.projections.QuotationSummary$Candidate">
+        <result property="candidateSeq" column="candidate_seq"/>
+        <result property="estimatedDays" column="estimated_days"/>
+        <result property="estimatedCost" column="estimated_cost"/>
+        <result property="estimatedCurrency" column="estimated_currency"/>
+        <result property="itinerarySummary" column="itinerary_summary"/>
+    </resultMap>
+
+    <insert id="insertQuotation">
+        INSERT INTO quotation (
+            quotation_id, shipper_id, origin_unlocode, destination_unlocode,
+            arrival_deadline, cargo_type, weight_kg, estimated_amount,
+            estimated_currency, valid_until, status
+        ) VALUES (
+            #{quotationId}, #{shipperId}, #{originUnlocode}, #{destinationUnlocode},
+            #{arrivalDeadline}, #{cargoType}, #{weightKg}, #{estimatedAmount},
+            #{estimatedCurrency}, #{validUntil}, #{status}
+        )
+    </insert>
+
+    <insert id="insertCandidate">
+        INSERT INTO quotation_candidate (
+            quotation_id, candidate_seq, estimated_days, estimated_cost,
+            estimated_currency, itinerary_summary
+        ) VALUES (
+            #{quotationId}, #{candidateSeq}, #{estimatedDays}, #{estimatedCost},
+            #{estimatedCurrency}, #{itinerarySummary}
+        )
+    </insert>
+
+    <select id="findById" resultMap="quotationResultMap">
+        SELECT quotation_id, shipper_id, origin_unlocode, destination_unlocode,
+               arrival_deadline, cargo_type, weight_kg, estimated_amount,
+               estimated_currency, valid_until, status, created_at, updated_at, version
+        FROM quotation
+        WHERE quotation_id = #{quotationId}
+    </select>
+
+    <select id="findCandidates" resultMap="candidateResultMap">
+        SELECT candidate_seq, estimated_days, estimated_cost, estimated_currency, itinerary_summary
+        FROM quotation_candidate
+        WHERE quotation_id = #{quotationId}
+        ORDER BY candidate_seq
+    </select>
+
+    <select id="findAllPaged" resultMap="quotationResultMap">
+        SELECT quotation_id, shipper_id, origin_unlocode, destination_unlocode,
+               arrival_deadline, cargo_type, weight_kg, estimated_amount,
+               estimated_currency, valid_until, status, created_at, updated_at, version
+        FROM quotation
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*) FROM quotation
+    </select>
+
+</mapper>
