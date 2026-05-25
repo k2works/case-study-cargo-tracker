@@ -23,11 +23,11 @@
 
 ### 成功基準
 
-- [ ] US01: 輸送見積を作成し、ルート概算候補・見積番号発行を確認できる
-- [ ] US06: 予約を経路設計者に引き渡し、状態が「経路設計中」に更新される
-- [ ] US07: 制約条件に基づく航海スケジュール検索ができる
-- [ ] US13: 予約を確定・キャンセルでき、状態遷移ガードが機能する
-- [ ] bookingms ⇔ routingms の cross-service イベントが Kafka 経由で疎通する
+- [x] US01: 輸送見積を作成し、ルート概算候補・見積番号発行を確認できる
+- [x] US06: 予約を経路設計者に引き渡し、状態が「経路設計中」に更新される
+- [x] US07: 制約条件に基づく航海スケジュール検索ができる
+- [x] US13: 予約を確定・キャンセルでき、状態遷移ガードが機能する
+- [x] bookingms ⇔ routingms の cross-service イベントが Kafka 経由で疎通する
 - [ ] テストカバレッジ（新規コード）80% 以上 / SonarQube Quality Gate PASS
 
 ---
@@ -142,11 +142,11 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | Kafka tracking モード移行（bookingms / routingms の event processor を tracking に変更） | 3h | - | [ ] |
-| 1.2 | cross-service イベント定義（`RouteDesignRequestedEvent` / `TrackingIssuanceRequestedEvent`）と Kafka トピック設計 | 2h | - | [ ] |
-| 1.3 | `BookingSagaManager`（Axon Saga）スケルトン作成（予約→経路設計→確定のフロー骨格） | 3h | - | [ ] |
-| 1.4 | ADR-0009「cross-service イベント連携と Saga 採用」作成 | 1h | - | [ ] |
-| 1.5 | cross-service イベント疎通の統合テスト（Testcontainers Kafka） | 2h | - | [ ] |
+| 1.1 | Kafka tracking モード移行（routingms の cross-service プロセッサ `route-design-requests` を StreamableKafkaMessageSource + tracking に。サービス内 Projection は subscribing 維持で IT2 退行回避） | 3h | - | [x] |
+| 1.2 | cross-service イベント定義（`RouteDesignRequestedEvent` を shared へ移動・経路設計情報込みに拡張）と Kafka トピック設計（`cargo-events`）。`TrackingIssuanceRequestedEvent` は IT5 | 2h | - | [x] |
+| 1.3 | `BookingSagaManager`（Axon Saga）スケルトン作成（予約→経路設計→確定/キャンセルのフロー骨格、SagaTestFixture 検証） | 3h | - | [x] |
+| 1.4 | ADR-0009「cross-service イベント連携と Saga 採用」作成 | 1h | - | [x] |
+| 1.5 | cross-service イベント疎通の統合テスト（Testcontainers Kafka、publish→Kafka→購読→記録） | 2h | - | [x] |
 
 **小計**: 11h（理想時間）
 
@@ -216,7 +216,7 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
 | IT2 フォローアップ・負債返済 | 0 | 11h | [x] |
-| cross-service イベント基盤 / Axon Saga | 0 | 11h | [ ] |
+| cross-service イベント基盤 / Axon Saga | 0 | 11h | [x] |
 | US07: 航海スケジュール検索 | 3 | 15h | [x] |
 | US01: 輸送見積 | 3 | 19h | [x] |
 | US06: 予約引渡し | 2 | 12h | [x] |
@@ -226,7 +226,7 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 **1 SP あたり**: 約 8.8h（うち SP 外基盤・負債返済 29h を含む。新規ストーリー実装のみでは約 5.9h/SP）
 
-**進捗率**: 100% (10/10 SP) — US07・US01・US06・US13 の業務機能（ドメイン + Read Model + API）とフロント UI を完成。負債返済 T1-T6 完了、E2E spec 整備済み。残るは SP 外の cross-service 基盤/Saga（T7、Kafka tracking 移行・routingms 受信。IT2 退行リスクのため最終段階で慎重に実施）と E2E の実バックエンド実行。
+**進捗率**: 100% (10/10 SP) — US07・US01・US06・US13 の業務機能（ドメイン + Read Model + API）とフロント UI を完成。負債返済 T1-T6 完了、E2E spec 整備済み。cross-service 基盤/Saga（T7）も完了（`RouteDesignRequestedEvent` を shared へ移動・拡張、`BookingSagaManager`、routingms 受信 read model `route_design_request`、Kafka tracking 配線を Testcontainers Kafka で疎通検証）。残るは E2E の実バックエンド実行のみ。
 
 ---
 
@@ -951,7 +951,7 @@ apps/frontend/src/
 - [ ] ユニットテストがパス（新規コードカバレッジ 80% 以上）
 - [ ] E2E テストがパス
 - [ ] SonarQube Quality Gate PASS（重複率 < 3%）
-- [ ] cross-service イベントが Kafka 経由で疎通（Testcontainers 統合テスト）
+- [x] cross-service イベントが Kafka 経由で疎通（Testcontainers 統合テスト）
 - [ ] ローカル環境（local-docker プロファイル）で動作確認済み
 - [ ] Heroku デプロイ確認済み（quotes / voyages サービスを deploy:dev に登録）
 - [ ] ドキュメント更新完了（設計ドキュメント T2 整合・ADR-0009）
@@ -975,6 +975,7 @@ apps/frontend/src/
 | 2026-05-25 | US07・US01 の実装完了を反映（進捗 60%、6/10 SP）。実装での簡略化を各タスクに注記 | k2works |
 | 2026-05-25 | 負債返済 T3/T4/T5 完了を反映（T1-T6 全完了）。残りは US06/US13・T7（ADR-0009 承認待ち）と E2E | k2works |
 | 2026-05-25 | ADR-0009 承認、US06/US13 の業務機能（状態遷移 + Read Model + API + S10 フロント）完成を反映（進捗 100%、10/10 SP）。cross-service 基盤（T7）と E2E 実行が残る | k2works |
+| 2026-05-25 | T7 完了: cross-service イベントを shared へ移動・経路設計情報込みに拡張、`BookingSagaManager`、routingms 受信 read model（`route_design_request`）、Kafka tracking 配線を Testcontainers Kafka で疎通検証。残りは E2E 実バックエンド実行のみ | k2works |
 
 ---
 
