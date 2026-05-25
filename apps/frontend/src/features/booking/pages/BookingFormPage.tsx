@@ -15,6 +15,11 @@ interface FormValues {
   heightCm: string;
   quantity: string;
   productName: string;
+  hazardImoClass: string;
+  hazardUnNumber: string;
+  hazardDeclaration: string;
+  temperatureMinC: string;
+  temperatureMaxC: string;
 }
 
 const empty: FormValues = {
@@ -29,6 +34,11 @@ const empty: FormValues = {
   heightCm: '',
   quantity: '',
   productName: '',
+  hazardImoClass: '',
+  hazardUnNumber: '',
+  hazardDeclaration: '',
+  temperatureMinC: '',
+  temperatureMaxC: '',
 };
 
 export default function BookingFormPage() {
@@ -45,7 +55,9 @@ export default function BookingFormPage() {
   }, []);
 
   function set<K extends keyof FormValues>(field: K) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    return (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) =>
       setValues((prev) => ({ ...prev, [field]: e.target.value as FormValues[K] }));
   }
 
@@ -53,6 +65,12 @@ export default function BookingFormPage() {
     if (s === '') return null;
     const n = Number(s);
     return Number.isFinite(n) ? Math.trunc(n) : null;
+  }
+
+  function parseOptionalNumber(s: string): number | null {
+    if (s === '') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -81,6 +99,30 @@ export default function BookingFormPage() {
       return;
     }
 
+    if (values.cargoType === 'HAZARDOUS') {
+      if (!values.hazardImoClass || !values.hazardUnNumber || !values.hazardDeclaration) {
+        setError('危険物の場合は IMO 分類クラス・国連番号・申告文をすべて入力してください');
+        return;
+      }
+    }
+
+    if (values.cargoType === 'REFRIGERATED') {
+      if (!values.temperatureMinC || !values.temperatureMaxC) {
+        setError('冷凍貨物の場合は最低温度・最高温度をともに入力してください');
+        return;
+      }
+      const min = Number(values.temperatureMinC);
+      const max = Number(values.temperatureMaxC);
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        setError('温度は数値で入力してください');
+        return;
+      }
+      if (min > max) {
+        setError('最低温度は最高温度以下である必要があります');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       await bookCargo({
@@ -95,6 +137,11 @@ export default function BookingFormPage() {
         heightCm: parseOptionalInt(values.heightCm),
         quantity: Math.trunc(quantity),
         productName: values.productName,
+        hazardImoClass: values.cargoType === 'HAZARDOUS' ? values.hazardImoClass : null,
+        hazardUnNumber: values.cargoType === 'HAZARDOUS' ? values.hazardUnNumber : null,
+        hazardDeclaration: values.cargoType === 'HAZARDOUS' ? values.hazardDeclaration : null,
+        temperatureMinC: values.cargoType === 'REFRIGERATED' ? parseOptionalNumber(values.temperatureMinC) : null,
+        temperatureMaxC: values.cargoType === 'REFRIGERATED' ? parseOptionalNumber(values.temperatureMaxC) : null,
       });
       navigate('/bookings');
     } catch (err) {
@@ -140,12 +187,12 @@ export default function BookingFormPage() {
             id="cargoType"
             value={values.cargoType}
             onChange={set('cargoType')}
-            disabled
-            className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-sm"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="GENERAL">一般貨物</option>
+            <option value="HAZARDOUS">危険物</option>
+            <option value="REFRIGERATED">冷凍・冷蔵貨物</option>
           </select>
-          <p className="mt-1 text-xs text-gray-500">危険物・冷凍貨物は US05 で対応予定</p>
         </div>
 
         <div>
@@ -265,6 +312,82 @@ export default function BookingFormPage() {
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
+
+        {values.cargoType === 'HAZARDOUS' && (
+          <fieldset className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-3">
+            <legend className="px-2 text-sm font-medium text-amber-800">危険物申告情報</legend>
+            <div>
+              <label htmlFor="hazardImoClass" className="block text-sm font-medium text-gray-700">
+                IMO 分類クラス
+              </label>
+              <input
+                id="hazardImoClass"
+                type="text"
+                value={values.hazardImoClass}
+                onChange={set('hazardImoClass')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="hazardUnNumber" className="block text-sm font-medium text-gray-700">
+                国連番号
+              </label>
+              <input
+                id="hazardUnNumber"
+                type="text"
+                value={values.hazardUnNumber}
+                onChange={set('hazardUnNumber')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="hazardDeclaration" className="block text-sm font-medium text-gray-700">
+                申告文
+              </label>
+              <textarea
+                id="hazardDeclaration"
+                rows={2}
+                value={values.hazardDeclaration}
+                onChange={set('hazardDeclaration')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </fieldset>
+        )}
+
+        {values.cargoType === 'REFRIGERATED' && (
+          <fieldset className="rounded-md border border-sky-300 bg-sky-50 p-3 space-y-3">
+            <legend className="px-2 text-sm font-medium text-sky-800">温度管理条件</legend>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="temperatureMinC" className="block text-sm font-medium text-gray-700">
+                  最低温度 (℃)
+                </label>
+                <input
+                  id="temperatureMinC"
+                  type="number"
+                  step="0.1"
+                  value={values.temperatureMinC}
+                  onChange={set('temperatureMinC')}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="temperatureMaxC" className="block text-sm font-medium text-gray-700">
+                  最高温度 (℃)
+                </label>
+                <input
+                  id="temperatureMaxC"
+                  type="number"
+                  step="0.1"
+                  value={values.temperatureMaxC}
+                  onChange={set('temperatureMaxC')}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </fieldset>
+        )}
 
         {error && (
           <div className="rounded-md bg-red-50 p-3">

@@ -134,4 +134,120 @@ describe('BookingFormPage', () => {
       })
     );
   });
+
+  it('US05: 危険物選択で hazard 情報フィールドが表示される', async () => {
+    renderNew();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    expect(screen.queryByLabelText('IMO 分類クラス')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('貨物種別'), 'HAZARDOUS');
+
+    expect(screen.getByLabelText('IMO 分類クラス')).toBeInTheDocument();
+    expect(screen.getByLabelText('国連番号')).toBeInTheDocument();
+    expect(screen.getByLabelText('申告文')).toBeInTheDocument();
+  });
+
+  it('US05: 冷凍選択で温度フィールドが表示される', async () => {
+    renderNew();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    expect(screen.queryByLabelText('最低温度 (℃)')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('貨物種別'), 'REFRIGERATED');
+
+    expect(screen.getByLabelText('最低温度 (℃)')).toBeInTheDocument();
+    expect(screen.getByLabelText('最高温度 (℃)')).toBeInTheDocument();
+  });
+
+  it('US05: 危険物選択で hazard フィールド未入力時にエラー', async () => {
+    renderNew();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    await fillRequired(user);
+    await user.selectOptions(screen.getByLabelText('貨物種別'), 'HAZARDOUS');
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('危険物')
+    );
+    expect(bookingApi.bookCargo).not.toHaveBeenCalled();
+  });
+
+  it('US05: 冷凍選択で min > max ならエラー', async () => {
+    renderNew();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    await fillRequired(user);
+    await user.selectOptions(screen.getByLabelText('貨物種別'), 'REFRIGERATED');
+    await user.type(screen.getByLabelText('最低温度 (℃)'), '-10');
+    await user.type(screen.getByLabelText('最高温度 (℃)'), '-25');
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('最低温度は最高温度以下')
+    );
+    expect(bookingApi.bookCargo).not.toHaveBeenCalled();
+  });
+
+  it('US05: 危険物予約が正しく送信される', async () => {
+    vi.mocked(bookingApi.bookCargo).mockResolvedValue({ bookingId: 'B-NEW' });
+    renderNew();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    await fillRequired(user);
+    await user.selectOptions(screen.getByLabelText('貨物種別'), 'HAZARDOUS');
+    await user.type(screen.getByLabelText('IMO 分類クラス'), '3');
+    await user.type(screen.getByLabelText('国連番号'), 'UN1090');
+    await user.type(screen.getByLabelText('申告文'), '引火性液体');
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('予約一覧')).toBeInTheDocument()
+    );
+
+    expect(bookingApi.bookCargo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cargoType: 'HAZARDOUS',
+        hazardImoClass: '3',
+        hazardUnNumber: 'UN1090',
+        hazardDeclaration: '引火性液体',
+        temperatureMinC: null,
+        temperatureMaxC: null,
+      })
+    );
+  });
+
+  it('US05: 冷凍予約が正しく送信される', async () => {
+    vi.mocked(bookingApi.bookCargo).mockResolvedValue({ bookingId: 'B-NEW' });
+    renderNew();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    await fillRequired(user);
+    await user.selectOptions(screen.getByLabelText('貨物種別'), 'REFRIGERATED');
+    await user.type(screen.getByLabelText('最低温度 (℃)'), '-25');
+    await user.type(screen.getByLabelText('最高温度 (℃)'), '-18');
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('予約一覧')).toBeInTheDocument()
+    );
+
+    expect(bookingApi.bookCargo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cargoType: 'REFRIGERATED',
+        temperatureMinC: -25,
+        temperatureMaxC: -18,
+        hazardImoClass: null,
+        hazardUnNumber: null,
+        hazardDeclaration: null,
+      })
+    );
+  });
 });

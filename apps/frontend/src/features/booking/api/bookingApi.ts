@@ -14,6 +14,11 @@ export interface CargoSummary {
   heightCm: number | null;
   quantity: number | null;
   productName: string | null;
+  hazardImoClass: string | null;
+  hazardUnNumber: string | null;
+  hazardDeclaration: string | null;
+  temperatureMinC: number | null;
+  temperatureMaxC: number | null;
   bookingStatus: string;
   routingStatus: string;
   estimatedAmount: number | null;
@@ -32,6 +37,11 @@ export interface BookCargoRequest {
   heightCm?: number | null;
   quantity: number;
   productName: string;
+  hazardImoClass?: string | null;
+  hazardUnNumber?: string | null;
+  hazardDeclaration?: string | null;
+  temperatureMinC?: number | null;
+  temperatureMaxC?: number | null;
 }
 
 export interface BookCargoResponse {
