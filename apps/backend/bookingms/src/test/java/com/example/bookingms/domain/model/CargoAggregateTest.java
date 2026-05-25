@@ -1,7 +1,9 @@
 package com.example.bookingms.domain.model;
 
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -300,5 +302,29 @@ class CargoAggregateTest {
         fixture.givenNoPriorActivity()
                 .when(cmd)
                 .expectException(IllegalArgumentException.class);
+    }
+
+    private CargoBookedEvent bookedEvent(String bookingId) {
+        BookCargoCommand cmd = validGeneralCommand(bookingId);
+        return new CargoBookedEvent(
+                bookingId, cmd.shipperId(), cmd.routeSpec(), cmd.cargoSpec(),
+                "PRELIMINARY", "NOT_ROUTED");
+    }
+
+    @Test
+    @DisplayName("US06: 仮受付の予約を経路設計に引き渡せる")
+    void 仮受付の予約を経路設計に引き渡せる() {
+        fixture.given(bookedEvent("B-201"))
+                .when(new RequestRouteDesignCommand("B-201"))
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new RouteDesignRequestedEvent("B-201", "ROUTING"));
+    }
+
+    @Test
+    @DisplayName("US06: 既に経路設計中の予約は再度引き渡せない")
+    void 既に経路設計中の予約は再度引き渡せない() {
+        fixture.given(bookedEvent("B-202"), new RouteDesignRequestedEvent("B-202", "ROUTING"))
+                .when(new RequestRouteDesignCommand("B-202"))
+                .expectException(IllegalStateException.class);
     }
 }

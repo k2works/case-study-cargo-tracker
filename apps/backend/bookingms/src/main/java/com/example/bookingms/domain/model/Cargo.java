@@ -1,7 +1,9 @@
 package com.example.bookingms.domain.model;
 
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
@@ -25,7 +27,6 @@ public class Cargo {
     private String bookingId;
     @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
     private String shipperId;
-    @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
     private BookingStatus bookingStatus;
     @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
     private RoutingStatus routingStatus;
@@ -156,6 +157,22 @@ public class Cargo {
         this.shipperId = event.shipperId();
         this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
         this.routingStatus = RoutingStatus.valueOf(event.routingStatus());
+    }
+
+    /**
+     * 経路設計引き渡し（US06）。仮受付（PRELIMINARY）のときのみ ROUTING へ遷移できる。
+     */
+    @CommandHandler
+    public void handle(RequestRouteDesignCommand command) {
+        if (this.bookingStatus != BookingStatus.PRELIMINARY) {
+            throw new IllegalStateException("経路設計を依頼できるのは仮受付状態の予約のみです");
+        }
+        AggregateLifecycle.apply(new RouteDesignRequestedEvent(this.bookingId, BookingStatus.ROUTING.name()));
+    }
+
+    @EventSourcingHandler
+    public void on(RouteDesignRequestedEvent event) {
+        this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
     }
 
     public String getBookingId() { return bookingId; }
