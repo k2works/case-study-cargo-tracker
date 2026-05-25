@@ -159,7 +159,7 @@ class CargoProjectionsEventHandlerTest {
     @Test
     @DisplayName("US06: RouteDesignRequestedEvent 受信で booking_status が ROUTING に更新される")
     void US06_経路設計依頼イベントでbookingStatusが更新される() {
-        handler.on(new RouteDesignRequestedEvent("B-001", "ROUTING"));
+        handler.on(new RouteDesignRequestedEvent("B-001", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"));
 
         verify(cargoSummaryMapper).updateBookingStatus("B-001", "ROUTING");
     }

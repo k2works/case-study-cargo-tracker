@@ -34,6 +34,8 @@ public class Cargo {
     private BookingStatus bookingStatus;
     @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
     private RoutingStatus routingStatus;
+    private RouteSpecification routeSpec;
+    private CargoType cargoType;
 
     protected Cargo() {
         // Axon required no-arg constructor
@@ -161,6 +163,8 @@ public class Cargo {
         this.shipperId = event.shipperId();
         this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
         this.routingStatus = RoutingStatus.valueOf(event.routingStatus());
+        this.routeSpec = event.routeSpec();
+        this.cargoType = event.cargoSpec().cargoType();
     }
 
     /**
@@ -171,7 +175,13 @@ public class Cargo {
         if (this.bookingStatus != BookingStatus.PRELIMINARY) {
             throw new IllegalStateException("経路設計を依頼できるのは仮受付状態の予約のみです");
         }
-        AggregateLifecycle.apply(new RouteDesignRequestedEvent(this.bookingId, BookingStatus.ROUTING.name()));
+        AggregateLifecycle.apply(new RouteDesignRequestedEvent(
+                this.bookingId,
+                BookingStatus.ROUTING.name(),
+                this.routeSpec.originUnlocode(),
+                this.routeSpec.destinationUnlocode(),
+                this.routeSpec.arrivalDeadline(),
+                this.cargoType.name()));
     }
 
     @EventSourcingHandler

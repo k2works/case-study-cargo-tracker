@@ -45,7 +45,7 @@ class BookingSagaManagerTest {
     @DisplayName("ADR-0009: 経路設計依頼イベントでも Saga は継続する")
     void 経路設計依頼でSagaが継続する() {
         fixture.givenAPublished(bookedEvent("B-001"))
-                .whenPublishingA(new RouteDesignRequestedEvent("B-001", "ROUTING"))
+                .whenPublishingA(new RouteDesignRequestedEvent("B-001", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"))
                 .expectActiveSagas(1);
     }
 

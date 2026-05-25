@@ -321,13 +321,15 @@ class CargoAggregateTest {
         fixture.given(bookedEvent("B-201"))
                 .when(new RequestRouteDesignCommand("B-201"))
                 .expectSuccessfulHandlerExecution()
-                .expectEvents(new RouteDesignRequestedEvent("B-201", "ROUTING"));
+                .expectEvents(new RouteDesignRequestedEvent(
+                        "B-201", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"));
     }
 
     @Test
     @DisplayName("US06: 既に経路設計中の予約は再度引き渡せない")
     void 既に経路設計中の予約は再度引き渡せない() {
-        fixture.given(bookedEvent("B-202"), new RouteDesignRequestedEvent("B-202", "ROUTING"))
+        fixture.given(bookedEvent("B-202"),
+                        new RouteDesignRequestedEvent("B-202", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"))
                 .when(new RequestRouteDesignCommand("B-202"))
                 .expectException(IllegalStateException.class);
     }
@@ -343,7 +345,8 @@ class CargoAggregateTest {
     @Test
     @DisplayName("US13: 経路設計中の予約をキャンセルできる")
     void 経路設計中の予約をキャンセルできる() {
-        fixture.given(bookedEvent("B-302"), new RouteDesignRequestedEvent("B-302", "ROUTING"))
+        fixture.given(bookedEvent("B-302"),
+                        new RouteDesignRequestedEvent("B-302", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"))
                 .when(new CancelBookingCommand("B-302"))
                 .expectEvents(new BookingCancelledEvent("B-302", "CANCELLED"));
     }
