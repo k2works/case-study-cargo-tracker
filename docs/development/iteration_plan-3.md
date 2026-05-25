@@ -129,9 +129,9 @@ IT2 ふりかえりの Try / 技術的負債を IT3 着手時に解消する。S
 |---|--------|---------|------|------|
 | 0.1 | T1: 「新サービス追加チェックリスト」を `docs/reference/` に作成（gatewayms routes・deploy:dev SERVICES・docker-compose・sonar-project.properties） | 2h | - | [x] |
 | 0.2 | T2: 設計ドキュメント整合（`architecture_backend.md` / `architecture_frontend.md` / `domain-model.md` / `data-model.md`）と ADR-0008「設計ドキュメントとの差分」解消 | 3h | - | [x] |
-| 0.3 | T3: `fetchBookings` / `fetchShippers` 後方互換ラッパを削除し `fetchBookingsPage` / `fetchShippersPage` に統一 | 2h | - | [ ] |
-| 0.4 | T4: `created_at DESC` インデックスを Flyway で追加し `data-model.md` に反映 | 1h | - | [ ] |
-| 0.5 | T5: `PageResponse<T>` 型・`PAGE_SIZE` 定数を `src/shared/api/types.ts` に共通化 | 2h | - | [ ] |
+| 0.3 | T3: `fetchBookings` / `fetchShippers` 後方互換ラッパを削除し `fetchBookingsPage` / `fetchShippersPage` に統一 | 2h | - | [x] |
+| 0.4 | T4: `created_at DESC` インデックスを Flyway で追加し `data-model.md` に反映 | 1h | - | [x] |
+| 0.5 | T5: `PageResponse<T>` 型・`PAGE_SIZE` 定数を `src/shared/api/types.ts` に共通化 | 2h | - | [x] |
 | 0.6 | T6: マルチパースペクティブレビュー用プロンプトテンプレート（tester / user-representative 観点）を整備 | 1h | - | [x] |
 
 **小計**: 11h（理想時間）
@@ -215,7 +215,7 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| IT2 フォローアップ・負債返済 | 0 | 11h | [ ] |
+| IT2 フォローアップ・負債返済 | 0 | 11h | [x] |
 | cross-service イベント基盤 / Axon Saga | 0 | 11h | [ ] |
 | US07: 航海スケジュール検索 | 3 | 15h | [x] |
 | US01: 輸送見積 | 3 | 19h | [x] |
@@ -226,7 +226,7 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 **1 SP あたり**: 約 8.8h（うち SP 外基盤・負債返済 29h を含む。新規ストーリー実装のみでは約 5.9h/SP）
 
-**進捗率**: 60% (6/10 SP) — US07・US01 のバックエンド + フロントを完成。US06・US13（4 SP）は ADR-0009 承認待ち。負債返済は T1/T2/T6 完了、T3/T4/T5/T7 未着手。
+**進捗率**: 60% (6/10 SP) — US07・US01 のバックエンド + フロントを完成。負債返済は T1-T6 全完了。残るは US06・US13（4 SP）と cross-service 基盤/Saga（T7）で、いずれも ADR-0009 の承認待ち。E2E は未整備。
 
 ---
 
@@ -973,6 +973,7 @@ apps/frontend/src/
 | 2026-05-25 | 整合性検証による設計修正（ドメインモデル・データモデル・UI 命名を SSOT に整合） | k2works |
 | 2026-05-25 | 設計セクションを IT2 粒度に拡充（VO 詳細・周辺データモデル・UI ビュー/モデル/インタラクション/フィードバック） | k2works |
 | 2026-05-25 | US07・US01 の実装完了を反映（進捗 60%、6/10 SP）。実装での簡略化を各タスクに注記 | k2works |
+| 2026-05-25 | 負債返済 T3/T4/T5 完了を反映（T1-T6 全完了）。残りは US06/US13・T7（ADR-0009 承認待ち）と E2E | k2works |
 
 ---
 
