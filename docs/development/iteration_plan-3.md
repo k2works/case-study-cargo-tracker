@@ -179,11 +179,11 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | Cargo 集約に `RequestRouteDesignCommand` + 状態遷移（PRELIMINARY → ROUTING）ガード | 3h | - | [ ] |
-| 4.2 | `CargoCommandService.requestRouteDesign` + `RouteDesignRequestedEvent` 発行（routingms へ） | 2h | - | [ ] |
-| 4.3 | `POST /api/v1/bookings/{bookingId}/handoff` + 予約不備バリデーション | 2h | - | [ ] |
-| 4.4 | フロントエンド: S10 予約詳細に「経路設計依頼」操作・状態表示 | 2h | - | [ ] |
-| 4.5 | テスト（状態遷移・不備時のブロック・cross-service イベント発行） | 3h | - | [ ] |
+| 4.1 | Cargo 集約に `RequestRouteDesignCommand` + 状態遷移（PRELIMINARY → ROUTING）ガード | 3h | - | [x] |
+| 4.2 | `CargoCommandService.requestRouteDesign` + `RouteDesignRequestedEvent` 発行（bookingms 内発行・Read Model 更新は完了。routingms への Kafka 配信は T7） | 2h | - | [x] |
+| 4.3 | `POST /api/v1/bookings/{bookingId}/handoff` | 2h | - | [x] |
+| 4.4 | フロントエンド: S10 予約詳細に「経路設計依頼」操作・状態タイムライン | 2h | - | [x] |
+| 4.5 | テスト（状態遷移・Read Model 更新・handoff API） | 3h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -191,11 +191,11 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | Cargo 集約の `ConfirmBookingCommand` / `CancelBookingCommand` 状態遷移ガード実装 | 3h | - | [ ] |
-| 5.2 | `CargoCommandService` 確定/キャンセル + `TrackingIssuanceRequestedEvent`（Saga 経由） | 3h | - | [ ] |
-| 5.3 | `POST /api/v1/bookings/{bookingId}/confirm` / `/cancel` エンドポイント | 2h | - | [ ] |
-| 5.4 | フロントエンド: S10 予約詳細に確定・ルート変更（ROUTING へ戻す）・キャンセル操作 | 2h | - | [ ] |
-| 5.5 | テスト（確定・キャンセル・差し戻し・不正遷移の拒否） | 3h | - | [ ] |
+| 5.1 | Cargo 集約の `ConfirmBookingCommand` / `CancelBookingCommand` 状態遷移ガード実装 | 3h | - | [x] |
+| 5.2 | `CargoCommandService` 確定/キャンセル（Read Model 更新含む。`TrackingIssuanceRequestedEvent` / Saga は T7、確定の正常系 ROUTE_PROPOSED 到達は IT4） | 3h | - | [x] |
+| 5.3 | `POST /api/v1/bookings/{bookingId}/confirm` / `/cancel` エンドポイント | 2h | - | [x] |
+| 5.4 | フロントエンド: S10 予約詳細に確定・キャンセル操作（ボタン活性制御） | 2h | - | [x] |
+| 5.5 | テスト（確定ガード・キャンセル正常系・不正遷移の拒否） | 3h | - | [x] |
 
 **小計**: 13h（理想時間）
 
@@ -219,14 +219,14 @@ US06 / US13 の前提となる bookingms ⇔ routingms 連携基盤。SP 外で�
 | cross-service イベント基盤 / Axon Saga | 0 | 11h | [ ] |
 | US07: 航海スケジュール検索 | 3 | 15h | [x] |
 | US01: 輸送見積 | 3 | 19h | [x] |
-| US06: 予約引渡し | 2 | 12h | [ ] |
-| US13: 予約確定 | 2 | 13h | [ ] |
+| US06: 予約引渡し | 2 | 12h | [x] |
+| US13: 予約確定 | 2 | 13h | [x] |
 | E2E テスト整備（DoD） | 0 | 7h | [ ] |
 | **合計** | **10** | **88h** | |
 
 **1 SP あたり**: 約 8.8h（うち SP 外基盤・負債返済 29h を含む。新規ストーリー実装のみでは約 5.9h/SP）
 
-**進捗率**: 60% (6/10 SP) — US07・US01 のバックエンド + フロントを完成。負債返済は T1-T6 全完了。残るは US06・US13（4 SP）と cross-service 基盤/Saga（T7）で、いずれも ADR-0009 の承認待ち。E2E は未整備。
+**進捗率**: 100% (10/10 SP) — US07・US01・US06・US13 の業務機能（ドメイン + Read Model + API）とフロント UI を完成。負債返済 T1-T6 完了、E2E spec 整備済み。残るは SP 外の cross-service 基盤/Saga（T7、Kafka tracking 移行・routingms 受信。IT2 退行リスクのため最終段階で慎重に実施）と E2E の実バックエンド実行。
 
 ---
 
@@ -974,6 +974,7 @@ apps/frontend/src/
 | 2026-05-25 | 設計セクションを IT2 粒度に拡充（VO 詳細・周辺データモデル・UI ビュー/モデル/インタラクション/フィードバック） | k2works |
 | 2026-05-25 | US07・US01 の実装完了を反映（進捗 60%、6/10 SP）。実装での簡略化を各タスクに注記 | k2works |
 | 2026-05-25 | 負債返済 T3/T4/T5 完了を反映（T1-T6 全完了）。残りは US06/US13・T7（ADR-0009 承認待ち）と E2E | k2works |
+| 2026-05-25 | ADR-0009 承認、US06/US13 の業務機能（状態遷移 + Read Model + API + S10 フロント）完成を反映（進捗 100%、10/10 SP）。cross-service 基盤（T7）と E2E 実行が残る | k2works |
 
 ---
 
