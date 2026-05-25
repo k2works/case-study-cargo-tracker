@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bookingms.infrastructure.repositories.mybatis.ShipperMapper">
+
+    <resultMap id="shipperResultMap" type="com.example.bookingms.domain.projections.ShipperProjection">
+        <id property="shipperId" column="shipper_id"/>
+        <result property="shipperType" column="shipper_type"/>
+        <result property="name" column="name"/>
+        <result property="addressLine1" column="address_line1"/>
+        <result property="addressLine2" column="address_line2"/>
+        <result property="city" column="city"/>
+        <result property="countryCode" column="country_code"/>
+        <result property="postalCode" column="postal_code"/>
+        <result property="email" column="email"/>
+        <result property="phone" column="phone"/>
+        <result property="contractNumber" column="contract_number"/>
+        <result property="discountRate" column="discount_rate"/>
+        <result property="active" column="active"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="version" column="version"/>
+    </resultMap>
+
+    <insert id="insertShipper">
+        INSERT INTO shipper (
+            shipper_id, shipper_type, name,
+            address_line1, address_line2, city, country_code, postal_code,
+            email, phone
+        ) VALUES (
+            #{shipperId}, #{shipperType}, #{name},
+            #{addressLine1}, #{addressLine2}, #{city}, #{countryCode}, #{postalCode},
+            #{email}, #{phone}
+        )
+    </insert>
+
+    <select id="findByShipperId" resultMap="shipperResultMap">
+        SELECT * FROM shipper WHERE shipper_id = #{shipperId}
+    </select>
+
+    <select id="findByEmail" resultMap="shipperResultMap">
+        SELECT * FROM shipper WHERE email = #{email}
+    </select>
+
+    <select id="findAll" resultMap="shipperResultMap">
+        SELECT * FROM shipper ORDER BY created_at DESC
+    </select>
+
+</mapper>
