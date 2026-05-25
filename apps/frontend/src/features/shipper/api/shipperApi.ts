@@ -26,6 +26,8 @@ export interface RegisterShipperRequest {
   postalCode?: string | null;
   email: string;
   phone: string;
+  contractNumber?: string | null;
+  discountRate?: number | null;
 }
 
 export interface RegisterShipperResponse {

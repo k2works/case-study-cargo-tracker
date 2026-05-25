@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchShippers, type Shipper } from '../api/shipperApi';
 
+function formatDiscountRate(rate: number | null): string {
+  if (rate === null || rate === undefined) return '-';
+  return `${(rate * 100).toFixed(1)}%`;
+}
+
 export default function ShipperListPage() {
   const navigate = useNavigate();
   const [shippers, setShippers] = useState<Shipper[]>([]);
@@ -42,6 +47,8 @@ export default function ShipperListPage() {
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">メール</th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">電話番号</th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">市区町村</th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">契約番号</th>
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">割引率</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -55,11 +62,13 @@ export default function ShipperListPage() {
                 <td className="px-4 py-3 text-sm text-gray-600">{s.email}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{s.phone}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{s.city}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{s.contractNumber ?? '-'}</td>
+                <td className="px-4 py-3 text-right text-sm text-gray-600">{formatDiscountRate(s.discountRate)}</td>
               </tr>
             ))}
             {shippers.length === 0 && !error && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">
                   登録されている荷主はありません
                 </td>
               </tr>

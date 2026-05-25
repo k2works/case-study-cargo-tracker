@@ -17,6 +17,8 @@ interface FormValues {
   postalCode: string;
   email: string;
   phone: string;
+  contractNumber: string;
+  discountRatePercent: string; // UI では % 表現 (0-30)
 }
 
 const empty: FormValues = {
@@ -29,6 +31,8 @@ const empty: FormValues = {
   postalCode: '',
   email: '',
   phone: '',
+  contractNumber: '',
+  discountRatePercent: '',
 };
 
 export default function ShipperFormPage() {
@@ -43,9 +47,18 @@ export default function ShipperFormPage() {
       setValues((prev) => ({ ...prev, [field]: e.target.value as FormValues[K] }));
   }
 
+  function parseDiscountRate(percent: string): number | null {
+    if (percent === '') return null;
+    const n = Number(percent);
+    if (!Number.isFinite(n)) return NaN;
+    return Math.round(n * 1000) / 100000; // 0-30(%) → 0.000-0.300 (誤差対策で 3 桁丸め)
+  }
+
   async function submitRegistration() {
     setLoading(true);
     try {
+      const isCorporate = values.shipperType === 'CORPORATE';
+      const discountRateValue = isCorporate ? parseDiscountRate(values.discountRatePercent) : null;
       await registerShipper({
         shipperType: values.shipperType,
         name: values.name,
@@ -56,6 +69,8 @@ export default function ShipperFormPage() {
         postalCode: values.postalCode || null,
         email: values.email,
         phone: values.phone,
+        contractNumber: isCorporate ? values.contractNumber : null,
+        discountRate: discountRateValue,
       });
       navigate('/shippers');
     } catch (err) {
@@ -74,6 +89,18 @@ export default function ShipperFormPage() {
         !values.countryCode || !values.email || !values.phone) {
       setError('必須項目をすべて入力してください');
       return;
+    }
+
+    if (values.shipperType === 'CORPORATE') {
+      if (!values.contractNumber) {
+        setError('法人荷主の契約番号は必須です');
+        return;
+      }
+      const rate = parseDiscountRate(values.discountRatePercent);
+      if (rate === null || Number.isNaN(rate) || rate < 0 || rate > 0.3) {
+        setError('割引率は 0〜30(%) の範囲で入力してください');
+        return;
+      }
     }
 
     setLoading(true);
@@ -103,12 +130,15 @@ export default function ShipperFormPage() {
     navigate('/shippers');
   }
 
+  const isCorporate = values.shipperType === 'CORPORATE';
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <h1 className="mb-6 text-xl font-bold text-gray-900">荷主新規登録</h1>
 
       <form
         onSubmit={handleSubmit}
+        noValidate
         className="space-y-4 rounded-lg border bg-white p-6 shadow-sm"
       >
         <div>
@@ -221,6 +251,37 @@ export default function ShipperFormPage() {
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
+
+        {isCorporate && (
+          <div className="rounded-md border border-blue-100 bg-blue-50 p-4 space-y-4">
+            <p className="text-sm font-medium text-blue-900">法人契約情報</p>
+            <div>
+              <label htmlFor="contractNumber" className="block text-sm font-medium text-gray-700">
+                契約番号
+              </label>
+              <input
+                id="contractNumber"
+                type="text"
+                value={values.contractNumber}
+                onChange={set('contractNumber')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="discountRatePercent" className="block text-sm font-medium text-gray-700">
+                割引率 (%) 0〜30
+              </label>
+              <input
+                id="discountRatePercent"
+                type="number"
+                step="0.1"
+                value={values.discountRatePercent}
+                onChange={set('discountRatePercent')}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-md bg-red-50 p-3">

@@ -78,4 +78,32 @@ describe('ShipperListPage', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('API ダウン')
     );
   });
+
+  it('US03: 法人荷主の契約番号と割引率が一覧に表示される', async () => {
+    vi.mocked(shipperApi.fetchShippers).mockResolvedValue([
+      {
+        shipperId: 'S-100',
+        shipperType: 'CORPORATE',
+        name: '株式会社グローバル商事',
+        addressLine1: '東京都港区六本木 6-10-1',
+        addressLine2: null,
+        city: '港区',
+        countryCode: 'JP',
+        postalCode: '106-6130',
+        email: 'biz@global.example.com',
+        phone: '03-5555-0001',
+        contractNumber: 'CONTRACT-2026-001',
+        discountRate: 0.15,
+        active: true,
+      },
+    ]);
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText('株式会社グローバル商事')).toBeInTheDocument()
+    );
+    expect(screen.getByText('CONTRACT-2026-001')).toBeInTheDocument();
+    expect(screen.getByText('15.0%')).toBeInTheDocument();
+    expect(screen.getByText('法人')).toBeInTheDocument();
+  });
 });

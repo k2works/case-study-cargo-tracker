@@ -156,3 +156,97 @@ describe('ShipperFormPage (新規登録)', () => {
     expect(shipperApi.registerShipper).not.toHaveBeenCalled();
   });
 });
+
+describe('ShipperFormPage (US03 法人荷主)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('INDIVIDUAL では契約番号フィールドが表示されない', () => {
+    renderNew();
+    expect(screen.queryByLabelText('契約番号')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('割引率 (%) 0〜30')).not.toBeInTheDocument();
+  });
+
+  it('CORPORATE 選択で契約番号と割引率フィールドが表示される', async () => {
+    renderNew();
+    const user = userEvent.setup();
+
+    await user.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE');
+
+    expect(screen.getByLabelText('契約番号')).toBeInTheDocument();
+    expect(screen.getByLabelText('割引率 (%) 0〜30')).toBeInTheDocument();
+  });
+
+  it('CORPORATE で契約番号が未入力ならエラー', async () => {
+    renderNew();
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE');
+    await fillRequired(user);
+    await user.type(screen.getByLabelText('割引率 (%) 0〜30'), '10');
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('契約番号は必須')
+    );
+  });
+
+  it('CORPORATE で割引率が 30 超ならエラー', async () => {
+    renderNew();
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE');
+    await fillRequired(user);
+    await user.type(screen.getByLabelText('契約番号'), 'CONTRACT-2026-001');
+    await user.type(screen.getByLabelText('割引率 (%) 0〜30'), '31');
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('0〜30')
+    );
+  });
+
+  it('CORPORATE で正常登録すると discountRate が 0.0-0.3 に変換され送信される', async () => {
+    vi.mocked(shipperApi.fetchShippersByEmail).mockResolvedValue([]);
+    vi.mocked(shipperApi.registerShipper).mockResolvedValue({ shipperId: 'S-NEW' });
+    renderNew();
+    const user = userEvent.setup();
+
+    await user.selectOptions(screen.getByLabelText('荷主種別'), 'CORPORATE');
+    await fillRequired(user);
+    await user.type(screen.getByLabelText('契約番号'), 'CONTRACT-2026-001');
+    await user.type(screen.getByLabelText('割引率 (%) 0〜30'), '15');
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('荷主一覧')).toBeInTheDocument()
+    );
+
+    expect(shipperApi.registerShipper).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shipperType: 'CORPORATE',
+        contractNumber: 'CONTRACT-2026-001',
+        discountRate: 0.15,
+      })
+    );
+  });
+
+  it('INDIVIDUAL では contractNumber / discountRate に null が送信される', async () => {
+    vi.mocked(shipperApi.fetchShippersByEmail).mockResolvedValue([]);
+    vi.mocked(shipperApi.registerShipper).mockResolvedValue({ shipperId: 'S-NEW' });
+    renderNew();
+    const user = userEvent.setup();
+
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: '登録' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('荷主一覧')).toBeInTheDocument()
+    );
+
+    expect(shipperApi.registerShipper).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shipperType: 'INDIVIDUAL',
+        contractNumber: null,
+        discountRate: null,
+      })
+    );
+  });
+});
