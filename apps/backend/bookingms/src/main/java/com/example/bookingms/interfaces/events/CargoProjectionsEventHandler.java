@@ -3,7 +3,7 @@ package com.example.bookingms.interfaces.events;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
-import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
+import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.HazardInfo;
 import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper;

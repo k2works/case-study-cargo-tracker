@@ -2,7 +2,7 @@ package com.example.bookingms.saga;
 
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
-import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
+import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;

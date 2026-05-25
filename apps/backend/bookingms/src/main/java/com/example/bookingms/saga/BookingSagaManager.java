@@ -2,7 +2,7 @@ package com.example.bookingms.saga;
 
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
-import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
+import com.example.shared.events.RouteDesignRequestedEvent;
 import org.axonframework.modelling.saga.EndSaga;
 import org.axonframework.modelling.saga.SagaEventHandler;
 import org.axonframework.modelling.saga.StartSaga;

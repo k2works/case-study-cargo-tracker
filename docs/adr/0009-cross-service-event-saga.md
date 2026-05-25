@@ -35,7 +35,7 @@ IT2 までに bookingms（荷主・予約）を実装しましたが、各マイ
 具体的には以下のとおりとします。
 
 1. **イベントプロセッサ**: bookingms / routingms の event processor を **tracking モード** に移行します（ADR-0001 の設定例を実装で具体化）。進捗は `token_entry` で管理します。
-2. **cross-service ドメインイベント**: 次のイベントを Kafka トピック経由で発行・購読します。
+2. **cross-service ドメインイベント**: 次のイベントを shared モジュール（`com.example.shared.events`）に配置し、Kafka トピック経由で発行・購読します。発行側（bookingms）と購読側（routingms）が同一 FQCN でシリアライズ・デシリアライズできるよう、cross-service の安定契約として shared に置きます（サービス内に閉じたドメインイベントは各サービスの `domain.events` に残します）。
    - `RouteDesignRequestedEvent`（bookingms → routingms、US06: 経路設計依頼）
    - `CargoRoutedEvent`（routingms → bookingms、IT4: 経路確定）
    - `TrackingIssuanceRequestedEvent`（bookingms → trackingms、US13 → IT5: 追跡番号発行依頼）
@@ -51,7 +51,7 @@ IT2 までに bookingms（荷主・予約）を実装しましたが、各マイ
 ### 変更箇所
 
 - `apps/backend/bookingms/.../saga/BookingSagaManager.java`（新規）
-- `apps/backend/bookingms/.../domain/event/RouteDesignRequestedEvent.java`、`TrackingIssuanceRequestedEvent.java`（新規）
+- `apps/backend/shared/.../events/RouteDesignRequestedEvent.java`（cross-service イベントは shared に配置し、bookingms / routingms が同一 FQCN で参照）、`apps/backend/bookingms/.../domain/events/TrackingIssuanceRequestedEvent.java`（IT5、新規）
 - `apps/backend/bookingms/.../application/CargoCommandService.java`（cross-service イベント発行）
 - `apps/backend/routingms/.../` cross-service イベントの購読ハンドラ
 - Kafka 設定（`event-processor-mode: tracking`、トピック設計）
