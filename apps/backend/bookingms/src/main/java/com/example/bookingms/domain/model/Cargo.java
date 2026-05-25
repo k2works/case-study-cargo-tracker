@@ -1,7 +1,11 @@
 package com.example.bookingms.domain.model;
 
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.CancelBookingCommand;
+import com.example.bookingms.domain.commands.ConfirmBookingCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
+import com.example.bookingms.domain.events.BookingCancelledEvent;
+import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import org.axonframework.commandhandling.CommandHandler;
@@ -172,6 +176,38 @@ public class Cargo {
 
     @EventSourcingHandler
     public void on(RouteDesignRequestedEvent event) {
+        this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
+    }
+
+    /**
+     * 予約確定（US13）。経路提案中（ROUTE_PROPOSED）のときのみ CONFIRMED へ遷移できる。
+     */
+    @CommandHandler
+    public void handle(ConfirmBookingCommand command) {
+        if (this.bookingStatus != BookingStatus.ROUTE_PROPOSED) {
+            throw new IllegalStateException("予約を確定できるのは経路提案中の予約のみです");
+        }
+        AggregateLifecycle.apply(new BookingConfirmedEvent(this.bookingId, BookingStatus.CONFIRMED.name()));
+    }
+
+    /**
+     * 予約キャンセル（US13）。確定済み・キャンセル済み以外であればキャンセルできる。
+     */
+    @CommandHandler
+    public void handle(CancelBookingCommand command) {
+        if (this.bookingStatus == BookingStatus.CONFIRMED || this.bookingStatus == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("確定済み・キャンセル済みの予約はキャンセルできません");
+        }
+        AggregateLifecycle.apply(new BookingCancelledEvent(this.bookingId, BookingStatus.CANCELLED.name()));
+    }
+
+    @EventSourcingHandler
+    public void on(BookingConfirmedEvent event) {
+        this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
+    }
+
+    @EventSourcingHandler
+    public void on(BookingCancelledEvent event) {
         this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
     }
 

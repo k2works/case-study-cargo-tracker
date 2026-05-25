@@ -1,7 +1,11 @@
 package com.example.bookingms.domain.model;
 
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.CancelBookingCommand;
+import com.example.bookingms.domain.commands.ConfirmBookingCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
+import com.example.bookingms.domain.events.BookingCancelledEvent;
+import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import org.axonframework.test.aggregate.AggregateTestFixture;
@@ -325,6 +329,38 @@ class CargoAggregateTest {
     void 既に経路設計中の予約は再度引き渡せない() {
         fixture.given(bookedEvent("B-202"), new RouteDesignRequestedEvent("B-202", "ROUTING"))
                 .when(new RequestRouteDesignCommand("B-202"))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US13: 仮受付の予約をキャンセルできる")
+    void 仮受付の予約をキャンセルできる() {
+        fixture.given(bookedEvent("B-301"))
+                .when(new CancelBookingCommand("B-301"))
+                .expectEvents(new BookingCancelledEvent("B-301", "CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("US13: 経路設計中の予約をキャンセルできる")
+    void 経路設計中の予約をキャンセルできる() {
+        fixture.given(bookedEvent("B-302"), new RouteDesignRequestedEvent("B-302", "ROUTING"))
+                .when(new CancelBookingCommand("B-302"))
+                .expectEvents(new BookingCancelledEvent("B-302", "CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("US13: 経路提案中でない予約は確定できない（ROUTE_PROPOSED 到達は IT4）")
+    void 経路提案中でない予約は確定できない() {
+        fixture.given(bookedEvent("B-303"))
+                .when(new ConfirmBookingCommand("B-303"))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US13: 確定済みの予約はキャンセルできない")
+    void 確定済みの予約はキャンセルできない() {
+        fixture.given(bookedEvent("B-304"), new BookingConfirmedEvent("B-304", "CONFIRMED"))
+                .when(new CancelBookingCommand("B-304"))
                 .expectException(IllegalStateException.class);
     }
 }
