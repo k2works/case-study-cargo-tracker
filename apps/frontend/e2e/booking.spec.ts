@@ -62,6 +62,32 @@ async function registerShipper(
   await expect(page).toHaveURL('/shippers', { timeout: 10_000 });
 }
 
+test.describe('IT2: ナビゲーション E2E', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
+  test('ナビゲーションに荷主管理メニューが表示される', async ({ page }) => {
+    await expect(page.getByRole('link', { name: '荷主管理' })).toBeVisible();
+  });
+
+  test('ナビゲーションに予約管理メニューが表示される', async ({ page }) => {
+    await expect(page.getByRole('link', { name: '予約管理' })).toBeVisible();
+  });
+
+  test('荷主管理リンククリックで /shippers に遷移する', async ({ page }) => {
+    await page.getByRole('link', { name: '荷主管理' }).click();
+    await expect(page).toHaveURL('/shippers', { timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: '荷主一覧' })).toBeVisible();
+  });
+
+  test('予約管理リンククリックで /bookings に遷移する', async ({ page }) => {
+    await page.getByRole('link', { name: '予約管理' }).click();
+    await expect(page).toHaveURL('/bookings', { timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: '予約一覧' })).toBeVisible();
+  });
+});
+
 test.describe('US02/US03: 荷主登録 E2E', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
