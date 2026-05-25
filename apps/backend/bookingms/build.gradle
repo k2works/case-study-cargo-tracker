@@ -1,0 +1,46 @@
+/*
+ * bookingms（予約マイクロサービス）
+ *
+ * 貨物予約（Cargo）・荷主（Shipper）・見積（Quotation）の中核ロジックを担う。
+ * Axon Framework 5 + Axon Kafka Extension による CQRS + Event Sourcing 構成。
+ */
+
+plugins {
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+dependencies {
+    implementation project(':shared')
+
+    // Spring Boot
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.actuator
+    implementation libs.spring.boot.starter.validation
+    implementation libs.spring.boot.starter.jdbc
+
+    // Axon Framework 5
+    implementation libs.axon.spring.boot.starter
+    implementation libs.axon.kafka.spring.boot.starter
+
+    // データアクセス
+    implementation libs.mybatis.spring.boot.starter
+    implementation libs.flyway.core
+    implementation libs.flyway.database.postgresql
+    runtimeOnly libs.postgresql
+    runtimeOnly libs.h2
+
+    // 開発時のみ
+    developmentOnly libs.spring.boot.devtools
+
+    // テスト
+    testImplementation libs.axon.test
+    testImplementation libs.mybatis.spring.boot.starter.test
+    testImplementation libs.testcontainers.junit.jupiter
+    testImplementation libs.testcontainers.postgresql
+    testImplementation libs.testcontainers.kafka
+}
+
+bootJar {
+    archiveBaseName = 'bookingms'
+}
