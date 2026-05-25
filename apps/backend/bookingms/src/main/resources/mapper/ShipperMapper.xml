@@ -45,10 +45,6 @@
         SELECT * FROM shipper WHERE email = #{email}
     </select>
 
-    <select id="findAll" resultMap="shipperResultMap">
-        SELECT * FROM shipper ORDER BY created_at DESC
-    </select>
-
     <select id="findAllPaged" resultMap="shipperResultMap">
         SELECT * FROM shipper
         ORDER BY created_at DESC

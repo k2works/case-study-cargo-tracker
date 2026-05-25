@@ -6,6 +6,7 @@ import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
+import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -107,7 +108,7 @@ class CargoBookingControllerTest {
         p.setCargoType("GENERAL");
         p.setBookingStatus("PRELIMINARY");
         p.setRoutingStatus("NOT_ROUTED");
-        when(queryService.findAll(0, 20)).thenReturn(List.of(p));
+        when(queryService.findAll(new PageRequest(0, 20))).thenReturn(List.of(p));
         when(queryService.count()).thenReturn(1L);
 
         ResponseEntity<PageResponse<CargoSummaryResponse>> response = controller.findAll(0, 20);
@@ -125,7 +126,7 @@ class CargoBookingControllerTest {
     @Test
     @DisplayName("IT2 ページネーション: page=2, size=10 が QueryService に渡される")
     void ページネーションパラメータがQueryServiceに渡される() {
-        when(queryService.findAll(2, 10)).thenReturn(List.of());
+        when(queryService.findAll(new PageRequest(2, 10))).thenReturn(List.of());
         when(queryService.count()).thenReturn(0L);
 
         ResponseEntity<PageResponse<CargoSummaryResponse>> response = controller.findAll(2, 10);
@@ -134,13 +135,13 @@ class CargoBookingControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().page()).isEqualTo(2);
         assertThat(response.getBody().size()).isEqualTo(10);
-        org.mockito.Mockito.verify(queryService).findAll(2, 10);
+        org.mockito.Mockito.verify(queryService).findAll(new PageRequest(2, 10));
     }
 
     @Test
     @DisplayName("IT2 ページネーション: page=-1, size=0 のサニタイズ")
     void 無効なページパラメータがサニタイズされる() {
-        when(queryService.findAll(0, 20)).thenReturn(List.of());
+        when(queryService.findAll(new PageRequest(0, 20))).thenReturn(List.of());
         when(queryService.count()).thenReturn(0L);
 
         ResponseEntity<PageResponse<CargoSummaryResponse>> response = controller.findAll(-1, 0);

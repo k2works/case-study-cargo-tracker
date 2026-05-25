@@ -2,14 +2,20 @@ package com.example.bookingms.application;
 
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper;
+import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 貨物予約の Read Model 参照サービス（US04）。
+ * 貨物予約の Read Model 参照サービス（US04 / ADR-0008）。
+ *
+ * <p>サニタイズは {@link PageRequest} に集約されているため、本サービスは
+ * 受け取った {@link PageRequest} の値をそのまま Mapper に委譲する。</p>
  */
 @Service
+@Transactional(readOnly = true)
 public class CargoQueryService {
 
     private final CargoSummaryMapper cargoSummaryMapper;
@@ -22,14 +28,8 @@ public class CargoQueryService {
         return cargoSummaryMapper.findByBookingId(bookingId);
     }
 
-    public List<CargoSummary> findAll() {
-        return cargoSummaryMapper.findAll();
-    }
-
-    public List<CargoSummary> findAll(int page, int size) {
-        int safePage = Math.max(page, 0);
-        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
-        return cargoSummaryMapper.findAllPaged(safePage * safeSize, safeSize);
+    public List<CargoSummary> findAll(PageRequest pageRequest) {
+        return cargoSummaryMapper.findAllPaged(pageRequest.offset(), pageRequest.size());
     }
 
     public long count() {

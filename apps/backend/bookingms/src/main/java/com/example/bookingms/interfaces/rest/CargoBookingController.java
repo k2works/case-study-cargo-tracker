@@ -12,6 +12,7 @@ import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
+import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -106,12 +107,11 @@ public class CargoBookingController {
     public ResponseEntity<PageResponse<CargoSummaryResponse>> findAll(
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
-        int safePage = Math.max(page, 0);
-        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
-        List<CargoSummaryResponse> items = queryService.findAll(safePage, safeSize).stream()
+        PageRequest pageRequest = new PageRequest(page, size);
+        List<CargoSummaryResponse> items = queryService.findAll(pageRequest).stream()
                 .map(CargoSummaryResponse::from)
                 .toList();
         long totalCount = queryService.count();
-        return ResponseEntity.ok(PageResponse.of(items, totalCount, safePage, safeSize));
+        return ResponseEntity.ok(PageResponse.of(items, totalCount, pageRequest.page(), pageRequest.size()));
     }
 }

@@ -4,6 +4,7 @@ import com.example.bookingms.application.ShipperCommandService;
 import com.example.bookingms.application.ShipperQueryService;
 import com.example.bookingms.domain.commands.RegisterShipperCommand;
 import com.example.bookingms.domain.projections.ShipperProjection;
+import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import com.example.bookingms.interfaces.rest.dto.RegisterShipperRequest;
 import com.example.bookingms.interfaces.rest.dto.ShipperResponse;
@@ -21,10 +22,16 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 荷主 REST Controller（US02 / US03）。
+ * 荷主 REST Controller（US02 / US03 / ADR-0008）。
  *
- * <p>POST /api/v1/shippers で登録、GET /api/v1/shippers{?email=} で重複検出可能。
- * 法人荷主の場合は contractNumber / discountRate を含む。</p>
+ * <p>エンドポイント一覧:
+ * <ul>
+ *   <li>{@code POST /api/v1/shippers} 荷主登録</li>
+ *   <li>{@code GET /api/v1/shippers/{shipperId}} 荷主詳細取得</li>
+ *   <li>{@code GET /api/v1/shippers?page=&size=} 荷主一覧（ページネーション）</li>
+ *   <li>{@code GET /api/v1/shippers/search?email=} 重複検出用の検索（メール完全一致、List 返却）</li>
+ * </ul>
+ * </p>
  */
 @RestController
 @RequestMapping("/api/v1/shippers")
@@ -73,29 +80,31 @@ public class ShipperController {
     }
 
     /**
-     * 荷主一覧。
-     *
-     * <p>{@code email} 指定時は重複検出用に list を返す。指定なしの場合は
-     * ページネーション付きの {@link PageResponse} を返す。
-     * フロントエンドは email クエリ有無で戻り型を切り替える。</p>
+     * 荷主一覧（ページネーション付き、ADR-0008）。
      */
     @GetMapping
-    public ResponseEntity<?> find(
-            @RequestParam(value = "email", required = false) String email,
+    public ResponseEntity<PageResponse<ShipperResponse>> findAll(
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
-        if (email != null && !email.isBlank()) {
-            List<ShipperResponse> responses = queryService.findByEmail(email).stream()
-                    .map(ShipperResponse::from)
-                    .toList();
-            return ResponseEntity.ok(responses);
-        }
-        int safePage = Math.max(page, 0);
-        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
-        List<ShipperResponse> items = queryService.findAll(safePage, safeSize).stream()
+        PageRequest pageRequest = new PageRequest(page, size);
+        List<ShipperResponse> items = queryService.findAll(pageRequest).stream()
                 .map(ShipperResponse::from)
                 .toList();
         long totalCount = queryService.count();
-        return ResponseEntity.ok(PageResponse.of(items, totalCount, safePage, safeSize));
+        return ResponseEntity.ok(PageResponse.of(items, totalCount, pageRequest.page(), pageRequest.size()));
+    }
+
+    /**
+     * メール完全一致による荷主検索（重複検出専用、UC02 拡張 4a）。
+     *
+     * <p>登録時の重複チェックを目的とした補助 API のため、件数は通常 0〜1 件であり
+     * ページネーションは不要。{@link List} を直接返す。</p>
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<ShipperResponse>> searchByEmail(@RequestParam("email") String email) {
+        List<ShipperResponse> responses = queryService.findByEmail(email).stream()
+                .map(ShipperResponse::from)
+                .toList();
+        return ResponseEntity.ok(responses);
     }
 }

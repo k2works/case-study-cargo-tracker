@@ -2,16 +2,20 @@ package com.example.bookingms.application;
 
 import com.example.bookingms.domain.projections.ShipperProjection;
 import com.example.bookingms.infrastructure.repositories.mybatis.ShipperMapper;
+import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 荷主の Read Model 参照サービス（US02）。
+ * 荷主の Read Model 参照サービス（US02 / ADR-0008）。
  *
- * <p>MyBatis Mapper を呼び出して {@link ShipperProjection} を返却する。</p>
+ * <p>サニタイズは {@link PageRequest} に集約されているため、本サービスは
+ * 受け取った {@link PageRequest} の値をそのまま Mapper に委譲する。</p>
  */
 @Service
+@Transactional(readOnly = true)
 public class ShipperQueryService {
 
     private final ShipperMapper shipperMapper;
@@ -28,14 +32,8 @@ public class ShipperQueryService {
         return shipperMapper.findByEmail(email);
     }
 
-    public List<ShipperProjection> findAll() {
-        return shipperMapper.findAll();
-    }
-
-    public List<ShipperProjection> findAll(int page, int size) {
-        int safePage = Math.max(page, 0);
-        int safeSize = size <= 0 ? 20 : Math.min(size, 200);
-        return shipperMapper.findAllPaged(safePage * safeSize, safeSize);
+    public List<ShipperProjection> findAll(PageRequest pageRequest) {
+        return shipperMapper.findAllPaged(pageRequest.offset(), pageRequest.size());
     }
 
     public long count() {

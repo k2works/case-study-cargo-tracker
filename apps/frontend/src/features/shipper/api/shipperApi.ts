@@ -71,7 +71,7 @@ export async function fetchShippers(): Promise<Shipper[]> {
 }
 
 export async function fetchShippersByEmail(email: string): Promise<Shipper[]> {
-  const res = await fetch(`/api/v1/shippers?email=${encodeURIComponent(email)}`, {
+  const res = await fetch(`/api/v1/shippers/search?email=${encodeURIComponent(email)}`, {
     headers: authHeader(),
   });
   if (!res.ok) throw new Error('荷主の検索に失敗しました');

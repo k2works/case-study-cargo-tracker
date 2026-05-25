@@ -33,8 +33,6 @@ public interface ShipperMapper {
 
     List<ShipperProjection> findByEmail(@Param("email") String email);
 
-    List<ShipperProjection> findAll();
-
     List<ShipperProjection> findAllPaged(@Param("offset") int offset, @Param("limit") int limit);
 
     long countAll();
