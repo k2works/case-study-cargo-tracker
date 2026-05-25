@@ -19,6 +19,10 @@ axon:
       enabled: true
     fetcher:
       enabled: true
+    consumer:
+      # cross-service 購読（route-design-requests）を tracking で動かすため
+      # StreamableKafkaMessageSource を有効化する（ADR-0009）
+      event-processor-mode: tracking
   eventhandling:
     processors:
       default:
