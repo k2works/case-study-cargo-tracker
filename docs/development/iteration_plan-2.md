@@ -123,12 +123,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Shipper 集約（RegisterShipperCommand / ShipperRegisteredEvent） | 3h | - | [ ] |
-| 2.2 | ShipperCommandService + ShipperQueryService | 2h | - | [ ] |
-| 2.3 | ShipperMapper（MyBatis）+ ShipperProjectionEventHandler | 2h | - | [ ] |
-| 2.4 | ShipperController（POST /api/v1/shippers / GET） | 2h | - | [ ] |
-| 2.5 | フロントエンド: 荷主一覧（S05）・荷主登録（S06） | 3h | - | [ ] |
-| 2.6 | テスト（Service / Controller / EventHandler） | 4h | - | [ ] |
+| 2.1 | Shipper 集約（RegisterShipperCommand / ShipperRegisteredEvent） | 3h | - | [x] |
+| 2.2 | ShipperCommandService + ShipperQueryService | 2h | - | [x] |
+| 2.3 | ShipperMapper（MyBatis）+ ShipperProjectionEventHandler | 2h | - | [x] |
+| 2.4 | ShipperController（POST /api/v1/shippers / GET） | 2h | - | [x] |
+| 2.5 | フロントエンド: 荷主一覧（S05）・荷主登録（S06） | 3h | - | [x] |
+| 2.6 | テスト（Service / Controller / EventHandler） | 4h | - | [x] |
 
 **小計**: 16h（理想時間）
 
@@ -180,7 +180,7 @@
 
 **1 SP あたり**: 約 6.5h
 
-**進捗率**: 10% (1/10 SP) — 2026-05-25: 基盤構築完了（local-h2 smoke test PASS）
+**進捗率**: 30% (3/10 SP) — 2026-05-25: 基盤構築 + US02 完了（バックエンド 9 テスト + フロントエンド 21 テスト PASS）
 
 ---
 
