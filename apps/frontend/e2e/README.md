@@ -10,11 +10,13 @@ E2E テストは実バックエンドに対して動作します。**事前に�
 | :--- | :--- | :--- |
 | gatewayms | 8080 | API Gateway |
 | authms | 8081 | JWT 発行・検証 |
+| bookingms | 8082 | 荷主・予約 API（IT2 で追加） |
 | routingms | 8083 | 航海スケジュール API |
 
 ```bash
 # local-h2 プロファイルで各サービスを起動
 ./gradlew :authms:bootRun
+./gradlew :bookingms:bootRun
 ./gradlew :routingms:bootRun
 ./gradlew :gatewayms:bootRun
 ```
@@ -47,8 +49,8 @@ npm run e2e:report
 | :--- | :--- | :--- |
 | `login.spec.ts` | ログイン・ログアウト・未認証リダイレクト・エラー表示 | US00（認証） |
 | `login-voyage.spec.ts` | ログイン → 航海スケジュールメニュー・画面遷移確認 | US24/US25（航海スケジュール） |
+| `booking.spec.ts` | 個人/法人荷主登録・割引率エラー、一般/危険物/冷凍貨物予約登録・条件フィールド表示・必須エラー | US02/US03/US04/US05（荷主・予約） |
 
-## IT2 以降の追加予定
+## IT3 以降の追加予定
 
-- `login-voyage.spec.ts` に航海スケジュール登録・更新のフルシナリオを追加（US24/US25 バックエンド完成後）
-- 荷主・予約・追跡などの各機能シナリオを順次追加
+- 追跡情報照会・荷役記録の各機能シナリオを順次追加
