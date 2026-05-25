@@ -86,3 +86,30 @@ export async function updateVoyage(
     throw new Error(err.message ?? '更新に失敗しました');
   }
 }
+
+export interface VoyageSearchCriteria {
+  origin?: string;
+  destination?: string;
+  departureFrom?: string; // ISO 8601 date-time
+  departureTo?: string; // ISO 8601 date-time
+  cargoType?: string;
+}
+
+/**
+ * 航海スケジュール検索（US07）。
+ *
+ * <p>指定された条件のみをクエリパラメータに変換して GET する。</p>
+ */
+export async function searchVoyages(criteria: VoyageSearchCriteria): Promise<Voyage[]> {
+  const params = new URLSearchParams();
+  if (criteria.origin) params.set('origin', criteria.origin);
+  if (criteria.destination) params.set('destination', criteria.destination);
+  if (criteria.departureFrom) params.set('departureFrom', criteria.departureFrom);
+  if (criteria.departureTo) params.set('departureTo', criteria.departureTo);
+  if (criteria.cargoType) params.set('cargoType', criteria.cargoType);
+  const res = await fetch(`/api/v1/voyages/search?${params.toString()}`, {
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('航海スケジュールの検索に失敗しました');
+  return res.json();
+}
