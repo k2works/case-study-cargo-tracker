@@ -3,6 +3,8 @@ package com.example.bookingms.interfaces.rest;
 import com.example.bookingms.application.CargoCommandService;
 import com.example.bookingms.application.CargoQueryService;
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.CancelBookingCommand;
+import com.example.bookingms.domain.commands.ConfirmBookingCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
@@ -98,6 +100,18 @@ public class CargoBookingController {
     @PostMapping("/{bookingId}/handoff")
     public ResponseEntity<Void> handoff(@PathVariable String bookingId) {
         commandService.requestRouteDesign(new RequestRouteDesignCommand(bookingId)).join();
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{bookingId}/confirm")
+    public ResponseEntity<Void> confirm(@PathVariable String bookingId) {
+        commandService.confirm(new ConfirmBookingCommand(bookingId)).join();
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{bookingId}/cancel")
+    public ResponseEntity<Void> cancel(@PathVariable String bookingId) {
+        commandService.cancel(new CancelBookingCommand(bookingId)).join();
         return ResponseEntity.ok().build();
     }
 

@@ -1,5 +1,7 @@
 package com.example.bookingms.interfaces.events;
 
+import com.example.bookingms.domain.events.BookingCancelledEvent;
+import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.HazardInfo;
@@ -52,6 +54,16 @@ public class CargoProjectionsEventHandler {
 
     @EventHandler
     public void on(RouteDesignRequestedEvent event) {
+        cargoSummaryMapper.updateBookingStatus(event.bookingId(), event.bookingStatus());
+    }
+
+    @EventHandler
+    public void on(BookingConfirmedEvent event) {
+        cargoSummaryMapper.updateBookingStatus(event.bookingId(), event.bookingStatus());
+    }
+
+    @EventHandler
+    public void on(BookingCancelledEvent event) {
         cargoSummaryMapper.updateBookingStatus(event.bookingId(), event.bookingStatus());
     }
 }

@@ -3,6 +3,8 @@ package com.example.bookingms.interfaces.rest;
 import com.example.bookingms.application.CargoCommandService;
 import com.example.bookingms.application.CargoQueryService;
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.CancelBookingCommand;
+import com.example.bookingms.domain.commands.ConfirmBookingCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
@@ -149,6 +151,30 @@ class CargoBookingControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         org.mockito.Mockito.verify(commandService).requestRouteDesign(any(RequestRouteDesignCommand.class));
+    }
+
+    @Test
+    @DisplayName("US13: confirm で予約確定コマンドが送信され 200 が返る")
+    void US13_confirmで予約確定コマンドが送信される() {
+        when(commandService.confirm(any(ConfirmBookingCommand.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        ResponseEntity<Void> response = controller.confirm("B-001");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        org.mockito.Mockito.verify(commandService).confirm(any(ConfirmBookingCommand.class));
+    }
+
+    @Test
+    @DisplayName("US13: cancel で予約キャンセルコマンドが送信され 200 が返る")
+    void US13_cancelで予約キャンセルコマンドが送信される() {
+        when(commandService.cancel(any(CancelBookingCommand.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        ResponseEntity<Void> response = controller.cancel("B-001");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        org.mockito.Mockito.verify(commandService).cancel(any(CancelBookingCommand.class));
     }
 
     @Test

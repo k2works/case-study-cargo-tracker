@@ -1,5 +1,7 @@
 package com.example.bookingms.interfaces.events;
 
+import com.example.bookingms.domain.events.BookingCancelledEvent;
+import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
@@ -160,5 +162,21 @@ class CargoProjectionsEventHandlerTest {
         handler.on(new RouteDesignRequestedEvent("B-001", "ROUTING"));
 
         verify(cargoSummaryMapper).updateBookingStatus("B-001", "ROUTING");
+    }
+
+    @Test
+    @DisplayName("US13: BookingConfirmedEvent 受信で booking_status が CONFIRMED に更新される")
+    void US13_予約確定イベントでbookingStatusが更新される() {
+        handler.on(new BookingConfirmedEvent("B-001", "CONFIRMED"));
+
+        verify(cargoSummaryMapper).updateBookingStatus("B-001", "CONFIRMED");
+    }
+
+    @Test
+    @DisplayName("US13: BookingCancelledEvent 受信で booking_status が CANCELLED に更新される")
+    void US13_予約キャンセルイベントでbookingStatusが更新される() {
+        handler.on(new BookingCancelledEvent("B-001", "CANCELLED"));
+
+        verify(cargoSummaryMapper).updateBookingStatus("B-001", "CANCELLED");
     }
 }

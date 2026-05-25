@@ -1,6 +1,8 @@
 package com.example.bookingms.application;
 
 import com.example.bookingms.domain.commands.BookCargoCommand;
+import com.example.bookingms.domain.commands.CancelBookingCommand;
+import com.example.bookingms.domain.commands.ConfirmBookingCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,14 @@ public class CargoCommandService {
     }
 
     public CompletableFuture<Void> requestRouteDesign(RequestRouteDesignCommand command) {
+        return commandGateway.send(command);
+    }
+
+    public CompletableFuture<Void> confirm(ConfirmBookingCommand command) {
+        return commandGateway.send(command);
+    }
+
+    public CompletableFuture<Void> cancel(CancelBookingCommand command) {
         return commandGateway.send(command);
     }
 }
