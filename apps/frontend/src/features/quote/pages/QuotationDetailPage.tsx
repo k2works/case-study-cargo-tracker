@@ -114,7 +114,20 @@ export default function QuotationDetailPage() {
       <div className="mt-4 flex gap-2">
         <button
           type="button"
-          onClick={() => navigate('/bookings/new')}
+          onClick={() =>
+            navigate('/bookings/new', {
+              state: {
+                fromQuotation: {
+                  shipperId: quotation.shipperId,
+                  originUnlocode: quotation.originUnlocode,
+                  destinationUnlocode: quotation.destinationUnlocode,
+                  arrivalDeadline: quotation.arrivalDeadline,
+                  cargoType: quotation.cargoType,
+                  weightKg: quotation.weightKg,
+                },
+              },
+            })
+          }
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           予約化

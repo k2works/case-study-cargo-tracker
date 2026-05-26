@@ -1,11 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import * as quoteApi from '../api/quoteApi';
 import QuotationDetailPage from './QuotationDetailPage';
 
 vi.mock('../api/quoteApi');
+
+/** 予約化遷移時に渡される navigation state（fromQuotation）を可視化するプローブ。 */
+function BookingFormProbe() {
+  const location = useLocation();
+  const preset = (location.state as { fromQuotation?: Record<string, unknown> } | null)?.fromQuotation;
+  return (
+    <div>
+      新規予約フォーム
+      {preset && <span data-testid="preset">{JSON.stringify(preset)}</span>}
+    </div>
+  );
+}
 
 const mockQuotation = {
   quotationId: 'Q-001',
@@ -30,7 +42,7 @@ function renderPage() {
       <Routes>
         <Route path="/quotes/:quotationId" element={<QuotationDetailPage />} />
         <Route path="/quotes" element={<div>見積一覧</div>} />
-        <Route path="/bookings/new" element={<div>新規予約フォーム</div>} />
+        <Route path="/bookings/new" element={<BookingFormProbe />} />
       </Routes>
     </MemoryRouter>
   );
@@ -70,6 +82,25 @@ describe('QuotationDetailPage (US01)', () => {
     await user.click(screen.getByRole('button', { name: '予約化' }));
 
     expect(screen.getByText('新規予約フォーム')).toBeInTheDocument();
+  });
+
+  it('H4: 予約化で見積情報が予約フォームへプリセットとして渡される', async () => {
+    vi.mocked(quoteApi.fetchQuotation).mockResolvedValue(mockQuotation);
+    renderPage();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByText('見積 Q-001'));
+    await user.click(screen.getByRole('button', { name: '予約化' }));
+
+    const preset = JSON.parse(screen.getByTestId('preset').textContent ?? '{}');
+    expect(preset).toMatchObject({
+      shipperId: 'S-001',
+      originUnlocode: 'JPTYO',
+      destinationUnlocode: 'USNYC',
+      arrivalDeadline: '2026-09-30',
+      cargoType: 'GENERAL',
+      weightKg: 1500,
+    });
   });
 
   it('US01: 取得失敗時にエラーが表示される', async () => {

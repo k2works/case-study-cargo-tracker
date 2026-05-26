@@ -20,6 +20,18 @@ function renderNew() {
   );
 }
 
+/** 見積からの予約化（H4）で渡される navigation state を付けてレンダリングする。 */
+function renderWithPreset(preset: Record<string, unknown>) {
+  return render(
+    <MemoryRouter initialEntries={[{ pathname: '/bookings/new', state: { fromQuotation: preset } }]}>
+      <Routes>
+        <Route path="/bookings/new" element={<BookingFormPage />} />
+        <Route path="/bookings" element={<div>予約一覧</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
 const mockShippers = [
   {
     shipperId: 'S-001',
@@ -67,6 +79,24 @@ describe('BookingFormPage', () => {
       expect(screen.getByLabelText('荷主')).toBeInTheDocument()
     );
     expect(screen.getByLabelText('品名')).toBeInTheDocument();
+  });
+
+  it('H4: 見積からの予約化で見積情報がフォームにプリセットされる', async () => {
+    renderWithPreset({
+      shipperId: 'S-001',
+      originUnlocode: 'JPTYO',
+      destinationUnlocode: 'USNYC',
+      arrivalDeadline: '2026-09-30',
+      cargoType: 'GENERAL',
+      weightKg: 1500,
+    });
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    expect(screen.getByLabelText('出発地 (UN/LOCODE)')).toHaveValue('JPTYO');
+    expect(screen.getByLabelText('目的地 (UN/LOCODE)')).toHaveValue('USNYC');
+    expect(screen.getByLabelText('到着期限')).toHaveValue('2026-09-30');
+    expect(screen.getByLabelText('重量 (kg)')).toHaveValue(1500);
+    await waitFor(() => expect(screen.getByLabelText('荷主')).toHaveValue('S-001'));
   });
 
   it('US04: 荷主選択は既存荷主の一覧から行える', async () => {

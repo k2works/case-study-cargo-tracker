@@ -1,5 +1,5 @@
 import { type SubmitEvent, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { bookCargo, type CargoType } from '../api/bookingApi';
 import { fetchShippersPage, type Shipper } from '../../shipper/api/shipperApi';
 
@@ -40,6 +40,32 @@ const empty: FormValues = {
   temperatureMinC: '',
   temperatureMaxC: '',
 };
+
+/** 見積からの予約化（H4）で渡される見積情報のプリセット。 */
+interface QuotationPreset {
+  shipperId?: string;
+  originUnlocode?: string;
+  destinationUnlocode?: string;
+  arrivalDeadline?: string;
+  cargoType?: CargoType;
+  weightKg?: number | null;
+}
+
+/** 見積プリセットをフォーム初期値へ写し取る。プリセットが無ければ空の初期値を返す。 */
+function presetToFormValues(preset: QuotationPreset | undefined): FormValues {
+  if (!preset) {
+    return empty;
+  }
+  return {
+    ...empty,
+    shipperId: preset.shipperId ?? '',
+    originUnlocode: preset.originUnlocode ?? '',
+    destinationUnlocode: preset.destinationUnlocode ?? '',
+    arrivalDeadline: preset.arrivalDeadline ?? '',
+    cargoType: preset.cargoType ?? 'GENERAL',
+    weightKg: preset.weightKg != null ? String(preset.weightKg) : '',
+  };
+}
 
 function parseOptionalInt(s: string): number | null {
   if (s === '') return null;
@@ -99,7 +125,9 @@ function validateBookingForm(values: FormValues): string | null {
 
 export default function BookingFormPage() {
   const navigate = useNavigate();
-  const [values, setValues] = useState<FormValues>(empty);
+  const location = useLocation();
+  const preset = (location.state as { fromQuotation?: QuotationPreset } | null)?.fromQuotation;
+  const [values, setValues] = useState<FormValues>(() => presetToFormValues(preset));
   const [shippers, setShippers] = useState<Shipper[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
