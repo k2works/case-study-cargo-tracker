@@ -1,5 +1,6 @@
 package com.example.bookingms.domain.model;
 
+import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
@@ -7,6 +8,7 @@ import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
@@ -16,6 +18,7 @@ import org.axonframework.spring.stereotype.Aggregate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 貨物予約集約（US04 + US05 / Booking Context）。
@@ -187,6 +190,46 @@ public class Cargo {
     @EventSourcingHandler
     public void on(RouteDesignRequestedEvent event) {
         this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
+    }
+
+    /**
+     * 経路割当（US11）。経路設計中（ROUTING）の予約に確定旅程を割り当て、経路提案中（ROUTE_PROPOSED）へ遷移する。
+     * 旅程は予約の出発地・目的地に一致し、最終到着日が到着期限以内であること。
+     */
+    @CommandHandler
+    public void handle(AssignRouteToCargoCommand command) {
+        if (this.bookingStatus != BookingStatus.ROUTING) {
+            throw new IllegalStateException("経路を割り当てできるのは経路設計中の予約のみです");
+        }
+        validateItinerary(command.legs());
+        AggregateLifecycle.apply(new CargoRoutedEvent(
+                this.bookingId,
+                BookingStatus.ROUTE_PROPOSED.name(),
+                RoutingStatus.ROUTED.name(),
+                command.legs()));
+    }
+
+    private void validateItinerary(List<Leg> legs) {
+        if (legs == null || legs.isEmpty()) {
+            throw new IllegalArgumentException("経路（旅程）は 1 区間以上必要です");
+        }
+        Leg first = legs.get(0);
+        Leg last = legs.get(legs.size() - 1);
+        if (!this.routeSpec.originUnlocode().equals(first.loadUnlocode())) {
+            throw new IllegalArgumentException("経路の出発地は予約の出発地と一致する必要があります");
+        }
+        if (!this.routeSpec.destinationUnlocode().equals(last.unloadUnlocode())) {
+            throw new IllegalArgumentException("経路の最終到着地は予約の目的地と一致する必要があります");
+        }
+        if (last.unloadTime().toLocalDate().isAfter(this.routeSpec.arrivalDeadline())) {
+            throw new IllegalArgumentException("経路の最終到着日は到着期限以内である必要があります");
+        }
+    }
+
+    @EventSourcingHandler
+    public void on(CargoRoutedEvent event) {
+        this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
+        this.routingStatus = RoutingStatus.valueOf(event.routingStatus());
     }
 
     /**

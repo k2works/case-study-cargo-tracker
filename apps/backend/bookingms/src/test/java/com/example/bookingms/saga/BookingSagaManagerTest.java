@@ -2,10 +2,12 @@ package com.example.bookingms.saga;
 
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
+import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RouteSpecification;
 import org.axonframework.test.saga.SagaTestFixture;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +16,8 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 class BookingSagaManagerTest {
 
@@ -55,5 +59,17 @@ class BookingSagaManagerTest {
         fixture.givenAPublished(bookedEvent("B-001"))
                 .whenPublishingA(new BookingCancelledEvent("B-001", "CANCELLED"))
                 .expectActiveSagas(0);
+    }
+
+    @Test
+    @DisplayName("US11: 経路確定イベントでも Saga は継続する（経路提案中）")
+    void 経路確定でSagaが継続する() {
+        fixture.givenAPublished(bookedEvent("B-001"))
+                .andThenAPublished(new RouteDesignRequestedEvent(
+                        "B-001", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"))
+                .whenPublishingA(new CargoRoutedEvent("B-001", "ROUTE_PROPOSED", "ROUTED", List.of(
+                        new Leg("V-100", "JPTYO", "USNYC",
+                                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0)))))
+                .expectActiveSagas(1);
     }
 }

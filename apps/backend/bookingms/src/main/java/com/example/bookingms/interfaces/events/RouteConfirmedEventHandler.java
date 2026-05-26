@@ -1,0 +1,59 @@
+package com.example.bookingms.interfaces.events;
+
+import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
+import com.example.bookingms.domain.model.Leg;
+import com.example.shared.events.RouteConfirmedEvent;
+import org.axonframework.commandhandling.CommandExecutionException;
+import org.axonframework.commandhandling.gateway.CommandGateway;
+import org.axonframework.config.ProcessingGroup;
+import org.axonframework.eventhandling.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+/**
+ * 経路確定イベントの受信ハンドラ（US11 / cross-service、ADR-0009）。
+ *
+ * <p>routingms が発行する {@link RouteConfirmedEvent} を Kafka 経由で購読し、確定旅程を写し取って
+ * {@link AssignRouteToCargoCommand} を発行する。Cargo 集約が {@code CargoRoutedEvent} を適用し、予約状態を
+ * 経路提案中（ROUTE_PROPOSED）へ更新、{@code cargo_leg} を確定する。IT3 の bookingms → routingms と
+ * 対になる routingms → bookingms 方向の連携。</p>
+ *
+ * <p>{@code route-confirmed} プロセッシンググループとして、bookingms 内のイベントを処理する default
+ * プロセッサ（event store source）から分離し、Kafka（cargo-events）の StreamableKafkaMessageSource を
+ * source とする tracking プロセッサに割り当てる（{@code KafkaEventProcessingConfig}）。tracking 再処理・
+ * 重複配信に備え、既に経路提案中で割当不可の場合は冪等にスキップする。</p>
+ */
+@Component
+@ProcessingGroup("route-confirmed")
+public class RouteConfirmedEventHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(RouteConfirmedEventHandler.class);
+
+    private final CommandGateway commandGateway;
+
+    public RouteConfirmedEventHandler(CommandGateway commandGateway) {
+        this.commandGateway = commandGateway;
+    }
+
+    @EventHandler
+    public void on(RouteConfirmedEvent event) {
+        List<Leg> legs = event.legs().stream()
+                .map(leg -> new Leg(
+                        leg.voyageNumber(),
+                        leg.loadUnlocode(),
+                        leg.unloadUnlocode(),
+                        leg.loadTime(),
+                        leg.unloadTime()))
+                .toList();
+        try {
+            commandGateway.sendAndWait(new AssignRouteToCargoCommand(event.bookingId(), legs));
+        } catch (CommandExecutionException ex) {
+            // 既に経路提案中等で割当不可（tracking 再処理・重複配信）の場合は冪等にスキップする
+            log.warn("経路割当コマンドの実行をスキップしました（bookingId={}）: {}",
+                    event.bookingId(), ex.getMessage());
+        }
+    }
+}

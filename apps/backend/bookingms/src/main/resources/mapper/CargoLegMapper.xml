@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.bookingms.infrastructure.repositories.mybatis.CargoLegMapper">
+
+    <resultMap id="cargoLegResultMap" type="com.example.bookingms.domain.projections.CargoLeg">
+        <id property="bookingId" column="booking_id"/>
+        <id property="legSeq" column="leg_seq"/>
+        <result property="voyageNumber" column="voyage_number"/>
+        <result property="loadUnlocode" column="load_unlocode"/>
+        <result property="unloadUnlocode" column="unload_unlocode"/>
+        <result property="loadAt" column="load_at"/>
+        <result property="unloadAt" column="unload_at"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO cargo_leg (booking_id, leg_seq, voyage_number,
+                               load_unlocode, unload_unlocode, load_at, unload_at)
+        VALUES (#{bookingId}, #{legSeq}, #{voyageNumber},
+                #{loadUnlocode}, #{unloadUnlocode}, #{loadAt}, #{unloadAt})
+    </insert>
+
+    <delete id="deleteByBookingId">
+        DELETE FROM cargo_leg WHERE booking_id = #{bookingId}
+    </delete>
+
+    <select id="findByBookingId" resultMap="cargoLegResultMap">
+        SELECT booking_id, leg_seq, voyage_number,
+               load_unlocode, unload_unlocode, load_at, unload_at
+        FROM cargo_leg
+        WHERE booking_id = #{bookingId}
+        ORDER BY leg_seq
+    </select>
+
+</mapper>

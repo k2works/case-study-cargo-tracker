@@ -3,13 +3,16 @@ package com.example.bookingms.interfaces.events;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.HazardInfo;
+import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.TemperatureCondition;
+import com.example.bookingms.infrastructure.repositories.mybatis.CargoLegMapper;
 import com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.Mockito.verify;
 
@@ -28,6 +33,9 @@ class CargoProjectionsEventHandlerTest {
 
     @Mock
     private CargoSummaryMapper cargoSummaryMapper;
+
+    @Mock
+    private CargoLegMapper cargoLegMapper;
 
     @InjectMocks
     private CargoProjectionsEventHandler handler;
@@ -178,5 +186,24 @@ class CargoProjectionsEventHandlerTest {
         handler.on(new BookingCancelledEvent("B-001", "CANCELLED"));
 
         verify(cargoSummaryMapper).updateBookingStatus("B-001", "CANCELLED");
+    }
+
+    @Test
+    @DisplayName("US11: CargoRoutedEvent 受信で状態を更新し cargo_leg を確定する")
+    void US11_経路確定イベントで状態更新と旅程確定が行われる() {
+        List<Leg> legs = List.of(
+                new Leg("V-A", "JPTYO", "SGSIN",
+                        LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 10, 18, 0)),
+                new Leg("V-B", "SGSIN", "DEHAM",
+                        LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 30, 18, 0)));
+
+        handler.on(new CargoRoutedEvent("B-501", "ROUTE_PROPOSED", "ROUTED", legs));
+
+        verify(cargoSummaryMapper).updateRouting("B-501", "ROUTE_PROPOSED", "ROUTED");
+        verify(cargoLegMapper).deleteByBookingId("B-501");
+        verify(cargoLegMapper).insert("B-501", 1, "V-A", "JPTYO", "SGSIN",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 10, 18, 0));
+        verify(cargoLegMapper).insert("B-501", 2, "V-B", "SGSIN", "DEHAM",
+                LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 30, 18, 0));
     }
 }

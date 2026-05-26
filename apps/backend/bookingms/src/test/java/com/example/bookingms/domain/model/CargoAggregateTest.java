@@ -1,5 +1,6 @@
 package com.example.bookingms.domain.model;
 
+import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
@@ -7,6 +8,7 @@ import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
+import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
@@ -16,6 +18,8 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 class CargoAggregateTest {
 
@@ -365,5 +369,75 @@ class CargoAggregateTest {
         fixture.given(bookedEvent("B-304"), new BookingConfirmedEvent("B-304", "CONFIRMED"))
                 .when(new CancelBookingCommand("B-304"))
                 .expectException(IllegalStateException.class);
+    }
+
+    private RouteDesignRequestedEvent routingEvent(String bookingId) {
+        return new RouteDesignRequestedEvent(
+                bookingId, "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL");
+    }
+
+    private List<Leg> validItinerary() {
+        return List.of(new Leg(
+                "V-100", "JPTYO", "USNYC",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0)));
+    }
+
+    @Test
+    @DisplayName("US11: 経路設計中の予約に経路を割り当てると経路提案中へ遷移する")
+    void 経路設計中の予約に経路を割り当てると経路提案中へ遷移する() {
+        List<Leg> legs = validItinerary();
+        fixture.given(bookedEvent("B-401"), routingEvent("B-401"))
+                .when(new AssignRouteToCargoCommand("B-401", legs))
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new CargoRoutedEvent("B-401", "ROUTE_PROPOSED", "ROUTED", legs));
+    }
+
+    @Test
+    @DisplayName("US11: 仮受付の予約には経路を割り当てられない")
+    void 仮受付の予約には経路を割り当てられない() {
+        fixture.given(bookedEvent("B-402"))
+                .when(new AssignRouteToCargoCommand("B-402", validItinerary()))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US11: 経路が空の場合は割り当てられない")
+    void 経路が空の場合は割り当てられない() {
+        fixture.given(bookedEvent("B-403"), routingEvent("B-403"))
+                .when(new AssignRouteToCargoCommand("B-403", List.of()))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("US11: 出発地が予約と一致しない経路は割り当てられない")
+    void 出発地が予約と一致しない経路は割り当てられない() {
+        List<Leg> legs = List.of(new Leg(
+                "V-100", "JPOSA", "USNYC",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0)));
+        fixture.given(bookedEvent("B-404"), routingEvent("B-404"))
+                .when(new AssignRouteToCargoCommand("B-404", legs))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("US11: 最終到着地が目的地と一致しない経路は割り当てられない")
+    void 最終到着地が目的地と一致しない経路は割り当てられない() {
+        List<Leg> legs = List.of(new Leg(
+                "V-100", "JPTYO", "SGSIN",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0)));
+        fixture.given(bookedEvent("B-405"), routingEvent("B-405"))
+                .when(new AssignRouteToCargoCommand("B-405", legs))
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("US11: 最終到着日が到着期限を超える経路は割り当てられない")
+    void 最終到着日が到着期限を超える経路は割り当てられない() {
+        List<Leg> legs = List.of(new Leg(
+                "V-100", "JPTYO", "USNYC",
+                LocalDateTime.of(2026, 9, 1, 9, 0), LocalDateTime.of(2026, 10, 15, 18, 0)));
+        fixture.given(bookedEvent("B-406"), routingEvent("B-406"))
+                .when(new AssignRouteToCargoCommand("B-406", legs))
+                .expectException(IllegalArgumentException.class);
     }
 }
