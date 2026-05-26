@@ -12,5 +12,6 @@
 | [ADR-0007](0007-unify-db-initialization-with-flyway.md) | `local-h2` を含む DB 初期化を Flyway に統一し、`schema.sql` を廃止する | 承認済み |
 | [ADR-0008](0008-pagination-strategy.md) | 一覧 API にページネーション (Offset/Limit + PageResponse) を採用する | 承認済み |
 | [ADR-0009](0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga を採用する（Kafka tracking モード） | 承認済み |
+| [ADR-0010](0010-local-h2-kafka-topic-initialization.md) | `local-h2` のインメモリ event store と Kafka トピックを整合させる（トピック初期化と冪等な孤児イベント処理） | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
