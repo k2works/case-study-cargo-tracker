@@ -331,6 +331,7 @@ entity "cargo_summary" as cargo {
   estimated_amount: NUMERIC(14,2)
   estimated_currency: VARCHAR(3)
   last_event_at: TIMESTAMPTZ
+  route_notified_at: TIMESTAMPTZ      ' 確定経路の荷主通知日時（US12 / IT4 V7）
   created_at: TIMESTAMPTZ
   updated_at: TIMESTAMPTZ
   version: BIGINT
@@ -481,7 +482,7 @@ entity "route_design_request" as rdr {
   destination_unlocode: VARCHAR(5) NOT NULL
   arrival_deadline: DATE NOT NULL
   cargo_type: VARCHAR(16) NOT NULL ' GENERAL / HAZARDOUS / REFRIGERATED
-  status: VARCHAR(16) NOT NULL ' PENDING ほか
+  status: VARCHAR(16) NOT NULL ' PENDING → ROUTE_SELECTED（US09）→ ASSIGNED（US11、M4）
   requested_at: TIMESTAMPTZ NOT NULL
 }
 
