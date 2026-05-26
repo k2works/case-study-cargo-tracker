@@ -12,6 +12,8 @@ import BookingDetailPage from './features/booking/pages/BookingDetailPage';
 import QuotationListPage from './features/quote/pages/QuotationListPage';
 import QuotationFormPage from './features/quote/pages/QuotationFormPage';
 import QuotationDetailPage from './features/quote/pages/QuotationDetailPage';
+import RouteDesignListPage from './features/routing/pages/RouteDesignListPage';
+import RouteDesignWorkbenchPage from './features/routing/pages/RouteDesignWorkbenchPage';
 
 function Dashboard() {
   return (
@@ -40,6 +42,8 @@ export default function App() {
           <Route path="/quotes" element={<QuotationListPage />} />
           <Route path="/quotes/new" element={<QuotationFormPage />} />
           <Route path="/quotes/:quotationId" element={<QuotationDetailPage />} />
+          <Route path="/routing/design" element={<RouteDesignListPage />} />
+          <Route path="/routing/design/:bookingId" element={<RouteDesignWorkbenchPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

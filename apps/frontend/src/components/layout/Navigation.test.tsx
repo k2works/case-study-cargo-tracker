@@ -52,6 +52,18 @@ describe('Navigation', () => {
     expect(screen.getByRole('link', { name: '航海スケジュール' })).toBeInTheDocument();
   });
 
+  it('IT4: ROLE_ROUTING に経路設計リンクが表示される（H3）', () => {
+    renderWithAuth('ROLE_ROUTING');
+
+    expect(screen.getByRole('link', { name: '経路設計' })).toHaveAttribute('href', '/routing/design');
+  });
+
+  it('IT4: ROLE_SALES に経路設計リンクは表示されない', () => {
+    renderWithAuth('ROLE_SALES');
+
+    expect(screen.queryByRole('link', { name: '経路設計' })).not.toBeInTheDocument();
+  });
+
   it('IT2: ROLE_HANDLER に荷主管理・予約管理リンクは表示されない', () => {
     renderWithAuth('ROLE_HANDLER');
 

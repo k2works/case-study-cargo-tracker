@@ -31,6 +31,7 @@ const mockBookings = [
     routingStatus: 'NOT_ROUTED',
     estimatedAmount: null,
     estimatedCurrency: null,
+    routeNotifiedAt: null,
   },
 ];
 

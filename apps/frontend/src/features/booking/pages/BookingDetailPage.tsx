@@ -2,10 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   fetchBooking,
+  fetchRoute,
   handoffBooking,
   confirmBooking,
   cancelBooking,
+  notifyRoute,
   type CargoSummary,
+  type CargoLeg,
 } from '../api/bookingApi';
 
 const STATUS_FLOW: { status: string; label: string }[] = [
@@ -33,6 +36,7 @@ export default function BookingDetailPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const [booking, setBooking] = useState<CargoSummary | null>(null);
+  const [legs, setLegs] = useState<CargoLeg[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -41,7 +45,14 @@ export default function BookingDetailPage() {
       return;
     }
     fetchBooking(bookingId)
-      .then(setBooking)
+      .then((b) => {
+        setBooking(b);
+        if (b.routingStatus === 'ROUTED') {
+          fetchRoute(bookingId).then(setLegs).catch(() => setLegs([]));
+        } else {
+          setLegs([]);
+        }
+      })
       .catch((e) => setError(e instanceof Error ? e.message : '取得に失敗しました'));
   }, [bookingId]);
 
@@ -113,6 +124,23 @@ export default function BookingDetailPage() {
         <div><dt className={dt}>品名</dt><dd className={dd}>{booking.productName ?? '-'}</dd></div>
       </dl>
 
+      {legs.length > 0 && (
+        <>
+          <h2 className="mb-2 mt-6 text-sm font-semibold text-gray-700">確定経路</h2>
+          <div className="rounded-lg border bg-white p-4 text-sm">
+            <p className="mb-2 text-gray-900">
+              経由港: {[legs[0].loadUnlocode, ...legs.map((l) => l.unloadUnlocode)].join(' → ')}
+            </p>
+            <p className="text-gray-600">到着予定日: {legs[legs.length - 1].unloadAt.slice(0, 10)}</p>
+            {booking.routeNotifiedAt && (
+              <p className="mt-1 text-xs text-green-700">
+                荷主通知済み: {booking.routeNotifiedAt.slice(0, 10)}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+
       <h2 className="mb-2 mt-6 text-sm font-semibold text-gray-700">予約状態</h2>
       <ol className="rounded-lg border bg-white p-4 text-sm">
         {STATUS_FLOW.map((s) => (
@@ -131,6 +159,14 @@ export default function BookingDetailPage() {
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-300"
         >
           経路設計を依頼
+        </button>
+        <button
+          type="button"
+          disabled={status !== 'ROUTE_PROPOSED'}
+          onClick={() => runAction(notifyRoute, '荷主に経路を通知しました')}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-300"
+        >
+          荷主に経路を通知
         </button>
         <button
           type="button"

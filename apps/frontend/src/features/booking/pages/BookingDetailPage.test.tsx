@@ -30,6 +30,7 @@ const baseBooking = {
   routingStatus: 'NOT_ROUTED',
   estimatedAmount: null,
   estimatedCurrency: null,
+  routeNotifiedAt: null,
 };
 
 function renderPage() {
@@ -87,5 +88,46 @@ describe('BookingDetailPage (US06/US13)', () => {
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent('予約が見つかりません')
     );
+  });
+
+  it('US11/US12: 経路提案中で確定経路が表示され荷主通知ボタンが有効になる', async () => {
+    vi.mocked(bookingApi.fetchBooking).mockResolvedValue({
+      ...baseBooking,
+      bookingStatus: 'ROUTE_PROPOSED',
+      routingStatus: 'ROUTED',
+    });
+    vi.mocked(bookingApi.fetchRoute).mockResolvedValue([
+      {
+        legSeq: 1,
+        voyageNumber: 'V-A',
+        loadUnlocode: 'JPTYO',
+        unloadUnlocode: 'DEHAM',
+        loadAt: '2026-07-03T09:00:00',
+        unloadAt: '2026-07-28T18:00:00',
+      },
+    ]);
+    renderPage();
+
+    await waitFor(() => screen.getByText('予約 B-001'));
+    await waitFor(() => expect(screen.getByText('確定経路')).toBeInTheDocument());
+    expect(screen.getByText('経由港: JPTYO → DEHAM')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '荷主に経路を通知' })).toBeEnabled();
+  });
+
+  it('US12: 荷主通知ボタンで notifyRoute が呼ばれる', async () => {
+    vi.mocked(bookingApi.fetchBooking).mockResolvedValue({
+      ...baseBooking,
+      bookingStatus: 'ROUTE_PROPOSED',
+      routingStatus: 'ROUTED',
+    });
+    vi.mocked(bookingApi.fetchRoute).mockResolvedValue([]);
+    vi.mocked(bookingApi.notifyRoute).mockResolvedValue(undefined);
+    renderPage();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByText('予約 B-001'));
+    await user.click(screen.getByRole('button', { name: '荷主に経路を通知' }));
+
+    await waitFor(() => expect(bookingApi.notifyRoute).toHaveBeenCalledWith('B-001'));
   });
 });

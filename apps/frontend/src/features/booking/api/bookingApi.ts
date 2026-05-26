@@ -28,6 +28,17 @@ export interface CargoSummary {
   routingStatus: string;
   estimatedAmount: number | null;
   estimatedCurrency: string | null;
+  routeNotifiedAt: string | null;
+}
+
+/** 確定旅程の輸送区間（US11/US12）。 */
+export interface CargoLeg {
+  legSeq: number;
+  voyageNumber: string;
+  loadUnlocode: string;
+  unloadUnlocode: string;
+  loadAt: string;
+  unloadAt: string;
 }
 
 export interface BookCargoRequest {
@@ -113,4 +124,22 @@ export async function cancelBooking(bookingId: string): Promise<void> {
     headers: authHeader(),
   });
   if (!res.ok) throw new Error('予約キャンセルに失敗しました');
+}
+
+/** 確定旅程を取得する（US11/US12、経路提案中以降）。 */
+export async function fetchRoute(bookingId: string): Promise<CargoLeg[]> {
+  const res = await fetch(`/api/v1/bookings/${bookingId}/route`, {
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('確定経路の取得に失敗しました');
+  return res.json();
+}
+
+/** 確定経路の荷主通知（US12、経路提案中のみ）。 */
+export async function notifyRoute(bookingId: string): Promise<void> {
+  const res = await fetch(`/api/v1/bookings/${bookingId}/notify-route`, {
+    method: 'POST',
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('荷主への経路通知に失敗しました');
 }
