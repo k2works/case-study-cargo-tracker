@@ -114,17 +114,25 @@ npx gulp sonar-local:help       # ヘルプ表示
 6. `sonarqube.config.json` を作成（複数プロジェクト対応時）
 7. `npx gulp sonar-local:scan` でスキャン実行
 
-### 8. 品質基準
+### 8. 品質基準（Quality Gate 条件）
 
-テスト戦略（@docs/design/test_strategy.md）で定義されたカバレッジ目標と SonarQube の Quality Gate を連携する。
+テスト戦略（@docs/design/test_strategy.md）で定義されたカバレッジ目標を、SonarQube の **Quality Gate 条件** として明文化する（IT4 retro Try T6）。Quality Gate は SonarQube サーバー側（プロジェクトに割り当てる Quality Gate）で定義し、`sonar-local:gate` / `sonar-local:check` で PASS / FAIL を判定する。
 
-| メトリクス | 目標 |
-|-----------|------|
-| カバレッジ | ドメイン層 90%、全体 80% |
-| 重複率 | 3% 未満 |
-| Bug | 0 件 |
-| Vulnerability | 0 件 |
-| Code Smell | 可能な限り 0 件 |
+新規コード（New Code）と全体（Overall）の双方に条件を設定する。
+
+| メトリクス | 新規コード条件 | 全体条件 | 必須/推奨 |
+|-----------|--------------|---------|-----------|
+| カバレッジ（行） | 80% 以上 | **80% 以上**（IT4 T6） | 必須 |
+| カバレッジ（ドメイン層） | 90% 以上 | 90% 以上 | 必須 |
+| 重複率 | 3% 未満 | 3% 未満 | 必須 |
+| Bug | 0 件 | 0 件 | 必須 |
+| Vulnerability | 0 件 | 0 件 | 必須 |
+| Code Smell | **0 件**（IT4 T6） | **0 件**（IT4 T6、フロントは IT3 で 25→0 達成済み） | 必須 |
+| Security Hotspot レビュー済み | 100% | 100% | 必須 |
+
+> **Quality Gate 条件の適用方法**: 上記は SonarQube サーバーの Quality Gate に設定する。SonarQube UI（Quality Gates → 条件追加）または Web API（`POST /api/qualitygates/create_condition`）でプロジェクトに割り当てた Quality Gate に上記条件を登録し、`sonarqube.config.json` の各 `projectKey` に紐付ける。`npx gulp sonar-local:gate` でゲート状態を取得し、CI/CD では `operating-cicd` の品質ゲートステップで FAIL 時にパイプラインを止める。
+>
+> **ローカル代理指標**: SonarQube サーバーを起動しない開発中は、JaCoCo（バックエンド）/ Vitest c8 lcov（フロントエンド）のカバレッジを代理指標とし、全体 80% / ドメイン層 90% を満たすことを確認する（@docs/reference/コーディングとテストガイド.md の JaCoCo 再生成運用を参照）。
 
 ### 9. CI/CD 連携
 
