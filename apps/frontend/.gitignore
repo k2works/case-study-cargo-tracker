@@ -8,6 +8,9 @@ dist
 dist-ssr
 *.local
 
+# TypeScript インクリメンタルビルドキャッシュ（生成物のため追跡しない）
+*.tsbuildinfo
+
 # Editor / IDE
 .vscode/*
 !.vscode/extensions.json
