@@ -41,6 +41,14 @@ dependencies {
     testImplementation libs.testcontainers.kafka
 }
 
+test {
+    useJUnitPlatform()
+    // Docker Desktop 29.x（MinAPI 1.40）では Testcontainers の docker-java が既定で
+    // 古い API バージョンを使い HTTP 400 になるため、サポート範囲内の API バージョンを明示する。
+    systemProperty 'api.version', '1.43'
+    environment 'DOCKER_API_VERSION', '1.43'
+}
+
 bootJar {
     archiveBaseName = 'bookingms'
 }
