@@ -1,6 +1,8 @@
 package com.example.bookingms.application;
 
+import com.example.bookingms.domain.projections.CargoLeg;
 import com.example.bookingms.domain.projections.CargoSummary;
+import com.example.bookingms.infrastructure.repositories.mybatis.CargoLegMapper;
 import com.example.bookingms.infrastructure.repositories.mybatis.CargoSummaryMapper;
 import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import org.springframework.stereotype.Service;
@@ -19,13 +21,20 @@ import java.util.List;
 public class CargoQueryService {
 
     private final CargoSummaryMapper cargoSummaryMapper;
+    private final CargoLegMapper cargoLegMapper;
 
-    public CargoQueryService(CargoSummaryMapper cargoSummaryMapper) {
+    public CargoQueryService(CargoSummaryMapper cargoSummaryMapper, CargoLegMapper cargoLegMapper) {
         this.cargoSummaryMapper = cargoSummaryMapper;
+        this.cargoLegMapper = cargoLegMapper;
     }
 
     public CargoSummary findByBookingId(String bookingId) {
         return cargoSummaryMapper.findByBookingId(bookingId);
+    }
+
+    /** 確定旅程（cargo_leg）を leg_seq 順に取得する（US11 / US12 経路表示）。 */
+    public List<CargoLeg> findLegs(String bookingId) {
+        return cargoLegMapper.findByBookingId(bookingId);
     }
 
     public List<CargoSummary> findAll(PageRequest pageRequest) {

@@ -5,9 +5,12 @@ import com.example.bookingms.application.CargoQueryService;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
+import com.example.bookingms.domain.commands.NotifyRouteToShipperCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
+import com.example.bookingms.domain.projections.CargoLeg;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
+import com.example.bookingms.interfaces.rest.dto.CargoLegResponse;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
 import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import com.example.bookingms.interfaces.rest.dto.PageResponse;
@@ -23,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -175,6 +179,43 @@ class CargoBookingControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         org.mockito.Mockito.verify(commandService).cancel(any(CancelBookingCommand.class));
+    }
+
+    @Test
+    @DisplayName("US12: notify-route で荷主通知コマンドが送信され 200 が返る")
+    void US12_荷主通知コマンドが送信される() {
+        when(commandService.notifyRoute(any(NotifyRouteToShipperCommand.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        ResponseEntity<Void> response = controller.notifyRoute("B-001");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ArgumentCaptor<NotifyRouteToShipperCommand> captor =
+                ArgumentCaptor.forClass(NotifyRouteToShipperCommand.class);
+        org.mockito.Mockito.verify(commandService).notifyRoute(captor.capture());
+        assertThat(captor.getValue().bookingId()).isEqualTo("B-001");
+    }
+
+    @Test
+    @DisplayName("US11/US12: GET /{id}/route で確定旅程を leg_seq 順に返す")
+    void 確定旅程を取得できる() {
+        CargoLeg leg = new CargoLeg();
+        leg.setBookingId("B-001");
+        leg.setLegSeq(1);
+        leg.setVoyageNumber("V-A");
+        leg.setLoadUnlocode("JPTYO");
+        leg.setUnloadUnlocode("DEHAM");
+        leg.setLoadAt(LocalDateTime.of(2026, 7, 3, 9, 0));
+        leg.setUnloadAt(LocalDateTime.of(2026, 7, 28, 18, 0));
+        when(queryService.findLegs("B-001")).thenReturn(List.of(leg));
+
+        ResponseEntity<List<CargoLegResponse>> response = controller.route("B-001");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().get(0).voyageNumber()).isEqualTo("V-A");
+        assertThat(response.getBody().get(0).loadUnlocode()).isEqualTo("JPTYO");
+        assertThat(response.getBody().get(0).unloadUnlocode()).isEqualTo("DEHAM");
     }
 
     @Test

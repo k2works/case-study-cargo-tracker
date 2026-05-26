@@ -50,4 +50,6 @@ public interface CargoSummaryMapper {
     void updateRouting(@Param("bookingId") String bookingId,
                        @Param("bookingStatus") String bookingStatus,
                        @Param("routingStatus") String routingStatus);
+
+    void updateRouteNotifiedAt(@Param("bookingId") String bookingId);
 }

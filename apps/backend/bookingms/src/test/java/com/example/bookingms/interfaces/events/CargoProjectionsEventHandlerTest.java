@@ -4,6 +4,7 @@ import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.bookingms.domain.events.RouteNotifiedToShipperEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
@@ -205,5 +206,13 @@ class CargoProjectionsEventHandlerTest {
                 LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 10, 18, 0));
         verify(cargoLegMapper).insert("B-501", 2, "V-B", "SGSIN", "DEHAM",
                 LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 30, 18, 0));
+    }
+
+    @Test
+    @DisplayName("US12: RouteNotifiedToShipperEvent 受信で通知日時を更新する")
+    void US12_荷主通知イベントで通知日時が更新される() {
+        handler.on(new RouteNotifiedToShipperEvent("B-601"));
+
+        verify(cargoSummaryMapper).updateRouteNotifiedAt("B-601");
     }
 }

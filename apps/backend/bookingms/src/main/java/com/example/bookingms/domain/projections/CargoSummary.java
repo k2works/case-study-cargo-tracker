@@ -36,6 +36,7 @@ public class CargoSummary {
     private BigDecimal estimatedAmount;
     private String estimatedCurrency;
     private LocalDateTime lastEventAt;
+    private LocalDateTime routeNotifiedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long version;
@@ -110,6 +111,9 @@ public class CargoSummary {
 
     public LocalDateTime getLastEventAt() { return lastEventAt; }
     public void setLastEventAt(LocalDateTime lastEventAt) { this.lastEventAt = lastEventAt; }
+
+    public LocalDateTime getRouteNotifiedAt() { return routeNotifiedAt; }
+    public void setRouteNotifiedAt(LocalDateTime routeNotifiedAt) { this.routeNotifiedAt = routeNotifiedAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -5,6 +5,7 @@ import com.example.bookingms.application.CargoQueryService;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
+import com.example.bookingms.domain.commands.NotifyRouteToShipperCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
@@ -14,6 +15,7 @@ import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.TemperatureCondition;
 import com.example.bookingms.domain.projections.CargoSummary;
 import com.example.bookingms.interfaces.rest.dto.BookCargoRequest;
+import com.example.bookingms.interfaces.rest.dto.CargoLegResponse;
 import com.example.bookingms.interfaces.rest.dto.CargoSummaryResponse;
 import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import com.example.bookingms.interfaces.rest.dto.PageResponse;
@@ -113,6 +115,26 @@ public class CargoBookingController {
     public ResponseEntity<Void> cancel(@PathVariable String bookingId) {
         commandService.cancel(new CancelBookingCommand(bookingId)).join();
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 確定経路を荷主に通知する（US12）。経路提案中の予約のみ通知でき、通知送信記録を残す。
+     */
+    @PostMapping("/{bookingId}/notify-route")
+    public ResponseEntity<Void> notifyRoute(@PathVariable String bookingId) {
+        commandService.notifyRoute(new NotifyRouteToShipperCommand(bookingId)).join();
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 確定旅程（経由港・航海番号・日時）を取得する（US11 / US12 経路表示）。
+     */
+    @GetMapping("/{bookingId}/route")
+    public ResponseEntity<List<CargoLegResponse>> route(@PathVariable String bookingId) {
+        List<CargoLegResponse> legs = queryService.findLegs(bookingId).stream()
+                .map(CargoLegResponse::from)
+                .toList();
+        return ResponseEntity.ok(legs);
     }
 
     @GetMapping("/{bookingId}")

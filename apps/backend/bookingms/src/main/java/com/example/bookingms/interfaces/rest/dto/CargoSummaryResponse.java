@@ -4,11 +4,12 @@ import com.example.bookingms.domain.projections.CargoSummary;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
- * 貨物予約応答 DTO（US04 + US05、GET /api/v1/bookings 系）。
+ * 貨物予約応答 DTO（US04 + US05 + US12、GET /api/v1/bookings 系）。
  *
- * <p>US05 で hazard_* / temperature_* フィールドを追加。</p>
+ * <p>US05 で hazard_* / temperature_* フィールドを追加。US12 で荷主通知日時 routeNotifiedAt を追加。</p>
  */
 public record CargoSummaryResponse(
         String bookingId,
@@ -32,7 +33,8 @@ public record CargoSummaryResponse(
         String bookingStatus,
         String routingStatus,
         BigDecimal estimatedAmount,
-        String estimatedCurrency
+        String estimatedCurrency,
+        LocalDateTime routeNotifiedAt
 ) {
     public static CargoSummaryResponse from(CargoSummary p) {
         return new CargoSummaryResponse(
@@ -57,7 +59,8 @@ public record CargoSummaryResponse(
                 p.getBookingStatus(),
                 p.getRoutingStatus(),
                 p.getEstimatedAmount(),
-                p.getEstimatedCurrency()
+                p.getEstimatedCurrency(),
+                p.getRouteNotifiedAt()
         );
     }
 }

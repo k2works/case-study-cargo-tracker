@@ -4,11 +4,13 @@ import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
+import com.example.bookingms.domain.commands.NotifyRouteToShipperCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.bookingms.domain.events.RouteNotifiedToShipperEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
@@ -230,6 +232,17 @@ public class Cargo {
     public void on(CargoRoutedEvent event) {
         this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
         this.routingStatus = RoutingStatus.valueOf(event.routingStatus());
+    }
+
+    /**
+     * 確定経路の荷主通知（US12）。経路提案中（ROUTE_PROPOSED）のときのみ通知でき、状態は変更しない。
+     */
+    @CommandHandler
+    public void handle(NotifyRouteToShipperCommand command) {
+        if (this.bookingStatus != BookingStatus.ROUTE_PROPOSED) {
+            throw new IllegalStateException("経路を荷主に通知できるのは経路提案中の予約のみです");
+        }
+        AggregateLifecycle.apply(new RouteNotifiedToShipperEvent(this.bookingId));
     }
 
     /**

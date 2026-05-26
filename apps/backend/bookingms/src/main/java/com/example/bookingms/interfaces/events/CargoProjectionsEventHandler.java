@@ -4,6 +4,7 @@ import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.bookingms.domain.events.RouteNotifiedToShipperEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.HazardInfo;
 import com.example.bookingms.domain.model.Leg;
@@ -94,5 +95,10 @@ public class CargoProjectionsEventHandler {
                     leg.loadTime(),
                     leg.unloadTime());
         }
+    }
+
+    @EventHandler
+    public void on(RouteNotifiedToShipperEvent event) {
+        cargoSummaryMapper.updateRouteNotifiedAt(event.bookingId());
     }
 }

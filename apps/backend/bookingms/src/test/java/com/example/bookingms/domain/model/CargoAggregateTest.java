@@ -4,11 +4,13 @@ import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
+import com.example.bookingms.domain.commands.NotifyRouteToShipperCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.bookingms.domain.events.RouteNotifiedToShipperEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
@@ -439,5 +441,26 @@ class CargoAggregateTest {
         fixture.given(bookedEvent("B-406"), routingEvent("B-406"))
                 .when(new AssignRouteToCargoCommand("B-406", legs))
                 .expectException(IllegalArgumentException.class);
+    }
+
+    private CargoRoutedEvent routedEvent(String bookingId) {
+        return new CargoRoutedEvent(bookingId, "ROUTE_PROPOSED", "ROUTED", validItinerary());
+    }
+
+    @Test
+    @DisplayName("US12: 経路提案中の予約は確定経路を荷主に通知できる")
+    void 経路提案中の予約は確定経路を荷主に通知できる() {
+        fixture.given(bookedEvent("B-501"), routingEvent("B-501"), routedEvent("B-501"))
+                .when(new NotifyRouteToShipperCommand("B-501"))
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new RouteNotifiedToShipperEvent("B-501"));
+    }
+
+    @Test
+    @DisplayName("US12: 経路提案中でない予約は荷主に通知できない")
+    void 経路提案中でない予約は荷主に通知できない() {
+        fixture.given(bookedEvent("B-502"), routingEvent("B-502"))
+                .when(new NotifyRouteToShipperCommand("B-502"))
+                .expectException(IllegalStateException.class);
     }
 }

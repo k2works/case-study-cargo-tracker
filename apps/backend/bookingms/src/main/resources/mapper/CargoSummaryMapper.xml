@@ -28,6 +28,7 @@
         <result property="estimatedAmount" column="estimated_amount"/>
         <result property="estimatedCurrency" column="estimated_currency"/>
         <result property="lastEventAt" column="last_event_at"/>
+        <result property="routeNotifiedAt" column="route_notified_at"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
         <result property="version" column="version"/>
@@ -79,6 +80,14 @@
         UPDATE cargo_summary
         SET booking_status = #{bookingStatus},
             routing_status = #{routingStatus},
+            updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE booking_id = #{bookingId}
+    </update>
+
+    <update id="updateRouteNotifiedAt">
+        UPDATE cargo_summary
+        SET route_notified_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP,
             version = version + 1
         WHERE booking_id = #{bookingId}
