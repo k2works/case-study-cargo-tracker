@@ -1,9 +1,11 @@
 package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.RouteCalculationService;
+import com.example.routingms.application.RouteSelectionService;
 import com.example.routingms.domain.model.RouteCandidate;
 import com.example.routingms.domain.model.RouteLeg;
 import com.example.routingms.interfaces.rest.dto.RouteCandidateResponse;
+import com.example.routingms.interfaces.rest.dto.SelectRouteRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,6 +29,9 @@ class RouteControllerTest {
 
     @Mock
     private RouteCalculationService calculationService;
+
+    @Mock
+    private RouteSelectionService selectionService;
 
     @InjectMocks
     private RouteController controller;
@@ -95,5 +100,19 @@ class RouteControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
         assertThat(response.getBody().get(0).recommended()).isTrue();
+    }
+
+    @Test
+    void 経路候補を選択して確定できる() {
+        when(selectionService.selectRoute("B-001", 2)).thenReturn(transshipmentCandidate());
+
+        ResponseEntity<RouteCandidateResponse> response =
+                controller.select("B-001", new SelectRouteRequest(2));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().sequence()).isEqualTo(2);
+        assertThat(response.getBody().voyageNumbers()).containsExactly("V-A", "V-B");
+        assertThat(response.getBody().ports()).containsExactly("JPTYO", "SGSIN", "DEHAM");
     }
 }

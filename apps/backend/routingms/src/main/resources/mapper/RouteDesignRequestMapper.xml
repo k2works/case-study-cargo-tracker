@@ -36,4 +36,10 @@
         ORDER BY requested_at DESC
     </select>
 
+    <update id="updateStatus">
+        UPDATE route_design_request
+        SET status = #{status}
+        WHERE booking_id = #{bookingId}
+    </update>
+
 </mapper>

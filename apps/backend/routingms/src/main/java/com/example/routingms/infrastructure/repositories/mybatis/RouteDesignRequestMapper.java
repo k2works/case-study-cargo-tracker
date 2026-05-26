@@ -19,4 +19,7 @@ public interface RouteDesignRequestMapper {
     RouteDesignRequestProjection findByBookingId(@Param("bookingId") String bookingId);
 
     List<RouteDesignRequestProjection> findAll();
+
+    void updateStatus(@Param("bookingId") String bookingId,
+                      @Param("status") String status);
 }

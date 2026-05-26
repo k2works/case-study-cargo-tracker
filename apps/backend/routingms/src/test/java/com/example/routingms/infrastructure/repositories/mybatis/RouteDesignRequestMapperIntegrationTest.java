@@ -65,4 +65,14 @@ class RouteDesignRequestMapperIntegrationTest {
         assertThat(all).extracting(RouteDesignRequestProjection::getBookingId)
                 .contains("B-001", "B-002");
     }
+
+    @Test
+    @DisplayName("経路設計依頼の状態を更新できる（US09 選択確定）")
+    void 状態を更新できる() {
+        mapper.insert("B-001", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL");
+
+        mapper.updateStatus("B-001", "ROUTE_SELECTED");
+
+        assertThat(mapper.findByBookingId("B-001").getStatus()).isEqualTo("ROUTE_SELECTED");
+    }
 }

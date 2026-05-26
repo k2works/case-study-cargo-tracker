@@ -1,12 +1,15 @@
 package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.RouteCalculationService;
+import com.example.routingms.application.RouteSelectionService;
 import com.example.routingms.domain.model.RouteCandidate;
 import com.example.routingms.interfaces.rest.dto.RouteCandidateResponse;
+import com.example.routingms.interfaces.rest.dto.SelectRouteRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,9 +28,12 @@ import java.util.stream.IntStream;
 public class RouteController {
 
     private final RouteCalculationService calculationService;
+    private final RouteSelectionService selectionService;
 
-    public RouteController(RouteCalculationService calculationService) {
+    public RouteController(RouteCalculationService calculationService,
+                           RouteSelectionService selectionService) {
         this.calculationService = calculationService;
+        this.selectionService = selectionService;
     }
 
     /**
@@ -44,6 +50,16 @@ public class RouteController {
     @GetMapping("/{bookingId}/candidates")
     public ResponseEntity<List<RouteCandidateResponse>> candidates(@PathVariable String bookingId) {
         return ResponseEntity.ok(toResponses(calculationService.calculate(bookingId)));
+    }
+
+    /**
+     * 経路候補を選択して確定する（US09）。選択した候補を返し、経路設計依頼を選択済みにする。
+     */
+    @PostMapping("/{bookingId}/select")
+    public ResponseEntity<RouteCandidateResponse> select(@PathVariable String bookingId,
+                                                         @RequestBody SelectRouteRequest request) {
+        RouteCandidate selected = selectionService.selectRoute(bookingId, request.sequence());
+        return ResponseEntity.ok(RouteCandidateResponse.from(selected, request.sequence(), false));
     }
 
     private List<RouteCandidateResponse> toResponses(List<RouteCandidate> candidates) {
