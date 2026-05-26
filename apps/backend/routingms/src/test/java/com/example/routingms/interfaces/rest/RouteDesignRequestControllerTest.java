@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,14 +28,18 @@ class RouteDesignRequestControllerTest {
     @InjectMocks
     private RouteDesignRequestController controller;
 
+    private static final LocalDate ARRIVAL_DEADLINE = LocalDate.of(2027, 9, 30);
+    private static final LocalDateTime REQUESTED_AT = LocalDateTime.of(2026, 5, 26, 10, 0);
+
     private RouteDesignRequestProjection makeProjection(String bookingId) {
         RouteDesignRequestProjection p = new RouteDesignRequestProjection();
         p.setBookingId(bookingId);
         p.setOriginUnlocode("JPTYO");
         p.setDestinationUnlocode("USNYC");
-        p.setArrivalDeadline(LocalDate.of(2027, 9, 30));
+        p.setArrivalDeadline(ARRIVAL_DEADLINE);
         p.setCargoType("GENERAL");
         p.setStatus("PENDING");
+        p.setRequestedAt(REQUESTED_AT);
         return p;
     }
 
@@ -46,10 +51,14 @@ class RouteDesignRequestControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
+        // DTO の全フィールドの写像を検証し、record 引数順の取り違え（偽陰性）を防ぐ。
         assertThat(response.getBody().bookingId()).isEqualTo("BK-001");
         assertThat(response.getBody().originUnlocode()).isEqualTo("JPTYO");
         assertThat(response.getBody().destinationUnlocode()).isEqualTo("USNYC");
+        assertThat(response.getBody().arrivalDeadline()).isEqualTo(ARRIVAL_DEADLINE);
         assertThat(response.getBody().cargoType()).isEqualTo("GENERAL");
+        assertThat(response.getBody().status()).isEqualTo("PENDING");
+        assertThat(response.getBody().requestedAt()).isEqualTo(REQUESTED_AT);
     }
 
     @Test
