@@ -4,7 +4,7 @@ import { searchVoyages } from './voyageApi';
 describe('voyageApi.searchVoyages (US07)', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
-    sessionStorage.clear();
+    localStorage.clear();
   });
 
   it('検索条件をクエリパラメータに変換して GET する', async () => {

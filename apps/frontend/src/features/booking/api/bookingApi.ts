@@ -1,4 +1,5 @@
 import type { PageResponse } from '../../../shared/api/types';
+import { authHeader } from '../../../shared/api/auth';
 
 export type { PageResponse };
 
@@ -50,11 +51,6 @@ export interface BookCargoRequest {
 
 export interface BookCargoResponse {
   bookingId: string;
-}
-
-function authHeader(): Record<string, string> {
-  const token = sessionStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 /**

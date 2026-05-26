@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { login as apiLogin, logout as apiLogout } from '../api/authApi';
+import { TOKEN_STORAGE_KEY } from '../../../shared/api/auth';
 
 interface AuthState {
   token: string | null;
@@ -15,7 +16,7 @@ interface AuthContextValue extends AuthState {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-const TOKEN_KEY = 'auth_token';
+const TOKEN_KEY = TOKEN_STORAGE_KEY;
 const ROLE_KEY = 'auth_role';
 const USERNAME_KEY = 'auth_username';
 

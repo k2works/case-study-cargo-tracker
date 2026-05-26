@@ -1,3 +1,5 @@
+import { authHeader } from '../../../shared/api/auth';
+
 export interface CarrierMovement {
   departureUnlocode: string;
   arrivalUnlocode: string;
@@ -37,11 +39,6 @@ export interface UpdateVoyageScheduleRequest {
   arrivalDate: string;
   movements: CarrierMovement[];
   acceptedCargoTypes: string[];
-}
-
-function authHeader(): Record<string, string> {
-  const token = sessionStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export async function fetchVoyages(): Promise<Voyage[]> {

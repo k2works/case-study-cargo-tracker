@@ -6,7 +6,7 @@ type FetchMock = ReturnType<typeof vi.fn>;
 describe('quoteApi (US01)', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
-    sessionStorage.clear();
+    localStorage.clear();
   });
 
   it('見積を作成し見積番号を返す', async () => {
