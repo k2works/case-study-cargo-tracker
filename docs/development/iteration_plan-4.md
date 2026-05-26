@@ -242,6 +242,8 @@ gantt
 
 ## 設計
 
+> **注**: domain-model.md・data-model.md・ui_design.md の定義に準拠する。`<<新規>>` 印は設計ドキュメント未定義のため IT4 で導入し、設計ドキュメント整合タスクで各設計書に反映する変更点。
+
 ### 主要設計方針
 
 - **経路候補算出（routingms ドメインサービス）**: Routing コンテキストの集約は `Voyage` のみ（domain-model.md）。経路候補算出は `Voyage` / `CarrierMovement`（寄港地接続）と `route_design_request`（出発地・目的地・期限・貨物種別）を入力に候補を生成するドメインサービス `OptimalRouteService` として実装。直行便を最優先、所要日数・費用で推奨順ソート、期限内到達不可なら候補なしを返す。候補（`RouteCandidate`）は永続集約を持たず算出結果として返す。
@@ -250,30 +252,98 @@ gantt
 
 ### ドメインモデル
 
+routingms に `OptimalRouteService`（ドメインサービス）と `RouteSearchSpecification`（探索制約）を追加し、bookingms の `Cargo` 集約に経路割当（`AssignRouteToCargoCommand` → `CargoRoutedEvent`）を実装する。`BookingSagaManager` が routingms の `RouteConfirmedEvent` を受けて割当コマンドを発行する。
+
 ```plantuml
 @startuml
-package "Routing Context" {
-  class Voyage <<Aggregate Root>>
-  class CarrierMovement <<Entity>>
-  class OptimalRouteService <<Domain Service>> {
-    + calculate(routeDesignRequest, voyages): List<RouteCandidate>
+title IT4 ドメインモデル（経路設計 / Saga / cross-service）
+
+package "routingms (Routing Context)" {
+
+  class Voyage <<Aggregate Root>> {
+    - voyageNumber: VoyageNumber
+    - schedule: Schedule
+    - acceptedCargoTypes: Set<CargoType>
+    + accepts(cargoType: CargoType): boolean
   }
-  Voyage *-- "1..*" CarrierMovement
+
+  class Schedule <<Value Object>> {
+    - movements: List<CarrierMovement>
+  }
+
+  class CarrierMovement <<Entity>> {
+    - departure: Location
+    - arrival: Location
+    - departureTime: LocalDateTime
+    - arrivalTime: LocalDateTime
+  }
+
+  class OptimalRouteService <<Domain Service>> {
+    + calculate(spec: RouteSearchSpecification, voyages: List<Voyage>): List<RouteCandidate>
+    - evaluateConnectivity(legs: List<Leg>): boolean
+    - sortByRecommendation(candidates): List<RouteCandidate>
+  }
+
+  class RouteSearchSpecification <<Value Object>> <<新規>> {
+    - origin: Location
+    - destination: Location
+    - arrivalDeadline: LocalDate
+    - cargoType: CargoType
+    + isSatisfiedBy(candidate: RouteCandidate): boolean
+  }
+
+  Voyage *-- Schedule
+  Schedule "1" *-- "1..*" CarrierMovement
+  Voyage *-- "*" CargoType
+  OptimalRouteService ..> Voyage : 寄港地接続を評価
+  OptimalRouteService ..> RouteSearchSpecification
 }
 
-package "Booking Context" {
+package "Booking Context (bookingms)" {
+
   class Cargo <<Aggregate Root>> {
+    - bookingId: BookingId
+    - routeSpecification: RouteSpecification
+    - itinerary: CargoItinerary
+    - bookingStatus: BookingStatus
     - routingStatus: RoutingStatus
     + handle(AssignRouteToCargoCommand)
+    + apply(CargoRoutedEvent)
+    + handle(NotifyRouteToShipperCommand) <<新規>>
   }
+
   class CargoItinerary <<Value Object>> {
     - legs: List<Leg>
+    + finalArrivalDate(): LocalDate
+    + finalDestination(): Location
   }
+
   class Leg <<Value Object>> {
     - voyageNumber: VoyageNumber
+    - loadLocation: Location
+    - unloadLocation: Location
+    - loadDate: LocalDateTime
+    - unloadDate: LocalDateTime
   }
+
+  enum BookingStatus {
+    PRELIMINARY
+    ROUTING
+    ROUTE_PROPOSED
+    CONFIRMED
+    CANCELLED
+  }
+
+  enum RoutingStatus {
+    NOT_ROUTED
+    ROUTED
+    MISROUTED
+  }
+
   Cargo *-- CargoItinerary
-  CargoItinerary *-- "1..*" Leg
+  Cargo *-- BookingStatus
+  Cargo *-- RoutingStatus
+  CargoItinerary "1" *-- "1..*" Leg
 }
 
 class RouteCandidate <<Value Object>> {
@@ -282,106 +352,283 @@ class RouteCandidate <<Value Object>> {
   - estimatedCost: Money
 }
 
-OptimalRouteService ..> RouteCandidate : 算出
-note bottom of Cargo : AssignRouteToCargoCommand →\nCargoRoutedEvent 発行 →\n状態 ROUTING → ROUTE_PROPOSED
+class "BookingSagaManager <<Saga>>" as Saga {
+  - bookingId: BookingId
+  + on(RouteDesignRequestedEvent)  ' IT3 実装済み
+  + on(RouteConfirmedEvent) <<新規>>
+  + on(CargoRoutedEvent)
+  + on(BookingConfirmedEvent)
+}
+
+OptimalRouteService ..> RouteCandidate : 算出（推奨順）
+Saga ..> Cargo : RouteConfirmedEvent 受信 →\nAssignRouteToCargoCommand 発行
+RouteCandidate *-- CargoItinerary
+
+note bottom of Cargo
+  <<新規>> = domain-model.md 未定義。
+  US11（ROUTING → ROUTE_PROPOSED 紐付け）で
+  AssignRouteToCargoCommand → CargoRoutedEvent、
+  US12（荷主通知）で NotifyRouteToShipperCommand を導入し、
+  設計ドキュメント整合タスクで domain-model.md へ反映する
+end note
+
+note bottom of OptimalRouteService
+  Routing の集約は Voyage のみ（domain-model.md）。
+  経路候補算出は集約を新設せずドメインサービスで実装。
+  routingms → bookingms は RouteConfirmedEvent（shared）の
+  Kafka tracking で連携（ADR-0009、IT3 の逆方向）
+end note
 @enduml
 ```
 
-> 参照: domain-model.md。集約・VO・コマンド/イベント名（`Voyage` / `CargoItinerary` / `Leg` / `RouteCandidate` / `AssignRouteToCargoCommand` / `CargoRoutedEvent` / `ROUTE_PROPOSED`）は同ドキュメントに準拠。routingms に経路設計集約は新設せず、`OptimalRouteService` をドメインサービスとして追加する。
+#### Cargo 集約の不変条件（IT4 関連）
+
+- `AssignRouteToCargoCommand` は `bookingStatus = ROUTING`（IT3 の US06 で引き渡し済み）のときのみ受理し、`CargoItinerary`（`Leg` 列）を確定して `ROUTE_PROPOSED` に遷移、`routingStatus` を `ROUTED` にする（不正状態時は `IllegalStateException`）
+- 紐付ける `CargoItinerary` は出発地が予約の出発地、最終到着地が予約の目的地に一致し、最終到着日が `arrivalDeadline` 以内であること（不変条件違反時は拒否）
+- `NotifyRouteToShipperCommand`（US12）は `bookingStatus = ROUTE_PROPOSED` のときのみ受理する
+- `bookingStatus = CANCELLED` の Cargo はそれ以降の経路割当・通知コマンドを受け付けない（domain-model.md 準拠）
+
+### 状態遷移（経路設計範囲）
+
+```plantuml
+@startuml
+title 予約状態遷移（IT4 実装範囲：ROUTING → ROUTE_PROPOSED → CONFIRMED）
+
+[*] --> ROUTING : RequestRouteDesignCommand（US06、IT3 実装済み）
+ROUTING --> ROUTE_PROPOSED : AssignRouteToCargoCommand（US11、CargoRoutedEvent）
+ROUTE_PROPOSED --> ROUTE_PROPOSED : NotifyRouteToShipperCommand（US12 荷主通知）
+ROUTE_PROPOSED --> CONFIRMED : ConfirmBookingCommand（US13、IT3 実装済み）
+ROUTE_PROPOSED --> ROUTING : 荷主ルート変更希望（US13 差し戻し、レビュー M6）
+ROUTE_PROPOSED --> CANCELLED : CancelBookingCommand（US13、IT3 実装済み）
+CONFIRMED --> [*] : 追跡番号発行へ（IT5: US14）
+
+note right of ROUTE_PROPOSED
+  本イテレーションの中核遷移。
+  routingms の経路確定（US09）→
+  RouteConfirmedEvent → Saga →
+  AssignRouteToCargoCommand で到達
+end note
+@enduml
+```
 
 ### データモデル
+
+経路候補（`RouteCandidate`）は `OptimalRouteService` の算出結果として返し、routingms に永続テーブルは新設しない。US09 経路選択確定・US11 経路紐付け・US12 確定経路通知はいずれも bookingms の既存 `cargo_summary`・`cargo_leg` を更新する。
+
+> **注**: `cargo_summary` / `cargo_leg` / `route_design_request` はいずれも data-model.md で定義済み（同 927-930 行で UC07/09/10 のデータ対応を定義）。本イテレーションで新規テーブルは追加しない。`route_design_request.status` の状態遷移（PENDING → ASSIGNED 等）を扱うかはレビュー M4 として本イテレーションで判断する。
 
 ```plantuml
 @startuml
 hide circle
 skinparam linetype ortho
 
-entity "route_design_request\n(routingms, IT3 追加済)" as rdr {
-  * booking_id : VARCHAR <<PK>>
+entity "route_design_request\n(routing_read_db, IT3 追加済)" as rdr {
+  * **booking_id**: VARCHAR(36) <<PK>>
+  --
+  origin_unlocode: VARCHAR(5) NOT NULL
+  destination_unlocode: VARCHAR(5) NOT NULL
+  arrival_deadline: DATE NOT NULL
+  cargo_type: VARCHAR(16) NOT NULL
+  status: VARCHAR(16) NOT NULL
+  ' PENDING（IT3）。状態遷移は本 IT で判断（M4）
+  requested_at: TIMESTAMPTZ
+}
+
+entity "cargo_summary\n(booking_read_db, US11 で更新)" as cargo {
+  * **booking_id**: VARCHAR(36) <<PK>>
+  --
+  booking_status: VARCHAR(20) NOT NULL
+  ' ROUTING → ROUTE_PROPOSED（US11）
+  routing_status: VARCHAR(16) NOT NULL
+  ' NOT_ROUTED → ROUTED（US11）
+  created_at: TIMESTAMPTZ
+}
+
+entity "cargo_leg\n(booking_read_db, V002 既存・US11 で確定)" as leg {
+  * **booking_id**: VARCHAR(36) <<PK>> <<FK>>
+  * **leg_seq**: INTEGER <<PK>>
+  --
+  voyage_number: VARCHAR(20) NOT NULL
+  load_unlocode: VARCHAR(5) NOT NULL
+  unload_unlocode: VARCHAR(5) NOT NULL
+  load_date: TIMESTAMPTZ NOT NULL
+  unload_date: TIMESTAMPTZ NOT NULL
+}
+
+entity "voyage\n(routing_read_db, 既存・候補算出の入力)" as voyage {
+  * **voyage_number**: VARCHAR(20) <<PK>>
   --
   origin_unlocode / destination_unlocode
-  arrival_deadline / cargo_type / status
-}
-
-entity "cargo_summary\n(bookingms)" as cargo {
-  * booking_id <<PK>>
-  --
-  routing_status  ' ROUTE_PROPOSED に更新
-}
-
-entity "cargo_leg\n(bookingms, V002 既存)" as leg {
-  * booking_id
-  * leg_seq : INTEGER <<PK>>
-  --
-  voyage_number / 出発港 / 到着港 / 日時
+  departure_date / arrival_date
 }
 
 cargo ||--|{ leg : "1..*（確定旅程）"
 rdr ..> cargo : cross-service（US11 経路確定→紐付け）
+voyage ..> leg : Leg の voyage_number で参照
 @enduml
 ```
 
-> 参照: data-model.md。US09 経路選択確定・US11 経路紐付け・US12 確定経路通知はいずれも `cargo_summary`・`cargo_leg` を更新（同 927-930 行）。経路候補は永続テーブルを持たず算出結果として扱う（routingms に route_candidate テーブルは新設しない）。`route_design_request.status` は IT3 時点で常に `PENDING`、状態遷移の責務は本イテレーションで検討（レビュー M4）。
+> **検索インデックス（既存）**: 候補算出は `voyage` の `INDEX(origin_unlocode, destination_unlocode, departure_date)` と `voyage_accepted_cargo_type(cargo_type)` を利用（US07 と共通）。`cargo_leg` は `INDEX(voyage_number)`（航海変更時の影響範囲特定）。
 
 ### ユーザーインターフェース
+
+> **注**: ui_design.md の画面 ID・パス・ビュー定義に準拠する。S10=予約詳細（営業）、S14=経路設計ワークベンチ（経路設計）。フロントエンドは React + Vite + React Router。フォームは送信成功で詳細へ遷移（PRG 相当）+ バリデーションエラーの自己ループで構成し、htmx は使用しない。フィードバックは IT1-IT3 と同じ alert 表示パターン。
 
 #### ビュー
 
 ```plantuml
 @startsalt
 {+
-  経路設計ワークベンチ (S14)  /routing/design/:bookingId
+  S14: 経路設計ワークベンチ（/routing/design/:bookingId）
   {+
+    { CargoTracker | 経路設計 | [ログアウト] }
+    ----
     {
-      予約: BK-001 | JPTYO → USNYC | 期限 2027-09-30 | GENERAL
+      {
+        予約情報 |
+        {
+          予約番号 | B-2026-0512-001
+          出発地 | JPTYO 東京
+          目的地 | DEHAM ハンブルク
+          期限 | 2026-08-01
+          貨物種別 | 一般 / 8,500 kg
+          状態 | 経路設計中（ROUTING）
+        }
+      } |
+      {
+        条件調整（US10） |
+        到着期限 | "2026-08-01"
+        経由地制限 | "なし"
+        [ 経路候補を算出 ] | [ 条件を調整して再算出 ]
+      }
     }
-    --
-    {
-      [ 経路候補を算出 ] | [ 条件を調整 (US10) ]
-    }
-    --
+    ----
+    経路候補（US08：推奨順）
     {#
-      . | 経由港 | 所要日数 | 概算費用 | 航海番号 | 選択
-      候補1 | JPTYO→USNYC | 14日 | ¥850,000 | V-001 | ( )
-      候補2 | JPTYO→SGSIN→USNYC | 18日 | ¥720,000 | V-002 | ( )
+      . | **経由港** | **所要日数** | **概算費用** | **航海番号** | **推奨** | **選択**
+      候補1 | JPTYO → DEHAM（直行） | 25 日 | ¥1,650,000 | V-MAERSK-220 | ★ | ( )
+      候補2 | JPTYO → SGSIN → DEHAM | 28 日 | ¥1,200,000 | V-MOL-001 | ★ | ( )
     }
-    --
+    ----
+    [ 選択した経路を確定 ]（US09） | [ 経路を予約に紐付け ]（US11）
+    ' 期限内候補なし → 「条件を緩和してください」警告（US08）
+  }
+-----------
+  S10: 予約詳細（/bookings/:id）── 経路提案中
+  {+
+    { CargoTracker | 予約管理 | [ログアウト] }
+    ----
     {
-      [ 選択した経路を確定・予約に紐付け ]
+      予約 B-2026-0512-001   状態: [経路提案中]
+      ----
+      {
+        {
+          確定経路 |
+          {
+            経由港 | JPTYO → DEHAM（直行）
+            所要日数 | 25 日
+            到着予定日 | 2026-07-28
+            概算料金 | ¥1,650,000
+          }
+        } |
+        {
+          予約状態 |
+          "● 仮受付"
+          "● 経路設計中"
+          "● 経路提案中（現在）"
+          "○ 予約確定"
+        }
+      }
+      ----
+      [荷主に経路を通知]（US12） | [確定]（US13） | [ルート変更] | [キャンセル]
+      ' 「荷主に経路を通知」: ROUTE_PROPOSED 時のみ活性（US12）
     }
   }
 }
 @endsalt
 ```
 
+#### モデル
+
+```plantuml
+@startuml
+class 経路設計ワークベンチ {
+  bookingId: String
+  request: RouteDesignRequestView
+  criteria: RouteSearchCriteria
+  candidates: List<RouteCandidateView>
+  selectedSeq: number
+  経路候補を算出()        ' US08: POST /routes/:bookingId/calculate
+  条件を調整して再算出()  ' US10
+  候補を選択()           ' US09: POST /routes/:bookingId/select
+  経路を予約に紐付け()    ' US11: POST /routes/:bookingId/confirm
+}
+
+class 経路設計待ちリスト {
+  requests: List<RouteDesignRequestView>
+  ワークベンチを開く(bookingId)  ' GET /routes/design-requests（arrivalDeadline 昇順）
+}
+
+class 予約詳細 {
+  booking: BookingDetail
+  itinerary: CargoItineraryView
+  statusTimeline: List<BookingStatus>
+  荷主に経路を通知()  ' US12: POST /bookings/:id/notify-route
+  確定()             ' US13（IT3 実装済み）
+  アクション活性制御(bookingStatus)
+}
+
+class ナビゲーション {
+  経路設計()  ' ROLE_ROUTING：経路設計待ちリストへ
+  ログアウト()
+}
+
+ナビゲーション -* 経路設計待ちリスト
+経路設計待ちリスト --> 経路設計ワークベンチ : 行クリック
+経路設計ワークベンチ --> 予約詳細 : 紐付け成功（ROUTE_PROPOSED）
+@enduml
+```
+
 #### インタラクション
 
 ```plantuml
 @startuml
-title 経路設計ワークベンチ 画面遷移（S14）
+title 画面遷移図（IT4 経路設計）
 
-state "予約詳細 (S10)\n/bookings/:id" as detail
-state "経路設計WB (S14)\n/routing/design/:bookingId" as wb
+[*] --> S01 : ログイン済み（経路設計者）
 
-detail --> wb : 「経路設計を依頼」（handoff 済の予約）
-wb --> wb : 経路候補を算出（候補なし→条件調整 US10）
-wb --> wb : 候補を選択・確定（US09）
-wb --> detail : 経路を予約に紐付け成功（US11、状態 ROUTE_PROPOSED）
-detail --> detail : 確定経路を荷主に通知（US12）
+state "S01 ダッシュボード\n/dashboard" as S01
+state "経路設計待ちリスト\n/routing/design" as LIST : route_design_request（arrivalDeadline 昇順、H3）
+state "S14 経路設計WB\n/routing/design/:bookingId" as S14 : 候補算出・選択・紐付け
+state "S10 予約詳細\n/bookings/:id" as S10 : 確定経路・荷主通知（営業）
+
+S01 --> LIST : サイドナビ「経路設計」（ROLE_ROUTING、H3）
+LIST --> S14 : 待ち予約をクリック
+S14 --> S14 : 「経路候補を算出」POST /routes/:id/calculate（US08）\n候補なし → 「条件を緩和してください」警告 → 条件調整（US10）
+S14 --> S14 : 候補を選択「確定」POST /routes/:id/select（US09）
+S14 --> S10 : 「経路を予約に紐付け」POST /routes/:id/confirm（US11）\n→ RouteConfirmedEvent → Saga → ROUTE_PROPOSED（PRG）
+S10 --> S10 : 「荷主に経路を通知」POST /bookings/:id/notify-route（US12）\n「確定」POST /confirm（US13、IT3）
 @enduml
 ```
 
-> 参照: ui_design.md（S14 経路設計ワークベンチ `/routing/design/:bookingId`、複合ビュー、ROLE_ROUTING）。本プロジェクトは React SPA のため htmx ではなく React Router + fetch で実装し、フィードバックは IT1-IT3 と同じ alert 表示パターンに従う。
+#### フィードバックメッセージ
 
-### API 設計（新規想定）
+| 種別 | 契機 | メッセージ例 | スタイル |
+|------|------|-------------|---------|
+| 成功 | 経路候補算出・選択確定・紐付け・荷主通知 | 「経路候補を 2 件算出しました」「経路を予約に紐付けました（経路提案中）」「荷主に経路を通知しました」 | `alert-success` |
+| 警告 | 期限内到達可能な経路候補なし | 「期限内に到達可能な経路がありません。条件を緩和して再算出してください」 | `alert-warning` |
+| エラー | バリデーション・不正状態遷移 | 「この予約は経路設計中ではないため経路を紐付けできません」 | `alert-error` |
 
-| メソッド | エンドポイント | 説明 | サービス |
-|---------|---------------|------|---------|
-| `POST` | `/api/v1/routes/{bookingId}/calculate` | 経路候補算出（US08） | routingms |
-| `GET` | `/api/v1/routes/{bookingId}/candidates` | 経路候補一覧（US08/US09） | routingms |
-| `POST` | `/api/v1/routes/{bookingId}/select` | 経路候補の選択・確定（US09） | routingms |
-| `POST` | `/api/v1/routes/{bookingId}/confirm` | 確定経路を予約に紐付け（US11、`RouteConfirmedEvent` 発行） | routingms |
-| `POST` | `/api/v1/bookings/{bookingId}/notify-route` | 確定経路を荷主に通知（US12） | bookingms |
+### API 設計
+
+| メソッド | エンドポイント | 説明 | ストーリー | サービス |
+|---------|---------------|------|-----------|---------|
+| GET | /api/v1/routes/design-requests | 経路設計待ちリスト（arrivalDeadline 昇順、IT3 追加済み） | US06/US08 | routingms |
+| POST | /api/v1/routes/{bookingId}/calculate | 経路候補算出（推奨順・候補なし通知） | US08 | routingms |
+| GET | /api/v1/routes/{bookingId}/candidates | 経路候補一覧 | US08/US09 | routingms |
+| POST | /api/v1/routes/{bookingId}/select | 経路候補の選択・確定 | US09 | routingms |
+| POST | /api/v1/routes/{bookingId}/confirm | 確定経路を予約に紐付け（`RouteConfirmedEvent` 発行） | US11 | routingms |
+| POST | /api/v1/bookings/{bookingId}/notify-route | 確定経路を荷主に通知 | US12 | bookingms |
 
 > エンドポイントは実装時に確定し、`docs/design/architecture_backend.md` の API カタログへ随時追記する（レビュー H2 / DoD）。
 
@@ -389,15 +636,20 @@ detail --> detail : 確定経路を荷主に通知（US12）
 
 ```text
 apps/backend/routingms/src/main/java/com/example/routingms/
-├─ domain/services/OptimalRouteService.java   # US08 経路候補算出（ドメインサービス）
-├─ interfaces/rest/RouteController.java        # /api/v1/routes/{bookingId}/*（US08/09/11）
+├─ domain/services/OptimalRouteService.java        # US08 経路候補算出（ドメインサービス）
+├─ domain/model/RouteSearchSpecification.java       # 探索制約（出発地・目的地・期限・貨物種別）
+├─ domain/events/RouteConfirmedEvent.java（shared 参照） # US11 cross-service
+├─ interfaces/rest/RouteController.java              # /api/v1/routes/{bookingId}/*（US08/09/11）
 apps/backend/bookingms/src/main/java/com/example/bookingms/
-├─ saga/BookingSagaManager.java               # RouteConfirmedEvent → AssignRouteToCargoCommand
-├─ domain/model/Cargo.java                     # handle(AssignRouteToCargoCommand) → CargoRoutedEvent
+├─ saga/BookingSagaManager.java                     # RouteConfirmedEvent → AssignRouteToCargoCommand
+├─ domain/model/Cargo.java                           # handle(AssignRouteToCargoCommand) → CargoRoutedEvent
+├─ domain/commands/NotifyRouteToShipperCommand.java  # US12
+├─ interfaces/rest/CargoBookingController.java        # POST /bookings/{id}/notify-route
 apps/backend/shared/src/main/java/com/example/shared/events/
-├─ RouteConfirmedEvent.java                    # cross-service（routingms → bookingms）
+├─ RouteConfirmedEvent.java                          # cross-service（routingms → bookingms）
 apps/frontend/src/features/routing/pages/
-├─ RouteDesignWorkbenchPage.tsx                # S14 /routing/design/:bookingId
+├─ RouteDesignListPage.tsx                           # 経路設計待ちリスト（H3）
+├─ RouteDesignWorkbenchPage.tsx                      # S14 /routing/design/:bookingId
 ```
 
 ### ADR
