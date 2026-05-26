@@ -1,0 +1,54 @@
+package com.example.routingms.interfaces.rest;
+
+import com.example.routingms.application.RouteCalculationService;
+import com.example.routingms.domain.model.RouteCandidate;
+import com.example.routingms.interfaces.rest.dto.RouteCandidateResponse;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.stream.IntStream;
+
+/**
+ * 経路設計 REST Controller（US08 経路候補算出）。
+ *
+ * <p>経路設計者ワークベンチ（S14）が経路設計待ちリストの予約 ID を指定して経路候補を算出・取得する。
+ * 経路候補は永続化せず算出のたびに返す（iteration_plan-4.md）。後続の選択確定（US09）・
+ * 予約紐付け（US11）も本 Controller に追加する。</p>
+ */
+@RestController
+@RequestMapping("/api/v1/routes")
+public class RouteController {
+
+    private final RouteCalculationService calculationService;
+
+    public RouteController(RouteCalculationService calculationService) {
+        this.calculationService = calculationService;
+    }
+
+    /**
+     * 経路候補を算出する（US08）。期限内に到達可能な候補がない場合は空リストを返す。
+     */
+    @PostMapping("/{bookingId}/calculate")
+    public ResponseEntity<List<RouteCandidateResponse>> calculate(@PathVariable String bookingId) {
+        return ResponseEntity.ok(toResponses(calculationService.calculate(bookingId)));
+    }
+
+    /**
+     * 算出済みの経路候補を取得する（US08 / US09）。現状は算出と同じ結果を返す。
+     */
+    @GetMapping("/{bookingId}/candidates")
+    public ResponseEntity<List<RouteCandidateResponse>> candidates(@PathVariable String bookingId) {
+        return ResponseEntity.ok(toResponses(calculationService.calculate(bookingId)));
+    }
+
+    private List<RouteCandidateResponse> toResponses(List<RouteCandidate> candidates) {
+        return IntStream.range(0, candidates.size())
+                .mapToObj(i -> RouteCandidateResponse.from(candidates.get(i), i + 1, i == 0))
+                .toList();
+    }
+}
