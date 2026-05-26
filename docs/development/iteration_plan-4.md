@@ -58,11 +58,12 @@
 
 **受入条件**:
 
-1. 航海スケジュールと出発地・目的地・期限を入力として経路候補が自動算出される
+1. 航海スケジュール検索結果と出発地・目的地・期限を入力として経路候補が自動算出される
 2. 寄港地の接続可能性が評価される
 3. 経路候補ごとに所要日数・経由港・費用・航海番号が表示される
-4. 経路候補が推奨順に並べられて提示される（直行便があれば最優先）
-5. 期限内に到達可能な経路がない場合、その旨が通知され条件調整が促される
+4. 経路候補が推奨順に並べられて提示される
+5. 直行便がある場合、最優先候補として提示される
+6. 期限内に到達可能な経路がない場合、その旨が通知され条件調整が促される
 
 #### US09: 経路を選択・確定する
 
@@ -143,9 +144,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | shared: `RoutePlannedEvent`（cross-service、routingms → bookingms）を定義 | 2h | - | [ ] |
-| 3.2 | routingms: 経路確定→予約紐付けで `RoutePlannedEvent` を発行（Kafka publisher） | 3h | - | [ ] |
-| 3.3 | bookingms: `RoutePlannedEvent` を tracking 購読し、Cargo 状態を「経路提案中（PROPOSED）」に更新（BookingSagaManager 連携） | 4h | - | [ ] |
+| 3.1 | shared: routingms → bookingms の cross-service イベント `RouteConfirmedEvent`（確定経路＝`CargoItinerary` 相当の `Leg` 列）を定義 | 2h | - | [ ] |
+| 3.2 | routingms: 経路確定→予約紐付けで `RouteConfirmedEvent` を発行（Kafka publisher） | 3h | - | [ ] |
+| 3.3 | bookingms: `RouteConfirmedEvent` を tracking 購読し、`BookingSagaManager` 経由で `AssignRouteToCargoCommand` を発行。Cargo が `CargoRoutedEvent` を適用して状態を「経路提案中（`ROUTE_PROPOSED`）」に更新し、`cargo_leg` を確定 | 4h | - | [ ] |
 | 3.4 | cross-service E2E（イベント駆動、retro Try T2）+ Testcontainers Kafka 統合テスト | 3h | - | [ ] |
 
 **小計**: 12h（理想時間）
@@ -222,7 +223,7 @@ gantt
     dateFormat  YYYY-MM-DD
     section US09/US11
     経路選択確定                  :a1, 2026-07-09, 1d
-    RoutePlannedEvent cross-service :a2, after a1, 2d
+    RouteConfirmedEvent cross-service :a2, after a1, 2d
     section US12
     荷主通知                       :u1, after a2, 1d
     section 仕上げ
@@ -232,7 +233,7 @@ gantt
 | 日 | タスク |
 |----|--------|
 | Day 6 | US09 経路選択確定（状態遷移 + UI） |
-| Day 7 | US11 `RoutePlannedEvent` 発行（routingms）+ shared 定義 |
+| Day 7 | US11 `RouteConfirmedEvent` 発行（routingms）+ shared 定義 |
 | Day 8 | US11 bookingms 購読 + Saga 連携 + cross-service E2E（T2） |
 | Day 9 | US12 荷主通知（通知内容・記録・UI） |
 | Day 10 | H4 見積→予約化プリセット、統合テスト、Release 1.0 MVP リリース条件確認、デモ準備（US10 ストレッチ着手） |
@@ -243,9 +244,134 @@ gantt
 
 ### 主要設計方針
 
-- **OptimalRouteService（routingms）**: route_design_request（出発地・目的地・期限・貨物種別）と航海スケジュール（CarrierMovement の寄港地接続）を入力に、グラフ探索で経路候補を生成。直行便を最優先、所要日数・費用で推奨順ソート。期限内到達不可なら候補なしを返す。
-- **逆方向 cross-service（US11、ADR-0009 準拠）**: routingms が経路確定→予約紐付け時に `RoutePlannedEvent` を shared に定義し Kafka 発行。bookingms が tracking 購読し `BookingSagaManager` 経由で Cargo 状態を「経路提案中（PROPOSED）」に更新。IT3 の bookingms → routingms と対になる routingms → bookingms 方向。
-- **経路設計ワークベンチ（S14、フロント）**: 経路設計者ロールの画面。`GET /api/v1/routes/design-requests`（IT3 で追加済み）で待ちリストを表示し、候補算出→選択→紐付けを実行（レビュー H3）。待ちリストは arrivalDeadline 昇順（レビュー L4）。
+- **経路候補算出（routingms ドメインサービス）**: Routing コンテキストの集約は `Voyage` のみ（domain-model.md）。経路候補算出は `Voyage` / `CarrierMovement`（寄港地接続）と `route_design_request`（出発地・目的地・期限・貨物種別）を入力に候補を生成するドメインサービス `OptimalRouteService` として実装。直行便を最優先、所要日数・費用で推奨順ソート、期限内到達不可なら候補なしを返す。候補（`RouteCandidate`）は永続集約を持たず算出結果として返す。
+- **逆方向 cross-service（US11、ADR-0009 準拠）**: routingms が経路確定時に shared の `RouteConfirmedEvent` を Kafka 発行 → bookingms が tracking 購読し `BookingSagaManager` 経由で `AssignRouteToCargoCommand` を発行 → Cargo が `CargoRoutedEvent` を適用して状態を「経路提案中（`ROUTE_PROPOSED`）」に更新、`cargo_leg` を確定。IT3 の bookingms → routingms と対になる routingms → bookingms 方向。
+- **経路設計ワークベンチ（S14）**: 経路設計者（ROLE_ROUTING）の複合ビュー `/routing/design/:bookingId`（ui_design.md）。`GET /api/v1/routes/design-requests`（IT3 追加済み）の待ちリスト（arrivalDeadline 昇順、レビュー L4）→ 候補算出 → 選択 → 紐付けを実行（レビュー H3）。
+
+### ドメインモデル
+
+```plantuml
+@startuml
+package "Routing Context" {
+  class Voyage <<Aggregate Root>>
+  class CarrierMovement <<Entity>>
+  class OptimalRouteService <<Domain Service>> {
+    + calculate(routeDesignRequest, voyages): List<RouteCandidate>
+  }
+  Voyage *-- "1..*" CarrierMovement
+}
+
+package "Booking Context" {
+  class Cargo <<Aggregate Root>> {
+    - routingStatus: RoutingStatus
+    + handle(AssignRouteToCargoCommand)
+  }
+  class CargoItinerary <<Value Object>> {
+    - legs: List<Leg>
+  }
+  class Leg <<Value Object>> {
+    - voyageNumber: VoyageNumber
+  }
+  Cargo *-- CargoItinerary
+  CargoItinerary *-- "1..*" Leg
+}
+
+class RouteCandidate <<Value Object>> {
+  - itinerary: CargoItinerary
+  - estimatedDays: int
+  - estimatedCost: Money
+}
+
+OptimalRouteService ..> RouteCandidate : 算出
+note bottom of Cargo : AssignRouteToCargoCommand →\nCargoRoutedEvent 発行 →\n状態 ROUTING → ROUTE_PROPOSED
+@enduml
+```
+
+> 参照: domain-model.md。集約・VO・コマンド/イベント名（`Voyage` / `CargoItinerary` / `Leg` / `RouteCandidate` / `AssignRouteToCargoCommand` / `CargoRoutedEvent` / `ROUTE_PROPOSED`）は同ドキュメントに準拠。routingms に経路設計集約は新設せず、`OptimalRouteService` をドメインサービスとして追加する。
+
+### データモデル
+
+```plantuml
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "route_design_request\n(routingms, IT3 追加済)" as rdr {
+  * booking_id : VARCHAR <<PK>>
+  --
+  origin_unlocode / destination_unlocode
+  arrival_deadline / cargo_type / status
+}
+
+entity "cargo_summary\n(bookingms)" as cargo {
+  * booking_id <<PK>>
+  --
+  routing_status  ' ROUTE_PROPOSED に更新
+}
+
+entity "cargo_leg\n(bookingms, V002 既存)" as leg {
+  * booking_id
+  * leg_seq : INTEGER <<PK>>
+  --
+  voyage_number / 出発港 / 到着港 / 日時
+}
+
+cargo ||--|{ leg : "1..*（確定旅程）"
+rdr ..> cargo : cross-service（US11 経路確定→紐付け）
+@enduml
+```
+
+> 参照: data-model.md。US09 経路選択確定・US11 経路紐付け・US12 確定経路通知はいずれも `cargo_summary`・`cargo_leg` を更新（同 927-930 行）。経路候補は永続テーブルを持たず算出結果として扱う（routingms に route_candidate テーブルは新設しない）。`route_design_request.status` は IT3 時点で常に `PENDING`、状態遷移の責務は本イテレーションで検討（レビュー M4）。
+
+### ユーザーインターフェース
+
+#### ビュー
+
+```plantuml
+@startsalt
+{+
+  経路設計ワークベンチ (S14)  /routing/design/:bookingId
+  {+
+    {
+      予約: BK-001 | JPTYO → USNYC | 期限 2027-09-30 | GENERAL
+    }
+    --
+    {
+      [ 経路候補を算出 ] | [ 条件を調整 (US10) ]
+    }
+    --
+    {#
+      . | 経由港 | 所要日数 | 概算費用 | 航海番号 | 選択
+      候補1 | JPTYO→USNYC | 14日 | ¥850,000 | V-001 | ( )
+      候補2 | JPTYO→SGSIN→USNYC | 18日 | ¥720,000 | V-002 | ( )
+    }
+    --
+    {
+      [ 選択した経路を確定・予約に紐付け ]
+    }
+  }
+}
+@endsalt
+```
+
+#### インタラクション
+
+```plantuml
+@startuml
+title 経路設計ワークベンチ 画面遷移（S14）
+
+state "予約詳細 (S10)\n/bookings/:id" as detail
+state "経路設計WB (S14)\n/routing/design/:bookingId" as wb
+
+detail --> wb : 「経路設計を依頼」（handoff 済の予約）
+wb --> wb : 経路候補を算出（候補なし→条件調整 US10）
+wb --> wb : 候補を選択・確定（US09）
+wb --> detail : 経路を予約に紐付け成功（US11、状態 ROUTE_PROPOSED）
+detail --> detail : 確定経路を荷主に通知（US12）
+@enduml
+```
+
+> 参照: ui_design.md（S14 経路設計ワークベンチ `/routing/design/:bookingId`、複合ビュー、ROLE_ROUTING）。本プロジェクトは React SPA のため htmx ではなく React Router + fetch で実装し、フィードバックは IT1-IT3 と同じ alert 表示パターンに従う。
 
 ### API 設計（新規想定）
 
@@ -254,18 +380,33 @@ gantt
 | `POST` | `/api/v1/routes/{bookingId}/calculate` | 経路候補算出（US08） | routingms |
 | `GET` | `/api/v1/routes/{bookingId}/candidates` | 経路候補一覧（US08/US09） | routingms |
 | `POST` | `/api/v1/routes/{bookingId}/select` | 経路候補の選択・確定（US09） | routingms |
-| `POST` | `/api/v1/routes/{bookingId}/assign` | 確定経路を予約に紐付け（US11、RoutePlannedEvent 発行） | routingms |
+| `POST` | `/api/v1/routes/{bookingId}/confirm` | 確定経路を予約に紐付け（US11、`RouteConfirmedEvent` 発行） | routingms |
 | `POST` | `/api/v1/bookings/{bookingId}/notify-route` | 確定経路を荷主に通知（US12） | bookingms |
 
 > エンドポイントは実装時に確定し、`docs/design/architecture_backend.md` の API カタログへ随時追記する（レビュー H2 / DoD）。
+
+### ディレクトリ構成
+
+```text
+apps/backend/routingms/src/main/java/com/example/routingms/
+├─ domain/services/OptimalRouteService.java   # US08 経路候補算出（ドメインサービス）
+├─ interfaces/rest/RouteController.java        # /api/v1/routes/{bookingId}/*（US08/09/11）
+apps/backend/bookingms/src/main/java/com/example/bookingms/
+├─ saga/BookingSagaManager.java               # RouteConfirmedEvent → AssignRouteToCargoCommand
+├─ domain/model/Cargo.java                     # handle(AssignRouteToCargoCommand) → CargoRoutedEvent
+apps/backend/shared/src/main/java/com/example/shared/events/
+├─ RouteConfirmedEvent.java                    # cross-service（routingms → bookingms）
+apps/frontend/src/features/routing/pages/
+├─ RouteDesignWorkbenchPage.tsx                # S14 /routing/design/:bookingId
+```
 
 ### ADR
 
 | ADR | タイトル | ステータス |
 |-----|---------|-----------|
-| [ADR-0009](../adr/0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga | 承認済み（US11 の逆方向 cross-service にも適用） |
+| [ADR-0009](../adr/0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga | 承認済み（US11 の routingms → bookingms 逆方向 cross-service にも適用） |
 
-> US11 で routingms → bookingms の新イベント `RoutePlannedEvent` を追加するため、トピック分割方針（retro Try / レビュー M5）を本イテレーションで ADR に追記検討。
+> US11 で `RouteConfirmedEvent`（routingms → bookingms）を追加するため、トピック分割方針（retro Try / レビュー M5）を本イテレーションで ADR に追記検討。
 
 ---
 
