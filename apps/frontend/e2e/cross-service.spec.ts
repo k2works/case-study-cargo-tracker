@@ -98,3 +98,105 @@ test.describe('US06/cross-service: 経路設計引き渡しの Kafka 伝搬 E2E'
     expect(body.cargoType).toBe('GENERAL');
   });
 });
+
+test.describe('US11/cross-service: 経路確定の Kafka 伝搬 E2E（routingms → bookingms）', () => {
+  test('経路候補算出 → 確定 → 紐付けで予約状態が経路提案中に伝搬する', async ({ page, request }) => {
+    test.skip(
+      !crossServiceEnabled,
+      'Kafka を要する cross-service E2E。CROSS_SERVICE_E2E=1 を指定したときのみ実行する。'
+    );
+
+    const token = await loginAndGetToken(page);
+    const auth = { Authorization: `Bearer ${token}` };
+    const stamp = Date.now();
+    const bookingId = `BK-RC-${stamp}`;
+    const voyageNumber = `V-RC-${stamp}`;
+
+    // 0) routingms に直行便（JPTYO→USNYC、一般貨物受入、期限内到着）を登録する。
+    const voyageRes = await request.post('/api/v1/voyages', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        voyageNumber,
+        carrierCode: 'MAERSK',
+        carrierName: 'Maersk Line',
+        shipName: 'RC Test Vessel',
+        originUnlocode: 'JPTYO',
+        destUnlocode: 'USNYC',
+        departureDate: '2027-01-10T09:00:00',
+        arrivalDate: '2027-02-10T18:00:00',
+        movements: [],
+        acceptedCargoTypes: ['GENERAL'],
+      },
+    });
+    expect(voyageRes.status(), await voyageRes.text()).toBe(201);
+
+    // 1) 予約 → 経路設計引き渡し（route_design_request が routingms に伝搬）。
+    const bookRes = await request.post('/api/v1/bookings', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        bookingId,
+        shipperId: 'S-RC-001',
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'USNYC',
+        arrivalDeadline: '2027-09-30',
+        cargoType: 'GENERAL',
+        weightKg: 1500,
+        quantity: 10,
+        productName: 'route-confirmed E2E 貨物',
+      },
+    });
+    expect(bookRes.status(), await bookRes.text()).toBe(201);
+    const handoffRes = await request.post(`/api/v1/bookings/${bookingId}/handoff`, { headers: auth });
+    expect(handoffRes.ok(), await handoffRes.text()).toBeTruthy();
+
+    // 2) 経路設計依頼の伝搬と航海 Read Model の反映を待ち、経路候補が算出されるまで polling する。
+    await expect
+      .poll(
+        async () => {
+          const res = await request.post(`/api/v1/routes/${bookingId}/calculate`, { headers: auth });
+          if (res.status() !== 200) return 0;
+          const candidates = await res.json();
+          return candidates.length;
+        },
+        {
+          message: '経路候補が算出されませんでした。route_design_request の伝搬と航海登録を確認してください。',
+          timeout: 30_000,
+          intervals: [500, 1_000, 2_000, 3_000],
+        }
+      )
+      .toBeGreaterThan(0);
+
+    // 3) 推奨候補（sequence=1）を確定し予約に紐付ける。routingms が RouteConfirmedEvent を発行する。
+    const confirmRes = await request.post(`/api/v1/routes/${bookingId}/confirm`, {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: { sequence: 1 },
+    });
+    expect(confirmRes.status(), await confirmRes.text()).toBe(202);
+
+    // 4) bookingms 側で Kafka 経由の受信 → Saga → AssignRouteToCargoCommand → CargoRoutedEvent の反映を待つ。
+    await expect
+      .poll(
+        async () => {
+          const res = await request.get(`/api/v1/bookings/${bookingId}`, { headers: auth });
+          if (res.status() !== 200) return '';
+          const detail = await res.json();
+          return detail.bookingStatus;
+        },
+        {
+          message:
+            '予約状態が ROUTE_PROPOSED に伝搬しませんでした。RouteConfirmedEvent の cross-service 連携を確認してください。',
+          timeout: 30_000,
+          intervals: [500, 1_000, 2_000, 3_000],
+        }
+      )
+      .toBe('ROUTE_PROPOSED');
+
+    // 5) 確定旅程（cargo_leg）が紐付いていることを確認する。
+    const routeRes = await request.get(`/api/v1/bookings/${bookingId}/route`, { headers: auth });
+    expect(routeRes.status()).toBe(200);
+    const legs = await routeRes.json();
+    expect(legs.length).toBeGreaterThan(0);
+    expect(legs[0].loadUnlocode).toBe('JPTYO');
+    expect(legs[legs.length - 1].unloadUnlocode).toBe('USNYC');
+  });
+});
