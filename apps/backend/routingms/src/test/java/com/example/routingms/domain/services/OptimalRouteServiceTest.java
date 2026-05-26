@@ -101,6 +101,24 @@ class OptimalRouteServiceTest {
     }
 
     @Test
+    void 乗り継ぎ便が接続便の到着と同時刻に出発する組み合わせは候補にする() {
+        // Given: legB が legA の到着時刻ちょうどに出発（境界：到着 == 出発）
+        VoyageProjection legA = voyage("V-A", "JPTYO", "SGSIN",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 10, 18, 0), List.of("GENERAL"));
+        VoyageProjection legB = voyage("V-B", "SGSIN", "DEHAM",
+                LocalDateTime.of(2026, 7, 10, 18, 0), LocalDateTime.of(2026, 7, 28, 18, 0), List.of("GENERAL"));
+        RouteSearchSpecification spec =
+                new RouteSearchSpecification("JPTYO", "DEHAM", LocalDate.of(2026, 8, 1), "GENERAL");
+
+        // When
+        List<RouteCandidate> candidates = service.calculate(spec, List.of(legA, legB));
+
+        // Then: 到着と同時刻の出発は接続可能（connects は !isBefore のため等値を含む。境界を固定）
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).voyageNumbers()).containsExactly("V-A", "V-B");
+    }
+
+    @Test
     void 貨物種別を受け入れない航海は候補から除外する() {
         // Given: 危険物を受け入れない直行便
         VoyageProjection direct = voyage("V-DIRECT", "JPTYO", "DEHAM",

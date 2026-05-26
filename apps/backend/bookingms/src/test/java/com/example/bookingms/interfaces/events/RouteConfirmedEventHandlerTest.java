@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,5 +83,21 @@ class RouteConfirmedEventHandlerTest {
 
         // ERROR で再スローせず冪等にスキップする（tracking プロセッサがブロック・ログ汚染しない）
         assertThatCode(() -> handler.on(event)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void 冪等スキップ対象外の例外は握り潰さず伝播する() {
+        RouteConfirmedEvent event = new RouteConfirmedEvent("B-003", List.of(
+                new RouteConfirmedEvent.LegData("V-X", "JPTYO", "USNYC",
+                        LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0))));
+        // 冪等スキップ対象（AggregateNotFoundException / CommandExecutionException）以外の真のエラーは
+        // 握り潰さず伝播させ、tracking プロセッサのエラーハンドラ（再試行・可視化）に委ねる。
+        // catch 範囲を不用意に広げる回帰を防ぐためのネガティブテスト（レビュー H1）。
+        when(commandGateway.sendAndWait(any(AssignRouteToCargoCommand.class)))
+                .thenThrow(new RuntimeException("予期しない基盤エラー"));
+
+        assertThatThrownBy(() -> handler.on(event))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("予期しない基盤エラー");
     }
 }

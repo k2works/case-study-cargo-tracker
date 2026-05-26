@@ -41,7 +41,11 @@ const empty: FormValues = {
   temperatureMaxC: '',
 };
 
-/** 見積からの予約化（H4）で渡される見積情報のプリセット。 */
+/**
+ * 見積からの予約化（H4）で渡される見積情報のプリセット。
+ * QuotationDetailPage が navigation state `fromQuotation` として送信する契約と対になる。
+ * 項目を変更する場合は送信側（QuotationDetailPage の「予約化」ボタン）も同時に更新すること。
+ */
 interface QuotationPreset {
   shipperId?: string;
   originUnlocode?: string;

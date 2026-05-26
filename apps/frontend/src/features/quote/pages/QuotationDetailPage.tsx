@@ -112,6 +112,8 @@ export default function QuotationDetailPage() {
       </div>
 
       <div className="mt-4 flex gap-2">
+        {/* H4: 見積情報を予約フォームへプリセット。受信側 BookingFormPage の QuotationPreset 型と対の契約。
+            項目を変更する場合は受信側も同時に更新すること。 */}
         <button
           type="button"
           onClick={() =>

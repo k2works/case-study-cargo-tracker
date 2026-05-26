@@ -99,6 +99,24 @@ describe('BookingFormPage', () => {
     await waitFor(() => expect(screen.getByLabelText('荷主')).toHaveValue('S-001'));
   });
 
+  it('H4: weightKg を持たない見積プリセットでも重量欄が空のまま壊れない（他項目は反映）', async () => {
+    renderWithPreset({
+      shipperId: 'S-001',
+      originUnlocode: 'JPTYO',
+      destinationUnlocode: 'USNYC',
+      arrivalDeadline: '2026-09-30',
+      cargoType: 'GENERAL',
+      weightKg: null,
+    });
+
+    await waitFor(() => screen.getByLabelText('荷主'));
+    // weightKg=null の無効同値：重量欄は空（number input の空は value=null）
+    expect(screen.getByLabelText('重量 (kg)')).toHaveValue(null);
+    // 他項目は通常どおりプリセットされる
+    expect(screen.getByLabelText('出発地 (UN/LOCODE)')).toHaveValue('JPTYO');
+    expect(screen.getByLabelText('目的地 (UN/LOCODE)')).toHaveValue('USNYC');
+  });
+
   it('US04: 荷主選択は既存荷主の一覧から行える', async () => {
     renderNew();
 
