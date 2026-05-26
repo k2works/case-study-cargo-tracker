@@ -1,7 +1,7 @@
 import type { PageResponse } from '../../../shared/api/types';
 import { authHeader } from '../../../shared/api/auth';
 
-export type { PageResponse };
+export type { PageResponse } from '../../../shared/api/types';
 
 export type ShipperType = 'INDIVIDUAL' | 'CORPORATE';
 

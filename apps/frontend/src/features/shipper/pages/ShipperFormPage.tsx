@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { type SubmitEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   fetchShippersByEmail,
@@ -35,6 +35,14 @@ const empty: FormValues = {
   discountRatePercent: '',
 };
 
+/** UI の割引率(%) 文字列を 0.000-0.300 の比率に変換する。空文字は null、不正値は NaN。 */
+function parseDiscountRate(percent: string): number | null {
+  if (percent === '') return null;
+  const n = Number(percent);
+  if (!Number.isFinite(n)) return Number.NaN;
+  return Math.round(n * 1000) / 100000; // 0-30(%) → 0.000-0.300 (誤差対策で 3 桁丸め)
+}
+
 export default function ShipperFormPage() {
   const navigate = useNavigate();
   const [values, setValues] = useState<FormValues>(empty);
@@ -45,13 +53,6 @@ export default function ShipperFormPage() {
   function set<K extends keyof FormValues>(field: K) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setValues((prev) => ({ ...prev, [field]: e.target.value as FormValues[K] }));
-  }
-
-  function parseDiscountRate(percent: string): number | null {
-    if (percent === '') return null;
-    const n = Number(percent);
-    if (!Number.isFinite(n)) return NaN;
-    return Math.round(n * 1000) / 100000; // 0-30(%) → 0.000-0.300 (誤差対策で 3 桁丸め)
   }
 
   async function submitRegistration() {
@@ -80,7 +81,7 @@ export default function ShipperFormPage() {
     }
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setDuplicates(null);

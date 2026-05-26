@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { type SubmitEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchVoyage, registerVoyage, updateVoyage } from '../api/voyageApi';
 
@@ -39,7 +39,7 @@ export default function VoyageFormPage() {
 
   useEffect(() => {
     if (!isEdit) return;
-    fetchVoyage(voyageNumber!)
+    fetchVoyage(voyageNumber)
       .then((v) => {
         setValues({
           voyageNumber: v.voyageNumber,
@@ -60,7 +60,7 @@ export default function VoyageFormPage() {
       setValues((prev) => ({ ...prev, [field]: e.target.value }));
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
@@ -74,7 +74,7 @@ export default function VoyageFormPage() {
     setLoading(true);
     try {
       if (isEdit) {
-        await updateVoyage(voyageNumber!, {
+        await updateVoyage(voyageNumber, {
           departureDate: values.departureDate,
           arrivalDate: values.arrivalDate,
           movements: [],
@@ -101,6 +101,8 @@ export default function VoyageFormPage() {
       setLoading(false);
     }
   }
+
+  const submitLabel = isEdit ? '更新' : '登録';
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
@@ -226,7 +228,7 @@ export default function VoyageFormPage() {
             disabled={loading}
             className="rounded-md bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '保存中...' : isEdit ? '更新' : '登録'}
+            {loading ? '保存中...' : submitLabel}
           </button>
           <button
             type="button"

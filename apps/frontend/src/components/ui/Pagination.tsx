@@ -12,7 +12,7 @@ interface PaginationProps {
  * 現在ページの件数範囲を「X-Y / Z 件」形式で表示する。
  * 1 ページのみの場合は前後ボタンは無効化される。</p>
  */
-export default function Pagination({ page, size, totalCount, onPageChange }: PaginationProps) {
+export default function Pagination({ page, size, totalCount, onPageChange }: Readonly<PaginationProps>) {
   const totalPages = Math.max(1, Math.ceil(totalCount / size));
   const safePage = Math.min(Math.max(page, 0), totalPages - 1);
   const firstIndex = totalCount === 0 ? 0 : safePage * size + 1;
@@ -23,11 +23,11 @@ export default function Pagination({ page, size, totalCount, onPageChange }: Pag
       aria-label="ページネーション"
       className="mt-4 flex items-center justify-between border-t pt-3"
     >
-      <div className="text-sm text-gray-600" role="status">
+      <output className="text-sm text-gray-600">
         {totalCount === 0
           ? '0 件'
           : `${firstIndex}-${lastIndex} / ${totalCount} 件`}
-      </div>
+      </output>
       <div className="flex items-center gap-2">
         <button
           type="button"

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchVoyages, type Voyage } from '../../voyage/api/voyageApi';
 import { createQuotation, type RouteCandidateInput } from '../api/quoteApi';
@@ -73,7 +73,7 @@ export default function QuotationFormPage() {
     });
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const weight = Number(form.weightKg);

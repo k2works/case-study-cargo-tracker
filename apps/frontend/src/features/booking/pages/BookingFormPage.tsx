@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { type SubmitEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { bookCargo, type CargoType } from '../api/bookingApi';
 import { fetchShippersPage, type Shipper } from '../../shipper/api/shipperApi';
@@ -41,6 +41,62 @@ const empty: FormValues = {
   temperatureMaxC: '',
 };
 
+function parseOptionalInt(s: string): number | null {
+  if (s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+function parseOptionalNumber(s: string): number | null {
+  if (s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function validateHazardous(values: FormValues): string | null {
+  if (!values.hazardImoClass || !values.hazardUnNumber || !values.hazardDeclaration) {
+    return '危険物の場合は IMO 分類クラス・国連番号・申告文をすべて入力してください';
+  }
+  return null;
+}
+
+function validateRefrigerated(values: FormValues): string | null {
+  if (!values.temperatureMinC || !values.temperatureMaxC) {
+    return '冷凍貨物の場合は最低温度・最高温度をともに入力してください';
+  }
+  const min = Number(values.temperatureMinC);
+  const max = Number(values.temperatureMaxC);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return '温度は数値で入力してください';
+  }
+  if (min > max) {
+    return '最低温度は最高温度以下である必要があります';
+  }
+  return null;
+}
+
+/** 予約フォームのバリデーション。エラーがあれば最初のメッセージを、無ければ null を返す。 */
+function validateBookingForm(values: FormValues): string | null {
+  if (!values.shipperId || !values.originUnlocode || !values.destinationUnlocode ||
+      !values.arrivalDeadline || !values.weightKg || !values.quantity || !values.productName) {
+    return '必須項目をすべて入力してください';
+  }
+  if (values.originUnlocode === values.destinationUnlocode) {
+    return '出発地と目的地は異なる必要があります';
+  }
+  const weight = Number(values.weightKg);
+  if (!Number.isFinite(weight) || weight <= 0) {
+    return '重量は 0 より大きい必要があります';
+  }
+  const quantity = Number(values.quantity);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return '数量は 0 より大きい必要があります';
+  }
+  if (values.cargoType === 'HAZARDOUS') return validateHazardous(values);
+  if (values.cargoType === 'REFRIGERATED') return validateRefrigerated(values);
+  return null;
+}
+
 export default function BookingFormPage() {
   const navigate = useNavigate();
   const [values, setValues] = useState<FormValues>(empty);
@@ -61,66 +117,14 @@ export default function BookingFormPage() {
       setValues((prev) => ({ ...prev, [field]: e.target.value as FormValues[K] }));
   }
 
-  function parseOptionalInt(s: string): number | null {
-    if (s === '') return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? Math.trunc(n) : null;
-  }
-
-  function parseOptionalNumber(s: string): number | null {
-    if (s === '') return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (!values.shipperId || !values.originUnlocode || !values.destinationUnlocode ||
-        !values.arrivalDeadline || !values.weightKg || !values.quantity || !values.productName) {
-      setError('必須項目をすべて入力してください');
+    const validationError = validateBookingForm(values);
+    if (validationError) {
+      setError(validationError);
       return;
-    }
-
-    if (values.originUnlocode === values.destinationUnlocode) {
-      setError('出発地と目的地は異なる必要があります');
-      return;
-    }
-
-    const weight = Number(values.weightKg);
-    const quantity = Number(values.quantity);
-    if (!Number.isFinite(weight) || weight <= 0) {
-      setError('重量は 0 より大きい必要があります');
-      return;
-    }
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setError('数量は 0 より大きい必要があります');
-      return;
-    }
-
-    if (values.cargoType === 'HAZARDOUS') {
-      if (!values.hazardImoClass || !values.hazardUnNumber || !values.hazardDeclaration) {
-        setError('危険物の場合は IMO 分類クラス・国連番号・申告文をすべて入力してください');
-        return;
-      }
-    }
-
-    if (values.cargoType === 'REFRIGERATED') {
-      if (!values.temperatureMinC || !values.temperatureMaxC) {
-        setError('冷凍貨物の場合は最低温度・最高温度をともに入力してください');
-        return;
-      }
-      const min = Number(values.temperatureMinC);
-      const max = Number(values.temperatureMaxC);
-      if (!Number.isFinite(min) || !Number.isFinite(max)) {
-        setError('温度は数値で入力してください');
-        return;
-      }
-      if (min > max) {
-        setError('最低温度は最高温度以下である必要があります');
-        return;
-      }
     }
 
     setLoading(true);
@@ -131,11 +135,11 @@ export default function BookingFormPage() {
         destinationUnlocode: values.destinationUnlocode,
         arrivalDeadline: values.arrivalDeadline,
         cargoType: values.cargoType,
-        weightKg: weight,
+        weightKg: Number(values.weightKg),
         lengthCm: parseOptionalInt(values.lengthCm),
         widthCm: parseOptionalInt(values.widthCm),
         heightCm: parseOptionalInt(values.heightCm),
-        quantity: Math.trunc(quantity),
+        quantity: Math.trunc(Number(values.quantity)),
         productName: values.productName,
         hazardImoClass: values.cargoType === 'HAZARDOUS' ? values.hazardImoClass : null,
         hazardUnNumber: values.cargoType === 'HAZARDOUS' ? values.hazardUnNumber : null,
