@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -61,7 +62,7 @@ class RouteControllerTest {
         when(calculationService.calculate("B-001"))
                 .thenReturn(List.of(directCandidate(), transshipmentCandidate()));
 
-        ResponseEntity<List<RouteCandidateResponse>> response = controller.calculate("B-001");
+        ResponseEntity<List<RouteCandidateResponse>> response = controller.calculate("B-001", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(2);
@@ -89,10 +90,23 @@ class RouteControllerTest {
     void 期限内到達可能な候補がない場合は空リストを返す() {
         when(calculationService.calculate("B-002")).thenReturn(List.of());
 
-        ResponseEntity<List<RouteCandidateResponse>> response = controller.calculate("B-002");
+        ResponseEntity<List<RouteCandidateResponse>> response = controller.calculate("B-002", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEmpty();
+    }
+
+    @Test
+    void US10_到着期限を調整して再算出できる() {
+        java.time.LocalDate newDeadline = java.time.LocalDate.of(2026, 10, 31);
+        when(calculationService.calculate("B-001", newDeadline)).thenReturn(List.of(directCandidate()));
+
+        ResponseEntity<List<RouteCandidateResponse>> response =
+                controller.calculate("B-001", new com.example.routingms.interfaces.rest.dto.CalculateRoutesRequest(newDeadline));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        verify(calculationService).calculate("B-001", newDeadline);
     }
 
     @Test

@@ -1123,7 +1123,7 @@ public class ExternalCargoRoutingService {
 | `GET` | `/api/v1/voyages/search` | 航海スケジュール検索（出発地・目的地・出発期間・貨物種別、US07） | UC05 |
 | `GET` | `/api/v1/routes/design-requests` | 経路設計待ちリスト一覧（cross-service read model、US06 の結果 / IT4 US08 の入力） | UC06 |
 | `GET` | `/api/v1/routes/design-requests/{bookingId}` | 経路設計依頼の取得（同上） | UC06 |
-| `POST` | `/api/v1/routes/{bookingId}/calculate` | 経路候補算出（OptimalRouteService、推奨順・候補なし通知、US08） | UC06 |
+| `POST` | `/api/v1/routes/{bookingId}/calculate` | 経路候補算出（OptimalRouteService、推奨順・候補なし通知、US08）。任意ボディ `{ arrivalDeadline }` で到着期限を上書きして再算出（US10 条件調整） | UC06 |
 | `GET` | `/api/v1/routes/{bookingId}/candidates` | 経路候補一覧（US08/US09） | UC06 |
 | `POST` | `/api/v1/routes/{bookingId}/select` | 経路候補の選択確定（route_design_request を ROUTE_SELECTED へ、200、US09） | UC07 |
 | `POST` | `/api/v1/routes/{bookingId}/confirm` | 確定経路を予約に紐付け（RouteConfirmedEvent 発行 + route_design_request を ASSIGNED へ。cross-service の非同期紐付けのため 202 Accepted、US11） | UC09 |

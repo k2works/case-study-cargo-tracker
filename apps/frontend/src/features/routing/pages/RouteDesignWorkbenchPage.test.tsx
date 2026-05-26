@@ -81,6 +81,20 @@ describe('RouteDesignWorkbenchPage (US08/US09/US11)', () => {
     );
   });
 
+  it('US10: 条件を調整して再算出すると調整後の到着期限で算出する', async () => {
+    vi.mocked(routingApi.calculateRoutes).mockResolvedValue([directCandidate]);
+    renderPage();
+    const user = userEvent.setup();
+
+    await waitFor(() => screen.getByText('経路設計ワークベンチ'));
+    await user.click(screen.getByRole('button', { name: '条件を調整して再算出' }));
+
+    // 依頼の到着期限（2026-08-01）が初期値として再算出に渡される
+    await waitFor(() =>
+      expect(routingApi.calculateRoutes).toHaveBeenCalledWith('B-001', '2026-08-01')
+    );
+  });
+
   it('US11: 経路を予約に紐付けると予約詳細へ遷移する', async () => {
     vi.mocked(routingApi.calculateRoutes).mockResolvedValue([directCandidate]);
     vi.mocked(routingApi.confirmRoute).mockResolvedValue(undefined);

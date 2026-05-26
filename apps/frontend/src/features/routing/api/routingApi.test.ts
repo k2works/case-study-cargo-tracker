@@ -39,6 +39,19 @@ describe('routingApi (US08/US09/US11)', () => {
     expect(result).toEqual(candidates);
     expect(fetchMock().mock.calls[0][0]).toBe('/api/v1/routes/B-001/calculate');
     expect(fetchMock().mock.calls[0][1].method).toBe('POST');
+    // 上書き期限なしの場合はボディを送らない
+    expect(fetchMock().mock.calls[0][1].body).toBeUndefined();
+  });
+
+  it('US10: 到着期限を上書きして再算出する', async () => {
+    fetchMock().mockResolvedValue({ ok: true, json: async () => [] });
+
+    await calculateRoutes('B-001', '2026-10-31');
+
+    const [url, init] = fetchMock().mock.calls[0];
+    expect(url).toBe('/api/v1/routes/B-001/calculate');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ arrivalDeadline: '2026-10-31' });
   });
 
   it('US09: 経路候補を選択番号付きで確定する', async () => {

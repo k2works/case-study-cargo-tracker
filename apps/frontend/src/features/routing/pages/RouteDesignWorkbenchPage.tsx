@@ -38,6 +38,7 @@ export default function RouteDesignWorkbenchPage() {
   const [request, setRequest] = useState<RouteDesignRequest | null>(null);
   const [candidates, setCandidates] = useState<RouteCandidate[] | null>(null);
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null);
+  const [adjustedDeadline, setAdjustedDeadline] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -45,7 +46,10 @@ export default function RouteDesignWorkbenchPage() {
   useEffect(() => {
     if (!bookingId) return;
     fetchRouteDesignRequest(bookingId)
-      .then(setRequest)
+      .then((r) => {
+        setRequest(r);
+        setAdjustedDeadline(r.arrivalDeadline);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : '取得に失敗しました'));
   }, [bookingId]);
 
@@ -55,15 +59,16 @@ export default function RouteDesignWorkbenchPage() {
     setWarning(null);
   }, []);
 
-  async function handleCalculate() {
+  // US08: 依頼の期限で算出 / US10: 調整した期限で再算出（overrideDeadline 指定時）
+  async function runCalculate(overrideDeadline?: string) {
     if (!bookingId) return;
     resetFeedback();
     setSelectedSeq(null);
     try {
-      const result = await calculateRoutes(bookingId);
+      const result = await calculateRoutes(bookingId, overrideDeadline);
       setCandidates(result);
       if (result.length === 0) {
-        setWarning('期限内に到達可能な経路がありません。条件を緩和して再算出してください');
+        setWarning('期限内に到達可能な経路がありません。条件を緩和して再算出するか、営業担当者に条件協議を依頼してください');
       } else {
         setMessage(`経路候補を ${result.length} 件算出しました`);
         setSelectedSeq(result[0].sequence);
@@ -125,13 +130,33 @@ export default function RouteDesignWorkbenchPage() {
         </dl>
       )}
 
-      <button
-        type="button"
-        onClick={handleCalculate}
-        className="mb-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-      >
-        経路候補を算出
-      </button>
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border bg-white p-4">
+        <button
+          type="button"
+          onClick={() => runCalculate()}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          経路候補を算出
+        </button>
+        <span className="text-xs text-gray-400">または条件を調整して再算出（US10）</span>
+        <label className="flex flex-col text-xs text-gray-500">
+          到着期限
+          <input
+            type="date"
+            value={adjustedDeadline}
+            onChange={(e) => setAdjustedDeadline(e.target.value)}
+            className="mt-1 rounded-md border px-2 py-1 text-sm text-gray-900"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={!adjustedDeadline}
+          onClick={() => runCalculate(adjustedDeadline)}
+          className="rounded-md bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-200 disabled:bg-gray-100 disabled:text-gray-400"
+        >
+          条件を調整して再算出
+        </button>
+      </div>
 
       {candidates && candidates.length > 0 && (
         <>

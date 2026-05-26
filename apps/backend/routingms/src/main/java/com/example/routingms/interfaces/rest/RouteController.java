@@ -4,6 +4,7 @@ import com.example.routingms.application.RouteCalculationService;
 import com.example.routingms.application.RouteConfirmationService;
 import com.example.routingms.application.RouteSelectionService;
 import com.example.routingms.domain.model.RouteCandidate;
+import com.example.routingms.interfaces.rest.dto.CalculateRoutesRequest;
 import com.example.routingms.interfaces.rest.dto.RouteCandidateResponse;
 import com.example.routingms.interfaces.rest.dto.SelectRouteRequest;
 import org.springframework.http.ResponseEntity;
@@ -42,10 +43,16 @@ public class RouteController {
 
     /**
      * 経路候補を算出する（US08）。期限内に到達可能な候補がない場合は空リストを返す。
+     * リクエストボディで {@code arrivalDeadline} を指定すると、その期限で再算出する（US10 条件調整）。
      */
     @PostMapping("/{bookingId}/calculate")
-    public ResponseEntity<List<RouteCandidateResponse>> calculate(@PathVariable String bookingId) {
-        return ResponseEntity.ok(toResponses(calculationService.calculate(bookingId)));
+    public ResponseEntity<List<RouteCandidateResponse>> calculate(
+            @PathVariable String bookingId,
+            @RequestBody(required = false) CalculateRoutesRequest request) {
+        List<RouteCandidate> candidates = (request != null && request.arrivalDeadline() != null)
+                ? calculationService.calculate(bookingId, request.arrivalDeadline())
+                : calculationService.calculate(bookingId);
+        return ResponseEntity.ok(toResponses(candidates));
     }
 
     /**

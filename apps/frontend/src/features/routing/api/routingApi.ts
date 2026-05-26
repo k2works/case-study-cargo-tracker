@@ -48,11 +48,19 @@ export async function fetchRouteDesignRequest(bookingId: string): Promise<RouteD
   return res.json();
 }
 
-/** 経路候補を算出する（US08）。期限内到達可能な候補がない場合は空配列。 */
-export async function calculateRoutes(bookingId: string): Promise<RouteCandidate[]> {
+/**
+ * 経路候補を算出する（US08）。期限内到達可能な候補がない場合は空配列。
+ * {@code overrideDeadline}（YYYY-MM-DD）を指定すると、その到着期限で再算出する（US10 条件調整）。
+ */
+export async function calculateRoutes(
+  bookingId: string,
+  overrideDeadline?: string
+): Promise<RouteCandidate[]> {
+  const hasOverride = overrideDeadline != null && overrideDeadline !== '';
   const res = await fetch(`/api/v1/routes/${bookingId}/calculate`, {
     method: 'POST',
-    headers: authHeader(),
+    headers: hasOverride ? { 'Content-Type': 'application/json', ...authHeader() } : authHeader(),
+    body: hasOverride ? JSON.stringify({ arrivalDeadline: overrideDeadline }) : undefined,
   });
   if (!res.ok) throw new Error('経路候補の算出に失敗しました');
   return res.json();
