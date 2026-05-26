@@ -71,28 +71,30 @@ public class OptimalRouteService {
 
     private List<RouteCandidate> transshipmentCandidates(
             RouteSearchSpecification spec, List<VoyageProjection> voyages) {
+        // 第 1 区間の候補：出発地から出るが目的地直行ではない便（直行便は directCandidates で扱う）
+        List<VoyageProjection> firstLegs = voyages.stream()
+                .filter(voyage -> matches(voyage.getOriginUnlocode(), spec.origin()))
+                .filter(voyage -> !matches(voyage.getDestUnlocode(), spec.destination()))
+                .toList();
+
         List<RouteCandidate> result = new ArrayList<>();
-        for (VoyageProjection first : voyages) {
-            if (!matches(first.getOriginUnlocode(), spec.origin())) {
-                continue;
-            }
-            if (matches(first.getDestUnlocode(), spec.destination())) {
-                continue; // 直行便は directCandidates で扱う
-            }
-            for (VoyageProjection second : voyages) {
-                if (!matches(second.getOriginUnlocode(), first.getDestUnlocode())) {
-                    continue;
-                }
-                if (!matches(second.getDestUnlocode(), spec.destination())) {
-                    continue;
-                }
-                if (second.getDepartureDate().isBefore(first.getArrivalDate())) {
-                    continue; // 乗り継ぎ便が接続便の到着前に出発 → 接続不可
-                }
-                result.add(toCandidate(List.of(toLeg(first), toLeg(second))));
-            }
+        for (VoyageProjection first : firstLegs) {
+            voyages.stream()
+                    .filter(second -> connects(first, second, spec))
+                    .map(second -> toCandidate(List.of(toLeg(first), toLeg(second))))
+                    .forEach(result::add);
         }
         return result;
+    }
+
+    /**
+     * {@code second} が {@code first} の乗り継ぎ便として成立するか。
+     * 接続港が一致し、目的地へ到達し、接続便の到着後に出発する場合に {@code true}。
+     */
+    private boolean connects(VoyageProjection first, VoyageProjection second, RouteSearchSpecification spec) {
+        return matches(second.getOriginUnlocode(), first.getDestUnlocode())
+                && matches(second.getDestUnlocode(), spec.destination())
+                && !second.getDepartureDate().isBefore(first.getArrivalDate());
     }
 
     /**

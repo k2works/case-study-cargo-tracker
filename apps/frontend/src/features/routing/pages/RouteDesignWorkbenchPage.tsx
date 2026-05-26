@@ -140,7 +140,7 @@ export default function RouteDesignWorkbenchPage() {
         </button>
         <span className="text-xs text-gray-400">または条件を調整して再算出（US10）</span>
         <label className="flex flex-col text-xs text-gray-500">
-          到着期限
+          <span>到着期限</span>
           <input
             type="date"
             value={adjustedDeadline}

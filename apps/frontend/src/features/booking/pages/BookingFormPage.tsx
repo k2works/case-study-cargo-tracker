@@ -63,7 +63,7 @@ function presetToFormValues(preset: QuotationPreset | undefined): FormValues {
     destinationUnlocode: preset.destinationUnlocode ?? '',
     arrivalDeadline: preset.arrivalDeadline ?? '',
     cargoType: preset.cargoType ?? 'GENERAL',
-    weightKg: preset.weightKg != null ? String(preset.weightKg) : '',
+    weightKg: preset.weightKg == null ? '' : String(preset.weightKg),
   };
 }
 
