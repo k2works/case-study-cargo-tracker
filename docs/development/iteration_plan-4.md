@@ -28,8 +28,8 @@
 - [x] US11: 確定経路を予約に紐付けると、bookingms の予約状態が Kafka 経由で「経路提案中」に更新される
 - [x] US12: 確定経路を荷主に通知でき、通知記録が登録される
 - [x] 経路設計者ロールのナビゲーションに経路設計ワークベンチ（S14）の導線がある
-- [x] cross-service（routingms → bookingms）のイベント駆動 E2E がパス（retro Try T2）※ Testcontainers Kafka 統合テスト（`RouteConfirmedKafkaIntegrationTest`）で結合検証。Playwright spec は env-gated（ライブ実行は残課題）
-- [x] テストカバレッジ（新規コード）80% 以上（routingms 91.4% / bookingms 84.4%）※ SonarQube ライブスキャンは JaCoCo を代理指標とする（残課題）
+- [x] cross-service（routingms → bookingms）のイベント駆動 E2E がパス（retro Try T2）※ Testcontainers Kafka 統合テストで結合検証。さらにライブ cross-service E2E を実行し、孤児イベント replay の堅牢化（ADR-0010）を追加
+- [x] テストカバレッジ（新規コード）80% 以上 / SonarQube Quality Gate PASS ※ **SonarQube ライブスキャン実施済み（2026-05-26、両プロジェクト PASS・Code Smell 0。backend new_coverage 92.1% / frontend 71.5%）**
 - [x] Release 1.0 MVP の開発完了条件（全ユニット・統合テストパス）を満たす ※ Heroku デプロイ・Aiven 接続は運用フェーズの残課題
 
 ---
@@ -680,8 +680,8 @@ apps/frontend/src/features/routing/pages/
 
 - [x] コードレビュー完了（developing-review、新規 API は architecture_backend.md に追記＝レビュー H2。結果は [it4_routing_review_20260526.md](../review/it4_routing_review_20260526.md)）
 - [x] ユニットテストがパス
-- [x] E2E テストがパス（cross-service を伴う US11 はイベント駆動 E2E を含む＝retro Try T2）※ Testcontainers Kafka 統合テストで結合検証。Playwright spec のライブ実行は残課題
-- [x] ESLint エラーなし / SonarQube Quality Gate PASS（新規コードカバレッジ 80% 以上）※ SonarQube は JaCoCo を代理指標（ライブスキャンは残課題）
+- [x] E2E テストがパス（cross-service を伴う US11 はイベント駆動 E2E を含む＝retro Try T2）※ Testcontainers Kafka 統合テスト + ライブ cross-service E2E 実行済み（孤児イベント堅牢化＝ADR-0010）
+- [x] ESLint エラーなし / SonarQube Quality Gate PASS（新規コードカバレッジ 80% 以上）※ **ライブスキャン実施済み・両プロジェクト PASS・Code Smell 0**
 - [x] 機能がローカル環境で動作確認済み（local-h2 の route-confirmed プロセッサ起動不具合を修正済み）
 - [x] ドキュメント更新完了（iteration_report-4 / API カタログ / data-model）
 
@@ -700,6 +700,7 @@ apps/frontend/src/features/routing/pages/
 | 2026-05-26 | 初版作成（IT3 実績ベロシティ 10 SP・レビュー H3/H4・retro Try を反映） | k2works |
 | 2026-05-26 | 進捗同期（tracking-progress --update）：タスク状態・成功基準・DoD を完了状態に更新。ライブ cross-service E2E で検出した `AggregateNotFoundException` 冪等スキップの堅牢化を反映 | k2works |
 | 2026-05-26 | Section 5 負債返済・品質を完了：H4 見積→予約化プリセット（TDD）、Try T1（認証ヘッダ規約）・T3（JaCoCo 再生成運用）・T5（フロント E2E チェックリスト）・T6（QG 条件明文化） | k2works |
+| 2026-05-26 | 進捗同期（tracking-progress --update）：SonarQube QG ライブスキャン PASS（両プロジェクト・Code Smell 0）とライブ cross-service E2E 実行を成功基準・DoD に反映 | k2works |
 
 ---
 

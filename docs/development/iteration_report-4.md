@@ -125,13 +125,17 @@ Phase 1（41 SP）完了。累計 41/76 SP（54%）。
 ## 品質ゲート
 
 - JaCoCo：新規コードの行カバレッジは全クラス 80% 以上（routingms 91.4% / bookingms 84.4%）
-- SonarQube Quality Gate のライブスキャンはローカル SonarQube 起動が前提のため、本報告では JaCoCo を代理指標とする（運用時に `operating-qt scan` で確認する）
+- **SonarQube Quality Gate ライブスキャン実施済み（2026-05-26）**：backend / frontend 両プロジェクト **PASS**。
+  - backend: new_coverage 92.1% / 重複 0% / new_violations 0（Bug 0・Vulnerability 0・Code Smell 0）
+  - frontend: new_coverage 71.5% / 重複 0% / new_violations 0（Code Smell 0）
+  - 検出した Code Smell 7 件（OptimalRouteService の認知的複雑度ほか）は解消済み。詳細は [it4_session_review_20260526.md](../review/it4_session_review_20260526.md)
 
 ## ADR
 
 | ADR | タイトル | IT4 での適用 |
 |-----|---------|-------------|
 | [ADR-0009](../adr/0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga | US11 の routingms→bookingms 逆方向 cross-service に適用 |
+| [ADR-0010](../adr/0010-local-h2-kafka-topic-initialization.md) | local-h2 トピック初期化・孤児イベント冪等スキップ | ライブ cross-service E2E で顕在化した `AggregateNotFoundException` replay への対処方針を記録 |
 
 ## フェーズ・累計進捗
 
@@ -147,9 +151,10 @@ Phase 1（41 SP）完了。累計 41/76 SP（54%）。
 
 ## 残課題（環境依存・次アクション）
 
-- SonarQube Quality Gate のライブスキャン（ローカル SonarQube 起動が前提）
-- cross-service E2E（US06/US11）のライブ実行（Kafka + 全サービスの再ビルド・起動が前提。spec は parse 検証済み）
+- ~~SonarQube Quality Gate のライブスキャン~~ → **実施済み（2026-05-26、両プロジェクト PASS）**
+- ~~cross-service E2E（US06/US11）のライブ実行~~ → **ライブ実行済み**。実行中に bookingms の `RouteConfirmedEventHandler` で集約不在時の `AggregateNotFoundException` replay を検出し、冪等スキップで堅牢化（commit `a85c28c0`、ADR-0010）。Playwright フルスタック E2E の CI 常時化は引き続き残課題
 - US10 の経由地追加・貨物種別変更による条件調整（本 IT は到着期限の上書きのみ実装。多段経由は IT8）
+- レビュー H4（`CommandExecutionException` 握りつぶしの失敗種別区別）・監視可能性は IT8 / retro へ。予約化 UX（未入力項目の明示）・失効見積の予約化抑止は新ストーリー（[it4_session_review_20260526.md](../review/it4_session_review_20260526.md)）
 
 ## ふりかえり
 
@@ -160,3 +165,4 @@ Phase 1（41 SP）完了。累計 41/76 SP（54%）。
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-05-26 | 初版作成（IT4 経路設計・Phase 1 完了） | k2works |
+| 2026-05-26 | 進捗同期（tracking-progress --update）：SonarQube QG ライブスキャン PASS・Code Smell 0、cross-service E2E ライブ実行と孤児イベント堅牢化（ADR-0010）、残課題の解消状況を反映 | k2works |

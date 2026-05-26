@@ -175,8 +175,8 @@ gantt
 
 **リリース条件**:
 
-- [x] 全ユニットテストがパス（全サービス `gradle check` PASS。routingms 91.4% / bookingms 84.4%）
-- [ ] E2E テストがパス（Testcontainers Kafka 統合テストで cross-service を結合検証済み。Playwright フルスタック E2E のライブ実行は残課題）
+- [x] 全ユニットテストがパス（全サービス `gradle check` PASS。SonarQube Quality Gate 両プロジェクト PASS・Code Smell 0）
+- [ ] E2E テストがパス（Testcontainers Kafka 統合テスト + ライブ cross-service E2E 実行済み・孤児イベント堅牢化＝ADR-0010。Playwright フルスタック E2E の CI 常時グリーン化は残課題）
 - [ ] Heroku dev 環境へのデプロイ成功（運用フェーズ）
 - [ ] Axon Kafka（Aiven）接続確認（運用フェーズ）
 
