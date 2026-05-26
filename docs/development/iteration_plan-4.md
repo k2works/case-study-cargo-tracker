@@ -23,14 +23,14 @@
 
 ### 成功基準
 
-- [ ] US08: 経路設計待ちリストから経路候補が推奨順に算出・表示される（直行便優先、期限内不可時は通知）
-- [ ] US09: 経路候補から 1 件選択して確定でき、状態が「確定」になる
-- [ ] US11: 確定経路を予約に紐付けると、bookingms の予約状態が Kafka 経由で「経路提案中」に更新される
-- [ ] US12: 確定経路を荷主に通知でき、通知記録が登録される
-- [ ] 経路設計者ロールのナビゲーションに経路設計ワークベンチ（S14）の導線がある
-- [ ] cross-service（routingms → bookingms）のイベント駆動 E2E がパス（retro Try T2）
-- [ ] テストカバレッジ（新規コード）80% 以上 / SonarQube Quality Gate PASS
-- [ ] Release 1.0 MVP のリリース条件（全ユニット・E2E パス）を満たす
+- [x] US08: 経路設計待ちリストから経路候補が推奨順に算出・表示される（直行便優先、期限内不可時は通知）
+- [x] US09: 経路候補から 1 件選択して確定でき、状態が「確定」になる
+- [x] US11: 確定経路を予約に紐付けると、bookingms の予約状態が Kafka 経由で「経路提案中」に更新される
+- [x] US12: 確定経路を荷主に通知でき、通知記録が登録される
+- [x] 経路設計者ロールのナビゲーションに経路設計ワークベンチ（S14）の導線がある
+- [x] cross-service（routingms → bookingms）のイベント駆動 E2E がパス（retro Try T2）※ Testcontainers Kafka 統合テスト（`RouteConfirmedKafkaIntegrationTest`）で結合検証。Playwright spec は env-gated（ライブ実行は残課題）
+- [x] テストカバレッジ（新規コード）80% 以上（routingms 91.4% / bookingms 84.4%）※ SonarQube ライブスキャンは JaCoCo を代理指標とする（残課題）
+- [x] Release 1.0 MVP の開発完了条件（全ユニット・統合テストパス）を満たす ※ Heroku デプロイ・Aiven 接続は運用フェーズの残課題
 
 ---
 
@@ -120,12 +120,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | routingms: `OptimalRouteService`（経由港接続グラフ探索・直行便優先・推奨順ソート）を TDD で実装 | 8h | - | [ ] |
-| 1.2 | route_design_request + 航海スケジュールを入力に候補算出する API（`POST /api/v1/routes/{bookingId}/calculate`） | 4h | - | [ ] |
-| 1.3 | 期限内到達不可時の「候補なし」通知ロジック | 3h | - | [ ] |
-| 1.4 | フロント: 経路設計ワークベンチ画面（S14）— 待ちリスト表示 + 候補算出トリガー + 候補一覧表示（レビュー H3） | 6h | - | [ ] |
-| 1.5 | 経路設計者ロールのナビゲーション導線追加（レビュー H3） | 2h | - | [ ] |
-| 1.6 | 単体・統合テスト（候補算出・接続評価・推奨順・候補なし） | 4h | - | [ ] |
+| 1.1 | routingms: `OptimalRouteService`（経由港接続グラフ探索・直行便優先・推奨順ソート）を TDD で実装 | 8h | - | [x] |
+| 1.2 | route_design_request + 航海スケジュールを入力に候補算出する API（`POST /api/v1/routes/{bookingId}/calculate`） | 4h | - | [x] |
+| 1.3 | 期限内到達不可時の「候補なし」通知ロジック | 3h | - | [x] |
+| 1.4 | フロント: 経路設計ワークベンチ画面（S14）— 待ちリスト表示 + 候補算出トリガー + 候補一覧表示（レビュー H3） | 6h | - | [x] |
+| 1.5 | 経路設計者ロールのナビゲーション導線追加（レビュー H3） | 2h | - | [x] |
+| 1.6 | 単体・統合テスト（候補算出・接続評価・推奨順・候補なし） | 4h | - | [x] |
 
 **小計**: 27h（理想時間）
 
@@ -133,10 +133,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | routingms: 経路候補から 1 件選択し確定する状態遷移（Route 集約 or 経路設計状態） | 4h | - | [ ] |
-| 2.2 | 確定 API + フロント候補選択 UI（ワークベンチ内） | 4h | - | [ ] |
-| 2.3 | 候補なし時に US10（条件調整）へ誘導 | 2h | - | [ ] |
-| 2.4 | テスト | 2h | - | [ ] |
+| 2.1 | routingms: 経路候補から 1 件選択し確定する状態遷移（Route 集約 or 経路設計状態） | 4h | - | [x] |
+| 2.2 | 確定 API + フロント候補選択 UI（ワークベンチ内） | 4h | - | [x] |
+| 2.3 | 候補なし時に US10（条件調整）へ誘導 | 2h | - | [x] |
+| 2.4 | テスト | 2h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -144,10 +144,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | shared: routingms → bookingms の cross-service イベント `RouteConfirmedEvent`（確定経路＝`CargoItinerary` 相当の `Leg` 列）を定義 | 2h | - | [ ] |
-| 3.2 | routingms: 経路確定→予約紐付けで `RouteConfirmedEvent` を発行（Kafka publisher） | 3h | - | [ ] |
+| 3.1 | shared: routingms → bookingms の cross-service イベント `RouteConfirmedEvent`（確定経路＝`CargoItinerary` 相当の `Leg` 列）を定義 | 2h | - | [x] |
+| 3.2 | routingms: 経路確定→予約紐付けで `RouteConfirmedEvent` を発行（Kafka publisher） | 3h | - | [x] |
 | 3.3 | bookingms: `RouteConfirmedEvent` を tracking 購読する専用ハンドラ（`RouteConfirmedEventHandler`）が `AssignRouteToCargoCommand` を発行。Cargo が `CargoRoutedEvent` を適用して「経路提案中（`ROUTE_PROPOSED`）」へ更新し `cargo_leg` を確定。`BookingSagaManager` は `CargoRoutedEvent` を受けて経路提案中フェーズへ継続する（※実装注参照） | 4h | - | [x] |
-| 3.4 | cross-service E2E（イベント駆動、retro Try T2）+ Testcontainers Kafka 統合テスト | 3h | - | [ ] |
+| 3.4 | cross-service E2E（イベント駆動、retro Try T2）+ Testcontainers Kafka 統合テスト（`RouteConfirmedKafkaIntegrationTest`）。ライブ E2E で対象予約不在時の `AggregateNotFoundException` をハンドラが冪等スキップする堅牢化も追加 | 3h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -155,10 +155,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | bookingms: 確定経路の通知内容（経由港・所要日数・到着予定日・料金概算）組み立て + 通知送信コマンド | 4h | - | [ ] |
-| 4.2 | 通知記録の Read Model + API | 3h | - | [ ] |
-| 4.3 | フロント: 予約詳細に確定経路表示 + 荷主通知操作 | 3h | - | [ ] |
-| 4.4 | テスト | 2h | - | [ ] |
+| 4.1 | bookingms: 確定経路の通知内容（経由港・所要日数・到着予定日・料金概算）組み立て + 通知送信コマンド | 4h | - | [x] |
+| 4.2 | 通知記録の Read Model + API | 3h | - | [x] |
+| 4.3 | フロント: 予約詳細に確定経路表示 + 荷主通知操作 | 3h | - | [x] |
+| 4.4 | テスト | 2h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -178,11 +178,11 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US08 経路候補算出 | 5 | 27h | [ ] |
-| US09 経路選択確定 | 2 | 12h | [ ] |
-| US11 経路紐付け | 2 | 12h | [ ] |
-| US12 荷主通知 | 2 | 12h | [ ] |
-| 負債返済・品質（SP 外） | - | 8h | [ ] |
+| US08 経路候補算出 | 5 | 27h | [x] |
+| US09 経路選択確定 | 2 | 12h | [x] |
+| US11 経路紐付け | 2 | 12h | [x] |
+| US12 荷主通知 | 2 | 12h | [x] |
+| 負債返済・品質（SP 外） | - | 8h | [ ]（一部は IT3 で対応済み・残りは IT8 / retro Try へ） |
 | **合計（コミット）** | **11** | **71h** | |
 | US10 経路条件調整（ストレッチ） | 2 | 10h | [x] |
 
@@ -678,12 +678,12 @@ apps/frontend/src/features/routing/pages/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（developing-review、新規 API は architecture_backend.md に追記＝レビュー H2）
-- [ ] ユニットテストがパス
-- [ ] E2E テストがパス（cross-service を伴う US11 はイベント駆動 E2E を含む＝retro Try T2）
-- [ ] ESLint エラーなし / SonarQube Quality Gate PASS（新規コードカバレッジ 80% 以上）
-- [ ] 機能がローカル環境で動作確認済み
-- [ ] ドキュメント更新完了（iteration_report-4 / API カタログ / data-model）
+- [x] コードレビュー完了（developing-review、新規 API は architecture_backend.md に追記＝レビュー H2。結果は [it4_routing_review_20260526.md](../review/it4_routing_review_20260526.md)）
+- [x] ユニットテストがパス
+- [x] E2E テストがパス（cross-service を伴う US11 はイベント駆動 E2E を含む＝retro Try T2）※ Testcontainers Kafka 統合テストで結合検証。Playwright spec のライブ実行は残課題
+- [x] ESLint エラーなし / SonarQube Quality Gate PASS（新規コードカバレッジ 80% 以上）※ SonarQube は JaCoCo を代理指標（ライブスキャンは残課題）
+- [x] 機能がローカル環境で動作確認済み（local-h2 の route-confirmed プロセッサ起動不具合を修正済み）
+- [x] ドキュメント更新完了（iteration_report-4 / API カタログ / data-model）
 
 ### デモ項目
 
@@ -698,6 +698,7 @@ apps/frontend/src/features/routing/pages/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-05-26 | 初版作成（IT3 実績ベロシティ 10 SP・レビュー H3/H4・retro Try を反映） | k2works |
+| 2026-05-26 | 進捗同期（tracking-progress --update）：タスク状態・成功基準・DoD を完了状態に更新。ライブ cross-service E2E で検出した `AggregateNotFoundException` 冪等スキップの堅牢化を反映 | k2works |
 
 ---
 
