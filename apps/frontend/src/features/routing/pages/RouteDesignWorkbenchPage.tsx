@@ -168,22 +168,26 @@ export default function RouteDesignWorkbenchPage() {
             </tbody>
           </table>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <p className="mt-4 text-xs text-gray-500">
+            候補を 1 件選び、「① 経路を確定」→「② 予約に紐付け」の順に実行してください。
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"
               disabled={selectedSeq == null}
               onClick={handleSelect}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-300"
             >
-              選択した経路を確定
+              ① 経路を確定
             </button>
+            <span className="text-gray-400">→</span>
             <button
               type="button"
               disabled={selectedSeq == null}
               onClick={handleConfirm}
               className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:bg-gray-300"
             >
-              経路を予約に紐付け
+              ② 予約に紐付け
             </button>
           </div>
         </>

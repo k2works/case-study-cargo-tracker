@@ -90,7 +90,7 @@ describe('RouteDesignWorkbenchPage (US08/US09/US11)', () => {
     await waitFor(() => screen.getByText('経路設計ワークベンチ'));
     await user.click(screen.getByRole('button', { name: '経路候補を算出' }));
     await waitFor(() => screen.getByText('V-DIRECT'));
-    await user.click(screen.getByRole('button', { name: '経路を予約に紐付け' }));
+    await user.click(screen.getByRole('button', { name: '② 予約に紐付け' }));
 
     await waitFor(() => expect(routingApi.confirmRoute).toHaveBeenCalledWith('B-001', 1));
     await waitFor(() => expect(screen.getByText('予約詳細')).toBeInTheDocument());

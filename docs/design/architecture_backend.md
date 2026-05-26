@@ -1102,8 +1102,8 @@ public class ExternalCargoRoutingService {
 | `GET` | `/api/v1/shippers` | 荷主一覧（ページネーション） | UC02 |
 | `GET` | `/api/v1/shippers/{shipperId}` | 荷主詳細 | UC02 |
 | `GET` | `/api/v1/shippers/search?email=` | メールで荷主検索（重複検出） | UC02 |
-| `GET` | `/api/v1/bookings/{bookingId}/route` | 確定旅程（cargo_leg）の取得（US11/US12 経路表示） | UC09 |
-| `POST` | `/api/v1/bookings/{bookingId}/notify-route` | 確定経路の荷主通知（NotifyRouteToShipperCommand、US12） | UC10 |
+| `GET` | `/api/v1/bookings/{bookingId}/route` | 確定旅程を構成する輸送区間（cargo_leg）のリスト取得（US11/US12 経路表示） | UC09 |
+| `POST` | `/api/v1/bookings/{bookingId}/notify-route` | 確定経路の荷主通知（NotifyRouteToShipperCommand、route_notified_at を記録、US12） | UC10 |
 | `PUT` | `/api/v1/bookings/{bookingId}/destination` | 仕向地変更（ChangeDestinationCommand）※未実装 | UC08 |
 | `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行（AssignTrackingDetailsToCargoCommand）※Phase 2（US14）未実装 | UC12 |
 
@@ -1125,8 +1125,8 @@ public class ExternalCargoRoutingService {
 | `GET` | `/api/v1/routes/design-requests/{bookingId}` | 経路設計依頼の取得（同上） | UC06 |
 | `POST` | `/api/v1/routes/{bookingId}/calculate` | 経路候補算出（OptimalRouteService、推奨順・候補なし通知、US08） | UC06 |
 | `GET` | `/api/v1/routes/{bookingId}/candidates` | 経路候補一覧（US08/US09） | UC06 |
-| `POST` | `/api/v1/routes/{bookingId}/select` | 経路候補の選択確定（route_design_request を ROUTE_SELECTED へ、US09） | UC07 |
-| `POST` | `/api/v1/routes/{bookingId}/confirm` | 確定経路を予約に紐付け（RouteConfirmedEvent 発行、cross-service、US11） | UC09 |
+| `POST` | `/api/v1/routes/{bookingId}/select` | 経路候補の選択確定（route_design_request を ROUTE_SELECTED へ、200、US09） | UC07 |
+| `POST` | `/api/v1/routes/{bookingId}/confirm` | 確定経路を予約に紐付け（RouteConfirmedEvent 発行 + route_design_request を ASSIGNED へ。cross-service の非同期紐付けのため 202 Accepted、US11） | UC09 |
 
 #### trackingms
 

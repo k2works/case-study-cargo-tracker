@@ -161,6 +161,30 @@ class OptimalRouteServiceTest {
     }
 
     @Test
+    void 概算費用を区間数と所要日数から算出する() {
+        // Given: 直行便（25 日）と乗り継ぎ便（27 日）
+        VoyageProjection direct = voyage("V-DIRECT", "JPTYO", "DEHAM",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0), List.of("GENERAL"));
+        VoyageProjection legA = voyage("V-A", "JPTYO", "SGSIN",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 10, 18, 0), List.of("GENERAL"));
+        VoyageProjection legB = voyage("V-B", "SGSIN", "DEHAM",
+                LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 30, 18, 0), List.of("GENERAL"));
+        RouteSearchSpecification spec =
+                new RouteSearchSpecification("JPTYO", "DEHAM", LocalDate.of(2026, 8, 1), "GENERAL");
+
+        // When
+        List<RouteCandidate> candidates = service.calculate(spec, List.of(legA, legB, direct));
+
+        // Then: 直行 = 1 区間 × 200,000 + 25 日 × 40,000 = 1,200,000
+        RouteCandidate directCandidate = candidates.get(0);
+        assertThat(directCandidate.estimatedCost()).isEqualByComparingTo("1200000");
+        assertThat(directCandidate.currency()).isEqualTo("JPY");
+        // 乗り継ぎ = 2 区間 × 200,000 + 27 日 × 40,000 = 1,480,000
+        RouteCandidate transship = candidates.get(1);
+        assertThat(transship.estimatedCost()).isEqualByComparingTo("1480000");
+    }
+
+    @Test
     void 候補を推奨順に並べる_直行を最優先し次に所要日数の短い順() {
         // Given: 直行（25日）/ 乗り継ぎ短（27日）/ 乗り継ぎ長（35日）
         VoyageProjection direct = voyage("V-DIRECT", "JPTYO", "DEHAM",

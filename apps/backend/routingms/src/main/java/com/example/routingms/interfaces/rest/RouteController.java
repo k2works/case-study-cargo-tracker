@@ -20,9 +20,9 @@ import java.util.stream.IntStream;
 /**
  * 経路設計 REST Controller（US08 経路候補算出）。
  *
- * <p>経路設計者ワークベンチ（S14）が経路設計待ちリストの予約 ID を指定して経路候補を算出・取得する。
- * 経路候補は永続化せず算出のたびに返す（iteration_plan-4.md）。後続の選択確定（US09）・
- * 予約紐付け（US11）も本 Controller に追加する。</p>
+ * <p>経路設計者ワークベンチ（S14）が経路設計待ちリストの予約 ID を指定して、経路候補の算出（US08）・
+ * 選択確定（US09）・予約紐付け（US11）を行う。経路候補は永続化せず算出のたびに返すため、選択・確定は
+ * 推奨順の候補番号（sequence）で指定する（iteration_plan-4.md）。</p>
  */
 @RestController
 @RequestMapping("/api/v1/routes")

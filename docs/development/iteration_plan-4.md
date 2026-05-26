@@ -146,7 +146,7 @@
 |---|--------|---------|------|------|
 | 3.1 | shared: routingms → bookingms の cross-service イベント `RouteConfirmedEvent`（確定経路＝`CargoItinerary` 相当の `Leg` 列）を定義 | 2h | - | [ ] |
 | 3.2 | routingms: 経路確定→予約紐付けで `RouteConfirmedEvent` を発行（Kafka publisher） | 3h | - | [ ] |
-| 3.3 | bookingms: `RouteConfirmedEvent` を tracking 購読し、`BookingSagaManager` 経由で `AssignRouteToCargoCommand` を発行。Cargo が `CargoRoutedEvent` を適用して状態を「経路提案中（`ROUTE_PROPOSED`）」に更新し、`cargo_leg` を確定 | 4h | - | [ ] |
+| 3.3 | bookingms: `RouteConfirmedEvent` を tracking 購読する専用ハンドラ（`RouteConfirmedEventHandler`）が `AssignRouteToCargoCommand` を発行。Cargo が `CargoRoutedEvent` を適用して「経路提案中（`ROUTE_PROPOSED`）」へ更新し `cargo_leg` を確定。`BookingSagaManager` は `CargoRoutedEvent` を受けて経路提案中フェーズへ継続する（※実装注参照） | 4h | - | [x] |
 | 3.4 | cross-service E2E（イベント駆動、retro Try T2）+ Testcontainers Kafka 統合テスト | 3h | - | [ ] |
 
 **小計**: 12h（理想時間）
@@ -247,7 +247,8 @@ gantt
 ### 主要設計方針
 
 - **経路候補算出（routingms ドメインサービス）**: Routing コンテキストの集約は `Voyage` のみ（domain-model.md）。経路候補算出は `Voyage` / `CarrierMovement`（寄港地接続）と `route_design_request`（出発地・目的地・期限・貨物種別）を入力に候補を生成するドメインサービス `OptimalRouteService` として実装。直行便を最優先、所要日数・費用で推奨順ソート、期限内到達不可なら候補なしを返す。候補（`RouteCandidate`）は永続集約を持たず算出結果として返す。
-- **逆方向 cross-service（US11、ADR-0009 準拠）**: routingms が経路確定時に shared の `RouteConfirmedEvent` を Kafka 発行 → bookingms が tracking 購読し `BookingSagaManager` 経由で `AssignRouteToCargoCommand` を発行 → Cargo が `CargoRoutedEvent` を適用して状態を「経路提案中（`ROUTE_PROPOSED`）」に更新、`cargo_leg` を確定。IT3 の bookingms → routingms と対になる routingms → bookingms 方向。
+- **逆方向 cross-service（US11、ADR-0009 準拠）**: routingms が経路確定時に shared の `RouteConfirmedEvent` を Kafka 発行 → bookingms が tracking 購読する専用ハンドラ（`RouteConfirmedEventHandler`、route-confirmed プロセッシンググループ）が `AssignRouteToCargoCommand` を発行 → Cargo が `CargoRoutedEvent` を適用して状態を「経路提案中（`ROUTE_PROPOSED`）」に更新、`cargo_leg` を確定。IT3 の bookingms → routingms と対になる routingms → bookingms 方向。
+  - **実装注（レビュー H1）**: 当初は「`BookingSagaManager` 経由でコマンド発行」と記述したが、Saga のイベントソース（bookingms 自身の event store）と cross-service イベントの source（Kafka）が競合するため、cross-service イベントは専用 tracking ハンドラで受信して `AssignRouteToCargoCommand` を発行する実装とした。`BookingSagaManager` は割当の結果である `CargoRoutedEvent`（bookingms ローカル）を受けて経路提案中フェーズへ継続する（追跡番号発行は IT5）。
 - **経路設計ワークベンチ（S14）**: 経路設計者（ROLE_ROUTING）の複合ビュー `/routing/design/:bookingId`（ui_design.md）。`GET /api/v1/routes/design-requests`（IT3 追加済み）の待ちリスト（arrivalDeadline 昇順、レビュー L4）→ 候補算出 → 選択 → 紐付けを実行（レビュー H3）。
 
 ### ドメインモデル

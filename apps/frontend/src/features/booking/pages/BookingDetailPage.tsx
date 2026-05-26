@@ -32,6 +32,14 @@ function cargoTypeLabel(type: string): string {
   }
 }
 
+/** 確定旅程の所要日数（最初の積込日から最終荷降し日までの日数）。 */
+function estimatedDays(legs: CargoLeg[]): number {
+  const MILLIS_PER_DAY = 1000 * 60 * 60 * 24;
+  const load = new Date(legs[0].loadAt.slice(0, 10));
+  const unload = new Date(legs[legs.length - 1].unloadAt.slice(0, 10));
+  return Math.round((unload.getTime() - load.getTime()) / MILLIS_PER_DAY);
+}
+
 export default function BookingDetailPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
@@ -131,6 +139,7 @@ export default function BookingDetailPage() {
             <p className="mb-2 text-gray-900">
               経由港: {[legs[0].loadUnlocode, ...legs.map((l) => l.unloadUnlocode)].join(' → ')}
             </p>
+            <p className="text-gray-600">所要日数: {estimatedDays(legs)} 日</p>
             <p className="text-gray-600">到着予定日: {legs[legs.length - 1].unloadAt.slice(0, 10)}</p>
             {booking.routeNotifiedAt && (
               <p className="mt-1 text-xs text-green-700">
