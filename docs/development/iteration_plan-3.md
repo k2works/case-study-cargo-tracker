@@ -28,7 +28,7 @@
 - [x] US07: 制約条件に基づく航海スケジュール検索ができる
 - [x] US13: 予約を確定・キャンセルでき、状態遷移ガードが機能する
 - [x] bookingms ⇔ routingms の cross-service イベントが Kafka 経由で疎通する
-- [ ] テストカバレッジ（新規コード）80% 以上 / SonarQube Quality Gate PASS
+- [x] テストカバレッジ（新規コード）80% 以上 / SonarQube Quality Gate PASS（Backend 80.0% / Frontend 81.0%、両プロジェクト Gate PASS）
 
 ---
 
