@@ -1,6 +1,7 @@
 package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.RouteCalculationService;
+import com.example.routingms.application.RouteConfirmationService;
 import com.example.routingms.application.RouteSelectionService;
 import com.example.routingms.domain.model.RouteCandidate;
 import com.example.routingms.interfaces.rest.dto.RouteCandidateResponse;
@@ -29,11 +30,14 @@ public class RouteController {
 
     private final RouteCalculationService calculationService;
     private final RouteSelectionService selectionService;
+    private final RouteConfirmationService confirmationService;
 
     public RouteController(RouteCalculationService calculationService,
-                           RouteSelectionService selectionService) {
+                           RouteSelectionService selectionService,
+                           RouteConfirmationService confirmationService) {
         this.calculationService = calculationService;
         this.selectionService = selectionService;
+        this.confirmationService = confirmationService;
     }
 
     /**
@@ -60,6 +64,16 @@ public class RouteController {
                                                          @RequestBody SelectRouteRequest request) {
         RouteCandidate selected = selectionService.selectRoute(bookingId, request.sequence());
         return ResponseEntity.ok(RouteCandidateResponse.from(selected, request.sequence(), false));
+    }
+
+    /**
+     * 確定経路を予約に紐付ける（US11）。RouteConfirmedEvent を発行して bookingms へ cross-service 連携する。
+     */
+    @PostMapping("/{bookingId}/confirm")
+    public ResponseEntity<RouteCandidateResponse> confirm(@PathVariable String bookingId,
+                                                          @RequestBody SelectRouteRequest request) {
+        RouteCandidate confirmed = confirmationService.confirmRoute(bookingId, request.sequence());
+        return ResponseEntity.accepted().body(RouteCandidateResponse.from(confirmed, request.sequence(), false));
     }
 
     private List<RouteCandidateResponse> toResponses(List<RouteCandidate> candidates) {

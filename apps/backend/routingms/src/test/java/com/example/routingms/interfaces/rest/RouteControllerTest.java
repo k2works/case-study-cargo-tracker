@@ -1,6 +1,7 @@
 package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.RouteCalculationService;
+import com.example.routingms.application.RouteConfirmationService;
 import com.example.routingms.application.RouteSelectionService;
 import com.example.routingms.domain.model.RouteCandidate;
 import com.example.routingms.domain.model.RouteLeg;
@@ -32,6 +33,9 @@ class RouteControllerTest {
 
     @Mock
     private RouteSelectionService selectionService;
+
+    @Mock
+    private RouteConfirmationService confirmationService;
 
     @InjectMocks
     private RouteController controller;
@@ -114,5 +118,17 @@ class RouteControllerTest {
         assertThat(response.getBody().sequence()).isEqualTo(2);
         assertThat(response.getBody().voyageNumbers()).containsExactly("V-A", "V-B");
         assertThat(response.getBody().ports()).containsExactly("JPTYO", "SGSIN", "DEHAM");
+    }
+
+    @Test
+    void 確定経路を予約に紐付けると202を返す() {
+        when(confirmationService.confirmRoute("B-001", 1)).thenReturn(directCandidate());
+
+        ResponseEntity<RouteCandidateResponse> response =
+                controller.confirm("B-001", new SelectRouteRequest(1));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().voyageNumbers()).containsExactly("V-DIRECT");
     }
 }
