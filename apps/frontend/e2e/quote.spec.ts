@@ -85,8 +85,10 @@ test.describe('US07/US01: 見積作成フロー', () => {
     await firstQuoteLink.click();
 
     // 詳細ページに基本情報とルート候補が表示される
+    // 出発地/目的地は <dd> に正確な値で表示される。ルート候補セルの
+    // 「JPTYO → USNYC（…）」と重複してマッチしないよう exact 指定で <dd> に絞る。
     await expect(page.getByRole('heading', { name: /^見積 / })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('JPTYO')).toBeVisible();
-    await expect(page.getByText('USNYC')).toBeVisible();
+    await expect(page.getByText('JPTYO', { exact: true })).toBeVisible();
+    await expect(page.getByText('USNYC', { exact: true })).toBeVisible();
   });
 });
