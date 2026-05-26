@@ -6,6 +6,7 @@ import com.example.shared.events.RouteConfirmedEvent;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.config.ProcessingGroup;
+import org.axonframework.modelling.command.AggregateNotFoundException;
 import org.axonframework.eventhandling.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,12 @@ public class RouteConfirmedEventHandler {
                 .toList();
         try {
             commandGateway.sendAndWait(new AssignRouteToCargoCommand(event.bookingId(), legs));
+        } catch (AggregateNotFoundException ex) {
+            // 対象予約が event store に存在しない。古い/再生された cross-service イベント
+            // （event store がリセットされた環境での tracking 再生など）では発生し得るため、
+            // ERROR で再スローせず冪等にスキップする（tracking プロセッサのブロック・ログ汚染を防ぐ）
+            log.warn("経路割当をスキップしました。対象予約が存在しません（bookingId={}）。"
+                    + "再生された古いイベントの可能性があります。", event.bookingId());
         } catch (CommandExecutionException ex) {
             // 既に経路提案中等で割当不可（tracking 再処理・重複配信）の場合は冪等にスキップする
             log.warn("経路割当コマンドの実行をスキップしました（bookingId={}）: {}",

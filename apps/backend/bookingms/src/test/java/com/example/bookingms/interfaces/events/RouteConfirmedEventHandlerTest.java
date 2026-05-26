@@ -4,6 +4,7 @@ import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
 import com.example.shared.events.RouteConfirmedEvent;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
+import org.axonframework.modelling.command.AggregateNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -65,6 +66,21 @@ class RouteConfirmedEventHandlerTest {
                 .thenThrow(new CommandExecutionException("経路を割り当てできるのは経路設計中の予約のみです", null));
 
         // 例外を握りつぶして処理を継続する（tracking プロセッサがブロックしない）
+        assertThatCode(() -> handler.on(event)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void 対象予約が存在しない場合は冪等にスキップして伝播しない() {
+        RouteConfirmedEvent event = new RouteConfirmedEvent("BK-RC-1779779588376", List.of(
+                new RouteConfirmedEvent.LegData("V-DIRECT", "JPTYO", "USNYC",
+                        LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0))));
+        // event store がリセットされた環境での再生イベントや、対象予約未作成の古いイベントでは
+        // 集約をロードできず AggregateNotFoundException が送出される（CommandExecutionException とは別系統）
+        when(commandGateway.sendAndWait(any(AssignRouteToCargoCommand.class)))
+                .thenThrow(new AggregateNotFoundException(
+                        "BK-RC-1779779588376", "The aggregate was not found in the event store"));
+
+        // ERROR で再スローせず冪等にスキップする（tracking プロセッサがブロック・ログ汚染しない）
         assertThatCode(() -> handler.on(event)).doesNotThrowAnyException();
     }
 }
