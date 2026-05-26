@@ -1089,24 +1089,35 @@ public class ExternalCargoRoutingService {
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/bookings` | 貨物予約の登録（BookCargoCommand） | UC03 |
+| `POST` | `/api/v1/bookings` | 貨物予約の登録（BookCargoCommand、US04/US05） | UC03 |
 | `GET` | `/api/v1/bookings/{bookingId}` | 予約詳細の取得（CargoSummaryQuery） | UC03 |
-| `GET` | `/api/v1/bookings` | 予約一覧（ListCargoSummariesQuery） | UC03 |
-| `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て（AssignRouteToCargoCommand） | UC09 |
-| `PUT` | `/api/v1/bookings/{bookingId}/destination` | 仕向地変更（ChangeDestinationCommand） | UC08 |
-| `PUT` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定 | UC11 |
-| `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行（AssignTrackingDetailsToCargoCommand） | UC12 |
-| `POST` | `/api/v1/quotes` | 輸送見積作成 | UC01 |
-| `POST` | `/api/v1/shippers` | 荷主登録 | UC02 |
+| `GET` | `/api/v1/bookings` | 予約一覧（ページネーション、ListCargoSummariesQuery） | UC03 |
+| `POST` | `/api/v1/bookings/{bookingId}/handoff` | 経路設計引き渡し（RequestRouteDesignCommand、US06） | UC03 |
+| `POST` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定（ConfirmBookingCommand、US13） | UC11 |
+| `POST` | `/api/v1/bookings/{bookingId}/cancel` | 予約キャンセル（CancelBookingCommand、US13） | UC03 |
+| `POST` | `/api/v1/quotes` | 輸送見積作成（US01） | UC01 |
+| `GET` | `/api/v1/quotes` | 見積一覧（ページネーション、US01） | UC01 |
+| `GET` | `/api/v1/quotes/{quotationId}` | 見積詳細（US01） | UC01 |
+| `POST` | `/api/v1/shippers` | 荷主登録（US02/US03） | UC02 |
+| `GET` | `/api/v1/shippers` | 荷主一覧（ページネーション） | UC02 |
+| `GET` | `/api/v1/shippers/{shipperId}` | 荷主詳細 | UC02 |
+| `GET` | `/api/v1/shippers/search?email=` | メールで荷主検索（重複検出） | UC02 |
+| `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て（AssignRouteToCargoCommand）※IT4（US11）未実装 | UC09 |
+| `PUT` | `/api/v1/bookings/{bookingId}/destination` | 仕向地変更（ChangeDestinationCommand）※未実装 | UC08 |
+| `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行（AssignTrackingDetailsToCargoCommand）※Phase 2（US14）未実装 | UC12 |
 
 #### routingms
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/voyages` | 航海スケジュール一覧 | UC05 |
-| `POST` | `/api/v1/voyages` | 航海スケジュール登録（RegisterVoyageCommand） | UC19 |
-| `PUT` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュール更新（UpdateVoyageScheduleCommand） | UC19 |
-| `GET` | `/api/v1/routes/optimal` | 最適経路候補算出 | UC06 |
+| `POST` | `/api/v1/voyages` | 航海スケジュール登録（RegisterVoyageCommand、US24） | UC19 |
+| `PUT` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュール更新（UpdateVoyageScheduleCommand、US25） | UC19 |
+| `GET` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュール詳細 | UC05 |
+| `GET` | `/api/v1/voyages/search` | 航海スケジュール検索（出発地・目的地・出発期間・貨物種別、US07） | UC05 |
+| `GET` | `/api/v1/routes/design-requests` | 経路設計待ちリスト一覧（cross-service read model、US06 の結果 / IT4 US08 の入力） | UC06 |
+| `GET` | `/api/v1/routes/design-requests/{bookingId}` | 経路設計依頼の取得（同上） | UC06 |
+| `GET` | `/api/v1/routes/optimal` | 最適経路候補算出 ※IT4（US08）未実装 | UC06 |
 
 #### trackingms
 
