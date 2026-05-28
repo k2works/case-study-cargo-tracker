@@ -20,9 +20,10 @@ dependencyResolutionManagement {
 
 rootProject.name = 'cargo-tracker-backend'
 
-// サブプロジェクトの登録（IT1: authms / routingms / shared / gatewayms、IT2: + bookingms）
+// サブプロジェクトの登録（IT1: authms / routingms / shared / gatewayms、IT2: + bookingms、IT5: + trackingms）
 include 'shared'
 include 'authms'
 include 'routingms'
 include 'gatewayms'
 include 'bookingms'
+include 'trackingms'
