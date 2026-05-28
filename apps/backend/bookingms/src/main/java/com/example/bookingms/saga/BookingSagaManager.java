@@ -16,7 +16,17 @@ import org.axonframework.spring.stereotype.Saga;
  * IT3 では開始（{@link CargoBookedEvent}）・経路設計依頼（{@link RouteDesignRequestedEvent}）・
  * キャンセル終了（{@link BookingCancelledEvent}）までを実装する。
  * IT4 で経路確定（{@link CargoRoutedEvent}）による経路提案中フェーズへの遷移を追加する。
- * 追跡番号発行（CargoTrackedEvent / IT5）に伴う trackingms への cross-service 指示は後続で追加する。</p>
+ * </p>
+ *
+ * <p><b>IT5 タスク 1.2 で追加予定の延伸</b>：{@code BookingConfirmedEvent}（予約確定）を購読し、
+ * shared モジュールの {@code com.example.shared.events.TrackingIssuanceRequestedEvent}（追加済）を
+ * 発行して trackingms に追跡初期化を依頼する。trackingms 側は {@code InitializeTrackingCommand} で
+ * {@code TrackingActivity} を NOT_RECEIVED 初期化・採番し、shared の
+ * {@code com.example.shared.events.CargoTrackedEvent}（追加済）を Kafka 経由で bookingms に返す。
+ * 本 Saga は {@code CargoTrackedEvent} を {@code @SagaEventHandler} で受信して予約状態を
+ * TRACKING_ISSUED に更新し、{@code @EndSaga} で終了する（iteration_plan-5.md §設計トピック・
+ * §タスク 1.1〜1.4）。cross-service 受信ハンドラは ADR-0011（ホワイトリスト方式）に従い、
+ * {@code AggregateNotFoundException} / {@code CommandExecutionException} の 2 種のみ WARN スキップする。</p>
  */
 @Saga
 public class BookingSagaManager {
