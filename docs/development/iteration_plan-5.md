@@ -113,11 +113,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | `settings.gradle` に `trackingms` / `handlingms` を追加し、build.gradle（Spring Boot 4 + Axon + Kafka + MyBatis + Flyway）を IT1 サービス雛形から作成 | 4h | - | [ ] |
-| 0.2 | application プロファイル（local-h2 / local-docker / heroku）と Axon Kafka 設定（publisher/fetcher、cross-service 用 tracking processor）を整備 | 4h | - | [ ] |
-| 0.3 | gatewayms に `/api/v1/tracking/**`・`/api/v1/handling/**` ルートを追加（新サービス追加チェックリスト） | 2h | - | [ ] |
-| 0.4 | Flyway 初期マイグレーション（tracking_read_db：tracking_summary/tracking_event/tracking_exception + token/saga、handling_read_db：handling_activity/handling_itinerary_snapshot/claim_verification + token） | 3h | - | [ ] |
-| 0.5 | docker-compose・deploy スクリプトの SERVICES・sonarqube.config.json・GitHub Project に新サービスを反映 | 2h | - | [ ] |
+| 0.1 | `settings.gradle` に `trackingms` / `handlingms` を追加し、build.gradle（Spring Boot 4 + Axon + Kafka + MyBatis + Flyway）を IT1 サービス雛形から作成 | 4h | - | [x] 2026-05-28（commit 0f48a866 / 810683cf） |
+| 0.2 | application プロファイル（local-h2 / local-docker / heroku）と Axon Kafka 設定（publisher/fetcher、cross-service 用 tracking processor）を整備 | 4h | - | [x] 2026-05-28（cross-service-tracking-processor-profile-config 規律準拠） |
+| 0.3 | gatewayms に `/api/v1/tracking/**`・`/api/v1/handling/**` ルートを追加（新サービス追加チェックリスト） | 2h | - | [x] 2026-05-28（commit 7c3f2b11） |
+| 0.4 | Flyway 初期マイグレーション（tracking_read_db：tracking_summary/tracking_event/tracking_exception + token/saga、handling_read_db：handling_activity/handling_itinerary_snapshot/claim_verification + token） | 3h | - | [x] 2026-05-28（V1 Axon + V2 投影テーブル。token は Axon の `tokenentry` に統合） |
+| 0.5 | docker-compose・deploy スクリプトの SERVICES・sonarqube.config.json・GitHub Project に新サービスを反映 | 2h | - | [一部対応] 2026-05-28：develop.js / heroku.js SERVICES + DEPLOY_ORDER + smoke、sonar-project.properties に反映（commit 7c3f2b11）。docker-compose.yml と GitHub Project Issue 同期は別途 |
 | 0.6 | trackingms に `NotificationAcl` スタブ（ログ出力）を実装し、通知トリガーイベント（`TrackingInitializedEvent`・`TransportStatusUpdatedEvent`）の配線（US14/US15/US17 受入基準の通知。実メール連携は IT6 以降） | 3h | - | [ ] |
 
 **小計**: 18h（理想時間）

@@ -384,7 +384,7 @@ gantt
 | IT2 | 2026-06-04 〜 2026-06-17 | 10 | 10 | 100% | 完了 |
 | IT3 | 2026-06-18 〜 2026-07-01 | 10 | 10 | 100% | 完了 |
 | IT4 | 2026-07-02 〜 2026-07-15 | 11 | 11 | 100% | 完了 |
-| IT5 | 2026-07-16 〜 2026-07-29 | 10 | - | - | 着手準備完了（2026-05-28：ADR-0011 / shared cross-service events 3 件 / BookingSagaManager 部分対応） |
+| IT5 | 2026-07-16 〜 2026-07-29 | 10 | - | - | 基盤完了（2026-05-28：ADR-0011 / shared events 3 件 / BookingSagaManager 部分対応 / trackingms・handlingms 骨組み + Gateway/Sonar/ops/Dockerfile 周辺整備） |
 | IT6 | 2026-07-30 〜 2026-08-12 | 9 | - | - | 未着手 |
 | IT7 | 2026-08-13 〜 2026-08-26 | 8 | - | - | 未着手 |
 | IT8 | 2026-08-27 〜 2026-09-09 | 8 | - | - | 未着手 |
@@ -420,3 +420,4 @@ xychart-beta
 | 2026-05-21 | 初版作成（take-5 Axon Kafka + Heroku 構成） | k2works |
 | 2026-05-26 | 進捗同期（tracking-progress --update）：IT1-IT4 完了タスク・Release 1.0 MVP リリース条件・実績バーンダウン・進捗状況合計を反映（Phase 1 完了・41/76 SP） | k2works |
 | 2026-05-28 | IT5 着手準備完了：ADR-0011（Kafka tracking エラーハンドリング統一方針）起票、shared cross-service イベント 3 件追加（TrackingIssuanceRequested / HandlingActivityRegistered / CargoTracked）、BookingSagaManager に BookingConfirmedEvent 購読を追加（IT5 タスク 1.1 完了・1.2 部分対応・1.4/3.3 shared 側完了）。Phase 2 開発の前提作業が整い、残るは trackingms / handlingms 新規モジュール追加と本格実装 | k2works |
+| 2026-05-28 | IT5 基盤フェーズ完了：trackingms (port 8084) / handlingms (port 8085) を Spring Boot + Axon Kafka 構成で新設（commit 0f48a866 / 810683cf）、gateway ルート・SonarQube モジュール・ops scripts SERVICES・Dockerfile を整備（commit 7c3f2b11）。タスク 0.1〜0.4 完了・0.5 一部対応。残るは tasks 0.6（NotificationAcl スタブ）と TrackingActivity / HandlingActivity 集約実装 | k2works |
