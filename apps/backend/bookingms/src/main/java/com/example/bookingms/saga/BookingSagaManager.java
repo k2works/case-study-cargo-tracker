@@ -10,6 +10,7 @@ import com.example.shared.events.CargoTrackedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.shared.events.TrackingIssuanceRequestedEvent;
 import org.axonframework.commandhandling.gateway.CommandGateway;
+import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.gateway.EventGateway;
 import org.axonframework.modelling.saga.EndSaga;
 import org.axonframework.modelling.saga.SagaEventHandler;
@@ -45,6 +46,7 @@ import java.util.List;
  * {@code transient} で持ち、状態フィールドは全て Serializable な型に限定する。</p>
  */
 @Saga
+@ProcessingGroup("booking-saga")
 public class BookingSagaManager {
 
     @Autowired

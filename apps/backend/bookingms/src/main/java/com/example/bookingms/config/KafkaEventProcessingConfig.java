@@ -31,4 +31,21 @@ public class KafkaEventProcessingConfig {
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }
+
+    /**
+     * BookingSagaManager の cross-service イベント購読（IT5 1.4）。
+     *
+     * <p>{@code BookingSagaManager} は trackingms が発行する shared モジュールの
+     * {@code CargoTrackedEvent} を {@code @SagaEventHandler} で購読する必要があるため、
+     * Saga 用プロセッサ（{@code booking-saga}、{@code @ProcessingGroup} で明示）も
+     * Kafka tracking モードで購読する。これにより予約確定→採番完了→Saga 終了の
+     * cross-service ライフサイクルが Kafka 経由で一気通貫に動作する。</p>
+     */
+    @Autowired
+    public void configureBookingSagaProcessor(EventProcessingConfigurer config) {
+        config.registerTrackingEventProcessor(
+                "booking-saga",
+                configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
+        );
+    }
 }
