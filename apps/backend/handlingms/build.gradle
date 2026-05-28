@@ -1,0 +1,56 @@
+/*
+ * handlingms（荷役サービス）
+ *
+ * 港湾での荷役作業（受領・積込・荷降し・引取・税関通過）の記録を担う。
+ * Axon Framework 5 + Axon Kafka Extension による CQRS + Event Sourcing 構成。
+ * IT5（US15・US16）で新設し、bookingms の CargoBookedEvent / CargoRoutedEvent を
+ * CargoSnapshot ACL として購読し、HandlingActivityRegisteredEvent を trackingms に発行する。
+ */
+
+plugins {
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+dependencies {
+    implementation project(':shared')
+
+    // Spring Boot
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.actuator
+    implementation libs.spring.boot.starter.validation
+    implementation libs.spring.boot.starter.jdbc
+
+    // Axon Framework 5
+    implementation libs.axon.spring.boot.starter
+    implementation libs.axon.kafka.spring.boot.starter
+
+    // データアクセス
+    implementation libs.mybatis.spring.boot.starter
+    implementation libs.flyway.core
+    implementation libs.flyway.database.postgresql
+    runtimeOnly libs.postgresql
+    runtimeOnly libs.h2
+
+    // 開発時のみ
+    developmentOnly libs.spring.boot.devtools
+
+    // テスト
+    testImplementation libs.axon.test
+    testImplementation libs.mybatis.spring.boot.starter.test
+    testImplementation libs.testcontainers.junit.jupiter
+    testImplementation libs.testcontainers.postgresql
+    testImplementation libs.testcontainers.kafka
+}
+
+test {
+    useJUnitPlatform()
+    // Docker Desktop 29.x（MinAPI 1.40）では Testcontainers の docker-java が既定で
+    // 古い API バージョンを使い HTTP 400 になるため、サポート範囲内の API バージョンを明示する。
+    systemProperty 'api.version', '1.43'
+    environment 'DOCKER_API_VERSION', '1.43'
+}
+
+bootJar {
+    archiveBaseName = 'handlingms'
+}

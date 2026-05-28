@@ -1,0 +1,28 @@
+# handlingms 共通設定
+spring:
+  application:
+    name: handlingms
+  profiles:
+    active: local-h2
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8085
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Axon 共通設定（プロファイル別に上書き）
+axon:
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
