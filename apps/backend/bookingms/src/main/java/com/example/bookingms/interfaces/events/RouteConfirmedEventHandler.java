@@ -26,6 +26,13 @@ import java.util.List;
  * プロセッサ（event store source）から分離し、Kafka（cargo-events）の StreamableKafkaMessageSource を
  * source とする tracking プロセッサに割り当てる（{@code KafkaEventProcessingConfig}）。tracking 再処理・
  * 重複配信に備え、既に経路提案中で割当不可の場合は冪等にスキップする。</p>
+ *
+ * <p><b>例外ハンドリング方針（ホワイトリスト）</b>: 冪等スキップする例外は
+ * {@link AggregateNotFoundException} と {@link CommandExecutionException} の 2 種のみ。
+ * それ以外の例外は握り潰さず伝播させ、tracking プロセッサのエラーハンドラ（再試行・可視化）に委ねる。
+ * catch 範囲を不用意に広げると、真の基盤障害が黙ってスキップされ可視性を失うため、
+ * 新たに冪等スキップを許容したい例外型が現れた場合は本クラスの Javadoc と
+ * {@code RouteConfirmedEventHandlerTest} のネガティブテスト（ADR-0010）も同時に更新すること。</p>
  */
 @Component
 @ProcessingGroup("route-confirmed")
