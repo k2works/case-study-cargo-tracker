@@ -653,6 +653,7 @@ apps/frontend/src/features/handling/pages/           # S20 荷役作業記録・
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-05-26 | 初版作成（IT5 Phase 2 開始・trackingms/handlingms 新設・IT4 実績ベロシティ 11 SP を反映） | k2works |
+| 2026-05-28 | 着手準備完了：ADR-0011（Kafka tracking エラーハンドリング統一方針）への参照を §ADR / §リスク / §設計トピック / §関連に追加。タスク 1.1 完了（shared cross-service events 3 件追加）、1.2 部分対応（BookingSagaManager に @SagaEventHandler(BookingConfirmedEvent) + テスト 2 件）、1.4 / 3.3 に shared 側完了のトレーサビリティ。残作業は trackingms / handlingms 新規モジュール追加と cross-service publish の本格実装 | k2works |
 
 ---
 
