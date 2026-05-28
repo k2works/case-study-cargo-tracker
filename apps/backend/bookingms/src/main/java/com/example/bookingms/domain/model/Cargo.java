@@ -1,6 +1,7 @@
 package com.example.bookingms.domain.model;
 
 import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
+import com.example.bookingms.domain.commands.AssignTrackingDetailsCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
@@ -10,6 +11,7 @@ import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.bookingms.domain.events.CargoTrackingAssignedEvent;
 import com.example.bookingms.domain.events.RouteNotifiedToShipperEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import org.axonframework.commandhandling.CommandHandler;
@@ -41,6 +43,8 @@ public class Cargo {
     private RoutingStatus routingStatus;
     private RouteSpecification routeSpec;
     private CargoType cargoType;
+    @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持するフィールド
+    private String trackingNumber;
 
     protected Cargo() {
         // Axon required no-arg constructor
@@ -257,6 +261,23 @@ public class Cargo {
     }
 
     /**
+     * 追跡情報割当（US14 / IT5 1.4）。予約確定（CONFIRMED）のときのみ TRACKING_ISSUED へ遷移する。
+     *
+     * <p>{@code BookingSagaManager} が trackingms から
+     * {@code com.example.shared.events.CargoTrackedEvent}（採番完了通知）を受信した直後に発行する。
+     * 採番された追跡番号を集約状態に保持し、{@link CargoTrackingAssignedEvent} で投影更新トリガーとなる。</p>
+     */
+    @CommandHandler
+    public void handle(AssignTrackingDetailsCommand command) {
+        if (this.bookingStatus != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException(
+                    "追跡情報を割当できるのは予約確定（CONFIRMED）の予約のみです: 現状態=" + this.bookingStatus);
+        }
+        AggregateLifecycle.apply(new CargoTrackingAssignedEvent(
+                this.bookingId, command.trackingNumber(), BookingStatus.TRACKING_ISSUED.name()));
+    }
+
+    /**
      * 予約キャンセル（US13）。確定済み・キャンセル済み以外であればキャンセルできる。
      */
     @CommandHandler
@@ -269,6 +290,12 @@ public class Cargo {
 
     @EventSourcingHandler
     public void on(BookingConfirmedEvent event) {
+        this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
+    }
+
+    @EventSourcingHandler
+    public void on(CargoTrackingAssignedEvent event) {
+        this.trackingNumber = event.trackingNumber();
         this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
     }
 

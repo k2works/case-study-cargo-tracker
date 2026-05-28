@@ -1,5 +1,6 @@
 package com.example.bookingms.saga;
 
+import com.example.bookingms.domain.commands.AssignTrackingDetailsCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
@@ -8,6 +9,7 @@ import com.example.bookingms.domain.model.Leg;
 import com.example.shared.events.CargoTrackedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.shared.events.TrackingIssuanceRequestedEvent;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.eventhandling.gateway.EventGateway;
 import org.axonframework.modelling.saga.EndSaga;
 import org.axonframework.modelling.saga.SagaEventHandler;
@@ -47,6 +49,9 @@ public class BookingSagaManager {
 
     @Autowired
     private transient EventGateway eventGateway;
+
+    @Autowired
+    private transient CommandGateway commandGateway;
 
     @SuppressWarnings("unused") // Saga 状態として bookingId を保持する（関連付けの記録）
     private String bookingId;
@@ -109,10 +114,10 @@ public class BookingSagaManager {
     @EndSaga
     @SagaEventHandler(associationProperty = "bookingId")
     public void on(CargoTrackedEvent event) {
-        // trackingms から採番完了通知を受信。予約 Saga を終了する（IT5 1.4）。
-        // 予約状態の TRACKING_ISSUED への更新（Cargo 集約の状態遷移）は後続コミットで
-        // AssignTrackingDetailsCommand 等の発行を Saga 内に追加する。
+        // trackingms から採番完了通知を受信。Cargo 集約に追跡情報を割り当てて
+        // 予約状態を CONFIRMED → TRACKING_ISSUED に遷移し、Saga を終了する（IT5 1.4）。
         this.bookingId = event.bookingId();
+        commandGateway.send(new AssignTrackingDetailsCommand(event.bookingId(), event.trackingNumber()));
     }
 
     @EndSaga

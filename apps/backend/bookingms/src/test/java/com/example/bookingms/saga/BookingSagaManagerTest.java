@@ -1,5 +1,6 @@
 package com.example.bookingms.saga;
 
+import com.example.bookingms.domain.commands.AssignTrackingDetailsCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
@@ -123,12 +124,16 @@ class BookingSagaManagerTest {
     }
 
     @Test
-    @DisplayName("US14 / IT5 1.4: CargoTrackedEvent（採番完了）で Saga が終了する（@EndSaga）")
-    void 採番完了でSagaが終了する() {
-        // trackingms から CargoTrackedEvent を Kafka 経由で受信すると Saga を終了する。
-        // 予約確定→追跡発行依頼→trackingms 採番→bookingms 完了通知 のサイクルが完結する。
+    @DisplayName("US14 / IT5 1.4: CargoTrackedEvent（採番完了）で AssignTrackingDetailsCommand を送信し Saga が終了する")
+    void 採番完了で追跡情報割当コマンドを送信しSagaが終了する() {
+        // trackingms から CargoTrackedEvent を Kafka 経由で受信すると、Cargo 集約に
+        // AssignTrackingDetailsCommand を送信して予約状態を TRACKING_ISSUED に遷移させ、
+        // @EndSaga で Saga を終了する。予約確定→追跡発行依頼→trackingms 採番→
+        // bookingms 完了通知→Cargo 状態更新 のサイクルが完結する。
         fixture.givenAPublished(bookedEvent("B-001"))
                 .whenPublishingA(new CargoTrackedEvent("B-001", "TRK-AB12CD3456"))
-                .expectActiveSagas(0);
+                .expectActiveSagas(0)
+                .expectDispatchedCommands(
+                        new AssignTrackingDetailsCommand("B-001", "TRK-AB12CD3456"));
     }
 }

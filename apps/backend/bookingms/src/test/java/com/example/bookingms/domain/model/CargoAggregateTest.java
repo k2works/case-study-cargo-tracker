@@ -1,6 +1,7 @@
 package com.example.bookingms.domain.model;
 
 import com.example.bookingms.domain.commands.AssignRouteToCargoCommand;
+import com.example.bookingms.domain.commands.AssignTrackingDetailsCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
@@ -10,6 +11,7 @@ import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.bookingms.domain.events.CargoTrackingAssignedEvent;
 import com.example.bookingms.domain.events.RouteNotifiedToShipperEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import org.axonframework.test.aggregate.AggregateTestFixture;
@@ -370,6 +372,35 @@ class CargoAggregateTest {
     void 確定済みの予約はキャンセルできない() {
         fixture.given(bookedEvent("B-304"), new BookingConfirmedEvent("B-304", "CONFIRMED"))
                 .when(new CancelBookingCommand("B-304"))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US14 / IT5 1.4: 予約確定（CONFIRMED）に追跡情報を割当できる")
+    void 予約確定後に追跡情報を割当できる() {
+        fixture.given(bookedEvent("B-501"), new BookingConfirmedEvent("B-501", "CONFIRMED"))
+                .when(new AssignTrackingDetailsCommand("B-501", "TRK-AB12CD3456"))
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new CargoTrackingAssignedEvent(
+                        "B-501", "TRK-AB12CD3456", "TRACKING_ISSUED"));
+    }
+
+    @Test
+    @DisplayName("US14 / IT5 1.4: 予約確定前は追跡情報を割当できない（仮受付状態）")
+    void 予約確定前は追跡情報を割当できない() {
+        fixture.given(bookedEvent("B-502"))
+                .when(new AssignTrackingDetailsCommand("B-502", "TRK-AB12CD3456"))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US14 / IT5 1.4: 追跡情報割当後の二重割当は拒否（TRACKING_ISSUED 以降）")
+    void 追跡情報割当後の二重割当は拒否() {
+        fixture.given(
+                        bookedEvent("B-503"),
+                        new BookingConfirmedEvent("B-503", "CONFIRMED"),
+                        new CargoTrackingAssignedEvent("B-503", "TRK-EXISTING01", "TRACKING_ISSUED"))
+                .when(new AssignTrackingDetailsCommand("B-503", "TRK-ANOTHER999"))
                 .expectException(IllegalStateException.class);
     }
 
