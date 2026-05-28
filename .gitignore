@@ -40,6 +40,10 @@ coverage/
 .claude/agent-memory/*/*
 !.claude/agent-memory/*/.gitkeep
 
+# Ralph Loop の local 状態と cwd 副産物（共有しない）
+.claude/ralph-loop.local.md
+apps/backend/.claude/
+
 # Temporary
 tmp/
 .tmp/
