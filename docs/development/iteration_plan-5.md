@@ -242,7 +242,7 @@ gantt
 
 - **新サービス 2 つ**: trackingms（`TrackingActivity` 集約・中核ドメイン）と handlingms（`HandlingActivity` 集約・補完）を Database per Service で新設する。IT1 のサービス雛形と新サービス追加チェックリストに準拠。
 - **予約 → 追跡の Saga 延伸（ADR-0009）**: `BookingSagaManager` を `BookingConfirmedEvent` → `TrackingIssuanceRequestedEvent`（shared）→ trackingms `InitializeTrackingCommand` まで延伸。追跡番号採番後、`CargoTrackedEvent`（bookingms ローカル）で予約状態を TRACKING_ISSUED にして `@EndSaga`。
-- **荷役 → 追跡の cross-service**: handlingms の `HandlingActivityRegisteredEvent` を trackingms が tracking 購読し、`UpdateTransportStatusCommand` を発行（IT4 の routingms → bookingms と同方式）。受信側は冪等・孤児イベント耐性（ADR-0010、`AggregateNotFoundException` / 状態ガード違反を WARN スキップ）。
+- **荷役 → 追跡の cross-service**: handlingms の `HandlingActivityRegisteredEvent` を trackingms が tracking 購読し、`UpdateTransportStatusCommand` を発行（IT4 の routingms → bookingms と同方式）。受信側は冪等・孤児イベント耐性（ADR-0010）+ ホワイトリスト方式（ADR-0011：`AggregateNotFoundException` / `CommandExecutionException` のみ WARN スキップ、それ以外は伝播）。Positive/Negative ペアテストで catch 範囲の退行を構造的に検知する。
 - **Handling → Booking の ACL 隔離**: handlingms は bookingms の `Cargo` に直接依存せず、`CargoSnapshot` ACL（`CargoBookedEvent`/`CargoRoutedEvent` 購読）で必要最小情報のみ保持（domain-model H5）。
 - **追跡番号の所有**: trackingms が `InitializeTracking` 時に `TRK-` + 大文字英数 10 桁で採番（推測困難）。bookingms へはイベントで反映（cargo_summary.tracking_number は UNIQUE）。採番責務の所在は 1.3/1.4 で確定する。
 - **通知の扱い（NotificationAcl、US14/US15/US17 受入基準の「荷主への通知」）**: 荷主への通知（メール）は user_story.md の US14/US15/US17 で受入基準に含まれるが、実メール送信基盤は本 IT の中核（追跡基盤の立ち上げ）とは別関心で範囲が大きい。本 IT では **通知トリガーとなるドメインイベント（`TrackingInitializedEvent`・`TransportStatusUpdatedEvent` 等）の発行と `NotificationAcl` のスタブ（ログ出力）まで**を範囲とし、**実メール連携は IT6（US18 追跡照会）以降で外部連携 ADR とともに実装**する。受入基準のうち「通知が送信される」はスタブ呼び出しの検証で満たす（対応方針：保留＝段階実装）。
@@ -611,6 +611,7 @@ apps/frontend/src/features/handling/pages/           # S20 荷役作業記録・
 |-----|---------|-----------|
 | [ADR-0009](../adr/0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga | 承認済み（US14 の Saga 延伸・US15 の handling→tracking に適用） |
 | [ADR-0010](../adr/0010-local-h2-kafka-topic-initialization.md) | トピック初期化・孤児イベント冪等スキップ | 承認済み（新規 cross-service 購読側に適用） |
+| [ADR-0011](../adr/0011-kafka-tracking-error-handling-policy.md) | Kafka tracking エラーハンドリング統一方針（ホワイトリスト方式の継続と伝播先処理の標準化） | 承認済み（trackingms / handlingms の全 cross-service ハンドラに適用。Positive/Negative テスト必須） |
 
 > 追跡照会の時限署名トークン（JWT）の ADR（data-model.md が参照する ADR-0013 相当）は US18（IT6）着手時に整備を検討する。
 
@@ -621,7 +622,7 @@ apps/frontend/src/features/handling/pages/           # S20 荷役作業記録・
 | リスク | 影響度 | 対策 |
 |--------|--------|------|
 | 新サービス 2 つの立ち上げ（基盤 15h）で velocity を超過 | 高 | 基盤を Day1-3 に前倒し。超過時は **US16（引取・2SP）を IT6 へ送る**（US14/US17/US15 で追跡の主導線は成立）。handlingms を US15/US16 ごと IT6 へ分割する案も保持 |
-| cross-service の多段化（bookingms→trackingms←handlingms）で順序不整合・孤児イベント | 中 | ADR-0010 の冪等・孤児スキップを新規購読側にも適用。Testcontainers Kafka で順序・冪等を検証 |
+| cross-service の多段化（bookingms→trackingms←handlingms）で順序不整合・孤児イベント | 中 | ADR-0010 の冪等・孤児スキップ + ADR-0011 のホワイトリスト方式を新規購読側にも適用。Positive/Negative ペアテストで catch 範囲の退行を構造的に検知。Testcontainers Kafka で順序・冪等を検証 |
 | 追跡番号採番の所有（trackingms か bookingms か）が曖昧 | 中 | 1.3/1.4 で trackingms 採番 + イベント反映に確定。data-model の UNIQUE 制約で二重採番を防止 |
 | TransportStatus 9 値の遷移表の取りこぼし | 中 | `TransportStatusTransition` を表駆動で実装し、許可/拒否の境界を網羅テスト（retro の境界値テスト方針を継続） |
 
@@ -661,5 +662,6 @@ apps/frontend/src/features/handling/pages/           # S20 荷役作業記録・
 - [IT4 完了報告書](./iteration_report-4.md)・[IT4 ふりかえり](./retrospective-4.md)
 - [ADR-0009 cross-service イベント連携と Axon Saga](../adr/0009-cross-service-event-saga.md)
 - [ADR-0010 トピック初期化・孤児イベント冪等スキップ](../adr/0010-local-h2-kafka-topic-initialization.md)
+- [ADR-0011 Kafka tracking エラーハンドリング統一方針](../adr/0011-kafka-tracking-error-handling-policy.md)
 - [ドメインモデル設計](../design/domain-model.md)（Tracking / Handling Context）
 - [新サービス追加チェックリスト](../reference/新サービス追加チェックリスト.md)

@@ -68,6 +68,7 @@
 | [ADR-0008](./adr/0008-pagination-strategy.md) | 一覧 API にページネーション (Offset/Limit + PageResponse) を採用 |
 | [ADR-0009](./adr/0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga を採用（Kafka tracking モード、提案中） |
 | [ADR-0010](./adr/0010-local-h2-kafka-topic-initialization.md) | `local-h2` のインメモリ event store と Kafka トピックを整合させる（トピック初期化と冪等な孤児イベント処理） |
+| [ADR-0011](./adr/0011-kafka-tracking-error-handling-policy.md) | Kafka tracking プロセッサのエラーハンドリング統一方針（ホワイトリスト方式の継続と伝播先処理の標準化） |
 
 ### 運用ドキュメント
 
