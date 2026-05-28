@@ -4,6 +4,7 @@ import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.bookingms.domain.events.CargoTrackingAssignedEvent;
 import com.example.bookingms.domain.events.RouteNotifiedToShipperEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.bookingms.domain.model.HazardInfo;
@@ -100,5 +101,13 @@ public class CargoProjectionsEventHandler {
     @EventHandler
     public void on(RouteNotifiedToShipperEvent event) {
         cargoSummaryMapper.updateRouteNotifiedAt(event.bookingId());
+    }
+
+    @EventHandler
+    public void on(CargoTrackingAssignedEvent event) {
+        // US14 / IT5 1.4: trackingms 採番完了 → AssignTrackingDetailsCommand → 本イベント。
+        // tracking_number と booking_status（TRACKING_ISSUED）を 1 SQL で同時更新する。
+        cargoSummaryMapper.updateTrackingAssignment(
+                event.bookingId(), event.trackingNumber(), event.bookingStatus());
     }
 }

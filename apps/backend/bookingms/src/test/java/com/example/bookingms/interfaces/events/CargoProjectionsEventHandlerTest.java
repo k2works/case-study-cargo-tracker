@@ -215,4 +215,14 @@ class CargoProjectionsEventHandlerTest {
 
         verify(cargoSummaryMapper).updateRouteNotifiedAt("B-601");
     }
+
+    @Test
+    @DisplayName("US14 / IT5 1.4: CargoTrackingAssignedEvent で tracking_number と booking_status を同時更新")
+    void US14_追跡情報割当イベントで投影が更新される() {
+        handler.on(new com.example.bookingms.domain.events.CargoTrackingAssignedEvent(
+                "B-701", "TRK-AB12CD3456", "TRACKING_ISSUED"));
+
+        verify(cargoSummaryMapper).updateTrackingAssignment(
+                "B-701", "TRK-AB12CD3456", "TRACKING_ISSUED");
+    }
 }

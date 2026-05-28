@@ -52,4 +52,12 @@ public interface CargoSummaryMapper {
                        @Param("routingStatus") String routingStatus);
 
     void updateRouteNotifiedAt(@Param("bookingId") String bookingId);
+
+    /**
+     * 追跡情報割当時の更新（US14 / IT5 1.4）。
+     * tracking_number と booking_status（TRACKING_ISSUED）を 1 SQL で同時更新する。
+     */
+    void updateTrackingAssignment(@Param("bookingId") String bookingId,
+                                  @Param("trackingNumber") String trackingNumber,
+                                  @Param("bookingStatus") String bookingStatus);
 }

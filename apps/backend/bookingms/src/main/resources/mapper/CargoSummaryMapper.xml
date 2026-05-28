@@ -93,4 +93,13 @@
         WHERE booking_id = #{bookingId}
     </update>
 
+    <update id="updateTrackingAssignment">
+        UPDATE cargo_summary
+        SET tracking_number = #{trackingNumber},
+            booking_status = #{bookingStatus},
+            updated_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE booking_id = #{bookingId}
+    </update>
+
 </mapper>
