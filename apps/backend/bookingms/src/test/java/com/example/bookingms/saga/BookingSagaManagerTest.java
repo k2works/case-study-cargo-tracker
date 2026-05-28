@@ -5,11 +5,13 @@ import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
+import com.example.shared.events.TrackingIssuanceRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RouteSpecification;
+import org.axonframework.eventhandling.gateway.EventGateway;
 import org.axonframework.test.saga.SagaTestFixture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,13 +22,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
 class BookingSagaManagerTest {
 
     private SagaTestFixture<BookingSagaManager> fixture;
+    private EventGateway eventGateway;
 
     @BeforeEach
     void setUp() {
         fixture = new SagaTestFixture<>(BookingSagaManager.class);
+        eventGateway = mock(EventGateway.class);
+        fixture.registerResource(eventGateway);
     }
 
     private CargoBookedEvent bookedEvent(String bookingId) {
@@ -75,19 +84,30 @@ class BookingSagaManagerTest {
     }
 
     @Test
-    @DisplayName("US14 / IT5 1.2: 予約確定イベントでも Saga は継続する（追跡番号発行待ち）")
-    void 予約確定でSagaが継続する() {
-        // 予約確定（CONFIRMED）後は trackingms への追跡発行依頼フェーズへ移行する。
-        // 本テストは Saga が BookingConfirmedEvent を握り潰さず購読することのみを担保する
-        // （cross-service publish: TrackingIssuanceRequestedEvent 発行は IT5 1.2 後続で追加）。
+    @DisplayName("US14 / IT5 1.2: 予約確定で TrackingIssuanceRequestedEvent が cross-service publish される")
+    void 予約確定で追跡発行依頼イベントが発行される() {
+        // 予約確定（CONFIRMED）後、Saga が RouteDesignRequestedEvent と CargoRoutedEvent から
+        // 集約した属性（出発地・目的地・到着期限・貨物種別・確定旅程）を使って
+        // shared モジュールの TrackingIssuanceRequestedEvent を EventGateway 経由で publish する。
+        // 受信側 trackingms は InitializeTrackingCommand を発行して TrackingActivity を
+        // NOT_RECEIVED 初期化・採番する（IT5 1.3）。
+        LocalDate deadline = LocalDate.of(2026, 9, 30);
+        LocalDateTime loadTime = LocalDateTime.of(2026, 7, 3, 9, 0);
+        LocalDateTime unloadTime = LocalDateTime.of(2026, 7, 28, 18, 0);
+
         fixture.givenAPublished(bookedEvent("B-001"))
                 .andThenAPublished(new RouteDesignRequestedEvent(
-                        "B-001", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"))
+                        "B-001", "ROUTING", "JPTYO", "USNYC", deadline, "GENERAL"))
                 .andThenAPublished(new CargoRoutedEvent("B-001", "ROUTE_PROPOSED", "ROUTED", List.of(
-                        new Leg("V-100", "JPTYO", "USNYC",
-                                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0)))))
+                        new Leg("V-100", "JPTYO", "USNYC", loadTime, unloadTime))))
                 .whenPublishingA(new BookingConfirmedEvent("B-001", "CONFIRMED"))
                 .expectActiveSagas(1);
+
+        verify(eventGateway).publish(eq(new TrackingIssuanceRequestedEvent(
+                "B-001", "JPTYO", "USNYC", deadline, "GENERAL",
+                List.of(new TrackingIssuanceRequestedEvent.LegData(
+                        "V-100", "JPTYO", "USNYC", loadTime, unloadTime))
+        )));
     }
 
     @Test
