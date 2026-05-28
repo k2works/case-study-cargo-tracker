@@ -16,17 +16,19 @@ const JAVA_TOOL_OPTIONS =
   '-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m ' +
   '-XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo';
 
-/** 稼働中のサービス定義（IT2 で bookingms を追加） */
+/** 稼働中のサービス定義（IT2 で bookingms 追加、IT5 で trackingms / handlingms 追加） */
 const SERVICES = [
-  { name: `${PREFIX}-authms`,    service: 'authms',    port: 8081, type: 'backend' },
-  { name: `${PREFIX}-bookingms`, service: 'bookingms', port: 8082, type: 'backend' },
-  { name: `${PREFIX}-routingms`, service: 'routingms', port: 8083, type: 'backend' },
-  { name: `${PREFIX}-gatewayms`, service: 'gatewayms', port: 8080, type: 'backend' },
-  { name: `${PREFIX}-frontend`,  service: 'frontend',  port: 80,   type: 'frontend' },
+  { name: `${PREFIX}-authms`,     service: 'authms',     port: 8081, type: 'backend' },
+  { name: `${PREFIX}-bookingms`,  service: 'bookingms',  port: 8082, type: 'backend' },
+  { name: `${PREFIX}-routingms`,  service: 'routingms',  port: 8083, type: 'backend' },
+  { name: `${PREFIX}-trackingms`, service: 'trackingms', port: 8084, type: 'backend' },
+  { name: `${PREFIX}-handlingms`, service: 'handlingms', port: 8085, type: 'backend' },
+  { name: `${PREFIX}-gatewayms`,  service: 'gatewayms',  port: 8080, type: 'backend' },
+  { name: `${PREFIX}-frontend`,   service: 'frontend',   port: 80,   type: 'frontend' },
 ];
 
-/** デプロイ順（依存関係を考慮: 業務サービス先行 → gatewayms → frontend） */
-const DEPLOY_ORDER = ['authms', 'bookingms', 'routingms', 'gatewayms', 'frontend'];
+/** デプロイ順（依存関係を考慮: 業務サービス先行 → trackingms / handlingms → gatewayms → frontend） */
+const DEPLOY_ORDER = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'gatewayms', 'frontend'];
 
 // ============================================
 // ヘルパー

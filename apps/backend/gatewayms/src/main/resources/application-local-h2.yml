@@ -15,6 +15,14 @@ spring:
           uri: http://localhost:8083
           predicates:
             - Path=/api/v1/voyages/**, /api/v1/routes/**
+        - id: trackingms
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/tracking/**
+        - id: handlingms
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/v1/handling/**
 
 logging:
   level:

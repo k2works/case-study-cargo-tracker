@@ -61,10 +61,12 @@ const ENV_FILE = path.join(ROOT, '.env');
 
 /** バックエンドサービス定義 */
 const SERVICES = [
-  { name: 'authms',    port: 8081, label: '認証サービス' },
-  { name: 'bookingms', port: 8082, label: '予約サービス' },
-  { name: 'routingms', port: 8083, label: '経路設計サービス' },
-  { name: 'gatewayms', port: 8080, label: 'API Gateway' },
+  { name: 'authms',     port: 8081, label: '認証サービス' },
+  { name: 'bookingms',  port: 8082, label: '予約サービス' },
+  { name: 'routingms',  port: 8083, label: '経路設計サービス' },
+  { name: 'trackingms', port: 8084, label: '追跡サービス' },
+  { name: 'handlingms', port: 8085, label: '荷役サービス' },
+  { name: 'gatewayms',  port: 8080, label: 'API Gateway' },
 ];
 
 /** Docker Compose サービス名 */
@@ -291,7 +293,9 @@ export default function(gulp) {
 
   /**
    * 全バックエンドサービスを local-docker プロファイルで並列起動
-   * 起動順: authms → routingms → gatewayms（依存関係に配慮して 3 秒間隔）
+   * 起動順: authms → bookingms → routingms → trackingms → handlingms → gatewayms
+   * （依存関係に配慮して 3 秒間隔。trackingms / handlingms は cross-service 購読のため
+   * 発行元 bookingms / routingms の後に起動する）
    */
   gulp.task('dev:backend:start:docker', (done) => {
     if (!isDockerAvailable()) {
@@ -300,7 +304,7 @@ export default function(gulp) {
     }
 
     const profile = 'local-docker';
-    const startOrder = ['authms', 'routingms', 'gatewayms'];
+    const startOrder = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'gatewayms'];
     const delay = 3000;
 
     console.log('[dev:backend:start:docker] local-docker プロファイルでバックエンドサービスを起動します...');
@@ -380,14 +384,17 @@ export default function(gulp) {
   });
 
   /**
-   * authms / bookingms / routingms / gatewayms の health エンドポイント疎通確認
+   * authms / bookingms / routingms / trackingms / handlingms / gatewayms の
+   * health エンドポイント疎通確認
    */
   gulp.task('local-docker:smoke', (done) => {
     const targets = [
-      { name: 'authms',    url: 'http://localhost:8081/actuator/health' },
-      { name: 'bookingms', url: 'http://localhost:8082/actuator/health' },
-      { name: 'routingms', url: 'http://localhost:8083/actuator/health' },
-      { name: 'gatewayms', url: 'http://localhost:8080/actuator/health' },
+      { name: 'authms',     url: 'http://localhost:8081/actuator/health' },
+      { name: 'bookingms',  url: 'http://localhost:8082/actuator/health' },
+      { name: 'routingms',  url: 'http://localhost:8083/actuator/health' },
+      { name: 'trackingms', url: 'http://localhost:8084/actuator/health' },
+      { name: 'handlingms', url: 'http://localhost:8085/actuator/health' },
+      { name: 'gatewayms',  url: 'http://localhost:8080/actuator/health' },
     ];
     runSmoke(targets, done);
   });

@@ -15,6 +15,14 @@ spring:
           uri: ${ROUTINGMS_URL}
           predicates:
             - Path=/api/v1/voyages/**, /api/v1/routes/**
+        - id: trackingms
+          uri: ${TRACKINGMS_URL}
+          predicates:
+            - Path=/api/v1/tracking/**
+        - id: handlingms
+          uri: ${HANDLINGMS_URL}
+          predicates:
+            - Path=/api/v1/handling/**
 
 server:
   port: ${PORT:8080}

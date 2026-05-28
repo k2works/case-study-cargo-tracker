@@ -1,8 +1,10 @@
-# gatewayms コンテナイメージ
+# trackingms コンテナイメージ
 #
 # マルチステージビルド:
 #   1. builder: Gradle で bootJar を生成
 #   2. runtime: Eclipse Temurin JRE 21 で軽量実行
+#
+# 非 root ユーザーで起動し、最小権限の原則に従う。
 
 # ===== Stage 1: builder =====
 FROM gradle:8.14-jdk21 AS builder
@@ -20,12 +22,12 @@ COPY trackingms/build.gradle trackingms/build.gradle
 COPY handlingms/build.gradle handlingms/build.gradle
 
 RUN sed -i 's/java = "25"/java = "21"/' gradle/libs.versions.toml && \
-    gradle :gatewayms:dependencies --no-daemon || true
+    gradle :trackingms:dependencies --no-daemon || true
 
 COPY shared/src/ shared/src/
-COPY gatewayms/src/ gatewayms/src/
-RUN gradle :gatewayms:bootJar --no-daemon -x test && \
-    find gatewayms/build/libs/ -name "gatewayms*.jar" ! -name "*plain*" -exec cp {} gatewayms/build/libs/gatewayms.jar \;
+COPY trackingms/src/ trackingms/src/
+RUN gradle :trackingms:bootJar --no-daemon -x test && \
+    find trackingms/build/libs/ -name "trackingms*.jar" ! -name "*plain*" -exec cp {} trackingms/build/libs/trackingms.jar \;
 
 # ===== Stage 2: runtime =====
 FROM eclipse-temurin:21-jre
@@ -35,13 +37,13 @@ RUN groupadd --system --gid 10001 cargo \
 
 WORKDIR /app
 
-COPY --from=builder /workspace/gatewayms/build/libs/gatewayms.jar /app/gatewayms.jar
+COPY --from=builder /workspace/trackingms/build/libs/trackingms.jar /app/trackingms.jar
 
 USER cargo
 
-EXPOSE 8080
+EXPOSE 8084
 
-ENTRYPOINT ["java", "-jar", "/app/gatewayms.jar"]
+ENTRYPOINT ["java", "-jar", "/app/trackingms.jar"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
-    CMD wget --spider -q http://localhost:${PORT:-8080}/actuator/health || exit 1
+    CMD wget --spider -q http://localhost:${PORT:-8084}/actuator/health || exit 1

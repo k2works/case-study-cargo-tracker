@@ -15,6 +15,9 @@ COPY shared/build.gradle shared/build.gradle
 COPY authms/build.gradle authms/build.gradle
 COPY routingms/build.gradle routingms/build.gradle
 COPY gatewayms/build.gradle gatewayms/build.gradle
+COPY bookingms/build.gradle bookingms/build.gradle
+COPY trackingms/build.gradle trackingms/build.gradle
+COPY handlingms/build.gradle handlingms/build.gradle
 
 RUN sed -i 's/java = "25"/java = "21"/' gradle/libs.versions.toml && \
     gradle :routingms:dependencies --no-daemon || true
