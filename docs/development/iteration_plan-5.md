@@ -126,7 +126,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | shared: `TrackingIssuanceRequestedEvent`（bookingms → trackingms）を定義 | 2h | - | [ ] |
+| 1.1 | shared: `TrackingIssuanceRequestedEvent`（bookingms → trackingms）を定義 | 2h | - | [x]（2026-05-28：併せて `CargoTrackedEvent`・`HandlingActivityRegisteredEvent` も shared に先行追加。`gradle check` 全モジュール PASS。Saga 延伸（1.2）と Read Model 投影（1.4）は後続） |
 | 1.2 | bookingms: `BookingSagaManager` を `BookingConfirmedEvent` → `TrackingIssuanceRequestedEvent` 発行まで延伸（ADR-0009、SagaTestFixture） | 4h | - | [ ] |
 | 1.3 | trackingms: `TrackingActivity` 集約 + `InitializeTrackingCommand` → `TrackingInitializedEvent`、`TrackingNumber` 採番（TRK- + 10 桁） | 4h | - | [ ] |
 | 1.4 | trackingms → bookingms: 採番結果を `CargoTrackedEvent` で反映し予約状態を TRACKING_ISSUED に（Saga 終了）+ Read Model 投影 | 4h | - | [ ] |
