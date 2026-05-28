@@ -1,6 +1,7 @@
 package com.example.bookingms.saga;
 
 import com.example.bookingms.domain.events.BookingCancelledEvent;
+import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
@@ -71,5 +72,32 @@ class BookingSagaManagerTest {
                         new Leg("V-100", "JPTYO", "USNYC",
                                 LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0)))))
                 .expectActiveSagas(1);
+    }
+
+    @Test
+    @DisplayName("US14 / IT5 1.2: 予約確定イベントでも Saga は継続する（追跡番号発行待ち）")
+    void 予約確定でSagaが継続する() {
+        // 予約確定（CONFIRMED）後は trackingms への追跡発行依頼フェーズへ移行する。
+        // 本テストは Saga が BookingConfirmedEvent を握り潰さず購読することのみを担保する
+        // （cross-service publish: TrackingIssuanceRequestedEvent 発行は IT5 1.2 後続で追加）。
+        fixture.givenAPublished(bookedEvent("B-001"))
+                .andThenAPublished(new RouteDesignRequestedEvent(
+                        "B-001", "ROUTING", "JPTYO", "USNYC", LocalDate.of(2026, 9, 30), "GENERAL"))
+                .andThenAPublished(new CargoRoutedEvent("B-001", "ROUTE_PROPOSED", "ROUTED", List.of(
+                        new Leg("V-100", "JPTYO", "USNYC",
+                                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 28, 18, 0)))))
+                .whenPublishingA(new BookingConfirmedEvent("B-001", "CONFIRMED"))
+                .expectActiveSagas(1);
+    }
+
+    @Test
+    @DisplayName("US14 / IT5 1.2: 別 bookingId の予約確定では Saga は新規開始しない（association 境界）")
+    void 別IDの予約確定では新規Sagaが開始しない() {
+        // BookingConfirmedEvent は @StartSaga ではないため、未開始の bookingId に対して
+        // 単独で publish しても Saga は活性化しない。association が正しく "bookingId" に紐づき、
+        // 別 ID で誤って新規 Saga が起動しないことを担保する（CargoBookedEvent のみが @StartSaga）。
+        fixture.givenAPublished(bookedEvent("B-001"))
+                .whenPublishingA(new BookingConfirmedEvent("B-002", "CONFIRMED"))
+                .expectActiveSagas(1);  // B-001 のまま、B-002 で新規開始しない
     }
 }

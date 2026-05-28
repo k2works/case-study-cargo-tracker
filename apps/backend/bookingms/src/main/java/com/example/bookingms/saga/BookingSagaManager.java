@@ -1,6 +1,7 @@
 package com.example.bookingms.saga;
 
 import com.example.bookingms.domain.events.BookingCancelledEvent;
+import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
@@ -50,6 +51,15 @@ public class BookingSagaManager {
     public void on(CargoRoutedEvent event) {
         // routingms の経路確定（RouteConfirmedEvent → AssignRouteToCargoCommand）を受けて
         // 経路提案中（ROUTE_PROPOSED）へ遷移。追跡番号発行（IT5）まで Saga は継続する。
+        this.bookingId = event.bookingId();
+    }
+
+    @SagaEventHandler(associationProperty = "bookingId")
+    public void on(BookingConfirmedEvent event) {
+        // 予約確定（CONFIRMED）。trackingms への追跡発行依頼フェーズへ移行する。
+        // cross-service publish（shared TrackingIssuanceRequestedEvent の発行）は
+        // IT5 タスク 1.2 後続の本格実装で追加する（EventGateway 注入または Cargo 集約経由）。
+        // 現段階は Saga 状態を保持して継続することのみを担保する。
         this.bookingId = event.bookingId();
     }
 

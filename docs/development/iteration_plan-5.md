@@ -127,9 +127,9 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | shared: `TrackingIssuanceRequestedEvent`（bookingms → trackingms）を定義 | 2h | - | [x]（2026-05-28：併せて `CargoTrackedEvent`・`HandlingActivityRegisteredEvent` も shared に先行追加。`gradle check` 全モジュール PASS。Saga 延伸（1.2）と Read Model 投影（1.4）は後続） |
-| 1.2 | bookingms: `BookingSagaManager` を `BookingConfirmedEvent` → `TrackingIssuanceRequestedEvent` 発行まで延伸（ADR-0009、SagaTestFixture） | 4h | - | [ ] |
+| 1.2 | bookingms: `BookingSagaManager` を `BookingConfirmedEvent` → `TrackingIssuanceRequestedEvent` 発行まで延伸（ADR-0009、SagaTestFixture） | 4h | - | [部分対応] 2026-05-28：`@SagaEventHandler(BookingConfirmedEvent)` メソッドを追加し SagaTestFixture テストを 2 件追加（Positive「Saga が継続する」+ Negative「別 ID で新規開始しない」）。`:bookingms:check` PASS。cross-service publish（`TrackingIssuanceRequestedEvent` 発行）は EventGateway 注入の設計判断を含むため後続 |
 | 1.3 | trackingms: `TrackingActivity` 集約 + `InitializeTrackingCommand` → `TrackingInitializedEvent`、`TrackingNumber` 採番（TRK- + 10 桁） | 4h | - | [ ] |
-| 1.4 | trackingms → bookingms: 採番結果を `CargoTrackedEvent` で反映し予約状態を TRACKING_ISSUED に（Saga 終了）+ Read Model 投影 | 4h | - | [ ] |
+| 1.4 | trackingms → bookingms: 採番結果を `CargoTrackedEvent` で反映し予約状態を TRACKING_ISSUED に（Saga 終了）+ Read Model 投影 | 4h | - | [shared 側完了] 2026-05-28：cross-service イベント `com.example.shared.events.CargoTrackedEvent` を shared に追加済（タスク 1.1 で先行）。trackingms 発行ロジック・bookingms Saga `@SagaEventHandler(CargoTrackedEvent)` + `@EndSaga` + Read Model 投影は trackingms 新規モジュール追加後に実装 |
 | 1.5 | テスト（Axon Test：Saga・集約、cross-service 統合：Testcontainers Kafka） | 3h | - | [ ] |
 
 **小計**: 17h（理想時間）
@@ -152,7 +152,7 @@
 |---|--------|---------|------|------|
 | 3.1 | handlingms: `CargoSnapshot` ACL（bookingms の `CargoBookedEvent`/`CargoRoutedEvent` を購読して必要最小情報を写し取る） | 4h | - | [ ] |
 | 3.2 | `HandlingActivity` 集約 + `RegisterHandlingActivityCommand`（LOAD/UNLOAD は航海番号必須・重複拒否・予定外警告） | 4h | - | [ ] |
-| 3.3 | handlingms → trackingms: `HandlingActivityRegisteredEvent` → `UpdateTransportStatusCommand`（cross-service） | 3h | - | [ ] |
+| 3.3 | handlingms → trackingms: `HandlingActivityRegisteredEvent` → `UpdateTransportStatusCommand`（cross-service） | 3h | - | [shared 側完了] 2026-05-28：cross-service イベント `com.example.shared.events.HandlingActivityRegisteredEvent`（内部に `ClaimVerificationData` record 併載）を shared に追加済（タスク 1.1 で先行）。handlingms 発行ロジック・trackingms 受信ハンドラ（ADR-0011 ホワイトリスト方式）は handlingms / trackingms 新規モジュール追加後に実装 |
 | 3.4 | フロント：荷役作業記録 UI（荷役作業員ロール） | 3h | - | [ ] |
 | 3.5 | テスト（集約・バリデーション・cross-service 統合） | 3h | - | [ ] |
 
