@@ -5,6 +5,7 @@ import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.model.Leg;
+import com.example.shared.events.CargoTrackedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.shared.events.TrackingIssuanceRequestedEvent;
 import org.axonframework.eventhandling.gateway.EventGateway;
@@ -103,6 +104,15 @@ public class BookingSagaManager {
                 this.cargoType,
                 legData
         ));
+    }
+
+    @EndSaga
+    @SagaEventHandler(associationProperty = "bookingId")
+    public void on(CargoTrackedEvent event) {
+        // trackingms から採番完了通知を受信。予約 Saga を終了する（IT5 1.4）。
+        // 予約状態の TRACKING_ISSUED への更新（Cargo 集約の状態遷移）は後続コミットで
+        // AssignTrackingDetailsCommand 等の発行を Saga 内に追加する。
+        this.bookingId = event.bookingId();
     }
 
     @EndSaga

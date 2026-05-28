@@ -4,6 +4,7 @@ import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
+import com.example.shared.events.CargoTrackedEvent;
 import com.example.shared.events.RouteDesignRequestedEvent;
 import com.example.shared.events.TrackingIssuanceRequestedEvent;
 import com.example.bookingms.domain.model.CargoSpecification;
@@ -119,5 +120,15 @@ class BookingSagaManagerTest {
         fixture.givenAPublished(bookedEvent("B-001"))
                 .whenPublishingA(new BookingConfirmedEvent("B-002", "CONFIRMED"))
                 .expectActiveSagas(1);  // B-001 のまま、B-002 で新規開始しない
+    }
+
+    @Test
+    @DisplayName("US14 / IT5 1.4: CargoTrackedEvent（採番完了）で Saga が終了する（@EndSaga）")
+    void 採番完了でSagaが終了する() {
+        // trackingms から CargoTrackedEvent を Kafka 経由で受信すると Saga を終了する。
+        // 予約確定→追跡発行依頼→trackingms 採番→bookingms 完了通知 のサイクルが完結する。
+        fixture.givenAPublished(bookedEvent("B-001"))
+                .whenPublishingA(new CargoTrackedEvent("B-001", "TRK-AB12CD3456"))
+                .expectActiveSagas(0);
     }
 }
