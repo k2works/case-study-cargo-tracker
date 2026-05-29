@@ -179,17 +179,20 @@ gantt
 
 ## 設計
 
-> **注**: domain-model.md（TrackingException / ExceptionType / ResponseStatus）・data-model.md（tracking_exception テーブル、IT5 で先行作成済み）・ui_design.md（S15 / S18）・ADR-0013（時限署名トークン）に準拠する。
+> **注**: domain-model.md（Tracking Context: TrackingException / ExceptionType / ResponseStatus / TrackingTokenService）・data-model.md（tracking_exception テーブル、IT5 V2 で先行作成済み）・ui_design.md（S15 / S18 / S19）・ADR-0013（時限署名トークン）に準拠する。新規 ADR-0012（cross-service 冪等性・トランザクション境界）・ADR-0014（@ProcessingGroup 命名規約）を IT6 で起票する。
 
 ### 主要設計方針
 
-- **時限署名トークン（JWT、ADR-0013）**: 追跡番号 + 有効期限を含む JWT を、追跡管理者が `POST /tracking/{tn}/token` で発行。公開エンドポイント `GET /public/tracking/{tn}` は Spring Security で permitAll とし、JwtTokenFilter で検証する。有効期限は `delivered_at + 30 日`（配送完了から 30 日間照会可能）。
-- **例外を集約内エンティティに**: TrackingException は `TrackingActivity` 集約内のエンティティ（domain-model.md）。集約 ID は trackingNumber、例外 ID は集約スコープの ID（IDENTITY）。
-- **EXCEPTION 状態への遷移**: 既存 `TransportStatusTransition` で {NOT_RECEIVED, RECEIVED, LOADED, IN_TRANSIT, UNLOADED, AWAITING_CLAIM} → EXCEPTION の遷移は許可済み。例外登録時に自動で EXCEPTION 遷移し、`CargoMisroutedEvent` 相当の `TrackingExceptionRegisteredEvent` を発行。
-- **escalation の自動判定**: 集約内で `ExceptionType = LOSS` のときに `escalated = TRUE` を自動設定し、`TrackingExceptionEscalatedEvent` を発行。NotificationAcl が管理職通知を呼び出す。
-- **公開照会のセキュリティ**: 推測困難な追跡番号（TRK- + 大文字英数 10 桁）+ JWT 署名で二重防御。トークン共有による情報漏洩リスクは荷主の責任範囲。
+- **時限署名トークン（JWT、ADR-0013）**: 追跡番号 + 有効期限を含む JWT を、追跡管理者が `POST /tracking/{tn}/token` で発行。公開エンドポイント `GET /public/tracking/{tn}` は Spring Security で `permitAll` とし、`PublicTrackingTokenFilter` で署名・期限・追跡番号一致を検証する。有効期限は `delivered_at + 30 日`（配送完了から 30 日間照会可能、配送未完了の場合は `arrival_deadline + 30 日`）。HS256 + 32 バイト以上の鍵を Heroku Config Vars / 環境変数 `tracking.public-token.secret` で保持。
+- **例外を集約内エンティティに**: `TrackingException` は `TrackingActivity` 集約内のエンティティ（domain-model.md M5）。集約識別子は `trackingNumber`、例外識別子 `exceptionId` は集約スコープ。例外履歴は集約の `List<TrackingException>` フィールドに格納し、Event Sourcing で完全再構築可能。
+- **EXCEPTION 状態への遷移**: 既存 `TransportStatusTransition`（IT5）で {NOT_RECEIVED, RECEIVED, LOADED, IN_TRANSIT, UNLOADED, AWAITING_CLAIM} → EXCEPTION の遷移は許可済み。例外登録時に集約内で「現状態 → EXCEPTION」遷移を自動実行し、`TransportStatusUpdatedEvent` + `TrackingExceptionRegisteredEvent` の 2 件を順次発行。MISROUTED / DELIVERED 状態の貨物には例外登録不可（IllegalStateException）。
+- **escalation の自動判定**: 集約内で `ExceptionType = LOSS` のときに `escalated = true` を自動設定し、`TrackingExceptionRegisteredEvent` と同時に `TrackingExceptionEscalatedEvent` を発行。`TrackingNotificationEventHandler` が `NotificationAcl.notifyExceptionEscalation` を呼び出して管理職通知のスタブ実行（実メール送信は 0.6 で外部連携 ADR を起票し IT8 で実装）。
+- **公開照会のセキュリティ**: 推測困難な追跡番号（TRK- + 大文字英数 10 桁、36^10 ≒ 3.6×10^15 通り）+ JWT 署名で二重防御。トークン共有による情報漏洩リスクは荷主の責任範囲（メール文面に注意書き）。`PublicTrackingTokenFilter` は `Authorization` ヘッダではなく `?token=` クエリパラメータから読む（メール URL に埋め込み可能にする）。
+- **TrackingTokenService の責務**: JWT 発行 / 検証 / 期限計算をすべてドメインサービスに集約。`@Value` で秘密鍵を注入し、jjwt 0.12+ で `Jwts.builder().subject(trackingNumber).expiration(...)` のシンプルな構成。authms の `JwtTokenProvider` とは別鍵・別 audience（`tracking.public`）で区別する。
+- **NotificationAcl 拡張（0.6 で実装基盤）**: 既存 `notifyTrackingIssued` / `notifyStatusChanged` / `notifyMisrouted` に加えて、`notifyExceptionRegistered` / `notifyExceptionResolved` / `notifyExceptionEscalation` を追加。`LoggingNotificationAcl` スタブを更新し、IT6 4.x で実メール送信 ADR-0015（仮）を起票して切替準備。
+- **cross-service 経路は IT6 では最小**: 例外関連の cross-service イベント発信は本 IT 範囲外（trackingms 内で完結）。IT7 Billing 連携時に `CargoExceptionResolvedEvent` 等を shared 化する余地を残す。
 
-### ドメインモデル（IT6 範囲、追加分）
+### ドメインモデル（IT6 範囲）
 
 ```plantuml
 @startuml
@@ -197,92 +200,565 @@ title IT6 ドメインモデル（追跡照会 + 例外処理）
 
 package "trackingms (Tracking)" {
   class TrackingActivity <<Aggregate Root>> {
+    - trackingNumber: TrackingNumber
+    - currentStatus: TransportStatus
+    - misrouted: boolean
+    - exceptions: List<TrackingException>
     + handle(RegisterTrackingExceptionCommand)
     + handle(ResolveTrackingExceptionCommand)
+    + on(TrackingExceptionRegisteredEvent)
+    + on(TrackingExceptionResolvedEvent)
+    + on(TrackingExceptionEscalatedEvent)
   }
+
   class TrackingException <<Entity>> {
     - exceptionId: TrackingExceptionId
     - exceptionType: ExceptionType
     - occurredAt: LocalDateTime
-    - location: Location
+    - occurredUnlocode: String
     - description: String
     - responseStatus: ResponseStatus
     - resolution: String
+    - resolvedAt: LocalDateTime
     - escalated: boolean
+    + transitionTo(newStatus: ResponseStatus): void
+    + canResolveWith(resolution: String): boolean
   }
+
+  class TrackingExceptionId <<Value Object>> {
+    - value: String
+    + TrackingExceptionId(uuid: String)
+  }
+
   enum ExceptionType {
     DELAY
     DAMAGE
     LOSS
+    --
+    + isEscalationRequired(): boolean
   }
+
   enum ResponseStatus {
     REPORTED
     RESPONDING
     RESOLVED
+    --
+    + canTransitionTo(to: ResponseStatus): boolean
   }
+
   class TrackingTokenService <<Domain Service>> {
-    + issue(trackingNumber, deliveredAt): JwtToken
-    + verify(token): VerifiedToken
+    - secret: SecretKey
+    - audience = "tracking.public"
+    + issue(tn: TrackingNumber, deliveredAt): JwtToken
+    + verify(token: String, expectedTn: TrackingNumber): VerifiedToken
+    - calculateExpiry(summary: TrackingSummary): Instant
   }
-  class JwtToken <<Value Object>>
+
+  class JwtToken <<Value Object>> {
+    - token: String
+    - issuedAt: Instant
+    - validUntil: Instant
+  }
+
+  class VerifiedToken <<Value Object>> {
+    - trackingNumber: TrackingNumber
+    - expiresAt: Instant
+  }
+
+  ' 既存（IT5）の TrackingActivity フィールドと TransportStatus 9 値・MISROUTED 救済（IT5 H5）
+  enum TransportStatus <<from IT5>> {
+    NOT_RECEIVED .. DELIVERED
+    MISROUTED
+    EXCEPTION
+  }
 }
 
-package "shared / NotificationAcl" {
+package "interfaces / 通知 ACL" {
   interface NotificationAcl {
-    + notifyExceptionRegistered(trackingNumber, type, occurredAt)
-    + notifyExceptionResolved(trackingNumber, type, resolution)
-    + notifyExceptionEscalation(trackingNumber, type)
+    + notifyTrackingIssued(...)
+    + notifyStatusChanged(...)
+    + notifyMisrouted(...)
+    .. IT6 追加 ..
+    + notifyExceptionRegistered(trackingNumber, type, occurredAt, description)
+    + notifyExceptionResolved(trackingNumber, exceptionId, resolution)
+    + notifyExceptionEscalation(trackingNumber, type, occurredAt)
   }
+
+  class LoggingNotificationAcl <<Adapter>>
 }
 
 TrackingActivity "1" *-- "0..*" TrackingException
+TrackingActivity *-- TransportStatus
+TrackingException *-- TrackingExceptionId
 TrackingException *-- ExceptionType
 TrackingException *-- ResponseStatus
-TrackingTokenService ..> JwtToken
-TrackingActivity ..> NotificationAcl : 通知 (via EventHandler)
+
+TrackingTokenService ..> JwtToken : 発行
+TrackingTokenService ..> VerifiedToken : 検証結果
+
+NotificationAcl <|.. LoggingNotificationAcl
+TrackingActivity ..> NotificationAcl : EventHandler 経由
 @enduml
 ```
 
 #### 集約の不変条件（IT6 関連）
 
-- **TrackingException**：`exceptionType = LOSS` のとき集約内で `escalated = true` を自動設定。`responseStatus` の遷移は `REPORTED → RESPONDING → RESOLVED` のみ受理し、逆行・スキップは拒否。`resolvedAt` は `responseStatus = RESOLVED` への遷移時のみ設定可能。
-- **TrackingActivity（拡張）**：`RegisterTrackingExceptionCommand` 受理時に自動的に EXCEPTION へ遷移し、`exceptions` リストに追加。`ResolveTrackingExceptionCommand` の `exceptionId` が `exceptions` に存在する必要あり。
+- **TrackingActivity（拡張）**:
+  - `RegisterTrackingExceptionCommand` は `currentStatus IN {NOT_RECEIVED, RECEIVED, LOADED, IN_TRANSIT, UNLOADED, AWAITING_CLAIM}` のときのみ受理。MISROUTED / DELIVERED / EXCEPTION 状態では `IllegalStateException`。
+  - 受理時に集約内で `TransportStatusUpdatedEvent(currentStatus → EXCEPTION)` + `TrackingExceptionRegisteredEvent(exceptionId, type, ...)` を順次 apply。
+  - `ResolveTrackingExceptionCommand` の `exceptionId` は集約の `exceptions` リストに存在する必要あり（不存在は `IllegalArgumentException`）。
+  - 同一 `(trackingNumber, exceptionType, occurredAt の分粒度)` の重複登録は拒否（5 分以内に同種別の例外を登録不可、HandlingActivity IT5 3.2 と同じ規約）。
+- **TrackingException**:
+  - `exceptionType = LOSS` のとき `escalated = true` を集約コンストラクタで自動設定。
+  - `responseStatus` の遷移は `REPORTED → RESPONDING → RESOLVED` の単方向のみ。逆行・スキップは `IllegalStateException`。
+  - `resolution` は `responseStatus = RESOLVED` への遷移時のみ必須（空文字拒否）。
+  - `resolvedAt` は `RESOLVED` 遷移時に集約側で `LocalDateTime.now()` で自動設定。
+- **TrackingTokenService**:
+  - 有効期限計算：`deliveredAt != null ? deliveredAt + 30 日 : arrivalDeadline + 30 日`。MAX を `now() + 90 日` で頭打ち。
+  - JWT subject は追跡番号、audience は `tracking.public`、issuer は `trackingms`。
+  - 検証時に `subject == 期待追跡番号` を厳密チェック（トークン取り違えの防止）。
 
-### ユーザーインターフェース
-
-| 画面 ID | 画面 | パス | ロール | 対応 US |
-|---------|------|------|--------|---------|
-| S15 | 追跡照会（公開）| `/tracking/:trackingNumber?token=<JWT>` | 公開（ログイン不要）| US18 |
-| S18 | 例外登録 | `/tracking/:trackingNumber/exceptions/new` | 追跡管理・荷役 | US19・US20 |
-| S19 | 例外対応一覧 | `/tracking/exceptions` | 追跡管理 | US19・US20 |
-
-> ui_design.md の画面一覧に準拠。S18 は単一例外の登録フォーム（追跡詳細から遷移）、S19 は対応待ち例外の一覧と各例外の対応入力（既存 S16 / S17 と連携）。
-
-### 画面遷移（ui_design.md 準拠）
+### 状態遷移（例外発生 → 対応 → 解決）
 
 ```plantuml
 @startuml
-[*] --> 追跡照会_公開 : メール内 URL の時限署名トークン経由（30 日有効、US18 / S15）
-追跡照会_公開 --> 追跡照会_公開 : ポーリング / 時限失効
-追跡管理一覧 --> 追跡詳細 : 行クリック（既存 S16 / S17）
-追跡詳細 --> 例外登録 : 「例外を記録」（US19/US20、S18）
-例外登録 --> 追跡詳細 : 送信成功（PRG）
-例外登録 --> 例外登録 : バリデーションエラー（自己ループ）
-追跡管理一覧 --> 例外対応一覧 : タブ切替（S19）
-例外対応一覧 --> 追跡詳細 : 行クリック（対応詳細）
-例外対応一覧 --> 例外対応一覧 : 対応内容入力（PATCH /resolve、PRG 相当）
+title TrackingException 状態遷移（US19 / US20）
+
+[*] --> REPORTED : RegisterTrackingExceptionCommand\n（DELAY / DAMAGE / LOSS）
+REPORTED --> RESPONDING : 対応開始（対応内容を入力中）
+RESPONDING --> RESOLVED : ResolveTrackingExceptionCommand\n（resolution 必須、resolvedAt 自動）
+REPORTED --> RESOLVED : 直接解決可（軽微）
+RESOLVED --> [*]
+
+note right of REPORTED
+  LOSS の場合は escalated=true で
+  TrackingExceptionEscalatedEvent も同時発行。
+  notifyExceptionEscalation で管理職通知。
+end note
+
+note bottom of RESOLVED
+  resolvedAt = RESOLVED 遷移時刻。
+  resolution（補償方針・代替ルート等）必須。
+end note
 @enduml
 ```
 
-### REST API（IT6 追加分）
+```plantuml
+@startuml
+title TransportStatus の EXCEPTION 復帰（IT5 既存 + IT6 例外契機）
 
-| Method | Path | 認証 | 内容 | US |
-|--------|------|------|------|----|
-| POST | `/api/v1/tracking/{tn}/token` | 追跡管理 | 公開照会用 JWT 発行 | US18 |
-| GET | `/api/v1/public/tracking/{trackingNumber}?token=<JWT>` | **permitAll**（JWT 検証）| 公開追跡照会 | US18 |
-| POST | `/api/v1/tracking/{trackingNumber}/exceptions` | 追跡管理 | 例外登録（DELAY/DAMAGE/LOSS）| US19/US20 |
-| PATCH | `/api/v1/tracking/{trackingNumber}/exceptions/{exceptionId}/resolve` | 追跡管理 | 対応内容入力 + RESOLVED 遷移 | US19/US20 |
-| GET | `/api/v1/tracking/{trackingNumber}/exceptions` | 追跡管理 / 公開（JWT）| 例外一覧 | US18/US19/US20 |
+state "輸送中の各状態" as Normal
+state EXCEPTION
+state RESOLVED <<choice>>
+
+[*] --> Normal : InitializeTracking
+Normal --> EXCEPTION : RegisterTrackingException\n（DELAY/DAMAGE/LOSS、US19/US20）
+EXCEPTION --> RESOLVED : ResolveTrackingException
+RESOLVED --> RECEIVED : 受領以前で再開
+RESOLVED --> LOADED : 積込以前で再開
+RESOLVED --> IN_TRANSIT : 輸送中で再開
+
+note bottom of EXCEPTION
+  TransportStatusTransition（IT5）の EXCEPTION → {RECEIVED, LOADED, IN_TRANSIT}
+  復帰遷移を「対応完了」契機で活用する。手動更新（US17）と組合せる業務フロー。
+end note
+@enduml
+```
+
+### データモデル
+
+`tracking_exception` テーブルは IT5 Flyway V2 で先行作成済み（data-model.md L564-578 準拠）。IT6 では Flyway V4 で `tracking_summary.delivered_at` カラムが既に存在することの確認のみ。新規テーブル追加なし。
+
+```plantuml
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "tracking_exception\n(IT5 V2 先行作成・IT6 で本格利用)" as ex {
+  * **exception_id**: VARCHAR(36) <<PK>>
+  --
+  tracking_number: VARCHAR(25) NOT NULL <<FK>>
+  exception_type: VARCHAR(16) NOT NULL  ' DELAY / DAMAGE / LOSS
+  occurred_at: TIMESTAMP NOT NULL
+  occurred_unlocode: VARCHAR(5)
+  description: VARCHAR(1000) NOT NULL
+  response_status: VARCHAR(16) NOT NULL ' REPORTED / RESPONDING / RESOLVED
+  resolution: VARCHAR(1000)
+  resolved_at: TIMESTAMP
+  escalated: BOOLEAN NOT NULL DEFAULT FALSE
+  created_at: TIMESTAMP NOT NULL
+  updated_at: TIMESTAMP NOT NULL
+}
+
+entity "tracking_summary\n(IT5 既存・公開照会で参照)" as ts {
+  * **tracking_number**: VARCHAR(25) <<PK>>
+  --
+  booking_id: VARCHAR(36) NOT NULL <<UNIQUE>>
+  current_status: VARCHAR(20) NOT NULL
+  current_unlocode: VARCHAR(5)
+  current_voyage_number: VARCHAR(20)
+  estimated_arrival: TIMESTAMP
+  misrouted: BOOLEAN NOT NULL
+  last_event_at: TIMESTAMP
+  delivered_at: TIMESTAMP    ' JWT 有効期限計算用（ADR-0013）
+  delivered_published_at: TIMESTAMP ' IT5 H3 冪等化
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+  version: BIGINT
+}
+
+entity "tracking_event\n(IT5 既存・公開照会で参照)" as te {
+  * event_id: BIGSERIAL <<PK>>
+  --
+  tracking_number: VARCHAR(25) NOT NULL <<FK>>
+  occurred_at: TIMESTAMP NOT NULL
+  event_type: VARCHAR(40) NOT NULL
+  transport_status: VARCHAR(20)
+  unlocode: VARCHAR(5)
+  source: VARCHAR(16)  ' SYSTEM / MANUAL / HANDLING
+  description: VARCHAR(1000)
+}
+
+ts ||--|{ te : "1..*"
+ts ||--o{ ex : "0..*（例外履歴）"
+
+note bottom of ex
+  IT5 V2 で既存。IT6 で本格利用。
+  PK は VARCHAR(36) UUID 文字列。
+  CHECK 制約: resolved_at IS NULL OR response_status = 'RESOLVED'
+  INDEX(tracking_number, response_status) で例外対応ダッシュボード高速化。
+end note
+@enduml
+```
+
+> **インデックス・制約（data-model.md L610-611 準拠、IT6 追加なし）**:
+> - `tracking_exception`: `INDEX(tracking_number, response_status)` / `INDEX(tracking_number, occurred_at)` / `CHECK(resolved_at IS NULL OR response_status = 'RESOLVED')`
+> - `tracking_summary.delivered_at`: 既存カラム、ADR-0013 で JWT 有効期限計算に使用
+
+### ユーザーインターフェース
+
+> ui_design.md の画面 ID・パス・ロールに準拠する。本 IT で追加する画面は S15（公開）・S18（追跡管理）・S19（追跡管理）の 3 枚。フロントは React + Vite + React Router。S15 のみ `PrivateRoute` 除外（公開ルート）。フォームは送信成功で関連画面へ PRG 遷移、バリデーションエラーは自己ループ。フィードバックは IT1-IT5 と同じ alert 表示パターン。
+
+| 画面 ID | 画面 | パス | ロール | タイプ | 対応ストーリー |
+|---------|------|------|--------|--------|---------------|
+| S15 | 追跡照会（公開）| `/tracking/:trackingNumber?token=<JWT>` | 公開（ログイン不要）| シングル | US18（追跡情報照会） |
+| S18 | 例外登録 | `/tracking/:trackingNumber/exceptions/new` | 追跡管理・荷役 | フォーム | US19（遅延）・US20（破損/紛失） |
+| S19 | 例外対応一覧 | `/tracking/exceptions` | 追跡管理 | コレクション | US19（対応入力）・US20（escalation 表示） |
+
+> 既存連携: S16 追跡管理一覧 → S18 例外登録（追跡番号引き継ぎ）、S19 → S17 追跡詳細・管理（対応詳細）、Navigation に「例外対応」リンク追加（ROLE_ADMIN + ROLE_TRACKER）。
+
+#### ビュー
+
+```plantuml
+@startsalt
+{+
+  S15: 追跡照会（公開、/tracking/TRK-AB12CD3456?token=eyJ...）
+  {+
+    { CargoTracker 追跡情報 }
+    ----
+    {
+      追跡番号 | TRK-AB12CD3456
+      現在の状態 | [輸送中]   現在地: SGSIN   推定到着: 2026-08-15
+    }
+    ----
+    追跡履歴（時系列）
+    {#
+      . | **日時** | **状態** | **場所** | **記録元**
+      1 | 07-20 10:00 | 受領済 | JPTYO | HANDLING
+      2 | 07-22 14:00 | 輸送中 | SGSIN | MANUAL
+    }
+    ----
+    例外情報（あれば赤色強調、対応中の場合は alert-warning）
+    {#
+      . | **日時** | **種別** | **場所** | **対応状態**
+      1 | 07-25 09:00 | 遅延 | SGSIN | 対応中（新着予定: 08-20）
+    }
+    ----
+    "このトークンは 2026-09-15 まで有効です"
+  }
+-----------
+  S18: 例外登録（/tracking/TRK-AB12CD3456/exceptions/new）
+  {+
+    { CargoTracker | 追跡管理 | [ログアウト] }
+    ----
+    {
+      追跡番号: TRK-AB12CD3456   現在の状態: [輸送中]
+    }
+    ----
+    {
+      例外種別 | ^遅延^
+      発生日時 | "2026-07-25 09:00"
+      発生場所 | "SGSIN"
+      理由・状況 | "悪天候のため寄港不可"
+    }
+    ----
+    "LOSS の場合は登録時に escalated=true で管理職に escalation 通知が送信されます"
+    ----
+    [ 例外を記録 ] | [ キャンセル ]
+  }
+-----------
+  S19: 例外対応一覧（/tracking/exceptions）
+  {+
+    { CargoTracker | 追跡管理 | [ログアウト] }
+    ----
+    タブ: [ 追跡管理 ] [ **例外対応** ]
+    ----
+    フィルタ: ^未対応^ | ^対応中^ | ^解決済^
+    ----
+    {#
+      . | **追跡番号** | **種別** | **発生日時** | **状態** | **escalation**
+      1 | TRK-AB12CD3456 | 遅延 | 07-25 09:00 | REPORTED | -
+      2 | TRK-XY99ZZ1111 | 紛失 | 07-26 14:00 | RESPONDING | ⚠️ 管理職通知済
+    }
+    ----
+    行クリック → 対応詳細モーダル
+    {
+      対応内容 | "代替ルート手配中。新到着予定 08-20。"
+      対応状態 | ^対応中^
+      ' RESOLVED 選択時は resolution 必須
+    }
+    [ 対応内容を更新 ] | [ 解決済にする ]
+  }
+}
+@endsalt
+```
+
+#### モデル
+
+```plantuml
+@startuml
+class 追跡照会公開 {
+  trackingNumber: String
+  token: String
+  summary: TrackingSummary
+  events: List<TrackingEvent>
+  exceptions: List<TrackingException>
+  照会する()
+  トークン期限切れで 401()
+}
+
+class 例外登録 {
+  trackingNumber: String
+  exceptionType: ExceptionType
+  occurredAt: DateTime
+  occurredUnlocode: String
+  description: String
+  記録する()
+  種別 LOSS で escalation 注意表示()
+}
+
+class 例外対応一覧 {
+  exceptions: List<TrackingException>
+  filter: ResponseStatus
+  対応内容を入力()
+  解決済にする()
+  RESOLVED 遷移で resolution 必須()
+}
+
+class ナビゲーション拡張 {
+  例外対応()  ' S19 へのリンク（ROLE_ADMIN + ROLE_TRACKER）
+}
+
+ナビゲーション拡張 -* 例外対応一覧
+例外対応一覧 -> 例外登録 : 追跡詳細から遷移
+例外登録 --> 例外対応一覧 : 記録成功（PRG）
+追跡照会公開 ..> 例外登録 : 関連なし（公開）
+@enduml
+```
+
+#### インタラクション
+
+```plantuml
+@startuml
+title 画面遷移図（IT6 追跡照会 + 例外処理）
+
+[*] --> S15 : メール内 URL の時限署名トークン（30 日有効、US18）
+[*] --> S01 : ログイン済み
+
+state "S15 追跡照会（公開）\n/tracking/:tn?token=<JWT>" as S15
+state "S01 ダッシュボード\n/dashboard" as S01
+state "S16 追跡管理一覧\n/tracking" as S16
+state "S17 追跡詳細・管理\n/tracking/:tn/manage" as S17
+state "S18 例外登録\n/tracking/:tn/exceptions/new" as S18
+state "S19 例外対応一覧\n/tracking/exceptions" as S19
+
+S15 --> S15 : 自動再取得（30 秒、refetchInterval）/ トークン失効で 401 表示
+S15 --> [*] : ブラウザ閉じる
+S01 --> S16 : サイドナビ「追跡管理」（ROLE_TRACKER）
+S01 --> S19 : サイドナビ「例外対応」（ROLE_TRACKER）
+S16 --> S17 : 追跡番号クリック
+S17 --> S18 : 「例外を記録」ボタン（追跡番号を引き継ぎ）
+S18 --> S18 : バリデーションエラー（自己ループ）/ LOSS 選択で escalation 注意表示
+S18 --> S17 : 記録成功（PRG、貨物状態が EXCEPTION に遷移）
+S19 --> S19 : 対応内容入力（PATCH /resolve、自己ループ）/ フィルタ切替
+S19 --> S17 : 行クリック（対応詳細＋追跡履歴）
+S16 --> S19 : タブ切替「例外対応」
+@enduml
+```
+
+#### フィードバックメッセージ
+
+| 種別 | 契機 | メッセージ例 | スタイル |
+|------|------|-------------|---------|
+| 成功 | 例外登録（DELAY/DAMAGE）| 「例外を記録しました。荷主に通知を送信しました」 | `alert-success` |
+| 成功 | 例外登録（LOSS）| 「紛失例外を記録しました。管理職に escalation 通知を送信しました」 | `alert-success` |
+| 成功 | 対応内容更新（RESPONDING）| 「対応内容を更新しました」 | `alert-success` |
+| 成功 | 解決済へ遷移（RESOLVED）| 「例外を解決済としてクローズしました」 | `alert-success` |
+| 警告 | 公開照会で対応中例外あり | 「現在、貨物に例外（遅延）が発生しています。対応状況: 対応中（新到着予定: ...）」 | `alert-warning` |
+| エラー | トークン期限切れ・無効 | 「このリンクは有効期限切れです。担当者に再発行を依頼してください」 | `alert-error` |
+| エラー | 追跡番号不在（公開照会）| 「追跡番号が見つかりません」 | `alert-error` |
+| エラー | EXCEPTION 状態で例外登録 | 「すでに例外発生中の貨物には新規例外を登録できません」 | `alert-error` |
+| エラー | resolution 空で RESOLVED 遷移 | 「対応内容を入力してから解決済にしてください」 | `alert-error` |
+
+### API 設計（IT6 追加分）
+
+| メソッド | エンドポイント | 認証 | 説明 | ストーリー | サービス |
+|---------|---------------|------|------|-----------|---------|
+| POST | `/api/v1/tracking/{trackingNumber}/token` | ROLE_TRACKER + ROLE_ADMIN | 公開照会用 JWT 発行（有効期限を返す） | US18 | trackingms |
+| GET | `/api/v1/public/tracking/{trackingNumber}?token=<JWT>` | **permitAll**（PublicTrackingTokenFilter で検証）| 公開追跡照会（summary + events + exceptions）| US18 | trackingms |
+| POST | `/api/v1/tracking/{trackingNumber}/exceptions` | ROLE_TRACKER + ROLE_HANDLER + ROLE_ADMIN | 例外登録（DELAY / DAMAGE / LOSS）| US19・US20 | trackingms |
+| PATCH | `/api/v1/tracking/{trackingNumber}/exceptions/{exceptionId}` | ROLE_TRACKER + ROLE_ADMIN | 対応内容更新（RESPONDING へ遷移）| US19・US20 | trackingms |
+| PATCH | `/api/v1/tracking/{trackingNumber}/exceptions/{exceptionId}/resolve` | ROLE_TRACKER + ROLE_ADMIN | RESOLVED へ遷移（resolution 必須）| US19・US20 | trackingms |
+| GET | `/api/v1/tracking/{trackingNumber}/exceptions` | ROLE_TRACKER + ROLE_ADMIN / 公開（JWT 検証）| 例外一覧 | US18・US19・US20 | trackingms |
+| GET | `/api/v1/tracking/exceptions?responseStatus={REPORTED,RESPONDING,RESOLVED}` | ROLE_TRACKER + ROLE_ADMIN | 全例外横断一覧（S19 例外対応一覧）| US19・US20 | trackingms |
+
+> エンドポイントは実装時に確定し、`docs/design/architecture_backend.md` の API カタログへ随時追記する（DoD）。
+
+### イベントフロー（cross-service と内部）
+
+```plantuml
+@startuml
+title US19/US20 例外登録 イベントフロー（trackingms 内完結）
+
+actor 追跡管理者 as user
+participant "TrackingController" as ctrl
+participant "TrackingActivity\n(Aggregate)" as agg
+database "EventStore" as es
+participant "TrackingSummary\nProjection" as proj
+participant "TrackingNotification\nEventHandler" as noti
+participant "NotificationAcl\n(Logging スタブ)" as acl
+
+user -> ctrl : POST /tracking/{tn}/exceptions\n{type=LOSS, occurredAt, location, description}
+ctrl -> agg : RegisterTrackingExceptionCommand
+agg -> agg : validate(現状態 ∈ 許可セット)
+agg -> agg : escalated = (type == LOSS)
+agg -> es : TransportStatusUpdatedEvent\n(現状態 → EXCEPTION)
+agg -> es : TrackingExceptionRegisteredEvent\n(exceptionId, type, ...)
+note over agg
+  type = LOSS のとき
+end note
+agg -> es : TrackingExceptionEscalatedEvent\n(LOSS のときのみ)
+
+es -> proj : 状態 / 例外 投影更新
+es -> noti : TrackingExceptionRegisteredEvent
+noti -> acl : notifyExceptionRegistered(...)
+note right of acl : LoggingNotificationAcl で\nINFO ログ
+es -> noti : TrackingExceptionEscalatedEvent（LOSS のみ）
+noti -> acl : notifyExceptionEscalation(...)
+note right of acl : WARN ログ（IT8 で実メール送信）
+
+ctrl --> user : 201 Created\n{exceptionId, escalated: true}
+@enduml
+```
+
+```plantuml
+@startuml
+title US18 公開照会 シーケンス（時限署名トークン）
+
+actor 荷主 as customer
+participant "ブラウザ\n(S15)" as ui
+participant "TrackingController\n/api/v1/public/..." as ctrl
+participant "PublicTrackingTokenFilter\n(Spring Security)" as filter
+participant "TrackingTokenService" as svc
+database "tracking_summary\n+ tracking_event\n+ tracking_exception" as db
+
+customer -> ui : メール内 URL を開く\n/tracking/TRK-...?token=eyJ...
+ui -> ctrl : GET /api/v1/public/tracking/{tn}?token=<JWT>
+ctrl -> filter : リクエスト
+filter -> svc : verify(token, expectedTn)
+svc -> svc : JWT 署名 + 期限 + subject 検証
+svc --> filter : VerifiedToken（または例外）
+alt 検証成功
+    filter -> ctrl : permitAll 通過
+    ctrl -> db : SELECT summary + events + exceptions
+    ctrl --> ui : 200 OK\n{summary, events, exceptions}
+    ui --> customer : S15 表示
+else 期限切れ / 不正
+    filter --> ui : 401 Unauthorized
+    ui --> customer : alert-error\n「リンク期限切れ・再発行依頼」
+end
+@enduml
+```
+
+### ディレクトリ構成（IT6 追加分）
+
+```text
+apps/backend/trackingms/src/main/java/com/example/trackingms/
+├─ domain/model/TrackingException.java                       # 集約内エンティティ
+├─ domain/model/TrackingExceptionId.java                     # 値オブジェクト
+├─ domain/model/ExceptionType.java                          # enum (DELAY / DAMAGE / LOSS)
+├─ domain/model/ResponseStatus.java                         # enum (REPORTED / RESPONDING / RESOLVED)
+├─ domain/services/TrackingTokenService.java                # JWT 発行・検証（jjwt 0.12+）
+├─ domain/services/PublicTrackingTokenFilter.java           # Spring Security 公開ルート用フィルタ
+├─ domain/commands/RegisterTrackingExceptionCommand.java
+├─ domain/commands/UpdateTrackingExceptionResponseCommand.java
+├─ domain/commands/ResolveTrackingExceptionCommand.java
+├─ domain/events/TrackingExceptionRegisteredEvent.java
+├─ domain/events/TrackingExceptionUpdatedEvent.java
+├─ domain/events/TrackingExceptionResolvedEvent.java
+├─ domain/events/TrackingExceptionEscalatedEvent.java
+├─ domain/projections/TrackingExceptionView.java            # POJO + ResultMap
+├─ infrastructure/repositories/mybatis/TrackingExceptionMapper.java
+├─ infrastructure/outboundservices/notification/NotificationAcl.java   # 既存に 3 メソッド追加
+├─ interfaces/rest/PublicTrackingController.java            # GET /public/tracking/{tn}
+├─ interfaces/rest/TrackingExceptionController.java         # POST/PATCH/GET /tracking/{tn}/exceptions
+├─ interfaces/rest/dto/RegisterExceptionRequest.java / UpdateExceptionRequest.java / TrackingExceptionResponse.java
+├─ interfaces/events/TrackingNotificationEventHandler.java  # 既存に 3 ハンドラ追加
+└─ config/SecurityConfig.java                              # /public/** を permitAll に追加
+
+apps/frontend/src/features/tracking/
+├─ api/trackingApi.ts                                       # 既存に getPublic / token 発行 / 例外関連 4 API 追加
+├─ pages/TrackingPublicPage.tsx                             # S15 公開照会（PrivateRoute 除外）
+├─ pages/ExceptionRegisterPage.tsx                          # S18 例外登録
+├─ pages/ExceptionListPage.tsx                              # S19 例外対応一覧
+└─ pages/__tests__/                                         # Vitest（公開 / 登録 / 対応）
+
+apps/frontend/src/App.tsx                                   # /public/tracking/:tn と /tracking/exceptions ルート追加
+apps/frontend/src/components/layout/Navigation.tsx          # 「例外対応」リンク追加
+
+apps/backend/trackingms/src/main/resources/
+├─ application.yml                                          # tracking.public-token.secret / audience 等
+└─ db/migration/V4__noop_or_indexes.sql                    # 既存 tracking_exception の index 追加（任意）
+
+docs/adr/
+├─ 0012-cross-service-idempotency-and-transactions.md       # cross-service 冪等性・トランザクション境界
+├─ 0013-public-tracking-token.md                           # 時限署名トークン採用
+└─ 0014-processing-group-naming.md                         # @ProcessingGroup 命名規約
+```
+
+### バリデーション / セキュリティ
+
+| 観点 | 規約 |
+|------|------|
+| **JWT 鍵長** | HS256 + 32 バイト以上（authms と別鍵、`tracking.public-token.secret` 環境変数）|
+| **JWT 有効期限** | `delivered_at + 30 日`（未配送なら `arrival_deadline + 30 日`、MAX `now + 90 日`）|
+| **JWT subject 検証** | 公開エンドポイントの `{trackingNumber}` パス変数と JWT subject の完全一致を強制（トークン取り違え防止）|
+| **公開ルート CORS** | `/api/v1/public/**` のみ `*` 許可。それ以外は既存 `https://<frontend>` のみ |
+| **rate limit（将来）** | 公開エンドポイントは IP 単位の rate limit を IT8 で検討（本 IT 範囲外）|
+| **resolution 最小長** | RESOLVED 遷移時の `resolution` は 10 文字以上必須（雑な「OK」を拒否）|
+| **occurredAt の制約** | 過去または現在のみ受理（HandlingActivity IT5 3.2 と同規約）|
+| **description 最大長** | 1000 文字（data-model.md の `VARCHAR(1000)` 上限と整合）|
+
+### ロール / 認可
+
+| ロール | 権限 |
+|--------|------|
+| 公開（未認証）| S15 のみ（`?token=` 必須）|
+| ROLE_TRACKER | S16 / S17 / S18 / S19 + 例外登録 / 対応更新 / 解決 + トークン発行 |
+| ROLE_HANDLER | S18 例外登録のみ（現場で発見した破損・紛失を記録）|
+| ROLE_ADMIN | 全権限 |
+
+> 既存 IT5 の ROLE_TRACKER / ROLE_HANDLER / ROLE_ADMIN の拡張。Navigation.test.tsx に IT6 関連ロール表示テストを追加する。
 
 ---
 
