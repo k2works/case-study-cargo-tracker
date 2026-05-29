@@ -41,4 +41,43 @@ public interface NotificationAcl {
      * @param unlocode       誤配送が検知された場所（任意）
      */
     void notifyMisrouted(String trackingNumber, String unlocode);
+
+    // --- IT6 タスク 2.5 / 3.2：US19 / US20 例外通知 ---
+
+    /**
+     * 追跡例外の発生を荷主に通知する（US19 / US20 受入基準 3/4）。
+     *
+     * @param trackingNumber   追跡番号
+     * @param exceptionId      例外識別子
+     * @param exceptionType    例外種別（DELAY / DAMAGE / LOSS）
+     * @param occurredUnlocode 発生場所（任意）
+     * @param description      発生状況・理由
+     */
+    void notifyExceptionRegistered(String trackingNumber,
+                                   String exceptionId,
+                                   String exceptionType,
+                                   String occurredUnlocode,
+                                   String description);
+
+    /**
+     * 追跡例外の解決を荷主に通知する（US19 受入基準 4）。
+     *
+     * @param trackingNumber 追跡番号
+     * @param exceptionId    例外識別子
+     * @param resolution     対応内容
+     */
+    void notifyExceptionResolved(String trackingNumber,
+                                 String exceptionId,
+                                 String resolution);
+
+    /**
+     * 追跡例外（紛失）の escalation を管理職に通知する（US20 受入基準 3）。
+     *
+     * @param trackingNumber 追跡番号
+     * @param exceptionId    例外識別子
+     * @param exceptionType  例外種別（実用上は LOSS）
+     */
+    void notifyExceptionEscalation(String trackingNumber,
+                                   String exceptionId,
+                                   String exceptionType);
 }

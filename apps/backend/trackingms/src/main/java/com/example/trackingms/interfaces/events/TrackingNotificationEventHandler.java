@@ -2,6 +2,9 @@ package com.example.trackingms.interfaces.events;
 
 import com.example.trackingms.application.outboundservices.notification.NotificationAcl;
 import com.example.trackingms.domain.events.CargoMisroutedEvent;
+import com.example.trackingms.domain.events.TrackingExceptionEscalatedEvent;
+import com.example.trackingms.domain.events.TrackingExceptionRegisteredEvent;
+import com.example.trackingms.domain.events.TrackingExceptionResolvedEvent;
 import com.example.trackingms.domain.events.TrackingInitializedEvent;
 import com.example.trackingms.domain.events.TransportStatusUpdatedEvent;
 import org.axonframework.config.ProcessingGroup;
@@ -44,5 +47,33 @@ public class TrackingNotificationEventHandler {
     @EventHandler
     public void on(CargoMisroutedEvent event) {
         notificationAcl.notifyMisrouted(event.trackingNumber(), event.unlocode());
+    }
+
+    // --- IT6 タスク 2.5 / 3.2：US19 / US20 例外通知 ---
+
+    @EventHandler
+    public void on(TrackingExceptionRegisteredEvent event) {
+        notificationAcl.notifyExceptionRegistered(
+                event.trackingNumber(),
+                event.exceptionId(),
+                event.type().name(),
+                event.occurredUnlocode(),
+                event.description());
+    }
+
+    @EventHandler
+    public void on(TrackingExceptionResolvedEvent event) {
+        notificationAcl.notifyExceptionResolved(
+                event.trackingNumber(),
+                event.exceptionId(),
+                event.resolution());
+    }
+
+    @EventHandler
+    public void on(TrackingExceptionEscalatedEvent event) {
+        notificationAcl.notifyExceptionEscalation(
+                event.trackingNumber(),
+                event.exceptionId(),
+                event.type().name());
     }
 }
