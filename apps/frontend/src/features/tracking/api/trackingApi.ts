@@ -100,7 +100,8 @@ const ALLOWED_TRANSITIONS: Record<TransportStatus, TransportStatus[]> = {
   UNLOADED: ['LOADED', 'AWAITING_CLAIM', 'MISROUTED', 'EXCEPTION'],
   AWAITING_CLAIM: ['DELIVERED', 'EXCEPTION'],
   DELIVERED: [],
-  MISROUTED: [],
+  // H5: MISROUTED から正常状態への救済動線（再経路設計 / 緊急輸送による復帰）
+  MISROUTED: ['RECEIVED', 'LOADED', 'IN_TRANSIT'],
   EXCEPTION: ['RECEIVED', 'LOADED', 'IN_TRANSIT'],
 };
 

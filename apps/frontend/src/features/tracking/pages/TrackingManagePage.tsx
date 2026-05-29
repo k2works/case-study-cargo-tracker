@@ -131,6 +131,16 @@ export default function TrackingManagePage() {
 
       <section className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">状態を手動更新</h2>
+        {summary.currentStatus === 'MISROUTED' && (
+          <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <p className="font-semibold">⚠️ 誤配送状態です</p>
+            <p className="mt-1">
+              再経路設計または緊急輸送による正常状態への救済が可能です。
+              復帰先（受領済 / 積込済 / 輸送中）を選択して状態を更新してください。
+              直接配送完了（DELIVERED）への遷移はできません。
+            </p>
+          </div>
+        )}
         {next.length === 0 ? (
           <p className="text-sm text-gray-500">
             現在の状態（{transportStatusLabel(summary.currentStatus)}）から更新可能な遷移はありません。

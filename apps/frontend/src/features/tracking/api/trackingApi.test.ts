@@ -16,9 +16,12 @@ describe('trackingApi', () => {
       ]);
     });
 
-    it('DELIVERED と MISROUTED からは遷移なし（終端）', () => {
+    it('DELIVERED からは遷移なし（終端）', () => {
       expect(allowedNextStatuses('DELIVERED')).toEqual([]);
-      expect(allowedNextStatuses('MISROUTED')).toEqual([]);
+    });
+
+    it('H5: MISROUTED から RECEIVED / LOADED / IN_TRANSIT への救済遷移', () => {
+      expect(allowedNextStatuses('MISROUTED')).toEqual(['RECEIVED', 'LOADED', 'IN_TRANSIT']);
     });
 
     it('EXCEPTION からは RECEIVED / LOADED / IN_TRANSIT のみ復帰', () => {

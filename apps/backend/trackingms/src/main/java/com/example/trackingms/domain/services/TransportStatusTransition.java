@@ -45,7 +45,14 @@ import static com.example.trackingms.domain.model.TransportStatus.UNLOADED;
 @Component
 public class TransportStatusTransition {
 
-    /** 遷移許可マトリックス（from → 許可される to の集合）。 */
+    /**
+     * 遷移許可マトリックス（from → 許可される to の集合）。
+     *
+     * <p>MISROUTED は IT5 リリース時点では終端扱いだったが、業務的には「誤配送」は
+     * 「終了」ではなく「異常」状態であるためレビュー H5 で救済動線を追加。
+     * MISROUTED → RECEIVED / LOADED / IN_TRANSIT は追跡管理者の手動更新でのみ許可する
+     * （再経路設計や緊急輸送による正常状態への復帰）。</p>
+     */
     private static final Map<TransportStatus, Set<TransportStatus>> ALLOWED = Map.ofEntries(
             Map.entry(NOT_RECEIVED, Set.of(RECEIVED, MISROUTED, EXCEPTION)),
             Map.entry(RECEIVED, Set.of(LOADED, MISROUTED, EXCEPTION)),
@@ -54,7 +61,8 @@ public class TransportStatusTransition {
             Map.entry(UNLOADED, Set.of(LOADED, AWAITING_CLAIM, MISROUTED, EXCEPTION)),
             Map.entry(AWAITING_CLAIM, Set.of(DELIVERED, EXCEPTION)),
             Map.entry(DELIVERED, Set.of()),
-            Map.entry(MISROUTED, Set.of()),
+            // H5: 誤配送からの救済動線（再経路設計 / 緊急輸送による復帰）
+            Map.entry(MISROUTED, Set.of(RECEIVED, LOADED, IN_TRANSIT)),
             Map.entry(EXCEPTION, Set.of(RECEIVED, LOADED, IN_TRANSIT))
     );
 

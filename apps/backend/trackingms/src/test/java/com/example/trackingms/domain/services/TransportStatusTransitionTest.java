@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *   <li>許可：NOT_RECEIVED→RECEIVED→LOADED→IN_TRANSIT→UNLOADED→AWAITING_CLAIM→DELIVERED</li>
  *   <li>許可：UNLOADED→LOADED（中継港の積み替え）</li>
  *   <li>許可：{NOT_RECEIVED, RECEIVED, LOADED, IN_TRANSIT, UNLOADED} → MISROUTED（誤配送検知）</li>
+ *   <li>許可：MISROUTED → {RECEIVED, LOADED, IN_TRANSIT}（誤配送からの救済、IT5 H5）</li>
  *   <li>許可：{NOT_RECEIVED..AWAITING_CLAIM} → EXCEPTION（例外発生）</li>
  *   <li>許可：EXCEPTION → {RECEIVED, LOADED, IN_TRANSIT}（復帰）</li>
  *   <li>拒否：同一状態への遷移、終端状態 DELIVERED からの遷移、MISROUTED からの復帰、逆行</li>
@@ -59,7 +60,11 @@ class TransportStatusTransitionTest {
             // 例外からの復帰
             "EXCEPTION,      RECEIVED",
             "EXCEPTION,      LOADED",
-            "EXCEPTION,      IN_TRANSIT"
+            "EXCEPTION,      IN_TRANSIT",
+            // 誤配送からの救済（IT5 H5）
+            "MISROUTED,      RECEIVED",
+            "MISROUTED,      LOADED",
+            "MISROUTED,      IN_TRANSIT"
     })
     void 許可遷移はtrue(TransportStatus from, TransportStatus to) {
         assertThat(transition.canTransition(from, to)).isTrue();
@@ -76,10 +81,14 @@ class TransportStatusTransitionTest {
             "DELIVERED,      IN_TRANSIT",
             "DELIVERED,      MISROUTED",
             "DELIVERED,      EXCEPTION",
-            // MISROUTED からの復帰は本 IT 範囲外（手動更新では戻せない）
-            "MISROUTED,      RECEIVED",
-            "MISROUTED,      IN_TRANSIT",
+            // MISROUTED から AWAITING_CLAIM / DELIVERED への直接遷移は拒否
+            // （正常状態に戻してから順次遷移する設計、IT5 H5）
+            "MISROUTED,      MISROUTED",
+            "MISROUTED,      NOT_RECEIVED",
+            "MISROUTED,      UNLOADED",
+            "MISROUTED,      AWAITING_CLAIM",
             "MISROUTED,      DELIVERED",
+            "MISROUTED,      EXCEPTION",
             // 逆行（前段階に戻る）は拒否
             "RECEIVED,       NOT_RECEIVED",
             "LOADED,         RECEIVED",
@@ -118,7 +127,8 @@ class TransportStatusTransitionTest {
     }
 
     /**
-     * 全 9×9=81 通りの遷移を網羅して、許可された 21 件以外はすべて拒否されることを保証する。
+     * 全 9×9=81 通りの遷移を網羅して、許可された 24 件以外はすべて拒否されることを保証する
+     * （IT5 H5: MISROUTED → {RECEIVED, LOADED, IN_TRANSIT} の救済 3 件追加で 21 → 24）。
      * （仕様変更時に網羅性が失われないようにする保険）。
      */
     @ParameterizedTest(name = "[{index}] {0} → {1} の網羅検証")
@@ -149,7 +159,11 @@ class TransportStatusTransitionTest {
                 "AWAITING_CLAIM->EXCEPTION",
                 "EXCEPTION->RECEIVED",
                 "EXCEPTION->LOADED",
-                "EXCEPTION->IN_TRANSIT"
+                "EXCEPTION->IN_TRANSIT",
+                // IT5 H5: MISROUTED からの救済
+                "MISROUTED->RECEIVED",
+                "MISROUTED->LOADED",
+                "MISROUTED->IN_TRANSIT"
         );
         Stream.Builder<org.junit.jupiter.params.provider.Arguments> b = Stream.builder();
         for (TransportStatus from : TransportStatus.values()) {

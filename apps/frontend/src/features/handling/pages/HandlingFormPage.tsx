@@ -7,17 +7,48 @@ import {
   requiresVoyageNumber,
   type HandlingType,
 } from '../api/handlingApi';
+import { useAuth } from '../../auth/contexts/AuthContext';
 
 const HANDLING_TYPES: HandlingType[] = ['RECEIVE', 'LOAD', 'UNLOAD', 'CLAIM', 'CUSTOMS'];
 
+/**
+ * 連続入力モード（H4）の localStorage キー。
+ * 荷役作業員が同じ航海・場所・作業員 ID で複数貨物を連続記録する典型シナリオに対応する。
+ * 直前値を保持し次回フォーム表示時に初期値として復元する。
+ */
+const LAST_UNLOCODE_KEY = 'handling_last_unlocode';
+const LAST_VOYAGE_KEY = 'handling_last_voyage';
+const LAST_HANDLER_ID_KEY = 'handling_last_handler_id';
+
+function loadLast(key: string): string {
+  try {
+    return localStorage.getItem(key) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function saveLast(key: string, value: string) {
+  try {
+    if (value) localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
 export default function HandlingFormPage() {
   const navigate = useNavigate();
+  const auth = useAuth();
   const [trackingNumber, setTrackingNumber] = useState('');
   const [handlingType, setHandlingType] = useState<HandlingType>('RECEIVE');
-  const [unlocode, setUnlocode] = useState('');
-  const [voyageNumber, setVoyageNumber] = useState('');
+  // H4: 連続入力モード - 直前値を初期値として復元
+  const [unlocode, setUnlocode] = useState(() => loadLast(LAST_UNLOCODE_KEY));
+  const [voyageNumber, setVoyageNumber] = useState(() => loadLast(LAST_VOYAGE_KEY));
   const [occurredAt, setOccurredAt] = useState(() => defaultOccurredAt());
-  const [handlerId, setHandlerId] = useState('');
+  // H4: 作業員 ID はログイン中のユーザー名で初期化（毎回手入力させない）
+  const [handlerId, setHandlerId] = useState(
+    () => loadLast(LAST_HANDLER_ID_KEY) || auth.username || '',
+  );
   const [consigneeName, setConsigneeName] = useState('');
   const [signatureRef, setSignatureRef] = useState('');
   const [confirmationCode, setConfirmationCode] = useState('');
@@ -63,6 +94,11 @@ export default function HandlingFormPage() {
             }
           : null,
       });
+      // H4: 連続入力モード - 同じ航海・場所・作業員 ID で複数貨物を続けて記録できるよう
+      // 直前値を localStorage に永続化する
+      saveLast(LAST_UNLOCODE_KEY, unlocode);
+      saveLast(LAST_VOYAGE_KEY, voyageNumber);
+      saveLast(LAST_HANDLER_ID_KEY, handlerId);
       navigate(`/handling?activityId=${res.activityId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : '登録に失敗しました');
