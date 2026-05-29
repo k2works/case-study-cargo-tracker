@@ -1,12 +1,18 @@
 package com.example.trackingms.domain.model;
 
 import com.example.trackingms.domain.commands.InitializeTrackingCommand;
+import com.example.trackingms.domain.commands.UpdateTransportStatusCommand;
+import com.example.trackingms.domain.events.CargoMisroutedEvent;
 import com.example.trackingms.domain.events.TrackingInitializedEvent;
+import com.example.trackingms.domain.events.TransportStatusUpdatedEvent;
+import com.example.trackingms.domain.services.TransportStatusTransition;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
 
 /**
  * {@link TrackingActivity} 集約の Axon Test Fixture テスト（US14 / IT5 1.3）。
@@ -22,6 +28,8 @@ class TrackingActivityAggregateTest {
     @BeforeEach
     void setUp() {
         fixture = new AggregateTestFixture<>(TrackingActivity.class);
+        // US17 タスク 2.2：状態遷移ガード（ドメインサービス）を Aggregate のリソースとして注入
+        fixture.registerInjectableResource(new TransportStatusTransition());
     }
 
     @Test
@@ -56,5 +64,117 @@ class TrackingActivityAggregateTest {
         fixture.givenNoPriorActivity()
                 .when(command)
                 .expectException(IllegalArgumentException.class);
+    }
+
+    // --- IT5 タスク 2.2：US17 貨物状態手動更新 ---
+
+    @Test
+    @DisplayName("US17: 許可遷移（NOT_RECEIVED→RECEIVED）で TransportStatusUpdatedEvent が発行される")
+    void 許可遷移で状態が更新される() {
+        LocalDateTime occurredAt = LocalDateTime.of(2026, 7, 20, 10, 0);
+        UpdateTransportStatusCommand command = new UpdateTransportStatusCommand(
+                "TRK-AB12CD3456", TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                "JPTYO", null, occurredAt, "貨物を東京港で受領");
+
+        fixture.given(new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new TransportStatusUpdatedEvent(
+                        "TRK-AB12CD3456",
+                        TrackingActivityAggregateTest.TransportStatusFixture.NOT_RECEIVED,
+                        TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                        "JPTYO", null, occurredAt, "貨物を東京港で受領"));
+    }
+
+    @Test
+    @DisplayName("US17: 不正遷移（NOT_RECEIVED→DELIVERED）は IllegalStateException")
+    void 不正遷移は拒否される() {
+        UpdateTransportStatusCommand command = new UpdateTransportStatusCommand(
+                "TRK-AB12CD3456", TrackingActivityAggregateTest.TransportStatusFixture.DELIVERED,
+                "USNYC", null, LocalDateTime.of(2026, 8, 1, 10, 0), "誤った遷移");
+
+        fixture.given(new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"))
+                .when(command)
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US17: MISROUTED への遷移で TransportStatusUpdatedEvent + CargoMisroutedEvent の 2 件が発行される")
+    void 誤配送検知でCargoMisroutedEventが発行される() {
+        LocalDateTime occurredAt = LocalDateTime.of(2026, 7, 22, 12, 0);
+        UpdateTransportStatusCommand command = new UpdateTransportStatusCommand(
+                "TRK-AB12CD3456", TrackingActivityAggregateTest.TransportStatusFixture.MISROUTED,
+                "CNHKG", null, occurredAt, "想定外の港で発見");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.NOT_RECEIVED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                                "JPTYO", null,
+                                LocalDateTime.of(2026, 7, 20, 10, 0), null))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.MISROUTED,
+                                "CNHKG", null, occurredAt, "想定外の港で発見"),
+                        new CargoMisroutedEvent("TRK-AB12CD3456", "CNHKG", occurredAt));
+    }
+
+    @Test
+    @DisplayName("US17: 終端 DELIVERED からの再遷移は拒否される")
+    void DELIVERED後の遷移は拒否される() {
+        UpdateTransportStatusCommand command = new UpdateTransportStatusCommand(
+                "TRK-AB12CD3456", TrackingActivityAggregateTest.TransportStatusFixture.EXCEPTION,
+                "USNYC", null, LocalDateTime.of(2026, 9, 1, 0, 0), null);
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.NOT_RECEIVED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                                "JPTYO", null, LocalDateTime.of(2026, 7, 20, 10, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.LOADED,
+                                "JPTYO", "V-MAERSK-220",
+                                LocalDateTime.of(2026, 7, 21, 9, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.LOADED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.IN_TRANSIT,
+                                "JPTYO", "V-MAERSK-220",
+                                LocalDateTime.of(2026, 7, 21, 18, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.IN_TRANSIT,
+                                TrackingActivityAggregateTest.TransportStatusFixture.UNLOADED,
+                                "USNYC", "V-MAERSK-220",
+                                LocalDateTime.of(2026, 8, 15, 9, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.UNLOADED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.AWAITING_CLAIM,
+                                "USNYC", null,
+                                LocalDateTime.of(2026, 8, 15, 10, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.AWAITING_CLAIM,
+                                TrackingActivityAggregateTest.TransportStatusFixture.DELIVERED,
+                                "USNYC", null,
+                                LocalDateTime.of(2026, 8, 16, 14, 0), null))
+                .when(command)
+                .expectException(IllegalStateException.class);
+    }
+
+    /** テスト可読性のための短縮エイリアス。 */
+    static final class TransportStatusFixture {
+        static final TransportStatus NOT_RECEIVED = TransportStatus.NOT_RECEIVED;
+        static final TransportStatus RECEIVED = TransportStatus.RECEIVED;
+        static final TransportStatus LOADED = TransportStatus.LOADED;
+        static final TransportStatus IN_TRANSIT = TransportStatus.IN_TRANSIT;
+        static final TransportStatus UNLOADED = TransportStatus.UNLOADED;
+        static final TransportStatus AWAITING_CLAIM = TransportStatus.AWAITING_CLAIM;
+        static final TransportStatus DELIVERED = TransportStatus.DELIVERED;
+        static final TransportStatus MISROUTED = TransportStatus.MISROUTED;
+        static final TransportStatus EXCEPTION = TransportStatus.EXCEPTION;
     }
 }
