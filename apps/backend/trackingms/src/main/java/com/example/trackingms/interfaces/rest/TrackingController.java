@@ -8,7 +8,10 @@ import com.example.trackingms.domain.projections.TrackingSummary;
 import com.example.trackingms.interfaces.rest.dto.TrackingEventResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingSummaryResponse;
 import com.example.trackingms.interfaces.rest.dto.UpdateTransportStatusRequest;
+import org.axonframework.commandhandling.CommandExecutionException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletionException;
 
 /**
  * 追跡情報の REST Controller（US17 / IT5 2.3）。
@@ -78,5 +83,38 @@ public class TrackingController {
         );
         commandService.updateStatus(command).join();
         return ResponseEntity.accepted().build();
+    }
+
+    /**
+     * 集約が拒否した状態遷移（不正遷移など）を 422 Unprocessable Entity に変換する。
+     * Axon の CommandGateway は集約内例外を {@link CommandExecutionException} でラップし、
+     * {@code join()} はさらに {@link CompletionException} でラップするため、
+     * 原因の {@link IllegalStateException} を辿って HTTP ステータスに対応付ける。
+     */
+    @ExceptionHandler(CompletionException.class)
+    public ResponseEntity<Map<String, String>> handleCompletionException(CompletionException ex) {
+        Throwable cause = unwrap(ex);
+        if (cause instanceof IllegalStateException) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(Map.of("message", cause.getMessage() == null ? "不正な状態遷移です" : cause.getMessage()));
+        }
+        if (cause instanceof IllegalArgumentException) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", cause.getMessage() == null ? "不正な引数です" : cause.getMessage()));
+        }
+        throw ex;
+    }
+
+    private Throwable unwrap(Throwable t) {
+        Throwable current = t;
+        while (current != null
+                && (current instanceof CompletionException || current instanceof CommandExecutionException)) {
+            Throwable next = current.getCause();
+            if (next == null || next == current) {
+                break;
+            }
+            current = next;
+        }
+        return current;
     }
 }
