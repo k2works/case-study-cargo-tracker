@@ -154,7 +154,7 @@
 | 3.2 | `HandlingActivity` 集約 + `RegisterHandlingActivityCommand`（LOAD/UNLOAD は航海番号必須・重複拒否・予定外警告） | 4h | - | [x] 2026-05-29: 集約全不変条件完成。HandlingValidationService（重複検知 + CargoSnapshot ベースの予定外検知）を集約に注入。未来時刻拒否・5 分粒度重複拒否（IllegalStateException）・予定外検知時の UnexpectedHandlingDetectedEvent 警告発行を追加。Aggregate Test 9 件 + ValidationService Test 9 件 PASS |
 | 3.3 | handlingms → trackingms: `HandlingActivityRegisteredEvent` → `UpdateTransportStatusCommand`（cross-service） | 3h | - | [x] 2026-05-29（commit 3ac8c2bd）: HandlingActivityCrossServicePublisher（local → shared 変換）+ trackingms HandlingActivityRegisteredEventHandler（HandlingType 4 マッピング + ADR-0011 ホワイトリスト）。テスト 8 件 PASS |
 | 3.4 | フロント：荷役作業記録 UI（荷役作業員ロール） | 3h | - | [x] 2026-05-29: handlingApi.ts（型 + 4 API + 3 ヘルパー）+ HandlingListPage（S21）+ HandlingFormPage（S20、種別セレクトで航海/荷受人確認の動的表示）+ App.tsx ルーティング追加。9 件 PASS、フロント全体 161 件 PASS |
-| 3.5 | テスト（集約・バリデーション・cross-service 統合） | 3h | - | [部分対応] 2026-05-29: HandlingActivityRegisteredEventHandlerTest 8 件 + CargoDeliveredEventPublisherTest 3 件 PASS。Testcontainers Kafka cross-service 統合テストは未追加 |
+| 3.5 | テスト（集約・バリデーション・cross-service 統合） | 3h | - | [x] 2026-05-29: Testcontainers Kafka 統合テスト 2 件追加。trackingms 側 HandlingActivityRegisteredKafkaIntegrationTest（handlingms → trackingms：RECEIVE → RECEIVED 伝搬 + ADR-0011 未初期化スキップ）、handlingms 側 HandlingActivityKafkaIntegrationTest（cargo_snapshot ACL 受信 + 荷役登録 → 投影 → cross-service publish）。単独実行は全 PASS、`./gradlew check` 連続実行では Kafka container race の flaky が発生する場合あり（IT5 既知事象） |
 
 **小計**: 17h（理想時間）
 
@@ -193,7 +193,7 @@ IT5 で追加した 4 画面（S16 / S17 / S20 / S21）と cross-service 連携�
 | **合計（コミット）** | **10** | **77h** | 10/10 SP 完了 |
 
 **1 SP あたり**: 約 7.7h（コミット分）。基盤 18h を含めると 95h
-**進捗率**: 100%（10/10 SP、Testcontainers Kafka cross-service 統合テスト追加 + 集約バリデーション拡張 [3.2 残] のみ後続フォローアップ）
+**進捗率**: 100%（10/10 SP、全タスク完了）
 
 > **注**: 新サービス 2 つの立ち上げ + 通知スタブ（基盤 18h）を含むため、IT1-IT4 の実効（約 70h/10-11SP）より重い。リスク欄の分割方針を参照。
 
