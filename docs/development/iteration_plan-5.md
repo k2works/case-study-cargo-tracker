@@ -118,7 +118,7 @@
 | 0.3 | gatewayms に `/api/v1/tracking/**`・`/api/v1/handling/**` ルートを追加（新サービス追加チェックリスト） | 2h | - | [x] 2026-05-28（commit 7c3f2b11） |
 | 0.4 | Flyway 初期マイグレーション（tracking_read_db：tracking_summary/tracking_event/tracking_exception + token/saga、handling_read_db：handling_activity/handling_itinerary_snapshot/claim_verification + token） | 3h | - | [x] 2026-05-28（V1 Axon + V2 投影テーブル。token は Axon の `tokenentry` に統合） |
 | 0.5 | docker-compose・deploy スクリプトの SERVICES・sonarqube.config.json・GitHub Project に新サービスを反映 | 2h | - | [一部対応] 2026-05-28：develop.js / heroku.js SERVICES + DEPLOY_ORDER + smoke、sonar-project.properties に反映（commit 7c3f2b11）。docker-compose.yml と GitHub Project Issue 同期は別途 |
-| 0.6 | trackingms に `NotificationAcl` スタブ（ログ出力）を実装し、通知トリガーイベント（`TrackingInitializedEvent`・`TransportStatusUpdatedEvent`）の配線（US14/US15/US17 受入基準の通知。実メール連携は IT6 以降） | 3h | - | [ ] |
+| 0.6 | trackingms に `NotificationAcl` スタブ（ログ出力）を実装し、通知トリガーイベント（`TrackingInitializedEvent`・`TransportStatusUpdatedEvent`）の配線（US14/US15/US17 受入基準の通知。実メール連携は IT6 以降） | 3h | - | [x] 2026-05-29: NotificationAcl Port + LoggingNotificationAcl スタブ実装 + TrackingNotificationEventHandler で TrackingInitializedEvent / TransportStatusUpdatedEvent / CargoMisroutedEvent 購読。テスト 3 件 PASS |
 
 **小計**: 18h（理想時間）
 
@@ -129,8 +129,8 @@
 | 1.1 | shared: `TrackingIssuanceRequestedEvent`（bookingms → trackingms）を定義 | 2h | - | [x]（2026-05-28：併せて `CargoTrackedEvent`・`HandlingActivityRegisteredEvent` も shared に先行追加。`gradle check` 全モジュール PASS。Saga 延伸（1.2）と Read Model 投影（1.4）は後続） |
 | 1.2 | bookingms: `BookingSagaManager` を `BookingConfirmedEvent` → `TrackingIssuanceRequestedEvent` 発行まで延伸（ADR-0009、SagaTestFixture） | 4h | - | [x] 2026-05-28（commit b7979512）: EventGateway 注入で TrackingIssuanceRequestedEvent を cross-service publish。Saga が RouteDesignRequestedEvent / CargoRoutedEvent から属性集約。SagaTestFixture で Mockito verify publish 内容を完全検証 |
 | 1.3 | trackingms: `TrackingActivity` 集約 + `InitializeTrackingCommand` → `TrackingInitializedEvent`、`TrackingNumber` 採番（TRK- + 10 桁） | 4h | - | [x] 2026-05-28（commit eb8050eb）: TrackingNumber 値オブジェクト + TrackingNumberGenerator（SecureRandom 36 文字種 × 10 桁）+ TrackingActivity 集約 + TransportStatus 9 値 enum。Axon Test Fixture 3 件 PASS（Positive 1 + Negative 2） |
-| 1.4 | trackingms → bookingms: 採番結果を `CargoTrackedEvent` で反映し予約状態を TRACKING_ISSUED に（Saga 終了）+ Read Model 投影 | 4h | - | [shared 側完了] 2026-05-28：cross-service イベント `com.example.shared.events.CargoTrackedEvent` を shared に追加済（タスク 1.1 で先行）。trackingms 発行ロジック・bookingms Saga `@SagaEventHandler(CargoTrackedEvent)` + `@EndSaga` + Read Model 投影は trackingms 新規モジュール追加後に実装 |
-| 1.5 | テスト（Axon Test：Saga・集約、cross-service 統合：Testcontainers Kafka） | 3h | - | [ ] |
+| 1.4 | trackingms → bookingms: 採番結果を `CargoTrackedEvent` で反映し予約状態を TRACKING_ISSUED に（Saga 終了）+ Read Model 投影 | 4h | - | [x] 2026-05-28（commits e5c4541b / 3430e2c4 / 1c4011ba）: cross-service Saga 完結。AssignTrackingDetailsCommand で Cargo を TRACKING_ISSUED に遷移。tracking_summary / cargo_summary 投影実装 |
+| 1.5 | テスト（Axon Test：Saga・集約、cross-service 統合：Testcontainers Kafka） | 3h | - | [x] 2026-05-28（commit 0c18463d）: cross-service 統合テスト 2 件追加（TrackingIssuanceRequestedKafkaIntegrationTest + CargoTrackedKafkaIntegrationTest）。Testcontainers Kafka で双方向 cross-service 経路を End-to-End 検証 |
 
 **小計**: 17h（理想時間）
 
@@ -138,11 +138,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | trackingms: `TransportStatus`（9 値）と `TransportStatusTransition`（遷移ガード）ドメインサービスを TDD で実装 | 4h | - | [ ] |
-| 2.2 | `UpdateTransportStatusCommand` → `TransportStatusUpdatedEvent`（不正遷移は拒否、MISROUTED 検知で `CargoMisroutedEvent`） | 4h | - | [ ] |
-| 2.3 | `tracking_summary` / `tracking_event`（source=MANUAL）の投影 + 照会・更新 API | 3h | - | [ ] |
-| 2.4 | フロント：追跡管理 UI（S16 追跡管理一覧・S17 追跡詳細/状態更新、追跡管理者ロール） | 4h | - | [ ] |
-| 2.5 | テスト（遷移許可/拒否・境界、投影、API） | 3h | - | [ ] |
+| 2.1 | trackingms: `TransportStatus`（9 値）と `TransportStatusTransition`（遷移ガード）ドメインサービスを TDD で実装 | 4h | - | [x] 2026-05-29（commit ed2011ca）: TransportStatusTransition Map ベース宣言的実装。9×9=81 通り遷移マトリックス（許可 21・拒否 60）。CSV 駆動テスト 26 件 PASS |
+| 2.2 | `UpdateTransportStatusCommand` → `TransportStatusUpdatedEvent`（不正遷移は拒否、MISROUTED 検知で `CargoMisroutedEvent`） | 4h | - | [x] 2026-05-29（commit ed2011ca）: TrackingActivity 集約に @CommandHandler 追加。MISROUTED 遷移時は TransportStatusUpdatedEvent + CargoMisroutedEvent の 2 件同時発行。Axon Test Fixture US17 4 件追加（許可遷移・不正遷移・MISROUTED 同時発行・終端 DELIVERED 拒否） |
+| 2.3 | `tracking_summary` / `tracking_event`（source=MANUAL）の投影 + 照会・更新 API | 3h | - | [x] 2026-05-29（commit dff6c870）: TrackingEventMapper / TrackingEvent POJO / Mapper XML 新規。TrackingSummaryMapper に updateStatus + markMisrouted 追加。TrackingController（GET /tracking/{tn}・/events、POST /status）+ DTO + Application Service。Projection 3 件 + Controller 6 件 PASS |
+| 2.4 | フロント：追跡管理 UI（S16 追跡管理一覧・S17 追跡詳細/状態更新、追跡管理者ロール） | 4h | - | [x] 2026-05-29（commit 272b8f39）: GET /api/v1/tracking 一覧 API（page/size 補正）+ TrackingListPage（S16）+ TrackingManagePage（S17、許可遷移のみセレクト + 履歴表示）+ trackingApi.ts（ALLOWED_TRANSITIONS バックエンド整合）。フロント 13 件 + 全体 152 件 PASS |
+| 2.5 | テスト（遷移許可/拒否・境界、投影、API） | 3h | - | [x] 2026-05-29（commit 6ed60e63）: TrackingControllerIntegrationTest（@SpringBootTest + TestRestTemplate + Awaitility）5 件追加。ハッピーパス（NOT_RECEIVED → DELIVERED 6 段階）+ MISROUTED + 不正遷移 422 + 不正状態名 400 + 404。@ExceptionHandler で CommandExecutionException → 422 / 400 変換 |
 
 **小計**: 18h（理想時間）
 
@@ -173,15 +173,15 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 基盤（trackingms/handlingms 新設・通知スタブ・SP 外） | - | 18h | [ ] |
-| US14 追跡番号発行 | 2 | 17h | [ ] |
-| US17 貨物状態手動更新 | 3 | 18h | [ ] |
-| US15 荷役作業記録 | 3 | 17h | [ ] |
-| US16 引取作業記録 | 2 | 10h | [ ] |
-| **合計（コミット）** | **10** | **77h** | |
+| 基盤（trackingms/handlingms 新設・通知スタブ・SP 外） | - | 18h | [一部対応] 0.1-0.5 完了。0.6（NotificationAcl スタブ）残 |
+| US14 追跡番号発行 | 2 | 17h | [x] 完了（2026-05-29） |
+| US17 貨物状態手動更新 | 3 | 18h | [x] 完了（2026-05-29） |
+| US15 荷役作業記録 | 3 | 17h | [部分対応] 3.2（集約初期化のみ）。3.1/3.3/3.4/3.5 残 |
+| US16 引取作業記録 | 2 | 10h | [一部対応] 4.1（ClaimVerification 不変条件）。4.2/4.3/4.4 残 |
+| **合計（コミット）** | **10** | **77h** | 5/10 SP 完了 |
 
 **1 SP あたり**: 約 7.7h（コミット分）。基盤 18h を含めると 95h
-**進捗率**: 0%（0/10 SP）
+**進捗率**: 50%（5/10 SP、US14 + US17）
 
 > **注**: 新サービス 2 つの立ち上げ + 通知スタブ（基盤 18h）を含むため、IT1-IT4 の実効（約 70h/10-11SP）より重い。リスク欄の分割方針を参照。
 
