@@ -42,10 +42,11 @@ test.describe('IT6 / S19: 例外対応一覧 UI', () => {
     await loginAsAdmin(page);
     await page.goto('/tracking/exceptions');
 
-    // 例外が 1 件もない初期状態では空状態メッセージが出る
-    // データがある環境ではこのテストはスキップされるべきだが、新環境前提
-    const emptyOrTable = page.getByText('例外がありません').or(page.getByRole('table'));
-    await expect(emptyOrTable).toBeVisible({ timeout: 10_000 });
+    // 例外が 1 件もない初期状態では「例外がありません」セルが、データがある環境では tracking 番号セルが表示される。
+    // strict mode 違反を避けるため td セル（role=cell）レベルで限定して or を組む。
+    const emptyCell = page.getByRole('cell', { name: '例外がありません' });
+    const dataCell = page.locator('td').filter({ hasText: /^TRK-/ });
+    await expect(emptyCell.or(dataCell.first())).toBeVisible({ timeout: 10_000 });
   });
 });
 
