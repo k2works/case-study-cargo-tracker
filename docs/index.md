@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み（Axon Kafka + Heroku + Aiven 構成） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 16 件作成済み（リリース計画・IT1-IT5 計画/ふりかえり/完了報告書） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 19 件作成済み（リリース計画・IT1-IT6 計画/ふりかえり/完了報告書）|
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 7 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 8 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 8 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 11 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 32 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -69,6 +69,9 @@
 | [ADR-0009](./adr/0009-cross-service-event-saga.md) | cross-service イベント連携と Axon Saga を採用（Kafka tracking モード、提案中） |
 | [ADR-0010](./adr/0010-local-h2-kafka-topic-initialization.md) | `local-h2` のインメモリ event store と Kafka トピックを整合させる（トピック初期化と冪等な孤児イベント処理） |
 | [ADR-0011](./adr/0011-kafka-tracking-error-handling-policy.md) | Kafka tracking プロセッサのエラーハンドリング統一方針（ホワイトリスト方式の継続と伝播先処理の標準化） |
+| [ADR-0012](./adr/0012-cross-service-idempotency-and-transactions.md) | cross-service イベントの冪等性とトランザクション境界（集約発火型 + 投影フラグ列 + 待避テーブル、提案中） |
+| [ADR-0013](./adr/0013-public-tracking-token.md) | 公開追跡照会の時限署名トークン（JWT HS256、有効期限 30 日、IT6 暫定 / IT8 で AWS Secrets Manager、提案中） |
+| [ADR-0014](./adr/0014-processing-group-naming.md) | Axon @ProcessingGroup 命名規約（`cross-` / `local-` / `outbound-` の 3 種類 prefix、提案中） |
 
 ### 運用ドキュメント
 
@@ -83,6 +86,12 @@
 | :--- | :--- |
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
 | [IT2 ページネーション機能レビュー](./review/pagination_review_20260525.md) | IT2 荷主・予約一覧ページネーション機能のマルチパースペクティブレビュー結果（高 4 件・中 7 件・低 6 件） |
+| [IT3 セッションレビュー](./review/it3_session_review_20260526.md) | IT3 経路設計依頼参照 API + cross-service E2E + 認証ヘッダ統一（高 4 件・中 6 件・低 6 件） |
+| [IT4 経路設計レビュー](./review/it4_routing_review_20260526.md) | IT4 経路設計（US08/US09/US11/US12）の本体実装レビュー（高 6 件・中 8 件・低 6 件） |
+| [IT4 セッション後続変更レビュー](./review/it4_session_review_20260526.md) | cross-service 堅牢化 + H4 予約化プリセット + Code Smell 解消（高 5 件・中 5 件・低 6 件） |
+| [cad796dd レビュー](./review/cad796dd_review_20260528.md) | IT5 着手前セッション変更レビュー |
+| [IT5 開発成果物レビュー](./review/IT5_review_20260529.md) | IT5（追跡・荷役）全変更のマルチパースペクティブレビュー結果（高 7 件・中 10 件・低 12 件） |
+| [IT6 開発成果物レビュー](./review/IT6_review_20260529.md) | IT6（追跡照会 + 例外処理）全変更のマルチパースペクティブレビュー結果（高 9 件・中 11 件・低 8 件） |
 
 ## 補足
 
