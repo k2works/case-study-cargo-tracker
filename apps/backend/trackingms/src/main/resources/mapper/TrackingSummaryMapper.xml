@@ -41,6 +41,26 @@
         )
     </insert>
 
+    <update id="updateStatus">
+        UPDATE tracking_summary
+        SET current_status        = #{currentStatus},
+            current_unlocode      = #{currentUnlocode},
+            current_voyage_number = #{currentVoyageNumber},
+            last_event_at         = #{lastEventAt},
+            updated_at            = CURRENT_TIMESTAMP,
+            version               = version + 1
+        WHERE tracking_number = #{trackingNumber}
+    </update>
+
+    <update id="markMisrouted">
+        UPDATE tracking_summary
+        SET misrouted     = TRUE,
+            last_event_at = #{lastEventAt},
+            updated_at    = CURRENT_TIMESTAMP,
+            version       = version + 1
+        WHERE tracking_number = #{trackingNumber}
+    </update>
+
     <select id="findByTrackingNumber" resultMap="trackingSummaryResultMap">
         SELECT *
         FROM tracking_summary

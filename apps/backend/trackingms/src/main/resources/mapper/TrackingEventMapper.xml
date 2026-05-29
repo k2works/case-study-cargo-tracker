@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.trackingms.infrastructure.repositories.mybatis.TrackingEventMapper">
+
+    <resultMap id="trackingEventResultMap" type="com.example.trackingms.domain.projections.TrackingEvent">
+        <id property="eventId" column="event_id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="occurredAt" column="occurred_at"/>
+        <result property="recordedAt" column="recorded_at"/>
+        <result property="eventType" column="event_type"/>
+        <result property="transportStatus" column="transport_status"/>
+        <result property="unlocode" column="unlocode"/>
+        <result property="voyageNumber" column="voyage_number"/>
+        <result property="handlingType" column="handling_type"/>
+        <result property="source" column="source"/>
+        <result property="description" column="description"/>
+    </resultMap>
+
+    <insert id="insertTrackingEvent">
+        INSERT INTO tracking_event (
+            tracking_number,
+            occurred_at,
+            recorded_at,
+            event_type,
+            transport_status,
+            unlocode,
+            voyage_number,
+            handling_type,
+            source,
+            description
+        ) VALUES (
+            #{trackingNumber},
+            #{occurredAt},
+            CURRENT_TIMESTAMP,
+            #{eventType},
+            #{transportStatus},
+            #{unlocode},
+            #{voyageNumber},
+            #{handlingType},
+            #{source},
+            #{description}
+        )
+    </insert>
+
+    <select id="findByTrackingNumber" resultMap="trackingEventResultMap">
+        SELECT *
+        FROM tracking_event
+        WHERE tracking_number = #{trackingNumber}
+        ORDER BY occurred_at ASC, event_id ASC
+    </select>
+
+</mapper>
