@@ -70,4 +70,41 @@ describe('Navigation', () => {
     expect(screen.queryByRole('link', { name: '荷主管理' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '予約管理' })).not.toBeInTheDocument();
   });
+
+  it('IT5: ROLE_TRACKER に追跡管理リンクが表示される（US17）', () => {
+    renderWithAuth('ROLE_TRACKER');
+
+    expect(screen.getByRole('link', { name: '追跡管理' })).toHaveAttribute('href', '/tracking');
+  });
+
+  it('IT5: ROLE_SALES に追跡管理リンクは表示されない', () => {
+    renderWithAuth('ROLE_SALES');
+
+    expect(screen.queryByRole('link', { name: '追跡管理' })).not.toBeInTheDocument();
+  });
+
+  it('IT5: ROLE_HANDLER に荷役作業リンクが表示される（US15）', () => {
+    renderWithAuth('ROLE_HANDLER');
+
+    expect(screen.getByRole('link', { name: '荷役作業' })).toHaveAttribute('href', '/handling');
+  });
+
+  it('IT5: ROLE_TRACKER に荷役作業リンクは表示されない', () => {
+    renderWithAuth('ROLE_TRACKER');
+
+    expect(screen.queryByRole('link', { name: '荷役作業' })).not.toBeInTheDocument();
+  });
+
+  it('IT5: ROLE_ADMIN に追跡管理と荷役作業の両方が表示される', () => {
+    renderWithAuth('ROLE_ADMIN');
+
+    expect(screen.getByRole('link', { name: '追跡管理' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '荷役作業' })).toBeInTheDocument();
+  });
+
+  it('IT5: ROLE_TRACKER にダッシュボードリンクが表示される', () => {
+    renderWithAuth('ROLE_TRACKER');
+
+    expect(screen.getByRole('link', { name: 'ダッシュボード' })).toHaveAttribute('href', '/');
+  });
 });
