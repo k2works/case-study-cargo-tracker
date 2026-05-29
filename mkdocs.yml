@@ -117,6 +117,7 @@ nav:
       - IT4 セッション後続変更レビュー: review/it4_session_review_20260526.md
       - cad796dd レビュー: review/cad796dd_review_20260528.md
       - IT5 開発成果物レビュー: review/IT5_review_20260529.md
+      - IT6 開発成果物レビュー: review/IT6_review_20260529.md
   - ADR:
       - 概要: adr/index.md
       - ADR-0001 Axon Kafka + Aiven 採用: adr/0001-axon-kafka-aiven-adoption.md
