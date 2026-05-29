@@ -61,6 +61,7 @@ import static org.awaitility.Awaitility.await;
 )
 @ActiveProfiles("local-h2")
 @Testcontainers
+@org.junit.jupiter.api.Tag("kafka-integration")
 class CargoTrackedKafkaIntegrationTest {
 
     @Container

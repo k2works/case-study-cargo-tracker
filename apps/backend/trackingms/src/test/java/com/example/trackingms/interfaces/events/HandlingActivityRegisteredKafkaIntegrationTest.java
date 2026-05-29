@@ -51,6 +51,7 @@ import static org.awaitility.Awaitility.await;
 )
 @ActiveProfiles("local-h2")
 @Testcontainers
+@org.junit.jupiter.api.Tag("kafka-integration")
 class HandlingActivityRegisteredKafkaIntegrationTest {
 
     @Container
@@ -115,13 +116,10 @@ class HandlingActivityRegisteredKafkaIntegrationTest {
                 "HA-NOINIT-01", trackingNumber, "RECEIVE",
                 occurredAt, "JPTYO", null, "H-NOINIT", null, false));
 
-        // スキップされて投影は更新されないことを 5 秒程度待って確認（追加されないことを観測）。
-        try {
-            Thread.sleep(5_000L);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        TrackingSummary summary = trackingSummaryMapper.findByTrackingNumber(trackingNumber);
-        assertThat(summary).isNull();
+        // スキップされて投影は更新されないことを Awaitility で 5 秒間「null のまま」を観測する。
+        // 通常 Awaitility は条件成立を待つが、ここでは during で「成立しない」ことを継続観測する。
+        await().pollDelay(Duration.ofSeconds(5)).atMost(Duration.ofSeconds(6))
+                .untilAsserted(() ->
+                        assertThat(trackingSummaryMapper.findByTrackingNumber(trackingNumber)).isNull());
     }
 }

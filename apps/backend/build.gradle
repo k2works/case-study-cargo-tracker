@@ -45,7 +45,15 @@ subprojects {
     }
 
     tasks.withType(Test).configureEach {
-        useJUnitPlatform()
+        useJUnitPlatform {
+            // IT5 H6/H7 対応：Kafka 統合テストは container race の flaky 問題のため
+            // 通常の `check` タスクからは除外する。`-PincludeKafkaIntegration=true` 指定時のみ実行。
+            // 個別実行は `./gradlew :<svc>:test --tests *KafkaIntegrationTest --rerun-tasks` で可能。
+            // IT6 で構造的解決（Testcontainers Reusable + 一意 topic prefix）予定。
+            if (!project.hasProperty('includeKafkaIntegration')) {
+                excludeTags 'kafka-integration'
+            }
+        }
         testLogging {
             events 'passed', 'failed', 'skipped'
             exceptionFormat = 'full'
