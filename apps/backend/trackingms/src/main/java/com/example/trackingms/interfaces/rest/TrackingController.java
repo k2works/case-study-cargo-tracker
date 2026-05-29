@@ -3,9 +3,14 @@ package com.example.trackingms.interfaces.rest;
 import com.example.trackingms.application.TrackingCommandService;
 import com.example.trackingms.application.TrackingQueryService;
 import com.example.trackingms.domain.commands.UpdateTransportStatusCommand;
+import com.example.trackingms.domain.model.JwtToken;
+import com.example.trackingms.domain.model.TrackingNumber;
 import com.example.trackingms.domain.model.TransportStatus;
 import com.example.trackingms.domain.projections.TrackingSummary;
+import com.example.trackingms.domain.services.TrackingTokenService;
+import com.example.trackingms.interfaces.rest.dto.IssueTokenRequest;
 import com.example.trackingms.interfaces.rest.dto.PageResponse;
+import com.example.trackingms.interfaces.rest.dto.TokenIssuanceResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingEventResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingSummaryResponse;
 import com.example.trackingms.interfaces.rest.dto.UpdateTransportStatusRequest;
@@ -37,11 +42,14 @@ public class TrackingController {
 
     private final TrackingCommandService commandService;
     private final TrackingQueryService queryService;
+    private final TrackingTokenService tokenService;
 
     public TrackingController(TrackingCommandService commandService,
-                              TrackingQueryService queryService) {
+                              TrackingQueryService queryService,
+                              TrackingTokenService tokenService) {
         this.commandService = commandService;
         this.queryService = queryService;
+        this.tokenService = tokenService;
     }
 
     @GetMapping
@@ -77,6 +85,39 @@ public class TrackingController {
                 .map(TrackingEventResponse::from)
                 .toList();
         return ResponseEntity.ok(events);
+    }
+
+    /**
+     * 公開照会用 JWT トークンを発行する（US18 / ADR-0013）。
+     *
+     * <p>追跡管理者が荷主・荷受人向けに照会 URL を生成するために呼び出す。発行された JWT は
+     * {@code /tracking/{tn}?token=<JWT>} のクエリパラメータに埋め込んで荷主に送付される。</p>
+     *
+     * <p>FIXME: 認可（ROLE_TRACKER + ROLE_ADMIN）は trackingms 全体に Spring Security 導入時
+     * （IT8 想定）に追加する。現状は trackingms に Spring Security が入っていないため、本エンドポイントは
+     * 認証なしで実行可能（gateway 側で認可する想定）。</p>
+     */
+    @PostMapping("/{trackingNumber}/token")
+    public ResponseEntity<TokenIssuanceResponse> issueToken(
+            @PathVariable String trackingNumber,
+            @RequestBody IssueTokenRequest request) {
+        TrackingNumber tn;
+        try {
+            tn = TrackingNumber.of(trackingNumber);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (request == null || request.subjectId() == null || request.subjectId().isBlank()
+                || request.role() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        TrackingSummary summary = queryService.findByTrackingNumber(trackingNumber);
+        if (summary == null) {
+            return ResponseEntity.notFound().build();
+        }
+        JwtToken token = tokenService.issue(tn, request.subjectId(), request.role(),
+                summary.getDeliveredAt());
+        return ResponseEntity.ok(TokenIssuanceResponse.from(token));
     }
 
     @PostMapping("/{trackingNumber}/status")
