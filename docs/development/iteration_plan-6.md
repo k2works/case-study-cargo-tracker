@@ -68,8 +68,8 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | trackingms: `TrackingTokenService` ドメインサービス（JWT 発行・検証、有効期限 = `delivered_at + 30 日`、ADR-0013） | 3h | - | [x] |
-| 1.2 | trackingms: `POST /api/v1/tracking/{tn}/token` 認証済みエンドポイント（追跡管理者が荷主向けトークンを発行）| 2h | - | [ ] |
-| 1.3 | trackingms: `GET /api/v1/public/tracking/{tn}?token=<JWT>` 公開エンドポイント（Spring Security で permitAll、JwtTokenFilter） | 4h | - | [ ] |
+| 1.2 | trackingms: `POST /api/v1/tracking/{tn}/token` 認証済みエンドポイント（追跡管理者が荷主向けトークンを発行）| 2h | - | [x] |
+| 1.3 | trackingms: `GET /api/v1/public/tracking/{tn}?token=<JWT>` 公開エンドポイント（OncePerRequestFilter で JWT 検証、Spring Security は IT8 で統一導入） | 4h | - | [x] |
 | 1.4 | フロント S15 追跡照会画面（`/tracking/:tn?token=<JWT>`、公開ルート、未認証アクセス可、PrivateRoute 除外） | 4h | - | [ ] |
 | 1.5 | フロント `TrackingPublicPage`：現在状態 / 位置 / 推定到着日 / 履歴時系列の表示。404 ハンドリング | 3h | - | [ ] |
 | 1.6 | テスト（TrackingTokenService TDD、Controller 単体、@SpringBootTest 統合、フロント Vitest、E2E 公開アクセス） | 3h | - | [ ] |
@@ -859,6 +859,7 @@ GitHub Issue 化を IT6 序盤で実施推奨。コードベース全体の改�
 | 2026-05-29 | iteration_plan-5.md パターンに合わせて設計セクション拡充（PlantUML 7 種・Salt 図・API 表・ディレクトリ構成・バリデーション/ロール表） | k2works |
 | 2026-05-29 | 2 回目の validating-iteration-plan 検証修正：domain-model.md 準拠で `occurredLocation: Location` / `LocalDateTime` 統一、data-model.md 準拠で `TIMESTAMPTZ` / `TEXT` 統一、ui_design.md 準拠で JWT Claims（`sub` = 荷主 ID、`tn` claim、`role`）/ 403 Forbidden / S18 動的フォーム / S19 期間フィルタ反映、IT5 レビュー H5/H6/H7 対応方針を明文化（タスク 0.1 を 5h に拡張、IT7 持ち越し方針注記） | k2works |
 | 2026-05-29 | IT6 着手（Ralph Loop iteration 1）：タスク 0.2/0.3/0.4 ADR 起票完了、タスク 1.1 TrackingTokenService TDD 完了（10/10 PASS）、タスク 0.1 H6/H7 は IT5 既存対応確認済み（T1 Testcontainers Reusable は構造変更のため確認必須として保留） | k2works |
+| 2026-05-29 | Ralph Loop iteration 2：タスク 1.2 POST /tracking/{tn}/token 完了（TrackingControllerTest 14/14 PASS）、タスク 1.3 PublicTrackingTokenFilter + GET /public/tracking 完了（Filter 単体 6/6 + 統合 5/5 PASS）。trackingms は Spring Security 未導入のため OncePerRequestFilter で実装、認可は IT8 で統一導入予定 | k2works |
 
 ## 参照
 
