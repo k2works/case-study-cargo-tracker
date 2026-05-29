@@ -427,11 +427,17 @@ export default function (gulp) {
 【デプロイ（全体）】
   deploy:dev                   全サービスを順次デプロイ（push → release）
 
-【デプロイ（個別）】
+【デプロイ（個別）】  ※実行順は DEPLOY_ORDER に準拠
   deploy:dev:push:authms       authms をビルド・プッシュ
   deploy:dev:release:authms    authms をリリース
+  deploy:dev:push:bookingms    bookingms をビルド・プッシュ（IT2 追加）
+  deploy:dev:release:bookingms bookingms をリリース
   deploy:dev:push:routingms    routingms をビルド・プッシュ
   deploy:dev:release:routingms routingms をリリース
+  deploy:dev:push:trackingms   trackingms をビルド・プッシュ（IT5 追加）
+  deploy:dev:release:trackingms trackingms をリリース
+  deploy:dev:push:handlingms   handlingms をビルド・プッシュ（IT5 追加）
+  deploy:dev:release:handlingms handlingms をリリース
   deploy:dev:push:gatewayms    gatewayms をビルド・プッシュ
   deploy:dev:release:gatewayms gatewayms をリリース
   deploy:dev:push:frontend     frontend をビルド・プッシュ
@@ -439,7 +445,10 @@ export default function (gulp) {
 
 【ログ確認】
   deploy:dev:logs:authms       authms のログを表示
+  deploy:dev:logs:bookingms    bookingms のログを表示（IT2 追加）
   deploy:dev:logs:routingms    routingms のログを表示
+  deploy:dev:logs:trackingms   trackingms のログを表示（IT5 追加）
+  deploy:dev:logs:handlingms   handlingms のログを表示（IT5 追加）
   deploy:dev:logs:gatewayms    gatewayms のログを表示
   deploy:dev:logs:frontend     frontend のログを表示
 
