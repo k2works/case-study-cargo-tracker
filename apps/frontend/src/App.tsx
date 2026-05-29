@@ -17,6 +17,8 @@ import RouteDesignWorkbenchPage from './features/routing/pages/RouteDesignWorkbe
 import TrackingListPage from './features/tracking/pages/TrackingListPage';
 import TrackingManagePage from './features/tracking/pages/TrackingManagePage';
 import TrackingPublicPage from './features/tracking/pages/TrackingPublicPage';
+import ExceptionRegisterPage from './features/tracking/pages/ExceptionRegisterPage';
+import ExceptionListPage from './features/tracking/pages/ExceptionListPage';
 import HandlingListPage from './features/handling/pages/HandlingListPage';
 import HandlingFormPage from './features/handling/pages/HandlingFormPage';
 
@@ -52,6 +54,11 @@ export default function App() {
           <Route path="/routing/design" element={<RouteDesignListPage />} />
           <Route path="/routing/design/:bookingId" element={<RouteDesignWorkbenchPage />} />
           <Route path="/tracking" element={<TrackingListPage />} />
+          <Route path="/tracking/exceptions" element={<ExceptionListPage />} />
+          <Route
+            path="/tracking/:trackingNumber/exceptions/new"
+            element={<ExceptionRegisterPage />}
+          />
           <Route path="/tracking/:trackingNumber/manage" element={<TrackingManagePage />} />
           <Route path="/handling" element={<HandlingListPage />} />
           <Route path="/handling/new" element={<HandlingFormPage />} />

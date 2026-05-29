@@ -138,6 +138,134 @@ export async function updateTrackingStatus(
   }
 }
 
+// --- IT6 タスク 2.3 / 2.4：US19 / US20 例外管理 ---
+
+/** 追跡例外種別（US19 / US20）。 */
+export type ExceptionType = 'DELAY' | 'DAMAGE' | 'LOSS';
+
+/** 例外対応状態（US19 / US20）。 */
+export type ResponseStatus = 'REPORTED' | 'RESPONDING' | 'RESOLVED';
+
+export interface TrackingExceptionView {
+  exceptionId: string;
+  trackingNumber: string;
+  type: ExceptionType;
+  occurredAt: string;
+  occurredUnlocode: string | null;
+  description: string;
+  responseStatus: ResponseStatus;
+  resolution: string | null;
+  resolvedAt: string | null;
+  escalated: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface RegisterExceptionRequestBody {
+  type: ExceptionType;
+  occurredAt: string;
+  occurredUnlocode: string | null;
+  description: string;
+}
+
+/**
+ * 例外を登録する（US19 / US20）。LOSS の場合は escalated=true でレスポンスされる。
+ */
+export async function registerException(
+  trackingNumber: string,
+  body: RegisterExceptionRequestBody,
+): Promise<TrackingExceptionView> {
+  const res = await fetch(`/api/v1/tracking/${trackingNumber}/exceptions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: '例外登録に失敗しました' }));
+    throw new Error(err.message ?? '例外登録に失敗しました');
+  }
+  return res.json();
+}
+
+/**
+ * 例外を解決済みに遷移させる（US19 受入基準 4/5、US20 受入基準 5）。
+ */
+export async function resolveException(
+  trackingNumber: string,
+  exceptionId: string,
+  resolution: string,
+): Promise<void> {
+  const res = await fetch(
+    `/api/v1/tracking/${trackingNumber}/exceptions/${exceptionId}/resolve`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ resolution }),
+    },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: '例外解決に失敗しました' }));
+    throw new Error(err.message ?? '例外解決に失敗しました');
+  }
+}
+
+export async function fetchExceptionsByTrackingNumber(
+  trackingNumber: string,
+): Promise<TrackingExceptionView[]> {
+  const res = await fetch(`/api/v1/tracking/${trackingNumber}/exceptions`, {
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('例外一覧の取得に失敗しました');
+  return res.json();
+}
+
+export async function fetchAllExceptions(
+  responseStatus: ResponseStatus | 'ALL' = 'ALL',
+  page = 0,
+  size = 20,
+): Promise<PageResponse<TrackingExceptionView>> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  if (responseStatus !== 'ALL') {
+    params.set('responseStatus', responseStatus);
+  }
+  const res = await fetch(`/api/v1/tracking/exceptions?${params.toString()}`, {
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('例外横断一覧の取得に失敗しました');
+  return res.json();
+}
+
+/** 例外種別ラベル。 */
+export function exceptionTypeLabel(type: ExceptionType): string {
+  switch (type) {
+    case 'DELAY':
+      return '遅延';
+    case 'DAMAGE':
+      return '破損';
+    case 'LOSS':
+      return '紛失';
+    default:
+      return type;
+  }
+}
+
+/** 対応状態ラベル。 */
+export function responseStatusLabel(status: ResponseStatus): string {
+  switch (status) {
+    case 'REPORTED':
+      return '未対応';
+    case 'RESPONDING':
+      return '対応中';
+    case 'RESOLVED':
+      return '解決済';
+    default:
+      return status;
+  }
+}
+
 /**
  * 状態遷移ガード（バックエンド TransportStatusTransition と整合）。
  * 許可遷移のみ選択肢に出すために UI で使用する（IT5 2.4）。

@@ -15,6 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/voyages', label: '航海スケジュール', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
   { path: '/routing/design', label: '経路設計', roles: ['ROLE_ADMIN', 'ROLE_ROUTING'] },
   { path: '/tracking', label: '追跡管理', roles: ['ROLE_ADMIN', 'ROLE_TRACKER'] },
+  { path: '/tracking/exceptions', label: '例外対応', roles: ['ROLE_ADMIN', 'ROLE_TRACKER'] },
   { path: '/handling', label: '荷役作業', roles: ['ROLE_ADMIN', 'ROLE_HANDLER'] },
 ];
 
