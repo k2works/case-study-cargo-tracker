@@ -24,6 +24,11 @@ dependencies {
     implementation libs.axon.spring.boot.starter
     implementation libs.axon.kafka.spring.boot.starter
 
+    // 公開追跡照会の時限署名トークン（ADR-0013、US18）
+    implementation libs.jjwt.api
+    runtimeOnly libs.jjwt.impl
+    runtimeOnly libs.jjwt.jackson
+
     // データアクセス
     implementation libs.mybatis.spring.boot.starter
     implementation libs.flyway.core

@@ -26,3 +26,10 @@ axon:
     general: jackson
     events: jackson
     messages: jackson
+
+# 公開追跡照会の時限署名トークン（ADR-0013、US18）
+# 本番環境は Heroku Config Vars / 環境変数で上書きする（32 バイト以上必須）。
+# IT8 で AWS Secrets Manager + 四半期ローテーションへ切替予定（ADR-0015 で起票予定）。
+tracking:
+  public-token:
+    secret: ${TRACKING_PUBLIC_TOKEN_SECRET:dev-only-tracking-public-token-secret-32+bytes}
