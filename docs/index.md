@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み（Axon Kafka + Heroku + Aiven 構成） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 13 件作成済み（リリース計画・IT1-IT4 計画/ふりかえり/完了報告書） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 16 件作成済み（リリース計画・IT1-IT5 計画/ふりかえり/完了報告書） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 5 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 7 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 7 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 8 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 32 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
