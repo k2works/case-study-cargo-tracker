@@ -18,7 +18,13 @@ import java.util.Objects;
  *   <li>{@code resolution} は {@code responseStatus = RESOLVED} への遷移時のみ必須（空文字拒否）</li>
  *   <li>{@code resolvedAt} は {@code RESOLVED} 遷移時に集約側で {@code LocalDateTime.now()} で自動設定</li>
  * </ul>
+ *
+ * <p>SonarQube 警告抑制: ドメインモデル M5（domain-model.md / user_story.md US19/US20）の業務用語
+ * 「追跡例外」をクラス名にそのまま使用するため、命名規約「Exception で終わるクラスは Throwable 継承」
+ * のチェック（{@code java:S2166}）を抑制する。本クラスは Throwable ではなくエンティティであり、
+ * ユビキタス言語との整合を命名規約より優先する。</p>
  */
+@SuppressWarnings("java:S2166")
 public final class TrackingException {
 
     private final TrackingExceptionId exceptionId;
@@ -55,7 +61,12 @@ public final class TrackingException {
     /**
      * イベントソーシング再生用のコンストラクタ。
      * 既存例外の状態を完全に復元するために使う（resolution / resolvedAt / responseStatus を含む）。
+     *
+     * <p>SonarQube 警告抑制（{@code java:S107}）: イベント再生時に状態を完全復元するため、可変フィールド
+     * （responseStatus / resolution / resolvedAt）も含めて 8 引数受け取る必要がある。IT7 リファクタで
+     * 引数オブジェクト（{@code TrackingExceptionSnapshot}）への移行を予定（IT6 review M2 連携）。</p>
      */
+    @SuppressWarnings("java:S107")
     public static TrackingException replay(
             TrackingExceptionId exceptionId,
             ExceptionType type,

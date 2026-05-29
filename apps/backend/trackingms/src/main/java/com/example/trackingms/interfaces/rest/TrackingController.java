@@ -93,8 +93,8 @@ public class TrackingController {
      * <p>追跡管理者が荷主・荷受人向けに照会 URL を生成するために呼び出す。発行された JWT は
      * {@code /tracking/{tn}?token=<JWT>} のクエリパラメータに埋め込んで荷主に送付される。</p>
      *
-     * <p>FIXME: 認可（ROLE_TRACKER + ROLE_ADMIN）は trackingms 全体に Spring Security 導入時
-     * （IT8 想定）に追加する。現状は trackingms に Spring Security が入っていないため、本エンドポイントは
+     * <p>注記（IT6 review H5）: 認可（ROLE_TRACKER + ROLE_ADMIN）は trackingms 全体に Spring Security
+     * 導入時（IT8 想定）に追加する。現状は trackingms に Spring Security が入っていないため、本エンドポイントは
      * 認証なしで実行可能（gateway 側で認可する想定）。</p>
      */
     @PostMapping("/{trackingNumber}/token")

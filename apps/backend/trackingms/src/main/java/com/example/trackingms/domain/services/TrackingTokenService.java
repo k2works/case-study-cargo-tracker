@@ -127,13 +127,7 @@ public class TrackingTokenService {
                                 + " / claim: " + tn + "）");
             }
 
-            String roleStr = claims.get(CLAIM_ROLE, String.class);
-            TokenRole role;
-            try {
-                role = TokenRole.valueOf(roleStr);
-            } catch (IllegalArgumentException ex) {
-                throw new TrackingTokenInvalidException("role claim が不正です: " + roleStr, ex);
-            }
+            TokenRole role = parseRoleClaim(claims.get(CLAIM_ROLE, String.class));
 
             LocalDateTime exp = LocalDateTime.ofInstant(
                     claims.getExpiration().toInstant(), ZoneOffset.UTC);
@@ -143,6 +137,19 @@ public class TrackingTokenService {
             throw new TrackingTokenInvalidException("トークンの有効期限が切れています", ex);
         } catch (JwtException ex) {
             throw new TrackingTokenInvalidException("トークンの検証に失敗しました: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * {@code role} claim の文字列を {@link TokenRole} 列挙へ変換する。
+     * 不正値（列挙外・null）は {@link TrackingTokenInvalidException} に変換する。
+     * 外側 try / catch とのネスト解消のため独立メソッドに切り出している（SonarQube java:S1141）。
+     */
+    private TokenRole parseRoleClaim(String roleStr) {
+        try {
+            return TokenRole.valueOf(roleStr);
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new TrackingTokenInvalidException("role claim が不正です: " + roleStr, ex);
         }
     }
 
