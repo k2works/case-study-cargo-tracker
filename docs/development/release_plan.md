@@ -384,11 +384,11 @@ gantt
 | IT2 | 2026-06-04 〜 2026-06-17 | 10 | 10 | 100% | 完了 |
 | IT3 | 2026-06-18 〜 2026-07-01 | 10 | 10 | 100% | 完了 |
 | IT4 | 2026-07-02 〜 2026-07-15 | 11 | 11 | 100% | 完了 |
-| IT5 | 2026-07-16 〜 2026-07-29 | 10 | - | - | 基盤完了（2026-05-28：ADR-0011 / shared events 3 件 / BookingSagaManager 部分対応 / trackingms・handlingms 骨組み + Gateway/Sonar/ops/Dockerfile 周辺整備） |
+| IT5 | 2026-07-16 〜 2026-07-29 | 10 | 10 | 100% | 完了（2026-05-29：基盤 6 + US14 + US17 + US15 + US16 + E2E + cross-service Kafka 統合テスト、計 21 タスク完了。SonarQube Quality Gate Backend/Frontend 共に OK・カバレッジ Backend 88.0% / Frontend 78.1%・Code Smell 0） |
 | IT6 | 2026-07-30 〜 2026-08-12 | 9 | - | - | 未着手 |
 | IT7 | 2026-08-13 〜 2026-08-26 | 8 | - | - | 未着手 |
 | IT8 | 2026-08-27 〜 2026-09-09 | 8 | - | - | 未着手 |
-| **合計** | | **76** | **41** | Phase 1 100% | Phase 1 完了（41/76 SP・54%） |
+| **合計** | | **76** | **51** | Phase 2 進行中（51/76 SP・67%） | Phase 1 完了 + IT5 完了。残 Phase 2（IT6/IT7/IT8、25 SP） |
 
 ### バーンダウンチャート
 
@@ -398,10 +398,10 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8"]
     y-axis "残 SP" 0 --> 80
     line "計画" [76, 66, 56, 46, 35, 25, 16, 8, 0]
-    line "実績" [76, 66, 56, 46, 35]
+    line "実績" [76, 66, 56, 46, 35, 25]
 ```
 
-> **実績（IT4 終了時点）**: Phase 1（41 SP）完了。累計 41/76 SP（54%）。IT1-IT4 はいずれも計画どおり完了し、残 SP は 35（Phase 2 + バッファ）。
+> **実績（IT5 終了時点）**: Phase 1（41 SP）+ IT5（10 SP）完了。累計 51/76 SP（67%）。IT1-IT5 はいずれも計画どおり完了し、残 SP は 25（Phase 2 残：IT6/IT7/IT8）。
 
 ---
 
@@ -421,3 +421,4 @@ xychart-beta
 | 2026-05-26 | 進捗同期（tracking-progress --update）：IT1-IT4 完了タスク・Release 1.0 MVP リリース条件・実績バーンダウン・進捗状況合計を反映（Phase 1 完了・41/76 SP） | k2works |
 | 2026-05-28 | IT5 着手準備完了：ADR-0011（Kafka tracking エラーハンドリング統一方針）起票、shared cross-service イベント 3 件追加（TrackingIssuanceRequested / HandlingActivityRegistered / CargoTracked）、BookingSagaManager に BookingConfirmedEvent 購読を追加（IT5 タスク 1.1 完了・1.2 部分対応・1.4/3.3 shared 側完了）。Phase 2 開発の前提作業が整い、残るは trackingms / handlingms 新規モジュール追加と本格実装 | k2works |
 | 2026-05-28 | IT5 基盤フェーズ完了：trackingms (port 8084) / handlingms (port 8085) を Spring Boot + Axon Kafka 構成で新設（commit 0f48a866 / 810683cf）、gateway ルート・SonarQube モジュール・ops scripts SERVICES・Dockerfile を整備（commit 7c3f2b11）。タスク 0.1〜0.4 完了・0.5 一部対応。残るは tasks 0.6（NotificationAcl スタブ）と TrackingActivity / HandlingActivity 集約実装 | k2works |
+| 2026-05-29 | **IT5 完了**（10/10 SP、21 タスク完了）：基盤 0.6（NotificationAcl スタブ）+ US14 追跡番号発行（5 タスク、cross-service Saga 完結）+ US17 貨物状態手動更新（5 タスク、9 値遷移マトリックス + REST API + S16/S17 UI）+ US15 荷役作業記録（5 タスク、CargoSnapshot ACL + cross-service publisher + 重複拒否・予定外警告・未来時刻拒否）+ US16 引取作業記録（4 タスク、CLAIM → DELIVERED + CargoDeliveredEvent for IT7 Billing）+ E2E（5.1 UI / 5.2 cross-service、計 10 件追加 / 全 45 件 PASS）+ cross-service Testcontainers Kafka 統合テスト 4 件。SonarQube Backend/Frontend 共に Quality Gate OK・カバレッジ Backend 88.0% / Frontend 78.1%・Code Smell 0。累計 51/76 SP（67%）。Phase 2 残 IT6/IT7/IT8 で 25 SP | k2works |
