@@ -80,8 +80,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | trackingms: `TrackingException` エンティティ + `ExceptionType` enum（DELAY / DAMAGE / LOSS）+ `ResponseStatus` enum（REPORTED / RESPONDING / RESOLVED）| 2h | - | [ ] |
-| 2.2 | trackingms: `TrackingActivity` 集約に `RegisterTrackingExceptionCommand` + `ResolveTrackingExceptionCommand` ハンドラ追加。EXCEPTION 遷移と例外履歴管理 | 3h | - | [ ] |
+| 2.1 | trackingms: `TrackingException` エンティティ + `ExceptionType` enum（DELAY / DAMAGE / LOSS）+ `ResponseStatus` enum（REPORTED / RESPONDING / RESOLVED）| 2h | - | [x] |
+| 2.2 | trackingms: `TrackingActivity` 集約に `RegisterTrackingExceptionCommand` + `ResolveTrackingExceptionCommand` ハンドラ追加。EXCEPTION 遷移と例外履歴管理 | 3h | - | [x] |
 | 2.3 | `tracking_exception` Read Model 投影（既存 V2 スキーマ利用）+ Mapper + Controller（POST /exceptions、PATCH /exceptions/{id}/resolve、GET /tracking/{tn}/exceptions）| 3h | - | [ ] |
 | 2.4 | フロント S18 例外登録画面（`/tracking/:trackingNumber/exceptions/new`、種別・場所・日時・理由）+ S19 例外対応一覧（`/tracking/exceptions`、対応詳細・入力）| 3h | - | [ ] |
 | 2.5 | NotificationAcl 拡張：`notifyExceptionRegistered` / `notifyExceptionResolved` 追加。テスト | 1h | - | [ ] |
@@ -92,7 +92,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | trackingms: `RegisterTrackingExceptionCommand` で DAMAGE / LOSS を受理。`ExceptionType = LOSS` のとき `escalated = TRUE` を集約で自動設定し `TrackingExceptionEscalatedEvent` を発行 | 2h | - | [ ] |
+| 3.1 | trackingms: `RegisterTrackingExceptionCommand` で DAMAGE / LOSS を受理。`ExceptionType = LOSS` のとき `escalated = TRUE` を集約で自動設定し `TrackingExceptionEscalatedEvent` を発行 | 2h | - | [x] |
 | 3.2 | NotificationAcl 拡張：`notifyExceptionEscalation`（管理職向け）。LoggingNotificationAcl で WARN ログ。実装は IT8 以降 | 1h | - | [ ] |
 | 3.3 | フロント S18 例外登録画面で「破損」「紛失」を選択可能に。S19 例外対応一覧で紛失の場合は赤色警告バッジ「管理職に escalation 通知済み」を表示 | 2h | - | [ ] |
 | 3.4 | テスト（DAMAGE / LOSS 集約・escalation 自動設定・notifyExceptionEscalation 呼び出し検証）| 2h | - | [ ] |
@@ -123,7 +123,7 @@
 
 **1 SP あたり**: 約 6.2h（コミット分）。基盤改善 13h + テスト/仕上げ 7h を含めると 58h。
 
-**進捗率**: 56%（5/9 SP、US18 完了）
+**進捗率**: 67%（6/9 SP、US18 完了 + US19 ドメイン完了）
 
 > **注**: IT5（10 SP）が 2 日で完了している実績を踏まえ、9 SP の IT6 は計画どおり完了可能。基盤改善で技術負債を解消し、後続 IT7/IT8 のベロシティを安定化する。
 
@@ -861,6 +861,7 @@ GitHub Issue 化を IT6 序盤で実施推奨。コードベース全体の改�
 | 2026-05-29 | IT6 着手（Ralph Loop iteration 1）：タスク 0.2/0.3/0.4 ADR 起票完了、タスク 1.1 TrackingTokenService TDD 完了（10/10 PASS）、タスク 0.1 H6/H7 は IT5 既存対応確認済み（T1 Testcontainers Reusable は構造変更のため確認必須として保留） | k2works |
 | 2026-05-29 | Ralph Loop iteration 2：タスク 1.2 POST /tracking/{tn}/token 完了（TrackingControllerTest 14/14 PASS）、タスク 1.3 PublicTrackingTokenFilter + GET /public/tracking 完了（Filter 単体 6/6 + 統合 5/5 PASS）。trackingms は Spring Security 未導入のため OncePerRequestFilter で実装、認可は IT8 で統一導入予定 | k2works |
 | 2026-05-29 | Ralph Loop iteration 3：US18 フロント完成。タスク 1.4 + 1.5 TrackingPublicPage 完了（Vitest 6/6 + 全体 193/193 PASS）、タスク 1.6 E2E public-tracking.spec.ts 追加。ESLint / vite build / 全体テスト すべて PASS。US18（5 SP）100% 完了、IT6 進捗 5/9 SP（56%） | k2works |
+| 2026-05-29 | Ralph Loop iteration 4：US19 ドメイン層完成。タスク 2.1 TrackingException + ExceptionType + ResponseStatus + TrackingExceptionId（14/14 PASS）、タスク 2.2 + 3.1 TrackingActivity に RegisterTrackingException / ResolveTrackingException ハンドラ追加（15/15 PASS、Axon Test Fixture）。LOSS 自動 escalation、ResponseStatus 単方向遷移、equals/hashCode で identity check 対応。IT6 進捗 6/9 SP（67%） | k2works |
 
 ## 参照
 
