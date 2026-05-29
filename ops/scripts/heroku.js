@@ -48,17 +48,20 @@ function getDomain(appName) {
 }
 
 /**
- * .env ファイルから変数を読み込む
+ * .env ファイルから変数を読み込む（Windows / Mac / Linux 共通）。
+ * grep に依存せず Node.js の fs API で読み込むことでクロスプラットフォーム対応。
  * @param {string} key
  * @returns {string}
  */
 function getEnvVar(key) {
-  try {
-    const content = execSync(`grep -E "^${key}=" ${ENV_FILE}`, { encoding: 'utf8' }).trim();
-    return content.replace(/^[^=]+=["']?/, '').replace(/["']?\s*$/, '');
-  } catch {
-    return '';
-  }
+  if (!existsSync(ENV_FILE)) return '';
+  const content = readFileSync(ENV_FILE, 'utf8');
+  // 行頭から `<KEY>=` で始まり、値部分を取り出す。行末改行 / クォート / コメント混入に対応。
+  const lineRegex = new RegExp(`^${key}=(.*)$`, 'm');
+  const match = content.match(lineRegex);
+  if (!match) return '';
+  // 値の前後のクォートと末尾空白を除去
+  return match[1].trim().replace(/^["']/, '').replace(/["']$/, '');
 }
 
 /**
