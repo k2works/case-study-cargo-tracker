@@ -16,6 +16,7 @@ import RouteDesignListPage from './features/routing/pages/RouteDesignListPage';
 import RouteDesignWorkbenchPage from './features/routing/pages/RouteDesignWorkbenchPage';
 import TrackingListPage from './features/tracking/pages/TrackingListPage';
 import TrackingManagePage from './features/tracking/pages/TrackingManagePage';
+import TrackingPublicPage from './features/tracking/pages/TrackingPublicPage';
 import HandlingListPage from './features/handling/pages/HandlingListPage';
 import HandlingFormPage from './features/handling/pages/HandlingFormPage';
 
@@ -33,6 +34,8 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* US18 公開追跡照会（PrivateRoute 外、token クエリで JWT 検証） */}
+        <Route path="/tracking/:trackingNumber" element={<TrackingPublicPage />} />
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/voyages" element={<VoyageListPage />} />

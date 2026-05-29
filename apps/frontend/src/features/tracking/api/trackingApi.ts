@@ -73,6 +73,56 @@ export async function fetchTrackingEvents(trackingNumber: string): Promise<Track
   return res.json();
 }
 
+/**
+ * 公開追跡照会レスポンス（US18 / ADR-0013）。
+ * Filter 検証成功時に summary + events を一括返却。
+ */
+export interface PublicTrackingPayload {
+  summary: TrackingSummary;
+  events: TrackingEvent[];
+}
+
+/**
+ * 公開追跡照会の結果型（US18 / ADR-0013）。
+ * 200 / 403 / 404 / その他エラーを明示的にハンドリングするため discriminated union を使う。
+ */
+export type PublicTrackingResult =
+  | { type: 'success'; payload: PublicTrackingPayload }
+  | { type: 'forbidden'; message: string }
+  | { type: 'not_found' }
+  | { type: 'error'; message: string };
+
+/**
+ * 公開追跡照会（US18）。token クエリパラメータで JWT を渡し、
+ * バックエンドの PublicTrackingTokenFilter で検証される。403 / 404 を明示的に分岐する。
+ */
+export async function fetchPublicTracking(
+  trackingNumber: string,
+  token: string,
+): Promise<PublicTrackingResult> {
+  if (!token || token.trim() === '') {
+    return { type: 'forbidden', message: 'トークンが指定されていません' };
+  }
+  try {
+    const res = await fetch(
+      `/api/v1/public/tracking/${trackingNumber}?token=${encodeURIComponent(token)}`,
+    );
+    if (res.status === 403) {
+      return { type: 'forbidden', message: 'リンクの有効期限が切れています。担当者に再発行を依頼してください' };
+    }
+    if (res.status === 404) {
+      return { type: 'not_found' };
+    }
+    if (!res.ok) {
+      return { type: 'error', message: `照会に失敗しました（HTTP ${res.status}）` };
+    }
+    const payload = (await res.json()) as PublicTrackingPayload;
+    return { type: 'success', payload };
+  } catch (e) {
+    return { type: 'error', message: e instanceof Error ? e.message : '通信エラー' };
+  }
+}
+
 export async function updateTrackingStatus(
   trackingNumber: string,
   req: UpdateTransportStatusRequest,
