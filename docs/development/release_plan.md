@@ -385,10 +385,10 @@ gantt
 | IT3 | 2026-06-18 〜 2026-07-01 | 10 | 10 | 100% | 完了 |
 | IT4 | 2026-07-02 〜 2026-07-15 | 11 | 11 | 100% | 完了 |
 | IT5 | 2026-07-16 〜 2026-07-29 | 10 | 10 | 100% | 完了（2026-05-29：基盤 6 + US14 + US17 + US15 + US16 + E2E + cross-service Kafka 統合テスト、計 21 タスク完了。SonarQube Quality Gate Backend/Frontend 共に OK・カバレッジ Backend 88.0% / Frontend 78.1%・Code Smell 0） |
-| IT6 | 2026-07-30 〜 2026-08-12 | 9 | - | - | 計画済み（US18 公開照会 + US19/US20 例外処理 + IT5 ふりかえり Try）|
-| IT7 | 2026-08-13 〜 2026-08-26 | 8 | - | - | 未着手 |
+| IT6 | 2026-07-30 〜 2026-08-12 | 9 | 9 | 100% | 完了（2026-05-29：ADR-0012/0013/0014 + US18 公開照会 + US19/US20 例外処理 + マルチパースペクティブレビュー + Quality Gate PASS、計 22 コミット） |
+| IT7 | 2026-08-13 〜 2026-08-26 | 8 | - | - | 未着手（US21-US23 精算 + IT5/IT6 持ち越し Try）|
 | IT8 | 2026-08-27 〜 2026-09-09 | 8 | - | - | 未着手 |
-| **合計** | | **76** | **51** | Phase 2 進行中（51/76 SP・67%） | Phase 1 完了 + IT5 完了。残 Phase 2（IT6/IT7/IT8、25 SP） |
+| **合計** | | **76** | **60** | Phase 2 完了（60/76 SP・79%） | Phase 1 + IT5 + IT6 完了。残 Phase 2 + Buffer（IT7/IT8、16 SP） |
 
 ### バーンダウンチャート
 
@@ -398,10 +398,10 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8"]
     y-axis "残 SP" 0 --> 80
     line "計画" [76, 66, 56, 46, 35, 25, 16, 8, 0]
-    line "実績" [76, 66, 56, 46, 35, 25]
+    line "実績" [76, 66, 56, 46, 35, 25, 16]
 ```
 
-> **実績（IT5 終了時点）**: Phase 1（41 SP）+ IT5（10 SP）完了。累計 51/76 SP（67%）。IT1-IT5 はいずれも計画どおり完了し、残 SP は 25（Phase 2 残：IT6/IT7/IT8）。
+> **実績（IT6 終了時点）**: Phase 1（41 SP）+ IT5（10 SP）+ IT6（9 SP）完了。累計 60/76 SP（79%）。IT1-IT6 はいずれも計画どおり完了し、残 SP は 16（Phase 2 残 IT7 = 8 SP + Buffer IT8 = 8 SP）。Release 2.0（Phase 2 完了）の中核機能（追跡・例外処理）達成。
 
 ---
 
@@ -422,3 +422,4 @@ xychart-beta
 | 2026-05-28 | IT5 着手準備完了：ADR-0011（Kafka tracking エラーハンドリング統一方針）起票、shared cross-service イベント 3 件追加（TrackingIssuanceRequested / HandlingActivityRegistered / CargoTracked）、BookingSagaManager に BookingConfirmedEvent 購読を追加（IT5 タスク 1.1 完了・1.2 部分対応・1.4/3.3 shared 側完了）。Phase 2 開発の前提作業が整い、残るは trackingms / handlingms 新規モジュール追加と本格実装 | k2works |
 | 2026-05-28 | IT5 基盤フェーズ完了：trackingms (port 8084) / handlingms (port 8085) を Spring Boot + Axon Kafka 構成で新設（commit 0f48a866 / 810683cf）、gateway ルート・SonarQube モジュール・ops scripts SERVICES・Dockerfile を整備（commit 7c3f2b11）。タスク 0.1〜0.4 完了・0.5 一部対応。残るは tasks 0.6（NotificationAcl スタブ）と TrackingActivity / HandlingActivity 集約実装 | k2works |
 | 2026-05-29 | **IT5 完了**（10/10 SP、21 タスク完了）：基盤 0.6（NotificationAcl スタブ）+ US14 追跡番号発行（5 タスク、cross-service Saga 完結）+ US17 貨物状態手動更新（5 タスク、9 値遷移マトリックス + REST API + S16/S17 UI）+ US15 荷役作業記録（5 タスク、CargoSnapshot ACL + cross-service publisher + 重複拒否・予定外警告・未来時刻拒否）+ US16 引取作業記録（4 タスク、CLAIM → DELIVERED + CargoDeliveredEvent for IT7 Billing）+ E2E（5.1 UI / 5.2 cross-service、計 10 件追加 / 全 45 件 PASS）+ cross-service Testcontainers Kafka 統合テスト 4 件。SonarQube Backend/Frontend 共に Quality Gate OK・カバレッジ Backend 88.0% / Frontend 78.1%・Code Smell 0。累計 51/76 SP（67%）。Phase 2 残 IT6/IT7/IT8 で 25 SP | k2works |
+| 2026-05-29 | **IT6 完了**（9/9 SP、Ralph Loop 7 iterations / 22 コミット）：ADR-0012/0013/0014 起票 + US18 公開照会（5 SP、TrackingTokenService + PublicTrackingTokenFilter + S15 TrackingPublicPage）+ US19 遅延例外処理（2 SP、TrackingException エンティティ + RegisterTrackingException ハンドラ + S18/S19）+ US20 破損・紛失例外処理（2 SP、LOSS 自動 escalation + 管理職通知 WARN ログ）+ E2E spec 10 件追加 + マルチパースペクティブレビュー（高 9・中 11・低 8）+ SonarQube Quality Gate PASS（new_coverage 74.5% / new_violations 0）。take-5 #189/#190/#191 をクローズ。累計 60/76 SP（79%）。Release 2.0 完了。残 IT7（精算 US21-US23 + IT5/IT6 持ち越し Try）+ IT8（非機能・Spring Security 統一）で 16 SP | k2works |
