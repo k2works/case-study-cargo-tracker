@@ -18,7 +18,7 @@
 | IT2 | 2026-06-04 〜 2026-06-17 | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [報告書](iteration_report-2.md) 完了 |
 | IT3 | 2026-06-18 〜 2026-07-01 | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [報告書](iteration_report-3.md) 完了 |
 | IT4 | 2026-07-02 〜 2026-07-15 | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [報告書](iteration_report-4.md) 完了 |
-| IT5 | 2026-07-16 〜 2026-07-29 | [iteration_plan-5.md](iteration_plan-5.md) | - | 計画済み（Phase 2 開始） |
+| IT5 | 2026-07-16 〜 2026-07-29 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | 完了（2026-05-29、報告書は IT6 着手前に作成予定） |
 | IT6 | 2026-07-30 〜 2026-08-12 | 未作成 | - | 未着手 |
 | IT7 | 2026-08-13 〜 2026-08-26 | 未作成 | - | 未着手 |
 | IT8 | 2026-08-27 〜 2026-09-09 | 未作成 | - | 未着手 |
@@ -31,11 +31,11 @@
 | IT2 | 10 | 10 | 100% |
 | IT3 | 10 | 10 | 100% |
 | IT4 | 11 | 11 | 100% |
-| IT5 | 10 | - | - |
+| IT5 | 10 | 10 | 100% |
 | IT6 | 9 | - | - |
 | IT7 | 8 | - | - |
 | IT8 | 8 | - | - |
-| **累計** | **76** | **41** | **54%** |
+| **累計** | **76** | **51** | **67%** |
 
 ### フェーズ進捗
 
