@@ -1,6 +1,7 @@
 package com.example.handlingms.interfaces.events;
 
 import com.example.handlingms.domain.events.HandlingActivityRegisteredEvent;
+import com.example.handlingms.domain.events.UnexpectedHandlingDetectedEvent;
 import com.example.handlingms.domain.projections.CargoSnapshot;
 import com.example.handlingms.infrastructure.repositories.mybatis.CargoSnapshotMapper;
 import com.example.handlingms.infrastructure.repositories.mybatis.HandlingActivityMapper;
@@ -29,6 +30,17 @@ public class HandlingActivityProjectionEventHandler {
                                                   CargoSnapshotMapper cargoSnapshotMapper) {
         this.handlingActivityMapper = handlingActivityMapper;
         this.cargoSnapshotMapper = cargoSnapshotMapper;
+    }
+
+    /**
+     * 予定外検知の警告ログを記録する（IT5 3.2）。
+     * 実運用では追跡管理者ダッシュボード等への通知に拡張する。
+     */
+    @EventHandler
+    public void on(UnexpectedHandlingDetectedEvent event) {
+        log.warn("[unexpected-handling] activityId={} trackingNumber={} type={} unlocode={} reason={}",
+                event.activityId(), event.trackingNumber(), event.handlingType(),
+                event.unlocode(), event.reason());
     }
 
     @EventHandler
