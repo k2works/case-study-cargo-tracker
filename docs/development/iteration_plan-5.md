@@ -153,7 +153,7 @@
 | 3.1 | handlingms: `CargoSnapshot` ACL（bookingms の `CargoBookedEvent`/`CargoRoutedEvent` を購読して必要最小情報を写し取る） | 4h | - | [x] 2026-05-29（commit 3ac8c2bd）: cargo_snapshot Read Model + Flyway V3 + CargoSnapshotProjectionEventHandler。shared.TrackingIssuanceRequestedEvent / CargoTrackedEvent を Kafka tracking 購読し bookingId / origin / destination / cargoType / trackingNumber を冪等保存 |
 | 3.2 | `HandlingActivity` 集約 + `RegisterHandlingActivityCommand`（LOAD/UNLOAD は航海番号必須・重複拒否・予定外警告） | 4h | - | [部分対応] 2026-05-28（commit decf8a8c）: 集約基本不変条件は完了（LOAD/UNLOAD 航海番号必須・CLAIM 荷受人確認必須）。重複拒否・予定外警告は handling_activity Read Model 投影と Mapper.countDuplicates が用意済（commit 3ac8c2bd）、集約内不変条件への組み込みは IT6 以降のフォローアップ |
 | 3.3 | handlingms → trackingms: `HandlingActivityRegisteredEvent` → `UpdateTransportStatusCommand`（cross-service） | 3h | - | [x] 2026-05-29（commit 3ac8c2bd）: HandlingActivityCrossServicePublisher（local → shared 変換）+ trackingms HandlingActivityRegisteredEventHandler（HandlingType 4 マッピング + ADR-0011 ホワイトリスト）。テスト 8 件 PASS |
-| 3.4 | フロント：荷役作業記録 UI（荷役作業員ロール） | 3h | - | [ ] |
+| 3.4 | フロント：荷役作業記録 UI（荷役作業員ロール） | 3h | - | [x] 2026-05-29: handlingApi.ts（型 + 4 API + 3 ヘルパー）+ HandlingListPage（S21）+ HandlingFormPage（S20、種別セレクトで航海/荷受人確認の動的表示）+ App.tsx ルーティング追加。9 件 PASS、フロント全体 161 件 PASS |
 | 3.5 | テスト（集約・バリデーション・cross-service 統合） | 3h | - | [部分対応] 2026-05-29: HandlingActivityRegisteredEventHandlerTest 8 件 + CargoDeliveredEventPublisherTest 3 件 PASS。Testcontainers Kafka cross-service 統合テストは未追加 |
 
 **小計**: 17h（理想時間）
@@ -164,7 +164,7 @@
 |---|--------|---------|------|------|
 | 4.1 | handlingms: CLAIM 種別 + `ClaimVerification`（署名参照 or 確認コード必須）の不変条件 | 3h | - | [x] 2026-05-28（commit decf8a8c）: ClaimVerification record + 集約バリデーション。Axon Test 1 件 PASS |
 | 4.2 | 引取記録 → trackingms で `DELIVERED` 遷移 → `CargoDeliveredEvent` 発行 | 3h | - | [x] 2026-05-29: HandlingActivityRegisteredEventHandler の CLAIM → DELIVERED マッピング（commit 3ac8c2bd）+ shared.CargoDeliveredEvent 新規 + CargoDeliveredEventPublisher（DELIVERED 遷移時に発行、IT7 Billing で購読予定）。テスト 3 件 PASS |
-| 4.3 | フロント：引取確認 UI | 2h | - | [ ] 3.4 と合わせて実装予定 |
+| 4.3 | フロント：引取確認 UI | 2h | - | [x] 2026-05-29: HandlingFormPage で CLAIM 選択時に荷受人確認フィールド（氏名 + 署名参照 + 確認コード）が動的表示。クライアントバリデーションで「いずれか必須」を検証 |
 | 4.4 | テスト（引取確認必須・DELIVERED 遷移・CargoDeliveredEvent） | 2h | - | [x] 2026-05-29: 集約・cross-service・発行を各レイヤで検証（4.1 / 3.3 / 4.2 のテスト群） |
 
 **小計**: 10h（理想時間）
@@ -176,12 +176,12 @@
 | 基盤（trackingms/handlingms 新設・通知スタブ・SP 外） | - | 18h | [x] 完了（0.6 含む、2026-05-29） |
 | US14 追跡番号発行 | 2 | 17h | [x] 完了（2026-05-29） |
 | US17 貨物状態手動更新 | 3 | 18h | [x] 完了（2026-05-29） |
-| US15 荷役作業記録 | 3 | 17h | [一部対応] 3.1/3.2/3.3/3.5 完了。3.4 フロント残 |
-| US16 引取作業記録 | 2 | 10h | [一部対応] 4.1/4.2/4.4 完了。4.3 フロント残（3.4 と一体） |
-| **合計（コミット）** | **10** | **77h** | 8/10 SP 完了 |
+| US15 荷役作業記録 | 3 | 17h | [x] 完了（2026-05-29） |
+| US16 引取作業記録 | 2 | 10h | [x] 完了（2026-05-29） |
+| **合計（コミット）** | **10** | **77h** | 10/10 SP 完了 |
 
 **1 SP あたり**: 約 7.7h（コミット分）。基盤 18h を含めると 95h
-**進捗率**: 80%（8/10 SP、フロント UI のみ残）
+**進捗率**: 100%（10/10 SP、Testcontainers Kafka cross-service 統合テスト追加 + 集約バリデーション拡張 [3.2 残] のみ後続フォローアップ）
 
 > **注**: 新サービス 2 つの立ち上げ + 通知スタブ（基盤 18h）を含むため、IT1-IT4 の実効（約 70h/10-11SP）より重い。リスク欄の分割方針を参照。
 

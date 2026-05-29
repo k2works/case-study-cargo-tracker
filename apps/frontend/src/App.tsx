@@ -16,6 +16,8 @@ import RouteDesignListPage from './features/routing/pages/RouteDesignListPage';
 import RouteDesignWorkbenchPage from './features/routing/pages/RouteDesignWorkbenchPage';
 import TrackingListPage from './features/tracking/pages/TrackingListPage';
 import TrackingManagePage from './features/tracking/pages/TrackingManagePage';
+import HandlingListPage from './features/handling/pages/HandlingListPage';
+import HandlingFormPage from './features/handling/pages/HandlingFormPage';
 
 function Dashboard() {
   return (
@@ -48,6 +50,8 @@ export default function App() {
           <Route path="/routing/design/:bookingId" element={<RouteDesignWorkbenchPage />} />
           <Route path="/tracking" element={<TrackingListPage />} />
           <Route path="/tracking/:trackingNumber/manage" element={<TrackingManagePage />} />
+          <Route path="/handling" element={<HandlingListPage />} />
+          <Route path="/handling/new" element={<HandlingFormPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
