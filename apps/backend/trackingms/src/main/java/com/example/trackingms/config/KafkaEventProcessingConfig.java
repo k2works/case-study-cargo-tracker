@@ -35,4 +35,17 @@ public class KafkaEventProcessingConfig {
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }
+
+    /**
+     * {@code HandlingActivityRegisteredEventHandler} の cross-service 購読（IT5 3.3）。
+     * handlingms が発行する shared モジュールの {@code HandlingActivityRegisteredEvent} を Kafka 経由で受信し、
+     * 荷役種別に応じた {@code UpdateTransportStatusCommand} を {@code TrackingActivity} 集約に送信する。
+     */
+    @Autowired
+    public void configureHandlingActivityEventsProcessor(EventProcessingConfigurer config) {
+        config.registerTrackingEventProcessor(
+                "handling-activity-events",
+                configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
+        );
+    }
 }

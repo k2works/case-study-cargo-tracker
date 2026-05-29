@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.handlingms.infrastructure.repositories.mybatis.CargoSnapshotMapper">
+
+    <resultMap id="cargoSnapshotResultMap" type="com.example.handlingms.domain.projections.CargoSnapshot">
+        <id property="bookingId" column="booking_id"/>
+        <result property="trackingNumber" column="tracking_number"/>
+        <result property="originUnlocode" column="origin_unlocode"/>
+        <result property="destinationUnlocode" column="destination_unlocode"/>
+        <result property="cargoType" column="cargo_type"/>
+    </resultMap>
+
+    <!--
+      upsert は ServiceImpl 側で 2 文に分解する（H2 / PostgreSQL 互換のため）。
+      ここでは insertIfAbsent と updateMutable の 2 文を定義する。
+    -->
+    <insert id="upsert">
+        INSERT INTO cargo_snapshot (
+            booking_id, origin_unlocode, destination_unlocode, cargo_type,
+            created_at, updated_at, version
+        )
+        SELECT #{bookingId}, #{originUnlocode}, #{destinationUnlocode}, #{cargoType},
+               CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
+        WHERE NOT EXISTS (
+            SELECT 1 FROM cargo_snapshot WHERE booking_id = #{bookingId}
+        )
+    </insert>
+
+    <update id="updateTrackingNumber">
+        UPDATE cargo_snapshot
+        SET tracking_number = #{trackingNumber},
+            updated_at      = CURRENT_TIMESTAMP,
+            version         = version + 1
+        WHERE booking_id = #{bookingId}
+    </update>
+
+    <select id="findByBookingId" resultMap="cargoSnapshotResultMap">
+        SELECT * FROM cargo_snapshot WHERE booking_id = #{bookingId}
+    </select>
+
+    <select id="findByTrackingNumber" resultMap="cargoSnapshotResultMap">
+        SELECT * FROM cargo_snapshot WHERE tracking_number = #{trackingNumber}
+    </select>
+
+</mapper>
