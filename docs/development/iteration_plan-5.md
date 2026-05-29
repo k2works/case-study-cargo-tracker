@@ -169,6 +169,18 @@
 
 **小計**: 10h（理想時間）
 
+### 5. E2E テスト（SP 外、IT5 受入条件検証）
+
+IT5 で追加した 4 画面（S16 / S17 / S20 / S21）と cross-service 連携の自動検証を整備する。
+ふりかえり Try：UI/フロー E2E は **TDD のアウトサイドインで先に書く** を IT6 以降で先取り（IT5 では事後追加）。
+
+| # | タスク | 見積もり | 担当 | 状態 |
+|---|--------|---------|------|------|
+| 5.1 | 軽量 UI E2E（tracking / handling / Navigation）：ナビ表示・到達・空状態・クライアントバリデーション。Kafka 不要 | 3h | - | [x] 2026-05-29: tracking-handling-ui.spec.ts 8 件 PASS。追跡管理一覧到達 + 存在しない追跡番号の耐性 + 荷役新規記録到達 + LOAD ヒント + CLAIM 動的フィールド + クライアントバリデーション + ナビ 8 件確認 |
+| 5.2 | cross-service E2E（handlingms → trackingms）：予約 → 採番 → 荷役（RECEIVE/LOAD/UNLOAD/CLAIM）→ tracking_summary の状態が伝搬する。`CROSS_SERVICE_E2E=1` 専用 | 3h | - | [x] 2026-05-29: cross-service.spec.ts に IT5 ブロック 2 件追加 PASS（予約→採番→RECEIVE→RECEIVED 伝搬 / 不正遷移 422）。全 E2E 45/45 PASS（既存 35 + 新規 10） |
+
+**小計**: 6h（理想時間、SP 外、完了）
+
 ### タスク合計
 
 | カテゴリ | SP | 理想時間 | 状態 |

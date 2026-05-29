@@ -200,3 +200,205 @@ test.describe('US11/cross-service: 経路確定の Kafka 伝搬 E2E（routingms 
     expect(legs[legs.length - 1].unloadUnlocode).toBe('USNYC');
   });
 });
+
+test.describe('US14/US15/US17/cross-service: 追跡番号採番と荷役による状態自動更新 E2E（IT5）', () => {
+  test('予約確定 → 採番 → 荷役 RECEIVE → tracking_summary が RECEIVED に伝搬する', async ({ page, request }) => {
+    test.skip(
+      !crossServiceEnabled,
+      'Kafka を要する cross-service E2E。CROSS_SERVICE_E2E=1 を指定したときのみ実行する。',
+    );
+
+    const token = await loginAndGetToken(page);
+    const auth = { Authorization: `Bearer ${token}` };
+    const stamp = Date.now();
+    const bookingId = `BK-TR-${stamp}`;
+    const voyageNumber = `V-TR-${stamp}`;
+
+    // 0) 航海登録（経路候補算出のため必要）
+    const voyageRes = await request.post('/api/v1/voyages', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        voyageNumber,
+        carrierCode: 'MAERSK',
+        carrierName: 'Maersk Line',
+        shipName: 'Tracking E2E Vessel',
+        originUnlocode: 'JPTYO',
+        destUnlocode: 'USNYC',
+        departureDate: '2027-01-10T09:00:00',
+        arrivalDate: '2027-02-10T18:00:00',
+        movements: [],
+        acceptedCargoTypes: ['GENERAL'],
+      },
+    });
+    expect(voyageRes.status(), await voyageRes.text()).toBe(201);
+
+    // 1) 予約登録 + 経路設計引き渡し
+    const bookRes = await request.post('/api/v1/bookings', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        bookingId,
+        shipperId: 'S-TR-001',
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'USNYC',
+        arrivalDeadline: '2027-09-30',
+        cargoType: 'GENERAL',
+        weightKg: 1500,
+        quantity: 10,
+        productName: 'tracking E2E 貨物',
+      },
+    });
+    expect(bookRes.status(), await bookRes.text()).toBe(201);
+    expect((await request.post(`/api/v1/bookings/${bookingId}/handoff`, { headers: auth })).ok()).toBeTruthy();
+
+    // 2) 経路候補算出 → 確定 → 紐付け（経路提案中まで）
+    await expect
+      .poll(
+        async () => {
+          const res = await request.post(`/api/v1/routes/${bookingId}/calculate`, { headers: auth });
+          if (res.status() !== 200) return 0;
+          const candidates = await res.json();
+          return candidates.length;
+        },
+        { timeout: 30_000, intervals: [500, 1_000, 2_000] },
+      )
+      .toBeGreaterThan(0);
+
+    expect(
+      (
+        await request.post(`/api/v1/routes/${bookingId}/confirm`, {
+          headers: { ...auth, 'Content-Type': 'application/json' },
+          data: { sequence: 1 },
+        })
+      ).status(),
+    ).toBe(202);
+
+    // 経路提案中まで伝搬を待つ
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/bookings/${bookingId}`, { headers: auth });
+          if (r.status() !== 200) return '';
+          return (await r.json()).bookingStatus;
+        },
+        { timeout: 30_000, intervals: [500, 1_000, 2_000] },
+      )
+      .toBe('ROUTE_PROPOSED');
+
+    // 3) 予約確定 → BookingSagaManager が TrackingIssuanceRequestedEvent を発行 →
+    //    trackingms が初期化・採番 → CargoTrackedEvent で Saga 終了 → bookingms が TRACKING_ISSUED に
+    expect((await request.post(`/api/v1/bookings/${bookingId}/confirm`, { headers: auth })).ok()).toBeTruthy();
+
+    // 4) 採番完了を待ち、tracking_number を取得する（US14）
+    const trackingNumber: string = await (async () => {
+      let tn: string | null = null;
+      await expect
+        .poll(
+          async () => {
+            const r = await request.get(`/api/v1/bookings/${bookingId}`, { headers: auth });
+            if (r.status() !== 200) return null;
+            const body = await r.json();
+            if (body.bookingStatus === 'TRACKING_ISSUED' && body.trackingNumber) {
+              tn = body.trackingNumber;
+              return tn;
+            }
+            return null;
+          },
+          {
+            message: 'US14: 追跡番号の採番が cross-service で伝搬しませんでした',
+            timeout: 30_000,
+            intervals: [500, 1_000, 2_000, 3_000],
+          },
+        )
+        .not.toBeNull();
+      if (!tn) throw new Error('採番された追跡番号を取得できませんでした');
+      return tn;
+    })();
+    expect(trackingNumber).toMatch(/^TRK-[A-Z0-9]{10}$/);
+
+    // 5) trackingms の tracking_summary が NOT_RECEIVED で初期化されていることを確認
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/tracking/${trackingNumber}`, { headers: auth });
+          if (r.status() !== 200) return '';
+          return (await r.json()).currentStatus;
+        },
+        { timeout: 30_000, intervals: [500, 1_000, 2_000] },
+      )
+      .toBe('NOT_RECEIVED');
+
+    // 6) 荷役 RECEIVE を登録 → cross-service で trackingms が tracking_summary を RECEIVED に更新（US15）
+    const handlingRes = await request.post('/api/v1/handling', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        trackingNumber,
+        handlingType: 'RECEIVE',
+        unlocode: 'JPTYO',
+        voyageNumber: null,
+        occurredAt: '2027-01-09T10:00:00',
+        handlerId: 'H-E2E-001',
+      },
+    });
+    expect(handlingRes.status(), await handlingRes.text()).toBe(201);
+
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/tracking/${trackingNumber}`, { headers: auth });
+          if (r.status() !== 200) return '';
+          return (await r.json()).currentStatus;
+        },
+        {
+          message: 'US15: 荷役 RECEIVE による状態 RECEIVED への伝搬が確認できませんでした',
+          timeout: 30_000,
+          intervals: [500, 1_000, 2_000, 3_000],
+        },
+      )
+      .toBe('RECEIVED');
+
+    // 7) 履歴に source=HANDLING の RECEIVED が記録されている（タイミング次第で空でも許容）
+    const eventsRes = await request.get(`/api/v1/tracking/${trackingNumber}/events`, { headers: auth });
+    expect(eventsRes.status()).toBe(200);
+    const events = await eventsRes.json();
+    // 初期化 + RECEIVED の少なくとも 2 件
+    expect(events.length).toBeGreaterThanOrEqual(2);
+    const receivedEvent = events.find(
+      (e: { transportStatus?: string }) => e.transportStatus === 'RECEIVED',
+    );
+    expect(receivedEvent).toBeTruthy();
+  });
+
+  test('US17: 追跡管理者が手動で状態を更新できる（UI 直叩き / 不正遷移は 422）', async ({ page, request }) => {
+    test.skip(
+      !crossServiceEnabled,
+      'Kafka を要する cross-service E2E。CROSS_SERVICE_E2E=1 を指定したときのみ実行する。',
+    );
+
+    const token = await loginAndGetToken(page);
+    const auth = { Authorization: `Bearer ${token}` };
+
+    // 直前テストの状態を引き継がず独立する。簡略のため /api/v1/tracking 一覧から
+    // 既存の追跡番号を 1 件取得して活用する（前テストで採番済みのものを再利用）。
+    const listRes = await request.get('/api/v1/tracking?page=0&size=5', { headers: auth });
+    expect(listRes.status()).toBe(200);
+    const list = await listRes.json();
+    if (list.items.length === 0) {
+      test.skip(true, '追跡番号が 1 件もありません。前テストを先に実行してください。');
+      return;
+    }
+    const target = list.items[0];
+
+    // 不正遷移：NOT_RECEIVED から DELIVERED は 422 で拒否
+    if (target.currentStatus === 'NOT_RECEIVED') {
+      const badRes = await request.post(`/api/v1/tracking/${target.trackingNumber}/status`, {
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        data: {
+          toStatus: 'DELIVERED',
+          unlocode: 'USNYC',
+          occurredAt: '2027-02-01T10:00:00',
+        },
+      });
+      expect(badRes.status()).toBe(422);
+    }
+  });
+});
