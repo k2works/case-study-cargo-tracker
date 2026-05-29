@@ -43,7 +43,8 @@ export default function TrackingManagePage() {
 
   const next = summary ? allowedNextStatuses(summary.currentStatus) : [];
 
-  async function handleSubmit(ev: React.FormEvent) {
+  // React.FormEvent は型定義上 @deprecated のため、最小構造的型を inline で記述する。
+  async function handleSubmit(ev: { preventDefault: () => void }) {
     ev.preventDefault();
     if (!toStatus) {
       setError('遷移先状態を選択してください');
@@ -138,7 +139,7 @@ export default function TrackingManagePage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                遷移先状態
+                <span>遷移先状態</span>
                 <select
                   value={toStatus}
                   onChange={(e) => setToStatus(e.target.value as TransportStatus | '')}
@@ -156,7 +157,7 @@ export default function TrackingManagePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <label className="block text-sm font-medium text-gray-700">
-                現在地（UN/LOCODE）
+                <span>現在地（UN/LOCODE）</span>
                 <input
                   type="text"
                   value={unlocode}
@@ -167,7 +168,7 @@ export default function TrackingManagePage() {
                 />
               </label>
               <label className="block text-sm font-medium text-gray-700">
-                航海番号
+                <span>航海番号</span>
                 <input
                   type="text"
                   value={voyageNumber}
@@ -178,7 +179,7 @@ export default function TrackingManagePage() {
               </label>
             </div>
             <label className="block text-sm font-medium text-gray-700">
-              発生日時
+              <span>発生日時</span>
               <input
                 type="datetime-local"
                 value={occurredAt}
@@ -188,7 +189,7 @@ export default function TrackingManagePage() {
               />
             </label>
             <label className="block text-sm font-medium text-gray-700">
-              説明
+              <span>説明</span>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

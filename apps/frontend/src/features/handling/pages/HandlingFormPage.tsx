@@ -27,7 +27,8 @@ export default function HandlingFormPage() {
   const claimRequired = requiresClaimVerification(handlingType);
   const voyageRequired = requiresVoyageNumber(handlingType);
 
-  async function handleSubmit(ev: React.FormEvent) {
+  // React.FormEvent は型定義上 @deprecated のため、最小構造的型を inline で記述する。
+  async function handleSubmit(ev: { preventDefault: () => void }) {
     ev.preventDefault();
     setError(null);
     if (voyageRequired && !voyageNumber) {
@@ -91,7 +92,7 @@ export default function HandlingFormPage() {
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4 rounded-lg border bg-white p-4 shadow-sm">
         <label className="block text-sm font-medium text-gray-700">
-          追跡番号
+          <span>追跡番号</span>
           <input
             type="text"
             value={trackingNumber}
@@ -103,7 +104,7 @@ export default function HandlingFormPage() {
         </label>
 
         <label className="block text-sm font-medium text-gray-700">
-          作業種別
+          <span>作業種別</span>
           <select
             value={handlingType}
             onChange={(e) => setHandlingType(e.target.value as HandlingType)}
@@ -119,7 +120,7 @@ export default function HandlingFormPage() {
         </label>
 
         <label className="block text-sm font-medium text-gray-700">
-          作業場所（UN/LOCODE）
+          <span>作業場所（UN/LOCODE）</span>
           <input
             type="text"
             value={unlocode}
@@ -132,7 +133,7 @@ export default function HandlingFormPage() {
         </label>
 
         <label className="block text-sm font-medium text-gray-700">
-          作業日時
+          <span>作業日時</span>
           <input
             type="datetime-local"
             value={occurredAt}
@@ -143,7 +144,7 @@ export default function HandlingFormPage() {
         </label>
 
         <label className="block text-sm font-medium text-gray-700">
-          航海番号 {voyageRequired && <span className="text-red-600">*</span>}
+          <span>航海番号 {voyageRequired && <span className="text-red-600">*</span>}</span>
           <input
             type="text"
             value={voyageNumber}
@@ -158,7 +159,7 @@ export default function HandlingFormPage() {
         </label>
 
         <label className="block text-sm font-medium text-gray-700">
-          作業員 ID
+          <span>作業員 ID</span>
           <input
             type="text"
             value={handlerId}
@@ -174,7 +175,7 @@ export default function HandlingFormPage() {
             <legend className="text-sm font-semibold text-blue-700">荷受人確認（引取必須）</legend>
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">
-                荷受人氏名 <span className="text-red-600">*</span>
+                <span>荷受人氏名 <span className="text-red-600">*</span></span>
                 <input
                   type="text"
                   value={consigneeName}
@@ -184,7 +185,7 @@ export default function HandlingFormPage() {
                 />
               </label>
               <label className="block text-sm font-medium text-gray-700">
-                署名参照（URL / ID）
+                <span>署名参照（URL / ID）</span>
                 <input
                   type="text"
                   value={signatureRef}
@@ -194,7 +195,7 @@ export default function HandlingFormPage() {
                 />
               </label>
               <label className="block text-sm font-medium text-gray-700">
-                確認コード
+                <span>確認コード</span>
                 <input
                   type="text"
                   value={confirmationCode}
