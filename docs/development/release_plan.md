@@ -285,33 +285,35 @@ gantt
 
 詳細は [iteration_plan-4.md](./iteration_plan-4.md) を参照。
 
-### IT5（Week 9-10: 2026-07-16 〜 2026-07-29）
+### IT5（Week 9-10: 2026-07-16 〜 2026-07-29）✅ 完了
 
 **ゴール**: 追跡番号発行・荷役作業記録・引取作業記録・貨物状態手動更新を実装する
 
 **主なタスク**:
 
-- [ ] 追跡番号発行（US14）
-- [ ] 荷役作業記録（US15）・引取作業記録（US16）
-- [ ] 貨物状態手動更新（US17）
+- [x] 追跡番号発行（US14）
+- [x] 荷役作業記録（US15）・引取作業記録（US16）
+- [x] 貨物状態手動更新（US17）
 
-**目標 SP**: 10
+**目標 SP**: 10（実績 10/10）
 
-詳細は [iteration_plan-5.md](./iteration_plan-5.md) を参照。
+詳細は [iteration_plan-5.md](./iteration_plan-5.md) / [retrospective-5.md](./retrospective-5.md) / [iteration_report-5.md](./iteration_report-5.md) を参照。
 
-### IT6（Week 11-12: 2026-07-30 〜 2026-08-12）
+### IT6（Week 11-12: 2026-07-30 〜 2026-08-12）✅ 完了
 
 **ゴール**: 追跡情報照会・遅延例外処理・破損紛失例外処理を実装する
 
 **主なタスク**:
 
-- [ ] 追跡情報照会（US18）
-- [ ] 遅延例外処理（US19）
-- [ ] 破損・紛失例外処理（US20）
+- [x] 追跡情報照会（US18、JWT 時限署名トークン、ADR-0013）
+- [x] 遅延例外処理（US19）
+- [x] 破損・紛失例外処理（US20、LOSS 自動 escalation）
+- [x] ADR-0012（cross-service 冪等性）/ ADR-0014（@ProcessingGroup 命名規約）起票
+- [x] マルチパースペクティブレビュー + SonarQube Quality Gate PASS
 
-**目標 SP**: 9
+**目標 SP**: 9（実績 9/9）
 
-詳細は [iteration_plan-6.md](./iteration_plan-6.md) を参照。
+詳細は [iteration_plan-6.md](./iteration_plan-6.md) / [retrospective-6.md](./retrospective-6.md) / [iteration_report-6.md](./iteration_report-6.md) を参照。
 
 ### IT7（Week 13-14: 2026-08-13 〜 2026-08-26）
 
