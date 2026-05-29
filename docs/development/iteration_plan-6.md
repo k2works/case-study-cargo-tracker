@@ -54,14 +54,14 @@
 
 | # | タスク | 見積もり | 担当 | 状態 | 元 Try |
 |---|--------|---------|------|------|--------|
-| 0.1 | Testcontainers Reusable + 一意 topic prefix で Kafka container race を構造的解決し、@Tag("kafka-integration") 除外を解除して通常 `check` に戻す | 3h | - | [ ] | T1（最優先） |
+| 0.1 | Testcontainers Reusable + 一意 topic prefix で Kafka container race を構造的解決し、@Tag("kafka-integration") 除外を解除して通常 `check` に戻す。**併せて H6**（`TrackingControllerIntegrationTest.hasSize(7)` を緩和ではなく `@DirtiesContext(BEFORE_CLASS)` で根本対処）と **H7**（`HandlingActivityKafkaIntegrationTest` の publish verify 追加または container 廃止）を解消 | 5h | - | [ ] | T1（最優先）/ H6 / H7 |
 | 0.2 | ADR-0012: cross-service 冪等性・トランザクション境界の方針（H3 + MEMORY 既出問題を統合） | 1h | - | [ ] | T2 |
 | 0.3 | ADR-0013: 公開追跡照会の時限署名トークン（JWT）採用 | 1h | - | [ ] | US18 設計判断 |
 | 0.4 | ADR-0014: @ProcessingGroup 命名規約（cross- / local- / outbound- prefix） | 1h | - | [ ] | T3 |
 | 0.5 | handlingms フォールバック投影の根本対処（DLQ 風 `pending_handling_activity` 待避テーブル + CargoSnapshot 到着時 retro-update） | 4h | - | [ ] | T5 |
 | 0.6 | NotificationAcl の実メール送信切替準備（ADR、現状スタブから JavaMailSender / SendGrid 等への移行方針） | 1h | - | [ ] | US19/US20 通知の本格化 |
 
-**小計**: 11h（理想時間、SP 外）
+**小計**: 13h（理想時間、SP 外。0.1 を H6/H7 含めて 3h→5h に増）
 
 ### 1. US18 追跡情報照会（5 SP）
 
@@ -114,14 +114,14 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 基盤改善（IT5 Try 持ち越し、SP 外） | - | 11h | [ ] |
+| 基盤改善（IT5 Try 持ち越し、SP 外） | - | 13h | [ ] |
 | US18 追跡情報照会 | 5 | 19h | [ ] |
 | US19 遅延例外処理 | 2 | 12h | [ ] |
 | US20 破損・紛失例外処理 | 2 | 7h | [ ] |
 | テスト / 仕上げ | - | 7h | [ ] |
-| **合計（コミット）** | **9** | **56h** | |
+| **合計（コミット）** | **9** | **58h** | |
 
-**1 SP あたり**: 約 6.2h（コミット分）。基盤改善 11h + テスト/仕上げ 7h を含めると 56h。
+**1 SP あたり**: 約 6.2h（コミット分）。基盤改善 13h + テスト/仕上げ 7h を含めると 58h。
 
 **進捗率**: 0%（0/9 SP）
 
@@ -183,12 +183,14 @@ gantt
 
 ### 主要設計方針
 
-- **時限署名トークン（JWT、ADR-0013）**: 追跡番号 + 有効期限を含む JWT を、追跡管理者が `POST /tracking/{tn}/token` で発行。公開エンドポイント `GET /public/tracking/{tn}` は Spring Security で `permitAll` とし、`PublicTrackingTokenFilter` で署名・期限・追跡番号一致を検証する。有効期限は `delivered_at + 30 日`（配送完了から 30 日間照会可能、配送未完了の場合は `arrival_deadline + 30 日`）。HS256 + 32 バイト以上の鍵を Heroku Config Vars / 環境変数 `tracking.public-token.secret` で保持。
+- **時限署名トークン（JWT、ADR-0013、ui_design.md S15 準拠）**: JWT (HS256) の Claims は `tn`（追跡番号）/ `sub`（荷主 ID または荷受人 ID）/ `exp`（有効期限）/ `iat`（発行時刻）/ `role`（`SHIPPER` or `CONSIGNEE`）。追跡管理者が `POST /tracking/{tn}/token?role={SHIPPER|CONSIGNEE}&subjectId=<id>` で発行。公開エンドポイント `GET /public/tracking/{tn}` は Spring Security で `permitAll` とし、`PublicTrackingTokenFilter` で署名・期限・`tn` 一致を検証する。有効期限は **30 日**（配送完了後 + 7 日で自動失効、ui_design.md L737）。検証失敗時は **403 Forbidden**（ui_design.md L738 準拠、リソース存在秘匿）。
+- **JWT 鍵管理（IT6 暫定 / IT8 本格）**: HS256 + 32 バイト以上。IT6 では Heroku Config Vars / 環境変数 `tracking.public-token.secret` で暫定運用。**ui_design.md L734 準拠の AWS Secrets Manager + 四半期ローテーションへの切替は IT8（非機能改善）で対応**（タスク 0.6 で ADR 起票）。
+- **レート制限（IT6 暫定 / IT8 本格）**: ui_design.md L739 で公開エンドポイントは「同一 IP から 60 req/min、超過 429」が規定。IT6 では Spring Security の Bucket4j 統合を暫定でスキップし、**IT8 でリバースプロキシ層 or アプリ層 rate limit を本格実装**（ADR-0015 と統合）。本 IT では Heroku の標準制限のみで運用。
 - **例外を集約内エンティティに**: `TrackingException` は `TrackingActivity` 集約内のエンティティ（domain-model.md M5）。集約識別子は `trackingNumber`、例外識別子 `exceptionId` は集約スコープ。例外履歴は集約の `List<TrackingException>` フィールドに格納し、Event Sourcing で完全再構築可能。
 - **EXCEPTION 状態への遷移**: 既存 `TransportStatusTransition`（IT5）で {NOT_RECEIVED, RECEIVED, LOADED, IN_TRANSIT, UNLOADED, AWAITING_CLAIM} → EXCEPTION の遷移は許可済み。例外登録時に集約内で「現状態 → EXCEPTION」遷移を自動実行し、`TransportStatusUpdatedEvent` + `TrackingExceptionRegisteredEvent` の 2 件を順次発行。MISROUTED / DELIVERED 状態の貨物には例外登録不可（IllegalStateException）。
 - **escalation の自動判定**: 集約内で `ExceptionType = LOSS` のときに `escalated = true` を自動設定し、`TrackingExceptionRegisteredEvent` と同時に `TrackingExceptionEscalatedEvent` を発行。`TrackingNotificationEventHandler` が `NotificationAcl.notifyExceptionEscalation` を呼び出して管理職通知のスタブ実行（実メール送信は 0.6 で外部連携 ADR を起票し IT8 で実装）。
 - **公開照会のセキュリティ**: 推測困難な追跡番号（TRK- + 大文字英数 10 桁、36^10 ≒ 3.6×10^15 通り）+ JWT 署名で二重防御。トークン共有による情報漏洩リスクは荷主の責任範囲（メール文面に注意書き）。`PublicTrackingTokenFilter` は `Authorization` ヘッダではなく `?token=` クエリパラメータから読む（メール URL に埋め込み可能にする）。
-- **TrackingTokenService の責務**: JWT 発行 / 検証 / 期限計算をすべてドメインサービスに集約。`@Value` で秘密鍵を注入し、jjwt 0.12+ で `Jwts.builder().subject(trackingNumber).expiration(...)` のシンプルな構成。authms の `JwtTokenProvider` とは別鍵・別 audience（`tracking.public`）で区別する。
+- **TrackingTokenService の責務**: JWT 発行 / 検証 / 期限計算をすべてドメインサービスに集約。`@Value` で秘密鍵を注入し、jjwt 0.12+ で `Jwts.builder().subject(subjectId).claim("tn", trackingNumber).claim("role", role).expiration(...)` の構成。authms の `JwtTokenProvider` とは別鍵で区別。**domain-model.md L711-714 の `verify(token, deliveredAt)` シグネチャは旧仕様**。本 IT では `verify(token, expectedTrackingNumber)` に変更し、IT6 完了時に domain-model.md を更新する（変更点として注記）。
 - **NotificationAcl 拡張（0.6 で実装基盤）**: 既存 `notifyTrackingIssued` / `notifyStatusChanged` / `notifyMisrouted` に加えて、`notifyExceptionRegistered` / `notifyExceptionResolved` / `notifyExceptionEscalation` を追加。`LoggingNotificationAcl` スタブを更新し、IT6 4.x で実メール送信 ADR-0015（仮）を起票して切替準備。
 - **cross-service 経路は IT6 では最小**: 例外関連の cross-service イベント発信は本 IT 範囲外（trackingms 内で完結）。IT7 Billing 連携時に `CargoExceptionResolvedEvent` 等を shared 化する余地を残す。
 
@@ -215,12 +217,12 @@ package "trackingms (Tracking)" {
     - exceptionId: TrackingExceptionId
     - exceptionType: ExceptionType
     - occurredAt: LocalDateTime
-    - occurredUnlocode: String
+    - occurredLocation: Location   ' domain-model.md 準拠（共有カーネル Location）
     - description: String
     - responseStatus: ResponseStatus
     - resolution: String
-    - resolvedAt: LocalDateTime
-    - escalated: boolean
+    - resolvedAt: LocalDateTime     ' domain-model.md 反映必要（IT6 で追加）
+    - escalated: boolean             ' domain-model.md 反映必要（IT6 で追加）
     + transitionTo(newStatus: ResponseStatus): void
     + canResolveWith(resolution: String): boolean
   }
@@ -248,21 +250,22 @@ package "trackingms (Tracking)" {
 
   class TrackingTokenService <<Domain Service>> {
     - secret: SecretKey
-    - audience = "tracking.public"
-    + issue(tn: TrackingNumber, deliveredAt): JwtToken
-    + verify(token: String, expectedTn: TrackingNumber): VerifiedToken
-    - calculateExpiry(summary: TrackingSummary): Instant
+    + issue(tn: TrackingNumber, subjectId: String, role: Role, deliveredAt: LocalDateTime): JwtToken
+    + verify(token: String, expectedTn: TrackingNumber): VerifiedToken  ' domain-model.md 旧仕様 verify(token, deliveredAt) を更新
+    - calculateExpiry(deliveredAt: LocalDateTime): LocalDateTime
   }
 
   class JwtToken <<Value Object>> {
     - token: String
-    - issuedAt: Instant
-    - validUntil: Instant
+    - issuedAt: LocalDateTime    ' domain-model.md 準拠
+    - validUntil: LocalDateTime   ' domain-model.md 準拠
   }
 
   class VerifiedToken <<Value Object>> {
     - trackingNumber: TrackingNumber
-    - expiresAt: Instant
+    - subjectId: String           ' SHIPPER or CONSIGNEE の id
+    - role: Role
+    - expiresAt: LocalDateTime
   }
 
   ' 既存（IT5）の TrackingActivity フィールドと TransportStatus 9 値・MISROUTED 救済（IT5 H5）
@@ -314,9 +317,9 @@ TrackingActivity ..> NotificationAcl : EventHandler 経由
   - `resolution` は `responseStatus = RESOLVED` への遷移時のみ必須（空文字拒否）。
   - `resolvedAt` は `RESOLVED` 遷移時に集約側で `LocalDateTime.now()` で自動設定。
 - **TrackingTokenService**:
-  - 有効期限計算：`deliveredAt != null ? deliveredAt + 30 日 : arrivalDeadline + 30 日`。MAX を `now() + 90 日` で頭打ち。
-  - JWT subject は追跡番号、audience は `tracking.public`、issuer は `trackingms`。
-  - 検証時に `subject == 期待追跡番号` を厳密チェック（トークン取り違えの防止）。
+  - 有効期限計算（ui_design.md L729 / L737 準拠）：発行時点から 30 日。配送完了済みなら `deliveredAt + 7 日` で頭打ち（配送完了後 7 日で自動失効）。
+  - JWT subject は荷主 ID または荷受人 ID（ui_design.md L733）、`tn` claim に追跡番号、`role` claim に `SHIPPER` / `CONSIGNEE`、issuer は `trackingms`。
+  - 検証時に `tn claim == 期待追跡番号` を厳密チェック（トークン取り違えの防止）。失敗時は **403 Forbidden**。
 
 ### 状態遷移（例外発生 → 対応 → 解決）
 
@@ -379,15 +382,15 @@ entity "tracking_exception\n(IT5 V2 先行作成・IT6 で本格利用)" as ex {
   --
   tracking_number: VARCHAR(25) NOT NULL <<FK>>
   exception_type: VARCHAR(16) NOT NULL  ' DELAY / DAMAGE / LOSS
-  occurred_at: TIMESTAMP NOT NULL
+  occurred_at: TIMESTAMPTZ NOT NULL
   occurred_unlocode: VARCHAR(5)
-  description: VARCHAR(1000) NOT NULL
+  description: TEXT NOT NULL             ' data-model.md L571 準拠（TEXT）
   response_status: VARCHAR(16) NOT NULL ' REPORTED / RESPONDING / RESOLVED
-  resolution: VARCHAR(1000)
-  resolved_at: TIMESTAMP
+  resolution: TEXT                       ' data-model.md L573 準拠
+  resolved_at: TIMESTAMPTZ
   escalated: BOOLEAN NOT NULL DEFAULT FALSE
-  created_at: TIMESTAMP NOT NULL
-  updated_at: TIMESTAMP NOT NULL
+  created_at: TIMESTAMPTZ NOT NULL
+  updated_at: TIMESTAMPTZ NOT NULL
 }
 
 entity "tracking_summary\n(IT5 既存・公開照会で参照)" as ts {
@@ -397,13 +400,13 @@ entity "tracking_summary\n(IT5 既存・公開照会で参照)" as ts {
   current_status: VARCHAR(20) NOT NULL
   current_unlocode: VARCHAR(5)
   current_voyage_number: VARCHAR(20)
-  estimated_arrival: TIMESTAMP
+  estimated_arrival: TIMESTAMPTZ
   misrouted: BOOLEAN NOT NULL
-  last_event_at: TIMESTAMP
-  delivered_at: TIMESTAMP    ' JWT 有効期限計算用（ADR-0013）
-  delivered_published_at: TIMESTAMP ' IT5 H3 冪等化
-  created_at: TIMESTAMP
-  updated_at: TIMESTAMP
+  last_event_at: TIMESTAMPTZ
+  delivered_at: TIMESTAMPTZ    ' JWT 有効期限計算用（ADR-0013、data-model.md L543）
+  delivered_published_at: TIMESTAMPTZ ' IT5 H3 冪等化（data-model.md 反映必要）
+  created_at: TIMESTAMPTZ
+  updated_at: TIMESTAMPTZ
   version: BIGINT
 }
 
@@ -411,12 +414,12 @@ entity "tracking_event\n(IT5 既存・公開照会で参照)" as te {
   * event_id: BIGSERIAL <<PK>>
   --
   tracking_number: VARCHAR(25) NOT NULL <<FK>>
-  occurred_at: TIMESTAMP NOT NULL
+  occurred_at: TIMESTAMPTZ NOT NULL
   event_type: VARCHAR(40) NOT NULL
   transport_status: VARCHAR(20)
   unlocode: VARCHAR(5)
   source: VARCHAR(16)  ' SYSTEM / MANUAL / HANDLING
-  description: VARCHAR(1000)
+  description: TEXT     ' data-model.md L561 準拠
 }
 
 ts ||--|{ te : "1..*"
@@ -477,47 +480,61 @@ end note
     "このトークンは 2026-09-15 まで有効です"
   }
 -----------
-  S18: 例外登録（/tracking/TRK-AB12CD3456/exceptions/new）
+  S18: 例外登録（/tracking/TRK-AB12CD3456/exceptions/new、ui_design.md L818-857 準拠）
   {+
     { CargoTracker | 追跡管理 | [ログアウト] }
     ----
-    {
-      追跡番号: TRK-AB12CD3456   現在の状態: [輸送中]
+    例外登録 - TRK-AB12CD3456
+    ----
+    例外種別 | "(.) 遅延  ( ) 破損  ( ) 紛失"
+    発生日時 | "2026-07-25 09:00    [現在時刻]"
+    発生場所 (UN/LOCODE) | "SGSIN [▼ 候補から選択]"
+    ----
+    {(遅延選択時)
+      遅延理由 | "( ) 悪天候  ( ) 港湾混雑  ( ) 通関遅延  ( ) その他"
+      新しい到着予定日 | "2026-08-20"
+      詳細 | "悪天候のため寄港不可"
     }
     ----
-    {
-      例外種別 | ^遅延^
-      発生日時 | "2026-07-25 09:00"
-      発生場所 | "SGSIN"
-      理由・状況 | "悪天候のため寄港不可"
+    {(破損選択時)
+      破損箇所 | "外装 / コンテナ / 内容物"
+      破損程度 | "( ) 軽微  ( ) 中程度  ( ) 重大"
+      写真添付 | "[ファイルを選択]  (最大 5 枚)"
+      詳細 | "...."
     }
     ----
-    "LOSS の場合は登録時に escalated=true で管理職に escalation 通知が送信されます"
+    {(紛失選択時)
+      最終確認場所 (UN/LOCODE) | "SGSIN"
+      最終確認日時 | "2026-07-24 18:00"
+      詳細 | "...."
+      ----
+      "⚠ 紛失を選択しました。この操作により管理職に自動通知が送信されます。"
+      [X] "紛失であることを確認しました（escalation を承知のうえ登録する）"
+    }
     ----
-    [ 例外を記録 ] | [ キャンセル ]
+    [ 登録 ] | [ キャンセル ]
   }
 -----------
-  S19: 例外対応一覧（/tracking/exceptions）
+  S19: 例外対応一覧（/tracking/exceptions、ui_design.md L867-892 準拠）
   {+
     { CargoTracker | 追跡管理 | [ログアウト] }
     ----
-    タブ: [ 追跡管理 ] [ **例外対応** ]
+    例外対応一覧
     ----
-    フィルタ: ^未対応^ | ^対応中^ | ^解決済^
+    {
+      "種別: [全て v]" | "対応状態: [未対応 v]" | "期間: [全て v]" | "[検索]"
+    }
     ----
     {#
-      . | **追跡番号** | **種別** | **発生日時** | **状態** | **escalation**
-      1 | TRK-AB12CD3456 | 遅延 | 07-25 09:00 | REPORTED | -
-      2 | TRK-XY99ZZ1111 | 紛失 | 07-26 14:00 | RESPONDING | ⚠️ 管理職通知済
+      ! | **例外 ID** | **追跡番号** | **種別** | **発生日時** | **経過時間** | **発生場所** | **対応状態** | **担当者**
+      ⚠ | E-005 | TRK-GH9012... | 紛失 | 07-26 14:00 | 3時間前 | CNSHA | 未対応 | -
+      . | E-004 | TRK-EF7890... | 遅延 | 07-25 09:00 | 昨日 | SGSIN | 対応中 | 田中
+      . | E-003 | TRK-CD5678... | 破損 | 07-24 11:00 | 2日前 | JPOSA | 未対応 | -
     }
     ----
-    行クリック → 対応詳細モーダル
-    {
-      対応内容 | "代替ルート手配中。新到着予定 08-20。"
-      対応状態 | ^対応中^
-      ' RESOLVED 選択時は resolution 必須
-    }
-    [ 対応内容を更新 ] | [ 解決済にする ]
+    "未対応 2 件 (うち escalation 中 1 件)" | "ページ 1 / 1  [<<] [<] 1 [>] [>>]"
+    ----
+    "行クリック → S17 追跡詳細・管理（対応詳細＋解決モーダル）"
   }
 }
 @endsalt
@@ -534,7 +551,7 @@ class 追跡照会公開 {
   events: List<TrackingEvent>
   exceptions: List<TrackingException>
   照会する()
-  トークン期限切れで 401()
+  トークン期限切れで 403()
 }
 
 class 例外登録 {
@@ -582,7 +599,7 @@ state "S17 追跡詳細・管理\n/tracking/:tn/manage" as S17
 state "S18 例外登録\n/tracking/:tn/exceptions/new" as S18
 state "S19 例外対応一覧\n/tracking/exceptions" as S19
 
-S15 --> S15 : 自動再取得（30 秒、refetchInterval）/ トークン失効で 401 表示
+S15 --> S15 : 自動再取得（30 秒、refetchInterval）/ トークン失効で 403 表示
 S15 --> [*] : ブラウザ閉じる
 S01 --> S16 : サイドナビ「追跡管理」（ROLE_TRACKER）
 S01 --> S19 : サイドナビ「例外対応」（ROLE_TRACKER）
@@ -684,7 +701,7 @@ alt 検証成功
     ctrl --> ui : 200 OK\n{summary, events, exceptions}
     ui --> customer : S15 表示
 else 期限切れ / 不正
-    filter --> ui : 401 Unauthorized
+    filter --> ui : 403 Forbidden
     ui --> customer : alert-error\n「リンク期限切れ・再発行依頼」
 end
 @enduml
@@ -747,7 +764,7 @@ docs/adr/
 | **rate limit（将来）** | 公開エンドポイントは IP 単位の rate limit を IT8 で検討（本 IT 範囲外）|
 | **resolution 最小長** | RESOLVED 遷移時の `resolution` は 10 文字以上必須（雑な「OK」を拒否）|
 | **occurredAt の制約** | 過去または現在のみ受理（HandlingActivity IT5 3.2 と同規約）|
-| **description 最大長** | 1000 文字（data-model.md の `VARCHAR(1000)` 上限と整合）|
+| **description 最大長** | アプリ層で 1000 文字制限（DB は `TEXT` で上限なし、data-model.md L571 準拠）|
 
 ### ロール / 認可
 
@@ -785,6 +802,18 @@ docs/adr/
 | **T5** | handlingms フォールバック投影根本対処 | タスク 0.5（DLQ 風 pending_handling_activity）|
 | **T6** | フロント型 OpenAPI 自動生成 | IT7 持ち越し（IT6 範囲外）|
 | **T7** | マルチパースペクティブレビュー固定化 | タスク 4.3 で継続実施 |
+
+## IT5 レビュー高優先度指摘との対応
+
+| 指摘 ID | 内容 | IT6 対応方針 |
+|---------|------|--------------|
+| **H1** | `release_plan.md` の IT5 進捗反映 | **対応済み**（IT5 完了時の `tracking-progress --update` で反映済み） |
+| **H2** | handlingms `UNKNOWN-BOOKING` フォールバック根本対処 | **タスク 0.5**（DLQ 風 `pending_handling_activity` 待避テーブル + CargoSnapshot 到着時 retro-update） |
+| **H3** | `CargoDeliveredEventPublisher` 再生時重複発行リスク | **タスク 0.2 ADR-0012** で冪等化方針を明文化（`tracking_summary.delivered_published_at` 列はすでに追加済み） |
+| **H4** | S20 荷役作業記録の連続入力 / バーコード対応 | **IT7 持ち越し**（業務適合性向上、レビュー残バックログ M6 と統合） |
+| **H5** | MISROUTED 後の救済動線（再経路設計差し戻し） | **IT7 持ち越し**（routingms / bookingms 横断改修のためスコープが大きい、user_story.md へのストーリー追加で対応 — IT6 範囲外と明示） |
+| **H6** | `TrackingControllerIntegrationTest.hasSize(7)` 緩和の根本対処 | **タスク 0.1 のサブ**として、Reusable 化と併せて `@DirtiesContext(BEFORE_CLASS)` or event store クリーンで H2 replay 汚染を解消し、`hasSize(7)` に戻す |
+| **H7** | `HandlingActivityKafkaIntegrationTest` の publish 未 verify | **タスク 0.1 のサブ**として、テスト名を「ローカル投影到達」に変更（container 廃止）または consumer record を assert する形に修正 |
 
 ## レビュー残バックログ（IT5 中・低指摘 22 件）
 
@@ -827,6 +856,8 @@ GitHub Issue 化を IT6 序盤で実施推奨。コードベース全体の改�
 |------|---------|--------|
 | 2026-05-29 | 初版作成（US18/US19/US20 + IT5 ふりかえり Try T1-T5 取込、9 SP / 2 週間） | k2works |
 | 2026-05-29 | validating-iteration-plan による検証修正（S18/S19 を ui_design.md に整合、画面遷移図追加、完了条件 / 更新履歴セクション追加） | k2works |
+| 2026-05-29 | iteration_plan-5.md パターンに合わせて設計セクション拡充（PlantUML 7 種・Salt 図・API 表・ディレクトリ構成・バリデーション/ロール表） | k2works |
+| 2026-05-29 | 2 回目の validating-iteration-plan 検証修正：domain-model.md 準拠で `occurredLocation: Location` / `LocalDateTime` 統一、data-model.md 準拠で `TIMESTAMPTZ` / `TEXT` 統一、ui_design.md 準拠で JWT Claims（`sub` = 荷主 ID、`tn` claim、`role`）/ 403 Forbidden / S18 動的フォーム / S19 期間フィルタ反映、IT5 レビュー H5/H6/H7 対応方針を明文化（タスク 0.1 を 5h に拡張、IT7 持ち越し方針注記） | k2works |
 
 ## 参照
 
