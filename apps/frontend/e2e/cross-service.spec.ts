@@ -335,7 +335,9 @@ test.describe('US14/US15/US17/cross-service: 追跡番号採番と荷役によ�
         handlingType: 'RECEIVE',
         unlocode: 'JPTYO',
         voyageNumber: null,
-        occurredAt: '2027-01-09T10:00:00',
+        // HandlingActivity 集約は「occurredAt は現在時刻以前」を強制するため、過去日時を指定。
+        // 出発予定（2027-01-10）より前の日時で受領を表現する。
+        occurredAt: '2026-05-01T10:00:00',
         handlerId: 'H-E2E-001',
       },
     });
