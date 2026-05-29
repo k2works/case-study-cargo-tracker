@@ -14,6 +14,8 @@ import QuotationFormPage from './features/quote/pages/QuotationFormPage';
 import QuotationDetailPage from './features/quote/pages/QuotationDetailPage';
 import RouteDesignListPage from './features/routing/pages/RouteDesignListPage';
 import RouteDesignWorkbenchPage from './features/routing/pages/RouteDesignWorkbenchPage';
+import TrackingListPage from './features/tracking/pages/TrackingListPage';
+import TrackingManagePage from './features/tracking/pages/TrackingManagePage';
 
 function Dashboard() {
   return (
@@ -44,6 +46,8 @@ export default function App() {
           <Route path="/quotes/:quotationId" element={<QuotationDetailPage />} />
           <Route path="/routing/design" element={<RouteDesignListPage />} />
           <Route path="/routing/design/:bookingId" element={<RouteDesignWorkbenchPage />} />
+          <Route path="/tracking" element={<TrackingListPage />} />
+          <Route path="/tracking/:trackingNumber/manage" element={<TrackingManagePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

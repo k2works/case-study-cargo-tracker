@@ -5,6 +5,7 @@ import com.example.trackingms.application.TrackingQueryService;
 import com.example.trackingms.domain.commands.UpdateTransportStatusCommand;
 import com.example.trackingms.domain.model.TransportStatus;
 import com.example.trackingms.domain.projections.TrackingSummary;
+import com.example.trackingms.interfaces.rest.dto.PageResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingEventResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingSummaryResponse;
 import com.example.trackingms.interfaces.rest.dto.UpdateTransportStatusRequest;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -40,6 +42,19 @@ public class TrackingController {
                               TrackingQueryService queryService) {
         this.commandService = commandService;
         this.queryService = queryService;
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<TrackingSummaryResponse>> findAll(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
+        List<TrackingSummaryResponse> items = queryService.findAll(safePage * safeSize, safeSize).stream()
+                .map(TrackingSummaryResponse::from)
+                .toList();
+        long total = queryService.count();
+        return ResponseEntity.ok(PageResponse.of(items, total, safePage, safeSize));
     }
 
     @GetMapping("/{trackingNumber}")

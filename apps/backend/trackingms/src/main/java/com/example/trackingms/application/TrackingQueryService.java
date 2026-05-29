@@ -30,4 +30,12 @@ public class TrackingQueryService {
     public List<TrackingEvent> findEvents(String trackingNumber) {
         return eventMapper.findByTrackingNumber(trackingNumber);
     }
+
+    public List<TrackingSummary> findAll(int offset, int limit) {
+        return summaryMapper.findAll(offset, limit);
+    }
+
+    public long count() {
+        return summaryMapper.count();
+    }
 }

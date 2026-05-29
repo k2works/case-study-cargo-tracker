@@ -43,4 +43,10 @@ public interface TrackingSummaryMapper {
     TrackingSummary findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 
     TrackingSummary findByBookingId(@Param("bookingId") String bookingId);
+
+    /** 追跡管理一覧用のページング取得（US17 / IT5 2.4、updated_at DESC）。 */
+    java.util.List<TrackingSummary> findAll(@Param("offset") int offset, @Param("limit") int limit);
+
+    /** 総件数（ページネーション用）。 */
+    long count();
 }

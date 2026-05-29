@@ -5,6 +5,7 @@ import com.example.trackingms.application.TrackingQueryService;
 import com.example.trackingms.domain.commands.UpdateTransportStatusCommand;
 import com.example.trackingms.domain.projections.TrackingEvent;
 import com.example.trackingms.domain.projections.TrackingSummary;
+import com.example.trackingms.interfaces.rest.dto.PageResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingEventResponse;
 import com.example.trackingms.interfaces.rest.dto.TrackingSummaryResponse;
 import com.example.trackingms.interfaces.rest.dto.UpdateTransportStatusRequest;
@@ -48,6 +49,39 @@ class TrackingControllerTest {
         s.setCurrentUnlocode("JPTYO");
         s.setMisrouted(false);
         return s;
+    }
+
+    @Test
+    @DisplayName("US17: GET /tracking 一覧で投影をページネーション返却する")
+    void 追跡一覧をページネーション返却() {
+        when(queryService.findAll(0, 20)).thenReturn(List.of(sampleSummary()));
+        when(queryService.count()).thenReturn(1L);
+
+        ResponseEntity<PageResponse<TrackingSummaryResponse>> response =
+                controller.findAll(0, 20);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().items()).hasSize(1);
+        assertThat(response.getBody().totalCount()).isEqualTo(1);
+        assertThat(response.getBody().page()).isEqualTo(0);
+        assertThat(response.getBody().size()).isEqualTo(20);
+        assertThat(response.getBody().items().get(0).trackingNumber()).isEqualTo("TRK-AB12CD3456");
+    }
+
+    @Test
+    @DisplayName("US17: 不正な size（0 や負数）は 20 に補正する")
+    void 不正なサイズは補正される() {
+        when(queryService.findAll(0, 20)).thenReturn(List.of());
+        when(queryService.count()).thenReturn(0L);
+
+        ResponseEntity<PageResponse<TrackingSummaryResponse>> response =
+                controller.findAll(-1, 0);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().page()).isEqualTo(0);
+        assertThat(response.getBody().size()).isEqualTo(20);
     }
 
     @Test

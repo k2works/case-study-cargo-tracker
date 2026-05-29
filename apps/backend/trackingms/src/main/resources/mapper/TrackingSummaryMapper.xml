@@ -73,4 +73,15 @@
         WHERE booking_id = #{bookingId}
     </select>
 
+    <select id="findAll" resultMap="trackingSummaryResultMap">
+        SELECT *
+        FROM tracking_summary
+        ORDER BY updated_at DESC, tracking_number ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM tracking_summary
+    </select>
+
 </mapper>
