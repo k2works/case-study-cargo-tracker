@@ -53,6 +53,12 @@ test {
     // 古い API バージョンを使い HTTP 400 になるため、サポート範囲内の API バージョンを明示する。
     systemProperty 'api.version', '1.43'
     environment 'DOCKER_API_VERSION', '1.43'
+    // IT5 H6 / IT6 review M7 対応：複数の @SpringBootTest（TrackingControllerIntegrationTest,
+    // PublicTrackingControllerIntegrationTest）が Spring Context をキャッシュ共有することで H2
+    // in-memory event store が積み重なる flaky を回避するため、テストクラスごとに JVM をフォーク
+    // して context キャッシュを完全分離する。IT7 で @WebMvcTest + MockBean 分解を実施するまでの
+    // 暫定対処（auto-memory: trackingms-spring-context-event-store-pollution）。
+    forkEvery = 1
 }
 
 bootJar {
