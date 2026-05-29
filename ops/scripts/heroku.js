@@ -125,21 +125,34 @@ export default function (gulp) {
    heroku container:login
 
 2. アプリ作成（既存の場合はスキップ）:
-   heroku create ${PREFIX}-authms    --stack container
-   heroku create ${PREFIX}-bookingms --stack container
-   heroku create ${PREFIX}-routingms --stack container
-   heroku create ${PREFIX}-gatewayms --stack container
-   heroku create ${PREFIX}-frontend  --stack container
+   heroku create ${PREFIX}-authms     --stack container
+   heroku create ${PREFIX}-bookingms  --stack container   # IT2 追加
+   heroku create ${PREFIX}-routingms  --stack container
+   heroku create ${PREFIX}-trackingms --stack container   # IT5 追加
+   heroku create ${PREFIX}-handlingms --stack container   # IT5 追加
+   heroku create ${PREFIX}-gatewayms  --stack container
+   heroku create ${PREFIX}-frontend   --stack container
 
    既存アプリの場合はスタックを container に設定:
    heroku stack:set container --app ${PREFIX}-authms
    heroku stack:set container --app ${PREFIX}-bookingms
    heroku stack:set container --app ${PREFIX}-routingms
+   heroku stack:set container --app ${PREFIX}-trackingms
+   heroku stack:set container --app ${PREFIX}-handlingms
    heroku stack:set container --app ${PREFIX}-gatewayms
    heroku stack:set container --app ${PREFIX}-frontend
 
-3. JWT_SECRET と Kafka 設定を .env に追加:
+3. PostgreSQL アドオン（Read Model 用、各 backend サービス毎）:
+   heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-bookingms
+   heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-routingms
+   heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-trackingms   # IT5 追加（tracking_summary / tracking_event / tracking_exception）
+   heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-handlingms   # IT5 追加（cargo_snapshot / handling_activity）
+   # authms は Spring Security JWT のみで DB 不要だが、ユーザーマスタを使う場合は同様に追加
+
+4. JWT_SECRET と Kafka 設定を .env に追加:
    echo 'JWT_SECRET="'$(openssl rand -base64 48)'"' >> .env
+   # IT6 追加: 公開追跡照会の時限署名トークン（trackingms 専用、authms と別鍵）
+   echo 'TRACKING_PUBLIC_TOKEN_SECRET="'$(openssl rand -base64 48)'"' >> .env
    # Aiven ダッシュボード > Connection Information から取得
    echo 'KAFKA_BOOTSTRAP_SERVERS="<host>:<port>"' >> .env
    echo 'KAFKA_SECURITY_PROTOCOL="SSL"' >> .env
@@ -147,13 +160,13 @@ export default function (gulp) {
    # 証明書ディレクトリに置き、以下のコマンドで .env に登録:
    npx gulp deploy:dev:kafka:certs --certs /path/to/aiven-certs
 
-4. Config Vars を一括設定:
+5. Config Vars を一括設定:
    npx gulp deploy:dev:config
 
-5. 全サービスをデプロイ:
+6. 全サービスをデプロイ（DEPLOY_ORDER: authms → bookingms → routingms → trackingms → handlingms → gatewayms → frontend）:
    npx gulp deploy:dev
 
-6. アプリを開く:
+7. アプリを開く:
    npx gulp deploy:dev:open
     `);
     done();
@@ -229,6 +242,13 @@ export default function (gulp) {
       process.exit(1);
     }
 
+    // IT6 追加: 公開追跡照会の時限署名トークン用秘密鍵（authms と別鍵、ADR-0013）
+    const trackingPublicTokenSecret = getEnvVar('TRACKING_PUBLIC_TOKEN_SECRET');
+    if (!trackingPublicTokenSecret) {
+      console.warn('⚠️  .env に TRACKING_PUBLIC_TOKEN_SECRET が設定されていません。trackingms の公開照会機能（US18）が dev デフォルト鍵で動作します。');
+      console.warn('    本番設定: echo \'TRACKING_PUBLIC_TOKEN_SECRET="\'$(openssl rand -base64 48)\'"\' >> .env');
+    }
+
     const kafkaBootstrap  = getEnvVar('KAFKA_BOOTSTRAP_SERVERS');
     const kafkaProtocol   = getEnvVar('KAFKA_SECURITY_PROTOCOL') || 'SSL';
     const kafkaCaCert     = getEnvVar('KAFKA_SSL_CA_CERT');
@@ -242,11 +262,15 @@ export default function (gulp) {
     const authDomain     = getDomain(`${PREFIX}-authms`);
     const bookingDomain  = getDomain(`${PREFIX}-bookingms`);
     const routingDomain  = getDomain(`${PREFIX}-routingms`);
+    const trackingDomain = getDomain(`${PREFIX}-trackingms`);   // IT5 追加
+    const handlingDomain = getDomain(`${PREFIX}-handlingms`);   // IT5 追加
     const gatewayDomain  = getDomain(`${PREFIX}-gatewayms`);
-    console.log(`  authms:    ${authDomain}`);
-    console.log(`  bookingms: ${bookingDomain}`);
-    console.log(`  routingms: ${routingDomain}`);
-    console.log(`  gatewayms: ${gatewayDomain}`);
+    console.log(`  authms:     ${authDomain}`);
+    console.log(`  bookingms:  ${bookingDomain}`);
+    console.log(`  routingms:  ${routingDomain}`);
+    console.log(`  trackingms: ${trackingDomain}`);
+    console.log(`  handlingms: ${handlingDomain}`);
+    console.log(`  gatewayms:  ${gatewayDomain}`);
 
     // 業務サービスに共通の Kafka 設定（KAFKA_BOOTSTRAP_SERVERS 指定時のみ付与）
     let kafkaVars = '';
@@ -289,7 +313,33 @@ export default function (gulp) {
       { stdio: 'inherit' }
     );
 
-    // gatewayms
+    // trackingms（IT5 追加、Kafka + 公開追跡照会トークン）
+    // TRACKING_PUBLIC_TOKEN_SECRET は IT6 / ADR-0013 で追加、authms と別鍵
+    let trackingExtraVars = '';
+    if (trackingPublicTokenSecret) {
+      trackingExtraVars = `TRACKING_PUBLIC_TOKEN_SECRET="${trackingPublicTokenSecret}" `;
+    }
+    execSync(
+      `heroku config:set ` +
+      `SPRING_PROFILES_ACTIVE=heroku ` +
+      `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
+      kafkaVars +
+      trackingExtraVars +
+      `--app ${PREFIX}-trackingms`,
+      { stdio: 'inherit' }
+    );
+
+    // handlingms（IT5 追加、Kafka）
+    execSync(
+      `heroku config:set ` +
+      `SPRING_PROFILES_ACTIVE=heroku ` +
+      `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
+      kafkaVars +
+      `--app ${PREFIX}-handlingms`,
+      { stdio: 'inherit' }
+    );
+
+    // gatewayms（IT5 で trackingms / handlingms ルートを追加）
     execSync(
       `heroku config:set ` +
       `SPRING_PROFILES_ACTIVE=heroku ` +
@@ -298,6 +348,8 @@ export default function (gulp) {
       `AUTHMS_URL="https://${authDomain}" ` +
       `BOOKINGMS_URL="https://${bookingDomain}" ` +
       `ROUTINGMS_URL="https://${routingDomain}" ` +
+      `TRACKINGMS_URL="https://${trackingDomain}" ` +
+      `HANDLINGMS_URL="https://${handlingDomain}" ` +
       `--app ${PREFIX}-gatewayms`,
       { stdio: 'inherit' }
     );
