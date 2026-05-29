@@ -83,7 +83,7 @@
 | 2.1 | trackingms: `TrackingException` エンティティ + `ExceptionType` enum（DELAY / DAMAGE / LOSS）+ `ResponseStatus` enum（REPORTED / RESPONDING / RESOLVED）| 2h | - | [ ] |
 | 2.2 | trackingms: `TrackingActivity` 集約に `RegisterTrackingExceptionCommand` + `ResolveTrackingExceptionCommand` ハンドラ追加。EXCEPTION 遷移と例外履歴管理 | 3h | - | [ ] |
 | 2.3 | `tracking_exception` Read Model 投影（既存 V2 スキーマ利用）+ Mapper + Controller（POST /exceptions、PATCH /exceptions/{id}/resolve、GET /tracking/{tn}/exceptions）| 3h | - | [ ] |
-| 2.4 | フロント S18 例外管理画面：例外登録フォーム（種別・場所・日時・理由）+ 一覧 + 対応内容入力 | 3h | - | [ ] |
+| 2.4 | フロント S18 例外登録画面（`/tracking/:trackingNumber/exceptions/new`、種別・場所・日時・理由）+ S19 例外対応一覧（`/tracking/exceptions`、対応詳細・入力）| 3h | - | [ ] |
 | 2.5 | NotificationAcl 拡張：`notifyExceptionRegistered` / `notifyExceptionResolved` 追加。テスト | 1h | - | [ ] |
 
 **小計**: 12h（理想時間）
@@ -94,7 +94,7 @@
 |---|--------|---------|------|------|
 | 3.1 | trackingms: `RegisterTrackingExceptionCommand` で DAMAGE / LOSS を受理。`ExceptionType = LOSS` のとき `escalated = TRUE` を集約で自動設定し `TrackingExceptionEscalatedEvent` を発行 | 2h | - | [ ] |
 | 3.2 | NotificationAcl 拡張：`notifyExceptionEscalation`（管理職向け）。LoggingNotificationAcl で WARN ログ。実装は IT8 以降 | 1h | - | [ ] |
-| 3.3 | フロント S18 で例外種別「破損」「紛失」を選択可能に。紛失の場合は赤色警告バッジで「管理職に escalation 通知済み」を表示 | 2h | - | [ ] |
+| 3.3 | フロント S18 例外登録画面で「破損」「紛失」を選択可能に。S19 例外対応一覧で紛失の場合は赤色警告バッジ「管理職に escalation 通知済み」を表示 | 2h | - | [ ] |
 | 3.4 | テスト（DAMAGE / LOSS 集約・escalation 自動設定・notifyExceptionEscalation 呼び出し検証）| 2h | - | [ ] |
 
 **小計**: 7h（理想時間）
@@ -253,8 +253,26 @@ TrackingActivity ..> NotificationAcl : 通知 (via EventHandler)
 | 画面 ID | 画面 | パス | ロール | 対応 US |
 |---------|------|------|--------|---------|
 | S15 | 追跡照会（公開）| `/tracking/:trackingNumber?token=<JWT>` | 公開（ログイン不要）| US18 |
-| S18 | 例外管理 | `/tracking/exceptions` | 追跡管理 | US19・US20 |
-| S18-detail | 例外詳細・対応入力 | `/tracking/:tn/exceptions/:exId` | 追跡管理 | US19・US20 |
+| S18 | 例外登録 | `/tracking/:trackingNumber/exceptions/new` | 追跡管理・荷役 | US19・US20 |
+| S19 | 例外対応一覧 | `/tracking/exceptions` | 追跡管理 | US19・US20 |
+
+> ui_design.md の画面一覧に準拠。S18 は単一例外の登録フォーム（追跡詳細から遷移）、S19 は対応待ち例外の一覧と各例外の対応入力（既存 S16 / S17 と連携）。
+
+### 画面遷移（ui_design.md 準拠）
+
+```plantuml
+@startuml
+[*] --> 追跡照会_公開 : メール内 URL の時限署名トークン経由（30 日有効、US18 / S15）
+追跡照会_公開 --> 追跡照会_公開 : ポーリング / 時限失効
+追跡管理一覧 --> 追跡詳細 : 行クリック（既存 S16 / S17）
+追跡詳細 --> 例外登録 : 「例外を記録」（US19/US20、S18）
+例外登録 --> 追跡詳細 : 送信成功（PRG）
+例外登録 --> 例外登録 : バリデーションエラー（自己ループ）
+追跡管理一覧 --> 例外対応一覧 : タブ切替（S19）
+例外対応一覧 --> 追跡詳細 : 行クリック（対応詳細）
+例外対応一覧 --> 例外対応一覧 : 対応内容入力（PATCH /resolve、PRG 相当）
+@enduml
+```
 
 ### REST API（IT6 追加分）
 
@@ -301,6 +319,38 @@ GitHub Issue 化を IT6 序盤で実施推奨。コードベース全体の改�
 - writer 系：architecture_backend API カタログ追記（M5）
 - tester 系：Mock 暗黙前提（M10）/ E2E helper 抽出（L12）
 - user 系：通知記録 UI（M7）/ EXCEPTION 補助（M8）/ 営業読み取り画面（L7）
+
+## 完了条件
+
+### Definition of Done
+
+- [ ] US18 / US19 / US20 の受入基準すべて充足（ストーリーマトリックス参照）
+- [ ] バックエンド全モジュール `./gradlew check` PASS（Kafka 統合テストは @Tag 除外解除後の通常 check に含む、IT5 H6/H7 持ち越し T1 解消後）
+- [ ] フロント `npm run test:run` 全件 PASS、E2E（Playwright）45 件 +α PASS
+- [ ] SonarQube ライブスキャン Backend/Frontend 両プロジェクト Quality Gate **OK**
+  - Bug 0 / Vulnerability 0 / Code Smell 0 / Security Hotspot 0
+  - new_coverage 70% 以上、全体カバレッジ Backend 85% 以上 / Frontend 75% 以上
+- [ ] マルチパースペクティブレビュー（5 エージェント）実施・重要度「高」全件対応済み
+- [ ] iteration_plan-6.md の全タスク [x] マーク、retrospective-6.md / iteration_report-6.md 作成
+- [ ] release_plan.md / docs index.md / mkdocs.yml に IT6 完了反映
+- [ ] GitHub Issue（take-5 US18/US19/US20）クローズ
+
+### デモ項目
+
+1. 追跡管理者が `POST /tracking/{tn}/token` で公開照会トークンを発行（US18）
+2. 荷主が `/tracking/TRK-...?token=<JWT>` をブラウザで開き、ログイン不要で追跡情報を照会（US18）
+3. トークン期限切れ・無効トークンで 401/403 を確認（US18）
+4. 追跡管理者が S18 例外登録画面で「遅延」を記録 → 貨物状態が EXCEPTION に遷移、荷主通知ログを `LoggingNotificationAcl` で確認（US19）
+5. S19 例外対応一覧から対応内容を入力して RESOLVED 遷移（US19）
+6. 「紛失」を記録 → `escalated=TRUE` の自動設定と管理職向け WARN ログを確認（US20）
+7. cross-service E2E（CROSS_SERVICE_E2E=1）で US18 公開照会 + US19/US20 例外登録の貫通検証
+
+## 更新履歴
+
+| 日付 | 更新内容 | 更新者 |
+|------|---------|--------|
+| 2026-05-29 | 初版作成（US18/US19/US20 + IT5 ふりかえり Try T1-T5 取込、9 SP / 2 週間） | k2works |
+| 2026-05-29 | validating-iteration-plan による検証修正（S18/S19 を ui_design.md に整合、画面遷移図追加、完了条件 / 更新履歴セクション追加） | k2works |
 
 ## 参照
 
