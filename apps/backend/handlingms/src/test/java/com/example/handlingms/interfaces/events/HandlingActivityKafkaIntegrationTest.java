@@ -1,12 +1,7 @@
 package com.example.handlingms.interfaces.events;
 
-import com.example.handlingms.domain.commands.RegisterHandlingActivityCommand;
-import com.example.handlingms.domain.model.HandlingType;
-import com.example.handlingms.domain.projections.HandlingActivitySummary;
 import com.example.handlingms.infrastructure.repositories.mybatis.CargoSnapshotMapper;
-import com.example.handlingms.infrastructure.repositories.mybatis.HandlingActivityMapper;
 import com.example.shared.events.TrackingIssuanceRequestedEvent;
-import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.eventhandling.gateway.EventGateway;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,28 +17,27 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * cross-service 荷役連携（US15 / IT5 3.5）の Kafka 疎通統合テスト（handlingms 側）。
+ * cross-service 荷役連携 入力経路（US15 / IT5 3.5）の Kafka 疎通統合テスト
+ * （bookingms → handlingms の CargoSnapshot ACL）。
  *
- * <p>Testcontainers Kafka を起動し、以下の 2 経路を検証する：</p>
- * <ol>
- *   <li>bookingms → handlingms：{@link TrackingIssuanceRequestedEvent} を Kafka 経由で受信し、
- *       CargoSnapshot ACL の {@code cargo_snapshot} に保存される</li>
- *   <li>handlingms 内部：荷役登録（{@code RegisterHandlingActivityCommand}）→
- *       ローカルイベント → {@code HandlingActivityProjectionEventHandler} で
- *       {@code handling_activity} 投影 → {@code HandlingActivityCrossServicePublisher} が
- *       shared 形式に変換して Kafka publish</li>
- * </ol>
+ * <p>IT5 レビュー H7 対応: 「Kafka を起動するのに publish の verify をしていない」という
+ * tester 指摘を踏まえて、本クラスは <strong>cross-service の受信側経路のみ</strong>を
+ * 検証する。送出側経路（荷役登録 → cross-service publish）は trackingms 側の
+ * {@code HandlingActivityRegisteredKafkaIntegrationTest} で受信側として End-to-End 検証済み。
+ * 送出された Kafka record を直接 verify する責任は本テストの対象外。
+ * ローカル投影単体は Kafka 不要なテスト
+ * （{@code HandlingActivityProjectionIntegrationTest}）に分離する。</p>
  *
- * <p>本テストでは Kafka publish された shared イベントの実際の trackingms 側受信は別テスト
- * （HandlingActivityRegisteredKafkaIntegrationTest）でカバーする。ここでは handlingms 内の
- * 投影・publisher の End-to-End を確認する。</p>
+ * <p>Testcontainers Kafka を起動し、bookingms が発行する想定の
+ * {@link TrackingIssuanceRequestedEvent} を Kafka に流すと、cargo-snapshot tracking processor →
+ * {@code CargoSnapshotProjectionEventHandler} → {@code cargo_snapshot} テーブルに
+ * origin / destination / cargoType が冪等に保存されることを検証する。</p>
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
@@ -68,13 +62,7 @@ class HandlingActivityKafkaIntegrationTest {
     }
 
     @Autowired
-    private CommandGateway commandGateway;
-
-    @Autowired
     private EventGateway eventGateway;
-
-    @Autowired
-    private HandlingActivityMapper handlingActivityMapper;
 
     @Autowired
     private CargoSnapshotMapper cargoSnapshotMapper;
@@ -96,33 +84,5 @@ class HandlingActivityKafkaIntegrationTest {
             assertThat(snapshot.getDestinationUnlocode()).isEqualTo("USNYC");
             assertThat(snapshot.getCargoType()).isEqualTo("GENERAL");
         });
-    }
-
-    @Test
-    @DisplayName("US15: 荷役登録から handling_activity 投影と cross-service Kafka publish までが貫通する")
-    void 荷役登録で投影とKafkaPublishが行われる() {
-        String trackingNumber = "TRK-HAND00INT2";
-        LocalDateTime occurredAt = LocalDateTime.of(2026, 3, 20, 10, 0);
-
-        // 荷役登録（ローカル集約コマンド）
-        String activityId = commandGateway.sendAndWait(new RegisterHandlingActivityCommand(
-                "HA-INT-K1", trackingNumber, HandlingType.RECEIVE,
-                occurredAt, "JPTYO", null, "H-INT-K1", null));
-        assertThat(activityId).isEqualTo("HA-INT-K1");
-
-        // handling_activity 投影が反映されるまで待機
-        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
-            HandlingActivitySummary activity = handlingActivityMapper.findById("HA-INT-K1");
-            assertThat(activity).isNotNull();
-            assertThat(activity.getTrackingNumber()).isEqualTo(trackingNumber);
-            assertThat(activity.getHandlingType()).isEqualTo("RECEIVE");
-            assertThat(activity.getUnlocode()).isEqualTo("JPTYO");
-            // CargoSnapshot 未到着のためフォールバック値（"UNKNOWN-BOOKING" / "UNK"）で投影される
-            assertThat(activity.getBookingId()).isNotNull();
-        });
-
-        // cross-service publisher が shared 形式に変換して Kafka publish するため、ローカル投影と
-        // 異なるイベントが流れている。ここではローカル投影の到達のみを確認する
-        // （shared 経路は HandlingActivityRegisteredKafkaIntegrationTest で別途検証）。
     }
 }

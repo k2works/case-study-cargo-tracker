@@ -5,12 +5,14 @@ import com.example.handlingms.domain.model.HandlingType;
 import com.example.handlingms.domain.projections.CargoSnapshot;
 import com.example.handlingms.infrastructure.repositories.mybatis.CargoSnapshotMapper;
 import com.example.handlingms.infrastructure.repositories.mybatis.HandlingActivityMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -23,13 +25,15 @@ class HandlingActivityProjectionEventHandlerTest {
 
     private HandlingActivityMapper activityMapper;
     private CargoSnapshotMapper snapshotMapper;
+    private SimpleMeterRegistry meterRegistry;
     private HandlingActivityProjectionEventHandler handler;
 
     @BeforeEach
     void setUp() {
         activityMapper = mock(HandlingActivityMapper.class);
         snapshotMapper = mock(CargoSnapshotMapper.class);
-        handler = new HandlingActivityProjectionEventHandler(activityMapper, snapshotMapper);
+        meterRegistry = new SimpleMeterRegistry();
+        handler = new HandlingActivityProjectionEventHandler(activityMapper, snapshotMapper, meterRegistry);
     }
 
     private CargoSnapshot snapshot() {
@@ -74,5 +78,38 @@ class HandlingActivityProjectionEventHandlerTest {
                 eq("UNK"), eq("UNK"), eq("UNKNOWN"),
                 eq("LOAD"), eq(occurredAt),
                 eq("JPTYO"), eq("V-220"), eq("H-001"), eq(false));
+    }
+
+    @Test
+    @DisplayName("H2: snapshot 未到着時に handlingms.projection.snapshot_missing カウンターが増える")
+    void snapshot未到着でカウンターが増える() {
+        when(snapshotMapper.findByTrackingNumber("TRK-NO0SNAP3456")).thenReturn(null);
+
+        // 2 回のフォールバックを発生させる
+        handler.on(new HandlingActivityRegisteredEvent(
+                "A-001", "TRK-NO0SNAP3456", HandlingType.RECEIVE,
+                LocalDateTime.of(2026, 3, 1, 10, 0), "JPTYO", null, "H-001", null));
+        handler.on(new HandlingActivityRegisteredEvent(
+                "A-002", "TRK-NO0SNAP3456", HandlingType.LOAD,
+                LocalDateTime.of(2026, 3, 2, 10, 0), "JPTYO", "V-220", "H-001", null));
+
+        // カウンターが 2 になる
+        assertThat(meterRegistry.find(
+                HandlingActivityProjectionEventHandler.METRIC_SNAPSHOT_MISSING)
+                .counter().count()).isEqualTo(2.0);
+    }
+
+    @Test
+    @DisplayName("H2: snapshot がある場合はカウンターが増えない")
+    void snapshotありでカウンターは増えない() {
+        when(snapshotMapper.findByTrackingNumber("TRK-AB12CD3456")).thenReturn(snapshot());
+
+        handler.on(new HandlingActivityRegisteredEvent(
+                "A-001", "TRK-AB12CD3456", HandlingType.RECEIVE,
+                LocalDateTime.of(2026, 3, 1, 10, 0), "JPTYO", null, "H-001", null));
+
+        assertThat(meterRegistry.find(
+                HandlingActivityProjectionEventHandler.METRIC_SNAPSHOT_MISSING)
+                .counter().count()).isEqualTo(0.0);
     }
 }

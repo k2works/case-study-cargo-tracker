@@ -44,6 +44,10 @@ import static org.awaitility.Awaitility.await;
                 "axon.kafka.fetcher.enabled=false"
         })
 @ActiveProfiles("local-h2")
+// IT5 レビュー H6 対応: テストごとに Spring Context を再生成し、H2 in-memory の
+// event store / Read Model を初期化することで、テスト間でリプレイ結果が混入する事象を防ぐ。
+@org.springframework.test.annotation.DirtiesContext(
+        classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class TrackingControllerIntegrationTest {
 
     @Autowired
@@ -87,17 +91,17 @@ class TrackingControllerIntegrationTest {
             assertThat(summary.misrouted()).isFalse();
         });
 
-        // 履歴の確認：初期化（SYSTEM）+ 各状態（MANUAL）が時系列で並ぶ。
-        // 件数は最低 7 件以上（Spring Context 共有によるリプレイで増える場合がある／IT5 既知事象、後続改善）。
+        // 履歴の確認：初期化（SYSTEM、NOT_RECEIVED）+ 6 件の MANUAL 更新 = ちょうど 7 件。
+        // @DirtiesContext(BEFORE_EACH_TEST_METHOD) で event store がクリーンなため厳密に検証可能（IT5 H6 対応）。
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
             List<TrackingEventResponse> events = getEvents(tn);
-            assertThat(events).hasSizeGreaterThanOrEqualTo(7);
+            assertThat(events).hasSize(7);
             assertThat(events.get(0).source()).isEqualTo("SYSTEM");
             assertThat(events.get(0).eventType()).isEqualTo("TRACKING_INITIALIZED");
-            // 期待される全状態が含まれている（順序・件数は保証しない）
-            assertThat(events).extracting(TrackingEventResponse::transportStatus)
-                    .contains("NOT_RECEIVED", "RECEIVED", "LOADED", "IN_TRANSIT",
-                              "UNLOADED", "AWAITING_CLAIM", "DELIVERED");
+            assertThat(events.get(1).source()).isEqualTo("MANUAL");
+            assertThat(events.get(1).transportStatus()).isEqualTo("RECEIVED");
+            // 時系列順に並ぶ（occurred_at ASC）
+            assertThat(events.get(6).transportStatus()).isEqualTo("DELIVERED");
         });
     }
 
@@ -133,7 +137,9 @@ class TrackingControllerIntegrationTest {
                 "DELIVERED", "USNYC", null,
                 LocalDateTime.of(2026, 8, 1, 10, 0), "ジャンプ");
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(
+        @SuppressWarnings({"unchecked", "rawtypes"}) // postForEntity の制約上 Class<T> のみ
+        ResponseEntity<Map<String, Object>> response =
+                (ResponseEntity<Map<String, Object>>) (ResponseEntity) restTemplate.postForEntity(
                 "/api/v1/tracking/" + tn + "/status", request, Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
         assertThat(response.getBody()).isNotNull();
@@ -160,7 +166,9 @@ class TrackingControllerIntegrationTest {
                 "BANANA", "JPTYO", null,
                 LocalDateTime.of(2026, 7, 20, 10, 0), null);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(
+        @SuppressWarnings({"unchecked", "rawtypes"}) // postForEntity の制約上 Class<T> のみ
+        ResponseEntity<Map<String, Object>> response =
+                (ResponseEntity<Map<String, Object>>) (ResponseEntity) restTemplate.postForEntity(
                 "/api/v1/tracking/" + tn + "/status", request, Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }

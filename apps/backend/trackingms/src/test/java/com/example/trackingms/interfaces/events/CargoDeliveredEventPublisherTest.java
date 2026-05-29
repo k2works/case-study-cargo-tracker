@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,9 +45,12 @@ class CargoDeliveredEventPublisherTest {
     }
 
     @Test
-    @DisplayName("US16: DELIVERED 遷移時に CargoDeliveredEvent を発行する")
+    @DisplayName("US16: DELIVERED 遷移時に CargoDeliveredEvent を発行する（H3 冪等化）")
     void DELIVERED遷移でCargoDeliveredEventを発行する() {
         when(mapper.findByTrackingNumber("TRK-AB12CD3456")).thenReturn(summary());
+        // 1 回目の publish 試行：markDeliveredPublished が 1 を返す（未発行）
+        when(mapper.markDeliveredPublished(eq("TRK-AB12CD3456"), any(LocalDateTime.class)))
+                .thenReturn(1);
         LocalDateTime occurredAt = LocalDateTime.of(2026, 8, 16, 14, 0);
 
         publisher.on(new TransportStatusUpdatedEvent(
@@ -60,6 +64,22 @@ class CargoDeliveredEventPublisherTest {
         assertThat(e.trackingNumber()).isEqualTo("TRK-AB12CD3456");
         assertThat(e.bookingId()).isEqualTo("B-001");
         assertThat(e.deliveredAt()).isEqualTo(occurredAt);
+        verify(mapper).markDeliveredPublished(eq("TRK-AB12CD3456"), any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("H3: 既に発行済み（markDeliveredPublished = 0）なら 2 回目は publish しない（冪等性）")
+    void 既発行ならpublishしない() {
+        when(mapper.findByTrackingNumber("TRK-AB12CD3456")).thenReturn(summary());
+        when(mapper.markDeliveredPublished(eq("TRK-AB12CD3456"), any(LocalDateTime.class)))
+                .thenReturn(0);
+
+        publisher.on(new TransportStatusUpdatedEvent(
+                "TRK-AB12CD3456",
+                TransportStatus.AWAITING_CLAIM, TransportStatus.DELIVERED,
+                "USNYC", null, LocalDateTime.of(2026, 8, 16, 14, 0), null));
+
+        verify(eventGateway, never()).publish(any(Object[].class));
     }
 
     @Test
