@@ -6,6 +6,7 @@ import com.example.trackingms.domain.events.TransportStatusUpdatedEvent;
 import com.example.trackingms.domain.model.TransportStatus;
 import com.example.trackingms.infrastructure.repositories.mybatis.TrackingEventMapper;
 import com.example.trackingms.infrastructure.repositories.mybatis.TrackingSummaryMapper;
+import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
  * （{@code TrackingIssuanceRequestedEventHandler}）に分離されている。</p>
  */
 @Component
+@ProcessingGroup("tracking-local-projection")
 public class TrackingSummaryProjectionEventHandler {
 
     private final TrackingSummaryMapper summaryMapper;

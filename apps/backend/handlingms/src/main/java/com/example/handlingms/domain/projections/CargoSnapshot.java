@@ -19,6 +19,7 @@ public class CargoSnapshot {
     private String cargoType;
 
     public CargoSnapshot() {
+        /* MyBatis result mapping。setter で値が設定される。 */
     }
 
     public String getBookingId() { return bookingId; }

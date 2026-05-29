@@ -4,6 +4,7 @@ import com.example.trackingms.application.outboundservices.notification.Notifica
 import com.example.trackingms.domain.events.CargoMisroutedEvent;
 import com.example.trackingms.domain.events.TrackingInitializedEvent;
 import com.example.trackingms.domain.events.TransportStatusUpdatedEvent;
+import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
  * （event store source）で動作する。</p>
  */
 @Component
+@ProcessingGroup("tracking-notifications")
 public class TrackingNotificationEventHandler {
 
     private final NotificationAcl notificationAcl;

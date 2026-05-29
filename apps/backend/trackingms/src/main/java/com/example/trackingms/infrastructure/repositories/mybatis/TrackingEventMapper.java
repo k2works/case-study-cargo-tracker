@@ -29,6 +29,7 @@ public interface TrackingEventMapper {
      * @param source          記録元（MANUAL / HANDLING / SYSTEM）
      * @param description     任意の説明
      */
+    @SuppressWarnings("java:S107") // MyBatis Mapper のパラメータは @Param 個別バインドが標準パターン
     void insertTrackingEvent(@Param("trackingNumber") String trackingNumber,
                              @Param("occurredAt") LocalDateTime occurredAt,
                              @Param("eventType") String eventType,

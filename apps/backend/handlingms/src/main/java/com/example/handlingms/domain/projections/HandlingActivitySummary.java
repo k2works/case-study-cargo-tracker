@@ -26,6 +26,7 @@ public class HandlingActivitySummary {
     private boolean unexpected;
 
     public HandlingActivitySummary() {
+        /* MyBatis result mapping。setter で値が設定される。 */
     }
 
     public String getActivityId() { return activityId; }

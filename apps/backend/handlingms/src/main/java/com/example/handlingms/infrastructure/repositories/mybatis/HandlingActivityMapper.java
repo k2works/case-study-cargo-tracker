@@ -15,6 +15,7 @@ import java.util.List;
 @Mapper
 public interface HandlingActivityMapper {
 
+    @SuppressWarnings("java:S107") // MyBatis Mapper のパラメータは @Param 個別バインドが標準パターン
     void insert(@Param("activityId") String activityId,
                 @Param("bookingId") String bookingId,
                 @Param("trackingNumber") String trackingNumber,

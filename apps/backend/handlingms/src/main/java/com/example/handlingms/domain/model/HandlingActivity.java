@@ -49,12 +49,12 @@ public class HandlingActivity {
     }
 
     private void validate(RegisterHandlingActivityCommand command) {
-        if (command.handlingType() == HandlingType.LOAD
-                || command.handlingType() == HandlingType.UNLOAD) {
-            if (command.voyageNumber() == null || command.voyageNumber().isBlank()) {
-                throw new IllegalArgumentException(
-                        "LOAD / UNLOAD では航海番号が必須です: handlingType=" + command.handlingType());
-            }
+        boolean isLoadOrUnload = command.handlingType() == HandlingType.LOAD
+                || command.handlingType() == HandlingType.UNLOAD;
+        if (isLoadOrUnload
+                && (command.voyageNumber() == null || command.voyageNumber().isBlank())) {
+            throw new IllegalArgumentException(
+                    "LOAD / UNLOAD では航海番号が必須です: handlingType=" + command.handlingType());
         }
         if (command.handlingType() == HandlingType.CLAIM
                 && command.claimVerification() == null) {

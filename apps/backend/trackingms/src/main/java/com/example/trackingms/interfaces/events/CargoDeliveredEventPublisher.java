@@ -5,6 +5,7 @@ import com.example.trackingms.domain.events.TransportStatusUpdatedEvent;
 import com.example.trackingms.domain.model.TransportStatus;
 import com.example.trackingms.domain.projections.TrackingSummary;
 import com.example.trackingms.infrastructure.repositories.mybatis.TrackingSummaryMapper;
+import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.eventhandling.gateway.EventGateway;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  * 投影が未到着（極稀）なら WARN ログを出して発行スキップする（再処理時にリプレイ可能）。</p>
  */
 @Component
+@ProcessingGroup("cargo-delivered-publisher")
 public class CargoDeliveredEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(CargoDeliveredEventPublisher.class);

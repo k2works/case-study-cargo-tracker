@@ -32,6 +32,8 @@ import java.util.concurrent.CompletionException;
 @RequestMapping("/api/v1/handling")
 public class HandlingActivityController {
 
+    private static final String MESSAGE_KEY = "message";
+
     private final HandlingActivityCommandService commandService;
     private final HandlingActivityQueryService queryService;
 
@@ -51,7 +53,7 @@ public class HandlingActivityController {
         try {
             handlingType = HandlingType.valueOf(req.handlingType());
         } catch (IllegalArgumentException | NullPointerException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", "不正な荷役種別: " + req.handlingType()));
+            return ResponseEntity.badRequest().body(Map.of(MESSAGE_KEY, "不正な荷役種別: " + req.handlingType()));
         }
 
         ClaimVerification verification = null;
@@ -64,7 +66,7 @@ public class HandlingActivityController {
                         req.claimVerification().verifiedAt()
                 );
             } catch (IllegalArgumentException e) {
-                return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+                return ResponseEntity.badRequest().body(Map.of(MESSAGE_KEY, e.getMessage()));
             }
         }
 
@@ -117,11 +119,11 @@ public class HandlingActivityController {
         Throwable cause = unwrap(ex);
         if (cause instanceof IllegalStateException) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                    .body(Map.of("message", cause.getMessage() == null ? "不正な操作" : cause.getMessage()));
+                    .body(Map.of(MESSAGE_KEY, cause.getMessage() == null ? "不正な操作" : cause.getMessage()));
         }
         if (cause instanceof IllegalArgumentException) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", cause.getMessage() == null ? "不正な引数" : cause.getMessage()));
+                    .body(Map.of(MESSAGE_KEY, cause.getMessage() == null ? "不正な引数" : cause.getMessage()));
         }
         throw ex;
     }

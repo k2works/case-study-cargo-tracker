@@ -49,9 +49,13 @@ import java.util.List;
 @ProcessingGroup("booking-saga")
 public class BookingSagaManager {
 
+    // Axon Saga は Serializable で永続化される。Gateway 系は Bean 注入のため
+    // Saga 状態に含めず transient にする（フレームワーク要件、ADR-0009）。
+    @SuppressWarnings("java:S2065")
     @Autowired
     private transient EventGateway eventGateway;
 
+    @SuppressWarnings("java:S2065")
     @Autowired
     private transient CommandGateway commandGateway;
 
