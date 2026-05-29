@@ -1,8 +1,13 @@
 package com.example.trackingms.domain.model;
 
 import com.example.trackingms.domain.commands.InitializeTrackingCommand;
+import com.example.trackingms.domain.commands.RegisterTrackingExceptionCommand;
+import com.example.trackingms.domain.commands.ResolveTrackingExceptionCommand;
 import com.example.trackingms.domain.commands.UpdateTransportStatusCommand;
 import com.example.trackingms.domain.events.CargoMisroutedEvent;
+import com.example.trackingms.domain.events.TrackingExceptionEscalatedEvent;
+import com.example.trackingms.domain.events.TrackingExceptionRegisteredEvent;
+import com.example.trackingms.domain.events.TrackingExceptionResolvedEvent;
 import com.example.trackingms.domain.events.TrackingInitializedEvent;
 import com.example.trackingms.domain.events.TransportStatusUpdatedEvent;
 import com.example.trackingms.domain.services.TransportStatusTransition;
@@ -12,7 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 /**
  * {@link TrackingActivity} 集約の Axon Test Fixture テスト（US14 / IT5 1.3）。
@@ -25,11 +32,16 @@ class TrackingActivityAggregateTest {
 
     private FixtureConfiguration<TrackingActivity> fixture;
 
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 8, 1, 10, 0);
+
     @BeforeEach
     void setUp() {
         fixture = new AggregateTestFixture<>(TrackingActivity.class);
         // US17 タスク 2.2：状態遷移ガード（ドメインサービス）を Aggregate のリソースとして注入
         fixture.registerInjectableResource(new TransportStatusTransition());
+        // US19 / US20 タスク 2.2：例外解決日時を固定するための Clock
+        fixture.registerInjectableResource(
+                Clock.fixed(FIXED_NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
     }
 
     @Test
@@ -163,6 +175,178 @@ class TrackingActivityAggregateTest {
                                 LocalDateTime.of(2026, 8, 16, 14, 0), null))
                 .when(command)
                 .expectException(IllegalStateException.class);
+    }
+
+    // --- IT6 タスク 2.2 + 3.1：US19 / US20 例外管理 ---
+
+    @Test
+    @DisplayName("US19: RegisterTrackingExceptionCommand(DELAY) で 状態 → EXCEPTION + 例外登録の 2 件が発行される")
+    void DELAY例外を登録できる() {
+        LocalDateTime occurredAt = LocalDateTime.of(2026, 7, 25, 9, 0);
+        RegisterTrackingExceptionCommand command = new RegisterTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-001",
+                com.example.trackingms.domain.model.ExceptionType.DELAY,
+                occurredAt, "SGSIN", "悪天候のため寄港不可");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.NOT_RECEIVED, TransportStatusFixture.RECEIVED,
+                                "JPTYO", null, LocalDateTime.of(2026, 7, 20, 10, 0), null))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.RECEIVED, TransportStatusFixture.EXCEPTION,
+                                "SGSIN", null, occurredAt, "例外発生: DELAY"),
+                        new TrackingExceptionRegisteredEvent(
+                                "TRK-AB12CD3456", "EX-001",
+                                com.example.trackingms.domain.model.ExceptionType.DELAY,
+                                occurredAt, "SGSIN", "悪天候のため寄港不可", false));
+    }
+
+    @Test
+    @DisplayName("US20: LOSS 種別では TrackingExceptionEscalatedEvent も追加発行される（3 件）")
+    void LOSS例外でescalation発火() {
+        LocalDateTime occurredAt = LocalDateTime.of(2026, 7, 26, 14, 0);
+        RegisterTrackingExceptionCommand command = new RegisterTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-002",
+                com.example.trackingms.domain.model.ExceptionType.LOSS,
+                occurredAt, "CNSHA", "貨物紛失を確認");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.NOT_RECEIVED, TransportStatusFixture.IN_TRANSIT,
+                                "CNSHA", null, LocalDateTime.of(2026, 7, 24, 10, 0), null))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.IN_TRANSIT, TransportStatusFixture.EXCEPTION,
+                                "CNSHA", null, occurredAt, "例外発生: LOSS"),
+                        new TrackingExceptionRegisteredEvent(
+                                "TRK-AB12CD3456", "EX-002",
+                                com.example.trackingms.domain.model.ExceptionType.LOSS,
+                                occurredAt, "CNSHA", "貨物紛失を確認", true),
+                        new TrackingExceptionEscalatedEvent(
+                                "TRK-AB12CD3456", "EX-002",
+                                com.example.trackingms.domain.model.ExceptionType.LOSS, occurredAt));
+    }
+
+    @Test
+    @DisplayName("US20: DAMAGE は escalated = false（escalation 発行なし、2 件のみ）")
+    void DAMAGE例外でescalationなし() {
+        LocalDateTime occurredAt = LocalDateTime.of(2026, 7, 27, 10, 0);
+        RegisterTrackingExceptionCommand command = new RegisterTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-003",
+                com.example.trackingms.domain.model.ExceptionType.DAMAGE,
+                occurredAt, "JPOSA", "外装に損傷あり");
+
+        fixture.given(new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.NOT_RECEIVED, TransportStatusFixture.EXCEPTION,
+                                "JPOSA", null, occurredAt, "例外発生: DAMAGE"),
+                        new TrackingExceptionRegisteredEvent(
+                                "TRK-AB12CD3456", "EX-003",
+                                com.example.trackingms.domain.model.ExceptionType.DAMAGE,
+                                occurredAt, "JPOSA", "外装に損傷あり", false));
+    }
+
+    @Test
+    @DisplayName("US19/US20: EXCEPTION 状態の貨物には新規例外を登録できない（IllegalStateException）")
+    void EXCEPTION状態では追加登録不可() {
+        RegisterTrackingExceptionCommand command = new RegisterTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-004",
+                com.example.trackingms.domain.model.ExceptionType.DELAY,
+                LocalDateTime.now(), "SGSIN", "追加遅延");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        // 既に EXCEPTION に遷移済み
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.NOT_RECEIVED, TransportStatusFixture.EXCEPTION,
+                                "JPTYO", null, LocalDateTime.of(2026, 7, 20, 10, 0), "例外発生"))
+                .when(command)
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US19: ResolveTrackingExceptionCommand で TrackingExceptionResolvedEvent が発行される")
+    void 例外を解決できる() {
+        ResolveTrackingExceptionCommand command = new ResolveTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-001",
+                "代替ルート手配済み。新到着予定 2026-08-20");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.NOT_RECEIVED, TransportStatusFixture.EXCEPTION,
+                                "SGSIN", null, LocalDateTime.of(2026, 7, 25, 9, 0), "例外発生: DELAY"),
+                        new TrackingExceptionRegisteredEvent(
+                                "TRK-AB12CD3456", "EX-001",
+                                com.example.trackingms.domain.model.ExceptionType.DELAY,
+                                LocalDateTime.of(2026, 7, 25, 9, 0), "SGSIN", "悪天候", false))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new TrackingExceptionResolvedEvent(
+                        "TRK-AB12CD3456", "EX-001",
+                        "代替ルート手配済み。新到着予定 2026-08-20",
+                        FIXED_NOW));
+    }
+
+    @Test
+    @DisplayName("US19: 存在しない exceptionId で resolve すると IllegalArgumentException")
+    void 存在しない例外をresolveできない() {
+        ResolveTrackingExceptionCommand command = new ResolveTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-NOPE", "何かしらの対応");
+
+        fixture.given(new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"))
+                .when(command)
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("US19: resolution が空で resolve すると IllegalArgumentException")
+    void resolutionが空ならresolveできない() {
+        ResolveTrackingExceptionCommand command = new ResolveTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-001", "");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.NOT_RECEIVED, TransportStatusFixture.EXCEPTION,
+                                "SGSIN", null, LocalDateTime.of(2026, 7, 25, 9, 0), "例外発生"),
+                        new TrackingExceptionRegisteredEvent(
+                                "TRK-AB12CD3456", "EX-001",
+                                com.example.trackingms.domain.model.ExceptionType.DELAY,
+                                LocalDateTime.of(2026, 7, 25, 9, 0), "SGSIN", "悪天候", false))
+                .when(command)
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("US19: 同一 exceptionId を 2 回登録しようとすると IllegalArgumentException")
+    void 同一例外IDの重複登録は拒否() {
+        RegisterTrackingExceptionCommand command = new RegisterTrackingExceptionCommand(
+                "TRK-AB12CD3456", "EX-001",
+                com.example.trackingms.domain.model.ExceptionType.DELAY,
+                LocalDateTime.now(), "SGSIN", "重複");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TransportStatusFixture.NOT_RECEIVED, TransportStatusFixture.EXCEPTION,
+                                "JPTYO", null, LocalDateTime.of(2026, 7, 20, 10, 0), "例外発生"),
+                        new TrackingExceptionRegisteredEvent(
+                                "TRK-AB12CD3456", "EX-001",
+                                com.example.trackingms.domain.model.ExceptionType.DELAY,
+                                LocalDateTime.of(2026, 7, 25, 9, 0), "SGSIN", "悪天候", false))
+                .when(command)
+                .expectException(IllegalStateException.class); // 状態 EXCEPTION でも拒否
     }
 
     /** テスト可読性のための短縮エイリアス。 */
