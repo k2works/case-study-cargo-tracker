@@ -20,7 +20,7 @@
 | IT4 | 2026-07-02 〜 2026-07-15 | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [報告書](iteration_report-4.md) 完了 |
 | IT5 | 2026-07-16 〜 2026-07-29 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [報告書](iteration_report-5.md) 完了 |
 | IT6 | 2026-07-30 〜 2026-08-12 | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [報告書](iteration_report-6.md) 完了 |
-| IT7 | 2026-08-13 〜 2026-08-26 | 未作成 | - | 未着手 |
+| IT7 | 2026-08-13 〜 2026-08-26 | [iteration_plan-7.md](iteration_plan-7.md) | - | 進行中（US21-US23 精算 + billingms 新規立ち上げ） |
 | IT8 | 2026-08-27 〜 2026-09-09 | 未作成 | - | 未着手 |
 
 ### 進捗サマリー
