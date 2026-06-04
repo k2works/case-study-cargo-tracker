@@ -133,6 +133,7 @@ nav:
       - ADR-0012 cross-service 冪等性とトランザクション境界: adr/0012-cross-service-idempotency-and-transactions.md
       - ADR-0013 公開追跡照会の時限署名トークン: adr/0013-public-tracking-token.md
       - ADR-0014 Axon @ProcessingGroup 命名規約: adr/0014-processing-group-naming.md
+      - ADR-0015 billingms cross-service + ShipperInfo ACL: adr/0015-billingms-cross-service-and-shipper-acl.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

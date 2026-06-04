@@ -17,5 +17,6 @@
 | [ADR-0012](0012-cross-service-idempotency-and-transactions.md) | cross-service イベントの冪等性とトランザクション境界（集約発火型 + 投影フラグ列 + 待避テーブル） | 提案中 |
 | [ADR-0013](0013-public-tracking-token.md) | 公開追跡照会の時限署名トークン（JWT HS256、有効期限 30 日、Heroku Config Vars → IT8 で AWS Secrets Manager） | 提案中 |
 | [ADR-0014](0014-processing-group-naming.md) | Axon @ProcessingGroup 命名規約（`cross-` / `local-` / `outbound-` の 3 種類 prefix） | 提案中 |
+| [ADR-0015](0015-billingms-cross-service-and-shipper-acl.md) | billingms の cross-service 連携と ShipperInfo ACL（Kafka tracking + 集約発火型 + REST 同期 + Resilience4j + Caffeine cache TTL 5min） | 提案中 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
