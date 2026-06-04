@@ -1,8 +1,13 @@
 package com.example.billingms.domain.model;
 
+import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
+import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
+import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
+import com.example.billingms.infrastructure.outboundservices.ShipperInfoAcl;
+import com.example.billingms.domain.model.CorporateContract;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
@@ -101,5 +106,45 @@ public class Invoice {
         this.totalAmount = event.basicAmount();
         this.currency = event.currency();
         this.billingStatus = BillingStatus.CALCULATED;
+    }
+
+    /**
+     * 法人割引適用（CALCULATED → CALCULATED 自己遷移、US22 / Task 3.3）。
+     *
+     * <p>{@link ShipperInfoAcl} で {@link CorporateContract} を取得し、
+     * {@link CorporateDiscountPolicy} で割引額を算出して
+     * {@link DiscountAppliedEvent} を集約発火する（ADR-0012）。</p>
+     *
+     * <p>状態遷移: CALCULATED → CALCULATED（{@link BillingStatus#canTransitionTo} で許可）。
+     * 既に割引適用済みでも再度上書き可能（割引率変更時の再計算を許容）。</p>
+     */
+    @CommandHandler
+    public void handle(ApplyDiscountCommand command,
+                       ShipperInfoAcl shipperInfoAcl,
+                       CorporateDiscountPolicy discountPolicy,
+                       Clock clock) {
+        if (this.billingStatus != BillingStatus.CALCULATED) {
+            throw new IllegalStateException(
+                    "ApplyDiscountCommand は CALCULATED 状態でのみ受理可能です: " + this.billingStatus);
+        }
+        CorporateContract contract = shipperInfoAcl.getContract(this.shipperId);
+        BigDecimal discountAmount = discountPolicy.calculateDiscount(this.basicAmount, contract);
+        BigDecimal newTotal = this.basicAmount
+                .subtract(discountAmount)
+                .add(this.adjustmentAmount);
+        AggregateLifecycle.apply(new DiscountAppliedEvent(
+                this.invoiceId,
+                this.shipperId,
+                contract.discountRate(),
+                discountAmount,
+                newTotal,
+                LocalDateTime.now(clock)
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(DiscountAppliedEvent event) {
+        this.discountAmount = event.discountAmount();
+        this.totalAmount = event.totalAmount();
     }
 }

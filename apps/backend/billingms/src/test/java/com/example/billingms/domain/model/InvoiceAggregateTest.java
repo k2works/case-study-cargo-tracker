@@ -1,8 +1,12 @@
 package com.example.billingms.domain.model;
 
+import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
+import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
+import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
+import com.example.billingms.infrastructure.outboundservices.ShipperInfoAcl;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,9 +34,16 @@ class InvoiceAggregateTest {
     void setUp() {
         fixture = new AggregateTestFixture<>(Invoice.class);
         fixture.registerInjectableResource(new FareCalculator(RateTable.defaultTable()));
+        fixture.registerInjectableResource(new CorporateDiscountPolicy());
+        fixture.registerInjectableResource(stubShipperInfoAcl());
         fixture.registerInjectableResource(
                 Clock.fixed(FIXED_NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
         );
+    }
+
+    private ShipperInfoAcl stubShipperInfoAcl() {
+        return shipperId -> new CorporateContract(
+                shipperId, ShipperType.CORPORATE, new BigDecimal("0.15"));
     }
 
     private TransportRecord defaultTransport() {
@@ -168,5 +179,108 @@ class InvoiceAggregateTest {
                         new BigDecimal("330000"), "JPY", FIXED_NOW))
                 .when(command)
                 .expectException(Exception.class);
+    }
+
+    // --- IT7 Task 3.3：US22 ApplyDiscountCommand ---
+
+    @Test
+    @DisplayName("US22: CALCULATED 状態で ApplyDiscountCommand 受理 → DiscountAppliedEvent 発火")
+    void US22_割引適用() {
+        ApplyDiscountCommand command = new ApplyDiscountCommand("INV-D01");
+
+        fixture.given(new InvoiceCalculatedEvent(
+                        "INV-D01", "B-D01", "S-D01",
+                        new BigDecimal("330000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new DiscountAppliedEvent(
+                        "INV-D01",
+                        "S-D01",
+                        new BigDecimal("0.15"),
+                        // 330,000 × 0.15 = 49,500（S23 UI と一致）
+                        new BigDecimal("49500"),
+                        // 330,000 - 49,500 = 280,500
+                        new BigDecimal("280500"),
+                        FIXED_NOW
+                ));
+    }
+
+    @Test
+    @DisplayName("US22: PENDING（イベントなし）状態では ApplyDiscountCommand は IllegalStateException")
+    void US22_PENDING状態では拒否() {
+        ApplyDiscountCommand command = new ApplyDiscountCommand("INV-D02");
+
+        // event store にイベントが無い = Aggregate 未生成
+        fixture.givenNoPriorActivity()
+                .when(command)
+                .expectException(Exception.class);
+    }
+
+    @Test
+    @DisplayName("US22: INDIVIDUAL 荷主は割引額 0 で DiscountAppliedEvent 発火（totalAmount は basicAmount のまま）")
+    void US22_INDIVIDUAL荷主は割引額ゼロ() {
+        // INDIVIDUAL を返す ShipperInfoAcl を別途登録
+        FixtureConfiguration<Invoice> individualFixture = new AggregateTestFixture<>(Invoice.class);
+        individualFixture.registerInjectableResource(new FareCalculator(RateTable.defaultTable()));
+        individualFixture.registerInjectableResource(new CorporateDiscountPolicy());
+        individualFixture.registerInjectableResource((ShipperInfoAcl) shipperId ->
+                new CorporateContract(shipperId, ShipperType.INDIVIDUAL, BigDecimal.ZERO));
+        individualFixture.registerInjectableResource(
+                Clock.fixed(FIXED_NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
+        );
+
+        ApplyDiscountCommand command = new ApplyDiscountCommand("INV-D03");
+
+        individualFixture.given(new InvoiceCalculatedEvent(
+                        "INV-D03", "B-D03", "S-IND-001",
+                        new BigDecimal("75000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new DiscountAppliedEvent(
+                        "INV-D03",
+                        "S-IND-001",
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO.setScale(0),
+                        new BigDecimal("75000"),
+                        FIXED_NOW
+                ));
+    }
+
+    @Test
+    @DisplayName("US22: 割引適用 2 回（割引率変更で上書き）→ 2 回目の DiscountAppliedEvent")
+    void US22_割引2回適用で上書き() {
+        // ShipperInfoAcl が 30% を返すように上書きした fixture
+        FixtureConfiguration<Invoice> overrideFixture = new AggregateTestFixture<>(Invoice.class);
+        overrideFixture.registerInjectableResource(new FareCalculator(RateTable.defaultTable()));
+        overrideFixture.registerInjectableResource(new CorporateDiscountPolicy());
+        overrideFixture.registerInjectableResource((ShipperInfoAcl) shipperId ->
+                new CorporateContract(shipperId, ShipperType.CORPORATE, new BigDecimal("0.30")));
+        overrideFixture.registerInjectableResource(
+                Clock.fixed(FIXED_NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
+        );
+
+        ApplyDiscountCommand command = new ApplyDiscountCommand("INV-D04");
+
+        overrideFixture.given(
+                        new InvoiceCalculatedEvent("INV-D04", "B-D04", "S-D04",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new DiscountAppliedEvent("INV-D04", "S-D04",
+                                new BigDecimal("0.15"),
+                                new BigDecimal("49500"),
+                                new BigDecimal("280500"),
+                                FIXED_NOW)
+                )
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new DiscountAppliedEvent(
+                        "INV-D04",
+                        "S-D04",
+                        new BigDecimal("0.30"),
+                        // 330,000 × 0.30 = 99,000
+                        new BigDecimal("99000"),
+                        // 330,000 - 99,000 = 231,000
+                        new BigDecimal("231000"),
+                        FIXED_NOW
+                ));
     }
 }

@@ -1,6 +1,7 @@
 package com.example.billingms.interfaces.rest;
 
 import com.example.billingms.application.InvoiceQueryService;
+import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
 import com.example.billingms.domain.model.TransportRecord;
 import com.example.billingms.domain.projections.InvoiceLine;
@@ -76,6 +77,19 @@ public class InvoiceController {
         ));
 
         return ResponseEntity.accepted().body(new InvoiceCreationResponse(invoiceId));
+    }
+
+    /**
+     * 法人割引適用（US22、IT7 タスク 3.3）。経理担当者が S23 で「割引を適用」操作。
+     * Invoice 集約が ShipperInfoAcl から契約取得 + CorporateDiscountPolicy で算出。
+     */
+    @PostMapping("/{invoiceId}/discount")
+    public ResponseEntity<Void> applyDiscount(@PathVariable String invoiceId) {
+        if (invoiceId == null || invoiceId.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        commandGateway.sendAndWait(new ApplyDiscountCommand(invoiceId));
+        return ResponseEntity.accepted().build();
     }
 
     /**

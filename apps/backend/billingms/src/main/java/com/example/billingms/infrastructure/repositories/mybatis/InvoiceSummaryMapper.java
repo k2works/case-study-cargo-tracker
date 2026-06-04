@@ -26,6 +26,14 @@ public interface InvoiceSummaryMapper {
                        @Param("currency") String currency,
                        @Param("billingStatus") String billingStatus);
 
+    /**
+     * 割引適用後の invoice 行更新（US22 / DiscountAppliedEvent 受信時）。
+     * discount_amount と total_amount を更新し、updated_at + version を進める。
+     */
+    void updateDiscount(@Param("invoiceId") String invoiceId,
+                        @Param("discountAmount") BigDecimal discountAmount,
+                        @Param("totalAmount") BigDecimal totalAmount);
+
     InvoiceSummary findByInvoiceId(@Param("invoiceId") String invoiceId);
 
     InvoiceSummary findByBookingId(@Param("bookingId") String bookingId);

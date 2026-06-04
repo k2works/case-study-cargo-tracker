@@ -1,9 +1,12 @@
 package com.example.billingms.interfaces.events;
 
+import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.model.BillingStatus;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceLineMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceSummaryMapper;
+
+import java.math.BigDecimal;
 import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
 import org.slf4j.Logger;
@@ -56,5 +59,30 @@ public class InvoiceProjectionsEventHandler {
         );
         log.info("[local-billing] Invoice 投影 invoiceId={} bookingId={} basicAmount={}",
                 event.invoiceId(), event.bookingId(), event.basicAmount());
+    }
+
+    @EventHandler
+    public void on(DiscountAppliedEvent event) {
+        summaryMapper.updateDiscount(
+                event.invoiceId(),
+                event.discountAmount(),
+                event.totalAmount()
+        );
+        // 既存の DISCOUNT 行が無い前提で seq=2 として挿入（複数回適用は IT8 で考慮）
+        Integer maxSeq = lineMapper.findMaxLineSeq(event.invoiceId());
+        int nextSeq = (maxSeq == null ? 1 : maxSeq + 1);
+        BigDecimal lineAmount = event.discountAmount().negate(); // DISCOUNT 行は負値
+        String description = String.format(
+                "法人割引（%.0f%%）", event.discountRate().multiply(new BigDecimal("100")).doubleValue());
+        lineMapper.insertInvoiceLine(
+                event.invoiceId(),
+                nextSeq,
+                "DISCOUNT",
+                description,
+                lineAmount,
+                "CORPORATE"
+        );
+        log.info("[local-billing] Discount 投影 invoiceId={} discountAmount={} totalAmount={}",
+                event.invoiceId(), event.discountAmount(), event.totalAmount());
     }
 }

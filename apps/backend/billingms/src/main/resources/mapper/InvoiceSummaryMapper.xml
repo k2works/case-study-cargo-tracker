@@ -53,6 +53,15 @@
         )
     </insert>
 
+    <update id="updateDiscount">
+        UPDATE invoice
+        SET discount_amount = #{discountAmount},
+            total_amount    = #{totalAmount},
+            updated_at      = CURRENT_TIMESTAMP,
+            version         = version + 1
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
     <select id="findByInvoiceId" resultMap="invoiceSummaryResultMap">
         SELECT * FROM invoice WHERE invoice_id = #{invoiceId}
     </select>
