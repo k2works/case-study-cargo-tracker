@@ -58,7 +58,7 @@
 | 0.1 | Testcontainers Reusable + 一意 topic prefix で Kafka container race を構造的解決し、@Tag("kafka-integration") 除外を解除して通常 `check` に戻す。H6（`hasSize(7)` を `@DirtiesContext(BEFORE_CLASS)` で根本対処）/ H7（`HandlingActivityKafkaIntegrationTest` 修正）も同時解消 | 5h | - | [x] | IT5 T1 / IT6 T1 |
 | 0.2 | `CargoDeliveredEventPublisher` 廃止 + 集約発火型移行（ADR-0012 自己整合回復）。`TrackingActivity.handle(UpdateTransportStatusCommand)` 内で DELIVERED 遷移時に `CargoDeliveredEvent` を直接 apply、`tracking_summary.delivered_published_at` 冪等化を温存 | 3h | - | [x] | IT6 T2 / IT6 review H1 |
 | 0.3 | ADR-0015: billingms cross-service イベント + ShipperInfo ACL 採用方針 | 1h | - | [x] | IT7 設計判断 |
-| 0.4 | ADR-0016: @ProcessingGroup 一斉改名（`cross-` / `local-` / `outbound-` prefix）+ token 移行手順 + ArchUnit 構造ガードテスト | 2h | - | [ ] | IT6 T3 |
+| 0.4 | ADR-0016: @ProcessingGroup 一斉改名（`cross-` / `local-` / `outbound-` prefix）+ token 移行手順 + ArchUnit 構造ガードテスト | 2h | - | [x] | IT6 T3 |
 | 0.5 | architecture_backend.md API カタログを IT6 7 endpoint + IT7 billingms 全 endpoint で更新。domain-model.md / data-model.md / ui_design.md の「反映必要」マーカー 4 件をクローズ | 2h | - | [ ] | IT6 T6 / IT6 review writer H6 |
 | 0.6 | 新サービス追加チェックリスト（`docs/reference/新サービス追加チェックリスト.md`）の billingms 適用ドライラン。漏れがあれば checklist を改訂 | 1h | - | [ ] | IT2 ふりかえり T1 持ち越し |
 

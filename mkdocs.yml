@@ -134,6 +134,7 @@ nav:
       - ADR-0013 公開追跡照会の時限署名トークン: adr/0013-public-tracking-token.md
       - ADR-0014 Axon @ProcessingGroup 命名規約: adr/0014-processing-group-naming.md
       - ADR-0015 billingms cross-service + ShipperInfo ACL: adr/0015-billingms-cross-service-and-shipper-acl.md
+      - ADR-0016 @ProcessingGroup 一斉改名 + token 移行: adr/0016-processing-group-renaming.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
