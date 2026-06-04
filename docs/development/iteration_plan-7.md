@@ -95,7 +95,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | billingms: `CorporateDiscountPolicy` ドメインサービス（`apply(basic: Money, contract: CorporateContract): Money`）。ShipperType `CORPORATE` のみ適用、`INDIVIDUAL` は 0%。`CorporateContract` 値オブジェクト（`discountRate: BigDecimal 0〜0.30`）| 3h | - | [ ] |
+| 3.1 | billingms: `CorporateDiscountPolicy` ドメインサービス（`apply(basic: Money, contract: CorporateContract): Money`）。ShipperType `CORPORATE` のみ適用、`INDIVIDUAL` は 0%。`CorporateContract` 値オブジェクト（`discountRate: BigDecimal 0〜0.30`）| 3h | - | [x] |
 | 3.2 | billingms: `ShipperInfoAcl`（bookingms `GET /api/v1/shippers/{id}` を REST 経由で参照、ShipperType / contract を取得）。Resilience4j circuit breaker + Caffeine cache（TTL 5min、ADR-0015）| 3h | - | [ ] |
 | 3.3 | `Invoice` 集約で `ApplyDiscountCommand` 受理時に CorporateDiscountPolicy 適用。`DiscountAppliedEvent` 発行で `discount_amount` 確定。`invoice_line` 投影に `line_type = DISCOUNT` 行を追加 | 2h | - | [ ] |
 | 3.4 | フロント S23 改修：荷主種別バッジ（法人 / 個人）+ 割引率表示 + 割引前後金額の対比表示 | 2h | - | [ ] |
