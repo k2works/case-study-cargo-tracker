@@ -23,6 +23,10 @@ spring:
           uri: http://localhost:8085
           predicates:
             - Path=/api/v1/handling/**
+        - id: billingms
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/v1/billing/**
 
 logging:
   level:

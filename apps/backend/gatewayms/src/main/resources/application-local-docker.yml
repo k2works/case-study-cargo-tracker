@@ -1,5 +1,5 @@
 # local-docker プロファイル: Kafka/PostgreSQL は Docker、アプリは localhost または Docker ネットワーク内で起動
-# コンテナ内では AUTHMS_URL / BOOKINGMS_URL / ROUTINGMS_URL / TRACKINGMS_URL / HANDLINGMS_URL 環境変数でコンテナ名を指定する
+# コンテナ内では AUTHMS_URL / BOOKINGMS_URL / ROUTINGMS_URL / TRACKINGMS_URL / HANDLINGMS_URL / BILLINGMS_URL 環境変数でコンテナ名を指定する
 spring:
   cloud:
     gateway:
@@ -24,6 +24,10 @@ spring:
           uri: ${HANDLINGMS_URL:http://localhost:8085}
           predicates:
             - Path=/api/v1/handling/**
+        - id: billingms
+          uri: ${BILLINGMS_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/v1/billing/**
 
 logging:
   level:

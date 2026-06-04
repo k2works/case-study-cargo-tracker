@@ -23,6 +23,10 @@ spring:
           uri: ${HANDLINGMS_URL}
           predicates:
             - Path=/api/v1/handling/**
+        - id: billingms
+          uri: ${BILLINGMS_URL}
+          predicates:
+            - Path=/api/v1/billing/**
 
 server:
   port: ${PORT:8080}
