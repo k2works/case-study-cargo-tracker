@@ -70,7 +70,7 @@
 |---|--------|---------|------|------|
 | 1.1 | `apps/backend/billingms/` ディレクトリ作成、Gradle module 追加、Spring Boot 4 / Axon 5 / MyBatis 依存。`application.yml` / `application-local-h2.yml` / `application-heroku.yml` | 3h | - | [x] |
 | 1.2 | Flyway V1: `invoice` / `invoice_line` / `payment` テーブル定義（data-model.md L693-735 準拠、PostgreSQL + H2 互換） | 2h | - | [x] |
-| 1.3 | Axon Event Store（PostgreSQL）+ Kafka tracking event publisher（既存 services と同パターン）。`@ProcessingGroup` 命名規約は ADR-0016 適用 | 2h | - | [ ] |
+| 1.3 | Axon Event Store（PostgreSQL）+ Kafka tracking event publisher（既存 services と同パターン）。`@ProcessingGroup` 命名規約は ADR-0016 適用 | 2h | - | [x] |
 | 1.4 | gatewayms `application-*.yml` に `/api/v1/billing/**` ルートを追加（local-h2 / heroku 両方） | 1h | - | [ ] |
 | 1.5 | ops/scripts/heroku.js に `billingms` 追加（SERVICES / DEPLOY_ORDER / deploy:dev:setup / deploy:dev:config / deploy:dev:build:backend / deploy:dev:help） | 2h | - | [ ] |
 | 1.6 | `LocalH2SmokeTest`（ApplicationContext assertion パターン）を billingms に追加。CI で context 起動を保証 | 1h | - | [x] |
