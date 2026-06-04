@@ -55,7 +55,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 | 元 Try |
 |---|--------|---------|------|------|--------|
-| 0.1 | Testcontainers Reusable + 一意 topic prefix で Kafka container race を構造的解決し、@Tag("kafka-integration") 除外を解除して通常 `check` に戻す。H6（`hasSize(7)` を `@DirtiesContext(BEFORE_CLASS)` で根本対処）/ H7（`HandlingActivityKafkaIntegrationTest` 修正）も同時解消 | 5h | - | [ ] | IT5 T1 / IT6 T1 |
+| 0.1 | Testcontainers Reusable + 一意 topic prefix で Kafka container race を構造的解決し、@Tag("kafka-integration") 除外を解除して通常 `check` に戻す。H6（`hasSize(7)` を `@DirtiesContext(BEFORE_CLASS)` で根本対処）/ H7（`HandlingActivityKafkaIntegrationTest` 修正）も同時解消 | 5h | - | [x] | IT5 T1 / IT6 T1 |
 | 0.2 | `CargoDeliveredEventPublisher` 廃止 + 集約発火型移行（ADR-0012 自己整合回復）。`TrackingActivity.handle(UpdateTransportStatusCommand)` 内で DELIVERED 遷移時に `CargoDeliveredEvent` を直接 apply、`tracking_summary.delivered_published_at` 冪等化を温存 | 3h | - | [ ] | IT6 T2 / IT6 review H1 |
 | 0.3 | ADR-0015: billingms cross-service イベント + ShipperInfo ACL 採用方針 | 1h | - | [ ] | IT7 設計判断 |
 | 0.4 | ADR-0016: @ProcessingGroup 一斉改名（`cross-` / `local-` / `outbound-` prefix）+ token 移行手順 + ArchUnit 構造ガードテスト | 2h | - | [ ] | IT6 T3 |
