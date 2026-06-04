@@ -60,7 +60,7 @@
 | 0.3 | ADR-0015: billingms cross-service イベント + ShipperInfo ACL 採用方針 | 1h | - | [x] | IT7 設計判断 |
 | 0.4 | ADR-0016: @ProcessingGroup 一斉改名（`cross-` / `local-` / `outbound-` prefix）+ token 移行手順 + ArchUnit 構造ガードテスト | 2h | - | [x] | IT6 T3 |
 | 0.5 | architecture_backend.md API カタログを IT6 7 endpoint + IT7 billingms 全 endpoint で更新。domain-model.md / data-model.md / ui_design.md の「反映必要」マーカー 4 件をクローズ | 2h | - | [x] | IT6 T6 / IT6 review writer H6 |
-| 0.6 | 新サービス追加チェックリスト（`docs/reference/新サービス追加チェックリスト.md`）の billingms 適用ドライラン。漏れがあれば checklist を改訂 | 1h | - | [ ] | IT2 ふりかえり T1 持ち越し |
+| 0.6 | 新サービス追加チェックリスト（`docs/reference/新サービス追加チェックリスト.md`）の billingms 適用ドライラン。漏れがあれば checklist を改訂 | 1h | - | [x] | IT2 ふりかえり T1 持ち越し |
 
 **小計**: 14h（理想時間、SP 外）
 
