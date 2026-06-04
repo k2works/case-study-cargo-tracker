@@ -73,4 +73,28 @@ test.describe('IT7 / S23: 請求詳細・算出 UI', () => {
 
     await expect(page.getByText(/請求書が見つかりません/)).toBeVisible({ timeout: 10_000 });
   });
+
+  test('US22: 割引を適用ボタン押下で StubShipperInfoAcl の 15% 割引が反映される', async ({ page }) => {
+    await loginAsAdmin(page);
+
+    const invoiceId = await calculateInvoiceViaApi(page);
+
+    await page.goto(`/billing/${invoiceId}`);
+
+    // 算出済（割引未適用）状態で「割引を適用」ボタンが表示される
+    const button = page.getByRole('button', { name: /割引を適用/ });
+    await expect(button).toBeVisible({ timeout: 10_000 });
+
+    // クリックで API 呼出 → 再フェッチ
+    await button.click();
+
+    // 割引適用済バッジが表示される（StubShipperInfoAcl は CORPORATE 15%）
+    await expect(page.getByText(/割引適用済/)).toBeVisible({ timeout: 10_000 });
+    // 割引前後対比セクションが現れる
+    await expect(page.getByText(/割引前後の対比/)).toBeVisible();
+    // 330,000 × 0.15 = 49,500 円の割引額
+    await expect(page.getByText(/-49,500/).first()).toBeVisible();
+    // 割引後 totalAmount = 280,500 円
+    await expect(page.getByText(/280,500/).first()).toBeVisible();
+  });
 });
