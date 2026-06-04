@@ -133,4 +133,40 @@ class InvoiceAggregateTest {
                 ));
     }
 
+    @Test
+    @DisplayName("US21: REFRIGERATED 貨物では 2.0 倍係数で basicAmount が算出される（648,000 円）")
+    void REFRIGERATED貨物の料金算出() {
+        TransportRecord transport = new TransportRecord(
+                new BigDecimal("5300"), new BigDecimal("1200"), "REFRIGERATED", 8, "JPY");
+        CalculateInvoiceCommand command = new CalculateInvoiceCommand(
+                "INV-003", "B-003", "S-003", transport);
+
+        fixture.givenNoPriorActivity()
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new InvoiceCalculatedEvent(
+                        "INV-003",
+                        "B-003",
+                        "S-003",
+                        // 5300 × 1200 × 0.10 = 636,000 + 8 × 1500 = 648,000
+                        new BigDecimal("648000"),
+                        "JPY",
+                        FIXED_NOW
+                ));
+    }
+
+    @Test
+    @DisplayName("US21: 既存集約への CalculateInvoiceCommand 再送は例外（ADR-0012 集約レベル冪等性）")
+    void 既存集約への再送は失敗() {
+        CalculateInvoiceCommand command = new CalculateInvoiceCommand(
+                "INV-004", "B-004", "S-004", defaultTransport());
+
+        // 既に CALCULATED 状態の集約に対して CalculateInvoiceCommand を再送する
+        // → @CommandHandler コンストラクタは新規生成専用のため例外
+        fixture.given(new InvoiceCalculatedEvent(
+                        "INV-004", "B-004", "S-004",
+                        new BigDecimal("330000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectException(Exception.class);
+    }
 }
