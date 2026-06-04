@@ -16,19 +16,20 @@ const JAVA_TOOL_OPTIONS =
   '-XX:MaxRAMPercentage=50.0 -XX:ReservedCodeCacheSize=64m ' +
   '-XX:MaxMetaspaceSize=128m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Tokyo';
 
-/** 稼働中のサービス定義（IT2 で bookingms 追加、IT5 で trackingms / handlingms 追加） */
+/** 稼働中のサービス定義（IT2 で bookingms 追加、IT5 で trackingms / handlingms 追加、IT7 で billingms 追加） */
 const SERVICES = [
   { name: `${PREFIX}-authms`,     service: 'authms',     port: 8081, type: 'backend' },
   { name: `${PREFIX}-bookingms`,  service: 'bookingms',  port: 8082, type: 'backend' },
   { name: `${PREFIX}-routingms`,  service: 'routingms',  port: 8083, type: 'backend' },
   { name: `${PREFIX}-trackingms`, service: 'trackingms', port: 8084, type: 'backend' },
   { name: `${PREFIX}-handlingms`, service: 'handlingms', port: 8085, type: 'backend' },
+  { name: `${PREFIX}-billingms`,  service: 'billingms',  port: 8086, type: 'backend' },
   { name: `${PREFIX}-gatewayms`,  service: 'gatewayms',  port: 8080, type: 'backend' },
   { name: `${PREFIX}-frontend`,   service: 'frontend',   port: 80,   type: 'frontend' },
 ];
 
-/** デプロイ順（依存関係を考慮: 業務サービス先行 → trackingms / handlingms → gatewayms → frontend） */
-const DEPLOY_ORDER = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'gatewayms', 'frontend'];
+/** デプロイ順（依存関係を考慮: 業務サービス先行 → trackingms / handlingms → billingms → gatewayms → frontend） */
+const DEPLOY_ORDER = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms', 'gatewayms', 'frontend'];
 
 // ============================================
 // ヘルパー
@@ -133,6 +134,7 @@ export default function (gulp) {
    heroku create ${PREFIX}-routingms  --stack container
    heroku create ${PREFIX}-trackingms --stack container   # IT5 追加
    heroku create ${PREFIX}-handlingms --stack container   # IT5 追加
+   heroku create ${PREFIX}-billingms  --stack container   # IT7 追加
    heroku create ${PREFIX}-gatewayms  --stack container
    heroku create ${PREFIX}-frontend   --stack container
 
@@ -142,6 +144,7 @@ export default function (gulp) {
    heroku stack:set container --app ${PREFIX}-routingms
    heroku stack:set container --app ${PREFIX}-trackingms
    heroku stack:set container --app ${PREFIX}-handlingms
+   heroku stack:set container --app ${PREFIX}-billingms
    heroku stack:set container --app ${PREFIX}-gatewayms
    heroku stack:set container --app ${PREFIX}-frontend
 
@@ -150,6 +153,7 @@ export default function (gulp) {
    heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-routingms
    heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-trackingms   # IT5 追加（tracking_summary / tracking_event / tracking_exception）
    heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-handlingms   # IT5 追加（cargo_snapshot / handling_activity）
+   heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-billingms    # IT7 追加（invoice / invoice_line / payment）
    # authms は Spring Security JWT のみで DB 不要だが、ユーザーマスタを使う場合は同様に追加
 
 4. JWT_SECRET と Kafka 設定を .env に追加:
@@ -166,7 +170,7 @@ export default function (gulp) {
 5. Config Vars を一括設定:
    npx gulp deploy:dev:config
 
-6. 全サービスをデプロイ（DEPLOY_ORDER: authms → bookingms → routingms → trackingms → handlingms → gatewayms → frontend）:
+6. 全サービスをデプロイ（DEPLOY_ORDER: authms → bookingms → routingms → trackingms → handlingms → billingms → gatewayms → frontend）:
    npx gulp deploy:dev
 
 7. アプリを開く:
@@ -267,12 +271,14 @@ export default function (gulp) {
     const routingDomain  = getDomain(`${PREFIX}-routingms`);
     const trackingDomain = getDomain(`${PREFIX}-trackingms`);   // IT5 追加
     const handlingDomain = getDomain(`${PREFIX}-handlingms`);   // IT5 追加
+    const billingDomain  = getDomain(`${PREFIX}-billingms`);    // IT7 追加
     const gatewayDomain  = getDomain(`${PREFIX}-gatewayms`);
     console.log(`  authms:     ${authDomain}`);
     console.log(`  bookingms:  ${bookingDomain}`);
     console.log(`  routingms:  ${routingDomain}`);
     console.log(`  trackingms: ${trackingDomain}`);
     console.log(`  handlingms: ${handlingDomain}`);
+    console.log(`  billingms:  ${billingDomain}`);
     console.log(`  gatewayms:  ${gatewayDomain}`);
 
     // 業務サービスに共通の Kafka 設定（KAFKA_BOOTSTRAP_SERVERS 指定時のみ付与）
@@ -342,7 +348,19 @@ export default function (gulp) {
       { stdio: 'inherit' }
     );
 
-    // gatewayms（IT5 で trackingms / handlingms ルートを追加）
+    // billingms（IT7 追加、Kafka + bookingms 同期参照 ADR-0015）
+    // BOOKINGMS_URL は RestShipperInfoAcl が GET /api/v1/shippers/{id} で参照
+    execSync(
+      `heroku config:set ` +
+      `SPRING_PROFILES_ACTIVE=heroku ` +
+      `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
+      kafkaVars +
+      `BOOKINGMS_URL="https://${bookingDomain}" ` +
+      `--app ${PREFIX}-billingms`,
+      { stdio: 'inherit' }
+    );
+
+    // gatewayms（IT5 で trackingms / handlingms ルート、IT7 で billingms ルート追加）
     execSync(
       `heroku config:set ` +
       `SPRING_PROFILES_ACTIVE=heroku ` +
@@ -353,6 +371,7 @@ export default function (gulp) {
       `ROUTINGMS_URL="https://${routingDomain}" ` +
       `TRACKINGMS_URL="https://${trackingDomain}" ` +
       `HANDLINGMS_URL="https://${handlingDomain}" ` +
+      `BILLINGMS_URL="https://${billingDomain}" ` +
       `--app ${PREFIX}-gatewayms`,
       { stdio: 'inherit' }
     );
@@ -493,6 +512,8 @@ export default function (gulp) {
   deploy:dev:release:trackingms trackingms をリリース
   deploy:dev:push:handlingms   handlingms をビルド・プッシュ（IT5 追加）
   deploy:dev:release:handlingms handlingms をリリース
+  deploy:dev:push:billingms    billingms をビルド・プッシュ（IT7 追加）
+  deploy:dev:release:billingms billingms をリリース
   deploy:dev:push:gatewayms    gatewayms をビルド・プッシュ
   deploy:dev:release:gatewayms gatewayms をリリース
   deploy:dev:push:frontend     frontend をビルド・プッシュ
@@ -504,6 +525,7 @@ export default function (gulp) {
   deploy:dev:logs:routingms    routingms のログを表示
   deploy:dev:logs:trackingms   trackingms のログを表示（IT5 追加）
   deploy:dev:logs:handlingms   handlingms のログを表示（IT5 追加）
+  deploy:dev:logs:billingms    billingms のログを表示（IT7 追加）
   deploy:dev:logs:gatewayms    gatewayms のログを表示
   deploy:dev:logs:frontend     frontend のログを表示
 
