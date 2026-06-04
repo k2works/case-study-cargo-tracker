@@ -86,7 +86,7 @@
 | 2.3 | billingms: `CalculateInvoiceCommand`（DELIVERED 契機）ハンドラ + `InvoiceCalculatedEvent`。冪等化（`if (billingStatus != null) return;`）| 2h | - | [x] |
 | 2.4 | billingms: ACL（cargoms から CargoDeliveredEvent サブスクライブ → `CalculateInvoiceCommand` 発火、ADR-0015）+ Routing ACL（routingms `confirmed_itinerary` を REST 経由参照、距離・港 ID 取得）+ Handling ACL（handlingms から荷役回数を REST 経由集計）| 4h | - | [x] |
 | 2.5 | `invoice` Read Model 投影（MyBatis Mapper + EventHandler）+ `invoice_line` 投影（`line_type = BASIC` 行を `InvoiceCalculatedEvent` から生成）+ Controller（`POST /api/v1/billing/invoices`、`GET /api/v1/billing/invoices/{invoiceId}`、`PATCH /adjust`） | 3h | - | [x] |
-| 2.6 | フロント S23 請求詳細・算出画面（`/billing/:invoiceId`、ROLE_ACCOUNTANT）：輸送実績表示・基本料金・例外調整入力・確定ボタン | 4h | - | [ ] |
+| 2.6 | フロント S23 請求詳細・算出画面（`/billing/:invoiceId`、ROLE_ACCOUNTANT）：輸送実績表示・基本料金・例外調整入力・確定ボタン | 4h | - | [x] |
 | 2.7 | テスト（Axon Test Fixture 8 件、ドメインサービス 6 件、Controller 6 件、Vitest 6 件、E2E 2 件） | 3h | - | [ ] |
 
 **小計**: 22h（理想時間）

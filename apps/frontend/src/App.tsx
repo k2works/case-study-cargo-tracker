@@ -21,6 +21,7 @@ import ExceptionRegisterPage from './features/tracking/pages/ExceptionRegisterPa
 import ExceptionListPage from './features/tracking/pages/ExceptionListPage';
 import HandlingListPage from './features/handling/pages/HandlingListPage';
 import HandlingFormPage from './features/handling/pages/HandlingFormPage';
+import InvoiceDetailPage from './features/billing/pages/InvoiceDetailPage';
 
 function Dashboard() {
   return (
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/tracking/:trackingNumber/manage" element={<TrackingManagePage />} />
           <Route path="/handling" element={<HandlingListPage />} />
           <Route path="/handling/new" element={<HandlingFormPage />} />
+          <Route path="/billing/:invoiceId" element={<InvoiceDetailPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
