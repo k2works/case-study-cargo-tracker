@@ -68,7 +68,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `apps/backend/billingms/` ディレクトリ作成、Gradle module 追加、Spring Boot 4 / Axon 5 / MyBatis 依存。`application.yml` / `application-local-h2.yml` / `application-heroku.yml` | 3h | - | [ ] |
+| 1.1 | `apps/backend/billingms/` ディレクトリ作成、Gradle module 追加、Spring Boot 4 / Axon 5 / MyBatis 依存。`application.yml` / `application-local-h2.yml` / `application-heroku.yml` | 3h | - | [x] |
 | 1.2 | Flyway V1: `invoice` / `invoice_line` / `payment` テーブル定義（data-model.md L693-735 準拠、PostgreSQL + H2 互換） | 2h | - | [ ] |
 | 1.3 | Axon Event Store（PostgreSQL）+ Kafka tracking event publisher（既存 services と同パターン）。`@ProcessingGroup` 命名規約は ADR-0016 適用 | 2h | - | [ ] |
 | 1.4 | gatewayms `application-*.yml` に `/api/v1/billing/**` ルートを追加（local-h2 / heroku 両方） | 1h | - | [ ] |

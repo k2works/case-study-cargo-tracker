@@ -1,0 +1,43 @@
+# heroku プロファイル: H2 インメモリ DB + Axon InMemory EventStore（Heroku 開発環境用）
+spring:
+  datasource:
+    url: jdbc:h2:mem:billingdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  sql:
+    init:
+      mode: never
+
+axon:
+  axonserver:
+    enabled: false
+  kafka:
+    publisher:
+      enabled: false
+    fetcher:
+      enabled: false
+  eventhandling:
+    processors:
+      default:
+        mode: subscribing
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+server:
+  port: ${PORT:8086}
+
+logging:
+  level:
+    com.example.billingms: INFO
+    org.axonframework: WARN
+    root: WARN
