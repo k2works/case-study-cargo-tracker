@@ -4,6 +4,7 @@ import com.example.trackingms.domain.commands.InitializeTrackingCommand;
 import com.example.trackingms.domain.commands.RegisterTrackingExceptionCommand;
 import com.example.trackingms.domain.commands.ResolveTrackingExceptionCommand;
 import com.example.trackingms.domain.commands.UpdateTransportStatusCommand;
+import com.example.shared.events.CargoDeliveredEvent;
 import com.example.trackingms.domain.events.CargoMisroutedEvent;
 import com.example.trackingms.domain.events.TrackingExceptionEscalatedEvent;
 import com.example.trackingms.domain.events.TrackingExceptionRegisteredEvent;
@@ -133,6 +134,52 @@ class TrackingActivityAggregateTest {
                                 TrackingActivityAggregateTest.TransportStatusFixture.MISROUTED,
                                 "CNHKG", null, occurredAt, "想定外の港で発見"),
                         new CargoMisroutedEvent("TRK-AB12CD3456", "CNHKG", occurredAt));
+    }
+
+    @Test
+    @DisplayName("US16/T2: AWAITING_CLAIM → DELIVERED 遷移で CargoDeliveredEvent も発行される（集約発火型、ADR-0012）")
+    void DELIVERED遷移でCargoDeliveredEventが発行される() {
+        LocalDateTime occurredAt = LocalDateTime.of(2026, 8, 16, 14, 0);
+        UpdateTransportStatusCommand command = new UpdateTransportStatusCommand(
+                "TRK-AB12CD3456",
+                TrackingActivityAggregateTest.TransportStatusFixture.DELIVERED,
+                "USNYC", null, occurredAt, "荷受人引取");
+
+        fixture.given(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.NOT_RECEIVED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                                "JPTYO", null,
+                                LocalDateTime.of(2026, 7, 20, 10, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.RECEIVED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.LOADED,
+                                "JPTYO", "V-MAERSK-220",
+                                LocalDateTime.of(2026, 7, 21, 9, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.LOADED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.IN_TRANSIT,
+                                "JPTYO", "V-MAERSK-220",
+                                LocalDateTime.of(2026, 7, 21, 18, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.IN_TRANSIT,
+                                TrackingActivityAggregateTest.TransportStatusFixture.UNLOADED,
+                                "USNYC", "V-MAERSK-220",
+                                LocalDateTime.of(2026, 8, 15, 9, 0), null),
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.UNLOADED,
+                                TrackingActivityAggregateTest.TransportStatusFixture.AWAITING_CLAIM,
+                                "USNYC", null,
+                                LocalDateTime.of(2026, 8, 15, 10, 0), null))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new TransportStatusUpdatedEvent("TRK-AB12CD3456",
+                                TrackingActivityAggregateTest.TransportStatusFixture.AWAITING_CLAIM,
+                                TrackingActivityAggregateTest.TransportStatusFixture.DELIVERED,
+                                "USNYC", null, occurredAt, "荷受人引取"),
+                        new CargoDeliveredEvent("TRK-AB12CD3456", "B-001", occurredAt));
     }
 
     @Test

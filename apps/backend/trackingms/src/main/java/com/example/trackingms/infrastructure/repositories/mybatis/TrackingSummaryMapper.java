@@ -49,15 +49,4 @@ public interface TrackingSummaryMapper {
 
     /** 総件数（ページネーション用）。 */
     long count();
-
-    /**
-     * CargoDeliveredEvent の cross-service 発行を冪等化する（IT5 レビュー H3 対応）。
-     *
-     * <p>{@code delivered_published_at IS NULL} の場合のみ {@code occurredAt} で更新し、
-     * 更新件数を返す。1 を返したら未発行 → 発行可、0 を返したら既発行 → スキップする。
-     * event store リプレイで TransportStatusUpdatedEvent (DELIVERED) が再生されても
-     * 二度 Kafka publish されないことを保証する。</p>
-     */
-    int markDeliveredPublished(@Param("trackingNumber") String trackingNumber,
-                               @Param("publishedAt") LocalDateTime publishedAt);
 }

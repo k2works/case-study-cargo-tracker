@@ -61,15 +61,6 @@
         WHERE tracking_number = #{trackingNumber}
     </update>
 
-    <update id="markDeliveredPublished">
-        UPDATE tracking_summary
-        SET delivered_published_at = #{publishedAt},
-            updated_at             = CURRENT_TIMESTAMP,
-            version                = version + 1
-        WHERE tracking_number       = #{trackingNumber}
-          AND delivered_published_at IS NULL
-    </update>
-
     <select id="findByTrackingNumber" resultMap="trackingSummaryResultMap">
         SELECT *
         FROM tracking_summary

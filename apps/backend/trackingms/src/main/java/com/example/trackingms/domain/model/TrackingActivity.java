@@ -4,6 +4,7 @@ import com.example.trackingms.domain.commands.InitializeTrackingCommand;
 import com.example.trackingms.domain.commands.RegisterTrackingExceptionCommand;
 import com.example.trackingms.domain.commands.ResolveTrackingExceptionCommand;
 import com.example.trackingms.domain.commands.UpdateTransportStatusCommand;
+import com.example.shared.events.CargoDeliveredEvent;
 import com.example.trackingms.domain.events.CargoMisroutedEvent;
 import com.example.trackingms.domain.events.TrackingExceptionEscalatedEvent;
 import com.example.trackingms.domain.events.TrackingExceptionRegisteredEvent;
@@ -51,7 +52,6 @@ public class TrackingActivity {
 
     @AggregateIdentifier
     private String trackingNumber;
-    @SuppressWarnings("unused") // Axon Event Sourcing で状態を保持
     private String bookingId;
     private TransportStatus currentStatus;
     @SuppressWarnings("unused") // 誤配送フラグ。投影と例外管理（IT6）で利用
@@ -99,6 +99,16 @@ public class TrackingActivity {
             AggregateLifecycle.apply(new CargoMisroutedEvent(
                     this.trackingNumber,
                     command.unlocode(),
+                    command.occurredAt()
+            ));
+        }
+        // IT7 T2 / ADR-0012：集約発火型で cross-service 配信。
+        // DELIVERED への遷移は TransportStatusTransition が「DELIVERED → 任意」を拒否するため
+        // 自然冪等。専用フラグや tracking_summary.delivered_published_at の SQL 更新は不要。
+        if (command.toStatus() == TransportStatus.DELIVERED) {
+            AggregateLifecycle.apply(new CargoDeliveredEvent(
+                    this.trackingNumber,
+                    this.bookingId,
                     command.occurredAt()
             ));
         }
