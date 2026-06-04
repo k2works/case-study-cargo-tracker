@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.billingms.infrastructure.repositories.mybatis.InvoiceSummaryMapper">
+
+    <resultMap id="invoiceSummaryResultMap" type="com.example.billingms.domain.projections.InvoiceSummary">
+        <id property="invoiceId" column="invoice_id"/>
+        <result property="bookingId" column="booking_id"/>
+        <result property="shipperId" column="shipper_id"/>
+        <result property="basicAmount" column="basic_amount"/>
+        <result property="discountAmount" column="discount_amount"/>
+        <result property="adjustmentAmount" column="adjustment_amount"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="currency" column="currency"/>
+        <result property="billingStatus" column="billing_status"/>
+        <result property="invoiceNumber" column="invoice_number"/>
+        <result property="paymentDue" column="payment_due"/>
+        <result property="paidAt" column="paid_at"/>
+        <result property="cancellationReason" column="cancellation_reason"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="version" column="version"/>
+    </resultMap>
+
+    <insert id="insertInvoice">
+        INSERT INTO invoice (
+            invoice_id,
+            booking_id,
+            shipper_id,
+            basic_amount,
+            discount_amount,
+            adjustment_amount,
+            total_amount,
+            currency,
+            billing_status,
+            created_at,
+            updated_at,
+            version
+        ) VALUES (
+            #{invoiceId},
+            #{bookingId},
+            #{shipperId},
+            #{basicAmount},
+            0,
+            0,
+            #{basicAmount},
+            #{currency},
+            #{billingStatus},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            0
+        )
+    </insert>
+
+    <select id="findByInvoiceId" resultMap="invoiceSummaryResultMap">
+        SELECT * FROM invoice WHERE invoice_id = #{invoiceId}
+    </select>
+
+    <select id="findByBookingId" resultMap="invoiceSummaryResultMap">
+        SELECT * FROM invoice WHERE booking_id = #{bookingId}
+    </select>
+
+    <select id="findAll" resultMap="invoiceSummaryResultMap">
+        SELECT * FROM invoice
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM invoice
+    </select>
+
+</mapper>
