@@ -47,7 +47,8 @@ class RouteDesignRequestKafkaIntegrationTest {
 
     @Container
     static final ConfluentKafkaContainer KAFKA =
-            new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+            new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"))
+                    .withReuse(true);
 
     @DynamicPropertySource
     static void kafkaProperties(DynamicPropertyRegistry registry) {
