@@ -81,7 +81,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | billingms: `Invoice` 集約（`invoiceId` を集約 ID、`bookingId` UNIQUE）+ `BillingStatus` enum（PENDING → CALCULATED → INVOICED → PAID / OVERDUE / CANCELLED）+ `TransportRecord` 値オブジェクト | 3h | - | [ ] |
+| 2.1 | billingms: `Invoice` 集約（`invoiceId` を集約 ID、`bookingId` UNIQUE）+ `BillingStatus` enum（PENDING → CALCULATED → INVOICED → PAID / OVERDUE / CANCELLED）+ `TransportRecord` 値オブジェクト | 3h | - | [x] |
 | 2.2 | billingms: `FareCalculator` ドメインサービス + `RateTable` 値オブジェクト（基本料金 = 重量 × 距離 × 貨物種別係数 + 荷役回数 × 取扱費）+ `HandlingSummary` 値オブジェクト | 3h | - | [ ] |
 | 2.3 | billingms: `CalculateInvoiceCommand`（DELIVERED 契機）ハンドラ + `InvoiceCalculatedEvent`。冪等化（`if (billingStatus != null) return;`）| 2h | - | [ ] |
 | 2.4 | billingms: ACL（cargoms から CargoDeliveredEvent サブスクライブ → `CalculateInvoiceCommand` 発火、ADR-0015）+ Routing ACL（routingms `confirmed_itinerary` を REST 経由参照、距離・港 ID 取得）+ Handling ACL（handlingms から荷役回数を REST 経由集計）| 4h | - | [ ] |
