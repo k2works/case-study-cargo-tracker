@@ -50,8 +50,8 @@ import static org.awaitility.Awaitility.await;
 )
 @ActiveProfiles("local-h2")
 @Testcontainers
-// IT5 既知事象（Kafka container race）の分離：check タスクから除外し
-// gradle :handlingms:kafkaTest で個別実行可能にする。IT6 で構造的解決予定。
+// IT7 T1 で Testcontainers Reusable 化により container race を構造的に解消。
+// 通常の `./gradlew check` で実行される（-PexcludeKafkaIntegration で除外可）。
 @org.junit.jupiter.api.Tag("kafka-integration")
 class HandlingActivityKafkaIntegrationTest {
 
