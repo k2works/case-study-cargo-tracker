@@ -1132,22 +1132,48 @@ public class ExternalCargoRoutingService {
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/tracking/{trackingNumber}` | 追跡情報照会（TrackingQuery） | UC15 |
-| `PUT` | `/api/v1/tracking/{trackingNumber}/status` | 貨物状態更新（UpdateTransportStatusCommand） | UC14 |
-| `POST` | `/api/v1/tracking/{trackingNumber}/exceptions` | 例外処理 | UC16 |
+| `GET` | `/api/v1/tracking` | 追跡管理一覧（page / size、TrackingQuery 投影、US17） | UC14 |
+| `GET` | `/api/v1/tracking/{trackingNumber}` | 追跡情報照会（TrackingSummary、US15）| UC15 |
+| `GET` | `/api/v1/tracking/{trackingNumber}/events` | 追跡履歴の時系列取得（US18）| UC15 |
+| `POST` | `/api/v1/tracking/{trackingNumber}/status` | 貨物状態の手動更新（UpdateTransportStatusCommand、US17）| UC14 |
+| `POST` | `/api/v1/tracking/{trackingNumber}/token` | 公開照会用 JWT 発行（TrackingTokenService、ADR-0013、US18、IT6 追加）| UC15 |
+| `POST` | `/api/v1/tracking/{trackingNumber}/exceptions` | 例外登録（RegisterTrackingExceptionCommand、DELAY/DAMAGE/LOSS、US19/US20、IT6 追加）| UC16 |
+| `PATCH` | `/api/v1/tracking/{trackingNumber}/exceptions/{exceptionId}/resolve` | 例外解決（ResolveTrackingExceptionCommand、US19/US20、IT6 追加）| UC16 |
+| `GET` | `/api/v1/tracking/{trackingNumber}/exceptions` | 追跡番号別 例外一覧（投影、US18/US19/US20、IT6 追加）| UC16 |
+| `GET` | `/api/v1/tracking/exceptions` | 全例外横断一覧（responseStatus フィルタ、S19 対応一覧用、US19/US20、IT6 追加）| UC16 |
+| `GET` | `/api/v1/public/tracking/{trackingNumber}?token=<JWT>` | 公開追跡照会（PublicTrackingTokenFilter で JWT 検証、permitAll、US18、IT6 追加）| UC15 |
+
+> **集約発火型の cross-service 出力（IT7 T2 / ADR-0012）**: `TrackingActivity.handle(UpdateTransportStatusCommand)` 内で
+> DELIVERED 遷移時に `CargoDeliveredEvent`（shared kernel）を **集約で直接 apply**。billingms の
+> `CrossCargoDeliveredEventHandler`（`@ProcessingGroup("cross-billing")`、ADR-0014/0015）が tracking event として
+> 購読し、`CalculateInvoiceCommand` を発火する。冪等化は Invoice 集約内 `if (billingStatus != null) return;` で担保。
 
 #### handlingms
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/handling` | 荷役作業の登録（RegisterHandlingActivityCommand） | UC13 |
+| `POST` | `/api/v1/handling` | 荷役作業の登録（RegisterHandlingActivityCommand、US15/US16）| UC13 |
+| `GET` | `/api/v1/handling` | 荷役作業履歴一覧（page / size / trackingNumber フィルタ、US15）| UC13 |
+| `GET` | `/api/v1/handling/{activityId}` | 荷役作業詳細 | UC13 |
 
-#### billingms
+#### billingms（IT7 新設、ADR-0015）
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/billing/{bookingId}/calculate` | 輸送料金算出（CalculateInvoiceCommand） | UC17 |
-| `POST` | `/api/v1/billing/{bookingId}/settlement` | 精算処理（SettleInvoiceCommand） | UC18 |
+| `POST` | `/api/v1/billing/invoices` | 輸送料金算出開始（手動契機、CalculateInvoiceCommand、US21）。通常は `CargoDeliveredEvent` で自動契機 | UC17 |
+| `GET` | `/api/v1/billing/invoices` | 請求一覧（billing_status / date range / page / size フィルタ、US23）| UC18 |
+| `GET` | `/api/v1/billing/invoices/{invoiceId}` | 請求詳細（invoice + invoice_line + payment 履歴、US21/US23）| UC17, UC18 |
+| `POST` | `/api/v1/billing/invoices/{invoiceId}/discount` | 法人割引適用（ApplyDiscountCommand、CorporateDiscountPolicy、US22）| UC17 |
+| `PATCH` | `/api/v1/billing/invoices/{invoiceId}/adjust` | 例外時補償の追加（AdjustInvoiceCommand、invoice_line に ADJUSTMENT 行、US21）| UC17 |
+| `POST` | `/api/v1/billing/invoices/{invoiceId}/issue` | 精算書発行（IssueInvoiceCommand、invoice_number 採番 + payment_due 確定、INVOICED 遷移、US23）| UC18 |
+| `POST` | `/api/v1/billing/invoices/{invoiceId}/payments` | 入金記録（RecordPaymentCommand、PAID 遷移 + `PaymentRecordedEvent` 集約発火、US23）| UC18 |
+| `GET` | `/api/v1/billing/invoices/overdue` | 督促対象一覧（OverdueScheduler が `MarkOverdueCommand` で更新した OVERDUE 状態、US23）| UC18 |
+
+> **cross-service 連携（ADR-0015）**: (1) cargoms → billingms は `CargoDeliveredEvent` を `@ProcessingGroup("cross-billing")`
+> で購読 + `CalculateInvoiceCommand` 発火。(2) ShipperInfo は bookingms の `GET /api/v1/shippers/{shipperId}` を **REST 同期参照**、
+> `RestShipperInfoAcl`（Resilience4j circuit breaker + Caffeine cache TTL 5min + 手動入力 fallback）で耐障害化。
+> (3) billingms → bookingms は `PaymentRecordedEvent` を `CrossBillingPaymentHandler`（`@ProcessingGroup("cross-booking-billing")`）で
+> 購読し Cargo を SETTLED に遷移。
 
 ## セキュリティ設計
 

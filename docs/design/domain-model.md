@@ -682,6 +682,8 @@ class TrackingException <<Entity>> {
   - description: String
   - responseStatus: ResponseStatus
   - resolution: String
+  - resolvedAt: LocalDateTime
+  - escalated: boolean
 }
 
 class TrackingExceptionId <<Value Object>>
@@ -709,8 +711,8 @@ class TransportStatusTransition <<Domain Service>> {
 }
 
 interface TrackingTokenService <<Domain Service>> {
-  + issue(trackingNumber: TrackingNumber, deliveredAt: LocalDateTime): JwtToken
-  + verify(token: String, deliveredAt: LocalDateTime): VerifiedToken
+  + issue(trackingNumber: TrackingNumber, subjectId: String, role: TokenRole, deliveredAt: LocalDateTime): JwtToken
+  + verify(token: String, expectedTrackingNumber: TrackingNumber): VerifiedToken
 }
 
 class JwtToken <<Value Object>> {
@@ -721,7 +723,14 @@ class JwtToken <<Value Object>> {
 
 class VerifiedToken <<Value Object>> {
   - trackingNumber: TrackingNumber
+  - subjectId: String
+  - role: TokenRole
   - expiresAt: LocalDateTime
+}
+
+enum TokenRole {
+  SHIPPER
+  CONSIGNEE
 }
 
 TrackingActivity *-- TrackingNumber

@@ -541,6 +541,7 @@ entity "tracking_summary" as ts {
   misrouted: BOOLEAN NOT NULL DEFAULT FALSE
   last_event_at: TIMESTAMPTZ
   delivered_at: TIMESTAMPTZ          ' 配送完了時刻（JWT 有効期限計算に使用: ADR-0013）
+  delivered_published_at: TIMESTAMPTZ ' DEPRECATED IT7 T2: 集約発火型移行で SQL 操作は廃止。列とマイグレーション V3 は既存データ互換とロールバック用に温存
   created_at: TIMESTAMPTZ
   updated_at: TIMESTAMPTZ
   version: BIGINT
