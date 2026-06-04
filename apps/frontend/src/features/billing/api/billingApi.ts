@@ -98,6 +98,20 @@ export async function calculateInvoice(
   return res.json();
 }
 
+/**
+ * 法人割引適用（US22、S23 「割引を適用」ボタン押下時）。
+ *
+ * <p>Invoice 集約が ShipperInfoAcl から契約を取得し CorporateDiscountPolicy で
+ * 割引額を算出する。CALCULATED 状態でのみ受理（それ以外は 422）。</p>
+ */
+export async function applyDiscount(invoiceId: string): Promise<void> {
+  const res = await fetch(`/api/v1/billing/invoices/${invoiceId}/discount`, {
+    method: 'POST',
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('法人割引適用に失敗しました');
+}
+
 /** BillingStatus → 日本語ラベル変換（S23 / S22 表示用）。 */
 export function billingStatusLabel(status: BillingStatus): string {
   switch (status) {

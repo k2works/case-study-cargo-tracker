@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+  applyDiscount,
   billingStatusLabel,
   fetchInvoice,
   invoiceLineTypeLabel,
@@ -20,6 +21,8 @@ export default function InvoiceDetailPage() {
   const { invoiceId = '' } = useParams<{ invoiceId: string }>();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [error, setError] = useState<'NOT_FOUND' | 'OTHER' | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +42,18 @@ export default function InvoiceDetailPage() {
     return () => {
       cancelled = true;
     };
+  }, [invoiceId, reloadKey]);
+
+  const handleApplyDiscount = useCallback(async () => {
+    setApplying(true);
+    try {
+      await applyDiscount(invoiceId);
+      setReloadKey((k) => k + 1);
+    } catch {
+      setError('OTHER');
+    } finally {
+      setApplying(false);
+    }
   }, [invoiceId]);
 
   if (error === 'NOT_FOUND') {
@@ -63,6 +78,11 @@ export default function InvoiceDetailPage() {
     );
   }
 
+  const discountAmountNum = Number(invoice.discountAmount);
+  const hasDiscount = !Number.isNaN(discountAmountNum) && discountAmountNum > 0;
+  const canApplyDiscount =
+    invoice.billingStatus === 'CALCULATED' && !hasDiscount && !applying;
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
       <h1 className="text-2xl font-bold mb-4">
@@ -74,7 +94,14 @@ export default function InvoiceDetailPage() {
         <dd>{invoice.bookingId}</dd>
 
         <dt className="text-gray-600">荷主 ID</dt>
-        <dd>{invoice.shipperId}</dd>
+        <dd>
+          {invoice.shipperId}
+          {hasDiscount && (
+            <span className="ml-2 rounded bg-green-100 px-2 py-0.5 text-green-800 text-xs">
+              割引適用済
+            </span>
+          )}
+        </dd>
 
         <dt className="text-gray-600">状態</dt>
         <dd>
@@ -104,6 +131,46 @@ export default function InvoiceDetailPage() {
           </>
         )}
       </section>
+
+      {hasDiscount && (
+        <section className="mb-6 rounded border border-green-200 bg-green-50 p-3 text-sm">
+          <h2 className="font-semibold text-green-800 mb-2">割引前後の対比</h2>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <p className="text-xs text-gray-600">割引前（basic_amount）</p>
+              <p className="font-bold">{formatAmount(invoice.basicAmount)} {invoice.currency}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600">割引額</p>
+              <p className="font-bold text-red-600">
+                -{formatAmount(invoice.discountAmount)} {invoice.currency}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600">割引後（total_amount）</p>
+              <p className="font-bold text-green-700">
+                {formatAmount(invoice.totalAmount)} {invoice.currency}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {canApplyDiscount && (
+        <section className="mb-6">
+          <button
+            type="button"
+            onClick={handleApplyDiscount}
+            disabled={applying}
+            className="rounded bg-blue-600 px-4 py-2 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+          >
+            {applying ? '適用中…' : '割引を適用（法人荷主のみ）'}
+          </button>
+          <p className="mt-2 text-xs text-gray-500">
+            ※ ShipperInfoAcl で荷主契約を取得し CorporateDiscountPolicy で算出します。INDIVIDUAL 荷主の場合は割引額 0 で確定します。
+          </p>
+        </section>
+      )}
 
       <section className="mb-6">
         <h2 className="text-lg font-semibold mb-2">料金内訳</h2>

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as billingApi from '../api/billingApi';
 import InvoiceDetailPage from './InvoiceDetailPage';
@@ -11,6 +12,7 @@ vi.mock('../api/billingApi', async () => {
   return {
     ...actual,
     fetchInvoice: vi.fn(),
+    applyDiscount: vi.fn(),
   };
 });
 
@@ -108,7 +110,8 @@ describe('InvoiceDetailPage (S23)', () => {
     });
     expect(screen.getByText(/法人割引（-10%）/)).toBeInTheDocument();
     expect(screen.getByText('割引')).toBeInTheDocument();
-    expect(screen.getByText(/-10,000/)).toBeInTheDocument();
+    // -10,000 は明細行と割引前後対比の 2 箇所に出現
+    expect(screen.getAllByText(/-10,000/).length).toBeGreaterThanOrEqual(1);
   });
 
   it('US23: INVOICED 状態では invoiceNumber と paymentDue を表示する', async () => {
@@ -150,5 +153,98 @@ describe('InvoiceDetailPage (S23)', () => {
     renderPage('INV-20260820-0001');
 
     expect(screen.getByText(/読み込み中/)).toBeInTheDocument();
+  });
+
+  // --- IT7 Task 3.4: 割引適用 ---
+
+  it('US22: CALCULATED かつ discountAmount=0 のとき「割引を適用」ボタンを表示', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(calculatedInvoice);
+
+    renderPage('INV-20260820-0001');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /割引を適用/ })).toBeInTheDocument();
+    });
+  });
+
+  it('US22: 割引適用済（discountAmount>0）は「割引適用済」バッジを表示しボタンは非表示', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(invoicedInvoice);
+
+    renderPage('INV-20260815-0007');
+
+    await waitFor(() => {
+      expect(screen.getByText(/割引適用済/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /割引を適用/ })).not.toBeInTheDocument();
+  });
+
+  it('US22: INVOICED 以降は CALCULATED でないため「割引を適用」ボタン非表示', async () => {
+    const invoicedNoDiscount: billingApi.Invoice = {
+      ...calculatedInvoice,
+      billingStatus: 'INVOICED',
+      invoiceNumber: 'INV-20260820-0001',
+      paymentDue: '2026-09-19',
+    };
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(invoicedNoDiscount);
+
+    renderPage('INV-20260820-0001');
+
+    await waitFor(() => {
+      expect(screen.getByText(/発行済/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /割引を適用/ })).not.toBeInTheDocument();
+  });
+
+  it('US22: 割引適用ボタン押下で applyDiscount API を呼び再フェッチする', async () => {
+    const user = userEvent.setup();
+
+    // 1 回目: discount なし → ボタン表示
+    // 2 回目: discount 適用済（押下後の再フェッチ）
+    vi.mocked(billingApi.fetchInvoice)
+      .mockResolvedValueOnce(calculatedInvoice)
+      .mockResolvedValueOnce({
+        ...calculatedInvoice,
+        discountAmount: '49500',
+        totalAmount: '280500',
+        lines: [
+          ...calculatedInvoice.lines,
+          {
+            lineSeq: 2,
+            lineType: 'DISCOUNT',
+            description: '法人割引（15%）',
+            amount: '-49500',
+            reasonCode: 'CORPORATE',
+          },
+        ],
+      });
+    vi.mocked(billingApi.applyDiscount).mockResolvedValue();
+
+    renderPage('INV-20260820-0001');
+
+    const button = await screen.findByRole('button', { name: /割引を適用/ });
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(billingApi.applyDiscount).toHaveBeenCalledWith('INV-20260820-0001');
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/割引適用済/)).toBeInTheDocument();
+    });
+  });
+
+  it('US22: 割引適用済 invoice は basicAmount → discountAmount → totalAmount の対比を表示', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(invoicedInvoice);
+
+    renderPage('INV-20260815-0007');
+
+    await waitFor(() => {
+      expect(screen.getByText(/割引前後の対比/)).toBeInTheDocument();
+    });
+    // basicAmount = 160,000
+    expect(screen.getAllByText(/160,000/).length).toBeGreaterThanOrEqual(1);
+    // discountAmount = 10,000（割引表示、明細行 + 割引前後対比に出現）
+    expect(screen.getAllByText(/-10,000/).length).toBeGreaterThanOrEqual(1);
+    // totalAmount = 150,000（割引後）
+    expect(screen.getAllByText(/150,000/).length).toBeGreaterThanOrEqual(1);
   });
 });
