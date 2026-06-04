@@ -1,9 +1,16 @@
 package com.example.billingms.domain.model;
 
+import com.example.billingms.domain.commands.CalculateInvoiceCommand;
+import com.example.billingms.domain.events.InvoiceCalculatedEvent;
+import com.example.billingms.domain.services.FareCalculator;
+import org.axonframework.commandhandling.CommandHandler;
+import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
+import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -25,12 +32,12 @@ import java.time.LocalDateTime;
  *   <li>{@link BillingStatus#CANCELLED} 状態の Invoice は再発行不可（新規 Invoice を発行する）</li>
  * </ul>
  *
- * <p><strong>本クラスは IT7 Task 2.1 で骨格のみ実装。Command Handler と
- * EventSourcingHandler は Task 2.3（CalculateInvoiceCommand）/ Task 3.x（ApplyDiscount）/
- * Task 4.x（IssueInvoice / RecordPayment / MarkOverdue）で順次追加する。</strong></p>
+ * <p>IT7 Task 2.3 で CalculateInvoiceCommand 受理（PENDING → CALCULATED 遷移）を実装。
+ * ApplyDiscountCommand / IssueInvoiceCommand / RecordPaymentCommand / MarkOverdueCommand は
+ * Task 3.x / 4.x で順次追加する。</p>
  */
 @Aggregate
-@SuppressWarnings("unused") // フィールドは Task 2.3 以降の @CommandHandler / @EventSourcingHandler で利用
+@SuppressWarnings("unused") // フィールドは Task 3.x / 4.x の Command Handler で利用
 public class Invoice {
 
     @AggregateIdentifier
@@ -49,5 +56,50 @@ public class Invoice {
 
     protected Invoice() {
         // Axon required no-arg constructor
+    }
+
+    /**
+     * 輸送料金算出（PENDING → CALCULATED）。{@code CargoDeliveredEvent} 起点で
+     * {@code CrossCargoDeliveredEventHandler}（Task 2.4）が本コマンドを発行する。
+     *
+     * <p>不変条件検証 → FareCalculator で basicAmount 算出 →
+     * {@link InvoiceCalculatedEvent} を apply（ADR-0012 集約発火型）。</p>
+     */
+    @CommandHandler
+    public Invoice(CalculateInvoiceCommand command, FareCalculator fareCalculator, Clock clock) {
+        if (command.invoiceId() == null || command.invoiceId().isBlank()) {
+            throw new IllegalArgumentException("invoiceId は必須です");
+        }
+        if (command.bookingId() == null || command.bookingId().isBlank()) {
+            throw new IllegalArgumentException("bookingId は必須です");
+        }
+        if (command.shipperId() == null || command.shipperId().isBlank()) {
+            throw new IllegalArgumentException("shipperId は必須です");
+        }
+        if (command.transport() == null) {
+            throw new IllegalArgumentException("transport は必須です");
+        }
+        BigDecimal basicAmount = fareCalculator.calculate(command.transport());
+        AggregateLifecycle.apply(new InvoiceCalculatedEvent(
+                command.invoiceId(),
+                command.bookingId(),
+                command.shipperId(),
+                basicAmount,
+                command.transport().currency(),
+                LocalDateTime.now(clock)
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(InvoiceCalculatedEvent event) {
+        this.invoiceId = event.invoiceId();
+        this.bookingId = event.bookingId();
+        this.shipperId = event.shipperId();
+        this.basicAmount = event.basicAmount();
+        this.discountAmount = BigDecimal.ZERO;
+        this.adjustmentAmount = BigDecimal.ZERO;
+        this.totalAmount = event.basicAmount();
+        this.currency = event.currency();
+        this.billingStatus = BillingStatus.CALCULATED;
     }
 }
