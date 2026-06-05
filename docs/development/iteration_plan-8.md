@@ -30,6 +30,20 @@
 | CI 検知 | ArchUnit 1.5+ アップグレード + DSL 統一 | 2h | retrospective-7 T10 |
 | ADR | ADR-0020 決済機関 webhook 選定 起票 | 2h | Stripe / GMO の評価、IT9 着手前準備 |
 
+### 追加スコープ（IT7 完了時 IT8 マーカー棚卸し結果、SP 外）
+
+| カテゴリ | 項目 | 規模 | 根拠（IT8 マーカー所在）|
+|---------|------|------|------|
+| セキュリティ統合 | 全サービス Spring Security 統一（`@PreAuthorize` + SecurityFilterChain）| 3h | InvoiceController L31 / 各 Controller 認可未実装 |
+| セキュリティ統合 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合 | 1h | PublicTrackingTokenFilter L27 |
+| 鍵運用 | trackingms 公開トークン鍵を AWS Secrets Manager + 四半期ローテーション | 2h | trackingms `application.yml` L32 |
+| ドメインロジック拡張 | OptimalRouteService の Dijkstra/A* 移行（多段経由・大量航海対応）| 3h | OptimalRouteService L33 |
+| 設定駆動拡張 | RateTable の運用設定 DB 移行（経理担当者が料金改定可能）| 2h | BillingCommonConfig L21 / RateTableTest L65 |
+| 設定駆動拡張 | BillingProperties paymentDueDays を Map<ShipperType, Integer> に拡張（NET30/60/90）| 1h | BillingProperties L8 / application.yml L24 |
+| アーキ整合 | handlingms outbound publisher の集約発火型移行（ArchUnit 除外解消）| 2h | HandlingArchitectureTest L81 |
+
+合計追加: 14h（SP 外、本番デプロイ準備の一部として IT8 内に取り込み）
+
 ### スコープ外（IT9 以降）
 
 - 部分入金対応（PartialPaymentRecorded、UI/API 拡張）
@@ -95,7 +109,14 @@
 |---|--------|---------|------|------|
 | 1.1 | ArchUnit 1.5+ アップグレード（libs.versions.toml + 5 サービス ArchUnit テスト DSL 統一） | 2h | - | [ ] |
 | 1.2 | ADR-0016 全 10 グループ一斉改名 + token 移行手順実行（local-h2 / local-docker / Heroku 本番）| 6h | - | [ ] |
-| 1.3 | TDD Red/Green/Refactor 分離コミット運用ルール文書化（開発ガイド追記）| 0.5h | - | [ ] |
+| 1.3 | TDD Red/Green/Refactor 分離コミット運用ルール文書化（開発ガイド追記）| 0.5h | - | [x] | <!-- IT7 内文書化済（commit 4afd7c05）、pre-commit hook 実装は本タスクで -->
+| 1.4 | 全サービス Spring Security 統一（@PreAuthorize + SecurityFilterChain、IT8 マーカー棚卸し）| 3h | - | [ ] |
+| 1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合 | 1h | - | [ ] |
+| 1.6 | trackingms 公開トークン鍵を AWS Secrets Manager + 四半期ローテーション | 2h | - | [ ] |
+| 1.7 | OptimalRouteService の Dijkstra/A* 移行（多段経由・大量航海対応）| 3h | - | [ ] |
+| 1.8 | RateTable の運用設定 DB 移行（経理担当者が料金改定可能）| 2h | - | [ ] |
+| 1.9 | BillingProperties paymentDueDays を Map<ShipperType, Integer> に拡張 | 1h | - | [ ] |
+| 1.10 | handlingms outbound publisher の集約発火型移行（ArchUnit 除外解消）| 2h | - | [ ] |
 
 ### 2. A1 ShedLock 統合
 
@@ -139,13 +160,18 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|---------|------|
-| 基盤改善・移行 | - | 8.5h | [ ] |
+| 基盤改善・移行（1.1-1.3）| - | 8.5h | [-] |
+| IT8 マーカー棚卸し追加（1.4-1.10）| - | 14h | [ ] |
 | A1 ShedLock | 1 | 3h | [ ] |
 | A2 SendGrid | 2 | 4h | [ ] |
 | A3 RestShipperInfoAcl | 2 | 4h | [ ] |
 | A4 PaymentDetailRecorded | 2 | 4h | [ ] |
 | ADR-0020 + 仕上げ | 1 | 5h | [ ] |
-| **合計** | **8** | **28.5h** | |
+| **合計** | **8** | **42.5h** | |
+
+**注**: 1.4-1.10 は IT7 完了時点のコード IT8 マーカー棚卸しで発見した追加項目（14h）。
+本番デプロイ準備の一部として SP 外で IT8 内に取り込み。総工数は 28.5h → 42.5h に増加するが、
+ストーリーポイント自体は変動なし（IT8 のスコープは「本番デプロイ可能な状態」と定義）。
 
 **進捗率**: 0%（0/8 SP）— IT8 着手前
 
