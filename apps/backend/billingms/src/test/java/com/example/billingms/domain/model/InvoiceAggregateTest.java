@@ -9,6 +9,7 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PaymentDetailRecorded;
 import com.example.shared.events.PaymentRecordedEvent;
 import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
@@ -442,16 +443,24 @@ class InvoiceAggregateTest {
                                 FIXED_NOW))
                 .when(command)
                 .expectSuccessfulHandlerExecution()
-                .expectEvents(new PaymentRecordedEvent(
-                        "INV-P01",
-                        "PAY-001",
-                        "B-P01",
-                        "S-P01",
-                        new BigDecimal("330000"),
-                        "JPY",
-                        paidAt,
-                        FIXED_NOW
-                ));
+                .expectEvents(
+                        new PaymentRecordedEvent(
+                                "INV-P01",
+                                "PAY-001",
+                                "B-P01",
+                                "S-P01",
+                                new BigDecimal("330000"),
+                                "JPY",
+                                paidAt,
+                                FIXED_NOW
+                        ),
+                        // IT8 T5.1 / ADR-0019: paymentMethod 非 null のため補完 event が連続 apply される
+                        new PaymentDetailRecorded(
+                                "INV-P01",
+                                "PAY-001",
+                                "BANK_TRANSFER",
+                                null
+                        ));
     }
 
     @Test
@@ -474,6 +483,75 @@ class InvoiceAggregateTest {
                         new InvoiceOverdueEvent("INV-P02", "S-P02", FIXED_NOW))
                 .when(command)
                 .expectSuccessfulHandlerExecution();
+    }
+
+    @Test
+    @DisplayName("IT8 T5.1 / ADR-0019: paymentMethod / externalReference 両方 null なら PaymentDetailRecorded は apply されない")
+    void IT8_T51_詳細情報なしならPaymentDetailRecordedは発火しない() {
+        LocalDateTime paidAt = LocalDateTime.of(2026, 9, 15, 14, 30);
+        RecordPaymentCommand command = new RecordPaymentCommand(
+                "INV-P-NULL", "PAY-NULL",
+                new BigDecimal("330000"), "JPY", paidAt,
+                null, null);
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-P-NULL", "B-P-NULL", "S-P-NULL",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-P-NULL", "S-P-NULL",
+                                "INV-20260820-0009",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new PaymentRecordedEvent(
+                        "INV-P-NULL",
+                        "PAY-NULL",
+                        "B-P-NULL",
+                        "S-P-NULL",
+                        new BigDecimal("330000"),
+                        "JPY",
+                        paidAt,
+                        FIXED_NOW
+                ));
+    }
+
+    @Test
+    @DisplayName("IT8 T5.1 / ADR-0019: externalReference のみ指定でも PaymentDetailRecorded が apply される")
+    void IT8_T51_externalReferenceのみでも補完event発火() {
+        LocalDateTime paidAt = LocalDateTime.of(2026, 9, 15, 14, 30);
+        RecordPaymentCommand command = new RecordPaymentCommand(
+                "INV-P-EXT", "PAY-EXT",
+                new BigDecimal("330000"), "JPY", paidAt,
+                null, "TXN-2026-0001");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-P-EXT", "B-P-EXT", "S-P-EXT",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-P-EXT", "S-P-EXT",
+                                "INV-20260820-0010",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new PaymentRecordedEvent(
+                                "INV-P-EXT",
+                                "PAY-EXT",
+                                "B-P-EXT",
+                                "S-P-EXT",
+                                new BigDecimal("330000"),
+                                "JPY",
+                                paidAt,
+                                FIXED_NOW
+                        ),
+                        new PaymentDetailRecorded(
+                                "INV-P-EXT",
+                                "PAY-EXT",
+                                null,
+                                "TXN-2026-0001"
+                        ));
     }
 
     @Test

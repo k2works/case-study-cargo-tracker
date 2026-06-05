@@ -40,4 +40,12 @@
         ORDER BY paid_at
     </select>
 
+    <!-- IT8 T5.1 / ADR-0019: PaymentDetailRecorded 受信時に payment_method / external_reference を補完 -->
+    <update id="updatePaymentDetail">
+        UPDATE payment
+           SET payment_method     = #{paymentMethod},
+               external_reference = #{externalReference}
+         WHERE payment_id = #{paymentId}
+    </update>
+
 </mapper>

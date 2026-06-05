@@ -30,4 +30,12 @@ public interface PaymentMapper {
 
     /** invoiceId 単位の入金履歴（時系列）。S23 詳細画面・S22 一覧の支払履歴で利用。 */
     List<Payment> findByInvoiceId(@Param("invoiceId") String invoiceId);
+
+    /**
+     * PaymentDetailRecorded 受信時の補完 UPDATE（IT8 T5.1 / ADR-0019）。
+     * paymentMethod / externalReference を後段で反映する。
+     */
+    int updatePaymentDetail(@Param("paymentId") String paymentId,
+                            @Param("paymentMethod") String paymentMethod,
+                            @Param("externalReference") String externalReference);
 }

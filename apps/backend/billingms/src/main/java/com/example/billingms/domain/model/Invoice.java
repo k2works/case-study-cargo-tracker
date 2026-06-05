@@ -239,6 +239,16 @@ public class Invoice {
                 command.paidAt(),
                 LocalDateTime.now(clock)
         ));
+        // IT8 T5.1 / ADR-0019: 内部 event で payment_method / external_reference を補完。
+        // paymentMethod / externalReference のいずれかが非 null の場合のみ apply（無用な投影 UPDATE 回避）
+        if (command.paymentMethod() != null || command.externalReference() != null) {
+            AggregateLifecycle.apply(new com.example.billingms.domain.events.PaymentDetailRecorded(
+                    this.invoiceId,
+                    command.paymentId(),
+                    command.paymentMethod(),
+                    command.externalReference()
+            ));
+        }
     }
 
     /**

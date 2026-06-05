@@ -5,6 +5,7 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PaymentDetailRecorded;
 import com.example.billingms.domain.model.BillingStatus;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceLineMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceSummaryMapper;
@@ -118,5 +119,18 @@ public class InvoiceProjection {
     /** INVOICED → OVERDUE：billing_status のみ更新。 */
     public void apply(InvoiceOverdueEvent event) {
         summaryMapper.updateForOverdue(event.invoiceId());
+    }
+
+    /**
+     * IT8 T5.1 / ADR-0019: PaymentDetailRecorded 受信時に payment テーブルの
+     * payment_method / external_reference を補完 UPDATE する。shared
+     * PaymentRecordedEvent → INSERT（method/ref は null）の後に本 event が同 paymentId で UPDATE する。
+     */
+    public void apply(PaymentDetailRecorded event) {
+        paymentMapper.updatePaymentDetail(
+                event.paymentId(),
+                event.paymentMethod(),
+                event.externalReference()
+        );
     }
 }

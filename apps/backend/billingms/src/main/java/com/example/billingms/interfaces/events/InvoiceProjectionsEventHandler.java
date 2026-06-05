@@ -5,6 +5,7 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PaymentDetailRecorded;
 import com.example.shared.events.PaymentRecordedEvent;
 import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
@@ -67,5 +68,17 @@ public class InvoiceProjectionsEventHandler {
         projection.apply(event);
         log.info("[local-billing] Invoice 督促投影 invoiceId={} markedAt={}",
                 event.invoiceId(), event.markedAt());
+    }
+
+    /**
+     * IT8 T5.1 / ADR-0019: 内部 PaymentDetailRecorded を受信して
+     * payment_method / external_reference を補完 UPDATE する。
+     */
+    @EventHandler
+    public void on(PaymentDetailRecorded event) {
+        projection.apply(event);
+        log.info("[local-billing] PaymentDetail 投影 invoiceId={} paymentId={} method={} ref={}",
+                event.invoiceId(), event.paymentId(),
+                event.paymentMethod(), event.externalReference());
     }
 }

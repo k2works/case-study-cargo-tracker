@@ -5,6 +5,7 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PaymentDetailRecorded;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceLineMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceSummaryMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.PaymentMapper;
@@ -120,5 +121,17 @@ class InvoiceProjectionTest {
         projection.apply(event);
 
         verify(summaryMapper).updateForOverdue("INV-001");
+    }
+
+    @Test
+    @DisplayName("IT8 T5.1 / ADR-0019: PaymentDetailRecorded → updatePaymentDetail 呼出（method + ref）")
+    void paymentDetailRecorded() {
+        PaymentDetailRecorded event = new PaymentDetailRecorded(
+                "INV-001", "PAY-001", "BANK_TRANSFER", "TXN-2026-0001");
+
+        projection.apply(event);
+
+        verify(paymentMapper).updatePaymentDetail(
+                "PAY-001", "BANK_TRANSFER", "TXN-2026-0001");
     }
 }
