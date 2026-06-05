@@ -126,7 +126,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | ArchUnit 1.4.0 → 1.4.2 アップグレード（JDK 25 完全サポート、commit 38168422、libs.versions.toml + 5 サービス ArchUnit テスト DSL 統一）| 2h | - | [x] |
-| 1.2 | ADR-0016 全 10 グループ一斉改名 + token 移行手順実行（local-h2 / local-docker / Heroku 本番）| 6h | - | [ ] |
+| 1.2 | ADR-0016 全 9 グループ一斉改名 + tokenentry 移行 SQL（4 サービス Flyway V_）+ ArchUnit hard assertion 化（commit 08843a14、local-h2 / local-docker 移行検証済、Heroku 本番は ADR-0016 §3 手順）| 6h | - | [x] |
 | 1.3 | TDD Red/Green/Refactor 分離コミット運用ルール文書化（開発ガイド追記）| 0.5h | - | [x] | <!-- IT7 内文書化済（commit 4afd7c05）、pre-commit hook 実装は本タスクで -->
 | 1.4 | 全サービス Spring Security 統一（@PreAuthorize + SecurityFilterChain、IT8 マーカー棚卸し）| 3h | - | [ ] |
 | 1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合 | 1h | - | [ ] |
