@@ -3,18 +3,21 @@ package com.example.billingms.infrastructure.outboundservices.notification;
 import com.example.billingms.application.outboundservices.notification.NotificationAcl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * {@link NotificationAcl} のスタブ実装（US23、IT7 T4.4）。
+ * {@link NotificationAcl} のスタブ実装（US23、IT7 T4.4 / IT8 T3.2）。
  *
- * <p>実メール送信は IT8 で SendGrid 統合（ADR-0018）に切替予定。本実装は INFO/WARN
- * レベルのログ出力のみを行い、通知トリガーの到達性をテストで担保できるようにする。</p>
+ * <p>IT8 T3.2 で {@code SendGridNotificationAcl} を追加。{@code @ConditionalOnMissingBean}
+ * で SendGrid 実装が登録された場合は本クラスを非生成にする。デフォルト
+ * （{@code notification.adapter=logging}）では本クラスが使われる。</p>
  */
 @Component
+@ConditionalOnMissingBean(name = "sendGridNotificationAcl")
 public class LoggingNotificationAcl implements NotificationAcl {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingNotificationAcl.class);

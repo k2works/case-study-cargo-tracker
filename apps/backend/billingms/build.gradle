@@ -37,6 +37,9 @@ dependencies {
     implementation libs.shedlock.spring
     implementation libs.shedlock.provider.jdbc.template
 
+    // 通知（IT8 T3.2 / ADR-0018、SendGrid Dynamic Templates）
+    implementation libs.sendgrid.java
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
 

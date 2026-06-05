@@ -29,6 +29,20 @@ billing:
     zone: "Asia/Tokyo"
   discountDescription: "法人割引（%d%%）"
 
+# 通知設定（IT8 T3.2 / ADR-0018）
+# adapter: logging（デフォルト、INFO/WARN ログ出力スタブ）
+#        | sendgrid（本番、SendGrid Dynamic Templates 経由でメール送信）
+notification:
+  adapter: ${NOTIFICATION_ADAPTER:logging}
+  sendgrid:
+    apiKey: ${SENDGRID_API_KEY:}
+    fromEmail: ${SENDGRID_FROM_EMAIL:noreply@cargo-tracker.example.com}
+    fromName: ${SENDGRID_FROM_NAME:Cargo Tracker}
+    templates:
+      invoiceIssued: ${SENDGRID_TEMPLATE_INVOICE_ISSUED:}
+      paymentReceived: ${SENDGRID_TEMPLATE_PAYMENT_RECEIVED:}
+      overdue: ${SENDGRID_TEMPLATE_OVERDUE:}
+
 # Axon 共通設定（プロファイル別に上書き）
 axon:
   serializer:
