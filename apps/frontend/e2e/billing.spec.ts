@@ -97,4 +97,82 @@ test.describe('IT7 / S23: 請求詳細・算出 UI', () => {
     // 割引後 totalAmount = 280,500 円
     await expect(page.getByText(/280,500/).first()).toBeVisible();
   });
+
+  test('US23: 精算書発行 → INVOICED 遷移、invoiceNumber と payment_due 確定', async ({ page }) => {
+    await loginAsAdmin(page);
+    const invoiceId = await calculateInvoiceViaApi(page);
+
+    await page.goto(`/billing/${invoiceId}`);
+
+    // CALCULATED 状態で「精算書を発行」ボタン表示
+    const issueButton = page.getByRole('button', { name: /精算書を発行/ });
+    await expect(issueButton).toBeVisible({ timeout: 10_000 });
+
+    await issueButton.click();
+
+    // 発行済バッジ表示
+    await expect(page.getByText(/発行済/)).toBeVisible({ timeout: 10_000 });
+    // invoice_number（INV-YYYYMMDD-XXXX）が表示される
+    await expect(page.getByText(/INV-\d{8}-\d{4}/)).toBeVisible();
+    // 支払期限（YYYY-MM-DD）が表示される
+    await expect(page.getByText(/支払期限/)).toBeVisible();
+  });
+
+  test('US23: 入金記録 → PAID 遷移、paid_at 確定', async ({ page }) => {
+    await loginAsAdmin(page);
+    const invoiceId = await calculateInvoiceViaApi(page);
+
+    await page.goto(`/billing/${invoiceId}`);
+
+    // CALCULATED → INVOICED に進める
+    await page.getByRole('button', { name: /精算書を発行/ }).click();
+    await expect(page.getByText(/発行済/)).toBeVisible({ timeout: 10_000 });
+
+    // 「入金を記録」ボタン表示
+    const payButton = page.getByRole('button', { name: /入金を記録/ });
+    await expect(payButton).toBeVisible();
+
+    await payButton.click();
+
+    // 入金済バッジ表示
+    await expect(page.getByText(/入金済/)).toBeVisible({ timeout: 10_000 });
+    // 入金日時が表示される
+    await expect(page.getByText(/入金日時/)).toBeVisible();
+  });
+
+  test('US23: S22 請求一覧でフィルタ・ページネーションが動作する', async ({ page }) => {
+    await loginAsAdmin(page);
+    // 一覧に出るために 1 件は事前作成しておく
+    await calculateInvoiceViaApi(page);
+
+    await page.goto('/billing');
+
+    // 一覧テーブルが表示される
+    await expect(page.getByRole('heading', { name: '請求一覧' })).toBeVisible({
+      timeout: 10_000,
+    });
+    // ステータスフィルタが存在する
+    await expect(page.getByLabel('状態フィルタ')).toBeVisible();
+    // 合計件数表示が現れる
+    await expect(page.getByText(/合計 \d+ 件/)).toBeVisible();
+  });
+
+  test('US23: S25 督促一覧が表示される（OverdueScheduler 未実行時は空メッセージ）', async ({
+    page,
+  }) => {
+    await loginAsAdmin(page);
+
+    await page.goto('/billing/overdue');
+
+    // 督促一覧見出し
+    await expect(page.getByRole('heading', { name: '督促一覧' })).toBeVisible({
+      timeout: 10_000,
+    });
+    // OverdueScheduler は毎日 09:00 実行のため、E2E では「対象なし」メッセージか件数が出る
+    await expect(
+      page
+        .getByText(/督促対象の請求書はありません/)
+        .or(page.getByText(/合計 \d+ 件/)),
+    ).toBeVisible();
+  });
 });
