@@ -41,3 +41,12 @@ logging:
     com.example.billingms: INFO
     org.axonframework: WARN
     root: WARN
+
+# billing パラメータの上書き（IT7 review 中対応で外部化）。
+# Heroku Config Vars で以下を設定すると application.yml デフォルトを上書き可能:
+#   - BILLING_PAYMENTDUEDAYS=60                            # NET60 支払サイト
+#   - BILLING_OVERDUE_CRON="0 0 10 * * *"                   # 毎日 10:00 に変更
+#   - BILLING_OVERDUE_ZONE="America/New_York"               # 米国本番運用時
+#   - BILLING_DISCOUNTDESCRIPTION="Corporate discount (%d%%)" # 英語通知用
+# IT8 ADR-0017 ShedLock 統合時は web=2 で BILLING_OVERDUE_CRON 一時停止（"-"）も検討可。
+# IT8 ADR-0018 SendGrid 統合時は notification.adapter=sendgrid + テンプレート ID を追加。
