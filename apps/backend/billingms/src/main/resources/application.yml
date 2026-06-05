@@ -43,6 +43,40 @@ notification:
       paymentReceived: ${SENDGRID_TEMPLATE_PAYMENT_RECEIVED:}
       overdue: ${SENDGRID_TEMPLATE_OVERDUE:}
 
+# cross-service ACL 設定（IT8 T4.1 / ADR-0015 後半、RestShipperInfoAcl）
+# adapter: stub（デフォルト、StubShipperInfoAcl が ConditionalOnMissingBean で生成）
+#        | rest（本番、RestShipperInfoAcl が bookingms /api/v1/shippers/{id} を呼出）
+shipper-info:
+  adapter: ${SHIPPER_INFO_ADAPTER:stub}
+  bookingms:
+    base-url: ${BOOKINGMS_URL:http://localhost:8081}
+    timeout-ms: 1000
+
+# Resilience4j 設定（ADR-0015 後半）
+resilience4j:
+  circuitbreaker:
+    instances:
+      shipperInfo:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        minimumNumberOfCalls: 5
+  timelimiter:
+    instances:
+      shipperInfo:
+        timeoutDuration: 1s
+        cancelRunningFuture: true
+
+# Caffeine cache（ADR-0015 後半、shipperInfo TTL 5min）
+spring.cache:
+  type: caffeine
+  cache-names: shipperInfo
+  caffeine:
+    spec: maximumSize=500,expireAfterWrite=5m
+
 # Axon 共通設定（プロファイル別に上書き）
 axon:
   serializer:

@@ -32,6 +32,10 @@ shedlock = "6.6.0"
 sendgrid = "4.10.3"
 wiremock = "3.13.1"
 
+# Cross-service ACL (IT8 T4.1 / ADR-0015 後半)
+resilience4j = "2.2.0"
+caffeine = "3.1.8"
+
 # JWT
 jjwt = "0.12.6"
 
@@ -86,6 +90,10 @@ shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-p
 # Notification (IT8 T3.1 / ADR-0018)
 sendgrid-java = { module = "com.sendgrid:sendgrid-java", version.ref = "sendgrid" }
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
+
+# Cross-service ACL (IT8 T4.1 / ADR-0015 後半)
+resilience4j-spring-boot3 = { module = "io.github.resilience4j:resilience4j-spring-boot3", version.ref = "resilience4j" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 
 # JWT
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }

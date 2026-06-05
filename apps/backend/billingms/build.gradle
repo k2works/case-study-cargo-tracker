@@ -40,6 +40,12 @@ dependencies {
     // 通知（IT8 T3.2 / ADR-0018、SendGrid Dynamic Templates）
     implementation libs.sendgrid.java
 
+    // cross-service ACL（IT8 T4.1 / ADR-0015 後半、RestShipperInfoAcl + Resilience4j + Caffeine）
+    // HTTP クライアントは Spring 6.1 RestClient を利用（既存 spring-boot-starter-web 由来）
+    implementation libs.resilience4j.spring.boot3
+    implementation libs.caffeine
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
 
