@@ -21,7 +21,7 @@
 | IT5 | 2026-07-16 〜 2026-07-29 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了 |
 | IT6 | 2026-07-30 〜 2026-08-12 | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了（Release 2.0）|
 | IT7 | 2026-08-13 〜 2026-08-26 | [iteration_plan-7.md](iteration_plan-7.md) | [retrospective-7.md](retrospective-7.md) | [iteration_report-7.md](iteration_report-7.md) | 完了（Release 2.1、billingms 新設・精算）|
-| IT8 | 2026-08-27 〜 2026-09-09 | [iteration_plan-8.md](iteration_plan-8.md)（スケルトン） | - | - | 未着手 |
+| IT8 | 2026-08-27 〜 2026-09-09 | [iteration_plan-8.md](iteration_plan-8.md) | - | [iteration_report-8.md](iteration_report-8.md) | 完了（Release 1.0 候補、A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020）|
 
 ### 進捗サマリー
 
@@ -34,8 +34,8 @@
 | IT5 | 10 | 10 | 100% |
 | IT6 | 9 | 9 | 100% |
 | IT7 | 8 | 8 | 100% |
-| IT8 | 8 | - | - |
-| **累計** | **76** | **68** | **89%** |
+| IT8 | 8 | 8 | 100% |
+| **累計** | **76** | **76** | **100%** |
 
 ### フェーズ進捗
 
@@ -43,7 +43,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | 基盤・認証・予約・経路設計（IT1-IT4） | 41 | 41 | 完了（Release 1.0 MVP）|
 | Phase 2 | 追跡・例外処理・精算（IT5-IT7） | 27 | 27 | 完了（IT5/IT6/IT7 完了、Release 2.1）|
-| Buffer | 非機能・品質改善・本番デプロイ準備（IT8）| 8 | 0 | 未着手 |
+| Buffer | 非機能・品質改善・本番デプロイ準備（IT8）| 8 | 8 | 完了（Release 1.0 候補確立）|
 
 ### リリース完了報告書
 

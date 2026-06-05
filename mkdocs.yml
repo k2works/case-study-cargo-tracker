@@ -109,7 +109,8 @@ nav:
       - IT7 計画: development/iteration_plan-7.md
       - IT7 ふりかえり: development/retrospective-7.md
       - IT7 完了報告書: development/iteration_report-7.md
-      - IT8 計画（スケルトン）: development/iteration_plan-8.md
+      - IT8 計画: development/iteration_plan-8.md
+      - IT8 完了報告書: development/iteration_report-8.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -124,6 +125,7 @@ nav:
       - cad796dd レビュー: review/cad796dd_review_20260528.md
       - IT5 開発成果物レビュー: review/IT5_review_20260529.md
       - IT6 開発成果物レビュー: review/IT6_review_20260529.md
+      - IT8 開発成果物レビュー: review/IT8_review_20260605.md
   - ADR:
       - 概要: adr/index.md
       - ADR-0001 Axon Kafka + Aiven 採用: adr/0001-axon-kafka-aiven-adoption.md
@@ -142,6 +144,7 @@ nav:
       - ADR-0017 OverdueScheduler クラスタ排他制御 (ShedLock): adr/0017-overdue-scheduler-cluster-lock.md
       - ADR-0018 通知アダプタ選定 (SendGrid Add-on): adr/0018-notification-adapter-selection.md
       - ADR-0019 PaymentDetailRecorded 補完イベント: adr/0019-payment-detail-recorded-event.md
+      - ADR-0020 決済機関 webhook 受信設計: adr/0020-payment-gateway-webhook.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

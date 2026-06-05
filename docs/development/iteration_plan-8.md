@@ -174,8 +174,8 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 6.1 | ADR-0020 決済機関 webhook 選定（Stripe / GMO / Square 評価）起票（Stripe 採用 + HMAC 署名検証 + webhook_processed テーブル + 部分入金 PARTIALLY_PAID 状態追加、IT9 実装予定）| 2h | - | [x] |
-| 6.2 | マルチパースペクティブレビュー実施 → 重要度「高」を IT 内で対応 | 2h | - | [ ] |
-| 6.3 | ふりかえり + 完了報告書作成 + release_plan / docs / mkdocs 反映 | 1h | - | [ ] |
+| 6.2 | マルチパースペクティブレビュー実施（docs/review/IT8_review_20260605.md、高 3 / 中 5 / 低 3）→ 高 3 件はすべて IT9 持ち越し（H1 WireMock 仕様制約 / H2 1.4-1.10 未消化 14h / H3 @SpringBootTest CI コスト測定）、commit cf7266b6 | 2h | - | [x] |
+| 6.3 | ふりかえり + 完了報告書作成（iteration_report-8.md）+ release_plan / docs / mkdocs 反映 | 1h | - | [x] |
 
 ### タスク合計
 
@@ -187,14 +187,14 @@
 | A2 SendGrid | 2 | 4h | [x] |
 | A3 RestShipperInfoAcl | 2 | 4h | [x] |
 | A4 PaymentDetailRecorded | 2 | 4h | [x] |
-| ADR-0020 + 仕上げ | 1 | 5h | [ ] |
+| ADR-0020 + 仕上げ | 1 | 5h | [x] |
 | **合計** | **8** | **42.5h** | |
 
 **注**: 1.4-1.10 は IT7 完了時点のコード IT8 マーカー棚卸しで発見した追加項目（14h）。
 本番デプロイ準備の一部として SP 外で IT8 内に取り込み。総工数は 28.5h → 42.5h に増加するが、
 ストーリーポイント自体は変動なし（IT8 のスコープは「本番デプロイ可能な状態」と定義）。
 
-**進捗率**: 88%（7/8 SP 完了 — A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded）— Day 9 終了時点
+**進捗率**: 100%（8/8 SP 完了 — A1-A4 + ADR-0020 起票 + マルチパースペクティブレビュー + 完了報告書）— IT8 完了
 
 ## スケジュール
 

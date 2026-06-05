@@ -389,8 +389,8 @@ gantt
 | IT5 | 2026-07-16 〜 2026-07-29 | 10 | 10 | 100% | 完了（2026-05-29：基盤 6 + US14 + US17 + US15 + US16 + E2E + cross-service Kafka 統合テスト、計 21 タスク完了。SonarQube Quality Gate Backend/Frontend 共に OK・カバレッジ Backend 88.0% / Frontend 78.1%・Code Smell 0） |
 | IT6 | 2026-07-30 〜 2026-08-12 | 9 | 9 | 100% | 完了（2026-05-29：ADR-0012/0013/0014 + US18 公開照会 + US19/US20 例外処理 + マルチパースペクティブレビュー + Quality Gate PASS、計 22 コミット） |
 | IT7 | 2026-08-13 〜 2026-08-26 | 8 | 8 | 100% | 完了（2026-06-05：US21-US23 精算 + billingms 新規立ち上げ + review 高/中 持ち越し 7 件 IT 内対応 + ADR-0017/0018/0019 起票 + 全 5 サービス ArchUnit 横展開、計 50+ コミット。billingms LINE 89.87%、全モジュール check PASS） |
-| IT8 | 2026-08-27 〜 2026-09-09 | 8 | - | - | 未着手（残: ADR-0015 後半 / ADR-0017 ShedLock / ADR-0018 SendGrid / ADR-0019 PaymentDetailRecorded 実装） |
-| **合計** | | **76** | **68** | Phase 2 完了（68/76 SP・89%） | Phase 1 + IT5 + IT6 + IT7 完了。残 Phase 2（IT8、8 SP） |
+| IT8 | 2026-08-27 〜 2026-09-09 | 8 | 8 | 100% | 完了（2026-06-05：A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020 起票、Ralph Loop で 1 日完遂、30+ コミット、全モジュール check PASS、frontend 234 件 PASS） |
+| **合計** | | **76** | **76** | **Release 1.0 候補確立（76/76 SP・100%）** | Phase 1 + IT5 + IT6 + IT7 + IT8 完了。残 0 SP、IT9 以降は Release 1.1（ADR-0020 決済機関 webhook、Spring Security 統一、AWS Secrets Manager、IT8 マーカー棚卸し 1.4-1.10 14h 分）|
 
 ### バーンダウンチャート
 
@@ -400,10 +400,10 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8"]
     y-axis "残 SP" 0 --> 80
     line "計画" [76, 66, 56, 46, 35, 25, 16, 8, 0]
-    line "実績" [76, 66, 56, 46, 35, 25, 16, 8]
+    line "実績" [76, 66, 56, 46, 35, 25, 16, 8, 0]
 ```
 
-> **実績（IT7 終了時点）**: Phase 1（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）完了。累計 68/76 SP（89%）。IT1-IT7 はいずれも計画どおり完了し、残 SP は 8（IT8）。Release 2.1（Phase 2 完了の精算機能）達成。IT7 では Ralph Loop モードで review 高/中 持ち越し 7 件 IT 内対応 + ADR-0017/0018/0019 起票 + 全 5 サービス ArchUnit 横展開を追加で完遂。
+> **実績（IT8 終了時点、Release 1.0 候補確立）**: Phase 1（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8 SP）完了。**累計 76/76 SP（100%）**。IT1-IT8 はいずれも計画どおり完了し、残 SP は 0。Release 2.1（Phase 2 完了の精算機能）に加え Release 1.0（本番デプロイ可能な状態：SendGrid Dynamic Templates 通知 + ShedLock クラスタ排他 + RestShipperInfoAcl + PaymentDetailRecorded + ADR-0020 起票）を達成。IT8 では Ralph Loop モードで 8 SP を 1 日完遂、A1-A4 全実装 + マルチパースペクティブレビュー + 完了報告書まで含めて 30+ コミットで完遂。
 
 ---
 
