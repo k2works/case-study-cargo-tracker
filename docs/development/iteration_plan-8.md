@@ -142,7 +142,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | ShedLock 6.6.0 依存追加（spring + jdbc-template、Spring Boot 4 対応）+ Flyway V3 shedlock テーブル + ShedLockConfig（commit 75f747d2）| 1h | - | [x] |
-| 2.2 | OverdueScheduler に @SchedulerLock 付与 + 統合テスト（2 instance シミュレーション）| 2h | - | [ ] |
+| 2.2 | OverdueScheduler に @SchedulerLock 付与（PT19H/PT5H）+ InMemoryLockProvider シミュレーション統合テスト 2 件（commit 78cb4b7f）| 2h | - | [x] |
 
 ### 3. A2 SendGrid 統合
 
