@@ -19,5 +19,7 @@
 | [ADR-0014](0014-processing-group-naming.md) | Axon @ProcessingGroup 命名規約（`cross-` / `local-` / `outbound-` の 3 種類 prefix） | 提案中 |
 | [ADR-0015](0015-billingms-cross-service-and-shipper-acl.md) | billingms の cross-service 連携と ShipperInfo ACL（Kafka tracking + 集約発火型 + REST 同期 + Resilience4j + Caffeine cache TTL 5min） | 提案中 |
 | [ADR-0016](0016-processing-group-renaming.md) | 既存 @ProcessingGroup の一斉改名 + token 移行手順（環境別）+ ArchUnit 構造ガード | 提案中 |
+| [ADR-0017](0017-overdue-scheduler-cluster-lock.md) | OverdueScheduler のクラスタ排他制御方針（ShedLock + JDBC、IT8 で確定） | 提案中 |
+| [ADR-0018](0018-notification-adapter-selection.md) | 通知アダプタ選定（SendGrid Add-on + Dynamic Templates、IT8 で確定） | 提案中 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
