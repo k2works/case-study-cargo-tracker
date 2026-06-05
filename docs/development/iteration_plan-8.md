@@ -156,7 +156,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | Resilience4j + Caffeine 依存追加 + RestShipperInfoAcl 実装 | 2h | - | [ ] |
+| 4.1 | Resilience4j 2.2.0 + Caffeine 3.1.8 依存追加 + RestShipperInfoAcl 実装（@Cacheable shipperInfo TTL 5min + @CircuitBreaker shipperInfo 半開 3 / 失敗率 50% + fallback CORPORATE/0、WireMock テスト 3 件、commit b45c69b1）| 2h | - | [x] |
 | 4.2 | Circuit Breaker fallback + 手動入力 UI（S23 改修）| 1.5h | - | [ ] |
 | 4.3 | WireMock タイムアウトテスト + Caffeine TTL 検証 | 0.5h | - | [ ] |
 
