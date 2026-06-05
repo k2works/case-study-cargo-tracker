@@ -4,6 +4,7 @@ import com.example.trackingms.application.outboundservices.notification.Notifica
 import com.example.trackingms.domain.model.TransportStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 /**
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
  * INFO レベルのログ出力のみを行い、通知トリガーの到達性をテストで担保できるようにする。</p>
  */
 @Component
+@ConditionalOnMissingBean(name = "sendGridNotificationAcl")
 public class LoggingNotificationAcl implements NotificationAcl {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingNotificationAcl.class);

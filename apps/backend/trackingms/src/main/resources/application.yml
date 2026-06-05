@@ -27,6 +27,23 @@ axon:
     events: jackson
     messages: jackson
 
+# 通知設定（IT8 T3.1 / ADR-0018）
+# adapter: logging（デフォルト、INFO/WARN ログ出力スタブ）
+#        | sendgrid（本番、SendGrid Dynamic Templates 経由でメール送信）
+notification:
+  adapter: ${NOTIFICATION_ADAPTER:logging}
+  sendgrid:
+    apiKey: ${SENDGRID_API_KEY:}
+    fromEmail: ${SENDGRID_FROM_EMAIL:noreply@cargo-tracker.example.com}
+    fromName: ${SENDGRID_FROM_NAME:Cargo Tracker}
+    templates:
+      trackingIssued: ${SENDGRID_TEMPLATE_TRACKING_ISSUED:}
+      statusChanged: ${SENDGRID_TEMPLATE_STATUS_CHANGED:}
+      misrouted: ${SENDGRID_TEMPLATE_MISROUTED:}
+      exceptionRegistered: ${SENDGRID_TEMPLATE_EXCEPTION_REGISTERED:}
+      exceptionResolved: ${SENDGRID_TEMPLATE_EXCEPTION_RESOLVED:}
+      exceptionEscalation: ${SENDGRID_TEMPLATE_EXCEPTION_ESCALATION:}
+
 # 公開追跡照会の時限署名トークン（ADR-0013、US18）
 # 本番環境は Heroku Config Vars / 環境変数で上書きする（32 バイト以上必須）。
 # IT8 で AWS Secrets Manager + 四半期ローテーションへ切替予定（ADR-0015 で起票予定）。

@@ -28,6 +28,9 @@ archunit = "1.4.2"
 # Distributed lock (IT8 T2.1 / ADR-0017)
 shedlock = "6.6.0"
 
+# Notification (IT8 T3.1 / ADR-0018)
+sendgrid = "4.10.3"
+
 # JWT
 jjwt = "0.12.6"
 
@@ -78,6 +81,9 @@ archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref
 # Distributed lock (IT8 T2.1 / ADR-0017)
 shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.ref = "shedlock" }
 shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
+
+# Notification (IT8 T3.1 / ADR-0018)
+sendgrid-java = { module = "com.sendgrid:sendgrid-java", version.ref = "sendgrid" }
 
 # JWT
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }

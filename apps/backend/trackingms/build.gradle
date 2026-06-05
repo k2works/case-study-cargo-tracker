@@ -36,6 +36,9 @@ dependencies {
     runtimeOnly libs.postgresql
     runtimeOnly libs.h2
 
+    // 通知（IT8 T3.1 / ADR-0018、SendGrid Dynamic Templates）
+    implementation libs.sendgrid.java
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
 
