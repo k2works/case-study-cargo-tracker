@@ -157,7 +157,9 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 4.1 | Resilience4j 2.2.0 + Caffeine 3.1.8 依存追加 + RestShipperInfoAcl 実装（@Cacheable shipperInfo TTL 5min + @CircuitBreaker shipperInfo 半開 3 / 失敗率 50% + fallback CORPORATE/0、WireMock テスト 3 件、commit b45c69b1）| 2h | - | [x] |
-| 4.2 | Circuit Breaker fallback + 手動入力 UI（S23 改修）| 1.5h | - | [ ] |
+| 4.2 | Circuit Breaker fallback + 手動入力 UI（S23 改修）| 1.5h | - | [x] |
+| 4.2.a | backend: ApplyDiscountCommand に manualDiscountRate 追加 + Invoice 集約 ACL バイパス分岐 + CircuitBreakerHealthController（GET /api/v1/billing/circuit-breakers/{name}）+ 単体テスト 4 件（commit 19a3e921）| - | - | [x] |
+| 4.2.b | frontend: billingApi.getCircuitBreakerHealth + S23 OPEN 時の手動入力フォーム（amber alert + 0.00〜0.30 input + 手動入力で適用）+ vitest 18 件（commit f2cdf59c）| - | - | [x] |
 | 4.3 | WireMock タイムアウトテスト + Caffeine TTL 検証 | 0.5h | - | [ ] |
 
 ### 5. A4 PaymentDetailRecorded
