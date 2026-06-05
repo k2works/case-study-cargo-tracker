@@ -125,7 +125,7 @@
 | 5.1 | cross-service E2E（CROSS_SERVICE_E2E=1）：DELIVERED → InvoiceCalculated → DiscountApplied → InvoiceIssued → PaymentRecorded → Booking SETTLED の貫通検証 | 3h | - | [x] |
 | 5.2 | SonarQube ライブスキャン + Quality Gate Backend/Frontend 両方 OK 維持。billingms カバレッジ 80%+ 目標 | 1h | - | [x] |
 | 5.3 | マルチパースペクティブレビュー実施（developing-review）→ 重要度「高」を IT 内で対応 | 2h | - | [x] |
-| 5.4 | ふりかえり + 完了報告書作成 + release_plan / docs index / mkdocs 反映 | 1h | - | [ ] |
+| 5.4 | ふりかえり + 完了報告書作成 + release_plan / docs index / mkdocs 反映 | 1h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -143,7 +143,7 @@
 
 **1 SP あたり**: 約 7.0h（コミット分）。基盤改善 14h + サービス基盤 11h + テスト/仕上げ 7h を含めると 88h。
 
-**進捗率**: 0%（0/8 SP）
+**進捗率**: 100%（8/8 SP）— IT7 完了（2026-06-05）
 
 > **注**: IT5（10 SP）が 2 日 / IT6（9 SP）が 1 日（Ralph Loop 7 iterations）で完了している実績を踏まえ、8 SP の IT7 は計画どおり完了可能。billingms 新規立ち上げで初期コストが大きいが、bookingms 立ち上げ（IT2）の学習を新サービス追加チェックリストで再利用できる。
 
