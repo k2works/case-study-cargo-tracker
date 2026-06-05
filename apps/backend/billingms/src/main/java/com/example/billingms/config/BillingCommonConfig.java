@@ -18,9 +18,11 @@ import java.time.Clock;
  *       <li>{@code OverdueScheduler} で支払期限超過の判定（{@code payment_due < now()}）</li>
  *     </ul>
  *   </li>
- *   <li>{@link RateTable}: 料金単価表（IT7 はコード内定数、IT8 で運用設定 DB へ移行検討）
+ *   <li>{@link RateTable}: 料金単価表（IT8 T1.8 で application.yml 駆動化、
+ *       完全な DB 駆動化は IT9 持ち越し）
  *     <ul>
  *       <li>{@code FareCalculator} が基本料金計算で参照</li>
+ *       <li>application.yml の {@code billing.rateTable.rates} / {@code handlingUnitFee} から構築</li>
  *     </ul>
  *   </li>
  * </ul>
@@ -37,11 +39,15 @@ public class BillingCommonConfig {
     }
 
     /**
-     * default 料金単価表（S20 UI サンプル値と整合）。IT7 では Bean として固定単価を公開、
-     * IT8 以降で経理担当者による料金改定（DB 永続化）への移行を検討する。
+     * 料金単価表を {@link BillingProperties.RateTableSettings} から構築する Bean（IT8 T1.8）。
+     * 経理担当者は application.yml の {@code billing.rateTable} を編集 → アプリ再起動で
+     * 料金改定が反映される。
      */
     @Bean
-    public RateTable rateTable() {
-        return RateTable.defaultTable();
+    public RateTable rateTable(BillingProperties properties) {
+        return new RateTable(
+                properties.rateTable().rates(),
+                properties.rateTable().handlingUnitFee()
+        );
     }
 }

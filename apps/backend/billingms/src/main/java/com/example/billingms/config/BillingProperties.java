@@ -3,8 +3,10 @@ package com.example.billingms.config;
 import com.example.billingms.domain.model.ShipperType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -24,7 +26,8 @@ public record BillingProperties(
         int paymentDueDays,
         Map<ShipperType, Integer> paymentDueDaysByType,
         Overdue overdue,
-        String discountDescription
+        String discountDescription,
+        RateTableSettings rateTable
 ) {
 
     public BillingProperties {
@@ -53,6 +56,10 @@ public record BillingProperties(
         if (discountDescription == null || discountDescription.isBlank()) {
             throw new IllegalArgumentException("discountDescription は必須です");
         }
+        if (rateTable == null) {
+            // IT8 T1.8: 未指定時は default テーブル（S20 UI サンプル値）を使用
+            rateTable = RateTableSettings.defaultSettings();
+        }
     }
 
     /**
@@ -64,6 +71,42 @@ public record BillingProperties(
         }
         Integer days = paymentDueDaysByType.get(shipperType);
         return days != null ? days : paymentDueDays;
+    }
+
+    /**
+     * 料金単価表設定（IT8 T1.8、運用設定駆動化）。
+     *
+     * <p>従来 {@code RateTable.defaultTable()} のコード内定数を application.yml に逃がし、
+     * 経理担当者が設定変更（料金改定）→ アプリ再起動で反映可能にする。完全な DB 駆動化
+     * （管理 UI 経由でランタイム反映）は IT9 持ち越し。</p>
+     *
+     * @param rates           貨物種別 → 単価係数（円/kg/km）
+     * @param handlingUnitFee 1 回あたり取扱費（円、0 以上）
+     */
+    public record RateTableSettings(
+            Map<String, BigDecimal> rates,
+            BigDecimal handlingUnitFee
+    ) {
+        public RateTableSettings {
+            if (rates == null || rates.isEmpty()) {
+                throw new IllegalArgumentException("rates は 1 件以上の単価エントリが必須です");
+            }
+            if (handlingUnitFee == null || handlingUnitFee.signum() < 0) {
+                throw new IllegalArgumentException(
+                        "handlingUnitFee は 0 以上の値で必須です: " + handlingUnitFee);
+            }
+            // 順序保持コピー
+            rates = Collections.unmodifiableMap(new LinkedHashMap<>(rates));
+        }
+
+        /** S20 UI サンプル値と整合する default 設定。 */
+        public static RateTableSettings defaultSettings() {
+            Map<String, BigDecimal> defaults = new LinkedHashMap<>();
+            defaults.put("GENERAL", new BigDecimal("0.05"));
+            defaults.put("HAZARDOUS", new BigDecimal("0.08"));
+            defaults.put("REFRIGERATED", new BigDecimal("0.10"));
+            return new RateTableSettings(defaults, new BigDecimal("1500"));
+        }
     }
 
     /**

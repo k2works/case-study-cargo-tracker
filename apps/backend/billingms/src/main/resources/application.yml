@@ -38,6 +38,14 @@ billing:
     cron: "0 0 9 * * *"
     zone: "Asia/Tokyo"
   discountDescription: "法人割引（%d%%）"
+  # IT8 T1.8: 料金単価表（S20 UI サンプル値、経理担当者が設定変更可能）
+  # 完全な DB 駆動化（管理 UI からの料金改定）は IT9 持ち越し
+  rateTable:
+    rates:
+      GENERAL: 0.05
+      HAZARDOUS: 0.08
+      REFRIGERATED: 0.10
+    handlingUnitFee: 1500
 
 # 通知設定（IT8 T3.2 / ADR-0018）
 # adapter: logging（デフォルト、INFO/WARN ログ出力スタブ）

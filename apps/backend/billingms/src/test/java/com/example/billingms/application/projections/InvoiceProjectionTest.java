@@ -42,7 +42,8 @@ class InvoiceProjectionTest {
                 30,
                 java.util.Map.of(),
                 new BillingProperties.Overdue("0 0 9 * * *", "Asia/Tokyo"),
-                "法人割引（%d%%）"
+                "法人割引（%d%%）",
+                null
         );
         projection = new InvoiceProjection(summaryMapper, lineMapper, paymentMapper, properties);
     }

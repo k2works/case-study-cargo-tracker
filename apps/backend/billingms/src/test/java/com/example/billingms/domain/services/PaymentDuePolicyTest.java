@@ -23,7 +23,7 @@ class PaymentDuePolicyTest {
 
     private PaymentDuePolicy policy(int days) {
         return new PaymentDuePolicy(
-                new BillingProperties(days, Map.of(), OVERDUE, "法人割引（%d%%）"));
+                new BillingProperties(days, Map.of(), OVERDUE, "法人割引（%d%%）", null));
     }
 
     @Test
@@ -70,7 +70,8 @@ class PaymentDuePolicyTest {
                 30,
                 Map.of(ShipperType.CORPORATE, 60, ShipperType.INDIVIDUAL, 90),
                 OVERDUE,
-                "法人割引（%d%%）");
+                "法人割引（%d%%）",
+                null);
         PaymentDuePolicy p = new PaymentDuePolicy(props);
         LocalDate issued = LocalDate.of(2026, 9, 1);
 
@@ -86,7 +87,8 @@ class PaymentDuePolicyTest {
                 30,
                 Map.of(ShipperType.CORPORATE, 60),
                 OVERDUE,
-                "法人割引（%d%%）");
+                "法人割引（%d%%）",
+                null);
         PaymentDuePolicy p = new PaymentDuePolicy(props);
         LocalDate issued = LocalDate.of(2026, 9, 1);
 
@@ -101,7 +103,7 @@ class PaymentDuePolicyTest {
     @Test
     @DisplayName("IT8 T1.9: Map 引数 null でも例外なく空 Map に正規化される（compact constructor）")
     void T19_Map_null時は空Mapに正規化() {
-        BillingProperties props = new BillingProperties(30, null, OVERDUE, "法人割引（%d%%）");
+        BillingProperties props = new BillingProperties(30, null, OVERDUE, "法人割引（%d%%）", null);
         PaymentDuePolicy p = new PaymentDuePolicy(props);
         LocalDate due = p.calculateDueDate(LocalDate.of(2026, 9, 1));
         assertThat(due).isEqualTo(LocalDate.of(2026, 10, 1));
