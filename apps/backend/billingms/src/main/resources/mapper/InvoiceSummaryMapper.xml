@@ -80,4 +80,17 @@
         SELECT COUNT(*) FROM invoice
     </select>
 
+    <!--
+        当日採番済の invoice_number 末尾 4 桁の最大値（US23 / T4.2）。
+        invoice_number 形式は INV-YYYYMMDD-XXXX で固定長 4 桁。
+        H2 / PostgreSQL 両対応のため SUBSTRING + CAST を使う。
+        当日採番なしの場合は NULL を返す。
+    -->
+    <select id="findMaxInvoiceNumberSequenceForDate" resultType="java.lang.Integer">
+        SELECT MAX(CAST(SUBSTRING(invoice_number, 14, 4) AS INTEGER))
+        FROM invoice
+        WHERE invoice_number IS NOT NULL
+          AND SUBSTRING(invoice_number, 5, 8) = #{yyyymmdd}
+    </select>
+
 </mapper>

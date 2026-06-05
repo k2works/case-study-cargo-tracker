@@ -43,4 +43,15 @@ public interface InvoiceSummaryMapper {
 
     /** 総件数（ページネーション用）。 */
     long count();
+
+    /**
+     * 当日採番済の invoice_number の最大シーケンス番号を取得（US23 / T4.2）。
+     *
+     * <p>INV-YYYYMMDD-XXXX の末尾 4 桁を返す。当日採番なしの場合は {@code null}。
+     * InvoiceNumberGenerator がインクリメントして新規番号を採番する。</p>
+     *
+     * @param yyyymmdd 採番対象日（YYYYMMDD 8 桁文字列）
+     * @return 最大シーケンス番号（1〜9999）または {@code null}（当日採番なし）
+     */
+    Integer findMaxInvoiceNumberSequenceForDate(@Param("yyyymmdd") String yyyymmdd);
 }
