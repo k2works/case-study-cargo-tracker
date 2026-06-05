@@ -73,8 +73,8 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | StubShipperInfoAclTest | 既存 | PASS |
 | CrossCargoDeliveredEventHandlerTest | 既存 | PASS |
 | BillingMsLocalH2SmokeTest | 1 件 | PASS |
-| **billingms 合計** | **53 件** | **PASS** |
-| **billingms LINE カバレッジ** | **85.4%（目標 80%+）** | **クリア** |
+| **billingms 合計（IT7 完了時点）** | **71 件** | **PASS** |
+| **billingms LINE カバレッジ** | **89.87%（目標 80%+）** | **クリア（IT7 review 対応で 85.4% → 89.87% に向上）** |
 
 ### バックエンド（bookingms 拡張）
 
@@ -197,9 +197,9 @@ IT8 は Phase 2 完了（残 8 SP）の仕上げ + 上記持ち越しタスク�
 
 ## 結論
 
-US21 / US22 / US23（合計 8 SP）すべての受入基準を達成。Billing Context を独立 BC として確立し、cross-service で bookingms と連動する Phase 2 Release 2.1 を完成させた。review H1（二段イベント）の重要度高指摘を IT 内で即時対応し ADR-0012 自己整合を回復。billingms LINE カバレッジ 85.4% で目標 80%+ をクリア。
+US21 / US22 / US23（合計 8 SP）すべての受入基準を達成。Billing Context を独立 BC として確立し、cross-service で bookingms と連動する Phase 2 Release 2.1 を完成させた。review H1（二段イベント）/ M1（programmer）/ M1（architect）/ M2 / 中 4 件の review 指摘を IT 内で即時対応し、ADR-0012/0014/0016/0019 を含む 4 件の ADR を起票・更新、全 5 サービスに ArchUnit 構造防止網（15 件のアーキテクチャテスト）を展開した。billingms LINE カバレッジは review 対応で 85.4% → 89.87% に向上。
 
-累計実績 68/76 SP（89%）で Phase 2 完了が見えてきた。IT8 でリリース可能な状態に仕上げる。
+累計実績 68/76 SP（89%）で Phase 2 完了が見えてきた。IT8 では ADR-0015 後半（RestShipperInfoAcl）/ ADR-0017（ShedLock）/ ADR-0018（SendGrid）/ ADR-0019（PaymentDetailRecorded）の実装で本番デプロイ可能な状態に仕上げる。
 
 ---
 
