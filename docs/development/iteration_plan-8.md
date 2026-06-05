@@ -15,6 +15,24 @@
 3. **ArchUnit 1.5+ アップグレード**: JDK 25 のクラスファイル major version 69 完全サポート版に切替え、Spring scan で代替している規約検査を ArchUnit DSL に統一する
 4. **Phase 2 完了**: Release 2.1 で精算機能を加えた完全な国際貨物輸送管理システムを本番デプロイ可能な状態にする
 
+## ユーザーストーリー
+
+### 対象ストーリー
+
+| ID | ユーザーストーリー | SP | 優先度 |
+|----|-------------------|-----|--------|
+| - | （本イテレーションは Phase 2 Buffer のため新規ユーザーストーリーなし。IT7 持ち越し ADR 実装 + アーキ規約完全移行に特化）| 0 | - |
+| **合計** | | **0** | - |
+
+### 補足
+
+- 全 25 ストーリー（US01-US25）は IT1-IT7 で実装完了済み（release_plan.md 参照、累計 68/76 SP・89%）
+- IT8 は **本番デプロイ準備イテレーション** と位置付け、以下に集中
+  - ADR-0015 後半 / ADR-0017 / ADR-0018 / ADR-0019 の実装
+  - ADR-0016 旧名 @ProcessingGroup 一斉改名 + token 移行
+  - ArchUnit 1.5+ アップグレード + 非機能・セキュリティ整合
+- 受入基準は本イテレーションの「受け入れ基準 A1-A6」で具体化
+
 ## 満足条件
 
 ### スコープ（IT7 持ち越し + IT8 仕上げ）
@@ -206,8 +224,88 @@
 - **ShedLock JdbcTemplateLockProvider**: 既存 `billing_read_db` 内に `shedlock` テーブルを Flyway V3 で作成。複雑な分散ロック実装を避ける。詳細は [ADR-0017](../adr/0017-overdue-scheduler-cluster-lock.md)
 - **SendGrid Dynamic Templates**: テンプレート ID を `application-heroku.yml` で管理し、多言語化（IT9）への布石とする。詳細は [ADR-0018](../adr/0018-notification-adapter-selection.md)
 - **RestShipperInfoAcl の fallback 階層**: Circuit Breaker OPEN → Caffeine cache → 手動入力 UI の 3 段階。billingms が bookingms 停止中でも業務継続可能に。詳細は [ADR-0015 §後半](../adr/0015-billingms-cross-service-and-shipper-acl.md)
+
+### ユーザーインターフェース
+
+#### S23 改修（A3 RestShipperInfoAcl 手動入力 fallback、ui_design.md §S23 拡張）
+
+`/billing/:invoiceId` 画面に Circuit Breaker OPEN 検知時の手動入力フォームを追加する。
+
+##### ビュー（S23 拡張、salt 図）
+
+```plantuml
+@startsalt
+{+
+  請求詳細 - INV-XXXXXXXX-XXXX
+  {+
+    {
+      予約 ID    | B-XXXX
+      荷主 ID    | S-XXXX
+      状態       | { 算出済 }
+    }
+    ---------------------
+    ⚠ ShipperInfoAcl が応答しません（Circuit Breaker: OPEN）
+    {
+      割引率（手動入力）| "0.15      "
+      [ 手動割引を適用 ]
+    }
+    ---------------------
+    {
+      [ 割引を適用（法人荷主のみ）]  (← Circuit Breaker OPEN 時は disabled)
+    }
+  }
+}
+@endsalt
+```
+
+##### インタラクション（画面遷移）
+
+```plantuml
+@startuml
+title S23 ShipperInfoAcl fallback 遷移
+
+[*] --> S23_通常表示 : GET /billing/:invoiceId
+
+state S23_通常表示 : RestShipperInfoAcl 取得成功\n（cache hit / 通常応答）
+state S23_fallback表示 : Circuit Breaker OPEN 検知\n手動入力フォーム表示
+state 通常割引適用 : POST /billing/:invoiceId/discount
+state 手動割引適用 : POST /billing/:invoiceId/discount?rate=X.XX
+
+S23_通常表示 --> 通常割引適用 : 「割引を適用」クリック
+S23_通常表示 --> S23_fallback表示 : Circuit Breaker が OPEN 遷移（5xx 連続 / タイムアウト）
+
+S23_fallback表示 --> 手動割引適用 : 「手動割引を適用」クリック（rate 入力済）
+S23_fallback表示 --> S23_fallback表示 : rate 未入力 / 0〜0.30 範囲外（バリデーションエラー）
+S23_fallback表示 --> S23_通常表示 : Circuit Breaker HALF_OPEN → CLOSED 復帰
+
+通常割引適用 --> S23_通常表示 : 適用完了（PRG パターン）
+手動割引適用 --> S23_通常表示 : 適用完了（PRG パターン）
+
+@enduml
+```
+
+##### 受入条件（S23 UI、A3 と統合）
+
+- [ ] Circuit Breaker OPEN 検知時、警告メッセージ（黄色 alert）と手動入力フォームが表示される
+- [ ] 手動入力 rate のバリデーション（0〜0.30、空入力不可）が同画面（自己ループ遷移）で表示される
+- [ ] 手動入力フォーム表示時、「割引を適用（法人荷主のみ）」ボタンは無効化される
+- [ ] Circuit Breaker が CLOSED に復帰したら手動入力フォームは自動的に閉じる（ポーリング or 次回画面表示時）
+- [ ] 手動適用後の遷移は通常適用と同じく PRG（POST → 302 → GET /billing/:invoiceId）
 - **PaymentDetailRecorded 内部 event 設計**: shared event は cross-service 最小契約のまま、内部 event で運用情報を補完。詳細は [ADR-0019](../adr/0019-payment-detail-recorded-event.md)
 - **ADR-0016 token 移行手順**: 環境別の手順（H2 / Docker / Heroku）を ADR-0016 §3 から引用し、必要なら CLI スクリプト化
+
+## リスクと対策
+
+| リスク | 影響度 | 対策 |
+|--------|--------|------|
+| ShedLock 5.x の JdbcTemplateLockProvider が Spring Boot 4 + Java 25 で互換性問題（メジャー upgrade 待ち）| 中 | IT8 着手前に MVP 検証（簡易プロジェクトでバージョン互換確認）。代替: ShedLock 4.x（Spring Boot 3 系）への一時 downgrade、または Quartz Cluster Mode |
+| SendGrid Heroku Add-on のプロビジョニング遅延 / API key 取得失敗 | 中 | Day 5 までに Add-on 申請完了、テスト送信を完了させる。代替: AWS SES 直接統合（ADR-0018 §代替案）|
+| Resilience4j + Caffeine の依存追加で既存 Spring Cache と衝突 | 低 | `@CacheConfig` 分離 + キャッシュマネージャ名を `caffeineShipperInfoCacheManager` 等で明示。MVP テストで衝突有無を確認 |
+| ADR-0016 token 移行で Heroku 本番に二重投影が発生 | 高 | (1) 一時停止モードで実行（Kafka publisher 停止 + scheduler 停止）、(2) token 移行手順を ADR-0016 §3 から CLI スクリプト化、(3) Blue/Green デプロイで切り戻し可能に |
+| ArchUnit 1.5+ アップグレードで既存 Spring scan 代替部分が破壊 | 低 | DSL 移行を 5 サービス順次実施、各サービスで PASS 確認後に次へ。失敗時は 1.4 系に戻して該当ルールを Spring scan のまま継続 |
+| PaymentDetailRecorded 追加で既存 InvoiceAggregateTest が破壊 | 低 | Red コミット先行（IT7 retrospective T1 規律）でテスト分離。expectEvents の順序検証を厳密化 |
+| 1.4 Spring Security 統一でローカル開発環境のテストが認証エラー多発 | 中 | 各 Controller の @WebMvcTest に `@WithMockUser` を一括導入。CI で認証スキップフラグ（spring.security.test.enabled=false）を有効化可能に |
+| 全タスク 42.5h を 2 週間で消化（1 SP あたり 5.3h、想定ベロシティの下限近接）| 中 | Day 5 / Day 8 / Day 10 でバッファレビュー。優先度高（A1-A4、ADR 実装）を Week 1、優先度中（1.4-1.10、IT8 マーカー）を Week 2 後半に配分 |
 
 ## 受け入れ基準（IT7 から引継ぎ）
 
@@ -215,13 +313,41 @@
 - [ ] retrospective-7 Try T11（ADR-0016 完全移行）対応
 - [ ] retrospective-7 Try T1（TDD Red/Green/Refactor 分離コミット運用化）開発ガイド追記
 
-## 履歴
+## 完了条件
+
+### Definition of Done
+
+- [ ] コードレビュー完了（マルチパースペクティブレビュー 6.2 タスク含む）
+- [ ] ユニットテストがパス（全サービス billingms / bookingms / trackingms / routingms / handlingms / authms / gatewayms / shared）
+- [ ] 統合テスト（Testcontainers）がパス（Kafka + PostgreSQL + ShedLock テーブル）
+- [ ] E2E テスト（cross-service.spec.ts 含む）がパス（PaymentDetailRecorded 反映確認）
+- [ ] ESLint / Checkstyle / SpotBugs エラーなし
+- [ ] SonarQube Quality Gate PASS（全サービス、new_coverage 80%+ / new_violations 0）
+- [ ] 機能がローカル環境（local-h2 / local-docker）で動作確認済み
+- [ ] Heroku ステージング環境にデプロイ + smoke test 完了
+- [ ] ドキュメント更新完了（architecture_backend.md API カタログ / docs/index.md / mkdocs.yml）
+- [ ] ADR-0015/0017/0018/0019 のステータスを「承認済み」に更新
+- [ ] ADR-0020（決済機関 webhook 選定）起票完了
+- [ ] 各サービスの ArchUnit `processingGroupPrefixConvention` が hard assertion で PASS（A5）
+
+### デモ項目
+
+1. **A1 ShedLock デモ**: Heroku で `heroku ps:scale web=2 --app cargotracker-billingms-dev` し、両 dyno の `@Scheduled` ログを表示。`shedlock` テーブルの `name`/`locked_at`/`locked_by` で 1 instance のみが処理したことを示す
+2. **A2 SendGrid デモ**: S24 精算書発行 → 荷主メールアドレスに実メール到達。SendGrid ダッシュボードで送信ログ確認、テンプレート ID 一覧を表示
+3. **A3 RestShipperInfoAcl デモ**: bookingms を停止 → S23 で割引適用ボタン → Circuit Breaker OPEN 検知 → 手動入力フォーム表示 → 0.15 入力 → 適用完了 → bookingms 再起動 → CLOSED 復帰でフォーム自動非表示
+4. **A4 PaymentDetailRecorded デモ**: S23 で入金記録（paymentMethod=BANK_TRANSFER, externalReference=TXN-001）→ `payment` テーブルで `payment_method` / `external_reference` カラムに値が反映されていることを SQL で確認
+5. **A5 ADR-0016 移行デモ**: 全サービスの @ProcessingGroup 名を `git grep` で確認、すべて `cross-` / `local-` / `outbound-` prefix に統一済みであることを示す。ArchUnit hard assertion が PASS することも確認
+6. **A6 ArchUnit 1.5+ デモ**: `./gradlew check` で全 5 サービスのアーキテクチャテストが ArchUnit DSL ベースで PASS することを表示
+7. **追加スコープデモ**: ADR-0020 起票内容（決済機関選定の代替案評価）レビュー、IT8 マーカー 35 件すべて消化済みを `grep -rn "FIXME(IT8)\|TODO(IT8)\|IT8 で"` で確認
+
+## 更新履歴
 
 | 日付 | 内容 | 担当 |
 |------|------|------|
 | 2026-06-05 | スケルトン作成（IT7 完了時、Ralph Loop モード）。IT7 持ち越し ADR 実装 + アーキ規約完全移行を中心に 8 SP / 28.5h で設計 | k2works |
+| 2026-06-05 | validating-iteration-plan 検証結果反映：ユーザーストーリーセクション（Buffer 明示）/ リスクと対策 / 完了条件（DoD + デモ項目）/ S23 ShipperInfoAcl fallback UI ワイヤーフレーム + 画面遷移を追加。「履歴」→「更新履歴」/「参照」→「関連ドキュメント」に統一 | k2works |
 
-## 参照
+## 関連ドキュメント
 
 - [リリース計画](release_plan.md)
 - [IT7 計画](iteration_plan-7.md)
