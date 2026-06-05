@@ -107,6 +107,55 @@ cross-service の command 発行は **同期コミット境界の外** で行う
 - 投影 EventHandler の Pull Request では、副作用列のフラグ列ガードがあるかをレビュー観点に追加
 - `architecture_backend.md` に「cross-service 冪等性チェックリスト」を追記
 
+## 自己整合チェックリスト（IT7 review H1 教訓）
+
+新規 cross-service イベントを追加するサービスを設計する際、着手前に以下のチェックリストを通すこと。IT7 で billingms に「内部 PaymentRecordedEvent + SharedPaymentRecordedEventPublisher」の二段イベントを導入してしまい、本 ADR §2 集約発火型に違反した教訓（review H1）を反映する。
+
+### 着手前チェック（設計時）
+
+- [ ] **C1: shared event を集約から直接 apply できるか？**
+  - 集約が `AggregateLifecycle.apply(sharedEvent)` を呼べる構造か？
+  - shared event に集約が知らない情報（外部 API 由来など）が含まれていないか？
+  - 含まれている場合、その情報は本当に集約の状態に必要か（不要なら shared event から除外）？
+
+- [ ] **C2: 内部 event と shared event を別々に持とうとしていないか？**
+  - 「内部 event は安定化のため」「shared event は cross-service 契約のため」という理由で 2 種類定義しようとしていないか？
+  - 2 種類になる場合は本 ADR §2 違反（二段イベント）として ADR で例外を明示すること
+  - 集約からは 1 種類の event のみを発火し、変換が必要なら upcaster を使うこと
+
+- [ ] **C3: 内部 publisher / EventHandler が shared event を再 publish していないか？**
+  - 内部 event を購読して `EventGateway.publish(sharedEvent)` する `@EventHandler` を書いていないか？
+  - 書いている場合、本 ADR §2 違反として削除し、集約発火に統合すること
+  - trackingms `CargoDeliveredEventPublisher`（IT6 で廃止）、billingms `SharedPaymentRecordedEventPublisher`（IT7 review H1 で廃止）が反例
+
+- [ ] **C4: 受信側 cross-service ハンドラは ADR-0011 ホワイトリストに準拠しているか？**
+  - `AggregateNotFoundException` と `CommandExecutionException` のみを WARN スキップしているか？
+  - その他の例外はログを吐かずに伝播させ、tracking プロセッサのエラーハンドラに委ねているか？
+
+### コミット前チェック（実装時）
+
+- [ ] **R1: Aggregate Test で shared event の apply が `expectEvents` で検証されているか？**
+  - `@CommandHandler` が `apply(sharedEvent)` を呼ぶことを Axon Test Fixture で検証する
+  - billingms `InvoiceAggregateTest#US23_入金記録` が好例
+
+- [ ] **R2: 投影 / 通知 / cross-service ハンドラは同一 shared event を購読しているか？**
+  - 同一 FQCN（shared/events パッケージ）の event を購読しているか？
+  - 内部 event の購読がプロジェクト内に残っていないか（`grep`）？
+
+- [ ] **R3: event store リプレイで二重発火が起きないか？**
+  - shared event 自体は 1 イベント = 1 集約 apply のため、リプレイで再 apply されても集約状態は冪等
+  - 副作用ハンドラ（投影・通知）は本 ADR §3 フラグ列 + IS NULL ガードで保護されているか？
+
+### レビュー時チェック（PR レビュー）
+
+- [ ] **PR1: 新規 `@EventHandler(SharedEvent.class)` で `EventGateway.publish` を呼んでいる箇所がないか？**
+  - 二段イベントの再導入を即座に検出するための `grep` パターン: `grep -rn "EventGateway.*publish" src/main`
+  - ADR 例外として認める場合はコミットメッセージで本 ADR 自己整合チェックリストの C2 と紐づけて明記
+
+- [ ] **PR2: cross-service ハンドラの `@ProcessingGroup` が ADR-0014/0016 prefix 規約に準拠しているか？**
+  - `cross-` / `local-` / `outbound-` のいずれかか？
+  - ArchUnit `processing_group_prefix_convention` テストが PASS しているか？
+
 ## 備考
 
 - 著者: k2works (IT6 計画時)
