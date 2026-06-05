@@ -45,6 +45,8 @@ dependencies {
     implementation libs.resilience4j.spring.boot3
     implementation libs.caffeine
     implementation 'org.springframework.boot:spring-boot-starter-cache'
+    // Resilience4j @CircuitBreaker / @Cacheable は AOP プロキシ経由で動作するため必須
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
 
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools

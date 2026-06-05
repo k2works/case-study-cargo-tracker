@@ -7,6 +7,12 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  # Caffeine cache（IT8 T4.1 / ADR-0015 後半、shipperInfo TTL 5min）
+  cache:
+    type: caffeine
+    cache-names: shipperInfo
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=5m
 
 server:
   port: 8086
@@ -69,13 +75,6 @@ resilience4j:
       shipperInfo:
         timeoutDuration: 1s
         cancelRunningFuture: true
-
-# Caffeine cache（ADR-0015 後半、shipperInfo TTL 5min）
-spring.cache:
-  type: caffeine
-  cache-names: shipperInfo
-  caffeine:
-    spec: maximumSize=500,expireAfterWrite=5m
 
 # Axon 共通設定（プロファイル別に上書き）
 axon:

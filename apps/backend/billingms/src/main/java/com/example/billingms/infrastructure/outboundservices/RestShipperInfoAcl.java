@@ -62,7 +62,7 @@ public class RestShipperInfoAcl implements ShipperInfoAcl {
     }
 
     @Override
-    @Cacheable(value = "shipperInfo", key = "#shipperId", sync = true)
+    @Cacheable(value = "shipperInfo", key = "#shipperId")
     @CircuitBreaker(name = "shipperInfo", fallbackMethod = "fallback")
     public CorporateContract getContract(String shipperId) {
         log.debug("[rest-shipper-info-acl] GET /api/v1/shippers/{} 実行（cache miss）", shipperId);
