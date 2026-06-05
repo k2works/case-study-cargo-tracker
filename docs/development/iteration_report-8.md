@@ -150,9 +150,19 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8
 | 項目 | 持ち越し先 | 備考 |
 |------|----------|------|
 | H1 SendGrid WireMock 統合テスト | IT9 序盤 | Client 注入経路の検討 |
-| H2 IT8 マーカー棚卸し 1.4-1.10（14h 分） | IT9 中盤 | スコープ判断（Spring Security / AWS Secrets Manager / 集約発火型移行）|
+| H2 残: 1.4 / 1.5 / 1.6 / 1.7 / 1.8（11h 分） | IT9 中盤 | Spring Security 統一 / PublicTrackingTokenFilter / AWS Secrets Manager / OptimalRouteService Dijkstra/A* / RateTable DB 移行 |
 | H3 @SpringBootTest CI コスト測定 | IT9 序盤 | RestShipperInfoAclWireMockIT の並列実行影響 |
 | ADR-0020 実装 | IT9 全体 | Stripe webhook 受信 + 部分入金 + PARTIALLY_PAID 状態追加 |
+
+### H2 持ち越し追加消化（本セッションで実施）
+
+| タスク | 内容 | コミット |
+|-------|------|---------|
+| T1.9 | BillingProperties paymentDueDays を Map に拡張（NET30/60/90 設定駆動化、paymentDueDaysByType + paymentDueDaysFor helper + PaymentDuePolicy オーバーロード、テスト 4 件追加）。Invoice 集約での shipperType 経路統合は IT9 持ち越し | 778fe734 |
+| T1.10 | handlingms + trackingms outbound publisher を集約発火型へ移行（HandlingActivityCrossServicePublisher + CargoTrackedEventPublisher を廃止、shared event を集約内で連続 apply、ADR-0012 二段イベント禁止の hard assertion 適用）| 3a501ff6 |
+| T1.11 | handlingms HandlingValidationService の DIP 回復（HandlingValidationRepository ポート抽出 + MybatisHandlingValidationRepository 実装、ArchUnit 除外解消）| 6d79f5b9 |
+
+これにより H2（14h 分）のうち 6h 分（T1.9 + T1.10 + T1.11）を IT8 内で消化。残 11h（T1.4-1.8）が IT9 持ち越し。
 
 ## 完了基準達成状況
 
