@@ -112,7 +112,7 @@
 | 4.3 | `invoice` Read Model 拡張（`invoice_number` / `payment_due` / `paid_at` カラム反映）+ `payment` 投影 Mapper + Controller（`POST /invoices/{id}/issue`、`POST /invoices/{id}/payments`、`GET /invoices?status=...`） | 4h | - | [x] |
 | 4.4 | NotificationAcl 拡張：`notifyInvoiceIssued` / `notifyPaymentReceived` / `notifyOverdue`。LoggingNotificationAcl スタブで INFO ログ、IT8 で SendGrid 統合 | 1h | - | [x] |
 | 4.5 | bookingms cross-service: `PaymentRecordedEvent`（billingms 発行）を購読し、`Cargo` 集約の予約状態を「精算済（SETTLED）」に更新。`@ProcessingGroup("cross-booking-billing")`、既存 `CargoStatus` enum に `SETTLED` 追加 | 2h | - | [x] |
-| 4.6 | OverdueScheduler（`@Scheduled` cron、毎日 09:00）：`billing_status = INVOICED AND payment_due < now()` を SELECT → 順次 `MarkOverdueCommand` 発火、`notifyOverdue` 発火 | 2h | - | [ ] |
+| 4.6 | OverdueScheduler（`@Scheduled` cron、毎日 09:00）：`billing_status = INVOICED AND payment_due < now()` を SELECT → 順次 `MarkOverdueCommand` 発火、`notifyOverdue` 発火 | 2h | - | [x] |
 | 4.7 | フロント S22 請求一覧（`/billing`、ROLE_ACCOUNTANT、ステータスフィルタ）+ S24 精算書発行（`/billing/:invoiceId/issue`、ROLE_ACCOUNTANT）+ S25 督促一覧（`/billing/overdue`、ROLE_ACCOUNTANT） | 5h | - | [ ] |
 | 4.8 | テスト（Invoice 集約 Axon Fixture 10 件、Controller 8 件、Scheduler 2 件、Vitest 8 件、E2E 3 件） | 3h | - | [ ] |
 
