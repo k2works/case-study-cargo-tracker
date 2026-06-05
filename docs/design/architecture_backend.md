@@ -1146,7 +1146,14 @@ public class ExternalCargoRoutingService {
 > **集約発火型の cross-service 出力（IT7 T2 / ADR-0012）**: `TrackingActivity.handle(UpdateTransportStatusCommand)` 内で
 > DELIVERED 遷移時に `CargoDeliveredEvent`（shared kernel）を **集約で直接 apply**。billingms の
 > `CrossCargoDeliveredEventHandler`（`@ProcessingGroup("cross-billing")`、ADR-0014/0015）が tracking event として
-> 購読し、`CalculateInvoiceCommand` を発火する。冪等化は Invoice 集約内 `if (billingStatus != null) return;` で担保。
+> 購読し、`CalculateInvoiceCommand` を発火する。
+>
+> **冪等化（IT7 review M1 architect 強化版、ADR-0012 §3 規約整合）**: invoiceId は
+> `InvoiceIdGenerator.fromBookingId`（SHA-1 + namespace `billing.invoice.v1` の UUID v5 風採番）で
+> bookingId から決定論的に派生する。event store リプレイや Kafka at-least-once 重複配信が起きても
+> 同一 invoiceId に集約され、Axon `AggregateIdentifierAlreadyExistsException` で集約ロード時点で
+> 冪等吸収される（副作用列を呼ぶ前段で吸収）。従来の `UUID.randomUUID()` + DB UNIQUE 違反方式から脱却し、
+> ADR-0012 §3「冪等性は副作用の前段で吸収する」規約に準拠。
 
 #### handlingms
 
@@ -1170,10 +1177,20 @@ public class ExternalCargoRoutingService {
 | `GET` | `/api/v1/billing/invoices/overdue` | 督促対象一覧（OverdueScheduler が `MarkOverdueCommand` で更新した OVERDUE 状態、US23）| UC18 |
 
 > **cross-service 連携（ADR-0015）**: (1) cargoms → billingms は `CargoDeliveredEvent` を `@ProcessingGroup("cross-billing")`
-> で購読 + `CalculateInvoiceCommand` 発火。(2) ShipperInfo は bookingms の `GET /api/v1/shippers/{shipperId}` を **REST 同期参照**、
-> `RestShipperInfoAcl`（Resilience4j circuit breaker + Caffeine cache TTL 5min + 手動入力 fallback）で耐障害化。
-> (3) billingms → bookingms は `PaymentRecordedEvent` を `CrossBillingPaymentHandler`（`@ProcessingGroup("cross-booking-billing")`）で
-> 購読し Cargo を SETTLED に遷移。
+> で購読 + `CalculateInvoiceCommand` 発火（IT7 review M1 architect で `InvoiceIdGenerator` による
+> bookingId 由来の決定論的 invoiceId 採番に修正済み、ADR-0012 §3 規約整合）。
+> (2) ShipperInfo は bookingms の `GET /api/v1/shippers/{shipperId}` を **REST 同期参照**、
+> `RestShipperInfoAcl`（Resilience4j circuit breaker + Caffeine cache TTL 5min + 手動入力 fallback、IT8 で実装）で耐障害化。
+> (3) billingms → bookingms は shared `PaymentRecordedEvent`（`com.example.shared.events`）を
+> `CrossBillingPaymentHandler`（`@ProcessingGroup("cross-booking-billing")`）で購読し Cargo を SETTLED に遷移。
+
+> **設計教訓（IT7 review H1）**: 設計初期に billingms 内部 `PaymentRecordedEvent` + `SharedPaymentRecordedEventPublisher`
+> （内部 event → shared event 派生 publisher）の二段構造を導入したが、これは ADR-0012 §2 集約発火型違反で、
+> trackingms `CargoDeliveredEventPublisher`（IT6 で廃止）と同型パターンだった。IT7 内対応で
+> `Invoice` 集約から shared event を直接 `apply` する設計に統一済み。
+> 新規 cross-service 連携を追加する際は **ADR-0012 §自己整合チェックリスト（C1-C4 / R1-R3 / PR1-PR2）** を
+> 着手前 / コミット前 / レビュー時の各段階で通すこと。ArchUnit 構造ガード（5 サービス × 3 件 = 15 件）が
+> CI で違反を検知する。
 
 ## セキュリティ設計
 
