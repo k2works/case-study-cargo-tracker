@@ -39,9 +39,10 @@ public class OverdueScheduler {
     }
 
     /**
-     * 毎日 09:00 JST 実行。{@code cron = "0 0 9 * * *"}（{@code zone} は JVM 既定）。
+     * 毎日 09:00 JST 実行（{@code application.yml} の {@code billing.overdue.cron} / {@code zone} で構成）。
+     * IT7 review 中対応で cron / zone を BillingProperties 経由に外部化。
      */
-    @Scheduled(cron = "${billing.overdue.cron:0 0 9 * * *}", zone = "Asia/Tokyo")
+    @Scheduled(cron = "${billing.overdue.cron}", zone = "${billing.overdue.zone}")
     public void scheduledRun() {
         runOverdueDetection();
     }

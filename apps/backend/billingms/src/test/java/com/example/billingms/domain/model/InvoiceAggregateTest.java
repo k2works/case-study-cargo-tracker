@@ -49,7 +49,12 @@ class InvoiceAggregateTest {
                 Clock.fixed(FIXED_NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
         );
         fixture.registerInjectableResource(stubInvoiceNumberGenerator("INV-20260820-0001"));
-        fixture.registerInjectableResource(new PaymentDuePolicy());
+        fixture.registerInjectableResource(new PaymentDuePolicy(
+                new com.example.billingms.config.BillingProperties(
+                        30,
+                        new com.example.billingms.config.BillingProperties.Overdue("0 0 9 * * *", "Asia/Tokyo"),
+                        "法人割引（%d%%）"
+                )));
     }
 
     /**

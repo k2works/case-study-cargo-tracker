@@ -1,5 +1,6 @@
 package com.example.billingms.application.projections;
 
+import com.example.billingms.config.BillingProperties;
 import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
@@ -32,13 +33,16 @@ public class InvoiceProjection {
     private final InvoiceSummaryMapper summaryMapper;
     private final InvoiceLineMapper lineMapper;
     private final PaymentMapper paymentMapper;
+    private final String discountDescriptionTemplate;
 
     public InvoiceProjection(InvoiceSummaryMapper summaryMapper,
                              InvoiceLineMapper lineMapper,
-                             PaymentMapper paymentMapper) {
+                             PaymentMapper paymentMapper,
+                             BillingProperties properties) {
         this.summaryMapper = summaryMapper;
         this.lineMapper = lineMapper;
         this.paymentMapper = paymentMapper;
+        this.discountDescriptionTemplate = properties.discountDescription();
     }
 
     /** PENDING → CALCULATED 初期挿入 + BASIC 行追加。 */
@@ -71,8 +75,8 @@ public class InvoiceProjection {
         Integer maxSeq = lineMapper.findMaxLineSeq(event.invoiceId());
         int nextSeq = (maxSeq == null ? 1 : maxSeq + 1);
         BigDecimal lineAmount = event.discountAmount().negate();
-        String description = String.format(
-                "法人割引（%.0f%%）", event.discountRate().multiply(new BigDecimal("100")).doubleValue());
+        int percent = event.discountRate().multiply(new BigDecimal("100")).intValue();
+        String description = String.format(discountDescriptionTemplate, percent);
         lineMapper.insertInvoiceLine(
                 event.invoiceId(),
                 nextSeq,

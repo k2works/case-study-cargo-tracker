@@ -20,6 +20,15 @@ management:
     health:
       show-details: when_authorized
 
+# billingms 業務パラメータ（IT7 review 中対応、ハードコード除去）
+# IT8 で契約別支払サイト（NET30/60/90）対応時は paymentDueDays を Map に拡張する
+billing:
+  paymentDueDays: 30
+  overdue:
+    cron: "0 0 9 * * *"
+    zone: "Asia/Tokyo"
+  discountDescription: "法人割引（%d%%）"
+
 # Axon 共通設定（プロファイル別に上書き）
 axon:
   serializer:

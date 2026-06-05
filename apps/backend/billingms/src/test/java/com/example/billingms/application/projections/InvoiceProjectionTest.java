@@ -1,5 +1,6 @@
 package com.example.billingms.application.projections;
 
+import com.example.billingms.config.BillingProperties;
 import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
@@ -36,7 +37,12 @@ class InvoiceProjectionTest {
         summaryMapper = mock(InvoiceSummaryMapper.class);
         lineMapper = mock(InvoiceLineMapper.class);
         paymentMapper = mock(PaymentMapper.class);
-        projection = new InvoiceProjection(summaryMapper, lineMapper, paymentMapper);
+        BillingProperties properties = new BillingProperties(
+                30,
+                new BillingProperties.Overdue("0 0 9 * * *", "Asia/Tokyo"),
+                "法人割引（%d%%）"
+        );
+        projection = new InvoiceProjection(summaryMapper, lineMapper, paymentMapper, properties);
     }
 
     @Test
