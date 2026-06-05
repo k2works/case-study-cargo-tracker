@@ -45,7 +45,7 @@ for each candidate:
 
 ### 方針
 
-1. **ShedLock 5.x** を Maven Central から導入し、`@SchedulerLock` アノテーションを `OverdueScheduler.scheduledRun` に付与
+1. **ShedLock 6.x**（Spring Framework 7 / Spring Boot 4 対応版、Maven Central 最新 6.6.0）を導入し、`@SchedulerLock` アノテーションを `OverdueScheduler.scheduledRun` に付与
 2. **LockProvider** は `JdbcTemplateLockProvider` を使用し、既存 `billing_read_db` 内に `shedlock` テーブルを Flyway V3 で作成
 3. **lock 名**: `billing-overdue-scheduler`（サービス + scheduler 名で一意）
 4. **lockAtMostFor / lockAtLeastFor**: cron 間隔の 80% / 20% を目安（24h 周期なら 19h / 5h）

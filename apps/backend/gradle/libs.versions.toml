@@ -25,6 +25,9 @@ mockito = "5.14.2"
 testcontainers = "1.20.4"
 archunit = "1.4.2"
 
+# Distributed lock (IT8 T2.1 / ADR-0017)
+shedlock = "6.6.0"
+
 # JWT
 jjwt = "0.12.6"
 
@@ -71,6 +74,10 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", ve
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 testcontainers-kafka = { module = "org.testcontainers:kafka", version.ref = "testcontainers" }
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+
+# Distributed lock (IT8 T2.1 / ADR-0017)
+shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.ref = "shedlock" }
+shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
 
 # JWT
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }

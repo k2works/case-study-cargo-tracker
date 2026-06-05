@@ -33,6 +33,10 @@ dependencies {
     runtimeOnly libs.postgresql
     runtimeOnly libs.h2
 
+    // 分散ロック（IT8 T2.1 / ADR-0017、OverdueScheduler の multi-instance 排他制御）
+    implementation libs.shedlock.spring
+    implementation libs.shedlock.provider.jdbc.template
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
 
