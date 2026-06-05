@@ -134,7 +134,13 @@ public class Invoice {
             throw new IllegalStateException(
                     "ApplyDiscountCommand は CALCULATED 状態でのみ受理可能です: " + this.billingStatus);
         }
-        CorporateContract contract = shipperInfoAcl.getContract(this.shipperId);
+        // IT8 T4.2: manualDiscountRate 指定時は ACL を呼ばず CORPORATE 扱いで直接適用
+        // （Circuit Breaker OPEN 時に S23 で経理担当者が手動入力するケース）
+        CorporateContract contract = command.manualDiscountRate() != null
+                ? new CorporateContract(this.shipperId,
+                        com.example.billingms.domain.model.ShipperType.CORPORATE,
+                        command.manualDiscountRate())
+                : shipperInfoAcl.getContract(this.shipperId);
         BigDecimal discountAmount = discountPolicy.calculateDiscount(this.basicAmount, contract);
         BigDecimal newTotal = this.basicAmount
                 .subtract(discountAmount)

@@ -314,6 +314,39 @@ class InvoiceAggregateTest {
                 ));
     }
 
+    @Test
+    @DisplayName("IT8 T4.2: manualDiscountRate 指定時は ShipperInfoAcl を呼ばず手動入力値で適用（Circuit Breaker OPEN fallback）")
+    void IT8_T42_手動入力割引率はACLバイパス() {
+        // ShipperInfoAcl が例外を投げる fixture（呼ばれてはいけないことを検証）
+        FixtureConfiguration<Invoice> bypassFixture = new AggregateTestFixture<>(Invoice.class);
+        bypassFixture.registerInjectableResource(new FareCalculator(RateTable.defaultTable()));
+        bypassFixture.registerInjectableResource(new CorporateDiscountPolicy());
+        bypassFixture.registerInjectableResource((ShipperInfoAcl) shipperId -> {
+            throw new IllegalStateException("manualDiscountRate 指定時は ACL を呼んではいけない");
+        });
+        bypassFixture.registerInjectableResource(
+                Clock.fixed(FIXED_NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
+        );
+
+        ApplyDiscountCommand command = new ApplyDiscountCommand("INV-D05", new BigDecimal("0.20"));
+
+        bypassFixture.given(new InvoiceCalculatedEvent(
+                        "INV-D05", "B-D05", "S-D05",
+                        new BigDecimal("330000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new DiscountAppliedEvent(
+                        "INV-D05",
+                        "S-D05",
+                        new BigDecimal("0.20"),
+                        // 330,000 × 0.20 = 66,000
+                        new BigDecimal("66000"),
+                        // 330,000 - 66,000 = 264,000
+                        new BigDecimal("264000"),
+                        FIXED_NOW
+                ));
+    }
+
     // --- IT7 Task 4.1：US23 IssueInvoiceCommand ---
 
     @Test

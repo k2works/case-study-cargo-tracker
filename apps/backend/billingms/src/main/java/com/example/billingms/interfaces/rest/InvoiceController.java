@@ -89,15 +89,21 @@ public class InvoiceController {
     }
 
     /**
-     * 法人割引適用（US22、IT7 タスク 3.3）。経理担当者が S23 で「割引を適用」操作。
-     * Invoice 集約が ShipperInfoAcl から契約取得 + CorporateDiscountPolicy で算出。
+     * 法人割引適用（US22、IT7 T3.3 / IT8 T4.2）。経理担当者が S23 で「割引を適用」操作。
+     *
+     * <p>通常時: Invoice 集約が ShipperInfoAcl から契約取得 + CorporateDiscountPolicy で算出。
+     * Circuit Breaker OPEN 時: 経理担当者が S23 で手動入力した割引率を {@code manualDiscountRate}
+     * として渡し、ACL をバイパスして直接適用。</p>
      */
     @PostMapping("/{invoiceId}/discount")
-    public ResponseEntity<Void> applyDiscount(@PathVariable String invoiceId) {
+    public ResponseEntity<Void> applyDiscount(
+            @PathVariable String invoiceId,
+            @RequestBody(required = false) com.example.billingms.interfaces.rest.dto.ApplyDiscountRequest request) {
         if (invoiceId == null || invoiceId.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        commandGateway.sendAndWait(new ApplyDiscountCommand(invoiceId));
+        java.math.BigDecimal manualRate = request == null ? null : request.manualDiscountRate();
+        commandGateway.sendAndWait(new ApplyDiscountCommand(invoiceId, manualRate));
         return ResponseEntity.accepted().build();
     }
 
