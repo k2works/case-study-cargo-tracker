@@ -39,7 +39,7 @@ billingms LINE カバレッジは review 対応で **85.4% → 89.87%** に向�
 
 ## Try（次に試すこと）
 
-- **T1: TDD Red/Green/Refactor 分離コミット運用化**（review 高、IT8）。pre-commit hook で「Red コミットには失敗テストが含まれる」を簡易検証（grep ベース）
+- **T1: TDD Red/Green/Refactor 分離コミット運用化**: ✅ IT 内文書化対応完了（commit 4afd7c05、`docs/reference/コーディングとテストガイド.md` に分離コミット運用セクション追加）。pre-commit hook 簡易検証は IT8 で実装
 - **T2: H1 教訓を ADR-0012 自己整合チェックリストとして文書化** ✅ IT 内対応完了（commit eadd6683）。次のサービス新設時の着手前ガイドとして活用
 - **T3: InvoiceProjection 抽出リファクタ** ✅ IT 内対応完了（commit 43270c3e）。state 遷移ごとの updateForXxx 増殖を SRP / DRY で解消
 - **T4: NumberSequenceRepository ポート抽出** ✅ IT 内対応完了（commit c9fa9a1c）。テストはインメモリ Fake で完結

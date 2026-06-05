@@ -169,7 +169,7 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 
 ### Try（次イテレーション以降で試す）
 
-- T1: TDD 規律として「Red コミット → Green コミット → Refactor コミット」を 1 タスク 3 コミットに分離。pre-commit hook に Red コミットの「失敗テストが含まれる」検証を追加
+- T1: ✅ IT7 内文書化対応（commit 4afd7c05）。コーディングとテストガイドに TDD Red/Green/Refactor 分離コミット運用ルールを追加。pre-commit hook 簡易検証は IT8（iteration_plan-8.md タスク 1.3）で実装
 - T7: ✅ IT7 内対応（commit bf020c3e + afe31e86）。ArchUnit + Spring scan で ADR-0012/0014/0016 CI 検知を全 5 サービス（billing/booking/tracking/routing/handling）に横展開し、H1/M2 の再発を構造的に防止
 - T2: ✅ IT7 内対応（commit eadd6683）。H1 教訓を ADR-0012 自己整合チェックリスト（C1-C4 / R1-R3 / PR1-PR2）として文書化済み
 - T3: InvoiceProjection クラスを抽出して updateForXxx 群を集約。状態遷移→投影更新の OCP を担保
