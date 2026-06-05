@@ -2,6 +2,7 @@ package com.example.billingms;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * billingms（精算マイクロサービス）のエントリポイント。
@@ -26,6 +27,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * <p>IT7（US21・US22・US23）で新設。</p>
  */
 @SpringBootApplication
+@EnableScheduling
 public class BillingMsApplication {
 
     public static void main(String[] args) {
