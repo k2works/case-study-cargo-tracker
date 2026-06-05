@@ -5,6 +5,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -43,6 +45,42 @@ public interface InvoiceSummaryMapper {
 
     /** 総件数（ページネーション用）。 */
     long count();
+
+    /**
+     * 精算書発行時の invoice 更新（US23 / T4.3、InvoiceIssuedEvent 受信時）。
+     * invoice_number / payment_due / billing_status を更新し、updated_at + version を進める。
+     */
+    void updateForIssued(@Param("invoiceId") String invoiceId,
+                         @Param("invoiceNumber") String invoiceNumber,
+                         @Param("paymentDue") LocalDate paymentDue);
+
+    /**
+     * 入金記録時の invoice 更新（US23 / T4.3、PaymentRecordedEvent 受信時）。
+     * paid_at / billing_status を更新し、updated_at + version を進める。
+     */
+    void updateForPaid(@Param("invoiceId") String invoiceId,
+                       @Param("paidAt") LocalDateTime paidAt);
+
+    /**
+     * 督促時の invoice 更新（US23 / T4.3、InvoiceOverdueEvent 受信時）。
+     * billing_status のみ OVERDUE に更新し、updated_at + version を進める。
+     */
+    void updateForOverdue(@Param("invoiceId") String invoiceId);
+
+    /**
+     * 督促対象（INVOICED かつ payment_due 超過）の一覧を返す（US23 / T4.3, T4.6）。
+     * OverdueScheduler および S25 督促一覧で利用。
+     */
+    List<InvoiceSummary> findOverdueCandidates(@Param("now") LocalDate now);
+
+    /**
+     * billing_status フィルタ付き一覧（US23 / T4.3 / S22 フィルタ）。
+     */
+    List<InvoiceSummary> findByStatus(@Param("billingStatus") String billingStatus,
+                                      @Param("offset") int offset,
+                                      @Param("limit") int limit);
+
+    long countByStatus(@Param("billingStatus") String billingStatus);
 
     /**
      * 当日採番済の invoice_number の最大シーケンス番号を取得（US23 / T4.2）。

@@ -62,6 +62,53 @@
         WHERE invoice_id = #{invoiceId}
     </update>
 
+    <update id="updateForIssued">
+        UPDATE invoice
+        SET invoice_number = #{invoiceNumber},
+            payment_due    = #{paymentDue},
+            billing_status = 'INVOICED',
+            updated_at     = CURRENT_TIMESTAMP,
+            version        = version + 1
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <update id="updateForPaid">
+        UPDATE invoice
+        SET paid_at        = #{paidAt},
+            billing_status = 'PAID',
+            updated_at     = CURRENT_TIMESTAMP,
+            version        = version + 1
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <update id="updateForOverdue">
+        UPDATE invoice
+        SET billing_status = 'OVERDUE',
+            updated_at     = CURRENT_TIMESTAMP,
+            version        = version + 1
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <select id="findOverdueCandidates" resultMap="invoiceSummaryResultMap">
+        SELECT * FROM invoice
+        WHERE billing_status = 'INVOICED'
+          AND payment_due IS NOT NULL
+          AND payment_due &lt; #{now}
+        ORDER BY payment_due
+    </select>
+
+    <select id="findByStatus" resultMap="invoiceSummaryResultMap">
+        SELECT * FROM invoice
+        WHERE billing_status = #{billingStatus}
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByStatus" resultType="long">
+        SELECT COUNT(*) FROM invoice
+        WHERE billing_status = #{billingStatus}
+    </select>
+
     <select id="findByInvoiceId" resultMap="invoiceSummaryResultMap">
         SELECT * FROM invoice WHERE invoice_id = #{invoiceId}
     </select>

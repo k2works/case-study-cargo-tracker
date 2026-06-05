@@ -3,11 +3,14 @@ package com.example.billingms.interfaces.rest;
 import com.example.billingms.application.InvoiceQueryService;
 import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
+import com.example.billingms.domain.commands.IssueInvoiceCommand;
+import com.example.billingms.domain.commands.RecordPaymentCommand;
 import com.example.billingms.domain.model.TransportRecord;
 import com.example.billingms.domain.projections.InvoiceLine;
 import com.example.billingms.domain.projections.InvoiceSummary;
 import com.example.billingms.interfaces.rest.dto.CalculateInvoiceRequest;
 import com.example.billingms.interfaces.rest.dto.InvoiceResponse;
+import com.example.billingms.interfaces.rest.dto.RecordPaymentRequest;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,10 +38,14 @@ public class InvoiceController {
 
     private final CommandGateway commandGateway;
     private final InvoiceQueryService queryService;
+    private final Clock clock;
 
-    public InvoiceController(CommandGateway commandGateway, InvoiceQueryService queryService) {
+    public InvoiceController(CommandGateway commandGateway,
+                             InvoiceQueryService queryService,
+                             Clock clock) {
         this.commandGateway = commandGateway;
         this.queryService = queryService;
+        this.clock = clock;
     }
 
     /**
@@ -93,6 +102,62 @@ public class InvoiceController {
     }
 
     /**
+     * 精算書発行（US23、IT7 T4.3、S24 精算書発行画面）。
+     * Invoice 集約が InvoiceNumberGenerator で採番 + PaymentDuePolicy で支払期限確定。
+     */
+    @PostMapping("/{invoiceId}/issue")
+    public ResponseEntity<Void> issue(@PathVariable String invoiceId) {
+        if (invoiceId == null || invoiceId.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        commandGateway.sendAndWait(new IssueInvoiceCommand(invoiceId));
+        return ResponseEntity.accepted().build();
+    }
+
+    /**
+     * 入金記録（US23、IT7 T4.3、S23 詳細画面の「入金確認」操作）。
+     * IT7 は完全一致のみ受理。IT8 で部分入金 / 決済機関 webhook 連携を追加する。
+     */
+    @PostMapping("/{invoiceId}/payments")
+    public ResponseEntity<PaymentCreationResponse> recordPayment(
+            @PathVariable String invoiceId,
+            @RequestBody RecordPaymentRequest request) {
+        if (invoiceId == null || invoiceId.isBlank()
+                || request == null
+                || request.paidAmount() == null
+                || request.currency() == null || request.currency().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        String paymentId = UUID.randomUUID().toString();
+        LocalDateTime paidAt = request.paidAt() != null ? request.paidAt() : LocalDateTime.now(clock);
+        commandGateway.sendAndWait(new RecordPaymentCommand(
+                invoiceId,
+                paymentId,
+                request.paidAmount(),
+                request.currency(),
+                paidAt,
+                request.paymentMethod(),
+                request.externalReference()
+        ));
+        return ResponseEntity.accepted().body(new PaymentCreationResponse(paymentId));
+    }
+
+    /**
+     * 督促対象（INVOICED かつ payment_due 超過）一覧（US23、IT7 T4.3、S25 督促一覧画面）。
+     * OverdueScheduler 自動発火と独立して経理担当者が即時確認できる。
+     */
+    @GetMapping("/overdue")
+    public ResponseEntity<InvoiceListResponse> findOverdue() {
+        List<InvoiceSummary> items = queryService.findOverdueCandidates();
+        return ResponseEntity.ok(new InvoiceListResponse(
+                items.stream()
+                        .map(s -> InvoiceResponse.from(s, queryService.findLinesByInvoiceId(s.getInvoiceId())))
+                        .toList(),
+                items.size(), 0, items.size()
+        ));
+    }
+
+    /**
      * 請求書詳細取得（US21・US23、S23 表示用）。
      */
     @GetMapping("/{invoiceId}")
@@ -107,16 +172,25 @@ public class InvoiceController {
 
     /**
      * 請求一覧取得（US23、S22 表示用）。
+     * {@code status} クエリパラメータで billing_status による絞り込みが可能。
      */
     @GetMapping
     public ResponseEntity<InvoiceListResponse> findAll(
             @org.springframework.web.bind.annotation.RequestParam(value = "page", defaultValue = "0") int page,
-            @org.springframework.web.bind.annotation.RequestParam(value = "size", defaultValue = "20") int size) {
+            @org.springframework.web.bind.annotation.RequestParam(value = "size", defaultValue = "20") int size,
+            @org.springframework.web.bind.annotation.RequestParam(value = "status", required = false) String status) {
         if (size <= 0 || size > 200) size = 20;
         if (page < 0) page = 0;
         int offset = page * size;
-        List<InvoiceSummary> items = queryService.findAll(offset, size);
-        long total = queryService.count();
+        List<InvoiceSummary> items;
+        long total;
+        if (status != null && !status.isBlank()) {
+            items = queryService.findByStatus(status, offset, size);
+            total = queryService.countByStatus(status);
+        } else {
+            items = queryService.findAll(offset, size);
+            total = queryService.count();
+        }
         return ResponseEntity.ok(new InvoiceListResponse(
                 items.stream()
                         .map(s -> InvoiceResponse.from(s, queryService.findLinesByInvoiceId(s.getInvoiceId())))
@@ -127,6 +201,9 @@ public class InvoiceController {
 
     /** 算出結果に対応する識別子のみを返す簡易レスポンス。 */
     public record InvoiceCreationResponse(String invoiceId) {}
+
+    /** 入金記録レスポンス（US23 T4.3、採番された paymentId のみ）。 */
+    public record PaymentCreationResponse(String paymentId) {}
 
     /** ページネーション付き一覧レスポンス（US23）。 */
     public record InvoiceListResponse(List<InvoiceResponse> items, long totalCount, int page, int size) {}
