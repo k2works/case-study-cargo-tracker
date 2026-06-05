@@ -148,7 +148,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | SendGrid SDK 依存追加 + SendGridNotificationAcl 実装（trackingms 6 メソッド）| 2h | - | [ ] |
+| 3.1 | SendGrid SDK 4.10.3 + trackingms NotificationProperties / NotificationConfig / SendGridNotificationAcl 実装（6 メソッド + Mockito テスト 9 件、commit cc66e825）| 2h | - | [x] |
 | 3.2 | SendGridNotificationAcl 拡張（billingms 3 メソッド）+ テンプレート ID 設定 | 1h | - | [ ] |
 | 3.3 | WireMock 統合テスト + Heroku SendGrid Add-on プロビジョニング | 1h | - | [ ] |
 
