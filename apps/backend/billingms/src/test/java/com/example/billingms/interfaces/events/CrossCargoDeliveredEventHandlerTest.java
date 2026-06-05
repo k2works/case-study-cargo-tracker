@@ -36,7 +36,9 @@ class CrossCargoDeliveredEventHandlerTest {
     void setUp() {
         commandGateway = mock(CommandGateway.class);
         billingContextAcl = mock(BillingContextAcl.class);
-        handler = new CrossCargoDeliveredEventHandler(commandGateway, billingContextAcl);
+        handler = new CrossCargoDeliveredEventHandler(
+                commandGateway, billingContextAcl,
+                new com.example.billingms.domain.services.InvoiceIdGenerator());
     }
 
     private BillingContextInfo defaultInfo() {
@@ -86,6 +88,24 @@ class CrossCargoDeliveredEventHandlerTest {
                 "TRK-FOO1234567", "B-XYZ", LocalDateTime.now()));
 
         verify(billingContextAcl).loadFor("B-XYZ", "TRK-FOO1234567");
+    }
+
+    @Test
+    @DisplayName("review M1 architect: 同一 bookingId のリプレイで invoiceId が決定論的に等しい")
+    void リプレイで決定論的invoiceId() {
+        when(billingContextAcl.loadFor("B-REPLAY", "TRK-REPLAY12345"))
+                .thenReturn(defaultInfo());
+
+        ArgumentCaptor<CalculateInvoiceCommand> captor = ArgumentCaptor.forClass(CalculateInvoiceCommand.class);
+
+        handler.on(new CargoDeliveredEvent(
+                "TRK-REPLAY12345", "B-REPLAY", LocalDateTime.now()));
+        handler.on(new CargoDeliveredEvent(
+                "TRK-REPLAY12345", "B-REPLAY", LocalDateTime.now()));
+
+        verify(commandGateway, org.mockito.Mockito.times(2)).sendAndWait(captor.capture());
+        java.util.List<CalculateInvoiceCommand> commands = captor.getAllValues();
+        assertThat(commands.get(0).invoiceId()).isEqualTo(commands.get(1).invoiceId());
     }
 
     @Test
