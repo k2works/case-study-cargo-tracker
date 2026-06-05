@@ -26,10 +26,14 @@ management:
     health:
       show-details: when_authorized
 
-# billingms 業務パラメータ（IT7 review 中対応、ハードコード除去）
-# IT8 で契約別支払サイト（NET30/60/90）対応時は paymentDueDays を Map に拡張する
+# billingms 業務パラメータ（IT7 review 中対応 / IT8 T1.9 契約別支払サイト対応）
+# paymentDueDays は Map 未設定 ShipperType 向けの default。
+# paymentDueDaysByType で ShipperType 別の NET30/60/90 を上書き可能（任意）。
 billing:
   paymentDueDays: 30
+  paymentDueDaysByType:
+    CORPORATE: 30
+    INDIVIDUAL: 30
   overdue:
     cron: "0 0 9 * * *"
     zone: "Asia/Tokyo"

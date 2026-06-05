@@ -53,6 +53,7 @@ class InvoiceAggregateTest {
         fixture.registerInjectableResource(new PaymentDuePolicy(
                 new com.example.billingms.config.BillingProperties(
                         30,
+                        java.util.Map.of(),
                         new com.example.billingms.config.BillingProperties.Overdue("0 0 9 * * *", "Asia/Tokyo"),
                         "法人割引（%d%%）"
                 )));

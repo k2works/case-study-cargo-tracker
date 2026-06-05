@@ -1,7 +1,10 @@
 package com.example.billingms.config;
 
+import com.example.billingms.domain.model.ShipperType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,9 +24,10 @@ class BillingPropertiesTest {
     @Test
     @DisplayName("デフォルト構成（30 日 + Asia/Tokyo + 法人割引テンプレート）で正常生成")
     void デフォルト構成で生成可能() {
-        BillingProperties props = new BillingProperties(30, VALID_OVERDUE, "法人割引（%d%%）");
+        BillingProperties props = new BillingProperties(30, Map.of(), VALID_OVERDUE, "法人割引（%d%%）");
 
         assertThat(props.paymentDueDays()).isEqualTo(30);
+        assertThat(props.paymentDueDaysByType()).isEmpty();
         assertThat(props.overdue().cron()).isEqualTo("0 0 9 * * *");
         assertThat(props.overdue().zone()).isEqualTo("Asia/Tokyo");
         assertThat(props.discountDescription()).isEqualTo("法人割引（%d%%）");
@@ -32,17 +36,17 @@ class BillingPropertiesTest {
     @Test
     @DisplayName("paymentDueDays が 0 以下だと IllegalArgumentException")
     void paymentDueDaysが非正値で例外() {
-        assertThatThrownBy(() -> new BillingProperties(0, VALID_OVERDUE, "x"))
+        assertThatThrownBy(() -> new BillingProperties(0, Map.of(), VALID_OVERDUE, "x"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("paymentDueDays");
-        assertThatThrownBy(() -> new BillingProperties(-1, VALID_OVERDUE, "x"))
+        assertThatThrownBy(() -> new BillingProperties(-1, Map.of(), VALID_OVERDUE, "x"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("overdue が null だと IllegalArgumentException")
     void overdueがnullで例外() {
-        assertThatThrownBy(() -> new BillingProperties(30, null, "x"))
+        assertThatThrownBy(() -> new BillingProperties(30, Map.of(), null, "x"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("overdue");
     }
@@ -50,12 +54,34 @@ class BillingPropertiesTest {
     @Test
     @DisplayName("discountDescription が null / 空文字 / 空白だと IllegalArgumentException")
     void discountDescriptionが空で例外() {
-        assertThatThrownBy(() -> new BillingProperties(30, VALID_OVERDUE, null))
+        assertThatThrownBy(() -> new BillingProperties(30, Map.of(), VALID_OVERDUE, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new BillingProperties(30, VALID_OVERDUE, ""))
+        assertThatThrownBy(() -> new BillingProperties(30, Map.of(), VALID_OVERDUE, ""))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new BillingProperties(30, VALID_OVERDUE, "   "))
+        assertThatThrownBy(() -> new BillingProperties(30, Map.of(), VALID_OVERDUE, "   "))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("IT8 T1.9: paymentDueDaysByType の値が 0 以下だと IllegalArgumentException")
+    void T19_Map内に非正値があると例外() {
+        assertThatThrownBy(() -> new BillingProperties(
+                30, Map.of(ShipperType.CORPORATE, 0), VALID_OVERDUE, "x"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("paymentDueDaysByType");
+    }
+
+    @Test
+    @DisplayName("IT8 T1.9: paymentDueDaysFor は Map 設定値を返し、未設定なら default を返す")
+    void T19_paymentDueDaysFor() {
+        BillingProperties props = new BillingProperties(
+                30,
+                Map.of(ShipperType.CORPORATE, 60),
+                VALID_OVERDUE,
+                "x");
+        assertThat(props.paymentDueDaysFor(ShipperType.CORPORATE)).isEqualTo(60);
+        assertThat(props.paymentDueDaysFor(ShipperType.INDIVIDUAL)).isEqualTo(30);
+        assertThat(props.paymentDueDaysFor(null)).isEqualTo(30);
     }
 
     @Test
@@ -81,7 +107,7 @@ class BillingPropertiesTest {
     @Test
     @DisplayName("NET60 等の長期サイト（60 日）でも構成可能（IT8 拡張準備）")
     void 長期サイト構成可能() {
-        BillingProperties props = new BillingProperties(60, VALID_OVERDUE, "法人割引（%d%%）");
+        BillingProperties props = new BillingProperties(60, Map.of(), VALID_OVERDUE, "法人割引（%d%%）");
         assertThat(props.paymentDueDays()).isEqualTo(60);
     }
 
@@ -90,6 +116,7 @@ class BillingPropertiesTest {
     void 多言語_他timezoneで構成可能() {
         BillingProperties props = new BillingProperties(
                 30,
+                Map.of(),
                 new BillingProperties.Overdue("0 0 10 * * *", "America/New_York"),
                 "Corporate discount (%d%%)"
         );
