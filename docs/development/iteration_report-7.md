@@ -133,8 +133,8 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | 高 | H1: SharedPaymentRecordedEventPublisher が二段イベント（ADR-0012 違反） | ✅ IT 内対応（commit 657e4a5a）。Invoice 集約から shared event を直接 apply、内部 event + publisher を削除 |
 | 高 | H2: outbound-billing-cross が ADR-0014 prefix 定義と齟齬 | ✅ H1 修正に伴い該当 ProcessingGroup ごと削除 |
 | 高 | TDD 規律: feat と test 同時投入 / test 後追い | ⚠️ IT8 持ち越し。Red→Green→Commit を 1 サイクル粒度で厳格化 |
-| 高 | Read Model Mapper 直叩きの SRP/DRY 違反 | ⚠️ IT8 持ち越し。InvoiceProjection 集約クラスへリファクタ予定 |
-| 中 | InvoiceNumberGenerator が Mapper 直依存（DIP 違反） | ⚠️ IT8 持ち越し。NumberSequenceRepository ポート抽出 |
+| 高 | Read Model Mapper 直叩きの SRP/DRY 違反（M1） | ✅ IT 内対応（commit 43270c3e）。application/projections/InvoiceProjection 抽出、EventHandler は薄いディスパッチ層に縮退 |
+| 中 | InvoiceNumberGenerator が Mapper 直依存（DIP 違反）（M2） | ✅ IT 内対応（commit c9fa9a1c）。InvoiceNumberSequenceRepository ポート + Mybatis 実装に分離 |
 | 中 | ハードコード（cron zone / 30 日 / DISCOUNT description） | ⚠️ IT8 持ち越し |
 | 中 | OverdueScheduler 例外スキップが沈黙故障リスク | ⚠️ IT8 持ち越し。Micrometer counter 検討 |
 | 中 | OverdueScheduler クラスタ排他未実装 | ⚠️ IT8 持ち越し。ShedLock 採用予定 |
@@ -181,8 +181,8 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | ID | 内容 | 規模 |
 |----|------|------|
 | IT8-0.1 | TDD 規律改善（Red/Green/Refactor 分離コミット）| 0.5h |
-| IT8-0.2 | InvoiceProjection 抽出リファクタ（review M1）| 2h |
-| IT8-0.3 | NumberSequenceRepository ポート抽出（review M2）| 1h |
+| IT8-0.2 | InvoiceProjection 抽出リファクタ（review M1）| ✅ IT7 完了（commit 43270c3e）|
+| IT8-0.3 | NumberSequenceRepository ポート抽出（review M2）| ✅ IT7 完了（commit c9fa9a1c）|
 | IT8-0.4 | OverdueScheduler ShedLock 統合（ADR-0017）| 3h |
 | IT8-0.5 | OverdueScheduler Micrometer counter | 0.5h |
 | IT8-0.6 | RestShipperInfoAcl + Resilience4j + Caffeine + 手動入力 fallback | 4h |
