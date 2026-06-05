@@ -4,11 +4,11 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
-import com.example.billingms.domain.events.PaymentRecordedEvent;
 import com.example.billingms.domain.model.BillingStatus;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceLineMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceSummaryMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.PaymentMapper;
+import com.example.shared.events.PaymentRecordedEvent;
 
 import java.math.BigDecimal;
 import org.axonframework.config.ProcessingGroup;
@@ -105,7 +105,13 @@ public class InvoiceProjectionsEventHandler {
                 event.invoiceId(), event.invoiceNumber(), event.paymentDue());
     }
 
-    /** 入金記録投影（US23 / T4.3、PaymentRecordedEvent → payment 行 INSERT + invoice.paid_at + PAID）。 */
+    /**
+     * 入金記録投影（US23 / T4.3、PaymentRecordedEvent → payment 行 INSERT + invoice.paid_at + PAID）。
+     *
+     * <p>shared event は cross-service 契約として最小化されており paymentMethod / externalReference を
+     * 含まない（review H1 修正で内部 event 廃止）。IT8 で部分入金 + 決済機関 webhook 連携時に
+     * 別途 PaymentDetailRecorded 等の補完 event を導入予定。</p>
+     */
     @EventHandler
     public void on(PaymentRecordedEvent event) {
         paymentMapper.insertPayment(
@@ -114,8 +120,8 @@ public class InvoiceProjectionsEventHandler {
                 event.paidAmount(),
                 event.currency(),
                 event.paidAt(),
-                event.paymentMethod(),
-                event.externalReference()
+                null,
+                null
         );
         summaryMapper.updateForPaid(event.invoiceId(), event.paidAt());
         log.info("[local-billing] Payment 投影 invoiceId={} paymentId={} paidAmount={}",

@@ -9,7 +9,6 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
-import com.example.billingms.domain.events.PaymentRecordedEvent;
 import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
 import com.example.billingms.domain.services.InvoiceNumberGenerator;
@@ -197,7 +196,8 @@ public class Invoice {
      * 入金記録（INVOICED|OVERDUE → PAID、US23 / T4.1）。
      *
      * <p>状態遷移検証 + 通貨整合性検証 + 金額完全一致検証（IT7 は完全一致のみ、IT8 で部分入金対応）。
-     * {@link PaymentRecordedEvent} を集約発火する。bookingId を Event payload に含めることで
+     * shared {@link com.example.shared.events.PaymentRecordedEvent} を集約発火する（ADR-0012 集約発火型、
+     * 二段イベント回避）。bookingId を Event payload に含めることで
      * bookingms cross-service（T4.5）が {@code Cargo} 集約を {@code SETTLED} へ遷移できる。</p>
      */
     @CommandHandler
@@ -223,7 +223,7 @@ public class Invoice {
         if (command.paymentId() == null || command.paymentId().isBlank()) {
             throw new IllegalArgumentException("paymentId は必須です");
         }
-        AggregateLifecycle.apply(new PaymentRecordedEvent(
+        AggregateLifecycle.apply(new com.example.shared.events.PaymentRecordedEvent(
                 this.invoiceId,
                 command.paymentId(),
                 this.bookingId,
@@ -231,14 +231,17 @@ public class Invoice {
                 command.paidAmount(),
                 command.currency(),
                 command.paidAt(),
-                command.paymentMethod(),
-                command.externalReference(),
                 LocalDateTime.now(clock)
         ));
     }
 
+    /**
+     * 集約発火型（ADR-0012）に準拠し、shared/events の {@link com.example.shared.events.PaymentRecordedEvent}
+     * を直接 apply する。bookingms cross-service が同 event を購読して Cargo を SETTLED に遷移させる
+     * （T4.5）。投影・通知も本 event を購読することで二段イベント（H1）を回避する。
+     */
     @EventSourcingHandler
-    public void on(PaymentRecordedEvent event) {
+    public void on(com.example.shared.events.PaymentRecordedEvent event) {
         this.paidAt = event.paidAt();
         this.billingStatus = BillingStatus.PAID;
     }

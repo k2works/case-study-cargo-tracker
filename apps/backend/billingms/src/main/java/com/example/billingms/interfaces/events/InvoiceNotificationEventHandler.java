@@ -3,7 +3,7 @@ package com.example.billingms.interfaces.events;
 import com.example.billingms.application.outboundservices.notification.NotificationAcl;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
-import com.example.billingms.domain.events.PaymentRecordedEvent;
+import com.example.shared.events.PaymentRecordedEvent;
 import org.axonframework.config.ProcessingGroup;
 import org.axonframework.eventhandling.EventHandler;
 import org.springframework.stereotype.Component;

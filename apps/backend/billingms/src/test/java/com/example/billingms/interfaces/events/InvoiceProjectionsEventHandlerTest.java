@@ -2,10 +2,10 @@ package com.example.billingms.interfaces.events;
 
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
-import com.example.billingms.domain.events.PaymentRecordedEvent;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceLineMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceSummaryMapper;
 import com.example.billingms.infrastructure.repositories.mybatis.PaymentMapper;
+import com.example.shared.events.PaymentRecordedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,18 +54,18 @@ class InvoiceProjectionsEventHandlerTest {
     @DisplayName("US23 T4.3: PaymentRecordedEvent → insertPayment + updateForPaid 呼出")
     void payment投影() {
         LocalDateTime paidAt = LocalDateTime.of(2026, 9, 22, 15, 0);
+        // shared event は paymentMethod / externalReference を含まない（H1 修正後の集約発火型）
         PaymentRecordedEvent event = new PaymentRecordedEvent(
                 "INV-001", "PAY-001", "B-001", "S-001",
                 new BigDecimal("330000"), "JPY",
-                paidAt, "BANK_TRANSFER", "TXN-001",
-                LocalDateTime.now());
+                paidAt, LocalDateTime.now());
 
         handler.on(event);
 
         verify(paymentMapper).insertPayment(
                 "PAY-001", "INV-001",
                 new BigDecimal("330000"), "JPY",
-                paidAt, "BANK_TRANSFER", "TXN-001");
+                paidAt, null, null);
         verify(summaryMapper).updateForPaid("INV-001", paidAt);
     }
 

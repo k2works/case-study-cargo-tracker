@@ -14,18 +14,18 @@ import java.time.LocalDateTime;
  * <p>cross-service の安定契約として shared モジュールに配置し、billingms / bookingms が
  * 同一 FQCN でシリアライズ・デシリアライズできるようにする（IT7 T4.5）。</p>
  *
- * <p>billingms 内部 {@code com.example.billingms.domain.events.PaymentRecordedEvent} とは
- * 同一意味の event だが、cross-service 配信用にこの shared 版を別途発行する設計とすることで、
- * 内部 event の payload 変更（例: 追加のメタデータ）が cross-service 契約に影響しないように保護する。</p>
+ * <p>ADR-0012 集約発火型に準拠し、Invoice 集約が本 shared event を直接 apply する
+ * （内部 event + 派生 publisher の二段イベントは IT7 review H1 を受けて廃止）。
+ * 同 event を bookingms cross-service / billingms 内部投影 / 通知の各購読者が利用する。</p>
  *
- * @param invoiceId   Invoice 識別子
- * @param paymentId   入金識別子
- * @param bookingId   予約識別子（bookingms の Cargo 集約の関連付けキー）
- * @param shipperId   荷主識別子
- * @param paidAmount  入金額
- * @param currency    通貨コード（ISO 4217 3 文字）
- * @param paidAt      入金時刻
- * @param recordedAt  記録時刻
+ * @param invoiceId         Invoice 識別子
+ * @param paymentId         入金識別子
+ * @param bookingId         予約識別子（bookingms の Cargo 集約の関連付けキー）
+ * @param shipperId         荷主識別子
+ * @param paidAmount        入金額
+ * @param currency          通貨コード（ISO 4217 3 文字）
+ * @param paidAt            入金時刻
+ * @param recordedAt        記録時刻
  */
 public record PaymentRecordedEvent(
         String invoiceId,

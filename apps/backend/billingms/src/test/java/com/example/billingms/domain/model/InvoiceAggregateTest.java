@@ -9,7 +9,7 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
-import com.example.billingms.domain.events.PaymentRecordedEvent;
+import com.example.shared.events.PaymentRecordedEvent;
 import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
 import com.example.billingms.domain.services.InvoiceNumberGenerator;
@@ -412,8 +412,6 @@ class InvoiceAggregateTest {
                         new BigDecimal("330000"),
                         "JPY",
                         paidAt,
-                        "BANK_TRANSFER",
-                        null,
                         FIXED_NOW
                 ));
     }

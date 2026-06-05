@@ -3,7 +3,7 @@ package com.example.billingms.interfaces.events;
 import com.example.billingms.application.outboundservices.notification.NotificationAcl;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
-import com.example.billingms.domain.events.PaymentRecordedEvent;
+import com.example.shared.events.PaymentRecordedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +53,7 @@ class InvoiceNotificationEventHandlerTest {
         PaymentRecordedEvent event = new PaymentRecordedEvent(
                 "INV-001", "PAY-001", "B-001", "S-001",
                 new BigDecimal("330000"), "JPY",
-                LocalDateTime.now(), "BANK_TRANSFER", null, LocalDateTime.now()
+                LocalDateTime.now(), LocalDateTime.now()
         );
 
         handler.on(event);
