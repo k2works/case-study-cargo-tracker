@@ -138,7 +138,7 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | 中 | ハードコード（cron zone / 30 日 / DISCOUNT description） | ✅ IT 内対応（commit 0f970cc1）。BillingProperties record + application.yml に集約 |
 | 中 | OverdueScheduler 例外スキップが沈黙故障リスク | ✅ IT 内対応（commit c3c2fe0e）。billing.overdue.fired/skipped[reason]/candidates counter 追加 |
 | 中 | OverdueScheduler クラスタ排他未実装 | ⚠️ IT8 持ち越し。ShedLock 採用予定 |
-| 中 | 冪等性が ADR-0012 規約と不一致（UNIQUE 違反方式） | ⚠️ IT8 持ち越し |
+| 中 | 冪等性が ADR-0012 規約と不一致（UNIQUE 違反方式） | ✅ IT 内対応（commit ca4a27f6）。InvoiceIdGenerator で bookingId 由来の決定論的 invoiceId に変更、集約識別子レベルで冪等吸収 |
 
 ## 設計判断
 
