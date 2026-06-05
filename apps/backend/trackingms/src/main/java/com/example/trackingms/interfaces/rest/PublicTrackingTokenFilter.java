@@ -9,9 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,16 +17,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 公開追跡照会エンドポイント {@code /api/v1/public/tracking/{tn}} 向けの JWT 検証フィルタ（US18 / ADR-0013）。
+ * 公開追跡照会エンドポイント {@code /api/v1/public/tracking/{tn}} 向けの JWT 検証フィルタ
+ * （US18 / ADR-0013、IT8 H2 持ち越し T1.5 で SecurityFilterChain 統合済み）。
  *
- * <p>本フィルタは Spring Security に依存せず、Spring Boot 標準の {@link OncePerRequestFilter} として
- * 直接 servlet チェーンに登録される（trackingms には Spring Security が導入されていないため）。
- * IT8 で trackingms 全体に Spring Security を導入する際は、本フィルタを SecurityFilterChain の中で
- * {@code permitAll} の前に登録するよう移行する。</p>
+ * <p>本フィルタは IT8 T1.5 以降、{@code SecurityConfig.publicTrackingFilterChain} 内で
+ * {@link org.springframework.security.web.access.intercept.AuthorizationFilter} の前に挿入される。
+ * Spring Security の標準認証フローはバイパスし、JWT 検証失敗時に
+ * <strong>HTTP 403 Forbidden + Problem Detail JSON</strong> を返す（ui_design.md L738 準拠）。
+ * リソース存在の秘匿のため、401 ではなく 403 を採用する。</p>
  *
- * <p>検証ロジックは {@link TrackingTokenService#verify(String, TrackingNumber)} に委譲し、
- * 失敗時はすべて <strong>HTTP 403 Forbidden + Problem Detail JSON</strong> を返す
- * （ui_design.md L738 準拠）。リソース存在の秘匿のため、401 ではなく 403 を採用する。</p>
+ * <p>検証ロジックは {@link TrackingTokenService#verify(String, TrackingNumber)} に委譲する。
+ * IT9 T1.4「全サービス Spring Security 統一」で、本フィルタ以外の trackingms endpoint も
+ * SecurityFilterChain 経由の認証へ移行する予定。</p>
  */
 public class PublicTrackingTokenFilter extends OncePerRequestFilter {
 
@@ -84,22 +83,5 @@ public class PublicTrackingTokenFilter extends OncePerRequestFilter {
         response.getWriter().write(String.format(
                 "{\"type\":\"about:blank\",\"title\":\"Forbidden\",\"status\":403,\"detail\":\"%s\"}",
                 message.replace("\"", "\\\"")));
-    }
-
-    /**
-     * {@link PublicTrackingTokenFilter} を servlet チェーンに登録する設定。
-     * Spring Security 経由ではなく、Boot の {@link FilterRegistrationBean} で直接登録する。
-     */
-    @Configuration
-    public static class FilterRegistration {
-        @Bean
-        public FilterRegistrationBean<PublicTrackingTokenFilter> publicTrackingTokenFilterRegistration(
-                TrackingTokenService tokenService) {
-            FilterRegistrationBean<PublicTrackingTokenFilter> bean = new FilterRegistrationBean<>();
-            bean.setFilter(new PublicTrackingTokenFilter(tokenService));
-            bean.addUrlPatterns("/api/v1/public/tracking/*");
-            bean.setOrder(1);
-            return bean;
-        }
     }
 }
