@@ -135,7 +135,7 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | 高 | TDD 規律: feat と test 同時投入 / test 後追い | ⚠️ IT8 持ち越し。Red→Green→Commit を 1 サイクル粒度で厳格化 |
 | 高 | Read Model Mapper 直叩きの SRP/DRY 違反（M1） | ✅ IT 内対応（commit 43270c3e）。application/projections/InvoiceProjection 抽出、EventHandler は薄いディスパッチ層に縮退 |
 | 中 | InvoiceNumberGenerator が Mapper 直依存（DIP 違反）（M2） | ✅ IT 内対応（commit c9fa9a1c）。InvoiceNumberSequenceRepository ポート + Mybatis 実装に分離 |
-| 中 | ハードコード（cron zone / 30 日 / DISCOUNT description） | ⚠️ IT8 持ち越し |
+| 中 | ハードコード（cron zone / 30 日 / DISCOUNT description） | ✅ IT 内対応（commit 0f970cc1）。BillingProperties record + application.yml に集約 |
 | 中 | OverdueScheduler 例外スキップが沈黙故障リスク | ⚠️ IT8 持ち越し。Micrometer counter 検討 |
 | 中 | OverdueScheduler クラスタ排他未実装 | ⚠️ IT8 持ち越し。ShedLock 採用予定 |
 | 中 | 冪等性が ADR-0012 規約と不一致（UNIQUE 違反方式） | ⚠️ IT8 持ち越し |
@@ -188,7 +188,7 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | IT8-0.6 | RestShipperInfoAcl + Resilience4j + Caffeine + 手動入力 fallback | 4h |
 | IT8-0.7 | LoggingNotificationAcl → SendGridNotificationAcl（ADR-0018）| 4h |
 | IT8-0.8 | PaymentDetailRecorded 補完 event 設計（webhook 連携 + 部分入金）| 6h |
-| IT8-0.9 | ハードコード除去（cron zone / 30 日 / description テンプレート）| 2h |
+| IT8-0.9 | ハードコード除去（cron zone / 30 日 / description テンプレート）| ✅ IT7 完了（commit 0f970cc1）|
 
 ## 次イテレーション計画概要
 
