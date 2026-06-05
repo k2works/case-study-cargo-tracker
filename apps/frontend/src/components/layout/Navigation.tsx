@@ -8,7 +8,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/', label: 'ダッシュボード', roles: ['ROLE_ADMIN', 'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER', 'ROLE_HANDLER'] },
+  { path: '/', label: 'ダッシュボード', roles: ['ROLE_ADMIN', 'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER', 'ROLE_HANDLER', 'ROLE_ACCOUNTANT'] },
   { path: '/shippers', label: '荷主管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   { path: '/quotes', label: '見積管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
   { path: '/bookings', label: '予約管理', roles: ['ROLE_ADMIN', 'ROLE_SALES'] },
@@ -17,6 +17,8 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/tracking', label: '追跡管理', roles: ['ROLE_ADMIN', 'ROLE_TRACKER'] },
   { path: '/tracking/exceptions', label: '例外対応', roles: ['ROLE_ADMIN', 'ROLE_TRACKER'] },
   { path: '/handling', label: '荷役作業', roles: ['ROLE_ADMIN', 'ROLE_HANDLER'] },
+  { path: '/billing', label: '請求管理', roles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT'] },
+  { path: '/billing/overdue', label: '督促一覧', roles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT'] },
 ];
 
 export default function Navigation() {
