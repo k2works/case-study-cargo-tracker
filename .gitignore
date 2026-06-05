@@ -44,6 +44,9 @@ coverage/
 .claude/ralph-loop.local.md
 apps/backend/.claude/
 
+# Codex CLI 個人環境設定（CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS 等）
+.codex/
+
 # Temporary
 tmp/
 .tmp/
