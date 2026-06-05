@@ -187,7 +187,7 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | IT8-0.5 | OverdueScheduler Micrometer counter | ✅ IT7 完了（commit c3c2fe0e）|
 | IT8-0.6 | RestShipperInfoAcl + Resilience4j + Caffeine + 手動入力 fallback | 4h |
 | IT8-0.7 | LoggingNotificationAcl → SendGridNotificationAcl（ADR-0018 起票済、commit c4a913be）| 4h |
-| IT8-0.8 | PaymentDetailRecorded 補完 event 設計（webhook 連携 + 部分入金）| 6h |
+| IT8-0.8 | PaymentDetailRecorded 補完 event 設計（webhook 連携 + 部分入金）| ADR-0019 起票済（commit 43d87dd1）、IT8 で実装 4h |
 | IT8-0.9 | ハードコード除去（cron zone / 30 日 / description テンプレート）| ✅ IT7 完了（commit 0f970cc1）|
 
 ## 次イテレーション計画概要
