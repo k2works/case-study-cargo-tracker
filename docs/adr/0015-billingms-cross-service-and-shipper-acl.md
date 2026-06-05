@@ -155,6 +155,12 @@ bookingms 側に追加する `CrossBillingPaymentHandler` は `cross-booking-bil
 - **ADR-0012 cross-service 冪等性**: 本 ADR は ADR-0012 規約 1（集約発火型）+ 規約 2（投影フラグ列 - Invoice の billingStatus が役割）に完全準拠
 - **ADR-0014 ProcessingGroup 命名**: 本 ADR で追加する 3 グループはすべて ADR-0014 prefix 規約に準拠
 
+### 派生 ADR（IT7 完了時点で起票、IT8 で実装）
+
+- **[ADR-0017 OverdueScheduler クラスタ排他制御](0017-overdue-scheduler-cluster-lock.md)**: billingms multi-instance 化時の ShedLock 統合方針。本 ADR §「将来見直し条件」の「billingms がクラスタ化される」状況に対応
+- **[ADR-0018 通知アダプタ選定](0018-notification-adapter-selection.md)**: 本 ADR で「IT7 は LoggingNotificationAcl スタブ、IT8 で SendGrid」と記述した部分の具体化。SendGrid Add-on + Dynamic Templates を採用
+- **[ADR-0019 PaymentDetailRecorded 補完イベント](0019-payment-detail-recorded-event.md)**: IT7 review H1 修正で内部 event を廃止した結果、`payment` テーブルに `payment_method` / `external_reference` が NULL で入る制限が発生。本 ADR の cross-service 契約最小化方針を維持しつつ補完するための内部 event を IT8 で導入
+
 ## コンプライアンス
 
 - 新規 ACL を追加する PR では、circuit breaker + cache + fallback の 3 層がそろっているかをレビュー観点に追加

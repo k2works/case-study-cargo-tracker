@@ -101,6 +101,11 @@ cross-service の command 発行は **同期コミット境界の外** で行う
 - **ADR-0010 local-h2 Kafka 初期化**: 本 ADR で「孤児イベントは AggregateNotFoundException で WARN スキップ」は引き続き有効
 - **ADR-0011 Kafka tracking エラーハンドリング**: 本 ADR の「フラグ列冪等化」は ADR-0011 の「ホワイトリスト方式」と直交（成功経路 vs 失敗経路）
 
+### 派生・適用 ADR
+
+- **[ADR-0015 billingms cross-service + ShipperInfo ACL](0015-billingms-cross-service-and-shipper-acl.md)**: 本 ADR の集約発火型を billingms に適用。IT7 review H1 で「内部 event + 派生 publisher」の二段イベントを廃止し、自己整合チェックリストを本 ADR に追記する契機となった
+- **[ADR-0019 PaymentDetailRecorded 補完イベント](0019-payment-detail-recorded-event.md)**: 本 ADR §2 集約発火型を維持しつつ、shared event 最小契約と内部運用情報の分離を実現する設計（IT8 で実装）
+
 ## コプライアンス
 
 - 新規 shared イベントを追加するレビュー時、本 ADR の 4 規約をチェックリストとして適用
