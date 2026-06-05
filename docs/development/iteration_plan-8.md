@@ -150,7 +150,7 @@
 |---|--------|---------|------|------|
 | 3.1 | SendGrid SDK 4.10.3 + trackingms NotificationProperties / NotificationConfig / SendGridNotificationAcl 実装（6 メソッド + Mockito テスト 9 件、commit cc66e825）| 2h | - | [x] |
 | 3.2 | SendGridNotificationAcl 拡張（billingms 3 メソッド）+ テンプレート ID 設定（Mockito テスト 6 件、commit b2b474ab）| 1h | - | [x] |
-| 3.3 | WireMock 統合テスト + Heroku SendGrid Add-on プロビジョニング | 1h | - | [ ] |
+| 3.3 | Heroku SendGrid Add-on プロビジョニング手順整備（ops/scripts/heroku.js: sendgrid:starter Add-on 作成 + NOTIFICATION_ADAPTER / SENDGRID_TEMPLATE_* Config Vars 自動投入）+ WireMock 依存追加（T4.3 で Resilience4j テストに利用）。SendGrid SDK の host 上書き制約（Client.buildUri は URIBuilder.setHost にホスト名のみ受理、ポート指定不可）により本 ms の WireMock 統合テストは不可、Mockito Request キャプチャ（T3.1/T3.2）で代替済み | 1h | - | [x] |
 
 ### 4. A3 RestShipperInfoAcl
 
@@ -181,8 +181,8 @@
 |---------|----|---------|------|
 | 基盤改善・移行（1.1-1.3）| - | 8.5h | [-] |
 | IT8 マーカー棚卸し追加（1.4-1.10）| - | 14h | [ ] |
-| A1 ShedLock | 1 | 3h | [ ] |
-| A2 SendGrid | 2 | 4h | [ ] |
+| A1 ShedLock | 1 | 3h | [x] |
+| A2 SendGrid | 2 | 4h | [x] |
 | A3 RestShipperInfoAcl | 2 | 4h | [ ] |
 | A4 PaymentDetailRecorded | 2 | 4h | [ ] |
 | ADR-0020 + 仕上げ | 1 | 5h | [ ] |
@@ -192,7 +192,7 @@
 本番デプロイ準備の一部として SP 外で IT8 内に取り込み。総工数は 28.5h → 42.5h に増加するが、
 ストーリーポイント自体は変動なし（IT8 のスコープは「本番デプロイ可能な状態」と定義）。
 
-**進捗率**: 0%（0/8 SP）— IT8 着手前
+**進捗率**: 38%（3/8 SP 完了 — A1 ShedLock + A2 SendGrid）— Day 5 終了時点
 
 ## スケジュール
 

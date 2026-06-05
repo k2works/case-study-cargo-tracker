@@ -156,6 +156,20 @@ export default function (gulp) {
    heroku addons:create heroku-postgresql:essential-0 --app ${PREFIX}-billingms    # IT7 追加（invoice / invoice_line / payment）
    # authms は Spring Security JWT のみで DB 不要だが、ユーザーマスタを使う場合は同様に追加
 
+3.1. SendGrid アドオン（IT8 T3.3 / ADR-0018、Dynamic Templates によるメール通知）:
+   heroku addons:create sendgrid:starter --app ${PREFIX}-trackingms  # 40,000 通/月、$15/月
+   heroku addons:create sendgrid:starter --app ${PREFIX}-billingms
+
+   # 各 app の SENDGRID_API_KEY / SENDGRID_USERNAME / SENDGRID_PASSWORD は Add-on 作成時に
+   # 自動で Config Vars にセットされる。Heroku → Add-on → SendGrid の Dashboard を開き、
+   # Sender Authentication（Single Sender or Domain Authentication）を完了させること。
+   # その後、Dynamic Templates 画面で 9 種類のテンプレートを作成し、各 d-xxxxx ID をメモする：
+   #   trackingms: trackingIssued / statusChanged / misrouted / exceptionRegistered
+   #               / exceptionResolved / exceptionEscalation
+   #   billingms : invoiceIssued / paymentReceived / overdue
+   # テンプレート ID は手順 5（npx gulp deploy:dev:config）で
+   # SENDGRID_TEMPLATE_* 環境変数として一括投入する。
+
 4. JWT_SECRET と Kafka 設定を .env に追加:
    echo 'JWT_SECRET="'$(openssl rand -base64 48)'"' >> .env
    # IT6 追加: 公開追跡照会の時限署名トークン（trackingms 専用、authms と別鍵）
@@ -256,6 +270,52 @@ export default function (gulp) {
       console.warn('    本番設定: echo \'TRACKING_PUBLIC_TOKEN_SECRET="\'$(openssl rand -base64 48)\'"\' >> .env');
     }
 
+    // IT8 追加: SendGrid Dynamic Templates の通知設定（ADR-0018、T3.1/T3.2）
+    // SENDGRID_API_KEY は Add-on（heroku addons:create sendgrid:starter）で自動投入されるため
+    // ここでは notification.adapter=sendgrid とテンプレート ID のみ Config Vars に追加する。
+    // Heroku SendGrid Dashboard → Dynamic Templates 画面で作成した d-xxxxx ID を .env に記載：
+    //   SENDGRID_TEMPLATE_TRACKING_ISSUED / STATUS_CHANGED / MISROUTED
+    //   SENDGRID_TEMPLATE_EXCEPTION_REGISTERED / RESOLVED / ESCALATION
+    //   SENDGRID_TEMPLATE_INVOICE_ISSUED / PAYMENT_RECEIVED / OVERDUE
+    const notificationAdapter = getEnvVar('NOTIFICATION_ADAPTER') || 'logging';
+    const sendgridFromEmail = getEnvVar('SENDGRID_FROM_EMAIL') || 'noreply@cargo-tracker.example.com';
+    const sendgridFromName = getEnvVar('SENDGRID_FROM_NAME') || 'Cargo Tracker';
+    const trackingTemplates = {
+      TRACKING_ISSUED:       getEnvVar('SENDGRID_TEMPLATE_TRACKING_ISSUED'),
+      STATUS_CHANGED:        getEnvVar('SENDGRID_TEMPLATE_STATUS_CHANGED'),
+      MISROUTED:             getEnvVar('SENDGRID_TEMPLATE_MISROUTED'),
+      EXCEPTION_REGISTERED:  getEnvVar('SENDGRID_TEMPLATE_EXCEPTION_REGISTERED'),
+      EXCEPTION_RESOLVED:    getEnvVar('SENDGRID_TEMPLATE_EXCEPTION_RESOLVED'),
+      EXCEPTION_ESCALATION:  getEnvVar('SENDGRID_TEMPLATE_EXCEPTION_ESCALATION'),
+    };
+    const billingTemplates = {
+      INVOICE_ISSUED:    getEnvVar('SENDGRID_TEMPLATE_INVOICE_ISSUED'),
+      PAYMENT_RECEIVED:  getEnvVar('SENDGRID_TEMPLATE_PAYMENT_RECEIVED'),
+      OVERDUE:           getEnvVar('SENDGRID_TEMPLATE_OVERDUE'),
+    };
+    if (notificationAdapter === 'sendgrid') {
+      const missingTracking = Object.entries(trackingTemplates).filter(([, v]) => !v).map(([k]) => k);
+      const missingBilling = Object.entries(billingTemplates).filter(([, v]) => !v).map(([k]) => k);
+      if (missingTracking.length > 0 || missingBilling.length > 0) {
+        console.warn('⚠️  NOTIFICATION_ADAPTER=sendgrid だが SendGrid テンプレート ID が未設定:');
+        if (missingTracking.length > 0) console.warn(`    trackingms 未設定: ${missingTracking.join(', ')}`);
+        if (missingBilling.length > 0)  console.warn(`    billingms 未設定:  ${missingBilling.join(', ')}`);
+        console.warn('    Heroku SendGrid Dashboard → Dynamic Templates で d-xxxxx ID を発行して .env に記載してください。');
+      }
+    }
+    const buildNotificationVars = (templates) => {
+      let vars =
+        `NOTIFICATION_ADAPTER="${notificationAdapter}" ` +
+        `SENDGRID_FROM_EMAIL="${sendgridFromEmail}" ` +
+        `SENDGRID_FROM_NAME="${sendgridFromName}" `;
+      for (const [key, value] of Object.entries(templates)) {
+        if (value) vars += `SENDGRID_TEMPLATE_${key}="${value}" `;
+      }
+      return vars;
+    };
+    const trackingNotificationVars = buildNotificationVars(trackingTemplates);
+    const billingNotificationVars = buildNotificationVars(billingTemplates);
+
     const kafkaBootstrap  = getEnvVar('KAFKA_BOOTSTRAP_SERVERS');
     const kafkaProtocol   = getEnvVar('KAFKA_SECURITY_PROTOCOL') || 'SSL';
     const kafkaCaCert     = getEnvVar('KAFKA_SSL_CA_CERT');
@@ -334,6 +394,7 @@ export default function (gulp) {
       `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
       kafkaVars +
       trackingExtraVars +
+      trackingNotificationVars +
       `--app ${PREFIX}-trackingms`,
       { stdio: 'inherit' }
     );
@@ -356,6 +417,7 @@ export default function (gulp) {
       `"JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS}" ` +
       kafkaVars +
       `BOOKINGMS_URL="https://${bookingDomain}" ` +
+      billingNotificationVars +
       `--app ${PREFIX}-billingms`,
       { stdio: 'inherit' }
     );

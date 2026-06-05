@@ -30,6 +30,7 @@ shedlock = "6.6.0"
 
 # Notification (IT8 T3.1 / ADR-0018)
 sendgrid = "4.10.3"
+wiremock = "3.13.1"
 
 # JWT
 jjwt = "0.12.6"
@@ -84,6 +85,7 @@ shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-p
 
 # Notification (IT8 T3.1 / ADR-0018)
 sendgrid-java = { module = "com.sendgrid:sendgrid-java", version.ref = "sendgrid" }
+wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 
 # JWT
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }

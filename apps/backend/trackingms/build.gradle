@@ -48,6 +48,8 @@ dependencies {
     testImplementation libs.testcontainers.junit.jupiter
     testImplementation libs.testcontainers.postgresql
     testImplementation libs.testcontainers.kafka
+    // SendGrid WireMock 統合テスト（IT8 T3.3）
+    testImplementation libs.wiremock
 }
 
 test {
