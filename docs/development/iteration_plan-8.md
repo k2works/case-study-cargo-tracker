@@ -166,7 +166,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | PaymentDetailRecorded event + Invoice 集約拡張 + InvoiceProjection 拡張 | 2h | - | [ ] |
+| 5.1 | PaymentDetailRecorded event + Invoice 集約拡張 + InvoiceProjection 拡張（method or ref が非 null 時のみ補完 event 連続 apply、PaymentMapper.updatePaymentDetail SQL 追加、Aggregate テスト 2 件 + Projection テスト 1 件、commit fab3f1be）| 2h | - | [x] |
 | 5.2 | PaymentMapper.updatePaymentDetail + cross-service E2E 更新 | 2h | - | [ ] |
 
 ### 6. ADR-0020 起票 + 仕上げ
