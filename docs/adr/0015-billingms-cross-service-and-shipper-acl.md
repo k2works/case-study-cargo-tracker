@@ -6,7 +6,17 @@ IT7 で精算サブドメイン（billingms）を新規立ち上げるにあた�
 
 ## ステータス
 
-提案中（IT7 着手時）
+部分実装済み（IT7 完了 2026-06-05）
+
+| 範囲 | ステータス | 備考 |
+|------|----------|------|
+| cross-billing event 購読（CargoDeliveredEvent → CalculateInvoiceCommand）| ✅ IT7 完了 | `CrossCargoDeliveredEventHandler` + 決定論的 invoiceId（review M1 architect） |
+| local-billing 投影 | ✅ IT7 完了 | `InvoiceProjectionsEventHandler` + `InvoiceProjection` 集約クラス（review M1） |
+| outbound-billing-notification | ✅ IT7 完了 | `InvoiceNotificationEventHandler` + `LoggingNotificationAcl` スタブ |
+| cross-booking-billing（bookingms 側）| ✅ IT7 完了 | `CrossBillingPaymentHandler` + shared `PaymentRecordedEvent` |
+| ShipperInfoAcl（Stub）| ✅ IT7 完了 | `StubShipperInfoAcl`（CORPORATE 15%） |
+| ShipperInfoAcl（Rest + Resilience4j + Caffeine）| 🚦 IT8 持ち越し | RestShipperInfoAcl 実装、ADR-0015 §追加依存セクション参照 |
+| SendGridNotificationAcl | 🚦 IT8 持ち越し | ADR-0018 で詳細決定 |
 
 ## コンテキスト
 
@@ -98,15 +108,21 @@ ADR-0009 で確立した「shared kernel イベントを Kafka 経由で配信�
 
 ### 4. ProcessingGroup 命名（ADR-0014 派生）
 
-billingms で本 ADR が新規追加する `@ProcessingGroup` は以下:
+billingms で本 ADR が新規追加する `@ProcessingGroup` は以下（IT7 実装完了時点、review H1 修正反映済み）:
 
-| 名前 | 種別 | 役割 |
-| :--- | :--- | :--- |
-| `cross-billing` | cross- prefix | `CargoDeliveredEvent` を購読 → `CalculateInvoiceCommand` 発火 |
-| `local-billing` | local- prefix | `invoice` / `invoice_line` / `payment` 投影更新 |
-| `outbound-billing-notification` | outbound- prefix | `InvoiceIssuedEvent` / `PaymentRecordedEvent` / `InvoiceOverdueEvent` → NotificationAcl |
+| 名前 | 種別 | 役割 | 実装クラス |
+| :--- | :--- | :--- | :--- |
+| `cross-billing` | cross- prefix | `CargoDeliveredEvent`（shared）を購読 → `CalculateInvoiceCommand` 発火 | `CrossCargoDeliveredEventHandler` |
+| `local-billing` | local- prefix | `invoice` / `invoice_line` / `payment` 投影更新 | `InvoiceProjectionsEventHandler` |
+| `outbound-billing-notification` | outbound- prefix | `InvoiceIssuedEvent` / `PaymentRecordedEvent`（shared）/ `InvoiceOverdueEvent` → NotificationAcl | `InvoiceNotificationEventHandler` |
 
-bookingms 側に追加する `CrossBillingPaymentHandler` は `cross-booking-billing` グループ。
+> **review H1 教訓（IT7、commit 657e4a5a で反映）**: 設計初期に `outbound-billing-cross` という 4 つ目のグループ
+> （`SharedPaymentRecordedEventPublisher` で内部 `PaymentRecordedEvent` を shared 版に変換して再 publish）を導入したが、
+> これは ADR-0012 §2 集約発火型違反の「二段イベント」パターン（trackingms `CargoDeliveredEventPublisher` 同型）であった。
+> IT7 内対応で内部 event + publisher を廃止し、`Invoice` 集約から直接 shared `PaymentRecordedEvent` を `apply` する設計に統一済み。
+> 詳細は ADR-0012 §自己整合チェックリスト C1-C4 / PR1 を参照。
+
+bookingms 側に追加する `CrossBillingPaymentHandler` は `cross-booking-billing` グループ（shared `PaymentRecordedEvent` を購読）。
 
 ## 影響
 
