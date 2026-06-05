@@ -129,7 +129,7 @@
 | 1.2 | ADR-0016 全 9 グループ一斉改名 + tokenentry 移行 SQL（4 サービス Flyway V_）+ ArchUnit hard assertion 化（commit 08843a14、local-h2 / local-docker 移行検証済、Heroku 本番は ADR-0016 §3 手順）| 6h | - | [x] |
 | 1.3 | TDD Red/Green/Refactor 分離コミット運用ルール文書化（開発ガイド追記）| 0.5h | - | [x] | <!-- IT7 内文書化済（commit 4afd7c05）、pre-commit hook 実装は本タスクで -->
 | 1.4 | 全サービス Spring Security 統一（@PreAuthorize + SecurityFilterChain、IT8 マーカー棚卸し）| 3h | - | [ ] |
-| 1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合 | 1h | - | [ ] |
+| 1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合（spring-boot-starter-security 追加、SecurityConfig 新規 + publicTrackingFilterChain + defaultFilterChain、AntPathRequestMatcher で web-app-none テスト対応、FilterRegistrationBean 削除、commit 5dbd222a）| 1h | - | [x] |
 | 1.6 | trackingms 公開トークン鍵を AWS Secrets Manager + 四半期ローテーション | 2h | - | [ ] |
 | 1.7 | OptimalRouteService の Dijkstra/A* 移行（多段経由・大量航海対応）| 3h | - | [ ] |
 | 1.8 | RateTable の運用設定 DB 移行（経理担当者が料金改定可能）| 2h | - | [ ] |

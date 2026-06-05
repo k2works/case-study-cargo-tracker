@@ -161,8 +161,9 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8
 | T1.9 | BillingProperties paymentDueDays を Map に拡張（NET30/60/90 設定駆動化、paymentDueDaysByType + paymentDueDaysFor helper + PaymentDuePolicy オーバーロード、テスト 4 件追加）。Invoice 集約での shipperType 経路統合は IT9 持ち越し | 778fe734 |
 | T1.10 | handlingms + trackingms outbound publisher を集約発火型へ移行（HandlingActivityCrossServicePublisher + CargoTrackedEventPublisher を廃止、shared event を集約内で連続 apply、ADR-0012 二段イベント禁止の hard assertion 適用）| 3a501ff6 |
 | T1.11 | handlingms HandlingValidationService の DIP 回復（HandlingValidationRepository ポート抽出 + MybatisHandlingValidationRepository 実装、ArchUnit 除外解消）| 6d79f5b9 |
+| T1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合（spring-boot-starter-security 追加 + SecurityConfig 新規、AntPathRequestMatcher で MvcRequestMatcher 依存回避、IT9 T1.4 の前準備）| 5dbd222a |
 
-これにより H2（14h 分）のうち 6h 分（T1.9 + T1.10 + T1.11）を IT8 内で消化。残 11h（T1.4-1.8）が IT9 持ち越し。
+これにより H2（14h 分）のうち 7h 分（T1.9 + T1.10 + T1.11 + T1.5）を IT8 内で消化。残 10h（T1.4 / T1.6 / T1.7 / T1.8）が IT9 持ち越し。
 
 ## 完了基準達成状況
 
