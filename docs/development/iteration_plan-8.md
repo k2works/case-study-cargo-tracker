@@ -160,7 +160,7 @@
 | 4.2 | Circuit Breaker fallback + 手動入力 UI（S23 改修）| 1.5h | - | [x] |
 | 4.2.a | backend: ApplyDiscountCommand に manualDiscountRate 追加 + Invoice 集約 ACL バイパス分岐 + CircuitBreakerHealthController（GET /api/v1/billing/circuit-breakers/{name}）+ 単体テスト 4 件（commit 19a3e921）| - | - | [x] |
 | 4.2.b | frontend: billingApi.getCircuitBreakerHealth + S23 OPEN 時の手動入力フォーム（amber alert + 0.00〜0.30 input + 手動入力で適用）+ vitest 18 件（commit f2cdf59c）| - | - | [x] |
-| 4.3 | WireMock タイムアウトテスト + Caffeine TTL 検証 | 0.5h | - | [ ] |
+| 4.3 | WireMock タイムアウトテスト + Caffeine TTL 検証（@SpringBootTest + WireMock で 5xx 連続 → OPEN → fallback + cache HIT で REST 抑止 2 件、spring-boot-starter-aop 追加、commit 1eb506b4）| 0.5h | - | [x] |
 
 ### 5. A4 PaymentDetailRecorded
 
@@ -185,7 +185,7 @@
 | IT8 マーカー棚卸し追加（1.4-1.10）| - | 14h | [ ] |
 | A1 ShedLock | 1 | 3h | [x] |
 | A2 SendGrid | 2 | 4h | [x] |
-| A3 RestShipperInfoAcl | 2 | 4h | [ ] |
+| A3 RestShipperInfoAcl | 2 | 4h | [x] |
 | A4 PaymentDetailRecorded | 2 | 4h | [ ] |
 | ADR-0020 + 仕上げ | 1 | 5h | [ ] |
 | **合計** | **8** | **42.5h** | |
@@ -194,7 +194,7 @@
 本番デプロイ準備の一部として SP 外で IT8 内に取り込み。総工数は 28.5h → 42.5h に増加するが、
 ストーリーポイント自体は変動なし（IT8 のスコープは「本番デプロイ可能な状態」と定義）。
 
-**進捗率**: 38%（3/8 SP 完了 — A1 ShedLock + A2 SendGrid）— Day 5 終了時点
+**進捗率**: 63%（5/8 SP 完了 — A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl）— Day 7 終了時点
 
 ## スケジュール
 
