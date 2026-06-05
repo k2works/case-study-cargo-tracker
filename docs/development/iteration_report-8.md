@@ -162,8 +162,9 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8
 | T1.10 | handlingms + trackingms outbound publisher を集約発火型へ移行（HandlingActivityCrossServicePublisher + CargoTrackedEventPublisher を廃止、shared event を集約内で連続 apply、ADR-0012 二段イベント禁止の hard assertion 適用）| 3a501ff6 |
 | T1.11 | handlingms HandlingValidationService の DIP 回復（HandlingValidationRepository ポート抽出 + MybatisHandlingValidationRepository 実装、ArchUnit 除外解消）| 6d79f5b9 |
 | T1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合（spring-boot-starter-security 追加 + SecurityConfig 新規、AntPathRequestMatcher で MvcRequestMatcher 依存回避、IT9 T1.4 の前準備）| 5dbd222a |
+| T1.8 | RateTable の運用設定駆動化（BillingProperties.RateTableSettings + application.yml、経理担当者が料金改定可能）| 75af56c5 |
 
-これにより H2（14h 分）のうち 7h 分（T1.9 + T1.10 + T1.11 + T1.5）を IT8 内で消化。残 10h（T1.4 / T1.6 / T1.7 / T1.8）が IT9 持ち越し。
+これにより H2（14h 分）のうち 9h 分（T1.9 + T1.10 + T1.11 + T1.5 + T1.8）を IT8 内で消化。残 8h（T1.4 Spring Security 統一 / T1.6 AWS Secrets Manager / T1.7 OptimalRouteService Dijkstra/A*）が IT9 持ち越し。
 
 ## 完了基準達成状況
 

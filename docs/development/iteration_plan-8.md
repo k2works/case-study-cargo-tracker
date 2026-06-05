@@ -132,7 +132,7 @@
 | 1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合（spring-boot-starter-security 追加、SecurityConfig 新規 + publicTrackingFilterChain + defaultFilterChain、AntPathRequestMatcher で web-app-none テスト対応、FilterRegistrationBean 削除、commit 5dbd222a）| 1h | - | [x] |
 | 1.6 | trackingms 公開トークン鍵を AWS Secrets Manager + 四半期ローテーション | 2h | - | [ ] |
 | 1.7 | OptimalRouteService の Dijkstra/A* 移行（多段経由・大量航海対応）| 3h | - | [ ] |
-| 1.8 | RateTable の運用設定 DB 移行（経理担当者が料金改定可能）| 2h | - | [ ] |
+| 1.8 | RateTable の運用設定駆動化（BillingProperties.RateTableSettings + application.yml で経理担当者が料金改定可能、defaultSettings 正規化、テスト 2 件追加、commit 75af56c5）。完全な DB 駆動化（管理 UI からのランタイム反映）は IT9 持ち越し | 2h | - | [x] |
 | 1.9 | BillingProperties paymentDueDays を Map<ShipperType, Integer> に拡張（paymentDueDaysByType + paymentDueDaysFor helper、PaymentDuePolicy.calculateDueDate(today, shipperType) オーバーロード、テスト 4 件追加、commit 778fe734）。IssueInvoice 集約での shipperType 経路統合は IT9 持ち越し | 1h | - | [x] |
 | 1.10 | handlingms + trackingms outbound publisher の集約発火型移行（HandlingActivityCrossServicePublisher + CargoTrackedEventPublisher を廃止、集約内で shared event 連続 apply、ArchUnit hard 適用、テスト 5 件更新、commit 3a501ff6）| 3h | - | [x] |
 | 1.11 | handlingms `HandlingValidationService` の DIP 回復（domain.services.HandlingValidationRepository 抽出 + infrastructure.MybatisHandlingValidationRepository 実装、ArchUnit DSL 除外を解消、テスト 8 件簡素化、commit 6d79f5b9）| 2h | - | [x] |
