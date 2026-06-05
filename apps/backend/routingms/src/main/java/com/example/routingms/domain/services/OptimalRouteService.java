@@ -7,9 +7,13 @@ import com.example.routingms.domain.projections.VoyageProjection;
 
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 経路候補算出ドメインサービス（US08 / Routing Context）。
@@ -18,8 +22,10 @@ import java.util.List;
  * 寄港地の接続可能性を評価して経路候補を推奨順に算出する。Routing の集約は {@code Voyage} のみであり
  * （domain-model.md）、経路候補は永続集約を持たない算出結果として返す。</p>
  *
- * <p>MVP では直行便および 1 経由（乗り継ぎ 1 回）までの単純探索を行う。多段経由の探索は
- * 段階拡張とし IT8 バッファで対応する（iteration_plan-4.md リスク対策）。</p>
+ * <p>IT8 T1.7 で BFS による多段経由探索（最大 {@link #MAX_LEGS} 段）に移行。直行 + 1 経由のみだった
+ * 旧実装（O(n²) の二重ループ）から、グラフ上の BFS 探索でグローバルな最適経路を発見可能にした。
+ * 循環防止のため同一港の二重通過を抑止する。完全な Dijkstra/A*（重み付きキュー + ヒューリスティック）
+ * は将来 voyage 数 / 港数の増加時に切替（現状の最大経由 3 段では BFS で実用十分）。</p>
  *
  * <p>推奨順は「直行便を最優先 → 所要日数の短い順 → 概算費用の安い順」で並べる。
  * 期限内に到達可能な経路がない場合は空リストを返す（候補なし）。</p>
@@ -28,12 +34,11 @@ import java.util.List;
  * {@code estimatedCost = 区間数 × LEG_BASE_FEE + 所要日数 × DAILY_RATE}（JPY 固定）の簡易ヒューリスティックで
  * 算出する。現状は所要日数に連動するため推奨順の第 2・第 3 キー（日数・費用）はおおむね同順となる。正式な運賃が
  * 導入された段階で費用が独立した推奨キーになる。</p>
- *
- * <p><b>スケール前提</b>：乗り継ぎ探索は全航海の二重ループ（O(n²)）で、直行 + 1 経由までの少件数を前提とする。
- * 多段経由・大量航海への拡張は IT8 でアルゴリズム（Dijkstra/A*）を差し替える。</p>
  */
 public class OptimalRouteService {
 
+    /** 探索する最大経由段数（leg 数）。3 段 = 直行 + 1 経由 + 2 経由まで。 */
+    private static final int MAX_LEGS = 3;
     private static final String GENERAL_CARGO_TYPE = "GENERAL";
     private static final BigDecimal LEG_BASE_FEE = new BigDecimal("200000");
     private static final BigDecimal DAILY_RATE = new BigDecimal("40000");
@@ -51,9 +56,7 @@ public class OptimalRouteService {
                 .filter(voyage -> accepts(voyage, spec.cargoType()))
                 .toList();
 
-        List<RouteCandidate> candidates = new ArrayList<>();
-        candidates.addAll(directCandidates(spec, eligible));
-        candidates.addAll(transshipmentCandidates(spec, eligible));
+        List<RouteCandidate> candidates = bfsSearch(spec, eligible);
 
         return candidates.stream()
                 .filter(candidate -> withinDeadline(candidate, spec))
@@ -61,40 +64,66 @@ public class OptimalRouteService {
                 .toList();
     }
 
-    private List<RouteCandidate> directCandidates(RouteSearchSpecification spec, List<VoyageProjection> voyages) {
-        return voyages.stream()
-                .filter(voyage -> matches(voyage.getOriginUnlocode(), spec.origin())
-                        && matches(voyage.getDestUnlocode(), spec.destination()))
-                .map(voyage -> toCandidate(List.of(toLeg(voyage))))
-                .toList();
-    }
+    /**
+     * BFS で出発地から目的地までの経路を全列挙する（最大 {@link #MAX_LEGS} 段）。
+     * 同一港を 2 回通る経路は循環として除外。
+     */
+    private List<RouteCandidate> bfsSearch(RouteSearchSpecification spec, List<VoyageProjection> voyages) {
+        List<RouteCandidate> results = new ArrayList<>();
+        Deque<SearchState> queue = new ArrayDeque<>();
 
-    private List<RouteCandidate> transshipmentCandidates(
-            RouteSearchSpecification spec, List<VoyageProjection> voyages) {
-        // 第 1 区間の候補：出発地から出るが目的地直行ではない便（直行便は directCandidates で扱う）
-        List<VoyageProjection> firstLegs = voyages.stream()
-                .filter(voyage -> matches(voyage.getOriginUnlocode(), spec.origin()))
-                .filter(voyage -> !matches(voyage.getDestUnlocode(), spec.destination()))
-                .toList();
-
-        List<RouteCandidate> result = new ArrayList<>();
-        for (VoyageProjection first : firstLegs) {
-            voyages.stream()
-                    .filter(second -> connects(first, second, spec))
-                    .map(second -> toCandidate(List.of(toLeg(first), toLeg(second))))
-                    .forEach(result::add);
+        // 初期状態: spec.origin から出発する全 voyage を queue に投入
+        for (VoyageProjection v : voyages) {
+            if (matches(v.getOriginUnlocode(), spec.origin())) {
+                Set<String> visited = new HashSet<>();
+                visited.add(spec.origin());
+                visited.add(v.getDestUnlocode());
+                queue.add(new SearchState(List.of(toLeg(v)), visited, v));
+            }
         }
-        return result;
+
+        while (!queue.isEmpty()) {
+            SearchState state = queue.poll();
+            VoyageProjection last = state.lastVoyage;
+
+            // 目的地に到達 → 経路候補として登録
+            if (matches(last.getDestUnlocode(), spec.destination())) {
+                results.add(toCandidate(state.legs));
+                continue;
+            }
+
+            // 探索深さ上限 or 目的地に到達できる可能性がない → 打ち切り
+            if (state.legs.size() >= MAX_LEGS) {
+                continue;
+            }
+
+            // 接続便を探索
+            for (VoyageProjection next : voyages) {
+                if (matches(next.getOriginUnlocode(), last.getDestUnlocode())
+                        && !state.visitedPorts.contains(next.getDestUnlocode())
+                        && !next.getDepartureDate().isBefore(last.getArrivalDate())) {
+                    List<RouteLeg> newLegs = new ArrayList<>(state.legs);
+                    newLegs.add(toLeg(next));
+                    Set<String> newVisited = new HashSet<>(state.visitedPorts);
+                    newVisited.add(next.getDestUnlocode());
+                    queue.add(new SearchState(List.copyOf(newLegs), newVisited, next));
+                }
+            }
+        }
+
+        return results;
     }
 
     /**
-     * {@code second} が {@code first} の乗り継ぎ便として成立するか。
-     * 接続港が一致し、目的地へ到達し、接続便の到着後に出発する場合に {@code true}。
+     * BFS 探索の中間状態。
+     *
+     * @param legs           ここまでの経路（leg 列）
+     * @param visitedPorts   既に通過した港（循環抑止用）
+     * @param lastVoyage     最後の leg に対応する Voyage（接続判定で利用）
      */
-    private boolean connects(VoyageProjection first, VoyageProjection second, RouteSearchSpecification spec) {
-        return matches(second.getOriginUnlocode(), first.getDestUnlocode())
-                && matches(second.getDestUnlocode(), spec.destination())
-                && !second.getDepartureDate().isBefore(first.getArrivalDate());
+    private record SearchState(List<RouteLeg> legs,
+                               Set<String> visitedPorts,
+                               VoyageProjection lastVoyage) {
     }
 
     /**

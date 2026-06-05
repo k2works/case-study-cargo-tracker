@@ -229,4 +229,63 @@ class OptimalRouteServiceTest {
         assertThat(candidates.get(2).voyageNumbers()).containsExactly("V-LA", "V-LB");
         assertThat(candidates.get(0).estimatedDays()).isEqualTo(25);
     }
+
+    @Test
+    void IT8_T17_BFS_2経由ルートも算出する() {
+        // JPTYO → SGSIN → AEJEA → DEHAM の 3 leg 経路
+        VoyageProjection leg1 = voyage("V-3A", "JPTYO", "SGSIN",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 10, 18, 0), List.of("GENERAL"));
+        VoyageProjection leg2 = voyage("V-3B", "SGSIN", "AEJEA",
+                LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 18, 18, 0), List.of("GENERAL"));
+        VoyageProjection leg3 = voyage("V-3C", "AEJEA", "DEHAM",
+                LocalDateTime.of(2026, 7, 20, 9, 0), LocalDateTime.of(2026, 7, 30, 18, 0), List.of("GENERAL"));
+        RouteSearchSpecification spec =
+                new RouteSearchSpecification("JPTYO", "DEHAM", LocalDate.of(2026, 8, 5), "GENERAL");
+
+        List<RouteCandidate> candidates = service.calculate(spec, List.of(leg1, leg2, leg3));
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).voyageNumbers()).containsExactly("V-3A", "V-3B", "V-3C");
+        assertThat(candidates.get(0).legs()).hasSize(3);
+    }
+
+    @Test
+    void IT8_T17_循環ルートは除外される() {
+        // JPTYO → SGSIN → JPTYO → DEHAM のような循環経路は MAX_LEGS 内であっても除外される
+        VoyageProjection out = voyage("V-OUT", "JPTYO", "SGSIN",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 10, 18, 0), List.of("GENERAL"));
+        VoyageProjection back = voyage("V-BACK", "SGSIN", "JPTYO",
+                LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 19, 18, 0), List.of("GENERAL"));
+        VoyageProjection direct = voyage("V-D", "JPTYO", "DEHAM",
+                LocalDateTime.of(2026, 7, 21, 9, 0), LocalDateTime.of(2026, 8, 1, 18, 0), List.of("GENERAL"));
+        RouteSearchSpecification spec =
+                new RouteSearchSpecification("JPTYO", "DEHAM", LocalDate.of(2026, 8, 10), "GENERAL");
+
+        // 循環: JPTYO → SGSIN → JPTYO → DEHAM は visitedPorts により除外される
+        // 結果は (1) JPTYO直行 V-D のみ
+        List<RouteCandidate> candidates = service.calculate(spec, List.of(out, back, direct));
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).voyageNumbers()).containsExactly("V-D");
+    }
+
+    @Test
+    void IT8_T17_MAX_LEGSを超える経路は探索しない() {
+        // 4 leg の経路（MAX_LEGS=3 を超える）は候補に含めない
+        VoyageProjection l1 = voyage("V-L1", "JPTYO", "P1",
+                LocalDateTime.of(2026, 7, 3, 9, 0), LocalDateTime.of(2026, 7, 5, 18, 0), List.of("GENERAL"));
+        VoyageProjection l2 = voyage("V-L2", "P1", "P2",
+                LocalDateTime.of(2026, 7, 6, 9, 0), LocalDateTime.of(2026, 7, 8, 18, 0), List.of("GENERAL"));
+        VoyageProjection l3 = voyage("V-L3", "P2", "P3",
+                LocalDateTime.of(2026, 7, 9, 9, 0), LocalDateTime.of(2026, 7, 11, 18, 0), List.of("GENERAL"));
+        VoyageProjection l4 = voyage("V-L4", "P3", "DEHAM",
+                LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 15, 18, 0), List.of("GENERAL"));
+        RouteSearchSpecification spec =
+                new RouteSearchSpecification("JPTYO", "DEHAM", LocalDate.of(2026, 8, 10), "GENERAL");
+
+        List<RouteCandidate> candidates = service.calculate(spec, List.of(l1, l2, l3, l4));
+
+        // 4 leg 経路は探索範囲外で候補なし
+        assertThat(candidates).isEmpty();
+    }
 }
