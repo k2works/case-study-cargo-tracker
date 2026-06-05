@@ -512,15 +512,18 @@ test.describe('US14/US15/US17/cross-service: 追跡番号採番と荷役によ�
       )
       .toBe('INVOICED');
 
-    // 6) 入金記録 → PAID
+    // 6) 入金記録 → PAID（IT8 T5.2 / ADR-0019: externalReference を渡して
+    //    PaymentDetailRecorded 経由で payment_method / external_reference が反映されることを検証）
     const invRes = await request.get(`/api/v1/billing/invoices/${invoiceId}`, { headers: auth });
     const inv = await invRes.json();
+    const externalReference = `TXN-IT7E2E-${invoiceId.slice(-6)}`;
     const payRes = await request.post(`/api/v1/billing/invoices/${invoiceId}/payments`, {
       headers: { ...auth, 'Content-Type': 'application/json' },
       data: {
         paidAmount: inv.totalAmount,
         currency: inv.currency,
         paymentMethod: 'BANK_TRANSFER',
+        externalReference,
       },
     });
     expect(payRes.status(), await payRes.text()).toBe(202);
@@ -538,6 +541,29 @@ test.describe('US14/US15/US17/cross-service: 追跡番号採番と荷役によ�
         },
       )
       .toBe('PAID');
+
+    // 6.5) IT8 T5.2 / ADR-0019: payment テーブルに payment_method / external_reference が反映されたことを
+    //      invoice 詳細 API の payments 配列で確認（PaymentDetailRecorded 補完 event 経由）
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/billing/invoices/${invoiceId}/payments`, { headers: auth });
+          if (r.status() !== 200) return null;
+          const payments = (await r.json()) as Array<{
+            paymentMethod?: string;
+            externalReference?: string;
+          }>;
+          const p = payments[0];
+          if (!p) return null;
+          return { method: p.paymentMethod, ref: p.externalReference };
+        },
+        {
+          message: 'PaymentDetailRecorded 補完 event 経由の payment_method / external_reference 反映を確認できませんでした',
+          timeout: 30_000,
+          intervals: [500, 1000, 2000],
+        },
+      )
+      .toEqual({ method: 'BANK_TRANSFER', ref: externalReference });
 
     // 7) bookingms cross-service SETTLED 反映（PaymentRecordedEvent → MarkBookingSettledCommand）
     await expect

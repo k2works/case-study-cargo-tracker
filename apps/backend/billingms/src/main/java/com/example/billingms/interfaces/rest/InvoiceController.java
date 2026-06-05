@@ -164,6 +164,25 @@ public class InvoiceController {
     }
 
     /**
+     * 入金履歴取得（US23、IT8 T5.2 / ADR-0019）。
+     *
+     * <p>S23 詳細画面の支払履歴セクション + cross-service E2E が PaymentDetailRecorded
+     * 経由の payment_method / external_reference 反映を確認するために利用する。</p>
+     */
+    @GetMapping("/{invoiceId}/payments")
+    public ResponseEntity<List<com.example.billingms.interfaces.rest.dto.PaymentResponse>> findPayments(
+            @PathVariable String invoiceId) {
+        if (invoiceId == null || invoiceId.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        List<com.example.billingms.interfaces.rest.dto.PaymentResponse> payments = queryService
+                .findPaymentsByInvoiceId(invoiceId).stream()
+                .map(com.example.billingms.interfaces.rest.dto.PaymentResponse::from)
+                .toList();
+        return ResponseEntity.ok(payments);
+    }
+
+    /**
      * 請求書詳細取得（US21・US23、S23 表示用）。
      */
     @GetMapping("/{invoiceId}")
