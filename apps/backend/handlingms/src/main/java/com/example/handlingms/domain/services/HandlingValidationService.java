@@ -2,8 +2,6 @@ package com.example.handlingms.domain.services;
 
 import com.example.handlingms.domain.model.HandlingType;
 import com.example.handlingms.domain.projections.CargoSnapshot;
-import com.example.handlingms.infrastructure.repositories.mybatis.CargoSnapshotMapper;
-import com.example.handlingms.infrastructure.repositories.mybatis.HandlingActivityMapper;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -30,13 +28,10 @@ public class HandlingValidationService {
     /** 重複判定の時間粒度（前後 5 分） */
     static final long DUPLICATE_WINDOW_MINUTES = 5;
 
-    private final HandlingActivityMapper handlingActivityMapper;
-    private final CargoSnapshotMapper cargoSnapshotMapper;
+    private final HandlingValidationRepository repository;
 
-    public HandlingValidationService(HandlingActivityMapper handlingActivityMapper,
-                                     CargoSnapshotMapper cargoSnapshotMapper) {
-        this.handlingActivityMapper = handlingActivityMapper;
-        this.cargoSnapshotMapper = cargoSnapshotMapper;
+    public HandlingValidationService(HandlingValidationRepository repository) {
+        this.repository = repository;
     }
 
     /**
@@ -47,8 +42,8 @@ public class HandlingValidationService {
                                 String unlocode, LocalDateTime occurredAt) {
         LocalDateTime windowStart = occurredAt.minusMinutes(DUPLICATE_WINDOW_MINUTES);
         LocalDateTime windowEnd = occurredAt.plusMinutes(DUPLICATE_WINDOW_MINUTES);
-        long count = handlingActivityMapper.countDuplicates(
-                trackingNumber, handlingType.name(), unlocode, windowStart, windowEnd);
+        long count = repository.countDuplicates(
+                trackingNumber, handlingType, unlocode, windowStart, windowEnd);
         return count > 0;
     }
 
@@ -67,7 +62,7 @@ public class HandlingValidationService {
      */
     public Optional<String> detectUnexpected(String trackingNumber, HandlingType handlingType,
                                              String unlocode) {
-        CargoSnapshot snapshot = cargoSnapshotMapper.findByTrackingNumber(trackingNumber);
+        CargoSnapshot snapshot = repository.findCargoSnapshotByTrackingNumber(trackingNumber);
         if (snapshot == null) {
             return Optional.empty();
         }

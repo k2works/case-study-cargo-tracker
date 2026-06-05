@@ -83,14 +83,11 @@ class HandlingArchitectureTest {
     }
 
     @Test
-    @DisplayName("DIP: handlingms の domain.services は infrastructure.repositories.mybatis に直接依存しない（HandlingValidationService は IT8 タスク 1.11 でポート抽出予定）")
+    @DisplayName("DIP: handlingms の domain.services は infrastructure.repositories.mybatis に直接依存しない（IT8 T1.11 で HandlingValidationService の Repository ポート抽出完了）")
     void domainServicesShouldNotDependOnMyBatisMapper() {
         List<String> violations = new ArrayList<>();
         for (JavaClass clazz : handlingClasses) {
             if (!clazz.getPackageName().contains("com.example.handlingms.domain.services")) continue;
-            // IT8 タスク 1.11 で HandlingValidationService の Repository ポート抽出予定
-            // （HandlingActivityMapper / CargoSnapshotMapper → Repository インターフェース）
-            if (clazz.getSimpleName().equals("HandlingValidationService")) continue;
             clazz.getDirectDependenciesFromSelf().forEach(dep -> {
                 if (dep.getTargetClass().getPackageName()
                         .contains("com.example.handlingms.infrastructure.repositories.mybatis")) {
