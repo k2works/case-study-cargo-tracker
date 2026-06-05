@@ -22,5 +22,6 @@
 | [ADR-0017](0017-overdue-scheduler-cluster-lock.md) | OverdueScheduler のクラスタ排他制御方針（ShedLock + JDBC、IT8 で確定） | 提案中 |
 | [ADR-0018](0018-notification-adapter-selection.md) | 通知アダプタ選定（SendGrid Add-on + Dynamic Templates、IT8 で確定） | 提案中 |
 | [ADR-0019](0019-payment-detail-recorded-event.md) | PaymentDetailRecorded 補完イベント（shared 最小契約 + 内部詳細の分離、IT8 で実装） | 提案中 |
+| [ADR-0020](0020-payment-gateway-webhook.md) | 決済機関 webhook 受信設計（Stripe + HMAC 署名検証 + idempotency キー + 部分入金、IT9 で実装） | 提案中 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

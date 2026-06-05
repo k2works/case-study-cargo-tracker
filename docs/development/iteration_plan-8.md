@@ -173,7 +173,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 6.1 | ADR-0020 決済機関 webhook 選定（Stripe / GMO / Square 評価）起票 | 2h | - | [ ] |
+| 6.1 | ADR-0020 決済機関 webhook 選定（Stripe / GMO / Square 評価）起票（Stripe 採用 + HMAC 署名検証 + webhook_processed テーブル + 部分入金 PARTIALLY_PAID 状態追加、IT9 実装予定）| 2h | - | [x] |
 | 6.2 | マルチパースペクティブレビュー実施 → 重要度「高」を IT 内で対応 | 2h | - | [ ] |
 | 6.3 | ふりかえり + 完了報告書作成 + release_plan / docs / mkdocs 反映 | 1h | - | [ ] |
 
