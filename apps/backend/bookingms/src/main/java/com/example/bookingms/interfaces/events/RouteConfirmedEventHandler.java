@@ -35,7 +35,7 @@ import java.util.List;
  * {@code RouteConfirmedEventHandlerTest} のネガティブテスト（ADR-0010）も同時に更新すること。</p>
  */
 @Component
-@ProcessingGroup("route-confirmed")
+@ProcessingGroup("cross-route-confirmed-events")
 public class RouteConfirmedEventHandler {
 
     private static final Logger log = LoggerFactory.getLogger(RouteConfirmedEventHandler.class);

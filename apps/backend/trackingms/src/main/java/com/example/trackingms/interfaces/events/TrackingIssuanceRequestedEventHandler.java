@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component;
  * {@code TrackingIssuanceRequestedEventHandlerTest} のネガティブテストを同時に更新すること。</p>
  */
 @Component
-@ProcessingGroup("tracking-issuance-requests")
+@ProcessingGroup("cross-tracking-issuance-requests")
 public class TrackingIssuanceRequestedEventHandler {
 
     private static final Logger log = LoggerFactory.getLogger(TrackingIssuanceRequestedEventHandler.class);

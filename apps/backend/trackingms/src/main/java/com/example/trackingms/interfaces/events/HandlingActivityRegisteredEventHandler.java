@@ -39,7 +39,7 @@ import java.util.Map;
  * ある（US17 の手動更新と組合せる業務フロー）。</p>
  */
 @Component
-@ProcessingGroup("handling-activity-events")
+@ProcessingGroup("cross-handling-activity-events")
 public class HandlingActivityRegisteredEventHandler {
 
     private static final Logger log =

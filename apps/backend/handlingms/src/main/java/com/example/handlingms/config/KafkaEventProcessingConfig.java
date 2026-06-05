@@ -25,7 +25,7 @@ public class KafkaEventProcessingConfig {
     @Autowired
     public void configureCargoSnapshotProcessor(EventProcessingConfigurer config) {
         config.registerTrackingEventProcessor(
-                "cargo-snapshot",
+                "cross-cargo-snapshot",
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }

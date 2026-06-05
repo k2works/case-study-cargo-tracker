@@ -46,7 +46,7 @@ import java.util.List;
  * {@code transient} で持ち、状態フィールドは全て Serializable な型に限定する。</p>
  */
 @Saga
-@ProcessingGroup("booking-saga")
+@ProcessingGroup("cross-booking-saga")
 public class BookingSagaManager {
 
     // Axon Saga は Serializable で永続化される。Gateway 系は Bean 注入のため

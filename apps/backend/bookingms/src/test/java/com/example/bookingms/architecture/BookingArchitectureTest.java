@@ -58,14 +58,10 @@ class BookingArchitectureTest {
         assertThat(checked)
                 .as("bookingms には @ProcessingGroup を持つクラスが 1 件以上存在する必要があります")
                 .isPositive();
-        // 注意: bookingms には ADR-0016 移行前の旧名グループ
-        // (booking-saga / route-confirmed) が残存。IT8 ADR-0016 完全移行前は warning level
-        // としてログ出力のみ。IT8 移行完了後にこの soft warning を assertion に変更する
-        if (!violations.isEmpty()) {
-            // Soft warning: IT7 段階では旧名グループの存在を許容（ADR-0016 完了は IT8）
-            System.out.println("[WARN] ADR-0014/0016 migration pending (ADR-0016 IT8 完了予定):");
-            violations.forEach(v -> System.out.println("  - " + v));
-        }
+        // IT8 T1.2 で ADR-0016 全 10 グループ改名完了。soft warning → hard assertion に変更
+        assertThat(violations)
+                .as("ADR-0014/0016 命名規約違反（IT8 移行完了済み）")
+                .isEmpty();
     }
 
     @Test

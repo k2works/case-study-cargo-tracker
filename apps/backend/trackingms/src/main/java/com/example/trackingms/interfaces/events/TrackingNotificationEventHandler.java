@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
  * （event store source）で動作する。</p>
  */
 @Component
-@ProcessingGroup("tracking-notifications")
+@ProcessingGroup("local-tracking-notifications")
 public class TrackingNotificationEventHandler {
 
     private final NotificationAcl notificationAcl;

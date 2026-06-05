@@ -49,10 +49,10 @@ class RoutingArchitectureTest {
         assertThat(checked)
                 .as("routingms には @ProcessingGroup を持つクラスが 1 件以上存在する必要があります")
                 .isPositive();
-        if (!violations.isEmpty()) {
-            System.out.println("[WARN] ADR-0014/0016 migration pending (ADR-0016 IT8 完了予定):");
-            violations.forEach(v -> System.out.println("  - " + v));
-        }
+        // IT8 T1.2 で ADR-0016 全 10 グループ改名完了。soft warning → hard assertion に変更
+        assertThat(violations)
+                .as("ADR-0014/0016 命名規約違反（IT8 移行完了済み）")
+                .isEmpty();
     }
 
     @Test

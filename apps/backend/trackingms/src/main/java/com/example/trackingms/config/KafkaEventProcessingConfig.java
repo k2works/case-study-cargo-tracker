@@ -31,7 +31,7 @@ public class KafkaEventProcessingConfig {
     @Autowired
     public void configureTrackingIssuanceRequestProcessor(EventProcessingConfigurer config) {
         config.registerTrackingEventProcessor(
-                "tracking-issuance-requests",
+                "cross-tracking-issuance-requests",
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }
@@ -44,7 +44,7 @@ public class KafkaEventProcessingConfig {
     @Autowired
     public void configureHandlingActivityEventsProcessor(EventProcessingConfigurer config) {
         config.registerTrackingEventProcessor(
-                "handling-activity-events",
+                "cross-handling-activity-events",
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }

@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
  * ローカル型（{@code HandlingType} enum 等）を保持し、shared 側は文字列で安定契約を提供する。</p>
  */
 @Component
-@ProcessingGroup("handling-cross-service-publish")
+@ProcessingGroup("outbound-handling-activity-events")
 public class HandlingActivityCrossServicePublisher {
 
     private static final Logger log = LoggerFactory.getLogger(HandlingActivityCrossServicePublisher.class);

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
  * （{@code KafkaEventProcessingConfig}）。</p>
  */
 @Component
-@ProcessingGroup("route-design-requests")
+@ProcessingGroup("cross-route-design-requests")
 public class RouteDesignRequestEventHandler {
 
     private final RouteDesignRequestMapper mapper;

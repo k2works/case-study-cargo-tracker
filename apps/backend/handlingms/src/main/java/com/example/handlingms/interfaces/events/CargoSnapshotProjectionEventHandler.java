@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
  * 集約ロードを伴わないため、例外は基本的に発生しない（冪等 INSERT + UPDATE で再処理にも耐える）。</p>
  */
 @Component
-@ProcessingGroup("cargo-snapshot")
+@ProcessingGroup("cross-cargo-snapshot")
 public class CargoSnapshotProjectionEventHandler {
 
     private static final Logger log = LoggerFactory.getLogger(CargoSnapshotProjectionEventHandler.class);

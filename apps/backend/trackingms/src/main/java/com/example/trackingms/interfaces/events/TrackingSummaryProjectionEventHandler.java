@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
  * （{@code TrackingIssuanceRequestedEventHandler}）に分離されている。</p>
  */
 @Component
-@ProcessingGroup("tracking-local-projection")
+@ProcessingGroup("local-tracking-summary-projection")
 public class TrackingSummaryProjectionEventHandler {
 
     private final TrackingSummaryMapper summaryMapper;

@@ -27,7 +27,7 @@ public class KafkaEventProcessingConfig {
     @Autowired
     public void configureRouteConfirmedProcessor(EventProcessingConfigurer config) {
         config.registerTrackingEventProcessor(
-                "route-confirmed",
+                "cross-route-confirmed-events",
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }
@@ -44,7 +44,7 @@ public class KafkaEventProcessingConfig {
     @Autowired
     public void configureBookingSagaProcessor(EventProcessingConfigurer config) {
         config.registerTrackingEventProcessor(
-                "booking-saga",
+                "cross-booking-saga",
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }

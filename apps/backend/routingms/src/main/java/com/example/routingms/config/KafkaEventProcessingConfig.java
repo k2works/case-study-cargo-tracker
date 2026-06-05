@@ -27,7 +27,7 @@ public class KafkaEventProcessingConfig {
     @Autowired
     public void configureRouteDesignRequestProcessor(EventProcessingConfigurer config) {
         config.registerTrackingEventProcessor(
-                "route-design-requests",
+                "cross-route-design-requests",
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }
