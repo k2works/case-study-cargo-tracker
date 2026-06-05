@@ -535,11 +535,12 @@ class CargoAggregateTest {
     }
 
     @Test
-    @DisplayName("US23 T4.5: PRELIMINARY（CONFIRMED 前）は SETTLED へ遷移できない")
-    void US23_PRELIMINARYからは精算済遷移不可() {
+    @DisplayName("US23 T4.5: PRELIMINARY 状態でも MarkBookingSettledCommand を受理（決済は経路ライフサイクルと独立、Tell don't ask）")
+    void US23_PRELIMINARYでも精算済遷移可() {
         fixture.given(bookedEvent("B-S04"))
                 .when(new MarkBookingSettledCommand("B-S04"))
-                .expectException(IllegalStateException.class);
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new BookingSettledEvent("B-S04", "SETTLED"));
     }
 
     @Test

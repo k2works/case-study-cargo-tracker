@@ -304,22 +304,22 @@ public class Cargo {
     /**
      * 予約「精算済」遷移（US23、IT7 T4.5、cross-service）。
      *
-     * <p>billingms の {@code PaymentRecordedEvent} 経由で発火される。冪等化のため
-     * 既に {@code SETTLED} / {@code CANCELLED} 状態の場合は静かに完了する（IllegalState ではない）。</p>
+     * <p>billingms の {@code PaymentRecordedEvent} 経由で発火される。決済は経路設計・追跡の
+     * ライフサイクルと独立した関心事であり、billingms から「支払い受領」が通知された時点で
+     * bookingms はその事実を受け入れる（Tell, don't ask）。</p>
+     *
+     * <p>冪等スキップ:</p>
+     * <ul>
+     *   <li>{@code SETTLED}: 既に精算済（重複配信・tracking 再処理対策）</li>
+     *   <li>{@code CANCELLED}: キャンセル済の予約に決済通知 → 異常だが集約は静かに完了し、
+     *     上位 ACL（{@code CrossBillingPaymentHandler}）が WARN ログで可視化する</li>
+     * </ul>
      */
     @CommandHandler
     public void handle(MarkBookingSettledCommand command) {
         if (this.bookingStatus == BookingStatus.SETTLED
                 || this.bookingStatus == BookingStatus.CANCELLED) {
-            // 冪等スキップ（重複配信・tracking 再処理対策）
             return;
-        }
-        if (this.bookingStatus != BookingStatus.TRACKING_ISSUED
-                && this.bookingStatus != BookingStatus.IN_TRANSIT
-                && this.bookingStatus != BookingStatus.DELIVERED
-                && this.bookingStatus != BookingStatus.CONFIRMED) {
-            throw new IllegalStateException(
-                    "予約を精算済にできるのは CONFIRMED 以降の状態のみです: 現状態=" + this.bookingStatus);
         }
         AggregateLifecycle.apply(new BookingSettledEvent(this.bookingId, BookingStatus.SETTLED.name()));
     }
