@@ -170,10 +170,10 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 ### Try（次イテレーション以降で試す）
 
 - T1: TDD 規律として「Red コミット → Green コミット → Refactor コミット」を 1 タスク 3 コミットに分離。pre-commit hook に Red コミットの「失敗テストが含まれる」検証を追加
-- T2: H1 教訓を ADR-0012 自己整合チェックリストとして文書化。次のサービス新設時に「shared event を集約から直接 apply できるか？」を着手前に確認
+- T2: ✅ IT7 内対応（commit eadd6683）。H1 教訓を ADR-0012 自己整合チェックリスト（C1-C4 / R1-R3 / PR1-PR2）として文書化済み
 - T3: InvoiceProjection クラスを抽出して updateForXxx 群を集約。状態遷移→投影更新の OCP を担保
 - T4: NumberSequenceRepository ポート / PaymentSitePolicy ポート / NotificationTemplate ポートで domain → infrastructure の DIP を整える
-- T5: ShedLock 採用 ADR（ADR-0017）起票 + Heroku multi-dyno 対応
+- T5: ✅ ADR-0017 起票（commit c4a913be）。IT8 で ShedLock 5.x + JdbcTemplateLockProvider を実装、Flyway V3 で shedlock テーブル作成
 - T6: Micrometer counter で OverdueScheduler の `failed` カウンタを公開。Heroku metrics ダッシュボードに反映
 
 ## 残課題（IT8 持ち越し）
@@ -183,10 +183,10 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）= 累計 
 | IT8-0.1 | TDD 規律改善（Red/Green/Refactor 分離コミット）| 0.5h |
 | IT8-0.2 | InvoiceProjection 抽出リファクタ（review M1）| ✅ IT7 完了（commit 43270c3e）|
 | IT8-0.3 | NumberSequenceRepository ポート抽出（review M2）| ✅ IT7 完了（commit c9fa9a1c）|
-| IT8-0.4 | OverdueScheduler ShedLock 統合（ADR-0017）| 3h |
+| IT8-0.4 | OverdueScheduler ShedLock 統合（ADR-0017 起票済、commit c4a913be）| 3h |
 | IT8-0.5 | OverdueScheduler Micrometer counter | ✅ IT7 完了（commit c3c2fe0e）|
 | IT8-0.6 | RestShipperInfoAcl + Resilience4j + Caffeine + 手動入力 fallback | 4h |
-| IT8-0.7 | LoggingNotificationAcl → SendGridNotificationAcl（ADR-0018）| 4h |
+| IT8-0.7 | LoggingNotificationAcl → SendGridNotificationAcl（ADR-0018 起票済、commit c4a913be）| 4h |
 | IT8-0.8 | PaymentDetailRecorded 補完 event 設計（webhook 連携 + 部分入金）| 6h |
 | IT8-0.9 | ハードコード除去（cron zone / 30 日 / description テンプレート）| ✅ IT7 完了（commit 0f970cc1）|
 
