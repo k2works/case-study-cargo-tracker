@@ -108,10 +108,10 @@ describe('Navigation', () => {
     expect(screen.getByRole('link', { name: 'ダッシュボード' })).toHaveAttribute('href', '/');
   });
 
-  it('IT7: ROLE_ACCOUNTANT に請求管理・督促一覧リンクが表示される（US23）', () => {
+  it('IT7: ROLE_ACCOUNTANT に請求一覧・督促一覧リンクが表示される（US23）', () => {
     renderWithAuth('ROLE_ACCOUNTANT');
 
-    expect(screen.getByRole('link', { name: '請求管理' })).toHaveAttribute('href', '/billing');
+    expect(screen.getByRole('link', { name: '請求一覧' })).toHaveAttribute('href', '/billing');
     expect(screen.getByRole('link', { name: '督促一覧' })).toHaveAttribute('href', '/billing/overdue');
   });
 
@@ -121,17 +121,17 @@ describe('Navigation', () => {
     expect(screen.getByRole('link', { name: 'ダッシュボード' })).toHaveAttribute('href', '/');
   });
 
-  it('IT7: ROLE_SALES に請求管理・督促一覧リンクは表示されない', () => {
+  it('IT7: ROLE_SALES に請求一覧・督促一覧リンクは表示されない', () => {
     renderWithAuth('ROLE_SALES');
 
-    expect(screen.queryByRole('link', { name: '請求管理' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '請求一覧' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '督促一覧' })).not.toBeInTheDocument();
   });
 
-  it('IT7: ROLE_ADMIN に請求管理・督促一覧リンクが表示される', () => {
+  it('IT7: ROLE_ADMIN に請求一覧・督促一覧リンクが表示される', () => {
     renderWithAuth('ROLE_ADMIN');
 
-    expect(screen.getByRole('link', { name: '請求管理' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '請求一覧' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '督促一覧' })).toBeInTheDocument();
   });
 });

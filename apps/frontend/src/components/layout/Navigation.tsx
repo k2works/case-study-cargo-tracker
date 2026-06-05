@@ -17,7 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/tracking', label: '追跡管理', roles: ['ROLE_ADMIN', 'ROLE_TRACKER'] },
   { path: '/tracking/exceptions', label: '例外対応', roles: ['ROLE_ADMIN', 'ROLE_TRACKER'] },
   { path: '/handling', label: '荷役作業', roles: ['ROLE_ADMIN', 'ROLE_HANDLER'] },
-  { path: '/billing', label: '請求管理', roles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT'] },
+  { path: '/billing', label: '請求一覧', roles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT'] },
   { path: '/billing/overdue', label: '督促一覧', roles: ['ROLE_ADMIN', 'ROLE_ACCOUNTANT'] },
 ];
 
