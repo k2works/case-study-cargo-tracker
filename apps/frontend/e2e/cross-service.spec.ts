@@ -403,4 +403,156 @@ test.describe('US14/US15/US17/cross-service: 追跡番号採番と荷役によ�
       expect(badRes.status()).toBe(422);
     }
   });
+
+  test('US21/US22/US23: DELIVERED → 算出 → 割引 → 発行 → 入金 → bookingms SETTLED の cross-service 貫通（IT7 T5.1）', async ({
+    page,
+    request,
+  }) => {
+    test.skip(
+      !crossServiceEnabled,
+      'Kafka を要する cross-service E2E。CROSS_SERVICE_E2E=1 を指定したときのみ実行する。',
+    );
+
+    const token = await loginAndGetToken(page);
+    const auth = { Authorization: `Bearer ${token}` };
+    const ts = Date.now();
+    const bookingId = `BK-BILL-${ts}`;
+    const shipperId = `S-${ts}`;
+
+    // 0) 荷主登録（CORPORATE で割引適用対象）
+    const shipperRes = await request.post('/api/v1/shippers', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        shipperId,
+        shipperType: 'CORPORATE',
+        name: 'cross-service 法人',
+        addressLine1: '東京都千代田区',
+        city: 'Tokyo',
+        countryCode: 'JP',
+        email: `shipper-${ts}@example.com`,
+        phone: '03-0000-0000',
+        contractNumber: 'C-001',
+        discountRate: 0.15,
+      },
+    });
+    expect(shipperRes.status(), await shipperRes.text()).toBe(201);
+
+    // 1) 予約
+    const bookRes = await request.post('/api/v1/bookings', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        bookingId,
+        shipperId,
+        originUnlocode: 'JPTYO',
+        destinationUnlocode: 'USNYC',
+        arrivalDeadline: '2027-09-30',
+        cargoType: 'GENERAL',
+        weightKg: 1200,
+        quantity: 8,
+        productName: 'cross-service E2E',
+      },
+    });
+    expect(bookRes.status(), await bookRes.text()).toBe(201);
+
+    // 2) 輸送料金算出（手動契機、CargoDeliveredEvent 起点と同等）
+    const calcRes = await request.post('/api/v1/billing/invoices', {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        bookingId,
+        shipperId,
+        distanceKm: '5300',
+        weightKg: '1200',
+        cargoType: 'GENERAL',
+        handlingCount: 8,
+        currency: 'JPY',
+      },
+    });
+    expect(calcRes.status(), await calcRes.text()).toBe(202);
+    const { invoiceId } = await calcRes.json();
+
+    // 3) Read Model 反映を待つ（CALCULATED）
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/billing/invoices/${invoiceId}`, { headers: auth });
+          if (r.status() !== 200) return '';
+          return (await r.json()).billingStatus;
+        },
+        {
+          message: '輸送料金算出後の CALCULATED 反映を確認できませんでした',
+          timeout: 30_000,
+          intervals: [500, 1000, 2000],
+        },
+      )
+      .toBe('CALCULATED');
+
+    // 4) 法人割引適用
+    const discountRes = await request.post(`/api/v1/billing/invoices/${invoiceId}/discount`, {
+      headers: auth,
+    });
+    expect(discountRes.status(), await discountRes.text()).toBe(202);
+
+    // 5) 精算書発行 → INVOICED
+    const issueRes = await request.post(`/api/v1/billing/invoices/${invoiceId}/issue`, {
+      headers: auth,
+    });
+    expect(issueRes.status(), await issueRes.text()).toBe(202);
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/billing/invoices/${invoiceId}`, { headers: auth });
+          if (r.status() !== 200) return '';
+          return (await r.json()).billingStatus;
+        },
+        {
+          message: '精算書発行後の INVOICED 反映を確認できませんでした',
+          timeout: 30_000,
+          intervals: [500, 1000, 2000],
+        },
+      )
+      .toBe('INVOICED');
+
+    // 6) 入金記録 → PAID
+    const invRes = await request.get(`/api/v1/billing/invoices/${invoiceId}`, { headers: auth });
+    const inv = await invRes.json();
+    const payRes = await request.post(`/api/v1/billing/invoices/${invoiceId}/payments`, {
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      data: {
+        paidAmount: inv.totalAmount,
+        currency: inv.currency,
+        paymentMethod: 'BANK_TRANSFER',
+      },
+    });
+    expect(payRes.status(), await payRes.text()).toBe(202);
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/billing/invoices/${invoiceId}`, { headers: auth });
+          if (r.status() !== 200) return '';
+          return (await r.json()).billingStatus;
+        },
+        {
+          message: '入金記録後の PAID 反映を確認できませんでした',
+          timeout: 30_000,
+          intervals: [500, 1000, 2000],
+        },
+      )
+      .toBe('PAID');
+
+    // 7) bookingms cross-service SETTLED 反映（PaymentRecordedEvent → MarkBookingSettledCommand）
+    await expect
+      .poll(
+        async () => {
+          const r = await request.get(`/api/v1/bookings/${bookingId}`, { headers: auth });
+          if (r.status() !== 200) return '';
+          return (await r.json()).bookingStatus;
+        },
+        {
+          message: 'cross-service による bookingms SETTLED 伝搬を確認できませんでした',
+          timeout: 60_000,
+          intervals: [1000, 2000, 3000, 5000],
+        },
+      )
+      .toBe('SETTLED');
+  });
 });
