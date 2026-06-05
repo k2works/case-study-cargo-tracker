@@ -72,6 +72,14 @@ public class TrackingActivity {
                 command.trackingNumber(),
                 command.bookingId()
         ));
+        // IT8 T1.10 / ADR-0012 集約発火型: shared cross-service event を集約内で連続 apply。
+        // 旧 CargoTrackedEventPublisher（local → shared 二段イベント）を廃止し、
+        // 二段イベント問題（H1 で billingms PaymentRecordedEvent でも対応済み）を解消。
+        // 受信側 bookingms BookingSagaManager は変更なし（shared CargoTrackedEvent を購読）。
+        AggregateLifecycle.apply(new com.example.shared.events.CargoTrackedEvent(
+                command.bookingId(),
+                command.trackingNumber()
+        ));
     }
 
     @CommandHandler

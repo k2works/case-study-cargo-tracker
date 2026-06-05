@@ -59,15 +59,10 @@ class HandlingArchitectureTest {
     }
 
     @Test
-    @DisplayName("ADR-0012 二段イベント禁止: handlingms の @EventHandler クラスは EventGateway に依存しない（注: outbound publisher は除外）")
+    @DisplayName("ADR-0012 二段イベント禁止: handlingms の @EventHandler クラスは EventGateway に依存しない（IT8 T1.10 で HandlingActivityCrossServicePublisher を廃止、集約発火型に統合完了）")
     void noTwoStageEventPublisher() {
         List<String> violations = new ArrayList<>();
         for (JavaClass clazz : handlingClasses) {
-            // outbound publisher パターン（local event → shared kernel 変換）は
-            // 当面 ADR-0014 上の許容として除外する。IT8 で集約発火型へ移行する場合は本除外を削除
-            boolean isOutboundPublisher = clazz.getFullName().contains("CrossServicePublisher");
-            if (isOutboundPublisher) continue;
-
             boolean hasEventHandler = clazz.getMethods().stream()
                     .anyMatch(m -> m.isAnnotatedWith(EventHandler.class));
             if (!hasEventHandler) continue;

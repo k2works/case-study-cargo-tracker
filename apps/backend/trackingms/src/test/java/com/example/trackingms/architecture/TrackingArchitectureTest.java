@@ -60,15 +60,10 @@ class TrackingArchitectureTest {
     }
 
     @Test
-    @DisplayName("ADR-0012 二段イベント禁止: trackingms の @EventHandler クラスは EventGateway に依存しない（IT6 CargoDeliveredEventPublisher 廃止、IT8 タスク 1.10 で CargoTrackedEventPublisher も移行予定）")
+    @DisplayName("ADR-0012 二段イベント禁止: trackingms の @EventHandler クラスは EventGateway に依存しない（IT6 CargoDeliveredEventPublisher 廃止、IT8 T1.10 で CargoTrackedEventPublisher も廃止完了）")
     void noTwoStageEventPublisher() {
         List<String> violations = new ArrayList<>();
         for (JavaClass clazz : trackingClasses) {
-            // IT8 タスク 1.10 で集約発火型移行予定の outbound publisher パターンは当面除外
-            // （ADR-0014 上の許容として handlingms と同様の扱い、移行後に除外解除）
-            boolean isOutboundPublisher = clazz.getFullName().endsWith("CargoTrackedEventPublisher");
-            if (isOutboundPublisher) continue;
-
             boolean hasEventHandler = clazz.getMethods().stream()
                     .anyMatch(m -> m.isAnnotatedWith(EventHandler.class));
             if (!hasEventHandler) continue;

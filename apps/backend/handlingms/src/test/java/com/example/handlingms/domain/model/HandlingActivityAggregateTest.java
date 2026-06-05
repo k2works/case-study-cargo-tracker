@@ -4,6 +4,7 @@ import com.example.handlingms.domain.commands.RegisterHandlingActivityCommand;
 import com.example.handlingms.domain.events.HandlingActivityRegisteredEvent;
 import com.example.handlingms.domain.events.UnexpectedHandlingDetectedEvent;
 import com.example.handlingms.domain.services.HandlingValidationService;
+import com.example.shared.events.HandlingActivityRegisteredEvent.ClaimVerificationData;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,25 @@ class HandlingActivityAggregateTest {
         fixture.registerInjectableResource(validationService);
     }
 
+    /**
+     * IT8 T1.10: 集約発火型に伴い shared cross-service event も連続 apply される。
+     * 旧 outbound publisher（HandlingActivityCrossServicePublisher）を廃止。
+     */
+    private com.example.shared.events.HandlingActivityRegisteredEvent sharedEvent(
+            String activityId, String trackingNumber, HandlingType type,
+            LocalDateTime occurredAt, String unlocode, String voyageNumber,
+            String handlerId, ClaimVerification verification) {
+        ClaimVerificationData data = verification == null ? null
+                : new ClaimVerificationData(
+                        verification.consigneeName(),
+                        verification.signatureRef(),
+                        verification.confirmationCode(),
+                        verification.verifiedAt());
+        return new com.example.shared.events.HandlingActivityRegisteredEvent(
+                activityId, trackingNumber, type.name(),
+                occurredAt, unlocode, voyageNumber, handlerId, data, false);
+    }
+
     @Test
     @DisplayName("US15: 受領（RECEIVE）を航海番号なしで登録できる")
     void 受領作業を登録できる() {
@@ -54,9 +74,12 @@ class HandlingActivityAggregateTest {
         fixture.givenNoPriorActivity()
                 .when(command)
                 .expectSuccessfulHandlerExecution()
-                .expectEvents(new HandlingActivityRegisteredEvent(
-                        "HA-001", "TRK-AB12CD3456", HandlingType.RECEIVE,
-                        OCCURRED_AT, "JPTYO", null, "OP-001", null));
+                .expectEvents(
+                        new HandlingActivityRegisteredEvent(
+                                "HA-001", "TRK-AB12CD3456", HandlingType.RECEIVE,
+                                OCCURRED_AT, "JPTYO", null, "OP-001", null),
+                        sharedEvent("HA-001", "TRK-AB12CD3456", HandlingType.RECEIVE,
+                                OCCURRED_AT, "JPTYO", null, "OP-001", null));
     }
 
     @Test
@@ -81,9 +104,12 @@ class HandlingActivityAggregateTest {
         fixture.givenNoPriorActivity()
                 .when(command)
                 .expectSuccessfulHandlerExecution()
-                .expectEvents(new HandlingActivityRegisteredEvent(
-                        "HA-003", "TRK-AB12CD3456", HandlingType.LOAD,
-                        OCCURRED_AT, "JPTYO", "V-100", "OP-001", null));
+                .expectEvents(
+                        new HandlingActivityRegisteredEvent(
+                                "HA-003", "TRK-AB12CD3456", HandlingType.LOAD,
+                                OCCURRED_AT, "JPTYO", "V-100", "OP-001", null),
+                        sharedEvent("HA-003", "TRK-AB12CD3456", HandlingType.LOAD,
+                                OCCURRED_AT, "JPTYO", "V-100", "OP-001", null));
     }
 
     @Test
@@ -122,9 +148,12 @@ class HandlingActivityAggregateTest {
         fixture.givenNoPriorActivity()
                 .when(command)
                 .expectSuccessfulHandlerExecution()
-                .expectEvents(new HandlingActivityRegisteredEvent(
-                        "HA-006", "TRK-AB12CD3456", HandlingType.CLAIM,
-                        OCCURRED_AT, "USNYC", null, "OP-002", verification));
+                .expectEvents(
+                        new HandlingActivityRegisteredEvent(
+                                "HA-006", "TRK-AB12CD3456", HandlingType.CLAIM,
+                                OCCURRED_AT, "USNYC", null, "OP-002", verification),
+                        sharedEvent("HA-006", "TRK-AB12CD3456", HandlingType.CLAIM,
+                                OCCURRED_AT, "USNYC", null, "OP-002", verification));
     }
 
     // --- IT5 タスク 3.2 ---
@@ -179,6 +208,8 @@ class HandlingActivityAggregateTest {
                 .expectEvents(
                         new HandlingActivityRegisteredEvent(
                                 "HA-UNEXP", "TRK-AB12CD3456", HandlingType.CLAIM,
+                                OCCURRED_AT, "CNHKG", null, "OP-003", verification),
+                        sharedEvent("HA-UNEXP", "TRK-AB12CD3456", HandlingType.CLAIM,
                                 OCCURRED_AT, "CNHKG", null, "OP-003", verification),
                         new UnexpectedHandlingDetectedEvent(
                                 "HA-UNEXP", "TRK-AB12CD3456", HandlingType.CLAIM,

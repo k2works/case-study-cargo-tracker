@@ -72,6 +72,22 @@ public class HandlingActivity {
                 command.claimVerification()
         ));
 
+        // IT8 T1.10 / ADR-0012 集約発火型: shared cross-service event を集約内で連続 apply。
+        // 旧 HandlingActivityCrossServicePublisher（local → shared 二段イベント）を廃止し
+        // 二段イベント問題（H1 で billingms PaymentRecordedEvent でも対応済み）を解消。
+        // 受信側 trackingms は変更なし（shared HandlingActivityRegisteredEvent を購読）。
+        AggregateLifecycle.apply(new com.example.shared.events.HandlingActivityRegisteredEvent(
+                command.activityId(),
+                command.trackingNumber(),
+                command.handlingType().name(),
+                command.occurredAt(),
+                command.unlocode(),
+                command.voyageNumber(),
+                command.handlerId(),
+                toClaimVerificationData(command.claimVerification()),
+                false
+        ));
+
         // 予定外検知は警告イベントとして発行（記録自体は許容）。
         Optional<String> unexpectedReason = validationService.detectUnexpected(
                 command.trackingNumber(), command.handlingType(), command.unlocode());
@@ -83,6 +99,17 @@ public class HandlingActivity {
                         command.unlocode(),
                         command.occurredAt(),
                         reason)));
+    }
+
+    private static com.example.shared.events.HandlingActivityRegisteredEvent.ClaimVerificationData
+            toClaimVerificationData(ClaimVerification v) {
+        if (v == null) return null;
+        return new com.example.shared.events.HandlingActivityRegisteredEvent.ClaimVerificationData(
+                v.consigneeName(),
+                v.signatureRef(),
+                v.confirmationCode(),
+                v.verifiedAt()
+        );
     }
 
     private void validate(RegisterHandlingActivityCommand command) {

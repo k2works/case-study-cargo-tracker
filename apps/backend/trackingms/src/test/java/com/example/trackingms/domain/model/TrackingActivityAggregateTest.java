@@ -46,7 +46,7 @@ class TrackingActivityAggregateTest {
     }
 
     @Test
-    @DisplayName("US14: InitializeTrackingCommand で TrackingInitializedEvent が発行される")
+    @DisplayName("US14: InitializeTrackingCommand で TrackingInitializedEvent + shared CargoTrackedEvent が連続発行（IT8 T1.10 集約発火型）")
     void 追跡を初期化できる() {
         InitializeTrackingCommand command = new InitializeTrackingCommand(
                 "TRK-AB12CD3456", "B-001");
@@ -54,7 +54,9 @@ class TrackingActivityAggregateTest {
         fixture.givenNoPriorActivity()
                 .when(command)
                 .expectSuccessfulHandlerExecution()
-                .expectEvents(new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"));
+                .expectEvents(
+                        new TrackingInitializedEvent("TRK-AB12CD3456", "B-001"),
+                        new com.example.shared.events.CargoTrackedEvent("B-001", "TRK-AB12CD3456"));
     }
 
     @Test
