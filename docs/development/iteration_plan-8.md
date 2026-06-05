@@ -130,7 +130,7 @@
 | 1.3 | TDD Red/Green/Refactor 分離コミット運用ルール文書化（開発ガイド追記）| 0.5h | - | [x] | <!-- IT7 内文書化済（commit 4afd7c05）、pre-commit hook 実装は本タスクで -->
 | 1.4 | 全サービス Spring Security 統一（bookingms / routingms / handlingms / billingms に spring-boot-starter-security + SecurityConfig 追加、互換性維持の permitAll、authms / gatewayms / trackingms は既存維持、commit ee4f98a4）。@PreAuthorize 適用と各 endpoint authenticated() への移行は IT9 持ち越し | 3h | - | [x] |
 | 1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合（spring-boot-starter-security 追加、SecurityConfig 新規 + publicTrackingFilterChain + defaultFilterChain、AntPathRequestMatcher で web-app-none テスト対応、FilterRegistrationBean 削除、commit 5dbd222a）| 1h | - | [x] |
-| 1.6 | trackingms 公開トークン鍵を AWS Secrets Manager + 四半期ローテーション | 2h | - | [ ] |
+| 1.6 | trackingms 公開トークン鍵の四半期ローテーション基盤整備（TrackingTokenSecretProvider ポート + StaticTrackingTokenSecretProvider + previous-secret 設定 + 複数キー検証）+ ADR-0021 起票（AWS Secrets Manager + Lambda 自動回転、IT9 実装）、テスト 2 件追加、commit 6b26042e | 2h | - | [x] |
 | 1.7 | OptimalRouteService の BFS 多段経由対応（直行 + 1 経由 → 最大 3 段、SearchState の visitedPorts で循環抑止、MAX_LEGS=3、テスト 13 件、commit cd96518c）。完全な Dijkstra/A*（重み付きキュー + ヒューリスティック）は voyage 数増大時に再検討 | 3h | - | [x] |
 | 1.8 | RateTable の運用設定駆動化（BillingProperties.RateTableSettings + application.yml で経理担当者が料金改定可能、defaultSettings 正規化、テスト 2 件追加、commit 75af56c5）。完全な DB 駆動化（管理 UI からのランタイム反映）は IT9 持ち越し | 2h | - | [x] |
 | 1.9 | BillingProperties paymentDueDays を Map<ShipperType, Integer> に拡張（paymentDueDaysByType + paymentDueDaysFor helper、PaymentDuePolicy.calculateDueDate(today, shipperType) オーバーロード、テスト 4 件追加、commit 778fe734）。IssueInvoice 集約での shipperType 経路統合は IT9 持ち越し | 1h | - | [x] |

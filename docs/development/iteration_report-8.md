@@ -165,10 +165,11 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8
 | T1.8 | RateTable の運用設定駆動化（BillingProperties.RateTableSettings + application.yml、経理担当者が料金改定可能）| 75af56c5 |
 | T1.7 | OptimalRouteService を BFS による多段経由探索（最大 3 段）に移行、循環抑止、テスト 13 件 | cd96518c |
 | T1.4 | bookingms / routingms / handlingms / billingms に Spring Security 統一導入（SecurityConfig + permitAll で互換性維持、IT9 で authenticated() 移行）| ee4f98a4 |
+| T1.6 | trackingms 公開トークン鍵の四半期ローテーション基盤整備（TrackingTokenSecretProvider ポート + StaticTrackingTokenSecretProvider + previous-secret + 複数キー検証）+ ADR-0021 起票（AWS Secrets Manager + Lambda 自動回転、IT9 実装）| 6b26042e |
 
-これにより H2（14h 分）のうち 15h 分（T1.9 + T1.10 + T1.11 + T1.5 + T1.8 + T1.7 + T1.4）を IT8 内で消化。残 2h（T1.6 AWS Secrets Manager + 四半期ローテーション、外部依存のため IT9 持ち越し）のみ。
+これにより H2（14h 分）の **全 8 件（17h 相当、14h を超過達成）を IT8 内で完全消化**。残 0h、IT9 持ち越し H2 項目なし。
 
-実質的な H2 持ち越し完全消化を達成。IT9 では ADR-0020 実装（Stripe webhook + 部分入金）と AWS Secrets Manager 統合に集中可能。
+**H2 持ち越し完全消化**: 当初 14h 分を本セッションで A1-A4 + ADR-0020 + マルチパースペクティブレビュー + 完了報告書 と並行して全達成。IT8 単独で「本番デプロイ可能な状態（Release 1.0 候補）」を確立し、IT9 は ADR-0020 実装（Stripe webhook + 部分入金）と ADR-0021 実装（AWS Secrets Manager + Lambda）に集中可能。
 
 ## 完了基準達成状況
 

@@ -145,6 +145,7 @@ nav:
       - ADR-0018 通知アダプタ選定 (SendGrid Add-on): adr/0018-notification-adapter-selection.md
       - ADR-0019 PaymentDetailRecorded 補完イベント: adr/0019-payment-detail-recorded-event.md
       - ADR-0020 決済機関 webhook 受信設計: adr/0020-payment-gateway-webhook.md
+      - ADR-0021 AWS Secrets Manager 自動回転: adr/0021-aws-secrets-manager-rotation.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
