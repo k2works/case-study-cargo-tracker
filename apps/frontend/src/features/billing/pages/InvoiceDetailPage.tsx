@@ -5,6 +5,8 @@ import {
   billingStatusLabel,
   fetchInvoice,
   invoiceLineTypeLabel,
+  issueInvoice,
+  recordPayment,
   type Invoice,
 } from '../api/billingApi';
 
@@ -23,6 +25,8 @@ export default function InvoiceDetailPage() {
   const [error, setError] = useState<'NOT_FOUND' | 'OTHER' | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [applying, setApplying] = useState(false);
+  const [issuing, setIssuing] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +60,37 @@ export default function InvoiceDetailPage() {
     }
   }, [invoiceId]);
 
+  const handleIssue = useCallback(async () => {
+    setIssuing(true);
+    try {
+      await issueInvoice(invoiceId);
+      setReloadKey((k) => k + 1);
+    } catch {
+      setError('OTHER');
+    } finally {
+      setIssuing(false);
+    }
+  }, [invoiceId]);
+
+  const handleRecordPayment = useCallback(
+    async (totalAmount: string, currency: string) => {
+      setPaying(true);
+      try {
+        await recordPayment(invoiceId, {
+          paidAmount: totalAmount,
+          currency,
+          paymentMethod: 'MANUAL',
+        });
+        setReloadKey((k) => k + 1);
+      } catch {
+        setError('OTHER');
+      } finally {
+        setPaying(false);
+      }
+    },
+    [invoiceId],
+  );
+
   if (error === 'NOT_FOUND') {
     return (
       <div className="mx-auto max-w-4xl px-4 py-6">
@@ -82,6 +117,9 @@ export default function InvoiceDetailPage() {
   const hasDiscount = !Number.isNaN(discountAmountNum) && discountAmountNum > 0;
   const canApplyDiscount =
     invoice.billingStatus === 'CALCULATED' && !hasDiscount && !applying;
+  const canIssue = invoice.billingStatus === 'CALCULATED' && !issuing;
+  const canRecordPayment =
+    (invoice.billingStatus === 'INVOICED' || invoice.billingStatus === 'OVERDUE') && !paying;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
@@ -168,6 +206,38 @@ export default function InvoiceDetailPage() {
           </button>
           <p className="mt-2 text-xs text-gray-500">
             ※ ShipperInfoAcl で荷主契約を取得し CorporateDiscountPolicy で算出します。INDIVIDUAL 荷主の場合は割引額 0 で確定します。
+          </p>
+        </section>
+      )}
+
+      {canIssue && (
+        <section className="mb-6">
+          <button
+            type="button"
+            onClick={handleIssue}
+            disabled={issuing}
+            className="rounded bg-indigo-600 px-4 py-2 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {issuing ? '発行中…' : '精算書を発行'}
+          </button>
+          <p className="mt-2 text-xs text-gray-500">
+            ※ InvoiceNumberGenerator で INV-YYYYMMDD-XXXX を採番、PaymentDuePolicy で支払期限（発行日 + 30 日）を確定します。
+          </p>
+        </section>
+      )}
+
+      {canRecordPayment && (
+        <section className="mb-6">
+          <button
+            type="button"
+            onClick={() => handleRecordPayment(invoice.totalAmount, invoice.currency)}
+            disabled={paying}
+            className="rounded bg-emerald-600 px-4 py-2 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {paying ? '記録中…' : `入金を記録（${formatAmount(invoice.totalAmount)} ${invoice.currency}）`}
+          </button>
+          <p className="mt-2 text-xs text-gray-500">
+            ※ IT7 は完全一致のみ受理。決済方法は MANUAL、外部参照は未設定で記録します（IT8 で webhook 統合予定）。
           </p>
         </section>
       )}

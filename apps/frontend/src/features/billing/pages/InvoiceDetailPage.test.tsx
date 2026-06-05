@@ -13,6 +13,8 @@ vi.mock('../api/billingApi', async () => {
     ...actual,
     fetchInvoice: vi.fn(),
     applyDiscount: vi.fn(),
+    issueInvoice: vi.fn(),
+    recordPayment: vi.fn(),
   };
 });
 
@@ -246,5 +248,102 @@ describe('InvoiceDetailPage (S23)', () => {
     expect(screen.getAllByText(/-10,000/).length).toBeGreaterThanOrEqual(1);
     // totalAmount = 150,000（割引後）
     expect(screen.getAllByText(/150,000/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  // --- IT7 Task 4.7: 精算書発行・入金記録ボタン ---
+
+  it('US23: CALCULATED で「精算書を発行」ボタンを表示', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(calculatedInvoice);
+
+    renderPage('INV-20260820-0001');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /精算書を発行/ })).toBeInTheDocument();
+    });
+  });
+
+  it('US23: INVOICED では「精算書を発行」ボタンは非表示', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(invoicedInvoice);
+
+    renderPage('INV-20260815-0007');
+
+    await waitFor(() => {
+      expect(screen.getByText(/発行済/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /精算書を発行/ })).not.toBeInTheDocument();
+  });
+
+  it('US23: 精算書発行ボタン押下で issueInvoice API を呼び再フェッチ', async () => {
+    const user = userEvent.setup();
+    vi.mocked(billingApi.fetchInvoice)
+      .mockResolvedValueOnce(calculatedInvoice)
+      .mockResolvedValueOnce({
+        ...calculatedInvoice,
+        billingStatus: 'INVOICED',
+        invoiceNumber: 'INV-20260820-0001',
+        paymentDue: '2026-09-19',
+      });
+    vi.mocked(billingApi.issueInvoice).mockResolvedValue();
+
+    renderPage('INV-20260820-0001');
+
+    const button = await screen.findByRole('button', { name: /精算書を発行/ });
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(billingApi.issueInvoice).toHaveBeenCalledWith('INV-20260820-0001');
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/発行済/)).toBeInTheDocument();
+    });
+  });
+
+  it('US23: INVOICED で「入金を記録」ボタンを表示', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(invoicedInvoice);
+
+    renderPage('INV-20260815-0007');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /入金を記録/ })).toBeInTheDocument();
+    });
+  });
+
+  it('US23: CALCULATED では「入金を記録」ボタンは非表示', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(calculatedInvoice);
+
+    renderPage('INV-20260820-0001');
+
+    await waitFor(() => {
+      expect(screen.getByText(/算出済/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /入金を記録/ })).not.toBeInTheDocument();
+  });
+
+  it('US23: 入金記録ボタン押下で recordPayment API を呼び totalAmount/currency を渡す', async () => {
+    const user = userEvent.setup();
+    vi.mocked(billingApi.fetchInvoice)
+      .mockResolvedValueOnce(invoicedInvoice)
+      .mockResolvedValueOnce({
+        ...invoicedInvoice,
+        billingStatus: 'PAID',
+        paidAt: '2026-09-22T15:00:00',
+      });
+    vi.mocked(billingApi.recordPayment).mockResolvedValue({ paymentId: 'PAY-001' });
+
+    renderPage('INV-20260815-0007');
+
+    const button = await screen.findByRole('button', { name: /入金を記録/ });
+    await user.click(button);
+
+    await waitFor(() => {
+      expect(billingApi.recordPayment).toHaveBeenCalledWith('INV-20260815-0007', {
+        paidAmount: '150000',
+        currency: 'JPY',
+        paymentMethod: 'MANUAL',
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/入金済/)).toBeInTheDocument();
+    });
   });
 });

@@ -71,15 +71,71 @@ export async function fetchInvoice(invoiceId: string): Promise<Invoice> {
 
 /**
  * 請求一覧（US23、S22 表示用、ページネーション付き）。
+ * status 指定で billing_status による絞り込みが可能。
  */
 export async function fetchInvoicesPage(
   page = 0,
   size = 20,
+  status?: BillingStatus,
 ): Promise<PageResponse<Invoice>> {
-  const res = await fetch(`/api/v1/billing/invoices?page=${page}&size=${size}`, {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set('status', status);
+  const res = await fetch(`/api/v1/billing/invoices?${params.toString()}`, {
     headers: authHeader(),
   });
   if (!res.ok) throw new Error('請求一覧の取得に失敗しました');
+  return res.json();
+}
+
+/**
+ * 督促対象（INVOICED + payment_due 超過）一覧（US23 S25）。
+ */
+export async function fetchOverdueInvoices(): Promise<{
+  items: Invoice[];
+  totalCount: number;
+  page: number;
+  size: number;
+}> {
+  const res = await fetch('/api/v1/billing/invoices/overdue', {
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('督促対象の取得に失敗しました');
+  return res.json();
+}
+
+/**
+ * 精算書発行（US23、S24「発行」ボタン押下時）。
+ * Invoice 集約が InvoiceNumberGenerator で採番、PaymentDuePolicy で支払期限確定。
+ * CALCULATED 状態でのみ受理。
+ */
+export async function issueInvoice(invoiceId: string): Promise<void> {
+  const res = await fetch(`/api/v1/billing/invoices/${invoiceId}/issue`, {
+    method: 'POST',
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('精算書発行に失敗しました');
+}
+
+/**
+ * 入金記録（US23、S23「入金確認」ボタン）。
+ * IT7 は完全一致のみ受理（paidAmount == totalAmount）。
+ */
+export async function recordPayment(
+  invoiceId: string,
+  request: {
+    paidAmount: string;
+    currency: string;
+    paidAt?: string;
+    paymentMethod?: 'BANK_TRANSFER' | 'CREDIT_CARD' | 'MANUAL';
+    externalReference?: string;
+  },
+): Promise<{ paymentId: string }> {
+  const res = await fetch(`/api/v1/billing/invoices/${invoiceId}/payments`, {
+    method: 'POST',
+    headers: { ...authHeader(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error('入金記録に失敗しました');
   return res.json();
 }
 
