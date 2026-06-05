@@ -409,9 +409,20 @@ xychart-beta
 
 ## 次のステップ
 
-1. GitHub Project（take-5）の作成と Issue 登録（`syncing-github-project`）
-2. IT1 イテレーション計画の作成（`planning-releases --iteration 1`）
-3. 開発開始（`orchestrating-development`）
+### Release 1.0 候補 → 正式版への昇格（IT9）
+
+IT8 完全達成（76/76 SP、100%）により Release 1.0 候補を確立。正式版への昇格には IT9 で以下の実装が必要:
+
+1. **ADR-0020 実装**（Stripe webhook 受信、3 SP）: 部分入金 PARTIALLY_PAID 状態追加、BalanceTracker 値オブジェクト、HMAC 署名検証、webhook_processed テーブルでの idempotency キー管理
+2. **ADR-0021 実装**（AWS Secrets Manager、2 SP）: AwsSecretsManagerTrackingTokenSecretProvider + Lambda 90 日自動回転 + LocalStack 統合テスト
+3. **全 ms 認可付与**（2 SP）: IT8 で平準化した SecurityFilterChain（permitAll）を authenticated() + @PreAuthorize に置換、E2E 認証付き動作確認
+4. **IT8 レビュー H1/H3 解消**（1 SP）: SendGrid Client 注入による WireMock 統合テスト + RestShipperInfoAclWireMockIT の CI コスト測定
+
+詳細は [iteration_plan-9.md](iteration_plan-9.md)（スケルトン）参照。IT9 完了後に Release 1.0 を正式版として GitHub Release タグ + CHANGELOG 確定 + 本番デプロイ可能宣言予定。
+
+### 当初の Release 1.0 MVP（達成済み）
+
+リリース完了時点で振り返り。Phase 1 完了（IT4、41 SP）で Release 1.0 MVP を達成済み。Phase 2（IT5-IT7、27 SP）で Release 2.0 / 2.1 達成。Phase 2 Buffer（IT8、8 SP）で Release 1.0 候補（本番デプロイ準備）達成。
 
 ---
 
@@ -426,3 +437,4 @@ xychart-beta
 | 2026-05-29 | **IT5 完了**（10/10 SP、21 タスク完了）：基盤 0.6（NotificationAcl スタブ）+ US14 追跡番号発行（5 タスク、cross-service Saga 完結）+ US17 貨物状態手動更新（5 タスク、9 値遷移マトリックス + REST API + S16/S17 UI）+ US15 荷役作業記録（5 タスク、CargoSnapshot ACL + cross-service publisher + 重複拒否・予定外警告・未来時刻拒否）+ US16 引取作業記録（4 タスク、CLAIM → DELIVERED + CargoDeliveredEvent for IT7 Billing）+ E2E（5.1 UI / 5.2 cross-service、計 10 件追加 / 全 45 件 PASS）+ cross-service Testcontainers Kafka 統合テスト 4 件。SonarQube Backend/Frontend 共に Quality Gate OK・カバレッジ Backend 88.0% / Frontend 78.1%・Code Smell 0。累計 51/76 SP（67%）。Phase 2 残 IT6/IT7/IT8 で 25 SP | k2works |
 | 2026-05-29 | **IT6 完了**（9/9 SP、Ralph Loop 7 iterations / 22 コミット）：ADR-0012/0013/0014 起票 + US18 公開照会（5 SP、TrackingTokenService + PublicTrackingTokenFilter + S15 TrackingPublicPage）+ US19 遅延例外処理（2 SP、TrackingException エンティティ + RegisterTrackingException ハンドラ + S18/S19）+ US20 破損・紛失例外処理（2 SP、LOSS 自動 escalation + 管理職通知 WARN ログ）+ E2E spec 10 件追加 + マルチパースペクティブレビュー（高 9・中 11・低 8）+ SonarQube Quality Gate PASS（new_coverage 74.5% / new_violations 0）。take-5 #189/#190/#191 をクローズ。累計 60/76 SP（79%）。Release 2.0 完了。残 IT7（精算 US21-US23 + IT5/IT6 持ち越し Try）+ IT8（非機能・Spring Security 統一）で 16 SP | k2works |
 | 2026-06-05 | **IT7 完了**（8/8 SP、Ralph Loop 50+ コミット）：US21 輸送料金算出（3 SP、Invoice 単一集約 + BillingStatus ステートマシン + FareCalculator + 4 ACL + S23）+ US22 法人割引適用（2 SP、CorporateDiscountPolicy + StubShipperInfoAcl + S23 改修）+ US23 精算処理（3 SP、Issue/Payment/Overdue ハンドラ + InvoiceNumberGenerator + PaymentDuePolicy + cross-service SETTLED + OverdueScheduler + S22/S25）+ E2E spec 8 件追加 + マルチパースペクティブレビュー（高 5・中 5）→ review 高/中 持ち越し 7 件 IT 内対応（H1 二段イベント / M1 InvoiceProjection / M2 NumberSequenceRepository / M1 architect 決定論的 invoiceId / ハードコード除去 / Micrometer counter）+ ADR-0012 自己整合チェックリスト追記 + ADR-0017/0018/0019 起票 + 全 5 サービス ArchUnit 横展開（15 件のアーキテクチャテスト）。billingms LINE 89.87%・全モジュール check PASS。take-5 #192/#193/#194 をクローズ。累計 68/76 SP（89%）。Release 2.1 完了。残 IT8 で 8 SP | k2works |
+| 2026-06-05 | **IT8 完了 + Release 1.0 候補確立**（8/8 SP + H2 持ち越し 8/8 件、Ralph Loop 60+ コミット 1 日完遂）：A1 ShedLock（@SchedulerLock + InMemoryLockProvider 統合テスト）+ A2 SendGrid（trackingms 6 種 + billingms 3 種 Dynamic Templates）+ A3 RestShipperInfoAcl（Resilience4j 2.2 + Caffeine + Circuit Breaker fallback UI）+ A4 PaymentDetailRecorded（補完 event 集約発火型 + payment_method 補完 SQL + cross-service E2E）+ ADR-0020 起票（決済機関 webhook）+ マルチパースペクティブレビュー + 完了報告書 + H2 持ち越し（T1.4 全 ms Spring Security 統一 / T1.5 trackingms SecurityFilterChain / T1.6 四半期ローテーション基盤 + ADR-0021 起票 / T1.7 BFS 多段経由 / T1.8 RateTable 設定駆動化 / T1.9 paymentDueDays Map / T1.10 outbound publisher 集約発火型完全移行 / T1.11 HandlingValidationService DIP 回復）+ IT9 スケルトン計画 + Release 1.0 候補確立報告書。累計 76/76 SP（100%）達成。**ADR-0012 集約発火型完全達成（二段イベント全廃）/ Onion/DIP 全 ms hard assertion / Spring Security 全 ms 平準化**。全 8 modules check / frontend 234 件 / ArchUnit 全 hard PASS。 | k2works |
