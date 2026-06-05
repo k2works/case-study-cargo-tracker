@@ -125,7 +125,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | ArchUnit 1.5+ アップグレード（libs.versions.toml + 5 サービス ArchUnit テスト DSL 統一） | 2h | - | [ ] |
+| 1.1 | ArchUnit 1.4.0 → 1.4.2 アップグレード（JDK 25 完全サポート、commit 38168422、libs.versions.toml + 5 サービス ArchUnit テスト DSL 統一）| 2h | - | [x] |
 | 1.2 | ADR-0016 全 10 グループ一斉改名 + token 移行手順実行（local-h2 / local-docker / Heroku 本番）| 6h | - | [ ] |
 | 1.3 | TDD Red/Green/Refactor 分離コミット運用ルール文書化（開発ガイド追記）| 0.5h | - | [x] | <!-- IT7 内文書化済（commit 4afd7c05）、pre-commit hook 実装は本タスクで -->
 | 1.4 | 全サービス Spring Security 統一（@PreAuthorize + SecurityFilterChain、IT8 マーカー棚卸し）| 3h | - | [ ] |
@@ -141,7 +141,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | ShedLock 5.x 依存追加（spring + jdbc-template）+ Flyway V3 shedlock テーブル | 1h | - | [ ] |
+| 2.1 | ShedLock 6.6.0 依存追加（spring + jdbc-template、Spring Boot 4 対応）+ Flyway V3 shedlock テーブル + ShedLockConfig（commit 75f747d2）| 1h | - | [x] |
 | 2.2 | OverdueScheduler に @SchedulerLock 付与 + 統合テスト（2 instance シミュレーション）| 2h | - | [ ] |
 
 ### 3. A2 SendGrid 統合
