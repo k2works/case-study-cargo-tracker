@@ -21,7 +21,8 @@
 | IT5 | 2026-07-16 〜 2026-07-29 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了 |
 | IT6 | 2026-07-30 〜 2026-08-12 | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了（Release 2.0）|
 | IT7 | 2026-08-13 〜 2026-08-26 | [iteration_plan-7.md](iteration_plan-7.md) | [retrospective-7.md](retrospective-7.md) | [iteration_report-7.md](iteration_report-7.md) | 完了（Release 2.1、billingms 新設・精算）|
-| IT8 | 2026-08-27 〜 2026-09-09 | [iteration_plan-8.md](iteration_plan-8.md) | - | [iteration_report-8.md](iteration_report-8.md) | 完了（Release 1.0 候補、A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020）|
+| IT8 | 2026-08-27 〜 2026-09-09 | [iteration_plan-8.md](iteration_plan-8.md) | - | [iteration_report-8.md](iteration_report-8.md) | 完了（Release 1.0 候補、A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020 + H2 持ち越し全 8 件 + ADR-0021）|
+| IT9 | 2026-09-10 〜 2026-09-23（暫定）| [iteration_plan-9.md](iteration_plan-9.md)（スケルトン） | - | - | 未着手（ADR-0020 / 0021 実装 + 全 ms authenticated() 移行 + H1/H3 解消）|
 
 ### 進捗サマリー
 

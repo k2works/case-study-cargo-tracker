@@ -111,6 +111,7 @@ nav:
       - IT7 完了報告書: development/iteration_report-7.md
       - IT8 計画: development/iteration_plan-8.md
       - IT8 完了報告書: development/iteration_report-8.md
+      - IT9 計画（スケルトン）: development/iteration_plan-9.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
