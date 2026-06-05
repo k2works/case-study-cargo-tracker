@@ -5,6 +5,7 @@ import com.example.billingms.domain.commands.MarkOverdueCommand;
 import com.example.billingms.domain.projections.InvoiceSummary;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.modelling.command.AggregateNotFoundException;
@@ -65,7 +66,20 @@ public class OverdueScheduler {
                 .register(registry);
     }
 
+    /**
+     * 定期実行（{@code @Scheduled} cron）+ ShedLock 分散排他（IT8 T2.2 / ADR-0017）。
+     *
+     * <p>{@code @SchedulerLock} で billingms multi-instance デプロイ時に 1 instance のみが
+     * 処理することを保証する。lock 名 {@code billing-overdue-scheduler}（lock 種類が複数あれば
+     * 別名を使う）。{@code lockAtMostFor = "PT19H"} は cron 周期（24h）の約 80%、
+     * {@code lockAtLeastFor = "PT5H"} は短時間連続発火を防止する最小ロック保持時間。</p>
+     */
     @Scheduled(cron = "${billing.overdue.cron}", zone = "${billing.overdue.zone}")
+    @SchedulerLock(
+            name = "billing-overdue-scheduler",
+            lockAtMostFor = "PT19H",
+            lockAtLeastFor = "PT5H"
+    )
     public void scheduledRun() {
         runOverdueDetection();
     }
