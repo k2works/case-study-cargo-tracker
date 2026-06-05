@@ -107,7 +107,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | billingms: `IssueInvoiceCommand`（CALCULATED 確定契機）+ `RecordPaymentCommand`（入金確認）+ `MarkOverdueCommand` ハンドラ。`InvoiceIssuedEvent` / `PaymentRecordedEvent` / `InvoiceOverdueEvent` 発行 | 3h | - | [ ] |
+| 4.1 | billingms: `IssueInvoiceCommand`（CALCULATED 確定契機）+ `RecordPaymentCommand`（入金確認）+ `MarkOverdueCommand` ハンドラ。`InvoiceIssuedEvent` / `PaymentRecordedEvent` / `InvoiceOverdueEvent` 発行 | 3h | - | [x] |
 | 4.2 | billingms: `InvoiceNumberGenerator`（`INV-YYYYMMDD-XXXX` 形式、日付 + シーケンス、UNIQUE 制約 + ON CONFLICT 再試行 5 回）+ `PaymentDuePolicy`（発行日 + 30 日）| 2h | - | [x] |
 | 4.3 | `invoice` Read Model 拡張（`invoice_number` / `payment_due` / `paid_at` カラム反映）+ `payment` 投影 Mapper + Controller（`POST /invoices/{id}/issue`、`POST /invoices/{id}/payments`、`GET /invoices?status=...`） | 4h | - | [ ] |
 | 4.4 | NotificationAcl 拡張：`notifyInvoiceIssued` / `notifyPaymentReceived` / `notifyOverdue`。LoggingNotificationAcl スタブで INFO ログ、IT8 で SendGrid 統合 | 1h | - | [ ] |
