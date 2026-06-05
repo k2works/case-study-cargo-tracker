@@ -38,7 +38,7 @@ class TrackingTokenServiceTest {
         fixedClock = Clock.fixed(
                 FIXED_NOW.toInstant(ZoneOffset.UTC),
                 ZoneOffset.UTC);
-        service = new TrackingTokenService(SECRET, fixedClock);
+        service = newService(SECRET, fixedClock);
     }
 
     @Test
@@ -103,7 +103,7 @@ class TrackingTokenServiceTest {
         Clock pastClock = Clock.fixed(
                 FIXED_NOW.minusDays(31).toInstant(ZoneOffset.UTC),
                 ZoneOffset.UTC);
-        TrackingTokenService pastService = new TrackingTokenService(SECRET, pastClock);
+        TrackingTokenService pastService = newService(SECRET, pastClock);
         JwtToken expired = pastService.issue(TN, SUBJECT_ID, TokenRole.SHIPPER, null);
 
         // 検証時点は FIXED_NOW（期限切れ）
@@ -115,7 +115,7 @@ class TrackingTokenServiceTest {
     @DisplayName("ADR-0013: 別鍵で署名されたトークンは検証拒否")
     void 署名が不正なトークンは拒否() {
         String otherSecret = "different-secret-key-with-at-least-32-bytes!!!!!";
-        TrackingTokenService otherService = new TrackingTokenService(otherSecret, fixedClock);
+        TrackingTokenService otherService = newService(otherSecret, fixedClock);
         JwtToken foreign = otherService.issue(TN, SUBJECT_ID, TokenRole.SHIPPER, null);
 
         assertThatThrownBy(() -> service.verify(foreign.token(), TN))
@@ -123,13 +123,52 @@ class TrackingTokenServiceTest {
     }
 
     @Test
-    @DisplayName("ADR-0013: 鍵長が 32 バイト未満の場合は構築時に拒否")
+    @DisplayName("ADR-0013: 鍵長が 32 バイト未満の場合は SecretProvider 構築時に拒否")
     void 短い鍵では構築できない() {
         String shortSecret = "too-short";
 
-        assertThatThrownBy(() -> new TrackingTokenService(shortSecret, fixedClock))
+        assertThatThrownBy(() -> new StaticTrackingTokenSecretProvider(shortSecret, ""))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("32");
+    }
+
+    @Test
+    @DisplayName("IT8 T1.6: 旧 secret で署名されたトークンも previous-secret 設定中は検証成功（四半期ローテーション）")
+    void IT8_T16_旧secret署名トークンも検証成功() {
+        // 旧 secret で署名
+        TrackingTokenService oldService = newService(
+                "old-rotated-secret-32-bytes-minimum-for-hs256-padding!!", fixedClock);
+        JwtToken oldToken = oldService.issue(TN, SUBJECT_ID, TokenRole.SHIPPER, null);
+
+        // 新 secret + 旧 secret の両方を保持する provider 経由で構築
+        StaticTrackingTokenSecretProvider rotating = new StaticTrackingTokenSecretProvider(
+                "new-current-secret-32-bytes-minimum-for-hs256-padding!!!",
+                "old-rotated-secret-32-bytes-minimum-for-hs256-padding!!");
+        TrackingTokenService rotatingService = new TrackingTokenService(rotating, fixedClock);
+
+        VerifiedToken verified = rotatingService.verify(oldToken.token(), TN);
+        assertThat(verified.trackingNumber()).isEqualTo(TN);
+    }
+
+    @Test
+    @DisplayName("IT8 T1.6: previous-secret 未設定時は旧 secret 署名トークンは検証拒否（ローテーション期間後）")
+    void IT8_T16_previous未設定時は旧secret拒否() {
+        TrackingTokenService oldService = newService(
+                "old-rotated-secret-32-bytes-minimum-for-hs256-padding!!", fixedClock);
+        JwtToken oldToken = oldService.issue(TN, SUBJECT_ID, TokenRole.SHIPPER, null);
+
+        // previous-secret なし
+        TrackingTokenService onlyNew = newService(
+                "new-current-secret-32-bytes-minimum-for-hs256-padding!!!", fixedClock);
+
+        assertThatThrownBy(() -> onlyNew.verify(oldToken.token(), TN))
+                .isInstanceOf(TrackingTokenInvalidException.class);
+    }
+
+    /** ヘルパ: 単一 secret の TrackingTokenSecretProvider で TrackingTokenService を構築する。 */
+    private static TrackingTokenService newService(String secret, Clock clock) {
+        return new TrackingTokenService(
+                new StaticTrackingTokenSecretProvider(secret, ""), clock);
     }
 
     @Test

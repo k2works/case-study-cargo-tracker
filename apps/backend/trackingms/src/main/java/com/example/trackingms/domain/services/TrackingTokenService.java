@@ -8,12 +8,9 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -42,23 +39,14 @@ public class TrackingTokenService {
     private static final String AUDIENCE = "tracking.public";
     private static final String CLAIM_TRACKING_NUMBER = "tn";
     private static final String CLAIM_ROLE = "role";
-    private static final int MIN_SECRET_BYTES = 32;
     private static final int MAX_VALID_DAYS = 30;
     private static final int DELIVERED_GRACE_DAYS = 7;
 
-    private final SecretKey secretKey;
+    private final TrackingTokenSecretProvider secretProvider;
     private final Clock clock;
 
-    public TrackingTokenService(
-            @Value("${tracking.public-token.secret}") String secret,
-            Clock clock) {
-        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
-        if (bytes.length < MIN_SECRET_BYTES) {
-            throw new IllegalArgumentException(
-                    "tracking.public-token.secret は 32 バイト以上である必要があります（現在: "
-                            + bytes.length + " バイト）");
-        }
-        this.secretKey = Keys.hmacShaKeyFor(bytes);
+    public TrackingTokenService(TrackingTokenSecretProvider secretProvider, Clock clock) {
+        this.secretProvider = secretProvider;
         this.clock = clock;
     }
 
@@ -84,7 +72,7 @@ public class TrackingTokenService {
                 .claim(CLAIM_ROLE, role.name())
                 .issuedAt(toDate(now))
                 .expiration(toDate(expires))
-                .signWith(secretKey)
+                .signWith(secretProvider.activeSigningKey())
                 .compact();
 
         return new JwtToken(tokenStr, now, expires);
@@ -102,9 +90,29 @@ public class TrackingTokenService {
         if (token == null || token.isBlank()) {
             throw new TrackingTokenInvalidException("token が空です");
         }
+        // IT8 T1.6: 四半期ローテーション期間中は現行 + 旧 secret の両方で検証する。
+        // 最初に成功した鍵で通す。すべて失敗した場合は最後の例外をそのまま伝播する。
+        JwtException lastFailure = null;
+        for (SecretKey key : secretProvider.verifyingKeys()) {
+            try {
+                return verifyWithKey(token, expectedTrackingNumber, key);
+            } catch (ExpiredJwtException ex) {
+                // 有効期限切れは secret によらず確定的なので即時失敗
+                throw new TrackingTokenInvalidException("トークンの有効期限が切れています", ex);
+            } catch (JwtException ex) {
+                lastFailure = ex;
+            }
+        }
+        throw new TrackingTokenInvalidException(
+                "トークンの検証に失敗しました: "
+                        + (lastFailure == null ? "no verifying key configured" : lastFailure.getMessage()),
+                lastFailure);
+    }
+
+    private VerifiedToken verifyWithKey(String token, TrackingNumber expectedTrackingNumber, SecretKey key) {
         try {
             Claims claims = Jwts.parser()
-                    .verifyWith(secretKey)
+                    .verifyWith(key)
                     .requireIssuer(ISSUER)
                     .requireAudience(AUDIENCE)
                     .clock(() -> Date.from(LocalDateTime.now(clock).toInstant(ZoneOffset.UTC)))
@@ -133,11 +141,10 @@ public class TrackingTokenService {
                     claims.getExpiration().toInstant(), ZoneOffset.UTC);
 
             return new VerifiedToken(expectedTrackingNumber, claims.getSubject(), role, exp);
-        } catch (ExpiredJwtException ex) {
-            throw new TrackingTokenInvalidException("トークンの有効期限が切れています", ex);
-        } catch (JwtException ex) {
-            throw new TrackingTokenInvalidException("トークンの検証に失敗しました: " + ex.getMessage(), ex);
+        } catch (ExpiredJwtException | TrackingTokenInvalidException ex) {
+            throw ex; // 確定的失敗は即伝播（複数キー試行で挽回できない）
         }
+        // JwtException（署名不一致など）は verify(...) のループに伝播してフォールバック
     }
 
     /**
