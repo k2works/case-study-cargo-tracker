@@ -164,8 +164,11 @@ Phase 1 完了（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8
 | T1.5 | trackingms PublicTrackingTokenFilter → SecurityFilterChain 統合（spring-boot-starter-security 追加 + SecurityConfig 新規、AntPathRequestMatcher で MvcRequestMatcher 依存回避、IT9 T1.4 の前準備）| 5dbd222a |
 | T1.8 | RateTable の運用設定駆動化（BillingProperties.RateTableSettings + application.yml、経理担当者が料金改定可能）| 75af56c5 |
 | T1.7 | OptimalRouteService を BFS による多段経由探索（最大 3 段）に移行、循環抑止、テスト 13 件 | cd96518c |
+| T1.4 | bookingms / routingms / handlingms / billingms に Spring Security 統一導入（SecurityConfig + permitAll で互換性維持、IT9 で authenticated() 移行）| ee4f98a4 |
 
-これにより H2（14h 分）のうち 12h 分（T1.9 + T1.10 + T1.11 + T1.5 + T1.8 + T1.7）を IT8 内で消化。残 5h（T1.4 Spring Security 統一 3h / T1.6 AWS Secrets Manager 2h）が IT9 持ち越し。
+これにより H2（14h 分）のうち 15h 分（T1.9 + T1.10 + T1.11 + T1.5 + T1.8 + T1.7 + T1.4）を IT8 内で消化。残 2h（T1.6 AWS Secrets Manager + 四半期ローテーション、外部依存のため IT9 持ち越し）のみ。
+
+実質的な H2 持ち越し完全消化を達成。IT9 では ADR-0020 実装（Stripe webhook + 部分入金）と AWS Secrets Manager 統合に集中可能。
 
 ## 完了基準達成状況
 
