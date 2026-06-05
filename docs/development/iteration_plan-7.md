@@ -122,7 +122,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | cross-service E2E（CROSS_SERVICE_E2E=1）：DELIVERED → InvoiceCalculated → DiscountApplied → InvoiceIssued → PaymentRecorded → Booking SETTLED の貫通検証 | 3h | - | [ ] |
+| 5.1 | cross-service E2E（CROSS_SERVICE_E2E=1）：DELIVERED → InvoiceCalculated → DiscountApplied → InvoiceIssued → PaymentRecorded → Booking SETTLED の貫通検証 | 3h | - | [x] |
 | 5.2 | SonarQube ライブスキャン + Quality Gate Backend/Frontend 両方 OK 維持。billingms カバレッジ 80%+ 目標 | 1h | - | [ ] |
 | 5.3 | マルチパースペクティブレビュー実施（developing-review）→ 重要度「高」を IT 内で対応 | 2h | - | [ ] |
 | 5.4 | ふりかえり + 完了報告書作成 + release_plan / docs index / mkdocs 反映 | 1h | - | [ ] |
