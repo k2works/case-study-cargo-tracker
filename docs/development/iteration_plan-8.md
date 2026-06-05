@@ -167,7 +167,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 5.1 | PaymentDetailRecorded event + Invoice 集約拡張 + InvoiceProjection 拡張（method or ref が非 null 時のみ補完 event 連続 apply、PaymentMapper.updatePaymentDetail SQL 追加、Aggregate テスト 2 件 + Projection テスト 1 件、commit fab3f1be）| 2h | - | [x] |
-| 5.2 | PaymentMapper.updatePaymentDetail + cross-service E2E 更新 | 2h | - | [ ] |
+| 5.2 | PaymentMapper.updatePaymentDetail 単体テスト 3 件（@MybatisTest + Flyway + H2）+ GET /api/v1/billing/invoices/{id}/payments + PaymentResponse DTO + cross-service E2E に externalReference 投入 & poll 検証追加（commit b914b4b7）| 2h | - | [x] |
 
 ### 6. ADR-0020 起票 + 仕上げ
 
@@ -186,7 +186,7 @@
 | A1 ShedLock | 1 | 3h | [x] |
 | A2 SendGrid | 2 | 4h | [x] |
 | A3 RestShipperInfoAcl | 2 | 4h | [x] |
-| A4 PaymentDetailRecorded | 2 | 4h | [ ] |
+| A4 PaymentDetailRecorded | 2 | 4h | [x] |
 | ADR-0020 + 仕上げ | 1 | 5h | [ ] |
 | **合計** | **8** | **42.5h** | |
 
@@ -194,7 +194,7 @@
 本番デプロイ準備の一部として SP 外で IT8 内に取り込み。総工数は 28.5h → 42.5h に増加するが、
 ストーリーポイント自体は変動なし（IT8 のスコープは「本番デプロイ可能な状態」と定義）。
 
-**進捗率**: 63%（5/8 SP 完了 — A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl）— Day 7 終了時点
+**進捗率**: 88%（7/8 SP 完了 — A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded）— Day 9 終了時点
 
 ## スケジュール
 
