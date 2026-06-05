@@ -2,10 +2,18 @@ package com.example.billingms.domain.model;
 
 import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
+import com.example.billingms.domain.commands.IssueInvoiceCommand;
+import com.example.billingms.domain.commands.MarkOverdueCommand;
+import com.example.billingms.domain.commands.RecordPaymentCommand;
 import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
+import com.example.billingms.domain.events.InvoiceIssuedEvent;
+import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PaymentRecordedEvent;
 import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
+import com.example.billingms.domain.services.InvoiceNumberGenerator;
+import com.example.billingms.domain.services.PaymentDuePolicy;
 import com.example.billingms.infrastructure.outboundservices.ShipperInfoAcl;
 import com.example.billingms.domain.model.CorporateContract;
 import org.axonframework.commandhandling.CommandHandler;
@@ -146,5 +154,116 @@ public class Invoice {
     public void on(DiscountAppliedEvent event) {
         this.discountAmount = event.discountAmount();
         this.totalAmount = event.totalAmount();
+    }
+
+    /**
+     * 精算書発行（CALCULATED → INVOICED、US23 / T4.1）。
+     *
+     * <p>{@link InvoiceNumberGenerator} で invoice_number を採番、{@link PaymentDuePolicy} で
+     * 支払期限を確定し、{@link InvoiceIssuedEvent} を集約発火する（ADR-0012）。状態遷移は
+     * {@link BillingStatus#canTransitionTo(BillingStatus)} で検証する。</p>
+     */
+    @CommandHandler
+    public void handle(IssueInvoiceCommand command,
+                       InvoiceNumberGenerator numberGenerator,
+                       PaymentDuePolicy paymentDuePolicy,
+                       Clock clock) {
+        if (!this.billingStatus.canTransitionTo(BillingStatus.INVOICED)) {
+            throw new IllegalStateException(
+                    "IssueInvoiceCommand は CALCULATED 状態でのみ受理可能です: " + this.billingStatus);
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
+        String invoiceNumber = numberGenerator.next();
+        LocalDate paymentDue = paymentDuePolicy.calculateDueDate(today);
+        AggregateLifecycle.apply(new InvoiceIssuedEvent(
+                this.invoiceId,
+                this.shipperId,
+                invoiceNumber,
+                paymentDue,
+                this.totalAmount,
+                now
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(InvoiceIssuedEvent event) {
+        this.invoiceNumber = event.invoiceNumber();
+        this.paymentDue = event.paymentDue();
+        this.billingStatus = BillingStatus.INVOICED;
+    }
+
+    /**
+     * 入金記録（INVOICED|OVERDUE → PAID、US23 / T4.1）。
+     *
+     * <p>状態遷移検証 + 通貨整合性検証 + 金額完全一致検証（IT7 は完全一致のみ、IT8 で部分入金対応）。
+     * {@link PaymentRecordedEvent} を集約発火する。bookingId を Event payload に含めることで
+     * bookingms cross-service（T4.5）が {@code Cargo} 集約を {@code SETTLED} へ遷移できる。</p>
+     */
+    @CommandHandler
+    public void handle(RecordPaymentCommand command, Clock clock) {
+        if (!this.billingStatus.canTransitionTo(BillingStatus.PAID)) {
+            throw new IllegalStateException(
+                    "RecordPaymentCommand は INVOICED または OVERDUE 状態でのみ受理可能です: "
+                            + this.billingStatus);
+        }
+        if (command.paidAmount() == null) {
+            throw new IllegalArgumentException("paidAmount は必須です");
+        }
+        if (command.paidAmount().compareTo(this.totalAmount) != 0) {
+            throw new IllegalArgumentException(
+                    "paidAmount は totalAmount と完全一致が必要です（IT7 制約、IT8 で部分入金対応）: "
+                            + "expected=" + this.totalAmount + ", actual=" + command.paidAmount());
+        }
+        if (command.currency() == null || !command.currency().equals(this.currency)) {
+            throw new IllegalArgumentException(
+                    "currency は集約通貨と一致が必要です: expected=" + this.currency
+                            + ", actual=" + command.currency());
+        }
+        if (command.paymentId() == null || command.paymentId().isBlank()) {
+            throw new IllegalArgumentException("paymentId は必須です");
+        }
+        AggregateLifecycle.apply(new PaymentRecordedEvent(
+                this.invoiceId,
+                command.paymentId(),
+                this.bookingId,
+                this.shipperId,
+                command.paidAmount(),
+                command.currency(),
+                command.paidAt(),
+                command.paymentMethod(),
+                command.externalReference(),
+                LocalDateTime.now(clock)
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(PaymentRecordedEvent event) {
+        this.paidAt = event.paidAt();
+        this.billingStatus = BillingStatus.PAID;
+    }
+
+    /**
+     * 督促（INVOICED → OVERDUE、US23 / T4.1 / T4.6）。
+     *
+     * <p>{@code OverdueScheduler}（T4.6）が支払期限超過判定を実施した後で本コマンドを発行する。
+     * 集約は状態遷移のみ実施し、{@link InvoiceOverdueEvent} を集約発火する。</p>
+     */
+    @CommandHandler
+    public void handle(MarkOverdueCommand command, Clock clock) {
+        if (!this.billingStatus.canTransitionTo(BillingStatus.OVERDUE)) {
+            throw new IllegalStateException(
+                    "MarkOverdueCommand は INVOICED 状態でのみ受理可能です: " + this.billingStatus);
+        }
+        AggregateLifecycle.apply(new InvoiceOverdueEvent(
+                this.invoiceId,
+                this.shipperId,
+                LocalDateTime.now(clock)
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(InvoiceOverdueEvent event) {
+        this.billingStatus = BillingStatus.OVERDUE;
     }
 }

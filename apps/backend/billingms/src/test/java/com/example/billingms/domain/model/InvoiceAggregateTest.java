@@ -2,10 +2,18 @@ package com.example.billingms.domain.model;
 
 import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
+import com.example.billingms.domain.commands.IssueInvoiceCommand;
+import com.example.billingms.domain.commands.MarkOverdueCommand;
+import com.example.billingms.domain.commands.RecordPaymentCommand;
 import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
+import com.example.billingms.domain.events.InvoiceIssuedEvent;
+import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PaymentRecordedEvent;
 import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
+import com.example.billingms.domain.services.InvoiceNumberGenerator;
+import com.example.billingms.domain.services.PaymentDuePolicy;
 import com.example.billingms.infrastructure.outboundservices.ShipperInfoAcl;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
@@ -15,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
@@ -39,6 +48,22 @@ class InvoiceAggregateTest {
         fixture.registerInjectableResource(
                 Clock.fixed(FIXED_NOW.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
         );
+        fixture.registerInjectableResource(stubInvoiceNumberGenerator("INV-20260820-0001"));
+        fixture.registerInjectableResource(new PaymentDuePolicy());
+    }
+
+    /**
+     * テスト用のスタブ {@link InvoiceNumberGenerator}。固定の番号を返す。
+     * 集約テストでは Read Model アクセスを避けたいため、Mapper モックではなく
+     * 直接 InvoiceNumberGenerator のスタブを注入する。
+     */
+    private static InvoiceNumberGenerator stubInvoiceNumberGenerator(String fixedNumber) {
+        return new InvoiceNumberGenerator(null, Clock.systemUTC()) {
+            @Override
+            public String next() {
+                return fixedNumber;
+            }
+        };
     }
 
     private ShipperInfoAcl stubShipperInfoAcl() {
@@ -282,5 +307,223 @@ class InvoiceAggregateTest {
                         new BigDecimal("231000"),
                         FIXED_NOW
                 ));
+    }
+
+    // --- IT7 Task 4.1：US23 IssueInvoiceCommand ---
+
+    @Test
+    @DisplayName("US23: CALCULATED 状態で IssueInvoiceCommand 受理 → InvoiceIssuedEvent 発火")
+    void US23_精算書発行() {
+        IssueInvoiceCommand command = new IssueInvoiceCommand("INV-I01");
+
+        fixture.given(new InvoiceCalculatedEvent(
+                        "INV-I01", "B-I01", "S-I01",
+                        new BigDecimal("330000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new InvoiceIssuedEvent(
+                        "INV-I01",
+                        "S-I01",
+                        "INV-20260820-0001",
+                        LocalDate.of(2026, 9, 19), // 8/20 + 30 日
+                        new BigDecimal("330000"),
+                        FIXED_NOW
+                ));
+    }
+
+    @Test
+    @DisplayName("US23: 割引適用後の CALCULATED でも IssueInvoiceCommand 受理可能")
+    void US23_割引後精算書発行() {
+        IssueInvoiceCommand command = new IssueInvoiceCommand("INV-I02");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-I02", "B-I02", "S-I02",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new DiscountAppliedEvent("INV-I02", "S-I02",
+                                new BigDecimal("0.15"),
+                                new BigDecimal("49500"),
+                                new BigDecimal("280500"),
+                                FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new InvoiceIssuedEvent(
+                        "INV-I02",
+                        "S-I02",
+                        "INV-20260820-0001",
+                        LocalDate.of(2026, 9, 19),
+                        new BigDecimal("280500"), // 割引後 totalAmount
+                        FIXED_NOW
+                ));
+    }
+
+    @Test
+    @DisplayName("US23: PENDING 状態（イベント無し）では IssueInvoiceCommand は例外")
+    void US23_PENDING状態では発行拒否() {
+        IssueInvoiceCommand command = new IssueInvoiceCommand("INV-I03");
+
+        fixture.givenNoPriorActivity()
+                .when(command)
+                .expectException(Exception.class);
+    }
+
+    @Test
+    @DisplayName("US23: INVOICED 状態（既発行）では IssueInvoiceCommand は IllegalStateException")
+    void US23_INVOICED状態では再発行拒否() {
+        IssueInvoiceCommand command = new IssueInvoiceCommand("INV-I04");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-I04", "B-I04", "S-I04",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-I04", "S-I04",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectException(IllegalStateException.class);
+    }
+
+    // --- IT7 Task 4.1：US23 RecordPaymentCommand ---
+
+    @Test
+    @DisplayName("US23: INVOICED 状態で RecordPaymentCommand 受理 → PaymentRecordedEvent 発火")
+    void US23_入金記録() {
+        LocalDateTime paidAt = LocalDateTime.of(2026, 9, 15, 14, 30);
+        RecordPaymentCommand command = new RecordPaymentCommand(
+                "INV-P01", "PAY-001",
+                new BigDecimal("330000"), "JPY", paidAt,
+                "BANK_TRANSFER", null);
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-P01", "B-P01", "S-P01",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-P01", "S-P01",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new PaymentRecordedEvent(
+                        "INV-P01",
+                        "PAY-001",
+                        "B-P01",
+                        "S-P01",
+                        new BigDecimal("330000"),
+                        "JPY",
+                        paidAt,
+                        "BANK_TRANSFER",
+                        null,
+                        FIXED_NOW
+                ));
+    }
+
+    @Test
+    @DisplayName("US23: OVERDUE 状態でも RecordPaymentCommand 受理可能（遅延入金）")
+    void US23_OVERDUE状態でも入金記録可能() {
+        LocalDateTime paidAt = LocalDateTime.of(2026, 9, 25, 10, 0);
+        RecordPaymentCommand command = new RecordPaymentCommand(
+                "INV-P02", "PAY-002",
+                new BigDecimal("330000"), "JPY", paidAt,
+                "BANK_TRANSFER", null);
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-P02", "B-P02", "S-P02",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-P02", "S-P02",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW),
+                        new InvoiceOverdueEvent("INV-P02", "S-P02", FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution();
+    }
+
+    @Test
+    @DisplayName("US23: CALCULATED 状態（未発行）では RecordPaymentCommand は IllegalStateException")
+    void US23_CALCULATED状態では入金拒否() {
+        RecordPaymentCommand command = new RecordPaymentCommand(
+                "INV-P03", "PAY-003",
+                new BigDecimal("330000"), "JPY", FIXED_NOW,
+                "BANK_TRANSFER", null);
+
+        fixture.given(new InvoiceCalculatedEvent(
+                        "INV-P03", "B-P03", "S-P03",
+                        new BigDecimal("330000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US23: paidAmount が totalAmount と一致しないと IllegalArgumentException")
+    void US23_金額不一致で拒否() {
+        RecordPaymentCommand command = new RecordPaymentCommand(
+                "INV-P04", "PAY-004",
+                new BigDecimal("280500"), "JPY", FIXED_NOW, // 半額入金
+                "BANK_TRANSFER", null);
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-P04", "B-P04", "S-P04",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-P04", "S-P04",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("US23: currency が集約通貨と一致しないと IllegalArgumentException")
+    void US23_通貨不一致で拒否() {
+        RecordPaymentCommand command = new RecordPaymentCommand(
+                "INV-P05", "PAY-005",
+                new BigDecimal("330000"), "USD", FIXED_NOW,
+                "BANK_TRANSFER", null);
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-P05", "B-P05", "S-P05",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-P05", "S-P05",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectException(IllegalArgumentException.class);
+    }
+
+    // --- IT7 Task 4.1：US23 MarkOverdueCommand ---
+
+    @Test
+    @DisplayName("US23: INVOICED 状態で MarkOverdueCommand 受理 → InvoiceOverdueEvent 発火")
+    void US23_督促() {
+        MarkOverdueCommand command = new MarkOverdueCommand("INV-O01");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-O01", "B-O01", "S-O01",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-O01", "S-O01",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new InvoiceOverdueEvent("INV-O01", "S-O01", FIXED_NOW));
+    }
+
+    @Test
+    @DisplayName("US23: CALCULATED 状態では MarkOverdueCommand は IllegalStateException")
+    void US23_CALCULATED状態では督促拒否() {
+        MarkOverdueCommand command = new MarkOverdueCommand("INV-O02");
+
+        fixture.given(new InvoiceCalculatedEvent(
+                        "INV-O02", "B-O02", "S-O02",
+                        new BigDecimal("330000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectException(IllegalStateException.class);
     }
 }
