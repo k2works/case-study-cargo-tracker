@@ -15,6 +15,7 @@ vi.mock('../api/billingApi', async () => {
     applyDiscount: vi.fn(),
     issueInvoice: vi.fn(),
     recordPayment: vi.fn(),
+    getCircuitBreakerHealth: vi.fn(),
   };
 });
 
@@ -220,6 +221,12 @@ describe('InvoiceDetailPage (S23)', () => {
         ],
       });
     vi.mocked(billingApi.applyDiscount).mockResolvedValue();
+    // IT8 T4.2: Circuit Breaker CLOSED 状態を mock（通常の自動取得 flow）
+    vi.mocked(billingApi.getCircuitBreakerHealth).mockResolvedValue({
+      name: 'shipperInfo',
+      state: 'CLOSED',
+      registered: true,
+    });
 
     renderPage('INV-20260820-0001');
 
@@ -228,6 +235,62 @@ describe('InvoiceDetailPage (S23)', () => {
 
     await waitFor(() => {
       expect(billingApi.applyDiscount).toHaveBeenCalledWith('INV-20260820-0001');
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/割引適用済/)).toBeInTheDocument();
+    });
+  });
+
+  it('IT8 T4.2: Circuit Breaker OPEN 時はボタン押下で手動入力フォームが表示される', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(billingApi.fetchInvoice)
+      .mockResolvedValueOnce(calculatedInvoice)
+      .mockResolvedValueOnce({
+        ...calculatedInvoice,
+        discountAmount: '66000',
+        totalAmount: '264000',
+        lines: [
+          ...calculatedInvoice.lines,
+          {
+            lineSeq: 2,
+            lineType: 'DISCOUNT',
+            description: '法人割引（20%）',
+            amount: '-66000',
+            reasonCode: 'CORPORATE',
+          },
+        ],
+      });
+    vi.mocked(billingApi.applyDiscount).mockResolvedValue();
+    vi.mocked(billingApi.getCircuitBreakerHealth).mockResolvedValue({
+      name: 'shipperInfo',
+      state: 'OPEN',
+      registered: true,
+      failureRate: 100,
+    });
+
+    renderPage('INV-20260820-0001');
+
+    const button = await screen.findByRole('button', { name: /割引を適用/ });
+    await user.click(button);
+
+    // 手動入力フォームが表示される
+    const form = await screen.findByTestId('manual-discount-form');
+    expect(form).toHaveTextContent(/Circuit Breaker: OPEN/);
+
+    // 割引率を 0.20 に変更して「手動入力で適用」押下
+    const rateInput = screen.getByLabelText('割引率') as HTMLInputElement;
+    await user.clear(rateInput);
+    await user.type(rateInput, '0.20');
+    const submit = screen.getByRole('button', { name: /手動入力で適用/ });
+    await user.click(submit);
+
+    // applyDiscount に manualDiscountRate=0.20 が渡る
+    await waitFor(() => {
+      expect(billingApi.applyDiscount).toHaveBeenCalledWith(
+        'INV-20260820-0001',
+        0.2,
+      );
     });
     await waitFor(() => {
       expect(screen.getByText(/割引適用済/)).toBeInTheDocument();

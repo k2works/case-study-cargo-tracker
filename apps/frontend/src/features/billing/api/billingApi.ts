@@ -155,17 +155,49 @@ export async function calculateInvoice(
 }
 
 /**
- * 法人割引適用（US22、S23 「割引を適用」ボタン押下時）。
+ * 法人割引適用（US22、S23 「割引を適用」ボタン押下時 / IT8 T4.2 で手動入力対応）。
  *
- * <p>Invoice 集約が ShipperInfoAcl から契約を取得し CorporateDiscountPolicy で
- * 割引額を算出する。CALCULATED 状態でのみ受理（それ以外は 422）。</p>
+ * <p>通常時（manualDiscountRate 未指定）: Invoice 集約が ShipperInfoAcl から契約を取得し
+ * CorporateDiscountPolicy で割引額を算出する。Circuit Breaker OPEN 時のみ
+ * {@code manualDiscountRate}（0.00〜0.30）を渡し、ACL バイパスで直接適用。
+ * CALCULATED 状態でのみ受理（それ以外は 422）。</p>
  */
-export async function applyDiscount(invoiceId: string): Promise<void> {
+export async function applyDiscount(
+  invoiceId: string,
+  manualDiscountRate?: number,
+): Promise<void> {
+  const body =
+    manualDiscountRate !== undefined
+      ? JSON.stringify({ manualDiscountRate })
+      : undefined;
   const res = await fetch(`/api/v1/billing/invoices/${invoiceId}/discount`, {
     method: 'POST',
-    headers: authHeader(),
+    headers: { ...authHeader(), 'Content-Type': 'application/json' },
+    body,
   });
   if (!res.ok) throw new Error('法人割引適用に失敗しました');
+}
+
+/** CircuitBreaker 状態。S23 で手動入力フォーム切替に使用（IT8 T4.2）。 */
+export type CircuitBreakerState = 'CLOSED' | 'OPEN' | 'HALF_OPEN' | 'DISABLED' | 'FORCED_OPEN' | 'METRICS_ONLY';
+export interface CircuitBreakerHealth {
+  name: string;
+  state: CircuitBreakerState;
+  registered: boolean;
+  failureRate?: number;
+  bufferedCalls?: number;
+}
+
+/**
+ * Resilience4j Circuit Breaker 現在状態を取得（IT8 T4.2）。
+ * shipperInfo の state=OPEN なら S23 で手動入力フォームを表示する。
+ */
+export async function getCircuitBreakerHealth(name: string): Promise<CircuitBreakerHealth> {
+  const res = await fetch(`/api/v1/billing/circuit-breakers/${name}`, {
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('Circuit Breaker 状態取得に失敗しました');
+  return (await res.json()) as CircuitBreakerHealth;
 }
 
 /** BillingStatus → 日本語ラベル変換（S23 / S22 表示用）。 */

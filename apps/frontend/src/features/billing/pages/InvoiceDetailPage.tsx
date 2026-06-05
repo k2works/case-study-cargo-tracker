@@ -4,9 +4,11 @@ import {
   applyDiscount,
   billingStatusLabel,
   fetchInvoice,
+  getCircuitBreakerHealth,
   invoiceLineTypeLabel,
   issueInvoice,
   recordPayment,
+  type CircuitBreakerState,
   type Invoice,
 } from '../api/billingApi';
 
@@ -27,6 +29,10 @@ export default function InvoiceDetailPage() {
   const [applying, setApplying] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [paying, setPaying] = useState(false);
+  // IT8 T4.2: Circuit Breaker fallback UI 用 state
+  const [shipperInfoState, setShipperInfoState] = useState<CircuitBreakerState | null>(null);
+  const [manualRate, setManualRate] = useState<string>('0.15');
+  const [showManualForm, setShowManualForm] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +54,20 @@ export default function InvoiceDetailPage() {
     };
   }, [invoiceId, reloadKey]);
 
-  const handleApplyDiscount = useCallback(async () => {
+  // IT8 T4.2: ボタン押下時にまず Circuit Breaker 状態を確認し、
+  // OPEN なら手動入力フォーム表示、CLOSED/HALF_OPEN なら ACL 経由で自動取得。
+  const handleApplyDiscountClick = useCallback(async () => {
+    try {
+      const health = await getCircuitBreakerHealth('shipperInfo');
+      setShipperInfoState(health.state);
+      if (health.state === 'OPEN' || health.state === 'FORCED_OPEN') {
+        setShowManualForm(true);
+        return;
+      }
+    } catch {
+      // 状態取得失敗時は通常 flow に縮退
+      setShipperInfoState(null);
+    }
     setApplying(true);
     try {
       await applyDiscount(invoiceId);
@@ -59,6 +78,24 @@ export default function InvoiceDetailPage() {
       setApplying(false);
     }
   }, [invoiceId]);
+
+  const handleManualSubmit = useCallback(async () => {
+    const rate = Number(manualRate);
+    if (Number.isNaN(rate) || rate < 0 || rate > 0.3) {
+      setError('OTHER');
+      return;
+    }
+    setApplying(true);
+    try {
+      await applyDiscount(invoiceId, rate);
+      setShowManualForm(false);
+      setReloadKey((k) => k + 1);
+    } catch {
+      setError('OTHER');
+    } finally {
+      setApplying(false);
+    }
+  }, [invoiceId, manualRate]);
 
   const handleIssue = useCallback(async () => {
     setIssuing(true);
@@ -194,11 +231,11 @@ export default function InvoiceDetailPage() {
         </section>
       )}
 
-      {canApplyDiscount && (
+      {canApplyDiscount && !showManualForm && (
         <section className="mb-6">
           <button
             type="button"
-            onClick={handleApplyDiscount}
+            onClick={handleApplyDiscountClick}
             disabled={applying}
             className="rounded bg-blue-600 px-4 py-2 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
           >
@@ -207,6 +244,55 @@ export default function InvoiceDetailPage() {
           <p className="mt-2 text-xs text-gray-500">
             ※ ShipperInfoAcl で荷主契約を取得し CorporateDiscountPolicy で算出します。INDIVIDUAL 荷主の場合は割引額 0 で確定します。
           </p>
+        </section>
+      )}
+
+      {canApplyDiscount && showManualForm && (
+        <section
+          className="mb-6 rounded border border-amber-300 bg-amber-50 p-4"
+          data-testid="manual-discount-form"
+        >
+          <div className="mb-2 flex items-start gap-2">
+            <span className="text-amber-600">⚠</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                ShipperInfoAcl が応答しません（Circuit Breaker: {shipperInfoState ?? 'OPEN'}）
+              </p>
+              <p className="text-xs text-amber-700">
+                bookingms から荷主契約を取得できないため、割引率を手動入力してください（0.00〜0.30）。
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <label htmlFor="manual-rate" className="text-sm">
+              割引率
+            </label>
+            <input
+              id="manual-rate"
+              type="number"
+              step="0.01"
+              min="0"
+              max="0.30"
+              value={manualRate}
+              onChange={(e) => setManualRate(e.target.value)}
+              className="w-28 rounded border px-2 py-1 text-sm"
+            />
+            <button
+              type="button"
+              onClick={handleManualSubmit}
+              disabled={applying}
+              className="rounded bg-amber-600 px-4 py-2 text-white text-sm font-semibold hover:bg-amber-700 disabled:opacity-50"
+            >
+              {applying ? '適用中…' : '手動入力で適用'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowManualForm(false)}
+              className="text-sm text-gray-600 underline hover:text-gray-800"
+            >
+              キャンセル
+            </button>
+          </div>
         </section>
       )}
 
