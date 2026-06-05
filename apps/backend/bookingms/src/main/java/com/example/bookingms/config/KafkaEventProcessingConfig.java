@@ -48,4 +48,19 @@ public class KafkaEventProcessingConfig {
                 configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
         );
     }
+
+    /**
+     * billingms PaymentRecordedEvent 購読の cross-service 処理（US23、IT7 T4.5）。
+     *
+     * <p>{@code cross-booking-billing} プロセッシンググループ（{@code CrossBillingPaymentHandler}）を
+     * Kafka tracking モードで購読し、Cargo 集約を {@code SETTLED} 状態に遷移させる。
+     * ADR-0014/0016 命名規約準拠（{@code cross-} prefix）。</p>
+     */
+    @Autowired
+    public void configureCrossBookingBillingProcessor(EventProcessingConfigurer config) {
+        config.registerTrackingEventProcessor(
+                "cross-booking-billing",
+                configuration -> configuration.getComponent(StreamableKafkaMessageSource.class)
+        );
+    }
 }

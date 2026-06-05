@@ -5,10 +5,12 @@ import com.example.bookingms.domain.commands.AssignTrackingDetailsCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
+import com.example.bookingms.domain.commands.MarkBookingSettledCommand;
 import com.example.bookingms.domain.commands.NotifyRouteToShipperCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
+import com.example.bookingms.domain.events.BookingSettledEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.events.CargoTrackingAssignedEvent;
@@ -296,6 +298,34 @@ public class Cargo {
     @EventSourcingHandler
     public void on(CargoTrackingAssignedEvent event) {
         this.trackingNumber = event.trackingNumber();
+        this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
+    }
+
+    /**
+     * 予約「精算済」遷移（US23、IT7 T4.5、cross-service）。
+     *
+     * <p>billingms の {@code PaymentRecordedEvent} 経由で発火される。冪等化のため
+     * 既に {@code SETTLED} / {@code CANCELLED} 状態の場合は静かに完了する（IllegalState ではない）。</p>
+     */
+    @CommandHandler
+    public void handle(MarkBookingSettledCommand command) {
+        if (this.bookingStatus == BookingStatus.SETTLED
+                || this.bookingStatus == BookingStatus.CANCELLED) {
+            // 冪等スキップ（重複配信・tracking 再処理対策）
+            return;
+        }
+        if (this.bookingStatus != BookingStatus.TRACKING_ISSUED
+                && this.bookingStatus != BookingStatus.IN_TRANSIT
+                && this.bookingStatus != BookingStatus.DELIVERED
+                && this.bookingStatus != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException(
+                    "予約を精算済にできるのは CONFIRMED 以降の状態のみです: 現状態=" + this.bookingStatus);
+        }
+        AggregateLifecycle.apply(new BookingSettledEvent(this.bookingId, BookingStatus.SETTLED.name()));
+    }
+
+    @EventSourcingHandler
+    public void on(BookingSettledEvent event) {
         this.bookingStatus = BookingStatus.valueOf(event.bookingStatus());
     }
 

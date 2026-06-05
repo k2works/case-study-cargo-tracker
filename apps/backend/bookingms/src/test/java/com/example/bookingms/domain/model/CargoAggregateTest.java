@@ -5,10 +5,12 @@ import com.example.bookingms.domain.commands.AssignTrackingDetailsCommand;
 import com.example.bookingms.domain.commands.BookCargoCommand;
 import com.example.bookingms.domain.commands.CancelBookingCommand;
 import com.example.bookingms.domain.commands.ConfirmBookingCommand;
+import com.example.bookingms.domain.commands.MarkBookingSettledCommand;
 import com.example.bookingms.domain.commands.NotifyRouteToShipperCommand;
 import com.example.bookingms.domain.commands.RequestRouteDesignCommand;
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
+import com.example.bookingms.domain.events.BookingSettledEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.events.CargoTrackingAssignedEvent;
@@ -493,5 +495,61 @@ class CargoAggregateTest {
         fixture.given(bookedEvent("B-502"), routingEvent("B-502"))
                 .when(new NotifyRouteToShipperCommand("B-502"))
                 .expectException(IllegalStateException.class);
+    }
+
+    // --- IT7 Task 4.5：US23 MarkBookingSettledCommand（cross-service SETTLED 反映） ---
+
+    @Test
+    @DisplayName("US23 T4.5: TRACKING_ISSUED 状態で MarkBookingSettledCommand → BookingSettledEvent")
+    void US23_精算済遷移() {
+        fixture.given(
+                        bookedEvent("B-S01"),
+                        new BookingConfirmedEvent("B-S01", "CONFIRMED"),
+                        new CargoTrackingAssignedEvent("B-S01", "TRK-AB12CD3456", "TRACKING_ISSUED"))
+                .when(new MarkBookingSettledCommand("B-S01"))
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new BookingSettledEvent("B-S01", "SETTLED"));
+    }
+
+    @Test
+    @DisplayName("US23 T4.5: CONFIRMED 状態でも MarkBookingSettledCommand 受理可能")
+    void US23_CONFIRMEDからでも精算済遷移可() {
+        fixture.given(
+                        bookedEvent("B-S02"),
+                        new BookingConfirmedEvent("B-S02", "CONFIRMED"))
+                .when(new MarkBookingSettledCommand("B-S02"))
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(new BookingSettledEvent("B-S02", "SETTLED"));
+    }
+
+    @Test
+    @DisplayName("US23 T4.5: 既に SETTLED の場合は冪等スキップ（重複配信対策）")
+    void US23_SETTLED冪等スキップ() {
+        fixture.given(
+                        bookedEvent("B-S03"),
+                        new BookingConfirmedEvent("B-S03", "CONFIRMED"),
+                        new BookingSettledEvent("B-S03", "SETTLED"))
+                .when(new MarkBookingSettledCommand("B-S03"))
+                .expectSuccessfulHandlerExecution()
+                .expectNoEvents();
+    }
+
+    @Test
+    @DisplayName("US23 T4.5: PRELIMINARY（CONFIRMED 前）は SETTLED へ遷移できない")
+    void US23_PRELIMINARYからは精算済遷移不可() {
+        fixture.given(bookedEvent("B-S04"))
+                .when(new MarkBookingSettledCommand("B-S04"))
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US23 T4.5: CANCELLED 状態は冪等スキップ（精算しない）")
+    void US23_CANCELLED冪等スキップ() {
+        fixture.given(
+                        bookedEvent("B-S05"),
+                        new BookingCancelledEvent("B-S05", "CANCELLED"))
+                .when(new MarkBookingSettledCommand("B-S05"))
+                .expectSuccessfulHandlerExecution()
+                .expectNoEvents();
     }
 }

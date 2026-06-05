@@ -2,6 +2,7 @@ package com.example.bookingms.interfaces.events;
 
 import com.example.bookingms.domain.events.BookingCancelledEvent;
 import com.example.bookingms.domain.events.BookingConfirmedEvent;
+import com.example.bookingms.domain.events.BookingSettledEvent;
 import com.example.bookingms.domain.events.CargoBookedEvent;
 import com.example.bookingms.domain.events.CargoRoutedEvent;
 import com.example.bookingms.domain.events.CargoTrackingAssignedEvent;
@@ -75,6 +76,12 @@ public class CargoProjectionsEventHandler {
 
     @EventHandler
     public void on(BookingCancelledEvent event) {
+        cargoSummaryMapper.updateBookingStatus(event.bookingId(), event.bookingStatus());
+    }
+
+    /** US23 / T4.5：billingms PaymentRecordedEvent 経由で SETTLED 投影。 */
+    @EventHandler
+    public void on(BookingSettledEvent event) {
         cargoSummaryMapper.updateBookingStatus(event.bookingId(), event.bookingStatus());
     }
 
