@@ -10,9 +10,6 @@ import org.axonframework.eventhandling.gateway.EventGateway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -44,29 +41,18 @@ class BookingArchitectureTest {
     }
 
     @Test
-    @DisplayName("ADR-0014/0016: bookingms の @ProcessingGroup は cross-/local-/outbound- prefix を持つ（既知例外: ADR-0016 移行前の旧名グループ）")
+    @DisplayName("ADR-0014/0016: bookingms の @ProcessingGroup は cross-/local-/outbound- prefix を持つ（ArchUnit DSL、IT8 T1.1）")
     void processingGroupPrefixConvention() {
-        ClassPathScanningCandidateComponentProvider scanner =
-                new ClassPathScanningCandidateComponentProvider(false);
-        scanner.addIncludeFilter(new AnnotationTypeFilter(ProcessingGroup.class));
-
         List<String> violations = new ArrayList<>();
         int checked = 0;
-        for (var beanDef : scanner.findCandidateComponents("com.example.bookingms")) {
-            String beanClassName = beanDef.getBeanClassName();
-            if (beanClassName == null) continue;
-            try {
-                Class<?> clazz = Class.forName(beanClassName);
-                ProcessingGroup annotation = clazz.getAnnotation(ProcessingGroup.class);
-                if (annotation == null) continue;
-                checked++;
-                String groupName = annotation.value();
-                if (!PROCESSING_GROUP_PREFIX.matcher(groupName).matches()) {
-                    violations.add("@ProcessingGroup(\"" + groupName + "\") on " + beanClassName
-                            + " does not match prefix convention");
-                }
-            } catch (ClassNotFoundException e) {
-                // skip
+        for (JavaClass clazz : bookingClasses) {
+            var annotation = clazz.tryGetAnnotationOfType(ProcessingGroup.class).orElse(null);
+            if (annotation == null) continue;
+            checked++;
+            String groupName = annotation.value();
+            if (!PROCESSING_GROUP_PREFIX.matcher(groupName).matches()) {
+                violations.add("@ProcessingGroup(\"" + groupName + "\") on " + clazz.getFullName()
+                        + " does not match prefix convention");
             }
         }
         assertThat(checked)

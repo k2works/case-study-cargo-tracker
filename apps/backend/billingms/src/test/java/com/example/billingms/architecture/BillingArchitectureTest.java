@@ -10,8 +10,6 @@ import org.axonframework.eventhandling.gateway.EventGateway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,14 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>IT7 review H1（二段イベント問題）の再発を ArchUnit で構造的に防止する。
  * 規約違反は CI（{@code ./gradlew :billingms:check}）で fail する。</p>
  *
- * <p><strong>注意</strong>: ArchUnit 1.4.0 は JDK 25 のクラスファイル major version 69 を
- * 完全サポートしていない（一部の enum 等で読み込み失敗）。バイトコードに依存しない
- * パッケージ依存ルール（DIP テスト）と、{@code @EventHandler} アノテーション検査（二段イベント禁止）は
- * 動作する。{@code @ProcessingGroup} の value（文字列）まで踏み込んだ検査は
- * Spring の {@link ClassPathScanningCandidateComponentProvider} を用いてリフレクションベースで実施する。</p>
- *
- * <p>ArchUnit 1.5+ または ASM 更新後の IT8 で {@code processingGroupPrefixConvention} を
- * ArchUnit ベースに統一する予定。</p>
+ * <p>ArchUnit 1.4.2 で JDK 25 クラスファイル major version 69 が完全サポートされたため
+ * （IT8 T1.1 で 1.4.0 → 1.4.2 にアップグレード済み）、すべての検査を ArchUnit DSL ベースに統一。
+ * IT7 で Spring scan による回避策を使っていた {@code processingGroupPrefixConvention} も
+ * ArchUnit の {@code JavaClass.tryGetAnnotationOfType} に統一した。</p>
  */
 class BillingArchitectureTest {
 
@@ -49,29 +43,18 @@ class BillingArchitectureTest {
     }
 
     @Test
-    @DisplayName("ADR-0014/0016: すべての @ProcessingGroup は cross-/local-/outbound- prefix を持つ（Spring scan）")
+    @DisplayName("ADR-0014/0016: すべての @ProcessingGroup は cross-/local-/outbound- prefix を持つ（ArchUnit DSL、IT8 T1.1 で Spring scan 撤去）")
     void processingGroupPrefixConvention() {
-        ClassPathScanningCandidateComponentProvider scanner =
-                new ClassPathScanningCandidateComponentProvider(false);
-        scanner.addIncludeFilter(new AnnotationTypeFilter(ProcessingGroup.class));
-
         List<String> violations = new ArrayList<>();
         int checked = 0;
-        for (var beanDef : scanner.findCandidateComponents("com.example.billingms")) {
-            String beanClassName = beanDef.getBeanClassName();
-            if (beanClassName == null) continue;
-            try {
-                Class<?> clazz = Class.forName(beanClassName);
-                ProcessingGroup annotation = clazz.getAnnotation(ProcessingGroup.class);
-                if (annotation == null) continue;
-                checked++;
-                String groupName = annotation.value();
-                if (!PROCESSING_GROUP_PREFIX.matcher(groupName).matches()) {
-                    violations.add("@ProcessingGroup(\"" + groupName + "\") on " + beanClassName
-                            + " does not match prefix convention (cross-/local-/outbound-)");
-                }
-            } catch (ClassNotFoundException e) {
-                // skip
+        for (JavaClass clazz : billingClasses) {
+            var annotation = clazz.tryGetAnnotationOfType(ProcessingGroup.class).orElse(null);
+            if (annotation == null) continue;
+            checked++;
+            String groupName = annotation.value();
+            if (!PROCESSING_GROUP_PREFIX.matcher(groupName).matches()) {
+                violations.add("@ProcessingGroup(\"" + groupName + "\") on " + clazz.getFullName()
+                        + " does not match prefix convention (cross-/local-/outbound-)");
             }
         }
         assertThat(checked)
