@@ -72,7 +72,7 @@
 | [IT7 計画](./development/iteration_plan-7.md) / [IT7 完了報告](./development/iteration_report-7.md) / [IT7 ふりかえり](./development/retrospective-7.md) | Phase 2 / 3（billingms 新設・精算、Release 2.1） |
 | [IT8 計画](./development/iteration_plan-8.md) / [IT8 完了報告](./development/iteration_report-8.md) | Phase 2 Buffer（本番デプロイ準備、A1-A4 + H2 持ち越し 8 件 + ADR-0020/0021 起票、Release 1.0 候補確立）|
 | [IT9 計画](./development/iteration_plan-9.md) / [IT9 完了報告](./development/iteration_report-9.md) / [IT9 ふりかえり](./development/retrospective-9.md) | Release 1.1 主要機能完全実装（Stripe webhook 部分入金 + AWS Secrets Manager 自動回転 + 認可基盤 + SendGrid WireMock 統合）、**8/8 SP 達成（100%）**、IT8 review 11 件全解消、A3.2 IT10 持ち越し |
-| [IT10 計画（スケルトン）](./development/iteration_plan-10.md) | Release 1.1 **正式版昇格**（A1 認可深層強化 + A2 fallback UX 改善 + A3 staging E2E + A4 Flyway × enum 同期検証 + A5 CHANGELOG + GitHub Release タグ）、5 ストーリー 8 SP |
+| [IT10 計画（スケルトン）](./development/iteration_plan-10.md) | Release 1.1 **正式版昇格**（A1 認可深層強化 + A2 fallback UX 改善 + A3 staging E2E + A4 Flyway × enum 同期検証 + A5 CHANGELOG + GitHub Release タグ）、5 ストーリー 8 SP、IT9 review 12 件統合（H3-H10 + M8 + L5/L6） |
 
 ### ADR ドキュメント
 
@@ -117,6 +117,7 @@
 | [IT5 開発成果物レビュー](./review/IT5_review_20260529.md) | IT5（追跡・荷役）全変更のマルチパースペクティブレビュー（高 7 件・中 10 件・低 12 件） |
 | [IT6 開発成果物レビュー](./review/IT6_review_20260529.md) | IT6（追跡照会 + 例外処理）全変更のマルチパースペクティブレビュー（高 9 件・中 11 件・低 8 件） |
 | [IT8 開発成果物レビュー](./review/IT8_review_20260605.md) | IT8（A1-A4 + ADR-0020）のマルチパースペクティブレビュー（高 3 件・中 5 件・低 3 件、H1/H3 IT9 持ち越し） |
+| [IT9 開発成果物レビュー](./review/IT9_review_20260606.md) | IT9（Release 1.1 主要機能完全実装、A1-A4 / Stripe + AWS + 認可）のマルチパースペクティブレビュー（高 10 件・中 9 件・低 7 件、12 件は IT10 統合・14 件は IT11+ 持ち越し） |
 
 ## 補足
 
