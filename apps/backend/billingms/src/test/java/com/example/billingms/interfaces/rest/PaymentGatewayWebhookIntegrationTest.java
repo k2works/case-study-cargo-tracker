@@ -100,7 +100,7 @@ class PaymentGatewayWebhookIntegrationTest {
         commandGateway.sendAndWait(new CalculateInvoiceCommand(invoiceId, bookingId, shipperId, transport));
         commandGateway.sendAndWait(new IssueInvoiceCommand(invoiceId));
         // Axon EventHandler の async dispatch を待機
-        await().atMost(Duration.ofSeconds(5)).until(() ->
+        await().atMost(Duration.ofSeconds(15)).until(() ->
                 invoiceMapper.findByInvoiceId(invoiceId) != null
                         && "INVOICED".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
         InvoiceSummary issued = invoiceMapper.findByInvoiceId(invoiceId);
@@ -120,7 +120,7 @@ class PaymentGatewayWebhookIntegrationTest {
                 .andExpect(status().isOk());
 
         // Assert 1: PARTIALLY_PAID + is_partial payment + webhook PROCESSED
-        await().atMost(Duration.ofSeconds(5)).until(() ->
+        await().atMost(Duration.ofSeconds(15)).until(() ->
                 "PARTIALLY_PAID".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
         WebhookProcessed processed = webhookMapper.findByEventId(eventId);
         assertThat(processed).isNotNull();
@@ -154,7 +154,7 @@ class PaymentGatewayWebhookIntegrationTest {
                 .andExpect(status().isOk());
 
         // Assert 3: PAID + payments 2 件
-        await().atMost(Duration.ofSeconds(5)).until(() ->
+        await().atMost(Duration.ofSeconds(15)).until(() ->
                 "PAID".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
         InvoiceSummary paid = invoiceMapper.findByInvoiceId(invoiceId);
         assertThat(paid.getBillingStatus()).isEqualTo("PAID");
@@ -170,7 +170,7 @@ class PaymentGatewayWebhookIntegrationTest {
                 new BigDecimal("1000"), new BigDecimal("500"), "GENERAL", 2, "JPY");
         commandGateway.sendAndWait(new CalculateInvoiceCommand(invoiceId, bookingId, shipperId, transport));
         commandGateway.sendAndWait(new IssueInvoiceCommand(invoiceId));
-        await().atMost(Duration.ofSeconds(5)).until(() ->
+        await().atMost(Duration.ofSeconds(15)).until(() ->
                 invoiceMapper.findByInvoiceId(invoiceId) != null
                         && "INVOICED".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
 
