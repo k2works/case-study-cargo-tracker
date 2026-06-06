@@ -24,15 +24,7 @@ import HandlingFormPage from './features/handling/pages/HandlingFormPage';
 import InvoiceDetailPage from './features/billing/pages/InvoiceDetailPage';
 import InvoiceListPage from './features/billing/pages/InvoiceListPage';
 import OverdueListPage from './features/billing/pages/OverdueListPage';
-
-function Dashboard() {
-  return (
-    <section>
-      <h1>ダッシュボード</h1>
-      <p>国際貨物輸送管理システム</p>
-    </section>
-  );
-}
+import DashboardPage from './features/dashboard/pages/DashboardPage';
 
 export default function App() {
   return (
@@ -42,7 +34,7 @@ export default function App() {
         {/* US18 公開追跡照会（PrivateRoute 外、token クエリで JWT 検証） */}
         <Route path="/tracking/:trackingNumber" element={<TrackingPublicPage />} />
         <Route element={<PrivateRoute />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<DashboardPage />} />
           <Route path="/voyages" element={<VoyageListPage />} />
           <Route path="/voyages/new" element={<VoyageFormPage />} />
           <Route path="/voyages/:voyageNumber/edit" element={<VoyageFormPage />} />
