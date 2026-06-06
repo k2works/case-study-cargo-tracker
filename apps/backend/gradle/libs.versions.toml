@@ -39,6 +39,9 @@ caffeine = "3.1.8"
 # JWT
 jjwt = "0.12.6"
 
+# Payment Gateway (IT9 A1 / ADR-0020)
+stripe = "29.0.0"
+
 # Quality
 jacoco = "0.8.12"
 checkstyle = "10.20.2"
@@ -99,6 +102,9 @@ caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "c
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+# Payment Gateway (IT9 A1 / ADR-0020)
+stripe-java = { module = "com.stripe:stripe-java", version.ref = "stripe" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }

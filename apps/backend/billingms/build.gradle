@@ -49,6 +49,9 @@ dependencies {
     // Resilience4j @CircuitBreaker / @Cacheable は AOP プロキシ経由で動作するため必須
     implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+    // Payment Gateway（IT9 A1 / ADR-0020、Stripe webhook + HMAC 署名検証）
+    implementation libs.stripe.java
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
 

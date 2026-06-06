@@ -1,6 +1,7 @@
 package com.example.billingms;
 
 import com.example.billingms.config.BillingProperties;
+import com.example.billingms.config.StripeWebhookProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -30,7 +31,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication
 @EnableScheduling
-@EnableConfigurationProperties(BillingProperties.class)
+@EnableConfigurationProperties({BillingProperties.class, StripeWebhookProperties.class})
 public class BillingMsApplication {
 
     public static void main(String[] args) {
