@@ -42,6 +42,9 @@ jjwt = "0.12.6"
 # Payment Gateway (IT9 A1 / ADR-0020)
 stripe = "29.0.0"
 
+# AWS SDK (IT9 A2 / ADR-0021、Secrets Manager 自動回転)
+awsSdk = "2.30.27"
+
 # Quality
 jacoco = "0.8.12"
 checkstyle = "10.20.2"
@@ -105,6 +108,9 @@ jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
 
 # Payment Gateway (IT9 A1 / ADR-0020)
 stripe-java = { module = "com.stripe:stripe-java", version.ref = "stripe" }
+
+# AWS SDK (IT9 A2 / ADR-0021、Secrets Manager 自動回転)
+aws-sdk-secretsmanager = { module = "software.amazon.awssdk:secretsmanager", version.ref = "awsSdk" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }

@@ -2,6 +2,7 @@ package com.example.trackingms.domain.services;
 
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -29,6 +30,11 @@ import java.util.List;
  * （AWS SDK 統合 + AWSCURRENT/AWSPREVIOUS 取得 + Lambda 自動回転、ADR-0021 起票予定）。</p>
  */
 @Component
+@ConditionalOnProperty(
+        name = "tracking.public-token.provider",
+        havingValue = "static",
+        matchIfMissing = true
+)
 public class StaticTrackingTokenSecretProvider implements TrackingTokenSecretProvider {
 
     private static final int MIN_SECRET_BYTES = 32;

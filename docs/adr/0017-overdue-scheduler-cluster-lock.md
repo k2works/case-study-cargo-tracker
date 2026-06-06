@@ -49,6 +49,8 @@ for each candidate:
 2. **LockProvider** は `JdbcTemplateLockProvider` を使用し、既存 `billing_read_db` 内に `shedlock` テーブルを Flyway V3 で作成
 3. **lock 名**: `billing-overdue-scheduler`（サービス + scheduler 名で一意）
 4. **lockAtMostFor / lockAtLeastFor**: cron 間隔の 80% / 20% を目安（24h 周期なら 19h / 5h）
+   - **lockAtMostFor=PT19H の根拠**: JVM 強制終了等で lock が release されない最悪ケースでも、次の cron 実行（24h 後）前には自動失効するよう 24h 未満で設定。80% = 19.2h ≒ PT19H として安全マージン 5h（深夜帯の手動メンテナンス時間に相当）を確保。短すぎると正常な scheduler が完了前に lock が外れ、別 instance が並走するリスクがあるため、想定最長処理時間（IT8 実測 1.5h / Stripe 同期含む将来 5h 程度）の 3 倍以上を目安にした。
+   - **lockAtLeastFor=PT5H の根拠**: clock drift / scheduler の早期完了（候補ゼロ件等）でも、最低 5h は lock を保持して別 instance が連続実行しないことを保証する。Heroku 3 dyno × 自動再起動でも cron 1 サイクル内で 2 回発火することを抑止する設計。短すぎると即時 release により再発火、長すぎると正常 instance の再実行ができない。5h は cron 1 サイクル（24h）の 20% で、Quartz の経験則 (1 サイクル / 5) と整合する（IT9 A2 / IT8 レビュー M1 補強）。
 
 ### 代替案の評価
 
