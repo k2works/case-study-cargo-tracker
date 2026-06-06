@@ -419,7 +419,7 @@ IT9 達成（**84/84 SP、100%**）により Release 1.1 主要機能を完全�
 3. **staging 環境構築 + E2E 認可検証**（4-6h）: Heroku staging app（dev plan）構築、JWT 経由 E2E、Stripe Test Mode webhook 実機検証、AWS Secrets Manager 手動 rotation 確認、SonarQube Quality Gate 実機計測
 4. **Flyway migration × enum 同期自動検証**（1 SP）: ArchUnit または独自テストで CHECK 制約値リスト ⊃ enum 値の検証（IT9 V5 バグ再発防止）
 
-詳細は IT10 計画作成時に [iteration_plan-10.md] として整備予定。IT10 完了後に Release 1.1 を正式版として GitHub Release タグ + CHANGELOG 確定 + 本番デプロイ可能宣言予定。
+詳細は [iteration_plan-10.md](iteration_plan-10.md)（スケルトン）参照。IT10 完了後に Release 1.1 を正式版として GitHub Release タグ + CHANGELOG 確定 + 本番デプロイ可能宣言予定。
 
 ### 過去の Release マイルストーン総括
 
