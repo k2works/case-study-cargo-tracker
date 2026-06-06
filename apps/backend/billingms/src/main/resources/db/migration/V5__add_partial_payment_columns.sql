@@ -9,5 +9,13 @@ ALTER TABLE invoice
 ALTER TABLE invoice
     ADD CONSTRAINT chk_invoice_paid_so_far CHECK (paid_so_far >= 0 AND paid_so_far <= total_amount);
 
+-- billing_status CHECK 制約に PARTIALLY_PAID を追加（IT9 / US26）
+ALTER TABLE invoice DROP CONSTRAINT IF EXISTS chk_invoice_status;
+ALTER TABLE invoice
+    ADD CONSTRAINT chk_invoice_status CHECK (
+        billing_status IN ('PENDING', 'CALCULATED', 'INVOICED',
+                           'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED')
+    );
+
 ALTER TABLE payment
     ADD COLUMN IF NOT EXISTS is_partial BOOLEAN NOT NULL DEFAULT FALSE;
