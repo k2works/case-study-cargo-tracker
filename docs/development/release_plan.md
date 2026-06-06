@@ -390,39 +390,47 @@ gantt
 | IT6 | 2026-07-30 〜 2026-08-12 | 9 | 9 | 100% | 完了（2026-05-29：ADR-0012/0013/0014 + US18 公開照会 + US19/US20 例外処理 + マルチパースペクティブレビュー + Quality Gate PASS、計 22 コミット） |
 | IT7 | 2026-08-13 〜 2026-08-26 | 8 | 8 | 100% | 完了（2026-06-05：US21-US23 精算 + billingms 新規立ち上げ + review 高/中 持ち越し 7 件 IT 内対応 + ADR-0017/0018/0019 起票 + 全 5 サービス ArchUnit 横展開、計 50+ コミット。billingms LINE 89.87%、全モジュール check PASS） |
 | IT8 | 2026-08-27 〜 2026-09-09 | 8 | 8 | 100% | 完了（2026-06-05：A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020 起票、Ralph Loop で 1 日完遂、30+ コミット、全モジュール check PASS、frontend 234 件 PASS） |
-| **合計** | | **76** | **76** | **Release 1.0 候補確立（76/76 SP・100%）** | Phase 1 + IT5 + IT6 + IT7 + IT8 完了。残 0 SP、IT9 以降は Release 1.1（ADR-0020 決済機関 webhook、Spring Security 統一、AWS Secrets Manager、IT8 マーカー棚卸し 1.4-1.10 14h 分）|
+| IT9 | 2026-09-10 〜 2026-09-23 | 8 | 7 | 87.5% | 完了（2026-06-06：A1 Stripe webhook 部分入金 + A2 AWS Secrets Manager + Lambda + Terraform + A3 HerokuSecurityConfig + JWT 検証 + A4.2 CI コスト + M1/M4/M5 解消、Ralph Loop 12 iteration、14 コミット、全モジュール check PASS、frontend 245 件 PASS。A3.2 / A4.1 IT10 持ち越し）|
+| **合計** | | **84** | **83** | **Release 1.1 ほぼ確立（83/84 SP・99%）** | Phase 1 + Phase 2 + Buffer + IT9 完了。残 1 SP（A4.1 SendGrid SDK 制約）は IT10 で SDK サブクラス化と staging E2E と合わせて再評価 |
 
 ### バーンダウンチャート
 
 ```mermaid
 xychart-beta
     title "リリースバーンダウン（計画 vs 実績）"
-    x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8"]
-    y-axis "残 SP" 0 --> 80
-    line "計画" [76, 66, 56, 46, 35, 25, 16, 8, 0]
-    line "実績" [76, 66, 56, 46, 35, 25, 16, 8, 0]
+    x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8", "IT9"]
+    y-axis "残 SP" 0 --> 84
+    line "計画" [84, 74, 64, 54, 43, 33, 24, 16, 8, 0]
+    line "実績" [84, 74, 64, 54, 43, 33, 24, 16, 8, 1]
 ```
 
-> **実績（IT8 終了時点、Release 1.0 候補確立）**: Phase 1（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8 SP）完了。**累計 76/76 SP（100%）**。IT1-IT8 はいずれも計画どおり完了し、残 SP は 0。Release 2.1（Phase 2 完了の精算機能）に加え Release 1.0（本番デプロイ可能な状態：SendGrid Dynamic Templates 通知 + ShedLock クラスタ排他 + RestShipperInfoAcl + PaymentDetailRecorded + ADR-0020 起票）を達成。IT8 では Ralph Loop モードで 8 SP を 1 日完遂、A1-A4 全実装 + マルチパースペクティブレビュー + 完了報告書まで含めて 30+ コミットで完遂。
+> **実績（IT9 終了時点、Release 1.1 ほぼ確立）**: Phase 1（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8 SP）+ IT9（7 SP）完了。**累計 83/84 SP（99%）**。残 1 SP（A4.1 SendGrid SDK Client 制約）は IT10 で SDK サブクラス化試行と合わせて再評価。IT9 では Ralph Loop モード 12 iteration で 7 SP 達成、A1 Stripe webhook 部分入金 + A2 AWS Secrets Manager + A3 認可基盤 + A4 IT8 review 解消（H3 / M1 / M4 / M5）で 14 コミット完遂。Release 1.1 主要機能（決済自動化 + secret 自動回転 + 本番認可）は実装完了し、staging 環境構築（IT10）で E2E 検証後に正式版へ昇格予定。
 
 ---
 
 ## 次のステップ
 
-### Release 1.0 候補 → 正式版への昇格（IT9）
+### Release 1.1 ほぼ確立 → 正式版への昇格（IT10）
 
-IT8 完全達成（76/76 SP、100%）により Release 1.0 候補を確立。正式版への昇格には IT9 で以下の実装が必要:
+IT9 達成（83/84 SP、99%）により Release 1.1 主要機能を実装完了。正式版昇格には IT10 で以下が必要:
 
-1. **ADR-0020 実装**（Stripe webhook 受信、3 SP）: 部分入金 PARTIALLY_PAID 状態追加、BalanceTracker 値オブジェクト、HMAC 署名検証、webhook_processed テーブルでの idempotency キー管理
-2. **ADR-0021 実装**（AWS Secrets Manager、2 SP）: AwsSecretsManagerTrackingTokenSecretProvider + Lambda 90 日自動回転 + LocalStack 統合テスト
-3. **全 ms 認可付与**（2 SP）: IT8 で平準化した SecurityFilterChain（permitAll）を authenticated() + @PreAuthorize に置換、E2E 認証付き動作確認
-4. **IT8 レビュー H1/H3 解消**（1 SP）: SendGrid Client 注入による WireMock 統合テスト + RestShipperInfoAclWireMockIT の CI コスト測定
+1. **A4.1 SendGrid SDK Client サブクラス化試行**（1 SP）: `com.sendgrid.Client.buildUri` を override する `WireMockCompatibleClient` で実 HTTP 経路を WireMock 統合検証
+2. **A3.2 各 Controller @PreAuthorize 付与**（2 SP）: メソッド単位の認可と `@WithMockUser` テストパターン確立で深層防御を完成
+3. **M3 RestShipperInfoAcl fallback UX 改善**（1 SP）: `discountRate=null`（未確定）を返してフロントエンドで明示警告
+4. **staging 環境構築 + E2E 認可検証**（2-3 SP）: Heroku staging app（dev plan）構築、JWT 経由 E2E、Stripe Test Mode webhook 実機検証、AWS Secrets Manager 手動 rotation 確認、SonarQube Quality Gate 実機計測
 
-詳細は [iteration_plan-9.md](iteration_plan-9.md)（スケルトン）参照。IT9 完了後に Release 1.0 を正式版として GitHub Release タグ + CHANGELOG 確定 + 本番デプロイ可能宣言予定。
+詳細は IT10 計画作成時に [iteration_plan-10.md] として整備予定。IT10 完了後に Release 1.1 を正式版として GitHub Release タグ + CHANGELOG 確定 + 本番デプロイ可能宣言予定。
 
-### 当初の Release 1.0 MVP（達成済み）
+### 過去の Release マイルストーン
 
-リリース完了時点で振り返り。Phase 1 完了（IT4、41 SP）で Release 1.0 MVP を達成済み。Phase 2（IT5-IT7、27 SP）で Release 2.0 / 2.1 達成。Phase 2 Buffer（IT8、8 SP）で Release 1.0 候補（本番デプロイ準備）達成。
+### 過去の Release マイルストーン総括
+
+- **Release 1.0 MVP**: Phase 1 完了（IT4、41 SP）で達成
+- **Release 2.0**: Phase 2 / IT6 完了で達成（追跡照会 + 例外処理）
+- **Release 2.1**: Phase 2 / IT7 完了で達成（精算機能）
+- **Release 1.0 候補**: Phase 2 Buffer（IT8、8 SP）で達成（本番デプロイ準備）
+- **Release 1.1 ほぼ確立**: IT9（7 SP）で達成（Stripe webhook + AWS Secrets Manager + 認可基盤）
+- **Release 1.1 正式版**: IT10 で staging E2E + SDK 制約解消後に確立予定
 
 ---
 
