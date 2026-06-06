@@ -43,6 +43,10 @@ dependencies {
     // AWS Secrets Manager（IT9 A2 / ADR-0021、公開トークン secret 自動回転）
     implementation libs.aws.sdk.secretsmanager
 
+    // LocalStack 統合テスト（IT9 A2.4）
+    testImplementation libs.testcontainers.junit.jupiter
+    testImplementation libs.testcontainers.localstack
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
 
