@@ -40,7 +40,3 @@ logging:
     com.example.routingms: INFO
     org.axonframework: INFO
 
-# DevDataSeeder 有効化（ダッシュボード各メニュー用サンプルデータ）
-app:
-  dev-seed:
-    enabled: true

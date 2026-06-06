@@ -1,0 +1,6 @@
+# dev-seed プロファイル: DevDataSeeder を有効化
+# 通常起動（bootRun）時に local-h2 / local-docker と一緒に active にする。
+# テストでは追加しないことで、サンプルデータの混入を防ぐ。
+app:
+  dev-seed:
+    enabled: true

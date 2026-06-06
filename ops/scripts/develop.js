@@ -154,17 +154,19 @@ export default function(gulp) {
 
     /**
      * 特定サービスを local-h2 プロファイルで起動
+     * dev-seed プロファイルを併用してダッシュボード用サンプルデータを投入する。
      */
     gulp.task(`dev:${svc.name}:start`, (done) => {
-      gradle(`:${svc.name}:bootRun`, { profile: 'local-h2' });
+      gradle(`:${svc.name}:bootRun`, { profile: 'local-h2,dev-seed' });
       done();
     });
 
     /**
      * 特定サービスを local-docker プロファイルで起動（Docker が必要）
+     * dev-seed プロファイルを併用してダッシュボード用サンプルデータを投入する。
      */
     gulp.task(`dev:${svc.name}:start:docker`, (done) => {
-      gradle(`:${svc.name}:bootRun`, { profile: 'local-docker' });
+      gradle(`:${svc.name}:bootRun`, { profile: 'local-docker,dev-seed' });
       done();
     });
 
@@ -303,7 +305,7 @@ export default function(gulp) {
       process.exit(1);
     }
 
-    const profile = 'local-docker';
+    const profile = 'local-docker,dev-seed';
     const startOrder = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'gatewayms'];
     const delay = 3000;
 
