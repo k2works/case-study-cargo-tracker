@@ -36,10 +36,10 @@
 
 | ID | ストーリー | SP | 優先度 |
 |----|----------|----|----|
-| US24 | 経理担当者として、Stripe で受信した部分入金が自動で請求書に反映されるようにしたい（手作業の externalReference 入力を排除）| 3 | 必須 |
-| US25 | 運用担当者として、公開トークンの secret が AWS Secrets Manager で自動回転されるようにしたい（手動 Heroku Config Vars 更新の排除）| 2 | 必須 |
-| US26 | システム管理者として、全 endpoint が認証 / 認可されているようにしたい（IT8 まで permitAll だった endpoint の本番化）| 2 | 必須 |
-| US27 | 開発チームとして、SendGrid + Resilience4j の WireMock 統合テストで実 HTTP 経路を保証したい（IT8 H1）| 1 | 中 |
+| US26 | 経理担当者として、Stripe で受信した部分入金が自動で請求書に反映されるようにしたい（手作業の externalReference 入力を排除）| 3 | 必須 |
+| US27 | 運用担当者として、公開トークンの secret が AWS Secrets Manager で自動回転されるようにしたい（手動 Heroku Config Vars 更新の排除）| 2 | 必須 |
+| US28 | システム管理者として、全 endpoint が認証 / 認可されているようにしたい（IT8 まで permitAll だった endpoint の本番化）| 2 | 必須 |
+| US29 | 開発チームとして、SendGrid + Resilience4j の WireMock 統合テストで実 HTTP 経路を保証したい（IT8 H1）| 1 | 中 |
 | **合計** | | **8** | |
 
 ---
@@ -108,6 +108,34 @@
 
 ---
 
+## レビュー指摘事項対応方針（IT8 レビュー由来）
+
+[IT8 開発成果物レビュー（2026-06-05）](../review/IT8_review_20260605.md)で挙げられた指摘事項について、IT9 での対応方針を以下に明示する。
+
+### 高優先度（3 件）
+
+| ID | 指摘 | IT9 での対応 |
+|----|------|------------|
+| H1 | SendGrid WireMock 統合テスト未実装 | **A4.1 で対応**（タスク見積もり 2h、US29 として正式ストーリー化） |
+| H2 | IT8 マーカー棚卸し追加項目 1.4-1.10（14h 分） | **IT8 内で完全消化済み、IT9 対応不要**。[iteration_report-8.md §H2 持ち越し追加消化](iteration_report-8.md) のとおり、T1.4 / T1.5 / T1.6 / T1.7 / T1.8 / T1.9 / T1.10 / T1.11 の 8 件すべてを IT8 内で完了（17h 相当、14h を超過達成）。IT8 レビュー作成時点とその後の完了報告作成時点でステータスが変化した点に留意 |
+| H3 | RestShipperInfoAcl の @SpringBootTest CI コスト測定 | **A4.2 で対応**（タスク見積もり 1h、必要に応じて forkEvery 設定） |
+
+### 中優先度（5 件）
+
+| ID | 指摘 | IT9 での対応方針 |
+|----|------|---------------|
+| M1 | ShedLock の `lockAtMostFor=PT19H` / `lockAtLeastFor=PT5H` 設定値根拠が ADR-0017 で未明示 | **IT9 中対応**（A2 ADR-0021 実装の流れで ADR-0017 にコメント追記、所要時間 0.5h を Buffer 内で吸収） |
+| M2 | `Invoice.handle(ApplyDiscountCommand)` の `manualDiscountRate` 分岐がドメインロジック内に混在 | **許容**（現状は 2 行のテルナリで簡潔、Rule of Three 遵守で次回類似分岐出現時に判断。IT9 で A1 部分入金実装時に再評価） |
+| M3 | `RestShipperInfoAcl` fallback の UX が「個人扱い」と区別困難 | **IT10 検討**（手動入力 UI で現状カバー済み。デフォルト値を null（discountRate 未確定）にする代替設計は IT9 のスコープ外。US26 の Stripe 統合 UX 設計と合わせて IT10 で再検討） |
+| M4 | `PaymentDetailRecorded` の `paymentMethod` / `externalReference` 制約が record コンストラクタで未検証 | **A1 で対応**（部分入金（IT9 / US26）の新規 record `PartialPaymentRecorded` で同種の問題を回避するため、コンストラクタ検証を標準化。既存 `PaymentDetailRecorded` への二重防御追加も A1 内で同時実施） |
+| M5 | E2E `cross-service.spec.ts` の poll タイムアウト 30 秒が本番 Kafka 経路と乖離する可能性 | **A3 で対応**（認可付与による E2E 全フロー再実行時に本番 Heroku Kafka 経路での所要時間を実測し、必要なら poll タイムアウトを調整。所要時間 0.5h を A3.4 タスク内に吸収） |
+
+### 低優先度（3 件）
+
+L1 / L2 / L3（IT8 レビューで「次々回以降」と判定された項目）は IT9 スコープ外。IT11 以降のリリース計画で再評価する。
+
+---
+
 ## 関連ドキュメント
 
 - [iteration_plan-8.md](iteration_plan-8.md) — IT8 完了報告
@@ -123,3 +151,6 @@
 | 日付 | 内容 | 担当 |
 |------|------|------|
 | 2026-06-05 | IT8 完全達成（H2 持ち越し含む）を受けて IT9 スケルトン計画を作成。IT9 着手時に詳細化（受入条件 / Definition of Done / リスクと対策）| k2works |
+| 2026-06-06 | 整合性検証（validating-iteration-plan）の結果、user_story.md の US24/US25 と番号衝突していたため US24-27 → US26-29 にリナンバリング。user_story.md に US26-29 を新規追加済み | k2works |
+| 2026-06-06 | 設計ドキュメント先行更新: domain-model.md に PARTIALLY_PAID / BalanceTracker / RecordPartialPaymentCommand / TrackingTokenSecretProvider 追加、data-model.md に webhook_processed テーブル + paid_so_far カラム追加、ui_design.md に S23 部分入金履歴 + Stripe 遷移リンク + alert-* スタイル追加 | k2works |
+| 2026-06-06 | IT8 レビュー指摘事項対応方針を追記（高 H1=A4.1 / H2=IT8 消化済み / H3=A4.2、中 M1=IT9 中対応 / M2=許容 / M3=IT10 / M4=A1 統合 / M5=A3 統合、低 L1-L3=IT11 以降） | k2works |
