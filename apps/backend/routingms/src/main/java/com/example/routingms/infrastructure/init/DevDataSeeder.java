@@ -30,6 +30,11 @@ public class DevDataSeeder {
     private static final Logger log = LoggerFactory.getLogger(DevDataSeeder.class);
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(5);
 
+    private static final String UNLOCODE_TYO = "JPTYO";
+    private static final String UNLOCODE_SIN = "SGSIN";
+    private static final String UNLOCODE_LAX = "USLAX";
+    private static final String UNLOCODE_NYK = "USNYK";
+
     private final CommandGateway commandGateway;
     private final VoyageMapper voyageMapper;
 
@@ -46,28 +51,28 @@ public class DevDataSeeder {
 
             sendVoyage(
                     "V0001", "MAERSK", "Maersk Line", "Maersk Tokyo",
-                    "JPTYO", "SGSIN",
+                    UNLOCODE_TYO, UNLOCODE_SIN,
                     now.plusDays(3), now.plusDays(10),
                     List.of(new CarrierMovementData(
-                            "JPTYO", "SGSIN",
+                            UNLOCODE_TYO, UNLOCODE_SIN,
                             now.plusDays(3), now.plusDays(10)
                     ))
             );
             sendVoyage(
                     "V0002", "MSC", "Mediterranean Shipping", "MSC Singapore",
-                    "SGSIN", "USLAX",
+                    UNLOCODE_SIN, UNLOCODE_LAX,
                     now.plusDays(12), now.plusDays(25),
                     List.of(new CarrierMovementData(
-                            "SGSIN", "USLAX",
+                            UNLOCODE_SIN, UNLOCODE_LAX,
                             now.plusDays(12), now.plusDays(25)
                     ))
             );
             sendVoyage(
                     "V0003", "ONE", "Ocean Network Express", "ONE California",
-                    "USLAX", "USNYK",
+                    UNLOCODE_LAX, UNLOCODE_NYK,
                     now.plusDays(28), now.plusDays(35),
                     List.of(new CarrierMovementData(
-                            "USLAX", "USNYK",
+                            UNLOCODE_LAX, UNLOCODE_NYK,
                             now.plusDays(28), now.plusDays(35)
                     ))
             );

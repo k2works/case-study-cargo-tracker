@@ -41,6 +41,20 @@ public class DevDataSeeder {
     private static final Logger log = LoggerFactory.getLogger(DevDataSeeder.class);
     private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(5);
 
+    private static final String SHIPPER_ACME = "SHIP-001";
+    private static final String SHIPPER_YAMADA = "SHIP-002";
+    private static final String SHIPPER_TECHVISION = "SHIP-003";
+    private static final String QUOTATION_ACME = "QUOT-001";
+    private static final String QUOTATION_YAMADA = "QUOT-002";
+    private static final String BOOKING_ACME = "BK-001";
+    private static final String BOOKING_YAMADA = "BK-002";
+    private static final String BOOKING_TECHVISION = "BK-003";
+    private static final String CITY_TOKYO = "Tokyo";
+    private static final String COUNTRY_JP = "JP";
+    private static final String UNLOCODE_TYO = "JPTYO";
+    private static final String UNLOCODE_LAX = "USLAX";
+    private static final String CURRENCY_JPY = "JPY";
+
     private final CommandGateway commandGateway;
     private final ShipperMapper shipperMapper;
     private final QuotationMapper quotationMapper;
@@ -73,34 +87,34 @@ public class DevDataSeeder {
 
     private void seedShippers() {
         sendIfAbsent(
-                "SHIP-001",
-                shipperMapper.findByShipperId("SHIP-001") != null,
+                SHIPPER_ACME,
+                shipperMapper.findByShipperId(SHIPPER_ACME) != null,
                 new RegisterShipperCommand(
-                        "SHIP-001", ShipperType.CORPORATE,
+                        SHIPPER_ACME, ShipperType.CORPORATE,
                         "ACME Corporation",
-                        "1-1-1 Marunouchi", null, "Tokyo", "JP", "100-0005",
+                        "1-1-1 Marunouchi", null, CITY_TOKYO, COUNTRY_JP, "100-0005",
                         "logistics@acme.example.com", "+81-3-1234-5678",
                         "CN-2026-0001", new BigDecimal("0.100")
                 )
         );
         sendIfAbsent(
-                "SHIP-002",
-                shipperMapper.findByShipperId("SHIP-002") != null,
+                SHIPPER_YAMADA,
+                shipperMapper.findByShipperId(SHIPPER_YAMADA) != null,
                 new RegisterShipperCommand(
-                        "SHIP-002", ShipperType.INDIVIDUAL,
+                        SHIPPER_YAMADA, ShipperType.INDIVIDUAL,
                         "山田太郎",
-                        "2-2-2 Shibuya", null, "Tokyo", "JP", "150-0002",
+                        "2-2-2 Shibuya", null, CITY_TOKYO, COUNTRY_JP, "150-0002",
                         "yamada.taro@example.com", "+81-90-1234-5678",
                         null, null
                 )
         );
         sendIfAbsent(
-                "SHIP-003",
-                shipperMapper.findByShipperId("SHIP-003") != null,
+                SHIPPER_TECHVISION,
+                shipperMapper.findByShipperId(SHIPPER_TECHVISION) != null,
                 new RegisterShipperCommand(
-                        "SHIP-003", ShipperType.CORPORATE,
+                        SHIPPER_TECHVISION, ShipperType.CORPORATE,
                         "TechVision Inc.",
-                        "3-3-3 Roppongi", "10F", "Tokyo", "JP", "106-0032",
+                        "3-3-3 Roppongi", "10F", CITY_TOKYO, COUNTRY_JP, "106-0032",
                         "ops@techvision.example.com", "+81-3-9876-5432",
                         "CN-2026-0002", new BigDecimal("0.050")
                 )
@@ -116,28 +130,28 @@ public class DevDataSeeder {
                 "Industrial equipment"
         );
         RouteSpecification spec = new RouteSpecification(
-                "JPTYO", "USLAX", LocalDate.now().plusDays(30)
+                UNLOCODE_TYO, UNLOCODE_LAX, LocalDate.now().plusDays(30)
         );
         List<RouteCandidate> candidates = List.of(
-                new RouteCandidate("JPTYO → USLAX (V001+V002)", 14, new BigDecimal("250000"), "JPY"),
-                new RouteCandidate("JPTYO → SGSIN → USLAX (V001/V002)", 18, new BigDecimal("220000"), "JPY")
+                new RouteCandidate("JPTYO → USLAX (V001+V002)", 14, new BigDecimal("250000"), CURRENCY_JPY),
+                new RouteCandidate("JPTYO → SGSIN → USLAX (V001/V002)", 18, new BigDecimal("220000"), CURRENCY_JPY)
         );
 
         sendIfAbsent(
-                "QUOT-001",
-                quotationMapper.findById("QUOT-001") != null,
+                QUOTATION_ACME,
+                quotationMapper.findById(QUOTATION_ACME) != null,
                 new CreateQuotationCommand(
-                        "QUOT-001", "SHIP-001", spec, generalCargo,
-                        candidates, new BigDecimal("250000"), "JPY",
+                        QUOTATION_ACME, SHIPPER_ACME, spec, generalCargo,
+                        candidates, new BigDecimal("250000"), CURRENCY_JPY,
                         LocalDate.now().plusDays(14)
                 )
         );
         sendIfAbsent(
-                "QUOT-002",
-                quotationMapper.findById("QUOT-002") != null,
+                QUOTATION_YAMADA,
+                quotationMapper.findById(QUOTATION_YAMADA) != null,
                 new CreateQuotationCommand(
-                        "QUOT-002", "SHIP-002", spec, generalCargo,
-                        candidates, new BigDecimal("180000"), "JPY",
+                        QUOTATION_YAMADA, SHIPPER_YAMADA, spec, generalCargo,
+                        candidates, new BigDecimal("180000"), CURRENCY_JPY,
                         LocalDate.now().plusDays(14)
                 )
         );
@@ -152,23 +166,23 @@ public class DevDataSeeder {
                 "Electronics components"
         );
         RouteSpecification spec = new RouteSpecification(
-                "JPTYO", "USLAX", LocalDate.now().plusDays(40)
+                UNLOCODE_TYO, UNLOCODE_LAX, LocalDate.now().plusDays(40)
         );
 
         sendIfAbsent(
-                "BK-001",
-                cargoSummaryMapper.findByBookingId("BK-001") != null,
-                new BookCargoCommand("BK-001", "SHIP-001", spec, cargo)
+                BOOKING_ACME,
+                cargoSummaryMapper.findByBookingId(BOOKING_ACME) != null,
+                new BookCargoCommand(BOOKING_ACME, SHIPPER_ACME, spec, cargo)
         );
         sendIfAbsent(
-                "BK-002",
-                cargoSummaryMapper.findByBookingId("BK-002") != null,
-                new BookCargoCommand("BK-002", "SHIP-002", spec, cargo)
+                BOOKING_YAMADA,
+                cargoSummaryMapper.findByBookingId(BOOKING_YAMADA) != null,
+                new BookCargoCommand(BOOKING_YAMADA, SHIPPER_YAMADA, spec, cargo)
         );
         sendIfAbsent(
-                "BK-003",
-                cargoSummaryMapper.findByBookingId("BK-003") != null,
-                new BookCargoCommand("BK-003", "SHIP-003", spec, cargo)
+                BOOKING_TECHVISION,
+                cargoSummaryMapper.findByBookingId(BOOKING_TECHVISION) != null,
+                new BookCargoCommand(BOOKING_TECHVISION, SHIPPER_TECHVISION, spec, cargo)
         );
     }
 

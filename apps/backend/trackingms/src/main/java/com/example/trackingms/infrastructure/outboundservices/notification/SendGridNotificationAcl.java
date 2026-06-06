@@ -51,6 +51,9 @@ public class SendGridNotificationAcl implements NotificationAcl {
 
     private static final Logger log = LoggerFactory.getLogger(SendGridNotificationAcl.class);
 
+    private static final String DATA_TRACKING_NUMBER = "trackingNumber";
+    private static final String DATA_EXCEPTION_ID = "exceptionId";
+
     private final SendGrid sendGrid;
     private final NotificationProperties properties;
     private final Counter successCounter;
@@ -76,7 +79,7 @@ public class SendGridNotificationAcl implements NotificationAcl {
     @Override
     public void notifyTrackingIssued(String trackingNumber, String bookingId) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("trackingNumber", trackingNumber);
+        data.put(DATA_TRACKING_NUMBER, trackingNumber);
         data.put("bookingId", bookingId);
         send(properties.sendgrid().templates().trackingIssued(), data, "TRACKING_ISSUED");
     }
@@ -87,7 +90,7 @@ public class SendGridNotificationAcl implements NotificationAcl {
                                     TransportStatus toStatus,
                                     String unlocode) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("trackingNumber", trackingNumber);
+        data.put(DATA_TRACKING_NUMBER, trackingNumber);
         data.put("fromStatus", fromStatus == null ? "" : fromStatus.name());
         data.put("toStatus", toStatus.name());
         data.put("unlocode", unlocode == null ? "" : unlocode);
@@ -97,7 +100,7 @@ public class SendGridNotificationAcl implements NotificationAcl {
     @Override
     public void notifyMisrouted(String trackingNumber, String unlocode) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("trackingNumber", trackingNumber);
+        data.put(DATA_TRACKING_NUMBER, trackingNumber);
         data.put("unlocode", unlocode == null ? "" : unlocode);
         send(properties.sendgrid().templates().misrouted(), data, "MISROUTED");
     }
@@ -109,8 +112,8 @@ public class SendGridNotificationAcl implements NotificationAcl {
                                           String occurredUnlocode,
                                           String description) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("trackingNumber", trackingNumber);
-        data.put("exceptionId", exceptionId);
+        data.put(DATA_TRACKING_NUMBER, trackingNumber);
+        data.put(DATA_EXCEPTION_ID, exceptionId);
         data.put("exceptionType", exceptionType);
         data.put("occurredUnlocode", occurredUnlocode == null ? "" : occurredUnlocode);
         data.put("description", description == null ? "" : description);
@@ -122,8 +125,8 @@ public class SendGridNotificationAcl implements NotificationAcl {
                                         String exceptionId,
                                         String resolution) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("trackingNumber", trackingNumber);
-        data.put("exceptionId", exceptionId);
+        data.put(DATA_TRACKING_NUMBER, trackingNumber);
+        data.put(DATA_EXCEPTION_ID, exceptionId);
         data.put("resolution", resolution == null ? "" : resolution);
         send(properties.sendgrid().templates().exceptionResolved(), data, "EXCEPTION_RESOLVED");
     }
@@ -133,8 +136,8 @@ public class SendGridNotificationAcl implements NotificationAcl {
                                           String exceptionId,
                                           String exceptionType) {
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("trackingNumber", trackingNumber);
-        data.put("exceptionId", exceptionId);
+        data.put(DATA_TRACKING_NUMBER, trackingNumber);
+        data.put(DATA_EXCEPTION_ID, exceptionId);
         data.put("exceptionType", exceptionType);
         send(properties.sendgrid().templates().exceptionEscalation(), data, "EXCEPTION_ESCALATION");
     }

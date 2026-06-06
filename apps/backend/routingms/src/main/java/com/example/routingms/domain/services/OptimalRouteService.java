@@ -86,27 +86,21 @@ public class OptimalRouteService {
             SearchState state = queue.poll();
             VoyageProjection last = state.lastVoyage;
 
-            // 目的地に到達 → 経路候補として登録
             if (matches(last.getDestUnlocode(), spec.destination())) {
+                // 目的地に到達 → 経路候補として登録
                 results.add(toCandidate(state.legs));
-                continue;
-            }
-
-            // 探索深さ上限 or 目的地に到達できる可能性がない → 打ち切り
-            if (state.legs.size() >= MAX_LEGS) {
-                continue;
-            }
-
-            // 接続便を探索
-            for (VoyageProjection next : voyages) {
-                if (matches(next.getOriginUnlocode(), last.getDestUnlocode())
-                        && !state.visitedPorts.contains(next.getDestUnlocode())
-                        && !next.getDepartureDate().isBefore(last.getArrivalDate())) {
-                    List<RouteLeg> newLegs = new ArrayList<>(state.legs);
-                    newLegs.add(toLeg(next));
-                    Set<String> newVisited = new HashSet<>(state.visitedPorts);
-                    newVisited.add(next.getDestUnlocode());
-                    queue.add(new SearchState(List.copyOf(newLegs), newVisited, next));
+            } else if (state.legs.size() < MAX_LEGS) {
+                // 探索深さ上限未満なら接続便を探索（上限以上なら打ち切り）
+                for (VoyageProjection next : voyages) {
+                    if (matches(next.getOriginUnlocode(), last.getDestUnlocode())
+                            && !state.visitedPorts.contains(next.getDestUnlocode())
+                            && !next.getDepartureDate().isBefore(last.getArrivalDate())) {
+                        List<RouteLeg> newLegs = new ArrayList<>(state.legs);
+                        newLegs.add(toLeg(next));
+                        Set<String> newVisited = new HashSet<>(state.visitedPorts);
+                        newVisited.add(next.getDestUnlocode());
+                        queue.add(new SearchState(List.copyOf(newLegs), newVisited, next));
+                    }
                 }
             }
         }

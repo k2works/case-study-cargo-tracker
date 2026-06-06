@@ -109,42 +109,44 @@ public class TrackingTokenService {
                 lastFailure);
     }
 
+    /**
+     * 単一の secret key でトークンを検証する。
+     *
+     * <p>本メソッドは確定的失敗（有効期限切れ・claim 不一致）の場合、verify ループに挽回させず
+     * 即時に呼び出し元へ伝播させる設計。署名不一致などの JwtException はループに伝播し、
+     * 次の secret key で再試行される。</p>
+     */
     private VerifiedToken verifyWithKey(String token, TrackingNumber expectedTrackingNumber, SecretKey key) {
-        try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(key)
-                    .requireIssuer(ISSUER)
-                    .requireAudience(AUDIENCE)
-                    .clock(() -> Date.from(LocalDateTime.now(clock).toInstant(ZoneOffset.UTC)))
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .requireIssuer(ISSUER)
+                .requireAudience(AUDIENCE)
+                .clock(() -> Date.from(LocalDateTime.now(clock).toInstant(ZoneOffset.UTC)))
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
 
-            // jjwt の clock 注入で期限切れは ExpiredJwtException に変換されるが、
-            // 二重防御として LocalDateTime ベースでも明示的に検証する。
-            LocalDateTime expDt = LocalDateTime.ofInstant(
-                    claims.getExpiration().toInstant(), ZoneOffset.UTC);
-            if (!expDt.isAfter(LocalDateTime.now(clock))) {
-                throw new TrackingTokenInvalidException("トークンの有効期限が切れています");
-            }
-
-            String tn = claims.get(CLAIM_TRACKING_NUMBER, String.class);
-            if (tn == null || !tn.equals(expectedTrackingNumber.value())) {
-                throw new TrackingTokenInvalidException(
-                        "tn claim がパス変数と一致しません（期待: " + expectedTrackingNumber.value()
-                                + " / claim: " + tn + "）");
-            }
-
-            TokenRole role = parseRoleClaim(claims.get(CLAIM_ROLE, String.class));
-
-            LocalDateTime exp = LocalDateTime.ofInstant(
-                    claims.getExpiration().toInstant(), ZoneOffset.UTC);
-
-            return new VerifiedToken(expectedTrackingNumber, claims.getSubject(), role, exp);
-        } catch (ExpiredJwtException | TrackingTokenInvalidException ex) {
-            throw ex; // 確定的失敗は即伝播（複数キー試行で挽回できない）
+        // jjwt の clock 注入で期限切れは ExpiredJwtException に変換されるが、
+        // 二重防御として LocalDateTime ベースでも明示的に検証する。
+        LocalDateTime expDt = LocalDateTime.ofInstant(
+                claims.getExpiration().toInstant(), ZoneOffset.UTC);
+        if (!expDt.isAfter(LocalDateTime.now(clock))) {
+            throw new TrackingTokenInvalidException("トークンの有効期限が切れています");
         }
-        // JwtException（署名不一致など）は verify(...) のループに伝播してフォールバック
+
+        String tn = claims.get(CLAIM_TRACKING_NUMBER, String.class);
+        if (tn == null || !tn.equals(expectedTrackingNumber.value())) {
+            throw new TrackingTokenInvalidException(
+                    "tn claim がパス変数と一致しません（期待: " + expectedTrackingNumber.value()
+                            + " / claim: " + tn + "）");
+        }
+
+        TokenRole role = parseRoleClaim(claims.get(CLAIM_ROLE, String.class));
+
+        LocalDateTime exp = LocalDateTime.ofInstant(
+                claims.getExpiration().toInstant(), ZoneOffset.UTC);
+
+        return new VerifiedToken(expectedTrackingNumber, claims.getSubject(), role, exp);
     }
 
     /**
