@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         properties = {
                 "axon.axonserver.enabled=false",
                 "axon.kafka.publisher.enabled=false",
-                "axon.kafka.fetcher.enabled=false"
+                "axon.kafka.fetcher.enabled=false",
+                "app.dev-seed.enabled=false"
         }
 )
 @ActiveProfiles("local-h2")
