@@ -17,6 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 @EnableWebSecurity
+@org.springframework.context.annotation.Profile("!heroku")
 public class SecurityConfig {
 
     @Bean
