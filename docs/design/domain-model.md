@@ -426,8 +426,17 @@ enum ShipperType {
 
 class CorporateContract <<Value Object>> {
   - contractNumber: String
-  - discountRate: Percentage
+  - discountRate: Percentage  ' null 可（IT10 / US31）
 }
+
+note bottom of CorporateContract
+  discountRate は IT10 / US31 で null 許容に拡張。
+  RestShipperInfoAcl の Circuit Breaker OPEN 時 fallback として
+  「未確定」状態を null で表現し、S23 で「割引率未確定」
+  alert-warning を表示して経理担当者の判断を仰ぐ。
+  IT8 の fallback「discountRate=0（個人扱い）」は法人荷主の
+  誤適用リスクがあったため、IT10 M3 対応で null fallback に変更。
+end note
 
 class Percentage <<Value Object>> {
   - value: BigDecimal
@@ -516,7 +525,7 @@ RouteCandidate *-- Money
 ### Shipper 集約の不変条件
 
 - `shipperType = CORPORATE` の場合、`corporateContract` は必須
-- `corporateContract.discountRate` は 0% 以上 30% 以下
+- `corporateContract.discountRate` は 0% 以上 30% 以下、または null（IT10 / US31、Circuit Breaker OPEN 時 fallback の「未確定」状態）。null 時は Invoice 集約は割引適用を保留し、S23 で alert-warning を表示
 - `Email` の同一性は予約検索のキーとなる（重複検出用に Projection 側でインデックス）
 
 ### ドメインイベント

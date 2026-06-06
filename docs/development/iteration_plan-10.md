@@ -135,6 +135,43 @@
 
 ---
 
+## リスクと対策
+
+| # | リスク | 影響度 | 対策 |
+|---|-------|-------|------|
+| R1 | Heroku staging app の dev plan 構築コスト（時間 + Add-on 費用）が想定を超える | 高 | dev plan は eco dyno + Kafka shared を選び、月額 $20 以内に抑える。staging を temporary（IT10 期間のみ）として扱い、IT10 完了後は停止 |
+| R2 | staging E2E で本番未検出のロール認可漏れが発覚し、A1 @PreAuthorize の修正が必要 | 高 | A1 を Week 19 Day 1-2 で先行完遂、A3 staging E2E は Week 20 で実機検証。差分修正のバッファを Week 20 Day 1-2 に確保 |
+| R3 | AWS Secrets Manager の rotate-secret が Lambda 経由で失敗（IAM Role 不足等） | 中 | A2.3 で構築した Terraform IaC を staging に適用し、初回 rotation を手動 trigger して動作確認。失敗時は CloudWatch Logs で詳細確認 |
+| R4 | Stripe Test Mode webhook が Heroku のオートスリープで欠落 | 中 | staging を eco dyno で運用、Stripe 側の retry mechanism（72 時間最大 5 回）で復旧。webhook_processed テーブルで欠落検知 |
+| R5 | Flyway × enum 同期テスト（A4）の偽陽性で既存テストが失敗 | 低 | Test 設計時に既存 BillingStatus / chk_invoice_status の値リストを比較で確認、想定外の差分があれば追加検出と判断 |
+| R6 | CHANGELOG / GitHub Release タグ作成で Release 1.0 候補（IT8）との重複混乱 | 低 | CHANGELOG セクションを「Release 1.0（IT4 MVP）」「Release 1.0 候補（IT8 本番準備）」「Release 1.1（IT9）」「Release 1.1 正式版（IT10）」と明示区分。タグは `v1.0.0` / `v1.1.0` の semver で運用 |
+
+## 完了条件
+
+### Definition of Done
+
+- [ ] A1-A5 全タスクが状態列で [x] に更新されている（25 タスク中 25 完了）
+- [ ] 全 5 ms（bookingms / routingms / handlingms / billingms / trackingms）で `:check` BUILD SUCCESSFUL
+- [ ] フロントエンド `npm run test:coverage` が 80% 以上を維持（IT9 245 件 + IT10 新規）
+- [ ] ArchUnit hard assertion すべて PASS（既存 4 件 + A4 Flyway × enum 同期テスト追加）
+- [ ] SonarQube Quality Gate PASS（staging code で実機計測、A3.5）
+- [ ] Heroku staging app（authms / 5 ms / gatewayms × 7 + Aiven Kafka + PostgreSQL）が稼働
+- [ ] Playwright cross-service.spec.ts が staging に対して JWT 認証ヘッダ付きで全 PASS（A3.2）
+- [ ] CHANGELOG.md / GitHub Release v1.1.0 タグ / README + index.md の本番デプロイ可能宣言が反映
+- [ ] iteration_report-10.md / retrospective-10.md / release_report-1.1.md 作成
+
+### デモ項目
+
+- [ ] staging app に未認証で `/api/v1/billing/invoices` GET → **401 Unauthorized**
+- [ ] staging app に ROLE_SHIPPER 認証で `/api/v1/billing/invoices` GET → **403 Forbidden**（メソッド @PreAuthorize で拒否）
+- [ ] staging app に ROLE_ACCOUNTANT 認証で `/api/v1/billing/invoices` GET → **200 OK + Invoice 一覧**
+- [ ] S23 で Circuit Breaker OPEN 時 alert-warning「割引率が未確定」が表示される（A2）
+- [ ] Stripe Test Mode で webhook を送信 → staging billingms で PARTIALLY_PAID 遷移が S23 に反映
+- [ ] AWS Secrets Manager Console で rotate-secret 実行 → CloudWatch Logs で trackingms refresh ログを確認
+- [ ] CI で BillingStatus に新規値を追加すると A4 テストが失敗し「Flyway VZ の CHECK 制約に値が反映されていません」エラーを出す（再発防止確認）
+
+---
+
 ## 関連ドキュメント
 
 - [iteration_plan-9.md](iteration_plan-9.md) — IT9 計画（100% 達成）
