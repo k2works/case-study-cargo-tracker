@@ -16,9 +16,9 @@
 | カテゴリ | 概要 | 状況 |
 | :--- | :--- | :--- |
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
-| [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
-| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み（Axon Kafka + Heroku + Aiven 構成） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 27 件作成済み（リリース計画 + Release 1.0 報告書 + IT1-IT8 計画/ふりかえり/完了報告書 + IT9 計画スケルトン）|
+| [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み（US 29 件、IT9 用 US26-29 追加済み） |
+| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み（Axon Kafka + Heroku + Aiven 構成、IT9 設計要素先行反映済み） |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 27 件作成済み（リリース計画 + Release 1.0 報告書 + IT1-IT8 計画/ふりかえり/完了報告書 + IT9 計画スケルトン整合性検証反映）|
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み（IT8 レビュー追加） |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 18 件作成済み（ADR-0020 / 0021 追加） |
@@ -40,7 +40,7 @@
 | [要件定義書](./requirements/requirements_definition.md) | RDRA 2.0 に基づく 4 層（システム価値・外部環境・境界・内部構造） |
 | [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 21 件・アクター目的リスト |
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
-| [ユーザーストーリー](./requirements/user_story.md) | US 25 件・受け入れ基準・トレーサビリティマトリックス |
+| [ユーザーストーリー](./requirements/user_story.md) | US 29 件・受け入れ基準・トレーサビリティマトリックス（US26-29 は IT9 用：Stripe webhook / AWS Secrets Manager / 全 endpoint 認可 / SendGrid WireMock） |
 
 ### 設計ドキュメント
 
@@ -49,9 +49,9 @@
 | [バックエンドアーキテクチャ](./design/architecture_backend.md) | Axon Framework 5 + Axon Kafka Extension + Aiven 構成のバックエンド設計 |
 | [フロントエンドアーキテクチャ](./design/architecture_frontend.md) | React 19 + Vite + TypeScript フロントエンド設計 |
 | [インフラストラクチャ](./design/architecture_infrastructure.md) | Heroku + Aiven Managed Kafka インフラ構成 |
-| [データモデル設計](./design/data-model.md) | ER 図・テーブル定義 |
-| [ドメインモデル設計](./design/domain-model.md) | エンティティ・値オブジェクト・集約 |
-| [UI 設計](./design/ui_design.md) | 画面遷移図・画面イメージ |
+| [データモデル設計](./design/data-model.md) | ER 図・テーブル定義（IT9 / US26 用 webhook_processed テーブル + invoice.paid_so_far 先行反映済み） |
+| [ドメインモデル設計](./design/domain-model.md) | エンティティ・値オブジェクト・集約（IT9 / US26 用 BalanceTracker / PARTIALLY_PAID / RecordPartialPaymentCommand + IT9 / US27 用 TrackingTokenSecretProvider 先行反映済み） |
+| [UI 設計](./design/ui_design.md) | 画面遷移図・画面イメージ（IT9 / US26 用 S23 部分入金履歴 + Stripe 遷移リンク + alert-* フィードバック規約先行反映済み） |
 | [テスト戦略](./design/test_strategy.md) | テストピラミッド・Testcontainers（Kafka）・カバレッジ目標 |
 | [非機能要件](./design/non_functional.md) | 性能・セキュリティ・可用性・保守性要件 |
 | [運用要件](./design/operation.md) | 運用フロー・監視設計・障害対応手順 |
@@ -71,7 +71,7 @@
 | [IT6 計画](./development/iteration_plan-6.md) / [IT6 完了報告](./development/iteration_report-6.md) / [IT6 ふりかえり](./development/retrospective-6.md) | Phase 2 / 2（公開照会・例外、Release 2.0） |
 | [IT7 計画](./development/iteration_plan-7.md) / [IT7 完了報告](./development/iteration_report-7.md) / [IT7 ふりかえり](./development/retrospective-7.md) | Phase 2 / 3（billingms 新設・精算、Release 2.1） |
 | [IT8 計画](./development/iteration_plan-8.md) / [IT8 完了報告](./development/iteration_report-8.md) | Phase 2 Buffer（本番デプロイ準備、A1-A4 + H2 持ち越し 8 件 + ADR-0020/0021 起票、Release 1.0 候補確立）|
-| [IT9 計画（スケルトン）](./development/iteration_plan-9.md) | Release 1.0 正式版（ADR-0020 Stripe webhook 実装 + ADR-0021 AWS Secrets Manager + 全 ms 認可付与） |
+| [IT9 計画（スケルトン）](./development/iteration_plan-9.md) | Release 1.0 正式版（ADR-0020 Stripe webhook 実装 + ADR-0021 AWS Secrets Manager + 全 ms 認可付与、整合性検証 8 ステップ反映済み、US26-29 リナンバリング + IT8 レビュー指摘対応方針追記） |
 
 ### ADR ドキュメント
 
