@@ -262,8 +262,36 @@ class CargoApiIntegrationTest {
 | E2E-01 | 見積作成 → 荷主登録 → 予約登録 → 経路設計 → 予約確定 → 追跡番号発行 | US01〜US14 |
 | E2E-02 | 荷役作業記録（受領 → 積込 → 荷降し → 引取）→ 追跡照会 | US15, US16, US18 |
 | E2E-03 | 例外発生（遅延）→ 対応入力 → 解決 → 荷主通知 | US19 |
-| E2E-04 | 配送完了 → 輸送料金算出 → 法人割引適用 → 精算書発行 → 入金確認 | US21〜US23 |
+| E2E-04 | 配送完了 → 輸送料金算出 → 法人割引適用 → 精算書発行 → 入金確認（IT9 / US26 部分入金含む） | US21〜US23, US26 |
 | E2E-05 | 航海スケジュール新規登録 → 検索 → 更新 | US24, US25 |
+
+#### cross-service.spec.ts の poll タイムアウト実機計測（IT9 A3.4、IT8 レビュー M5 統合）
+
+cross-service イベント伝搬の E2E 検証では、`GET /payments` などの Read Model 反映を polling で待機する。`local-h2` 環境では Axon の subscribing event processor が同期的にハンドリングするため数十 ms で完了するが、本番 Heroku + Aiven Kafka 経路では tracking processor が非同期で動作し、数秒〜数百 ms の遅延が発生し得る。`cross-service.spec.ts` のデフォルト poll タイムアウト 30 秒が staging 環境で妥当かを実機計測する。
+
+**測定対象**:
+
+- `cross-service.spec.ts` の `pollUntil(...)` ヘルパが GET 200 + 期待値を満たすまでの所要時間
+- bookingms → routingms → bookingms → trackingms → handlingms → billingms の各 cross-service 連携 hop の所要時間
+
+**測定方法**:
+
+```typescript
+// e2e/cross-service.spec.ts の pollUntil に計測を仕込む（IT9 で計測用に追加）
+const start = Date.now();
+const result = await pollUntil(...);
+console.log(`[poll] elapsed=${Date.now() - start}ms hop=${hopName}`);
+```
+
+**判断基準**:
+
+| 観測結果（staging） | 対応 |
+| :--- | :--- |
+| p95 < 5 秒 | デフォルト 30 秒タイムアウト維持で十分 |
+| p95 5〜15 秒 | タイムアウトを 60 秒に拡張、E2E の flakiness 対策強化 |
+| p95 > 15 秒 | Kafka topic partition 設定・コンシューマグループ設定の見直し |
+
+**現状**: IT9 完了時点では staging 環境未構築のため未測定。staging 環境構築（IT11 想定）と同時に実施し、本ドキュメントに p50 / p95 値を追記する。
 
 ツール: **Playwright**（クロスブラウザ・並列実行・トレース保存）
 
@@ -547,6 +575,38 @@ stop
 | **main マージ後 合計** | **20 分以内** |
 
 並列実行とテスト分割で時間を抑える。
+
+### @SpringBootTest CI コスト測定手順（IT9 A4.2、IT8 レビュー H3 統合）
+
+IT8 で導入した `RestShipperInfoAclWireMockIT` が `@SpringBootTest` + `@DirtiesContext` で起動するため、Spring Context 再利用が抑制されて CI 時間に影響する可能性がある。本番 CI への影響を以下の手順で実機計測する。
+
+**測定コマンド**:
+
+```bash
+# 既定（forkEvery 未指定 = 0、JVM 再利用、Spring Context もキャッシュ）
+./gradlew :billingms:test --rerun-tasks 2>&1 | grep "BUILD SUCCESSFUL"
+
+# forkEvery=1（1 クラスごとに JVM 再起動、Spring Context 再利用効果を排除）
+./gradlew :billingms:test --rerun-tasks -PforkEvery=1 2>&1 | grep "BUILD SUCCESSFUL"
+
+# maxParallelForks 並列調整（CI runner CPU 数に合わせる）
+./gradlew :billingms:test --rerun-tasks -PmaxParallelForks=2
+```
+
+**判断基準**:
+
+| 観測結果 | 対応 |
+| :--- | :--- |
+| `forkEvery=1` で 2 倍未満の悪化 | 既定（forkEvery=0）維持で OK |
+| `forkEvery=1` で 2 倍以上悪化 | `@DirtiesContext` テストを別タスク（`integrationTest`）に分離検討 |
+| 並列 fork で時間短縮効果あり | CI で `maxParallelForks=CPU 数` を指定 |
+
+**現状観測値**（2026-06-06、ローカル M2 Mac Apple Silicon）:
+
+- `billingms:test`（forkEvery 既定）: 約 27 秒
+- 他テスト並列実行影響: なし（subprojects 配下で並列、各 :test は独立）
+
+本番 CI（GitHub Actions ubuntu-latest）での実機計測は staging 環境構築時に実施し、結果を本ドキュメントに追記する（IT9 完了時点では未測定）。
 
 ### 失敗時の振る舞い
 

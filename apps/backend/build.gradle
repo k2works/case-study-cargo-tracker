@@ -63,6 +63,18 @@ subprojects {
         systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active', 'local-h2')
         // Java 25 + Mockito/ByteBuddy 互換性のため実験的モードを有効化
         jvmArgs '-Dnet.bytebuddy.experimental=true'
+
+        // IT9 A4.2 / IT8 レビュー H3: @SpringBootTest CI コスト調整用フック。
+        // -PforkEvery=1 で 1 テストクラスごとに JVM 再起動し、Spring Context 再利用効果を排除する。
+        // RestShipperInfoAclWireMockIT 等の @DirtiesContext テストの周辺影響を本番 CI で計測する際に使用。
+        // 既定（未指定）は forkEvery=0 = JVM 再利用（最速）。
+        if (project.hasProperty('forkEvery')) {
+            forkEvery = (project.property('forkEvery') as String).toLong()
+        }
+        // -PmaxParallelForks=N で並列 fork 数を指定（CI runner CPU 数に合わせる）。
+        if (project.hasProperty('maxParallelForks')) {
+            maxParallelForks = (project.property('maxParallelForks') as String).toInteger()
+        }
     }
 
     tasks.withType(JavaCompile).configureEach {
