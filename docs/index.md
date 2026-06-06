@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み（US 29 件、IT9 用 US26-29 追加済み） |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み（Axon Kafka + Heroku + Aiven 構成、IT9 設計要素先行反映済み） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 27 件作成済み（リリース計画 + Release 1.0 報告書 + IT1-IT8 計画/ふりかえり/完了報告書 + IT9 計画スケルトン整合性検証反映）|
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 28 件作成済み（リリース計画 + Release 1.0 報告書 + IT1-IT9 計画/ふりかえり/完了報告書、IT9 で 7/8 SP 達成 + A4.1 / A3.2 IT10 持ち越し）|
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み（IT8 レビュー追加） |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 18 件作成済み（ADR-0020 / 0021 追加） |
@@ -71,7 +71,7 @@
 | [IT6 計画](./development/iteration_plan-6.md) / [IT6 完了報告](./development/iteration_report-6.md) / [IT6 ふりかえり](./development/retrospective-6.md) | Phase 2 / 2（公開照会・例外、Release 2.0） |
 | [IT7 計画](./development/iteration_plan-7.md) / [IT7 完了報告](./development/iteration_report-7.md) / [IT7 ふりかえり](./development/retrospective-7.md) | Phase 2 / 3（billingms 新設・精算、Release 2.1） |
 | [IT8 計画](./development/iteration_plan-8.md) / [IT8 完了報告](./development/iteration_report-8.md) | Phase 2 Buffer（本番デプロイ準備、A1-A4 + H2 持ち越し 8 件 + ADR-0020/0021 起票、Release 1.0 候補確立）|
-| [IT9 計画（スケルトン）](./development/iteration_plan-9.md) | Release 1.0 正式版（ADR-0020 Stripe webhook 実装 + ADR-0021 AWS Secrets Manager + 全 ms 認可付与、整合性検証 8 ステップ反映済み、US26-29 リナンバリング + IT8 レビュー指摘対応方針追記） |
+| [IT9 計画](./development/iteration_plan-9.md) / [IT9 完了報告](./development/iteration_report-9.md) | Release 1.1（Stripe webhook 部分入金 + AWS Secrets Manager 自動回転 + 認可基盤）、7/8 SP 達成（87.5%）、A3.2 / A4.1 IT10 持ち越し |
 
 ### ADR ドキュメント
 

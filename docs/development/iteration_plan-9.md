@@ -92,7 +92,7 @@
 | A4 IT8 レビュー解消 | 1 | 3h |
 | **合計** | **8** | **23.5h** |
 
-**進捗率**: 75%（6/8 SP）— A1 ✅ + A2 ✅ + A3 部分（A3.1 + A3.3）✅ + A4 部分（A4.2）✅、残: A1.6 / A2.4 LocalStack 統合テスト、A3.4 E2E JWT 統一、A4.1 SendGrid WireMock
+**進捗率**: 87.5%（7/8 SP）— A1 ✅（A1.6 完了）+ A2 ✅（A2.4 完了）+ A3 部分（A3.1 + A3.3 + A3.4）✅ + A4 部分（A4.2）✅、残: A3.2 / A4.1 を IT10 持ち越し
 
 ---
 
@@ -189,3 +189,4 @@ L1 / L2 / L3（IT8 レビューで「次々回以降」と判定された項目�
 | 2026-06-06 | IT8 レビュー指摘事項対応方針を追記（高 H1=A4.1 / H2=IT8 消化済み / H3=A4.2、中 M1=IT9 中対応 / M2=許容 / M3=IT10 / M4=A1 統合 / M5=A3 統合、低 L1-L3=IT11 以降） | k2works |
 | 2026-06-06 | IT9 着手 Phase 0 詳細化: タイトルから「（スケルトン）」削除、リスクと対策（R1-R6）/ Definition of Done（8 項目）/ デモ項目（4 項目）を追記 | k2works |
 | 2026-06-06 | A1.1〜A1.5b 実装完了（Stripe webhook + BalanceTracker + 部分入金 UI、6h）、A2.1〜A2.3 実装完了（AWS Secrets Manager + Lambda + Terraform、4.5h）、A3.1 全 ms HerokuSecurityConfig 追加 + A3.3 gatewayms JWT 検証 GlobalFilter（2h）、A4.2 + A3.4 CI コスト測定 + M5 poll 実測手順を test_strategy.md に追記（1h） | k2works |
+| 2026-06-06 | A1.6 Stripe webhook @SpringBootTest E2E 統合テスト 2 件 + V5 migration の CHECK 制約バグ修正、A2.4 LocalStack 統合テスト 2 件（実 AWS SDK + Testcontainers）、iteration_report-9.md 作成。残 A3.2（各 Controller @PreAuthorize）と A4.1（SendGrid SDK Client サブクラス化）は IT10 持ち越し | k2works |
