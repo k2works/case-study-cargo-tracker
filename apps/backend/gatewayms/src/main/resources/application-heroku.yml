@@ -1,4 +1,9 @@
 # heroku プロファイル: Heroku 上のサービス間ルーティング
+# IT9 A3.3: authms 発行 JWT を検証して X-Forwarded-User/Role を upstream に付与する
+# JWT 秘密鍵は authms と共有（Heroku Config Vars の JWT_SECRET を 32 バイト以上で設定）
+jwt:
+  secret: ${JWT_SECRET}
+
 spring:
   cloud:
     gateway:

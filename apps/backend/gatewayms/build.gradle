@@ -24,8 +24,19 @@ dependencies {
     implementation libs.spring.boot.starter.actuator
     implementation libs.spring.boot.starter.security
 
+    // JWT 検証（IT9 A3.3、authms 発行 token を検証して X-Forwarded-User/Role を upstream に付与）
+    implementation libs.jjwt.api
+    runtimeOnly libs.jjwt.impl
+    runtimeOnly libs.jjwt.jackson
+
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
+
+    // テスト
+    testImplementation libs.spring.boot.starter.test
+    testImplementation libs.junit.jupiter
+    testImplementation libs.assertj.core
+    testImplementation 'io.projectreactor:reactor-test'
 }
 
 bootJar {
