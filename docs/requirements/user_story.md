@@ -538,6 +538,87 @@ date: 2026-04-04T00:00:00.000Z
 
 ---
 
+## US26: 決済機関 webhook から部分入金を反映する
+
+**として**: 経理担当者
+
+**したい**: 決済機関（Stripe）から受信した部分入金が、手作業を介さず請求書（Invoice）に自動反映されるようにしたい
+
+**なぜなら**: IT8 までは入金確認時に外部参照番号（externalReference）を経理担当者が手入力していたが、Stripe webhook 経由で重複なく自動取り込みすることで、決済の自動化と監査トレース性を両立できるからだ
+
+**対応 UC**: UC18（精算処理の延長）
+
+**受け入れ基準**:
+
+- [ ] Stripe から HMAC 署名付き webhook を `POST /api/v1/billing/webhooks/stripe` で受信できる
+- [ ] HMAC 署名検証に失敗した webhook は 401 で拒否され、ログにイベント ID と失敗理由が記録される
+- [ ] Stripe Event ID を冪等性キーとして `webhook_processed` テーブルに記録し、同一イベントの再送は副作用なく 200 で受理する
+- [ ] 部分入金（請求総額未満）を受信した場合、Invoice は `PARTIALLY_PAID` 状態に遷移し残額が `BalanceTracker` で追跡される
+- [ ] 残額がゼロになる入金を受信すると `PAID` 状態に遷移する
+- [ ] 受信した入金は `PaymentRecorded` イベントとして既存の支払い履歴に蓄積され、S23 で時系列表示できる
+- [ ] S23 から Stripe ダッシュボードへの遷移リンクが提供される
+
+---
+
+## US27: 公開トークンの secret を AWS Secrets Manager で自動回転する
+
+**として**: 運用担当者
+
+**したい**: 公開追跡トークン（PublicTrackingToken）の JWT secret を AWS Secrets Manager に格納し、Lambda による定期回転で自動更新されるようにしたい
+
+**なぜなら**: IT8 までは Heroku Config Vars に格納した secret を四半期ごとに手動更新していたが、人為的な更新漏れと secret の漏洩リスクを排除するためには自動回転とアクセス監査が不可欠だからだ
+
+**対応 UC**: UC15（追跡情報照会）の運用基盤
+
+**受け入れ基準**:
+
+- [ ] `AwsSecretsManagerTrackingTokenSecretProvider` が `AWSCURRENT` と `AWSPREVIOUS` の両方を取得して `verifyingKeys()` に提供する
+- [ ] `@Scheduled(fixedRate = 5min)` で secret を refresh し、新規発行は最新 `AWSCURRENT` で署名する
+- [ ] Lambda rotation Function が四半期ごとに新しい secret を生成し、`AWSCURRENT` ローテーションを実行する
+- [ ] LocalStack 環境で Secrets Manager + Lambda の統合テストが PASS する
+- [ ] 既存の `StaticTrackingTokenSecretProvider` は `@ConditionalOnProperty` で開発用フォールバックとして残る
+
+---
+
+## US28: 全 endpoint に認証・認可を付与する
+
+**として**: システム管理者
+
+**したい**: IT8 まで `permitAll` で運用していた全 endpoint に `authenticated()` 制約とロールベース認可（`@PreAuthorize`）を付与したい
+
+**なぜなら**: IT8 で SecurityFilterChain を全 ms に統一導入したが、Release 1.1 として本番運用するためには全 endpoint で認証・認可を有効化し、不正アクセスと権限逸脱を防止する必要があるからだ
+
+**対応 UC**: 全 UC の横断的セキュリティ要件
+
+**受け入れ基準**:
+
+- [ ] bookingms / routingms / handlingms / billingms / trackingms の SecurityConfig が `anyRequest().authenticated()` に変更される
+- [ ] 各 Controller のメソッドに `@PreAuthorize("hasRole('ACCOUNTANT')")` 等のロール制約が付与される
+- [ ] 公開 endpoint（`/api/v1/public/tracking/**` 等）は引き続き `permitAll` で運用される
+- [ ] gatewayms が authms 発行の JWT を検証し、各 ms に `Authorization` ヘッダで伝搬する
+- [ ] E2E `cross-service.spec.ts` が JWT 認証ヘッダ付きで全フロー PASS する
+
+---
+
+## US29: SendGrid + Resilience4j を WireMock で統合検証する
+
+**として**: 開発チーム
+
+**したい**: SendGrid Client（`com.sendgrid.SendGrid`）の HTTP 経路を WireMock で検証する統合テストを trackingms / billingms 両方で実装したい
+
+**なぜなら**: IT8 では SendGrid SDK の `Client.buildUri` がポート指定を受理しないため WireMock 統合が成立せず、Mockito Request キャプチャで代替したが、本番 SDK 更新時の互換性破壊を検知できない盲点が残っているからだ
+
+**対応 UC**: なし（テスト整備）
+
+**受け入れ基準**:
+
+- [ ] SendGrid Client を DI 注入し、テストで WireMock 向け Client に差し替えられる
+- [ ] WireMock スタブで 202 Accepted を返す正常系テストが trackingms / billingms 両方で PASS する
+- [ ] WireMock スタブで 5xx を返す異常系テストで failure counter が increment される
+- [ ] Mockito 代替テストは互換性確認のため当面残し、将来は WireMock テストに集約する
+
+---
+
 ## トレーサビリティマトリックス
 
 | ストーリー | UC | BUC | ビジネス目標 |
@@ -561,6 +642,10 @@ date: 2026-04-04T00:00:00.000Z
 | US21, US22 | UC17 | BUC18, BUC19 | 精算業務の正確化 |
 | US23 | UC18 | BUC20 | 精算業務の正確化 |
 | US24, US25 | UC19 | BUC21 | 経路候補算出の精度向上 |
+| US26 | UC18 | BUC20 | 精算業務の正確化（決済自動化） |
+| US27 | UC15 | BUC16 | リアルタイム貨物追跡（運用基盤の自動化） |
+| US28 | 全 UC 横断 | 横断的 | セキュリティ強化（不正アクセス防止） |
+| US29 | テスト整備 | 横断的 | 品質保証（外部 SDK 互換性検知） |
 
 ---
 
