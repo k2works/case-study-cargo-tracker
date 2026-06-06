@@ -21,4 +21,24 @@ public record PaymentDetailRecorded(
         String paymentMethod,
         String externalReference
 ) {
+
+    /**
+     * IT8 レビュー M4（IT9 A1.4 統合）: コンストラクタでの二重防御。
+     * RecordPaymentCommand / RecordPartialPaymentCommand 側でも検証されるが、
+     * 受信側（投影）でも record の不変条件を保つ。
+     */
+    public PaymentDetailRecorded {
+        if (invoiceId == null || invoiceId.isBlank()) {
+            throw new IllegalArgumentException("invoiceId は必須です");
+        }
+        if (paymentId == null || paymentId.isBlank()) {
+            throw new IllegalArgumentException("paymentId は必須です");
+        }
+        // paymentMethod / externalReference は両方 null 可能だが、両方 null なら本 event 自体不要
+        if ((paymentMethod == null || paymentMethod.isBlank())
+                && (externalReference == null || externalReference.isBlank())) {
+            throw new IllegalArgumentException(
+                    "paymentMethod または externalReference のいずれかが必須です");
+        }
+    }
 }

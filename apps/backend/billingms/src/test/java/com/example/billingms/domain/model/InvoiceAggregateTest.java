@@ -4,11 +4,13 @@ import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
 import com.example.billingms.domain.commands.IssueInvoiceCommand;
 import com.example.billingms.domain.commands.MarkOverdueCommand;
+import com.example.billingms.domain.commands.RecordPartialPaymentCommand;
 import com.example.billingms.domain.commands.RecordPaymentCommand;
 import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PartialPaymentRecordedEvent;
 import com.example.billingms.domain.events.PaymentDetailRecorded;
 import com.example.shared.events.PaymentRecordedEvent;
 import com.example.billingms.domain.services.CorporateDiscountPolicy;
@@ -641,5 +643,148 @@ class InvoiceAggregateTest {
                         new BigDecimal("330000"), "JPY", FIXED_NOW))
                 .when(command)
                 .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US26: INVOICED 状態で部分入金を受理して PARTIALLY_PAID 遷移")
+    void US26_部分入金で残額が残る場合はPARTIALLY_PAID遷移() {
+        LocalDateTime paidAt = LocalDateTime.of(2026, 9, 1, 10, 0);
+        RecordPartialPaymentCommand command = new RecordPartialPaymentCommand(
+                "INV-PP01", "PAY-PP-001",
+                new BigDecimal("100000"), "JPY", paidAt,
+                "STRIPE", "ch_test_001");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-PP01", "B-PP01", "S-PP01",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-PP01", "S-PP01",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new PartialPaymentRecordedEvent(
+                                "INV-PP01",
+                                "PAY-PP-001",
+                                "B-PP01",
+                                "S-PP01",
+                                new BigDecimal("100000"),
+                                "JPY",
+                                paidAt,
+                                new BigDecimal("100000"),
+                                new BigDecimal("330000"),
+                                FIXED_NOW
+                        ),
+                        new PaymentDetailRecorded(
+                                "INV-PP01",
+                                "PAY-PP-001",
+                                "STRIPE",
+                                "ch_test_001"
+                        ));
+    }
+
+    @Test
+    @DisplayName("US26: PARTIALLY_PAID 状態で残額入金を受理して PAID 遷移と shared PaymentRecordedEvent 発火")
+    void US26_残額入金でPAID遷移() {
+        LocalDateTime paidAt = LocalDateTime.of(2026, 9, 10, 14, 0);
+        RecordPartialPaymentCommand command = new RecordPartialPaymentCommand(
+                "INV-PP02", "PAY-PP-FINAL",
+                new BigDecimal("230000"), "JPY", paidAt,
+                "STRIPE", "ch_test_002");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-PP02", "B-PP02", "S-PP02",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-PP02", "S-PP02",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW),
+                        new PartialPaymentRecordedEvent("INV-PP02", "PAY-PP-PRE",
+                                "B-PP02", "S-PP02",
+                                new BigDecimal("100000"), "JPY",
+                                LocalDateTime.of(2026, 9, 1, 10, 0),
+                                new BigDecimal("100000"),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectSuccessfulHandlerExecution()
+                .expectEvents(
+                        new PaymentRecordedEvent(
+                                "INV-PP02",
+                                "PAY-PP-FINAL",
+                                "B-PP02",
+                                "S-PP02",
+                                new BigDecimal("230000"),
+                                "JPY",
+                                paidAt,
+                                FIXED_NOW
+                        ),
+                        new PaymentDetailRecorded(
+                                "INV-PP02",
+                                "PAY-PP-FINAL",
+                                "STRIPE",
+                                "ch_test_002"
+                        ));
+    }
+
+    @Test
+    @DisplayName("US26: 残額を超過する入金は IllegalArgumentException")
+    void US26_残額超過は例外() {
+        RecordPartialPaymentCommand command = new RecordPartialPaymentCommand(
+                "INV-PP03", "PAY-PP-OVER",
+                new BigDecimal("400000"), "JPY",
+                LocalDateTime.of(2026, 9, 1, 10, 0),
+                "STRIPE", "ch_test_over");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-PP03", "B-PP03", "S-PP03",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-PP03", "S-PP03",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectException(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("US26: CALCULATED 状態では部分入金拒否（INVOICED 必須）")
+    void US26_CALCULATED状態では部分入金拒否() {
+        RecordPartialPaymentCommand command = new RecordPartialPaymentCommand(
+                "INV-PP04", "PAY-PP-BAD",
+                new BigDecimal("100000"), "JPY",
+                LocalDateTime.of(2026, 9, 1, 10, 0),
+                "STRIPE", "ch_test_bad");
+
+        fixture.given(new InvoiceCalculatedEvent(
+                        "INV-PP04", "B-PP04", "S-PP04",
+                        new BigDecimal("330000"), "JPY", FIXED_NOW))
+                .when(command)
+                .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("US26 / M4: 通貨不一致は IllegalArgumentException")
+    void US26_通貨不一致は例外() {
+        RecordPartialPaymentCommand command = new RecordPartialPaymentCommand(
+                "INV-PP05", "PAY-PP-CUR",
+                new BigDecimal("100000"), "USD",
+                LocalDateTime.of(2026, 9, 1, 10, 0),
+                "STRIPE", "ch_test_cur");
+
+        fixture.given(
+                        new InvoiceCalculatedEvent("INV-PP05", "B-PP05", "S-PP05",
+                                new BigDecimal("330000"), "JPY", FIXED_NOW),
+                        new InvoiceIssuedEvent("INV-PP05", "S-PP05",
+                                "INV-20260820-0001",
+                                LocalDate.of(2026, 9, 19),
+                                new BigDecimal("330000"),
+                                FIXED_NOW))
+                .when(command)
+                .expectException(IllegalArgumentException.class);
     }
 }

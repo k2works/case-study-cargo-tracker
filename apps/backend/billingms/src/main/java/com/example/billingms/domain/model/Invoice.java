@@ -4,11 +4,13 @@ import com.example.billingms.domain.commands.ApplyDiscountCommand;
 import com.example.billingms.domain.commands.CalculateInvoiceCommand;
 import com.example.billingms.domain.commands.IssueInvoiceCommand;
 import com.example.billingms.domain.commands.MarkOverdueCommand;
+import com.example.billingms.domain.commands.RecordPartialPaymentCommand;
 import com.example.billingms.domain.commands.RecordPaymentCommand;
 import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PartialPaymentRecordedEvent;
 import com.example.billingms.domain.services.CorporateDiscountPolicy;
 import com.example.billingms.domain.services.FareCalculator;
 import com.example.billingms.domain.services.InvoiceNumberGenerator;
@@ -297,5 +299,89 @@ public class Invoice {
     @EventSourcingHandler
     public void on(InvoiceOverdueEvent event) {
         this.billingStatus = BillingStatus.OVERDUE;
+    }
+
+    /**
+     * 部分入金記録（INVOICED | PARTIALLY_PAID → PARTIALLY_PAID | PAID、IT9 A1.4 / ADR-0020 / US26）。
+     *
+     * <p>Stripe webhook 経由の部分入金を受理する。受理可否は BalanceTracker と BillingStatus で判定:</p>
+     * <ul>
+     *   <li>状態が INVOICED または PARTIALLY_PAID 以外: {@link IllegalStateException}</li>
+     *   <li>通貨が集約通貨と不一致: {@link IllegalArgumentException}</li>
+     *   <li>残額を超過する入金: BalanceTracker.apply が {@link IllegalArgumentException}</li>
+     * </ul>
+     *
+     * <p>残額がゼロになる場合は PAID 遷移として shared {@code PaymentRecordedEvent} を発火し、
+     * bookingms cross-service が Cargo を SETTLED に遷移できるようにする。残額が残る場合は
+     * billingms 内部の {@link PartialPaymentRecordedEvent} のみを発火する。</p>
+     */
+    @CommandHandler
+    public void handle(RecordPartialPaymentCommand command, Clock clock) {
+        if (this.billingStatus != BillingStatus.INVOICED
+                && this.billingStatus != BillingStatus.PARTIALLY_PAID) {
+            throw new IllegalStateException(
+                    "RecordPartialPaymentCommand は INVOICED または PARTIALLY_PAID 状態でのみ受理可能です: "
+                            + this.billingStatus);
+        }
+        if (command.paymentId() == null || command.paymentId().isBlank()) {
+            throw new IllegalArgumentException("paymentId は必須です");
+        }
+        if (command.paidAmount() == null || command.paidAmount().signum() <= 0) {
+            throw new IllegalArgumentException("paidAmount は 0 より大きい値で必須です");
+        }
+        if (command.currency() == null || !command.currency().equals(this.currency)) {
+            throw new IllegalArgumentException(
+                    "currency は集約通貨と一致が必要です: expected=" + this.currency
+                            + ", actual=" + command.currency());
+        }
+        // BalanceTracker.apply で残額超過を検証（IllegalArgumentException）
+        BalanceTracker newBalance = this.balance.apply(command.paidAmount());
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        if (newBalance.isFullyPaid()) {
+            // 残額入金 → PAID 遷移。shared event で cross-service 通知
+            AggregateLifecycle.apply(new com.example.shared.events.PaymentRecordedEvent(
+                    this.invoiceId,
+                    command.paymentId(),
+                    this.bookingId,
+                    this.shipperId,
+                    command.paidAmount(),
+                    command.currency(),
+                    command.paidAt(),
+                    now
+            ));
+        } else {
+            // 部分入金 → PARTIALLY_PAID 遷移（または維持）。内部 event のみ
+            AggregateLifecycle.apply(new PartialPaymentRecordedEvent(
+                    this.invoiceId,
+                    command.paymentId(),
+                    this.bookingId,
+                    this.shipperId,
+                    command.paidAmount(),
+                    command.currency(),
+                    command.paidAt(),
+                    newBalance.paidSoFar(),
+                    newBalance.totalDue(),
+                    now
+            ));
+        }
+
+        // payment_method / external_reference 補完（A1.4 + M4 統合）
+        if (command.paymentMethod() != null || command.externalReference() != null) {
+            AggregateLifecycle.apply(new com.example.billingms.domain.events.PaymentDetailRecorded(
+                    this.invoiceId,
+                    command.paymentId(),
+                    command.paymentMethod(),
+                    command.externalReference()
+            ));
+        }
+    }
+
+    @EventSourcingHandler
+    public void on(PartialPaymentRecordedEvent event) {
+        this.billingStatus = BillingStatus.PARTIALLY_PAID;
+        if (this.balance != null) {
+            this.balance = this.balance.apply(event.paidAmount());
+        }
     }
 }
