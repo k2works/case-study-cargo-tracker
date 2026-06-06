@@ -105,6 +105,10 @@ IT9 の開発成果物に対し 5 観点（programmer / tester / architect / tec
 
 レビュー結果は IT10 計画にすべて反映済み（[iteration_plan-10.md](iteration_plan-10.md) 「IT9 マルチパースペクティブレビュー指摘の取り込み」セクション）。Release 1.1 正式版昇格に必要な品質ゲートとして機能する。
 
+### IT9 クロージング作業として前倒し完了（L6）
+
+- **L6（ADR-0020 / 0021 のステータス更新）**: 実装は IT9 で完了しているにもかかわらず ADR ステータスが「提案中」のままだと誤解を招くため、IT9 クロージング作業として 2026-06-06 に前倒し対応。`docs/adr/0020-payment-gateway-webhook.md` / `docs/adr/0021-aws-secrets-manager-rotation.md` / `docs/adr/index.md` / `docs/index.md` の 4 ファイルでステータスを「採用済み（実装完了）」に変更し、実装タイムライン + 持ち越し指摘（H1 / H2 / H7 / H8 / H9 / L2 / L3）を ADR 本文に明示
+
 ---
 
 **作成日**: 2026-06-06
