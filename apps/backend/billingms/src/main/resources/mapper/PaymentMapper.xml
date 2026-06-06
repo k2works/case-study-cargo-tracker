@@ -22,7 +22,8 @@
             currency,
             paid_at,
             payment_method,
-            external_reference
+            external_reference,
+            is_partial
         ) VALUES (
             #{paymentId},
             #{invoiceId},
@@ -30,7 +31,31 @@
             #{currency},
             #{paidAt},
             #{paymentMethod},
-            #{externalReference}
+            #{externalReference},
+            FALSE
+        )
+    </insert>
+
+    <!-- IT9 A1.5 / US26: 部分入金 INSERT（is_partial=TRUE） -->
+    <insert id="insertPartialPayment">
+        INSERT INTO payment (
+            payment_id,
+            invoice_id,
+            paid_amount,
+            currency,
+            paid_at,
+            payment_method,
+            external_reference,
+            is_partial
+        ) VALUES (
+            #{paymentId},
+            #{invoiceId},
+            #{paidAmount},
+            #{currency},
+            #{paidAt},
+            #{paymentMethod},
+            #{externalReference},
+            TRUE
         )
     </insert>
 

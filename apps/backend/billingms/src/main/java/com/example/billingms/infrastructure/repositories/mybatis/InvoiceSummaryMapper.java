@@ -68,6 +68,13 @@ public interface InvoiceSummaryMapper {
     void updateForOverdue(@Param("invoiceId") String invoiceId);
 
     /**
+     * 部分入金時の invoice 更新（IT9 A1.5 / US26、PartialPaymentRecordedEvent 受信時）。
+     * paid_so_far を加算し、billing_status を PARTIALLY_PAID に更新する。
+     */
+    void updateForPartiallyPaid(@Param("invoiceId") String invoiceId,
+                                @Param("paidAmount") BigDecimal paidAmount);
+
+    /**
      * 督促対象（INVOICED かつ payment_due 超過）の一覧を返す（US23 / T4.3, T4.6）。
      * OverdueScheduler および S25 督促一覧で利用。
      */

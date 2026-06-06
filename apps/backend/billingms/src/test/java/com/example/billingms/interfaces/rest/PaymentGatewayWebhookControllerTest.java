@@ -1,8 +1,10 @@
 package com.example.billingms.interfaces.rest;
 
+import com.example.billingms.application.StripeEventTranslator;
 import com.example.billingms.config.StripeWebhookProperties;
 import com.example.billingms.domain.projections.WebhookProcessed;
 import com.example.billingms.infrastructure.repositories.mybatis.WebhookProcessedMapper;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -11,8 +13,11 @@ import org.springframework.http.ResponseEntity;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,17 +37,22 @@ class PaymentGatewayWebhookControllerTest {
 
     private static final String SIGNING_SECRET = "whsec_test_secret_123456789012345678901234";
     private static final String VALID_PAYLOAD = """
-            {"id":"evt_test_001","object":"event","type":"payment_intent.succeeded","data":{"object":{"id":"pi_test_001"}}}
+            {"id":"evt_test_001","object":"event","api_version":"2024-11-20.acacia","type":"payment_intent.succeeded","data":{"object":{"id":"pi_test_001","object":"payment_intent"}}}
             """.trim();
 
     private WebhookProcessedMapper mapper;
+    private StripeEventTranslator translator;
+    private CommandGateway commandGateway;
     private PaymentGatewayWebhookController controller;
 
     @BeforeEach
     void setup() {
         mapper = mock(WebhookProcessedMapper.class);
+        translator = new StripeEventTranslator(Clock.systemUTC());
+        commandGateway = mock(CommandGateway.class);
+        when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
         StripeWebhookProperties properties = new StripeWebhookProperties(SIGNING_SECRET, 300L);
-        controller = new PaymentGatewayWebhookController(properties, mapper);
+        controller = new PaymentGatewayWebhookController(properties, mapper, translator, commandGateway);
     }
 
     @Test
@@ -54,9 +64,11 @@ class PaymentGatewayWebhookControllerTest {
         ResponseEntity<String> response = controller.receive(VALID_PAYLOAD, signature);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo("received");
+        // payload に PaymentIntent metadata がないため、translator が empty を返し skipped となる
+        assertThat(response.getBody()).isEqualTo("skipped");
         verify(mapper, times(1)).insertReceived(
                 eq("evt_test_001"), eq("STRIPE"), eq("payment_intent.succeeded"), anyString());
+        verify(mapper, times(1)).markFailed(eq("evt_test_001"), anyString());
     }
 
     @Test
@@ -107,9 +119,27 @@ class PaymentGatewayWebhookControllerTest {
     }
 
     @Test
+    void 完全な部分入金ペイロードはコマンド発火と完了マークに到達する() {
+        String fullPayload = """
+                {"id":"evt_full_001","object":"event","api_version":"2024-11-20.acacia","type":"payment_intent.succeeded","created":1735000000,"data":{"object":{"id":"pi_full","object":"payment_intent","metadata":{"invoice_id":"INV-FULL-001","paid_amount":"50000","currency":"JPY"}}}}
+                """.trim();
+        long timestamp = Instant.now().getEpochSecond();
+        String signature = buildStripeSignatureHeader(timestamp, fullPayload, SIGNING_SECRET);
+        when(mapper.findByEventId("evt_full_001")).thenReturn(null);
+
+        ResponseEntity<String> response = controller.receive(fullPayload, signature);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("processed");
+        verify(commandGateway, times(1)).send(any());
+        verify(mapper, times(1)).markProcessed(eq("evt_full_001"), eq("INV-FULL-001"));
+    }
+
+    @Test
     void シークレットが空の場合は機能無効として利用不可応答を返す() {
         StripeWebhookProperties disabled = new StripeWebhookProperties("", 300L);
-        PaymentGatewayWebhookController disabledController = new PaymentGatewayWebhookController(disabled, mapper);
+        PaymentGatewayWebhookController disabledController = new PaymentGatewayWebhookController(
+                disabled, mapper, translator, commandGateway);
 
         ResponseEntity<String> response = disabledController.receive(VALID_PAYLOAD, "t=1,v1=deadbeef");
 

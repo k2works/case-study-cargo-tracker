@@ -89,6 +89,15 @@
         WHERE invoice_id = #{invoiceId}
     </update>
 
+    <update id="updateForPartiallyPaid">
+        UPDATE invoice
+        SET paid_so_far    = paid_so_far + #{paidAmount},
+            billing_status = 'PARTIALLY_PAID',
+            updated_at     = CURRENT_TIMESTAMP,
+            version        = version + 1
+        WHERE invoice_id = #{invoiceId}
+    </update>
+
     <select id="findOverdueCandidates" resultMap="invoiceSummaryResultMap">
         SELECT * FROM invoice
         WHERE billing_status = 'INVOICED'

@@ -5,6 +5,7 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PartialPaymentRecordedEvent;
 import com.example.billingms.domain.events.PaymentDetailRecorded;
 import com.example.billingms.domain.model.BillingStatus;
 import com.example.billingms.infrastructure.repositories.mybatis.InvoiceLineMapper;
@@ -119,6 +120,24 @@ public class InvoiceProjection {
     /** INVOICED → OVERDUE：billing_status のみ更新。 */
     public void apply(InvoiceOverdueEvent event) {
         summaryMapper.updateForOverdue(event.invoiceId());
+    }
+
+    /**
+     * INVOICED|PARTIALLY_PAID → PARTIALLY_PAID（IT9 A1.5 / US26、Stripe webhook 部分入金）：
+     * payment 行 INSERT（is_partial=TRUE）+ invoice.paid_so_far 加算 + billing_status=PARTIALLY_PAID。
+     * 後続の PaymentDetailRecorded で payment_method / external_reference を補完。
+     */
+    public void apply(PartialPaymentRecordedEvent event) {
+        paymentMapper.insertPartialPayment(
+                event.paymentId(),
+                event.invoiceId(),
+                event.paidAmount(),
+                event.currency(),
+                event.paidAt(),
+                null,
+                null
+        );
+        summaryMapper.updateForPartiallyPaid(event.invoiceId(), event.paidAmount());
     }
 
     /**

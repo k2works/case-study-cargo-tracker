@@ -5,6 +5,7 @@ import com.example.billingms.domain.events.DiscountAppliedEvent;
 import com.example.billingms.domain.events.InvoiceCalculatedEvent;
 import com.example.billingms.domain.events.InvoiceIssuedEvent;
 import com.example.billingms.domain.events.InvoiceOverdueEvent;
+import com.example.billingms.domain.events.PartialPaymentRecordedEvent;
 import com.example.billingms.domain.events.PaymentDetailRecorded;
 import com.example.shared.events.PaymentRecordedEvent;
 import org.axonframework.config.ProcessingGroup;
@@ -80,5 +81,17 @@ public class InvoiceProjectionsEventHandler {
         log.info("[local-billing] PaymentDetail 投影 invoiceId={} paymentId={} method={} ref={}",
                 event.invoiceId(), event.paymentId(),
                 event.paymentMethod(), event.externalReference());
+    }
+
+    /**
+     * IT9 A1.5 / US26: Stripe webhook 経由の部分入金 PartialPaymentRecordedEvent を受信して
+     * payment INSERT（is_partial=TRUE）+ invoice.paid_so_far 加算 + billing_status=PARTIALLY_PAID。
+     */
+    @EventHandler
+    public void on(PartialPaymentRecordedEvent event) {
+        projection.apply(event);
+        log.info("[local-billing] PartialPayment 投影 invoiceId={} paymentId={} paidAmount={} newPaidSoFar={}",
+                event.invoiceId(), event.paymentId(),
+                event.paidAmount(), event.newPaidSoFar());
     }
 }

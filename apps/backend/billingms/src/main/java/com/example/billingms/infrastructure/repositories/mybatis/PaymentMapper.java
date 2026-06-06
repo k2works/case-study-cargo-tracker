@@ -28,6 +28,19 @@ public interface PaymentMapper {
                        @Param("paymentMethod") String paymentMethod,
                        @Param("externalReference") String externalReference);
 
+    /**
+     * PartialPaymentRecordedEvent 受信時の部分入金 INSERT（IT9 A1.5 / US26）。
+     * is_partial=TRUE で payment 行を作成する。
+     */
+    @SuppressWarnings("java:S107") // Mapper API は SQL の全カラムをパラメータに必要とするため許容
+    void insertPartialPayment(@Param("paymentId") String paymentId,
+                              @Param("invoiceId") String invoiceId,
+                              @Param("paidAmount") BigDecimal paidAmount,
+                              @Param("currency") String currency,
+                              @Param("paidAt") LocalDateTime paidAt,
+                              @Param("paymentMethod") String paymentMethod,
+                              @Param("externalReference") String externalReference);
+
     /** invoiceId 単位の入金履歴（時系列）。S23 詳細画面・S22 一覧の支払履歴で利用。 */
     List<Payment> findByInvoiceId(@Param("invoiceId") String invoiceId);
 

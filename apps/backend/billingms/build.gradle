@@ -51,6 +51,9 @@ dependencies {
 
     // Payment Gateway（IT9 A1 / ADR-0020、Stripe webhook + HMAC 署名検証）
     implementation libs.stripe.java
+    // Gson は Stripe SDK の内部 deserialize で使用されるが、明示的に依存追加して
+    // StripeEventTranslator の raw JSON 解析にも利用する
+    implementation 'com.google.code.gson:gson:2.11.0'
 
     // 開発時のみ
     developmentOnly libs.spring.boot.devtools
