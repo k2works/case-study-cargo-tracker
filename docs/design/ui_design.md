@@ -1071,11 +1071,31 @@ C -> User : 詳細画面が更新される
 | 種別 | スタイル | 用途・例 |
 | :--- | :--- | :--- |
 | 成功 | `alert-success`（緑） | 入金記録成功「¥500,000 の入金を記録しました（残額: ¥820,000）」 |
-| 警告 | `alert-warning`（黄） | 重複検知「同一の Stripe Event ID（evt_xxx）はすでに処理済みです。副作用なく完了しました」 |
+| 警告 | `alert-warning`（黄） | 重複検知「同一の Stripe Event ID（evt_xxx）はすでに処理済みです。副作用なく完了しました」 / 割引率未確定（IT10 / US31）「割引率が未確定です。bookingms との通信回復後に再度「割引を適用」を押してください」 |
 | 情報 | `alert-info`（青） | 状態遷移通知「請求書が `PARTIALLY_PAID` 状態になりました」 |
 | エラー | `alert-error` / `alert-danger`（赤） | webhook 失敗「Stripe webhook の HMAC 署名検証に失敗しました。Stripe ダッシュボードでイベントを確認してください」 |
 
 S23 では入金履歴の右上に直近のフィードバックメッセージを表示し、ユーザーが「閉じる」を押すまで残す。Stripe webhook の非同期受信のため、表示は polling またはサーバーセントイベント（SSE）で更新される。
+
+#### S23 fallback UX 改善（IT10 / US31 / IT8 review M3 統合）
+
+`RestShipperInfoAcl` の Circuit Breaker が OPEN になり bookingms から荷主契約を取得できない場合、IT8 では fallback として `discountRate=0`（個人扱い）を返していたが、これは「本来は法人荷主かもしれない請求書を誤って個人扱いで発行する」リスクがあった。IT10 では fallback を `discountRate=null`（未確定）に変更し、S23 で以下のパターンで経理担当者に明示する。
+
+**動作シナリオ**:
+
+1. 経理担当者が S23 で「割引を適用」を押下
+2. billingms が `RestShipperInfoAcl.getContract(shipperId)` を呼ぶ
+3. Circuit Breaker が OPEN（または fetch エラー）→ fallback メソッドが `new CorporateContract(shipperId, CORPORATE, null)` を返す
+4. Invoice 集約は `discountRate == null` を検知して `IllegalStateException` を返さず、`DiscountAppliedEvent` を発火しない（または「未確定状態」イベントを発火）
+5. S23 が次の `alert-warning` を表示:
+
+```text
+⚠ 割引率が未確定です。
+bookingms との通信回復後に再度「割引を適用」を押すか、
+「手動入力で適用」で経理担当者の判断値を直接入力してください。
+```
+
+6. 「割引を適用」ボタンは disable、「手動入力で適用」（IT8 T4.2 で実装済み）は引き続き利用可能
 
 ### 主要操作シナリオ
 

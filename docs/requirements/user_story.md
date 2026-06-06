@@ -619,6 +619,103 @@ date: 2026-04-04T00:00:00.000Z
 
 ---
 
+## US30: 全 Controller メソッド単位で認可違反を 403 で拒否する
+
+**として**: システム管理者
+
+**したい**: IT9 の URL ルール認可（HerokuSecurityConfig）に加えて、各 Controller のメソッド単位に `@PreAuthorize("hasRole('XXX')")` を付与し、深層防御を二段重層化したい
+
+**なぜなら**: URL ルール認可は path ベースで広域に効くが、新規 Controller 追加時の漏れや path 再構成時の認可ホール（漏れ）のリスクを下げるためには、メソッド単位の認可がもう一段必要だからだ
+
+**対応 UC**: 全 UC 横断的セキュリティ要件
+
+**受け入れ基準**:
+
+- [ ] bookingms / routingms / handlingms / billingms / trackingms の各 Controller の業務メソッドに `@PreAuthorize` が付与される
+- [ ] `@WithMockUser(roles="XXX")` で適切ロール時 200、不適切ロール時 403 を返す単体テストが追加される
+- [ ] `@EnableMethodSecurity(prePostEnabled=true)` が `@Profile("heroku")` で有効化される
+- [ ] developing-backend スキルに `@PreAuthorize` + `@WithMockUser` パターンの定型が追記される
+
+---
+
+## US31: Circuit Breaker OPEN 時に「割引率未確定」と明示警告を受ける
+
+**として**: 経理担当者
+
+**したい**: bookingms との通信が一時的に切れている（Circuit Breaker OPEN）状況で、S23 で「割引率が未確定」と明示警告を受け、誤って「個人扱い（割引 0%）」のまま発行しないようにしたい
+
+**なぜなら**: IT8 では fallback を「discountRate=0 で個人扱い」としていたが、本来は法人荷主かもしれない請求書に対して個人扱いを誤適用するリスクがあり、経理担当者が状況を判別できないと検収後の手戻りに直結するからだ
+
+**対応 UC**: UC17（輸送料金算出）の fallback UX
+
+**受け入れ基準**:
+
+- [ ] RestShipperInfoAcl の fallback メソッドが `discountRate=null`（未確定）の `CorporateContract` を返す
+- [ ] S23 で `discountRate=null` を検知し、`alert-warning` で「割引率が未確定です。bookingms との通信回復後に再度「割引を適用」を押してください」と表示
+- [ ] 「割引を適用」ボタンは disable され、手動入力フォーム（IT8 T4.2）を引き続き選べる
+- [ ] フロントエンド単体テストで null discountRate の警告表示を検証
+
+---
+
+## US32: staging 環境で全 E2E が JWT 認証ヘッダ付きで通ることを確認する
+
+**として**: 運用担当者
+
+**したい**: Heroku staging app（dev plan）に Release 1.1 全機能をデプロイし、JWT 認証ヘッダ付きで cross-service.spec.ts を含む全 E2E が PASS することを実機検証したい
+
+**なぜなら**: local-h2 環境では permitAll で動作する一方、本番（Heroku）で initial deploy 前に「認証経路の実機動作」「Stripe webhook の実機到達」「AWS Secrets Manager rotation の挙動」を未検証で本番リリースするのはリスクが高すぎるからだ
+
+**対応 UC**: 全 UC の本番デプロイ前最終検証
+
+**受け入れ基準**:
+
+- [ ] Heroku staging app（authms / bookingms / routingms / handlingms / billingms / trackingms / gatewayms × 7 + Aiven Kafka + PostgreSQL）が構築される
+- [ ] JWT_SECRET / STRIPE_WEBHOOK_SECRET / AWS Secrets Manager credentials 等の Config Vars が設定される
+- [ ] Playwright `cross-service.spec.ts` が JWT 認証ヘッダ自動付与で staging に対して全 PASS
+- [ ] Stripe Test Mode webhook を staging billingms に手動送信 → PARTIALLY_PAID 状態遷移を S23 で確認
+- [ ] `aws secretsmanager rotate-secret` 実行 → trackingms refresh で新 secret 反映を CloudWatch Logs で確認
+- [ ] SonarQube Quality Gate を staging branch で実機計測、Coverage 80%+ + new violations 0 を確認
+
+---
+
+## US33: Flyway migration の CHECK 制約と enum 値の不一致を CI で検知する
+
+**として**: 開発チーム
+
+**したい**: enum（BillingStatus / HandlingType / TransportStatus 等）の値リストと、対応する Flyway migration の `CHECK (xxx IN (...))` 値リストが乖離した場合、CI でテスト失敗として検知したい
+
+**なぜなら**: IT9 A1.6 で V5 migration の `chk_invoice_status` に PARTIALLY_PAID 値を追加し忘れた事象が発生したように、設計ドキュメント / enum / Flyway migration の三者同期は手動では再発しやすく、CI 自動検知で予防する必要があるからだ
+
+**対応 UC**: 全 UC の構造的品質保証
+
+**受け入れ基準**:
+
+- [ ] BillingStatus enum 値 ⊂ V2 + V5 migration の `chk_invoice_status` 値 を検証するテストが追加される
+- [ ] HandlingType / TransportStatus / ExceptionType 等の主要 enum × CHECK 制約に横展開される
+- [ ] CI（pre-commit hook + GitHub Actions）で本テストが PASS することが必須化される
+- [ ] テスト失敗時のエラーメッセージで「enum X の値 Y が Flyway VZ の CHECK 制約に未反映」と具体的に分かる
+
+---
+
+## US34: Release 1.1 を GitHub Release タグ + CHANGELOG で正式公開する
+
+**として**: プロダクトオーナー
+
+**したい**: IT9 で完成した Release 1.1 主要機能（Stripe webhook 部分入金 + AWS Secrets Manager 自動回転 + 認可基盤 + SendGrid WireMock 統合）を、GitHub Release v1.1.0 タグ + CHANGELOG エントリで正式公開し、本番デプロイ可能であることを宣言したい
+
+**なぜなら**: 「本番デプロイ可能」が暗黙の状態のままだと、内部チーム間で「いつから本番に出せるのか」のコミュニケーションコストが発生するからだ。明示的なバージョンタグと CHANGELOG で関係者全員に告知することで、本番化への意思決定が透明になる
+
+**対応 UC**: なし（リリース管理）
+
+**受け入れ基準**:
+
+- [ ] CHANGELOG.md に Release 1.1 セクションが作成され、IT8 + IT9 の機能（A1-A4）が網羅される
+- [ ] GitHub Release タグ v1.1.0 が作成され、release notes に主要機能 + 統合実装日が記載される
+- [ ] README.md と docs/index.md に「本番デプロイ可能」宣言が反映される
+- [ ] release_report-1.1.md（リリース完了報告書）が作成される
+
+---
+
 ## トレーサビリティマトリックス
 
 | ストーリー | UC | BUC | ビジネス目標 |
@@ -646,6 +743,11 @@ date: 2026-04-04T00:00:00.000Z
 | US27 | UC15 | BUC16 | リアルタイム貨物追跡（運用基盤の自動化） |
 | US28 | 全 UC 横断 | 横断的 | セキュリティ強化（不正アクセス防止） |
 | US29 | テスト整備 | 横断的 | 品質保証（外部 SDK 互換性検知） |
+| US30 | 全 UC 横断 | 横断的 | セキュリティ深層強化（メソッド単位認可） |
+| US31 | UC17 | BUC18 | 精算業務の正確化（fallback UX 改善） |
+| US32 | 全 UC 横断 | 横断的 | 本番デプロイ前最終検証（staging E2E） |
+| US33 | 構造保証 | 横断的 | 品質保証（enum × Flyway 自動検証） |
+| US34 | リリース管理 | 横断的 | 公式 Release 1.1 公開 |
 
 ---
 
