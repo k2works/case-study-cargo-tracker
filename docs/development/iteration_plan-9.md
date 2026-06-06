@@ -1,4 +1,4 @@
-# イテレーション 9 計画（スケルトン）
+# イテレーション 9 計画
 
 ## 概要
 
@@ -44,7 +44,7 @@
 
 ---
 
-## タスク（スケルトン、IT9 着手時に詳細化）
+## タスク
 
 ### A1: Stripe webhook 受信（ADR-0020 実装）
 
@@ -92,7 +92,7 @@
 | A4 IT8 レビュー解消 | 1 | 3h |
 | **合計** | **8** | **23.5h** |
 
-**進捗率**: 0%（0/8 SP）— IT9 着手前（スケルトン）
+**進捗率**: 0%（0/8 SP）— IT9 着手中
 
 ---
 
@@ -136,6 +136,39 @@ L1 / L2 / L3（IT8 レビューで「次々回以降」と判定された項目�
 
 ---
 
+## リスクと対策
+
+| # | リスク | 影響度 | 対策 |
+|---|-------|-------|------|
+| R1 | Stripe SDK の HMAC 署名検証ライブラリのバージョン差異で実機 webhook 検証が失敗 | 高 | TDD で固定 payload + 固定 signature をテスト fixture 化、テスト時は SDK の `Webhook.constructEvent` を呼ぶ実 SDK 経路で確認 |
+| R2 | webhook_processed テーブルの冪等性キー（Stripe Event ID）に対する競合（同一 event_id の並列受信） | 中 | UNIQUE 制約 + `INSERT ... ON CONFLICT DO NOTHING` パターン、または UNIQUE 違反を 200 OK にマッピング |
+| R3 | Invoice 集約に PARTIALLY_PAID 状態を追加すると既存 Event Store の Replay で不整合（古い Event は PARTIALLY_PAID を知らない） | 高 | EventSourcingHandler で PARTIALLY_PAID 関連 Event は新規追加のみ、既存 PaymentRecordedEvent は不変。新規 PartialPaymentRecordedEvent と既存 PaymentRecordedEvent の共存を集約コードで明示 |
+| R4 | AWS Secrets Manager の LocalStack 統合で Lambda rotation の挙動が本番と乖離 | 中 | LocalStack Pro 機能（Lambda）が必要。代替として AWS Console での手動回転確認（A2.4）を必須化 |
+| R5 | 全 ms に authenticated() 付与で既存 E2E テストが大量 fail（Authorization ヘッダ不足） | 高 | A3.4 で E2E spec に JWT 発行・付与を一括追加、ローカル authms で発行した JWT を全 ms に伝搬 |
+| R6 | SendGrid SDK の Client.buildUri が依然として port を受理しないため、A4.1 の WireMock 統合テストが Builder 注入で迂回できない | 中 | A4.1 の TDD で SendGrid 側の Java SDK バージョン更新（4.10.3 → 4.11+）を検証、または `RestTemplate` ベースの代替 Acl の実装余地を残す |
+
+## 完了条件
+
+### Definition of Done
+
+- [ ] A1-A4 全タスクが「状態」列で [x] に更新されている
+- [ ] 全 5 ms（bookingms / routingms / handlingms / billingms / trackingms）で `:check` BUILD SUCCESSFUL
+- [ ] フロントエンドで `npm run test:coverage` が 80% 以上を維持
+- [ ] ArchUnit hard assertion すべて PASS（ADR-0012 集約発火型ガード継続）
+- [ ] SonarQube Quality Gate PASS（new_violations: 0、new_coverage ≥ 80%、new_duplicated_lines_density < 3%）
+- [ ] E2E `cross-service.spec.ts` が JWT 認証ヘッダ付きで全フロー PASS
+- [ ] マルチパースペクティブレビュー（developing-review）を 1 回以上実施し指摘事項を記録
+- [ ] iteration_report-9.md と retrospective-9.md を作成
+
+### デモ項目
+
+- [ ] Stripe Dashboard から Test Mode で webhook を送信 → S23 で部分入金履歴がリアルタイム表示される
+- [ ] AWS Secrets Manager Console で手動 rotation 実行 → trackingms の `@Scheduled` refresh で新 secret が反映、既存 JWT も `AWSPREVIOUS` で引き続き検証 OK
+- [ ] 認証ヘッダなしで `/api/v1/billing/invoices` に GET → 401 Unauthorized、認証ヘッダ + 不適切ロールで 403 Forbidden、適切ロールで 200 OK
+- [ ] SendGrid WireMock スタブで 5xx を返す → failure counter が increment され通知失敗ログが出力される
+
+---
+
 ## 関連ドキュメント
 
 - [iteration_plan-8.md](iteration_plan-8.md) — IT8 完了報告
@@ -154,3 +187,4 @@ L1 / L2 / L3（IT8 レビューで「次々回以降」と判定された項目�
 | 2026-06-06 | 整合性検証（validating-iteration-plan）の結果、user_story.md の US24/US25 と番号衝突していたため US24-27 → US26-29 にリナンバリング。user_story.md に US26-29 を新規追加済み | k2works |
 | 2026-06-06 | 設計ドキュメント先行更新: domain-model.md に PARTIALLY_PAID / BalanceTracker / RecordPartialPaymentCommand / TrackingTokenSecretProvider 追加、data-model.md に webhook_processed テーブル + paid_so_far カラム追加、ui_design.md に S23 部分入金履歴 + Stripe 遷移リンク + alert-* スタイル追加 | k2works |
 | 2026-06-06 | IT8 レビュー指摘事項対応方針を追記（高 H1=A4.1 / H2=IT8 消化済み / H3=A4.2、中 M1=IT9 中対応 / M2=許容 / M3=IT10 / M4=A1 統合 / M5=A3 統合、低 L1-L3=IT11 以降） | k2works |
+| 2026-06-06 | IT9 着手 Phase 0 詳細化: タイトルから「（スケルトン）」削除、リスクと対策（R1-R6）/ Definition of Done（8 項目）/ デモ項目（4 項目）を追記 | k2works |
