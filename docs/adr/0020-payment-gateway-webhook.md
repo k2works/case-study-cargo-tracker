@@ -6,7 +6,11 @@ IT7 は経理担当者が S23 で「入金確認」ボタン押下時のみ完�
 
 ## ステータス
 
-提案中（IT9 着手時に確定 / 一部は IT10 持ち越し可）
+採用済み（実装完了）
+
+- 2026-06-05: 提案 / IT8 終了時点
+- 2026-06-06: IT9 で全範囲を実装完了（A1.1〜A1.6）。`POST /api/v1/billing/webhooks/stripe` エンドポイント、HMAC 検証（`com.sendgrid.Webhook.constructEvent`）、Stripe Event ID 冪等性、`BalanceTracker` 値オブジェクト、`PARTIALLY_PAID` 状態遷移、`PartialPaymentRecordedEvent`（内部）と `PaymentRecordedEvent`（残額入金時のみ shared）の分離をすべて実装。Flyway V5 で `webhook_processed` テーブル + `invoice.paid_so_far` + `chk_invoice_status` への `PARTIALLY_PAID` 追加を完了
+- 2026-06-06: マルチパースペクティブレビューで H1（ES 決定性 / event に paidSoFar を含める検討）/ H2（PARTIALLY_PAID → PAID 経路テスト不足）/ H8（返金 / dispute シナリオ）/ L2（paid_amount 単位確認）が IT10-11 持ち越しとして識別済み
 
 ## コンテキスト
 

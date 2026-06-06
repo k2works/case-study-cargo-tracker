@@ -6,7 +6,11 @@ IT8 T1.6 で trackingms の公開追跡照会トークン用 secret について
 
 ## ステータス
 
-提案中（IT9 着手時に確定 / 一部は IT10 持ち越し可）
+採用済み（実装完了）
+
+- 2026-06-05: 提案 / IT8 終了時点
+- 2026-06-06: IT9 で全範囲を実装完了（A2.1〜A2.4）。`AwsSecretsManagerTrackingTokenSecretProvider`（AWSCURRENT + AWSPREVIOUS 取得 + `@Scheduled` 5 分間隔 refresh）、AWS SDK secretsmanager 2.30.27 統合、LocalStack Testcontainers 統合テスト、Lambda rotation Function（Python 3.12 / AWS 標準 4 ステップ）+ Terraform IaC（90 日サイクル）をすべて実装
+- 2026-06-06: マルチパースペクティブレビューで H9（rotation 失敗時 PagerDuty/Slack 通知未定義）/ L3（Micrometer メトリクス化）/ H7（LocalStack IT の CI 隔離確認）が IT10 持ち越しとして識別済み
 
 ## コンテキスト
 

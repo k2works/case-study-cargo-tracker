@@ -94,8 +94,8 @@
 | [ADR-0017](./adr/0017-overdue-scheduler-cluster-lock.md) | OverdueScheduler のクラスタ排他制御方針（IT8 実装済み：@SchedulerLock + InMemoryLockProvider 統合テスト） |
 | [ADR-0018](./adr/0018-notification-adapter-selection.md) | 通知アダプタ選定（IT8 実装済み：SendGrid Dynamic Templates 9 種 + Heroku Add-on プロビジョニング） |
 | [ADR-0019](./adr/0019-payment-detail-recorded-event.md) | PaymentDetailRecorded 補完イベント（IT8 実装済み：集約発火型連続 apply + GET /payments + cross-service E2E） |
-| [ADR-0020](./adr/0020-payment-gateway-webhook.md) | 決済機関 webhook 受信設計（Stripe + HMAC + idempotency + 部分入金 PARTIALLY_PAID、IT9 で実装） |
-| [ADR-0021](./adr/0021-aws-secrets-manager-rotation.md) | AWS Secrets Manager + Lambda 自動回転（trackingms 公開トークン、IT9 で実装、IT8 で TrackingTokenSecretProvider ポート整備済） |
+| [ADR-0020](./adr/0020-payment-gateway-webhook.md) | 決済機関 webhook 受信設計（Stripe + HMAC + idempotency + 部分入金 PARTIALLY_PAID、IT9 で実装完了、採用済み） |
+| [ADR-0021](./adr/0021-aws-secrets-manager-rotation.md) | AWS Secrets Manager + Lambda 自動回転（trackingms 公開トークン、IT9 で実装完了、採用済み） |
 
 ### 運用ドキュメント
 
