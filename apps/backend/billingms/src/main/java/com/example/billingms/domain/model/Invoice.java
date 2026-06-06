@@ -65,6 +65,8 @@ public class Invoice {
     private String invoiceNumber;
     private LocalDate paymentDue;
     private LocalDateTime paidAt;
+    /** 入金残額追跡（IT9 A1.3 / ADR-0020 / US26、部分入金を含む累積入金を保持）。 */
+    private BalanceTracker balance;
 
     protected Invoice() {
         // Axon required no-arg constructor
@@ -113,6 +115,7 @@ public class Invoice {
         this.totalAmount = event.basicAmount();
         this.currency = event.currency();
         this.billingStatus = BillingStatus.CALCULATED;
+        this.balance = BalanceTracker.of(event.basicAmount());
     }
 
     /**
@@ -159,6 +162,9 @@ public class Invoice {
     public void on(DiscountAppliedEvent event) {
         this.discountAmount = event.discountAmount();
         this.totalAmount = event.totalAmount();
+        if (this.balance != null) {
+            this.balance = this.balance.withTotalDue(event.totalAmount());
+        }
     }
 
     /**
@@ -260,6 +266,13 @@ public class Invoice {
     public void on(com.example.shared.events.PaymentRecordedEvent event) {
         this.paidAt = event.paidAt();
         this.billingStatus = BillingStatus.PAID;
+        if (this.balance != null) {
+            // 完全入金として扱う（IT7 制約：paidAmount == totalAmount を Command Handler で検証済み）
+            BigDecimal remaining = this.balance.remainingBalance();
+            if (remaining.signum() > 0) {
+                this.balance = this.balance.apply(remaining);
+            }
+        }
     }
 
     /**

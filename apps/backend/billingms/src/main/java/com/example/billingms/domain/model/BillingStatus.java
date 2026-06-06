@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Invoice 集約のステートマシン（US21 / US22 / US23、domain-model.md L913-920、IT7 計画書 L405-408）。
+ * Invoice 集約のステートマシン（US21 / US22 / US23 / US26、domain-model.md L913-920、IT7 計画書 L405-408、IT9 / ADR-0020）。
  *
  * <p>状態遷移の不変条件は本 enum 内に閉じる（Tell, Don't Ask）。集約は
  * {@link #canTransitionTo(BillingStatus)} を呼んで遷移可否を判定し、不可なら
@@ -12,6 +12,10 @@ import java.util.Set;
  *
  * <pre>
  * PENDING → CALCULATED → INVOICED → PAID
+ *               │            │
+ *               │            ├→ PARTIALLY_PAID → PAID  （IT9 / US26、Stripe webhook 部分入金）
+ *               │            │       │
+ *               │            │       └→ PARTIALLY_PAID  （追加部分入金）
  *               │            │
  *               │            └→ OVERDUE → PAID
  *               │
@@ -29,6 +33,9 @@ public enum BillingStatus {
     /** 精算書発行済（invoice_number 採番、payment_due 確定）。RecordPaymentCommand で PAID、MarkOverdueCommand で OVERDUE へ。 */
     INVOICED,
 
+    /** 部分入金済（IT9 / US26、Stripe webhook 経由）。RecordPartialPaymentCommand で追加部分入金 or 残額入金（PAID）へ。 */
+    PARTIALLY_PAID,
+
     /** 入金済。終端状態。 */
     PAID,
 
@@ -42,12 +49,13 @@ public enum BillingStatus {
      * 状態遷移マトリクス。本 enum 外部からは {@link #canTransitionTo(BillingStatus)} で参照する。
      */
     private static final Map<BillingStatus, Set<BillingStatus>> ALLOWED = Map.of(
-            PENDING,    Set.of(CALCULATED),
-            CALCULATED, Set.of(CALCULATED, INVOICED, CANCELLED),
-            INVOICED,   Set.of(PAID, OVERDUE, CANCELLED),
-            OVERDUE,    Set.of(PAID),
-            PAID,       Set.of(),
-            CANCELLED,  Set.of()
+            PENDING,        Set.of(CALCULATED),
+            CALCULATED,     Set.of(CALCULATED, INVOICED, CANCELLED),
+            INVOICED,       Set.of(PAID, PARTIALLY_PAID, OVERDUE, CANCELLED),
+            PARTIALLY_PAID, Set.of(PARTIALLY_PAID, PAID),
+            OVERDUE,        Set.of(PAID),
+            PAID,           Set.of(),
+            CANCELLED,      Set.of()
     );
 
     /**
