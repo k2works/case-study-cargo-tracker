@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.billingms.infrastructure.repositories.mybatis.WebhookProcessedMapper">
+
+  <resultMap id="WebhookProcessedResult"
+             type="com.example.billingms.domain.projections.WebhookProcessed">
+    <id property="eventId" column="event_id"/>
+    <result property="provider" column="provider"/>
+    <result property="eventType" column="event_type"/>
+    <result property="invoiceId" column="invoice_id"/>
+    <result property="payloadHash" column="payload_hash"/>
+    <result property="processingStatus" column="processing_status"/>
+    <result property="receivedAt" column="received_at"/>
+    <result property="processedAt" column="processed_at"/>
+    <result property="errorReason" column="error_reason"/>
+    <result property="createdAt" column="created_at"/>
+    <result property="updatedAt" column="updated_at"/>
+  </resultMap>
+
+  <select id="findByEventId" resultMap="WebhookProcessedResult">
+    SELECT event_id, provider, event_type, invoice_id, payload_hash,
+           processing_status, received_at, processed_at, error_reason,
+           created_at, updated_at
+    FROM webhook_processed
+    WHERE event_id = #{eventId}
+  </select>
+
+  <insert id="insertReceived">
+    INSERT INTO webhook_processed
+        (event_id, provider, event_type, payload_hash, processing_status,
+         received_at, created_at, updated_at)
+    VALUES (#{eventId}, #{provider}, #{eventType}, #{payloadHash}, 'RECEIVED',
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  </insert>
+
+  <update id="markProcessed">
+    UPDATE webhook_processed
+    SET processing_status = 'PROCESSED',
+        invoice_id = #{invoiceId},
+        processed_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE event_id = #{eventId}
+  </update>
+
+  <update id="markFailed">
+    UPDATE webhook_processed
+    SET processing_status = 'FAILED',
+        error_reason = #{errorReason},
+        updated_at = CURRENT_TIMESTAMP
+    WHERE event_id = #{eventId}
+  </update>
+
+</mapper>
