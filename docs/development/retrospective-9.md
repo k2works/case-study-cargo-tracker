@@ -75,7 +75,38 @@ A4.1 SendGrid WireMock 統合は IT8 H1 持ち越し（SDK 制約のため代替
 
 残る課題は各 Controller @PreAuthorize（A3.2、URL ルール認可で深層防御確保済み）。IT10 で @WithMockUser テストパターン確立 + staging 環境構築と合わせて、Release 1.1 を正式版に昇格させる。
 
+## マルチパースペクティブレビューの結果（2026-06-06 実施）
+
+IT9 の開発成果物に対し 5 観点（programmer / tester / architect / technical-writer / user-representative）でマルチパースペクティブレビューを並列実施し、**26 件の指摘**（高 10 / 中 9 / 低 7）を抽出した。詳細は [IT9_review_20260606.md](../review/IT9_review_20260606.md) を参照。
+
+### IT10 で取り込む 12 件
+
+| カテゴリ | 件数 | IT10 統合先 |
+|---------|------|------------|
+| 認可深層強化（H3 / H4 / H10） | 3 | A1（タスク 1.4 / 1.5 / 1.6 として追加） |
+| staging E2E + テスト改善（H5 / H6 / H7 / H8 / H9） | 5 | A3（タスク 3.6-3.10 として追加） |
+| Release 1.1 正式版（M8 / L5 / L6） | 3 | A5（タスク 5.4-5.6 として追加） |
+| 端数処理ルール（M9） | 1 | A2 検討（業務要件確認後、ADR 起票判断） |
+
+### IT11+ に持ち越す 14 件
+
+- **shared 契約変更が必要なため ADR 起票が望ましいもの**: H1（Invoice ES 決定性 / PaymentRecordedEvent に paidSoFar 含める）/ M9（端数処理ルール）
+- **Rule of Three / SDK バージョン待ちで時期尚早なもの**: M1（HerokuSecurityConfig 抽出）/ M4（SendGrid サブクラス化の ArchUnit 化）
+- **IT10 で部分対応・残りは IT11**: M7（JWT フィルタの時刻 / アルゴリズム境界）/ L3（Micrometer メトリクス化）
+- **テスト改善デーで一括対応**: L1（verify API 統一）/ L4（TestFixtures 抽出）
+- **その他**: H2 / M2 / M3 / M5 / M6 / L2 / L7
+
+### 主要な指摘の含意
+
+- **H3 JWT 信頼境界の不完全性**: gatewayms が `X-Forwarded-Role` を付与しても、各 ms が httpBasic のままだと直接アクセスで BASIC 認証突破リスクが残る。IT10 A1.4 で PreAuthFilter を追加して完全な信頼境界を確立する。
+- **H8 業務シナリオ欠落**: 返金 / 過剰入金 / dispute の業務フローが US26 受入基準にない。IT10 A3.9 で staging 実機検証と合わせて受入基準を補完する。
+- **H9 rotation 失敗の観測性**: 5 分間隔の連続失敗を PagerDuty/Slack に飛ばす設計が未定義。本番運用前に IT10 A3.10 で観測性ストーリーを追加する。
+- **H10 既存ユーザーの再認可運用**: 認可基盤を本番投入する際の ROLE 棚卸し / 四半期レビュー手順が `operation.md` に未記載。IT10 A1.6 で運用要件として明文化する。
+
+レビュー結果は IT10 計画にすべて反映済み（[iteration_plan-10.md](iteration_plan-10.md) 「IT9 マルチパースペクティブレビュー指摘の取り込み」セクション）。Release 1.1 正式版昇格に必要な品質ゲートとして機能する。
+
 ---
 
 **作成日**: 2026-06-06
 **作成者**: k2works（AI ペアプログラミング、Ralph Loop モード 14 iteration、IT9 100% 達成）
+**更新**: 2026-06-06 マルチパースペクティブレビュー結果（26 件指摘 / 12 件 IT10 統合 / 14 件 IT11+ 持ち越し）を追記
