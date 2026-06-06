@@ -12,6 +12,7 @@ vi.mock('../api/billingApi', async () => {
   return {
     ...actual,
     fetchInvoice: vi.fn(),
+    fetchPayments: vi.fn().mockResolvedValue([]),
     applyDiscount: vi.fn(),
     issueInvoice: vi.fn(),
     recordPayment: vi.fn(),
@@ -86,6 +87,7 @@ function renderPage(invoiceId: string) {
 describe('InvoiceDetailPage (S23)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(billingApi.fetchPayments).mockResolvedValue([]);
   });
 
   it('US21: CALCULATED 状態の請求詳細を表示する', async () => {
@@ -408,5 +410,62 @@ describe('InvoiceDetailPage (S23)', () => {
     await waitFor(() => {
       expect(screen.getByText(/入金済/)).toBeInTheDocument();
     });
+  });
+
+  it('US26: PARTIALLY_PAID 状態で残額・累積入金額・部分入金履歴が表示される', async () => {
+    const partiallyPaidInvoice: billingApi.Invoice = {
+      ...invoicedInvoice,
+      invoiceId: 'INV-PP-001',
+      totalAmount: '150000',
+      paidSoFar: '50000',
+      billingStatus: 'PARTIALLY_PAID',
+    };
+    const partialPayment: billingApi.Payment = {
+      paymentId: 'PAY-PP-001',
+      invoiceId: 'INV-PP-001',
+      paidAmount: '50000',
+      currency: 'JPY',
+      paidAt: '2026-09-10T14:30:00',
+      paymentMethod: 'STRIPE',
+      externalReference: 'pi_test_abc123',
+      isPartial: true,
+    };
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(partiallyPaidInvoice);
+    vi.mocked(billingApi.fetchPayments).mockResolvedValue([partialPayment]);
+
+    renderPage('INV-PP-001');
+
+    await screen.findByText(/部分入金状況/);
+
+    expect(screen.getByTestId('partial-payment-balance')).toBeInTheDocument();
+    expect(screen.getByTestId('payment-history')).toBeInTheDocument();
+
+    const balanceSection = screen.getByTestId('partial-payment-balance');
+    expect(balanceSection).toHaveTextContent('150,000');
+    expect(balanceSection).toHaveTextContent('50,000');
+    expect(balanceSection).toHaveTextContent('100,000');
+
+    const stripeLink = screen.getByRole('link', { name: /Stripe で表示/ });
+    expect(stripeLink).toHaveAttribute(
+      'href',
+      'https://dashboard.stripe.com/payments/pi_test_abc123',
+    );
+    expect(stripeLink).toHaveAttribute('target', '_blank');
+  });
+
+  it('US26: PARTIALLY_PAID 状態でも入金記録ボタンが表示される', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue({
+      ...invoicedInvoice,
+      invoiceId: 'INV-PP-002',
+      totalAmount: '200000',
+      paidSoFar: '80000',
+      billingStatus: 'PARTIALLY_PAID',
+    });
+    vi.mocked(billingApi.fetchPayments).mockResolvedValue([]);
+
+    renderPage('INV-PP-002');
+
+    await screen.findByText(/部分入金状況/);
+    expect(screen.getByRole('button', { name: /入金を記録/ })).toBeInTheDocument();
   });
 });

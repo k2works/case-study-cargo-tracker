@@ -8,6 +8,7 @@ export type BillingStatus =
   | 'PENDING'
   | 'CALCULATED'
   | 'INVOICED'
+  | 'PARTIALLY_PAID'
   | 'PAID'
   | 'OVERDUE'
   | 'CANCELLED';
@@ -31,6 +32,8 @@ export interface Invoice {
   discountAmount: string;
   adjustmentAmount: string;
   totalAmount: string;
+  /** 累積入金額（IT9 / US26、BalanceTracker の paidSoFar 投影。部分入金時は total_amount 未満） */
+  paidSoFar?: string;
   currency: string;
   billingStatus: BillingStatus;
   invoiceNumber: string | null;
@@ -39,6 +42,21 @@ export interface Invoice {
   createdAt: string;
   updatedAt: string;
   lines: InvoiceLine[];
+}
+
+/**
+ * 入金履歴（US23 / IT9 / US26、S23 入金履歴セクション）。
+ * isPartial=TRUE は Stripe webhook 経由の部分入金、FALSE は完全入金。
+ */
+export interface Payment {
+  paymentId: string;
+  invoiceId: string;
+  paidAmount: string;
+  currency: string;
+  paidAt: string;
+  paymentMethod: string | null;
+  externalReference: string | null;
+  isPartial: boolean;
 }
 
 export interface CalculateInvoiceRequest {
@@ -209,6 +227,8 @@ export function billingStatusLabel(status: BillingStatus): string {
       return '算出済';
     case 'INVOICED':
       return '発行済';
+    case 'PARTIALLY_PAID':
+      return '部分入金';
     case 'PAID':
       return '入金済';
     case 'OVERDUE':
@@ -216,6 +236,27 @@ export function billingStatusLabel(status: BillingStatus): string {
     case 'CANCELLED':
       return 'キャンセル';
   }
+}
+
+/**
+ * 請求書ごとの入金履歴を取得（IT9 / US26、S23 入金履歴セクション）。
+ * 既存の GET /api/v1/billing/invoices/{id}/payments を利用。
+ */
+export async function fetchPayments(invoiceId: string): Promise<Payment[]> {
+  const res = await fetch(`/api/v1/billing/invoices/${invoiceId}/payments`, {
+    headers: authHeader(),
+  });
+  if (!res.ok) throw new Error('入金履歴の取得に失敗しました');
+  return res.json();
+}
+
+/**
+ * Stripe ダッシュボードへの遷移 URL を生成（IT9 / US26）。
+ * external_reference に Stripe Charge ID（ch_xxx / pi_xxx）が格納されている前提。
+ */
+export function stripeDashboardUrl(externalReference: string | null): string | null {
+  if (!externalReference || externalReference.trim() === '') return null;
+  return `https://dashboard.stripe.com/payments/${externalReference}`;
 }
 
 /** InvoiceLineType → 日本語ラベル変換。 */

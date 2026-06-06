@@ -4,12 +4,15 @@ import {
   applyDiscount,
   billingStatusLabel,
   fetchInvoice,
+  fetchPayments,
   getCircuitBreakerHealth,
   invoiceLineTypeLabel,
   issueInvoice,
   recordPayment,
+  stripeDashboardUrl,
   type CircuitBreakerState,
   type Invoice,
+  type Payment,
 } from '../api/billingApi';
 
 /**
@@ -24,6 +27,7 @@ import {
 export default function InvoiceDetailPage() {
   const { invoiceId = '' } = useParams<{ invoiceId: string }>();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [error, setError] = useState<'NOT_FOUND' | 'OTHER' | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [applying, setApplying] = useState(false);
@@ -48,6 +52,14 @@ export default function InvoiceDetailPage() {
           setInvoice(null);
           setError(e.message === 'NOT_FOUND' ? 'NOT_FOUND' : 'OTHER');
         }
+      });
+    // IT9 / US26: 入金履歴も並行取得（PARTIALLY_PAID / PAID 時の表示用）
+    fetchPayments(invoiceId)
+      .then((data) => {
+        if (!cancelled) setPayments(data);
+      })
+      .catch(() => {
+        if (!cancelled) setPayments([]);
       });
     return () => {
       cancelled = true;
@@ -156,7 +168,17 @@ export default function InvoiceDetailPage() {
     invoice.billingStatus === 'CALCULATED' && !hasDiscount && !applying;
   const canIssue = invoice.billingStatus === 'CALCULATED' && !issuing;
   const canRecordPayment =
-    (invoice.billingStatus === 'INVOICED' || invoice.billingStatus === 'OVERDUE') && !paying;
+    (invoice.billingStatus === 'INVOICED'
+      || invoice.billingStatus === 'OVERDUE'
+      || invoice.billingStatus === 'PARTIALLY_PAID')
+    && !paying;
+  // IT9 / US26: 部分入金の残額計算
+  const paidSoFarNum = Number(invoice.paidSoFar ?? '0');
+  const totalNum = Number(invoice.totalAmount);
+  const remainingBalance = !Number.isNaN(paidSoFarNum) && !Number.isNaN(totalNum)
+    ? totalNum - paidSoFarNum
+    : null;
+  const hasPaymentHistory = payments.length > 0;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
@@ -325,6 +347,89 @@ export default function InvoiceDetailPage() {
           <p className="mt-2 text-xs text-gray-500">
             ※ IT7 は完全一致のみ受理。決済方法は MANUAL、外部参照は未設定で記録します（IT8 で webhook 統合予定）。
           </p>
+        </section>
+      )}
+
+      {invoice.billingStatus === 'PARTIALLY_PAID' && remainingBalance !== null && (
+        <section
+          className="mb-6 rounded border border-amber-300 bg-amber-50 p-4"
+          data-testid="partial-payment-balance"
+        >
+          <h2 className="font-semibold text-amber-800 mb-2">部分入金状況（残額あり）</h2>
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div>
+              <p className="text-xs text-gray-600">請求総額</p>
+              <p className="font-bold">{formatAmount(invoice.totalAmount)} {invoice.currency}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600">累積入金額</p>
+              <p className="font-bold text-emerald-700">
+                {formatAmount(invoice.paidSoFar ?? '0')} {invoice.currency}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600">残額</p>
+              <p className="font-bold text-amber-700">
+                {formatAmount(String(remainingBalance))} {invoice.currency}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {hasPaymentHistory && (
+        <section className="mb-6" data-testid="payment-history">
+          <h2 className="text-lg font-semibold mb-2">入金履歴</h2>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-gray-300">
+                <th className="text-left py-2 px-2">日時</th>
+                <th className="text-right py-2 px-2">金額</th>
+                <th className="text-left py-2 px-2">支払方法</th>
+                <th className="text-left py-2 px-2">種別</th>
+                <th className="text-left py-2 px-2">取引</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p) => {
+                const stripeUrl = stripeDashboardUrl(p.externalReference);
+                return (
+                  <tr key={p.paymentId} className="border-b border-gray-200">
+                    <td className="py-2 px-2">{p.paidAt}</td>
+                    <td className="py-2 px-2 text-right">
+                      {formatAmount(p.paidAmount)} {p.currency}
+                    </td>
+                    <td className="py-2 px-2">{p.paymentMethod ?? '-'}</td>
+                    <td className="py-2 px-2">
+                      {p.isPartial ? (
+                        <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-800 text-xs">
+                          部分
+                        </span>
+                      ) : (
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 text-xs">
+                          完全
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 px-2">
+                      {stripeUrl ? (
+                        <a
+                          href={stripeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline hover:text-blue-800 text-xs"
+                        >
+                          Stripe で表示
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-xs">{p.externalReference ?? '-'}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </section>
       )}
 
