@@ -234,7 +234,19 @@ state 荷役作業履歴
 荷役作業記録 --> 荷役作業履歴 : 送信成功
 
 state 請求一覧
-state 請求詳細算出
+state 請求詳細算出 {
+  state CALCULATED
+  state INVOICED
+  state PARTIALLY_PAID
+  state PAID
+  state OVERDUE
+  CALCULATED --> INVOICED : 「請求書を発行」
+  INVOICED --> PARTIALLY_PAID : Stripe webhook（部分入金、IT9 / US26）
+  INVOICED --> PAID : Stripe webhook（全額入金）/ 経理担当者「入金確認」
+  PARTIALLY_PAID --> PARTIALLY_PAID : Stripe webhook（追加部分入金）
+  PARTIALLY_PAID --> PAID : Stripe webhook（残額入金）
+  INVOICED --> OVERDUE : Scheduler（支払期限超過）
+}
 state 精算書発行
 state 督促一覧
 請求一覧 --> 請求詳細算出 : 行クリック
@@ -935,7 +947,7 @@ state 追跡詳細 {
 ```plantuml
 @startsalt
 {+
-  請求 INV-2026-0001  状態: [CALCULATED]
+  請求 INV-2026-0001  状態: [PARTIALLY_PAID]
   ---
   {
     予約 | B-2026-0512-001
@@ -948,6 +960,9 @@ state 追跡詳細 {
     調整 (例外補償等) | ¥-30,000
     ----
     合計 | ¥1,620,000
+    入金済 (-) | ¥800,000
+    ----
+    残額 | ¥820,000
   }
   ---
   料金内訳
@@ -958,10 +973,24 @@ state 追跡詳細 {
     ADJUSTMENT | 遅延補償 (E-001) | -¥30,000
   }
   ---
+  入金履歴（IT9 / US26）
+  {#
+    日時 | 金額 | 支払方法 | 取引 ID | 種別 | 操作
+    2026-06-30 10:32 | ¥500,000 | STRIPE | ch_3OxYz... | 部分 | [Stripe で表示]
+    2026-07-05 14:15 | ¥300,000 | STRIPE | ch_3PyAa... | 部分 | [Stripe で表示]
+  }
+  ---
   [割引を再適用] | [請求書を発行] | [取消]
 }
 @endsalt
 ```
+
+**注記（IT9 / US26、ADR-0020）**:
+
+- 状態 `PARTIALLY_PAID` は新規追加状態。`INVOICED` 状態で Stripe webhook 経由の部分入金を受信すると遷移する。
+- 「入金履歴」セクションは Stripe webhook で記録された `payment` 行を時系列表示する（`is_partial = TRUE` も含む）。
+- 「Stripe で表示」リンクは `external_reference` に格納された Stripe Charge ID から Stripe ダッシュボード URL（`https://dashboard.stripe.com/payments/{external_reference}`）に遷移する。
+- 残額がゼロになると状態は `PAID` に遷移し、`paid_at` が記録される。
 
 ### S24: 精算書発行
 
@@ -1034,6 +1063,19 @@ C -> User : 詳細画面が更新される
 | ドメインルール違反（422） | モーダルにエラーコード・理由を表示 | 操作見直し |
 | 通信エラー / 5xx | 汎用エラートースト + Sentry へ送信 | リトライまたは時間をおく |
 | Read Model 未反映 | リトライ後も未反映の場合「ページを再読み込み」ボタンを提示 | 手動更新 |
+
+### フィードバックメッセージ規約
+
+`alert-*` クラス（Bootstrap / Tailwind 系を想定）でカラーリングを統一する。S23 部分入金履歴（IT9 / US26）を含む全画面共通のパターン。
+
+| 種別 | スタイル | 用途・例 |
+| :--- | :--- | :--- |
+| 成功 | `alert-success`（緑） | 入金記録成功「¥500,000 の入金を記録しました（残額: ¥820,000）」 |
+| 警告 | `alert-warning`（黄） | 重複検知「同一の Stripe Event ID（evt_xxx）はすでに処理済みです。副作用なく完了しました」 |
+| 情報 | `alert-info`（青） | 状態遷移通知「請求書が `PARTIALLY_PAID` 状態になりました」 |
+| エラー | `alert-error` / `alert-danger`（赤） | webhook 失敗「Stripe webhook の HMAC 署名検証に失敗しました。Stripe ダッシュボードでイベントを確認してください」 |
+
+S23 では入金履歴の右上に直近のフィードバックメッセージを表示し、ユーザーが「閉じる」を押すまで残す。Stripe webhook の非同期受信のため、表示は polling またはサーバーセントイベント（SSE）で更新される。
 
 ### 主要操作シナリオ
 

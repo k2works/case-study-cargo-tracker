@@ -715,6 +715,19 @@ interface TrackingTokenService <<Domain Service>> {
   + verify(token: String, expectedTrackingNumber: TrackingNumber): VerifiedToken
 }
 
+interface TrackingTokenSecretProvider <<Domain Port>> {
+  + activeSigningKey(): SecretKey
+  + verifyingKeys(): List<SecretKey>
+}
+
+note right of TrackingTokenSecretProvider
+  IT8 で導入した複数キー検証基盤の Port。
+  StaticTrackingTokenSecretProvider（環境変数）と
+  AwsSecretsManagerTrackingTokenSecretProvider
+  （IT9 / US27、AWSCURRENT + AWSPREVIOUS 取得）
+  の 2 実装を切り替える。
+end note
+
 class JwtToken <<Value Object>> {
   - token: String
   - issuedAt: LocalDateTime
@@ -746,6 +759,7 @@ TrackingException *-- Location
 
 TrackingTokenService ..> JwtToken
 TrackingTokenService ..> VerifiedToken
+TrackingTokenService ..> TrackingTokenSecretProvider
 
 @enduml
 ```
@@ -907,6 +921,7 @@ class Invoice <<Aggregate Root>> {
   - discountAmount: Money
   - adjustmentAmount: Money
   - totalAmount: Money
+  - balance: BalanceTracker
   - billingStatus: BillingStatus
   - paymentDue: LocalDate
   - paidAt: LocalDateTime (optional)
@@ -914,15 +929,25 @@ class Invoice <<Aggregate Root>> {
   + handle(ApplyDiscountCommand)
   + handle(IssueInvoiceCommand)
   + handle(RecordPaymentCommand)
+  + handle(RecordPartialPaymentCommand)
   + handle(MarkOverdueCommand)
 }
 
 class InvoiceId <<Value Object>>
 
+class BalanceTracker <<Value Object>> {
+  - totalDue: Money
+  - paidSoFar: Money
+  + remainingBalance(): Money
+  + isFullyPaid(): boolean
+  + apply(payment: Money): BalanceTracker
+}
+
 enum BillingStatus {
   PENDING
   CALCULATED
   INVOICED
+  PARTIALLY_PAID
   PAID
   OVERDUE
   CANCELLED
@@ -961,6 +986,7 @@ Invoice *-- InvoiceId
 Invoice *-- BookingId
 Invoice *-- ShipperId
 Invoice *-- BillingStatus
+Invoice *-- BalanceTracker
 Invoice "1" *-- "3" Money
 
 @enduml
@@ -973,6 +999,9 @@ Invoice "1" *-- "3" Money
 - 通貨は集約内で一貫（混在不可）
 - `paymentDue` は `INVOICED` 状態への遷移時に確定する
 - `cancelled` 状態の Invoice は再発行不可（新規 Invoice を発行する）
+- `PARTIALLY_PAID` 遷移は `INVOICED` または `PARTIALLY_PAID`（追加部分入金）からのみ可能（IT9 / US26）
+- `balance.remainingBalance() == 0` のとき `PAID` 状態へ遷移する（`PARTIALLY_PAID` ・ `INVOICED` いずれからも）
+- 単一入金 ≧ 総額の場合は `PaymentRecordedEvent`、単一入金 < 総額の場合は `PartialPaymentRecordedEvent` を発火する
 
 ### ドメインイベント
 
@@ -981,7 +1010,8 @@ Invoice "1" *-- "3" Money
 | `InvoiceCalculatedEvent` | `CalculateInvoiceCommand` | 料金算出 |
 | `DiscountAppliedEvent` | `ApplyDiscountCommand` | 法人割引適用 |
 | `InvoiceIssuedEvent` | `IssueInvoiceCommand` | 請求書発行 |
-| `PaymentRecordedEvent` | `RecordPaymentCommand` | 入金記録 |
+| `PaymentRecordedEvent` | `RecordPaymentCommand` | 入金記録（完全入金） |
+| `PartialPaymentRecordedEvent` | `RecordPartialPaymentCommand` | 部分入金記録（IT9 / US26） |
 | `InvoiceOverdueEvent` | `MarkOverdueCommand` | 期日超過 |
 
 ## Auth Context（支援）
@@ -1139,6 +1169,7 @@ T -> N : (LOSS の場合) escalation
 | `DiscountAppliedEvent` | Billing | Billing |
 | `InvoiceIssuedEvent` | Billing | Billing, Notification |
 | `PaymentRecordedEvent` | Billing | Billing, Booking |
+| `PartialPaymentRecordedEvent` | Billing | Billing, Booking（IT9 / US26、Stripe webhook） |
 | `InvoiceOverdueEvent` | Billing | Billing, Notification |
 
 ## コマンド一覧
@@ -1167,6 +1198,7 @@ T -> N : (LOSS の場合) escalation
 | Billing | `ApplyDiscountCommand` | 経理担当者 / 内部 | UC17 |
 | Billing | `IssueInvoiceCommand` | 経理担当者 | UC18 |
 | Billing | `RecordPaymentCommand` | 経理担当者 / 外部連携 | UC18 |
+| Billing | `RecordPartialPaymentCommand` | Stripe webhook | UC18（IT9 / US26） |
 | Billing | `MarkOverdueCommand` | 内部スケジューラ | UC18（拡張） |
 | Auth | `RegisterUserCommand` | システム管理者 | - |
 | Auth | `AuthenticateCommand` | 全ユーザー | - |

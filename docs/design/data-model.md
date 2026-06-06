@@ -188,7 +188,7 @@ end note
 | routingms | `routing_read_db` | 航海 Read Model + 経路設計依頼（cross-service）+ Axon Token Store | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `route_design_request` + `token_entry`, `saga_entry`, `association_value_entry` |
 | trackingms | `tracking_read_db` | 追跡 Read Model + Axon Token Store | `tracking_summary`, `tracking_event`, `tracking_exception` + `token_entry`, `saga_entry`, `association_value_entry` |
 | handlingms | `handling_read_db` | 荷役 Read Model + Axon Token Store | `handling_activity`, `claim_verification` + `token_entry`, `saga_entry`, `association_value_entry` |
-| billingms | `billing_read_db` | 精算 Read Model + Axon Token Store | `invoice`, `payment` + `token_entry`, `saga_entry`, `association_value_entry` |
+| billingms | `billing_read_db` | 精算 Read Model + Axon Token Store + Webhook 冪等性 | `invoice`, `invoice_line`, `payment`, `webhook_processed` + `token_entry`, `saga_entry`, `association_value_entry` |
 
 > **データアクセス方式**: 本プロジェクトは **MyBatis** を採用する。Read Model / Auth DB のすべてのテーブルは MyBatis Mapper（XML / Annotation）でアクセスする。Axon の `JdbcTokenStore` / `JdbcSagaStore` は標準実装を使用し、Read Model と同一 DataSource を共有することで `@EventHandler` 内の Projection 更新と Token 更新が **同一 JDBC トランザクション** で処理される。
 
@@ -701,10 +701,11 @@ entity "invoice" as inv {
   adjustment_amount: NUMERIC(14,2) NOT NULL DEFAULT 0
   total_amount: NUMERIC(14,2) NOT NULL
   currency: VARCHAR(3) NOT NULL
-  billing_status: VARCHAR(16) NOT NULL ' PENDING / CALCULATED / INVOICED / PAID / OVERDUE / CANCELLED
+  billing_status: VARCHAR(16) NOT NULL ' PENDING / CALCULATED / INVOICED / PARTIALLY_PAID / PAID / OVERDUE / CANCELLED
   invoice_number: VARCHAR(30) <<UNIQUE>>
   payment_due: DATE
   paid_at: TIMESTAMPTZ
+  paid_so_far: NUMERIC(14,2) NOT NULL DEFAULT 0 ' BalanceTracker、累積入金額（IT9 / US26）
   cancellation_reason: TEXT
   created_at: TIMESTAMPTZ
   updated_at: TIMESTAMPTZ
@@ -728,22 +729,47 @@ entity "payment" as pay {
   paid_amount: NUMERIC(14,2) NOT NULL
   currency: VARCHAR(3) NOT NULL
   paid_at: TIMESTAMPTZ NOT NULL
-  payment_method: VARCHAR(40)
+  payment_method: VARCHAR(40) ' BANK_TRANSFER / CREDIT_CARD / STRIPE / MANUAL
   external_reference: VARCHAR(100) ' 決済機関の取引番号
+  is_partial: BOOLEAN NOT NULL DEFAULT FALSE ' 部分入金フラグ（IT9 / US26）
+}
+
+entity "webhook_processed" as wh {
+  * **event_id**: VARCHAR(64) <<PK>> ' Stripe Event ID（evt_xxx）
+  --
+  provider: VARCHAR(20) NOT NULL ' STRIPE 等
+  event_type: VARCHAR(64) NOT NULL ' payment_intent.succeeded 等
+  invoice_id: VARCHAR(36) <<FK>>
+  payload_hash: VARCHAR(64) NOT NULL ' SHA-256 of raw payload
+  processing_status: VARCHAR(20) NOT NULL ' RECEIVED / PROCESSED / FAILED
+  received_at: TIMESTAMPTZ NOT NULL
+  processed_at: TIMESTAMPTZ
+  error_reason: TEXT
+  created_at: TIMESTAMPTZ
+  updated_at: TIMESTAMPTZ
 }
 
 inv ||--|{ line : "1..*"
 inv ||--o{ pay : "0..*（複数回入金）"
+inv ||--o{ wh : "0..*（webhook 履歴）"
 
 note right of inv
   Invoice Aggregate の Read Model。
   total_amount = basic_amount - discount_amount + adjustment_amount。
+  paid_so_far <= total_amount。
+  PARTIALLY_PAID は paid_so_far < total_amount、PAID は paid_so_far = total_amount。
   CHECK 制約で整合性を確保する。
 end note
 
 note right of line
   料金内訳明細。
   経理担当者が請求書 PDF を生成する際の入力。
+end note
+
+note right of wh
+  Stripe webhook 冪等性管理テーブル（IT9 / US26、ADR-0020）。
+  Stripe Event ID を PK にして同一イベントの再送を抑止する。
+  HMAC 署名検証後、PARTIALLY_PAID / PAID 遷移コマンドを発行。
 end note
 @enduml
 ```
@@ -758,7 +784,11 @@ end note
 | `invoice` | `INDEX(billing_status, payment_due)` | 督促対象の抽出 |
 | `invoice` | `CHECK(total_amount = basic_amount - discount_amount + adjustment_amount)` | 金額の整合性 |
 | `invoice` | `CHECK(discount_amount >= 0 AND adjustment_amount >= 0 AND basic_amount >= 0)` | 非負制約 |
+| `invoice` | `CHECK(paid_so_far >= 0 AND paid_so_far <= total_amount)` | 累積入金額の整合性（IT9 / US26） |
 | `payment` | `INDEX(invoice_id)` | 請求書ごとの入金履歴 |
+| `webhook_processed` | `INDEX(provider, received_at)` | プロバイダ別の受信履歴監査 |
+| `webhook_processed` | `INDEX(invoice_id)` | 請求書ごとの webhook 履歴 |
+| `webhook_processed` | `INDEX(processing_status, received_at)` | 未処理 / 失敗 webhook の再試行抽出 |
 
 ### Auth DB（`auth_db`）
 
@@ -937,7 +967,7 @@ db/migration/
 | UC15 追跡情報照会 | - | `tracking_summary`, `tracking_event`, `tracking_exception` |
 | UC16 例外処理 | `tracking_exception`, `tracking_summary`, `tracking_event` | - |
 | UC17 輸送料金算出 | `invoice`, `invoice_line` | `cargo_summary`, `cargo_leg`, `handling_activity`, `shipper` |
-| UC18 精算処理 | `invoice`, `payment` | `invoice` |
+| UC18 精算処理 | `invoice`, `payment`, `webhook_processed` | `invoice`, `webhook_processed`（冪等性チェック） |
 | UC19 航海登録 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` | `voyage`（重複チェック） |
 
 ## 設計判断と推奨事項
