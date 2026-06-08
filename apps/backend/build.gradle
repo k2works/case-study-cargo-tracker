@@ -35,8 +35,10 @@ subprojects {
     }
 
     // 共通依存関係（テスト系のみ。Spring Boot 系は各サブプロジェクトで宣言する）
+    // spring-security-test は IT10 A1.2（US30 @WithMockUser テスト）で全 ms 共通追加。
     dependencies {
         testImplementation libs.spring.boot.starter.test
+        testImplementation libs.spring.security.test
         testImplementation libs.junit.jupiter
         testImplementation libs.assertj.core
         testImplementation libs.mockito.core
