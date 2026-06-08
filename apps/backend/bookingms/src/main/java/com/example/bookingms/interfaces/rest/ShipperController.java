@@ -9,6 +9,7 @@ import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import com.example.bookingms.interfaces.rest.dto.RegisterShipperRequest;
 import com.example.bookingms.interfaces.rest.dto.ShipperResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/shippers")
+@PreAuthorize("hasAnyRole('SALES', 'ADMIN')")
 public class ShipperController {
 
     private final ShipperCommandService commandService;

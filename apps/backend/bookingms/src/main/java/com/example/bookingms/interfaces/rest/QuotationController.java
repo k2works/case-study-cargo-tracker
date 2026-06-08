@@ -14,6 +14,7 @@ import com.example.bookingms.interfaces.rest.dto.PageRequest;
 import com.example.bookingms.interfaces.rest.dto.PageResponse;
 import com.example.bookingms.interfaces.rest.dto.QuotationResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/quotes")
+@PreAuthorize("hasAnyRole('SALES', 'ADMIN')")
 public class QuotationController {
 
     private final QuotationCommandService commandService;
