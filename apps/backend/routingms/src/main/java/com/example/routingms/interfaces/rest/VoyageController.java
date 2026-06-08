@@ -11,13 +11,22 @@ import com.example.routingms.interfaces.rest.dto.UpdateVoyageScheduleRequest;
 import com.example.routingms.interfaces.rest.dto.VoyageResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 航海スケジュール REST API（US24 / US25 / US07）。
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('ROUTING', 'ADMIN')")}
+ * を付与し、URL ルール認可（{@link com.example.routingms.config.HerokuSecurityConfig}）と
+ * 二段重層の深層防御を確立する。</p>
+ */
 @RestController
 @RequestMapping("/api/v1/voyages")
+@PreAuthorize("hasAnyRole('ROUTING', 'ADMIN')")
 public class VoyageController {
 
     private final VoyageCommandService commandService;

@@ -4,6 +4,7 @@ import com.example.routingms.application.RouteDesignRequestQueryService;
 import com.example.routingms.domain.projections.RouteDesignRequestProjection;
 import com.example.routingms.interfaces.rest.dto.RouteDesignRequestResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,9 +18,14 @@ import java.util.List;
  * <p>bookingms が発行した {@code RouteDesignRequestedEvent} を Kafka（cargo-events）経由で
  * 受信し routingms に記録した経路設計待ちリスト（route_design_request）を公開する。
  * 経路設計者のワークベンチ（IT4 / US08）の入力であり、cross-service 伝搬の検証にも用いる。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('ROUTING', 'ADMIN')")}
+ * を付与し、URL ルール認可（{@link com.example.routingms.config.HerokuSecurityConfig}）と
+ * 二段重層の深層防御を確立する。</p>
  */
 @RestController
 @RequestMapping("/api/v1/routes/design-requests")
+@PreAuthorize("hasAnyRole('ROUTING', 'ADMIN')")
 public class RouteDesignRequestController {
 
     private final RouteDesignRequestQueryService queryService;

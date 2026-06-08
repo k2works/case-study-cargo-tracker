@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,12 +18,19 @@ import org.springframework.security.web.SecurityFilterChain;
  *
  * <p>URL ↔ Role マッピング:</p>
  * <ul>
- *   <li>{@code /api/v1/voyages/**} / {@code /api/v1/route-design-requests/**}: ROLE_ROUTING / ROLE_ADMIN</li>
+ *   <li>{@code /api/v1/voyages/**} / {@code /api/v1/routes/**}: ROLE_ROUTING / ROLE_ADMIN</li>
  *   <li>{@code /actuator/health}, {@code /actuator/info}: permitAll</li>
  * </ul>
+ *
+ * <p>IT10 A1.1: {@link EnableMethodSecurity} で {@code @PreAuthorize} メソッド認可を
+ * 有効化し、URL ルール認可と二段重層の深層防御を確立する。{@code /api/v1/routes/**} は
+ * {@link com.example.routingms.interfaces.rest.RouteController} と
+ * {@link com.example.routingms.interfaces.rest.RouteDesignRequestController}（{@code /api/v1/routes/design-requests}）
+ * の両方をカバー。</p>
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @Profile("heroku")
 public class HerokuSecurityConfig {
 
@@ -34,7 +42,7 @@ public class HerokuSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/api/v1/voyages/**",
-                                "/api/v1/route-design-requests/**")
+                                "/api/v1/routes/**")
                         .hasAnyRole("ROUTING", "ADMIN")
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())

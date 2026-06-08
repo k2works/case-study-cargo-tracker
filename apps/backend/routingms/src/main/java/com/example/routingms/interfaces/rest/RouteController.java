@@ -8,6 +8,7 @@ import com.example.routingms.interfaces.rest.dto.CalculateRoutesRequest;
 import com.example.routingms.interfaces.rest.dto.RouteCandidateResponse;
 import com.example.routingms.interfaces.rest.dto.SelectRouteRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,9 +25,14 @@ import java.util.stream.IntStream;
  * <p>経路設計者ワークベンチ（S14）が経路設計待ちリストの予約 ID を指定して、経路候補の算出（US08）・
  * 選択確定（US09）・予約紐付け（US11）を行う。経路候補は永続化せず算出のたびに返すため、選択・確定は
  * 推奨順の候補番号（sequence）で指定する（iteration_plan-4.md）。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('ROUTING', 'ADMIN')")}
+ * を付与し、URL ルール認可（{@link com.example.routingms.config.HerokuSecurityConfig}）と
+ * 二段重層の深層防御を確立する。</p>
  */
 @RestController
 @RequestMapping("/api/v1/routes")
+@PreAuthorize("hasAnyRole('ROUTING', 'ADMIN')")
 public class RouteController {
 
     private final RouteCalculationService calculationService;
