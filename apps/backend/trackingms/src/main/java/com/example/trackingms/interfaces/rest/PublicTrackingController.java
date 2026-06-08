@@ -23,6 +23,11 @@ import java.util.List;
  *
  * <p>ベース URL を {@code /api/v1/public/...} と明確に分離することで、フィルタ適用範囲と
  * 認証必須エンドポイントを URL レベルで判別可能にする。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: 本 Controller は時限署名トークン（JWT）検証で代替認証するため
+ * {@code @PreAuthorize} を付与しない。{@link com.example.trackingms.config.HerokuSecurityConfig#publicTrackingFilterChain}
+ * 側で {@code /api/v1/public/tracking/**} を {@code permitAll} に設定し、
+ * {@link PublicTrackingTokenFilter} が JWT 検証を担う。</p>
  */
 @RestController
 @RequestMapping("/api/v1/public/tracking")

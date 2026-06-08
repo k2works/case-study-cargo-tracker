@@ -17,6 +17,7 @@ import com.example.trackingms.interfaces.rest.dto.UpdateTransportStatusRequest;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,9 +36,14 @@ import java.util.concurrent.CompletionException;
  *
  * <p>追跡管理者が貨物の現在状態を確認し、必要に応じて状態を手動更新するためのエンドポイント。
  * 公開照会（US18：時限署名トークン）は IT6 で別 Controller として実装する。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('TRACKER', 'ADMIN')")}
+ * を付与し、URL ルール認可（{@link com.example.trackingms.config.HerokuSecurityConfig}）と
+ * 二段重層の深層防御を確立する。</p>
  */
 @RestController
 @RequestMapping("/api/v1/tracking")
+@PreAuthorize("hasAnyRole('TRACKER', 'ADMIN')")
 public class TrackingController {
 
     private final TrackingCommandService commandService;

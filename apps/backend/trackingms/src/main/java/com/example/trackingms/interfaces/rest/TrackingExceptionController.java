@@ -15,6 +15,7 @@ import com.example.trackingms.interfaces.rest.dto.TrackingExceptionResponse;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,11 +34,16 @@ import java.util.concurrent.CompletionException;
  * 追跡例外管理の REST Controller（US19 / US20 / IT6 タスク 2.3）。
  *
  * <p>POST /tracking/{tn}/exceptions で例外を登録、PATCH .../resolve で解決済みに遷移、
- * GET で一覧・横断照会を提供する。認可は trackingms に Spring Security 導入時（IT8）で
- * ROLE_TRACKER + ROLE_ADMIN（および登録は ROLE_HANDLER）を強制する予定。</p>
+ * GET で一覧・横断照会を提供する。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('TRACKER', 'ADMIN')")}
+ * を付与し、URL ルール認可（{@link com.example.trackingms.config.HerokuSecurityConfig}）と
+ * 二段重層の深層防御を確立する。荷役作業員（HANDLER）による例外登録の細分化は M9 残額しきい値
+ * 端数処理ルール ADR 起票後に検討する。</p>
  */
 @RestController
 @RequestMapping("/api/v1/tracking")
+@PreAuthorize("hasAnyRole('TRACKER', 'ADMIN')")
 public class TrackingExceptionController {
 
     private final TrackingCommandService commandService;

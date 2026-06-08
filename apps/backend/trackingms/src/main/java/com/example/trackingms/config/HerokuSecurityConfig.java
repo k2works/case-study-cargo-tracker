@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -26,9 +27,14 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
  *   <li>{@code /api/v1/tracking/**}: ROLE_TRACKER / ROLE_ADMIN</li>
  *   <li>{@code /actuator/health}, {@code /actuator/info}: permitAll</li>
  * </ul>
+ *
+ * <p>IT10 A1.1: {@link EnableMethodSecurity} で {@code @PreAuthorize} メソッド認可を
+ * 有効化し、URL ルール認可と二段重層の深層防御を確立する。{@code PublicTrackingController}
+ * は時限署名トークン検証で代替認証するため {@code @PreAuthorize} は付与しない。</p>
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @Profile("heroku")
 public class HerokuSecurityConfig {
 
