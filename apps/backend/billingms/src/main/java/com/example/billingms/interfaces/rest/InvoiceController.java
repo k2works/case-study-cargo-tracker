@@ -13,6 +13,7 @@ import com.example.billingms.interfaces.rest.dto.InvoiceResponse;
 import com.example.billingms.interfaces.rest.dto.RecordPaymentRequest;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,12 +29,16 @@ import java.util.UUID;
 /**
  * 請求書 REST API（US21 / US23 / IT7 タスク 2.5）。
  *
- * <p>S23 請求詳細・算出画面 / S22 請求一覧（Task 4.7）から呼ばれる。認可は IT8 で
- * Spring Security 統一導入時に {@code @PreAuthorize("hasRole('ACCOUNTANT')")} を付与する
- * （IT7 は trackingms 同様、認証なしで動作）。</p>
+ * <p>S23 請求詳細・算出画面 / S22 請求一覧（Task 4.7）から呼ばれる。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('ACCOUNTANT', 'ADMIN')")}
+ * を付与し、URL ルール認可（{@link com.example.billingms.config.HerokuSecurityConfig}）と
+ * 二段重層の深層防御を確立する。{@link org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity}
+ * は heroku profile のみ有効化、ローカル/テスト profile では認可をバイパス。</p>
  */
 @RestController
 @RequestMapping("/api/v1/billing/invoices")
+@PreAuthorize("hasAnyRole('ACCOUNTANT', 'ADMIN')")
 public class InvoiceController {
 
     private final CommandGateway commandGateway;

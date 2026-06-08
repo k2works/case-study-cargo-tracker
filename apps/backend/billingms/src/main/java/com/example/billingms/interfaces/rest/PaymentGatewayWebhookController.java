@@ -49,6 +49,10 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>業務エラー（残額超過 / 状態不一致 / 通貨不一致 等）でも HTTP は 200 で返す。Stripe 側の
  * retry を抑制するため。エラー詳細は webhook_processed.error_reason に記録する。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: 本 endpoint は HMAC 署名検証で代替認証するため
+ * {@code @PreAuthorize} を付与しない。{@link com.example.billingms.config.HerokuSecurityConfig}
+ * 側で {@code /api/v1/billing/webhooks/stripe} を {@code permitAll} に設定。</p>
  */
 @RestController
 @RequestMapping("/api/v1/billing/webhooks/stripe")

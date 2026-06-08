@@ -3,6 +3,7 @@ package com.example.billingms.interfaces.rest;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,10 +24,14 @@ import java.util.Map;
  * </ul>
  *
  * <p>actuator の resilience4j endpoint を直接公開せず、frontend が必要な情報のみを
- * 安全に取得できる薄い専用 API とした（認可ロール ACCOUNTANT は IT8 後半で付与予定）。</p>
+ * 安全に取得できる薄い専用 API とした。</p>
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('ACCOUNTANT', 'ADMIN')")}
+ * を付与。S23 画面の Circuit Breaker 状態取得は経理担当者が利用するため。</p>
  */
 @RestController
 @RequestMapping("/api/v1/billing/circuit-breakers")
+@PreAuthorize("hasAnyRole('ACCOUNTANT', 'ADMIN')")
 public class CircuitBreakerHealthController {
 
     private final CircuitBreakerRegistry registry;
