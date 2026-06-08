@@ -55,6 +55,93 @@ cd apps/backend && ./gradlew bootRun
 # OpenAPI JSON: http://localhost:8080/v3/api-docs
 ```
 
+## 認可テストパターン（@PreAuthorize + @WithMockUser）
+
+新規 REST Controller を作る際は、URL ルール認可（HerokuSecurityConfig）と
+メソッド認可（`@PreAuthorize`）の **二段重層**で深層防御を確立する。
+
+### Controller 側
+
+クラスレベルで `@PreAuthorize` を付与する（メソッド単位で異なるロールが必要な場合のみメソッド付与）。
+
+```java
+@RestController
+@RequestMapping("/api/v1/billing/invoices")
+@PreAuthorize("hasAnyRole('ACCOUNTANT', 'ADMIN')")
+public class InvoiceController { ... }
+```
+
+メソッドレベル認可を有効にするため、`HerokuSecurityConfig` には `@EnableMethodSecurity` を付ける。
+
+```java
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@Profile("heroku")
+public class HerokuSecurityConfig { ... }
+```
+
+代替認証で `permitAll` 維持する Controller（例: HMAC 署名 webhook、時限署名 JWT 公開照会）には
+`@PreAuthorize` を **付与せず**、その旨を Javadoc に明記する。
+
+### テスト側（slice テスト）
+
+`@WebMvcTest` + `SecurityAutoConfiguration` 除外 + テスト専用 `TestMethodSecurityConfig` で
+heroku profile 相当のメソッド認可挙動を再現する。各 Controller に **3 件**（401 / 403 / 業務応答）を目安に追加する。
+
+```java
+@ExtendWith(SpringExtension.class)
+@WebMvcTest(controllers = XxxController.class,
+        excludeAutoConfiguration = { SecurityAutoConfiguration.class })
+@Import(XxxControllerAuthorizationTest.TestMethodSecurityConfig.class)
+class XxxControllerAuthorizationTest {
+
+    @Autowired private MockMvc mockMvc;
+    @MockitoBean private XxxService service;  // Controller の依存をすべて @MockitoBean
+
+    @Test
+    @DisplayName("未認証の GET は 401 Unauthorized")
+    void shouldReturn401WhenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/api/v1/xxx/1")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("権限不一致の GET は 403 Forbidden")
+    @WithMockUser(roles = "WRONG_ROLE")
+    void shouldReturn403WhenWrongRole() throws Exception {
+        mockMvc.perform(get("/api/v1/xxx/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("正しいロールの GET は @PreAuthorize を通過し業務応答を返す")
+    @WithMockUser(roles = "CORRECT_ROLE")
+    void shouldPassPreAuthorizeWhenCorrectRole() throws Exception {
+        mockMvc.perform(get("/api/v1/xxx/1")).andExpect(status().isNotFound());  // 業務応答
+    }
+
+    @TestConfiguration
+    @EnableWebSecurity
+    @EnableMethodSecurity
+    static class TestMethodSecurityConfig {
+        @Bean
+        SecurityFilterChain testFilterChain(HttpSecurity http) throws Exception {
+            return http.csrf(csrf -> csrf.disable())
+                    .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                    .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                    .httpBasic(Customizer.withDefaults()).build();
+        }
+    }
+}
+```
+
+### テストメソッド命名規約
+
+- `should{Behavior}When{Condition}` 形式の identifier
+- `@DisplayName` で日本語の振る舞い説明（business intent を明記）
+- 認可テストでは「未認証」「権限不一致」「正しいロール」の 3 観点で命名する
+
+実例: `apps/backend/billingms/src/test/java/com/example/billingms/interfaces/rest/InvoiceControllerAuthorizationTest.java`
+
 ## 品質チェックリスト
 
 コミット前に必ず確認する。

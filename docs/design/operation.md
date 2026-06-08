@@ -99,6 +99,49 @@ tags: design, operation, sre, monitoring, incident-response, backup, runbook
 | 監査対応（ISO 27001 等） | 年次 | セキュリティ + 法務 |
 | Java / Spring Boot メジャー LTS 評価 | 半年 1 回 | 開発 |
 | Aiven Kafka スケールアップ評価 | 年次 | アーキテクト + SRE |
+| **ロール棚卸し（後述 2.5）** | **四半期 1 回** | **セキュリティ + アプリ開発リード** |
+
+### 2.5 ロール棚卸し（IT10 A1.6 / US30 / IT9 H10）
+
+`@PreAuthorize` メソッド認可で利用するロール（`ROLE_SALES` / `ROLE_ROUTING` / `ROLE_HANDLER` /
+`ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN`）の付与状況を **四半期 1 回** 棚卸しする。
+過剰権限・退職者残置・部門異動による不要権限の蓄積を防ぐ目的。
+
+#### ロール一覧と対象 ms
+
+| ロール | 対象 ms / Controller | 担当業務 |
+| :--- | :--- | :--- |
+| `ROLE_SALES` | bookingms（CargoBooking / Quotation / Shipper） | 営業担当者：荷主・予約・見積管理 |
+| `ROLE_ROUTING` | routingms（Voyage / Route / RouteDesignRequest） | 経路設計者：航海スケジュール・経路算出 |
+| `ROLE_HANDLER` | handlingms（HandlingActivity） | 荷役作業員：荷役・引取作業記録 |
+| `ROLE_TRACKER` | trackingms（Tracking / TrackingException） | 追跡管理者：貨物状態・例外処理 |
+| `ROLE_ACCOUNTANT` | billingms（Invoice / CircuitBreakerHealth） | 経理担当者：輸送料金算出・精算 |
+| `ROLE_ADMIN` | 全 ms（バックアップロール） | システム管理者：緊急時の横断対応 |
+
+#### 棚卸し手順
+
+四半期初週（1 月 / 4 月 / 7 月 / 10 月の第 1 月曜日）に実施する。
+
+1. **ロール付与状況のエクスポート**: authms から全ユーザーのロール一覧を CSV エクスポート（`/api/v1/admin/users?withRoles=true`）
+2. **HR システムとの突合**: HR 側の在籍状況・部門マスタと突合し、以下の差分を抽出
+   - 退職者で未削除のアカウント → 即時削除
+   - 部門異動でロールが旧職務のまま残置 → 該当ロールを削除
+   - 過剰な ROLE_ADMIN 付与（4 名超）→ 必要性を再確認
+3. **アクセスログ突合**: 過去 90 日のアクセスログを確認し、付与されているロールを実際に使っていないアカウントを抽出 → 部門長に必要性を確認
+4. **差分の修正**: authms 管理画面または `/api/v1/admin/users/{id}/roles` でロールを更新
+5. **棚卸し結果の記録**: `docs/operation/role-audit-YYYY-QN.md` に棚卸し結果（チェック対象人数 / 修正件数 / 残課題）を記録
+6. **監査ログ確認**: 棚卸し後 1 週間、`authorization_audit` イベント（`/api/v1/audit/auth`）を確認し、変更ロールでの認可違反 403 が増えていないかチェック
+
+#### 新規ロール追加時のチェックリスト
+
+新規 ms / Controller を追加する際、`@PreAuthorize` で新ロールを参照する場合は以下を実施。
+
+- [ ] ロールを `ROLE_<NAME>` 形式の Constant として shared モジュールに追加
+- [ ] HerokuSecurityConfig の URL ルール認可（`hasAnyRole`）にも同ロールを追加（二段重層）
+- [ ] 認可テスト（`XxxControllerAuthorizationTest`）を追加し、401 / 403 / 業務応答の 3 件で検証
+- [ ] 本「2.5 ロール棚卸し」セクションの「ロール一覧」表に新ロールを追記
+- [ ] authms 管理画面でロール選択肢に新ロールが表示されることを確認
+- [ ] 既存ユーザーの中で新ロールを付与すべき対象を部門長と確認
 
 ## 3. 監視設計
 
