@@ -3,12 +3,12 @@ package com.example.routingms.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 /**
  * routingms の本番（heroku profile）Spring Security 設定（IT9 A3.1 / US28）。
@@ -27,6 +27,11 @@ import org.springframework.security.web.SecurityFilterChain;
  * {@link com.example.routingms.interfaces.rest.RouteController} と
  * {@link com.example.routingms.interfaces.rest.RouteDesignRequestController}（{@code /api/v1/routes/design-requests}）
  * の両方をカバー。</p>
+ *
+ * <p>IT10 A1.4 (IT9 H3): {@link PreAuthFilter} を {@link AuthorizationFilter} の前段に挿入し、
+ * gatewayms 由来の {@code X-Forwarded-User} / {@code X-Forwarded-Role} ヘッダを
+ * {@code Authentication} に変換する。同時に {@code httpBasic} を無効化することで、
+ * gatewayms をバイパスした各 ms への直接アクセスを 401 で拒否し、BASIC 認証突破リスクを解消する。</p>
  */
 @Configuration
 @EnableWebSecurity
@@ -45,7 +50,9 @@ public class HerokuSecurityConfig {
                                 "/api/v1/routes/**")
                         .hasAnyRole("ROUTING", "ADMIN")
                         .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
+                .addFilterBefore(new PreAuthFilter(), AuthorizationFilter.class)
+                // httpBasic は明示的に無効化（IT9 H3 / BASIC 突破リスク解消）
+                .httpBasic(httpBasic -> httpBasic.disable())
                 .build();
     }
 }
