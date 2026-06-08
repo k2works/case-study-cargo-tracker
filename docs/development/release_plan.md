@@ -391,17 +391,18 @@ gantt
 | IT7 | 2026-08-13 〜 2026-08-26 | 8 | 8 | 100% | 完了（2026-06-05：US21-US23 精算 + billingms 新規立ち上げ + review 高/中 持ち越し 7 件 IT 内対応 + ADR-0017/0018/0019 起票 + 全 5 サービス ArchUnit 横展開、計 50+ コミット。billingms LINE 89.87%、全モジュール check PASS） |
 | IT8 | 2026-08-27 〜 2026-09-09 | 8 | 8 | 100% | 完了（2026-06-05：A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020 起票、Ralph Loop で 1 日完遂、30+ コミット、全モジュール check PASS、frontend 234 件 PASS） |
 | IT9 | 2026-09-10 〜 2026-09-23 | 8 | 8 | 100% | 完了（2026-06-06：A1 Stripe webhook 部分入金 + A2 AWS Secrets Manager + Lambda + Terraform + A3 HerokuSecurityConfig + JWT 検証 + A4.1 SendGrid SDK サブクラス化 WireMock + A4.2 CI コスト + IT8 review 11 件全解消、Ralph Loop 14 iteration、17 コミット、全モジュール check PASS、frontend 245 件 PASS。A3.2 のみ IT10 持ち越し）|
-| **合計** | | **84** | **84** | **Release 1.1 主要機能完全実装（84/84 SP・100%）** | Phase 1 + Phase 2 + Buffer + IT9 完了。IT8 review 11 件全解消。残 A3.2（@PreAuthorize）は URL ルール認可で深層防御済み、IT10 で staging E2E と合わせて段階的に強化 |
+| IT10 | 2026-06-08 〜 2026-06-19 | 8 | 0 | 0% | 着手前（2026-06-08：IT10 正式版計画確定。A1 認可深層強化 / A2 fallback UX 改善 / A3 staging E2E + IT9 H5-H9 / A4 Flyway×enum 同期検証 / A5 Release 1.1 正式版昇格。28 タスク / 35h、IT9 マルチパースペクティブレビュー指摘 12 件統合済み、A5.6 のみ 2026-06-06 前倒し完了） |
+| **合計** | | **92** | **84** | **Release 1.1 主要機能完全実装（84/92 SP・91%）** | Phase 1 + Phase 2 + Buffer + IT9 完了。IT8 review 11 件全解消。IT10 で Release 1.1 正式版昇格予定（staging E2E + メソッド認可 + UX 改善 + 構造検証） |
 
 ### バーンダウンチャート
 
 ```mermaid
 xychart-beta
     title "リリースバーンダウン（計画 vs 実績）"
-    x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8", "IT9"]
-    y-axis "残 SP" 0 --> 84
-    line "計画" [84, 74, 64, 54, 43, 33, 24, 16, 8, 0]
-    line "実績" [84, 74, 64, 54, 43, 33, 24, 16, 8, 0]
+    x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8", "IT9", "IT10"]
+    y-axis "残 SP" 0 --> 92
+    line "計画" [92, 82, 72, 62, 51, 41, 32, 24, 16, 8, 0]
+    line "実績" [92, 82, 72, 62, 51, 41, 32, 24, 16, 8, 8]
 ```
 
 > **実績（IT9 終了時点、Release 1.1 主要機能完全実装）**: Phase 1（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8 SP）+ IT9（**8 SP**）完了。**累計 84/84 SP（100%）達成**。IT9 では Ralph Loop モード 14 iteration で 8 SP 完遂、A1 Stripe webhook 部分入金 + A2 AWS Secrets Manager + A3 認可基盤 + A4 IT8 review 完全解消（H1 / H3 / M1-M5）で **17 コミット**達成。**IT8 review 11 件全解消**。A4.1 SendGrid WireMock は SDK ソース展開で `Client.buildUri` の public override 性を確認し `WireMockCompatibleSendGridClient` で解決。Release 1.1 主要機能（決済自動化 + secret 自動回転 + 本番認可 + 通知品質保証）は実装完了し、staging 環境構築（IT10）で E2E 検証後に正式版へ昇格予定。
@@ -444,3 +445,4 @@ IT9 達成（**84/84 SP、100%**）により Release 1.1 主要機能を完全�
 | 2026-05-29 | **IT6 完了**（9/9 SP、Ralph Loop 7 iterations / 22 コミット）：ADR-0012/0013/0014 起票 + US18 公開照会（5 SP、TrackingTokenService + PublicTrackingTokenFilter + S15 TrackingPublicPage）+ US19 遅延例外処理（2 SP、TrackingException エンティティ + RegisterTrackingException ハンドラ + S18/S19）+ US20 破損・紛失例外処理（2 SP、LOSS 自動 escalation + 管理職通知 WARN ログ）+ E2E spec 10 件追加 + マルチパースペクティブレビュー（高 9・中 11・低 8）+ SonarQube Quality Gate PASS（new_coverage 74.5% / new_violations 0）。take-5 #189/#190/#191 をクローズ。累計 60/76 SP（79%）。Release 2.0 完了。残 IT7（精算 US21-US23 + IT5/IT6 持ち越し Try）+ IT8（非機能・Spring Security 統一）で 16 SP | k2works |
 | 2026-06-05 | **IT7 完了**（8/8 SP、Ralph Loop 50+ コミット）：US21 輸送料金算出（3 SP、Invoice 単一集約 + BillingStatus ステートマシン + FareCalculator + 4 ACL + S23）+ US22 法人割引適用（2 SP、CorporateDiscountPolicy + StubShipperInfoAcl + S23 改修）+ US23 精算処理（3 SP、Issue/Payment/Overdue ハンドラ + InvoiceNumberGenerator + PaymentDuePolicy + cross-service SETTLED + OverdueScheduler + S22/S25）+ E2E spec 8 件追加 + マルチパースペクティブレビュー（高 5・中 5）→ review 高/中 持ち越し 7 件 IT 内対応（H1 二段イベント / M1 InvoiceProjection / M2 NumberSequenceRepository / M1 architect 決定論的 invoiceId / ハードコード除去 / Micrometer counter）+ ADR-0012 自己整合チェックリスト追記 + ADR-0017/0018/0019 起票 + 全 5 サービス ArchUnit 横展開（15 件のアーキテクチャテスト）。billingms LINE 89.87%・全モジュール check PASS。take-5 #192/#193/#194 をクローズ。累計 68/76 SP（89%）。Release 2.1 完了。残 IT8 で 8 SP | k2works |
 | 2026-06-05 | **IT8 完了 + Release 1.0 候補確立**（8/8 SP + H2 持ち越し 8/8 件、Ralph Loop 60+ コミット 1 日完遂）：A1 ShedLock（@SchedulerLock + InMemoryLockProvider 統合テスト）+ A2 SendGrid（trackingms 6 種 + billingms 3 種 Dynamic Templates）+ A3 RestShipperInfoAcl（Resilience4j 2.2 + Caffeine + Circuit Breaker fallback UI）+ A4 PaymentDetailRecorded（補完 event 集約発火型 + payment_method 補完 SQL + cross-service E2E）+ ADR-0020 起票（決済機関 webhook）+ マルチパースペクティブレビュー + 完了報告書 + H2 持ち越し（T1.4 全 ms Spring Security 統一 / T1.5 trackingms SecurityFilterChain / T1.6 四半期ローテーション基盤 + ADR-0021 起票 / T1.7 BFS 多段経由 / T1.8 RateTable 設定駆動化 / T1.9 paymentDueDays Map / T1.10 outbound publisher 集約発火型完全移行 / T1.11 HandlingValidationService DIP 回復）+ IT9 スケルトン計画 + Release 1.0 候補確立報告書。累計 76/76 SP（100%）達成。**ADR-0012 集約発火型完全達成（二段イベント全廃）/ Onion/DIP 全 ms hard assertion / Spring Security 全 ms 平準化**。全 8 modules check / frontend 234 件 / ArchUnit 全 hard PASS。 | k2works |
+| 2026-06-08 | **IT10 正式版計画確定**：iteration_plan-10.md をスケルトンから正式版へ昇格。期間 2026-06-08 〜 2026-06-19、5 ストーリー（US30-US34）8 SP、28 タスク 35h（A5.6 のみ前倒し完了済み）。IT9 マルチパースペクティブレビュー指摘 12 件（H3-H10 + M8 + L5/L6）統合済み。Release 1.1 正式版昇格（GitHub Release v1.1.0 + CHANGELOG 確定 + 本番デプロイ可能宣言）を目標とし、認可深層強化 / fallback UX 改善 / staging E2E + Stripe/AWS/SonarQube 実機検証 / Flyway×enum 同期自動検証で構成。リリース計画累計を 84 → 92 SP に拡張、バーンダウン更新 | k2works |
