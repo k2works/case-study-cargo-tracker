@@ -11,6 +11,7 @@ import com.example.handlingms.interfaces.rest.dto.RegisterHandlingActivityReques
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,9 +28,14 @@ import java.util.concurrent.CompletionException;
 
 /**
  * 荷役作業 REST Controller（US15・US16 / IT5 3.x）。
+ *
+ * <p>認可（IT10 A1.1 / US30）: クラスレベル {@code @PreAuthorize("hasAnyRole('HANDLER', 'ADMIN')")}
+ * を付与し、URL ルール認可（{@link com.example.handlingms.config.HerokuSecurityConfig}）と
+ * 二段重層の深層防御を確立する。</p>
  */
 @RestController
 @RequestMapping("/api/v1/handling")
+@PreAuthorize("hasAnyRole('HANDLER', 'ADMIN')")
 public class HandlingActivityController {
 
     private static final String MESSAGE_KEY = "message";

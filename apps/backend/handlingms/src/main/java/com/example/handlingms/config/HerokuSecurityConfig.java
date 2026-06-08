@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,9 +21,13 @@ import org.springframework.security.web.SecurityFilterChain;
  *   <li>{@code /api/v1/handling/**}: ROLE_HANDLER / ROLE_ADMIN（荷役作業員）</li>
  *   <li>{@code /actuator/health}, {@code /actuator/info}: permitAll</li>
  * </ul>
+ *
+ * <p>IT10 A1.1: {@link EnableMethodSecurity} で {@code @PreAuthorize} メソッド認可を
+ * 有効化し、URL ルール認可と二段重層の深層防御を確立する。</p>
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @Profile("heroku")
 public class HerokuSecurityConfig {
 
