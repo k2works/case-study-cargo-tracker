@@ -334,9 +334,10 @@ IT10 では既存 API への追加変更はない。ただし `@PreAuthorize` �
 ### Definition of Done
 
 - [ ] A1-A5 全タスクが状態列で [x] に更新されている（28 タスク中 28 完了、A5.6 前倒し完了済み）
-- [ ] 全 5 ms（bookingms / routingms / handlingms / billingms / trackingms）で `:check` BUILD SUCCESSFUL
-- [ ] フロントエンド `npm run test:coverage` が 80% 以上を維持（IT9 245 件 + IT10 新規）
-- [ ] ArchUnit hard assertion すべて PASS（既存 4 件 + A4 Flyway × enum 同期テスト追加）
+- [x] 全 5 ms（bookingms / routingms / handlingms / billingms / trackingms）で `:check` BUILD SUCCESSFUL
+- [x] フロントエンド `npm run test:coverage` が 80% 以上を維持（IT9 245 件 + IT10 新規 = 247 件）
+- [x] ArchUnit hard assertion すべて PASS（既存 4 件）
+- [x] **A4 Flyway × enum 同期テスト 7 件 PASS**（ADR-0023 で migration SQL パース方式を採用、ArchUnit ではなく独自テスト方式）
 - [ ] SonarQube Quality Gate PASS（staging code で実機計測、A3.5）
 - [ ] Heroku staging app（authms / 5 ms / gatewayms × 7 + Aiven Kafka + PostgreSQL）が稼働
 - [ ] Playwright `cross-service.spec.ts` が staging に対して JWT 認証ヘッダ付きで全 PASS（A3.2）
