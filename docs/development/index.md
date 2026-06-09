@@ -22,7 +22,8 @@
 | IT6 | 2026-07-30 〜 2026-08-12 | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了（Release 2.0）|
 | IT7 | 2026-08-13 〜 2026-08-26 | [iteration_plan-7.md](iteration_plan-7.md) | [retrospective-7.md](retrospective-7.md) | [iteration_report-7.md](iteration_report-7.md) | 完了（Release 2.1、billingms 新設・精算）|
 | IT8 | 2026-08-27 〜 2026-09-09 | [iteration_plan-8.md](iteration_plan-8.md) | - | [iteration_report-8.md](iteration_report-8.md) | 完了（Release 1.0 候補、A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020 + H2 持ち越し全 8 件 + ADR-0021）|
-| IT9 | 2026-09-10 〜 2026-09-23（暫定）| [iteration_plan-9.md](iteration_plan-9.md)（スケルトン） | - | - | 未着手（ADR-0020 / 0021 実装 + 全 ms authenticated() 移行 + H1/H3 解消）|
+| IT9 | 2026-09-10 〜 2026-09-23 | [iteration_plan-9.md](iteration_plan-9.md) | [retrospective-9.md](retrospective-9.md) | [iteration_report-9.md](iteration_report-9.md) | 完了（Release 1.1 主要機能完全実装、Stripe webhook + AWS Secrets Manager + 認可基盤 + SendGrid WireMock、**8/8 SP**、IT8 review 11 件全解消）|
+| IT10 | 2026-06-08 〜 2026-06-19 | [iteration_plan-10.md](iteration_plan-10.md) | - | -（[journal-it10.md](journal-it10.md) 中間サマリ） | 進行中（Release 1.1 正式版昇格、A1 認可深層強化 + A2 fallback UX 改善 + A4 Flyway × enum 同期検証 完遂、A3 staging + A5 残作業は staging 実機環境構築フェーズ、**5/8 SP 達成・62.5%**、IT9 review 12 件中 9 件解消）|
 
 ### Release 1.0 完了報告書（暫定）
 
@@ -40,7 +41,9 @@
 | IT6 | 9 | 9 | 100% |
 | IT7 | 8 | 8 | 100% |
 | IT8 | 8 | 8 | 100% |
-| **累計** | **76** | **76** | **100%** |
+| IT9 | 8 | 8 | 100% |
+| IT10 | 8 | 5 | 62.5%（AI 単独完結部分、残 3 SP は staging 実機環境）|
+| **累計** | **92** | **89** | **96.7%** |
 
 ### フェーズ進捗
 
