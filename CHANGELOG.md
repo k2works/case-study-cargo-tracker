@@ -11,7 +11,7 @@
 
 IT10 staging 実機検証が完了次第、`v1.1.0` を正式タグ化（staging E2E 経由認可検証 + Stripe Test Mode webhook + Secrets Manager rotation 実機確認後）。
 
-残作業（A3 staging タスク）:
+### staging 実機残作業（人間判断・実機環境必要）
 
 - A3.1 Heroku staging app（dev plan）構築 + 各 ms デプロイ
 - A3.2 Playwright JWT 経由 E2E（`cross-service.spec.ts`）staging 実行
@@ -20,6 +20,23 @@ IT10 staging 実機検証が完了次第、`v1.1.0` を正式タグ化（staging
 - A3.5 SonarQube Quality Gate を staging code で実機計測
 - A3.9b Stripe Test Mode から `charge.refunded` / `charge.dispute.created` 送信 → skipped 動作検証
 - A3.10b rotation 失敗時の Grafana / PagerDuty 通知実機検証
+- A5.2 git tag `v1.1.0` + GitHub Release 公開
+- A5.3 README + `docs/index.md` に「本番デプロイ可能」宣言
+
+### v1.1.0 タグ化時点で含まれる IT10 後半の追加成果（中間レビュー解消 + 次イテレーション提案）
+
+`[1.1.0]` セクションに記載した IT10 主要実装に加えて、中間 self-review 実施後に AI Agent 単独完結フェーズで進めた以下のクロージング作業も v1.1.0 に含まれる:
+
+- IT10 中間レビュー L 優先度 4 件全件解消:
+  - L1: `PaymentGatewayWebhookController.receive()` の Optional パターンを `orElse(null)` + null チェックに整理（commit `04943b3a`）
+  - L2: 3 ms `*CheckConstraintTest` に「複数 ADD CONSTRAINT 順序ロバスト性テスト」を 1 件ずつ追加（commit `f66e8822`）
+  - L3: `markFailed` reason を `unsupported_event_type` / `missing_metadata` に分離 + US26 受入基準更新（commit `1c7ef1c0`）
+  - L4: README 主要機能見出しを「Release 1.1 候補 / IT10 進行中：実装完了、staging 検証中」に修正（commit `1c4ba54e`）
+- ADR-0023 起票（Flyway × enum 同期検証ルール、commit `5d291c9d`）
+- IT10 中間マルチパースペクティブ self-review 実施（commit `e307fa69`）+ 解消状況追跡セクション（commit `13475fae`）+ サマリ追記（commit `4ae6936b`）
+- `journal-it10.md` 中間サマリ作成・最新化（commits `70fefe38` / `b2dc0dba`）
+- 各 index 反映（release_plan / docs/index / docs/development/index / docs/review/index）
+- `iteration_plan-11.md` スケルトン作成（次イテレーション提案、commit `f93ee50f`）
 
 ---
 
