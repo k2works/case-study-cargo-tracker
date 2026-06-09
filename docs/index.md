@@ -19,9 +19,9 @@
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み（US 29 件、IT9 用 US26-29 追加済み） |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み（Axon Kafka + Heroku + Aiven 構成、IT9 設計要素先行反映済み） |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 29 件作成済み（リリース計画 + Release 1.0 報告書 + IT1-IT9 計画/ふりかえり/完了報告書 + IT10 正式版計画進行中、IT10 で **5/8 SP（62.5%）達成** + IT9 review 9 件解消 + 累計 89/92 SP・97%、残 3 SP は staging 実機環境）|
-| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み（IT8 レビュー追加） |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 18 件作成済み（ADR-0020 / 0021 追加） |
+| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 3 件作成済み（Kubernetes 運用手順書追加） |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 11 件作成済み（IT9 / IT10 レビュー追加） |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 19 件作成済み（ADR-0023 追加） |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 32 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -106,6 +106,7 @@
 | :--- | :--- |
 | [アプリケーション開発環境セットアップ手順書](./operation/アプリケーション開発環境セットアップ手順書.md) | ローカルアプリケーション開発環境の構築手順（Java 25 + Gradle + Kafka） |
 | [開発環境セットアップ手順書](./operation/開発環境セットアップ手順書.md) | Heroku Container Registry デプロイ手順（Axon Kafka + Aiven） |
+| [Kubernetes 運用手順書](./operation/Kubernetes運用手順書.md) | Kubernetes デプロイ・運用手順（Kustomize 版 `ops/k8s/` / Helm 版 `ops/helm/`、インフラ込み 7 ms） |
 
 ### レビュードキュメント
 
