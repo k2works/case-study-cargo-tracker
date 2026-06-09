@@ -35,6 +35,13 @@ const HELM_RELEASE = process.env.K8S_HELM_RELEASE || 'cargo-tracker';
 const INGRESS_HOST = process.env.K8S_INGRESS_HOST || 'cargo-tracker.local';
 
 /**
+ * Ingress 公開ホストポート（K8S_INGRESS_HOST_PORT で上書き可能、既定 8080）。
+ * port 80 はユーザー権限では bind できず sudo が必要なため、デフォルトは 8080。
+ * port 80 を使う場合は `sudo K8S_INGRESS_HOST_PORT=80 npx gulp k8s:expose:local` 等で実行。
+ */
+const INGRESS_HOST_PORT = process.env.K8S_INGRESS_HOST_PORT || '8080';
+
+/**
  * イメージビルド対象（7 ms + frontend）。
  * 既定では apps/backend を context に <name>/Dockerfile をビルドする。
  * frontend は dir/dockerfile を指定して apps/frontend をビルドする。
@@ -350,25 +357,37 @@ export default function (gulp) {
   });
 
   /**
-   * Ingress（ingress-nginx）を 127.0.0.1:80 へ公開（Ctrl+C で終了、起動したまま使う）。
+   * Ingress（ingress-nginx）を 127.0.0.1:${INGRESS_HOST_PORT} へ公開
+   * （Ctrl+C で終了、起動したまま使う）。
    * docker-desktop はノードが docker ネットワーク内のため LoadBalancer IP に
-   * ホストから直接届かない。本タスクで ${INGRESS_HOST} を 127.0.0.1 で利用可能にする。
+   * ホストから直接届かない。本タスクで ${INGRESS_HOST}:${INGRESS_HOST_PORT} を
+   * 127.0.0.1 で利用可能にする。
+   *
+   * port は既定 8080（ユーザー権限で bind 可能）。port 80 を使う場合は
+   * `sudo K8S_INGRESS_HOST_PORT=80 npx gulp k8s:expose:local` のように
+   * sudo + 環境変数で実行する。
+   *
    * 前提: hosts に "127.0.0.1 ${INGRESS_HOST}" を登録済みであること。
    */
   gulp.task('k8s:expose:local', (done) => {
     requireCommand('kubectl', 'kubectl を導入してください。');
-    console.log(`Ingress を http://${INGRESS_HOST}/ で公開します（このプロセスは起動したままにしてください）。`);
-    kubectl('-n ingress-nginx port-forward svc/ingress-nginx-controller 80:80');
+    const url = INGRESS_HOST_PORT === '80'
+      ? `http://${INGRESS_HOST}/`
+      : `http://${INGRESS_HOST}:${INGRESS_HOST_PORT}/`;
+    console.log(`Ingress を ${url} で公開します（このプロセスは起動したままにしてください）。`);
+    kubectl(`-n ingress-nginx port-forward svc/ingress-nginx-controller ${INGRESS_HOST_PORT}:80`);
     done();
   });
 
   /**
    * ローカルデプロイのフロントエンド（公開エントリポイント）をブラウザで開く。
-   * 事前に k8s:expose:local（Ingress を 80 番へ公開）を別ターミナルで起動し、
+   * 事前に k8s:expose:local（Ingress を ${INGRESS_HOST_PORT} 番へ公開）を別ターミナルで起動し、
    * hosts に "127.0.0.1 ${INGRESS_HOST}" を登録しておくこと。
    */
   gulp.task('k8s:open:local', (done) => {
-    const url = `http://${INGRESS_HOST}/`;
+    const url = INGRESS_HOST_PORT === '80'
+      ? `http://${INGRESS_HOST}/`
+      : `http://${INGRESS_HOST}:${INGRESS_HOST_PORT}/`;
     console.log(`ブラウザで ${url} を開きます。`);
     console.log('表示されない場合は別ターミナルで `npx gulp k8s:expose:local` を起動し、hosts に "127.0.0.1 ' + INGRESS_HOST + '" があるか確認してください。');
     try {
@@ -438,8 +457,9 @@ namespace: ${NAMESPACE} / cluster: ${CLUSTER_TYPE} / image: ${IMAGE_PREFIX}/<ms>
   k8s:status                namespace 内のリソース状態を表示
   k8s:smoke                 全 Deployment が Available になるまで待機
   k8s:port-forward          gatewayms を 8080 にポートフォワード
-  k8s:expose:local          Ingress を 127.0.0.1:80 へ公開（起動したまま使う）
-  k8s:open:local            ブラウザで http://${INGRESS_HOST}/ を開く
+  k8s:expose:local          Ingress を 127.0.0.1:${INGRESS_HOST_PORT} へ公開（起動したまま使う、
+                              既定 8080 でユーザー権限 OK、80 を使う場合は sudo + 環境変数）
+  k8s:open:local            ブラウザで ${INGRESS_HOST_PORT === '80' ? `http://${INGRESS_HOST}/` : `http://${INGRESS_HOST}:${INGRESS_HOST_PORT}/`} を開く
   k8s:clean                 namespace を PVC ごと完全削除（y/n 確認あり）
   k8s:help                  このヘルプを表示
 
@@ -451,6 +471,7 @@ namespace: ${NAMESPACE} / cluster: ${CLUSTER_TYPE} / image: ${IMAGE_PREFIX}/<ms>
   K8S_IMAGE_TAG             イメージタグ（既定: latest）
   K8S_HELM_RELEASE          Helm リリース名（既定: cargo-tracker）
   K8S_INGRESS_HOST          ブラウザアクセス用ホスト名（既定: cargo-tracker.local）
+  K8S_INGRESS_HOST_PORT     Ingress 公開ホストポート（既定: 8080、80 を使う場合は sudo 必要）
     `);
     done();
   });
