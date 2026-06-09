@@ -50,8 +50,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>local-h2 + Axon subscribing processor のため Webhook 受信から Projection 反映までは同期的だが、
  * EventBus dispatch の僅かな遅延を Awaitility で吸収する（atMost 5s に短縮）。各メソッドは UUID で
- * Invoice ID を独立採番するため、共有 Spring Context 上でも相互干渉しない。
- * {@link DirtiesContext} はクラス起動時のみ webhook secret を application properties で固定するため。</p>
+ * Invoice ID を独立採番する。{@link DirtiesContext} は {@code AFTER_EACH_TEST_METHOD} で
+ * 各テスト後に Spring Context（H2 in-memory + Axon Event Store）を再構築し、CI 環境で発生していた
+ * tracking processor による前テスト event の replay → PK 違反（payment_id 衝突）を構造的に防ぐ。</p>
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
@@ -61,15 +62,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "axon.axonserver.enabled=false",
                 "axon.kafka.publisher.enabled=false",
                 "axon.kafka.fetcher.enabled=false",
+                // application-local-h2.yml の axon.kafka.consumer.event-processor-mode=tracking が
+                // 強制 override する事象を回避するため subscribing に上書きする（CI で PK 違反 flaky
+                // の原因。memory: trackingms-spring-context-event-store-pollution 同種）。
+                "axon.kafka.consumer.event-processor-mode=subscribing",
                 "axon.eventhandling.processors.local-billing.mode=subscribing",
                 "axon.eventhandling.processors.cross-billing.mode=subscribing",
                 "axon.eventhandling.processors.outbound-billing-notification.mode=subscribing",
-                "app.dev-seed.enabled=false"
+                "app.dev-seed.enabled=false",
+                // 他の @SpringBootTest クラスと H2 in-memory DB を共有しないため URL を unique 化
+                // （application-local-h2.yml の jdbc:h2:mem:billingdb;DB_CLOSE_DELAY=-1 は JVM 内
+                // で共有され、他クラスの Event Store / payment テーブル状態が引き継がれる）
+                "spring.datasource.url=jdbc:h2:mem:billingdb_webhook_it;MODE=PostgreSQL;DB_CLOSE_DELAY=-1"
         }
 )
 @AutoConfigureMockMvc
 @ActiveProfiles("local-h2")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class PaymentGatewayWebhookIntegrationTest {
 
     private static final String SIGNING_SECRET = "whsec_test_secret_123456789012345678901234";

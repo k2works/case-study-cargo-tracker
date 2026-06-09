@@ -64,34 +64,60 @@ class OverdueSchedulerShedLockIntegrationTest {
         AtomicInteger instance1FiredCount = new AtomicInteger();
         AtomicInteger instance2FiredCount = new AtomicInteger();
 
+        // CountDownLatch で両 instance が「同時刻に lock 取得試行」する状況を厳密に再現する。
+        // 元実装は ExecutorService に submit → awaitTermination で全完了を待つだけだったため、
+        // CI 環境（thread scheduling が遅延）で Thread1 が unlock 完了 → Thread2 が lock 取得
+        // という直列順序になり、両 instance が処理して 6 件発火する flaky が発生していた。
+        // start latch で両 thread を「lock 試行直前」まで待機させ、同時に release することで
+        // ADR-0017 が保証する「並列発火時に 1 instance のみが lock 取得」を構造的に検証する。
+        java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch doneLatch = new java.util.concurrent.CountDownLatch(2);
+
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         executor.submit(() -> {
-            Optional<SimpleLock> lock = sharedLockProvider.lock(
-                    new LockConfiguration(java.time.Instant.now(),
-                            "billing-overdue-scheduler",
-                            Duration.ofHours(19),
-                            Duration.ofHours(5)));
-            if (lock.isPresent()) {
-                instance1FiredCount.set(scheduler.runOverdueDetection());
-                lock.get().unlock();
+            try {
+                startLatch.await();
+                Optional<SimpleLock> lock = sharedLockProvider.lock(
+                        new LockConfiguration(java.time.Instant.now(),
+                                "billing-overdue-scheduler",
+                                Duration.ofHours(19),
+                                Duration.ofHours(5)));
+                if (lock.isPresent()) {
+                    instance1FiredCount.set(scheduler.runOverdueDetection());
+                    lock.get().unlock();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                doneLatch.countDown();
             }
         });
 
         executor.submit(() -> {
-            Optional<SimpleLock> lock = sharedLockProvider.lock(
-                    new LockConfiguration(java.time.Instant.now(),
-                            "billing-overdue-scheduler",
-                            Duration.ofHours(19),
-                            Duration.ofHours(5)));
-            if (lock.isPresent()) {
-                instance2FiredCount.set(scheduler.runOverdueDetection());
-                lock.get().unlock();
+            try {
+                startLatch.await();
+                Optional<SimpleLock> lock = sharedLockProvider.lock(
+                        new LockConfiguration(java.time.Instant.now(),
+                                "billing-overdue-scheduler",
+                                Duration.ofHours(19),
+                                Duration.ofHours(5)));
+                if (lock.isPresent()) {
+                    instance2FiredCount.set(scheduler.runOverdueDetection());
+                    lock.get().unlock();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                doneLatch.countDown();
             }
         });
 
+        // 両 thread が startLatch.await() で待機している状態から同時 release
+        startLatch.countDown();
+        doneLatch.await(10, TimeUnit.SECONDS);
         executor.shutdown();
-        executor.awaitTermination(10, TimeUnit.SECONDS);
+        executor.awaitTermination(5, TimeUnit.SECONDS);
 
         // どちらか一方のみが処理（3 件発火）、他方は lock 取れず 0 件
         int totalFired = instance1FiredCount.get() + instance2FiredCount.get();
