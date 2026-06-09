@@ -332,12 +332,14 @@ export default function(gulp) {
   // local-docker プロファイル運用タスク
   //
   // docker-compose.yml と application-local-docker.yml で構成する
-  // フルスタック（Kafka + ZooKeeper + PostgreSQL + authms + routingms +
-  // gatewayms）の構築・起動・停止・リセット・疎通確認を提供する。
+  // フルスタック（Kafka + ZooKeeper + PostgreSQL + authms + bookingms +
+  // routingms + trackingms + handlingms + billingms + gatewayms）の
+  // 構築・起動・停止・リセット・疎通確認を提供する。
   // ──────────────────────────────────────────
 
   /**
-   * 全サービスの Docker イメージをビルド
+   * 全サービス（インフラ + 7 ms）の Docker イメージをビルド
+   * 対象: authms / bookingms / routingms / trackingms / handlingms / billingms / gatewayms
    */
   gulp.task('local-docker:build', (done) => {
     if (!isDockerAvailable()) {
@@ -349,7 +351,9 @@ export default function(gulp) {
   });
 
   /**
-   * 全サービスを起動（Kafka + ZooKeeper + PostgreSQL + authms + routingms + gatewayms）
+   * 全サービスを起動
+   * インフラ: Kafka + ZooKeeper + PostgreSQL
+   * アプリ: authms + bookingms + routingms + trackingms + handlingms + billingms + gatewayms
    */
   gulp.task('local-docker:up', (done) => {
     if (!isDockerAvailable()) {
@@ -386,8 +390,8 @@ export default function(gulp) {
   });
 
   /**
-   * authms / bookingms / routingms / trackingms / handlingms / gatewayms の
-   * health エンドポイント疎通確認
+   * authms / bookingms / routingms / trackingms / handlingms / billingms / gatewayms の
+   * health エンドポイント疎通確認（全 7 ms）
    */
   gulp.task('local-docker:smoke', (done) => {
     const targets = [
@@ -396,6 +400,7 @@ export default function(gulp) {
       { name: 'routingms',  url: 'http://localhost:8083/actuator/health' },
       { name: 'trackingms', url: 'http://localhost:8084/actuator/health' },
       { name: 'handlingms', url: 'http://localhost:8085/actuator/health' },
+      { name: 'billingms',  url: 'http://localhost:8086/actuator/health' },
       { name: 'gatewayms',  url: 'http://localhost:8080/actuator/health' },
     ];
     runSmoke(targets, done);
@@ -483,8 +488,11 @@ export default function(gulp) {
   dev:infra:logs            コンテナログ表示
 
 【local-docker プロファイル（フルスタック）】
-  local-docker:build        全サービスの Docker イメージをビルド
-  local-docker:up           全サービス起動（インフラ + authms + routingms + gatewayms）
+  local-docker:build        全サービス（インフラ + 7 ms）の Docker イメージをビルド
+  local-docker:up           全サービス起動（Kafka + ZooKeeper + Postgres + 7 ms）
+  local-docker:smoke        全 7 ms の /actuator/health 疎通確認（gatewayms:8080,
+                              authms:8081, bookingms:8082, routingms:8083,
+                              trackingms:8084, handlingms:8085, billingms:8086）
   local-docker:down         コンテナ停止（ボリュームは保持）
   local-docker:clean        完全リセット（実行前に y/n 確認、Kafka / DB データを破棄）
   local-docker:smoke        authms / routingms / gatewayms の health 疎通確認

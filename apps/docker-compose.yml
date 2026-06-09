@@ -9,6 +9,11 @@
 #   npx gulp local-docker:up
 #
 # シークレットはすべてリポジトリ直下の .env から読み込む（ハードコード禁止）。
+#
+# サービス構成（ポート割り当て）:
+#   インフラ:  zookeeper(2181) / kafka(9092) / postgresql(5432)
+#   アプリ:   gatewayms(8080) / authms(8081) / bookingms(8082) / routingms(8083)
+#             trackingms(8084) / handlingms(8085) / billingms(8086)
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -59,7 +64,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # ポート割り当て: authms=8081, bookingms=8082, routingms=8083, gatewayms=8080
   authms:
     build:
       context: ./backend
@@ -82,32 +86,6 @@ services:
     restart: on-failure
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8081/actuator/health || exit 1"]
-      interval: 30s
-      timeout: 5s
-      start_period: 90s
-      retries: 5
-
-  routingms:
-    build:
-      context: ./backend
-      dockerfile: routingms/Dockerfile
-    container_name: cargo-routingms
-    ports:
-      - "8083:8083"
-    environment:
-      SPRING_PROFILES_ACTIVE: local-docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/routing_read_db
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    depends_on:
-      postgresql:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-    restart: on-failure
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8083/actuator/health || exit 1"]
       interval: 30s
       timeout: 5s
       start_period: 90s
@@ -139,6 +117,128 @@ services:
       start_period: 90s
       retries: 5
 
+  routingms:
+    build:
+      context: ./backend
+      dockerfile: routingms/Dockerfile
+    container_name: cargo-routingms
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/routing_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8083/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+
+  # trackingms（IT5 新設、追跡 + 公開照会 + SendGrid 通知 + ADR-0021 AWS Secrets Manager rotation）
+  trackingms:
+    build:
+      context: ./backend
+      dockerfile: trackingms/Dockerfile
+    container_name: cargo-trackingms
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/tracking_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # 公開追跡照会 JWT 署名鍵（IT8 / ADR-0013、IT9 / US27 で AWS Secrets Manager 移行可能）
+      TRACKING_PUBLIC_TOKEN_SECRET: ${TRACKING_PUBLIC_TOKEN_SECRET:-dev-only-tracking-public-token-secret-32+bytes}
+      TRACKING_PUBLIC_TOKEN_PREVIOUS_SECRET: ${TRACKING_PUBLIC_TOKEN_PREVIOUS_SECRET:-}
+      # SendGrid Dynamic Templates（IT8 / ADR-0018、未設定時はログ通知に縮退）
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-noreply@cargo-tracker.example.com}
+      SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME:-Cargo Tracker}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8084/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+
+  # handlingms（IT5 新設、港湾荷役作業記録 + IT10 A4.2a Flyway × HandlingType 同期検証）
+  handlingms:
+    build:
+      context: ./backend
+      dockerfile: handlingms/Dockerfile
+    container_name: cargo-handlingms
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/handling_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8085/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+
+  # billingms（IT7 新設、精算 + IT9 / US26 Stripe webhook 部分入金 + IT10 認可深層強化）
+  billingms:
+    build:
+      context: ./backend
+      dockerfile: billingms/Dockerfile
+    container_name: cargo-billingms
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: local-docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/billing_read_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # Stripe webhook 設定（IT9 / US26 / ADR-0020、未設定時は 503 disabled）
+      BILLING_STRIPE_WEBHOOK_SIGNING_SECRET: ${STRIPE_WEBHOOK_SIGNING_SECRET:-}
+      BILLING_STRIPE_WEBHOOK_TOLERANCE_SECONDS: ${STRIPE_WEBHOOK_TOLERANCE_SECONDS:-300}
+      # SendGrid Dynamic Templates（IT8 / ADR-0018、未設定時はログ通知に縮退）
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-noreply@cargo-tracker.example.com}
+      SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME:-Cargo Tracker}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8086/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+
+  # gatewayms（API Gateway + JWT 検証 + 全 ms へのリバースプロキシ、IT10 A1 認可深層強化対応）
   gatewayms:
     build:
       context: ./backend
@@ -148,15 +248,25 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: local-docker
+      JWT_SECRET: ${JWT_SECRET}
       AUTHMS_URL: http://authms:8081
       BOOKINGMS_URL: http://bookingms:8082
       ROUTINGMS_URL: http://routingms:8083
+      TRACKINGMS_URL: http://trackingms:8084
+      HANDLINGMS_URL: http://handlingms:8085
+      BILLINGMS_URL: http://billingms:8086
     depends_on:
       authms:
         condition: service_healthy
       bookingms:
         condition: service_healthy
       routingms:
+        condition: service_healthy
+      trackingms:
+        condition: service_healthy
+      handlingms:
+        condition: service_healthy
+      billingms:
         condition: service_healthy
     restart: on-failure
     healthcheck:
