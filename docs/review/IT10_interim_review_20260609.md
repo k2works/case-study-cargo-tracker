@@ -20,6 +20,8 @@
 
 **総評**: IT9 マルチパースペクティブレビュー指摘 12 件中 9 件（H3 / H4 / H5 / H6 / H7 / H8 / H9 / H10 / M3 / M8 / L5）を IT10 内で構造的に解消。ADR-0023 起票で運用ルールの永続化も達成。Backend 変更を最小化する判断（A2 で frontend のみで完結、A3.10a で MeterRegistry 注入のみ）は YAGNI と整合的。一方、staging 実機完了で初めて発覚しうる **PreAuthFilter 単独テストの統合カバレッジ不足**、**境界値テストの実 SDK 互換性未確認**、**メトリクス命名規則の Prometheus alert manager 適合性未確認** が残課題。
 
+**中間レビュー後の追加進展（2026-06-09）**: 本レビューで挙げた L 優先度 4 件（L1: Optional パターン書き換え / L2: 順序ロバスト性テスト 3 ms 横展開 / L3: markFailed reason 分離 + US26 受入基準更新 / L4: README 見出し正確性）を全件解消（コミット 1c4ba54e / 04943b3a / 1c7ef1c0 / f66e8822）。続けて、本レビューの「IT11 持ち越し候補」4 項目（H1 / M1 共通化、H3 / M2 SDK contract test、M3 Prometheus alert rule、A3.9a 続編 US28 / US29 候補）を起点に [iteration_plan-11（スケルトン）](../development/iteration_plan-11.md) を作成（B1-B5 / 8 SP / 29.5h 仮構成、staging 完了後の正式版昇格前提）。残 H1-H3 / M1-M4 は中間レビューの判定通り staging 実機 / staging 安定確認後で消化予定。
+
 ---
 
 ## 高優先度（staging E2E 前に解消推奨、3 件）
