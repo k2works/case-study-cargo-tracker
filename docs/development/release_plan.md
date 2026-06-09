@@ -405,7 +405,7 @@ xychart-beta
     line "実績" [92, 82, 72, 62, 51, 41, 32, 24, 16, 8, 3]
 ```
 
-> **実績（IT10 進行中、2026-06-09 時点）**: Phase 1（41 SP）+ IT5-IT9（43 SP）+ IT10（**5/8 SP**）完了。**累計 89/92 SP（97%）達成**。IT10 では Ralph Loop モード 8 iteration で **9 コミット**、A1 認可深層強化（PreAuthorize + PreAuthFilter + httpBasic 無効化、IT9 H3 / H4 / H10 解消）+ A2 fallback UX 改善（CircuitBreaker 連動 alert-warning、IT9 M3 解消）+ A4 Flyway × enum 同期検証（3 ms × CHECK 制約 + 7 件テスト、IT9 V5 再発防止）+ A3 部分実装（webhook IT 4 分割、tolerance Clock 注入境界値、LocalStack tag 除外、refund/dispute 仕様、rotation 監視メトリクス、IT9 H5-H9 解消）+ A5 ドキュメント整備（CHANGELOG + README + Release ライン経緯、IT9 M8 / L5 解消）を達成。**残 3 SP は全て Heroku staging 実機環境必要**: A3.1-A3.5 + A3.9b + A3.10b（staging E2E / Stripe Test Mode / Secrets Manager rotation / SonarQube / 通知実機）と A5.2-A5.3（`v1.1.0` GitHub Release tag + 本番デプロイ可能宣言）。staging 構築完了で Release 1.1 正式版（v1.1.0）昇格可能。
+> **実績（IT10 進行中、2026-06-09 時点）**: Phase 1（41 SP）+ IT5-IT9（43 SP）+ IT10（**5/8 SP**）完了。**累計 89/92 SP（97%）達成**。IT10 では Ralph Loop モード 12 iteration で **21+ コミット**（IT10 関連、ADR-0023 起票 + 中間 self-review + 全 index 反映 + メモリ保存含む）、A1 認可深層強化（PreAuthorize + PreAuthFilter + httpBasic 無効化、IT9 H3 / H4 / H10 解消）+ A2 fallback UX 改善（CircuitBreaker 連動 alert-warning、IT9 M3 解消）+ A4 Flyway × enum 同期検証（3 ms × CHECK 制約 + 7 件テスト、IT9 V5 再発防止）+ A3 部分実装（webhook IT 4 分割、tolerance Clock 注入境界値、LocalStack tag 除外、refund/dispute 仕様、rotation 監視メトリクス、IT9 H5-H9 解消）+ A5 ドキュメント整備（CHANGELOG + README + Release ライン経緯、IT9 M8 / L5 解消）+ ADR-0023 + IT10 中間レビュー（高 3 / 中 4 / 低 4 / 良 6 + staging 連動 S1-S5）を達成。**残 3 SP は全て Heroku staging 実機環境必要**: A3.1-A3.5 + A3.9b + A3.10b（staging E2E / Stripe Test Mode / Secrets Manager rotation / SonarQube / 通知実機）と A5.2-A5.3（`v1.1.0` GitHub Release tag + 本番デプロイ可能宣言）。staging 構築完了で Release 1.1 正式版（v1.1.0）昇格可能。
 
 ---
 
