@@ -253,6 +253,7 @@ package "Security 監視" #LightPink {
 | WAF ブロック数 | AWS WAF | 1 時間に 1,000 件超 |
 | 管理者操作 | 監査ログ | 全件 Slack `#ops-audit` に通知 |
 | ロール変更 | 監査ログ | 全件 セキュリティ担当に通知 |
+| **公開トークン secret rotation 失敗** | Micrometer (`tracking.public_token.refresh.failure` Counter / `tracking.public_token.refresh.consecutive_failures` Gauge) | **Gauge ≥ 3 (連続失敗 3 回)** で Critical: PagerDuty + Slack `#sec-incident`。Counter 増分（5 分窓）≥ 5 で Warning: Slack `#sec-monitoring`。IT10 A3.10 / US32 / IT9 H9。 |
 
 ### 3.3 ダッシュボード
 

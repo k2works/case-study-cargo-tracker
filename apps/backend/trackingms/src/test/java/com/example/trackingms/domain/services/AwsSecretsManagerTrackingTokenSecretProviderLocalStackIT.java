@@ -1,5 +1,6 @@
 package com.example.trackingms.domain.services;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -77,7 +78,7 @@ class AwsSecretsManagerTrackingTokenSecretProviderLocalStackIT {
                 .build());
 
         AwsSecretsManagerTrackingTokenSecretProvider provider =
-                new AwsSecretsManagerTrackingTokenSecretProvider(client, secretId);
+                new AwsSecretsManagerTrackingTokenSecretProvider(client, secretId, new SimpleMeterRegistry());
         provider.init();
 
         assertThat(provider.activeSigningKey()).isNotNull();
@@ -95,7 +96,7 @@ class AwsSecretsManagerTrackingTokenSecretProviderLocalStackIT {
         String initialVersionId = initialCreate.versionId();
 
         AwsSecretsManagerTrackingTokenSecretProvider provider =
-                new AwsSecretsManagerTrackingTokenSecretProvider(client, secretId);
+                new AwsSecretsManagerTrackingTokenSecretProvider(client, secretId, new SimpleMeterRegistry());
         provider.init();
         var initialActiveKey = provider.activeSigningKey();
         assertThat(provider.verifyingKeys()).hasSize(1);

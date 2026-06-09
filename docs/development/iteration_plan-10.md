@@ -154,7 +154,8 @@
 | 3.7 | **IT9 レビュー H6**: HMAC tolerance 境界値（299s / 300s / 301s）テスト + Clock 注入で時刻固定（Controller 前段 tolerance 検証 + 6 件の境界値テスト追加） | 1.5h | k2works | [x] |
 | 3.8 | **IT9 レビュー H7**: `:check` から `localstack-integration` タグを除外する設定を `build.gradle` に明示、4 分加算の解消確認（`-PincludeLocalstackIntegration=true` で明示実行可能） | 0.5h | k2works | [x] |
 | 3.9 | **IT9 レビュー H8**: `charge.refunded` / `charge.dispute.created` 業務シナリオを US26 受入基準に追加、staging で実機検証 | 2h | - | [ ] |
-| 3.10 | **IT9 レビュー H9**: rotation 失敗時の PagerDuty/Slack 通知（Micrometer Counter + アラート閾値）設計と staging 動作確認 | 2h | - | [ ] |
+| 3.10a | **IT9 レビュー H9**: rotation 失敗時の Micrometer Counter（success/failure）+ 連続失敗 Gauge + operation.md アラート閾値（連続 3 回 = Critical）設計 + 単体テスト 3 件 | 1.5h | k2works | [x] |
+| 3.10b | staging 動作確認（連続失敗時の Grafana / PagerDuty 通知実機検証） | 0.5h | - | [ ] |
 
 **小計**: 16h（理想時間）
 

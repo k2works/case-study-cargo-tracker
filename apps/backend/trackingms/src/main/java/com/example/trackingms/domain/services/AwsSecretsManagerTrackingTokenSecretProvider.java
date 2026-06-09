@@ -1,6 +1,8 @@
 package com.example.trackingms.domain.services;
 
 import io.jsonwebtoken.security.Keys;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * AWS Secrets Manager 経由で公開追跡トークンの secret を取得する
@@ -54,12 +57,34 @@ public class AwsSecretsManagerTrackingTokenSecretProvider implements TrackingTok
     private volatile SecretKey activeKey;
     private volatile List<SecretKey> verifyingKeys = List.of();
 
+    // 監視メトリクス（IT10 A3.10 / US32 / IT9 H9）。Prometheus / Grafana 経由で
+    // refresh 失敗率を監視し、tracking_public_token_refresh_consecutive_failures
+    // が閾値（既定: 3 回連続）を超えたら PagerDuty / Slack へ通知する運用前提。
+    private final Counter refreshSuccessCounter;
+    private final Counter refreshFailureCounter;
+    private final AtomicLong consecutiveFailures = new AtomicLong(0);
+
     public AwsSecretsManagerTrackingTokenSecretProvider(
             SecretsManagerClient client,
-            @Value("${tracking.public-token.aws.secret-id}") String secretId
+            @Value("${tracking.public-token.aws.secret-id}") String secretId,
+            MeterRegistry meterRegistry
     ) {
         this.client = client;
         this.secretId = secretId;
+        this.refreshSuccessCounter = Counter.builder("tracking.public_token.refresh.success")
+                .description("AWS Secrets Manager AWSCURRENT 取得に成功した回数")
+                .tag("secret_id", secretId)
+                .register(meterRegistry);
+        this.refreshFailureCounter = Counter.builder("tracking.public_token.refresh.failure")
+                .description("AWS Secrets Manager AWSCURRENT 取得に失敗した回数")
+                .tag("secret_id", secretId)
+                .register(meterRegistry);
+        meterRegistry.gauge(
+                "tracking.public_token.refresh.consecutive_failures",
+                List.of(io.micrometer.core.instrument.Tag.of("secret_id", secretId)),
+                consecutiveFailures,
+                AtomicLong::doubleValue
+        );
     }
 
     /**
@@ -85,7 +110,10 @@ public class AwsSecretsManagerTrackingTokenSecretProvider implements TrackingTok
         SecretKey current = fetchKey(STAGE_CURRENT);
         SecretKey previous = fetchKeyOptional(STAGE_PREVIOUS);
         if (current == null) {
-            log.warn("AWS Secrets Manager AWSCURRENT 取得失敗（前回値を維持）: secret_id={}", secretId);
+            refreshFailureCounter.increment();
+            long failures = consecutiveFailures.incrementAndGet();
+            log.warn("AWS Secrets Manager AWSCURRENT 取得失敗（前回値を維持）: secret_id={}, "
+                    + "consecutive_failures={}", secretId, failures);
             return;
         }
         List<SecretKey> newVerifying = new ArrayList<>();
@@ -95,6 +123,8 @@ public class AwsSecretsManagerTrackingTokenSecretProvider implements TrackingTok
         }
         this.activeKey = current;
         this.verifyingKeys = List.copyOf(newVerifying);
+        refreshSuccessCounter.increment();
+        consecutiveFailures.set(0);
         log.info("AWS Secrets Manager refresh 完了: secret_id={}, verifying_keys={}件",
                 secretId, newVerifying.size());
     }
