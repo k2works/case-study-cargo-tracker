@@ -75,7 +75,7 @@ IT10 進行中の作業ログ。staging 実機検証完了後に `iteration_repo
 |---|---|---|
 | A5.1 | CHANGELOG.md `[1.1.0] — 2026-06-09` セクション追加 + 旧 IT9 セクションを `[1.1.0-candidate]` に降格 | 2a8faa6b |
 | A5.4 | CHANGELOG 末尾に「Release ライン経緯」セクション追加（IT9 M8 解消） | 2a8faa6b |
-| A5.5 | README に「主要機能（Release 1.1 / IT10 時点）」表追加（IT9 L5 解消） | 2a8faa6b |
+| A5.5 | README に「主要機能（Release 1.1 候補 / IT10 進行中）」表追加（IT9 L5 解消、staging 検証中表記は中間レビュー L4 対応で後続調整） | 2a8faa6b / 033a80fe |
 | A5.6 | （IT9 クロージング作業として前倒し完了済み） | (IT9 期) |
 
 #### staging 実機検証完了後の作業
