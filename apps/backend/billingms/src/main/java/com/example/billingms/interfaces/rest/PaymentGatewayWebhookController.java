@@ -101,13 +101,12 @@ public class PaymentGatewayWebhookController {
         // Stripe SDK の Webhook.constructEvent は内部で System.currentTimeMillis() を使うため
         // tolerance 判定を Clock 制御できない。本前段チェックでスキューを Clock 基準で判定し、
         // Stripe SDK には tolerance=0 ではなく標準値を渡して HMAC 検証のみを担当させる。
-        Optional<Long> timestampOpt = extractTimestamp(signature);
-        if (timestampOpt.isEmpty()) {
+        Long timestamp = extractTimestamp(signature).orElse(null);
+        if (timestamp == null) {
             log.warn("Stripe webhook 署名ヘッダから timestamp を抽出できません: {}", signature);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid signature");
         }
-        long nowEpochSeconds = clock.instant().getEpochSecond();
-        long skewSeconds = Math.abs(nowEpochSeconds - timestampOpt.get());
+        long skewSeconds = Math.abs(clock.instant().getEpochSecond() - timestamp);
         if (skewSeconds > properties.toleranceSeconds()) {
             log.warn("Stripe webhook timestamp が tolerance を超過: skew={}s, tolerance={}s",
                     skewSeconds, properties.toleranceSeconds());

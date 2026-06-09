@@ -101,8 +101,9 @@ IT11 では、staging で安定動作確認後に:
 | ID | 解消方法 | コミット |
 |---|---|---|
 | L4 | README 主要機能セクション見出しを「Release 1.1 候補 / IT10 進行中：実装完了、staging 検証中」に修正、CHANGELOG `[Unreleased]` セクションの v1.1.0 正式タグ化記述と整合化 | 1c4ba54e |
+| L1 | `PaymentGatewayWebhookController.receive()` の `Optional<Long> timestampOpt = extractTimestamp(...)` + `if (isEmpty())` + `timestampOpt.get()` を `Long timestamp = extractTimestamp(...).orElse(null)` + `if (timestamp == null)` に書き換え。null チェック直後の `Long` 直接利用で `.get()` 呼び出しが消え、Optional の二重抽出が解消。境界値 6 件 + 既存 9 件全 PASS | （本ターン） |
 
-残 H1 / H2 / H3 / M1-M4 / L1 / L2 / L3 は中間レビューの判定通り（H1 / M1 は staging 安定確認後、L1-L3 は Release 1.2 以降検討、H3 / M2 / M3 は staging 実機タスクに連動）。
+残 H1 / H2 / H3 / M1-M4 / L2 / L3 は中間レビューの判定通り（H1 / M1 は staging 安定確認後、L2 / L3 は Release 1.2 以降検討、H3 / M2 / M3 は staging 実機タスクに連動）。
 
 ## 関連
 
