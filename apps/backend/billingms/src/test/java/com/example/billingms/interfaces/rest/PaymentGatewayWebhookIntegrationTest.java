@@ -35,21 +35,23 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Stripe webhook 統合テスト（IT9 A1.6 / ADR-0020 / US26）。
+ * Stripe webhook 統合テスト（IT9 A1.6 / ADR-0020 / US26、IT10 A3.6 で分割）。
  *
  * <p>@SpringBootTest で billingms 全体を起動し、Webhook 受信 → HMAC 検証 → 冪等性チェック →
- * Invoice 集約 → Projection 反映までの一連の E2E フローを実 HTTP（MockMvc）で検証する。</p>
+ * Invoice 集約 → Projection 反映までの E2E フローを実 HTTP（MockMvc）で検証する。</p>
  *
- * <p>シナリオ:</p>
- * <ol>
- *   <li>事前準備: CalculateInvoice + Issue で INVOICED 状態の Invoice を作成</li>
- *   <li>Stripe webhook（部分入金）を POST → 200 processed + PARTIALLY_PAID + payment.is_partial=TRUE</li>
- *   <li>同一 event_id 再送 → 200 already processed（副作用なし）</li>
- *   <li>残額入金 webhook → 200 processed + PAID + paid_so_far=total_amount</li>
- * </ol>
+ * <p>シナリオ別メソッド構成（IT9 レビュー H5 / IT10 A3.6）:</p>
+ * <ul>
+ *   <li>{@link #部分入金webhookでPARTIALLY_PAIDに遷移し投影に反映される()}</li>
+ *   <li>{@link #同一event_id再送は冪等で副作用が発生しない()}</li>
+ *   <li>{@link #残額入金webhookでPAIDに遷移する()}</li>
+ *   <li>{@link #不正な署名のwebhookは401で拒否され投影に影響しない()}</li>
+ * </ul>
  *
- * <p>local-h2 + Axon subscribing processor のため、Webhook 受信から Projection 反映までは同期的。
- * @DirtiesContext は Webhook secret の application properties override 競合回避用。</p>
+ * <p>local-h2 + Axon subscribing processor のため Webhook 受信から Projection 反映までは同期的だが、
+ * EventBus dispatch の僅かな遅延を Awaitility で吸収する（atMost 5s に短縮）。各メソッドは UUID で
+ * Invoice ID を独立採番するため、共有 Spring Context 上でも相互干渉しない。
+ * {@link DirtiesContext} はクラス起動時のみ webhook secret を application properties で固定するため。</p>
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
@@ -72,6 +74,7 @@ class PaymentGatewayWebhookIntegrationTest {
 
     private static final String SIGNING_SECRET = "whsec_test_secret_123456789012345678901234";
     private static final String WEBHOOK_PATH = "/api/v1/billing/webhooks/stripe";
+    private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(5);
 
     @Autowired
     private MockMvc mockMvc;
@@ -85,8 +88,104 @@ class PaymentGatewayWebhookIntegrationTest {
     private WebhookProcessedMapper webhookMapper;
 
     @Test
-    void Stripe部分入金webhookで集約と投影が反映される() throws Exception {
-        // Arrange: CalculateInvoice + Issue で INVOICED 状態を作成
+    void 部分入金webhookでPARTIALLY_PAIDに遷移し投影に反映される() throws Exception {
+        InvoicedFixture fx = arrangeInvoicedInvoice();
+        BigDecimal partialAmount = fx.totalAmount.divide(new BigDecimal("2"));
+
+        String eventId = newEventId();
+        String payload = buildPayload(eventId, fx.invoiceId, partialAmount, "pi_it_partial");
+        long timestamp = Instant.now().getEpochSecond();
+        String signature = buildStripeSignatureHeader(timestamp, payload, SIGNING_SECRET);
+
+        mockMvc.perform(post(WEBHOOK_PATH)
+                        .header("Stripe-Signature", signature)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk());
+
+        await().atMost(AWAIT_TIMEOUT).until(() ->
+                "PARTIALLY_PAID".equals(invoiceMapper.findByInvoiceId(fx.invoiceId).getBillingStatus()));
+
+        WebhookProcessed processed = webhookMapper.findByEventId(eventId);
+        assertThat(processed).isNotNull();
+        assertThat(processed.getProcessingStatus()).isEqualTo("PROCESSED");
+
+        InvoiceSummary partial = invoiceMapper.findByInvoiceId(fx.invoiceId);
+        assertThat(partial.getBillingStatus()).isEqualTo("PARTIALLY_PAID");
+
+        List<Payment> payments = paymentMapper.findByInvoiceId(fx.invoiceId);
+        assertThat(payments).hasSize(1);
+        assertThat(payments.get(0).getPaidAmount()).isEqualByComparingTo(partialAmount);
+    }
+
+    @Test
+    void 同一event_id再送は冪等で副作用が発生しない() throws Exception {
+        InvoicedFixture fx = arrangeInvoicedInvoice();
+        BigDecimal partialAmount = fx.totalAmount.divide(new BigDecimal("2"));
+
+        String eventId = newEventId();
+        String payload = buildPayload(eventId, fx.invoiceId, partialAmount, "pi_it_idemp");
+        long timestamp = Instant.now().getEpochSecond();
+        String signature = buildStripeSignatureHeader(timestamp, payload, SIGNING_SECRET);
+
+        mockMvc.perform(post(WEBHOOK_PATH)
+                        .header("Stripe-Signature", signature)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk());
+
+        await().atMost(AWAIT_TIMEOUT).until(() ->
+                "PARTIALLY_PAID".equals(invoiceMapper.findByInvoiceId(fx.invoiceId).getBillingStatus()));
+        assertThat(paymentMapper.findByInvoiceId(fx.invoiceId)).hasSize(1);
+
+        mockMvc.perform(post(WEBHOOK_PATH)
+                        .header("Stripe-Signature", signature)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk());
+
+        assertThat(paymentMapper.findByInvoiceId(fx.invoiceId))
+                .as("同一 event_id 再送後も payment は 1 件のまま")
+                .hasSize(1);
+    }
+
+    @Test
+    void 残額入金webhookでPAIDに遷移する() throws Exception {
+        InvoicedFixture fx = arrangeInvoicedInvoice();
+        BigDecimal partialAmount = fx.totalAmount.divide(new BigDecimal("2"));
+
+        sendWebhook(fx.invoiceId, partialAmount, "pi_it_remaining_1", newEventId());
+        await().atMost(AWAIT_TIMEOUT).until(() ->
+                "PARTIALLY_PAID".equals(invoiceMapper.findByInvoiceId(fx.invoiceId).getBillingStatus()));
+
+        BigDecimal remaining = fx.totalAmount.subtract(partialAmount);
+        sendWebhook(fx.invoiceId, remaining, "pi_it_remaining_2", newEventId());
+
+        await().atMost(AWAIT_TIMEOUT).until(() ->
+                "PAID".equals(invoiceMapper.findByInvoiceId(fx.invoiceId).getBillingStatus()));
+        assertThat(paymentMapper.findByInvoiceId(fx.invoiceId)).hasSize(2);
+    }
+
+    @Test
+    void 不正な署名のwebhookは401で拒否され投影に影響しない() throws Exception {
+        InvoicedFixture fx = arrangeInvoicedInvoice();
+
+        String eventId = "evt_it_bad_" + UUID.randomUUID().toString().substring(0, 8);
+        String payload = buildPayload(eventId, fx.invoiceId, new BigDecimal("100"), "pi_bad");
+        String invalidSig = "t=" + Instant.now().getEpochSecond()
+                + ",v1=0000000000000000000000000000000000000000000000000000000000000000";
+
+        mockMvc.perform(post(WEBHOOK_PATH)
+                        .header("Stripe-Signature", invalidSig)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(webhookMapper.findByEventId(eventId)).isNull();
+        assertThat(invoiceMapper.findByInvoiceId(fx.invoiceId).getBillingStatus()).isEqualTo("INVOICED");
+    }
+
+    private InvoicedFixture arrangeInvoicedInvoice() {
         String invoiceId = UUID.randomUUID().toString();
         String bookingId = UUID.randomUUID().toString();
         String shipperId = UUID.randomUUID().toString();
@@ -99,18 +198,17 @@ class PaymentGatewayWebhookIntegrationTest {
         );
         commandGateway.sendAndWait(new CalculateInvoiceCommand(invoiceId, bookingId, shipperId, transport));
         commandGateway.sendAndWait(new IssueInvoiceCommand(invoiceId));
-        // Axon EventHandler の async dispatch を待機
-        await().atMost(Duration.ofSeconds(15)).until(() ->
-                invoiceMapper.findByInvoiceId(invoiceId) != null
-                        && "INVOICED".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
+        await().atMost(AWAIT_TIMEOUT).until(() -> {
+            InvoiceSummary s = invoiceMapper.findByInvoiceId(invoiceId);
+            return s != null && "INVOICED".equals(s.getBillingStatus());
+        });
         InvoiceSummary issued = invoiceMapper.findByInvoiceId(invoiceId);
-        BigDecimal totalAmount = issued.getTotalAmount();
-        assertThat(issued.getBillingStatus()).isEqualTo("INVOICED");
-        BigDecimal partialAmount = totalAmount.divide(new BigDecimal("2"));
+        return new InvoicedFixture(invoiceId, issued.getTotalAmount());
+    }
 
-        // Act 1: 部分入金 webhook
-        String eventId = "evt_it_" + UUID.randomUUID().toString().substring(0, 8);
-        String payload = buildPayload(eventId, invoiceId, partialAmount, "pi_it_1");
+    private void sendWebhook(String invoiceId, BigDecimal amount, String paymentIntentId, String eventId)
+            throws Exception {
+        String payload = buildPayload(eventId, invoiceId, amount, paymentIntentId);
         long timestamp = Instant.now().getEpochSecond();
         String signature = buildStripeSignatureHeader(timestamp, payload, SIGNING_SECRET);
         mockMvc.perform(post(WEBHOOK_PATH)
@@ -118,78 +216,10 @@ class PaymentGatewayWebhookIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());
-
-        // Assert 1: PARTIALLY_PAID + is_partial payment + webhook PROCESSED
-        await().atMost(Duration.ofSeconds(15)).until(() ->
-                "PARTIALLY_PAID".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
-        WebhookProcessed processed = webhookMapper.findByEventId(eventId);
-        assertThat(processed).isNotNull();
-        assertThat(processed.getProcessingStatus()).isEqualTo("PROCESSED");
-        InvoiceSummary partial = invoiceMapper.findByInvoiceId(invoiceId);
-        assertThat(partial.getBillingStatus()).isEqualTo("PARTIALLY_PAID");
-        List<Payment> payments = paymentMapper.findByInvoiceId(invoiceId);
-        assertThat(payments).hasSize(1);
-        assertThat(payments.get(0).getPaidAmount()).isEqualByComparingTo(partialAmount);
-
-        // Act 2: 同一 event_id 再送（冪等性）
-        mockMvc.perform(post(WEBHOOK_PATH)
-                        .header("Stripe-Signature", signature)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
-                .andExpect(status().isOk());
-
-        // Assert 2: 投影は変わらない（payment 件数 1 件のまま）
-        assertThat(paymentMapper.findByInvoiceId(invoiceId)).hasSize(1);
-
-        // Act 3: 残額入金 webhook
-        String eventId2 = "evt_it_" + UUID.randomUUID().toString().substring(0, 8);
-        BigDecimal remaining = totalAmount.subtract(partialAmount);
-        String payload2 = buildPayload(eventId2, invoiceId, remaining, "pi_it_2");
-        long timestamp2 = Instant.now().getEpochSecond();
-        String signature2 = buildStripeSignatureHeader(timestamp2, payload2, SIGNING_SECRET);
-        mockMvc.perform(post(WEBHOOK_PATH)
-                        .header("Stripe-Signature", signature2)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload2))
-                .andExpect(status().isOk());
-
-        // Assert 3: PAID + payments 2 件
-        await().atMost(Duration.ofSeconds(15)).until(() ->
-                "PAID".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
-        InvoiceSummary paid = invoiceMapper.findByInvoiceId(invoiceId);
-        assertThat(paid.getBillingStatus()).isEqualTo("PAID");
-        assertThat(paymentMapper.findByInvoiceId(invoiceId)).hasSize(2);
     }
 
-    @Test
-    void 不正な署名のwebhookは401で拒否され投影に影響しない() throws Exception {
-        String invoiceId = UUID.randomUUID().toString();
-        String bookingId = UUID.randomUUID().toString();
-        String shipperId = UUID.randomUUID().toString();
-        TransportRecord transport = new TransportRecord(
-                new BigDecimal("1000"), new BigDecimal("500"), "GENERAL", 2, "JPY");
-        commandGateway.sendAndWait(new CalculateInvoiceCommand(invoiceId, bookingId, shipperId, transport));
-        commandGateway.sendAndWait(new IssueInvoiceCommand(invoiceId));
-        await().atMost(Duration.ofSeconds(15)).until(() ->
-                invoiceMapper.findByInvoiceId(invoiceId) != null
-                        && "INVOICED".equals(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()));
-
-        String eventId = "evt_it_bad_" + UUID.randomUUID().toString().substring(0, 8);
-        String payload = buildPayload(eventId, invoiceId, new BigDecimal("100"), "pi_bad");
-        // 不正な署名
-        String invalidSig = "t=" + Instant.now().getEpochSecond()
-                + ",v1=0000000000000000000000000000000000000000000000000000000000000000";
-
-        mockMvc.perform(post(WEBHOOK_PATH)
-                        .header("Stripe-Signature", invalidSig)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
-                .andExpect(status().isUnauthorized());
-
-        // webhook_processed には記録されない
-        assertThat(webhookMapper.findByEventId(eventId)).isNull();
-        // 状態は INVOICED のまま
-        assertThat(invoiceMapper.findByInvoiceId(invoiceId).getBillingStatus()).isEqualTo("INVOICED");
+    private static String newEventId() {
+        return "evt_it_" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     private static String buildPayload(String eventId, String invoiceId, BigDecimal amount, String pi) {
@@ -225,5 +255,8 @@ class PaymentGatewayWebhookIntegrationTest {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private record InvoicedFixture(String invoiceId, BigDecimal totalAmount) {
     }
 }

@@ -150,7 +150,7 @@
 | 3.3 | Stripe Test Mode webhook を staging billingms に向けて手動送信 + PARTIALLY_PAID 検証 | 1h | - | [ ] |
 | 3.4 | AWS Secrets Manager で `rotate-secret` 実行 + trackingms refresh ログ確認 | 1h | - | [ ] |
 | 3.5 | SonarQube Quality Gate を staging code で実機計測 | 1h | - | [ ] |
-| 3.6 | **IT9 レビュー H5**: `PaymentGatewayWebhookIntegrationTest` を 3 メソッドに分割、`await().atMost(5s)` に短縮 | 1h | - | [ ] |
+| 3.6 | **IT9 レビュー H5**: `PaymentGatewayWebhookIntegrationTest` を 3 シナリオ + 不正署名の計 4 メソッドに分割、`await().atMost(5s)` に短縮 | 1h | k2works | [x] |
 | 3.7 | **IT9 レビュー H6**: HMAC tolerance 境界値（299s / 300s / 301s）テスト + Clock 注入で時刻固定 | 1.5h | - | [ ] |
 | 3.8 | **IT9 レビュー H7**: `:check` から `localstack-integration` タグを除外する設定を `build.gradle` に明示、4 分加算の解消確認（`-PincludeLocalstackIntegration=true` で明示実行可能） | 0.5h | k2works | [x] |
 | 3.9 | **IT9 レビュー H8**: `charge.refunded` / `charge.dispute.created` 業務シナリオを US26 受入基準に追加、staging で実機検証 | 2h | - | [ ] |
