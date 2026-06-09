@@ -22,7 +22,7 @@ const NAMESPACE = process.env.K8S_NAMESPACE || 'cargo-tracker';
 const IMAGE_PREFIX = process.env.K8S_IMAGE_PREFIX || 'cargo-tracker';
 const IMAGE_TAG = process.env.K8S_IMAGE_TAG || 'latest';
 
-/** ローカルクラスタ種別（minikube | kind、K8S_CLUSTER_TYPE で上書き可能） */
+/** ローカルクラスタ種別（minikube | kind | docker-desktop、K8S_CLUSTER_TYPE で上書き可能） */
 const CLUSTER_TYPE = process.env.K8S_CLUSTER_TYPE || 'minikube';
 
 /** kind クラスタ名 */
@@ -142,11 +142,17 @@ function buildImage(svc) {
 }
 
 /**
- * ビルド済みイメージをローカルクラスタ（minikube / kind）へロードする。
+ * ビルド済みイメージをローカルクラスタ（minikube / kind / docker-desktop）へロードする。
+ * docker-desktop の場合、docker engine と Kubernetes が統合されているため
+ * docker build した時点でイメージがクラスタから参照可能 → load skip。
  * @param {{name: string}} svc - サービス定義
  */
 function loadImage(svc) {
   const image = `${IMAGE_PREFIX}/${svc.name}:${IMAGE_TAG}`;
+  if (CLUSTER_TYPE === 'docker-desktop') {
+    console.log(`[image load:docker-desktop] ${image} (skip: docker engine と統合済み)`);
+    return;
+  }
   let cmd;
   if (CLUSTER_TYPE === 'kind') {
     cmd = `kind load docker-image ${image} --name ${KIND_CLUSTER}`;
@@ -180,11 +186,19 @@ export default function (gulp) {
 
   /**
    * ビルド済みイメージをローカルクラスタへロード
-   * 種別は K8S_CLUSTER_TYPE（minikube | kind）で切り替える。
+   * 種別は K8S_CLUSTER_TYPE（minikube | kind | docker-desktop）で切り替える。
+   * docker-desktop の場合は docker engine と Kubernetes が統合されているため
+   * 追加ツール不要・load 不要（タスクは no-op で完了）。
    */
   gulp.task('k8s:images:load', (done) => {
+    if (CLUSTER_TYPE === 'docker-desktop') {
+      console.log('K8S_CLUSTER_TYPE=docker-desktop: image load を skip（docker engine と Kubernetes が統合済み）');
+      SERVICES.forEach(loadImage);
+      done();
+      return;
+    }
     const tool = CLUSTER_TYPE === 'kind' ? 'kind' : 'minikube';
-    requireCommand(tool, `${tool} を導入してください（K8S_CLUSTER_TYPE で切替）。`);
+    requireCommand(tool, `${tool} を導入してください（K8S_CLUSTER_TYPE で切替: minikube | kind | docker-desktop）。`);
     SERVICES.forEach(loadImage);
     done();
   });
@@ -366,7 +380,10 @@ namespace: ${NAMESPACE} / cluster: ${CLUSTER_TYPE} / image: ${IMAGE_PREFIX}/<ms>
 
 【イメージ準備（Kustomize / Helm 共通の前提）】
   k8s:images:build          全 7 ms + frontend の Docker イメージをビルド
-  k8s:images:load           イメージをローカルクラスタへロード（minikube/kind）
+  k8s:images:load           イメージをローカルクラスタへロード
+                              - minikube       : minikube image load
+                              - kind           : kind load docker-image
+                              - docker-desktop : skip（docker engine と統合）
   k8s:images                build → load を連続実行
 
 【Kustomize 版】
@@ -393,7 +410,7 @@ namespace: ${NAMESPACE} / cluster: ${CLUSTER_TYPE} / image: ${IMAGE_PREFIX}/<ms>
 
 【環境変数（.env、K8S_ プレフィックス）】
   K8S_NAMESPACE             namespace（既定: cargo-tracker）
-  K8S_CLUSTER_TYPE          minikube | kind（既定: minikube）
+  K8S_CLUSTER_TYPE          minikube | kind | docker-desktop（既定: minikube）
   K8S_KIND_CLUSTER          kind クラスタ名（既定: cargo-tracker）
   K8S_IMAGE_PREFIX          イメージ接頭辞（既定: cargo-tracker）
   K8S_IMAGE_TAG             イメージタグ（既定: latest）
