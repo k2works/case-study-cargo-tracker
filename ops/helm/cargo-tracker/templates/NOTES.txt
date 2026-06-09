@@ -1,18 +1,28 @@
 Cargo Tracker をデプロイしました（namespace: {{ .Release.Namespace }}）。
 
-Pod の起動状況:
-  kubectl -n {{ .Release.Namespace }} get pods -w
+公開エントリポイントは frontend（React SPA）です。/ で SPA を配信し、/api/ を gatewayms へプロキシします。
+
+1) Pod の起動を待つ:
+   kubectl -n {{ .Release.Namespace }} get pods -w
+   （または）  npx gulp k8s:smoke
 
 {{- if .Values.ingress.enabled }}
 
-API Gateway へのアクセス（Ingress 経由）:
-  http://{{ .Values.ingress.host }}/
-  ※ /etc/hosts に "<ingress IP> {{ .Values.ingress.host }}" を追加してください。
+2) ブラウザでアクセス（Ingress 経由、推奨）:
+   - 前提 a: ingress-nginx コントローラがクラスタに導入済みであること
+       npx gulp k8s:ingress:install   （未導入なら 1 度だけ実行。up タスクでも自動導入されます）
+   - 前提 b: hosts に "127.0.0.1 {{ .Values.ingress.host }}" を登録（要管理者）
+   - 別ターミナルで Ingress を公開（起動したまま）:
+       npx gulp k8s:expose:local      （既定 127.0.0.1:8080。Ctrl+C で終了）
+   - ブラウザで開く:
+       npx gulp k8s:open:local        （http://{{ .Values.ingress.host }}:8080/）
 {{- end }}
 
-ポートフォワードで直接確認する場合:
-  kubectl -n {{ .Release.Namespace }} port-forward svc/gatewayms 8080:8080
-  curl http://localhost:8080/actuator/health
+3) ポートフォワードで直接確認する場合（Ingress 不要）:
+   - フロントエンド: kubectl -n {{ .Release.Namespace }} port-forward svc/frontendms 8888:80
+       → http://localhost:8888
+   - gatewayms:     kubectl -n {{ .Release.Namespace }} port-forward svc/gatewayms 8080:8080
+       → curl http://localhost:8080/actuator/health
 
 警告: secret.* はデフォルトで開発用の値です。
   本番では `-f values-prod.yaml` 等で JWT_SECRET / POSTGRES_PASSWORD 等を必ず上書きしてください。

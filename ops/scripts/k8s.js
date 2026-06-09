@@ -42,6 +42,14 @@ const INGRESS_HOST = process.env.K8S_INGRESS_HOST || 'cargo-tracker.local';
 const INGRESS_HOST_PORT = process.env.K8S_INGRESS_HOST_PORT || '8080';
 
 /**
+ * ingress-nginx コントローラのインストール用マニフェスト（K8S_INGRESS_NGINX_MANIFEST で上書き可能）。
+ * docker-desktop / kind には同梱されないため、これを apply して導入する。
+ * minikube は `minikube addons enable ingress` を使う（ensureIngressController 参照）。
+ */
+const INGRESS_NGINX_MANIFEST = process.env.K8S_INGRESS_NGINX_MANIFEST ||
+  'https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.3/deploy/static/provider/cloud/deploy.yaml';
+
+/**
  * イメージビルド対象（7 ms + frontend）。
  * 既定では apps/backend を context に <name>/Dockerfile をビルドする。
  * frontend は dir/dockerfile を指定して apps/frontend をビルドする。
@@ -173,6 +181,63 @@ function loadImage(svc) {
   execSync(cmd, { stdio: 'inherit', env: cleanDockerEnv() });
 }
 
+/**
+ * ingress-nginx コントローラが既にクラスタへ導入済みか判定する。
+ * @returns {boolean} 導入済みなら true
+ */
+function isIngressControllerInstalled() {
+  const result = spawnSync(
+    'kubectl',
+    ['get', 'deployment', 'ingress-nginx-controller', '-n', 'ingress-nginx'],
+    { stdio: 'ignore' },
+  );
+  return result.status === 0;
+}
+
+/**
+ * ingress-nginx コントローラを導入し、Ready になるまで待機する（冪等）。
+ * minikube は addon、docker-desktop / kind はマニフェスト apply を使う。
+ * 既に導入済みなら何もしない。
+ */
+function ensureIngressController() {
+  if (isIngressControllerInstalled()) {
+    console.log('[ingress] ingress-nginx コントローラは導入済み（skip）');
+    return;
+  }
+  console.log('[ingress] ingress-nginx コントローラが見つからないため導入します...');
+  if (CLUSTER_TYPE === 'minikube') {
+    requireCommand('minikube', 'minikube を導入してください。');
+    execSync('minikube addons enable ingress', { stdio: 'inherit', env: cleanDockerEnv() });
+  } else {
+    kubectl(`apply -f ${INGRESS_NGINX_MANIFEST}`);
+  }
+  console.log('[ingress] コントローラの起動を待機しています...');
+  kubectl(
+    'wait --namespace ingress-nginx --for=condition=ready pod ' +
+    '--selector=app.kubernetes.io/component=controller --timeout=180s',
+  );
+}
+
+/**
+ * デプロイ後の接続手順を分かりやすく表示する。
+ */
+function printConnectGuidance() {
+  const url = INGRESS_HOST_PORT === '80'
+    ? `http://${INGRESS_HOST}/`
+    : `http://${INGRESS_HOST}:${INGRESS_HOST_PORT}/`;
+  console.log(`
+──────────────────────────────────────────────
+ デプロイ完了。ブラウザでつなぐ手順:
+   1) Pod 起動を待つ:        npx gulp k8s:smoke
+   2) hosts に登録（要管理者）: 127.0.0.1 ${INGRESS_HOST}
+   3) 別ターミナルで公開:     npx gulp k8s:expose:local   （起動したまま）
+   4) ブラウザで開く:         npx gulp k8s:open:local
+   → ${url}
+ （Ingress を使わず直接見る場合: kubectl -n ${NAMESPACE} port-forward svc/frontendms 8888:80 → http://localhost:8888）
+──────────────────────────────────────────────
+`);
+}
+
 // ============================================
 // Gulp タスク
 // ============================================
@@ -241,11 +306,14 @@ export default function (gulp) {
   });
 
   /**
-   * local overlay をデプロイ（kubectl apply -k）
+   * local overlay をデプロイ（kubectl apply -k）。
+   * 接続に必要な ingress-nginx コントローラを自動導入し、最後に接続手順を表示する。
    */
   gulp.task('k8s:kustomize:up:local', (done) => {
     requireCommand('kubectl', 'kubectl を導入してください。');
+    ensureIngressController();
     kubectl(`apply -k ${path.join(K8S_DIR, 'overlays', 'local')}`);
+    printConnectGuidance();
     done();
   });
 
@@ -299,11 +367,17 @@ export default function (gulp) {
   });
 
   /**
-   * Helm でデプロイ（helm upgrade --install、namespace 自動作成）
+   * Helm でデプロイ（helm upgrade --install、namespace 自動作成）。
+   * 接続に必要な ingress-nginx コントローラを自動導入し、最後に接続手順を表示する。
+   * Helm チャートは Ingress リソースのみ生成し、コントローラは導入しないため
+   * ここで ensureIngressController を呼ぶ（k8s:clean 後でもそのまま繋がるように）。
    */
   gulp.task('k8s:helm:up', (done) => {
     requireCommand('helm', 'helm を導入してください。');
+    requireCommand('kubectl', 'kubectl を導入してください。');
+    ensureIngressController();
     helm(`upgrade --install ${HELM_RELEASE} ${HELM_CHART} -n ${NAMESPACE} --create-namespace`);
+    printConnectGuidance();
     done();
   });
 
@@ -357,11 +431,23 @@ export default function (gulp) {
   });
 
   /**
+   * ingress-nginx コントローラを導入（冪等）。Ready まで待機する。
+   * docker-desktop / kind は同梱されないため必要。minikube は addon を使う。
+   * up タスクからも自動で呼ばれるが、単体導入したい場合に使う。
+   */
+  gulp.task('k8s:ingress:install', (done) => {
+    requireCommand('kubectl', 'kubectl を導入してください。');
+    ensureIngressController();
+    console.log('[ingress] 導入完了。`npx gulp k8s:expose:local` で公開できます。');
+    done();
+  });
+
+  /**
    * Ingress（ingress-nginx）を 127.0.0.1:${INGRESS_HOST_PORT} へ公開
    * （Ctrl+C で終了、起動したまま使う）。
    * docker-desktop はノードが docker ネットワーク内のため LoadBalancer IP に
    * ホストから直接届かない。本タスクで ${INGRESS_HOST}:${INGRESS_HOST_PORT} を
-   * 127.0.0.1 で利用可能にする。
+   * 127.0.0.1 で利用可能にする。コントローラ未導入なら自動導入する。
    *
    * port は既定 8080（ユーザー権限で bind 可能）。port 80 を使う場合は
    * `sudo K8S_INGRESS_HOST_PORT=80 npx gulp k8s:expose:local` のように
@@ -371,6 +457,7 @@ export default function (gulp) {
    */
   gulp.task('k8s:expose:local', (done) => {
     requireCommand('kubectl', 'kubectl を導入してください。');
+    ensureIngressController();
     const url = INGRESS_HOST_PORT === '80'
       ? `http://${INGRESS_HOST}/`
       : `http://${INGRESS_HOST}:${INGRESS_HOST_PORT}/`;
@@ -457,6 +544,7 @@ namespace: ${NAMESPACE} / cluster: ${CLUSTER_TYPE} / image: ${IMAGE_PREFIX}/<ms>
   k8s:status                namespace 内のリソース状態を表示
   k8s:smoke                 全 Deployment が Available になるまで待機
   k8s:port-forward          gatewayms を 8080 にポートフォワード
+  k8s:ingress:install       ingress-nginx コントローラを導入（冪等、up タスクから自動実行）
   k8s:expose:local          Ingress を 127.0.0.1:${INGRESS_HOST_PORT} へ公開（起動したまま使う、
                               既定 8080 でユーザー権限 OK、80 を使う場合は sudo + 環境変数）
   k8s:open:local            ブラウザで ${INGRESS_HOST_PORT === '80' ? `http://${INGRESS_HOST}/` : `http://${INGRESS_HOST}:${INGRESS_HOST_PORT}/`} を開く
