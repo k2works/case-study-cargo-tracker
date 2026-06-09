@@ -50,3 +50,11 @@ logging:
 #   - BILLING_DISCOUNTDESCRIPTION="Corporate discount (%d%%)" # 英語通知用
 # IT8 ADR-0017 ShedLock 統合時は web=2 で BILLING_OVERDUE_CRON 一時停止（"-"）も検討可。
 # IT8 ADR-0018 SendGrid 統合時は notification.adapter=sendgrid + テンプレート ID を追加。
+
+# Heroku 開発環境（cargo-tracker-5-billingms 等）でも DevDataSeeder を有効化し、
+# 起動直後から動作確認用のサンプル Invoice（CALCULATED / INVOICED / PAID）が投入される。
+# DevDataSeeder は冪等（既存データ skip）のため、dyno 再起動時の重複も安全。
+# 本番運用時は APP_DEV_SEED_ENABLED=false で Config Vars 上書きして停止すること。
+app:
+  dev-seed:
+    enabled: true

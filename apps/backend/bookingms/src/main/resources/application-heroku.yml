@@ -41,3 +41,11 @@ logging:
     com.example.bookingms: INFO
     org.axonframework: WARN
     root: WARN
+
+# Heroku 開発環境（cargo-tracker-5-bookingms 等）でも DevDataSeeder を有効化し、
+# 起動直後から動作確認用のサンプル Shipper / Cargo / Quotation が投入される。
+# DevDataSeeder は冪等（既存データ skip）のため、dyno 再起動時の重複も安全。
+# 本番運用時は APP_DEV_SEED_ENABLED=false で Config Vars 上書きして停止すること。
+app:
+  dev-seed:
+    enabled: true
