@@ -135,7 +135,7 @@ docker-compose と異なり、Kubernetes は**事前にビルド済みのイメ�
 **Gulp タスク（推奨）**: ビルド → クラスタへのロードを一括実行します。
 
 ```bash
-# K8S_CLUSTER_TYPE（minikube | kind）で切り替え。既定は minikube
+# K8S_CLUSTER_TYPE（docker-desktop | minikube | kind）で切り替え。既定は docker-desktop
 npx gulp k8s:images          # build → load を連続実行
 # 個別に実行する場合
 npx gulp k8s:images:build    # 7 ms + frontend のイメージをビルド

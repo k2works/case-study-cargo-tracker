@@ -3,7 +3,7 @@
 import path from 'path';
 import readline from 'readline';
 import { execSync, spawnSync } from 'child_process';
-import { cleanDockerEnv, isDockerAvailable } from './shared.js';
+import { cleanDockerEnv, isDockerAvailable, openUrl } from './shared.js';
 
 // ============================================
 // 設定
@@ -22,14 +22,17 @@ const NAMESPACE = process.env.K8S_NAMESPACE || 'cargo-tracker';
 const IMAGE_PREFIX = process.env.K8S_IMAGE_PREFIX || 'cargo-tracker';
 const IMAGE_TAG = process.env.K8S_IMAGE_TAG || 'latest';
 
-/** ローカルクラスタ種別（minikube | kind | docker-desktop、K8S_CLUSTER_TYPE で上書き可能） */
-const CLUSTER_TYPE = process.env.K8S_CLUSTER_TYPE || 'minikube';
+/** ローカルクラスタ種別（docker-desktop | minikube | kind、K8S_CLUSTER_TYPE で上書き可能） */
+const CLUSTER_TYPE = process.env.K8S_CLUSTER_TYPE || 'docker-desktop';
 
 /** kind クラスタ名 */
 const KIND_CLUSTER = process.env.K8S_KIND_CLUSTER || 'cargo-tracker';
 
 /** Helm リリース名 */
 const HELM_RELEASE = process.env.K8S_HELM_RELEASE || 'cargo-tracker';
+
+/** Ingress ホスト名（ブラウザアクセス用、K8S_INGRESS_HOST で上書き可能） */
+const INGRESS_HOST = process.env.K8S_INGRESS_HOST || 'cargo-tracker.local';
 
 /**
  * イメージビルド対象（7 ms + frontend）。
@@ -347,6 +350,36 @@ export default function (gulp) {
   });
 
   /**
+   * Ingress（ingress-nginx）を 127.0.0.1:80 へ公開（Ctrl+C で終了、起動したまま使う）。
+   * docker-desktop はノードが docker ネットワーク内のため LoadBalancer IP に
+   * ホストから直接届かない。本タスクで ${INGRESS_HOST} を 127.0.0.1 で利用可能にする。
+   * 前提: hosts に "127.0.0.1 ${INGRESS_HOST}" を登録済みであること。
+   */
+  gulp.task('k8s:expose:local', (done) => {
+    requireCommand('kubectl', 'kubectl を導入してください。');
+    console.log(`Ingress を http://${INGRESS_HOST}/ で公開します（このプロセスは起動したままにしてください）。`);
+    kubectl('-n ingress-nginx port-forward svc/ingress-nginx-controller 80:80');
+    done();
+  });
+
+  /**
+   * ローカルデプロイのフロントエンド（公開エントリポイント）をブラウザで開く。
+   * 事前に k8s:expose:local（Ingress を 80 番へ公開）を別ターミナルで起動し、
+   * hosts に "127.0.0.1 ${INGRESS_HOST}" を登録しておくこと。
+   */
+  gulp.task('k8s:open:local', (done) => {
+    const url = `http://${INGRESS_HOST}/`;
+    console.log(`ブラウザで ${url} を開きます。`);
+    console.log('表示されない場合は別ターミナルで `npx gulp k8s:expose:local` を起動し、hosts に "127.0.0.1 ' + INGRESS_HOST + '" があるか確認してください。');
+    try {
+      openUrl(url);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  /**
    * namespace ごと完全削除（PVC・永続データを破棄）
    * 実行前に対話的に y/n 確認を取る。
    */
@@ -405,16 +438,19 @@ namespace: ${NAMESPACE} / cluster: ${CLUSTER_TYPE} / image: ${IMAGE_PREFIX}/<ms>
   k8s:status                namespace 内のリソース状態を表示
   k8s:smoke                 全 Deployment が Available になるまで待機
   k8s:port-forward          gatewayms を 8080 にポートフォワード
+  k8s:expose:local          Ingress を 127.0.0.1:80 へ公開（起動したまま使う）
+  k8s:open:local            ブラウザで http://${INGRESS_HOST}/ を開く
   k8s:clean                 namespace を PVC ごと完全削除（y/n 確認あり）
   k8s:help                  このヘルプを表示
 
 【環境変数（.env、K8S_ プレフィックス）】
   K8S_NAMESPACE             namespace（既定: cargo-tracker）
-  K8S_CLUSTER_TYPE          minikube | kind | docker-desktop（既定: minikube）
+  K8S_CLUSTER_TYPE          docker-desktop | minikube | kind（既定: docker-desktop）
   K8S_KIND_CLUSTER          kind クラスタ名（既定: cargo-tracker）
   K8S_IMAGE_PREFIX          イメージ接頭辞（既定: cargo-tracker）
   K8S_IMAGE_TAG             イメージタグ（既定: latest）
   K8S_HELM_RELEASE          Helm リリース名（既定: cargo-tracker）
+  K8S_INGRESS_HOST          ブラウザアクセス用ホスト名（既定: cargo-tracker.local）
     `);
     done();
   });
