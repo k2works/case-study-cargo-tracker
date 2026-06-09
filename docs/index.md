@@ -72,7 +72,8 @@
 | [IT7 計画](./development/iteration_plan-7.md) / [IT7 完了報告](./development/iteration_report-7.md) / [IT7 ふりかえり](./development/retrospective-7.md) | Phase 2 / 3（billingms 新設・精算、Release 2.1） |
 | [IT8 計画](./development/iteration_plan-8.md) / [IT8 完了報告](./development/iteration_report-8.md) | Phase 2 Buffer（本番デプロイ準備、A1-A4 + H2 持ち越し 8 件 + ADR-0020/0021 起票、Release 1.0 候補確立）|
 | [IT9 計画](./development/iteration_plan-9.md) / [IT9 完了報告](./development/iteration_report-9.md) / [IT9 ふりかえり](./development/retrospective-9.md) | Release 1.1 主要機能完全実装（Stripe webhook 部分入金 + AWS Secrets Manager 自動回転 + 認可基盤 + SendGrid WireMock 統合）、**8/8 SP 達成（100%）**、IT8 review 11 件全解消、A3.2 IT10 持ち越し |
-| [IT10 計画](./development/iteration_plan-10.md) | Release 1.1 **正式版昇格進行中**（A1 認可深層強化 + A2 fallback UX 改善 + A4 Flyway × enum 同期検証 完遂、A3 staging + A5 残 staging 実機待ち）、**5/8 SP 達成（62.5%）/ 21 タスク完遂・75%**、IT9 review 12 件中 9 件解消（H3-H10 + M3 + M8 + L5）、Ralph Loop 12 iteration / 21+ コミット + 全モジュール check PASS + frontend 247 件 PASS + ADR-0023 起票 + 中間 self-review |
+| [IT10 計画](./development/iteration_plan-10.md) | Release 1.1 **正式版昇格進行中**（A1 認可深層強化 + A2 fallback UX 改善 + A4 Flyway × enum 同期検証 完遂、A3 staging + A5 残 staging 実機待ち）、**5/8 SP 達成（62.5%）/ 23 タスク完遂・77%**、IT9 review 12 件中 9 件解消（H3-H10 + M3 + M8 + L5）、Ralph Loop 17+ iteration / 25+ コミット + 全モジュール check PASS + frontend 247 件 PASS + ADR-0023 起票 + 中間 self-review + L 優先度 4 件全件解消 |
+| [IT11 計画（スケルトン）](./development/iteration_plan-11.md) | Release 1.2 着手 / 構造的負債返済 + 業務スコープ拡張（B1 共通化リファクタリング + B2 SDK contract test + B3 Prometheus alert rule + B4/B5 US28/US29 候補スコープ確定）、IT10 中間レビュー H/M 持ち越し + IT10 A3.9a 続編、8 SP / 29.5h（仮）、staging 完了後に正式版昇格 |
 
 ### ADR ドキュメント
 

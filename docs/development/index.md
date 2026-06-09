@@ -24,6 +24,7 @@
 | IT8 | 2026-08-27 〜 2026-09-09 | [iteration_plan-8.md](iteration_plan-8.md) | - | [iteration_report-8.md](iteration_report-8.md) | 完了（Release 1.0 候補、A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020 + H2 持ち越し全 8 件 + ADR-0021）|
 | IT9 | 2026-09-10 〜 2026-09-23 | [iteration_plan-9.md](iteration_plan-9.md) | [retrospective-9.md](retrospective-9.md) | [iteration_report-9.md](iteration_report-9.md) | 完了（Release 1.1 主要機能完全実装、Stripe webhook + AWS Secrets Manager + 認可基盤 + SendGrid WireMock、**8/8 SP**、IT8 review 11 件全解消）|
 | IT10 | 2026-06-08 〜 2026-06-19 | [iteration_plan-10.md](iteration_plan-10.md) | - | -（[journal-it10.md](journal-it10.md) 中間サマリ） | 進行中（Release 1.1 正式版昇格、A1 認可深層強化 + A2 fallback UX 改善 + A4 Flyway × enum 同期検証 完遂、A3 staging + A5 残作業は staging 実機環境構築フェーズ、**5/8 SP 達成・62.5%**、IT9 review 12 件中 9 件解消）|
+| IT11 | 2026-06-22 〜 2026-07-03（仮）| [iteration_plan-11.md](iteration_plan-11.md)（スケルトン） | - | - | 未着手（Release 1.2 着手 / 構造的負債返済 + 業務スコープ拡張：B1 共通化リファクタリング + B2 SDK contract test + B3 Prometheus alert rule + B4/B5 US28/US29 候補スコープ確定、IT10 中間レビュー H/M 持ち越し + 業務拡張）|
 
 ### Release 1.0 完了報告書（暫定）
 
