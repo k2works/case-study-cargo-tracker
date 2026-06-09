@@ -391,8 +391,8 @@ gantt
 | IT7 | 2026-08-13 〜 2026-08-26 | 8 | 8 | 100% | 完了（2026-06-05：US21-US23 精算 + billingms 新規立ち上げ + review 高/中 持ち越し 7 件 IT 内対応 + ADR-0017/0018/0019 起票 + 全 5 サービス ArchUnit 横展開、計 50+ コミット。billingms LINE 89.87%、全モジュール check PASS） |
 | IT8 | 2026-08-27 〜 2026-09-09 | 8 | 8 | 100% | 完了（2026-06-05：A1 ShedLock + A2 SendGrid + A3 RestShipperInfoAcl + A4 PaymentDetailRecorded + ADR-0020 起票、Ralph Loop で 1 日完遂、30+ コミット、全モジュール check PASS、frontend 234 件 PASS） |
 | IT9 | 2026-09-10 〜 2026-09-23 | 8 | 8 | 100% | 完了（2026-06-06：A1 Stripe webhook 部分入金 + A2 AWS Secrets Manager + Lambda + Terraform + A3 HerokuSecurityConfig + JWT 検証 + A4.1 SendGrid SDK サブクラス化 WireMock + A4.2 CI コスト + IT8 review 11 件全解消、Ralph Loop 14 iteration、17 コミット、全モジュール check PASS、frontend 245 件 PASS。A3.2 のみ IT10 持ち越し）|
-| IT10 | 2026-06-08 〜 2026-06-19 | 8 | 0 | 0% | 着手前（2026-06-08：IT10 正式版計画確定。A1 認可深層強化 / A2 fallback UX 改善 / A3 staging E2E + IT9 H5-H9 / A4 Flyway×enum 同期検証 / A5 Release 1.1 正式版昇格。28 タスク / 35h、IT9 マルチパースペクティブレビュー指摘 12 件統合済み、A5.6 のみ 2026-06-06 前倒し完了） |
-| **合計** | | **92** | **84** | **Release 1.1 主要機能完全実装（84/92 SP・91%）** | Phase 1 + Phase 2 + Buffer + IT9 完了。IT8 review 11 件全解消。IT10 で Release 1.1 正式版昇格予定（staging E2E + メソッド認可 + UX 改善 + 構造検証） |
+| IT10 | 2026-06-08 〜 2026-06-19 | 8 | 5 | 62.5% | 進行中（2026-06-09：AI Agent 単独完結部分は上限到達。A1 認可深層強化（US30, 2 SP）完遂、A2 fallback UX 改善（US31, 1 SP）完遂、A4 Flyway×enum 同期検証（US33, 1 SP）完遂、A3 staging タスク（US32, 3 SP）のうち AI 単独可能な 3.6 / 3.7 / 3.8 / 3.9a / 3.10a 完遂・残 5 件は staging 実機待ち、A5 Release 1.1 正式版昇格（US34, 1 SP）のうち 5.1 / 5.4 / 5.5 / 5.6 完遂・残 2 件は staging 実機検証完了後。Ralph Loop 8 iteration、9 コミット、全モジュール check PASS、frontend 247 件 PASS。IT9 レビュー指摘 12 件中 9 件解消（H3-H10 / M3）） |
+| **合計** | | **92** | **89** | **Release 1.1 主要機能 89/92 SP（97%）** | Phase 1 + Phase 2 + Buffer + IT9 完了。IT10 で認可深層強化 + Flyway × enum 検証 + fallback UX 改善完遂。残 3 SP（A3 staging 実機 + A5 正式タグ）が完了次第、Release 1.1 正式版（v1.1.0）に昇格 |
 
 ### バーンダウンチャート
 
@@ -402,25 +402,30 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8", "IT9", "IT10"]
     y-axis "残 SP" 0 --> 92
     line "計画" [92, 82, 72, 62, 51, 41, 32, 24, 16, 8, 0]
-    line "実績" [92, 82, 72, 62, 51, 41, 32, 24, 16, 8, 8]
+    line "実績" [92, 82, 72, 62, 51, 41, 32, 24, 16, 8, 3]
 ```
 
-> **実績（IT9 終了時点、Release 1.1 主要機能完全実装）**: Phase 1（41 SP）+ IT5（10 SP）+ IT6（9 SP）+ IT7（8 SP）+ IT8（8 SP）+ IT9（**8 SP**）完了。**累計 84/84 SP（100%）達成**。IT9 では Ralph Loop モード 14 iteration で 8 SP 完遂、A1 Stripe webhook 部分入金 + A2 AWS Secrets Manager + A3 認可基盤 + A4 IT8 review 完全解消（H1 / H3 / M1-M5）で **17 コミット**達成。**IT8 review 11 件全解消**。A4.1 SendGrid WireMock は SDK ソース展開で `Client.buildUri` の public override 性を確認し `WireMockCompatibleSendGridClient` で解決。Release 1.1 主要機能（決済自動化 + secret 自動回転 + 本番認可 + 通知品質保証）は実装完了し、staging 環境構築（IT10）で E2E 検証後に正式版へ昇格予定。
+> **実績（IT10 進行中、2026-06-09 時点）**: Phase 1（41 SP）+ IT5-IT9（43 SP）+ IT10（**5/8 SP**）完了。**累計 89/92 SP（97%）達成**。IT10 では Ralph Loop モード 8 iteration で **9 コミット**、A1 認可深層強化（PreAuthorize + PreAuthFilter + httpBasic 無効化、IT9 H3 / H4 / H10 解消）+ A2 fallback UX 改善（CircuitBreaker 連動 alert-warning、IT9 M3 解消）+ A4 Flyway × enum 同期検証（3 ms × CHECK 制約 + 7 件テスト、IT9 V5 再発防止）+ A3 部分実装（webhook IT 4 分割、tolerance Clock 注入境界値、LocalStack tag 除外、refund/dispute 仕様、rotation 監視メトリクス、IT9 H5-H9 解消）+ A5 ドキュメント整備（CHANGELOG + README + Release ライン経緯、IT9 M8 / L5 解消）を達成。**残 3 SP は全て Heroku staging 実機環境必要**: A3.1-A3.5 + A3.9b + A3.10b（staging E2E / Stripe Test Mode / Secrets Manager rotation / SonarQube / 通知実機）と A5.2-A5.3（`v1.1.0` GitHub Release tag + 本番デプロイ可能宣言）。staging 構築完了で Release 1.1 正式版（v1.1.0）昇格可能。
 
 ---
 
 ## 次のステップ
 
-### Release 1.1 主要機能完全実装 → 正式版への昇格（IT10）
+### Release 1.1 正式版昇格（IT10 残作業、staging 実機環境構築フェーズ）
 
-IT9 達成（**84/84 SP、100%**）により Release 1.1 主要機能を完全実装。IT8 review 11 件も全解消（A4.1 SendGrid WireMock を SDK Client サブクラス化で解決）。正式版昇格には IT10 で以下が必要:
+IT10 AI Agent 単独完結部分は完遂（5/8 SP）。残 3 SP は全て Heroku staging 実機環境を必要とする：
 
-1. **A3.2 各 Controller @PreAuthorize 付与**（2 SP）: URL ルール認可で深層防御は確保済みだが、メソッド単位の認可と `@WithMockUser` テストパターン確立で重層化
-2. **M3 RestShipperInfoAcl fallback UX 改善**（1 SP）: `discountRate=null`（未確定）を返してフロントエンドで明示警告
-3. **staging 環境構築 + E2E 認可検証**（4-6h）: Heroku staging app（dev plan）構築、JWT 経由 E2E、Stripe Test Mode webhook 実機検証、AWS Secrets Manager 手動 rotation 確認、SonarQube Quality Gate 実機計測
-4. **Flyway migration × enum 同期自動検証**（1 SP）: ArchUnit または独自テストで CHECK 制約値リスト ⊃ enum 値の検証（IT9 V5 バグ再発防止）
+1. **A3.1 Heroku staging app 構築**（3h）: dev plan で billingms / routingms / bookingms / handlingms / trackingms / gatewayms / authms をデプロイ、`JWT_SECRET` 等 Config Vars 設定
+2. **A3.2 Playwright JWT E2E staging 実行**（3h）: `cross-service.spec.ts` を staging に向けて実行、認可深層化の実機動作確認
+3. **A3.3 Stripe Test Mode webhook 検証**（1h）: Stripe ダッシュボードから staging billingms に payment_intent.succeeded 送信 → PARTIALLY_PAID 検証
+4. **A3.4 AWS Secrets Manager 手動 rotation**（1h）: `rotate-secret` 実行 + trackingms refresh ログ確認
+5. **A3.5 SonarQube Quality Gate 実機計測**（1h）: staging コードで Quality Gate PASS 確認
+6. **A3.9b refund / dispute 実機検証**（1h）: Stripe Test Mode から `charge.refunded` / `charge.dispute.created` 送信 → skipped 動作確認
+7. **A3.10b rotation 失敗通知実機検証**（0.5h）: 連続失敗 3 回 → Grafana / PagerDuty 通知発火確認
+8. **A5.2 GitHub Release v1.1.0 タグ**（0.5h）: release notes 公開
+9. **A5.3 本番デプロイ可能宣言**（0.5h）: README + `docs/index.md` に明記
 
-詳細は [iteration_plan-10.md](iteration_plan-10.md)（スケルトン）参照。IT10 完了後に Release 1.1 を正式版として GitHub Release タグ + CHANGELOG 確定 + 本番デプロイ可能宣言予定。
+詳細は [iteration_plan-10.md](iteration_plan-10.md) 参照。IT10 staging 実機完了で Release 1.1 を正式版として GitHub Release タグ + 本番デプロイ可能宣言。
 
 ### 過去の Release マイルストーン総括
 
