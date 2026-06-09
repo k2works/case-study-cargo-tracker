@@ -106,7 +106,24 @@ IT10 で「Rule of Three 到達」と判定したが staging 安定確認後に�
 | 同 M2 | B2 | SDK upgrade 検知 contract test |
 | 同 M3 | B3 | Prometheus alert rule YAML 化 |
 | US26 受入基準 IT10 A3.9a 続編 | B4 / B5 | charge.refunded / charge.dispute.created の本格業務反映 |
-| 正式 `developing-review`（staging 完了後） | TBD | IT11 着手前に追加指摘が出れば B6 以降として統合判断 |
+| [IT9 開発成果物レビュー](../review/IT9_review_20260606.md) IT11+ 持ち越し 14 件 | B6（候補） | H1（Invoice ES 決定性）/ H2（PARTIALLY_PAID → PAID 経路テスト）/ M2-M7 / L1-L4 / L7。IT11 着手時にスコープ判断 |
+| 正式 `developing-review`（staging 完了後） | TBD | IT11 着手前に追加指摘が出れば B7 以降として統合判断 |
+
+---
+
+## IT9 review IT11+ 持ち越し候補（草案、B6 として B4/B5 完了後に判断）
+
+IT9 マルチパースペクティブレビューで「IT11+ 検討（持ち越し）」と分類された 14 件のうち、IT11 着手時に取り込む候補を以下に明示する。IT10 staging 完了 + 正式 `developing-review` 結果と合わせて、IT11 開始時に最終スコープを決定する。
+
+| ID | 観点 | 内容（要約） | 取り込み判断 |
+|---|---|---|---|
+| IT9 H1 | programmer | `Invoice.on(PaymentRecordedEvent)` の balance 再構築が ES の決定性を脅かす（event に paidSoFar を含める shared 契約変更検討） | shared 契約変更 = 影響範囲大、IT11 で ADR-0024 起票後に IT12 以降実装 |
+| IT9 H2 | programmer | `BillingStatus.canTransitionTo` で `PARTIALLY_PAID → PAID`（手動完全入金）経路のテスト不足 | B6 候補（1 SP 以内、Domain test 追加のみ） |
+| IT9 M2 | programmer | `PaymentGatewayWebhookController` の `catch (Exception e)` で TimeoutException 握り潰し | IT10 A3.6 / A3.7 改善で部分緩和、残は IT11 で型別 catch に分離 |
+| IT9 M3-M5 | programmer / architect | `WebhookProcessed` POJO → record / SendGrid SDK サブクラス ArchUnit 検知 / PartialPaymentRecorded 境界判定 | B6 / B7 候補、Domain / Test レベル変更 |
+| IT9 M6 | tester | `BalanceTracker.withTotalDue` 既入金 > 新 totalDue エッジ | B6 候補（プロパティベース検証） |
+| IT9 M7 | tester | JWT フィルタの時刻関連境界値（期限切れ / exp 欠落 / 署名アルゴリズム不一致） | B6 候補（JwtAuthenticationFilterTest 拡張） |
+| IT9 L1-L4 / L7 | 各観点 | 低優先度 5 件 | Release 1.2 以降検討維持 |
 
 ---
 
