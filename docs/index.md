@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み（US 29 件、IT9 用 US26-29 追加済み） |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み（Axon Kafka + Heroku + Aiven 構成、IT9 設計要素先行反映済み） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 29 件作成済み（リリース計画 + Release 1.0 報告書 + IT1-IT9 計画/ふりかえり/完了報告書 + IT10 スケルトン、IT9 で **8/8 SP（100%）達成** + IT8 review 11 件全解消 + 累計 84/84 SP）|
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | 29 件作成済み（リリース計画 + Release 1.0 報告書 + IT1-IT9 計画/ふりかえり/完了報告書 + IT10 正式版計画進行中、IT10 で **5/8 SP（62.5%）達成** + IT9 review 9 件解消 + 累計 89/92 SP・97%、残 3 SP は staging 実機環境）|
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 2 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み（IT8 レビュー追加） |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | 18 件作成済み（ADR-0020 / 0021 追加） |
@@ -72,7 +72,7 @@
 | [IT7 計画](./development/iteration_plan-7.md) / [IT7 完了報告](./development/iteration_report-7.md) / [IT7 ふりかえり](./development/retrospective-7.md) | Phase 2 / 3（billingms 新設・精算、Release 2.1） |
 | [IT8 計画](./development/iteration_plan-8.md) / [IT8 完了報告](./development/iteration_report-8.md) | Phase 2 Buffer（本番デプロイ準備、A1-A4 + H2 持ち越し 8 件 + ADR-0020/0021 起票、Release 1.0 候補確立）|
 | [IT9 計画](./development/iteration_plan-9.md) / [IT9 完了報告](./development/iteration_report-9.md) / [IT9 ふりかえり](./development/retrospective-9.md) | Release 1.1 主要機能完全実装（Stripe webhook 部分入金 + AWS Secrets Manager 自動回転 + 認可基盤 + SendGrid WireMock 統合）、**8/8 SP 達成（100%）**、IT8 review 11 件全解消、A3.2 IT10 持ち越し |
-| [IT10 計画（スケルトン）](./development/iteration_plan-10.md) | Release 1.1 **正式版昇格**（A1 認可深層強化 + A2 fallback UX 改善 + A3 staging E2E + A4 Flyway × enum 同期検証 + A5 CHANGELOG + GitHub Release タグ）、5 ストーリー 8 SP、IT9 review 12 件統合（H3-H10 + M8 + L5/L6） |
+| [IT10 計画](./development/iteration_plan-10.md) | Release 1.1 **正式版昇格進行中**（A1 認可深層強化 + A2 fallback UX 改善 + A4 Flyway × enum 同期検証 完遂、A3 staging + A5 残 staging 実機待ち）、**5/8 SP 達成（62.5%）**、IT9 review 12 件中 9 件解消（H3-H10 + M3）、Ralph Loop 9 コミット + 全モジュール check PASS + frontend 247 件 PASS |
 
 ### ADR ドキュメント
 
