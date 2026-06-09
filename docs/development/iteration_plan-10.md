@@ -162,7 +162,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `BillingStatus` enum 値 ⊂ Flyway V2/V5 の `chk_invoice_status` を検証するテスト（`@MybatisTest` 経由） | 1.5h | - | [ ] |
+| 4.1 | `BillingStatus` enum 値 ⊂ Flyway V2/V5 の `chk_invoice_status` を検証するテスト（migration SQL パース方式に簡素化、Testcontainers 不要） | 1.5h | k2works | [x] |
 | 4.2 | 他 ms の同種 enum × CHECK 制約も横展開（`handling_type` / `transport_status` 等） | 1.5h | - | [ ] |
 
 **小計**: 3h（理想時間）
