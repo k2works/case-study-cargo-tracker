@@ -5,9 +5,9 @@ IT10 進行中の作業ログ。staging 実機検証完了後に `iteration_repo
 ## 概要
 
 - 期間: 2026-06-08 〜 2026-06-19（計画）
-- 計画 SP: 8 SP（5 ストーリー / 28 タスク / 35h）
-- 進行中（2026-06-09 時点）: **AI 単独完結部分 5/8 SP（62.5%）達成**
-- Ralph Loop モード: 9 turn 経過、9 コミット（IT9 review 9 件解消含む）
+- 計画 SP: 8 SP（5 ストーリー / 28 タスク → 30+ タスク（分割後）/ 34h（実績、元 35h から 1h 短縮））
+- 進行中（2026-06-09 時点）: **AI 単独完結部分 5/8 SP（62.5%）達成**、タスク完遂率 23/30+（77%）
+- Ralph Loop モード: 16+ turn 経過、24+ コミット（IT9 review 9 件解消 + ADR-0023 起票 + IT10 中間レビュー L 全件解消 + 各 index 反映 + メモリ保存）
 - 残 3 SP: 全て Heroku staging 実機環境構築フェーズ（人間判断必要）
 
 ## 完遂ストーリー
@@ -91,11 +91,27 @@ IT10 進行中の作業ログ。staging 実機検証完了後に `iteration_repo
 |---|---|---|
 | ADR-0023 起票（Flyway × enum 同期検証） | ✅ 完遂 | 5d291c9d |
 | `release_plan.md` 進捗反映（5/8 SP, 89/92 SP） | ✅ 完遂 | 4c84515e |
-| `docs/index.md` IT10 進捗反映 | ✅ 完遂 | 06d20434 |
-| `journal-it10.md` 中間サマリ（本ファイル） | 🟡 進行中 | （現在のターン） |
-| マルチパースペクティブレビュー（developing-review） | ⚪ staging 完了後 | — |
+| `docs/index.md` IT10 進捗反映 | ✅ 完遂 | 06d20434 / 033a80fe |
+| `docs/development/index.md` IT9 完了 + IT10 進行中エントリ | ✅ 完遂 | 70fefe38 |
+| `journal-it10.md` 中間サマリ（本ファイル） | ✅ 完遂 | 70fefe38 / 本ターン更新 |
+| 中間マルチパースペクティブ self-review（IT10_interim_review） | ✅ 完遂 | e307fa69 |
+| メモリ保存（`feedback_review-two-stage.md`） | ✅ 完遂 | （メモリ外） |
+| iteration_plan-10 時間整合性（A2 3h → 2h） | ✅ 完遂 | 90c22617 |
+| 中間レビュー L 優先度全件解消 | ✅ 完遂 | 1c4ba54e / 04943b3a / 1c7ef1c0 / f66e8822 |
+| 正式マルチパースペクティブレビュー（developing-review、XP 5 並列） | ⚪ staging 完了後 | — |
 | `iteration_report-10.md`（creating-iteration-report） | ⚪ staging 完了後 | — |
 | `retrospective-10.md`（IT10 ふりかえり） | ⚪ staging 完了後 | — |
+| IT11 計画スケルトン | ⚪ staging 完了後 | — |
+
+### 中間レビュー（self-review）解消状況サマリ
+
+| 優先度 | 完了 | 残（staging 後 / IT11） |
+|---|---|---|
+| 高 (H1-H3) | 0 | 3 件 |
+| 中 (M1-M4) | 0 | 4 件 |
+| **低 (L1-L4)** | **4 件 ✅** | **0 件** |
+| 良い点 (G1-G6) | 評価項目 | — |
+| staging 連動 (S1-S5) | 0 | 5 件 |
 
 ## IT9 マルチパースペクティブレビュー指摘の解消状況
 
