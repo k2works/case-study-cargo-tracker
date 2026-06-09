@@ -50,6 +50,32 @@ class BillingStatusCheckConstraintTest {
     }
 
     @Test
+    @DisplayName("複数 ADD CONSTRAINT が同一 SQL に現れた場合、最後の定義が採用される（リファクタリングで順序を変えてもロバスト）")
+    void multipleAddConstraintsRobustToOrdering() {
+        String sql = """
+                ALTER TABLE invoice ADD CONSTRAINT chk_invoice_status CHECK (
+                    billing_status IN ('PENDING', 'CALCULATED', 'INVOICED', 'PAID', 'OVERDUE', 'CANCELLED')
+                );
+                -- 後続 migration で再定義（IT9 V5 相当の rewrite シナリオ）
+                ALTER TABLE invoice DROP CONSTRAINT IF EXISTS chk_invoice_status;
+                ALTER TABLE invoice ADD CONSTRAINT chk_invoice_status CHECK (
+                    billing_status IN ('PENDING', 'CALCULATED', 'INVOICED', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED')
+                );
+                """;
+
+        Matcher m = CHECK_PATTERN.matcher(sql);
+        Set<String> latest = null;
+        while (m.find()) {
+            latest = parseInClause(m.group(1));
+        }
+
+        assertThat(latest)
+                .as("最新の ADD CONSTRAINT 値が採用される（DROP の位置 / 数に依存しない）")
+                .containsExactly("PENDING", "CALCULATED", "INVOICED", "PARTIALLY_PAID",
+                        "PAID", "OVERDUE", "CANCELLED");
+    }
+
+    @Test
     @DisplayName("chk_invoice_status CHECK 制約に enum に存在しない値が混入していない")
     void noOrphanValuesInCheckConstraint() throws Exception {
         Set<String> allowed = extractLatestAllowedStatuses();

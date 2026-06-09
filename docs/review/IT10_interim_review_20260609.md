@@ -102,9 +102,10 @@ IT11 では、staging で安定動作確認後に:
 |---|---|---|
 | L4 | README 主要機能セクション見出しを「Release 1.1 候補 / IT10 進行中：実装完了、staging 検証中」に修正、CHANGELOG `[Unreleased]` セクションの v1.1.0 正式タグ化記述と整合化 | 1c4ba54e |
 | L1 | `PaymentGatewayWebhookController.receive()` の `Optional<Long> timestampOpt = extractTimestamp(...)` + `if (isEmpty())` + `timestampOpt.get()` を `Long timestamp = extractTimestamp(...).orElse(null)` + `if (timestamp == null)` に書き換え。null チェック直後の `Long` 直接利用で `.get()` 呼び出しが消え、Optional の二重抽出が解消。境界値 6 件 + 既存 9 件全 PASS | 04943b3a |
-| L3 | `markFailed` reason を「`unsupported_event_type`」と「`missing_metadata`」の 2 値に分離。Controller 側で `event.getType()` を判定して reason を選択（StripeEventTranslator 変更不要）。新規テスト 1 件追加（payment_intent.succeeded だが metadata 不足 → missing_metadata）、既存 2 件の assertion 更新。US26 受入基準も 2 reason 体系に更新（業務監査時に「対象外イベント率」と「データ不正率」を分離可能） | （本ターン） |
+| L3 | `markFailed` reason を「`unsupported_event_type`」と「`missing_metadata`」の 2 値に分離。Controller 側で `event.getType()` を判定して reason を選択（StripeEventTranslator 変更不要）。新規テスト 1 件追加（payment_intent.succeeded だが metadata 不足 → missing_metadata）、既存 2 件の assertion 更新。US26 受入基準も 2 reason 体系に更新（業務監査時に「対象外イベント率」と「データ不正率」を分離可能） | 1c7ef1c0 |
+| L2 | 3 ms（billingms / handlingms / trackingms）の `*CheckConstraintTest` にリテラル SQL を渡す「複数 ADD CONSTRAINT 順序ロバスト性テスト」を 1 件ずつ追加。`DROP CONSTRAINT IF EXISTS chk_xxx; ADD CONSTRAINT chk_xxx CHECK (... 新値リスト)` のような再定義パターンを SQL 文字列で再現し、Pattern が最新の ADD のみを採用することを実証。3 ms × 10 件全 PASS（既存 7 + 新規 3）。将来の migration リファクタリングで DROP/ADD の順序を変えてもパース挙動が崩れないリグレッション保護 | （本ターン） |
 
-残 H1 / H2 / H3 / M1-M4 / L2 は中間レビューの判定通り（H1 / M1 は staging 安定確認後、L2 は Release 1.2 以降検討、H3 / M2 / M3 は staging 実機タスクに連動）。
+残 H1 / H2 / H3 / M1-M4 は中間レビューの判定通り（H1 / M1 は staging 安定確認後、H3 / M2 / M3 は staging 実機タスクに連動、M4 は CHANGELOG 表記）。L 優先度は全件解消。
 
 ## 関連
 

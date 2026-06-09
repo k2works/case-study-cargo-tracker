@@ -50,6 +50,31 @@ class HandlingTypeCheckConstraintTest {
     }
 
     @Test
+    @DisplayName("複数 ADD CONSTRAINT が同一 SQL に現れた場合、最後の定義が採用される（リファクタリングで順序を変えてもロバスト）")
+    void multipleAddConstraintsRobustToOrdering() {
+        String sql = """
+                ALTER TABLE handling_activity ADD CONSTRAINT chk_handling_type CHECK (
+                    handling_type IN ('RECEIVE', 'LOAD', 'UNLOAD')
+                );
+                -- 後続 migration で値域を拡張
+                ALTER TABLE handling_activity DROP CONSTRAINT IF EXISTS chk_handling_type;
+                ALTER TABLE handling_activity ADD CONSTRAINT chk_handling_type CHECK (
+                    handling_type IN ('RECEIVE', 'LOAD', 'UNLOAD', 'CLAIM', 'CUSTOMS')
+                );
+                """;
+
+        Matcher m = CHECK_PATTERN.matcher(sql);
+        Set<String> latest = null;
+        while (m.find()) {
+            latest = parseInClause(m.group(1));
+        }
+
+        assertThat(latest)
+                .as("最新の ADD CONSTRAINT 値が採用される（DROP の位置 / 数に依存しない）")
+                .containsExactly("RECEIVE", "LOAD", "UNLOAD", "CLAIM", "CUSTOMS");
+    }
+
+    @Test
     @DisplayName("chk_handling_type CHECK 制約に enum に存在しない値が混入していない")
     void noOrphanValuesInCheckConstraint() throws Exception {
         Set<String> allowed = extractLatestAllowedValues();

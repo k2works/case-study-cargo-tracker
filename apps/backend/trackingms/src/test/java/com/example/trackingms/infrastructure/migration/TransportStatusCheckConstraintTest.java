@@ -60,6 +60,34 @@ class TransportStatusCheckConstraintTest {
     }
 
     @Test
+    @DisplayName("複数 ADD CONSTRAINT が同一 SQL に現れた場合、最後の定義が採用される（リファクタリングで順序を変えてもロバスト）")
+    void multipleAddConstraintsRobustToOrdering() {
+        String sql = """
+                ALTER TABLE tracking_summary ADD CONSTRAINT chk_tracking_summary_current_status CHECK (
+                    current_status IN ('NOT_RECEIVED', 'RECEIVED', 'LOADED')
+                );
+                -- 後続 migration で値域を拡張
+                ALTER TABLE tracking_summary DROP CONSTRAINT IF EXISTS chk_tracking_summary_current_status;
+                ALTER TABLE tracking_summary ADD CONSTRAINT chk_tracking_summary_current_status CHECK (
+                    current_status IN ('NOT_RECEIVED', 'RECEIVED', 'LOADED', 'IN_TRANSIT',
+                                       'UNLOADED', 'AWAITING_CLAIM', 'DELIVERED',
+                                       'MISROUTED', 'EXCEPTION')
+                );
+                """;
+
+        Matcher m = SUMMARY_PATTERN.matcher(sql);
+        Set<String> latest = null;
+        while (m.find()) {
+            latest = parseInClause(m.group(1));
+        }
+
+        assertThat(latest)
+                .as("最新の ADD CONSTRAINT 値が採用される（DROP の位置 / 数に依存しない）")
+                .containsExactly("NOT_RECEIVED", "RECEIVED", "LOADED", "IN_TRANSIT",
+                        "UNLOADED", "AWAITING_CLAIM", "DELIVERED", "MISROUTED", "EXCEPTION");
+    }
+
+    @Test
     @DisplayName("各 CHECK 制約に enum に存在しない値が混入していない")
     void noOrphanValuesInCheckConstraints() throws Exception {
         Set<String> summaryAllowed = extractLatest(SUMMARY_PATTERN);

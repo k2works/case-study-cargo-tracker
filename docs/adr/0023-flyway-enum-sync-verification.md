@@ -64,9 +64,11 @@ private static final Pattern CHECK_PATTERN = Pattern.compile(
 
 | ms | enum | CHECK 制約名 | テスト数 |
 |---|---|---|---|
-| billingms | `BillingStatus`（7 値） | `chk_invoice_status` | 2 |
-| handlingms | `HandlingType`（5 値） | `chk_handling_type` | 2 |
-| trackingms | `TransportStatus`（9 値） | `chk_tracking_summary_current_status` + `chk_tracking_event_transport_status` | 3 |
+| billingms | `BillingStatus`（7 値） | `chk_invoice_status` | 3（enum 全包含 + 孤児値なし + 順序ロバスト性） |
+| handlingms | `HandlingType`（5 値） | `chk_handling_type` | 3（同上） |
+| trackingms | `TransportStatus`（9 値） | `chk_tracking_summary_current_status` + `chk_tracking_event_transport_status` | 4（summary 全包含 + event 全包含 + 孤児値なし + 順序ロバスト性） |
+
+「順序ロバスト性」テストは IT10 中間レビュー L2 対応で追加。リテラル SQL で `DROP CONSTRAINT IF EXISTS ...; ADD CONSTRAINT ... CHECK (...)` の再定義パターンを与え、Pattern が最新の ADD 値を取得することを実証する。将来の migration リファクタリングで DROP/ADD の順序を変えてもパース挙動が崩れないことを構造的に保証する。
 
 ### 4. CI での実行
 
