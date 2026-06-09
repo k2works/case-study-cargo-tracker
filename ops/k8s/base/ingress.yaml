@@ -11,6 +11,10 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
 spec:
+  # ingress-nginx の IngressClass を明示。
+  # 標準の ingress-nginx（cloud 版、docker-desktop 等）は class 未指定の Ingress を
+  # 既定では拾わないため必須。minikube の ingress アドオンでも同じ class で動作する。
+  ingressClassName: nginx
   rules:
     - host: cargo-tracker.local
       http:
