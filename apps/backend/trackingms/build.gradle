@@ -61,6 +61,9 @@ dependencies {
 }
 
 test {
+    // useJUnitPlatform { ... } は parent build.gradle の tasks.withType(Test).configureEach で
+    // excludeTags 'localstack-integration'（デフォルト）/ 'kafka-integration'（-PexcludeKafkaIntegration）
+    // が設定済みなので、ここでは引数なしで呼び出して上書きしない（IT9 レビュー H7 / IT10 A3.8）。
     useJUnitPlatform()
     // Docker Desktop 29.x（MinAPI 1.40）では Testcontainers の docker-java が既定で
     // 古い API バージョンを使い HTTP 400 になるため、サポート範囲内の API バージョンを明示する。

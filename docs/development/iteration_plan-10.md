@@ -152,7 +152,7 @@
 | 3.5 | SonarQube Quality Gate を staging code で実機計測 | 1h | - | [ ] |
 | 3.6 | **IT9 レビュー H5**: `PaymentGatewayWebhookIntegrationTest` を 3 メソッドに分割、`await().atMost(5s)` に短縮 | 1h | - | [ ] |
 | 3.7 | **IT9 レビュー H6**: HMAC tolerance 境界値（299s / 300s / 301s）テスト + Clock 注入で時刻固定 | 1.5h | - | [ ] |
-| 3.8 | **IT9 レビュー H7**: `:check` から `localstack-integration` タグを除外する設定を `build.gradle` に明示、4 分加算の解消確認 | 0.5h | - | [ ] |
+| 3.8 | **IT9 レビュー H7**: `:check` から `localstack-integration` タグを除外する設定を `build.gradle` に明示、4 分加算の解消確認（`-PincludeLocalstackIntegration=true` で明示実行可能） | 0.5h | k2works | [x] |
 | 3.9 | **IT9 レビュー H8**: `charge.refunded` / `charge.dispute.created` 業務シナリオを US26 受入基準に追加、staging で実機検証 | 2h | - | [ ] |
 | 3.10 | **IT9 レビュー H9**: rotation 失敗時の PagerDuty/Slack 通知（Micrometer Counter + アラート閾値）設計と staging 動作確認 | 2h | - | [ ] |
 

@@ -56,6 +56,14 @@ subprojects {
             if (project.hasProperty('excludeKafkaIntegration')) {
                 excludeTags 'kafka-integration'
             }
+            // IT9 レビュー H7 / IT10 A3.8: LocalStack 統合テスト（trackingms の
+            // AwsSecretsManagerTrackingTokenSecretProviderLocalStackIT 等）は
+            // Docker + LocalStack イメージ起動で約 4 分かかるため、`:check` から
+            // デフォルトで除外する。明示実行は -PincludeLocalstackIntegration=true
+            // または個別実行 `./gradlew :trackingms:test --tests *LocalStackIT*`。
+            if (!project.hasProperty('includeLocalstackIntegration')) {
+                excludeTags 'localstack-integration'
+            }
         }
         testLogging {
             events 'passed', 'failed', 'skipped'
