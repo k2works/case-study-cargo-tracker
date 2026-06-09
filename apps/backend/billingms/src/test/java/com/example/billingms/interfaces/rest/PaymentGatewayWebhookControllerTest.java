@@ -52,7 +52,7 @@ class PaymentGatewayWebhookControllerTest {
         commandGateway = mock(CommandGateway.class);
         when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
         StripeWebhookProperties properties = new StripeWebhookProperties(SIGNING_SECRET, 300L);
-        controller = new PaymentGatewayWebhookController(properties, mapper, translator, commandGateway);
+        controller = new PaymentGatewayWebhookController(properties, mapper, translator, commandGateway, Clock.systemUTC());
     }
 
     @Test
@@ -139,7 +139,7 @@ class PaymentGatewayWebhookControllerTest {
     void シークレットが空の場合は機能無効として利用不可応答を返す() {
         StripeWebhookProperties disabled = new StripeWebhookProperties("", 300L);
         PaymentGatewayWebhookController disabledController = new PaymentGatewayWebhookController(
-                disabled, mapper, translator, commandGateway);
+                disabled, mapper, translator, commandGateway, Clock.systemUTC());
 
         ResponseEntity<String> response = disabledController.receive(VALID_PAYLOAD, "t=1,v1=deadbeef");
 

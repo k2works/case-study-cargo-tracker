@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.util.HexFormat;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -66,17 +67,20 @@ public class PaymentGatewayWebhookController {
     private final WebhookProcessedMapper webhookProcessedMapper;
     private final StripeEventTranslator translator;
     private final CommandGateway commandGateway;
+    private final Clock clock;
 
     public PaymentGatewayWebhookController(
             StripeWebhookProperties properties,
             WebhookProcessedMapper webhookProcessedMapper,
             StripeEventTranslator translator,
-            CommandGateway commandGateway
+            CommandGateway commandGateway,
+            Clock clock
     ) {
         this.properties = properties;
         this.webhookProcessedMapper = webhookProcessedMapper;
         this.translator = translator;
         this.commandGateway = commandGateway;
+        this.clock = clock;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -92,6 +96,22 @@ public class PaymentGatewayWebhookController {
         if (signature == null || signature.isBlank()) {
             log.warn("Stripe webhook 署名ヘッダ Stripe-Signature が欠落しています");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("missing signature");
+        }
+        // tolerance 事前チェック（注入された Clock を使い、テストで境界値を再現可能にする）。
+        // Stripe SDK の Webhook.constructEvent は内部で System.currentTimeMillis() を使うため
+        // tolerance 判定を Clock 制御できない。本前段チェックでスキューを Clock 基準で判定し、
+        // Stripe SDK には tolerance=0 ではなく標準値を渡して HMAC 検証のみを担当させる。
+        Optional<Long> timestampOpt = extractTimestamp(signature);
+        if (timestampOpt.isEmpty()) {
+            log.warn("Stripe webhook 署名ヘッダから timestamp を抽出できません: {}", signature);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid signature");
+        }
+        long nowEpochSeconds = clock.instant().getEpochSecond();
+        long skewSeconds = Math.abs(nowEpochSeconds - timestampOpt.get());
+        if (skewSeconds > properties.toleranceSeconds()) {
+            log.warn("Stripe webhook timestamp が tolerance を超過: skew={}s, tolerance={}s",
+                    skewSeconds, properties.toleranceSeconds());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("timestamp out of tolerance");
         }
         Event event;
         try {
@@ -140,6 +160,24 @@ public class PaymentGatewayWebhookController {
             webhookProcessedMapper.markFailed(event.getId(), reason);
             return ResponseEntity.ok("failed");
         }
+    }
+
+    /**
+     * Stripe-Signature ヘッダから t=... の epoch 秒を抽出する。
+     * 形式: "t=1234567890,v1=abc...,v0=...".
+     */
+    static Optional<Long> extractTimestamp(String header) {
+        for (String token : header.split(",")) {
+            String trimmed = token.trim();
+            if (trimmed.startsWith("t=")) {
+                try {
+                    return Optional.of(Long.parseLong(trimmed.substring(2)));
+                } catch (NumberFormatException e) {
+                    return Optional.empty();
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     private static String sha256(String input) {
