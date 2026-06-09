@@ -24,5 +24,6 @@
 | [ADR-0019](0019-payment-detail-recorded-event.md) | PaymentDetailRecorded 補完イベント（shared 最小契約 + 内部詳細の分離、IT8 で実装） | 提案中 |
 | [ADR-0020](0020-payment-gateway-webhook.md) | 決済機関 webhook 受信設計（Stripe + HMAC 署名検証 + idempotency キー + 部分入金、IT9 で実装完了） | 採用済み |
 | [ADR-0021](0021-aws-secrets-manager-rotation.md) | AWS Secrets Manager + Lambda 自動回転（trackingms 公開トークン、IT9 で実装完了） | 採用済み |
+| [ADR-0023](0023-flyway-enum-sync-verification.md) | Flyway migration × enum 同期検証ルール（IT9 V5 バグ再発防止、3 ms × CHECK 制約 + 7 件テスト、IT10 A4 で実装完了） | 採用済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。

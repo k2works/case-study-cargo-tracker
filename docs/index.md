@@ -96,6 +96,7 @@
 | [ADR-0019](./adr/0019-payment-detail-recorded-event.md) | PaymentDetailRecorded 補完イベント（IT8 実装済み：集約発火型連続 apply + GET /payments + cross-service E2E） |
 | [ADR-0020](./adr/0020-payment-gateway-webhook.md) | 決済機関 webhook 受信設計（Stripe + HMAC + idempotency + 部分入金 PARTIALLY_PAID、IT9 で実装完了、採用済み） |
 | [ADR-0021](./adr/0021-aws-secrets-manager-rotation.md) | AWS Secrets Manager + Lambda 自動回転（trackingms 公開トークン、IT9 で実装完了、採用済み） |
+| [ADR-0023](./adr/0023-flyway-enum-sync-verification.md) | Flyway migration × enum 同期検証ルール（IT10 A4 で 3 ms × 7 件テスト実装完了、IT9 V5 バグ再発防止、採用済み） |
 
 ### 運用ドキュメント
 

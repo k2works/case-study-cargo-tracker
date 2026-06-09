@@ -278,7 +278,7 @@ gantt
 | [ADR-0020](../adr/ADR-0020.md) | 決済機関 webhook（Stripe） | 採用済み（実装完了） | IT9 で前倒し確定（A5.6） |
 | [ADR-0021](../adr/ADR-0021.md) | 認可基盤 + JWT 検証 + Secrets Manager rotation | 採用済み（実装完了） | IT9 で前倒し確定（A5.6） |
 | ADR-0022（起票候補） | `shared-security` モジュール抽出（HerokuSecurityConfig コピペ解消） | 未起票 | IT9 M1 Rule of Three 判断、IT11 起票候補 |
-| ADR-0023（起票候補） | Flyway × enum 同期検証ルール（CI 検証） | 未起票 | A4 実装完了後に起票判断 |
+| [ADR-0023](../adr/0023-flyway-enum-sync-verification.md) | Flyway × enum 同期検証ルール（CI 検証） | 採用済み（実装完了） | A4 完遂と同時に起票（2026-06-09、3 ms × 7 件テスト） |
 
 ### ディレクトリ構成（新規追加分）
 
