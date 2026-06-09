@@ -23,6 +23,13 @@ axon:
       enabled: false
     fetcher:
       enabled: false
+    consumer:
+      # Heroku は H2 in-memory のため Kafka 経由イベント購読は無効化しているが、
+      # Axon Kafka Extension のデフォルト event-processor-mode は tracking のままで、
+      # cross-* / local-* processor が tracking として登録されて Event Store 起動時
+      # replay → DevDataSeeder の Invoice 採番中に PK 違反を起こす。subscribing に
+      # 明示 override して全 processor を同期実行に統一する。
+      event-processor-mode: subscribing
   eventhandling:
     processors:
       default:
