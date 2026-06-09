@@ -63,6 +63,7 @@
 | :--- | :--- |
 | [リリース計画](./development/release_plan.md) | Phase 1/2/Buffer のリリース計画、バーンダウン、履歴（IT1-IT8 完了、76/76 SP、Release 1.0 候補確立） |
 | [Release 1.0 候補確立報告書（暫定）](./development/release_report-1.0.md) | Phase 1+2+Buffer 全 76 SP 達成総括、IT9 で正式版昇格予定 |
+| [Release 1.1 完了報告書（仮版）](./development/release_report-1_1_0.md) | IT9 + IT10 AI 単独完結部分の累積、89/92 SP・97% 達成、staging 実機検証完了で正式版 `v1.1.0` タグ化、コミット 465 件 / テスト 483 件 / 138→20 日（85% 短縮）の Ralph Loop モード実績含む |
 | [IT1 計画](./development/iteration_plan-1.md) / [IT1 完了報告](./development/iteration_report-1.md) / [IT1 ふりかえり](./development/retrospective-1.md) | Phase 1 / 1 |
 | [IT2 計画](./development/iteration_plan-2.md) / [IT2 完了報告](./development/iteration_report-2.md) / [IT2 ふりかえり](./development/retrospective-2.md) | Phase 1 / 2 |
 | [IT3 計画](./development/iteration_plan-3.md) / [IT3 完了報告](./development/iteration_report-3.md) / [IT3 ふりかえり](./development/retrospective-3.md) | Phase 1 / 3 |

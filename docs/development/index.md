@@ -30,6 +30,10 @@
 
 - [release_report-1.0.md](release_report-1.0.md) — Release 1.0 候補確立報告書（IT8 完全達成、76/76 SP、ADR-0020/0021 起票）
 
+### Release 1.1 完了報告書（仮版）
+
+- [release_report-1_1_0.md](release_report-1_1_0.md) — Release 1.1 仮版報告書（IT9 + IT10 AI 単独完結部分、89/92 SP・97% 達成、staging 残 3 SP は実機検証完了後に正式版へ昇格）
+
 ### 進捗サマリー
 
 | イテレーション | 計画 SP | 実績 SP | 達成率 |
