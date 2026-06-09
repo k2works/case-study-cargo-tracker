@@ -1,0 +1,14 @@
+apiVersion: v2
+name: cargo-tracker
+description: Cargo Tracker マイクロサービス（7 ms + Kafka/Zookeeper/PostgreSQL）の Helm チャート
+type: application
+version: 0.1.0
+# アプリのリリースバージョン（参考値、実体はイメージタグで管理）
+appVersion: "1.2.0"
+keywords:
+  - cargo-tracker
+  - microservices
+  - axon
+  - kafka
+maintainers:
+  - name: cargo-tracker team

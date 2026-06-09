@@ -1,0 +1,66 @@
+{{- if .Values.frontend.enabled }}
+{{- $f := .Values.frontend }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $f.name }}
+  labels:
+    app: {{ $f.name }}
+    {{- include "cargo-tracker.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: {{ $f.name }}
+  ports:
+    - name: http
+      port: {{ $f.port }}
+      targetPort: {{ $f.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $f.name }}
+  labels:
+    app: {{ $f.name }}
+    {{- include "cargo-tracker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.defaults.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $f.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $f.name }}
+    spec:
+      containers:
+        - name: {{ $f.name }}
+          image: {{ include "cargo-tracker.image" (dict "registry" .Values.image.registry "name" $f.name "tag" .Values.image.tag) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $f.port }}
+          env:
+            # nginx.heroku.conf の envsubst 対象
+            - name: PORT
+              value: {{ $f.port | quote }}
+            - name: GATEWAY_URL
+              value: {{ $f.gatewayUrl | quote }}
+            - name: GATEWAY_HOST
+              value: {{ $f.gatewayHost | quote }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ $f.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ $f.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            {{- toYaml $f.resources | nindent 12 }}
+{{- end }}

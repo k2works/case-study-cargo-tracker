@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: trackingms
+  labels:
+    app: trackingms
+spec:
+  selector:
+    app: trackingms
+  ports:
+    - name: http
+      port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trackingms
+  labels:
+    app: trackingms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trackingms
+  template:
+    metadata:
+      labels:
+        app: trackingms
+    spec:
+      containers:
+        - name: trackingms
+          image: cargo-tracker/trackingms:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8084
+          envFrom:
+            - configMapRef:
+                name: cargo-config
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql:5432/tracking_read_db
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: POSTGRES_PASSWORD
+            # 公開追跡照会 JWT 署名鍵（ADR-0013 / ADR-0021）
+            - name: TRACKING_PUBLIC_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: TRACKING_PUBLIC_TOKEN_SECRET
+            - name: TRACKING_PUBLIC_TOKEN_PREVIOUS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: TRACKING_PUBLIC_TOKEN_PREVIOUS_SECRET
+            # SendGrid Dynamic Templates（ADR-0018、未設定時はログ通知に縮退）
+            - name: SENDGRID_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: SENDGRID_API_KEY
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi

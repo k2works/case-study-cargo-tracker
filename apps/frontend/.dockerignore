@@ -1,0 +1,12 @@
+# Docker ビルドコンテキストから除外（イメージは builder ステージで npm ci + build する）
+node_modules
+dist
+coverage
+test-results
+playwright-report
+.vite
+*.tsbuildinfo
+.git
+.gitignore
+Dockerfile
+.dockerignore

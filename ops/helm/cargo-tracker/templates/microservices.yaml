@@ -1,0 +1,91 @@
+{{- $root := . -}}
+{{- range .Values.microservices }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  labels:
+    app: {{ .name }}
+    {{- include "cargo-tracker.labels" $root | nindent 4 }}
+spec:
+  selector:
+    app: {{ .name }}
+  ports:
+    - name: http
+      port: {{ .port }}
+      targetPort: {{ .port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  labels:
+    app: {{ .name }}
+    {{- include "cargo-tracker.labels" $root | nindent 4 }}
+spec:
+  replicas: {{ $root.Values.defaults.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      containers:
+        - name: {{ .name }}
+          image: {{ include "cargo-tracker.image" (dict "registry" $root.Values.image.registry "name" .name "tag" $root.Values.image.tag) }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .port }}
+          envFrom:
+            - configMapRef:
+                name: cargo-config
+          env:
+            {{- if .db }}
+            - name: SPRING_DATASOURCE_URL
+              value: {{ printf "jdbc:postgresql://postgresql:5432/%s" .db | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: POSTGRES_PASSWORD
+            {{- end }}
+            {{- if .jwt }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: JWT_SECRET
+            {{- end }}
+            {{- range .extraSecretEnv }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: {{ .key }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .port }}
+            initialDelaySeconds: {{ if .gateway }}20{{ else }}30{{ end }}
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .port }}
+            initialDelaySeconds: {{ if .gateway }}60{{ else }}90{{ end }}
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            {{- toYaml $root.Values.defaults.resources | nindent 12 }}
+{{- end }}

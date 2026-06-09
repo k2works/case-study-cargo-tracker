@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: billingms
+  labels:
+    app: billingms
+spec:
+  selector:
+    app: billingms
+  ports:
+    - name: http
+      port: 8086
+      targetPort: 8086
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billingms
+  labels:
+    app: billingms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: billingms
+  template:
+    metadata:
+      labels:
+        app: billingms
+    spec:
+      containers:
+        - name: billingms
+          image: cargo-tracker/billingms:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8086
+          envFrom:
+            - configMapRef:
+                name: cargo-config
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgresql:5432/billing_read_db
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: POSTGRES_PASSWORD
+            # Stripe webhook 設定（ADR-0020、未設定時は 503 disabled）
+            - name: BILLING_STRIPE_WEBHOOK_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: STRIPE_WEBHOOK_SIGNING_SECRET
+            # SendGrid Dynamic Templates（ADR-0018、未設定時はログ通知に縮退）
+            - name: SENDGRID_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: SENDGRID_API_KEY
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8086
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8086
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi

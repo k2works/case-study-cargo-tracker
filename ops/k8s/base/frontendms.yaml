@@ -1,0 +1,69 @@
+# frontendms（React SPA + nginx）
+# 公開エントリポイント。nginx が静的ファイルを配信し、/api/ を gatewayms へプロキシする。
+# Dockerfile は apps/frontend/Dockerfile を再利用（envsubst で PORT/GATEWAY_URL/GATEWAY_HOST を注入）。
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontendms
+  labels:
+    app: frontendms
+spec:
+  selector:
+    app: frontendms
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontendms
+  labels:
+    app: frontendms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontendms
+  template:
+    metadata:
+      labels:
+        app: frontendms
+    spec:
+      containers:
+        - name: frontendms
+          image: cargo-tracker/frontendms:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            # nginx.heroku.conf の envsubst 対象
+            - name: PORT
+              value: "80"
+            # /api/ プロキシ先（クラスタ内 gatewayms。パスは保持される）
+            - name: GATEWAY_URL
+              value: "http://gatewayms:8080"
+            - name: GATEWAY_HOST
+              value: "gatewayms"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi

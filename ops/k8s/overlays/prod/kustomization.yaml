@@ -1,0 +1,48 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 本番想定オーバーレイ
+#
+# 注意: secret.yaml の開発用デフォルト値は本番では使用しないこと。
+#   実運用では Sealed Secrets / External Secrets Operator 等で
+#   cargo-secret を上書きする（ADR-0021 AWS Secrets Manager と整合）。
+resources:
+  - ../../base
+
+# ステートレス ms を冗長化（インフラ StatefulSet は単一のまま）
+replicas:
+  - name: gatewayms
+    count: 2
+  - name: authms
+    count: 2
+  - name: bookingms
+    count: 2
+  - name: routingms
+    count: 2
+  - name: trackingms
+    count: 2
+  - name: handlingms
+    count: 2
+  - name: billingms
+    count: 2
+  - name: frontendms
+    count: 2
+
+# 本番では明示的なイメージタグ運用を推奨（latest 禁止）
+images:
+  - name: cargo-tracker/authms
+    newTag: stable
+  - name: cargo-tracker/bookingms
+    newTag: stable
+  - name: cargo-tracker/routingms
+    newTag: stable
+  - name: cargo-tracker/trackingms
+    newTag: stable
+  - name: cargo-tracker/handlingms
+    newTag: stable
+  - name: cargo-tracker/billingms
+    newTag: stable
+  - name: cargo-tracker/gatewayms
+    newTag: stable
+  - name: cargo-tracker/frontendms
+    newTag: stable

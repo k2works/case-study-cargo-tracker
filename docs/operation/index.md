@@ -10,6 +10,7 @@
 | :--- | :--- | :--- |
 | [アプリケーション開発環境セットアップ手順書](アプリケーション開発環境セットアップ手順書.md) | ローカルアプリケーション開発環境の構築手順（Java 25 + Gradle + Kafka） | 作成済み |
 | [開発環境セットアップ手順書](開発環境セットアップ手順書.md) | Heroku Container Registry デプロイ手順（Axon Kafka + Aiven） | 作成済み |
+| [Kubernetes 運用手順書](Kubernetes運用手順書.md) | Kubernetes デプロイ・運用手順（Kustomize 版 `ops/k8s/` / Helm 版 `ops/helm/`、インフラ込み 7 ms） | 作成済み |
 | Heroku ステージング環境セットアップ手順書 | Heroku ステージング環境の構築手順 | 未作成 |
 | Heroku プロダクション環境セットアップ手順書 | Heroku 本番環境の構築手順 | 未作成 |
 

@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 全リソースを cargo-tracker namespace に配置
+namespace: cargo-tracker
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: cargo-tracker
+    includeSelectors: false
+
+resources:
+  # namespace
+  - namespace.yaml
+  # 設定・機密
+  - configmap.yaml
+  - secret.yaml
+  # インフラ（クラスタ内）
+  - zookeeper.yaml
+  - kafka.yaml
+  - postgresql.yaml
+  # マイクロサービス
+  - authms.yaml
+  - bookingms.yaml
+  - routingms.yaml
+  - trackingms.yaml
+  - handlingms.yaml
+  - billingms.yaml
+  - gatewayms.yaml
+  # フロントエンド（公開エントリポイント）
+  - frontendms.yaml
+  # 外部公開
+  - ingress.yaml
+
+# イメージタグ集中管理（CI でビルドしたイメージに差し替える）
+images:
+  - name: cargo-tracker/authms
+    newTag: latest
+  - name: cargo-tracker/bookingms
+    newTag: latest
+  - name: cargo-tracker/routingms
+    newTag: latest
+  - name: cargo-tracker/trackingms
+    newTag: latest
+  - name: cargo-tracker/handlingms
+    newTag: latest
+  - name: cargo-tracker/billingms
+    newTag: latest
+  - name: cargo-tracker/gatewayms
+    newTag: latest
+  - name: cargo-tracker/frontendms
+    newTag: latest

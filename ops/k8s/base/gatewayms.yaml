@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gatewayms
+  labels:
+    app: gatewayms
+spec:
+  selector:
+    app: gatewayms
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gatewayms
+  labels:
+    app: gatewayms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gatewayms
+  template:
+    metadata:
+      labels:
+        app: gatewayms
+    spec:
+      containers:
+        - name: gatewayms
+          image: cargo-tracker/gatewayms:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          # AUTHMS_URL 等の各 ms URL は cargo-config から注入
+          envFrom:
+            - configMapRef:
+                name: cargo-config
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cargo-secret
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi

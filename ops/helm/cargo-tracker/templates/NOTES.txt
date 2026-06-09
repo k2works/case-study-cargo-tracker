@@ -1,0 +1,18 @@
+Cargo Tracker をデプロイしました（namespace: {{ .Release.Namespace }}）。
+
+Pod の起動状況:
+  kubectl -n {{ .Release.Namespace }} get pods -w
+
+{{- if .Values.ingress.enabled }}
+
+API Gateway へのアクセス（Ingress 経由）:
+  http://{{ .Values.ingress.host }}/
+  ※ /etc/hosts に "<ingress IP> {{ .Values.ingress.host }}" を追加してください。
+{{- end }}
+
+ポートフォワードで直接確認する場合:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/gatewayms 8080:8080
+  curl http://localhost:8080/actuator/health
+
+警告: secret.* はデフォルトで開発用の値です。
+  本番では `-f values-prod.yaml` 等で JWT_SECRET / POSTGRES_PASSWORD 等を必ず上書きしてください。

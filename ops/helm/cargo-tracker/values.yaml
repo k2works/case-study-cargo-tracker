@@ -1,0 +1,114 @@
+# Cargo Tracker Helm チャートのデフォルト値
+#
+# 本番では --set / -f values-prod.yaml で機密値を上書きすること。
+# secret.* の値は開発・ローカル検証専用（ハードコード禁止の原則）。
+
+image:
+  # イメージリポジトリ接頭辞（例: registry.example.com/cargo-tracker）
+  registry: cargo-tracker
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# 各 ms 共通の非機密設定（ConfigMap cargo-config に展開）
+config:
+  springProfilesActive: local-docker
+  kafkaBootstrap: kafka:29092
+  sendgridFromEmail: noreply@cargo-tracker.example.com
+  sendgridFromName: Cargo Tracker
+  stripeWebhookToleranceSeconds: "300"
+
+# 機密値（Secret cargo-secret に展開）
+secret:
+  create: true
+  postgresUser: cargo
+  postgresPassword: cargo-dev-password
+  jwtSecret: dev-only-jwt-secret-please-override-in-prod-32+bytes
+  trackingPublicTokenSecret: dev-only-tracking-public-token-secret-32+bytes
+  trackingPublicTokenPreviousSecret: ""
+  sendgridApiKey: ""
+  stripeWebhookSigningSecret: ""
+
+# ステートレス ms のデフォルトリソース・レプリカ
+defaults:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 768Mi
+
+# マイクロサービス定義（このリストをループして Deployment + Service を生成）
+microservices:
+  - name: authms
+    port: 8081
+    db: auth_db
+    jwt: true
+  - name: bookingms
+    port: 8082
+    db: booking_read_db
+  - name: routingms
+    port: 8083
+    db: routing_read_db
+  - name: handlingms
+    port: 8085
+    db: handling_read_db
+  - name: trackingms
+    port: 8084
+    db: tracking_read_db
+    extraSecretEnv:
+      - name: TRACKING_PUBLIC_TOKEN_SECRET
+        key: TRACKING_PUBLIC_TOKEN_SECRET
+      - name: TRACKING_PUBLIC_TOKEN_PREVIOUS_SECRET
+        key: TRACKING_PUBLIC_TOKEN_PREVIOUS_SECRET
+      - name: SENDGRID_API_KEY
+        key: SENDGRID_API_KEY
+  - name: billingms
+    port: 8086
+    db: billing_read_db
+    extraSecretEnv:
+      - name: BILLING_STRIPE_WEBHOOK_SIGNING_SECRET
+        key: STRIPE_WEBHOOK_SIGNING_SECRET
+      - name: SENDGRID_API_KEY
+        key: SENDGRID_API_KEY
+  # API Gateway（datasource 無し、各 ms への URL を ConfigMap から注入）
+  - name: gatewayms
+    port: 8080
+    jwt: true
+    gateway: true
+
+# フロントエンド（React SPA + nginx、公開エントリポイント）
+# microservices ループとは形が異なる（nginx / port 80 / actuator 無し / DB 無し）ため別定義。
+# nginx が "/" で SPA を配信し、"/api/" を gatewayms へプロキシする。
+frontend:
+  enabled: true
+  name: frontendms
+  port: 80
+  # /api/ プロキシ先（クラスタ内 gatewayms。パスは保持される）
+  gatewayUrl: http://gatewayms:8080
+  gatewayHost: gatewayms
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+# インフラ（クラスタ内）
+infra:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    storage: 1Gi
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    storage: 2Gi
+  postgresql:
+    image: postgres:16
+    storage: 2Gi
+    multipleDatabases: auth_db,booking_read_db,routing_read_db,tracking_read_db,handling_read_db,billing_read_db
+
+# 外部公開
+ingress:
+  enabled: true
+  className: nginx
+  host: cargo-tracker.local

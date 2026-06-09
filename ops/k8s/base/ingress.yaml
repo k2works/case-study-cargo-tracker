@@ -1,0 +1,24 @@
+# frontendms を外部公開する Ingress（唯一の公開エントリポイント）
+# "/" は frontendms（React SPA + nginx）に到達し、frontendms 内の nginx が
+# "/api/" を gatewayms へプロキシする。gatewayms 自体はクラスタ内サービスのまま。
+# ingress-nginx 等のコントローラを前提とする。ローカルでは
+#   minikube addons enable ingress
+# 後、hosts に "<minikube ip> cargo-tracker.local"（または tunnel 利用時は 127.0.0.1）を追加する。
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cargo-tracker
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  rules:
+    - host: cargo-tracker.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontendms
+                port:
+                  number: 80

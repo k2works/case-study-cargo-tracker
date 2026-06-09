@@ -10,6 +10,12 @@
 #
 # シークレットはすべてリポジトリ直下の .env から読み込む（ハードコード禁止）。
 #
+# Kubernetes 版:
+#   この構成を Kubernetes 化したマニフェストを提供している。
+#     - Kustomize 版: ops/k8s/        （kubectl apply -k ops/k8s/overlays/local）
+#     - Helm 版:      ops/helm/cargo-tracker/  （helm install ...）
+#   インフラ（zookeeper/kafka/postgresql）もクラスタ内に含む。詳細は ops/k8s/README.md。
+#
 # サービス構成（ポート割り当て）:
 #   インフラ:  zookeeper(2181) / kafka(9092) / postgresql(5432)
 #   アプリ:   gatewayms(8080) / authms(8081) / bookingms(8082) / routingms(8083)
