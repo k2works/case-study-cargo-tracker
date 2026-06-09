@@ -174,11 +174,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | CHANGELOG.md に Release 1.1 セクション追加（IT8 + IT9 + IT10 の機能を集約） | 1h | - | [ ] |
-| 5.2 | GitHub Release タグ作成（`v1.1.0`）+ release notes 公開 | 0.5h | - | [ ] |
-| 5.3 | 本番デプロイ可能宣言（README + `docs/index.md` に明記） | 0.5h | - | [ ] |
-| 5.4 | **IT9 レビュー M8**: CHANGELOG のバージョン順序ぶれを「Release ライン経緯」セクションで明示、または再採番 | 0.5h | - | [ ] |
-| 5.5 | **IT9 レビュー L5**: README の主要機能表に Stripe webhook / AWS Secrets Manager / 認可基盤を 1 行ずつ追記 | 0.5h | - | [ ] |
+| 5.1 | CHANGELOG.md に Release 1.1 セクション追加（IT8 + IT9 + IT10 の機能を集約）+ 既存 IT9 セクションを `1.1.0-candidate` に降格 | 1h | k2works | [x] |
+| 5.2 | GitHub Release タグ作成（`v1.1.0`）+ release notes 公開（staging 実機検証完了後に実施） | 0.5h | - | [ ] |
+| 5.3 | 本番デプロイ可能宣言（README + `docs/index.md` に明記、staging 実機検証完了後に実施） | 0.5h | - | [ ] |
+| 5.4 | **IT9 レビュー M8**: CHANGELOG 末尾に「Release ライン経緯」セクションを追加し、`v2.x` → `v1.0.0-candidate` → `v1.1.0` の見かけ上の逆行の経緯を説明 | 0.5h | k2works | [x] |
+| 5.5 | **IT9 レビュー L5**: README に「主要機能（Release 1.1 時点）」表を新規追加し、Stripe webhook / AWS Secrets Manager / 認可基盤を含む 6 カテゴリで網羅 | 0.5h | k2works | [x] |
 | 5.6 | ~~**IT9 レビュー L6**: ADR-0020 / ADR-0021 のステータスを「採用済み（実装完了）」に更新~~（IT9 クロージング作業として 2026-06-06 に前倒し完了） | 0.5h | k2works | [x] |
 
 **小計**: 3.5h（理想時間、5.6 前倒し完了分含む）

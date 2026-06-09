@@ -22,6 +22,17 @@ DDD（ドメイン駆動設計）のケーススタディとして、貨物追�
 
 本システムでは、この一連の業務フローを DDD の境界付けられたコンテキスト（Booking・Routing・Handling・Tracking・Shared）に分割して設計・実装します。
 
+### 主要機能（Release 1.1 / IT10 時点）
+
+| カテゴリ | 機能 | 概要 | 関連 ADR / ストーリー |
+|---|---|---|---|
+| 業務基盤 | 貨物予約 / 経路設計 / 荷役 / 追跡 / 例外管理 | DDD 5 境界付けられたコンテキストで分割実装、Axon Framework 5 + Kafka Extension による CQRS + Event Sourcing | US1-US20 |
+| 業務基盤 | 精算（請求書発行 / 入金記録 / 督促） | Invoice 集約 + BalanceTracker 値オブジェクト、ShedLock で OverdueScheduler のクラスタ排他 | US21-US25 / ADR-0017 |
+| 決済自動化 | **Stripe webhook 部分入金受信** | `POST /api/v1/billing/webhooks/stripe` で HMAC 署名検証 + 冪等性キー + PARTIALLY_PAID 状態遷移 + Clock 注入による tolerance 制御 | US26 / ADR-0020 |
+| 運用基盤 | **AWS Secrets Manager 自動回転** | trackingms 公開トークン secret の AWSCURRENT/AWSPREVIOUS 取得 + Lambda 90 日サイクル rotation + Micrometer 失敗監視 | US27 / ADR-0021 |
+| セキュリティ | **認可基盤（gatewayms JWT + 全 ms 深層認可）** | authms 発行 JWT を gatewayms `JwtAuthenticationFilter` で検証 → `X-Forwarded-User/Role` 伝搬 → 各 ms `PreAuthFilter` で SecurityContext 復元 + 全 Controller `@PreAuthorize` 二段重層 | US28 / US30 / ADR-0021 |
+| 監視 | Micrometer / Prometheus / Grafana / SendGrid 通知 | HTTP latency / JVM / Event Processor lag / Saga 失敗率 / secret rotation 失敗（連続 3 回で Critical） | US29 / ADR-0018 |
+
 ### 前提
 
 | ソフトウェア | バージョン | 備考 |

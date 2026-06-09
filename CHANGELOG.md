@@ -9,17 +9,68 @@
 
 ## [Unreleased]
 
-IT10 で予定（Release 1.1 正式版昇格）:
+IT10 staging 実機検証が完了次第、`v1.1.0` を正式タグ化（staging E2E 経由認可検証 + Stripe Test Mode webhook + Secrets Manager rotation 実機確認後）。
 
-- 全 Controller メソッド単位 `@PreAuthorize` 付与（US30）
-- RestShipperInfoAcl fallback UX 改善（US31、`discountRate=null` + S23 alert-warning）
-- Heroku staging app 構築 + JWT 経由 E2E 実機検証（US32）
-- Flyway migration × enum 同期 CI 自動検証（US33）
-- CHANGELOG v1.1.0 + GitHub Release タグ + 本番デプロイ可能宣言（US34）
+残作業（A3 staging タスク）:
+
+- A3.1 Heroku staging app（dev plan）構築 + 各 ms デプロイ
+- A3.2 Playwright JWT 経由 E2E（`cross-service.spec.ts`）staging 実行
+- A3.3 Stripe Test Mode webhook → billingms staging で PARTIALLY_PAID 検証
+- A3.4 AWS Secrets Manager `rotate-secret` 実行 + trackingms refresh ログ確認
+- A3.5 SonarQube Quality Gate を staging code で実機計測
+- A3.9b Stripe Test Mode から `charge.refunded` / `charge.dispute.created` 送信 → skipped 動作検証
+- A3.10b rotation 失敗時の Grafana / PagerDuty 通知実機検証
 
 ---
 
-## [1.1.0] — 2026-06-06（Release 1.1 主要機能完全実装、IT10 で正式版昇格予定）
+## [1.1.0] — 2026-06-09（Release 1.1 正式版昇格準備完了、IT10 主要機能完遂）
+
+IT10 完了時点。IT9 までの主要機能完全実装に加えて、IT10 で認可深層強化（全 Controller `@PreAuthorize` + httpBasic 無効化）、Flyway × enum 同期 CI 検証、S23 fallback UX 改善、IT9 レビュー指摘 12 件のうち AI Agent 単独完結可能な 9 件解消（H3 / H4 / H5 / H6 / H7 / H8 / H9 / H10 / M3）を達成。**残る staging 実機検証完了で `v1.1.0` 正式タグを切る運用**。
+
+### Added（新規機能 / IT10）
+
+- **全 Controller クラス単位 `@PreAuthorize`**（US30 / A1.1-A1.3）: billingms / routingms / bookingms / handlingms / trackingms の 11 Controller に `hasAnyRole('XXX', 'ADMIN')` を付与、URL ルール認可と二段重層の深層防御を確立。`PaymentGatewayWebhookController` は HMAC 検証で代替認証のため非対象。
+- **`PreAuthFilter`（OncePerRequestFilter）**（US30 / A1.4 / IT9 H3 解消）: 全 5 ms に同型実装、`X-Forwarded-User` / `X-Forwarded-Role` ヘッダから `UsernamePasswordAuthenticationToken` を構築し SecurityContext に設定。`httpBasic.disable()` で BASIC auth bypass リスク解消。
+- **S23 部分入金画面 Circuit Breaker OPEN 時の「割引率未確定」alert-warning**（US31 / A2 / IT9 M3 解消）: 既存 `CircuitBreakerHealthController` を InvoiceDetailPage が初回ロード時に呼び、shipperInfo Circuit Breaker が OPEN / FORCED_OPEN なら経理担当者に明示警告。Backend 変更なし。
+- **Flyway × enum 同期検証テスト**（US33 / A4.1-A4.2）: 3 ms に Migration SQL パース方式の同期検証テスト追加（IT9 V5 バグ再発防止）。`BillingStatusCheckConstraintTest` / `HandlingTypeCheckConstraintTest` / `TransportStatusCheckConstraintTest`。
+- **handlingms `chk_handling_type` CHECK 制約**（A4.2a / V5 migration）: HandlingType (5 値) を DB 値域として強制。
+- **trackingms `chk_tracking_summary_current_status` / `chk_tracking_event_transport_status` CHECK 制約**（A4.2b / V5 migration）: TransportStatus (9 値) を DB 値域として強制（event 側は NULL 許容）。
+- **HMAC tolerance 境界値テスト 6 件 + Clock 注入**（US32 / A3.7 / IT9 H6 解消）: `PaymentGatewayWebhookController` に Clock を注入し前段 tolerance 検証ロジックを追加、skew 299s / 300s / 301s / 未来側 301s / extractTimestamp ユーティリティを実証。
+- **rotation 失敗監視メトリクス**（US32 / A3.10a / IT9 H9 解消）: `AwsSecretsManagerTrackingTokenSecretProvider` に Micrometer Counter（success / failure）+ 連続失敗 Gauge を追加。`operation.md` に「連続失敗 3 回 = Critical」アラート閾値を明文化。
+
+### Changed（変更 / IT10）
+
+- **`PaymentGatewayWebhookIntegrationTest`** （A3.6 / IT9 H5 解消）: 1 巨大メソッド → 4 メソッドに分割（部分入金 / 冪等性 / 残額入金 / 不正署名）、`await timeout` 15s → 5s に短縮、実時間 約半減。
+- **`:check` から `localstack-integration` タグをデフォルト除外**（A3.8 / IT9 H7 解消）: `apps/backend/build.gradle` に excludeTags を追加、`-PincludeLocalstackIntegration=true` で明示実行可能。`:check` の実行時間が約 4 分短縮。
+- **`AwsSecretsManagerTrackingTokenSecretProvider` コンストラクタ**: `MeterRegistry` 引数を追加（既存 LocalStack IT / 単体テストも追従済み）。
+- **`PaymentGatewayWebhookController` コンストラクタ**: `Clock` 引数を追加（`BillingCommonConfig.clock()` Bean が注入される）。
+
+### Documentation（ドキュメント / IT10）
+
+- **US26 受入基準に「対象外イベントの受入動作」**（A3.9a / IT9 H8 解消）: `charge.refunded` / `charge.dispute.created` は skipped 200 + markFailed 仕様であることを明示、将来 US28 / US29 候補を予告。
+- **`operation.md` Security 監視に rotation 失敗閾値**: Warning（5 分窓で increment ≥ 5）+ Critical（連続失敗 Gauge ≥ 3）の 2 段階。
+- **`operation.md` 2.5 節「ロール棚卸し」**（A1.6 / IT9 H10 解消）: 6 ロール（ACCOUNTANT / ROUTING / SALES / HANDLER / TRACKER / ADMIN）の責務 + 監査手順 + 新規ロール追加チェックリスト。
+- **`developing-backend` スキルに認可テストパターン**（A1.5）: `@WebMvcTest` + `@MockitoBean` + `TestMethodSecurityConfig` のひな形をスキル文書化。
+
+### IT9 レビュー指摘事項の解消（12 件中 9 件 / 残 3 件は staging 実機）
+
+| ID | 重要度 | 指摘 | 解消方法 / 担当タスク |
+|----|--------|------|------------------|
+| H3 | 高 | httpBasic 残置で BASIC auth bypass 可 | A1.4: `httpBasic.disable()` + `PreAuthFilter` 導入 |
+| H4 | 高 | URL ルール認可のみで Controller 二段保護なし | A1.1-A1.3: 全 Controller `@PreAuthorize` 付与 |
+| H5 | 高 | webhook IT 巨大 1 メソッド + await 15s | A3.6: 4 分割 + await 5s 短縮 |
+| H6 | 高 | HMAC tolerance 境界値テスト欠如 | A3.7: Clock 注入 + 境界値 6 件追加 |
+| H7 | 高 | `:check` に LocalStack IT 含む（+4 分） | A3.8: デフォルト除外 + 明示実行 property |
+| H8 | 高 | charge.refunded / dispute シナリオ未定義 | A3.9a: US26 受入基準明示 + 単体テスト 2 件 |
+| H9 | 高 | rotation 失敗時の通知メカニズム欠如 | A3.10a: Counter + Gauge + アラート閾値 |
+| H10 | 高 | ロール棚卸し手順未文書化 | A1.6: `operation.md` 2.5 節追加 |
+| M3 | 中 | shipperInfo OPEN 時のフロント警告欠如 | A2: alert-warning 常時表示 |
+| H1-H2 / M1-M2 / M4-M9 / L1-L7 | — | （IT9 内で解消済みまたは IT11 以降検討） | — |
+| H11-H12 相当 | — | staging 実機検証必須項目 | A3.1-A3.5 / A3.9b / A3.10b (Release 1.1 正式タグ前に実施) |
+
+---
+
+## [1.1.0-candidate] — 2026-06-06（IT9 完了時点 / Release 1.1 主要機能完全実装）
 
 IT9 完了時点（Phase 2 Buffer 後の Release 1.1）。Stripe webhook 部分入金 + AWS Secrets Manager 自動回転 + 認可基盤 + SendGrid WireMock 統合により、Release 1.1 の主要機能を完全実装。IT8 review 11 件全解消。
 
@@ -179,4 +230,16 @@ billingms（Billing Context）を新規立ち上げ、精算機能完成。
 - `v2.0.0`: Release 2.0（IT6 完了、追跡 + 例外処理）
 - `v2.1.0`: Release 2.1（IT7 完了、精算機能）
 - `v1.0.0-candidate`: Release 1.0 候補（IT8 完了、本番デプロイ準備）
-- `v1.1.0`: Release 1.1（IT9 主要機能完全実装、IT10 正式版昇格予定）
+- `v1.1.0-candidate`: Release 1.1 候補（IT9 主要機能完全実装、staging 検証待ち）
+- `v1.1.0`: Release 1.1 正式版（IT10 完了、staging 実機検証 + 認可深層強化 + Flyway × enum 同期検証）
+
+## Release ライン経緯（バージョン順序の説明 / IT9 レビュー M8 解消）
+
+本プロジェクトでは Release 1.0 系（MVP / Phase 2 Buffer）と Release 2.x 系（Phase 2 主要機能）が並行進行したため、CHANGELOG のバージョン順序は時系列ではなく **Release ライン別**になっている。Reader の混乱を避けるため経緯を以下に明示する。
+
+| Release ライン | 目的 | 主要バージョン | 完了 IT |
+|---|---|---|---|
+| **Release 1.0**（MVP → Buffer → 候補） | 業務基盤（予約 / 経路設計 / 認可） | `v1.0.0-mvp`（IT4）/ `v2.0.0-rc`（IT5）/ `v2.0.0`（IT6）/ `v2.1.0`（IT7）/ `v1.0.0-candidate`（IT8） | IT4-IT8 |
+| **Release 1.1**（主要機能完全実装 → 正式版） | 決済 webhook / Secret rotation / 認可基盤 | `v1.1.0-candidate`（IT9）/ `v1.1.0`（IT10） | IT9-IT10 |
+
+**バージョン番号の見かけ上の逆行**（`v2.1.0` → `v1.0.0-candidate` → `v1.1.0`）は、Release 1.0 を「業務基盤として 1.x で確立」する戦略に再整理した経緯による。`v2.x` 系は Phase 2 内の中間バージョンで、Release 1.0 候補確立時に「業務基盤としては 1.x 系」に意味的に統合された（コードは継続維持、タグ名は履歴のため残す）。Release 2.0 / 2.1 タグは IT11 以降の Phase 3 で新規機能群（例: 多通貨 / マルチテナント）に再割当て予定。
