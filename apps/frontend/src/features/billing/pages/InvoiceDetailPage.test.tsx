@@ -88,6 +88,11 @@ describe('InvoiceDetailPage (S23)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(billingApi.fetchPayments).mockResolvedValue([]);
+    vi.mocked(billingApi.getCircuitBreakerHealth).mockResolvedValue({
+      name: 'shipperInfo',
+      state: 'CLOSED',
+      registered: true,
+    });
   });
 
   it('US21: CALCULATED 状態の請求詳細を表示する', async () => {
@@ -467,5 +472,33 @@ describe('InvoiceDetailPage (S23)', () => {
 
     await screen.findByText(/部分入金状況/);
     expect(screen.getByRole('button', { name: /入金を記録/ })).toBeInTheDocument();
+  });
+
+  it('US31: Circuit Breaker OPEN のときページ表示時に「割引率未確定」alert-warning を出す', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(calculatedInvoice);
+    vi.mocked(billingApi.getCircuitBreakerHealth).mockResolvedValue({
+      name: 'shipperInfo',
+      state: 'OPEN',
+      registered: true,
+      failureRate: 100,
+    });
+
+    renderPage('INV-20260820-0001');
+
+    const alert = await screen.findByTestId('discount-pending-alert');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent(/割引率が未確定です/);
+    expect(alert).toHaveTextContent(/bookingms の障害により最新の割引率を取得できません/);
+  });
+
+  it('US31: Circuit Breaker CLOSED のときは「割引率未確定」alert は表示されない', async () => {
+    vi.mocked(billingApi.fetchInvoice).mockResolvedValue(calculatedInvoice);
+
+    renderPage('INV-20260820-0001');
+
+    await waitFor(() => {
+      expect(screen.getByText(/INV-20260820-0001/)).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('discount-pending-alert')).not.toBeInTheDocument();
   });
 });

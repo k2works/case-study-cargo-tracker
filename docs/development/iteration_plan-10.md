@@ -16,7 +16,7 @@
 ### イテレーション終了時の達成状態
 
 1. **A1 認可深層強化（IT9 A3.2 持ち越し）**: 全 ms Controller に `@PreAuthorize("hasRole('XXX')")` を付与し、URL ルール認可と二段重層の深層防御を確立する。`@WithMockUser` テストパターンを `developing-backend` スキルに反映。
-2. **A2 RestShipperInfoAcl fallback UX 改善（IT9 M3 持ち越し）**: Circuit Breaker OPEN 時の fallback を「個人扱い（discountRate=0）」から「discountRate=null（未確定）」に変更し、S23 で経理担当者に明示警告を表示する。
+2. **A2 RestShipperInfoAcl fallback UX 改善（IT9 M3 持ち越し）**: ~~Circuit Breaker OPEN 時の fallback を「個人扱い（discountRate=0）」から「discountRate=null（未確定）」に変更~~（ドメインモデル変更の影響範囲が想定より大きいため**アプローチ変更**）。**既存の `CircuitBreakerHealthController` をフロント側で活用し、S23 ページ表示時に常時 `shipperInfo` Circuit Breaker 状態を確認、OPEN なら「割引率未確定」alert-warning を表示**することで、経理担当者に明示警告を行う。Backend は変更不要。
 3. **A3 staging 環境構築 + E2E 認可実機検証**: Heroku staging app（dev plan）構築、JWT 経由 E2E、Stripe Test Mode webhook、AWS Secrets Manager 手動 rotation、SonarQube Quality Gate 実機計測。
 4. **A4 Flyway migration × enum 同期自動検証**: ArchUnit または独自テストで「CHECK 制約値リスト ⊃ enum 値」を CI 検証する仕組みを追加（IT9 V5 バグ再発防止）。
 5. **A5 Release 1.1 正式版昇格**: CHANGELOG 確定 + GitHub Release タグ + 本番デプロイ可能宣言。
@@ -135,9 +135,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `RestShipperInfoAcl` の fallback を null 返却に変更（既存テスト調整含む） | 1h | - | [ ] |
-| 2.2 | `InvoiceDetailPage` S23 で null discountRate を「割引率未確定」alert-warning として表示 | 1h | - | [ ] |
-| 2.3 | フロントエンドテスト追加（alert-warning 表示の単体テスト 2 件） | 1h | - | [ ] |
+| 2.1 | ~~`RestShipperInfoAcl` の fallback を null 返却に変更~~ → **アプローチ変更**: 既存 `CircuitBreakerHealthController` を活用、Backend 変更不要 | 0h | k2works | [x] |
+| 2.2 | `InvoiceDetailPage` S23 で ページ表示時に Circuit Breaker 状態確認 → OPEN なら「割引率未確定」alert-warning を表示 | 1h | k2works | [x] |
+| 2.3 | フロントエンドテスト追加（alert-warning 表示の単体テスト 2 件: OPEN 表示 / CLOSED 非表示） | 1h | k2works | [x] |
 
 **小計**: 3h（理想時間）
 

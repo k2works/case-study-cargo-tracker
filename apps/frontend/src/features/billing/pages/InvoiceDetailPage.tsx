@@ -37,6 +37,7 @@ export default function InvoiceDetailPage() {
   const [shipperInfoState, setShipperInfoState] = useState<CircuitBreakerState | null>(null);
   const [manualRate, setManualRate] = useState<string>('0.15');
   const [showManualForm, setShowManualForm] = useState(false);
+  const [shipperInfoCircuitOpen, setShipperInfoCircuitOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +61,17 @@ export default function InvoiceDetailPage() {
       })
       .catch(() => {
         if (!cancelled) setPayments([]);
+      });
+    getCircuitBreakerHealth('shipperInfo')
+      .then((health) => {
+        if (!cancelled) {
+          setShipperInfoCircuitOpen(
+            health.state === 'OPEN' || health.state === 'FORCED_OPEN',
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setShipperInfoCircuitOpen(false);
       });
     return () => {
       cancelled = true;
@@ -185,6 +197,26 @@ export default function InvoiceDetailPage() {
       <h1 className="text-2xl font-bold mb-4">
         請求詳細 - {invoice.invoiceId}
       </h1>
+
+      {shipperInfoCircuitOpen && (
+        <section
+          className="mb-4 rounded border border-amber-300 bg-amber-50 p-4"
+          role="alert"
+          data-testid="discount-pending-alert"
+        >
+          <div className="flex items-start gap-2">
+            <span className="text-amber-600" aria-hidden="true">⚠</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                割引率が未確定です
+              </p>
+              <p className="mt-1 text-xs text-amber-700">
+                bookingms の障害により最新の割引率を取得できません。表示中の割引額は前回キャッシュ値または手動入力値である可能性があります。経理担当者は障害復旧後に再確認してください。
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="mb-6 grid grid-cols-2 gap-y-2 text-sm">
         <dt className="text-gray-600">予約 ID</dt>
