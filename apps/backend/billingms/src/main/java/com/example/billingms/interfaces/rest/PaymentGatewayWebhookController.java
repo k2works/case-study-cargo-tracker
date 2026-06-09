@@ -61,6 +61,7 @@ public class PaymentGatewayWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentGatewayWebhookController.class);
     private static final String PROVIDER_STRIPE = "STRIPE";
+    private static final String EVENT_TYPE_PAYMENT_INTENT_SUCCEEDED = "payment_intent.succeeded";
     private static final long COMMAND_TIMEOUT_SEC = 5L;
 
     private final StripeWebhookProperties properties;
@@ -140,9 +141,13 @@ public class PaymentGatewayWebhookController {
 
         Optional<RecordPartialPaymentCommand> commandOpt = translator.translate(event, payload);
         if (commandOpt.isEmpty()) {
-            // 対象外 event type または metadata 不足。記録は残し副作用なし。
-            webhookProcessedMapper.markFailed(event.getId(),
-                    "unsupported event type or missing metadata");
+            // 対象外 event type と metadata 不足を区別して reason を記録する
+            // （経理担当者が webhook_processed テーブルを直接 SQL で集計するときに
+            // 「対象外イベント率」と「データ不正率」を分離可能にする / IT10 中間レビュー L3）。
+            String reason = EVENT_TYPE_PAYMENT_INTENT_SUCCEEDED.equals(event.getType())
+                    ? "missing_metadata"
+                    : "unsupported_event_type";
+            webhookProcessedMapper.markFailed(event.getId(), reason);
             return ResponseEntity.ok("skipped");
         }
 

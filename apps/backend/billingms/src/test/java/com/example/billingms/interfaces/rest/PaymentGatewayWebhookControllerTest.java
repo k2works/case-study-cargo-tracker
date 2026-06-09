@@ -150,7 +150,7 @@ class PaymentGatewayWebhookControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("skipped");
         verify(mapper, times(1)).markFailed(eq("evt_refund_001"),
-                eq("unsupported event type or missing metadata"));
+                eq("unsupported_event_type"));
         verify(commandGateway, never()).send(any());
     }
 
@@ -169,7 +169,28 @@ class PaymentGatewayWebhookControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("skipped");
         verify(mapper, times(1)).markFailed(eq("evt_dispute_001"),
-                eq("unsupported event type or missing metadata"));
+                eq("unsupported_event_type"));
+        verify(commandGateway, never()).send(any());
+    }
+
+    @Test
+    void US26payment_intent_succeededだがmetadata不足は200_skippedでmissing_metadata記録() {
+        // payment_intent.succeeded event だが metadata（invoice_id / paid_amount）が無い
+        // → StripeEventTranslator.translate が Optional.empty を返す → missing_metadata で markFailed
+        String payload = """
+                {"id":"evt_missing_meta_001","object":"event","api_version":"2024-11-20.acacia",
+                 "type":"payment_intent.succeeded","data":{"object":{"id":"pi_missing_meta_001","object":"payment_intent"}}}
+                """.trim();
+        long timestamp = Instant.now().getEpochSecond();
+        String signature = buildStripeSignatureHeader(timestamp, payload, SIGNING_SECRET);
+        when(mapper.findByEventId("evt_missing_meta_001")).thenReturn(null);
+
+        ResponseEntity<String> response = controller.receive(payload, signature);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("skipped");
+        verify(mapper, times(1)).markFailed(eq("evt_missing_meta_001"),
+                eq("missing_metadata"));
         verify(commandGateway, never()).send(any());
     }
 

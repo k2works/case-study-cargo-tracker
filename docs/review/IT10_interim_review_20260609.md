@@ -101,9 +101,10 @@ IT11 では、staging で安定動作確認後に:
 | ID | 解消方法 | コミット |
 |---|---|---|
 | L4 | README 主要機能セクション見出しを「Release 1.1 候補 / IT10 進行中：実装完了、staging 検証中」に修正、CHANGELOG `[Unreleased]` セクションの v1.1.0 正式タグ化記述と整合化 | 1c4ba54e |
-| L1 | `PaymentGatewayWebhookController.receive()` の `Optional<Long> timestampOpt = extractTimestamp(...)` + `if (isEmpty())` + `timestampOpt.get()` を `Long timestamp = extractTimestamp(...).orElse(null)` + `if (timestamp == null)` に書き換え。null チェック直後の `Long` 直接利用で `.get()` 呼び出しが消え、Optional の二重抽出が解消。境界値 6 件 + 既存 9 件全 PASS | （本ターン） |
+| L1 | `PaymentGatewayWebhookController.receive()` の `Optional<Long> timestampOpt = extractTimestamp(...)` + `if (isEmpty())` + `timestampOpt.get()` を `Long timestamp = extractTimestamp(...).orElse(null)` + `if (timestamp == null)` に書き換え。null チェック直後の `Long` 直接利用で `.get()` 呼び出しが消え、Optional の二重抽出が解消。境界値 6 件 + 既存 9 件全 PASS | 04943b3a |
+| L3 | `markFailed` reason を「`unsupported_event_type`」と「`missing_metadata`」の 2 値に分離。Controller 側で `event.getType()` を判定して reason を選択（StripeEventTranslator 変更不要）。新規テスト 1 件追加（payment_intent.succeeded だが metadata 不足 → missing_metadata）、既存 2 件の assertion 更新。US26 受入基準も 2 reason 体系に更新（業務監査時に「対象外イベント率」と「データ不正率」を分離可能） | （本ターン） |
 
-残 H1 / H2 / H3 / M1-M4 / L2 / L3 は中間レビューの判定通り（H1 / M1 は staging 安定確認後、L2 / L3 は Release 1.2 以降検討、H3 / M2 / M3 は staging 実機タスクに連動）。
+残 H1 / H2 / H3 / M1-M4 / L2 は中間レビューの判定通り（H1 / M1 は staging 安定確認後、L2 は Release 1.2 以降検討、H3 / M2 / M3 は staging 実機タスクに連動）。
 
 ## 関連
 
