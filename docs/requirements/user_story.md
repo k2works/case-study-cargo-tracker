@@ -558,6 +558,12 @@ date: 2026-04-04T00:00:00.000Z
 - [ ] 受信した入金は `PaymentRecorded` イベントとして既存の支払い履歴に蓄積され、S23 で時系列表示できる
 - [ ] S23 から Stripe ダッシュボードへの遷移リンクが提供される
 
+**対象外イベントの受入動作**（IT10 A3.9 / IT9 H8）:
+
+- [ ] `charge.refunded`（返金）の webhook を受信した場合、HMAC 検証は通過するが業務処理は実行せず、`webhook_processed` に `error_reason = "unsupported event type or missing metadata"` で記録し HTTP 200 `skipped` を返す（Stripe 側 retry を抑制）。実際の返金は Invoice 状態に反映されず、経理担当者は Stripe ダッシュボードを並行確認する運用とする。返金の業務反映は将来ストーリー（US28 候補: Invoice 返金処理）で対応する。
+- [ ] `charge.dispute.created`（チャージバック申し立て）の webhook を受信した場合も同様に `skipped` 200 として記録される。申し立て対応は Stripe ダッシュボードで手動進行し、Invoice 状態（DISPUTED 等）は将来ストーリー（US29 候補: 申し立て管理）で対応する。
+- [ ] 対象外イベントが多発した場合、`webhook_processed` テーブルを SQL クエリで集計し、Business 監視（運用ダッシュボード）の「対象外イベント率」として可視化する（10% 超で経理担当者にエスカレーション）。
+
 ---
 
 ## US27: 公開トークンの secret を AWS Secrets Manager で自動回転する

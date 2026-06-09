@@ -136,6 +136,44 @@ class PaymentGatewayWebhookControllerTest {
     }
 
     @Test
+    void US26対象外イベントcharge_refundedは200_skippedで受理しmarkFailedされる() {
+        String refundPayload = """
+                {"id":"evt_refund_001","object":"event","api_version":"2024-11-20.acacia",
+                 "type":"charge.refunded","data":{"object":{"id":"ch_refund_001","object":"charge"}}}
+                """.trim();
+        long timestamp = Instant.now().getEpochSecond();
+        String signature = buildStripeSignatureHeader(timestamp, refundPayload, SIGNING_SECRET);
+        when(mapper.findByEventId("evt_refund_001")).thenReturn(null);
+
+        ResponseEntity<String> response = controller.receive(refundPayload, signature);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("skipped");
+        verify(mapper, times(1)).markFailed(eq("evt_refund_001"),
+                eq("unsupported event type or missing metadata"));
+        verify(commandGateway, never()).send(any());
+    }
+
+    @Test
+    void US26対象外イベントcharge_dispute_createdは200_skippedで受理しmarkFailedされる() {
+        String disputePayload = """
+                {"id":"evt_dispute_001","object":"event","api_version":"2024-11-20.acacia",
+                 "type":"charge.dispute.created","data":{"object":{"id":"dp_dispute_001","object":"dispute"}}}
+                """.trim();
+        long timestamp = Instant.now().getEpochSecond();
+        String signature = buildStripeSignatureHeader(timestamp, disputePayload, SIGNING_SECRET);
+        when(mapper.findByEventId("evt_dispute_001")).thenReturn(null);
+
+        ResponseEntity<String> response = controller.receive(disputePayload, signature);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo("skipped");
+        verify(mapper, times(1)).markFailed(eq("evt_dispute_001"),
+                eq("unsupported event type or missing metadata"));
+        verify(commandGateway, never()).send(any());
+    }
+
+    @Test
     void シークレットが空の場合は機能無効として利用不可応答を返す() {
         StripeWebhookProperties disabled = new StripeWebhookProperties("", 300L);
         PaymentGatewayWebhookController disabledController = new PaymentGatewayWebhookController(
