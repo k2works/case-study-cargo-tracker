@@ -937,14 +937,14 @@ CREATE TABLE users (
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `user_id` | `BIGINT` | `PK, FK → users.id, NOT NULL` | 親ユーザー ID |
-| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`SHIPPER` / `SALES` / `HANDLER` / `TRACKER` / `ACCOUNTANT` / `ADMIN`） |
+| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`SHIPPER` / `SALES` / `ROUTE_DESIGNER` / `HANDLER` / `TRACKER` / `ACCOUNTANT` / `ADMIN`） |
 
 #### DDL
 
 ```sql
 CREATE TABLE user_roles (
     user_id  BIGINT      NOT NULL REFERENCES users(id),
-    role     VARCHAR(50) NOT NULL,  -- SHIPPER / SALES / HANDLER / TRACKER / ACCOUNTANT / ADMIN
+    role     VARCHAR(50) NOT NULL,  -- SHIPPER / SALES / ROUTE_DESIGNER / HANDLER / TRACKER / ACCOUNTANT / ADMIN
     PRIMARY KEY (user_id, role)
 );
 ```
