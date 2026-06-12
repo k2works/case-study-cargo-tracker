@@ -17,7 +17,7 @@
 | :--- | :--- | :--- |
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
-| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 8 件作成済み |
+| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 9 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
@@ -54,6 +54,7 @@
 | [UI 設計](./design/ui_design.md) | OOUX に基づく 21 画面の一覧・遷移図・ワイヤーフレーム・インタラクション設計 |
 | [技術スタック選定](./design/tech_stack.md) | Scala 3 / Play / ScalikeJDBC 等の技術一覧・選定理由・バージョン管理方針 |
 | [テスト戦略](./design/test_strategy.md) | ピラミッド型テスト形状・テストレベル定義・カバレッジ目標・TDD ワークフロー |
+| [非機能要件](./design/non_functional.md) | ISO/IEC 25010 に基づく性能・可用性・セキュリティ・保守性・拡張性の数値目標 |
 
 ### ADR
 
