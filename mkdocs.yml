@@ -80,6 +80,7 @@ nav:
       - インフラアーキテクチャ: design/architecture_infrastructure.md
       - データモデル設計: design/data-model.md
       - ドメインモデル設計: design/domain-model.md
+      - UI 設計: design/ui_design.md
   - 開発:
       - 概要: development/index.md
   - 運用:
