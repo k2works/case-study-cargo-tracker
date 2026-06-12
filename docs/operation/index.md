@@ -14,6 +14,7 @@
 | [Playwright E2E テストセットアップ手順書](./dev_e2e_instruction.md) | Playwright による E2E テスト環境の構築手順 | 作成済 |
 | [コントローラー E2E テストセットアップ手順書](./dev_e2e_api_instruction.md) | ScalaTestPlus-Play + Testcontainers によるコントローラー E2E テストの構築手順 | 作成済 |
 | [開発環境セットアップ手順書](./dev_infra_instruction.md) | Heroku コンテナ + Heroku Postgres を使った開発環境の構築手順 | 作成済 |
+| [Kubernetes 開発環境セットアップ手順書](./dev_k8s_instruction.md) | Kustomize + Docker Desktop による Kubernetes デプロイ・運用手順 | 作成済 |
 | AWS ステージング環境セットアップ手順書 | ステージング環境の構築手順 | 未作成 |
 | AWS プロダクション環境セットアップ手順書 | 本番環境の構築手順 | 未作成 |
 
