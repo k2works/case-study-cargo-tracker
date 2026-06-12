@@ -67,10 +67,15 @@ final case class Cargo(
     status: BookingStatus
 ):
   def assignRoute(itinerary: CargoItinerary): Either[DomainError, Cargo] =
-    if routeSpecification.isSatisfiedBy(itinerary) then
-      Right(copy(itinerary = Some(itinerary), status = BookingStatus.RouteProposed))
-    else Left(DomainError.RouteNotSatisfied(bookingId))
+    if !routeSpecification.isSatisfiedBy(itinerary) then
+      Left(DomainError.RouteNotSatisfied(bookingId))
+    else
+      status
+        .transitionTo(BookingStatus.RouteProposed)   // 状態遷移検証（canTransitionTo に基づく）
+        .map(next => copy(itinerary = Some(itinerary), status = next))
 ```
+
+> 状態遷移の検証（`transitionTo`）を含む完全なドメインモデル表現規約は [ドメインモデル設計](domain-model.md) を参照。
 
 ## 全体アーキテクチャ
 
@@ -147,6 +152,11 @@ package "Infrastructure" {
 ```
 
 ## 境界付けられたコンテキスト
+
+> **正本について**: 本章のコンテキストマップは実装の中核となる**主要 5 コンテキスト + 共有カーネルの概観**である。
+> システム全体は Shipper（荷主管理）・Estimation（見積）を加えた **8 コンテキスト**で構成され、
+> 全コンテキストの戦術的設計（集約・値オブジェクト・enum の定義）は [ドメインモデル設計](domain-model.md) を正とする。
+> テーブル構成（18 テーブル）は [データモデル設計](data-model.md) を参照。
 
 ### コンテキストマップ
 
@@ -252,7 +262,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `TrackingActivity` |
 | 主要概念 | `TrackingNumber`, `TransportStatus`, `TrackingExceptionEvent` |
-| `TransportStatus` | `NotReceived` / `Received` / `Loaded` / `InTransit` / `Unloaded` / `CustomsInspection` / `AwaitingClaim` / `Delivered` / `Misrouted` |
+| `TransportStatus` | `NotReceived` / `Received` / `Loaded` / `OnboardCarrier` / `Unloaded` / `AwaitingClaim` / `Claimed` / `InException` / `Unknown`（[ドメインモデル設計](domain-model.md) の定義が正） |
 | アクター | 追跡管理者、荷主、荷受人 |
 
 #### 4. Handling Context（荷役コンテキスト）
@@ -481,15 +491,22 @@ class CargoBookingCommandService @Inject() (
     eventPublisher: DomainEventPublisher
 ):
   def bookCargo(command: BookCargoCommand): Either[DomainError, BookingId] =
-    DB.localTx { implicit session =>
-      for
-        cargo <- Cargo.create(command)
-        _ = cargoRepository.save(cargo)
-      yield
-        eventPublisher.publish(CargoBookedEvent(cargo.bookingId, Instant.now()))
+    val result = DB.localTx { implicit session =>
+      Cargo.create(command).map { cargo =>
+        cargoRepository.save(cargo)
         cargo.bookingId
+      }
     }
+    // イベント発行はトランザクションコミット後（localTx の外）に行う
+    result.foreach { bookingId =>
+      eventPublisher.publish(CargoBookedEvent(bookingId, Instant.now()))
+    }
+    result
 ```
+
+> ドメイン検証エラー（`Left`）の場合は `DB.localTx` がそのまま `Left` を返し、保存は行われない。
+> イベント発行を `localTx` ブロックの外に出すことで、ロールバック済みトランザクションのイベントが
+> 購読者に届く事故を防ぐ（イベント駆動設計の節の注意書きと対応）。
 
 ## イベント駆動設計
 
@@ -570,6 +587,11 @@ class TrackingEventSubscriber @Inject() (
 > またはコミットフックを使用する）。
 > 高可用性が必要なシステムへ移行する際は Transactional Outbox パターン + Pekko / メッセージブローカーへの移行を検討すること。
 
+> **部分配信の防止**: `SyncDomainEventPublisher` は購読者を逐次呼び出すため、1 つの購読者の例外が
+> 後続の購読者への配信を止めてはならない。各購読者の `handle` 呼び出しは個別に try/catch で隔離し、
+> 失敗は ERROR ログ（イベント種別・購読者名・原因）に記録して次の購読者へ進む。
+> 失敗したイベント処理の回復は当面ログベースの手動対応とし、恒久対応は Outbox パターン移行時に再設計する。
+
 ## Spring Boot → Play Framework 移行マッピング
 
 Java/Spring Boot 版の設計要素を Play Framework / Scala へ対応付ける。
@@ -618,7 +640,7 @@ apps/cargo-tracker/
 ├── conf/
 │   ├── routes                       # ルーティング定義
 │   ├── application.conf             # 共通設定
-│   └── db/migration/                # Flyway マイグレーション
+│   └── db/migration/default/        # Flyway マイグレーション（flyway-play 規約。default は Play の DB 名）
 ├── test/                            # ユニット・統合テスト
 └── build.sbt
 ```

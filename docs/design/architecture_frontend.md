@@ -47,6 +47,8 @@ package "ブラウザ" as browser {
 package "Play Framework Application" as app {
 
   package "Web Layer（interfaces/web/）" as web {
+    [EstimateWebController]
+    [ShipperWebController]
     [BookingWebController]
     [TrackingWebController]
     [HandlingWebController]
@@ -57,6 +59,8 @@ package "Play Framework Application" as app {
 
   package "Twirl テンプレート（app/views/）" as templates {
     [layout/\n（共通レイアウト）]
+    [estimate/\n（見積画面）]
+    [shipper/\n（荷主画面）]
     [booking/\n（予約画面）]
     [tracking/\n（追跡画面）]
     [handling/\n（荷役画面）]
@@ -95,19 +99,24 @@ package "Play Framework Application" as app {
 
 ### 主要画面一覧
 
+全 21 画面の一覧・対応 US・ワイヤーフレームは [UI 設計](ui_design.md) を正とする。ここでは構成把握のための主要画面を挙げる。
+
 | 画面 | URL パス | 説明 | アクター |
 | :--- | :--- | :--- | :--- |
 | ダッシュボード | `/` | 全体サマリー・最新荷役情報 | 全ロール |
+| 見積一覧・作成・詳細 | `/estimates`, `/estimates/new`, `/estimates/:estimateId` | 見積の作成・ルート候補の確認 | 営業担当者 |
+| 荷主一覧・登録 | `/shippers`, `/shippers/new` | 荷主（個人/法人）の管理 | 営業担当者 |
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 |
-| 予約詳細 | `/bookings/:bookingId` | 予約情報・経路・荷役履歴 | 荷主、営業担当者 |
-| 経路割り当て | `/bookings/:bookingId/route` | 利用可能な航路から経路を選択 | 営業担当者 |
-| 貨物追跡 | `/tracking` | 追跡番号入力・現在地確認 | 荷主、荷受人、追跡管理者 |
-| 追跡詳細 | `/tracking/:trackingNumber` | 輸送ステータス履歴・マップ表示 | 荷主、荷受人 |
+| 予約詳細 | `/bookings/:bookingId` | 予約情報・経路・荷役履歴・確定/引き渡し操作 | 荷主、営業担当者 |
+| 経路割り当て | `/bookings/:bookingId/route` | 航海検索・経路候補から経路を選択・確定 | 経路設計者、営業担当者 |
+| 貨物追跡入力 | `/tracking` | 追跡番号入力 | 荷主、荷受人、追跡管理者 |
+| 追跡詳細 | `/tracking/:trackingNumber` | 輸送ステータス履歴タイムライン・状態更新・例外登録 | 荷主、追跡管理者 |
+| 公開貨物追跡 | `/public/tracking/:trackingNumber` | 認証不要の貨物状態照会 | 荷主・荷受人（未認証） |
 | 荷役作業登録 | `/handling/new` | 荷役イベントの登録フォーム | 荷役作業員 |
 | 荷役作業一覧 | `/handling` | 荷役履歴の一覧・検索 | 荷役作業員、追跡管理者 |
-| 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 |
-| 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 |
+| 航路一覧・航海スケジュール登録/更新 | `/voyages`, `/voyages/new`, `/voyages/:voyageNumber/edit` | 航海スケジュールの管理 | 経路設計者 |
+| 請求書一覧・詳細 | `/billing/invoices`, `/billing/invoices/:invoiceId` | 請求書の管理・支払い確認 | 経理担当者 |
 | ログイン | `/login` | フォームベースログイン画面 | 全ロール |
 
 ### 画面遷移図
@@ -202,12 +211,30 @@ package "app/views/" as templates {
     [cargoSummary.scala.html\n（貨物サマリーカード）]
   }
 
+  package "estimate/" as estimate {
+    [index.scala.html\n（見積一覧）]
+    [new.scala.html\n（見積作成）]
+    [show.scala.html\n（見積詳細）]
+    [_routeCandidates.scala.html\n（htmx 部分更新用）]
+  }
+
+  package "shipper/" as shipper {
+    [index.scala.html\n（荷主一覧）]
+    [new.scala.html\n（荷主登録）]
+  }
+
   package "booking/" as booking {
     [index.scala.html\n（一覧）]
     [new.scala.html\n（登録フォーム）]
     [show.scala.html\n（詳細）]
     [route.scala.html\n（経路割り当て）]
     [_cargoRow.scala.html\n（htmx 部分更新用）]
+  }
+
+  package "voyage/" as voyage {
+    [index.scala.html\n（航路一覧）]
+    [new.scala.html\n（スケジュール登録）]
+    [edit.scala.html\n（スケジュール更新）]
   }
 
   package "tracking/" as tracking {
@@ -498,6 +525,14 @@ apps/cargo-tracker/
 │       │   ├── alerts.scala.html           # フラッシュメッセージ
 │       │   ├── pagination.scala.html       # ページネーション
 │       │   └── statusBadge.scala.html      # ステータスバッジ
+│       ├── estimate/
+│       │   ├── index.scala.html
+│       │   ├── new.scala.html
+│       │   ├── show.scala.html
+│       │   └── _routeCandidates.scala.html # htmx 部分更新用フラグメント
+│       ├── shipper/
+│       │   ├── index.scala.html
+│       │   └── new.scala.html
 │       ├── booking/
 │       │   ├── index.scala.html
 │       │   ├── new.scala.html

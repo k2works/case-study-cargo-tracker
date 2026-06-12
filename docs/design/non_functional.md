@@ -159,6 +159,12 @@ tags: design, non-functional, sla, security, performance, scala
 | 緊急セキュリティパッチ | 随時 | 可能な限り事前通知（平日は顧客通知優先） | 30 分以内 |
 | RDS マイナーバージョンアップ | 定期メンテナンス枠内 | 1 週間前 | 10 分（Multi-AZ フェイルオーバー） |
 
+> **追跡照会の縮退継続**: 荷主・荷受人は海外におり時差があるため、日本の深夜でも公開追跡照会は利用される。
+> 追跡照会（公開・99.99% 目標）は定期メンテナンス中も**縮退運転で継続**する。
+> ECS のローリングアップデートによりアプリ層は無停止とし、DB を伴うメンテナンス中は
+> 直近の追跡スナップショット（読み取り専用）を返す縮退モードで照会のみ提供する。
+> 全停止を伴う作業（RDS メジャーバージョンアップ等）は事前告知のうえ追跡照会の停止時間を最小化する計画を立てる。
+
 ### 3.4 ヘルスチェック設計
 
 **ECS タスクレベルのヘルスチェック設定**:
@@ -225,6 +231,7 @@ Play Framework には Spring Boot Actuator に相当する標準機能がない�
   - `HANDLER`（荷役作業員）: **2 時間**（港湾・倉庫現場での連続作業・バーコードスキャン業務を考慮）
   - その他全ロール: **30 分**
 - Play Session はクライアントサイド Cookie のためサーバー側に有効期限の状態を持たない。タイムアウトは Session に格納した最終アクセス時刻（`lastAccessedAt`）を `AuthenticatedAction` が検証し、超過時に 401 を返して実現する。アクセスのたびに時刻を更新した Cookie を再発行する
+- **htmx の自動ポーリング（`hx-trigger="every 30s"`）は keep-alive と見なさない**。ポーリングリクエスト（`HX-Trigger` ヘッダーで識別）では `lastAccessedAt` を更新せず、ユーザーの能動的操作（クリック・フォーム送信）のみをセッション延長の対象とする。追跡詳細を放置したまま開いていてもタイムアウトは通常どおり進行し、残り 5 分でバナー警告を表示する（7.5 参照）
 - CSRF 保護: Play CSRF Filter 有効（フォーム送信は `@helper.CSRF.formField`、htmx リクエストは `Csrf-Token` ヘッダーで対応）
 - セッション固定攻撃対策: 認証成功後に Session を破棄して新規発行（`withNewSession` + 再格納）
 - 同一ユーザーの同時セッション数: 1。クライアントサイド Cookie 単体では制御できないため、`users` テーブルにセッション世代番号（`session_generation`）を保持し、ログイン時にインクリメント、`AuthenticatedAction` が Cookie 内の世代番号と照合して旧セッションを無効化する
@@ -360,7 +367,10 @@ Logback + logstash-logback-encoder で JSON 構造化ログを出力する（Pla
 - `userId`: `AuthenticatedAction` でログインユーザー ID を付与
 - `traceId`: AWS X-Ray トレース ID（後続の分散トレーシング対応）
 
-> **注意**: MDC はスレッドローカルベースのため、`Future` をまたぐ処理ではコンテキストが失われる。リクエスト処理を同一 ExecutionContext 内で完結させるか、MDC 伝搬対応の ExecutionContext を導入する。
+> **設計判断（要 ADR）**: MDC はスレッドローカルベースのため、`Future` をまたぐ処理ではコンテキストが失われ、
+> 監査ログ（5 年保持・コンプライアンス要件）の `userId` 欠落につながる。**MDC 伝搬対応の ExecutionContext を採用する**
+> 方針とし、具体的な実装方式（MDC コピー付き ExecutionContext の自作 or ライブラリ採用）は実装イテレーションで
+> ADR として記録する。MDC が `Future` をまたいで保持されることを検証する統合テストを 1 件設ける（[テスト戦略](test_strategy.md) 参照）。
 
 ### 5.2 監視・メトリクス
 
@@ -403,8 +413,8 @@ Logback + logstash-logback-encoder で JSON 構造化ログを出力する（Pla
 **CI 統合**:
 
 - Pull Request 時に scoverage カバレッジレポートをコメントで自動投稿
-- SonarQube Quality Gate 失敗時はマージをブロック（Scala プラグインの保守状況リスクは [技術スタック選定](tech_stack.md) を参照）
-- scalafmt + scalafix の違反はビルドエラーとして扱う
+- マージをブロックする品質ゲートは **scalafmt / scalafix / scoverage / `-Werror`** に限定する
+- SonarQube は**可視化（非ブロッキング）として運用**する。Scala プラグインの保守状況リスク（[技術スタック選定](tech_stack.md) 参照）により、外部要因で CI が不安定化することを避けるため、Quality Gate の結果は参考情報としてレビューで確認する
 
 ---
 
@@ -444,12 +454,19 @@ db.default {
   driver = "org.postgresql.Driver"
   url = ${DATABASE_URL}
   hikaricp {
-    maximumPoolSize = 20      # タスクあたり最大接続数
+    maximumPoolSize = 15      # タスクあたり最大接続数（10 タスク × 15 = 150 < max_connections 200）
     minimumIdle = 5           # 最小アイドル接続数
     connectionTimeout = 3000  # 接続タイムアウト（ms）
     idleTimeout = 600000      # アイドル接続の解放時間（10 分）
     maxLifetime = 1800000     # 接続の最大生存時間（30 分）
   }
+}
+
+# ブロッキング DB アクセス専用ディスパッチャー
+# スレッド数は HikariCP の maximumPoolSize と一致させる（接続待ちのスレッド滞留を防ぐ）
+database.dispatcher {
+  executor = "thread-pool-executor"
+  thread-pool-executor.fixed-pool-size = 15
 }
 ```
 
@@ -458,10 +475,10 @@ db.default {
 | 設定 | 値 | 備考 |
 |---|---|---|
 | `max_connections`（RDS） | 200 | db.t3.medium のデフォルト |
-| 最大同時接続数（計算） | タスク数(10) × 接続プール(20) = 200 | ピーク時に上限到達する可能性あり |
+| 最大同時接続数（計算） | タスク数(10) × 接続プール(15) = 150 | RDS 内部用接続・監視用に 50 のマージンを確保 |
 | Read Replica 追加基準 | 追跡照会の読み取り RPS が 500 を超過 | CQRS 読み取り側をレプリカに分離 |
 
-> **注意**: ピーク時（10 タスク × 20 接続 = 200）は RDS 接続数上限に達するため、必要に応じて RDS Proxy を導入し接続プーリングを委譲する。
+> **注意**: RDS は内部接続・モニタリング・レプリケーション用に接続を消費するため、アプリケーションで `max_connections` を使い切る設計にしない。タスクあたりプール 15 で不足する場合（最大タスク数の増枠時を含む）は、プール拡大ではなく **RDS Proxy の導入を前提条件**として接続プーリングを委譲する。
 
 **Read Replica の活用方針**:
 
@@ -515,6 +532,7 @@ db.default {
 - 通知テキスト: 「セッションが 5 分後に切れます。作業を保存するか、[セッションを延長] をクリックしてください。」
 - セッション延長ボタン: クリックで `/keep-alive` エンドポイントを呼び出し、`lastAccessedAt` を更新した Cookie を再発行
 - タイムアウト後: 入力中フォームの値を `sessionStorage` に一時保存し、再ログイン後に復元（Phase 2）
+- **例外: 荷役作業登録フォームのみ初期リリースで入力値のローカル退避・復帰時再送を実装する**。港湾・倉庫は通信が不安定（圏外含む）であり、現場作業の入力消失は業務影響が大きいため（[UI 設計](ui_design.md) の荷役作業登録を参照）
 - `HANDLER` のタイムアウト（2 時間）でも同様に残り 5 分でバナー通知を行う
 
 ---

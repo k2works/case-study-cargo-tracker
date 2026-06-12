@@ -35,6 +35,8 @@ tags: design, data-model, postgresql, scalikejdbc, flyway
 
 全コンテキストのエンティティとその主要リレーションシップを俯瞰する。
 
+> **フェーズについて**: 概念データモデルはシステムの**最終形**を示す。一部の属性（`cargo` の `transport_status` / `routing_status` / `booking_amount_*` 等）は初期イテレーションのテーブル定義には含まれず、対応するコンテキストの実装イテレーションでマイグレーションにより追加する（各テーブル定義の「将来追加予定カラム」を参照）。
+
 ```plantuml
 @startuml
 title 概念データモデル - 国際貨物輸送管理システム
@@ -925,6 +927,8 @@ Play のログイン処理（`AuthController`）と `AuthenticatedAction` が参
 
 認証ポリシー（セッションタイムアウト・同時セッション制御・パスワード有効期限・アカウントロック）の要件値は [非機能要件定義](non_functional.md) を参照。
 
+> **パスワード履歴**: 非機能要件の「過去 5 世代のパスワード再利用禁止」には `password_history`（`user_id` / `password` / `created_at`）テーブルが必要となる。認証機能の実装イテレーションでマイグレーションにより追加する。
+
 #### DDL
 
 ```sql
@@ -1163,6 +1167,14 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
 **判断**: ORM のエンティティマッピング（アノテーション等）は使用せず、ScalikeJDBC の `WrappedResultSet` → case class 変換関数をリポジトリ実装内に手書きする。
 
 **根拠**: ドメインモデル（opaque type・enum・ネストした値オブジェクト）とテーブル（フラットなカラム）の構造は一致しないため、自動マッピングよりも明示的な変換関数のほうが安全で読みやすい。変換はインフラ層に閉じ、ドメイン層は永続化を一切意識しない（ヘキサゴナルアーキテクチャの依存方向と一致）。
+
+---
+
+### 9. 楽観ロック用 `version` カラムの集約ルートテーブルへの付与
+
+**判断**: 更新系操作を持つ集約ルートテーブル（`cargo`・`voyage`・`tracking_activity`・`invoice`・`estimate`・`shipper`）に `version INTEGER NOT NULL DEFAULT 0` を付与する。リポジトリの UPDATE は `SET version = version + 1 ... WHERE id = ? AND version = ?` の比較更新とし、更新行数 0 を競合（`DomainError.ConcurrentModification`）として扱う。
+
+**根拠**: 複数ユーザーが同じ集約を同時に編集する lost update（US17 の手動状態更新、US25 の航海スケジュール上書き等）を防ぐ。追記のみのイベント系テーブル（`tracking_handling_event` 等）は上書きが発生しないため対象外。方針の詳細は [ドメインモデル設計](domain-model.md) の「並行性制御（楽観ロック）」を参照。
 
 ---
 

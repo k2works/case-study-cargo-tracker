@@ -1185,10 +1185,26 @@ package "コンテキスト固有の VoyageNumber 型" {
 
 > **TransportStatus の値について**: 本ドキュメントの 9 値
 > （`NotReceived / Received / Loaded / OnboardCarrier / Unloaded / AwaitingClaim / Claimed / InException / Unknown`）を正とする。
-> [バックエンドアーキテクチャ](architecture_backend.md) 概要に記載の値一覧は本定義で詳細化される。
+> [バックエンドアーキテクチャ](architecture_backend.md) のコンテキスト概要の値一覧も本定義に統一済み。
 > 要件定義の貨物状態遷移（受領待ち〜引取済・例外発生）との対応: 受領待ち = NotReceived、受領済 = Received、
 > 積込済 = Loaded、輸送中 = OnboardCarrier、荷降し済 = Unloaded、引取待ち = AwaitingClaim、引取済 = Claimed、
 > 例外発生・対応中 = InException。
+
+### TransportStatus と TrackingStatus の関係
+
+Tracking Context の `TrackingStatus` と共有ドメインの `TransportStatus` は同じ 9 段階のフェーズを表すが、
+意図的に**別の型**として定義する（VoyageNumber のコンテキスト分離と同じ原則）。役割分担は次のとおり。
+
+| 型 | 所属 | 役割 |
+|---|---|---|
+| `TrackingStatus` | Tracking Context 固有 | `TrackingActivity.currentStatus()` がイベント履歴から**導出**するコンテキスト内部の状態。Tracking のドメインロジック（例外復帰等）はこちらを使う |
+| `TransportStatus` | Shared Domain | コンテキスト間連携（イベントペイロード）・画面表示・Booking の状態同期で使う**公開語彙** |
+
+連携規約:
+
+- Tracking Context の出口（イベント発行・クエリサービス）で `TrackingStatus.toTransportStatus` により変換する。変換は**全域かつ 1 対 1**（9 値 ↔ 9 値）とする
+- 他コンテキストが `TrackingStatus` を直接参照することを禁止する（ArchUnit ルールの対象）
+- 両 enum の対応は `TableDrivenPropertyChecks` による全網羅テストで検証し、片方への値追加時の乖離をコンパイルエラー（`match` の網羅性検査）とテストの双方で検出する（[テスト戦略](test_strategy.md) 参照）
 
 ### VoyageNumber のコンテキスト分離設計
 
@@ -1276,6 +1292,16 @@ billing -> billing : ConfirmPaymentCommand\n→ Settled
 | NotificationPort | 通知システム | 荷主・荷受人へのメール / SMS 通知の送信 |
 
 各ポートはヘキサゴナルアーキテクチャの出力ポート（`trait`）として定義され、インフラ層のアダプター（Play WS クライアント等）が実装を担う。これにより外部システムの変更がドメインロジックに影響しない。
+
+## 並行性制御（楽観ロック）
+
+イミュータブル集約は単一トランザクション内の整合性を保証するが、**複数ユーザーが同じ集約を同時に開いて別々に上書きする lost update** は別の問題であり、楽観ロックで防止する。
+
+- すべての集約ルートテーブルに `version` カラム（`INTEGER NOT NULL DEFAULT 0`）を持たせる（[データモデル設計](data-model.md) 参照）
+- リポジトリの `save` は `UPDATE ... SET version = version + 1 WHERE id = ? AND version = ?` で比較更新し、更新行数 0 の場合は `DomainError.ConcurrentModification` を返す（先勝ち）
+- アプリケーションサービスは `Left(ConcurrentModification)` を受けたら HTTP 409 相当として扱い、UI は「他のユーザーが更新しました。最新の内容を確認して再度操作してください」と再読み込みを促す
+- 対象は更新系操作を持つ集約（Cargo・Voyage・TrackingActivity・Invoice・Estimate・Shipper）。追記のみのテーブル（イベント系）は対象外
+- 競合シナリオ（US17 の手動状態更新、US25 の航海スケジュール上書き等）の並行更新は統合テストで検証する（[テスト戦略](test_strategy.md) 参照）
 
 ## 集約設計の判断
 

@@ -476,6 +476,12 @@ async function waitForHtmxUpdate(page: Page, selector: string, timeout = 10000) 
 }
 ```
 
+**フレイキー対策**: E2E はネットワーク遅延・ポーリングタイミングで不安定化しやすいため、以下を運用ルールとする。
+
+- Playwright の `retries: 2`（CI のみ）を設定し、リトライで成功したテストは flaky としてレポートに記録する
+- 同一テストが 1 週間に 2 回以上 flaky になった場合は修正タスクを起票する（放置すると E2E への信頼が失われる）
+- 待機は `waitForHtmxUpdate` / `expect(...).toHaveText`（自動リトライ付きアサーション）に限定し、固定 `sleep` を禁止する
+
 #### 実装例: US18 追跡情報照会の Playwright テスト（TypeScript）
 
 ```typescript
@@ -627,9 +633,18 @@ test("通知失敗時にログを記録して処理を継続する") {
 }
 ```
 
-> CustomsClearancePort（CLEARED / HELD）・PaymentGatewayPort（CONFIRMED / 失敗）・PortManagementPort（受理 / 代替港提案）も
-> 同一パターン（正常レスポンス + 異常レスポンスのスタブ）で契約テストを定義する。レスポンス仕様は外部システム連携技術
-> （[技術スタック選定](tech_stack.md)）の各ポート定義に従う。
+#### 残り 3 ポートの異常系シナリオ
+
+CustomsClearancePort・PaymentGatewayPort・PortManagementPort は単純なスタブ差し替えに留まらず、
+**スタブ応答 + 後続の状態連鎖・イベント発行の検証**をセットで行う。
+
+| ポート | 異常シナリオ | 検証内容 |
+|---|---|---|
+| `CustomsClearancePort` | `HELD`（税関保留）応答 | `CustomsHold` 例外イベントが `TrackingActivity` に自動登録され、`currentStatus()` が `InException` を返すこと |
+| `PaymentGatewayPort` | 決済失敗応答・期限超過 | `PaymentStatus` が `Overdue` へ連鎖すること（US23）。失敗時に `Invoice` の状態が変化しないこと |
+| `PortManagementPort` | 代替港提案応答・タイムアウト | 代替港提案が経路候補の再算出入力に反映されること。タイムアウト時にユーザー向けエラーが返ること |
+
+レスポンス仕様は外部システム連携技術（[技術スタック選定](tech_stack.md)）の各ポート定義に従う。
 
 ---
 
@@ -649,10 +664,10 @@ test("通知失敗時にログを記録して処理を継続する") {
 | US07 | 航海スケジュールを検索する | 検索条件の貨物種別絞り込みロジック | `VoyageRepository`（検索 SQL）、`VoyageWebController` | - | 高 |
 | US08 | 経路候補を算出する | 経路候補算出ドメインサービス（接続判定・期限判定・推奨順） | `ExternalRoutingServicePort` WireMock | - | 高 |
 | US09 | 経路を選択・確定する | 経路確定ロジック | `RouteWebController`（選択・確定操作） | - | 高 |
-| US10 | 経路条件を調整して再算出する | 条件調整後の再算出（期限内経路なしの通知） | `RouteWebController`（htmx 部分更新） | - | 高 |
+| US10 | 経路条件を調整して再算出する | 条件調整後の再算出（期限内経路なしの通知）、条件協議依頼の通知トリガー | `RouteWebController`（htmx 部分更新） | - | 高 |
 | US11 | 経路情報を予約に紐付ける | `Cargo.assignRoute`（Leg 連結制約・`isSatisfiedBy`） | `CargoRepository`（旅程保存） | - | 高 |
 | US12 | 確定経路を荷主に通知する | - | `BookingWebController`（通知操作）、`NotificationPort` WireMock | - | 高 |
-| US13 | 予約を確定する | `Cargo.confirm`、`canTransitionTo`（8 値遷移） | `BookingWebController`（確定 API） | **シナリオ 1** | 高 |
+| US13 | 予約を確定する | `Cargo.confirm`、`canTransitionTo`（8 値遷移）、差し戻し遷移（`Confirmed → RouteProposed`） | `BookingWebController`（確定 API・差し戻し操作） | **シナリオ 1** | 高 |
 | US14 | 追跡番号を発行する | `TrackingNumber` 形式検証・一意採番、`TrackingIssued` 遷移 | `CargoRepository`・`TrackingActivityRepository`（イベント連携） | - | 高 |
 | US15 | 荷役作業を記録する | `HandlingActivity.isValidFor`（`HandlingValidity` デシジョンテーブル） | `HandlingActivityRepository`、`HandlingWebController` | **シナリオ 2** | 高 |
 | US16 | 引取作業を記録する | Claim 時の通関 Cleared 前提条件、`Claimed` 遷移 | `HandlingWebController`（荷受人確認フィールド） | - | 高 |
@@ -664,7 +679,21 @@ test("通知失敗時にログを記録して処理を継続する") {
 | US22 | 法人割引を適用する | `DiscountPolicy.calculateRate`、法人/個人の分岐（ADT パターンマッチ） | `BillingWebController`（割引内訳表示） | - | 中 |
 | US23 | 精算を処理する | `Invoice.confirmPayment`、`PaymentStatus` 遷移、期限超過判定 | `BillingWebController`、`PaymentGatewayPort` WireMock（正常・失敗） | - | 中 |
 | US24 | 航海スケジュールを新規登録する | `Schedule` スマートコンストラクタ（日付整合性・順序）、`Voyage` 重複検出 | `VoyageRepository`、`VoyageWebController`（Form 検証） | - | 高 |
-| US25 | 既存航海スケジュールを更新する | スケジュール上書きロジック | `VoyageWebController`（差分確認・更新・キャンセル） | - | 高 |
+| US25 | 既存航海スケジュールを更新する | スケジュール上書きロジック | `VoyageWebController`（差分確認・更新・キャンセル）、並行更新の競合検出 | - | 高 |
+
+### 5.1 横断要件のテスト（US 番号を持たない要件）
+
+US に紐付かない横断要件は以下で検証する。
+
+| 横断要件 | テストレベル | 検証内容 |
+|---|---|---|
+| 状態遷移 enum の全セル網羅 | ユニット | `BookingStatus`（8 値）に加え、`TrackingStatus`（9 値）・`PaymentStatus`・`CustomsStatus`・`RoutingStatus` の各 enum について、**N×N の全遷移ペア**（許可 = `Right` / 不許可 = `Left`）を `TableDrivenPropertyChecks` で網羅する。`TrackingStatus` は `currentStatus()` の導出関数のため、「例外解決後に発生前状態へ復帰」を各先行状態（Received / Loaded / Unloaded 等）との組み合わせで検証する |
+| `TrackingStatus` ↔ `TransportStatus` 対応表 | ユニット | 両 enum の変換（`toTransportStatus`）が全域かつ 1 対 1 であることを Table で全網羅検証する（[ドメインモデル設計](domain-model.md) の連携規約） |
+| 同時更新（楽観ロック） | 統合 | Testcontainers 上で同一集約（`Cargo` / `Voyage`）を 2 つのトランザクションが並行更新し、後発が `DomainError.ConcurrentModification` を受け取ること（先勝ち）。US17 の手動状態更新・US25 のスケジュール上書きを代表シナリオとする |
+| セッションタイムアウト境界 | 統合 | `lastAccessedAt` を操作した FakeRequest で、タイムアウト直前（29:59）は 200、直後（30:01）は 401 を返すこと。`HANDLER` ロールは 2 時間境界で同様に検証する |
+| 同時セッション制御 | 統合 | 再ログインで `session_generation` がインクリメントされ、旧世代 Cookie のリクエストが 401 になること |
+| ポーリングの keep-alive 除外 | 統合 | `HX-Trigger` ヘッダー付きポーリングリクエストでは `lastAccessedAt` が更新されないこと（[非機能要件定義](non_functional.md) 4.1） |
+| MDC 伝搬 | 統合 | `Future` をまたぐリクエスト処理で `requestId` / `userId` がログに保持されること（監査ログの追跡可能性。[非機能要件定義](non_functional.md) 5.1） |
 
 ---
 
