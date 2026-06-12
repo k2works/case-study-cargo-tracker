@@ -79,6 +79,7 @@ nav:
       - フロントエンドアーキテクチャ: design/architecture_frontend.md
       - インフラアーキテクチャ: design/architecture_infrastructure.md
       - データモデル設計: design/data-model.md
+      - ドメインモデル設計: design/domain-model.md
   - 開発:
       - 概要: development/index.md
   - 運用:

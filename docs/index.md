@@ -17,7 +17,7 @@
 | :--- | :--- | :--- |
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
-| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 4 件作成済み |
+| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 5 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
@@ -50,6 +50,7 @@
 | [フロントエンドアーキテクチャ](./design/architecture_frontend.md) | Twirl SSR + htmx による画面構成・状態管理・画面遷移 |
 | [インフラストラクチャ](./design/architecture_infrastructure.md) | AWS ECS Fargate + RDS 構成、sbt ベースの CI/CD、監視設計 |
 | [データモデル設計](./design/data-model.md) | 概念・論理データモデル、18 テーブル定義、ScalikeJDBC マッピング方針 |
+| [ドメインモデル設計](./design/domain-model.md) | 8 コンテキストの集約・値オブジェクト・ドメインイベントを Scala 3 で定義 |
 
 ### ADR
 
