@@ -807,7 +807,7 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `tracking_id` | `BIGINT` | `FK → tracking_activity.id, NOT NULL` | 親追跡レコード ID |
-| `exception_type` | `VARCHAR(50)` | `NOT NULL` | 例外種別（`DELAY` / `DAMAGE` / `LOSS` / `CUSTOMS_HOLD`） |
+| `exception_type` | `VARCHAR(50)` | `NOT NULL` | 例外種別（`DELAY` / `DAMAGE` / `LOST` / `CUSTOMS_HOLD`） |
 | `occurred_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 例外発生日時 |
 | `escalation_flag` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | エスカレーション判定フラグ（US20 紛失時） |
 | `description` | `VARCHAR(500)` | | 例外内容の詳細 |
