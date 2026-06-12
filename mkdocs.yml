@@ -93,6 +93,7 @@ nav:
       - Playwright E2E テストセットアップ手順書: operation/dev_e2e_instruction.md
       - コントローラー E2E テストセットアップ手順書: operation/dev_e2e_api_instruction.md
       - 開発環境セットアップ手順書: operation/dev_infra_instruction.md
+      - Kubernetes 開発環境セットアップ手順書: operation/dev_k8s_instruction.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
