@@ -180,7 +180,7 @@ end note
 | CPU | 512 (0.5 vCPU) | 初期設定。負荷に応じてスケール |
 | メモリ | 1024 MB | JVM ヒープ設定（`-Xmx` / `-XX:MaxRAMPercentage`）に合わせて調整 |
 | 希望タスク数 | 2 | 最小稼働台数（高可用性） |
-| 最大タスク数 | 6 | Auto Scaling 上限 |
+| 最大タスク数 | 10 | Auto Scaling 上限（非機能要件定義と整合） |
 | サービスディスカバリ | ALB ターゲットグループ | `/health` ヘルスチェック経由でルーティング |
 
 > Play の Session はクライアントサイド Cookie のため、サーバー側にセッション状態を持たない。
@@ -458,7 +458,7 @@ note right of prod_db : 高可用性構成\n手動承認後デプロイ\n監視�
 | 設定項目 | ローカル | ステージング | 本番 |
 | :--- | :--- | :--- | :--- |
 | DB | Docker PostgreSQL | RDS（Single-AZ） | RDS（Multi-AZ） |
-| ECS タスク数 | - | 1 | 2〜6（Auto Scaling） |
+| ECS タスク数 | - | 1 | 2〜10（Auto Scaling） |
 | ログレベル | DEBUG | INFO | INFO |
 | 設定ファイル | `application.conf`（デフォルト） | `-Dconfig.resource=staging.conf` | `-Dconfig.resource=production.conf` |
 | DB マイグレーション | 自動（起動時 / flyway-play） | 自動（起動時） | 自動（起動時） |
