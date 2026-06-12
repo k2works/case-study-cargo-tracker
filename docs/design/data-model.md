@@ -616,6 +616,10 @@ entity "users\n（ユーザー）" as users {
   * email : VARCHAR(200) <<UK, NOT NULL>>
   * password : VARCHAR(255) <<NOT NULL>>
   * enabled : BOOLEAN <<NOT NULL, DEFAULT TRUE>>
+  * session_generation : INTEGER <<NOT NULL, DEFAULT 0>>
+  * password_changed_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+  * failed_login_attempts : INTEGER <<NOT NULL, DEFAULT 0>>
+  locked_until : TIMESTAMP
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
 
@@ -913,18 +917,28 @@ Play のログイン処理（`AuthController`）と `AuthenticatedAction` が参
 | `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス |
 | `password` | `VARCHAR(255)` | `NOT NULL` | パスワード（bcrypt ハッシュ） |
 | `enabled` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | アカウント有効フラグ |
+| `session_generation` | `INTEGER` | `NOT NULL, DEFAULT 0` | セッション世代番号。ログイン時にインクリメントし、旧セッションの Cookie を無効化する（同時セッション数 1 の制御） |
+| `password_changed_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | パスワード最終変更日時（90 日有効期限の判定に使用） |
+| `failed_login_attempts` | `INTEGER` | `NOT NULL, DEFAULT 0` | 連続ログイン失敗回数（5 回でロック） |
+| `locked_until` | `TIMESTAMP WITH TIME ZONE` | `NULL` | アカウントロック解除日時（NULL は未ロック） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+
+認証ポリシー（セッションタイムアウト・同時セッション制御・パスワード有効期限・アカウントロック）の要件値は [非機能要件定義](non_functional.md) を参照。
 
 #### DDL
 
 ```sql
 CREATE TABLE users (
-    id           BIGSERIAL PRIMARY KEY,
-    username     VARCHAR(50)  NOT NULL UNIQUE,
-    email        VARCHAR(200) NOT NULL UNIQUE,
-    password     VARCHAR(255) NOT NULL,  -- bcrypt ハッシュ
-    enabled      BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    id                    BIGSERIAL PRIMARY KEY,
+    username              VARCHAR(50)  NOT NULL UNIQUE,
+    email                 VARCHAR(200) NOT NULL UNIQUE,
+    password              VARCHAR(255) NOT NULL,  -- bcrypt ハッシュ
+    enabled               BOOLEAN NOT NULL DEFAULT TRUE,
+    session_generation    INTEGER NOT NULL DEFAULT 0,
+    password_changed_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until          TIMESTAMP WITH TIME ZONE,
+    created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 ```
 
