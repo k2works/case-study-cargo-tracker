@@ -8,9 +8,11 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| バックエンドアーキテクチャ | バックエンドの責務分割、レイヤ、連携方式を整理 | 未作成 |
-| フロントエンドアーキテクチャ | UI 構成、状態管理、画面遷移を整理 | 未作成 |
-| インフラストラクチャ | 実行環境、ネットワーク、デプロイ構成を整理 | 未作成 |
+| [バックエンドアーキテクチャ](architecture_backend.md) | DDD + ヘキサゴナル + CQRS を Play Framework / Scala 3 で実装する設計 | 作成済み |
+| [フロントエンドアーキテクチャ](architecture_frontend.md) | Twirl SSR + htmx による画面構成・状態管理・画面遷移 | 作成済み |
+| [インフラストラクチャ](architecture_infrastructure.md) | AWS ECS Fargate + RDS 構成、sbt ベースの CI/CD、監視設計 | 作成済み |
+
+> 技術スタック選定の経緯は [ADR 0001: Play Framework 採用](../adr/0001-play-framework-scala-stack.md) を参照。
 
 ### モデル設計
 
