@@ -17,11 +17,11 @@
 | :--- | :--- | :--- |
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
-| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
+| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | アーキテクチャ 3 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 1 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -41,6 +41,20 @@
 | [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 21 件・アクター目的リスト |
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
 | [ユーザーストーリー](./requirements/user_story.md) | US 25 件・受け入れ基準・トレーサビリティマトリックス |
+
+### 設計ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [バックエンドアーキテクチャ](./design/architecture_backend.md) | DDD + ヘキサゴナル + CQRS を Play Framework / Scala 3 で実装する設計 |
+| [フロントエンドアーキテクチャ](./design/architecture_frontend.md) | Twirl SSR + htmx による画面構成・状態管理・画面遷移 |
+| [インフラストラクチャ](./design/architecture_infrastructure.md) | AWS ECS Fargate + RDS 構成、sbt ベースの CI/CD、監視設計 |
+
+### ADR
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [0001 Play Framework 採用](./adr/0001-play-framework-scala-stack.md) | Scala 版バックエンドスタックの選定（Play 3.x + Twirl + ScalikeJDBC） |
 
 ### レビュードキュメント
 

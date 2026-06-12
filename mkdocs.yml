@@ -75,6 +75,9 @@ nav:
       - ユーザーストーリー: requirements/user_story.md
   - 設計:
       - 概要: design/index.md
+      - バックエンドアーキテクチャ: design/architecture_backend.md
+      - フロントエンドアーキテクチャ: design/architecture_frontend.md
+      - インフラアーキテクチャ: design/architecture_infrastructure.md
   - 開発:
       - 概要: development/index.md
   - 運用:
@@ -84,6 +87,7 @@ nav:
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
   - ADR:
       - 概要: adr/index.md
+      - 0001 Play Framework 採用: adr/0001-play-framework-scala-stack.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
