@@ -558,12 +558,13 @@ CI/CD による継続的インテグレーション・デプロイを設定し�
 
 ### ワークフロー一覧
 
-| ワークフロー | ファイル | トリガー | 説明 |
-|-------------|----------|----------|------|
-| Backend CI | `.github/workflows/ci.yml` | `apps/cargo-tracker/**` 変更時 | 品質チェック・テスト・ビルド |
-| CD Staging | `.github/workflows/cd-staging.yml` | main ブランチ push | ステージング環境への自動デプロイ |
-| CD Production | `.github/workflows/cd-production.yml` | 手動承認 / release タグ | 本番環境へのデプロイ |
-| Docs Deploy | `.github/workflows/docs-deploy.yml` | main ブランチ push | MkDocs を GitHub Pages にデプロイ |
+| ワークフロー | ファイル | トリガー | 説明 | 状況 |
+|-------------|----------|----------|------|------|
+| Backend CI | `.github/workflows/ci.yml` | `apps/cargo-tracker/**` 変更時（push / PR） | 品質チェック・テスト・ビルド | 作成済 |
+| Docs Deploy | `.github/workflows/mkdocs.yml` | main ブランチ push | MkDocs を GitHub Pages にデプロイ | 作成済 |
+| Docker Publish | `.github/workflows/docker-publish.yml` | タグ push / 手動実行 | リポジトリイメージを GHCR に公開 | 作成済 |
+| CD Staging | `.github/workflows/cd-staging.yml` | main ブランチ push | ステージング環境への自動デプロイ | 未作成（AWS 環境構築後） |
+| CD Production | `.github/workflows/cd-production.yml` | 手動承認 / release タグ | 本番環境へのデプロイ | 未作成（AWS 環境構築後） |
 
 ### Backend CI
 
@@ -583,14 +584,14 @@ CI/CD による継続的インテグレーション・デプロイを設定し�
 
 ### Docker Image Publish
 
-タグ push 時または手動実行時に、Docker イメージ（マルチステージビルド: `sbt stage` → `eclipse-temurin:25-jre-alpine`）をビルドして ECR に公開します。
+アプリイメージ（マルチステージビルド: `sbt stage` → `eclipse-temurin:25-jre-alpine`）の ECR 公開は、AWS 環境構築後に CD ワークフローで対応します。
 
 ```bash
-# タグによる自動実行
+# タグによる自動実行（計画）
 git tag v0.1.0
 git push origin v0.1.0
 
-# イメージの取得
+# イメージの取得（計画）
 docker pull {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/cargo-tracker:latest
 ```
 
