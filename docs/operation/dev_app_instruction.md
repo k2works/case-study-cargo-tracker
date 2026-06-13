@@ -593,6 +593,32 @@ docker compose ps
 docker compose up -d postgres
 ```
 
+### ポート 9000 が使用中で起動できない
+
+**問題**: `sbt run` が `BindException: [/0.0.0.0:9000] Address already in use` で失敗する。ローカルで SonarQube（デフォルトポート 9000）等を起動している場合に発生します。
+
+**解決策**: 競合するサービスを停止するか、代替ポートで起動する
+
+```bash
+# ポートの使用状況を確認
+lsof -nP -iTCP:9000 -sTCP:LISTEN
+
+# 代替ポートで起動（例: 9001）
+sbt "run 9001"
+```
+
+### Testcontainers が Docker を検出できない
+
+**問題**: テスト実行時に `Could not find a valid Docker environment` で統合テストが ABORTED になる。Docker Engine 29 系は古い Docker API バージョン（1.40 未満）の要求を拒否するため、docker-java のデフォルト（1.32）では接続できません。
+
+**解決策**: `build.sbt` で docker-java の API バージョンを明示しています（設定済み）。Docker Desktop 更新後に再発した場合はこの設定値を確認してください。
+
+```scala
+// build.sbt
+Test / fork := true
+Test / javaOptions += "-Dapi.version=1.44"
+```
+
 ### Testcontainers の起動に時間がかかる
 
 **問題**: 統合テストが初回起動時に非常に遅い
