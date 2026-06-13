@@ -24,5 +24,8 @@ developTasks(gulp);
 // ドキュメントサーバー起動（旧 gulp dev。アプリ開発サーバーは gulp dev を使用）
 export const docs = gulp.series('mkdocs:serve', 'mkdocs:open');
 
+// npm run start: ドキュメントサーバー（mkdocs）とアプリ開発サーバーを一括起動
+gulp.task('start', gulp.series('dev:db:start', 'mkdocs:serve', 'mkdocs:open', 'dev:app'));
+
 // Export gulp to make it available to the gulp CLI
 export default gulp;

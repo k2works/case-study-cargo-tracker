@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "prepare": "husky",
-    "start": "gulp dev",
+    "start": "gulp start",
     "tdd": "gulp tdd",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
