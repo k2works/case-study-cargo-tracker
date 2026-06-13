@@ -314,8 +314,8 @@ test('追跡番号で公開照会でき、個人情報が表示されない', as
 
 ```bash
 # ターミナル 1: PostgreSQL とアプリケーションの起動
-docker compose up -d postgres
 cd apps/cargo-tracker
+docker compose up -d postgres
 sbt run
 ```
 

@@ -182,11 +182,12 @@ Case Study Cargo Tracker は以下のサブシステムで構成されていま�
 ### ローカル開発（デフォルト）
 
 ```bash
+cd apps/cargo-tracker
+
 # PostgreSQL コンテナを起動
 docker compose up -d postgres
 
 # Play 開発モードで起動（ホットリロード有効）
-cd apps/cargo-tracker
 sbt run
 ```
 
@@ -235,9 +236,18 @@ sbt ~test
 
 ## 7. Docker Compose のセットアップ
 
+Docker Compose は 2 か所に分かれています。
+
+| ファイル | サービス | 用途 |
+|---------|---------|------|
+| `apps/cargo-tracker/docker-compose.yml` | postgres / adminer / mailhog | アプリケーション開発用 |
+| `docker-compose.yml`（リポジトリルート） | mkdocs / plantuml / dev | ドキュメント・リポジトリ共通基盤 |
+
 ### データベースコンテナの起動
 
 ```bash
+cd apps/cargo-tracker
+
 # PostgreSQL を起動
 docker compose up -d postgres
 
@@ -248,6 +258,8 @@ docker compose ps
 ### Docker Compose の便利なコマンド
 
 ```bash
+cd apps/cargo-tracker
+
 # PostgreSQL を起動
 docker compose up -d postgres
 
@@ -264,6 +276,7 @@ docker compose exec postgres psql -U cargo_tracker -d cargo_tracker
 ### MkDocs ドキュメントサーバーの起動
 
 ```bash
+# リポジトリルートで実行
 # MkDocs サーバー起動（ポート 8000）
 docker compose up -d mkdocs
 
@@ -372,6 +385,7 @@ case-study-cargo-tracker/
 │       ├── build.sbt                # sbt ビルド定義
 │       ├── project/                 # sbt プラグイン（scalafmt, scalafix, scoverage, native-packager）
 │       ├── Dockerfile               # アプリコンテナイメージ（sbt stage → temurin-21-jre）
+│       ├── docker-compose.yml       # アプリ開発用サービス（postgres / adminer / mailhog）
 │       ├── .scalafmt.conf           # scalafmt 設定
 │       ├── .scalafix.conf           # scalafix 設定
 │       ├── app/
@@ -411,7 +425,7 @@ case-study-cargo-tracker/
 │           └── src/
 ├── docs/                            # MkDocs ドキュメント
 ├── ops/                             # 運用スクリプト（Gulp タスク）・Terraform
-├── docker-compose.yml               # Docker サービス定義
+├── docker-compose.yml               # ドキュメント・共通基盤（mkdocs / plantuml / dev）
 └── package.json                     # Node.js 依存関係（Gulp, Husky）
 ```
 
@@ -503,10 +517,10 @@ git commit --no-verify -m "メッセージ"
 npm install
 
 # 2. PostgreSQL の起動
+cd apps/cargo-tracker
 docker compose up -d postgres
 
 # 3. ビルド確認
-cd apps/cargo-tracker
 sbt compile
 
 # 4. テスト実行
@@ -589,6 +603,7 @@ docker pull {AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/cargo-tracker:
 **解決策**: PostgreSQL コンテナが起動しているか確認する
 
 ```bash
+cd apps/cargo-tracker
 docker compose ps
 docker compose up -d postgres
 ```

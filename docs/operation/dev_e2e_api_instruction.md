@@ -376,9 +376,10 @@ docker info
 
 **問題**: `Bind for 0.0.0.0:5432 failed: port is already allocated`
 
-**解決策**: Testcontainers はランダムポートを使用するため通常は発生しない。`docker-compose.yml` の PostgreSQL が起動中の場合は影響しないが、テスト側が固定ポートを参照していないか確認する。
+**解決策**: Testcontainers はランダムポートを使用するため通常は発生しない。`apps/cargo-tracker/docker-compose.yml` の PostgreSQL が起動中の場合は影響しないが、テスト側が固定ポートを参照していないか確認する。
 
 ```bash
+cd apps/cargo-tracker
 docker compose down
 ```
 
