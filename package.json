@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
+    "prepare": "husky",
     "start": "gulp dev",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
@@ -37,5 +38,14 @@
     "@k2works/claude-code-booster": "^4.5.0",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11"
+  },
+  "lint-staged": {
+    "apps/cargo-tracker/**/*.scala": [
+      "bash -c 'cd apps/cargo-tracker && sbt scalafmtCheckAll \"scalafixAll --check\"'"
+    ]
   }
 }
