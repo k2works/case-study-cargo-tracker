@@ -14,7 +14,8 @@ RUN sbt stage
 
 # Stage 2: Runtime（JRE のみ・非 root ユーザー）
 FROM eclipse-temurin:25-jre-alpine
-RUN addgroup -S cargo && adduser -S cargo -G cargo
+# bash は sbt-native-packager の起動スクリプトに必要
+RUN apk add --no-cache bash && addgroup -S cargo && adduser -S cargo -G cargo
 WORKDIR /app
 COPY --from=build /build/target/universal/stage/ /app/
 USER cargo
@@ -23,5 +24,6 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s \
   CMD wget -qO- http://localhost:9000/health || exit 1
 
+# 非 root 実行のため PID ファイルは無効化する（コンテナがプロセスを管理）
 ENTRYPOINT ["/app/bin/cargo-tracker"]
-CMD ["-Dhttp.port=9000"]
+CMD ["-Dhttp.port=9000", "-Dpidfile.path=/dev/null"]
