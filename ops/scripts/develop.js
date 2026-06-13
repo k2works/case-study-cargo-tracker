@@ -1,0 +1,209 @@
+'use strict';
+
+import path from 'path';
+import { execSync } from 'child_process';
+import { cleanDockerEnv, isDockerAvailable } from './shared.js';
+
+// ============================================
+// 設定
+// ============================================
+
+const PREFIX = 'DEV'; // 環境変数プレフィックス
+
+/** サービス定義 */
+const SERVICES = [
+  { name: 'cargo-tracker', dir: 'apps/cargo-tracker', port: 9000, dbService: 'postgres', label: '国際貨物輸送管理システム' },
+];
+
+const APP = SERVICES[0];
+const APP_DIR = path.join(process.cwd(), APP.dir);
+
+// ============================================
+// ヘルパー関数
+// ============================================
+
+/**
+ * アプリケーションの起動ポートを取得する（SonarQube 等との競合時は DEV_APP_PORT で変更）
+ * @returns {string} ポート番号
+ */
+function appPort() {
+  return process.env[`${PREFIX}_APP_PORT`] || String(APP.port);
+}
+
+/**
+ * アプリディレクトリで docker compose コマンドを実行する
+ * @param {string} args - docker compose に渡す引数
+ */
+function dockerCompose(args) {
+  execSync(`docker compose ${args}`, { cwd: APP_DIR, stdio: 'inherit', env: cleanDockerEnv() });
+}
+
+/**
+ * アプリディレクトリで sbt コマンドを実行する
+ * @param {string} args - sbt に渡す引数
+ */
+function sbt(args) {
+  execSync(`sbt ${args}`, { cwd: APP_DIR, stdio: 'inherit', env: cleanDockerEnv() });
+}
+
+/**
+ * Docker が利用可能か確認し、不可なら警告メッセージを表示して false を返す
+ * @returns {boolean} Docker が利用可能なら true
+ */
+function requireDocker() {
+  if (isDockerAvailable()) {
+    return true;
+  }
+  console.warn('Warning: Docker is not running. Skipping this task.');
+  console.warn('Please start Docker Desktop and try again.');
+  return false;
+}
+
+// ============================================
+// Gulp タスク
+// ============================================
+
+/**
+ * アプリケーション開発タスクを gulp に登録する
+ * @param {import('gulp').Gulp} gulp - Gulp インスタンス
+ */
+export default function (gulp) {
+  // --- データベース ---
+
+  gulp.task('dev:db:start', (done) => {
+    if (!requireDocker()) { done(); return; }
+    try {
+      console.log('Starting PostgreSQL...');
+      dockerCompose(`up -d ${APP.dbService}`);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:db:stop', (done) => {
+    if (!requireDocker()) { done(); return; }
+    try {
+      dockerCompose('down');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:db:logs', (done) => {
+    if (!requireDocker()) { done(); return; }
+    try {
+      dockerCompose(`logs -f ${APP.dbService}`);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:db:psql', (done) => {
+    if (!requireDocker()) { done(); return; }
+    try {
+      dockerCompose(`exec ${APP.dbService} psql -U cargo_tracker -d cargo_tracker`);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  // --- 開発サーバー ---
+
+  gulp.task('dev:app', (done) => {
+    try {
+      const port = appPort();
+      console.log(`Starting Play dev server on http://localhost:${port} ...`);
+      sbt(`"run ${port}"`);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  // 開発サーバー起動（PostgreSQL 起動込み）
+  gulp.task('dev', gulp.series('dev:db:start', 'dev:app'));
+
+  // TDD モード（Testcontainers が PostgreSQL を自動起動するため compose 不要）
+  gulp.task('tdd', (done) => {
+    if (!requireDocker()) { done(); return; }
+    try {
+      sbt('~test');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  // --- テスト・品質チェック ---
+
+  gulp.task('dev:test', (done) => {
+    if (!requireDocker()) { done(); return; }
+    try {
+      sbt('test');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:coverage', (done) => {
+    if (!requireDocker()) { done(); return; }
+    try {
+      sbt('clean coverage test coverageReport');
+      console.log(`\nレポート: ${APP.dir}/target/scala-3.3.*/scoverage-report/index.html`);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:format', (done) => {
+    try {
+      sbt('scalafmtAll scalafixAll');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('dev:check', (done) => {
+    try {
+      sbt('scalafmtCheckAll "scalafixAll --check"');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  // --- ヘルプ ---
+
+  gulp.task('dev:help', (done) => {
+    console.log(`
+=== アプリケーション開発コマンド（${APP.label}） ===
+
+  dev                開発サーバー起動（PostgreSQL 起動込み・http://localhost:${appPort()}）
+  dev:app            開発サーバーのみ起動（sbt run）
+  tdd                TDD モード（sbt ~test・ソース変更で自動再実行）
+
+  dev:db:start       PostgreSQL を起動
+  dev:db:stop        Docker サービスを停止
+  dev:db:logs        PostgreSQL のログを表示
+  dev:db:psql        PostgreSQL に接続（psql）
+
+  dev:test           全テスト実行（sbt test）
+  dev:coverage       カバレッジレポート生成（ゲート 80%）
+  dev:format         フォーマット適用（scalafmt + scalafix）
+  dev:check          品質チェック（CI と同一）
+
+  dev:help           このヘルプを表示
+
+環境変数（.env）:
+  ${PREFIX}_APP_PORT       開発サーバーのポート（デフォルト ${APP.port}。SonarQube 等と競合する場合に変更）
+`);
+    done();
+  });
+}

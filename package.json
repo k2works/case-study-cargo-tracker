@@ -5,6 +5,7 @@
   "scripts": {
     "prepare": "husky",
     "start": "gulp dev",
+    "tdd": "gulp tdd",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
