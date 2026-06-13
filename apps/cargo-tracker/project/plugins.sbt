@@ -1,5 +1,5 @@
 // Play Framework（sbt-native-packager 同梱: sbt stage / dist）
-addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.8")
+addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.11")
 
 // コード品質（非機能要件定義のブロッキングゲート）
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.4")
