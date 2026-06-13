@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'scala/**'
+    paths:
+      - 'apps/cargo-tracker/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'apps/cargo-tracker/**'
+      - '.github/workflows/ci.yml'
+
+defaults:
+  run:
+    working-directory: apps/cargo-tracker
+
+jobs:
+  ci:
+    name: 品質チェック・テスト・ビルド
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: コードチェックアウト
+        uses: actions/checkout@v4
+
+      - name: JDK 25 セットアップ（Coursier / sbt キャッシュ込み）
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: sbt
+          cache-dependency-path: |
+            apps/cargo-tracker/build.sbt
+            apps/cargo-tracker/project/plugins.sbt
+            apps/cargo-tracker/project/build.properties
+
+      - name: sbt セットアップ
+        uses: sbt/setup-sbt@v1
+
+      # 高速フィードバックのため Lint → テスト → ビルドの順に実行する
+      - name: 品質チェック（scalafmt / scalafix）
+        run: sbt scalafmtCheckAll "scalafixAll --check"
+
+      - name: テスト + カバレッジ（Testcontainers / scoverage ゲート 80%）
+        run: sbt clean coverage test coverageReport
+
+      - name: ビルド（sbt stage）
+        run: sbt stage
+
+      - name: テスト・カバレッジレポートをアップロード
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage-reports
+          path: |
+            apps/cargo-tracker/target/test-reports
+            apps/cargo-tracker/target/scala-*/scoverage-report
+          if-no-files-found: ignore
