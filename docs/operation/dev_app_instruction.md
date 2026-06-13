@@ -206,9 +206,14 @@ npx gulp dev
 # TDD モード（テスト自動再実行）
 npx gulp tdd
 
+# 開発コマンドのヘルプ（DB 操作・テスト・品質チェック等）
+npx gulp dev:help
+
 # タスク一覧を表示
 npx gulp --tasks
 ```
+
+> ポート 9000 が SonarQube 等と競合する場合は、`.env` の `DEV_APP_PORT` で起動ポートを変更できます。
 
 ### sbt 直接実行
 

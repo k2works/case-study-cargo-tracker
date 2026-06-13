@@ -20,7 +20,18 @@
 
 ### 運用コマンド
 
-運用コマンドのリファレンスを追加予定です。
+アプリケーション開発タスク（`ops/scripts/develop.js`）を Gulp で提供しています。
+
+| コマンド | 説明 |
+| :--- | :--- |
+| `npx gulp dev` | 開発サーバー起動（PostgreSQL 起動込み） |
+| `npx gulp tdd` | TDD モード（`sbt ~test`） |
+| `npx gulp dev:db:start` / `dev:db:stop` | PostgreSQL の起動 / 停止 |
+| `npx gulp dev:test` / `dev:coverage` | テスト実行 / カバレッジレポート |
+| `npx gulp dev:format` / `dev:check` | フォーマット適用 / 品質チェック（CI と同一） |
+| `npx gulp dev:help` | 開発コマンドの一覧を表示 |
+
+デプロイ（`deploy_*`）・プロビジョニング（`provision_*`）のスクリプトは各環境の構築時に追加します。
 
 ### インフラ
 
