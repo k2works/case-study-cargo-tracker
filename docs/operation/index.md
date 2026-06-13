@@ -32,6 +32,16 @@
 | `npx gulp dev:format` / `dev:check` | フォーマット適用 / 品質チェック（CI と同一） |
 | `npx gulp dev:help` | 開発コマンドの一覧を表示 |
 
+Kubernetes 運用タスク（`ops/scripts/k8s.js`、Docker Desktop / Kustomize）も提供しています。詳細は [Kubernetes 開発環境セットアップ手順書](./dev_k8s_instruction.md) を参照してください。
+
+| コマンド | 説明 |
+| :--- | :--- |
+| `npx gulp k8s:images:build` | アプリイメージをビルド |
+| `npx gulp k8s:kustomize:up:local` / `:down:local` | デプロイ / 削除（`ops/k8s/overlays/local`） |
+| `npx gulp k8s:status` / `k8s:smoke` | 状態確認 / 起動待機・疎通確認（ポートフォワード経由） |
+| `npx gulp k8s:port-forward` / `k8s:clean` | localhost:9000 へ転送 / 完全削除 |
+| `npx gulp k8s:help` | Kubernetes コマンドの一覧を表示 |
+
 デプロイ（`deploy_*`）・プロビジョニング（`provision_*`）のスクリプトは各環境の構築時に追加します。
 
 ### インフラ

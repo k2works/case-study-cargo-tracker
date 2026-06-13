@@ -50,7 +50,7 @@ sec ..> pg : POSTGRES_USER/PASSWORD
 
 ### Gulp タスク（運用の入口）
 
-本書のコマンドは `ops/scripts/k8s.js` の Gulp タスクとして整備します（`operating-script` で作成。未整備の間は素のコマンドを使用してください）。
+本書のコマンドは `ops/scripts/k8s.js` の Gulp タスクとして整備済みです。
 
 ```bash
 npx gulp k8s:help
@@ -110,6 +110,13 @@ cd ../..
 ```
 
 > **Docker Desktop の利点**: Kubernetes が Docker Desktop と**同一の Docker デーモン**を使用するため、`docker build` したイメージはロード作業なしでそのままクラスタから参照できます（minikube の `image load` や kind の `load docker-image` は不要）。マニフェスト側は `imagePullPolicy: IfNotPresent` を指定し、レジストリへの問い合わせを避けます。
+
+> **`latest` の上書きはクラスタに伝わらない**: `imagePullPolicy: IfNotPresent` のため、`latest` タグを再ビルドしても kubelet はキャッシュ済みの旧イメージを使い続けます。コードを変えて再デプロイするときは**必ずバージョンタグを付与**して `kubectl set image`（または `npx gulp k8s:images:build` 後に `set image`）してください。本書の検証では `cargo-tracker/app:0.1.2` のようにタグを付けて反映しています（「6.2 ローリングアップデート」参照）。
+
+> **コンテナ実行の前提（Dockerfile）**: 非 root 実行のため、実行ステージに 2 点の対応が必要です。`apps/cargo-tracker/Dockerfile` に反映済みです。
+>
+> - sbt-native-packager の起動スクリプトは `bash` を要求するため、`eclipse-temurin:25-jre-alpine` に `apk add --no-cache bash` を追加する
+> - Play は起動時に `RUNNING_PID` を作業ディレクトリに書き込むが、非 root では `/app` に書けないため `-Dpidfile.path=/dev/null` で無効化する
 
 > **本番運用**: 外部レジストリ（ECR 等）に push し、overlay でイメージ名・タグを差し替えます（「3.5 イメージタグの差し替え」参照）。AWS 環境のデプロイは ECS を採用しているため、Kubernetes 構成はローカル検証・学習用です。
 
@@ -187,7 +194,7 @@ spec:
             - name: POSTGRES_DB
               value: cargo_tracker
           volumeMounts:
-            - name: data
+            - name: pgdata
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
@@ -196,7 +203,7 @@ spec:
             periodSeconds: 5
   volumeClaimTemplates:
     - metadata:
-        name: data
+        name: pgdata
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:
@@ -238,6 +245,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9000
+          envFrom:
+            - configMapRef:
+                name: cargo-config   # JAVA_OPTS（-XX:MaxRAMPercentage=75.0）
           env:
             - name: DB_URL
               value: jdbc:postgresql://postgresql:5432/cargo_tracker
@@ -279,7 +289,24 @@ spec:
 > - ヘルスチェックは自作の `/health`（DB 疎通込み）を readiness / liveness の両方に使用します
 > - flyway-play が起動時にマイグレーションを適用するため、`initialDelaySeconds` に余裕を持たせます
 > - Play Session は署名付きクライアントサイド Cookie のため、`replicas: 2` 以上でもスティッキーセッション不要です。ただし全 Pod に**同一の** `PLAY_HTTP_SECRET_KEY` を注入する必要があります（Secret で一元管理）
-> - メモリ limit に対して JVM ヒープは `-XX:MaxRAMPercentage=75.0` で制御します（Dockerfile の `JAVA_OPTS`）
+> - メモリ limit に対して JVM ヒープは `-XX:MaxRAMPercentage=75.0` で制御します（ConfigMap `cargo-config` の `JAVA_OPTS`）
+
+#### base/configmap.yaml
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cargo-config
+data:
+  # メモリ limit に対して JVM ヒープを制御する（OOMKilled 対策）
+  JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+  # K8s の readiness/liveness probe は Pod IP を Host ヘッダーにするため全ホストを許可する
+  # （ローカル検証用。本番 ECS では ALB のホスト名を指定する）
+  PLAY_ALLOWED_HOST: "."
+```
+
+> **`PLAY_ALLOWED_HOST` が必要な理由**: Play の `AllowedHostsFilter`（DNS リバインディング対策）は許可外の Host ヘッダーを拒否します。kubelet の `httpGet` probe は Pod IP（例: `10.244.0.12:9000`）を Host にするため、既定の許可リスト（localhost）では probe が弾かれ Pod が Ready になりません。`application.conf` は `PLAY_ALLOWED_HOST` で許可ホストを 1 件追加できるようにしており、ローカル K8s では `.`（全許可）を設定します。本番 ECS では ALB のホスト名を指定して制限します。
 
 #### base/secret.yaml（開発用デフォルト値）
 
@@ -387,7 +414,9 @@ images:
 
 ## 4. アクセス確認
 
-### 4.1 ポートフォワード（最も簡単）
+### 4.1 ポートフォワード（最も簡単・推奨）
+
+環境差の影響を受けず最も確実な方法です。Gulp の `k8s:smoke` もこの方式で疎通確認します。
 
 ```bash
 kubectl -n cargo-tracker port-forward svc/cargo-tracker 9000:9000
@@ -395,16 +424,18 @@ kubectl -n cargo-tracker port-forward svc/cargo-tracker 9000:9000
 # 別ターミナルで確認
 curl http://localhost:9000/health
 # → {"status":"UP"}
-# ブラウザで http://localhost:9000 を開くとログイン画面が表示される
+# ブラウザで http://localhost:9000 を開くとホーム画面が表示される
 ```
 
 ### 4.2 NodePort（local overlay）
 
-`overlays/local` はアプリ Service を NodePort 30900 で公開します。Docker Desktop ではノードが localhost のため、そのままアクセスできます。
+`overlays/local` はアプリ Service を NodePort 30900 で公開します。
 
 ```bash
 curl http://localhost:30900/health
 ```
+
+> **注意**: Docker Desktop のバージョン・構成によっては NodePort がホスト（localhost）へ公開されず、接続が拒否される（`curl: (7)`）ことがあります。その場合は **4.1 のポートフォワード**を使用してください。NodePort はクラスタ内からは `<ClusterIP>:9000` で常に到達できます（`npx gulp k8s:status` で確認）。
 
 ### 4.3 Ingress（本来の公開経路）
 
@@ -524,10 +555,15 @@ kubectl delete namespace cargo-tracker
 | :--- | :--- | :--- |
 | Pod が `ImagePullBackOff` | イメージ未ビルド、またはコンテキストが docker-desktop でない | 「2. イメージのビルド」を実施。`kubectl config current-context` を確認。`imagePullPolicy: IfNotPresent` を確認 |
 | アプリが `CrashLoopBackOff` を繰り返す | PostgreSQL がまだ Ready でない（Flyway が接続失敗） | 数分待つ。依存が安定すれば自己回復。`kubectl logs` で接続エラーを確認 |
+| アプリ Pod が `env: 'bash': No such file or directory` | 実行イメージに bash が無い（native-packager の起動スクリプトが要求） | Dockerfile に `apk add --no-cache bash`（対応済み。再ビルド＋バージョンタグで再デプロイ） |
+| アプリ Pod が `AccessDeniedException: /app/RUNNING_PID` | 非 root ユーザーが PID ファイルを書けない | `-Dpidfile.path=/dev/null` で無効化（Dockerfile 対応済み） |
+| Pod が Ready にならず `Host not allowed: <PodIP>:9000` | `AllowedHostsFilter` が probe の Host（Pod IP）を拒否 | ConfigMap `cargo-config` の `PLAY_ALLOWED_HOST: "."` を確認（「3.2 base/configmap.yaml」参照） |
+| PostgreSQL が `directory "/var/lib/postgresql/data" exists but is not empty` | 別用途で使った既存 PVC が再利用された | 専用 PVC 名（`pgdata`）を使う。リセットするなら `npx gulp k8s:clean` で PVC ごと削除 |
+| NodePort `http://localhost:30900` に繋がらない（`curl: (7)`） | Docker Desktop が NodePort をホストへ公開していない | ポートフォワード（4.1）を使用。`npx gulp k8s:smoke` はポートフォワードで疎通確認する |
 | `Configuration error: play.http.secret.key` で起動失敗 | `cargo-secret` の `PLAY_HTTP_SECRET_KEY` 不足 | 「5. 機密管理」の必須キーを確認 |
 | readinessProbe が失敗し続ける | `/health` が 503（DB 疎通失敗） | `DB_URL` の Service 名（`postgresql`）と Secret の認証情報を確認 |
 | Ingress にアクセスできない | ingress-nginx 未導入 / hosts 未登録 | 「4.3 Ingress」を実施 |
-| `OOMKilled` で再起動する | メモリ limit に対して JVM ヒープが過大 | `JAVA_OPTS=-XX:MaxRAMPercentage=75.0` を確認。limit を 1Gi 以上に増やす |
+| `OOMKilled` で再起動する | メモリ limit に対して JVM ヒープが過大 | ConfigMap `cargo-config` の `JAVA_OPTS=-XX:MaxRAMPercentage=75.0` を確認。limit を 1Gi 以上に増やす |
 | 更新したのに反映されない | `latest` タグの上書き | バージョンタグで `set image`、または `rollout restart`（6.2 の注意参照） |
 | 再デプロイ後にログインが全て無効 | `PLAY_HTTP_SECRET_KEY` が変わった | Secret を固定値で管理する（生成し直さない） |
 
