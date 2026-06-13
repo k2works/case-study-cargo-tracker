@@ -1,5 +1,6 @@
 # Stage 1: Build（sbt stage で起動スクリプト込みの配布物を生成）
-FROM sbtscala/scala-sbt:eclipse-temurin-21.0.5_11_1.10.7_3.3.4 AS build
+# sbt launcher は project/build.properties の sbt バージョンを自動取得する
+FROM sbtscala/scala-sbt:eclipse-temurin-25.0.3_9_1.12.11_3.3.7 AS build
 WORKDIR /build
 
 # 依存解決を先に行いレイヤーキャッシュを活用する
@@ -12,7 +13,7 @@ COPY conf/ conf/
 RUN sbt stage
 
 # Stage 2: Runtime（JRE のみ・非 root ユーザー）
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 RUN addgroup -S cargo && adduser -S cargo -G cargo
 WORKDIR /app
 COPY --from=build /build/target/universal/stage/ /app/
