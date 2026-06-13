@@ -24,6 +24,7 @@
 
 | コマンド | 説明 |
 | :--- | :--- |
+| `npm run start` | アプリ + ドキュメントサーバー一括起動（PostgreSQL / MkDocs / Play） |
 | `npx gulp dev` | 開発サーバー起動（PostgreSQL 起動込み） |
 | `npx gulp tdd` | TDD モード（`sbt ~test`） |
 | `npx gulp dev:db:start` / `dev:db:stop` | PostgreSQL の起動 / 停止 |

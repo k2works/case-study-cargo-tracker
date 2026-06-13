@@ -200,6 +200,9 @@ sbt run
 ### タスクランナー経由（推奨）
 
 ```bash
+# アプリ + ドキュメントサーバー一括起動（PostgreSQL / MkDocs / Play）
+npm run start
+
 # 開発サーバー起動（PostgreSQL 起動込み）
 npx gulp dev
 
