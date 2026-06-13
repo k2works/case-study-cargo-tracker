@@ -1,5 +1,6 @@
 'use strict';
 
+import net from 'net';
 import path from 'path';
 import { execSync } from 'child_process';
 import { cleanDockerEnv, isDockerAvailable } from './shared.js';
@@ -28,6 +29,20 @@ const APP_DIR = path.join(process.cwd(), APP.dir);
  */
 function appPort() {
   return process.env[`${PREFIX}_APP_PORT`] || String(APP.port);
+}
+
+/**
+ * 指定ポートが使用可能か確認する
+ * @param {string|number} port - ポート番号
+ * @returns {Promise<boolean>} 使用可能なら true
+ */
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => server.close(() => resolve(true)));
+    server.listen(Number(port), '0.0.0.0');
+  });
 }
 
 /**
@@ -113,15 +128,16 @@ export default function (gulp) {
 
   // --- 開発サーバー ---
 
-  gulp.task('dev:app', (done) => {
-    try {
-      const port = appPort();
-      console.log(`Starting Play dev server on http://localhost:${port} ...`);
-      sbt(`"run ${port}"`);
-      done();
-    } catch (error) {
-      done(error);
+  gulp.task('dev:app', async () => {
+    const port = appPort();
+    if (!(await isPortAvailable(port))) {
+      throw new Error(
+        `ポート ${port} は使用中です（SonarQube 等が起動していないか確認してください）。` +
+          `.env の ${PREFIX}_APP_PORT で別ポートを指定できます（例: ${PREFIX}_APP_PORT=9001）`
+      );
     }
+    console.log(`Starting Play dev server on http://localhost:${port} ...`);
+    sbt(`"run ${port}"`);
   });
 
   // 開発サーバー起動（PostgreSQL 起動込み）

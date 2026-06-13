@@ -627,6 +627,8 @@ lsof -nP -iTCP:9000 -sTCP:LISTEN
 sbt "run 9001"
 ```
 
+タスクランナー経由（`npx gulp dev`）の場合は、`.env` に `DEV_APP_PORT=9001` を設定してください。ポートが使用中の場合は起動前チェックがエラーメッセージで案内します。
+
 ### Testcontainers が Docker を検出できない
 
 **問題**: テスト実行時に `Could not find a valid Docker environment` で統合テストが ABORTED になる。Docker Engine 29 系は古い Docker API バージョン（1.40 未満）の要求を拒否するため、docker-java のデフォルト（1.32）では接続できません。
