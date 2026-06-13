@@ -1,0 +1,45 @@
+name := "cargo-tracker"
+organization := "cargotracker"
+version := "0.1.0-SNAPSHOT"
+
+scalaVersion := "3.3.6"
+
+lazy val root = (project in file(".")).enablePlugins(PlayScala)
+
+libraryDependencies ++= Seq(
+  guice,
+  jdbc,
+  "org.postgresql" % "postgresql" % "42.7.4",
+  "org.scalikejdbc" %% "scalikejdbc" % "4.3.2",
+  "org.flywaydb" %% "flyway-play" % "9.1.0",
+  "org.mindrot" % "jbcrypt" % "0.4",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test,
+  "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.43.0" % Test,
+  "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.43.0" % Test
+)
+
+// Docker Engine 29 系の API に対応した testcontainers-java を使用する
+dependencyOverrides ++= Seq(
+  "org.testcontainers" % "testcontainers" % "1.21.3" % Test,
+  "org.testcontainers" % "postgresql" % "1.21.3" % Test
+)
+
+// Docker Engine 29 系は API 1.40 未満を拒否するため、docker-java の API バージョンを明示する
+Test / fork := true
+Test / javaOptions += "-Dapi.version=1.44"
+
+// 警告ゼロを品質ゲートとする（非機能要件定義）
+// -deprecation / -unchecked は Play プラグインが設定済みのため指定しない（重複指定は警告になる）
+scalacOptions ++= Seq(
+  "-feature",
+  "-Werror"
+)
+
+// scalafix（セマンティックルール用 SemanticDB）
+ThisBuild / semanticdbEnabled := true
+
+// scoverage: 全体 80% を下回ったらビルド失敗（テスト戦略）
+coverageMinimumStmtTotal := 80
+coverageFailOnMinimum := true
+// Play が生成するルーター・リバースルート・Twirl テンプレートは計測対象外
+coverageExcludedPackages := "<empty>;Reverse.*;router\\..*;views\\.html\\..*"
