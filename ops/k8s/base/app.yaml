@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cargo-tracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cargo-tracker
+  template:
+    metadata:
+      labels:
+        app: cargo-tracker
+    spec:
+      containers:
+        - name: cargo-tracker
+          image: cargo-tracker/app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+          envFrom:
+            - configMapRef:
+                name: cargo-config
+          env:
+            - name: DB_URL
+              value: jdbc:postgresql://postgresql:5432/cargo_tracker
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef: { name: cargo-secret, key: POSTGRES_USER }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: cargo-secret, key: POSTGRES_PASSWORD }
+            - name: PLAY_HTTP_SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: cargo-secret, key: PLAY_HTTP_SECRET_KEY }
+          readinessProbe:
+            httpGet: { path: /health, port: 9000 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 9000 }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cargo-tracker
+spec:
+  selector:
+    app: cargo-tracker
+  ports:
+    - port: 9000
+      targetPort: 9000

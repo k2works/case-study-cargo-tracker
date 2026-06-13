@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cargo-config
+data:
+  # メモリ limit に対して JVM ヒープを制御する（OOMKilled 対策）
+  JAVA_OPTS: "-XX:MaxRAMPercentage=75.0"
+  # K8s の readiness/liveness probe は Pod IP を Host ヘッダーにするため全ホストを許可する
+  # （ローカル検証用。本番 ECS では ALB のホスト名を指定する）
+  PLAY_ALLOWED_HOST: "."
