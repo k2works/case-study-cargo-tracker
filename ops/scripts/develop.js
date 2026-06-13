@@ -2,8 +2,8 @@
 
 import net from 'net';
 import path from 'path';
-import { execSync } from 'child_process';
-import { cleanDockerEnv, isDockerAvailable } from './shared.js';
+import { execSync, spawn } from 'child_process';
+import { cleanDockerEnv, isDockerAvailable, openUrl } from './shared.js';
 
 // ============================================
 // 設定
@@ -42,6 +42,60 @@ function isPortAvailable(port) {
     server.once('error', () => resolve(false));
     server.once('listening', () => server.close(() => resolve(true)));
     server.listen(Number(port), '0.0.0.0');
+  });
+}
+
+/**
+ * アプリの /health が応答するまで待機する
+ * @param {string|number} port - ポート番号
+ * @param {number} [timeoutMs=300000] - タイムアウト（ミリ秒）
+ * @returns {Promise<boolean>} 応答したら true
+ */
+async function waitForHealth(port, timeoutMs = 300000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://localhost:${port}/health`, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) return true;
+    } catch {
+      // 起動待ち（接続不可・タイムアウトは無視してリトライ）
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  return false;
+}
+
+/**
+ * Play 開発サーバーを起動する（終了までブロック）
+ * @param {{ openBrowser?: boolean }} [options] - openBrowser: 起動完了後にブラウザでアプリを開く
+ * @returns {Promise<void>}
+ */
+async function runAppServer(options = {}) {
+  const port = appPort();
+  if (!(await isPortAvailable(port))) {
+    throw new Error(
+      `ポート ${port} は使用中です（SonarQube 等が起動していないか確認してください）。` +
+        `.env の ${PREFIX}_APP_PORT で別ポートを指定できます（例: ${PREFIX}_APP_PORT=9001）`
+    );
+  }
+  console.log(`Starting Play dev server on http://localhost:${port} ...`);
+  const child =
+    process.platform === 'win32'
+      ? spawn(`sbt "run ${port}"`, { cwd: APP_DIR, stdio: 'inherit', env: cleanDockerEnv(), shell: true })
+      : spawn('sbt', [`run ${port}`], { cwd: APP_DIR, stdio: 'inherit', env: cleanDockerEnv() });
+  if (options.openBrowser) {
+    waitForHealth(port).then((ok) => {
+      if (ok) {
+        console.log(`Opening http://localhost:${port}/ ...`);
+        openUrl(`http://localhost:${port}/`);
+      }
+    });
+  }
+  await new Promise((resolve, reject) => {
+    child.on('error', reject);
+    child.on('exit', (code) =>
+      code === 0 || code === null ? resolve() : reject(new Error(`sbt run がコード ${code} で終了しました`))
+    );
   });
 }
 
@@ -128,17 +182,10 @@ export default function (gulp) {
 
   // --- 開発サーバー ---
 
-  gulp.task('dev:app', async () => {
-    const port = appPort();
-    if (!(await isPortAvailable(port))) {
-      throw new Error(
-        `ポート ${port} は使用中です（SonarQube 等が起動していないか確認してください）。` +
-          `.env の ${PREFIX}_APP_PORT で別ポートを指定できます（例: ${PREFIX}_APP_PORT=9001）`
-      );
-    }
-    console.log(`Starting Play dev server on http://localhost:${port} ...`);
-    sbt(`"run ${port}"`);
-  });
+  gulp.task('dev:app', () => runAppServer());
+
+  // 起動完了（/health 応答）後にブラウザでアプリを開く（npm run start 用）
+  gulp.task('dev:app:open', () => runAppServer({ openBrowser: true }));
 
   // 開発サーバー起動（PostgreSQL 起動込み）
   gulp.task('dev', gulp.series('dev:db:start', 'dev:app'));
@@ -203,6 +250,7 @@ export default function (gulp) {
 
   dev                開発サーバー起動（PostgreSQL 起動込み・http://localhost:${appPort()}）
   dev:app            開発サーバーのみ起動（sbt run）
+  dev:app:open       開発サーバー起動 + 起動完了後にブラウザを開く
   tdd                TDD モード（sbt ~test・ソース変更で自動再実行）
 
   dev:db:start       PostgreSQL を起動

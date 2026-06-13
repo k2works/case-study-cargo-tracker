@@ -25,7 +25,8 @@ developTasks(gulp);
 export const docs = gulp.series('mkdocs:serve', 'mkdocs:open');
 
 // npm run start: ドキュメントサーバー（mkdocs）とアプリ開発サーバーを一括起動
-gulp.task('start', gulp.series('dev:db:start', 'mkdocs:serve', 'mkdocs:open', 'dev:app'));
+// アプリは起動完了（/health 応答）後にブラウザで自動オープンする
+gulp.task('start', gulp.series('dev:db:start', 'mkdocs:serve', 'mkdocs:open', 'dev:app:open'));
 
 // Export gulp to make it available to the gulp CLI
 export default gulp;
