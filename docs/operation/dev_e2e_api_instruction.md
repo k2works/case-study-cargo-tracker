@@ -21,7 +21,7 @@
 
 | 前提 | 確認方法 |
 |------|---------|
-| JDK 21.x / sbt 1.10.x | `java -version` / `sbt --version` |
+| JDK 25.x / sbt 1.10.x | `java -version` / `sbt --version` |
 | Docker Desktop が起動している | `docker info` |
 | `sbt compile` が成功する | `cd apps/cargo-tracker && sbt compile` |
 

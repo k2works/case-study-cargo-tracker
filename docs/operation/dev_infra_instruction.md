@@ -92,7 +92,7 @@ Heroku に push する Dockerfile は `apps/cargo-tracker/Dockerfile` を使用�
 
 - ビルドステージ（`sbtscala/scala-sbt`）で `sbt stage` を実行し、起動スクリプト込みの配布物を生成
 - テストは Docker build では実行しない
-- 実行イメージは `eclipse-temurin:21-jre-alpine` ベース
+- 実行イメージは `eclipse-temurin:25-jre-alpine` ベース
 - 非 root ユーザーで実行
 - `CMD` で `bin/cargo-tracker -Dhttp.port=${PORT:-9000}` を起動
 

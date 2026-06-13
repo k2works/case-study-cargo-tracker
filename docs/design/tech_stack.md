@@ -20,7 +20,7 @@ tags: design, tech-stack, scala, play-framework, postgresql
 | 技術名 | バージョン | 用途・役割 | 選定理由 | ライセンス | サポート状況 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Scala | 3.3.x（LTS） | アプリケーション実装言語 | opaque type・enum・ADT によるドメインモデル表現、コンパイル時の網羅性検査。LTS 系列で安定運用 | Apache 2.0 | LTS（次期 LTS リリース後に移行検討） |
-| JDK（Eclipse Temurin） | 21（LTS） | 実行ランタイム | LTS。Play 3.x / ScalikeJDBC の動作要件を満たす。コンテナイメージも Temurin 21 で統一 | GPLv2 + CE | LTS（Temurin サポート 2029 年以降まで） |
+| JDK（Eclipse Temurin） | 25（LTS） | 実行ランタイム | LTS。Play 3.x / ScalikeJDBC の動作要件を満たす。コンテナイメージも Temurin 25 で統一 | GPLv2 + CE | LTS（Temurin サポート 2030 年以降まで） |
 | Play Framework | 3.0.x | アプリケーションフレームワーク | SSR（Twirl）・フォーム・CSRF・署名付き Session・型検査されるルーティングを標準装備。Pekko ベース | Apache 2.0 | GA（Play 3.x 系。2.x 系は Akka ライセンス問題のため不採用） |
 | Twirl | 2.0.x | テンプレートエンジン（SSR） | Scala にコンパイルされる型安全テンプレート。Play に同梱 | Apache 2.0 | GA（Play に同梱） |
 | Apache Pekko | 1.x | 非同期ランタイム（Play 基盤） | Play 3.x の内部基盤。初期フェーズでは直接利用しない | Apache 2.0 | GA（Play に同梱） |
@@ -147,7 +147,7 @@ tags: design, tech-stack, scala, play-framework, postgresql
 本プロジェクトでは以下の方針でバージョンを選定する。
 
 - Scala: LTS 系列（3.3.x）を使用し、次期 LTS リリース後に移行を計画する。Scala Next（3.4+ 非 LTS）は採用しない
-- JDK: LTS（21）を使用する。次期 LTS（25）への移行はライブラリ（Play / ScalikeJDBC）の対応確認後に行う
+- JDK: LTS（25）を使用する。次期 LTS への移行はライブラリ（Play / ScalikeJDBC）の対応確認後に行う
 - PostgreSQL: EOL（2028-11）まで 16.x を維持し、17.x への移行は 2027 年を目標とする
 - Play Framework: 3.0.x のパッチバージョンは積極的に追従する。3.1 以降のマイナーバージョンはリリースノート確認のうえ追従する
 - ライブラリのバージョンは `project/Dependencies.scala` に一元管理し、Scala Steward（または Renovate）による更新 PR を CI で検証する
@@ -157,7 +157,7 @@ tags: design, tech-stack, scala, play-framework, postgresql
 | 技術 | 現行バージョン | 次期バージョン | 予定時期 | 影響範囲 |
 | :--- | :--- | :--- | :--- | :--- |
 | Scala | 3.3.x（LTS） | 次期 LTS | 次期 LTS GA 後 6 ヶ月以内 | コンパイラ警告・ライブラリ互換性 |
-| JDK | 21（LTS） | 25（LTS） | Play / 主要ライブラリ対応確認後 | JVM 設定、コンテナベースイメージ |
+| JDK | 25（LTS） | 次期 LTS | Play / 主要ライブラリ対応確認後 | JVM 設定、コンテナベースイメージ |
 | PostgreSQL | 16.x | 17.x | 2027 年 | スキーマ移行（互換性高） |
 | Play Framework | 3.0.x | 3.x 最新 | 随時 | ルーティング・設定の変更確認 |
 | Flyway | 10.x | 11.x | flyway-play 対応後 | マイグレーションスクリプト |

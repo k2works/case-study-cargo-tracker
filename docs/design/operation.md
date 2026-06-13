@@ -156,7 +156,7 @@ aws cloudwatch get-metric-statistics \
 - [ ] AWS ライセンス・サポートプランの更新確認
 - [ ] 監査ログ（`/ecs/cargo-tracker/audit`）の 1 年分をアーカイブして S3 に保存
 - [ ] 非機能要件（SLA/SLO/RTO/RPO）の見直しと関係者合意
-- [ ] 技術スタックのサポート期限確認（Scala 3.3 LTS / Play 3.x / JDK 21 LTS の EOL 確認 → [技術スタック選定](tech_stack.md)）
+- [ ] 技術スタックのサポート期限確認（Scala 3.3 LTS / Play 3.x / JDK 25 LTS の EOL 確認 → [技術スタック選定](tech_stack.md)）
 
 ---
 

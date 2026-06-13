@@ -10,7 +10,7 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| [アプリケーション開発環境セットアップ手順書](./dev_app_instruction.md) | ローカルアプリケーション開発環境（JDK 21 / sbt / Play / Docker PostgreSQL）の構築手順 | 作成済 |
+| [アプリケーション開発環境セットアップ手順書](./dev_app_instruction.md) | ローカルアプリケーション開発環境（JDK 25 / sbt / Play / Docker PostgreSQL）の構築手順 | 作成済 |
 | [Playwright E2E テストセットアップ手順書](./dev_e2e_instruction.md) | Playwright による E2E テスト環境の構築手順 | 作成済 |
 | [コントローラー E2E テストセットアップ手順書](./dev_e2e_api_instruction.md) | ScalaTestPlus-Play + Testcontainers によるコントローラー E2E テストの構築手順 | 作成済 |
 | [開発環境セットアップ手順書](./dev_infra_instruction.md) | Heroku コンテナ + Heroku Postgres を使った開発環境の構築手順 | 作成済 |

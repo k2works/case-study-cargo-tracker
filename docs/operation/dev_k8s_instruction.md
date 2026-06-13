@@ -100,7 +100,7 @@ kubectl get nodes
 
 ## 2. イメージのビルド
 
-Kubernetes は事前にビルド済みのイメージを参照します。アプリの Dockerfile は `apps/cargo-tracker/Dockerfile`（マルチステージビルド: `sbt stage` → `eclipse-temurin:21-jre-alpine`）です。
+Kubernetes は事前にビルド済みのイメージを参照します。アプリの Dockerfile は `apps/cargo-tracker/Dockerfile`（マルチステージビルド: `sbt stage` → `eclipse-temurin:25-jre-alpine`）です。
 
 ```bash
 # アプリイメージをビルド

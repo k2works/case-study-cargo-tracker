@@ -89,11 +89,11 @@ developer --> [S3\n(Terraform State)] : terraform state
 title Dockerfile マルチステージビルド
 
 package "Stage 1: Build" as build {
-  [sbtscala/scala-sbt\n(eclipse-temurin-21 / sbt / Scala 3)\n（ビルドステージ）] as builder
+  [sbtscala/scala-sbt\n(eclipse-temurin-25 / sbt / Scala 3)\n（ビルドステージ）] as builder
 }
 
 package "Stage 2: Runtime" as runtime {
-  [eclipse-temurin:21-jre-alpine\n（実行ステージ）] as runner
+  [eclipse-temurin:25-jre-alpine\n（実行ステージ）] as runner
 }
 
 note right of builder : sbt 依存解決・コンパイル\nTwirl テンプレートのコンパイル\nsbt stage で配布物を生成\n(target/universal/stage/)
@@ -270,7 +270,7 @@ start
 
 |CI ワークフロー (ci.yml)|
 :コードチェックアウト;
-:JDK 21 + sbt セットアップ\n(Coursier キャッシュ);
+:JDK 25 + sbt セットアップ\n(Coursier キャッシュ);
 fork
   :Lint\n(scalafmtCheckAll / scalafix --check);
 fork again

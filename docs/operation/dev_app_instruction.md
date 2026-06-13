@@ -25,7 +25,7 @@
 
 | ツール | バージョン | 確認コマンド |
 |--------|-----------|-------------|
-| JDK（Temurin） | 21.x LTS | `java -version` |
+| JDK（Temurin） | 25.x LTS | `java -version` |
 | sbt | 1.10.x | `sbt --version` |
 | Docker | 24.x 以上 | `docker -v` |
 | Docker Compose | 2.x | `docker compose version` |
@@ -43,8 +43,8 @@ SDKMAN を使用すると複数バージョンの管理が容易です。
 # SDKMAN のインストール
 curl -s "https://get.sdkman.io" | bash
 
-# JDK 21（Temurin）のインストール
-sdk install java 21-tem
+# JDK 25（Temurin）のインストール
+sdk install java 25-tem
 
 # sbt のインストール
 sdk install sbt
@@ -133,7 +133,7 @@ Case Study Cargo Tracker は以下のサブシステムで構成されていま�
 | カテゴリ | 技術 | バージョン |
 |---------|------|-----------|
 | 言語 | Scala | 3.3.x LTS |
-| ランタイム | JDK（Temurin） | 21 LTS |
+| ランタイム | JDK（Temurin） | 25 LTS |
 | フレームワーク | Play Framework | 3.0.x（Pekko ベース） |
 | DI | Guice | 6.x（Play 標準） |
 | ビルドツール | sbt | 1.10.x |
@@ -384,7 +384,7 @@ case-study-cargo-tracker/
 │   └── cargo-tracker/               # メインアプリケーション
 │       ├── build.sbt                # sbt ビルド定義
 │       ├── project/                 # sbt プラグイン（scalafmt, scalafix, scoverage, native-packager）
-│       ├── Dockerfile               # アプリコンテナイメージ（sbt stage → temurin-21-jre）
+│       ├── Dockerfile               # アプリコンテナイメージ（sbt stage → temurin-25-jre）
 │       ├── docker-compose.yml       # アプリ開発用サービス（postgres / adminer / mailhog）
 │       ├── .scalafmt.conf           # scalafmt 設定
 │       ├── .scalafix.conf           # scalafix 設定
@@ -564,7 +564,7 @@ CI/CD による継続的インテグレーション・デプロイを設定し�
 ```
 実行内容:
 
-  1. JDK 21 + sbt 環境セットアップ（Coursier キャッシュ復元）
+  1. JDK 25 + sbt 環境セットアップ（Coursier キャッシュ復元）
   2. 品質チェック（scalafmtCheckAll / scalafixAll --check）
   3. ユニットテスト（ScalaTest）
   4. 統合テスト（Testcontainers / ScalaTestPlus-Play）
@@ -575,7 +575,7 @@ CI/CD による継続的インテグレーション・デプロイを設定し�
 
 ### Docker Image Publish
 
-タグ push 時または手動実行時に、Docker イメージ（マルチステージビルド: `sbt stage` → `eclipse-temurin:21-jre-alpine`）をビルドして ECR に公開します。
+タグ push 時または手動実行時に、Docker イメージ（マルチステージビルド: `sbt stage` → `eclipse-temurin:25-jre-alpine`）をビルドして ECR に公開します。
 
 ```bash
 # タグによる自動実行
