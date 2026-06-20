@@ -1,0 +1,38 @@
+@(shippers: Seq[cargotracker.shipper.domain.Shipper])(implicit request: RequestHeader, flash: Flash)
+@views.html.layout.main("荷主一覧") {
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">荷主一覧</h1>
+    <a href="@cargotracker.shipper.interfaces.web.routes.ShipperController.newForm()" class="btn btn-primary">新規登録</a>
+  </div>
+  @flash.get("success").map { msg =>
+    <div class="alert alert-success">@msg</div>
+  }
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>荷主コード</th>
+        <th>氏名/社名</th>
+        <th>種別</th>
+        <th>メール</th>
+        <th>電話</th>
+        <th>割引率</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if(shippers.isEmpty) {
+        <tr><td colspan="6" class="text-center text-muted">登録された荷主はありません</td></tr>
+      } else {
+        @for(s <- shippers) {
+          <tr>
+            <td>@s.shipperId.value</td>
+            <td>@s.name</td>
+            <td>@s.shipperType</td>
+            <td>@s.email</td>
+            <td>@s.phone</td>
+            <td>@{f"${s.discountRate.value * 100}%.1f"}%</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+}
