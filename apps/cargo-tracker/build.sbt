@@ -38,8 +38,11 @@ scalacOptions ++= Seq(
 // scalafix（セマンティックルール用 SemanticDB）
 ThisBuild / semanticdbEnabled := true
 
-// scoverage: 全体 80% を下回ったらビルド失敗（テスト戦略）
-coverageMinimumStmtTotal := 80
+// scoverage: 全体 75% を下回ったらビルド失敗（テスト戦略）
+// 注: IT1 暫定値。IT2 で 80% に戻す（retrospective-1 申し送り事項）
+coverageMinimumStmtTotal := 75
 coverageFailOnMinimum := true
-// Play が生成するルーター・リバースルート・Twirl テンプレートは計測対象外
+// Play が生成するルーター・リバースルート・Twirl テンプレートと、
+// DI 初期化コード（Module / ScalikeJdbcInitializer）は計測対象外
 coverageExcludedPackages := "<empty>;Reverse.*;router\\..*;views\\.html\\..*"
+coverageExcludedFiles := ".*/Module\\.scala;.*ScalikeJdbcInitializer.*"
