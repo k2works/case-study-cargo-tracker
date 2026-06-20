@@ -13,12 +13,13 @@
             @CSRF.formField
             <div class="mb-3">
               <label for="username" class="form-label">ユーザー ID</label>
-              <input type="text" id="username" name="username" class="form-control" required autofocus>
+              <input type="text" id="username" name="username" class="form-control" value="admin" required autofocus>
             </div>
             <div class="mb-3">
               <label for="password" class="form-label">パスワード</label>
-              <input type="password" id="password" name="password" class="form-control" required>
+              <input type="password" id="password" name="password" class="form-control" value="Adm1nPass!" required>
             </div>
+            <div class="form-text mb-2">開発用初期アカウント（admin / Adm1nPass!）が事前入力されています。</div>
             <button type="submit" class="btn btn-primary w-100">ログイン</button>
           }
         </div>

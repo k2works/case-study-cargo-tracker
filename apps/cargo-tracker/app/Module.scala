@@ -1,5 +1,5 @@
 import cargotracker.auth.domain.UserRepository
-import cargotracker.auth.infrastructure.ScalikeJdbcUserRepository
+import cargotracker.auth.infrastructure.{AdminUserSeeder, ScalikeJdbcUserRepository}
 import cargotracker.booking.domain.{CargoRepository, ShipperExistenceChecker}
 import cargotracker.booking.infrastructure.{ScalikeJdbcCargoRepository, ShipperRepositoryBackedExistenceChecker}
 import cargotracker.estimation.domain.EstimateRepository
@@ -32,3 +32,5 @@ class Module extends AbstractModule:
     bind(classOf[ShipperExistenceChecker])
       .to(classOf[ShipperRepositoryBackedExistenceChecker])
     bind(classOf[Clock]).toInstance(Clock.systemUTC())
+    // 開発用 admin ユーザーの起動時シード
+    bind(classOf[AdminUserSeeder]).asEagerSingleton()
