@@ -1,0 +1,62 @@
+@(bookingForm: Form[cargotracker.booking.interfaces.web.BookingFormData], errorMessage: Option[String])(implicit request: RequestHeader, messagesProvider: play.api.i18n.MessagesProvider)
+@views.html.layout.main("貨物予約登録") {
+  <h1 class="h3 mb-3">貨物予約登録</h1>
+  @errorMessage.map { msg =>
+    <div class="alert alert-danger">@msg</div>
+  }
+  @helper.form(action = cargotracker.booking.interfaces.web.routes.BookingController.create()) {
+    @helper.CSRF.formField
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">荷主コード</label>
+        <input type="text" name="shipperCode" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">出発地（UnLocode）</label>
+        <input type="text" name="origin" class="form-control" pattern="[A-Z]{5}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">目的地（UnLocode）</label>
+        <input type="text" name="destination" class="form-control" pattern="[A-Z]{5}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">希望着日</label>
+        <input type="date" name="arrivalDeadline" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">貨物種別</label>
+        <select name="cargoType" class="form-select" required>
+          <option value="General" selected>一般</option>
+          <option value="Refrigerated">冷凍</option>
+          <option value="Hazardous">危険物</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">重量(kg)</label>
+        <input type="number" name="weightKg" min="1" max="999999999" class="form-control" required>
+      </div>
+      <div class="col-md-9">
+        <label class="form-label">品名</label>
+        <input type="text" name="description" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">個数</label>
+        <input type="number" name="quantity" min="1" class="form-control">
+      </div>
+      <div class="col-md-12">
+        <fieldset class="border p-3 rounded">
+          <legend class="float-none w-auto px-2 fs-6">危険物申告（該当時のみ）</legend>
+          <div class="row g-3">
+            <div class="col-md-4"><label class="form-label">危険物クラス</label><input type="text" name="hazardousClass" class="form-control"></div>
+            <div class="col-md-4"><label class="form-label">UN 番号</label><input type="text" name="hazardousUnNumber" class="form-control"></div>
+            <div class="col-md-4"><label class="form-label">正式輸送品名</label><input type="text" name="hazardousProperName" class="form-control"></div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+      <a href="@cargotracker.booking.interfaces.web.routes.BookingController.list()" class="btn btn-secondary">一覧に戻る</a>
+      <button type="submit" class="btn btn-primary">予約登録</button>
+    </div>
+  }
+}

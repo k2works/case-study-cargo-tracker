@@ -1,0 +1,25 @@
+@(cargo: cargotracker.booking.domain.Cargo)(implicit request: RequestHeader, flash: Flash)
+@views.html.layout.main("予約詳細") {
+  <h1 class="h3 mb-3">予約詳細 - @cargo.bookingId.value</h1>
+  @flash.get("success").map { msg =>
+    <div class="alert alert-success">@msg</div>
+  }
+  <dl class="row">
+    <dt class="col-sm-3">予約番号</dt><dd class="col-sm-9">@cargo.bookingId.value</dd>
+    <dt class="col-sm-3">荷主コード</dt><dd class="col-sm-9">@cargo.shipperId.value</dd>
+    <dt class="col-sm-3">出発地</dt><dd class="col-sm-9">@cargo.routeSpecification.origin.unLocode</dd>
+    <dt class="col-sm-3">目的地</dt><dd class="col-sm-9">@cargo.routeSpecification.destination.unLocode</dd>
+    <dt class="col-sm-3">希望着日</dt><dd class="col-sm-9">@cargo.routeSpecification.arrivalDeadline</dd>
+    <dt class="col-sm-3">貨物種別</dt><dd class="col-sm-9">@cargo.cargoSpec.cargoType</dd>
+    <dt class="col-sm-3">重量(kg)</dt><dd class="col-sm-9">@cargo.cargoSpec.weight.kg</dd>
+    <dt class="col-sm-3">品名</dt><dd class="col-sm-9">@cargo.cargoSpec.description.getOrElse("-")</dd>
+    <dt class="col-sm-3">個数</dt><dd class="col-sm-9">@cargo.cargoSpec.quantity.map(_.toString).getOrElse("-")</dd>
+    <dt class="col-sm-3">状態</dt><dd class="col-sm-9"><span class="badge bg-info">@cargo.status</span></dd>
+  </dl>
+  @cargo.cargoSpec.hazardous.map { h =>
+    <div class="alert alert-warning">
+      <strong>危険物申告</strong>: クラス @h.hazardClass / UN @h.unNumber / @h.properShippingName
+    </div>
+  }
+  <a href="@cargotracker.booking.interfaces.web.routes.BookingController.list()" class="btn btn-secondary">一覧に戻る</a>
+}

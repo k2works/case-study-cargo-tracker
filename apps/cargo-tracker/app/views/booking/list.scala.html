@@ -1,0 +1,40 @@
+@(cargos: Seq[cargotracker.booking.domain.Cargo])(implicit request: RequestHeader, flash: Flash)
+@views.html.layout.main("貨物予約一覧") {
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">貨物予約一覧</h1>
+    <a href="@cargotracker.booking.interfaces.web.routes.BookingController.newForm()" class="btn btn-primary">新規予約</a>
+  </div>
+  @flash.get("success").map { msg =>
+    <div class="alert alert-success">@msg</div>
+  }
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>予約番号</th>
+        <th>荷主</th>
+        <th>出発地</th>
+        <th>目的地</th>
+        <th>希望着日</th>
+        <th>貨物種別</th>
+        <th>状態</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if(cargos.isEmpty) {
+        <tr><td colspan="7" class="text-center text-muted">登録された予約はありません</td></tr>
+      } else {
+        @for(c <- cargos) {
+          <tr>
+            <td><a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(c.bookingId.value)">@c.bookingId.value</a></td>
+            <td>@c.shipperId.value</td>
+            <td>@c.routeSpecification.origin.unLocode</td>
+            <td>@c.routeSpecification.destination.unLocode</td>
+            <td>@c.routeSpecification.arrivalDeadline</td>
+            <td>@c.cargoSpec.cargoType</td>
+            <td>@c.status</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+}

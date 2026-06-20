@@ -18,6 +18,12 @@ GET     /estimates/new          cargotracker.estimation.interfaces.web.EstimateC
 POST    /estimates              cargotracker.estimation.interfaces.web.EstimateController.create()
 GET     /estimates/:estimateId  cargotracker.estimation.interfaces.web.EstimateController.detail(estimateId: String)
 
+# 貨物予約
+GET     /bookings               cargotracker.booking.interfaces.web.BookingController.list()
+GET     /bookings/new           cargotracker.booking.interfaces.web.BookingController.newForm()
+POST    /bookings               cargotracker.booking.interfaces.web.BookingController.create()
+GET     /bookings/:bookingId    cargotracker.booking.interfaces.web.BookingController.detail(bookingId: String)
+
 # ダッシュボード・ヘルス
 GET     /                       cargotracker.shared.interfaces.web.HomeController.index()
 GET     /health                 cargotracker.shared.interfaces.web.HealthController.health()

@@ -1,5 +1,7 @@
 import cargotracker.auth.domain.UserRepository
 import cargotracker.auth.infrastructure.ScalikeJdbcUserRepository
+import cargotracker.booking.domain.{CargoRepository, ShipperExistenceChecker}
+import cargotracker.booking.infrastructure.{ScalikeJdbcCargoRepository, ShipperRepositoryBackedExistenceChecker}
 import cargotracker.estimation.domain.EstimateRepository
 import cargotracker.estimation.infrastructure.ScalikeJdbcEstimateRepository
 import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
@@ -26,4 +28,7 @@ class Module extends AbstractModule:
     bind(classOf[ShipperRepository]).to(classOf[ScalikeJdbcShipperRepository])
     bind(classOf[EstimateRepository]).to(classOf[ScalikeJdbcEstimateRepository])
     bind(classOf[PricingService]).to(classOf[InMemoryPricingService])
+    bind(classOf[CargoRepository]).to(classOf[ScalikeJdbcCargoRepository])
+    bind(classOf[ShipperExistenceChecker])
+      .to(classOf[ShipperRepositoryBackedExistenceChecker])
     bind(classOf[Clock]).toInstance(Clock.systemUTC())
