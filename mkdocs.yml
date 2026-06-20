@@ -87,6 +87,8 @@ nav:
       - 運用要件: design/operation.md
   - 開発:
       - 概要: development/index.md
+      - リリース計画: development/release_plan.md
+      - イテレーション 1 計画: development/iteration_plan-1.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/dev_app_instruction.md
@@ -98,6 +100,7 @@ nav:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260612.md
+      - リリース計画レビュー: review/release_plan_review_20260620.md
   - ADR:
       - 概要: adr/index.md
       - 0001 Play Framework 採用: adr/0001-play-framework-scala-stack.md
