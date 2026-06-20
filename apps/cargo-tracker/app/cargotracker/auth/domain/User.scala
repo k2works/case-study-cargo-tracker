@@ -51,3 +51,16 @@ object User:
         .toRight(InvalidEmail)
       validRoles <- Some(roles).filter(_.nonEmpty).toRight(RolesRequired)
     yield User(validUsername, validEmail, password, validRoles, enabled = true)
+
+  /** 永続化から読み戻したユーザーを復元する（バリデーション緩和、enabled を指定可）。
+    *
+    * 既に DB に保存されたデータが対象のため、バリデーションを通らないユーザーは 設計バグを示唆する。安全のため [[create]] と同じ検証を行う。
+    */
+  def reconstruct(
+      username: String,
+      email: String,
+      password: PasswordHash,
+      roles: Set[Role],
+      enabled: Boolean
+  ): Either[Error, User] =
+    create(username, email, password, roles).map(_.copy(enabled = enabled))
