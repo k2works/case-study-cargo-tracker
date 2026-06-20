@@ -12,6 +12,12 @@ GET     /shippers/new           cargotracker.shipper.interfaces.web.ShipperContr
 POST    /shippers               cargotracker.shipper.interfaces.web.ShipperController.create()
 GET     /shippers/check-email   cargotracker.shipper.interfaces.web.ShipperController.checkEmail(email: String)
 
+# 見積
+GET     /estimates              cargotracker.estimation.interfaces.web.EstimateController.list()
+GET     /estimates/new          cargotracker.estimation.interfaces.web.EstimateController.newForm()
+POST    /estimates              cargotracker.estimation.interfaces.web.EstimateController.create()
+GET     /estimates/:estimateId  cargotracker.estimation.interfaces.web.EstimateController.detail(estimateId: String)
+
 # ダッシュボード・ヘルス
 GET     /                       cargotracker.shared.interfaces.web.HomeController.index()
 GET     /health                 cargotracker.shared.interfaces.web.HealthController.health()

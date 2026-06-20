@@ -1,5 +1,8 @@
 import cargotracker.auth.domain.UserRepository
 import cargotracker.auth.infrastructure.ScalikeJdbcUserRepository
+import cargotracker.estimation.domain.EstimateRepository
+import cargotracker.estimation.infrastructure.ScalikeJdbcEstimateRepository
+import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
 import cargotracker.shipper.domain.ShipperRepository
 import cargotracker.shipper.infrastructure.ScalikeJdbcShipperRepository
 import com.google.inject.AbstractModule
@@ -21,4 +24,6 @@ class Module extends AbstractModule:
     bind(classOf[ScalikeJdbcInitializer]).asEagerSingleton()
     bind(classOf[UserRepository]).to(classOf[ScalikeJdbcUserRepository])
     bind(classOf[ShipperRepository]).to(classOf[ScalikeJdbcShipperRepository])
+    bind(classOf[EstimateRepository]).to(classOf[ScalikeJdbcEstimateRepository])
+    bind(classOf[PricingService]).to(classOf[InMemoryPricingService])
     bind(classOf[Clock]).toInstance(Clock.systemUTC())
