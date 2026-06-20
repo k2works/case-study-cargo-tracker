@@ -1,6 +1,7 @@
 package cargotracker.e2e
 
 import cargotracker.shipper.domain.{Shipper, ShipperRepository}
+import cargotracker.support.AuthenticatedRequestSupport.*
 import cargotracker.support.PostgresContainerSupport
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -29,7 +30,7 @@ class BookingEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
     "貨物予約一覧画面を表示する" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
-        val result = route(app, FakeRequest(GET, "/bookings")).get
+        val result = route(app, FakeRequest(GET, "/bookings").withAuthenticatedSession).get
         status(result) shouldBe OK
         contentAsString(result) should include("貨物予約一覧")
       }
@@ -40,7 +41,7 @@ class BookingEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
     "貨物予約登録フォームを表示する" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
-        val result = route(app, FakeRequest(GET, "/bookings/new")).get
+        val result = route(app, FakeRequest(GET, "/bookings/new").withAuthenticatedSession).get
         status(result) shouldBe OK
         contentAsString(result) should include("貨物予約登録")
         contentAsString(result) should include("危険物")
@@ -62,6 +63,7 @@ class BookingEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
             "cargoType" -> "General",
             "weightKg" -> "1000"
           )
+          .withAuthenticatedSession
           .withCSRFToken
         val result = route(app, request).get
         status(result) shouldBe SEE_OTHER
@@ -82,6 +84,7 @@ class BookingEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
             "cargoType" -> "General",
             "weightKg" -> "1000"
           )
+          .withAuthenticatedSession
           .withCSRFToken
         val result = route(app, request).get
         status(result) shouldBe BAD_REQUEST

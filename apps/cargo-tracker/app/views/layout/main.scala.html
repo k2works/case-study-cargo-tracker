@@ -1,4 +1,4 @@
-@(title: String)(content: Html)
+@(title: String)(content: Html)(implicit request: RequestHeader)
 <!DOCTYPE html>
 <html lang="ja">
   <head>
@@ -10,7 +10,18 @@
   <body>
     <nav class="navbar navbar-expand-lg bg-body-tertiary">
       <div class="container">
-        <a class="navbar-brand" href="/">Cargo Tracker</a>
+        <a class="navbar-brand" href="/"><b>CargoTracker</b></a>
+        @request.session.get("username").map { _ =>
+          <div class="d-flex align-items-center gap-3 ms-auto">
+            <a class="nav-link" href="/estimates">見積管理</a>
+            <a class="nav-link" href="/shippers">荷主管理</a>
+            <a class="nav-link" href="/bookings">貨物予約</a>
+            <form method="POST" action="/logout" class="d-inline m-0">
+              @helper.CSRF.formField
+              <button type="submit" class="btn btn-outline-secondary btn-sm">ログアウト</button>
+            </form>
+          </div>
+        }
       </div>
     </nav>
     <main class="container py-4">

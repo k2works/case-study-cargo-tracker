@@ -1,5 +1,6 @@
 package cargotracker.e2e
 
+import cargotracker.support.AuthenticatedRequestSupport.*
 import cargotracker.support.PostgresContainerSupport
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -21,13 +22,24 @@ class HealthEndpointSpec extends AnyWordSpec with Matchers with PostgresContaine
   }
 
   "GET /" should {
-    "ホーム画面を表示する" in withContainers { container =>
+    "ホーム画面を表示する（要認証）" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val result =
+          route(app, FakeRequest(GET, "/").withAuthenticatedSession).get
+
+        status(result) shouldBe OK
+        contentAsString(result) should include("国際貨物輸送管理システム")
+      }
+    }
+
+    "未認証時はログイン画面にリダイレクトする" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
         val result = route(app, FakeRequest(GET, "/")).get
 
-        status(result) shouldBe OK
-        contentAsString(result) should include("国際貨物輸送管理システム")
+        status(result) shouldBe SEE_OTHER
+        redirectLocation(result) shouldBe Some("/login")
       }
     }
   }

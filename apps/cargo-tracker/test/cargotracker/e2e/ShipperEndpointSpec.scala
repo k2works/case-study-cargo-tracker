@@ -1,5 +1,6 @@
 package cargotracker.e2e
 
+import cargotracker.support.AuthenticatedRequestSupport.*
 import cargotracker.support.PostgresContainerSupport
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -13,7 +14,7 @@ class ShipperEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
     "荷主一覧画面を表示する" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
-        val result = route(app, FakeRequest(GET, "/shippers")).get
+        val result = route(app, FakeRequest(GET, "/shippers").withAuthenticatedSession).get
         status(result) shouldBe OK
         contentAsString(result) should include("荷主一覧")
       }
@@ -24,7 +25,7 @@ class ShipperEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
     "荷主登録フォームを表示する" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
-        val result = route(app, FakeRequest(GET, "/shippers/new")).get
+        val result = route(app, FakeRequest(GET, "/shippers/new").withAuthenticatedSession).get
         status(result) shouldBe OK
         contentAsString(result) should include("荷主登録")
         contentAsString(result) should include("個人")
@@ -45,6 +46,7 @@ class ShipperEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
             "address" -> "東京都",
             "shipperType" -> "Individual"
           )
+          .withAuthenticatedSession
           .withCSRFToken
         val result = route(app, request).get
         status(result) shouldBe SEE_OTHER
@@ -66,6 +68,7 @@ class ShipperEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
             "contractNumber" -> "CT-E2E-0001",
             "discountRate" -> "0.15"
           )
+          .withAuthenticatedSession
           .withCSRFToken
         val result = route(app, request).get
         status(result) shouldBe SEE_OTHER
@@ -80,7 +83,7 @@ class ShipperEndpointSpec extends AnyWordSpec with Matchers with PostgresContain
       running(app) {
         val result = route(
           app,
-          FakeRequest(GET, "/shippers/check-email?email=novel@example.com")
+          FakeRequest(GET, "/shippers/check-email?email=novel@example.com").withAuthenticatedSession
         ).get
         status(result) shouldBe OK
         contentAsString(result) shouldBe ""

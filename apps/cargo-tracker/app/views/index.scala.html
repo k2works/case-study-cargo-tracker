@@ -1,8 +1,31 @@
-@()
+@()(implicit request: RequestHeader)
 @layout.main("ホーム") {
   <h1>国際貨物輸送管理システム</h1>
   <p class="lead">Cargo Tracker（Scala 版）アプリケーション開発環境のセットアップが完了しています。</p>
-  <ul>
+  <div class="row mt-4 g-3">
+    <div class="col-md-4">
+      <div class="card"><div class="card-body">
+        <h5 class="card-title">見積管理</h5>
+        <p class="card-text small">輸送見積の作成・確認</p>
+        <a href="/estimates" class="btn btn-primary btn-sm">開く</a>
+      </div></div>
+    </div>
+    <div class="col-md-4">
+      <div class="card"><div class="card-body">
+        <h5 class="card-title">荷主管理</h5>
+        <p class="card-text small">個人・法人荷主の登録</p>
+        <a href="/shippers" class="btn btn-primary btn-sm">開く</a>
+      </div></div>
+    </div>
+    <div class="col-md-4">
+      <div class="card"><div class="card-body">
+        <h5 class="card-title">貨物予約</h5>
+        <p class="card-text small">貨物予約の登録・確認</p>
+        <a href="/bookings" class="btn btn-primary btn-sm">開く</a>
+      </div></div>
+    </div>
+  </div>
+  <ul class="mt-4">
     <li><a href="/health">ヘルスチェック</a>（DB 疎通込み）</li>
   </ul>
 }

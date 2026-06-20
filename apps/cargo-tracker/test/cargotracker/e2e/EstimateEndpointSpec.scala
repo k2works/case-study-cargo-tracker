@@ -1,5 +1,6 @@
 package cargotracker.e2e
 
+import cargotracker.support.AuthenticatedRequestSupport.*
 import cargotracker.support.PostgresContainerSupport
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -13,7 +14,7 @@ class EstimateEndpointSpec extends AnyWordSpec with Matchers with PostgresContai
     "見積一覧画面を表示する" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
-        val result = route(app, FakeRequest(GET, "/estimates")).get
+        val result = route(app, FakeRequest(GET, "/estimates").withAuthenticatedSession).get
         status(result) shouldBe OK
         contentAsString(result) should include("見積一覧")
       }
@@ -24,7 +25,7 @@ class EstimateEndpointSpec extends AnyWordSpec with Matchers with PostgresContai
     "見積作成フォームを表示する" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
-        val result = route(app, FakeRequest(GET, "/estimates/new")).get
+        val result = route(app, FakeRequest(GET, "/estimates/new").withAuthenticatedSession).get
         status(result) shouldBe OK
         contentAsString(result) should include("見積作成")
         contentAsString(result) should include("UnLocode")
@@ -44,6 +45,7 @@ class EstimateEndpointSpec extends AnyWordSpec with Matchers with PostgresContai
             "cargoType" -> "General",
             "weightKg" -> "100"
           )
+          .withAuthenticatedSession
           .withCSRFToken
         val result = route(app, request).get
         status(result) shouldBe SEE_OTHER
@@ -62,6 +64,7 @@ class EstimateEndpointSpec extends AnyWordSpec with Matchers with PostgresContai
             "cargoType" -> "General",
             "weightKg" -> "100"
           )
+          .withAuthenticatedSession
           .withCSRFToken
         val result = route(app, request).get
         status(result) shouldBe BAD_REQUEST
