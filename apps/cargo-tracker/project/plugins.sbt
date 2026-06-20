@@ -5,3 +5,6 @@ addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.11")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.4")
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.13.0")
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.2.2")
+
+// SonarQube 連携（scoverage XML を SonarQube に送信）
+addSbtPlugin("com.sonar-scala" % "sbt-sonar" % "2.3.0")

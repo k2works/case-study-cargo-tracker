@@ -46,3 +46,15 @@ coverageFailOnMinimum := true
 // DI 初期化コード（Module / ScalikeJdbcInitializer）は計測対象外
 coverageExcludedPackages := "<empty>;Reverse.*;router\\..*;views\\.html\\..*"
 coverageExcludedFiles := ".*/Module\\.scala;.*ScalikeJdbcInitializer.*"
+
+// SonarQube 連携プロパティ（sbt-sonar）
+import sbtsonar.SonarPlugin.autoImport.sonarProperties
+sonarProperties := Map(
+  "sonar.projectKey"  -> "cargo-tracker-5-backend",
+  "sonar.projectName" -> "Cargo Tracker Scala (Backend)",
+  "sonar.sources"     -> "app",
+  "sonar.tests"       -> "test",
+  "sonar.sourceEncoding" -> "UTF-8",
+  "sonar.exclusions"  -> "**/target/**,app/views/**",
+  "sonar.scala.coverage.reportPaths" -> "target/scala-3.3.6/scoverage-report/scoverage.xml"
+)
