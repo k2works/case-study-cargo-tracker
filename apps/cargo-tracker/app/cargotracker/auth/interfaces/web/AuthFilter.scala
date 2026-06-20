@@ -20,9 +20,10 @@ class AuthFilter @Inject() (clock: Clock)(implicit
 ) extends Filter:
 
   private val SessionTimeout = Duration.ofMinutes(30)
+  private val LoginPath = "/login"
 
   private val publicPathPrefixes =
-    Seq("/login", "/logout", "/public/", "/health", "/assets/")
+    Seq(LoginPath, "/logout", "/public/", "/health", "/assets/")
   private val publicPaths = Set("/health")
 
   private def isPublic(path: String): Boolean =
@@ -40,10 +41,10 @@ class AuthFilter @Inject() (clock: Clock)(implicit
         case (Some(_), Some(lastStr)) =>
           val last = Instant.parse(lastStr)
           if Duration.between(last, now).compareTo(SessionTimeout) > 0 then
-            Future.successful(Redirect("/login").withNewSession)
+            Future.successful(Redirect(LoginPath).withNewSession)
           else
             nextFilter(requestHeader).map(
               _.addingToSession("lastAccessedAt" -> now.toString)(requestHeader)
             )
         case _ =>
-          Future.successful(Redirect("/login"))
+          Future.successful(Redirect(LoginPath))
