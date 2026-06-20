@@ -8,12 +8,12 @@
     @helper.CSRF.formField
     <div class="row g-3">
       <div class="col-md-12">
-        <label class="form-label">氏名/社名</label>
-        <input type="text" name="name" class="form-control" required>
+        <label for="shipper-name" class="form-label">氏名/社名</label>
+        <input type="text" id="shipper-name" name="name" class="form-control" required>
       </div>
       <div class="col-md-6">
-        <label class="form-label">メール</label>
-        <input type="email" name="email" class="form-control" required
+        <label for="shipper-email" class="form-label">メール</label>
+        <input type="email" id="shipper-email" name="email" class="form-control" required
                hx-get="@cargotracker.shipper.interfaces.web.routes.ShipperController.checkEmail("")"
                hx-trigger="blur changed"
                hx-target="#email-warning" hx-swap="innerHTML"
@@ -21,27 +21,27 @@
         <div id="email-warning"></div>
       </div>
       <div class="col-md-6">
-        <label class="form-label">電話</label>
-        <input type="text" name="phone" class="form-control" required>
+        <label for="shipper-phone" class="form-label">電話</label>
+        <input type="text" id="shipper-phone" name="phone" class="form-control" required>
       </div>
       <div class="col-md-12">
-        <label class="form-label">住所</label>
-        <input type="text" name="address" class="form-control" required>
+        <label for="shipper-address" class="form-label">住所</label>
+        <input type="text" id="shipper-address" name="address" class="form-control" required>
       </div>
       <div class="col-md-6">
-        <label class="form-label">種別</label>
+        <label for="shipperType" class="form-label">種別</label>
         <select name="shipperType" id="shipperType" class="form-select" required>
           <option value="Individual" selected>個人</option>
           <option value="Corporate">法人</option>
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">契約番号（法人）</label>
-        <input type="text" name="contractNumber" class="form-control">
+        <label for="shipper-contract-number" class="form-label">契約番号（法人のみ）</label>
+        <input type="text" id="shipper-contract-number" name="contractNumber" class="form-control">
       </div>
       <div class="col-md-3">
-        <label class="form-label">割引率（0〜0.30）</label>
-        <input type="number" name="discountRate" step="0.01" min="0" max="0.30" class="form-control">
+        <label for="shipper-discount-rate" class="form-label">割引率（法人のみ、0〜0.30）</label>
+        <input type="number" id="shipper-discount-rate" name="discountRate" step="0.01" min="0" max="0.30" class="form-control">
       </div>
     </div>
     <div class="mt-3 d-flex gap-2">
