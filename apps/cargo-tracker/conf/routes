@@ -1,5 +1,11 @@
 # Routes
 # 上から順にマッチする。詳細: https://www.playframework.com/documentation/latest/ScalaRouting
 
+# 認証
+GET     /login       cargotracker.auth.interfaces.web.AuthController.loginPage()
+POST    /login       cargotracker.auth.interfaces.web.AuthController.login()
+POST    /logout      cargotracker.auth.interfaces.web.AuthController.logout()
+
+# ダッシュボード・ヘルス
 GET     /            cargotracker.shared.interfaces.web.HomeController.index()
 GET     /health      cargotracker.shared.interfaces.web.HealthController.health()
