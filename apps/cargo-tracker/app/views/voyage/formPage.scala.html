@@ -9,6 +9,7 @@
   else
     cargotracker.routing.interfaces.web.routes.VoyageController.create()
   ) {
+    @CSRF.formField
     <div class="mb-3">
       <label for="voyageNumber" class="form-label">航海番号</label>
       <input type="text" id="voyageNumber" name="voyageNumber" value="@voyageForm("voyageNumber").value.getOrElse("")"

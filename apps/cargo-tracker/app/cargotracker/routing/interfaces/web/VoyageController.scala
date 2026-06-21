@@ -33,8 +33,8 @@ class VoyageController @Inject() (
         mapping(
           "departureLocation" -> nonEmptyText(minLength = 5, maxLength = 5),
           "arrivalLocation" -> nonEmptyText(minLength = 5, maxLength = 5),
-          "departureTime" -> localDateTime,
-          "arrivalTime" -> localDateTime
+          "departureTime" -> localDateTime("yyyy-MM-dd'T'HH:mm"),
+          "arrivalTime" -> localDateTime("yyyy-MM-dd'T'HH:mm")
         )(MovementForm.apply)(m => Some((m.departureLocation, m.arrivalLocation, m.departureTime, m.arrivalTime)))
       )
     )(VoyageFormData.apply)(d => Some((d.voyageNumber, d.movements)))
