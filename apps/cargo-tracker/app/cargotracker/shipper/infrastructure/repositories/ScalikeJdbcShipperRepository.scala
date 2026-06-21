@@ -87,6 +87,7 @@ class ScalikeJdbcShipperRepository extends ShipperRepository:
                 shipper_type = ${shipper.shipperType.toString},
                 contract_number = ${shipper.contractNumber.orNull},
                 discount_rate = ${shipper.discountRate.value},
+                version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE shipper_code = ${shipper.shipperId.value}
           """.update.apply()

@@ -91,6 +91,7 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                 hazardous_un_number = ${haz.map(_.unNumber).orNull},
                 hazardous_proper_name = ${haz.map(_.properShippingName).orNull},
                 booking_status = ${cargo.status.toString},
+                version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE tracking_id = ${cargo.bookingId.value}
           """.update.apply()

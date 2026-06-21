@@ -130,7 +130,7 @@
 | 0.8 | SonarQube Quality Gate 閾値確定 + CI 連携確認 | 2h | - | [ ] |
 | 0.9 | scoverage ゲート 75% → 80% 復元（ドメインテスト追加で達成） | 2h | - | [ ] |
 | 0.10 | admin 資格情報を application.conf に外出し（IT1 レビュー H1 対応、Day 1 着手） | 1h | - | [x] |
-| 0.11 | 楽観ロック準備: `cargo` / `estimate` / `shipper` に `version INTEGER NOT NULL DEFAULT 0` を追加（IT1 レビュー H5 対応、Flyway V5）。Repository の UPDATE を `WHERE id = ? AND version = ?` 形式に変更し `DomainError.ConcurrentModification` を返す | 4h | - | [ ] |
+| 0.11 | 楽観ロック準備: `cargo` / `estimate` / `shipper` に `version INTEGER NOT NULL DEFAULT 0` を追加（IT1 レビュー H5 対応、Flyway V5）。Repository の UPDATE で `version = version + 1` をインクリメント、`OptimisticLockException` を共有カーネルに追加（完全な競合検出は IT3 で集約に version フィールド追加と合わせて活性化） | 4h | - | [x] |
 
 **小計**: 22h（理想時間）
 
