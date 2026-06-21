@@ -40,7 +40,7 @@ class ScalikeJdbcEstimateRepository extends EstimateRepository:
     DB.readOnly { implicit session =>
       sql"""
         SELECT id, estimate_id, origin_unlocode, destination_unlocode,
-               deadline, cargo_type, weight_kg, status
+               deadline, cargo_type, weight_kg, status, version
         FROM estimate
         WHERE estimate_id = ${estimateId.value}
       """
