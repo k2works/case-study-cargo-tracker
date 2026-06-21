@@ -123,3 +123,27 @@ class RouteCandidateSearchSpec extends AnyFunSuite with Matchers:
     )
     val legs = RouteCandidateSearch.toRoutingLegs(voyages, Some(CargoType.Hazardous))
     legs.map(_.voyageNumber.value) shouldBe List("VY-002")
+
+  // === 上位 N 候補選定（IT3 タスク 2.5 / US08） ===
+
+  test("topN: 区間数の少ない順（直行優先）→ 所要日数 → 出港時刻で並ぶ"):
+    val legs = List(
+      // 中継 2 区間、所要 11 日
+      leg(vn1, tyo, yok, "2026-07-01T10:00:00", "2026-07-01T18:00:00"),
+      leg(vn2, yok, lax, "2026-07-02T08:00:00", "2026-07-12T20:00:00"),
+      // 直行 1 区間、所要 9 日
+      leg(vn3, tyo, lax, "2026-07-01T10:00:00", "2026-07-10T18:00:00")
+    )
+    val routes = RouteCandidateSearch.search(legs, tyo, lax)
+    val top2 = RouteCandidateSearch.topN(routes, 2)
+    top2.head.legs.size shouldBe 1 // 直行を最優先
+    top2.head.voyages shouldBe List(vn3)
+    top2(1).legs.size shouldBe 2 // 中継
+
+  test("topN: n=0 は IllegalArgumentException"):
+    a[IllegalArgumentException] should be thrownBy RouteCandidateSearch.topN(Nil, 0)
+
+  test("topN: 候補が n より少なくても全件返す"):
+    val legs = List(leg(vn1, tyo, lax, "2026-07-01T10:00:00", "2026-07-10T18:00:00"))
+    val routes = RouteCandidateSearch.search(legs, tyo, lax)
+    RouteCandidateSearch.topN(routes, 5).size shouldBe 1

@@ -65,3 +65,18 @@ object RouteCandidateSearch:
           }
 
     loop(origin, earliestDeparture, Set(origin), Nil).map(RouteCandidate(_))
+
+  /** 上位 N 件を「直行便 → 所要日数 → 区間数」の順で並べて返す（IT3 タスク 2.5 / US08）。
+    *
+    * スコアリングの暫定方針:
+    *   - 第 1 キー: 区間数の昇順（直行を最優先）
+    *   - 第 2 キー: 所要日数の昇順（短い方が優先）
+    *   - 第 3 キー: 出港時刻の昇順（早い方が優先、安定ソート用）
+    *
+    * 料金スコアリング（PricingService 連携）はタスク 2.3 で別途追加する。
+    */
+  def topN(candidates: List[RouteCandidate], n: Int): List[RouteCandidate] =
+    require(n > 0, "n は正の整数")
+    candidates
+      .sortBy(c => (c.legs.size, c.transitDays, c.departure.toEpochMilli))
+      .take(n)
