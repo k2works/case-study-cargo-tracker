@@ -32,12 +32,36 @@
       @r.unit（経路設計者は冷凍コンテナ手配の必須インプットとして利用してください）
     </div>
   }
-  <div class="d-flex gap-2 mt-3">
+  @cargo.itinerary.map { it =>
+    <div class="alert alert-info">
+      <strong>紐付け経路（航海）</strong>: @it.voyageNumbers.mkString(" → ")
+    </div>
+  }
+  <div class="d-flex gap-2 mt-3 flex-wrap">
     <a href="@cargotracker.booking.interfaces.web.routes.BookingController.list()" class="btn btn-secondary">一覧に戻る</a>
     @if(cargo.status == BookingStatus.Preliminary) {
       <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.assignToRouting(cargo.bookingId.value)" class="d-inline">
         @helper.CSRF.formField
         <button type="submit" class="btn btn-success">経路設計者へ引き渡す</button>
+      </form>
+    }
+    @if(cargo.status == BookingStatus.RouteAssigned) {
+      <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.confirm(cargo.bookingId.value)" class="d-inline">
+        @helper.CSRF.formField
+        <button type="submit" class="btn btn-success" data-action="confirm">予約を確定</button>
+      </form>
+      <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.reproposeRoute(cargo.bookingId.value)" class="d-inline">
+        @helper.CSRF.formField
+        <button type="submit" class="btn btn-warning" data-action="repropose">経路再設計に戻す</button>
+      </form>
+    }
+    @if(cargo.status == BookingStatus.Preliminary
+        || cargo.status == BookingStatus.RouteProposed
+        || cargo.status == BookingStatus.RouteAssigned
+        || cargo.status == BookingStatus.Confirmed) {
+      <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.cancel(cargo.bookingId.value)" class="d-inline" onsubmit="return confirm('本当にキャンセルしますか？');">
+        @helper.CSRF.formField
+        <button type="submit" class="btn btn-outline-danger" data-action="cancel">キャンセル</button>
       </form>
     }
   </div>

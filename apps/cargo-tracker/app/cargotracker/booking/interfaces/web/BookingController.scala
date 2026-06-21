@@ -149,6 +149,35 @@ class BookingController @Inject() (
         ).flashing("error" -> msg)
   }
 
+  /** 予約を確定（US13）。 */
+  def confirm(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
+    transitionAction(commandService.confirm(bookingId), bookingId, "予約を確定しました")
+  }
+
+  /** 経路再設計に戻す（US13）。 */
+  def reproposeRoute(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
+    transitionAction(
+      commandService.reproposeRoute(bookingId),
+      bookingId,
+      "経路設計者に再設計を依頼しました（経路紐付けを解除）"
+    )
+  }
+
+  /** 予約をキャンセル（US13）。 */
+  def cancel(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
+    transitionAction(commandService.cancel(bookingId), bookingId, "予約をキャンセルしました")
+  }
+
+  private def transitionAction(
+      result: Either[String, cargotracker.booking.domain.model.aggregates.Cargo],
+      bookingId: String,
+      successMessage: String
+  )(implicit request: cargotracker.auth.interfaces.web.AuthenticatedRequest[?]): Result =
+    val detailCall = cargotracker.booking.interfaces.web.routes.BookingController.detail(bookingId)
+    result match
+      case Right(_) => Redirect(detailCall).flashing("success" -> successMessage)
+      case Left(msg) => Redirect(detailCall).flashing("error" -> msg)
+
   /** 経路を荷主に通知（US12）。PRG で通知ログ画面にリダイレクト。 */
   def notifyRoute(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
     notifyRouteService.notify(bookingId) match

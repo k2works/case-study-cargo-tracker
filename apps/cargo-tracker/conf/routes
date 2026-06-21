@@ -26,6 +26,9 @@ GET     /bookings/:bookingId    cargotracker.booking.interfaces.web.BookingContr
 POST    /bookings/:bookingId/assign-routing  cargotracker.booking.interfaces.web.BookingController.assignToRouting(bookingId: String)
 POST    /bookings/:bookingId/notify-route    cargotracker.booking.interfaces.web.BookingController.notifyRoute(bookingId: String)
 GET     /bookings/:bookingId/notifications   cargotracker.booking.interfaces.web.BookingController.notifications(bookingId: String)
+POST    /bookings/:bookingId/confirm         cargotracker.booking.interfaces.web.BookingController.confirm(bookingId: String)
+POST    /bookings/:bookingId/repropose-route cargotracker.booking.interfaces.web.BookingController.reproposeRoute(bookingId: String)
+POST    /bookings/:bookingId/cancel          cargotracker.booking.interfaces.web.BookingController.cancel(bookingId: String)
 GET     /bookings/:bookingId/routes          cargotracker.routing.interfaces.web.RouteCandidateController.candidates(bookingId: String)
 POST    /bookings/:bookingId/routes/:idx/confirm  cargotracker.routing.interfaces.web.RouteCandidateController.confirm(bookingId: String, idx: Int)
 
