@@ -17,6 +17,7 @@
 | IT1（2026-06-22 〜 2026-07-05） | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | [iteration_report-1.md](./iteration_report-1.md) | ✅ 完了（12/12 SP） |
 | IT2（2026-07-06 〜 2026-07-19） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | ✅ 完了（12/12 SP、v0.1.0 タグ付けはユーザー判断委譲） |
 | IT3（2026-07-20 〜 2026-08-02） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | ✅ 完了（11/11 SP / US07 + US08 + IT2 申し送り 15 件、テスト 224 / coverage 88.0%） |
+| IT4（2026-08-03 〜 2026-08-16） | [iteration_plan-4.md](./iteration_plan-4.md) | - | - | 🟡 計画策定済（目標 11 SP / US09 + US11 + US12 + US13 + IT3 申し送り 8 件） |
 
 ### 進捗サマリー
 

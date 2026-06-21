@@ -479,7 +479,7 @@ gantt
 | 1 | 12 | 12 | 100% | 完了（US26・US01-04 全完了、71 テスト全パス） |
 | 2 | 12 | 12 | 100% | 完了（US05・US06・US24・US25 + US08 スパイク、Release 0.1 ゲート確認済み、[retrospective-2.md](./retrospective-2.md)） |
 | 3 | 11 | 11 | 100% | 完了（US07 + US08 + IT2 申し送り 15 件、テスト 224 / coverage 88.0% / 経路探索 P95=60ms、[retrospective-3.md](./retrospective-3.md)） |
-| 4 | 11 | - | - | 未着手 |
+| 4 | 11 | - | - | 計画策定済（[iteration_plan-4.md](./iteration_plan-4.md)、US09 + US11 + US12 + US13 + IT3 申し送り 8 件） |
 | 5 | 11 | - | - | 未着手 |
 | 6 | 12 | - | - | 未着手 |
 | 7 | 12 | - | - | 未着手 |
