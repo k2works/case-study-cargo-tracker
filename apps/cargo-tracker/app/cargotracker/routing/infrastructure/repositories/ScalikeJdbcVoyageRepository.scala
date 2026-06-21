@@ -6,6 +6,7 @@ import cargotracker.routing.domain.model.valueobjects.{CarrierMovement, Schedule
 import cargotracker.shared.domain.{CargoType, Location}
 import scalikejdbc.*
 
+import java.time.Instant
 import javax.inject.Singleton
 
 /** ScalikeJDBC 実装の VoyageRepository（US24/US25 + ADR 0006 拡張）。
@@ -83,6 +84,58 @@ class ScalikeJdbcVoyageRepository extends VoyageRepository:
             FROM voyage WHERE voyage_number = ${voyageNumber.value}"""
         .map(extractRow)
         .single
+        .apply()
+        .map(reconstructVoyage)
+    }
+
+  override def findByCriteria(
+      origin: Option[Location] = None,
+      destination: Option[Location] = None,
+      departureFrom: Option[Instant] = None,
+      departureTo: Option[Instant] = None,
+      cargoType: Option[CargoType] = None
+  ): Seq[Voyage] =
+    DB.readOnly { implicit session =>
+      // 設計指針 (ADR 0006): 検索条件は EXISTS サブクエリで適用し、N+1 を回避するため
+      // 候補となる voyage.id だけまず絞り込み、後段で集約全体を組み立てる。
+      val conditions = scala.collection.mutable.ArrayBuffer.empty[SQLSyntax]
+      origin.foreach { o =>
+        conditions += sqls"""EXISTS (SELECT 1 FROM carrier_movement cm
+                             WHERE cm.voyage_id = v.id AND cm.seq_number = 1
+                               AND cm.departure_location_unlocode = ${o.unLocode})"""
+      }
+      destination.foreach { d =>
+        conditions += sqls"""EXISTS (SELECT 1 FROM carrier_movement cm
+                             WHERE cm.voyage_id = v.id
+                               AND cm.seq_number = (SELECT MAX(seq_number)
+                                                    FROM carrier_movement WHERE voyage_id = v.id)
+                               AND cm.arrival_location_unlocode = ${d.unLocode})"""
+      }
+      departureFrom.foreach { from =>
+        conditions += sqls"""EXISTS (SELECT 1 FROM carrier_movement cm
+                             WHERE cm.voyage_id = v.id AND cm.seq_number = 1
+                               AND cm.departure_date >= ${java.sql.Timestamp.from(from)})"""
+      }
+      departureTo.foreach { to =>
+        conditions += sqls"""EXISTS (SELECT 1 FROM carrier_movement cm
+                             WHERE cm.voyage_id = v.id AND cm.seq_number = 1
+                               AND cm.departure_date <= ${java.sql.Timestamp.from(to)})"""
+      }
+      cargoType.foreach { ct =>
+        conditions += sqls"""EXISTS (SELECT 1 FROM voyage_supported_cargo_type sct
+                             WHERE sct.voyage_id = v.id AND sct.cargo_type = ${ct.toString})"""
+      }
+
+      val whereClause =
+        if conditions.isEmpty then sqls""
+        else sqls"WHERE ${sqls.joinWithAnd(conditions.toSeq*)}"
+
+      sql"""SELECT v.id, v.voyage_number, v.version, v.vessel_name, v.carrier_code
+            FROM voyage v
+            $whereClause
+            ORDER BY v.voyage_number"""
+        .map(extractRow)
+        .list
         .apply()
         .map(reconstructVoyage)
     }
