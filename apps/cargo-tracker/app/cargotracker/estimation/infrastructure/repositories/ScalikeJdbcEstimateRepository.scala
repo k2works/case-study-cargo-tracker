@@ -2,7 +2,7 @@ package cargotracker.estimation.infrastructure.repositories
 
 import cargotracker.estimation.domain.model.aggregates.{Estimate, EstimateStatus}
 import cargotracker.estimation.domain.model.repositories.EstimateRepository
-import cargotracker.estimation.domain.model.valueobjects.{EstimateId, RouteCandidate}
+import cargotracker.estimation.domain.model.valueobjects.{CargoSpec, EstimateId, RouteCandidate, RouteSpec}
 import cargotracker.shared.domain.{CargoType, Location, Money, Weight}
 import scalikejdbc.*
 
@@ -52,14 +52,18 @@ class ScalikeJdbcEstimateRepository extends EstimateRepository:
             .flatMap { ct =>
               EstimateStatus.fromName(rs.string("status")).map { st =>
                 Estimate.reconstruct(
-                  EstimateId.unsafeFrom(rs.string("estimate_id")),
-                  Location.unsafeFrom(rs.string("origin_unlocode")),
-                  Location.unsafeFrom(rs.string("destination_unlocode")),
-                  rs.localDate("deadline"),
-                  ct,
-                  Weight.unsafeFrom(rs.long("weight_kg")),
-                  st,
-                  candidates,
+                  estimateId = EstimateId.unsafeFrom(rs.string("estimate_id")),
+                  routeSpec = RouteSpec(
+                    origin = Location.unsafeFrom(rs.string("origin_unlocode")),
+                    destination = Location.unsafeFrom(rs.string("destination_unlocode")),
+                    deadline = rs.localDate("deadline")
+                  ),
+                  cargoSpec = CargoSpec(
+                    cargoType = ct,
+                    weight = Weight.unsafeFrom(rs.long("weight_kg"))
+                  ),
+                  status = st,
+                  routeCandidates = candidates,
                   version = rs.int("version")
                 )
               }
