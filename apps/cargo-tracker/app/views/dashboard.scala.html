@@ -89,6 +89,7 @@
     @if(routeProposed.isEmpty) {
       <p class="text-muted">引き渡し済みの予約はありません。営業担当者が予約詳細から「経路設計者へ引き渡す」を実行すると、ここに表示されます。</p>
     } else {
+      <p class="form-text">「経路設計を開始 →」ボタンで航海検索画面に遷移し、出発地・目的地・期限に合う経路を選定します（IT3 US07 / US08 で完成予定）。</p>
       <table class="table table-sm table-hover mt-2">
         <thead class="table-light">
           <tr>
@@ -104,7 +105,10 @@
               <td>@cargo.routeSpecification.destination.unLocode</td>
               <td>@cargo.routeSpecification.arrivalDeadline</td>
               <td>@cargo.cargoSpec.cargoType</td>
-              <td><a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a></td>
+              <td class="d-flex gap-1">
+                <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a>
+                <a href="@cargotracker.routing.interfaces.web.routes.VoyageController.list()" class="btn btn-sm btn-primary" title="航海一覧から経路設計を開始（US07 検索は IT3 後半で本実装）">経路設計を開始 →</a>
+              </td>
             </tr>
           }
         </tbody>
