@@ -19,6 +19,9 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     private val seq: AtomicInteger = AtomicInteger(0)
     override def findById(id: BookingId): Option[Cargo] = store.get(id)
     override def findAll(): Seq[Cargo] = store.values.toSeq
+    override def findByStatus(
+        status: cargotracker.booking.domain.model.valueobjects.BookingStatus
+    ): Seq[Cargo] = store.values.filter(_.status == status).toSeq
     override def save(c: Cargo): Unit = store.update(c.bookingId, c)
     override def nextIdentity(): BookingId =
       BookingId.unsafeFrom(f"BK-${seq.incrementAndGet()}%06d")

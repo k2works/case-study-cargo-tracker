@@ -76,6 +76,15 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
         .flatten
     }
 
+  override def findByStatus(status: BookingStatus): Seq[Cargo] =
+    DB.readOnly { implicit session =>
+      sql"SELECT * FROM cargo WHERE booking_status = ${status.toString} ORDER BY tracking_id"
+        .map(rowToCargo)
+        .list
+        .apply()
+        .flatten
+    }
+
   override def save(cargo: Cargo): Unit =
     DB.localTx { implicit session =>
       val existing =

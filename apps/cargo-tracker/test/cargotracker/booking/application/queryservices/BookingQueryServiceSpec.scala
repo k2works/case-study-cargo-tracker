@@ -42,6 +42,9 @@ class BookingQueryServiceSpec extends AnyFunSuite with Matchers:
     private val store = mutable.Map.from(seed.map(c => c.bookingId -> c))
     override def findById(id: BookingId): Option[Cargo] = store.get(id)
     override def findAll(): Seq[Cargo] = store.values.toSeq
+    override def findByStatus(
+        status: cargotracker.booking.domain.model.valueobjects.BookingStatus
+    ): Seq[Cargo] = store.values.filter(_.status == status).toSeq
     override def save(c: Cargo): Unit = store.update(c.bookingId, c)
     override def nextIdentity(): BookingId = BookingId.unsafeFrom("BK-999999")
 
@@ -56,3 +59,14 @@ class BookingQueryServiceSpec extends AnyFunSuite with Matchers:
   test("findById は未知の ID で None を返す"):
     val service = new BookingQueryService(new InMemoryCargoRepository(cargo))
     service.findById("BK-999999") shouldBe None
+
+  test("findRouteProposed は RouteProposed のみ返す（US06）"):
+    val routed = Cargo.reconstruct(
+      BookingId.unsafeFrom("BK-000002"),
+      cargotracker.shared.domain.ShipperId.unsafeFrom("SH-000001"),
+      cargo.routeSpecification,
+      cargo.cargoSpec,
+      cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteProposed
+    )
+    val service = new BookingQueryService(new InMemoryCargoRepository(cargo, routed))
+    service.findRouteProposed().map(_.bookingId.value) shouldBe Seq("BK-000002")

@@ -1,4 +1,4 @@
-@(username: String, roles: Set[cargotracker.auth.domain.model.valueobjects.Role])(implicit request: RequestHeader)
+@(username: String, roles: Set[cargotracker.auth.domain.model.valueobjects.Role], routeProposed: Seq[cargotracker.booking.domain.model.aggregates.Cargo])(implicit request: RequestHeader)
 @import cargotracker.auth.domain.model.valueobjects.Role
 @layout.main("ダッシュボード") {
   <div class="d-flex justify-content-between align-items-baseline mb-3">
@@ -39,8 +39,8 @@
       <div class="col-md-4">
         <div class="card border-success"><div class="card-body">
           <h5 class="card-title">経路設計依頼</h5>
-          <p class="card-text small">引き渡し済み予約一覧（US06、IT2 後半）</p>
-          <a href="#" class="btn btn-success btn-sm disabled">準備中</a>
+          <p class="card-text small">引き渡し済み予約: <b>@routeProposed.size</b> 件（US06）</p>
+          <a href="#route-proposed" class="btn btn-success btn-sm">一覧を見る</a>
         </div></div>
       </div>
       <div class="col-md-4">
@@ -82,6 +82,35 @@
       </div>
     }
   </div>
+
+  @if(roles.contains(Role.RouteDesigner) || roles.contains(Role.MasterAdmin)) {
+    <hr class="mt-5">
+    <h2 id="route-proposed" class="h4 mt-4">引き渡し済み予約（RouteProposed） - @routeProposed.size 件</h2>
+    @if(routeProposed.isEmpty) {
+      <p class="text-muted">引き渡し済みの予約はありません。営業担当者が予約詳細から「経路設計者へ引き渡す」を実行すると、ここに表示されます。</p>
+    } else {
+      <table class="table table-sm table-hover mt-2">
+        <thead class="table-light">
+          <tr>
+            <th>予約番号</th><th>荷主</th><th>出発地</th><th>目的地</th><th>希望着日</th><th>貨物種別</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for(cargo <- routeProposed) {
+            <tr>
+              <td>@cargo.bookingId.value</td>
+              <td>@cargo.shipperId.value</td>
+              <td>@cargo.routeSpecification.origin.unLocode</td>
+              <td>@cargo.routeSpecification.destination.unLocode</td>
+              <td>@cargo.routeSpecification.arrivalDeadline</td>
+              <td>@cargo.cargoSpec.cargoType</td>
+              <td><a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
 
   <ul class="mt-4 small">
     <li><a href="/health">ヘルスチェック</a>（DB 疎通込み）</li>
