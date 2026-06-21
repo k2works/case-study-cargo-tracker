@@ -233,105 +233,443 @@ gantt
 
 ## 設計
 
-### ドメインモデル（追加分）
+### ドメインモデル
+
+IT2 で導入した Booking / Routing Context、IT3 で拡張した Routing Context を、IT4 では以下のとおり拡張する。`RouteCandidateSelection` 集約（Routing）を新設し、`Itinerary` 値オブジェクト（Booking ACL）で Routing 側決定結果を受領、`BookingStatus.RouteAssigned` を追加、`NotificationLog` エンティティ（Booking 内 / 将来 Notification Context 独立予定）を追加する。コマンド命名・遷移は domain-model.md（line 442 / 585-625 / 651）+ ADR 0007 / 0008（IT4 Day 3 作成予定）準拠。
 
 ```plantuml
 @startuml
-package "Routing Context" {
-  class RouteCandidateSelection {
-    bookingId
-    voyageNumbers
-    status: Pending|Confirmed
-    + confirm()
-  }
+
+title IT4 ドメインモデル全体図
+
+package "Shared Kernel" {
+  class Location <<value>> { unLocode }
+  enum CargoType { General, Hazardous, Refrigerated }
+  class Money <<value>> { currency, amount }
 }
 
 package "Booking Context" {
-  class Cargo {
-    status: Preliminary|RouteProposed|RouteAssigned|Booked|Cancelled
+  class Cargo <<aggregate root>> {
+    bookingId
+    shipperId
+    routeSpecification
+    cargoSpec
+    -- IT4 追加 --
+    itinerary: Option[Itinerary]
+    status: BookingStatus
+    version: Int
+    -- methods --
     + assignItinerary(itinerary)
     + confirm()
     + repropose()
     + cancel()
   }
-  class Itinerary {
-    legs: List[Leg]
+  enum BookingStatus {
+    Preliminary
+    RouteProposed
+    RouteAssigned   ' IT4 追加
+    Confirmed
+    TrackingIssued
+    InTransit
+    Delivered
+    Settled
+    Cancelled
+    + canTransitionTo(next)
   }
-}
-
-package "Notification Context" {
-  class NotificationLog {
+  class Itinerary <<value>> {
+    legs: List[ItineraryLeg]
+    + transitDays
+    + finalArrival
+  }
+  class ItineraryLeg <<value>> {
+    voyageNumber
+    from: Location
+    to: Location
+    departure
+    arrival
+  }
+  class NotificationLog <<entity>> {
+    id
     bookingId
-    type: RouteNotice|BookingConfirmed|TrackingRequest|Cancelled
+    type: NotificationType
     payload
     sentAt
+    version: Int
   }
+  enum NotificationType {
+    RouteProposal
+    BookingConfirmed
+    TrackingRequest
+    Cancellation
+  }
+  Cargo "1" o-- "0..1" Itinerary
+  Itinerary "1" *-- "1..*" ItineraryLeg
+  Cargo "1" -- "*" NotificationLog : bookingId 参照
+  NotificationLog *-- NotificationType
+  Cargo *-- BookingStatus
+  Cargo --> Location : routeSpecification
+  Cargo --> CargoType
 }
 
-Cargo *-- Itinerary
-RouteCandidateSelection ..> Cargo : assignItinerary 経由
-NotificationLog ..> Cargo : bookingId 参照
+package "Routing Context" {
+  class RouteCandidateSelection <<aggregate root>> {
+    selectionId
+    bookingId
+    candidate: RouteCandidate
+    status: SelectionStatus
+    version: Int
+    + confirm(): Either[Error, RouteCandidateSelection]
+  }
+  enum SelectionStatus { Pending, Confirmed }
+  class RouteCandidate <<value, 既存>> {
+    legs: List[RoutingLeg]
+  }
+  RouteCandidateSelection *-- SelectionStatus
+  RouteCandidateSelection o-- RouteCandidate
+  RouteCandidateSelection ..> Cargo : assignItinerary 経由
+}
+
 @enduml
 ```
 
-### データモデル（追加分）
+#### 不変条件（IT4 追加分）
+
+1. `BookingStatus.canTransitionTo` の状態遷移は以下のマトリクスで制約する（IT4 で `RouteAssigned` を追加）。
+2. `Cargo.assignItinerary` は `RouteProposed` 状態でのみ呼び出せ、成功時に `RouteAssigned` へ遷移する。
+3. `Cargo.confirm` は `RouteAssigned` 状態でのみ呼び出せ、成功時に `Confirmed` へ遷移する。
+4. `Cargo.repropose` は `RouteAssigned` 状態でのみ呼び出せ、`RouteProposed` へ巻き戻す（itinerary は破棄）。
+5. `Cargo.cancel` は `Preliminary / RouteProposed / RouteAssigned / Confirmed` のいずれかでのみ呼び出せ、`Cancelled` へ遷移する（`Confirmed → Cancelled` は IT2 で既に許可されている）。
+6. `RouteCandidateSelection.confirm` は `Pending` 状態でのみ呼び出せ、`Confirmed` へ遷移する（楽観ロックで `version` を +1）。
+7. `Itinerary.legs` は 1 件以上必須。隣接する leg の `to` と `from` が一致し、`arrival ≤ 次 leg の departure` の連結条件を満たす。
+8. `NotificationLog` は 1 つの `Cargo` に対して時系列で append-only。削除・更新は不可（監査要件）。
+
+#### BookingStatus 状態遷移マトリクス（IT4 拡張版）
+
+| from \ to | Preliminary | RouteProposed | **RouteAssigned** | Confirmed | TrackingIssued | InTransit | Delivered | Settled | Cancelled |
+|-----------|:-----------:|:-------------:|:-----------------:|:---------:|:--------------:|:---------:|:---------:|:-------:|:---------:|
+| **Preliminary**   | - | ✓（US06）| - | - | - | - | - | - | ✓（US13 経由なし、IT2 既存）|
+| **RouteProposed** | - | - | **✓（US11）** | - | - | - | - | - | ✓（IT2 既存）|
+| **RouteAssigned** | - | **✓（US13 reprop）** | - | **✓（US13）** | - | - | - | - | **✓（US13）** |
+| **Confirmed**     | - | - | - | - | ✓（US14、IT5）| - | - | - | ✓（IT2 既存）|
+| **TrackingIssued** | - | - | - | - | - | ✓ | - | - | - |
+| **InTransit**     | - | - | - | - | - | - | ✓ | - | - |
+| **Delivered**     | - | - | - | - | - | - | - | ✓ | - |
+
+太字は IT4 で新規追加する遷移。
+
+### データモデル
+
+IT3 までに作成した Flyway V1〜V8 に加えて、IT4 で V9 / V10 を追加する。命名規約（単数形テーブル / `id BIGSERIAL PK + 業務キー UK` / `version INT` / `created_at` `updated_at` 監査カラム / FK は `id` 参照）は data-model.md に準拠する。
+
+#### V9: route_candidate_selection（US09）
 
 ```sql
--- V9
 CREATE TABLE route_candidate_selection (
   id BIGSERIAL PRIMARY KEY,
+  selection_id VARCHAR(30) NOT NULL,
   booking_id VARCHAR(20) NOT NULL,
-  voyage_numbers VARCHAR(255) NOT NULL,  -- カンマ区切り
-  status VARCHAR(20) NOT NULL CHECK (status IN ('Pending','Confirmed')),
+  status VARCHAR(20) NOT NULL CHECK (status IN ('Pending', 'Confirmed')),
   version INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(booking_id)
+  CONSTRAINT uk_route_candidate_selection_selection_id UNIQUE (selection_id),
+  CONSTRAINT uk_route_candidate_selection_booking UNIQUE (booking_id)
 );
+CREATE INDEX idx_route_candidate_selection_status ON route_candidate_selection (status);
 
--- V10
+-- 選択された経路の leg を子テーブルで保持（既存 carrier_movement と類似構造）
+CREATE TABLE route_candidate_selection_leg (
+  id BIGSERIAL PRIMARY KEY,
+  selection_id BIGINT NOT NULL REFERENCES route_candidate_selection (id) ON DELETE CASCADE,
+  seq_number INT NOT NULL,
+  voyage_number VARCHAR(20) NOT NULL,
+  departure_location_unlocode CHAR(5) NOT NULL,
+  arrival_location_unlocode CHAR(5) NOT NULL,
+  departure_time TIMESTAMP NOT NULL,
+  arrival_time TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uk_route_candidate_selection_leg UNIQUE (selection_id, seq_number)
+);
+CREATE INDEX idx_rcs_leg_voyage ON route_candidate_selection_leg (voyage_number);
+```
+
+#### V10: notification_log（US12 / US13）+ cargo.itinerary 永続化（US11）
+
+```sql
+-- cargo 拡張: itinerary を子テーブルで保持（US11）
+CREATE TABLE cargo_itinerary_leg (
+  id BIGSERIAL PRIMARY KEY,
+  cargo_id BIGINT NOT NULL REFERENCES cargo (id) ON DELETE CASCADE,
+  seq_number INT NOT NULL,
+  voyage_number VARCHAR(20) NOT NULL,
+  departure_location_unlocode CHAR(5) NOT NULL,
+  arrival_location_unlocode CHAR(5) NOT NULL,
+  departure_time TIMESTAMP NOT NULL,
+  arrival_time TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uk_cargo_itinerary_leg UNIQUE (cargo_id, seq_number)
+);
+CREATE INDEX idx_cargo_itinerary_leg_voyage ON cargo_itinerary_leg (voyage_number);
+
+-- 通知ログ（US12 / US13）
 CREATE TABLE notification_log (
   id BIGSERIAL PRIMARY KEY,
-  booking_id VARCHAR(20) NOT NULL,
-  type VARCHAR(30) NOT NULL,
-  payload TEXT NOT NULL,
+  cargo_id BIGINT NOT NULL REFERENCES cargo (id) ON DELETE CASCADE,
+  notification_type VARCHAR(30) NOT NULL
+    CHECK (notification_type IN ('RouteProposal', 'BookingConfirmed', 'TrackingRequest', 'Cancellation')),
+  payload_json TEXT NOT NULL,
   sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   version INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_notification_log_booking ON notification_log (booking_id, sent_at DESC);
+CREATE INDEX idx_notification_log_cargo_sent_at ON notification_log (cargo_id, sent_at DESC);
+CREATE INDEX idx_notification_log_type ON notification_log (notification_type);
 ```
 
-### ユーザーインターフェース（変更）
+#### 既存テーブル一覧（参考）
 
-#### 画面遷移（追加・変更）
+| テーブル | バージョン | IT |
+|---------|----------|-----|
+| user, shipper, cargo, voyage, carrier_movement, voyage_supported_cargo_type, estimate, route_candidate | V1-V8 | IT1-IT3 |
+| **route_candidate_selection / route_candidate_selection_leg** | **V9** | **IT4** |
+| **cargo_itinerary_leg / notification_log** | **V10** | **IT4** |
+
+### ユーザーインターフェース
+
+#### ビュー
+
+ui_design.md（line 71-130）の画面一覧に IT4 で追加する 1 画面（経路通知ログ）と、拡張する 2 画面（経路候補画面 / 予約詳細）を反映する（タスク 0.9 で ui_design.md にも反映）。ナビバーは IT2 から継続。
+
+```plantuml
+@startsalt
+{+
+  経路候補画面（拡張 / `/bookings/:bookingId/routes`、US09）
+  {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 経路設計依頼 | 航路管理 | [ログアウト] }
+    {
+      予約番号             | "BK-1001 "
+      出発地 - 目的地       | "JPTYO - USLAX"
+      希望着日              | "2099-12-31"
+      貨物種別              | "General"
+    }
+    ---
+    {
+      <b>期限内到着候補</b>
+      |# | 区間数 | 出港 | 到着 | 所要日数 | 料金見積もり | 航海番号 | 操作 |
+      | 1 | 1 | 2099-07-01 10:00 | 2099-07-10 18:00 | 9 | 1,000 JPY | VY-001 | [この経路で確定] |
+      | 2 | 2 | 2099-07-02 08:00 | 2099-07-15 18:00 | 13 | 1,500 JPY | VY-002 → VY-003 | [この経路で確定] |
+    }
+    ---
+    [予約詳細に戻る]
+  }
+}
+----------------
+{+
+  予約詳細画面（拡張 / `/bookings/:bookingId`、US11 / US12 / US13）
+  {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 貨物予約 | [ログアウト] }
+    {
+      予約番号             | "BK-1001 "
+      状態                | "<b>RouteAssigned</b>"
+      出発地 - 目的地       | "JPTYO - USLAX"
+      希望着日              | "2099-12-31"
+    }
+    ---
+    {
+      <b>選択経路（Itinerary）</b>
+      |# | 航海番号 | 出発 | 到着 | 出港 | 到着 |
+      | 1 | VY-001 | JPTYO | USLAX | 2099-07-01 10:00 | 2099-07-10 18:00 |
+    }
+    ---
+    {
+      <b>通知履歴</b>
+      |種別 | 送信時刻 | 概要 |
+      | RouteProposal | 2099-07-01 11:00 | 経路通知（経由港 0 / 9 日 / 1000 JPY）|
+    }
+    ---
+    [経路を荷主に通知] | [予約を確定] | [経路再設計に戻す] | [キャンセル]
+  }
+}
+----------------
+{+
+  経路通知ログ画面（新規 / `/bookings/:bookingId/notifications`、US12 詳細）
+  {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 貨物予約 | [ログアウト] }
+    {
+      予約番号 | "BK-1001"
+    }
+    ---
+    {
+      |送信時刻 | 種別 | ペイロード抜粋 |
+      | 2099-07-01 11:00 | RouteProposal | 経由港 0、9 日、1000 JPY |
+      | 2099-07-02 10:30 | BookingConfirmed | 予約 BK-1001 を確定しました |
+    }
+    ---
+    [予約詳細に戻る]
+  }
+}
+@endsalt
+```
+
+#### 画面一覧（IT4 追加・拡張）
+
+| 画面名 | URL | 説明 | アクセスロール | 関連 US |
+|--------|-----|------|---------------|---------|
+| 経路候補画面（拡張）| `/bookings/:bookingId/routes` | IT3 既存に「この経路で確定」ボタン追加 | RouteDesigner, MasterAdmin | **US09** |
+| 予約詳細（拡張）| `/bookings/:bookingId` | itinerary 表示 / 通知履歴 / 確定・再設計・キャンセル | Sales, RouteDesigner | **US11 / US13** |
+| 経路通知ログ（新規）| `/bookings/:bookingId/notifications` | 通知履歴一覧 | Sales, MasterAdmin | **US12** |
+
+#### インタラクション
 
 ```plantuml
 @startuml
-[*] --> ダッシュボード
-state ダッシュボード : 経路設計者 / 営業担当者ロール別
 
-ダッシュボード --> 経路候補画面 : 「経路設計を開始」
-経路候補画面 --> 経路候補画面 : 候補 0 件 / 期限超過のみ
-経路候補画面 --> 予約詳細 : 「この経路で確定」(US09 + US11 紐付け)
-予約詳細 --> 通知ログ : 「経路通知」(US12)
-予約詳細 --> 予約詳細 : 「予約確定」 / 「経路再設計」 / 「キャンセル」(US13)
-予約詳細 --> [*]
+title 画面遷移図（IT4 業務導線）
+
+[*] --> ログイン
+
+state ログイン
+ログイン --> ダッシュボード : ログイン成功（GET /）
+
+state ダッシュボード
+ダッシュボード --> 経路候補画面 : 「経路設計を開始」（GET /bookings/:id/routes）
+
+state 経路候補画面 : URL: /bookings/:bookingId/routes
+経路候補画面 --> 予約詳細 : 「この経路で確定」（PRG: POST /bookings/:id/routes/:idx/confirm → /bookings/:id）
+経路候補画面 --> 経路候補画面 : バリデーションエラー / 候補 0 件 / 期限超過
+
+state 予約詳細 : URL: /bookings/:bookingId
+予約詳細 --> 経路通知ログ : 「経路通知」（PRG: POST /bookings/:id/notify-route → /bookings/:id/notifications）
+予約詳細 --> 予約詳細 : 「予約を確定」（PRG: POST /bookings/:id/confirm）
+予約詳細 --> 予約詳細 : 「経路再設計に戻す」（PRG: POST /bookings/:id/repropose）
+予約詳細 --> 予約詳細 : 「キャンセル」（PRG: POST /bookings/:id/cancel）
+予約詳細 --> 予約詳細 : バリデーションエラー（自己ループ）
+
+state 経路通知ログ : URL: /bookings/:bookingId/notifications
+経路通知ログ --> 予約詳細 : 「予約詳細に戻る」（GET /bookings/:id）
+
+予約詳細 --> [*] : ログアウト
 @enduml
 ```
 
 #### htmx パターン
 
-- US09 確定: 通常 POST + PRG（経路候補画面 → 予約詳細へ flash success）
-- US12 通知ボタン: htmx で確認モーダル + POST `/bookings/:id/notify-route` → 通知ログ部分更新
+| パターン | 採用箇所 | 実装 |
+|---------|---------|------|
+| 確認モーダル | 「予約を確定」「キャンセル」「経路再設計に戻す」 | Bootstrap modal + `data-bs-toggle` 後に通常 POST フォーム送信（誤操作防止） |
+| 通常 POST + PRG | 「この経路で確定」「経路を荷主に通知」 | フォーム送信 → SEE_OTHER → 詳細画面に flash success/error |
+| htmx 部分更新 | 経路通知ログの追記 | `hx-post="/bookings/:id/notify-route" hx-target="#notification-history" hx-swap="outerHTML"` で通知履歴の差し替え |
+| htmx エラー処理 | 通知失敗 | `htmx:responseError` を listener で受け `#flash-area` に `alert-danger` 挿入 |
+
+#### フィードバックメッセージ
+
+| トリガー | スタイル | メッセージ例 |
+|---------|---------|------------|
+| US09 確定成功 | `alert-success` | 「経路 VY-001 → VY-002 を予約 BK-1001 に紐付けました」 |
+| US09 候補なし | `alert-warning` | 「期限内に到着可能な経路がありません。経路条件を調整してください」 |
+| US11 紐付け不正 | `alert-danger` | 「既に経路が紐付けられた予約には再紐付けできません」 |
+| US12 通知送信成功 | `alert-success` | 「荷主への経路通知を送信しました（通知 ID: NT-0001）」 |
+| US13 確定成功 | `alert-success` | 「予約 BK-1001 を確定しました。追跡番号発行依頼を経路設計者に通知しました」 |
+| US13 キャンセル成功 | `alert-info` | 「予約 BK-1001 をキャンセルしました。荷主に確認通知を送信しました」 |
+| 楽観ロック衝突 | `alert-danger` | 「他のユーザーが先に更新しました。画面を再読み込みしてください」 |
+
+### ディレクトリ構成
+
+IT3 までの構成に対し、IT4 で以下を追加する。
+
+```text
+apps/cargo-tracker/
+├── app/
+│   ├── cargotracker/
+│   │   ├── booking/
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/
+│   │   │   │   │   ├── Cargo.scala                   # IT4 拡張: assignItinerary/confirm/repropose/cancel
+│   │   │   │   │   └── BookingStatus.scala           # IT4 拡張: RouteAssigned 追加
+│   │   │   │   ├── valueobjects/
+│   │   │   │   │   ├── Itinerary.scala               # IT4 新規
+│   │   │   │   │   └── ItineraryLeg.scala            # IT4 新規
+│   │   │   │   └── entities/
+│   │   │   │       ├── NotificationLog.scala         # IT4 新規
+│   │   │   │       └── NotificationType.scala        # IT4 新規
+│   │   │   ├── application/
+│   │   │   │   ├── commandservices/
+│   │   │   │   │   ├── BookingCommandService.scala   # IT4 拡張: confirm/repropose/cancel
+│   │   │   │   │   ├── AssignItineraryCommand.scala  # IT4 新規
+│   │   │   │   │   ├── ConfirmBookingCommand.scala   # IT4 新規
+│   │   │   │   │   ├── CancelBookingCommand.scala    # IT4 新規
+│   │   │   │   │   └── NotifyRouteCommand.scala      # IT4 新規
+│   │   │   │   └── queryservices/
+│   │   │   │       └── NotificationQueryService.scala # IT4 新規
+│   │   │   ├── infrastructure/repositories/
+│   │   │   │   ├── ScalikeJdbcCargoRepository.scala  # IT4 拡張: itinerary 永続化
+│   │   │   │   └── ScalikeJdbcNotificationLogRepository.scala # IT4 新規
+│   │   │   └── interfaces/web/
+│   │   │       ├── BookingController.scala           # IT4 拡張: confirm/repropose/cancel/notify-route
+│   │   │       └── NotificationLogController.scala   # IT4 新規
+│   │   ├── routing/
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/
+│   │   │   │   │   └── RouteCandidateSelection.scala # IT4 新規
+│   │   │   │   ├── valueobjects/
+│   │   │   │   │   └── SelectionStatus.scala         # IT4 新規
+│   │   │   │   └── repositories/
+│   │   │   │       └── RouteCandidateSelectionRepository.scala # IT4 新規（ポート）
+│   │   │   ├── application/
+│   │   │   │   └── commandservices/
+│   │   │   │       ├── RoutingCommandService.scala   # IT4 新規
+│   │   │   │       └── SelectRouteCommand.scala      # IT4 新規
+│   │   │   ├── infrastructure/repositories/
+│   │   │   │   └── ScalikeJdbcRouteCandidateSelectionRepository.scala # IT4 新規
+│   │   │   └── interfaces/web/
+│   │   │       └── RouteCandidateController.scala    # IT4 拡張: 確定 POST 追加
+│   │   └── shared/
+│   │       └── interfaces/web/
+│   │           └── views/
+│   │               └── helpers/                       # IT4 新規（タスク 0.1）
+│   │                   ├── MoneyFormat.scala
+│   │                   ├── InstantFormat.scala
+│   │                   └── LocationFormat.scala
+│   └── views/
+│       ├── booking/
+│       │   ├── detail.scala.html                     # IT4 拡張: itinerary 表示 / 確定ボタン
+│       │   ├── routes.scala.html                     # IT4 拡張: 確定ボタン
+│       │   └── notifications.scala.html              # IT4 新規
+│       └── layout/
+│           └── _confirmation_modal.scala.html        # IT4 新規（共通モーダル）
+├── conf/
+│   ├── routes                                        # IT4 拡張: 6 エンドポイント追加
+│   └── db/migration/default/
+│       ├── V9__add_route_candidate_selection.sql     # IT4 新規
+│       └── V10__add_itinerary_and_notification.sql   # IT4 新規
+└── test/
+    └── cargotracker/
+        ├── booking/                                  # IT4 拡張テスト
+        ├── routing/                                  # IT4 拡張テスト
+        └── e2e/
+            └── EndToEndBookingFlowSpec.scala         # IT4 新規（業務導線 E2E、IT3 ふりかえり T1）
+```
+
+### API 設計
+
+| メソッド | エンドポイント | 説明 | 関連 US |
+|---------|---------------|------|---------|
+| POST | `/bookings/:bookingId/routes/:candidateIndex/confirm` | 経路候補を確定（PRG → 予約詳細） | US09 |
+| POST | `/bookings/:bookingId/notify-route` | 経路を荷主に通知（PRG → 通知ログ） | US12 |
+| POST | `/bookings/:bookingId/confirm` | 予約を確定（PRG → 予約詳細） | US13 |
+| POST | `/bookings/:bookingId/repropose` | 経路再設計に戻す（PRG → 予約詳細） | US13 |
+| POST | `/bookings/:bookingId/cancel` | 予約をキャンセル（PRG → 予約詳細） | US13 |
+| GET | `/bookings/:bookingId/notifications` | 通知ログ画面 | US12 |
 
 ### ADR
 
-| ADR | タイトル | ステータス |
-|-----|---------|-----------|
-| [ADR 0007](../adr/0007-optimistic-lock-either-api.md) | 楽観ロック失敗を Either API に統一 | 提案（IT4 で起案 / 実装は IT5+） |
-| [ADR 0008](../adr/0008-route-candidate-aggregate-boundary.md) | RouteCandidateSelection を Routing Context の集約として独立 | 提案 |
+| ADR | タイトル | ステータス | 関連タスク |
+|-----|---------|-----------|------|
+| [ADR 0007](../adr/0007-optimistic-lock-either-api.md) | 楽観ロック失敗を `Either[DomainError.ConcurrentModification, A]` API に統一（実装は IT5+） | 提案（IT4 Day 3 起案） | 0.5 |
+| [ADR 0008](../adr/0008-route-candidate-aggregate-boundary.md) | `RouteCandidateSelection` を Routing Context の独立集約として定義（Cargo.itinerary は ACL 経由で受領） | 提案（IT4 Day 4 起案） | 1.1 |
 
 ---
 
@@ -375,6 +713,7 @@ state ダッシュボード : 経路設計者 / 営業担当者ロール別
 |------|---------|--------|
 | 2026-06-21 | 初版作成（IT3 ふりかえりの Try 6 件 + IT3 マルチパースペクティブレビュー高 6 件を IT3 申し送り 0.x に取り込み、US09-US13 を機能タスクとして計画）| AI Agent |
 | 2026-06-21 | validating-iteration-plan 検証反映: (a) US13 状態名を `Booked` → `Confirmed` に修正（domain-model.md 整合）、(b) US11 紐付け状態は `RouteAssigned` を新規追加（既存 enum 拡張）、(c) US12 通知 URL を `/notify-route` に統一（ui_design.md L634 整合）、(d) 0.9 で domain-model.md / data-model.md / ui_design.md への反映タスク追加、(e) 保留事項として IT3 レビュー高 #2 を明記、合計 73h | AI Agent |
+| 2026-06-21 | 設計セクションを iteration_plan-3.md と同レベルに拡充: (a) ドメインモデル全体図を全コンテキスト + 不変条件 8 件 + BookingStatus 状態遷移マトリクスで再構成、(b) データモデルを V9（route_candidate_selection + leg 子表）/ V10（cargo_itinerary_leg + notification_log）の完全 SQL DDL に拡張、(c) UI 設計に salt ワイヤーフレーム 3 画面 + 画面一覧 + 画面遷移図 + htmx パターン表 + フィードバックメッセージ表、(d) ディレクトリ構成の追加・拡張ファイル一覧、(e) API 設計 6 エンドポイント表、(f) ADR 0007/0008 関連タスク表 | AI Agent |
 
 ---
 
