@@ -1,5 +1,7 @@
 package cargotracker.arch
 
+import com.tngtech.archunit.base.DescribedPredicate
+import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.{ClassFileImporter, ImportOption}
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
@@ -72,7 +74,41 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
       rule.check(classes)
     }
 
-  test("ルール 4: infrastructure のリポジトリ実装は domain の repositories trait に依存している"):
+  test("ルール 4: application.commandservices / queryservices 配下のクラスは命名規約に従う"):
+    // Scala のコンパニオンオブジェクト・enum case などはクラス名が `$` で終わる合成クラスとなるため除外する
+    val notScalaSynthetic: DescribedPredicate[JavaClass] =
+      new DescribedPredicate[JavaClass]("not a Scala synthetic class (binary name not ending with '$')"):
+        override def test(c: JavaClass): Boolean = !c.getName.endsWith("$")
+
+    val commandRule = ArchRuleDefinition
+      .classes()
+      .that()
+      .resideInAPackage("..cargotracker..application.commandservices..")
+      .and()
+      .areTopLevelClasses()
+      .and(notScalaSynthetic)
+      .should()
+      .haveSimpleNameEndingWith("CommandService")
+      .orShould()
+      .haveSimpleNameEndingWith("Command")
+      .because(
+        "commandservices パッケージのトップレベルクラスはユースケース実行（*CommandService）か入力 DTO（*Command）のいずれかに統一する"
+      )
+    commandRule.check(classes)
+
+    val queryRule = ArchRuleDefinition
+      .classes()
+      .that()
+      .resideInAPackage("..cargotracker..application.queryservices..")
+      .and()
+      .areTopLevelClasses()
+      .and(notScalaSynthetic)
+      .should()
+      .haveSimpleNameEndingWith("QueryService")
+      .because("queryservices パッケージのトップレベルクラスは CQRS Query 側の *QueryService に統一する")
+    queryRule.check(classes)
+
+  test("ルール 5: infrastructure のリポジトリ実装は domain の repositories trait に依存している"):
     val rule = ArchRuleDefinition
       .classes()
       .that()
