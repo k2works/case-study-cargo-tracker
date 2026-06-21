@@ -43,7 +43,7 @@ class EstimateController @Inject() (
   }
 
   def newForm(): Action[AnyContent] = authenticated { implicit request =>
-    Ok(views.html.estimate.form(estimateForm, errorMessage = None))
+    Ok(views.html.estimate.formPage(estimateForm, errorMessage = None))
   }
 
   def create(): Action[AnyContent] = authenticated { implicit request =>
@@ -53,7 +53,7 @@ class EstimateController @Inject() (
         formWithErrors =>
           BadRequest(
             views.html.estimate
-              .form(formWithErrors, errorMessage = Some("入力内容を確認してください"))
+              .formPage(formWithErrors, errorMessage = Some("入力内容を確認してください"))
           ),
         data =>
           commandService.create(
@@ -72,7 +72,7 @@ class EstimateController @Inject() (
               ).flashing("success" -> "見積を作成しました")
             case Left(msg) =>
               BadRequest(
-                views.html.estimate.form(estimateForm, errorMessage = Some(msg))
+                views.html.estimate.formPage(estimateForm, errorMessage = Some(msg))
               )
       )
   }

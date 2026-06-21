@@ -64,7 +64,7 @@ class ShipperController @Inject() (
   }
 
   def newForm(): Action[AnyContent] = authenticated { implicit request =>
-    Ok(views.html.shipper.form(shipperForm, errorMessage = None))
+    Ok(views.html.shipper.formPage(shipperForm, errorMessage = None))
   }
 
   def create(): Action[AnyContent] = authenticated { implicit request =>
@@ -73,7 +73,7 @@ class ShipperController @Inject() (
       .fold(
         formWithErrors =>
           BadRequest(
-            views.html.shipper.form(
+            views.html.shipper.formPage(
               formWithErrors,
               errorMessage = Some("入力内容を確認してください")
             )
@@ -118,5 +118,5 @@ class ShipperController @Inject() (
 
   private def formError(msg: String)(implicit request: RequestHeader): Result =
     BadRequest(
-      views.html.shipper.form(shipperForm, errorMessage = Some(msg))
+      views.html.shipper.formPage(shipperForm, errorMessage = Some(msg))
     )

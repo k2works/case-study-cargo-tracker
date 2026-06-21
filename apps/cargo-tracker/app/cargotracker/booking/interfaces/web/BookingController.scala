@@ -71,7 +71,7 @@ class BookingController @Inject() (
   }
 
   def newForm(): Action[AnyContent] = authenticated { implicit request =>
-    Ok(views.html.booking.form(bookingForm, errorMessage = None))
+    Ok(views.html.booking.formPage(bookingForm, errorMessage = None))
   }
 
   def create(): Action[AnyContent] = authenticated { implicit request =>
@@ -81,7 +81,7 @@ class BookingController @Inject() (
         formWithErrors =>
           BadRequest(
             views.html.booking
-              .form(formWithErrors, errorMessage = Some("入力内容を確認してください"))
+              .formPage(formWithErrors, errorMessage = Some("入力内容を確認してください"))
           ),
         data =>
           commandService.book(
@@ -108,7 +108,7 @@ class BookingController @Inject() (
               )
             case Left(msg) =>
               BadRequest(
-                views.html.booking.form(bookingForm, errorMessage = Some(msg))
+                views.html.booking.formPage(bookingForm, errorMessage = Some(msg))
               )
       )
   }
