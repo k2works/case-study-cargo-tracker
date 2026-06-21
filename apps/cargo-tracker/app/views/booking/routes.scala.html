@@ -10,9 +10,9 @@
   }
 
   <dl class="row">
-    <dt class="col-sm-3">出発地</dt><dd class="col-sm-9">@cargo.routeSpecification.origin.unLocode</dd>
-    <dt class="col-sm-3">目的地</dt><dd class="col-sm-9">@cargo.routeSpecification.destination.unLocode</dd>
-    <dt class="col-sm-3">希望着日</dt><dd class="col-sm-9">@cargo.routeSpecification.arrivalDeadline</dd>
+    <dt class="col-sm-3">出発地</dt><dd class="col-sm-9">@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.origin)</dd>
+    <dt class="col-sm-3">目的地</dt><dd class="col-sm-9">@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.destination)</dd>
+    <dt class="col-sm-3">希望着日</dt><dd class="col-sm-9">@views.helpers.DisplayFormatters.formatDate(cargo.routeSpecification.arrivalDeadline)</dd>
     <dt class="col-sm-3">貨物種別</dt><dd class="col-sm-9">@cargo.cargoSpec.cargoType</dd>
   </dl>
 
@@ -57,10 +57,10 @@
         <tr>
           <td>@(idx + 1)</td>
           <td>@p.candidate.legs.size</td>
-          <td>@p.candidate.departure</td>
-          <td>@p.candidate.arrival</td>
+          <td>@views.helpers.DisplayFormatters.formatInstant(p.candidate.departure)</td>
+          <td>@views.helpers.DisplayFormatters.formatInstant(p.candidate.arrival)</td>
           <td>@p.candidate.transitDays</td>
-          <td>@p.estimatedCost.map(m => s"${m.amount} ${m.currency}").getOrElse("-")</td>
+          <td>@views.helpers.DisplayFormatters.formatMoneyOpt(p.estimatedCost)</td>
           <td>@p.candidate.voyages.map(_.value).mkString(" → ")</td>
         </tr>
       }
@@ -87,10 +87,10 @@
         <tr class="table-warning">
           <td>@(idx + 1)</td>
           <td>@p.candidate.legs.size</td>
-          <td>@p.candidate.departure</td>
-          <td>@p.candidate.arrival</td>
+          <td>@views.helpers.DisplayFormatters.formatInstant(p.candidate.departure)</td>
+          <td>@views.helpers.DisplayFormatters.formatInstant(p.candidate.arrival)</td>
           <td>@p.candidate.transitDays</td>
-          <td>@p.estimatedCost.map(m => s"${m.amount} ${m.currency}").getOrElse("-")</td>
+          <td>@views.helpers.DisplayFormatters.formatMoneyOpt(p.estimatedCost)</td>
           <td>@p.candidate.voyages.map(_.value).mkString(" → ")</td>
         </tr>
       }

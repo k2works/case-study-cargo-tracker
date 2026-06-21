@@ -61,10 +61,10 @@
               <td>@v.voyageNumber.value</td>
               <td>@v.vesselName</td>
               <td>@v.carrierCode</td>
-              <td>@v.schedule.origin.unLocode</td>
-              <td>@v.schedule.destination.unLocode</td>
-              <td>@v.schedule.carrierMovements.head.departureTime</td>
-              <td>@v.schedule.carrierMovements.last.arrivalTime</td>
+              <td>@views.helpers.DisplayFormatters.formatLocation(v.schedule.origin)</td>
+              <td>@views.helpers.DisplayFormatters.formatLocation(v.schedule.destination)</td>
+              <td>@views.helpers.DisplayFormatters.formatInstant(v.schedule.carrierMovements.head.departureTime)</td>
+              <td>@views.helpers.DisplayFormatters.formatInstant(v.schedule.carrierMovements.last.arrivalTime)</td>
               <td>@v.supportedCargoTypes.map(_.toString).toSeq.sorted.mkString(", ")</td>
             </tr>
           }

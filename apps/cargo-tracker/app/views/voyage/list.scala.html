@@ -20,8 +20,8 @@
         @for(v <- voyages) {
           <tr>
             <td>@v.voyageNumber.value</td>
-            <td>@v.schedule.origin.unLocode</td>
-            <td>@v.schedule.destination.unLocode</td>
+            <td>@views.helpers.DisplayFormatters.formatLocation(v.schedule.origin)</td>
+            <td>@views.helpers.DisplayFormatters.formatLocation(v.schedule.destination)</td>
             <td>@v.schedule.carrierMovements.size</td>
             <td>@v.version</td>
             <td>
