@@ -20,8 +20,8 @@
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + IT1/IT2 計画 + Release 0.1 ゲート確認結果 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 5 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 5 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 6 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -66,6 +66,7 @@
 | [0003 PricingService 共有](./adr/0003-pricing-service-shared-between-estimate-and-billing.md) | 料金計算ドメインサービスを Estimation と Billing で共通化 |
 | [0004 US26 を UC 横断扱い](./adr/0004-us26-as-cross-cutting-story.md) | 認証・認可ストーリーを UC 横断として扱う |
 | [0005 経路探索アルゴリズム](./adr/0005-route-search-algorithm.md) | DFS + 深さ制限の経路探索（IT2 spike → IT3 US08 で再評価） |
+| [0006 Voyage データモデル拡張](./adr/0006-voyage-data-model-extension.md) | US07 検索のための voyage 拡張・中間テーブル・Routing 用 RouteCandidate/RoutingLeg 分離 |
 
 ### レビュードキュメント
 
@@ -76,6 +77,7 @@
 | [リリース計画レビュー](./review/release_plan_review_20260620.md) | Scala 版 take-1 のリリース計画レビュー結果（高 9 件・中 11 件・低 9 件） |
 | [IT1 実装レビュー](./review/it1_implementation_review_20260620.md) | IT1 実装全体（73 ファイル 3,305 行）のマルチパースペクティブレビュー結果（高 8 件・中 19 件・低 7 件） |
 | [IT2 実装レビュー](./review/it2_implementation_review_20260621.md) | IT2 実装全体（134 ファイル 5,034 行）のマルチパースペクティブレビュー結果（高 10 件・中 10 件・低 11 件） |
+| [IT3 実装レビュー](./review/it3_implementation_review_20260621.md) | IT3 実装全体（Routing US07/US08 + ADR 0006 + SELECT 句修正）のマルチパースペクティブレビュー結果（高 8 件・中 17 件・低 9 件） |
 
 ## 補足
 

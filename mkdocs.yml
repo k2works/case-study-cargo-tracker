@@ -95,6 +95,8 @@ nav:
       - イテレーション 2 ふりかえり: development/retrospective-2.md
       - イテレーション 2 完了報告書: development/iteration_report-2.md
       - イテレーション 3 計画: development/iteration_plan-3.md
+      - イテレーション 3 ふりかえり: development/retrospective-3.md
+      - イテレーション 3 完了報告書: development/iteration_report-3.md
       - Release 0.1.0 ゲート確認結果: development/release-0.1.0-gate-check.md
   - 運用:
       - 概要: operation/index.md
@@ -110,6 +112,7 @@ nav:
       - リリース計画レビュー: review/release_plan_review_20260620.md
       - IT1 実装レビュー: review/it1_implementation_review_20260620.md
       - IT2 実装レビュー: review/it2_implementation_review_20260621.md
+      - IT3 実装レビュー: review/it3_implementation_review_20260621.md
   - ADR:
       - 概要: adr/index.md
       - 0001 Play Framework 採用: adr/0001-play-framework-scala-stack.md
@@ -117,6 +120,7 @@ nav:
       - 0003 PricingService 共有: adr/0003-pricing-service-shared-between-estimate-and-billing.md
       - 0004 US26 を UC 横断扱い: adr/0004-us26-as-cross-cutting-story.md
       - 0005 経路探索アルゴリズム: adr/0005-route-search-algorithm.md
+      - 0006 Voyage データモデル拡張: adr/0006-voyage-data-model-extension.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
