@@ -141,8 +141,13 @@
               <td>@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.destination)</td>
               <td>@views.helpers.DisplayFormatters.formatDate(cargo.routeSpecification.arrivalDeadline)</td>
               <td>@cargo.itinerary.map(_.voyageNumbers.mkString(" → ")).getOrElse("-")</td>
-              <td>
+              <td class="d-flex gap-1">
                 <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a>
+                <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.notifyRoute(cargo.bookingId.value)" class="d-inline-block">
+                  @helper.CSRF.formField
+                  <button type="submit" class="btn btn-sm btn-primary" data-notify-route="true">経路を通知</button>
+                </form>
+                <a href="@cargotracker.booking.interfaces.web.routes.BookingController.notifications(cargo.bookingId.value)" class="btn btn-sm btn-outline-secondary">通知ログ</a>
               </td>
             </tr>
           }

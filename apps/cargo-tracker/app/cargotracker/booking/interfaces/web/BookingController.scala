@@ -33,7 +33,9 @@ class BookingController @Inject() (
     cc: ControllerComponents,
     authenticated: AuthenticatedAction,
     commandService: BookingCommandService,
-    queryService: BookingQueryService
+    queryService: BookingQueryService,
+    notifyRouteService: cargotracker.booking.application.commandservices.NotifyRouteCommandService,
+    notificationRepository: cargotracker.booking.domain.model.repositories.NotificationLogRepository
 ) extends AbstractController(cc)
     with I18nSupport:
 
@@ -145,4 +147,26 @@ class BookingController @Inject() (
         Redirect(
           cargotracker.booking.interfaces.web.routes.BookingController.detail(bookingId)
         ).flashing("error" -> msg)
+  }
+
+  /** 経路を荷主に通知（US12）。PRG で通知ログ画面にリダイレクト。 */
+  def notifyRoute(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
+    notifyRouteService.notify(bookingId) match
+      case Right(_) =>
+        Redirect(
+          cargotracker.booking.interfaces.web.routes.BookingController.notifications(bookingId)
+        ).flashing("success" -> s"予約 $bookingId の経路通知を送信しました")
+      case Left(msg) =>
+        Redirect(
+          cargotracker.booking.interfaces.web.routes.BookingController.detail(bookingId)
+        ).flashing("error" -> msg)
+  }
+
+  /** 通知ログ一覧（US12 / US13）。 */
+  def notifications(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
+    queryService.findById(bookingId) match
+      case None => NotFound("予約が見つかりません")
+      case Some(cargo) =>
+        val logs = notificationRepository.findByBookingId(cargo.bookingId)
+        Ok(views.html.booking.notifications(cargo, logs))
   }

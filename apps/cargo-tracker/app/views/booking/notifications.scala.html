@@ -1,0 +1,43 @@
+@(cargo: cargotracker.booking.domain.model.aggregates.Cargo,
+  logs: Seq[cargotracker.booking.domain.model.aggregates.NotificationLog])(implicit request: RequestHeader, flash: Flash)
+@views.html.layout.main(s"通知ログ - ${cargo.bookingId.value}") {
+  <h1 class="h3 mb-3">通知ログ - @cargo.bookingId.value</h1>
+
+  @flash.get("success").map { msg => <div class="alert alert-success">@msg</div> }
+  @flash.get("error").map { msg => <div class="alert alert-danger">@msg</div> }
+
+  <dl class="row">
+    <dt class="col-sm-3">予約状態</dt><dd class="col-sm-9">@cargo.status</dd>
+    <dt class="col-sm-3">出発地</dt><dd class="col-sm-9">@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.origin)</dd>
+    <dt class="col-sm-3">目的地</dt><dd class="col-sm-9">@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.destination)</dd>
+    <dt class="col-sm-3">経路（航海）</dt><dd class="col-sm-9">@cargo.itinerary.map(_.voyageNumbers.mkString(" → ")).getOrElse("-")</dd>
+  </dl>
+
+  @if(logs.isEmpty) {
+    <p class="text-muted">通知履歴はまだありません。</p>
+  } else {
+    <h2 class="h5 mt-4">通知履歴（@logs.size 件・新しい順）</h2>
+    <table class="table table-sm table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>送信日時</th>
+          <th>種別</th>
+          <th>ペイロード</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(log <- logs) {
+          <tr>
+            <td>@views.helpers.DisplayFormatters.formatInstant(log.sentAt)</td>
+            <td><span class="badge bg-secondary">@log.notificationType</span></td>
+            <td><code class="small">@log.payload</code></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <div class="d-flex gap-2 mt-3">
+    <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-secondary">予約詳細に戻る</a>
+  </div>
+}
