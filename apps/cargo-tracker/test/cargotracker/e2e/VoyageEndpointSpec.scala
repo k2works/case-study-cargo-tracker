@@ -74,6 +74,27 @@ class VoyageEndpointSpec extends AnyWordSpec with Matchers with PostgresContaine
 
     // 重複登録の検証は Twirl の @CSRF.formField 再描画が必要なため E2E（Playwright）側で
     // カバー（us24-25-voyage.spec.ts L33）。Endpoint レベルでは初回 SEE_OTHER の検証で十分。
+
+    // 航海を 1 件登録した後に一覧画面が 500 にならない回帰テスト。
+    // findAll は SELECT id, voyage_number, version, ... と列を明示しているため
+    // 楽観ロック等で列を追加した際に取り忘れると ResultSet 列名不在で 500 になる。
+    // 空テーブル時は SELECT すら走らず気付けないので 1 件 seed 後に GET する。
+    "航海を 1 件登録した後に /voyages 一覧画面が 500 にならない（SELECT 句カラム整合性の回帰）" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val csrf = "test-csrf-token"
+        val create = FakeRequest(POST, "/voyages")
+          .withFormUrlEncodedBody(voyagePayload("VY-REG01") :+ ("csrfToken" -> csrf): _*)
+          .withSession("csrfToken" -> csrf)
+          .withAuthenticatedSession
+          .withHeaders("Csrf-Token" -> csrf)
+        status(route(app, create).get) shouldBe SEE_OTHER
+
+        val list = route(app, FakeRequest(GET, "/voyages").withAuthenticatedSession).get
+        status(list) shouldBe OK
+        contentAsString(list) should include("VY-REG01")
+      }
+    }
   }
 
   "GET /voyages/:voyageNumber/edit" should {
