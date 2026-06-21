@@ -136,7 +136,7 @@ date: 2026-06-21
 |---|--------|---------|------|
 | 2.1 | `Cargo.assignItinerary(itinerary)` + `Itinerary` 値オブジェクト（経路選択結果の Booking 側 ACL） | 3h | [x] |
 | 2.2 | `BookingStatus.RouteAssigned` 追加と canTransitionTo の遷移マトリクス拡張 | 2h | [x] |
-| 2.3 | US09 完了後に自動で予約紐付けを実行（同一トランザクション）。または別 Command に分離する判断 | 2h | [ ] |
+| 2.3 | US09 完了後に自動で予約紐付けを実行（同一トランザクション）。または別 Command に分離する判断 | 2h | [x] |
 | 2.4 | 営業担当者ダッシュボードに `RouteAssigned` 一覧を追加 | 2h | [ ] |
 | 2.5 | テスト（紐付け成功 / 既に確定済予約への再紐付け禁止） | 2h | [ ] |
 

@@ -1,6 +1,7 @@
 package cargotracker.routing.interfaces.web
 
 import cargotracker.auth.interfaces.web.AuthenticatedAction
+import cargotracker.booking.application.commandservices.BookingCommandService
 import cargotracker.booking.application.queryservices.BookingQueryService
 import cargotracker.booking.domain.model.aggregates.Cargo
 import cargotracker.routing.application.commandservices.{RoutingCommandService, SelectRouteCommand}
@@ -27,6 +28,7 @@ class RouteCandidateController @Inject() (
     bookingQueryService: BookingQueryService,
     routeCandidateQueryService: RouteCandidateQueryService,
     routingCommandService: RoutingCommandService,
+    bookingCommandService: BookingCommandService,
     clock: Clock
 ) extends AbstractController(cc)
     with I18nSupport:
@@ -84,10 +86,15 @@ class RouteCandidateController @Inject() (
                   .flashing("error" -> "選択された経路候補が見つかりません。再度候補を確認してください")
               case Some(picked) =>
                 val voyageNumbers = picked.candidate.voyages.map(_.value)
-                routingCommandService.confirmRoute(SelectRouteCommand(bookingId, voyageNumbers)) match
+                // US09 確定と US11 予約紐付けを同一 HTTP リクエストで順次実行（ACL は Controller 層で吸収）。
+                val result = for
+                  _ <- routingCommandService.confirmRoute(SelectRouteCommand(bookingId, voyageNumbers))
+                  _ <- bookingCommandService.assignItinerary(bookingId, voyageNumbers)
+                yield ()
+                result match
                   case Right(_) =>
                     Redirect(routes.RouteCandidateController.candidates(bookingId))
-                      .flashing("success" -> "経路を確定しました")
+                      .flashing("success" -> "経路を確定し予約に紐付けました")
                   case Left(msg) =>
                     Redirect(routes.RouteCandidateController.candidates(bookingId)).flashing("error" -> msg)
   }

@@ -93,20 +93,24 @@ class RouteCandidateIntegrationSpec extends AnyWordSpec with Matchers with Postg
           "2099-07-01T10:00:00Z",
           "2099-07-10T18:00:00Z"
         )
-        val bookingId = book(
-          app.injector.instanceOf[BookingCommandService],
-          shipperCode,
-          "JPTYO",
-          "USLAX",
-          LocalDate.parse("2099-12-31")
-        )
+        val bookingService = app.injector.instanceOf[BookingCommandService]
+        val bookingId = book(bookingService, shipperCode, "JPTYO", "USLAX", LocalDate.parse("2099-12-31"))
+        bookingService.assignToRouting(bookingId).toOption.get
+
         val confirm = route(
           app,
           FakeRequest(POST, s"/bookings/$bookingId/routes/0/confirm").withAuthenticatedSession.withCSRFToken
         ).get
         status(confirm) shouldBe SEE_OTHER
         redirectLocation(confirm) shouldBe Some(s"/bookings/$bookingId/routes")
-        flash(confirm).get("success") shouldBe Some("経路を確定しました")
+        flash(confirm).get("success") shouldBe Some("経路を確定し予約に紐付けました")
+
+        val updated = app.injector
+          .instanceOf[cargotracker.booking.domain.model.repositories.CargoRepository]
+          .findById(cargotracker.booking.domain.model.valueobjects.BookingId.unsafeFrom(bookingId))
+          .get
+        updated.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteAssigned
+        updated.itinerary.map(_.voyageNumbers) shouldBe Some(List("VY-CONFIRM"))
       }
     }
 

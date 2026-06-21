@@ -7,6 +7,7 @@ import cargotracker.booking.domain.model.valueobjects.{
   BookingId,
   CargoSpec,
   HazardousDeclaration,
+  Itinerary,
   RefrigerationSpec,
   RouteSpecification,
   TemperatureUnit
@@ -98,6 +99,28 @@ class BookingCommandService @Inject() (
         case Cargo.InvalidStatusTransition(from, to) =>
           s"現在の状態 $from から $to への遷移はできません"
         case _ => s"予約 $bookingId の引き渡しに失敗しました"
+      }
+    yield
+      repository.save(next)
+      next
+
+  /** 経路情報を予約に紐付ける（US11 / `AssignItineraryCommand`）。
+    *
+    *   - 予約が存在しない場合は `Left("予約 BK-... が見つかりません")`
+    *   - 状態遷移違反は `Left("現在の状態 ... から RouteAssigned への遷移はできません")`
+    *   - 成功時は `RouteAssigned` 状態かつ `itinerary` を保持した Cargo を保存して返す
+    *
+    * Routing Context の `RoutingCommandService.confirmRoute` から US09 完了直後に 同一トランザクションで呼び出される（IT4 タスク 2.3）。
+    */
+  def assignItinerary(bookingId: String, voyageNumbers: List[String]): Either[String, Cargo] =
+    for
+      id <- BookingId(bookingId).left.map(_ => s"予約 ID の形式が不正です: $bookingId")
+      cargo <- repository.findById(id).toRight(s"予約 $bookingId が見つかりません")
+      itinerary <- Itinerary(voyageNumbers).left.map(_ => "経路に含む航海が指定されていません")
+      next <- cargo.assignItinerary(itinerary).left.map {
+        case Cargo.InvalidStatusTransition(from, to) =>
+          s"現在の状態 $from から $to への遷移はできません"
+        case _ => s"予約 $bookingId の経路紐付けに失敗しました"
       }
     yield
       repository.save(next)

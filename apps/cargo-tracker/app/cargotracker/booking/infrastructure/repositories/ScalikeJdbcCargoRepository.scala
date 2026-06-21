@@ -7,6 +7,7 @@ import cargotracker.booking.domain.model.valueobjects.{
   BookingStatus,
   CargoSpec,
   HazardousDeclaration,
+  Itinerary,
   RefrigerationSpec,
   RouteSpecification,
   TemperatureUnit
@@ -50,13 +51,18 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
         hazardous = hazardous,
         refrigeration = refrigeration
       )
+      val itinerary = rs
+        .stringOpt("itinerary_voyages")
+        .filter(_.nonEmpty)
+        .map(s => Itinerary.unsafeFrom(s.split(",").toList))
       Cargo.reconstruct(
         bookingId = BookingId.unsafeFrom(rs.string("tracking_id")),
         shipperId = ShipperId.unsafeFrom(rs.string("shipper_code")),
         routeSpecification = routeSpec,
         cargoSpec = spec,
         status = status,
-        version = rs.int("version")
+        version = rs.int("version"),
+        itinerary = itinerary
       )
 
   override def findById(bookingId: BookingId): Option[Cargo] =
@@ -116,6 +122,7 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                 refrigeration_max_temp = ${refrig.map(_.maxTemperature).orNull},
                 refrigeration_unit = ${refrig.map(_.unit.toString).orNull},
                 booking_status = ${cargo.status.toString},
+                itinerary_voyages = ${cargo.itinerary.map(_.voyageNumbers.mkString(",")).orNull},
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE tracking_id = ${cargo.bookingId.value} AND version = ${cargo.version}
