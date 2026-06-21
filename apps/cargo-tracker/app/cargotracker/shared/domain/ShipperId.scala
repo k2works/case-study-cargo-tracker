@@ -1,5 +1,7 @@
 package cargotracker.shared.domain
 
+import cargotracker.shared.domain.ShipperType
+
 /** 荷主の業務キー識別子。`SH-NNNNNN` 形式（数字 6 桁）。 */
 opaque type ShipperId = String
 

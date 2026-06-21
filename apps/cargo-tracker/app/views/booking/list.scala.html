@@ -1,4 +1,4 @@
-@(cargos: Seq[cargotracker.booking.domain.Cargo])(implicit request: RequestHeader, flash: Flash)
+@(cargos: Seq[cargotracker.booking.domain.model.aggregates.Cargo])(implicit request: RequestHeader, flash: Flash)
 @views.html.layout.main("貨物予約一覧") {
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3">貨物予約一覧</h1>

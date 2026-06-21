@@ -1,7 +1,9 @@
 package cargotracker.shipper.interfaces.web
 
 import cargotracker.shared.domain.ShipperType
-import cargotracker.shipper.domain.{DiscountRate, Shipper, ShipperRepository}
+import cargotracker.shipper.domain.model.aggregates.Shipper
+import cargotracker.shipper.domain.model.repositories.ShipperRepository
+import cargotracker.shipper.domain.model.valueobjects.DiscountRate
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.data.format.Formats.doubleFormat
@@ -9,7 +11,6 @@ import play.api.i18n.I18nSupport
 import play.api.mvc.*
 
 import javax.inject.{Inject, Singleton}
-
 final case class ShipperForm(
     name: String,
     email: String,

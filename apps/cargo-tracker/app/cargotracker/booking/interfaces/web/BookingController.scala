@@ -1,14 +1,9 @@
 package cargotracker.booking.interfaces.web
 
-import cargotracker.booking.domain.{
-  BookingId,
-  Cargo,
-  CargoRepository,
-  CargoSpec,
-  HazardousDeclaration,
-  RouteSpecification,
-  ShipperExistenceChecker
-}
+import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
+import cargotracker.booking.domain.model.aggregates.Cargo
+import cargotracker.booking.domain.model.repositories.CargoRepository
+import cargotracker.booking.domain.model.valueobjects.{BookingId, CargoSpec, HazardousDeclaration, RouteSpecification}
 import cargotracker.shared.domain.{CargoType, Location, ShipperId, Weight}
 import play.api.data.Form
 import play.api.data.Forms.*

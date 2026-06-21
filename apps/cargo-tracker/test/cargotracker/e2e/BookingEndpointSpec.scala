@@ -1,6 +1,7 @@
 package cargotracker.e2e
 
-import cargotracker.shipper.domain.{Shipper, ShipperRepository}
+import cargotracker.shipper.domain.model.aggregates.Shipper
+import cargotracker.shipper.domain.model.repositories.ShipperRepository
 import cargotracker.support.AuthenticatedRequestSupport.*
 import cargotracker.support.PostgresContainerSupport
 import org.scalatest.matchers.should.Matchers

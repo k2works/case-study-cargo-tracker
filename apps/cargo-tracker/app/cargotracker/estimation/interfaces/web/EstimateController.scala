@@ -1,6 +1,8 @@
 package cargotracker.estimation.interfaces.web
 
-import cargotracker.estimation.domain.{Estimate, EstimateId, EstimateRepository, RouteCandidate}
+import cargotracker.estimation.domain.model.aggregates.Estimate
+import cargotracker.estimation.domain.model.repositories.EstimateRepository
+import cargotracker.estimation.domain.model.valueobjects.{EstimateId, RouteCandidate}
 import cargotracker.shared.domain.pricing.PricingService
 import cargotracker.shared.domain.{CargoType, Location, Weight}
 import play.api.data.Form

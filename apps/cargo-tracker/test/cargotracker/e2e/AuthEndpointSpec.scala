@@ -1,6 +1,8 @@
 package cargotracker.e2e
 
-import cargotracker.auth.domain.{PasswordHash, Role, User, UserRepository}
+import cargotracker.auth.domain.model.aggregates.User
+import cargotracker.auth.domain.model.repositories.UserRepository
+import cargotracker.auth.domain.model.valueobjects.{PasswordHash, Role}
 import cargotracker.support.PostgresContainerSupport
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec

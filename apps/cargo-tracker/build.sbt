@@ -15,7 +15,9 @@ libraryDependencies ++= Seq(
   "org.mindrot" % "jbcrypt" % "0.4",
   "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % Test,
   "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.43.0" % Test,
-  "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.43.0" % Test
+  "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.43.0" % Test,
+  // ArchUnit: ヘキサゴナルアーキテクチャの境界をテストで強制する
+  "com.tngtech.archunit" % "archunit" % "1.3.0" % Test
 )
 
 // Docker Engine 29 系の API に対応した testcontainers-java を使用する

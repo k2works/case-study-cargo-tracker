@@ -1,8 +1,8 @@
 package cargotracker.shared.domain
 
+import cargotracker.shared.domain.ShipperType
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-
 class ShipperIdSpec extends AnyFunSuite with Matchers:
 
   test("SH-XXXXXX 形式の文字列から ShipperId を生成できる"):

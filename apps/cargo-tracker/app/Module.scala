@@ -1,12 +1,15 @@
-import cargotracker.auth.domain.UserRepository
-import cargotracker.auth.infrastructure.{AdminUserSeeder, ScalikeJdbcUserRepository}
-import cargotracker.booking.domain.{CargoRepository, ShipperExistenceChecker}
-import cargotracker.booking.infrastructure.{ScalikeJdbcCargoRepository, ShipperRepositoryBackedExistenceChecker}
-import cargotracker.estimation.domain.EstimateRepository
-import cargotracker.estimation.infrastructure.ScalikeJdbcEstimateRepository
+import cargotracker.auth.domain.model.repositories.UserRepository
+import cargotracker.auth.infrastructure.repositories.ScalikeJdbcUserRepository
+import cargotracker.auth.infrastructure.services.AdminUserSeeder
+import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
+import cargotracker.booking.domain.model.repositories.CargoRepository
+import cargotracker.booking.infrastructure.repositories.ScalikeJdbcCargoRepository
+import cargotracker.booking.infrastructure.services.ShipperRepositoryBackedExistenceChecker
+import cargotracker.estimation.domain.model.repositories.EstimateRepository
+import cargotracker.estimation.infrastructure.repositories.ScalikeJdbcEstimateRepository
 import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
-import cargotracker.shipper.domain.ShipperRepository
-import cargotracker.shipper.infrastructure.ScalikeJdbcShipperRepository
+import cargotracker.shipper.domain.model.repositories.ShipperRepository
+import cargotracker.shipper.infrastructure.repositories.ScalikeJdbcShipperRepository
 import com.google.inject.AbstractModule
 import play.api.db.DBApi
 import scalikejdbc.{ConnectionPool, DataSourceConnectionPool}

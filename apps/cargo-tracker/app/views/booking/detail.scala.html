@@ -1,4 +1,4 @@
-@(cargo: cargotracker.booking.domain.Cargo)(implicit request: RequestHeader, flash: Flash)
+@(cargo: cargotracker.booking.domain.model.aggregates.Cargo)(implicit request: RequestHeader, flash: Flash)
 @views.html.layout.main("予約詳細") {
   <h1 class="h3 mb-3">予約詳細 - @cargo.bookingId.value</h1>
   @flash.get("success").map { msg =>

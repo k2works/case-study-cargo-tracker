@@ -1,4 +1,4 @@
-@(estimate: cargotracker.estimation.domain.Estimate)(implicit request: RequestHeader, flash: Flash)
+@(estimate: cargotracker.estimation.domain.model.aggregates.Estimate)(implicit request: RequestHeader, flash: Flash)
 @views.html.layout.main("見積詳細") {
   <h1 class="h3 mb-3">見積詳細</h1>
   @flash.get("success").map { msg =>

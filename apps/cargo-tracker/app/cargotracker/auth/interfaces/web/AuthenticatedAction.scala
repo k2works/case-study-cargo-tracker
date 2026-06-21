@@ -1,6 +1,6 @@
 package cargotracker.auth.interfaces.web
 
-import cargotracker.auth.domain.Role
+import cargotracker.auth.domain.model.valueobjects.Role
 import play.api.mvc.*
 import play.api.mvc.Results.Redirect
 

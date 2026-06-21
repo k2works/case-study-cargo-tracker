@@ -1,6 +1,6 @@
 package cargotracker.auth.interfaces.web
 
-import cargotracker.auth.domain.UserRepository
+import cargotracker.auth.domain.model.repositories.UserRepository
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.i18n.I18nSupport
