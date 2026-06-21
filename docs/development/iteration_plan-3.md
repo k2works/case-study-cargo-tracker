@@ -85,10 +85,10 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 0.1 | Controller / Twirl / Dashboard の Play `FakeRequest` 統合テスト追加（CSRF / AuthFilter / Flash / PRG）。new_coverage 80% 復元 | 6h | - | [x] |
-| 0.2 | 集約 `Cargo` / `Estimate` / `Shipper` / `Voyage` に `version: Int` フィールド追加。`Either[DomainError.ConcurrentModification, A]` を返す Repository UPDATE に変更 | 5h | - | [ ] |
+| 0.2 | 集約 `Cargo` / `Estimate` / `Shipper` / `Voyage` に `version: Int` フィールド追加。`Either[DomainError.ConcurrentModification, A]` を返す Repository UPDATE に変更 | 5h | - | [x] |
 | 0.3 | `VoyageCommandService.register` / `update` + `VoyageController.create` / `update` の重複を `upsert(vn, build)` 共通骨格に抽出 | 2h | - | [x] |
 | 0.4 | `BookingCommandService.book` の `_ => "荷主が見つかりません"` を sealed エラー網羅 match に変更 | 1h | - | [x] |
-| 0.5 | scoverage + Twirl + coverage モードの `NoClassDefFoundError` 再現条件特定 + build.sbt 修正 | 3h | - | [ ] |
+| 0.5 | scoverage + Twirl + coverage モードの `NoClassDefFoundError` 再現条件特定 + build.sbt 修正 | 3h | - | [x] |
 | 0.6 | Dashboard 集計を `HomeController` から pure function 切り出し、テスト追加 | 2h | - | [x] |
 | 0.7 | 危険物・冷凍フィールドの htmx 動的表示（IT2 ui_design.md 565 準拠） | 3h | - | [x] |
 | 0.8 | 予約詳細に温度管理条件の表示追加（経路設計者が冷凍要件を確認できる） | 1h | - | [x] |
@@ -648,6 +648,7 @@ IT1+IT2 既存に加え、IT3 で航海検索 / 経路候補算出 / htmx フラ
 |------|---------|--------|
 | 2026-06-21 | 初版作成（IT2 ふりかえり申し送り + Phase 2 開始） | AI Agent |
 | 2026-06-21 | validating-iteration-plan 検証反映: (a) ドメインモデル節を iteration_plan-2.md と同等の精度に拡張（全コンテキスト + 不変条件 6 件）、(b) データモデル節に既存テーブル + V8 マイグレーション一覧、(c) ユーザーインターフェース節（ビュー salt 図 2 画面 + 画面遷移図 + htmx パターン + フィードバックメッセージ表）、(d) フルディレクトリ構成、(e) Routing 用 RouteCandidate を Estimation 既存型と区別、(f) 中間表に id BIGSERIAL PK + 監査カラム追加、(g) IT2 review 中優先 3 件（#13/#14/#18）をタスク 0.13-0.15 に追加、合計 86h | AI Agent |
+| 2026-06-21 | IT3 全タスク完了。0.1（Controller 統合テスト）/ 0.2（楽観ロック活性化）/ 0.3（Voyage upsert 抽出）/ 0.5（scoverage 86.28% / branch 77.33% で coverage モードクリーン、NoClassDefFoundError 解消確認）/ 2.3（PricingService 連携）/ 2.6（期限内不到達通知）/ 2.7（経路候補画面）/ 2.8（探索 P95=60ms / 上限 3s）/ 2.9（直行 / 危険物 / 期限超過 E2E）をマーク。残課題は IT4 以降のスコープへ。 | AI Agent |
 
 ---
 
