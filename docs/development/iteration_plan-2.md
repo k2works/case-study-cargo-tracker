@@ -154,7 +154,7 @@
 | 2.1 | `Cargo` 集約に `assignToRouting()` 実装（`AssignToRoutingCommand` 受領で `Preliminary → RouteProposed` 遷移、`BookingStatus.canTransitionTo` を使用） | 2h | - | [x] |
 | 2.2 | BookingController に引き渡しエンドポイント追加（POST `/bookings/:bookingId/assign-routing`、PRG で予約詳細へリダイレクト + flash 通知。BookingCommandService.assignToRouting で BookingId 形式検証・予約存在確認・状態遷移検証） | 3h | - | [x] |
 | 2.3 | 経路設計者ダッシュボード（`RouteProposed` 予約一覧）画面追加。CargoRepository.findByStatus / BookingQueryService.findRouteProposed / HomeController が RouteDesigner / MasterAdmin ロールに対してのみ一覧をテンプレートに注入。通知は flash success メッセージで代替（外部通知 IT4 以降） | 3h | - | [x] |
-| 2.4 | ドメインユニット + E2E テスト（通知ログ検証含む） | 2h | - | [ ] |
+| 2.4 | ドメインユニット + E2E テスト（通知ログ検証含む）。CargoAssignToRoutingSpec + BookingCommandServiceSpec assignToRouting 3 件 + Playwright us06-assign-routing.spec.ts 2 件（フロー全体 / RouteProposed 後のボタン非表示） | 2h | - | [x] |
 
 **小計**: 10h（5h/SP）
 

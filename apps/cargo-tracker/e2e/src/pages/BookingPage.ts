@@ -78,4 +78,15 @@ export class BookingPage {
   async submit(): Promise<void> {
     await this.page.locator('button[type="submit"]:has-text("予約登録")').click();
   }
+
+  async gotoDetail(bookingId: string): Promise<void> {
+    await this.page.goto(`/bookings/${bookingId}`);
+  }
+
+  /** 予約詳細から「経路設計者へ引き渡す」を実行（US06）。 */
+  async assignToRouting(): Promise<void> {
+    await this.page
+      .locator('button[type="submit"]:has-text("経路設計者へ引き渡す")')
+      .click();
+  }
 }
