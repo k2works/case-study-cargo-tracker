@@ -62,10 +62,9 @@ class DashboardComposerSpec extends AnyFunSuite with Matchers:
     val view = DashboardComposer.compose(
       username = "sales",
       roles = Set(Role.Sales),
-      fetchRouteProposed = { () =>
+      fetchRouteProposed = () =>
         called.set(true)
         Seq(sampleCargo)
-      }
     )
     called.get shouldBe false
     view.routeProposed shouldBe empty

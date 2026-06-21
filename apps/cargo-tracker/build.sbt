@@ -17,7 +17,9 @@ libraryDependencies ++= Seq(
   "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.43.0" % Test,
   "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.43.0" % Test,
   // ArchUnit: ヘキサゴナルアーキテクチャの境界をテストで強制する
-  "com.tngtech.archunit" % "archunit" % "1.3.0" % Test
+  "com.tngtech.archunit" % "archunit" % "1.3.0" % Test,
+  // ScalaCheck: 値オブジェクトの不変条件をプロパティテストで検証（IT3 タスク 0.11）
+  "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test
 )
 
 // Docker Engine 29 系の API に対応した testcontainers-java を使用する
