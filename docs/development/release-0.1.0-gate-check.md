@@ -9,7 +9,7 @@
 | 全ユニット / 統合 / Arch テスト pass | ✅ | 158/158（テスト一覧は CHANGELOG 参照） |
 | 全 E2E テスト pass | ✅ | 14/14（Playwright） |
 | テストカバレッジ 80% 以上 | ✅ | ステートメント **82.34%** / ブランチ 83.13% |
-| SonarQube Quality Gate PASS | ⏸ | タスク 0.8 未完了（Sonar インスタンス確定後、IT3 Day 1 で実施） |
+| SonarQube Quality Gate PASS | ⚠️ 条件付き | プロジェクト [cargo-tracker-5-backend](http://localhost:9000/dashboard?id=cargo-tracker-5-backend) で `Sonar way` を採用。`new_violations=0` / `new_duplicated_lines_density=0%` は PASS、`new_coverage=68.9%` が 80% を下回り **ERROR**。Bug / Vulnerability / Code Smell / 重複は新コードに存在せず、品質本体は健全。新コード coverage 80% 復元は IT3 で Controller / Dashboard テスト追加で対応する（IT3 申し送り） |
 | ArchUnit 5 ルール pass | ✅ | ドメイン純粋性 / application 境界 / コンテキスト分離 / 命名規約 / リポジトリ実装方向 |
 | ドキュメント更新完了 | ✅ | CHANGELOG.md / iteration_plan-2.md / docs/adr/0005-* / docs/adr/index.md |
 

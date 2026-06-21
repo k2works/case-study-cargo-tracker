@@ -127,7 +127,7 @@
 | 0.5 | Twirl ファイル名規約整理（`form.scala.html` → `formPage.scala.html`、helper.form 名前衝突回避） | 1h | - | [x] |
 | 0.6 | `DbCleanupSupport` trait 追加（テスト独立化、TRUNCATE RESTART IDENTITY CASCADE）。afterContainersStart で Flyway 実行 + ConnectionPool 登録、beforeEach で aggregate テーブル TRUNCATE | 2h | - | [x] |
 | 0.7 | ArchUnit 4 ルール導入（ドメイン純粋性・application 境界・コンテキスト分離・リポジトリ実装方向）。ヘキサゴナル DDD パッケージ構成（domain/model/{aggregates,valueobjects,repositories,acl} 他）への全面リファクタを伴う | 3h | - | [x] |
-| 0.8 | SonarQube Quality Gate 閾値確定 + CI 連携確認 | 2h | - | [ ] |
+| 0.8 | SonarQube Quality Gate 閾値確定 + CI 連携確認。`Sonar way`（CAYC compliant、new_coverage ≥ 80% / new_duplicated_lines_density < 3% / new_violations = 0）を採用。スキャンは `sbt sonarScan`、Release 0.1 時点で new_violations=0 / new_duplications=0、new_coverage=68.9% は IT3 で Controller / Dashboard テスト追加により 80% 復元（IT3 申し送り） | 2h | - | [x] |
 | 0.9 | scoverage ゲート 75% → 80% 復元（ドメインテスト追加で達成）。実績 82.34% で復元完了 | 2h | - | [x] |
 | 0.10 | admin 資格情報を application.conf に外出し（IT1 レビュー H1 対応、Day 1 着手） | 1h | - | [x] |
 | 0.11 | 楽観ロック準備: `cargo` / `estimate` / `shipper` に `version INTEGER NOT NULL DEFAULT 0` を追加（IT1 レビュー H5 対応、Flyway V5）。Repository の UPDATE で `version = version + 1` をインクリメント、`OptimisticLockException` を共有カーネルに追加（完全な競合検出は IT3 で集約に version フィールド追加と合わせて活性化） | 4h | - | [x] |
