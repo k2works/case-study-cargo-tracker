@@ -22,7 +22,8 @@ class HomeController @Inject() (
     val view = DashboardComposer.compose(
       username = request.username,
       roles = request.roles,
-      fetchRouteProposed = () => bookingQuery.findRouteProposed()
+      fetchRouteProposed = () => bookingQuery.findRouteProposed(),
+      fetchRouteAssigned = () => bookingQuery.findRouteAssigned()
     )
-    Ok(views.html.dashboard(view.username, view.roles, view.routeProposed))
+    Ok(views.html.dashboard(view.username, view.roles, view.routeProposed, view.routeAssigned))
   }

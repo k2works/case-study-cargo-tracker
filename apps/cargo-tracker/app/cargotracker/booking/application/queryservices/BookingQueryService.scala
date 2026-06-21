@@ -17,3 +17,6 @@ class BookingQueryService @Inject() (repository: CargoRepository):
 
   /** 経路設計者ダッシュボード用: 引き渡し済み（RouteProposed）の予約一覧。 */
   def findRouteProposed(): Seq[Cargo] = repository.findByStatus(BookingStatus.RouteProposed)
+
+  /** 営業担当者ダッシュボード用: 経路紐付け済み（RouteAssigned）の予約一覧（US11）。 */
+  def findRouteAssigned(): Seq[Cargo] = repository.findByStatus(BookingStatus.RouteAssigned)

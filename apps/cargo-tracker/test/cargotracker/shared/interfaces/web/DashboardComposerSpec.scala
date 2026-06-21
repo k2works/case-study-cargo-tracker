@@ -70,6 +70,34 @@ class DashboardComposerSpec extends AnyFunSuite with Matchers:
     view.routeProposed shouldBe empty
     view.canSeeSales shouldBe true
 
+  test("shouldFetchRouteAssigned: Sales ロールなら true"):
+    DashboardComposer.shouldFetchRouteAssigned(Set(Role.Sales)) shouldBe true
+
+  test("shouldFetchRouteAssigned: RouteDesigner のみなら false"):
+    DashboardComposer.shouldFetchRouteAssigned(Set(Role.RouteDesigner)) shouldBe false
+
+  test("compose: Sales には fetchRouteAssigned が呼び出され結果が反映される"):
+    val view = DashboardComposer.compose(
+      username = "sales",
+      roles = Set(Role.Sales),
+      fetchRouteProposed = () => Seq.empty,
+      fetchRouteAssigned = () => Seq(sampleCargo)
+    )
+    view.routeAssigned should have size 1
+
+  test("compose: RouteDesigner のみなら fetchRouteAssigned は呼ばれず空 Seq"):
+    val called = new java.util.concurrent.atomic.AtomicBoolean(false)
+    val view = DashboardComposer.compose(
+      username = "designer",
+      roles = Set(Role.RouteDesigner),
+      fetchRouteProposed = () => Seq.empty,
+      fetchRouteAssigned = () =>
+        called.set(true)
+        Seq(sampleCargo)
+    )
+    called.get shouldBe false
+    view.routeAssigned shouldBe empty
+
   test("canSee 系: MasterAdmin は全カードに権限を持つ"):
     val view = DashboardComposer.compose("admin", Set(Role.MasterAdmin), () => Seq.empty)
     view.canSeeSales shouldBe true

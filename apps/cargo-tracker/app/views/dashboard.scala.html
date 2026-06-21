@@ -1,4 +1,7 @@
-@(username: String, roles: Set[cargotracker.auth.domain.model.valueobjects.Role], routeProposed: Seq[cargotracker.booking.domain.model.aggregates.Cargo])(implicit request: RequestHeader)
+@(username: String,
+  roles: Set[cargotracker.auth.domain.model.valueobjects.Role],
+  routeProposed: Seq[cargotracker.booking.domain.model.aggregates.Cargo],
+  routeAssigned: Seq[cargotracker.booking.domain.model.aggregates.Cargo])(implicit request: RequestHeader)
 @import cargotracker.auth.domain.model.valueobjects.Role
 @layout.main("ダッシュボード") {
   <div class="d-flex justify-content-between align-items-baseline mb-3">
@@ -108,6 +111,38 @@
               <td class="d-flex gap-1">
                 <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a>
                 <a href="@cargotracker.routing.interfaces.web.routes.RouteCandidateController.candidates(cargo.bookingId.value)" class="btn btn-sm btn-primary" title="この予約の経路候補を表示（US08）">経路設計を開始 →</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+
+  @if(roles.contains(Role.Sales) || roles.contains(Role.MasterAdmin)) {
+    <hr class="mt-5">
+    <h2 id="route-assigned" class="h4 mt-4">経路紐付け済み予約（RouteAssigned） - @routeAssigned.size 件</h2>
+    @if(routeAssigned.isEmpty) {
+      <p class="text-muted">経路紐付け済みの予約はありません。経路設計者が経路候補画面で「この経路で確定」を実行すると、ここに表示されます（US09 → US11）。</p>
+    } else {
+      <p class="form-text">「経路を荷主に通知」「予約を確定」操作（US12 / US13）の対象予約です。</p>
+      <table class="table table-sm table-hover mt-2">
+        <thead class="table-light">
+          <tr>
+            <th>予約番号</th><th>荷主</th><th>出発地</th><th>目的地</th><th>希望着日</th><th>経路（航海番号）</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for(cargo <- routeAssigned) {
+            <tr>
+              <td>@cargo.bookingId.value</td>
+              <td>@cargo.shipperId.value</td>
+              <td>@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.origin)</td>
+              <td>@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.destination)</td>
+              <td>@views.helpers.DisplayFormatters.formatDate(cargo.routeSpecification.arrivalDeadline)</td>
+              <td>@cargo.itinerary.map(_.voyageNumbers.mkString(" → ")).getOrElse("-")</td>
+              <td>
+                <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-sm btn-outline-primary">詳細</a>
               </td>
             </tr>
           }

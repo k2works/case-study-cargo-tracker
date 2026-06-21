@@ -13,7 +13,8 @@ object DashboardComposer:
   final case class DashboardView(
       username: String,
       roles: Set[Role],
-      routeProposed: Seq[Cargo]
+      routeProposed: Seq[Cargo],
+      routeAssigned: Seq[Cargo] = Seq.empty
   ):
     def canSeeSales: Boolean = roles.contains(Role.Sales) || roles.contains(Role.MasterAdmin)
     def canSeeRouting: Boolean =
@@ -28,12 +29,19 @@ object DashboardComposer:
   def shouldFetchRouteProposed(roles: Set[Role]): Boolean =
     roles.contains(Role.RouteDesigner) || roles.contains(Role.MasterAdmin)
 
+  /** RouteAssigned 一覧を取得するか判定する。営業担当者または MasterAdmin のみ（US11）。 */
+  def shouldFetchRouteAssigned(roles: Set[Role]): Boolean =
+    roles.contains(Role.Sales) || roles.contains(Role.MasterAdmin)
+
   /** Controller から受け取ったデータでビューモデルを組み立てる。 */
   def compose(
       username: String,
       roles: Set[Role],
-      fetchRouteProposed: () => Seq[Cargo]
+      fetchRouteProposed: () => Seq[Cargo],
+      fetchRouteAssigned: () => Seq[Cargo] = () => Seq.empty
   ): DashboardView =
     val routeProposed =
       if shouldFetchRouteProposed(roles) then fetchRouteProposed() else Seq.empty
-    DashboardView(username, roles, routeProposed)
+    val routeAssigned =
+      if shouldFetchRouteAssigned(roles) then fetchRouteAssigned() else Seq.empty
+    DashboardView(username, roles, routeProposed, routeAssigned)
