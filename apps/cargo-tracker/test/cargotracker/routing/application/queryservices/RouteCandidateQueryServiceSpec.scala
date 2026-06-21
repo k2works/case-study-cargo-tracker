@@ -2,15 +2,14 @@ package cargotracker.routing.application.queryservices
 
 import cargotracker.routing.application.CalculateRouteCommand
 import cargotracker.routing.domain.model.aggregates.Voyage
-import cargotracker.routing.domain.model.repositories.VoyageRepository
 import cargotracker.routing.domain.model.valueobjects.{CarrierMovement, Schedule, VoyageNumber}
 import cargotracker.shared.domain.pricing.PricingService
 import cargotracker.shared.domain.{CargoType, Location, Money, Weight}
+import cargotracker.support.InMemoryVoyageRepository
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 import java.time.Instant
-import scala.collection.mutable
 
 /** RouteCandidateQueryService.calculateCandidates の単体テスト（IT3 タスク 2.7 / US08）。 */
 class RouteCandidateQueryServiceSpec extends AnyFunSuite with Matchers:
@@ -27,20 +26,6 @@ class RouteCandidateQueryServiceSpec extends AnyFunSuite with Matchers:
   private val tyo = Location.unsafeFrom("JPTYO")
   private val yok = Location.unsafeFrom("JPYOK")
   private val lax = Location.unsafeFrom("USLAX")
-
-  private class InMemoryVoyageRepository extends VoyageRepository:
-    val store: mutable.Buffer[Voyage] = mutable.Buffer.empty
-    override def findByVoyageNumber(vn: VoyageNumber): Option[Voyage] =
-      store.find(_.voyageNumber == vn)
-    override def findAll(): Seq[Voyage] = store.toSeq
-    override def save(v: Voyage): Unit = store += v
-    override def findByCriteria(
-        origin: Option[Location],
-        destination: Option[Location],
-        departureFrom: Option[Instant],
-        departureTo: Option[Instant],
-        cargoType: Option[CargoType]
-    ): Seq[Voyage] = store.toSeq
 
   private def directVoyage(
       vn: String,
