@@ -145,3 +145,83 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
         )
       ): @unchecked
     msg should include("温度範囲が不正")
+
+  // === 境界値・エラー経路網羅（IT3 タスク 0.9 / IT2 review tester 高 #2） ===
+
+  test("book: 到着地の UnLocode 形式不正でエラー"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    service.book(baseCommand.copy(destination = "12345")) shouldBe Left(
+      "目的地の UnLocode 形式が不正です"
+    )
+
+  test("book: 貨物種別が未知の値でエラー"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    service.book(baseCommand.copy(cargoType = "Unknown")) shouldBe Left("貨物種別が不正です")
+
+  test("book: 重量 0 は Weight バリデーション失敗"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    service.book(baseCommand.copy(weightKg = 0L)) shouldBe Left("重量が不正です")
+
+  test("book: 重量負値は Weight バリデーション失敗"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    service.book(baseCommand.copy(weightKg = -100L)) shouldBe Left("重量が不正です")
+
+  test("book: Hazardous 貨物で 3 フィールド全揃いなら CargoSpec 成立"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service
+      .book(
+        baseCommand.copy(
+          cargoType = "Hazardous",
+          hazardousClass = Some("3"),
+          hazardousUnNumber = Some("UN1170"),
+          hazardousProperName = Some("ETHANOL")
+        )
+      ): @unchecked
+    cargo.cargoSpec.hazardous shouldBe defined
+    cargo.cargoSpec.hazardous.get.unNumber shouldBe "UN1170"
+
+  test("book: Refrigerated で同点温度（min == max）も受理"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val Right(cargo) = service
+      .book(
+        baseCommand.copy(
+          cargoType = "Refrigerated",
+          refrigerationMinTemp = Some(0),
+          refrigerationMaxTemp = Some(0),
+          refrigerationUnit = Some("Celsius")
+        )
+      ): @unchecked
+    cargo.cargoSpec.refrigeration.get.minTemperature shouldBe 0
+    cargo.cargoSpec.refrigeration.get.maxTemperature shouldBe 0
+
+  test("book: 温度単位が未知の文字列の場合は refrigeration が組み立てられない（General 扱い）"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val Left(msg) = service
+      .book(
+        baseCommand.copy(
+          cargoType = "Refrigerated",
+          refrigerationMinTemp = Some(-10),
+          refrigerationMaxTemp = Some(0),
+          refrigerationUnit = Some("Kelvin")
+        )
+      ): @unchecked
+    // 温度単位が解釈不可なら refrigeration = None → Refrigerated 必須違反
+    msg should include("冷凍")
+
+  test("book: General 貨物で危険物 / 温度フィールド全 None は正常に成立"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    cargo.cargoSpec.hazardous shouldBe None
+    cargo.cargoSpec.refrigeration shouldBe None
+
+  test("assignToRouting: 既に RouteProposed の予約は再度引き渡せない（InvalidStatusTransition）"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    val Right(_) = service.assignToRouting(cargo.bookingId.value): @unchecked
+
+    val Left(msg) = service.assignToRouting(cargo.bookingId.value): @unchecked
+    msg should include("RouteProposed")
+    msg should include("遷移はできません")
