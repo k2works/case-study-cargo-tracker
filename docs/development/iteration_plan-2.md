@@ -125,7 +125,7 @@
 | 0.3 | Flyway V5 で開発用シードユーザー投入（admin / sales / router / handler / billing / shipper） | 1h | - | [ ] |
 | 0.4 | pre-commit hook を高速化（scalafix を CI 専用に移動、pre-commit は scalafmtCheckAll のみ）。30 秒超 → 約 12 秒に短縮 | 1h | - | [x] |
 | 0.5 | Twirl ファイル名規約整理（`form.scala.html` → `formPage.scala.html`、helper.form 名前衝突回避） | 1h | - | [x] |
-| 0.6 | `DbCleanupSupport` trait 追加（テスト独立化） | 2h | - | [ ] |
+| 0.6 | `DbCleanupSupport` trait 追加（テスト独立化、TRUNCATE RESTART IDENTITY CASCADE）。afterContainersStart で Flyway 実行 + ConnectionPool 登録、beforeEach で aggregate テーブル TRUNCATE | 2h | - | [x] |
 | 0.7 | ArchUnit 4 ルール導入（ドメイン純粋性・application 境界・コンテキスト分離・リポジトリ実装方向）。ヘキサゴナル DDD パッケージ構成（domain/model/{aggregates,valueobjects,repositories,acl} 他）への全面リファクタを伴う | 3h | - | [x] |
 | 0.8 | SonarQube Quality Gate 閾値確定 + CI 連携確認 | 2h | - | [ ] |
 | 0.9 | scoverage ゲート 75% → 80% 復元（ドメインテスト追加で達成）。実績 82.34% で復元完了 | 2h | - | [x] |
