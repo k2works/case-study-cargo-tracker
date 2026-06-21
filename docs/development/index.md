@@ -15,7 +15,7 @@
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
 | IT1（2026-06-22 〜 2026-07-05） | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | [iteration_report-1.md](./iteration_report-1.md) | ✅ 完了（12/12 SP） |
-| IT2（2026-07-06 〜 2026-07-19） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | - | ✅ 完了（12/12 SP、v0.1.0 タグ付けはユーザー判断委譲） |
+| IT2（2026-07-06 〜 2026-07-19） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | ✅ 完了（12/12 SP、v0.1.0 タグ付けはユーザー判断委譲） |
 
 ### 進捗サマリー
 
