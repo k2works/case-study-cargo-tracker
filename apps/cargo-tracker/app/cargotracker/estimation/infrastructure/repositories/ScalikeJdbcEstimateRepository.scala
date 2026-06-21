@@ -59,7 +59,8 @@ class ScalikeJdbcEstimateRepository extends EstimateRepository:
                   ct,
                   Weight.unsafeFrom(rs.long("weight_kg")),
                   st,
-                  candidates
+                  candidates,
+                  version = rs.int("version")
                 )
               }
             }

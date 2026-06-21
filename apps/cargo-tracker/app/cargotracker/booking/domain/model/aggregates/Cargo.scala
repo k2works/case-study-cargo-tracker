@@ -8,14 +8,15 @@ import cargotracker.shared.domain.ShipperId
   *
   *   - 業務キー: `BookingId`（`BK-NNNNNN`）
   *   - 状態遷移は `BookingStatus` の規約に従う（domain-model.md ビジネスルール 4）
-  *   - 旅程・追跡情報は本 IT では未実装（IT4・IT5 で追加）
+  *   - 楽観ロック: `version: Int` を持ち、リポジトリ UPDATE は `WHERE id=? AND version=?` で 比較更新する（IT3 タスク 0.2 で活性化）
   */
 final case class Cargo private (
     bookingId: BookingId,
     shipperId: ShipperId,
     routeSpecification: RouteSpecification,
     cargoSpec: CargoSpec,
-    status: BookingStatus
+    status: BookingStatus,
+    version: Int
 ):
 
   /** 経路設計者への引き渡し（US06 / `AssignToRoutingCommand`）。
@@ -35,7 +36,7 @@ object Cargo:
 
   /** 新規予約を生成する。
     *
-    * ShipperExistenceChecker で荷主存在を確認し、初期状態は `Preliminary`。
+    * ShipperExistenceChecker で荷主存在を確認し、初期状態は `Preliminary`、`version = 0`。
     */
   def book(
       bookingId: BookingId,
@@ -52,16 +53,18 @@ object Cargo:
           shipperId = shipperId,
           routeSpecification = routeSpecification,
           cargoSpec = cargoSpec,
-          status = BookingStatus.Preliminary
+          status = BookingStatus.Preliminary,
+          version = 0
         )
       )
 
-  /** 永続化からの復元 */
+  /** 永続化からの復元（DB の `version` カラムを保持） */
   def reconstruct(
       bookingId: BookingId,
       shipperId: ShipperId,
       routeSpecification: RouteSpecification,
       cargoSpec: CargoSpec,
-      status: BookingStatus
+      status: BookingStatus,
+      version: Int = 0
   ): Cargo =
-    new Cargo(bookingId, shipperId, routeSpecification, cargoSpec, status)
+    new Cargo(bookingId, shipperId, routeSpecification, cargoSpec, status, version)

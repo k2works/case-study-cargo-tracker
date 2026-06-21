@@ -29,7 +29,8 @@ final case class Estimate private (
     cargoType: CargoType,
     weight: Weight,
     status: EstimateStatus,
-    routeCandidates: List[RouteCandidate]
+    routeCandidates: List[RouteCandidate],
+    version: Int
 ):
   /** 候補ルートがあるか。 */
   def hasRoutes: Boolean = routeCandidates.nonEmpty
@@ -59,7 +60,8 @@ object Estimate:
           cargoType = cargoType,
           weight = weight,
           status = EstimateStatus.Created,
-          routeCandidates = routeCandidates
+          routeCandidates = routeCandidates,
+          version = 0
         )
       )
 
@@ -72,7 +74,8 @@ object Estimate:
       cargoType: CargoType,
       weight: Weight,
       status: EstimateStatus,
-      routeCandidates: List[RouteCandidate]
+      routeCandidates: List[RouteCandidate],
+      version: Int = 0
   ): Estimate =
     Estimate(
       estimateId = estimateId,
@@ -82,5 +85,6 @@ object Estimate:
       cargoType = cargoType,
       weight = weight,
       status = status,
-      routeCandidates = routeCandidates
+      routeCandidates = routeCandidates,
+      version = version
     )

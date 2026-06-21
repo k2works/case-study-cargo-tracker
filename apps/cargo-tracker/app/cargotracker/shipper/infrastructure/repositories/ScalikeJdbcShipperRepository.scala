@@ -11,6 +11,7 @@ import javax.inject.Singleton
 class ScalikeJdbcShipperRepository extends ShipperRepository:
 
   private def rowToShipper(rs: WrappedResultSet): Option[Shipper] =
+    val version = rs.int("version")
     for
       shipperType <- ShipperType.fromName(rs.string("shipper_type"))
       shipper <- shipperType match
@@ -23,6 +24,7 @@ class ScalikeJdbcShipperRepository extends ShipperRepository:
               rs.string("phone"),
               rs.string("address")
             )
+            .map(_.withVersion(version))
             .toOption
         case ShipperType.Corporate =>
           for
@@ -37,6 +39,7 @@ class ScalikeJdbcShipperRepository extends ShipperRepository:
                 rs.string("contract_number"),
                 rate
               )
+              .map(_.withVersion(version))
               .toOption
           yield s
     yield shipper
@@ -78,7 +81,7 @@ class ScalikeJdbcShipperRepository extends ShipperRepository:
 
       existing match
         case Some(_) =>
-          sql"""
+          val updated = sql"""
             UPDATE shipper
             SET name = ${shipper.name},
                 email = ${shipper.email},
@@ -89,8 +92,13 @@ class ScalikeJdbcShipperRepository extends ShipperRepository:
                 discount_rate = ${shipper.discountRate.value},
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE shipper_code = ${shipper.shipperId.value}
+            WHERE shipper_code = ${shipper.shipperId.value} AND version = ${shipper.version}
           """.update.apply()
+          if updated == 0 then
+            throw cargotracker.shared.domain.OptimisticLockException(
+              entityType = "Shipper",
+              identifier = shipper.shipperId.value
+            )
         case None =>
           sql"""
             INSERT INTO shipper

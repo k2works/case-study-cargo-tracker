@@ -55,7 +55,8 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
         shipperId = ShipperId.unsafeFrom(rs.string("shipper_code")),
         routeSpecification = routeSpec,
         cargoSpec = spec,
-        status = status
+        status = status,
+        version = rs.int("version")
       )
 
   override def findById(bookingId: BookingId): Option[Cargo] =
@@ -97,7 +98,8 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
       val refrig = cargo.cargoSpec.refrigeration
       existing match
         case Some(_) =>
-          sql"""
+          // 楽観ロック: 期待 version と一致する行のみ更新
+          val updated = sql"""
             UPDATE cargo
             SET shipper_code = ${cargo.shipperId.value},
                 origin_unlocode = ${cargo.routeSpecification.origin.unLocode},
@@ -116,8 +118,13 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                 booking_status = ${cargo.status.toString},
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE tracking_id = ${cargo.bookingId.value}
+            WHERE tracking_id = ${cargo.bookingId.value} AND version = ${cargo.version}
           """.update.apply()
+          if updated == 0 then
+            throw cargotracker.shared.domain.OptimisticLockException(
+              entityType = "Cargo",
+              identifier = cargo.bookingId.value
+            )
         case None =>
           sql"""
             INSERT INTO cargo

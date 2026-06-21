@@ -16,8 +16,11 @@ final case class Shipper private (
     address: String,
     shipperType: ShipperType,
     contractNumber: Option[String],
-    discountRate: DiscountRate
-)
+    discountRate: DiscountRate,
+    version: Int = 0
+):
+  /** 永続化からの復元用に DB の version を反映した新インスタンスを返す（楽観ロック）。 */
+  def withVersion(v: Int): Shipper = copy(version = v)
 
 object Shipper:
 
