@@ -25,8 +25,10 @@ class RouteCandidateSearchPerfSpec extends AnyFunSuite with Matchers:
     val baseInstant = Instant.parse("2099-07-01T00:00:00Z")
     (1 to n).map { i =>
       val from = hubs(rng.nextInt(hubs.size))
-      var to = hubs(rng.nextInt(hubs.size))
-      while to == from do to = hubs(rng.nextInt(hubs.size))
+      val to = LazyList
+        .continually(hubs(rng.nextInt(hubs.size)))
+        .find(_ != from)
+        .get
       val dep = baseInstant.plusSeconds(rng.nextLong(3600L * 24 * 30))
       RoutingLeg(
         VoyageNumber.unsafeFrom(s"VY-${"%04d".format(i)}"),

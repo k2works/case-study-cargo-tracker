@@ -15,7 +15,8 @@ class VoyageNumberSpec extends AnyFunSuite with Matchers:
 
   test("空文字 / null は EmptyValue"):
     VoyageNumber("") shouldBe Left(VoyageNumber.EmptyValue)
-    VoyageNumber(null) shouldBe Left(VoyageNumber.EmptyValue)
+    // Java/Scala 相互運用で null が渡るケースを意図的に検証
+    VoyageNumber(null: String) shouldBe Left(VoyageNumber.EmptyValue) // scalafix:ok DisableSyntax.null
 
   test("20 文字超過は InvalidFormat"):
     VoyageNumber("V" + "X" * 20) shouldBe Left(VoyageNumber.InvalidFormat)

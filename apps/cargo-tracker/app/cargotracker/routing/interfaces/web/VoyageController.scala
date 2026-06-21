@@ -1,13 +1,13 @@
 package cargotracker.routing.interfaces.web
 
 import cargotracker.auth.interfaces.web.AuthenticatedAction
+import cargotracker.routing.application.SearchVoyageCommand
 import cargotracker.routing.application.commandservices.{
   CarrierMovementCommand,
   RegisterVoyageCommand,
   UpdateVoyageCommand,
   VoyageCommandService
 }
-import cargotracker.routing.application.SearchVoyageCommand
 import cargotracker.routing.application.queryservices.VoyageQueryService
 import play.api.data.Form
 import play.api.data.Forms.*
