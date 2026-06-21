@@ -74,13 +74,91 @@ class ScalikeJdbcEstimateRepository extends EstimateRepository:
         .flatten
     }
 
+  /** estimate と route_candidate を 2 クエリで取得し N+1 を解消する（IT4 タスク 0.7）。 */
   override def findAll(): Seq[Estimate] =
     DB.readOnly { implicit session =>
-      val ids = sql"SELECT estimate_id FROM estimate ORDER BY created_at DESC"
-        .map(_.string("estimate_id"))
-        .list
-        .apply()
-      ids.flatMap(id => findById(EstimateId.unsafeFrom(id)))
+      case class EstimateRow(
+          rowId: Long,
+          estimateId: String,
+          origin: String,
+          destination: String,
+          deadline: java.time.LocalDate,
+          cargoType: String,
+          weightKg: Long,
+          status: String,
+          version: Int
+      )
+
+      val rows: List[EstimateRow] =
+        sql"""
+          SELECT id, estimate_id, origin_unlocode, destination_unlocode,
+                 deadline, cargo_type, weight_kg, status, version
+          FROM estimate
+          ORDER BY created_at DESC
+        """
+          .map { rs =>
+            EstimateRow(
+              rowId = rs.long("id"),
+              estimateId = rs.string("estimate_id"),
+              origin = rs.string("origin_unlocode"),
+              destination = rs.string("destination_unlocode"),
+              deadline = rs.localDate("deadline"),
+              cargoType = rs.string("cargo_type"),
+              weightKg = rs.long("weight_kg"),
+              status = rs.string("status"),
+              version = rs.int("version")
+            )
+          }
+          .list
+          .apply()
+
+      if rows.isEmpty then Seq.empty
+      else
+        val rowIds = rows.map(_.rowId)
+        val candidatesByEstimate: Map[Long, List[RouteCandidate]] =
+          sql"""
+            SELECT estimate_id, voyage_number, transit_ports, transit_days,
+                   estimated_cost_amount, estimated_cost_currency
+            FROM route_candidate
+            WHERE estimate_id IN ($rowIds)
+            ORDER BY estimate_id, id
+          """
+            .map { rs =>
+              val cost = Money(
+                rs.string("estimated_cost_currency"),
+                rs.long("estimated_cost_amount")
+              ).getOrElse(Money.zeroJpy)
+              rs.long("estimate_id") -> RouteCandidate(
+                voyageNumber = rs.string("voyage_number"),
+                transitPorts = rs.string("transit_ports").split(",").toList,
+                transitDays = rs.int("transit_days"),
+                estimatedCost = cost
+              )
+            }
+            .list
+            .apply()
+            .groupMap(_._1)(_._2)
+
+        rows.flatMap { row =>
+          for
+            ct <- CargoType.fromName(row.cargoType)
+            st <- EstimateStatus.fromName(row.status)
+          yield Estimate.reconstruct(
+            estimateId = EstimateId.unsafeFrom(row.estimateId),
+            routeSpec = RouteSpec(
+              origin = Location.unsafeFrom(row.origin),
+              destination = Location.unsafeFrom(row.destination),
+              deadline = row.deadline
+            ),
+            cargoSpec = CargoSpec(
+              cargoType = ct,
+              weight = Weight.unsafeFrom(row.weightKg)
+            ),
+            status = st,
+            routeCandidates = candidatesByEstimate.getOrElse(row.rowId, Nil),
+            version = row.version
+          )
+        }
     }
 
   override def save(estimate: Estimate): Unit =
