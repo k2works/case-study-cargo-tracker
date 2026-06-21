@@ -126,7 +126,7 @@
 | 0.4 | pre-commit hook を staged ファイル限定スキャンに変更（scalafmt / scalafix） | 1h | - | [ ] |
 | 0.5 | Twirl ファイル名規約整理（`*Page.scala.html` 統一） | 1h | - | [ ] |
 | 0.6 | `DbCleanupSupport` trait 追加（テスト独立化） | 2h | - | [ ] |
-| 0.7 | ArchUnit 4 ルール導入（コンテキスト間依存禁止・レイヤー方向・命名規約） | 3h | - | [ ] |
+| 0.7 | ArchUnit 4 ルール導入（ドメイン純粋性・application 境界・コンテキスト分離・リポジトリ実装方向）。ヘキサゴナル DDD パッケージ構成（domain/model/{aggregates,valueobjects,repositories,acl} 他）への全面リファクタを伴う | 3h | - | [x] |
 | 0.8 | SonarQube Quality Gate 閾値確定 + CI 連携確認 | 2h | - | [ ] |
 | 0.9 | scoverage ゲート 75% → 80% 復元（ドメインテスト追加で達成） | 2h | - | [ ] |
 | 0.10 | admin 資格情報を application.conf に外出し（IT1 レビュー H1 対応、Day 1 着手） | 1h | - | [ ] |
