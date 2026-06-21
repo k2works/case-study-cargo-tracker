@@ -7,7 +7,9 @@ import cargotracker.booking.domain.model.valueobjects.{
   BookingStatus,
   CargoSpec,
   HazardousDeclaration,
-  RouteSpecification
+  RefrigerationSpec,
+  RouteSpecification,
+  TemperatureUnit
 }
 import cargotracker.shared.domain.{CargoType, Location, ShipperId, Weight}
 import scalikejdbc.*
@@ -33,12 +35,20 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
         psn <- rs.stringOpt("hazardous_proper_name")
       yield HazardousDeclaration(hc, un, psn)
 
+      val refrigeration = for
+        minT <- rs.intOpt("refrigeration_min_temp")
+        maxT <- rs.intOpt("refrigeration_max_temp")
+        unit <- rs.stringOpt("refrigeration_unit").flatMap(TemperatureUnit.fromName)
+        spec <- RefrigerationSpec(minT, maxT, unit).toOption
+      yield spec
+
       val spec = CargoSpec(
         cargoType = ct,
         weight = Weight.unsafeFrom(rs.long("weight_kg")),
         description = rs.stringOpt("description"),
         quantity = rs.intOpt("quantity"),
-        hazardous = hazardous
+        hazardous = hazardous,
+        refrigeration = refrigeration
       )
       Cargo.reconstruct(
         bookingId = BookingId.unsafeFrom(rs.string("tracking_id")),
@@ -75,6 +85,7 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
           .apply()
 
       val haz = cargo.cargoSpec.hazardous
+      val refrig = cargo.cargoSpec.refrigeration
       existing match
         case Some(_) =>
           sql"""
@@ -90,6 +101,9 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                 hazardous_class = ${haz.map(_.hazardClass).orNull},
                 hazardous_un_number = ${haz.map(_.unNumber).orNull},
                 hazardous_proper_name = ${haz.map(_.properShippingName).orNull},
+                refrigeration_min_temp = ${refrig.map(_.minTemperature).orNull},
+                refrigeration_max_temp = ${refrig.map(_.maxTemperature).orNull},
+                refrigeration_unit = ${refrig.map(_.unit.toString).orNull},
                 booking_status = ${cargo.status.toString},
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
@@ -101,6 +115,7 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
               (tracking_id, shipper_code, origin_unlocode, destination_unlocode,
                arrival_deadline, cargo_type, weight_kg, description, quantity,
                hazardous_class, hazardous_un_number, hazardous_proper_name,
+               refrigeration_min_temp, refrigeration_max_temp, refrigeration_unit,
                booking_status)
             VALUES
               (${cargo.bookingId.value}, ${cargo.shipperId.value},
@@ -114,6 +129,9 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                ${haz.map(_.hazardClass).orNull},
                ${haz.map(_.unNumber).orNull},
                ${haz.map(_.properShippingName).orNull},
+               ${refrig.map(_.minTemperature).orNull},
+               ${refrig.map(_.maxTemperature).orNull},
+               ${refrig.map(_.unit.toString).orNull},
                ${cargo.status.toString})
           """.update.apply()
     }
