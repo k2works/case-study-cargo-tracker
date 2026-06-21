@@ -1,0 +1,65 @@
+package cargotracker.routing.application.commandservices
+
+import cargotracker.routing.domain.model.aggregates.RouteCandidateSelection
+import cargotracker.routing.domain.model.repositories.RouteCandidateSelectionRepository
+import cargotracker.routing.domain.model.valueobjects.VoyageNumber
+
+import javax.inject.{Inject, Singleton}
+
+/** 経路選択ドメインのコマンドサービス（US09）。
+  *
+  *   - `confirmRoute`: 候補画面で選択された経路を `RouteCandidateSelection` として 保存し、即座に `Confirmed` 状態に遷移させる（PRG）。
+  *   - 同一予約への再確定（既に Confirmed）は `AlreadyConfirmed` を返す。
+  *   - 後続: US11 で `Cargo.assignItinerary` を呼び出し、Booking Context 側に紐付ける。
+  */
+@Singleton
+class RoutingCommandService @Inject() (repository: RouteCandidateSelectionRepository):
+
+  def confirmRoute(command: SelectRouteCommand): Either[String, RouteCandidateSelection] =
+    for
+      voyages <- parseVoyages(command.voyageNumbers)
+      saved <- persistConfirmed(command.bookingId, voyages)
+    yield saved
+
+  private def parseVoyages(raw: List[String]): Either[String, List[VoyageNumber]] =
+    if raw.isEmpty then Left("経路に含む航海が指定されていません")
+    else
+      raw.foldLeft[Either[String, List[VoyageNumber]]](Right(Nil)) { (acc, s) =>
+        for
+          built <- acc
+          vn <- VoyageNumber(s).left.map(_ => s"航海番号の形式が不正です: $s")
+        yield built :+ vn
+      }
+
+  private def persistConfirmed(
+      bookingId: String,
+      voyages: List[VoyageNumber]
+  ): Either[String, RouteCandidateSelection] =
+    repository.findByBookingId(bookingId) match
+      case Some(existing) =>
+        existing.confirm.left
+          .map {
+            case RouteCandidateSelection.AlreadyConfirmed => "この予約の経路は既に確定済みです"
+            case _ => "経路の確定に失敗しました"
+          }
+          .map { confirmed =>
+            repository.save(confirmed)
+            confirmed
+          }
+      case None =>
+        for
+          pending <- RouteCandidateSelection.create(bookingId, voyages).left.map {
+            case RouteCandidateSelection.EmptyVoyages => "経路に含む航海が指定されていません"
+            case _ => "経路の作成に失敗しました"
+          }
+          confirmed <- pending.confirm.left.map(_ => "経路の確定に失敗しました")
+        yield
+          repository.save(confirmed)
+          confirmed
+
+/** 経路選択コマンド（US09）。
+  *
+  *   - `bookingId`: 予約番号
+  *   - `voyageNumbers`: 選択された経路を構成する航海番号の順序リスト
+  */
+final case class SelectRouteCommand(bookingId: String, voyageNumbers: List[String])
