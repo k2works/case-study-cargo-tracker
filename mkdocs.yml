@@ -92,6 +92,7 @@ nav:
       - イテレーション 1 ふりかえり: development/retrospective-1.md
       - イテレーション 1 完了報告書: development/iteration_report-1.md
       - イテレーション 2 計画: development/iteration_plan-2.md
+      - Release 0.1.0 ゲート確認結果: development/release-0.1.0-gate-check.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/dev_app_instruction.md
@@ -104,9 +105,15 @@ nav:
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260612.md
       - リリース計画レビュー: review/release_plan_review_20260620.md
+      - IT1 実装レビュー: review/it1_implementation_review_20260620.md
+      - IT2 実装レビュー: review/it2_implementation_review_20260621.md
   - ADR:
       - 概要: adr/index.md
       - 0001 Play Framework 採用: adr/0001-play-framework-scala-stack.md
+      - 0002 bcrypt + Play Session: adr/0002-bcrypt-and-session-management.md
+      - 0003 PricingService 共有: adr/0003-pricing-service-shared-between-estimate-and-billing.md
+      - 0004 US26 を UC 横断扱い: adr/0004-us26-as-cross-cutting-story.md
+      - 0005 経路探索アルゴリズム: adr/0005-route-search-algorithm.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
