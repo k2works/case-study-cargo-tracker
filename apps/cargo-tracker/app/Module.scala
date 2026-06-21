@@ -2,8 +2,11 @@ import cargotracker.auth.domain.model.repositories.UserRepository
 import cargotracker.auth.infrastructure.repositories.ScalikeJdbcUserRepository
 import cargotracker.auth.infrastructure.services.AdminUserSeeder
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
-import cargotracker.booking.domain.model.repositories.CargoRepository
-import cargotracker.booking.infrastructure.repositories.ScalikeJdbcCargoRepository
+import cargotracker.booking.domain.model.repositories.{CargoRepository, NotificationLogRepository}
+import cargotracker.booking.infrastructure.repositories.{
+  ScalikeJdbcCargoRepository,
+  ScalikeJdbcNotificationLogRepository
+}
 import cargotracker.booking.infrastructure.services.ShipperRepositoryBackedExistenceChecker
 import cargotracker.estimation.domain.model.repositories.EstimateRepository
 import cargotracker.estimation.infrastructure.repositories.ScalikeJdbcEstimateRepository
@@ -37,6 +40,7 @@ class Module extends AbstractModule:
     bind(classOf[EstimateRepository]).to(classOf[ScalikeJdbcEstimateRepository])
     bind(classOf[PricingService]).to(classOf[InMemoryPricingService])
     bind(classOf[CargoRepository]).to(classOf[ScalikeJdbcCargoRepository])
+    bind(classOf[NotificationLogRepository]).to(classOf[ScalikeJdbcNotificationLogRepository])
     bind(classOf[VoyageRepository]).to(classOf[ScalikeJdbcVoyageRepository])
     bind(classOf[RouteCandidateSelectionRepository])
       .to(classOf[ScalikeJdbcRouteCandidateSelectionRepository])
