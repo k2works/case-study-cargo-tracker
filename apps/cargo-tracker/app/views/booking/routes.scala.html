@@ -1,6 +1,6 @@
 @(cargo: cargotracker.booking.domain.model.aggregates.Cargo,
-  candidates: List[cargotracker.routing.domain.model.valueobjects.RouteCandidate],
-  lateCandidates: List[cargotracker.routing.domain.model.valueobjects.RouteCandidate],
+  candidates: List[cargotracker.routing.application.queryservices.PricedRouteCandidate],
+  lateCandidates: List[cargotracker.routing.application.queryservices.PricedRouteCandidate],
   errorMessage: Option[String])(implicit request: RequestHeader, flash: Flash)
 @views.html.layout.main(s"経路候補 - ${cargo.bookingId.value}") {
   <h1 class="h3 mb-3">経路候補 - @cargo.bookingId.value</h1>
@@ -48,18 +48,20 @@
           <th>出港</th>
           <th>到着</th>
           <th>所要日数</th>
+          <th>料金見積もり</th>
           <th>航海番号</th>
         </tr>
       </thead>
       <tbody>
-      @for((c, idx) <- candidates.zipWithIndex) {
+      @for((p, idx) <- candidates.zipWithIndex) {
         <tr>
           <td>@(idx + 1)</td>
-          <td>@c.legs.size</td>
-          <td>@c.departure</td>
-          <td>@c.arrival</td>
-          <td>@c.transitDays</td>
-          <td>@c.voyages.map(_.value).mkString(" → ")</td>
+          <td>@p.candidate.legs.size</td>
+          <td>@p.candidate.departure</td>
+          <td>@p.candidate.arrival</td>
+          <td>@p.candidate.transitDays</td>
+          <td>@p.estimatedCost.map(m => s"${m.amount} ${m.currency}").getOrElse("-")</td>
+          <td>@p.candidate.voyages.map(_.value).mkString(" → ")</td>
         </tr>
       }
       </tbody>
@@ -76,18 +78,20 @@
           <th>出港</th>
           <th>到着</th>
           <th>所要日数</th>
+          <th>料金見積もり</th>
           <th>航海番号</th>
         </tr>
       </thead>
       <tbody>
-      @for((c, idx) <- lateCandidates.zipWithIndex) {
+      @for((p, idx) <- lateCandidates.zipWithIndex) {
         <tr class="table-warning">
           <td>@(idx + 1)</td>
-          <td>@c.legs.size</td>
-          <td>@c.departure</td>
-          <td>@c.arrival</td>
-          <td>@c.transitDays</td>
-          <td>@c.voyages.map(_.value).mkString(" → ")</td>
+          <td>@p.candidate.legs.size</td>
+          <td>@p.candidate.departure</td>
+          <td>@p.candidate.arrival</td>
+          <td>@p.candidate.transitDays</td>
+          <td>@p.estimatedCost.map(m => s"${m.amount} ${m.currency}").getOrElse("-")</td>
+          <td>@p.candidate.voyages.map(_.value).mkString(" → ")</td>
         </tr>
       }
       </tbody>
