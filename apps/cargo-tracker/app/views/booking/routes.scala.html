@@ -1,13 +1,15 @@
 @(cargo: cargotracker.booking.domain.model.aggregates.Cargo,
   candidates: List[cargotracker.routing.application.queryservices.PricedRouteCandidate],
   lateCandidates: List[cargotracker.routing.application.queryservices.PricedRouteCandidate],
-  errorMessage: Option[String])(implicit request: RequestHeader, flash: Flash)
+  errorMessage: Option[String])(implicit request: RequestHeader, flash: Flash, messagesProvider: play.api.i18n.MessagesProvider)
 @views.html.layout.main(s"経路候補 - ${cargo.bookingId.value}") {
   <h1 class="h3 mb-3">経路候補 - @cargo.bookingId.value</h1>
 
   @errorMessage.map { msg =>
     <div class="alert alert-danger">@msg</div>
   }
+  @flash.get("success").map { msg => <div class="alert alert-success">@msg</div> }
+  @flash.get("error").map { msg => <div class="alert alert-danger">@msg</div> }
 
   <dl class="row">
     <dt class="col-sm-3">出発地</dt><dd class="col-sm-9">@views.helpers.DisplayFormatters.formatLocation(cargo.routeSpecification.origin)</dd>
@@ -50,6 +52,7 @@
           <th>所要日数</th>
           <th>料金見積もり</th>
           <th>航海番号</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -62,6 +65,12 @@
           <td>@p.candidate.transitDays</td>
           <td>@views.helpers.DisplayFormatters.formatMoneyOpt(p.estimatedCost)</td>
           <td>@p.candidate.voyages.map(_.value).mkString(" → ")</td>
+          <td>
+            @helper.form(action = cargotracker.routing.interfaces.web.routes.RouteCandidateController.confirm(cargo.bookingId.value, idx)) {
+              @helper.CSRF.formField
+              <button type="submit" class="btn btn-sm btn-primary" data-confirm-route-idx="@idx">この経路で確定</button>
+            }
+          </td>
         </tr>
       }
       </tbody>
