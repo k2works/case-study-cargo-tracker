@@ -3,7 +3,13 @@ package cargotracker.booking.application.commandservices
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
 import cargotracker.booking.domain.model.aggregates.Cargo
 import cargotracker.booking.domain.model.repositories.CargoRepository
-import cargotracker.booking.domain.model.valueobjects.{CargoSpec, HazardousDeclaration, RouteSpecification}
+import cargotracker.booking.domain.model.valueobjects.{
+  CargoSpec,
+  HazardousDeclaration,
+  RefrigerationSpec,
+  RouteSpecification,
+  TemperatureUnit
+}
 import cargotracker.shared.domain.{CargoType, Location, ShipperId, Weight}
 
 import java.time.LocalDate
@@ -36,13 +42,24 @@ class BookingCommandService @Inject() (
         un <- command.hazardousUnNumber.filter(_.nonEmpty)
         psn <- command.hazardousProperName.filter(_.nonEmpty)
       yield HazardousDeclaration(hc, un, psn)
-      spec = CargoSpec(
-        cargoType = cargoType,
-        weight = weight,
-        description = command.description.filter(_.nonEmpty),
-        quantity = command.quantity,
-        hazardous = hazardous
-      )
+      refrigeration <- buildRefrigeration(command).left
+        .map(_ => "温度範囲が不正です（最低 ≤ 最高）")
+      spec <- CargoSpec
+        .create(
+          cargoType = cargoType,
+          weight = weight,
+          description = command.description.filter(_.nonEmpty),
+          quantity = command.quantity,
+          hazardous = hazardous,
+          refrigeration = refrigeration
+        )
+        .left
+        .map {
+          case CargoSpec.HazardousDeclarationRequired =>
+            "危険物の貨物には UN 番号・正式輸送品名・危険物クラスが必須です"
+          case CargoSpec.RefrigerationSpecRequired =>
+            "冷凍・冷蔵貨物には温度範囲（最低・最高・単位）が必須です"
+        }
       cargo <- Cargo
         .book(
           repository.nextIdentity(),
@@ -60,7 +77,21 @@ class BookingCommandService @Inject() (
       cargo
     }
 
-/** 貨物予約コマンド（US04）。Controller から受け取るフォーム値の DTO 相当。 */
+  private def buildRefrigeration(
+      command: BookCargoCommand
+  ): Either[RefrigerationSpec.Error, Option[RefrigerationSpec]] =
+    (
+      command.refrigerationMinTemp,
+      command.refrigerationMaxTemp,
+      command.refrigerationUnit
+        .flatMap(TemperatureUnit.fromName)
+    ) match
+      case (Some(minT), Some(maxT), Some(unit)) =>
+        RefrigerationSpec(minT, maxT, unit).map(Some(_))
+      case _ =>
+        Right(None)
+
+/** 貨物予約コマンド（US04 + US05）。Controller から受け取るフォーム値の DTO 相当。 */
 final case class BookCargoCommand(
     shipperCode: String,
     origin: String,
@@ -72,5 +103,8 @@ final case class BookCargoCommand(
     quantity: Option[Int],
     hazardousClass: Option[String],
     hazardousUnNumber: Option[String],
-    hazardousProperName: Option[String]
+    hazardousProperName: Option[String],
+    refrigerationMinTemp: Option[Int] = None,
+    refrigerationMaxTemp: Option[Int] = None,
+    refrigerationUnit: Option[String] = None
 )

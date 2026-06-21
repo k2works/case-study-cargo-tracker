@@ -81,9 +81,9 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
       ): @unchecked
     cargo.cargoSpec.hazardous shouldBe defined
 
-  test("危険物フィールドが部分欠落の場合は HazardousDeclaration が組み立てられない"):
+  test("Hazardous で危険物フィールド部分欠落は CargoSpec バリデーション失敗（US05）"):
     val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
-    val Right(cargo) = service
+    val Left(msg) = service
       .book(
         baseCommand.copy(
           cargoType = "Hazardous",
@@ -92,4 +92,36 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
           hazardousProperName = Some("ETHANOL")
         )
       ): @unchecked
-    cargo.cargoSpec.hazardous shouldBe None
+    msg should include("危険物")
+
+  test("Refrigerated 貨物に温度範囲を渡すと予約成立し refrigeration が反映される（US05）"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val Right(cargo) = service
+      .book(
+        baseCommand.copy(
+          cargoType = "Refrigerated",
+          refrigerationMinTemp = Some(-20),
+          refrigerationMaxTemp = Some(-5),
+          refrigerationUnit = Some("Celsius")
+        )
+      ): @unchecked
+    cargo.cargoSpec.refrigeration shouldBe defined
+    cargo.cargoSpec.refrigeration.get.minTemperature shouldBe -20
+
+  test("Refrigerated 貨物で温度範囲未指定は CargoSpec バリデーション失敗"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val Left(msg) = service.book(baseCommand.copy(cargoType = "Refrigerated")): @unchecked
+    msg should include("冷凍")
+
+  test("Refrigerated 貨物で min > max の温度範囲は不正温度範囲エラー"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val Left(msg) = service
+      .book(
+        baseCommand.copy(
+          cargoType = "Refrigerated",
+          refrigerationMinTemp = Some(10),
+          refrigerationMaxTemp = Some(-10),
+          refrigerationUnit = Some("Celsius")
+        )
+      ): @unchecked
+    msg should include("温度範囲が不正")
