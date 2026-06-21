@@ -1029,6 +1029,72 @@ CREATE TABLE route_candidate (
 );
 ```
 
+### `route_candidate_selection`（経路選択）
+
+US09 で営業担当者が複数候補から選んだ経路を予約に紐付ける記録。Flyway V9 で新設（IT4 タスク 1.2）。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `VARCHAR(20)` | `NOT NULL, UNIQUE` | 予約番号（業務キー、1 予約 1 選択） |
+| `voyage_numbers` | `VARCHAR(200)` | `NOT NULL` | カンマ区切りの航海番号列（経路を構成する Voyage の順序） |
+| `status` | `VARCHAR(20)` | `NOT NULL` | `Pending` / `Confirmed`（US09 確定後は `Confirmed`） |
+| `version` | `INTEGER` | `NOT NULL, DEFAULT 0` | 楽観ロック |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 監査 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 監査 |
+
+#### DDL
+
+```sql
+CREATE TABLE route_candidate_selection (
+    id              BIGSERIAL PRIMARY KEY,
+    booking_id      VARCHAR(20) NOT NULL UNIQUE,
+    voyage_numbers  VARCHAR(200) NOT NULL,
+    status          VARCHAR(20) NOT NULL,
+    version         INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_route_candidate_selection_status
+      CHECK (status IN ('Pending', 'Confirmed'))
+);
+CREATE INDEX idx_route_candidate_selection_booking ON route_candidate_selection (booking_id);
+```
+
+### `notification_log`（通知ログ）
+
+US12（経路通知）/ US13（予約確定通知）で発行された通知の永続記録。Flyway V10 で新設（IT4 タスク 3.2）。
+
+IT4 はメール送信を行わず DB ログのみ。IT5 以降で MailHog 経由のメール送信を追加する。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `VARCHAR(20)` | `NOT NULL` | 通知対象の予約番号 |
+| `type` | `VARCHAR(30)` | `NOT NULL` | `RouteNotified` / `BookingConfirmed` / `BookingCancelled` |
+| `sent_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 通知発行時刻 |
+| `payload` | `TEXT` | `NOT NULL` | 通知本文 JSON（経路概要・料金概算・追跡番号等） |
+| `version` | `INTEGER` | `NOT NULL, DEFAULT 0` | 楽観ロック |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 監査 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 監査 |
+
+#### DDL
+
+```sql
+CREATE TABLE notification_log (
+    id          BIGSERIAL PRIMARY KEY,
+    booking_id  VARCHAR(20) NOT NULL,
+    type        VARCHAR(30) NOT NULL,
+    sent_at     TIMESTAMP WITH TIME ZONE NOT NULL,
+    payload     TEXT NOT NULL,
+    version     INTEGER NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_notification_log_type
+      CHECK (type IN ('RouteNotified', 'BookingConfirmed', 'BookingCancelled'))
+);
+CREATE INDEX idx_notification_log_booking_sent ON notification_log (booking_id, sent_at DESC);
+```
+
 ---
 
 ## ScalikeJDBC マッピング方針

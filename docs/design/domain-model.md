@@ -86,15 +86,18 @@ final case class Money(amount: Long, currency: Currency):
 
 // 状態列挙: 遷移可否を enum のメソッドで表現
 enum BookingStatus:
-  case Preliminary, RouteProposed, Confirmed, TrackingIssued,
+  case Preliminary, RouteProposed, RouteAssigned, Confirmed, TrackingIssued,
        InTransit, Delivered, Settled, Cancelled
 
   def canTransitionTo(next: BookingStatus): Boolean = (this, next) match
-    case (Preliminary, RouteProposed) | (RouteProposed, Confirmed) |
+    case (Preliminary, RouteProposed) | (RouteProposed, RouteAssigned) |
+         (RouteAssigned, Confirmed) | (RouteAssigned, RouteProposed) |
          (Confirmed, TrackingIssued) | (TrackingIssued, InTransit) |
          (InTransit, Delivered) | (Delivered, Settled) => true
-    case (Preliminary | RouteProposed | Confirmed, Cancelled) => true
+    case (Preliminary | RouteProposed | RouteAssigned | Confirmed, Cancelled) => true
     case _ => false
+  // IT4 追加（US09 / US11）:
+  //   RouteAssigned … 経路選択完了で予約に経路が紐付いた状態。再設計に戻すパスも許容。
 
 // 集約: 状態変更は Either で検証して新インスタンスを返す
 final case class Cargo(
@@ -151,7 +154,7 @@ final case class Cargo(
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | TransportStatus | 輸送状態 | Shared Domain | 貨物の現在の輸送フェーズを表す共有列挙型 |
 | RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NotRouted / Routed / Misrouted） |
-| BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（8 値） |
+| BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（IT4 で `RouteAssigned` を追加し 9 値） |
 | CargoType | 貨物種別 | Booking Context | General / Hazardous / Refrigerated |
 | ExceptionType | 例外種別 | Tracking Context | Delay / Damage / Lost / CustomsHold |
 | CustomsStatus | 通関状態 | Handling Context | Pending / Cleared / Held / Rejected |

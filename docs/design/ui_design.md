@@ -77,7 +77,7 @@ Estimate 1 ─── N RouteCandidate（見積→予約への引き継ぎは将�
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US04, US06 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04, US05 |
 | 予約詳細 | `/bookings/:bookingId` | 予約情報・経路・荷役履歴・確定/引き渡し操作 | 荷主、営業担当者 | US06, US12, US13, US14 |
-| 経路割り当て | `/bookings/:bookingId/route` | 航海検索・経路候補から経路を選択・確定 | 経路設計者、営業担当者 | US07, US08, US09, US10, US11 |
+| 経路割り当て | `/bookings/:bookingId/routes` | 航海検索・経路候補から経路を選択・確定 | 経路設計者、営業担当者 | US07, US08, US09, US10, US11 |
 | 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US18 |
 | 追跡詳細 | `/tracking/:trackingNumber` | 輸送ステータス履歴タイムライン・状態更新・例外登録（管理者） | 荷主、荷受人、追跡管理者 | US17, US18, US19, US20 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム（引取時は荷受人確認） | 荷役作業員 | US15, US16 |
@@ -244,7 +244,7 @@ state "予約フロー" as booking_flow {
     予約詳細 : 予約情報・荷役履歴\n確定・引き渡し・通知操作
   }
   state 経路割り当て {
-    経路割り当て : /bookings/:bookingId/route
+    経路割り当て : /bookings/:bookingId/routes
     経路割り当て : 航海検索・経路候補テーブル
   }
 
@@ -631,7 +631,8 @@ state 公開貨物追跡 {
 | 操作 | 表示条件 | 処理 | 対応 US |
 | :--- | :--- | :--- | :--- |
 | [経路設計者に引き渡す] | Sales かつ `PRELIMINARY` | 確認モーダル後 `POST /bookings/:bookingId/assign-routing`。`ROUTE_PROPOSED` に遷移（PRG） | US06 |
-| [経路を荷主に通知] | Sales かつ経路紐付け済み | `POST /bookings/:bookingId/notify-route`。通知送信記録を登録（PRG） | US12 |
+| [経路を確定] | RouteDesigner / Sales かつ `ROUTE_PROPOSED` かつ経路候補表示中 | 経路候補画面で `POST /bookings/:bookingId/routes/:idx/confirm`。選択経路を予約に紐付け `ROUTE_ASSIGNED` に遷移（PRG） | US09 |
+| [経路を荷主に通知] | Sales かつ経路紐付け済み（`ROUTE_ASSIGNED`） | `POST /bookings/:bookingId/notify-route`。通知送信記録を登録（PRG） | US12 |
 | [予約を確定] | Sales かつ経路提案済み | 確認モーダル後 `POST /bookings/:bookingId/confirm`。`CONFIRMED` に遷移し追跡番号発行依頼を通知（PRG） | US13 |
 | [追跡番号を発行] | RouteDesigner かつ `CONFIRMED` | `POST /bookings/:bookingId/issue-tracking`。`TRACKING_ISSUED` に遷移し荷主にメール通知（PRG） | US14 |
 | [経路設計中へ戻す]（差し戻し） | Sales かつ `CONFIRMED`（輸送開始前） | 荷主のルート変更依頼時。確認モーダル後 `POST /bookings/:bookingId/revert-routing`。`ROUTE_PROPOSED` に戻し経路設計者に再設計を通知（PRG） | US13 |
@@ -640,7 +641,7 @@ state 公開貨物追跡 {
 
 ---
 
-### 経路割り当て (/bookings/:bookingId/route)
+### 経路割り当て (/bookings/:bookingId/routes)
 
 #### ワイヤーフレーム
 
