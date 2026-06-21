@@ -1,6 +1,6 @@
 package cargotracker.routing.application.queryservices
 
-import cargotracker.routing.application.{CalculateRouteCommand, PricedRouteCandidate, RouteCandidateSearch}
+import cargotracker.routing.application.RouteCandidateSearch
 import cargotracker.routing.domain.model.repositories.VoyageRepository
 import cargotracker.routing.domain.model.valueobjects.RouteCandidate
 import cargotracker.shared.domain.pricing.PricingService

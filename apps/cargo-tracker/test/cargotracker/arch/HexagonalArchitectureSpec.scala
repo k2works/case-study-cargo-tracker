@@ -105,7 +105,17 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
       .and(notScalaSynthetic)
       .should()
       .haveSimpleNameEndingWith("QueryService")
-      .because("queryservices パッケージのトップレベルクラスは CQRS Query 側の *QueryService に統一する")
+      .orShould()
+      .haveSimpleNameEndingWith("Query")
+      .orShould()
+      .haveSimpleNameEndingWith("Command")
+      .orShould()
+      .haveSimpleNameEndingWith("Result")
+      .orShould()
+      .haveSimpleNameEndingWith("Candidate")
+      .because(
+        "queryservices パッケージのトップレベルクラスは CQRS Query 側の実装（*QueryService）か入出力 DTO（*Query / *Command / *Result / *Candidate）に統一する（ADR 0008）"
+      )
     queryRule.check(classes)
 
   test("ルール 5: infrastructure のリポジトリ実装は domain の repositories trait に依存している"):

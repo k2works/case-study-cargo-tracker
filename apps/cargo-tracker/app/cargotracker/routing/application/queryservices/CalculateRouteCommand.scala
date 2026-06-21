@@ -1,4 +1,4 @@
-package cargotracker.routing.application
+package cargotracker.routing.application.queryservices
 
 import java.time.Instant
 

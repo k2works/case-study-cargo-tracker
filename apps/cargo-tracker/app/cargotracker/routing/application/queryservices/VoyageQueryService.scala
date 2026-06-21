@@ -1,6 +1,5 @@
 package cargotracker.routing.application.queryservices
 
-import cargotracker.routing.application.SearchVoyageCommand
 import cargotracker.routing.domain.model.aggregates.Voyage
 import cargotracker.routing.domain.model.repositories.VoyageRepository
 import cargotracker.routing.domain.model.valueobjects.VoyageNumber

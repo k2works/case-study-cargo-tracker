@@ -1,4 +1,4 @@
-package cargotracker.routing.application
+package cargotracker.routing.application.queryservices
 
 import cargotracker.routing.domain.model.valueobjects.RouteCandidate
 import cargotracker.shared.domain.Money
