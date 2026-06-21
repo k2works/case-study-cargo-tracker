@@ -46,7 +46,7 @@
   },
   "lint-staged": {
     "apps/cargo-tracker/**/*.scala": [
-      "bash -c 'cd apps/cargo-tracker && sbt scalafmtCheckAll \"scalafixAll --check\"'"
+      "bash -c 'cd apps/cargo-tracker && sbt -batch scalafmtCheckAll'"
     ]
   }
 }

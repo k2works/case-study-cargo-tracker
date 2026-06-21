@@ -123,7 +123,7 @@
 | 0.1 | ShipperController・EstimateController・BookingController に `AuthenticatedAction` 適用 | 2h | - | [x] |
 | 0.2 | HomeController にロール別ダッシュボード（経路設計者用 引き渡し済み予約一覧含む） | 3h | - | [ ] |
 | 0.3 | Flyway V5 で開発用シードユーザー投入（admin / sales / router / handler / billing / shipper） | 1h | - | [ ] |
-| 0.4 | pre-commit hook を staged ファイル限定スキャンに変更（scalafmt / scalafix） | 1h | - | [ ] |
+| 0.4 | pre-commit hook を高速化（scalafix を CI 専用に移動、pre-commit は scalafmtCheckAll のみ）。30 秒超 → 約 12 秒に短縮 | 1h | - | [x] |
 | 0.5 | Twirl ファイル名規約整理（`*Page.scala.html` 統一） | 1h | - | [ ] |
 | 0.6 | `DbCleanupSupport` trait 追加（テスト独立化） | 2h | - | [ ] |
 | 0.7 | ArchUnit 4 ルール導入（ドメイン純粋性・application 境界・コンテキスト分離・リポジトリ実装方向）。ヘキサゴナル DDD パッケージ構成（domain/model/{aggregates,valueobjects,repositories,acl} 他）への全面リファクタを伴う | 3h | - | [x] |
