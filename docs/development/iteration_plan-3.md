@@ -18,7 +18,7 @@
 1. **Routing 検索**: 経路設計者が出発地・目的地・出発期間・貨物種別で航海スケジュールを検索でき、危険物・冷凍貨物の場合は対応航海のみに絞り込まれる
 2. **経路候補算出**: IT2 Spike `RouteCandidateSearchSpike` を `routing.application.RouteCandidateSearch` に格上げし、料金スコアリング + 対応貨物種別フィルタ + 上位 N 候補選定 + P95 < 3 秒（非機能要件）
 3. **データモデル追補**: 船名・運送会社・対応貨物種別カラムを `voyage` テーブルに追加（ADR で定義）
-4. **楽観ロック完全活性化**: Cargo / Estimate / Shipper / Voyage に `version: Int` フィールドを追加し、`Either[DomainError.ConcurrentModification, A]` を返す
+4. **楽観ロック完全活性化**: Cargo / Estimate / Shipper / Voyage に `version: Int` フィールドを追加し、`WHERE id=? AND version=?` + `OptimisticLockException` 投擲方式で活性化（`Either[DomainError.ConcurrentModification, A]` API への移行は IT4 以降に申し送り）
 5. **テストカバレッジ復元**: Controller / Twirl / Dashboard 統合テストで new_coverage 80% に復元、SonarQube QG 完全 PASS
 
 ### 成功基準
@@ -85,7 +85,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 0.1 | Controller / Twirl / Dashboard の Play `FakeRequest` 統合テスト追加（CSRF / AuthFilter / Flash / PRG）。new_coverage 80% 復元 | 6h | - | [x] |
-| 0.2 | 集約 `Cargo` / `Estimate` / `Shipper` / `Voyage` に `version: Int` フィールド追加。`Either[DomainError.ConcurrentModification, A]` を返す Repository UPDATE に変更 | 5h | - | [x] |
+| 0.2 | 集約 `Cargo` / `Estimate` / `Shipper` / `Voyage` に `version: Int` フィールド追加。Repository UPDATE は `WHERE id=? AND version=?` + `OptimisticLockException` で活性化（Either API 化は IT4 以降に申し送り） | 5h | - | [x] |
 | 0.3 | `VoyageCommandService.register` / `update` + `VoyageController.create` / `update` の重複を `upsert(vn, build)` 共通骨格に抽出 | 2h | - | [x] |
 | 0.4 | `BookingCommandService.book` の `_ => "荷主が見つかりません"` を sealed エラー網羅 match に変更 | 1h | - | [x] |
 | 0.5 | scoverage + Twirl + coverage モードの `NoClassDefFoundError` 再現条件特定 + build.sbt 修正 | 3h | - | [x] |
@@ -326,7 +326,7 @@ Voyage ..> CargoType
 3. `RoutingLeg.apply` は `from != to`、`departure < arrival` を検証
 4. `RoutingRouteCandidate.apply` は `legs.nonEmpty`、連結条件（前到着地 == 次出発地、前到着時刻 ≤ 次出発時刻）を検証
 5. `RouteCandidateSearch.calculate` は期限内到達不可で `Left(DomainError.UnreachableDestination(deadline))` を返す
-6. **楽観ロック活性化**（IT2 タスク 0.11 の完全活性化）: Cargo / Estimate / Shipper / Voyage の各集約が `version: Int` を持ち、リポジトリ UPDATE 失敗時に `DomainError.ConcurrentModification` を返す
+6. **楽観ロック活性化**（IT2 タスク 0.11 の完全活性化）: Cargo / Estimate / Shipper / Voyage の各集約が `version: Int` を持ち、リポジトリ UPDATE 失敗時に `OptimisticLockException` を投擲する（`Either[DomainError.ConcurrentModification, A]` API への移行は IT4 以降）
 
 ### データモデル
 
