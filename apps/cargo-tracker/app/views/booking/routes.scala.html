@@ -1,5 +1,6 @@
 @(cargo: cargotracker.booking.domain.model.aggregates.Cargo,
   candidates: List[cargotracker.routing.domain.model.valueobjects.RouteCandidate],
+  lateCandidates: List[cargotracker.routing.domain.model.valueobjects.RouteCandidate],
   errorMessage: Option[String])(implicit request: RequestHeader, flash: Flash)
 @views.html.layout.main(s"経路候補 - ${cargo.bookingId.value}") {
   <h1 class="h3 mb-3">経路候補 - @cargo.bookingId.value</h1>
@@ -15,7 +16,7 @@
     <dt class="col-sm-3">貨物種別</dt><dd class="col-sm-9">@cargo.cargoSpec.cargoType</dd>
   </dl>
 
-  @if(candidates.isEmpty) {
+  @if(candidates.isEmpty && lateCandidates.isEmpty) {
     <div class="alert alert-warning">
       <strong>条件に合致する経路候補が見つかりませんでした。</strong>
       <ul class="mb-0 mt-2">
@@ -24,7 +25,21 @@
         <li>必要に応じて航海スケジュール（/voyages/search）で個別便を確認してください</li>
       </ul>
     </div>
-  } else {
+  }
+
+  @if(candidates.isEmpty && lateCandidates.nonEmpty) {
+    <div class="alert alert-danger">
+      <strong>希望着日（@cargo.routeSpecification.arrivalDeadline）までに到着可能な経路は見つかりませんでした。</strong>
+      <ul class="mb-0 mt-2">
+        <li>希望着日を後ろ倒しできないか確認してください</li>
+        <li>貨物種別の制約により候補が絞り込まれている可能性があります</li>
+        <li>下表に期限超過の参考候補を表示しています</li>
+      </ul>
+    </div>
+  }
+
+  @if(candidates.nonEmpty) {
+    <h2 class="h5 mt-4">期限内到着候補（@candidates.size 件）</h2>
     <table class="table table-striped">
       <thead>
         <tr>
@@ -39,6 +54,34 @@
       <tbody>
       @for((c, idx) <- candidates.zipWithIndex) {
         <tr>
+          <td>@(idx + 1)</td>
+          <td>@c.legs.size</td>
+          <td>@c.departure</td>
+          <td>@c.arrival</td>
+          <td>@c.transitDays</td>
+          <td>@c.voyages.map(_.value).mkString(" → ")</td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  }
+
+  @if(lateCandidates.nonEmpty) {
+    <h2 class="h5 mt-4 text-warning">期限超過候補（@lateCandidates.size 件・参考）</h2>
+    <table class="table table-bordered table-sm">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>区間数</th>
+          <th>出港</th>
+          <th>到着</th>
+          <th>所要日数</th>
+          <th>航海番号</th>
+        </tr>
+      </thead>
+      <tbody>
+      @for((c, idx) <- lateCandidates.zipWithIndex) {
+        <tr class="table-warning">
           <td>@(idx + 1)</td>
           <td>@c.legs.size</td>
           <td>@c.departure</td>
