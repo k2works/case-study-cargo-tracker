@@ -84,9 +84,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | Controller / Twirl / Dashboard の Play `FakeRequest` 統合テスト追加（CSRF / AuthFilter / Flash / PRG）。new_coverage 80% 復元 | 6h | - | [ ] |
+| 0.1 | Controller / Twirl / Dashboard の Play `FakeRequest` 統合テスト追加（CSRF / AuthFilter / Flash / PRG）。new_coverage 80% 復元 | 6h | - | [x] |
 | 0.2 | 集約 `Cargo` / `Estimate` / `Shipper` / `Voyage` に `version: Int` フィールド追加。`Either[DomainError.ConcurrentModification, A]` を返す Repository UPDATE に変更 | 5h | - | [ ] |
-| 0.3 | `VoyageCommandService.register` / `update` + `VoyageController.create` / `update` の重複を `upsert(vn, build)` 共通骨格に抽出 | 2h | - | [ ] |
+| 0.3 | `VoyageCommandService.register` / `update` + `VoyageController.create` / `update` の重複を `upsert(vn, build)` 共通骨格に抽出 | 2h | - | [x] |
 | 0.4 | `BookingCommandService.book` の `_ => "荷主が見つかりません"` を sealed エラー網羅 match に変更 | 1h | - | [x] |
 | 0.5 | scoverage + Twirl + coverage モードの `NoClassDefFoundError` 再現条件特定 + build.sbt 修正 | 3h | - | [ ] |
 | 0.6 | Dashboard 集計を `HomeController` から pure function 切り出し、テスト追加 | 2h | - | [x] |
@@ -121,13 +121,13 @@
 |---|--------|---------|------|------|
 | 2.1 | IT2 Spike `RouteCandidateSearchSpike` を `routing.application.RouteCandidateSearch` に格上げ、`RoutingLeg` / `RouteCandidate` を `routing.domain.model.valueobjects` に移動 | 4h | - | [x] |
 | 2.2 | 隣接リスト化（`legs.groupBy(_.from)`）で探索高速化（ADR 0005 IT3 申し送り） | 2h | - | [x] |
-| 2.3 | 料金スコアリング統合（`PricingService` 連携、ADR 0003 経由）。経路候補ごとの費用算出 | 4h | - | [ ] |
+| 2.3 | 料金スコアリング統合（`PricingService` 連携、ADR 0003 経由）。経路候補ごとの費用算出 | 4h | - | [x] |
 | 2.4 | 対応貨物種別フィルタ（危険物 / 冷凍貨物に対応する航海のみで探索）。US05 受入条件 4 のフィルタロジック完成 | 3h | - | [x] |
 | 2.5 | 上位 N 候補選定（直行便最優先、所要日数・費用の総合スコア） + 推奨順並び替え | 4h | - | [x] |
-| 2.6 | 期限内不到達時の通知 + 条件緩和ガイダンス | 2h | - | [ ] |
-| 2.7 | `RoutingApplicationService.calculateCandidates(CalculateRouteCommand)` + Controller / 画面 | 6h | - | [ ] |
-| 2.8 | パフォーマンステスト（航海数 1000 件規模で P95 < 3 秒、非機能要件） | 4h | - | [ ] |
-| 2.9 | ドメインユニット + 統合 + E2E テスト（直行 / 中継 / 不到達 / 危険物フィルタ / 上位 N 件） | 6h | - | [ ] |
+| 2.6 | 期限内不到達時の通知 + 条件緩和ガイダンス | 2h | - | [x] |
+| 2.7 | `RoutingApplicationService.calculateCandidates(CalculateRouteCommand)` + Controller / 画面 | 6h | - | [x] |
+| 2.8 | パフォーマンステスト（航海数 1000 件規模で P95 < 3 秒、非機能要件） | 4h | - | [x] |
+| 2.9 | ドメインユニット + 統合 + E2E テスト（直行 / 中継 / 不到達 / 危険物フィルタ / 上位 N 件） | 6h | - | [x] |
 
 **小計**: 35h（4.4h/SP）
 
