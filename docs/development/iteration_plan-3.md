@@ -119,8 +119,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | IT2 Spike `RouteCandidateSearchSpike` を `routing.application.RouteCandidateSearch` に格上げ、`RoutingLeg` / `RouteCandidate` を `routing.domain.model.valueobjects` に移動 | 4h | - | [ ] |
-| 2.2 | 隣接リスト化（`legs.groupBy(_.from)`）で探索高速化（ADR 0005 IT3 申し送り） | 2h | - | [ ] |
+| 2.1 | IT2 Spike `RouteCandidateSearchSpike` を `routing.application.RouteCandidateSearch` に格上げ、`RoutingLeg` / `RouteCandidate` を `routing.domain.model.valueobjects` に移動 | 4h | - | [x] |
+| 2.2 | 隣接リスト化（`legs.groupBy(_.from)`）で探索高速化（ADR 0005 IT3 申し送り） | 2h | - | [x] |
 | 2.3 | 料金スコアリング統合（`PricingService` 連携、ADR 0003 経由）。経路候補ごとの費用算出 | 4h | - | [ ] |
 | 2.4 | 対応貨物種別フィルタ（危険物 / 冷凍貨物に対応する航海のみで探索）。US05 受入条件 4 のフィルタロジック完成 | 3h | - | [ ] |
 | 2.5 | 上位 N 候補選定（直行便最優先、所要日数・費用の総合スコア） + 推奨順並び替え | 4h | - | [ ] |
