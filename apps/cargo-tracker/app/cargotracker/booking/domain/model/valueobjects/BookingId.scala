@@ -20,7 +20,11 @@ object BookingId:
 
   extension (id: BookingId) def value: String = id
 
-/** 予約の状態（domain-model.md 準拠）。 */
+/** 予約の状態（domain-model.md ビジネスルール 4 準拠）。
+  *
+  * 遷移規約: Preliminary → RouteProposed → Confirmed → TrackingIssued → InTransit → Delivered → Settled の順に進む。 Preliminary
+  * / RouteProposed / Confirmed からは Cancelled に遷移可能。
+  */
 enum BookingStatus:
   case Preliminary
   case RouteProposed
@@ -30,6 +34,19 @@ enum BookingStatus:
   case Delivered
   case Settled
   case Cancelled
+
+  /** 指定された次状態へ遷移可能か判定する。違反時のエラー化は呼び出し側で行う。 */
+  def canTransitionTo(next: BookingStatus): Boolean = (this, next) match
+    case (Preliminary, RouteProposed) => true
+    case (RouteProposed, Confirmed) => true
+    case (Confirmed, TrackingIssued) => true
+    case (TrackingIssued, InTransit) => true
+    case (InTransit, Delivered) => true
+    case (Delivered, Settled) => true
+    case (Preliminary, Cancelled) => true
+    case (RouteProposed, Cancelled) => true
+    case (Confirmed, Cancelled) => true
+    case _ => false
 
 object BookingStatus:
   def fromName(name: String): Option[BookingStatus] =

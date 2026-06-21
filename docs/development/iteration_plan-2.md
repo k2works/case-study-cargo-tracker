@@ -151,7 +151,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `Cargo` 集約に `assignToRouting()` 実装（`AssignToRoutingCommand` 受領で `Preliminary → RouteProposed` 遷移、`BookingStatus.canTransitionTo` を使用） | 2h | - | [ ] |
+| 2.1 | `Cargo` 集約に `assignToRouting()` 実装（`AssignToRoutingCommand` 受領で `Preliminary → RouteProposed` 遷移、`BookingStatus.canTransitionTo` を使用） | 2h | - | [x] |
 | 2.2 | BookingController に引き渡しエンドポイント追加（POST `/bookings/:bookingId/assign-routing`、PRG で経路設計者ダッシュボードへ） | 3h | - | [ ] |
 | 2.3 | 経路設計者ダッシュボード（`RouteProposed` 予約一覧）画面追加 + 通知レコード書き込み（IT2 はログ出力で代替、外部通知は IT4 以降） | 3h | - | [ ] |
 | 2.4 | ドメインユニット + E2E テスト（通知ログ検証含む） | 2h | - | [ ] |

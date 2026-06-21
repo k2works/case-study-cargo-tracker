@@ -16,12 +16,22 @@ final case class Cargo private (
     routeSpecification: RouteSpecification,
     cargoSpec: CargoSpec,
     status: BookingStatus
-)
+):
+
+  /** 経路設計者への引き渡し（US06 / `AssignToRoutingCommand`）。
+    *
+    *   - `Preliminary` 以外からは呼び出せない（`InvalidStatusTransition`）
+    *   - 成功時は `RouteProposed` 状態の新インスタンスを返す
+    */
+  def assignToRouting(): Either[Cargo.Error, Cargo] =
+    if status.canTransitionTo(BookingStatus.RouteProposed) then Right(copy(status = BookingStatus.RouteProposed))
+    else Left(Cargo.InvalidStatusTransition(status, BookingStatus.RouteProposed))
 
 object Cargo:
 
   sealed trait Error
   case object UnknownShipper extends Error
+  final case class InvalidStatusTransition(from: BookingStatus, to: BookingStatus) extends Error
 
   /** 新規予約を生成する。
     *
