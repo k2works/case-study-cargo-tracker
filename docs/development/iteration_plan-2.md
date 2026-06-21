@@ -138,12 +138,12 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `RefrigerationSpec` 値オブジェクト追加（temperature range / unit） | 2h | - | [ ] |
-| 1.2 | `Cargo` 集約に冷凍貨物バリデーション追加（CargoType 別必須項目検査） | 3h | - | [ ] |
-| 1.3 | Flyway V6: `cargo` に `refrigeration_min_temp` / `refrigeration_max_temp` / `refrigeration_unit` カラム追加 | 1h | - | [ ] |
-| 1.4 | ScalikeJdbcCargoRepository 拡張（refrigeration マッピング） | 2h | - | [ ] |
-| 1.5 | BookingController フォーム拡張（貨物種別選択に応じて危険物 / 冷凍フィールドを htmx で動的表示・必須化、ui_design.md 565 準拠） | 3h | - | [ ] |
-| 1.6 | ドメインユニット + E2E テスト（危険物 / 冷凍 / 通常の 3 系統） | 4h | - | [ ] |
+| 1.1 | `RefrigerationSpec` 値オブジェクト追加（temperature range / unit） | 2h | - | [x] |
+| 1.2 | `Cargo` 集約に冷凍貨物バリデーション追加（CargoType 別必須項目検査） | 3h | - | [x] |
+| 1.3 | Flyway V6: `cargo` に `refrigeration_min_temp` / `refrigeration_max_temp` / `refrigeration_unit` カラム追加 | 1h | - | [x] |
+| 1.4 | ScalikeJdbcCargoRepository 拡張（refrigeration マッピング） | 2h | - | [x] |
+| 1.5 | BookingController フォーム拡張（貨物種別選択に応じて危険物 / 冷凍フィールドを htmx で動的表示・必須化、ui_design.md 565 準拠） | 3h | - | [x] |
+| 1.6 | ドメインユニット + E2E テスト（危険物 / 冷凍 / 通常の 3 系統） | 4h | - | [x] |
 
 **小計**: 15h（約 5h/SP）
 

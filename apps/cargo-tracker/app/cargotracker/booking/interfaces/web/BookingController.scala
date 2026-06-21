@@ -22,7 +22,10 @@ final case class BookingFormData(
     quantity: Option[Int],
     hazardousClass: Option[String],
     hazardousUnNumber: Option[String],
-    hazardousProperName: Option[String]
+    hazardousProperName: Option[String],
+    refrigerationMinTemp: Option[Int],
+    refrigerationMaxTemp: Option[Int],
+    refrigerationUnit: Option[String]
 )
 
 @Singleton
@@ -46,7 +49,10 @@ class BookingController @Inject() (
       "quantity" -> optional(number(min = 1)),
       "hazardousClass" -> optional(text(maxLength = 50)),
       "hazardousUnNumber" -> optional(text(maxLength = 20)),
-      "hazardousProperName" -> optional(text(maxLength = 200))
+      "hazardousProperName" -> optional(text(maxLength = 200)),
+      "refrigerationMinTemp" -> optional(number(min = -273, max = 100)),
+      "refrigerationMaxTemp" -> optional(number(min = -273, max = 100)),
+      "refrigerationUnit" -> optional(text(maxLength = 10))
     )(BookingFormData.apply)(d =>
       Some(
         (
@@ -60,7 +66,10 @@ class BookingController @Inject() (
           d.quantity,
           d.hazardousClass,
           d.hazardousUnNumber,
-          d.hazardousProperName
+          d.hazardousProperName,
+          d.refrigerationMinTemp,
+          d.refrigerationMaxTemp,
+          d.refrigerationUnit
         )
       )
     )
@@ -96,7 +105,10 @@ class BookingController @Inject() (
               quantity = data.quantity,
               hazardousClass = data.hazardousClass,
               hazardousUnNumber = data.hazardousUnNumber,
-              hazardousProperName = data.hazardousProperName
+              hazardousProperName = data.hazardousProperName,
+              refrigerationMinTemp = data.refrigerationMinTemp,
+              refrigerationMaxTemp = data.refrigerationMaxTemp,
+              refrigerationUnit = data.refrigerationUnit
             )
           ) match
             case Right(cargo) =>

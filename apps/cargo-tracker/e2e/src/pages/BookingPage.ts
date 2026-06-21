@@ -12,6 +12,9 @@ export interface BookingFormData {
   hazardousClass?: string;
   hazardousUnNumber?: string;
   hazardousProperName?: string;
+  refrigerationMinTemp?: number;
+  refrigerationMaxTemp?: number;
+  refrigerationUnit?: 'Celsius' | 'Fahrenheit';
 }
 
 export class BookingPage {
@@ -51,6 +54,23 @@ export class BookingPage {
         await this.page
           .locator('input[name="hazardousProperName"]')
           .fill(data.hazardousProperName);
+      }
+    }
+    if (data.cargoType === 'Refrigerated') {
+      if (data.refrigerationMinTemp !== undefined) {
+        await this.page
+          .locator('input[name="refrigerationMinTemp"]')
+          .fill(String(data.refrigerationMinTemp));
+      }
+      if (data.refrigerationMaxTemp !== undefined) {
+        await this.page
+          .locator('input[name="refrigerationMaxTemp"]')
+          .fill(String(data.refrigerationMaxTemp));
+      }
+      if (data.refrigerationUnit) {
+        await this.page
+          .locator('select[name="refrigerationUnit"]')
+          .selectOption(data.refrigerationUnit);
       }
     }
   }

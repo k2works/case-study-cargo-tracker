@@ -45,12 +45,30 @@
       </div>
       <div class="col-md-12">
         <fieldset class="border p-3 rounded">
-          <legend class="float-none w-auto px-2 fs-6">危険物申告（該当時のみ）</legend>
+          <legend class="float-none w-auto px-2 fs-6">危険物申告（貨物種別「危険物」を選択時に必須）</legend>
           <div class="row g-3">
             <div class="col-md-4"><label for="booking-hazardous-class" class="form-label">危険物クラス</label><input type="text" id="booking-hazardous-class" name="hazardousClass" class="form-control"></div>
             <div class="col-md-4"><label for="booking-hazardous-un-number" class="form-label">UN 番号</label><input type="text" id="booking-hazardous-un-number" name="hazardousUnNumber" class="form-control"></div>
             <div class="col-md-4"><label for="booking-hazardous-proper-name" class="form-label">正式輸送品名</label><input type="text" id="booking-hazardous-proper-name" name="hazardousProperName" class="form-control"></div>
           </div>
+        </fieldset>
+      </div>
+      <div class="col-md-12">
+        <fieldset class="border p-3 rounded">
+          <legend class="float-none w-auto px-2 fs-6">温度管理条件（貨物種別「冷凍」を選択時に必須・US05）</legend>
+          <div class="row g-3">
+            <div class="col-md-4"><label for="booking-refrig-min" class="form-label">最低温度</label><input type="number" id="booking-refrig-min" name="refrigerationMinTemp" min="-273" max="100" class="form-control"></div>
+            <div class="col-md-4"><label for="booking-refrig-max" class="form-label">最高温度</label><input type="number" id="booking-refrig-max" name="refrigerationMaxTemp" min="-273" max="100" class="form-control"></div>
+            <div class="col-md-4">
+              <label for="booking-refrig-unit" class="form-label">温度単位</label>
+              <select id="booking-refrig-unit" name="refrigerationUnit" class="form-select">
+                <option value="">未指定</option>
+                <option value="Celsius">摂氏（℃）</option>
+                <option value="Fahrenheit">華氏（℉）</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-text mt-2">最低温度 ≤ 最高温度。3 項目すべて指定または未指定。</div>
         </fieldset>
       </div>
     </div>
