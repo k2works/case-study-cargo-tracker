@@ -1,33 +1,64 @@
 package cargotracker.routing.domain.model.aggregates
 
 import cargotracker.routing.domain.model.valueobjects.{Schedule, VoyageNumber}
+import cargotracker.shared.domain.CargoType
 
-/** 航海（Routing Context の集約ルート、domain-model.md 準拠）。
+/** 航海（Routing Context の集約ルート、domain-model.md / ADR 0006 準拠）。
   *
   *   - 業務キー: `VoyageNumber`
   *   - スケジュールは `Schedule` 値オブジェクトでカプセル化
-  *   - `version` は楽観ロック用（IT2 タスク 0.11 / data-model.md）
+  *   - `vesselName`・`carrierCode` は US07 検索条件（ADR 0006）
+  *   - `supportedCargoTypes` は US08 経路候補算出時の貨物種別フィルタ（多対多）
+  *   - `version` は楽観ロック用
   */
 final case class Voyage private (
     voyageNumber: VoyageNumber,
     schedule: Schedule,
+    vesselName: String,
+    carrierCode: String,
+    supportedCargoTypes: Set[CargoType],
     version: Int
 ):
 
-  /** スケジュール更新（US25 / `UpdateVoyageCommand`）。 voyageNumber は不変、version は IT3 で集約に活性化する。 */
   def updateSchedule(newSchedule: Schedule): Voyage =
     copy(schedule = newSchedule)
 
+  def updateVessel(newVesselName: String, newCarrierCode: String): Voyage =
+    copy(vesselName = newVesselName, carrierCode = newCarrierCode)
+
+  def updateSupportedCargoTypes(types: Set[CargoType]): Voyage =
+    copy(supportedCargoTypes = types)
+
+  def supports(cargoType: CargoType): Boolean =
+    supportedCargoTypes.contains(cargoType)
+
 object Voyage:
 
-  /** 新規航海を生成する（US24 / `RegisterVoyageCommand`）。 */
   def register(voyageNumber: VoyageNumber, schedule: Schedule): Voyage =
-    new Voyage(voyageNumber, schedule, version = 0)
+    new Voyage(voyageNumber, schedule, "", "", Set.empty, version = 0)
 
-  /** 永続化からの復元 */
+  def register(
+      voyageNumber: VoyageNumber,
+      schedule: Schedule,
+      vesselName: String,
+      carrierCode: String,
+      supportedCargoTypes: Set[CargoType]
+  ): Voyage =
+    new Voyage(voyageNumber, schedule, vesselName, carrierCode, supportedCargoTypes, version = 0)
+
   def reconstruct(
       voyageNumber: VoyageNumber,
       schedule: Schedule,
       version: Int
   ): Voyage =
-    new Voyage(voyageNumber, schedule, version)
+    new Voyage(voyageNumber, schedule, "", "", Set.empty, version)
+
+  def reconstruct(
+      voyageNumber: VoyageNumber,
+      schedule: Schedule,
+      vesselName: String,
+      carrierCode: String,
+      supportedCargoTypes: Set[CargoType],
+      version: Int
+  ): Voyage =
+    new Voyage(voyageNumber, schedule, vesselName, carrierCode, supportedCargoTypes, version)
