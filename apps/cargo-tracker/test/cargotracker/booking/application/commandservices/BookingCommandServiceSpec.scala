@@ -225,3 +225,47 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     val Left(msg) = service.assignToRouting(cargo.bookingId.value): @unchecked
     msg should include("RouteProposed")
     msg should include("遷移はできません")
+
+  test("assignItinerary: RouteProposed 予約に経路を紐付けると RouteAssigned で保存される（US11）"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.assignToRouting(cargo.bookingId.value)
+
+    val Right(assigned) = service.assignItinerary(cargo.bookingId.value, List("VY-1", "VY-2")): @unchecked
+    assigned.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteAssigned
+    assigned.itinerary.map(_.voyageNumbers) shouldBe Some(List("VY-1", "VY-2"))
+    repo.findById(cargo.bookingId).get.status shouldBe
+      cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteAssigned
+
+  test("assignItinerary: Preliminary からの紐付けは状態遷移違反"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    val Left(msg) = service.assignItinerary(cargo.bookingId.value, List("VY-1")): @unchecked
+    msg should include("Preliminary")
+    msg should include("RouteAssigned")
+    msg should include("遷移はできません")
+
+  test("assignItinerary: 既に RouteAssigned の予約は再紐付け禁止"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.assignToRouting(cargo.bookingId.value)
+    service.assignItinerary(cargo.bookingId.value, List("VY-1")).isRight shouldBe true
+
+    val Left(msg) = service.assignItinerary(cargo.bookingId.value, List("VY-2")): @unchecked
+    msg should include("RouteAssigned")
+    msg should include("遷移はできません")
+
+  test("assignItinerary: 存在しない予約 ID はエラー"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    service.assignItinerary("BK-000999", List("VY-1")) shouldBe Left("予約 BK-000999 が見つかりません")
+
+  test("assignItinerary: 空航海リストはエラー"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.assignToRouting(cargo.bookingId.value)
+    service.assignItinerary(cargo.bookingId.value, Nil) shouldBe Left("経路に含む航海が指定されていません")
