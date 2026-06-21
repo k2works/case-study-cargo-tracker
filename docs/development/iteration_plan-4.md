@@ -146,7 +146,7 @@ date: 2026-06-21
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | `NotificationLog` 集約（Notification Context 新設または Booking 内エンティティ）。MailHog 経由のメール送信は IT5 以降、IT4 は DB ログのみ | 3h | [ ] |
+| 3.1 | `NotificationLog` 集約（Notification Context 新設または Booking 内エンティティ）。MailHog 経由のメール送信は IT5 以降、IT4 は DB ログのみ | 3h | [x] |
 | 3.2 | Flyway V10: `notification_log`（id / booking_id / type / sent_at / payload / version / 監査）追加 | 1h | [ ] |
 | 3.3 | `NotifyRouteCommandService.notify(bookingId)` 実装（経路概要 + 料金概算をペイロード化） | 3h | [ ] |
 | 3.4 | 営業ダッシュボードに「経路通知」ボタンを追加、`/bookings/:id/notifications` で通知ログ閲覧 | 3h | [ ] |
