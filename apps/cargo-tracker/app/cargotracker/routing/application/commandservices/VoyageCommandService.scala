@@ -18,33 +18,45 @@ import javax.inject.{Inject, Singleton}
 class VoyageCommandService @Inject() (repository: VoyageRepository):
 
   def register(command: RegisterVoyageCommand): Either[String, Voyage] =
-    val parsedNumber =
-      VoyageNumber(command.voyageNumber).left.map(_ => "航海番号の形式が不正です")
+    upsert(
+      command.voyageNumber,
+      command.movements,
+      existence = {
+        case Some(_) => Left(s"航海番号 ${command.voyageNumber} は既に登録されています")
+        case None => Right(None)
+      },
+      build = (vn, _, schedule) => Voyage.register(vn, schedule)
+    )
+
+  def update(command: UpdateVoyageCommand): Either[String, Voyage] =
+    upsert(
+      command.voyageNumber,
+      command.movements,
+      existence = {
+        case Some(v) => Right(Some(v))
+        case None => Left(s"航海番号 ${command.voyageNumber} が見つかりません")
+      },
+      build = (_, existing, schedule) => existing.get.updateSchedule(schedule)
+    )
+
+  /** register / update の共通骨格（IT2 review #6 / IT3 タスク 0.3）。
+    *
+    *   - 航海番号パース → 既存検索 + 存在チェック → スケジュール組み立て → 集約構築 → 保存
+    */
+  private def upsert(
+      voyageNumberRaw: String,
+      movements: Seq[CarrierMovementCommand],
+      existence: Option[Voyage] => Either[String, Option[Voyage]],
+      build: (VoyageNumber, Option[Voyage], Schedule) => Voyage
+  ): Either[String, Voyage] =
     for
-      vn <- parsedNumber
-      _ <- repository
-        .findByVoyageNumber(vn)
-        .map(_ => s"航海番号 ${command.voyageNumber} は既に登録されています")
-        .toLeft(())
-      schedule <- buildSchedule(command.movements)
-      voyage = Voyage.register(vn, schedule)
+      vn <- VoyageNumber(voyageNumberRaw).left.map(_ => "航海番号の形式が不正です")
+      existing <- existence(repository.findByVoyageNumber(vn))
+      schedule <- buildSchedule(movements)
+      voyage = build(vn, existing, schedule)
     yield
       repository.save(voyage)
       voyage
-
-  def update(command: UpdateVoyageCommand): Either[String, Voyage] =
-    val parsedNumber =
-      VoyageNumber(command.voyageNumber).left.map(_ => "航海番号の形式が不正です")
-    for
-      vn <- parsedNumber
-      existing <- repository
-        .findByVoyageNumber(vn)
-        .toRight(s"航海番号 ${command.voyageNumber} が見つかりません")
-      schedule <- buildSchedule(command.movements)
-      updated = existing.updateSchedule(schedule)
-    yield
-      repository.save(updated)
-      updated
 
   private def buildSchedule(
       inputs: Seq[CarrierMovementCommand]

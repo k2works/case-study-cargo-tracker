@@ -49,34 +49,11 @@ class VoyageController @Inject() (
   }
 
   def create(): Action[AnyContent] = authenticated { implicit request =>
-    voyageForm
-      .bindFromRequest()
-      .fold(
-        formWithErrors =>
-          BadRequest(
-            views.html.voyage.formPage(
-              formWithErrors,
-              errorMessage = Some("入力内容を確認してください"),
-              isEdit = false
-            )
-          ),
-        data =>
-          commandService.register(
-            RegisterVoyageCommand(
-              voyageNumber = data.voyageNumber,
-              movements = data.movements.map(toInput)
-            )
-          ) match
-            case Right(voyage) =>
-              Redirect(
-                cargotracker.routing.interfaces.web.routes.VoyageController.list()
-              ).flashing("success" -> s"航海 ${voyage.voyageNumber.value} を登録しました")
-            case Left(msg) =>
-              BadRequest(
-                views.html.voyage
-                  .formPage(voyageForm.fill(data), errorMessage = Some(msg), isEdit = false)
-              )
-      )
+    handleSubmit(isEdit = false) { data =>
+      commandService.register(
+        RegisterVoyageCommand(voyageNumber = data.voyageNumber, movements = data.movements.map(toInput))
+      ) -> "登録"
+    }
   }
 
   def editForm(voyageNumber: String): Action[AnyContent] = authenticated { implicit request =>
@@ -98,6 +75,17 @@ class VoyageController @Inject() (
   }
 
   def update(voyageNumber: String): Action[AnyContent] = authenticated { implicit request =>
+    handleSubmit(isEdit = true) { data =>
+      commandService.update(
+        UpdateVoyageCommand(voyageNumber = voyageNumber, movements = data.movements.map(toInput))
+      ) -> "更新"
+    }
+  }
+
+  /** create / update のフォーム fold + バインディング + flash 処理の共通骨格（IT3 タスク 0.3）。 */
+  private def handleSubmit(isEdit: Boolean)(
+      execute: VoyageFormData => (Either[String, cargotracker.routing.domain.model.aggregates.Voyage], String)
+  )(implicit request: play.api.mvc.Request[AnyContent]): play.api.mvc.Result =
     voyageForm
       .bindFromRequest()
       .fold(
@@ -106,27 +94,21 @@ class VoyageController @Inject() (
             views.html.voyage.formPage(
               formWithErrors,
               errorMessage = Some("入力内容を確認してください"),
-              isEdit = true
+              isEdit = isEdit
             )
           ),
         data =>
-          commandService.update(
-            UpdateVoyageCommand(
-              voyageNumber = voyageNumber,
-              movements = data.movements.map(toInput)
-            )
-          ) match
+          val (result, actionLabel) = execute(data)
+          result match
             case Right(voyage) =>
-              Redirect(
-                cargotracker.routing.interfaces.web.routes.VoyageController.list()
-              ).flashing("success" -> s"航海 ${voyage.voyageNumber.value} を更新しました")
+              Redirect(cargotracker.routing.interfaces.web.routes.VoyageController.list())
+                .flashing("success" -> s"航海 ${voyage.voyageNumber.value} を${actionLabel}しました")
             case Left(msg) =>
               BadRequest(
                 views.html.voyage
-                  .formPage(voyageForm.fill(data), errorMessage = Some(msg), isEdit = true)
+                  .formPage(voyageForm.fill(data), errorMessage = Some(msg), isEdit = isEdit)
               )
       )
-  }
 
   private def toInput(m: MovementForm): CarrierMovementCommand =
     CarrierMovementCommand(
