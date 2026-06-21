@@ -45,7 +45,6 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
         "..cargotracker..interfaces.."
       )
       .because("アプリケーション層は出力ポート（trait）に依存し、具体実装はインフラ層に置く")
-      .allowEmptyShould(true) // IT2 時点では application 層は未実装。IT3+ で実装が増えた際に有効化される
     rule.check(classes)
 
   test("ルール 3: コンテキストの domain / application は他コンテキストの内部に直接依存してはならない（infrastructure は ACL アダプター用途で許容）"):

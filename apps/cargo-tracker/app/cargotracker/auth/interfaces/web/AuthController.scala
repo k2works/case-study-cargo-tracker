@@ -1,20 +1,21 @@
 package cargotracker.auth.interfaces.web
 
-import cargotracker.auth.domain.model.repositories.UserRepository
+import cargotracker.auth.application.commandservices.AuthCommandService
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.i18n.I18nSupport
 import play.api.mvc.*
 
-import java.time.{Clock, Instant}
 import javax.inject.{Inject, Singleton}
 
-/** ログイン・ログアウトのコントローラ。 */
+/** ログイン・ログアウトのコントローラ。
+  *
+  * 認証ロジック（資格情報照合・セッション情報組み立て）は [[AuthCommandService]] に委譲し、 ここでは入力バインディングと Play セッション Cookie の発行のみを行う。
+  */
 @Singleton
 class AuthController @Inject() (
     cc: ControllerComponents,
-    userRepository: UserRepository,
-    clock: Clock
+    authCommandService: AuthCommandService
 ) extends AbstractController(cc)
     with I18nSupport:
 
@@ -27,12 +28,10 @@ class AuthController @Inject() (
     )(LoginForm.apply)(lf => Some((lf.username, lf.password)))
   )
 
-  /** ログインフォーム表示 */
   def loginPage(): Action[AnyContent] = Action { implicit request =>
     Ok(views.html.auth.login(loginForm, errorMessage = None))
   }
 
-  /** ログイン実行（PRG） */
   def login(): Action[AnyContent] = Action { implicit request =>
     loginForm
       .bindFromRequest()
@@ -43,16 +42,14 @@ class AuthController @Inject() (
               .login(formWithErrors, errorMessage = Some("入力内容を確認してください"))
           ),
         data =>
-          userRepository.findByUsername(data.username) match
-            case Some(user) if user.authenticate(data.password) =>
-              val rolesStr = user.roles.map(_.toString).mkString(",")
-              Redirect("/")
-                .withSession(
-                  "username" -> user.username,
-                  "roles" -> rolesStr,
-                  "lastAccessedAt" -> Instant.now(clock).toString
-                )
-            case _ =>
+          authCommandService.authenticate(data.username, data.password) match
+            case Right(session) =>
+              Redirect("/").withSession(
+                "username" -> session.username,
+                "roles" -> session.rolesCsv,
+                "lastAccessedAt" -> session.lastAccessedAt.toString
+              )
+            case Left(AuthCommandService.AuthError.InvalidCredentials) =>
               Unauthorized(
                 views.html.auth.login(
                   loginForm,
@@ -62,7 +59,6 @@ class AuthController @Inject() (
       )
   }
 
-  /** ログアウト */
   def logout(): Action[AnyContent] = Action { implicit request =>
     Redirect("/login").withNewSession
   }

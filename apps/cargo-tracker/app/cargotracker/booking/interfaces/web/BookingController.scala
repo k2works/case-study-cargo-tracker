@@ -1,10 +1,7 @@
 package cargotracker.booking.interfaces.web
 
-import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
-import cargotracker.booking.domain.model.aggregates.Cargo
-import cargotracker.booking.domain.model.repositories.CargoRepository
-import cargotracker.booking.domain.model.valueobjects.{BookingId, CargoSpec, HazardousDeclaration, RouteSpecification}
-import cargotracker.shared.domain.{CargoType, Location, ShipperId, Weight}
+import cargotracker.booking.application.commandservices.{BookCargoCommand, BookingCommandService}
+import cargotracker.booking.application.queryservices.BookingQueryService
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.i18n.I18nSupport
@@ -30,8 +27,8 @@ final case class BookingFormData(
 @Singleton
 class BookingController @Inject() (
     cc: ControllerComponents,
-    repository: CargoRepository,
-    shipperChecker: ShipperExistenceChecker
+    commandService: BookingCommandService,
+    queryService: BookingQueryService
 ) extends AbstractController(cc)
     with I18nSupport:
 
@@ -68,7 +65,7 @@ class BookingController @Inject() (
   )
 
   def list(): Action[AnyContent] = Action { implicit request =>
-    Ok(views.html.booking.list(repository.findAll()))
+    Ok(views.html.booking.list(queryService.findAll()))
   }
 
   def newForm(): Action[AnyContent] = Action { implicit request =>
@@ -84,63 +81,38 @@ class BookingController @Inject() (
             views.html.booking
               .form(formWithErrors, errorMessage = Some("入力内容を確認してください"))
           ),
-        data => persistBooking(data)
+        data =>
+          commandService.book(
+            BookCargoCommand(
+              shipperCode = data.shipperCode,
+              origin = data.origin,
+              destination = data.destination,
+              arrivalDeadline = data.arrivalDeadline,
+              cargoType = data.cargoType,
+              weightKg = data.weightKg,
+              description = data.description,
+              quantity = data.quantity,
+              hazardousClass = data.hazardousClass,
+              hazardousUnNumber = data.hazardousUnNumber,
+              hazardousProperName = data.hazardousProperName
+            )
+          ) match
+            case Right(cargo) =>
+              Redirect(
+                cargotracker.booking.interfaces.web.routes.BookingController
+                  .detail(cargo.bookingId.value)
+              ).flashing(
+                "success" -> s"貨物予約 ${cargo.bookingId.value} を登録しました"
+              )
+            case Left(msg) =>
+              BadRequest(
+                views.html.booking.form(bookingForm, errorMessage = Some(msg))
+              )
       )
   }
 
   def detail(bookingId: String): Action[AnyContent] = Action { implicit request =>
-    repository.findById(BookingId.unsafeFrom(bookingId)) match
+    queryService.findById(bookingId) match
       case Some(cargo) => Ok(views.html.booking.detail(cargo))
       case None => NotFound("予約が見つかりません")
   }
-
-  private def persistBooking(data: BookingFormData)(implicit
-      request: RequestHeader
-  ): Result =
-    val result = for
-      origin <- Location(data.origin).left.map(_ => "出発地の UnLocode 形式が不正です")
-      destination <- Location(data.destination).left
-        .map(_ => "目的地の UnLocode 形式が不正です")
-      cargoType <- CargoType
-        .fromName(data.cargoType)
-        .toRight("貨物種別が不正です")
-      weight <- Weight(data.weightKg).left.map(_ => "重量が不正です")
-      routeSpec <- RouteSpecification(origin, destination, data.arrivalDeadline).left
-        .map(_ => "出発地と目的地が同じです")
-      hazardous = for
-        hc <- data.hazardousClass.filter(_.nonEmpty)
-        un <- data.hazardousUnNumber.filter(_.nonEmpty)
-        psn <- data.hazardousProperName.filter(_.nonEmpty)
-      yield HazardousDeclaration(hc, un, psn)
-      spec = CargoSpec(
-        cargoType = cargoType,
-        weight = weight,
-        description = data.description.filter(_.nonEmpty),
-        quantity = data.quantity,
-        hazardous = hazardous
-      )
-      cargo <- Cargo
-        .book(
-          repository.nextIdentity(),
-          ShipperId.unsafeFrom(data.shipperCode),
-          routeSpec,
-          spec,
-          shipperChecker
-        )
-        .left
-        .map(_ => s"荷主 ${data.shipperCode} が見つかりません")
-    yield cargo
-
-    result match
-      case Right(cargo) =>
-        repository.save(cargo)
-        Redirect(
-          cargotracker.booking.interfaces.web.routes.BookingController
-            .detail(cargo.bookingId.value)
-        ).flashing(
-          "success" -> s"貨物予約 ${cargo.bookingId.value} を登録しました"
-        )
-      case Left(msg) =>
-        BadRequest(
-          views.html.booking.form(bookingForm, errorMessage = Some(msg))
-        )

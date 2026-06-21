@@ -1,9 +1,8 @@
 package cargotracker.shipper.interfaces.web
 
-import cargotracker.shared.domain.ShipperType
+import cargotracker.shipper.application.commandservices.{RegisterShipperCommand, ShipperCommandService}
+import cargotracker.shipper.application.queryservices.ShipperQueryService
 import cargotracker.shipper.domain.model.aggregates.Shipper
-import cargotracker.shipper.domain.model.repositories.ShipperRepository
-import cargotracker.shipper.domain.model.valueobjects.DiscountRate
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.data.format.Formats.doubleFormat
@@ -11,6 +10,7 @@ import play.api.i18n.I18nSupport
 import play.api.mvc.*
 
 import javax.inject.{Inject, Singleton}
+
 final case class ShipperForm(
     name: String,
     email: String,
@@ -21,11 +21,15 @@ final case class ShipperForm(
     discountRate: Option[Double]
 )
 
-/** 荷主の一覧表示・新規登録コントローラ（US02・US03）。 */
+/** 荷主の一覧表示・新規登録コントローラ（US02・US03）。
+  *
+  * ビジネスロジック・永続化は [[ShipperCommandService]] / [[ShipperQueryService]] に委譲する。
+  */
 @Singleton
 class ShipperController @Inject() (
     cc: ControllerComponents,
-    repository: ShipperRepository
+    commandService: ShipperCommandService,
+    queryService: ShipperQueryService
 ) extends AbstractController(cc)
     with I18nSupport:
 
@@ -54,7 +58,7 @@ class ShipperController @Inject() (
   )
 
   def list(): Action[AnyContent] = Action { implicit request =>
-    Ok(views.html.shipper.list(repository.findAll()))
+    Ok(views.html.shipper.list(queryService.findAll()))
   }
 
   def newForm(): Action[AnyContent] = Action { implicit request =>
@@ -72,13 +76,13 @@ class ShipperController @Inject() (
               errorMessage = Some("入力内容を確認してください")
             )
           ),
-        data => persistShipper(data)
+        data => handleRegister(data)
       )
   }
 
   /** メール重複チェック（htmx 用）。 */
   def checkEmail(email: String): Action[AnyContent] = Action { implicit request =>
-    repository.findByEmail(email) match
+    queryService.findByEmail(email) match
       case Some(existing) =>
         Ok(
           s"""<div class="alert alert-warning">同一メール荷主が既に存在します（${existing.shipperId.value}）</div>"""
@@ -86,48 +90,26 @@ class ShipperController @Inject() (
       case None => Ok("").as("text/html")
   }
 
-  private def persistShipper(data: ShipperForm)(implicit
+  private def handleRegister(data: ShipperForm)(implicit
       request: RequestHeader
   ): Result =
-    ShipperType.fromName(data.shipperType) match
-      case Some(ShipperType.Individual) =>
-        Shipper
-          .individual(
-            repository.nextIdentity(),
-            data.name,
-            data.email,
-            data.phone,
-            data.address
-          )
-          .fold(
-            err => formError(s"荷主の生成に失敗しました: $err"),
-            shipper => saveAndRedirect(shipper)
-          )
+    val result = RegisterShipperCommand
+      .from(
+        data.shipperType,
+        data.name,
+        data.email,
+        data.phone,
+        data.address,
+        data.contractNumber,
+        data.discountRate
+      )
+      .flatMap(commandService.register)
 
-      case Some(ShipperType.Corporate) =>
-        val rate = data.discountRate
-          .flatMap(d => DiscountRate(d).toOption)
-          .getOrElse(DiscountRate.zero)
-        Shipper
-          .corporate(
-            repository.nextIdentity(),
-            data.name,
-            data.email,
-            data.phone,
-            data.address,
-            data.contractNumber.getOrElse(""),
-            rate
-          )
-          .fold(
-            err => formError(s"荷主の生成に失敗しました: $err"),
-            shipper => saveAndRedirect(shipper)
-          )
+    result match
+      case Right(shipper) => redirectToList(shipper)
+      case Left(msg) => formError(msg)
 
-      case None =>
-        formError("荷主種別が不正です")
-
-  private def saveAndRedirect(shipper: Shipper): Result =
-    repository.save(shipper)
+  private def redirectToList(shipper: Shipper): Result =
     Redirect(
       cargotracker.shipper.interfaces.web.routes.ShipperController.list()
     ).flashing("success" -> s"荷主 ${shipper.shipperId.value} を登録しました")
