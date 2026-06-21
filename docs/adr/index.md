@@ -12,5 +12,6 @@
 | [0004](0004-us26-as-cross-cutting-story.md) | US26（認証・認可）を UC 横断ストーリーとして扱う | 承認 |
 | [0005](0005-route-search-algorithm.md) | 経路探索アルゴリズム選定（DFS + 深さ制限、IT2 spike → IT3 US08 で再評価） | 提案 |
 | [0006](0006-voyage-data-model-extension.md) | 航海データモデル追補（船名・運送会社・対応貨物種別 + Routing 値オブジェクト分離） | 提案 |
+| [0007](0007-optimistic-lock-either-api.md) | 楽観ロックを `Either[DomainError.ConcurrentModification, A]` API として表現する | 提案 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
