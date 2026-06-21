@@ -25,12 +25,12 @@ class VoyageSpec extends AnyFunSuite with Matchers:
   ).toOption.get
 
   test("register で version 0 の Voyage を生成する"):
-    val v = Voyage.register(voyageNumber, schedule)
+    val v = Voyage.register(voyageNumber, schedule, "MV Sample", "MAEU", Set.empty)
     v.voyageNumber shouldBe voyageNumber
     v.version shouldBe 0
 
   test("updateSchedule で schedule を差し替えた新インスタンスを返す"):
-    val v0 = Voyage.register(voyageNumber, schedule)
+    val v0 = Voyage.register(voyageNumber, schedule, "MV", "CC", Set.empty)
     val newSchedule = Schedule(
       List(
         CarrierMovement(
@@ -53,5 +53,5 @@ class VoyageSpec extends AnyFunSuite with Matchers:
     v1.version shouldBe 0 // IT2: 集約に version 活性化は IT3
 
   test("reconstruct で永続化から復元できる"):
-    val v = Voyage.reconstruct(voyageNumber, schedule, version = 3)
+    val v = Voyage.reconstruct(voyageNumber, schedule, "MV Sample", "MAEU", Set.empty, version = 3)
     v.version shouldBe 3

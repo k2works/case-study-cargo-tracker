@@ -50,7 +50,7 @@ class ScalikeJdbcVoyageRepositorySpec
 
   test("save → findByVoyageNumber で航海と単一区間が復元される"):
     val repo = new ScalikeJdbcVoyageRepository
-    val v = Voyage.register(voyageNumber, schedule1)
+    val v = Voyage.register(voyageNumber, schedule1, "MV", "CC", Set.empty)
     repo.save(v)
     val found = repo.findByVoyageNumber(voyageNumber).get
     found.voyageNumber shouldBe voyageNumber
@@ -61,8 +61,8 @@ class ScalikeJdbcVoyageRepositorySpec
 
   test("save → 同 VoyageNumber で再 save（UPDATE）→ version+1、carrier_movement 入れ替え"):
     val repo = new ScalikeJdbcVoyageRepository
-    repo.save(Voyage.register(voyageNumber, schedule1))
-    repo.save(Voyage.register(voyageNumber, schedule2))
+    repo.save(Voyage.register(voyageNumber, schedule1, "MV", "CC", Set.empty))
+    repo.save(Voyage.register(voyageNumber, schedule2, "MV", "CC", Set.empty))
 
     val found = repo.findByVoyageNumber(voyageNumber).get
     found.version shouldBe 1
@@ -71,8 +71,8 @@ class ScalikeJdbcVoyageRepositorySpec
 
   test("findAll は登録順で voyage_number 昇順に取得する"):
     val repo = new ScalikeJdbcVoyageRepository
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-002"), schedule1))
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-001"), schedule1))
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-002"), schedule1, "MV", "CC", Set.empty))
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-001"), schedule1, "MV", "CC", Set.empty))
     repo.findAll().map(_.voyageNumber.value) shouldBe Seq("VY-001", "VY-002")
 
   test("未登録 VoyageNumber は None"):
@@ -98,8 +98,8 @@ class ScalikeJdbcVoyageRepositorySpec
 
   test("findByCriteria: 全条件未指定なら findAll と同件数を返す"):
     val repo = new ScalikeJdbcVoyageRepository
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-A1"), schedule1))
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-A2"), schedule2))
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-A1"), schedule1, "MV", "CC", Set.empty))
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-A2"), schedule2, "MV", "CC", Set.empty))
     repo.findByCriteria().map(_.voyageNumber.value) should contain theSameElementsAs Seq(
       "VY-A1",
       "VY-A2"
@@ -107,7 +107,7 @@ class ScalikeJdbcVoyageRepositorySpec
 
   test("findByCriteria: 出発港で絞り込みできる"):
     val repo = new ScalikeJdbcVoyageRepository
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-T1"), schedule1)) // 出発: JPTYO
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-T1"), schedule1, "MV", "CC", Set.empty)) // 出発: JPTYO
     val schedFromYok = Schedule(
       List(
         CarrierMovement(
@@ -118,7 +118,7 @@ class ScalikeJdbcVoyageRepositorySpec
         ).toOption.get
       )
     ).toOption.get
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-Y1"), schedFromYok))
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-Y1"), schedFromYok, "MV", "CC", Set.empty))
 
     val results = repo.findByCriteria(origin = Some(tyo))
     results.map(_.voyageNumber.value) shouldBe Seq("VY-T1")
@@ -148,8 +148,8 @@ class ScalikeJdbcVoyageRepositorySpec
 
   test("findByCriteria: 出港期間で絞り込みできる"):
     val repo = new ScalikeJdbcVoyageRepository
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-JUL"), schedule1)) // 2026-07-01
-    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-AUG"), schedule2)) // 2026-07-02 開始
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-JUL"), schedule1, "MV", "CC", Set.empty)) // 2026-07-01
+    repo.save(Voyage.register(VoyageNumber.unsafeFrom("VY-AUG"), schedule2, "MV", "CC", Set.empty)) // 2026-07-02 開始
     val results = repo.findByCriteria(
       departureFrom = Some(Instant.parse("2026-07-02T00:00:00Z")),
       departureTo = Some(Instant.parse("2026-07-02T23:59:59Z"))

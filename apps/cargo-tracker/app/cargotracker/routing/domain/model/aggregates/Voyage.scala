@@ -34,9 +34,10 @@ final case class Voyage private (
 
 object Voyage:
 
-  def register(voyageNumber: VoyageNumber, schedule: Schedule): Voyage =
-    new Voyage(voyageNumber, schedule, "", "", Set.empty, version = 0)
-
+  /** 新規登録（vesselName / carrierCode / supportedCargoTypes は必須）。
+    *
+    * IT4 タスク 0.2: 旧 2 引数版を廃止し、必須項目を明示する API に統一。
+    */
   def register(
       voyageNumber: VoyageNumber,
       schedule: Schedule,
@@ -46,13 +47,7 @@ object Voyage:
   ): Voyage =
     new Voyage(voyageNumber, schedule, vesselName, carrierCode, supportedCargoTypes, version = 0)
 
-  def reconstruct(
-      voyageNumber: VoyageNumber,
-      schedule: Schedule,
-      version: Int
-  ): Voyage =
-    new Voyage(voyageNumber, schedule, "", "", Set.empty, version)
-
+  /** 永続化からの再構成（必須項目を明示する API に統一）。 */
   def reconstruct(
       voyageNumber: VoyageNumber,
       schedule: Schedule,

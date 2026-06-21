@@ -3,7 +3,7 @@ package cargotracker.routing.application.commandservices
 import cargotracker.routing.domain.model.aggregates.Voyage
 import cargotracker.routing.domain.model.repositories.VoyageRepository
 import cargotracker.routing.domain.model.valueobjects.{CarrierMovement, Schedule, VoyageNumber}
-import cargotracker.shared.domain.Location
+import cargotracker.shared.domain.{CargoType, Location}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
@@ -25,7 +25,8 @@ class VoyageCommandService @Inject() (repository: VoyageRepository):
         case Some(_) => Left(s"航海番号 ${command.voyageNumber} は既に登録されています")
         case None => Right(None)
       },
-      build = (vn, _, schedule) => Voyage.register(vn, schedule)
+      build = (vn, _, schedule) =>
+        Voyage.register(vn, schedule, command.vesselName, command.carrierCode, command.supportedCargoTypes)
     )
 
   def update(command: UpdateVoyageCommand): Either[String, Voyage] =
@@ -87,10 +88,16 @@ class VoyageCommandService @Inject() (repository: VoyageRepository):
         }
       }
 
-/** 航海スケジュール登録コマンド（US24）。 */
+/** 航海スケジュール登録コマンド（US24）。
+  *
+  * IT4 タスク 0.2: 船名・運送会社・対応貨物種別は必須項目化（DEFAULT '' を撤去）。 未入力時は呼び出し側で空文字 / 空集合を明示的に渡す（フォーム拡張は IT5 申し送り）。
+  */
 final case class RegisterVoyageCommand(
     voyageNumber: String,
-    movements: Seq[CarrierMovementCommand]
+    movements: Seq[CarrierMovementCommand],
+    vesselName: String = "",
+    carrierCode: String = "",
+    supportedCargoTypes: Set[CargoType] = Set.empty
 )
 
 /** 航海スケジュール更新コマンド（US25）。 */
