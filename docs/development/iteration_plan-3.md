@@ -91,13 +91,13 @@
 | 0.5 | scoverage + Twirl + coverage モードの `NoClassDefFoundError` 再現条件特定 + build.sbt 修正 | 3h | - | [ ] |
 | 0.6 | Dashboard 集計を `HomeController` から pure function 切り出し、テスト追加 | 2h | - | [x] |
 | 0.7 | 危険物・冷凍フィールドの htmx 動的表示（IT2 ui_design.md 565 準拠） | 3h | - | [ ] |
-| 0.8 | 予約詳細に温度管理条件の表示追加（経路設計者が冷凍要件を確認できる） | 1h | - | [ ] |
+| 0.8 | 予約詳細に温度管理条件の表示追加（経路設計者が冷凍要件を確認できる） | 1h | - | [x] |
 | 0.9 | `BookingCommandService.assignToRouting` / `book` の境界値・エラー経路網羅テスト | 3h | - | [ ] |
 | 0.10 | README に「動かし方」追加（ロール別ダッシュボード / シードユーザー / ログイン URL） | 1h | - | [x] |
 | 0.11 | ScalaCheck プロパティテスト導入（ShipperId / Money / VoyageNumber 等の不変条件） | 3h | - | [ ] |
 | 0.12 | CHANGELOG / ADR 0005 リンクパス修正（リポジトリ名、相対パス化） | 1h | - | [x] |
 | 0.13 | IT2 review 中 #13 ダッシュボードに「受領」「設計開始」等の次アクション追加（経路設計者の業務追跡が引き渡し後に止まらないように） | 2h | - | [ ] |
-| 0.14 | IT2 review 中 #14 release-0.1.0-gate-check.md の SonarQube QG セルを「PASS 項目 / ERROR 項目 / 判断根拠 / IT3 対応」の 4 行サブリストに分解、localhost URL コメント化 | 1h | - | [ ] |
+| 0.14 | IT2 review 中 #14 release-0.1.0-gate-check.md の SonarQube QG セルを「PASS 項目 / ERROR 項目 / 判断根拠 / IT3 対応」の 4 行サブリストに分解、localhost URL コメント化 | 1h | - | [x] |
 | 0.15 | IT2 review 中 #18 E2E フレーキネス対策（`page.waitForResponse` + seed エンドポイント、`networkidle` 禁止 lint 導入） | 2h | - | [ ] |
 
 **小計**: 36h（理想時間、0.13/0.14/0.15 追加で +5h）

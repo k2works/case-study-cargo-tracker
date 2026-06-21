@@ -25,6 +25,13 @@
       <strong>危険物申告</strong>: クラス @h.hazardClass / UN @h.unNumber / @h.properShippingName
     </div>
   }
+  @cargo.cargoSpec.refrigeration.map { r =>
+    <div class="alert alert-info">
+      <strong>温度管理条件</strong>:
+      @r.minTemperature ～ @r.maxTemperature
+      @r.unit（経路設計者は冷凍コンテナ手配の必須インプットとして利用してください）
+    </div>
+  }
   <div class="d-flex gap-2 mt-3">
     <a href="@cargotracker.booking.interfaces.web.routes.BookingController.list()" class="btn btn-secondary">一覧に戻る</a>
     @if(cargo.status == BookingStatus.Preliminary) {
