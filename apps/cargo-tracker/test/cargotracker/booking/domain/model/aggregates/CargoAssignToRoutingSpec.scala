@@ -63,7 +63,10 @@ class CargoAssignToRoutingSpec extends AnyFunSuite with Matchers:
 
   test("BookingStatus.canTransitionTo の代表ケース"):
     BookingStatus.Preliminary.canTransitionTo(BookingStatus.RouteProposed) shouldBe true
-    BookingStatus.RouteProposed.canTransitionTo(BookingStatus.Confirmed) shouldBe true
+    // IT4 US11/US13: RouteProposed → Confirmed は直接遷移せず RouteAssigned を経由する
+    BookingStatus.RouteProposed.canTransitionTo(BookingStatus.Confirmed) shouldBe false
+    BookingStatus.RouteProposed.canTransitionTo(BookingStatus.RouteAssigned) shouldBe true
+    BookingStatus.RouteAssigned.canTransitionTo(BookingStatus.Confirmed) shouldBe true
     BookingStatus.Preliminary.canTransitionTo(BookingStatus.Confirmed) shouldBe false
     BookingStatus.Cancelled.canTransitionTo(BookingStatus.Preliminary) shouldBe false
     BookingStatus.Confirmed.canTransitionTo(BookingStatus.Cancelled) shouldBe true
