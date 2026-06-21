@@ -27,6 +27,7 @@ POST    /bookings/:bookingId/assign-routing  cargotracker.booking.interfaces.web
 
 # 航海スケジュール（US24・US25）
 GET     /voyages                       cargotracker.routing.interfaces.web.VoyageController.list()
+GET     /voyages/search                cargotracker.routing.interfaces.web.VoyageController.search()
 GET     /voyages/new                   cargotracker.routing.interfaces.web.VoyageController.newForm()
 POST    /voyages                       cargotracker.routing.interfaces.web.VoyageController.create()
 GET     /voyages/:voyageNumber/edit    cargotracker.routing.interfaces.web.VoyageController.editForm(voyageNumber: String)

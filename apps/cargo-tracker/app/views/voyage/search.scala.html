@@ -1,0 +1,75 @@
+@(searchForm: play.api.data.Form[cargotracker.routing.interfaces.web.SearchVoyageFormData],
+  results: Seq[cargotracker.routing.domain.model.aggregates.Voyage],
+  errorMessage: Option[String],
+  searched: Boolean
+)(implicit request: RequestHeader, messagesProvider: play.api.i18n.MessagesProvider, flash: Flash)
+@views.html.layout.main("航海スケジュール検索") {
+  <h1 class="h3 mb-3">航海スケジュール検索</h1>
+  @errorMessage.map { msg => <div class="alert alert-danger">@msg</div> }
+
+  @helper.form(action = cargotracker.routing.interfaces.web.routes.VoyageController.search(), Symbol("method") -> "GET") {
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <label for="search-origin" class="form-label">出発港 (UnLocode)</label>
+        <input type="text" id="search-origin" name="origin" class="form-control" maxlength="5" pattern="[A-Z]{5}" placeholder="JPTYO" value="@searchForm("origin").value.getOrElse("")">
+      </div>
+      <div class="col-md-3">
+        <label for="search-destination" class="form-label">到着港 (UnLocode)</label>
+        <input type="text" id="search-destination" name="destination" class="form-control" maxlength="5" pattern="[A-Z]{5}" placeholder="USLAX" value="@searchForm("destination").value.getOrElse("")">
+      </div>
+      <div class="col-md-3">
+        <label for="search-departure-from" class="form-label">出港日 (From)</label>
+        <input type="date" id="search-departure-from" name="departureDateFrom" class="form-control" value="@searchForm("departureDateFrom").value.getOrElse("")">
+      </div>
+      <div class="col-md-3">
+        <label for="search-departure-to" class="form-label">出港日 (To)</label>
+        <input type="date" id="search-departure-to" name="departureDateTo" class="form-control" value="@searchForm("departureDateTo").value.getOrElse("")">
+      </div>
+      <div class="col-md-3">
+        <label for="search-cargo-type" class="form-label">貨物種別</label>
+        <select id="search-cargo-type" name="cargoType" class="form-select">
+          <option value="">指定なし</option>
+          @for(ct <- Seq("General", "Refrigerated", "Hazardous")) {
+            <option value="@ct" @if(searchForm("cargoType").value.contains(ct)){selected}>@ct</option>
+          }
+        </select>
+      </div>
+      <div class="col-md-12 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">検索</button>
+        <a href="@cargotracker.routing.interfaces.web.routes.VoyageController.list()" class="btn btn-secondary">航海一覧へ</a>
+      </div>
+    </div>
+  }
+
+  @if(searched) {
+    <h2 class="h5 mb-2">検索結果（@results.size 件）</h2>
+    @if(results.isEmpty) {
+      <div class="alert alert-warning">
+        該当する航海はありません。条件を緩和してください（出港期間を広げる、貨物種別を指定なしにする等）。
+      </div>
+    } else {
+      <table class="table table-sm table-hover">
+        <thead class="table-light">
+          <tr>
+            <th>航海番号</th><th>船名</th><th>運送会社</th>
+            <th>出発港</th><th>到着港</th><th>出港時刻</th><th>到着時刻</th><th>対応貨物種別</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for(v <- results) {
+            <tr>
+              <td>@v.voyageNumber.value</td>
+              <td>@v.vesselName</td>
+              <td>@v.carrierCode</td>
+              <td>@v.schedule.origin.unLocode</td>
+              <td>@v.schedule.destination.unLocode</td>
+              <td>@v.schedule.carrierMovements.head.departureTime</td>
+              <td>@v.schedule.carrierMovements.last.arrivalTime</td>
+              <td>@v.supportedCargoTypes.map(_.toString).toSeq.sorted.mkString(", ")</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+}

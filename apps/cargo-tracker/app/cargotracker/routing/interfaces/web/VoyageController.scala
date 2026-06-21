@@ -7,13 +7,13 @@ import cargotracker.routing.application.commandservices.{
   UpdateVoyageCommand,
   VoyageCommandService
 }
-import cargotracker.routing.application.queryservices.VoyageQueryService
+import cargotracker.routing.application.queryservices.{SearchVoyageCommand, VoyageQueryService}
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.i18n.I18nSupport
 import play.api.mvc.*
 
-import java.time.{Instant, LocalDateTime, ZoneId}
+import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
 import javax.inject.{Inject, Singleton}
 
 /** 航海スケジュール画面の Controller（US24・US25）。 */
@@ -42,6 +42,43 @@ class VoyageController @Inject() (
 
   def list(): Action[AnyContent] = authenticated { implicit request =>
     Ok(views.html.voyage.list(queryService.findAll()))
+  }
+
+  private val searchForm: Form[SearchVoyageFormData] = Form(
+    mapping(
+      "origin" -> optional(text),
+      "destination" -> optional(text),
+      "departureDateFrom" -> optional(localDate),
+      "departureDateTo" -> optional(localDate),
+      "cargoType" -> optional(text)
+    )(SearchVoyageFormData.apply)(d =>
+      Some((d.origin, d.destination, d.departureDateFrom, d.departureDateTo, d.cargoType))
+    )
+  )
+
+  /** US07: 航海スケジュール検索画面（GET /voyages/search）。 */
+  def search(): Action[AnyContent] = authenticated { implicit request =>
+    val bound = searchForm.bindFromRequest()
+    val hasAnyParam = request.queryString.exists { case (k, v) =>
+      Set("origin", "destination", "departureDateFrom", "departureDateTo", "cargoType")
+        .contains(k) && v.exists(_.nonEmpty)
+    }
+    val data = bound.value.getOrElse(SearchVoyageFormData())
+    if !hasAnyParam then Ok(views.html.voyage.search(bound, Seq.empty, None, searched = false))
+    else
+      queryService.search(
+        SearchVoyageCommand(
+          origin = data.origin.filter(_.nonEmpty),
+          destination = data.destination.filter(_.nonEmpty),
+          departureDateFrom = data.departureDateFrom,
+          departureDateTo = data.departureDateTo,
+          cargoType = data.cargoType.filter(_.nonEmpty)
+        )
+      ) match
+        case Right(results) =>
+          Ok(views.html.voyage.search(bound, results, None, searched = true))
+        case Left(msg) =>
+          BadRequest(views.html.voyage.search(bound, Seq.empty, Some(msg), searched = true))
   }
 
   def newForm(): Action[AnyContent] = authenticated { implicit request =>
@@ -117,6 +154,14 @@ class VoyageController @Inject() (
       departureTime = m.departureTime.atZone(ZoneId.of("UTC")).toInstant,
       arrivalTime = m.arrivalTime.atZone(ZoneId.of("UTC")).toInstant
     )
+
+final case class SearchVoyageFormData(
+    origin: Option[String] = None,
+    destination: Option[String] = None,
+    departureDateFrom: Option[LocalDate] = None,
+    departureDateTo: Option[LocalDate] = None,
+    cargoType: Option[String] = None
+)
 
 final case class VoyageFormData(voyageNumber: String, movements: Seq[MovementForm])
 final case class MovementForm(
