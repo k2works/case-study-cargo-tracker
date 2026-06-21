@@ -110,7 +110,7 @@
 | 1.2 | Flyway V8: 上記カラム + 中間テーブル追加 | 1h | - | [x] |
 | 1.3 | `Voyage` 集約に船名・運送会社・対応貨物種別を持たせ、`VoyageRepository.findByCriteria(origin, destination, period, cargoType)` を実装 | 3h | - | [x] |
 | 1.4 | `VoyageQueryService.search(SearchVoyageCommand)` + ScalikeJDBC 実装（インデックス活用） | 3h | - | [x] |
-| 1.5 | `VoyageController.search` + `views/voyage/search.scala.html`（条件入力 + 結果一覧 + 条件緩和ガイド） | 3h | - | [ ] |
+| 1.5 | `VoyageController.search` + `views/voyage/search.scala.html`（条件入力 + 結果一覧 + 条件緩和ガイド） | 3h | - | [x] |
 | 1.6 | ドメインユニット + 統合 + E2E テスト（一般・危険物・冷凍の 3 系統 + 該当なし） | 3h | - | [ ] |
 
 **小計**: 15h（5h/SP）
