@@ -80,6 +80,7 @@ class RouteCandidateEndpointSpec extends AnyWordSpec with Matchers with Postgres
         val body = contentAsString(result)
         body should include("条件に合致する経路候補が見つかりませんでした")
         body should include("貨物種別の制約")
+        body should include("data-us10-relink=\"true\"")
       }
     }
   }

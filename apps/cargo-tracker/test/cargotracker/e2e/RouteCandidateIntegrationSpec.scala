@@ -11,6 +11,7 @@ import cargotracker.support.AuthenticatedRequestSupport.*
 import cargotracker.support.PostgresContainerSupport
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import play.api.test.CSRFTokenHelper.*
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
 
@@ -77,6 +78,49 @@ class RouteCandidateIntegrationSpec extends AnyWordSpec with Matchers with Postg
     ).toOption.get
     val schedule = Schedule(List(cm)).toOption.get
     repo.save(Voyage.register(VoyageNumber.unsafeFrom(vn), schedule, "Vessel", "CC", supported))
+
+  "POST /bookings/:bookingId/routes/:idx/confirm" should {
+
+    "直行便を選んで確定すると success フラッシュとともに候補画面に戻る" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val shipperCode = seedShipper(app.injector.instanceOf[ShipperRepository])
+        seedVoyage(
+          app.injector.instanceOf[VoyageRepository],
+          "VY-CONFIRM",
+          "JPTYO",
+          "USLAX",
+          "2099-07-01T10:00:00Z",
+          "2099-07-10T18:00:00Z"
+        )
+        val bookingId = book(
+          app.injector.instanceOf[BookingCommandService],
+          shipperCode,
+          "JPTYO",
+          "USLAX",
+          LocalDate.parse("2099-12-31")
+        )
+        val confirm = route(
+          app,
+          FakeRequest(POST, s"/bookings/$bookingId/routes/0/confirm").withAuthenticatedSession.withCSRFToken
+        ).get
+        status(confirm) shouldBe SEE_OTHER
+        redirectLocation(confirm) shouldBe Some(s"/bookings/$bookingId/routes")
+        flash(confirm).get("success") shouldBe Some("経路を確定しました")
+      }
+    }
+
+    "存在しない予約 ID の確定は 404" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val result = route(
+          app,
+          FakeRequest(POST, "/bookings/UNKNOWN/routes/0/confirm").withAuthenticatedSession.withCSRFToken
+        ).get
+        status(result) shouldBe NOT_FOUND
+      }
+    }
+  }
 
   "GET /bookings/:bookingId/routes" should {
 

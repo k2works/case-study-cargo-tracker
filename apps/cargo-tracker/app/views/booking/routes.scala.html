@@ -24,7 +24,8 @@
       <ul class="mb-0 mt-2">
         <li>貨物種別の制約により候補が絞り込まれている可能性があります</li>
         <li>出港期間や経由地条件を緩和して再検索してください</li>
-        <li>必要に応じて航海スケジュール（/voyages/search）で個別便を確認してください</li>
+        <li>必要に応じて航海スケジュール（<a href="@cargotracker.routing.interfaces.web.routes.VoyageController.search()">/voyages/search</a>）で個別便を確認してください</li>
+        <li><a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" data-us10-relink="true">予約詳細で経路条件を見直す（US10）</a></li>
       </ul>
     </div>
   }

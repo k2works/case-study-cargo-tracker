@@ -126,7 +126,7 @@ date: 2026-06-21
 | 1.2 | Flyway V9: `route_candidate_selection`（id / booking_id / voyage_numbers / status / version / 監査）テーブル追加 | 1h | [x] |
 | 1.3 | `SelectRouteCommand` + `RoutingCommandService.confirmRoute(bookingId, candidateIndex)` 実装 | 4h | [x] |
 | 1.4 | 経路候補画面（IT3 タスク 2.7）に「この経路で確定」ボタンを各行に追加。POST `/bookings/:id/routes/:idx/confirm`（PRG） | 3h | [x] |
-| 1.5 | 統合 + E2E テスト（直行を確定 / 中継を確定 / 0 件時の US10 リンク表示） | 3h | [ ] |
+| 1.5 | 統合 + E2E テスト（直行を確定 / 中継を確定 / 0 件時の US10 リンク表示） | 3h | [x] |
 
 **小計**: 14h
 
