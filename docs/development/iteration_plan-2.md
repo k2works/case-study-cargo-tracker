@@ -120,7 +120,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | ShipperController・EstimateController・BookingController に `AuthenticatedAction` 適用 | 2h | - | [ ] |
+| 0.1 | ShipperController・EstimateController・BookingController に `AuthenticatedAction` 適用 | 2h | - | [x] |
 | 0.2 | HomeController にロール別ダッシュボード（経路設計者用 引き渡し済み予約一覧含む） | 3h | - | [ ] |
 | 0.3 | Flyway V5 で開発用シードユーザー投入（admin / sales / router / handler / billing / shipper） | 1h | - | [ ] |
 | 0.4 | pre-commit hook を staged ファイル限定スキャンに変更（scalafmt / scalafix） | 1h | - | [ ] |

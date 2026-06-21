@@ -1,5 +1,6 @@
 package cargotracker.shipper.interfaces.web
 
+import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.shipper.application.commandservices.{RegisterShipperCommand, ShipperCommandService}
 import cargotracker.shipper.application.queryservices.ShipperQueryService
 import cargotracker.shipper.domain.model.aggregates.Shipper
@@ -28,6 +29,7 @@ final case class ShipperForm(
 @Singleton
 class ShipperController @Inject() (
     cc: ControllerComponents,
+    authenticated: AuthenticatedAction,
     commandService: ShipperCommandService,
     queryService: ShipperQueryService
 ) extends AbstractController(cc)
@@ -57,15 +59,15 @@ class ShipperController @Inject() (
     )
   )
 
-  def list(): Action[AnyContent] = Action { implicit request =>
+  def list(): Action[AnyContent] = authenticated { implicit request =>
     Ok(views.html.shipper.list(queryService.findAll()))
   }
 
-  def newForm(): Action[AnyContent] = Action { implicit request =>
+  def newForm(): Action[AnyContent] = authenticated { implicit request =>
     Ok(views.html.shipper.form(shipperForm, errorMessage = None))
   }
 
-  def create(): Action[AnyContent] = Action { implicit request =>
+  def create(): Action[AnyContent] = authenticated { implicit request =>
     shipperForm
       .bindFromRequest()
       .fold(
@@ -81,7 +83,7 @@ class ShipperController @Inject() (
   }
 
   /** メール重複チェック（htmx 用）。 */
-  def checkEmail(email: String): Action[AnyContent] = Action { implicit request =>
+  def checkEmail(email: String): Action[AnyContent] = authenticated { implicit request =>
     queryService.findByEmail(email) match
       case Some(existing) =>
         Ok(

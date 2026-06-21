@@ -1,5 +1,6 @@
 package cargotracker.booking.interfaces.web
 
+import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.booking.application.commandservices.{BookCargoCommand, BookingCommandService}
 import cargotracker.booking.application.queryservices.BookingQueryService
 import play.api.data.Form
@@ -27,6 +28,7 @@ final case class BookingFormData(
 @Singleton
 class BookingController @Inject() (
     cc: ControllerComponents,
+    authenticated: AuthenticatedAction,
     commandService: BookingCommandService,
     queryService: BookingQueryService
 ) extends AbstractController(cc)
@@ -64,15 +66,15 @@ class BookingController @Inject() (
     )
   )
 
-  def list(): Action[AnyContent] = Action { implicit request =>
+  def list(): Action[AnyContent] = authenticated { implicit request =>
     Ok(views.html.booking.list(queryService.findAll()))
   }
 
-  def newForm(): Action[AnyContent] = Action { implicit request =>
+  def newForm(): Action[AnyContent] = authenticated { implicit request =>
     Ok(views.html.booking.form(bookingForm, errorMessage = None))
   }
 
-  def create(): Action[AnyContent] = Action { implicit request =>
+  def create(): Action[AnyContent] = authenticated { implicit request =>
     bookingForm
       .bindFromRequest()
       .fold(
@@ -111,7 +113,7 @@ class BookingController @Inject() (
       )
   }
 
-  def detail(bookingId: String): Action[AnyContent] = Action { implicit request =>
+  def detail(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
     queryService.findById(bookingId) match
       case Some(cargo) => Ok(views.html.booking.detail(cargo))
       case None => NotFound("予約が見つかりません")

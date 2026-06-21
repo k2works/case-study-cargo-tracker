@@ -1,5 +1,6 @@
 package cargotracker.estimation.interfaces.web
 
+import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.estimation.application.commandservices.{CreateEstimateCommand, EstimateCommandService}
 import cargotracker.estimation.application.queryservices.EstimateQueryService
 import play.api.data.Form
@@ -21,6 +22,7 @@ final case class EstimateFormData(
 @Singleton
 class EstimateController @Inject() (
     cc: ControllerComponents,
+    authenticated: AuthenticatedAction,
     commandService: EstimateCommandService,
     queryService: EstimateQueryService
 ) extends AbstractController(cc)
@@ -36,15 +38,15 @@ class EstimateController @Inject() (
     )(EstimateFormData.apply)(d => Some((d.origin, d.destination, d.deadline, d.cargoType, d.weightKg)))
   )
 
-  def list(): Action[AnyContent] = Action { implicit request =>
+  def list(): Action[AnyContent] = authenticated { implicit request =>
     Ok(views.html.estimate.list(queryService.findAll()))
   }
 
-  def newForm(): Action[AnyContent] = Action { implicit request =>
+  def newForm(): Action[AnyContent] = authenticated { implicit request =>
     Ok(views.html.estimate.form(estimateForm, errorMessage = None))
   }
 
-  def create(): Action[AnyContent] = Action { implicit request =>
+  def create(): Action[AnyContent] = authenticated { implicit request =>
     estimateForm
       .bindFromRequest()
       .fold(
@@ -75,7 +77,7 @@ class EstimateController @Inject() (
       )
   }
 
-  def detail(estimateId: String): Action[AnyContent] = Action { implicit request =>
+  def detail(estimateId: String): Action[AnyContent] = authenticated { implicit request =>
     queryService.findById(estimateId) match
       case Some(est) => Ok(views.html.estimate.detail(est))
       case None => NotFound("見積が見つかりません")
