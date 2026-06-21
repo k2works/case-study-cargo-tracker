@@ -83,3 +83,43 @@ class RouteCandidateSearchSpec extends AnyFunSuite with Matchers:
   test("到達不能: 目的地への辺がない場合は空"):
     val legs = List(leg(vn1, tyo, yok, "2026-07-01T10:00:00", "2026-07-01T18:00:00"))
     RouteCandidateSearch.search(legs, tyo, nyc) shouldBe empty
+
+  // === 貨物種別フィルタ（IT3 タスク 2.4 / US08） ===
+
+  import cargotracker.routing.domain.model.aggregates.Voyage
+  import cargotracker.routing.domain.model.valueobjects.{CarrierMovement, Schedule}
+  import cargotracker.shared.domain.CargoType
+
+  private def voyage(
+      vn: VoyageNumber,
+      from: Location,
+      to: Location,
+      supported: Set[CargoType]
+  ): Voyage =
+    val schedule = Schedule(
+      List(
+        CarrierMovement(
+          from,
+          to,
+          Instant.parse("2026-07-01T10:00:00Z"),
+          Instant.parse("2026-07-10T18:00:00Z")
+        ).toOption.get
+      )
+    ).toOption.get
+    Voyage.register(vn, schedule, "V", "C", supported)
+
+  test("toRoutingLegs: cargoTypeFilter 未指定なら全航海の辺を返す"):
+    val voyages = Seq(
+      voyage(vn1, tyo, lax, Set(CargoType.General)),
+      voyage(vn2, tyo, lax, Set(CargoType.Hazardous))
+    )
+    RouteCandidateSearch.toRoutingLegs(voyages).size shouldBe 2
+
+  test("toRoutingLegs: cargoTypeFilter 指定時は非対応航海を除外する"):
+    val voyages = Seq(
+      voyage(vn1, tyo, lax, Set(CargoType.General)),
+      voyage(vn2, tyo, lax, Set(CargoType.Hazardous, CargoType.General)),
+      voyage(vn3, tyo, lax, Set(CargoType.Refrigerated))
+    )
+    val legs = RouteCandidateSearch.toRoutingLegs(voyages, Some(CargoType.Hazardous))
+    legs.map(_.voyageNumber.value) shouldBe List("VY-002")

@@ -2,7 +2,7 @@ package cargotracker.routing.application
 
 import cargotracker.routing.domain.model.aggregates.Voyage
 import cargotracker.routing.domain.model.valueobjects.{RouteCandidate, RoutingLeg}
-import cargotracker.shared.domain.Location
+import cargotracker.shared.domain.{CargoType, Location}
 
 import java.time.Instant
 
@@ -15,19 +15,27 @@ import java.time.Instant
   */
 object RouteCandidateSearch:
 
-  /** すべての登録済み `Voyage` から `RoutingLeg` のフラットリストを生成する。 */
-  def toRoutingLegs(voyages: Seq[Voyage]): List[RoutingLeg] =
-    voyages.toList.flatMap { v =>
-      v.schedule.carrierMovements.map { cm =>
-        RoutingLeg(
-          voyageNumber = v.voyageNumber,
-          from = cm.departureLocation,
-          to = cm.arrivalLocation,
-          departure = cm.departureTime,
-          arrival = cm.arrivalTime
-        )
+  /** すべての登録済み `Voyage` から `RoutingLeg` のフラットリストを生成する。
+    *
+    * `cargoTypeFilter` を指定した場合、その貨物種別に対応する航海のみを採用する（US05 受入条件 4 / US08 貨物種別フィルタ）。
+    */
+  def toRoutingLegs(
+      voyages: Seq[Voyage],
+      cargoTypeFilter: Option[CargoType] = None
+  ): List[RoutingLeg] =
+    voyages.toList
+      .filter(v => cargoTypeFilter.forall(v.supports))
+      .flatMap { v =>
+        v.schedule.carrierMovements.map { cm =>
+          RoutingLeg(
+            voyageNumber = v.voyageNumber,
+            from = cm.departureLocation,
+            to = cm.arrivalLocation,
+            departure = cm.departureTime,
+            arrival = cm.arrivalTime
+          )
+        }
       }
-    }
 
   /** DFS + 深さ制限で `origin → destination` の経路を全列挙する。 */
   def search(
