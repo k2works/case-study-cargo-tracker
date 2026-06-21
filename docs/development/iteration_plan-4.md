@@ -90,7 +90,7 @@ date: 2026-06-21
 **受入条件**:
 
 1. 予約番号を指定して予約内容と選択ルートを確認できる
-2. 確定操作を行うと予約状態が `Booked`（予約確定）に更新される
+2. 確定操作を行うと予約状態が `Confirmed`（予約確定）に更新される
 3. 経路設計者に追跡番号発行依頼の通知が送信される（IT5 前提のため通知ログのみ）
 4. 荷主がルート変更を希望する場合、予約を `RouteProposed`（経路設計中）に戻せる
 5. 荷主がキャンセルを希望する場合、予約を `Cancelled` 状態に変更できる
@@ -110,8 +110,13 @@ date: 2026-06-21
 | 0.6 | ArchUnit ルール 4 を `*QueryService` / `*Query` / `*Result` 許容に拡張し、`CalculateRouteCommand` 等を `queryservices` に戻す ADR 化 | 3h | [ ] |
 | 0.7 | `Estimate.findAll` の N+1 解消（estimate + route_candidate を一括 SELECT で取得） | 2h | [ ] |
 | 0.8 | iteration_plan-3.md L344 の VARCHAR 桁数表記不一致と L601-604 重複 ADR 表の修正 | 1h | [ ] |
+| 0.9 | **設計ドキュメント整合化**: (a) `BookingStatus` に `RouteAssigned` 追加を `domain-model.md` に反映、(b) `route_candidate_selection` / `notification_log` テーブルを `data-model.md` に追記、(c) `ui_design.md` の経路画面 URL を `/bookings/:id/route` → `/bookings/:id/routes` に統一（IT3 実装乖離の解消）、(d) ui_design.md の予約詳細ボタン表に「経路を確定」(US09) を追記 | 3h | [ ] |
 
-**小計**: 19h
+**小計**: 22h
+
+> **保留事項（IT4 スコープ外）**:
+>
+> - IT3 レビュー高 #2「予約番号→検索画面の事前充填導線」は、US09 で経路候補画面から直接「この経路で確定」できるため IT4 では不要。US11 完了後に経路条件再調整（US10、IT9 予備）で再算出する流れに合わせて IT5 で再評価する。
 
 #### 1. US09 経路選択・確定（3 SP）
 
@@ -153,7 +158,7 @@ date: 2026-06-21
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | `BookingStatus.Booked` / `Cancelled` 追加と canTransitionTo 拡張（RouteAssigned → Booked / Cancelled / RouteProposed） | 2h | [ ] |
+| 4.1 | `BookingStatus.Confirmed`（既存）/ `Cancelled`（既存）の canTransitionTo 拡張（RouteAssigned → Confirmed / Cancelled / RouteProposed） | 2h | [ ] |
 | 4.2 | `ConfirmBookingCommand` / `ReproposeRouteCommand` / `CancelBookingCommand` の 3 コマンド追加 | 4h | [ ] |
 | 4.3 | 予約詳細画面に「予約確定」「経路再設計に戻す」「キャンセル」ボタンを RouteAssigned 状態の予約に表示 | 3h | [ ] |
 | 4.4 | 各操作後の `NotificationLog` 記録（追跡番号発行依頼通知 / キャンセル確認通知） | 2h | [ ] |
@@ -165,12 +170,12 @@ date: 2026-06-21
 
 | カテゴリ | SP | 理想時間 |
 |---------|----|----|
-| IT3 申し送り（0.x） | - | 19h |
+| IT3 申し送り（0.x） | - | 22h |
 | US09 経路選択・確定 | 3 | 14h |
 | US11 経路情報紐付け | 2 | 11h |
 | US12 荷主通知 | 3 | 12h |
 | US13 予約確定 | 3 | 14h |
-| **合計** | **11** | **70h** |
+| **合計** | **11** | **73h** |
 
 **1 SP あたり**: 約 6.4h（IT3 申し送り含む / 機能タスクのみなら 4.6h）
 **進捗率**: 0% (0/11 SP)
@@ -319,7 +324,7 @@ state ダッシュボード : 経路設計者 / 営業担当者ロール別
 #### htmx パターン
 
 - US09 確定: 通常 POST + PRG（経路候補画面 → 予約詳細へ flash success）
-- US12 通知ボタン: htmx で確認モーダル + POST `/bookings/:id/notify` → 通知ログ部分更新
+- US12 通知ボタン: htmx で確認モーダル + POST `/bookings/:id/notify-route` → 通知ログ部分更新
 
 ### ADR
 
@@ -353,12 +358,13 @@ state ダッシュボード : 経路設計者 / 営業担当者ロール別
 - [ ] scalafmt / scalafix エラーなし
 - [ ] SonarQube Quality Gate PASS（Bug 0 / Vulnerability 0 / Code Smell 0 / 重複 < 3%）
 - [ ] ドキュメント更新完了（domain-model.md / data-model.md / ui_design.md への反映、release_plan.md の進捗更新）
+- [ ] **validating-iteration-plan 検証で不整合 0 件**（IT4 で発覚した domain-model/ui_design 乖離をすべて解消したこと）
 
 ### デモ項目
 
 1. 経路設計者が経路候補画面から「この経路で確定」を押すと予約が `RouteAssigned` に遷移
 2. 営業担当者が「経路通知」を押すと通知ログに記録される
-3. 営業担当者が「予約確定」を押すと予約が `Booked` 状態へ遷移し、追跡番号発行依頼通知が記録される
+3. 営業担当者が「予約確定」を押すと予約が `Confirmed` 状態へ遷移し、追跡番号発行依頼通知が記録される
 4. キャンセル時に予約状態が `Cancelled` に遷移し通知ログが残る
 
 ---
@@ -368,6 +374,7 @@ state ダッシュボード : 経路設計者 / 営業担当者ロール別
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-06-21 | 初版作成（IT3 ふりかえりの Try 6 件 + IT3 マルチパースペクティブレビュー高 6 件を IT3 申し送り 0.x に取り込み、US09-US13 を機能タスクとして計画）| AI Agent |
+| 2026-06-21 | validating-iteration-plan 検証反映: (a) US13 状態名を `Booked` → `Confirmed` に修正（domain-model.md 整合）、(b) US11 紐付け状態は `RouteAssigned` を新規追加（既存 enum 拡張）、(c) US12 通知 URL を `/notify-route` に統一（ui_design.md L634 整合）、(d) 0.9 で domain-model.md / data-model.md / ui_design.md への反映タスク追加、(e) 保留事項として IT3 レビュー高 #2 を明記、合計 73h | AI Agent |
 
 ---
 
