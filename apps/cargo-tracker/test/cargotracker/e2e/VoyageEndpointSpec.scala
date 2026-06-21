@@ -89,3 +89,48 @@ class VoyageEndpointSpec extends AnyWordSpec with Matchers with PostgresContaine
       }
     }
   }
+
+  // === US07 航海スケジュール検索（IT3 タスク 1.6） ===
+
+  "GET /voyages/search" should {
+    "クエリ未指定なら検索フォームのみを表示する" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val result = route(app, FakeRequest(GET, "/voyages/search").withAuthenticatedSession).get
+        status(result) shouldBe OK
+        contentAsString(result) should include("航海スケジュール検索")
+      }
+    }
+
+    "出発港の UnLocode 形式不正は BadRequest" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val result =
+          route(app, FakeRequest(GET, "/voyages/search?origin=xx").withAuthenticatedSession).get
+        status(result) shouldBe BAD_REQUEST
+        contentAsString(result) should include("出発港")
+      }
+    }
+
+    "貨物種別が未知の名称は BadRequest" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val result =
+          route(
+            app,
+            FakeRequest(GET, "/voyages/search?cargoType=Unknown").withAuthenticatedSession
+          ).get
+        status(result) shouldBe BAD_REQUEST
+        contentAsString(result) should include("貨物種別")
+      }
+    }
+
+    "未認証時はログイン画面にリダイレクトする" in withContainers { container =>
+      val app = buildApp(container)
+      running(app) {
+        val result = route(app, FakeRequest(GET, "/voyages/search")).get
+        status(result) shouldBe SEE_OTHER
+        redirectLocation(result) shouldBe Some("/login")
+      }
+    }
+  }
