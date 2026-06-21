@@ -1,0 +1,89 @@
+@(username: String, roles: Set[cargotracker.auth.domain.model.valueobjects.Role])(implicit request: RequestHeader)
+@import cargotracker.auth.domain.model.valueobjects.Role
+@layout.main("ダッシュボード") {
+  <div class="d-flex justify-content-between align-items-baseline mb-3">
+    <h1 class="h3 mb-0">ダッシュボード</h1>
+    <div class="text-muted small">
+      ログイン中: <b>@username</b>
+      （ロール: @roles.map(_.toString).toSeq.sorted.mkString(", ")）
+    </div>
+  </div>
+  <p class="lead">あなたのロールに応じた業務メニューを表示します。</p>
+
+  <div class="row g-3 mt-2">
+    @if(roles.contains(Role.Sales) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-primary"><div class="card-body">
+          <h5 class="card-title">見積管理</h5>
+          <p class="card-text small">輸送見積の作成・確認（US01）</p>
+          <a href="/estimates" class="btn btn-primary btn-sm">開く</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-primary"><div class="card-body">
+          <h5 class="card-title">荷主管理</h5>
+          <p class="card-text small">個人・法人荷主の登録（US02・US03）</p>
+          <a href="/shippers" class="btn btn-primary btn-sm">開く</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-primary"><div class="card-body">
+          <h5 class="card-title">貨物予約</h5>
+          <p class="card-text small">貨物予約の登録・確認（US04・US05）</p>
+          <a href="/bookings" class="btn btn-primary btn-sm">開く</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.RouteDesigner) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-success"><div class="card-body">
+          <h5 class="card-title">経路設計依頼</h5>
+          <p class="card-text small">引き渡し済み予約一覧（US06、IT2 後半）</p>
+          <a href="#" class="btn btn-success btn-sm disabled">準備中</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-success"><div class="card-body">
+          <h5 class="card-title">航路管理</h5>
+          <p class="card-text small">航海スケジュールの登録・更新（US24・US25）</p>
+          <a href="#" class="btn btn-success btn-sm disabled">準備中</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.Tracker) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-warning"><div class="card-body">
+          <h5 class="card-title">追跡・荷役</h5>
+          <p class="card-text small">追跡情報照会・荷役記録（IT3+）</p>
+          <a href="#" class="btn btn-warning btn-sm disabled">準備中</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.Settlement) || roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-info"><div class="card-body">
+          <h5 class="card-title">精算</h5>
+          <p class="card-text small">輸送料金算出・精算処理（IT4+）</p>
+          <a href="#" class="btn btn-info btn-sm disabled">準備中</a>
+        </div></div>
+      </div>
+    }
+
+    @if(roles.contains(Role.MasterAdmin)) {
+      <div class="col-md-4">
+        <div class="card border-secondary"><div class="card-body">
+          <h5 class="card-title">マスタ管理</h5>
+          <p class="card-text small">マスタ管理者専用（システム設定）</p>
+          <a href="#" class="btn btn-secondary btn-sm disabled">準備中</a>
+        </div></div>
+      </div>
+    }
+  </div>
+
+  <ul class="mt-4 small">
+    <li><a href="/health">ヘルスチェック</a>（DB 疎通込み）</li>
+  </ul>
+}

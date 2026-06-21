@@ -22,14 +22,16 @@ class HealthEndpointSpec extends AnyWordSpec with Matchers with PostgresContaine
   }
 
   "GET /" should {
-    "ホーム画面を表示する（要認証）" in withContainers { container =>
+    "ロール別ダッシュボードを表示する（要認証）" in withContainers { container =>
       val app = buildApp(container)
       running(app) {
         val result =
           route(app, FakeRequest(GET, "/").withAuthenticatedSession).get
 
         status(result) shouldBe OK
-        contentAsString(result) should include("国際貨物輸送管理システム")
+        val body = contentAsString(result)
+        body should include("ダッシュボード")
+        body should include("ログイン中")
       }
     }
 
