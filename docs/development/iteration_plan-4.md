@@ -150,7 +150,7 @@ date: 2026-06-21
 | 3.2 | Flyway V11: `notification_log`（id / booking_id / type / sent_at / payload / version / 監査）追加 — V10 を cargo.itinerary_voyages に充てたため繰り下げ | 1h | [x] |
 | 3.3 | `NotifyRouteCommandService.notify(bookingId)` 実装（経路概要 + 料金概算をペイロード化） | 3h | [x] |
 | 3.4 | 営業ダッシュボードに「経路通知」ボタンを追加、`/bookings/:id/notifications` で通知ログ閲覧 | 3h | [x] |
-| 3.5 | テスト（通知ログ登録 / 未紐付け予約の通知拒否） | 2h | [ ] |
+| 3.5 | テスト（通知ログ登録 / 未紐付け予約の通知拒否） | 2h | [x] |
 
 **小計**: 12h
 
