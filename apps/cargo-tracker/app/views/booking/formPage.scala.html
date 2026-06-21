@@ -43,7 +43,7 @@
         <label for="booking-quantity" class="form-label">個数</label>
         <input type="number" id="booking-quantity" name="quantity" min="1" class="form-control">
       </div>
-      <div class="col-md-12">
+      <div class="col-md-12" id="hazardous-fieldset" data-show-when="Hazardous">
         <fieldset class="border p-3 rounded">
           <legend class="float-none w-auto px-2 fs-6">危険物申告（貨物種別「危険物」を選択時に必須）</legend>
           <div class="row g-3">
@@ -53,7 +53,7 @@
           </div>
         </fieldset>
       </div>
-      <div class="col-md-12">
+      <div class="col-md-12" id="refrigeration-fieldset" data-show-when="Refrigerated">
         <fieldset class="border p-3 rounded">
           <legend class="float-none w-auto px-2 fs-6">温度管理条件（貨物種別「冷凍」を選択時に必須・US05）</legend>
           <div class="row g-3">
@@ -77,4 +77,33 @@
       <button type="submit" class="btn btn-primary">予約登録</button>
     </div>
   }
+  <script>
+    (function () {
+      // 貨物種別に応じて危険物・冷凍 fieldset を動的トグル（US05、IT3 タスク 0.7）。
+      // htmx 由来の仕様だが、サーバー往復不要な純クライアント切替のため Vanilla JS で実装。
+      const cargoTypeSelect = document.getElementById('booking-cargo-type');
+      const conditionalSections = document.querySelectorAll('[data-show-when]');
+      function applyVisibility() {
+        const selected = cargoTypeSelect.value;
+        conditionalSections.forEach(section => {
+          const target = section.dataset.showWhen;
+          const visible = target === selected;
+          section.style.display = visible ? '' : 'none';
+          // 非表示の必須相当フィールドの required を一時的に解除しブラウザバリデーション崩壊を防ぐ
+          section.querySelectorAll('input, select').forEach(input => {
+            if (visible) {
+              if (input.dataset.requiredOriginal === 'true') input.required = true;
+            } else {
+              if (input.required) input.dataset.requiredOriginal = 'true';
+              input.required = false;
+            }
+          });
+        });
+      }
+      if (cargoTypeSelect) {
+        cargoTypeSelect.addEventListener('change', applyVisibility);
+        applyVisibility();
+      }
+    })();
+  </script>
 }
