@@ -45,6 +45,33 @@ final case class Cargo private (
       Right(copy(status = BookingStatus.RouteAssigned, itinerary = Some(itinerary)))
     else Left(Cargo.InvalidStatusTransition(status, BookingStatus.RouteAssigned))
 
+  /** 予約を確定する（US13 / `ConfirmBookingCommand`）。
+    *
+    *   - `RouteAssigned` 以外からは呼び出せない
+    *   - 成功時は `Confirmed` 状態の新インスタンスを返す
+    */
+  def confirm(): Either[Cargo.Error, Cargo] =
+    if status.canTransitionTo(BookingStatus.Confirmed) then Right(copy(status = BookingStatus.Confirmed))
+    else Left(Cargo.InvalidStatusTransition(status, BookingStatus.Confirmed))
+
+  /** 経路再設計に戻す（US13 / `ReproposeRouteCommand`）。
+    *
+    *   - `RouteAssigned` のみから可能
+    *   - 成功時は `RouteProposed` 状態に戻し、紐付け済 `itinerary` を破棄する
+    */
+  def reproposeRoute(): Either[Cargo.Error, Cargo] =
+    if status == BookingStatus.RouteAssigned then Right(copy(status = BookingStatus.RouteProposed, itinerary = None))
+    else Left(Cargo.InvalidStatusTransition(status, BookingStatus.RouteProposed))
+
+  /** 予約をキャンセルする（US13 / `CancelBookingCommand`）。
+    *
+    *   - 確定前（Preliminary / RouteProposed / RouteAssigned / Confirmed）のみ可能
+    *   - 成功時は `Cancelled` 状態の新インスタンスを返す
+    */
+  def cancel(): Either[Cargo.Error, Cargo] =
+    if status.canTransitionTo(BookingStatus.Cancelled) then Right(copy(status = BookingStatus.Cancelled))
+    else Left(Cargo.InvalidStatusTransition(status, BookingStatus.Cancelled))
+
 object Cargo:
 
   sealed trait Error

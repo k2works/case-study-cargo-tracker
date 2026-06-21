@@ -104,6 +104,35 @@ class BookingCommandService @Inject() (
       repository.save(next)
       next
 
+  /** 予約を確定する（US13 / `ConfirmBookingCommand`）。 */
+  def confirm(bookingId: String): Either[String, Cargo] =
+    transition(bookingId, _.confirm(), "確定")
+
+  /** 経路再設計に戻す（US13 / `ReproposeRouteCommand`）。 */
+  def reproposeRoute(bookingId: String): Either[String, Cargo] =
+    transition(bookingId, _.reproposeRoute(), "経路再設計への差し戻し")
+
+  /** 予約をキャンセルする（US13 / `CancelBookingCommand`）。 */
+  def cancel(bookingId: String): Either[String, Cargo] =
+    transition(bookingId, _.cancel(), "キャンセル")
+
+  private def transition(
+      bookingId: String,
+      op: Cargo => Either[Cargo.Error, Cargo],
+      action: String
+  ): Either[String, Cargo] =
+    for
+      id <- BookingId(bookingId).left.map(_ => s"予約 ID の形式が不正です: $bookingId")
+      cargo <- repository.findById(id).toRight(s"予約 $bookingId が見つかりません")
+      next <- op(cargo).left.map {
+        case Cargo.InvalidStatusTransition(from, to) =>
+          s"現在の状態 $from から $to への遷移はできません"
+        case _ => s"予約 $bookingId の${action}に失敗しました"
+      }
+    yield
+      repository.save(next)
+      next
+
   /** 経路情報を予約に紐付ける（US11 / `AssignItineraryCommand`）。
     *
     *   - 予約が存在しない場合は `Left("予約 BK-... が見つかりません")`

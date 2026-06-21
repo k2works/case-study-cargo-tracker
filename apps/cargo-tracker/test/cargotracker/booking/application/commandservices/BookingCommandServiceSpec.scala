@@ -269,3 +269,59 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.assignToRouting(cargo.bookingId.value)
     service.assignItinerary(cargo.bookingId.value, Nil) shouldBe Left("経路に含む航海が指定されていません")
+
+  test("confirm: RouteAssigned 予約を確定すると Confirmed に遷移"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.assignToRouting(cargo.bookingId.value)
+    service.assignItinerary(cargo.bookingId.value, List("VY-1"))
+
+    val Right(confirmed) = service.confirm(cargo.bookingId.value): @unchecked
+    confirmed.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.Confirmed
+    repo.findById(cargo.bookingId).get.status shouldBe
+      cargotracker.booking.domain.model.valueobjects.BookingStatus.Confirmed
+
+  test("confirm: RouteAssigned 以外の予約は遷移違反"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    val Left(msg) = service.confirm(cargo.bookingId.value): @unchecked
+    msg should include("Preliminary")
+    msg should include("Confirmed")
+
+  test("reproposeRoute: RouteAssigned 予約を再設計に戻すと itinerary がリセットされる"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.assignToRouting(cargo.bookingId.value)
+    service.assignItinerary(cargo.bookingId.value, List("VY-1"))
+
+    val Right(reproposed) = service.reproposeRoute(cargo.bookingId.value): @unchecked
+    reproposed.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteProposed
+    reproposed.itinerary shouldBe None
+
+  test("reproposeRoute: RouteProposed のままの予約は遷移違反"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.assignToRouting(cargo.bookingId.value)
+    val Left(msg) = service.reproposeRoute(cargo.bookingId.value): @unchecked
+    msg should include("RouteProposed")
+    msg should include("遷移はできません")
+
+  test("cancel: Preliminary / RouteProposed / RouteAssigned / Confirmed からキャンセル可能"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    val Right(cancelled) = service.cancel(cargo.bookingId.value): @unchecked
+    cancelled.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.Cancelled
+
+  test("cancel: 既にキャンセル済みの予約は遷移違反"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.cancel(cargo.bookingId.value)
+    val Left(msg) = service.cancel(cargo.bookingId.value): @unchecked
+    msg should include("Cancelled")
+    msg should include("遷移はできません")
