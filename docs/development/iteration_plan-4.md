@@ -243,9 +243,18 @@ IT2 で導入した Booking / Routing Context、IT3 で拡張した Routing Cont
 title IT4 ドメインモデル全体図
 
 package "Shared Kernel" {
-  class Location <<value>> { unLocode }
-  enum CargoType { General, Hazardous, Refrigerated }
-  class Money <<value>> { currency, amount }
+  class Location <<value>> {
+    unLocode
+  }
+  enum CargoType {
+    General
+    Hazardous
+    Refrigerated
+  }
+  class Money <<value>> {
+    currency
+    amount
+  }
 }
 
 package "Booking Context" {
@@ -254,11 +263,10 @@ package "Booking Context" {
     shipperId
     routeSpecification
     cargoSpec
-    -- IT4 追加 --
-    itinerary: Option[Itinerary]
-    status: BookingStatus
-    version: Int
-    -- methods --
+    itinerary
+    status
+    version
+    --
     + assignItinerary(itinerary)
     + confirm()
     + repropose()
@@ -267,34 +275,36 @@ package "Booking Context" {
   enum BookingStatus {
     Preliminary
     RouteProposed
-    RouteAssigned   ' IT4 追加
+    RouteAssigned
     Confirmed
     TrackingIssued
     InTransit
     Delivered
     Settled
     Cancelled
+    --
     + canTransitionTo(next)
   }
   class Itinerary <<value>> {
-    legs: List[ItineraryLeg]
+    legs
+    --
     + transitDays
     + finalArrival
   }
   class ItineraryLeg <<value>> {
     voyageNumber
-    from: Location
-    to: Location
+    from
+    to
     departure
     arrival
   }
   class NotificationLog <<entity>> {
     id
     bookingId
-    type: NotificationType
+    type
     payload
     sentAt
-    version: Int
+    version
   }
   enum NotificationType {
     RouteProposal
@@ -302,32 +312,45 @@ package "Booking Context" {
     TrackingRequest
     Cancellation
   }
-  Cargo "1" o-- "0..1" Itinerary
-  Itinerary "1" *-- "1..*" ItineraryLeg
-  Cargo "1" -- "*" NotificationLog : bookingId 参照
-  NotificationLog *-- NotificationType
-  Cargo *-- BookingStatus
-  Cargo --> Location : routeSpecification
-  Cargo --> CargoType
 }
 
 package "Routing Context" {
   class RouteCandidateSelection <<aggregate root>> {
     selectionId
     bookingId
-    candidate: RouteCandidate
-    status: SelectionStatus
-    version: Int
-    + confirm(): Either[Error, RouteCandidateSelection]
+    candidate
+    status
+    version
+    --
+    + confirm()
   }
-  enum SelectionStatus { Pending, Confirmed }
-  class RouteCandidate <<value, 既存>> {
-    legs: List[RoutingLeg]
+  enum SelectionStatus {
+    Pending
+    Confirmed
   }
-  RouteCandidateSelection *-- SelectionStatus
-  RouteCandidateSelection o-- RouteCandidate
-  RouteCandidateSelection ..> Cargo : assignItinerary 経由
+  class RouteCandidate <<value>> {
+    legs
+  }
 }
+
+Cargo "1" o-- "0..1" Itinerary
+Itinerary "1" *-- "1..*" ItineraryLeg
+Cargo "1" -- "*" NotificationLog
+NotificationLog *-- NotificationType
+Cargo *-- BookingStatus
+Cargo --> Location
+Cargo --> CargoType
+RouteCandidateSelection *-- SelectionStatus
+RouteCandidateSelection o-- RouteCandidate
+RouteCandidateSelection ..> Cargo : assignItinerary
+
+note right of BookingStatus
+  IT4 で RouteAssigned を追加
+end note
+
+note bottom of RouteCandidate
+  IT3 既存（routing.domain.model.valueobjects）
+end note
 
 @enduml
 ```
