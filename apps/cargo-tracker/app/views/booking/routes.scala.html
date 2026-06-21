@@ -1,0 +1,57 @@
+@(cargo: cargotracker.booking.domain.model.aggregates.Cargo,
+  candidates: List[cargotracker.routing.domain.model.valueobjects.RouteCandidate],
+  errorMessage: Option[String])(implicit request: RequestHeader, flash: Flash)
+@views.html.layout.main(s"経路候補 - ${cargo.bookingId.value}") {
+  <h1 class="h3 mb-3">経路候補 - @cargo.bookingId.value</h1>
+
+  @errorMessage.map { msg =>
+    <div class="alert alert-danger">@msg</div>
+  }
+
+  <dl class="row">
+    <dt class="col-sm-3">出発地</dt><dd class="col-sm-9">@cargo.routeSpecification.origin.unLocode</dd>
+    <dt class="col-sm-3">目的地</dt><dd class="col-sm-9">@cargo.routeSpecification.destination.unLocode</dd>
+    <dt class="col-sm-3">希望着日</dt><dd class="col-sm-9">@cargo.routeSpecification.arrivalDeadline</dd>
+    <dt class="col-sm-3">貨物種別</dt><dd class="col-sm-9">@cargo.cargoSpec.cargoType</dd>
+  </dl>
+
+  @if(candidates.isEmpty) {
+    <div class="alert alert-warning">
+      <strong>条件に合致する経路候補が見つかりませんでした。</strong>
+      <ul class="mb-0 mt-2">
+        <li>貨物種別の制約により候補が絞り込まれている可能性があります</li>
+        <li>出港期間や経由地条件を緩和して再検索してください</li>
+        <li>必要に応じて航海スケジュール（/voyages/search）で個別便を確認してください</li>
+      </ul>
+    </div>
+  } else {
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>区間数</th>
+          <th>出港</th>
+          <th>到着</th>
+          <th>所要日数</th>
+          <th>航海番号</th>
+        </tr>
+      </thead>
+      <tbody>
+      @for((c, idx) <- candidates.zipWithIndex) {
+        <tr>
+          <td>@(idx + 1)</td>
+          <td>@c.legs.size</td>
+          <td>@c.departure</td>
+          <td>@c.arrival</td>
+          <td>@c.transitDays</td>
+          <td>@c.voyages.map(_.value).mkString(" → ")</td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  }
+
+  <div class="d-flex gap-2 mt-3">
+    <a href="@cargotracker.booking.interfaces.web.routes.BookingController.detail(cargo.bookingId.value)" class="btn btn-secondary">予約詳細に戻る</a>
+  </div>
+}

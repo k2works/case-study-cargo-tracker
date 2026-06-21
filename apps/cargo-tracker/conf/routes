@@ -24,6 +24,7 @@ GET     /bookings/new           cargotracker.booking.interfaces.web.BookingContr
 POST    /bookings               cargotracker.booking.interfaces.web.BookingController.create()
 GET     /bookings/:bookingId    cargotracker.booking.interfaces.web.BookingController.detail(bookingId: String)
 POST    /bookings/:bookingId/assign-routing  cargotracker.booking.interfaces.web.BookingController.assignToRouting(bookingId: String)
+GET     /bookings/:bookingId/routes          cargotracker.routing.interfaces.web.RouteCandidateController.candidates(bookingId: String)
 
 # 航海スケジュール（US24・US25）
 GET     /voyages                       cargotracker.routing.interfaces.web.VoyageController.list()
