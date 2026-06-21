@@ -129,7 +129,7 @@
 | 0.7 | ArchUnit 4 ルール導入（ドメイン純粋性・application 境界・コンテキスト分離・リポジトリ実装方向）。ヘキサゴナル DDD パッケージ構成（domain/model/{aggregates,valueobjects,repositories,acl} 他）への全面リファクタを伴う | 3h | - | [x] |
 | 0.8 | SonarQube Quality Gate 閾値確定 + CI 連携確認 | 2h | - | [ ] |
 | 0.9 | scoverage ゲート 75% → 80% 復元（ドメインテスト追加で達成） | 2h | - | [ ] |
-| 0.10 | admin 資格情報を application.conf に外出し（IT1 レビュー H1 対応、Day 1 着手） | 1h | - | [ ] |
+| 0.10 | admin 資格情報を application.conf に外出し（IT1 レビュー H1 対応、Day 1 着手） | 1h | - | [x] |
 | 0.11 | 楽観ロック準備: `cargo` / `estimate` / `shipper` に `version INTEGER NOT NULL DEFAULT 0` を追加（IT1 レビュー H5 対応、Flyway V5）。Repository の UPDATE を `WHERE id = ? AND version = ?` 形式に変更し `DomainError.ConcurrentModification` を返す | 4h | - | [ ] |
 
 **小計**: 22h（理想時間）
