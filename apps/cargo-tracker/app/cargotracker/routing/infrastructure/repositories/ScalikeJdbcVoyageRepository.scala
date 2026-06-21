@@ -3,16 +3,15 @@ package cargotracker.routing.infrastructure.repositories
 import cargotracker.routing.domain.model.aggregates.Voyage
 import cargotracker.routing.domain.model.repositories.VoyageRepository
 import cargotracker.routing.domain.model.valueobjects.{CarrierMovement, Schedule, VoyageNumber}
-import cargotracker.shared.domain.Location
+import cargotracker.shared.domain.{CargoType, Location}
 import scalikejdbc.*
 
 import javax.inject.Singleton
 
-/** ScalikeJDBC 実装の VoyageRepository（US24/US25）。
+/** ScalikeJDBC 実装の VoyageRepository（US24/US25 + ADR 0006 拡張）。
   *
-  *   - voyage と carrier_movement を 1 トランザクションで save する
-  *   - 既存 VoyageNumber は UPDATE（version をインクリメント）+ carrier_movement を全削除して再挿入
-  *   - 新規は INSERT
+  *   - voyage + carrier_movement + voyage_supported_cargo_type を 1 トランザクションで save
+  *   - 更新時は carrier_movement と voyage_supported_cargo_type を全削除して再挿入
   */
 @Singleton
 class ScalikeJdbcVoyageRepository extends VoyageRepository:
@@ -41,31 +40,61 @@ class ScalikeJdbcVoyageRepository extends VoyageRepository:
         )
       )
 
+  private def loadSupportedCargoTypes(voyageRowId: Long)(implicit
+      session: DBSession
+  ): Set[CargoType] =
+    sql"SELECT cargo_type FROM voyage_supported_cargo_type WHERE voyage_id = $voyageRowId"
+      .map(rs => CargoType.fromName(rs.string("cargo_type")))
+      .list
+      .apply()
+      .flatten
+      .toSet
+
+  private case class VoyageRow(
+      id: Long,
+      voyageNumber: String,
+      version: Int,
+      vesselName: String,
+      carrierCode: String
+  )
+
+  private def extractRow(rs: WrappedResultSet): VoyageRow =
+    VoyageRow(
+      id = rs.long("id"),
+      voyageNumber = rs.string("voyage_number"),
+      version = rs.int("version"),
+      vesselName = rs.string("vessel_name"),
+      carrierCode = rs.string("carrier_code")
+    )
+
+  private def reconstructVoyage(row: VoyageRow)(implicit session: DBSession): Voyage =
+    Voyage.reconstruct(
+      voyageNumber = VoyageNumber.unsafeFrom(row.voyageNumber),
+      schedule = loadSchedule(row.id),
+      vesselName = row.vesselName,
+      carrierCode = row.carrierCode,
+      supportedCargoTypes = loadSupportedCargoTypes(row.id),
+      version = row.version
+    )
+
   override def findByVoyageNumber(voyageNumber: VoyageNumber): Option[Voyage] =
     DB.readOnly { implicit session =>
-      sql"SELECT id, voyage_number, version FROM voyage WHERE voyage_number = ${voyageNumber.value}"
-        .map { rs =>
-          val rowId = rs.long("id")
-          val vn = VoyageNumber.unsafeFrom(rs.string("voyage_number"))
-          val ver = rs.int("version")
-          (rowId, vn, ver)
-        }
+      sql"""SELECT id, voyage_number, version, vessel_name, carrier_code
+            FROM voyage WHERE voyage_number = ${voyageNumber.value}"""
+        .map(extractRow)
         .single
         .apply()
-        .map { case (rowId, vn, ver) =>
-          Voyage.reconstruct(vn, loadSchedule(rowId), ver)
-        }
+        .map(reconstructVoyage)
     }
 
   override def findAll(): Seq[Voyage] =
     DB.readOnly { implicit session =>
-      val rows = sql"SELECT id, voyage_number, version FROM voyage ORDER BY voyage_number"
-        .map { rs => (rs.long("id"), rs.string("voyage_number"), rs.int("version")) }
+      sql"""SELECT id, voyage_number, version, vessel_name, carrier_code
+            FROM voyage ORDER BY voyage_number"""
+        .map(extractRow)
         .list
         .apply()
-      rows.map { case (rowId, vn, ver) =>
-        Voyage.reconstruct(VoyageNumber.unsafeFrom(vn), loadSchedule(rowId), ver)
-      }
+        .map(reconstructVoyage)
     }
 
   override def save(voyage: Voyage): Unit =
@@ -78,20 +107,24 @@ class ScalikeJdbcVoyageRepository extends VoyageRepository:
 
       val voyageRowId = existingId match
         case Some(id) =>
-          // 楽観ロック: 期待 version と一致する行のみ更新。0 行ヒットは並行更新による競合
           val updated =
-            sql"""UPDATE voyage SET version = version + 1, updated_at = CURRENT_TIMESTAMP
+            sql"""UPDATE voyage
+                  SET version = version + 1,
+                      vessel_name = ${voyage.vesselName},
+                      carrier_code = ${voyage.carrierCode},
+                      updated_at = CURRENT_TIMESTAMP
                   WHERE id = $id AND version = ${voyage.version}""".update.apply()
           if updated == 0 then
             throw cargotracker.shared.domain.OptimisticLockException(
               entityType = "Voyage",
               identifier = voyage.voyageNumber.value
             )
-          // 更新時は carrier_movement を入れ替え
           sql"DELETE FROM carrier_movement WHERE voyage_id = $id".update.apply()
+          sql"DELETE FROM voyage_supported_cargo_type WHERE voyage_id = $id".update.apply()
           id
         case None =>
-          sql"""INSERT INTO voyage (voyage_number) VALUES (${voyage.voyageNumber.value})""".updateAndReturnGeneratedKey
+          sql"""INSERT INTO voyage (voyage_number, vessel_name, carrier_code)
+                VALUES (${voyage.voyageNumber.value}, ${voyage.vesselName}, ${voyage.carrierCode})""".updateAndReturnGeneratedKey
             .apply()
 
       voyage.schedule.carrierMovements.zipWithIndex.foreach { case (cm, idx) =>
@@ -104,5 +137,10 @@ class ScalikeJdbcVoyageRepository extends VoyageRepository:
                  ${java.sql.Timestamp.from(cm.departureTime)},
                  ${java.sql.Timestamp.from(cm.arrivalTime)},
                  ${idx + 1})""".update.apply()
+      }
+
+      voyage.supportedCargoTypes.foreach { ct =>
+        sql"""INSERT INTO voyage_supported_cargo_type (voyage_id, cargo_type)
+              VALUES ($voyageRowId, ${ct.toString})""".update.apply()
       }
     }
