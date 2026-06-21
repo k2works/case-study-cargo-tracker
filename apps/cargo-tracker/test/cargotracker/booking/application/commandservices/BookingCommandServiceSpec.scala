@@ -113,6 +113,23 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     val Left(msg) = service.book(baseCommand.copy(cargoType = "Refrigerated")): @unchecked
     msg should include("冷凍")
 
+  test("assignToRouting: Preliminary 予約を引き渡すと RouteProposed が保存される（US06）"):
+    val repo = new InMemoryCargoRepository
+    val service = new BookingCommandService(repo, acceptingChecker)
+    val Right(cargo) = service.book(baseCommand): @unchecked
+
+    val Right(next) = service.assignToRouting(cargo.bookingId.value): @unchecked
+    next.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteProposed
+    repo.saved.head.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteProposed
+
+  test("assignToRouting: 存在しない予約 ID はエラー"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    service.assignToRouting("BK-999999") shouldBe Left("予約 BK-999999 が見つかりません")
+
+  test("assignToRouting: フォーマット不正な予約 ID はエラー"):
+    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    service.assignToRouting("invalid-id") shouldBe Left("予約 ID の形式が不正です: invalid-id")
+
   test("Refrigerated 貨物で min > max の温度範囲は不正温度範囲エラー"):
     val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
     val Left(msg) = service

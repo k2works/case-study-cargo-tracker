@@ -4,6 +4,7 @@ import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
 import cargotracker.booking.domain.model.aggregates.Cargo
 import cargotracker.booking.domain.model.repositories.CargoRepository
 import cargotracker.booking.domain.model.valueobjects.{
+  BookingId,
   CargoSpec,
   HazardousDeclaration,
   RefrigerationSpec,
@@ -76,6 +77,27 @@ class BookingCommandService @Inject() (
       repository.save(cargo)
       cargo
     }
+
+  /** 経路設計者への引き渡し（US06）。
+    *
+    *   - 予約が存在しない場合は `Left("予約 BK-... が見つかりません")`
+    *   - 状態遷移違反は `Left("現在の状態 ... から RouteProposed への遷移はできません")`
+    *   - 成功時は新状態の Cargo を保存して返す
+    */
+  def assignToRouting(bookingId: String): Either[String, Cargo] =
+    val parsed = BookingId(bookingId).left
+      .map(_ => s"予約 ID の形式が不正です: $bookingId")
+    for
+      id <- parsed
+      cargo <- repository.findById(id).toRight(s"予約 $bookingId が見つかりません")
+      next <- cargo.assignToRouting().left.map {
+        case Cargo.InvalidStatusTransition(from, to) =>
+          s"現在の状態 $from から $to への遷移はできません"
+        case _ => s"予約 $bookingId の引き渡しに失敗しました"
+      }
+    yield
+      repository.save(next)
+      next
 
   private def buildRefrigeration(
       command: BookCargoCommand

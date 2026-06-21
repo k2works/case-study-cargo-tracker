@@ -23,6 +23,7 @@ GET     /bookings               cargotracker.booking.interfaces.web.BookingContr
 GET     /bookings/new           cargotracker.booking.interfaces.web.BookingController.newForm()
 POST    /bookings               cargotracker.booking.interfaces.web.BookingController.create()
 GET     /bookings/:bookingId    cargotracker.booking.interfaces.web.BookingController.detail(bookingId: String)
+POST    /bookings/:bookingId/assign-routing  cargotracker.booking.interfaces.web.BookingController.assignToRouting(bookingId: String)
 
 # ダッシュボード・ヘルス
 GET     /                       cargotracker.shared.interfaces.web.HomeController.index()

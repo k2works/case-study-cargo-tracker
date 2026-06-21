@@ -130,3 +130,19 @@ class BookingController @Inject() (
       case Some(cargo) => Ok(views.html.booking.detail(cargo))
       case None => NotFound("予約が見つかりません")
   }
+
+  /** 経路設計者への引き渡し（US06）。PRG で予約詳細へリダイレクトし、flash で結果を通知。 */
+  def assignToRouting(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
+    commandService.assignToRouting(bookingId) match
+      case Right(cargo) =>
+        Redirect(
+          cargotracker.booking.interfaces.web.routes.BookingController
+            .detail(cargo.bookingId.value)
+        ).flashing(
+          "success" -> s"予約 ${cargo.bookingId.value} を経路設計者へ引き渡しました"
+        )
+      case Left(msg) =>
+        Redirect(
+          cargotracker.booking.interfaces.web.routes.BookingController.detail(bookingId)
+        ).flashing("error" -> msg)
+  }
