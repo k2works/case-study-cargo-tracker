@@ -8,7 +8,8 @@
     "test:ui": "playwright test --ui-port=8932 --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "lint:no-networkidle": "! grep -rn \"networkidle\\|waitForTimeout\" src 2>/dev/null || (echo '⛔ networkidle / waitForTimeout は flakiness 源のため禁止。waitForResponse / waitForSelector / locator.waitFor を使用してください（IT3 タスク 0.15）' && exit 1)"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
