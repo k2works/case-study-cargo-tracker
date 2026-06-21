@@ -105,7 +105,7 @@ date: 2026-06-21
 | 0.1 | 表示フォーマッタ層（`Money` / `Instant` / `UnLocode + 港名`）を `views.helpers` 配下に導入し、既存画面（経路候補・航海検索）を移行 | 4h | [x] |
 | 0.2 | `Voyage.register(2 引数)` / `reconstruct(3 引数)` の空文字許容オーバーロードを削除し、V8 で `DEFAULT ''` を撤去（必須化）。フィクスチャを必須引数版に更新 | 3h | [x] |
 | 0.3 | `RouteCandidateQueryServiceSpec` の `InMemoryVoyageRepository.findByCriteria` を引数フィルタ実装に置き換え、契約テストパターンを `support/InMemoryRepositories` に整理 | 3h | [x] |
-| 0.4 | `RouteCandidateEndpointSpec` に「seed なし 200 + 空表示」ハッピーパス追加 | 1h | [ ] |
+| 0.4 | `RouteCandidateEndpointSpec` に「seed なし 200 + 空表示」ハッピーパス追加 | 1h | [x] |
 | 0.5 | 楽観ロック `Either[DomainError.ConcurrentModification, A]` API 化の ADR 0007 起案（実装は IT5 以降に申し送り） | 2h | [ ] |
 | 0.6 | ArchUnit ルール 4 を `*QueryService` / `*Query` / `*Result` 許容に拡張し、`CalculateRouteCommand` 等を `queryservices` に戻す ADR 化 | 3h | [ ] |
 | 0.7 | `Estimate.findAll` の N+1 解消（estimate + route_candidate を一括 SELECT で取得） | 2h | [ ] |
