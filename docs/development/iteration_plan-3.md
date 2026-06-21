@@ -87,7 +87,7 @@
 | 0.1 | Controller / Twirl / Dashboard の Play `FakeRequest` 統合テスト追加（CSRF / AuthFilter / Flash / PRG）。new_coverage 80% 復元 | 6h | - | [ ] |
 | 0.2 | 集約 `Cargo` / `Estimate` / `Shipper` / `Voyage` に `version: Int` フィールド追加。`Either[DomainError.ConcurrentModification, A]` を返す Repository UPDATE に変更 | 5h | - | [ ] |
 | 0.3 | `VoyageCommandService.register` / `update` + `VoyageController.create` / `update` の重複を `upsert(vn, build)` 共通骨格に抽出 | 2h | - | [ ] |
-| 0.4 | `BookingCommandService.book` の `_ => "荷主が見つかりません"` を sealed エラー網羅 match に変更 | 1h | - | [ ] |
+| 0.4 | `BookingCommandService.book` の `_ => "荷主が見つかりません"` を sealed エラー網羅 match に変更 | 1h | - | [x] |
 | 0.5 | scoverage + Twirl + coverage モードの `NoClassDefFoundError` 再現条件特定 + build.sbt 修正 | 3h | - | [ ] |
 | 0.6 | Dashboard 集計を `HomeController` から pure function 切り出し、テスト追加 | 2h | - | [ ] |
 | 0.7 | 危険物・冷凍フィールドの htmx 動的表示（IT2 ui_design.md 565 準拠） | 3h | - | [ ] |

@@ -70,7 +70,11 @@ class BookingCommandService @Inject() (
           shipperChecker
         )
         .left
-        .map(_ => s"荷主 ${command.shipperCode} が見つかりません")
+        .map {
+          case Cargo.UnknownShipper => s"荷主 ${command.shipperCode} が見つかりません"
+          case Cargo.InvalidStatusTransition(from, to) =>
+            s"予約状態の遷移が不正です（$from → $to）"
+        }
     yield cargo
 
     result.map { cargo =>
