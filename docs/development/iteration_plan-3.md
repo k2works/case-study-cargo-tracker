@@ -341,7 +341,7 @@ entity "voyage（IT2 + IT3 拡張）" as v {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK>>
-  vessel_name : VARCHAR(200) <<IT3 追加>>
+  vessel_name : VARCHAR(100) <<IT3 追加>>
   carrier_code : VARCHAR(20) <<IT3 追加>>
   * version : INTEGER <<DEFAULT 0>>
   * created_at : TIMESTAMP WITH TIME ZONE
@@ -596,12 +596,7 @@ IT1+IT2 既存に加え、IT3 で航海検索 / 経路候補算出 / htmx フラ
 | ADR | タイトル | ステータス |
 |-----|---------|-----------|
 | [ADR 0001-0005](../adr/) | 既存 | 承認済み |
-| ADR 0006（IT3 Day 3 作成予定） | 航海データモデル追補（vessel_name / carrier_code / supported_cargo_types + Routing 用 RouteCandidate 命名分離） | 提案 |
-
-| ADR | タイトル | ステータス |
-|-----|---------|-----------|
-| [ADR 0001-0005](../adr/) | 既存 | 承認済み |
-| ADR 0006（IT3 Day 3 作成予定） | 航海データモデル追補（vessel_name / carrier_code / supported_cargo_types） | 提案 |
+| [ADR 0006](../adr/0006-voyage-data-model-extension.md) | 航海データモデル追補（vessel_name / carrier_code / supported_cargo_types + Routing 用 RouteCandidate 命名分離） | 提案 |
 
 ---
 
