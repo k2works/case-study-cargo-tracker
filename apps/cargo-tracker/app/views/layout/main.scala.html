@@ -12,15 +12,22 @@
       <div class="container">
         <a class="navbar-brand" href="/"><b>CargoTracker</b></a>
         @request.session.get("username").map { _ =>
-          <div class="d-flex align-items-center gap-3 ms-auto">
-            <a class="nav-link" href="/estimates">見積管理</a>
-            <a class="nav-link" href="/shippers">荷主管理</a>
-            <a class="nav-link" href="/bookings">貨物予約</a>
-            <form method="POST" action="/logout" class="d-inline m-0">
-              @helper.CSRF.formField
-              <button type="submit" class="btn btn-outline-secondary btn-sm">ログアウト</button>
-            </form>
-          </div>
+          @defining(request.session.get("roles").getOrElse("").split(",").toSet) { roles =>
+            <div class="d-flex align-items-center gap-3 ms-auto">
+              @if(roles.contains("Sales") || roles.contains("MasterAdmin")) {
+                <a class="nav-link" href="/estimates">見積管理</a>
+                <a class="nav-link" href="/shippers">荷主管理</a>
+                <a class="nav-link" href="/bookings">貨物予約</a>
+              }
+              @if(roles.contains("RouteDesigner") || roles.contains("MasterAdmin")) {
+                <a class="nav-link" href="/voyages">航路管理</a>
+              }
+              <form method="POST" action="/logout" class="d-inline m-0">
+                @helper.CSRF.formField
+                <button type="submit" class="btn btn-outline-secondary btn-sm">ログアウト</button>
+              </form>
+            </div>
+          }
         }
       </div>
     </nav>

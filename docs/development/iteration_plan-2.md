@@ -166,8 +166,8 @@
 | 3.2 | `Voyage` 集約 + `VoyageNumber`（opaque type）/ `Schedule` / `CarrierMovement` 実装（domain-model.md 585-625 準拠）。`Schedule.apply` で順序・連続性検証、`CarrierMovement` で `arrival_date > departure_date` 検証 | 4h | - | [x] |
 | 3.3 | Flyway V7: `voyage`（`id BIGSERIAL PK`・`voyage_number UK`）+ `carrier_movement`（`id BIGSERIAL PK`・`voyage_id FK → voyage.id`・`departure_location_unlocode FK`・`arrival_location_unlocode FK`・`seq_number`）作成。両テーブルに `version` カラムも付与 | 2h | - | [x] |
 | 3.4 | ScalikeJdbcVoyageRepository 実装（`findByVoyageNumber` / `findByCriteria` / `save` upsert + 楽観ロック）。`AssignToRoutingCommand` 用通知記録の参照 API も用意 | 4h | - | [x] |
-| 3.5 | VoyageController + `RegisterVoyageCommand` / `UpdateVoyageCommand` アプリケーションサービス実装（一覧 `/voyages` / 新規 `/voyages/new` / 編集・差分確認 `/voyages/:voyageNumber/edit` の 3 画面、ui_design.md 85-87 準拠） | 5h | - | [ ] |
-| 3.6 | Twirl テンプレート（一覧・登録・差分確認）。ナビバーは layout/nav.scala.html でロール別表示（RouteDesigner にのみ「航路管理」メニュー表示、ui_design.md 130 準拠） | 4h | - | [ ] |
+| 3.5 | VoyageController + `RegisterVoyageCommand` / `UpdateVoyageCommand` アプリケーションサービス実装（一覧 `/voyages` / 新規 `/voyages/new` / 編集・差分確認 `/voyages/:voyageNumber/edit` の 3 画面、ui_design.md 85-87 準拠） | 5h | - | [x] |
+| 3.6 | Twirl テンプレート（一覧・登録・差分確認）。ナビバーは layout/nav.scala.html でロール別表示（RouteDesigner にのみ「航路管理」メニュー表示、ui_design.md 130 準拠） | 4h | - | [x] |
 | 3.7 | ドメインユニット + リポジトリ統合 + E2E テスト（UC05 検索対象として利用可能なことの確認テスト含む） | 5h | - | [ ] |
 
 **小計**: 25h（5h/SP）

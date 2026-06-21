@@ -25,6 +25,13 @@ POST    /bookings               cargotracker.booking.interfaces.web.BookingContr
 GET     /bookings/:bookingId    cargotracker.booking.interfaces.web.BookingController.detail(bookingId: String)
 POST    /bookings/:bookingId/assign-routing  cargotracker.booking.interfaces.web.BookingController.assignToRouting(bookingId: String)
 
+# 航海スケジュール（US24・US25）
+GET     /voyages                       cargotracker.routing.interfaces.web.VoyageController.list()
+GET     /voyages/new                   cargotracker.routing.interfaces.web.VoyageController.newForm()
+POST    /voyages                       cargotracker.routing.interfaces.web.VoyageController.create()
+GET     /voyages/:voyageNumber/edit    cargotracker.routing.interfaces.web.VoyageController.editForm(voyageNumber: String)
+POST    /voyages/:voyageNumber/edit    cargotracker.routing.interfaces.web.VoyageController.update(voyageNumber: String)
+
 # ダッシュボード・ヘルス
 GET     /                       cargotracker.shared.interfaces.web.HomeController.index()
 GET     /health                 cargotracker.shared.interfaces.web.HealthController.health()
