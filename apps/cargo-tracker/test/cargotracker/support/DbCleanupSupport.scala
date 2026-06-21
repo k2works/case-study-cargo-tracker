@@ -25,6 +25,8 @@ trait DbCleanupSupport extends BeforeAndAfterEach:
 
   /** TRUNCATE 対象のテーブル。サブクラスが追加する場合はオーバーライドする。 */
   protected def cleanupTables: Seq[String] = Seq(
+    "carrier_movement",
+    "voyage",
     "route_candidate",
     "estimate",
     "cargo",
