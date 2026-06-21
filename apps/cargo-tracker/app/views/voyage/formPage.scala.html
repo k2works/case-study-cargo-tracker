@@ -17,9 +17,10 @@
     </div>
 
     <h2 class="h5 mt-4">運送区間（順序通りに 1 件以上）</h2>
+    <div id="voyage-movements">
     @for(i <- 0 until math.max(voyageForm("movements").indexes.size, 1)) {
-      <fieldset class="border p-3 rounded mb-2">
-        <legend class="float-none w-auto px-2 fs-6">区間 @(i + 1)</legend>
+      <fieldset class="border p-3 rounded mb-2 movement-fieldset" data-index="@i">
+        <legend class="float-none w-auto px-2 fs-6 movement-legend">区間 @(i + 1)</legend>
         <div class="row g-2">
           <div class="col-md-3">
             <label class="form-label">出発地（UnLocode）</label>
@@ -46,13 +47,54 @@
                    class="form-control" required>
           </div>
         </div>
+        <button type="button" class="btn btn-sm btn-outline-danger mt-2 remove-movement"
+                style="display:none">この区間を削除</button>
       </fieldset>
     }
-    <div class="form-text mb-3">IT2 では 1 区間入力。複数区間 UI は IT2 後半（タスク 3.6）で追加。</div>
+    </div>
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" id="add-movement" class="btn btn-outline-success btn-sm">+ 区間を追加</button>
+      <span class="form-text">前区間の到着地と次区間の出発地は一致させてください（自動検証）。</span>
+    </div>
 
     <div class="d-flex gap-2">
       <a href="@cargotracker.routing.interfaces.web.routes.VoyageController.list()" class="btn btn-secondary">一覧に戻る</a>
       <button type="submit" class="btn btn-primary">@if(isEdit) { 更新する } else { 登録 }</button>
     </div>
   }
+
+  <script>
+    (function () {
+      const container = document.getElementById('voyage-movements');
+      const addBtn = document.getElementById('add-movement');
+      function renumber() {
+        const fields = container.querySelectorAll('.movement-fieldset');
+        fields.forEach((fs, idx) => {
+          fs.dataset.index = idx;
+          fs.querySelector('.movement-legend').textContent = '区間 ' + (idx + 1);
+          fs.querySelectorAll('input[name^="movements["]').forEach(input => {
+            input.name = input.name.replace(/movements\[\d+\]/, 'movements[' + idx + ']');
+          });
+          const removeBtn = fs.querySelector('.remove-movement');
+          if (removeBtn) removeBtn.style.display = fields.length > 1 ? '' : 'none';
+        });
+      }
+      function attachRemove(fs) {
+        const btn = fs.querySelector('.remove-movement');
+        if (!btn) return;
+        btn.addEventListener('click', () => { fs.remove(); renumber(); });
+      }
+      addBtn.addEventListener('click', () => {
+        const fields = container.querySelectorAll('.movement-fieldset');
+        const last = fields[fields.length - 1];
+        const clone = last.cloneNode(true);
+        clone.querySelectorAll('input').forEach(input => { input.value = ''; });
+        container.appendChild(clone);
+        attachRemove(clone);
+        renumber();
+      });
+      container.querySelectorAll('.movement-fieldset').forEach(attachRemove);
+      renumber();
+    })();
+  </script>
 }

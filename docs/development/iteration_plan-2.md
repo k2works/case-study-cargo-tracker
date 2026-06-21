@@ -24,13 +24,13 @@
 
 ### 成功基準
 
-- [ ] US05・US06・US24・US25 の受入基準すべてを満たす
-- [ ] テストカバレッジ 80% 以上（暫定 75% ゲートから復元）
-- [ ] ScalaTest 全パス（IT1 末 71 件 → IT2 末 100 件以上）
-- [ ] ArchUnit 4 ルール pass（依存方向・パッケージ境界）
-- [ ] SonarQube Quality Gate PASS
-- [ ] Release 0.1 Internal Alpha リリースゲート pass（E2E 予約フロー: US02 → US01 → US04 → US06）
-- [ ] US08 スパイク成果を ADR 0005（経路探索アルゴリズム選定）として記録
+- [x] US05・US06・US24・US25 の受入基準すべてを満たす
+- [x] テストカバレッジ 80% 以上（暫定 75% ゲートから復元）
+- [x] ScalaTest 全パス（IT1 末 71 件 → IT2 末 100 件以上）
+- [x] ArchUnit 4 ルール pass（依存方向・パッケージ境界）
+- [x] SonarQube Quality Gate PASS
+- [x] Release 0.1 Internal Alpha リリースゲート pass（E2E 予約フロー: US02 → US01 → US04 → US06）
+- [x] US08 スパイク成果を ADR 0005（経路探索アルゴリズム選定）として記録
 
 ---
 
@@ -205,7 +205,7 @@
 | **合計** | **12** | **84h** | |
 
 **1 SP あたり**: 約 7.0h（負債解消 22h・リリース準備 4h 込み）。基本ストーリーのみだと約 5.0h/SP で IT1 と整合。負債解消増加分（+5h）は IT1 レビュー H1・H5 反映による。
-**進捗率**: 0% (0/12 SP)
+**進捗率**: 100% (12/12 SP、5.3 v0.1.0 タグ付けはユーザー判断委譲)
 
 ---
 
@@ -797,15 +797,15 @@ IT1 既存（認証・荷主・見積・予約）に加え、IT2 で経路設計
 
 ### Definition of Done
 
-- [ ] IT1 申し送り事項すべて解消
-- [ ] 対象ストーリー（US05・US06・US24・US25）のすべての受入条件を満たす
-- [ ] ScalaTest 全パス（目標 100 件以上）
-- [ ] テストカバレッジ 80% 以上（ゲートも 80% に復元）
-- [ ] ScalafmtCheck / ScalafixAll / ArchUnit / SonarQube QG すべて pass
-- [ ] Release 0.1 Internal Alpha 共通最低リリースゲート pass
-- [ ] Release 0.1 増分検証 pass（E2E: US02 → US01 → US04 → US06）
-- [ ] ADR 0005 作成
-- [ ] CHANGELOG / docs/index.md / mkdocs.yml 更新
+- [x] IT1 申し送り事項すべて解消
+- [x] 対象ストーリー（US05・US06・US24・US25）のすべての受入条件を満たす
+- [x] ScalaTest 全パス（目標 100 件以上）
+- [x] テストカバレッジ 80% 以上（ゲートも 80% に復元）
+- [x] ScalafmtCheck / ScalafixAll / ArchUnit / SonarQube QG すべて pass
+- [x] Release 0.1 Internal Alpha 共通最低リリースゲート pass
+- [x] Release 0.1 増分検証 pass（E2E: US02 → US01 → US04 → US06）
+- [x] ADR 0005 作成
+- [x] CHANGELOG / docs/index.md / mkdocs.yml 更新
 
 ### デモ項目
 

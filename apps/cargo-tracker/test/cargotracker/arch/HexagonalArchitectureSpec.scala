@@ -50,7 +50,7 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
     rule.check(classes)
 
   test("ルール 3: コンテキストの domain / application は他コンテキストの内部に直接依存してはならない（infrastructure は ACL アダプター用途で許容）"):
-    val contexts = Seq("auth", "booking", "estimation", "shipper")
+    val contexts = Seq("auth", "booking", "estimation", "routing", "shipper")
     contexts.foreach { ctx =>
       val others = contexts.filter(_ != ctx).flatMap { other =>
         Seq(

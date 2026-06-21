@@ -2,5 +2,5 @@ projectKey=cargo-tracker-5-backend
 serverUrl=http://localhost:9000
 serverVersion=25.12.0.117093
 dashboardUrl=http://localhost:9000/dashboard?id=cargo-tracker-5-backend
-ceTaskId=844d2a23-c3e4-4e99-849c-6e23736259cd
-ceTaskUrl=http://localhost:9000/api/ce/task?id=844d2a23-c3e4-4e99-849c-6e23736259cd
+ceTaskId=9f889e3c-ab23-44fa-a3a6-3b77a397f530
+ceTaskUrl=http://localhost:9000/api/ce/task?id=9f889e3c-ab23-44fa-a3a6-3b77a397f530

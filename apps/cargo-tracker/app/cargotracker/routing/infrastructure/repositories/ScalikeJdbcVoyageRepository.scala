@@ -78,8 +78,15 @@ class ScalikeJdbcVoyageRepository extends VoyageRepository:
 
       val voyageRowId = existingId match
         case Some(id) =>
-          sql"""UPDATE voyage SET version = version + 1, updated_at = CURRENT_TIMESTAMP
-                WHERE id = $id""".update.apply()
+          // 楽観ロック: 期待 version と一致する行のみ更新。0 行ヒットは並行更新による競合
+          val updated =
+            sql"""UPDATE voyage SET version = version + 1, updated_at = CURRENT_TIMESTAMP
+                  WHERE id = $id AND version = ${voyage.version}""".update.apply()
+          if updated == 0 then
+            throw cargotracker.shared.domain.OptimisticLockException(
+              entityType = "Voyage",
+              identifier = voyage.voyageNumber.value
+            )
           // 更新時は carrier_movement を入れ替え
           sql"DELETE FROM carrier_movement WHERE voyage_id = $id".update.apply()
           id
