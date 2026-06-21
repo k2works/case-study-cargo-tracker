@@ -25,3 +25,18 @@ class BookingIdSpec extends AnyFunSuite with Matchers:
       BookingStatus.Preliminary
     )
     BookingStatus.Preliminary.toString shouldBe "Preliminary"
+
+  test("RouteAssigned からは Confirmed / Cancelled / RouteProposed に遷移できる（US13 / IT4 タスク 4.1）"):
+    BookingStatus.RouteAssigned.canTransitionTo(BookingStatus.Confirmed) shouldBe true
+    BookingStatus.RouteAssigned.canTransitionTo(BookingStatus.Cancelled) shouldBe true
+    BookingStatus.RouteAssigned.canTransitionTo(BookingStatus.RouteProposed) shouldBe true
+
+  test("RouteAssigned から TrackingIssued や InTransit には直接遷移できない"):
+    BookingStatus.RouteAssigned.canTransitionTo(BookingStatus.TrackingIssued) shouldBe false
+    BookingStatus.RouteAssigned.canTransitionTo(BookingStatus.InTransit) shouldBe false
+
+  test("Confirmed / Cancelled は終端方向にしか遷移しない"):
+    BookingStatus.Confirmed.canTransitionTo(BookingStatus.TrackingIssued) shouldBe true
+    BookingStatus.Confirmed.canTransitionTo(BookingStatus.Cancelled) shouldBe true
+    BookingStatus.Confirmed.canTransitionTo(BookingStatus.RouteAssigned) shouldBe false
+    BookingStatus.Cancelled.canTransitionTo(BookingStatus.Confirmed) shouldBe false
