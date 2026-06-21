@@ -1,6 +1,6 @@
 @(cargo: cargotracker.booking.domain.model.aggregates.Cargo,
-  candidates: List[cargotracker.routing.application.queryservices.PricedRouteCandidate],
-  lateCandidates: List[cargotracker.routing.application.queryservices.PricedRouteCandidate],
+  candidates: List[cargotracker.routing.application.PricedRouteCandidate],
+  lateCandidates: List[cargotracker.routing.application.PricedRouteCandidate],
   errorMessage: Option[String])(implicit request: RequestHeader, flash: Flash)
 @views.html.layout.main(s"経路候補 - ${cargo.bookingId.value}") {
   <h1 class="h3 mb-3">経路候補 - @cargo.bookingId.value</h1>

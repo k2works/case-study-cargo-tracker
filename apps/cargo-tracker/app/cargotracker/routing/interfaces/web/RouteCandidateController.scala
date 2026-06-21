@@ -3,11 +3,8 @@ package cargotracker.routing.interfaces.web
 import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.booking.application.queryservices.BookingQueryService
 import cargotracker.booking.domain.model.aggregates.Cargo
-import cargotracker.routing.application.queryservices.{
-  CalculateRouteCommand,
-  PricedRouteCandidate,
-  RouteCandidateQueryService
-}
+import cargotracker.routing.application.{CalculateRouteCommand, PricedRouteCandidate}
+import cargotracker.routing.application.queryservices.RouteCandidateQueryService
 import play.api.i18n.I18nSupport
 import play.api.mvc.*
 

@@ -1,6 +1,6 @@
 package cargotracker.routing.application.queryservices
 
-import cargotracker.routing.application.RouteCandidateSearch
+import cargotracker.routing.application.{CalculateRouteCommand, PricedRouteCandidate, RouteCandidateSearch}
 import cargotracker.routing.domain.model.repositories.VoyageRepository
 import cargotracker.routing.domain.model.valueobjects.RouteCandidate
 import cargotracker.shared.domain.pricing.PricingService
@@ -8,30 +8,6 @@ import cargotracker.shared.domain.{CargoType, Location, Money, Weight}
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
-
-/** 経路候補算出コマンド（US08）。
-  *
-  *   - `origin` / `destination` / `earliestDeparture`: 必須
-  *   - `cargoType`: 任意。指定時は対応航海のみで探索する
-  *   - `weightKg`: 任意。指定時は料金算出を行う（IT3 タスク 2.3）
-  *   - `maxLegs`: 探索深さ。デフォルト 3
-  *   - `topN`: 結果に含める候補数。デフォルト 5
-  */
-final case class CalculateRouteCommand(
-    origin: String,
-    destination: String,
-    earliestDeparture: Instant,
-    cargoType: Option[String] = None,
-    weightKg: Option[Long] = None,
-    maxLegs: Int = 3,
-    topN: Int = 5
-)
-
-/** 経路候補に料金見積もりを付与した値オブジェクト（IT3 タスク 2.3）。
-  *
-  * `estimatedCost` は `weightKg` 指定時に `PricingService` で算出した合計金額。 料金計算に失敗した場合は `None`（経路自体は表示するが料金未算出を意味する）。
-  */
-final case class PricedRouteCandidate(candidate: RouteCandidate, estimatedCost: Option[Money])
 
 /** US08 経路候補算出アプリケーションサービス。
   *

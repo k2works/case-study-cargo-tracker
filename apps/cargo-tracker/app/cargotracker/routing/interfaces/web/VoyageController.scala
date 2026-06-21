@@ -7,7 +7,8 @@ import cargotracker.routing.application.commandservices.{
   UpdateVoyageCommand,
   VoyageCommandService
 }
-import cargotracker.routing.application.queryservices.{SearchVoyageCommand, VoyageQueryService}
+import cargotracker.routing.application.SearchVoyageCommand
+import cargotracker.routing.application.queryservices.VoyageQueryService
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.i18n.I18nSupport

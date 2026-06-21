@@ -1,21 +1,13 @@
 package cargotracker.routing.application.queryservices
 
+import cargotracker.routing.application.SearchVoyageCommand
 import cargotracker.routing.domain.model.aggregates.Voyage
 import cargotracker.routing.domain.model.repositories.VoyageRepository
 import cargotracker.routing.domain.model.valueobjects.VoyageNumber
 import cargotracker.shared.domain.{CargoType, Location}
 
-import java.time.{LocalDate, ZoneId}
+import java.time.ZoneId
 import javax.inject.{Inject, Singleton}
-
-/** 航海検索条件（US07）。すべて任意項目。 */
-final case class SearchVoyageCommand(
-    origin: Option[String] = None,
-    destination: Option[String] = None,
-    departureDateFrom: Option[LocalDate] = None,
-    departureDateTo: Option[LocalDate] = None,
-    cargoType: Option[String] = None
-)
 
 /** 航海の参照系（CQRS Query 側、IT3 US07 検索）。 */
 @Singleton
