@@ -1,7 +1,13 @@
 package cargotracker.booking.domain.model.aggregates
 
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
-import cargotracker.booking.domain.model.valueobjects.{BookingId, BookingStatus, CargoSpec, RouteSpecification}
+import cargotracker.booking.domain.model.valueobjects.{
+  BookingId,
+  BookingStatus,
+  CargoSpec,
+  Itinerary,
+  RouteSpecification
+}
 import cargotracker.shared.domain.ShipperId
 
 /** 貨物予約（Booking Context の集約ルート）。
@@ -16,7 +22,8 @@ final case class Cargo private (
     routeSpecification: RouteSpecification,
     cargoSpec: CargoSpec,
     status: BookingStatus,
-    version: Int
+    version: Int,
+    itinerary: Option[Itinerary] = None
 ):
 
   /** 経路設計者への引き渡し（US06 / `AssignToRoutingCommand`）。
@@ -27,6 +34,16 @@ final case class Cargo private (
   def assignToRouting(): Either[Cargo.Error, Cargo] =
     if status.canTransitionTo(BookingStatus.RouteProposed) then Right(copy(status = BookingStatus.RouteProposed))
     else Left(Cargo.InvalidStatusTransition(status, BookingStatus.RouteProposed))
+
+  /** 経路情報を予約に紐付ける（US11 / `AssignItineraryCommand`）。
+    *
+    *   - `RouteProposed` 以外からは呼び出せない（`InvalidStatusTransition`）
+    *   - 成功時は `RouteAssigned` 状態の新インスタンスを返し、`itinerary` を保持する
+    */
+  def assignItinerary(itinerary: Itinerary): Either[Cargo.Error, Cargo] =
+    if status.canTransitionTo(BookingStatus.RouteAssigned) then
+      Right(copy(status = BookingStatus.RouteAssigned, itinerary = Some(itinerary)))
+    else Left(Cargo.InvalidStatusTransition(status, BookingStatus.RouteAssigned))
 
 object Cargo:
 
@@ -65,6 +82,7 @@ object Cargo:
       routeSpecification: RouteSpecification,
       cargoSpec: CargoSpec,
       status: BookingStatus,
-      version: Int = 0
+      version: Int = 0,
+      itinerary: Option[Itinerary] = None
   ): Cargo =
-    new Cargo(bookingId, shipperId, routeSpecification, cargoSpec, status, version)
+    new Cargo(bookingId, shipperId, routeSpecification, cargoSpec, status, version, itinerary)

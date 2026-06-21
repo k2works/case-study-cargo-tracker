@@ -28,6 +28,7 @@ object BookingId:
 enum BookingStatus:
   case Preliminary
   case RouteProposed
+  case RouteAssigned // IT4 US11: 経路選択完了で予約に経路が紐付いた状態
   case Confirmed
   case TrackingIssued
   case InTransit
@@ -38,13 +39,16 @@ enum BookingStatus:
   /** 指定された次状態へ遷移可能か判定する。違反時のエラー化は呼び出し側で行う。 */
   def canTransitionTo(next: BookingStatus): Boolean = (this, next) match
     case (Preliminary, RouteProposed) => true
-    case (RouteProposed, Confirmed) => true
+    case (RouteProposed, RouteAssigned) => true
+    case (RouteAssigned, Confirmed) => true
+    case (RouteAssigned, RouteProposed) => true // 経路再設計に戻す
     case (Confirmed, TrackingIssued) => true
     case (TrackingIssued, InTransit) => true
     case (InTransit, Delivered) => true
     case (Delivered, Settled) => true
     case (Preliminary, Cancelled) => true
     case (RouteProposed, Cancelled) => true
+    case (RouteAssigned, Cancelled) => true
     case (Confirmed, Cancelled) => true
     case _ => false
 
