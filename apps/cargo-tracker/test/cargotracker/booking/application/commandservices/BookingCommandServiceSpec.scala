@@ -14,6 +14,12 @@ import scala.collection.mutable
 
 class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
+  private class InMemoryNotificationLogRepository
+      extends cargotracker.booking.domain.model.repositories.NotificationLogRepository:
+    val store: mutable.Buffer[cargotracker.booking.domain.model.aggregates.NotificationLog] = mutable.Buffer.empty
+    override def findByBookingId(id: BookingId) = store.toSeq.filter(_.bookingId == id)
+    override def save(log: cargotracker.booking.domain.model.aggregates.NotificationLog): Unit = store += log
+
   private class InMemoryCargoRepository extends CargoRepository:
     private val store: mutable.Map[BookingId, Cargo] = mutable.Map.empty
     private val seq: AtomicInteger = AtomicInteger(0)
@@ -46,7 +52,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("有効な入力で予約を生成し Preliminary 状態で保存する"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
 
     val Right(cargo) = service.book(baseCommand): @unchecked
 
@@ -55,24 +66,44 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     repo.saved should have size 1
 
   test("出発地と目的地が同じならエラー"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Left(msg) = service.book(baseCommand.copy(destination = baseCommand.origin)): @unchecked
     msg should include("出発地と目的地が同じ")
 
   test("不正な UnLocode はエラー"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.book(baseCommand.copy(origin = "xx")) shouldBe Left("出発地の UnLocode 形式が不正です")
 
   test("存在しない荷主は ShipperExistenceChecker で弾かれ永続化されない"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, rejectingChecker)
+    val service = new BookingCommandService(
+      repo,
+      rejectingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
 
     val Left(msg) = service.book(baseCommand): @unchecked
     msg should include("荷主 SH-000001 が見つかりません")
     repo.saved shouldBe empty
 
   test("危険物 3 フィールド全揃いで HazardousDeclaration が反映される"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service
       .book(
         baseCommand.copy(
@@ -85,7 +116,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     cargo.cargoSpec.hazardous shouldBe defined
 
   test("Hazardous で危険物フィールド部分欠落は CargoSpec バリデーション失敗（US05）"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Left(msg) = service
       .book(
         baseCommand.copy(
@@ -98,7 +134,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     msg should include("危険物")
 
   test("Refrigerated 貨物に温度範囲を渡すと予約成立し refrigeration が反映される（US05）"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service
       .book(
         baseCommand.copy(
@@ -112,13 +153,23 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     cargo.cargoSpec.refrigeration.get.minTemperature shouldBe -20
 
   test("Refrigerated 貨物で温度範囲未指定は CargoSpec バリデーション失敗"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Left(msg) = service.book(baseCommand.copy(cargoType = "Refrigerated")): @unchecked
     msg should include("冷凍")
 
   test("assignToRouting: Preliminary 予約を引き渡すと RouteProposed が保存される（US06）"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
 
     val Right(next) = service.assignToRouting(cargo.bookingId.value): @unchecked
@@ -126,15 +177,30 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     repo.saved.head.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteProposed
 
   test("assignToRouting: 存在しない予約 ID はエラー"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.assignToRouting("BK-999999") shouldBe Left("予約 BK-999999 が見つかりません")
 
   test("assignToRouting: フォーマット不正な予約 ID はエラー"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.assignToRouting("invalid-id") shouldBe Left("予約 ID の形式が不正です: invalid-id")
 
   test("Refrigerated 貨物で min > max の温度範囲は不正温度範囲エラー"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Left(msg) = service
       .book(
         baseCommand.copy(
@@ -149,26 +215,51 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
   // === 境界値・エラー経路網羅（IT3 タスク 0.9 / IT2 review tester 高 #2） ===
 
   test("book: 到着地の UnLocode 形式不正でエラー"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.book(baseCommand.copy(destination = "12345")) shouldBe Left(
       "目的地の UnLocode 形式が不正です"
     )
 
   test("book: 貨物種別が未知の値でエラー"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.book(baseCommand.copy(cargoType = "Unknown")) shouldBe Left("貨物種別が不正です")
 
   test("book: 重量 0 は Weight バリデーション失敗"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.book(baseCommand.copy(weightKg = 0L)) shouldBe Left("重量が不正です")
 
   test("book: 重量負値は Weight バリデーション失敗"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.book(baseCommand.copy(weightKg = -100L)) shouldBe Left("重量が不正です")
 
   test("book: Hazardous 貨物で 3 フィールド全揃いなら CargoSpec 成立"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service
       .book(
         baseCommand.copy(
@@ -182,7 +273,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     cargo.cargoSpec.hazardous.get.unNumber shouldBe "UN1170"
 
   test("book: Refrigerated で同点温度（min == max）も受理"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service
       .book(
         baseCommand.copy(
@@ -196,7 +292,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     cargo.cargoSpec.refrigeration.get.maxTemperature shouldBe 0
 
   test("book: 温度単位が未知の文字列の場合は refrigeration が組み立てられない（General 扱い）"):
-    val service = new BookingCommandService(new InMemoryCargoRepository, acceptingChecker)
+    val service = new BookingCommandService(
+      new InMemoryCargoRepository,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Left(msg) = service
       .book(
         baseCommand.copy(
@@ -211,14 +312,24 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("book: General 貨物で危険物 / 温度フィールド全 None は正常に成立"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     cargo.cargoSpec.hazardous shouldBe None
     cargo.cargoSpec.refrigeration shouldBe None
 
   test("assignToRouting: 既に RouteProposed の予約は再度引き渡せない（InvalidStatusTransition）"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     val Right(_) = service.assignToRouting(cargo.bookingId.value): @unchecked
 
@@ -228,7 +339,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("assignItinerary: RouteProposed 予約に経路を紐付けると RouteAssigned で保存される（US11）"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.assignToRouting(cargo.bookingId.value)
 
@@ -240,7 +356,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("assignItinerary: Preliminary からの紐付けは状態遷移違反"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     val Left(msg) = service.assignItinerary(cargo.bookingId.value, List("VY-1")): @unchecked
     msg should include("Preliminary")
@@ -249,7 +370,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("assignItinerary: 既に RouteAssigned の予約は再紐付け禁止"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.assignToRouting(cargo.bookingId.value)
     service.assignItinerary(cargo.bookingId.value, List("VY-1")).isRight shouldBe true
@@ -260,19 +386,34 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("assignItinerary: 存在しない予約 ID はエラー"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     service.assignItinerary("BK-000999", List("VY-1")) shouldBe Left("予約 BK-000999 が見つかりません")
 
   test("assignItinerary: 空航海リストはエラー"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.assignToRouting(cargo.bookingId.value)
     service.assignItinerary(cargo.bookingId.value, Nil) shouldBe Left("経路に含む航海が指定されていません")
 
   test("confirm: RouteAssigned 予約を確定すると Confirmed に遷移"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.assignToRouting(cargo.bookingId.value)
     service.assignItinerary(cargo.bookingId.value, List("VY-1"))
@@ -284,7 +425,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("confirm: RouteAssigned 以外の予約は遷移違反"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     val Left(msg) = service.confirm(cargo.bookingId.value): @unchecked
     msg should include("Preliminary")
@@ -292,7 +438,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("reproposeRoute: RouteAssigned 予約を再設計に戻すと itinerary がリセットされる"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.assignToRouting(cargo.bookingId.value)
     service.assignItinerary(cargo.bookingId.value, List("VY-1"))
@@ -303,7 +454,12 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("reproposeRoute: RouteProposed のままの予約は遷移違反"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.assignToRouting(cargo.bookingId.value)
     val Left(msg) = service.reproposeRoute(cargo.bookingId.value): @unchecked
@@ -312,14 +468,58 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("cancel: Preliminary / RouteProposed / RouteAssigned / Confirmed からキャンセル可能"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     val Right(cancelled) = service.cancel(cargo.bookingId.value): @unchecked
     cancelled.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.Cancelled
 
+  test("confirm: 成功時に BookingConfirmed 通知ログが記録される（IT4 タスク 4.4）"):
+    val repo = new InMemoryCargoRepository
+    val notif = new InMemoryNotificationLogRepository
+    val service = new BookingCommandService(repo, acceptingChecker, notif, java.time.Clock.systemUTC())
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.assignToRouting(cargo.bookingId.value)
+    service.assignItinerary(cargo.bookingId.value, List("VY-1"))
+    service.confirm(cargo.bookingId.value)
+
+    notif.store.map(_.notificationType) should contain(
+      cargotracker.booking.domain.model.valueobjects.NotificationType.BookingConfirmed
+    )
+    notif.store.last.payload should include("trackingIssueRequested")
+
+  test("cancel: 成功時に BookingCancelled 通知ログが記録される（IT4 タスク 4.4）"):
+    val repo = new InMemoryCargoRepository
+    val notif = new InMemoryNotificationLogRepository
+    val service = new BookingCommandService(repo, acceptingChecker, notif, java.time.Clock.systemUTC())
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.cancel(cargo.bookingId.value)
+    notif.store.map(_.notificationType) shouldBe Seq(
+      cargotracker.booking.domain.model.valueobjects.NotificationType.BookingCancelled
+    )
+
+  test("cancel: 失敗時は通知ログが記録されない"):
+    val repo = new InMemoryCargoRepository
+    val notif = new InMemoryNotificationLogRepository
+    val service = new BookingCommandService(repo, acceptingChecker, notif, java.time.Clock.systemUTC())
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    service.cancel(cargo.bookingId.value)
+    val sizeBefore = notif.store.size
+    service.cancel(cargo.bookingId.value) // 既に Cancelled → 失敗
+    notif.store.size shouldBe sizeBefore
+
   test("cancel: 既にキャンセル済みの予約は遷移違反"):
     val repo = new InMemoryCargoRepository
-    val service = new BookingCommandService(repo, acceptingChecker)
+    val service = new BookingCommandService(
+      repo,
+      acceptingChecker,
+      new InMemoryNotificationLogRepository,
+      java.time.Clock.systemUTC()
+    )
     val Right(cargo) = service.book(baseCommand): @unchecked
     service.cancel(cargo.bookingId.value)
     val Left(msg) = service.cancel(cargo.bookingId.value): @unchecked

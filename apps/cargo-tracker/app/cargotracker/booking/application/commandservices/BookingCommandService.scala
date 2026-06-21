@@ -25,7 +25,9 @@ import javax.inject.{Inject, Singleton}
 @Singleton
 class BookingCommandService @Inject() (
     repository: CargoRepository,
-    shipperChecker: ShipperExistenceChecker
+    shipperChecker: ShipperExistenceChecker,
+    notificationRepository: cargotracker.booking.domain.model.repositories.NotificationLogRepository,
+    clock: java.time.Clock
 ):
 
   def book(command: BookCargoCommand): Either[String, Cargo] =
@@ -104,17 +106,40 @@ class BookingCommandService @Inject() (
       repository.save(next)
       next
 
-  /** 予約を確定する（US13 / `ConfirmBookingCommand`）。 */
+  /** 予約を確定する（US13 / `ConfirmBookingCommand`）。確定成功時は追跡番号発行依頼の通知を記録する。 */
   def confirm(bookingId: String): Either[String, Cargo] =
-    transition(bookingId, _.confirm(), "確定")
+    transition(bookingId, _.confirm(), "確定").map { cargo =>
+      logNotification(
+        cargo,
+        cargotracker.booking.domain.model.valueobjects.NotificationType.BookingConfirmed,
+        s"""{"bookingId":"${cargo.bookingId.value}","status":"Confirmed","trackingIssueRequested":true}"""
+      )
+      cargo
+    }
 
   /** 経路再設計に戻す（US13 / `ReproposeRouteCommand`）。 */
   def reproposeRoute(bookingId: String): Either[String, Cargo] =
     transition(bookingId, _.reproposeRoute(), "経路再設計への差し戻し")
 
-  /** 予約をキャンセルする（US13 / `CancelBookingCommand`）。 */
+  /** 予約をキャンセルする（US13 / `CancelBookingCommand`）。キャンセル成功時は確認通知を記録する。 */
   def cancel(bookingId: String): Either[String, Cargo] =
-    transition(bookingId, _.cancel(), "キャンセル")
+    transition(bookingId, _.cancel(), "キャンセル").map { cargo =>
+      logNotification(
+        cargo,
+        cargotracker.booking.domain.model.valueobjects.NotificationType.BookingCancelled,
+        s"""{"bookingId":"${cargo.bookingId.value}","status":"Cancelled"}"""
+      )
+      cargo
+    }
+
+  private def logNotification(
+      cargo: Cargo,
+      notificationType: cargotracker.booking.domain.model.valueobjects.NotificationType,
+      payload: String
+  ): Unit =
+    cargotracker.booking.domain.model.aggregates.NotificationLog
+      .create(cargo.bookingId, notificationType, clock.instant(), payload)
+      .foreach(notificationRepository.save)
 
   private def transition(
       bookingId: String,
