@@ -3,7 +3,10 @@ package cargotracker.auth.infrastructure.services
 import cargotracker.auth.domain.model.aggregates.User
 import cargotracker.auth.domain.model.repositories.UserRepository
 import cargotracker.auth.domain.model.valueobjects.{PasswordHash, Role}
+import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.*
 
 import javax.inject.{Inject, Singleton}
 
@@ -18,7 +21,9 @@ import javax.inject.{Inject, Singleton}
 @Singleton
 class AdminUserSeeder @Inject() (
     configuration: Configuration,
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    system: ActorSystem,
+    ec: ExecutionContext
 ):
 
   private val seedConfig = configuration.get[Configuration]("cargotracker.admin-seed")
@@ -27,7 +32,9 @@ class AdminUserSeeder @Inject() (
   private val adminEmail = seedConfig.get[String]("email")
   private val adminPassword = seedConfig.get[String]("password")
 
-  seed()
+  system.scheduler.scheduleOnce(5.seconds) {
+    seed()
+  }(ec)
 
   private def seed(): Unit =
     if enabled && userRepository.findByUsername(adminUsername).isEmpty then
