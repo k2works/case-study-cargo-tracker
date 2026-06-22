@@ -82,6 +82,7 @@
 | [IT2 実装レビュー](./review/it2_implementation_review_20260621.md) | IT2 実装全体（134 ファイル 5,034 行）のマルチパースペクティブレビュー結果（高 10 件・中 10 件・低 11 件） |
 | [IT3 実装レビュー](./review/it3_implementation_review_20260621.md) | IT3 実装全体（Routing US07/US08 + ADR 0006 + SELECT 句修正）のマルチパースペクティブレビュー結果（高 8 件・中 17 件・低 9 件） |
 | [IT4 セルフレビュー](./review/it4_self_review_20260621.md) | IT4 実装の自己レビュー結果（高 6 件 H1-H6）— IT5 申し送り |
+| [IT5 セルフレビュー](./review/it5_self_review_20260622.md) | IT5 実装（US14/US15/US18 + Tracking/Handling Context 新設）の自己レビュー結果（高 7 件 H1-H7）— IT6 申し送り |
 
 ## 補足
 
