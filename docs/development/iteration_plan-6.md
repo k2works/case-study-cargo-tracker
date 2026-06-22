@@ -224,7 +224,7 @@ IT5 までで確立した Booking / Routing / Tracking / Handling Context に、
 ```plantuml
 @startuml
 
-title IT6 ドメインモデル全体図（Billing Context 新設 + 引取・状態更新拡張）
+title IT6 ドメインモデル全体図 (Billing Context 新設 + 引取・状態更新拡張)
 
 package "Shared Kernel" {
   class PricingService <<service>> {
@@ -232,22 +232,24 @@ package "Shared Kernel" {
     + calculateActual(bookingId): Money
   }
   class Money <<value>> {
-    amount: Long（最小通貨単位）
+    amount: Long
     currency: Currency
   }
-  class Location <<value>> { unLocode }
+  class Location <<value>> {
+    unLocode
+  }
 }
 
 package "Booking Context" {
   class Cargo <<aggregate root>> {
     bookingId
     status: BookingStatus
-    trackingNumber: Option[BookingTrackingNumber]
-    invoiceId: Option[InvoiceId]
+    trackingNumber: Option
+    invoiceId: Option
     version
     --
-    + issueTracking(BookingTrackingNumber)
-    + deliver(): Either[E, Cargo]
+    + issueTracking(tn)
+    + deliver()
   }
   enum BookingStatus {
     Preliminary
@@ -256,45 +258,49 @@ package "Booking Context" {
     Confirmed
     TrackingIssued
     InTransit
-    **Delivered**
+    Delivered
     Settled
     Cancelled
   }
-  class BookingTrackingNumber <<opaque type String>>
+  class BookingTrackingNumber <<opaque>>
 }
 
 package "Tracking Context" {
   class TrackingActivity <<aggregate root>> {
-    events: List[TrackingActivityEvent]
+    events
     transport_status
     version
     --
-    + addEvent(event): TrackingActivity（H1 戻り値型化）
-    + recordManualUpdate(status, location, time)
+    + addEvent(e): TrackingActivity
+    + recordManualUpdate(s, l, t)
   }
 }
 
 package "Handling Context" {
   class HandlingActivity <<aggregate root>> {
     eventType: HandlingType
-    recipientConfirmation: Option[String]
+    recipientConfirmation: Option
     routeDeviation: Boolean
     --
-    + isClaim: Boolean
+    + isClaim(): Boolean
   }
   enum HandlingType {
-    Receive Load Unload Customs **Claim**
+    Receive
+    Load
+    Unload
+    Customs
+    Claim
   }
-  class CargoSnapshot <<ACL VO>> {
+  class CargoSnapshot <<ACL>> {
     bookingId
     status
     itinerary
     --
-    + canRegisterHandling(type): Either[E, Unit]
+    + canRegisterHandling(t)
   }
 }
 
-package "Billing Context（IT6 新設）" {
+package "Billing Context" {
   class Invoice <<aggregate root>> {
     invoiceId: InvoiceId
     cargoBookingId: BillingBookingId
@@ -303,27 +309,27 @@ package "Billing Context（IT6 新設）" {
     discountRate: DiscountRate
     finalAmount: Money
     paymentStatus: PaymentStatus
-    issuedAt: Option[Instant]
-    paidAt: Option[Instant]
+    issuedAt: Option
+    paidAt: Option
     version
     --
     + calculateFinalAmount(): Money
-    + applyDiscount(policy: DiscountPolicy): Either[E, Invoice]
-    + confirmPayment(paidAt): Either[E, Invoice]
+    + applyDiscount(p)
+    + confirmPayment(at)
   }
-  class InvoiceId <<opaque type String>>
-  class BillingBookingId <<opaque type String>>
+  class InvoiceId <<opaque>>
+  class BillingBookingId <<opaque>>
   class BillingShipperId <<value>> {
     shipperId
     shipperType
     --
-    + isCorporate: Boolean
+    + isCorporate(): Boolean
   }
-  class DiscountRate <<opaque type BigDecimal>>
+  class DiscountRate <<opaque>>
   class DiscountPolicy <<value>> {
     policyType: DiscountPolicyType
     --
-    + calculateRate(shipperType, amount): DiscountRate
+    + calculateRate(st, amt): DiscountRate
   }
   enum PaymentStatus {
     Pending
@@ -349,28 +355,39 @@ Invoice *-- BillingShipperId
 Invoice *-- Money
 Invoice *-- DiscountRate
 Invoice *-- PaymentStatus
-Invoice ..> DiscountPolicy : applyDiscount()
-Invoice ..> PricingService : calculateActual()
+Invoice ..> DiscountPolicy : applyDiscount
+Invoice ..> PricingService : calculateActual
 DiscountPolicy *-- DiscountPolicyType
 
-HandlingActivity ..> Cargo : << HandlingActivityRegisteredEvent >>\n（Claim → deliver）
-Invoice ..> Cargo : << InvoiceCreatedEvent >>\n（Cargo.invoiceId 更新）
+HandlingActivity ..> Cargo : HandlingActivityRegistered
+Invoice ..> Cargo : InvoiceCreated
+
+note right of BookingStatus
+  Delivered は IT6 US16 で
+  InTransit から Delivered 遷移を有効化
+end note
+
+note right of HandlingType
+  Claim は IT6 US16 で UI 開放
+  (IT5 は enum 定義のみ)
+end note
 
 note bottom of CargoSnapshot
-  IT6 新規（IT5 H6 解消、ADR 0011）。
-  Handling Context が Booking 内部に依存せず
+  IT6 新規 (IT5 H6 解消、ADR 0011)
+  Handling は Booking 内部に依存せず
   Cargo 状態を ACL 経由で検証
 end note
 
 note right of PricingService
-  Estimate（US01）と Invoice（US21）で共通利用（ADR 0012）。
+  Estimate (US01) と Invoice (US21)
+  で共通利用 (ADR 0012)
   calculateActual は荷役実績含む
 end note
 
 note bottom of Invoice
-  IT6 新規（domain-model.md L914-927 準拠）。
-  applyDiscount + confirmPayment は IT8 US22/US23 で完成。
-  IT6 では generate + 法人割引率自動取得まで
+  IT6 新規 (domain-model.md L914-927 準拠)
+  applyDiscount + confirmPayment は
+  IT8 US22/US23 で完成
 end note
 
 @enduml
