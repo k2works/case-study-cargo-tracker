@@ -1,0 +1,23 @@
+@(trackingNumber: String)(implicit request: RequestHeader)
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>追跡番号が見つかりません - Cargo Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+      <span class="navbar-brand">Cargo Tracker</span>
+    </div>
+  </nav>
+  <main class="container my-4">
+    <div class="alert alert-warning">
+      <h1 class="h4">追跡番号が見つかりません</h1>
+      <p>追跡番号 <code>@trackingNumber</code> に該当する貨物情報は見つかりませんでした。</p>
+      <p>追跡番号をご確認の上、再度お試しください。</p>
+    </div>
+  </main>
+</body>
+</html>

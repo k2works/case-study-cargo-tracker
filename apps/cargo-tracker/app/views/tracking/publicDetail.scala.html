@@ -1,0 +1,49 @@
+@(view: cargotracker.tracking.application.queryservices.TrackingResult)(implicit request: RequestHeader)
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>追跡 @view.trackingNumber - Cargo Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+      <span class="navbar-brand">Cargo Tracker</span>
+    </div>
+  </nav>
+  <main class="container my-4">
+    <h1 class="h3 mb-3">追跡情報 @view.trackingNumber</h1>
+    <dl class="row">
+      <dt class="col-sm-3">現在状態</dt><dd class="col-sm-9"><span class="badge bg-info">@view.currentStatus</span></dd>
+      <dt class="col-sm-3">現在位置</dt><dd class="col-sm-9">@view.currentLocation.map(_.unLocode).getOrElse("-")</dd>
+    </dl>
+    <h2 class="h5 mt-4">追跡イベント履歴</h2>
+    @if(view.events.isEmpty) {
+      <p class="text-muted">まだ追跡イベントが記録されていません。</p>
+    } else {
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>発生時刻</th>
+            <th>種別</th>
+            <th>場所</th>
+            <th>航海番号</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for(e <- view.events) {
+            <tr>
+              <td>@e.eventTime</td>
+              <td>@e.eventType</td>
+              <td>@e.location.unLocode</td>
+              <td>@e.voyageNumber.getOrElse("-")</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </main>
+</body>
+</html>

@@ -143,10 +143,10 @@ date: 2026-06-22
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | `TrackingQueryService.findByTrackingNumber(number)` + `TrackingView` Read Model（現在 `TrackingStatus` / 現在 `TrackingLocation` / 推定到着日 / `TrackingActivityEvent` 履歴） | 3h | [ ] |
-| 3.2 | 認証ユーザー向け追跡入力画面 `/tracking`（追跡番号入力フォーム） + 追跡詳細画面 `/tracking/:trackingNumber`（ステータスタイムライン、30 秒 htmx ポーリング） | 4h | [ ] |
-| 3.3 | 公開照会画面 `/public/tracking/:trackingNumber`（未認証 GET 許可、CSRF 例外、Twirl 共通テンプレート使用）+ Play Security 例外パス定義 | 4h | [ ] |
-| 3.4 | テスト（未認証 200 / 存在しない番号「追跡番号が見つかりません」表示 / 履歴時系列順 / 30 秒ポーリングはセッション延長しない確認） + E2E | 3h | [ ] |
+| 3.1 | `TrackingQueryService.findByTrackingNumber(number)` + `TrackingView` Read Model（現在 `TrackingStatus` / 現在 `TrackingLocation` / 推定到着日 / `TrackingActivityEvent` 履歴） | 3h | [x] |
+| 3.2 | 認証ユーザー向け追跡入力画面 `/tracking`（追跡番号入力フォーム） + 追跡詳細画面 `/tracking/:trackingNumber`（ステータスタイムライン、30 秒 htmx ポーリング） | 4h | [x] |
+| 3.3 | 公開照会画面 `/public/tracking/:trackingNumber`（未認証 GET 許可、CSRF 例外、Twirl 共通テンプレート使用）+ Play Security 例外パス定義 | 4h | [x] |
+| 3.4 | テスト（未認証 200 / 存在しない番号「追跡番号が見つかりません」表示 / 履歴時系列順 / 30 秒ポーリングはセッション延長しない確認） + E2E | 3h | [x] |
 
 **小計**: 14h
 

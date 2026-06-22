@@ -1,0 +1,13 @@
+@(view: cargotracker.tracking.application.queryservices.TrackingResult)(implicit request: RequestHeader, flash: Flash, messages: play.api.i18n.Messages)
+@views.html.layout.main(s"追跡 ${view.trackingNumber}") {
+  <h1 class="h3 mb-3">追跡 @view.trackingNumber</h1>
+  <dl class="row">
+    <dt class="col-sm-3">予約番号</dt><dd class="col-sm-9">@view.bookingId</dd>
+    <dt class="col-sm-3">現在状態</dt><dd class="col-sm-9"><span class="badge bg-info">@view.currentStatus</span></dd>
+    <dt class="col-sm-3">現在位置</dt><dd class="col-sm-9">@view.currentLocation.map(_.unLocode).getOrElse("-")</dd>
+  </dl>
+  <div hx-get="@cargotracker.tracking.interfaces.web.routes.TrackingController.timeline(view.trackingNumber)" hx-trigger="every 30s" hx-target="#tracking-timeline" hx-swap="outerHTML">
+    @views.html.tracking._timeline(view)
+  </div>
+  <a href="@cargotracker.tracking.interfaces.web.routes.TrackingController.input()" class="btn btn-secondary mt-3">別の貨物を追跡</a>
+}
