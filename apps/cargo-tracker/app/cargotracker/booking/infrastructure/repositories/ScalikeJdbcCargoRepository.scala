@@ -62,7 +62,8 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
         cargoSpec = spec,
         status = status,
         version = rs.int("version"),
-        itinerary = itinerary
+        itinerary = itinerary,
+        trackingNumber = rs.stringOpt("tracking_number")
       )
 
   override def findById(bookingId: BookingId): Option[Cargo] =
@@ -123,6 +124,7 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                 refrigeration_unit = ${refrig.map(_.unit.toString).orNull},
                 booking_status = ${cargo.status.toString},
                 itinerary_voyages = ${cargo.itinerary.map(_.voyageNumbers.mkString(",")).orNull},
+                tracking_number = ${cargo.trackingNumber.orNull},
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE tracking_id = ${cargo.bookingId.value} AND version = ${cargo.version}

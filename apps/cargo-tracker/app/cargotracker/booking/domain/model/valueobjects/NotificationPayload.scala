@@ -32,3 +32,9 @@ object NotificationPayload:
 
   /** 予約キャンセル通知ペイロード（US13 / `BookingCommandService.cancel`）。 */
   final case class BookingCancelled(bookingId: String) extends NotificationPayload
+
+  /** 追跡番号発行通知ペイロード（US14 / `BookingCommandService.issueTracking`）。 */
+  final case class TrackingIssued(
+      bookingId: String,
+      trackingNumber: String
+  ) extends NotificationPayload

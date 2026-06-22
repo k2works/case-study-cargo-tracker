@@ -18,6 +18,8 @@ import cargotracker.routing.infrastructure.repositories.{
 import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
 import cargotracker.shipper.domain.model.repositories.ShipperRepository
 import cargotracker.shipper.infrastructure.repositories.ScalikeJdbcShipperRepository
+import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
+import cargotracker.tracking.infrastructure.repositories.ScalikeJdbcTrackingActivityRepository
 import com.google.inject.AbstractModule
 import play.api.db.DBApi
 import scalikejdbc.{ConnectionPool, DataSourceConnectionPool}
@@ -44,6 +46,8 @@ class Module extends AbstractModule:
     bind(classOf[VoyageRepository]).to(classOf[ScalikeJdbcVoyageRepository])
     bind(classOf[RouteCandidateSelectionRepository])
       .to(classOf[ScalikeJdbcRouteCandidateSelectionRepository])
+    bind(classOf[TrackingActivityRepository])
+      .to(classOf[ScalikeJdbcTrackingActivityRepository])
     bind(classOf[ShipperExistenceChecker])
       .to(classOf[ShipperRepositoryBackedExistenceChecker])
     bind(classOf[Clock]).toInstance(Clock.systemUTC())

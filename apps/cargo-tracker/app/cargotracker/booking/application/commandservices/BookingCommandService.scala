@@ -124,6 +124,22 @@ class BookingCommandService @Inject() (
       cargo
     }
 
+  /** 追跡番号を発行する（US14 / `AssignTrackingNumberCommand`）。
+    *
+    *   - `Confirmed` 以外からは状態遷移違反
+    *   - 既発行は冪等成功（既存番号を返す）
+    *   - 成功時は `TrackingIssued` 状態に遷移し、`NotificationType.TrackingIssued` ログを記録
+    */
+  def issueTracking(bookingId: String, trackingNumber: String): Either[String, Cargo] =
+    transition(bookingId, _.issueTracking(trackingNumber), "追跡番号発行").map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.TrackingIssued,
+        NotificationPayload.TrackingIssued(cargo.bookingId.value, trackingNumber)
+      )
+      cargo
+    }
+
   private def logNotification(
       cargo: Cargo,
       notificationType: NotificationType,

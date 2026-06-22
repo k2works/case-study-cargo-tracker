@@ -29,5 +29,12 @@ object NotificationPayloadJson:
         "bookingId" -> p.bookingId,
         "status" -> "Cancelled"
       )
+    case p: NotificationPayload.TrackingIssued =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "status" -> "TrackingIssued",
+        "trackingUrl" -> s"/public/tracking/${p.trackingNumber}"
+      )
 
   def asString(payload: NotificationPayload): String = Json.stringify(toJson(payload))

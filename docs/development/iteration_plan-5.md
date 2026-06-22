@@ -115,8 +115,8 @@ date: 2026-06-22
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
 | 1.1 | Tracking Context 新設: `TrackingActivity` 集約 + `TrackingNumber`（`opaque type String`、`VARCHAR(20)` 整合）+ `TrackingBookingId`（`opaque type String`）+ `TrackingStatus` 9 値 + `TrackingActivityRepository` ポート + ADR 0010 起案。`addEvent` / `currentLocation` は US15（IT5 タスク 2.3）で追加 | 4h | [x] |
-| 1.2 | Flyway V12: `tracking_activity` テーブル追加（data-model.md L782 準拠：`id BIGSERIAL` / `tracking_number VARCHAR(20) UK` / `booking_id VARCHAR(20)` / `transport_status VARCHAR(30)` / 監査） | 1h | [ ] |
-| 1.3 | `AssignTrackingNumberCommand` + `TrackingCommandService.assign(bookingId)` 実装。`Confirmed` 状態の `Cargo.issueTracking(number)` 呼出 → `BookingStatus.TrackingIssued` 遷移 → `TrackingActivity` 新規作成 → `NotificationLog`（`NotificationType.TrackingIssued`）登録の一トランザクション | 3h | [ ] |
+| 1.2 | Flyway V12: `tracking_activity` テーブル追加（data-model.md L782 準拠：`id BIGSERIAL` / `tracking_number VARCHAR(20) UK` / `booking_id VARCHAR(20)` / `transport_status VARCHAR(30)` / 監査） + `cargo.tracking_number` カラム追加 | 1h | [x] |
+| 1.3 | `AssignTrackingNumberCommand` + `TrackingCommandService.assign(bookingId)` 実装。`Cargo.issueTracking(number)` 拡張（`Confirmed → TrackingIssued` 遷移 + 冪等性）。Booking 側の `BookingCommandService.issueTracking` + `NotificationLog`（`NotificationType.TrackingIssued`）登録。Controller 層で 2 つの CommandService を順次呼出（タスク 1.4 で配線） | 3h | [x] |
 | 1.4 | 予約詳細画面（IT4 拡張）に `Confirmed` 状態時のみ「追跡番号発行」ボタン追加。POST `/bookings/:bookingId/issue-tracking`（PRG → 予約詳細）。発行結果に追跡 URL を flash 表示 | 2h | [ ] |
 | 1.5 | テスト（採番一意性 / `Confirmed` 以外からの拒否 / 再発行禁止 / `TrackingActivity` 初期 `TrackingStatus.NotReceived` 検証 / `NotificationLog` 登録） | 2h | [ ] |
 

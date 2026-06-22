@@ -23,7 +23,8 @@ final case class Cargo private (
     cargoSpec: CargoSpec,
     status: BookingStatus,
     version: Int,
-    itinerary: Option[Itinerary] = None
+    itinerary: Option[Itinerary] = None,
+    trackingNumber: Option[String] = None
 ):
 
   /** 経路設計者への引き渡し（US06 / `AssignToRoutingCommand`）。
@@ -72,6 +73,22 @@ final case class Cargo private (
     if status.canTransitionTo(BookingStatus.Cancelled) then Right(copy(status = BookingStatus.Cancelled))
     else Left(Cargo.InvalidStatusTransition(status, BookingStatus.Cancelled))
 
+  /** 追跡番号を発行する（US14 / `AssignTrackingNumberCommand`）。
+    *
+    *   - `Confirmed` 以外からは呼び出せない
+    *   - 既に `trackingNumber` が設定済みの場合は冪等成功（既存値を保持して `TrackingIssued` を返す）
+    *   - 成功時は `TrackingIssued` 状態に遷移し、`trackingNumber` を保持
+    */
+  def issueTracking(trackingNumber: String): Either[Cargo.Error, Cargo] =
+    this.trackingNumber match
+      case Some(_) =>
+        // 冪等: 既に発行済みの場合は現状を返す（再採番禁止）
+        Right(this)
+      case None =>
+        if status.canTransitionTo(BookingStatus.TrackingIssued) then
+          Right(copy(status = BookingStatus.TrackingIssued, trackingNumber = Some(trackingNumber)))
+        else Left(Cargo.InvalidStatusTransition(status, BookingStatus.TrackingIssued))
+
 object Cargo:
 
   sealed trait Error
@@ -110,6 +127,7 @@ object Cargo:
       cargoSpec: CargoSpec,
       status: BookingStatus,
       version: Int = 0,
-      itinerary: Option[Itinerary] = None
+      itinerary: Option[Itinerary] = None,
+      trackingNumber: Option[String] = None
   ): Cargo =
-    new Cargo(bookingId, shipperId, routeSpecification, cargoSpec, status, version, itinerary)
+    new Cargo(bookingId, shipperId, routeSpecification, cargoSpec, status, version, itinerary, trackingNumber)
