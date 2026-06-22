@@ -126,7 +126,7 @@ date: 2026-06-22
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | Handling Context 新設: `HandlingActivity` 集約（`bookingId` / `eventType` / `completionTime` / `location` / `voyageNumber` / `operatorName`）+ `HandlingType` enum（5 値: `Receive` / `Load` / `Unload` / `Customs` / `Claim`）+ `HandlingVoyageNumber`（`opaque type String`）+ `HandlingActivityRepository` ポート | 4h | [ ] |
+| 2.1 | Handling Context 新設: `HandlingActivity` 集約（`bookingId` / `eventType` / `completionTime` / `location` / `voyageNumber` / `operatorName` / `routeDeviation`）+ `HandlingType` enum（5 値: `Receive` / `Load` / `Unload` / `Customs` / `Claim`、`requiresVoyage` 内包）+ `HandlingVoyageNumber`（`opaque type String`）+ `HandlingActivityRepository` ポート | 4h | [x] |
 | 2.2 | Flyway V13: `handling_activity` テーブル追加（data-model.md L827 準拠：`id BIGSERIAL` / `booking_id VARCHAR(20)` / `event_type VARCHAR(30)` / `event_completion_time TIMESTAMP` / `location_unlocode VARCHAR(5)` / `voyage_number VARCHAR(20)` / `operator_name VARCHAR(200)` / 監査） | 1h | [ ] |
 | 2.3 | Tracking Context 拡張: `TrackingActivityEvent` 子エンティティ（`eventType` / `eventTime` / `location` / `voyageNumber`）+ `TrackingActivity.addEvent` で時系列順序検証（最終イベントより過去の時刻を拒否） | 3h | [ ] |
 | 2.4 | Flyway V14: `tracking_handling_event` テーブル追加（data-model.md L795 準拠：`id BIGSERIAL` / `tracking_id BIGINT FK` / `event_type VARCHAR(30)` / `event_time TIMESTAMP` / `location_unlocode VARCHAR(5)` / `voyage_number VARCHAR(20)` / 監査） | 1h | [ ] |

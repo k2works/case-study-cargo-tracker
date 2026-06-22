@@ -1,0 +1,69 @@
+package cargotracker.handling.domain.model.aggregates
+
+import cargotracker.handling.domain.model.enums.HandlingType
+import cargotracker.handling.domain.model.valueobjects.HandlingVoyageNumber
+import cargotracker.shared.domain.Location
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+
+import java.time.Instant
+
+class HandlingActivitySpec extends AnyFunSuite with Matchers:
+
+  private val now = Instant.parse("2026-08-17T10:00:00Z")
+  private val tyo = Location.unsafeFrom("JPTYO")
+  private val vy = HandlingVoyageNumber.unsafeFrom("VY-1")
+
+  test("register: Receive は voyageNumber なしで成立する"):
+    val Right(ha) = HandlingActivity.register(
+      bookingId = "BK-000001",
+      eventType = HandlingType.Receive,
+      completionTime = now,
+      location = tyo,
+      voyageNumber = None,
+      operatorName = Some("山田")
+    ): @unchecked
+    ha.eventType shouldBe HandlingType.Receive
+    ha.voyageNumber shouldBe None
+    ha.operatorName shouldBe Some("山田")
+    ha.routeDeviation shouldBe false
+    ha.version shouldBe 0
+
+  test("register: Load は voyageNumber 必須"):
+    HandlingActivity.register(
+      bookingId = "BK-000002",
+      eventType = HandlingType.Load,
+      completionTime = now,
+      location = tyo,
+      voyageNumber = None,
+      operatorName = None
+    ) shouldBe Left(HandlingActivity.VoyageRequired)
+
+  test("register: Load + voyageNumber 提供で成立する"):
+    val Right(ha) = HandlingActivity.register(
+      bookingId = "BK-000003",
+      eventType = HandlingType.Load,
+      completionTime = now,
+      location = tyo,
+      voyageNumber = Some(vy),
+      operatorName = None
+    ): @unchecked
+    ha.eventType shouldBe HandlingType.Load
+    ha.voyageNumber shouldBe Some(vy)
+
+  test("register: 空 bookingId は EmptyBookingId"):
+    HandlingActivity.register(
+      bookingId = "",
+      eventType = HandlingType.Receive,
+      completionTime = now,
+      location = tyo,
+      voyageNumber = None,
+      operatorName = None
+    ) shouldBe Left(HandlingActivity.EmptyBookingId)
+
+  test("HandlingType.requiresVoyage: Load/Unload は必須、それ以外は不要"):
+    HandlingType.Load.requiresVoyage shouldBe true
+    HandlingType.Unload.requiresVoyage shouldBe true
+    HandlingType.Receive.requiresVoyage shouldBe false
+    HandlingType.Customs.requiresVoyage shouldBe false
+    HandlingType.Claim.requiresVoyage shouldBe false
