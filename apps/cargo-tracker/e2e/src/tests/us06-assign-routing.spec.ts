@@ -58,11 +58,12 @@ test.describe('US06 経路設計者への引き渡し', () => {
     await expect(page.locator('.alert-success')).toContainText('経路設計者へ引き渡し');
     await expect(page.locator('.badge')).toContainText('RouteProposed');
 
-    // Then: ダッシュボードの RouteProposed 一覧に表示される
+    // Then: ダッシュボードの RouteProposed 一覧に表示される（「貨物種別」列で RouteAssigned 一覧と区別）
     await page.goto('/');
     await expect(page.locator('#route-proposed')).toBeVisible();
-    await expect(page.locator('table')).toContainText(bookingId);
-    await expect(page.locator('table')).toContainText('JPYOK');
+    const routeProposedTable = page.locator('table:has(th:has-text("貨物種別"))');
+    await expect(routeProposedTable).toContainText(bookingId);
+    await expect(routeProposedTable).toContainText('JPYOK');
   });
 
   test('既に RouteProposed の予約は引き渡しボタンが非表示', async ({ page, loggedIn }) => {

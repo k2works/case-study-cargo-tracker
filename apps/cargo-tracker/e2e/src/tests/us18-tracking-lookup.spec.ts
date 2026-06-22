@@ -53,7 +53,7 @@ async function issueTracking(page: import('@playwright/test').Page): Promise<str
     shipperCode: shipperId,
     origin: 'JPYOK',
     destination: 'USNYC',
-    arrivalDeadline: futureDate(365 * 70),
+    arrivalDeadline: "2099-12-31",
     cargoType: 'General',
     weightKg: 500,
   });

@@ -47,7 +47,7 @@ async function bootedRouteAssigned(page: import('@playwright/test').Page): Promi
     shipperCode: shipperId,
     origin: 'JPYOK',
     destination: 'USNYC',
-    arrivalDeadline: futureDate(365 * 70),
+    arrivalDeadline: "2099-12-31",
     cargoType: 'General',
     weightKg: 500,
   });
@@ -62,17 +62,15 @@ async function bootedRouteAssigned(page: import('@playwright/test').Page): Promi
 }
 
 test.describe('US12 経路通知', () => {
-  test('予約詳細から「経路を荷主に通知」を実行すると通知ログに RouteNotified が記録される', async ({
+  test('ダッシュボードの RouteAssigned 一覧から「経路を通知」を実行すると通知ログに RouteNotified が記録される', async ({
     page,
     loggedIn,
   }) => {
     const bookingId = await bootedRouteAssigned(page);
-    const booking = new BookingPage(page);
-    await booking.gotoDetail(bookingId);
-
-    // 通知ボタン (notify-route) を押下
+    // 通知ボタンはダッシュボードの RouteAssigned 一覧にある
+    await page.goto('/');
     await page
-      .locator('form[action*="notify-route"] button[type="submit"]')
+      .locator(`form[action="/bookings/${bookingId}/notify-route"] button[type="submit"]`)
       .click();
     await expect(page).toHaveURL(`/bookings/${bookingId}/notifications`);
     await expect(page.locator('body')).toContainText('RouteNotified');

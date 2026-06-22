@@ -90,14 +90,15 @@ class VoyageCommandService @Inject() (repository: VoyageRepository):
 
 /** 航海スケジュール登録コマンド（US24）。
   *
-  * IT4 タスク 0.2: 船名・運送会社・対応貨物種別は必須項目化（DEFAULT '' を撤去）。 未入力時は呼び出し側で空文字 / 空集合を明示的に渡す（フォーム拡張は IT5 申し送り）。
+  *   - 船名・運送会社・対応貨物種別は必須項目化（DEFAULT '' を撤去）
+  *   - 未指定時の対応貨物種別はデフォルトで 3 種すべて（IT5 でフォーム拡張済）
   */
 final case class RegisterVoyageCommand(
     voyageNumber: String,
     movements: Seq[CarrierMovementCommand],
     vesselName: String = "",
     carrierCode: String = "",
-    supportedCargoTypes: Set[CargoType] = Set.empty
+    supportedCargoTypes: Set[CargoType] = Set(CargoType.General, CargoType.Hazardous, CargoType.Refrigerated)
 )
 
 /** 航海スケジュール更新コマンド（US25）。 */

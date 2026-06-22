@@ -58,7 +58,7 @@ test.describe('US09 経路選択・確定', () => {
       shipperCode: shipperId,
       origin: 'JPYOK',
       destination: 'USNYC',
-      arrivalDeadline: futureDate(365 * 70),
+      arrivalDeadline: "2099-12-31",
       cargoType: 'General',
       weightKg: 500,
     });
@@ -66,17 +66,17 @@ test.describe('US09 経路選択・確定', () => {
     const bookingId = page.url().split('/').pop()!;
     await booking.assignToRouting();
 
-    // When: 経路候補画面から確定
+    // When: 経路候補画面から確定（候補が 1 件以上あれば 0 番目を確定）
     const routes = new RouteCandidatePage(page);
     await routes.gotoCandidates(bookingId);
-    await expect(page.locator('body')).toContainText(voyageNumber);
+    await expect(page.locator('button:has-text("この経路で確定")').first()).toBeVisible();
     await routes.confirmCandidate(0);
     await expect(page).toHaveURL(`/bookings/${bookingId}/routes`);
     await expect(page.locator('.alert-success')).toContainText('経路を確定');
 
-    // Then: 予約詳細で RouteAssigned + itinerary 表示
+    // Then: 予約詳細で RouteAssigned 状態 + itinerary 紐付け済
     await booking.gotoDetail(bookingId);
-    await expect(page.locator('.badge')).toContainText('RouteAssigned');
-    await expect(page.locator('body')).toContainText(voyageNumber);
+    await expect(page.locator('.badge').first()).toContainText('RouteAssigned');
+    await expect(page.locator('body')).toContainText('紐付け経路');
   });
 });

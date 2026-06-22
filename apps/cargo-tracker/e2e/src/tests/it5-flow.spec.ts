@@ -62,7 +62,7 @@ test.describe('IT5 業務導線（荷主中核体験）', () => {
       shipperCode: shipperId,
       origin: 'JPYOK',
       destination: 'USNYC',
-      arrivalDeadline: futureDate(365 * 70),
+      arrivalDeadline: "2099-12-31",
       cargoType: 'General',
       weightKg: 500,
     });
