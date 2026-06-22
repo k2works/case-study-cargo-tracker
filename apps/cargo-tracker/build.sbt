@@ -28,9 +28,12 @@ dependencyOverrides ++= Seq(
   "org.testcontainers" % "postgresql" % "1.21.3" % Test
 )
 
-// Docker Engine 29 系は API 1.40 未満を拒否するため、docker-java の API バージョンを明示する
+// docker-java の API バージョンを明示する
+//   - ローカル Docker Desktop は 1.54 まで対応
+//   - GitHub Actions Ubuntu runner は最大 1.48
+// 互換性最大化のため両環境で受理される 1.48 を採用する
 Test / fork := true
-Test / javaOptions += "-Dapi.version=1.54"
+Test / javaOptions += "-Dapi.version=1.48"
 
 // 警告ゼロを品質ゲートとする（非機能要件定義）
 // -deprecation / -unchecked は Play プラグインが設定済みのため指定しない（重複指定は警告になる）
