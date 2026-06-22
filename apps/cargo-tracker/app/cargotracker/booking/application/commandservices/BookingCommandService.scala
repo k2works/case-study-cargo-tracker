@@ -1,5 +1,6 @@
 package cargotracker.booking.application.commandservices
 
+import cargotracker.booking.application.errors.CargoErrorMessages
 import cargotracker.booking.application.notifications.NotificationPayloadJson
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
 import cargotracker.booking.domain.model.aggregates.Cargo
@@ -95,19 +96,7 @@ class BookingCommandService @Inject() (
     *   - 成功時は新状態の Cargo を保存して返す
     */
   def assignToRouting(bookingId: String): Either[String, Cargo] =
-    val parsed = BookingId(bookingId).left
-      .map(_ => s"予約 ID の形式が不正です: $bookingId")
-    for
-      id <- parsed
-      cargo <- repository.findById(id).toRight(s"予約 $bookingId が見つかりません")
-      next <- cargo.assignToRouting().left.map {
-        case Cargo.InvalidStatusTransition(from, to) =>
-          s"現在の状態 $from から $to への遷移はできません"
-        case _ => s"予約 $bookingId の引き渡しに失敗しました"
-      }
-    yield
-      repository.save(next)
-      next
+    transition(bookingId, _.assignToRouting(), "引き渡し")
 
   /** 予約を確定する（US13 / `ConfirmBookingCommand`）。確定成功時は追跡番号発行依頼の通知を記録する。 */
   def confirm(bookingId: String): Either[String, Cargo] =
@@ -150,13 +139,11 @@ class BookingCommandService @Inject() (
       action: String
   ): Either[String, Cargo] =
     for
-      id <- BookingId(bookingId).left.map(_ => s"予約 ID の形式が不正です: $bookingId")
-      cargo <- repository.findById(id).toRight(s"予約 $bookingId が見つかりません")
-      next <- op(cargo).left.map {
-        case Cargo.InvalidStatusTransition(from, to) =>
-          s"現在の状態 $from から $to への遷移はできません"
-        case _ => s"予約 $bookingId の${action}に失敗しました"
-      }
+      id <- BookingId(bookingId).left.map(_ => CargoErrorMessages.invalidBookingIdMessage(bookingId))
+      cargo <- repository.findById(id).toRight(CargoErrorMessages.bookingNotFoundMessage(bookingId))
+      next <- op(cargo).left.map(
+        CargoErrorMessages.toMessage(_, CargoErrorMessages.actionFailureFallback(bookingId, action))
+      )
     yield
       repository.save(next)
       next
@@ -171,17 +158,9 @@ class BookingCommandService @Inject() (
     */
   def assignItinerary(bookingId: String, voyageNumbers: List[String]): Either[String, Cargo] =
     for
-      id <- BookingId(bookingId).left.map(_ => s"予約 ID の形式が不正です: $bookingId")
-      cargo <- repository.findById(id).toRight(s"予約 $bookingId が見つかりません")
       itinerary <- Itinerary(voyageNumbers).left.map(_ => "経路に含む航海が指定されていません")
-      next <- cargo.assignItinerary(itinerary).left.map {
-        case Cargo.InvalidStatusTransition(from, to) =>
-          s"現在の状態 $from から $to への遷移はできません"
-        case _ => s"予約 $bookingId の経路紐付けに失敗しました"
-      }
-    yield
-      repository.save(next)
-      next
+      next <- transition(bookingId, _.assignItinerary(itinerary), "経路紐付け")
+    yield next
 
   private def buildRefrigeration(
       command: BookCargoCommand
