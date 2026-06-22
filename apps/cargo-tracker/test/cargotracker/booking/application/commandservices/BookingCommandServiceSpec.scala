@@ -7,6 +7,7 @@ import cargotracker.booking.domain.model.valueobjects.{BookingId, BookingStatus}
 import cargotracker.shared.domain.ShipperId
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import play.api.libs.json.Json
 
 import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicInteger
@@ -490,7 +491,11 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     notif.store.map(_.notificationType) should contain(
       cargotracker.booking.domain.model.valueobjects.NotificationType.BookingConfirmed
     )
-    notif.store.last.payload should include("trackingIssueRequested")
+    // IT5 H5: payload を JSON 構造として検証する（部分文字列マッチではない）
+    val confirmedJson = Json.parse(notif.store.last.payload)
+    (confirmedJson \ "bookingId").as[String] shouldBe cargo.bookingId.value
+    (confirmedJson \ "status").as[String] shouldBe "Confirmed"
+    (confirmedJson \ "trackingIssueRequested").as[Boolean] shouldBe true
 
   test("cancel: 成功時に BookingCancelled 通知ログが記録される（IT4 タスク 4.4）"):
     val repo = new InMemoryCargoRepository
@@ -501,6 +506,10 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     notif.store.map(_.notificationType) shouldBe Seq(
       cargotracker.booking.domain.model.valueobjects.NotificationType.BookingCancelled
     )
+    // IT5 H5: payload を JSON 構造として検証する
+    val cancelJson = Json.parse(notif.store.last.payload)
+    (cancelJson \ "bookingId").as[String] shouldBe cargo.bookingId.value
+    (cancelJson \ "status").as[String] shouldBe "Cancelled"
 
   test("cancel: 失敗時は通知ログが記録されない"):
     val repo = new InMemoryCargoRepository

@@ -14,6 +14,7 @@ import cargotracker.booking.domain.model.valueobjects.{
 import cargotracker.shared.domain.{CargoType, Location, ShipperId, Weight}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import play.api.libs.json.Json
 
 import java.time.{Clock, Instant, LocalDate, ZoneOffset}
 import scala.collection.mutable
@@ -70,11 +71,32 @@ class NotifyRouteCommandServiceSpec extends AnyFunSuite with Matchers:
     val Right(log) = svc.notify(bookingId.value): @unchecked
     log.notificationType shouldBe NotificationType.RouteNotified
     log.sentAt shouldBe Instant.parse("2026-06-21T10:00:00Z")
-    log.payload should include("VY-1")
-    log.payload should include("VY-2")
-    log.payload should include("JPTYO")
-    log.payload should include("USLAX")
+    // IT5 H5: payload を JSON 構造として検証する（部分文字列マッチではない）
+    val json = Json.parse(log.payload)
+    (json \ "bookingId").as[String] shouldBe bookingId.value
+    (json \ "origin").as[String] shouldBe "JPTYO"
+    (json \ "destination").as[String] shouldBe "USLAX"
+    (json \ "arrivalDeadline").as[String] shouldBe "2099-12-31"
+    (json \ "voyages").as[List[String]] shouldBe List("VY-1", "VY-2")
     notifRepo.store should have size 1
+
+  test("notify: voyages が単一でも JSON 配列として正しく serialise される（H5 構造アサート）"):
+    val singleLeg = Cargo.reconstruct(
+      bookingId = bookingId,
+      shipperId = shipperId,
+      routeSpecification = routeSpec,
+      cargoSpec = spec,
+      status = BookingStatus.RouteAssigned,
+      version = 0,
+      itinerary = Some(Itinerary.unsafeFrom(List("VY-ONLY")))
+    )
+    val cargoRepo = new InMemoryCargoRepo
+    cargoRepo.save(singleLeg)
+    val svc = new NotifyRouteCommandService(cargoRepo, new InMemoryNotificationRepo, fixedClock)
+
+    val Right(log) = svc.notify(bookingId.value): @unchecked
+    val json = Json.parse(log.payload)
+    (json \ "voyages").as[List[String]] shouldBe List("VY-ONLY")
 
   test("notify: 経路未紐付け（Preliminary）は拒否"):
     val pre = Cargo.reconstruct(bookingId, shipperId, routeSpec, spec, BookingStatus.Preliminary, 0, None)
