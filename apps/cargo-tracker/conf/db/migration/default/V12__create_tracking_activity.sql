@@ -17,5 +17,3 @@ CREATE INDEX idx_tracking_activity_transport_status ON tracking_activity (transp
 -- cargo に tracking_number カラムを追加（data-model.md L732）
 ALTER TABLE cargo ADD COLUMN tracking_number VARCHAR(20);
 CREATE INDEX idx_cargo_tracking_number ON cargo (tracking_number);
-
--- 注: notification_log の CHECK 制約への TrackingIssued / HandlingRecorded 追加は V14 にまとめて実施
