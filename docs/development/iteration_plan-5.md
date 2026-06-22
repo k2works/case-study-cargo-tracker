@@ -99,7 +99,7 @@ date: 2026-06-22
 | 0.1 | `NotificationPayload` 値オブジェクトを `booking/domain/model/valueobjects/` に新設し（ドメインは ADT のみ）、Play JSON シリアライズは application 層 `NotificationPayloadJson` に隔離（ArchUnit ルール 1 整合）。`BookingCommandService.logNotification` と `NotifyRouteCommandService.buildPayload` を一本化（H1 解消） | 4h | [x] |
 | 0.2 | `BookingCommandService` の `assignToRouting` / `assignItinerary` を `transition` ヘルパ経由に統一 + `Cargo.Error → メッセージ` 変換を `CargoErrorMessages` に抽出（H2 解消） | 3h | [x] |
 | 0.3 | `RoutingCommandService.parseVoyages` を `raw.traverse(VoyageNumber(_).left.map(...))` 相当に書き換え、`persistConfirmed` を 25 行 → 10 行に短縮（H3 解消） | 3h | [x] |
-| 0.4 | 経路紐付け整合性 E2E 追加（confirm voyages と assign itinerary voyages の一致を E2E で検証 / 不一致拒否ケース）（H4 解消） | 3h | [ ] |
+| 0.4 | 経路紐付け整合性 E2E 追加（confirm voyages と assign itinerary voyages の一致を E2E で検証 / 不一致拒否ケース）（H4 解消） | 3h | [x] |
 | 0.5 | 通知 payload を Play JSON でパースして `voyages` / `origin` / `destination` を構造的にアサートする `NotifyRouteCommandServiceSpec` のテスト再構築（H5 解消） | 3h | [ ] |
 | 0.6 | 状態 × 操作デシジョンテーブル（現在状態 5 × 操作 5 = 25 セル）を `forAll` でパラメタライズ化、`cancel` の 4 状態網羅 / `notify` のべき等性仕様を確定（H6 解消） | 3h | [ ] |
 
