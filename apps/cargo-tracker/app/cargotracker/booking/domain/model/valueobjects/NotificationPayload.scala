@@ -1,0 +1,34 @@
+package cargotracker.booking.domain.model.valueobjects
+
+import java.time.LocalDate
+
+/** 通知ペイロード（US12 / US13）。
+  *
+  *   - 経路通知 / 予約確定 / 予約キャンセルの 3 種を ADT で型安全に表現する
+  *   - `BookingCommandService` / `NotifyRouteCommandService` の文字列ハードコーディングを一本化
+  *   - JSON 直書き（エスケープ漏れ・フィールド名タイポ）を防ぐ
+  *   - JSON 化は application 層の [[cargotracker.booking.application.notifications.NotificationPayloadJson]] が担う
+  *   - IT4 セルフレビュー H1 対応
+  */
+sealed trait NotificationPayload:
+  def bookingId: String
+
+object NotificationPayload:
+
+  /** 経路通知ペイロード（US12 / `NotifyRouteCommandService`）。 */
+  final case class RouteNotified(
+      bookingId: String,
+      origin: String,
+      destination: String,
+      arrivalDeadline: LocalDate,
+      voyages: List[String]
+  ) extends NotificationPayload
+
+  /** 予約確定通知ペイロード（US13 / `BookingCommandService.confirm`）。 */
+  final case class BookingConfirmed(
+      bookingId: String,
+      trackingIssueRequested: Boolean = true
+  ) extends NotificationPayload
+
+  /** 予約キャンセル通知ペイロード（US13 / `BookingCommandService.cancel`）。 */
+  final case class BookingCancelled(bookingId: String) extends NotificationPayload

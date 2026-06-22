@@ -1,5 +1,6 @@
 package cargotracker.booking.application.commandservices
 
+import cargotracker.booking.application.notifications.NotificationPayloadJson
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
 import cargotracker.booking.domain.model.aggregates.Cargo
 import cargotracker.booking.domain.model.repositories.CargoRepository
@@ -8,6 +9,8 @@ import cargotracker.booking.domain.model.valueobjects.{
   CargoSpec,
   HazardousDeclaration,
   Itinerary,
+  NotificationPayload,
+  NotificationType,
   RefrigerationSpec,
   RouteSpecification,
   TemperatureUnit
@@ -111,8 +114,8 @@ class BookingCommandService @Inject() (
     transition(bookingId, _.confirm(), "確定").map { cargo =>
       logNotification(
         cargo,
-        cargotracker.booking.domain.model.valueobjects.NotificationType.BookingConfirmed,
-        s"""{"bookingId":"${cargo.bookingId.value}","status":"Confirmed","trackingIssueRequested":true}"""
+        NotificationType.BookingConfirmed,
+        NotificationPayload.BookingConfirmed(cargo.bookingId.value)
       )
       cargo
     }
@@ -126,19 +129,19 @@ class BookingCommandService @Inject() (
     transition(bookingId, _.cancel(), "キャンセル").map { cargo =>
       logNotification(
         cargo,
-        cargotracker.booking.domain.model.valueobjects.NotificationType.BookingCancelled,
-        s"""{"bookingId":"${cargo.bookingId.value}","status":"Cancelled"}"""
+        NotificationType.BookingCancelled,
+        NotificationPayload.BookingCancelled(cargo.bookingId.value)
       )
       cargo
     }
 
   private def logNotification(
       cargo: Cargo,
-      notificationType: cargotracker.booking.domain.model.valueobjects.NotificationType,
-      payload: String
+      notificationType: NotificationType,
+      payload: NotificationPayload
   ): Unit =
     cargotracker.booking.domain.model.aggregates.NotificationLog
-      .create(cargo.bookingId, notificationType, clock.instant(), payload)
+      .create(cargo.bookingId, notificationType, clock.instant(), NotificationPayloadJson.asString(payload))
       .foreach(notificationRepository.save)
 
   private def transition(

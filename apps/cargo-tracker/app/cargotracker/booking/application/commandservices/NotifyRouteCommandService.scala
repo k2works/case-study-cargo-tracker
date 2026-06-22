@@ -1,8 +1,15 @@
 package cargotracker.booking.application.commandservices
 
+import cargotracker.booking.application.notifications.NotificationPayloadJson
 import cargotracker.booking.domain.model.aggregates.NotificationLog
 import cargotracker.booking.domain.model.repositories.{CargoRepository, NotificationLogRepository}
-import cargotracker.booking.domain.model.valueobjects.{BookingId, BookingStatus, NotificationType}
+import cargotracker.booking.domain.model.valueobjects.{
+  BookingId,
+  BookingStatus,
+  NotificationPayload,
+  NotificationType,
+  RouteSpecification
+}
 
 import java.time.Clock
 import javax.inject.{Inject, Singleton}
@@ -32,7 +39,7 @@ class NotifyRouteCommandService @Inject() (
       itinerary <- cargo.itinerary.toRight(s"予約 $bookingId に紐付け経路がありません")
       payload = buildPayload(cargo.bookingId.value, itinerary.voyageNumbers, cargo.routeSpecification)
       log <- NotificationLog
-        .create(id, NotificationType.RouteNotified, clock.instant(), payload)
+        .create(id, NotificationType.RouteNotified, clock.instant(), NotificationPayloadJson.asString(payload))
         .left
         .map(_ => "通知ペイロードの生成に失敗しました")
     yield
@@ -42,7 +49,12 @@ class NotifyRouteCommandService @Inject() (
   private def buildPayload(
       bookingIdValue: String,
       voyageNumbers: List[String],
-      routeSpec: cargotracker.booking.domain.model.valueobjects.RouteSpecification
-  ): String =
-    val voyages = voyageNumbers.map(v => s"\"$v\"").mkString("[", ",", "]")
-    s"""{"bookingId":"$bookingIdValue","origin":"${routeSpec.origin.unLocode}","destination":"${routeSpec.destination.unLocode}","arrivalDeadline":"${routeSpec.arrivalDeadline}","voyages":$voyages}"""
+      routeSpec: RouteSpecification
+  ): NotificationPayload.RouteNotified =
+    NotificationPayload.RouteNotified(
+      bookingId = bookingIdValue,
+      origin = routeSpec.origin.unLocode,
+      destination = routeSpec.destination.unLocode,
+      arrivalDeadline = routeSpec.arrivalDeadline,
+      voyages = voyageNumbers
+    )
