@@ -5,10 +5,10 @@ import cargotracker.auth.domain.model.repositories.UserRepository
 import cargotracker.auth.domain.model.valueobjects.{PasswordHash, Role}
 import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.*
 
 import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.*
 
 /** アプリケーション起動時に開発用 admin ユーザーを投入する（IT1 レビュー H1 対応）。
   *

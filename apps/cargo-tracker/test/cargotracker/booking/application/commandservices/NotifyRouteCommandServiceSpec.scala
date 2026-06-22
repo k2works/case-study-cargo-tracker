@@ -1,7 +1,7 @@
 package cargotracker.booking.application.commandservices
 
-import cargotracker.booking.domain.model.aggregates.{Cargo, NotificationLog}
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
+import cargotracker.booking.domain.model.aggregates.{Cargo, NotificationLog}
 import cargotracker.booking.domain.model.repositories.{CargoRepository, NotificationLogRepository}
 import cargotracker.booking.domain.model.valueobjects.{
   BookingId,
