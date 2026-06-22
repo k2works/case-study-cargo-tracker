@@ -30,7 +30,7 @@ dependencyOverrides ++= Seq(
 
 // Docker Engine 29 系は API 1.40 未満を拒否するため、docker-java の API バージョンを明示する
 Test / fork := true
-Test / javaOptions += "-Dapi.version=1.44"
+Test / javaOptions += "-Dapi.version=1.54"
 
 // 警告ゼロを品質ゲートとする（非機能要件定義）
 // -deprecation / -unchecked は Play プラグインが設定済みのため指定しない（重複指定は警告になる）

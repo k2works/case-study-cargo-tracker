@@ -11,6 +11,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 trait PostgresContainerSupport extends TestContainerForAll:
   self: Suite =>
 
+  if System.getProperty("api.version") == null then System.setProperty("api.version", "1.54")
+
   override val containerDef: PostgreSQLContainer.Def =
     PostgreSQLContainer.Def(DockerImageName.parse("postgres:16-alpine"))
 
