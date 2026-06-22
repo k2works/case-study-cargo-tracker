@@ -60,7 +60,7 @@ date: 2026-06-22
 **受入条件**:
 
 1. 「予約確定」状態（`BookingStatus.Confirmed`）の予約に対して追跡番号を発行できる
-2. 追跡番号は一意に採番される（採番ポリシーは ADR 0009 で確定。`VARCHAR(20)` 制約に整合）
+2. 追跡番号は一意に採番される（採番ポリシーは ADR 0010 で確定。`VARCHAR(20)` 制約に整合）
 3. 発行後、貨物状態が `TrackingIssued` に遷移し、`TrackingActivity` 集約（初期 `TrackingStatus.NotReceived`）が作成される
 4. 荷主に追跡番号と追跡 URL を `NotificationLog`（`NotificationType.TrackingIssued` 追加）経由で通知する
 
@@ -114,7 +114,7 @@ date: 2026-06-22
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | Tracking Context 新設: `TrackingActivity` 集約（`addEvent` / `currentStatus` / `currentLocation`）+ `TrackingNumber`（`opaque type String`、`VARCHAR(20)` 整合）+ `TrackingBookingId`（`opaque type String`）+ `TrackingActivityRepository` ポート | 4h | [ ] |
+| 1.1 | Tracking Context 新設: `TrackingActivity` 集約 + `TrackingNumber`（`opaque type String`、`VARCHAR(20)` 整合）+ `TrackingBookingId`（`opaque type String`）+ `TrackingStatus` 9 値 + `TrackingActivityRepository` ポート + ADR 0010 起案。`addEvent` / `currentLocation` は US15（IT5 タスク 2.3）で追加 | 4h | [x] |
 | 1.2 | Flyway V12: `tracking_activity` テーブル追加（data-model.md L782 準拠：`id BIGSERIAL` / `tracking_number VARCHAR(20) UK` / `booking_id VARCHAR(20)` / `transport_status VARCHAR(30)` / 監査） | 1h | [ ] |
 | 1.3 | `AssignTrackingNumberCommand` + `TrackingCommandService.assign(bookingId)` 実装。`Confirmed` 状態の `Cargo.issueTracking(number)` 呼出 → `BookingStatus.TrackingIssued` 遷移 → `TrackingActivity` 新規作成 → `NotificationLog`（`NotificationType.TrackingIssued`）登録の一トランザクション | 3h | [ ] |
 | 1.4 | 予約詳細画面（IT4 拡張）に `Confirmed` 状態時のみ「追跡番号発行」ボタン追加。POST `/bookings/:bookingId/issue-tracking`（PRG → 予約詳細）。発行結果に追跡 URL を flash 表示 | 2h | [ ] |
@@ -178,7 +178,7 @@ gantt
     transition 統一 + traverse 線形化     :d2, after d1, 1d
     整合性 E2E + payload 構造化 + デシジョンテーブル :d3, after d2, 1d
     section US14
-    Tracking Context + V12 + Command + ADR 0009 :d4, after d3, 1d
+    Tracking Context + V12 + Command + ADR 0010 :d4, after d3, 1d
     発行 UI + テスト                       :d5, after d4, 1d
 ```
 
@@ -187,7 +187,7 @@ gantt
 | Day 1 | 0.1 NotificationPayload 導入（H1） |
 | Day 2 | 0.2 transition 統一（H2）/ 0.3 parseVoyages 線形化（H3） |
 | Day 3 | 0.4 整合性 E2E（H4）/ 0.5 payload 構造化（H5）/ 0.6 デシジョンテーブル（H6） |
-| Day 4 | 1.1-1.3 US14 Tracking Context 立上げ + ADR 0009 起案 |
+| Day 4 | 1.1-1.3 US14 Tracking Context 立上げ + ADR 0010 起案 |
 | Day 5 | 1.4-1.5 US14 UI + テスト |
 
 ### Week 2（Day 6-10）
@@ -375,7 +375,7 @@ end note
 
 #### 不変条件（IT5 追加分）
 
-1. `TrackingNumber` は `opaque type String` で `VARCHAR(20)` 制約に整合する形式のみ受理する（ADR 0009）。採番後の変更は不可
+1. `TrackingNumber` は `opaque type String` で `VARCHAR(20)` 制約に整合する形式のみ受理する（ADR 0010）。採番後の変更は不可
 2. `TrackingActivity.addEvent` は `eventTime` の単調増加性を検証する（最終イベントより過去の時刻を拒否、domain-model.md L760-761 準拠）
 3. `TrackingActivity.currentStatus()` はイベント履歴から導出する（永続化しない、domain-model.md L752）
 4. 同一 `bookingId` に対する `AssignTrackingNumberCommand` は冪等（再発行禁止、`Cargo.trackingNumber.isDefined` で判定）
@@ -810,7 +810,7 @@ apps/cargo-tracker/
 
 | ADR | タイトル | ステータス | 関連タスク |
 |-----|---------|-----------|------|
-| [ADR 0009](../adr/0009-tracking-number-policy.md) | 追跡番号の採番ポリシー（`VARCHAR(20)` 制約に整合するプレフィクス + 連番方式を採用、UUID v4 36 文字は不採用）と Tracking / Handling Context の集約境界定義 | 提案（IT5 Day 4 起案） | 1.1, 2.1 |
+| [ADR 0010](../adr/0010-tracking-number-policy.md) | 追跡番号の採番ポリシー（`VARCHAR(20)` 制約に整合するプレフィクス + 連番方式を採用、UUID v4 36 文字は不採用）と Tracking / Handling Context の集約境界定義 | 提案（IT5 Day 4 起案） | 1.1, 2.1 |
 
 ---
 
@@ -818,7 +818,7 @@ apps/cargo-tracker/
 
 | リスク | 影響度 | 対策 |
 |--------|--------|------|
-| Tracking / Handling 2 つの Context 同時新設で境界判断が IT5 内で揺れる | 高 | Day 4 朝に ADR 0009 で意思決定し以降変更しない。`CargoSnapshot`（ACL）を Day 6 までに先行実装 |
+| Tracking / Handling 2 つの Context 同時新設で境界判断が IT5 内で揺れる | 高 | Day 4 朝に ADR 0010 で意思決定し以降変更しない。`CargoSnapshot`（ACL）を Day 6 までに先行実装 |
 | 公開 URL `/public/tracking/*`（未認証）導入による CSRF / アクセス制御の取りこぼし | 高 | 3.3 で `application.conf` に CSRF 例外パスを明示定義 + 公開ルートは GET のみ。`PublicTrackingController` は専用パッケージに隔離し認証必要画面と物理分離 |
 | `HandlingActivityRegisteredEvent` 同期処理（Handling → Tracking → Booking）の整合性 | 中 | 同一トランザクション内で完遂（domain-model.md 準拠）。失敗時はトランザクションロールバックでイベントを破棄し、リポジトリレベルで一貫性保証 |
 | `TrackingActivity.currentStatus()` のイベント履歴依存が読取コストに影響 | 中 | Read Model（`TrackingView`）に `transport_status` をキャッシュ。書込時の `tracking_activity.transport_status` 列更新で読取 O(1) を維持 |
@@ -859,7 +859,7 @@ apps/cargo-tracker/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-06-22 | 初版作成（IT4 ふりかえり Try 6 件 + IT4 セルフレビュー高 6 件を IT4 申し送り 0.x に取り込み、US14/US15/US18 を機能タスクとして計画、Tracking Context 新設） | AI Agent |
-| 2026-06-22 | validating-iteration-plan 検証反映: (a) US15 を **Handling Context（`HandlingActivity`）と Tracking Context（`TrackingActivityEvent`）に分離**（domain-model.md L150, L775 準拠）、(b) `TrackingHandlingEvent` → `TrackingActivityEvent` に改名、(c) `HandlingType` を 5 値（`Receive` / `Load` / `Unload` / `Customs` / `Claim`）に拡張、(d) `TrackingStatus` を 9 値に修正、(e) `TrackingNumber` を `opaque type String` で表記、(f) コマンド名を `AssignTrackingNumberCommand` に統一（domain-model.md L449 準拠）、(g) URL 修正：`/public/tracking/:trackingNumber` / `/handling/new` / `/handling` / `/tracking` / `/tracking/:trackingNumber`（ui_design.md L81-92 準拠）、(h) Flyway を V12 / V13 / V14 の 3 マイグレーションに分割、(i) ADR 0009 採番候補から UUID v4 を除外（`VARCHAR(20)` 制約）、(j) 設計セクションを iteration_plan-4.md と同レベルに拡充（ドメインモデル全体図 + 不変条件 10 件 + BookingStatus 遷移マトリクス + TrackingStatus 導出マトリクス、V12-V14 完全 SQL DDL、salt ワイヤーフレーム 6 画面 + 画面一覧 + 画面遷移図 + htmx パターン表 + フィードバックメッセージ表、ディレクトリ構成、API 9 エンドポイント表、ADR 表）。合計 74h | AI Agent |
+| 2026-06-22 | validating-iteration-plan 検証反映: (a) US15 を **Handling Context（`HandlingActivity`）と Tracking Context（`TrackingActivityEvent`）に分離**（domain-model.md L150, L775 準拠）、(b) `TrackingHandlingEvent` → `TrackingActivityEvent` に改名、(c) `HandlingType` を 5 値（`Receive` / `Load` / `Unload` / `Customs` / `Claim`）に拡張、(d) `TrackingStatus` を 9 値に修正、(e) `TrackingNumber` を `opaque type String` で表記、(f) コマンド名を `AssignTrackingNumberCommand` に統一（domain-model.md L449 準拠）、(g) URL 修正：`/public/tracking/:trackingNumber` / `/handling/new` / `/handling` / `/tracking` / `/tracking/:trackingNumber`（ui_design.md L81-92 準拠）、(h) Flyway を V12 / V13 / V14 の 3 マイグレーションに分割、(i) ADR 0010 採番候補から UUID v4 を除外（`VARCHAR(20)` 制約）、(j) 設計セクションを iteration_plan-4.md と同レベルに拡充（ドメインモデル全体図 + 不変条件 10 件 + BookingStatus 遷移マトリクス + TrackingStatus 導出マトリクス、V12-V14 完全 SQL DDL、salt ワイヤーフレーム 6 画面 + 画面一覧 + 画面遷移図 + htmx パターン表 + フィードバックメッセージ表、ディレクトリ構成、API 9 エンドポイント表、ADR 表）。合計 74h | AI Agent |
 
 ---
 

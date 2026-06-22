@@ -15,5 +15,6 @@
 | [0007](0007-optimistic-lock-either-api.md) | 楽観ロックを `Either[DomainError.ConcurrentModification, A]` API として表現する | 提案 |
 | [0008](0008-queryservices-package-naming.md) | queryservices パッケージ命名規約を入出力 DTO 許容（`*Query` / `*Command` / `*Result` / `*Candidate`）に拡張する | 承認 |
 | [0009](0009-route-candidate-selection-aggregate.md) | 経路選択を独立集約 `RouteCandidateSelection` として永続化する | 提案 |
+| [0010](0010-tracking-number-policy.md) | 追跡番号採番ポリシー（`TN-` プレフィクス + 6 桁シーケンス、UUID は不採用）と Tracking Context 集約境界 | 提案 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
