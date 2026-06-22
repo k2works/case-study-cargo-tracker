@@ -467,7 +467,35 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     msg should include("RouteProposed")
     msg should include("遷移はできません")
 
-  test("cancel: Preliminary / RouteProposed / RouteAssigned / Confirmed からキャンセル可能"):
+  test("cancel: Preliminary / RouteProposed / RouteAssigned / Confirmed の 4 状態すべてからキャンセル可能（IT5 H6 デシジョンテーブル網羅）"):
+    val startStates = List("Preliminary", "RouteProposed", "RouteAssigned", "Confirmed")
+    startStates.foreach { label =>
+      val repo = new InMemoryCargoRepository
+      val service = new BookingCommandService(
+        repo,
+        acceptingChecker,
+        new InMemoryNotificationLogRepository,
+        java.time.Clock.systemUTC()
+      )
+      val Right(cargo) = service.book(baseCommand): @unchecked
+      label match
+        case "Preliminary" => ()
+        case "RouteProposed" => service.assignToRouting(cargo.bookingId.value).toOption.get
+        case "RouteAssigned" =>
+          service.assignToRouting(cargo.bookingId.value).toOption.get
+          service.assignItinerary(cargo.bookingId.value, List("VY-1")).toOption.get
+        case "Confirmed" =>
+          service.assignToRouting(cargo.bookingId.value).toOption.get
+          service.assignItinerary(cargo.bookingId.value, List("VY-1")).toOption.get
+          service.confirm(cargo.bookingId.value).toOption.get
+
+      withClue(s"start=$label: ") {
+        val Right(cancelled) = service.cancel(cargo.bookingId.value): @unchecked
+        cancelled.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.Cancelled
+      }
+    }
+
+  test("cancel: TrackingIssued 以降（IT5 未実装）/ Cancelled は遷移違反（IT5 H6 デシジョンテーブル網羅）"):
     val repo = new InMemoryCargoRepository
     val service = new BookingCommandService(
       repo,
@@ -476,8 +504,10 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
       java.time.Clock.systemUTC()
     )
     val Right(cargo) = service.book(baseCommand): @unchecked
-    val Right(cancelled) = service.cancel(cargo.bookingId.value): @unchecked
-    cancelled.status shouldBe cargotracker.booking.domain.model.valueobjects.BookingStatus.Cancelled
+    service.cancel(cargo.bookingId.value).toOption.get
+    // 既に Cancelled の予約への再キャンセル
+    val Left(msg) = service.cancel(cargo.bookingId.value): @unchecked
+    msg should include("Cancelled")
 
   test("confirm: 成功時に BookingConfirmed 通知ログが記録される（IT4 タスク 4.4）"):
     val repo = new InMemoryCargoRepository

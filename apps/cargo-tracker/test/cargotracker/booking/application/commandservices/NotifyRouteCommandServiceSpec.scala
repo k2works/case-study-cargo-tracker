@@ -113,3 +113,17 @@ class NotifyRouteCommandServiceSpec extends AnyFunSuite with Matchers:
   test("notify: 不正な予約 ID 形式は Left"):
     val svc = new NotifyRouteCommandService(new InMemoryCargoRepo, new InMemoryNotificationRepo, fixedClock)
     svc.notify("invalid").left.toOption.get should include("形式が不正")
+
+  test("notify: 同一予約への複数回呼び出しは追記される（IT5 H6 べき等性仕様：累積記録）"):
+    val cargoRepo = new InMemoryCargoRepo
+    cargoRepo.save(routeAssignedCargo)
+    val notifRepo = new InMemoryNotificationRepo
+    val svc = new NotifyRouteCommandService(cargoRepo, notifRepo, fixedClock)
+
+    svc.notify(bookingId.value).isRight shouldBe true
+    svc.notify(bookingId.value).isRight shouldBe true
+    svc.notify(bookingId.value).isRight shouldBe true
+
+    // notify は追記型仕様（重複抑止しない）。送信履歴として 3 件残る
+    notifRepo.store should have size 3
+    notifRepo.store.map(_.notificationType).distinct shouldBe Seq(NotificationType.RouteNotified)
