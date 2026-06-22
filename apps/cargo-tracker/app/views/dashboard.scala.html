@@ -58,9 +58,16 @@
     @if(roles.contains(Role.Tracker) || roles.contains(Role.MasterAdmin)) {
       <div class="col-md-4">
         <div class="card border-warning"><div class="card-body">
-          <h5 class="card-title">追跡・荷役</h5>
-          <p class="card-text small">追跡情報照会・荷役記録（IT3+）</p>
-          <a href="#" class="btn btn-warning btn-sm disabled">準備中</a>
+          <h5 class="card-title">追跡照会</h5>
+          <p class="card-text small">追跡番号で貨物状態を照会（US18）</p>
+          <a href="@cargotracker.tracking.interfaces.web.routes.TrackingController.input()" class="btn btn-warning btn-sm">開く</a>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card border-warning"><div class="card-body">
+          <h5 class="card-title">荷役管理</h5>
+          <p class="card-text small">荷役作業の記録・履歴（US15）</p>
+          <a href="@cargotracker.handling.interfaces.web.routes.HandlingController.list()" class="btn btn-warning btn-sm">開く</a>
         </div></div>
       </div>
     }
