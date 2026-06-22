@@ -17,7 +17,7 @@
 | IT1（2026-06-22 〜 2026-07-05） | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | [iteration_report-1.md](./iteration_report-1.md) | ✅ 完了（12/12 SP） |
 | IT2（2026-07-06 〜 2026-07-19） | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | ✅ 完了（12/12 SP、v0.1.0 タグ付けはユーザー判断委譲） |
 | IT3（2026-07-20 〜 2026-08-02） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | ✅ 完了（11/11 SP / US07 + US08 + IT2 申し送り 15 件、テスト 224 / coverage 88.0%） |
-| IT4（2026-08-03 〜 2026-08-16） | [iteration_plan-4.md](./iteration_plan-4.md) | - | - | 🟡 計画策定済（目標 11 SP / US09 + US11 + US12 + US13 + IT3 申し送り 8 件） |
+| IT4（2026-08-03 〜 2026-08-16） | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | ✅ 完了（11/11 SP / US09 + US11 + US12 + US13 + IT3 申し送り 9 件、テスト 288 / coverage 88.21%） |
 
 ### 進捗サマリー
 
@@ -25,14 +25,16 @@
 |---------------|---------|---------|--------|
 | IT1 | 12 | 12 | 100% |
 | IT2 | 12 | 12 | 100% |
-| **累計** | **24** | **24** | **100%** |
+| IT3 | 11 | 11 | 100% |
+| IT4 | 11 | 11 | 100% |
+| **累計** | **46** | **46** | **100%** |
 
 ### フェーズ進捗
 
 | フェーズ | 内容 | SP | 完了 SP | 状態 |
 |---------|------|-----|---------|------|
 | Phase 1 | 認証 + 予約・荷主基盤 + 航海スケジュール | 22 | 24 | ✅ 完了（IT1 + IT2、Release 0.1 Internal Alpha） |
-| Phase 2 | 経路設計・確定 | 22 | 0 | 未着手 |
+| Phase 2 | 経路設計・確定 | 22 | 22 | ✅ 完了（IT3 + IT4） |
 | Phase 3 | 追跡・状態更新 + 料金算出 | 23 | 0 | 未着手 |
 | Phase 4 | 例外処理・割引・精算 | 21 | 0 | 未着手 |
 | 予備 | バッファ消費・US10 | 3 | 0 | 未着手 |

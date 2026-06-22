@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + IT1/IT2 計画 + Release 0.1 ゲート確認結果 |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + IT1〜IT4 計画・ふりかえり・完了報告書 + Release 0.1 ゲート確認結果 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 5 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 6 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 6 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 7 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 9 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -67,6 +67,9 @@
 | [0004 US26 を UC 横断扱い](./adr/0004-us26-as-cross-cutting-story.md) | 認証・認可ストーリーを UC 横断として扱う |
 | [0005 経路探索アルゴリズム](./adr/0005-route-search-algorithm.md) | DFS + 深さ制限の経路探索（IT2 spike → IT3 US08 で再評価） |
 | [0006 Voyage データモデル拡張](./adr/0006-voyage-data-model-extension.md) | US07 検索のための voyage 拡張・中間テーブル・Routing 用 RouteCandidate/RoutingLeg 分離 |
+| [0007 楽観ロック Either API](./adr/0007-optimistic-lock-either-api.md) | 楽観ロックを `Either[DomainError.ConcurrentModification, A]` で表現する |
+| [0008 queryservices 命名拡張](./adr/0008-queryservices-package-naming.md) | queryservices パッケージで `*Query` / `*Command` / `*Result` / `*Candidate` を許容 |
+| [0009 経路選択集約](./adr/0009-route-candidate-selection-aggregate.md) | 経路選択を独立集約 `RouteCandidateSelection` として永続化する |
 
 ### レビュードキュメント
 
@@ -78,6 +81,7 @@
 | [IT1 実装レビュー](./review/it1_implementation_review_20260620.md) | IT1 実装全体（73 ファイル 3,305 行）のマルチパースペクティブレビュー結果（高 8 件・中 19 件・低 7 件） |
 | [IT2 実装レビュー](./review/it2_implementation_review_20260621.md) | IT2 実装全体（134 ファイル 5,034 行）のマルチパースペクティブレビュー結果（高 10 件・中 10 件・低 11 件） |
 | [IT3 実装レビュー](./review/it3_implementation_review_20260621.md) | IT3 実装全体（Routing US07/US08 + ADR 0006 + SELECT 句修正）のマルチパースペクティブレビュー結果（高 8 件・中 17 件・低 9 件） |
+| [IT4 セルフレビュー](./review/it4_self_review_20260621.md) | IT4 実装の自己レビュー結果（高 6 件 H1-H6）— IT5 申し送り |
 
 ## 補足
 

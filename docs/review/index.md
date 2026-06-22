@@ -12,3 +12,4 @@
 | [IT1 実装レビュー](./it1_implementation_review_20260620.md) | IT1 実装全体（apps/cargo-tracker/ 73 ファイル 3,305 行 + ADR 0002-0004） | 2026-06-20 | 高 8 件 / 中 19 件 / 低 7 件 |
 | [IT2 実装レビュー](./it2_implementation_review_20260621.md) | IT2 実装全体（apps/cargo-tracker/ 134 ファイル 5,034 行追加 + ADR 0005） | 2026-06-21 | 高 10 件 / 中 10 件 / 低 11 件 |
 | [IT3 実装レビュー](./it3_implementation_review_20260621.md) | IT3 実装全体（Routing US07/US08 + ADR 0006 + SELECT 句修正） | 2026-06-21 | 高 8 件 / 中 17 件 / 低 9 件 |
+| [IT4 セルフレビュー](./it4_self_review_20260621.md) | IT4 実装（US09/US11/US12/US13 + 申し送り 9 件） | 2026-06-21 | 高 6 件（H1-H6 / IT5 申し送り）|
