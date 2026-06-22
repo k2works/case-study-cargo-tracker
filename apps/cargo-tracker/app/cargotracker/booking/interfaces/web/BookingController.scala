@@ -35,7 +35,8 @@ class BookingController @Inject() (
     commandService: BookingCommandService,
     queryService: BookingQueryService,
     notifyRouteService: cargotracker.booking.application.commandservices.NotifyRouteCommandService,
-    notificationRepository: cargotracker.booking.domain.model.repositories.NotificationLogRepository
+    notificationRepository: cargotracker.booking.domain.model.repositories.NotificationLogRepository,
+    trackingCommandService: cargotracker.tracking.application.commandservices.TrackingCommandService
 ) extends AbstractController(cc)
     with I18nSupport:
 
@@ -166,6 +167,24 @@ class BookingController @Inject() (
   /** 予約をキャンセル（US13）。 */
   def cancel(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
     transitionAction(commandService.cancel(bookingId), bookingId, "予約をキャンセルしました")
+  }
+
+  /** 追跡番号を発行（US14）。Tracking Context と Booking Context を順次更新する。 */
+  def issueTracking(bookingId: String): Action[AnyContent] = authenticated { implicit request =>
+    val detailCall = cargotracker.booking.interfaces.web.routes.BookingController.detail(bookingId)
+    val result = for
+      activity <- trackingCommandService.assign(
+        cargotracker.tracking.application.commandservices.AssignTrackingNumberCommand(bookingId)
+      )
+      tn = activity.trackingNumber.value
+      _ <- commandService.issueTracking(bookingId, tn)
+    yield tn
+
+    result match
+      case Right(tn) =>
+        Redirect(detailCall)
+          .flashing("success" -> s"追跡番号 $tn を発行しました（追跡 URL: /public/tracking/$tn）")
+      case Left(msg) => Redirect(detailCall).flashing("error" -> msg)
   }
 
   private def transitionAction(

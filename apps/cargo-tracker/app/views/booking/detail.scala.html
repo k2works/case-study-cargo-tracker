@@ -37,6 +37,12 @@
       <strong>紐付け経路（航海）</strong>: @it.voyageNumbers.mkString(" → ")
     </div>
   }
+  @cargo.trackingNumber.map { tn =>
+    <div class="alert alert-primary">
+      <strong>追跡番号</strong>: @tn
+      <a href="/public/tracking/@tn" target="_blank" rel="noopener" class="ms-2">公開追跡ページを開く</a>
+    </div>
+  }
   <div class="d-flex gap-2 mt-3 flex-wrap">
     <a href="@cargotracker.booking.interfaces.web.routes.BookingController.list()" class="btn btn-secondary">一覧に戻る</a>
     @if(cargo.status == BookingStatus.Preliminary) {
@@ -53,6 +59,12 @@
       <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.reproposeRoute(cargo.bookingId.value)" class="d-inline">
         @helper.CSRF.formField
         <button type="submit" class="btn btn-warning" data-action="repropose">経路再設計に戻す</button>
+      </form>
+    }
+    @if(cargo.status == BookingStatus.Confirmed && cargo.trackingNumber.isEmpty) {
+      <form method="POST" action="@cargotracker.booking.interfaces.web.routes.BookingController.issueTracking(cargo.bookingId.value)" class="d-inline">
+        @helper.CSRF.formField
+        <button type="submit" class="btn btn-primary" data-action="issue-tracking">追跡番号を発行</button>
       </form>
     }
     @if(cargo.status == BookingStatus.Preliminary

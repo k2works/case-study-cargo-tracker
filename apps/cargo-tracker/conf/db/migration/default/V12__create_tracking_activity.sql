@@ -17,3 +17,8 @@ CREATE INDEX idx_tracking_activity_transport_status ON tracking_activity (transp
 -- cargo に tracking_number カラムを追加（data-model.md L732）
 ALTER TABLE cargo ADD COLUMN tracking_number VARCHAR(20);
 CREATE INDEX idx_cargo_tracking_number ON cargo (tracking_number);
+
+-- notification_log の CHECK 制約に TrackingIssued を追加（US14）
+ALTER TABLE notification_log DROP CONSTRAINT ck_notification_log_type;
+ALTER TABLE notification_log ADD CONSTRAINT ck_notification_log_type
+    CHECK (type IN ('RouteNotified', 'BookingConfirmed', 'BookingCancelled', 'TrackingIssued'));
