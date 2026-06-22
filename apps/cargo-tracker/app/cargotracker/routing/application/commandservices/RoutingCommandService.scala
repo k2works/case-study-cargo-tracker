@@ -23,39 +23,39 @@ class RoutingCommandService @Inject() (repository: RouteCandidateSelectionReposi
 
   private def parseVoyages(raw: List[String]): Either[String, List[VoyageNumber]] =
     if raw.isEmpty then Left("経路に含む航海が指定されていません")
-    else
-      raw.foldLeft[Either[String, List[VoyageNumber]]](Right(Nil)) { (acc, s) =>
-        for
-          built <- acc
-          vn <- VoyageNumber(s).left.map(_ => s"航海番号の形式が不正です: $s")
-        yield built :+ vn
+    else traverseEither(raw)(s => VoyageNumber(s).left.map(_ => s"航海番号の形式が不正です: $s"))
+
+  /** `List[A]` を `A => Either[E, B]` で写像し、最初の失敗で短絡する traverse 相当のヘルパ。 prepend + reverse で O(n) を維持する純粋実装。
+    */
+  private def traverseEither[A, E, B](
+      xs: List[A]
+  )(f: A => Either[E, B]): Either[E, List[B]] =
+    xs
+      .foldLeft[Either[E, List[B]]](Right(Nil)) { (acc, a) =>
+        acc.flatMap(rs => f(a).map(_ :: rs))
       }
+      .map(_.reverse)
 
   private def persistConfirmed(
       bookingId: String,
       voyages: List[VoyageNumber]
   ): Either[String, RouteCandidateSelection] =
-    repository.findByBookingId(bookingId) match
-      case Some(existing) =>
-        existing.confirm.left
-          .map {
-            case RouteCandidateSelection.AlreadyConfirmed => "この予約の経路は既に確定済みです"
-            case _ => "経路の確定に失敗しました"
-          }
-          .map { confirmed =>
-            repository.save(confirmed)
-            confirmed
-          }
+    val base: Either[String, RouteCandidateSelection] = repository.findByBookingId(bookingId) match
+      case Some(existing) => Right(existing)
       case None =>
-        for
-          pending <- RouteCandidateSelection.create(bookingId, voyages).left.map {
-            case RouteCandidateSelection.EmptyVoyages => "経路に含む航海が指定されていません"
-            case _ => "経路の作成に失敗しました"
-          }
-          confirmed <- pending.confirm.left.map(_ => "経路の確定に失敗しました")
-        yield
-          repository.save(confirmed)
-          confirmed
+        RouteCandidateSelection.create(bookingId, voyages).left.map {
+          case RouteCandidateSelection.EmptyVoyages => "経路に含む航海が指定されていません"
+          case _ => "経路の作成に失敗しました"
+        }
+    for
+      selection <- base
+      confirmed <- selection.confirm.left.map {
+        case RouteCandidateSelection.AlreadyConfirmed => "この予約の経路は既に確定済みです"
+        case _ => "経路の確定に失敗しました"
+      }
+    yield
+      repository.save(confirmed)
+      confirmed
 
 /** 経路選択コマンド（US09）。
   *
