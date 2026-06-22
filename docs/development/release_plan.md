@@ -480,7 +480,7 @@ gantt
 | 2 | 12 | 12 | 100% | 完了（US05・US06・US24・US25 + US08 スパイク、Release 0.1 ゲート確認済み、[retrospective-2.md](./retrospective-2.md)） |
 | 3 | 11 | 11 | 100% | 完了（US07 + US08 + IT2 申し送り 15 件、テスト 224 / coverage 88.0% / 経路探索 P95=60ms、[retrospective-3.md](./retrospective-3.md)） |
 | 4 | 11 | 11 | 100% | 完了（US09 + US11 + US12 + US13 + IT3 申し送り 9 件、テスト 288 / coverage 88.21% / Branch 79.06% / V9-V11 適用、[iteration_report-4.md](./iteration_report-4.md) / [retrospective-4.md](./retrospective-4.md)） |
-| 5 | 11 | - | - | 未着手 |
+| 5 | 11 | - | - | 計画中（US14 + US15 + US18 + IT4 申し送り 6 件、[iteration_plan-5.md](./iteration_plan-5.md)） |
 | 6 | 12 | - | - | 未着手 |
 | 7 | 12 | - | - | 未着手 |
 | 8 | 9 | - | - | 未着手 |
@@ -515,3 +515,4 @@ xychart-beta
 | 2026-06-20 | 初版作成（Java 版 take-2 実績を踏まえた Scala 版 8 イテレーション計画） | AI Agent |
 | 2026-06-20 | レビュー優先度 1 反映：リリース呼称再定義（0.1=Internal Alpha、1.0=MVP、2.0=GA）、US21 を Release 1.0 へ前倒し、Scala 係数 1.15 + US08 5→8 SP、IT 平準化（10-12 SP）、US18 を IT5 に前倒し、リリース条件統一（共通ゲート+増分検証）、予備 IT9 追加 | AI Agent |
 | 2026-06-20 | 認証ストーリー US26 を追加（2 SP、IT1 ストレッチ 12 SP）、Phase 1 を 22 SP、総計を 91 SP に更新 | AI Agent |
+| 2026-06-22 | IT5 計画策定（US14 + US15 + US18 + IT4 申し送り 6 件、Tracking Context 新設、[iteration_plan-5.md](./iteration_plan-5.md)） | AI Agent |
