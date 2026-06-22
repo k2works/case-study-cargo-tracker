@@ -124,6 +124,28 @@ class BookingCommandService @Inject() (
       cargo
     }
 
+  /** 荷役作業記録通知を Booking 側で記録する（US15）。Cargo の状態遷移は行わない（状態は Tracking 側 currentStatus で表現）。
+    *
+    * Controller 層から HandlingCommandService 実行後に呼び出される。
+    */
+  def logHandlingNotification(
+      bookingId: String,
+      trackingNumber: String,
+      eventType: String,
+      location: String
+  ): Either[String, Unit] =
+    BookingId(bookingId).left
+      .map(_ => CargoErrorMessages.invalidBookingIdMessage(bookingId))
+      .flatMap { id =>
+        repository.findById(id).toRight(CargoErrorMessages.bookingNotFoundMessage(bookingId)).map { cargo =>
+          logNotification(
+            cargo,
+            NotificationType.HandlingRecorded,
+            NotificationPayload.HandlingRecorded(cargo.bookingId.value, trackingNumber, eventType, location)
+          )
+        }
+      }
+
   /** 追跡番号を発行する（US14 / `AssignTrackingNumberCommand`）。
     *
     *   - `Confirmed` 以外からは状態遷移違反

@@ -36,5 +36,12 @@ object NotificationPayloadJson:
         "status" -> "TrackingIssued",
         "trackingUrl" -> s"/public/tracking/${p.trackingNumber}"
       )
+    case p: NotificationPayload.HandlingRecorded =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "eventType" -> p.eventType,
+        "location" -> p.location
+      )
 
   def asString(payload: NotificationPayload): String = Json.stringify(toJson(payload))

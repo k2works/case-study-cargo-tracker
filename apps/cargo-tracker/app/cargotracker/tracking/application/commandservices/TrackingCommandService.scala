@@ -1,9 +1,11 @@
 package cargotracker.tracking.application.commandservices
 
 import cargotracker.tracking.domain.model.aggregates.TrackingActivity
+import cargotracker.tracking.domain.model.entities.TrackingActivityEvent
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
-import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, TrackingNumber}
+import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, TrackingLocation, TrackingNumber}
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 
 /** 追跡コマンドサービス（US14 + IT5 拡張余地）。
@@ -34,5 +36,38 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
             }
     yield activity
 
+  /** 追跡イベントを追記する（US15）。Handling 側で記録された荷役を Tracking 側履歴に反映する。 */
+  def recordEvent(command: RecordTrackingEventCommand): Either[String, TrackingActivity] =
+    for
+      tn <- TrackingNumber(command.trackingNumber).left
+        .map(_ => "追跡番号の形式が不正です")
+      activity <- repository
+        .findByTrackingNumber(tn)
+        .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
+      event = TrackingActivityEvent(
+        eventType = command.eventType,
+        eventTime = command.eventTime,
+        location = TrackingLocation.of(command.locationUnLocode),
+        voyageNumber = command.voyageNumber.filter(_.nonEmpty),
+        routeDeviation = command.routeDeviation
+      )
+      updated <- activity.addEvent(event).left.map {
+        case TrackingActivity.OutOfOrder => "追跡イベントの時系列順序が不正です（過去時刻は不可）"
+        case _ => "追跡イベントの記録に失敗しました"
+      }
+    yield
+      repository.appendEvent(updated, event)
+      updated
+
 /** 追跡番号発行コマンド（US14）。 */
 final case class AssignTrackingNumberCommand(bookingId: String)
+
+/** 追跡イベント記録コマンド（US15）。 */
+final case class RecordTrackingEventCommand(
+    trackingNumber: String,
+    eventType: String,
+    eventTime: Instant,
+    locationUnLocode: String,
+    voyageNumber: Option[String],
+    routeDeviation: Boolean
+)

@@ -10,6 +10,8 @@ import cargotracker.booking.infrastructure.repositories.{
 import cargotracker.booking.infrastructure.services.ShipperRepositoryBackedExistenceChecker
 import cargotracker.estimation.domain.model.repositories.EstimateRepository
 import cargotracker.estimation.infrastructure.repositories.ScalikeJdbcEstimateRepository
+import cargotracker.handling.domain.model.repositories.HandlingActivityRepository
+import cargotracker.handling.infrastructure.repositories.ScalikeJdbcHandlingActivityRepository
 import cargotracker.routing.domain.model.repositories.{RouteCandidateSelectionRepository, VoyageRepository}
 import cargotracker.routing.infrastructure.repositories.{
   ScalikeJdbcRouteCandidateSelectionRepository,
@@ -48,6 +50,8 @@ class Module extends AbstractModule:
       .to(classOf[ScalikeJdbcRouteCandidateSelectionRepository])
     bind(classOf[TrackingActivityRepository])
       .to(classOf[ScalikeJdbcTrackingActivityRepository])
+    bind(classOf[HandlingActivityRepository])
+      .to(classOf[ScalikeJdbcHandlingActivityRepository])
     bind(classOf[ShipperExistenceChecker])
       .to(classOf[ShipperRepositoryBackedExistenceChecker])
     bind(classOf[Clock]).toInstance(Clock.systemUTC())

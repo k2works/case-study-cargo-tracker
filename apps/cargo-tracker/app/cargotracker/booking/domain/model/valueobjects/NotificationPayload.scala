@@ -38,3 +38,11 @@ object NotificationPayload:
       bookingId: String,
       trackingNumber: String
   ) extends NotificationPayload
+
+  /** 荷役記録通知ペイロード（US15 / `HandlingController` 経由）。 */
+  final case class HandlingRecorded(
+      bookingId: String,
+      trackingNumber: String,
+      eventType: String,
+      location: String
+  ) extends NotificationPayload

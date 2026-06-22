@@ -33,6 +33,11 @@ POST    /bookings/:bookingId/issue-tracking  cargotracker.booking.interfaces.web
 GET     /bookings/:bookingId/routes          cargotracker.routing.interfaces.web.RouteCandidateController.candidates(bookingId: String)
 POST    /bookings/:bookingId/routes/:idx/confirm  cargotracker.routing.interfaces.web.RouteCandidateController.confirm(bookingId: String, idx: Int)
 
+# 荷役作業（US15）
+GET     /handling                         cargotracker.handling.interfaces.web.HandlingController.list()
+GET     /handling/new                     cargotracker.handling.interfaces.web.HandlingController.newForm()
+POST    /handling                         cargotracker.handling.interfaces.web.HandlingController.create()
+
 # 航海スケジュール（US24・US25）
 GET     /voyages                       cargotracker.routing.interfaces.web.VoyageController.list()
 GET     /voyages/search                cargotracker.routing.interfaces.web.VoyageController.search()
