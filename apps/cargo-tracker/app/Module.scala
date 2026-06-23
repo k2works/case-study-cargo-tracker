@@ -1,6 +1,8 @@
 import cargotracker.auth.domain.model.repositories.UserRepository
 import cargotracker.auth.infrastructure.repositories.ScalikeJdbcUserRepository
 import cargotracker.auth.infrastructure.services.AdminUserSeeder
+import cargotracker.billing.domain.model.repositories.InvoiceRepository
+import cargotracker.billing.infrastructure.repositories.ScalikeJdbcInvoiceRepository
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
 import cargotracker.booking.domain.model.repositories.{CargoRepository, NotificationLogRepository}
 import cargotracker.booking.infrastructure.repositories.{
@@ -22,8 +24,6 @@ import cargotracker.shipper.domain.model.repositories.ShipperRepository
 import cargotracker.shipper.infrastructure.repositories.ScalikeJdbcShipperRepository
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
 import cargotracker.tracking.infrastructure.repositories.ScalikeJdbcTrackingActivityRepository
-import cargotracker.billing.domain.model.repositories.InvoiceRepository
-import cargotracker.billing.infrastructure.repositories.ScalikeJdbcInvoiceRepository
 import com.google.inject.AbstractModule
 import play.api.db.DBApi
 import scalikejdbc.{ConnectionPool, DataSourceConnectionPool}

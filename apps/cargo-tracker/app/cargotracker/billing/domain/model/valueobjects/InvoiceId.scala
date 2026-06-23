@@ -25,7 +25,7 @@ opaque type BillingBookingId = String
 
 object BillingBookingId:
   def apply(raw: String): Either[String, BillingBookingId] =
-    if raw == null || raw.isEmpty then Left("予約 ID が空です") else Right(raw)
+    Option(raw).filter(_.nonEmpty).toRight("予約 ID が空です")
   def unsafeFrom(raw: String): BillingBookingId = raw
   extension (id: BillingBookingId) def value: String = id
 

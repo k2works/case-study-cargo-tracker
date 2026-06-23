@@ -11,7 +11,9 @@ object DiscountRate:
   private val Max: BigDecimal = BigDecimal("0.3000")
 
   def apply(value: BigDecimal): Either[Error, DiscountRate] =
-    if value == null || value < Min || value > Max then Left(OutOfRange) else Right(value)
+    Option(value) match
+      case Some(v) if v >= Min && v <= Max => Right(v)
+      case _ => Left(OutOfRange)
 
   def unsafeFrom(value: BigDecimal): DiscountRate = value
   def zero: DiscountRate = Min
