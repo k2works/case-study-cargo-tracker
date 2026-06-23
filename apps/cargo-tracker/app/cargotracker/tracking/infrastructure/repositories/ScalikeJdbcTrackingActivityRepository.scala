@@ -80,8 +80,8 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
           .single
           .apply()
 
-      val trackingId = existing match
-        case Some(id) =>
+      existing match
+        case Some(_) =>
           val updated = sql"""
             UPDATE tracking_activity
             SET transport_status = ${activity.transportStatus.toString},
@@ -94,7 +94,6 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
               entityType = "TrackingActivity",
               identifier = activity.trackingNumber.value
             )
-          id
         case None =>
           sql"""
             INSERT INTO tracking_activity
@@ -103,7 +102,7 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
               (${activity.trackingNumber.value},
                ${activity.bookingId.value},
                ${activity.transportStatus.toString})
-          """.updateAndReturnGeneratedKey.apply()
+          """.update.apply()
 
       // save() ではイベント差分書込はしない（appendEvent 経由）
     }

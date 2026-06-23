@@ -37,7 +37,6 @@ class InvoiceController @Inject() (
   }
 
   def create(): Action[AnyContent] = authenticated { implicit request =>
-    val listRoute = routes.InvoiceController.list()
     val newRoute = routes.InvoiceController.newForm()
     newInvoiceForm
       .bindFromRequest()
