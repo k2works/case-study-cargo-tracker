@@ -93,15 +93,15 @@ date: 2026-06-22
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 0.1 | `TrackingActivityRepository.appendEvent` 戻り値を `Unit` → `TrackingActivity`（新バージョン付き）に変更し呼出側の再利用安全化（H1 解消） | 3h | [ ] |
+| 0.1 | `TrackingActivityRepository.appendEvent` 戻り値を `Unit` → `TrackingActivity`（新バージョン付き）に変更し呼出側の再利用安全化（H1 解消） | 3h | [x] |
 | 0.2 | `CargoSnapshot` ACL VO を Handling Context に新設、`HandlingCommandService.register` に注入し Cargo 状態（`TrackingIssued`/`InTransit`/`Delivered` 直前まで）を検証（H6 解消） | 4h | [ ] |
 | 0.3 | orchestration サービス `BookingHandlingOrchestrator` を application 層に新設し、HandlingActivity 登録 + TrackingActivity event 追記 + 通知ログを単一 `DB.localTx` 境界に統合（H3 解消） | 4h | [ ] |
-| 0.4 | `TrackingActivitySpec` に `addEvent` の `OutOfOrder`（時系列逆順）境界値テスト + 同時刻イベント許容テストを追加（H4 解消） | 2h | [ ] |
-| 0.5 | `ScalikeJdbcTrackingActivityRepositoryIntegrationSpec`（Testcontainers）に楽観ロック衝突 → `OptimisticLockException` テストを追加（H5 解消） | 3h | [ ] |
-| 0.6 | `BookingTrackingNumber` opaque type を Booking Context に新設、`Cargo.issueTracking(BookingTrackingNumber)` でフォーマット検証（H2 解消） | 3h | [ ] |
-| 0.7 | `transport_status` 整合性 assertion を `TrackingActivity` 不変条件に追加し、`addEvent` 結果と DB キャッシュの乖離を検出（H7 解消） | 2h | [ ] |
-| 0.8 | tracking_number 採番を `MAX(id)+1` → PostgreSQL シーケンス（`DEFAULT nextval('tracking_number_seq')`）に変更（O2 解消、ADR 0013 で 0010 更新） | 3h | [ ] |
-| 0.9 | 公開ページ用 `layout/public.scala.html` を切り出し `publicDetail` / `publicNotFound` から呼出（O1 解消） | 2h | [ ] |
+| 0.4 | `TrackingActivitySpec` に `addEvent` の `OutOfOrder`（時系列逆順）境界値テスト + 同時刻イベント許容テストを追加（H4 解消） | 2h | [x] |
+| 0.5 | `ScalikeJdbcTrackingActivityRepositoryIntegrationSpec`（Testcontainers）に楽観ロック衝突 → `OptimisticLockException` テストを追加（H5 解消） | 3h | [x] |
+| 0.6 | `BookingTrackingNumber` opaque type を Booking Context に新設、`Cargo.issueTracking(BookingTrackingNumber)` でフォーマット検証（H2 解消） | 3h | [x] |
+| 0.7 | `transport_status` 整合性 assertion を `TrackingActivity` 不変条件に追加し、`addEvent` 結果と DB キャッシュの乖離を検出（H7 解消） | 2h | [x] |
+| 0.8 | tracking_number 採番を `MAX(id)+1` → PostgreSQL シーケンス（`DEFAULT nextval('tracking_number_seq')`）に変更（O2 解消、ADR 0013 で 0010 更新） | 3h | [x] |
+| 0.9 | 公開ページ用 `layout/public.scala.html` を切り出し `publicDetail` / `publicNotFound` から呼出（O1 解消） | 2h | [x] |
 | 0.10 | `Itinerary` に leg 詳細（from/to 港湾）を追加し、`HandlingCommandService.register` のルート逸脱判定（`routeDeviation`）を正式実装（O3 解消） | 4h | [ ] |
 
 **小計**: 30h
@@ -163,7 +163,7 @@ date: 2026-06-22
 | **合計** | **12** | **87h** |
 
 **1 SP あたり**: 約 7.3h（IT5 申し送り含む / 機能タスクのみなら 4.8h）
-**進捗率**: 0% (0/12 SP)
+**進捗率**: 0% (0/12 SP) / IT5 申し送り 7/10 件完了 (18/30h)
 
 ---
 
