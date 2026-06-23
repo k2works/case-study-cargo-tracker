@@ -61,6 +61,30 @@ class HandlingActivitySpec extends AnyFunSuite with Matchers:
       operatorName = None
     ) shouldBe Left(HandlingActivity.EmptyBookingId)
 
+  test("register: Claim は recipientConfirmation 必須 (US16 / IT6)"):
+    HandlingActivity.register(
+      bookingId = "BK-CLAIM01",
+      eventType = HandlingType.Claim,
+      completionTime = now,
+      location = tyo,
+      voyageNumber = None,
+      operatorName = None,
+      recipientConfirmation = None
+    ) shouldBe Left(HandlingActivity.RecipientConfirmationRequired)
+
+  test("register: Claim + recipientConfirmation 提供で成立する (US16)"):
+    val Right(ha) = HandlingActivity.register(
+      bookingId = "BK-CLAIM02",
+      eventType = HandlingType.Claim,
+      completionTime = now,
+      location = tyo,
+      voyageNumber = None,
+      operatorName = Some("田中"),
+      recipientConfirmation = Some("署名: 山田太郎")
+    ): @unchecked
+    ha.eventType shouldBe HandlingType.Claim
+    ha.recipientConfirmation shouldBe Some("署名: 山田太郎")
+
   test("HandlingType.requiresVoyage: Load/Unload は必須、それ以外は不要"):
     HandlingType.Load.requiresVoyage shouldBe true
     HandlingType.Unload.requiresVoyage shouldBe true

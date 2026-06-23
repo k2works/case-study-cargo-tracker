@@ -24,7 +24,8 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
       voyageNumber = rs.stringOpt("voyage_number").flatMap(HandlingVoyageNumber(_).toOption),
       operatorName = rs.stringOpt("operator_name"),
       routeDeviation = rs.boolean("route_deviation"),
-      version = rs.int("version")
+      version = rs.int("version"),
+      recipientConfirmation = rs.stringOpt("recipient_confirmation")
     )
 
   override def save(activity: HandlingActivity): Unit =
@@ -32,7 +33,7 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
       sql"""
         INSERT INTO handling_activity
           (booking_id, event_type, event_completion_time, location_unlocode,
-           voyage_number, operator_name, route_deviation)
+           voyage_number, operator_name, route_deviation, recipient_confirmation)
         VALUES
           (${activity.bookingId},
            ${activity.eventType.toString},
@@ -40,7 +41,8 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
            ${activity.location.unLocode},
            ${activity.voyageNumber.map(_.value).orNull},
            ${activity.operatorName.orNull},
-           ${activity.routeDeviation})
+           ${activity.routeDeviation},
+           ${activity.recipientConfirmation.orNull})
       """.update.apply()
     }
 

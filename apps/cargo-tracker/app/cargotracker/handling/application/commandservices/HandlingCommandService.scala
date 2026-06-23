@@ -41,6 +41,7 @@ class HandlingCommandService @Inject() (repository: HandlingActivityRepository):
         .map {
           case HandlingActivity.VoyageRequired => s"$eventType は航海番号が必須です"
           case HandlingActivity.EmptyBookingId => "予約 ID が空です"
+          case HandlingActivity.RecipientConfirmationRequired => "引取作業 (Claim) には荷受人確認が必須です"
         }
     yield
       repository.save(activity)

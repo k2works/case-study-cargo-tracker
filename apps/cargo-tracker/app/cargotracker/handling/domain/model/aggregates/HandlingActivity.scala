@@ -20,6 +20,7 @@ final case class HandlingActivity private (
     voyageNumber: Option[HandlingVoyageNumber],
     operatorName: Option[String],
     routeDeviation: Boolean,
+    recipientConfirmation: Option[String],
     version: Int
 )
 
@@ -28,6 +29,7 @@ object HandlingActivity:
   sealed trait Error
   case object EmptyBookingId extends Error
   case object VoyageRequired extends Error
+  case object RecipientConfirmationRequired extends Error
 
   def register(
       bookingId: String,
@@ -36,10 +38,13 @@ object HandlingActivity:
       location: Location,
       voyageNumber: Option[HandlingVoyageNumber],
       operatorName: Option[String],
-      routeDeviation: Boolean = false
+      routeDeviation: Boolean = false,
+      recipientConfirmation: Option[String] = None
   ): Either[Error, HandlingActivity] =
     if bookingId.isEmpty then Left(EmptyBookingId)
     else if eventType.requiresVoyage && voyageNumber.isEmpty then Left(VoyageRequired)
+    else if eventType == HandlingType.Claim && recipientConfirmation.forall(_.isEmpty) then
+      Left(RecipientConfirmationRequired)
     else
       Right(
         new HandlingActivity(
@@ -50,6 +55,7 @@ object HandlingActivity:
           voyageNumber = voyageNumber,
           operatorName = operatorName,
           routeDeviation = routeDeviation,
+          recipientConfirmation = recipientConfirmation,
           version = 0
         )
       )
@@ -63,7 +69,8 @@ object HandlingActivity:
       voyageNumber: Option[HandlingVoyageNumber],
       operatorName: Option[String],
       routeDeviation: Boolean,
-      version: Int
+      version: Int,
+      recipientConfirmation: Option[String] = None
   ): HandlingActivity =
     new HandlingActivity(
       bookingId,
@@ -73,5 +80,6 @@ object HandlingActivity:
       voyageNumber,
       operatorName,
       routeDeviation,
+      recipientConfirmation,
       version
     )
