@@ -13,7 +13,9 @@ import cargotracker.booking.infrastructure.repositories.{
 import cargotracker.booking.infrastructure.services.ShipperRepositoryBackedExistenceChecker
 import cargotracker.estimation.domain.model.repositories.EstimateRepository
 import cargotracker.estimation.infrastructure.repositories.ScalikeJdbcEstimateRepository
+import cargotracker.handling.domain.model.ports.{BookingNotificationPort, TrackingLookupPort}
 import cargotracker.handling.domain.model.repositories.HandlingActivityRepository
+import cargotracker.handling.infrastructure.acl.{BookingAdapter, TrackingAdapter}
 import cargotracker.handling.infrastructure.repositories.ScalikeJdbcHandlingActivityRepository
 import cargotracker.routing.domain.model.repositories.{RouteCandidateSelectionRepository, VoyageRepository}
 import cargotracker.routing.infrastructure.repositories.{
@@ -55,6 +57,8 @@ class Module extends AbstractModule:
       .to(classOf[ScalikeJdbcTrackingActivityRepository])
     bind(classOf[HandlingActivityRepository])
       .to(classOf[ScalikeJdbcHandlingActivityRepository])
+    bind(classOf[TrackingLookupPort]).to(classOf[TrackingAdapter])
+    bind(classOf[BookingNotificationPort]).to(classOf[BookingAdapter])
     bind(classOf[InvoiceRepository]).to(classOf[ScalikeJdbcInvoiceRepository])
     bind(classOf[BillingCargoQueryPort]).to(classOf[BookingCargoQueryAdapter])
     bind(classOf[ShipperExistenceChecker])

@@ -91,8 +91,12 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
       .haveSimpleNameEndingWith("CommandService")
       .orShould()
       .haveSimpleNameEndingWith("Command")
+      .orShould()
+      .haveSimpleNameEndingWith("Orchestrator")
+      .orShould()
+      .haveSimpleNameEndingWith("Input")
       .because(
-        "commandservices パッケージのトップレベルクラスはユースケース実行（*CommandService）か入力 DTO（*Command）のいずれかに統一する"
+        "commandservices パッケージのトップレベルクラスはユースケース実行（*CommandService / *Orchestrator）か入出力 DTO（*Command / *Input）のいずれかに統一する（IT7 0.3 Orchestrator 追加）"
       )
     commandRule.check(classes)
 

@@ -1,30 +1,23 @@
 package cargotracker.handling.interfaces.web
 
 import cargotracker.auth.interfaces.web.AuthenticatedAction
-import cargotracker.booking.application.commandservices.BookingCommandService
-import cargotracker.handling.application.commandservices.{HandlingCommandService, RegisterHandlingActivityCommand}
+import cargotracker.handling.application.commandservices.{HandlingOrchestrator, RegisterHandlingFlowInput}
 import cargotracker.handling.domain.model.repositories.HandlingActivityRepository
-import cargotracker.tracking.application.commandservices.{RecordTrackingEventCommand, TrackingCommandService}
-import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
-import cargotracker.tracking.domain.model.valueobjects.TrackingNumber
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.i18n.I18nSupport
 import play.api.mvc.*
 
-import java.time.{Instant, LocalDateTime, ZoneId}
+import java.time.{LocalDateTime, ZoneId}
 import javax.inject.{Inject, Singleton}
 
-/** 荷役管理画面 / 登録（US15）。 */
+/** 荷役管理画面 / 登録（US15、IT7 0.3 で HandlingOrchestrator 経由に切替）。 */
 @Singleton
 class HandlingController @Inject() (
     cc: ControllerComponents,
     authenticated: AuthenticatedAction,
-    handlingCommandService: HandlingCommandService,
-    trackingCommandService: TrackingCommandService,
-    bookingCommandService: BookingCommandService,
-    handlingRepository: HandlingActivityRepository,
-    trackingRepository: TrackingActivityRepository
+    orchestrator: HandlingOrchestrator,
+    handlingRepository: HandlingActivityRepository
 ) extends AbstractController(cc)
     with I18nSupport:
 
@@ -64,77 +57,32 @@ class HandlingController @Inject() (
   }
 
   def create(): Action[AnyContent] = authenticated { implicit request =>
+    val listRoute = cargotracker.handling.interfaces.web.routes.HandlingController.list()
+    val newRoute = cargotracker.handling.interfaces.web.routes.HandlingController.newForm()
     handlingForm
       .bindFromRequest()
       .fold(
         formWithErrors => BadRequest(views.html.handling.newForm(formWithErrors)),
-        data => orchestrateRegistration(data)
+        data =>
+          val input = RegisterHandlingFlowInput(
+            trackingNumber = data.trackingNumber,
+            eventType = data.eventType,
+            completionTime = data.completionDateTime.atZone(ZoneId.systemDefault()).toInstant,
+            locationUnLocode = data.locationUnLocode,
+            voyageNumber = data.voyageNumber,
+            operatorName = data.operatorName,
+            recipientConfirmation = data.recipientConfirmation.filter(_.nonEmpty),
+            recipientConfirmationType = data.recipientConfirmationType.filter(_.nonEmpty)
+          )
+          orchestrator.register(input) match
+            case Right(_) =>
+              Redirect(listRoute).flashing(
+                "success" -> s"荷役作業を登録しました（${data.trackingNumber} / ${data.eventType} / ${data.locationUnLocode}）"
+              )
+            case Left(msg) =>
+              Redirect(newRoute).flashing("error" -> msg)
       )
   }
-
-  private def orchestrateRegistration(
-      data: HandlingFormData
-  )(implicit
-      request: cargotracker.auth.interfaces.web.AuthenticatedRequest[?]
-  ): Result =
-    val listRoute = cargotracker.handling.interfaces.web.routes.HandlingController.list()
-    val newRoute = cargotracker.handling.interfaces.web.routes.HandlingController.newForm()
-    val completionInstant = data.completionDateTime.atZone(ZoneId.systemDefault()).toInstant
-
-    val result = for
-      tn <- TrackingNumber(data.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
-      activity <- trackingRepository
-        .findByTrackingNumber(tn)
-        .toRight(s"追跡番号 ${data.trackingNumber} が見つかりません")
-      _ <- handlingCommandService.register(
-        RegisterHandlingActivityCommand(
-          bookingId = activity.bookingId.value,
-          eventType = data.eventType,
-          completionTime = completionInstant,
-          locationUnLocode = data.locationUnLocode,
-          voyageNumber = data.voyageNumber,
-          operatorName = data.operatorName,
-          routeDeviation = false,
-          recipientConfirmation = data.recipientConfirmation.filter(_.nonEmpty),
-          recipientConfirmationType = data.recipientConfirmationType.filter(_.nonEmpty)
-        )
-      )
-      _ <- trackingCommandService.recordEvent(
-        RecordTrackingEventCommand(
-          trackingNumber = data.trackingNumber,
-          eventType = data.eventType,
-          eventTime = completionInstant,
-          locationUnLocode = data.locationUnLocode,
-          voyageNumber = data.voyageNumber,
-          routeDeviation = false
-        )
-      )
-      _ <- bookingCommandService.logHandlingNotification(
-        activity.bookingId.value,
-        data.trackingNumber,
-        data.eventType,
-        data.locationUnLocode
-      )
-      _ <-
-        if data.eventType == "Claim" then
-          bookingCommandService
-            .completeDelivery(
-              activity.bookingId.value,
-              data.trackingNumber,
-              data.locationUnLocode,
-              data.recipientConfirmation.getOrElse("")
-            )
-            .map(_ => ())
-        else Right(())
-    yield ()
-
-    result match
-      case Right(_) =>
-        Redirect(listRoute).flashing(
-          "success" -> s"荷役作業を登録しました（${data.trackingNumber} / ${data.eventType} / ${data.locationUnLocode}）"
-        )
-      case Left(msg) =>
-        Redirect(newRoute).flashing("error" -> msg)
 
 /** 荷役登録フォームデータ。 */
 final case class HandlingFormData(

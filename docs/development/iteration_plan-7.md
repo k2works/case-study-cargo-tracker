@@ -83,7 +83,7 @@ date: 2026-06-23
 |---|--------|---------|------|
 | 0.1 | ArchUnit `contexts` に billing/handling/tracking を追加し境界違反を可視化（H1） | 2h | [x] |
 | 0.2 | `BillingCargoQueryPort` (Billing 側 trait) + Booking 側 ACL アダプター実装、`BillingCommandService` の Cargo 直接結合を解消（H2 / IT5 申し送り 0.2 部分流用） | 5h | [x] |
-| 0.3 | `HandlingOrchestrator` (Application Service) を新設し、Handling 登録 + Tracking event 追記 + Booking 通知 + completeDelivery を単一 `DB.localTx` で実行（H3 / IT5 申し送り 0.3）。`HandlingController` の Claim 連結を Orchestrator 呼出に置換 | 6h | [ ] |
+| 0.3 | `HandlingOrchestrator` (Application Service) を新設し、Handling 登録 + Tracking event 追記 + Booking 通知 + completeDelivery を単一 `DB.localTx` で実行（H3 / IT5 申し送り 0.3）。`HandlingController` の Claim 連結を Orchestrator 呼出に置換 | 6h | [x]※ |
 | 0.4 | ADR 0015 起票「Billing は単通貨 JPY、shared.domain.Money に一本化」+ `BillingMoney` 削除、`shared.domain.Money` に `multiplyByRate` extension を追加（H4） | 4h | [x] |
 | 0.5 | ADR 0014 Snapshot ADT 適用: `Invoice.Snapshot` 新設 → `ScalikeJdbcInvoiceRepository` リファクタ | 3h | [x] |
 | 0.6 | ADR 0014 Snapshot ADT 適用: `Cargo.Snapshot` 新設 → `ScalikeJdbcCargoRepository` + 関連テストリファクタ | 4h | [x] |
