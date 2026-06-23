@@ -31,7 +31,7 @@
         </div>
         <div class="form-check form-check-inline">
           <input type="radio" name="eventType" value="Claim" class="form-check-input" id="et-claim" @if(form("eventType").value.contains("Claim")){checked}>
-          <label class="form-check-label" for="et-claim">Claim（引取）</label>
+          <label class="form-check-label" for="et-claim">Claim（引取作業）</label>
         </div>
       </div>
     </div>
@@ -52,7 +52,7 @@
       <input type="text" name="operatorName" class="form-control" value="@form("operatorName").value.getOrElse("")" maxlength="200">
     </div>
     <div class="mb-3" id="recipient-confirmation-row" style="display:none;">
-      <label class="form-label">荷受人確認（Claim 必須） <span class="text-danger">*</span></label>
+      <label class="form-label">荷受人確認（引取作業 (Claim) 必須） <span class="text-danger">*</span></label>
       <input type="text" name="recipientConfirmation" class="form-control" value="@form("recipientConfirmation").value.getOrElse("")" placeholder="署名 or 確認コード" maxlength="120">
     </div>
     <script>

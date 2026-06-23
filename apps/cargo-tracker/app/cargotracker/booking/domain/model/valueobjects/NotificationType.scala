@@ -7,7 +7,7 @@ enum NotificationType:
   case BookingCancelled // 予約キャンセル通知（US13）
   case TrackingIssued // 追跡番号発行通知（US14）
   case HandlingRecorded // 荷役作業記録通知（US15）
-  case DeliveryCompleted // 配送完了通知（US16 / IT6）
+  case DeliveryCompleted // 配送完了通知（US16 / IT6、社内視点）。UI / 荷主向けは「引取済」と表現する（IT7 0.15 ユビキタス言語統一）
   case ManualStatusUpdated // 手動状態更新通知（US17 / IT6）
 
 object NotificationType:
