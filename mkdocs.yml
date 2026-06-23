@@ -139,6 +139,7 @@ nav:
       - 0009 経路選択集約: adr/0009-route-candidate-selection-aggregate.md
       - 0010 追跡番号採番ポリシー: adr/0010-tracking-number-policy.md
       - 0013 tracking_number シーケンス採番: adr/0013-tracking-number-sequence-numbering.md
+      - 0014 集約 Snapshot ADT 導入: adr/0014-aggregate-snapshot-adt.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
