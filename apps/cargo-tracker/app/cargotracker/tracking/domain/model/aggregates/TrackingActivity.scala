@@ -18,6 +18,11 @@ final case class TrackingActivity private (
     events: List[TrackingActivityEvent],
     version: Int
 ):
+  // 不変条件 3 (H7): transportStatus は events 履歴から導出した結果と一致する
+  require(
+    transportStatus == TrackingActivity.deriveStatus(events),
+    s"transportStatus($transportStatus) does not match derived from events(${TrackingActivity.deriveStatus(events)})"
+  )
 
   /** イベントを時系列順序を維持して追加する（domain-model.md L760-761 / 不変条件 2）。
     *

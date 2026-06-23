@@ -46,9 +46,17 @@ class TrackingActivitySpec extends AnyFunSuite with Matchers:
     ta2.events.size shouldBe 2
     ta2.transportStatus shouldBe TrackingStatus.Loaded
 
-  test("reconstruct: 永続化からの復元"):
+  test("reconstruct: 永続化からの復元（events 履歴と status 整合）"):
     val tn = TrackingNumber.unsafeFrom("TN-000003")
     val bid = TrackingBookingId.unsafeFrom("BK-000003")
-    val ta = TrackingActivity.reconstruct(tn, bid, TrackingStatus.Loaded, version = 5)
+    val events = List(evt("Receive", 100), evt("Load", 200))
+    val ta = TrackingActivity.reconstruct(tn, bid, TrackingStatus.Loaded, events, version = 5)
     ta.transportStatus shouldBe TrackingStatus.Loaded
     ta.version shouldBe 5
+
+  test("reconstruct: status と events 履歴の乖離は IllegalArgumentException で拒否（H7）"):
+    val tn = TrackingNumber.unsafeFrom("TN-000004")
+    val bid = TrackingBookingId.unsafeFrom("BK-000004")
+    a[IllegalArgumentException] shouldBe thrownBy(
+      TrackingActivity.reconstruct(tn, bid, TrackingStatus.Loaded, Nil, version = 5)
+    )

@@ -12,14 +12,14 @@ import javax.inject.Singleton
 @Singleton
 class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
 
-  private def rowToActivity(rs: WrappedResultSet): Option[(Long, TrackingActivity)] =
+  private def rowToBase(rs: WrappedResultSet): Option[(Long, TrackingNumber, TrackingBookingId, TrackingStatus, Int)] =
     for
       tn <- TrackingNumber(rs.string("tracking_number")).toOption
       bid <- TrackingBookingId(rs.string("booking_id")).toOption
       status = TrackingStatus.values
         .find(_.toString == rs.string("transport_status"))
         .getOrElse(TrackingStatus.Unknown)
-    yield (rs.long("id"), TrackingActivity.reconstruct(tn, bid, status, version = rs.int("version")))
+    yield (rs.long("id"), tn, bid, status, rs.int("version"))
 
   private def loadEvents(trackingId: Long)(implicit session: DBSession): List[TrackingActivityEvent] =
     sql"""SELECT * FROM tracking_handling_event
@@ -37,18 +37,12 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
       .list
       .apply()
 
-  private def attachEvents(idAndActivity: (Long, TrackingActivity))(implicit
+  private def attachEvents(base: (Long, TrackingNumber, TrackingBookingId, TrackingStatus, Int))(implicit
       session: DBSession
   ): TrackingActivity =
-    val (id, base) = idAndActivity
+    val (id, tn, bid, status, version) = base
     val events = loadEvents(id)
-    TrackingActivity.reconstruct(
-      base.trackingNumber,
-      base.bookingId,
-      base.transportStatus,
-      events,
-      base.version
-    )
+    TrackingActivity.reconstruct(tn, bid, status, events, version)
 
   override def nextTrackingNumber(): TrackingNumber =
     DB.readOnly { implicit session =>
@@ -61,7 +55,7 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
   override def findByTrackingNumber(tn: TrackingNumber): Option[TrackingActivity] =
     DB.readOnly { implicit session =>
       sql"SELECT * FROM tracking_activity WHERE tracking_number = ${tn.value}"
-        .map(rowToActivity)
+        .map(rowToBase)
         .single
         .apply()
         .flatten
@@ -71,7 +65,7 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
   override def findByBookingId(bid: TrackingBookingId): Option[TrackingActivity] =
     DB.readOnly { implicit session =>
       sql"SELECT * FROM tracking_activity WHERE booking_id = ${bid.value}"
-        .map(rowToActivity)
+        .map(rowToBase)
         .single
         .apply()
         .flatten
