@@ -69,3 +69,23 @@ class CargoBookingSpec extends AnyFunSuite with Matchers:
     val Right(pre) = Cargo.book(bookingId, shipperId, routeSpec, spec, acceptingChecker): @unchecked
     pre.assignItinerary(Itinerary.unsafeFrom(List("VY-1"))) shouldBe
       Left(Cargo.InvalidStatusTransition(BookingStatus.Preliminary, BookingStatus.RouteAssigned))
+
+  private def cargoIn(status: BookingStatus): Cargo =
+    Cargo.reconstruct(bookingId, shipperId, routeSpec, spec, status)
+
+  test("deliver: TrackingIssued から Delivered に遷移する (US16 / IT6)"):
+    val Right(delivered) = cargoIn(BookingStatus.TrackingIssued).deliver(): @unchecked
+    delivered.status shouldBe BookingStatus.Delivered
+
+  test("deliver: InTransit から Delivered に遷移する (US16 / IT6)"):
+    val Right(delivered) = cargoIn(BookingStatus.InTransit).deliver(): @unchecked
+    delivered.status shouldBe BookingStatus.Delivered
+
+  test("deliver: 既に Delivered なら冪等成功"):
+    val done = cargoIn(BookingStatus.Delivered)
+    done.deliver() shouldBe Right(done)
+
+  test("deliver: Preliminary から呼ぶと InvalidStatusTransition"):
+    cargoIn(BookingStatus.Preliminary).deliver() shouldBe Left(
+      Cargo.InvalidStatusTransition(BookingStatus.Preliminary, BookingStatus.Delivered)
+    )

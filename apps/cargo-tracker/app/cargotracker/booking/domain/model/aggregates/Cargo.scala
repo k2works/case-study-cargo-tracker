@@ -96,6 +96,18 @@ final case class Cargo private (
       case Left(_) => Left(Cargo.InvalidTrackingNumberFormat(trackingNumberRaw))
       case Right(tn) => issueTracking(tn)
 
+  /** 引取完了 (US16 / IT6) で `Delivered` に遷移する。
+    *
+    *   - `InTransit` または `TrackingIssued` から遷移可能 (Claim 記録時に呼出)
+    *   - 既に `Delivered` 以降の場合は冪等成功 (現状を返す)
+    */
+  def deliver(): Either[Cargo.Error, Cargo] =
+    status match
+      case BookingStatus.Delivered | BookingStatus.Settled => Right(this)
+      case _ =>
+        if status.canTransitionTo(BookingStatus.Delivered) then Right(copy(status = BookingStatus.Delivered))
+        else Left(Cargo.InvalidStatusTransition(status, BookingStatus.Delivered))
+
 object Cargo:
 
   sealed trait Error

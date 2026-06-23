@@ -44,6 +44,7 @@ enum BookingStatus:
     case (RouteAssigned, RouteProposed) => true // 経路再設計に戻す
     case (Confirmed, TrackingIssued) => true
     case (TrackingIssued, InTransit) => true
+    case (TrackingIssued, Delivered) => true // US16: Receive スキップで直接引取された場合
     case (InTransit, Delivered) => true
     case (Delivered, Settled) => true
     case (Preliminary, Cancelled) => true
