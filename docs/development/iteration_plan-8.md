@@ -94,7 +94,7 @@
 | 0.9 | トップレベル README.md に IT2 以降の Phase 進捗 + Release マイルストーン反映（H11 / 設計ドキュメントへのリンク委譲） | 2h | [ ] |
 | 0.10 | `recordException` 戻り値の `: @unchecked` パターン補正 + EitherValues 移行（H12 / TrackingCommandServiceSpec） | 2h | [ ] |
 | 0.11 | `HandlingCargoQueryPort` (handling 用 ACL Port) + `BookingCargoForHandlingAdapter` 新設、`HandlingOrchestrator.register` で `Itinerary.isOnRoute` 経由 routeDeviation 自動判定 + ユニットテスト 3 件追加（T3 / 0.14 持ち越し回収） | 5h | [ ] |
-| 0.12 | 設計ドキュメント反映（T6 / docs/design/data-model.md + domain-model.md + ui_design.md）: IT7 差分 (V18-V22 + TrackingExceptionEvent + ItineraryLeg + InvoiceLineItem + RecipientConfirmationType + 例外記録 UI) + IT8 差分 (Payment テーブル列 `amount BIGINT` 単通貨整合 + `due_date` / `version` 追加 + `transaction_reference` → `reference_code` 統一、Payment 関連画面 state 追加、Accountant→Pricer / Admin→MasterAdmin Role 統一) を正式反映 | 6h | [ ] |
+| 0.12 | 設計ドキュメント反映（T6 / docs/design/data-model.md + domain-model.md + ui_design.md）: IT7 差分 (V18-V22 + TrackingExceptionEvent + ItineraryLeg + InvoiceLineItem + RecipientConfirmationType + 例外記録 UI) + IT8 差分 (Payment テーブル列 `amount BIGINT` 単通貨整合 + `due_date` / `version` 追加 + `transaction_reference` → `reference_code` 統一、ui_design.md L82 画面一覧 + L209 画面遷移図 (精算フロー) の **両方** に Payment 系 4 画面 (`/billing/invoices/:id/issue-payment` / `/billing/payments` / `/billing/payments/:paymentId` / `/billing/payments/:id/confirm`) を追加、Accountant→Settlement / Admin→MasterAdmin Role 統一 (実装側 Role.scala: Sales / RouteDesigner / Tracker / Settlement / MasterAdmin 準拠)) を正式反映 | 6h | [ ] |
 | 0.13 | CLAUDE.md に TDD コミット規律 (Red → Green の分離、もしくは Red→Green を経た事実をコミットメッセージに明記) を追記 (H6 / it7_implementation_review_20260623.md) | 1h | [ ] |
 | 0.14 | ADR 0020 起票「公開追跡画面 (`/public/tracking/...`) における例外表示方針」: 表示する/しない、表示する場合の情報粒度 (緊急バッジのみ / 詳細 / 対応状況) を業務ルール決定 (H8 / it7 業務代表者指摘) | 3h | [ ] |
 | 0.15 | ADR 0019 起票「Billing Context の Payment は Invoice 集約内 (`paymentStatus` フィールド + `confirmPayment` メソッド) か別集約か」: domain-model.md L921-955 では Invoice 集約内、計画 2.1 は別集約案。本イテレーションで決定 (S3-1 / S3-2 / S3-3 整合) | 3h | [ ] |
@@ -396,7 +396,7 @@ package "Tracking Context (IT7 基盤、IT8 改修部分)" {
   TrackingExceptionEvent --> ExceptionEventId
 }
 
-CorporateShipper -[hidden]-> Cargo
+Shipper -[hidden]-> Cargo
 Cargo -[hidden]-> Invoice
 SettlementCommandService --> Payment
 SettlementCommandService --> Invoice
@@ -624,7 +624,7 @@ ALTER TABLE notification_log ADD CONSTRAINT ck_notification_log_type
 
 ### ユーザーインターフェース
 
-ui_design.md L88-91（請求書一覧 / 新規請求書発行 / 請求書詳細 / 割引ポリシー管理）の既存構成を踏まえ、IT8 は **精算 (Settlement) 系の 3 画面を新設** または **請求書詳細画面に統合** する。ADR 0019 案 A 採択時は前者、案 B 採択時は後者。下記ワイヤーフレームは **案 A** を主として描き、案 B 採択時の差分は注釈で示す。さらに ui_design.md の Role 表記 (Accountant / Admin) と実装側 Role (Pricer / MasterAdmin) の乖離を 0.12 で統一する。
+ui_design.md L88-91（請求書一覧 / 新規請求書発行 / 請求書詳細 / 割引ポリシー管理）の既存構成を踏まえ、IT8 は **精算 (Settlement) 系の 3 画面を新設** または **請求書詳細画面に統合** する。ADR 0019 案 A 採択時は前者、案 B 採択時は後者。下記ワイヤーフレームは **案 A** を主として描き、案 B 採択時の差分は注釈で示す。さらに ui_design.md の Role 表記 (Accountant / Admin) と実装側 Role (Settlement / MasterAdmin) の乖離を 0.12 で統一する。
 
 #### ビュー
 
@@ -678,7 +678,7 @@ ui_design.md L88-91（請求書一覧 / 新規請求書発行 / 請求書詳細 
       支払期限      | "2026-10-31" :^2026-10-31, 2026-11-15, 2026-11-30^
       支払方法既定  | "銀行振込（BankTransfer）"
     }
-    {  : Pricer/MasterAdmin のみ表示 }
+    {  : Settlement/MasterAdmin のみ表示 }
     [キャンセル] | [<b>発行</b>]
   }
 }
@@ -717,7 +717,7 @@ ui_design.md L88-91（請求書一覧 / 新規請求書発行 / 請求書詳細 
       支払方法      | ^BankTransfer/Card/Convenience^
     }
     [キャンセル] | [<b>入金確認</b>]
-    {  : Pricer/MasterAdmin のみ表示 }
+    {  : Settlement/MasterAdmin のみ表示 }
     ---
     {  : <b>通知履歴</b> }
     | <b>送信日時</b>      | <b>種別</b>          | <b>送信先</b>            |
@@ -739,12 +739,12 @@ ui_design.md L88-91（請求書一覧 / 新規請求書発行 / 請求書詳細 
 
 | 画面名 | URL | 説明 | アクセスロール | 関連 US |
 |--------|-----|------|---------------|---------|
-| 請求書詳細（拡張） | `/billing/invoices/:invoiceId` | 料金内訳に **Discount 明細を強調表示** + 精算状態セクション追加 | Pricer, MasterAdmin | **US22**, US23 |
-| 精算書発行（新規） | `/billing/invoices/:invoiceId/issue-payment` | 期限プリセット + 支払方法既定 | Pricer, MasterAdmin | US23 |
-| 精算一覧（新規、案 A） | `/billing/payments` | 状態フィルタ + 期限範囲 + CSV 出力 | Pricer, MasterAdmin | US23 |
-| 精算詳細（新規、案 A） | `/billing/payments/:paymentId` | 入金確認フォーム + 通知履歴 | Pricer, MasterAdmin | US23 |
-| 入金確認 POST | `/billing/payments/:paymentId/confirm` <br/> (案 B 時: `/billing/invoices/:id/confirm-payment`) | PRG、Confirmed 遷移 + Settled 連動 + PaymentConfirmed 通知 | Pricer, MasterAdmin | US23 |
-| 払戻 POST（IT9 申し送り） | `/billing/payments/:paymentId/refund` | Refunded 遷移、IT8 はバックエンド API のみ | Pricer, MasterAdmin | US23（縮小） |
+| 請求書詳細（拡張） | `/billing/invoices/:invoiceId` | 料金内訳に **Discount 明細を強調表示** + 精算状態セクション追加 | Settlement, MasterAdmin | **US22**, US23 |
+| 精算書発行（新規） | `/billing/invoices/:invoiceId/issue-payment` | 期限プリセット + 支払方法既定 | Settlement, MasterAdmin | US23 |
+| 精算一覧（新規、案 A） | `/billing/payments` | 状態フィルタ + 期限範囲 + CSV 出力 | Settlement, MasterAdmin | US23 |
+| 精算詳細（新規、案 A） | `/billing/payments/:paymentId` | 入金確認フォーム + 通知履歴 | Settlement, MasterAdmin | US23 |
+| 入金確認 POST | `/billing/payments/:paymentId/confirm` <br/> (案 B 時: `/billing/invoices/:id/confirm-payment`) | PRG、Confirmed 遷移 + Settled 連動 + PaymentConfirmed 通知 | Settlement, MasterAdmin | US23 |
+| 払戻 POST（IT9 申し送り） | `/billing/payments/:paymentId/refund` | Refunded 遷移、IT8 はバックエンド API のみ | Settlement, MasterAdmin | US23（縮小） |
 | 追跡詳細（拡張） | `/tracking/:trackingNumber` | 「対応取消し」「補足コメント追記」動線追加 (H9) | Tracker, MasterAdmin | US19/US20 補正 |
 | 例外対応取消し POST | `/tracking/:trackingNumber/exceptions/:idx/cancel` | resolvedAt=NULL + 補足コメント追記、監査ログ汚染防止 | Tracker, MasterAdmin | H9 解消 |
 | 公開追跡（拡張、ADR 0020 結果次第） | `/public/tracking/:trackingNumber` | 例外表示の有無は ADR 0020 で決定 | 未認証 | H8 解消 |
@@ -761,8 +761,8 @@ state ログイン
 ログイン --> ダッシュボード : ログイン成功（GET /）
 
 state ダッシュボード
-ダッシュボード --> 請求書一覧 : 「請求管理」（GET /billing/invoices）[Pricer]
-ダッシュボード --> 精算一覧 : 「精算管理」（GET /billing/payments）[Pricer、案 A のみ]
+ダッシュボード --> 請求書一覧 : 「請求管理」（GET /billing/invoices）[Settlement]
+ダッシュボード --> 精算一覧 : 「精算管理」（GET /billing/payments）[Settlement、案 A のみ]
 ダッシュボード --> 追跡詳細 : 「貨物追跡」→ 番号入力（GET /tracking/:n）
 
 state 請求書詳細 : URL: /billing/invoices/:invoiceId\n割引内訳明示 + 精算セクション
@@ -918,12 +918,12 @@ apps/cargo-tracker/
 
 | メソッド | エンドポイント | 説明 | 関連 US / 案 | 認証 |
 |---------|---------------|------|-------------|------|
-| GET | `/billing/invoices/:invoiceId` | 請求書詳細（料金内訳 + 精算状態） | US22, US23 共通 | Pricer / MasterAdmin |
-| GET | `/billing/invoices/:invoiceId/issue-payment` | 精算書発行フォーム | US23 | Pricer / MasterAdmin |
-| POST | `/billing/invoices/:invoiceId/issue-payment` | 精算書発行（PRG）。Pending Payment 作成 + PaymentRequested 通知 | US23 | Pricer / MasterAdmin |
-| GET | `/billing/payments` | 精算一覧 (status / 期限フィルタ) | US23（案 A）| Pricer / MasterAdmin |
-| GET | `/billing/payments/:paymentId` | 精算詳細（入金確認フォーム + 通知履歴） | US23（案 A）| Pricer / MasterAdmin |
-| POST | `/billing/payments/:paymentId/confirm` <br/> 案 B: `/billing/invoices/:id/confirm-payment` | 入金確認（PRG）。Confirmed 遷移 + Cargo.Settled + PaymentConfirmed 通知 | US23 | Pricer / MasterAdmin |
+| GET | `/billing/invoices/:invoiceId` | 請求書詳細（料金内訳 + 精算状態） | US22, US23 共通 | Settlement / MasterAdmin |
+| GET | `/billing/invoices/:invoiceId/issue-payment` | 精算書発行フォーム | US23 | Settlement / MasterAdmin |
+| POST | `/billing/invoices/:invoiceId/issue-payment` | 精算書発行（PRG）。Pending Payment 作成 + PaymentRequested 通知 | US23 | Settlement / MasterAdmin |
+| GET | `/billing/payments` | 精算一覧 (status / 期限フィルタ) | US23（案 A）| Settlement / MasterAdmin |
+| GET | `/billing/payments/:paymentId` | 精算詳細（入金確認フォーム + 通知履歴） | US23（案 A）| Settlement / MasterAdmin |
+| POST | `/billing/payments/:paymentId/confirm` <br/> 案 B: `/billing/invoices/:id/confirm-payment` | 入金確認（PRG）。Confirmed 遷移 + Cargo.Settled + PaymentConfirmed 通知 | US23 | Settlement / MasterAdmin |
 | POST | `/billing/payments/:paymentId/refund` | 払戻し（Refunded 遷移、IT8 はバックエンド API のみ、UI は IT9）| US23（縮小）| MasterAdmin |
 | POST | `/billing/payments/detect-overdue` <br/> （バッチ未実装、API のみ） | 期限超過検出（Overdue 化 + OverdueAlerted 通知）。IT9 で Pekko Scheduler 連携 | US23（縮小）| MasterAdmin |
 | GET | `/tracking/:trackingNumber/exceptions/:idx/cancel-form` | 対応取消し確認モーダル（htmx）| H9 解消 | Tracker / MasterAdmin |
@@ -955,7 +955,7 @@ apps/cargo-tracker/
 | Payment 集約の楽観ロック実装で V17 既存 payment テーブルが version カラム未保有 (確認済、`amount BIGINT` のみ) | 中 | V24 で `due_date` / `version` を ALTER 追加。data-model.md L545-555 を整合させる差分も 0.12 に含める |
 | **US23 受入基準 3 (決済機関連携) のスコープ調整**: IT8 では手動入力 referenceCode で代替し外部 API 連携は IT9 に申し送り (S2-3) | 中 | リスクとして明記、リリースノートに「IT8 は手動入力、IT9 で Stripe/GMO 連携拡張」を併記。ユーザー合意必須 |
 | **ADR 0019 (Payment 集約 vs Invoice 内) の決定が US23 全タスクの前提**: domain-model.md は Invoice 内案、計画は別集約案。Day 1 で決定しないと US23 全体が手戻る | 高 | Day 1 のタスク 0.15 で必ず決定。決定後に 2.1-2.10 の主語を確定 |
-| ui_design.md の Role 表記 (Accountant / Admin) と実装側 Role (Pricer / MasterAdmin) の乖離 (S5-2)、画面遷移図への Payment state 追加 (S6-1) | 中 | タスク 0.12 で ui_design.md を実装側 Role に統一 + 画面遷移図に Payment state 追記 |
+| ui_design.md の Role 表記 (Accountant / Admin) と実装側 Role (Settlement / MasterAdmin) の乖離 (S5-2)、画面遷移図への Payment state 追加 (S6-1) | 中 | タスク 0.12 で ui_design.md を実装側 Role に統一 + 画面遷移図に Payment state 追記 |
 | Phase 4 完了 + Release 2.0 GA リリースゲート達成のための Playwright E2E 件数増加 | 中 | Day 10 にまとめて 4-5 件追加、テンプレ流用で短縮 |
 
 ---
@@ -1010,3 +1010,4 @@ apps/cargo-tracker/
 | 2026-06-23 | IT8 計画策定（US22 + US23 + 申し送り 12 件、Phase 4 完了 + Release 2.0 GA） | AI Agent |
 | 2026-06-23 | validating-iteration-plan 検証結果反映 - 14 件不整合解消: 0.13 (TDD 規律)・0.14 (ADR 0020 公開追跡例外)・0.15 (ADR 0019 Payment 集約) 追加、0.12 を IT8 差分まで拡張、US23 2.x に ADR 0019 結果次第の二段構え注記、リスク 3 件追加 | AI Agent |
 | 2026-06-23 | 設計セクションを iteration_plan-7 と同等レベルに拡充 (詳細 PlantUML 全集約図 + 不変条件 8 件 + PaymentStatus 遷移マトリクス + BookingStatus 拡張図 + V23/V24/V25 SQL DDL + 4 画面 salt ワイヤーフレーム + 画面遷移図 + htmx パターン 6 件 + フィードバック 12 件 + ディレクトリツリー + API 12 件 + ADR 7 件) | AI Agent |
+| 2026-06-23 | 拡充後の validating-iteration-plan 検証反映 - 3 件新規不整合解消: S3-4 (Shipper-Cargo 連結を `CorporateShipper` → `Shipper` 修正)、S5-3 (Role 名 5 箇所 `Pricer` → 実装準拠 `Settlement` 修正、0.12 タスクも `Accountant→Settlement` に統一)、S5-4 (0.12 タスクに ui_design.md 画面一覧 + 画面遷移図 両方への Payment 系 4 画面追加を明示) | AI Agent |
