@@ -19,7 +19,7 @@
 | IT3（2026-07-20 〜 2026-08-02） | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | ✅ 完了（11/11 SP / US07 + US08 + IT2 申し送り 15 件、テスト 224 / coverage 88.0%） |
 | IT4（2026-08-03 〜 2026-08-16） | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | ✅ 完了（11/11 SP / US09 + US11 + US12 + US13 + IT3 申し送り 9 件、テスト 288 / coverage 88.21%） |
 | IT5（2026-08-17 〜 2026-08-30） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | ✅ 完了（11/11 SP / US14 + US15 + US18 + IT4 申し送り 6 件、Tracking/Handling Context 新設、テスト 323 件） |
-| IT6（2026-08-31 〜 2026-09-13） | [iteration_plan-6.md](./iteration_plan-6.md) | - | - | 🚧 計画中（12 SP / US16 + US17 + US21 + IT5 申し送り 10 件、Billing Context 新設、Release 1.0 MVP リリース） |
+| IT6（2026-08-31 〜 2026-09-13） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | ✅ 完了（12/12 SP / US16 + US17 + US21 + IT5 申し送り 7/10 件、Billing Context 新設、Unit 261 + Playwright E2E 36/36 PASS、Release 1.0 MVP 機能完了） |
 
 ### 進捗サマリー
 
@@ -30,7 +30,8 @@
 | IT3 | 11 | 11 | 100% |
 | IT4 | 11 | 11 | 100% |
 | IT5 | 11 | 11 | 100% |
-| **累計** | **57** | **57** | **100%** |
+| IT6 | 12 | 12 | 100% |
+| **累計** | **69** | **69** | **100%** |
 
 ### フェーズ進捗
 
@@ -38,7 +39,7 @@
 |---------|------|-----|---------|------|
 | Phase 1 | 認証 + 予約・荷主基盤 + 航海スケジュール | 22 | 24 | ✅ 完了（IT1 + IT2、Release 0.1 Internal Alpha） |
 | Phase 2 | 経路設計・確定 | 22 | 22 | ✅ 完了（IT3 + IT4） |
-| Phase 3 | 追跡・状態更新 + 料金算出 | 23 | 11 | 🚧 IT5 完了（US14/US15/US18）、IT6 で US16/US17/US21 + Release 1.0 MVP |
+| Phase 3 | 追跡・状態更新 + 料金算出 | 23 | 23 | ✅ 完了（IT5 + IT6、Release 1.0 MVP 機能完了） |
 | Phase 4 | 例外処理・割引・精算 | 21 | 0 | 未着手 |
 | 予備 | バッファ消費・US10 | 3 | 0 | 未着手 |
 
