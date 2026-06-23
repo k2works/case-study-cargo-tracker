@@ -89,7 +89,7 @@ date: 2026-06-23
 | 0.6 | ADR 0014 Snapshot ADT 適用: `Cargo.Snapshot` 新設 → `ScalikeJdbcCargoRepository` + 関連テストリファクタ | 4h | [x] |
 | 0.7 | ADR 0014 Snapshot ADT 適用: `HandlingActivity.Snapshot` + `RegisterRequest` 新設 → Repository + CommandService リファクタ | 4h | [x] |
 | 0.8 | 請求書発行 UI から法人フラグ手入力欄を削除、`BillingShipperId` を Booking 経由で荷主属性 (`Shipper.shipperType`) から自動判定（H5） | 4h | [x] |
-| 0.9 | 請求書詳細画面に料金内訳（距離料金 / 重量料金 / 貨物種別料金）を表示、`PricingService.calculateActual` で `invoice_line_item` を生成しテーブル永続化（H6 / IT8 US22 前倒し候補） | 6h | [ ] |
+| 0.9 | 請求書詳細画面に料金内訳（距離料金 / 重量料金 / 貨物種別料金）を表示、`PricingService.calculateActual` で `invoice_line_item` を生成しテーブル永続化（H6 / IT8 US22 前倒し候補） | 6h | [x]※ |
 | 0.10 | `PricingService.calculateActual` の失敗系テスト追加（無効ルート / 単価未登録 / 計算オーバーフロー）（H7） | 2h | [x] |
 | 0.11 | `TrackingCommandService.updateStatus` の `OptimisticLockException` を `Either[String, _]` に畳み込み、UI に「他のユーザーが更新したため再読込してください」を表示（H8） | 3h | [x] |
 | 0.12 | 荷役登録 UI: 荷受人確認を「種別 (署名 / 受領印 / 身分証 / コード) + 値」の 2 フィールド構成に変更、`HandlingActivity` に `recipientConfirmationType` 追加 + Flyway V18（M6） | 4h | [x] |

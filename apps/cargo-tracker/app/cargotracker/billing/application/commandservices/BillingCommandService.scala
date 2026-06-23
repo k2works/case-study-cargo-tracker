@@ -2,7 +2,13 @@ package cargotracker.billing.application.commandservices
 
 import cargotracker.billing.domain.model.aggregates.Invoice
 import cargotracker.billing.domain.model.repositories.{BillingCargoQueryPort, InvoiceRepository}
-import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, BillingShipperId, DiscountRate}
+import cargotracker.billing.domain.model.valueobjects.{
+  BillingBookingId,
+  BillingShipperId,
+  DiscountRate,
+  InvoiceLineItem,
+  LineItemCategory
+}
 import cargotracker.shared.domain.pricing.PricingService
 
 import java.time.Clock
@@ -39,8 +45,8 @@ class BillingCommandService @Inject() (
         case Some(inv) => Right(inv)
         case None =>
           for
-            base <- pricingService
-              .calculateActual(
+            breakdown <- pricingService
+              .calculateActualWithBreakdown(
                 snapshot.origin,
                 snapshot.destination,
                 snapshot.cargoType,
@@ -55,9 +61,10 @@ class BillingCommandService @Inject() (
                 invoiceRepository.nextInvoiceId(),
                 snapshot.bookingId,
                 shipper,
-                base,
+                breakdown.total,
                 command.discountRate.getOrElse(DiscountRate.zero),
-                clock.instant()
+                clock.instant(),
+                BillingCommandService.toInvoiceLineItems(breakdown.items)
               )
               .left
               .map(_ => "請求書の発行に失敗しました")
@@ -65,6 +72,18 @@ class BillingCommandService @Inject() (
             invoiceRepository.save(invoice)
             invoice
     yield result
+
+object BillingCommandService:
+  /** PricingService の内訳明細を Billing の `InvoiceLineItem` に変換する（IT7 0.9）。 */
+  def toInvoiceLineItems(items: List[PricingService.LineItem]): List[InvoiceLineItem] =
+    items.map { i =>
+      val cat = i.category match
+        case PricingService.LineItemCategory.Distance => LineItemCategory.Distance
+        case PricingService.LineItemCategory.Weight => LineItemCategory.Weight
+        case PricingService.LineItemCategory.CargoType => LineItemCategory.CargoType
+        case PricingService.LineItemCategory.Other => LineItemCategory.Other
+      InvoiceLineItem(category = cat, name = i.name, amount = i.amount)
+    }
 
 /** 請求書発行コマンド（US21、IT7 0.8 で `isCorporate` を廃止し Shipper 自動判定に統一）。 */
 final case class GenerateInvoiceCommand(

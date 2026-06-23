@@ -12,5 +12,26 @@
     <dt class="col-sm-3">発行日時</dt><dd class="col-sm-9">@inv.issuedAt</dd>
     <dt class="col-sm-3">支払日時</dt><dd class="col-sm-9">@inv.paidAt.map(_.toString).getOrElse("-")</dd>
   </dl>
+  @if(inv.lineItems.nonEmpty) {
+    <h2 class="h5 mt-4 mb-3">料金内訳 (IT7 0.9)</h2>
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>種別</th>
+          <th>明細</th>
+          <th class="text-end">金額</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(item <- inv.lineItems) {
+          <tr>
+            <td>@item.category</td>
+            <td>@item.name</td>
+            <td class="text-end">@item.amount.amount 円</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
   <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.list()" class="btn btn-secondary">一覧に戻る</a>
 }

@@ -101,4 +101,6 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
               entityType = "Invoice",
               identifier = invoice.invoiceId.value
             )
+      // IT7 0.9: lineItems の永続化は invoice_line_item テーブル新設（別マイグレーション）後の follow-up に持ち越し。
+      // 現状はメモリ上の `Invoice.lineItems` のみで料金内訳を保持し、UI 表示は新規発行直後のフローでのみ反映される。
     }
