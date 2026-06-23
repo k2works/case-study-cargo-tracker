@@ -6,7 +6,7 @@
 |------|------|
 | **イテレーション** | IT8 |
 | **期間** | 2026-09-28 〜 2026-10-11（Week 17-18、2 週間） |
-| **ゴール** | US22 法人割引 + US23 精算（計 9 SP）を完成、Release 2.0 GA に到達、IT7 申し送り（Try 8 件 + Review 高優先 12 件）の高優先 0.x 12 件を消化、Phase 4 全完了 |
+| **ゴール** | US22 法人割引 + US23 精算（計 9 SP）を完成、Release 2.0 GA に到達、IT7 申し送り（Try 8 件 + Review 高優先 12 件）の 15 件 (H1-H12 + T3 / T6 + ADR 0019/0020 起票) を消化、Phase 4 全完了 |
 | **目標 SP** | 9 |
 
 ---
@@ -94,9 +94,12 @@
 | 0.9 | トップレベル README.md に IT2 以降の Phase 進捗 + Release マイルストーン反映（H11 / 設計ドキュメントへのリンク委譲） | 2h | [ ] |
 | 0.10 | `recordException` 戻り値の `: @unchecked` パターン補正 + EitherValues 移行（H12 / TrackingCommandServiceSpec） | 2h | [ ] |
 | 0.11 | `HandlingCargoQueryPort` (handling 用 ACL Port) + `BookingCargoForHandlingAdapter` 新設、`HandlingOrchestrator.register` で `Itinerary.isOnRoute` 経由 routeDeviation 自動判定 + ユニットテスト 3 件追加（T3 / 0.14 持ち越し回収） | 5h | [ ] |
-| 0.12 | 設計ドキュメント反映（T6 / docs/design/data-model.md + domain-model.md + ui_design.md）: V18-V22 + TrackingExceptionEvent + ItineraryLeg + InvoiceLineItem + RecipientConfirmationType + 例外記録 UI を正式反映 | 5h | [ ] |
+| 0.12 | 設計ドキュメント反映（T6 / docs/design/data-model.md + domain-model.md + ui_design.md）: IT7 差分 (V18-V22 + TrackingExceptionEvent + ItineraryLeg + InvoiceLineItem + RecipientConfirmationType + 例外記録 UI) + IT8 差分 (Payment テーブル列 `amount BIGINT` 単通貨整合 + `due_date` / `version` 追加 + `transaction_reference` → `reference_code` 統一、Payment 関連画面 state 追加、Accountant→Pricer / Admin→MasterAdmin Role 統一) を正式反映 | 6h | [ ] |
+| 0.13 | CLAUDE.md に TDD コミット規律 (Red → Green の分離、もしくは Red→Green を経た事実をコミットメッセージに明記) を追記 (H6 / it7_implementation_review_20260623.md) | 1h | [ ] |
+| 0.14 | ADR 0020 起票「公開追跡画面 (`/public/tracking/...`) における例外表示方針」: 表示する/しない、表示する場合の情報粒度 (緊急バッジのみ / 詳細 / 対応状況) を業務ルール決定 (H8 / it7 業務代表者指摘) | 3h | [ ] |
+| 0.15 | ADR 0019 起票「Billing Context の Payment は Invoice 集約内 (`paymentStatus` フィールド + `confirmPayment` メソッド) か別集約か」: domain-model.md L921-955 では Invoice 集約内、計画 2.1 は別集約案。本イテレーションで決定 (S3-1 / S3-2 / S3-3 整合) | 3h | [ ] |
 
-**小計**: 44h
+**小計**: 57h
 
 #### 1. US22 法人割引適用（3 SP）
 
@@ -112,31 +115,41 @@
 
 #### 2. US23 精算処理（6 SP）
 
+> **前提**: タスク 0.15 (ADR 0019) で「Payment は集約 / Invoice 内のステータス」の二択を IT8 着手最初に決定する。下記は **集約案** での詳細だが、ADR 0019 で `Invoice` 集約内 (domain-model.md L921-955 準拠) を採択した場合は、各タスクの主語を以下に置換する:
+>
+> - 「Payment 集約新設」→「`Invoice.confirmPayment(paidAt, referenceCode)` メソッド拡張」
+> - 「PaymentRepository」→ 既存 `InvoiceRepository` の `save`/`update` で吸収
+> - 「SettlementCommandService」→ `BillingCommandService.issuePayment` / `BillingCommandService.confirmPayment` / `BillingCommandService.detectOverdue` の 3 メソッド追加
+> - UI URL は `/billing/invoices/:id/...` 系に統合 (ui_design.md L88-90 準拠)
+
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | Payment 集約新設: `Payment(paymentId: PaymentId, invoiceId, amount: Money, dueDate, status: PaymentStatus, paidAt: Option[Instant], referenceCode: Option[String], version: Int)` + `PaymentStatus` enum (Pending / Confirmed / Overdue / Refunded) + `Payment.Snapshot` (ADR 0014) | 4h | [ ] |
-| 2.2 | Flyway V24: `payment` テーブル (V17 で先行作成済、必要なら ALTER で `due_date` / `reference_code` / `version` 補正) + sequence 確認 | 2h | [ ] |
-| 2.3 | `PaymentRepository` trait + `ScalikeJdbcPaymentRepository`（楽観ロック / withOptimisticLock 適用） | 4h | [ ] |
-| 2.4 | `SettlementCommandService.issuePayment(invoiceId, dueDate)`: Confirmed Invoice → Payment 発行 + 荷主メール送信ポート連携 + PaymentRequested 通知ログ | 4h | [ ] |
-| 2.5 | `SettlementCommandService.confirmPayment(paymentId, paidAt, referenceCode)`: 入金確認 → Payment.Confirmed + Cargo.Settled 遷移 + PaymentConfirmed 通知 | 3h | [ ] |
-| 2.6 | `SettlementCommandService.detectOverdue(now)` (Cron スケジューラ想定、IT8 はバッチ未着手で API のみ): 期限超過 Payment を Overdue 化 + OverdueAlerted 通知 | 3h | [ ] |
+| 2.1 | (ADR 0019 集約案採択時) Payment 集約新設: `Payment(paymentId: PaymentId, invoiceId, amount: Money, dueDate, status: PaymentStatus, paidAt, referenceCode, version)` + `PaymentStatus` enum (Pending / Confirmed / Overdue / Refunded) + `Payment.Snapshot` (ADR 0014)。**Invoice 内案採択時**は `Invoice.confirmPayment` + `paymentStatus` フィールドへの遷移ロジック追加 | 4h | [ ] |
+| 2.2 | Flyway V24: `payment` テーブル (V17 で先行作成済)。**ALTER で追加**: `due_date DATE NOT NULL DEFAULT CURRENT_DATE` / `version INTEGER NOT NULL DEFAULT 0`。**確認**: 既存 V17 列名は `reference_code` (data-model.md の `transaction_reference` から名称統一) | 2h | [ ] |
+| 2.3 | (集約案) `PaymentRepository` trait + `ScalikeJdbcPaymentRepository`（楽観ロック / withOptimisticLock 適用）。**Invoice 内案**は本タスクスキップ、既存 InvoiceRepository に `confirmPayment` SQL 追加 | 4h | [ ] |
+| 2.4 | `issuePayment(invoiceId, dueDate)`: Confirmed Invoice → Payment 発行 + 荷主メール送信ポート連携 + PaymentRequested 通知ログ (BillingCommandService or SettlementCommandService、ADR 0019 結果次第) | 4h | [ ] |
+| 2.5 | `confirmPayment(paymentId or invoiceId, paidAt, referenceCode)`: 入金確認 → Confirmed + Cargo.Settled 遷移 (BookingPublicApi 経由) + PaymentConfirmed 通知 | 3h | [ ] |
+| 2.6 | `detectOverdue(now)` (Cron スケジューラ想定、IT8 はバッチ未着手で API のみ、IT9 で Pekko Scheduler 連携): 期限超過 Payment/Invoice を Overdue 化 + OverdueAlerted 通知 | 3h | [ ] |
 | 2.7 | NotificationType に PaymentRequested / PaymentConfirmed / OverdueAlerted 追加、ペイロード + JSON + Flyway V25 (CHECK 拡張) | 3h | [ ] |
-| 2.8 | 精算管理画面: `/billing/invoices/:id/payment/new` (発行) / `/billing/payments` (一覧) / `/billing/payments/:id` (詳細) / `/billing/payments/:id/confirm` (入金確認) | 6h | [ ] |
+| 2.8 | 精算管理画面 (ADR 0019 集約案採択時): `/billing/invoices/:id/payment/new` (発行) / `/billing/payments` (一覧) / `/billing/payments/:id` (詳細) / `/billing/payments/:id/confirm` (入金確認)。**Invoice 内案採択時**は `/billing/invoices/:id/issue-payment` + `/billing/invoices/:id/confirm-payment` + 請求書詳細画面内に支払欄追加 (ui_design.md L90 準拠) | 6h | [ ] |
 | 2.9 | `MailNotificationPort` (handling と同じ ACL パターン) + `MailNotificationAdapter` (Pekko Mail or print logger)、ADR 0018 候補 | 3h | [ ] |
-| 2.10 | SettlementCommandServiceSpec / PaymentSpec / RepositoryIT 計 8 件、Playwright E2E 3 件 (発行 / 入金 / 期限超過) | 6h | [ ] |
+| 2.10 | 集約案: SettlementCommandServiceSpec / PaymentSpec / RepositoryIT 計 8 件 / Invoice 内案: BillingCommandServiceSpec 拡張 + InvoiceSpec 拡張 計 6-8 件。Playwright E2E 3 件 (発行 / 入金 / 期限超過) | 6h | [ ] |
 
 **小計**: 38h
+
+> **US23 受入基準 3「決済機関との連携により入金確認ができる」のスコープ調整 (S2-3)**:
+> IT8 では `confirmPayment(referenceCode)` で **手動入力 referenceCode** を許可する形に縮小し、実際の決済機関 API 連携 (Stripe / GMO 等) は IT9 / Phase 5 に申し送り。本縮小はリスクセクションに明記、本受入基準は「外部 API は IT9 拡張、IT8 は手動入力で確認できる」と読み替える前提。ユーザー合意必須。
 
 #### タスク合計
 
 | カテゴリ | SP | 理想時間 |
 |---------|----|----|
-| IT7 申し送り（0.x） | - | 44h |
+| IT7 申し送り（0.x、15 件） | - | 57h |
 | US22 法人割引 | 3 | 13h |
 | US23 精算 | 6 | 38h |
-| **合計** | **9** | **95h** |
+| **合計** | **9** | **108h** |
 
-**1 SP あたり**: 約 10.6h（IT7 申し送り含む / 機能タスクのみなら 5.7h）
+**1 SP あたり**: 約 12.0h（IT7 申し送り含む / 機能タスクのみなら 5.7h）
 **進捗率**: 0% (0/9 SP)
 
 > **IT8 スコープ外で IT9 / Phase 5 へ申し送り**:
@@ -171,7 +184,7 @@ gantt
 
 | 日 | タスク |
 |----|--------|
-| Day 1 | 0.1 withOptimisticLock 抽出 / 0.2 Lost/Loss 命名統一 / 0.10 EitherValues 移行 |
+| Day 1 | 0.15 **ADR 0019 Payment 集約 vs Invoice 内 決定** (Day 1 必須、US23 全タスクの前提) / 0.14 ADR 0020 公開追跡画面例外表示方針 / 0.1 withOptimisticLock 抽出 / 0.2 Lost/Loss 命名統一 / 0.10 EitherValues 移行 |
 | Day 2 | 0.3 ADR 0017 BookingPublicApi / 0.4 ADR 0016 tx 境界 / 0.9 README 更新 |
 | Day 3 | 0.5 V23 TrackingExceptionEvent.id / 0.6 同値クラステスト / 0.11 routeDeviation 自動判定 |
 | Day 4 | US22 1.1-1.5 全タスク (法人割引 3 SP) |
@@ -434,9 +447,11 @@ apps/cargo-tracker/app/cargotracker/booking/
 |-----|---------|-----------|
 | 0014 | 集約 Snapshot ADT 導入 | 承認・適用済（IT7） |
 | 0015 | Billing Money を shared.domain.Money に一本化 | 承認・適用済（IT7） |
-| 0016 | HandlingOrchestrator のトランザクション境界 | 提案 → IT8 で承認予定 |
-| 0017 | BookingPublicApi 公開 Port 化 | 提案 → IT8 で承認予定 |
-| 0018 | MailNotificationPort 抽象化 (Pekko Mail / print logger) | 候補（必要なら IT8 で起票） |
+| 0016 | HandlingOrchestrator のトランザクション境界 | 提案 → IT8 で承認予定 (タスク 0.4) |
+| 0017 | BookingPublicApi 公開 Port 化 | 提案 → IT8 で承認予定 (タスク 0.3) |
+| 0018 | MailNotificationPort 抽象化 (Pekko Mail / print logger) | 候補（必要なら IT8 タスク 2.9 で起票） |
+| 0019 | Payment は Invoice 集約内のステータス保持か別集約か | 提案 → IT8 着手最初に承認予定 (タスク 0.15、US23 全タスクの前提) |
+| 0020 | 公開追跡画面における例外表示方針 | 提案 → IT8 で承認予定 (タスク 0.14、業務代表者指摘) |
 
 ---
 
@@ -447,7 +462,10 @@ apps/cargo-tracker/app/cargotracker/booking/
 | US23 精算は 6 SP だが Payment 集約 + 4 通知 + 4 画面 + メール送信で実装量大 | 高 | Day 5-8 の 4 日間を確保、メール送信は print logger フォールバックで OK |
 | BookingPublicApi 化で既存 BookingCommandService の API 整理が広範囲に波及 | 中 | ADR 0017 で IT8 範囲は最小限 (findCargoForBilling + markSettled) に限定 |
 | `Cargo.deliver` → Settled 遷移を `markSettled` で別途設計するか deliver 拡張するか不明 | 中 | ADR 0017 で「Settled は別メソッド markSettled を追加、deliver は Delivered のまま」と決定 |
-| Payment 集約の楽観ロック実装で V17 既存 payment テーブルが version カラム未保有なら ALTER 必要 | 低 | Day 5 で確認、V24 で必要なら追加 |
+| Payment 集約の楽観ロック実装で V17 既存 payment テーブルが version カラム未保有 (確認済、`amount BIGINT` のみ) | 中 | V24 で `due_date` / `version` を ALTER 追加。data-model.md L545-555 を整合させる差分も 0.12 に含める |
+| **US23 受入基準 3 (決済機関連携) のスコープ調整**: IT8 では手動入力 referenceCode で代替し外部 API 連携は IT9 に申し送り (S2-3) | 中 | リスクとして明記、リリースノートに「IT8 は手動入力、IT9 で Stripe/GMO 連携拡張」を併記。ユーザー合意必須 |
+| **ADR 0019 (Payment 集約 vs Invoice 内) の決定が US23 全タスクの前提**: domain-model.md は Invoice 内案、計画は別集約案。Day 1 で決定しないと US23 全体が手戻る | 高 | Day 1 のタスク 0.15 で必ず決定。決定後に 2.1-2.10 の主語を確定 |
+| ui_design.md の Role 表記 (Accountant / Admin) と実装側 Role (Pricer / MasterAdmin) の乖離 (S5-2)、画面遷移図への Payment state 追加 (S6-1) | 中 | タスク 0.12 で ui_design.md を実装側 Role に統一 + 画面遷移図に Payment state 追記 |
 | Phase 4 完了 + Release 2.0 GA リリースゲート達成のための Playwright E2E 件数増加 | 中 | Day 10 にまとめて 4-5 件追加、テンプレ流用で短縮 |
 
 ---
@@ -456,17 +474,18 @@ apps/cargo-tracker/app/cargotracker/booking/
 
 ### Definition of Done
 
-- [ ] US22 + US23 全タスク完了、受入基準 100% PASS
-- [ ] 0.x 申し送り 12 件完了（H1-H5 / H7 / H9-H12 / T3 / T6）
+- [ ] US22 + US23 全タスク完了、受入基準 100% PASS (US23 受入基準 3 は IT8 縮小スコープ「手動入力 referenceCode で確認できる」で読み替え)
+- [ ] 0.x 申し送り 15 件完了（H1-H5 / H6 (規律) / H7-H12 / T3 / T6 / ADR 0019/0020）
 - [ ] Unit テスト 400+ 件 PASS、coverage 80% 以上
 - [ ] Playwright E2E 40+ 件 PASS（US22 1 件 + US23 3 件 + US19/US20 4 件追加）
 - [ ] ArchUnit 5 ルール pass
 - [ ] scalafmt / scalafix 通過
 - [ ] Flyway V23-V25 適用、Testcontainers IT で確認
-- [ ] ADR 0016 / 0017 承認、（必要なら 0018 承認）
-- [ ] 設計ドキュメント反映完了（data-model / domain-model / ui_design）
+- [ ] ADR 0016 / 0017 / 0019 / 0020 承認、（必要なら 0018 承認）
+- [ ] 設計ドキュメント反映完了（data-model / domain-model / ui_design）IT7 差分 + IT8 差分の両方
 - [ ] SonarQube 実機再スキャン Quality Gate 通過、MAJOR Code Smell 0 件確認
 - [ ] README.md 進捗反映完了
+- [ ] CLAUDE.md に TDD コミット規律追記完了 (H6)
 - [ ] dev サーバー起動・動作確認完了（IT7 P1 教訓踏襲）
 
 ### デモ項目
@@ -499,3 +518,4 @@ apps/cargo-tracker/app/cargotracker/booking/
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-06-23 | IT8 計画策定（US22 + US23 + 申し送り 12 件、Phase 4 完了 + Release 2.0 GA） | AI Agent |
+| 2026-06-23 | validating-iteration-plan 検証結果反映 - 14 件不整合解消: 0.13 (TDD 規律)・0.14 (ADR 0020 公開追跡例外)・0.15 (ADR 0019 Payment 集約) 追加、0.12 を IT8 差分まで拡張、US23 2.x に ADR 0019 結果次第の二段構え注記、リスク 3 件追加 | AI Agent |
