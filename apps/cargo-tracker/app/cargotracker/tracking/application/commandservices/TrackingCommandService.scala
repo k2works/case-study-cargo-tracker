@@ -1,5 +1,6 @@
 package cargotracker.tracking.application.commandservices
 
+import cargotracker.shared.domain.OptimisticLockException
 import cargotracker.tracking.domain.model.aggregates.TrackingActivity
 import cargotracker.tracking.domain.model.entities.TrackingActivityEvent
 import cargotracker.tracking.domain.model.enums.TrackingStatus
@@ -8,6 +9,7 @@ import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, Track
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
+import scala.util.control.NonFatal
 
 /** 追跡コマンドサービス（US14 + IT5 拡張余地）。
   *
@@ -64,7 +66,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
     *   - 楽観ロック対応 (appendEvent が衝突時に OptimisticLockException を投げる)
     */
   def updateStatus(command: UpdateTrackingStatusCommand): Either[String, TrackingActivity] =
-    for
+    val result = for
       tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
       eventType <- TrackingCommandService.eventTypeFor(command.status)
       activity <- repository
@@ -81,7 +83,15 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
         case TrackingActivity.OutOfOrder => "追跡イベントの時系列順序が不正です（過去時刻は不可）"
         case _ => "追跡イベントの記録に失敗しました"
       }
-    yield repository.appendEvent(updated, event)
+    yield (updated, event)
+    result.flatMap { case (updated, event) =>
+      try Right(repository.appendEvent(updated, event))
+      catch
+        case _: OptimisticLockException =>
+          Left("他のユーザーが更新したため再読込してください")
+        case NonFatal(_) =>
+          Left("追跡イベントの保存に失敗しました")
+    }
 
 object TrackingCommandService:
   private[commandservices] def eventTypeFor(status: TrackingStatus): Either[String, String] =

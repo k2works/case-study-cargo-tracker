@@ -87,3 +87,29 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
         )
       )
       .isLeft shouldBe true
+
+  test("updateStatus: appendEvent が OptimisticLockException を投げたら『再読込してください』Left (IT7 0.11 / H8)"):
+    val baseRepo = new InMemoryRepo
+    val svc = new TrackingCommandService(new TrackingActivityRepository:
+      override def nextTrackingNumber(): TrackingNumber = baseRepo.nextTrackingNumber()
+      override def findByTrackingNumber(tn: TrackingNumber): Option[TrackingActivity] =
+        baseRepo.findByTrackingNumber(tn)
+      override def findByBookingId(bid: TrackingBookingId): Option[TrackingActivity] =
+        baseRepo.findByBookingId(bid)
+      override def save(a: TrackingActivity): Unit = baseRepo.save(a)
+      override def appendEvent(
+          a: TrackingActivity,
+          newEvent: cargotracker.tracking.domain.model.entities.TrackingActivityEvent
+      ): TrackingActivity =
+        throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
+    )
+    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-UPD002")): @unchecked
+    val Left(msg) = svc.updateStatus(
+      UpdateTrackingStatusCommand(
+        trackingNumber = ta.trackingNumber.value,
+        status = TrackingStatus.Received,
+        locationUnLocode = "JPTYO",
+        occurredAt = java.time.Instant.parse("2026-09-10T10:00:00Z")
+      )
+    ): @unchecked
+    msg should include("再読込してください")
