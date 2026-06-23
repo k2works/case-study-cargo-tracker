@@ -1,14 +1,14 @@
 package cargotracker.tracking.application.queryservices
 
 import cargotracker.tracking.domain.model.aggregates.TrackingActivity
-import cargotracker.tracking.domain.model.entities.TrackingActivityEvent
+import cargotracker.tracking.domain.model.entities.{TrackingActivityEvent, TrackingExceptionEvent}
 import cargotracker.tracking.domain.model.enums.TrackingStatus
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
 import cargotracker.tracking.domain.model.valueobjects.{TrackingLocation, TrackingNumber}
 
 import javax.inject.{Inject, Singleton}
 
-/** 追跡情報照会クエリサービス（US18）。 */
+/** 追跡情報照会クエリサービス（US18、IT7 US19/US20 で exceptions 追加）。 */
 @Singleton
 class TrackingQueryService @Inject() (repository: TrackingActivityRepository):
 
@@ -21,14 +21,16 @@ class TrackingQueryService @Inject() (repository: TrackingActivityRepository):
       bookingId = ta.bookingId.value,
       currentStatus = ta.transportStatus,
       currentLocation = ta.currentLocation,
-      events = ta.events
+      events = ta.events,
+      exceptions = ta.exceptions
     )
 
-/** 追跡照会の表示用 Read Model（US18）。 */
+/** 追跡照会の表示用 Read Model（US18 + IT7 US19/US20）。 */
 final case class TrackingResult(
     trackingNumber: String,
     bookingId: String,
     currentStatus: TrackingStatus,
     currentLocation: Option[TrackingLocation],
-    events: List[TrackingActivityEvent]
+    events: List[TrackingActivityEvent],
+    exceptions: List[TrackingExceptionEvent] = Nil
 )

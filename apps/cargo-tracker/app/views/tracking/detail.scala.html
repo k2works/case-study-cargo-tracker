@@ -15,8 +15,38 @@
     <a href="@cargotracker.tracking.interfaces.web.routes.TrackingController.input()" class="btn btn-secondary">別の貨物を追跡</a>
     @if(canManualUpdate) {
       <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#manualStatusModal">状態を手動更新</button>
+      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#recordExceptionModal">例外を記録</button>
     }
   </div>
+
+  @if(view.exceptions.nonEmpty) {
+    <h2 class="h5 mt-4 mb-3">例外履歴 (US19 / US20)</h2>
+    <table class="table table-sm">
+      <thead><tr><th>#</th><th>種別</th><th>発生時刻</th><th>場所</th><th>説明</th><th>緊急</th><th>状態</th><th></th></tr></thead>
+      <tbody>
+        @for((ex, idx) <- view.exceptions.zipWithIndex) {
+          <tr>
+            <td>@idx</td>
+            <td>@ex.exceptionType</td>
+            <td>@ex.occurredAt</td>
+            <td>@ex.location.unLocode</td>
+            <td>@ex.description.getOrElse("-")</td>
+            <td>@if(ex.escalationFlag){<span class="badge bg-danger">エスカ</span>}</td>
+            <td>@if(ex.isResolved){<span class="badge bg-success">対応済</span>}else{<span class="badge bg-warning">未対応</span>}</td>
+            <td>
+              @if(!ex.isResolved && canManualUpdate) {
+                <form method="POST" action="@cargotracker.tracking.interfaces.web.routes.TrackingController.resolveException(view.trackingNumber, idx)" class="d-inline">
+                  @helper.CSRF.formField
+                  <input type="text" name="resolutionNotes" class="form-control form-control-sm d-inline-block w-auto" placeholder="対応内容" maxlength="500" required>
+                  <button type="submit" class="btn btn-sm btn-success">対応報告</button>
+                </form>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
   @if(canManualUpdate) {
   <div class="modal fade" id="manualStatusModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -54,6 +84,47 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
           <button type="submit" class="btn btn-warning">更新</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  }
+  @if(canManualUpdate) {
+  <div class="modal fade" id="recordExceptionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form method="POST" action="@cargotracker.tracking.interfaces.web.routes.TrackingController.recordException(view.trackingNumber)" class="modal-content">
+        @helper.CSRF.formField
+        <div class="modal-header">
+          <h5 class="modal-title">追跡例外を記録 (US19 / US20)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">例外種別 <span class="text-danger">*</span></label>
+            <select name="exceptionType" class="form-select" required>
+              <option value="Delay">Delay（遅延）</option>
+              <option value="Damage">Damage（破損）</option>
+              <option value="Lost">Lost（紛失・管理職エスカレーション）</option>
+              <option value="CustomsHold">CustomsHold（通関保留）</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">発生場所（UN/LOCODE） <span class="text-danger">*</span></label>
+            <input type="text" name="locationUnLocode" class="form-control" maxlength="5" minlength="5" placeholder="JPTYO" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">発生日時 <span class="text-danger">*</span></label>
+            <input type="datetime-local" name="occurredAt" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">詳細</label>
+            <textarea name="description" class="form-control" rows="2" maxlength="500" placeholder="例: 通関手続き遅延、補修見積依頼中"></textarea>
+            <div class="form-text">Lost を選ぶと自動的に緊急エスカレーションフラグが立ちます。</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+          <button type="submit" class="btn btn-danger">例外を記録</button>
         </div>
       </form>
     </div>
