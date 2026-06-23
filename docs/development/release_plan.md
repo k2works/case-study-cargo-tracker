@@ -481,7 +481,7 @@ gantt
 | 3 | 11 | 11 | 100% | 完了（US07 + US08 + IT2 申し送り 15 件、テスト 224 / coverage 88.0% / 経路探索 P95=60ms、[retrospective-3.md](./retrospective-3.md)） |
 | 4 | 11 | 11 | 100% | 完了（US09 + US11 + US12 + US13 + IT3 申し送り 9 件、テスト 288 / coverage 88.21% / Branch 79.06% / V9-V11 適用、[iteration_report-4.md](./iteration_report-4.md) / [retrospective-4.md](./retrospective-4.md)） |
 | 5 | 11 | 11 | 100% | 完了（US14 + US15 + US18 + IT4 申し送り 6 件、Tracking/Handling Context 新設、テスト 323 件 / V12-V14 適用、[retrospective-5.md](./retrospective-5.md)） |
-| 6 | 12 | - | - | 計画中（US16 + US17 + US21 + IT5 申し送り 10 件、Billing Context 新設、Release 1.0 MVP リリース、[iteration_plan-6.md](./iteration_plan-6.md)） |
+| 6 | 12 | 12 | 100% | 主要部完了（US16 + US17 + US21 + IT5 申し送り 7/10 件、Billing Context 新設、Unit 261 / E2E 36 全件 PASS、[iteration_plan-6.md](./iteration_plan-6.md) / [it6_implementation_review_20260623.md](../review/it6_implementation_review_20260623.md)） |
 | 7 | 12 | - | - | 未着手 |
 | 8 | 9 | - | - | 未着手 |
 | 9 予備 | 3+ | - | - | 未着手 |
@@ -494,7 +494,7 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8", "IT9"]
     y-axis "残 SP" 0 --> 91
     line "計画" [91, 79, 69, 58, 47, 36, 24, 12, 3, 0]
-    line "実績" [91, 79, 69, 58, 47, 36]
+    line "実績" [91, 79, 69, 58, 47, 36, 24]
 ```
 
 ---
@@ -518,3 +518,4 @@ xychart-beta
 | 2026-06-22 | IT5 計画策定（US14 + US15 + US18 + IT4 申し送り 6 件、Tracking Context 新設、[iteration_plan-5.md](./iteration_plan-5.md)） | AI Agent |
 | 2026-06-22 | IT5 完了（11/11 SP、Tracking/Handling Context 新設、テスト 323 件全成功、V12-V14 適用、ADR 0010、[retrospective-5.md](./retrospective-5.md)） | AI Agent |
 | 2026-06-22 | IT6 計画策定（US16 + US17 + US21 + IT5 申し送り 10 件、Billing Context 新設、Release 1.0 MVP リリース、[iteration_plan-6.md](./iteration_plan-6.md)） | AI Agent |
+| 2026-06-23 | IT6 主要部完了（12/12 SP、US16/US17/US21、Billing Context 新設、IT5 申し送り 7/10 解消、Unit 261 件 + Playwright E2E 36/36 PASS、developing-review 正式実施 [it6_implementation_review_20260623.md](../review/it6_implementation_review_20260623.md)） | AI Agent |
