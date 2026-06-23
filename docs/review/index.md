@@ -14,3 +14,5 @@
 | [IT3 実装レビュー](./it3_implementation_review_20260621.md) | IT3 実装全体（Routing US07/US08 + ADR 0006 + SELECT 句修正） | 2026-06-21 | 高 8 件 / 中 17 件 / 低 9 件 |
 | [IT4 セルフレビュー](./it4_self_review_20260621.md) | IT4 実装（US09/US11/US12/US13 + 申し送り 9 件） | 2026-06-21 | 高 6 件（H1-H6 / IT5 申し送り）|
 | [IT5 セルフレビュー](./it5_self_review_20260622.md) | IT5 実装（US14/US15/US18 + IT4 申し送り 6 件 + Tracking/Handling Context 新設） | 2026-06-22 | 高 7 件（H1-H7 / IT6 申し送り）+ 中 3 件 |
+| [IT6 実装レビュー](./it6_implementation_review_20260623.md) | IT6 実装全体（US16/US17/US21 + IT5 申し送り 7 件 + Billing Context 新設） | 2026-06-23 | 高 8 件 / 中 10 件 / 低 - |
+| [IT7 実装レビュー](./it7_implementation_review_20260623.md) | IT7 実装全体（US19/US20 + IT6 申し送り 16 件 + ADR 0014/0015 + Flyway V18-V22） | 2026-06-23 | 高 12 件 / 中 17 件 / 低 15 件 |
