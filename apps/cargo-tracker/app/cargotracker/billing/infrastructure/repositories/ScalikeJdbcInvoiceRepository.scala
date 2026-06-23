@@ -3,14 +3,8 @@ package cargotracker.billing.infrastructure.repositories
 import cargotracker.billing.domain.model.aggregates.Invoice
 import cargotracker.billing.domain.model.enums.PaymentStatus
 import cargotracker.billing.domain.model.repositories.InvoiceRepository
-import cargotracker.billing.domain.model.valueobjects.{
-  BillingBookingId,
-  BillingShipperId,
-  DiscountRate,
-  InvoiceId,
-  Money
-}
-import cargotracker.shared.domain.OptimisticLockException
+import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, BillingShipperId, DiscountRate, InvoiceId}
+import cargotracker.shared.domain.{Money, OptimisticLockException}
 import scalikejdbc.*
 
 import javax.inject.Singleton
@@ -25,9 +19,9 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
         invoiceId = InvoiceId.unsafeFrom(rs.string("invoice_number")),
         cargoBookingId = BillingBookingId.unsafeFrom(rs.string("booking_id")),
         shipperId = BillingShipperId(rs.string("shipper_id"), rs.boolean("is_corporate")),
-        baseAmount = Money.unsafeFrom(rs.long("base_amount")),
+        baseAmount = Money.unsafeFromJpy(rs.long("base_amount")),
         discountRate = DiscountRate.unsafeFrom(rs.bigDecimal("discount_rate")),
-        finalAmount = Money.unsafeFrom(rs.long("final_amount")),
+        finalAmount = Money.unsafeFromJpy(rs.long("final_amount")),
         paymentStatus = status,
         issuedAt = rs.zonedDateTime("issued_at").toInstant,
         paidAt = rs.zonedDateTimeOpt("paid_at").map(_.toInstant),
@@ -87,9 +81,9 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
                ${invoice.cargoBookingId.value},
                ${invoice.shipperId.value},
                ${invoice.shipperId.isCorporate},
-               ${invoice.baseAmount.value},
+               ${invoice.baseAmount.amount},
                ${invoice.discountRate.value},
-               ${invoice.finalAmount.value},
+               ${invoice.finalAmount.amount},
                ${invoice.paymentStatus.toString},
                ${java.sql.Timestamp.from(invoice.issuedAt)})
           """.update.apply()

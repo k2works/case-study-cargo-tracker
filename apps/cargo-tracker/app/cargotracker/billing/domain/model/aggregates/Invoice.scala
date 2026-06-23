@@ -1,13 +1,8 @@
 package cargotracker.billing.domain.model.aggregates
 
 import cargotracker.billing.domain.model.enums.PaymentStatus
-import cargotracker.billing.domain.model.valueobjects.{
-  BillingBookingId,
-  BillingShipperId,
-  DiscountRate,
-  InvoiceId,
-  Money
-}
+import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, BillingShipperId, DiscountRate, InvoiceId}
+import cargotracker.shared.domain.Money
 
 import java.time.Instant
 
@@ -15,7 +10,7 @@ import java.time.Instant
   *
   *   - 業務キー: `InvoiceId`（`INV-NNNNNN`）
   *   - `baseAmount` × (1 - `discountRate`) = `finalAmount`（税抜）
-  *   - IT6 US21 は `PaymentStatus.Pending` で発行。`Confirmed` 遷移は IT8 US23 で実装
+  *   - IT7 0.4 / ADR 0015: 金額は `shared.domain.Money` (JPY 単通貨) に統一
   */
 final case class Invoice private (
     invoiceId: InvoiceId,

@@ -2,12 +2,7 @@ package cargotracker.billing.application.commandservices
 
 import cargotracker.billing.domain.model.aggregates.Invoice
 import cargotracker.billing.domain.model.repositories.{BillingCargoQueryPort, InvoiceRepository}
-import cargotracker.billing.domain.model.valueobjects.{
-  BillingBookingId,
-  BillingShipperId,
-  DiscountRate,
-  Money as BillingMoney
-}
+import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, BillingShipperId, DiscountRate}
 import cargotracker.shared.domain.pricing.PricingService
 
 import java.time.Clock
@@ -54,14 +49,13 @@ class BillingCommandService @Inject() (
               )
               .left
               .map(_ => "料金算出に失敗しました")
-            baseMoney: BillingMoney = BillingMoney.unsafeFrom(base.amount)
             shipper = BillingShipperId(snapshot.shipperId, command.isCorporate)
             invoice <- Invoice
               .issue(
                 invoiceRepository.nextInvoiceId(),
                 snapshot.bookingId,
                 shipper,
-                baseMoney,
+                base,
                 command.discountRate.getOrElse(DiscountRate.zero),
                 clock.instant()
               )

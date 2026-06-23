@@ -26,9 +26,9 @@
             <td><a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.detail(inv.invoiceId.value)">@inv.invoiceId.value</a></td>
             <td>@inv.cargoBookingId.value</td>
             <td>@inv.shipperId.value @if(inv.shipperId.isCorporate){<span class="badge bg-info">法人</span>}</td>
-            <td class="text-end">@inv.baseAmount.value 円</td>
+            <td class="text-end">@inv.baseAmount.amount 円</td>
             <td class="text-end">@inv.discountRate.percent %</td>
-            <td class="text-end">@inv.finalAmount.value 円</td>
+            <td class="text-end">@inv.finalAmount.amount 円</td>
             <td><span class="badge bg-warning">@inv.paymentStatus</span></td>
             <td>@inv.issuedAt</td>
           </tr>
