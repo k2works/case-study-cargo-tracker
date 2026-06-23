@@ -25,6 +25,14 @@
           <input type="radio" name="eventType" value="Unload" class="form-check-input" id="et-unload" @if(form("eventType").value.contains("Unload")){checked}>
           <label class="form-check-label" for="et-unload">Unload（荷降し）</label>
         </div>
+        <div class="form-check form-check-inline">
+          <input type="radio" name="eventType" value="Customs" class="form-check-input" id="et-customs" @if(form("eventType").value.contains("Customs")){checked}>
+          <label class="form-check-label" for="et-customs">Customs（通関）</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input type="radio" name="eventType" value="Claim" class="form-check-input" id="et-claim" @if(form("eventType").value.contains("Claim")){checked}>
+          <label class="form-check-label" for="et-claim">Claim（引取）</label>
+        </div>
       </div>
     </div>
     <div class="mb-3">
@@ -43,6 +51,22 @@
       <label class="form-label">作業員名</label>
       <input type="text" name="operatorName" class="form-control" value="@form("operatorName").value.getOrElse("")" maxlength="200">
     </div>
+    <div class="mb-3" id="recipient-confirmation-row" style="display:none;">
+      <label class="form-label">荷受人確認（Claim 必須） <span class="text-danger">*</span></label>
+      <input type="text" name="recipientConfirmation" class="form-control" value="@form("recipientConfirmation").value.getOrElse("")" placeholder="署名 or 確認コード" maxlength="120">
+    </div>
+    <script>
+      (function() {
+        var radios = document.querySelectorAll('input[name="eventType"]');
+        var row = document.getElementById('recipient-confirmation-row');
+        function sync() {
+          var checked = document.querySelector('input[name="eventType"]:checked');
+          row.style.display = (checked && checked.value === 'Claim') ? '' : 'none';
+        }
+        radios.forEach(function(r) { r.addEventListener('change', sync); });
+        sync();
+      })();
+    </script>
     <div class="d-flex gap-2">
       <button type="submit" class="btn btn-primary">登録</button>
       <a href="@cargotracker.handling.interfaces.web.routes.HandlingController.list()" class="btn btn-secondary">一覧に戻る</a>

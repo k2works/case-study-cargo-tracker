@@ -35,7 +35,8 @@ class HandlingCommandService @Inject() (repository: HandlingActivityRepository):
           location = location,
           voyageNumber = voyageNumber,
           operatorName = command.operatorName.filter(_.nonEmpty),
-          routeDeviation = command.routeDeviation
+          routeDeviation = command.routeDeviation,
+          recipientConfirmation = command.recipientConfirmation.filter(_.nonEmpty)
         )
         .left
         .map {
@@ -55,5 +56,6 @@ final case class RegisterHandlingActivityCommand(
     locationUnLocode: String,
     voyageNumber: Option[String],
     operatorName: Option[String],
-    routeDeviation: Boolean = false
+    routeDeviation: Boolean = false,
+    recipientConfirmation: Option[String] = None
 )
