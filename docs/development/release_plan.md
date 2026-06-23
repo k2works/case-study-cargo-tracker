@@ -482,7 +482,7 @@ gantt
 | 4 | 11 | 11 | 100% | 完了（US09 + US11 + US12 + US13 + IT3 申し送り 9 件、テスト 288 / coverage 88.21% / Branch 79.06% / V9-V11 適用、[iteration_report-4.md](./iteration_report-4.md) / [retrospective-4.md](./retrospective-4.md)） |
 | 5 | 11 | 11 | 100% | 完了（US14 + US15 + US18 + IT4 申し送り 6 件、Tracking/Handling Context 新設、テスト 323 件 / V12-V14 適用、[retrospective-5.md](./retrospective-5.md)） |
 | 6 | 12 | 12 | 100% | 主要部完了（US16 + US17 + US21 + IT5 申し送り 7/10 件、Billing Context 新設、Unit 261 / E2E 36 全件 PASS、[iteration_plan-6.md](./iteration_plan-6.md) / [it6_implementation_review_20260623.md](../review/it6_implementation_review_20260623.md)） |
-| 7 | 12 | - | - | 未着手 |
+| 7 | 12 | 12 | 100% | 完了（US19 + US20 + IT6 申し送り 16/16 件、TrackingExceptionEvent 新設、Flyway V18-V22 + ADR 0014/0015 承認、Unit 371 / E2E 36 全件 PASS、[iteration_report-7.md](./iteration_report-7.md) / [retrospective-7.md](./retrospective-7.md)） |
 | 8 | 9 | - | - | 未着手 |
 | 9 予備 | 3+ | - | - | 未着手 |
 
@@ -494,7 +494,7 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7", "IT8", "IT9"]
     y-axis "残 SP" 0 --> 91
     line "計画" [91, 79, 69, 58, 47, 36, 24, 12, 3, 0]
-    line "実績" [91, 79, 69, 58, 47, 36, 24]
+    line "実績" [91, 79, 69, 58, 47, 36, 24, 12]
 ```
 
 ---
