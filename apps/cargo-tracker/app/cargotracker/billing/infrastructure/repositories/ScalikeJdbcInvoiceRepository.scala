@@ -3,7 +3,14 @@ package cargotracker.billing.infrastructure.repositories
 import cargotracker.billing.domain.model.aggregates.Invoice
 import cargotracker.billing.domain.model.enums.PaymentStatus
 import cargotracker.billing.domain.model.repositories.InvoiceRepository
-import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, BillingShipperId, DiscountRate, InvoiceId}
+import cargotracker.billing.domain.model.valueobjects.{
+  BillingBookingId,
+  BillingShipperId,
+  DiscountRate,
+  InvoiceId,
+  InvoiceLineItem,
+  LineItemCategory
+}
 import cargotracker.shared.domain.{Money, OptimisticLockException}
 import scalikejdbc.*
 
@@ -12,10 +19,10 @@ import javax.inject.Singleton
 @Singleton
 class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
 
-  private def rowTo(rs: WrappedResultSet): Option[Invoice] =
+  private def rowToInvoiceAndId(rs: WrappedResultSet): Option[(Long, Invoice.Snapshot)] =
     for status <- PaymentStatus.fromName(rs.string("payment_status"))
-    yield Invoice.reconstruct(
-      Invoice.Snapshot(
+    yield
+      val snapshot = Invoice.Snapshot(
         invoiceId = InvoiceId.unsafeFrom(rs.string("invoice_number")),
         cargoBookingId = BillingBookingId.unsafeFrom(rs.string("booking_id")),
         shipperId = BillingShipperId(rs.string("shipper_id"), rs.boolean("is_corporate")),
@@ -27,7 +34,27 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
         paidAt = rs.zonedDateTimeOpt("paid_at").map(_.toInstant),
         version = rs.int("version")
       )
-    )
+      (rs.long("id"), snapshot)
+
+  private def loadLineItems(invoiceId: Long)(implicit session: DBSession): List[InvoiceLineItem] =
+    sql"""SELECT category, description, amount
+          FROM invoice_line_item
+          WHERE invoice_id = $invoiceId
+          ORDER BY line_no"""
+      .map { rs =>
+        val cat = LineItemCategory.fromName(rs.string("category")).getOrElse(LineItemCategory.Other)
+        InvoiceLineItem(
+          category = cat,
+          name = rs.string("description"),
+          amount = Money.unsafeFromJpy(rs.long("amount"))
+        )
+      }
+      .list
+      .apply()
+
+  private def reconstructWithItems(id: Long, snapshot: Invoice.Snapshot)(implicit session: DBSession): Invoice =
+    val items = loadLineItems(id)
+    Invoice.reconstruct(if items.isEmpty then snapshot else snapshot.copy(lineItems = items))
 
   override def nextInvoiceId(): InvoiceId =
     DB.readOnly { implicit session =>
@@ -42,24 +69,40 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
   override def findById(id: InvoiceId): Option[Invoice] =
     DB.readOnly { implicit session =>
       sql"SELECT * FROM invoice WHERE invoice_number = ${id.value}"
-        .map(rowTo)
+        .map(rowToInvoiceAndId)
         .single
         .apply()
         .flatten
+        .map { case (iid, snap) => reconstructWithItems(iid, snap) }
     }
 
   override def findByBookingId(bookingId: BillingBookingId): Option[Invoice] =
     DB.readOnly { implicit session =>
       sql"SELECT * FROM invoice WHERE booking_id = ${bookingId.value}"
-        .map(rowTo)
+        .map(rowToInvoiceAndId)
         .single
         .apply()
         .flatten
+        .map { case (iid, snap) => reconstructWithItems(iid, snap) }
     }
 
   override def findAll(): Seq[Invoice] =
     DB.readOnly { implicit session =>
-      sql"SELECT * FROM invoice ORDER BY issued_at DESC".map(rowTo).list.apply().flatten
+      sql"SELECT * FROM invoice ORDER BY issued_at DESC"
+        .map(rowToInvoiceAndId)
+        .list
+        .apply()
+        .flatten
+        .map { case (iid, snap) => reconstructWithItems(iid, snap) }
+    }
+
+  private def replaceLineItems(invoiceId: Long, items: List[InvoiceLineItem])(implicit session: DBSession): Unit =
+    sql"DELETE FROM invoice_line_item WHERE invoice_id = $invoiceId".update.apply()
+    items.zipWithIndex.foreach { case (item, idx) =>
+      sql"""INSERT INTO invoice_line_item
+              (invoice_id, line_no, category, description, amount)
+            VALUES ($invoiceId, ${idx + 1}, ${item.category.toString}, ${item.name}, ${item.amount.amount})""".update
+        .apply()
     }
 
   override def save(invoice: Invoice): Unit =
@@ -70,7 +113,7 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
           .single
           .apply()
 
-      existing match
+      val invoiceId = existing match
         case None =>
           sql"""
             INSERT INTO invoice
@@ -86,8 +129,8 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
                ${invoice.finalAmount.amount},
                ${invoice.paymentStatus.toString},
                ${java.sql.Timestamp.from(invoice.issuedAt)})
-          """.update.apply()
-        case Some(_) =>
+          """.updateAndReturnGeneratedKey.apply()
+        case Some(id) =>
           val updated = sql"""
             UPDATE invoice
             SET payment_status = ${invoice.paymentStatus.toString},
@@ -101,6 +144,8 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
               entityType = "Invoice",
               identifier = invoice.invoiceId.value
             )
-      // IT7 0.9: lineItems の永続化は invoice_line_item テーブル新設（別マイグレーション）後の follow-up に持ち越し。
-      // 現状はメモリ上の `Invoice.lineItems` のみで料金内訳を保持し、UI 表示は新規発行直後のフローでのみ反映される。
+          id
+
+      // IT7 0.9: 料金内訳を同期 (V17 で作成済 invoice_line_item テーブル + V22 で追加した category カラム)
+      if invoice.lineItems.nonEmpty then replaceLineItems(invoiceId, invoice.lineItems)
     }
