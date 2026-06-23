@@ -483,7 +483,7 @@ gantt
 | 5 | 11 | 11 | 100% | 完了（US14 + US15 + US18 + IT4 申し送り 6 件、Tracking/Handling Context 新設、テスト 323 件 / V12-V14 適用、[retrospective-5.md](./retrospective-5.md)） |
 | 6 | 12 | 12 | 100% | 主要部完了（US16 + US17 + US21 + IT5 申し送り 7/10 件、Billing Context 新設、Unit 261 / E2E 36 全件 PASS、[iteration_plan-6.md](./iteration_plan-6.md) / [it6_implementation_review_20260623.md](../review/it6_implementation_review_20260623.md)） |
 | 7 | 12 | 12 | 100% | 完了（US19 + US20 + IT6 申し送り 16/16 件、TrackingExceptionEvent 新設、Flyway V18-V22 + ADR 0014/0015 承認、Unit 371 / E2E 36 全件 PASS、[iteration_report-7.md](./iteration_report-7.md) / [retrospective-7.md](./retrospective-7.md)） |
-| 8 | 9 | - | - | 未着手 |
+| 8 | 9 | - | - | 🚧 計画中（US22 法人割引 + US23 精算、IT7 申し送り 12 件、Release 2.0 GA、[iteration_plan-8.md](./iteration_plan-8.md)） |
 | 9 予備 | 3+ | - | - | 未着手 |
 
 ### バーンダウンチャート
@@ -521,3 +521,5 @@ xychart-beta
 | 2026-06-23 | IT6 主要部完了（12/12 SP、US16/US17/US21、Billing Context 新設、IT5 申し送り 7/10 解消、Unit 261 件 + Playwright E2E 36/36 PASS、developing-review 正式実施 [it6_implementation_review_20260623.md](../review/it6_implementation_review_20260623.md)） | AI Agent |
 | 2026-06-23 | IT7 完了（12/12 SP、US19 + US20、IT6 申し送り 16/16 件全消化、TrackingExceptionEvent + Flyway V18-V22 + ADR 0014/0015 承認、Unit 371 件 PASS、Phase 4 着手、[iteration_report-7.md](./iteration_report-7.md) / [retrospective-7.md](./retrospective-7.md)） | AI Agent |
 | 2026-06-23 | GitHub Project #30 同期：US07-US13 + US19 + US20 の 8 Issue を Closed + Project Status=Done に更新（残 Todo: US10 / US22 / US23、Done 累計 23/26） | AI Agent |
+| 2026-06-23 | IT7 マルチパースペクティブ実装レビュー実施（高 12 / 中 17 / 低 15 件、[it7_implementation_review_20260623.md](../review/it7_implementation_review_20260623.md)） | AI Agent |
+| 2026-06-23 | IT8 計画策定（US22 法人割引 + US23 精算、IT7 申し送り 12 件、Release 2.0 GA、[iteration_plan-8.md](./iteration_plan-8.md)） | AI Agent |

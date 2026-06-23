@@ -21,6 +21,7 @@
 | IT5（2026-08-17 〜 2026-08-30） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | ✅ 完了（11/11 SP / US14 + US15 + US18 + IT4 申し送り 6 件、Tracking/Handling Context 新設、テスト 323 件） |
 | IT6（2026-08-31 〜 2026-09-13） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | ✅ 完了（12/12 SP / US16 + US17 + US21 + IT5 申し送り 7/10 件、Billing Context 新設、Unit 261 + Playwright E2E 36/36 PASS、Release 1.0 MVP 機能完了） |
 | IT7（2026-09-14 〜 2026-09-27） | [iteration_plan-7.md](./iteration_plan-7.md) | [retrospective-7.md](./retrospective-7.md) | [iteration_report-7.md](./iteration_report-7.md) | ✅ 完了（12/12 SP / US19 + US20 + IT6 申し送り 16/16 件、Flyway V18-V22 + ADR 0014/0015 承認、Unit 371 件、Phase 4 着手） |
+| IT8（2026-09-28 〜 2026-10-11） | [iteration_plan-8.md](./iteration_plan-8.md) | - | - | 🚧 計画中（9 SP / US22 + US23 + IT7 申し送り 12 件、Release 2.0 GA、Phase 4 完了予定） |
 
 ### 進捗サマリー
 
