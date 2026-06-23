@@ -36,7 +36,8 @@ class HandlingController @Inject() (
       "locationUnLocode" -> nonEmptyText(minLength = 5, maxLength = 5),
       "voyageNumber" -> optional(text(maxLength = 20)),
       "operatorName" -> optional(text(maxLength = 200)),
-      "recipientConfirmation" -> optional(text(maxLength = 120))
+      "recipientConfirmation" -> optional(text(maxLength = 120)),
+      "recipientConfirmationType" -> optional(text(maxLength = 20))
     )(HandlingFormData.apply)(d =>
       Some(
         (
@@ -46,7 +47,8 @@ class HandlingController @Inject() (
           d.locationUnLocode,
           d.voyageNumber,
           d.operatorName,
-          d.recipientConfirmation
+          d.recipientConfirmation,
+          d.recipientConfirmationType
         )
       )
     )
@@ -93,7 +95,8 @@ class HandlingController @Inject() (
           voyageNumber = data.voyageNumber,
           operatorName = data.operatorName,
           routeDeviation = false,
-          recipientConfirmation = data.recipientConfirmation.filter(_.nonEmpty)
+          recipientConfirmation = data.recipientConfirmation.filter(_.nonEmpty),
+          recipientConfirmationType = data.recipientConfirmationType.filter(_.nonEmpty)
         )
       )
       _ <- trackingCommandService.recordEvent(
@@ -141,5 +144,6 @@ final case class HandlingFormData(
     locationUnLocode: String,
     voyageNumber: Option[String],
     operatorName: Option[String],
-    recipientConfirmation: Option[String] = None
+    recipientConfirmation: Option[String] = None,
+    recipientConfirmationType: Option[String] = None
 )

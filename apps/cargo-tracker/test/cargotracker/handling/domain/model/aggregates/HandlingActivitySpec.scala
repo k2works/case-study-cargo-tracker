@@ -1,6 +1,6 @@
 package cargotracker.handling.domain.model.aggregates
 
-import cargotracker.handling.domain.model.enums.HandlingType
+import cargotracker.handling.domain.model.enums.{HandlingType, RecipientConfirmationType}
 import cargotracker.handling.domain.model.valueobjects.HandlingVoyageNumber
 import cargotracker.shared.domain.Location
 import org.scalatest.funsuite.AnyFunSuite
@@ -82,7 +82,7 @@ class HandlingActivitySpec extends AnyFunSuite with Matchers:
       )
     ) shouldBe Left(HandlingActivity.RecipientConfirmationRequired)
 
-  test("register: Claim + recipientConfirmation 提供で成立する (US16)"):
+  test("register: Claim + recipientConfirmation + 種別 提供で成立する (US16 + IT7 0.12)"):
     val Right(ha) = HandlingActivity.register(
       HandlingActivity.RegisterRequest(
         bookingId = "BK-CLAIM02",
@@ -91,11 +91,27 @@ class HandlingActivitySpec extends AnyFunSuite with Matchers:
         location = tyo,
         voyageNumber = None,
         operatorName = Some("田中"),
-        recipientConfirmation = Some("署名: 山田太郎")
+        recipientConfirmation = Some("署名: 山田太郎"),
+        recipientConfirmationType = Some(RecipientConfirmationType.Signature)
       )
     ): @unchecked
     ha.eventType shouldBe HandlingType.Claim
     ha.recipientConfirmation shouldBe Some("署名: 山田太郎")
+    ha.recipientConfirmationType shouldBe Some(RecipientConfirmationType.Signature)
+
+  test("register: Claim で確認の値はあるが種別が None なら RecipientConfirmationTypeRequired (IT7 0.12 / M6)"):
+    HandlingActivity.register(
+      HandlingActivity.RegisterRequest(
+        bookingId = "BK-CLAIM03",
+        eventType = HandlingType.Claim,
+        completionTime = now,
+        location = tyo,
+        voyageNumber = None,
+        operatorName = None,
+        recipientConfirmation = Some("受領印あり"),
+        recipientConfirmationType = None
+      )
+    ) shouldBe Left(HandlingActivity.RecipientConfirmationTypeRequired)
 
   test("HandlingType.requiresVoyage: Load/Unload は必須、それ以外は不要"):
     HandlingType.Load.requiresVoyage shouldBe true

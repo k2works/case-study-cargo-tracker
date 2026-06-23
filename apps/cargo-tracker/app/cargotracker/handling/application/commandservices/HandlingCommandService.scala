@@ -1,7 +1,7 @@
 package cargotracker.handling.application.commandservices
 
 import cargotracker.handling.domain.model.aggregates.HandlingActivity
-import cargotracker.handling.domain.model.enums.HandlingType
+import cargotracker.handling.domain.model.enums.{HandlingType, RecipientConfirmationType}
 import cargotracker.handling.domain.model.repositories.HandlingActivityRepository
 import cargotracker.handling.domain.model.valueobjects.HandlingVoyageNumber
 import cargotracker.shared.domain.Location
@@ -27,6 +27,9 @@ class HandlingCommandService @Inject() (repository: HandlingActivityRepository):
       voyageNumber = command.voyageNumber
         .filter(_.nonEmpty)
         .flatMap(HandlingVoyageNumber(_).toOption)
+      confirmationType = command.recipientConfirmationType
+        .filter(_.nonEmpty)
+        .flatMap(RecipientConfirmationType.fromName)
       activity <- HandlingActivity
         .register(
           HandlingActivity.RegisterRequest(
@@ -37,14 +40,17 @@ class HandlingCommandService @Inject() (repository: HandlingActivityRepository):
             voyageNumber = voyageNumber,
             operatorName = command.operatorName.filter(_.nonEmpty),
             routeDeviation = command.routeDeviation,
-            recipientConfirmation = command.recipientConfirmation.filter(_.nonEmpty)
+            recipientConfirmation = command.recipientConfirmation.filter(_.nonEmpty),
+            recipientConfirmationType = confirmationType
           )
         )
         .left
         .map {
           case HandlingActivity.VoyageRequired => s"$eventType は航海番号が必須です"
           case HandlingActivity.EmptyBookingId => "予約 ID が空です"
-          case HandlingActivity.RecipientConfirmationRequired => "引取作業 (Claim) には荷受人確認が必須です"
+          case HandlingActivity.RecipientConfirmationRequired => "引取作業 (Claim) には荷受人確認の値が必須です"
+          case HandlingActivity.RecipientConfirmationTypeRequired =>
+            "引取作業 (Claim) には荷受人確認の種別 (署名 / 受領印 / 身分証 / コード) が必須です"
         }
     yield
       repository.save(activity)
@@ -59,5 +65,6 @@ final case class RegisterHandlingActivityCommand(
     voyageNumber: Option[String],
     operatorName: Option[String],
     routeDeviation: Boolean = false,
-    recipientConfirmation: Option[String] = None
+    recipientConfirmation: Option[String] = None,
+    recipientConfirmationType: Option[String] = None
 )

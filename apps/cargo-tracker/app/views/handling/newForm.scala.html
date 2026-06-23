@@ -52,8 +52,16 @@
       <input type="text" name="operatorName" class="form-control" value="@form("operatorName").value.getOrElse("")" maxlength="200">
     </div>
     <div class="mb-3" id="recipient-confirmation-row" style="display:none;">
-      <label class="form-label">荷受人確認（引取作業 (Claim) 必須） <span class="text-danger">*</span></label>
-      <input type="text" name="recipientConfirmation" class="form-control" value="@form("recipientConfirmation").value.getOrElse("")" placeholder="署名 or 確認コード" maxlength="120">
+      <label class="form-label">荷受人確認 種別（引取作業 (Claim) 必須） <span class="text-danger">*</span></label>
+      <select name="recipientConfirmationType" class="form-select">
+        <option value="">-- 種別を選択 --</option>
+        <option value="Signature" @if(form("recipientConfirmationType").value.contains("Signature")){selected}>署名</option>
+        <option value="Stamp" @if(form("recipientConfirmationType").value.contains("Stamp")){selected}>受領印</option>
+        <option value="IdCard" @if(form("recipientConfirmationType").value.contains("IdCard")){selected}>身分証</option>
+        <option value="Code" @if(form("recipientConfirmationType").value.contains("Code")){selected}>引取コード</option>
+      </select>
+      <label class="form-label mt-2">荷受人確認 値 <span class="text-danger">*</span></label>
+      <input type="text" name="recipientConfirmation" class="form-control" value="@form("recipientConfirmation").value.getOrElse("")" placeholder="署名イメージ / 印影メモ / 身分証番号 / 引取コード" maxlength="120">
     </div>
     <script>
       (function() {

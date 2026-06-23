@@ -1,7 +1,7 @@
 package cargotracker.handling.infrastructure.repositories
 
 import cargotracker.handling.domain.model.aggregates.HandlingActivity
-import cargotracker.handling.domain.model.enums.HandlingType
+import cargotracker.handling.domain.model.enums.{HandlingType, RecipientConfirmationType}
 import cargotracker.handling.domain.model.repositories.HandlingActivityRepository
 import cargotracker.handling.domain.model.valueobjects.HandlingVoyageNumber
 import cargotracker.shared.domain.Location
@@ -26,7 +26,9 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
         operatorName = rs.stringOpt("operator_name"),
         routeDeviation = rs.boolean("route_deviation"),
         version = rs.int("version"),
-        recipientConfirmation = rs.stringOpt("recipient_confirmation")
+        recipientConfirmation = rs.stringOpt("recipient_confirmation"),
+        recipientConfirmationType =
+          rs.stringOpt("recipient_confirmation_type").flatMap(RecipientConfirmationType.fromName)
       )
     )
 
@@ -35,7 +37,8 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
       sql"""
         INSERT INTO handling_activity
           (booking_id, event_type, event_completion_time, location_unlocode,
-           voyage_number, operator_name, route_deviation, recipient_confirmation)
+           voyage_number, operator_name, route_deviation,
+           recipient_confirmation, recipient_confirmation_type)
         VALUES
           (${activity.bookingId},
            ${activity.eventType.toString},
@@ -44,7 +47,8 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
            ${activity.voyageNumber.map(_.value).orNull},
            ${activity.operatorName.orNull},
            ${activity.routeDeviation},
-           ${activity.recipientConfirmation.orNull})
+           ${activity.recipientConfirmation.orNull},
+           ${activity.recipientConfirmationType.map(_.toString).orNull})
       """.update.apply()
     }
 
