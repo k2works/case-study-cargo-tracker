@@ -47,7 +47,7 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
   override def nextTrackingNumber(): TrackingNumber =
     DB.readOnly { implicit session =>
       val next = sql"""
-        SELECT COALESCE(MAX(id), 0) + 1 AS next FROM tracking_activity
+        SELECT nextval('tracking_activity_id_seq') AS next
       """.map(_.long("next")).single.apply().getOrElse(1L)
       TrackingNumber.fromSequence(next)
     }

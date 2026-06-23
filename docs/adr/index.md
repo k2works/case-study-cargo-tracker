@@ -16,5 +16,6 @@
 | [0008](0008-queryservices-package-naming.md) | queryservices パッケージ命名規約を入出力 DTO 許容（`*Query` / `*Command` / `*Result` / `*Candidate`）に拡張する | 承認 |
 | [0009](0009-route-candidate-selection-aggregate.md) | 経路選択を独立集約 `RouteCandidateSelection` として永続化する | 提案 |
 | [0010](0010-tracking-number-policy.md) | 追跡番号採番ポリシー（`TN-` プレフィクス + 6 桁シーケンス、UUID は不採用）と Tracking Context 集約境界 | 提案 |
+| [0013](0013-tracking-number-sequence-numbering.md) | tracking_number 採番を `MAX(id)+1` → `nextval(tracking_activity_id_seq)` に変更（O2 解消、ADR 0010 更新） | 承認 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
