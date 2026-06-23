@@ -6,7 +6,14 @@ IT6 SonarQube 解析で検出された MAJOR Code Smell 4 件 (関数パラメ�
 
 ## ステータス
 
-2026-06-23 提案 (IT7 タスク冒頭バンドル候補)。受理後に IT7 でドメイン集約 4 種に適用。
+2026-06-23 承認・適用済 (IT7 タスク 0.5 / 0.6 / 0.7 で 4 集約適用完了)。
+
+適用結果:
+
+- `Invoice.Snapshot` (10 フィールド) 適用、`ScalikeJdbcInvoiceRepository.rowTo` リファクタ (commit 5949b0ac)
+- `Cargo.Snapshot` (8 フィールド) 適用、`ScalikeJdbcCargoRepository` + 関連テスト 5 件リファクタ (commit b98569e2)
+- `HandlingActivity.RegisterRequest` + `HandlingActivity.Snapshot` (各 9 フィールド) 適用、Repository + CommandService + テスト 6 件リファクタ (commit 1e3677ad)
+- IT7 0.16 で SonarQube 再スキャンを実施し MAJOR Code Smell 4 → 0 件を Quality Gate 上で確認する想定。スキャナ実行は SonarQube コンテナ稼働環境で `npx gulp sonar-local:check` を呼び出す。
 
 ## コンテキスト
 

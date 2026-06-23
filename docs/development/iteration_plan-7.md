@@ -96,7 +96,7 @@ date: 2026-06-23
 | 0.13 | 追跡詳細の手動更新モーダルに「更新理由」必須フィールド追加 + `Role.Tracker / MasterAdmin` 限定でボタン表示制御（M7） | 3h | [x] |
 | 0.14 | `Itinerary` に leg 詳細（from/to UnLocode）追加し `HandlingCommandService.register` で routeDeviation を正式判定（O3 / IT5 申し送り 0.10）。Flyway V19 で `cargo_itinerary_leg` テーブル新設 | 5h | [ ] |
 | 0.15 | ユビキタス言語統一: `DeliveryCompleted` (ドメイン) / 「引取作業」(UI) / 「配送完了」(通知) を「荷主視点 = 引取済」「社内視点 = 配送完了」で整理し view 文言を統一（M10） | 2h | [x] |
-| 0.16 | SonarQube 再スキャン + Quality Gate 確認、MAJOR Code Smell 0 件達成を ADR 0014 ステータス更新で記録 | 2h | [ ] |
+| 0.16 | SonarQube 再スキャン + Quality Gate 確認、MAJOR Code Smell 0 件達成を ADR 0014 ステータス更新で記録 | 2h | [x] |
 
 **小計**: 59h
 
