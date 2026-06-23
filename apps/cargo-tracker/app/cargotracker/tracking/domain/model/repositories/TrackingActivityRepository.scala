@@ -15,8 +15,11 @@ trait TrackingActivityRepository:
   /** 集約ルートの永続化。新規 INSERT または `version` の差分更新のみを行う（events は appendEvent 経由）。 */
   def save(activity: TrackingActivity): Unit
 
-  /** 集約配下の新規イベント 1 件を追記し、`transportStatus` と `version` を同時更新する（楽観ロック）。 */
+  /** 集約配下の新規イベント 1 件を追記し、`transportStatus` と `version` を同時更新する（楽観ロック）。
+    *
+    * 戻り値: 新しい version を持つ TrackingActivity。呼出側はこれを引数の `activity` の代わりに後続処理で再利用すること（H1 対応）。
+    */
   def appendEvent(
       activity: TrackingActivity,
       newEvent: cargotracker.tracking.domain.model.entities.TrackingActivityEvent
-  ): Unit
+  ): TrackingActivity

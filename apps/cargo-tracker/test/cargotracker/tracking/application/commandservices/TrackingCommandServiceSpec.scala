@@ -25,10 +25,18 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
     override def appendEvent(
         activity: TrackingActivity,
         newEvent: cargotracker.tracking.domain.model.entities.TrackingActivityEvent
-    ): Unit =
+    ): TrackingActivity =
       val current = store(activity.bookingId.value)
       val updated = current.addEvent(newEvent).fold(_ => current, identity)
-      store(activity.bookingId.value) = updated
+      val withNewVersion = TrackingActivity.reconstruct(
+        trackingNumber = updated.trackingNumber,
+        bookingId = updated.bookingId,
+        transportStatus = updated.transportStatus,
+        events = updated.events,
+        version = updated.version + 1
+      )
+      store(activity.bookingId.value) = withNewVersion
+      withNewVersion
 
   test("assign: 新規予約に対して採番し TrackingActivity を初期化（NotReceived）"):
     val repo = new InMemoryRepo

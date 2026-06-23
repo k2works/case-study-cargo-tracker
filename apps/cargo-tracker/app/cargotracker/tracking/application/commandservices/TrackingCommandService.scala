@@ -55,9 +55,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
         case TrackingActivity.OutOfOrder => "追跡イベントの時系列順序が不正です（過去時刻は不可）"
         case _ => "追跡イベントの記録に失敗しました"
       }
-    yield
-      repository.appendEvent(updated, event)
-      updated
+    yield repository.appendEvent(updated, event)
 
 /** 追跡番号発行コマンド（US14）。 */
 final case class AssignTrackingNumberCommand(bookingId: String)

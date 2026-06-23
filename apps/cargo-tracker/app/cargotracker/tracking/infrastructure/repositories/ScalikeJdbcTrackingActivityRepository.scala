@@ -114,7 +114,7 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
       // save() ではイベント差分書込はしない（appendEvent 経由）
     }
 
-  override def appendEvent(activity: TrackingActivity, newEvent: TrackingActivityEvent): Unit =
+  override def appendEvent(activity: TrackingActivity, newEvent: TrackingActivityEvent): TrackingActivity =
     DB.localTx { implicit session =>
       val trackingId = sql"SELECT id FROM tracking_activity WHERE tracking_number = ${activity.trackingNumber.value}"
         .map(_.long("id"))
@@ -149,4 +149,12 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
            ${newEvent.voyageNumber.orNull},
            ${newEvent.routeDeviation})
       """.update.apply()
+
+      cargotracker.tracking.domain.model.aggregates.TrackingActivity.reconstruct(
+        trackingNumber = activity.trackingNumber,
+        bookingId = activity.bookingId,
+        transportStatus = activity.transportStatus,
+        events = activity.events,
+        version = activity.version + 1
+      )
     }
