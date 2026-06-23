@@ -104,12 +104,12 @@ date: 2026-06-23
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | Tracking Context 拡張: `TrackingExceptionEvent` エンティティ新設（`exceptionType: ExceptionType` / `occurredAt` / `location` / `reason` / `responsePlan: Option[String]` / `version`）、`ExceptionType` enum (Delay / Damage / Loss) + `TrackingStatus.InException` への遷移ロジック | 5h | [ ] |
-| 1.2 | Flyway V20: `tracking_exception_event` テーブル（`tracking_id` FK / `exception_type` CHECK / `response_plan` / 監査） | 2h | [ ] |
-| 1.3 | `TrackingCommandService.recordException(RecordExceptionCommand)` 実装: 楽観ロック付き、TrackingStatus を InException に遷移 | 4h | [ ] |
+| 1.1 | Tracking Context 拡張: `TrackingExceptionEvent` エンティティ新設（domain-model.md L 準拠: `exceptionType: ExceptionType` / `location: TrackingLocation` / `occurredAt` / `description: Option[String]` / `escalationFlag: Boolean` / `resolvedAt: Option[Instant]`）、`ExceptionType` enum (Delay / Damage / Lost / CustomsHold) + `TrackingActivity.addException` / `resolveException` / `hasActiveException` / `TrackingStatus.InException` 導出ロジック | 5h | [ ] |
+| 1.2 | Flyway V20: `tracking_exception_event` テーブル（data-model.md 準拠: `tracking_id` FK / `exception_type VARCHAR(50)` CHECK / `occurred_at` / `escalation_flag BOOLEAN` / `description VARCHAR(500)` / `resolved_at` / `resolution_notes TEXT` / 監査）+ ※location は IT7 で `location_unlocode` カラム追加し data-model.md にも反映 | 2h | [ ] |
+| 1.3 | `TrackingCommandService.recordException(RecordExceptionCommand)` 実装: 楽観ロック付き、TrackingStatus を `currentStatus()` 経由で `InException` 導出 | 4h | [ ] |
 | 1.4 | `BookingCommandService.logDelayNotification` + `NotificationType.DelayNotified` + `NotificationPayload.DelayNotified` (新到着予定日 / 対応方針 / 理由) | 3h | [ ] |
 | 1.5 | Flyway V21: `notification_log` CHECK 拡張（`DelayNotified` / `DamageReported` / `LossEscalated` / `ExceptionResponded` 4 種追加） | 1h | [ ] |
-| 1.6 | 追跡詳細画面に「例外を記録」ボタン + モーダル（例外種別 / 場所 / 日時 / 理由）+ 「対応報告」ボタン + モーダル（新到着予定日 / 対応方針） | 5h | [ ] |
+| 1.6 | 追跡詳細画面 (`/tracking/:trackingNumber`) に「例外を記録」ボタン + モーダル（例外種別 Delay/Damage/Lost/CustomsHold / 場所 / 日時 / description）+ 「対応報告」ボタン + モーダル（resolution_notes）+ POST `/tracking/:trackingNumber/exceptions` / POST `.../exceptions/:eventId/resolve` ルート追加 (CSRF formField 必須) | 5h | [ ] |
 | 1.7 | E2E + ユニットテスト（遅延記録 → InException 遷移 → DelayNotified ログ → 対応報告 → ExceptionResponded ログ） | 4h | [ ] |
 
 **小計**: 24h
@@ -118,11 +118,11 @@ date: 2026-06-23
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | `ExceptionType.Damage` / `ExceptionType.Loss` を `TrackingExceptionEvent` のシナリオに展開（US19 1.1 と統合済）、`Loss` 時の緊急フラグ (`isUrgent: Boolean`) ロジック | 3h | [ ] |
-| 2.2 | `BookingCommandService.escalateException` 実装: `Loss` 時に管理職 (`Role.MasterAdmin`) 向け escalation 通知 + `NotificationType.LossEscalated` ログ | 4h | [ ] |
-| 2.3 | 追跡詳細画面の「例外を記録」モーダルで Damage / Loss を選択可能化、Loss 選択時に「緊急対応フラグ」表示 | 3h | [ ] |
-| 2.4 | 補償方針入力フォーム + `NotificationPayload.DamageReported` / `LossEscalated` 通知ペイロード | 4h | [ ] |
-| 2.5 | E2E + ユニットテスト（破損記録 → InException 遷移 + DamageReported / 紛失記録 → 緊急フラグ + LossEscalated 管理職通知） | 4h | [ ] |
+| 2.1 | `ExceptionType.Damage` / `ExceptionType.Lost` (domain-model 命名準拠) を `TrackingExceptionEvent` シナリオに展開（US19 1.1 と統合済）、`Lost` 時の `escalationFlag = true` ロジック | 3h | [ ] |
+| 2.2 | `BookingCommandService.escalateException` 実装: `Lost` 時に管理職 (`Role.MasterAdmin`) 向け escalation 通知 + `NotificationType.LossEscalated` ログ | 4h | [ ] |
+| 2.3 | 追跡詳細画面の「例外を記録」モーダルで Damage / Lost を選択可能化、Lost 選択時に「緊急対応フラグ」表示 | 3h | [ ] |
+| 2.4 | 補償方針入力フォーム（`resolution_notes` 永続化）+ `NotificationPayload.DamageReported` / `LossEscalated` 通知ペイロード | 4h | [ ] |
+| 2.5 | E2E + ユニットテスト（破損記録 → InException 遷移 + DamageReported / 紛失記録 → escalationFlag + LossEscalated 管理職通知） | 4h | [ ] |
 
 **小計**: 18h
 
@@ -221,17 +221,18 @@ package "Tracking Context" {
   class TrackingActivityEvent
   class TrackingExceptionEvent {
     + exceptionType
-    + occurredAt
     + location
-    + reason
-    + responsePlan
-    + isUrgent
+    + occurredAt
+    + description
+    + escalationFlag
+    + resolvedAt
   }
 
   enum ExceptionType {
     Delay
     Damage
-    Loss
+    Lost
+    CustomsHold
   }
 
   TrackingActivity *-- "0..*" TrackingActivityEvent
@@ -282,14 +283,13 @@ entity "tracking_exception_event" {
   *id : BIGSERIAL
   --
   tracking_id : BIGINT FK
-  exception_type : VARCHAR(10) (CHECK: Delay/Damage/Loss)
+  exception_type : VARCHAR(50) CHECK (Delay/Damage/Lost/CustomsHold)
   occurred_at : TIMESTAMP
-  location_unlocode : VARCHAR(5)
-  reason : TEXT
-  response_plan : TEXT (NULL)
-  is_urgent : BOOLEAN
-  responded_at : TIMESTAMP (NULL)
-  responded_by : VARCHAR(50) (NULL)
+  location_unlocode : VARCHAR(5)  // 注: data-model.md に追加が必要
+  escalation_flag : BOOLEAN
+  description : VARCHAR(500) NULL
+  resolved_at : TIMESTAMP NULL
+  resolution_notes : TEXT NULL
   version : INT
   created_at : TIMESTAMP
   updated_at : TIMESTAMP
@@ -309,13 +309,63 @@ entity "cargo_itinerary_leg" {
 @enduml
 ```
 
+### ユーザーインターフェース（追加分）
+
+#### ビュー: 追跡詳細画面 (`/tracking/:trackingNumber`) 拡張
+
+```plantuml
+@startsalt
+{+
+{/ <b>CargoTracker</b> | ダッシュボード | 貨物追跡 | 航海管理 | [ログアウト] }
+{
+  <b>追跡 TN-000123</b>
+  ---
+  予約番号 | BK-000045
+  現在状態 | <color:red>InException</color>
+  現在位置 | USNYC
+  ---
+  <b>追跡イベント履歴</b>
+  | 発生時刻 | 種別 | 場所 | 航海番号 |
+  | 2099-09-01 10:00 | Receive | JPYOK | - |
+  | 2099-09-05 14:30 | Load | JPYOK | VY-001 |
+  ---
+  <b>例外履歴</b>
+  | 発生時刻 | 種別 | 場所 | 説明 | 緊急 | 解決日時 |
+  | 2099-09-08 12:00 | Delay | USNYC | 通関遅延 | - | - |
+  ---
+  [別の貨物を追跡] | [状態を手動更新] | [例外を記録] | [対応報告]
+}
+}
+@endsalt
+```
+
+#### インタラクション
+
+```plantuml
+@startuml
+title US19/US20 例外処理画面遷移
+[*] --> 追跡詳細
+state 追跡詳細 : /tracking/:trackingNumber
+追跡詳細 --> 例外記録モーダル : 「例外を記録」ボタン
+例外記録モーダル --> 追跡詳細 : POST /exceptions (PRG, success)
+例外記録モーダル --> 例外記録モーダル : バリデーションエラー
+追跡詳細 --> 対応報告モーダル : 「対応報告」ボタン (未解決例外行から)
+対応報告モーダル --> 追跡詳細 : POST /exceptions/:eventId/resolve (PRG, success)
+対応報告モーダル --> 対応報告モーダル : バリデーションエラー
+@enduml
+```
+
+- フィードバック: 成功 = `alert-success`, バリデーション失敗 = `alert-danger`, 警告 (Lost 緊急フラグ) = `alert-warning`
+- htmx パターン: 例外履歴セクションは追跡タイムラインと同様に `hx-trigger="every 30s"` で部分更新
+- ロール制御: Tracker / MasterAdmin のみ「例外を記録」「対応報告」ボタン表示 (`@if(roles.contains(Role.Tracker) || roles.contains(Role.MasterAdmin))`)
+
 ### 主要 API（追加分）
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| POST | `/tracking/:trackingNumber/exceptions` | 例外記録（種別 / 場所 / 日時 / 理由） |
-| POST | `/tracking/:trackingNumber/exceptions/:eventId/respond` | 対応報告（新到着予定日 / 対応方針） |
-| GET | `/tracking/:trackingNumber` | 詳細画面に例外履歴 + 緊急フラグ表示 |
+| POST | `/tracking/:trackingNumber/exceptions` | 例外記録（種別 / 場所 / 日時 / description）。ui_design.md L82 で「追跡詳細画面の管理者機能」として定義済みの動作の REST 表現 |
+| POST | `/tracking/:trackingNumber/exceptions/:eventId/resolve` | 対応報告 + `resolved_at` / `resolution_notes` 永続化 |
+| GET | `/tracking/:trackingNumber` | 詳細画面に例外履歴 + escalationFlag 表示 (ui_design.md L82 拡張) |
 
 ### ADR
 
