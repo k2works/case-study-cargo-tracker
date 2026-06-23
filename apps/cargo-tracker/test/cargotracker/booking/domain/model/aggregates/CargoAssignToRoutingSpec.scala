@@ -49,11 +49,13 @@ class CargoAssignToRoutingSpec extends AnyFunSuite with Matchers:
   test("Cancelled 状態からは RouteProposed へ遷移できない"):
     val cancelled =
       Cargo.reconstruct(
-        BookingId.unsafeFrom("BK-000099"),
-        ShipperId.unsafeFrom("SH-000001"),
-        routeSpec,
-        spec,
-        BookingStatus.Cancelled
+        Cargo.Snapshot(
+          BookingId.unsafeFrom("BK-000099"),
+          ShipperId.unsafeFrom("SH-000001"),
+          routeSpec,
+          spec,
+          BookingStatus.Cancelled
+        )
       )
     val Left(err) = cancelled.assignToRouting(): @unchecked
     err shouldBe Cargo.InvalidStatusTransition(

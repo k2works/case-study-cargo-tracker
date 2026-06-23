@@ -62,11 +62,13 @@ class BookingQueryServiceSpec extends AnyFunSuite with Matchers:
 
   test("findRouteProposed は RouteProposed のみ返す（US06）"):
     val routed = Cargo.reconstruct(
-      BookingId.unsafeFrom("BK-000002"),
-      cargotracker.shared.domain.ShipperId.unsafeFrom("SH-000001"),
-      cargo.routeSpecification,
-      cargo.cargoSpec,
-      cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteProposed
+      Cargo.Snapshot(
+        BookingId.unsafeFrom("BK-000002"),
+        cargotracker.shared.domain.ShipperId.unsafeFrom("SH-000001"),
+        cargo.routeSpecification,
+        cargo.cargoSpec,
+        cargotracker.booking.domain.model.valueobjects.BookingStatus.RouteProposed
+      )
     )
     val service = new BookingQueryService(new InMemoryCargoRepository(cargo, routed))
     service.findRouteProposed().map(_.bookingId.value) shouldBe Seq("BK-000002")

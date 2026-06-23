@@ -53,13 +53,15 @@ class NotifyRouteCommandServiceSpec extends AnyFunSuite with Matchers:
 
   private def routeAssignedCargo: Cargo =
     Cargo.reconstruct(
-      bookingId = bookingId,
-      shipperId = shipperId,
-      routeSpecification = routeSpec,
-      cargoSpec = spec,
-      status = BookingStatus.RouteAssigned,
-      version = 0,
-      itinerary = Some(Itinerary.unsafeFrom(List("VY-1", "VY-2")))
+      Cargo.Snapshot(
+        bookingId = bookingId,
+        shipperId = shipperId,
+        routeSpecification = routeSpec,
+        cargoSpec = spec,
+        status = BookingStatus.RouteAssigned,
+        version = 0,
+        itinerary = Some(Itinerary.unsafeFrom(List("VY-1", "VY-2")))
+      )
     )
 
   test("notify: RouteAssigned 予約に通知を発行する"):
@@ -82,13 +84,15 @@ class NotifyRouteCommandServiceSpec extends AnyFunSuite with Matchers:
 
   test("notify: voyages が単一でも JSON 配列として正しく serialise される（H5 構造アサート）"):
     val singleLeg = Cargo.reconstruct(
-      bookingId = bookingId,
-      shipperId = shipperId,
-      routeSpecification = routeSpec,
-      cargoSpec = spec,
-      status = BookingStatus.RouteAssigned,
-      version = 0,
-      itinerary = Some(Itinerary.unsafeFrom(List("VY-ONLY")))
+      Cargo.Snapshot(
+        bookingId = bookingId,
+        shipperId = shipperId,
+        routeSpecification = routeSpec,
+        cargoSpec = spec,
+        status = BookingStatus.RouteAssigned,
+        version = 0,
+        itinerary = Some(Itinerary.unsafeFrom(List("VY-ONLY")))
+      )
     )
     val cargoRepo = new InMemoryCargoRepo
     cargoRepo.save(singleLeg)
@@ -99,7 +103,8 @@ class NotifyRouteCommandServiceSpec extends AnyFunSuite with Matchers:
     (json \ "voyages").as[List[String]] shouldBe List("VY-ONLY")
 
   test("notify: 経路未紐付け（Preliminary）は拒否"):
-    val pre = Cargo.reconstruct(bookingId, shipperId, routeSpec, spec, BookingStatus.Preliminary, 0, None)
+    val pre =
+      Cargo.reconstruct(Cargo.Snapshot(bookingId, shipperId, routeSpec, spec, BookingStatus.Preliminary, 0, None))
     val cargoRepo = new InMemoryCargoRepo
     cargoRepo.save(pre)
     val svc = new NotifyRouteCommandService(cargoRepo, new InMemoryNotificationRepo, fixedClock)

@@ -139,8 +139,11 @@ object Cargo:
         )
       )
 
-  /** 永続化からの復元（DB の `version` カラムを保持） */
-  def reconstruct(
+  /** Cargo 集約の永続化スナップショット（ADR 0014）。
+    *
+    * Repository が DB 行から組み立て、ドメイン側で集約に再構成する。
+    */
+  final case class Snapshot(
       bookingId: BookingId,
       shipperId: ShipperId,
       routeSpecification: RouteSpecification,
@@ -149,14 +152,17 @@ object Cargo:
       version: Int = 0,
       itinerary: Option[Itinerary] = None,
       trackingNumber: Option[String] = None
-  ): Cargo =
+  )
+
+  /** 永続化からの復元（ADR 0014 Snapshot ADT）。 */
+  def reconstruct(s: Snapshot): Cargo =
     new Cargo(
-      bookingId,
-      shipperId,
-      routeSpecification,
-      cargoSpec,
-      status,
-      version,
-      itinerary,
-      trackingNumber.map(BookingTrackingNumber.unsafeFrom)
+      s.bookingId,
+      s.shipperId,
+      s.routeSpecification,
+      s.cargoSpec,
+      s.status,
+      s.version,
+      s.itinerary,
+      s.trackingNumber.map(BookingTrackingNumber.unsafeFrom)
     )

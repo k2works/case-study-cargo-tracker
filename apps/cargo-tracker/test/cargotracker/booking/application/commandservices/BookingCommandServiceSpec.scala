@@ -571,14 +571,16 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     val service = new BookingCommandService(repo, acceptingChecker, notif, java.time.Clock.systemUTC())
     val Right(cargo) = service.book(baseCommand): @unchecked
     val tracked = Cargo.reconstruct(
-      cargo.bookingId,
-      cargo.shipperId,
-      cargo.routeSpecification,
-      cargo.cargoSpec,
-      BookingStatus.TrackingIssued,
-      cargo.version,
-      cargo.itinerary,
-      Some("TN-000001")
+      Cargo.Snapshot(
+        cargo.bookingId,
+        cargo.shipperId,
+        cargo.routeSpecification,
+        cargo.cargoSpec,
+        BookingStatus.TrackingIssued,
+        cargo.version,
+        cargo.itinerary,
+        Some("TN-000001")
+      )
     )
     repo.save(tracked)
     val Right(delivered) =

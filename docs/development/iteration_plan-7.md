@@ -86,7 +86,7 @@ date: 2026-06-23
 | 0.3 | `HandlingOrchestrator` (Application Service) を新設し、Handling 登録 + Tracking event 追記 + Booking 通知 + completeDelivery を単一 `DB.localTx` で実行（H3 / IT5 申し送り 0.3）。`HandlingController` の Claim 連結を Orchestrator 呼出に置換 | 6h | [ ] |
 | 0.4 | ADR 0015 起票「Billing は単通貨 JPY、shared.domain.Money に一本化」+ `BillingMoney` 削除、`shared.domain.Money` に `multiplyByRate` extension を追加（H4） | 4h | [ ] |
 | 0.5 | ADR 0014 Snapshot ADT 適用: `Invoice.Snapshot` 新設 → `ScalikeJdbcInvoiceRepository` リファクタ | 3h | [x] |
-| 0.6 | ADR 0014 Snapshot ADT 適用: `Cargo.Snapshot` 新設 → `ScalikeJdbcCargoRepository` + 関連テストリファクタ | 4h | [ ] |
+| 0.6 | ADR 0014 Snapshot ADT 適用: `Cargo.Snapshot` 新設 → `ScalikeJdbcCargoRepository` + 関連テストリファクタ | 4h | [x] |
 | 0.7 | ADR 0014 Snapshot ADT 適用: `HandlingActivity.Snapshot` + `RegisterRequest` 新設 → Repository + CommandService リファクタ | 4h | [ ] |
 | 0.8 | 請求書発行 UI から法人フラグ手入力欄を削除、`BillingShipperId` を Booking 経由で荷主属性 (`Shipper.shipperType`) から自動判定（H5） | 4h | [ ] |
 | 0.9 | 請求書詳細画面に料金内訳（距離料金 / 重量料金 / 貨物種別料金）を表示、`PricingService.calculateActual` で `invoice_line_item` を生成しテーブル永続化（H6 / IT8 US22 前倒し候補） | 6h | [ ] |

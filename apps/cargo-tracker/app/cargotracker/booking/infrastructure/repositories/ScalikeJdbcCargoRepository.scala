@@ -56,14 +56,16 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
         .filter(_.nonEmpty)
         .map(s => Itinerary.unsafeFrom(s.split(",").toList))
       Cargo.reconstruct(
-        bookingId = BookingId.unsafeFrom(rs.string("tracking_id")),
-        shipperId = ShipperId.unsafeFrom(rs.string("shipper_code")),
-        routeSpecification = routeSpec,
-        cargoSpec = spec,
-        status = status,
-        version = rs.int("version"),
-        itinerary = itinerary,
-        trackingNumber = rs.stringOpt("tracking_number")
+        Cargo.Snapshot(
+          bookingId = BookingId.unsafeFrom(rs.string("tracking_id")),
+          shipperId = ShipperId.unsafeFrom(rs.string("shipper_code")),
+          routeSpecification = routeSpec,
+          cargoSpec = spec,
+          status = status,
+          version = rs.int("version"),
+          itinerary = itinerary,
+          trackingNumber = rs.stringOpt("tracking_number")
+        )
       )
 
   override def findById(bookingId: BookingId): Option[Cargo] =

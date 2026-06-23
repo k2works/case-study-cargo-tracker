@@ -71,7 +71,7 @@ class CargoBookingSpec extends AnyFunSuite with Matchers:
       Left(Cargo.InvalidStatusTransition(BookingStatus.Preliminary, BookingStatus.RouteAssigned))
 
   private def cargoIn(status: BookingStatus): Cargo =
-    Cargo.reconstruct(bookingId, shipperId, routeSpec, spec, status)
+    Cargo.reconstruct(Cargo.Snapshot(bookingId, shipperId, routeSpec, spec, status))
 
   test("deliver: TrackingIssued から Delivered に遷移する (US16 / IT6)"):
     val Right(delivered) = cargoIn(BookingStatus.TrackingIssued).deliver(): @unchecked
