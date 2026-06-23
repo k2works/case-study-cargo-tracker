@@ -46,3 +46,19 @@ object NotificationPayload:
       eventType: String,
       location: String
   ) extends NotificationPayload
+
+  /** 配送完了通知ペイロード（US16 / `BookingCommandService.completeDelivery`）。 */
+  final case class DeliveryCompleted(
+      bookingId: String,
+      trackingNumber: String,
+      location: String,
+      recipientConfirmation: String
+  ) extends NotificationPayload
+
+  /** 手動状態更新通知ペイロード（US17 / `TrackingCommandService.updateStatus`）。 */
+  final case class ManualStatusUpdated(
+      bookingId: String,
+      trackingNumber: String,
+      status: String,
+      location: String
+  ) extends NotificationPayload

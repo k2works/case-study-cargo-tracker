@@ -164,6 +164,27 @@ class BookingCommandService @Inject() (
       cargo
     }
 
+  /** 引取完了で Cargo を Delivered 遷移 + 配送完了通知を記録（US16 / IT6）。 */
+  def completeDelivery(
+      bookingId: String,
+      trackingNumber: String,
+      location: String,
+      recipientConfirmation: String
+  ): Either[String, Cargo] =
+    transition(bookingId, _.deliver(), "引取完了").map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.DeliveryCompleted,
+        NotificationPayload.DeliveryCompleted(
+          cargo.bookingId.value,
+          trackingNumber,
+          location,
+          recipientConfirmation
+        )
+      )
+      cargo
+    }
+
   private def logNotification(
       cargo: Cargo,
       notificationType: NotificationType,

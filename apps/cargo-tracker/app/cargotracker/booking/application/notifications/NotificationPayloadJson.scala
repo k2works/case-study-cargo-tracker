@@ -43,5 +43,20 @@ object NotificationPayloadJson:
         "eventType" -> p.eventType,
         "location" -> p.location
       )
+    case p: NotificationPayload.DeliveryCompleted =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "status" -> "Delivered",
+        "location" -> p.location,
+        "recipientConfirmation" -> p.recipientConfirmation
+      )
+    case p: NotificationPayload.ManualStatusUpdated =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "status" -> p.status,
+        "location" -> p.location
+      )
 
   def asString(payload: NotificationPayload): String = Json.stringify(toJson(payload))

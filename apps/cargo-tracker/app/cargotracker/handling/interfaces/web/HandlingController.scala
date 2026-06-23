@@ -112,6 +112,17 @@ class HandlingController @Inject() (
         data.eventType,
         data.locationUnLocode
       )
+      _ <-
+        if data.eventType == "Claim" then
+          bookingCommandService
+            .completeDelivery(
+              activity.bookingId.value,
+              data.trackingNumber,
+              data.locationUnLocode,
+              data.recipientConfirmation.getOrElse("")
+            )
+            .map(_ => ())
+        else Right(())
     yield ()
 
     result match
