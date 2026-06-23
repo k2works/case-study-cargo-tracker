@@ -22,6 +22,8 @@ import cargotracker.shipper.domain.model.repositories.ShipperRepository
 import cargotracker.shipper.infrastructure.repositories.ScalikeJdbcShipperRepository
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
 import cargotracker.tracking.infrastructure.repositories.ScalikeJdbcTrackingActivityRepository
+import cargotracker.billing.domain.model.repositories.InvoiceRepository
+import cargotracker.billing.infrastructure.repositories.ScalikeJdbcInvoiceRepository
 import com.google.inject.AbstractModule
 import play.api.db.DBApi
 import scalikejdbc.{ConnectionPool, DataSourceConnectionPool}
@@ -52,6 +54,7 @@ class Module extends AbstractModule:
       .to(classOf[ScalikeJdbcTrackingActivityRepository])
     bind(classOf[HandlingActivityRepository])
       .to(classOf[ScalikeJdbcHandlingActivityRepository])
+    bind(classOf[InvoiceRepository]).to(classOf[ScalikeJdbcInvoiceRepository])
     bind(classOf[ShipperExistenceChecker])
       .to(classOf[ShipperRepositoryBackedExistenceChecker])
     bind(classOf[Clock]).toInstance(Clock.systemUTC())

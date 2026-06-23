@@ -121,7 +121,7 @@ date: 2026-06-22
 | 1.3 | Flyway V15: `handling_activity.recipient_confirmation` カラム追加 | 1h | [x] |
 | 1.4 | `Cargo.deliver()` ドメインメソッド: `Claim` 記録後に `BookingStatus` を `Delivered` に遷移 + canTransitionTo 拡張 | 3h | [x] |
 | 1.5 | Claim → Cargo.deliver + DeliveryCompleted 通知連携（Orchestrator 0.3 未着手のため Controller 一時連結） | 2h | [x] |
-| 1.6 | E2E（Claim 登録 → 貨物状態 `Delivered` + TrackingStatus `Claimed` + 配送完了通知）+ ユニットテスト（荷受人確認必須 / Delivered 遷移） | 3h | [-] |
+| 1.6 | E2E（Claim 登録 → 貨物状態 `Delivered` + TrackingStatus `Claimed` + 配送完了通知）+ ユニットテスト（荷受人確認必須 / Delivered 遷移） | 3h | [x] |
 
 **小計**: 14h
 
@@ -133,7 +133,7 @@ date: 2026-06-22
 | 2.2 | `TrackingActivity.recordManualUpdate(status, location, time)`: イベント履歴に `TrackingActivityEvent` を追記 + `transport_status` 同期（既存 addEvent + appendEvent で実現） | 3h | [x] |
 | 2.3 | 追跡詳細画面（`/tracking/:trackingNumber`）に「状態を手動更新」ボタン + モーダルフォーム（状態セレクト / 港湾 / 日時） | 4h | [x] |
 | 2.4 | `NotificationType.ManualStatusUpdated` 追加 + Flyway V16（notification_log CHECK 拡張）+ payload + Booking 側通知連携 | 2h | [x] |
-| 2.5 | E2E（Tracker ログイン → 手動更新 → 履歴反映 + 通知記録 + 競合時 `OptimisticLockException`）+ ユニットテスト | 3h | [-] |
+| 2.5 | E2E（Tracker ログイン → 手動更新 → 履歴反映 + 通知記録 + 競合時 `OptimisticLockException`）+ ユニットテスト | 3h | [x] |
 
 **小計**: 15h
 
@@ -148,7 +148,7 @@ date: 2026-06-22
 | 3.5 | 法人割引率自動取得（US22 部分実装）: `BillingShipperId.isCorporate` 真の場合 `DiscountPolicy.calculateRate` で `DiscountRate` を取得し画面に表示（適用 = `applyDiscount` は IT8 US22） | 2h | [ ] |
 | 3.6 | 請求書一覧 `/billing/invoices` + 発行画面 `/billing/invoices/new` + 詳細 `/billing/invoices/:invoiceId`（基本料金 / 割引率 / 最終金額 / 状態表示） | 5h | [x] |
 | 3.7 | `Settlement` ロール（または `MasterAdmin`）でダッシュボードに「請求管理」カード追加 | 2h | [x] |
-| 3.8 | E2E（引取済予約 → 料金算出 → `PaymentStatus.Pending` 登録 → 一覧表示 + 見積金額との整合性 property test）+ ユニットテスト | 4h | [-] |
+| 3.8 | E2E（引取済予約 → 料金算出 → `PaymentStatus.Pending` 登録 → 一覧表示 + 見積金額との整合性 property test）+ ユニットテスト | 4h | [x] |
 
 **小計**: 28h
 

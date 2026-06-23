@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 
-export type HandlingEventType = 'Receive' | 'Load' | 'Unload';
+export type HandlingEventType = 'Receive' | 'Load' | 'Unload' | 'Customs' | 'Claim';
 
 export interface HandlingFormData {
   trackingNumber: string;
@@ -9,6 +9,7 @@ export interface HandlingFormData {
   locationUnLocode: string;
   voyageNumber?: string;
   operatorName?: string;
+  recipientConfirmation?: string;
 }
 
 /** 荷役作業画面（US15） */
@@ -37,6 +38,9 @@ export class HandlingPage {
     }
     if (data.operatorName !== undefined) {
       await this.page.locator('input[name="operatorName"]').fill(data.operatorName);
+    }
+    if (data.recipientConfirmation !== undefined) {
+      await this.page.locator('input[name="recipientConfirmation"]').fill(data.recipientConfirmation);
     }
   }
 
