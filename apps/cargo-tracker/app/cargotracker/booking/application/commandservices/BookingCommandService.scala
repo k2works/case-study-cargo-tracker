@@ -164,6 +164,25 @@ class BookingCommandService @Inject() (
       cargo
     }
 
+  /** 手動状態更新の通知ログを Booking 側に記録（US17 / IT6）。Cargo の状態遷移は行わない。 */
+  def logManualStatusUpdate(
+      bookingId: String,
+      trackingNumber: String,
+      status: String,
+      location: String
+  ): Either[String, Unit] =
+    BookingId(bookingId).left
+      .map(_ => CargoErrorMessages.invalidBookingIdMessage(bookingId))
+      .flatMap { id =>
+        repository.findById(id).toRight(CargoErrorMessages.bookingNotFoundMessage(bookingId)).map { cargo =>
+          logNotification(
+            cargo,
+            NotificationType.ManualStatusUpdated,
+            NotificationPayload.ManualStatusUpdated(cargo.bookingId.value, trackingNumber, status, location)
+          )
+        }
+      }
+
   /** 引取完了で Cargo を Delivered 遷移 + 配送完了通知を記録（US16 / IT6）。 */
   def completeDelivery(
       bookingId: String,

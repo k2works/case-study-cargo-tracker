@@ -1,6 +1,7 @@
 package cargotracker.tracking.interfaces.web
 
 import cargotracker.auth.interfaces.web.AuthenticatedAction
+import cargotracker.booking.application.commandservices.BookingCommandService
 import cargotracker.tracking.application.commandservices.{TrackingCommandService, UpdateTrackingStatusCommand}
 import cargotracker.tracking.application.queryservices.TrackingQueryService
 import cargotracker.tracking.domain.model.enums.TrackingStatus
@@ -18,7 +19,8 @@ class TrackingController @Inject() (
     cc: ControllerComponents,
     authenticated: AuthenticatedAction,
     queryService: TrackingQueryService,
-    commandService: TrackingCommandService
+    commandService: TrackingCommandService,
+    bookingCommandService: BookingCommandService
 ) extends AbstractController(cc)
     with I18nSupport:
 
@@ -77,7 +79,13 @@ class TrackingController @Inject() (
               commandService.updateStatus(
                 UpdateTrackingStatusCommand(trackingNumber, status, data.locationUnLocode, occurredInstant)
               ) match
-                case Right(_) =>
+                case Right(activity) =>
+                  bookingCommandService.logManualStatusUpdate(
+                    activity.bookingId.value,
+                    trackingNumber,
+                    status.toString,
+                    data.locationUnLocode
+                  )
                   Redirect(detailRoute).flashing("success" -> s"状態を $status に更新しました")
                 case Left(msg) =>
                   Redirect(detailRoute).flashing("error" -> msg)

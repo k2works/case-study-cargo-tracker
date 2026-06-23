@@ -591,6 +591,20 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     (payload \ "status").as[String] shouldBe "Delivered"
     (payload \ "recipientConfirmation").as[String] shouldBe "署名: 田中"
 
+  test("logManualStatusUpdate: 既存予約に対し ManualStatusUpdated 通知を記録 (US17 / IT6)"):
+    val repo = new InMemoryCargoRepository
+    val notif = new InMemoryNotificationLogRepository
+    val service = new BookingCommandService(repo, acceptingChecker, notif, java.time.Clock.systemUTC())
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    val Right(_) =
+      service.logManualStatusUpdate(cargo.bookingId.value, "TN-000007", "Loaded", "JPTYO"): @unchecked
+    val log = notif.store
+      .find(_.notificationType == cargotracker.booking.domain.model.valueobjects.NotificationType.ManualStatusUpdated)
+      .get
+    val payload = Json.parse(log.payload)
+    (payload \ "status").as[String] shouldBe "Loaded"
+    (payload \ "location").as[String] shouldBe "JPTYO"
+
   test("completeDelivery: Preliminary からは遷移違反でエラー + 通知ログ未記録 (US16)"):
     val repo = new InMemoryCargoRepository
     val notif = new InMemoryNotificationLogRepository
