@@ -56,6 +56,12 @@ POST    /voyages                       cargotracker.routing.interfaces.web.Voyag
 GET     /voyages/:voyageNumber/edit    cargotracker.routing.interfaces.web.VoyageController.editForm(voyageNumber: String)
 POST    /voyages/:voyageNumber/edit    cargotracker.routing.interfaces.web.VoyageController.update(voyageNumber: String)
 
+# 請求書（US21 / IT6）
+GET     /billing/invoices                cargotracker.billing.interfaces.web.InvoiceController.list()
+GET     /billing/invoices/new            cargotracker.billing.interfaces.web.InvoiceController.newForm()
+POST    /billing/invoices                cargotracker.billing.interfaces.web.InvoiceController.create()
+GET     /billing/invoices/:invoiceId     cargotracker.billing.interfaces.web.InvoiceController.detail(invoiceId: String)
+
 # ダッシュボード・ヘルス
 GET     /                       cargotracker.shared.interfaces.web.HomeController.index()
 GET     /health                 cargotracker.shared.interfaces.web.HealthController.health()

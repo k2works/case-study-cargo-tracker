@@ -75,9 +75,9 @@
     @if(roles.contains(Role.Settlement) || roles.contains(Role.MasterAdmin)) {
       <div class="col-md-4">
         <div class="card border-info"><div class="card-body">
-          <h5 class="card-title">精算</h5>
-          <p class="card-text small">輸送料金算出・精算処理（IT4+）</p>
-          <a href="#" class="btn btn-info btn-sm disabled">準備中</a>
+          <h5 class="card-title">請求管理</h5>
+          <p class="card-text small">輸送料金算出・請求書発行（US21）</p>
+          <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.list()" class="btn btn-info btn-sm">開く</a>
         </div></div>
       </div>
     }

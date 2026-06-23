@@ -1,0 +1,39 @@
+@(invoices: Seq[cargotracker.billing.domain.model.aggregates.Invoice])(implicit request: RequestHeader, flash: Flash, messages: play.api.i18n.Messages)
+@views.html.layout.main("請求書一覧") {
+  <h1 class="h3 mb-3">請求書一覧</h1>
+  @flash.get("success").map { msg => <div class="alert alert-success">@msg</div> }
+  @flash.get("error").map { msg => <div class="alert alert-danger">@msg</div> }
+  <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.newForm()" class="btn btn-primary mb-3">新規発行</a>
+  @if(invoices.isEmpty) {
+    <p class="text-muted">請求書がありません。</p>
+  } else {
+    <table class="table">
+      <thead>
+        <tr>
+          <th>請求書 ID</th>
+          <th>予約 ID</th>
+          <th>荷主</th>
+          <th class="text-end">基本金額</th>
+          <th class="text-end">割引率</th>
+          <th class="text-end">最終金額</th>
+          <th>状態</th>
+          <th>発行日時</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(inv <- invoices) {
+          <tr>
+            <td><a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.detail(inv.invoiceId.value)">@inv.invoiceId.value</a></td>
+            <td>@inv.cargoBookingId.value</td>
+            <td>@inv.shipperId.value @if(inv.shipperId.isCorporate){<span class="badge bg-info">法人</span>}</td>
+            <td class="text-end">@inv.baseAmount.value 円</td>
+            <td class="text-end">@inv.discountRate.percent %</td>
+            <td class="text-end">@inv.finalAmount.value 円</td>
+            <td><span class="badge bg-warning">@inv.paymentStatus</span></td>
+            <td>@inv.issuedAt</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+}
