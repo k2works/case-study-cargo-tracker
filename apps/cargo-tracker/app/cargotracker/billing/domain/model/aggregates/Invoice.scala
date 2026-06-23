@@ -34,6 +34,23 @@ object Invoice:
   sealed trait Error
   case object InvalidAmount extends Error
 
+  /** Invoice 集約の永続化スナップショット（ADR 0014）。
+    *
+    * Repository が DB 行から組み立て、ドメイン側で集約に再構成する。 不変条件の検証は `reconstruct` 内で実行される。
+    */
+  final case class Snapshot(
+      invoiceId: InvoiceId,
+      cargoBookingId: BillingBookingId,
+      shipperId: BillingShipperId,
+      baseAmount: Money,
+      discountRate: DiscountRate,
+      finalAmount: Money,
+      paymentStatus: PaymentStatus,
+      issuedAt: Instant,
+      paidAt: Option[Instant],
+      version: Int
+  )
+
   /** 請求書を新規発行（US21）。`finalAmount` は `baseAmount × (1 - discountRate)` で計算。 */
   def issue(
       invoiceId: InvoiceId,
@@ -59,28 +76,17 @@ object Invoice:
       )
     )
 
-  /** 永続化からの復元。 */
-  def reconstruct(
-      invoiceId: InvoiceId,
-      cargoBookingId: BillingBookingId,
-      shipperId: BillingShipperId,
-      baseAmount: Money,
-      discountRate: DiscountRate,
-      finalAmount: Money,
-      paymentStatus: PaymentStatus,
-      issuedAt: Instant,
-      paidAt: Option[Instant],
-      version: Int
-  ): Invoice =
+  /** 永続化からの復元（ADR 0014 Snapshot ADT）。 */
+  def reconstruct(s: Snapshot): Invoice =
     new Invoice(
-      invoiceId,
-      cargoBookingId,
-      shipperId,
-      baseAmount,
-      discountRate,
-      finalAmount,
-      paymentStatus,
-      issuedAt,
-      paidAt,
-      version
+      s.invoiceId,
+      s.cargoBookingId,
+      s.shipperId,
+      s.baseAmount,
+      s.discountRate,
+      s.finalAmount,
+      s.paymentStatus,
+      s.issuedAt,
+      s.paidAt,
+      s.version
     )

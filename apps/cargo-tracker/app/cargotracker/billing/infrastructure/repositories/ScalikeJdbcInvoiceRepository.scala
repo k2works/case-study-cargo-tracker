@@ -21,16 +21,18 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
   private def rowTo(rs: WrappedResultSet): Option[Invoice] =
     for status <- PaymentStatus.fromName(rs.string("payment_status"))
     yield Invoice.reconstruct(
-      invoiceId = InvoiceId.unsafeFrom(rs.string("invoice_number")),
-      cargoBookingId = BillingBookingId.unsafeFrom(rs.string("booking_id")),
-      shipperId = BillingShipperId(rs.string("shipper_id"), rs.boolean("is_corporate")),
-      baseAmount = Money.unsafeFrom(rs.long("base_amount")),
-      discountRate = DiscountRate.unsafeFrom(rs.bigDecimal("discount_rate")),
-      finalAmount = Money.unsafeFrom(rs.long("final_amount")),
-      paymentStatus = status,
-      issuedAt = rs.zonedDateTime("issued_at").toInstant,
-      paidAt = rs.zonedDateTimeOpt("paid_at").map(_.toInstant),
-      version = rs.int("version")
+      Invoice.Snapshot(
+        invoiceId = InvoiceId.unsafeFrom(rs.string("invoice_number")),
+        cargoBookingId = BillingBookingId.unsafeFrom(rs.string("booking_id")),
+        shipperId = BillingShipperId(rs.string("shipper_id"), rs.boolean("is_corporate")),
+        baseAmount = Money.unsafeFrom(rs.long("base_amount")),
+        discountRate = DiscountRate.unsafeFrom(rs.bigDecimal("discount_rate")),
+        finalAmount = Money.unsafeFrom(rs.long("final_amount")),
+        paymentStatus = status,
+        issuedAt = rs.zonedDateTime("issued_at").toInstant,
+        paidAt = rs.zonedDateTimeOpt("paid_at").map(_.toInstant),
+        version = rs.int("version")
+      )
     )
 
   override def nextInvoiceId(): InvoiceId =

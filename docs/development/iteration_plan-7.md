@@ -85,7 +85,7 @@ date: 2026-06-23
 | 0.2 | `BillingCargoQueryPort` (Billing 側 trait) + Booking 側 ACL アダプター実装、`BillingCommandService` の Cargo 直接結合を解消（H2 / IT5 申し送り 0.2 部分流用） | 5h | [x] |
 | 0.3 | `HandlingOrchestrator` (Application Service) を新設し、Handling 登録 + Tracking event 追記 + Booking 通知 + completeDelivery を単一 `DB.localTx` で実行（H3 / IT5 申し送り 0.3）。`HandlingController` の Claim 連結を Orchestrator 呼出に置換 | 6h | [ ] |
 | 0.4 | ADR 0015 起票「Billing は単通貨 JPY、shared.domain.Money に一本化」+ `BillingMoney` 削除、`shared.domain.Money` に `multiplyByRate` extension を追加（H4） | 4h | [ ] |
-| 0.5 | ADR 0014 Snapshot ADT 適用: `Invoice.Snapshot` 新設 → `ScalikeJdbcInvoiceRepository` リファクタ | 3h | [ ] |
+| 0.5 | ADR 0014 Snapshot ADT 適用: `Invoice.Snapshot` 新設 → `ScalikeJdbcInvoiceRepository` リファクタ | 3h | [x] |
 | 0.6 | ADR 0014 Snapshot ADT 適用: `Cargo.Snapshot` 新設 → `ScalikeJdbcCargoRepository` + 関連テストリファクタ | 4h | [ ] |
 | 0.7 | ADR 0014 Snapshot ADT 適用: `HandlingActivity.Snapshot` + `RegisterRequest` 新設 → Repository + CommandService リファクタ | 4h | [ ] |
 | 0.8 | 請求書発行 UI から法人フラグ手入力欄を削除、`BillingShipperId` を Booking 経由で荷主属性 (`Shipper.shipperType`) から自動判定（H5） | 4h | [ ] |
