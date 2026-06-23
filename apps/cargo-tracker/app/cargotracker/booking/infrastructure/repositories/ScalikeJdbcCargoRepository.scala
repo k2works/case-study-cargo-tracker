@@ -8,6 +8,7 @@ import cargotracker.booking.domain.model.valueobjects.{
   CargoSpec,
   HazardousDeclaration,
   Itinerary,
+  ItineraryLeg,
   RefrigerationSpec,
   RouteSpecification,
   TemperatureUnit
@@ -20,7 +21,7 @@ import javax.inject.Singleton
 @Singleton
 class ScalikeJdbcCargoRepository extends CargoRepository:
 
-  private def rowToCargo(rs: WrappedResultSet): Option[Cargo] =
+  private def rowToCargoAndId(rs: WrappedResultSet): Option[(Long, Cargo.Snapshot)] =
     for
       ct <- CargoType.fromName(rs.string("cargo_type"))
       status <- BookingStatus.fromName(rs.string("booking_status"))
@@ -51,48 +52,84 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
         hazardous = hazardous,
         refrigeration = refrigeration
       )
-      val itinerary = rs
+      val csvItinerary = rs
         .stringOpt("itinerary_voyages")
         .filter(_.nonEmpty)
         .map(s => Itinerary.unsafeFrom(s.split(",").toList))
-      Cargo.reconstruct(
-        Cargo.Snapshot(
-          bookingId = BookingId.unsafeFrom(rs.string("tracking_id")),
-          shipperId = ShipperId.unsafeFrom(rs.string("shipper_code")),
-          routeSpecification = routeSpec,
-          cargoSpec = spec,
-          status = status,
-          version = rs.int("version"),
-          itinerary = itinerary,
-          trackingNumber = rs.stringOpt("tracking_number")
-        )
+      val snapshot = Cargo.Snapshot(
+        bookingId = BookingId.unsafeFrom(rs.string("tracking_id")),
+        shipperId = ShipperId.unsafeFrom(rs.string("shipper_code")),
+        routeSpecification = routeSpec,
+        cargoSpec = spec,
+        status = status,
+        version = rs.int("version"),
+        itinerary = csvItinerary,
+        trackingNumber = rs.stringOpt("tracking_number")
       )
+      (rs.long("id"), snapshot)
+
+  private def loadLegs(cargoId: Long)(implicit session: DBSession): List[ItineraryLeg] =
+    sql"""SELECT voyage_number, from_location_unlocode, to_location_unlocode
+          FROM cargo_itinerary_leg
+          WHERE cargo_id = $cargoId
+          ORDER BY seq_number"""
+      .map { rs =>
+        ItineraryLeg(
+          voyageNumber = rs.string("voyage_number"),
+          from = Location.unsafeFrom(rs.string("from_location_unlocode")),
+          to = Location.unsafeFrom(rs.string("to_location_unlocode"))
+        )
+      }
+      .list
+      .apply()
+
+  private def reconstructWithLegs(
+      cargoId: Long,
+      snapshot: Cargo.Snapshot
+  )(implicit session: DBSession): Cargo =
+    val legs = loadLegs(cargoId)
+    val enriched =
+      if legs.isEmpty then snapshot
+      else snapshot.copy(itinerary = Some(Itinerary.unsafeFromLegs(legs)))
+    Cargo.reconstruct(enriched)
 
   override def findById(bookingId: BookingId): Option[Cargo] =
     DB.readOnly { implicit session =>
       sql"SELECT * FROM cargo WHERE tracking_id = ${bookingId.value}"
-        .map(rowToCargo)
+        .map(rowToCargoAndId)
         .single
         .apply()
         .flatten
+        .map { case (id, snap) => reconstructWithLegs(id, snap) }
     }
 
   override def findAll(): Seq[Cargo] =
     DB.readOnly { implicit session =>
       sql"SELECT * FROM cargo ORDER BY tracking_id"
-        .map(rowToCargo)
+        .map(rowToCargoAndId)
         .list
         .apply()
         .flatten
+        .map { case (id, snap) => reconstructWithLegs(id, snap) }
     }
 
   override def findByStatus(status: BookingStatus): Seq[Cargo] =
     DB.readOnly { implicit session =>
       sql"SELECT * FROM cargo WHERE booking_status = ${status.toString} ORDER BY tracking_id"
-        .map(rowToCargo)
+        .map(rowToCargoAndId)
         .list
         .apply()
         .flatten
+        .map { case (id, snap) => reconstructWithLegs(id, snap) }
+    }
+
+  private def replaceLegs(cargoId: Long, legs: List[ItineraryLeg])(implicit session: DBSession): Unit =
+    sql"DELETE FROM cargo_itinerary_leg WHERE cargo_id = $cargoId".update.apply()
+    legs.zipWithIndex.foreach { case (leg, idx) =>
+      sql"""INSERT INTO cargo_itinerary_leg
+              (cargo_id, seq_number, voyage_number, from_location_unlocode, to_location_unlocode)
+            VALUES ($cargoId, ${idx + 1}, ${leg.voyageNumber}, ${leg.from.unLocode}, ${leg.to.unLocode})""".update
+        .apply()
     }
 
   override def save(cargo: Cargo): Unit =
@@ -105,9 +142,8 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
 
       val haz = cargo.cargoSpec.hazardous
       val refrig = cargo.cargoSpec.refrigeration
-      existing match
-        case Some(_) =>
-          // 楽観ロック: 期待 version と一致する行のみ更新
+      val cargoId = existing match
+        case Some(id) =>
           val updated = sql"""
             UPDATE cargo
             SET shipper_code = ${cargo.shipperId.value},
@@ -136,6 +172,7 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
               entityType = "Cargo",
               identifier = cargo.bookingId.value
             )
+          id
         case None =>
           sql"""
             INSERT INTO cargo
@@ -143,7 +180,7 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                arrival_deadline, cargo_type, weight_kg, description, quantity,
                hazardous_class, hazardous_un_number, hazardous_proper_name,
                refrigeration_min_temp, refrigeration_max_temp, refrigeration_unit,
-               booking_status)
+               booking_status, itinerary_voyages, tracking_number)
             VALUES
               (${cargo.bookingId.value}, ${cargo.shipperId.value},
                ${cargo.routeSpecification.origin.unLocode},
@@ -159,8 +196,13 @@ class ScalikeJdbcCargoRepository extends CargoRepository:
                ${refrig.map(_.minTemperature).orNull},
                ${refrig.map(_.maxTemperature).orNull},
                ${refrig.map(_.unit.toString).orNull},
-               ${cargo.status.toString})
-          """.update.apply()
+               ${cargo.status.toString},
+               ${cargo.itinerary.map(_.voyageNumbers.mkString(",")).orNull},
+               ${cargo.trackingNumber.orNull})
+          """.updateAndReturnGeneratedKey.apply()
+
+      // IT7 0.14: 経路 leg 詳細を cargo_itinerary_leg テーブルに同期する
+      cargo.itinerary.map(_.legs).foreach(legs => replaceLegs(cargoId, legs))
     }
 
   override def nextIdentity(): BookingId =

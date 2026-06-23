@@ -94,7 +94,7 @@ date: 2026-06-23
 | 0.11 | `TrackingCommandService.updateStatus` の `OptimisticLockException` を `Either[String, _]` に畳み込み、UI に「他のユーザーが更新したため再読込してください」を表示（H8） | 3h | [x] |
 | 0.12 | 荷役登録 UI: 荷受人確認を「種別 (署名 / 受領印 / 身分証 / コード) + 値」の 2 フィールド構成に変更、`HandlingActivity` に `recipientConfirmationType` 追加 + Flyway V18（M6） | 4h | [x] |
 | 0.13 | 追跡詳細の手動更新モーダルに「更新理由」必須フィールド追加 + `Role.Tracker / MasterAdmin` 限定でボタン表示制御（M7） | 3h | [x] |
-| 0.14 | `Itinerary` に leg 詳細（from/to UnLocode）追加し `HandlingCommandService.register` で routeDeviation を正式判定（O3 / IT5 申し送り 0.10）。Flyway V19 で `cargo_itinerary_leg` テーブル新設 | 5h | [ ] |
+| 0.14 | `Itinerary` に leg 詳細（from/to UnLocode）追加し `HandlingCommandService.register` で routeDeviation を正式判定（O3 / IT5 申し送り 0.10）。Flyway V19 で `cargo_itinerary_leg` テーブル新設 | 5h | [x]※ |
 | 0.15 | ユビキタス言語統一: `DeliveryCompleted` (ドメイン) / 「引取作業」(UI) / 「配送完了」(通知) を「荷主視点 = 引取済」「社内視点 = 配送完了」で整理し view 文言を統一（M10） | 2h | [x] |
 | 0.16 | SonarQube 再スキャン + Quality Gate 確認、MAJOR Code Smell 0 件達成を ADR 0014 ステータス更新で記録 | 2h | [x] |
 
