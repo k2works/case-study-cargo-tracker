@@ -52,3 +52,53 @@ class InMemoryPricingServiceSpec extends AnyFunSuite with Matchers:
       weight,
       None
     ) shouldBe Left(PricingService.SameOriginAndDestination)
+
+  // IT7 0.10: calculateActual 失敗系テスト
+
+  test("calculateActual: 出発地と目的地が同じルートは SameOriginAndDestination (estimateCost 経由)"):
+    service.calculateActual(
+      origin,
+      origin,
+      CargoType.General,
+      weight,
+      Nil
+    ) shouldBe Left(PricingService.SameOriginAndDestination)
+
+  test("calculateActual: itineraryVoyages の先頭が candidateVoyage として estimateCost に伝播される"):
+    val captured = new java.util.concurrent.atomic.AtomicReference[Option[String]](None)
+    val fake = new PricingService:
+      override def estimateCost(
+          o: Location,
+          d: Location,
+          c: CargoType,
+          w: Weight,
+          candidateVoyage: Option[String]
+      ): Either[PricingService.Error, cargotracker.shared.domain.Money] =
+        captured.set(candidateVoyage)
+        cargotracker.shared.domain.Money.jpy(1000L).left.map(_ => PricingService.PriceCalculationFailed)
+    fake.calculateActual(origin, destination, CargoType.General, weight, List("VY-1", "VY-2"))
+    captured.get() shouldBe Some("VY-1")
+
+  test("calculateActual: 単価計算サービスが PriceCalculationFailed を返したら呼出元にそのまま伝播される"):
+    val alwaysFails = new PricingService:
+      override def estimateCost(
+          o: Location,
+          d: Location,
+          c: CargoType,
+          w: Weight,
+          candidateVoyage: Option[String]
+      ): Either[PricingService.Error, cargotracker.shared.domain.Money] =
+        Left(PricingService.PriceCalculationFailed)
+    alwaysFails.calculateActual(
+      origin,
+      destination,
+      CargoType.General,
+      weight,
+      Nil
+    ) shouldBe Left(PricingService.PriceCalculationFailed)
+
+  test("calculateActual: itineraryVoyages が空でも estimateCost に candidateVoyage=None を渡して通常算出する"):
+    val res = service.calculateActual(origin, destination, CargoType.General, weight, Nil)
+    res.isRight shouldBe true
+    res.toOption.get.currency shouldBe "JPY"
+    res.toOption.get.amount should be > 0L
