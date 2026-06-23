@@ -81,6 +81,8 @@ class BookingCommandService @Inject() (
           case Cargo.UnknownShipper => s"荷主 ${command.shipperCode} が見つかりません"
           case Cargo.InvalidStatusTransition(from, to) =>
             s"予約状態の遷移が不正です（$from → $to）"
+          case Cargo.InvalidTrackingNumberFormat(raw) =>
+            s"追跡番号の形式が不正です（$raw）"
         }
     yield cargo
 
@@ -153,7 +155,7 @@ class BookingCommandService @Inject() (
     *   - 成功時は `TrackingIssued` 状態に遷移し、`NotificationType.TrackingIssued` ログを記録
     */
   def issueTracking(bookingId: String, trackingNumber: String): Either[String, Cargo] =
-    transition(bookingId, _.issueTracking(trackingNumber), "追跡番号発行").map { cargo =>
+    transition(bookingId, _.issueTrackingByRaw(trackingNumber), "追跡番号発行").map { cargo =>
       logNotification(
         cargo,
         NotificationType.TrackingIssued,

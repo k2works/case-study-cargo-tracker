@@ -82,13 +82,13 @@ class IssueTrackingEndpointSpec extends AnyWordSpec with Matchers with PostgresC
             .get
           cargo.status shouldBe BookingStatus.TrackingIssued
           cargo.trackingNumber shouldBe defined
-          cargo.trackingNumber.get should startWith("TN-")
+          cargo.trackingNumber.get.value should startWith("TN-")
 
           val activity = app.injector
             .instanceOf[TrackingActivityRepository]
             .findByBookingId(TrackingBookingId.unsafeFrom(bookingId))
             .get
-          activity.trackingNumber.value shouldBe cargo.trackingNumber.get
+          activity.trackingNumber.value shouldBe cargo.trackingNumber.get.value
 
           val logs = app.injector.instanceOf[NotificationLogRepository].findByBookingId(cargo.bookingId)
           logs.map(_.notificationType) should contain(NotificationType.TrackingIssued)

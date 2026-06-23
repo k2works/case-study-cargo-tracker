@@ -4,6 +4,7 @@ import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
 import cargotracker.booking.domain.model.valueobjects.{
   BookingId,
   BookingStatus,
+  BookingTrackingNumber,
   CargoSpec,
   Itinerary,
   RouteSpecification
@@ -24,7 +25,7 @@ final case class Cargo private (
     status: BookingStatus,
     version: Int,
     itinerary: Option[Itinerary] = None,
-    trackingNumber: Option[String] = None
+    trackingNumber: Option[BookingTrackingNumber] = None
 ):
 
   /** 経路設計者への引き渡し（US06 / `AssignToRoutingCommand`）。
@@ -79,7 +80,7 @@ final case class Cargo private (
     *   - 既に `trackingNumber` が設定済みの場合は冪等成功（既存値を保持して `TrackingIssued` を返す）
     *   - 成功時は `TrackingIssued` 状態に遷移し、`trackingNumber` を保持
     */
-  def issueTracking(trackingNumber: String): Either[Cargo.Error, Cargo] =
+  def issueTracking(trackingNumber: BookingTrackingNumber): Either[Cargo.Error, Cargo] =
     this.trackingNumber match
       case Some(_) =>
         // 冪等: 既に発行済みの場合は現状を返す（再採番禁止）
@@ -89,11 +90,18 @@ final case class Cargo private (
           Right(copy(status = BookingStatus.TrackingIssued, trackingNumber = Some(trackingNumber)))
         else Left(Cargo.InvalidStatusTransition(status, BookingStatus.TrackingIssued))
 
+  /** 文字列から `BookingTrackingNumber` を検証して `issueTracking` を呼び出す便宜メソッド（H2 補助）。 */
+  def issueTrackingByRaw(trackingNumberRaw: String): Either[Cargo.Error, Cargo] =
+    BookingTrackingNumber(trackingNumberRaw) match
+      case Left(_) => Left(Cargo.InvalidTrackingNumberFormat(trackingNumberRaw))
+      case Right(tn) => issueTracking(tn)
+
 object Cargo:
 
   sealed trait Error
   case object UnknownShipper extends Error
   final case class InvalidStatusTransition(from: BookingStatus, to: BookingStatus) extends Error
+  final case class InvalidTrackingNumberFormat(raw: String) extends Error
 
   /** 新規予約を生成する。
     *
@@ -130,4 +138,13 @@ object Cargo:
       itinerary: Option[Itinerary] = None,
       trackingNumber: Option[String] = None
   ): Cargo =
-    new Cargo(bookingId, shipperId, routeSpecification, cargoSpec, status, version, itinerary, trackingNumber)
+    new Cargo(
+      bookingId,
+      shipperId,
+      routeSpecification,
+      cargoSpec,
+      status,
+      version,
+      itinerary,
+      trackingNumber.map(BookingTrackingNumber.unsafeFrom)
+    )

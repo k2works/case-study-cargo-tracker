@@ -14,6 +14,8 @@ object CargoErrorMessages:
       s"現在の状態 $from から $to への遷移はできません"
     case Cargo.UnknownShipper =>
       fallback
+    case Cargo.InvalidTrackingNumberFormat(raw) =>
+      s"追跡番号の形式が不正です（$raw）"
 
   /** `予約 BK-... の<action>に失敗しました` 形式の fallback メッセージを生成する。 */
   def actionFailureFallback(bookingId: String, action: String): String =
