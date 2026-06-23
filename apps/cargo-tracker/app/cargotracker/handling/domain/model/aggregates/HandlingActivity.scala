@@ -31,7 +31,8 @@ object HandlingActivity:
   case object VoyageRequired extends Error
   case object RecipientConfirmationRequired extends Error
 
-  def register(
+  /** 荷役作業登録リクエスト（ADR 0014 / 業務操作）。 */
+  final case class RegisterRequest(
       bookingId: String,
       eventType: HandlingType,
       completionTime: Instant,
@@ -40,28 +41,10 @@ object HandlingActivity:
       operatorName: Option[String],
       routeDeviation: Boolean = false,
       recipientConfirmation: Option[String] = None
-  ): Either[Error, HandlingActivity] =
-    if bookingId.isEmpty then Left(EmptyBookingId)
-    else if eventType.requiresVoyage && voyageNumber.isEmpty then Left(VoyageRequired)
-    else if eventType == HandlingType.Claim && recipientConfirmation.forall(_.isEmpty) then
-      Left(RecipientConfirmationRequired)
-    else
-      Right(
-        new HandlingActivity(
-          bookingId = bookingId,
-          eventType = eventType,
-          completionTime = completionTime,
-          location = location,
-          voyageNumber = voyageNumber,
-          operatorName = operatorName,
-          routeDeviation = routeDeviation,
-          recipientConfirmation = recipientConfirmation,
-          version = 0
-        )
-      )
+  )
 
-  /** 永続化からの復元。 */
-  def reconstruct(
+  /** 永続化スナップショット（ADR 0014）。 */
+  final case class Snapshot(
       bookingId: String,
       eventType: HandlingType,
       completionTime: Instant,
@@ -71,15 +54,38 @@ object HandlingActivity:
       routeDeviation: Boolean,
       version: Int,
       recipientConfirmation: Option[String] = None
-  ): HandlingActivity =
+  )
+
+  def register(req: RegisterRequest): Either[Error, HandlingActivity] =
+    if req.bookingId.isEmpty then Left(EmptyBookingId)
+    else if req.eventType.requiresVoyage && req.voyageNumber.isEmpty then Left(VoyageRequired)
+    else if req.eventType == HandlingType.Claim && req.recipientConfirmation.forall(_.isEmpty) then
+      Left(RecipientConfirmationRequired)
+    else
+      Right(
+        new HandlingActivity(
+          bookingId = req.bookingId,
+          eventType = req.eventType,
+          completionTime = req.completionTime,
+          location = req.location,
+          voyageNumber = req.voyageNumber,
+          operatorName = req.operatorName,
+          routeDeviation = req.routeDeviation,
+          recipientConfirmation = req.recipientConfirmation,
+          version = 0
+        )
+      )
+
+  /** 永続化からの復元（ADR 0014 Snapshot ADT）。 */
+  def reconstruct(s: Snapshot): HandlingActivity =
     new HandlingActivity(
-      bookingId,
-      eventType,
-      completionTime,
-      location,
-      voyageNumber,
-      operatorName,
-      routeDeviation,
-      recipientConfirmation,
-      version
+      s.bookingId,
+      s.eventType,
+      s.completionTime,
+      s.location,
+      s.voyageNumber,
+      s.operatorName,
+      s.routeDeviation,
+      s.recipientConfirmation,
+      s.version
     )

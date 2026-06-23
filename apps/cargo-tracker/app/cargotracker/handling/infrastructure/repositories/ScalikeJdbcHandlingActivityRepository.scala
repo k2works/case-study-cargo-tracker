@@ -17,15 +17,17 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
       et <- HandlingType.fromName(rs.string("event_type"))
       loc <- Location(rs.string("location_unlocode")).toOption
     yield HandlingActivity.reconstruct(
-      bookingId = rs.string("booking_id"),
-      eventType = et,
-      completionTime = rs.timestamp("event_completion_time").toInstant,
-      location = loc,
-      voyageNumber = rs.stringOpt("voyage_number").flatMap(HandlingVoyageNumber(_).toOption),
-      operatorName = rs.stringOpt("operator_name"),
-      routeDeviation = rs.boolean("route_deviation"),
-      version = rs.int("version"),
-      recipientConfirmation = rs.stringOpt("recipient_confirmation")
+      HandlingActivity.Snapshot(
+        bookingId = rs.string("booking_id"),
+        eventType = et,
+        completionTime = rs.timestamp("event_completion_time").toInstant,
+        location = loc,
+        voyageNumber = rs.stringOpt("voyage_number").flatMap(HandlingVoyageNumber(_).toOption),
+        operatorName = rs.stringOpt("operator_name"),
+        routeDeviation = rs.boolean("route_deviation"),
+        version = rs.int("version"),
+        recipientConfirmation = rs.stringOpt("recipient_confirmation")
+      )
     )
 
   override def save(activity: HandlingActivity): Unit =

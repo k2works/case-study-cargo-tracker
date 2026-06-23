@@ -16,12 +16,14 @@ class HandlingActivitySpec extends AnyFunSuite with Matchers:
 
   test("register: Receive は voyageNumber なしで成立する"):
     val Right(ha) = HandlingActivity.register(
-      bookingId = "BK-000001",
-      eventType = HandlingType.Receive,
-      completionTime = now,
-      location = tyo,
-      voyageNumber = None,
-      operatorName = Some("山田")
+      HandlingActivity.RegisterRequest(
+        bookingId = "BK-000001",
+        eventType = HandlingType.Receive,
+        completionTime = now,
+        location = tyo,
+        voyageNumber = None,
+        operatorName = Some("山田")
+      )
     ): @unchecked
     ha.eventType shouldBe HandlingType.Receive
     ha.voyageNumber shouldBe None
@@ -31,56 +33,66 @@ class HandlingActivitySpec extends AnyFunSuite with Matchers:
 
   test("register: Load は voyageNumber 必須"):
     HandlingActivity.register(
-      bookingId = "BK-000002",
-      eventType = HandlingType.Load,
-      completionTime = now,
-      location = tyo,
-      voyageNumber = None,
-      operatorName = None
+      HandlingActivity.RegisterRequest(
+        bookingId = "BK-000002",
+        eventType = HandlingType.Load,
+        completionTime = now,
+        location = tyo,
+        voyageNumber = None,
+        operatorName = None
+      )
     ) shouldBe Left(HandlingActivity.VoyageRequired)
 
   test("register: Load + voyageNumber 提供で成立する"):
     val Right(ha) = HandlingActivity.register(
-      bookingId = "BK-000003",
-      eventType = HandlingType.Load,
-      completionTime = now,
-      location = tyo,
-      voyageNumber = Some(vy),
-      operatorName = None
+      HandlingActivity.RegisterRequest(
+        bookingId = "BK-000003",
+        eventType = HandlingType.Load,
+        completionTime = now,
+        location = tyo,
+        voyageNumber = Some(vy),
+        operatorName = None
+      )
     ): @unchecked
     ha.eventType shouldBe HandlingType.Load
     ha.voyageNumber shouldBe Some(vy)
 
   test("register: 空 bookingId は EmptyBookingId"):
     HandlingActivity.register(
-      bookingId = "",
-      eventType = HandlingType.Receive,
-      completionTime = now,
-      location = tyo,
-      voyageNumber = None,
-      operatorName = None
+      HandlingActivity.RegisterRequest(
+        bookingId = "",
+        eventType = HandlingType.Receive,
+        completionTime = now,
+        location = tyo,
+        voyageNumber = None,
+        operatorName = None
+      )
     ) shouldBe Left(HandlingActivity.EmptyBookingId)
 
   test("register: Claim は recipientConfirmation 必須 (US16 / IT6)"):
     HandlingActivity.register(
-      bookingId = "BK-CLAIM01",
-      eventType = HandlingType.Claim,
-      completionTime = now,
-      location = tyo,
-      voyageNumber = None,
-      operatorName = None,
-      recipientConfirmation = None
+      HandlingActivity.RegisterRequest(
+        bookingId = "BK-CLAIM01",
+        eventType = HandlingType.Claim,
+        completionTime = now,
+        location = tyo,
+        voyageNumber = None,
+        operatorName = None,
+        recipientConfirmation = None
+      )
     ) shouldBe Left(HandlingActivity.RecipientConfirmationRequired)
 
   test("register: Claim + recipientConfirmation 提供で成立する (US16)"):
     val Right(ha) = HandlingActivity.register(
-      bookingId = "BK-CLAIM02",
-      eventType = HandlingType.Claim,
-      completionTime = now,
-      location = tyo,
-      voyageNumber = None,
-      operatorName = Some("田中"),
-      recipientConfirmation = Some("署名: 山田太郎")
+      HandlingActivity.RegisterRequest(
+        bookingId = "BK-CLAIM02",
+        eventType = HandlingType.Claim,
+        completionTime = now,
+        location = tyo,
+        voyageNumber = None,
+        operatorName = Some("田中"),
+        recipientConfirmation = Some("署名: 山田太郎")
+      )
     ): @unchecked
     ha.eventType shouldBe HandlingType.Claim
     ha.recipientConfirmation shouldBe Some("署名: 山田太郎")

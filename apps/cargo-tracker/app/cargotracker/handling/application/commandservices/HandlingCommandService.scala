@@ -29,14 +29,16 @@ class HandlingCommandService @Inject() (repository: HandlingActivityRepository):
         .flatMap(HandlingVoyageNumber(_).toOption)
       activity <- HandlingActivity
         .register(
-          bookingId = command.bookingId,
-          eventType = eventType,
-          completionTime = command.completionTime,
-          location = location,
-          voyageNumber = voyageNumber,
-          operatorName = command.operatorName.filter(_.nonEmpty),
-          routeDeviation = command.routeDeviation,
-          recipientConfirmation = command.recipientConfirmation.filter(_.nonEmpty)
+          HandlingActivity.RegisterRequest(
+            bookingId = command.bookingId,
+            eventType = eventType,
+            completionTime = command.completionTime,
+            location = location,
+            voyageNumber = voyageNumber,
+            operatorName = command.operatorName.filter(_.nonEmpty),
+            routeDeviation = command.routeDeviation,
+            recipientConfirmation = command.recipientConfirmation.filter(_.nonEmpty)
+          )
         )
         .left
         .map {
