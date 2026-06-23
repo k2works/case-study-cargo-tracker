@@ -59,5 +59,35 @@ object NotificationPayloadJson:
         "location" -> p.location,
         "reason" -> p.reason
       )
+    case p: NotificationPayload.DelayNotified =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "newEstimatedArrival" -> p.newEstimatedArrival,
+        "responsePlan" -> p.responsePlan,
+        "reason" -> p.reason
+      )
+    case p: NotificationPayload.DamageReported =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "location" -> p.location,
+        "description" -> p.description
+      )
+    case p: NotificationPayload.LossEscalated =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "location" -> p.location,
+        "description" -> p.description,
+        "escalation" -> true
+      )
+    case p: NotificationPayload.ExceptionResponded =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "trackingNumber" -> p.trackingNumber,
+        "exceptionType" -> p.exceptionType,
+        "resolutionNotes" -> p.resolutionNotes
+      )
 
   def asString(payload: NotificationPayload): String = Json.stringify(toJson(payload))

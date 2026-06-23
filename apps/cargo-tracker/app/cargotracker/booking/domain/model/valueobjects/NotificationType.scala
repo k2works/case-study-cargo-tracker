@@ -9,6 +9,10 @@ enum NotificationType:
   case HandlingRecorded // 荷役作業記録通知（US15）
   case DeliveryCompleted // 配送完了通知（US16 / IT6、社内視点）。UI / 荷主向けは「引取済」と表現する（IT7 0.15 ユビキタス言語統一）
   case ManualStatusUpdated // 手動状態更新通知（US17 / IT6）
+  case DelayNotified // 遅延通知（US19 / IT7）
+  case DamageReported // 破損通知（US20 / IT7）
+  case LossEscalated // 紛失 + 管理職エスカレーション通知（US20 / IT7）
+  case ExceptionResponded // 例外対応報告通知（US19 / US20 / IT7）
 
 object NotificationType:
   def fromName(name: String): Option[NotificationType] =

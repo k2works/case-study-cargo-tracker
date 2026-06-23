@@ -63,3 +63,36 @@ object NotificationPayload:
       location: String,
       reason: String
   ) extends NotificationPayload
+
+  /** 遅延通知ペイロード（US19 / IT7）。 */
+  final case class DelayNotified(
+      bookingId: String,
+      trackingNumber: String,
+      newEstimatedArrival: String,
+      responsePlan: String,
+      reason: String
+  ) extends NotificationPayload
+
+  /** 破損通知ペイロード（US20 / IT7）。 */
+  final case class DamageReported(
+      bookingId: String,
+      trackingNumber: String,
+      location: String,
+      description: String
+  ) extends NotificationPayload
+
+  /** 紛失エスカレーション通知ペイロード（US20 / IT7、管理職向け）。 */
+  final case class LossEscalated(
+      bookingId: String,
+      trackingNumber: String,
+      location: String,
+      description: String
+  ) extends NotificationPayload
+
+  /** 例外対応報告通知ペイロード（US19 / US20 / IT7）。 */
+  final case class ExceptionResponded(
+      bookingId: String,
+      trackingNumber: String,
+      exceptionType: String,
+      resolutionNotes: String
+  ) extends NotificationPayload

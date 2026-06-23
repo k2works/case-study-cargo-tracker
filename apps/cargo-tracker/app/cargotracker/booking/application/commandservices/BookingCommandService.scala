@@ -184,6 +184,78 @@ class BookingCommandService @Inject() (
         }
       }
 
+  /** 遅延通知ログを記録（US19 / IT7）。Cargo の状態遷移は行わない。 */
+  def logDelayNotification(
+      bookingId: String,
+      trackingNumber: String,
+      newEstimatedArrival: String,
+      responsePlan: String,
+      reason: String
+  ): Either[String, Unit] =
+    findCargo(bookingId).map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.DelayNotified,
+        NotificationPayload.DelayNotified(
+          cargo.bookingId.value,
+          trackingNumber,
+          newEstimatedArrival,
+          responsePlan,
+          reason
+        )
+      )
+    }
+
+  /** 破損通知ログを記録（US20 / IT7）。 */
+  def logDamageReport(
+      bookingId: String,
+      trackingNumber: String,
+      location: String,
+      description: String
+  ): Either[String, Unit] =
+    findCargo(bookingId).map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.DamageReported,
+        NotificationPayload.DamageReported(cargo.bookingId.value, trackingNumber, location, description)
+      )
+    }
+
+  /** 紛失エスカレーション通知ログを記録（US20 / IT7、管理職向け）。 */
+  def escalateLoss(
+      bookingId: String,
+      trackingNumber: String,
+      location: String,
+      description: String
+  ): Either[String, Unit] =
+    findCargo(bookingId).map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.LossEscalated,
+        NotificationPayload.LossEscalated(cargo.bookingId.value, trackingNumber, location, description)
+      )
+    }
+
+  /** 例外対応報告通知ログを記録（US19 / US20 / IT7）。 */
+  def logExceptionResponse(
+      bookingId: String,
+      trackingNumber: String,
+      exceptionType: String,
+      resolutionNotes: String
+  ): Either[String, Unit] =
+    findCargo(bookingId).map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.ExceptionResponded,
+        NotificationPayload.ExceptionResponded(cargo.bookingId.value, trackingNumber, exceptionType, resolutionNotes)
+      )
+    }
+
+  private def findCargo(bookingId: String): Either[String, Cargo] =
+    BookingId(bookingId).left
+      .map(_ => CargoErrorMessages.invalidBookingIdMessage(bookingId))
+      .flatMap(id => repository.findById(id).toRight(CargoErrorMessages.bookingNotFoundMessage(bookingId)))
+
   /** 引取完了で Cargo を Delivered 遷移 + 配送完了通知を記録（US16 / IT6）。 */
   def completeDelivery(
       bookingId: String,
