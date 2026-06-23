@@ -200,180 +200,627 @@ gantt
 
 ## 設計
 
-### ドメインモデル（拡張）
+### ドメインモデル
+
+IT6 までで確立した 8 コンテキスト（Auth / Shipper / Estimation / Booking / Routing / Tracking / Handling / Billing）に対し、IT7 は **Tracking Context の `TrackingExceptionEvent` を本格活用**し、Booking 側で `BookingStatus.InException` 遷移と例外通知連携を整える。さらに **Snapshot ADT パターン（ADR 0014）** を Invoice / Cargo / HandlingActivity の reconstruct に適用、**Money 単通貨化（ADR 0015）** で shared.domain.Money に一本化、**Billing → Booking ACL（`BillingCargoQueryPort`）** と **HandlingOrchestrator** で集約間トランザクション境界を再設計する。
 
 ```plantuml
 @startuml
-title IT7 ドメインモデル拡張（Tracking + Booking + Billing）
+
+title IT7 ドメインモデル全体図（例外処理 + ACL + Orchestrator + Snapshot ADT）
+
+package "Shared Kernel" {
+  class Money <<value>> {
+    amount: Long
+    currency: String
+    --
+    + jpy(amount): Either
+    + multiplyByRate(r): Money
+  }
+  class Location <<value>> {
+    unLocode
+  }
+  class PricingService <<service>> {
+    + estimateCost(...)
+    + calculateActual(spec): (Money, LineItems)
+  }
+}
+
+package "Booking Context" {
+  class Cargo <<aggregate root>> {
+    bookingId
+    status: BookingStatus
+    itinerary: Option
+    trackingNumber: Option
+    invoiceId: Option
+    version
+    --
+    + markException()
+    + resolveException()
+  }
+  class "Cargo.Snapshot" as CargoSnapshot <<value>> {
+    全永続化フィールド
+    --
+    + reconstruct(s)
+  }
+  class Itinerary <<value>> {
+    legs: List[ItineraryLeg]
+  }
+  class ItineraryLeg <<value>> {
+    legNo
+    voyageNumber
+    fromUnLocode
+    toUnLocode
+  }
+  enum BookingStatus {
+    Preliminary
+    RouteProposed
+    RouteAssigned
+    Confirmed
+    TrackingIssued
+    InTransit
+    Delivered
+    InException
+    Settled
+    Cancelled
+  }
+  Cargo *-- BookingStatus
+  Cargo o-- Itinerary
+  Itinerary *-- "1..*" ItineraryLeg
+  Cargo .. CargoSnapshot
+}
 
 package "Tracking Context" {
-  class TrackingActivity {
-    + trackingNumber
-    + bookingId
-    + transportStatus
-    + events
-    + version
+  class TrackingActivity <<aggregate root>> {
+    trackingNumber
+    bookingId
+    transportStatus
+    events
+    exceptions
+    version
     --
-    + recordException(event)
-    + currentExceptionStatus()
+    + addEvent(e): Either
+    + addException(ex): Either
+    + resolveException(eventId, at): Either
+    + hasActiveException(): Boolean
+    + currentStatus(): TrackingStatus
   }
-
   class TrackingActivityEvent
-  class TrackingExceptionEvent {
-    + exceptionType
-    + location
-    + occurredAt
-    + description
-    + escalationFlag
-    + resolvedAt
+  class TrackingExceptionEvent <<entity>> {
+    eventId
+    exceptionType
+    location: TrackingLocation
+    occurredAt
+    description: Option
+    escalationFlag
+    resolvedAt: Option
+    resolutionNotes: Option
   }
-
   enum ExceptionType {
     Delay
     Damage
     Lost
     CustomsHold
   }
-
+  enum TrackingStatus {
+    NotReceived
+    Received
+    Loaded
+    OnboardCarrier
+    Unloaded
+    AwaitingClaim
+    Claimed
+    InException
+    Unknown
+  }
   TrackingActivity *-- "0..*" TrackingActivityEvent
   TrackingActivity *-- "0..*" TrackingExceptionEvent
   TrackingExceptionEvent --> ExceptionType
+  TrackingActivity --> TrackingStatus
 }
 
-package "Booking Context" {
-  class Cargo {
-    + bookingId
-    + status
-    + ...
+package "Handling Context" {
+  class HandlingActivity <<aggregate root>> {
+    bookingId
+    eventType
+    completionTime
+    location
+    voyageNumber
+    operatorName
+    routeDeviation
+    recipientConfirmation
+    recipientConfirmationType
+    version
     --
-    + markException()
+    + register(req)
+    + reconstruct(s)
   }
-
-  enum BookingStatus {
-    InTransit
-    Delivered
-    InException
-    ...
+  class "HandlingActivity.Snapshot" as HASnap <<value>>
+  class "HandlingActivity.RegisterRequest" as HAReq <<value>>
+  enum RecipientConfirmationType {
+    Signature
+    Stamp
+    IdCard
+    Code
   }
-
-  Cargo --> BookingStatus
+  HandlingActivity .. HASnap
+  HandlingActivity .. HAReq
+  HandlingActivity --> RecipientConfirmationType
 }
 
-package "Notification" {
-  enum NotificationType {
-    DelayNotified
-    DamageReported
-    LossEscalated
-    ExceptionResponded
-    ...
+package "Billing Context" {
+  class Invoice <<aggregate root>> {
+    invoiceId
+    cargoBookingId
+    shipperId
+    baseAmount: Money
+    discountRate
+    finalAmount: Money
+    paymentStatus
+    issuedAt
+    paidAt
+    version
+    --
+    + issue(snapshot)
+    + reconstruct(s)
+  }
+  class "Invoice.Snapshot" as InvSnap <<value>>
+  class BillingShipperId <<value>> {
+    shipperId
+    isCorporate
+  }
+  class InvoiceLineItem <<entity>> {
+    seqNumber
+    description
+    amount: Money
+  }
+  Invoice *-- "1..*" InvoiceLineItem
+  Invoice *-- BillingShipperId
+  Invoice .. InvSnap
+}
+
+package "Booking ACL (Billing 側 Port)" {
+  interface BillingCargoQueryPort <<port>> {
+    + findByBookingId(bid): Option[CargoSummary]
+  }
+  class CargoSummary <<value>> {
+    bookingId
+    shipperId
+    shipperType
+    status
+    routeSpec
+    cargoSpec
+    itinerary
+  }
+  BillingCargoQueryPort -- CargoSummary
+}
+
+package "Application Orchestration" {
+  class HandlingOrchestrator <<service>> {
+    + registerHandlingWithSideEffects(cmd):
+       Either[String, Activity]
+    --
+    単一 DB.localTx 境界:
+    HandlingActivity.save
+    + TrackingActivity.appendEvent
+    + Booking.logHandlingNotification
+    + (Claim 時) Cargo.deliver
   }
 }
+
+Invoice ..> PricingService : calculateActual
+Invoice ..> BillingCargoQueryPort : findByBookingId
+TrackingActivity ..> Cargo : 状態同期（addException/resolveException 経由）
+HandlingActivity ..> Cargo : (Claim) deliver via Orchestrator
+HandlingOrchestrator ..> HandlingActivity
+HandlingOrchestrator ..> TrackingActivity
+HandlingOrchestrator ..> Cargo
+
+note right of BookingStatus
+  IT7 で InException 遷移を有効化
+  TrackingActivity.addException 経由で
+  Cargo.markException が呼ばれる
+end note
+
+note right of TrackingExceptionEvent
+  IT7 新規本格活用
+  (IT6 までは enum 定義のみ)
+end note
+
+note right of HandlingOrchestrator
+  IT7 新規 (ADR 0016 候補 + H3 解消)
+  Controller 経由 Handling 連結を
+  単一 DB.localTx に集約
+end note
+
+note right of BillingCargoQueryPort
+  IT7 新規 (H2 + IT5 H6 同時解消)
+  Billing は Booking domain に直結せず
+  Port 経由で Cargo Summary を取得
+end note
+
+note bottom of InvSnap
+  ADR 0014 適用で 10 引数 reconstruct を
+  1 引数 (Snapshot) に統一
+  (Cargo / HandlingActivity も同様)
+end note
 
 @enduml
 ```
 
-### データモデル（追加分）
+#### 不変条件（IT7 追加分）
 
-```plantuml
-@startuml
-hide circle
-skinparam linetype ortho
+1. `TrackingActivity.addException` は時系列順序を強制（最終イベントより未来の `occurredAt`）。違反時 `OutOfOrder` を返す
+2. `TrackingActivity.addException` 成功時、`currentStatus()` が `InException` を導出し、`Cargo.markException()` がアプリ層で連動呼出される
+3. `ExceptionType.Lost` の `TrackingExceptionEvent` は `escalationFlag = true` を強制
+4. `TrackingActivity.resolveException(eventId, at)` は `resolvedAt = None` の未解決例外にのみ実行可、解決後 `currentStatus()` は最新の通常イベントから再導出
+5. `TrackingActivity.hasActiveException` 真の間、`addEvent` は警告フラグ付きで受理（通常運用継続可だが UI で警告表示）
+6. `Cargo.markException` は `InTransit / TrackingIssued / Delivered` のいずれかから `InException` に遷移可、それ以外は `InvalidStatusTransition`
+7. `Cargo.resolveException` は `InException` 状態のみで実行可、`previousStatus` (InTransit or Delivered) に戻す
+8. `Invoice.reconstruct(snapshot)` は `finalAmount == baseAmount.multiplyByRate(1 - discountRate)` を require で強制（バイパス防止）
+9. `HandlingActivity.register(request)` は `eventType == Claim` のとき `recipientConfirmation` + `recipientConfirmationType` ともに必須
+10. `Itinerary.legs` は 1 件以上を require、`legs(i).fromUnLocode == legs(i-1).toUnLocode`（接続性）を強制
+11. `BillingCargoQueryPort.findByBookingId` の戻り値 `CargoSummary` は read-only スナップショット（Billing から Booking 集約を変更不可）
+12. `HandlingOrchestrator.registerHandlingWithSideEffects` は単一 `DB.localTx` 境界で 4 操作を実行、いずれか失敗で全件ロールバック
 
-entity "tracking_exception_event" {
-  *id : BIGSERIAL
-  --
-  tracking_id : BIGINT FK
-  exception_type : VARCHAR(50) CHECK (Delay/Damage/Lost/CustomsHold)
-  occurred_at : TIMESTAMP
-  location_unlocode : VARCHAR(5)  // 注: data-model.md に追加が必要
-  escalation_flag : BOOLEAN
-  description : VARCHAR(500) NULL
-  resolved_at : TIMESTAMP NULL
-  resolution_notes : TEXT NULL
-  version : INT
-  created_at : TIMESTAMP
-  updated_at : TIMESTAMP
-}
+#### BookingStatus 状態遷移マトリクス（IT7 拡張版）
 
-entity "cargo_itinerary_leg" {
-  *id : BIGSERIAL
-  --
-  cargo_id : BIGINT FK
-  leg_no : INT (1..N)
-  voyage_number : VARCHAR(20)
-  from_unlocode : VARCHAR(5)
-  to_unlocode : VARCHAR(5)
-  created_at : TIMESTAMP
-}
+| from \ to | InTransit | Delivered | **InException** | Settled | Cancelled |
+|-----------|:---------:|:---------:|:---------------:|:-------:|:---------:|
+| **TrackingIssued** | ✓（IT5）| ✓（US16）| **✓（US19/20）** | - | - |
+| **InTransit** | - | ✓（US16）| **✓（US19/20）** | - | - |
+| **Delivered** | - | - | **✓（US20 紛失）** | ✓（IT8） | - |
+| **InException** | - | - | - | - | ✓（業務判断） |
 
-@enduml
+太字は IT7 で新規追加する遷移（`* → InException`、US19/US20 経由）。`InException → InTransit/Delivered/TrackingIssued` への復帰は `resolveException` で前状態に戻す（不変条件 7）。
+
+#### TrackingStatus 導出ロジック（IT7 拡張）
+
+`TrackingActivity.currentStatus()` は以下の優先順位で導出:
+
+1. **未解決の `TrackingExceptionEvent` が存在** → `InException`（IT7 新規）
+2. 最終 `TrackingActivityEvent.eventType` から導出（IT5 既存）:
+    - `Receive` → `Received`
+    - `Load` → `Loaded`
+    - `Unload` → `Unloaded`
+    - `Claim` → `Claimed`
+    - `Customs` → `InException`（IT5 既存。IT7 で `CustomsHold` 例外への移行を推奨）
+3. イベントなし → `NotReceived`
+
+### データモデル
+
+V17 まで適用済の IT6 状態に対し、IT7 で **V18 / V19 / V20 / V21** を追加する。命名規約（単数形テーブル / `id BIGSERIAL PK + 業務キー UK` / `version INT` / 監査カラム / FK は `id` 参照）は data-model.md に準拠する。
+
+#### V18: handling_activity.recipient_confirmation_type（US16 review M6 解消）
+
+```sql
+-- IT7 0.12: 荷受人確認の種別フィールド追加（IT6 review M6）
+ALTER TABLE handling_activity
+  ADD COLUMN recipient_confirmation_type VARCHAR(20)
+    CHECK (recipient_confirmation_type IN ('Signature', 'Stamp', 'IdCard', 'Code'));
+COMMENT ON COLUMN handling_activity.recipient_confirmation_type IS 'Claim 時のみ必須（recipient_confirmation と対）';
 ```
 
-### ユーザーインターフェース（追加分）
+#### V19: cargo_itinerary_leg 構造拡張（IT5 申し送り 0.10 / O3 解消）
 
-#### ビュー: 追跡詳細画面 (`/tracking/:trackingNumber`) 拡張
+```sql
+-- IT7 0.14: Itinerary に from/to UnLocode を追加し routeDeviation を正式判定
+-- 既存 cargo_itinerary_leg (V10) は voyage_number のみ → from/to を追加
+ALTER TABLE cargo_itinerary_leg
+  ADD COLUMN from_unlocode VARCHAR(5),
+  ADD COLUMN to_unlocode VARCHAR(5);
+CREATE INDEX idx_cargo_itinerary_leg_from ON cargo_itinerary_leg (from_unlocode);
+CREATE INDEX idx_cargo_itinerary_leg_to ON cargo_itinerary_leg (to_unlocode);
+COMMENT ON COLUMN cargo_itinerary_leg.from_unlocode IS 'IT7: routeDeviation 判定用の出発港';
+COMMENT ON COLUMN cargo_itinerary_leg.to_unlocode IS 'IT7: routeDeviation 判定用の到着港';
+```
+
+#### V20: tracking_exception_event（US19/US20、data-model.md L1015 準拠）
+
+```sql
+-- IT7 US19/US20: 追跡例外イベント
+-- data-model.md は location カラムなしだが、ドメイン上 TrackingLocation を保持するため
+-- location_unlocode を追加（同時に data-model.md にも反映）
+CREATE TABLE tracking_exception_event (
+  id BIGSERIAL PRIMARY KEY,
+  tracking_id BIGINT NOT NULL REFERENCES tracking_activity (id) ON DELETE CASCADE,
+  exception_type VARCHAR(50) NOT NULL
+    CHECK (exception_type IN ('Delay', 'Damage', 'Lost', 'CustomsHold')),
+  occurred_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  location_unlocode VARCHAR(5) NOT NULL,
+  escalation_flag BOOLEAN NOT NULL DEFAULT FALSE,
+  description VARCHAR(500),
+  resolved_at TIMESTAMP WITH TIME ZONE,
+  resolution_notes TEXT,
+  version INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_tracking_exception_tracking ON tracking_exception_event (tracking_id);
+CREATE INDEX idx_tracking_exception_type ON tracking_exception_event (exception_type);
+CREATE INDEX idx_tracking_exception_unresolved ON tracking_exception_event (tracking_id)
+  WHERE resolved_at IS NULL;  -- 未解決例外の高速検索
+```
+
+#### V21: notification_log CHECK 拡張（US19/US20）
+
+```sql
+-- IT7 US19/US20: 例外通知 4 種を追加
+ALTER TABLE notification_log DROP CONSTRAINT ck_notification_log_type;
+ALTER TABLE notification_log ADD CONSTRAINT ck_notification_log_type
+    CHECK (type IN ('RouteNotified', 'BookingConfirmed', 'BookingCancelled',
+                    'TrackingIssued', 'HandlingRecorded',
+                    'ManualStatusUpdated', 'DeliveryCompleted',
+                    'DelayNotified', 'DamageReported', 'LossEscalated', 'ExceptionResponded'));
+```
+
+#### 既存テーブル一覧（参考）
+
+| テーブル | バージョン | IT |
+|---------|----------|-----|
+| user, shipper, cargo, voyage, carrier_movement, voyage_supported_cargo_type, estimate, route_candidate | V1-V8 | IT1-IT3 |
+| route_candidate_selection / route_candidate_selection_leg | V9 | IT4 |
+| cargo_itinerary_leg（voyage_number のみ） | V10 | IT4 |
+| notification_log | V11 | IT4 |
+| tracking_activity（+ cargo.tracking_number） | V12 | IT5 |
+| handling_activity | V13 | IT5 |
+| tracking_handling_event（+ notification_log CHECK 拡張） | V14 | IT5 |
+| handling_activity.recipient_confirmation | V15 | IT6 |
+| notification_log CHECK 拡張（ManualStatusUpdated / DeliveryCompleted） | V16 | IT6 |
+| invoice / invoice_line_item / payment / cargo.invoice_id / invoice_id_seq | V17 | IT6 |
+| **handling_activity.recipient_confirmation_type** | **V18** | **IT7** |
+| **cargo_itinerary_leg.from/to_unlocode 追加** | **V19** | **IT7** |
+| **tracking_exception_event** | **V20** | **IT7** |
+| **notification_log CHECK 拡張（DelayNotified / DamageReported / LossEscalated / ExceptionResponded）** | **V21** | **IT7** |
+
+### ユーザーインターフェース
+
+ui_design.md L82（追跡詳細）の「状態更新・例外登録（管理者）」機能を IT7 で具体化する。追跡詳細画面に例外履歴セクション + 例外記録モーダル + 対応報告モーダルを追加、荷役登録に確認種別セレクト、ナビバーに変更なし。
+
+#### ビュー
 
 ```plantuml
 @startsalt
 {+
-{/ <b>CargoTracker</b> | ダッシュボード | 貨物追跡 | 航海管理 | [ログアウト] }
-{
-  <b>追跡 TN-000123</b>
-  ---
-  予約番号 | BK-000045
-  現在状態 | <color:red>InException</color>
-  現在位置 | USNYC
-  ---
-  <b>追跡イベント履歴</b>
-  | 発生時刻 | 種別 | 場所 | 航海番号 |
-  | 2099-09-01 10:00 | Receive | JPYOK | - |
-  | 2099-09-05 14:30 | Load | JPYOK | VY-001 |
-  ---
-  <b>例外履歴</b>
-  | 発生時刻 | 種別 | 場所 | 説明 | 緊急 | 解決日時 |
-  | 2099-09-08 12:00 | Delay | USNYC | 通関遅延 | - | - |
-  ---
-  [別の貨物を追跡] | [状態を手動更新] | [例外を記録] | [対応報告]
+  追跡詳細（拡張 / `/tracking/:trackingNumber`、US19/US20）
+  {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 貨物追跡 | 荷役管理 | [ログアウト] }
+    {
+      追跡番号 | "TN-000123"
+      現在状態 | "<b>InException</b>"
+      現在位置 | "USNYC"
+    }
+    ---
+    {
+      <b>追跡イベント履歴</b>
+      | <b>発生時刻</b> | <b>種別</b> | <b>場所</b> | <b>航海番号</b> |
+      | 2099-09-01 10:00 | Receive | JPYOK | - |
+      | 2099-09-05 14:30 | Load | JPYOK | VY-001 |
+    }
+    ---
+    {
+      <b>例外履歴</b>
+      | <b>発生時刻</b> | <b>種別</b> | <b>場所</b> | <b>説明</b> | <b>緊急</b> | <b>解決日時</b> |
+      | 2099-09-08 12:00 | Delay | USNYC | "通関手続き遅延" | - | - |
+    }
+    ---
+    [別の貨物を追跡] | [状態を手動更新] | [<b>例外を記録</b>] | [<b>対応報告</b>]
+  }
 }
+----------------
+{+
+  例外記録モーダル（拡張、US19/US20）
+  {+
+    {
+      例外種別 | ^Delay/Damage/Lost/CustomsHold^
+      発生場所（UN/LOCODE） | "USNYC"
+      発生日時             | "2099-09-08 12:00"
+      説明（任意）         | "通関手続きで荷物が滞留中"
+    }
+    {  : Lost 選択時のみ : <color:red>緊急フラグ自動 ON</color> }
+    [キャンセル] | [記録]
+  }
+}
+----------------
+{+
+  対応報告モーダル（新規、US19/US20）
+  {+
+    {
+      対象例外     | "Delay (2099-09-08 12:00 @USNYC)"
+      対応方針     | "代替ルート（VY-003）で再輸送、新到着予定 2099-09-15"
+      解決日時     | "2099-09-09 09:00"
+    }
+    [キャンセル] | [解決済みとして記録]
+  }
+}
+----------------
+{+
+  荷役登録（拡張、IT6 review M6 / US16 補正）
+  {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 荷役管理 | [ログアウト] }
+    {
+      追跡番号 | "TN-000001"
+      [(.) Receive  () Load  () Unload  () <b>Claim</b>]
+      作業完了日時 | "2099-08-01 10:00"
+      作業場所     | "USNYC"
+      [Claim 時のみ表示]
+      確認種別     | ^Signature/Stamp/IdCard/Code^
+      確認内容     | "署名画像URL or コード"
+    }
+    [登録]
+  }
 }
 @endsalt
 ```
+
+#### 画面一覧（IT7 追加・拡張）
+
+| 画面名 | URL | 説明 | アクセスロール | 関連 US |
+|--------|-----|------|---------------|---------|
+| 追跡詳細（拡張）| `/tracking/:trackingNumber` | 例外履歴セクション + 「例外を記録」「対応報告」ボタン（Tracker/MasterAdmin のみ）| Shipper, Tracker, MasterAdmin | **US19**, **US20** |
+| 荷役登録（拡張）| `/handling/new` | Claim 時に確認種別セレクト追加（IT6 M6 補正）| Handler, Tracker | US16（補正） |
+| 請求書発行（拡張）| `/billing/invoices/new` | 法人フラグ手入力廃止 + 料金内訳表示（IT6 H5/H6 解消）| Settlement, MasterAdmin | US21（補正） |
+| 請求書詳細（拡張）| `/billing/invoices/:invoiceId` | 料金内訳 4 項目表示（基本料金 / 距離料金 / 重量料金 / 貨物種別料金）| Settlement, MasterAdmin | US21（補正） |
 
 #### インタラクション
 
 ```plantuml
 @startuml
-title US19/US20 例外処理画面遷移
-[*] --> 追跡詳細
-state 追跡詳細 : /tracking/:trackingNumber
-追跡詳細 --> 例外記録モーダル : 「例外を記録」ボタン
-例外記録モーダル --> 追跡詳細 : POST /exceptions (PRG, success)
-例外記録モーダル --> 例外記録モーダル : バリデーションエラー
-追跡詳細 --> 対応報告モーダル : 「対応報告」ボタン (未解決例外行から)
-対応報告モーダル --> 追跡詳細 : POST /exceptions/:eventId/resolve (PRG, success)
-対応報告モーダル --> 対応報告モーダル : バリデーションエラー
+
+title 画面遷移図（IT7 例外処理導線 + 補正画面）
+
+[*] --> ログイン
+state ログイン
+ログイン --> ダッシュボード : ログイン成功（GET /）
+
+state ダッシュボード
+ダッシュボード --> 追跡詳細 : 「貨物追跡」→ 番号入力（GET /tracking/:n）
+ダッシュボード --> 請求書一覧 : 「請求管理」（GET /billing/invoices）[Settlement]
+ダッシュボード --> 荷役作業一覧 : 「荷役管理」（GET /handling）[Handler]
+
+state 追跡詳細 : URL: /tracking/:trackingNumber
+追跡詳細 --> 例外記録モーダル : 「例外を記録」[Tracker/MasterAdmin]（GET /exceptions/new、htmx hx-get）
+追跡詳細 --> 対応報告モーダル : 「対応報告」（未解決例外行から、GET /exceptions/:id/resolve-form、htmx）
+追跡詳細 --> 追跡詳細 : 30 秒 htmx ポーリング（IT5 既存）+ 例外履歴も含む
+
+state 例外記録モーダル : URL: htmx 部分表示
+例外記録モーダル --> 追跡詳細 : 「記録」成功（PRG: POST /tracking/:n/exceptions → /tracking/:n + alert-success + InException 遷移）
+例外記録モーダル --> 例外記録モーダル : 種別/場所/日時バリデーション失敗（alert-danger、自己ループ）
+
+state 対応報告モーダル : URL: htmx 部分表示
+対応報告モーダル --> 追跡詳細 : 「解決済み」成功（PRG: POST /tracking/:n/exceptions/:eventId/resolve → /tracking/:n + alert-success）
+対応報告モーダル --> 対応報告モーダル : 対応方針未入力 / 解決日時不正（alert-danger、自己ループ）
+
+state 荷役作業登録 : URL: /handling/new
+荷役作業登録 --> 荷役作業一覧 : Claim 登録成功（PRG、確認種別 + 内容両方必須）
+荷役作業登録 --> 荷役作業登録 : Claim だが確認種別 or 内容欠落（alert-danger、自己ループ）
+
+state 請求書発行（補正） : URL: /billing/invoices/new
+請求書発行（補正） --> 請求書発行（補正） : 予約 ID 入力時、Booking から法人/個人を自動判定（htmx hx-get /billing/invoices/preview）
+請求書発行（補正） --> 請求書詳細 : 「発行」成功（PRG）
+
+ダッシュボード --> [*] : ログアウト
 @enduml
 ```
 
-- フィードバック: 成功 = `alert-success`, バリデーション失敗 = `alert-danger`, 警告 (Lost 緊急フラグ) = `alert-warning`
-- htmx パターン: 例外履歴セクションは追跡タイムラインと同様に `hx-trigger="every 30s"` で部分更新
-- ロール制御: Tracker / MasterAdmin のみ「例外を記録」「対応報告」ボタン表示 (`@if(roles.contains(Role.Tracker) || roles.contains(Role.MasterAdmin))`)
+#### htmx パターン
 
-### 主要 API（追加分）
+| パターン | 採用箇所 | 実装 |
+|---------|---------|------|
+| htmx モーダル取得 | 「例外を記録」「対応報告」 | `hx-get="/tracking/:n/exceptions/new" hx-target="#modal" hx-trigger="click"` で空フォーム取得、送信は通常 POST + PRG |
+| htmx 部分更新 | 例外履歴セクション | 追跡タイムラインの 30 秒ポーリング (`hx-trigger="every 30s"`) に統合 |
+| htmx エラー処理 | 楽観ロック競合（IT6 H8 補正） | `htmx:responseError` を listener で受け `alert-danger` を `#flash-area` に挿入、「再読込してください」表示 |
+| htmx 自動判定 | 請求書発行画面の予約 ID 入力 | `hx-get="/billing/invoices/preview?bookingId=" hx-trigger="change delay:300ms"` で法人/個人 + 料金内訳 4 項目を取得 |
+| 通常 POST + PRG | 例外記録 / 対応報告 / 荷役登録 / 請求書発行 | フォーム送信 → SEE_OTHER → 詳細・一覧画面に flash success/error |
 
-| メソッド | エンドポイント | 説明 |
-|---------|---------------|------|
-| POST | `/tracking/:trackingNumber/exceptions` | 例外記録（種別 / 場所 / 日時 / description）。ui_design.md L82 で「追跡詳細画面の管理者機能」として定義済みの動作の REST 表現 |
-| POST | `/tracking/:trackingNumber/exceptions/:eventId/resolve` | 対応報告 + `resolved_at` / `resolution_notes` 永続化 |
-| GET | `/tracking/:trackingNumber` | 詳細画面に例外履歴 + escalationFlag 表示 (ui_design.md L82 拡張) |
+#### フィードバックメッセージ
+
+| トリガー | スタイル | メッセージ例 |
+|---------|---------|------------|
+| US19 遅延記録成功 | `alert-success` | 「例外（Delay）を記録しました。荷主に遅延通知を送信しました」 |
+| US19 対応報告成功 | `alert-success` | 「対応報告を送信しました（新到着予定: 2099-09-15）」 |
+| US20 紛失記録 + 緊急 | `alert-warning` | 「例外（Lost）を記録しました。<b>緊急フラグ ON</b> で管理職にエスカレーション通知を送信しました」 |
+| US20 破損記録成功 | `alert-success` | 「例外（Damage）を記録しました。荷主に破損通知を送信しました」 |
+| 時系列順序違反（記録日時 < 最終イベント時刻） | `alert-danger` | 「発生日時が直近の追跡イベントより過去です。日時を確認してください」 |
+| 楽観ロック競合（IT6 H8 補正） | `alert-danger` | 「他のユーザーが先に更新しました。画面を再読み込みしてください」 |
+| 荷受人確認種別欠落（IT6 M6 補正） | `alert-danger` | 「引取作業には確認種別（署名/受領印/身分証/コード）と内容の両方が必須です」 |
+| 請求書発行で予約が法人荷主 | `alert-info`（情報表示）| 「法人荷主のため割引率 5.00% が自動適用されます」 |
+
+### ディレクトリ構成
+
+IT6 までの構成に対し、IT7 で以下を追加・変更する。
+
+```text
+apps/cargo-tracker/
+├── app/
+│   ├── cargotracker/
+│   │   ├── booking/
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/Cargo.scala               # IT7 拡張: Snapshot ADT + markException + resolveException
+│   │   │   │   └── valueobjects/
+│   │   │   │       ├── Itinerary.scala                  # IT7 拡張: legs に from/to UnLocode
+│   │   │   │       └── ItineraryLeg.scala               # IT7 新規 (O3 解消)
+│   │   │   ├── application/
+│   │   │   │   ├── acl/
+│   │   │   │   │   └── BookingCargoAclAdapter.scala     # IT7 新規 (Billing 側 Port の Booking 実装)
+│   │   │   │   └── commandservices/
+│   │   │   │       ├── BookingCommandService.scala      # IT7 拡張: logDelayNotification / escalateException / logExceptionResponded
+│   │   │   │       └── HandlingOrchestrator.scala       # IT7 新規 (H3 解消)
+│   │   │   └── infrastructure/repositories/
+│   │   │       └── ScalikeJdbcCargoRepository.scala     # IT7 拡張: Snapshot 経由 reconstruct
+│   │   ├── tracking/
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/TrackingActivity.scala    # IT7 拡張: exceptions / addException / resolveException / hasActiveException
+│   │   │   │   ├── entities/TrackingExceptionEvent.scala # IT7 新規
+│   │   │   │   └── enums/ExceptionType.scala            # IT7 新規 (Delay/Damage/Lost/CustomsHold)
+│   │   │   ├── application/commandservices/
+│   │   │   │   └── TrackingCommandService.scala         # IT7 拡張: recordException / resolveException + OptimisticLock Either 化
+│   │   │   └── infrastructure/repositories/
+│   │   │       └── ScalikeJdbcTrackingExceptionEventRepository.scala  # IT7 新規
+│   │   ├── handling/
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/HandlingActivity.scala    # IT7 拡張: Snapshot + RegisterRequest, recipientConfirmationType
+│   │   │   │   └── enums/RecipientConfirmationType.scala # IT7 新規
+│   │   │   └── infrastructure/repositories/
+│   │   │       └── ScalikeJdbcHandlingActivityRepository.scala  # IT7 拡張: Snapshot 経由 reconstruct
+│   │   ├── billing/
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/Invoice.scala             # IT7 拡張: Snapshot ADT
+│   │   │   │   ├── valueobjects/
+│   │   │   │   │   ├── InvoiceLineItem.scala            # IT7 新規 (料金内訳)
+│   │   │   │   │   └── (Money.scala 削除 → shared.domain.Money に統合)
+│   │   │   │   └── ports/BillingCargoQueryPort.scala    # IT7 新規 (H2 解消)
+│   │   │   ├── application/commandservices/
+│   │   │   │   └── BillingCommandService.scala          # IT7 拡張: Port 経由、法人フラグ自動判定、料金内訳生成
+│   │   │   └── interfaces/web/
+│   │   │       └── InvoiceController.scala              # IT7 拡張: 法人フラグ手入力削除
+│   │   └── shared/
+│   │       └── domain/
+│   │           ├── Money.scala                          # IT7 拡張: multiplyByRate extension 追加
+│   │           └── pricing/PricingService.scala         # IT7 拡張: calculateActual で InvoiceLineItem 返却
+│   ├── views/
+│   │   ├── tracking/detail.scala.html                   # IT7 拡張: 例外履歴 + 記録/対応モーダル + Tracker ロール限定 + 手動更新理由
+│   │   ├── handling/newForm.scala.html                  # IT7 拡張: recipient_confirmation_type セレクト
+│   │   └── billing/
+│   │       ├── newForm.scala.html                       # IT7 拡張: 法人フラグ手入力削除、htmx 自動判定
+│   │       └── detail.scala.html                        # IT7 拡張: 料金内訳 4 項目
+│   └── test/
+│       ├── cargotracker/arch/
+│       │   └── HexagonalArchitectureSpec.scala          # IT7 拡張: contexts に billing/handling/tracking/notification 追加 (H1)
+│       └── cargotracker/billing/infrastructure/
+│           └── ScalikeJdbcInvoiceRepositoryIntegrationSpec.scala  # IT7 新規 (M9 楽観ロック IT)
+├── conf/
+│   ├── routes                                           # IT7 拡張: 4 エンドポイント追加 (例外記録/対応報告/プレビュー)
+│   └── db/migration/default/
+│       ├── V18__handling_recipient_confirmation_type.sql # IT7 新規
+│       ├── V19__cargo_itinerary_leg_from_to.sql         # IT7 新規
+│       ├── V20__create_tracking_exception_event.sql     # IT7 新規
+│       └── V21__notification_log_check_exceptions.sql   # IT7 新規
+└── docs/adr/
+    ├── 0014-aggregate-snapshot-adt.md                   # IT7 で承認
+    ├── 0015-billing-single-currency-jpy.md              # IT7 0.4 で新規
+    └── 0016-cross-context-orchestrator-pattern.md       # IT7 0.3 で新規 (候補)
+```
+
+### API 設計
+
+| メソッド | エンドポイント | 説明 | 関連 US | 認証 |
+|---------|---------------|------|---------|------|
+| POST | `/tracking/:trackingNumber/exceptions` | 例外記録（PRG）。種別 / 場所 / 日時 / description / (Lost 時) escalationFlag 自動 ON | US19/US20 | Tracker/MasterAdmin |
+| GET | `/tracking/:trackingNumber/exceptions/new` | 例外記録モーダル取得（htmx） | US19/US20 | Tracker/MasterAdmin |
+| POST | `/tracking/:trackingNumber/exceptions/:eventId/resolve` | 対応報告（PRG）。resolved_at + resolution_notes 永続化 + Cargo.resolveException 連動 | US19/US20 | Tracker/MasterAdmin |
+| GET | `/tracking/:trackingNumber/exceptions/:eventId/resolve-form` | 対応報告モーダル取得（htmx） | US19/US20 | Tracker/MasterAdmin |
+| GET | `/billing/invoices/preview` | 料金内訳 + 法人/個人判定 htmx プレビュー（IT6 H5/H6 補正） | US21 補正 | Settlement |
+| POST | `/handling` | 荷役登録（recipient_confirmation_type 必須化 IT6 M6 補正） | US16 補正 | Handler |
 
 ### ADR
 
-| ADR | タイトル | ステータス |
-|-----|---------|-----------|
-| [ADR-0014](../adr/0014-aggregate-snapshot-adt.md) | 集約 Snapshot ADT 導入 | 提案 → IT7 で承認予定 |
-| ADR-0015 | Billing 単通貨 JPY、`shared.domain.Money` 一本化 | 0.4 で起票 |
-| ADR-0016（候補） | コンテキスト間 Orchestrator パターン | 0.3 の HandlingOrchestrator 実装と並行検討 |
+| ADR | タイトル | ステータス | 関連タスク |
+|-----|---------|-----------|------|
+| [ADR 0014](../adr/0014-aggregate-snapshot-adt.md) | 集約 reconstruct / register に Snapshot ADT を導入し SonarQube MAJOR Code Smell 4 件を解消 | 提案 → **IT7 で承認**（0.16 で確認）| 0.5, 0.6, 0.7 |
+| ADR 0015 | Billing は単通貨 JPY、`shared.domain.Money` 一本化（IT6 H4 解消）| 0.4 で起票 | 0.4 |
+| ADR 0016（候補）| コンテキスト間 Orchestrator パターン（`HandlingOrchestrator` 経由で単一 DB.localTx 境界）| 0.3 で起案検討 | 0.3 |
+| ADR 0017（候補）| ArchUnit contexts ルール拡張ガイドライン（IT7 0.1 の知見を将来コンテキスト追加時に再利用）| 0.1 完了後に検討 | 0.1 |
 
 ---
 
