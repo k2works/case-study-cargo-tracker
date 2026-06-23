@@ -695,9 +695,9 @@ state 荷役作業登録 : URL: /handling/new
 荷役作業登録 --> 荷役作業一覧 : Claim 登録成功（PRG、確認種別 + 内容両方必須）
 荷役作業登録 --> 荷役作業登録 : Claim だが確認種別 or 内容欠落（alert-danger、自己ループ）
 
-state 請求書発行（補正） : URL: /billing/invoices/new
-請求書発行（補正） --> 請求書発行（補正） : 予約 ID 入力時、Booking から法人/個人を自動判定（htmx hx-get /billing/invoices/preview）
-請求書発行（補正） --> 請求書詳細 : 「発行」成功（PRG）
+state 請求書発行補正 : URL: /billing/invoices/new
+請求書発行補正 --> 請求書発行補正 : 予約 ID 入力時、Booking から法人/個人を自動判定（htmx hx-get /billing/invoices/preview）
+請求書発行補正 --> 請求書詳細 : 「発行」成功（PRG）
 
 ダッシュボード --> [*] : ログアウト
 @enduml
