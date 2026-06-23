@@ -169,7 +169,8 @@ class BookingCommandService @Inject() (
       bookingId: String,
       trackingNumber: String,
       status: String,
-      location: String
+      location: String,
+      reason: String
   ): Either[String, Unit] =
     BookingId(bookingId).left
       .map(_ => CargoErrorMessages.invalidBookingIdMessage(bookingId))
@@ -178,7 +179,7 @@ class BookingCommandService @Inject() (
           logNotification(
             cargo,
             NotificationType.ManualStatusUpdated,
-            NotificationPayload.ManualStatusUpdated(cargo.bookingId.value, trackingNumber, status, location)
+            NotificationPayload.ManualStatusUpdated(cargo.bookingId.value, trackingNumber, status, location, reason)
           )
         }
       }

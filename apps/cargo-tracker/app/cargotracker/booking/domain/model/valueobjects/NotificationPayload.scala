@@ -55,10 +55,11 @@ object NotificationPayload:
       recipientConfirmation: String
   ) extends NotificationPayload
 
-  /** 手動状態更新通知ペイロード（US17 / `TrackingCommandService.updateStatus`）。 */
+  /** 手動状態更新通知ペイロード（US17 / `TrackingCommandService.updateStatus`、IT7 0.13 で `reason` 追加）。 */
   final case class ManualStatusUpdated(
       bookingId: String,
       trackingNumber: String,
       status: String,
-      location: String
+      location: String,
+      reason: String
   ) extends NotificationPayload

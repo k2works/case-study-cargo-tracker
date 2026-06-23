@@ -56,7 +56,8 @@ object NotificationPayloadJson:
         "bookingId" -> p.bookingId,
         "trackingNumber" -> p.trackingNumber,
         "status" -> p.status,
-        "location" -> p.location
+        "location" -> p.location,
+        "reason" -> p.reason
       )
 
   def asString(payload: NotificationPayload): String = Json.stringify(toJson(payload))
