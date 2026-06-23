@@ -104,8 +104,8 @@ date: 2026-06-23
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | Tracking Context 拡張: `TrackingExceptionEvent` エンティティ新設（domain-model.md L 準拠: `exceptionType: ExceptionType` / `location: TrackingLocation` / `occurredAt` / `description: Option[String]` / `escalationFlag: Boolean` / `resolvedAt: Option[Instant]`）、`ExceptionType` enum (Delay / Damage / Lost / CustomsHold) + `TrackingActivity.addException` / `resolveException` / `hasActiveException` / `TrackingStatus.InException` 導出ロジック | 5h | [ ] |
-| 1.2 | Flyway V20: `tracking_exception_event` テーブル（data-model.md 準拠: `tracking_id` FK / `exception_type VARCHAR(50)` CHECK / `occurred_at` / `escalation_flag BOOLEAN` / `description VARCHAR(500)` / `resolved_at` / `resolution_notes TEXT` / 監査）+ ※location は IT7 で `location_unlocode` カラム追加し data-model.md にも反映 | 2h | [ ] |
+| 1.1 | Tracking Context 拡張: `TrackingExceptionEvent` エンティティ新設（domain-model.md L 準拠: `exceptionType: ExceptionType` / `location: TrackingLocation` / `occurredAt` / `description: Option[String]` / `escalationFlag: Boolean` / `resolvedAt: Option[Instant]`）、`ExceptionType` enum (Delay / Damage / Lost / CustomsHold) + `TrackingActivity.addException` / `resolveException` / `hasActiveException` / `TrackingStatus.InException` 導出ロジック | 5h | [x] |
+| 1.2 | Flyway V20: `tracking_exception_event` テーブル（data-model.md 準拠: `tracking_id` FK / `exception_type VARCHAR(50)` CHECK / `occurred_at` / `escalation_flag BOOLEAN` / `description VARCHAR(500)` / `resolved_at` / `resolution_notes TEXT` / 監査）+ ※location は IT7 で `location_unlocode` カラム追加し data-model.md にも反映 | 2h | [x] |
 | 1.3 | `TrackingCommandService.recordException(RecordExceptionCommand)` 実装: 楽観ロック付き、TrackingStatus を `currentStatus()` 経由で `InException` 導出 | 4h | [ ] |
 | 1.4 | `BookingCommandService.logDelayNotification` + `NotificationType.DelayNotified` + `NotificationPayload.DelayNotified` (新到着予定日 / 対応方針 / 理由) | 3h | [ ] |
 | 1.5 | Flyway V21: `notification_log` CHECK 拡張（`DelayNotified` / `DamageReported` / `LossEscalated` / `ExceptionResponded` 4 種追加） | 1h | [ ] |
