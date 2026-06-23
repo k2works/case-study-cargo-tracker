@@ -37,6 +37,40 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
       )
       store(activity.bookingId.value) = withNewVersion
       withNewVersion
+    override def appendException(
+        activity: TrackingActivity,
+        newException: cargotracker.tracking.domain.model.entities.TrackingExceptionEvent
+    ): TrackingActivity =
+      val current = store(activity.bookingId.value)
+      val updated = current.addException(newException)
+      val withNewVersion = TrackingActivity.reconstruct(
+        trackingNumber = updated.trackingNumber,
+        bookingId = updated.bookingId,
+        transportStatus = updated.transportStatus,
+        events = updated.events,
+        version = updated.version + 1,
+        exceptions = updated.exceptions
+      )
+      store(activity.bookingId.value) = withNewVersion
+      withNewVersion
+    override def updateExceptionResolution(
+        activity: TrackingActivity,
+        index: Int,
+        resolvedAt: java.time.Instant,
+        resolutionNotes: String
+    ): TrackingActivity =
+      val current = store(activity.bookingId.value)
+      val Right(updated) = current.resolveException(index, resolvedAt, resolutionNotes): @unchecked
+      val withNewVersion = TrackingActivity.reconstruct(
+        trackingNumber = updated.trackingNumber,
+        bookingId = updated.bookingId,
+        transportStatus = updated.transportStatus,
+        events = updated.events,
+        version = updated.version + 1,
+        exceptions = updated.exceptions
+      )
+      store(activity.bookingId.value) = withNewVersion
+      withNewVersion
 
   test("assign: 新規予約に対して採番し TrackingActivity を初期化（NotReceived）"):
     val repo = new InMemoryRepo
@@ -100,6 +134,18 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
       override def appendEvent(
           a: TrackingActivity,
           newEvent: cargotracker.tracking.domain.model.entities.TrackingActivityEvent
+      ): TrackingActivity =
+        throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
+      override def appendException(
+          a: TrackingActivity,
+          newException: cargotracker.tracking.domain.model.entities.TrackingExceptionEvent
+      ): TrackingActivity =
+        throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
+      override def updateExceptionResolution(
+          a: TrackingActivity,
+          index: Int,
+          resolvedAt: java.time.Instant,
+          resolutionNotes: String
       ): TrackingActivity =
         throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
     )

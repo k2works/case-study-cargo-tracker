@@ -1,12 +1,13 @@
 package cargotracker.tracking.infrastructure.repositories
 
 import cargotracker.tracking.domain.model.aggregates.TrackingActivity
-import cargotracker.tracking.domain.model.entities.TrackingActivityEvent
-import cargotracker.tracking.domain.model.enums.TrackingStatus
+import cargotracker.tracking.domain.model.entities.{TrackingActivityEvent, TrackingExceptionEvent}
+import cargotracker.tracking.domain.model.enums.{ExceptionType, TrackingStatus}
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
 import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, TrackingLocation, TrackingNumber}
 import scalikejdbc.*
 
+import java.time.Instant
 import javax.inject.Singleton
 
 @Singleton
@@ -37,12 +38,34 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
       .list
       .apply()
 
+  private def loadExceptions(trackingId: Long)(implicit session: DBSession): List[TrackingExceptionEvent] =
+    sql"""SELECT exception_type, location_unlocode, occurred_at,
+                 description, escalation_flag, resolved_at, resolution_notes
+          FROM tracking_exception_event
+          WHERE tracking_id = $trackingId
+          ORDER BY occurred_at"""
+      .map { rs =>
+        val cat = ExceptionType.fromName(rs.string("exception_type")).getOrElse(ExceptionType.Delay)
+        TrackingExceptionEvent(
+          exceptionType = cat,
+          location = TrackingLocation.of(rs.string("location_unlocode")),
+          occurredAt = rs.timestamp("occurred_at").toInstant,
+          description = rs.stringOpt("description"),
+          escalationFlag = rs.boolean("escalation_flag"),
+          resolvedAt = rs.zonedDateTimeOpt("resolved_at").map(_.toInstant),
+          resolutionNotes = rs.stringOpt("resolution_notes")
+        )
+      }
+      .list
+      .apply()
+
   private def attachEvents(base: (Long, TrackingNumber, TrackingBookingId, TrackingStatus, Int))(implicit
       session: DBSession
   ): TrackingActivity =
     val (id, tn, bid, status, version) = base
     val events = loadEvents(id)
-    TrackingActivity.reconstruct(tn, bid, status, events, version)
+    val exceptions = loadExceptions(id)
+    TrackingActivity.reconstruct(tn, bid, status, events, version, exceptions)
 
   override def nextTrackingNumber(): TrackingNumber =
     DB.readOnly { implicit session =>
@@ -103,35 +126,37 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
                ${activity.bookingId.value},
                ${activity.transportStatus.toString})
           """.update.apply()
-
-      // save() ではイベント差分書込はしない（appendEvent 経由）
     }
+
+  private def lockedTrackingId(activity: TrackingActivity)(implicit session: DBSession): Long =
+    sql"SELECT id FROM tracking_activity WHERE tracking_number = ${activity.trackingNumber.value}"
+      .map(_.long("id"))
+      .single
+      .apply()
+      .getOrElse(
+        throw IllegalStateException(
+          s"tracking_activity not found for ${activity.trackingNumber.value}（save 未実行）"
+        )
+      )
+
+  private def bumpVersion(activity: TrackingActivity)(implicit session: DBSession): Unit =
+    val updated = sql"""
+      UPDATE tracking_activity
+      SET transport_status = ${activity.transportStatus.toString},
+          version = version + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE tracking_number = ${activity.trackingNumber.value} AND version = ${activity.version}
+    """.update.apply()
+    if updated == 0 then
+      throw cargotracker.shared.domain.OptimisticLockException(
+        entityType = "TrackingActivity",
+        identifier = activity.trackingNumber.value
+      )
 
   override def appendEvent(activity: TrackingActivity, newEvent: TrackingActivityEvent): TrackingActivity =
     DB.localTx { implicit session =>
-      val trackingId = sql"SELECT id FROM tracking_activity WHERE tracking_number = ${activity.trackingNumber.value}"
-        .map(_.long("id"))
-        .single
-        .apply()
-        .getOrElse(
-          throw IllegalStateException(
-            s"tracking_activity not found for ${activity.trackingNumber.value}（save 未実行）"
-          )
-        )
-
-      val updated = sql"""
-        UPDATE tracking_activity
-        SET transport_status = ${activity.transportStatus.toString},
-            version = version + 1,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE tracking_number = ${activity.trackingNumber.value} AND version = ${activity.version}
-      """.update.apply()
-      if updated == 0 then
-        throw cargotracker.shared.domain.OptimisticLockException(
-          entityType = "TrackingActivity",
-          identifier = activity.trackingNumber.value
-        )
-
+      val trackingId = lockedTrackingId(activity)
+      bumpVersion(activity)
       sql"""
         INSERT INTO tracking_handling_event
           (tracking_id, event_type, event_time, location_unlocode, voyage_number, route_deviation)
@@ -143,11 +168,75 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
            ${newEvent.routeDeviation})
       """.update.apply()
 
-      cargotracker.tracking.domain.model.aggregates.TrackingActivity.reconstruct(
+      TrackingActivity.reconstruct(
         trackingNumber = activity.trackingNumber,
         bookingId = activity.bookingId,
         transportStatus = activity.transportStatus,
         events = activity.events,
-        version = activity.version + 1
+        version = activity.version + 1,
+        exceptions = activity.exceptions
+      )
+    }
+
+  override def appendException(
+      activity: TrackingActivity,
+      newException: TrackingExceptionEvent
+  ): TrackingActivity =
+    DB.localTx { implicit session =>
+      val trackingId = lockedTrackingId(activity)
+      bumpVersion(activity)
+      sql"""
+        INSERT INTO tracking_exception_event
+          (tracking_id, exception_type, location_unlocode, occurred_at,
+           description, escalation_flag, resolved_at, resolution_notes)
+        VALUES
+          ($trackingId,
+           ${newException.exceptionType.toString},
+           ${newException.location.unLocode},
+           ${java.sql.Timestamp.from(newException.occurredAt)},
+           ${newException.description.orNull},
+           ${newException.escalationFlag},
+           ${newException.resolvedAt.map(java.sql.Timestamp.from).orNull},
+           ${newException.resolutionNotes.orNull})
+      """.update.apply()
+
+      TrackingActivity.reconstruct(
+        trackingNumber = activity.trackingNumber,
+        bookingId = activity.bookingId,
+        transportStatus = activity.transportStatus,
+        events = activity.events,
+        version = activity.version + 1,
+        exceptions = activity.exceptions
+      )
+    }
+
+  override def updateExceptionResolution(
+      activity: TrackingActivity,
+      index: Int,
+      resolvedAt: Instant,
+      resolutionNotes: String
+  ): TrackingActivity =
+    DB.localTx { implicit session =>
+      val trackingId = lockedTrackingId(activity)
+      bumpVersion(activity)
+      val target = activity.exceptions(index)
+      sql"""
+        UPDATE tracking_exception_event
+        SET resolved_at = ${java.sql.Timestamp.from(resolvedAt)},
+            resolution_notes = $resolutionNotes,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE tracking_id = $trackingId
+          AND exception_type = ${target.exceptionType.toString}
+          AND occurred_at = ${java.sql.Timestamp.from(target.occurredAt)}
+          AND resolved_at IS NULL
+      """.update.apply()
+
+      TrackingActivity.reconstruct(
+        trackingNumber = activity.trackingNumber,
+        bookingId = activity.bookingId,
+        transportStatus = activity.transportStatus,
+        events = activity.events,
+        version = activity.version + 1,
+        exceptions = activity.exceptions
       )
     }

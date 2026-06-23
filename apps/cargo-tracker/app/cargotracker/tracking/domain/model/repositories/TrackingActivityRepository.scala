@@ -23,3 +23,17 @@ trait TrackingActivityRepository:
       activity: TrackingActivity,
       newEvent: cargotracker.tracking.domain.model.entities.TrackingActivityEvent
   ): TrackingActivity
+
+  /** 例外イベントを追記する（IT7 US19/US20）。`version` を楽観ロックで更新する。 */
+  def appendException(
+      activity: TrackingActivity,
+      newException: cargotracker.tracking.domain.model.entities.TrackingExceptionEvent
+  ): TrackingActivity
+
+  /** 指定 index の例外を解決済に更新する（IT7 US19/US20）。 */
+  def updateExceptionResolution(
+      activity: TrackingActivity,
+      index: Int,
+      resolvedAt: java.time.Instant,
+      resolutionNotes: String
+  ): TrackingActivity

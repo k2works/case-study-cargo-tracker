@@ -93,6 +93,48 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
           Left("追跡イベントの保存に失敗しました")
     }
 
+  /** 追跡例外を記録する（US19 遅延 / US20 破損・紛失）。楽観ロック付き。 */
+  def recordException(command: RecordExceptionCommand): Either[String, TrackingActivity] =
+    for
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      activity <- repository
+        .findByTrackingNumber(tn)
+        .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
+      exception = cargotracker.tracking.domain.model.entities.TrackingExceptionEvent(
+        exceptionType = command.exceptionType,
+        location = cargotracker.tracking.domain.model.valueobjects.TrackingLocation.of(command.locationUnLocode),
+        occurredAt = command.occurredAt,
+        description = command.description.filter(_.nonEmpty)
+      )
+      updated = activity.addException(exception)
+      result <-
+        try Right(repository.appendException(updated, updated.exceptions.last))
+        catch
+          case _: OptimisticLockException => Left("他のユーザーが更新したため再読込してください")
+          case NonFatal(_) => Left("追跡例外の保存に失敗しました")
+    yield result
+
+  /** 追跡例外の対応報告（resolvedAt + resolutionNotes 設定）。 */
+  def resolveException(command: ResolveExceptionCommand): Either[String, TrackingActivity] =
+    for
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      activity <- repository
+        .findByTrackingNumber(tn)
+        .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
+      updated <- activity.resolveException(command.index, command.resolvedAt, command.resolutionNotes).left.map {
+        case TrackingActivity.ExceptionNotFound => s"指定された例外 (#${command.index}) が見つかりません"
+        case _ => "例外の対応報告に失敗しました"
+      }
+      result <-
+        try
+          Right(
+            repository.updateExceptionResolution(updated, command.index, command.resolvedAt, command.resolutionNotes)
+          )
+        catch
+          case _: OptimisticLockException => Left("他のユーザーが更新したため再読込してください")
+          case NonFatal(_) => Left("例外対応報告の保存に失敗しました")
+    yield result
+
 object TrackingCommandService:
   private[commandservices] def eventTypeFor(status: TrackingStatus): Either[String, String] =
     status match
@@ -113,6 +155,23 @@ final case class UpdateTrackingStatusCommand(
 
 /** 追跡番号発行コマンド（US14）。 */
 final case class AssignTrackingNumberCommand(bookingId: String)
+
+/** 追跡例外記録コマンド（US19 / US20 / IT7）。 */
+final case class RecordExceptionCommand(
+    trackingNumber: String,
+    exceptionType: cargotracker.tracking.domain.model.enums.ExceptionType,
+    locationUnLocode: String,
+    occurredAt: Instant,
+    description: Option[String] = None
+)
+
+/** 追跡例外対応報告コマンド（US19 / US20 / IT7）。 */
+final case class ResolveExceptionCommand(
+    trackingNumber: String,
+    index: Int,
+    resolvedAt: Instant,
+    resolutionNotes: String
+)
 
 /** 追跡イベント記録コマンド（US15）。 */
 final case class RecordTrackingEventCommand(
