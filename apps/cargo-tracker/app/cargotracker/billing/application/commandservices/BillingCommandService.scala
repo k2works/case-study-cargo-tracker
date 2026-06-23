@@ -49,7 +49,7 @@ class BillingCommandService @Inject() (
               )
               .left
               .map(_ => "料金算出に失敗しました")
-            shipper = BillingShipperId(snapshot.shipperId, command.isCorporate)
+            shipper = BillingShipperId(snapshot.shipperId, snapshot.isCorporate)
             invoice <- Invoice
               .issue(
                 invoiceRepository.nextInvoiceId(),
@@ -66,9 +66,8 @@ class BillingCommandService @Inject() (
             invoice
     yield result
 
-/** 請求書発行コマンド（US21）。 */
+/** 請求書発行コマンド（US21、IT7 0.8 で `isCorporate` を廃止し Shipper 自動判定に統一）。 */
 final case class GenerateInvoiceCommand(
     bookingId: String,
-    isCorporate: Boolean = false,
     discountRate: Option[DiscountRate] = None
 )

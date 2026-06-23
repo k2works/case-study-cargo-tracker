@@ -33,10 +33,11 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers:
   private val clock = Clock.fixed(Instant.parse("2026-09-15T10:00:00Z"), ZoneId.of("UTC"))
   private val pricing: PricingService = new InMemoryPricingService
 
-  private def snapshot(isDelivered: Boolean): BillingCargoSnapshot =
+  private def snapshot(isDelivered: Boolean, isCorporate: Boolean = false): BillingCargoSnapshot =
     BillingCargoSnapshot(
       bookingId = BillingBookingId.unsafeFrom("BK-000001"),
       shipperId = "SH-000001",
+      isCorporate = isCorporate,
       isDelivered = isDelivered,
       origin = Location.unsafeFrom("JPYOK"),
       destination = Location.unsafeFrom("USNYC"),
@@ -73,3 +74,19 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers:
     val Right(second) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     first.invoiceId.value shouldBe second.invoiceId.value
     invRepo.store should have size 1
+
+  test("generate: 法人荷主スナップショットから発行された Invoice の shipperId.isCorporate=true (IT7 0.8 / H5)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = true))
+    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
+    inv.shipperId.isCorporate shouldBe true
+
+  test("generate: 個人荷主スナップショットから発行された Invoice の shipperId.isCorporate=false"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = false))
+    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
+    inv.shipperId.isCorporate shouldBe false

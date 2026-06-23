@@ -9,6 +9,7 @@ import cargotracker.shared.domain.{CargoType, Location, Weight}
 final case class BillingCargoSnapshot(
     bookingId: BillingBookingId,
     shipperId: String,
+    isCorporate: Boolean,
     isDelivered: Boolean,
     origin: Location,
     destination: Location,

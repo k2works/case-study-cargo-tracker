@@ -7,11 +7,7 @@
     <div class="mb-3">
       <label class="form-label">予約 ID <span class="text-danger">*</span></label>
       <input type="text" name="bookingId" class="form-control" value="@form("bookingId").value.getOrElse("")" placeholder="BK-000001" required maxlength="20">
-      <div class="form-text">引取済 (Delivered) 状態の予約のみ請求可能です。</div>
-    </div>
-    <div class="form-check mb-3">
-      <input type="checkbox" name="isCorporate" value="true" class="form-check-input" id="is-corporate" @if(form("isCorporate").value.contains("true")){checked}>
-      <label class="form-check-label" for="is-corporate">法人荷主</label>
+      <div class="form-text">引取済 (Delivered) 状態の予約のみ請求可能です。法人/個人の判定は荷主属性から自動判定されます (IT7 0.8)。</div>
     </div>
     <div class="d-flex gap-2">
       <button type="submit" class="btn btn-primary">発行</button>

@@ -3,7 +3,7 @@ package cargotracker.billing.interfaces.web
 import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.billing.application.commandservices.{BillingCommandService, GenerateInvoiceCommand}
 import cargotracker.billing.domain.model.repositories.InvoiceRepository
-import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, InvoiceId}
+import cargotracker.billing.domain.model.valueobjects.InvoiceId
 import play.api.data.Form
 import play.api.data.Forms.*
 import play.api.i18n.I18nSupport
@@ -11,7 +11,7 @@ import play.api.mvc.*
 
 import javax.inject.{Inject, Singleton}
 
-/** 請求書発行・一覧・詳細画面（US21 / IT6）。 */
+/** 請求書発行・一覧・詳細画面（US21 / IT6、IT7 0.8 で法人フラグを Shipper 自動判定に変更）。 */
 @Singleton
 class InvoiceController @Inject() (
     cc: ControllerComponents,
@@ -23,9 +23,8 @@ class InvoiceController @Inject() (
 
   private val newInvoiceForm: Form[NewInvoiceFormData] = Form(
     mapping(
-      "bookingId" -> nonEmptyText(maxLength = 20),
-      "isCorporate" -> boolean
-    )(NewInvoiceFormData.apply)(d => Some((d.bookingId, d.isCorporate)))
+      "bookingId" -> nonEmptyText(maxLength = 20)
+    )(NewInvoiceFormData.apply)(d => Some(d.bookingId))
   )
 
   def list(): Action[AnyContent] = authenticated { implicit request =>
@@ -43,7 +42,7 @@ class InvoiceController @Inject() (
       .fold(
         formWithErrors => BadRequest(views.html.billing.newForm(formWithErrors)),
         data =>
-          commandService.generate(GenerateInvoiceCommand(data.bookingId, data.isCorporate)) match
+          commandService.generate(GenerateInvoiceCommand(data.bookingId)) match
             case Right(inv) =>
               Redirect(routes.InvoiceController.detail(inv.invoiceId.value))
                 .flashing("success" -> s"請求書 ${inv.invoiceId.value} を発行しました")
@@ -64,4 +63,4 @@ class InvoiceController @Inject() (
               .flashing("error" -> s"請求書 $invoiceId が見つかりません")
   }
 
-final case class NewInvoiceFormData(bookingId: String, isCorporate: Boolean)
+final case class NewInvoiceFormData(bookingId: String)
