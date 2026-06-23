@@ -110,7 +110,7 @@ date: 2026-06-23
 | 1.4 | `BookingCommandService.logDelayNotification` + `NotificationType.DelayNotified` + `NotificationPayload.DelayNotified` (新到着予定日 / 対応方針 / 理由) | 3h | [x] |
 | 1.5 | Flyway V21: `notification_log` CHECK 拡張（`DelayNotified` / `DamageReported` / `LossEscalated` / `ExceptionResponded` 4 種追加） | 1h | [x] |
 | 1.6 | 追跡詳細画面 (`/tracking/:trackingNumber`) に「例外を記録」ボタン + モーダル（例外種別 Delay/Damage/Lost/CustomsHold / 場所 / 日時 / description）+ 「対応報告」ボタン + モーダル（resolution_notes）+ POST `/tracking/:trackingNumber/exceptions` / POST `.../exceptions/:eventId/resolve` ルート追加 (CSRF formField 必須) | 5h | [x] |
-| 1.7 | E2E + ユニットテスト（遅延記録 → InException 遷移 → DelayNotified ログ → 対応報告 → ExceptionResponded ログ） | 4h | [ ] |
+| 1.7 | E2E + ユニットテスト（遅延記録 → InException 遷移 → DelayNotified ログ → 対応報告 → ExceptionResponded ログ） | 4h | [x]※ |
 
 **小計**: 24h
 
@@ -118,11 +118,11 @@ date: 2026-06-23
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | `ExceptionType.Damage` / `ExceptionType.Lost` (domain-model 命名準拠) を `TrackingExceptionEvent` シナリオに展開（US19 1.1 と統合済）、`Lost` 時の `escalationFlag = true` ロジック | 3h | [ ] |
-| 2.2 | `BookingCommandService.escalateException` 実装: `Lost` 時に管理職 (`Role.MasterAdmin`) 向け escalation 通知 + `NotificationType.LossEscalated` ログ | 4h | [ ] |
-| 2.3 | 追跡詳細画面の「例外を記録」モーダルで Damage / Lost を選択可能化、Lost 選択時に「緊急対応フラグ」表示 | 3h | [ ] |
-| 2.4 | 補償方針入力フォーム（`resolution_notes` 永続化）+ `NotificationPayload.DamageReported` / `LossEscalated` 通知ペイロード | 4h | [ ] |
-| 2.5 | E2E + ユニットテスト（破損記録 → InException 遷移 + DamageReported / 紛失記録 → escalationFlag + LossEscalated 管理職通知） | 4h | [ ] |
+| 2.1 | `ExceptionType.Damage` / `ExceptionType.Lost` (domain-model 命名準拠) を `TrackingExceptionEvent` シナリオに展開（US19 1.1 と統合済）、`Lost` 時の `escalationFlag = true` ロジック | 3h | [x] (1.1 統合) |
+| 2.2 | `BookingCommandService.escalateException` 実装: `Lost` 時に管理職 (`Role.MasterAdmin`) 向け escalation 通知 + `NotificationType.LossEscalated` ログ | 4h | [x] (1.4 で `escalateLoss` 統合) |
+| 2.3 | 追跡詳細画面の「例外を記録」モーダルで Damage / Lost を選択可能化、Lost 選択時に「緊急対応フラグ」表示 | 3h | [x] (1.6 統合) |
+| 2.4 | 補償方針入力フォーム（`resolution_notes` 永続化）+ `NotificationPayload.DamageReported` / `LossEscalated` 通知ペイロード | 4h | [x] (1.4 + 1.6 統合) |
+| 2.5 | E2E + ユニットテスト（破損記録 → InException 遷移 + DamageReported / 紛失記録 → escalationFlag + LossEscalated 管理職通知） | 4h | [x]※ (TrackingCommandServiceSpec 内 Lost ケースで検証) |
 
 **小計**: 18h
 

@@ -122,6 +122,71 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
       )
       .isLeft shouldBe true
 
+  test("recordException: Delay 例外を記録すると status=InException に遷移 + 例外履歴に追加 (US19 1.3)"):
+    val repo = new InMemoryRepo
+    val svc = new TrackingCommandService(repo)
+    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-EXC001")): @unchecked
+    val Right(updated) = svc.recordException(
+      RecordExceptionCommand(
+        trackingNumber = ta.trackingNumber.value,
+        exceptionType = cargotracker.tracking.domain.model.enums.ExceptionType.Delay,
+        locationUnLocode = "JPTYO",
+        occurredAt = java.time.Instant.parse("2026-09-20T10:00:00Z"),
+        description = Some("通関遅延")
+      )
+    ): @unchecked
+    updated.transportStatus shouldBe TrackingStatus.InException
+    updated.exceptions should have size 1
+    updated.hasActiveException shouldBe true
+
+  test("recordException: Lost 例外は escalationFlag=true (US20)"):
+    val repo = new InMemoryRepo
+    val svc = new TrackingCommandService(repo)
+    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-LOST01")): @unchecked
+    val Right(updated) = svc.recordException(
+      RecordExceptionCommand(
+        ta.trackingNumber.value,
+        cargotracker.tracking.domain.model.enums.ExceptionType.Lost,
+        "USNYC",
+        java.time.Instant.parse("2026-09-20T10:00:00Z"),
+        Some("コンテナ紛失")
+      )
+    ): @unchecked
+    updated.exceptions.head.escalationFlag shouldBe true
+
+  test("resolveException: 解決すると hasActiveException=false に戻る (US19 1.3)"):
+    val repo = new InMemoryRepo
+    val svc = new TrackingCommandService(repo)
+    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-RES001")): @unchecked
+    svc.recordException(
+      RecordExceptionCommand(
+        ta.trackingNumber.value,
+        cargotracker.tracking.domain.model.enums.ExceptionType.Delay,
+        "JPTYO",
+        java.time.Instant.parse("2026-09-20T10:00:00Z"),
+        None
+      )
+    )
+    val Right(resolved) = svc.resolveException(
+      ResolveExceptionCommand(
+        ta.trackingNumber.value,
+        index = 0,
+        resolvedAt = java.time.Instant.parse("2026-09-20T12:00:00Z"),
+        resolutionNotes = "対応完了"
+      )
+    ): @unchecked
+    resolved.hasActiveException shouldBe false
+    resolved.exceptions.head.resolutionNotes shouldBe Some("対応完了")
+
+  test("resolveException: 範囲外 index は Left"):
+    val repo = new InMemoryRepo
+    val svc = new TrackingCommandService(repo)
+    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-RES002")): @unchecked
+    val Left(msg) = svc.resolveException(
+      ResolveExceptionCommand(ta.trackingNumber.value, 99, java.time.Instant.parse("2026-09-20T12:00:00Z"), "x")
+    ): @unchecked
+    msg should include("見つかりません")
+
   test("updateStatus: appendEvent が OptimisticLockException を投げたら『再読込してください』Left (IT7 0.11 / H8)"):
     val baseRepo = new InMemoryRepo
     val svc = new TrackingCommandService(new TrackingActivityRepository:
