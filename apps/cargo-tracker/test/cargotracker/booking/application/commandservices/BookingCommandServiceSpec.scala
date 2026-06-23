@@ -564,3 +564,41 @@ class BookingCommandServiceSpec extends AnyFunSuite with Matchers:
     val Left(msg) = service.cancel(cargo.bookingId.value): @unchecked
     msg should include("Cancelled")
     msg should include("遷移はできません")
+
+  test("completeDelivery: TrackingIssued の予約を Delivered に遷移 + DeliveryCompleted 通知 (US16 / IT6)"):
+    val repo = new InMemoryCargoRepository
+    val notif = new InMemoryNotificationLogRepository
+    val service = new BookingCommandService(repo, acceptingChecker, notif, java.time.Clock.systemUTC())
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    val tracked = Cargo.reconstruct(
+      cargo.bookingId,
+      cargo.shipperId,
+      cargo.routeSpecification,
+      cargo.cargoSpec,
+      BookingStatus.TrackingIssued,
+      cargo.version,
+      cargo.itinerary,
+      Some("TN-000001")
+    )
+    repo.save(tracked)
+    val Right(delivered) =
+      service.completeDelivery(cargo.bookingId.value, "TN-000001", "USNYC", "署名: 田中"): @unchecked
+    delivered.status shouldBe BookingStatus.Delivered
+    val log = notif.store
+      .find(_.notificationType == cargotracker.booking.domain.model.valueobjects.NotificationType.DeliveryCompleted)
+      .get
+    val payload = Json.parse(log.payload)
+    (payload \ "status").as[String] shouldBe "Delivered"
+    (payload \ "recipientConfirmation").as[String] shouldBe "署名: 田中"
+
+  test("completeDelivery: Preliminary からは遷移違反でエラー + 通知ログ未記録 (US16)"):
+    val repo = new InMemoryCargoRepository
+    val notif = new InMemoryNotificationLogRepository
+    val service = new BookingCommandService(repo, acceptingChecker, notif, java.time.Clock.systemUTC())
+    val Right(cargo) = service.book(baseCommand): @unchecked
+    val Left(msg) =
+      service.completeDelivery(cargo.bookingId.value, "TN-000001", "USNYC", "署名"): @unchecked
+    msg should include("Delivered")
+    notif.store.exists(
+      _.notificationType == cargotracker.booking.domain.model.valueobjects.NotificationType.DeliveryCompleted
+    ) shouldBe false
