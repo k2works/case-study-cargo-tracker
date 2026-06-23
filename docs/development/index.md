@@ -49,7 +49,7 @@
 |---------|--------|------|
 | Release 0.1 Internal Alpha | [release-0.1.0-gate-check.md](./release-0.1.0-gate-check.md) | ✅ ゲート確認済（v0.1.0 タグ付け待ち） |
 | Release 0.2 | - | 未リリース |
-| Release 1.0 MVP | - | 未リリース |
+| Release 1.0 MVP | [release_report-scala-1_0_0-mvp.md](./release_report-scala-1_0_0-mvp.md) | ✅ 機能完了（IT5+IT6 = 23 SP、v1.0.0 タグ付けはユーザー判断委譲） |
 | Release 2.0 GA | - | 未リリース |
 
 ## 補足
