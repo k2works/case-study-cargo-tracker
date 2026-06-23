@@ -221,39 +221,110 @@ gantt
 
 ### ドメインモデル
 
-IT7 までで確立した 8 コンテキスト（Auth / Shipper / Estimation / Booking / Routing / Tracking / Handling / Billing）に対し、IT8 は **Settlement (精算)** 概念を Billing Context 内に新設し、`Payment` 集約 + `PaymentStatus` enum で精算ライフサイクルを管理する。さらに **Booking 公開 Port (BookingPublicApi)** を新設して ACL アダプターの依存先を application 直接呼出から公開インターフェース化する。
+IT7 までで確立した 8 コンテキスト（Auth / Shipper / Estimation / Booking / Routing / Tracking / Handling / Billing）に対し、IT8 は **Settlement (精算)** 概念を Billing Context 内に確立する。`Payment` をどう表現するかは **ADR 0019 で決定**: (A) `Payment` 集約案、または (B) `Invoice` 集約内 `paymentStatus + confirmPayment` 案 (domain-model.md L921-955 既存)。下記 PlantUML は **(A) 集約案** を主案として描き、(B) Invoice 内案の差分は注釈で示す。さらに **Booking 公開 Port (BookingPublicApi、ADR 0017)** と **MailNotificationPort (ADR 0018 候補)** を新設し、Billing Context からの依存方向を ACL ポート経由に統一する。
 
 ```plantuml
 @startuml
+
 title IT8 ドメインモデル全体図 (Settlement + 法人割引 + ACL 堅牢化)
 
 package "Shared Kernel" {
-  class Money <<value>>
+  class Money <<value>> {
+    amount: Long
+    currency: "JPY"
+    --
+    + jpy(amount)
+    + multiplyByRate(rate)
+  }
+  class PricingService <<service>> {
+    + calculateActual(spec): Either[Error, Breakdown]
+  }
+  class Breakdown <<value>> {
+    base: Money
+    distance: Money
+    weight: Money
+    cargoType: Money
+  }
 }
 
 package "Shipper Context" {
-  class CorporateShipper <<aggregate>> {
-    discountRate: BigDecimal
+  class Shipper <<aggregate root>> {
+    shipperId
+    shipperType: Individual | Corporate
+    discountRate: Option[BigDecimal]
   }
 }
 
 package "Booking Context" {
   class Cargo <<aggregate root>> {
-    status: BookingStatus (... + Settled)
+    bookingId
+    shipperId
+    status: BookingStatus
+    invoiceId: Option[InvoiceId]
+    version
+    --
+    + deliver()
+    + markSettled()
   }
-  interface BookingPublicApi <<port>> {
-    + findCargoForBilling(id)
-    + completeDelivery(...)
-    + markSettled(id)
+  enum BookingStatus {
+    Preliminary
+    RouteProposed
+    RouteAssigned
+    Confirmed
+    TrackingIssued
+    InTransit
+    Delivered
+    InException
+    Cancelled
+    Settled    <<IT8 拡張>>
   }
+  interface BookingPublicApi <<port, ADR 0017>> {
+    + findCargoForBilling(id): Option[CargoSummary]
+    + markSettled(id): Either[Error, Unit]
+  }
+  class CargoSummary <<value>> {
+    bookingId
+    shipperId
+    shipperType
+    discountRate: Option
+    finalAmount: Money
+  }
+  BookingPublicApi -- CargoSummary
 }
 
 package "Billing Context" {
   class Invoice <<aggregate root>> {
-    lineItems: List[InvoiceLineItem]
+    invoiceId
+    cargoBookingId
+    shipperId
+    baseAmount: Money
+    discountRate: DiscountRate
     finalAmount: Money
+    paymentStatus
+    issuedAt
+    lineItems: List[InvoiceLineItem]
+    version
+    --
+    + issue(snapshot)
+    + applyCorporateDiscount(rate)
+    + reconstruct(s)
   }
-  class Payment <<aggregate root>> {
+  class "Invoice.Snapshot" as InvSnap <<value>>
+  class InvoiceLineItem <<entity>> {
+    seqNumber
+    category: LineItemCategory
+    name
+    amount: Money
+  }
+  enum LineItemCategory {
+    Distance
+    Weight
+    CargoType
+    Discount  <<IT8 US22 で本格活用>>
+    Other
+  }
+
+  class Payment <<aggregate root, IT8 案 A>> {
     paymentId: PaymentId
     invoiceId: InvoiceId
     amount: Money
@@ -262,6 +333,15 @@ package "Billing Context" {
     paidAt: Option[Instant]
     referenceCode: Option[String]
     version: Int
+    --
+    + issue(invoice, dueDate)
+    + confirm(paidAt, ref)
+    + markOverdue(now)
+    + refund()
+  }
+  class "Payment.Snapshot" as PaySnap <<value>>
+  class PaymentId <<value, opaque>> {
+    "PAY-NNNNNN"
   }
   enum PaymentStatus {
     Pending
@@ -269,189 +349,599 @@ package "Billing Context" {
     Overdue
     Refunded
   }
-  class SettlementCommandService {
+
+  class SettlementCommandService <<service>> {
     + issuePayment(invoiceId, dueDate)
-    + confirmPayment(paymentId, paidAt, referenceCode)
+    + confirmPayment(paymentId, paidAt, ref)
     + detectOverdue(now)
+    + refundPayment(paymentId, reason)
   }
-  interface MailNotificationPort <<port>>
+  class BillingCommandService <<service>> {
+    + generate(GenerateInvoiceCommand)
+    --
+    法人荷主時に自動的に
+    snapshot.corporateDiscountRate を適用
+  }
+  interface MailNotificationPort <<port, ADR 0018>> {
+    + send(toEmail, subject, body)
+  }
   interface BookingNotificationPort <<port>>
+  interface BillingCargoQueryPort <<port>> {
+    + findByBookingId(bid)
+  }
+
+  Invoice *-- "0..*" InvoiceLineItem
+  InvoiceLineItem --> LineItemCategory
+  Invoice .. InvSnap
+  Payment *-- PaymentStatus
+  Payment *-- PaymentId
+  Payment .. PaySnap
+  Invoice <-- Payment : 1 Invoice ←- 0..N Payment\n(発行～refund を時系列に保持)
+}
+
+package "Tracking Context (IT7 基盤、IT8 改修部分)" {
+  class TrackingExceptionEvent <<entity>> {
+    id: ExceptionEventId  <<IT8 H5 で追加>>
+    exceptionType: ExceptionType
+    location: TrackingLocation
+    occurredAt
+    description
+    escalationFlag
+    resolvedAt
+    resolutionNotes
+  }
+  class ExceptionEventId <<value, opaque>> {
+    "EXC-NNNNNN"
+  }
+  TrackingExceptionEvent --> ExceptionEventId
 }
 
 CorporateShipper -[hidden]-> Cargo
 Cargo -[hidden]-> Invoice
-Invoice <-- Payment : settles
 SettlementCommandService --> Payment
 SettlementCommandService --> Invoice
 SettlementCommandService ..> MailNotificationPort
 SettlementCommandService ..> BookingNotificationPort
-BookingPublicApi <.. SettlementCommandService
+SettlementCommandService ..> BookingPublicApi : markSettled
+BillingCommandService --> Invoice
+BillingCommandService --> PricingService : calculateActual\nWithBreakdown
+BillingCommandService ..> BillingCargoQueryPort
+BillingCargoQueryPort -- CargoSummary
+BookingPublicApi <.. BillingCargoQueryPort : Cargo + Shipper 統合 ACL
+
+note right of Payment
+  IT8 ADR 0019 案 A: 別集約として
+  ライフサイクル管理。
+  --
+  案 B 採択時は本クラス・本依存を削除し、
+  Invoice に status / paidAt / referenceCode /
+  dueDate を追加、`Invoice.confirmPayment` を
+  メソッド化する (domain-model.md L921-955)
+end note
+
+note right of BookingPublicApi
+  IT8 ADR 0017 新規。
+  Billing から Booking の internal API
+  (BookingCommandService) を呼ばず、本 Port を経由。
+  Adapter は infrastructure/acl に配置。
+end note
+
+note right of MailNotificationPort
+  IT8 ADR 0018 候補 (新規)。
+  IT8 は print logger 実装で十分、
+  Pekko Mail / SendGrid 連携は IT9 申し送り。
+end note
+
+note bottom of ExceptionEventId
+  IT8 H5 / V23 で追加。
+  (type + occurred_at) 複合キー UPDATE を
+  PK 直接更新に変更し並行解決の競合を解消。
+end note
+
+note bottom of LineItemCategory
+  IT8 US22 で Discount を本格利用。
+  amount は負値 (`-baseAmount × rate`) で保持。
+end note
 
 @enduml
 ```
 
 #### 不変条件（IT8 追加分）
 
-1. **Payment 金額一致**: `Payment.amount == Invoice.finalAmount`（発行時固定）
-2. **PaymentStatus 遷移**: Pending → Confirmed | Overdue、Confirmed → Refunded、Overdue → Confirmed（救済）/ Refunded
-3. **Settled 連動**: Payment.Confirmed → Cargo.deliver()→Settled (BookingPublicApi 経由)
-4. **InvoiceLineItem.Discount 不変条件**: amount < 0、name に「法人契約割引 (XX%)」形式
+1. **Payment 金額一致 (案 A)**: `Payment.amount == Invoice.finalAmount`（発行時固定、IssuedAt 後の Invoice.finalAmount 変更は禁止）
+2. **PaymentStatus 遷移**: Pending → Confirmed | Overdue、Confirmed → Refunded、Overdue → Confirmed（救済）/ Refunded（払戻し）。逆遷移 (Confirmed → Pending 等) は不可
+3. **Settled 連動**: 1 件目の `Payment.Confirmed` 成立時、`BookingPublicApi.markSettled(bookingId)` で `Cargo.status = Settled` に遷移する（既に Settled なら冪等成功）
+4. **InvoiceLineItem.Discount 形式**: `category == Discount` の明細は `amount < 0`、`name` は「法人契約割引 (XX.XX%)」形式を強制
+5. **法人割引適用条件**: `BillingCargoQueryPort.findByBookingId` が返す CargoSummary の `shipperType == Corporate` かつ `discountRate.isDefined` の場合のみ Discount 明細を追加。Individual 荷主時は Discount 明細を生成しない
+6. **PaymentId 命名規約**: `PAY-NNNNNN`（6 桁 0 埋め）、`payment_id_seq` シーケンス採番（ADR 0013 命名規約準拠）
+7. **Overdue 判定タイミング**: `detectOverdue(now)` 内で `dueDate < now.toLocalDate && status == Pending` の Payment を Overdue 化。Confirmed 済は対象外（救済しない）
+8. **Refund 制約**: Refunded は Confirmed の正常系に対して例外的にのみ実施、IT8 はバックエンド API のみ実装、UI は IT9 で追加（スコープ縮小）
+
+#### PaymentStatus 遷移マトリクス（IT8 新設）
+
+| 現状態＼操作 | issuePayment | confirmPayment | detectOverdue (期限超過) | refundPayment |
+|------------|-------------|----------------|----------------------|---------------|
+| (初期、Invoice 未払い) | **Pending** に遷移 | - | - | - |
+| Pending | （冪等成功） | **Confirmed** に遷移 + Cargo.Settled | **Overdue** に遷移 + OverdueAlerted 通知 | エラー（未確定の払戻し不可） |
+| Confirmed | エラー（多重発行禁止） | （冪等成功） | （変化なし、救済済） | **Refunded** に遷移 |
+| Overdue | エラー | **Confirmed** に救済 + 救済ログ + Cargo.Settled | （冪等成功） | エラー（未確定の払戻し不可） |
+| Refunded | エラー | エラー | エラー | （冪等成功） |
+
+#### BookingStatus 拡張: Settled 追加（IT8）
+
+```text
+                                                                    Settled (IT8 NEW)
+                                                                        ^
+                                                                        |
+                                              Payment.Confirmed         |
+                                                  (BookingPublicApi.markSettled)
+                                                        ^               |
+Preliminary -> RouteProposed -> RouteAssigned -> Confirmed -> TrackingIssued -> InTransit -> Delivered ----+
+   |                ^                              |             |             |              ^           |
+   |                | reproposeRoute               | cancel      |             | resolveExc   |           |
+   |  cancel        |                              |             |             |              |           |
+   +--> Cancelled   |                              +--> Cancelled |             |             |           |
+                    |                                              v             v             |
+                    |                                          InException <---+               |
+                    |                                                                          |
+                    +- (CorporateShipper 割引 5-30% 自動適用、US22) ---+   reverse Settled       |
+                                                                                  (refund 時)   |
+                                                                                     <---------+
+```
+
+#### 法人割引適用ロジック (US22)
+
+```text
+BillingCommandService.generate(GenerateInvoiceCommand):
+  1. snapshot = cargoQueryPort.findByBookingId(bid)
+     // snapshot.shipperType, snapshot.corporateDiscountRate を取得
+  2. base, breakdown = pricingService.calculateActualWithBreakdown(...)
+  3. discountRate = if snapshot.shipperType == Corporate then
+                       snapshot.corporateDiscountRate.getOrElse(BigDecimal(0))
+                    else BigDecimal(0)
+  4. lineItems = breakdown.items.map(toInvoiceLineItem) ++
+                 (if discountRate > 0 then
+                    List(InvoiceLineItem(
+                      category = Discount,
+                      name = f"法人契約割引 (${discountRate * 100}%.2f%%)",
+                      amount = Money.jpy(-(base.amount * discountRate).toLong)
+                    ))
+                  else Nil)
+  5. invoice = Invoice.issue(id, bid, snapshot.shipperId, base, discountRate, lineItems, now)
+  6. invoiceRepository.save(invoice)
+```
 
 ### データモデル
 
-#### V23: tracking_exception_event.id 確認 + ExceptionType.Loss → Lost 統一 (H2/H5)
+V22 まで適用済の IT7 状態に対し、IT8 で **V23 / V24 / V25** を追加する。命名規約（単数形テーブル / `id BIGSERIAL PK + 業務キー UK` / `version INT` / 監査カラム / FK は `id` 参照）は data-model.md に準拠する。なお `payment` テーブルは V17 で先行作成済 (IT6 / Billing Context タスク 3.2)、IT8 は ALTER で精算ライフサイクル運用に必要なカラムを補正する。
+
+#### V23: tracking_exception_event 永続化 PK の値オブジェクト化（H5 / IT7 P10 解消）
 
 ```sql
--- V20 で既に id BIGSERIAL PK は存在するため、ドメイン側のみ TrackingExceptionEvent.id: Option[Long] を追加。
--- もし V20 で id がない場合は ALTER TABLE で追加。
--- H2: exception_type の CHECK は 'Lost' のまま (変更なし)、ドメイン enum 命名統一のみ。
+-- IT7 P10 (TrackingExceptionEvent の永続化キーが暗黙) を解消する。
+-- V20 で `id BIGSERIAL PRIMARY KEY` は既に存在するが、ドメイン側で値オブジェクト化されていない。
+-- IT8 0.5: ドメイン側に opaque type ExceptionEventId を追加し、
+-- Repository.appendException が PK を返却、updateExceptionResolution は PK 直接 UPDATE に変更。
+--
+-- SQL レベルの追加変更なし (V20 で十分)。
+-- ただし、並行解決時のロック粒度を明確にするために
+-- UNIQUE 制約を 1 件追加する:
+
+ALTER TABLE tracking_exception_event
+  ADD CONSTRAINT uk_tracking_exception_unique_unresolved
+  EXCLUDE USING gist (
+    tracking_id WITH =,
+    exception_type WITH =
+  ) WHERE (resolved_at IS NULL);
+-- 同一 tracking_id × 同一 exception_type の "未解決" 例外を 1 件に制限。
+-- Damage が 2 件同時に未解決という業務的にあり得ないケースを DB で防ぐ。
 ```
 
-#### V24: payment テーブル補正
+#### V24: payment テーブル補正（US23 + S4-1/2/3 整合）
 
-V17 で既に payment テーブル作成済。IT8 で `due_date DATE NOT NULL` / `reference_code VARCHAR(100)` / `version INTEGER NOT NULL DEFAULT 0` の有無を確認し、不足分を ALTER。
+```sql
+-- IT8 US23: 精算ライフサイクル運用に必要なカラムを ALTER で追加。
+-- V17 既存スキーマ:
+--   payment (id BIGSERIAL PK, invoice_id BIGINT FK, amount BIGINT,
+--            payment_method VARCHAR(30), paid_at TIMESTAMP,
+--            reference_code VARCHAR(100), created_at TIMESTAMP)
+-- IT8 で追加するカラム:
+--   payment_number  VARCHAR(20)  -- 業務キー PAY-NNNNNN
+--   due_date        DATE         -- 支払期限
+--   status          VARCHAR(20)  -- Pending/Confirmed/Overdue/Refunded
+--   version         INTEGER      -- 楽観ロック
+--   updated_at      TIMESTAMP    -- 監査カラム
+-- かつ paid_at / payment_method / reference_code を NULL 許容に変更
+-- (発行時点 (Pending) ではこれらは未確定のため)。
 
-#### V25: notification_log CHECK 拡張
+ALTER TABLE payment
+  ADD COLUMN payment_number VARCHAR(20),
+  ADD COLUMN due_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'Pending'
+    CHECK (status IN ('Pending', 'Confirmed', 'Overdue', 'Refunded')),
+  ADD COLUMN version INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ALTER COLUMN paid_at DROP NOT NULL,
+  ALTER COLUMN payment_method DROP NOT NULL,
+  ALTER COLUMN payment_method SET DEFAULT 'BankTransfer';
 
-`PaymentRequested` / `PaymentConfirmed` / `OverdueAlerted` の 3 種追加。
+-- 業務キーの UK 化（既存行が空のため後付けで NOT NULL + UK）
+UPDATE payment SET payment_number = 'PAY-' || LPAD(id::text, 6, '0') WHERE payment_number IS NULL;
+ALTER TABLE payment
+  ALTER COLUMN payment_number SET NOT NULL,
+  ADD CONSTRAINT uk_payment_number UNIQUE (payment_number);
+
+-- 業務キーのシーケンス採番（ADR 0013 命名規約準拠）
+CREATE SEQUENCE payment_id_seq START WITH 1 INCREMENT BY 1;
+
+CREATE INDEX idx_payment_status ON payment (status);
+CREATE INDEX idx_payment_due_date ON payment (due_date) WHERE status = 'Pending';
+COMMENT ON COLUMN payment.payment_number IS '業務キー PAY-NNNNNN（payment_id_seq 採番）';
+COMMENT ON COLUMN payment.due_date IS '支払期限（issuedAt + 30 日が業務既定）';
+COMMENT ON COLUMN payment.status IS 'PaymentStatus enum、Pending/Confirmed/Overdue/Refunded';
+
+-- data-model.md L545-555 との整合
+-- data-model.md の `paid_amount_value INTEGER + paid_amount_currency VARCHAR(3)` は ADR 0015 に合わせ
+-- `amount BIGINT` 単通貨 (JPY) に統一する差分を 0.12 で data-model.md に反映する。
+-- data-model.md の `transaction_reference` は V17 で既に `reference_code` に統一済。
+```
+
+#### V25: notification_log CHECK 拡張（US23）
+
+```sql
+-- IT8 US23: 精算通知 3 種を追加。
+ALTER TABLE notification_log DROP CONSTRAINT ck_notification_log_type;
+ALTER TABLE notification_log ADD CONSTRAINT ck_notification_log_type
+    CHECK (type IN ('RouteNotified', 'BookingConfirmed', 'BookingCancelled',
+                    'TrackingIssued', 'HandlingRecorded',
+                    'ManualStatusUpdated', 'DeliveryCompleted',
+                    'DelayNotified', 'DamageReported', 'LossEscalated', 'ExceptionResponded',
+                    'PaymentRequested', 'PaymentConfirmed', 'OverdueAlerted'));
+```
+
+#### 既存テーブル一覧（参考）
+
+| テーブル | バージョン | IT | IT8 での変更 |
+|---------|----------|-----|-------------|
+| user, shipper, cargo, voyage, carrier_movement, voyage_supported_cargo_type, estimate, route_candidate | V1-V8 | IT1-IT3 | - |
+| route_candidate_selection / route_candidate_selection_leg | V9 | IT4 | - |
+| cargo_itinerary_leg | V10 | IT4 | - |
+| notification_log | V11 | IT4 | - |
+| tracking_activity | V12 | IT5 | - |
+| handling_activity | V13 | IT5 | - |
+| tracking_handling_event | V14 | IT5 | - |
+| handling_activity.recipient_confirmation | V15 | IT6 | - |
+| notification_log CHECK 拡張 | V16 | IT6 | V25 で更に拡張 |
+| invoice / invoice_line_item / **payment** / cargo.invoice_id / invoice_id_seq | V17 | IT6 | **V24 で payment ALTER + payment_id_seq 追加** |
+| handling_activity.recipient_confirmation_type | V18 | IT7 | - |
+| cargo_itinerary_leg.from/to_unlocode | V19 | IT7 | - |
+| tracking_exception_event | V20 | IT7 | **V23 で EXCLUDE 制約 + ExceptionEventId 値オブジェクト化** |
+| notification_log CHECK 拡張（DelayNotified 等 4 種）| V21 | IT7 | V25 で更に 3 種拡張 |
+| invoice_line_item.category | V22 | IT7 (0.9) | - |
+| **tracking_exception_event EXCLUDE 制約** | **V23** | **IT8** | NEW |
+| **payment ALTER + payment_id_seq** | **V24** | **IT8** | NEW |
+| **notification_log CHECK 拡張（PaymentRequested / PaymentConfirmed / OverdueAlerted）** | **V25** | **IT8** | NEW |
 
 ### ユーザーインターフェース
 
-#### ビュー
+ui_design.md L88-91（請求書一覧 / 新規請求書発行 / 請求書詳細 / 割引ポリシー管理）の既存構成を踏まえ、IT8 は **精算 (Settlement) 系の 3 画面を新設** または **請求書詳細画面に統合** する。ADR 0019 案 A 採択時は前者、案 B 採択時は後者。下記ワイヤーフレームは **案 A** を主として描き、案 B 採択時の差分は注釈で示す。さらに ui_design.md の Role 表記 (Accountant / Admin) と実装側 Role (Pricer / MasterAdmin) の乖離を 0.12 で統一する。
 
-新規画面（4 画面）+ 既存画面拡張（2 画面）:
+#### ビュー
 
 ```plantuml
 @startsalt
 {+
-  精算書発行画面 /billing/invoices/:id/payment/new
+  請求書詳細（拡張 / `/billing/invoices/:invoiceId`、US22 + US23）
   {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 請求管理 | [ログアウト] }
     {
-      [  精算書発行   ]
+      請求書番号    | "<b>INV-000001</b>"
+      予約 ID       | "BK-000001"
+      荷主          | "SH-000001 <color:blue>法人</color>"
+    }
+    ---
+    {
+      <b>料金内訳</b>
+      | <b>種別</b>  | <b>明細</b>           | <b>金額</b>      |
+      | Weight       | "重量料金"             | "10,000 円"      |
+      | Distance     | "距離料金加算"          | "5,000 円"       |
+      | CargoType    | "貨物種別加算 (Refrig)" | "3,000 円"       |
+      | <color:red>Discount</color> | "<b>法人契約割引 (15.00%)</b>" | "<color:red>-2,700 円</color>" |
+    }
+    ---
+    {
+      基本料金合計  | "18,000 円"
+      割引適用率    | "<color:red>15.00%</color>"
+      割引額        | "<color:red>-2,700 円</color>"
+      <b>請求金額</b> | "<b>15,300 円</b>"
+    }
+    ---
+    {
+      <b>精算状態</b>
+      | <b>精算番号</b> | <b>金額</b> | <b>期限</b> | <b>状態</b> | <b>支払日</b> |
+      | (なし)         | -          | -          | -          | -            |
+    }
+    ---
+    [一覧に戻る] | [<b>精算書発行</b>]（Confirmed 状態のみ）
+  }
+}
+----------------
+{+
+  精算書発行画面（新規 / `/billing/invoices/:invoiceId/issue-payment`、US23）
+  {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 請求管理 | [ログアウト] }
+    {
+      [  精算書発行  ]
       ---------------------
       請求書番号    | "INV-000001"
-      請求金額      | "12,000 円"
-      支払期限      | "2026-10-31"
-      [    キャンセル    ][    発行    ]
+      請求金額      | "15,300 円"
+      支払期限      | "2026-10-31" :^2026-10-31, 2026-11-15, 2026-11-30^
+      支払方法既定  | "銀行振込（BankTransfer）"
     }
+    {  : Pricer/MasterAdmin のみ表示 }
+    [キャンセル] | [<b>発行</b>]
   }
+}
 ----------------
-  精算一覧画面 /billing/payments
+{+
+  精算一覧画面（新規 / `/billing/payments`、US23、案 A 採択時のみ）
   {+
-  { . | 精算番号 | 請求書番号 | 金額 | 期限 | 状態 | 操作
-    . | PAY-001 | INV-001 | ¥12,000 | 2026-10-31 | Pending | [詳細]
-    . | PAY-002 | INV-002 | ¥8,000 | 2026-09-30 | Overdue | [詳細]
+    {/ <b>CargoTracker</b> | ダッシュボード | 請求管理 | 精算管理 | [ログアウト] }
+    {
+      検索: | <b>状態</b> ^全件/Pending/Confirmed/Overdue/Refunded^ |  期限 | "2026-10-01" - "2026-10-31"
+    }
+    ---
+    | <b>精算番号</b> | <b>請求書番号</b> | <b>金額</b> | <b>期限</b>  | <b>状態</b>      | <b>支払日</b> | <b>操作</b> |
+    | PAY-000001      | INV-000001        | "¥15,300"  | 2026-10-31  | <color:gray>Pending</color>   | -        | [詳細] |
+    | PAY-000002      | INV-000002        | "¥8,000"   | 2026-09-30  | <color:red>Overdue</color>    | -        | [詳細] |
+    | PAY-000003      | INV-000003        | "¥12,000"  | 2026-09-15  | <color:green>Confirmed</color> | 2026-09-10 | [詳細] |
   }
+}
+----------------
+{+
+  精算詳細画面（新規 / `/billing/payments/:paymentId`、US23）
+  {+
+    {/ <b>CargoTracker</b> | ダッシュボード | 請求管理 | 精算管理 | [ログアウト] }
+    {
+      精算番号    | "<b>PAY-000001</b>"
+      請求書番号  | "INV-000001"
+      金額        | "¥15,300"
+      期限        | "2026-10-31"
+      状態        | "<color:gray>Pending</color>"
+    }
+    ---
+    {  : <b>入金確認フォーム</b>（状態が Pending or Overdue のときのみ表示） }
+    {
+      入金日時      | "2026-10-25 14:30" : datetime-local
+      決済参照番号  | "TXN-20261025-001" : ^任意^
+      支払方法      | ^BankTransfer/Card/Convenience^
+    }
+    [キャンセル] | [<b>入金確認</b>]
+    {  : Pricer/MasterAdmin のみ表示 }
+    ---
+    {  : <b>通知履歴</b> }
+    | <b>送信日時</b>      | <b>種別</b>          | <b>送信先</b>            |
+    | 2026-10-01 10:00    | PaymentRequested     | "shipper@example.com"   |
+    | 2026-10-15 09:00    | OverdueAlerted       | "accounting@cargo.local" |
   }
 }
 @endsalt
 ```
 
+> **案 B (ADR 0019 Invoice 内案) 採択時の差分**:
+>
+> - 精算一覧画面は **不要** (請求書一覧画面の状態カラムで代替)
+> - 精算詳細画面は **不要** (請求書詳細画面に「入金確認フォーム」セクションを統合)
+> - URL: `/billing/payments/...` → `/billing/invoices/:id/confirm-payment` 等に置換
+> - 業務的フローはほぼ同じ、画面遷移が請求書 → 入金確認 → 請求書詳細 (Settled) に短縮される
+
 #### 画面一覧（IT8 追加・拡張）
 
-| URL | 画面 | 認可 |
-|-----|------|------|
-| /billing/invoices/:id/payment/new | 精算書発行フォーム | Pricer / MasterAdmin |
-| /billing/payments | 精算一覧 | Pricer / MasterAdmin |
-| /billing/payments/:id | 精算詳細 | Pricer / MasterAdmin |
-| /billing/payments/:id/confirm | 入金確認 POST | Pricer / MasterAdmin |
-| /tracking/:tn/exceptions/:idx/cancel | 例外対応取消し (H9) | Tracker / MasterAdmin |
-| /billing/invoices/:id | 請求書詳細拡張 (US22 割引内訳明示) | Pricer / MasterAdmin |
+| 画面名 | URL | 説明 | アクセスロール | 関連 US |
+|--------|-----|------|---------------|---------|
+| 請求書詳細（拡張） | `/billing/invoices/:invoiceId` | 料金内訳に **Discount 明細を強調表示** + 精算状態セクション追加 | Pricer, MasterAdmin | **US22**, US23 |
+| 精算書発行（新規） | `/billing/invoices/:invoiceId/issue-payment` | 期限プリセット + 支払方法既定 | Pricer, MasterAdmin | US23 |
+| 精算一覧（新規、案 A） | `/billing/payments` | 状態フィルタ + 期限範囲 + CSV 出力 | Pricer, MasterAdmin | US23 |
+| 精算詳細（新規、案 A） | `/billing/payments/:paymentId` | 入金確認フォーム + 通知履歴 | Pricer, MasterAdmin | US23 |
+| 入金確認 POST | `/billing/payments/:paymentId/confirm` <br/> (案 B 時: `/billing/invoices/:id/confirm-payment`) | PRG、Confirmed 遷移 + Settled 連動 + PaymentConfirmed 通知 | Pricer, MasterAdmin | US23 |
+| 払戻 POST（IT9 申し送り） | `/billing/payments/:paymentId/refund` | Refunded 遷移、IT8 はバックエンド API のみ | Pricer, MasterAdmin | US23（縮小） |
+| 追跡詳細（拡張） | `/tracking/:trackingNumber` | 「対応取消し」「補足コメント追記」動線追加 (H9) | Tracker, MasterAdmin | US19/US20 補正 |
+| 例外対応取消し POST | `/tracking/:trackingNumber/exceptions/:idx/cancel` | resolvedAt=NULL + 補足コメント追記、監査ログ汚染防止 | Tracker, MasterAdmin | H9 解消 |
+| 公開追跡（拡張、ADR 0020 結果次第） | `/public/tracking/:trackingNumber` | 例外表示の有無は ADR 0020 で決定 | 未認証 | H8 解消 |
 
 #### インタラクション
 
-画面遷移図:
-
 ```plantuml
 @startuml
-title IT8 画面遷移図 (Settlement)
 
-[*] --> 請求書詳細
-請求書詳細 : /billing/invoices/:id
-請求書詳細 --> 精算書発行 : Confirmed 状態のみ
-精算書発行 : /billing/invoices/:id/payment/new
-精算書発行 --> 精算詳細 : 発行成功 (PRG)
-精算書発行 --> 精算書発行 : 入力エラー (自己遷移)
+title 画面遷移図（IT8 Settlement + US22 + 申し送り解消）
 
-精算詳細 : /billing/payments/:id
-精算詳細 --> 入金確認 : POST /confirm
-入金確認 --> 精算詳細 : 確認後 PRG (Settled 遷移含む)
+[*] --> ログイン
+state ログイン
+ログイン --> ダッシュボード : ログイン成功（GET /）
 
-精算詳細 --> 精算一覧 : 一覧へ
-精算一覧 : /billing/payments
-精算一覧 --> 精算詳細 : 行クリック
+state ダッシュボード
+ダッシュボード --> 請求書一覧 : 「請求管理」（GET /billing/invoices）[Pricer]
+ダッシュボード --> 精算一覧 : 「精算管理」（GET /billing/payments）[Pricer、案 A のみ]
+ダッシュボード --> 追跡詳細 : 「貨物追跡」→ 番号入力（GET /tracking/:n）
 
-精算詳細 --> [*] : ログアウト
+state 請求書詳細 : URL: /billing/invoices/:invoiceId\n割引内訳明示 + 精算セクション
+請求書一覧 --> 請求書詳細 : 行クリック（GET）
+請求書詳細 --> 精算書発行 : 「精算書発行」[Confirmed 状態のみ]（GET）
+
+state 精算書発行 : URL: /billing/invoices/:id/issue-payment\n期限プリセット + 支払方法既定
+精算書発行 --> 精算詳細 : 「発行」成功（PRG: POST /billing/invoices/:id/issue-payment\n→ /billing/payments/:id + alert-success + PaymentRequested 通知）
+精算書発行 --> 精算書発行 : 期限が過去日 or 必須未入力（alert-danger、自己ループ）
+
+state 精算詳細 : URL: /billing/payments/:paymentId\n入金確認フォーム + 通知履歴
+精算一覧 --> 精算詳細 : 行クリック（GET）
+精算詳細 --> 精算詳細_確認後 : 「入金確認」（PRG: POST .../confirm\n→ 自詳細 + alert-success + Confirmed + Cargo.Settled + PaymentConfirmed 通知）
+精算詳細 --> 精算詳細 : 入金日時 不正 / 重複確認（alert-danger、自己ループ）
+
+state 精算詳細_確認後 : 状態 = Confirmed\n「払戻」ボタンのみ活性（IT9 申し送り）
+精算詳細_確認後 --> 精算一覧 : 「一覧へ」
+
+state 追跡詳細_IT8 : URL: /tracking/:trackingNumber\n例外履歴 + <b>対応取消しボタン</b> (H9)
+追跡詳細 --> 追跡詳細_IT8 : 30 秒 htmx ポーリング (IT5+IT7 既存)
+追跡詳細_IT8 --> 追跡詳細_IT8 : 「対応取消し」（PRG: POST .../exceptions/:idx/cancel + 補足コメント + alert-success + 監査ログ追記）
+追跡詳細_IT8 --> 追跡詳細_IT8 : 補足コメント未入力 / 補足コメント超過（alert-danger、自己ループ）
+
+state 例外記録モーダル_IT8 : URL: htmx 部分表示\nDelay 選択時のみ新到着予定日 + 対応方針 (H10 / T7)
+追跡詳細_IT8 --> 例外記録モーダル_IT8 : 「例外を記録」[Tracker]
+例外記録モーダル_IT8 --> 追跡詳細_IT8 : 「記録」（PRG: POST .../exceptions + alert-success + DelayNotified に意味ある値）
+例外記録モーダル_IT8 --> 例外記録モーダル_IT8 : Delay で新到着予定日が過去日 / 対応方針 未選択（alert-danger）
+
+ダッシュボード --> [*] : ログアウト
 @enduml
 ```
 
+#### htmx パターン
+
+| パターン | 採用箇所 | 実装 |
+|---------|---------|------|
+| htmx モーダル取得 | 「対応取消し」「補足コメント追記」(H9) | `hx-get="/tracking/:n/exceptions/:idx/cancel-form" hx-target="#modal"` で確認モーダル取得、送信は通常 POST + PRG |
+| htmx Delay 専用フィールド表示制御 (H10) | 例外記録モーダル | 「例外種別」select の `hx-trigger="change"` で `hx-get="/tracking/:n/exceptions/new-fragment?type=Delay"` を取得、`hx-target="#delay-fields"` に挿入。Delay 以外はクリア |
+| htmx 入金確認の即時反映 | 精算詳細画面 | 「入金確認」後の Cargo.Settled 連動完了を確認するため、PRG 後の精算詳細画面で `hx-get="/booking/cargoes/:bid/status" hx-trigger="load"` で `#cargo-status` 部分を取得 |
+| htmx 精算一覧の絞り込み | 精算一覧画面 | 状態 select + 期限範囲入力で `hx-get="/billing/payments?status=...&from=...&to=..." hx-target="#payment-table" hx-trigger="change delay:300ms"` |
+| 通常 POST + PRG | 精算書発行 / 入金確認 / 対応取消し / 法人割引適用 | フォーム送信 → SEE_OTHER → 詳細・一覧画面に flash success/error |
+| htmx エラー処理（楽観ロック競合）| Payment.confirmPayment / Cargo.markSettled の競合 | `htmx:responseError` を listener で受け `alert-danger` を `#flash-area` に挿入、「再読込してください」表示。IT7 0.11 + IT8 0.1 (withOptimisticLock) 共通化済 |
+
+#### フィードバックメッセージ
+
+| トリガー | スタイル | メッセージ例 |
+|---------|---------|------------|
+| US22 法人割引適用成功（請求書発行）| `alert-info`（情報表示）| 「法人荷主のため割引率 <b>15.00%</b> が自動適用されました（割引額: -2,700 円）」 |
+| US22 個人荷主で割引なし | `alert-info`（情報表示）| 「個人荷主のため割引は適用されません」（明示表示しない場合あり）|
+| US23 精算書発行成功 | `alert-success` | 「精算書 <b>PAY-000001</b> を発行しました。荷主に支払案内を送信しました（PaymentRequested）」 |
+| US23 入金確認成功 | `alert-success` | 「入金を確認しました。予約 BK-000001 は <b>Settled</b> 状態に遷移しました」 |
+| US23 期限超過自動検出（detectOverdue）| `alert-warning` | 「精算 PAY-000002 の支払期限を超過しました。経理担当者に未払い通知を送信しました（OverdueAlerted）」 |
+| US23 期限超過後の救済入金 | `alert-success` | 「Overdue 状態の精算 PAY-000002 を救済しました（Confirmed 遷移、救済ログ記録）」 |
+| H9 例外対応取消し成功 | `alert-success` | 「例外対応を取消しました（補足: 「Lost と判定したが実は社内倉庫で再発見」）。監査ログに追記されました」 |
+| H10 Delay 通知で意味ある値 | `alert-success` | 「Delay 例外を記録しました。新到着予定日 <b>2026-10-15</b> + 対応方針「代替航海 VY-003 で再輸送」を荷主に通知しました（DelayNotified）」 |
+| 楽観ロック競合（H1 共通化後）| `alert-danger` | 「他のユーザーが先に更新しました。画面を再読み込みしてください」 |
+| Payment.refund エラー（未確定の払戻し）| `alert-danger` | 「Pending 状態の精算は払戻しできません。先に入金確認するか、発行をキャンセルしてください」 |
+| 精算書発行で期限が過去日 | `alert-danger` | 「支払期限は本日以降の日付を選択してください」 |
+| ADR 0019 未決定で US23 着手 | （計画運用上の警告）| 「ADR 0019 (Payment 集約 vs Invoice 内) が承認されていません。Day 1 で必ず決定してください」 |
+
 ### ディレクトリ構成
 
-```
-apps/cargo-tracker/app/cargotracker/billing/
-├── application/
-│   ├── commandservices/
-│   │   ├── BillingCommandService.scala (既存、US22 で snapshot.corporateDiscountRate 参照に拡張)
-│   │   └── SettlementCommandService.scala (NEW IT8 / US23)
-│   └── notifications/
-│       └── NotificationPayloadJson.scala (PaymentRequested 等追加)
-├── domain/
-│   └── model/
-│       ├── aggregates/
-│       │   ├── Invoice.scala (既存)
-│       │   └── Payment.scala (NEW IT8 / US23)
-│       ├── enums/
-│       │   ├── PaymentStatus.scala (既存、Refunded 既に enum 化済)
-│       │   └── LineItemCategory.scala (既存、Discount 既に enum 化済)
-│       ├── ports/
-│       │   └── MailNotificationPort.scala (NEW IT8)
-│       ├── repositories/
-│       │   ├── InvoiceRepository.scala (既存)
-│       │   ├── PaymentRepository.scala (NEW IT8)
-│       │   └── BillingCargoQueryPort.scala (既存)
-│       └── valueobjects/
-│           ├── BillingCargoSnapshot.scala (corporateDiscountRate 追加)
-│           ├── InvoiceLineItem.scala (既存)
-│           └── PaymentId.scala (NEW IT8 / opaque type, PAY-NNNNNN)
-├── infrastructure/
-│   ├── acl/
-│   │   └── BookingCargoQueryAdapter.scala (Shipper.discountRate 取得拡張)
-│   └── repositories/
-│       ├── ScalikeJdbcInvoiceRepository.scala (既存)
-│       └── ScalikeJdbcPaymentRepository.scala (NEW IT8)
-└── interfaces/
-    └── web/
-        ├── InvoiceController.scala (既存)
-        └── PaymentController.scala (NEW IT8)
+IT7 までの構成に対し、IT8 で以下を追加・変更する。**案 A (Payment 集約) を主案として記載**。案 B 採択時は注釈に従い読み替える。
 
-apps/cargo-tracker/app/cargotracker/booking/
-└── application/
-    └── ports/
-        └── BookingPublicApi.scala (NEW IT8 / H3 / ADR 0017)
+```text
+apps/cargo-tracker/
+├── app/
+│   ├── cargotracker/
+│   │   ├── billing/
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/
+│   │   │   │   │   ├── Invoice.scala                       # IT8 拡張: applyCorporateDiscount メソッド追加、Snapshot は IT7 既存
+│   │   │   │   │   └── Payment.scala                       # IT8 新規 (案 A) / 案 B 時は不要
+│   │   │   │   ├── enums/
+│   │   │   │   │   ├── PaymentStatus.scala                 # IT8 拡張: Refunded 既存、案 B 時は Invoice 直属
+│   │   │   │   │   └── LineItemCategory.scala              # IT7 既存、US22 で Discount 本格利用
+│   │   │   │   ├── ports/
+│   │   │   │   │   ├── BillingCargoQueryPort.scala         # IT7 既存、CargoSummary に discountRate 追加 (US22)
+│   │   │   │   │   └── MailNotificationPort.scala          # IT8 新規 (ADR 0018 候補)
+│   │   │   │   ├── repositories/
+│   │   │   │   │   ├── InvoiceRepository.scala             # IT7 既存
+│   │   │   │   │   └── PaymentRepository.scala             # IT8 新規 (案 A) / 案 B 時は不要
+│   │   │   │   └── valueobjects/
+│   │   │   │       ├── BillingCargoSnapshot.scala          # IT8 拡張: corporateDiscountRate 追加 (US22)
+│   │   │   │       ├── InvoiceLineItem.scala               # IT7 既存
+│   │   │   │       └── PaymentId.scala                     # IT8 新規 (opaque type PAY-NNNNNN)
+│   │   │   ├── application/
+│   │   │   │   ├── commandservices/
+│   │   │   │   │   ├── BillingCommandService.scala         # IT8 拡張: corporateDiscountRate 自動適用 + lineItems 生成 (US22)
+│   │   │   │   │   └── SettlementCommandService.scala      # IT8 新規 (案 A): issuePayment / confirmPayment / detectOverdue / refundPayment\n                                                            # 案 B 時は BillingCommandService に統合
+│   │   │   │   └── notifications/
+│   │   │   │       └── NotificationPayloadJson.scala       # IT8 拡張: PaymentRequested / PaymentConfirmed / OverdueAlerted JSON 化
+│   │   │   ├── infrastructure/
+│   │   │   │   ├── acl/
+│   │   │   │   │   ├── BookingCargoQueryAdapter.scala      # IT8 拡張: ShipperRepository.findById で discountRate 取得 (US22)
+│   │   │   │   │   ├── MailNotificationAdapter.scala       # IT8 新規 (Pekko Mail / print logger、ADR 0018)
+│   │   │   │   │   └── BookingPublicApiAdapter.scala       # IT8 新規 (ADR 0017、SettlementCommandService が利用)
+│   │   │   │   └── repositories/
+│   │   │   │       ├── ScalikeJdbcInvoiceRepository.scala  # IT7 既存
+│   │   │   │       └── ScalikeJdbcPaymentRepository.scala  # IT8 新規 (案 A、withOptimisticLock 適用)
+│   │   │   └── interfaces/
+│   │   │       └── web/
+│   │   │           ├── InvoiceController.scala             # IT8 拡張: 詳細画面に精算状態セクション + 「精算書発行」ボタン
+│   │   │           └── PaymentController.scala             # IT8 新規 (案 A): list/detail/issue/confirm/refund アクション
+│   │   ├── booking/
+│   │   │   ├── application/
+│   │   │   │   └── commandservices/
+│   │   │   │       └── BookingCommandService.scala         # IT8 拡張: markSettled 追加 (BookingPublicApi 経由で呼ばれる)
+│   │   │   ├── domain/model/
+│   │   │   │   ├── aggregates/Cargo.scala                  # IT8 拡張: markSettled / Settled 遷移
+│   │   │   │   └── valueobjects/BookingStatus.scala        # IT8 拡張: Settled enum 追加
+│   │   │   └── interfaces/                                  # IT8 新規 ports サブパッケージ
+│   │   │       └── ports/
+│   │   │           └── BookingPublicApi.scala              # IT8 新規 (ADR 0017、公開 Port trait)
+│   │   ├── tracking/
+│   │   │   ├── domain/model/
+│   │   │   │   └── valueobjects/
+│   │   │   │       └── ExceptionEventId.scala              # IT8 新規 (opaque type EXC-NNNNNN、H5 解消)
+│   │   │   ├── application/commandservices/
+│   │   │   │   └── TrackingCommandService.scala            # IT8 拡張: withOptimisticLock 共通化 (H1)、cancelExceptionResolution / appendResolutionComment 追加 (H9)
+│   │   │   └── interfaces/web/
+│   │   │       └── TrackingController.scala                # IT8 拡張: 対応取消し動線 (H9) + Delay 専用フィールド htmx 取得 (H10)
+│   │   └── handling/
+│   │       └── application/commandservices/
+│   │           └── HandlingOrchestrator.scala              # IT8 拡張: ADR 0016 決定に応じて単一 DB.localTx 化 or Outbox 化、HandlingCargoQueryPort 経由 routeDeviation 自動判定 (T3)
+├── conf/
+│   ├── routes                                              # IT8 拡張: 8 エンドポイント追加 (精算 4 + 例外取消し 1 + 公開追跡 1 + Delay モーダル 1 + 例外コメント 1)
+│   └── db/migration/default/
+│       ├── V23__tracking_exception_event_exclude_uk.sql    # IT8 新規 (H5)
+│       ├── V24__payment_alter_for_settlement.sql           # IT8 新規 (US23)
+│       └── V25__notification_log_check_payment.sql         # IT8 新規 (US23)
+├── test/
+│   ├── cargotracker/arch/
+│   │   └── HexagonalArchitectureSpec.scala                 # IT8 拡張: BookingPublicApi の依存方向ルール追加 (ADR 0017 検証)
+│   ├── cargotracker/billing/
+│   │   ├── application/commandservices/
+│   │   │   ├── BillingCommandServiceSpec.scala             # IT8 拡張: 法人 / 個人 / 割引 0% / 15% / 30% 4 ケース追加
+│   │   │   └── SettlementCommandServiceSpec.scala          # IT8 新規 (案 A): issue / confirm / detectOverdue / refund 各 2 件
+│   │   └── infrastructure/repositories/
+│   │       └── ScalikeJdbcPaymentRepositoryIntegrationSpec.scala  # IT8 新規 (案 A、Testcontainers + V24)
+│   └── cargotracker/tracking/
+│       └── application/commandservices/
+│           └── TrackingCommandServiceSpec.scala            # IT8 拡張: 対応取消し + 補足コメント + EitherValues 移行 (H12)
+└── docs/adr/
+    ├── 0016-handling-orchestrator-transaction-boundary.md  # IT8 0.4 で起票
+    ├── 0017-booking-public-api-port.md                     # IT8 0.3 で起票
+    ├── 0018-mail-notification-port.md                      # IT8 2.9 候補
+    ├── 0019-payment-aggregation-vs-invoice-status.md       # IT8 0.15 で起票 (Day 1 必須)
+    └── 0020-public-tracking-exception-visibility.md        # IT8 0.14 で起票
 ```
 
 ### API 設計
 
-| メソッド | エンドポイント | 説明 |
-|---------|---------------|------|
-| GET | /billing/invoices/:id/payment/new | 精算書発行フォーム |
-| POST | /billing/invoices/:id/payment | 精算書発行 |
-| GET | /billing/payments | 精算一覧 |
-| GET | /billing/payments/:id | 精算詳細 |
-| POST | /billing/payments/:id/confirm | 入金確認 |
-| POST | /tracking/:tn/exceptions/:idx/cancel | 例外対応取消し |
+| メソッド | エンドポイント | 説明 | 関連 US / 案 | 認証 |
+|---------|---------------|------|-------------|------|
+| GET | `/billing/invoices/:invoiceId` | 請求書詳細（料金内訳 + 精算状態） | US22, US23 共通 | Pricer / MasterAdmin |
+| GET | `/billing/invoices/:invoiceId/issue-payment` | 精算書発行フォーム | US23 | Pricer / MasterAdmin |
+| POST | `/billing/invoices/:invoiceId/issue-payment` | 精算書発行（PRG）。Pending Payment 作成 + PaymentRequested 通知 | US23 | Pricer / MasterAdmin |
+| GET | `/billing/payments` | 精算一覧 (status / 期限フィルタ) | US23（案 A）| Pricer / MasterAdmin |
+| GET | `/billing/payments/:paymentId` | 精算詳細（入金確認フォーム + 通知履歴） | US23（案 A）| Pricer / MasterAdmin |
+| POST | `/billing/payments/:paymentId/confirm` <br/> 案 B: `/billing/invoices/:id/confirm-payment` | 入金確認（PRG）。Confirmed 遷移 + Cargo.Settled + PaymentConfirmed 通知 | US23 | Pricer / MasterAdmin |
+| POST | `/billing/payments/:paymentId/refund` | 払戻し（Refunded 遷移、IT8 はバックエンド API のみ、UI は IT9）| US23（縮小）| MasterAdmin |
+| POST | `/billing/payments/detect-overdue` <br/> （バッチ未実装、API のみ） | 期限超過検出（Overdue 化 + OverdueAlerted 通知）。IT9 で Pekko Scheduler 連携 | US23（縮小）| MasterAdmin |
+| GET | `/tracking/:trackingNumber/exceptions/:idx/cancel-form` | 対応取消し確認モーダル（htmx）| H9 解消 | Tracker / MasterAdmin |
+| POST | `/tracking/:trackingNumber/exceptions/:idx/cancel` | 対応取消し（PRG）。resolvedAt=NULL + 補足コメント追記 | H9 解消 | Tracker / MasterAdmin |
+| GET | `/tracking/:trackingNumber/exceptions/new-fragment` | 例外種別変更時の Delay 専用フィールド取得（htmx）| H10 / T7 | Tracker / MasterAdmin |
+| GET | `/public/tracking/:trackingNumber` | 公開追跡（例外表示有無は ADR 0020 結果次第）| H8 解消 | 未認証 |
 
 ### ADR
 
-| ADR | タイトル | ステータス |
-|-----|---------|-----------|
-| 0014 | 集約 Snapshot ADT 導入 | 承認・適用済（IT7） |
-| 0015 | Billing Money を shared.domain.Money に一本化 | 承認・適用済（IT7） |
-| 0016 | HandlingOrchestrator のトランザクション境界 | 提案 → IT8 で承認予定 (タスク 0.4) |
-| 0017 | BookingPublicApi 公開 Port 化 | 提案 → IT8 で承認予定 (タスク 0.3) |
-| 0018 | MailNotificationPort 抽象化 (Pekko Mail / print logger) | 候補（必要なら IT8 タスク 2.9 で起票） |
-| 0019 | Payment は Invoice 集約内のステータス保持か別集約か | 提案 → IT8 着手最初に承認予定 (タスク 0.15、US23 全タスクの前提) |
-| 0020 | 公開追跡画面における例外表示方針 | 提案 → IT8 で承認予定 (タスク 0.14、業務代表者指摘) |
+| ADR | タイトル | ステータス | 関連タスク |
+|-----|---------|-----------|------|
+| [ADR 0014](../adr/0014-aggregate-snapshot-adt.md) | 集約 reconstruct / register に Snapshot ADT を導入 | 承認・適用済（IT7） | （IT7 完了済）|
+| [ADR 0015](../adr/0015-billing-money-shared-domain.md) | Billing Money を `shared.domain.Money` に一本化 | 承認・適用済（IT7） | （IT7 完了済）|
+| ADR 0016 | HandlingOrchestrator のトランザクション境界（単一 DB.localTx vs Outbox/Domain Events） | 提案 → IT8 で承認予定 | 0.4 |
+| ADR 0017 | BookingPublicApi 公開 Port 化（H3 解消、Billing/Handling の application 層を Booking application に依存させない）| 提案 → IT8 で承認予定 | 0.3 |
+| ADR 0018 | MailNotificationPort 抽象化（Pekko Mail / print logger、IT8 は logger 実装、Pekko Mail は IT9 申し送り）| 候補 → 必要なら IT8 で起票 | 2.9 |
+| **ADR 0019** | **Payment は Invoice 集約内のステータス保持か別集約か** | **提案 → IT8 着手 Day 1 必須で決定**（domain-model.md 既存案 vs 計画案）| **0.15** |
+| ADR 0020 | 公開追跡画面 (`/public/tracking/...`) における例外表示方針（H8 解消、業務代表者指摘）| 提案 → IT8 で承認予定 | 0.14 |
 
 ---
 
@@ -519,3 +1009,4 @@ apps/cargo-tracker/app/cargotracker/booking/
 |------|---------|--------|
 | 2026-06-23 | IT8 計画策定（US22 + US23 + 申し送り 12 件、Phase 4 完了 + Release 2.0 GA） | AI Agent |
 | 2026-06-23 | validating-iteration-plan 検証結果反映 - 14 件不整合解消: 0.13 (TDD 規律)・0.14 (ADR 0020 公開追跡例外)・0.15 (ADR 0019 Payment 集約) 追加、0.12 を IT8 差分まで拡張、US23 2.x に ADR 0019 結果次第の二段構え注記、リスク 3 件追加 | AI Agent |
+| 2026-06-23 | 設計セクションを iteration_plan-7 と同等レベルに拡充 (詳細 PlantUML 全集約図 + 不変条件 8 件 + PaymentStatus 遷移マトリクス + BookingStatus 拡張図 + V23/V24/V25 SQL DDL + 4 画面 salt ワイヤーフレーム + 画面遷移図 + htmx パターン 6 件 + フィードバック 12 件 + ディレクトリツリー + API 12 件 + ADR 7 件) | AI Agent |
