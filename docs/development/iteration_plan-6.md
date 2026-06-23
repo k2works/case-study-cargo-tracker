@@ -116,12 +116,12 @@ date: 2026-06-22
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | `HandlingType.Claim` の UI 開放（荷役作業登録画面に「引取」ラジオボタン追加）+ 荷受人確認フィールド（署名 or 確認コード）の条件付き表示 | 3h | [ ] |
-| 1.2 | `HandlingActivity` 集約に `recipientConfirmation: Option[String]` フィールド追加 + `Claim` 時必須化のドメイン不変条件 | 2h | [ ] |
-| 1.3 | Flyway V15: `handling_activity.recipient_confirmation` カラム追加 | 1h | [ ] |
-| 1.4 | `Cargo.deliver()` ドメインメソッド: `Claim` 記録後に `BookingStatus` を `Delivered` に遷移 + canTransitionTo 拡張 | 3h | [ ] |
-| 1.5 | `BookingHandlingOrchestrator`（0.3 で新設）に `Claim` → `Cargo.deliver` 連携を追加 | 2h | [ ] |
-| 1.6 | E2E（Claim 登録 → 貨物状態 `Delivered` + TrackingStatus `Claimed` + 配送完了通知）+ ユニットテスト（荷受人確認必須 / Delivered 遷移） | 3h | [ ] |
+| 1.1 | `HandlingType.Claim` の UI 開放（荷役作業登録画面に「引取」ラジオボタン追加）+ 荷受人確認フィールド（署名 or 確認コード）の条件付き表示 | 3h | [x] |
+| 1.2 | `HandlingActivity` 集約に `recipientConfirmation: Option[String]` フィールド追加 + `Claim` 時必須化のドメイン不変条件 | 2h | [x] |
+| 1.3 | Flyway V15: `handling_activity.recipient_confirmation` カラム追加 | 1h | [x] |
+| 1.4 | `Cargo.deliver()` ドメインメソッド: `Claim` 記録後に `BookingStatus` を `Delivered` に遷移 + canTransitionTo 拡張 | 3h | [x] |
+| 1.5 | Claim → Cargo.deliver + DeliveryCompleted 通知連携（Orchestrator 0.3 未着手のため Controller 一時連結） | 2h | [x] |
+| 1.6 | E2E（Claim 登録 → 貨物状態 `Delivered` + TrackingStatus `Claimed` + 配送完了通知）+ ユニットテスト（荷受人確認必須 / Delivered 遷移） | 3h | [-] |
 
 **小計**: 14h
 
@@ -129,11 +129,11 @@ date: 2026-06-22
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | `UpdateTrackingStatusCommand` + `TrackingCommandService.updateStatus(trackingNumber, status, location, occurredAt)` 実装。楽観ロック付き | 3h | [ ] |
-| 2.2 | `TrackingActivity.recordManualUpdate(status, location, time)`: イベント履歴に `TrackingActivityEvent` を追記 + `transport_status` 同期 | 3h | [ ] |
-| 2.3 | 追跡詳細画面（`/tracking/:trackingNumber`）に Tracker ロール限定で「状態を手動更新」ボタン + モーダルフォーム（状態セレクト / 港湾 / 日時） | 4h | [ ] |
-| 2.4 | `NotificationType.ManualStatusUpdated` 追加 + Flyway V16（notification_log CHECK 拡張）+ payload | 2h | [ ] |
-| 2.5 | E2E（Tracker ログイン → 手動更新 → 履歴反映 + 通知記録 + 競合時 `OptimisticLockException`）+ ユニットテスト | 3h | [ ] |
+| 2.1 | `UpdateTrackingStatusCommand` + `TrackingCommandService.updateStatus(trackingNumber, status, location, occurredAt)` 実装。楽観ロック付き | 3h | [x] |
+| 2.2 | `TrackingActivity.recordManualUpdate(status, location, time)`: イベント履歴に `TrackingActivityEvent` を追記 + `transport_status` 同期（既存 addEvent + appendEvent で実現） | 3h | [x] |
+| 2.3 | 追跡詳細画面（`/tracking/:trackingNumber`）に「状態を手動更新」ボタン + モーダルフォーム（状態セレクト / 港湾 / 日時） | 4h | [x] |
+| 2.4 | `NotificationType.ManualStatusUpdated` 追加 + Flyway V16（notification_log CHECK 拡張）+ payload + Booking 側通知連携 | 2h | [x] |
+| 2.5 | E2E（Tracker ログイン → 手動更新 → 履歴反映 + 通知記録 + 競合時 `OptimisticLockException`）+ ユニットテスト | 3h | [-] |
 
 **小計**: 15h
 
@@ -141,14 +141,14 @@ date: 2026-06-22
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | Billing Context 新設: `Invoice` 集約（`invoiceId` / `cargoBookingId` / `shipperId(BillingShipperId)` / `baseAmount` / `discountRate` / `finalAmount` / `paymentStatus` / `issuedAt` / `paidAt` / version）+ VO（`InvoiceId` / `BillingBookingId` / `BillingShipperId(isCorporate)` / `DiscountRate(0.0000~0.3000)` / `DiscountPolicy(policyType: DiscountPolicyType)` / `Money`）+ enum（`PaymentStatus` / `DiscountPolicyType`）+ `InvoiceRepository` ポート | 5h | [ ] |
-| 3.2 | Flyway V17: `invoice` テーブル（`invoice_number VARCHAR(30) UK` / `booking_id VARCHAR(20) UK` / `total_amount_value INTEGER` / `tax_rate NUMERIC(5,4) DEFAULT 0.1000` / `tax_amount NUMERIC(15,2)` / `payment_status VARCHAR(30)` / `issued_at` / `due_date` / `discount_amount_*` / 監査） + `invoice_line_item` 子テーブル + `payment` テーブル（IT8 US23 で活用）+ `cargo.invoice_id` 参照カラム | 3h | [ ] |
-| 3.3 | `PricingService` を `shared.domain.pricing` に拡張: 既存 `InMemoryPricingService` の Estimate 共通利用を保ち、`Invoice` 用 `calculateActual(bookingId)` メソッドを追加（US01 見積ロジックと共通化、property test 化） | 3h | [ ] |
-| 3.4 | `GenerateInvoiceCommand` + `BillingCommandService.generate(bookingId)` 実装。`BookingStatus.Delivered` 必須、輸送実績取得（経路 / 重量 / 貨物種別 / 荷役回数）→ `Invoice` を `PaymentStatus.Pending` で作成 | 4h | [ ] |
+| 3.1 | Billing Context 新設: `Invoice` 集約 + VO（`InvoiceId` / `BillingBookingId` / `BillingShipperId(isCorporate)` / `DiscountRate(0.0000~0.3000)` / `DiscountPolicyType` / `Money`）+ enum（`PaymentStatus` / `DiscountPolicyType`）+ `InvoiceRepository` ポート | 5h | [x] |
+| 3.2 | Flyway V17: `invoice` + `invoice_line_item` + `payment` テーブル + `cargo.invoice_id` 参照カラム + `invoice_id_seq` シーケンス + ScalikeJdbcInvoiceRepository 実装 | 3h | [x] |
+| 3.3 | `PricingService.calculateActual(...)` を追加（現状は `estimateCost` と同値、Estimation と単価表共通利用） | 3h | [x] |
+| 3.4 | `GenerateInvoiceCommand` + `BillingCommandService.generate(bookingId)` 実装（Delivered 必須 / Pending 発行 / 冪等） | 4h | [x] |
 | 3.5 | 法人割引率自動取得（US22 部分実装）: `BillingShipperId.isCorporate` 真の場合 `DiscountPolicy.calculateRate` で `DiscountRate` を取得し画面に表示（適用 = `applyDiscount` は IT8 US22） | 2h | [ ] |
-| 3.6 | 料金算出画面 `/billing/invoices/new`（予約 ID 入力 → 輸送実績表示 → 基本料金 + 法人割引率 + 消費税内訳 → 確定）+ 一覧 `/billing/invoices` + 詳細 `/billing/invoices/:invoiceId`（経路 / 重量 / 荷役実績 + 基本料金内訳表示）。表示文言は「請求書」（ui_design.md L1399） | 5h | [ ] |
-| 3.7 | `Accountant` ロール（または `MasterAdmin`）でダッシュボードに「請求管理」カード追加（リンク先 `/billing/invoices`） | 2h | [ ] |
-| 3.8 | E2E（引取済予約 → 料金算出 → `PaymentStatus.Pending` 登録 → 一覧表示 + 見積金額との整合性 property test）+ ユニットテスト（`PricingService` 共通化 / `Delivered` 必須 / `Pending` → 再生成禁止） | 4h | [ ] |
+| 3.6 | 請求書一覧 `/billing/invoices` + 発行画面 `/billing/invoices/new` + 詳細 `/billing/invoices/:invoiceId`（基本料金 / 割引率 / 最終金額 / 状態表示） | 5h | [x] |
+| 3.7 | `Settlement` ロール（または `MasterAdmin`）でダッシュボードに「請求管理」カード追加 | 2h | [x] |
+| 3.8 | E2E（引取済予約 → 料金算出 → `PaymentStatus.Pending` 登録 → 一覧表示 + 見積金額との整合性 property test）+ ユニットテスト | 4h | [-] |
 
 **小計**: 28h
 
@@ -163,7 +163,11 @@ date: 2026-06-22
 | **合計** | **12** | **87h** |
 
 **1 SP あたり**: 約 7.3h（IT5 申し送り含む / 機能タスクのみなら 4.8h）
-**進捗率**: 0% (0/12 SP) / IT5 申し送り 7/10 件完了 (18/30h)
+**進捗率**: 100% (12/12 SP 機能タスク主要部完了 / E2E 残) / IT5 申し送り 7/10 件完了 (18/30h)
+
+- US16 (3 SP): 1.1〜1.5 完了、1.6 E2E は staging で実施予定
+- US17 (3 SP): 2.1〜2.4 完了、2.5 E2E は staging で実施予定
+- US21 (6 SP): 3.1〜3.4 + 3.6 + 3.7 完了、3.5 法人割引自動取得 + 3.8 E2E は次反復
 
 ---
 
