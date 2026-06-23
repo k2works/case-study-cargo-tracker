@@ -58,3 +58,32 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
   test("assign: 空の予約 ID は Left"):
     val svc = new TrackingCommandService(new InMemoryRepo)
     svc.assign(AssignTrackingNumberCommand("")).isLeft shouldBe true
+
+  test("updateStatus: Received を指定すると Receive イベント追記 + status 同期 (US17 / IT6)"):
+    val repo = new InMemoryRepo
+    val svc = new TrackingCommandService(repo)
+    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-UPD001")): @unchecked
+    val Right(updated) = svc.updateStatus(
+      UpdateTrackingStatusCommand(
+        trackingNumber = ta.trackingNumber.value,
+        status = TrackingStatus.Received,
+        locationUnLocode = "JPTYO",
+        occurredAt = java.time.Instant.parse("2026-09-10T10:00:00Z")
+      )
+    ): @unchecked
+    updated.transportStatus shouldBe TrackingStatus.Received
+    updated.events.size shouldBe 1
+    updated.events.head.eventType shouldBe "Receive"
+
+  test("updateStatus: NotReceived など手動更新で許可されない状態は Left (US17)"):
+    val svc = new TrackingCommandService(new InMemoryRepo)
+    svc
+      .updateStatus(
+        UpdateTrackingStatusCommand(
+          trackingNumber = "TN-000099",
+          status = TrackingStatus.NotReceived,
+          locationUnLocode = "JPTYO",
+          occurredAt = java.time.Instant.parse("2026-09-10T10:00:00Z")
+        )
+      )
+      .isLeft shouldBe true

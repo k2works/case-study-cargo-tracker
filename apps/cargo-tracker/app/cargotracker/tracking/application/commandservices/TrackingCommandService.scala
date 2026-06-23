@@ -2,6 +2,7 @@ package cargotracker.tracking.application.commandservices
 
 import cargotracker.tracking.domain.model.aggregates.TrackingActivity
 import cargotracker.tracking.domain.model.entities.TrackingActivityEvent
+import cargotracker.tracking.domain.model.enums.TrackingStatus
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
 import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, TrackingLocation, TrackingNumber}
 
@@ -56,6 +57,49 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
         case _ => "追跡イベントの記録に失敗しました"
       }
     yield repository.appendEvent(updated, event)
+
+  /** 状態を手動更新する（US17 / IT6）。
+    *
+    *   - 指定 status に対応する eventType を導出してイベント追記する
+    *   - 楽観ロック対応 (appendEvent が衝突時に OptimisticLockException を投げる)
+    */
+  def updateStatus(command: UpdateTrackingStatusCommand): Either[String, TrackingActivity] =
+    for
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      eventType <- TrackingCommandService.eventTypeFor(command.status)
+      activity <- repository
+        .findByTrackingNumber(tn)
+        .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
+      event = TrackingActivityEvent(
+        eventType = eventType,
+        eventTime = command.occurredAt,
+        location = TrackingLocation.of(command.locationUnLocode),
+        voyageNumber = None,
+        routeDeviation = false
+      )
+      updated <- activity.addEvent(event).left.map {
+        case TrackingActivity.OutOfOrder => "追跡イベントの時系列順序が不正です（過去時刻は不可）"
+        case _ => "追跡イベントの記録に失敗しました"
+      }
+    yield repository.appendEvent(updated, event)
+
+object TrackingCommandService:
+  private[commandservices] def eventTypeFor(status: TrackingStatus): Either[String, String] =
+    status match
+      case TrackingStatus.Received => Right("Receive")
+      case TrackingStatus.Loaded => Right("Load")
+      case TrackingStatus.Unloaded => Right("Unload")
+      case TrackingStatus.Claimed => Right("Claim")
+      case TrackingStatus.InException => Right("Customs")
+      case other => Left(s"手動更新では指定できない状態です: $other")
+
+/** 状態手動更新コマンド（US17 / IT6）。 */
+final case class UpdateTrackingStatusCommand(
+    trackingNumber: String,
+    status: TrackingStatus,
+    locationUnLocode: String,
+    occurredAt: Instant
+)
 
 /** 追跡番号発行コマンド（US14）。 */
 final case class AssignTrackingNumberCommand(bookingId: String)
