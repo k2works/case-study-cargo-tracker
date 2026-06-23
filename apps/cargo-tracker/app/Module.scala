@@ -1,7 +1,8 @@
 import cargotracker.auth.domain.model.repositories.UserRepository
 import cargotracker.auth.infrastructure.repositories.ScalikeJdbcUserRepository
 import cargotracker.auth.infrastructure.services.AdminUserSeeder
-import cargotracker.billing.domain.model.repositories.InvoiceRepository
+import cargotracker.billing.domain.model.repositories.{BillingCargoQueryPort, InvoiceRepository}
+import cargotracker.billing.infrastructure.acl.BookingCargoQueryAdapter
 import cargotracker.billing.infrastructure.repositories.ScalikeJdbcInvoiceRepository
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
 import cargotracker.booking.domain.model.repositories.{CargoRepository, NotificationLogRepository}
@@ -55,6 +56,7 @@ class Module extends AbstractModule:
     bind(classOf[HandlingActivityRepository])
       .to(classOf[ScalikeJdbcHandlingActivityRepository])
     bind(classOf[InvoiceRepository]).to(classOf[ScalikeJdbcInvoiceRepository])
+    bind(classOf[BillingCargoQueryPort]).to(classOf[BookingCargoQueryAdapter])
     bind(classOf[ShipperExistenceChecker])
       .to(classOf[ShipperRepositoryBackedExistenceChecker])
     bind(classOf[Clock]).toInstance(Clock.systemUTC())
