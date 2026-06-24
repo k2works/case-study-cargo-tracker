@@ -16,6 +16,7 @@ import play.api.data.Forms.*
 import play.api.i18n.I18nSupport
 import play.api.mvc.*
 
+import java.time.format.DateTimeFormatter
 import java.time.{Clock, LocalDateTime, ZoneId}
 import javax.inject.{Inject, Singleton}
 
@@ -47,8 +48,13 @@ class TrackingController @Inject() (
       "exceptionType" -> nonEmptyText,
       "locationUnLocode" -> nonEmptyText(minLength = 5, maxLength = 5),
       "occurredAt" -> localDateTime("yyyy-MM-dd'T'HH:mm[:ss]"),
-      "description" -> optional(text(maxLength = 500))
-    )(RecordExceptionFormData.apply)(d => Some((d.exceptionType, d.locationUnLocode, d.occurredAt, d.description)))
+      "description" -> optional(text(maxLength = 500)),
+      // IT8 0.8 (H10 / T7 / P8): Delay 選択時の詳細入力 (UI 側で JS 表示制御)
+      "newEstimatedArrival" -> optional(localDateTime("yyyy-MM-dd'T'HH:mm[:ss]")),
+      "responsePlan" -> optional(text(maxLength = 50))
+    )(RecordExceptionFormData.apply)(d =>
+      Some((d.exceptionType, d.locationUnLocode, d.occurredAt, d.description, d.newEstimatedArrival, d.responsePlan))
+    )
   )
 
   private val resolveExceptionForm: Form[ResolveExceptionFormData] = Form(
@@ -146,11 +152,16 @@ class TrackingController @Inject() (
                     // 通知ログ: Delay→DelayNotified、Damage→DamageReported、Lost→LostEscalated
                     et match
                       case ExceptionType.Delay =>
+                        // IT8 0.8 (H10 / T7 / P8): Delay 専用フィールドを意味ある値として渡す
+                        val etaStr = data.newEstimatedArrival
+                          .map(_.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+                          .getOrElse("未確定")
+                        val planStr = data.responsePlan.map(DelayResponsePlan.displayName).getOrElse("未確定")
                         bookingCommandService.logDelayNotification(
                           activity.bookingId.value,
                           trackingNumber,
-                          newEstimatedArrival = "未確定",
-                          responsePlan = data.description.getOrElse(""),
+                          newEstimatedArrival = etaStr,
+                          responsePlan = planStr,
                           reason = data.description.getOrElse("")
                         )
                       case ExceptionType.Damage =>
@@ -210,13 +221,31 @@ final case class ManualStatusUpdateFormData(
     reason: String
 )
 
-/** 追跡例外記録フォームデータ（IT7 US19/US20）。 */
+/** 追跡例外記録フォームデータ（IT7 US19/US20、IT8 0.8 で Delay 専用フィールド追加 / H10 / T7 / P8）。 */
 final case class RecordExceptionFormData(
     exceptionType: String,
     locationUnLocode: String,
     occurredAt: LocalDateTime,
-    description: Option[String]
+    description: Option[String],
+    newEstimatedArrival: Option[LocalDateTime] = None,
+    responsePlan: Option[String] = None
 )
+
+/** Delay 例外の対応方針（IT8 0.8 / P8 定型 4 種）。logDelayNotification に意味ある値として渡される。 */
+object DelayResponsePlan:
+  val Reroute = "Reroute" // 次便への振替
+  val Express = "Express" // 速達便手配
+  val BondedWarehouse = "BondedWarehouse" // 保税倉庫保管
+  val ContactShipper = "ContactShipper" // 荷主へ調整依頼
+
+  val displayNames: Map[String, String] = Map(
+    Reroute -> "次便への振替",
+    Express -> "速達便手配",
+    BondedWarehouse -> "保税倉庫保管",
+    ContactShipper -> "荷主へ調整依頼"
+  )
+
+  def displayName(code: String): String = displayNames.getOrElse(code, code)
 
 /** 追跡例外対応報告フォームデータ（IT7 US19/US20）。 */
 final case class ResolveExceptionFormData(resolutionNotes: String)

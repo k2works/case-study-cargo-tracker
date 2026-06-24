@@ -101,7 +101,7 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">例外種別 <span class="text-danger">*</span></label>
-            <select name="exceptionType" class="form-select" required>
+            <select id="exceptionTypeSelect" name="exceptionType" class="form-select" required>
               <option value="Delay">Delay（遅延）</option>
               <option value="Damage">Damage（破損）</option>
               <option value="Lost">Lost（紛失・管理職エスカレーション）</option>
@@ -116,10 +116,28 @@
             <label class="form-label">発生日時 <span class="text-danger">*</span></label>
             <input type="datetime-local" name="occurredAt" class="form-control" required>
           </div>
+          @* IT8 0.8 (H10 / T7 / P8): Delay 選択時のみ JS で表示する詳細入力欄 *@
+          <div id="delayOnlyFields" class="border rounded p-3 mb-3 bg-light" style="display:none;">
+            <h6 class="text-muted">Delay 例外の追加情報</h6>
+            <div class="mb-2">
+              <label class="form-label">新到着予定日</label>
+              <input type="datetime-local" name="newEstimatedArrival" class="form-control">
+            </div>
+            <div class="mb-2">
+              <label class="form-label">対応方針</label>
+              <select name="responsePlan" class="form-select">
+                <option value="">選択してください</option>
+                <option value="Reroute">次便への振替</option>
+                <option value="Express">速達便手配</option>
+                <option value="BondedWarehouse">保税倉庫保管</option>
+                <option value="ContactShipper">荷主へ調整依頼</option>
+              </select>
+            </div>
+          </div>
           <div class="mb-3">
-            <label class="form-label">詳細</label>
+            <label class="form-label">詳細理由</label>
             <textarea name="description" class="form-control" rows="2" maxlength="500" placeholder="例: 通関手続き遅延、補修見積依頼中"></textarea>
-            <div class="form-text">Lost を選ぶと自動的に緊急エスカレーションフラグが立ちます。</div>
+            <div class="form-text">Lost を選ぶと自動的に緊急エスカレーションフラグが立ちます。Delay 選択時は新到着予定日 + 対応方針を併せて入力してください。</div>
           </div>
         </div>
         <div class="modal-footer">
@@ -131,4 +149,15 @@
   </div>
   }
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // IT8 0.8 (H10 / T7 / P8): Delay 選択時のみ詳細フィールドを表示
+    (function() {
+      var sel = document.getElementById('exceptionTypeSelect');
+      var box = document.getElementById('delayOnlyFields');
+      if (!sel || !box) return;
+      function toggle() { box.style.display = (sel.value === 'Delay') ? '' : 'none'; }
+      sel.addEventListener('change', toggle);
+      toggle();
+    })();
+  </script>
 }
