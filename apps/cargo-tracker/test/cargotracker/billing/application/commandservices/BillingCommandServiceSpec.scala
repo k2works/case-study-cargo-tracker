@@ -96,7 +96,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true))
     val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, new NoopMail, clock)
-    val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
+    val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
     // IT8 ADR 0019 (案 B): 発行直後は NotIssued、issuePayment 経由で Pending に遷移する
     inv.paymentStatus shouldBe PaymentStatus.NotIssued
     inv.cargoBookingId.value shouldBe "BK-000001"
@@ -107,7 +107,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = false))
     val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, new NoopMail, clock)
-    val Left(msg) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
+    val msg = service.generate(GenerateInvoiceCommand("BK-000001")).left.value
     msg should include("Delivered")
     invRepo.store shouldBe empty
 
@@ -116,8 +116,8 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true))
     val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, new NoopMail, clock)
-    val Right(first) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
-    val Right(second) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
+    val first = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    val second = service.generate(GenerateInvoiceCommand("BK-000001")).value
     first.invoiceId.value shouldBe second.invoiceId.value
     invRepo.store should have size 1
 
@@ -126,7 +126,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = true))
     val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, new NoopMail, clock)
-    val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
+    val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
     inv.shipperId.isCorporate shouldBe true
 
   test("generate: 個人荷主スナップショットから発行された Invoice の shipperId.isCorporate=false"):
@@ -134,7 +134,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = false))
     val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, new NoopMail, clock)
-    val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
+    val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
     inv.shipperId.isCorporate shouldBe false
 
   // IT8 US22: 法人割引適用シナリオ 3 件 + Discount 明細

@@ -98,7 +98,7 @@ class BillingCommandService @Inject() (
       updated <- invoice.issuePayment(command.dueDate, command.referenceCode).left.map {
         case _: Invoice.InvalidPaymentStateTransition =>
           s"請求書 ${command.invoiceNumber} は支払発行可能な状態ではありません (現状態: ${invoice.paymentStatus})"
-        case _ => "支払発行に失敗しました"
+        case Invoice.InvalidAmount => "支払発行に失敗しました (金額エラー)"
       }
       saved <- withOptimisticLock("請求書"):
         invoiceRepository.save(updated)
@@ -136,7 +136,7 @@ class BillingCommandService @Inject() (
       updated <- invoice.confirmPayment(command.paidAt).left.map {
         case _: Invoice.InvalidPaymentStateTransition =>
           s"請求書 ${command.invoiceNumber} は入金確認可能な状態ではありません (現状態: ${invoice.paymentStatus})"
-        case _ => "入金確認に失敗しました"
+        case Invoice.InvalidAmount => "入金確認に失敗しました (金額エラー)"
       }
       saved <- withOptimisticLock("請求書"):
         invoiceRepository.save(updated)
