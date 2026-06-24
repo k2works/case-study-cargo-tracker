@@ -34,3 +34,11 @@ coverage/
 tmp/
 .tmp/
 .claude/agent-memory
+
+# Ralph Loop state (transient, per-session)
+.claude/ralph-loop.local.md
+**/.claude/ralph-loop.local.md
+
+# SonarQube scanner work directory (transient)
+.scannerwork/
+**/.scannerwork/
