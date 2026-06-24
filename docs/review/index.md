@@ -16,3 +16,4 @@
 | [IT5 セルフレビュー](./it5_self_review_20260622.md) | IT5 実装（US14/US15/US18 + IT4 申し送り 6 件 + Tracking/Handling Context 新設） | 2026-06-22 | 高 7 件（H1-H7 / IT6 申し送り）+ 中 3 件 |
 | [IT6 実装レビュー](./it6_implementation_review_20260623.md) | IT6 実装全体（US16/US17/US21 + IT5 申し送り 7 件 + Billing Context 新設） | 2026-06-23 | 高 8 件 / 中 10 件 / 低 - |
 | [IT7 実装レビュー](./it7_implementation_review_20260623.md) | IT7 実装全体（US19/US20 + IT6 申し送り 16 件 + ADR 0014/0015 + Flyway V18-V22） | 2026-06-23 | 高 12 件 / 中 17 件 / 低 15 件 |
+| [IT8 セルフレビュー](./it8_self_review_20260624.md) | IT8 実装全体（US22/US23 + IT7 申し送り 15 件 + ADR 0016-0020 + Flyway V23/V26/V27/V28、中間 self-review）| 2026-06-24 | 高 3 件 / 中 3 件 / 低 3 件、総合評価 A |
