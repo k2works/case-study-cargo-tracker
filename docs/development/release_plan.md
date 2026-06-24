@@ -437,10 +437,10 @@ gantt
 
 **主なタスク**:
 
-- [ ] US24: Release 2.0 GA 本番公開（3 SP、ステージング → 本番デプロイ → GitHub Release v2.0.0）
-- [ ] US25: Shipper 法人マスタ登録 UI（2 SP、E2E 前提）
-- [ ] US23-r1: 入金消込 CSV 取込 UI（4 SP、Stripe/GMO 連携までのブリッジ）
-- [ ] US27: 監査ログ audit_log + AuditLogPort（2 SP）
+- [ ] US27: Release 2.0 GA 本番公開（3 SP、ステージング → 本番デプロイ → GitHub Release v2.0.0）
+- [ ] US28: Shipper 法人マスタ登録 UI（2 SP、E2E 前提）
+- [ ] US29: 入金消込 CSV 取込 UI（4 SP、Stripe/GMO 連携までのブリッジ）
+- [ ] US30: 監査ログ audit_log + AuditLogPort（2 SP）
 - [ ] IT8 申し送り消化 0.x（2 SP / 8 タスク）= ADR 0016 案 A 実装 / Pekko Mail/SES 切替 / detectOverdue Cron / pre-commit フルテスト / ADR ↔ ArchUnit チェックリスト / ADR 0021 Port 規約 / Repository IT 拡張 / Refunded + Lost テスト
 
 **目標 SP**: 13
