@@ -4,12 +4,16 @@ import cargotracker.tracking.domain.model.aggregates.TrackingActivity
 import cargotracker.tracking.domain.model.enums.TrackingStatus
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
 import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, TrackingNumber}
+import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.mutable
 
-class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
+/** IT8 タスク 0.10 (H12 解消): `val Right(x) = ...: @unchecked` パターンを EitherValues `.value` / `.left.value`
+  * に統一し、テスト失敗時のスタックトレースで「期待値が Right だったか Left だったか」を明示できるようにする。
+  */
+class TrackingCommandServiceSpec extends AnyFunSuite with Matchers with EitherValues:
 
   private class InMemoryRepo extends TrackingActivityRepository:
     val store: mutable.Map[String, TrackingActivity] = mutable.Map.empty
@@ -60,7 +64,7 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
         resolutionNotes: String
     ): TrackingActivity =
       val current = store(activity.bookingId.value)
-      val Right(updated) = current.resolveException(index, resolvedAt, resolutionNotes): @unchecked
+      val updated = current.resolveException(index, resolvedAt, resolutionNotes).value
       val withNewVersion = TrackingActivity.reconstruct(
         trackingNumber = updated.trackingNumber,
         bookingId = updated.bookingId,
@@ -75,7 +79,7 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
   test("assign: 新規予約に対して採番し TrackingActivity を初期化（NotReceived）"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
-    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-000001")): @unchecked
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-000001")).value
     ta.trackingNumber.value shouldBe "TN-000001"
     ta.bookingId.value shouldBe "BK-000001"
     ta.transportStatus shouldBe TrackingStatus.NotReceived
@@ -84,8 +88,8 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
   test("assign: 同一予約への 2 回目呼出は冪等成功（既存番号を返す）"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
-    val Right(first) = svc.assign(AssignTrackingNumberCommand("BK-000002")): @unchecked
-    val Right(second) = svc.assign(AssignTrackingNumberCommand("BK-000002")): @unchecked
+    val first = svc.assign(AssignTrackingNumberCommand("BK-000002")).value
+    val second = svc.assign(AssignTrackingNumberCommand("BK-000002")).value
     first.trackingNumber shouldBe second.trackingNumber
     repo.store.size shouldBe 1
 
@@ -96,15 +100,17 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
   test("updateStatus: Received を指定すると Receive イベント追記 + status 同期 (US17 / IT6)"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
-    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-UPD001")): @unchecked
-    val Right(updated) = svc.updateStatus(
-      UpdateTrackingStatusCommand(
-        trackingNumber = ta.trackingNumber.value,
-        status = TrackingStatus.Received,
-        locationUnLocode = "JPTYO",
-        occurredAt = java.time.Instant.parse("2026-09-10T10:00:00Z")
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-UPD001")).value
+    val updated = svc
+      .updateStatus(
+        UpdateTrackingStatusCommand(
+          trackingNumber = ta.trackingNumber.value,
+          status = TrackingStatus.Received,
+          locationUnLocode = "JPTYO",
+          occurredAt = java.time.Instant.parse("2026-09-10T10:00:00Z")
+        )
       )
-    ): @unchecked
+      .value
     updated.transportStatus shouldBe TrackingStatus.Received
     updated.events.size shouldBe 1
     updated.events.head.eventType shouldBe "Receive"
@@ -125,16 +131,18 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
   test("recordException: Delay 例外を記録すると status=InException に遷移 + 例外履歴に追加 (US19 1.3)"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
-    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-EXC001")): @unchecked
-    val Right(updated) = svc.recordException(
-      RecordExceptionCommand(
-        trackingNumber = ta.trackingNumber.value,
-        exceptionType = cargotracker.tracking.domain.model.enums.ExceptionType.Delay,
-        locationUnLocode = "JPTYO",
-        occurredAt = java.time.Instant.parse("2026-09-20T10:00:00Z"),
-        description = Some("通関遅延")
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-EXC001")).value
+    val updated = svc
+      .recordException(
+        RecordExceptionCommand(
+          trackingNumber = ta.trackingNumber.value,
+          exceptionType = cargotracker.tracking.domain.model.enums.ExceptionType.Delay,
+          locationUnLocode = "JPTYO",
+          occurredAt = java.time.Instant.parse("2026-09-20T10:00:00Z"),
+          description = Some("通関遅延")
+        )
       )
-    ): @unchecked
+      .value
     updated.transportStatus shouldBe TrackingStatus.InException
     updated.exceptions should have size 1
     updated.hasActiveException shouldBe true
@@ -142,22 +150,24 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
   test("recordException: Lost 例外は escalationFlag=true (US20)"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
-    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-LOST01")): @unchecked
-    val Right(updated) = svc.recordException(
-      RecordExceptionCommand(
-        ta.trackingNumber.value,
-        cargotracker.tracking.domain.model.enums.ExceptionType.Lost,
-        "USNYC",
-        java.time.Instant.parse("2026-09-20T10:00:00Z"),
-        Some("コンテナ紛失")
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-LOST01")).value
+    val updated = svc
+      .recordException(
+        RecordExceptionCommand(
+          ta.trackingNumber.value,
+          cargotracker.tracking.domain.model.enums.ExceptionType.Lost,
+          "USNYC",
+          java.time.Instant.parse("2026-09-20T10:00:00Z"),
+          Some("コンテナ紛失")
+        )
       )
-    ): @unchecked
+      .value
     updated.exceptions.head.escalationFlag shouldBe true
 
   test("resolveException: 解決すると hasActiveException=false に戻る (US19 1.3)"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
-    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-RES001")): @unchecked
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-RES001")).value
     svc.recordException(
       RecordExceptionCommand(
         ta.trackingNumber.value,
@@ -167,24 +177,29 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
         None
       )
     )
-    val Right(resolved) = svc.resolveException(
-      ResolveExceptionCommand(
-        ta.trackingNumber.value,
-        index = 0,
-        resolvedAt = java.time.Instant.parse("2026-09-20T12:00:00Z"),
-        resolutionNotes = "対応完了"
+    val resolved = svc
+      .resolveException(
+        ResolveExceptionCommand(
+          ta.trackingNumber.value,
+          index = 0,
+          resolvedAt = java.time.Instant.parse("2026-09-20T12:00:00Z"),
+          resolutionNotes = "対応完了"
+        )
       )
-    ): @unchecked
+      .value
     resolved.hasActiveException shouldBe false
     resolved.exceptions.head.resolutionNotes shouldBe Some("対応完了")
 
   test("resolveException: 範囲外 index は Left"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
-    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-RES002")): @unchecked
-    val Left(msg) = svc.resolveException(
-      ResolveExceptionCommand(ta.trackingNumber.value, 99, java.time.Instant.parse("2026-09-20T12:00:00Z"), "x")
-    ): @unchecked
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-RES002")).value
+    val msg = svc
+      .resolveException(
+        ResolveExceptionCommand(ta.trackingNumber.value, 99, java.time.Instant.parse("2026-09-20T12:00:00Z"), "x")
+      )
+      .left
+      .value
     msg should include("見つかりません")
 
   test("updateStatus: appendEvent が OptimisticLockException を投げたら『再読込してください』Left (IT7 0.11 / H8)"):
@@ -214,13 +229,16 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers:
       ): TrackingActivity =
         throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
     )
-    val Right(ta) = svc.assign(AssignTrackingNumberCommand("BK-UPD002")): @unchecked
-    val Left(msg) = svc.updateStatus(
-      UpdateTrackingStatusCommand(
-        trackingNumber = ta.trackingNumber.value,
-        status = TrackingStatus.Received,
-        locationUnLocode = "JPTYO",
-        occurredAt = java.time.Instant.parse("2026-09-10T10:00:00Z")
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-UPD002")).value
+    val msg = svc
+      .updateStatus(
+        UpdateTrackingStatusCommand(
+          trackingNumber = ta.trackingNumber.value,
+          status = TrackingStatus.Received,
+          locationUnLocode = "JPTYO",
+          occurredAt = java.time.Instant.parse("2026-09-10T10:00:00Z")
+        )
       )
-    ): @unchecked
+      .left
+      .value
     msg should include("再読込してください")
