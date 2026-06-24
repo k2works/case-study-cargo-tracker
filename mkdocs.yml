@@ -118,6 +118,7 @@ nav:
       - Release 2.0.0 GA ゲート確認: development/release-2.0.0-gate-check.md
       - Release 0.1.0 ゲート確認結果: development/release-0.1.0-gate-check.md
       - Release 1.0 MVP 完了報告書: development/release_report-scala-1_0_0-mvp.md
+      - Release 2.0 GA 完了報告書: development/release_report-scala-2_0_0-ga.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/dev_app_instruction.md
