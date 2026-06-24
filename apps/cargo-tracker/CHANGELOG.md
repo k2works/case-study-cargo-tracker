@@ -8,7 +8,36 @@
 
 ### Added
 
-- (IT3 以降の追加機能をここに記録)
+#### IT8 (2026-09-28 〜 2026-10-11) — Release 2.0 GA コード到達
+
+- **US22 法人割引適用**: `BillingCargoSnapshot.corporateDiscountRate` 経由で Shipper.discountRate 自動反映、UI 4 行表示 (適用前 / 割引率 + バッジ / 割引額 / 適用後)、`appendDiscountLineItem` で Discount 明細追加
+- **US23 精算処理 (ADR 0019 案 B 採択 = Invoice 集約内 paymentStatus)**:
+  - PaymentStatus enum 拡張 (NotIssued / Pending / Overdue / Confirmed / Refunded)
+  - Invoice に dueDate / paymentReference + issuePayment / confirmPayment / markOverdue メソッド
+  - Cargo.markSettled (Delivered → Settled 遷移)
+  - BillingCommandService.detectOverdue (期限超過バッチ API、Cron は IT9 申し送り)
+  - 請求書詳細画面に支払欄統合 + 状態別フォーム
+  - 受入条件 3 (決済機関連携) は手動 referenceCode 入力に縮小、Stripe/GMO 連携は IT9 申し送り
+- **新規 Port / Adapter**:
+  - `BookingPublicApi` trait (ADR 0017): Booking Context 公開 API、他 Context は本 trait のみ依存
+  - `MailNotificationPort` trait + LoggingMailNotificationAdapter (ADR 0018): IT9 で Pekko Mail/SES 連携予定
+  - `HandlingCargoQueryPort` + BookingCargoForHandlingAdapter: routeDeviation 自動判定
+- **新規 ADR 5 件**: 0016 (HandlingOrchestrator tx 境界) / 0017 (BookingPublicApi) / 0018 (MailNotificationPort) / 0019 (Payment 集約方針) / 0020 (公開追跡画面例外表示)
+- **Flyway 新規 4 件**: V23 (invoice 拡張) / V26 (LossEscalated rename) / V27 (notification_log CHECK 拡張) / V28 (payment テーブル drop)
+- **その他改善 (IT7 申し送り 15 件解消)**: `OptimisticLockOps.withOptimisticLock` ヘルパ抽出、`LossEscalated` → `LostEscalated` 命名統一、`TrackingExceptionEventId` opaque type 導入 (PK 直接更新化)、例外対応取消し動線 + 補足コメント追記、Delay 例外モーダル拡張 (新到着予定日 + 対応方針 4 種定型)、TrackingExceptionSpec 同値クラステスト +6 件
+
+### Changed
+
+- Invoice 初期 paymentStatus を Pending → NotIssued に変更 (ADR 0019 反映)
+- HandlingOrchestrator の routeDeviation を `HandlingCargoQueryPort.isOnRoute` 経由で自動判定 (従来は false 固定)
+- BillingCommandService の `case _ =>` フォールバック削除、sealed Error 網羅性活用
+- BillingCommandServiceSpec / TrackingCommandServiceSpec を EitherValues 統一、`@unchecked` 注釈ゼロ達成
+
+### Documentation
+
+- README.md にプロジェクト進捗セクション追加 (Phase 1-4 × Release × IT 一覧)
+- CLAUDE.md に TDD コミット規律セクション追加 (Red→Green 分離 + Conventional Commits 例)
+- data-model.md / domain-model.md / ui_design.md を ADR 0019 案 B に整合反映、Role 名 6 箇所統一 (Accountant→Settlement / Admin→MasterAdmin)
 
 ---
 
