@@ -96,3 +96,28 @@ object NotificationPayload:
       exceptionType: String,
       resolutionNotes: String
   ) extends NotificationPayload
+
+  /** 入金発行通知ペイロード（US23 / IT8 ADR 0019 案 B）。 */
+  final case class PaymentRequested(
+      bookingId: String,
+      invoiceNumber: String,
+      dueDate: String,
+      paymentReference: String,
+      amount: Long
+  ) extends NotificationPayload
+
+  /** 入金確認通知ペイロード（US23 / IT8）。 */
+  final case class PaymentConfirmed(
+      bookingId: String,
+      invoiceNumber: String,
+      paidAt: String,
+      amount: Long
+  ) extends NotificationPayload
+
+  /** 期限超過通知ペイロード（US23 / IT8）。 */
+  final case class OverdueAlerted(
+      bookingId: String,
+      invoiceNumber: String,
+      dueDate: String,
+      amount: Long
+  ) extends NotificationPayload

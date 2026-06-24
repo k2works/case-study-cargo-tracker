@@ -6,12 +6,15 @@ import cargotracker.billing.domain.model.valueobjects.{
   BillingBookingId,
   BillingShipperId,
   DiscountRate,
+  InvoiceId,
   InvoiceLineItem,
   LineItemCategory
 }
+import cargotracker.booking.application.api.BookingPublicApi
+import cargotracker.shared.application.OptimisticLockOps.withOptimisticLock
 import cargotracker.shared.domain.pricing.PricingService
 
-import java.time.Clock
+import java.time.{Clock, Instant, LocalDate}
 import javax.inject.{Inject, Singleton}
 
 /** 請求書発行コマンドサービス（US21 / IT6, IT7 0.2 で ACL 化）。
@@ -26,6 +29,7 @@ class BillingCommandService @Inject() (
     invoiceRepository: InvoiceRepository,
     cargoQueryPort: BillingCargoQueryPort,
     pricingService: PricingService,
+    bookingPublicApi: BookingPublicApi,
     clock: Clock
 ):
 
@@ -79,6 +83,34 @@ class BillingCommandService @Inject() (
             invoice
     yield result
 
+  /** IT8 US23 (ADR 0019 案 B): NotIssued の Invoice に支払期日と入金参照コードを設定し Pending に遷移する。
+    *
+    *   - 確定済 Invoice (Pending / Confirmed) からの再発行はドメイン側で拒否される
+    *   - 成功時は PaymentRequested 通知を Booking Context に記録 (荷主向けメール送信は MailNotificationPort 経由、IT8 2.9 で実装)
+    */
+  def issuePayment(command: IssuePaymentCommand): Either[String, Invoice] =
+    for
+      invoice <- invoiceRepository
+        .findById(InvoiceId.unsafeFrom(command.invoiceNumber))
+        .toRight(s"請求書 ${command.invoiceNumber} が見つかりません")
+      updated <- invoice.issuePayment(command.dueDate, command.referenceCode).left.map {
+        case _: Invoice.InvalidPaymentStateTransition =>
+          s"請求書 ${command.invoiceNumber} は支払発行可能な状態ではありません (現状態: ${invoice.paymentStatus})"
+        case _ => "支払発行に失敗しました"
+      }
+      saved <- withOptimisticLock("請求書"):
+        invoiceRepository.save(updated)
+        updated
+    yield
+      bookingPublicApi.logPaymentRequested(
+        bookingId = saved.cargoBookingId.value,
+        invoiceNumber = saved.invoiceId.value,
+        dueDate = command.dueDate.toString,
+        paymentReference = command.referenceCode,
+        amount = saved.finalAmount.amount
+      )
+      saved
+
 object BillingCommandService:
   /** PricingService の内訳明細を Billing の `InvoiceLineItem` に変換する（IT7 0.9）。 */
   def toInvoiceLineItems(items: List[PricingService.LineItem]): List[InvoiceLineItem] =
@@ -111,4 +143,11 @@ object BillingCommandService:
 final case class GenerateInvoiceCommand(
     bookingId: String,
     discountRate: Option[DiscountRate] = None
+)
+
+/** 支払発行コマンド (US23 / IT8 ADR 0019 案 B)。 */
+final case class IssuePaymentCommand(
+    invoiceNumber: String,
+    dueDate: LocalDate,
+    referenceCode: String
 )

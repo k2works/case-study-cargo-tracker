@@ -251,6 +251,52 @@ class BookingCommandService @Inject() (
       )
     }
 
+  /** 入金発行通知ログを記録 (US23 / IT8 ADR 0019 案 B、BookingPublicApi 実装)。 */
+  override def logPaymentRequested(
+      bookingId: String,
+      invoiceNumber: String,
+      dueDate: String,
+      paymentReference: String,
+      amount: Long
+  ): Either[String, Unit] =
+    findCargo(bookingId).map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.PaymentRequested,
+        NotificationPayload.PaymentRequested(cargo.bookingId.value, invoiceNumber, dueDate, paymentReference, amount)
+      )
+    }
+
+  /** 入金確認通知ログを記録 (US23 / IT8、BookingPublicApi 実装)。 */
+  override def logPaymentConfirmed(
+      bookingId: String,
+      invoiceNumber: String,
+      paidAt: String,
+      amount: Long
+  ): Either[String, Unit] =
+    findCargo(bookingId).map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.PaymentConfirmed,
+        NotificationPayload.PaymentConfirmed(cargo.bookingId.value, invoiceNumber, paidAt, amount)
+      )
+    }
+
+  /** 期限超過通知ログを記録 (US23 / IT8、BookingPublicApi 実装)。 */
+  override def logOverdueAlerted(
+      bookingId: String,
+      invoiceNumber: String,
+      dueDate: String,
+      amount: Long
+  ): Either[String, Unit] =
+    findCargo(bookingId).map { cargo =>
+      logNotification(
+        cargo,
+        NotificationType.OverdueAlerted,
+        NotificationPayload.OverdueAlerted(cargo.bookingId.value, invoiceNumber, dueDate, amount)
+      )
+    }
+
   private def findCargo(bookingId: String): Either[String, Cargo] =
     BookingId(bookingId).left
       .map(_ => CargoErrorMessages.invalidBookingIdMessage(bookingId))

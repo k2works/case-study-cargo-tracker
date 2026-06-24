@@ -10,13 +10,15 @@ import cargotracker.billing.domain.model.valueobjects.{
   InvoiceId,
   LineItemCategory
 }
+import cargotracker.booking.application.api.BookingPublicApi
+import cargotracker.booking.domain.model.aggregates.Cargo
 import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
 import cargotracker.shared.domain.{CargoType, Location, Weight}
 import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-import java.time.{Clock, Instant, ZoneId}
+import java.time.{Clock, Instant, LocalDate, ZoneId}
 import java.util.concurrent.atomic.AtomicLong
 import scala.collection.mutable
 
@@ -26,6 +28,21 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val store: mutable.Map[String, BillingCargoSnapshot] = mutable.Map.empty
     override def findForBilling(bookingId: BillingBookingId): Option[BillingCargoSnapshot] =
       store.get(bookingId.value)
+
+  /** Fake BookingPublicApi (IT8 US23): 呼出ログを記録するだけのテストダブル。 */
+  private class FakeBookingPublicApi extends BookingPublicApi:
+    val paymentRequested: mutable.Buffer[(String, String, String, String, Long)] = mutable.Buffer.empty
+    val paymentConfirmed: mutable.Buffer[(String, String, String, Long)] = mutable.Buffer.empty
+    val overdueAlerted: mutable.Buffer[(String, String, String, Long)] = mutable.Buffer.empty
+    override def logHandlingNotification(b: String, t: String, e: String, l: String): Either[String, Unit] = Right(())
+    override def completeDelivery(b: String, t: String, l: String, r: String): Either[String, Cargo] =
+      Left("not used in spec")
+    override def logPaymentRequested(b: String, i: String, d: String, p: String, a: Long): Either[String, Unit] =
+      paymentRequested += ((b, i, d, p, a)); Right(())
+    override def logPaymentConfirmed(b: String, i: String, p: String, a: Long): Either[String, Unit] =
+      paymentConfirmed += ((b, i, p, a)); Right(())
+    override def logOverdueAlerted(b: String, i: String, d: String, a: Long): Either[String, Unit] =
+      overdueAlerted += ((b, i, d, a)); Right(())
 
   private class InMemoryInvoiceRepo extends InvoiceRepository:
     val store: mutable.Map[String, Invoice] = mutable.Map.empty
@@ -62,7 +79,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val port = new FakeBillingCargoQueryPort
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true))
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     // IT8 ADR 0019 (案 B): 発行直後は NotIssued、issuePayment 経由で Pending に遷移する
     inv.paymentStatus shouldBe PaymentStatus.NotIssued
@@ -73,7 +90,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val port = new FakeBillingCargoQueryPort
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = false))
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val Left(msg) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     msg should include("Delivered")
     invRepo.store shouldBe empty
@@ -82,7 +99,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val port = new FakeBillingCargoQueryPort
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true))
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val Right(first) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     val Right(second) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     first.invoiceId.value shouldBe second.invoiceId.value
@@ -92,7 +109,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val port = new FakeBillingCargoQueryPort
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = true))
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     inv.shipperId.isCorporate shouldBe true
 
@@ -100,7 +117,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val port = new FakeBillingCargoQueryPort
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = false))
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     inv.shipperId.isCorporate shouldBe false
 
@@ -110,7 +127,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     val port = new FakeBillingCargoQueryPort
     val invRepo = new InMemoryInvoiceRepo
     port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = false, corporateDiscountRate = None))
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
     inv.discountRate.value shouldBe BigDecimal(0)
     inv.finalAmount.amount shouldBe inv.baseAmount.amount
@@ -123,7 +140,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
       "BK-000001",
       snapshot(isDelivered = true, isCorporate = true, corporateDiscountRate = Some(BigDecimal("0.15")))
     )
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
     inv.discountRate.value shouldBe BigDecimal("0.15")
     inv.finalAmount.amount shouldBe (inv.baseAmount.amount * 85 / 100)
@@ -138,7 +155,7 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
       "BK-000001",
       snapshot(isDelivered = true, isCorporate = true, corporateDiscountRate = Some(BigDecimal("0.30")))
     )
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
     inv.discountRate.value shouldBe BigDecimal("0.30")
     inv.finalAmount.amount shouldBe (inv.baseAmount.amount * 70 / 100)
@@ -151,9 +168,66 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
       "BK-000001",
       snapshot(isDelivered = true, isCorporate = true, corporateDiscountRate = Some(BigDecimal("0.20")))
     )
-    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, clock)
     // command 側で 0.05 を指定しても、snapshot 側の 0.20 が優先される
     val inv = service
       .generate(GenerateInvoiceCommand("BK-000001", Some(DiscountRate(BigDecimal("0.05")).toOption.get)))
       .value
     inv.discountRate.value shouldBe BigDecimal("0.20")
+
+  // IT8 US23 タスク 2.4: issuePayment
+
+  test(
+    "issuePayment: 確定 Invoice (NotIssued) を Pending に遷移 + dueDate/paymentReference 設定 + PaymentRequested 通知記録 (IT8 US23)"
+  ):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    val due = LocalDate.parse("2026-10-31")
+    val updated = service
+      .issuePayment(IssuePaymentCommand(invoice.invoiceId.value, due, "PAY-REF-001"))
+      .value
+    updated.paymentStatus shouldBe PaymentStatus.Pending
+    updated.dueDate shouldBe Some(due)
+    updated.paymentReference shouldBe Some("PAY-REF-001")
+    booking.paymentRequested should have size 1
+    val (b, inv, d, ref, amt) = booking.paymentRequested.head
+    b shouldBe "BK-000001"
+    inv shouldBe updated.invoiceId.value
+    d shouldBe "2026-10-31"
+    ref shouldBe "PAY-REF-001"
+    amt shouldBe updated.finalAmount.amount
+
+  test("issuePayment: 不正な状態遷移 (Pending → 再 issue) は Left (IT8 US23)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    service
+      .issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-10-31"), "REF1"))
+      .value
+    val msg = service
+      .issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-11-30"), "REF2"))
+      .left
+      .value
+    msg should include("支払発行可能な状態ではありません")
+    booking.paymentRequested should have size 1 // 2回目は通知記録されない
+
+  test("issuePayment: 不明な invoice は Left (IT8 US23)"):
+    val service = new BillingCommandService(
+      new InMemoryInvoiceRepo,
+      new FakeBillingCargoQueryPort,
+      pricing,
+      new FakeBookingPublicApi,
+      clock
+    )
+    val msg = service
+      .issuePayment(IssuePaymentCommand("INV-999999", LocalDate.parse("2026-10-31"), "X"))
+      .left
+      .value
+    msg should include("見つかりません")

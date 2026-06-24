@@ -29,3 +29,28 @@ trait BookingPublicApi:
       location: String,
       recipientConfirmation: String
   ): Either[String, Cargo]
+
+  /** 入金発行通知ログを記録 (US23 / IT8 ADR 0019 案 B)。Cargo の状態遷移は行わない。 */
+  def logPaymentRequested(
+      bookingId: String,
+      invoiceNumber: String,
+      dueDate: String,
+      paymentReference: String,
+      amount: Long
+  ): Either[String, Unit]
+
+  /** 入金確認通知ログを記録 (US23 / IT8)。Cargo の状態遷移 (Settled) は別途 `markSettled` で実施する。 */
+  def logPaymentConfirmed(
+      bookingId: String,
+      invoiceNumber: String,
+      paidAt: String,
+      amount: Long
+  ): Either[String, Unit]
+
+  /** 期限超過通知ログを記録 (US23 / IT8)。 */
+  def logOverdueAlerted(
+      bookingId: String,
+      invoiceNumber: String,
+      dueDate: String,
+      amount: Long
+  ): Either[String, Unit]

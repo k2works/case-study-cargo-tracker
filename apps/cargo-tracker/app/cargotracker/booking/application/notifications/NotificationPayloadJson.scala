@@ -89,5 +89,27 @@ object NotificationPayloadJson:
         "exceptionType" -> p.exceptionType,
         "resolutionNotes" -> p.resolutionNotes
       )
+    case p: NotificationPayload.PaymentRequested =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "invoiceNumber" -> p.invoiceNumber,
+        "dueDate" -> p.dueDate,
+        "paymentReference" -> p.paymentReference,
+        "amount" -> p.amount
+      )
+    case p: NotificationPayload.PaymentConfirmed =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "invoiceNumber" -> p.invoiceNumber,
+        "paidAt" -> p.paidAt,
+        "amount" -> p.amount
+      )
+    case p: NotificationPayload.OverdueAlerted =>
+      Json.obj(
+        "bookingId" -> p.bookingId,
+        "invoiceNumber" -> p.invoiceNumber,
+        "dueDate" -> p.dueDate,
+        "amount" -> p.amount
+      )
 
   def asString(payload: NotificationPayload): String = Json.stringify(toJson(payload))

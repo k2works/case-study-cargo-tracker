@@ -13,6 +13,9 @@ enum NotificationType:
   case DamageReported // 破損通知（US20 / IT7）
   case LostEscalated // 紛失 + 管理職エスカレーション通知（US20 / IT7）
   case ExceptionResponded // 例外対応報告通知（US19 / US20 / IT7）
+  case PaymentRequested // 入金発行通知（US23 / IT8 ADR 0019 案 B）
+  case PaymentConfirmed // 入金確認通知（US23 / IT8）
+  case OverdueAlerted // 期限超過通知（US23 / IT8）
 
 object NotificationType:
   def fromName(name: String): Option[NotificationType] =
