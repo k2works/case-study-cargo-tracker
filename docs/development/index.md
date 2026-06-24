@@ -56,7 +56,7 @@
 | Release 0.1 Internal Alpha | [release-0.1.0-gate-check.md](./release-0.1.0-gate-check.md) | ✅ ゲート確認済（v0.1.0 タグ付け待ち） |
 | Release 0.2 | - | 未リリース |
 | Release 1.0 MVP | [release_report-scala-1_0_0-mvp.md](./release_report-scala-1_0_0-mvp.md) | ✅ 機能完了（IT5+IT6 = 23 SP、v1.0.0 タグ付けはユーザー判断委譲） |
-| Release 2.0 GA | [release_report-scala-2_0_0-ga.md](./release_report-scala-2_0_0-ga.md) | ✅ コード完了（IT7+IT8+IT9 = 32/34 SP、本番 deploy + v2.0.0 タグ push は user 待ち） |
+| Release 2.0 GA | [release_report-scala-2_0_0-ga.md](./release_report-scala-2_0_0-ga.md) / [release-2.0.0-gate-check.md](./release-2.0.0-gate-check.md) | ✅ コード完了（IT7+IT8+IT9 = 32/34 SP、本番 deploy + v2.0.0 タグ push は user 待ち） |
 
 ## 補足
 
