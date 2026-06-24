@@ -86,8 +86,12 @@
       <div class="col-md-4">
         <div class="card border-secondary"><div class="card-body">
           <h5 class="card-title">マスタ管理</h5>
-          <p class="card-text small">監査ログ閲覧・システム設定（US30）</p>
-          <a href="@cargotracker.shared.audit.interfaces.web.routes.AuditLogController.list()" class="btn btn-secondary btn-sm">監査ログを開く</a>
+          <p class="card-text small">荷主登録（個人 / 法人）・監査ログ閲覧（US28 / US30）</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="@cargotracker.shipper.interfaces.web.routes.ShipperController.newForm()" class="btn btn-primary btn-sm">荷主登録</a>
+            <a href="@cargotracker.shipper.interfaces.web.routes.ShipperController.list()" class="btn btn-outline-secondary btn-sm">荷主一覧</a>
+            <a href="@cargotracker.shared.audit.interfaces.web.routes.AuditLogController.list()" class="btn btn-outline-secondary btn-sm">監査ログ</a>
+          </div>
         </div></div>
       </div>
     }

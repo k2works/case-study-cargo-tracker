@@ -27,6 +27,9 @@
                 <div class="dropdown">
                   <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">マスタ管理</a>
                   <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="@cargotracker.shipper.interfaces.web.routes.ShipperController.list()">荷主一覧</a></li>
+                    <li><a class="dropdown-item" href="@cargotracker.shipper.interfaces.web.routes.ShipperController.newForm()">荷主登録 (個人 / 法人)</a></li>
+                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="@cargotracker.shared.audit.interfaces.web.routes.AuditLogController.list()">監査ログ</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><span class="dropdown-item-text text-muted small">割引ポリシー管理 (US22 関連、IT10+)</span></li>
