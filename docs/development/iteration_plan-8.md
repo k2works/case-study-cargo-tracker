@@ -129,7 +129,7 @@
 | 2.8 | 請求書詳細画面 `/billing/invoices/:id` に「支払欄 (paymentStatus / dueDate / paidAt / paymentReference / [入金確認] ボタン)」統合 + `POST /billing/invoices/:id/issue-payment` + `POST /billing/invoices/:id/confirm-payment` の 2 アクション追加 (ui_design.md L90 準拠、独立した精算画面は作らない) | 5h | [x] **完了** (2026-06-24): `InvoiceController` に `issuePayment` / `confirmPayment` アクション + `IssuePaymentFormData` / `ConfirmPaymentFormData` + `SettlementAllowedRoles = {Settlement, MasterAdmin}` 追加。routes に POST 2 行追加。`detail.scala.html` に支払情報 dl (paymentStatus バッジ色分け / dueDate / paymentReference / paidAt) + `canSettle && NotIssued` 時の支払発行フォーム + `canSettle && Pending|Overdue` 時の入金確認フォーム (confirm dialog 付) を統合。Unit 26 件 Green |
 | 2.9 | `MailNotificationPort` (handling と同じ ACL パターン) + `MailNotificationAdapter` (Pekko Mail or print logger)、ADR 0018 候補 | 3h | [ ] |
 | 2.10 | BillingCommandServiceSpec 拡張 (issuePayment / confirmPayment / detectOverdue 各 2 件) + InvoiceSpec 拡張 (issuePayment / confirmPayment / markOverdue 状態遷移 6 件) + ScalikeJdbcInvoiceRepositoryIT 拡張 (新フィールド永続化) + Playwright E2E 3 件 (発行 / 入金 / 期限超過) | 8h | [ ] |
-| 2.11 | Flyway V25: `payment` テーブル drop (V17 で先行作成、案 B 採択により未使用となるため)。`invoice.paid_amount_value` / `invoice.paid_amount_currency` 列も削除 (finalAmount で代替) | 1h | [ ] |
+| 2.11 | Flyway V25: `payment` テーブル drop (V17 で先行作成、案 B 採択により未使用となるため)。`invoice.paid_amount_value` / `invoice.paid_amount_currency` 列も削除 (finalAmount で代替) | 1h | [x] **完了** (2026-06-24): V28 として作成 (V25 → V28 命名変更、Out-Of-Order 回避) = `DROP TABLE IF EXISTS payment CASCADE`。**invoice.paid_amount_value / paid_amount_currency 列削除はスキップ** (V17 実装側には存在せず data-model.md の記載のみだったため対象外、0.12 で data-model.md 反映済) |
 
 **小計**: 39h (案 B 採択により Repository 新設不要で減、V25 drop 追加で +1h)
 
