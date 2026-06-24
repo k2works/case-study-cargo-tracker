@@ -3,6 +3,7 @@ package cargotracker.handling.application.commandservices
 import cargotracker.handling.domain.model.aggregates.HandlingActivity
 import cargotracker.handling.domain.model.ports.{BookingNotificationPort, HandlingCargoQueryPort, TrackingLookupPort}
 import cargotracker.handling.domain.model.repositories.HandlingActivityRepository
+import cargotracker.shared.application.NoOpTransactionBoundary
 import org.scalatest.EitherValues
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -16,6 +17,7 @@ class HandlingOrchestratorSpec extends AnyFunSuite with Matchers with EitherValu
   private class InMemoryHandlingRepo extends HandlingActivityRepository:
     val store: mutable.Buffer[HandlingActivity] = mutable.Buffer.empty
     override def save(a: HandlingActivity): Unit = store += a
+    override def saveInTx(a: HandlingActivity)(implicit session: scalikejdbc.DBSession): Unit = store += a
     override def findAll(): Seq[HandlingActivity] = store.toSeq
     override def findByBookingId(bookingId: String): Seq[HandlingActivity] =
       store.toSeq.filter(_.bookingId == bookingId)
@@ -75,7 +77,8 @@ class HandlingOrchestratorSpec extends AnyFunSuite with Matchers with EitherValu
       new HandlingCommandService(handlingRepo),
       tracking,
       booking,
-      cargoQuery
+      cargoQuery,
+      new NoOpTransactionBoundary
     )
     (orchestrator, handlingRepo)
 

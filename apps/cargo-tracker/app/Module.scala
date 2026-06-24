@@ -26,6 +26,7 @@ import cargotracker.routing.infrastructure.repositories.{
   ScalikeJdbcRouteCandidateSelectionRepository,
   ScalikeJdbcVoyageRepository
 }
+import cargotracker.shared.application.{ScalikeJdbcTransactionBoundary, TransactionBoundary}
 import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
 import cargotracker.shipper.domain.model.repositories.ShipperRepository
 import cargotracker.shipper.infrastructure.repositories.ScalikeJdbcShipperRepository
@@ -65,6 +66,7 @@ class Module extends AbstractModule:
     bind(classOf[BookingNotificationPort]).to(classOf[BookingAdapter])
     bind(classOf[HandlingCargoQueryPort]).to(classOf[BookingCargoForHandlingAdapter])
     bind(classOf[BookingPublicApi]).to(classOf[BookingCommandService])
+    bind(classOf[TransactionBoundary]).to(classOf[ScalikeJdbcTransactionBoundary])
     bind(classOf[InvoiceRepository]).to(classOf[ScalikeJdbcInvoiceRepository])
     bind(classOf[BillingCargoQueryPort]).to(classOf[BookingCargoQueryAdapter])
     bind(classOf[MailNotificationPort]).to(classOf[LoggingMailNotificationAdapter])

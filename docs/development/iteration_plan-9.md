@@ -102,7 +102,7 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 0.1 | **ADR 0016 案 A 実装** (H1/R1): 各 Repository を `(implicit DBSession)` 受取に拡張、HandlingOrchestrator に単一 `DB.localTx` 境界導入、ステップ 2 失敗時の rollback 検証 IntegrationSpec 追加 | 8h | [ ] |
+| 0.1 | **ADR 0016 案 A 実装** (H1/R1): 各 Repository を `(implicit DBSession)` 受取に拡張、HandlingOrchestrator に単一 `DB.localTx` 境界導入、ステップ 2 失敗時の rollback 検証 IntegrationSpec 追加 | 8h | [x] **Phase 1 完了** (2026-06-25): `TransactionBoundary` trait + `ScalikeJdbcTransactionBoundary` (本番) / `NoOpTransactionBoundary` (テスト) 新設。`HandlingActivityRepository.saveInTx(implicit DBSession)` 拡張 + `HandlingCommandService.registerInTx(implicit session)` + `HandlingOrchestrator.register` を `txBoundary.inLocalTx` で囲む。Module bind 追加。ArchUnit ルール 1 を `domain.model.repositories` のみ scalikejdbc 依存許容に緩和 (ADR 0016 案 A 例外明記)。Unit 20 件 Green (Handling 6 + ArchUnit 6 + その他)。**Phase 2 (Tracking/Cargo/NotificationLog Repository への implicit DBSession 拡張で完全な単一 TX 化) と IntegrationSpec は IT9 後半 or IT10 申し送り** |
 | 0.2 | **MailNotificationPort 実装切替** (T5): LoggingMailNotificationAdapter → PekkoMailNotificationAdapter or AwsSesMailNotificationAdapter、application.conf に SMTP/SES 設定、IT 1 件追加 | 5h | [ ] |
 | 0.3 | **detectOverdue Cron 連携** (T8): Pekko Scheduler で日次 02:00 JST 起動、`Scheduler` ジョブ起動失敗時のリトライ + ログ、application.conf でジョブ ON/OFF 切替 | 4h | [ ] |
 | 0.4 | **pre-commit hook でフルテスト** (T11/R7): `.husky/pre-commit` に `sbt test` 追加、ローカル実行時間 2-3 分の許容、CI 同等化 | 2h | [x] **完了** (2026-06-25): `.husky/pre-commit` に sbt test 実行追加。`SKIP_FULL_TEST=1` 環境変数で skip 可能。Scala/sbt/conf 変更が含まれる commit のみ実行 (docs-only commit はスキップで開発体験維持)。IT8 6fe0b22c の教訓を反映 |

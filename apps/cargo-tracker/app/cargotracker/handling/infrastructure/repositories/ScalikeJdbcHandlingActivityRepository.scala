@@ -33,24 +33,29 @@ class ScalikeJdbcHandlingActivityRepository extends HandlingActivityRepository:
     )
 
   override def save(activity: HandlingActivity): Unit =
-    DB.localTx { implicit session =>
-      sql"""
-        INSERT INTO handling_activity
-          (booking_id, event_type, event_completion_time, location_unlocode,
-           voyage_number, operator_name, route_deviation,
-           recipient_confirmation, recipient_confirmation_type)
-        VALUES
-          (${activity.bookingId},
-           ${activity.eventType.toString},
-           ${java.sql.Timestamp.from(activity.completionTime)},
-           ${activity.location.unLocode},
-           ${activity.voyageNumber.map(_.value).orNull},
-           ${activity.operatorName.orNull},
-           ${activity.routeDeviation},
-           ${activity.recipientConfirmation.orNull},
-           ${activity.recipientConfirmationType.map(_.toString).orNull})
-      """.update.apply()
-    }
+    DB.localTx { implicit session => saveInternal(activity) }
+
+  /** IT9 0.1 (ADR 0016 案 A): 外側 TX に参加する save (implicit DBSession 受取版)。 */
+  override def saveInTx(activity: HandlingActivity)(implicit session: DBSession): Unit =
+    saveInternal(activity)
+
+  private def saveInternal(activity: HandlingActivity)(implicit session: DBSession): Unit =
+    sql"""
+      INSERT INTO handling_activity
+        (booking_id, event_type, event_completion_time, location_unlocode,
+         voyage_number, operator_name, route_deviation,
+         recipient_confirmation, recipient_confirmation_type)
+      VALUES
+        (${activity.bookingId},
+         ${activity.eventType.toString},
+         ${java.sql.Timestamp.from(activity.completionTime)},
+         ${activity.location.unLocode},
+         ${activity.voyageNumber.map(_.value).orNull},
+         ${activity.operatorName.orNull},
+         ${activity.routeDeviation},
+         ${activity.recipientConfirmation.orNull},
+         ${activity.recipientConfirmationType.map(_.toString).orNull})
+    """.update.apply()
 
   override def findByBookingId(bookingId: String): Seq[HandlingActivity] =
     DB.readOnly { implicit session =>

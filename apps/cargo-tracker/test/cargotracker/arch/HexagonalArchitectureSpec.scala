@@ -18,10 +18,16 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
       .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
       .importPackages("cargotracker..")
 
-  test("ルール 1: domain 層は application / infrastructure / interfaces / Play / ScalikeJDBC に依存してはならない"):
+  test(
+    "ルール 1: domain 層は application / infrastructure / interfaces / Play / ScalikeJDBC に依存してはならない (ADR 0016 案 A: domain.model.repositories は TX 統合のため scalikejdbc.DBSession 依存可)"
+  ):
     val rule = noClasses()
       .that()
       .resideInAPackage("..cargotracker..domain..")
+      .and()
+      .resideOutsideOfPackage(
+        "..cargotracker..domain.model.repositories.."
+      ) // IT9 0.1 / ADR 0016 案 A: TX 境界統合のため Repository trait のみ scalikejdbc.DBSession 依存を許容
       .should()
       .dependOnClassesThat()
       .resideInAnyPackage(
@@ -33,7 +39,10 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
         "controllers..",
         "views.."
       )
-      .because("ドメイン層はフレームワーク・永続化・UI から独立した純粋な Scala で記述する")
+      .because(
+        "ドメイン層はフレームワーク・永続化・UI から独立した純粋な Scala で記述する。" +
+          "ただし `domain.model.repositories` trait は ADR 0016 案 A (HandlingOrchestrator 単一 TX 化) のため scalikejdbc.DBSession を引き回せる例外を許容"
+      )
     rule.check(classes)
 
   test("ルール 2: application 層は infrastructure / interfaces に依存してはならない"):

@@ -17,7 +17,23 @@ import javax.inject.{Inject, Singleton}
 @Singleton
 class HandlingCommandService @Inject() (repository: HandlingActivityRepository):
 
+  /** 既存呼出側互換: repository.save が自前で DB.localTx を開く */
   def register(command: RegisterHandlingActivityCommand): Either[String, HandlingActivity] =
+    build(command).map { activity =>
+      repository.save(activity); activity
+    }
+
+  /** IT9 0.1 (ADR 0016 案 A): 外側 TX に参加する register。 HandlingOrchestrator が `DB.localTx { implicit session => ... }`
+    * で囲む際に使う。
+    */
+  def registerInTx(
+      command: RegisterHandlingActivityCommand
+  )(implicit session: scalikejdbc.DBSession): Either[String, HandlingActivity] =
+    build(command).map { activity =>
+      repository.saveInTx(activity)(session); activity
+    }
+
+  private def build(command: RegisterHandlingActivityCommand): Either[String, HandlingActivity] =
     for
       eventType <- HandlingType
         .fromName(command.eventType)
@@ -52,9 +68,7 @@ class HandlingCommandService @Inject() (repository: HandlingActivityRepository):
           case HandlingActivity.RecipientConfirmationTypeRequired =>
             "引取作業 (Claim) には荷受人確認の種別 (署名 / 受領印 / 身分証 / コード) が必須です"
         }
-    yield
-      repository.save(activity)
-      activity
+    yield activity
 
 /** 荷役登録コマンド（US15）。 */
 final case class RegisterHandlingActivityCommand(
