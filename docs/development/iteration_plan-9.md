@@ -150,11 +150,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | Flyway V29: `audit_log` テーブル新設 (id BIGSERIAL / operator VARCHAR / action VARCHAR / target_type VARCHAR / target_id VARCHAR / before TEXT / after TEXT / occurred_at TIMESTAMPTZ + index) | 2h | [ ] |
-| 4.2 | `AuditLogPort` trait + `ScalikeJdbcAuditLogAdapter` 実装、Module bind | 3h | [ ] |
-| 4.3 | TrackingController (cancelExceptionResolution / appendResolutionComment) + InvoiceController (issuePayment / confirmPayment) に AuditLogPort.record 呼出追加 | 4h | [ ] |
-| 4.4 | `/admin/audit-logs` 一覧画面 (MasterAdmin 限定、フィルタ: 日付範囲 / アクター / 操作種別) | 4h | [ ] |
-| 4.5 | AuditLogPortSpec + Controller IT 拡張 | 3h | [ ] |
+| 4.1 | Flyway V29: `audit_log` テーブル新設 (id BIGSERIAL / operator VARCHAR / action VARCHAR / target_type VARCHAR / target_id VARCHAR / before TEXT / after TEXT / occurred_at TIMESTAMPTZ + index) | 2h | [x] **完了** (2026-06-25): V30 として実装 (V29 は IT9 0.8 invoice refund 列追加で消費済、CLAUDE.md max+1 採番ルール準拠)。CHECK 制約に AuditAction 6 種 (CancelExceptionResolution/AppendResolutionComment/IssuePayment/ConfirmPayment/Refund/ImportPaymentsBatch) + 4 種 index (operator/target/occurred/action+occurred) |
+| 4.2 | `AuditLogPort` trait + `ScalikeJdbcAuditLogAdapter` 実装、Module bind | 3h | [x] **完了** (2026-06-25): `shared/audit/domain/AuditLog.scala` (entity + AuditLogId opaque type + AuditAction enum) + `AuditLogPort.scala` (trait + AuditLogFilter) + `infrastructure/ScalikeJdbcAuditLogAdapter.scala` (record/findByFilter/findById、UPDATE/DELETE 未提供で不変記録保証)。Module bind 追加 |
+| 4.3 | TrackingController (cancelExceptionResolution / appendResolutionComment) + InvoiceController (issuePayment / confirmPayment) に AuditLogPort.record 呼出追加 | 4h | 🔄 **未着手** (Controller 連携は次タスク) |
+| 4.4 | `/admin/audit-logs` 一覧画面 (MasterAdmin 限定、フィルタ: 日付範囲 / アクター / 操作種別) | 4h | 🔄 **未着手** (UI は次タスク) |
+| 4.5 | AuditLogPortSpec + Controller IT 拡張 | 3h | [x] **AuditLogAdapter IT 完了** (2026-06-25): ScalikeJdbcAuditLogAdapterIntegrationSpec 新設、IT 5 件 (record+findById / 全件 DESC 順 / action フィルタ / operator フィルタ / limit) Green。Controller IT は 4.3 完了後に追加 |
 
 **小計**: 16h
 
