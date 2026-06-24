@@ -314,3 +314,51 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     count shouldBe 0
     invRepo.store(invoice.invoiceId.value).paymentStatus shouldBe PaymentStatus.Pending
     booking.overdueAlerted shouldBe empty
+
+  // IT8 US23 タスク 2.10: MailNotificationPort 送信検証 (NoopMail バッファ確認)
+
+  test("issuePayment: MailNotificationPort.sendPaymentRequested が呼び出される (IT8 US23 2.9/2.10)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    val mail = new NoopMail
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, mail, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    service
+      .issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-10-31"), "PAY-REF-001"))
+      .value
+    mail.sentRequested should have size 1
+    val (b, inv, d, ref, amt) = mail.sentRequested.head
+    b shouldBe "BK-000001"
+    inv shouldBe invoice.invoiceId.value
+    d shouldBe "2026-10-31"
+    ref shouldBe "PAY-REF-001"
+    amt shouldBe invoice.finalAmount.amount
+
+  test("confirmPayment: MailNotificationPort.sendPaymentConfirmed が呼び出される (IT8 US23 2.9/2.10)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    val mail = new NoopMail
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, mail, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    service.issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-10-31"), "R1")).value
+    val paid = Instant.parse("2026-10-15T09:00:00Z")
+    service.confirmPayment(ConfirmPaymentCommand(invoice.invoiceId.value, paid)).value
+    mail.sentConfirmed should have size 1
+    mail.sentConfirmed.head._3 shouldBe paid.toString
+
+  test("detectOverdue: MailNotificationPort.sendOverdueAlert が呼び出される (IT8 US23 2.9/2.10)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    val mail = new NoopMail
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, mail, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    service.issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-10-31"), "R1")).value
+    service.detectOverdue(LocalDate.parse("2026-11-15"))
+    mail.sentOverdue should have size 1
+    mail.sentOverdue.head._3 shouldBe "2026-10-31"
