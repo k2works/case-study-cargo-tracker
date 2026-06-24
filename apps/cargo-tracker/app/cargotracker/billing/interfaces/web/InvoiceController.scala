@@ -25,6 +25,7 @@ class InvoiceController @Inject() (
     authenticated: AuthenticatedAction,
     commandService: BillingCommandService,
     repository: InvoiceRepository,
+    auditLog: cargotracker.shared.audit.domain.AuditLogPort,
     clock: Clock
 ) extends AbstractController(cc)
     with I18nSupport:
@@ -104,7 +105,19 @@ class InvoiceController @Inject() (
                 Redirect(detailRoute).flashing("error" -> s"支払期日の形式が不正です: ${data.dueDate}")
               case Some(due) =>
                 commandService.issuePayment(IssuePaymentCommand(invoiceId, due, data.referenceCode)) match
-                  case Right(_) => Redirect(detailRoute).flashing("success" -> s"支払発行しました (期日: $due)")
+                  case Right(_) =>
+                    // IT9 US30: 監査ログ記録
+                    auditLog.record(
+                      operator = request.username,
+                      action = cargotracker.shared.audit.domain.AuditAction.IssuePayment,
+                      targetType = "Invoice",
+                      targetId = invoiceId,
+                      before = Some("""{"paymentStatus":"NotIssued"}"""),
+                      after = Some(
+                        s"""{"paymentStatus":"Pending","dueDate":"$due","paymentReference":"${data.referenceCode}"}"""
+                      )
+                    )
+                    Redirect(detailRoute).flashing("success" -> s"支払発行しました (期日: $due)")
                   case Left(msg) => Redirect(detailRoute).flashing("error" -> msg)
         )
   }
@@ -123,6 +136,15 @@ class InvoiceController @Inject() (
             val paidInstant = data.paidAt.atZone(ZoneId.systemDefault()).toInstant
             commandService.confirmPayment(ConfirmPaymentCommand(invoiceId, paidInstant)) match
               case Right(_) =>
+                // IT9 US30: 監査ログ記録
+                auditLog.record(
+                  operator = request.username,
+                  action = cargotracker.shared.audit.domain.AuditAction.ConfirmPayment,
+                  targetType = "Invoice",
+                  targetId = invoiceId,
+                  before = Some("""{"paymentStatus":"Pending"}"""),
+                  after = Some(s"""{"paymentStatus":"Confirmed","paidAt":"$paidInstant"}""")
+                )
                 Redirect(detailRoute).flashing("success" -> s"入金を確認しました。予約は Settled 状態に遷移しました")
               case Left(msg) => Redirect(detailRoute).flashing("error" -> msg)
         )

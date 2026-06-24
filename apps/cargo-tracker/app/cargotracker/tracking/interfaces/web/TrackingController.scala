@@ -30,6 +30,7 @@ class TrackingController @Inject() (
     queryService: TrackingQueryService,
     commandService: TrackingCommandService,
     bookingCommandService: BookingCommandService,
+    auditLog: cargotracker.shared.audit.domain.AuditLogPort,
     clock: Clock
 ) extends AbstractController(cc)
     with I18nSupport:
@@ -229,7 +230,17 @@ class TrackingController @Inject() (
         Redirect(detailRoute).flashing("error" -> "対応取消しの権限がありません")
       else
         commandService.cancelExceptionResolution(CancelExceptionResolutionCommand(trackingNumber, index)) match
-          case Right(_) => Redirect(detailRoute).flashing("success" -> s"例外 (#$index) の対応を取消しました")
+          case Right(_) =>
+            // IT9 US30: 監査ログ記録 (ベストエフォート、失敗してもメインフロー継続)
+            auditLog.record(
+              operator = request.username,
+              action = cargotracker.shared.audit.domain.AuditAction.CancelExceptionResolution,
+              targetType = "TrackingActivity",
+              targetId = s"$trackingNumber#$index",
+              before = Some(s"""{"trackingNumber":"$trackingNumber","exceptionIndex":$index,"status":"resolved"}"""),
+              after = Some(s"""{"trackingNumber":"$trackingNumber","exceptionIndex":$index,"status":"unresolved"}""")
+            )
+            Redirect(detailRoute).flashing("success" -> s"例外 (#$index) の対応を取消しました")
           case Left(msg) => Redirect(detailRoute).flashing("error" -> msg)
   }
 
@@ -248,7 +259,17 @@ class TrackingController @Inject() (
               commandService.appendResolutionComment(
                 AppendResolutionCommentCommand(trackingNumber, index, data.comment)
               ) match
-                case Right(_) => Redirect(detailRoute).flashing("success" -> s"例外 (#$index) に補足コメントを追記しました")
+                case Right(_) =>
+                  // IT9 US30: 監査ログ記録
+                  auditLog.record(
+                    operator = request.username,
+                    action = cargotracker.shared.audit.domain.AuditAction.AppendResolutionComment,
+                    targetType = "TrackingActivity",
+                    targetId = s"$trackingNumber#$index",
+                    before = None,
+                    after = Some(s"""{"comment":${play.api.libs.json.JsString(data.comment).toString}}""")
+                  )
+                  Redirect(detailRoute).flashing("success" -> s"例外 (#$index) に補足コメントを追記しました")
                 case Left(msg) => Redirect(detailRoute).flashing("error" -> msg)
           )
   }
