@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + IT1〜IT6 計画・ふりかえり・完了報告書 + Release 0.1 ゲート確認結果 + Release 1.0 MVP 完了報告書 |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + IT1〜IT9 計画・ふりかえり・完了報告書 + Release 0.1 ゲート確認 + Release 1.0 MVP 完了報告書 + Release 2.0 GA ゲート確認 / 完了報告書 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 5 件作成済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 9 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 11 件作成済み (0001-0010 + 0013) |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 13 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 19 件作成済み (0001-0010 + 0013-0021) |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -70,6 +70,16 @@
 | [0007 楽観ロック Either API](./adr/0007-optimistic-lock-either-api.md) | 楽観ロックを `Either[DomainError.ConcurrentModification, A]` で表現する |
 | [0008 queryservices 命名拡張](./adr/0008-queryservices-package-naming.md) | queryservices パッケージで `*Query` / `*Command` / `*Result` / `*Candidate` を許容 |
 | [0009 経路選択集約](./adr/0009-route-candidate-selection-aggregate.md) | 経路選択を独立集約 `RouteCandidateSelection` として永続化する |
+| [0010 追跡番号採番ポリシー](./adr/0010-tracking-number-policy.md) | TrackingNumber 採番ポリシー |
+| [0013 tracking_number シーケンス採番](./adr/0013-tracking-number-sequence-numbering.md) | tracking_number 採番を PostgreSQL シーケンスに統一 |
+| [0014 集約 Snapshot ADT](./adr/0014-aggregate-snapshot-adt.md) | 集約 Snapshot 値オブジェクトの ADT 化 |
+| [0015 Billing Money 統一](./adr/0015-billing-money-shared-domain.md) | Billing Money を shared.domain に統一 |
+| [0016 HandlingOrchestrator tx 境界](./adr/0016-handling-orchestrator-transaction-boundary.md) | HandlingOrchestrator の単一 DB.localTx 化 (案 A) |
+| [0017 BookingPublicApi](./adr/0017-booking-public-api-port.md) | Booking Context 公開 Port パターン |
+| [0018 MailNotificationPort](./adr/0018-mail-notification-port.md) | メール通知 Port + Logging Adapter |
+| [0019 Payment 集約方針](./adr/0019-payment-aggregation-vs-invoice-status.md) | Invoice 集約内 paymentStatus 採用 (案 B) |
+| [0020 公開追跡例外表示](./adr/0020-public-tracking-exception-display.md) | 公開追跡画面の例外表示方針 |
+| [0021 Port パターン規約](./adr/0021-port-pattern-convention.md) | 公開 (application.api) / 入力 / 出力 Port の規約 + ArchUnit ルール 6 |
 
 ### レビュードキュメント
 
@@ -83,6 +93,11 @@
 | [IT3 実装レビュー](./review/it3_implementation_review_20260621.md) | IT3 実装全体（Routing US07/US08 + ADR 0006 + SELECT 句修正）のマルチパースペクティブレビュー結果（高 8 件・中 17 件・低 9 件） |
 | [IT4 セルフレビュー](./review/it4_self_review_20260621.md) | IT4 実装の自己レビュー結果（高 6 件 H1-H6）— IT5 申し送り |
 | [IT5 セルフレビュー](./review/it5_self_review_20260622.md) | IT5 実装（US14/US15/US18 + Tracking/Handling Context 新設）の自己レビュー結果（高 7 件 H1-H7）— IT6 申し送り |
+| [IT6 実装レビュー](./review/it6_implementation_review_20260623.md) | IT6 実装全体（US16/US17/US21 + Billing Context 新設）のマルチパースペクティブレビュー結果（高 8 件・中 10 件） |
+| [IT7 実装レビュー](./review/it7_implementation_review_20260623.md) | IT7 実装全体（US19/US20 + ADR 0014/0015 + Flyway V18-V22）のマルチパースペクティブレビュー結果（高 12 件・中 17 件・低 15 件） |
+| [IT8 セルフレビュー](./review/it8_self_review_20260624.md) | IT8 実装（US22/US23 + ADR 0016-0020 + Flyway V23/V26-V28）のセルフレビュー（高 3 件・中 3 件・低 3 件、総合 A） |
+| [IT8 実装レビュー](./review/it8_implementation_review_20260624.md) | IT8 実装全体のマルチパースペクティブレビュー (XP 5 エージェント並列、高 8 件・中 5 件・低 3 件、総合 A) |
+| [IT9 セルフレビュー](./review/it9_self_review_20260625.md) | IT9 実装（US27-30 + ADR 0021 + Flyway V29/V30）のセルフレビュー（高 4 件・中 5 件・低 3 件、総合 A） |
 
 ## 補足
 
