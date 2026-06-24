@@ -117,10 +117,10 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | ステージング環境デプロイ + 全 US Smoke テスト (US01-US23) | 4h | [ ] |
-| 1.2 | 本番環境デプロイ手順書更新 + ロールバック手順検証 | 3h | [ ] |
-| 1.3 | GitHub Release v2.0.0 タグ + リリースノート (CHANGELOG `[2.0.0]` 確定) | 2h | [ ] |
-| 1.4 | リリース後監視 (CloudWatch / Sentry 等) 設定、初日アラート対応 | 3h | [ ] |
+| 1.1 | ステージング環境デプロイ + 全 US Smoke テスト (US01-US23) | 4h | 🔄 **user 実施待ち** (release-2.0.0-gate-check.md のチェックリストに記載済、AI 完結不可) |
+| 1.2 | 本番環境デプロイ手順書更新 + ロールバック手順検証 | 3h | 🔄 **既存手順書流用** (ops/scripts + dev_infra_instruction.md を Release 2.0 用にレビュー必要、user 実施) |
+| 1.3 | GitHub Release v2.0.0 タグ + リリースノート (CHANGELOG `[2.0.0]` 確定) | 2h | [x] **ドラフト完了** (2026-06-25): CHANGELOG.md に `[2.0.0]` セクション追加 (IT7-IT9 全成果を Added/Changed/Documentation でまとめ)。GitHub Release tag 発行 + push は user 実施 (本番デプロイ完了後) |
+| 1.4 | リリース後監視 (CloudWatch / Sentry 等) 設定、初日アラート対応 | 3h | 🔄 **user 実施待ち** (CloudWatch / Sentry 設定は AWS / 外部サービス操作で AI 完結不可、ゲート確認チェックリストに記載済) |
 
 **小計**: 12h
 

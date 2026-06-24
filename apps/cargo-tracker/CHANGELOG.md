@@ -6,7 +6,32 @@
 
 ## [Unreleased]
 
+(本リリース後の差分をここに記録)
+
+---
+
+## [2.0.0] - 2026-10-25 — Release 2.0 GA
+
+Phase 4 完了 (IT7-IT9)。例外処理 + 法人割引 + 精算 + 監査ログ + 運用基盤強化を含む正式版。
+
 ### Added
+
+#### IT9 (2026-10-12 〜 2026-10-25) — Release 2.0 GA 本番公開準備
+
+- **US27 Release 2.0 GA 本番公開** (運用ストーリー、3 SP): ステージング検証 + 本番デプロイ + GitHub Release v2.0.0
+- **US28 法人 Shipper 登録 UI** (UC02 拡張、2 SP): /shippers/new で個人/法人選択 + 法人時 contractNumber + discountRate (0-30%) JS 表示制御、Sales/MasterAdmin ロール制御
+- **US29 入金消込 CSV 取込 UI** (UC18 拡張、4 SP): /billing/payments/import で referenceCode 一致一括 confirmPayment、4 分類結果サマリ (成功/不一致/二重/エラー)、Stripe/GMO 連携までのブリッジ機能
+- **US30 システム操作監査ログ** (運用、2 SP): audit_log テーブル新設、AuditLogPort + ScalikeJdbcAuditLogAdapter、5 操作で記録 (cancelExceptionResolution / appendResolutionComment / issuePayment / confirmPayment / ImportPaymentsBatch)、/admin/audit-logs 一覧 + 詳細画面 (MasterAdmin 限定、フィルタ: 日付 / アクター / 操作種別)
+- **新規 ADR**: 0021 Port パターン規約 (公開/入力/出力 + ArchUnit ルール 6)
+- **新規 Flyway**: V29 (invoice.refunded_at + refund_reason) / V30 (audit_log 新設)
+- **運用基盤強化** (IT8 申し送り解消):
+  - HandlingOrchestrator 単一 TX 化 Phase 1 (ADR 0016 案 A 実装)、TransactionBoundary 抽象化
+  - OverdueDetectionScheduler (Pekko Scheduler 日次起動、cron-hour/minute/zone-id 設定可)
+  - LoggingMailNotificationAdapter (Pekko Mail/SES 連携は IT10 申し送り)
+  - pre-commit hook で sbt test (フル) 実行 (SKIP_FULL_TEST=1 で skip 可)
+  - CLAUDE.md に Flyway 採番ルール + ADR ↔ ArchUnit 整合チェックリスト追記
+  - ArchUnit ルール 6 (Port 規約 ADR 0021 準拠) + ルール 4 に "Result" suffix 追加
+- **Invoice.refund メソッド** (R4 解消): Confirmed → Refunded 遷移 + 二重返金防止、Snapshot/Repository/Spec 拡張
 
 #### IT8 (2026-09-28 〜 2026-10-11) — Release 2.0 GA コード到達
 
