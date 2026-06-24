@@ -1,6 +1,7 @@
 package cargotracker.billing.application.commandservices
 
 import cargotracker.billing.domain.model.aggregates.Invoice
+import cargotracker.billing.domain.model.ports.MailNotificationPort
 import cargotracker.billing.domain.model.repositories.{BillingCargoQueryPort, InvoiceRepository}
 import cargotracker.billing.domain.model.valueobjects.{
   BillingBookingId,
@@ -30,6 +31,7 @@ class BillingCommandService @Inject() (
     cargoQueryPort: BillingCargoQueryPort,
     pricingService: PricingService,
     bookingPublicApi: BookingPublicApi,
+    mailPort: MailNotificationPort,
     clock: Clock
 ):
 
@@ -109,6 +111,14 @@ class BillingCommandService @Inject() (
         paymentReference = command.referenceCode,
         amount = saved.finalAmount.amount
       )
+      // IT8 2.9: 荷主向けメール送信 (ベストエフォート)
+      mailPort.sendPaymentRequested(
+        bookingId = saved.cargoBookingId.value,
+        invoiceNumber = saved.invoiceId.value,
+        dueDate = command.dueDate.toString,
+        paymentReference = command.referenceCode,
+        amount = saved.finalAmount.amount
+      )
       saved
 
   /** IT8 US23 (ADR 0019 案 B): Pending / Overdue Invoice に入金確認を反映し、Cargo を Settled に遷移する。
@@ -140,6 +150,12 @@ class BillingCommandService @Inject() (
         paidAt = command.paidAt.toString,
         amount = saved.finalAmount.amount
       )
+      mailPort.sendPaymentConfirmed(
+        bookingId = saved.cargoBookingId.value,
+        invoiceNumber = saved.invoiceId.value,
+        paidAt = command.paidAt.toString,
+        amount = saved.finalAmount.amount
+      )
       saved
 
   /** IT8 US23 (ADR 0019 案 B): 期限超過 Invoice を一括で Overdue 化する。
@@ -157,6 +173,12 @@ class BillingCommandService @Inject() (
           try
             invoiceRepository.save(updated)
             bookingPublicApi.logOverdueAlerted(
+              bookingId = updated.cargoBookingId.value,
+              invoiceNumber = updated.invoiceId.value,
+              dueDate = updated.dueDate.map(_.toString).getOrElse(""),
+              amount = updated.finalAmount.amount
+            )
+            mailPort.sendOverdueAlert(
               bookingId = updated.cargoBookingId.value,
               invoiceNumber = updated.invoiceId.value,
               dueDate = updated.dueDate.map(_.toString).getOrElse(""),
