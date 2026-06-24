@@ -2,9 +2,9 @@ package cargotracker.shared.audit.infrastructure
 
 import cargotracker.shared.audit.domain.*
 import cargotracker.support.{DbCleanupSupport, PostgresContainerSupport}
-import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.{EitherValues, OptionValues}
 
 import java.time.Instant
 

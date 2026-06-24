@@ -1,12 +1,12 @@
 package cargotracker.billing.infrastructure.scheduler
 
 import cargotracker.billing.application.commandservices.BillingCommandService
+import com.typesafe.config.ConfigFactory
 import org.apache.pekko.actor.ActorSystem
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import play.api.Configuration
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
-import com.typesafe.config.ConfigFactory
 
 import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.ExecutionContext
@@ -35,7 +35,7 @@ class OverdueDetectionSchedulerSpec extends AnyFunSuite with Matchers:
       )
     )
     val clock = Clock.fixed(now, zoneTokyo)
-    new OverdueDetectionScheduler(actorSystem, cfg, null, clock, lifecycle)
+    new OverdueDetectionScheduler(actorSystem, cfg, (_: java.time.LocalDate) => 0, clock, lifecycle)
 
   test("computeInitialDelay: 今日 01:00 JST → 02:00 JST まで 1 時間"):
     // 2026-10-15 01:00:00 JST = 2026-10-14T16:00:00Z

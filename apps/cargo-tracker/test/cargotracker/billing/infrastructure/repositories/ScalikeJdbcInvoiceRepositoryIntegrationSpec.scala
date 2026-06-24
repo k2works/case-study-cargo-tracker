@@ -5,9 +5,9 @@ import cargotracker.billing.domain.model.enums.PaymentStatus
 import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, BillingShipperId, DiscountRate}
 import cargotracker.shared.domain.Money
 import cargotracker.support.{DbCleanupSupport, PostgresContainerSupport}
-import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.{EitherValues, OptionValues}
 
 import java.time.{Instant, LocalDate}
 

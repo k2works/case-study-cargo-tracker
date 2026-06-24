@@ -2,8 +2,8 @@ package cargotracker.billing.infrastructure.scheduler
 
 import cargotracker.billing.application.commandservices.BillingCommandService
 import org.apache.pekko.actor.ActorSystem
-import play.api.{Configuration, Logger}
 import play.api.inject.ApplicationLifecycle
+import play.api.{Configuration, Logger}
 
 import java.time.{Clock, LocalDate, LocalTime, ZoneId, ZonedDateTime}
 import javax.inject.{Inject, Singleton}
@@ -28,13 +28,24 @@ import scala.concurrent.duration.*
   * ```
   */
 @Singleton
-class OverdueDetectionScheduler @Inject() (
+class OverdueDetectionScheduler(
     actorSystem: ActorSystem,
     config: Configuration,
-    billingCommandService: BillingCommandService,
+    detectOverdueFn: LocalDate => Int,
     clock: Clock,
     lifecycle: ApplicationLifecycle
 )(implicit ec: ExecutionContext):
+
+  /** Guice DI 用コンストラクタ (BillingCommandService.detectOverdue を委譲)。 */
+  @Inject
+  def this(
+      actorSystem: ActorSystem,
+      config: Configuration,
+      billingCommandService: BillingCommandService,
+      clock: Clock,
+      lifecycle: ApplicationLifecycle
+  )(implicit ec: ExecutionContext) =
+    this(actorSystem, config, billingCommandService.detectOverdue, clock, lifecycle)
 
   private val logger: Logger = Logger("billing.scheduler.overdue")
 
@@ -68,7 +79,7 @@ class OverdueDetectionScheduler @Inject() (
   private[scheduler] def runOnce(): Unit =
     try
       val today = LocalDate.ofInstant(clock.instant(), zoneId)
-      val count = billingCommandService.detectOverdue(today)
+      val count = detectOverdueFn(today)
       if count > 0 then logger.info(s"[OverdueScheduler] detected $count overdue invoice(s) on $today")
       else logger.info(s"[OverdueScheduler] no overdue invoice on $today")
     catch case scala.util.control.NonFatal(e) => logger.error(s"[OverdueScheduler] failed: ${e.getMessage}", e)

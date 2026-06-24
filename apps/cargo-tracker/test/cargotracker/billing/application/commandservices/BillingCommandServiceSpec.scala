@@ -15,9 +15,9 @@ import cargotracker.booking.application.api.BookingPublicApi
 import cargotracker.booking.domain.model.aggregates.Cargo
 import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
 import cargotracker.shared.domain.{CargoType, Location, Weight}
-import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.{EitherValues, OptionValues}
 
 import java.time.{Clock, Instant, LocalDate, ZoneId}
 import java.util.concurrent.atomic.AtomicLong
