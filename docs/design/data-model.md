@@ -872,8 +872,13 @@ CREATE TABLE shipper (
 | `due_date` | `DATE` | | 支払期日 |
 | `discount_amount_value` | `INTEGER` | | 割引金額（最小通貨単位） |
 | `discount_amount_currency` | `VARCHAR(3)` | | 割引通貨コード |
+| `paid_at` | `TIMESTAMP WITH TIME ZONE` | | 入金確認時刻（IT8 ADR 0019 反映、Invoice 集約内案採択） |
+| `payment_reference` | `VARCHAR(64)` | | 入金参照コード（手動入力、IT8 V23 で追加、ADR 0019 反映） |
+| `version` | `INTEGER` | `NOT NULL, DEFAULT 0` | 楽観ロック用バージョン |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+> **IT8 ADR 0019 反映**: Payment は Invoice 集約内のステータスとして表現する（独立した `payment` テーブルは IT8 V25 で drop 予定）。`paid_at` / `payment_reference` 列を invoice に統合し、`BillingCommandService.confirmPayment(invoiceId, paidAt)` で更新する。
 
 ---
 
@@ -892,17 +897,19 @@ CREATE TABLE shipper (
 
 ---
 
-### `payment`（支払記録）
+### `payment`（支払記録）— **IT8 V25 で drop 予定**
+
+> **IT8 ADR 0019 反映**: Payment は独立集約ではなく Invoice 集約内のステータスとして表現する方針を採択。本テーブルは V17 で先行作成されたが、IT8 V25 で drop し、`paid_at` / `payment_reference` を invoice テーブルに統合する。下表は **歴史的記録** として残し、新規実装では参照しない。
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL）|
 | `invoice_id` | `BIGINT` | `FK → invoice.id, NOT NULL` | 親精算書 ID |
-| `paid_amount_value` | `INTEGER` | `NOT NULL` | 支払金額（最小通貨単位） |
-| `paid_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
+| `paid_amount_value` | `INTEGER` | `NOT NULL` | 支払金額（最小通貨単位）|
+| `paid_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217）|
 | `paid_at` | `TIMESTAMP` | `NOT NULL` | 支払日時 |
-| `payment_method` | `VARCHAR(30)` | `NOT NULL` | 支払方法（`BANK_TRANSFER` / `CREDIT_CARD` 等） |
-| `transaction_reference` | `VARCHAR(100)` | | 取引参照番号（外部決済システムの ID） |
+| `payment_method` | `VARCHAR(30)` | `NOT NULL` | 支払方法（`BANK_TRANSFER` / `CREDIT_CARD` 等）|
+| `reference_code` | `VARCHAR(64)` | | 取引参照コード（手動入力 or 外部決済システム ID）|
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 

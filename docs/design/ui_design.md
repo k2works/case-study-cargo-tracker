@@ -88,7 +88,9 @@ Estimate 1 ─── N RouteCandidate（見積→予約への引き継ぎは将�
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理・一括入金確認・CSV 出力 | 経理担当者 | US23 |
 | 新規請求書発行 | `/billing/invoices/new` | 引取済予約の選択・輸送実績表示・料金自動算出 | 経理担当者 | US21, US22 |
 | 請求書詳細 | `/billing/invoices/:invoiceId` | 請求書詳細・割引内訳・支払い確認・PDF 出力 | 経理担当者 | US22, US23 |
-| 割引ポリシー管理 | `/admin/discount-policies`（一覧・登録・編集） | 割引ポリシーの管理 | Admin | US22（関連・将来） |
+| 割引ポリシー管理 | `/admin/discount-policies`（一覧・登録・編集） | 割引ポリシーの管理 | MasterAdmin | US22（関連・将来） |
+| 精算: 入金発行 | `/billing/invoices/:id/issue-payment` (POST) | 確定済 Invoice に支払期日 + reference_code を設定 (Pending 遷移) | Settlement | US23（IT8、案 B 統合）|
+| 精算: 入金確認 | `/billing/invoices/:id/confirm-payment` (POST) | 手動 reference_code 入力で入金確認 → Confirmed + Cargo.Settled 遷移 | Settlement | US23（IT8、案 B 統合）|
 | 公開貨物追跡 | `/public/tracking/:trackingNumber` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 
 ---
@@ -106,8 +108,8 @@ UI の表示制御は [バックエンドアーキテクチャ](architecture_bac
 | `RouteDesigner` | 経路設計者 | 航海スケジュール管理・経路選択・確定・追跡番号発行 |
 | `Handler` | 荷役作業員 | 荷役作業登録 |
 | `Tracker` | 追跡管理者 | 追跡情報管理・状態更新・例外対応 |
-| `Accountant` | 経理担当者 | 料金算出・精算管理 |
-| `Admin` | システム管理者 | 全機能・割引ポリシー管理 |
+| `Settlement` | 精算担当者 | 料金算出・精算管理（IT8 0.12 で `Accountant` → `Settlement` 統一、実装 Role.scala 準拠）|
+| `MasterAdmin` | システム管理者 | 全機能・割引ポリシー管理（IT8 0.12 で `Admin` → `MasterAdmin` 統一、実装 Role.scala 準拠）|
 
 > **荷受人について**: 荷受人専用ロールは設けない。荷受人は認証不要の公開貨物追跡（`/public/tracking/:trackingNumber`）で
 > 追跡情報を照会する（US18 の「ログインなしでも追跡番号があれば照会できる」に対応）。
@@ -128,8 +130,8 @@ UI の表示制御は [バックエンドアーキテクチャ](architecture_bac
 | 貨物追跡 | `/tracking` | Shipper, Tracker |
 | 荷役管理 | `/handling` | Handler, Tracker |
 | 航路管理 | `/voyages` | RouteDesigner |
-| 請求管理 | `/billing/invoices` | Accountant |
-| 管理設定 | `/admin/discount-policies` | Admin |
+| 請求管理 | `/billing/invoices` | Settlement |
+| 管理設定 | `/admin/discount-policies` | MasterAdmin |
 | ログアウト | `/logout` | 全ロール |
 
 ロール別表示は Twirl テンプレート内で認証済みユーザー情報（`AuthenticatedRequest`）のロールを参照して制御する。
@@ -447,7 +449,7 @@ state 公開貨物追跡 {
 
 - サマリーカード: 今月の予約件数・輸送中件数・未割り当て件数・未払い請求件数（CQRS クエリサービスの集計 DTO）
 - 最新荷役作業: 直近 10 件を降順表示
-- ロール制御: Accountant のみ「未払い請求」カードを表示
+- ロール制御: Settlement のみ「未払い請求」カードを表示
 - htmx: サマリーカードを `hx-get="/dashboard/summary"` で部分取得（初期ロード後）
 
 ---
@@ -1034,7 +1036,7 @@ state 公開貨物追跡 {
 
 - **フィルタ**: PaymentStatus（`PENDING`, `CONFIRMED`, `OVERDUE`, `REFUNDED`）・発行日でフィルタリング
 - **支払期限超過**: 期限超過かつ未払いの場合は行を赤色ハイライトし、経理担当者に未払い通知（US23）
-- **アクセス制御**: Accountant のみアクセス可能
+- **アクセス制御**: Settlement のみアクセス可能
 - 本画面の主担当は US23（精算処理の一覧管理）。US21（料金算出）の主担当は後述の新規請求書発行画面
 
 #### 月末締め向け一括処理（初期リリース対象）
@@ -1119,7 +1121,7 @@ state 公開貨物追跡 {
 - **一覧**: ポリシー名・貨物種別・顧客区分・割引率・有効期間を表示。有効期限でフィルタリング可能
 - **登録・編集**: 割引率（-50〜100%）・有効開始日 ≤ 有効終了日のバリデーション。同一「貨物種別 × 顧客区分 × 期間」の重複はエラー
 - **無効化**: `POST /admin/discount-policies/:id/disable` で論理削除（PRG）
-- **アクセス制御**: Admin のみ。他ロールは 403 画面
+- **アクセス制御**: MasterAdmin のみ。他ロールは 403 画面
 - **位置づけ**: ドメインモデルの `DiscountPolicy` に対応する管理機能。初期フェーズでは法人契約割引（shipper.discount_rate）のみで運用し、本画面は将来イテレーションで実装する
 
 ---

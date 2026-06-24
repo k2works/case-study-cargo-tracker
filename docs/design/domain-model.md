@@ -921,11 +921,23 @@ package "Aggregate（集約）" {
     -paymentStatus: PaymentStatus
     -issuedAt: Option[Instant]
     -paidAt: Option[Instant]
+    -dueDate: Option[LocalDate]
+    -paymentReference: Option[String]
+    -version: Long
     +calculateFinalAmount(): Money
     +applyDiscount(policy: DiscountPolicy): Either[DomainError, Invoice]
+    +issuePayment(dueDate: LocalDate, referenceCode: String): Either[DomainError, Invoice]
     +confirmPayment(paidAt: Instant): Either[DomainError, Invoice]
+    +markOverdue(now: LocalDate): Either[DomainError, Invoice]
   }
 }
+
+note bottom of Invoice
+  IT8 ADR 0019 反映 (案 B 採択):
+  Payment は独立集約ではなく Invoice 集約内のステータス + メソッドとして表現する。
+  PaymentStatus enum: NotIssued / Pending / Overdue / Confirmed / Refunded
+  dueDate / paymentReference は IT8 V23 で invoice テーブルに追加。
+end note
 
 package "Value Objects（値オブジェクト）" {
   class InvoiceId <<opaque type>> {
