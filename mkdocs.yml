@@ -112,6 +112,7 @@ nav:
       - イテレーション 8 計画: development/iteration_plan-8.md
       - イテレーション 8 ふりかえり: development/retrospective-8.md
       - イテレーション 8 完了報告書: development/iteration_report-8.md
+      - イテレーション 9 計画: development/iteration_plan-9.md
       - Release 0.1.0 ゲート確認結果: development/release-0.1.0-gate-check.md
       - Release 1.0 MVP 完了報告書: development/release_report-scala-1_0_0-mvp.md
   - 運用:

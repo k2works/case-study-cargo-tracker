@@ -431,17 +431,21 @@ gantt
 
 詳細は [IT8 完了報告書](./iteration_report-8.md) / [IT8 ふりかえり](./retrospective-8.md) 参照。
 
-### 予備イテレーション 9（Week 17-18）
+### イテレーション 9（Week 19-20）🚧 計画策定済 (2026-06-24)
 
-**ゴール**: バッファ消費・低優先度ストーリー消化・技術的負債返済
+**ゴール**: Release 2.0 GA 本番公開準備（運用基盤強化 + E2E 整備 + 構造的品質強化 + IT8 申し送り 14 件解消）
 
 **主なタスク**:
 
-- [ ] US10: 経路条件再算出（3 SP）
-- [ ] 技術的負債返済・E2E 共通化補完
-- [ ] パフォーマンスチューニング
+- [ ] US24: Release 2.0 GA 本番公開（3 SP、ステージング → 本番デプロイ → GitHub Release v2.0.0）
+- [ ] US25: Shipper 法人マスタ登録 UI（2 SP、E2E 前提）
+- [ ] US23-r1: 入金消込 CSV 取込 UI（4 SP、Stripe/GMO 連携までのブリッジ）
+- [ ] US27: 監査ログ audit_log + AuditLogPort（2 SP）
+- [ ] IT8 申し送り消化 0.x（2 SP / 8 タスク）= ADR 0016 案 A 実装 / Pekko Mail/SES 切替 / detectOverdue Cron / pre-commit フルテスト / ADR ↔ ArchUnit チェックリスト / ADR 0021 Port 規約 / Repository IT 拡張 / Refunded + Lost テスト
 
-**目標 SP**: 3 + バッファ
+**目標 SP**: 13
+
+詳細は [IT9 計画](./iteration_plan-9.md) 参照。
 
 ---
 
