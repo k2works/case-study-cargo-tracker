@@ -431,21 +431,21 @@ gantt
 
 詳細は [IT8 完了報告書](./iteration_report-8.md) / [IT8 ふりかえり](./retrospective-8.md) 参照。
 
-### イテレーション 9（Week 19-20）🚧 計画策定済 (2026-06-24)
+### イテレーション 9（Week 19-20）✅ 完了 (2026-06-25、AI 完結部分)
 
 **ゴール**: Release 2.0 GA 本番公開準備（運用基盤強化 + E2E 整備 + 構造的品質強化 + IT8 申し送り 14 件解消）
 
 **主なタスク**:
 
-- [ ] US27: Release 2.0 GA 本番公開（3 SP、ステージング → 本番デプロイ → GitHub Release v2.0.0）
-- [ ] US28: Shipper 法人マスタ登録 UI（2 SP、E2E 前提）
-- [ ] US29: 入金消込 CSV 取込 UI（4 SP、Stripe/GMO 連携までのブリッジ）
-- [ ] US30: 監査ログ audit_log + AuditLogPort（2 SP）
-- [ ] IT8 申し送り消化 0.x（2 SP / 8 タスク）= ADR 0016 案 A 実装 / Pekko Mail/SES 切替 / detectOverdue Cron / pre-commit フルテスト / ADR ↔ ArchUnit チェックリスト / ADR 0021 Port 規約 / Repository IT 拡張 / Refunded + Lost テスト
+- [ ] US27: Release 2.0 GA 本番公開（3 SP）→ CHANGELOG + ゲートチェックリストはドラフト完了、**実 deploy は user 待ち**
+- [x] US28: Shipper 法人マスタ登録 UI（2 SP、E2E 前提）✅
+- [x] US29: 入金消込 CSV 取込 UI（4 SP、Stripe/GMO 連携までのブリッジ）✅
+- [x] US30: 監査ログ audit_log + AuditLogPort（2 SP）✅
+- [x] IT8 申し送り消化 0.x（2 SP / 7-8 タスク）✅ 7/8 (Pekko Mail/SES は IT10 申し送り)
 
-**目標 SP**: 13
+**目標 SP**: 13 / **実績 SP**: 11（達成率 85%、US27 実 deploy 未）
 
-詳細は [IT9 計画](./iteration_plan-9.md) 参照。
+詳細は [IT9 完了報告書](./iteration_report-9.md) / [IT9 ふりかえり](./retrospective-9.md) / [Release 2.0.0 GA ゲート確認](./release-2.0.0-gate-check.md) 参照。
 
 ---
 
