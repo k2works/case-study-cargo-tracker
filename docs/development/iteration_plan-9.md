@@ -212,6 +212,415 @@
 
 ## 設計
 
+> 本セクションは iteration_plan-8.md と同等レベルで、新規 4 ストーリー (US27-30) + IT8 申し送り解消 (ADR 0016 案 A 等) の設計詳細を網羅する。PlantUML / SQL DDL / salt ワイヤーフレーム / API 一覧 / ディレクトリツリーを含む。
+
+### ドメインモデル拡張 (US30 監査ログ + Invoice.refund 追加)
+
+IT8 で確立した 8 コンテキストに対し、IT9 は新規エンティティとして **AuditLog** (Booking Context もしくは shared.audit Context 配下) を導入する。また Invoice 集約に `refund()` メソッドを追加し、PaymentStatus.Refunded への遷移と二重返金防止を実装する。
+
+```plantuml
+@startuml
+title IT9 ドメインモデル拡張 (US30 監査ログ + Invoice.refund)
+
+package "Shared (audit、新規)" {
+  class AuditLog <<entity>> {
+    -id: AuditLogId
+    -operator: UserId
+    -action: AuditAction
+    -targetType: String
+    -targetId: String
+    -before: Option[String]  // JSON
+    -after: Option[String]   // JSON
+    -occurredAt: Instant
+  }
+
+  enum AuditAction {
+    CancelExceptionResolution
+    AppendResolutionComment
+    IssuePayment
+    ConfirmPayment
+    ImportPaymentsBatch  // US29
+  }
+
+  class AuditLogId <<opaque type>> {
+    Long
+  }
+
+  interface AuditLogPort {
+    +record(operator, action, targetType, targetId, before, after): Either[String, Unit]
+    +findByFilter(filter: AuditLogFilter): Seq[AuditLog]
+  }
+
+  AuditLog *-- AuditLogId
+  AuditLog *-- AuditAction
+}
+
+package "Billing Context (拡張)" {
+  class Invoice <<aggregate root>> {
+    .. 既存 (IT8) ..
+    +issuePayment(dueDate, ref): Either
+    +confirmPayment(paidAt): Either
+    +markOverdue(now): Either
+    .. IT9 追加 ..
+    +refund(refundedAt, reason): Either[Invoice.Error, Invoice]
+  }
+
+  enum PaymentStatus {
+    NotIssued
+    Pending
+    Overdue
+    Confirmed
+    Refunded  // IT9 で初実装
+  }
+
+  Invoice ..> PaymentStatus
+}
+
+note bottom of Invoice
+  IT9 US30 / R4 解消:
+  Confirmed → Refunded 遷移を refund() で実装。
+  Refunded → Refunded は InvalidPaymentStateTransition (二重返金防止)。
+  NotIssued / Pending / Overdue からの refund も InvalidPaymentStateTransition。
+end note
+
+note bottom of AuditLog
+  IT9 US30 / H8 解消:
+  操作履歴の不変記録 (after 確定後の修正は禁止)。
+  TrackingController / InvoiceController から AuditLogPort.record で記録。
+end note
+
+@enduml
+```
+
+### 不変条件 (IT9 で追加)
+
+| # | 不変条件 | 検証箇所 |
+| :--- | :--- | :--- |
+| INV-IT9-1 | Invoice.refund は status = Confirmed のときのみ実行可 | Invoice.refund + InvoiceSpec |
+| INV-IT9-2 | refund 後の status は Refunded、refundedAt が記録される | InvoiceSpec |
+| INV-IT9-3 | Refunded からの再 refund / issuePayment / confirmPayment は InvalidPaymentStateTransition | InvoiceSpec |
+| INV-IT9-4 | AuditLog の after フィールドは insert 後の更新を禁止 | AuditLogPort 仕様 (UPDATE メソッド未提供) |
+| INV-IT9-5 | AuditLog の operator は AuthenticatedRequest.user.id から自動取得 | Controller 層で AuditLogPort.record 呼出時 |
+| INV-IT9-6 | CSV 取込 (US29) の各行処理は独立 try で実行、1 行失敗が全体失敗にならない | BillingCommandService.confirmPaymentsBatch |
+| INV-IT9-7 | HandlingOrchestrator.register は単一 DB.localTx 内で 4 ステップ全実行、いずれか失敗で全 rollback | ADR 0016 案 A 実装 + IntegrationSpec |
+| INV-IT9-8 | Cron 起動された detectOverdue は冪等 (同日複数回起動でも結果同一) | BillingCommandService.detectOverdue + IT |
+
+### PaymentStatus 遷移マトリクス (IT9 完成版)
+
+```plantuml
+@startuml
+title PaymentStatus 状態遷移 (IT9 完成版、Refunded 含む)
+
+[*] --> NotIssued : Invoice.issue (US21)
+
+NotIssued --> Pending : issuePayment\n(dueDate + ref) (US23)
+Pending --> Overdue : markOverdue\n(now > dueDate) (US23)
+Pending --> Confirmed : confirmPayment\n(paidAt) (US23)
+Overdue --> Confirmed : confirmPayment\n(paidAt) (US23)
+Confirmed --> Refunded : refund\n(refundedAt) (US30 / IT9)
+
+NotIssued --> NotIssued : confirmPayment\n→ InvalidPaymentStateTransition
+NotIssued --> NotIssued : markOverdue\n→ InvalidPaymentStateTransition
+Pending --> Pending : issuePayment\n→ InvalidPaymentStateTransition
+Confirmed --> Confirmed : refund\n→ Refunded\n(IT9 で実装)
+Refunded --> Refunded : refund / issuePayment / confirmPayment\n→ InvalidPaymentStateTransition (二重防止)
+@enduml
+```
+
+### データモデル拡張
+
+#### Flyway V29 (新規): audit_log テーブル
+
+```sql
+-- IT9 US30: 監査ログテーブル
+CREATE TABLE audit_log (
+  id BIGSERIAL PRIMARY KEY,
+  operator VARCHAR(50) NOT NULL,
+  action VARCHAR(50) NOT NULL
+    CHECK (action IN ('CancelExceptionResolution', 'AppendResolutionComment',
+                      'IssuePayment', 'ConfirmPayment', 'ImportPaymentsBatch', 'Refund')),
+  target_type VARCHAR(50) NOT NULL,
+  target_id VARCHAR(50) NOT NULL,
+  before TEXT,
+  after TEXT,
+  occurred_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_audit_log_operator ON audit_log (operator);
+CREATE INDEX idx_audit_log_target ON audit_log (target_type, target_id);
+CREATE INDEX idx_audit_log_occurred ON audit_log (occurred_at DESC);
+CREATE INDEX idx_audit_log_action_occurred ON audit_log (action, occurred_at DESC);
+
+COMMENT ON TABLE audit_log IS 'システム監査ログ (IT9 US30)';
+COMMENT ON COLUMN audit_log.before IS '変更前状態 (JSON、NULL 可)';
+COMMENT ON COLUMN audit_log.after IS '変更後状態 (JSON、insert 後 UPDATE 禁止)';
+```
+
+#### Flyway V30 (新規): invoice.refunded_at + refund_reason 列追加
+
+```sql
+-- IT9 US30 / R4: Invoice.refund 実装のため
+ALTER TABLE invoice
+    ADD COLUMN refunded_at TIMESTAMP WITH TIME ZONE NULL,
+    ADD COLUMN refund_reason VARCHAR(500) NULL;
+
+COMMENT ON COLUMN invoice.refunded_at IS '返金時刻 (IT9 US30 で追加)';
+COMMENT ON COLUMN invoice.refund_reason IS '返金理由 (任意、最大 500 文字)';
+```
+
+### UI 設計
+
+#### 画面一覧拡張 (ui_design.md L82 追加)
+
+| 画面 | URL | 用途 | アクセス制御 | 関連 US |
+| :--- | :--- | :--- | :--- | :--- |
+| 法人 Shipper 登録フォーム | `/shippers/new` (拡張) | 個人/法人選択 + 法人時 contractNumber + discountRate 入力 | Sales / MasterAdmin | US28 |
+| 入金消込 CSV 取込 | `/billing/payments/import` (GET 画面 / POST 実行) | CSV アップロード + バッチ実行 | Settlement / MasterAdmin | US29 |
+| CSV 取込結果 | `/billing/payments/import/result` | 成功 / 不一致 / 二重 / エラーの 4 分類サマリ | Settlement / MasterAdmin | US29 |
+| 監査ログ一覧 | `/admin/audit-logs` | 全操作履歴 (フィルタ: 日付 / アクター / 操作種別) | MasterAdmin | US30 |
+| 監査ログ詳細 | `/admin/audit-logs/:id` | before / after JSON 差分表示 | MasterAdmin | US30 |
+| 請求書詳細 (Refund 追加) | `/billing/invoices/:id` (拡張) | Confirmed Invoice に「返金」フォーム + 結果表示 | Settlement / MasterAdmin | US30 (R4) |
+
+#### Salt ワイヤーフレーム (新規 3 画面 + 1 拡張)
+
+##### 1. 法人 Shipper 登録フォーム (US28)
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 見積管理 | 荷主管理 | 貨物予約 | 貨物追跡 | 荷役管理 | 航路管理 | 請求管理 | 管理設定 | [ログアウト] }
+  ---
+  荷主登録 (US28 / 法人マスタ UI 整備)
+  ---
+  {
+    荷主種別 *      | () 個人 (X) 法人
+    荷主名 *        | "株式会社サンプル        "
+    住所            | "東京都港区...           "
+    連絡先          | "03-1234-5678           "
+    -- ↓ 法人選択時のみ表示 (JS) --
+    契約番号 *      | "CTR-2026-001           "
+    割引率 (0-30%) *| "15.00 %                "
+    契約開始日      | "2026/01/01             "
+    --
+    [   キャンセル   ] | [   登録   ]
+  }
+}
+@endsalt
+```
+
+##### 2. CSV 取込画面 (US29)
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | ... | 請求管理 | [ログアウト] }
+  ---
+  入金消込 CSV 取込 (US29 / IT9)
+  ---
+  {
+    "CSV 形式: referenceCode,paidAt,amount"
+    {
+      [ ファイル選択 (CSV) ] | "                                    "
+    }
+    "プレビュー (最初の 5 行):"
+    {#
+      ! referenceCode | paidAt                   | amount
+      | PAY-REF-001   | 2026-10-15T09:00:00+09:00 | 15300
+      | PAY-REF-002   | 2026-10-16T10:30:00+09:00 | 28500
+      | PAY-REF-003   | 2026-10-17T11:15:00+09:00 | 9800
+    }
+    [   キャンセル   ] | [   一括入金確認   ]
+  }
+}
+@endsalt
+```
+
+##### 3. CSV 取込結果画面 (US29)
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | ... | 請求管理 | [ログアウト] }
+  ---
+  入金消込結果 (US29 / IT9)
+  ---
+  {
+    <b>処理サマリ:</b>
+    {
+      "✅ 成功: 142 件"
+      "⚠️ 不一致 (referenceCode 該当なし): 3 件"
+      "⚠️ 二重確認 (既に Confirmed): 1 件"
+      "❌ エラー (日付形式不正等): 2 件"
+    }
+    "<b>警告詳細:</b>"
+    {#
+      ! 行 | referenceCode | 理由
+      | 15 | PAY-REF-099   | 該当 Invoice なし
+      | 47 | PAY-REF-100   | 該当 Invoice なし
+      | 92 | PAY-REF-001   | 既に Confirmed
+    }
+    [   一覧に戻る   ]
+  }
+}
+@endsalt
+```
+
+##### 4. 監査ログ一覧画面 (US30)
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | ... | 管理設定 | [ログアウト] }
+  ---
+  監査ログ (US30 / IT9 / MasterAdmin 限定)
+  ---
+  {
+    <b>フィルタ:</b>
+    {
+      期間   | "2026/10/12" | "～" | "2026/10/25"
+      アクター| ".select.    "
+      操作種別| ".select.    "
+      [ 検索 ]
+    }
+    {#
+      ! 日時                       | アクター | 操作                    | 対象            | [詳細]
+      | 2026-10-15 09:30:00 JST    | sato    | ConfirmPayment           | INV-000142      | [詳細]
+      | 2026-10-15 09:15:00 JST    | sato    | IssuePayment             | INV-000142      | [詳細]
+      | 2026-10-14 14:22:00 JST    | tanaka  | CancelExceptionResolution| TN-000087 #0    | [詳細]
+      | 2026-10-14 11:08:00 JST    | suzuki  | AppendResolutionComment  | TN-000091 #1    | [詳細]
+    }
+    "[ << 前へ ] 1 2 3 ... 24 [ 次へ >> ]"
+  }
+}
+@endsalt
+```
+
+#### 画面遷移図 (ui_design.md L209 追加分)
+
+```plantuml
+@startuml
+title IT9 新規画面遷移図
+
+[*] --> ShipperListPage : 既存
+ShipperListPage --> ShipperNewForm : [新規作成]
+state ShipperNewForm : /shippers/new (US28 拡張)
+ShipperNewForm --> ShipperNewForm : バリデーションエラー (PRG)
+ShipperNewForm --> ShipperDetail : 登録成功 (PRG)
+
+[*] --> InvoiceListPage : 既存
+InvoiceListPage --> PaymentImportForm : [CSV 取込]
+state PaymentImportForm : /billing/payments/import (US29)
+PaymentImportForm --> PaymentImportResult : POST 一括実行
+state PaymentImportResult : /billing/payments/import/result (US29)
+PaymentImportResult --> InvoiceListPage : [一覧に戻る]
+
+[*] --> AdminAuditLogList : /admin/audit-logs (US30)
+state AdminAuditLogList : MasterAdmin only
+AdminAuditLogList --> AdminAuditLogDetail : [詳細]
+state AdminAuditLogDetail : /admin/audit-logs/:id (US30)
+AdminAuditLogDetail --> AdminAuditLogList : [一覧に戻る]
+
+[*] --> InvoiceDetail : 既存 (IT8)
+state InvoiceDetail : /billing/invoices/:id (Refund 追加)
+InvoiceDetail --> InvoiceDetail : Confirmed → 返金フォーム表示\n(R4 / IT9)
+@enduml
+```
+
+#### htmx パターン (IT9 新規 4 件、IT8 6 件と合わせて 10 件)
+
+| 場面 | パターン | 実装方針 |
+| :--- | :--- | :--- |
+| US28 法人選択切替 | `change` event → JS で `#corporate-fields` div の表示制御 | IT8 0.8 Delay UI と同じ手法 |
+| US29 CSV プレビュー | `hx-post="/billing/payments/import/preview"` `hx-target="#preview-table"` で最初の 5 行を非同期表示 | アップロード前に内容確認可能 |
+| US29 結果フィードバック | バッチ完了後 PRG で `/result` 画面遷移、`alert-success/warning/danger` で 4 分類表示 | 大量データ処理の結果可視化 |
+| US30 監査ログ自動更新 | 一覧画面で `hx-get="/admin/audit-logs?since=<lastTimestamp>"` を 30 秒ポーリング | 新規ログのリアルタイム反映 |
+
+#### フィードバックメッセージ (IT9 新規)
+
+| シーン | alert クラス | メッセージ例 |
+| :--- | :--- | :--- |
+| US28 法人 Shipper 登録成功 | `alert-success` | 「法人 Shipper を登録しました (割引率: XX%、契約番号: CTR-...)」 |
+| US28 discountRate 範囲外 | `alert-danger` | 「割引率は 0% 〜 30% で入力してください」 |
+| US29 CSV 取込成功 | `alert-success` | 「142 件の入金確認が完了しました」 |
+| US29 CSV 取込警告含む | `alert-warning` | 「142 件成功、3 件不一致、1 件二重確認、2 件エラー。詳細は下記を確認してください」 |
+| US29 CSV ファイル形式不正 | `alert-danger` | 「CSV ヘッダー (referenceCode, paidAt, amount) を確認してください」 |
+| US30 監査ログアクセス権限不足 | `alert-danger` | 「監査ログを閲覧する権限がありません (MasterAdmin 限定)」 |
+| R4 返金成功 | `alert-success` | 「請求書を返金しました (Refunded 状態に遷移)」 |
+| R4 返金不正状態 | `alert-danger` | 「Confirmed 状態の請求書のみ返金可能です (現状態: XXX)」 |
+
+### ディレクトリツリー (IT9 追加分)
+
+```
+apps/cargo-tracker/
+├── app/cargotracker/
+│   ├── shared/audit/                              # IT9 新規 (US30)
+│   │   ├── domain/
+│   │   │   ├── AuditLog.scala                     # entity
+│   │   │   ├── AuditAction.scala                  # enum
+│   │   │   ├── AuditLogId.scala                   # opaque type
+│   │   │   └── AuditLogPort.scala                 # trait
+│   │   └── infrastructure/
+│   │       └── ScalikeJdbcAuditLogAdapter.scala
+│   ├── billing/
+│   │   ├── domain/model/aggregates/
+│   │   │   └── Invoice.scala                      # refund() メソッド追加 (R4)
+│   │   └── application/commandservices/
+│   │       └── BillingCommandService.scala        # confirmPaymentsBatch (US29) + refund (R4)
+│   ├── shipper/
+│   │   └── interfaces/web/
+│   │       └── ShipperController.scala            # 法人選択 + discountRate 入力 (US28)
+│   └── ...
+├── app/views/
+│   ├── shippers/
+│   │   └── newForm.scala.html                     # 法人選択 + JS 表示制御 (US28)
+│   ├── billing/
+│   │   ├── paymentsImport.scala.html              # US29 取込フォーム
+│   │   └── paymentsImportResult.scala.html        # US29 結果画面
+│   └── admin/
+│       ├── auditLogList.scala.html                # US30 一覧
+│       └── auditLogDetail.scala.html              # US30 詳細
+├── conf/
+│   ├── routes                                     # IT9 で 6 ルート追加 (US28 拡張 + US29 3 + US30 2)
+│   └── db/migration/default/
+│       ├── V29__create_audit_log.sql              # US30
+│       └── V30__add_invoice_refund_columns.sql    # R4
+└── test/cargotracker/
+    ├── shared/audit/
+    │   ├── domain/AuditLogSpec.scala              # Unit
+    │   └── infrastructure/AuditLogAdapterIT.scala # Testcontainers IT
+    ├── billing/
+    │   ├── application/commandservices/
+    │   │   └── BillingCommandServiceSpec.scala    # +6 件 (refund 3 / batch CSV 3)
+    │   └── domain/model/aggregates/
+    │       └── InvoiceSpec.scala                  # +3 件 (refund 状態遷移)
+    └── arch/
+        └── HexagonalArchitectureSpec.scala        # ルール 6 追加 (ADR 0021)
+```
+
+### API 設計 (IT9 新規 6 ルート)
+
+| メソッド | エンドポイント | 用途 | アクセス | 関連 US |
+| :--- | :--- | :--- | :--- | :--- |
+| POST | `/shippers` (拡張) | 法人 Shipper 登録 (contractNumber + discountRate 受領) | Sales / MasterAdmin | US28 |
+| GET  | `/billing/payments/import` | CSV アップロードフォーム表示 | Settlement / MasterAdmin | US29 |
+| POST | `/billing/payments/import` | CSV 一括取込実行 (multipart/form-data) | Settlement / MasterAdmin | US29 |
+| GET  | `/billing/payments/import/result` | 直前の取込結果 (flash 経由) | Settlement / MasterAdmin | US29 |
+| GET  | `/admin/audit-logs` | 監査ログ一覧 (フィルタクエリパラメータ対応) | MasterAdmin | US30 |
+| GET  | `/admin/audit-logs/:id` | 監査ログ詳細 (before/after JSON 表示) | MasterAdmin | US30 |
+| POST | `/billing/invoices/:id/refund` | 返金実行 (Confirmed → Refunded) | Settlement / MasterAdmin | R4 |
+
+### ADR (IT9 新規 2 件 + 実装 2 件)
+
+| ADR | タイトル | ステータス | 関連タスク |
+| :--- | :--- | :--- | :--- |
+| 0016 (既存) | HandlingOrchestrator 単一 DB.localTx 化 | **本 IT で実装** | 0.1 |
+| 0017 (既存) | BookingPublicApi 公開 Port | 維持 (markSettled 追加に対応) | - |
+| 0018 (既存) | MailNotificationPort | **本 IT で Adapter 切替** | 0.2 |
+| 0019 (既存) | Payment は Invoice 集約内 (案 B) | 維持 (refund() 追加で完成版) | - |
+| **ADR 0021 (新規)** | **Port パターン規約**: 公開 = `application.api`、入力 = `domain.model.ports`、出力 = `domain.model.ports` + ArchUnit ルール 6 (`application.api` への外部依存許可、`application.commandservices` 禁止強化) | **本 IT で起票** | 0.6 |
+| **ADR 0022 (新規)** | **監査ログ設計**: AuditLogPort + ScalikeJdbcAuditLogAdapter + audit_log テーブル (operator / action / target_type / target_id / before / after / occurred_at) | **本 IT で起票** | 4.x |
+| ADR 0023 (候補) | pre-commit / pre-push hook でフルテスト実行 (CI 並走) | **本 IT で起票候補** | 0.4 |
+
 ### IT8 申し送り解消の論点
 
 #### ADR 0016 案 A 実装（0.1）
@@ -365,3 +774,4 @@ PAY-REF-002,2026-10-16T10:30:00+09:00,28500
 |------|---------|--------|
 | 2026-06-24 | IT9 計画初版作成 (新規 US 4 件 + IT8 申し送り 14 件消化、13 SP) | AI Agent |
 | 2026-06-24 | validating-iteration-plan 検証反映 - US 番号衝突解消: 既存 US24 (航海新規) / US25 (航海更新) / US26 (認証) と衝突するため新規ストーリーを US27-30 に再採番 (Release 2.0 GA → US27、法人 Shipper UI → US28、CSV 取込 → US29、監査ログ → US30)。**user_story.md への US27-30 正式追記は IT9 Day 1 必須タスクとする** | AI Agent |
+| 2026-06-24 | 設計セクションを iteration_plan-8 と同等レベルに拡充: ドメインモデル拡張 PlantUML (AuditLog + Invoice.refund) / 不変条件 INV-IT9-1 〜 8 / PaymentStatus 遷移マトリクス (Refunded 含む完成版) / Flyway V29 (audit_log) + V30 (invoice 拡張) SQL DDL / 4 画面 salt ワイヤーフレーム (法人 Shipper / CSV 取込 / 結果 / 監査ログ一覧) / 画面遷移図 / htmx パターン 4 件 / フィードバックメッセージ 8 件 / ディレクトリツリー / API 7 ルート / ADR 0021 (Port 規約) + ADR 0022 (監査ログ設計) + ADR 0023 候補 (pre-commit フルテスト) | AI Agent |
