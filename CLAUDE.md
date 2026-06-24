@@ -188,6 +188,35 @@ Simple made easy.
 - [推奨される次の作業]
 ```
 
+## TDD コミット規律
+
+IT7 実装レビュー (H6) で「Red→Green の経路が commit 履歴から追えない」指摘があった。以下を必須規律とする。
+
+### 原則
+
+- **Red コミットと Green コミットを分離する**。失敗するテストを先に追加してコミットし、続けて実装を追加して Green に転じるコミットを行う。これにより 1 つの commit log だけで TDD サイクルが追跡可能になる。
+- **やむを得ず Red と Green を 1 コミットに含める場合**、コミットメッセージに以下のいずれかを明記する:
+  - `Red→Green サイクル: <テスト名> を先に追加し失敗を確認後、実装で Green に転じた`
+  - `TDD: test-first で <テスト名> を Red 確認 → 実装で Green`
+
+### Conventional Commits 例
+
+```text
+# 推奨: Red と Green を分離
+test(it8): Invoice.markOverdue が期日超過時に Overdue 遷移するテスト追加（Red）
+feat(it8): Invoice.markOverdue 実装、期日超過時に PaymentStatus.Overdue 遷移（Green）
+
+# やむを得ず単一コミットの場合
+feat(it8): Invoice.markOverdue 実装
+
+Red→Green サイクル: InvoiceSpec.markOverdue の 3 ケース (期日内 Left / 期日超過 Right / 既 Overdue Left) を先に追加し失敗を確認後、Invoice.markOverdue を実装して Green 化
+```
+
+### 例外（規律を緩める場合）
+
+- **リファクタリングコミット**: 既存テストが Green の状態でテストを変更せずコードのみ整理する場合は Red→Green 表記は不要 (`refactor: ...` プレフィックスを使う)
+- **ドキュメント / 設定変更**: テストが存在しない領域は対象外
+
 ## 開発手法・品質保証・その他詳細
 
 開発手法（TDD サイクル、変更管理、コミット規律、リファクタリングルール、実装アプローチ）、品質保証（設計原則、冗長性の排除、ハードコーディング禁止、エラーハンドリング）の詳細は `ai-agent-guidelines` スキルを参照してください。
