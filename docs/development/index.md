@@ -21,7 +21,7 @@
 | IT5（2026-08-17 〜 2026-08-30） | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | ✅ 完了（11/11 SP / US14 + US15 + US18 + IT4 申し送り 6 件、Tracking/Handling Context 新設、テスト 323 件） |
 | IT6（2026-08-31 〜 2026-09-13） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | ✅ 完了（12/12 SP / US16 + US17 + US21 + IT5 申し送り 7/10 件、Billing Context 新設、Unit 261 + Playwright E2E 36/36 PASS、Release 1.0 MVP 機能完了） |
 | IT7（2026-09-14 〜 2026-09-27） | [iteration_plan-7.md](./iteration_plan-7.md) | [retrospective-7.md](./retrospective-7.md) | [iteration_report-7.md](./iteration_report-7.md) | ✅ 完了（12/12 SP / US19 + US20 + IT6 申し送り 16/16 件、Flyway V18-V22 + ADR 0014/0015 承認、Unit 371 件、Phase 4 着手） |
-| IT8（2026-09-28 〜 2026-10-11） | [iteration_plan-8.md](./iteration_plan-8.md) | - | - | 🚧 計画中（9 SP / US22 + US23 + IT7 申し送り 12 件、Release 2.0 GA、Phase 4 完了予定） |
+| IT8（2026-09-28 〜 2026-10-11） | [iteration_plan-8.md](./iteration_plan-8.md) | [retrospective-8.md](./retrospective-8.md) | [iteration_report-8.md](./iteration_report-8.md) | ✅ 完了（9/9 SP / US22 + US23 + IT7 申し送り 15/15 件、ADR 0016-0020 承認、Flyway V23/V26/V27/V28、Unit +37 件、Phase 4 完了、Release 2.0 GA コード到達） |
 
 ### 進捗サマリー
 
@@ -34,7 +34,8 @@
 | IT5 | 11 | 11 | 100% |
 | IT6 | 12 | 12 | 100% |
 | IT7 | 12 | 12 | 100% |
-| **累計** | **81** | **81** | **100%** |
+| IT8 | 9 | 9 | 100% |
+| **累計** | **90** | **90** | **100%** |
 
 ### フェーズ進捗
 
@@ -43,7 +44,7 @@
 | Phase 1 | 認証 + 予約・荷主基盤 + 航海スケジュール | 22 | 24 | ✅ 完了（IT1 + IT2、Release 0.1 Internal Alpha） |
 | Phase 2 | 経路設計・確定 | 22 | 22 | ✅ 完了（IT3 + IT4） |
 | Phase 3 | 追跡・状態更新 + 料金算出 | 23 | 23 | ✅ 完了（IT5 + IT6、Release 1.0 MVP 機能完了） |
-| Phase 4 | 例外処理・割引・精算 | 21 | 12 | 🚧 進行中（IT7 で US19+US20 完了、IT8 で US22+US23 + 申し送り T1-T8） |
+| Phase 4 | 例外処理・割引・精算 | 21 | 21 | ✅ 完了（IT7 で US19+US20、IT8 で US22+US23 + 申し送り 15 件、Release 2.0 GA コード到達） |
 | 予備 | バッファ消費・US10 | 3 | 0 | 未着手 |
 
 ### リリース完了報告書
