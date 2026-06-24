@@ -83,3 +83,53 @@ class InvoiceSpec extends AnyFunSuite with Matchers with EitherValues:
     pending.markOverdue(LocalDate.parse("2026-11-01")).value.paymentStatus shouldBe PaymentStatus.Overdue
     // NotIssued から markOverdue: NG (dueDate 未設定)
     freshInvoice.markOverdue(LocalDate.parse("2026-12-31")).left.value shouldBe a[Invoice.InvalidPaymentStateTransition]
+
+  // IT9 0.8 (R4 解消): refund 状態遷移テスト 4 件
+
+  test("refund: Confirmed → Refunded 遷移 + refundedAt / refundReason 記録 (IT9 R4)"):
+    val confirmed = freshInvoice
+      .issuePayment(LocalDate.parse("2026-10-31"), "REF1")
+      .value
+      .confirmPayment(Instant.parse("2026-10-15T09:00:00Z"))
+      .value
+    val refundAt = Instant.parse("2026-10-20T14:00:00Z")
+    val refunded = confirmed.refund(refundAt, "顧客都合キャンセル").value
+    refunded.paymentStatus shouldBe PaymentStatus.Refunded
+    refunded.refundedAt shouldBe Some(refundAt)
+    refunded.refundReason shouldBe Some("顧客都合キャンセル")
+
+  test("refund: Refunded から再 refund (二重返金) は InvalidPaymentStateTransition (IT9 R4 / H7)"):
+    val refunded = freshInvoice
+      .issuePayment(LocalDate.parse("2026-10-31"), "REF1")
+      .value
+      .confirmPayment(Instant.parse("2026-10-15T09:00:00Z"))
+      .value
+      .refund(Instant.parse("2026-10-20T14:00:00Z"), "初回返金")
+      .value
+    val err = refunded.refund(Instant.parse("2026-10-21T10:00:00Z"), "再返金").left.value
+    err shouldBe a[Invoice.InvalidPaymentStateTransition]
+
+  test("refund: NotIssued / Pending / Overdue からの refund は全て InvalidPaymentStateTransition (IT9 R4)"):
+    // NotIssued
+    freshInvoice.refund(now, "x").left.value shouldBe a[Invoice.InvalidPaymentStateTransition]
+    // Pending
+    val pending = freshInvoice.issuePayment(LocalDate.parse("2026-10-31"), "REF1").value
+    pending.refund(now, "x").left.value shouldBe a[Invoice.InvalidPaymentStateTransition]
+    // Overdue
+    val overdue = pending.markOverdue(LocalDate.parse("2026-11-01")).value
+    overdue.refund(now, "x").left.value shouldBe a[Invoice.InvalidPaymentStateTransition]
+
+  test("refund: 返金後の issuePayment / confirmPayment / markOverdue も InvalidPaymentStateTransition (IT9 R4 / 不可逆性)"):
+    val refunded = freshInvoice
+      .issuePayment(LocalDate.parse("2026-10-31"), "REF1")
+      .value
+      .confirmPayment(Instant.parse("2026-10-15T09:00:00Z"))
+      .value
+      .refund(Instant.parse("2026-10-20T14:00:00Z"), "返金")
+      .value
+    refunded
+      .issuePayment(LocalDate.parse("2026-12-31"), "R2")
+      .left
+      .value shouldBe a[Invoice.InvalidPaymentStateTransition]
+    refunded.confirmPayment(now).left.value shouldBe a[Invoice.InvalidPaymentStateTransition]
+    refunded.markOverdue(LocalDate.parse("2027-01-01")).left.value shouldBe a[Invoice.InvalidPaymentStateTransition]
