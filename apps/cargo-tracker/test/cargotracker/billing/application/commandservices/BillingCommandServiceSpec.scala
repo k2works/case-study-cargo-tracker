@@ -362,3 +362,61 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     service.detectOverdue(LocalDate.parse("2026-11-15"))
     mail.sentOverdue should have size 1
     mail.sentOverdue.head._3 shouldBe "2026-10-31"
+
+  // IT9 US29: confirmPaymentsBatch (CSV 取込)
+
+  test("confirmPaymentsBatch: 4 行 (成功 2 + 不一致 1 + 二重 1) で正しく分類される (IT9 US29)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    port.store.update(
+      "BK-IT9CSV",
+      snapshot(isDelivered = true).copy(bookingId = BillingBookingId.unsafeFrom("BK-IT9CSV"))
+    )
+    val service = new BillingCommandService(invRepo, port, pricing, booking, new NoopMail, clock)
+    val inv1 = service.generate(GenerateInvoiceCommand("BK-IT9CSV")).value
+    service.issuePayment(IssuePaymentCommand(inv1.invoiceId.value, LocalDate.parse("2026-10-31"), "PAY-001")).value
+    // 別 invoice 用にもう 1 件
+    port.store.update(
+      "BK-IT9CSV2",
+      snapshot(isDelivered = true).copy(bookingId = BillingBookingId.unsafeFrom("BK-IT9CSV2"))
+    )
+    val inv2 = service.generate(GenerateInvoiceCommand("BK-IT9CSV2")).value
+    service.issuePayment(IssuePaymentCommand(inv2.invoiceId.value, LocalDate.parse("2026-10-31"), "PAY-002")).value
+    // 3 件目: 既 Confirmed の Invoice
+    port.store.update(
+      "BK-IT9CSV3",
+      snapshot(isDelivered = true).copy(bookingId = BillingBookingId.unsafeFrom("BK-IT9CSV3"))
+    )
+    val inv3 = service.generate(GenerateInvoiceCommand("BK-IT9CSV3")).value
+    service.issuePayment(IssuePaymentCommand(inv3.invoiceId.value, LocalDate.parse("2026-10-31"), "PAY-003")).value
+    service.confirmPayment(ConfirmPaymentCommand(inv3.invoiceId.value, Instant.parse("2026-10-10T09:00:00Z"))).value
+
+    val rows = Seq(
+      CsvPaymentInput("PAY-001", Instant.parse("2026-10-15T09:00:00Z"), 15300L),
+      CsvPaymentInput("PAY-002", Instant.parse("2026-10-15T10:00:00Z"), 15300L),
+      CsvPaymentInput("PAY-NOTFOUND", Instant.parse("2026-10-15T11:00:00Z"), 9999L),
+      CsvPaymentInput("PAY-003", Instant.parse("2026-10-15T12:00:00Z"), 15300L)
+    )
+    val result = service.confirmPaymentsBatch(rows)
+    result.totalRows shouldBe 4
+    result.succeeded shouldBe 2
+    result.unmatched should have size 1
+    result.unmatched.head.referenceCode shouldBe "PAY-NOTFOUND"
+    result.alreadyConfirmed should have size 1
+    result.alreadyConfirmed.head._1.referenceCode shouldBe "PAY-003"
+    result.alreadyConfirmed.head._2 shouldBe "Confirmed"
+    result.errors shouldBe empty
+
+  test("confirmPaymentsBatch: 全件不一致なら succeeded=0 + unmatched=全行 (IT9 US29)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val service = new BillingCommandService(invRepo, port, pricing, new FakeBookingPublicApi, new NoopMail, clock)
+    val rows = Seq(
+      CsvPaymentInput("UNKNOWN-1", Instant.parse("2026-10-15T09:00:00Z"), 1000L),
+      CsvPaymentInput("UNKNOWN-2", Instant.parse("2026-10-15T10:00:00Z"), 2000L)
+    )
+    val result = service.confirmPaymentsBatch(rows)
+    result.succeeded shouldBe 0
+    result.unmatched should have size 2
+    result.alreadyConfirmed shouldBe empty

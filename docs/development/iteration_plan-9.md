@@ -138,11 +138,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 3.1 | `BillingCommandService.confirmPaymentsBatch(csvRows)` バッチメソッド追加、各行を独立 try で握り潰し、結果サマリ返却 | 4h | [ ] |
-| 3.2 | CSV パーサ (referenceCode, paidAt, amount) + バリデーション (必須 / 日付形式 / 金額正数) | 3h | [ ] |
-| 3.3 | `InvoiceController.importPayments` (POST multipart) + `/billing/payments/import` 画面 | 4h | [ ] |
-| 3.4 | 結果画面: 成功件数 / 失敗件数 / 二重確認警告一覧 (alert-warning) | 3h | [ ] |
-| 3.5 | BillingCommandServiceSpec + IntegrationSpec 拡張 (5 件正常 / 1 件不一致 / 1 件二重確認)、Playwright E2E 1 件 | 4h | [ ] |
+| 3.1 | `BillingCommandService.confirmPaymentsBatch(csvRows)` バッチメソッド追加、各行を独立 try で握り潰し、結果サマリ返却 | 4h | [x] **完了** (2026-06-25): foldLeft で immutable 化 (scalafix DisableSyntax.var 準拠)、`Map[String, Invoice] (byRef)` で findByPaymentReference の代替、4 分類 (成功 / 不一致 / 二重 / エラー) 集計 |
+| 3.2 | CSV パーサ (referenceCode, paidAt, amount) + バリデーション (必須 / 日付形式 / 金額正数) | 3h | [x] **完了** (2026-06-25): `InvoiceController.parseCsv` (companion object) で UTF-8 読込 + ヘッダー検証 + 各行 OffsetDateTime + Long(>0) バリデーション、不正行は flatMap で除外 |
+| 3.3 | `InvoiceController.importPayments` (POST multipart) + `/billing/payments/import` 画面 | 4h | [x] **完了** (2026-06-25): `importPaymentsForm()` + `importPayments()` (multipartFormData) + GET/POST routes 追加、Settlement/MasterAdmin ロール制御、AuditLogPort.record (ImportPaymentsBatch) 連携 |
+| 3.4 | 結果画面: 成功件数 / 失敗件数 / 二重確認警告一覧 (alert-warning) | 3h | [x] **完了** (2026-06-25): paymentsImport.scala.html (アップロードフォーム + CSV 例) + paymentsImportResult.scala.html (4 色アラート + 3 詳細テーブル: 不一致 / 二重 / エラー) |
+| 3.5 | BillingCommandServiceSpec + IntegrationSpec 拡張 (5 件正常 / 1 件不一致 / 1 件二重確認)、Playwright E2E 1 件 | 4h | [x] **Unit のみ完了** (2026-06-25): BillingCommandServiceSpec +2 件 (4 行混在分類 / 全件不一致)、ArchUnit ルール 4 に "Result" suffix 追加 (BatchConfirmResult 命名対応)、`CsvPaymentRow` → `CsvPaymentInput` rename (Row suffix 不適合のため)。Billing Unit 21 + ArchUnit 6 = 27 件 Green。**Playwright E2E は IT10 申し送り** |
 
 **小計**: 18h
 

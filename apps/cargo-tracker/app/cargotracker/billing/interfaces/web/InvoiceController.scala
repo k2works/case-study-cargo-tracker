@@ -3,8 +3,10 @@ package cargotracker.billing.interfaces.web
 import cargotracker.auth.domain.model.valueobjects.Role
 import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.billing.application.commandservices.{
+  BatchConfirmResult,
   BillingCommandService,
   ConfirmPaymentCommand,
+  CsvPaymentInput,
   GenerateInvoiceCommand,
   IssuePaymentCommand
 }
@@ -149,6 +151,72 @@ class InvoiceController @Inject() (
               case Left(msg) => Redirect(detailRoute).flashing("error" -> msg)
         )
   }
+
+  /** IT9 US29: CSV 取込フォーム画面 (Settlement / MasterAdmin 限定)。 */
+  def importPaymentsForm(): Action[AnyContent] = authenticated { implicit request =>
+    if !request.roles.exists(SettlementAllowedRoles.contains) then Forbidden("CSV 取込は Settlement / MasterAdmin 限定です")
+    else Ok(views.html.billing.paymentsImport())
+  }
+
+  /** IT9 US29: CSV 取込実行 (multipart/form-data)。 */
+  def importPayments(): Action[MultipartFormData[play.api.libs.Files.TemporaryFile]] =
+    authenticated(parse.multipartFormData) { implicit request =>
+      val redirectForm = routes.InvoiceController.importPaymentsForm()
+      if !request.roles.exists(SettlementAllowedRoles.contains) then
+        Redirect(redirectForm).flashing("error" -> "CSV 取込は Settlement / MasterAdmin 限定です")
+      else
+        request.body.file("csv") match
+          case None => Redirect(redirectForm).flashing("error" -> "CSV ファイルを選択してください")
+          case Some(file) =>
+            InvoiceController.parseCsv(file.ref.path.toFile) match
+              case Left(msg) => Redirect(redirectForm).flashing("error" -> msg)
+              case Right(rows) =>
+                val result = commandService.confirmPaymentsBatch(rows)
+                // 監査ログ記録 (IT9 US30)
+                auditLog.record(
+                  operator = request.username,
+                  action = cargotracker.shared.audit.domain.AuditAction.ImportPaymentsBatch,
+                  targetType = "InvoiceBatch",
+                  targetId = s"rows=${rows.size}",
+                  before = None,
+                  after = Some(
+                    s"""{"succeeded":${result.succeeded},"unmatched":${result.unmatched.size},"already":${result.alreadyConfirmed.size},"errors":${result.errors.size}}"""
+                  )
+                )
+                Ok(views.html.billing.paymentsImportResult(result))
+    }
+
+object InvoiceController:
+  import java.io.File
+  import scala.io.Source
+  import scala.util.Using
+
+  /** IT9 US29: CSV ファイル (referenceCode, paidAt, amount) を解析。
+    *
+    *   - 1 行目はヘッダーとして検証 (referenceCode / paidAt / amount の 3 列必須)
+    *   - paidAt は ISO_OFFSET_DATE_TIME (例: 2026-10-15T09:00:00+09:00)
+    *   - amount は 正の Long
+    */
+  def parseCsv(file: File): Either[String, Seq[CsvPaymentInput]] =
+    Using(Source.fromFile(file, "UTF-8")) { src =>
+      val lines = src.getLines().toSeq
+      if lines.isEmpty then Left("CSV が空です")
+      else
+        val header = lines.head.split(",").map(_.trim).toSeq
+        val expected = Seq("referenceCode", "paidAt", "amount")
+        if header != expected then Left(s"CSV ヘッダーが不正です。期待: ${expected.mkString(",")}、実際: ${header.mkString(",")}")
+        else
+          val rows = lines.tail.zipWithIndex.flatMap { case (line, idx) =>
+            val cols = line.split(",").map(_.trim)
+            if cols.length != 3 then None
+            else
+              for
+                paidAt <- scala.util.Try(java.time.OffsetDateTime.parse(cols(1)).toInstant).toOption
+                amount <- cols(2).toLongOption.filter(_ > 0)
+              yield CsvPaymentInput(cols(0), paidAt, amount)
+          }
+          Right(rows)
+    }.toEither.left.map(e => s"CSV 読込失敗: ${e.getMessage}").flatten
 
 final case class NewInvoiceFormData(bookingId: String)
 final case class IssuePaymentFormData(dueDate: String, referenceCode: String)

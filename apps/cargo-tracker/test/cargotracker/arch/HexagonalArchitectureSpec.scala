@@ -110,8 +110,10 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
       .haveSimpleNameEndingWith("Orchestrator")
       .orShould()
       .haveSimpleNameEndingWith("Input")
+      .orShould()
+      .haveSimpleNameEndingWith("Result") // IT9 US29: バッチ実行結果集約 DTO (BatchConfirmResult 等) を許容
       .because(
-        "commandservices パッケージのトップレベルクラスはユースケース実行（*CommandService / *Orchestrator）か入出力 DTO（*Command / *Input）のいずれかに統一する（IT7 0.3 Orchestrator 追加）"
+        "commandservices パッケージのトップレベルクラスはユースケース実行（*CommandService / *Orchestrator）か入出力 DTO（*Command / *Input / *Result）のいずれかに統一する（IT7 0.3 Orchestrator 追加、IT9 US29 で Result 追加）"
       )
     commandRule.check(classes)
 

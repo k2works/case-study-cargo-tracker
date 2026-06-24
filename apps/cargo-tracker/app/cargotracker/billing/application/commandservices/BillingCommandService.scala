@@ -1,6 +1,7 @@
 package cargotracker.billing.application.commandservices
 
 import cargotracker.billing.domain.model.aggregates.Invoice
+import cargotracker.billing.domain.model.enums.PaymentStatus
 import cargotracker.billing.domain.model.ports.MailNotificationPort
 import cargotracker.billing.domain.model.repositories.{BillingCargoQueryPort, InvoiceRepository}
 import cargotracker.billing.domain.model.valueobjects.{
@@ -180,6 +181,31 @@ class BillingCommandService @Inject() (
           saved
     }
 
+  /** IT9 US29: CSV 取込による一括入金確認。各行を独立 try で実行し、結果を 4 分類で返却する。
+    *
+    *   - 1 行失敗が全体失敗にならない (各行独立 try)
+    *   - referenceCode 一致 + Pending|Overdue → confirmPayment 実行
+    *   - 不一致 → unmatched (warn)
+    *   - 既 Confirmed/Refunded → alreadyConfirmed (warn)
+    *   - その他例外 → errors
+    */
+  def confirmPaymentsBatch(rows: Seq[CsvPaymentInput]): BatchConfirmResult =
+    val byRef: Map[String, Invoice] =
+      invoiceRepository.findAll().flatMap(i => i.paymentReference.map(ref => ref -> i)).toMap
+    val initial = BatchConfirmResult(totalRows = rows.size, succeeded = 0, Nil, Nil, Nil)
+    rows.foldLeft(initial) { (acc, row) =>
+      byRef.get(row.referenceCode) match
+        case None => acc.copy(unmatched = acc.unmatched :+ row)
+        case Some(invoice) =>
+          invoice.paymentStatus match
+            case PaymentStatus.Confirmed | PaymentStatus.Refunded =>
+              acc.copy(alreadyConfirmed = acc.alreadyConfirmed :+ ((row, invoice.paymentStatus.toString)))
+            case _ =>
+              confirmPayment(ConfirmPaymentCommand(invoice.invoiceId.value, row.paidAt)) match
+                case Right(_) => acc.copy(succeeded = acc.succeeded + 1)
+                case Left(msg) => acc.copy(errors = acc.errors :+ ((row, msg)))
+    }
+
 object BillingCommandService:
   /** PricingService の内訳明細を Billing の `InvoiceLineItem` に変換する（IT7 0.9）。 */
   def toInvoiceLineItems(items: List[PricingService.LineItem]): List[InvoiceLineItem] =
@@ -223,3 +249,17 @@ final case class IssuePaymentCommand(
 
 /** 入金確認コマンド (US23 / IT8)。 */
 final case class ConfirmPaymentCommand(invoiceNumber: String, paidAt: Instant)
+
+/** IT9 US29: CSV 取込 1 行分の入金データ。 */
+final case class CsvPaymentInput(referenceCode: String, paidAt: Instant, amount: Long)
+
+/** IT9 US29: CSV バッチ取込結果サマリ。 */
+final case class BatchConfirmResult(
+    totalRows: Int,
+    succeeded: Int,
+    unmatched: Seq[CsvPaymentInput],
+    alreadyConfirmed: Seq[(CsvPaymentInput, String)],
+    errors: Seq[(CsvPaymentInput, String)]
+):
+  def warningCount: Int = unmatched.size + alreadyConfirmed.size
+  def errorCount: Int = errors.size

@@ -1,0 +1,53 @@
+@(result: cargotracker.billing.application.commandservices.BatchConfirmResult)(implicit request: RequestHeader, flash: Flash, messages: play.api.i18n.Messages)
+@views.html.layout.main("入金消込結果") {
+  <h1 class="h3 mb-3">入金消込結果 (US29 / IT9)</h1>
+
+  <div class="row mb-3">
+    <div class="col-sm-3"><div class="alert alert-success"><strong>✅ 成功: @result.succeeded 件</strong></div></div>
+    <div class="col-sm-3"><div class="alert alert-warning">⚠️ 不一致: @result.unmatched.size 件</div></div>
+    <div class="col-sm-3"><div class="alert alert-warning">⚠️ 二重確認: @result.alreadyConfirmed.size 件</div></div>
+    <div class="col-sm-3"><div class="alert alert-danger">❌ エラー: @result.errors.size 件</div></div>
+  </div>
+  <p class="text-muted">処理対象: @result.totalRows 件 (成功 + 警告 + エラー)</p>
+
+  @if(result.unmatched.nonEmpty) {
+    <h2 class="h5 mt-3">不一致 (referenceCode 該当 Invoice なし)</h2>
+    <table class="table table-sm">
+      <thead><tr><th>referenceCode</th><th>paidAt</th><th>amount</th></tr></thead>
+      <tbody>
+        @for(r <- result.unmatched) {
+          <tr><td>@r.referenceCode</td><td>@r.paidAt</td><td>@r.amount</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if(result.alreadyConfirmed.nonEmpty) {
+    <h2 class="h5 mt-3">二重確認 (既に Confirmed / Refunded)</h2>
+    <table class="table table-sm">
+      <thead><tr><th>referenceCode</th><th>paidAt</th><th>現状態</th></tr></thead>
+      <tbody>
+        @for((r, st) <- result.alreadyConfirmed) {
+          <tr><td>@r.referenceCode</td><td>@r.paidAt</td><td><span class="badge bg-secondary">@st</span></td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if(result.errors.nonEmpty) {
+    <h2 class="h5 mt-3">エラー</h2>
+    <table class="table table-sm">
+      <thead><tr><th>referenceCode</th><th>paidAt</th><th>理由</th></tr></thead>
+      <tbody>
+        @for((r, msg) <- result.errors) {
+          <tr><td>@r.referenceCode</td><td>@r.paidAt</td><td class="text-danger">@msg</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <div class="mt-3 d-flex gap-2">
+    <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.importPaymentsForm()" class="btn btn-primary">続けて取込</a>
+    <a href="@cargotracker.billing.interfaces.web.routes.InvoiceController.list()" class="btn btn-secondary">一覧に戻る</a>
+  </div>
+}

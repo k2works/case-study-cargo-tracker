@@ -68,6 +68,10 @@ GET     /billing/invoices/:invoiceId     cargotracker.billing.interfaces.web.Inv
 POST    /billing/invoices/:invoiceId/issue-payment cargotracker.billing.interfaces.web.InvoiceController.issuePayment(invoiceId: String)
 POST    /billing/invoices/:invoiceId/confirm-payment cargotracker.billing.interfaces.web.InvoiceController.confirmPayment(invoiceId: String)
 
+# IT9 US29: 入金消込 CSV 取込
+GET     /billing/payments/import         cargotracker.billing.interfaces.web.InvoiceController.importPaymentsForm()
+POST    /billing/payments/import         cargotracker.billing.interfaces.web.InvoiceController.importPayments()
+
 # ダッシュボード・ヘルス
 GET     /                       cargotracker.shared.interfaces.web.HomeController.index()
 GET     /health                 cargotracker.shared.interfaces.web.HealthController.health()
