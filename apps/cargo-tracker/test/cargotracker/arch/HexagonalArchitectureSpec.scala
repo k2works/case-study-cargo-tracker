@@ -140,3 +140,23 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
       .resideInAnyPackage("..cargotracker..domain.model.repositories..")
       .because("インフラ層のリポジトリ実装は domain 層の出力ポート（trait）を実装するアダプターである")
     rule.check(classes)
+
+  test(
+    "ルール 6: Port パターン規約 (ADR 0021) - 他コンテキストの domain.model.ports は禁止 (入力/出力 Port は自 Context 内のみ)、application.api は許容 (公開 Port)"
+  ):
+    val contexts = Seq("auth", "billing", "booking", "estimation", "handling", "routing", "shipper", "tracking")
+    contexts.foreach { ctx =>
+      // 他コンテキストの domain.model.ports (入力/出力 Port) への直接依存は禁止
+      val otherPorts = contexts.filter(_ != ctx).map(o => s"..cargotracker.$o.domain.model.ports..")
+      val rule = noClasses()
+        .that()
+        .resideInAPackage(s"..cargotracker.$ctx..")
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(otherPorts*)
+        .because(
+          s"$ctx は他コンテキストの入力/出力 Port (`domain.model.ports`) に直接依存できない。" +
+            s"他コンテキストへの依存は公開 Port (`application.api.*`、ADR 0017) または ACL Adapter 経由のみ (ADR 0021)"
+        )
+      rule.check(classes)
+    }
