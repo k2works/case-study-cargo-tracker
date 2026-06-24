@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "backend",
+      "label": "Cargo Tracker Scala Backend",
+      "projectKey": "cargo-tracker-5-backend",
+      "scanType": "sbt",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}
