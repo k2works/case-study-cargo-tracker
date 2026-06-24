@@ -147,6 +147,7 @@ nav:
       - 0014 集約 Snapshot ADT 導入: adr/0014-aggregate-snapshot-adt.md
       - 0015 Billing Money 統一: adr/0015-billing-money-shared-domain.md
       - 0016 HandlingOrchestrator tx 境界: adr/0016-handling-orchestrator-transaction-boundary.md
+      - 0017 BookingPublicApi: adr/0017-booking-public-api-port.md
       - 0019 Payment 集約方針: adr/0019-payment-aggregation-vs-invoice-status.md
       - 0020 公開追跡例外表示: adr/0020-public-tracking-exception-display.md
   - 記事:

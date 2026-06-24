@@ -32,7 +32,7 @@ class BookingCommandService @Inject() (
     shipperChecker: ShipperExistenceChecker,
     notificationRepository: cargotracker.booking.domain.model.repositories.NotificationLogRepository,
     clock: java.time.Clock
-):
+) extends cargotracker.booking.application.api.BookingPublicApi:
 
   def book(command: BookCargoCommand): Either[String, Cargo] =
     val result = for
