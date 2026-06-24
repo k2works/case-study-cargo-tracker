@@ -32,7 +32,10 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
         paymentStatus = status,
         issuedAt = rs.zonedDateTime("issued_at").toInstant,
         paidAt = rs.zonedDateTimeOpt("paid_at").map(_.toInstant),
-        version = rs.int("version")
+        version = rs.int("version"),
+        // IT8 0.5 / US23 (ADR 0019 案 B)
+        dueDate = rs.dateOpt("due_date").map(_.toLocalDate),
+        paymentReference = rs.stringOpt("payment_reference")
       )
       (rs.long("id"), snapshot)
 
@@ -131,10 +134,13 @@ class ScalikeJdbcInvoiceRepository extends InvoiceRepository:
                ${java.sql.Timestamp.from(invoice.issuedAt)})
           """.updateAndReturnGeneratedKey.apply()
         case Some(id) =>
+          // IT8 US23 (ADR 0019 案 B): due_date / payment_reference も同時 UPDATE
           val updated = sql"""
             UPDATE invoice
             SET payment_status = ${invoice.paymentStatus.toString},
                 paid_at = ${invoice.paidAt.map(java.sql.Timestamp.from).orNull},
+                due_date = ${invoice.dueDate.map(java.sql.Date.valueOf).orNull},
+                payment_reference = ${invoice.paymentReference.orNull},
                 version = version + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE invoice_number = ${invoice.invoiceId.value} AND version = ${invoice.version}
