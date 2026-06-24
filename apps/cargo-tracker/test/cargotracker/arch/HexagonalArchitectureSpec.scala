@@ -49,13 +49,18 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
       .because("アプリケーション層は出力ポート（trait）に依存し、具体実装はインフラ層に置く")
     rule.check(classes)
 
-  test("ルール 3: コンテキストの domain / application は他コンテキストの内部に直接依存してはならない（infrastructure は ACL アダプター用途で許容）"):
+  test(
+    "ルール 3: コンテキストの domain / application は他コンテキストの内部に直接依存してはならない（infrastructure は ACL アダプター用途で許容、application.api は公開 Port として ADR 0017 で許容）"
+  ):
     val contexts = Seq("auth", "billing", "booking", "estimation", "handling", "routing", "shipper", "tracking")
     contexts.foreach { ctx =>
+      // 他コンテキストの内部実装は禁止。ただし `application.api` 配下は ADR 0017 (BookingPublicApi 等) で公開 Port として許容
       val others = contexts.filter(_ != ctx).flatMap { other =>
         Seq(
           s"..cargotracker.$other.domain..",
-          s"..cargotracker.$other.application..",
+          s"..cargotracker.$other.application.commandservices..",
+          s"..cargotracker.$other.application.queryservices..",
+          s"..cargotracker.$other.application.notifications..",
           s"..cargotracker.$other.infrastructure.."
         )
       }
@@ -69,7 +74,8 @@ class HexagonalArchitectureSpec extends AnyFunSuite:
         .dependOnClassesThat()
         .resideInAnyPackage(others*)
         .because(
-          s"$ctx の domain / application は他コンテキストの実装に依存しない。infrastructure 配下の ACL アダプターのみが他コンテキストの port を呼ぶことができる"
+          s"$ctx の domain / application は他コンテキストの内部実装 (commandservices / queryservices / notifications / infrastructure / domain) に依存しない。" +
+            s"他コンテキストへの依存は他コンテキストの `application.api.*` 公開 Port (ADR 0017) または自コンテキスト infrastructure の ACL アダプター経由のみが許容される"
         )
       rule.check(classes)
     }
