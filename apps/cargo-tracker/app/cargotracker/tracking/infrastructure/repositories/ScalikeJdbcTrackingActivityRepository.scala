@@ -4,7 +4,12 @@ import cargotracker.tracking.domain.model.aggregates.TrackingActivity
 import cargotracker.tracking.domain.model.entities.{TrackingActivityEvent, TrackingExceptionEvent}
 import cargotracker.tracking.domain.model.enums.{ExceptionType, TrackingStatus}
 import cargotracker.tracking.domain.model.repositories.TrackingActivityRepository
-import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, TrackingLocation, TrackingNumber}
+import cargotracker.tracking.domain.model.valueobjects.{
+  TrackingBookingId,
+  TrackingExceptionEventId,
+  TrackingLocation,
+  TrackingNumber
+}
 import scalikejdbc.*
 
 import java.time.Instant
@@ -39,11 +44,11 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
       .apply()
 
   private def loadExceptions(trackingId: Long)(implicit session: DBSession): List[TrackingExceptionEvent] =
-    sql"""SELECT exception_type, location_unlocode, occurred_at,
+    sql"""SELECT id, exception_type, location_unlocode, occurred_at,
                  description, escalation_flag, resolved_at, resolution_notes
           FROM tracking_exception_event
           WHERE tracking_id = $trackingId
-          ORDER BY occurred_at"""
+          ORDER BY id"""
       .map { rs =>
         val cat = ExceptionType.fromName(rs.string("exception_type")).getOrElse(ExceptionType.Delay)
         TrackingExceptionEvent(
@@ -53,7 +58,8 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
           description = rs.stringOpt("description"),
           escalationFlag = rs.boolean("escalation_flag"),
           resolvedAt = rs.zonedDateTimeOpt("resolved_at").map(_.toInstant),
-          resolutionNotes = rs.stringOpt("resolution_notes")
+          resolutionNotes = rs.stringOpt("resolution_notes"),
+          id = Some(TrackingExceptionEventId(rs.long("id")))
         )
       }
       .list
@@ -185,7 +191,7 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
     DB.localTx { implicit session =>
       val trackingId = lockedTrackingId(activity)
       bumpVersion(activity)
-      sql"""
+      val newId = sql"""
         INSERT INTO tracking_exception_event
           (tracking_id, exception_type, location_unlocode, occurred_at,
            description, escalation_flag, resolved_at, resolution_notes)
@@ -198,15 +204,23 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
            ${newException.escalationFlag},
            ${newException.resolvedAt.map(java.sql.Timestamp.from).orNull},
            ${newException.resolutionNotes.orNull})
-      """.update.apply()
+      """.updateAndReturnGeneratedKey.apply()
 
+      // IT8 0.5 (H5): 保存後の id を採番し、集約内の最終 exception に反映してから reconstruct
+      val savedException = newException.copy(id = Some(TrackingExceptionEventId(newId)))
+      val updatedExceptions =
+        if activity.exceptions.lastOption.exists(e =>
+            e.id.isEmpty && e.exceptionType == newException.exceptionType && e.occurredAt == newException.occurredAt
+          )
+        then activity.exceptions.init :+ savedException
+        else activity.exceptions :+ savedException
       TrackingActivity.reconstruct(
         trackingNumber = activity.trackingNumber,
         bookingId = activity.bookingId,
         transportStatus = activity.transportStatus,
         events = activity.events,
         version = activity.version + 1,
-        exceptions = activity.exceptions
+        exceptions = updatedExceptions
       )
     }
 
@@ -220,23 +234,30 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
       val trackingId = lockedTrackingId(activity)
       bumpVersion(activity)
       val target = activity.exceptions(index)
+      // IT8 0.5 (H5): id 直接更新に切り替え。id が None なら不整合 (未保存 example が UPDATE 対象に来ている)
+      val exceptionId = target.id.getOrElse(
+        throw IllegalStateException(
+          s"TrackingExceptionEvent (tracking_id=$trackingId, index=$index) に id が設定されていません。保存後の集約を再ロードしてから呼び出してください"
+        )
+      )
       sql"""
         UPDATE tracking_exception_event
         SET resolved_at = ${java.sql.Timestamp.from(resolvedAt)},
             resolution_notes = $resolutionNotes,
             updated_at = CURRENT_TIMESTAMP
-        WHERE tracking_id = $trackingId
-          AND exception_type = ${target.exceptionType.toString}
-          AND occurred_at = ${java.sql.Timestamp.from(target.occurredAt)}
-          AND resolved_at IS NULL
+        WHERE id = ${exceptionId.value}
       """.update.apply()
 
+      val resolvedException = target.copy(
+        resolvedAt = Some(resolvedAt),
+        resolutionNotes = Some(resolutionNotes)
+      )
       TrackingActivity.reconstruct(
         trackingNumber = activity.trackingNumber,
         bookingId = activity.bookingId,
         transportStatus = activity.transportStatus,
         events = activity.events,
         version = activity.version + 1,
-        exceptions = activity.exceptions
+        exceptions = activity.exceptions.updated(index, resolvedException)
       )
     }
