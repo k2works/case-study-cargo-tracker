@@ -1,6 +1,6 @@
 package cargotracker.tracking.application.commandservices
 
-import cargotracker.shared.domain.OptimisticLockException
+import cargotracker.shared.application.OptimisticLockOps.withOptimisticLock
 import cargotracker.tracking.domain.model.aggregates.TrackingActivity
 import cargotracker.tracking.domain.model.entities.TrackingActivityEvent
 import cargotracker.tracking.domain.model.enums.TrackingStatus
@@ -9,7 +9,6 @@ import cargotracker.tracking.domain.model.valueobjects.{TrackingBookingId, Track
 
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
-import scala.util.control.NonFatal
 
 /** 追跡コマンドサービス（US14 + IT5 拡張余地）。
   *
@@ -85,12 +84,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
       }
     yield (updated, event)
     result.flatMap { case (updated, event) =>
-      try Right(repository.appendEvent(updated, event))
-      catch
-        case _: OptimisticLockException =>
-          Left("他のユーザーが更新したため再読込してください")
-        case NonFatal(_) =>
-          Left("追跡イベントの保存に失敗しました")
+      withOptimisticLock("追跡イベント")(repository.appendEvent(updated, event))
     }
 
   /** 追跡例外を記録する（US19 遅延 / US20 破損・紛失）。楽観ロック付き。 */
@@ -107,11 +101,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
         description = command.description.filter(_.nonEmpty)
       )
       updated = activity.addException(exception)
-      result <-
-        try Right(repository.appendException(updated, updated.exceptions.last))
-        catch
-          case _: OptimisticLockException => Left("他のユーザーが更新したため再読込してください")
-          case NonFatal(_) => Left("追跡例外の保存に失敗しました")
+      result <- withOptimisticLock("追跡例外")(repository.appendException(updated, updated.exceptions.last))
     yield result
 
   /** 追跡例外の対応報告（resolvedAt + resolutionNotes 設定）。 */
@@ -125,14 +115,8 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
         case TrackingActivity.ExceptionNotFound => s"指定された例外 (#${command.index}) が見つかりません"
         case _ => "例外の対応報告に失敗しました"
       }
-      result <-
-        try
-          Right(
-            repository.updateExceptionResolution(updated, command.index, command.resolvedAt, command.resolutionNotes)
-          )
-        catch
-          case _: OptimisticLockException => Left("他のユーザーが更新したため再読込してください")
-          case NonFatal(_) => Left("例外対応報告の保存に失敗しました")
+      result <- withOptimisticLock("例外対応報告"):
+        repository.updateExceptionResolution(updated, command.index, command.resolvedAt, command.resolutionNotes)
     yield result
 
 object TrackingCommandService:
