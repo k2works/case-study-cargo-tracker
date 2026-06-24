@@ -129,6 +129,23 @@ date: 2026-06-24
 - data-model.md / domain-model.md / ui_design.md を ADR 0019 案 B に整合反映
 - retrospective-8.md / iteration_report-8.md（本書）新設
 
+## 最終フルテスト確認 (2026-06-24 追加実施)
+
+| 項目 | 結果 |
+| :--- | :---: |
+| `sbt test` 全件実行 | **409/409 全 Green** ✅ |
+| Suites | 69 件 (Billing 2 / Tracking 4 / Handling 2 / Booking 関連 12 / Shared / Auth / Shipper / Routing / Estimation / Auth / ArchUnit 等) |
+| 失敗 / abort | 0 / 0 |
+| 所要時間 | 約 2 分 12 秒 |
+
+### フルテストで発覚した隠れた欠陥 (即時解消済)
+
+| 内容 | 解消 commit |
+| :--- | :--- |
+| **ArchUnit ルール 3 と ADR 0017 (BookingPublicApi) の整合違反**: 他 Context の `application..` 全配下を禁止していたため、`booking.application.api` への依存が違反として検出された。ルール 3 の禁止対象を `commandservices` / `queryservices` / `notifications` に限定、`application.api..` を許容して ADR 0017 公開 Port パターンと整合 | `6fe0b22c` |
+
+この発見は **マルチパースペクティブレビュー (5 エージェント) / セルフレビュー両方で見落とされていた**。スコープ限定 testOnly 実行では他 Context への波及が見えなかったことが根本原因。IT9 で pre-commit hook フルテスト化 (Try T11 / R7) を予定。
+
 ## DoD (Definition of Done) 達成状況
 
 | 項目 | 状態 | 備考 |
