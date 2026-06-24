@@ -20,7 +20,23 @@ DDD（ドメイン駆動設計）のケーススタディとして、貨物追�
 
 貨物が荷受人に届けられると配送完了となり、輸送料金の精算が行われます。
 
-本システムでは、この一連の業務フローを DDD の境界付けられたコンテキスト（Booking・Routing・Handling・Tracking・Shared）に分割して設計・実装します。
+本システムでは、この一連の業務フローを DDD の境界付けられたコンテキスト（Auth・Shipper・Estimation・Booking・Routing・Tracking・Handling・Billing + Shared）に分割して設計・実装します。
+
+### プロジェクト進捗
+
+XP のリリース計画に基づき、Phase 単位で段階的にリリースしています。詳細は [開発ドキュメント](docs/development/index.md) を参照してください。
+
+| Phase | リリース | イテレーション | 状態 | 主要ストーリー |
+| :--- | :--- | :--- | :--- | :--- |
+| Phase 1 | Release 1.0 MVP | IT1-IT4 | ✅ 完了 (2026-07-14) | 基盤・認証・予約・経路設計 (US01 / US06-US13 / US26) |
+| Phase 2 | Release 1.5 | IT5-IT6 | ✅ 完了 (2026-08-15) | 追跡・荷役 (US14-US18 / US21) |
+| Phase 3 | Release 1.8 | (Phase 2 内に統合) | ✅ 完了 | 料金算出 (US21) |
+| Phase 4 | Release 2.0 GA | IT7-IT8 | 🔄 進行中 (IT7 完了 / IT8 着手) | 例外処理・法人割引・精算 (US19 / US20 / US22 / US23) |
+
+- **累計実装ストーリーポイント**: 81 SP (IT1-IT7 完了)
+- **直近のリリース**: [Release 1.0 MVP 完了報告書](docs/development/release_report-scala-1_0_0-mvp.md)
+- **直近のイテレーション報告**: [IT7 完了報告書](docs/development/iteration_report-7.md) / [IT7 実装レビュー](docs/review/it7_implementation_review_20260623.md)
+- **ADR 一覧**: [Architecture Decision Records](docs/adr/index.md)（0001-0020 までで 14 件承認）
 
 ### 前提
 
