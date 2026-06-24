@@ -159,19 +159,34 @@ date: 2026-06-24
 
 平均ベロシティ: **11.4 SP/IT**（91 / 8）。IT8 は新規 9 SP + 申し送り 15 件で実質作業量は平均超過。
 
-## IT9 申し送り（合計 9 件）
+## IT9 申し送り（合計 9 件 + マルチパースペクティブレビュー 6 件 = 15 件）
+
+> **本日解消済 (3 件は IT9 申し送りから除外)**: Flyway 採番ルール明文化は CLAUDE.md 追記済 (`6f498b0e`)、レビュー H2 / H3 / H5 / M1 / M2 / M4 / M5 の 7 件は実装内対応済。
+
+### 当初の IT8 申し送り (再優先順序)
 
 | # | 項目 | 優先度 |
 |---|------|------:|
 | 1 | Playwright E2E 4 件 (US22 + US23 各シナリオ) | 高 |
 | 2 | Shipper 法人マスタ登録 UI 整備 (E2E 前提) | 高 |
-| 3 | Flyway 番号採番ルール CLAUDE.md 追記 | 高 |
-| 4 | HandlingOrchestrator 単一 TX 化 (ADR 0016 実装) | 中 |
-| 5 | MailNotificationPort の Pekko Mail / SES 連携 | 中 |
-| 6 | ScalikeJdbcInvoiceRepositoryIT 拡張 (Testcontainers) | 中 |
-| 7 | detectOverdue Cron 連携 (Pekko Scheduler) | 中 |
-| 8 | US23 受入条件 3 拡張 (決済機関連携 / Stripe / GMO 等) | 中 |
-| 9 | ArchUnit ルール拡張 (booking.application.commandservices 外部参照禁止) | 低 |
+| 3 | HandlingOrchestrator 単一 TX 化 (ADR 0016 実装) | 高 (本日レビュー H1) |
+| 4 | MailNotificationPort の Pekko Mail / SES 連携 | 中 |
+| 5 | ScalikeJdbcInvoiceRepositoryIT 拡張 (Testcontainers) | 中 |
+| 6 | detectOverdue Cron 連携 (Pekko Scheduler) | 中 |
+| 7 | US23 受入条件 3 拡張 (決済機関連携 / Stripe / GMO 等) | 中 |
+| 8 | ArchUnit ルール拡張 (booking.application.commandservices 外部参照禁止) | 低 |
+| ~~9~~ | ~~Flyway 番号採番ルール CLAUDE.md 追記~~ | ✅ 本日解消 (`6f498b0e`) |
+
+### マルチパースペクティブレビューで追加発見 (6 件)
+
+| # | 観点 | 内容 | 優先度 |
+|---|------|------|------:|
+| R1 | architect | ADR 0016 案 A 実装 (上記 3 と同一統合) | 高 |
+| R2 | user-rep | 入金消込 CSV 取込 UI (Stripe/GMO 本実装までのブリッジ) | 高 |
+| R3 | architect | 公開 Port vs 入力 Port 規約 ADR 化 + ArchUnit | 中 |
+| R4 | tester | Refunded 状態遷移 + Lost 通知連携テスト 2 件追加 (Refund 機能本実装と併せて) | 中 |
+| R5 | user-rep | 例外取消し動線の権限明文化 + audit_log テーブル化 | 中 |
+| R6 | tester | テストピラミッド E2E 偏重リカバリ計画を IT9 計画ドキュメントに明示 (上記 1 と統合) | 低 |
 
 ## 関連ドキュメント
 

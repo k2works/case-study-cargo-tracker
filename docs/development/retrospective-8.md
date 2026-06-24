@@ -92,10 +92,18 @@ iteration: 8
 
 IT9 は **Release 2.0 GA → 2.1 拡張 + 運用基盤強化**を主眼とする想定:
 
-1. **本番運用基盤** (T1-T6 / P5-P6): MailNotificationPort 実装 + Cron + 単一 TX 化
+1. **本番運用基盤** (T1 / T5-T6 / P5-P6): MailNotificationPort 実装 + Cron + 単一 TX 化
 2. **E2E 自動化** (T2-T3): Shipper UI 整備 + Playwright 4 件
 3. **外部連携** (T8 + US23-r1): 決済機関連携 / 受取人通知メール
-4. **ArchUnit / 品質強化** (T9-T10): ルール拡張 + TDD 規律遵守
+4. **ArchUnit / 品質強化** (T9): ルール拡張 (Port 規約 ADR 化 + ArchUnit 強制)
+5. **マルチパースペクティブレビュー指摘 IT9 申し送り**: H1 ADR 0016 実装 / H4 CSV 取込 / H6 Port 規約 ADR / H7 Refunded テスト / H8 audit_log / M3 E2E 計画明記
+
+> **本日解消済** (Try 10 件のうち、レビューと重複部分):
+> - T1 Flyway 採番ルール CLAUDE.md 追記 ✅ `6f498b0e` (= レビュー M2)
+> - T10 TDD 規律 = IT8 内で逐次遵守 (CLAUDE.md TDD コミット規律セクション追加済 `70a82d17`)
+> - レビュー H2 / H3 / H5 / M1 / M4 / M5 も本日解消 (詳細は it8_implementation_review_20260624.md)
+>
+> 残 Try (T2-T9) は IT9 へ。
 
 ## 関連ドキュメント
 
