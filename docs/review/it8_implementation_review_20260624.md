@@ -147,8 +147,21 @@ IT8 は 5 エージェント並列レビューで全観点 A 評価。Phase 4 �
 | **M2** Flyway 番号採番ルール | `6f498b0e` | CLAUDE.md に原則 + IT8 実績例 + 確認コマンド追記 |
 | **M4** case _ => 削除 | `bce2e143` | sealed Error 網羅性活用、Invoice.InvalidAmount 明示化 |
 | **M5 / G** CHANGELOG 先行記載 | `15f415cc` | `[Unreleased]` に US22/US23/Port/ADR/Flyway を Added/Changed/Documentation で記載 |
+| **追加 (フルテスト発見)** ArchUnit ADR 0017 整合 | `6fe0b22c` | ルール 3 の他 Context 依存禁止対象を `commandservices/queryservices/notifications` に限定、`application.api..` を許容して ADR 0017 公開 Port パターンと整合 |
 
-**13 件中 7 件解消、6 件 IT9 申し送り (大規模実装 / 新規 ADR / 新機能設計を要するもの)**。本日対応可能な範囲は完了。残課題は IT9 で計画的に対応する想定。
+**13 件中 7 件解消 + フルテストで発覚した 1 件解消 = 計 8 件**、6 件 IT9 申し送り (大規模実装 / 新規 ADR / 新機能設計を要するもの)。本日対応可能な範囲は完了。残課題は IT9 で計画的に対応する想定。
+
+## 重要な所感 (本日のレビュープロセス改善点)
+
+ArchUnit ADR 0017 整合違反 (`6fe0b22c` で解消) は **マルチパースペクティブレビュー / セルフレビュー両方で見落とされていた**。本日 28 件の commit を経て、最終的にフルテスト (`sbt test`) を実行して初めて顕在化した。
+
+### 教訓 (IT9 申し送り候補)
+
+| # | 内容 | 優先度 |
+|---|------|------:|
+| R7 | **pre-commit hook で `sbt test` (フル) を実行**: スコープ限定 testOnly では他 Context への波及が見えない。BookingPublicApi 追加時、ArchUnit ルール 3 が他コンテキスト全 application 配下を禁止していたが、Billing テストでは検出できなかった | 高 |
+| R8 | **ADR と ArchUnit ルールの整合性チェック**: ADR 起票時にルール影響を必ず確認、CI で自動検出 | 中 |
+| R9 | **大規模変更 (Port 追加など) 後は fullTest 実行を必須に**: IT9 で pre-push hook 設計検討 | 中 |
 
 ## 関連ドキュメント
 

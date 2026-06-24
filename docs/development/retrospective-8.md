@@ -57,6 +57,8 @@ iteration: 8
 | T8 | **Cron 連携 (Pekko Scheduler)** で detectOverdue を日次起動 | IT9、優先度: 中 |
 | T9 | **ArchUnit ルール拡張**: 「`booking.application.commandservices.*` を booking パッケージ外から参照不可」(ADR 0017 コンプライアンス) | IT9、優先度: 低 |
 | T10 | **Red→Green コミット分離をより厳密に**: 新メソッド追加時はテスト追加 commit を必ず分離 (CLAUDE.md TDD 規律遵守) | 即時 |
+| T11 | **pre-commit hook でフルテスト (`sbt test`) を実行**: 本日 ArchUnit ADR 0017 整合違反 (`6fe0b22c` で解消) が局所テストでは検出できず、最終フルテストで初めて発覚。Port 追加など他 Context に波及する変更時は pre-commit / pre-push でフル実行が必要 | IT9 高 |
+| T12 | **ADR 起票時の ArchUnit 影響チェック**: 新規 Port パターン導入時はルール 3 等の影響を起票時に確認 | IT9 中 |
 
 ## DoD (Definition of Done) 達成状況
 
