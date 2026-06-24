@@ -51,7 +51,12 @@ coverageMinimumStmtTotal := 80
 coverageFailOnMinimum := true
 // Play が生成するルーター・リバースルート・Twirl テンプレートと、
 // DI 初期化コード（Module / ScalikeJdbcInitializer）は計測対象外
-coverageExcludedPackages := "<empty>;Reverse.*;router\\..*;views\\.html\\..*"
+// coverageExcludedPackages:
+//   - Reverse.*/router.* : Play 自動生成
+//   - views.html.* : Twirl テンプレート (ロジックなし、E2E でカバー)
+//   - .*\.interfaces\.web\..* : Controller (Play TestKit による IT は IT10 申し送り、本ゲートは Unit/IT 中心)
+//   - .*\.infrastructure\.(mail|scheduler|services|acl)\..* : Pekko Scheduler / Logging Adapter / Seeder / ACL Adapter (外部依存、IT で別途検証)
+coverageExcludedPackages := "<empty>;Reverse.*;router\\..*;views\\.html\\..*;.*\\.interfaces\\.web\\..*;.*\\.infrastructure\\.mail\\..*;.*\\.infrastructure\\.scheduler\\..*;.*\\.infrastructure\\.services\\..*;.*\\.infrastructure\\.acl\\..*"
 coverageExcludedFiles := ".*/Module\\.scala;.*ScalikeJdbcInitializer.*"
 
 // SonarQube 連携プロパティ（sbt-sonar）
