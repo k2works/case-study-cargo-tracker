@@ -162,10 +162,12 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 5.1 | E2E: US28 法人 Shipper 登録 → US22 法人割引適用 (15% / 30%) → 請求書詳細画面で割引額確認 | 4h | [ ] |
-| 5.2 | E2E: US23 issuePayment (NotIssued → Pending) → 支払期日 + referenceCode 表示確認 | 3h | [ ] |
-| 5.3 | E2E: US23 confirmPayment (Pending → Confirmed) → Cargo.Settled 遷移確認 | 3h | [ ] |
-| 5.4 | E2E: detectOverdue Cron 実行 → Pending → Overdue 遷移確認 | 3h | [ ] |
+| 5.1 | E2E: US28 法人 Shipper 登録 → US22 法人割引適用 (15% / 30%) → 請求書詳細画面で割引額確認 | 4h | [x] **spec 完了** (2026-06-25): `it9-us22-us28-corporate-discount.spec.ts` 新設 (法人登録 + JS 表示制御 + 法人割引適用通し)、BillingPage / 既存 ShipperPage 連携。実 PASS は user 環境 (Postgres + dev server) で確認 |
+| 5.2 | E2E: US23 issuePayment (NotIssued → Pending) → 支払期日 + referenceCode 表示確認 | 3h | [x] **spec 完了** (2026-06-25): `it9-us23-payment-flow.spec.ts` に支払発行フォーム + 5 種バッジ UI 表示確認 |
+| 5.3 | E2E: US23 confirmPayment (Pending → Confirmed) → Cargo.Settled 遷移確認 | 3h | [x] **spec 完了** (2026-06-25): 同上 spec に統合、BillingPage.confirmPayment (confirm dialog 自動 OK) |
+| 5.4 | E2E: detectOverdue Cron 実行 → Pending → Overdue 遷移確認 | 3h | 🔄 **IT10 申し送り** (Cron 起動は OverdueScheduler の Pekko スケジュールで自動実行されるため、E2E では時刻操作が困難。代替案: 手動 detectOverdue API エンドポイント追加 or テスト用 BillingCommandService.detectOverdue 直接呼出) |
+
+**追加 (user 要望)**: `it9-us29-csv-import.spec.ts` (CSV 取込 4 件: フォーム表示 / 全件不一致 / required validation) + `it9-us30-audit-log.spec.ts` (監査ログ 3 件: ナビ dropdown 動線 / 検索フォーム 5 フィールド / action フィルタ) を IT9 範囲で追加実装、計 4 spec ファイル / 9 シナリオ。BillingPage + AuditLogPage の PageObject も新設。
 
 **小計**: 13h
 
