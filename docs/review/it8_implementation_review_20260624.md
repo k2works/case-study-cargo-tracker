@@ -3,7 +3,7 @@ title: IT8 マルチパースペクティブ実装レビュー
 date: 2026-06-24
 reviewers: xp-programmer / xp-tester / xp-architect / xp-technical-writer / xp-user-representative
 scope: IT8 全 31 タスク完遂 (commit 096c3be6 〜 a9566200)
-status: 完了 (5 エージェント並列実施)
+status: 完了 (5 エージェント並列実施 + 本日解消 7 件マーク反映)
 ---
 
 # IT8 マルチパースペクティブ実装レビュー
@@ -12,28 +12,30 @@ XP 5 エージェント並列レビュー結果の統合。
 
 ## 統合フィードバック
 
+> **本日解消ステータス (2026-06-24)**: 高 8 件中 3 件 ✅ + 中 5 件中 4 件 ✅ = **7 件解消**、残 6 件は IT9 申し送り。詳細は各行末「対応」列。
+
 ### 高優先指摘 (8 件)
 
-| # | 観点 | 指摘 | 解消提案 |
-|---|------|------|---------|
-| H1 | architect | **ADR 0016 案 A 未実装**: Orchestrator TX 境界未確立で markSettled/Invoice 状態遷移が稼働中。ステップ 2 失敗時 Cargo と Invoice 乖離リスク | IT9 最優先、Outbox/補償 TX |
-| H2 | programmer | **detectOverdue の try/catch が粗い** (`BillingCommandService.scala:170-189`): save / log / send を同一 try で握り潰し、通知失敗で count 減 → 業務ミスリード | `withOptimisticLock` + 通知失敗は別 try で warn 化 |
-| H3 | tester | **BillingCommandServiceSpec の `@unchecked` 7 箇所残存**: EitherValues 未統一、MatchError で原因特定困難 | IT9 で EitherValues 完遂 |
-| H4 | user-rep | **US23 受入条件 3 縮小の運用負荷**: 振込明細 CSV 数百件/日 を経理目視突合、Overdue 誤判定リスク | IT9 で CSV アップロード + 一括 confirmPayment UI (Stripe/GMO 本実装までのブリッジ) |
-| H5 | technical-writer | **mkdocs.yml ナビ漏れリスク**: retrospective-8 / iteration_report-8 / ADR 0016-0020 / it8_self_review の登録要確認 | grep 検証 + 追記 (本レビュー後に再確認) |
-| H6 | architect | (中) **公開 Port vs 入力 Port の非対称**: BillingCargoQueryPort と BookingPublicApi の命名・配置規約が混在 | ADR 化 + ArchUnit 強制 |
-| H7 | tester | (中) **状態遷移境界テスト欠落**: Refunded 遷移 / Lost → 通知連携のデシジョンテーブル化未完 | 追加テスト 2 シナリオ |
-| H8 | user-rep | (中) **例外対応取消し動線の権限・監査ログ不明確**: 取消し権限 (現場 vs 主任承認) と追記履歴の監査残存方針が報告書から読み取れない | 権限ロール明文化 + 追記履歴の audit_log テーブル化検討 |
+| # | 観点 | 指摘 | 解消提案 | 対応 |
+|---|------|------|---------|------|
+| H1 | architect | **ADR 0016 案 A 未実装**: Orchestrator TX 境界未確立で markSettled/Invoice 状態遷移が稼働中。ステップ 2 失敗時 Cargo と Invoice 乖離リスク | IT9 最優先、Outbox/補償 TX | 🔄 IT9 |
+| H2 | programmer | **detectOverdue の try/catch が粗い**: save / log / send を同一 try で握り潰し、通知失敗で count 減 → 業務ミスリード | `withOptimisticLock` + 通知失敗は別 try で warn 化 | ✅ `a34168db` |
+| H3 | tester | **BillingCommandServiceSpec の `@unchecked` 7 箇所残存**: EitherValues 未統一、MatchError で原因特定困難 | IT9 で EitherValues 完遂 | ✅ `bce2e143` |
+| H4 | user-rep | **US23 受入条件 3 縮小の運用負荷**: 振込明細 CSV 数百件/日 を経理目視突合、Overdue 誤判定リスク | IT9 で CSV アップロード + 一括 confirmPayment UI | 🔄 IT9 |
+| H5 | technical-writer | **mkdocs.yml ナビ漏れリスク** | grep 検証 + 追記 | ✅ `bce2e143` 9 件登録確認 |
+| H6 | architect | (中) **公開 Port vs 入力 Port の非対称** | ADR 化 + ArchUnit 強制 | 🔄 IT9 (ADR 新規起票) |
+| H7 | tester | (中) **状態遷移境界テスト欠落**: Refunded 遷移 / Lost → 通知連携 | 追加テスト 2 シナリオ | 🔄 IT9 (Refund 機能本実装と併せて) |
+| H8 | user-rep | (中) **例外対応取消し動線の権限・監査ログ不明確** | 権限ロール明文化 + audit_log テーブル化 | 🔄 IT9 (audit_log 設計) |
 
 ### 中優先指摘 (5 件)
 
-| # | 観点 | 指摘 |
-|---|------|------|
-| M1 | programmer | `issuePayment`/`confirmPayment` の構造重複 (`BillingCommandService.scala:93-122` と `131-159` が同型) → `PaymentNotifier` helper 抽出余地 |
-| M2 | architect | Flyway V24→V27 / V25→V28 番号乖離が不可視 → 番号予約ポリシー明文化 (ops ドキュメント) |
-| M3 | tester | Playwright E2E 0 件 / Repository IT 拡張なしでテストピラミッドがユニット偏重 → IT9 開始時の優先実装計画明記 |
-| M4 | programmer | `case _ =>` フォールバック (`BillingCommandService.scala:101, 139`) が到達不能 (Invoice.Error は sealed)、exhaustive 警告活用余地 |
-| M5 | technical-writer | CHANGELOG.md `[Unreleased]` への US22/US23 追記なし → PR 単位の追跡性低下、Release 2.0 GA 一括反映前に先行記載推奨 |
+| # | 観点 | 指摘 | 対応 |
+|---|------|------|------|
+| M1 | programmer | `issuePayment`/`confirmPayment` の構造重複 → `PaymentNotifier` helper 抽出余地 | ✅ `b649c490` (private object paymentNotifier 抽出) |
+| M2 | architect | Flyway V24→V27 / V25→V28 番号乖離が不可視 → 番号予約ポリシー明文化 | ✅ `6f498b0e` (CLAUDE.md に Flyway 採番ルール追記) |
+| M3 | tester | Playwright E2E 0 件 / Repository IT 拡張なしでテストピラミッドがユニット偏重 | 🔄 IT9 計画策定時に優先実装計画明記 |
+| M4 | programmer | `case _ =>` フォールバックが到達不能 (Invoice.Error は sealed) | ✅ `bce2e143` (case Invoice.InvalidAmount => に明示化) |
+| M5 | technical-writer | CHANGELOG.md `[Unreleased]` への US22/US23 追記なし | ✅ `15f415cc` (Added/Changed/Documentation で先行記載) |
 
 ### 低優先指摘 (3 件)
 
@@ -132,7 +134,21 @@ XP 5 エージェント並列レビュー結果の統合。
 | **業務適合性** | A- (US23 受入条件 3 縮小、運用負荷は IT9 CSV 取込で軽減予定) |
 | **総合** | **A** |
 
-IT8 は 5 エージェント並列レビューで全観点 A 評価。Phase 4 完了 + Release 2.0 GA コード到達は確実。残課題 9 件は IT9 で計画的に対応する想定。
+IT8 は 5 エージェント並列レビューで全観点 A 評価。Phase 4 完了 + Release 2.0 GA コード到達は確実。
+
+## 本日解消サマリ (2026-06-24)
+
+| 指摘 | 解消 commit | 内容 |
+|------|------------|------|
+| **H2** detectOverdue try/catch 粗 | `a34168db` | save / log / send を独立 try に分離、count は save 成否のみで決定 |
+| **H3** EitherValues 完遂 | `bce2e143` | BillingCommandServiceSpec の `@unchecked` 6 箇所を `.value` / `.left.value` 化 |
+| **H5** mkdocs ナビ確認 | `bce2e143` | retrospective-8 / iteration_report-8 / ADR 5 件 / 2 レビューの計 9 件登録確認 |
+| **M1** PaymentNotifier 抽出 | `b649c490` | private object に 3 メソッド集約、log + send ペアの重複 40 行を 3 行に圧縮 |
+| **M2** Flyway 番号採番ルール | `6f498b0e` | CLAUDE.md に原則 + IT8 実績例 + 確認コマンド追記 |
+| **M4** case _ => 削除 | `bce2e143` | sealed Error 網羅性活用、Invoice.InvalidAmount 明示化 |
+| **M5 / G** CHANGELOG 先行記載 | `15f415cc` | `[Unreleased]` に US22/US23/Port/ADR/Flyway を Added/Changed/Documentation で記載 |
+
+**13 件中 7 件解消、6 件 IT9 申し送り (大規模実装 / 新規 ADR / 新機能設計を要するもの)**。本日対応可能な範囲は完了。残課題は IT9 で計画的に対応する想定。
 
 ## 関連ドキュメント
 
