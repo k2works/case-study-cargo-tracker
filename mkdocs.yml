@@ -139,6 +139,7 @@ nav:
       - IT7 実装レビュー: review/it7_implementation_review_20260623.md
       - IT8 セルフレビュー: review/it8_self_review_20260624.md
       - IT8 実装レビュー: review/it8_implementation_review_20260624.md
+      - IT9 セルフレビュー: review/it9_self_review_20260625.md
   - ADR:
       - 概要: adr/index.md
       - 0001 Play Framework 採用: adr/0001-play-framework-scala-stack.md
