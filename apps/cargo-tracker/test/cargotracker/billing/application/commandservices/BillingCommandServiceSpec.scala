@@ -64,7 +64,8 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     port.store.update("BK-000001", snapshot(isDelivered = true))
     val service = new BillingCommandService(invRepo, port, pricing, clock)
     val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
-    inv.paymentStatus shouldBe PaymentStatus.Pending
+    // IT8 ADR 0019 (案 B): 発行直後は NotIssued、issuePayment 経由で Pending に遷移する
+    inv.paymentStatus shouldBe PaymentStatus.NotIssued
     inv.cargoBookingId.value shouldBe "BK-000001"
     invRepo.store should have size 1
 
