@@ -142,6 +142,31 @@ class BillingCommandService @Inject() (
       )
       saved
 
+  /** IT8 US23 (ADR 0019 案 B): 期限超過 Invoice を一括で Overdue 化する。
+    *
+    *   - 全 Pending Invoice を取得し、`Invoice.markOverdue(now)` が成功するものだけ更新する
+    *   - 各遷移後に OverdueAlerted 通知を Booking Context に記録
+    *   - 戻り値: Overdue 化された Invoice 数
+    *   - IT8 では API のみ。Cron 実行は IT9 で Pekko Scheduler 連携予定
+    *   - 個々の楽観ロック競合は無視 (次回バッチで再試行されるため)
+    */
+  def detectOverdue(now: LocalDate): Int =
+    invoiceRepository.findAll().count { invoice =>
+      invoice.markOverdue(now) match
+        case Right(updated) =>
+          try
+            invoiceRepository.save(updated)
+            bookingPublicApi.logOverdueAlerted(
+              bookingId = updated.cargoBookingId.value,
+              invoiceNumber = updated.invoiceId.value,
+              dueDate = updated.dueDate.map(_.toString).getOrElse(""),
+              amount = updated.finalAmount.amount
+            )
+            true
+          catch case _: Throwable => false
+        case Left(_) => false
+    }
+
 object BillingCommandService:
   /** PricingService の内訳明細を Billing の `InvoiceLineItem` に変換する（IT7 0.9）。 */
   def toInvoiceLineItems(items: List[PricingService.LineItem]): List[InvoiceLineItem] =

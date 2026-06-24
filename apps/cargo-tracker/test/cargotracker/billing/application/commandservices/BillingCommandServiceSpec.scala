@@ -267,3 +267,36 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
     msg should include("入金確認可能な状態ではありません")
     booking.settled shouldBe empty
     booking.paymentConfirmed shouldBe empty
+
+  // IT8 US23 タスク 2.6: detectOverdue
+
+  test("detectOverdue: 期限超過 Pending Invoice を Overdue 化 + OverdueAlerted 通知 (IT8 US23)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    service
+      .issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-10-31"), "REF1"))
+      .value
+    // 期限超過判定
+    val count = service.detectOverdue(LocalDate.parse("2026-11-15"))
+    count shouldBe 1
+    invRepo.store(invoice.invoiceId.value).paymentStatus shouldBe PaymentStatus.Overdue
+    booking.overdueAlerted should have size 1
+
+  test("detectOverdue: 期限内 Pending Invoice はスキップ (count=0) (IT8 US23)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    service
+      .issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-12-31"), "REF1"))
+      .value
+    val count = service.detectOverdue(LocalDate.parse("2026-11-15"))
+    count shouldBe 0
+    invRepo.store(invoice.invoiceId.value).paymentStatus shouldBe PaymentStatus.Pending
+    booking.overdueAlerted shouldBe empty
