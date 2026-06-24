@@ -111,6 +111,37 @@ class BillingCommandService @Inject() (
       )
       saved
 
+  /** IT8 US23 (ADR 0019 案 B): Pending / Overdue Invoice に入金確認を反映し、Cargo を Settled に遷移する。
+    *
+    *   - Invoice の状態遷移: Pending|Overdue → Confirmed (paidAt 記録)
+    *   - 連携: BookingPublicApi.markSettled で Cargo を Delivered → Settled
+    *   - PaymentConfirmed 通知を Booking Context に記録
+    *   - Cargo が Delivered 未到達 (markSettled が Left) の場合でも Invoice は Confirmed 状態で保存される (業務上、入金事実は記録優先)
+    */
+  def confirmPayment(command: ConfirmPaymentCommand): Either[String, Invoice] =
+    for
+      invoice <- invoiceRepository
+        .findById(InvoiceId.unsafeFrom(command.invoiceNumber))
+        .toRight(s"請求書 ${command.invoiceNumber} が見つかりません")
+      updated <- invoice.confirmPayment(command.paidAt).left.map {
+        case _: Invoice.InvalidPaymentStateTransition =>
+          s"請求書 ${command.invoiceNumber} は入金確認可能な状態ではありません (現状態: ${invoice.paymentStatus})"
+        case _ => "入金確認に失敗しました"
+      }
+      saved <- withOptimisticLock("請求書"):
+        invoiceRepository.save(updated)
+        updated
+    yield
+      // Cargo の Delivered → Settled 遷移 (失敗しても Invoice 保存は成功扱い、業務優先順)
+      bookingPublicApi.markSettled(saved.cargoBookingId.value)
+      bookingPublicApi.logPaymentConfirmed(
+        bookingId = saved.cargoBookingId.value,
+        invoiceNumber = saved.invoiceId.value,
+        paidAt = command.paidAt.toString,
+        amount = saved.finalAmount.amount
+      )
+      saved
+
 object BillingCommandService:
   /** PricingService の内訳明細を Billing の `InvoiceLineItem` に変換する（IT7 0.9）。 */
   def toInvoiceLineItems(items: List[PricingService.LineItem]): List[InvoiceLineItem] =
@@ -151,3 +182,6 @@ final case class IssuePaymentCommand(
     dueDate: LocalDate,
     referenceCode: String
 )
+
+/** 入金確認コマンド (US23 / IT8)。 */
+final case class ConfirmPaymentCommand(invoiceNumber: String, paidAt: Instant)

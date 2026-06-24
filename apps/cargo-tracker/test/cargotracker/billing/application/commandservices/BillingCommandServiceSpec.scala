@@ -43,6 +43,9 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
       paymentConfirmed += ((b, i, p, a)); Right(())
     override def logOverdueAlerted(b: String, i: String, d: String, a: Long): Either[String, Unit] =
       overdueAlerted += ((b, i, d, a)); Right(())
+    val settled: mutable.Buffer[String] = mutable.Buffer.empty
+    override def markSettled(bookingId: String): Either[String, Cargo] =
+      settled += bookingId; Left("not used in spec (テストは記録ログのみ確認)")
 
   private class InMemoryInvoiceRepo extends InvoiceRepository:
     val store: mutable.Map[String, Invoice] = mutable.Map.empty
@@ -231,3 +234,36 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVal
       .left
       .value
     msg should include("見つかりません")
+
+  // IT8 US23 タスク 2.5: confirmPayment
+
+  test(
+    "confirmPayment: Pending Invoice を Confirmed に遷移 + paidAt 記録 + Cargo.markSettled + PaymentConfirmed 通知 (IT8 US23)"
+  ):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    service
+      .issuePayment(IssuePaymentCommand(invoice.invoiceId.value, LocalDate.parse("2026-10-31"), "REF1"))
+      .value
+    val paid = Instant.parse("2026-10-15T09:00:00Z")
+    val confirmed = service.confirmPayment(ConfirmPaymentCommand(invoice.invoiceId.value, paid)).value
+    confirmed.paymentStatus shouldBe PaymentStatus.Confirmed
+    confirmed.paidAt shouldBe Some(paid)
+    booking.settled should contain("BK-000001")
+    booking.paymentConfirmed should have size 1
+
+  test("confirmPayment: NotIssued Invoice は不正状態遷移で Left (IT8 US23)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    val booking = new FakeBookingPublicApi
+    port.store.update("BK-000001", snapshot(isDelivered = true))
+    val service = new BillingCommandService(invRepo, port, pricing, booking, clock)
+    val invoice = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    val msg = service.confirmPayment(ConfirmPaymentCommand(invoice.invoiceId.value, clock.instant())).left.value
+    msg should include("入金確認可能な状態ではありません")
+    booking.settled shouldBe empty
+    booking.paymentConfirmed shouldBe empty

@@ -108,6 +108,17 @@ final case class Cargo private (
         if status.canTransitionTo(BookingStatus.Delivered) then Right(copy(status = BookingStatus.Delivered))
         else Left(Cargo.InvalidStatusTransition(status, BookingStatus.Delivered))
 
+  /** US23 / IT8 ADR 0019: 入金確認後に Delivered → Settled に遷移する。
+    *
+    *   - 既に Settled の場合は冪等成功
+    *   - Delivered 以外からは InvalidStatusTransition
+    */
+  def markSettled(): Either[Cargo.Error, Cargo] =
+    status match
+      case BookingStatus.Settled => Right(this)
+      case BookingStatus.Delivered => Right(copy(status = BookingStatus.Settled))
+      case _ => Left(Cargo.InvalidStatusTransition(status, BookingStatus.Settled))
+
 object Cargo:
 
   sealed trait Error

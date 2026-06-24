@@ -54,3 +54,6 @@ trait BookingPublicApi:
       dueDate: String,
       amount: Long
   ): Either[String, Unit]
+
+  /** 入金確認後に Cargo を Settled 状態に遷移する (US23 / IT8 ADR 0019)。 */
+  def markSettled(bookingId: String): Either[String, Cargo]

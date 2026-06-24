@@ -302,6 +302,13 @@ class BookingCommandService @Inject() (
       .map(_ => CargoErrorMessages.invalidBookingIdMessage(bookingId))
       .flatMap(id => repository.findById(id).toRight(CargoErrorMessages.bookingNotFoundMessage(bookingId)))
 
+  /** 入金確認後に Cargo を Settled 状態に遷移する（US23 / IT8 ADR 0019、BookingPublicApi 実装）。
+    *
+    *   - Delivered → Settled の状態遷移を行う。それ以外の状態からは Left
+    */
+  override def markSettled(bookingId: String): Either[String, Cargo] =
+    transition(bookingId, _.markSettled(), "精算完了")
+
   /** 引取完了で Cargo を Delivered 遷移 + 配送完了通知を記録（US16 / IT6）。 */
   def completeDelivery(
       bookingId: String,
