@@ -22,6 +22,17 @@
               @if(roles.contains("RouteDesigner") || roles.contains("MasterAdmin")) {
                 <a class="nav-link" href="/voyages">航路管理</a>
               }
+              @* IT9 US30: MasterAdmin 限定マスタ管理 dropdown (監査ログ等) *@
+              @if(roles.contains("MasterAdmin")) {
+                <div class="dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">マスタ管理</a>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="@cargotracker.shared.audit.interfaces.web.routes.AuditLogController.list()">監査ログ</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><span class="dropdown-item-text text-muted small">割引ポリシー管理 (US22 関連、IT10+)</span></li>
+                  </ul>
+                </div>
+              }
               <form method="POST" action="/logout" class="d-inline m-0">
                 @helper.CSRF.formField
                 <button type="submit" class="btn btn-outline-secondary btn-sm">ログアウト</button>
