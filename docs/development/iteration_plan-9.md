@@ -128,9 +128,9 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | `ShipperController.newForm` / `create` に法人選択 + contractNumber + discountRate (0-30%) フォーム追加 | 3h | [ ] |
-| 2.2 | `shippers/newForm.scala.html` 拡張、JS で法人選択時のみ法人専用フィールド表示 | 3h | [ ] |
-| 2.3 | ShipperControllerSpec 追加 (個人/法人/範囲外 discountRate)、Sales/MasterAdmin ロール制御テスト | 3h | [ ] |
+| 2.1 | `ShipperController.newForm` / `create` に法人選択 + contractNumber + discountRate (0-30%) フォーム追加 | 3h | [x] **完了** (2026-06-25): ShipperController に `RegisterAllowedRoles = {Sales, MasterAdmin}` 追加、newForm / create で他ロール Forbidden。既存 ShipperForm + RegisterShipperCommand は contractNumber / discountRate を既にサポート済のため Form 拡張不要 |
+| 2.2 | `shippers/newForm.scala.html` 拡張、JS で法人選択時のみ法人専用フィールド表示 | 3h | [x] **完了** (2026-06-25): formPage.scala.html に `#corporate-fields` div 追加 (法人専用フィールドを枠付き light 背景でグループ化)、JS で `shipperType` change イベントで Corporate 時のみ表示制御 (Delay UI 0.8 と同手法)、初期表示は Individual のため非表示。range hint (0-30%) + placeholder (CTR-2026-001 / 0.15) 追加 |
+| 2.3 | ShipperControllerSpec 追加 (個人/法人/範囲外 discountRate)、Sales/MasterAdmin ロール制御テスト | 3h | 🔄 **IT10 申し送り** (ShipperControllerSpec が現状存在せず Play TestKit セットアップが必要、IT10 で全 Controller IT 整備時に併せて対応) |
 
 **小計**: 9h
 

@@ -29,19 +29,26 @@
         <input type="text" id="shipper-address" name="address" class="form-control" required>
       </div>
       <div class="col-md-6">
-        <label for="shipperType" class="form-label">種別</label>
+        <label for="shipperType" class="form-label">種別 <span class="text-danger">*</span></label>
         <select name="shipperType" id="shipperType" class="form-select" required>
           <option value="Individual" selected>個人</option>
           <option value="Corporate">法人</option>
         </select>
       </div>
-      <div class="col-md-3">
-        <label for="shipper-contract-number" class="form-label">契約番号（法人のみ）</label>
-        <input type="text" id="shipper-contract-number" name="contractNumber" class="form-control">
-      </div>
-      <div class="col-md-3">
-        <label for="shipper-discount-rate" class="form-label">割引率（法人のみ、0〜0.30）</label>
-        <input type="number" id="shipper-discount-rate" name="discountRate" step="0.01" min="0" max="0.30" class="form-control">
+      @* IT9 US28: 法人選択時のみ表示する法人専用フィールド (JS 表示制御) *@
+      <div id="corporate-fields" class="col-md-12 border rounded p-3 bg-light" style="display:none;">
+        <h6 class="text-muted">法人専用情報</h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="shipper-contract-number" class="form-label">契約番号 <span class="text-danger">*</span></label>
+            <input type="text" id="shipper-contract-number" name="contractNumber" class="form-control" maxlength="50" placeholder="CTR-2026-001">
+          </div>
+          <div class="col-md-6">
+            <label for="shipper-discount-rate" class="form-label">割引率 (0.00 〜 0.30) <span class="text-danger">*</span></label>
+            <input type="number" id="shipper-discount-rate" name="discountRate" step="0.01" min="0" max="0.30" class="form-control" placeholder="0.15">
+            <div class="form-text">0% 〜 30% の範囲で入力 (例: 0.15 = 15%)</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="mt-3 d-flex gap-2">
@@ -49,4 +56,15 @@
       <button type="submit" class="btn btn-primary">登録</button>
     </div>
   }
+  <script>
+    // IT9 US28: shipperType = Corporate 時のみ法人専用フィールドを表示
+    (function() {
+      var sel = document.getElementById('shipperType');
+      var box = document.getElementById('corporate-fields');
+      if (!sel || !box) return;
+      function toggle() { box.style.display = (sel.value === 'Corporate') ? '' : 'none'; }
+      sel.addEventListener('change', toggle);
+      toggle();
+    })();
+  </script>
 }

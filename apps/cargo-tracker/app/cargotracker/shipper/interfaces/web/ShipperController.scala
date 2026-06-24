@@ -1,5 +1,6 @@
 package cargotracker.shipper.interfaces.web
 
+import cargotracker.auth.domain.model.valueobjects.Role
 import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.shipper.application.commandservices.{RegisterShipperCommand, ShipperCommandService}
 import cargotracker.shipper.application.queryservices.ShipperQueryService
@@ -35,6 +36,9 @@ class ShipperController @Inject() (
 ) extends AbstractController(cc)
     with I18nSupport:
 
+  // IT9 US28: 荷主登録は Sales / MasterAdmin 限定
+  private val RegisterAllowedRoles: Set[Role] = Set(Role.Sales, Role.MasterAdmin)
+
   private val shipperForm: Form[ShipperForm] = Form(
     mapping(
       "name" -> nonEmptyText(maxLength = 200),
@@ -64,22 +68,25 @@ class ShipperController @Inject() (
   }
 
   def newForm(): Action[AnyContent] = authenticated { implicit request =>
-    Ok(views.html.shipper.formPage(shipperForm, errorMessage = None))
+    if !request.roles.exists(RegisterAllowedRoles.contains) then Forbidden("荷主登録は Sales / MasterAdmin 限定です (IT9 US28)")
+    else Ok(views.html.shipper.formPage(shipperForm, errorMessage = None))
   }
 
   def create(): Action[AnyContent] = authenticated { implicit request =>
-    shipperForm
-      .bindFromRequest()
-      .fold(
-        formWithErrors =>
-          BadRequest(
-            views.html.shipper.formPage(
-              formWithErrors,
-              errorMessage = Some("入力内容を確認してください")
-            )
-          ),
-        data => handleRegister(data)
-      )
+    if !request.roles.exists(RegisterAllowedRoles.contains) then Forbidden("荷主登録は Sales / MasterAdmin 限定です (IT9 US28)")
+    else
+      shipperForm
+        .bindFromRequest()
+        .fold(
+          formWithErrors =>
+            BadRequest(
+              views.html.shipper.formPage(
+                formWithErrors,
+                errorMessage = Some("入力内容を確認してください")
+              )
+            ),
+          data => handleRegister(data)
+        )
   }
 
   /** メール重複チェック（htmx 用）。 */
