@@ -105,11 +105,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | `BillingCargoSnapshot` に `corporateDiscountRate: Option[BigDecimal]` を追加、`BookingCargoQueryAdapter` で `Shipper.discountRate` から取得（CorporateShipper のみ） | 3h | [ ] |
-| 1.2 | `BillingCommandService.generate` で snapshot から DiscountRate を取り `Invoice.issue` に渡す（command.discountRate より優先、UI 入力なし） | 2h | [ ] |
-| 1.3 | `Invoice.lineItems` に `LineItemCategory.Discount` 明細を `name="法人契約割引 (XX%)"`、`amount = -baseAmount × discountRate` で追加 | 2h | [ ] |
-| 1.4 | `billing/detail.scala.html` を拡張し「割引適用前金額」「割引率」「割引額」「割引適用後金額」を明示表示 | 2h | [ ] |
-| 1.5 | BillingCommandServiceSpec / InvoiceSpec に法人割引適用シナリオ 3 件追加（割引 0% / 15% / 30%）、Playwright E2E 1 件追加 | 4h | [ ] |
+| 1.1 | `BillingCargoSnapshot` に `corporateDiscountRate: Option[BigDecimal]` を追加、`BookingCargoQueryAdapter` で `Shipper.discountRate` から取得（CorporateShipper のみ） | 3h | [x] **完了** (2026-06-24): `BillingCargoSnapshot.corporateDiscountRate: Option[BigDecimal]` 追加、`BookingCargoQueryAdapter` で Shipper.shipperType == Corporate のとき Shipper.discountRate を BigDecimal 変換して設定 |
+| 1.2 | `BillingCommandService.generate` で snapshot から DiscountRate を取り `Invoice.issue` に渡す（command.discountRate より優先、UI 入力なし） | 2h | [x] **完了** (2026-06-24): generate で snapshot.corporateDiscountRate を効果的 DiscountRate に変換 (範囲外時 Left 返却)、未設定時のみ command.discountRate fallback。UI 入力依存ゼロ達成 |
+| 1.3 | `Invoice.lineItems` に `LineItemCategory.Discount` 明細を `name="法人契約割引 (XX%)"`、`amount = -baseAmount × discountRate` で追加 | 2h | [x] **完了** (2026-06-24): `BillingCommandService.appendDiscountLineItem` ヘルパ新設、discountRate > 0 のとき `LineItemCategory.Discount` + `名前="法人契約割引 (XX%)"` + `amount = baseAmount × -discountRate` を末尾追加 |
+| 1.4 | `billing/detail.scala.html` を拡張し「割引適用前金額」「割引率」「割引額」「割引適用後金額」を明示表示 | 2h | [x] **完了** (2026-06-24): 既存「基本料金/割引率/最終金額」を「割引適用前金額/割引率 (＋法人契約割引適用バッジ)/割引額 (緑文字)/割引適用後金額」に拡張 |
+| 1.5 | BillingCommandServiceSpec / InvoiceSpec に法人割引適用シナリオ 3 件追加（割引 0% / 15% / 30%）、Playwright E2E 1 件追加 | 4h | [x] **完了 (E2E 除く)** (2026-06-24): BillingCommandServiceSpec に法人割引 4 件追加 (None=0% / 15% / 30% 境界値 / snapshot 優先テスト)、Unit 9 → 13 件 Green、EitherValues/OptionValues 導入。**Playwright E2E は IT9 申し送り** (Shipper 法人マスタ登録 UI が無く E2E 構築の前提条件が満たせないため、IT8 内では Unit/Integration まで) |
 
 **小計**: 13h
 

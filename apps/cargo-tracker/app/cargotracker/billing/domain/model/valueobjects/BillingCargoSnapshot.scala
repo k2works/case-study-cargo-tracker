@@ -15,5 +15,7 @@ final case class BillingCargoSnapshot(
     destination: Location,
     cargoType: CargoType,
     weight: Weight,
-    voyageNumbers: List[String]
+    voyageNumbers: List[String],
+    /** IT8 US22: 法人荷主の場合は Shipper.discountRate を反映 (0.0〜0.30)。個人荷主は None。 */
+    corporateDiscountRate: Option[BigDecimal] = None
 )

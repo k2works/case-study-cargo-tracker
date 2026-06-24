@@ -56,15 +56,21 @@ class BillingCommandService @Inject() (
               .left
               .map(_ => "料金算出に失敗しました")
             shipper = BillingShipperId(snapshot.shipperId, snapshot.isCorporate)
+            // IT8 US22: snapshot の corporateDiscountRate を優先採用（UI 入力 command.discountRate は fallback、互換維持）
+            effectiveDiscountRate <- snapshot.corporateDiscountRate
+              .map(rate => DiscountRate(rate).left.map(_ => s"法人割引率が範囲外です: $rate"))
+              .getOrElse(Right(command.discountRate.getOrElse(DiscountRate.zero)))
+            baseItems = BillingCommandService.toInvoiceLineItems(breakdown.items)
+            allItems = BillingCommandService.appendDiscountLineItem(baseItems, breakdown.total, effectiveDiscountRate)
             invoice <- Invoice
               .issue(
                 invoiceRepository.nextInvoiceId(),
                 snapshot.bookingId,
                 shipper,
                 breakdown.total,
-                command.discountRate.getOrElse(DiscountRate.zero),
+                effectiveDiscountRate,
                 clock.instant(),
-                BillingCommandService.toInvoiceLineItems(breakdown.items)
+                allItems
               )
               .left
               .map(_ => "請求書の発行に失敗しました")
@@ -84,6 +90,22 @@ object BillingCommandService:
         case PricingService.LineItemCategory.Other => LineItemCategory.Other
       InvoiceLineItem(category = cat, name = i.name, amount = i.amount)
     }
+
+  /** IT8 US22: 法人割引が 0% より大きい場合、Discount 明細行を追加する。`amount = -baseAmount × discountRate`。 */
+  def appendDiscountLineItem(
+      base: List[InvoiceLineItem],
+      baseAmount: cargotracker.shared.domain.Money,
+      discountRate: DiscountRate
+  ): List[InvoiceLineItem] =
+    if discountRate.value > BigDecimal(0) then
+      val pct = (discountRate.percent.setScale(0, BigDecimal.RoundingMode.HALF_UP)).toBigInt
+      val discountAmount = baseAmount.multiplyByRate(-discountRate.value)
+      base :+ InvoiceLineItem(
+        category = LineItemCategory.Discount,
+        name = s"法人契約割引 ($pct%)",
+        amount = discountAmount
+      )
+    else base
 
 /** 請求書発行コマンド（US21、IT7 0.8 で `isCorporate` を廃止し Shipper 自動判定に統一）。 */
 final case class GenerateInvoiceCommand(

@@ -22,9 +22,12 @@ class BookingCargoQueryAdapter @Inject() (
 
   override def findForBilling(bookingId: BillingBookingId): Option[BillingCargoSnapshot] =
     BookingId(bookingId.value).toOption.flatMap(cargoRepository.findById).map { cargo =>
-      val isCorporate = shipperRepository
-        .findById(cargo.shipperId)
-        .exists(_.shipperType == ShipperType.Corporate)
+      val shipperOpt = shipperRepository.findById(cargo.shipperId)
+      val isCorporate = shipperOpt.exists(_.shipperType == ShipperType.Corporate)
+      // IT8 US22: 法人荷主の場合のみ Shipper.discountRate を反映
+      val discountRate = shipperOpt
+        .filter(_.shipperType == ShipperType.Corporate)
+        .map(s => BigDecimal(s.discountRate.value.toString))
       BillingCargoSnapshot(
         bookingId = BillingBookingId.unsafeFrom(cargo.bookingId.value),
         shipperId = cargo.shipperId.value,
@@ -34,6 +37,7 @@ class BookingCargoQueryAdapter @Inject() (
         destination = cargo.routeSpecification.destination,
         cargoType = cargo.cargoSpec.cargoType,
         weight = cargo.cargoSpec.weight,
-        voyageNumbers = cargo.itinerary.map(_.voyageNumbers).getOrElse(Nil)
+        voyageNumbers = cargo.itinerary.map(_.voyageNumbers).getOrElse(Nil),
+        corporateDiscountRate = discountRate
       )
     }

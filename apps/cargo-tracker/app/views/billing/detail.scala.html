@@ -5,9 +5,17 @@
   <dl class="row">
     <dt class="col-sm-3">予約 ID</dt><dd class="col-sm-9">@inv.cargoBookingId.value</dd>
     <dt class="col-sm-3">荷主</dt><dd class="col-sm-9">@inv.shipperId.value @if(inv.shipperId.isCorporate){<span class="badge bg-info">法人</span>}</dd>
-    <dt class="col-sm-3">基本料金</dt><dd class="col-sm-9 text-end">@inv.baseAmount.amount 円</dd>
-    <dt class="col-sm-3">割引率</dt><dd class="col-sm-9 text-end">@inv.discountRate.percent %</dd>
-    <dt class="col-sm-3">最終金額</dt><dd class="col-sm-9 text-end fw-bold">@inv.finalAmount.amount 円</dd>
+    <dt class="col-sm-3">割引適用前金額</dt><dd class="col-sm-9 text-end">@inv.baseAmount.amount 円</dd>
+    <dt class="col-sm-3">割引率</dt>
+    <dd class="col-sm-9 text-end">
+      @inv.discountRate.percent %
+      @if(inv.discountRate.value > 0){<span class="badge bg-success ms-2">法人契約割引適用 (IT8 US22)</span>}
+    </dd>
+    @if(inv.discountRate.value > 0) {
+      <dt class="col-sm-3">割引額</dt>
+      <dd class="col-sm-9 text-end text-success">-@((inv.baseAmount.amount - inv.finalAmount.amount)) 円</dd>
+    }
+    <dt class="col-sm-3">割引適用後金額</dt><dd class="col-sm-9 text-end fw-bold">@inv.finalAmount.amount 円</dd>
     <dt class="col-sm-3">支払状態</dt><dd class="col-sm-9"><span class="badge bg-warning">@inv.paymentStatus</span></dd>
     <dt class="col-sm-3">発行日時</dt><dd class="col-sm-9">@inv.issuedAt</dd>
     <dt class="col-sm-3">支払日時</dt><dd class="col-sm-9">@inv.paidAt.map(_.toString).getOrElse("-")</dd>

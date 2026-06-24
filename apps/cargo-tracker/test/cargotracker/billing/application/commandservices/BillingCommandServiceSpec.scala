@@ -3,9 +3,16 @@ package cargotracker.billing.application.commandservices
 import cargotracker.billing.domain.model.aggregates.Invoice
 import cargotracker.billing.domain.model.enums.PaymentStatus
 import cargotracker.billing.domain.model.repositories.{BillingCargoQueryPort, InvoiceRepository}
-import cargotracker.billing.domain.model.valueobjects.{BillingBookingId, BillingCargoSnapshot, DiscountRate, InvoiceId}
+import cargotracker.billing.domain.model.valueobjects.{
+  BillingBookingId,
+  BillingCargoSnapshot,
+  DiscountRate,
+  InvoiceId,
+  LineItemCategory
+}
 import cargotracker.shared.domain.pricing.{InMemoryPricingService, PricingService}
 import cargotracker.shared.domain.{CargoType, Location, Weight}
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
@@ -13,7 +20,7 @@ import java.time.{Clock, Instant, ZoneId}
 import java.util.concurrent.atomic.AtomicLong
 import scala.collection.mutable
 
-class BillingCommandServiceSpec extends AnyFunSuite with Matchers:
+class BillingCommandServiceSpec extends AnyFunSuite with Matchers with EitherValues with OptionValues:
 
   private class FakeBillingCargoQueryPort extends BillingCargoQueryPort:
     val store: mutable.Map[String, BillingCargoSnapshot] = mutable.Map.empty
@@ -33,7 +40,11 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers:
   private val clock = Clock.fixed(Instant.parse("2026-09-15T10:00:00Z"), ZoneId.of("UTC"))
   private val pricing: PricingService = new InMemoryPricingService
 
-  private def snapshot(isDelivered: Boolean, isCorporate: Boolean = false): BillingCargoSnapshot =
+  private def snapshot(
+      isDelivered: Boolean,
+      isCorporate: Boolean = false,
+      corporateDiscountRate: Option[BigDecimal] = None
+  ): BillingCargoSnapshot =
     BillingCargoSnapshot(
       bookingId = BillingBookingId.unsafeFrom("BK-000001"),
       shipperId = "SH-000001",
@@ -43,7 +54,8 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers:
       destination = Location.unsafeFrom("USNYC"),
       cargoType = CargoType.General,
       weight = Weight(1000).toOption.get,
-      voyageNumbers = Nil
+      voyageNumbers = Nil,
+      corporateDiscountRate = corporateDiscountRate
     )
 
   test("generate: Delivered 予約から請求書を発行 Pending で永続化 (US21)"):
@@ -90,3 +102,57 @@ class BillingCommandServiceSpec extends AnyFunSuite with Matchers:
     val service = new BillingCommandService(invRepo, port, pricing, clock)
     val Right(inv) = service.generate(GenerateInvoiceCommand("BK-000001")): @unchecked
     inv.shipperId.isCorporate shouldBe false
+
+  // IT8 US22: 法人割引適用シナリオ 3 件 + Discount 明細
+
+  test("generate: 個人荷主 (corporateDiscountRate=None) は割引 0% で発行される (IT8 US22)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    port.store.update("BK-000001", snapshot(isDelivered = true, isCorporate = false, corporateDiscountRate = None))
+    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    inv.discountRate.value shouldBe BigDecimal(0)
+    inv.finalAmount.amount shouldBe inv.baseAmount.amount
+    inv.lineItems.exists(_.category == LineItemCategory.Discount) shouldBe false
+
+  test("generate: 法人荷主 (corporateDiscountRate=0.15) は 15% 割引適用 + Discount 明細追加 (IT8 US22)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    port.store.update(
+      "BK-000001",
+      snapshot(isDelivered = true, isCorporate = true, corporateDiscountRate = Some(BigDecimal("0.15")))
+    )
+    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    inv.discountRate.value shouldBe BigDecimal("0.15")
+    inv.finalAmount.amount shouldBe (inv.baseAmount.amount * 85 / 100)
+    val discountItem = inv.lineItems.find(_.category == LineItemCategory.Discount).value
+    discountItem.name should include("15%")
+    discountItem.amount.amount should be < 0L
+
+  test("generate: 法人荷主 (corporateDiscountRate=0.30) は最大割引 30% 適用 (IT8 US22 境界値)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    port.store.update(
+      "BK-000001",
+      snapshot(isDelivered = true, isCorporate = true, corporateDiscountRate = Some(BigDecimal("0.30")))
+    )
+    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    val inv = service.generate(GenerateInvoiceCommand("BK-000001")).value
+    inv.discountRate.value shouldBe BigDecimal("0.30")
+    inv.finalAmount.amount shouldBe (inv.baseAmount.amount * 70 / 100)
+    inv.lineItems.find(_.category == LineItemCategory.Discount).value.name should include("30%")
+
+  test("generate: snapshot.corporateDiscountRate は command.discountRate より優先される (IT8 US22 UI 入力依存ゼロ)"):
+    val port = new FakeBillingCargoQueryPort
+    val invRepo = new InMemoryInvoiceRepo
+    port.store.update(
+      "BK-000001",
+      snapshot(isDelivered = true, isCorporate = true, corporateDiscountRate = Some(BigDecimal("0.20")))
+    )
+    val service = new BillingCommandService(invRepo, port, pricing, clock)
+    // command 側で 0.05 を指定しても、snapshot 側の 0.20 が優先される
+    val inv = service
+      .generate(GenerateInvoiceCommand("BK-000001", Some(DiscountRate(BigDecimal("0.05")).toOption.get)))
+      .value
+    inv.discountRate.value shouldBe BigDecimal("0.20")
