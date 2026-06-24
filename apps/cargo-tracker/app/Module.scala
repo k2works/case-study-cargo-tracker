@@ -6,6 +6,7 @@ import cargotracker.billing.domain.model.repositories.{BillingCargoQueryPort, In
 import cargotracker.billing.infrastructure.acl.BookingCargoQueryAdapter
 import cargotracker.billing.infrastructure.mail.LoggingMailNotificationAdapter
 import cargotracker.billing.infrastructure.repositories.ScalikeJdbcInvoiceRepository
+import cargotracker.billing.infrastructure.scheduler.OverdueDetectionScheduler
 import cargotracker.booking.application.api.BookingPublicApi
 import cargotracker.booking.application.commandservices.BookingCommandService
 import cargotracker.booking.domain.model.acl.ShipperExistenceChecker
@@ -75,3 +76,5 @@ class Module extends AbstractModule:
     bind(classOf[Clock]).toInstance(Clock.systemUTC())
     // 開発用 admin ユーザーの起動時シード
     bind(classOf[AdminUserSeeder]).asEagerSingleton()
+    // IT9 0.3: 期限超過 Invoice 検出を Pekko Scheduler で日次起動 (billing.overdue.enabled = true 時のみ)
+    bind(classOf[OverdueDetectionScheduler]).asEagerSingleton()
