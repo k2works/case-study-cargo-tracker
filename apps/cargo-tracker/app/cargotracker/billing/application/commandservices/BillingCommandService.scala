@@ -169,24 +169,35 @@ class BillingCommandService @Inject() (
   def detectOverdue(now: LocalDate): Int =
     invoiceRepository.findAll().count { invoice =>
       invoice.markOverdue(now) match
-        case Right(updated) =>
-          try
-            invoiceRepository.save(updated)
-            bookingPublicApi.logOverdueAlerted(
-              bookingId = updated.cargoBookingId.value,
-              invoiceNumber = updated.invoiceId.value,
-              dueDate = updated.dueDate.map(_.toString).getOrElse(""),
-              amount = updated.finalAmount.amount
-            )
-            mailPort.sendOverdueAlert(
-              bookingId = updated.cargoBookingId.value,
-              invoiceNumber = updated.invoiceId.value,
-              dueDate = updated.dueDate.map(_.toString).getOrElse(""),
-              amount = updated.finalAmount.amount
-            )
-            true
-          catch case _: Throwable => false
         case Left(_) => false
+        case Right(updated) =>
+          // IT8 H2 解消 (programmer): save 失敗時のみ count 減、通知失敗は warn ログで握り潰す
+          // 楽観ロック競合 (OptimisticLockException) も次回バッチで再試行されるため false 扱い
+          val saved =
+            try
+              invoiceRepository.save(updated)
+              true
+            catch case scala.util.control.NonFatal(_) => false
+          if saved then
+            // 通知はベストエフォート: 失敗してもバッチ全体は失敗扱いにしない
+            val dueDateStr = updated.dueDate.map(_.toString).getOrElse("")
+            try
+              bookingPublicApi.logOverdueAlerted(
+                bookingId = updated.cargoBookingId.value,
+                invoiceNumber = updated.invoiceId.value,
+                dueDate = dueDateStr,
+                amount = updated.finalAmount.amount
+              )
+            catch case scala.util.control.NonFatal(_) => () // warn ログは IT9 で構造化
+            try
+              mailPort.sendOverdueAlert(
+                bookingId = updated.cargoBookingId.value,
+                invoiceNumber = updated.invoiceId.value,
+                dueDate = dueDateStr,
+                amount = updated.finalAmount.amount
+              )
+            catch case scala.util.control.NonFatal(_) => ()
+          saved
     }
 
 object BillingCommandService:
