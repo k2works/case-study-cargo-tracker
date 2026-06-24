@@ -35,11 +35,13 @@ class TrackingController @Inject() (
 ) extends AbstractController(cc)
     with I18nSupport:
 
+  private val LocalDateTimePattern: String = "yyyy-MM-dd'T'HH:mm[:ss]"
+
   private val updateStatusForm: Form[ManualStatusUpdateFormData] = Form(
     mapping(
       "status" -> nonEmptyText,
       "locationUnLocode" -> nonEmptyText(minLength = 5, maxLength = 5),
-      "occurredAt" -> localDateTime("yyyy-MM-dd'T'HH:mm[:ss]"),
+      "occurredAt" -> localDateTime(LocalDateTimePattern),
       "reason" -> nonEmptyText(minLength = 1, maxLength = 500)
     )(ManualStatusUpdateFormData.apply)(d => Some((d.status, d.locationUnLocode, d.occurredAt, d.reason)))
   )
@@ -50,10 +52,10 @@ class TrackingController @Inject() (
     mapping(
       "exceptionType" -> nonEmptyText,
       "locationUnLocode" -> nonEmptyText(minLength = 5, maxLength = 5),
-      "occurredAt" -> localDateTime("yyyy-MM-dd'T'HH:mm[:ss]"),
+      "occurredAt" -> localDateTime(LocalDateTimePattern),
       "description" -> optional(text(maxLength = 500)),
       // IT8 0.8 (H10 / T7 / P8): Delay 選択時の詳細入力 (UI 側で JS 表示制御)
-      "newEstimatedArrival" -> optional(localDateTime("yyyy-MM-dd'T'HH:mm[:ss]")),
+      "newEstimatedArrival" -> optional(localDateTime(LocalDateTimePattern)),
       "responsePlan" -> optional(text(maxLength = 50))
     )(RecordExceptionFormData.apply)(d =>
       Some((d.exceptionType, d.locationUnLocode, d.occurredAt, d.description, d.newEstimatedArrival, d.responsePlan))

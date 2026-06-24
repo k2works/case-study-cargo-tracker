@@ -63,5 +63,11 @@ sonarProperties := Map(
   "sonar.tests"       -> "test",
   "sonar.sourceEncoding" -> "UTF-8",
   "sonar.exclusions"  -> "**/target/**,app/views/**",
-  "sonar.scala.coverage.reportPaths" -> "target/scala-3.3.6/scoverage-report/scoverage.xml"
+  "sonar.scala.coverage.reportPaths" -> "target/scala-3.3.6/scoverage-report/scoverage.xml",
+  // scala:S107 (Functions, methods and lambdas should not have too many parameters) を
+  // 集約ルート / Snapshot ADT (ADR 0014) / RegisterRequest に対して除外。
+  // 永続化スナップショットは DB スキーマと 1:1 で必然的にフィールドが多くなる設計上の意図。
+  "sonar.issue.ignore.multicriteria"        -> "snapshotS107",
+  "sonar.issue.ignore.multicriteria.snapshotS107.ruleKey"      -> "scala:S107",
+  "sonar.issue.ignore.multicriteria.snapshotS107.resourceKey"  -> "app/cargotracker/**/domain/model/aggregates/*.scala"
 )

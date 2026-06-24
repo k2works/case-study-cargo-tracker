@@ -42,7 +42,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
   def recordEvent(command: RecordTrackingEventCommand): Either[String, TrackingActivity] =
     for
       tn <- TrackingNumber(command.trackingNumber).left
-        .map(_ => "追跡番号の形式が不正です")
+        .map(_ => TrackingCommandService.InvalidTrackingNumberFormat)
       activity <- repository
         .findByTrackingNumber(tn)
         .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
@@ -66,7 +66,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
     */
   def updateStatus(command: UpdateTrackingStatusCommand): Either[String, TrackingActivity] =
     val result = for
-      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => TrackingCommandService.InvalidTrackingNumberFormat)
       eventType <- TrackingCommandService.eventTypeFor(command.status)
       activity <- repository
         .findByTrackingNumber(tn)
@@ -90,7 +90,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
   /** 追跡例外を記録する（US19 遅延 / US20 破損・紛失）。楽観ロック付き。 */
   def recordException(command: RecordExceptionCommand): Either[String, TrackingActivity] =
     for
-      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => TrackingCommandService.InvalidTrackingNumberFormat)
       activity <- repository
         .findByTrackingNumber(tn)
         .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
@@ -107,7 +107,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
   /** 追跡例外の対応報告（resolvedAt + resolutionNotes 設定）。 */
   def resolveException(command: ResolveExceptionCommand): Either[String, TrackingActivity] =
     for
-      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => TrackingCommandService.InvalidTrackingNumberFormat)
       activity <- repository
         .findByTrackingNumber(tn)
         .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
@@ -122,7 +122,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
   /** 例外対応を取消す (IT8 0.7 / H9): resolvedAt / resolutionNotes をクリアし、再対応待ち状態に戻す。 */
   def cancelExceptionResolution(command: CancelExceptionResolutionCommand): Either[String, TrackingActivity] =
     for
-      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => TrackingCommandService.InvalidTrackingNumberFormat)
       activity <- repository
         .findByTrackingNumber(tn)
         .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
@@ -138,7 +138,7 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
   /** 例外に補足コメントを追記する (IT8 0.7 / H9): 既存 resolutionNotes に改行区切りで追記する。 */
   def appendResolutionComment(command: AppendResolutionCommentCommand): Either[String, TrackingActivity] =
     for
-      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => TrackingCommandService.InvalidTrackingNumberFormat)
       activity <- repository
         .findByTrackingNumber(tn)
         .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
@@ -153,6 +153,8 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
     yield result
 
 object TrackingCommandService:
+  private[commandservices] val InvalidTrackingNumberFormat: String = "追跡番号の形式が不正です"
+
   private[commandservices] def eventTypeFor(status: TrackingStatus): Either[String, String] =
     status match
       case TrackingStatus.Received => Right("Receive")
