@@ -96,8 +96,8 @@
 | 0.11 | `HandlingCargoQueryPort` (handling 用 ACL Port) + `BookingCargoForHandlingAdapter` 新設、`HandlingOrchestrator.register` で `Itinerary.isOnRoute` 経由 routeDeviation 自動判定 + ユニットテスト 3 件追加（T3 / 0.14 持ち越し回収） | 5h | [ ] |
 | 0.12 | 設計ドキュメント反映（T6 / docs/design/data-model.md + domain-model.md + ui_design.md）: IT7 差分 (V18-V22 + TrackingExceptionEvent + ItineraryLeg + InvoiceLineItem + RecipientConfirmationType + 例外記録 UI) + IT8 差分 (Payment テーブル列 `amount BIGINT` 単通貨整合 + `due_date` / `version` 追加 + `transaction_reference` → `reference_code` 統一、ui_design.md L82 画面一覧 + L209 画面遷移図 (精算フロー) の **両方** に Payment 系 4 画面 (`/billing/invoices/:id/issue-payment` / `/billing/payments` / `/billing/payments/:paymentId` / `/billing/payments/:id/confirm`) を追加、Accountant→Settlement / Admin→MasterAdmin Role 統一 (実装側 Role.scala: Sales / RouteDesigner / Tracker / Settlement / MasterAdmin 準拠)) を正式反映 | 6h | [ ] |
 | 0.13 | CLAUDE.md に TDD コミット規律 (Red → Green の分離、もしくは Red→Green を経た事実をコミットメッセージに明記) を追記 (H6 / it7_implementation_review_20260623.md) | 1h | [ ] |
-| 0.14 | ADR 0020 起票「公開追跡画面 (`/public/tracking/...`) における例外表示方針」: 表示する/しない、表示する場合の情報粒度 (緊急バッジのみ / 詳細 / 対応状況) を業務ルール決定 (H8 / it7 業務代表者指摘) | 3h | [ ] |
-| 0.15 | ADR 0019 起票「Billing Context の Payment は Invoice 集約内 (`paymentStatus` フィールド + `confirmPayment` メソッド) か別集約か」: domain-model.md L921-955 では Invoice 集約内、計画 2.1 は別集約案。本イテレーションで決定 (S3-1 / S3-2 / S3-3 整合) | 3h | [ ] |
+| 0.14 | ADR 0020 起票「公開追跡画面 (`/public/tracking/...`) における例外表示方針」: 表示する/しない、表示する場合の情報粒度 (緊急バッジのみ / 詳細 / 対応状況) を業務ルール決定 (H8 / it7 業務代表者指摘) | 3h | [x] **承認** (2026-06-24): 段階的開示 = ステータスバッジ + 簡易メッセージ + 連絡先のみ公開、対応詳細は社内画面のみ |
+| 0.15 | ADR 0019 起票「Billing Context の Payment は Invoice 集約内 (`paymentStatus` フィールド + `confirmPayment` メソッド) か別集約か」: domain-model.md L921-955 では Invoice 集約内、計画 2.1 は別集約案。本イテレーションで決定 (S3-1 / S3-2 / S3-3 整合) | 3h | [x] **承認** (2026-06-24): **案 B 採択** = Invoice 集約内 `paymentStatus` + `issuePayment` / `confirmPayment` / `markOverdue` メソッド。Payment 独立集約は作らない。下記 2.x は案 B 確定版に書き換え済 |
 
 **小計**: 57h
 
@@ -115,27 +115,23 @@
 
 #### 2. US23 精算処理（6 SP）
 
-> **前提**: タスク 0.15 (ADR 0019) で「Payment は集約 / Invoice 内のステータス」の二択を IT8 着手最初に決定する。下記は **集約案** での詳細だが、ADR 0019 で `Invoice` 集約内 (domain-model.md L921-955 準拠) を採択した場合は、各タスクの主語を以下に置換する:
->
-> - 「Payment 集約新設」→「`Invoice.confirmPayment(paidAt, referenceCode)` メソッド拡張」
-> - 「PaymentRepository」→ 既存 `InvoiceRepository` の `save`/`update` で吸収
-> - 「SettlementCommandService」→ `BillingCommandService.issuePayment` / `BillingCommandService.confirmPayment` / `BillingCommandService.detectOverdue` の 3 メソッド追加
-> - UI URL は `/billing/invoices/:id/...` 系に統合 (ui_design.md L88-90 準拠)
+> **ADR 0019 採択結果 (2026-06-24)**: **案 B (Invoice 集約内案)** を確定。`Payment` 独立集約は作らない。以下のタスクは案 B 確定版。
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | (ADR 0019 集約案採択時) Payment 集約新設: `Payment(paymentId: PaymentId, invoiceId, amount: Money, dueDate, status: PaymentStatus, paidAt, referenceCode, version)` + `PaymentStatus` enum (Pending / Confirmed / Overdue / Refunded) + `Payment.Snapshot` (ADR 0014)。**Invoice 内案採択時**は `Invoice.confirmPayment` + `paymentStatus` フィールドへの遷移ロジック追加 | 4h | [ ] |
-| 2.2 | Flyway V24: `payment` テーブル (V17 で先行作成済)。**ALTER で追加**: `due_date DATE NOT NULL DEFAULT CURRENT_DATE` / `version INTEGER NOT NULL DEFAULT 0`。**確認**: 既存 V17 列名は `reference_code` (data-model.md の `transaction_reference` から名称統一) | 2h | [ ] |
-| 2.3 | (集約案) `PaymentRepository` trait + `ScalikeJdbcPaymentRepository`（楽観ロック / withOptimisticLock 適用）。**Invoice 内案**は本タスクスキップ、既存 InvoiceRepository に `confirmPayment` SQL 追加 | 4h | [ ] |
-| 2.4 | `issuePayment(invoiceId, dueDate)`: Confirmed Invoice → Payment 発行 + 荷主メール送信ポート連携 + PaymentRequested 通知ログ (BillingCommandService or SettlementCommandService、ADR 0019 結果次第) | 4h | [ ] |
-| 2.5 | `confirmPayment(paymentId or invoiceId, paidAt, referenceCode)`: 入金確認 → Confirmed + Cargo.Settled 遷移 (BookingPublicApi 経由) + PaymentConfirmed 通知 | 3h | [ ] |
-| 2.6 | `detectOverdue(now)` (Cron スケジューラ想定、IT8 はバッチ未着手で API のみ、IT9 で Pekko Scheduler 連携): 期限超過 Payment/Invoice を Overdue 化 + OverdueAlerted 通知 | 3h | [ ] |
-| 2.7 | NotificationType に PaymentRequested / PaymentConfirmed / OverdueAlerted 追加、ペイロード + JSON + Flyway V25 (CHECK 拡張) | 3h | [ ] |
-| 2.8 | 精算管理画面 (ADR 0019 集約案採択時): `/billing/invoices/:id/payment/new` (発行) / `/billing/payments` (一覧) / `/billing/payments/:id` (詳細) / `/billing/payments/:id/confirm` (入金確認)。**Invoice 内案採択時**は `/billing/invoices/:id/issue-payment` + `/billing/invoices/:id/confirm-payment` + 請求書詳細画面内に支払欄追加 (ui_design.md L90 準拠) | 6h | [ ] |
+| 2.1 | `Invoice` に `dueDate: Option[LocalDate]` / `paymentReference: Option[String]` フィールド追加 + `PaymentStatus` enum 拡張 (NotIssued / Pending / Overdue / Confirmed / Refunded) + `issuePayment(dueDate, referenceCode)` / `confirmPayment(paidAt)` / `markOverdue(now)` メソッド追加。`Invoice.Snapshot` (ADR 0014) もフィールド追加に追随 | 4h | [ ] |
+| 2.2 | Flyway V23: `invoice` テーブルに `due_date DATE NULL` / `payment_reference VARCHAR(64) NULL` 追加 (corporate_discount_policy 新設と同一 migration に統合) | 2h | [ ] |
+| 2.3 | `ScalikeJdbcInvoiceRepository.save` / `update` を新フィールド対応に拡張（withOptimisticLock 適用、PaymentRepository は新設しない） | 3h | [ ] |
+| 2.4 | `BillingCommandService.issuePayment(invoiceId, dueDate, referenceCode)`: Confirmed Invoice → `Invoice.issuePayment` → MailNotificationPort 経由で荷主メール送信 + PaymentRequested 通知ログ | 4h | [ ] |
+| 2.5 | `BillingCommandService.confirmPayment(invoiceId, paidAt)`: 手動入力された paidAt で `Invoice.confirmPayment` → BookingPublicApi 経由で `Cargo.markSettled` 遷移 + PaymentConfirmed 通知 | 3h | [ ] |
+| 2.6 | `BillingCommandService.detectOverdue(now)` (Cron スケジューラ想定、IT8 はバッチ未着手で API のみ、IT9 で Pekko Scheduler 連携): 期限超過 Invoice を `Invoice.markOverdue` で Overdue 化 + OverdueAlerted 通知 | 3h | [ ] |
+| 2.7 | NotificationType に PaymentRequested / PaymentConfirmed / OverdueAlerted 追加、ペイロード + JSON + Flyway V24 (CHECK 拡張) | 3h | [ ] |
+| 2.8 | 請求書詳細画面 `/billing/invoices/:id` に「支払欄 (paymentStatus / dueDate / paidAt / paymentReference / [入金確認] ボタン)」統合 + `POST /billing/invoices/:id/issue-payment` + `POST /billing/invoices/:id/confirm-payment` の 2 アクション追加 (ui_design.md L90 準拠、独立した精算画面は作らない) | 5h | [ ] |
 | 2.9 | `MailNotificationPort` (handling と同じ ACL パターン) + `MailNotificationAdapter` (Pekko Mail or print logger)、ADR 0018 候補 | 3h | [ ] |
-| 2.10 | 集約案: SettlementCommandServiceSpec / PaymentSpec / RepositoryIT 計 8 件 / Invoice 内案: BillingCommandServiceSpec 拡張 + InvoiceSpec 拡張 計 6-8 件。Playwright E2E 3 件 (発行 / 入金 / 期限超過) | 6h | [ ] |
+| 2.10 | BillingCommandServiceSpec 拡張 (issuePayment / confirmPayment / detectOverdue 各 2 件) + InvoiceSpec 拡張 (issuePayment / confirmPayment / markOverdue 状態遷移 6 件) + ScalikeJdbcInvoiceRepositoryIT 拡張 (新フィールド永続化) + Playwright E2E 3 件 (発行 / 入金 / 期限超過) | 8h | [ ] |
+| 2.11 | Flyway V25: `payment` テーブル drop (V17 で先行作成、案 B 採択により未使用となるため)。`invoice.paid_amount_value` / `invoice.paid_amount_currency` 列も削除 (finalAmount で代替) | 1h | [ ] |
 
-**小計**: 38h
+**小計**: 39h (案 B 採択により Repository 新設不要で減、V25 drop 追加で +1h)
 
 > **US23 受入基準 3「決済機関との連携により入金確認ができる」のスコープ調整 (S2-3)**:
 > IT8 では `confirmPayment(referenceCode)` で **手動入力 referenceCode** を許可する形に縮小し、実際の決済機関 API 連携 (Stripe / GMO 等) は IT9 / Phase 5 に申し送り。本縮小はリスクセクションに明記、本受入基準は「外部 API は IT9 拡張、IT8 は手動入力で確認できる」と読み替える前提。ユーザー合意必須。
@@ -1011,3 +1007,4 @@ apps/cargo-tracker/
 | 2026-06-23 | validating-iteration-plan 検証結果反映 - 14 件不整合解消: 0.13 (TDD 規律)・0.14 (ADR 0020 公開追跡例外)・0.15 (ADR 0019 Payment 集約) 追加、0.12 を IT8 差分まで拡張、US23 2.x に ADR 0019 結果次第の二段構え注記、リスク 3 件追加 | AI Agent |
 | 2026-06-23 | 設計セクションを iteration_plan-7 と同等レベルに拡充 (詳細 PlantUML 全集約図 + 不変条件 8 件 + PaymentStatus 遷移マトリクス + BookingStatus 拡張図 + V23/V24/V25 SQL DDL + 4 画面 salt ワイヤーフレーム + 画面遷移図 + htmx パターン 6 件 + フィードバック 12 件 + ディレクトリツリー + API 12 件 + ADR 7 件) | AI Agent |
 | 2026-06-23 | 拡充後の validating-iteration-plan 検証反映 - 3 件新規不整合解消: S3-4 (Shipper-Cargo 連結を `CorporateShipper` → `Shipper` 修正)、S5-3 (Role 名 5 箇所 `Pricer` → 実装準拠 `Settlement` 修正、0.12 タスクも `Accountant→Settlement` に統一)、S5-4 (0.12 タスクに ui_design.md 画面一覧 + 画面遷移図 両方への Payment 系 4 画面追加を明示) | AI Agent |
+| 2026-06-24 | IT8 Day 1 必須決定完了: ADR 0019 起票 (案 B 採択 = Invoice 集約内 paymentStatus + メソッド拡張、Payment 独立集約は作らない) + ADR 0020 起票 (公開追跡画面例外表示 = 段階的開示、バッジ + 簡易メッセージ + 連絡先のみ公開)。0.14 / 0.15 完了マーク、US23 2.x を案 B 確定版に書き換え (Repository 新設不要、V25 で payment テーブル drop 追加、UI は請求書詳細画面統合)。小計 38h → 39h | AI Agent |

@@ -19,5 +19,7 @@
 | [0013](0013-tracking-number-sequence-numbering.md) | tracking_number 採番を `MAX(id)+1` → `nextval(tracking_activity_id_seq)` に変更（O2 解消、ADR 0010 更新） | 承認 |
 | [0014](0014-aggregate-snapshot-adt.md) | 集約の `reconstruct` / `register` に Snapshot ADT を導入し SonarQube MAJOR Code Smell 4 件を解消 | 承認 |
 | [0015](0015-billing-money-shared-domain.md) | Billing Context の `Money` を削除し `shared.domain.Money` (JPY 単通貨) に一本化、`multiplyByRate` extension を追加 | 承認 |
+| [0019](0019-payment-aggregation-vs-invoice-status.md) | Payment は Invoice 集約内のステータスとして表現する（別集約化しない） | 承認 |
+| [0020](0020-public-tracking-exception-display.md) | 公開追跡画面では例外バッジ + 簡易メッセージ + 連絡先のみ公開、対応詳細は社内画面のみ | 承認 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
