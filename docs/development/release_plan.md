@@ -412,18 +412,24 @@ gantt
 
 **目標 SP**: 12
 
-### イテレーション 8（Week 15-16）
+### イテレーション 8（Week 15-16）✅ 完了 (2026-06-24)
 
 **ゴール**: 法人割引・精算を完成させ Release 2.0 GA をリリースする
 
 **主なタスク**:
 
-- [ ] US22: 法人割引適用（3 SP）
-- [ ] US23: 精算処理（6 SP）
-- [ ] Release 2.0 GA リリース準備
-- [ ] Java 版等価性検証
+- [x] US22: 法人割引適用（3 SP）✅
+- [x] US23: 精算処理（6 SP、受入条件 3 縮小）✅
+- [x] IT7 申し送り 15 件全消化（H1-H12 + T3 + T6 + ADR 0019/0020）✅
+- [x] ADR 5 件起票・承認 (0016 / 0017 / 0018 / 0019 / 0020) ✅
+- [x] Flyway 4 件追加 (V23 / V26 / V27 / V28) ✅
+- [x] BookingPublicApi / MailNotificationPort / HandlingCargoQueryPort 新設 ✅
+- [ ] Release 2.0 GA リリース準備 → コード完成、ステージング/本番デプロイは IT9 申し送り
+- [ ] Java 版等価性検証 → IT9 申し送り
 
-**目標 SP**: 9
+**目標 SP**: 9 / **実績 SP**: 9（達成率 100%）
+
+詳細は [IT8 完了報告書](./iteration_report-8.md) / [IT8 ふりかえり](./retrospective-8.md) 参照。
 
 ### 予備イテレーション 9（Week 17-18）
 
