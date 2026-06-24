@@ -35,6 +35,29 @@ class BillingCommandService @Inject() (
     clock: Clock
 ):
 
+  /** IT8 M1 解消 (programmer): 通知ログ + メール送信のペア呼出を共通化。 各メソッドは独立 try で握り潰しベストエフォート。失敗時の構造化 warn は IT9 で対応。 */
+  private object paymentNotifier:
+    private def safe[A](block: => A): Unit =
+      try
+        block; ()
+      catch case scala.util.control.NonFatal(_) => ()
+
+    def notifyRequested(inv: Invoice, dueDate: String, ref: String): Unit =
+      val (b, i, a) = (inv.cargoBookingId.value, inv.invoiceId.value, inv.finalAmount.amount)
+      safe(bookingPublicApi.logPaymentRequested(b, i, dueDate, ref, a))
+      safe(mailPort.sendPaymentRequested(b, i, dueDate, ref, a))
+
+    def notifyConfirmed(inv: Invoice, paidAt: String): Unit =
+      val (b, i, a) = (inv.cargoBookingId.value, inv.invoiceId.value, inv.finalAmount.amount)
+      safe(bookingPublicApi.logPaymentConfirmed(b, i, paidAt, a))
+      safe(mailPort.sendPaymentConfirmed(b, i, paidAt, a))
+
+    def notifyOverdue(inv: Invoice): Unit =
+      val (b, i, a) = (inv.cargoBookingId.value, inv.invoiceId.value, inv.finalAmount.amount)
+      val due = inv.dueDate.map(_.toString).getOrElse("")
+      safe(bookingPublicApi.logOverdueAlerted(b, i, due, a))
+      safe(mailPort.sendOverdueAlert(b, i, due, a))
+
   def generate(command: GenerateInvoiceCommand): Either[String, Invoice] =
     val bid = BillingBookingId.unsafeFrom(command.bookingId)
     for
@@ -104,21 +127,7 @@ class BillingCommandService @Inject() (
         invoiceRepository.save(updated)
         updated
     yield
-      bookingPublicApi.logPaymentRequested(
-        bookingId = saved.cargoBookingId.value,
-        invoiceNumber = saved.invoiceId.value,
-        dueDate = command.dueDate.toString,
-        paymentReference = command.referenceCode,
-        amount = saved.finalAmount.amount
-      )
-      // IT8 2.9: 荷主向けメール送信 (ベストエフォート)
-      mailPort.sendPaymentRequested(
-        bookingId = saved.cargoBookingId.value,
-        invoiceNumber = saved.invoiceId.value,
-        dueDate = command.dueDate.toString,
-        paymentReference = command.referenceCode,
-        amount = saved.finalAmount.amount
-      )
+      paymentNotifier.notifyRequested(saved, command.dueDate.toString, command.referenceCode)
       saved
 
   /** IT8 US23 (ADR 0019 案 B): Pending / Overdue Invoice に入金確認を反映し、Cargo を Settled に遷移する。
@@ -144,18 +153,7 @@ class BillingCommandService @Inject() (
     yield
       // Cargo の Delivered → Settled 遷移 (失敗しても Invoice 保存は成功扱い、業務優先順)
       bookingPublicApi.markSettled(saved.cargoBookingId.value)
-      bookingPublicApi.logPaymentConfirmed(
-        bookingId = saved.cargoBookingId.value,
-        invoiceNumber = saved.invoiceId.value,
-        paidAt = command.paidAt.toString,
-        amount = saved.finalAmount.amount
-      )
-      mailPort.sendPaymentConfirmed(
-        bookingId = saved.cargoBookingId.value,
-        invoiceNumber = saved.invoiceId.value,
-        paidAt = command.paidAt.toString,
-        amount = saved.finalAmount.amount
-      )
+      paymentNotifier.notifyConfirmed(saved, command.paidAt.toString)
       saved
 
   /** IT8 US23 (ADR 0019 案 B): 期限超過 Invoice を一括で Overdue 化する。
@@ -178,25 +176,7 @@ class BillingCommandService @Inject() (
               invoiceRepository.save(updated)
               true
             catch case scala.util.control.NonFatal(_) => false
-          if saved then
-            // 通知はベストエフォート: 失敗してもバッチ全体は失敗扱いにしない
-            val dueDateStr = updated.dueDate.map(_.toString).getOrElse("")
-            try
-              bookingPublicApi.logOverdueAlerted(
-                bookingId = updated.cargoBookingId.value,
-                invoiceNumber = updated.invoiceId.value,
-                dueDate = dueDateStr,
-                amount = updated.finalAmount.amount
-              )
-            catch case scala.util.control.NonFatal(_) => () // warn ログは IT9 で構造化
-            try
-              mailPort.sendOverdueAlert(
-                bookingId = updated.cargoBookingId.value,
-                invoiceNumber = updated.invoiceId.value,
-                dueDate = dueDateStr,
-                amount = updated.finalAmount.amount
-              )
-            catch case scala.util.control.NonFatal(_) => ()
+          if saved then paymentNotifier.notifyOverdue(updated)
           saved
     }
 
