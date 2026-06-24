@@ -1,0 +1,67 @@
+@(logs: Seq[cargotracker.shared.audit.domain.AuditLog], filter: cargotracker.shared.audit.domain.AuditLogFilter)(implicit request: RequestHeader, flash: Flash, messages: play.api.i18n.Messages)
+@views.html.layout.main("監査ログ") {
+  <h1 class="h3 mb-3">監査ログ (IT9 US30 / MasterAdmin 限定)</h1>
+
+  <form method="GET" action="@cargotracker.shared.audit.interfaces.web.routes.AuditLogController.list()" class="row g-2 mb-3">
+    <div class="col-sm-2">
+      <label class="form-label">期間 (from)</label>
+      <input type="date" name="from" class="form-control" value="@filter.fromOccurredAt.map(_.toString.take(10)).getOrElse("")">
+    </div>
+    <div class="col-sm-2">
+      <label class="form-label">期間 (to)</label>
+      <input type="date" name="to" class="form-control" value="@filter.toOccurredAt.map(_.toString.take(10)).getOrElse("")">
+    </div>
+    <div class="col-sm-2">
+      <label class="form-label">アクター</label>
+      <input type="text" name="operator" class="form-control" value="@filter.operator.getOrElse("")">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">操作種別</label>
+      <select name="action" class="form-select">
+        <option value="">すべて</option>
+        @for(a <- cargotracker.shared.audit.domain.AuditAction.values) {
+          <option value="@a" @if(filter.action.contains(a)){selected}>@a</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-1">
+      <label class="form-label">件数</label>
+      <input type="number" name="limit" class="form-control" min="10" max="500" value="@filter.limit">
+    </div>
+    <div class="col-sm-2 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary w-100">検索</button>
+    </div>
+  </form>
+
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th>日時</th>
+        <th>アクター</th>
+        <th>操作</th>
+        <th>対象</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if(logs.isEmpty) {
+        <tr><td colspan="5" class="text-center text-muted">該当する監査ログはありません</td></tr>
+      }
+      @for(log <- logs) {
+        <tr>
+          <td>@log.occurredAt</td>
+          <td>@log.operator</td>
+          <td><span class="badge bg-secondary">@log.action</span></td>
+          <td>@log.targetType / @log.targetId</td>
+          <td>
+            @log.id.map { id =>
+              <a href="@cargotracker.shared.audit.interfaces.web.routes.AuditLogController.detail(id.value)" class="btn btn-sm btn-outline-primary">詳細</a>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <p class="text-muted small">表示件数: @logs.size / 上限: @filter.limit (max 500)</p>
+}

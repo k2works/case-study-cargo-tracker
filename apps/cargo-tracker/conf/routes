@@ -71,3 +71,7 @@ POST    /billing/invoices/:invoiceId/confirm-payment cargotracker.billing.interf
 # ダッシュボード・ヘルス
 GET     /                       cargotracker.shared.interfaces.web.HomeController.index()
 GET     /health                 cargotracker.shared.interfaces.web.HealthController.health()
+
+# IT9 US30: 監査ログ閲覧 (MasterAdmin 限定)
+GET     /admin/audit-logs       cargotracker.shared.audit.interfaces.web.AuditLogController.list()
+GET     /admin/audit-logs/:id   cargotracker.shared.audit.interfaces.web.AuditLogController.detail(id: Long)
