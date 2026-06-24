@@ -41,6 +41,21 @@
                   <button type="submit" class="btn btn-sm btn-success">対応報告</button>
                 </form>
               }
+              @* IT8 0.7 (H9): 解決済例外の取消し動線 *@
+              @if(ex.isResolved && canManualUpdate) {
+                <form method="POST" action="@cargotracker.tracking.interfaces.web.routes.TrackingController.cancelExceptionResolution(view.trackingNumber, idx)" class="d-inline" onsubmit="return confirm('例外 #@idx の対応を取消しますか？');">
+                  @helper.CSRF.formField
+                  <button type="submit" class="btn btn-sm btn-outline-warning">対応取消し</button>
+                </form>
+              }
+              @* IT8 0.7 (H9): 補足コメント追記動線 (解決済/未解決どちらでも可) *@
+              @if(canManualUpdate) {
+                <form method="POST" action="@cargotracker.tracking.interfaces.web.routes.TrackingController.appendResolutionComment(view.trackingNumber, idx)" class="d-inline mt-1">
+                  @helper.CSRF.formField
+                  <input type="text" name="comment" class="form-control form-control-sm d-inline-block w-auto" placeholder="補足コメント" maxlength="500" required>
+                  <button type="submit" class="btn btn-sm btn-outline-secondary">補足追記</button>
+                </form>
+              }
             </td>
           </tr>
         }

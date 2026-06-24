@@ -261,3 +261,61 @@ class ScalikeJdbcTrackingActivityRepository extends TrackingActivityRepository:
         exceptions = activity.exceptions.updated(index, resolvedException)
       )
     }
+
+  override def clearExceptionResolution(activity: TrackingActivity, index: Int): TrackingActivity =
+    DB.localTx { implicit session =>
+      val trackingId = lockedTrackingId(activity)
+      bumpVersion(activity)
+      val target = activity.exceptions(index)
+      val exceptionId = target.id.getOrElse(
+        throw IllegalStateException(
+          s"TrackingExceptionEvent (tracking_id=$trackingId, index=$index) に id が設定されていません"
+        )
+      )
+      sql"""
+        UPDATE tracking_exception_event
+        SET resolved_at = NULL,
+            resolution_notes = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${exceptionId.value}
+      """.update.apply()
+
+      val cleared = target.copy(resolvedAt = None, resolutionNotes = None)
+      val nextExceptions = activity.exceptions.updated(index, cleared)
+      TrackingActivity.reconstruct(
+        trackingNumber = activity.trackingNumber,
+        bookingId = activity.bookingId,
+        transportStatus = activity.transportStatus,
+        events = activity.events,
+        version = activity.version + 1,
+        exceptions = nextExceptions
+      )
+    }
+
+  override def updateExceptionNotes(activity: TrackingActivity, index: Int, mergedNotes: String): TrackingActivity =
+    DB.localTx { implicit session =>
+      val trackingId = lockedTrackingId(activity)
+      bumpVersion(activity)
+      val target = activity.exceptions(index)
+      val exceptionId = target.id.getOrElse(
+        throw IllegalStateException(
+          s"TrackingExceptionEvent (tracking_id=$trackingId, index=$index) に id が設定されていません"
+        )
+      )
+      sql"""
+        UPDATE tracking_exception_event
+        SET resolution_notes = $mergedNotes,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${exceptionId.value}
+      """.update.apply()
+
+      val updated = target.copy(resolutionNotes = Some(mergedNotes))
+      TrackingActivity.reconstruct(
+        trackingNumber = activity.trackingNumber,
+        bookingId = activity.bookingId,
+        transportStatus = activity.transportStatus,
+        events = activity.events,
+        version = activity.version + 1,
+        exceptions = activity.exceptions.updated(index, updated)
+      )
+    }

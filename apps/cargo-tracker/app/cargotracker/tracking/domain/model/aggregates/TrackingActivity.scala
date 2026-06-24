@@ -59,6 +59,35 @@ final case class TrackingActivity private (
       val nextExceptions = exceptions.updated(index, resolved)
       Right(copy(exceptions = nextExceptions, transportStatus = TrackingActivity.deriveStatus(events, nextExceptions)))
 
+  /** 解決済例外の対応を取消す (IT8 0.7 / H9): resolvedAt と resolutionNotes をクリアし、再対応待ち状態に戻す。
+    *
+    *   - 未解決例外 (resolvedAt が None) に対しては `NotResolved` を返す
+    */
+  def cancelExceptionResolution(index: Int): Either[TrackingActivity.Error, TrackingActivity] =
+    if index < 0 || index >= exceptions.size then Left(TrackingActivity.ExceptionNotFound)
+    else if exceptions(index).isActive then Left(TrackingActivity.NotResolved)
+    else
+      val reverted = exceptions(index).copy(resolvedAt = None, resolutionNotes = None)
+      val nextExceptions = exceptions.updated(index, reverted)
+      Right(copy(exceptions = nextExceptions, transportStatus = TrackingActivity.deriveStatus(events, nextExceptions)))
+
+  /** 例外に補足コメントを追記する (IT8 0.7 / H9): 既存 resolutionNotes に改行区切りで追記する。
+    *
+    *   - 解決済 / 未解決のいずれにも追記可能
+    *   - 空文字コメントは `EmptyComment` を返す
+    */
+  def appendExceptionComment(index: Int, comment: String): Either[TrackingActivity.Error, TrackingActivity] =
+    if index < 0 || index >= exceptions.size then Left(TrackingActivity.ExceptionNotFound)
+    else if comment.trim.isEmpty then Left(TrackingActivity.EmptyComment)
+    else
+      val current = exceptions(index)
+      val merged = current.resolutionNotes match
+        case Some(existing) if existing.nonEmpty => s"$existing\n---\n$comment"
+        case _ => comment
+      val updated = current.copy(resolutionNotes = Some(merged))
+      val nextExceptions = exceptions.updated(index, updated)
+      Right(copy(exceptions = nextExceptions))
+
   /** アクティブな例外があるか。 */
   def hasActiveException: Boolean = exceptions.exists(_.isActive)
 
@@ -71,6 +100,8 @@ object TrackingActivity:
   case object EmptyBookingId extends Error
   case object OutOfOrder extends Error
   case object ExceptionNotFound extends Error
+  case object NotResolved extends Error
+  case object EmptyComment extends Error
 
   def issue(trackingNumber: TrackingNumber, bookingId: String): Either[Error, TrackingActivity] =
     TrackingBookingId(bookingId).left

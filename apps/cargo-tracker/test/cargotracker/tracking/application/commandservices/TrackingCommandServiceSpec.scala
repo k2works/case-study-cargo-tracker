@@ -65,6 +65,30 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVa
     ): TrackingActivity =
       val current = store(activity.bookingId.value)
       val updated = current.resolveException(index, resolvedAt, resolutionNotes).value
+      bumpAndStore(updated)
+    override def clearExceptionResolution(activity: TrackingActivity, index: Int): TrackingActivity =
+      val current = store(activity.bookingId.value)
+      val updated = current.cancelExceptionResolution(index).value
+      bumpAndStore(updated)
+    override def updateExceptionNotes(
+        activity: TrackingActivity,
+        index: Int,
+        mergedNotes: String
+    ): TrackingActivity =
+      val current = store(activity.bookingId.value)
+      val target = current.exceptions(index)
+      val nextExceptions = current.exceptions.updated(index, target.copy(resolutionNotes = Some(mergedNotes)))
+      bumpAndStore(
+        TrackingActivity.reconstruct(
+          trackingNumber = current.trackingNumber,
+          bookingId = current.bookingId,
+          transportStatus = current.transportStatus,
+          events = current.events,
+          version = current.version,
+          exceptions = nextExceptions
+        )
+      )
+    private def bumpAndStore(updated: TrackingActivity): TrackingActivity =
       val withNewVersion = TrackingActivity.reconstruct(
         trackingNumber = updated.trackingNumber,
         bookingId = updated.bookingId,
@@ -73,7 +97,7 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVa
         version = updated.version + 1,
         exceptions = updated.exceptions
       )
-      store(activity.bookingId.value) = withNewVersion
+      store(updated.bookingId.value) = withNewVersion
       withNewVersion
 
   test("assign: 新規予約に対して採番し TrackingActivity を初期化（NotReceived）"):
@@ -190,6 +214,80 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVa
     resolved.hasActiveException shouldBe false
     resolved.exceptions.head.resolutionNotes shouldBe Some("対応完了")
 
+  // IT8 0.7 (H9): 対応取消し + 補足コメント追記
+
+  test("cancelExceptionResolution: 解決済例外を取消すと未解決状態に戻る (IT8 0.7 / H9)"):
+    val svc = new TrackingCommandService(new InMemoryRepo)
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-CXL01")).value
+    svc.recordException(
+      RecordExceptionCommand(
+        ta.trackingNumber.value,
+        cargotracker.tracking.domain.model.enums.ExceptionType.Delay,
+        "JPTYO",
+        java.time.Instant.parse("2026-09-20T10:00:00Z"),
+        Some("通関遅延")
+      )
+    )
+    svc.resolveException(
+      ResolveExceptionCommand(ta.trackingNumber.value, 0, java.time.Instant.parse("2026-09-20T12:00:00Z"), "解決")
+    )
+    val cancelled = svc.cancelExceptionResolution(CancelExceptionResolutionCommand(ta.trackingNumber.value, 0)).value
+    cancelled.exceptions.head.resolvedAt shouldBe None
+    cancelled.exceptions.head.resolutionNotes shouldBe None
+    cancelled.hasActiveException shouldBe true
+
+  test("cancelExceptionResolution: 未解決例外への取消しは Left (IT8 0.7 / H9)"):
+    val svc = new TrackingCommandService(new InMemoryRepo)
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-CXL02")).value
+    svc.recordException(
+      RecordExceptionCommand(
+        ta.trackingNumber.value,
+        cargotracker.tracking.domain.model.enums.ExceptionType.Delay,
+        "JPTYO",
+        java.time.Instant.parse("2026-09-20T10:00:00Z"),
+        None
+      )
+    )
+    val msg = svc.cancelExceptionResolution(CancelExceptionResolutionCommand(ta.trackingNumber.value, 0)).left.value
+    msg should include("解決されていません")
+
+  test("appendResolutionComment: コメントを追記すると resolutionNotes に改行区切りで連結される (IT8 0.7 / H9)"):
+    val svc = new TrackingCommandService(new InMemoryRepo)
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-CMT01")).value
+    svc.recordException(
+      RecordExceptionCommand(
+        ta.trackingNumber.value,
+        cargotracker.tracking.domain.model.enums.ExceptionType.Damage,
+        "USNYC",
+        java.time.Instant.parse("2026-09-20T10:00:00Z"),
+        Some("初期報告")
+      )
+    )
+    svc.resolveException(
+      ResolveExceptionCommand(ta.trackingNumber.value, 0, java.time.Instant.parse("2026-09-20T12:00:00Z"), "補償交渉中")
+    )
+    val updated = svc
+      .appendResolutionComment(AppendResolutionCommentCommand(ta.trackingNumber.value, 0, "補償申請受領"))
+      .value
+    updated.exceptions.head.resolutionNotes.get should include("補償交渉中")
+    updated.exceptions.head.resolutionNotes.get should include("補償申請受領")
+    updated.exceptions.head.resolutionNotes.get should include("---") // 区切り
+
+  test("appendResolutionComment: 空コメントは Left (IT8 0.7 / H9)"):
+    val svc = new TrackingCommandService(new InMemoryRepo)
+    val ta = svc.assign(AssignTrackingNumberCommand("BK-CMT02")).value
+    svc.recordException(
+      RecordExceptionCommand(
+        ta.trackingNumber.value,
+        cargotracker.tracking.domain.model.enums.ExceptionType.Delay,
+        "JPTYO",
+        java.time.Instant.parse("2026-09-20T10:00:00Z"),
+        None
+      )
+    )
+    val msg = svc.appendResolutionComment(AppendResolutionCommentCommand(ta.trackingNumber.value, 0, "   ")).left.value
+    msg should include("必須")
+
   test("resolveException: 範囲外 index は Left"):
     val repo = new InMemoryRepo
     val svc = new TrackingCommandService(repo)
@@ -227,6 +325,10 @@ class TrackingCommandServiceSpec extends AnyFunSuite with Matchers with EitherVa
           resolvedAt: java.time.Instant,
           resolutionNotes: String
       ): TrackingActivity =
+        throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
+      override def clearExceptionResolution(a: TrackingActivity, index: Int): TrackingActivity =
+        throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
+      override def updateExceptionNotes(a: TrackingActivity, index: Int, mergedNotes: String): TrackingActivity =
         throw cargotracker.shared.domain.OptimisticLockException("TrackingActivity", a.trackingNumber.value)
     )
     val ta = svc.assign(AssignTrackingNumberCommand("BK-UPD002")).value

@@ -119,6 +119,39 @@ class TrackingCommandService @Inject() (repository: TrackingActivityRepository):
         repository.updateExceptionResolution(updated, command.index, command.resolvedAt, command.resolutionNotes)
     yield result
 
+  /** 例外対応を取消す (IT8 0.7 / H9): resolvedAt / resolutionNotes をクリアし、再対応待ち状態に戻す。 */
+  def cancelExceptionResolution(command: CancelExceptionResolutionCommand): Either[String, TrackingActivity] =
+    for
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      activity <- repository
+        .findByTrackingNumber(tn)
+        .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
+      updated <- activity.cancelExceptionResolution(command.index).left.map {
+        case TrackingActivity.ExceptionNotFound => s"指定された例外 (#${command.index}) が見つかりません"
+        case TrackingActivity.NotResolved => s"指定された例外 (#${command.index}) はまだ解決されていません"
+        case _ => "例外対応の取消しに失敗しました"
+      }
+      result <- withOptimisticLock("例外対応取消し"):
+        repository.clearExceptionResolution(updated, command.index)
+    yield result
+
+  /** 例外に補足コメントを追記する (IT8 0.7 / H9): 既存 resolutionNotes に改行区切りで追記する。 */
+  def appendResolutionComment(command: AppendResolutionCommentCommand): Either[String, TrackingActivity] =
+    for
+      tn <- TrackingNumber(command.trackingNumber).left.map(_ => "追跡番号の形式が不正です")
+      activity <- repository
+        .findByTrackingNumber(tn)
+        .toRight(s"追跡番号 ${command.trackingNumber} が見つかりません")
+      updated <- activity.appendExceptionComment(command.index, command.comment).left.map {
+        case TrackingActivity.ExceptionNotFound => s"指定された例外 (#${command.index}) が見つかりません"
+        case TrackingActivity.EmptyComment => "補足コメントは必須です"
+        case _ => "補足コメントの追記に失敗しました"
+      }
+      mergedNotes = updated.exceptions(command.index).resolutionNotes.getOrElse("")
+      result <- withOptimisticLock("補足コメント追記"):
+        repository.updateExceptionNotes(updated, command.index, mergedNotes)
+    yield result
+
 object TrackingCommandService:
   private[commandservices] def eventTypeFor(status: TrackingStatus): Either[String, String] =
     status match
@@ -156,6 +189,12 @@ final case class ResolveExceptionCommand(
     resolvedAt: Instant,
     resolutionNotes: String
 )
+
+/** 追跡例外対応取消しコマンド (IT8 0.7 / H9)。 */
+final case class CancelExceptionResolutionCommand(trackingNumber: String, index: Int)
+
+/** 追跡例外への補足コメント追記コマンド (IT8 0.7 / H9)。 */
+final case class AppendResolutionCommentCommand(trackingNumber: String, index: Int, comment: String)
 
 /** 追跡イベント記録コマンド（US15）。 */
 final case class RecordTrackingEventCommand(

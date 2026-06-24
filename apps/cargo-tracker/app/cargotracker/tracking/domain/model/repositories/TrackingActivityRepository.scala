@@ -37,3 +37,9 @@ trait TrackingActivityRepository:
       resolvedAt: java.time.Instant,
       resolutionNotes: String
   ): TrackingActivity
+
+  /** 指定 index の例外対応を取消す (IT8 0.7 / H9): resolved_at / resolution_notes を NULL に戻す。 */
+  def clearExceptionResolution(activity: TrackingActivity, index: Int): TrackingActivity
+
+  /** 指定 index の例外に補足コメントを追記する (IT8 0.7 / H9): resolution_notes を更新する。 */
+  def updateExceptionNotes(activity: TrackingActivity, index: Int, mergedNotes: String): TrackingActivity

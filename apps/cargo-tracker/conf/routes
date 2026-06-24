@@ -46,6 +46,8 @@ GET     /tracking/:trackingNumber/timeline cargotracker.tracking.interfaces.web.
 POST    /tracking/:trackingNumber/update-status cargotracker.tracking.interfaces.web.TrackingController.updateStatus(trackingNumber: String)
 POST    /tracking/:trackingNumber/exceptions cargotracker.tracking.interfaces.web.TrackingController.recordException(trackingNumber: String)
 POST    /tracking/:trackingNumber/exceptions/:index/resolve cargotracker.tracking.interfaces.web.TrackingController.resolveException(trackingNumber: String, index: Int)
+POST    /tracking/:trackingNumber/exceptions/:index/cancel cargotracker.tracking.interfaces.web.TrackingController.cancelExceptionResolution(trackingNumber: String, index: Int)
+POST    /tracking/:trackingNumber/exceptions/:index/comments cargotracker.tracking.interfaces.web.TrackingController.appendResolutionComment(trackingNumber: String, index: Int)
 
 # 公開追跡照会（US18 / 未認証）
 GET     /public/tracking/:trackingNumber  cargotracker.tracking.interfaces.web.PublicTrackingController.detail(trackingNumber: String)

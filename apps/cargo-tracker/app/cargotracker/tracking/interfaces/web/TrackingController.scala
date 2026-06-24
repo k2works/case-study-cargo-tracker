@@ -4,6 +4,8 @@ import cargotracker.auth.domain.model.valueobjects.Role
 import cargotracker.auth.interfaces.web.AuthenticatedAction
 import cargotracker.booking.application.commandservices.BookingCommandService
 import cargotracker.tracking.application.commandservices.{
+  AppendResolutionCommentCommand,
+  CancelExceptionResolutionCommand,
   RecordExceptionCommand,
   ResolveExceptionCommand,
   TrackingCommandService,
@@ -61,6 +63,12 @@ class TrackingController @Inject() (
     mapping(
       "resolutionNotes" -> nonEmptyText(minLength = 1, maxLength = 500)
     )(ResolveExceptionFormData.apply)(d => Some(d.resolutionNotes))
+  )
+
+  private val appendCommentForm: Form[AppendCommentFormData] = Form(
+    mapping(
+      "comment" -> nonEmptyText(minLength = 1, maxLength = 500)
+    )(AppendCommentFormData.apply)(d => Some(d.comment))
   )
 
   /** 追跡番号入力フォーム。 */
@@ -213,6 +221,38 @@ class TrackingController @Inject() (
         )
   }
 
+  /** 例外対応取消し (IT8 0.7 / H9): 解決済例外の resolved 状態を取消し、再対応待ち状態に戻す。 */
+  def cancelExceptionResolution(trackingNumber: String, index: Int): Action[AnyContent] = authenticated {
+    implicit request =>
+      val detailRoute = routes.TrackingController.detail(trackingNumber)
+      if !request.roles.exists(ManualUpdateAllowedRoles.contains) then
+        Redirect(detailRoute).flashing("error" -> "対応取消しの権限がありません")
+      else
+        commandService.cancelExceptionResolution(CancelExceptionResolutionCommand(trackingNumber, index)) match
+          case Right(_) => Redirect(detailRoute).flashing("success" -> s"例外 (#$index) の対応を取消しました")
+          case Left(msg) => Redirect(detailRoute).flashing("error" -> msg)
+  }
+
+  /** 例外への補足コメント追記 (IT8 0.7 / H9)。 */
+  def appendResolutionComment(trackingNumber: String, index: Int): Action[AnyContent] = authenticated {
+    implicit request =>
+      val detailRoute = routes.TrackingController.detail(trackingNumber)
+      if !request.roles.exists(ManualUpdateAllowedRoles.contains) then
+        Redirect(detailRoute).flashing("error" -> "補足コメント追記の権限がありません")
+      else
+        appendCommentForm
+          .bindFromRequest()
+          .fold(
+            _ => Redirect(detailRoute).flashing("error" -> "補足コメントは必須です（最大 500 文字）"),
+            data =>
+              commandService.appendResolutionComment(
+                AppendResolutionCommentCommand(trackingNumber, index, data.comment)
+              ) match
+                case Right(_) => Redirect(detailRoute).flashing("success" -> s"例外 (#$index) に補足コメントを追記しました")
+                case Left(msg) => Redirect(detailRoute).flashing("error" -> msg)
+          )
+  }
+
 /** 状態手動更新フォームデータ（IT7 0.13 で `reason` 追加）。 */
 final case class ManualStatusUpdateFormData(
     status: String,
@@ -249,3 +289,6 @@ object DelayResponsePlan:
 
 /** 追跡例外対応報告フォームデータ（IT7 US19/US20）。 */
 final case class ResolveExceptionFormData(resolutionNotes: String)
+
+/** 追跡例外への補足コメント追記フォームデータ (IT8 0.7 / H9)。 */
+final case class AppendCommentFormData(comment: String)
