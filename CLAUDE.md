@@ -217,6 +217,35 @@ Red→Green サイクル: InvoiceSpec.markOverdue の 3 ケース (期日内 Lef
 - **リファクタリングコミット**: 既存テストが Green の状態でテストを変更せずコードのみ整理する場合は Red→Green 表記は不要 (`refactor: ...` プレフィックスを使う)
 - **ドキュメント / 設定変更**: テストが存在しない領域は対象外
 
+## Flyway Migration 番号採番ルール
+
+IT8 マルチパースペクティブレビュー M2 (architect) で「Flyway 番号予約ポリシー明文化」が指摘された。以下を採番規律とする。
+
+### 原則
+
+- **新規 migration は `ls apps/cargo-tracker/conf/db/migration/default/` で確認した既存 max 番号 + 1** を使う
+- **計画ドキュメント (iteration_plan-N.md) で V25 等を予約していても、実装時点で既により大きい番号が存在する場合は実装側を優先**して採番する
+- Flyway のデフォルト動作 (Out-Of-Order 不許可) を尊重し、後追い番号は使わない
+
+### 計画と実装の番号乖離が発生した場合
+
+- iteration_plan-N.md の完了マークに **「計画 V25 → 実装 V28」のように両方記載**して追跡性を維持
+- 1 つの iteration 内で複数 migration を作る場合は連番で確保 (作成順 = 実行順)
+
+### 例 (IT8 実績)
+
+| 計画 | 実装 | 理由 |
+| :--- | :--- | :--- |
+| V23 (invoice 拡張) | V23 | 計画通り |
+| V24 (notification_log CHECK) | V27 | V26 (LossEscalated rename) を先行作成済のため後ろにシフト |
+| V25 (payment drop) | V28 | V26 / V27 先行作成済のため後ろにシフト |
+
+### 確認コマンド
+
+```bash
+ls apps/cargo-tracker/conf/db/migration/default/ | grep -oE "V[0-9]+" | sort -V | tail -1
+```
+
 ## 開発手法・品質保証・その他詳細
 
 開発手法（TDD サイクル、変更管理、コミット規律、リファクタリングルール、実装アプローチ）、品質保証（設計原則、冗長性の排除、ハードコーディング禁止、エラーハンドリング）の詳細は `ai-agent-guidelines` スキルを参照してください。
