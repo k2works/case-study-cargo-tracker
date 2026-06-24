@@ -11,7 +11,7 @@ enum NotificationType:
   case ManualStatusUpdated // 手動状態更新通知（US17 / IT6）
   case DelayNotified // 遅延通知（US19 / IT7）
   case DamageReported // 破損通知（US20 / IT7）
-  case LossEscalated // 紛失 + 管理職エスカレーション通知（US20 / IT7）
+  case LostEscalated // 紛失 + 管理職エスカレーション通知（US20 / IT7）
   case ExceptionResponded // 例外対応報告通知（US19 / US20 / IT7）
 
 object NotificationType:

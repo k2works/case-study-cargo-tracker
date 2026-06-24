@@ -759,7 +759,7 @@ TrackingExceptionEvent *-- TrackingLocation
 
 1. 追跡活動は必ず一意の TrackingNumber を持つ
 2. TrackingActivityEvent は時系列順で管理される。イベントごとに位置と時刻が必須。`addEvent` は最終イベントより過去の時刻を拒否する
-3. ExceptionType が Lost の場合、`escalationFlag` を `true` に設定し上位管理者へエスカレーションする（US20）
+3. ExceptionType が Lost の場合、`escalationFlag` を `true` に設定し上位管理者へエスカレーションする（US20）。Booking 側の通知は `NotificationType.LostEscalated` / `BookingCommandService.escalateLost` として表現する（**ユビキタス言語注記**: `Lost` を「紛失状態」「紛失事象」両方の意味で統一使用し、`Loss` は用いない。IT7 H2 / IT8 0.2 / Flyway V26 で統一済）
 4. CustomsHold 例外は税関システム（CustomsClearancePort）からの通知によって自動登録される
 5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する（`currentStatus()` の導出ロジックで自然に実現される）
 

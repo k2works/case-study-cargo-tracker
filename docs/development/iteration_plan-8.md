@@ -84,7 +84,7 @@
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
 | 0.1 | 楽観ロック try/catch を `withOptimisticLock[A](label)` ヘルパに抽出（H1 / TrackingCommandService 3 箇所 + 他コマンドサービス候補） | 3h | [x] **完了** (2026-06-24): `shared.application.OptimisticLockOps.withOptimisticLock` 新設 + TrackingCommandService 3 箇所 (updateStatus / recordException / resolveException) 置換、Unit 5 件 Green、既存 10 件 Regression なし |
-| 0.2 | ExceptionType.Lost / NotificationType.LossEscalated / escalateLoss の命名統一（H2、ユビキタス言語注記 or 改名） | 2h | [ ] |
+| 0.2 | ExceptionType.Lost / NotificationType.LossEscalated / escalateLoss の命名統一（H2、ユビキタス言語注記 or 改名） | 2h | [x] **完了** (2026-06-24): 改名採択 = `LossEscalated` → `LostEscalated` / `escalateLoss` → `escalateLost` (NotificationType / NotificationPayload / NotificationPayloadJson / BookingCommandService / TrackingController 計 5 ファイル)、Flyway V26 で CHECK 制約更新 + 既存データ UPDATE、domain-model.md にユビキタス言語注記追加、Unit 51 件 Regression なし |
 | 0.3 | ADR 0017 起票「Booking 公開 Port (BookingPublicApi) を切る」+ `BookingPublicApi` trait 新設、`BookingAdapter` を Port 経由に変更（H3） | 5h | [ ] |
 | 0.4 | ADR 0016 起票「HandlingOrchestrator のトランザクション境界（単一 DB.localTx vs Outbox/Domain Events）」+ 採用方針決定（H4 / T2） | 4h | [ ] |
 | 0.5 | Flyway V23: `tracking_exception_event` に `id BIGINT AUTO_INCREMENT PK` 追加 + `TrackingExceptionEvent` に `id: Option[Long]` を追加、`updateExceptionResolution` を PK 直接更新に変更（H5 / T8） | 4h | [ ] |

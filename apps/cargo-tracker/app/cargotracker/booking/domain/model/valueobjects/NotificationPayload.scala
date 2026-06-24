@@ -82,7 +82,7 @@ object NotificationPayload:
   ) extends NotificationPayload
 
   /** 紛失エスカレーション通知ペイロード（US20 / IT7、管理職向け）。 */
-  final case class LossEscalated(
+  final case class LostEscalated(
       bookingId: String,
       trackingNumber: String,
       location: String,

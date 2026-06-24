@@ -143,7 +143,7 @@ class TrackingController @Inject() (
                   RecordExceptionCommand(trackingNumber, et, data.locationUnLocode, occurredInstant, data.description)
                 ) match
                   case Right(activity) =>
-                    // 通知ログ: Delay→DelayNotified、Damage→DamageReported、Lost→LossEscalated
+                    // 通知ログ: Delay→DelayNotified、Damage→DamageReported、Lost→LostEscalated
                     et match
                       case ExceptionType.Delay =>
                         bookingCommandService.logDelayNotification(
@@ -161,7 +161,7 @@ class TrackingController @Inject() (
                           data.description.getOrElse("")
                         )
                       case ExceptionType.Lost =>
-                        bookingCommandService.escalateLoss(
+                        bookingCommandService.escalateLost(
                           activity.bookingId.value,
                           trackingNumber,
                           data.locationUnLocode,

@@ -74,7 +74,7 @@ object NotificationPayloadJson:
         "location" -> p.location,
         "description" -> p.description
       )
-    case p: NotificationPayload.LossEscalated =>
+    case p: NotificationPayload.LostEscalated =>
       Json.obj(
         "bookingId" -> p.bookingId,
         "trackingNumber" -> p.trackingNumber,

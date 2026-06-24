@@ -222,7 +222,7 @@ class BookingCommandService @Inject() (
     }
 
   /** 紛失エスカレーション通知ログを記録（US20 / IT7、管理職向け）。 */
-  def escalateLoss(
+  def escalateLost(
       bookingId: String,
       trackingNumber: String,
       location: String,
@@ -231,8 +231,8 @@ class BookingCommandService @Inject() (
     findCargo(bookingId).map { cargo =>
       logNotification(
         cargo,
-        NotificationType.LossEscalated,
-        NotificationPayload.LossEscalated(cargo.bookingId.value, trackingNumber, location, description)
+        NotificationType.LostEscalated,
+        NotificationPayload.LostEscalated(cargo.bookingId.value, trackingNumber, location, description)
       )
     }
 
