@@ -22,7 +22,7 @@
 | IT6（2026-08-31 〜 2026-09-13） | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | ✅ 完了（12/12 SP / US16 + US17 + US21 + IT5 申し送り 7/10 件、Billing Context 新設、Unit 261 + Playwright E2E 36/36 PASS、Release 1.0 MVP 機能完了） |
 | IT7（2026-09-14 〜 2026-09-27） | [iteration_plan-7.md](./iteration_plan-7.md) | [retrospective-7.md](./retrospective-7.md) | [iteration_report-7.md](./iteration_report-7.md) | ✅ 完了（12/12 SP / US19 + US20 + IT6 申し送り 16/16 件、Flyway V18-V22 + ADR 0014/0015 承認、Unit 371 件、Phase 4 着手） |
 | IT8（2026-09-28 〜 2026-10-11） | [iteration_plan-8.md](./iteration_plan-8.md) | [retrospective-8.md](./retrospective-8.md) | [iteration_report-8.md](./iteration_report-8.md) | ✅ 完了（9/9 SP / US22 + US23 + IT7 申し送り 15/15 件、ADR 0016-0020 承認、Flyway V23/V26/V27/V28、Unit +37 件、Phase 4 完了、Release 2.0 GA コード到達） |
-| IT9（2026-10-12 〜 2026-10-25） | [iteration_plan-9.md](./iteration_plan-9.md) | - | - | 🚧 計画策定済（13 SP / US27 GA 公開 + US28 法人 Shipper UI + US29 CSV 取込 + US30 監査ログ + IT8 申し送り 14 件解消） |
+| IT9（2026-10-12 〜 2026-10-25） | [iteration_plan-9.md](./iteration_plan-9.md) | [retrospective-9.md](./retrospective-9.md) | [iteration_report-9.md](./iteration_report-9.md) | ✅ 完了 (11/13 SP、US27 実 deploy は user 待ち / ADR 0021 + Flyway V29/V30 + TransactionBoundary + OverdueScheduler + AuditLog + Refund + CSV 取込 + 法人 Shipper UI + IT8 申し送り 8 件解消) |
 
 ### 進捗サマリー
 
@@ -36,7 +36,8 @@
 | IT6 | 12 | 12 | 100% |
 | IT7 | 12 | 12 | 100% |
 | IT8 | 9 | 9 | 100% |
-| **累計** | **90** | **90** | **100%** |
+| IT9 | 13 | 11 | 85% (US27 実 deploy は user 待ち) |
+| **累計** | **104** | **102** | **98%** |
 
 ### フェーズ進捗
 
