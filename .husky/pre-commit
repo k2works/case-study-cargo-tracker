@@ -1,1 +1,17 @@
 npx lint-staged
+
+# IT9 0.4 (T11/R7): pre-commit でフルテスト実行
+# IT8 commit 6fe0b22c で ArchUnit ADR 0017 整合違反がスコープ限定テストでは検出できなかった教訓。
+# SKIP_FULL_TEST=1 環境変数で skip 可能 (急ぎの WIP commit / docs-only commit 用、CI で必ず実行されるため)。
+if [ -z "$SKIP_FULL_TEST" ]; then
+  # Scala / sbt / conf 変更が含まれるコミットのみフルテストを実行 (docs-only commit はスキップ)
+  if git diff --cached --name-only | grep -qE '\.(scala|sbt)$|conf/(routes|application\.conf|db/)'; then
+    echo "🧪 Running sbt test (full)... (SKIP_FULL_TEST=1 を設定で skip 可)"
+    (cd apps/cargo-tracker && sbt -batch test) || {
+      echo "❌ sbt test failed. Fix tests or set SKIP_FULL_TEST=1 if you intend to commit anyway."
+      exit 1
+    }
+  else
+    echo "📝 No Scala/config changes staged; skipping fullTest (docs-only commit)."
+  fi
+fi

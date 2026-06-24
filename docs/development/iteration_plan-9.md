@@ -105,7 +105,7 @@
 | 0.1 | **ADR 0016 案 A 実装** (H1/R1): 各 Repository を `(implicit DBSession)` 受取に拡張、HandlingOrchestrator に単一 `DB.localTx` 境界導入、ステップ 2 失敗時の rollback 検証 IntegrationSpec 追加 | 8h | [ ] |
 | 0.2 | **MailNotificationPort 実装切替** (T5): LoggingMailNotificationAdapter → PekkoMailNotificationAdapter or AwsSesMailNotificationAdapter、application.conf に SMTP/SES 設定、IT 1 件追加 | 5h | [ ] |
 | 0.3 | **detectOverdue Cron 連携** (T8): Pekko Scheduler で日次 02:00 JST 起動、`Scheduler` ジョブ起動失敗時のリトライ + ログ、application.conf でジョブ ON/OFF 切替 | 4h | [ ] |
-| 0.4 | **pre-commit hook でフルテスト** (T11/R7): `.husky/pre-commit` に `sbt test` 追加、ローカル実行時間 2-3 分の許容、CI 同等化 | 2h | [ ] |
+| 0.4 | **pre-commit hook でフルテスト** (T11/R7): `.husky/pre-commit` に `sbt test` 追加、ローカル実行時間 2-3 分の許容、CI 同等化 | 2h | [x] **完了** (2026-06-25): `.husky/pre-commit` に sbt test 実行追加。`SKIP_FULL_TEST=1` 環境変数で skip 可能。Scala/sbt/conf 変更が含まれる commit のみ実行 (docs-only commit はスキップで開発体験維持)。IT8 6fe0b22c の教訓を反映 |
 | 0.5 | **ADR ↔ ArchUnit 整合チェックリスト** (T12/R8): CLAUDE.md に「ADR 起票時の ArchUnit 影響確認 5 項目」追記、新規 Port 配置 + ルール 3 影響確認の運用化 | 1h | [x] **完了** (2026-06-25): CLAUDE.md に「ADR ↔ ArchUnit 整合チェックリスト」セクション追加 (起票時 5 項目チェック + 例外規定) |
 | 0.6 | **公開 Port vs 入力 Port 規約 ADR 化** (H6/R3): ADR 0021 起票「Port パターン規約: 入力 Port は自 Context domain、公開 Port は自 Context application.api」+ ArchUnit ルール 6 追加（`*.application.api` への外部依存は許可、`*.application.commandservices` への外部依存は禁止） | 4h | [x] **ADR 起票完了** (2026-06-25): ADR 0021 起票・承認 (3 種類の Port 配置規約 + ArchUnit ルール 6 仕様)。**ルール 6 の HexagonalArchitectureSpec 実装は次タスクで対応** |
 | 0.7 | **ScalikeJdbcInvoiceRepositoryIT 拡張** (T4/R6): Testcontainers PostgreSQL 起動 + due_date / payment_reference 永続化テスト + due_date での検索テスト 3 件 | 4h | [ ] |
