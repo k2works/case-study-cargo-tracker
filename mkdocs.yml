@@ -156,6 +156,7 @@ nav:
       - 0018 MailNotificationPort: adr/0018-mail-notification-port.md
       - 0019 Payment 集約方針: adr/0019-payment-aggregation-vs-invoice-status.md
       - 0020 公開追跡例外表示: adr/0020-public-tracking-exception-display.md
+      - 0021 Port パターン規約: adr/0021-port-pattern-convention.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

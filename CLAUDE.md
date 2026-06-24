@@ -246,6 +246,23 @@ IT8 マルチパースペクティブレビュー M2 (architect) で「Flyway �
 ls apps/cargo-tracker/conf/db/migration/default/ | grep -oE "V[0-9]+" | sort -V | tail -1
 ```
 
+## ADR ↔ ArchUnit 整合チェックリスト (ADR 起票時必須、IT8 教訓 R8 / T12 解消)
+
+IT8 で ADR 0017 (BookingPublicApi 公開 Port) を導入した際、ArchUnit ルール 3 と整合せず、最終 fullTest で初検出された (commit 6fe0b22c)。再発防止のため、新規 ADR 起票時は以下を必ず確認する。
+
+### 起票時 5 項目チェック
+
+1. **新 Port のパッケージ配置**: ADR 0021 (Port パターン規約) に照らして、公開 Port = `application.api`、入力 Port = `domain.model.ports` / `domain.model.repositories`、出力 Port = `domain.model.ports` のどれに該当するか明示する
+2. **他 Context からの依存有無**: 他 Context が新 Port に依存する設計か (= 公開 Port)、自 Context 内のみか (= 入力/出力 Port) を ADR 本文に明示
+3. **ArchUnit ルール 3 影響**: 公開 Port を新設する場合、ルール 3 の禁止対象から `application.api` が除外されているか確認 (IT8 6fe0b22c で対応済)
+4. **ArchUnit ルール 6 影響**: 入力/出力 Port を新設する場合、自 Context 内のみアクセス可能であることをルール 6 が強制しているか確認
+5. **fullTest 実行**: ADR 実装 PR では必ず `sbt test` (フル) を実行し、ArchUnit Suite 5 件含む全 Suite Green を確認
+
+### 例外規定
+
+- 既存 Port の **配置変更を伴わない** ADR (例: 採用フレームワーク変更 / 採番ルール変更) は本チェックリスト対象外
+- shared kernel (`shared.*`) は全 Context からアクセス可能、本チェックリスト対象外
+
 ## 開発手法・品質保証・その他詳細
 
 開発手法（TDD サイクル、変更管理、コミット規律、リファクタリングルール、実装アプローチ）、品質保証（設計原則、冗長性の排除、ハードコーディング禁止、エラーハンドリング）の詳細は `ai-agent-guidelines` スキルを参照してください。

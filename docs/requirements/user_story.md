@@ -585,6 +585,93 @@ date: 2026-04-04T00:00:00.000Z
 | US21, US22 | UC17 | BUC18, BUC19 | 精算業務の正確化 |
 | US23 | UC18 | BUC20 | 精算業務の正確化 |
 | US24, US25 | UC19 | BUC21 | 経路候補算出の精度向上 |
+| US27 | (運用) | - | Release 2.0 GA 本番公開 (IT9) |
+| US28 | UC02 拡張 | BUC03 | 法人 Shipper の UI 登録による US22 法人割引適用基盤 (IT9) |
+| US29 | UC18 拡張 | BUC20 | 入金消込 CSV 取込で経理オペレーション効率化 (IT9、Stripe/GMO 連携までのブリッジ) |
+| US30 | (運用) | - | 監査ログによる ISO 27001 監査対応 (IT9) |
+
+---
+
+## US27: Release 2.0 GA を本番公開する
+
+**として**: 開発チーム
+
+**したい**: Phase 4 で実装した法人割引 + 精算機能を本番環境に正式公開したい
+
+**なぜなら**: 顧客に Release 2.0 GA 機能を提供し、ビジネス価値を実現するためだ
+
+**対応 UC**: (運用ストーリー、特定 UC なし)
+
+**受け入れ基準**:
+
+- [ ] ステージング環境で全機能（US01-US23）の E2E 検証 PASS
+- [ ] 本番デプロイ実施、ロールバック手順確認済
+- [ ] GitHub Release v2.0.0 タグ + リリースノート公開
+- [ ] CHANGELOG.md の `[Unreleased]` → `[2.0.0]` 確定
+- [ ] リリース後 24 時間の監視 (CloudWatch / Sentry) でクリティカルアラートなし
+
+---
+
+## US28: 法人 Shipper を UI で登録する
+
+**として**: 営業担当者 (Sales)
+
+**したい**: 法人 Shipper を UI から登録 (契約番号 + 割引率付き) したい
+
+**なぜなら**: 現状はマイグレーション/seed 経由でしか法人 Shipper を登録できず、US22 法人割引適用の E2E 検証および現場運用ができないからだ
+
+**対応 UC**: UC02 (荷主登録) の拡張
+
+**受け入れ基準**:
+
+- [ ] `/shippers/new` で個人 / 法人を選択できる
+- [ ] 法人選択時のみ contractNumber (任意 50 文字) + discountRate (0-30%) 入力フィールドが表示される
+- [ ] discountRate は 0%-30% の範囲内でのみ受け付け、範囲外は alert-danger
+- [ ] Sales / MasterAdmin ロールのみ登録可、他ロールは 403
+- [ ] 登録成功時は Shipper 詳細画面にリダイレクト + alert-success
+- [ ] Playwright E2E で「個人/法人登録 → US22 法人割引適用 → 請求書詳細で割引額確認」の通しテストが PASS
+
+---
+
+## US29: 入金消込 CSV を取り込む
+
+**として**: 精算担当者 (Settlement)
+
+**したい**: 銀行振込明細 CSV をアップロードして referenceCode 一致で入金確認を一括実行したい
+
+**なぜなら**: 現状の手動 referenceCode 入力では数百件/日 の振込明細を捌けず、Overdue 誤判定の温床となるからだ。Stripe / GMO 等の API 本実装 (IT10 以降) までのブリッジ機能として必要だ
+
+**対応 UC**: UC18 (精算) の拡張
+
+**受け入れ基準**:
+
+- [ ] `/billing/payments/import` で CSV (referenceCode, paidAt, amount) ファイルをアップロードできる
+- [ ] referenceCode 一致 + Pending|Overdue 状態の Invoice を一括 confirmPayment 実行
+- [ ] 結果画面で 4 分類 (成功 / 不一致 / 二重確認 / エラー) の件数とサマリ表示
+- [ ] 各行処理は独立 try で、1 行失敗が全体失敗にならない
+- [ ] Settlement / MasterAdmin ロールのみ実行可
+- [ ] Playwright E2E で 5 件正常 + 1 件不一致 + 1 件二重確認の通しテストが PASS
+
+---
+
+## US30: システム操作監査ログを記録する
+
+**として**: システム管理者 (MasterAdmin)
+
+**したい**: 例外対応取消し / 補足追記 / 入金確認 / 返金等の業務操作履歴を不変な監査ログとして残し、いつでも検索できるようにしたい
+
+**なぜなら**: ISO 27001 監査対応で「誰がいつ何を変更したか (before/after)」のトレーサビリティを 7 年間保持する義務があるからだ
+
+**対応 UC**: (運用ストーリー、特定 UC なし)
+
+**受け入れ基準**:
+
+- [ ] `audit_log` テーブルに operator / action / target_type / target_id / before / after / occurred_at を記録
+- [ ] TrackingController (cancelExceptionResolution / appendResolutionComment) + InvoiceController (issuePayment / confirmPayment / refund) の 5 操作で AuditLogPort.record が呼ばれる
+- [ ] `/admin/audit-logs` で MasterAdmin のみ閲覧可、他ロールは 403
+- [ ] フィルタ: 日付範囲 / アクター / 操作種別 (action) で絞り込み可能
+- [ ] `/admin/audit-logs/:id` で before/after の JSON 差分を表示
+- [ ] audit_log は INSERT のみで UPDATE/DELETE 禁止 (Repository に UPDATE メソッド未提供)
 
 ---
 

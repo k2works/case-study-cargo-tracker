@@ -106,8 +106,8 @@
 | 0.2 | **MailNotificationPort 実装切替** (T5): LoggingMailNotificationAdapter → PekkoMailNotificationAdapter or AwsSesMailNotificationAdapter、application.conf に SMTP/SES 設定、IT 1 件追加 | 5h | [ ] |
 | 0.3 | **detectOverdue Cron 連携** (T8): Pekko Scheduler で日次 02:00 JST 起動、`Scheduler` ジョブ起動失敗時のリトライ + ログ、application.conf でジョブ ON/OFF 切替 | 4h | [ ] |
 | 0.4 | **pre-commit hook でフルテスト** (T11/R7): `.husky/pre-commit` に `sbt test` 追加、ローカル実行時間 2-3 分の許容、CI 同等化 | 2h | [ ] |
-| 0.5 | **ADR ↔ ArchUnit 整合チェックリスト** (T12/R8): CLAUDE.md に「ADR 起票時の ArchUnit 影響確認 5 項目」追記、新規 Port 配置 + ルール 3 影響確認の運用化 | 1h | [ ] |
-| 0.6 | **公開 Port vs 入力 Port 規約 ADR 化** (H6/R3): ADR 0021 起票「Port パターン規約: 入力 Port は自 Context domain、公開 Port は自 Context application.api」+ ArchUnit ルール 6 追加（`*.application.api` への外部依存は許可、`*.application.commandservices` への外部依存は禁止） | 4h | [ ] |
+| 0.5 | **ADR ↔ ArchUnit 整合チェックリスト** (T12/R8): CLAUDE.md に「ADR 起票時の ArchUnit 影響確認 5 項目」追記、新規 Port 配置 + ルール 3 影響確認の運用化 | 1h | [x] **完了** (2026-06-25): CLAUDE.md に「ADR ↔ ArchUnit 整合チェックリスト」セクション追加 (起票時 5 項目チェック + 例外規定) |
+| 0.6 | **公開 Port vs 入力 Port 規約 ADR 化** (H6/R3): ADR 0021 起票「Port パターン規約: 入力 Port は自 Context domain、公開 Port は自 Context application.api」+ ArchUnit ルール 6 追加（`*.application.api` への外部依存は許可、`*.application.commandservices` への外部依存は禁止） | 4h | [x] **ADR 起票完了** (2026-06-25): ADR 0021 起票・承認 (3 種類の Port 配置規約 + ArchUnit ルール 6 仕様)。**ルール 6 の HexagonalArchitectureSpec 実装は次タスクで対応** |
 | 0.7 | **ScalikeJdbcInvoiceRepositoryIT 拡張** (T4/R6): Testcontainers PostgreSQL 起動 + due_date / payment_reference 永続化テスト + due_date での検索テスト 3 件 | 4h | [ ] |
 | 0.8 | **Refunded 状態遷移 + Lost 通知連携テスト** (H7/R4): Invoice に refund() メソッド追加（Confirmed → Refunded）、二重返金防止テスト、TrackingController の Lost 例外記録時 BookingCommandService.escalateLost 連携 IT テスト | 4h | [ ] |
 

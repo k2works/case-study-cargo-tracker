@@ -24,5 +24,6 @@
 | [0018](0018-mail-notification-port.md) | Billing Context にメール送信用 `MailNotificationPort` を導入し、IT8 はログ実装・IT9 で Pekko Mail/SES 等に差替え | 承認 |
 | [0019](0019-payment-aggregation-vs-invoice-status.md) | Payment は Invoice 集約内のステータスとして表現する（別集約化しない） | 承認 |
 | [0020](0020-public-tracking-exception-display.md) | 公開追跡画面では例外バッジ + 簡易メッセージ + 連絡先のみ公開、対応詳細は社内画面のみ | 承認 |
+| [0021](0021-port-pattern-convention.md) | Port パターン規約: 公開 = `application.api`、入力/出力 = `domain.model.ports` + ArchUnit ルール 6 強制 | 承認 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
