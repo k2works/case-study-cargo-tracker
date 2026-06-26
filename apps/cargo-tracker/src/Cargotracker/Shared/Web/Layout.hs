@@ -53,3 +53,7 @@ pageLayout title body = doctypehtml_ $ do
       [ src_ "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
       ]
       ("" :: Text)
+    script_
+      [ src_ "https://unpkg.com/htmx.org@1.9.12"
+      ]
+      ("" :: Text)

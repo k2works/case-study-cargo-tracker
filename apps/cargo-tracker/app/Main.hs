@@ -45,6 +45,9 @@ import Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ( newPostgresVoyageRepository,
   )
 import Cargotracker.Routing.Interfaces.VoyageApi (voyageApp)
+import Cargotracker.Routing.Interfaces.VoyageMovementRowApi
+  ( voyageMovementRowApp,
+  )
 import Cargotracker.Routing.Interfaces.VoyagePageApi (voyagePageApp)
 import Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier (newBcryptVerifier)
 import Cargotracker.Shared.Auth.Infrastructure.JwtIssuer (JwtSecret (..))
@@ -59,6 +62,7 @@ import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   )
 import Cargotracker.Shipper.Interfaces.ShipperApi (shipperApp)
 import Cargotracker.Shipper.Interfaces.ShipperPageApi (shipperPageApp)
+import Cargotracker.Shipper.Interfaces.ShipperSearchApi (shipperSearchApp)
 
 main :: IO ()
 main = do
@@ -110,6 +114,8 @@ rootApp conn jwtSecret req respond =
     "api" : "shippers" : _ -> shipperApp shipperRepo req respond
     "api" : "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond
     "api" : "voyages" : _ -> voyageApp voyageRepo req respond
+    ["shippers", "search"] -> shipperSearchApp shipperRepo req respond
+    ["voyages", "new", "movement-row"] -> voyageMovementRowApp req respond
     "shippers" : _ -> shipperPageApp shipperRepo req respond
     "bookings" : _ -> bookingPageApp bookingRepo shipperChecker req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond

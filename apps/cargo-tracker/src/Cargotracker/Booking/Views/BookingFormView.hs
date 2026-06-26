@@ -12,6 +12,7 @@ module Cargotracker.Booking.Views.BookingFormView
 
 import Data.Text (Text)
 import Lucid
+import Lucid.Base (makeAttribute)
 
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
 
@@ -65,8 +66,13 @@ bookingFormPage mError = pageLayout "貨物予約登録 - Cargo Tracker" $ do
             , class_ "form-control"
             , required_ "required"
             , pattern_ "SHP-[A-Z0-9]{6}"
-            , placeholder_ "SHP-A1B2C3"
+            , placeholder_ "SHP-A1B2C3 / 検索キーワード入力で候補表示"
+            , makeAttribute "hx-get" "/shippers/search"
+            , makeAttribute "hx-trigger" "keyup changed delay:300ms"
+            , makeAttribute "hx-target" "#shipper-results"
+            , makeAttribute "hx-swap" "innerHTML"
             ]
+          div_ [id_ "shipper-results", class_ "list-group mt-1"] mempty
         div_ [class_ "row"] $ do
           div_ [class_ "col-md-6 mb-3"] (portSelect "origin" "origin" "出発港")
           div_ [class_ "col-md-6 mb-3"] (portSelect "destination" "destination" "到着港")

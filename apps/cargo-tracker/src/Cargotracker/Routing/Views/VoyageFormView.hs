@@ -8,11 +8,13 @@ IT2 で htmx による動的行追加に置き換える予定。
 module Cargotracker.Routing.Views.VoyageFormView
   ( voyageFormPage,
     voyageResultPage,
+    movementRow,
   ) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
 import Lucid
+import Lucid.Base (makeAttribute)
 
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
 
@@ -86,9 +88,19 @@ voyageFormPage mError = pageLayout "航海登録 - Cargo Tracker" $ do
         p_
           [class_ "text-muted small"]
           "区間 1 は必須、2-3 は任意。連続性 (前区間の到着港 = 次区間の出発港) は登録時に検証されます。"
-        movementRow 1 True
-        movementRow 2 False
-        movementRow 3 False
+        div_ [id_ "movements-container"] $ do
+          movementRow 1 True
+          movementRow 2 False
+          movementRow 3 False
+        div_ [class_ "mt-2"] $
+          button_
+            [ type_ "button"
+            , class_ "btn btn-sm btn-outline-secondary"
+            , makeAttribute "hx-get" "/voyages/new/movement-row"
+            , makeAttribute "hx-target" "#movements-container"
+            , makeAttribute "hx-swap" "beforeend"
+            ]
+            "+ 区間を追加"
         button_ [type_ "submit", class_ "btn btn-primary mt-4"] "登録"
 
 voyageResultPage :: Bool -> Text -> Html ()
