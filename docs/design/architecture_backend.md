@@ -521,9 +521,9 @@ publishSync (SyncPublisher subs) event =
 
 ## セキュリティ設計
 
-### Servant Auth による認証・認可
+### Servant Auth (servant-auth-server) による認証・認可
 
-Spring Security / Play Session 相当を Servant の `AuthProtect` ハンドラと JWT (または署名付き Cookie) で実装する。
+Spring Security / Play Session 相当を `servant-auth-server` の `AuthProtect` ハンドラと JWT (または署名付き Cookie) で実装する。
 
 ```haskell
 type ProtectedAPI = AuthProtect "cookie-auth" :> BookingAPI

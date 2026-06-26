@@ -250,12 +250,12 @@ CREATE TABLE shipper (
 | `id` | `BIGINT` | `PK` | サロゲートキー |
 | `booking_id` | `VARCHAR(20)` | `UK, NOT NULL` | `BK-XXXXXX` |
 | `shipper_id` | `BIGINT` | `FK → shipper.id` | 荷主 |
-| `cargo_type` | `VARCHAR(20)` | `NOT NULL DEFAULT 'GENERAL'` | 貨物種別 |
+| `cargo_type` | `VARCHAR(20)` | `NOT NULL DEFAULT 'GENERAL' CHECK (cargo_type IN ('GENERAL','HAZARDOUS','REFRIGERATED'))` | 貨物種別 |
 | `weight_kg` | `NUMERIC(10,3)` | `NOT NULL CHECK (weight_kg > 0)` | 重量 |
 | `spec_origin_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | RouteSpec 出発地 |
 | `spec_destination_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | RouteSpec 仕向地 |
 | `spec_arrival_deadline` | `DATE` | `NOT NULL` | 到着期限 |
-| `booking_status` | `VARCHAR(30)` | `NOT NULL DEFAULT 'PRELIMINARY'` | 予約状態 |
+| `booking_status` | `VARCHAR(30)` | `NOT NULL DEFAULT 'PRELIMINARY' CHECK (booking_status IN ('PRELIMINARY','ROUTE_PROPOSED','ROUTE_ASSIGNED','CONFIRMED','TRACKING_ISSUED','IN_TRANSIT','DELIVERED','SETTLED','CANCELLED'))` | 予約状態 (BookingStatus 9 値) |
 | `declared_value` | `NUMERIC(15,2)` | | 申告価額 |
 | `dimension_length/width/height` | `NUMERIC(10,3)` | | 寸法 (cm) |
 | `quantity` | `INTEGER` | `CHECK (quantity >= 1)` | 個数 |
@@ -319,7 +319,7 @@ CREATE TABLE shipper (
 | `id` | `BIGINT` | `PK` |
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` |
 | `booking_id` | `VARCHAR(20)` | `NOT NULL` |
-| `transport_status` | `VARCHAR(30)` | `NOT NULL` |
+| `transport_status` | `VARCHAR(30)` | `NOT NULL CHECK (transport_status IN ('NOT_RECEIVED','RECEIVED','LOADED','ONBOARD_CARRIER','UNLOADED','AWAITING_CLAIM','CLAIMED','IN_EXCEPTION','UNKNOWN'))` |
 | `version` | `INTEGER` | `NOT NULL DEFAULT 0` |
 | `created_at` / `updated_at` | `TIMESTAMPTZ` | |
 
@@ -329,7 +329,7 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK` |
 | `tracking_id` | `BIGINT` | `FK → tracking_activity.id` |
-| `event_type` | `VARCHAR(30)` | `NOT NULL` |
+| `event_type` | `VARCHAR(30)` | `NOT NULL CHECK (event_type IN ('RECEIVE','LOAD','UNLOAD','CUSTOMS','CLAIM'))` |
 | `event_time` | `TIMESTAMPTZ` | `NOT NULL` |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` |
 | `voyage_number` | `VARCHAR(20)` | |

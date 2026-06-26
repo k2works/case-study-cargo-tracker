@@ -66,11 +66,11 @@ architecture_backend と tech_stack で言及される主要ライブラリ (Ser
 
 ### 軽微な指摘
 
-| ID | 指摘 | 重要度 | 対応推奨 |
+| ID | 指摘 | 重要度 | 対応状況 |
 | :--- | :--- | :---: | :--- |
-| C-01 | `servant-auth` の表記が architecture_backend では「Servant Auth」、tech_stack では `servant-auth-server` と異なる | 低 | 開発開始時に統一すれば足りる |
-| C-02 | data-model の `BookingStatus` CHECK 制約が DDL に未記述 (`shipper_type` には `CHECK (... IN ('INDIVIDUAL','CORPORATE'))` あり、`booking_status` にはない) | 低 | dbmate マイグレーション時に追加 |
-| C-03 | `notification_log.type` の値リスト (`RouteNotified` / `BookingConfirmed` / `BookingCancelled` / `LostEscalated`) が domain-model の DomainEvent と直接対応していない | 低 | 開発時に NotificationKind と対応表整理 |
+| C-01 | `servant-auth` の表記が architecture_backend では「Servant Auth」、tech_stack では `servant-auth-server` と異なる | 低 | ✅ 対応済 (architecture_backend を `Servant Auth (servant-auth-server)` に修正) |
+| C-02 | data-model の `BookingStatus` / `cargo_type` / `transport_status` / `event_type` (tracking_handling_event) CHECK 制約が DDL に未記述 | 低 | ✅ 対応済 (4 カラムに CHECK 制約を追加) |
+| C-03 | `notification_log.type` の値リスト (`RouteNotified` / `BookingConfirmed` / `BookingCancelled` / `LostEscalated`) が domain-model の DomainEvent と直接対応していない | 低 | 未対応 (開発時に NotificationKind と対応表整理) |
 
 ### 検出されなかった重大問題
 
