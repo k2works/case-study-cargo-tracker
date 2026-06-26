@@ -104,6 +104,8 @@ library:
   - Cargotracker.Shared.Auth.Interfaces.LoginPageApi
   - Cargotracker.Shipper.Views.ShipperFormView
   - Cargotracker.Shipper.Interfaces.ShipperPageApi
+  - Cargotracker.Booking.Views.BookingFormView
+  - Cargotracker.Booking.Interfaces.BookingPageApi
 
 executables:
   cargo-tracker-exe:

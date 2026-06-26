@@ -40,6 +40,7 @@ import Cargotracker.Booking.Infrastructure.PostgresShipperExistenceChecker
   ( newPostgresShipperExistenceChecker,
   )
 import Cargotracker.Booking.Interfaces.BookingApi (bookingApp)
+import Cargotracker.Booking.Interfaces.BookingPageApi (bookingPageApp)
 import Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ( newPostgresVoyageRepository,
   )
@@ -91,6 +92,7 @@ rootApp conn jwtSecret req respond =
     "login" : _ -> loginApp userRepo verifier jwtSecret req respond
     ["shippers", "new"] -> shipperPageApp shipperRepo req respond
     "shippers" : _ -> shipperApp shipperRepo req respond
+    ["bookings", "new"] -> bookingPageApp bookingRepo shipperChecker req respond
     "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond
     "voyages" : _ -> voyageApp voyageRepo req respond
     _ ->
