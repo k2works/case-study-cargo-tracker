@@ -53,6 +53,9 @@ dependencies:
 - bcrypt >= 0.0.11
 - cryptohash-sha256 >= 0.11
 - base64-bytestring >= 1.2
+- servant >= 0.20
+- servant-server >= 0.20
+- wai >= 3.2
 
 library:
   source-dirs: src
@@ -64,6 +67,7 @@ library:
   - Cargotracker.Shared.Auth.Application.LoginCommand
   - Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier
   - Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
+  - Cargotracker.Shared.Auth.Interfaces.LoginApi
 
 executables:
   cargo-tracker-exe:
@@ -95,3 +99,12 @@ tests:
     - cargo-tracker
     - hspec >= 2.11
     - hedgehog >= 1.4
+    - hspec-wai >= 0.11
+    - wai >= 3.2
+    - wai-extra >= 3.1
+    - http-types
+    - servant
+    - servant-server
+    - aeson
+    - bytestring
+    - text
