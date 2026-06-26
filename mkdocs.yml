@@ -75,15 +75,30 @@ nav:
       - ユーザーストーリー: requirements/user_story.md
   - 設計:
       - 概要: design/index.md
+      - バックエンドアーキテクチャ: design/architecture_backend.md
+      - フロントエンドアーキテクチャ: design/architecture_frontend.md
+      - インフラアーキテクチャ: design/architecture_infrastructure.md
+      - ドメインモデル設計: design/domain-model.md
+      - データモデル設計: design/data-model.md
+      - UI 設計: design/ui_design.md
+      - 技術スタック選定: design/tech_stack.md
+      - テスト戦略: design/test_strategy.md
+      - 非機能要件: design/non_functional.md
+      - 運用要件: design/operation.md
   - 開発:
       - 概要: development/index.md
+      - リリース計画: development/release_plan.md
+      - 分析フェーズ完了報告書: development/analysis_completion_report.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - 分析整合性セルフレビュー: review/analysis_consistency_review_20260626.md
+      - 分析多視点レビュー: review/analysis_multi_perspective_review_20260626.md
   - ADR:
       - 概要: adr/index.md
+      - ADR 0001 Haskell + Servant スタック: adr/0001-haskell-servant-stack.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
