@@ -1,0 +1,544 @@
+\restrict dbmate
+
+-- Dumped from database version 16.14
+-- Dumped by pg_dump version 18.4
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: cargo; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cargo (
+    id bigint NOT NULL,
+    booking_id character varying(20) NOT NULL,
+    shipper_id bigint NOT NULL,
+    origin_unlocode character varying(5) NOT NULL,
+    destination_unlocode character varying(5) NOT NULL,
+    deadline timestamp with time zone NOT NULL,
+    booking_status character varying(20) NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT cargo_booking_id_format CHECK (((booking_id)::text ~ '^BK-[A-Z0-9]{6}$'::text)),
+    CONSTRAINT cargo_booking_status_check CHECK (((booking_status)::text = ANY ((ARRAY['Draft'::character varying, 'Submitted'::character varying, 'RouteProposed'::character varying, 'Confirmed'::character varying, 'Closed'::character varying])::text[])))
+);
+
+
+--
+-- Name: cargo_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cargo_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cargo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cargo_id_seq OWNED BY public.cargo.id;
+
+
+--
+-- Name: carrier_movement; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.carrier_movement (
+    id bigint NOT NULL,
+    voyage_id bigint NOT NULL,
+    seq_number integer NOT NULL,
+    departure_location_unlocode character varying(5) NOT NULL,
+    arrival_location_unlocode character varying(5) NOT NULL,
+    departure_time timestamp with time zone NOT NULL,
+    arrival_time timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT carrier_movement_time_order CHECK ((departure_time < arrival_time))
+);
+
+
+--
+-- Name: carrier_movement_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.carrier_movement_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: carrier_movement_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.carrier_movement_id_seq OWNED BY public.carrier_movement.id;
+
+
+--
+-- Name: location; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.location (
+    unlocode character varying(5) NOT NULL,
+    name character varying(255) NOT NULL,
+    country character varying(100) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT location_unlocode_format CHECK (((unlocode)::text ~ '^[A-Z]{2}[A-Z0-9]{3}$'::text))
+);
+
+
+--
+-- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.schema_migrations (
+    version character varying NOT NULL
+);
+
+
+--
+-- Name: shipper; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.shipper (
+    id bigint NOT NULL,
+    shipper_id character varying(20) NOT NULL,
+    name character varying(255) NOT NULL,
+    email character varying(255) NOT NULL,
+    address character varying(500) NOT NULL,
+    shipper_kind character varying(20) NOT NULL,
+    corporate_number character varying(13),
+    contract_rank character varying(20),
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT shipper_contract_rank_check CHECK (((contract_rank IS NULL) OR ((contract_rank)::text = ANY ((ARRAY['Bronze'::character varying, 'Silver'::character varying, 'Gold'::character varying])::text[])))),
+    CONSTRAINT shipper_corporate_fields CHECK (((((shipper_kind)::text = 'Individual'::text) AND (corporate_number IS NULL) AND (contract_rank IS NULL)) OR (((shipper_kind)::text = 'Corporate'::text) AND (corporate_number IS NOT NULL) AND (contract_rank IS NOT NULL)))),
+    CONSTRAINT shipper_corporate_number_format CHECK (((corporate_number IS NULL) OR ((corporate_number)::text ~ '^[0-9]{13}$'::text))),
+    CONSTRAINT shipper_kind_check CHECK (((shipper_kind)::text = ANY ((ARRAY['Individual'::character varying, 'Corporate'::character varying])::text[]))),
+    CONSTRAINT shipper_shipper_id_format CHECK (((shipper_id)::text ~ '^SHP-[A-Z0-9]{6}$'::text))
+);
+
+
+--
+-- Name: shipper_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.shipper_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: shipper_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.shipper_id_seq OWNED BY public.shipper.id;
+
+
+--
+-- Name: user_roles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_roles (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    role character varying(20) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT user_roles_role_check CHECK (((role)::text = ANY ((ARRAY['Shipper'::character varying, 'Consignee'::character varying, 'Sales'::character varying, 'Router'::character varying, 'Tracker'::character varying, 'Handler'::character varying, 'Accountant'::character varying, 'MasterAdmin'::character varying])::text[])))
+);
+
+
+--
+-- Name: user_roles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.user_roles_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: user_roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.user_roles_id_seq OWNED BY public.user_roles.id;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id bigint NOT NULL,
+    user_id character varying(50) NOT NULL,
+    email character varying(255) NOT NULL,
+    password_hash character varying(60) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.users_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- Name: voyage; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.voyage (
+    id bigint NOT NULL,
+    voyage_number character varying(20) NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: voyage_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.voyage_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: voyage_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.voyage_id_seq OWNED BY public.voyage.id;
+
+
+--
+-- Name: cargo id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cargo ALTER COLUMN id SET DEFAULT nextval('public.cargo_id_seq'::regclass);
+
+
+--
+-- Name: carrier_movement id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carrier_movement ALTER COLUMN id SET DEFAULT nextval('public.carrier_movement_id_seq'::regclass);
+
+
+--
+-- Name: shipper id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shipper ALTER COLUMN id SET DEFAULT nextval('public.shipper_id_seq'::regclass);
+
+
+--
+-- Name: user_roles id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_roles ALTER COLUMN id SET DEFAULT nextval('public.user_roles_id_seq'::regclass);
+
+
+--
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: voyage id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.voyage ALTER COLUMN id SET DEFAULT nextval('public.voyage_id_seq'::regclass);
+
+
+--
+-- Name: cargo cargo_booking_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cargo
+    ADD CONSTRAINT cargo_booking_id_key UNIQUE (booking_id);
+
+
+--
+-- Name: cargo cargo_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cargo
+    ADD CONSTRAINT cargo_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: carrier_movement carrier_movement_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carrier_movement
+    ADD CONSTRAINT carrier_movement_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: carrier_movement carrier_movement_seq_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carrier_movement
+    ADD CONSTRAINT carrier_movement_seq_unique UNIQUE (voyage_id, seq_number);
+
+
+--
+-- Name: location location_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.location
+    ADD CONSTRAINT location_pkey PRIMARY KEY (unlocode);
+
+
+--
+-- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.schema_migrations
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: shipper shipper_email_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shipper
+    ADD CONSTRAINT shipper_email_key UNIQUE (email);
+
+
+--
+-- Name: shipper shipper_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shipper
+    ADD CONSTRAINT shipper_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shipper shipper_shipper_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shipper
+    ADD CONSTRAINT shipper_shipper_id_key UNIQUE (shipper_id);
+
+
+--
+-- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_roles
+    ADD CONSTRAINT user_roles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_roles user_roles_user_id_role_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_roles
+    ADD CONSTRAINT user_roles_user_id_role_key UNIQUE (user_id, role);
+
+
+--
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_key UNIQUE (email);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: voyage voyage_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.voyage
+    ADD CONSTRAINT voyage_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: voyage voyage_voyage_number_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.voyage
+    ADD CONSTRAINT voyage_voyage_number_key UNIQUE (voyage_number);
+
+
+--
+-- Name: cargo_booking_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX cargo_booking_status_idx ON public.cargo USING btree (booking_status);
+
+
+--
+-- Name: cargo_shipper_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX cargo_shipper_id_idx ON public.cargo USING btree (shipper_id);
+
+
+--
+-- Name: carrier_movement_voyage_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX carrier_movement_voyage_id_idx ON public.carrier_movement USING btree (voyage_id);
+
+
+--
+-- Name: shipper_email_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX shipper_email_idx ON public.shipper USING btree (email);
+
+
+--
+-- Name: user_roles_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_roles_user_id_idx ON public.user_roles USING btree (user_id);
+
+
+--
+-- Name: users_email_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX users_email_idx ON public.users USING btree (email);
+
+
+--
+-- Name: cargo cargo_destination_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cargo
+    ADD CONSTRAINT cargo_destination_unlocode_fkey FOREIGN KEY (destination_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: cargo cargo_origin_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cargo
+    ADD CONSTRAINT cargo_origin_unlocode_fkey FOREIGN KEY (origin_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: cargo cargo_shipper_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cargo
+    ADD CONSTRAINT cargo_shipper_id_fkey FOREIGN KEY (shipper_id) REFERENCES public.shipper(id);
+
+
+--
+-- Name: carrier_movement carrier_movement_arrival_location_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carrier_movement
+    ADD CONSTRAINT carrier_movement_arrival_location_unlocode_fkey FOREIGN KEY (arrival_location_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: carrier_movement carrier_movement_departure_location_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carrier_movement
+    ADD CONSTRAINT carrier_movement_departure_location_unlocode_fkey FOREIGN KEY (departure_location_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: carrier_movement carrier_movement_voyage_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carrier_movement
+    ADD CONSTRAINT carrier_movement_voyage_id_fkey FOREIGN KEY (voyage_id) REFERENCES public.voyage(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_roles
+    ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict dbmate
+
+
+--
+-- Dbmate schema migrations
+--
+
+INSERT INTO public.schema_migrations (version) VALUES
+    ('20260706120000'),
+    ('20260706120100'),
+    ('20260706120200'),
+    ('20260706120300'),
+    ('20260706120400'),
+    ('20260706120500');

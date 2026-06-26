@@ -3,11 +3,13 @@
 -- | ログイン画面のビュー (IT1 AUTH)
 module Cargotracker.Shared.Auth.Views.LoginView
   ( loginPage,
+    loginResultPage,
   ) where
 
 import Data.Text (Text)
 import Lucid
 
+import Cargotracker.Shared.Auth.Domain.User (Email (..))
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
 
 loginPage :: Maybe Text -> Html ()
@@ -54,3 +56,12 @@ loginPage mError = pageLayout "Login - Cargo Tracker" $ do
           li_ "accountant@example.com (Accountant)"
           li_ "shipper@example.com (Shipper)"
           li_ "consignee@example.com (Consignee)"
+
+loginResultPage :: Email -> Text -> Html ()
+loginResultPage (Email userEmail) roleText = pageLayout "ログイン成功 - Cargo Tracker" $
+  div_ [class_ "row justify-content-center"] $
+    div_ [class_ "col-md-6"] $ do
+      h1_ [class_ "h3 mb-4"] "ログイン成功"
+      flashAlert FlashSuccess (userEmail <> " (" <> roleText <> ") としてログインしました")
+      p_ [class_ "text-muted small"] "IT1: Cookie / セッション統合は IT2 で対応します"
+      a_ [href_ "/", class_ "btn btn-primary"] "トップへ"

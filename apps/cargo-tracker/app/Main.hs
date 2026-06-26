@@ -105,10 +105,8 @@ rootApp conn jwtSecret req respond =
   case pathInfo req of
     [] -> homeApp req respond
     ["health"] -> healthHandler req respond
-    ["login"]
-      | requestMethod req == methodGet -> loginPageApp req respond
-      | requestMethod req == methodPost -> loginApp userRepo verifier jwtSecret req respond
-    "login" : _ -> loginApp userRepo verifier jwtSecret req respond
+    ["login"] -> loginPageApp userRepo verifier req respond
+    ["api", "login"] -> loginApp userRepo verifier jwtSecret req respond
     ["shippers", "new"] -> shipperPageApp shipperRepo req respond
     "shippers" : _ -> shipperApp shipperRepo req respond
     ["bookings", "new"] -> bookingPageApp bookingRepo shipperChecker req respond
