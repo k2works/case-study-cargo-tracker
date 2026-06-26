@@ -81,6 +81,8 @@ library:
   - Cargotracker.Routing.Domain.Model.Voyage
   - Cargotracker.Routing.Domain.Model.Value.VoyageNumber
   - Cargotracker.Routing.Domain.Model.Value.CarrierMovement
+  - Cargotracker.Shipper.Application.Ports
+  - Cargotracker.Shipper.Application.RegisterShipperCommand
 
 executables:
   cargo-tracker-exe:

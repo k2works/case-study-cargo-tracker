@@ -19,6 +19,7 @@ import qualified Shared.Auth.Infrastructure.JwtIssuerSpec
 import qualified Shared.Auth.Interfaces.LoginApiSpec
 import qualified Shared.Auth.Interfaces.ProtectedSpec
 import qualified Shared.Domain.Common.UnLocodeSpec
+import qualified Shipper.Application.RegisterShipperCommandSpec
 import qualified Shipper.Domain.Model.ShipperSpec
 
 main :: IO ()
@@ -71,3 +72,7 @@ main = hspec $ do
   describe
     "Cargotracker.Routing.Domain.Model.Voyage"
     Routing.Domain.Model.VoyageSpec.spec
+
+  describe
+    "Cargotracker.Shipper.Application.RegisterShipperCommand"
+    Shipper.Application.RegisterShipperCommandSpec.spec
