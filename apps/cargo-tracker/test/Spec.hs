@@ -12,6 +12,7 @@ import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
+import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
@@ -81,3 +82,7 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Application.RegisterBookingCommand"
     Booking.Application.RegisterBookingCommandSpec.spec
+
+  describe
+    "Cargotracker.Routing.Application.RegisterVoyageCommand"
+    Routing.Application.RegisterVoyageCommandSpec.spec
