@@ -213,14 +213,18 @@ billing <.. booking : CargoDeliveredEvent (future)
 
 ### 各コンテキストの責務 (要約)
 
+> H-05 反映: 集約数を 7 (Booking / Shipper / Routing / Tracking / Handling / Billing / Estimation) として domain-model.md と統一。
+
 | Context | 集約ルート | 主要概念 | 状態 |
 | :--- | :--- | :--- | :--- |
-| Booking | `Cargo` | `RouteSpecification`, `Delivery` | `Preliminary` / `RouteProposed` / `Confirmed` / `TrackingIssued` / `InTransit` / `Delivered` / `Settled` / `Cancelled` |
+| Booking | `Cargo` | `RouteSpecification`, `Delivery` | `Preliminary` / `RouteProposed` / `RouteAssigned` / `Confirmed` / `TrackingIssued` / `InTransit` / `Delivered` / `Settled` / `Cancelled` |
+| Shipper | `Shipper` (sum type) | `IndividualShipper` / `CorporateShipper`, `DiscountRate` | - |
 | Routing | `Voyage` | `CarrierMovement`, `Schedule` | - |
 | Tracking | `TrackingActivity` | `TrackingNumber`, `TransportStatus` | `NotReceived` / `Received` / `Loaded` / `OnboardCarrier` / `Unloaded` / `AwaitingClaim` / `Claimed` / `InException` / `Unknown` |
 | Handling | `HandlingActivity` | `HandlingType`, `CustomsDeclaration` | - |
 | Billing | `Invoice` | `Money`, `DiscountPolicy`, `PaymentStatus` | - |
-| Shared | - | `Location` (UN/LOCODE) | - |
+| Estimation | `Estimate` | `RouteCandidate`, `Weight`, `EstimateStatus` | `Created` / `Expired` |
+| Shared | - | `Location` (UN/LOCODE), `ShipperId`, `TransportStatus` | - |
 
 `VoyageNumber` は各コンテキスト固有型として共有しない。
 
@@ -421,23 +425,45 @@ findBookingSummaries = withConn $ \conn ->
 
 トランザクションはアプリケーションサービス層で `withTransaction` ヘルパーにより明示する。
 
+#### トランザクション境界規約 (H-07 反映)
+
+ドメインエラー (`Left`) とトランザクションの組み合わせには以下の規約を **必ず** 適用する。
+
+**規約 T-01: ドメイン検証はトランザクション開始前に行う**
+
+`withTransaction` ブロックの中で `Cargo.create` 等の検証を行うと、`Left` 時にも空トランザクションが開始されコミットされる。検証は **必ずブロック外** で行い、`Left` の場合はトランザクションを開始しない。
+
+**規約 T-02: トランザクション内の永続化失敗は例外をスローする**
+
+postgresql-simple の `withTransaction` は例外がスローされた場合のみロールバックする。`Left` を返してもロールバックされないため、リポジトリ操作の失敗は `DomainErrorException` 等のカスタム例外を `throw` し、トランザクション外で `try` してハンドリングする。
+
+**規約 T-03: イベント発行はトランザクションコミット後**
+
+イベント発行を `withTransaction` 内で行うと、ロールバック時にイベントが既に発行済みとなる漏出が発生する。コミット完了後に発行する。
+
 ```haskell
+-- 正しい実装: 検証はブロック外、永続化失敗は例外、イベント発行はコミット後
 bookCargo :: BookCargoCommand -> AppM (Either DomainError BookingId)
 bookCargo cmd = do
   env <- ask
-  result <- withTransaction $ do
-    case Cargo.create cmd of
-      Left err    -> pure (Left err)
-      Right cargo -> do
+  -- T-01: ドメイン検証 (純粋関数、トランザクション開始前)
+  case Cargo.create cmd of
+    Left err    -> pure (Left err)
+    Right cargo -> do
+      -- T-02: 永続化失敗は SqlError → DomainError 変換
+      result <- liftIO $ try $ withTransaction (envDbConn env) $ do
         saveCargo (envCargoRepo env) cargo
-        pure (Right (cargoBookingId cargo))
-  -- イベント発行はコミット後 (トランザクション外)
-  forM_ result $ \bookingId ->
-    publish (envEventPublisher env) (CargoBookedEvent bookingId)
-  pure result
+        pure (cargoBookingId cargo)
+      case result of
+        Left (e :: SqlError) -> pure (Left (PersistenceFailed (toText e)))
+        Right bookingId      -> do
+          -- T-03: コミット後にイベント発行
+          publish (envEventPublisher env) (CargoBookedEvent bookingId)
+          pure (Right bookingId)
 ```
 
-> Scala 版同様、イベント発行は **トランザクションコミット後** に行い、ロールバック時のイベント漏出を防ぐ。
+> 違反例: `withTransaction $ case Cargo.create cmd of Left err -> pure (Left err) ; Right ...` は空トランザクションが発生する。`withTransaction $ ... ; publish ...` はロールバック時にイベント漏出する。
+> 規約違反を CI で検出するため、`bookCargo` パターンを `arch-check` のチェック対象に加える ([ADR 0002](../adr/0002-arch-check-implementation.md) 参照)。
 
 ## イベント駆動設計
 

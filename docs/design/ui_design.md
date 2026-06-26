@@ -449,12 +449,129 @@ state "精算フロー" {
 
 #### モバイル (375px) レイアウト
 
-タブレット・スマホでの利用を想定し、`col-12` の単一カラム + 大きめのタッチターゲット (`btn-lg`)。
+タブレット・スマホでの利用を想定し、`col-12` の単一カラム + 大きめのタッチターゲット (後述の規約参照)。
 追跡番号入力欄にバーコードスキャン連携 (`hx-trigger="qrcode-scanned"` でカスタムイベント)。
 
-#### オフライン・通信断対応 (将来)
+#### オフライン・通信断対応 (H-14 反映: IT1 で前倒し検討)
 
-`navigator.serviceWorker` で IndexedDB にフォームデータを一時保存し、オンライン復帰時に POST 再送する PWA 化は初期リリース対象外。
+港湾・倉庫は通信不安定が常態のため、Service Worker + IndexedDB によるオフライン対応を **IT5 (荷役登録実装時) までに完成** させる。
+
+**設計方針**:
+
+1. **Service Worker**: `static/js/sw.js` で `/handling/new` のフォーム送信を intercept
+2. **IndexedDB**: オフライン時の POST リクエスト (action / formData / timestamp) を `pending-handling-events` ストアに永続化
+3. **再送キュー**: `online` イベント発火時に IndexedDB から取り出して順次再送 (FIFO)
+4. **UI フィードバック**: オフライン時は黄色バナー「オフライン: 作業は端末に保存され、オンライン復帰時に送信されます」を常時表示
+5. **競合解決**: サーバー側で楽観ロック (`version` カラム) を確認し、競合時は再送リクエストを「保留中」として管理画面に表示
+
+**Lucid + htmx での実装スケッチ**:
+
+```haskell
+-- Views/Handling/New.hs
+newHandlingFormView :: AuthenticatedUser -> Html ()
+newHandlingFormView _ = mainLayout "荷役作業登録" Nothing $ do
+  div_ [id_ "offline-banner", class_ "alert alert-warning d-none", role_ "alert"]
+    "オフライン: 作業は端末に保存され、オンライン復帰時に送信されます"
+  form_
+    [ method_ "POST"
+    , action_ "/handling"
+    , hxPost_ "/handling"
+    , hxTarget_ "#form-result"
+    , hxOn_ "htmx:sendError" "queueOfflineSubmit(event)"  -- Service Worker 連携
+    ] $ do
+      -- フォームフィールド
+      ...
+```
+
+**初期リリース (Release 0.1) では未対応**、Release 1.0 MVP までに対応。Release 1.0 の判定基準に追加。
+
+#### エラー状態統一ハンドリング (H-15 反映)
+
+24 画面で発生し得るエラー (ネットワーク・権限・楽観ロック衝突) は **共通フラグメント** `Views/Fragments/ErrorAlert.hs` で統一表示する。
+
+| HTTP ステータス | 表示メッセージ | 表示位置 | 自動消失 |
+| :--- | :--- | :--- | :--- |
+| 401 (未認証) | `/login` へリダイレクト | 全画面 | - |
+| 403 (権限不足) | 「この操作を実行する権限がありません」 | ページ上部 alert-danger | 8 秒 |
+| 404 (リソース未存在) | 「指定されたリソースが見つかりません」 | ページ上部 alert-warning | 8 秒 |
+| 409 (楽観ロック衝突) | 「他のユーザーが更新しました。最新の内容を確認して再度操作してください」 + 再読込ボタン | モーダル | 手動閉じ |
+| 422 (バリデーション) | フィールド毎に赤字エラー (Bootstrap `.invalid-feedback`) | 該当フィールド下 | 入力で消失 |
+| 5xx (サーバーエラー) | 「一時的なエラーが発生しました。しばらくしてから再度お試しください」(詳細はログのみ) | ページ上部 alert-danger | 手動閉じ |
+| ネットワーク切断 (htmx) | 「オフラインです。オンライン復帰を待っています」(黄バナー、Service Worker 連動) | 全画面上部 | online 復帰で消失 |
+
+htmx の `hx-on:htmx:response-error` をグローバルで定義し、ステータスコード毎に統一処理:
+
+```html
+<!-- Layout.hs の <body> 直下に配置 -->
+<div id="global-error-handler"
+     hx-on:htmx:response-error="window.handleHtmxError(event)"
+     hx-on:htmx:send-error="window.handleNetworkError(event)"></div>
+
+<script>
+window.handleHtmxError = (event) => {
+  const status = event.detail.xhr.status;
+  const handlers = {
+    401: () => location.href = '/login?returnTo=' + encodeURIComponent(location.pathname),
+    403: () => showAlert('danger', 'この操作を実行する権限がありません'),
+    409: () => showConflictModal(),
+    422: () => {} /* フィールドエラーは hx-target で部分更新済み */,
+    500: () => showAlert('danger', '一時的なエラーが発生しました。しばらくしてから再度お試しください'),
+  };
+  (handlers[status] || handlers[500])();
+};
+</script>
+```
+
+#### タッチターゲット・コントラスト規約 (H-16 反映)
+
+WCAG 2.5.5 (Target Size) と Apple HIG / Material Design に準拠し、以下を **全ボタン・リンク・入力フィールドに適用** する。
+
+| 要素 | 最小タッチターゲット | 推奨 |
+| :--- | :---: | :---: |
+| プライマリボタン (CTA) | 44×44 px | 48×48 px |
+| セカンダリボタン | 44×44 px | - |
+| ラジオ・チェックボックス | 44×44 px (周辺の `<label>` 含む) | - |
+| アイコンボタン (削除等) | 44×44 px | - |
+| テキスト入力 | 高さ 44 px 以上 | 48 px |
+| 隣接するボタン間の間隔 | 8 px 以上 | 12 px |
+
+Bootstrap 5 では:
+
+- 通常ボタン (`.btn`) は約 38 px → モバイル向けに `.btn-lg` (約 48 px) を **荷役登録画面では必須**
+- カスタム CSS で `.touch-target` クラス (`min-width: 44px; min-height: 44px;`) を定義
+
+```css
+/* static/css/custom.css */
+.touch-target,
+.btn-lg,
+.form-control-lg {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@media (max-width: 768px) {
+  .btn { min-width: 44px; min-height: 44px; }
+}
+```
+
+コントラスト比 (WCAG AA):
+
+- 通常テキスト: 4.5:1 以上
+- 18pt 以上または太字 14pt 以上: 3:1 以上
+- ステータスバッジ (IN_TRANSIT 等の色付き要素): 背景とのコントラスト 3:1 以上を確保
+
+**ステータスバッジのコントラスト検証結果** (Bootstrap 5 デフォルトテーマ):
+
+| バッジ | 背景色 | 文字色 | コントラスト比 | WCAG AA |
+| :--- | :--- | :--- | :---: | :---: |
+| `bg-primary` (Confirmed 等) | `#0d6efd` | `#ffffff` | 4.51 | ✅ |
+| `bg-success` (Delivered) | `#198754` | `#ffffff` | 4.55 | ✅ |
+| `bg-warning` (RouteProposed) | `#ffc107` | `#000000` | 11.34 | ✅ |
+| `bg-danger` (Cancelled) | `#dc3545` | `#ffffff` | 4.50 | ✅ |
+| `bg-info` (TrackingIssued) | `#0dcaf0` | `#000000` | 8.59 | ✅ |
+| `bg-secondary` (Preliminary) | `#6c757d` | `#ffffff` | 5.07 | ✅ |
+
+→ 全 6 バリエーション WCAG AA 準拠。色のみに依存せず、テキストラベルも併用すること。
 
 ---
 

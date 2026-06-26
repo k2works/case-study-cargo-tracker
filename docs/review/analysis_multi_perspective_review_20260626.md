@@ -31,26 +31,26 @@ DDD + ヘキサゴナル + CQRS の Haskell への翻訳は自然で、Scala 版
 
 ## 改善提案 (優先度別)
 
-### 高 (実装着手前に対応推奨)
+### 高 (実装着手前に対応推奨) — Sprint 0 で全 16 件対応完了 (2026-06-26)
 
-| # | 指摘元 | 提案 | 理由 |
+| # | 指摘元 | 提案 | 対応状況 |
 | :---: | :---: | :--- | :--- |
-| H-01 | PM | リリース計画 L135 の「合計 26 US」を 25 に修正、または横断要件 (認証) を US26 として正式採番 | 集計表と本文記述 (L26: 25 件) の整合 |
-| H-02 | PM | Phase 1 SP 合計 23 と IT1+IT2 (12+10=22) の 1 SP ズレ解消 | 計画の数値整合 |
-| H-03 | PM | US10/US12 を IT8 内で「IT9 候補のストレッチ」と明示 | Phase 4 内優先順位矛盾 (Phase 2 注釈と一覧で扱いが矛盾) |
-| H-04 | PM | US08 を US08a (経路候補算出基本) / US08b (制約評価) に物理分割 | INVEST の Small 違反 (1 IT 内完了せず IT3-IT4 跨ぎ) |
-| H-05 | Architect | architecture_backend.md のコンテキストマップ (5 集約) と domain-model.md (7 集約) の集約数表記不整合を解消 | 設計文書間の一貫性 |
-| H-06 | Architect | `arch-check` の判定アルゴリズム・実装手段 (haskell-src-exts / モジュール命名規約等) を ADR 化または専用ドキュメントで定義 | CI 規律の維持。ArchUnit 教訓 (Scala 版 IT8) の継承 |
-| H-07 | Architect | `bookCargo` 例のトランザクション境界と `Either` の組み合わせ規約統一 (ドメインエラー時の `withTransaction` 挙動) | 空コミット・暗黙ロールバックのリスク |
-| H-08 | Tester | 非機能要件 P95 < 500ms の検証手段 (k6/wrk によるスモーク負荷テスト) を CI に組み込み、リグレッション検知の出口を作る | SLO 違反の早期検出 |
-| H-09 | Tester | 楽観ロックの真の並行テスト (`async` で並行 commit) を最低 1 ケース追加 | `ConcurrentModification` の発火を実証 |
-| H-10 | Tester | US01-US25 の受入基準を BDD (Given/When/Then) 形式で書き直す、または AC→spec 対応マップを test_strategy.md に追加 | テスト可能性。`[ ]` チェックボックスのみでは ATDD 不可 |
-| H-11 | UR | 荷受人を一級アクターに昇格し、引取通知 (荷受人への確認コード配信) ストーリーを Phase 3 に追加 | MVP 後の運用破綻防止 |
-| H-12 | UR | 通関 / 税関連携の最小要件 (HS コード・通関業者・申告ステータス) を Phase 2 に追加 | 国際貨物として実運用不可リスク |
-| H-13 | UR | US08 の受入基準に「危険物対応港・温度管理可能船の絞り込み」を明文化 | US05 で入力した特別情報の活用が暗黙 |
-| H-14 | UX | 荷役登録のオフライン対応 (Service Worker + IndexedDB + 楽観的送信キュー) の前倒し | 港湾・倉庫の通信不安定が常態 |
-| H-15 | UX | 24 画面のネットワークエラー・権限エラー・楽観ロック衝突の UI 統一ハンドリング (`hx-on:htmx:response-error`) 定義 | エラー時の UX 空白 |
-| H-16 | UX | タッチターゲット 44x44px 以上の明示 (WCAG 2.5.5 / Apple HIG) | 荷役作業員の手袋装着・現場利用前提 |
+| H-01 | PM | リリース計画「合計 26 US」を 25 に修正、または横断要件を US26 として正式採番 | ✅ 27 US (US01-US27) + 横断要件 1 として再採番 (release_plan.md) |
+| H-02 | PM | Phase 1 SP 合計 23 と IT1+IT2 のズレ解消 | ✅ IT1 を 13 SP に修正 (release_plan.md) |
+| H-03 | PM | US10/US12 を「IT9 候補のストレッチ」と明示 | ✅ IT8 ストレッチとして明示、Release 2.0 判定基準もストレッチ目標に変更 |
+| H-04 | PM | US08 を US08a (基本算出) / US08b (制約評価) に物理分割 | ✅ user_story.md / release_plan.md で物理分割 (US08a: 5 SP / US08b: 3 SP) |
+| H-05 | Architect | architecture_backend.md と domain-model.md の集約数表記不整合 | ✅ architecture_backend.md を 7 集約 (Booking/Shipper/Routing/Tracking/Handling/Billing/Estimation) に統一 |
+| H-06 | Architect | `arch-check` の判定アルゴリズム・実装手段を ADR 化 | ✅ ADR 0002 起票 (HLint + 自作 AST 解析のハイブリッド、4 段階導入計画) |
+| H-07 | Architect | トランザクション境界と `Either` の組み合わせ規約統一 | ✅ architecture_backend.md にトランザクション境界規約 T-01〜T-03 を追加 |
+| H-08 | Tester | P95 < 500ms 検証 (k6/wrk スモーク負荷) を CI に組み込み | ✅ test_strategy.md §9.1 CI 統合スモーク負荷テスト追加、release_plan.md 判定基準にも反映 |
+| H-09 | Tester | 楽観ロックの真の並行テスト | ✅ test_strategy.md §9.4 `forConcurrently` ベースの並行更新テスト例を追加 |
+| H-10 | Tester | 受入基準の BDD (Given/When/Then) 形式化 | ✅ test_strategy.md §3.5 BDD 規約 + hspec マッピング + US08a 実装例追加。US08a/US08b/US26/US27 は既に BDD 化 |
+| H-11 | UR | 荷受人を一級アクターに昇格、引取通知ストーリーを Phase 3 に追加 | ✅ US26 を新規追加 (Phase 3 / IT6 / 2 SP)、release_plan.md 判定基準にも反映 |
+| H-12 | UR | 通関 / 税関連携の最小要件を Phase 2 に追加 | ✅ US27 を新規追加 (Phase 2 / IT3 / 3 SP)、HS コード・通関業者・申告ステータス受入基準を BDD で定義 |
+| H-13 | UR | US08 の受入基準に「危険物対応港・温度管理可能船の絞り込み」を明文化 | ✅ US08b として独立化、危険物クラス/冷凍コンテナ可否の受入基準を Gherkin で明示 |
+| H-14 | UX | 荷役登録のオフライン対応 (Service Worker + IndexedDB) の前倒し | ✅ ui_design.md にオフライン設計方針追加、Release 1.0 MVP までに対応する判定基準に追加 |
+| H-15 | UX | 24 画面のエラー UI 統一ハンドリング定義 | ✅ ui_design.md に「エラー状態統一ハンドリング」表 + htmx グローバルハンドラ実装例追加 |
+| H-16 | UX | タッチターゲット 44x44px 以上の明示 | ✅ ui_design.md に WCAG 2.5.5 準拠規約 + Bootstrap 5 デフォルトテーマのコントラスト比検証表を追加 |
 
 ### 中
 

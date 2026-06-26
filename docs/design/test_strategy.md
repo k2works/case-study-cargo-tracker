@@ -341,6 +341,68 @@ test('US18 追跡情報照会: ポーリングで状態が更新される', asyn
 
 ---
 
+## 3.5 受入基準の BDD 形式 (Gherkin) 化 (H-10 反映)
+
+### 規約
+
+US01-US27 の受入基準は **必ず Given/When/Then 形式** で記述する。`[ ]` チェックボックスのみの表現は ATDD (受入テスト駆動開発) に変換できないため禁止する。
+
+### Gherkin 形式の標準パターン
+
+```text
+- [ ] **Given** {前提条件・初期状態}
+      **When** {操作・トリガー}
+      **Then** {期待される結果}
+```
+
+複数の前提・操作を組み合わせる場合は `And` / `But` を使用する。
+
+### Haskell hspec / hspec-wai での対応マッピング
+
+| Gherkin | hspec / hspec-wai 対応 |
+| :--- | :--- |
+| Feature | `describe` (US 単位) |
+| Scenario | `it` (受入基準 1 件単位) |
+| Given | テスト冒頭の状態構築 (`let initial = ...`、`seedDb`) |
+| When | テスト対象の関数呼び出し / `request` |
+| Then | `shouldBe` / `shouldRespondWith` / `shouldSatisfy` |
+| And (Given) | 追加の `let` または DB 投入 |
+| And (Then) | 追加の `shouldBe` |
+
+### 実装例: US08a の受入基準
+
+```haskell
+spec :: Spec
+spec = describe "US08a: 経路候補を算出する (基本)" $ do
+  it "Given 航海スケジュールと出発地・目的地・期限 When 候補算出 Then 期限内到達可能な候補が返る" $ do
+    let voyages  = sampleVoyages -- Given
+        spec     = sampleRouteSpec
+    result <- findCandidates spec voyages -- When
+    result `shouldSatisfy` (not . null) -- Then
+    all (meetsDeadline (rsDeadline spec)) result `shouldBe` True
+
+  it "Given 直行便が存在 When 候補算出 Then 直行便が rank=0 で最優先候補" $ do
+    let voyages = directVoyage : indirectVoyages
+    result <- findCandidates sampleRouteSpec voyages
+    rcRank (head result) `shouldBe` 0
+    rcDirectFlight (head result) `shouldBe` True
+
+  it "Given 期限内到達可能な経路なし When 候補算出 Then 「期限内到達不可」エラー" $ do
+    result <- findCandidates impossibleSpec sampleVoyages
+    result `shouldBe` Left DeadlineUnreachable
+```
+
+### トレーサビリティ
+
+`docs/requirements/user_story.md` の受入基準と `test/unit/<ContextName>/<UseCase>Spec.hs` の `it` 文の対応を、`docs/development/acceptance_test_traceability.md` (IT1 で作成) で維持する。
+
+### 既存 25 US の Gherkin 化スケジュール
+
+| 対応 US | タイミング |
+| :--- | :--- |
+| US08a / US08b / US26 / US27 | Sprint 0 で既に対応済み |
+| 残り 23 US | IT1 開発着手前に書き直し (推定 4 時間) |
+
 ## 4. WireMock 契約テストシナリオ (ACL ポート別)
 
 ### 4.1 シナリオ一覧
@@ -502,12 +564,77 @@ stop
 
 ---
 
-## 9. パフォーマンステスト (将来)
+## 9. パフォーマンステスト (Release 1.0 から CI 組み込み)
 
-初期リリース対象外だが、以下を将来検討する。
+> H-08 反映: 非機能要件の P95 < 500ms を「将来」から「CI 組み込み (Release 1.0 から)」に格上げ。
 
-- 負荷テスト: `wrk` または k6 で `/api/v1/tracking/:number` の RPS 計測
-- 長時間稼働: GHC RTS のメモリリーク検出 (`+RTS -hT`)
+### 9.1 CI 統合スモーク負荷テスト
+
+| 項目 | 内容 |
+| :--- | :--- |
+| ツール | k6 (推奨) または wrk |
+| 対象 | 公開貨物追跡 `GET /public/tracking/:number` (認証不要、最頻アクセス) |
+| 実行頻度 | main branch push 時 (E2E と同時) |
+| 環境 | ステージング (本番相当の ECS Fargate + RDS) |
+| シナリオ | 10 RPS × 60 秒で安定状態を計測 |
+| 判定 | P95 < 500 ms / P99 < 1.0 s / エラー率 < 0.1% |
+| 失敗時 | デプロイブロック + Slack 通知 |
+
+```javascript
+// scripts/k6/smoke-tracking.js
+import http from 'k6/http';
+import { check } from 'k6';
+
+export const options = {
+  vus: 10,
+  duration: '60s',
+  thresholds: {
+    http_req_duration: ['p(95)<500', 'p(99)<1000'],
+    http_req_failed:   ['rate<0.001'],
+  },
+};
+
+export default function () {
+  const res = http.get('https://staging.cargo-tracker.example.com/public/tracking/TR12345');
+  check(res, { 'status 200': (r) => r.status === 200 });
+}
+```
+
+### 9.2 リグレッション検知
+
+- 直近 7 回の実行結果を CloudWatch カスタムメトリクスに記録
+- P95 が直近 7 回平均の +30% を超えた場合は Warning (Slack 通知のみ、ブロックなし)
+- 月次レポートで SLO バジェット消費量を可視化
+
+### 9.3 長時間稼働テスト (Release 2.0 以降)
+
+- GHC RTS のメモリリーク検出 (`+RTS -hT -i30`)
+- 24 時間以上の連続稼働でメモリ増加 < 5% を確認
+
+### 9.4 楽観ロックの真の並行テスト (H-09 反映)
+
+`async` で複数スレッドから同じ集約を同時に更新し、`ConcurrentModification` が確実に発火することを実証する。
+
+```haskell
+spec :: Spec
+spec = aroundAll (withContainers postgresContainer) $
+  describe "Cargo 楽観ロック並行更新" $
+    it "10 スレッドが同時に同じ集約を更新すると、1 つだけ成功し残りは ConcurrentModification" $ \conn -> do
+      let initial = sampleCargo Preliminary
+      _ <- saveCargo conn initial
+      results <- forConcurrently [1..10] $ \_ -> do
+        cargo <- fromJust <$> findByBookingId conn (cargoBookingId initial)
+        -- 全スレッドが同じバージョンを読み取り、各自で更新
+        saveCargo conn (cargo { cargoStatus = RouteProposed })
+      let successes = filter isRight results
+          conflicts = filter isLeft results
+      length successes `shouldBe` 1
+      length conflicts `shouldBe` 9
+      all (== Left (ConcurrentModification "BK-...")) conflicts `shouldBe` True
+```
+
+> `forConcurrently` は `Control.Concurrent.Async` (async パッケージ) 提供。
+> CI で flaky にならないよう、`withTransaction` の isolation level を `Serializable` に設定するか、テスト固有 DB を使用する。
 
 ---
 
