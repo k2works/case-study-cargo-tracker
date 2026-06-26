@@ -24,6 +24,7 @@ import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
 import qualified Shared.Auth.Infrastructure.JwtIssuerSpec
 import qualified Shared.Auth.Infrastructure.PostgresUserRepositorySpec
 import qualified Shared.Auth.Interfaces.LoginApiSpec
+import qualified Shared.Auth.Interfaces.LoginPageApiSpec
 import qualified Shared.Auth.Interfaces.ProtectedSpec
 import qualified Shared.Domain.Common.UnLocodeSpec
 import qualified Shipper.Application.RegisterShipperCommandSpec
@@ -69,6 +70,10 @@ main = hspec $ do
   describe
     "Cargotracker.Shared.Auth.Interfaces.Protected"
     Shared.Auth.Interfaces.ProtectedSpec.spec
+
+  describe
+    "Cargotracker.Shared.Auth.Interfaces.LoginPageApi"
+    Shared.Auth.Interfaces.LoginPageApiSpec.spec
 
   describe
     "Cargotracker.Shipper.Domain.Model.Shipper"

@@ -28,7 +28,8 @@ import Database.PostgreSQL.Simple
     connectPostgreSQL,
   )
 import Network.HTTP.Types (status200, status404, status500)
-import Network.Wai (Application, pathInfo, responseLBS)
+import Network.HTTP.Types.Method (methodGet, methodPost)
+import Network.Wai (Application, pathInfo, requestMethod, responseLBS)
 import Network.Wai.Handler.Warp (run)
 import System.Environment (lookupEnv)
 
@@ -49,6 +50,7 @@ import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   ( newPostgresUserRepository,
   )
 import Cargotracker.Shared.Auth.Interfaces.LoginApi (loginApp)
+import Cargotracker.Shared.Auth.Interfaces.LoginPageApi (loginPageApp)
 import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   ( newPostgresShipperRepository,
   )
@@ -82,6 +84,9 @@ rootApp :: Connection -> JwtSecret -> Application
 rootApp conn jwtSecret req respond =
   case pathInfo req of
     ["health"] -> healthHandler req respond
+    ["login"]
+      | requestMethod req == methodGet -> loginPageApp req respond
+      | requestMethod req == methodPost -> loginApp userRepo verifier jwtSecret req respond
     "login" : _ -> loginApp userRepo verifier jwtSecret req respond
     "shippers" : _ -> shipperApp shipperRepo req respond
     "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond

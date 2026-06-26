@@ -57,6 +57,8 @@ dependencies:
 - servant-server >= 0.20
 - wai >= 3.2
 - postgresql-simple >= 0.7
+- lucid >= 2.11
+- servant-lucid >= 0.9
 
 library:
   source-dirs: src
@@ -96,6 +98,9 @@ library:
   - Cargotracker.Booking.Infrastructure.PostgresBookingRepository
   - Cargotracker.Booking.Infrastructure.PostgresShipperExistenceChecker
   - Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
+  - Cargotracker.Shared.Web.Layout
+  - Cargotracker.Shared.Auth.Views.LoginView
+  - Cargotracker.Shared.Auth.Interfaces.LoginPageApi
 
 executables:
   cargo-tracker-exe:
@@ -138,3 +143,5 @@ tests:
     - bytestring
     - text
     - postgresql-simple
+    - lucid
+    - servant-lucid
