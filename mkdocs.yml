@@ -90,6 +90,8 @@ nav:
       - Grokking Functional Programming: article/grokkingfp/index.md
       - Grokking Concurrency: article/grokking-concurrency/index.md
       - 関数型デザイン - 原則、パターン、実践: article/functional-desgin-ppp/index.md
+      - 実践データベース設計：基幹業務システム編: article/practical-database-design/index.md
+      - Docker/Kubernetes 実践コンテナ解説: article/getting-start-docker-kubernetes/index.md
   - リファレンス:
       - 概要: reference/index.md
       - よいソフトウェアとは: reference/よいソフトウェアとは.md
