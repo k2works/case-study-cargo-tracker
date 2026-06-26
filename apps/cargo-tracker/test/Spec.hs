@@ -15,6 +15,7 @@ import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
 import qualified Shared.Auth.Infrastructure.JwtIssuerSpec
 import qualified Shared.Auth.Interfaces.LoginApiSpec
+import qualified Shared.Auth.Interfaces.ProtectedSpec
 
 main :: IO ()
 main = hspec $ do
@@ -46,3 +47,7 @@ main = hspec $ do
   describe
     "Cargotracker.Shared.Auth.Interfaces.LoginApi"
     Shared.Auth.Interfaces.LoginApiSpec.spec
+
+  describe
+    "Cargotracker.Shared.Auth.Interfaces.Protected"
+    Shared.Auth.Interfaces.ProtectedSpec.spec

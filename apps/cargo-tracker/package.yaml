@@ -68,6 +68,7 @@ library:
   - Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier
   - Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
   - Cargotracker.Shared.Auth.Interfaces.LoginApi
+  - Cargotracker.Shared.Auth.Interfaces.Protected
 
 executables:
   cargo-tracker-exe:
