@@ -26,6 +26,7 @@ import qualified Shared.Auth.Interfaces.ProtectedSpec
 import qualified Shared.Domain.Common.UnLocodeSpec
 import qualified Shipper.Application.RegisterShipperCommandSpec
 import qualified Shipper.Domain.Model.ShipperSpec
+import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
 import qualified Shipper.Interfaces.ShipperApiSpec
 
 main :: IO ()
@@ -98,6 +99,10 @@ main = hspec $ do
   describe
     "Cargotracker.Shipper.Interfaces.ShipperApi"
     Shipper.Interfaces.ShipperApiSpec.spec
+
+  describe
+    "Cargotracker.Shipper.Infrastructure.PostgresShipperRepository"
+    Shipper.Infrastructure.PostgresShipperRepositorySpec.spec
 
   describe
     "Cargotracker.Booking.Interfaces.BookingApi"
