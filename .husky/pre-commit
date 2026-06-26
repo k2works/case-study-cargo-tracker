@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+# Husky pre-commit フック
+# Haskell ソースに変更がある場合のみ品質チェックを実行する。
+# stack/hlint/fourmolu が未インストールの環境ではスキップ (警告のみ)。
+
+set -e
+
+# 変更ファイルを取得
+changed_hs=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^apps/cargo-tracker/(src|test|app)/.*\.hs$' || true)
+
+if [ -z "$changed_hs" ]; then
+  echo "[pre-commit] Haskell ソース変更なし → スキップ"
+  exit 0
+fi
+
+cd apps/cargo-tracker
+
+# fourmolu --mode check
+if command -v fourmolu >/dev/null 2>&1; then
+  echo "[pre-commit] fourmolu --mode check"
+  fourmolu --mode check src/ test/ app/ || {
+    echo "[pre-commit] フォーマット違反。\`npm run format\` で修正してください。"
+    exit 1
+  }
+else
+  echo "[pre-commit] fourmolu 未インストール (スキップ)"
+fi
+
+# HLint
+if command -v hlint >/dev/null 2>&1; then
+  echo "[pre-commit] hlint"
+  hlint src/ test/ app/ || exit 1
+else
+  echo "[pre-commit] hlint 未インストール (スキップ)"
+fi
+
+# Domain テスト (高速)
+if command -v stack >/dev/null 2>&1; then
+  echo "[pre-commit] stack test (Domain)"
+  stack test --test-arguments="--match Domain" || exit 1
+else
+  echo "[pre-commit] stack 未インストール (スキップ)"
+fi

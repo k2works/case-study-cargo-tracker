@@ -1,0 +1,17 @@
+# Weeder: 未使用 export / 未使用関数の検出
+# 詳細: https://hackage.haskell.org/package/weeder
+#
+# 実行: weeder
+# (stack build --pedantic を先に実行して .hie ファイルを生成しておくこと)
+
+# ルート (エントリポイント) — ここから到達できないコードを「未使用」と判定する
+roots = [
+    "^Main\\.main$",
+    # テスト・スタブ・初期実装途中で許容する識別子は IT1 以降に追加する
+]
+
+# Cabal 自動生成の Paths_ モジュールは除外
+root-instances = false
+
+# テスト対象モジュールも検査する
+type-class-roots = true
