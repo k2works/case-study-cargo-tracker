@@ -71,6 +71,9 @@
 | :--- | :--- |
 | [リリース計画](./development/release_plan.md) | 25 US / 73 SP・4 フェーズ × 8 IT (0.1 → 0.2 → 1.0 MVP → 2.0 GA) |
 | [分析フェーズ完了報告書](./development/analysis_completion_report.md) | 全 16 ドキュメントの成果サマリ・主要決定事項・残課題 |
+| [IT1 計画](./development/iteration_plan-1.md) | AUTH / US02 / US03 / US04 / US24 の 20 SP イテレーション計画 |
+| [IT1 完了報告書](./development/iteration_report-1.md) | 成功基準 6 件中 5 OK / 1 未達 (HPC 未計測)、主要メトリクス・学び |
+| [IT1 ふりかえり (KPT)](./development/retrospective-1.md) | Keep 13・Problem 14・Try 18 (必達 10 + 推奨 8) |
 
 ### レビュードキュメント
 
@@ -79,6 +82,7 @@
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー (高 11・中 12・低 5) |
 | [分析整合性セルフレビュー](./review/analysis_consistency_review_20260626.md) | grep ベース機械的整合性検証 (集約↔テーブル、UC↔US 等) |
 | [分析多視点レビュー](./review/analysis_multi_perspective_review_20260626.md) | XP 5 エージェント並列レビュー (高 16・中 16・低 10) |
+| [IT1 コードレビュー](./review/it1_code_review_20260626.md) | IT1 全体の XP 5 エージェント並列レビュー (高 10・中 13・低 8) |
 
 ## 補足
 

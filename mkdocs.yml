@@ -89,6 +89,8 @@ nav:
       - 概要: development/index.md
       - リリース計画: development/release_plan.md
       - イテレーション 1 計画: development/iteration_plan-1.md
+      - イテレーション 1 完了報告書: development/iteration_report-1.md
+      - イテレーション 1 ふりかえり: development/retrospective-1.md
       - 分析フェーズ完了報告書: development/analysis_completion_report.md
   - 運用:
       - 概要: operation/index.md
@@ -104,6 +106,7 @@ nav:
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 分析整合性セルフレビュー: review/analysis_consistency_review_20260626.md
       - 分析多視点レビュー: review/analysis_multi_perspective_review_20260626.md
+      - IT1 コードレビュー: review/it1_code_review_20260626.md
   - ADR:
       - 概要: adr/index.md
       - ADR 0001 Haskell + Servant スタック: adr/0001-haskell-servant-stack.md
