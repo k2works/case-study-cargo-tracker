@@ -70,6 +70,7 @@ executables:
     - servant >= 0.20
     - servant-server >= 0.20
     - warp >= 3.4
+    - wai >= 3.2
     - http-types
 
 tests:

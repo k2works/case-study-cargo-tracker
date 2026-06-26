@@ -1,7 +1,7 @@
 # Stack 3.x + GHC 9.10 系列
 # 詳細: https://www.haskellstack.org/
 
-resolver: lts-23.0  # GHC 9.10 系の Stackage LTS
+resolver: lts-24.0  # GHC 9.10 系 (lts-23 は GHC 9.8 + macOS ar @-rsp 非対応で不可)
 
 packages:
 - .
