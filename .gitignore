@@ -39,3 +39,6 @@ apps/cargo-tracker/.hpc/
 apps/cargo-tracker/*.tix
 apps/cargo-tracker/cargo-tracker.cabal
 apps/cargo-tracker/.env
+
+# Skill test workspaces (作業ディレクトリ。コミット対象外)
+.claude/skills/*-workspace/
