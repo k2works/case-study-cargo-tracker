@@ -45,6 +45,7 @@ import Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ( newPostgresVoyageRepository,
   )
 import Cargotracker.Routing.Interfaces.VoyageApi (voyageApp)
+import Cargotracker.Routing.Interfaces.VoyagePageApi (voyagePageApp)
 import Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier (newBcryptVerifier)
 import Cargotracker.Shared.Auth.Infrastructure.JwtIssuer (JwtSecret (..))
 import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
@@ -94,6 +95,7 @@ rootApp conn jwtSecret req respond =
     "shippers" : _ -> shipperApp shipperRepo req respond
     ["bookings", "new"] -> bookingPageApp bookingRepo shipperChecker req respond
     "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond
+    ["voyages", "new"] -> voyagePageApp voyageRepo req respond
     "voyages" : _ -> voyageApp voyageRepo req respond
     _ ->
       respond $
