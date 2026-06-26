@@ -399,6 +399,411 @@ vo ||--o{ cm : 持つ
 
 詳細は [UI 設計](../design/ui_design.md) §IT1 画面群を参照。
 
+### モジュール構造 (IT1 範囲)
+
+DDD + ヘキサゴナル の規約に従い、各 Bounded Context は **Domain / Application / Infrastructure / Interfaces** の 4 層で構成する。`Shared.Auth` は横断モジュール。
+
+```text
+apps/cargo-tracker/src/Cargotracker/
+├── Shared/
+│   ├── Auth/                          ← IT1 新規
+│   │   ├── Domain/
+│   │   │   ├── User.hs                ← UserId / Email / PasswordHash / Role
+│   │   │   └── AuthError.hs
+│   │   ├── Application/
+│   │   │   ├── LoginCommand.hs        ← bcrypt 検証 → JwtClaims 生成
+│   │   │   └── AuthorizationPolicy.hs ← RBAC 型クラスポート
+│   │   ├── Infrastructure/
+│   │   │   ├── JwtIssuer.hs           ← servant-auth-server 統合
+│   │   │   └── PostgresUserRepository.hs
+│   │   └── Interfaces/
+│   │       └── ServantAuth.hs         ← Auth '[Cookie, JWT] User
+│   └── Domain/
+│       ├── DomainError.hs             ← 既存、拡張
+│       └── Common/                    ← UnLocode / Money 等 (IT3 以降で拡張)
+├── Shipper/                           ← IT1 新規 (BC)
+│   ├── Domain/Model/
+│   │   ├── Shipper.hs                 ← 集約ルート
+│   │   └── Value/{ShipperId, Email, Address}.hs
+│   ├── Application/
+│   │   ├── RegisterShipperCommand.hs
+│   │   └── ShipperRepositoryPort.hs   ← 型クラス (ヘキサゴナル "ポート")
+│   ├── Infrastructure/
+│   │   └── PostgresShipperRepository.hs
+│   └── Interfaces/
+│       └── ShipperApi.hs              ← Servant API + Lucid ビュー
+├── Booking/                           ← IT1 新規 (BC)
+│   ├── Domain/Model/
+│   │   ├── Cargo.hs                   ← 集約ルート
+│   │   ├── Value/{BookingId, RouteSpecification, Deadline}.hs
+│   │   └── State/BookingStatus.hs
+│   ├── Application/
+│   │   ├── RegisterBookingCommand.hs
+│   │   ├── BookingRepositoryPort.hs
+│   │   └── ShipperExistenceCheckerPort.hs   ← 他 BC への ACL
+│   ├── Infrastructure/
+│   │   ├── PostgresBookingRepository.hs
+│   │   └── ShipperExistenceCheckerImpl.hs   ← Shipper BC を ACL 経由で参照
+│   └── Interfaces/
+│       └── BookingApi.hs
+└── Routing/                           ← IT1 新規 (BC、IT3 で経路探索を本格化)
+    ├── Domain/Model/
+    │   ├── Voyage.hs                  ← 集約ルート
+    │   └── Value/{VoyageNumber, CarrierMovement}.hs
+    ├── Application/
+    │   ├── RegisterVoyageCommand.hs
+    │   └── VoyageRepositoryPort.hs
+    ├── Infrastructure/
+    │   └── PostgresVoyageRepository.hs
+    └── Interfaces/
+        └── VoyageApi.hs
+```
+
+**依存方向** (arch-check で強制):
+
+```
+Interfaces  → Application → Domain
+Infrastructure → Application (型クラスポートの実装) → Domain
+Domain は Servant / postgresql-simple / aeson に依存しない (ADR 0002)
+```
+
+### アプリケーション層シーケンス
+
+#### AUTH ログイン (POST /login)
+
+```plantuml
+@startuml
+actor User as U
+participant "Servant\nlogin handler" as H
+participant "LoginCommand" as C
+participant "PostgresUserRepository" as R
+participant "JwtIssuer" as J
+database "PostgreSQL" as DB
+
+U -> H : POST /login {email, password}
+H -> C : execute(LoginInput)
+C -> R : findByEmail(email)
+R -> DB : SELECT * FROM users WHERE email=?
+DB --> R : Just user
+R --> C : Just user
+C -> C : bcrypt.verify(password, user.passwordHash)
+alt 検証成功
+  C -> J : issue(JwtClaims user)
+  J --> C : signed JWT
+  C --> H : Right (User, Token)
+  H --> U : 302 Found + Set-Cookie (HttpOnly, SameSite=Strict)
+else 検証失敗
+  C --> H : Left InvalidCredentials
+  H --> U : 401 + flash "資格情報が一致しません"
+end
+@enduml
+```
+
+#### Shipper 登録 (POST /shippers)
+
+```plantuml
+@startuml
+actor Sales as S
+participant "Servant\nshipper handler" as H
+participant "RegisterShipperCommand" as C
+participant "Shipper 集約\n(スマートコンストラクタ)" as Agg
+participant "PostgresShipperRepository" as R
+database "PostgreSQL" as DB
+
+S -> H : POST /shippers (個人 or 法人)
+H -> C : execute(RegisterShipperInput)
+C -> Agg : mkShipper(input)
+alt バリデーション成功
+  Agg --> C : Right Shipper
+  C -> R : save(shipper)
+  R -> DB : BEGIN; INSERT shipper; COMMIT
+  DB --> R : id
+  R --> C : Right ()
+  C --> H : Right ShipperId
+  H --> S : 302 Found /shippers/:id (PRG パターン)
+else バリデーション失敗
+  Agg --> C : Left DomainError
+  C --> H : Left DomainError
+  H --> S : 422 + flash + Lucid 再描画 (入力値保持)
+end
+@enduml
+```
+
+#### Cargo 予約 (POST /bookings)
+
+```plantuml
+@startuml
+actor Sales as S
+participant "Servant\nbooking handler" as H
+participant "RegisterBookingCommand" as C
+participant "ShipperExistenceChecker\n(ACL ポート)" as ACL
+participant "Cargo 集約" as Agg
+participant "PostgresBookingRepository" as R
+database "PostgreSQL" as DB
+
+S -> H : POST /bookings (shipper_id, origin, destination, deadline)
+H -> C : execute(RegisterBookingInput)
+C -> ACL : exists(shipperId)
+ACL -> DB : SELECT 1 FROM shipper WHERE shipper_id=?
+DB --> ACL : true
+ACL --> C : true
+C -> Agg : mkCargo(input)
+Agg --> C : Right Cargo (BookingStatus=Draft)
+C -> R : save(cargo)
+R -> DB : BEGIN; INSERT cargo (version=1); COMMIT
+DB --> R : ()
+R --> C : Right ()
+C --> H : Right BookingId
+H --> S : 302 Found /bookings/:bookingId
+@enduml
+```
+
+#### Voyage 登録 (POST /voyages)
+
+```plantuml
+@startuml
+actor Master as M
+participant "Servant\nvoyage handler" as H
+participant "RegisterVoyageCommand" as C
+participant "Voyage 集約" as Agg
+participant "PostgresVoyageRepository" as R
+database "PostgreSQL" as DB
+
+M -> H : POST /voyages (voyage_number, carrier_movements[])
+H -> C : execute(RegisterVoyageInput)
+C -> Agg : mkVoyage(number, movements)
+note over Agg : 区間の連続性検証\n(前区間 arrival == 次区間 departure)
+Agg --> C : Right Voyage
+C -> R : save(voyage)
+R -> DB : BEGIN; INSERT voyage; INSERT carrier_movement * N; COMMIT
+DB --> R : ()
+R --> C : Right ()
+C --> H : Right VoyageNumber
+H --> M : 302 Found /voyages/:voyageNumber
+@enduml
+```
+
+### トランザクション境界
+
+ADR 0002 の規約 (T-01〜T-03) を IT1 範囲に適用する。
+
+| ルール | 適用 |
+| :--- | :--- |
+| **T-01 (Application で `withTransaction` を張る)** | `RegisterShipperCommand` / `RegisterBookingCommand` / `RegisterVoyageCommand` の各 `execute` 関数の入口で `withTransaction conn $ \tx -> ...` |
+| **T-02 (Domain は IO を持たない)** | スマートコンストラクタ (`mkCargo` 等) は純粋関数 `Either DomainError a`。Repository 呼び出しは Application から行う |
+| **T-03 (Event Publish はトランザクション外)** | IT1 ではイベントは未導入。IT3 以降の `CargoBookedEvent` 等で適用予定 |
+
+トランザクション境界の典型例 (`Booking.Application.RegisterBookingCommand`):
+
+```haskell
+execute :: (HasDb env, HasShipperChecker env)
+        => RegisterBookingInput -> ReaderT env IO (Either DomainError BookingId)
+execute input = do
+  withDbTransaction $ \tx -> do
+    -- 1. バリデーション (純粋関数、トランザクション内)
+    case mkCargo input of
+      Left err   -> pure (Left err)
+      Right cargo -> do
+        -- 2. 他 BC との不変条件 (Shipper の存在) を ACL ポート経由で確認
+        exists <- runShipperChecker tx (cargoShipperId cargo)
+        if not exists
+          then pure (Left (ShipperNotFound (cargoShipperId cargo)))
+          else do
+            -- 3. 永続化 (version=1 で楽観ロック開始)
+            saveBooking tx cargo
+            pure (Right (cargoBookingId cargo))
+```
+
+### エラー処理戦略
+
+```haskell
+-- Cargotracker.Shared.Domain.DomainError
+data DomainError
+  = -- Booking
+    InvalidBookingId !Text
+  | ShipperNotFound !ShipperId
+  | ConcurrentModification !Text
+  | RouteNotSatisfied !BookingId          -- IT2 以降
+  | -- Shared
+    InvalidEmail !Text
+  | InvalidUnLocode !Text
+  | -- Auth (IT1)
+    InvalidCredentials
+  | AccessDenied !Role
+  | -- Routing (IT1)
+    InvalidVoyageNumber !Text
+  | LegContinuityViolation !VoyageNumber  -- 区間連続性違反
+  deriving stock (Eq, Show)
+```
+
+**HTTP マッピング** (`Cargotracker.Shared.Web.ErrorHandler`):
+
+| DomainError | HTTP ステータス | フラッシュメッセージ例 |
+| :--- | :--- | :--- |
+| `InvalidEmail` / `InvalidBookingId` / `InvalidVoyageNumber` / `InvalidUnLocode` / `LegContinuityViolation` | 422 Unprocessable Entity | 「入力値が不正です: <詳細>」 |
+| `InvalidCredentials` | 401 Unauthorized | 「ID またはパスワードが正しくありません」 |
+| `AccessDenied` | 403 Forbidden | 「この操作を実行する権限がありません」 |
+| `ShipperNotFound` | 404 Not Found | 「指定された荷主が見つかりません」 |
+| `ConcurrentModification` | 409 Conflict | 「他の利用者が更新しました。最新を再読込してください」 |
+
+Servant ハンドラの典型実装:
+
+```haskell
+handleRegisterBooking :: RegisterBookingInput -> AppHandler (Headers '[Location] NoContent)
+handleRegisterBooking input = do
+  result <- liftEnv $ execute input
+  case result of
+    Right bookingId -> redirect302 ("/bookings/" <> unBookingId bookingId)
+    Left err        -> throwError (domainErrorToServerError err)
+```
+
+### DB マイグレーション順序
+
+dbmate で **IT1 で 5 マイグレーション** を投入する。FK 参照順序を尊重する。
+
+| 順序 | ファイル | 内容 |
+| :--- | :--- | :--- |
+| 001 | `001_create_users_and_roles.sql` | `users` + `user_roles` (AUTH) |
+| 002 | `002_create_location.sql` | `location` (UnLocode マスタ、最小 10 件シード) |
+| 003 | `003_create_shipper.sql` | `shipper` (FK は `location` のみ) |
+| 004 | `004_create_cargo.sql` | `cargo` (FK: `shipper.id` + `location.unlocode` x2) |
+| 005 | `005_create_voyage_and_carrier_movement.sql` | `voyage` + `carrier_movement` (FK: `voyage.id`, `location.unlocode` x2) |
+
+各マイグレーションは `up` と `down` を両方記述 (rollback 可能性確保)。シード SQL は `db/seeds/` 配下に別管理。
+
+### 画面遷移とインタラクション (IT1 範囲)
+
+```plantuml
+@startuml
+title IT1 画面遷移
+
+[*] --> ログイン画面
+
+state "ログイン画面 (/login)" as Login
+state "ダッシュボード (/)" as Home
+state "荷主登録 (/shippers/new)" as ShipperNew
+state "荷主登録 (/shippers/new) [バリデーションエラー]" as ShipperNewErr
+state "荷主詳細 (/shippers/:id)" as ShipperShow
+state "貨物予約登録 (/bookings/new)" as BookingNew
+state "貨物予約登録 (/bookings/new) [バリデーションエラー]" as BookingNewErr
+state "貨物予約詳細 (/bookings/:bookingId)" as BookingShow
+state "航海登録 (/voyages/new)" as VoyageNew
+state "航海登録 (/voyages/new) [バリデーションエラー]" as VoyageNewErr
+state "航海詳細 (/voyages/:voyageNumber)" as VoyageShow
+
+Login --> Home : POST /login 成功 (302)
+Login --> Login : POST /login 失敗 (401 + flash)
+
+Home --> ShipperNew : メニュー (営業 / マスタ管理者)
+Home --> BookingNew : メニュー (営業)
+Home --> VoyageNew : メニュー (マスタ管理者 / 運航管理者)
+Home --> Login : POST /logout
+
+ShipperNew --> ShipperShow : POST /shippers 成功 (302 PRG)
+ShipperNew --> ShipperNewErr : POST /shippers 422
+ShipperNewErr --> ShipperNew : 入力修正
+
+BookingNew --> BookingShow : POST /bookings 成功 (302 PRG)
+BookingNew --> BookingNewErr : POST /bookings 422
+BookingNewErr --> BookingNew : 入力修正
+
+VoyageNew --> VoyageShow : POST /voyages 成功 (302 PRG)
+VoyageNew --> VoyageNewErr : POST /voyages 422
+VoyageNewErr --> VoyageNew : 入力修正
+
+ShipperShow --> Home
+BookingShow --> Home
+VoyageShow --> Home
+@enduml
+```
+
+**htmx パターン (IT1 適用箇所)**:
+
+| 画面 | パターン | エンドポイント |
+| :--- | :--- | :--- |
+| 貨物予約登録 | 荷主検索オートコンプリート | `hx-get="/shippers/search?q=..."` → `hx-target="#shipper-results"` → `hx-swap="innerHTML"` |
+| 航海登録 | 寄港地行の動的追加 | `hx-get="/voyages/new/movement-row"` → `hx-target="#movements-table tbody"` → `hx-swap="beforeend"` |
+| 航海登録 | 寄港地行の削除 | `hx-delete` は使わず `hx-post` でクライアント DOM 操作のみ (サーバ呼び出し不要) |
+
+**フラッシュメッセージ規約**:
+
+| レベル | Bootstrap クラス | 用途 |
+| :--- | :--- | :--- |
+| 成功 | `alert alert-success` | 登録成功時の確認 |
+| 警告 | `alert alert-warning` | 楽観ロック衝突 (`ConcurrentModification`) |
+| エラー | `alert alert-danger` | バリデーションエラー、認証失敗 |
+
+htmx エラーハンドリング: `htmx:responseError` イベントで Bootstrap alert を表示。HX-Trigger ヘッダで `showFlash` イベントを発火するパターン。
+
+### テスト戦略 (IT1 範囲)
+
+| ツール | 対象 | カバレッジ目標 |
+| :--- | :--- | ---: |
+| hspec | Domain 純粋関数 (集約スマートコンストラクタ、状態遷移) | ≥ 95% |
+| hedgehog | 値オブジェクトの不変条件 (BookingId 形式、Email 形式、UnLocode 5 文字) | プロパティ 8 件 |
+| hspec-wai | Servant API 統合テスト (認証、CRUD、エラーマッピング) | API カバレッジ ≥ 80% |
+| testcontainers-hs | PostgresRepository 統合テスト (実 PostgreSQL コンテナ) | リポジトリ全メソッド |
+| hpc | 全体カバレッジ | 全体 ≥ 70% (IT1 段階目標) |
+| Playwright (TypeScript) | E2E デモシナリオ (営業ログイン → 荷主登録 → 予約) | 主要 1 シナリオのみ |
+
+**Gherkin → hspec-wai 変換例**:
+
+```haskell
+-- test/integration/Booking/RegisterBookingSpec.hs
+spec :: Spec
+spec = with appWithTestDb $ do
+  describe "POST /bookings" $ do
+    it "営業ロールで正しい入力なら 302 + Location ヘッダ" $ do
+      _ <- loginAs SalesUser
+      post "/bookings" validBookingPayload
+        `shouldRespondWith` 302
+        { matchHeaders = ["Location" <:> "/bookings/BK-A1B2C3"] }
+```
+
+**Gherkin 23 件の内訳 (Sprint 0 抽出より、IT1 で hspec-wai 化)**:
+
+| 機能 | シナリオ数 |
+| :--- | ---: |
+| AUTH (ログイン・RBAC) | 8 |
+| US02 / US03 荷主登録 | 6 |
+| US04 貨物予約登録 | 5 |
+| US24 航海登録 | 4 |
+
+### CI 統合
+
+`.github/workflows/ci.yml` に IT1 で追加するステップ:
+
+```yaml
+- name: arch-check Phase 1 (HLint custom rules)
+  working-directory: apps/cargo-tracker
+  run: nix-shell ../../$NIX_SHELL --run "hlint --hint=.hlint.yaml src/"
+
+- name: arch-check Phase 2 (custom binary)
+  working-directory: apps/cargo-tracker
+  run: nix-shell ../../$NIX_SHELL --run "stack exec arch-check -- src/"
+
+- name: HPC カバレッジしきい値検証
+  working-directory: apps/cargo-tracker
+  run: |
+    nix-shell ../../$NIX_SHELL --run "stack test --coverage"
+    nix-shell ../../$NIX_SHELL --run "stack hpc report --all" \
+      | tee /tmp/hpc-report.txt
+    # しきい値検証 (Domain 95%, 全体 70%)
+    domain_cov=$(grep "expressions used (Domain)" /tmp/hpc-report.txt | awk '{print $NF}')
+    [ "${domain_cov%\%}" -ge 95 ] || (echo "Domain カバレッジ不足: $domain_cov" && exit 1)
+```
+
+`testcontainers-hs` 統合テストでは Docker-in-Docker が必要なため、`services: docker` を有効化する。
+
+```yaml
+services:
+  docker:
+    image: docker:24-dind
+    options: --privileged
+```
+
+`k6` スモークテストは IT6 で導入 (本イテレーション範囲外)。
+
 ---
 
 ## リスクと対策
@@ -439,6 +844,7 @@ vo ||--o{ cm : 持つ
 | :--- | :--- | :--- | :--- |
 | 2026-06-26 | 1.0 | 初版作成 (orchestrating-project --init より) | - |
 | 2026-06-26 | 1.1 | validating-iteration-plan による整合性検証反映: テンプレート準拠 (リスクと対策 / 完了条件 / 関連ドキュメント / 更新履歴)、データモデルをサロゲートキー規約に修正、Voyage を CarrierMovement 構成に修正、BookingStatus を 5 値に拡張、AUTH の横断扱い注記 | - |
+| 2026-06-26 | 1.2 | 設計セクション充実: モジュール構造 / アプリケーション層シーケンス 4 件 / トランザクション境界 / エラー処理戦略 / DB マイグレーション順序 / 画面遷移とインタラクション / テスト戦略 / CI 統合 を追加 (8 トピック) | - |
 
 ---
 
