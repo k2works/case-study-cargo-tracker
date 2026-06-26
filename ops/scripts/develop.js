@@ -132,6 +132,15 @@ export default function (gulp) {
     done();
   });
 
+  // ホットリロード起動: ソース変更で main を自動再起動 (ghcid 経由)
+  gulp.task('dev:watch', (done) => {
+    runIn(
+      'ghcid --command="stack ghci cargo-tracker:exe:cargo-tracker-exe" --test=":main" --warnings --restart=package.yaml --restart=db/migrations',
+      APP_DIR,
+    );
+    done();
+  });
+
   // --- テスト ---
 
   gulp.task('dev:test', (done) => {
@@ -260,6 +269,7 @@ export default function (gulp) {
   dev:build             stack build
   dev:build:pedantic    -Werror 相当の厳格ビルド
   dev:run               cargo-tracker-exe を起動
+  dev:watch             ホットリロード起動 (ghcid + main)
   dev:ghci              GHCi REPL を起動
 
   [テスト]

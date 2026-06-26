@@ -7,6 +7,7 @@
     "stop": "gulp stop",
     "spec": "gulp spec",
     "start:dev": "gulp dev:run",
+    "start:watch": "gulp dev:watch",
     "test": "gulp dev:test",
     "test:tdd": "gulp tdd:cargo-tracker",
     "test:coverage": "gulp dev:test:coverage",
