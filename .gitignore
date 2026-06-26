@@ -33,3 +33,9 @@ coverage/
 tmp/
 .tmp/
 .claude/agent-memory
+# Haskell (apps/cargo-tracker)
+apps/cargo-tracker/.stack-work/
+apps/cargo-tracker/.hpc/
+apps/cargo-tracker/*.tix
+apps/cargo-tracker/cargo-tracker.cabal
+apps/cargo-tracker/.env

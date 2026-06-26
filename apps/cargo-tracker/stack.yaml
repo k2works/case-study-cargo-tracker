@@ -1,0 +1,24 @@
+# Stack 3.x + GHC 9.10 系列
+# 詳細: https://www.haskellstack.org/
+
+resolver: lts-23.0  # GHC 9.10 系の Stackage LTS
+
+packages:
+- .
+
+# 主要依存はテーマ別に追加。版数は IT1 で確定する
+extra-deps: []
+
+# ローカルでビルド成果物を分離 (Docker でも同じパスを使う)
+allow-newer: false
+
+# 警告を CI で厳格化 (pedantic は package.yaml の ghc-options で個別指定)
+nix:
+  enable: false
+
+flags: {}
+
+# Docker integration (将来検討)
+# docker:
+#   enable: true
+#   repo: fpco/stack-build:lts-23.0

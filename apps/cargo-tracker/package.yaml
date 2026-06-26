@@ -1,0 +1,86 @@
+name:                cargo-tracker
+version:             0.1.0.0
+github:              "k2works/case-study-cargo-tracker-haskell-take-1"
+license:             BSD-3-Clause
+author:              "Cargo Tracker Team"
+maintainer:          "noreply@example.com"
+copyright:           "2026 Cargo Tracker Team"
+
+extra-source-files:
+- README.md
+- db/migrations/**/*.sql
+
+synopsis:            国際貨物輸送管理システム (Haskell 版)
+description:         DDD + ヘキサゴナル + CQRS を Servant + Warp + Lucid で実装
+
+# ADR 0002 (arch-check) で定めたコンパイラフラグを全プロジェクトに強制適用
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-patterns
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wpartial-fields
+- -Wmissing-export-lists
+- -Wmissing-deriving-strategies
+- -Wunused-packages
+- -Wname-shadowing
+- -Wredundant-constraints
+- -Werror=incomplete-patterns
+
+default-extensions:
+- DerivingStrategies
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- OverloadedStrings
+- RecordWildCards
+- ScopedTypeVariables
+- StrictData
+- TypeApplications
+- DataKinds
+- TypeOperators
+
+dependencies:
+- base >= 4.18 && < 5
+- text >= 2.0
+- bytestring
+- containers
+- time
+- uuid
+- aeson >= 2.2
+- mtl >= 2.3
+
+library:
+  source-dirs: src
+  exposed-modules:
+  - Cargotracker
+  - Cargotracker.Shared.Domain.DomainError
+
+executables:
+  cargo-tracker-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - cargo-tracker
+    - servant >= 0.20
+    - servant-server >= 0.20
+    - warp >= 3.4
+    - http-types
+
+tests:
+  cargo-tracker-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - cargo-tracker
+    - hspec >= 2.11
+    - hedgehog >= 1.4

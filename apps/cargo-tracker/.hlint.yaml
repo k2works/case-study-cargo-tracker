@@ -1,0 +1,22 @@
+# HLint カスタムルール
+# 詳細: https://github.com/ndmitchell/hlint#readme
+# ADR 0002 (arch-check) Phase 1 として依存方向ルールを定義する。
+
+# ルール 1: ドメイン層がインフラ層に依存しない
+- modules:
+    - {name: [Cargotracker.*.Infrastructure.*], within: ["Cargotracker.*.Domain.*"]}
+      message: "ルール 1 違反: ドメイン層はインフラ層に依存してはいけない (ADR 0002)"
+
+# ルール 2: ドメイン層がフレームワーク・永続化ライブラリに依存しない
+- modules:
+    - {name: [Servant.*, Database.PostgreSQL.Simple.*, Data.Aeson.*, Network.HTTP.*], within: ["Cargotracker.*.Domain.*"]}
+      message: "ルール 2 違反: ドメイン層は Servant / postgresql-simple / aeson 等に依存してはいけない (ADR 0002)"
+
+# ルール 3: アプリケーション層がインフラ層を直接 import しない (型クラスポート経由)
+- modules:
+    - {name: [Cargotracker.*.Infrastructure.*], within: ["Cargotracker.*.Application.*"]}
+      message: "ルール 3 違反: アプリケーション層はインフラ層を型クラスポート経由でのみ参照 (ADR 0002)"
+
+# 慣用表現の警告 (デフォルトの多くを許容)
+- ignore: {name: "Use camelCase"}    # snake_case の DB カラム名を保持するため
+- ignore: {name: "Reduce duplication"}  # 過剰反応しやすいため OFF

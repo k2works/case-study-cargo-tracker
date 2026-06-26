@@ -1,0 +1,18 @@
+# Stack / Cabal ビルド成果物
+.stack-work/
+cargo-tracker.cabal       # hpack が package.yaml から生成 (CI でも再生成)
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
+# テストカバレッジ (hpc)
+.hpc/
+*.tix
+
+# ローカル設定
+.env
+.envrc
+
+# ローカル DB データ (Docker Compose volume)
+# postgres_data volume は docker compose 管理なのでファイルとしては無い
