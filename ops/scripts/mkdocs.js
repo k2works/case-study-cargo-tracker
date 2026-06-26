@@ -31,16 +31,23 @@ function requireDocker() {
  * @param {import('gulp').Gulp} gulp - Gulp インスタンス
  */
 export default function (gulp) {
-  gulp.task('mkdocs:serve', (done) => {
-    if (!requireDocker()) { done(); return; }
-    try {
-      console.log('Starting MkDocs server...');
-      dockerCompose('up -d mkdocs');
-      console.log('\nDocumentation is available at http://localhost:8000');
-      done();
-    } catch (error) {
-      done(error);
+  gulp.task('mkdocs:serve', async () => {
+    if (!requireDocker()) return;
+    console.log('Starting MkDocs server...');
+    dockerCompose('up -d mkdocs');
+    // daemon が応答するまで待機 (最大 60 秒)
+    const start = Date.now();
+    const timeoutMs = 180000;
+    while (Date.now() - start < timeoutMs) {
+      try {
+        execSync('curl -sf http://localhost:8000/ -o /dev/null', { stdio: 'ignore' });
+        console.log('\nDocumentation is available at http://localhost:8000');
+        return;
+      } catch {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
     }
+    console.log('\nWarning: MkDocs did not become ready within 180s. Check `docker compose logs mkdocs`.');
   });
 
   gulp.task('mkdocs:build', (done) => {

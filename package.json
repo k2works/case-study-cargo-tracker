@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "gulp spec",
+    "start": "gulp start",
+    "stop": "gulp stop",
+    "spec": "gulp spec",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
