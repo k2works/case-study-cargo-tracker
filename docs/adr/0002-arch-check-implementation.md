@@ -108,6 +108,16 @@ rules:
       - in_module: "Cargotracker.*.Application.CommandService"
       - pattern: "withTransaction.*publish"
       - message: "T-03 違反: イベント発行はコミット後 (withTransaction の外) で行うこと"
+
+  # ルール 5 (M-10 反映): 同 BC 内での集約境界跨ぎ参照禁止
+  # 集約 A が集約 B の内部状態フィールドを直接参照することを禁止し、集約 ID 経由でのみ参照させる
+  - name: aggregate-boundary-respect
+    forbid_pattern:
+      - in_module: "Cargotracker.<Ctx>.Domain.Model.Aggregates.<AggregateA>"
+      - pattern: "Cargotracker.<Ctx>.Domain.Model.Aggregates.<AggregateB>\\.[a-z]"
+      - except:
+          - "AggregateBId"  # ID 型のみ参照可
+      - message: "ルール 5 違反: 同 BC 内でも集約 B の内部状態に直接アクセスせず、ID 経由でリポジトリから取得すること"
 ```
 
 #### 段階的導入

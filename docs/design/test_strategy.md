@@ -403,6 +403,99 @@ spec = describe "US08a: 経路候補を算出する (基本)" $ do
 | US08a / US08b / US26 / US27 | Sprint 0 で既に対応済み |
 | 残り 23 US | IT1 開発着手前に書き直し (推定 4 時間) |
 
+## 3.6 境界値テスト一覧表 (M-07 反映)
+
+業務領域に散在する境界値を集約し、テストの抜け漏れを防ぐ。
+`describe "boundaries"` ブロック単位で対応する spec を作成する。
+
+| 対象 | 値オブジェクト | 境界 | 期待動作 | 担当 spec |
+| :--- | :--- | :--- | :--- | :--- |
+| 割引率 | `DiscountRate` | 0.0000 (下限) | OK | `DiscountRateSpec` |
+| 割引率 | `DiscountRate` | 0.3000 (上限) | OK | `DiscountRateSpec` |
+| 割引率 | `DiscountRate` | -0.0001 | `DiscountRateOutOfRange` | `DiscountRateSpec` |
+| 割引率 | `DiscountRate` | 0.3001 | `DiscountRateOutOfRange` | `DiscountRateSpec` |
+| UN/LOCODE | `UnLocode` | 5 文字 (例: `JPTYO`) | OK | `UnLocodeSpec` |
+| UN/LOCODE | `UnLocode` | 4 文字 / 6 文字 | `InvalidUnLocode` | `UnLocodeSpec` |
+| UN/LOCODE | `UnLocode` | 先頭 2 文字が小文字 | `InvalidUnLocode` | `UnLocodeSpec` |
+| 重量 | `Weight` | 0.001 kg (下限超過) | OK | `WeightSpec` |
+| 重量 | `Weight` | 0 / 負の値 | `InvalidWeight` | `WeightSpec` |
+| 個数 | `Quantity` | 1 (下限) | OK | `QuantitySpec` |
+| 個数 | `Quantity` | 0 / 負の値 | `InvalidQuantity` | `QuantitySpec` |
+| 寸法 | `Dimensions.length` | 0.001 cm (下限超過) | OK | `DimensionsSpec` |
+| 品名 | `Description` | 500 文字 (上限) | OK | `DescriptionSpec` |
+| 品名 | `Description` | 501 文字 | `DescriptionTooLong` | `DescriptionSpec` |
+| HS コード | `HsCode` | 6 桁 (下限) | OK | `HsCodeSpec` |
+| HS コード | `HsCode` | 10 桁 (上限) | OK | `HsCodeSpec` |
+| HS コード | `HsCode` | 5 桁 / 11 桁 | `InvalidHsCode` | `HsCodeSpec` |
+| 追跡番号 | `TrackingNumber` | 8 文字英数大文字 (例: `TR12345A`) | OK | `TrackingNumberSpec` |
+| 追跡番号 | `TrackingNumber` | 7 文字 / 9 文字 / 小文字混在 | `InvalidTrackingNumber` | `TrackingNumberSpec` |
+| 予約 ID | `BookingId` | `BK-` + 6 文字英数 | OK | `BookingIdSpec` |
+| 予約 ID | `BookingId` | 接頭辞欠落 / 長さ違反 | `InvalidBookingId` | `BookingIdSpec` |
+| 引取確認コード | `ClaimCode` | 4 桁数字 (下限) | OK | `ClaimCodeSpec` |
+| 引取確認コード | `ClaimCode` | 6 桁数字 (上限) | OK | `ClaimCodeSpec` |
+| 引取確認コード | `ClaimCode` | 3 桁 / 7 桁 / アルファベット混入 | `InvalidClaimCode` | `ClaimCodeSpec` |
+| 通貨換算金額 | `Money.add` | 同一通貨 (`JPY` + `JPY`) | OK | `MoneySpec` |
+| 通貨換算金額 | `Money.add` | 異通貨 (`JPY` + `USD`) | `CurrencyMismatch` | `MoneySpec` |
+| BookingStatus 遷移 | `canTransitionTo` | 全 9 × 9 = 81 ペア | 期待結果と一致 | `BookingStatusSpec` |
+| 通貨コード | `Currency` | `JPY` / `USD` / `EUR` (ISO 4217) | OK | `CurrencySpec` |
+| 通貨コード | `Currency` | `XYZ` (未定義 3 文字) | `InvalidCurrency` | `CurrencySpec` |
+
+## 3.7 hedgehog Generator 設計指針 (M-08 反映)
+
+プロパティテストの信頼性を保つため、Generator 設計に以下の規約を適用する。
+
+### 規約 G-01: `Gen.filter` の多用を避ける
+
+`Gen.filter` は条件を満たすまで生成を繰り返す。条件が厳しいと discard が増え、テスト時間が伸び、ひどい場合は `GaveUp` (生成不能エラー) になる。
+
+❌ **悪い例**:
+
+```haskell
+-- 5 文字英数大文字を生成したいが、Gen.text で生成して filter する
+genUnLocode = Gen.filter validFormat (Gen.text (Range.linear 0 10) Gen.alphaNum)
+  where validFormat t = T.length t == 5 && T.all isAsciiUpper (T.take 2 t)
+```
+
+⭕ **良い例 (コンストラクティブな生成)**:
+
+```haskell
+-- 各文字を直接生成して合成
+genUnLocode = do
+  cc  <- Gen.text (Range.singleton 2) Gen.upper
+  loc <- Gen.text (Range.singleton 3) (Gen.choice [Gen.upper, Gen.digit])
+  pure (cc <> loc)
+```
+
+### 規約 G-02: 合成型 (data) は各フィールドを独立生成
+
+```haskell
+genRouteSpecification :: Gen RouteSpecification
+genRouteSpecification = RouteSpecification
+  <$> genLocation
+  <*> genLocation
+  <*> genFutureDay  -- 未来日付のみ生成
+```
+
+### 規約 G-03: スマートコンストラクタを通す Generator も用意
+
+純粋なドメイン関数のテストでは「無効な値」も生成する必要があるが、Application 層のテストでは「有効な値」のみが必要。両方の Generator を用意する。
+
+```haskell
+genValidBookingId :: Gen BookingId
+genValidBookingId = unsafeBookingId <$> genBookingIdText  -- 検証済み形式のみ
+
+genAnyText :: Gen Text  -- 検証失敗パスも含む
+genAnyText = Gen.text (Range.linear 0 20) Gen.alphaNum
+```
+
+### 規約 G-04: シュリンク (失敗時の最小反例) が効くように設計
+
+`Gen.element [a, b, c]` でなく `Gen.choice [pure a, pure b, pure c]` を使うと、Hedgehog はシュリンク経路を活用しやすい。Range は `linear` を優先 (シュリンクで 0 に向かう)。
+
+### 規約 G-05: discard 率を監視
+
+`hedgehog` の `--verbose` または `--coverage` でテスト統計を確認。discard 率 > 10% は Generator 設計を見直すサイン。
+
 ## 4. WireMock 契約テストシナリオ (ACL ポート別)
 
 ### 4.1 シナリオ一覧
@@ -414,6 +507,51 @@ spec = describe "US08a: 経路候補を算出する (基本)" $ do
 | `PaymentGatewayPort` | 決済完了 | 拒否レスポンス → 状態遷移なし |
 | `PortManagementPort` | 港湾情報取得 | 接続不可 → キャッシュフォールバック |
 | `NotificationPort` | 通知送信成功 | 失敗時もメインフロー継続 (ログ記録) |
+
+### 4.3 Circuit Breaker シナリオ (M-09 反映)
+
+`ExternalRoutingServicePort` を代表に、Circuit Breaker パターンの状態遷移を WireMock で検証する。
+
+| 状態 | 検証内容 |
+| :--- | :--- |
+| **Closed (正常)** | 連続 5 回成功 → `findOptimalItinerary` がレスポンス取得 |
+| **Closed → Open (障害発生)** | 連続 5 回 5xx → 6 回目以降は即時 `RoutingServiceUnavailable` を返し、外部リクエスト発火しない |
+| **Open → Half-Open (試行期間)** | Open 状態で 30 秒経過 → 1 回だけ外部リクエストを許可 |
+| **Half-Open → Closed (復旧)** | Half-Open リクエストが成功 → Closed に戻り通常運用再開 |
+| **Half-Open → Open (再失敗)** | Half-Open リクエストが失敗 → Open に戻り次の 30 秒待機 |
+| **リトライ上限** | 単一リクエストの再試行は最大 3 回 (指数バックオフ: 100ms → 500ms → 2s) |
+
+```haskell
+spec :: Spec
+spec = around (withWireMock "external-routing.json") $
+  describe "ExternalRoutingServicePort Circuit Breaker" $ do
+
+    it "連続 5 回 5xx → Open 状態に遷移" $ \wmHost -> do
+      replicateM_ 5 $ do
+        result <- findOptimalItinerary sampleSpec `runReaderT` mkEnv wmHost
+        result `shouldBe` Left RoutingServiceUnavailable
+      -- 6 回目は外部リクエストを発火せず即 Left
+      stats <- getWireMockStats wmHost
+      requestCount stats `shouldBe` 5  -- 5 で停止、増えない
+
+    it "Open → Half-Open 30 秒待機 → 成功で Closed 復帰" $ \wmHost -> do
+      -- Open 状態にする
+      replicateM_ 5 (findOptimalItinerary sampleSpec `runReaderT` mkEnv wmHost)
+      -- WireMock を正常応答に切り替え
+      switchWireMockStub wmHost "external-routing-ok.json"
+      -- 30 秒待機 (テストでは時刻モックを使用)
+      advanceTime 30
+      result <- findOptimalItinerary sampleSpec `runReaderT` mkEnv wmHost
+      result `shouldSatisfy` isRight
+
+    it "リトライ上限 3 回 + 指数バックオフ" $ \wmHost -> do
+      -- 100ms → 500ms → 2s で 3 回試行
+      startTime <- getCurrentTime
+      _ <- findOptimalItinerary sampleSpec `runReaderT` mkEnv wmHost
+      endTime <- getCurrentTime
+      let elapsed = diffUTCTime endTime startTime
+      elapsed `shouldSatisfy` (\e -> e >= 2.6 && e <= 3.0)  -- 100+500+2000=2.6s
+```
 
 ### 4.2 WireMock 実装例
 

@@ -367,17 +367,58 @@ createBooking form =
 
 ### CSRF 対策
 
-Servant にデフォルトの CSRF Filter はないため、**Double Submit Cookie パターン** または
-`servant-csrf` ライブラリで保護する。基本方針:
+Servant にデフォルトの CSRF Filter はないため、**Double Submit Cookie パターン** を採用する。
+基本方針:
 
 1. `GET` リクエスト時にランダムトークンを Cookie + meta タグに発行
 2. `POST`/`PUT`/`DELETE` 時に `X-CSRF-Token` ヘッダで送信させ、Cookie 値と一致検証
 
-```html
-<!-- Layout.hs で埋め込み -->
-<meta name="csrf-token" content="{{TOKEN}}"/>
+#### M-04 反映: 型安全な CSRF トークン受け渡し
 
-<!-- htmx の自動 CSRF ヘッダ送信 -->
+`{{TOKEN}}` プレースホルダ置換は実行時エラー (置換漏れ) のリスクがあるため、**Lucid ビュー関数の引数で `CsrfToken` を受け取る型安全パターン** に統一する。
+
+```haskell
+-- 新規 newtype
+newtype CsrfToken = CsrfToken { unCsrfToken :: Text }
+  deriving (Eq, Show)
+
+-- Layout.hs: CsrfToken を引数で受ける (引数漏れはコンパイルエラー)
+mainLayout :: AuthenticatedUser
+           -> CsrfToken
+           -> Text                  -- title
+           -> Maybe FlashMessage
+           -> Html ()                -- content
+           -> Html ()
+mainLayout user csrf title flash content = doctypehtml_ $ do
+  head_ $ do
+    title_ (toHtml (title <> " - Cargo Tracker"))
+    link_ [rel_ "stylesheet", href_ "/static/css/bootstrap.min.css"]
+    script_ [src_ "/static/js/htmx.min.js", defer_ ""] T.empty
+    meta_ [name_ "csrf-token", content_ (unCsrfToken csrf)]  -- 型安全
+  body_ $ do
+    navView user
+    main_ [class_ "container"] $ do
+      alertsView flash
+      content
+    footerView
+
+-- 利用側: Servant ハンドラで CsrfToken を生成・伝搬
+showBookingHandler :: AuthenticatedUser -> BookingId -> AppM (Html ())
+showBookingHandler user bid = do
+  csrf  <- generateCsrfToken
+  cargo <- findBookingDetail bid
+  pure (mainLayout user csrf "予約詳細" Nothing (bookingDetailView cargo))
+  -- ↑ csrf を渡し忘れるとコンパイルエラー
+```
+
+利点:
+
+- `{{TOKEN}}` プレースホルダ置換による実行時エラーを排除
+- ビューが CSRF を必要とする全画面で、型システムが引数渡しを強制
+- テスト時は `CsrfToken "test-token"` で固定値を渡せる
+
+```html
+<!-- htmx の自動 CSRF ヘッダ送信 (グローバル設定) -->
 <script>
   document.addEventListener('htmx:configRequest', (event) => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -386,7 +427,8 @@ Servant にデフォルトの CSRF Filter はないため、**Double Submit Cook
 </script>
 ```
 
-Servant 側はカスタムミドルウェアで突き合わせを行う。
+Servant 側は `CsrfProtectedMiddleware` でリクエスト Cookie とヘッダの突き合わせを行う。
+GET でない HTTP メソッドかつトークン不一致は 403 を返す。
 
 ### 入力検証
 

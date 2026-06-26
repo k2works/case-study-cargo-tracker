@@ -52,26 +52,26 @@ DDD + ヘキサゴナル + CQRS の Haskell への翻訳は自然で、Scala 版
 | H-15 | UX | 24 画面のエラー UI 統一ハンドリング定義 | ✅ ui_design.md に「エラー状態統一ハンドリング」表 + htmx グローバルハンドラ実装例追加 |
 | H-16 | UX | タッチターゲット 44x44px 以上の明示 | ✅ ui_design.md に WCAG 2.5.5 準拠規約 + Bootstrap 5 デフォルトテーマのコントラスト比検証表を追加 |
 
-### 中
+### 中 — Sprint 0 後追いで全 16 件対応完了 (2026-06-26)
 
-| # | 指摘元 | 提案 | 理由 |
+| # | 指摘元 | 提案 | 対応状況 |
 | :---: | :---: | :--- | :--- |
-| M-01 | PM | US18 (追跡照会) を IT5 で前倒し配置、IT5 末プレ MVP デモ可能化 | 荷主フィードバックの早期取得 |
-| M-02 | PM | Release 0.1 判定基準に Application 層カバレッジ ≥ 80% を追加 | Domain 偏重防止 |
-| M-03 | PM | US05 を US04 の拡張オプションとして統合 | 受入基準重複の解消 |
-| M-04 | Architect | CSRF 実装を Lucid 関数引数で `CsrfToken -> Html ()` の型安全パターン化 | 型システム活用 |
-| M-05 | Architect | `servant-auth-server` の廃止リスクに備え、代替 (`servant-auth-cookie` 等) との比較を ADR 備考に追記 | エコシステム変動 |
-| M-06 | Architect | `DiscountPolicy` の割引種別を sum type で表現する設計判断を明記 | 変更影響範囲の明確化 |
-| M-07 | Tester | 境界値一覧表を test_strategy.md に追加 (割引率 0-30%、UN/LOCODE 5 文字、重量・寸法等) | 境界値テストの体系化 |
-| M-08 | Tester | hedgehog Generator 設計指針 (`Gen.filter` 多用回避、合成型直接生成推奨) を 1 節追加 | プロパティテストの信頼性 |
-| M-09 | Tester | WireMock シナリオに Circuit Breaker 復旧 (Half-Open → Close) とリトライ上限を追加 | 障害復旧パスの検証 |
-| M-10 | Tester | アーキテクチャ規約に「同 BC 内での集約境界をまたぐ参照禁止」追加 | 内部凝集性の維持 |
-| M-11 | UR | 荷役オフライン対応 (現状「将来」扱い) を Phase 4 に明示 | 現場運用想定 |
-| M-12 | UR | US18 の ETA 算出根拠を受入基準に明記 | 荷受人の信頼確保 |
-| M-13 | UR | US23 精算の通貨・為替の扱い (USD/JPY、レート確定日) を US21 受入基準に追加 | 国際取引の前提 |
-| M-14 | UX | 追跡詳細を地図 + タイムラインのメタファーで強化 | 「現在地を一目で」の UX |
-| M-15 | UX | ステータスバッジの色トークン (IN_PORT / IN_TRANSIT / CLAIMED) の WCAG AA コントラスト比検証 | A11y 担保 |
-| M-16 | UX | htmx 部分更新時の `aria-live` 領域指定を画面仕様に明記 | スクリーンリーダー対応 |
+| M-01 | PM | US18 を IT5 で前倒し配置 | ✅ Sprint 0 で対応済 (release_plan.md IT5 配置) |
+| M-02 | PM | Release 0.1 判定基準に Application カバレッジ ≥ 80% | ✅ Sprint 0 で対応済 |
+| M-03 | PM | US05 を US04 の拡張オプションとして統合 | ✅ user_story.md で US05 タイトルに「US04 の拡張オプション」を明記し、Gherkin 受入基準で US04 と独立検証 |
+| M-04 | Architect | CSRF を `CsrfToken -> Html ()` の型安全パターン化 | ✅ architecture_frontend.md に `newtype CsrfToken` + `mainLayout :: ... -> CsrfToken -> ... -> Html ()` の実装例追加 |
+| M-05 | Architect | `servant-auth-server` の代替を ADR 0001 備考に追記 | ✅ ADR 0001 に「servant-auth-server の廃止リスクと代替案」セクション追加 (servant-auth-cookie / wai-extra + 自作 / jose) |
+| M-06 | Architect | `DiscountPolicy` の sum type 表現を明記 | ✅ domain-model.md に `DiscountPolicy` の sum type 定義と網羅性検査の利点を追加 |
+| M-07 | Tester | 境界値一覧表を test_strategy.md に追加 | ✅ §3.6 境界値テスト一覧表 (29 件) 追加 |
+| M-08 | Tester | hedgehog Generator 設計指針追加 | ✅ §3.7 Generator 設計指針 G-01〜G-05 追加 (Gen.filter 多用回避・コンストラクティブ生成・discard 率監視等) |
+| M-09 | Tester | WireMock に Circuit Breaker 復旧 + リトライ上限 | ✅ §4.3 Circuit Breaker シナリオ (Closed → Open → Half-Open) + 指数バックオフ実装例追加 |
+| M-10 | Tester | 「同 BC 内での集約境界をまたぐ参照禁止」追加 | ✅ ADR 0002 にルール 5 `aggregate-boundary-respect` 追加 |
+| M-11 | UR | 荷役オフライン対応を Phase 4 に明示 | ✅ H-14 で前倒し対応済 (Release 1.0 までに対応) |
+| M-12 | UR | US18 の ETA 算出根拠を明文化 | ✅ user_story.md US18 受入基準に「ETA 算出根拠: 確定経路最終 Leg.unloadTime + 未解決例外の遅延期間」追加 |
+| M-13 | UR | US21 精算の通貨・為替の扱いを追加 | ✅ user_story.md US21 受入基準に通貨決定ルール (個人=JPY 固定、法人=契約通貨) + TTM 仲値レート + CurrencyMismatch エラー追加 |
+| M-14 | UX | 追跡詳細を地図 + タイムラインで強化 | ✅ ui_design.md US18 仕様に「地図 + タイムライン + イベント履歴の三層構造」(Leaflet.js) を追加 |
+| M-15 | UX | ステータスバッジのコントラスト比検証 | ✅ Sprint 0 で対応済 (Bootstrap 5 デフォルトテーマ 6 バリエーション全 WCAG AA 準拠を表で記録) |
+| M-16 | UX | htmx 部分更新時の `aria-live` 領域指定を明記 | ✅ ui_design.md に `aria-live` 規約 (polite/assertive 使い分け表) + Lucid 実装例追加 |
 
 ### 低
 

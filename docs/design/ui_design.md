@@ -397,6 +397,94 @@ state "精算フロー" {
 - **公開エンドポイント**: `/public/tracking/:number` は認証不要。ナビゲーション・管理者操作を省略した簡易レイアウト
 - **htmx**: タイムラインを `hx-get="/tracking/:number" hx-trigger="every 30s" hx-headers='{"HX-Request":"true"}'` で更新
 
+##### M-14 反映: 地図 + タイムラインのメタファー強化
+
+追跡詳細画面を以下の **三層構造** に再設計する。「貨物の現在地が一目でわかる」UX を実現する。
+
+| 層 | 表示内容 | 実装方針 |
+| :--- | :--- | :--- |
+| **上部 (Map View)** | 世界地図上に出発地・経由港・現在地・目的地のピンを表示。現在地は点滅マーカー | Leaflet.js (OSM タイル) + 静的地点座標 (`location` テーブルに `lat`/`lon` カラム追加) |
+| **中部 (Timeline)** | 出発 → 受領 → 積込 → 輸送中 → 荷降し → 引取の状態タイムライン (水平方向 step indicator) | Bootstrap 5 progress + カスタム CSS。現在状態を強調 |
+| **下部 (Event History)** | 時系列のイベント一覧 (日時・場所・作業種別・操作者) | Bootstrap 5 list-group |
+
+実装方針:
+
+- 地図は **Lucid で `<div id="map" data-route='[...]'>` を出力** し、JS 側で Leaflet を初期化
+- 地点座標は `Location` 値オブジェクトに `latitude :: Maybe Double` / `longitude :: Maybe Double` を追加 (将来拡張)
+- 公開貨物追跡 (`/public/tracking/:number`) でも地図表示を提供 (荷主・荷受人が共有しやすい)
+- 地図 / タイムライン / イベント履歴の 3 層は段階的に htmx で更新可能 (`hx-target="#status-container"` 等)
+
+```haskell
+-- Views/Tracking/Show.hs
+showView :: AuthenticatedUser -> CsrfToken -> TrackingDetailDto -> Html ()
+showView user csrf dto = mainLayout user csrf "追跡詳細" Nothing $ do
+  -- 上部: 地図ビュー (M-14)
+  section_ [class_ "tracking-map mb-4"] $ do
+    h2_ [class_ "visually-hidden"] "貨物の現在位置"
+    div_ [ id_ "map"
+         , class_ "leaflet-container"
+         , style_ "height: 400px;"
+         , data_ "route" (toJSON (mapPoints dto))
+         , aria_ "label" "貨物の輸送経路を表示する地図"
+         ] mempty
+
+  -- 中部: タイムライン
+  section_ [class_ "tracking-timeline mb-4"
+           , id_ "timeline-container"
+           , aria_ "live" "polite"  -- M-16: 自動更新を読み上げ
+           ] $ do
+    h2_ "輸送ステータス"
+    timelineFragment dto
+
+  -- 下部: イベント履歴
+  section_ [class_ "tracking-events"] $ do
+    h2_ "イベント履歴"
+    eventListView (tdEvents dto)
+```
+
+##### M-16 反映: htmx 部分更新時の `aria-live` 規約
+
+htmx で動的に置き換えられる領域には **必ず `aria-live` 属性を設定** し、スクリーンリーダーが更新を読み上げるようにする。
+
+| 更新領域 | `aria-live` 値 | 理由 |
+| :--- | :--- | :--- |
+| 追跡タイムライン (30 秒ポーリング) | `polite` | 重要だが緊急ではない。会話を中断しない |
+| 例外発生通知 (荷主向け) | `assertive` | 緊急 (遅延・破損・紛失) は即座に通知 |
+| フォームバリデーションエラー | `polite` | 入力中の読み上げを中断しない |
+| 検索結果一覧 (インクリメンタル検索) | `polite` | 入力中の頻繁な更新で中断回避 |
+| ダッシュボードの例外数表示 | `polite` | 自動更新を控えめに通知 |
+| 楽観ロック衝突モーダル | `assertive` | 即座にユーザーに気付かせる |
+| Flash メッセージ (成功・エラー) | `polite` | PRG パターン後の通知 |
+
+追加属性:
+
+- `aria-atomic="true"`: 領域全体を一括で読み上げる (部分的な変化でも全体読み直し)
+- `aria-busy="true"`: htmx リクエスト中は設定し、完了時 `false` に戻す
+
+```html
+<!-- 良い例: タイムライン領域 -->
+<section id="timeline-container"
+         aria-live="polite"
+         aria-atomic="true"
+         hx-get="/tracking/TR12345/status"
+         hx-trigger="every 30s">
+  <!-- timelineFragment が置き換わる -->
+</section>
+
+<!-- 良い例: 例外通知 (緊急) -->
+<div id="exception-alert"
+     aria-live="assertive"
+     hx-get="/notifications/exceptions"
+     hx-trigger="every 60s">
+</div>
+```
+
+実装ルール:
+
+- 全 24 画面の htmx 動的更新領域に `aria-live` を漏れなく設定
+- Lucid ヘルパー関数 `liveRegion :: AriaLive -> Html () -> Html ()` を用意し、デフォルトで `polite` を強制
+- E2E テスト (Playwright + axe-core) で `aria-live` 設定漏れを自動検出
+
 ### 荷役作業登録 (`/handling/new`)
 
 #### ワイヤーフレーム

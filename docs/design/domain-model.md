@@ -1142,6 +1142,41 @@ class Monad m => NotificationPort m where
 
 **根拠**: 請求書 1 件の整合性 (基本料金・割引率・最終金額の一貫性) は `Invoice` 集約内で保証される。`DiscountPolicy` の割引率計算は `applyDiscount` 内で完結するため、外部ドメインサービスとして切り出す必要はない。金額は `Money` (`Integer` 最小通貨単位) で表現。
 
+#### `DiscountPolicy` の sum type 表現 (M-06 反映)
+
+割引種別は **sum type** で表現し、パターンマッチの網羅性検査により「新しい割引種別追加時のロジック漏れ」をコンパイル時に検出する。
+
+```haskell
+data DiscountPolicy
+  = CorporateStandard !DiscountRate     -- 法人標準割引 (契約割引率)
+  | VolumeDiscount    !VolumeThreshold !DiscountRate  -- ボリューム割引 (重量閾値超過時)
+  | Seasonal          !SeasonId !DiscountRate  -- シーズン割引 (期間限定)
+  | NoDiscount                          -- 割引なし (個人荷主のデフォルト)
+  deriving (Eq, Show, Generic)
+
+-- 割引率算出: 全パターン網羅 (-Wincomplete-patterns でコンパイル時検出)
+calculateDiscountRate :: DiscountPolicy -> Shipper -> Money -> DiscountRate
+calculateDiscountRate (CorporateStandard r) _ _ = r
+calculateDiscountRate (VolumeDiscount threshold r) _ amount
+  | moneyAmount amount >= threshold = r
+  | otherwise                       = zeroDiscount
+calculateDiscountRate (Seasonal sid r) _ _ = r  -- 期間判定は呼び出し側
+calculateDiscountRate NoDiscount _ _        = zeroDiscount
+```
+
+利点:
+
+- **新しい割引種別 (例: `Promotional`) の追加時、`calculateDiscountRate` のパターン漏れがコンパイルエラー**
+- DB 永続化時は `policy_type VARCHAR(30) CHECK (... IN ('CORPORATE_STANDARD', 'VOLUME_DISCOUNT', 'SEASONAL', 'NO_DISCOUNT'))` で対応
+- パラメータ (DiscountRate, VolumeThreshold, SeasonId) は別カラムに保存
+
+新規割引追加の影響範囲:
+
+1. `DiscountPolicy` に新コンストラクタ追加
+2. `calculateDiscountRate` にパターンマッチ追加 (コンパイラが強制)
+3. DB CHECK 制約を更新するマイグレーション追加
+4. テストケース追加
+
 ### Estimation Context: `Estimate` 集約
 
 `Estimate` を集約ルートとし、`RouteCandidate` のリストを集約内に保持。

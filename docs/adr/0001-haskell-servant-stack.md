@@ -97,3 +97,21 @@ Haskell 版の設計にあたり、アーキテクチャ思想（DDD・ヘキサ
 - 関連:
   - Java 版参照実装 `tmp/case-study-cargo-tracker/docs/design/`
   - Scala 版 ADR 0001 `tmp/case-study-cargo-tracker/docs/adr/0001-play-framework-scala-stack.md`
+
+### servant-auth-server の廃止リスクと代替案 (M-05 反映、2026-06-26 追記)
+
+`servant-auth-server` は active maintenance 状況に変動がある (Stackage LTS の include 状況、最終リリース時期を定期確認すべき)。万一メンテナンス停止した場合の代替を以下に記録する。
+
+| 代替 | 評価 |
+| :--- | :--- |
+| `servant-auth-cookie` | Cookie ベースに特化、JWT 非対応。Servant 0.20 系との互換性は要確認 |
+| `wai-extra` + 自作 `AuthHandler` | 完全自作。JWT/Cookie いずれも対応可能だが boilerplate が増加 |
+| `jose` + 自作 Middleware | JWT 検証のみ `jose` ライブラリで実装し、Cookie は `cookie` パッケージで処理 |
+
+移行時の判断基準:
+
+1. `servant-auth-server` が 12 ヶ月以上リリースなし → 代替検討開始
+2. GHC 9.12 で互換性問題発生 → `wai-extra` + 自作に移行
+3. 移行コストは IT1-IT2 で約 1-2 日相当 (認証層は ReaderT パターンに閉じているため、影響範囲は限定的)
+
+ADR 0001 採用判断は維持。代替への移行は新規 ADR (例: ADR 0010) を起票して対応する。
