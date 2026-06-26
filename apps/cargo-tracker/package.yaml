@@ -95,6 +95,7 @@ library:
   - Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   - Cargotracker.Booking.Infrastructure.PostgresBookingRepository
   - Cargotracker.Booking.Infrastructure.PostgresShipperExistenceChecker
+  - Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
 
 executables:
   cargo-tracker-exe:
