@@ -35,15 +35,18 @@ export default function (gulp) {
     if (!requireDocker()) return;
     console.log('Starting MkDocs server...');
     dockerCompose('up -d mkdocs');
-    // daemon が応答するまで待機 (最大 60 秒)
+    // daemon が応答するまで待機 (最大 180 秒)。進捗を可視化して「フリーズに見える」のを防ぐ
+    process.stdout.write('Waiting for MkDocs to be ready');
     const start = Date.now();
     const timeoutMs = 180000;
     while (Date.now() - start < timeoutMs) {
       try {
         execSync('curl -sf http://localhost:8000/ -o /dev/null', { stdio: 'ignore' });
-        console.log('\nDocumentation is available at http://localhost:8000');
+        const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+        console.log(`\nDocumentation is available at http://localhost:8000 (${elapsed}s)`);
         return;
       } catch {
+        process.stdout.write('.');
         await new Promise((r) => setTimeout(r, 1500));
       }
     }
@@ -70,7 +73,8 @@ export default function (gulp) {
     if (!requireDocker()) { done(); return; }
     try {
       console.log('Stopping MkDocs server...');
-      dockerCompose('down');
+      // down ではなく stop を使う: コンテナを残しておけば次回の起動が高速になる
+      dockerCompose('stop mkdocs');
       console.log('Stopped.');
       done();
     } catch (error) {
