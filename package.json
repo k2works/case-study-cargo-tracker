@@ -6,6 +6,18 @@
     "start": "gulp start",
     "stop": "gulp stop",
     "spec": "gulp spec",
+    "start:dev": "gulp dev:run",
+    "test": "gulp dev:test",
+    "test:tdd": "gulp tdd:cargo-tracker",
+    "test:coverage": "gulp dev:test:coverage",
+    "lint": "gulp dev:lint",
+    "format": "gulp dev:format",
+    "format:check": "gulp dev:format:check",
+    "check": "gulp dev:verify",
+    "build": "gulp dev:build",
+    "db:start": "gulp dev:db:start",
+    "db:stop": "gulp dev:db:stop",
+    "db:migrate": "gulp dev:db:migrate",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
@@ -17,7 +29,8 @@
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
-    "gemini:yolo": "gemini --yolo"
+    "gemini:yolo": "gemini --yolo",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -39,5 +52,9 @@
     "@k2works/claude-code-booster": "^4.7.0",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8"
   }
 }
