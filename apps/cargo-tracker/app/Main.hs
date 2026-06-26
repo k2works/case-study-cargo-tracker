@@ -53,6 +53,7 @@ import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   )
 import Cargotracker.Shared.Auth.Interfaces.LoginApi (loginApp)
 import Cargotracker.Shared.Auth.Interfaces.LoginPageApi (loginPageApp)
+import Cargotracker.Shared.Web.HomeView (homeApp)
 import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   ( newPostgresShipperRepository,
   )
@@ -86,6 +87,7 @@ main = do
 rootApp :: Connection -> JwtSecret -> Application
 rootApp conn jwtSecret req respond =
   case pathInfo req of
+    [] -> homeApp req respond
     ["health"] -> healthHandler req respond
     ["login"]
       | requestMethod req == methodGet -> loginPageApp req respond
