@@ -78,6 +78,9 @@ library:
   - Cargotracker.Booking.Domain.Model.Value.BookingId
   - Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   - Cargotracker.Booking.Domain.Model.State.BookingStatus
+  - Cargotracker.Routing.Domain.Model.Voyage
+  - Cargotracker.Routing.Domain.Model.Value.VoyageNumber
+  - Cargotracker.Routing.Domain.Model.Value.CarrierMovement
 
 executables:
   cargo-tracker-exe:

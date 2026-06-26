@@ -11,6 +11,7 @@ import Cargotracker (greet)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 import qualified Booking.Domain.Model.CargoSpec
+import qualified Routing.Domain.Model.VoyageSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
@@ -66,3 +67,7 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Model.Cargo"
     Booking.Domain.Model.CargoSpec.spec
+
+  describe
+    "Cargotracker.Routing.Domain.Model.Voyage"
+    Routing.Domain.Model.VoyageSpec.spec
