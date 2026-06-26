@@ -12,6 +12,7 @@ import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
+import qualified Booking.Infrastructure.PostgresBookingRepositorySpec
 import qualified Booking.Interfaces.BookingApiSpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
@@ -107,6 +108,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Interfaces.BookingApi"
     Booking.Interfaces.BookingApiSpec.spec
+
+  describe
+    "Cargotracker.Booking.Infrastructure.PostgresBookingRepository"
+    Booking.Infrastructure.PostgresBookingRepositorySpec.spec
 
   describe
     "Cargotracker.Routing.Interfaces.VoyageApi"
