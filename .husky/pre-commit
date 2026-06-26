@@ -34,6 +34,10 @@ else
   echo "[pre-commit] hlint 未インストール (スキップ)"
 fi
 
+# arch-check (ADR 0002)
+echo "[pre-commit] arch-check (Phase 1)"
+./scripts/arch-check.sh src || exit 1
+
 # Domain テスト (高速)
 if command -v stack >/dev/null 2>&1; then
   echo "[pre-commit] stack test (Domain)"

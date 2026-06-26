@@ -168,9 +168,9 @@ export default function (gulp) {
     done();
   });
 
-  // arch-check は IT1 で実装予定。スタブとして HLint ルールでの簡易チェックを行う。
+  // arch-check Phase 1 (シェルスクリプト実装、ADR 0002 の 3 ルールを検査)
   gulp.task('dev:arch-check', (done) => {
-    runIn('hlint --hint=.hlint.yaml src/', APP_DIR);
+    runIn('./scripts/arch-check.sh src', APP_DIR);
     done();
   });
 
