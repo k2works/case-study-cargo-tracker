@@ -107,12 +107,12 @@ rootApp conn jwtSecret req respond =
     ["health"] -> healthHandler req respond
     ["login"] -> loginPageApp userRepo verifier req respond
     ["api", "login"] -> loginApp userRepo verifier jwtSecret req respond
-    ["shippers", "new"] -> shipperPageApp shipperRepo req respond
-    "shippers" : _ -> shipperApp shipperRepo req respond
-    ["bookings", "new"] -> bookingPageApp bookingRepo shipperChecker req respond
-    "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond
-    ["voyages", "new"] -> voyagePageApp voyageRepo req respond
-    "voyages" : _ -> voyageApp voyageRepo req respond
+    "api" : "shippers" : _ -> shipperApp shipperRepo req respond
+    "api" : "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond
+    "api" : "voyages" : _ -> voyageApp voyageRepo req respond
+    "shippers" : _ -> shipperPageApp shipperRepo req respond
+    "bookings" : _ -> bookingPageApp bookingRepo shipperChecker req respond
+    "voyages" : _ -> voyagePageApp voyageRepo req respond
     _ ->
       respond $
         responseLBS

@@ -18,6 +18,7 @@ module Cargotracker.Booking.Interfaces.BookingPageApi
   ) where
 
 import Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString.Char8 as BC
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime, defaultTimeLocale, parseTimeM)
@@ -28,16 +29,18 @@ import Servant.HTML.Lucid (HTML)
 import Web.FormUrlEncoded (FromForm)
 
 import Cargotracker.Booking.Application.Ports
-  ( BookingRepository,
+  ( BookingRepository (..),
     ShipperExistenceChecker,
   )
 import Cargotracker.Booking.Application.RegisterBookingCommand
   ( RegisterBookingInput (..),
     execute,
   )
-import Cargotracker.Booking.Views.BookingFormView
-  ( bookingFormPage,
-    bookingResultPage,
+import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
+import Cargotracker.Booking.Views.BookingFormView (bookingFormPage)
+import Cargotracker.Booking.Views.BookingShowView
+  ( bookingNotFoundPage,
+    bookingShowPage,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
@@ -53,29 +56,34 @@ data BookingFormRequest = BookingFormRequest
 
 type BookingPageApi =
   "bookings"
-    :> "new"
-    :> ( Get '[HTML] (Html ())
-           :<|> ReqBody '[FormUrlEncoded] BookingFormRequest :> Post '[HTML] (Html ())
+    :> ( "new" :> Get '[HTML] (Html ())
+           :<|> "new"
+             :> ReqBody '[FormUrlEncoded] BookingFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "bookingId" Text :> Get '[HTML] (Html ())
        )
 
 bookingPageApp :: BookingRepository IO -> ShipperExistenceChecker IO -> Application
 bookingPageApp repo checker =
   serve
     (Proxy :: Proxy BookingPageApi)
-    (handlerGet :<|> handlerPost repo checker)
+    (handlerGet :<|> handlerPost repo checker :<|> handlerShow repo)
 
 handlerGet :: Handler (Html ())
 handlerGet = pure (bookingFormPage Nothing)
+
+handlerShow :: BookingRepository IO -> Text -> Handler (Html ())
+handlerShow repo bid = do
+  m <- liftIO (findCargoById repo (BookingId bid))
+  pure (maybe bookingNotFoundPage bookingShowPage m)
 
 handlerPost ::
   BookingRepository IO ->
   ShipperExistenceChecker IO ->
   BookingFormRequest ->
-  Handler (Html ())
+  Handler (Headers '[Header "Location" Text] NoContent)
 handlerPost repo checker req = case parseDeadline (deadline req) of
-  Nothing ->
-    pure
-      (bookingResultPage False "到着期限の形式が不正です")
+  Nothing -> redirectErr "/bookings/new?error=deadline-format"
   Just dt -> do
     let input =
           RegisterBookingInput
@@ -86,17 +94,18 @@ handlerPost repo checker req = case parseDeadline (deadline req) of
             , inputDeadline = dt
             }
     result <- liftIO (execute repo checker input)
-    pure $ case result of
-      Right _ ->
-        bookingResultPage
-          True
-          ("予約 " <> bookingId req <> " を登録しました")
-      Left (ShipperNotFound sid) ->
-        bookingResultPage
-          False
-          ("荷主 " <> sid <> " が見つかりません。先に登録してください")
-      Left e ->
-        bookingResultPage False ("登録失敗: " <> T.pack (show e))
+    case result of
+      Right _ -> pure (addHeader ("/bookings/" <> bookingId req) NoContent)
+      Left (ShipperNotFound _) -> redirectErr "/bookings/new?error=shipper-not-found"
+      Left e -> redirectErr ("/bookings/new?error=" <> T.pack (show e))
+  where
+    redirectErr :: Text -> Handler a
+    redirectErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
 
 -- datetime-local 形式 "YYYY-MM-DDTHH:MM" を UTCTime に変換
 parseDeadline :: Text -> Maybe UTCTime

@@ -19,7 +19,6 @@ module Cargotracker.Shared.Auth.Interfaces.LoginPageApi
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
-import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Lucid (Html)
 import Network.Wai (Application)
@@ -35,13 +34,8 @@ import Cargotracker.Shared.Auth.Application.Ports
   ( PasswordVerifier,
     UserRepository,
   )
-import Cargotracker.Shared.Auth.Domain.User
-  ( Email (..),
-    User (..),
-    userEmail,
-    userRole,
-  )
-import Cargotracker.Shared.Auth.Views.LoginView (loginPage, loginResultPage)
+import Cargotracker.Shared.Auth.Domain.User (Email (..))
+import Cargotracker.Shared.Auth.Views.LoginView (loginPage)
 
 data LoginFormRequest = LoginFormRequest
   { email :: !Text
@@ -53,7 +47,8 @@ data LoginFormRequest = LoginFormRequest
 type LoginPageApi =
   "login"
     :> ( Get '[HTML] (Html ())
-           :<|> ReqBody '[FormUrlEncoded] LoginFormRequest :> Post '[HTML] (Html ())
+           :<|> ReqBody '[FormUrlEncoded] LoginFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
 loginPageApp :: UserRepository IO -> PasswordVerifier IO -> Application
@@ -67,7 +62,7 @@ handlerPost ::
   UserRepository IO ->
   PasswordVerifier IO ->
   LoginFormRequest ->
-  Handler (Html ())
+  Handler (Headers '[Header "Location" Text] NoContent)
 handlerPost repo verifier req = do
   let input =
         LoginInput
@@ -75,10 +70,12 @@ handlerPost repo verifier req = do
           , loginPassword = password req
           }
   result <- liftIO (execute repo verifier input)
-  pure $ case result of
+  case result of
     Left _ ->
-      loginPage (Just "メールアドレスまたはパスワードが正しくありません")
-    Right user ->
-      loginResultPage
-        (userEmail user)
-        (T.pack (show (userRole user)))
+      throwError $
+        err401
+          { errBody = "メールアドレスまたはパスワードが正しくありません"
+          , errHeaders = [("Content-Type", "text/plain; charset=utf-8")]
+          }
+    Right _ ->
+      pure (addHeader "/" NoContent)

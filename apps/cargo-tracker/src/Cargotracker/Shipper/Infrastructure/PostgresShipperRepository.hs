@@ -46,8 +46,41 @@ newPostgresShipperRepository :: Connection -> ShipperRepository IO
 newPostgresShipperRepository conn =
   ShipperRepository
     { findByContactEmail = \(ContactEmail e) -> findByEmail conn e
+    , findById = \(ShipperId sid) -> findByShipperId conn sid
     , save = saveShipper conn
+    , searchByQuery = \(ContactEmail q) -> searchShippers conn q
     }
+
+findByShipperId :: Connection -> Text -> IO (Maybe Shipper)
+findByShipperId conn sid = do
+  rows <-
+    query
+      conn
+      "SELECT shipper_id, email, address, shipper_kind, corporate_number, contract_rank \
+      \ FROM shipper WHERE shipper_id = ? LIMIT 1"
+      (Only sid) ::
+      IO [(Text, Text, Text, Text, Maybe Text, Maybe Text)]
+  case rows of
+    [(sidV, em, addr, kindText, mCn, mRank)] ->
+      pure (toShipper sidV em addr kindText mCn mRank)
+    _ -> pure Nothing
+
+searchShippers :: Connection -> Text -> IO [Shipper]
+searchShippers conn q = do
+  let pat = "%" <> q <> "%"
+  rows <-
+    query
+      conn
+      "SELECT shipper_id, email, address, shipper_kind, corporate_number, contract_rank \
+      \ FROM shipper WHERE shipper_id ILIKE ? OR email ILIKE ? \
+      \ ORDER BY shipper_id LIMIT 10"
+      (pat, pat) ::
+      IO [(Text, Text, Text, Text, Maybe Text, Maybe Text)]
+  pure
+    [ s
+    | (sidV, em, addr, kindText, mCn, mRank) <- rows
+    , Just s <- [toShipper sidV em addr kindText mCn mRank]
+    ]
 
 findByEmail :: Connection -> Text -> IO (Maybe Shipper)
 findByEmail conn email = do

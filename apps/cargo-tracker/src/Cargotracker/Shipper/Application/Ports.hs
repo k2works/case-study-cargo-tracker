@@ -9,8 +9,11 @@ module Cargotracker.Shipper.Application.Ports
 
 import Cargotracker.Shipper.Domain.Model.Shipper (Shipper)
 import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (ContactEmail)
+import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId)
 
 data ShipperRepository m = ShipperRepository
   { findByContactEmail :: ContactEmail -> m (Maybe Shipper)
+  , findById :: ShipperId -> m (Maybe Shipper)
   , save :: Shipper -> m ()
+  , searchByQuery :: ContactEmail -> m [Shipper]
   }

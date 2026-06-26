@@ -109,6 +109,9 @@ library:
   - Cargotracker.Routing.Views.VoyageFormView
   - Cargotracker.Routing.Interfaces.VoyagePageApi
   - Cargotracker.Shared.Web.HomeView
+  - Cargotracker.Shipper.Views.ShipperShowView
+  - Cargotracker.Booking.Views.BookingShowView
+  - Cargotracker.Routing.Views.VoyageShowView
 
 executables:
   cargo-tracker-exe:

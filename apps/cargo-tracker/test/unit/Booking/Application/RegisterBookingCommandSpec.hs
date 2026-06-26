@@ -45,7 +45,7 @@ makeCheckerNo = ShipperExistenceChecker {exists = \_ -> pure False}
 makeRepo :: IO (BookingRepository IO, IO [Cargo])
 makeRepo = do
   ref <- newIORef []
-  let r = BookingRepository {saveBooking = \c -> modifyIORef' ref (c :)}
+  let r = BookingRepository {saveBooking = \c -> modifyIORef' ref (c :), findCargoById = \_ -> pure Nothing}
   pure (r, readIORef ref)
 
 validInput :: RegisterBookingInput

@@ -17,6 +17,7 @@ module Cargotracker.Routing.Interfaces.VoyagePageApi
   ) where
 
 import Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString.Char8 as BC
 import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -27,15 +28,17 @@ import Servant
 import Servant.HTML.Lucid (HTML)
 import Web.FormUrlEncoded (FromForm)
 
-import Cargotracker.Routing.Application.Ports (VoyageRepository)
+import Cargotracker.Routing.Application.Ports (VoyageRepository (..))
 import Cargotracker.Routing.Application.RegisterVoyageCommand
   ( CarrierMovementInput (..),
     RegisterVoyageInput (..),
     execute,
   )
-import Cargotracker.Routing.Views.VoyageFormView
-  ( voyageFormPage,
-    voyageResultPage,
+import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (VoyageNumber (..))
+import Cargotracker.Routing.Views.VoyageFormView (voyageFormPage)
+import Cargotracker.Routing.Views.VoyageShowView
+  ( voyageNotFoundPage,
+    voyageShowPage,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
@@ -59,21 +62,33 @@ data VoyageFormRequest = VoyageFormRequest
 
 type VoyagePageApi =
   "voyages"
-    :> "new"
-    :> ( Get '[HTML] (Html ())
-           :<|> ReqBody '[FormUrlEncoded] VoyageFormRequest :> Post '[HTML] (Html ())
+    :> ( "new" :> Get '[HTML] (Html ())
+           :<|> "new"
+             :> ReqBody '[FormUrlEncoded] VoyageFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "voyageNumber" Text :> Get '[HTML] (Html ())
        )
 
 voyagePageApp :: VoyageRepository IO -> Application
 voyagePageApp repo =
-  serve (Proxy :: Proxy VoyagePageApi) (handlerGet :<|> handlerPost repo)
+  serve
+    (Proxy :: Proxy VoyagePageApi)
+    (handlerGet :<|> handlerPost repo :<|> handlerShow repo)
 
 handlerGet :: Handler (Html ())
 handlerGet = pure (voyageFormPage Nothing)
 
-handlerPost :: VoyageRepository IO -> VoyageFormRequest -> Handler (Html ())
+handlerShow :: VoyageRepository IO -> Text -> Handler (Html ())
+handlerShow repo vn = do
+  m <- liftIO (findByVoyageNumber repo (VoyageNumber vn))
+  pure (maybe voyageNotFoundPage voyageShowPage m)
+
+handlerPost ::
+  VoyageRepository IO ->
+  VoyageFormRequest ->
+  Handler (Headers '[Header "Location" Text] NoContent)
 handlerPost repo req = case toMovements req of
-  Left err -> pure (voyageResultPage False err)
+  Left err -> redirectErr ("/voyages/new?error=" <> err)
   Right ms -> do
     let input =
           RegisterVoyageInput
@@ -81,13 +96,17 @@ handlerPost repo req = case toMovements req of
             , inputMovements = ms
             }
     result <- liftIO (execute repo input)
-    pure $ case result of
-      Right _ ->
-        voyageResultPage
-          True
-          ("航海 " <> voyageNumber req <> " を登録しました")
-      Left e ->
-        voyageResultPage False ("登録失敗: " <> T.pack (show e))
+    case result of
+      Right _ -> pure (addHeader ("/voyages/" <> voyageNumber req) NoContent)
+      Left e -> redirectErr ("/voyages/new?error=" <> T.pack (show e))
+  where
+    redirectErr :: Text -> Handler a
+    redirectErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
 
 toMovements :: VoyageFormRequest -> Either Text [CarrierMovementInput]
 toMovements req = do

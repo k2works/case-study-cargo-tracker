@@ -12,6 +12,7 @@ module Cargotracker.Booking.Infrastructure.PostgresBookingRepository
   ) where
 
 import Data.Text (Text)
+import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple
   ( Connection,
     Only (..),
@@ -33,7 +34,44 @@ newPostgresBookingRepository :: Connection -> BookingRepository IO
 newPostgresBookingRepository conn =
   BookingRepository
     { saveBooking = saveCargo conn
+    , findCargoById = \(BookingId bid) -> findCargo conn bid
     }
+
+findCargo :: Connection -> Text -> IO (Maybe Cargo)
+findCargo conn bid = do
+  rows <-
+    query
+      conn
+      "SELECT c.booking_id, s.shipper_id, c.origin_unlocode, c.destination_unlocode, \
+      \        c.deadline, c.booking_status, c.version \
+      \ FROM cargo c JOIN shipper s ON s.id = c.shipper_id \
+      \ WHERE c.booking_id = ? LIMIT 1"
+      (Only bid) ::
+      IO [(Text, Text, Text, Text, UTCTime, Text, Int)]
+  case rows of
+    [(bidV, sidV, orig, dest, deadlineV, statusT, ver)] ->
+      pure $
+        Just
+          Cargo
+            { cargoBookingId = BookingId bidV
+            , cargoShipperId = ShipperId sidV
+            , cargoRouteSpec =
+                RouteSpecification
+                  { origin = UnLocode orig
+                  , destination = UnLocode dest
+                  , arrivalDeadline = deadlineV
+                  }
+            , cargoStatus = textToBookingStatus statusT
+            , cargoVersion = ver
+            }
+    _ -> pure Nothing
+
+textToBookingStatus :: Text -> BookingStatus
+textToBookingStatus "Submitted" = Submitted
+textToBookingStatus "RouteProposed" = RouteProposed
+textToBookingStatus "Confirmed" = Confirmed
+textToBookingStatus "Closed" = Closed
+textToBookingStatus _ = Draft
 
 saveCargo :: Connection -> Cargo -> IO ()
 saveCargo conn c = do

@@ -29,7 +29,7 @@ import Cargotracker.Booking.Interfaces.BookingApi (bookingApp)
 makeRepo :: IO (BookingRepository IO)
 makeRepo = do
   ref <- newIORef ([] :: [Cargo])
-  pure BookingRepository {saveBooking = \c -> modifyIORef' ref (c :)}
+  pure BookingRepository {saveBooking = \c -> modifyIORef' ref (c :), findCargoById = \_ -> pure Nothing}
 
 checkerYes :: ShipperExistenceChecker IO
 checkerYes = ShipperExistenceChecker {exists = \_ -> pure True}

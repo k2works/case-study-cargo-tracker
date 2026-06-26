@@ -16,6 +16,7 @@ module Cargotracker.Shipper.Interfaces.ShipperPageApi
   ) where
 
 import Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString.Char8 as BC
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -25,16 +26,20 @@ import Servant.HTML.Lucid (HTML)
 import Web.FormUrlEncoded (FromForm)
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shipper.Application.Ports (ShipperRepository)
+import Cargotracker.Shipper.Application.Ports
+  ( ShipperRepository (..),
+  )
 import Cargotracker.Shipper.Application.RegisterShipperCommand
   ( RegisterShipperInput (..),
     ShipperKindInput (..),
     execute,
   )
 import Cargotracker.Shipper.Domain.Model.Shipper (ContractRank (..))
-import Cargotracker.Shipper.Views.ShipperFormView
-  ( shipperFormPage,
-    shipperResultPage,
+import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shipper.Views.ShipperFormView (shipperFormPage)
+import Cargotracker.Shipper.Views.ShipperShowView
+  ( shipperNotFoundPage,
+    shipperShowPage,
   )
 
 data ShipperFormRequest = ShipperFormRequest
@@ -50,34 +55,50 @@ data ShipperFormRequest = ShipperFormRequest
 
 type ShipperPageApi =
   "shippers"
-    :> "new"
-    :> ( Get '[HTML] (Html ())
-           :<|> ReqBody '[FormUrlEncoded] ShipperFormRequest :> Post '[HTML] (Html ())
+    :> ( "new" :> Get '[HTML] (Html ())
+           :<|> "new"
+             :> ReqBody '[FormUrlEncoded] ShipperFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "shipperId" Text :> Get '[HTML] (Html ())
        )
 
 shipperPageApp :: ShipperRepository IO -> Application
 shipperPageApp repo =
-  serve (Proxy :: Proxy ShipperPageApi) (handlerGet :<|> handlerPost repo)
+  serve
+    (Proxy :: Proxy ShipperPageApi)
+    (handlerGet :<|> handlerPost repo :<|> handlerShow repo)
 
 handlerGet :: Handler (Html ())
 handlerGet = pure (shipperFormPage Nothing)
 
-handlerPost :: ShipperRepository IO -> ShipperFormRequest -> Handler (Html ())
+handlerShow :: ShipperRepository IO -> Text -> Handler (Html ())
+handlerShow repo sid = do
+  m <- liftIO (findById repo (ShipperId sid))
+  case m of
+    Just s -> pure (shipperShowPage s)
+    Nothing -> pure shipperNotFoundPage
+
+handlerPost ::
+  ShipperRepository IO ->
+  ShipperFormRequest ->
+  Handler (Headers '[Header "Location" Text] NoContent)
 handlerPost repo req = case toInput req of
-  Left e ->
-    pure
-      (shipperResultPage False ("登録失敗: " <> T.pack (show e)))
+  Left e -> redirectErr ("/shippers/new?error=" <> T.pack (show e))
   Right input -> do
     result <- liftIO (execute repo input)
-    pure $ case result of
-      Right _ ->
-        shipperResultPage
-          True
-          ("荷主 " <> shipperId req <> " を登録しました")
+    case result of
+      Right _ -> pure (addHeader ("/shippers/" <> shipperId req) NoContent)
       Left (ConcurrentModification _) ->
-        shipperResultPage False "メールアドレスが既に使用されています"
-      Left e ->
-        shipperResultPage False ("登録失敗: " <> T.pack (show e))
+        redirectErr "/shippers/new?error=duplicate-email"
+      Left e -> redirectErr ("/shippers/new?error=" <> T.pack (show e))
+  where
+    redirectErr :: Text -> Handler a
+    redirectErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
 
 toInput :: ShipperFormRequest -> Either DomainError RegisterShipperInput
 toInput r = case kind r of
