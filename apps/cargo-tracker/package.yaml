@@ -89,6 +89,7 @@ library:
   - Cargotracker.Routing.Application.RegisterVoyageCommand
   - Cargotracker.Shipper.Interfaces.ShipperApi
   - Cargotracker.Booking.Interfaces.BookingApi
+  - Cargotracker.Routing.Interfaces.VoyageApi
 
 executables:
   cargo-tracker-exe:

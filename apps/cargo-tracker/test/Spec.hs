@@ -15,6 +15,7 @@ import qualified Booking.Domain.Model.CargoSpec
 import qualified Booking.Interfaces.BookingApiSpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
+import qualified Routing.Interfaces.VoyageApiSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
@@ -96,3 +97,7 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Interfaces.BookingApi"
     Booking.Interfaces.BookingApiSpec.spec
+
+  describe
+    "Cargotracker.Routing.Interfaces.VoyageApi"
+    Routing.Interfaces.VoyageApiSpec.spec
