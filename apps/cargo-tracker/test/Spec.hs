@@ -10,6 +10,7 @@ import Test.Hspec
 import Cargotracker (greet)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
+import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
 
 main :: IO ()
@@ -26,3 +27,7 @@ main = hspec $ do
         `shouldBe` "ConcurrentModification \"BK-A1B2C3\""
 
   describe "Cargotracker.Shared.Auth.Domain.User" Shared.Auth.Domain.UserSpec.spec
+
+  describe
+    "Cargotracker.Shared.Auth.Application.LoginCommand"
+    Shared.Auth.Application.LoginCommandSpec.spec

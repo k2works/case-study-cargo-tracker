@@ -57,6 +57,8 @@ library:
   - Cargotracker
   - Cargotracker.Shared.Domain.DomainError
   - Cargotracker.Shared.Auth.Domain.User
+  - Cargotracker.Shared.Auth.Application.Ports
+  - Cargotracker.Shared.Auth.Application.LoginCommand
 
 executables:
   cargo-tracker-exe:
