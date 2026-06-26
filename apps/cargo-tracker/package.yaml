@@ -51,6 +51,8 @@ dependencies:
 - aeson >= 2.2
 - mtl >= 2.3
 - bcrypt >= 0.0.11
+- cryptohash-sha256 >= 0.11
+- base64-bytestring >= 1.2
 
 library:
   source-dirs: src
@@ -61,6 +63,7 @@ library:
   - Cargotracker.Shared.Auth.Application.Ports
   - Cargotracker.Shared.Auth.Application.LoginCommand
   - Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier
+  - Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
 
 executables:
   cargo-tracker-exe:

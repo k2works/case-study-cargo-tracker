@@ -13,6 +13,7 @@ import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
+import qualified Shared.Auth.Infrastructure.JwtIssuerSpec
 
 main :: IO ()
 main = hspec $ do
@@ -36,3 +37,7 @@ main = hspec $ do
   describe
     "Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier"
     Shared.Auth.Infrastructure.BcryptVerifierSpec.spec
+
+  describe
+    "Cargotracker.Shared.Auth.Infrastructure.JwtIssuer"
+    Shared.Auth.Infrastructure.JwtIssuerSpec.spec
