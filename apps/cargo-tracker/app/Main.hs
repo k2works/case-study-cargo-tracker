@@ -76,7 +76,23 @@ main = do
     (Just dbUrl, Just secret) -> do
       putStrLn "Connecting to PostgreSQL..."
       conn <- connectPostgreSQL (BC.pack dbUrl)
-      putStrLn $ "Cargo Tracker (Haskell) starting on port " <> show port
+      putStrLn ""
+      putStrLn "========================================================"
+      putStrLn "  Cargo Tracker (Haskell) 起動完了"
+      putStrLn "========================================================"
+      putStrLn $ "  Listening on port: " <> show port
+      putStrLn ""
+      putStrLn "  利用可能なエンドポイント:"
+      putStrLn $ "    Home          : http://localhost:" <> show port <> "/"
+      putStrLn $ "    Health        : http://localhost:" <> show port <> "/health"
+      putStrLn $ "    Login         : http://localhost:" <> show port <> "/login"
+      putStrLn $ "    荷主登録      : http://localhost:" <> show port <> "/shippers/new"
+      putStrLn $ "    貨物予約登録  : http://localhost:" <> show port <> "/bookings/new"
+      putStrLn $ "    航海登録      : http://localhost:" <> show port <> "/voyages/new"
+      putStrLn ""
+      putStrLn "  停止: Ctrl+C"
+      putStrLn "========================================================"
+      putStrLn ""
       run port (rootApp conn (JwtSecret (T.pack secret)))
 
 {- | パスの 1 階層目で各 BC の Application に分岐する。

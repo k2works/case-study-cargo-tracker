@@ -193,6 +193,36 @@ export default function (gulp) {
     done();
   });
 
+  // --- E2E (Playwright) ---
+
+  const e2eDir = path.join(APP_DIR, 'e2e');
+
+  gulp.task('dev:e2e:install', (done) => {
+    execSync('npm install', { cwd: e2eDir, stdio: 'inherit' });
+    execSync('npx playwright install chromium', { cwd: e2eDir, stdio: 'inherit' });
+    done();
+  });
+
+  gulp.task('dev:e2e', (done) => {
+    execSync('npm test', { cwd: e2eDir, stdio: 'inherit' });
+    done();
+  });
+
+  gulp.task('dev:e2e:headed', (done) => {
+    execSync('npm run test:headed', { cwd: e2eDir, stdio: 'inherit' });
+    done();
+  });
+
+  gulp.task('dev:e2e:ui', (done) => {
+    execSync('npm run test:ui', { cwd: e2eDir, stdio: 'inherit' });
+    done();
+  });
+
+  gulp.task('dev:e2e:report', (done) => {
+    execSync('npm run report', { cwd: e2eDir, stdio: 'inherit' });
+    done();
+  });
+
   // --- 一括タスク ---
 
   // 初回セットアップ: DB 起動 -> stack setup -> マイグレーション -> build
@@ -242,6 +272,13 @@ export default function (gulp) {
   dev:format            fourmolu --mode inplace
   dev:format:check      fourmolu --mode check
   dev:arch-check        ADR 0002 アーキテクチャ規約チェック (Phase 1: HLint)
+
+  [E2E (Playwright)]
+  dev:e2e:install       npm install + Chromium 取得 (初回のみ)
+  dev:e2e               ヘッドレス実行
+  dev:e2e:headed        ブラウザ表示で実行
+  dev:e2e:ui            Playwright UI モード
+  dev:e2e:report        HTML レポート表示
 
   [一括]
   dev:bootstrap         初回セットアップ (DB→GHC→migrate→build)
