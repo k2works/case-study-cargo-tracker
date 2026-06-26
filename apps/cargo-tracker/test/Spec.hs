@@ -12,6 +12,7 @@ import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
+import qualified Booking.Interfaces.BookingApiSpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
@@ -91,3 +92,7 @@ main = hspec $ do
   describe
     "Cargotracker.Shipper.Interfaces.ShipperApi"
     Shipper.Interfaces.ShipperApiSpec.spec
+
+  describe
+    "Cargotracker.Booking.Interfaces.BookingApi"
+    Booking.Interfaces.BookingApiSpec.spec
