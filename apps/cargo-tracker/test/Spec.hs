@@ -1,13 +1,14 @@
--- | テストエントリポイント (hspec)
---
--- IT1 以降に各 Bounded Context の Spec を追加していく。
--- 現時点はビルド検証用の最小 Spec のみ。
+{- | テストエントリポイント (hspec)
+
+IT1 以降に各 Bounded Context の Spec を追加していく。
+現時点はビルド検証用の最小 Spec のみ。
+-}
 module Main (main) where
 
-import           Test.Hspec
+import Test.Hspec
 
-import           Cargotracker                          (greet)
-import           Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker (greet)
+import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 main :: IO ()
 main = hspec $ do

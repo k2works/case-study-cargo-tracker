@@ -1,6 +1,7 @@
--- | Cargo Tracker トップレベルモジュール
---
--- IT1 で本格実装する。現時点は最小のスタブのみ。
+{- | Cargo Tracker トップレベルモジュール
+
+IT1 で本格実装する。現時点は最小のスタブのみ。
+-}
 module Cargotracker
   ( greet,
   )
