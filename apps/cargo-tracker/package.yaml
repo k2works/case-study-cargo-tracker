@@ -73,6 +73,11 @@ library:
   - Cargotracker.Shipper.Domain.Model.Value.Address
   - Cargotracker.Shipper.Domain.Model.Value.ContactEmail
   - Cargotracker.Shipper.Domain.Model.Value.ShipperId
+  - Cargotracker.Shared.Domain.Common.UnLocode
+  - Cargotracker.Booking.Domain.Model.Cargo
+  - Cargotracker.Booking.Domain.Model.Value.BookingId
+  - Cargotracker.Booking.Domain.Model.Value.RouteSpecification
+  - Cargotracker.Booking.Domain.Model.State.BookingStatus
 
 executables:
   cargo-tracker-exe:

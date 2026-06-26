@@ -10,12 +10,14 @@ import Test.Hspec
 import Cargotracker (greet)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
+import qualified Booking.Domain.Model.CargoSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
 import qualified Shared.Auth.Infrastructure.JwtIssuerSpec
 import qualified Shared.Auth.Interfaces.LoginApiSpec
 import qualified Shared.Auth.Interfaces.ProtectedSpec
+import qualified Shared.Domain.Common.UnLocodeSpec
 import qualified Shipper.Domain.Model.ShipperSpec
 
 main :: IO ()
@@ -56,3 +58,11 @@ main = hspec $ do
   describe
     "Cargotracker.Shipper.Domain.Model.Shipper"
     Shipper.Domain.Model.ShipperSpec.spec
+
+  describe
+    "Cargotracker.Shared.Domain.Common.UnLocode"
+    Shared.Domain.Common.UnLocodeSpec.spec
+
+  describe
+    "Cargotracker.Booking.Domain.Model.Cargo"
+    Booking.Domain.Model.CargoSpec.spec
