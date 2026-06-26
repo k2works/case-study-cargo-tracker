@@ -69,6 +69,10 @@ library:
   - Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
   - Cargotracker.Shared.Auth.Interfaces.LoginApi
   - Cargotracker.Shared.Auth.Interfaces.Protected
+  - Cargotracker.Shipper.Domain.Model.Shipper
+  - Cargotracker.Shipper.Domain.Model.Value.Address
+  - Cargotracker.Shipper.Domain.Model.Value.ContactEmail
+  - Cargotracker.Shipper.Domain.Model.Value.ShipperId
 
 executables:
   cargo-tracker-exe:
