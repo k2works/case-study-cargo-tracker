@@ -9,6 +9,7 @@
 - [設計](./design/index.md) - アーキテクチャ、モデル、品質方針を整理します。
 - [開発](./development/index.md) - リリース計画とイテレーション管理の入口です。
 - [運用](./operation/index.md) - 環境構築、デプロイ、運用関連の入口です。
+- [ジャーナル](./journal/index.md) - セッションでの判断と学びの物語です。
 - [記事](./article/index.md) - 学習用の記事シリーズの入口です。
 
 ## ドキュメント構成
@@ -18,10 +19,11 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能、運用、技術スタック | 10 件作成済み (Haskell 版) |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + 分析完了報告書 |
-| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + IT1 計画 + 分析完了報告書 |
+| [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 4 段階セットアップ手順書を配置 |
+| [ジャーナル](./journal/index.md) | セッションでの判断・学びの物語形式の記録 | 1 件 (2026-06-26) |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 1 件作成済み (ADR 0001) |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 2 件作成済み (ADR 0001, 0002) |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
