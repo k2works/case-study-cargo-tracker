@@ -19,7 +19,7 @@ vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
 
-export const dev = gulp.series('mkdocs:serve', 'mkdocs:open');
+export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 
 // Export gulp to make it available to the gulp CLI
 export default gulp;
