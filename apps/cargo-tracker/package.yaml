@@ -59,6 +59,7 @@ dependencies:
 - postgresql-simple >= 0.7
 - lucid >= 2.11
 - servant-lucid >= 0.9
+- http-api-data >= 0.6
 
 library:
   source-dirs: src
@@ -101,6 +102,8 @@ library:
   - Cargotracker.Shared.Web.Layout
   - Cargotracker.Shared.Auth.Views.LoginView
   - Cargotracker.Shared.Auth.Interfaces.LoginPageApi
+  - Cargotracker.Shipper.Views.ShipperFormView
+  - Cargotracker.Shipper.Interfaces.ShipperPageApi
 
 executables:
   cargo-tracker-exe:

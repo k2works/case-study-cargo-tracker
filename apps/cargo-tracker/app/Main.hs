@@ -55,6 +55,7 @@ import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   ( newPostgresShipperRepository,
   )
 import Cargotracker.Shipper.Interfaces.ShipperApi (shipperApp)
+import Cargotracker.Shipper.Interfaces.ShipperPageApi (shipperPageApp)
 
 main :: IO ()
 main = do
@@ -88,6 +89,7 @@ rootApp conn jwtSecret req respond =
       | requestMethod req == methodGet -> loginPageApp req respond
       | requestMethod req == methodPost -> loginApp userRepo verifier jwtSecret req respond
     "login" : _ -> loginApp userRepo verifier jwtSecret req respond
+    ["shippers", "new"] -> shipperPageApp shipperRepo req respond
     "shippers" : _ -> shipperApp shipperRepo req respond
     "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond
     "voyages" : _ -> voyageApp voyageRepo req respond
