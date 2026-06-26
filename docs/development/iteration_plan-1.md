@@ -48,7 +48,7 @@
 | US24 | 航海スケジュールを新規登録する | 3 | 必須 | #256 |
 | **合計** | | **15** (本体 13 + 横断 -2 取扱) | | |
 
-> AUTH は横断機能であり、リリース計画では目標 SP (13) に算入しない扱い。実工数は計上する。
+> AUTH は横断機能 (Shared.Auth) であり、`user_story.md` には US 番号として掲載されていない。リリース計画では目標 SP (13) に算入しない扱い。実工数は計上する。
 
 ### ストーリー詳細
 
@@ -89,9 +89,9 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 ---
 
-## タスク
+### タスク
 
-### 1. AUTH 認証基盤 (5 SP)
+#### 1. AUTH 認証基盤 (5 SP)
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
@@ -104,7 +104,7 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 **小計**: 20h
 
-### 2. 荷主登録 US02 / US03 (4 SP)
+#### 2. 荷主登録 US02 / US03 (4 SP)
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
@@ -118,7 +118,7 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 **小計**: 17h
 
-### 3. 貨物予約 US04 (3 SP)
+#### 3. 貨物予約 US04 (3 SP)
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
@@ -131,20 +131,20 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 **小計**: 18h
 
-### 4. 航海スケジュール US24 (3 SP)
+#### 4. 航海スケジュール US24 (3 SP)
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
-| 4.1 | `Routing.Domain.Model.Voyage` 集約 + Itinerary 値オブジェクト | 3h | [ ] |
+| 4.1 | `Routing.Domain.Model.Voyage` 集約 + CarrierMovement 値オブジェクト | 3h | [ ] |
 | 4.2 | `Routing.Application.RegisterVoyageCommand` | 2h | [ ] |
-| 4.3 | dbmate migration `003_create_voyage.sql` + `004_create_itinerary.sql` | 1h | [ ] |
+| 4.3 | dbmate migration `003_create_voyage.sql` + `004_create_carrier_movement.sql` | 1h | [ ] |
 | 4.4 | `Routing.Infrastructure.PostgresVoyageRepository` | 3h | [ ] |
 | 4.5 | Servant + Lucid: スケジュール登録画面 (寄港地動的追加 htmx) | 3h | [ ] |
 | 4.6 | hspec + hedgehog + hspec-wai | 2h | [ ] |
 
 **小計**: 14h
 
-### 5. arch-check Phase 1 + Gherkin 整備 (横断作業)
+#### 5. arch-check Phase 1 + Gherkin 整備 (横断作業)
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
@@ -155,7 +155,7 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 **小計**: 15h
 
-### タスク合計
+#### タスク合計
 
 | カテゴリ | SP | 理想時間 |
 | :--- | ---: | ---: |
@@ -268,33 +268,39 @@ package "Booking (BC)" {
   class Cargo <<集約ルート>> {
     BookingId
     ShipperId (参照)
+    RouteSpecification
+    BookingStatus
+    -- IT2 以降で追加 --
+    CargoItinerary?
+    Delivery?
+  }
+  class RouteSpecification {
     Origin: UnLocode
     Destination: UnLocode
     Deadline
-    BookingStatus
   }
   enum BookingStatus {
     Draft
     Submitted
+    RouteProposed
+    Confirmed
+    Closed
   }
+  Cargo *-- RouteSpecification
   Cargo --> BookingStatus
 }
 
 package "Routing (BC)" {
   class Voyage <<集約ルート>> {
     VoyageNumber
-    Itinerary
   }
-  class Itinerary {
-    legs: [Leg]
+  class CarrierMovement {
+    departure: UnLocode
+    arrival: UnLocode
+    departureTime
+    arrivalTime
   }
-  class Leg {
-    UnLocode
-    arrival
-    departure
-  }
-  Voyage *-- Itinerary
-  Itinerary *-- "1..*" Leg
+  Voyage *-- "1..*" CarrierMovement
 }
 
 Cargo ..> Shipper : ShipperId 参照
@@ -310,56 +316,73 @@ Cargo ..> User : 操作者ロール検証
 hide circle
 skinparam linetype ortho
 
-entity "user_account" as ua {
-    *user_id : uuid
+' data-model.md 規約: PK は BIGSERIAL の id、業務キーは UK で別途定義
+entity "users" as ua {
+    * id : BIGINT <<PK, BIGSERIAL>>
     --
-    email : text (unique)
-    password_hash : text
-    role : text
-    created_at : timestamp
+    * email : VARCHAR(255) <<UK>>
+    password_hash : VARCHAR(255)
+    created_at : TIMESTAMP WITH TIME ZONE
+    updated_at : TIMESTAMP WITH TIME ZONE
+}
+
+entity "user_roles" as ur {
+    * id : BIGINT <<PK, BIGSERIAL>>
+    --
+    * user_id : BIGINT <<FK>>
+    * role : VARCHAR(50)
 }
 
 entity "shipper" as sh {
-    *shipper_id : uuid
+    * id : BIGINT <<PK, BIGSERIAL>>
     --
-    name : text
-    email : text
-    address : text
-    corporate_number : text (nullable)
-    contract_rank : text (nullable)
-    created_at : timestamp
+    * shipper_id : VARCHAR(20) <<UK>>
+    name : VARCHAR(255)
+    email : VARCHAR(255)
+    address : VARCHAR(500)
+    corporate_number : VARCHAR(13)
+    contract_rank : VARCHAR(20)
+    created_at : TIMESTAMP WITH TIME ZONE
+    updated_at : TIMESTAMP WITH TIME ZONE
 }
 
 entity "cargo" as ca {
-    *booking_id : text (BK-XXXXXX)
+    * id : BIGINT <<PK, BIGSERIAL>>
     --
-    shipper_id : uuid
-    origin_unlocode : text
-    destination_unlocode : text
-    deadline : timestamp
-    booking_status : text
-    version : bigint
-    created_at : timestamp
+    * booking_id : VARCHAR(20) <<UK>>  ' BK-XXXXXX 形式
+    * shipper_id : BIGINT <<FK>>
+    * origin_unlocode : VARCHAR(5) <<FK>>
+    * destination_unlocode : VARCHAR(5) <<FK>>
+    deadline : TIMESTAMP WITH TIME ZONE
+    booking_status : VARCHAR(20)
+    version : BIGINT  ' 楽観ロック
+    created_at : TIMESTAMP WITH TIME ZONE
+    updated_at : TIMESTAMP WITH TIME ZONE
 }
 
 entity "voyage" as vo {
-    *voyage_number : text
+    * id : BIGINT <<PK, BIGSERIAL>>
     --
-    version : bigint
-    created_at : timestamp
+    * voyage_number : VARCHAR(20) <<UK>>
+    version : BIGINT
+    created_at : TIMESTAMP WITH TIME ZONE
+    updated_at : TIMESTAMP WITH TIME ZONE
 }
 
-entity "voyage_leg" as vl {
-    *voyage_number : text
-    *leg_order : int
+entity "carrier_movement" as cm {
+    * id : BIGINT <<PK, BIGSERIAL>>
     --
-    unlocode : text
-    arrival : timestamp
-    departure : timestamp
+    * voyage_id : BIGINT <<FK>>
+    * departure_location_unlocode : VARCHAR(5) <<FK>>
+    * arrival_location_unlocode : VARCHAR(5) <<FK>>
+    departure_time : TIMESTAMP WITH TIME ZONE
+    arrival_time : TIMESTAMP WITH TIME ZONE
+    seq_number : INT  ' 区間順序
 }
 
+ua ||--o{ ur : 持つ
 sh ||--o{ ca : 持つ
-vo ||--o{ vl : 持つ
+vo ||--o{ cm : 持つ
 
 @enduml
 ```
@@ -378,7 +401,7 @@ vo ||--o{ vl : 持つ
 
 ---
 
-## 依存関係とリスク
+## リスクと対策
 
 ### 依存関係
 
@@ -396,7 +419,7 @@ vo ||--o{ vl : 持つ
 
 ---
 
-## 完了の定義
+## 完了条件
 
 - すべてのストーリーの受入条件が満たされている
 - hspec / hedgehog / hspec-wai 全テストが緑
@@ -410,7 +433,16 @@ vo ||--o{ vl : 持つ
 
 ---
 
-## 参照
+## 更新履歴
+
+| 日付 | 版 | 変更内容 | 担当 |
+| :--- | :--- | :--- | :--- |
+| 2026-06-26 | 1.0 | 初版作成 (orchestrating-project --init より) | - |
+| 2026-06-26 | 1.1 | validating-iteration-plan による整合性検証反映: テンプレート準拠 (リスクと対策 / 完了条件 / 関連ドキュメント / 更新履歴)、データモデルをサロゲートキー規約に修正、Voyage を CarrierMovement 構成に修正、BookingStatus を 5 値に拡張、AUTH の横断扱い注記 | - |
+
+---
+
+## 関連ドキュメント
 
 - [リリース計画](./release_plan.md) §イテレーション 1
 - [ユーザーストーリー](../requirements/user_story.md)
