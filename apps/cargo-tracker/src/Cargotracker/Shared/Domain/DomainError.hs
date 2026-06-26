@@ -1,28 +1,34 @@
 {- | ドメインエラー共有カーネル
 
 全 Bounded Context の検証エラーをこの sum type に集約する。
-詳細は docs/design/domain-model.md (ドメインエラー節) を参照。
-
-IT1 で本格実装する。現時点は IT1 着手前の最小スタブとして
-`Either DomainError a` パターンを型クラスで動作確認できる程度に留める。
+詳細は docs/design/domain-model.md (ドメインエラー節) と
+iteration_plan-1.md エラー処理戦略を参照。
 -}
 module Cargotracker.Shared.Domain.DomainError
   ( DomainError (..),
-  )
-where
+  ) where
 
 import Data.Text (Text)
 
-{- | ドメイン検証エラー (IT1-IT8 で順次拡張)
+{- | ドメイン検証エラー (IT1 で導入する集合)
 
-完全な定義は domain-model.md を参照。本実装は IT1 で開始時の
-最小集合のみ含む。
+IT2 以降で `RouteNotSatisfied` などを追加する。
 -}
 data DomainError
-  = -- | 予約 ID の形式不正 (BK-XXXXXX 形式)
+  = -- Booking
     InvalidBookingId !Text
-  | -- | UN/LOCODE 形式不正 (5 文字、先頭 2 文字大文字)
-    InvalidUnLocode !Text
-  | -- | 楽観ロック競合 (集約の version 不一致)
-    ConcurrentModification !Text
+  | InvalidUnLocode !Text
+  | ConcurrentModification !Text
+  | -- Shared.Auth (IT1)
+    InvalidUserId !Text
+  | InvalidEmail !Text
+  | InvalidPasswordHash !Text
+  | InvalidCredentials
+  | AccessDenied !Text
+  | -- Routing (IT1)
+    InvalidVoyageNumber !Text
+  | LegContinuityViolation !Text
+  | -- Shipper / Booking 関連 (IT1)
+    InvalidShipperId !Text
+  | ShipperNotFound !Text
   deriving stock (Eq, Show)
