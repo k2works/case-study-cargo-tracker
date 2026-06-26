@@ -29,6 +29,7 @@ loginPage mError = pageLayout "Login - Cargo Tracker" $ do
             , required_ "required"
             , autofocus_
             , autocomplete_ "username"
+            , value_ "admin@example.com"
             ]
         div_ [class_ "mb-3"] $ do
           label_ [for_ "password", class_ "form-label"] "パスワード"
@@ -39,8 +40,17 @@ loginPage mError = pageLayout "Login - Cargo Tracker" $ do
             , class_ "form-control"
             , required_ "required"
             , autocomplete_ "current-password"
+            , value_ "password"
             ]
         button_ [type_ "submit", class_ "btn btn-primary w-100"] "ログイン"
-      p_
-        [class_ "text-center mt-3 text-muted small"]
-        "IT1: SSR ログイン画面 (JSON API は POST /login)"
+      div_ [class_ "mt-4 small"] $ do
+        p_ [class_ "text-muted mb-1"] "IT1 デモ用シードユーザー (共通パスワード: password)"
+        ul_ [class_ "text-muted"] $ do
+          li_ "admin@example.com (MasterAdmin)"
+          li_ "sales@example.com (Sales)"
+          li_ "router@example.com (Router)"
+          li_ "tracker@example.com (Tracker)"
+          li_ "handler@example.com (Handler)"
+          li_ "accountant@example.com (Accountant)"
+          li_ "shipper@example.com (Shipper)"
+          li_ "consignee@example.com (Consignee)"
