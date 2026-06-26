@@ -73,20 +73,20 @@ DDD + ヘキサゴナル + CQRS の Haskell への翻訳は自然で、Scala 版
 | M-15 | UX | ステータスバッジのコントラスト比検証 | ✅ Sprint 0 で対応済 (Bootstrap 5 デフォルトテーマ 6 バリエーション全 WCAG AA 準拠を表で記録) |
 | M-16 | UX | htmx 部分更新時の `aria-live` 領域指定を明記 | ✅ ui_design.md に `aria-live` 規約 (polite/assertive 使い分け表) + Lucid 実装例追加 |
 
-### 低
+### 低 — Sprint 0 補強で全 10 件対応完了 (2026-06-26)
 
-| # | 指摘元 | 提案 |
-| :---: | :---: | :--- |
-| L-01 | PM | user_story.md の優先度欄に「低」も含めるか、release_plan.md の優先度を逆反映 |
-| L-02 | PM | US24/US25 のアクターを「マスタ管理者」ロールに再検討 |
-| L-03 | Architect | `mtl` の使用範囲 ("ReaderT 基盤のみ、MonadReader/MonadError は使わない") を tech_stack に注記 |
-| L-04 | Architect | `-Wincomplete-patterns` 等のコンパイラフラグを `package.yaml` で強制する規約を tech_stack に追加 |
-| L-05 | Tester | HPC のブランチカバレッジ計測精度に関する注記 |
-| L-06 | Tester | E2E htmx ポーリング系のテストヘルパー API (間隔短縮ノブ) 整備 |
-| L-07 | Tester | Pre-commit テストは `--match Domain` 等のフィルタ運用明記 |
-| L-08 | UR | US22 割引率上限 30% の業務根拠と変更可否を運用要件にメモ |
-| L-09 | UR | キャンセル料の扱い (確定後・出港後) を US13 / US23 に追加 |
-| L-10 | UX | 共通パンくずコンポーネントの一貫性確保 |
+| # | 指摘元 | 提案 | 対応状況 |
+| :---: | :---: | :--- | :--- |
+| L-01 | PM | user_story.md の優先度欄に「低」を含める、release_plan.md の優先度を逆反映 | ✅ user_story.md ストーリー一覧に「低 (IT8 ストレッチ)」「中」「高」3 段階で再採点。release_plan.md の判断を逆反映 |
+| L-02 | PM | US24/US25 のアクターを「マスタ管理者」ロールに再検討 | ✅ user_story.md US24/US25 の主アクターを「マスタ管理者 (主) / 経路設計者 (副)」に変更、マスタ整合性責任を Admin に置く |
+| L-03 | Architect | `mtl` の使用範囲注記 | ✅ tech_stack.md に「ReaderT 基盤のみ。MonadReader/MonadError 等の型クラスは抽象化レイヤとして使わない」規約 + サンプル追加 |
+| L-04 | Architect | `-Wincomplete-patterns` 等のコンパイラフラグを package.yaml で強制 | ✅ tech_stack.md に GHC 11 フラグ強制設定 + `-Werror=incomplete-patterns` のエラー昇格規約追加 |
+| L-05 | Tester | HPC ブランチカバレッジ計測精度の注記 | ✅ test_strategy.md §6.1 に HPC ブランチカバレッジの 3 制約 (網羅性検査の関係、guard 計測の粗さ、型クラスメソッドの分岐) を注記 |
+| L-06 | Tester | E2E htmx ポーリングテストヘルパー API | ✅ test_strategy.md §3.4 に `pollingInterval cfg` ノブ + Playwright `setupFastPolling` ヘルパー実装例追加 |
+| L-07 | Tester | Pre-commit テストのフィルタ運用 | ✅ test_strategy.md §7.1 に `stack test --test-arguments="--match Domain"` の pre-commit フックサンプル追加 |
+| L-08 | UR | 割引率上限 30% の業務根拠と変更可否 | ✅ non_functional.md §9 ビジネスルール定数の運用に「法人割引率の上限 30%」根拠・変更可否・影響範囲を追加 |
+| L-09 | UR | キャンセル料の扱いを US13 / US23 に追加 | ✅ user_story.md US13 受入基準に 3 段階キャンセル料ルール (確定前 0%、確定後出港前 30%、出港後 100%) と invoice 連動を追加 |
+| L-10 | UX | 共通パンくずコンポーネントの一貫性確保 | ✅ ui_design.md に `breadcrumbView` 共通コンポーネント設計 + `mainLayout` 第 6 引数の `[BreadcrumbItem]` 必須化 + 14 画面の標準パンくず階層表を追加 |
 
 ---
 

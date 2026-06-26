@@ -663,6 +663,90 @@ Bootstrap 5 では:
 
 ---
 
+## 共通パンくず (Breadcrumb) 規約 (L-10 反映)
+
+階層深い画面 (予約詳細 → 経路割り当て、貨物追跡 → 追跡詳細 等) で戻り動線が画面ごとにブレないよう、**共通パンくずコンポーネント** を全画面で統一する。
+
+### 設計方針
+
+- Bootstrap 5 の `breadcrumb` コンポーネントを使用
+- `mainLayout` の第 6 引数として `[BreadcrumbItem]` を受け取る (省略不可、空リストは「ホーム」のみ表示)
+- 各画面のビュー関数は自身のパンくず階層を宣言的に渡す
+- 最後の要素は `aria-current="page"` で現在ページを明示
+
+```haskell
+-- Views/Layout.hs
+data BreadcrumbItem = BreadcrumbItem
+  { biLabel :: !Text
+  , biLink  :: !(Maybe Text)   -- Just URL = リンク、Nothing = 現在ページ
+  }
+
+mainLayout :: AuthenticatedUser
+           -> CsrfToken
+           -> Text              -- title
+           -> [BreadcrumbItem]  -- breadcrumb (省略不可)
+           -> Maybe FlashMessage
+           -> Html ()
+           -> Html ()
+mainLayout user csrf title crumbs flash content = doctypehtml_ $ do
+  head_ $ ...
+  body_ $ do
+    navView user
+    main_ [class_ "container"] $ do
+      breadcrumbView crumbs
+      alertsView flash
+      content
+    footerView
+
+breadcrumbView :: [BreadcrumbItem] -> Html ()
+breadcrumbView crumbs = nav_ [ariaLabel_ "パンくずリスト"] $
+  ol_ [class_ "breadcrumb"] $ do
+    li_ [class_ "breadcrumb-item"] $
+      a_ [href_ "/"] "ホーム"
+    forM_ crumbs $ \(BreadcrumbItem label link) ->
+      case link of
+        Just url -> li_ [class_ "breadcrumb-item"] $
+          a_ [href_ url] (toHtml label)
+        Nothing  -> li_ [class_ "breadcrumb-item active", ariaCurrent_ "page"] $
+          toHtml label
+```
+
+### 標準パンくず階層
+
+| 画面 | パンくず |
+| :--- | :--- |
+| ダッシュボード | ホーム |
+| 貨物予約一覧 | ホーム > 貨物予約 |
+| 貨物予約登録 | ホーム > 貨物予約 > 新規登録 |
+| 予約詳細 | ホーム > 貨物予約 > BK-XXXXXX |
+| 経路割り当て | ホーム > 貨物予約 > BK-XXXXXX > 経路割り当て |
+| 貨物追跡入力 | ホーム > 貨物追跡 |
+| 追跡詳細 | ホーム > 貨物追跡 > TR12345 |
+| 荷役作業一覧 | ホーム > 荷役作業 |
+| 荷役作業登録 | ホーム > 荷役作業 > 新規登録 |
+| 航路一覧 | ホーム > 航路 |
+| 航海スケジュール登録 | ホーム > 航路 > 新規登録 |
+| 航海スケジュール更新 | ホーム > 航路 > V001 > 更新 |
+| 請求書一覧 | ホーム > 請求書 |
+| 請求書詳細 | ホーム > 請求書 > INV-001 |
+
+### 利用例
+
+```haskell
+-- Views/Booking/Show.hs
+bookingShowView :: AuthenticatedUser -> CsrfToken -> BookingDetailDto -> Html ()
+bookingShowView user csrf dto = mainLayout user csrf "予約詳細"
+  [ BreadcrumbItem "貨物予約" (Just "/bookings")
+  , BreadcrumbItem (unBookingId (bdBookingId dto)) Nothing  -- 現在ページ
+  ]
+  Nothing $ do
+    -- 詳細コンテンツ
+    ...
+```
+
+これにより全画面で戻り動線が一貫し、ユーザーの認知負荷が低減する。
+パンくず欠落は型システム (`mainLayout` 引数必須) で防止する。
+
 ## Lucid ビュー構成 (実装方針)
 
 ```text

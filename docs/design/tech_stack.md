@@ -29,7 +29,7 @@ tags: design, tech-stack, haskell, servant, postgresql
 | aeson | 2.2.x | JSON シリアライズ | REST API DTO の `ToJSON` / `FromJSON` を `deriving` で自動導出 | BSD-3-Clause | GA |
 | http-client + http-client-tls | 0.7.x / 0.3.x | HTTP クライアント | 外部システム連携 (ACL アダプター) の実装 | MIT | GA |
 | katip | 0.8.x | 構造化ログ | JSON 構造化ログ。CloudWatch 向け JSON 出力に対応 | BSD-3-Clause | GA |
-| mtl | 2.3.x | モナド変換子 (ReaderT) | `ReaderT Env IO` パターンの基盤 | BSD-3-Clause | GA (Haskell コア) |
+| mtl | 2.3.x | モナド変換子 (ReaderT) | `ReaderT Env IO` パターンの基盤 (使用範囲は注記参照) | BSD-3-Clause | GA (Haskell コア) |
 | text | 2.1.x | 文字列型 | Haskell 標準の Unicode 文字列。`String` は使用しない | BSD-2-Clause | GA (Haskell コア) |
 | time | 1.12.x | 日時 | UTC・ローカル時刻の標準型 (`UTCTime`, `Day`) | BSD-2-Clause | GA (Haskell コア) |
 | uuid | 1.3.x | UUID 生成 | ID 採番 (`ShipperId`, `EstimateId` 等) | BSD-3-Clause | GA |
@@ -38,6 +38,56 @@ tags: design, tech-stack, haskell, servant, postgresql
 
 > **DI に関する注記**: ReaderT パターンによる環境レコードでの配線。Guice 相当のランタイム DI 誤りはなく、
 > 配線誤りはコンパイル時に検出される。
+
+### mtl の使用範囲 (L-03 反映)
+
+`mtl` は本プロジェクトでは `ReaderT` / `Reader` の型定義基盤としてのみ使用する。
+`MonadReader` / `MonadError` / `MonadState` 等の **型クラスを抽象化レイヤとして使わない** ことを規約とする。
+
+理由:
+
+- `MonadXxx` 型クラスを多用すると型シグネチャが `(MonadReader Env m, MonadIO m, MonadError DomainError m) => ...` のように肥大化し、初学者の障壁になる
+- 本プロジェクトは効果システムを `ReaderT Env IO` 1 種類に固定しており、抽象化の必要性が低い
+- 失敗表現は `Either DomainError a` (純粋関数) または `Either DomainError a` 戻り値で統一し、`MonadError` を使わない
+
+```haskell
+-- ✅ 採用パターン (型シグネチャが明示的)
+type AppM = ReaderT Env IO
+findBooking :: BookingId -> AppM (Maybe Cargo)
+
+-- ❌ 不採用パターン (mtl 型クラスを多用)
+findBooking :: (MonadReader Env m, MonadIO m) => BookingId -> m (Maybe Cargo)
+```
+
+`mtl` 型クラスを使った抽象化が必要になった場合 (例: 純粋なテスト用モナドを差し替えたい) は、ADR 起票で記録する。
+
+### コンパイラフラグの強制 (L-04 反映)
+
+`package.yaml` (または `cargo-tracker.cabal`) で以下のフラグを **プロジェクト全体に強制適用** し、品質を底上げする。
+
+```yaml
+# package.yaml
+ghc-options:
+  - -Wall                          # 全警告を有効化
+  - -Wincomplete-patterns           # パターンマッチ網羅性検査 (sum type の網羅性)
+  - -Wincomplete-record-updates     # レコード更新の網羅性
+  - -Wincomplete-uni-patterns       # 単一パターンマッチの網羅性
+  - -Wpartial-fields                # 部分フィールド警告
+  - -Wmissing-export-lists          # モジュール export リスト必須化
+  - -Wmissing-deriving-strategies   # deriving 戦略の明示化
+  - -Wunused-packages               # 不要パッケージ検出
+  - -Wname-shadowing                # 変数名シャドーイング検出
+  - -Wredundant-constraints         # 不要型制約検出
+  - -Werror=incomplete-patterns     # 網羅性違反はエラーに昇格 (CI でブロック)
+```
+
+特に重要:
+
+- `-Werror=incomplete-patterns`: 状態遷移 (`BookingStatus.canTransitionTo`) や `DiscountPolicy` の sum type 網羅漏れをコンパイル時にエラー化
+- `-Wmissing-export-lists`: モジュール境界を明示し、内部実装の意図しない公開を防ぐ
+- `-Wunused-packages`: stack/cabal の依存肥大化を防ぐ
+
+開発時 (`stack build`) と CI 共に同じフラグを適用。例外的に警告を抑制する場合は `{-# OPTIONS_GHC -Wno-... #-}` をモジュール冒頭に明示する。
 
 ## フロントエンド
 

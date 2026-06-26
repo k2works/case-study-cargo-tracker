@@ -325,6 +325,50 @@ stack exec arch-check -- src/Cargotracker/
 
 タイムラインの自動更新は Playwright の `waitForResponse` で次のポーリング応答を待ち、UI に反映されることを確認する。
 
+##### L-06 反映: E2E ポーリング系のテストヘルパー API
+
+30 秒待機は E2E テスト全体の所要時間を圧迫し flaky の原因となる。**ポーリング間隔をテスト時のみ短縮するノブ** を Lucid ビューと Servant ハンドラに用意する。
+
+```haskell
+-- Views/Tracking/Show.hs
+showView :: AppConfig -> AuthenticatedUser -> CsrfToken -> TrackingDetailDto -> Html ()
+showView cfg user csrf dto = mainLayout user csrf "追跡詳細" Nothing $ do
+  section_ [ id_ "timeline-container"
+           , hxGet_ ("/tracking/" <> trackingNum dto <> "/status")
+           , hxTrigger_ (pollingInterval cfg)  -- ← 設定値で切替可能
+           , ariaLive_ "polite"
+           ] $ timelineFragment dto
+
+-- Config.hs
+data AppConfig = AppConfig
+  { cfgPollingInterval :: !Text  -- "every 30s" (本番) / "every 1s" (テスト)
+  , ...
+  }
+```
+
+Playwright テストヘルパー:
+
+```typescript
+// test/e2e/helpers/tracking.ts
+export async function setupFastPolling(page: Page) {
+  // テスト環境変数で 1 秒間隔に切替
+  await page.addInitScript(() => {
+    window.__TEST_POLLING_INTERVAL = 'every 1s';
+  });
+}
+
+test('US18 ポーリング短縮で 30 秒待機しない', async ({ page }) => {
+  await setupFastPolling(page);
+  await page.goto('/public/tracking/TR12345');
+  await api.updateTrackingStatus('TR12345', 'Unloaded');
+  // 1 秒間隔なので最大 2 秒で反映確認可能
+  await expect(page.locator('#status-container'))
+    .toContainText('Unloaded', { timeout: 3000 });
+});
+```
+
+これにより E2E スイート全体が 30 秒単位の待機を避けられ、CI 全体時間を短縮できる。
+
 ```typescript
 test('US18 追跡情報照会: ポーリングで状態が更新される', async ({ page }) => {
   await page.goto('/public/tracking/TR12345');
@@ -610,6 +654,17 @@ spec = around (withWireMock "external-routing.json") $
 | Interfaces (API) | 75% | 65% | hpc |
 | **全体** | **85% 以上** | **75% 以上** | hpc |
 
+> **L-05 反映: HPC のブランチカバレッジ計測精度に関する注記**
+>
+> HPC のブランチカバレッジは `case` 式 / `if` 式の各分岐到達を計測するが、以下の制約がある。
+>
+> - **網羅性検査が `-Werror=incomplete-patterns` で強制されている関数**: コンパイル時に網羅性が保証されているため、HPC のブランチ未到達はテスト不足を示すが、実行時の安全性自体は損なわれない
+> - **`guard` (パターンガード) のブランチ**: HPC は最終的な `True`/`False` の 2 分岐として扱うため、複数 guard 条件の論理積/論理和は粗い計測となる
+> - **型クラスメソッドのインスタンス分岐**: 各インスタンスは別関数として計測される (網羅性は型クラス Coverage Condition で保証)
+>
+> 目標値 (Domain 95% / 全体 85%) はステートメントカバレッジを優先指標とし、ブランチカバレッジは補助指標とする。
+> 状態遷移の網羅 (BookingStatus 81 ペア等) は専用テストで保証し、HPC カバレッジに頼らない。
+
 ### 6.2 品質ゲート条件
 
 CI で以下を満たさない場合はマージ不可:
@@ -629,10 +684,34 @@ CI で以下を満たさない場合はマージ不可:
 
 | ステージ | 実行内容 | 所要時間目安 |
 | :--- | :--- | :--- |
-| Pre-commit (ローカル) | fourmolu / HLint / 単体テスト | 30 秒 |
+| Pre-commit (ローカル) | fourmolu / HLint / **ドメイン単体テストのみ** (L-07) | 30 秒 |
 | PR / push (GitHub Actions) | アーキテクチャ規約 + 単体 + 統合 (Testcontainers) + WireMock | 5-10 分 |
 | main push | + ステージングデプロイ + E2E (Playwright) | 15-20 分 |
 | リリースタグ | + 本番デプロイ前手動承認 + スモークテスト | 30 分 |
+
+#### L-07 反映: Pre-commit テストのフィルタ運用
+
+ローカル pre-commit で全テスト (`stack test`) を実行すると 1-2 分以上要する場合があり、コミット頻度を下げる。
+**ドメイン層のみ** に絞った高速実行を pre-commit に組み込む。
+
+```bash
+# .git/hooks/pre-commit (または lefthook 等で管理)
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 1. Format チェック
+fourmolu --mode check src/
+
+# 2. HLint
+hlint src/
+
+# 3. ドメイン層のみ単体テスト (高速、副作用なし)
+stack test --test-arguments="--match \"Domain\""
+
+echo "✅ Pre-commit checks passed"
+```
+
+フルテスト (`stack test`) は手動実行または push 直前に実施。CI 側で完全網羅される。
 
 ### 7.2 GitHub Actions パイプライン図
 
