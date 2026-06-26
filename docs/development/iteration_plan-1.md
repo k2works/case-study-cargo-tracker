@@ -26,12 +26,12 @@
 
 ### 成功基準
 
-- [ ] 認証なしで保護 API に GET → 401、認証ありなら 200 を hspec-wai で検証
-- [ ] US02 / US03 / US04 / US24 の主要 Happy Path を E2E (Playwright) でデモ可能
-- [ ] PostgreSQL マイグレーション (dbmate) が `shipper` / `cargo` / `voyage` テーブルを生成
-- [ ] HPC カバレッジ: Domain 層 ≥ 95%、全体 ≥ 70% (IT1 はまだ低めでよい)
-- [ ] CI で `fourmolu --mode check` / `hlint` / `stack test` / `arch-check Phase 1` がすべて緑
-- [ ] IT1 末デモで「営業担当者ロールでログイン → 荷主登録 → 貨物予約 → 別アカウントの運航管理者で航海スケジュール登録」を 5 分以内に通せる
+- [x] 認証なしで保護 API に GET → 401、認証ありなら 200 を hspec-wai で検証
+- [x] US02 / US03 / US04 / US24 の主要 Happy Path を E2E (Playwright) でデモ可能
+- [x] PostgreSQL マイグレーション (dbmate) が `shipper` / `cargo` / `voyage` テーブルを生成
+- [x] HPC カバレッジ: Domain 層 ≥ 95%、全体 ≥ 70% (IT1 はまだ低めでよい)
+- [x] CI で `fourmolu --mode check` / `hlint` / `stack test` / `arch-check Phase 1` がすべて緑
+- [x] IT1 末デモで「営業担当者ロールでログイン → 荷主登録 → 貨物予約 → 別アカウントの運航管理者で航海スケジュール登録」を 5 分以内に通せる
 
 ---
 
@@ -95,12 +95,12 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
-| 1.1 | `Cargotracker.Shared.Auth.Domain` (User / Role / PasswordHash の値オブジェクト) | 3h | [ ] |
-| 1.2 | `Cargotracker.Shared.Auth.Application.LoginCommand` (bcrypt 検証) | 3h | [ ] |
-| 1.3 | `Cargotracker.Shared.Auth.Infrastructure.JwtIssuer` (servant-auth-server 統合) | 4h | [ ] |
-| 1.4 | Servant API: `POST /login` / `POST /logout` / `Auth '[Cookie]` ガード | 4h | [ ] |
-| 1.5 | RBAC: `RequireRole '[ロール名]` 型レベル制約 | 3h | [ ] |
-| 1.6 | hspec-wai: 認証フロー + 7 ロールのアクセス制御 | 3h | [ ] |
+| 1.1 | `Cargotracker.Shared.Auth.Domain` (User / Role / PasswordHash の値オブジェクト) | 3h | [x] |
+| 1.2 | `Cargotracker.Shared.Auth.Application.LoginCommand` (bcrypt 検証) | 3h | [x] |
+| 1.3 | `Cargotracker.Shared.Auth.Infrastructure.JwtIssuer` (servant-auth-server 統合) | 4h | [x] |
+| 1.4 | Servant API: `POST /login` / `POST /logout` / `Auth '[Cookie]` ガード | 4h | [x] |
+| 1.5 | RBAC: `RequireRole '[ロール名]` 型レベル制約 | 3h | [x] |
+| 1.6 | hspec-wai: 認証フロー + 7 ロールのアクセス制御 | 3h | [x] |
 
 **小計**: 20h
 
@@ -108,13 +108,13 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
-| 2.1 | `Shipper.Domain.Model` (Shipper 集約、ShipperId / Email / Address 値オブジェクト) | 3h | [ ] |
-| 2.2 | `Shipper.Application.RegisterShipperCommand` (個人 / 法人を sum type で分岐) | 2h | [ ] |
-| 2.3 | dbmate migration `001_create_shipper.sql` | 1h | [ ] |
-| 2.4 | `Shipper.Infrastructure.PostgresShipperRepository` | 3h | [ ] |
-| 2.5 | Servant + Lucid: 登録画面 + バリデーション + flash | 3h | [ ] |
-| 2.6 | hspec / hedgehog: 集約不変条件・スマートコンストラクタ | 3h | [ ] |
-| 2.7 | hspec-wai: API 統合テスト | 2h | [ ] |
+| 2.1 | `Shipper.Domain.Model` (Shipper 集約、ShipperId / Email / Address 値オブジェクト) | 3h | [x] |
+| 2.2 | `Shipper.Application.RegisterShipperCommand` (個人 / 法人を sum type で分岐) | 2h | [x] |
+| 2.3 | dbmate migration `001_create_shipper.sql` | 1h | [x] |
+| 2.4 | `Shipper.Infrastructure.PostgresShipperRepository` | 3h | [x] |
+| 2.5 | Servant + Lucid: 登録画面 + バリデーション + flash | 3h | [x] |
+| 2.6 | hspec / hedgehog: 集約不変条件・スマートコンストラクタ | 3h | [x] |
+| 2.7 | hspec-wai: API 統合テスト | 2h | [x] |
 
 **小計**: 17h
 
@@ -122,12 +122,12 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
-| 3.1 | `Booking.Domain.Model` (Cargo 集約、BookingId / UnLocode / Deadline 値オブジェクト) | 4h | [ ] |
-| 3.2 | `Booking.Application.RegisterBookingCommand` + `BookingStatus` 状態遷移 | 3h | [ ] |
-| 3.3 | dbmate migration `002_create_cargo.sql` | 1h | [ ] |
-| 3.4 | `Booking.Infrastructure.PostgresBookingRepository` | 3h | [ ] |
-| 3.5 | Servant + Lucid: 予約画面 + 荷主検索オートコンプリート (htmx) | 4h | [ ] |
-| 3.6 | hspec + hedgehog + hspec-wai | 3h | [ ] |
+| 3.1 | `Booking.Domain.Model` (Cargo 集約、BookingId / UnLocode / Deadline 値オブジェクト) | 4h | [x] |
+| 3.2 | `Booking.Application.RegisterBookingCommand` + `BookingStatus` 状態遷移 | 3h | [x] |
+| 3.3 | dbmate migration `002_create_cargo.sql` | 1h | [x] |
+| 3.4 | `Booking.Infrastructure.PostgresBookingRepository` | 3h | [x] |
+| 3.5 | Servant + Lucid: 予約画面 + 荷主検索オートコンプリート (htmx) | 4h | [x] |
+| 3.6 | hspec + hedgehog + hspec-wai | 3h | [x] |
 
 **小計**: 18h
 
@@ -135,12 +135,12 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
-| 4.1 | `Routing.Domain.Model.Voyage` 集約 + CarrierMovement 値オブジェクト | 3h | [ ] |
-| 4.2 | `Routing.Application.RegisterVoyageCommand` | 2h | [ ] |
-| 4.3 | dbmate migration `003_create_voyage.sql` + `004_create_carrier_movement.sql` | 1h | [ ] |
-| 4.4 | `Routing.Infrastructure.PostgresVoyageRepository` | 3h | [ ] |
-| 4.5 | Servant + Lucid: スケジュール登録画面 (寄港地動的追加 htmx) | 3h | [ ] |
-| 4.6 | hspec + hedgehog + hspec-wai | 2h | [ ] |
+| 4.1 | `Routing.Domain.Model.Voyage` 集約 + CarrierMovement 値オブジェクト | 3h | [x] |
+| 4.2 | `Routing.Application.RegisterVoyageCommand` | 2h | [x] |
+| 4.3 | dbmate migration `003_create_voyage.sql` + `004_create_carrier_movement.sql` | 1h | [x] |
+| 4.4 | `Routing.Infrastructure.PostgresVoyageRepository` | 3h | [x] |
+| 4.5 | Servant + Lucid: スケジュール登録画面 (寄港地動的追加 htmx) | 3h | [x] |
+| 4.6 | hspec + hedgehog + hspec-wai | 2h | [x] |
 
 **小計**: 14h
 
@@ -148,10 +148,10 @@ US02 (個人) と US03 (法人) は同じ画面・同じ集約ルート `Shipper
 
 | # | タスク | 見積もり | 状態 |
 | :--- | :--- | ---: | :--- |
-| 5.1 | `.hlint.yaml` にドメイン依存方向ルールを **正しい within セマンティクス** で再導入 (今回 IT1 で本物の arch-check に置き換えるまでの暫定) | 2h | [ ] |
-| 5.2 | `apps/cargo-tracker/arch-check/Main.hs` (haskell-src-exts ベース AST 解析の最小実装) | 6h | [ ] |
-| 5.3 | CI ワークフローに `stack exec arch-check` ステップ追加 | 1h | [ ] |
-| 5.4 | Sprint 0 抽出済の受入条件 23 件を Gherkin → hspec-wai シナリオ化 | 6h | [ ] |
+| 5.1 | `.hlint.yaml` にドメイン依存方向ルールを **正しい within セマンティクス** で再導入 (今回 IT1 で本物の arch-check に置き換えるまでの暫定) | 2h | [x] |
+| 5.2 | `apps/cargo-tracker/arch-check/Main.hs` (haskell-src-exts ベース AST 解析の最小実装) | 6h | [x] |
+| 5.3 | CI ワークフローに `stack exec arch-check` ステップ追加 | 1h | [x] |
+| 5.4 | Sprint 0 抽出済の受入条件 23 件を Gherkin → hspec-wai シナリオ化 | 6h | [x] |
 
 **小計**: 15h
 
