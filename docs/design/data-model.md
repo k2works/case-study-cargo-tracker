@@ -37,7 +37,9 @@ tags: design, data-model, postgresql, postgresql-simple, dbmate
 @startuml
 title 概念データモデル
 
-skinparam entity { BackgroundColor White BorderColor Black }
+' avoid problems with angled crows feet
+skinparam linetype ortho
+hide circle
 
 package "Shared Domain" #lightgray {
   entity "location" as location {
@@ -100,6 +102,8 @@ package "Routing Context" #lightgreen {
     * id : BIGINT <<PK>>
     --
     * voyage_id : BIGINT <<FK>>
+    * departure_location_unlocode : VARCHAR(5) <<FK>>
+    * arrival_location_unlocode : VARCHAR(5) <<FK>>
   }
 }
 
@@ -109,9 +113,22 @@ package "Tracking Context" #lightyellow {
     --
     * tracking_number : VARCHAR(20) <<UK>>
     * booking_id : VARCHAR(20)
+    * transport_status : VARCHAR(30)
   }
-  entity "tracking_handling_event" as the
-  entity "tracking_exception_event" as tee
+  entity "tracking_handling_event" as tracking_handling_event {
+    * id : BIGINT <<PK>>
+    --
+    * tracking_id : BIGINT <<FK>>
+    * event_type : VARCHAR(30)
+    * event_time : TIMESTAMPTZ
+  }
+  entity "tracking_exception_event" as tracking_exception_event {
+    * id : BIGINT <<PK>>
+    --
+    * tracking_id : BIGINT <<FK>>
+    * exception_type : VARCHAR(50)
+    * occurred_at : TIMESTAMPTZ
+  }
 }
 
 package "Handling Context" #lightcoral {
@@ -120,8 +137,15 @@ package "Handling Context" #lightcoral {
     --
     * booking_id : VARCHAR(20)
     * event_type : VARCHAR(30)
+    * location_unlocode : VARCHAR(5) <<FK>>
   }
-  entity "customs_declaration" as customs_declaration
+  entity "customs_declaration" as customs_declaration {
+    * id : BIGINT <<PK>>
+    --
+    * handling_activity_id : BIGINT <<FK>>
+    * declaration_number : VARCHAR(50) <<UK>>
+    * status : VARCHAR(30)
+  }
 }
 
 package "Estimation Context" #wheat {
@@ -129,9 +153,23 @@ package "Estimation Context" #wheat {
     * id : BIGINT <<PK>>
     --
     * estimate_id : UUID <<UK>>
+    * cargo_type : VARCHAR(30)
+    * status : VARCHAR(20)
   }
-  entity "route_candidate" as route_candidate
-  entity "route_candidate_selection" as rcs
+  entity "route_candidate" as route_candidate {
+    * id : BIGINT <<PK>>
+    --
+    * estimate_id : BIGINT <<FK>>
+    * voyage_number : VARCHAR(20)
+    * rank : INT
+  }
+  entity "route_candidate_selection" as route_candidate_selection {
+    * id : BIGINT <<PK>>
+    --
+    * booking_id : VARCHAR(20) <<UK>>
+    * voyage_numbers : VARCHAR(200)
+    * status : VARCHAR(20)
+  }
 }
 
 package "Billing Context" #lightpink {
@@ -142,23 +180,45 @@ package "Billing Context" #lightpink {
     * booking_id : VARCHAR(20) <<UK>>
     * payment_status : VARCHAR(30)
   }
-  entity "invoice_line_item" as ili
+  entity "invoice_line_item" as invoice_line_item {
+    * id : BIGINT <<PK>>
+    --
+    * invoice_id : BIGINT <<FK>>
+    * amount_value : BIGINT
+  }
 }
 
 package "Cross-cutting" #lavender {
-  entity "notification_log" as nl
+  entity "notification_log" as notification_log {
+    * id : BIGINT <<PK>>
+    --
+    * booking_id : VARCHAR(20)
+    * type : VARCHAR(30)
+    * sent_at : TIMESTAMPTZ
+  }
 }
 
-cargo }o--|| shipper
+' リレーション (左 = 親 / 右 = 子)
+shipper ||--o{ cargo
 cargo ||--o{ leg
-leg }o--|| voyage
+voyage ||--o{ leg
 voyage ||--o{ carrier_movement
-tracking_activity ||--o{ the
-tracking_activity ||--o{ tee
+location ||--o{ leg
+location ||--o{ carrier_movement
+location ||--o{ handling_activity
+tracking_activity ||--o{ tracking_handling_event
+tracking_activity ||--o{ tracking_exception_event
 handling_activity ||--o| customs_declaration
 estimate ||--o{ route_candidate
-invoice ||--o{ ili
+invoice ||--o{ invoice_line_item
 users ||--o{ user_roles
+
+' コンテキスト間の業務的関連 (DB 制約なし、識別子参照のみ)
+cargo .. tracking_activity : booking_id
+cargo .. handling_activity : booking_id
+cargo .. invoice : booking_id
+cargo .. route_candidate_selection : booking_id
+cargo .. notification_log : booking_id
 
 @enduml
 ```
