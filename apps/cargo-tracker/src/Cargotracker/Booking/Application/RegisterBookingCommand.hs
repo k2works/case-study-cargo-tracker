@@ -50,8 +50,10 @@ execute repo checker input = case validate input of
       then pure (Left (ShipperNotFound (unShipperId sid)))
       else do
         let cargo = mkCargo bid sid route
-        saveBooking repo cargo
-        pure (Right (cargoBookingId cargo))
+        saveResult <- saveBooking repo cargo
+        case saveResult of
+          Left e -> pure (Left e)
+          Right () -> pure (Right (cargoBookingId cargo))
   where
     validate i = do
       bid <- mkBookingId (inputBookingId i)

@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | htmx: 航海フォームに区間行を動的追加 (GET /voyages/new/movement-row?index=N)
@@ -8,6 +7,7 @@ module Cargotracker.Routing.Interfaces.VoyageMovementRowApi
     voyageMovementRowApp,
   ) where
 
+import Data.Maybe (fromMaybe)
 import Lucid
 import Network.Wai (Application)
 import Servant
@@ -26,4 +26,4 @@ voyageMovementRowApp :: Application
 voyageMovementRowApp = serve (Proxy :: Proxy VoyageMovementRowApi) handler
 
 handler :: Maybe Int -> Handler (Html ())
-handler mIdx = pure (movementRow (maybe 4 id mIdx) False)
+handler mIdx = pure (movementRow (fromMaybe 4 mIdx) False)

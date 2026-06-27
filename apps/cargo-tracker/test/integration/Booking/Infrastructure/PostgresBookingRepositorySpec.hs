@@ -84,7 +84,8 @@ spec = describe "PostgresBookingRepository [INTEGRATION]" $ do
                 (BookingId "BK-INT001")
                 (ShipperId "SHP-INT001")
                 route
-        saveBooking repo cargo
+        saveResult <- saveBooking repo cargo
+        saveResult `shouldBe` Right ()
         -- 検証: cargo テーブルから直接 SELECT
         rows <-
           query

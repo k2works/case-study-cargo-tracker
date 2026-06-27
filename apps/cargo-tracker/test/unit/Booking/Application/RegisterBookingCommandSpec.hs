@@ -26,6 +26,7 @@ import Cargotracker.Booking.Application.RegisterBookingCommand
   )
 import Cargotracker.Booking.Domain.Model.Cargo
   ( Cargo (..),
+    cargoBookingId,
   )
 import Cargotracker.Booking.Domain.Model.State.BookingStatus
   ( BookingStatus (..),
@@ -45,8 +46,25 @@ makeCheckerNo = ShipperExistenceChecker {exists = \_ -> pure False}
 makeRepo :: IO (BookingRepository IO, IO [Cargo])
 makeRepo = do
   ref <- newIORef []
-  let r = BookingRepository {saveBooking = \c -> modifyIORef' ref (c :), findCargoById = \_ -> pure Nothing}
+  let r =
+        BookingRepository
+          { saveBooking = \c -> do
+              modifyIORef' ref (c :)
+              pure (Right ())
+          , findCargoById = \_ -> pure Nothing
+          }
   pure (r, readIORef ref)
+
+-- リポジトリ側で「保存対象の荷主がサロゲートキー解決できない」状況を再現するフェイク
+makeRepoShipperNotFound :: IO (BookingRepository IO)
+makeRepoShipperNotFound = do
+  pure
+    BookingRepository
+      { saveBooking = \c ->
+          let bid = case cargoBookingId c of BookingId t -> t
+           in pure (Left (ShipperNotFound ("repo-resolve-failed:" <> bid)))
+      , findCargoById = \_ -> pure Nothing
+      }
 
 validInput :: RegisterBookingInput
 validInput =
@@ -102,3 +120,12 @@ spec = do
       result `shouldBe` Left (ShipperNotFound "SHP-X1Y2Z3")
       saved <- get
       length saved `shouldBe` 0 -- 永続化されない
+  describe "execute (T-01: Repository が Left を返す経路)" $ do
+    it "Repository.saveBooking が ShipperNotFound を返すと例外化せず Left を伝播する" $ do
+      repo <- makeRepoShipperNotFound
+      result <- execute repo makeCheckerYes validInput
+      case result of
+        Left (ShipperNotFound _) -> pure ()
+        other ->
+          expectationFailure
+            ("expected Left (ShipperNotFound _) but got " <> show other)

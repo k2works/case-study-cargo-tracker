@@ -28,6 +28,7 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
+import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 
 newPostgresBookingRepository :: Connection -> BookingRepository IO
@@ -73,7 +74,9 @@ textToBookingStatus "Confirmed" = Confirmed
 textToBookingStatus "Closed" = Closed
 textToBookingStatus _ = Draft
 
-saveCargo :: Connection -> Cargo -> IO ()
+-- T-01 (IT2): shipper サロゲートキー解決失敗を `error` で潰さず
+-- `Left (ShipperNotFound ...)` を返して呼び出し元に伝播する。
+saveCargo :: Connection -> Cargo -> IO (Either DomainError ())
 saveCargo conn c = do
   let ShipperId sidBusiness = cargoShipperId c
   rows <-
@@ -83,8 +86,10 @@ saveCargo conn c = do
       (Only sidBusiness) ::
       IO [Only Int]
   case rows of
-    [Only shipperPk] -> insertCargo conn shipperPk c
-    _ -> error ("PostgresBookingRepository: shipper not found: " <> show sidBusiness)
+    [Only shipperPk] -> do
+      insertCargo conn shipperPk c
+      pure (Right ())
+    _ -> pure (Left (ShipperNotFound sidBusiness))
 
 insertCargo :: Connection -> Int -> Cargo -> IO ()
 insertCargo conn shipperPk c = do
