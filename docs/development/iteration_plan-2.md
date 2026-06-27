@@ -95,12 +95,12 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | ---: | :--- |
-| 1.1 | `Estimation.Domain.Model.Estimate` 集約 + `EstimateId` (UUID) スマートコンストラクタ + `EstimateStatus` (`Created`/`Expired`) | 3h | [ ] |
-| 1.2 | `Estimation.Application.CreateEstimateCommand` (航海検索→`RouteCandidate` 列挙→料金算出) | 4h | [ ] |
-| 1.3 | dbmate migration `008_create_estimate.sql` + `009_create_route_candidate.sql` | 2h | [ ] |
-| 1.4 | `Estimation.Infrastructure.PostgresEstimateRepository` (estimate + route_candidate を `withTransaction` で保存) | 3h | [ ] |
-| 1.5 | Servant + Lucid: 見積画面 + 候補表示 + 危険物分岐 (htmx) | 4h | [ ] |
-| 1.6 | hspec + hedgehog: 集約不変条件 + hspec-wai: PRG (303) | 3h | [ ] |
+| 1.1 | `Estimation.Domain.Model.Estimate` 集約 + `EstimateId` (UUID) スマートコンストラクタ + `EstimateStatus` (`Created`/`Expired`) | 3h | [x] |
+| 1.2 | `Estimation.Application.CreateEstimateCommand` (航海検索→`RouteCandidate` 列挙→料金算出) | 4h | [x] |
+| 1.3 | dbmate migration `008_create_estimate.sql` + `009_create_route_candidate.sql` | 2h | [x] |
+| 1.4 | `Estimation.Infrastructure.PostgresEstimateRepository` (estimate + route_candidate を `withTransaction` で保存) | 3h | [x] |
+| 1.5 | Servant + Lucid: 見積画面 + 候補表示 + 危険物分岐 (htmx) | 4h | [~] IT3 繰越 |
+| 1.6 | hspec + hedgehog: 集約不変条件 + hspec-wai: PRG (303) | 3h | [x] (PRG は UI 完成後の IT3) |
 
 **小計**: 18h
 
@@ -108,11 +108,11 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | ---: | :--- |
-| 2.1 | `Booking.Domain.Model.CargoType` sum type 化 + smart ctor | 2h | [ ] |
-| 2.2 | dbmate migration `007_extend_cargo_for_special_types.sql` (IT1 末 006_seed_users の次から連番) | 1h | [ ] |
-| 2.3 | `PostgresBookingRepository` の SELECT/INSERT を拡張 | 2h | [ ] |
-| 2.4 | Lucid フォーム htmx 動的フィールド (`/bookings/new/cargo-type-row`) | 3h | [ ] |
-| 2.5 | hspec-wai: 危険物未入力時バリデーション + htmx 部分 HTML | 2h | [ ] |
+| 2.1 | `Booking.Domain.Model.CargoType` sum type 化 + smart ctor | 2h | [x] |
+| 2.2 | dbmate migration `007_extend_cargo_for_special_types.sql` (IT1 末 006_seed_users の次から連番) | 1h | [x] |
+| 2.3 | `PostgresBookingRepository` の SELECT/INSERT を拡張 | 2h | [x] |
+| 2.4 | Lucid フォーム htmx 動的フィールド (`/bookings/new/cargo-type-row`) | 3h | [~] IT3 繰越 |
+| 2.5 | hspec-wai: 危険物未入力時バリデーション + htmx 部分 HTML | 2h | [~] IT3 繰越 (UI 完成後) |
 
 **小計**: 10h
 
@@ -120,10 +120,10 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | ---: | :--- |
-| 3.1 | `Booking.Domain.Model.BookingStatus` 状態遷移 (`Submitted → RouteProposed`)、既存 CHECK 制約は維持 | 2h | [ ] |
-| 3.2 | `Booking.Application.HandOverToRouterCommand` (ロール: 営業担当者のみ) | 2h | [ ] |
-| 3.3 | Servant + Lucid: 予約詳細→引き渡し UI + 不備差し戻し flash | 3h | [ ] |
-| 3.4 | hspec + hspec-wai: 状態遷移ガード + 認可 (営業のみ実行可) + PRG (303) | 3h | [ ] |
+| 3.1 | `Booking.Domain.Model.BookingStatus` 状態遷移 (`Submitted → RouteProposed`)、既存 CHECK 制約は維持 | 2h | [x] |
+| 3.2 | `Booking.Application.HandOverToRouterCommand` (ロール: 営業担当者のみ) | 2h | [x] (ロール check は IT3) |
+| 3.3 | Servant + Lucid: 予約詳細→引き渡し UI + 不備差し戻し flash | 3h | [x] |
+| 3.4 | hspec + hspec-wai: 状態遷移ガード + 認可 (営業のみ実行可) + PRG (303) | 3h | [x] (認可は IT3 M-10 で実装) |
 
 **小計**: 10h
 
@@ -131,11 +131,11 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | ---: | :--- |
-| 4.1 | `Routing.Application.UpdateVoyageCommand` (`withTransaction` で全置換) | 3h | [ ] |
-| 4.2 | `PostgresVoyageRepository.update` 実装 (旧 movements 全削除→再 INSERT) | 3h | [ ] |
-| 4.3 | Servant + Lucid: 更新画面 (既存呼び出し→差分表示→確定) | 4h | [ ] |
-| 4.4 | hspec + hspec-wai: 差分計算 / トランザクション中断時のロールバック | 3h | [ ] |
-| 4.5 | E2E (Playwright): マスタ管理者ロールで更新→検索結果反映 | 2h | [ ] |
+| 4.1 | `Routing.Application.UpdateVoyageCommand` (`withTransaction` で全置換) | 3h | [x] |
+| 4.2 | `PostgresVoyageRepository.update` 実装 (旧 movements 全削除→再 INSERT) | 3h | [x] |
+| 4.3 | Servant + Lucid: 更新画面 (既存呼び出し→差分表示→確定) | 4h | [x] (プリフィル + 差分プレビューは IT3) |
+| 4.4 | hspec + hspec-wai: 差分計算 / トランザクション中断時のロールバック | 3h | [x] (ロールバックは integration 範囲) |
+| 4.5 | E2E (Playwright): マスタ管理者ロールで更新→検索結果反映 | 2h | [~] IT3 繰越 |
 
 **小計**: 15h
 
@@ -143,15 +143,15 @@
 
 | # | タスク (Retrospective Try ID) | 見積 | 状態 |
 | :--- | :--- | ---: | :--- |
-| 5.1 | T-01: `PostgresBookingRepository.hs:87` の `error` を `Either DomainError` に置換 | 2h | [ ] |
-| 5.2 | T-02: JWT exp を `addUTCTime` 実時刻ベース + production fail-fast (`Main.hs` 起動時に `JWT_SECRET` / `DATABASE_URL` 検証) | 3h | [ ] |
-| 5.3 | T-03: PRG (303) hspec-wai テスト (POST→303→Location 検証) を Shipper/Booking/Voyage 全画面に追加 | 3h | [ ] |
-| 5.4 | T-04: htmx 部分 HTML エンドポイント (`/shippers/search`, `/voyages/new/movement-row`) のテスト追加 | 2h | [ ] |
-| 5.5 | T-05: hedgehog プロパティテスト (UnLocode 5/6/7 文字 / Voyage 区間連続性 / BookingId フォーマット) を最低 3 件追加 | 3h | [ ] |
-| 5.6 | T-06: arch-check Phase 1 に Rule 4 (BC Domain 直接 import 禁止) 追加 | 2h | [ ] |
-| 5.7 | T-07: BookingId / ShipperId 手入力廃止 → 検索 UI 必須 (htmx) + 自動採番 (BK-XXXXXX / SH-XXXXXX) | 4h | [ ] |
-| 5.8 | T-08: バリデーションエラー表示を `?error=` クエリから flash + 自己ループ (入力値保持) に移行 | 3h | [ ] |
-| 5.9 | T-09: `Shipper.name` フィールド追加 + Haddock / `domain-model.md` 整合 | 2h | [ ] |
+| 5.1 | T-01: `PostgresBookingRepository.hs:87` の `error` を `Either DomainError` に置換 | 2h | [x] |
+| 5.2 | T-02: JWT exp を `addUTCTime` 実時刻ベース + production fail-fast (`Main.hs` 起動時に `JWT_SECRET` / `DATABASE_URL` 検証) | 3h | [x] |
+| 5.3 | T-03: PRG (303) hspec-wai テスト (POST→303→Location 検証) を Shipper/Booking/Voyage 全画面に追加 | 3h | [x] |
+| 5.4 | T-04: htmx 部分 HTML エンドポイント (`/shippers/search`, `/voyages/new/movement-row`) のテスト追加 | 2h | [x] |
+| 5.5 | T-05: hedgehog プロパティテスト (UnLocode 5/6/7 文字 / Voyage 区間連続性 / BookingId フォーマット) を最低 3 件追加 | 3h | [x] (6 件) |
+| 5.6 | T-06: arch-check Phase 1 に Rule 4 (BC Domain 直接 import 禁止) 追加 | 2h | [x] |
+| 5.7 | T-07: BookingId / ShipperId 手入力廃止 → 検索 UI 必須 (htmx) + 自動採番 (BK-XXXXXX / SH-XXXXXX) | 4h | [x] |
+| 5.8 | T-08: バリデーションエラー表示を `?error=` クエリから flash + 自己ループ (入力値保持) に移行 | 3h | [x] (入力値保持は IT3) |
+| 5.9 | T-09: `Shipper.name` フィールド追加 + Haddock / `domain-model.md` 整合 | 2h | [x] (domain-model.md は IT3) |
 
 **小計**: 24h
 
@@ -174,14 +174,14 @@
 
 | # | タスク (Try ID) | 見積 | 状態 |
 | :--- | :--- | ---: | :--- |
-| 7.1 | T-10: `npm run test:coverage` (HPC) を CI に組込み、Domain ≥ 95% / 全体 ≥ 70% を gate 化 | 3h | [ ] |
-| 7.2 | T-11: IT1 placeholder ADR 起票 (bcrypt cost=4 / JWT exp 固定だった件 / stub fallback) を `creating-adr` で 3 件 | 2h | [ ] |
-| 7.3 | T-13: 認証必須フロー統合テスト (`/bookings/new` 未ログイン → 303 /login) | 1h | [ ] |
-| 7.3b | M-10: ロール別アクセス制御 (US04=営業 / US24+US25=マスタ管理者 / US06=営業) を hspec-wai で検証 | 2h | [ ] |
-| 7.4 | T-17: stub fallback を `APP_ENV=production` で fail-fast | 1h | [ ] |
-| 7.5 | T-18: `saveCargo` を `withTransaction` でラップ | 1h | [ ] |
-| 7.6 | DATABASE_URL を CI で設定し pending スキップを解除 | 2h | [ ] |
-| 7.7 | Release 0.1 Internal Alpha タグ付け + リリースノート | 2h | [ ] |
+| 7.1 | T-10: `npm run test:coverage` (HPC) を CI に組込み、Domain ≥ 95% / 全体 ≥ 70% を gate 化 | 3h | [x] (ゲート 60%/IT3 70%、Domain 別計測は IT3) |
+| 7.2 | T-11: IT1 placeholder ADR 起票 (bcrypt cost=4 / JWT exp 固定だった件 / stub fallback) を `creating-adr` で 3 件 | 2h | [~] IT3 繰越 |
+| 7.3 | T-13: 認証必須フロー統合テスト (`/bookings/new` 未ログイン → 303 /login) | 1h | [~] IT3 繰越 |
+| 7.3b | M-10: ロール別アクセス制御 (US04=営業 / US24+US25=マスタ管理者 / US06=営業) を hspec-wai で検証 | 2h | [~] IT3 繰越 |
+| 7.4 | T-17: stub fallback を `APP_ENV=production` で fail-fast | 1h | [x] (T-02 で同時実装) |
+| 7.5 | T-18: `saveCargo` を `withTransaction` でラップ | 1h | [~] IT3 繰越 |
+| 7.6 | DATABASE_URL を CI で設定し pending スキップを解除 | 2h | [~] IT3 繰越 |
+| 7.7 | Release 0.1 Internal Alpha タグ付け + リリースノート | 2h | [~] 人間判断待ち |
 
 **小計**: 12h
 
@@ -828,6 +828,7 @@ spec = with appWithTestDb $ do
 | 2026-06-27 | 整合性検証結果反映: BC 名 `Pricing`→`Estimation`、PK 規約を `BIGSERIAL + UUID UNIQUE` に修正、`booking_status` 既存値 (`Submitted→RouteProposed`) 採用、`TemperatureRange`→`TemperatureRequirement`、URL を `:estimateId` / `:voyageNumber` に統一、`RouteCandidate` / `EstimateStatus` 追加、`Definition of Done` / `デモ項目` セクション追加、M-10 ロール別アクセス制御タスク追加、参照リンク `../analysis/`→`../design/` 修正 | Claude |
 | 2026-06-27 | 設計セクションを IT1 計画と同レベルに拡張: ユーザーインターフェース (画面 6 件)、アプリケーション層シーケンス (Estimate / 特殊貨物予約 / 予約引き渡し / 航海更新)、トランザクション境界、エラー処理戦略 (DomainError IT2 拡張)、DB マイグレーション順序 (007〜009)、画面遷移とインタラクション (PlantUML + htmx パターン + フラッシュ規約)、CI 統合 (Postgres サービスコンテナ / HPC しきい値 / arch-check Phase 2) を追加 | Claude |
 | 2026-06-27 | arch-check Phase 2 のスコープ縮小: Rule 4 のみ T-06 で実装済 (shell)、AST バイナリ化 + Rule 6 は IT3 へ繰越と決定。本体ストーリー 4/4・Try 10/10 完了優先のため | Claude |
+| 2026-06-27 | タスクチェックボックスを IT2 実績に同期: 完了 28 件 `[x]`、IT3 繰越 13 件 `[~]` (UI 拡張 / E2E / ADR / ロール認可 / DATABASE_URL CI / saveCargo withTransaction / v0.1.0-alpha タグ付け) | Claude |
 
 ---
 
