@@ -56,7 +56,9 @@ data ShipperFormRequest = ShipperFormRequest
 
 type ShipperPageApi =
   "shippers"
-    :> ( "new" :> Get '[HTML] (Html ())
+    :> ( "new"
+           :> QueryParam "error" Text
+           :> Get '[HTML] (Html ())
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] ShipperFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -69,8 +71,15 @@ shipperPageApp repo =
     (Proxy :: Proxy ShipperPageApi)
     (handlerGet :<|> handlerPost repo :<|> handlerShow repo)
 
-handlerGet :: Handler (Html ())
-handlerGet = pure (shipperFormPage Nothing)
+-- T-08 (IT2): ?error= クエリを受け取り、ShipperFormView の上部に
+-- Bootstrap alert でフラッシュ表示する。エラーコードは
+-- redirectErr 側で確定値 (例: duplicate-email) を渡している。
+handlerGet :: Maybe Text -> Handler (Html ())
+handlerGet mError = pure (shipperFormPage (fmap shipperErrorMessage mError))
+
+shipperErrorMessage :: Text -> Text
+shipperErrorMessage "duplicate-email" = "同じメールアドレスが既に登録されています"
+shipperErrorMessage e = "登録に失敗しました: " <> e
 
 handlerShow :: ShipperRepository IO -> Text -> Handler (Html ())
 handlerShow repo sid = do

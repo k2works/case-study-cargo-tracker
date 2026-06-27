@@ -8,7 +8,10 @@ POST /bookings/new がフォーム入力を受け取り、成功時は予約詳�
 -}
 module Booking.Interfaces.BookingPageApiSpec (spec) where
 
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.IORef (modifyIORef', newIORef)
+import Network.Wai.Test (simpleBody)
 import Test.Hspec
 import Test.Hspec.Wai
 
@@ -149,3 +152,16 @@ spec = do
             { matchHeaders =
                 ["Location" <:> "/bookings/new?error=booking-not-found"]
             }
+
+  describe "GET /bookings/new (T-08 フラッシュ表示)" $
+    with (mkApp checkerYes) $ do
+      it "?error なしは 200 を返す" $
+        get "/bookings/new" `shouldRespondWith` 200
+
+      it "?error=deadline-format で 200 + 期限フォーマットエラーを含む" $ do
+        res <- get "/bookings/new?error=deadline-format"
+        liftIO $ do
+          let body = LBS.toStrict (simpleBody res)
+          shouldSatisfy
+            body
+            (\b -> "\xe5\x88\xb0\xe7\x9d\x80\xe6\x9c\x9f\xe9\x99\x90" `BS.isInfixOf` b)

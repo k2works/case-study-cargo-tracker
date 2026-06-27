@@ -63,13 +63,16 @@ data VoyageFormRequest = VoyageFormRequest
 
 type VoyagePageApi =
   "voyages"
-    :> ( "new" :> Get '[HTML] (Html ())
+    :> ( "new"
+           :> QueryParam "error" Text
+           :> Get '[HTML] (Html ())
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] VoyageFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
            :<|> Capture "voyageNumber" Text :> Get '[HTML] (Html ())
            :<|> Capture "voyageNumber" Text
              :> "edit"
+             :> QueryParam "error" Text
              :> Get '[HTML] (Html ())
            :<|> Capture "voyageNumber" Text
              :> "update"
@@ -88,8 +91,13 @@ voyagePageApp repo =
         :<|> handlerUpdate repo
     )
 
-handlerGet :: Handler (Html ())
-handlerGet = pure (voyageFormPage Nothing)
+-- T-08 (IT2): ?error= クエリを Bootstrap alert に変換する。
+handlerGet :: Maybe Text -> Handler (Html ())
+handlerGet mError = pure (voyageFormPage (fmap voyageErrorMessage mError))
+
+voyageErrorMessage :: Text -> Text
+voyageErrorMessage "voyage-not-found" = "指定された航海が見つかりません"
+voyageErrorMessage e = "航海登録に失敗しました: " <> e
 
 handlerShow :: VoyageRepository IO -> Text -> Handler (Html ())
 handlerShow repo vn = do
@@ -145,14 +153,23 @@ toMovements req = do
   Right (m1 : catMaybes [m2, m3])
 
 -- US25 (IT2): 航海更新フォームの表示。対象が見つからない場合は 404 ページ。
-handlerEdit :: VoyageRepository IO -> Text -> Handler (Html ())
-handlerEdit repo vn = do
+-- T-08 (IT2): ?error= クエリを Bootstrap alert として渡す。
+handlerEdit ::
+  VoyageRepository IO -> Text -> Maybe Text -> Handler (Html ())
+handlerEdit repo vn mError = do
   m <- liftIO (findByVoyageNumber repo (VoyageNumber vn))
   pure $
     maybe
       voyageNotFoundPage
-      (\_ -> voyageEditPage vn Nothing)
+      (\_ -> voyageEditPage vn (fmap voyageEditErrorMessage mError))
       m
+
+voyageEditErrorMessage :: Text -> Text
+voyageEditErrorMessage "leg-continuity" =
+  "区間の連続性が崩れています (前区間の到着港 = 次区間の出発港 となるよう修正してください)"
+voyageEditErrorMessage "concurrent-modification" =
+  "他の利用者により更新されました。最新を再読込してから更新してください"
+voyageEditErrorMessage e = "航海更新に失敗しました: " <> e
 
 -- US25 (IT2): 航海更新の POST 実行 (PRG)。UpdateVoyageCommand 経由。
 handlerUpdate ::

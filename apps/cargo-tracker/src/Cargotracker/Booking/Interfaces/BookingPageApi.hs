@@ -61,7 +61,9 @@ data BookingFormRequest = BookingFormRequest
 
 type BookingPageApi =
   "bookings"
-    :> ( "new" :> Get '[HTML] (Html ())
+    :> ( "new"
+           :> QueryParam "error" Text
+           :> Get '[HTML] (Html ())
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] BookingFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -81,8 +83,15 @@ bookingPageApp repo checker =
         :<|> handlerHandover repo
     )
 
-handlerGet :: Handler (Html ())
-handlerGet = pure (bookingFormPage Nothing)
+-- T-08 (IT2): ?error= クエリを Bootstrap alert に変換する。
+handlerGet :: Maybe Text -> Handler (Html ())
+handlerGet mError = pure (bookingFormPage (fmap bookingErrorMessage mError))
+
+bookingErrorMessage :: Text -> Text
+bookingErrorMessage "deadline-format" = "到着期限の日付形式が不正です"
+bookingErrorMessage "shipper-not-found" = "指定された荷主が見つかりません"
+bookingErrorMessage "booking-not-found" = "指定された予約が見つかりません"
+bookingErrorMessage e = "予約登録に失敗しました: " <> e
 
 handlerShow :: BookingRepository IO -> Text -> Handler (Html ())
 handlerShow repo bid = do
