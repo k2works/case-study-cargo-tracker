@@ -155,14 +155,18 @@
 
 **小計**: 24h
 
-### 6. arch-check Phase 2 (2 SP)
+### 6. arch-check Phase 2 (2 SP) → **IT3 へ繰越**
+
+> **スコープ縮小**: IT2 では T-06 で shell 実装に Rule 4 (BC Domain 横断 import 禁止) を追加し、ALLOWLIST 付きで稼働状態になっている。haskell-src-exts ベースの AST バイナリへの置換と Rule 5/6 の導入は IT3 で実施する。
+> 理由: (a) AST バイナリ化に新規 exe 追加 + 依存導入が必要で 6h+ のリスク、(b) Rule 6 「Interfaces → Domain 禁止」は import-grep だと既存 30+ 件の VO import を即座に違反扱いしてしまい、Application 層との往復リファクタが先に必要 (本イテレーションの本体ストーリー完了を優先)。
+> Issue #270 (arch-check Phase 2) は本決定で IT3 へラベル変更してクローズする。
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | ---: | :--- |
-| 6.1 | `apps/cargo-tracker/arch-check/` を haskell-src-exts ベースの本物 AST 解析バイナリに置換 (現状 shell から移行) | 6h | [ ] |
-| 6.2 | Rule 5: Application 層は Infrastructure 層を import 禁止 | 2h | [ ] |
-| 6.3 | Rule 6: Interfaces 層は Domain を直接呼び出さず Application 経由のみ | 2h | [ ] |
-| 6.4 | CI ステップ更新 (`stack exec arch-check` に置換) | 1h | [ ] |
+| 6.1 | `apps/cargo-tracker/arch-check/` を haskell-src-exts ベースの本物 AST 解析バイナリに置換 (現状 shell から移行) | 6h | [~] IT3 繰越 |
+| 6.2 | Rule 5: Application 層は Infrastructure 層を import 禁止 | 2h | [x] T-06 で既存 Rule 3 として稼働済 |
+| 6.3 | Rule 6: Interfaces 層は Domain を直接呼び出さず Application 経由のみ | 2h | [~] IT3 繰越 (リファクタが先) |
+| 6.4 | CI ステップ更新 (`stack exec arch-check` に置換) | 1h | [~] IT3 繰越 |
 
 **小計**: 11h
 
@@ -823,6 +827,7 @@ spec = with appWithTestDb $ do
 | 2026-06-27 | 初版作成 (IT1 ふりかえり Try 反映 / Release 0.1 計画組込み) | Claude |
 | 2026-06-27 | 整合性検証結果反映: BC 名 `Pricing`→`Estimation`、PK 規約を `BIGSERIAL + UUID UNIQUE` に修正、`booking_status` 既存値 (`Submitted→RouteProposed`) 採用、`TemperatureRange`→`TemperatureRequirement`、URL を `:estimateId` / `:voyageNumber` に統一、`RouteCandidate` / `EstimateStatus` 追加、`Definition of Done` / `デモ項目` セクション追加、M-10 ロール別アクセス制御タスク追加、参照リンク `../analysis/`→`../design/` 修正 | Claude |
 | 2026-06-27 | 設計セクションを IT1 計画と同レベルに拡張: ユーザーインターフェース (画面 6 件)、アプリケーション層シーケンス (Estimate / 特殊貨物予約 / 予約引き渡し / 航海更新)、トランザクション境界、エラー処理戦略 (DomainError IT2 拡張)、DB マイグレーション順序 (007〜009)、画面遷移とインタラクション (PlantUML + htmx パターン + フラッシュ規約)、CI 統合 (Postgres サービスコンテナ / HPC しきい値 / arch-check Phase 2) を追加 | Claude |
+| 2026-06-27 | arch-check Phase 2 のスコープ縮小: Rule 4 のみ T-06 で実装済 (shell)、AST バイナリ化 + Rule 6 は IT3 へ繰越と決定。本体ストーリー 4/4・Try 10/10 完了優先のため | Claude |
 
 ---
 
