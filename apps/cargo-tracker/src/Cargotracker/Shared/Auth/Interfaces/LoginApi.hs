@@ -48,8 +48,11 @@ import Cargotracker.Shared.Auth.Domain.User
 import Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
   ( Claims (..),
     JwtSecret,
+    JwtTtlSeconds,
+    computeExpiry,
     issue,
   )
+import Data.Time.Clock.POSIX (POSIXTime)
 
 data LoginRequest = LoginRequest
   { email :: !Text
@@ -74,9 +77,11 @@ loginHandler ::
   UserRepository IO ->
   PasswordVerifier IO ->
   JwtSecret ->
+  JwtTtlSeconds ->
+  IO POSIXTime ->
   LoginRequest ->
   Handler LoginResponse
-loginHandler repo verifier secret req = do
+loginHandler repo verifier secret ttl getNow req = do
   let input =
         LoginInput
           { loginEmail = Email (email req)
@@ -86,13 +91,14 @@ loginHandler repo verifier secret req = do
   case result of
     Left _ -> throwError err401 {errBody = "{\"error\":\"invalid credentials\"}"}
     Right user -> do
-      -- exp は IT2 で実時刻ベースに置き換える。IT1 は固定の遠未来値。
+      -- T-02 (IT2): exp を実時刻 + TTL から算出。固定の遠未来値を撤廃。
+      now <- liftIO getNow
       let claims =
             Claims
               { claimsUserId = userId user
               , claimsEmail = userEmail user
               , claimsRole = userRole user
-              , claimsExp = 9999999999
+              , claimsExp = computeExpiry now ttl
               }
       tok <- liftIO (issue secret claims)
       pure
@@ -104,6 +110,12 @@ loginHandler repo verifier secret req = do
     roleToText :: Role -> Text
     roleToText = T.pack . show
 
-loginApp :: UserRepository IO -> PasswordVerifier IO -> JwtSecret -> Application
-loginApp repo verifier secret =
-  serve (Proxy :: Proxy LoginApi) (loginHandler repo verifier secret)
+loginApp ::
+  UserRepository IO ->
+  PasswordVerifier IO ->
+  JwtSecret ->
+  JwtTtlSeconds ->
+  IO POSIXTime ->
+  Application
+loginApp repo verifier secret ttl getNow =
+  serve (Proxy :: Proxy LoginApi) (loginHandler repo verifier secret ttl getNow)

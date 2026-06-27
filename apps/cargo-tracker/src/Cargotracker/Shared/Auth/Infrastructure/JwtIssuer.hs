@@ -12,9 +12,11 @@ JWT 構造 (3 つのドット区切りパート):
 -}
 module Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
   ( JwtSecret (..),
+    JwtTtlSeconds (..),
     Claims (..),
     issue,
     verifyAndDecode,
+    computeExpiry,
   ) where
 
 import qualified Crypto.Hash.SHA256 as SHA256
@@ -25,6 +27,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8', encodeUtf8)
+import Data.Time.Clock.POSIX (POSIXTime)
 
 import Cargotracker.Shared.Auth.Domain.User
   ( Email (..),
@@ -34,6 +37,21 @@ import Cargotracker.Shared.Auth.Domain.User
 
 newtype JwtSecret = JwtSecret {unJwtSecret :: Text}
   deriving stock (Eq, Show)
+
+{- | JWT 有効期間 (秒)。
+
+T-02 (IT2) で導入。発行時点の POSIX 時刻 + ttl を exp とすることで、
+固定の遠未来値による「永続有効トークン」リスクを排除する。
+-}
+newtype JwtTtlSeconds = JwtTtlSeconds {unJwtTtlSeconds :: Integer}
+  deriving stock (Eq, Show)
+
+{- | 現在時刻 (POSIX 秒) と TTL から exp を算出する。
+
+`floor` で切り捨て、Integer の秒精度に統一。
+-}
+computeExpiry :: POSIXTime -> JwtTtlSeconds -> Integer
+computeExpiry now (JwtTtlSeconds ttl) = floor (toRational now) + ttl
 
 {- | JWT クレーム。
 exp は UNIX 秒。
