@@ -11,6 +11,7 @@ import Test.Hspec
 import Cargotracker.Booking.Domain.Model.Cargo
   ( Cargo (..),
     mkCargo,
+    requestRouting,
     submitBooking,
   )
 import Cargotracker.Booking.Domain.Model.State.BookingStatus
@@ -86,3 +87,38 @@ spec = do
           Left _ -> pure ()
           Right _ -> expectationFailure "submitted を submit して成功した"
         Left e -> expectationFailure ("first submit failed: " <> show e)
+
+  describe "requestRouting (US06)" $ do
+    it "Submitted → RouteProposed に遷移し version が +1 される" $ do
+      Right o <- pure (mkUnLocode "JPTYO")
+      Right d <- pure (mkUnLocode "USNYC")
+      let route = RouteSpecification {origin = o, destination = d, arrivalDeadline = deadline}
+          cargo = mkCargo unsafeBookingId unsafeShipperId route
+      Right submitted <- pure (submitBooking cargo)
+      case requestRouting submitted of
+        Right c3 -> do
+          cargoStatus c3 `shouldBe` RouteProposed
+          cargoVersion c3 `shouldBe` 3
+        Left e -> expectationFailure ("requestRouting failed: " <> show e)
+
+    it "Draft からの直接引き渡しは InvalidStateTransition" $ do
+      Right o <- pure (mkUnLocode "JPTYO")
+      Right d <- pure (mkUnLocode "USNYC")
+      let route = RouteSpecification {origin = o, destination = d, arrivalDeadline = deadline}
+          cargo = mkCargo unsafeBookingId unsafeShipperId route
+      case requestRouting cargo of
+        Left (InvalidStateTransition fromS toS) -> do
+          fromS `shouldBe` "Draft"
+          toS `shouldBe` "RouteProposed"
+        other -> expectationFailure ("expected InvalidStateTransition but got " <> show other)
+
+    it "RouteProposed の貨物は二重引き渡しできない" $ do
+      Right o <- pure (mkUnLocode "JPTYO")
+      Right d <- pure (mkUnLocode "USNYC")
+      let route = RouteSpecification {origin = o, destination = d, arrivalDeadline = deadline}
+          cargo = mkCargo unsafeBookingId unsafeShipperId route
+      Right submitted <- pure (submitBooking cargo)
+      Right routed <- pure (requestRouting submitted)
+      case requestRouting routed of
+        Left (InvalidStateTransition _ _) -> pure ()
+        other -> expectationFailure ("expected InvalidStateTransition but got " <> show other)

@@ -31,4 +31,8 @@ data DomainError
   | -- Shipper / Booking 関連 (IT1)
     InvalidShipperId !Text
   | ShipperNotFound !Text
+  | -- IT2 追加
+
+    -- | from / to の状態名を保持する状態遷移違反
+    InvalidStateTransition !Text !Text
   deriving stock (Eq, Show)

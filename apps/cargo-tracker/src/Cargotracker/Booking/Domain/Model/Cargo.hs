@@ -9,7 +9,10 @@ module Cargotracker.Booking.Domain.Model.Cargo
   ( Cargo (..),
     mkCargo,
     submitBooking,
+    requestRouting,
   ) where
+
+import qualified Data.Text as T
 
 import Cargotracker.Booking.Domain.Model.State.BookingStatus
   ( BookingStatus (..),
@@ -52,3 +55,23 @@ submitBooking cargo = case cargoStatus cargo of
         , cargoVersion = cargoVersion cargo + 1
         }
   _ -> Left (ConcurrentModification (unShipperId (cargoShipperId cargo)))
+
+{- | 予約を経路設計者に引き渡す (Submitted → RouteProposed) (US06, IT2)。
+
+Submitted 以外の状態からは InvalidStateTransition を返し、
+二重引き渡し・順序違反 (Draft からの直接引き渡し等) を防ぐ。
+-}
+requestRouting :: Cargo -> Either DomainError Cargo
+requestRouting cargo = case cargoStatus cargo of
+  Submitted ->
+    Right
+      cargo
+        { cargoStatus = RouteProposed
+        , cargoVersion = cargoVersion cargo + 1
+        }
+  other ->
+    Left
+      ( InvalidStateTransition
+          (T.pack (show other))
+          (T.pack (show RouteProposed))
+      )
