@@ -490,7 +490,7 @@ gantt
 | イテレーション | 計画 SP | 実績 SP | 達成率 | 状態 |
 | :---: | :---: | :---: | :---: | :--- |
 | IT1 | 13 | 20 | 154% | 完了 (2026-06-26) |
-| IT2 | 10 | - | - | 未着手 |
+| IT2 | 10 (+Try 8) | - | - | 計画済 (2026-06-27) |
 | IT3 | 11 | - | - | 未着手 |
 | IT4 | 11 | - | - | 未着手 |
 | IT5 | 10 | - | - | 未着手 |
@@ -540,9 +540,10 @@ xychart-beta
 
 ## 次のステップ
 
-1. **GitHub Project 同期** (`syncing-github-project`): 本リリース計画を Issue / Milestone に反映
-2. **IT1 イテレーション計画作成** (`--iteration 1`): IT1 の詳細タスク分解 + ガントチャート作成
-3. **開発フェーズ開始** (`orchestrating-development`): TDD サイクルで実装着手
+1. **IT2 計画整合性検証** (`validating-iteration-plan`): `iteration_plan-2.md` と上流ドキュメントの整合確認
+2. **GitHub Project 同期** (`syncing-github-project --sync`): IT2 ストーリー (US01 / US04+US05 / US06 / US25) + Try Issue を Milestone "Release 0.1 Internal Alpha" に反映
+3. **IT2 開発開始** (`orchestrating-development`): Try 必達 (T-01〜T-09) から着手し本体ストーリーへ展開
+4. **Release 0.1 Internal Alpha リリース** (`developing-release`): IT2 末に `v0.1.0-alpha` タグ付け
 
 ---
 
@@ -555,6 +556,7 @@ xychart-beta
 | 2026-06-26 | Sprint 0 中優先度 16 件反映 | 開発チーム |
 | 2026-06-26 | Sprint 0 低優先度 10 件反映 | 開発チーム |
 | 2026-06-26 | 標準フォーマット (docs/template/リリース計画.md) を適用、ガント・バーンダウン・進捗状況・更新履歴等を追加 | 開発チーム |
+| 2026-06-27 | IT1 完了 (実績 20 SP / 154%) を反映、IT2 を計画済に更新、§次のステップを IT2 着手手順に書き換え | Claude |
 
 ---
 
