@@ -19,6 +19,7 @@ import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
 import qualified Routing.Infrastructure.PostgresVoyageRepositorySpec
 import qualified Routing.Interfaces.VoyageApiSpec
+import qualified Routing.Interfaces.VoyageMovementRowApiSpec
 import qualified Routing.Interfaces.VoyagePageApiSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
@@ -34,6 +35,7 @@ import qualified Shipper.Domain.Model.ShipperSpec
 import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
 import qualified Shipper.Interfaces.ShipperApiSpec
 import qualified Shipper.Interfaces.ShipperPageApiSpec
+import qualified Shipper.Interfaces.ShipperSearchApiSpec
 
 main :: IO ()
 main = hspec $ do
@@ -141,3 +143,11 @@ main = hspec $ do
   describe
     "Cargotracker.Routing.Interfaces.VoyagePageApi"
     Routing.Interfaces.VoyagePageApiSpec.spec
+
+  describe
+    "Cargotracker.Shipper.Interfaces.ShipperSearchApi"
+    Shipper.Interfaces.ShipperSearchApiSpec.spec
+
+  describe
+    "Cargotracker.Routing.Interfaces.VoyageMovementRowApi"
+    Routing.Interfaces.VoyageMovementRowApiSpec.spec
