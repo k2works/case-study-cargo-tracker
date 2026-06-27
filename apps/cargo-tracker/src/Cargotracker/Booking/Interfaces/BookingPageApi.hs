@@ -28,6 +28,10 @@ import Servant
 import Servant.HTML.Lucid (HTML)
 import Web.FormUrlEncoded (FromForm)
 
+import Cargotracker.Booking.Application.HandOverToRouterCommand
+  ( HandOverToRouterInput (..),
+  )
+import qualified Cargotracker.Booking.Application.HandOverToRouterCommand as HandOver
 import Cargotracker.Booking.Application.Ports
   ( BookingRepository (..),
     ShipperExistenceChecker,
@@ -61,13 +65,20 @@ type BookingPageApi =
              :> ReqBody '[FormUrlEncoded] BookingFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
            :<|> Capture "bookingId" Text :> Get '[HTML] (Html ())
+           :<|> Capture "bookingId" Text
+             :> "handover"
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
 bookingPageApp :: BookingRepository IO -> ShipperExistenceChecker IO -> Application
 bookingPageApp repo checker =
   serve
     (Proxy :: Proxy BookingPageApi)
-    (handlerGet :<|> handlerPost repo checker :<|> handlerShow repo)
+    ( handlerGet
+        :<|> handlerPost repo checker
+        :<|> handlerShow repo
+        :<|> handlerHandover repo
+    )
 
 handlerGet :: Handler (Html ())
 handlerGet = pure (bookingFormPage Nothing)
@@ -110,3 +121,38 @@ handlerPost repo checker req = case parseDeadline (deadline req) of
 -- datetime-local 形式 "YYYY-MM-DDTHH:MM" を UTCTime に変換
 parseDeadline :: Text -> Maybe UTCTime
 parseDeadline t = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M" (T.unpack t)
+
+-- US06 (IT2): POST /bookings/:bookingId/handover で経路設計者へ引き渡す。
+-- Submitted → RouteProposed の遷移が成功すれば詳細画面に 303、
+-- 失敗時はエラー種別ごとのフラッシュ用クエリを付与して詳細画面に戻す。
+handlerHandover ::
+  BookingRepository IO ->
+  Text ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerHandover repo bid = do
+  result <-
+    liftIO
+      ( HandOver.execute
+          repo
+          (HandOverToRouterInput {inputBookingId = BookingId bid})
+      )
+  let detail = "/bookings/" <> bid
+  case result of
+    Right _ ->
+      pure (addHeader (detail <> "?flash=handover-ok") NoContent)
+    Left (BookingNotFound _) ->
+      redirectErr "/bookings/new?error=booking-not-found"
+    Left (InvalidStateTransition fromS _) ->
+      redirectErr (detail <> "?error=invalid-state&from=" <> fromS)
+    Left (ConcurrentModification _) ->
+      redirectErr (detail <> "?error=concurrent-modification")
+    Left e ->
+      redirectErr (detail <> "?error=" <> T.pack (show e))
+  where
+    redirectErr :: Text -> Handler a
+    redirectErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }

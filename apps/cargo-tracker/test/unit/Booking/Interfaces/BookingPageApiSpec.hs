@@ -16,8 +16,19 @@ import Cargotracker.Booking.Application.Ports
   ( BookingRepository (..),
     ShipperExistenceChecker (..),
   )
-import Cargotracker.Booking.Domain.Model.Cargo (Cargo)
+import Cargotracker.Booking.Domain.Model.Cargo
+  ( Cargo,
+    mkCargo,
+    submitBooking,
+  )
+import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
+import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
+  ( RouteSpecification (..),
+  )
 import Cargotracker.Booking.Interfaces.BookingPageApi (bookingPageApp)
+import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
+import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Network.Wai (Application)
 
 makeRepo :: IO (BookingRepository IO)
@@ -42,6 +53,39 @@ mkApp :: ShipperExistenceChecker IO -> IO Application
 mkApp ch = do
   repo <- makeRepo
   pure (bookingPageApp repo ch)
+
+-- US06 (IT2): /handover テスト用に、特定の Cargo を find で返し、
+-- updateBooking 呼出を IORef に記録する Repository を作る。
+deadlineAt :: UTCTime
+deadlineAt = UTCTime (fromGregorian 2026 12 31) (secondsToDiffTime 0)
+
+routeForHandover :: RouteSpecification
+routeForHandover =
+  RouteSpecification
+    { origin = UnLocode "JPTYO"
+    , destination = UnLocode "USNYC"
+    , arrivalDeadline = deadlineAt
+    }
+
+submittedCargo :: Cargo
+submittedCargo =
+  let draft = mkCargo (BookingId "BK-A1B2C3") (ShipperId "SHP-X1Y2Z3") routeForHandover
+   in case submitBooking draft of
+        Right c -> c
+        Left _ -> error "test setup: submitBooking failed"
+
+draftCargo :: Cargo
+draftCargo = mkCargo (BookingId "BK-A1B2C3") (ShipperId "SHP-X1Y2Z3") routeForHandover
+
+mkHandoverApp :: Maybe Cargo -> IO Application
+mkHandoverApp seed = do
+  let repo =
+        BookingRepository
+          { saveBooking = \_ -> pure (Right ())
+          , findCargoById = \_ -> pure seed
+          , updateBooking = \_ -> pure (Right ())
+          }
+  pure (bookingPageApp repo checkerYes)
 
 spec :: Spec
 spec = do
@@ -77,4 +121,31 @@ spec = do
           "bookingId=BK-A1B2C3&shipperId=SHP-X1Y2Z3&origin=JPTYO&destination=USNYC&deadline=2026-12-31T00%3A00"
           `shouldRespondWith` 303
             { matchHeaders = ["Location" <:> "/bookings/new?error=shipper-not-found"]
+            }
+
+  describe "POST /bookings/:bookingId/handover (US06 PRG)" $ do
+    with (mkHandoverApp (Just submittedCargo)) $
+      it "Submitted 状態は 303 を返し flash=handover-ok を付ける" $
+        request "POST" "/bookings/BK-A1B2C3/handover" [] ""
+          `shouldRespondWith` 303
+            { matchHeaders =
+                ["Location" <:> "/bookings/BK-A1B2C3?flash=handover-ok"]
+            }
+
+    with (mkHandoverApp (Just draftCargo)) $
+      it "Draft 状態は 303 + invalid-state エラーを付ける" $
+        request "POST" "/bookings/BK-A1B2C3/handover" [] ""
+          `shouldRespondWith` 303
+            { matchHeaders =
+                [ "Location"
+                    <:> "/bookings/BK-A1B2C3?error=invalid-state&from=Draft"
+                ]
+            }
+
+    with (mkHandoverApp Nothing) $
+      it "予約未存在は 303 + /bookings/new?error=booking-not-found を指す" $
+        request "POST" "/bookings/BK-NOTHERE/handover" [] ""
+          `shouldRespondWith` 303
+            { matchHeaders =
+                ["Location" <:> "/bookings/new?error=booking-not-found"]
             }

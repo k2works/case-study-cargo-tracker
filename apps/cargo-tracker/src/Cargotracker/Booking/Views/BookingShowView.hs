@@ -10,6 +10,9 @@ import qualified Data.Text as T
 import Lucid
 
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
+import Cargotracker.Booking.Domain.Model.State.BookingStatus
+  ( BookingStatus (..),
+  )
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
@@ -48,6 +51,19 @@ bookingShowPage c = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
         tr_ $ do
           th_ "状態"
           td_ (toHtml (T.pack (show (cargoStatus c))))
+      -- US06 (IT2): Submitted 状態のみ「経路設計者に引き渡す」ボタンを表示。
+      -- POST 動作は PRG (303 → 同詳細画面?flash=...) に従う。
+      case cargoStatus c of
+        Submitted ->
+          form_
+            [ action_ ("/bookings/" <> bid <> "/handover")
+            , method_ "post"
+            , class_ "d-inline"
+            ]
+            $ button_
+              [type_ "submit", class_ "btn btn-primary me-2"]
+              "経路設計者に引き渡す"
+        _ -> mempty
       a_ [href_ "/bookings/new", class_ "btn btn-secondary me-2"] "もう 1 件予約"
       a_ [href_ "/", class_ "btn btn-light"] "トップへ"
 
