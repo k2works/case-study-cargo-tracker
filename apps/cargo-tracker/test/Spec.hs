@@ -15,6 +15,7 @@ import qualified Booking.Domain.Model.CargoSpec
 import qualified Booking.Infrastructure.PostgresBookingRepositorySpec
 import qualified Booking.Interfaces.BookingApiSpec
 import qualified Booking.Interfaces.BookingPageApiSpec
+import qualified Domain.PropertiesSpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
 import qualified Routing.Infrastructure.PostgresVoyageRepositorySpec
@@ -151,3 +152,5 @@ main = hspec $ do
   describe
     "Cargotracker.Routing.Interfaces.VoyageMovementRowApi"
     Routing.Interfaces.VoyageMovementRowApiSpec.spec
+
+  Domain.PropertiesSpec.spec
