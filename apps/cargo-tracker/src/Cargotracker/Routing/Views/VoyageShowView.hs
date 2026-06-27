@@ -34,6 +34,11 @@ voyageShowPage v = pageLayout "航海詳細 - Cargo Tracker" $ do
           th_ "到着時刻"
         tbody_ $
           mapM_ (uncurry renderRow) (zip [1 :: Int ..] (carrierMovements v))
+      a_
+        [ href_ ("/voyages/" <> vn <> "/edit")
+        , class_ "btn btn-primary me-2"
+        ]
+        "更新する"
       a_ [href_ "/voyages/new", class_ "btn btn-secondary me-2"] "もう 1 件登録"
       a_ [href_ "/", class_ "btn btn-light"] "トップへ"
   where

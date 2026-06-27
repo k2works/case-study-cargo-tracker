@@ -34,8 +34,9 @@ import Cargotracker.Routing.Application.RegisterVoyageCommand
     RegisterVoyageInput (..),
     execute,
   )
+import qualified Cargotracker.Routing.Application.UpdateVoyageCommand as Update
 import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (VoyageNumber (..))
-import Cargotracker.Routing.Views.VoyageFormView (voyageFormPage)
+import Cargotracker.Routing.Views.VoyageFormView (voyageEditPage, voyageFormPage)
 import Cargotracker.Routing.Views.VoyageShowView
   ( voyageNotFoundPage,
     voyageShowPage,
@@ -67,13 +68,25 @@ type VoyagePageApi =
              :> ReqBody '[FormUrlEncoded] VoyageFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
            :<|> Capture "voyageNumber" Text :> Get '[HTML] (Html ())
+           :<|> Capture "voyageNumber" Text
+             :> "edit"
+             :> Get '[HTML] (Html ())
+           :<|> Capture "voyageNumber" Text
+             :> "update"
+             :> ReqBody '[FormUrlEncoded] VoyageFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
 voyagePageApp :: VoyageRepository IO -> Application
 voyagePageApp repo =
   serve
     (Proxy :: Proxy VoyagePageApi)
-    (handlerGet :<|> handlerPost repo :<|> handlerShow repo)
+    ( handlerGet
+        :<|> handlerPost repo
+        :<|> handlerShow repo
+        :<|> handlerEdit repo
+        :<|> handlerUpdate repo
+    )
 
 handlerGet :: Handler (Html ())
 handlerGet = pure (voyageFormPage Nothing)
@@ -130,6 +143,54 @@ toMovements req = do
           (movement3DepartureTime req)
           (movement3ArrivalTime req)
   Right (m1 : catMaybes [m2, m3])
+
+-- US25 (IT2): 航海更新フォームの表示。対象が見つからない場合は 404 ページ。
+handlerEdit :: VoyageRepository IO -> Text -> Handler (Html ())
+handlerEdit repo vn = do
+  m <- liftIO (findByVoyageNumber repo (VoyageNumber vn))
+  pure $
+    maybe
+      voyageNotFoundPage
+      (\_ -> voyageEditPage vn Nothing)
+      m
+
+-- US25 (IT2): 航海更新の POST 実行 (PRG)。UpdateVoyageCommand 経由。
+handlerUpdate ::
+  VoyageRepository IO ->
+  Text ->
+  VoyageFormRequest ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerUpdate repo vn req = case toMovements req of
+  Left err -> redirectToEdit vn ("update-" <> err)
+  Right ms -> do
+    let input =
+          Update.UpdateVoyageInput
+            { Update.inputVoyageNumber = vn
+            , Update.inputMovements = ms
+            }
+    result <- liftIO (Update.execute repo input)
+    case result of
+      Right _ -> redirectOk ("/voyages/" <> vn <> "?flash=updated")
+      Left (InvalidVoyageNumber _) ->
+        redirectErr "/voyages/new?error=voyage-not-found"
+      Left (LegContinuityViolation _) ->
+        redirectToEdit vn "leg-continuity"
+      Left (ConcurrentModification _) ->
+        redirectToEdit vn "concurrent-modification"
+      Left e -> redirectToEdit vn (T.pack (show e))
+  where
+    redirectErr :: Text -> Handler a
+    redirectErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
+    redirectToEdit :: Text -> Text -> Handler a
+    redirectToEdit v e =
+      redirectErr ("/voyages/" <> v <> "/edit?error=" <> e)
+    redirectOk :: Text -> Handler (Headers '[Header "Location" Text] NoContent)
+    redirectOk loc = pure (addHeader loc NoContent)
 
 parseMovement ::
   Text -> Text -> Text -> Text -> Text -> Either Text CarrierMovementInput
