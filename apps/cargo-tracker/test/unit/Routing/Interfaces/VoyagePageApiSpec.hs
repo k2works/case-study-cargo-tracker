@@ -23,6 +23,7 @@ makeRepo = do
     VoyageRepository
       { findByVoyageNumber = \_ -> pure Nothing
       , saveVoyage = \v -> modifyIORef' ref (v :)
+      , updateVoyage = \_ -> pure (Right ())
       }
 
 spec :: Spec

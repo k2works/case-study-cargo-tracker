@@ -93,6 +93,7 @@ library:
   - Cargotracker.Booking.Application.HandOverToRouterCommand
   - Cargotracker.Routing.Application.Ports
   - Cargotracker.Routing.Application.RegisterVoyageCommand
+  - Cargotracker.Routing.Application.UpdateVoyageCommand
   - Cargotracker.Shipper.Interfaces.ShipperApi
   - Cargotracker.Booking.Interfaces.BookingApi
   - Cargotracker.Routing.Interfaces.VoyageApi

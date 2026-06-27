@@ -33,12 +33,14 @@ import Cargotracker.Routing.Domain.Model.Value.VoyageNumber
   )
 import Cargotracker.Routing.Domain.Model.Voyage (Voyage (..))
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
+import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 newPostgresVoyageRepository :: Connection -> VoyageRepository IO
 newPostgresVoyageRepository conn =
   VoyageRepository
     { findByVoyageNumber = findVoyage conn
     , saveVoyage = saveVoy conn
+    , updateVoyage = updateVoy conn
     }
 
 findVoyage :: Connection -> VoyageNumber -> IO (Maybe Voyage)
@@ -89,6 +91,37 @@ saveVoy conn v = withTransaction conn $ do
   case rows of
     [Only voyId] -> mapM_ (insertMovement conn voyId) (zip [1 ..] (carrierMovements v))
     _ -> error "PostgresVoyageRepository: voyage insert returned no id"
+
+-- US25 (IT2): 既存 voyage の version を楽観ロックし、carrier_movement を
+-- 全削除→再 INSERT で差し替える。3 ステートメントを `withTransaction` で
+-- ラップし ADR 0002 T-01 (Application/Infrastructure 境界) を満たす。
+updateVoy :: Connection -> Voyage -> IO (Either DomainError ())
+updateVoy conn v = withTransaction conn $ do
+  let VoyageNumber vn = voyageNumber v
+      newVersion = voyageVersion v
+      expectedVersion = newVersion - 1
+  rows <-
+    query
+      conn
+      "SELECT id FROM voyage WHERE voyage_number = ? AND version = ? \
+      \ FOR UPDATE"
+      (vn, expectedVersion) ::
+      IO [Only Int]
+  case rows of
+    [Only voyId] -> do
+      _ <-
+        execute
+          conn
+          "DELETE FROM carrier_movement WHERE voyage_id = ?"
+          (Only voyId)
+      mapM_ (insertMovement conn voyId) (zip [1 ..] (carrierMovements v))
+      _ <-
+        execute
+          conn
+          "UPDATE voyage SET version = ? WHERE id = ?"
+          (newVersion, voyId)
+      pure (Right ())
+    _ -> pure (Left (ConcurrentModification vn))
 
 insertMovement :: Connection -> Int -> (Int, CarrierMovement) -> IO ()
 insertMovement conn voyId (seqNo, m) = do

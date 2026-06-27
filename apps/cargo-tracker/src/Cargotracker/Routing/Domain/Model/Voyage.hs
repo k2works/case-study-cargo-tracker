@@ -6,6 +6,7 @@
 module Cargotracker.Routing.Domain.Model.Voyage
   ( Voyage (..),
     mkVoyage,
+    updateMovements,
   ) where
 
 import Cargotracker.Routing.Domain.Model.Value.CarrierMovement
@@ -48,3 +49,29 @@ isContinuous [_] = True
 isContinuous (a : b : rest) =
   arrivalLocation a == departureLocation b
     && isContinuous (b : rest)
+
+{- | 既存 Voyage の区間を差し替える (US25, IT2)。
+
+入力 movements に対して mkVoyage と同じ連続性検証を適用し、
+成功時は voyageVersion を +1 して返す (楽観ロックに使用)。
+新規作成の mkVoyage と異なり、既存集約の同一性 (voyageNumber) を
+保持する点が要点。
+-}
+updateMovements :: Voyage -> [CarrierMovement] -> Either DomainError Voyage
+updateMovements existing newMovements
+  | null newMovements =
+      Left (LegContinuityViolation "at least 1 movement required")
+  | not (isContinuous newMovements) =
+      Left
+        ( LegContinuityViolation
+            ( "voyage "
+                <> unVoyageNumber (voyageNumber existing)
+                <> ": leg continuity broken"
+            )
+        )
+  | otherwise =
+      Right
+        existing
+          { carrierMovements = newMovements
+          , voyageVersion = voyageVersion existing + 1
+          }

@@ -35,6 +35,7 @@ makeRepo = do
                 [] -> Nothing
             )
       , saveVoyage = \v -> modifyIORef' ref (v :)
+      , updateVoyage = \_ -> pure (Right ())
       }
 
 testApp :: IO Application

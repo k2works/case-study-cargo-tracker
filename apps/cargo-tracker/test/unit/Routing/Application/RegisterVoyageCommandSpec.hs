@@ -48,6 +48,7 @@ makeRepo initial = do
                     [] -> Nothing
                 )
           , saveVoyage = \v -> modifyIORef' ref (v :)
+          , updateVoyage = \_ -> pure (Right ())
           }
   pure (r, readIORef ref)
 
