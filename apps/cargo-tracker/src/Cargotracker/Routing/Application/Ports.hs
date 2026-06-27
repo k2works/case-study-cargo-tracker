@@ -17,4 +17,6 @@ data VoyageRepository m = VoyageRepository
   {- ^ US25 (IT2): 既存 Voyage の区間集合を全置換し version を更新する。
   楽観ロック衝突や対象不在を DomainError で表現できるよう Either を返す。
   -}
+  , findAllVoyages :: m [Voyage]
+  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件)
   }

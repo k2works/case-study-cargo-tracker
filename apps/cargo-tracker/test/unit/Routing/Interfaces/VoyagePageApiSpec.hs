@@ -35,6 +35,7 @@ makeRepo = do
       { findByVoyageNumber = \_ -> pure Nothing
       , saveVoyage = \v -> modifyIORef' ref (v :)
       , updateVoyage = \_ -> pure (Right ())
+      , findAllVoyages = pure []
       }
 
 spec :: Spec
@@ -102,6 +103,7 @@ mkUpdateApp seed updResult =
           { findByVoyageNumber = \_ -> pure seed
           , saveVoyage = \_ -> pure ()
           , updateVoyage = \_ -> pure updResult
+          , findAllVoyages = pure []
           }
     )
 

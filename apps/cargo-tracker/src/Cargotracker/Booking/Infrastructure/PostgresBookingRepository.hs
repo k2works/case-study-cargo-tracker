@@ -18,6 +18,7 @@ import Database.PostgreSQL.Simple
     Only (..),
     execute,
     query,
+    query_,
   )
 import Database.PostgreSQL.Simple.Types ((:.) (..))
 
@@ -49,7 +50,53 @@ newPostgresBookingRepository conn =
     { saveBooking = saveCargo conn
     , findCargoById = \(BookingId bid) -> findCargo conn bid
     , updateBooking = updateCargo conn
+    , findAllCargos = listCargos conn
     }
+
+listCargos :: Connection -> IO [Cargo]
+listCargos conn = do
+  rows <-
+    query_
+      conn
+      "SELECT c.booking_id, s.shipper_id, c.origin_unlocode, c.destination_unlocode, \
+      \        c.deadline, c.booking_status, c.version, \
+      \        c.cargo_type, c.hazardous_class, c.un_number, c.proper_shipping_name, \
+      \        c.min_temperature, c.max_temperature, c.temperature_unit \
+      \ FROM cargo c JOIN shipper s ON s.id = c.shipper_id \
+      \ ORDER BY c.booking_id LIMIT 100" ::
+      IO
+        [ ( Text
+          , Text
+          , Text
+          , Text
+          , UTCTime
+          , Text
+          , Int
+          , Text
+          , Maybe Text
+          , Maybe Text
+          , Maybe Text
+          , Maybe Double
+          , Maybe Double
+          , Maybe Text
+          )
+        ]
+  pure
+    [ Cargo
+        { cargoBookingId = BookingId bidV
+        , cargoShipperId = ShipperId sidV
+        , cargoRouteSpec =
+            RouteSpecification
+              { origin = UnLocode orig
+              , destination = UnLocode dest
+              , arrivalDeadline = deadlineV
+              }
+        , cargoStatus = textToBookingStatus statusT
+        , cargoType = textToCargoType ctypeT mHC mUN mPSN mMin mMax mUnit
+        , cargoVersion = ver
+        }
+    | (bidV, sidV, orig, dest, deadlineV, statusT, ver, ctypeT, mHC, mUN, mPSN, mMin, mMax, mUnit) <- rows
+    ]
 
 findCargo :: Connection -> Text -> IO (Maybe Cargo)
 findCargo conn bid = do

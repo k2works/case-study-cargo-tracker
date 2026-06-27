@@ -27,6 +27,7 @@ import Database.PostgreSQL.Simple
     Only (..),
     execute,
     query,
+    query_,
   )
 
 import Cargotracker.Shipper.Application.Ports (ShipperRepository (..))
@@ -50,7 +51,22 @@ newPostgresShipperRepository conn =
     , findById = \(ShipperId sid) -> findByShipperId conn sid
     , save = saveShipper conn
     , searchByQuery = \(ContactEmail q) -> searchShippers conn q
+    , findAllShippers = listShippers conn
     }
+
+listShippers :: Connection -> IO [Shipper]
+listShippers conn = do
+  rows <-
+    query_
+      conn
+      "SELECT shipper_id, name, email, address, shipper_kind, corporate_number, contract_rank \
+      \ FROM shipper ORDER BY shipper_id LIMIT 100" ::
+      IO [(Text, Text, Text, Text, Text, Maybe Text, Maybe Text)]
+  pure
+    [ s
+    | (sidV, nameV, em, addr, kindText, mCn, mRank) <- rows
+    , Just s <- [toShipper sidV nameV em addr kindText mCn mRank]
+    ]
 
 findByShipperId :: Connection -> Text -> IO (Maybe Shipper)
 findByShipperId conn sid = do

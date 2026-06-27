@@ -43,6 +43,7 @@ import Cargotracker.Booking.Application.RegisterBookingCommand
   )
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
 import Cargotracker.Booking.Views.BookingFormView (bookingFormPage)
+import Cargotracker.Booking.Views.BookingListView (bookingListPage)
 import Cargotracker.Booking.Views.BookingShowView
   ( bookingNotFoundPage,
     bookingShowPage,
@@ -64,9 +65,10 @@ data BookingFormRequest = BookingFormRequest
 
 type BookingPageApi =
   "bookings"
-    :> ( "new"
-           :> QueryParam "error" Text
-           :> Get '[HTML] (Html ())
+    :> ( Get '[HTML] (Html ())
+           :<|> "new"
+             :> QueryParam "error" Text
+             :> Get '[HTML] (Html ())
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] BookingFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -80,11 +82,17 @@ bookingPageApp :: BookingRepository IO -> ShipperExistenceChecker IO -> Applicat
 bookingPageApp repo checker =
   serve
     (Proxy :: Proxy BookingPageApi)
-    ( handlerGet
+    ( handlerList repo
+        :<|> handlerGet
         :<|> handlerPost repo checker
         :<|> handlerShow repo
         :<|> handlerHandover repo
     )
+
+handlerList :: BookingRepository IO -> Handler (Html ())
+handlerList repo = do
+  xs <- liftIO (findAllCargos repo)
+  pure (bookingListPage xs)
 
 -- T-08 (IT2): ?error= クエリを Bootstrap alert に変換する。
 handlerGet :: Maybe Text -> Handler (Html ())

@@ -37,6 +37,7 @@ import Cargotracker.Routing.Application.RegisterVoyageCommand
 import qualified Cargotracker.Routing.Application.UpdateVoyageCommand as Update
 import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (VoyageNumber (..))
 import Cargotracker.Routing.Views.VoyageFormView (voyageEditPage, voyageFormPage)
+import Cargotracker.Routing.Views.VoyageListView (voyageListPage)
 import Cargotracker.Routing.Views.VoyageShowView
   ( voyageNotFoundPage,
     voyageShowPage,
@@ -63,9 +64,10 @@ data VoyageFormRequest = VoyageFormRequest
 
 type VoyagePageApi =
   "voyages"
-    :> ( "new"
-           :> QueryParam "error" Text
-           :> Get '[HTML] (Html ())
+    :> ( Get '[HTML] (Html ())
+           :<|> "new"
+             :> QueryParam "error" Text
+             :> Get '[HTML] (Html ())
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] VoyageFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -84,12 +86,18 @@ voyagePageApp :: VoyageRepository IO -> Application
 voyagePageApp repo =
   serve
     (Proxy :: Proxy VoyagePageApi)
-    ( handlerGet
+    ( handlerList repo
+        :<|> handlerGet
         :<|> handlerPost repo
         :<|> handlerShow repo
         :<|> handlerEdit repo
         :<|> handlerUpdate repo
     )
+
+handlerList :: VoyageRepository IO -> Handler (Html ())
+handlerList repo = do
+  xs <- liftIO (findAllVoyages repo)
+  pure (voyageListPage xs)
 
 -- T-08 (IT2): ?error= クエリを Bootstrap alert に変換する。
 handlerGet :: Maybe Text -> Handler (Html ())

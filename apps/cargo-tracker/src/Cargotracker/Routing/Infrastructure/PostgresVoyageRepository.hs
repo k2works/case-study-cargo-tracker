@@ -16,11 +16,13 @@ module Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ) where
 
 import Data.Text (Text)
+import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple
   ( Connection,
     Only (..),
     execute,
     query,
+    query_,
     withTransaction,
   )
 
@@ -41,7 +43,44 @@ newPostgresVoyageRepository conn =
     { findByVoyageNumber = findVoyage conn
     , saveVoyage = saveVoy conn
     , updateVoyage = updateVoy conn
+    , findAllVoyages = listVoyages conn
     }
+
+listVoyages :: Connection -> IO [Voyage]
+listVoyages conn = do
+  rows <-
+    query_
+      conn
+      "SELECT voyage_number, version FROM voyage ORDER BY voyage_number LIMIT 100" ::
+      IO [(Text, Int)]
+  mapM (loadOne conn) rows
+  where
+    loadOne :: Connection -> (Text, Int) -> IO Voyage
+    loadOne c (vn, ver) = do
+      mvs <-
+        query
+          c
+          "SELECT v.id, departure_location_unlocode, arrival_location_unlocode, \
+          \        departure_time, arrival_time \
+          \ FROM carrier_movement cm \
+          \ JOIN voyage v ON v.id = cm.voyage_id \
+          \ WHERE v.voyage_number = ? ORDER BY seq_number ASC"
+          (Only vn) ::
+          IO [(Int, Text, Text, UTCTime, UTCTime)]
+      pure
+        Voyage
+          { voyageNumber = VoyageNumber vn
+          , voyageVersion = ver
+          , carrierMovements =
+              [ CarrierMovement
+                  { departureLocation = UnLocode dep
+                  , arrivalLocation = UnLocode arr
+                  , departureTime = depT
+                  , arrivalTime = arrT
+                  }
+              | (_, dep, arr, depT, arrT) <- mvs
+              ]
+          }
 
 findVoyage :: Connection -> VoyageNumber -> IO (Maybe Voyage)
 findVoyage conn (VoyageNumber vn) = do

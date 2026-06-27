@@ -40,6 +40,7 @@ import Cargotracker.Shipper.Application.RegisterShipperCommand
 import Cargotracker.Shipper.Domain.Model.Shipper (ContractRank (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 import Cargotracker.Shipper.Views.ShipperFormView (shipperFormPage)
+import Cargotracker.Shipper.Views.ShipperListView (shipperListPage)
 import Cargotracker.Shipper.Views.ShipperShowView
   ( shipperNotFoundPage,
     shipperShowPage,
@@ -59,9 +60,10 @@ data ShipperFormRequest = ShipperFormRequest
 
 type ShipperPageApi =
   "shippers"
-    :> ( "new"
-           :> QueryParam "error" Text
-           :> Get '[HTML] (Html ())
+    :> ( Get '[HTML] (Html ())
+           :<|> "new"
+             :> QueryParam "error" Text
+             :> Get '[HTML] (Html ())
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] ShipperFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -72,7 +74,16 @@ shipperPageApp :: ShipperRepository IO -> Application
 shipperPageApp repo =
   serve
     (Proxy :: Proxy ShipperPageApi)
-    (handlerGet :<|> handlerPost repo :<|> handlerShow repo)
+    ( handlerList repo
+        :<|> handlerGet
+        :<|> handlerPost repo
+        :<|> handlerShow repo
+    )
+
+handlerList :: ShipperRepository IO -> Handler (Html ())
+handlerList repo = do
+  xs <- liftIO (findAllShippers repo)
+  pure (shipperListPage xs)
 
 -- T-08 (IT2): ?error= クエリを受け取り、ShipperFormView の上部に
 -- Bootstrap alert でフラッシュ表示する。エラーコードは

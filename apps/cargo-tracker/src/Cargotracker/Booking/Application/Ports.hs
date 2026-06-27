@@ -23,6 +23,8 @@ data BookingRepository m = BookingRepository
   {- ^ US06 (IT2): 既存 Cargo の状態 / version を更新する。
   楽観ロック衝突や対象不在を DomainError で表現できるよう Either を返す。
   -}
+  , findAllCargos :: m [Cargo]
+  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件)
   }
 
 newtype ShipperExistenceChecker m = ShipperExistenceChecker

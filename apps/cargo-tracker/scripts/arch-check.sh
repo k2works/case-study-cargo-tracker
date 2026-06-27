@@ -30,6 +30,7 @@ ALLOWLIST_RULE4=(
   "Cargotracker/Booking/Infrastructure/PostgresBookingRepository.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
   "Cargotracker/Booking/Infrastructure/PostgresShipperExistenceChecker.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
   "Cargotracker/Booking/Views/BookingShowView.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
+  "Cargotracker/Booking/Views/BookingListView.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
 )
 
 is_rule4_allowed() {

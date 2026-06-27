@@ -41,6 +41,7 @@ makeRepo = do
           pure (case [s | s <- xs, shipperId s == sid] of (x : _) -> Just x; [] -> Nothing)
       , save = \s -> modifyIORef' ref (s :)
       , searchByQuery = \_ -> readIORef ref
+      , findAllShippers = pure []
       }
 
 testApp :: IO Application

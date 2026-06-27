@@ -16,4 +16,6 @@ data ShipperRepository m = ShipperRepository
   , findById :: ShipperId -> m (Maybe Shipper)
   , save :: Shipper -> m ()
   , searchByQuery :: ContactEmail -> m [Shipper]
+  , findAllShippers :: m [Shipper]
+  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件)
   }

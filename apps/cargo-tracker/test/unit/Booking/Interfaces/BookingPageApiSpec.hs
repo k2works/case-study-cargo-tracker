@@ -54,6 +54,7 @@ makeRepo = do
           pure (Right ())
       , findCargoById = \_ -> pure Nothing
       , updateBooking = \_ -> pure (Right ())
+      , findAllCargos = pure []
       }
 
 checkerYes :: ShipperExistenceChecker IO
@@ -97,6 +98,7 @@ mkHandoverApp seed = do
           { saveBooking = \_ -> pure (Right ())
           , findCargoById = \_ -> pure seed
           , updateBooking = \_ -> pure (Right ())
+          , findAllCargos = pure []
           }
   pure (bookingPageApp repo checkerYes)
 

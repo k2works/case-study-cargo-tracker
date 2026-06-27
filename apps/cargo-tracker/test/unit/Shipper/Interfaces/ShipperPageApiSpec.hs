@@ -40,6 +40,7 @@ makeRepo = do
             [] -> Nothing
       , save = \s -> modifyIORef' ref (s :)
       , searchByQuery = \_ -> pure []
+      , findAllShippers = pure []
       }
 
 spec :: Spec

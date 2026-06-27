@@ -96,6 +96,7 @@ makeRepo seed = do
           , updateVoyage = \v -> do
               writeIORef updRef (Just v)
               pure (Right ())
+          , findAllVoyages = pure []
           }
   pure (r, readIORef updRef)
 
@@ -136,6 +137,7 @@ spec = describe "UpdateVoyageCommand (US25)" $ do
             { findByVoyageNumber = \_ -> pure (Just seedVoyage)
             , saveVoyage = \_ -> pure ()
             , updateVoyage = \_ -> pure (Left (ConcurrentModification "V0001"))
+            , findAllVoyages = pure []
             }
     result <- execute repo validUpdateInput
     result `shouldBe` Left (ConcurrentModification "V0001")

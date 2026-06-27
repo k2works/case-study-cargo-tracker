@@ -63,6 +63,7 @@ makeRepo seed = do
           , updateBooking = \c -> do
               writeIORef updRef (Just c)
               pure (Right ())
+          , findAllCargos = pure []
           }
   pure (r, readIORef updRef)
 
@@ -102,6 +103,7 @@ spec = describe "HandOverToRouterCommand" $ do
             , updateBooking = \c -> do
                 writeIORef updRef (Just c)
                 pure (Left (ConcurrentModification "BK-A1B2C3"))
+            , findAllCargos = pure []
             }
     result <- execute repo (HandOverToRouterInput bid)
     result `shouldBe` Left (ConcurrentModification "BK-A1B2C3")

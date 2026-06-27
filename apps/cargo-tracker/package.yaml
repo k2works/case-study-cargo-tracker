@@ -125,6 +125,9 @@ library:
   - Cargotracker.Routing.Interfaces.VoyagePageApi
   - Cargotracker.Shared.Web.HomeView
   - Cargotracker.Shipper.Views.ShipperShowView
+  - Cargotracker.Shipper.Views.ShipperListView
+  - Cargotracker.Booking.Views.BookingListView
+  - Cargotracker.Routing.Views.VoyageListView
   - Cargotracker.Booking.Views.BookingShowView
   - Cargotracker.Routing.Views.VoyageShowView
   - Cargotracker.Shipper.Interfaces.ShipperSearchApi

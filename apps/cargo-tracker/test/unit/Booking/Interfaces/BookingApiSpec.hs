@@ -36,6 +36,7 @@ makeRepo = do
           pure (Right ())
       , findCargoById = \_ -> pure Nothing
       , updateBooking = \_ -> pure (Right ())
+      , findAllCargos = pure []
       }
 
 checkerYes :: ShipperExistenceChecker IO

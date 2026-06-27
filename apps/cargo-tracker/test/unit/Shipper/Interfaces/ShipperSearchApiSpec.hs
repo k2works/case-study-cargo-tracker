@@ -50,6 +50,7 @@ repoFor results =
     , findById = \_ -> pure Nothing
     , save = \_ -> pure ()
     , searchByQuery = \_ -> pure results
+    , findAllShippers = pure []
     }
 
 spec :: Spec

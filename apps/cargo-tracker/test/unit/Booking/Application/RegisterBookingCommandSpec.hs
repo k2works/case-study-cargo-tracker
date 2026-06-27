@@ -54,6 +54,7 @@ makeRepo = do
               pure (Right ())
           , findCargoById = \_ -> pure Nothing
           , updateBooking = \_ -> pure (Right ())
+          , findAllCargos = pure []
           }
   pure (r, readIORef ref)
 
@@ -67,6 +68,7 @@ makeRepoShipperNotFound = do
            in pure (Left (ShipperNotFound ("repo-resolve-failed:" <> bid)))
       , findCargoById = \_ -> pure Nothing
       , updateBooking = \_ -> pure (Right ())
+      , findAllCargos = pure []
       }
 
 validInput :: RegisterBookingInput

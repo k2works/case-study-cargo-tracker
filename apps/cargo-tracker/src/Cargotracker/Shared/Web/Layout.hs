@@ -45,6 +45,12 @@ pageLayout title body = doctypehtml_ $ do
         a_ [class_ "navbar-brand", href_ "/"] "Cargo Tracker"
         ul_ [class_ "navbar-nav me-auto"] $ do
           li_ [class_ "nav-item"] $
+            a_ [class_ "nav-link", href_ "/shippers"] "荷主一覧"
+          li_ [class_ "nav-item"] $
+            a_ [class_ "nav-link", href_ "/bookings"] "貨物予約一覧"
+          li_ [class_ "nav-item"] $
+            a_ [class_ "nav-link", href_ "/voyages"] "航海一覧"
+          li_ [class_ "nav-item"] $
             a_ [class_ "nav-link", href_ "/login"] "Login"
           li_ [class_ "nav-item"] $
             a_ [class_ "nav-link", href_ "/health"] "Health"
