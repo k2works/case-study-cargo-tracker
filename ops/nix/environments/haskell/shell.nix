@@ -10,9 +10,10 @@ packages.mkShell {
     cabal-install
     haskell-language-server
     # コード品質ツール (ADR 0002)
-    # NOTE (IT2): nixos-25.05 で haskellPackages.fourmolu は 0.19 系列。
-    # CI (.github/workflows/ci.yml) も同 channel を使用し、フォーマット
-    # 結果の揺れを抑える。
+    # NOTE (IT2): CI は nixos-24.05 を使用 (GHC 9.10.2 互換性のため)。
+    # channel 24.05 の fourmolu は 0.14 系列で、ローカル開発の 0.19/0.20
+    # と diff が出るため CI 側 format/lint は continue-on-error: true で
+    # warn-only 化している。push 前は pre-commit hook で format 強制。
     haskellPackages.hlint
     haskellPackages.fourmolu
     haskellPackages.weeder

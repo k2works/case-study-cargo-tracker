@@ -34,7 +34,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
-          nix_path: nixpkgs=channel:nixos-25.05
+          nix_path: nixpkgs=channel:nixos-24.05
           extra_nix_config: |
             experimental-features = nix-command flakes
             substituters = https://cache.nixos.org
@@ -80,7 +80,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
-          nix_path: nixpkgs=channel:nixos-25.05
+          nix_path: nixpkgs=channel:nixos-24.05
           extra_nix_config: |
             experimental-features = nix-command flakes
             substituters = https://cache.nixos.org
