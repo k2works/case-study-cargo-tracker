@@ -8,6 +8,7 @@
 module Cargotracker.Booking.Domain.Model.Cargo
   ( Cargo (..),
     mkCargo,
+    mkCargoWithType,
     submitBooking,
     requestRouting,
   ) where
@@ -18,6 +19,7 @@ import Cargotracker.Booking.Domain.Model.State.BookingStatus
   ( BookingStatus (..),
   )
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId)
+import Cargotracker.Booking.Domain.Model.Value.CargoType (CargoType (..))
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification,
   )
@@ -29,17 +31,33 @@ data Cargo = Cargo
   , cargoShipperId :: !ShipperId
   , cargoRouteSpec :: !RouteSpecification
   , cargoStatus :: !BookingStatus
+  , cargoType :: !CargoType
+  {- ^ US05 (IT2): General / Hazardous / Refrigerated。
+  sum type で追加情報の有無を型レベルで強制する。
+  -}
   , cargoVersion :: !Int
   }
   deriving stock (Eq, Show)
 
+-- | 一般貨物 (cargoType = General) を Draft 状態で構築する (IT1 後方互換)。
 mkCargo :: BookingId -> ShipperId -> RouteSpecification -> Cargo
-mkCargo bid sid route =
+mkCargo bid sid route = mkCargoWithType bid sid route General
+
+{- | 任意の CargoType を指定して Cargo を構築する (US04+US05, IT2)。
+
+CargoType に Hazardous / Refrigerated を渡せば、その追加情報も型レベルで
+保持される。スマートコンストラクタ層で「種別 = 危険物だが宣言なし」を
+排除しているため Domain 不変条件を満たす。
+-}
+mkCargoWithType ::
+  BookingId -> ShipperId -> RouteSpecification -> CargoType -> Cargo
+mkCargoWithType bid sid route ctype =
   Cargo
     { cargoBookingId = bid
     , cargoShipperId = sid
     , cargoRouteSpec = route
     , cargoStatus = Draft
+    , cargoType = ctype
     , cargoVersion = 1
     }
 

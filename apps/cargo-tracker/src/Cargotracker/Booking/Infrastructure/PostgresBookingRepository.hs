@@ -24,6 +24,7 @@ import Cargotracker.Booking.Application.Ports (BookingRepository (..))
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
 import Cargotracker.Booking.Domain.Model.State.BookingStatus (BookingStatus (..))
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
+import Cargotracker.Booking.Domain.Model.Value.CargoType (CargoType (..))
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
   )
@@ -64,6 +65,9 @@ findCargo conn bid = do
                   , arrivalDeadline = deadlineV
                   }
             , cargoStatus = textToBookingStatus statusT
+            , -- US05 (IT2): cargo_type 列の読み出しは次イテレーションで対応。
+              --   現状は General 扱い (DB DEFAULT 'GENERAL' に整合)。
+              cargoType = General
             , cargoVersion = ver
             }
     _ -> pure Nothing
