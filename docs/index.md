@@ -86,6 +86,7 @@
 | [分析整合性セルフレビュー](./review/analysis_consistency_review_20260626.md) | grep ベース機械的整合性検証 (集約↔テーブル、UC↔US 等) |
 | [分析多視点レビュー](./review/analysis_multi_perspective_review_20260626.md) | XP 5 エージェント並列レビュー (高 16・中 16・低 10) |
 | [IT1 コードレビュー](./review/it1_code_review_20260626.md) | IT1 全体の XP 5 エージェント並列レビュー (高 10・中 13・低 8) |
+| [IT2 コードレビュー](./review/it2_code_review_20260627.md) | IT2 全体の XP 5 エージェント並列レビュー (高 12・中 14・低 12、矛盾 3) |
 
 ## 補足
 
