@@ -356,6 +356,8 @@ ALTER TABLE cargo
 -- マイグレーションは「既存データの name=email から正しい name への移行」スクリプトとして用意する。
 ```
 
+> 上記 SQL ブロックの `-- 007_*` 〜 `-- 010_*` は論理順序のラベル。実ファイル名は dbmate の `YYYYMMDDHHMMSS_*.sql` 形式 (詳細は本節末の §DB マイグレーション順序 参照)。
+>
 > 既存 IT1 マイグレーションで `cargo.booking_status` は導入済 (`'Draft'/'Submitted'/'RouteProposed'/'Confirmed'/'Closed'`)。IT2 では `booking_status` の追加マイグレーションは不要、状態遷移コードのみ実装する。
 
 ### モジュール構造 (IT2 追加)
@@ -631,7 +633,7 @@ IT1 の 001〜005 (および IT1 後続改善で投入された 006_seed_users) 
 | 009 | `009_create_route_candidate.sql` | `route_candidate` テーブル新規 (FK: `estimate.id`) | `estimate` (008) |
 | 010 | `010_migrate_shipper_name_from_email.sql` (T-09) | `shipper.name` placeholder (=email) を正規化 | `shipper` (IT1 003) |
 
-> 番号は IT1 末時点の最新マイグレーション (`006_seed_users`) の次から連番。`004` `005` `006` は IT1 で消費済のため `007` 起点。各マイグレーションは `up` / `down` を両方記述する。
+> **マイグレーション命名規約**: 計画書では論理順序のため `007_*` `008_*` 表記を使うが、実ファイル名は dbmate 標準の **`YYYYMMDDHHMMSS_<name>.sql`** 形式に従う (例: `20260720100000_extend_cargo_for_special_types.sql`)。IT1 既存ファイルは `20260706120000_create_users_and_roles.sql` 〜 `20260706120500_seed_users.sql` の 6 件。各マイグレーションは `up` / `down` を両方記述する。
 
 ### 画面遷移とインタラクション (IT2 範囲)
 
