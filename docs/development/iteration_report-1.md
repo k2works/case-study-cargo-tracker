@@ -59,7 +59,7 @@ xychart-beta
 | 1 | 認証なしで保護 API に GET → 401、認証ありなら 200 を hspec-wai で検証 | OK | `apps/cargo-tracker/test/unit/Shared/Auth/Interfaces/ProtectedSpec.hs` (hspec-wai) |
 | 2 | US02 / US03 / US04 / US24 の主要 Happy Path を E2E (Playwright) でデモ可能 | OK | `apps/cargo-tracker/e2e/src/tests/*.spec.ts` 4 spec (home / shipper / voyage / booking) |
 | 3 | PostgreSQL マイグレーション (dbmate) が `shipper` / `cargo` / `voyage` テーブルを生成 | OK | `apps/cargo-tracker/db/migrations/` 6 ファイル (users_and_roles / location / shipper / cargo / voyage_and_carrier_movement / seed_users) |
-| 4 | HPC カバレッジ: Domain 層 ≥ 95%、全体 ≥ 70% | △ 未計測 | HPC report 未取得 (IT2 で `dev:test:coverage` 実行を必達化 / レビュー指摘 T-10) |
+| 4 | HPC カバレッジ: Domain 層 ≥ 95%、全体 ≥ 70% | △ 全体 62% / Domain 別計測未実施 | IT2 T-10 で `stack test --coverage` を CI に組み込み実測 (全体 62%、しきい値 60% / IT3 目標 70%)。Domain 別ゲートは IT3 で導入予定 |
 | 5 | CI で `fourmolu --mode check` / `hlint` / `stack test` / `arch-check Phase 1` がすべて緑 | OK | `.github/workflows/ci.yml` 全ステップ通過 / 117 tests / 0 failures / 10 pending (Postgres 統合は CI 未設定で skip) |
 | 6 | IT1 末デモで「営業担当者ロールでログイン → 荷主登録 → 貨物予約 → 別アカウントの運航管理者で航海スケジュール登録」を 5 分以内に通せる | OK | シードユーザー 8 ロール投入済 (admin/sales/router/tracker/handler/accountant/shipper/consignee)、E2E booking-registration.spec.ts で荷主登録→貨物予約フロー実機検証 |
 
