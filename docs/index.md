@@ -76,6 +76,7 @@
 | [IT1 ふりかえり (KPT)](./development/retrospective-1.md) | Keep 13・Problem 14・Try 18 (必達 10 + 推奨 8) |
 | [IT2 計画](./development/iteration_plan-2.md) | US01 / US04+US05 / US06 / US25 の 10 SP + Try 必達 8 SP、Release 0.1 Internal Alpha 計画 |
 | [IT2 完了報告書](./development/iteration_report-2.md) | 本体 4/4 ストーリー + Try 10/10 完了、207 tests / 0 failures、arch-check Phase 2 は IT3 繰越 |
+| [IT2 ふりかえり (KPT)](./development/retrospective-2.md) | Keep 9・Problem 11・Try 14 (必達 10 + 推奨 4)、ベロシティ実績 IT1 154% → IT2 100% |
 
 ### レビュードキュメント
 
