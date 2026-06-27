@@ -52,6 +52,7 @@ makeRepo = do
               modifyIORef' ref (c :)
               pure (Right ())
           , findCargoById = \_ -> pure Nothing
+          , updateBooking = \_ -> pure (Right ())
           }
   pure (r, readIORef ref)
 
@@ -64,6 +65,7 @@ makeRepoShipperNotFound = do
           let bid = case cargoBookingId c of BookingId t -> t
            in pure (Left (ShipperNotFound ("repo-resolve-failed:" <> bid)))
       , findCargoById = \_ -> pure Nothing
+      , updateBooking = \_ -> pure (Right ())
       }
 
 validInput :: RegisterBookingInput

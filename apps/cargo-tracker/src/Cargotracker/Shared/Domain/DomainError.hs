@@ -35,4 +35,6 @@ data DomainError
 
     -- | from / to の状態名を保持する状態遷移違反
     InvalidStateTransition !Text !Text
+  | -- | 予約 (Cargo) が見つからない (BookingId 文字列を保持)
+    BookingNotFound !Text
   deriving stock (Eq, Show)

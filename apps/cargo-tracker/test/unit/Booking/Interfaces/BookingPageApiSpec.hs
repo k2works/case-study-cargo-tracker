@@ -29,6 +29,7 @@ makeRepo = do
           modifyIORef' ref (c :)
           pure (Right ())
       , findCargoById = \_ -> pure Nothing
+      , updateBooking = \_ -> pure (Right ())
       }
 
 checkerYes :: ShipperExistenceChecker IO

@@ -36,6 +36,7 @@ newPostgresBookingRepository conn =
   BookingRepository
     { saveBooking = saveCargo conn
     , findCargoById = \(BookingId bid) -> findCargo conn bid
+    , updateBooking = updateCargo conn
     }
 
 findCargo :: Connection -> Text -> IO (Maybe Cargo)
@@ -118,6 +119,25 @@ insertCargo conn shipperPk c = do
     originLoc = origin
     destLoc :: RouteSpecification -> UnLocode
     destLoc = destination
+
+-- US06 (IT2): 既存 cargo の booking_status / version を楽観ロック付きで更新する。
+-- 期待バージョン (cargoVersion - 1) と DB 上の version が一致しない場合は
+-- 影響行が 0 件となり ConcurrentModification を返す。
+updateCargo :: Connection -> Cargo -> IO (Either DomainError ())
+updateCargo conn c = do
+  let BookingId bid = cargoBookingId c
+      statusText = bookingStatusToText (cargoStatus c)
+      newVersion = cargoVersion c
+      expectedVersion = newVersion - 1
+  affected <-
+    execute
+      conn
+      "UPDATE cargo SET booking_status = ?, version = ? \
+      \ WHERE booking_id = ? AND version = ?"
+      (statusText, newVersion, bid, expectedVersion)
+  if affected == 1
+    then pure (Right ())
+    else pure (Left (ConcurrentModification bid))
 
 bookingStatusToText :: BookingStatus -> Text
 bookingStatusToText Draft = "Draft"

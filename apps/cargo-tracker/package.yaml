@@ -90,6 +90,7 @@ library:
   - Cargotracker.Shipper.Application.RegisterShipperCommand
   - Cargotracker.Booking.Application.Ports
   - Cargotracker.Booking.Application.RegisterBookingCommand
+  - Cargotracker.Booking.Application.HandOverToRouterCommand
   - Cargotracker.Routing.Application.Ports
   - Cargotracker.Routing.Application.RegisterVoyageCommand
   - Cargotracker.Shipper.Interfaces.ShipperApi

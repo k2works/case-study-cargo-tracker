@@ -19,6 +19,10 @@ import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId)
 data BookingRepository m = BookingRepository
   { saveBooking :: Cargo -> m (Either DomainError ())
   , findCargoById :: BookingId -> m (Maybe Cargo)
+  , updateBooking :: Cargo -> m (Either DomainError ())
+  {- ^ US06 (IT2): 既存 Cargo の状態 / version を更新する。
+  楽観ロック衝突や対象不在を DomainError で表現できるよう Either を返す。
+  -}
   }
 
 newtype ShipperExistenceChecker m = ShipperExistenceChecker
