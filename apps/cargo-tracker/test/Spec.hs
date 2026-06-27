@@ -14,10 +14,12 @@ import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
 import qualified Booking.Infrastructure.PostgresBookingRepositorySpec
 import qualified Booking.Interfaces.BookingApiSpec
+import qualified Booking.Interfaces.BookingPageApiSpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
 import qualified Routing.Infrastructure.PostgresVoyageRepositorySpec
 import qualified Routing.Interfaces.VoyageApiSpec
+import qualified Routing.Interfaces.VoyagePageApiSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
@@ -31,6 +33,7 @@ import qualified Shipper.Application.RegisterShipperCommandSpec
 import qualified Shipper.Domain.Model.ShipperSpec
 import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
 import qualified Shipper.Interfaces.ShipperApiSpec
+import qualified Shipper.Interfaces.ShipperPageApiSpec
 
 main :: IO ()
 main = hspec $ do
@@ -126,3 +129,15 @@ main = hspec $ do
   describe
     "Cargotracker.Routing.Infrastructure.PostgresVoyageRepository"
     Routing.Infrastructure.PostgresVoyageRepositorySpec.spec
+
+  describe
+    "Cargotracker.Shipper.Interfaces.ShipperPageApi"
+    Shipper.Interfaces.ShipperPageApiSpec.spec
+
+  describe
+    "Cargotracker.Booking.Interfaces.BookingPageApi"
+    Booking.Interfaces.BookingPageApiSpec.spec
+
+  describe
+    "Cargotracker.Routing.Interfaces.VoyagePageApi"
+    Routing.Interfaces.VoyagePageApiSpec.spec
