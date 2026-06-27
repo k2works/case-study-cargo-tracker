@@ -21,7 +21,8 @@ import Cargotracker.Booking.Application.Ports
     ShipperExistenceChecker (..),
   )
 import Cargotracker.Booking.Application.RegisterBookingCommand
-  ( RegisterBookingInput (..),
+  ( CargoTypeInput (..),
+    RegisterBookingInput (..),
     execute,
   )
 import Cargotracker.Booking.Domain.Model.Cargo
@@ -76,6 +77,7 @@ validInput =
     , inputOrigin = "JPTYO"
     , inputDestination = "USNYC"
     , inputDeadline = deadline
+    , inputCargoType = InputGeneral
     }
 
 spec :: Spec
@@ -131,3 +133,55 @@ spec = do
         other ->
           expectationFailure
             ("expected Left (ShipperNotFound _) but got " <> show other)
+
+  describe "execute (US05 CargoType)" $ do
+    it "Hazardous 入力で危険物予約を保存できる" $ do
+      (repo, get) <- makeRepo
+      let i =
+            validInput
+              { inputCargoType = InputHazardous "3" "1203" "Gasoline"
+              }
+      result <- execute repo makeCheckerYes i
+      case result of
+        Right _ -> pure ()
+        Left e -> expectationFailure ("expected Right but got " <> show e)
+      saved <- get
+      length saved `shouldBe` 1
+
+    it "Hazardous の UN 番号不正は Left InvalidBookingId" $ do
+      (repo, _) <- makeRepo
+      let i =
+            validInput
+              { inputCargoType = InputHazardous "3" "ABC" "Gasoline"
+              }
+      result <- execute repo makeCheckerYes i
+      case result of
+        Left (InvalidBookingId _) -> pure ()
+        other -> expectationFailure ("unexpected: " <> show other)
+
+    it "Refrigerated 入力で冷凍予約を保存できる" $ do
+      (repo, _) <- makeRepo
+      let i =
+            validInput
+              { inputCargoType = InputRefrigerated (-20) (-10) "C"
+              }
+      result <- execute repo makeCheckerYes i
+      case result of
+        Right _ -> pure ()
+        Left e -> expectationFailure ("expected Right but got " <> show e)
+
+    it "Refrigerated の温度逆転は Left InvalidBookingId" $ do
+      (repo, _) <- makeRepo
+      let i = validInput {inputCargoType = InputRefrigerated 10 (-5) "C"}
+      result <- execute repo makeCheckerYes i
+      case result of
+        Left (InvalidBookingId _) -> pure ()
+        other -> expectationFailure ("unexpected: " <> show other)
+
+    it "Refrigerated の温度単位不正は Left InvalidBookingId" $ do
+      (repo, _) <- makeRepo
+      let i = validInput {inputCargoType = InputRefrigerated (-20) (-10) "K"}
+      result <- execute repo makeCheckerYes i
+      case result of
+        Left (InvalidBookingId _) -> pure ()
+        other -> expectationFailure ("unexpected: " <> show other)

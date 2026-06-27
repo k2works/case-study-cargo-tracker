@@ -34,7 +34,8 @@ import Cargotracker.Booking.Application.Ports
     ShipperExistenceChecker,
   )
 import Cargotracker.Booking.Application.RegisterBookingCommand
-  ( RegisterBookingInput (..),
+  ( CargoTypeInput (..),
+    RegisterBookingInput (..),
     execute,
   )
 import Cargotracker.Booking.Domain.Model.Value.BookingId (unBookingId)
@@ -72,6 +73,9 @@ bookingHandler repo checker req = do
           , inputOrigin = origin req
           , inputDestination = destination req
           , inputDeadline = deadline req
+          , -- US05 (IT2): JSON API は IT3 で cargoType 受け取り対応。
+            --   現状 General 固定で IT1 後方互換を維持する。
+            inputCargoType = InputGeneral
           }
   result <- liftIO (execute repo checker input)
   case result of

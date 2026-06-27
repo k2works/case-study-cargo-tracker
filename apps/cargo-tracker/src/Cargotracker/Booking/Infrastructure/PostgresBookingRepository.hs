@@ -19,14 +19,25 @@ import Database.PostgreSQL.Simple
     execute,
     query,
   )
+import Database.PostgreSQL.Simple.Types ((:.) (..))
 
 import Cargotracker.Booking.Application.Ports (BookingRepository (..))
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
 import Cargotracker.Booking.Domain.Model.State.BookingStatus (BookingStatus (..))
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
-import Cargotracker.Booking.Domain.Model.Value.CargoType (CargoType (..))
+import Cargotracker.Booking.Domain.Model.Value.CargoType
+  ( CargoType (..),
+    cargoTypeToText,
+  )
+import Cargotracker.Booking.Domain.Model.Value.HazardousDeclaration
+  ( HazardousDeclaration (..),
+  )
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
+  )
+import Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
+  ( TemperatureRequirement (..),
+    TemperatureUnit (..),
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
@@ -46,13 +57,31 @@ findCargo conn bid = do
     query
       conn
       "SELECT c.booking_id, s.shipper_id, c.origin_unlocode, c.destination_unlocode, \
-      \        c.deadline, c.booking_status, c.version \
+      \        c.deadline, c.booking_status, c.version, \
+      \        c.cargo_type, c.hazardous_class, c.un_number, c.proper_shipping_name, \
+      \        c.min_temperature, c.max_temperature, c.temperature_unit \
       \ FROM cargo c JOIN shipper s ON s.id = c.shipper_id \
       \ WHERE c.booking_id = ? LIMIT 1"
       (Only bid) ::
-      IO [(Text, Text, Text, Text, UTCTime, Text, Int)]
+      IO
+        [ ( Text
+          , Text
+          , Text
+          , Text
+          , UTCTime
+          , Text
+          , Int
+          , Text
+          , Maybe Text
+          , Maybe Text
+          , Maybe Text
+          , Maybe Double
+          , Maybe Double
+          , Maybe Text
+          )
+        ]
   case rows of
-    [(bidV, sidV, orig, dest, deadlineV, statusT, ver)] ->
+    [(bidV, sidV, orig, dest, deadlineV, statusT, ver, ctypeT, mHC, mUN, mPSN, mMin, mMax, mUnit)] ->
       pure $
         Just
           Cargo
@@ -65,12 +94,37 @@ findCargo conn bid = do
                   , arrivalDeadline = deadlineV
                   }
             , cargoStatus = textToBookingStatus statusT
-            , -- US05 (IT2): cargo_type 列の読み出しは次イテレーションで対応。
-              --   現状は General 扱い (DB DEFAULT 'GENERAL' に整合)。
-              cargoType = General
+            , cargoType = textToCargoType ctypeT mHC mUN mPSN mMin mMax mUnit
             , cargoVersion = ver
             }
     _ -> pure Nothing
+
+-- DB 列値から CargoType を復元する。CHECK 制約で整合性が保たれている前提
+-- (スマートコンストラクタを通さず直接構築)。不整合時は General にフォールバックする。
+textToCargoType ::
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Double ->
+  Maybe Double ->
+  Maybe Text ->
+  CargoType
+textToCargoType "HAZARDOUS" (Just hc) (Just un) (Just psn) _ _ _ =
+  Hazardous
+    HazardousDeclaration
+      { hazardousClass = hc
+      , unNumber = un
+      , properShippingName = psn
+      }
+textToCargoType "REFRIGERATED" _ _ _ (Just lo) (Just hi) (Just u) =
+  Refrigerated
+    TemperatureRequirement
+      { minTemperature = lo
+      , maxTemperature = hi
+      , temperatureUnit = if u == "F" then Fahrenheit else Celsius
+      }
+textToCargoType _ _ _ _ _ _ _ = General
 
 textToBookingStatus :: Text -> BookingStatus
 textToBookingStatus "Submitted" = Submitted
@@ -103,19 +157,26 @@ insertCargo conn shipperPk c = do
       UnLocode origin = originLoc route
       UnLocode destination = destLoc route
       statusText = bookingStatusToText (cargoStatus c)
+      ctype = cargoType c
+      (cargoTypeT, mHC, mUN, mPSN, mMin, mMax, mUnit) = cargoTypeColumns ctype
   _ <-
     execute
       conn
-      "INSERT INTO cargo (booking_id, shipper_id, origin_unlocode, destination_unlocode, \
-      \                  deadline, booking_status, version) \
-      \ VALUES (?, ?, ?, ?, ?, ?, ?)"
-      ( bid
-      , shipperPk
-      , origin
-      , destination
-      , arrivalDeadline route
-      , statusText
-      , cargoVersion c
+      "INSERT INTO cargo \
+      \ (booking_id, shipper_id, origin_unlocode, destination_unlocode, \
+      \  deadline, booking_status, version, \
+      \  cargo_type, hazardous_class, un_number, proper_shipping_name, \
+      \  min_temperature, max_temperature, temperature_unit) \
+      \ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      ( ( bid
+        , shipperPk
+        , origin
+        , destination
+        , arrivalDeadline route
+        , statusText
+        , cargoVersion c
+        )
+          :. (cargoTypeT, mHC, mUN, mPSN, mMin, mMax, mUnit)
       )
   pure ()
   where
@@ -123,6 +184,31 @@ insertCargo conn shipperPk c = do
     originLoc = origin
     destLoc :: RouteSpecification -> UnLocode
     destLoc = destination
+
+-- CargoType を DB の (cargo_type, 危険物 3 列, 冷凍 3 列) の 7-tuple に分解する。
+cargoTypeColumns ::
+  CargoType ->
+  (Text, Maybe Text, Maybe Text, Maybe Text, Maybe Double, Maybe Double, Maybe Text)
+cargoTypeColumns ctype = case ctype of
+  General -> (cargoTypeToText General, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+  Hazardous d ->
+    ( cargoTypeToText (Hazardous d)
+    , Just (hazardousClass d)
+    , Just (unNumber d)
+    , Just (properShippingName d)
+    , Nothing
+    , Nothing
+    , Nothing
+    )
+  Refrigerated r ->
+    ( cargoTypeToText (Refrigerated r)
+    , Nothing
+    , Nothing
+    , Nothing
+    , Just (minTemperature r)
+    , Just (maxTemperature r)
+    , Just (case temperatureUnit r of Celsius -> "C"; Fahrenheit -> "F")
+    )
 
 -- US06 (IT2): 既存 cargo の booking_status / version を楽観ロック付きで更新する。
 -- 期待バージョン (cargoVersion - 1) と DB 上の version が一致しない場合は

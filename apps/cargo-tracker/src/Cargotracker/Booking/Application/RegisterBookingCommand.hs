@@ -8,6 +8,7 @@
 -}
 module Cargotracker.Booking.Application.RegisterBookingCommand
   ( RegisterBookingInput (..),
+    CargoTypeInput (..),
     execute,
   ) where
 
@@ -18,14 +19,32 @@ import Cargotracker.Booking.Application.Ports
   ( BookingRepository (..),
     ShipperExistenceChecker (..),
   )
-import Cargotracker.Booking.Domain.Model.Cargo (cargoBookingId, mkCargo)
+import Cargotracker.Booking.Domain.Model.Cargo (cargoBookingId, mkCargoWithType)
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId, mkBookingId)
+import Cargotracker.Booking.Domain.Model.Value.CargoType (CargoType (..))
+import Cargotracker.Booking.Domain.Model.Value.HazardousDeclaration
+  ( mkHazardousDeclaration,
+  )
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
+  )
+import Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
+  ( mkTemperatureRequirement,
+    parseTemperatureUnit,
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (mkUnLocode)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (mkShipperId, unShipperId)
+
+-- US04+US05 (IT2): フォーム / API 入力から CargoType を構築するための DTO。
+-- HTML form の cargoType select + 条件付きフィールドに対応する。
+data CargoTypeInput
+  = InputGeneral
+  | -- | hazardousClass, unNumber, properShippingName
+    InputHazardous !Text !Text !Text
+  | -- | minTemperature, maxTemperature, temperatureUnit ("C" or "F")
+    InputRefrigerated !Double !Double !Text
+  deriving stock (Eq, Show)
 
 data RegisterBookingInput = RegisterBookingInput
   { inputBookingId :: !Text
@@ -33,6 +52,7 @@ data RegisterBookingInput = RegisterBookingInput
   , inputOrigin :: !Text
   , inputDestination :: !Text
   , inputDeadline :: !UTCTime
+  , inputCargoType :: !CargoTypeInput
   }
   deriving stock (Eq, Show)
 
@@ -44,12 +64,12 @@ execute ::
   m (Either DomainError BookingId)
 execute repo checker input = case validate input of
   Left e -> pure (Left e)
-  Right (bid, sid, route) -> do
+  Right (bid, sid, route, ctype) -> do
     okShipper <- exists checker sid
     if not okShipper
       then pure (Left (ShipperNotFound (unShipperId sid)))
       else do
-        let cargo = mkCargo bid sid route
+        let cargo = mkCargoWithType bid sid route ctype
         saveResult <- saveBooking repo cargo
         case saveResult of
           Left e -> pure (Left e)
@@ -60,10 +80,21 @@ execute repo checker input = case validate input of
       sid <- mkShipperId (inputShipperId i)
       origin <- mkUnLocode (inputOrigin i)
       destination <- mkUnLocode (inputDestination i)
+      ctype <- buildCargoType (inputCargoType i)
       let route =
             RouteSpecification
               { origin = origin
               , destination = destination
               , arrivalDeadline = inputDeadline i
               }
-      Right (bid, sid, route)
+      Right (bid, sid, route, ctype)
+
+    buildCargoType :: CargoTypeInput -> Either DomainError CargoType
+    buildCargoType InputGeneral = Right General
+    buildCargoType (InputHazardous cls un name) = do
+      decl <- mkHazardousDeclaration cls un name
+      Right (Hazardous decl)
+    buildCargoType (InputRefrigerated lo hi unitText) = do
+      unit <- parseTemperatureUnit unitText
+      req <- mkTemperatureRequirement lo hi unit
+      Right (Refrigerated req)
