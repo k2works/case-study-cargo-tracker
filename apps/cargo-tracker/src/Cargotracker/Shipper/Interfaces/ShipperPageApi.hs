@@ -26,6 +26,9 @@ import Servant.HTML.Lucid (HTML)
 import Web.FormUrlEncoded (FromForm)
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Infrastructure.IdGenerator
+  ( generateShipperIdText,
+  )
 import Cargotracker.Shipper.Application.Ports
   ( ShipperRepository (..),
   )
@@ -92,15 +95,20 @@ handlerPost ::
   ShipperRepository IO ->
   ShipperFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerPost repo req = case toInput req of
-  Left e -> redirectErr ("/shippers/new?error=" <> T.pack (show e))
-  Right input -> do
-    result <- liftIO (execute repo input)
-    case result of
-      Right _ -> pure (addHeader ("/shippers/" <> shipperId req) NoContent)
-      Left (ConcurrentModification _) ->
-        redirectErr "/shippers/new?error=duplicate-email"
-      Left e -> redirectErr ("/shippers/new?error=" <> T.pack (show e))
+-- T-07 (IT2): ID はクライアントの入力を信頼せずサーバ側で自動採番する。
+-- 業務 UI でのフィールドは廃止し、確定値は本ハンドラで生成する。
+handlerPost repo req = do
+  generatedId <- liftIO generateShipperIdText
+  let reqWithId = req {shipperId = generatedId}
+  case toInput reqWithId of
+    Left e -> redirectErr ("/shippers/new?error=" <> T.pack (show e))
+    Right input -> do
+      result <- liftIO (execute repo input)
+      case result of
+        Right _ -> pure (addHeader ("/shippers/" <> generatedId) NoContent)
+        Left (ConcurrentModification _) ->
+          redirectErr "/shippers/new?error=duplicate-email"
+        Left e -> redirectErr ("/shippers/new?error=" <> T.pack (show e))
   where
     redirectErr :: Text -> Handler a
     redirectErr loc =

@@ -60,6 +60,7 @@ dependencies:
 - lucid >= 2.11
 - servant-lucid >= 0.9
 - http-api-data >= 0.6
+- random >= 1.2
 
 library:
   source-dirs: src
@@ -93,6 +94,7 @@ library:
   - Cargotracker.Estimation.Application.Ports
   - Cargotracker.Estimation.Application.CreateEstimateCommand
   - Cargotracker.Estimation.Infrastructure.PostgresEstimateRepository
+  - Cargotracker.Shared.Infrastructure.IdGenerator
   - Cargotracker.Routing.Domain.Model.Voyage
   - Cargotracker.Routing.Domain.Model.Value.VoyageNumber
   - Cargotracker.Routing.Domain.Model.Value.CarrierMovement

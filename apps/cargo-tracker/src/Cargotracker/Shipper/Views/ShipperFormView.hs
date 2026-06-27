@@ -24,17 +24,11 @@ shipperFormPage mError = pageLayout "荷主登録 - Cargo Tracker" $ do
         Just msg -> flashAlert FlashDanger msg
         Nothing -> mempty
       form_ [action_ "/shippers/new", method_ "post"] $ do
-        div_ [class_ "mb-3"] $ do
-          label_ [for_ "shipperId", class_ "form-label"] "荷主 ID (SHP-XXXXXX)"
-          input_
-            [ type_ "text"
-            , id_ "shipperId"
-            , name_ "shipperId"
-            , class_ "form-control"
-            , required_ "required"
-            , pattern_ "SHP-[A-Z0-9]{6}"
-            , placeholder_ "SHP-A1B2C3"
-            ]
+        -- T-07 (IT2): 荷主 ID はサーバ側で自動採番。ハンドラが無視するため
+        -- フォームから手入力フィールドを撤去 (誤入力防止)。
+        p_
+          [class_ "text-muted small mb-3"]
+          "荷主 ID (SHP-XXXXXX) は登録時に自動採番されます。"
         div_ [class_ "mb-3"] $ do
           label_ [for_ "name", class_ "form-label"] "氏名 / 社名 (255 文字以内)"
           input_

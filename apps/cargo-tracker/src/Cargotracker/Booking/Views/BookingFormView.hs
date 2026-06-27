@@ -46,19 +46,15 @@ bookingFormPage mError = pageLayout "貨物予約登録 - Cargo Tracker" $ do
         Just msg -> flashAlert FlashDanger msg
         Nothing -> mempty
       form_ [action_ "/bookings/new", method_ "post"] $ do
+        -- T-07 (IT2): 予約 ID はサーバ側で自動採番。手入力フィールドは廃止する。
+        p_
+          [class_ "text-muted small mb-3"]
+          "予約 ID (BK-XXXXXX) は登録時に自動採番されます。"
+        -- Servant の FromForm が bookingId フィールドを要求するため、
+        -- hidden で空値を送る (ハンドラ側で自動採番値に上書き)。
+        input_ [type_ "hidden", name_ "bookingId", value_ ""]
         div_ [class_ "mb-3"] $ do
-          label_ [for_ "bookingId", class_ "form-label"] "予約 ID (BK-XXXXXX)"
-          input_
-            [ type_ "text"
-            , id_ "bookingId"
-            , name_ "bookingId"
-            , class_ "form-control"
-            , required_ "required"
-            , pattern_ "BK-[A-Z0-9]{6}"
-            , placeholder_ "BK-A1B2C3"
-            ]
-        div_ [class_ "mb-3"] $ do
-          label_ [for_ "shipperId", class_ "form-label"] "荷主 ID (SHP-XXXXXX、要事前登録)"
+          label_ [for_ "shipperId", class_ "form-label"] "荷主 ID (検索で選択)"
           input_
             [ type_ "text"
             , id_ "shipperId"

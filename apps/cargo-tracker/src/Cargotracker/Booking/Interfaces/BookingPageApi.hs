@@ -48,6 +48,9 @@ import Cargotracker.Booking.Views.BookingShowView
     bookingShowPage,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Infrastructure.IdGenerator
+  ( generateBookingIdText,
+  )
 
 data BookingFormRequest = BookingFormRequest
   { bookingId :: !Text
@@ -103,12 +106,15 @@ handlerPost ::
   ShipperExistenceChecker IO ->
   BookingFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
+-- T-07 (IT2): BookingId はサーバ側で自動採番する。クライアントから
+-- 送られた bookingId は無視する。
 handlerPost repo checker req = case parseDeadline (deadline req) of
   Nothing -> redirectErr "/bookings/new?error=deadline-format"
   Just dt -> do
+    generatedBid <- liftIO generateBookingIdText
     let input =
           RegisterBookingInput
-            { inputBookingId = bookingId req
+            { inputBookingId = generatedBid
             , inputShipperId = shipperId req
             , inputOrigin = origin req
             , inputDestination = destination req
@@ -119,7 +125,7 @@ handlerPost repo checker req = case parseDeadline (deadline req) of
             }
     result <- liftIO (execute repo checker input)
     case result of
-      Right _ -> pure (addHeader ("/bookings/" <> bookingId req) NoContent)
+      Right _ -> pure (addHeader ("/bookings/" <> generatedBid) NoContent)
       Left (ShipperNotFound _) -> redirectErr "/bookings/new?error=shipper-not-found"
       Left e -> redirectErr ("/bookings/new?error=" <> T.pack (show e))
   where

@@ -11,9 +11,11 @@ module Booking.Interfaces.BookingPageApiSpec (spec) where
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.IORef (modifyIORef', newIORef)
+import Network.HTTP.Types.Header (Header)
 import Network.Wai.Test (simpleBody)
 import Test.Hspec
 import Test.Hspec.Wai
+import Test.Hspec.Wai.Matcher (MatchHeader (..))
 
 import Cargotracker.Booking.Application.Ports
   ( BookingRepository (..),
@@ -33,6 +35,14 @@ import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Network.Wai (Application)
+
+-- T-07 (IT2): サーバ採番された ID を含む Location の接頭辞一致検証
+matchLocationPrefix :: BS.ByteString -> MatchHeader
+matchLocationPrefix prefix = MatchHeader $ \hs _ ->
+  case lookup "Location" (hs :: [Header]) of
+    Just v | prefix `BS.isPrefixOf` v -> Nothing
+    Just v -> Just ("Location does not start with " <> show prefix <> ": got " <> show v)
+    Nothing -> Just "missing Location header"
 
 makeRepo :: IO (BookingRepository IO)
 makeRepo = do
@@ -94,14 +104,14 @@ spec :: Spec
 spec = do
   describe "POST /bookings/new (T-03 PRG / 荷主あり)" $
     with (mkApp checkerYes) $ do
-      it "正常系は 303 を返し Location が /bookings/:bookingId を指す" $
+      it "正常系は 303 を返し Location が /bookings/BK-... を指す (T-07 自動採番)" $
         request
           "POST"
           "/bookings/new"
           [("Content-Type", "application/x-www-form-urlencoded")]
-          "bookingId=BK-A1B2C3&shipperId=SHP-X1Y2Z3&origin=JPTYO&destination=USNYC&deadline=2026-12-31T00%3A00"
+          "bookingId=IGNORED&shipperId=SHP-X1Y2Z3&origin=JPTYO&destination=USNYC&deadline=2026-12-31T00%3A00"
           `shouldRespondWith` 303
-            { matchHeaders = ["Location" <:> "/bookings/BK-A1B2C3"]
+            { matchHeaders = [matchLocationPrefix "/bookings/BK-"]
             }
 
       it "期限フォーマット不正は 303 + Location=/bookings/new?error=deadline-format" $

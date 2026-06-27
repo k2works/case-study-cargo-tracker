@@ -8,13 +8,24 @@ IT1 では PRG が実装されていたがテストが皆無 (リロード二重
 -}
 module Shipper.Interfaces.ShipperPageApiSpec (spec) where
 
+import qualified Data.ByteString as BS
 import Data.IORef (modifyIORef', newIORef, readIORef)
+import Network.HTTP.Types.Header (Header)
 import Test.Hspec
 import Test.Hspec.Wai
+import Test.Hspec.Wai.Matcher (MatchHeader (..))
 
 import Cargotracker.Shipper.Application.Ports (ShipperRepository (..))
 import Cargotracker.Shipper.Domain.Model.Shipper (Shipper)
 import Cargotracker.Shipper.Interfaces.ShipperPageApi (shipperPageApp)
+
+-- T-07 (IT2): サーバ採番された ID を含む Location ヘッダの「接頭辞一致」を検証する
+matchLocationPrefix :: BS.ByteString -> MatchHeader
+matchLocationPrefix prefix = MatchHeader $ \hs _ ->
+  case lookup "Location" (hs :: [Header]) of
+    Just v | prefix `BS.isPrefixOf` v -> Nothing
+    Just v -> Just ("Location does not start with " <> show prefix <> ": got " <> show v)
+    Nothing -> Just "missing Location header"
 
 makeRepo :: IO (ShipperRepository IO)
 makeRepo = do
@@ -34,14 +45,14 @@ makeRepo = do
 spec :: Spec
 spec = with (fmap shipperPageApp makeRepo) $ do
   describe "POST /shippers/new (T-03 PRG)" $ do
-    it "正常系は 303 を返し Location が /shippers/:id を指す" $
+    it "正常系は 303 を返し Location が /shippers/SHP-... を指す (T-07 自動採番)" $
       request
         "POST"
         "/shippers/new"
         [("Content-Type", "application/x-www-form-urlencoded")]
-        "shipperId=SHP-ABC123&name=Alice&email=alice%40example.com&address=Tokyo&kind=individual"
+        "shipperId=IGNORED&name=Alice&email=alice%40example.com&address=Tokyo&kind=individual"
         `shouldRespondWith` 303
-          { matchHeaders = ["Location" <:> "/shippers/SHP-ABC123"]
+          { matchHeaders = [matchLocationPrefix "/shippers/SHP-"]
           }
 
     it "種別不正でも 303 を返し Location が /shippers/new?error=... を指す" $ do
