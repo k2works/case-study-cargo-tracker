@@ -9,10 +9,10 @@ postgresql-simple を直接利用する。IT1 段階では単一テーブル操�
 - shipper (id BIGSERIAL PK, shipper_id UK, email UK,
            shipper_kind, corporate_number?, contract_rank?, version, ...)
 
-IT1 注記:
-- スキーマには `name` 列があるが Domain の Shipper には name フィールドが
-  ないため、プレースホルダとして email を name 列にも書き込む。
-  IT2 で Domain と UI に name を導入したら正しい値に置き換える。
+IT2 (T-09) 反映:
+- IT1 では `name` 列に email を placeholder として書き込んでいた負債を解消し、
+  Domain `Shipper.shipperName` の値を `name` 列に書き出すように変更。
+- SELECT 文も `name` 列を取得し `ShipperName` で復元する。
 - 永続化からの復元は値オブジェクトのコンストラクタを直接使う (スマート
   コンストラクタを通さない)。DB CHECK 制約と挿入時のバリデーションで
   不変条件が保たれている前提。
@@ -41,6 +41,7 @@ import Cargotracker.Shipper.Domain.Model.Value.ContactEmail
   ( ContactEmail (..),
   )
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName (..))
 
 newPostgresShipperRepository :: Connection -> ShipperRepository IO
 newPostgresShipperRepository conn =
@@ -56,13 +57,13 @@ findByShipperId conn sid = do
   rows <-
     query
       conn
-      "SELECT shipper_id, email, address, shipper_kind, corporate_number, contract_rank \
+      "SELECT shipper_id, name, email, address, shipper_kind, corporate_number, contract_rank \
       \ FROM shipper WHERE shipper_id = ? LIMIT 1"
       (Only sid) ::
-      IO [(Text, Text, Text, Text, Maybe Text, Maybe Text)]
+      IO [(Text, Text, Text, Text, Text, Maybe Text, Maybe Text)]
   case rows of
-    [(sidV, em, addr, kindText, mCn, mRank)] ->
-      pure (toShipper sidV em addr kindText mCn mRank)
+    [(sidV, nameV, em, addr, kindText, mCn, mRank)] ->
+      pure (toShipper sidV nameV em addr kindText mCn mRank)
     _ -> pure Nothing
 
 searchShippers :: Connection -> Text -> IO [Shipper]
@@ -71,15 +72,15 @@ searchShippers conn q = do
   rows <-
     query
       conn
-      "SELECT shipper_id, email, address, shipper_kind, corporate_number, contract_rank \
+      "SELECT shipper_id, name, email, address, shipper_kind, corporate_number, contract_rank \
       \ FROM shipper WHERE shipper_id ILIKE ? OR email ILIKE ? \
       \ ORDER BY shipper_id LIMIT 10"
       (pat, pat) ::
-      IO [(Text, Text, Text, Text, Maybe Text, Maybe Text)]
+      IO [(Text, Text, Text, Text, Text, Maybe Text, Maybe Text)]
   pure
     [ s
-    | (sidV, em, addr, kindText, mCn, mRank) <- rows
-    , Just s <- [toShipper sidV em addr kindText mCn mRank]
+    | (sidV, nameV, em, addr, kindText, mCn, mRank) <- rows
+    , Just s <- [toShipper sidV nameV em addr kindText mCn mRank]
     ]
 
 findByEmail :: Connection -> Text -> IO (Maybe Shipper)
@@ -87,21 +88,30 @@ findByEmail conn email = do
   rows <-
     query
       conn
-      "SELECT shipper_id, email, address, shipper_kind, corporate_number, contract_rank \
+      "SELECT shipper_id, name, email, address, shipper_kind, corporate_number, contract_rank \
       \ FROM shipper WHERE email = ? LIMIT 1"
       (Only email) ::
-      IO [(Text, Text, Text, Text, Maybe Text, Maybe Text)]
+      IO [(Text, Text, Text, Text, Text, Maybe Text, Maybe Text)]
   case rows of
-    [(sid, em, addr, kindText, mCn, mRank)] ->
-      pure (toShipper sid em addr kindText mCn mRank)
+    [(sid, nameV, em, addr, kindText, mCn, mRank)] ->
+      pure (toShipper sid nameV em addr kindText mCn mRank)
     _ -> pure Nothing
 
-toShipper :: Text -> Text -> Text -> Text -> Maybe Text -> Maybe Text -> Maybe Shipper
-toShipper sid em addr kindText mCn mRank = do
+toShipper ::
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Shipper
+toShipper sid nameV em addr kindText mCn mRank = do
   kind <- parseKind kindText mCn mRank
   Just
     Shipper
       { shipperId = ShipperId sid
+      , shipperName = ShipperName nameV
       , shipperEmail = ContactEmail em
       , shipperAddress = Address addr
       , shipperKind = kind
@@ -126,6 +136,7 @@ saveShipper conn s = do
           ("Corporate", Just cn, Just (rankToText rank))
       ContactEmail emailValue = shipperEmail s
       ShipperId sidValue = shipperId s
+      ShipperName nameValue = shipperName s
       Address addrValue = shipperAddress s
   _ <-
     execute
@@ -133,7 +144,7 @@ saveShipper conn s = do
       "INSERT INTO shipper (shipper_id, name, email, address, shipper_kind, corporate_number, contract_rank, version) \
       \ VALUES (?, ?, ?, ?, ?, ?, ?, 1)"
       ( sidValue
-      , emailValue -- IT1 プレースホルダ
+      , nameValue -- T-09 (IT2): Domain の正しい name を書き出す
       , emailValue
       , addrValue
       , kindText

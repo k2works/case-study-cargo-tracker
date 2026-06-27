@@ -43,6 +43,7 @@ import Cargotracker.Shipper.Domain.Model.Shipper (ContractRank (..))
 
 data RegisterShipperRequest = RegisterShipperRequest
   { shipperId :: !Text
+  , name :: !Text
   , email :: !Text
   , address :: !Text
   , kind :: !Text
@@ -57,6 +58,7 @@ instance FromJSON RegisterShipperRequest where
   parseJSON = withObject "RegisterShipperRequest" $ \o ->
     RegisterShipperRequest
       <$> o .: "shipperId"
+      <*> o .: "name"
       <*> o .: "email"
       <*> o .: "address"
       <*> o .: "kind"
@@ -103,6 +105,7 @@ toInput r = case kind r of
     Right
       RegisterShipperInput
         { inputId = shipperId r
+        , inputName = name r
         , inputEmail = email r
         , inputAddress = address r
         , inputKind = InputIndividual
@@ -112,6 +115,7 @@ toInput r = case kind r of
       Right
         RegisterShipperInput
           { inputId = shipperId r
+          , inputName = name r
           , inputEmail = email r
           , inputAddress = address r
           , inputKind = InputCorporate cn rank

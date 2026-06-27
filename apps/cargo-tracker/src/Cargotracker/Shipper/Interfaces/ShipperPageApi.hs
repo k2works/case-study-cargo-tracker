@@ -44,6 +44,7 @@ import Cargotracker.Shipper.Views.ShipperShowView
 
 data ShipperFormRequest = ShipperFormRequest
   { shipperId :: !Text
+  , name :: !Text
   , email :: !Text
   , address :: !Text
   , kind :: !Text
@@ -106,6 +107,7 @@ toInput r = case kind r of
     Right
       RegisterShipperInput
         { inputId = shipperId r
+        , inputName = name r
         , inputEmail = email r
         , inputAddress = address r
         , inputKind = InputIndividual
@@ -115,6 +117,7 @@ toInput r = case kind r of
       Right
         RegisterShipperInput
           { inputId = shipperId r
+          , inputName = name r
           , inputEmail = email r
           , inputAddress = address r
           , inputKind = InputCorporate cn rank

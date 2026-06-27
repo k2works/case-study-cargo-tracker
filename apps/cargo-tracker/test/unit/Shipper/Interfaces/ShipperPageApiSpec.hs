@@ -39,7 +39,7 @@ spec = with (fmap shipperPageApp makeRepo) $ do
         "POST"
         "/shippers/new"
         [("Content-Type", "application/x-www-form-urlencoded")]
-        "shipperId=SHP-ABC123&email=alice%40example.com&address=Tokyo&kind=individual"
+        "shipperId=SHP-ABC123&name=Alice&email=alice%40example.com&address=Tokyo&kind=individual"
         `shouldRespondWith` 303
           { matchHeaders = ["Location" <:> "/shippers/SHP-ABC123"]
           }
@@ -50,5 +50,5 @@ spec = with (fmap shipperPageApp makeRepo) $ do
           "POST"
           "/shippers/new"
           [("Content-Type", "application/x-www-form-urlencoded")]
-          "shipperId=SHP-ABC123&email=alice%40example.com&address=Tokyo&kind=WRONG"
+          "shipperId=SHP-ABC123&name=Alice&email=alice%40example.com&address=Tokyo&kind=WRONG"
       shouldRespondWith (pure res) 303

@@ -22,6 +22,7 @@ import Cargotracker.Shipper.Domain.Model.Shipper
 import Cargotracker.Shipper.Domain.Model.Value.Address (Address (..))
 import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (ContactEmail (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName (..))
 import Cargotracker.Shipper.Interfaces.ShipperSearchApi (shipperSearchApp)
 
 bodyContains :: BS.ByteString -> MatchBody
@@ -38,6 +39,7 @@ seedShipper :: Shipper
 seedShipper =
   mkIndividualShipper
     (ShipperId "SHP-ALICE1")
+    (ShipperName "Alice")
     (ContactEmail "alice@example.com")
     (Address "Tokyo")
 

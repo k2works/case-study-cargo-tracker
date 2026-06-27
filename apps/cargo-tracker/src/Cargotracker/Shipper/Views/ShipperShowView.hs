@@ -21,10 +21,12 @@ import Cargotracker.Shipper.Domain.Model.Value.ContactEmail
   ( ContactEmail (..),
   )
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName (..))
 
 shipperShowPage :: Shipper -> Html ()
 shipperShowPage s = pageLayout "荷主詳細 - Cargo Tracker" $ do
   let ShipperId sid = shipperId s
+      ShipperName nm = shipperName s
       ContactEmail em = shipperEmail s
       Address addr = shipperAddress s
   div_ [class_ "row justify-content-center"] $
@@ -35,6 +37,9 @@ shipperShowPage s = pageLayout "荷主詳細 - Cargo Tracker" $ do
         tr_ $ do
           th_ "荷主 ID"
           td_ (toHtml sid)
+        tr_ $ do
+          th_ "氏名 / 社名"
+          td_ (toHtml nm)
         tr_ $ do
           th_ "メール"
           td_ (toHtml em)

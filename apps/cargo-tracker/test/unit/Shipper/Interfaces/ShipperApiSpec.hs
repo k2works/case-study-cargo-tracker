@@ -48,19 +48,19 @@ testApp = shipperApp <$> makeRepo
 
 individualBody :: LBC.ByteString
 individualBody =
-  "{\"shipperId\":\"SHP-A1B2C3\",\"email\":\"alice@example.com\","
+  "{\"shipperId\":\"SHP-A1B2C3\",\"name\":\"Alice Yamada\",\"email\":\"alice@example.com\","
     <> "\"address\":\"4-2-8 Shibakoen, Minato-ku, Tokyo\",\"kind\":\"individual\"}"
 
 corporateBody :: LBC.ByteString
 corporateBody =
-  "{\"shipperId\":\"SHP-D4E5F6\",\"email\":\"corp@example.com\","
+  "{\"shipperId\":\"SHP-D4E5F6\",\"name\":\"\xe6\xa0\xaa\xe5\xbc\x8f\xe4\xbc\x9a\xe7\xa4\xbe\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a\",\"email\":\"corp@example.com\","
     <> "\"address\":\"1-1 Marunouchi, Chiyoda-ku, Tokyo\","
     <> "\"kind\":\"corporate\",\"corporateNumber\":\"1234567890123\","
     <> "\"contractRank\":\"Gold\"}"
 
 invalidIdBody :: LBC.ByteString
 invalidIdBody =
-  "{\"shipperId\":\"WRONG\",\"email\":\"x@y.z\",\"address\":\"a\",\"kind\":\"individual\"}"
+  "{\"shipperId\":\"WRONG\",\"name\":\"x\",\"email\":\"x@y.z\",\"address\":\"a\",\"kind\":\"individual\"}"
 
 spec :: Spec
 spec = with testApp $ do
@@ -82,7 +82,7 @@ spec = with testApp $ do
       _ <- request methodPost "/shippers" [("Content-Type", "application/json")] individualBody
       -- 同じメールで再登録
       let dup =
-            "{\"shipperId\":\"SHP-X9Y8Z7\",\"email\":\"alice@example.com\","
+            "{\"shipperId\":\"SHP-X9Y8Z7\",\"name\":\"Alice 2\",\"email\":\"alice@example.com\","
               <> "\"address\":\"Different Address 9-9-9\",\"kind\":\"individual\"}"
       request methodPost "/shippers" [("Content-Type", "application/json")] dup
         `shouldRespondWith` 409

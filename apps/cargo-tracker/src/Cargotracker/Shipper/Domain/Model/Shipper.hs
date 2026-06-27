@@ -21,6 +21,7 @@ import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shipper.Domain.Model.Value.Address (Address)
 import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (ContactEmail)
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId)
+import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName)
 
 newtype CorporateNumber = CorporateNumber {unCorporateNumber :: Text}
   deriving stock (Eq, Show)
@@ -38,6 +39,10 @@ data ShipperKind
 
 data Shipper = Shipper
   { shipperId :: !ShipperId
+  , shipperName :: !ShipperName
+  {- ^ T-09 (IT2): 個人荷主は氏名、法人荷主は社名を保持。
+  IT1 では Domain 未実装で email を placeholder にしていた。
+  -}
   , shipperEmail :: !ContactEmail
   , shipperAddress :: !Address
   , shipperKind :: !ShipperKind
@@ -50,10 +55,12 @@ mkCorporateNumber t
   | not (T.all isDigit t) = Left (InvalidShipperId "digits only")
   | otherwise = Right (CorporateNumber t)
 
-mkIndividualShipper :: ShipperId -> ContactEmail -> Address -> Shipper
-mkIndividualShipper sid email addr =
+mkIndividualShipper ::
+  ShipperId -> ShipperName -> ContactEmail -> Address -> Shipper
+mkIndividualShipper sid name email addr =
   Shipper
     { shipperId = sid
+    , shipperName = name
     , shipperEmail = email
     , shipperAddress = addr
     , shipperKind = Individual
@@ -61,14 +68,16 @@ mkIndividualShipper sid email addr =
 
 mkCorporateShipper ::
   ShipperId ->
+  ShipperName ->
   ContactEmail ->
   Address ->
   CorporateNumber ->
   ContractRank ->
   Shipper
-mkCorporateShipper sid email addr cn rank =
+mkCorporateShipper sid name email addr cn rank =
   Shipper
     { shipperId = sid
+    , shipperName = name
     , shipperEmail = email
     , shipperAddress = addr
     , shipperKind = Corporate cn rank

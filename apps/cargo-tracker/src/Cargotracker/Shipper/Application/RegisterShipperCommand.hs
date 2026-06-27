@@ -32,6 +32,7 @@ import Cargotracker.Shipper.Domain.Model.Shipper
 import Cargotracker.Shipper.Domain.Model.Value.Address (mkAddress)
 import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (mkContactEmail, unContactEmail)
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (mkShipperId)
+import Cargotracker.Shipper.Domain.Model.Value.ShipperName (mkShipperName)
 
 data ShipperKindInput
   = InputIndividual
@@ -40,6 +41,7 @@ data ShipperKindInput
 
 data RegisterShipperInput = RegisterShipperInput
   { inputId :: !Text
+  , inputName :: !Text
   , inputEmail :: !Text
   , inputAddress :: !Text
   , inputKind :: !ShipperKindInput
@@ -72,10 +74,11 @@ execute repo input = case buildShipper input of
     buildShipper :: RegisterShipperInput -> Either DomainError Shipper
     buildShipper i = do
       sid <- mkShipperId (inputId i)
+      name <- mkShipperName (inputName i)
       email <- mkContactEmail (inputEmail i)
       addr <- mkAddress (inputAddress i)
       case inputKind i of
-        InputIndividual -> Right (mkIndividualShipper sid email addr)
+        InputIndividual -> Right (mkIndividualShipper sid name email addr)
         InputCorporate cnText rank -> do
           cn <- mkCorporateNumber cnText
-          Right (mkCorporateShipper sid email addr cn rank)
+          Right (mkCorporateShipper sid name email addr cn rank)

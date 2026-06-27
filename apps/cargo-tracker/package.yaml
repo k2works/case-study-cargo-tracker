@@ -77,6 +77,7 @@ library:
   - Cargotracker.Shipper.Domain.Model.Value.Address
   - Cargotracker.Shipper.Domain.Model.Value.ContactEmail
   - Cargotracker.Shipper.Domain.Model.Value.ShipperId
+  - Cargotracker.Shipper.Domain.Model.Value.ShipperName
   - Cargotracker.Shared.Domain.Common.UnLocode
   - Cargotracker.Booking.Domain.Model.Cargo
   - Cargotracker.Booking.Domain.Model.Value.BookingId

@@ -26,6 +26,7 @@ import Cargotracker.Shipper.Domain.Model.Shipper
 import Cargotracker.Shipper.Domain.Model.Value.Address (Address (..))
 import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (ContactEmail (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName (..))
 import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   ( newPostgresShipperRepository,
   )
@@ -41,6 +42,7 @@ dummyIndividual :: Shipper
 dummyIndividual =
   Shipper
     { shipperId = ShipperId "SHP-Z1Y2X3"
+    , shipperName = ShipperName "Test Individual"
     , shipperEmail = testEmail1
     , shipperAddress = Address "1-1-1 Test, Tokyo"
     , shipperKind = Individual
@@ -50,6 +52,7 @@ dummyCorporate :: Shipper
 dummyCorporate =
   Shipper
     { shipperId = ShipperId "SHP-A9B8C7"
+    , shipperName = ShipperName "Test Corp Inc."
     , shipperEmail = testEmail2
     , shipperAddress = Address "2-2-2 Test, Osaka"
     , shipperKind = Corporate (CorporateNumber "9876543210123") Gold

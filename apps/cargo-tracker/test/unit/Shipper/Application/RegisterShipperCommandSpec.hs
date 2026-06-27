@@ -51,6 +51,7 @@ inputIndividual :: RegisterShipperInput
 inputIndividual =
   RegisterShipperInput
     { inputId = "SHP-A1B2C3"
+    , inputName = "山田 太郎"
     , inputEmail = "alice@example.com"
     , inputAddress = "東京都港区芝公園 4-2-8"
     , inputKind = InputIndividual
@@ -60,6 +61,7 @@ inputCorporate :: RegisterShipperInput
 inputCorporate =
   RegisterShipperInput
     { inputId = "SHP-D4E5F6"
+    , inputName = "株式会社あいうえお"
     , inputEmail = "corp@example.com"
     , inputAddress = "東京都千代田区丸の内 1-1"
     , inputKind = InputCorporate "1234567890123" Gold

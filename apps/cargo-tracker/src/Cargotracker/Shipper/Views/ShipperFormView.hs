@@ -36,6 +36,17 @@ shipperFormPage mError = pageLayout "荷主登録 - Cargo Tracker" $ do
             , placeholder_ "SHP-A1B2C3"
             ]
         div_ [class_ "mb-3"] $ do
+          label_ [for_ "name", class_ "form-label"] "氏名 / 社名 (255 文字以内)"
+          input_
+            [ type_ "text"
+            , id_ "name"
+            , name_ "name"
+            , class_ "form-control"
+            , required_ "required"
+            , maxlength_ "255"
+            , placeholder_ "山田太郎 / 株式会社あいうえお"
+            ]
+        div_ [class_ "mb-3"] $ do
           label_ [for_ "email", class_ "form-label"] "連絡先メール"
           input_
             [ type_ "email"

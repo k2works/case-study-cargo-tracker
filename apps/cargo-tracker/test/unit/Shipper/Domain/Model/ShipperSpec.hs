@@ -21,6 +21,7 @@ import Cargotracker.Shipper.Domain.Model.Shipper
 import Cargotracker.Shipper.Domain.Model.Value.Address (Address (..), mkAddress)
 import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (ContactEmail (..), mkContactEmail)
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..), mkShipperId)
+import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName (..), mkShipperName)
 
 validId :: ShipperId
 validId =
@@ -39,6 +40,12 @@ validAddress =
   case mkAddress "東京都港区芝公園 4-2-8" of
     Right a -> a
     Left _ -> error "test setup: invalid address"
+
+validName :: ShipperName
+validName =
+  case mkShipperName "山田 太郎" of
+    Right n -> n
+    Left _ -> error "test setup: invalid name"
 
 spec :: Spec
 spec = do
@@ -79,19 +86,30 @@ spec = do
       [Bronze, Silver, Gold] `shouldBe` [minBound .. maxBound]
 
   describe "mkIndividualShipper (US02)" $ do
-    it "ID/メール/住所だけで構築でき kind は Individual" $ do
-      let s = mkIndividualShipper validId validEmail validAddress
+    it "ID/氏名/メール/住所で構築でき kind は Individual" $ do
+      let s = mkIndividualShipper validId validName validEmail validAddress
       shipperId s `shouldBe` validId
+      shipperName s `shouldBe` validName
       shipperKind s `shouldBe` Individual
 
   describe "mkCorporateShipper (US03)" $ do
-    it "ID/メール/住所/法人番号/契約ランクで構築でき kind は Corporate" $ do
+    it "ID/社名/メール/住所/法人番号/契約ランクで構築でき kind は Corporate" $ do
       Right cn <- pure (mkCorporateNumber "1234567890123")
       let s =
             mkCorporateShipper
               validId
+              validName
               validEmail
               validAddress
               cn
               Gold
       shipperKind s `shouldBe` Corporate cn Gold
+
+  describe "mkShipperName (T-09)" $ do
+    it "空文字は Left" $
+      mkShipperName "" `shouldBe` Left (InvalidShipperId "shipper name must not be empty")
+    it "256 文字超は Left" $
+      mkShipperName (T.replicate 256 "a")
+        `shouldBe` Left (InvalidShipperId "shipper name too long (max 255)")
+    it "前後空白は trim される" $
+      mkShipperName "  山田 太郎  " `shouldBe` Right (ShipperName "山田 太郎")
