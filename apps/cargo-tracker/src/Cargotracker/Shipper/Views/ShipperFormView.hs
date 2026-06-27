@@ -29,6 +29,9 @@ shipperFormPage mError = pageLayout "荷主登録 - Cargo Tracker" $ do
         p_
           [class_ "text-muted small mb-3"]
           "荷主 ID (SHP-XXXXXX) は登録時に自動採番されます。"
+        -- Servant FromForm が shipperId フィールドを要求するため、
+        -- hidden で空値を送る (ハンドラ側で自動採番値に上書きされる)。
+        input_ [type_ "hidden", name_ "shipperId", value_ ""]
         div_ [class_ "mb-3"] $ do
           label_ [for_ "name", class_ "form-label"] "氏名 / 社名 (255 文字以内)"
           input_

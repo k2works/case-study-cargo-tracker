@@ -34,8 +34,18 @@ CREATE TABLE public.cargo (
     version bigint DEFAULT 1 NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    cargo_type character varying(20) DEFAULT 'GENERAL'::character varying NOT NULL,
+    hazardous_class character varying(10),
+    un_number character varying(10),
+    proper_shipping_name text,
+    min_temperature numeric,
+    max_temperature numeric,
+    temperature_unit character varying(1),
     CONSTRAINT cargo_booking_id_format CHECK (((booking_id)::text ~ '^BK-[A-Z0-9]{6}$'::text)),
-    CONSTRAINT cargo_booking_status_check CHECK (((booking_status)::text = ANY ((ARRAY['Draft'::character varying, 'Submitted'::character varying, 'RouteProposed'::character varying, 'Confirmed'::character varying, 'Closed'::character varying])::text[])))
+    CONSTRAINT cargo_booking_status_check CHECK (((booking_status)::text = ANY ((ARRAY['Draft'::character varying, 'Submitted'::character varying, 'RouteProposed'::character varying, 'Confirmed'::character varying, 'Closed'::character varying])::text[]))),
+    CONSTRAINT cargo_hazardous_fields CHECK (((((cargo_type)::text = 'HAZARDOUS'::text) AND (hazardous_class IS NOT NULL) AND (un_number IS NOT NULL) AND (proper_shipping_name IS NOT NULL)) OR ((cargo_type)::text <> 'HAZARDOUS'::text))),
+    CONSTRAINT cargo_refrigerated_fields CHECK (((((cargo_type)::text = 'REFRIGERATED'::text) AND (min_temperature IS NOT NULL) AND (max_temperature IS NOT NULL) AND (temperature_unit IS NOT NULL) AND ((temperature_unit)::text = ANY ((ARRAY['C'::character varying, 'F'::character varying])::text[]))) OR ((cargo_type)::text <> 'REFRIGERATED'::text))),
+    CONSTRAINT cargo_type_check CHECK (((cargo_type)::text = ANY ((ARRAY['GENERAL'::character varying, 'HAZARDOUS'::character varying, 'REFRIGERATED'::character varying])::text[])))
 );
 
 
@@ -95,6 +105,48 @@ ALTER SEQUENCE public.carrier_movement_id_seq OWNED BY public.carrier_movement.i
 
 
 --
+-- Name: estimate; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.estimate (
+    id bigint NOT NULL,
+    estimate_id uuid NOT NULL,
+    shipper_id bigint NOT NULL,
+    origin_unlocode character varying(5) NOT NULL,
+    destination_unlocode character varying(5) NOT NULL,
+    deadline timestamp with time zone NOT NULL,
+    cargo_type character varying(20) NOT NULL,
+    weight_kg numeric NOT NULL,
+    estimate_status character varying(20) NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT estimate_cargo_type_check CHECK (((cargo_type)::text = ANY ((ARRAY['GENERAL'::character varying, 'HAZARDOUS'::character varying, 'REFRIGERATED'::character varying])::text[]))),
+    CONSTRAINT estimate_status_check CHECK (((estimate_status)::text = ANY ((ARRAY['Created'::character varying, 'Expired'::character varying])::text[]))),
+    CONSTRAINT estimate_weight_positive CHECK ((weight_kg > (0)::numeric))
+);
+
+
+--
+-- Name: estimate_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.estimate_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: estimate_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.estimate_id_seq OWNED BY public.estimate.id;
+
+
+--
 -- Name: location; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -105,6 +157,43 @@ CREATE TABLE public.location (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT location_unlocode_format CHECK (((unlocode)::text ~ '^[A-Z]{2}[A-Z0-9]{3}$'::text))
 );
+
+
+--
+-- Name: route_candidate; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.route_candidate (
+    id bigint NOT NULL,
+    estimate_id bigint NOT NULL,
+    rank integer NOT NULL,
+    transit_days integer NOT NULL,
+    estimated_cost numeric NOT NULL,
+    voyage_numbers text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT route_candidate_cost_nonneg CHECK ((estimated_cost >= (0)::numeric)),
+    CONSTRAINT route_candidate_rank_nonneg CHECK ((rank >= 0)),
+    CONSTRAINT route_candidate_transit_positive CHECK ((transit_days >= 1))
+);
+
+
+--
+-- Name: route_candidate_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.route_candidate_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: route_candidate_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.route_candidate_id_seq OWNED BY public.route_candidate.id;
 
 
 --
@@ -271,6 +360,20 @@ ALTER TABLE ONLY public.carrier_movement ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: estimate id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estimate ALTER COLUMN id SET DEFAULT nextval('public.estimate_id_seq'::regclass);
+
+
+--
+-- Name: route_candidate id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.route_candidate ALTER COLUMN id SET DEFAULT nextval('public.route_candidate_id_seq'::regclass);
+
+
+--
 -- Name: shipper id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -331,11 +434,43 @@ ALTER TABLE ONLY public.carrier_movement
 
 
 --
+-- Name: estimate estimate_estimate_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estimate
+    ADD CONSTRAINT estimate_estimate_id_key UNIQUE (estimate_id);
+
+
+--
+-- Name: estimate estimate_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estimate
+    ADD CONSTRAINT estimate_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: location location_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.location
     ADD CONSTRAINT location_pkey PRIMARY KEY (unlocode);
+
+
+--
+-- Name: route_candidate route_candidate_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.route_candidate
+    ADD CONSTRAINT route_candidate_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: route_candidate route_candidate_rank_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.route_candidate
+    ADD CONSTRAINT route_candidate_rank_unique UNIQUE (estimate_id, rank);
 
 
 --
@@ -434,6 +569,13 @@ CREATE INDEX cargo_booking_status_idx ON public.cargo USING btree (booking_statu
 
 
 --
+-- Name: cargo_cargo_type_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX cargo_cargo_type_idx ON public.cargo USING btree (cargo_type);
+
+
+--
 -- Name: cargo_shipper_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -445,6 +587,27 @@ CREATE INDEX cargo_shipper_id_idx ON public.cargo USING btree (shipper_id);
 --
 
 CREATE INDEX carrier_movement_voyage_id_idx ON public.carrier_movement USING btree (voyage_id);
+
+
+--
+-- Name: estimate_shipper_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX estimate_shipper_id_idx ON public.estimate USING btree (shipper_id);
+
+
+--
+-- Name: estimate_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX estimate_status_idx ON public.estimate USING btree (estimate_status);
+
+
+--
+-- Name: route_candidate_estimate_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX route_candidate_estimate_id_idx ON public.route_candidate USING btree (estimate_id);
 
 
 --
@@ -517,6 +680,38 @@ ALTER TABLE ONLY public.carrier_movement
 
 
 --
+-- Name: estimate estimate_destination_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estimate
+    ADD CONSTRAINT estimate_destination_unlocode_fkey FOREIGN KEY (destination_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: estimate estimate_origin_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estimate
+    ADD CONSTRAINT estimate_origin_unlocode_fkey FOREIGN KEY (origin_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: estimate estimate_shipper_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estimate
+    ADD CONSTRAINT estimate_shipper_id_fkey FOREIGN KEY (shipper_id) REFERENCES public.shipper(id);
+
+
+--
+-- Name: route_candidate route_candidate_estimate_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.route_candidate
+    ADD CONSTRAINT route_candidate_estimate_id_fkey FOREIGN KEY (estimate_id) REFERENCES public.estimate(id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -541,4 +736,7 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260706120200'),
     ('20260706120300'),
     ('20260706120400'),
-    ('20260706120500');
+    ('20260706120500'),
+    ('20260720100000'),
+    ('20260720100100'),
+    ('20260720100200');

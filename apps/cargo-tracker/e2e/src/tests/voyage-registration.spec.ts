@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('US24 航海登録', () => {
-  test('多区間 (JPTYO → HKHKG → USNYC) の航海を登録できる', async ({ page }) => {
+// IT2 対応:
+// - voyageNumber はユーザ入力のまま (Voyage は IT2 で自動採番化していない)
+// - PRG: POST /voyages/new → 303 → GET /voyages/:voyageNumber
+
+test.describe('US24 航海登録 (IT2 PRG 遷移)', () => {
+  test('多区間 (JPTYO → HKHKG → USNYC) を登録すると詳細画面に遷移する', async ({ page }) => {
     await page.goto('/voyages/new');
     await expect(page.locator('h1')).toContainText('航海');
 
@@ -20,7 +24,36 @@ test.describe('US24 航海登録', () => {
 
     await page.locator('button[type="submit"]').click();
 
-    await expect(page.locator('h1')).toContainText('航海登録結果');
-    await expect(page.locator('.alert-success')).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/voyages/${voyageNumber}$`));
+    await expect(page.locator('h1')).toContainText('航海詳細');
+  });
+
+  test('時刻フォーマット不正は /voyages/new?error= に PRG リダイレクトしフラッシュ表示', async ({ page }) => {
+    await page.goto('/voyages/new');
+
+    const voyageNumber = `V${Date.now().toString().slice(-7)}`;
+    await page.locator('#voyageNumber').fill(voyageNumber);
+    // HTML5 required + datetime-local バリデーションを迂回するため
+    // 強制的に value を不正文字列にする
+    await page.locator('select[name="movement1Departure"]').selectOption('JPTYO');
+    await page.locator('select[name="movement1Arrival"]').selectOption('USNYC');
+    await page
+      .locator('input[name="movement1DepartureTime"]')
+      .evaluate((el: HTMLInputElement) => {
+        el.removeAttribute('required');
+        el.type = 'text';
+        el.value = 'NOT-A-DATE';
+      });
+    await page
+      .locator('input[name="movement1ArrivalTime"]')
+      .evaluate((el: HTMLInputElement) => {
+        el.removeAttribute('required');
+        el.type = 'text';
+        el.value = 'NOT-A-DATE';
+      });
+
+    await page.locator('button[type="submit"]').click();
+
+    await expect(page).toHaveURL(/\/voyages\/new\?error=/);
   });
 });
