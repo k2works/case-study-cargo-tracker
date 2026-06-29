@@ -52,4 +52,10 @@ data DomainError
     InvalidSearchPeriod !UTCTime !UTCTime
   | -- | 航海検索の出発地と目的地が同一 (UnLocode を Text として保持)
     SameOriginDestination !Text
+  | -- | HS コードが 6-10 桁の数字でない (US27)
+    InvalidHsCode !Text
+  | -- | 通関申告ステータス文字列が不正 (US27)
+    InvalidDeclarationStatus !Text
+  | -- | 通関業者名が不正 (US27)
+    InvalidBrokerName !Text
   deriving stock (Eq, Show)

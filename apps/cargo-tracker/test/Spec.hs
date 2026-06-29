@@ -14,6 +14,7 @@ import qualified Booking.Application.HandOverToRouterCommandSpec
 import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Application.SubmitBookingCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
+import qualified Booking.Domain.Model.CustomsDeclarationSpec
 import qualified Booking.Domain.Model.Value.CargoTypeSpec
 import qualified Booking.Infrastructure.PostgresBookingRepositorySpec
 import qualified Booking.Interfaces.BookingApiSpec
@@ -109,6 +110,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Model.Value.CargoType"
     Booking.Domain.Model.Value.CargoTypeSpec.spec
+
+  describe
+    "Cargotracker.Booking.Domain.Model.CustomsDeclaration"
+    Booking.Domain.Model.CustomsDeclarationSpec.spec
 
   describe
     "Cargotracker.Estimation.Domain.Model.Estimate"

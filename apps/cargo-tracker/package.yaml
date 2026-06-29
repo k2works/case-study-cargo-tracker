@@ -88,6 +88,9 @@ library:
   - Cargotracker.Booking.Domain.Model.Value.CargoType
   - Cargotracker.Booking.Domain.Model.Value.HazardousDeclaration
   - Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
+  - Cargotracker.Booking.Domain.Model.Value.HsCode
+  - Cargotracker.Booking.Domain.Model.State.DeclarationStatus
+  - Cargotracker.Booking.Domain.Model.CustomsDeclaration
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate
