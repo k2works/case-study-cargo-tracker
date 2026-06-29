@@ -143,7 +143,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     ["shippers", "search"] -> shipperSearchApp shipperRepo req respond
     ["voyages", "new", "movement-row"] -> voyageMovementRowApp req respond
     "shippers" : _ -> shipperPageApp shipperRepo req respond
-    "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsRepo req respond
+    "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsRepo voyageRepo req respond
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     _ ->

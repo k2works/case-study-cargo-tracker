@@ -53,7 +53,9 @@ import Cargotracker.Booking.Application.SubmitBookingCommand
   ( SubmitBookingInput (..),
   )
 import qualified Cargotracker.Booking.Application.SubmitBookingCommand as Submit
+import Cargotracker.Booking.Domain.Model.Cargo (cargoRouteSpec)
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
+import qualified Cargotracker.Booking.Domain.Model.Value.RouteSpecification as RouteSpec
 import Cargotracker.Booking.Views.BookingFormView
   ( bookingFormPage,
     cargoTypeRowFragment,
@@ -64,6 +66,15 @@ import Cargotracker.Booking.Views.BookingShowView
     bookingShowPage,
   )
 import Cargotracker.Booking.Views.CustomsSectionView (customsEditPage)
+import Cargotracker.Routing.Application.ComputeRouteCandidatesQuery
+  ( ComputeRouteCandidatesInput (..),
+  )
+import qualified Cargotracker.Routing.Application.ComputeRouteCandidatesQuery as ComputeRoutes
+import Cargotracker.Routing.Application.Ports (VoyageRepository)
+import Cargotracker.Routing.Views.RouteCandidatesView
+  ( routeCandidatesNotFoundPage,
+    routeCandidatesPage,
+  )
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shared.Infrastructure.IdGenerator
   ( generateBookingIdText,
@@ -126,14 +137,18 @@ type BookingPageApi =
              :> "customs"
              :> ReqBody '[FormUrlEncoded] CustomsFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "bookingId" Text
+             :> "routes"
+             :> Get '[HTML] (Html ())
        )
 
 bookingPageApp ::
   BookingRepository IO ->
   ShipperExistenceChecker IO ->
   CustomsDeclarationRepository IO ->
+  VoyageRepository IO ->
   Application
-bookingPageApp repo checker customsRepo =
+bookingPageApp repo checker customsRepo voyageRepo =
   serve
     (Proxy :: Proxy BookingPageApi)
     ( handlerList repo
@@ -145,7 +160,34 @@ bookingPageApp repo checker customsRepo =
         :<|> handlerSubmit repo
         :<|> handlerCustomsEdit repo customsRepo
         :<|> handlerCustomsAttach repo customsRepo
+        :<|> handlerRoutes repo voyageRepo
     )
+
+{- | US08a (IT3): GET /bookings/:bookingId/routes
+予約から RouteSpecification を取り出して経路候補を算出する。
+予約が存在しない場合は not-found ページを 200 で返す。
+-}
+handlerRoutes ::
+  BookingRepository IO ->
+  VoyageRepository IO ->
+  Text ->
+  Handler (Html ())
+handlerRoutes repo voyageRepo bid = do
+  m <- liftIO (findCargoById repo (BookingId bid))
+  case m of
+    Nothing -> pure routeCandidatesNotFoundPage
+    Just cargo -> do
+      let spec = cargoRouteSpec cargo
+          input =
+            ComputeRouteCandidatesInput
+              { inputOrigin = RouteSpec.origin spec
+              , inputDestination = RouteSpec.destination spec
+              , inputDeadline = RouteSpec.arrivalDeadline spec
+              }
+      res <- liftIO (ComputeRoutes.execute voyageRepo input)
+      case res of
+        Left _ -> pure (routeCandidatesPage bid [])
+        Right candidates -> pure (routeCandidatesPage bid candidates)
 
 -- U-02 (IT3): htmx 部分 HTML を返す。cargoType=Hazardous なら危険物
 -- フィールド、Refrigerated なら冷凍フィールドを返す。General/未指定は空。

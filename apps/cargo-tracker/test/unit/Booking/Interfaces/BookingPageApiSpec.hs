@@ -34,6 +34,7 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
   )
 import Cargotracker.Booking.Interfaces.BookingPageApi (bookingPageApp)
+import Cargotracker.Routing.Application.Ports (VoyageRepository (..))
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
@@ -69,13 +70,22 @@ checkerNo = ShipperExistenceChecker {exists = \_ -> pure False}
 mkApp :: ShipperExistenceChecker IO -> IO Application
 mkApp ch = do
   repo <- makeRepo
-  pure (bookingPageApp repo ch stubCustomsRepo)
+  pure (bookingPageApp repo ch stubCustomsRepo stubVoyageRepo)
 
 stubCustomsRepo :: CustomsDeclarationRepository IO
 stubCustomsRepo =
   CustomsDeclarationRepository
     { upsertCustomsDeclaration = \_ -> pure (Right ())
     , findByBookingId = \_ -> pure Nothing
+    }
+
+stubVoyageRepo :: VoyageRepository IO
+stubVoyageRepo =
+  VoyageRepository
+    { findByVoyageNumber = \_ -> pure Nothing
+    , saveVoyage = \_ -> pure ()
+    , updateVoyage = \_ -> pure (Right ())
+    , findAllVoyages = pure []
     }
 
 -- US06 (IT2): /handover テスト用に、特定の Cargo を find で返し、
@@ -110,7 +120,7 @@ mkHandoverApp seed = do
           , updateBooking = \_ -> pure (Right ())
           , findAllCargos = pure []
           }
-  pure (bookingPageApp repo checkerYes stubCustomsRepo)
+  pure (bookingPageApp repo checkerYes stubCustomsRepo stubVoyageRepo)
 
 spec :: Spec
 spec = do
@@ -203,6 +213,7 @@ spec = do
               )
               checkerYes
               customsRepoStub
+              stubVoyageRepo
 
     describe "GET /bookings/:id/customs/edit" $ do
       with (mkCustomsApp (Just cargoStub)) $
@@ -303,3 +314,26 @@ spec = do
               { matchHeaders =
                   ["Location" <:> "/bookings/new?error=hazardous-fields-missing"]
               }
+
+  describe "US08a: GET /bookings/:id/routes" $ do
+    let mkRoutesApp seed =
+          pure $
+            bookingPageApp
+              ( BookingRepository
+                  { saveBooking = \_ -> pure (Right ())
+                  , findCargoById = \_ -> pure seed
+                  , updateBooking = \_ -> pure (Right ())
+                  , findAllCargos = pure []
+                  }
+              )
+              checkerYes
+              stubCustomsRepo
+              stubVoyageRepo
+
+    with (mkRoutesApp (Just draftCargo)) $
+      it "予約が存在すれば 200 を返す" $
+        get "/bookings/BK-A1B2C3/routes" `shouldRespondWith` 200
+
+    with (mkRoutesApp Nothing) $
+      it "予約が存在しなければ 200 + not-found ページを返す" $
+        get "/bookings/BK-NOTHERE/routes" `shouldRespondWith` 200
