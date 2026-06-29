@@ -17,5 +17,11 @@ data ShipperRepository m = ShipperRepository
   , save :: Shipper -> m ()
   , searchByQuery :: ContactEmail -> m [Shipper]
   , findAllShippers :: m [Shipper]
-  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件)
+  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件) — IT4 で findShippersPaged へ移行 (ADR-0006)
   }
+
+{-# DEPRECATED
+  findAllShippers
+  "ADR-0006 PG-03: IT4 で findShippersPaged :: PageReq -> m (Page Shipper) へ移行する。\
+  \新規 callsite の追加は避け、既存 callsite は段階的に移行すること。"
+  #-}

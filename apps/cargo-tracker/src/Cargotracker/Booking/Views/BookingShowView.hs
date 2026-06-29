@@ -8,6 +8,7 @@ module Cargotracker.Booking.Views.BookingShowView
 
 import qualified Data.Text as T
 import Lucid
+import Lucid.Base (makeAttribute)
 
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
 import Cargotracker.Booking.Domain.Model.CustomsDeclaration (CustomsDeclaration)
@@ -77,11 +78,14 @@ bookingShowPage c mCustoms = pageLayout "貨物予約詳細 - Cargo Tracker" $ d
               "経路設計者に引き渡す"
         _ -> mempty
       -- US08a (IT3): 経路候補算出ページへの導線
+      -- H-02 (2026-06-29 レビュー反映): ボタン文言から開発内部識別子 (US08a) を除去。
+      -- ストーリー由来は data-story 属性で参照可能とし、業務ユーザーには見せない。
       a_
         [ href_ ("/bookings/" <> bid <> "/routes")
         , class_ "btn btn-outline-primary me-2"
+        , makeAttribute "data-story" "US08a"
         ]
-        "経路候補を見る (US08a)"
+        "経路候補を見る"
       -- US27 (IT3): 通関情報セクションを埋め込む
       customsSection (cargoBookingId c) mCustoms
       a_ [href_ "/bookings/new", class_ "btn btn-secondary me-2"] "もう 1 件予約"

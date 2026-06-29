@@ -16,4 +16,11 @@ data EstimateRepository m = EstimateRepository
   { saveEstimate :: Estimate -> m (Either DomainError ())
   , findEstimateById :: EstimateId -> m (Maybe Estimate)
   , findAllEstimates :: m [Estimate]
+  -- ^ IT4 で findEstimatesPaged に移行予定 (ADR-0006 PG-03 Phase 1)
   }
+
+{-# DEPRECATED
+  findAllEstimates
+  "ADR-0006 PG-03: IT4 で findEstimatesPaged :: PageReq -> m (Page Estimate) へ移行する。\
+  \新規 callsite の追加は避け、既存 callsite は段階的に移行すること。"
+  #-}

@@ -76,11 +76,9 @@ data NavMenuItem = NavMenuItem
 -}
 menuItemsForRole :: Maybe Role -> [NavMenuItem]
 menuItemsForRole Nothing =
+  -- H-01 (2026-06-29 レビュー反映): 業務一覧 (荷主 / 予約 / 航海) は荷主名・運賃・
+  -- 予約状況を含むため未認証で露出させない。認証後にロール別メニューで提供する。
   [ NavMenuItem "/estimates/new" "見積作成"
-  , NavMenuItem "/estimates" "見積一覧"
-  , NavMenuItem "/shippers" "荷主一覧"
-  , NavMenuItem "/bookings" "貨物予約一覧"
-  , NavMenuItem "/voyages" "航海一覧"
   , NavMenuItem "/voyages/search" "航海検索"
   , NavMenuItem "/login" "Login"
   ]

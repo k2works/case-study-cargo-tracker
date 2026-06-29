@@ -18,5 +18,11 @@ data VoyageRepository m = VoyageRepository
   楽観ロック衝突や対象不在を DomainError で表現できるよう Either を返す。
   -}
   , findAllVoyages :: m [Voyage]
-  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件)
+  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件) — IT4 で findVoyagesPaged へ移行 (ADR-0006)
   }
+
+{-# DEPRECATED
+  findAllVoyages
+  "ADR-0006 PG-03: IT4 で findVoyagesPaged :: PageReq -> m (Page Voyage) へ移行する。\
+  \新規 callsite の追加は避け、既存 callsite は段階的に移行すること。"
+  #-}

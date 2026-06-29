@@ -24,8 +24,14 @@ data BookingRepository m = BookingRepository
   楽観ロック衝突や対象不在を DomainError で表現できるよう Either を返す。
   -}
   , findAllCargos :: m [Cargo]
-  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件)
+  -- ^ IT2 一覧画面用 (暫定ページング無し、最大 100 件) — IT4 で findCargosPaged へ移行 (ADR-0006)
   }
+
+{-# DEPRECATED
+  findAllCargos
+  "ADR-0006 PG-03: IT4 で findCargosPaged :: BookingSearchCriteria -> PageReq -> m (Page Cargo) へ\
+  \移行する。新規 callsite の追加は避け、既存 callsite は段階的に移行すること。"
+  #-}
 
 newtype ShipperExistenceChecker m = ShipperExistenceChecker
   { exists :: ShipperRef -> m Bool
