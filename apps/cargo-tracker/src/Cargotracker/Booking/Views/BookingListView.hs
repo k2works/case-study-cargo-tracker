@@ -6,6 +6,7 @@ module Cargotracker.Booking.Views.BookingListView
   ) where
 
 import qualified Data.Text as T
+import Data.Time (defaultTimeLocale, formatTime)
 import Lucid
 
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
@@ -33,6 +34,7 @@ bookingListPage cargos = pageLayout "貨物予約一覧 - Cargo Tracker" $ do
         th_ "荷主 ID"
         th_ "出発港"
         th_ "到着港"
+        th_ "到着期限"
         th_ "状態"
         th_ "貨物種別"
         th_ ""
@@ -50,6 +52,7 @@ bookingListPage cargos = pageLayout "貨物予約一覧 - Cargo Tracker" $ do
         td_ (toHtml sid)
         td_ (toHtml o)
         td_ (toHtml d)
+        td_ (toHtml (T.pack (formatTime defaultTimeLocale "%Y-%m-%d" (arrivalDeadline route))))
         td_ (toHtml (T.pack (show (cargoStatus c))))
         td_ (toHtml (cargoTypeToText (cargoType c)))
         td_ $

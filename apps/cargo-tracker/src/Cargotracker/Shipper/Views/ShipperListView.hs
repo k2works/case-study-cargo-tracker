@@ -15,6 +15,7 @@ import Cargotracker.Shipper.Domain.Model.Shipper
     Shipper (..),
     ShipperKind (..),
   )
+import Cargotracker.Shipper.Domain.Model.Value.Address (Address (..))
 import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (ContactEmail (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName (..))
@@ -31,6 +32,7 @@ shipperListPage shippers = pageLayout "荷主一覧 - Cargo Tracker" $ do
         th_ "荷主 ID"
         th_ "氏名 / 社名"
         th_ "メール"
+        th_ "住所"
         th_ "種別"
         th_ "法人番号 / ランク"
         th_ ""
@@ -41,10 +43,12 @@ shipperListPage shippers = pageLayout "荷主一覧 - Cargo Tracker" $ do
       let ShipperId sid = shipperId s
           ShipperName nm = shipperName s
           ContactEmail em = shipperEmail s
+          Address addr = shipperAddress s
       tr_ $ do
         td_ (toHtml sid)
         td_ (toHtml nm)
         td_ (toHtml em)
+        td_ [class_ "small text-muted"] (toHtml addr)
         td_ $ case shipperKind s of
           Individual -> "個人"
           Corporate _ _ -> "法人"
