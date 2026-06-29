@@ -23,6 +23,9 @@
 2. **航海マスタの更新運用が可能**: マスタ管理者が US25 で既存航海を更新でき、差分確認 UI を経て上書きできる
 3. **IT1 技術負債の解消**: PRG/htmx テスト・hedgehog プロパティ・JWT 実時刻・arch-check Rule 4・検索 UI・flash エラーが揃い、Release 0.1 が「内部デモ用」として実用に耐える
 4. **arch-check Phase 2 稼働**: 自作 AST 解析バイナリで BC Domain 横断 import 禁止を機械検証
+   > **L-08 反映 / IT3 繰越**: Phase 2 (haskell-src-exts AST バイナリ) は IT2 末に
+   > T-06 (Rule 4 ALLOWLIST 機構) のみ実装し、Phase 2 本体 (Rule 6 / AST バイナリ)
+   > は IT3 タスク 1.4 / U-04 として繰り越し済 (IT2 完了報告書 / retrospective-2.md 参照)。
 5. **HPC カバレッジ実測ゲート**: `npm run test:coverage` を CI に組込み、Domain ≥ 95% / 全体 ≥ 70% を可視化
 
 ### 成功基準
@@ -30,7 +33,7 @@
 - [ ] US01 / US04+US05 / US06 / US25 の主要 Happy Path を E2E (Playwright) で通せる
 - [ ] PRG (303) 統合テスト + htmx 部分 HTML テストがすべて hspec-wai でグリーン
 - [ ] hedgehog プロパティテスト最低 3 件 (UnLocode / Voyage / Cargo) が CI で実行
-- [ ] arch-check Phase 2 が「`Booking.Domain.Cargo` が `Shipper.Domain.ShipperId` を直接 import」を検出して fail
+- [ ] arch-check Phase 2 が「`Booking.Domain.Cargo` が `Shipper.Domain.ShipperId` を直接 import」を検出して fail (※ L-08: IT3 U-04 へ繰越 / U-05 ShipperRef VO 移行で違反箇所自体が消滅したため、IT3 では新規 BC 追加時の予防ガードとして実装)
 - [ ] JWT exp が実時刻ベース、production プロファイルで `JWT_SECRET` / `DATABASE_URL` 未設定なら fail-fast
 - [ ] HPC カバレッジ: Domain ≥ 95%、全体 ≥ 70% (CI レポート添付)
 - [ ] CI で `fourmolu --mode check` / `hlint` / `stack test` / `arch-check Phase 1+2` / `dev:test:coverage` がすべて緑
@@ -815,8 +818,8 @@ spec = with appWithTestDb $ do
 
 - [ ] 営業担当者ロールでログイン → 見積 (US01) 作成 → 候補確認 → 危険物予約 (US04+US05) 登録 → 引き渡し (US06) を 5 分以内に通せる
 - [ ] マスタ管理者ロールでログイン → 既存航海 (US25) を編集 → 差分確認 → 上書き更新 → 検索結果反映を確認
-- [ ] arch-check Phase 2 が「`Booking.Domain.Cargo` が `Shipper.Domain.ShipperId` を直接 import」を検出して fail することを実演
-- [ ] `v0.1.0-alpha` タグと GitHub Release ノートを公開
+- [ ] arch-check Phase 2 が「`Booking.Domain.Cargo` が `Shipper.Domain.ShipperId` を直接 import」を検出して fail することを実演 (※ L-08: IT3 U-04 へ繰越 / U-05 で違反箇所自体が消滅。実演は IT3 完了時に「新規 BC が ShipperId を直接 import するパッチを作って fail を確認」の形で行う)
+- [ ] `v0.1.0-alpha` タグと GitHub Release ノートを公開 (※ IT3 U-10 で実施: docs/release/v0.1.0-alpha.md ドラフト済、tag push と GitHub Release 公開は IT3 完了時に実施)
 
 ---
 
