@@ -31,13 +31,20 @@ homePage = pageLayout "Cargo Tracker (Haskell 版)" $ do
         hr_ [class_ "my-4"]
         p_
           [class_ "small text-muted"]
-          "IT1 で実装したのは AUTH (認証基盤) と Booking フローの最小版です。経路設計 (US07-09) は IT3、追跡 (US18) は IT5 で追加予定。"
-      h2_ [class_ "h4 mb-3"] "機能メニュー"
+          "IT3 までで認証基盤 + Booking / Routing / Estimation の主要フロー (US07 航海検索 / US08a 経路候補 / US27 通関) を実装済み。追跡 (US18) は IT5 で追加予定。"
+      h2_ [class_ "h4 mb-3"] "登録メニュー"
       div_ [class_ "row g-3"] $ do
         menuCard "/login" "🔐 ログイン" "認証 (JWT/Cookie + RBAC)"
         menuCard "/shippers/new" "👤 荷主登録" "US02 個人 / US03 法人"
         menuCard "/bookings/new" "📦 貨物予約登録" "US04 出発港 / 到着港 / 期限"
         menuCard "/voyages/new" "🚢 航海登録" "US24 多区間スケジュール"
+        menuCard "/estimates/new" "💴 見積作成" "US01 重量・体積から運賃見積"
+      h2_ [class_ "h4 mt-5 mb-3"] "一覧・検索メニュー"
+      div_ [class_ "row g-3"] $ do
+        menuCard "/shippers" "👥 荷主一覧" "登録済荷主の参照"
+        menuCard "/bookings" "📋 貨物予約一覧" "予約状態 + 通関情報 (US27) へ"
+        menuCard "/voyages" "🛳️ 航海一覧" "登録済航海スケジュール参照"
+        menuCard "/voyages/search" "🔍 航海検索 (US07)" "出発地・到着地・期間で検索"
       h2_ [class_ "h4 mt-5 mb-3"] "デモシナリオ"
       ol_ [class_ "list-group list-group-numbered"] $ do
         li_ [class_ "list-group-item"] $ do
@@ -49,6 +56,12 @@ homePage = pageLayout "Cargo Tracker (Haskell 版)" $ do
         li_ [class_ "list-group-item"] $ do
           strong_ "貨物予約登録"
           " → 荷主 ID + 出発港 + 到着港 + 期限で予約 (Draft 状態) 作成"
+        li_ [class_ "list-group-item"] $ do
+          strong_ "経路候補算出 (US08a)"
+          " → 予約詳細から「経路候補」リンク (/bookings/:id/routes) を開く"
+        li_ [class_ "list-group-item"] $ do
+          strong_ "通関情報紐付け (US27)"
+          " → 予約詳細から「通関情報を登録」(/bookings/:id/customs/edit) で HS コード等を保存"
       div_ [class_ "mt-4 text-muted small"] $ do
         p_ "API:"
         ul_ $ do

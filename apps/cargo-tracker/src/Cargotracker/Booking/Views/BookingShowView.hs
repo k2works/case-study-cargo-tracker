@@ -76,6 +76,12 @@ bookingShowPage c mCustoms = pageLayout "貨物予約詳細 - Cargo Tracker" $ d
               [type_ "submit", class_ "btn btn-primary me-2"]
               "経路設計者に引き渡す"
         _ -> mempty
+      -- US08a (IT3): 経路候補算出ページへの導線
+      a_
+        [ href_ ("/bookings/" <> bid <> "/routes")
+        , class_ "btn btn-outline-primary me-2"
+        ]
+        "経路候補を見る (US08a)"
       -- US27 (IT3): 通関情報セクションを埋め込む
       customsSection (cargoBookingId c) mCustoms
       a_ [href_ "/bookings/new", class_ "btn btn-secondary me-2"] "もう 1 件予約"

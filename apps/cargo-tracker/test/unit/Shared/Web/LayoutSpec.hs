@@ -16,24 +16,41 @@ hrefs = map (show . navHref)
 
 spec :: Spec
 spec = describe "menuItemsForRole (U-07)" $ do
-  it "未認証は見積作成 + Login のみ" $ do
+  it "未認証は見積作成 + 公開一覧 + 航海検索 + Login" $ do
     let items = menuItemsForRole Nothing
-    map navHref items `shouldBe` ["/estimates/new", "/login"]
+    map navHref items
+      `shouldBe` [ "/estimates/new"
+                 , "/shippers"
+                 , "/bookings"
+                 , "/voyages"
+                 , "/voyages/search"
+                 , "/login"
+                 ]
 
-  it "Sales は見積/荷主/予約一覧/予約登録" $ do
+  it "Sales は見積/荷主/予約一覧/予約登録/航海検索" $ do
     let items = menuItemsForRole (Just Sales)
     map navHref items
-      `shouldBe` ["/estimates/new", "/shippers", "/bookings", "/bookings/new"]
+      `shouldBe` [ "/estimates/new"
+                 , "/shippers"
+                 , "/bookings"
+                 , "/bookings/new"
+                 , "/voyages/search"
+                 ]
 
   it "Router は予約一覧/航海一覧/航海検索" $ do
     let items = menuItemsForRole (Just Router)
     map navHref items
       `shouldBe` ["/bookings", "/voyages", "/voyages/search"]
 
-  it "MasterAdmin はマスタ全メニュー" $ do
+  it "MasterAdmin はマスタ全メニュー + 航海検索" $ do
     let items = menuItemsForRole (Just MasterAdmin)
     map navHref items
-      `shouldBe` ["/shippers", "/bookings", "/voyages", "/voyages/new"]
+      `shouldBe` [ "/shippers"
+                 , "/bookings"
+                 , "/voyages"
+                 , "/voyages/new"
+                 , "/voyages/search"
+                 ]
 
   it "Sales は航海登録を表示しない (MasterAdmin 専管)" $ do
     let salesHrefs = map navHref (menuItemsForRole (Just Sales))
