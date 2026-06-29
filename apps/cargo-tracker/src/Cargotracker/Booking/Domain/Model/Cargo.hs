@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 {- | Cargo 集約ルート (IT1 US04)
 
 予約の中心エンティティ。荷主 (`ShipperId`) を ACL 参照として保持し、
@@ -15,6 +17,7 @@ module Cargotracker.Booking.Domain.Model.Cargo
 
 import qualified Data.Text as T
 
+import Cargotracker.Booking.Domain.Error (pattern InvalidStateTransition)
 import Cargotracker.Booking.Domain.Model.State.BookingStatus
   ( BookingStatus (..),
   )
@@ -23,7 +26,7 @@ import Cargotracker.Booking.Domain.Model.Value.CargoType (CargoType (..))
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification,
   )
-import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Domain.DomainError (DomainError)
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId)
 
 data Cargo = Cargo

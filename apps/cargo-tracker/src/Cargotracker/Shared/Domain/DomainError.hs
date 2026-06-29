@@ -31,10 +31,18 @@ data DomainError
   | -- Shipper / Booking 関連 (IT1)
     InvalidShipperId !Text
   | ShipperNotFound !Text
-  | -- IT2 追加
+  | -- IT2 追加 (ADR-0005 Phase 1: 段階移行中。Phase 3 で削除予定)
 
-    -- | from / to の状態名を保持する状態遷移違反
+    {- | from / to の状態名を保持する状態遷移違反
+
+    ADR-0005 (BCE-01): Booking BC 固有エラー。新規参照は
+    'Cargotracker.Booking.Domain.Error' のパターン経由で行うこと。
+    -}
     InvalidStateTransition !Text !Text
-  | -- | 予約 (Cargo) が見つからない (BookingId 文字列を保持)
+  | {- | 予約 (Cargo) が見つからない (BookingId 文字列を保持)
+
+    ADR-0005 (BCE-01): Booking BC 固有エラー。新規参照は
+    'Cargotracker.Booking.Domain.Error' のパターン経由で行うこと。
+    -}
     BookingNotFound !Text
   deriving stock (Eq, Show)
