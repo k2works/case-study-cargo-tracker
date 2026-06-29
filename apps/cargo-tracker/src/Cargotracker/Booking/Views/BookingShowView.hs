@@ -51,9 +51,19 @@ bookingShowPage c = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
         tr_ $ do
           th_ "状態"
           td_ (toHtml (T.pack (show (cargoStatus c))))
-      -- US06 (IT2): Submitted 状態のみ「経路設計者に引き渡す」ボタンを表示。
-      -- POST 動作は PRG (303 → 同詳細画面?flash=...) に従う。
+      -- US06 (IT3, H-03): Draft 状態は「予約を確定送信する」ボタン (POST /submit)。
+      -- Submitted 状態は「経路設計者に引き渡す」ボタン (POST /handover)。
+      -- いずれも PRG (303 → 同詳細画面?flash=...) に従う。
       case cargoStatus c of
+        Draft ->
+          form_
+            [ action_ ("/bookings/" <> bid <> "/submit")
+            , method_ "post"
+            , class_ "d-inline"
+            ]
+            $ button_
+              [type_ "submit", class_ "btn btn-primary me-2"]
+              "予約を確定送信する"
         Submitted ->
           form_
             [ action_ ("/bookings/" <> bid <> "/handover")

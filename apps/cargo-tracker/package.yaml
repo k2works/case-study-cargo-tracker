@@ -104,6 +104,7 @@ library:
   - Cargotracker.Booking.Application.Ports
   - Cargotracker.Booking.Application.RegisterBookingCommand
   - Cargotracker.Booking.Application.HandOverToRouterCommand
+  - Cargotracker.Booking.Application.SubmitBookingCommand
   - Cargotracker.Routing.Application.Ports
   - Cargotracker.Routing.Application.RegisterVoyageCommand
   - Cargotracker.Routing.Application.UpdateVoyageCommand

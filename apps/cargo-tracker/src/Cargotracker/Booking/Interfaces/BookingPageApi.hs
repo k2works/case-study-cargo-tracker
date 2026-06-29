@@ -41,6 +41,10 @@ import Cargotracker.Booking.Application.RegisterBookingCommand
     RegisterBookingInput (..),
     execute,
   )
+import Cargotracker.Booking.Application.SubmitBookingCommand
+  ( SubmitBookingInput (..),
+  )
+import qualified Cargotracker.Booking.Application.SubmitBookingCommand as Submit
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
 import Cargotracker.Booking.Views.BookingFormView (bookingFormPage)
 import Cargotracker.Booking.Views.BookingListView (bookingListPage)
@@ -76,6 +80,9 @@ type BookingPageApi =
            :<|> Capture "bookingId" Text
              :> "handover"
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "bookingId" Text
+             :> "submit"
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
 bookingPageApp :: BookingRepository IO -> ShipperExistenceChecker IO -> Application
@@ -87,6 +94,7 @@ bookingPageApp repo checker =
         :<|> handlerPost repo checker
         :<|> handlerShow repo
         :<|> handlerHandover repo
+        :<|> handlerSubmit repo
     )
 
 handlerList :: BookingRepository IO -> Handler (Html ())
@@ -152,6 +160,55 @@ parseDeadline t = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M" (T.unpack t
 -- US06 (IT2): POST /bookings/:bookingId/handover で経路設計者へ引き渡す。
 -- Submitted → RouteProposed の遷移が成功すれば詳細画面に 303、
 -- 失敗時はエラー種別ごとのフラッシュ用クエリを付与して詳細画面に戻す。
+-- US06 (IT3, H-03): POST /bookings/:bookingId/submit で Draft → Submitted。
+-- 経路設計者へ引き渡せる前提状態を作る。
+handlerSubmit ::
+  BookingRepository IO ->
+  Text ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerSubmit repo bid = do
+  result <-
+    liftIO
+      ( Submit.execute
+          repo
+          (SubmitBookingInput {inputBookingId = BookingId bid})
+      )
+  let detail = "/bookings/" <> bid
+  case result of
+    Right _ ->
+      pure (addHeader (detail <> "?flash=submit-ok") NoContent)
+    Left (BookingNotFound _) ->
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack "/bookings/new?error=booking-not-found"))]
+          , errBody = ""
+          }
+    Left (InvalidStateTransition fromS _) ->
+      throwError $
+        err303
+          { errHeaders =
+              [
+                ( "Location"
+                , BC.pack (T.unpack (detail <> "?error=invalid-state&from=" <> fromS))
+                )
+              ]
+          , errBody = ""
+          }
+    Left (ConcurrentModification _) ->
+      throwError $
+        err303
+          { errHeaders =
+              [("Location", BC.pack (T.unpack (detail <> "?error=concurrent-modification")))]
+          , errBody = ""
+          }
+    Left e ->
+      throwError $
+        err303
+          { errHeaders =
+              [("Location", BC.pack (T.unpack (detail <> "?error=" <> T.pack (show e))))]
+          , errBody = ""
+          }
+
 handlerHandover ::
   BookingRepository IO ->
   Text ->
