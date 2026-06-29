@@ -18,7 +18,7 @@ module Cargotracker.Routing.Interfaces.VoyagePageApi
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BC
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime, defaultTimeLocale, parseTimeM)
@@ -34,15 +34,24 @@ import Cargotracker.Routing.Application.RegisterVoyageCommand
     RegisterVoyageInput (..),
     execute,
   )
+import Cargotracker.Routing.Application.SearchVoyagesQuery
+  ( SearchVoyagesInput (..),
+  )
+import qualified Cargotracker.Routing.Application.SearchVoyagesQuery as Search
 import qualified Cargotracker.Routing.Application.UpdateVoyageCommand as Update
 import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (VoyageNumber (..))
 import Cargotracker.Routing.Domain.Model.Voyage (carrierMovements)
 import Cargotracker.Routing.Views.VoyageFormView (voyageEditPage, voyageFormPage)
 import Cargotracker.Routing.Views.VoyageListView (voyageListPage)
+import Cargotracker.Routing.Views.VoyageSearchView
+  ( VoyageSearchFormData (..),
+    voyageSearchPage,
+  )
 import Cargotracker.Routing.Views.VoyageShowView
   ( voyageNotFoundPage,
     voyageShowPage,
   )
+import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..), mkUnLocode)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 data VoyageFormRequest = VoyageFormRequest
@@ -72,6 +81,12 @@ type VoyagePageApi =
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] VoyageFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> "search"
+             :> QueryParam "from" Text
+             :> QueryParam "to" Text
+             :> QueryParam "from_date" Text
+             :> QueryParam "to_date" Text
+             :> Get '[HTML] (Html ())
            :<|> Capture "voyageNumber" Text :> Get '[HTML] (Html ())
            :<|> Capture "voyageNumber" Text
              :> "edit"
@@ -90,10 +105,84 @@ voyagePageApp repo =
     ( handlerList repo
         :<|> handlerGet
         :<|> handlerPost repo
+        :<|> handlerSearch repo
         :<|> handlerShow repo
         :<|> handlerEdit repo
         :<|> handlerUpdate repo
     )
+
+{- | US07 (IT3): /voyages/search の GET ハンドラ。
+
+クエリパラメータが全て未指定ならフォームのみ表示 (初期画面)。
+1 つでも指定があれば検索を実行し、結果テーブル or 0 件メッセージを表示。
+バリデーションエラー (UnLocode 不正・日付不正・期間逆順) は alert-danger
+で表示してフォームを再描画する (入力値は保持)。
+-}
+handlerSearch ::
+  VoyageRepository IO ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Handler (Html ())
+handlerSearch repo mFrom mTo mFromDate mToDate = do
+  let form =
+        VoyageSearchFormData
+          { fdOrigin = fromMaybeT mFrom
+          , fdDestination = fromMaybeT mTo
+          , fdFromDate = fromMaybeT mFromDate
+          , fdToDate = fromMaybeT mToDate
+          }
+  if allEmpty [mFrom, mTo, mFromDate, mToDate]
+    then pure (voyageSearchPage form Nothing Nothing)
+    else case parseSearchInput mFrom mTo mFromDate mToDate of
+      Left msg -> pure (voyageSearchPage form (Just msg) Nothing)
+      Right input -> do
+        res <- liftIO (Search.execute repo input)
+        case res of
+          Left e -> pure (voyageSearchPage form (Just (searchErrorMessage e)) Nothing)
+          Right voys -> pure (voyageSearchPage form Nothing (Just voys))
+  where
+    fromMaybeT = fromMaybe ""
+    allEmpty = all (maybe True T.null)
+
+parseSearchInput ::
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Either Text SearchVoyagesInput
+parseSearchInput mFrom mTo mFromDate mToDate = do
+  fromTxt <- requireField "from" mFrom
+  toTxt <- requireField "to" mTo
+  fromDateTxt <- requireField "from_date" mFromDate
+  toDateTxt <- requireField "to_date" mToDate
+  origin <- mapLeft (T.pack . show) (mkUnLocode fromTxt)
+  destination <- mapLeft (T.pack . show) (mkUnLocode toTxt)
+  fromDate <- parseDay fromDateTxt
+  toDate <- parseDay toDateTxt
+  Right
+    SearchVoyagesInput
+      { inputOrigin = origin
+      , inputDestination = destination
+      , inputFromDate = fromDate
+      , inputToDate = toDate
+      }
+  where
+    requireField name mt = case mt of
+      Just t | not (T.null t) -> Right t
+      _ -> Left (name <> " を入力してください")
+    parseDay t = case parseTimeM True defaultTimeLocale "%Y-%m-%d" (T.unpack t) of
+      Just d -> Right d
+      Nothing -> Left ("日付の形式が不正です: " <> t)
+    mapLeft f (Left e) = Left (f e)
+    mapLeft _ (Right x) = Right x
+
+searchErrorMessage :: DomainError -> Text
+searchErrorMessage (InvalidSearchPeriod _ _) = "出発期間の開始日は終了日より前である必要があります"
+searchErrorMessage (SameOriginDestination _) = "出発地と目的地は異なる港を指定してください"
+searchErrorMessage (InvalidUnLocode t) = "UnLocode が不正です: " <> t
+searchErrorMessage e = "検索に失敗しました: " <> T.pack (show e)
 
 handlerList :: VoyageRepository IO -> Handler (Html ())
 handlerList repo = do

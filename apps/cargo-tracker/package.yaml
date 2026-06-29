@@ -102,6 +102,7 @@ library:
   - Cargotracker.Routing.Domain.Model.Value.VoyageSearchCriteria
   - Cargotracker.Routing.Domain.Service.VoyageQuery
   - Cargotracker.Routing.Application.SearchVoyagesQuery
+  - Cargotracker.Routing.Views.VoyageSearchView
   - Cargotracker.Shipper.Application.Ports
   - Cargotracker.Shipper.Application.RegisterShipperCommand
   - Cargotracker.Booking.Application.Ports

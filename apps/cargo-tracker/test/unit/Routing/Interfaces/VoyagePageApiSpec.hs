@@ -10,9 +10,12 @@ module Routing.Interfaces.VoyagePageApiSpec (spec) where
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 import Data.IORef (modifyIORef', newIORef)
 import Data.List (isInfixOf)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Network.Wai.Test (simpleBody)
 import Test.Hspec
 import Test.Hspec.Wai
@@ -46,6 +49,7 @@ spec :: Spec
 spec = do
   specCreate
   specUpdate
+  specSearch
 
 specCreate :: Spec
 specCreate = with (fmap voyagePageApp makeRepo) $ do
@@ -180,3 +184,58 @@ specUpdate = do
             { matchHeaders =
                 ["Location" <:> "/voyages/V0001/edit?error=concurrent-modification"]
             }
+
+specSearch :: Spec
+specSearch = do
+  describe "GET /voyages/search (US07)" $ do
+    with (mkUpdateApp (Just seedVoyage) (Right ())) $
+      it "クエリ未指定はフォームのみ 200 を返す" $
+        get "/voyages/search" `shouldRespondWith` 200
+
+    with (mkSearchApp [seedVoyage]) $
+      it "条件にマッチする航海が結果テーブルに表示される" $ do
+        res <-
+          get
+            ( "/voyages/search?from=JPTYO&to=USNYC"
+                <> "&from_date=2026-07-01&to_date=2026-12-31"
+            )
+        liftIO $ do
+          let body = bodyAsText res
+          T.isInfixOf "V0001" body `shouldBe` True
+          T.isInfixOf "検索結果" body `shouldBe` True
+
+    with (mkSearchApp []) $
+      it "該当 0 件は alert-warning メッセージを表示" $ do
+        res <-
+          get
+            ( "/voyages/search?from=JPTYO&to=USNYC"
+                <> "&from_date=2026-07-01&to_date=2026-12-31"
+            )
+        liftIO $ do
+          let body = bodyAsText res
+          T.isInfixOf "該当する航海がありません" body `shouldBe` True
+
+    with (mkSearchApp []) $
+      it "出発期間逆順は 200 + バリデーションメッセージ" $ do
+        res <-
+          get
+            ( "/voyages/search?from=JPTYO&to=USNYC"
+                <> "&from_date=2026-12-31&to_date=2026-07-01"
+            )
+        liftIO $ do
+          let body = bodyAsText res
+          T.isInfixOf "出発期間" body `shouldBe` True
+  where
+    bodyAsText = TE.decodeUtf8 . BSL.toStrict . simpleBody
+
+mkSearchApp :: [Voyage] -> IO Application
+mkSearchApp voys =
+  pure
+    ( voyagePageApp
+        VoyageRepository
+          { findByVoyageNumber = \_ -> pure Nothing
+          , saveVoyage = \_ -> pure ()
+          , updateVoyage = \_ -> pure (Right ())
+          , findAllVoyages = pure voys
+          }
+    )
