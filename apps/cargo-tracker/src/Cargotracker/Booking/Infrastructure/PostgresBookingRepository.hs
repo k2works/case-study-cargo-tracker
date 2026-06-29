@@ -12,6 +12,7 @@ module Cargotracker.Booking.Infrastructure.PostgresBookingRepository
   ) where
 
 import Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple
@@ -22,6 +23,7 @@ import Database.PostgreSQL.Simple
     query_,
   )
 import Database.PostgreSQL.Simple.Types (Query (..), (:.) (..))
+import System.IO (hPutStrLn, stderr)
 
 import Cargotracker.Booking.Application.Ports (BookingRepository (..))
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
@@ -80,22 +82,40 @@ cargoSelectColumns =
   \ c.cargo_type, c.hazardous_class, c.un_number, c.proper_shipping_name, \
   \ c.min_temperature, c.max_temperature, c.temperature_unit"
 
-rowToCargo :: CargoRow -> Cargo
+{- | rowToCargo は CargoRow を Cargo に変換する。
+DB データ不整合 (例: HAZARDOUS だが hazardousClass が NULL) があれば
+WARN ログを stderr に出して General にフォールバックする (M-02 改善)。
+-}
+rowToCargo :: CargoRow -> IO Cargo
 rowToCargo
-  (bidV, sidV, orig, dest, deadlineV, statusT, ver, ctypeT, mHC, mUN, mPSN, mMin, mMax, mUnit) =
-    Cargo
-      { cargoBookingId = BookingId bidV
-      , cargoShipperRef = ShipperRef sidV
-      , cargoRouteSpec =
-          RouteSpecification
-            { origin = UnLocode orig
-            , destination = UnLocode dest
-            , arrivalDeadline = deadlineV
-            }
-      , cargoStatus = textToBookingStatus statusT
-      , cargoType = textToCargoType ctypeT mHC mUN mPSN mMin mMax mUnit
-      , cargoVersion = ver
-      }
+  (bidV, sidV, orig, dest, deadlineV, statusT, ver, ctypeT, mHC, mUN, mPSN, mMin, mMax, mUnit) = do
+    cType <- case parseCargoType ctypeT mHC mUN mPSN mMin mMax mUnit of
+      Right ct -> pure ct
+      Left issue -> do
+        hPutStrLn
+          stderr
+          ( "WARN PostgresBookingRepository: cargo_type 復元失敗 / "
+              <> "booking_id="
+              <> T.unpack bidV
+              <> " / issue="
+              <> show issue
+              <> " (General にフォールバック)"
+          )
+        pure General
+    pure
+      Cargo
+        { cargoBookingId = BookingId bidV
+        , cargoShipperRef = ShipperRef sidV
+        , cargoRouteSpec =
+            RouteSpecification
+              { origin = UnLocode orig
+              , destination = UnLocode dest
+              , arrivalDeadline = deadlineV
+              }
+        , cargoStatus = textToBookingStatus statusT
+        , cargoType = cType
+        , cargoVersion = ver
+        }
 
 listCargos :: Connection -> IO [Cargo]
 listCargos conn = do
@@ -108,7 +128,7 @@ listCargos conn = do
              \ ORDER BY c.booking_id LIMIT 100"
       ) ::
       IO [CargoRow]
-  pure (map rowToCargo rows)
+  mapM rowToCargo rows
 
 findCargo :: Connection -> Text -> IO (Maybe Cargo)
 findCargo conn bid = do
@@ -122,13 +142,24 @@ findCargo conn bid = do
       )
       (Only bid) ::
       IO [CargoRow]
-  pure $ case rows of
-    (r : _) -> Just (rowToCargo r)
-    [] -> Nothing
+  case rows of
+    (r : _) -> Just <$> rowToCargo r
+    [] -> pure Nothing
 
--- DB 列値から CargoType を復元する。CHECK 制約で整合性が保たれている前提
--- (スマートコンストラクタを通さず直接構築)。不整合時は General にフォールバックする。
-textToCargoType ::
+{- | DB 列値から CargoType を復元する際の失敗理由 (M-02 改善)。
+詳細を呼び出し元に伝え、WARN ログで運用者が原因特定できるようにする。
+-}
+data ParseCargoTypeIssue
+  = HazardousFieldsMissing -- "HAZARDOUS" だが必須カラムが NULL
+  | RefrigeratedFieldsMissing -- "REFRIGERATED" だが必須カラムが NULL
+  | UnknownCargoTypeText !Text -- "GENERAL" / "HAZARDOUS" / "REFRIGERATED" 以外
+  deriving stock (Eq, Show)
+
+{- | DB 列値から CargoType を復元する。CHECK 制約で整合性が保たれている前提
+(スマートコンストラクタを通さず直接構築)。不整合時は Left でその理由を返し、
+呼び出し元 (rowToCargo) が WARN ログを出して General にフォールバックする。
+-}
+parseCargoType ::
   Text ->
   Maybe Text ->
   Maybe Text ->
@@ -136,22 +167,27 @@ textToCargoType ::
   Maybe Double ->
   Maybe Double ->
   Maybe Text ->
-  CargoType
-textToCargoType "HAZARDOUS" (Just hc) (Just un) (Just psn) _ _ _ =
-  Hazardous
-    HazardousDeclaration
-      { hazardousClass = hc
-      , unNumber = un
-      , properShippingName = psn
-      }
-textToCargoType "REFRIGERATED" _ _ _ (Just lo) (Just hi) (Just u) =
-  Refrigerated
-    TemperatureRequirement
-      { minTemperature = lo
-      , maxTemperature = hi
-      , temperatureUnit = if u == "F" then Fahrenheit else Celsius
-      }
-textToCargoType _ _ _ _ _ _ _ = General
+  Either ParseCargoTypeIssue CargoType
+parseCargoType "GENERAL" _ _ _ _ _ _ = Right General
+parseCargoType "HAZARDOUS" (Just hc) (Just un) (Just psn) _ _ _ =
+  Right $
+    Hazardous
+      HazardousDeclaration
+        { hazardousClass = hc
+        , unNumber = un
+        , properShippingName = psn
+        }
+parseCargoType "HAZARDOUS" _ _ _ _ _ _ = Left HazardousFieldsMissing
+parseCargoType "REFRIGERATED" _ _ _ (Just lo) (Just hi) (Just u) =
+  Right $
+    Refrigerated
+      TemperatureRequirement
+        { minTemperature = lo
+        , maxTemperature = hi
+        , temperatureUnit = if u == "F" then Fahrenheit else Celsius
+        }
+parseCargoType "REFRIGERATED" _ _ _ _ _ _ = Left RefrigeratedFieldsMissing
+parseCargoType other _ _ _ _ _ _ = Left (UnknownCargoTypeText other)
 
 textToBookingStatus :: Text -> BookingStatus
 textToBookingStatus "Submitted" = Submitted
