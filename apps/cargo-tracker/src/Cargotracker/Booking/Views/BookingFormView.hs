@@ -8,6 +8,7 @@ deadline は datetime-local 入力 (ISO 8601 への変換は handler で実施)�
 module Cargotracker.Booking.Views.BookingFormView
   ( bookingFormPage,
     bookingResultPage,
+    cargoTypeRowFragment,
   ) where
 
 import Data.Text (Text)
@@ -81,7 +82,114 @@ bookingFormPage mError = pageLayout "貨物予約登録 - Cargo Tracker" $ do
             , class_ "form-control"
             , required_ "required"
             ]
+        -- U-02 (IT3, H-05): 貨物種別 select + htmx 動的フィールド差替え。
+        -- General は追加入力なし、Hazardous は危険物 3 項目、Refrigerated は
+        -- 温度範囲 + 単位を要求する。サーバ側で hx-get で fragment を返す。
+        div_ [class_ "mb-3"] $ do
+          label_ [for_ "cargoType", class_ "form-label"] "貨物種別"
+          select_
+            [ id_ "cargoType"
+            , name_ "cargoType"
+            , class_ "form-select"
+            , required_ "required"
+            , makeAttribute "hx-get" "/bookings/new/cargo-type-row"
+            , makeAttribute "hx-trigger" "change"
+            , makeAttribute "hx-target" "#cargo-fields"
+            , makeAttribute "hx-swap" "innerHTML"
+            , makeAttribute "hx-include" "this"
+            ]
+            $ do
+              option_ [value_ "General", selected_ "selected"] "一般貨物"
+              option_ [value_ "Hazardous"] "危険物"
+              option_ [value_ "Refrigerated"] "冷凍貨物"
+        div_ [id_ "cargo-fields"] mempty
         button_ [type_ "submit", class_ "btn btn-primary"] "予約"
+
+{- | U-02 (IT3): /bookings/new/cargo-type-row が返す htmx fragment。
+
+cargoType の値に応じて追加入力フィールド (危険物クラス / UN 番号 / 正式
+輸送品名、冷凍温度範囲 / 単位) を差し替え表示する。General は空。
+-}
+cargoTypeRowFragment :: Text -> Html ()
+cargoTypeRowFragment "Hazardous" = hazardousFields
+cargoTypeRowFragment "Refrigerated" = refrigeratedFields
+cargoTypeRowFragment _ = mempty
+
+hazardousFields :: Html ()
+hazardousFields = div_ [class_ "border rounded p-3 bg-light"] $ do
+  h6_ [class_ "mb-3"] "危険物詳細"
+  div_ [class_ "mb-3"] $ do
+    label_ [for_ "hazardousClass", class_ "form-label"] "危険物クラス"
+    input_
+      [ type_ "text"
+      , id_ "hazardousClass"
+      , name_ "hazardousClass"
+      , class_ "form-control"
+      , required_ "required"
+      , maxlength_ "10"
+      , placeholder_ "例: 3 (引火性液体)"
+      ]
+  div_ [class_ "mb-3"] $ do
+    label_ [for_ "unNumber", class_ "form-label"] "UN 番号 (4 桁数字)"
+    input_
+      [ type_ "text"
+      , id_ "unNumber"
+      , name_ "unNumber"
+      , class_ "form-control"
+      , required_ "required"
+      , pattern_ "[0-9]{4}"
+      , maxlength_ "4"
+      , placeholder_ "1203"
+      ]
+  div_ [class_ "mb-3"] $ do
+    label_ [for_ "properShippingName", class_ "form-label"] "正式輸送品名"
+    input_
+      [ type_ "text"
+      , id_ "properShippingName"
+      , name_ "properShippingName"
+      , class_ "form-control"
+      , required_ "required"
+      , maxlength_ "200"
+      , placeholder_ "GASOLINE"
+      ]
+
+refrigeratedFields :: Html ()
+refrigeratedFields = div_ [class_ "border rounded p-3 bg-light"] $ do
+  h6_ [class_ "mb-3"] "冷凍管理"
+  div_ [class_ "row"] $ do
+    div_ [class_ "col-md-4 mb-3"] $ do
+      label_ [for_ "minTemperature", class_ "form-label"] "最低温度"
+      input_
+        [ type_ "number"
+        , id_ "minTemperature"
+        , name_ "minTemperature"
+        , class_ "form-control"
+        , required_ "required"
+        , step_ "0.1"
+        , placeholder_ "-20"
+        ]
+    div_ [class_ "col-md-4 mb-3"] $ do
+      label_ [for_ "maxTemperature", class_ "form-label"] "最高温度"
+      input_
+        [ type_ "number"
+        , id_ "maxTemperature"
+        , name_ "maxTemperature"
+        , class_ "form-control"
+        , required_ "required"
+        , step_ "0.1"
+        , placeholder_ "-15"
+        ]
+    div_ [class_ "col-md-4 mb-3"] $ do
+      label_ [for_ "temperatureUnit", class_ "form-label"] "単位"
+      select_
+        [ id_ "temperatureUnit"
+        , name_ "temperatureUnit"
+        , class_ "form-select"
+        , required_ "required"
+        ]
+        $ do
+          option_ [value_ "Celsius", selected_ "selected"] "摂氏 (°C)"
+          option_ [value_ "Fahrenheit"] "華氏 (°F)"
 
 bookingResultPage :: Bool -> Text -> Html ()
 bookingResultPage success message = pageLayout "予約結果 - Cargo Tracker" $ do

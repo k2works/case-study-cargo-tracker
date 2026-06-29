@@ -249,3 +249,57 @@ spec = do
               { matchHeaders =
                   ["Location" <:> "/bookings/new?error=booking-not-found"]
               }
+
+  describe "U-02 (IT3): CargoType 動的フィールド" $ do
+    describe "GET /bookings/new/cargo-type-row" $ do
+      with (mkApp checkerYes) $ do
+        it "cargoType 未指定は空のフラグメントを 200 で返す" $
+          get "/bookings/new/cargo-type-row" `shouldRespondWith` 200
+
+        it "cargoType=Hazardous は危険物フィールドを含むフラグメントを返す" $ do
+          res <- get "/bookings/new/cargo-type-row?cargoType=Hazardous"
+          liftIO $ do
+            let body = LBS.toStrict (simpleBody res)
+            shouldSatisfy
+              body
+              (\b -> "hazardousClass" `BS.isInfixOf` b && "unNumber" `BS.isInfixOf` b)
+
+        it "cargoType=Refrigerated は冷凍フィールドを含むフラグメントを返す" $ do
+          res <- get "/bookings/new/cargo-type-row?cargoType=Refrigerated"
+          liftIO $ do
+            let body = LBS.toStrict (simpleBody res)
+            shouldSatisfy
+              body
+              (\b -> "minTemperature" `BS.isInfixOf` b && "temperatureUnit" `BS.isInfixOf` b)
+
+    describe "POST /bookings/new with cargoType" $ do
+      with (mkApp checkerYes) $ do
+        it "Hazardous で危険物 3 項目を送れば 303" $
+          request
+            "POST"
+            "/bookings/new"
+            [("Content-Type", "application/x-www-form-urlencoded")]
+            ( "bookingId=&shipperId=SHP-X1Y2Z3&origin=JPTYO&destination=USNYC"
+                <> "&deadline=2026-12-31T00%3A00"
+                <> "&cargoType=Hazardous"
+                <> "&hazardousClass=3"
+                <> "&unNumber=1203"
+                <> "&properShippingName=GASOLINE"
+            )
+            `shouldRespondWith` 303
+              { matchHeaders = [matchLocationPrefix "/bookings/BK-"]
+              }
+
+        it "Hazardous でフィールド欠落は 303 + ?error=hazardous-fields-missing" $
+          request
+            "POST"
+            "/bookings/new"
+            [("Content-Type", "application/x-www-form-urlencoded")]
+            ( "bookingId=&shipperId=SHP-X1Y2Z3&origin=JPTYO&destination=USNYC"
+                <> "&deadline=2026-12-31T00%3A00"
+                <> "&cargoType=Hazardous"
+            )
+            `shouldRespondWith` 303
+              { matchHeaders =
+                  ["Location" <:> "/bookings/new?error=hazardous-fields-missing"]
+              }

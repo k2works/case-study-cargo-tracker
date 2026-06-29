@@ -19,6 +19,7 @@ module Cargotracker.Booking.Interfaces.BookingPageApi
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BC
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime, defaultTimeLocale, parseTimeM)
@@ -53,7 +54,10 @@ import Cargotracker.Booking.Application.SubmitBookingCommand
   )
 import qualified Cargotracker.Booking.Application.SubmitBookingCommand as Submit
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
-import Cargotracker.Booking.Views.BookingFormView (bookingFormPage)
+import Cargotracker.Booking.Views.BookingFormView
+  ( bookingFormPage,
+    cargoTypeRowFragment,
+  )
 import Cargotracker.Booking.Views.BookingListView (bookingListPage)
 import Cargotracker.Booking.Views.BookingShowView
   ( bookingNotFoundPage,
@@ -79,6 +83,16 @@ data BookingFormRequest = BookingFormRequest
   , origin :: !Text
   , destination :: !Text
   , deadline :: !Text -- "YYYY-MM-DDTHH:MM" (datetime-local)
+  , -- U-02 (IT3): 動的フィールド対応のため新規追加。値は htmx fragment が
+    -- 提供する name=cargoType 等の Form フィールドからバインドされる。
+    -- General の場合は Hazardous/Refrigerated 関連フィールドは Nothing。
+    cargoType :: !(Maybe Text)
+  , hazardousClass :: !(Maybe Text)
+  , unNumber :: !(Maybe Text)
+  , properShippingName :: !(Maybe Text)
+  , minTemperature :: !(Maybe Text)
+  , maxTemperature :: !(Maybe Text)
+  , temperatureUnit :: !(Maybe Text)
   }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (FromForm)
@@ -92,6 +106,10 @@ type BookingPageApi =
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] BookingFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> "new"
+             :> "cargo-type-row"
+             :> QueryParam "cargoType" Text
+             :> Get '[HTML] (Html ())
            :<|> Capture "bookingId" Text :> Get '[HTML] (Html ())
            :<|> Capture "bookingId" Text
              :> "handover"
@@ -121,12 +139,18 @@ bookingPageApp repo checker customsRepo =
     ( handlerList repo
         :<|> handlerGet
         :<|> handlerPost repo checker
+        :<|> handlerCargoTypeRow
         :<|> handlerShow repo customsRepo
         :<|> handlerHandover repo
         :<|> handlerSubmit repo
         :<|> handlerCustomsEdit repo customsRepo
         :<|> handlerCustomsAttach repo customsRepo
     )
+
+-- U-02 (IT3): htmx 部分 HTML を返す。cargoType=Hazardous なら危険物
+-- フィールド、Refrigerated なら冷凍フィールドを返す。General/未指定は空。
+handlerCargoTypeRow :: Maybe Text -> Handler (Html ())
+handlerCargoTypeRow mType = pure (cargoTypeRowFragment (fromMaybe "" mType))
 
 handlerList :: BookingRepository IO -> Handler (Html ())
 handlerList repo = do
@@ -141,6 +165,9 @@ bookingErrorMessage :: Text -> Text
 bookingErrorMessage "deadline-format" = "到着期限の日付形式が不正です"
 bookingErrorMessage "shipper-not-found" = "指定された荷主が見つかりません"
 bookingErrorMessage "booking-not-found" = "指定された予約が見つかりません"
+bookingErrorMessage "hazardous-fields-missing" = "危険物クラス / UN 番号 / 正式輸送品名を全て入力してください"
+bookingErrorMessage "refrigerated-fields-missing" = "最低温度 / 最高温度 / 単位を全て入力してください"
+bookingErrorMessage "temperature-format" = "温度は数値で入力してください"
 bookingErrorMessage e = "予約登録に失敗しました: " <> e
 
 handlerShow ::
@@ -167,22 +194,23 @@ handlerPost repo checker req = case parseDeadline (deadline req) of
   Nothing -> redirectErr "/bookings/new?error=deadline-format"
   Just dt -> do
     generatedBid <- liftIO generateBookingIdText
-    let input =
-          RegisterBookingInput
-            { inputBookingId = generatedBid
-            , inputShipperId = shipperId req
-            , inputOrigin = origin req
-            , inputDestination = destination req
-            , inputDeadline = dt
-            , -- US05 (IT2): フォーム UI の cargoType 選択は次反復で導入。
-              --   現状 General 固定で IT1 後方互換を維持する。
-              inputCargoType = InputGeneral
-            }
-    result <- liftIO (execute repo checker input)
-    case result of
-      Right _ -> pure (addHeader ("/bookings/" <> generatedBid) NoContent)
-      Left (ShipperNotFound _) -> redirectErr "/bookings/new?error=shipper-not-found"
-      Left e -> redirectErr ("/bookings/new?error=" <> T.pack (show e))
+    case parseCargoType req of
+      Left errCode -> redirectErr ("/bookings/new?error=" <> errCode)
+      Right ct -> do
+        let input =
+              RegisterBookingInput
+                { inputBookingId = generatedBid
+                , inputShipperId = shipperId req
+                , inputOrigin = origin req
+                , inputDestination = destination req
+                , inputDeadline = dt
+                , inputCargoType = ct
+                }
+        result <- liftIO (execute repo checker input)
+        case result of
+          Right _ -> pure (addHeader ("/bookings/" <> generatedBid) NoContent)
+          Left (ShipperNotFound _) -> redirectErr "/bookings/new?error=shipper-not-found"
+          Left e -> redirectErr ("/bookings/new?error=" <> T.pack (show e))
   where
     redirectErr :: Text -> Handler a
     redirectErr loc =
@@ -195,6 +223,32 @@ handlerPost repo checker req = case parseDeadline (deadline req) of
 -- datetime-local 形式 "YYYY-MM-DDTHH:MM" を UTCTime に変換
 parseDeadline :: Text -> Maybe UTCTime
 parseDeadline t = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M" (T.unpack t)
+
+{- | U-02 (IT3): フォーム入力から CargoTypeInput を組み立てる。
+
+cargoType フィールドが Hazardous/Refrigerated の場合は対応する追加フィールド
+(hazardousClass / unNumber / properShippingName / minTemperature / maxTemperature
+ / temperatureUnit) が揃っているかを検証する。不足は Left エラーコードを返す。
+-}
+parseCargoType :: BookingFormRequest -> Either Text CargoTypeInput
+parseCargoType req = case mTyped of
+  "Hazardous" -> case (hazardousClass req, unNumber req, properShippingName req) of
+    (Just cls, Just un, Just nm)
+      | not (T.null cls) && not (T.null un) && not (T.null nm) ->
+          Right (InputHazardous cls un nm)
+    _ -> Left "hazardous-fields-missing"
+  "Refrigerated" -> case (minTemperature req, maxTemperature req, temperatureUnit req) of
+    (Just minT, Just maxT, Just unitT) ->
+      case (readDouble minT, readDouble maxT) of
+        (Just lo, Just hi) -> Right (InputRefrigerated lo hi unitT)
+        _ -> Left "temperature-format"
+    _ -> Left "refrigerated-fields-missing"
+  _ -> Right InputGeneral
+  where
+    mTyped = fromMaybe "General" (cargoType req)
+    readDouble t = case reads (T.unpack t) of
+      [(x, "")] -> Just x
+      _ -> Nothing
 
 -- US06 (IT2): POST /bookings/:bookingId/handover で経路設計者へ引き渡す。
 -- Submitted → RouteProposed の遷移が成功すれば詳細画面に 303、
