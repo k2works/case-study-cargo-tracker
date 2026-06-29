@@ -17,6 +17,11 @@ import qualified Hedgehog.Range as Range
 import Test.Hspec
 
 import Cargotracker.Booking.Domain.Model.Value.BookingId (mkBookingId)
+import Cargotracker.Booking.Domain.Model.Value.HsCode (mkHsCode)
+import Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
+  ( TemperatureUnit (..),
+    mkTemperatureRequirement,
+  )
 import Cargotracker.Routing.Domain.Model.Value.CarrierMovement
   ( CarrierMovement (..),
   )
@@ -126,6 +131,59 @@ prop_voyage_rejects_discontinuity = property $ do
     Left (LegContinuityViolation _) -> pure ()
     other -> fail ("expected Left LegContinuityViolation but got " <> show other)
 
+-- U-13 (IT3): HsCode のプロパティ
+prop_hscode_valid_digits :: Property
+prop_hscode_valid_digits = property $ do
+  -- 6-10 桁の数字は必ず Right
+  n <- forAll (Gen.int (Range.linear 6 10))
+  digits <- forAll (T.pack <$> Gen.list (Range.singleton n) (Gen.element ['0' .. '9']))
+  case mkHsCode digits of
+    Right _ -> pure ()
+    Left e -> fail ("expected Right for valid HS but got " <> show e)
+
+prop_hscode_rejects_non_digit :: Property
+prop_hscode_rejects_non_digit = property $ do
+  -- 英字を 1 文字含むと必ず Left InvalidHsCode (長さ 6-10 でも)
+  n <- forAll (Gen.int (Range.linear 6 10))
+  base <- forAll (T.pack <$> Gen.list (Range.singleton (n - 1)) (Gen.element ['0' .. '9']))
+  letter <- forAll (T.singleton <$> Gen.element ['A' .. 'Z'])
+  let bad = base <> letter
+  case mkHsCode bad of
+    Left (InvalidHsCode _) -> pure ()
+    other -> fail ("expected InvalidHsCode but got " <> show other)
+
+prop_hscode_rejects_wrong_length :: Property
+prop_hscode_rejects_wrong_length = property $ do
+  -- 5 桁以下 / 11 桁以上は必ず Left
+  n <- forAll (Gen.element [0, 1, 5, 11, 12, 15])
+  digits <- forAll (T.pack <$> Gen.list (Range.singleton n) (Gen.element ['0' .. '9']))
+  case mkHsCode digits of
+    Left (InvalidHsCode _) -> pure ()
+    other -> fail ("expected InvalidHsCode for length " <> show n <> " but got " <> show other)
+
+-- U-13 (IT3): TemperatureRequirement のプロパティ
+prop_temperature_min_le_max :: Property
+prop_temperature_min_le_max = property $ do
+  -- min <= max なら必ず Right
+  minT <- forAll (Gen.double (Range.linearFrac (-50) 30))
+  delta <- forAll (Gen.double (Range.linearFrac 0 30))
+  unit <- forAll (Gen.element [Celsius, Fahrenheit])
+  let maxT = minT + delta
+  case mkTemperatureRequirement minT maxT unit of
+    Right _ -> pure ()
+    Left e -> fail ("expected Right for min<=max but got " <> show e)
+
+prop_temperature_rejects_inverted :: Property
+prop_temperature_rejects_inverted = property $ do
+  -- min > max は必ず Left
+  maxT <- forAll (Gen.double (Range.linearFrac (-50) 30))
+  delta <- forAll (Gen.double (Range.linearFrac 0.01 30))
+  unit <- forAll (Gen.element [Celsius, Fahrenheit])
+  let minT = maxT + delta -- min > max
+  case mkTemperatureRequirement minT maxT unit of
+    Left _ -> pure ()
+    Right _ -> fail "expected Left for inverted min/max"
+
 -- ---------------------------------------------------------------
 -- hspec wrapper
 -- ---------------------------------------------------------------
@@ -143,3 +201,8 @@ spec = describe "Domain Properties (T-05 hedgehog)" $ do
   runProp "BookingId: 不正な接頭辞は必ず Left" prop_bookingid_rejects_bad_prefix
   runProp "Voyage: 連続区間 (前 arrival == 次 departure) は Right" prop_voyage_continuity
   runProp "Voyage: 連続性違反は必ず LegContinuityViolation" prop_voyage_rejects_discontinuity
+  runProp "HsCode: 6-10 桁の数字は必ず Right (U-13)" prop_hscode_valid_digits
+  runProp "HsCode: 英字混入は必ず InvalidHsCode (U-13)" prop_hscode_rejects_non_digit
+  runProp "HsCode: 5 桁以下 / 11 桁以上は必ず InvalidHsCode (U-13)" prop_hscode_rejects_wrong_length
+  runProp "TemperatureRequirement: min<=max は必ず Right (U-13)" prop_temperature_min_le_max
+  runProp "TemperatureRequirement: min>max は必ず Left (U-13)" prop_temperature_rejects_inverted
