@@ -35,6 +35,11 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   )
 import Cargotracker.Booking.Interfaces.BookingPageApi (bookingPageApp)
 import Cargotracker.Routing.Application.Ports (VoyageRepository (..))
+import Cargotracker.Routing.Domain.Model.Value.CarrierMovement
+  ( CarrierMovement (..),
+  )
+import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (mkVoyageNumber)
+import Cargotracker.Routing.Domain.Model.Voyage (mkVoyage)
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
@@ -337,3 +342,86 @@ spec = do
     with (mkRoutesApp Nothing) $
       it "予約が存在しなければ 200 + not-found ページを返す" $
         get "/bookings/BK-NOTHERE/routes" `shouldRespondWith` 200
+
+  -- US08a タスク 4.5: 経路候補算出の hspec-wai 受入テスト
+  describe "US08a タスク 4.5: 経路候補算出の受入" $ do
+    let mkRoutesAppWithVoyages seed voys =
+          pure $
+            bookingPageApp
+              ( BookingRepository
+                  { saveBooking = \_ -> pure (Right ())
+                  , findCargoById = \_ -> pure seed
+                  , updateBooking = \_ -> pure (Right ())
+                  , findAllCargos = pure []
+                  }
+              )
+              checkerYes
+              stubCustomsRepo
+              ( VoyageRepository
+                  { findByVoyageNumber = \_ -> pure Nothing
+                  , saveVoyage = \_ -> pure ()
+                  , updateVoyage = \_ -> pure (Right ())
+                  , findAllVoyages = pure voys
+                  }
+              )
+        cargoForRoutes = draftCargo -- JPTYO -> USNYC / arrivalDeadline 2026-12-31
+        baseDay = UTCTime (fromGregorian 2026 9 1) (secondsToDiffTime 0)
+        plusDays n = case n of
+          0 -> baseDay
+          _ -> UTCTime (fromGregorian 2026 9 (1 + n)) (secondsToDiffTime 0)
+        mkV vn dep arr depT arrT =
+          case ( mkVoyageNumber vn
+               , Right () :: Either String ()
+               ) of
+            (Right v, _) ->
+              case mkVoyage
+                v
+                [ CarrierMovement
+                    { departureLocation = UnLocode dep
+                    , arrivalLocation = UnLocode arr
+                    , departureTime = depT
+                    , arrivalTime = arrT
+                    }
+                ] of
+                Right voy -> voy
+                Left e -> error (show e)
+            _ -> error "vn parse"
+
+    -- 成功: V0001 直行便 JPTYO -> USNYC が結果に表示される
+    with (mkRoutesAppWithVoyages (Just cargoForRoutes) [mkV "V0001" "JPTYO" "USNYC" baseDay (plusDays 14)]) $
+      it "成功: 候補表に V0001 と rank=0 が含まれる" $ do
+        res <- get "/bookings/BK-A1B2C3/routes"
+        liftIO $ do
+          let body = LBS.toStrict (simpleBody res)
+          shouldSatisfy body ("V0001" `BS.isInfixOf`)
+
+    -- 0 件: 該当 Voyage なし -> alert-warning
+    with (mkRoutesAppWithVoyages (Just cargoForRoutes) []) $
+      it "0 件: 期限内到達不可メッセージを含む" $ do
+        res <- get "/bookings/BK-A1B2C3/routes"
+        liftIO $ do
+          let body = LBS.toStrict (simpleBody res)
+          -- 「期限内に到達可能な経路が見つかりませんでした」を含む
+          shouldSatisfy body (\b -> "alert-warning" `BS.isInfixOf` b)
+
+    -- 期日超過: 期限超過の Voyage は除外され、結果が 0 件メッセージになる
+    -- (draftCargo の deadline は 2026-12-31。それより 1 年後に到着する直行便)
+    with
+      ( mkRoutesAppWithVoyages
+          (Just cargoForRoutes)
+          [ mkV
+              "V9999"
+              "JPTYO"
+              "USNYC"
+              baseDay
+              (UTCTime (fromGregorian 2027 12 31) (secondsToDiffTime 0))
+          ]
+      )
+      $ it "期日超過: 期限超過便は除外され 0 件警告になる"
+      $ do
+        res <- get "/bookings/BK-A1B2C3/routes"
+        liftIO $ do
+          let body = LBS.toStrict (simpleBody res)
+          -- V9999 は除外され、警告メッセージが表示される
+          shouldSatisfy body ("alert-warning" `BS.isInfixOf`)
+          shouldSatisfy body (not . ("V9999" `BS.isInfixOf`))
