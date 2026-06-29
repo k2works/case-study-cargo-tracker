@@ -89,7 +89,10 @@ data CustomsFormRequest = CustomsFormRequest
   deriving anyclass (FromForm)
 
 data BookingFormRequest = BookingFormRequest
-  { bookingId :: !Text
+  { bookingId :: !(Maybe Text)
+  {- ^ M-03 (IT3): クライアントからの bookingId は無視するが、後方互換のため
+  Maybe Text で残す (Servant FromForm がフィールド欠落を許容する形)。
+  -}
   , shipperId :: !Text
   , origin :: !Text
   , destination :: !Text

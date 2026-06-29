@@ -48,12 +48,11 @@ bookingFormPage mError = pageLayout "貨物予約登録 - Cargo Tracker" $ do
         Nothing -> mempty
       form_ [action_ "/bookings/new", method_ "post"] $ do
         -- T-07 (IT2): 予約 ID はサーバ側で自動採番。手入力フィールドは廃止する。
+        -- M-03 (IT3): BookingFormRequest.bookingId を Maybe Text 化したため
+        -- hidden の死コードは不要 (削除済)。
         p_
           [class_ "text-muted small mb-3"]
           "予約 ID (BK-XXXXXX) は登録時に自動採番されます。"
-        -- Servant の FromForm が bookingId フィールドを要求するため、
-        -- hidden で空値を送る (ハンドラ側で自動採番値に上書き)。
-        input_ [type_ "hidden", name_ "bookingId", value_ ""]
         div_ [class_ "mb-3"] $ do
           label_ [for_ "shipperId", class_ "form-label"] "荷主 ID (検索で選択)"
           input_
