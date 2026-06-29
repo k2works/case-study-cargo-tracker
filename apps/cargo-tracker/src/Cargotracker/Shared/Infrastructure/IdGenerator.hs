@@ -1,4 +1,4 @@
-{- | ID 自動採番ユーティリティ (T-07, IT2)
+{- | ID 自動採番ユーティリティ (T-07, IT2 / H-02, IT3)
 
 ShipperId / BookingId のような業務 ID をサーバ側で生成する。
 英数字大文字 6 桁ランダムを `<PREFIX>-XXXXXX` の形式で組み立てる。
@@ -6,13 +6,26 @@ ShipperId / BookingId のような業務 ID をサーバ側で生成する。
 IT1 ではフォームでユーザが手入力していたが、業務上の誤予約温床
 となるため自動採番に切り替える (retrospective P-7)。
 
-衝突は確率的に十分小さい (約 1/2.18B per attempt)。実運用 (IT5+) では
-DB のサロゲートキーを使う方が確実だが、業務キーはユーザ向け表示用なので
-当面は random 採番で運用する。
+衝突確率 (H-02 で誕生日パラドックス補正):
+
+36^6 = 約 21.8 億通り。誕生日パラドックスで近似すると、N 件登録時の
+衝突確率は概ね N(N-1) / (2 * 36^6)。
+
+- 1,000 件: 約 2.3 × 10^-4 (0.023%)
+- 10,000 件: 約 0.023 (2.3%)
+- 100,000 件: 約 2.3 (実質確定衝突)
+
+単発 attempt の確率 (1 / 21.8 億) ではなく累積確率で評価する必要がある。
+本実装は DB の UNIQUE 制約 (data-model.md: shipper.shipper_code,
+cargo.booking_id) で最終防御し、上位レイヤで挿入失敗時の再試行を行う。
+
+実運用 (IT5+) では DB のサロゲートキー (BIGSERIAL) を使う方が確実だが、
+業務キーはユーザ向け表示用なので当面は random 採番で運用する。
 -}
 module Cargotracker.Shared.Infrastructure.IdGenerator
   ( generateBookingIdText,
     generateShipperIdText,
+    intToAlphaNumChar,
   ) where
 
 import Data.Text (Text)
@@ -40,7 +53,17 @@ randomAlphaNumChar :: IO Char
 randomAlphaNumChar = do
   -- 36 通り (0-9 + A-Z) から 1 文字を一様サンプル
   i <- randomRIO (0, 35 :: Int)
-  pure (alphaNumTable !! i)
+  pure (intToAlphaNumChar i)
 
-alphaNumTable :: [Char]
-alphaNumTable = ['0' .. '9'] <> ['A' .. 'Z']
+{- | 0-35 の Int を英数大文字 1 字に変換する total 関数 (H-02)。
+
+`alphaNumTable !! i` の partial 性を排除するため、`toEnum` ベースの
+直接計算に置換した。範囲外 (i < 0 or i > 35) はガード句で '0' に丸める
+(`randomRIO (0, 35)` を介す本実装では到達不能)。
+-}
+intToAlphaNumChar :: Int -> Char
+intToAlphaNumChar i
+  | i < 0 = '0'
+  | i < 10 = toEnum (fromEnum '0' + i)
+  | i < 36 = toEnum (fromEnum 'A' + i - 10)
+  | otherwise = '0'
