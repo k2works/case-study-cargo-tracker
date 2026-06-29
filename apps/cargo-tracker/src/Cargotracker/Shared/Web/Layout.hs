@@ -116,14 +116,23 @@ pageLayoutFor mRole title body = doctypehtml_ $ do
         a_ [class_ "navbar-brand", href_ "/"] "Cargo Tracker"
         ul_ [class_ "navbar-nav me-auto"] $ do
           mapM_ renderItem (menuItemsForRole mRole)
-          -- 認証済はログアウト、未認証は (Login はメニュー側で表示済) Health のみ
+          -- 認証済はログアウトを表示
           case mRole of
             Just _ ->
               li_ [class_ "nav-item"] $
                 a_ [class_ "nav-link", href_ "/logout"] "ログアウト"
             Nothing -> mempty
-          li_ [class_ "nav-item"] $
-            a_ [class_ "nav-link text-light-emphasis small", href_ "/health"] "Health"
+          -- M-09 (IT3): Health は運用メニューのため業務ロールでは非表示、
+          -- 未認証 (オペレータがログイン前にヘルスチェックする場面) と
+          -- MasterAdmin (運用責務) のみで表示する。
+          case mRole of
+            Nothing ->
+              li_ [class_ "nav-item"] $
+                a_ [class_ "nav-link text-light-emphasis small", href_ "/health"] "Health"
+            Just MasterAdmin ->
+              li_ [class_ "nav-item"] $
+                a_ [class_ "nav-link text-light-emphasis small", href_ "/health"] "Health"
+            Just _ -> mempty
     main_ [class_ "container my-4"] body
     script_
       [ src_ "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
