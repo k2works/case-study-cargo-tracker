@@ -10,6 +10,7 @@ import Test.Hspec
 import Cargotracker (greet)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
+import qualified Booking.Application.AttachCustomsDeclarationCommandSpec
 import qualified Booking.Application.HandOverToRouterCommandSpec
 import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Application.SubmitBookingCommandSpec
@@ -146,6 +147,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Application.SubmitBookingCommand"
     Booking.Application.SubmitBookingCommandSpec.spec
+
+  describe
+    "Cargotracker.Booking.Application.AttachCustomsDeclarationCommand"
+    Booking.Application.AttachCustomsDeclarationCommandSpec.spec
 
   describe
     "Cargotracker.Routing.Application.RegisterVoyageCommand"

@@ -112,6 +112,8 @@ library:
   - Cargotracker.Booking.Application.RegisterBookingCommand
   - Cargotracker.Booking.Application.HandOverToRouterCommand
   - Cargotracker.Booking.Application.SubmitBookingCommand
+  - Cargotracker.Booking.Application.CustomsPorts
+  - Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
   - Cargotracker.Routing.Application.Ports
   - Cargotracker.Routing.Application.RegisterVoyageCommand
   - Cargotracker.Routing.Application.UpdateVoyageCommand
