@@ -2,7 +2,7 @@
 
 {- | Cargo 集約ルート (IT1 US04)
 
-予約の中心エンティティ。荷主 (`ShipperId`) を ACL 参照として保持し、
+予約の中心エンティティ。荷主 (`ShipperRef`) を ACL 参照として保持し、
 状態遷移は `BookingStatus` 経由で管理する。
 
 楽観ロックは `cargoVersion` で表現 (新規 = 1、各更新で +1)。
@@ -27,11 +27,11 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError)
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId)
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef)
 
 data Cargo = Cargo
   { cargoBookingId :: !BookingId
-  , cargoShipperId :: !ShipperId
+  , cargoShipperRef :: !ShipperRef
   , cargoRouteSpec :: !RouteSpecification
   , cargoStatus :: !BookingStatus
   , cargoType :: !CargoType
@@ -43,7 +43,7 @@ data Cargo = Cargo
   deriving stock (Eq, Show)
 
 -- | 一般貨物 (cargoType = General) を Draft 状態で構築する (IT1 後方互換)。
-mkCargo :: BookingId -> ShipperId -> RouteSpecification -> Cargo
+mkCargo :: BookingId -> ShipperRef -> RouteSpecification -> Cargo
 mkCargo bid sid route = mkCargoWithType bid sid route General
 
 {- | 任意の CargoType を指定して Cargo を構築する (US04+US05, IT2)。
@@ -53,11 +53,11 @@ CargoType に Hazardous / Refrigerated を渡せば、その追加情報も型�
 排除しているため Domain 不変条件を満たす。
 -}
 mkCargoWithType ::
-  BookingId -> ShipperId -> RouteSpecification -> CargoType -> Cargo
+  BookingId -> ShipperRef -> RouteSpecification -> CargoType -> Cargo
 mkCargoWithType bid sid route ctype =
   Cargo
     { cargoBookingId = bid
-    , cargoShipperId = sid
+    , cargoShipperRef = sid
     , cargoRouteSpec = route
     , cargoStatus = Draft
     , cargoType = ctype

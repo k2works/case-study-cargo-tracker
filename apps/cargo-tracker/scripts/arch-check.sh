@@ -21,17 +21,10 @@ set -uo pipefail
 SRC_DIR="${1:-src}"
 VIOLATIONS=0
 
-# Rule 4 既知違反 ALLOWLIST (IT1 由来、IT3 で ACL 経由に解消予定)。
-# 形式: "<相対 src パス>|<許可 import の正規表現>"
-ALLOWLIST_RULE4=(
-  "Cargotracker/Booking/Application/Ports.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
-  "Cargotracker/Booking/Application/RegisterBookingCommand.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
-  "Cargotracker/Booking/Domain/Model/Cargo.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
-  "Cargotracker/Booking/Infrastructure/PostgresBookingRepository.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
-  "Cargotracker/Booking/Infrastructure/PostgresShipperExistenceChecker.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
-  "Cargotracker/Booking/Views/BookingShowView.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
-  "Cargotracker/Booking/Views/BookingListView.hs|Cargotracker.Shipper.Domain.Model.Value.ShipperId"
-)
+# Rule 4 既知違反 ALLOWLIST (IT3 U-05 で Booking 系 7 件を ShipperRef VO に
+# 解消済み / ADR-0004)。本配列は空。新規 BC 追加時に必要なら ADR で起票し
+# 暫定エントリを追加する運用は今後も維持する。
+ALLOWLIST_RULE4=()
 
 is_rule4_allowed() {
   local file="$1" imp="$2"

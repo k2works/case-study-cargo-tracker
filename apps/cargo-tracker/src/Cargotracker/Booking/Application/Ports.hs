@@ -11,7 +11,7 @@ module Cargotracker.Booking.Application.Ports
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo)
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId)
 import Cargotracker.Shared.Domain.DomainError (DomainError)
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId)
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef)
 
 -- T-01 (IT2): saveBooking は Infrastructure 側の検証失敗 (例: 荷主サロゲート
 -- キー解決不可) を例外で潰さず DomainError として返す。Application 層が
@@ -28,5 +28,5 @@ data BookingRepository m = BookingRepository
   }
 
 newtype ShipperExistenceChecker m = ShipperExistenceChecker
-  { exists :: ShipperId -> m Bool
+  { exists :: ShipperRef -> m Bool
   }

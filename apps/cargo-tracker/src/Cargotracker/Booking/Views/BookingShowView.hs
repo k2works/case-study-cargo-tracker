@@ -20,13 +20,13 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   )
 import Cargotracker.Booking.Views.CustomsSectionView (customsSection)
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 
 bookingShowPage :: Cargo -> Maybe CustomsDeclaration -> Html ()
 bookingShowPage c mCustoms = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
   let BookingId bid = cargoBookingId c
-      ShipperId sid = cargoShipperId c
+      ShipperRef sid = cargoShipperRef c
       route = cargoRouteSpec c
       UnLocode orig = origin route
       UnLocode dest = destination route

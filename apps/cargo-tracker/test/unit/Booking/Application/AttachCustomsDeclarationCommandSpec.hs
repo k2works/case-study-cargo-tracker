@@ -34,7 +34,7 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 
 deadline :: UTCTime
 deadline = UTCTime (fromGregorian 2026 12 31) (secondsToDiffTime 0)
@@ -51,7 +51,7 @@ baseRoute =
     }
 
 sampleCargo :: Cargo
-sampleCargo = mkCargo bid (ShipperId "SHP-X1Y2Z3") baseRoute
+sampleCargo = mkCargo bid (ShipperRef "SHP-X1Y2Z3") baseRoute
 
 makeBookingRepo :: Maybe Cargo -> BookingRepository IO
 makeBookingRepo seed =

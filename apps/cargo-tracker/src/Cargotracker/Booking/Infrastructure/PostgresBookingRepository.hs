@@ -42,7 +42,7 @@ import Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 
 newPostgresBookingRepository :: Connection -> BookingRepository IO
 newPostgresBookingRepository conn =
@@ -84,7 +84,7 @@ listCargos conn = do
   pure
     [ Cargo
         { cargoBookingId = BookingId bidV
-        , cargoShipperId = ShipperId sidV
+        , cargoShipperRef = ShipperRef sidV
         , cargoRouteSpec =
             RouteSpecification
               { origin = UnLocode orig
@@ -133,7 +133,7 @@ findCargo conn bid = do
         Just
           Cargo
             { cargoBookingId = BookingId bidV
-            , cargoShipperId = ShipperId sidV
+            , cargoShipperRef = ShipperRef sidV
             , cargoRouteSpec =
                 RouteSpecification
                   { origin = UnLocode orig
@@ -184,7 +184,7 @@ textToBookingStatus _ = Draft
 -- `Left (ShipperNotFound ...)` を返して呼び出し元に伝播する。
 saveCargo :: Connection -> Cargo -> IO (Either DomainError ())
 saveCargo conn c = do
-  let ShipperId sidBusiness = cargoShipperId c
+  let ShipperRef sidBusiness = cargoShipperRef c
   rows <-
     query
       conn

@@ -34,7 +34,7 @@ import Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (mkUnLocode)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (mkShipperId, unShipperId)
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..), mkShipperRef)
 
 -- US04+US05 (IT2): フォーム / API 入力から CargoType を構築するための DTO。
 -- HTML form の cargoType select + 条件付きフィールドに対応する。
@@ -67,7 +67,7 @@ execute repo checker input = case validate input of
   Right (bid, sid, route, ctype) -> do
     okShipper <- exists checker sid
     if not okShipper
-      then pure (Left (ShipperNotFound (unShipperId sid)))
+      then pure (Left (ShipperNotFound (unShipperRef sid)))
       else do
         let cargo = mkCargoWithType bid sid route ctype
         saveResult <- saveBooking repo cargo
@@ -77,7 +77,7 @@ execute repo checker input = case validate input of
   where
     validate i = do
       bid <- mkBookingId (inputBookingId i)
-      sid <- mkShipperId (inputShipperId i)
+      sid <- mkShipperRef (inputShipperId i)
       origin <- mkUnLocode (inputOrigin i)
       destination <- mkUnLocode (inputDestination i)
       ctype <- buildCargoType (inputCargoType i)

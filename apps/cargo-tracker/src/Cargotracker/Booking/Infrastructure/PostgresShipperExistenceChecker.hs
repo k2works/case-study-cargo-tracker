@@ -16,12 +16,12 @@ import Database.PostgreSQL.Simple
   )
 
 import Cargotracker.Booking.Application.Ports (ShipperExistenceChecker (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 
 newPostgresShipperExistenceChecker :: Connection -> ShipperExistenceChecker IO
 newPostgresShipperExistenceChecker conn =
   ShipperExistenceChecker
-    { exists = \(ShipperId sid) -> do
+    { exists = \(ShipperRef sid) -> do
         rows <-
           query
             conn

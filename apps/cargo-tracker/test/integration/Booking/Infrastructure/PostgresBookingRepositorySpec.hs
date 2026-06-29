@@ -32,7 +32,7 @@ import Cargotracker.Booking.Infrastructure.PostgresShipperExistenceChecker
   ( newPostgresShipperExistenceChecker,
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 
 deadline :: UTCTime
 deadline = UTCTime (fromGregorian 2027 1 31) (secondsToDiffTime 0)
@@ -82,7 +82,7 @@ spec = describe "PostgresBookingRepository [INTEGRATION]" $ do
             cargo =
               mkCargo
                 (BookingId "BK-INT001")
-                (ShipperId "SHP-INT001")
+                (ShipperRef "SHP-INT001")
                 route
         saveResult <- saveBooking repo cargo
         saveResult `shouldBe` Right ()
@@ -106,7 +106,7 @@ spec = describe "PostgresBookingRepository [INTEGRATION]" $ do
           conn <- connectPostgreSQL (BC.pack url)
           setupShipper conn
           let checker = newPostgresShipperExistenceChecker conn
-          result <- exists checker (ShipperId "SHP-INT001")
+          result <- exists checker (ShipperRef "SHP-INT001")
           result `shouldBe` True
           teardownShipper conn
           close conn
@@ -118,6 +118,6 @@ spec = describe "PostgresBookingRepository [INTEGRATION]" $ do
         Just url -> do
           conn <- connectPostgreSQL (BC.pack url)
           let checker = newPostgresShipperExistenceChecker conn
-          result <- exists checker (ShipperId "SHP-NOEXIST")
+          result <- exists checker (ShipperRef "SHP-NOEXIST")
           result `shouldBe` False
           close conn

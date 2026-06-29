@@ -1,6 +1,6 @@
 {- | Cargo 集約のテスト (IT1 US04 3.1)
 
-集約ルート Cargo: BookingId / ShipperId (参照) / RouteSpecification / BookingStatus。
+集約ルート Cargo: BookingId / ShipperRef (参照) / RouteSpecification / BookingStatus。
 新規貨物予約は Draft 状態で開始し、submitBooking で Submitted に遷移する。
 -}
 module Booking.Domain.Model.CargoSpec (spec) where
@@ -27,15 +27,15 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (mkUnLocode)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId, mkShipperId)
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef, mkShipperRef)
 
 unsafeBookingId :: BookingId
 unsafeBookingId = case mkBookingId "BK-A1B2C3" of
   Right b -> b
   Left _ -> error "test: invalid id"
 
-unsafeShipperId :: ShipperId
-unsafeShipperId = case mkShipperId "SHP-X1Y2Z3" of
+unsafeShipperId :: ShipperRef
+unsafeShipperId = case mkShipperRef "SHP-X1Y2Z3" of
   Right s -> s
   Left _ -> error "test: invalid shipper"
 

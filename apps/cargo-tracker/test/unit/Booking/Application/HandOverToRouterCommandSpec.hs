@@ -28,7 +28,7 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 
 deadline :: UTCTime
 deadline = UTCTime (fromGregorian 2026 12 31) (secondsToDiffTime 0)
@@ -45,7 +45,7 @@ bid :: BookingId
 bid = BookingId "BK-A1B2C3"
 
 draftCargo :: Cargo
-draftCargo = mkCargo bid (ShipperId "SHP-X1Y2Z3") baseRoute
+draftCargo = mkCargo bid (ShipperRef "SHP-X1Y2Z3") baseRoute
 
 submittedCargo :: Cargo
 submittedCargo = case submitBooking draftCargo of

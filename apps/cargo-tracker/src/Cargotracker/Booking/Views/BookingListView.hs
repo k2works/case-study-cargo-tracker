@@ -17,8 +17,8 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 import Cargotracker.Shared.Web.Layout (pageLayout)
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 
 bookingListPage :: [Cargo] -> Html ()
 bookingListPage cargos = pageLayout "貨物予約一覧 - Cargo Tracker" $ do
@@ -41,7 +41,7 @@ bookingListPage cargos = pageLayout "貨物予約一覧 - Cargo Tracker" $ do
     row :: Cargo -> Html ()
     row c = do
       let BookingId bid = cargoBookingId c
-          ShipperId sid = cargoShipperId c
+          ShipperRef sid = cargoShipperRef c
           route = cargoRouteSpec c
           UnLocode o = origin route
           UnLocode d = destination route

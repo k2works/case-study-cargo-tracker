@@ -35,7 +35,7 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   )
 import Cargotracker.Booking.Interfaces.BookingPageApi (bookingPageApp)
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Network.Wai (Application)
 
@@ -93,13 +93,13 @@ routeForHandover =
 
 submittedCargo :: Cargo
 submittedCargo =
-  let draft = mkCargo (BookingId "BK-A1B2C3") (ShipperId "SHP-X1Y2Z3") routeForHandover
+  let draft = mkCargo (BookingId "BK-A1B2C3") (ShipperRef "SHP-X1Y2Z3") routeForHandover
    in case submitBooking draft of
         Right c -> c
         Left _ -> error "test setup: submitBooking failed"
 
 draftCargo :: Cargo
-draftCargo = mkCargo (BookingId "BK-A1B2C3") (ShipperId "SHP-X1Y2Z3") routeForHandover
+draftCargo = mkCargo (BookingId "BK-A1B2C3") (ShipperRef "SHP-X1Y2Z3") routeForHandover
 
 mkHandoverApp :: Maybe Cargo -> IO Application
 mkHandoverApp seed = do
