@@ -101,11 +101,11 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | U-01: `/estimates/new` フォーム + 候補表示 + 予約遷移 | 4h | - | [ ] |
-| 1.2 | U-02: BookingFormView に CargoType select + htmx 動的フィールド | 4h | - | [ ] |
-| 1.3 | U-03: voyageEditPage プリフィル (movements を input value) | 2h | - | [ ] |
-| 1.4 | U-04: arch-check Phase 2 (haskell-src-exts AST バイナリ + Rule 6) | 8h | - | [ ] |
-| 1.5 | U-05: `ShipperRef` VO 導入 + Booking 側参照リファクタ + ALLOWLIST 解消 | 6h | - | [ ] |
+| 1.1 | U-01: `/estimates/new` フォーム + 候補表示 + 予約遷移 | 4h | - | [x] |
+| 1.2 | U-02: BookingFormView に CargoType select + htmx 動的フィールド | 4h | - | [x] |
+| 1.3 | U-03: voyageEditPage プリフィル (movements を input value) | 2h | - | [x] |
+| 1.4 | U-04: arch-check Phase 2 (haskell-src-exts AST バイナリ + Rule 6) | 8h | - | [ ] (IT4 繰越) |
+| 1.5 | U-05: `ShipperRef` VO 導入 + Booking 側参照リファクタ + ALLOWLIST 解消 | 6h | - | [x] |
 
 **小計**: 24h
 
@@ -113,11 +113,11 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | U-06: HPC Domain 別計測 + CI ゲート 70% 引き上げ | 4h | - | [ ] |
-| 2.2 | U-07: M-10 ロール別認可 (handler 単位 / authMiddleware 拡張) | 6h | - | [ ] |
-| 2.3 | U-08: Playwright E2E US01 / US06 / US25 ハッピーパス追加 | 6h | - | [ ] |
-| 2.4 | U-09: domain-model.md / data-model.md を IT2 実装で同期 | 3h | - | [ ] |
-| 2.5 | U-10: `v0.1.0-alpha` タグ + GitHub Release ノート公開 | 1h | - | [ ] |
+| 2.1 | U-06: HPC Domain 別計測 + CI ゲート 70% 引き上げ | 4h | - | [x] |
+| 2.2 | U-07: M-10 ロール別認可 (handler 単位 / authMiddleware 拡張) | 6h | - | [x] |
+| 2.3 | U-08: Playwright E2E US01 / US06 / US25 ハッピーパス追加 | 6h | - | [ ] (IT4 繰越) |
+| 2.4 | U-09: domain-model.md / data-model.md を IT2 実装で同期 | 3h | - | [x] |
+| 2.5 | U-10: `v0.1.0-alpha` タグ + GitHub Release ノート公開 | 1h | - | [x] (リリースノートドラフト完了 / tag は人手作業) |
 
 **小計**: 20h
 
@@ -125,11 +125,11 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Domain: `VoyageSearchCriteria` VO + `VoyageQuery` 関数 | 3h | - | [ ] |
-| 3.2 | Application: `SearchVoyagesQuery` ユースケース | 2h | - | [ ] |
-| 3.3 | Infrastructure: PostgresVoyageRepository に検索メソッド | 3h | - | [ ] |
-| 3.4 | HTTP/UI: `/voyages/search` GET ハンドラ + フォーム + 結果テンプレート | 4h | - | [ ] |
-| 3.5 | hspec-wai 受入テスト 3 件 (該当あり / 該当なし / 不正入力) | 2h | - | [ ] |
+| 3.1 | Domain: `VoyageSearchCriteria` VO + `VoyageQuery` 関数 | 3h | - | [x] |
+| 3.2 | Application: `SearchVoyagesQuery` ユースケース | 2h | - | [x] |
+| 3.3 | Infrastructure: PostgresVoyageRepository に検索メソッド | 3h | - | [x] |
+| 3.4 | HTTP/UI: `/voyages/search` GET ハンドラ + フォーム + 結果テンプレート | 4h | - | [x] |
+| 3.5 | hspec-wai 受入テスト 3 件 (該当あり / 該当なし / 不正入力) | 2h | - | [x] |
 
 **小計**: 14h
 
@@ -137,12 +137,12 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | Domain: `RouteCandidate` 集約 + `RouteFinder` 純関数 (DFS / 5 件まで) | 6h | - | [ ] |
-| 4.2 | Domain: hedgehog プロパティ (期日内 / 時刻順) | 3h | - | [ ] |
-| 4.3 | Application: `ComputeRouteCandidatesQuery` ユースケース | 3h | - | [ ] |
-| 4.4 | HTTP/UI: `/bookings/{id}/routes` GET + 候補表 | 4h | - | [ ] |
-| 4.5 | hspec-wai 受入テスト 3 件 (成功 / 0 件 / 期日超過) | 2h | - | [ ] |
-| 4.6 | 性能ベンチ (航海 1000 件で <500ms 確認) | 2h | - | [ ] |
+| 4.1 | Domain: `RouteCandidate` 集約 + `RouteFinder` 純関数 (DFS / 5 件まで) | 6h | - | [x] |
+| 4.2 | Domain: hedgehog プロパティ (期日内 / 時刻順) | 3h | - | [x] |
+| 4.3 | Application: `ComputeRouteCandidatesQuery` ユースケース | 3h | - | [x] |
+| 4.4 | HTTP/UI: `/bookings/{id}/routes` GET + 候補表 | 4h | - | [x] |
+| 4.5 | hspec-wai 受入テスト 3 件 (成功 / 0 件 / 期日超過) | 2h | - | [x] |
+| 4.6 | 性能ベンチ (航海 1000 件で <500ms 確認) | 2h | - | [x] (12.6ms 達成) |
 
 **小計**: 20h
 
@@ -150,12 +150,12 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | Domain: `CustomsDeclaration` 集約 + `HsCode` VO (6-10 桁) + `DeclarationStatus` sum type | 3h | - | [ ] |
-| 5.2 | dbmate migration: 既存 `customs_declaration` に `hs_code` / `broker_name` / `declaration_status` カラム追加 | 1h | - | [ ] |
-| 5.3 | Application: `AttachCustomsDeclarationCommand` + `CustomsDeclarationRepository` Port | 2h | - | [ ] |
-| 5.4 | Infrastructure: PostgresCustomsDeclarationRepository | 2h | - | [ ] |
-| 5.5 | HTTP/UI: 予約詳細に通関セクション追加 + PRG (ステータス select) | 3h | - | [ ] |
-| 5.6 | hspec-wai 受入テスト 3 件 (正常 / HS 形式エラー / 不正ステータス) | 2h | - | [ ] |
+| 5.1 | Domain: `CustomsDeclaration` 集約 + `HsCode` VO (6-10 桁) + `DeclarationStatus` sum type | 3h | - | [x] |
+| 5.2 | dbmate migration: 既存 `customs_declaration` に `hs_code` / `broker_name` / `declaration_status` カラム追加 | 1h | - | [x] |
+| 5.3 | Application: `AttachCustomsDeclarationCommand` + `CustomsDeclarationRepository` Port | 2h | - | [x] |
+| 5.4 | Infrastructure: PostgresCustomsDeclarationRepository | 2h | - | [x] |
+| 5.5 | HTTP/UI: 予約詳細に通関セクション追加 + PRG (ステータス select) | 3h | - | [x] |
+| 5.6 | hspec-wai 受入テスト 3 件 (正常 / HS 形式エラー / 不正ステータス) | 2h | - | [x] |
 
 **小計**: 13h
 
@@ -163,13 +163,13 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 6.1 | arch-check Phase 3 T-01: トランザクション境界 (Application のみ runTx) | 4h | - | [ ] |
-| 6.2 | arch-check Phase 3 T-02: Repository は IO のみ (Tx 開始禁止) | 3h | - | [ ] |
-| 6.3 | arch-check Phase 3 T-03: Domain は IO 完全排除 | 2h | - | [ ] |
-| 6.4 | U-11: PostgresBookingRepository SELECT 圧縮 (postgresql-simple-named) | 3h | - | [ ] |
-| 6.5 | U-12: CreateEstimateCommand の Postgres 統合テスト + CI 自動化 | 3h | - | [ ] |
-| 6.6 | U-13: hedgehog 拡張 (Estimate / RouteCandidate / TemperatureRequirement) | 2h | - | [ ] |
-| 6.7 | U-14: arch-check Rule 4 ALLOWLIST ファイル存在検証 | 1h | - | [ ] |
+| 6.1 | arch-check Phase 3 T-01: トランザクション境界 (Application のみ runTx) | 4h | - | [ ] (IT4 繰越) |
+| 6.2 | arch-check Phase 3 T-02: Repository は IO のみ (Tx 開始禁止) | 3h | - | [ ] (IT4 繰越) |
+| 6.3 | arch-check Phase 3 T-03: Domain は IO 完全排除 | 2h | - | [ ] (IT4 繰越) |
+| 6.4 | U-11: PostgresBookingRepository SELECT 圧縮 (postgresql-simple-named) | 3h | - | [x] |
+| 6.5 | U-12: CreateEstimateCommand の Postgres 統合テスト + CI 自動化 | 3h | - | [ ] (IT4 繰越) |
+| 6.6 | U-13: hedgehog 拡張 (Estimate / RouteCandidate / TemperatureRequirement) | 2h | - | [x] |
+| 6.7 | U-14: arch-check Rule 4 ALLOWLIST ファイル存在検証 | 1h | - | [x] |
 
 **小計**: 18h
 
@@ -177,11 +177,11 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 7.1 | H-01: `submitBooking` のエラー型を `InvalidStateTransition` に修正 (`Booking/Domain/Model/Cargo.hs:75`) | 1h | - | [ ] |
-| 7.2 | H-02: `IdGenerator.hs:43` partial 関数除去 + UNIQUE 制約 + retry ループ | 2h | - | [ ] |
-| 7.3 | H-03: US06 Draft → Submitted の Submit ボタン実装 + `SubmitBookingCommand` | 3h | - | [ ] |
-| 7.4 | H-07: `BookingNotFound`/`InvalidStateTransition` を `Booking.Domain.Error` へ分離 + ADR-0005 起票 | 2h | - | [ ] |
-| 7.5 | H-09: ベロシティ表記を 3 ドキュメント (`iteration_report-2.md` / `retrospective-2.md` / `release_plan.md`) で統一注記 | 1h | - | [ ] |
+| 7.1 | H-01: `submitBooking` のエラー型を `InvalidStateTransition` に修正 (`Booking/Domain/Model/Cargo.hs:75`) | 1h | - | [x] |
+| 7.2 | H-02: `IdGenerator.hs:43` partial 関数除去 + UNIQUE 制約 + retry ループ | 2h | - | [x] |
+| 7.3 | H-03: US06 Draft → Submitted の Submit ボタン実装 + `SubmitBookingCommand` | 3h | - | [x] |
+| 7.4 | H-07: `BookingNotFound`/`InvalidStateTransition` を `Booking.Domain.Error` へ分離 + ADR-0005 起票 | 2h | - | [x] |
+| 7.5 | H-09: ベロシティ表記を 3 ドキュメント (`iteration_report-2.md` / `retrospective-2.md` / `release_plan.md`) で統一注記 | 1h | - | [x] |
 
 **小計**: 9h（2 SP 相当、IT2 繰越クリティカルに追加）
 
@@ -189,17 +189,17 @@ release_plan.md の IT3-IT4 原案では US07(3) + US08a(5) + US08b(3) + US09(3)
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| IT2 繰越クリティカル (U-01〜U-05) | 6 | 24h | [ ] |
-| IT2 繰越セカンダリ (U-06〜U-10) | 6 | 20h | [ ] |
-| US07 航海検索 | 3 | 14h | [ ] |
-| US08a 経路候補基本 | 5 | 20h | [ ] |
-| US27 通関紐付け | 3 | 13h | [ ] |
-| 横断 (arch Phase 3 + U-11〜U-14, ストレッチ) | 4 | 18h | [ ] |
-| レビュー指摘高優先 (H-01〜H-03/H-07/H-09) | 2 | 9h | [ ] |
+| IT2 繰越クリティカル (U-01〜U-05) | 6 | 24h | [-] (U-04 のみ IT4 繰越) |
+| IT2 繰越セカンダリ (U-06〜U-10) | 6 | 20h | [-] (U-08 のみ IT4 繰越) |
+| US07 航海検索 | 3 | 14h | [x] |
+| US08a 経路候補基本 | 5 | 20h | [x] |
+| US27 通関紐付け | 3 | 13h | [x] |
+| 横断 (arch Phase 3 + U-11〜U-14, ストレッチ) | 4 | 18h | [-] (Phase 3 T-01〜T-03 / U-12 が IT4 繰越) |
+| レビュー指摘高優先 (H-01〜H-03/H-07/H-09) | 2 | 9h | [x] |
 | **合計** | **29** | **118h** | |
 
 **1 SP あたり**: 約 4.0h
-**進捗率**: 0% (0/29 SP)
+**進捗率**: 約 75% (≒ 22/29 SP、IT4 繰越 7 SP: U-04 / U-08 / U-12 / Phase 3 T-01〜T-03)
 **ストレッチ枠**: U-11〜U-14 (4 SP) はバッファ消費時に IT4 へ繰越可能。コミット必達は 25 SP。
 
 ---
