@@ -28,6 +28,7 @@ import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Application.SearchVoyagesQuerySpec
 import qualified Routing.Application.UpdateVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
+import qualified Routing.Domain.Service.RouteFinderPropertiesSpec
 import qualified Routing.Domain.Service.RouteFinderSpec
 import qualified Routing.Domain.Service.VoyageQuerySpec
 import qualified Routing.Infrastructure.PostgresVoyageRepositorySpec
@@ -146,6 +147,10 @@ main = hspec $ do
   describe
     "Cargotracker.Routing.Domain.Service.RouteFinder"
     Routing.Domain.Service.RouteFinderSpec.spec
+
+  describe
+    "Cargotracker.Routing.Domain.Service.RouteFinder (hedgehog)"
+    Routing.Domain.Service.RouteFinderPropertiesSpec.spec
 
   describe
     "Cargotracker.Shipper.Application.RegisterShipperCommand"
