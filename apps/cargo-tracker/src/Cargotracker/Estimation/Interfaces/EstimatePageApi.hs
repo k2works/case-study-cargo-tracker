@@ -41,6 +41,7 @@ import Cargotracker.Estimation.Domain.Model.Value.EstimateId
   )
 import Cargotracker.Estimation.Views.EstimateFormView
   ( estimateFormPage,
+    estimateListPage,
     estimateNotFoundPage,
     estimateShowPage,
   )
@@ -58,9 +59,10 @@ data EstimateFormRequest = EstimateFormRequest
 
 type EstimatePageApi =
   "estimates"
-    :> ( "new"
-           :> QueryParam "error" Text
-           :> Get '[HTML] (Html ())
+    :> ( Get '[HTML] (Html ())
+           :<|> "new"
+             :> QueryParam "error" Text
+             :> Get '[HTML] (Html ())
            :<|> ReqBody '[FormUrlEncoded] EstimateFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
            :<|> Capture "estimateId" Text :> Get '[HTML] (Html ())
@@ -70,10 +72,16 @@ estimatePageApp :: EstimateRepository IO -> Application
 estimatePageApp repo =
   serve
     (Proxy :: Proxy EstimatePageApi)
-    ( handlerNew
+    ( handlerList repo
+        :<|> handlerNew
         :<|> handlerPost repo
         :<|> handlerShow repo
     )
+
+handlerList :: EstimateRepository IO -> Handler (Html ())
+handlerList repo = do
+  ests <- liftIO (findAllEstimates repo)
+  pure (estimateListPage ests)
 
 handlerNew :: Maybe Text -> Handler (Html ())
 handlerNew mError = pure (estimateFormPage (fmap errorMessage mError))

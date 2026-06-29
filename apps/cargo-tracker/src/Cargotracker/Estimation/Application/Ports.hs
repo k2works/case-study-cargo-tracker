@@ -15,4 +15,5 @@ import Cargotracker.Shared.Domain.DomainError (DomainError)
 data EstimateRepository m = EstimateRepository
   { saveEstimate :: Estimate -> m (Either DomainError ())
   , findEstimateById :: EstimateId -> m (Maybe Estimate)
+  , findAllEstimates :: m [Estimate]
   }

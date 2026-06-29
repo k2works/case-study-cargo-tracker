@@ -10,16 +10,19 @@ H-04 反映: IT2 で API のみ実装されていた見積機能に SSR UI を�
 module Cargotracker.Estimation.Views.EstimateFormView
   ( estimateFormPage,
     estimateShowPage,
+    estimateListPage,
     estimateNotFoundPage,
   ) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Time (defaultTimeLocale, formatTime)
 import Lucid
 
 import Cargotracker.Estimation.Domain.Model.Estimate (Estimate (..))
 import qualified Cargotracker.Estimation.Domain.Model.RouteCandidate as RC
 import Cargotracker.Estimation.Domain.Model.Value.EstimateId (unEstimateId)
+import Cargotracker.Estimation.Domain.Model.Value.EstimateStatus (estimateStatusToText)
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
 
@@ -154,6 +157,64 @@ candidateRow rc =
     td_ (toHtml (T.pack (show (RC.transitDays rc)) <> " 日"))
     td_ (toHtml ("¥ " <> T.pack (show (RC.estimatedCost rc))))
     td_ (toHtml (T.intercalate ", " (RC.voyageNumbers rc)))
+
+{- | 見積一覧 (US01, IT3 追加導線)。最大 100 件 (Postgres 側で LIMIT 100)。
+IT4 で ADR-0006 のページネーション API に移行予定。
+-}
+estimateListPage :: [Estimate] -> Html ()
+estimateListPage ests = pageLayout "見積一覧 - Cargo Tracker" $ do
+  div_ [class_ "d-flex justify-content-between align-items-center mb-4"] $ do
+    h1_ [class_ "h3 mb-0"] "見積一覧"
+    a_ [href_ "/estimates/new", class_ "btn btn-primary"] "新規見積作成"
+  let n = length ests
+  p_
+    [class_ "text-muted small mb-3"]
+    ( toHtml
+        ("表示中 " <> T.pack (show n) <> " 件 (最大 100 件表示)")
+    )
+  if n >= 100
+    then
+      flashAlert
+        FlashWarning
+        "上限件数に達しています。検索・ページング機能の追加は IT4 で実装予定です。"
+    else mempty
+  if null ests
+    then p_ [class_ "text-muted"] "見積がまだありません。"
+    else table_ [class_ "table table-striped"] $ do
+      thead_ $ tr_ $ do
+        th_ "見積 ID"
+        th_ "荷主 ID"
+        th_ "出発港"
+        th_ "到着港"
+        th_ "到着期限"
+        th_ "貨物種別"
+        th_ "重量 (kg)"
+        th_ "状態"
+        th_ "候補数"
+        th_ ""
+      tbody_ (mapM_ row ests)
+  where
+    row :: Estimate -> Html ()
+    row e =
+      let eid = unEstimateId (estimateId e)
+          UnLocode o = origin e
+          UnLocode d = destination e
+       in tr_ $ do
+            td_ (toHtml (T.take 8 eid <> "…"))
+            td_ (toHtml (shipperIdText e))
+            td_ (toHtml o)
+            td_ (toHtml d)
+            td_ (toHtml (T.pack (formatTime defaultTimeLocale "%Y-%m-%d %H:%M" (deadline e))))
+            td_ (toHtml (cargoTypeText e))
+            td_ (toHtml (T.pack (show (weightKg e))))
+            td_ (toHtml (estimateStatusToText (estimateStatus e)))
+            td_ (toHtml (T.pack (show (length (routeCandidates e)))))
+            td_ $
+              a_
+                [ href_ ("/estimates/" <> eid)
+                , class_ "btn btn-sm btn-outline-primary"
+                ]
+                "詳細"
 
 estimateNotFoundPage :: Html ()
 estimateNotFoundPage = pageLayout "Not Found - Cargo Tracker" $

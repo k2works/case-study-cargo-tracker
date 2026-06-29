@@ -16,10 +16,11 @@ hrefs = map (show . navHref)
 
 spec :: Spec
 spec = describe "menuItemsForRole (U-07)" $ do
-  it "未認証は見積作成 + 公開一覧 + 航海検索 + Login" $ do
+  it "未認証は見積作成 + 見積一覧 + 公開一覧 + 航海検索 + Login" $ do
     let items = menuItemsForRole Nothing
     map navHref items
       `shouldBe` [ "/estimates/new"
+                 , "/estimates"
                  , "/shippers"
                  , "/bookings"
                  , "/voyages"
@@ -27,10 +28,11 @@ spec = describe "menuItemsForRole (U-07)" $ do
                  , "/login"
                  ]
 
-  it "Sales は見積/荷主/予約一覧/予約登録/航海検索" $ do
+  it "Sales は見積作成/見積一覧/荷主/予約一覧/予約登録/航海検索" $ do
     let items = menuItemsForRole (Just Sales)
     map navHref items
       `shouldBe` [ "/estimates/new"
+                 , "/estimates"
                  , "/shippers"
                  , "/bookings"
                  , "/bookings/new"

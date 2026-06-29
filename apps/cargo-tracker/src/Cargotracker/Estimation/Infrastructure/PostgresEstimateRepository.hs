@@ -49,6 +49,7 @@ newPostgresEstimateRepository conn =
   EstimateRepository
     { saveEstimate = saveEst conn
     , findEstimateById = findEst conn
+    , findAllEstimates = findAllEst conn
     }
 
 saveEst :: Connection -> Estimate -> IO (Either DomainError ())
@@ -141,6 +142,42 @@ findEst conn (EstimateId eidT) = withTransaction conn $ do
             , routeCandidates = candidates
             }
     _ -> pure Nothing
+
+{- | 全見積一覧 (最大 100 件) を最近作成順で取得する。
+IT4 で ADR-0006 に従い Page a 型に置き換える予定。
+-}
+findAllEst :: Connection -> IO [Estimate]
+findAllEst conn = withTransaction conn $ do
+  rows <-
+    query
+      conn
+      "SELECT e.id, e.estimate_id, s.shipper_id, e.origin_unlocode, e.destination_unlocode, \
+      \        e.deadline, e.cargo_type, e.weight_kg, e.estimate_status \
+      \ FROM estimate e JOIN shipper s ON s.id = e.shipper_id \
+      \ ORDER BY e.id DESC LIMIT 100"
+      () ::
+      IO
+        [(Int, Text, Text, Text, Text, UTCTime, Text, Double, Text)]
+  mapM
+    ( \(estDbId, eidV, sidT, orig, dest, dl, ctype, wt, statusT) -> do
+        candidates <- loadCandidates conn estDbId
+        let status = case statusT of
+              "Expired" -> Expired
+              _ -> Created
+        pure
+          Estimate
+            { estimateId = EstimateId eidV
+            , shipperIdText = sidT
+            , origin = UnLocode orig
+            , destination = UnLocode dest
+            , deadline = dl
+            , cargoTypeText = ctype
+            , weightKg = wt
+            , estimateStatus = status
+            , routeCandidates = candidates
+            }
+    )
+    rows
 
 loadCandidates :: Connection -> Int -> IO [RouteCandidate]
 loadCandidates conn estDbId = do

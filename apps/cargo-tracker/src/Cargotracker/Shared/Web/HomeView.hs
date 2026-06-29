@@ -41,6 +41,7 @@ homePage = pageLayout "Cargo Tracker (Haskell 版)" $ do
         menuCard "/estimates/new" "💴 見積作成" "US01 重量・体積から運賃見積"
       h2_ [class_ "h4 mt-5 mb-3"] "一覧・検索メニュー"
       div_ [class_ "row g-3"] $ do
+        menuCard "/estimates" "💴 見積一覧" "登録済見積 + 候補一覧"
         menuCard "/shippers" "👥 荷主一覧" "登録済荷主の参照"
         menuCard "/bookings" "📋 貨物予約一覧" "予約状態 + 通関情報 (US27) へ"
         menuCard "/voyages" "🛳️ 航海一覧" "登録済航海スケジュール参照"

@@ -3,7 +3,7 @@
 -- | EstimatePageApi のテスト (U-01 / US01, IT3)
 module Estimation.Interfaces.EstimatePageApiSpec (spec) where
 
-import Data.IORef (modifyIORef', newIORef)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import Network.Wai (Application)
 import Network.Wai.Test (simpleHeaders)
 import Test.Hspec
@@ -22,6 +22,7 @@ makeRepo = do
           modifyIORef' ref (e :)
           pure (Right ())
       , findEstimateById = \_ -> pure Nothing
+      , findAllEstimates = readIORef ref
       }
 
 mkApp :: IO Application

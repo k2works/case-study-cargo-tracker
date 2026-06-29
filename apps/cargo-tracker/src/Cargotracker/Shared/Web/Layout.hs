@@ -77,6 +77,7 @@ data NavMenuItem = NavMenuItem
 menuItemsForRole :: Maybe Role -> [NavMenuItem]
 menuItemsForRole Nothing =
   [ NavMenuItem "/estimates/new" "見積作成"
+  , NavMenuItem "/estimates" "見積一覧"
   , NavMenuItem "/shippers" "荷主一覧"
   , NavMenuItem "/bookings" "貨物予約一覧"
   , NavMenuItem "/voyages" "航海一覧"
@@ -85,6 +86,7 @@ menuItemsForRole Nothing =
   ]
 menuItemsForRole (Just Sales) =
   [ NavMenuItem "/estimates/new" "見積作成"
+  , NavMenuItem "/estimates" "見積一覧"
   , NavMenuItem "/shippers" "荷主一覧"
   , NavMenuItem "/bookings" "貨物予約一覧"
   , NavMenuItem "/bookings/new" "予約登録"

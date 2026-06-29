@@ -58,6 +58,7 @@ makeRepo = do
           , findEstimateById = \_ -> do
               xs <- readIORef ref
               pure $ case xs of (x : _) -> Just x; [] -> Nothing
+          , findAllEstimates = readIORef ref
           }
   pure (r, readIORef ref)
 
@@ -112,6 +113,7 @@ spec = describe "CreateEstimateCommand" $ do
           EstimateRepository
             { saveEstimate = \_ -> pure (Left (ConcurrentModification "uuid"))
             , findEstimateById = \_ -> pure Nothing
+            , findAllEstimates = pure []
             }
     result <- execute repo validInput
     result `shouldBe` Left (ConcurrentModification "uuid")
