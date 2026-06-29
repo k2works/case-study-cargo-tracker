@@ -12,6 +12,7 @@ module Cargotracker.Booking.Infrastructure.PostgresBookingRepository
   ) where
 
 import Data.Text (Text)
+import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple
   ( Connection,
@@ -20,7 +21,7 @@ import Database.PostgreSQL.Simple
     query,
     query_,
   )
-import Database.PostgreSQL.Simple.Types ((:.) (..))
+import Database.PostgreSQL.Simple.Types (Query (..), (:.) (..))
 
 import Cargotracker.Booking.Application.Ports (BookingRepository (..))
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
@@ -53,98 +54,77 @@ newPostgresBookingRepository conn =
     , findAllCargos = listCargos conn
     }
 
+-- U-11 (IT3 / M-01): cargo SELECT の重複した 14-tuple 行型を一つにまとめる。
+-- listCargos と findCargo で SELECT 列順を完全に揃え、変換も rowToCargo に集約する。
+type CargoRow =
+  ( Text -- booking_id
+  , Text -- shipper_id (business key)
+  , Text -- origin_unlocode
+  , Text -- destination_unlocode
+  , UTCTime -- deadline
+  , Text -- booking_status
+  , Int -- version
+  , Text -- cargo_type
+  , Maybe Text -- hazardous_class
+  , Maybe Text -- un_number
+  , Maybe Text -- proper_shipping_name
+  , Maybe Double -- min_temperature
+  , Maybe Double -- max_temperature
+  , Maybe Text -- temperature_unit
+  )
+
+cargoSelectColumns :: Text
+cargoSelectColumns =
+  "c.booking_id, s.shipper_id, c.origin_unlocode, c.destination_unlocode, \
+  \ c.deadline, c.booking_status, c.version, \
+  \ c.cargo_type, c.hazardous_class, c.un_number, c.proper_shipping_name, \
+  \ c.min_temperature, c.max_temperature, c.temperature_unit"
+
+rowToCargo :: CargoRow -> Cargo
+rowToCargo
+  (bidV, sidV, orig, dest, deadlineV, statusT, ver, ctypeT, mHC, mUN, mPSN, mMin, mMax, mUnit) =
+    Cargo
+      { cargoBookingId = BookingId bidV
+      , cargoShipperRef = ShipperRef sidV
+      , cargoRouteSpec =
+          RouteSpecification
+            { origin = UnLocode orig
+            , destination = UnLocode dest
+            , arrivalDeadline = deadlineV
+            }
+      , cargoStatus = textToBookingStatus statusT
+      , cargoType = textToCargoType ctypeT mHC mUN mPSN mMin mMax mUnit
+      , cargoVersion = ver
+      }
+
 listCargos :: Connection -> IO [Cargo]
 listCargos conn = do
   rows <-
     query_
       conn
-      "SELECT c.booking_id, s.shipper_id, c.origin_unlocode, c.destination_unlocode, \
-      \        c.deadline, c.booking_status, c.version, \
-      \        c.cargo_type, c.hazardous_class, c.un_number, c.proper_shipping_name, \
-      \        c.min_temperature, c.max_temperature, c.temperature_unit \
-      \ FROM cargo c JOIN shipper s ON s.id = c.shipper_id \
-      \ ORDER BY c.booking_id LIMIT 100" ::
-      IO
-        [ ( Text
-          , Text
-          , Text
-          , Text
-          , UTCTime
-          , Text
-          , Int
-          , Text
-          , Maybe Text
-          , Maybe Text
-          , Maybe Text
-          , Maybe Double
-          , Maybe Double
-          , Maybe Text
-          )
-        ]
-  pure
-    [ Cargo
-        { cargoBookingId = BookingId bidV
-        , cargoShipperRef = ShipperRef sidV
-        , cargoRouteSpec =
-            RouteSpecification
-              { origin = UnLocode orig
-              , destination = UnLocode dest
-              , arrivalDeadline = deadlineV
-              }
-        , cargoStatus = textToBookingStatus statusT
-        , cargoType = textToCargoType ctypeT mHC mUN mPSN mMin mMax mUnit
-        , cargoVersion = ver
-        }
-    | (bidV, sidV, orig, dest, deadlineV, statusT, ver, ctypeT, mHC, mUN, mPSN, mMin, mMax, mUnit) <- rows
-    ]
+      ( "SELECT "
+          <> Query (T.encodeUtf8 cargoSelectColumns)
+          <> " FROM cargo c JOIN shipper s ON s.id = c.shipper_id \
+             \ ORDER BY c.booking_id LIMIT 100"
+      ) ::
+      IO [CargoRow]
+  pure (map rowToCargo rows)
 
 findCargo :: Connection -> Text -> IO (Maybe Cargo)
 findCargo conn bid = do
   rows <-
     query
       conn
-      "SELECT c.booking_id, s.shipper_id, c.origin_unlocode, c.destination_unlocode, \
-      \        c.deadline, c.booking_status, c.version, \
-      \        c.cargo_type, c.hazardous_class, c.un_number, c.proper_shipping_name, \
-      \        c.min_temperature, c.max_temperature, c.temperature_unit \
-      \ FROM cargo c JOIN shipper s ON s.id = c.shipper_id \
-      \ WHERE c.booking_id = ? LIMIT 1"
+      ( "SELECT "
+          <> Query (T.encodeUtf8 cargoSelectColumns)
+          <> " FROM cargo c JOIN shipper s ON s.id = c.shipper_id \
+             \ WHERE c.booking_id = ? LIMIT 1"
+      )
       (Only bid) ::
-      IO
-        [ ( Text
-          , Text
-          , Text
-          , Text
-          , UTCTime
-          , Text
-          , Int
-          , Text
-          , Maybe Text
-          , Maybe Text
-          , Maybe Text
-          , Maybe Double
-          , Maybe Double
-          , Maybe Text
-          )
-        ]
-  case rows of
-    [(bidV, sidV, orig, dest, deadlineV, statusT, ver, ctypeT, mHC, mUN, mPSN, mMin, mMax, mUnit)] ->
-      pure $
-        Just
-          Cargo
-            { cargoBookingId = BookingId bidV
-            , cargoShipperRef = ShipperRef sidV
-            , cargoRouteSpec =
-                RouteSpecification
-                  { origin = UnLocode orig
-                  , destination = UnLocode dest
-                  , arrivalDeadline = deadlineV
-                  }
-            , cargoStatus = textToBookingStatus statusT
-            , cargoType = textToCargoType ctypeT mHC mUN mPSN mMin mMax mUnit
-            , cargoVersion = ver
-            }
-    _ -> pure Nothing
+      IO [CargoRow]
+  pure $ case rows of
+    (r : _) -> Just (rowToCargo r)
+    [] -> Nothing
 
 -- DB 列値から CargoType を復元する。CHECK 制約で整合性が保たれている前提
 -- (スマートコンストラクタを通さず直接構築)。不整合時は General にフォールバックする。
