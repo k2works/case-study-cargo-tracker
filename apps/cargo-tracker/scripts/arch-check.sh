@@ -21,9 +21,23 @@ set -uo pipefail
 SRC_DIR="${1:-src}"
 VIOLATIONS=0
 
-# Rule 4 既知違反 ALLOWLIST (IT3 U-05 で Booking 系 7 件を ShipperRef VO に
-# 解消済み / ADR-0004)。本配列は空。新規 BC 追加時に必要なら ADR で起票し
-# 暫定エントリを追加する運用は今後も維持する。
+# Rule 4 既知違反 ALLOWLIST (L-09 経緯リンク):
+#
+# IT1 完了時に Booking 系 7 ファイル (Cargo.hs / Ports.hs / 2 Infrastructure
+# / 2 Views / RegisterBookingCommand) が Shipper.Domain.Model.Value.ShipperId
+# を直接 import している既知違反として登録されていた。IT3 U-05 で全 7 件を
+# Shared.Domain.Reference.ShipperRef VO 経由に移行し、本配列は空になった。
+#
+# 経緯ドキュメント:
+# - docs/adr/0004-cross-bc-shipper-ref.md   (Cross-BC 参照 VO の規約 BCE-04)
+# - docs/development/retrospective-2.md     (IT2 ふりかえり Try U-05)
+# - docs/development/iteration_plan-3.md    (IT3 タスク 1.5 U-05)
+# - docs/review/it2_code_review_20260627.md (M-04: ACL ADR 起票指示)
+#
+# 新規 BC 追加で同種の Cross-BC import を一時的に許容する場合の運用:
+# 1. ADR-0004 BCE-04 規約を確認し、新 BC 用 <TargetBC>Ref VO を起票
+# 2. 暫定で本配列に "<file>|<import 正規表現>" を追加 (target IT を ADR 起票で明示)
+# 3. 解消した時点で配列から削除し、retrospective に経緯を記録
 ALLOWLIST_RULE4=()
 
 # U-14 (IT3): ALLOWLIST 整合性検証。
