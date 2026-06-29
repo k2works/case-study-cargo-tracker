@@ -43,6 +43,7 @@ import qualified Shared.Auth.Interfaces.LoginPageApiSpec
 import qualified Shared.Auth.Interfaces.ProtectedSpec
 import qualified Shared.Domain.Common.UnLocodeSpec
 import qualified Shared.Infrastructure.IdGeneratorSpec
+import qualified Shared.Web.LayoutSpec
 import qualified Shipper.Application.RegisterShipperCommandSpec
 import qualified Shipper.Domain.Model.ShipperSpec
 import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
@@ -104,6 +105,10 @@ main = hspec $ do
   describe
     "Cargotracker.Shared.Infrastructure.IdGenerator"
     Shared.Infrastructure.IdGeneratorSpec.spec
+
+  describe
+    "Cargotracker.Shared.Web.Layout"
+    Shared.Web.LayoutSpec.spec
 
   describe
     "Cargotracker.Booking.Domain.Model.Cargo"

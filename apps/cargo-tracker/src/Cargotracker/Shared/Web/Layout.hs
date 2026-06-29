@@ -7,12 +7,17 @@ iteration_plan-1.md のフロントエンドアーキテクチャに準拠。
 -}
 module Cargotracker.Shared.Web.Layout
   ( pageLayout,
+    pageLayoutFor,
     flashAlert,
     FlashLevel (..),
+    NavMenuItem (..),
+    menuItemsForRole,
   ) where
 
 import Data.Text (Text)
 import Lucid
+
+import Cargotracker.Shared.Auth.Domain.User (Role (..))
 
 data FlashLevel
   = FlashSuccess
@@ -29,8 +34,74 @@ flashAlert :: FlashLevel -> Text -> Html ()
 flashAlert level msg =
   div_ [class_ ("alert " <> flashLevelClass level), role_ "alert"] (toHtml msg)
 
+-- | ナビメニュー項目 (U-07: ロール別表示制御)
+data NavMenuItem = NavMenuItem
+  { navHref :: !Text
+  , navLabel :: !Text
+  }
+  deriving stock (Eq, Show)
+
+{- | U-07 (IT3): ロール別のメニュー項目を返す純粋関数。
+
+`Nothing` (未認証) は最小限のメニュー (見積 / 追跡 / Login)。
+各ロールは domain-model.md のアクター責務に従う:
+
+* Sales: 見積 / 荷主 / 予約 (US01-US06 主要業務)
+* Router: 予約 / 航海 / 経路設計 (US07-US11)
+* MasterAdmin: 全メニュー (US24/US25 マスタ管理)
+* その他 (Shipper / Consignee / Tracker / Handler / Accountant) はそれぞれの業務メニュー
+-}
+menuItemsForRole :: Maybe Role -> [NavMenuItem]
+menuItemsForRole Nothing =
+  [ NavMenuItem "/estimates/new" "見積作成"
+  , NavMenuItem "/login" "Login"
+  ]
+menuItemsForRole (Just Sales) =
+  [ NavMenuItem "/estimates/new" "見積作成"
+  , NavMenuItem "/shippers" "荷主一覧"
+  , NavMenuItem "/bookings" "貨物予約一覧"
+  , NavMenuItem "/bookings/new" "予約登録"
+  ]
+menuItemsForRole (Just Router) =
+  [ NavMenuItem "/bookings" "貨物予約一覧"
+  , NavMenuItem "/voyages" "航海一覧"
+  , NavMenuItem "/voyages/search" "航海検索"
+  ]
+menuItemsForRole (Just MasterAdmin) =
+  [ NavMenuItem "/shippers" "荷主一覧"
+  , NavMenuItem "/bookings" "貨物予約一覧"
+  , NavMenuItem "/voyages" "航海一覧"
+  , NavMenuItem "/voyages/new" "航海登録"
+  ]
+menuItemsForRole (Just Shipper) =
+  [ NavMenuItem "/bookings" "貨物予約一覧"
+  ]
+menuItemsForRole (Just Tracker) =
+  [ NavMenuItem "/bookings" "貨物予約一覧"
+  ]
+menuItemsForRole (Just Handler) =
+  [ NavMenuItem "/bookings" "貨物予約一覧"
+  ]
+menuItemsForRole (Just Accountant) =
+  [ NavMenuItem "/bookings" "貨物予約一覧"
+  ]
+menuItemsForRole (Just Consignee) =
+  [ NavMenuItem "/bookings" "貨物予約一覧"
+  ]
+
+-- | 後方互換: ロール未指定 (Nothing) でレンダリング
 pageLayout :: Text -> Html () -> Html ()
-pageLayout title body = doctypehtml_ $ do
+pageLayout = pageLayoutFor Nothing
+
+{- | U-07 (IT3): ロールに応じたナビメニューでレイアウトを描画する。
+
+`Nothing` を渡すと未認証 (最小メニュー)、`Just role` を渡すとそのロール用
+メニューが表示される。各 PageApi ハンドラは将来的に Cookie/JWT からロールを
+復元してこの関数を呼ぶ。Phase 1 (IT3 U-07) では既存ハンドラの大半が
+`pageLayout` (Nothing) を呼んでおり、段階移行で Just role 化する。
+-}
+pageLayoutFor :: Maybe Role -> Text -> Html () -> Html ()
+pageLayoutFor mRole title body = doctypehtml_ $ do
   head_ $ do
     meta_ [charset_ "utf-8"]
     meta_ [name_ "viewport", content_ "width=device-width, initial-scale=1"]
@@ -44,16 +115,15 @@ pageLayout title body = doctypehtml_ $ do
       div_ [class_ "container-fluid"] $ do
         a_ [class_ "navbar-brand", href_ "/"] "Cargo Tracker"
         ul_ [class_ "navbar-nav me-auto"] $ do
+          mapM_ renderItem (menuItemsForRole mRole)
+          -- 認証済はログアウト、未認証は (Login はメニュー側で表示済) Health のみ
+          case mRole of
+            Just _ ->
+              li_ [class_ "nav-item"] $
+                a_ [class_ "nav-link", href_ "/logout"] "ログアウト"
+            Nothing -> mempty
           li_ [class_ "nav-item"] $
-            a_ [class_ "nav-link", href_ "/shippers"] "荷主一覧"
-          li_ [class_ "nav-item"] $
-            a_ [class_ "nav-link", href_ "/bookings"] "貨物予約一覧"
-          li_ [class_ "nav-item"] $
-            a_ [class_ "nav-link", href_ "/voyages"] "航海一覧"
-          li_ [class_ "nav-item"] $
-            a_ [class_ "nav-link", href_ "/login"] "Login"
-          li_ [class_ "nav-item"] $
-            a_ [class_ "nav-link", href_ "/health"] "Health"
+            a_ [class_ "nav-link text-light-emphasis small", href_ "/health"] "Health"
     main_ [class_ "container my-4"] body
     script_
       [ src_ "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
@@ -63,3 +133,8 @@ pageLayout title body = doctypehtml_ $ do
       [ src_ "https://unpkg.com/htmx.org@1.9.12"
       ]
       ("" :: Text)
+  where
+    renderItem :: NavMenuItem -> Html ()
+    renderItem (NavMenuItem href lbl) =
+      li_ [class_ "nav-item"] $
+        a_ [class_ "nav-link", href_ href] (toHtml lbl)
