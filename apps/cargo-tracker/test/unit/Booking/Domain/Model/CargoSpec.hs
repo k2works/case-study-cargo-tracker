@@ -5,6 +5,7 @@
 -}
 module Booking.Domain.Model.CargoSpec (spec) where
 
+import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Test.Hspec
 
@@ -77,14 +78,17 @@ spec = do
           cargoStatus c2 `shouldBe` Submitted
           cargoVersion c2 `shouldBe` 2
         Left e -> expectationFailure ("submit failed: " <> show e)
-    it "Submitted の貨物は再度 submit できない" $ do
+    it "Submitted の貨物は再度 submit できず InvalidStateTransition を返す (H-01)" $ do
       Right o <- pure (mkUnLocode "JPTYO")
       Right d <- pure (mkUnLocode "USNYC")
       let route = RouteSpecification {origin = o, destination = d, arrivalDeadline = deadline}
           cargo = mkCargo unsafeBookingId unsafeShipperId route
       case submitBooking cargo of
         Right c2 -> case submitBooking c2 of
-          Left _ -> pure ()
+          Left (InvalidStateTransition from to_) -> do
+            from `shouldBe` T.pack (show Submitted)
+            to_ `shouldBe` T.pack (show Submitted)
+          Left other -> expectationFailure ("expected InvalidStateTransition, got " <> show other)
           Right _ -> expectationFailure "submitted を submit して成功した"
         Left e -> expectationFailure ("first submit failed: " <> show e)
 

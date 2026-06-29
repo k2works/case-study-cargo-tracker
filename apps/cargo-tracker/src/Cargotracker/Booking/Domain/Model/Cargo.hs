@@ -24,7 +24,7 @@ import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId, unShipperId)
+import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId)
 
 data Cargo = Cargo
   { cargoBookingId :: !BookingId
@@ -72,7 +72,12 @@ submitBooking cargo = case cargoStatus cargo of
         { cargoStatus = Submitted
         , cargoVersion = cargoVersion cargo + 1
         }
-  _ -> Left (ConcurrentModification (unShipperId (cargoShipperId cargo)))
+  other ->
+    Left
+      ( InvalidStateTransition
+          (T.pack (show other))
+          (T.pack (show Submitted))
+      )
 
 {- | 予約を経路設計者に引き渡す (Submitted → RouteProposed) (US06, IT2)。
 
