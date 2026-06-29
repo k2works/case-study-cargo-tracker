@@ -184,10 +184,22 @@ parseCargoType "REFRIGERATED" _ _ _ (Just lo) (Just hi) (Just u) =
       TemperatureRequirement
         { minTemperature = lo
         , maxTemperature = hi
-        , temperatureUnit = if u == "F" then Fahrenheit else Celsius
+        , temperatureUnit = temperatureUnitFromText u
         }
 parseCargoType "REFRIGERATED" _ _ _ _ _ _ = Left RefrigeratedFieldsMissing
 parseCargoType other _ _ _ _ _ _ = Left (UnknownCargoTypeText other)
+
+{- | L-03 (IT3): TemperatureUnit ↔ DB 文字列 ("C" / "F") の対称ヘルパ。
+parseCargoType (read) と cargoTypeColumns (write) で同じ写像を使う。
+-}
+temperatureUnitToText :: TemperatureUnit -> Text
+temperatureUnitToText Celsius = "C"
+temperatureUnitToText Fahrenheit = "F"
+
+-- | "F" 以外はすべて Celsius にフォールバック (DB CHECK 制約で 'C'/'F' のみ前提)。
+temperatureUnitFromText :: Text -> TemperatureUnit
+temperatureUnitFromText "F" = Fahrenheit
+temperatureUnitFromText _ = Celsius
 
 textToBookingStatus :: Text -> BookingStatus
 textToBookingStatus "Submitted" = Submitted
@@ -270,7 +282,7 @@ cargoTypeColumns ctype = case ctype of
     , Nothing
     , Just (minTemperature r)
     , Just (maxTemperature r)
-    , Just (case temperatureUnit r of Celsius -> "C"; Fahrenheit -> "F")
+    , Just (temperatureUnitToText (temperatureUnit r))
     )
 
 -- US06 (IT2): 既存 cargo の booking_status / version を楽観ロック付きで更新する。
