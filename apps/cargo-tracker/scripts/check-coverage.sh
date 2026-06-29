@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
-# HPC カバレッジしきい値検証 (T-10, IT2)
+# HPC カバレッジしきい値検証 (T-10 IT2 / U-06 IT3)
 #
 # `stack test --coverage` の出力から「expressions used」%を抽出し、
 # しきい値を下回ったら exit 1 で fail させる。
 #
 # 環境変数:
-# - COVERAGE_MIN_OVERALL  : 全体カバレッジ最低値 (デフォルト 60、IT3 で 70 に引き上げ予定)
+# - COVERAGE_MIN_OVERALL  : 全体カバレッジ最低値 (デフォルト 70 / IT3 U-06 で 60 → 70 引き上げ)
 # - COVERAGE_TARGET       : 目標値 (達成時に祝賀ログを出す、デフォルト 70)
+# - COVERAGE_REPORT_MODULES : 1 にすると Domain モジュール別の coverage を
+#                             stack hpc report で個別出力 (CI 補助情報、gate 化はしない)
 #
-# IT2 baseline (T-09 完了時): 62% expressions used。
-# Domain ≥ 95% / 全体 ≥ 70% (iteration_plan-2.md §テスト戦略) は IT3 目標。
+# IT3 baseline (U-06 完了時): 70% expressions used (unified)。
+# IT4 以降: Domain ≥ 95% を per-module gate 化検討。HTML レポート
+# (.stack-work/install/.../hpc/combined/custom/hpc_index.html) で
+# 確認可能。
 
 set -uo pipefail
 
-MIN_OVERALL="${COVERAGE_MIN_OVERALL:-60}"
+MIN_OVERALL="${COVERAGE_MIN_OVERALL:-70}"
 TARGET="${COVERAGE_TARGET:-70}"
+REPORT_MODULES="${COVERAGE_REPORT_MODULES:-0}"
 
 LOG=$(mktemp)
 trap 'rm -f "$LOG"' EXIT
@@ -60,4 +65,29 @@ if [ "$overall" -ge "$TARGET" ]; then
   echo "🎉 目標 ${TARGET}% を達成"
 else
   echo "✅ しきい値クリア (目標 ${TARGET}% へ向けて改善継続)"
+fi
+
+# U-06 IT3: Domain モジュール一覧の補助レポート (gate 化はしない)。
+# `stack hpc report` はモジュール名引数を受け付けないため per-module 数値は
+# unified の HTML レポート (hpc_index.html) を参照する。CI のレポート
+# アーティファクトに含まれる。本セクションは「監視対象 Domain モジュール」
+# の存在確認のみを行う (IT4 で per-module gate 化を ADR 起票する際の足場)。
+if [ "$REPORT_MODULES" = "1" ]; then
+  echo ""
+  echo "==================================================="
+  echo " Domain モジュール一覧 (HTML レポートで個別 % を確認)"
+  echo "==================================================="
+  count=0
+  while IFS= read -r mod; do
+    echo "  - $mod"
+    count=$((count + 1))
+  done < <(
+    find src/Cargotracker -path '*/Domain/*' -name '*.hs' \
+      | sed -e 's|^src/||' -e 's|\.hs$||' -e 's|/|.|g' \
+      | sort
+  )
+  echo "---------------------------------------------------"
+  echo "  Domain モジュール件数 : ${count}"
+  echo "  HTML レポート         : .stack-work/install/.../hpc/combined/all/hpc_index.html"
+  echo "==================================================="
 fi

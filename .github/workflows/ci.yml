@@ -120,11 +120,15 @@ jobs:
         run: |
           nix-shell ../../$NIX_SHELL --run "stack build"
 
-      - name: Stack test (with coverage) + HPC しきい値検証 (T-10)
+      - name: Stack test (with coverage) + HPC しきい値検証 (T-10 / U-06)
         working-directory: apps/cargo-tracker
         env:
-          COVERAGE_MIN_OVERALL: 60
+          # U-06 (IT3): 60 -> 70 に引き上げ
+          COVERAGE_MIN_OVERALL: 70
           COVERAGE_TARGET: 70
+          # U-06 (IT3): Domain モジュール別の補助 coverage レポートを有効化
+          # (IT4 で per-module gate 化検討のための足場)
+          COVERAGE_REPORT_MODULES: 1
         run: |
           nix-shell ../../$NIX_SHELL --run "bash scripts/check-coverage.sh"
 
