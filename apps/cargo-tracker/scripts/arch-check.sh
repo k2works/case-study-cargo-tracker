@@ -26,6 +26,26 @@ VIOLATIONS=0
 # 暫定エントリを追加する運用は今後も維持する。
 ALLOWLIST_RULE4=()
 
+# U-14 (IT3): ALLOWLIST 整合性検証。
+# 登録ファイルが src/ 配下に実在しなければ stale エントリとして即 fail させる
+# (リネーム漏れや誤登録の検出)。空配列のときは no-op。
+validate_allowlist_entries() {
+  local entry af missing=0
+  for entry in "${ALLOWLIST_RULE4[@]}"; do
+    af="${entry%%|*}"
+    if [ ! -f "${SRC_DIR}/${af}" ]; then
+      echo "❌ ALLOWLIST_RULE4 stale entry: ${af} (src ファイル不在)"
+      missing=$((missing + 1))
+    fi
+  done
+  if [ "$missing" -gt 0 ]; then
+    echo "❌ ALLOWLIST_RULE4 に ${missing} 件の不在ファイル登録があります"
+    exit 1
+  fi
+}
+
+validate_allowlist_entries
+
 is_rule4_allowed() {
   local file="$1" imp="$2"
   for entry in "${ALLOWLIST_RULE4[@]}"; do
