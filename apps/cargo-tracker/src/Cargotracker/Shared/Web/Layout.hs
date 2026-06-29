@@ -9,6 +9,7 @@ module Cargotracker.Shared.Web.Layout
   ( pageLayout,
     pageLayoutFor,
     flashAlert,
+    flashAlertWithAction,
     FlashLevel (..),
     NavMenuItem (..),
     menuItemsForRole,
@@ -33,6 +34,28 @@ flashLevelClass FlashDanger = "alert-danger"
 flashAlert :: FlashLevel -> Text -> Html ()
 flashAlert level msg =
   div_ [class_ ("alert " <> flashLevelClass level), role_ "alert"] (toHtml msg)
+
+{- | M-08 (IT3): メッセージと一緒にアクションリンクを併置する alert。
+
+楽観ロック衝突など「次に何をすべきか」が明確な業務エラー用。
+flashAlert と同じ visual だが、Bootstrap の `.d-flex` で右端にボタンを配置する。
+-}
+flashAlertWithAction ::
+  FlashLevel ->
+  Text -> -- メッセージ本文
+  Text -> -- アクションラベル (例: "最新を再読込")
+  Text -> -- アクション URL (再読込先など)
+  Html ()
+flashAlertWithAction level msg actionLabel actionUrl =
+  div_
+    [ class_ ("alert " <> flashLevelClass level <> " d-flex justify-content-between align-items-center")
+    , role_ "alert"
+    ]
+    $ do
+      span_ (toHtml msg)
+      a_
+        [href_ actionUrl, class_ "btn btn-sm btn-outline-secondary ms-3"]
+        (toHtml actionLabel)
 
 -- | ナビメニュー項目 (U-07: ロール別表示制御)
 data NavMenuItem = NavMenuItem

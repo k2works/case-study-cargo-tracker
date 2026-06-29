@@ -266,7 +266,8 @@ voyageEditErrorMessage :: Text -> Text
 voyageEditErrorMessage "leg-continuity" =
   "区間の連続性が崩れています (前区間の到着港 = 次区間の出発港 となるよう修正してください)"
 voyageEditErrorMessage "concurrent-modification" =
-  "他の利用者により更新されました。最新を再読込してから更新してください"
+  -- M-08 (IT3): 業務語に強化 + 編集内容保持に関する明示
+  "他の利用者により更新されました。今回の入力は破棄されます — 最新を再読込してから再度編集してください"
 voyageEditErrorMessage e = "航海更新に失敗しました: " <> e
 
 -- US25 (IT2): 航海更新の POST 実行 (PRG)。UpdateVoyageCommand 経由。

@@ -23,7 +23,12 @@ import Cargotracker.Routing.Domain.Model.Value.CarrierMovement
   ( CarrierMovement (..),
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
-import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
+import Cargotracker.Shared.Web.Layout
+  ( FlashLevel (..),
+    flashAlert,
+    flashAlertWithAction,
+    pageLayout,
+  )
 
 ports :: [(Text, Text)]
 ports =
@@ -148,7 +153,15 @@ voyageEditPage vn movements mError = pageLayout "航海更新 - Cargo Tracker" $
   div_ [class_ "row justify-content-center"] $
     div_ [class_ "col-md-10"] $ do
       h1_ [class_ "h3 mb-4"] (toHtml ("航海スケジュール更新 (US25): " <> vn))
+      -- M-08 (IT3): 楽観ロック衝突メッセージは「最新を再読込」アクションを併置
       case mError of
+        Just msg
+          | "他の利用者により更新されました" `T.isInfixOf` msg ->
+              flashAlertWithAction
+                FlashDanger
+                msg
+                "最新を再読込"
+                ("/voyages/" <> vn <> "/edit")
         Just msg -> flashAlert FlashDanger msg
         Nothing -> mempty
       flashAlert
