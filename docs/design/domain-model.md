@@ -1213,6 +1213,59 @@ reconstructCargo row = Cargo
   }
 ```
 
+## IT2 / IT3 実装反映 (U-09)
+
+本ドキュメントは戦術的設計の正準である一方、IT2-IT3 で実装した追加要素は
+以下にまとめる (本セクション以前の記述と矛盾する場合は本セクションを正とする)。
+詳細はリポジトリの該当モジュール (`apps/cargo-tracker/src/Cargotracker/`) を参照。
+
+### IT2 反映 (2026-06-27 完了)
+
+| 概念 | モジュール / 型 | 補足 |
+|---|---|---|
+| `CargoType` sum type | `Booking.Domain.Model.Value.CargoType` (`General` / `Hazardous` / `Refrigerated`) | スマートコンストラクタで HazardousDeclaration / TemperatureRequirement の必須性を型レベル排除 |
+| `HazardousDeclaration` 値オブジェクト | `Booking.Domain.Model.Value.HazardousDeclaration` | クラス / UN 番号 / 正式輸送品名 |
+| `TemperatureRequirement` 値オブジェクト | `Booking.Domain.Model.Value.TemperatureRequirement` | 最低 / 最高 / 単位 (C / F) |
+| `Estimate` 集約 | `Estimation.Domain.Model.Estimate` | `EstimateStatus` (Created / Expired) + `[RouteCandidate]` |
+| `submitBooking` / `requestRouting` | `Booking.Domain.Model.Cargo` | Draft → Submitted → RouteProposed の段階遷移 |
+
+### IT3 反映 (US07 / US08a / US27)
+
+#### Routing Context: 航海検索ドメインサービス (US07)
+
+| 概念 | モジュール / 型 | 補足 |
+|---|---|---|
+| `VoyageSearchCriteria` 値オブジェクト | `Routing.Domain.Model.Value.VoyageSearchCriteria` | 出発地 / 目的地 / 出発期間 from..to。`mkVoyageSearchCriteria` で from > to (`InvalidSearchPeriod`) / 同一港 (`SameOriginDestination`) を検証 |
+| `VoyageQuery` ドメインサービス | `Routing.Domain.Service.VoyageQuery` | `matchesCriteria :: VoyageSearchCriteria -> Voyage -> Bool` + `sortByDeparture :: [Voyage] -> [Voyage]`。純粋関数 |
+
+> `VoyageSearchCriteria` の判定規約: 出発地は voyage の **先頭** `CarrierMovement.departureLocation`、目的地は **末尾** `CarrierMovement.arrivalLocation` で照合する (経由便も含む)。
+
+#### Booking Context: 通関情報集約 (US27)
+
+| 概念 | モジュール / 型 | 補足 |
+|---|---|---|
+| `CustomsDeclaration` 集約 | `Booking.Domain.Model.CustomsDeclaration` | BookingId + HsCode + brokerName + DeclarationStatus。`mkCustomsDeclaration` で一括検証 |
+| `HsCode` 値オブジェクト | `Booking.Domain.Model.Value.HsCode` | `newtype HsCode = Text` + `mkHsCode` (6-10 桁の数字を検証) |
+| `DeclarationStatus` 列挙型 | `Booking.Domain.Model.State.DeclarationStatus` | sum type `Pending` / `Cleared` / `Held` / `Rejected`。DB は SCREAMING_SNAKE_CASE 文字列 |
+
+> **IT3 スコープ調整 (U-09 注記)**: 元の戦術的設計 (§5 Handling Context) では `CustomsDeclaration` を Handling Context 内の集約内エンティティとしていた。IT3 では Handling Context (handling_activity テーブル) が未実装のため、US27 の要求 (国際輸送の通関最小機能) を満たすために `CustomsDeclaration` を **Booking Context 内の独立集約** として実装した。Handling Context 実装時 (IT4+) に再配置を検討する。
+
+#### ADR-0005: BC 固有エラーの分離 (Phase 1)
+
+`Cargotracker.Booking.Domain.Error` を新設し、`BookingError` 型エイリアスと `pattern BookingNotFound` / `pattern InvalidStateTransition` (PatternSynonyms) を提供する。`Shared.Domain.DomainError` の該当コンストラクタには段階移行のための注記を付与した。詳細は [ADR 0005](../adr/0005-bounded-context-error-types.md)。
+
+### `DomainError` の IT2 / IT3 追加コンストラクタ
+
+| コンストラクタ | 追加 IT | 用途 |
+|---|---|---|
+| `InvalidStateTransition !Text !Text` | IT2 | 状態遷移違反 (from / to の状態名を保持) |
+| `BookingNotFound !Text` | IT2 | 予約 (Cargo) 未検出 |
+| `InvalidSearchPeriod !UTCTime !UTCTime` | IT3 | 航海検索の出発期間が逆順 |
+| `SameOriginDestination !Text` | IT3 | 出発地 = 目的地 |
+| `InvalidHsCode !Text` | IT3 | HS コード形式不正 |
+| `InvalidDeclarationStatus !Text` | IT3 | 申告ステータス文字列が想定値外 |
+| `InvalidBrokerName !Text` | IT3 | 通関業者名が空または 100 文字超 |
+
 ## 参照
 
 - [バックエンドアーキテクチャ](architecture_backend.md)
@@ -1220,4 +1273,5 @@ reconstructCargo row = Cargo
 - [要件定義書](../requirements/requirements_definition.md)
 - [システムユースケース](../requirements/system_usecase.md)
 - [ユーザーストーリー](../requirements/user_story.md)
+- [ADR-0005 BC 固有エラーの分離](../adr/0005-bounded-context-error-types.md)
 - Scala 版参考: `tmp/case-study-cargo-tracker/docs/design/domain-model.md`

@@ -424,16 +424,36 @@ CREATE TABLE shipper (
 
 ### `customs_declaration` (税関申告)
 
+> **最終形 (Handling Context 実装後)**: handling_activity_id を FK で持ち、税関連携 (CustomsClearancePort) からの状態更新を受ける。
+>
+> **IT3 実装形 (US27 / U-09 注記)**: Handling Context (`handling_activity`) が未実装のため、IT3 では US27 が必要とする最小カラムで新規作成した。Handling Context 実装時 (IT4+) に `handling_activity_id` / `declaration_number` / `declared_at` / `cleared_at` / `remarks` 等を ALTER で追加する。
+
+#### 最終形カラム (将来)
+
 | カラム | 型 | 制約 |
 | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK` |
-| `handling_activity_id` | `BIGINT` | `FK → handling_activity.id` |
-| `declaration_number` | `VARCHAR(50)` | `UK, NOT NULL` |
-| `declared_at` | `TIMESTAMPTZ` | `NOT NULL` |
+| `handling_activity_id` | `BIGINT` | `FK → handling_activity.id` (IT4+) |
+| `declaration_number` | `VARCHAR(50)` | `UK, NOT NULL` (IT4+) |
+| `declared_at` | `TIMESTAMPTZ` | `NOT NULL` (IT4+) |
 | `status` | `VARCHAR(30)` | `NOT NULL CHECK (status IN ('PENDING','CLEARED','HELD','REJECTED'))` |
-| `cleared_at` | `TIMESTAMPTZ` | |
-| `remarks` | `VARCHAR(500)` | |
+| `cleared_at` | `TIMESTAMPTZ` | (IT4+) |
+| `remarks` | `VARCHAR(500)` | (IT4+) |
 | `created_at` / `updated_at` | `TIMESTAMPTZ` | |
+
+#### IT3 実装カラム (`db/migrations/20260803100000_create_customs_declaration.sql`)
+
+| カラム | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | `PK` | サロゲートキー |
+| `booking_id` | `VARCHAR(20)` | `NOT NULL UNIQUE` | 1 予約 = 0..1 通関情報。`ON CONFLICT (booking_id) DO UPDATE` による upsert を可能にする |
+| `hs_code` | `VARCHAR(10)` | `NOT NULL CHECK (6-10 桁の数字)` | HS コード (US27) |
+| `broker_name` | `VARCHAR(100)` | `NOT NULL CHECK (1-100 文字)` | 通関業者名 (US27) |
+| `declaration_status` | `VARCHAR(20)` | `NOT NULL DEFAULT 'PENDING' CHECK IN ('PENDING','CLEARED','HELD','REJECTED')` | 申告ステータス |
+| `version` | `BIGINT` | `NOT NULL DEFAULT 1` | 楽観ロック |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | 監査 |
+
+インデックス: `idx_customs_declaration_booking (booking_id)` / `idx_customs_declaration_status (declaration_status)`
 
 ### `invoice` (精算書)
 
@@ -800,6 +820,23 @@ DROP TABLE route_candidate_selection;
 
 > イテレーション開発では全テーブルを初回マイグレーションで一括作成せず、実装するコンテキストの単位でマイグレーションを分割してよい
 > (例: 初回 = Shared + Security + Booking、以降のイテレーションで Routing / Tracking / Handling / Billing / Estimation を追加)。
+
+### 適用済マイグレーション一覧 (U-09 同期, 2026-08 時点)
+
+| ファイル名 | IT | 内容 |
+| :--- | :---: | :--- |
+| `20260706120000_create_users_and_roles.sql` | IT1 | `users` + `user_roles` (Servant 認証) |
+| `20260706120100_create_location.sql` | IT1 | `location` 共有マスタ |
+| `20260706120200_create_shipper.sql` | IT1 | `shipper` (個人 / 法人 sum type) |
+| `20260706120300_create_cargo.sql` | IT1 | `cargo` (予約・状態遷移) |
+| `20260706120400_create_voyage_and_carrier_movement.sql` | IT1 | `voyage` + `carrier_movement` |
+| `20260706120500_seed_users.sql` | IT1 | seed: admin / sales / router / handler |
+| `20260720100000_extend_cargo_for_special_types.sql` | IT2 | `cargo` に `cargo_type` / 危険物 / 冷凍カラム追加 (US04+US05) |
+| `20260720100100_create_estimate.sql` | IT2 | `estimate` (US01 輸送見積) |
+| `20260720100200_create_route_candidate.sql` | IT2 | `route_candidate` (見積に紐づく候補) |
+| `20260803100000_create_customs_declaration.sql` | IT3 | `customs_declaration` (US27 通関情報、本ドキュメント §customs_declaration 参照) |
+
+> Handling Context (`handling_activity` 等)、Tracking Context、Billing Context のテーブルは IT4 以降のイテレーションで追加する。
 
 ---
 
