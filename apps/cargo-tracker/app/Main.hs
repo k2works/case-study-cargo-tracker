@@ -38,6 +38,9 @@ import System.Environment (lookupEnv)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
 
+import Cargotracker.Booking.Application.CustomsPorts
+  ( CustomsDeclarationRepository (..),
+  )
 import Cargotracker.Booking.Infrastructure.PostgresBookingRepository
   ( newPostgresBookingRepository,
   )
@@ -136,7 +139,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     ["shippers", "search"] -> shipperSearchApp shipperRepo req respond
     ["voyages", "new", "movement-row"] -> voyageMovementRowApp req respond
     "shippers" : _ -> shipperPageApp shipperRepo req respond
-    "bookings" : _ -> bookingPageApp bookingRepo shipperChecker req respond
+    "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsStubRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     _ ->
       respond $
@@ -151,6 +154,13 @@ rootApp conn jwtSecret jwtTtl req respond =
     bookingRepo = newPostgresBookingRepository conn
     shipperChecker = newPostgresShipperExistenceChecker conn
     voyageRepo = newPostgresVoyageRepository conn
+    -- US27 (IT3): タスク 5.4 で Postgres 実装に差し替える暫定スタブ。
+    -- 今は upsert を no-op、findByBookingId を Nothing で返す。
+    customsStubRepo =
+      CustomsDeclarationRepository
+        { upsertCustomsDeclaration = \_ -> pure (Right ())
+        , findByBookingId = \_ -> pure Nothing
+        }
 
 healthHandler :: Application
 healthHandler _req respond =

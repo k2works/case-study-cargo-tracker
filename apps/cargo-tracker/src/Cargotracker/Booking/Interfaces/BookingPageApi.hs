@@ -28,6 +28,13 @@ import Servant
 import Servant.HTML.Lucid (HTML)
 import Web.FormUrlEncoded (FromForm)
 
+import Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
+  ( AttachCustomsInput (..),
+  )
+import qualified Cargotracker.Booking.Application.AttachCustomsDeclarationCommand as AttachCustoms
+import Cargotracker.Booking.Application.CustomsPorts
+  ( CustomsDeclarationRepository (..),
+  )
 import Cargotracker.Booking.Application.HandOverToRouterCommand
   ( HandOverToRouterInput (..),
   )
@@ -52,10 +59,19 @@ import Cargotracker.Booking.Views.BookingShowView
   ( bookingNotFoundPage,
     bookingShowPage,
   )
+import Cargotracker.Booking.Views.CustomsSectionView (customsEditPage)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shared.Infrastructure.IdGenerator
   ( generateBookingIdText,
   )
+
+data CustomsFormRequest = CustomsFormRequest
+  { hs_code :: !Text
+  , broker_name :: !Text
+  , status :: !Text
+  }
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (FromForm)
 
 data BookingFormRequest = BookingFormRequest
   { bookingId :: !Text
@@ -83,18 +99,33 @@ type BookingPageApi =
            :<|> Capture "bookingId" Text
              :> "submit"
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "bookingId" Text
+             :> "customs"
+             :> "edit"
+             :> QueryParam "error" Text
+             :> Get '[HTML] (Html ())
+           :<|> Capture "bookingId" Text
+             :> "customs"
+             :> ReqBody '[FormUrlEncoded] CustomsFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
-bookingPageApp :: BookingRepository IO -> ShipperExistenceChecker IO -> Application
-bookingPageApp repo checker =
+bookingPageApp ::
+  BookingRepository IO ->
+  ShipperExistenceChecker IO ->
+  CustomsDeclarationRepository IO ->
+  Application
+bookingPageApp repo checker customsRepo =
   serve
     (Proxy :: Proxy BookingPageApi)
     ( handlerList repo
         :<|> handlerGet
         :<|> handlerPost repo checker
-        :<|> handlerShow repo
+        :<|> handlerShow repo customsRepo
         :<|> handlerHandover repo
         :<|> handlerSubmit repo
+        :<|> handlerCustomsEdit repo customsRepo
+        :<|> handlerCustomsAttach repo customsRepo
     )
 
 handlerList :: BookingRepository IO -> Handler (Html ())
@@ -112,10 +143,18 @@ bookingErrorMessage "shipper-not-found" = "指定された荷主が見つかり�
 bookingErrorMessage "booking-not-found" = "指定された予約が見つかりません"
 bookingErrorMessage e = "予約登録に失敗しました: " <> e
 
-handlerShow :: BookingRepository IO -> Text -> Handler (Html ())
-handlerShow repo bid = do
+handlerShow ::
+  BookingRepository IO ->
+  CustomsDeclarationRepository IO ->
+  Text ->
+  Handler (Html ())
+handlerShow repo customsRepo bid = do
   m <- liftIO (findCargoById repo (BookingId bid))
-  pure (maybe bookingNotFoundPage bookingShowPage m)
+  case m of
+    Nothing -> pure bookingNotFoundPage
+    Just cargo -> do
+      mCustoms <- liftIO (findByBookingId customsRepo (BookingId bid))
+      pure (bookingShowPage cargo mCustoms)
 
 handlerPost ::
   BookingRepository IO ->
@@ -160,6 +199,90 @@ parseDeadline t = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M" (T.unpack t
 -- US06 (IT2): POST /bookings/:bookingId/handover で経路設計者へ引き渡す。
 -- Submitted → RouteProposed の遷移が成功すれば詳細画面に 303、
 -- 失敗時はエラー種別ごとのフラッシュ用クエリを付与して詳細画面に戻す。
+
+{- | US27 (IT3): GET /bookings/:bookingId/customs/edit
+通関情報編集フォーム (新規/更新兼用)。既存登録があればプリフィル。
+-}
+handlerCustomsEdit ::
+  BookingRepository IO ->
+  CustomsDeclarationRepository IO ->
+  Text ->
+  Maybe Text ->
+  Handler (Html ())
+handlerCustomsEdit repo customsRepo bid mError = do
+  m <- liftIO (findCargoById repo (BookingId bid))
+  case m of
+    Nothing -> pure bookingNotFoundPage
+    Just _ -> do
+      mCustoms <- liftIO (findByBookingId customsRepo (BookingId bid))
+      pure (customsEditPage (BookingId bid) mCustoms (fmap customsErrorMessage mError))
+
+{- | US27 (IT3): POST /bookings/:bookingId/customs
+通関情報を予約に紐付ける (PRG → /bookings/:bid?flash=customs-ok)。
+-}
+handlerCustomsAttach ::
+  BookingRepository IO ->
+  CustomsDeclarationRepository IO ->
+  Text ->
+  CustomsFormRequest ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerCustomsAttach repo customsRepo bid req = do
+  let input =
+        AttachCustomsInput
+          { inputBookingId = BookingId bid
+          , inputHsCode = hs_code req
+          , inputBrokerName = broker_name req
+          , inputStatusText = status req
+          }
+  result <- liftIO (AttachCustoms.execute repo customsRepo input)
+  let detail = "/bookings/" <> bid
+      editBack = detail <> "/customs/edit"
+  case result of
+    Right _ ->
+      pure (addHeader (detail <> "?flash=customs-ok") NoContent)
+    Left (BookingNotFound _) ->
+      throwError $
+        err303
+          { errHeaders =
+              [("Location", BC.pack (T.unpack "/bookings/new?error=booking-not-found"))]
+          , errBody = ""
+          }
+    Left (InvalidHsCode _) ->
+      throwError $
+        err303
+          { errHeaders =
+              [("Location", BC.pack (T.unpack (editBack <> "?error=invalid-hs-code")))]
+          , errBody = ""
+          }
+    Left (InvalidDeclarationStatus _) ->
+      throwError $
+        err303
+          { errHeaders =
+              [("Location", BC.pack (T.unpack (editBack <> "?error=invalid-status")))]
+          , errBody = ""
+          }
+    Left (InvalidBrokerName _) ->
+      throwError $
+        err303
+          { errHeaders =
+              [("Location", BC.pack (T.unpack (editBack <> "?error=invalid-broker")))]
+          , errBody = ""
+          }
+    Left _ ->
+      throwError $
+        err303
+          { errHeaders =
+              [("Location", BC.pack (T.unpack (editBack <> "?error=unknown")))]
+          , errBody = ""
+          }
+
+customsErrorMessage :: Text -> Text
+customsErrorMessage "invalid-hs-code" = "HS コードは 6-10 桁の数字で入力してください"
+customsErrorMessage "invalid-status" = "申告ステータスが不正です"
+customsErrorMessage "invalid-broker" = "通関業者名は 1-100 文字で入力してください"
+customsErrorMessage "unknown" = "通関情報の保存に失敗しました"
+customsErrorMessage e = "通関情報の保存に失敗しました: " <> e
+
 -- US06 (IT3, H-03): POST /bookings/:bookingId/submit で Draft → Submitted。
 -- 経路設計者へ引き渡せる前提状態を作る。
 handlerSubmit ::

@@ -114,6 +114,7 @@ library:
   - Cargotracker.Booking.Application.SubmitBookingCommand
   - Cargotracker.Booking.Application.CustomsPorts
   - Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
+  - Cargotracker.Booking.Views.CustomsSectionView
   - Cargotracker.Routing.Application.Ports
   - Cargotracker.Routing.Application.RegisterVoyageCommand
   - Cargotracker.Routing.Application.UpdateVoyageCommand

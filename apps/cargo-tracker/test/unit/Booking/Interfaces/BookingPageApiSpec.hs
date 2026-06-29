@@ -17,6 +17,9 @@ import Test.Hspec
 import Test.Hspec.Wai
 import Test.Hspec.Wai.Matcher (MatchHeader (..))
 
+import Cargotracker.Booking.Application.CustomsPorts
+  ( CustomsDeclarationRepository (..),
+  )
 import Cargotracker.Booking.Application.Ports
   ( BookingRepository (..),
     ShipperExistenceChecker (..),
@@ -66,7 +69,14 @@ checkerNo = ShipperExistenceChecker {exists = \_ -> pure False}
 mkApp :: ShipperExistenceChecker IO -> IO Application
 mkApp ch = do
   repo <- makeRepo
-  pure (bookingPageApp repo ch)
+  pure (bookingPageApp repo ch stubCustomsRepo)
+
+stubCustomsRepo :: CustomsDeclarationRepository IO
+stubCustomsRepo =
+  CustomsDeclarationRepository
+    { upsertCustomsDeclaration = \_ -> pure (Right ())
+    , findByBookingId = \_ -> pure Nothing
+    }
 
 -- US06 (IT2): /handover テスト用に、特定の Cargo を find で返し、
 -- updateBooking 呼出を IORef に記録する Repository を作る。
@@ -100,7 +110,7 @@ mkHandoverApp seed = do
           , updateBooking = \_ -> pure (Right ())
           , findAllCargos = pure []
           }
-  pure (bookingPageApp repo checkerYes)
+  pure (bookingPageApp repo checkerYes stubCustomsRepo)
 
 spec :: Spec
 spec = do
@@ -177,3 +187,65 @@ spec = do
           shouldSatisfy
             body
             (\b -> "\xe5\x88\xb0\xe7\x9d\x80\xe6\x9c\x9f\xe9\x99\x90" `BS.isInfixOf` b)
+
+  describe "US27: 通関情報の編集/紐付け" $ do
+    let customsRepoStub = stubCustomsRepo
+        cargoStub = draftCargo
+        mkCustomsApp seed =
+          pure $
+            bookingPageApp
+              ( BookingRepository
+                  { saveBooking = \_ -> pure (Right ())
+                  , findCargoById = \_ -> pure seed
+                  , updateBooking = \_ -> pure (Right ())
+                  , findAllCargos = pure []
+                  }
+              )
+              checkerYes
+              customsRepoStub
+
+    describe "GET /bookings/:id/customs/edit" $ do
+      with (mkCustomsApp (Just cargoStub)) $
+        it "予約が存在すれば 200 を返す" $
+          get "/bookings/BK-A1B2C3/customs/edit" `shouldRespondWith` 200
+
+      with (mkCustomsApp Nothing) $
+        it "予約が見つからなければ 200 + not-found ページを返す" $
+          get "/bookings/BK-DOESNT/customs/edit" `shouldRespondWith` 200
+
+    describe "POST /bookings/:id/customs" $ do
+      with (mkCustomsApp (Just cargoStub)) $
+        it "正常 PRG: 303 + Location が /bookings/:id?flash=customs-ok" $
+          request
+            "POST"
+            "/bookings/BK-A1B2C3/customs"
+            [("Content-Type", "application/x-www-form-urlencoded")]
+            "hs_code=123456&broker_name=ABC&status=PENDING"
+            `shouldRespondWith` 303
+              { matchHeaders =
+                  ["Location" <:> "/bookings/BK-A1B2C3?flash=customs-ok"]
+              }
+
+      with (mkCustomsApp (Just cargoStub)) $
+        it "HS コード不正は 303 + /customs/edit?error=invalid-hs-code" $
+          request
+            "POST"
+            "/bookings/BK-A1B2C3/customs"
+            [("Content-Type", "application/x-www-form-urlencoded")]
+            "hs_code=BAD&broker_name=ABC&status=PENDING"
+            `shouldRespondWith` 303
+              { matchHeaders =
+                  ["Location" <:> "/bookings/BK-A1B2C3/customs/edit?error=invalid-hs-code"]
+              }
+
+      with (mkCustomsApp Nothing) $
+        it "予約未存在は 303 + /bookings/new?error=booking-not-found" $
+          request
+            "POST"
+            "/bookings/BK-DOESNT/customs"
+            [("Content-Type", "application/x-www-form-urlencoded")]
+            "hs_code=123456&broker_name=ABC&status=PENDING"
+            `shouldRespondWith` 303
+              { matchHeaders =
+                  ["Location" <:> "/bookings/new?error=booking-not-found"]
+              }

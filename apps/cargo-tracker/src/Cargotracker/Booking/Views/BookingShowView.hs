@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import Lucid
 
 import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
+import Cargotracker.Booking.Domain.Model.CustomsDeclaration (CustomsDeclaration)
 import Cargotracker.Booking.Domain.Model.State.BookingStatus
   ( BookingStatus (..),
   )
@@ -17,12 +18,13 @@ import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
   ( RouteSpecification (..),
   )
+import Cargotracker.Booking.Views.CustomsSectionView (customsSection)
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 
-bookingShowPage :: Cargo -> Html ()
-bookingShowPage c = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
+bookingShowPage :: Cargo -> Maybe CustomsDeclaration -> Html ()
+bookingShowPage c mCustoms = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
   let BookingId bid = cargoBookingId c
       ShipperId sid = cargoShipperId c
       route = cargoRouteSpec c
@@ -74,6 +76,8 @@ bookingShowPage c = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
               [type_ "submit", class_ "btn btn-primary me-2"]
               "経路設計者に引き渡す"
         _ -> mempty
+      -- US27 (IT3): 通関情報セクションを埋め込む
+      customsSection (cargoBookingId c) mCustoms
       a_ [href_ "/bookings/new", class_ "btn btn-secondary me-2"] "もう 1 件予約"
       a_ [href_ "/", class_ "btn btn-light"] "トップへ"
 
