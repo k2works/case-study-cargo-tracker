@@ -49,6 +49,10 @@ import Cargotracker.Booking.Infrastructure.PostgresShipperExistenceChecker
   )
 import Cargotracker.Booking.Interfaces.BookingApi (bookingApp)
 import Cargotracker.Booking.Interfaces.BookingPageApi (bookingPageApp)
+import Cargotracker.Estimation.Infrastructure.PostgresEstimateRepository
+  ( newPostgresEstimateRepository,
+  )
+import Cargotracker.Estimation.Interfaces.EstimatePageApi (estimatePageApp)
 import Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ( newPostgresVoyageRepository,
   )
@@ -140,6 +144,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     ["voyages", "new", "movement-row"] -> voyageMovementRowApp req respond
     "shippers" : _ -> shipperPageApp shipperRepo req respond
     "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsRepo req respond
+    "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     _ ->
       respond $
@@ -155,6 +160,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     shipperChecker = newPostgresShipperExistenceChecker conn
     voyageRepo = newPostgresVoyageRepository conn
     customsRepo = newPostgresCustomsDeclarationRepository conn
+    estimateRepo = newPostgresEstimateRepository conn
 
 healthHandler :: Application
 healthHandler _req respond =

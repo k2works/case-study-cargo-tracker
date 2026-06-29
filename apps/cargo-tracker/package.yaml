@@ -97,6 +97,8 @@ library:
   - Cargotracker.Estimation.Domain.Model.Estimate
   - Cargotracker.Estimation.Application.Ports
   - Cargotracker.Estimation.Application.CreateEstimateCommand
+  - Cargotracker.Estimation.Views.EstimateFormView
+  - Cargotracker.Estimation.Interfaces.EstimatePageApi
   - Cargotracker.Estimation.Infrastructure.PostgresEstimateRepository
   - Cargotracker.Shared.Infrastructure.IdGenerator
   - Cargotracker.Routing.Domain.Model.Voyage

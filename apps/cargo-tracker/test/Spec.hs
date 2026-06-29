@@ -23,6 +23,7 @@ import qualified Booking.Interfaces.BookingPageApiSpec
 import qualified Domain.PropertiesSpec
 import qualified Estimation.Application.CreateEstimateCommandSpec
 import qualified Estimation.Domain.Model.EstimateSpec
+import qualified Estimation.Interfaces.EstimatePageApiSpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Application.SearchVoyagesQuerySpec
 import qualified Routing.Application.UpdateVoyageCommandSpec
@@ -123,6 +124,10 @@ main = hspec $ do
   describe
     "Cargotracker.Estimation.Application.CreateEstimateCommand"
     Estimation.Application.CreateEstimateCommandSpec.spec
+
+  describe
+    "Cargotracker.Estimation.Interfaces.EstimatePageApi"
+    Estimation.Interfaces.EstimatePageApiSpec.spec
 
   describe
     "Cargotracker.Routing.Domain.Model.Voyage"
