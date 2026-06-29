@@ -9,6 +9,7 @@ module Cargotracker.Shared.Domain.DomainError
   ) where
 
 import Data.Text (Text)
+import Data.Time (UTCTime)
 
 {- | ドメイン検証エラー (IT1 で導入する集合)
 
@@ -45,4 +46,10 @@ data DomainError
     'Cargotracker.Booking.Domain.Error' のパターン経由で行うこと。
     -}
     BookingNotFound !Text
+  | -- IT3 追加 (US07 航海検索)
+
+    -- | 航海検索の出発期間が逆順 (from > to)
+    InvalidSearchPeriod !UTCTime !UTCTime
+  | -- | 航海検索の出発地と目的地が同一 (UnLocode を Text として保持)
+    SameOriginDestination !Text
   deriving stock (Eq, Show)

@@ -24,6 +24,7 @@ import qualified Estimation.Domain.Model.EstimateSpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Application.UpdateVoyageCommandSpec
 import qualified Routing.Domain.Model.VoyageSpec
+import qualified Routing.Domain.Service.VoyageQuerySpec
 import qualified Routing.Infrastructure.PostgresVoyageRepositorySpec
 import qualified Routing.Interfaces.VoyageApiSpec
 import qualified Routing.Interfaces.VoyageMovementRowApiSpec
@@ -119,6 +120,10 @@ main = hspec $ do
   describe
     "Cargotracker.Routing.Domain.Model.Voyage"
     Routing.Domain.Model.VoyageSpec.spec
+
+  describe
+    "Cargotracker.Routing.Domain.Service.VoyageQuery"
+    Routing.Domain.Service.VoyageQuerySpec.spec
 
   describe
     "Cargotracker.Shipper.Application.RegisterShipperCommand"

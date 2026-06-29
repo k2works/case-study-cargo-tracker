@@ -99,6 +99,8 @@ library:
   - Cargotracker.Routing.Domain.Model.Voyage
   - Cargotracker.Routing.Domain.Model.Value.VoyageNumber
   - Cargotracker.Routing.Domain.Model.Value.CarrierMovement
+  - Cargotracker.Routing.Domain.Model.Value.VoyageSearchCriteria
+  - Cargotracker.Routing.Domain.Service.VoyageQuery
   - Cargotracker.Shipper.Application.Ports
   - Cargotracker.Shipper.Application.RegisterShipperCommand
   - Cargotracker.Booking.Application.Ports
