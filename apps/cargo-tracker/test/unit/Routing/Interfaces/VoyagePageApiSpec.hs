@@ -8,8 +8,12 @@ POST /voyages/new が航海フォーム入力を受け取り、成功時は航�
 -}
 module Routing.Interfaces.VoyagePageApiSpec (spec) where
 
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy
+import qualified Data.ByteString.Lazy.Char8 as BSL8
 import Data.IORef (modifyIORef', newIORef)
+import Data.List (isInfixOf)
+import Network.Wai.Test (simpleBody)
 import Test.Hspec
 import Test.Hspec.Wai
 
@@ -129,6 +133,18 @@ specUpdate = do
     with (mkUpdateApp Nothing (Right ())) $
       it "未存在は 200 + not-found ページ" $
         get "/voyages/V0999/edit" `shouldRespondWith` 200
+
+    with (mkUpdateApp (Just seedVoyage) (Right ())) $
+      it "U-03: 既存航海の edit ページに区間 1 のプリフィル値が含まれる" $ do
+        res <- get "/voyages/V0001/edit"
+        liftIO $ do
+          -- 出発港 (JPTYO) と到着港 (USNYC) が select の selected として埋まる
+          let body = BSL8.unpack (simpleBody res)
+          ("selected" `isInfixOf` body) `shouldBe` True
+          ("JPTYO" `isInfixOf` body) `shouldBe` True
+          ("USNYC" `isInfixOf` body) `shouldBe` True
+          -- 出発時刻が input value として埋まる (2026-07-01T00:00)
+          ("2026-07-01T00:00" `isInfixOf` body) `shouldBe` True
 
   describe "POST /voyages/:voyageNumber/update (US25 PRG)" $ do
     with (mkUpdateApp (Just seedVoyage) (Right ())) $

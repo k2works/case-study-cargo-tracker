@@ -36,6 +36,7 @@ import Cargotracker.Routing.Application.RegisterVoyageCommand
   )
 import qualified Cargotracker.Routing.Application.UpdateVoyageCommand as Update
 import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (VoyageNumber (..))
+import Cargotracker.Routing.Domain.Model.Voyage (carrierMovements)
 import Cargotracker.Routing.Views.VoyageFormView (voyageEditPage, voyageFormPage)
 import Cargotracker.Routing.Views.VoyageListView (voyageListPage)
 import Cargotracker.Routing.Views.VoyageShowView
@@ -169,7 +170,7 @@ handlerEdit repo vn mError = do
   pure $
     maybe
       voyageNotFoundPage
-      (\_ -> voyageEditPage vn (fmap voyageEditErrorMessage mError))
+      (\voy -> voyageEditPage vn (carrierMovements voy) (fmap voyageEditErrorMessage mError))
       m
 
 voyageEditErrorMessage :: Text -> Text

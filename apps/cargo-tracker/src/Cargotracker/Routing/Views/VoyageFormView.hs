@@ -10,13 +10,19 @@ module Cargotracker.Routing.Views.VoyageFormView
     voyageEditPage,
     voyageResultPage,
     movementRow,
+    movementRowWith,
   ) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Time (UTCTime, defaultTimeLocale, formatTime)
 import Lucid
 import Lucid.Base (makeAttribute)
 
+import Cargotracker.Routing.Domain.Model.Value.CarrierMovement
+  ( CarrierMovement (..),
+  )
+import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
 
 ports :: [(Text, Text)]
@@ -34,21 +40,46 @@ ports =
   , ("GBLON", "GBLON - London")
   ]
 
-portSelect :: Text -> Text -> Bool -> Html ()
-portSelect nameAttr label required = do
+portSelect :: Text -> Text -> Bool -> Maybe Text -> Html ()
+portSelect nameAttr label required mSelected = do
   label_ [class_ "form-label small"] (toHtml label)
   select_ ([name_ nameAttr, class_ "form-select form-select-sm"] <> [required_ "required" | required]) $
-    mapM_ (\(code, lbl) -> option_ [value_ code] (toHtml lbl)) ports
+    mapM_ renderOption ports
+  where
+    renderOption :: (Text, Text) -> Html ()
+    renderOption (code, lbl) =
+      let baseAttrs = [value_ code]
+          attrs = case mSelected of
+            Just sel | sel == code -> selected_ "selected" : baseAttrs
+            _ -> baseAttrs
+       in option_ attrs (toHtml lbl)
 
+-- | datetime-local input value 形式 ("YYYY-MM-DDTHH:MM") に整形する (U-03)
+formatDateTimeLocal :: UTCTime -> Text
+formatDateTimeLocal = T.pack . formatTime defaultTimeLocale "%Y-%m-%dT%H:%M"
+
+-- | プリフィル無しの空行を返す互換シム (US24 登録フォーム / 追加行用)
 movementRow :: Int -> Bool -> Html ()
-movementRow i isFirst = do
+movementRow i isFirst = movementRowWith i isFirst Nothing
+
+{- | U-03: 既存の CarrierMovement をプリフィル可能な区間行。
+
+`Just cm` を渡すと select は selected, input value は datetime-local 形式で
+既存値を表示する。`Nothing` の場合は空フォームに退化する (登録時と同一)。
+-}
+movementRowWith :: Int -> Bool -> Maybe CarrierMovement -> Html ()
+movementRowWith i isFirst mCm = do
   let n = T.pack (show i)
+      mDep = fmap (unUnLocode . departureLocation) mCm
+      mArr = fmap (unUnLocode . arrivalLocation) mCm
+      mDepT = fmap (formatDateTimeLocal . departureTime) mCm
+      mArrT = fmap (formatDateTimeLocal . arrivalTime) mCm
   h6_ [class_ "mt-3"] (toHtml ("区間 " <> n <> if isFirst then " (必須)" else " (任意)"))
   div_ [class_ "row g-2"] $ do
     div_ [class_ "col-md-3"] $
-      portSelect ("movement" <> n <> "Departure") "出発港" isFirst
+      portSelect ("movement" <> n <> "Departure") "出発港" isFirst mDep
     div_ [class_ "col-md-3"] $
-      portSelect ("movement" <> n <> "Arrival") "到着港" isFirst
+      portSelect ("movement" <> n <> "Arrival") "到着港" isFirst mArr
     div_ [class_ "col-md-3"] $ do
       label_ [class_ "form-label small"] "出発時刻"
       input_ $
@@ -57,6 +88,7 @@ movementRow i isFirst = do
         , class_ "form-control form-control-sm"
         ]
           <> [required_ "required" | isFirst]
+          <> maybe [] (\v -> [value_ v]) mDepT
     div_ [class_ "col-md-3"] $ do
       label_ [class_ "form-label small"] "到着時刻"
       input_ $
@@ -65,6 +97,7 @@ movementRow i isFirst = do
         , class_ "form-control form-control-sm"
         ]
           <> [required_ "required" | isFirst]
+          <> maybe [] (\v -> [value_ v]) mArrT
 
 voyageFormPage :: Maybe Text -> Html ()
 voyageFormPage mError = pageLayout "航海登録 - Cargo Tracker" $ do
@@ -104,11 +137,14 @@ voyageFormPage mError = pageLayout "航海登録 - Cargo Tracker" $ do
             "+ 区間を追加"
         button_ [type_ "submit", class_ "btn btn-primary mt-4"] "登録"
 
--- US25 (IT2): 既存航海の更新フォーム。`voyageFormPage` と同じ入力構造を
--- 流用し、action だけ `/voyages/:voyageNumber/update` に切り替える。
--- 既存値のプリフィル (input value 属性への埋め込み) は IT3 で対応する。
-voyageEditPage :: Text -> Maybe Text -> Html ()
-voyageEditPage vn mError = pageLayout "航海更新 - Cargo Tracker" $ do
+{- | US25 (IT2 → U-03 IT3): 既存航海の更新フォーム。
+
+U-03 で既存 `CarrierMovement` をフォームにプリフィルできるよう [CarrierMovement]
+を引数で受ける。先頭 3 区間を `movementRowWith Just` で埋め、4 区間目以降は htmx で
+追加可能。
+-}
+voyageEditPage :: Text -> [CarrierMovement] -> Maybe Text -> Html ()
+voyageEditPage vn movements mError = pageLayout "航海更新 - Cargo Tracker" $ do
   div_ [class_ "row justify-content-center"] $
     div_ [class_ "col-md-10"] $ do
       h1_ [class_ "h3 mb-4"] (toHtml ("航海スケジュール更新 (US25): " <> vn))
@@ -117,7 +153,7 @@ voyageEditPage vn mError = pageLayout "航海更新 - Cargo Tracker" $ do
         Nothing -> mempty
       flashAlert
         FlashWarning
-        "既存の区間を全て上書きします。変更不要な区間も再度入力してください (プリフィルは IT3 対応予定)。"
+        "既存の区間を全て上書きします。プリフィル済の値を編集して更新してください。"
       form_
         [action_ ("/voyages/" <> vn <> "/update"), method_ "post"]
         $ do
@@ -125,10 +161,13 @@ voyageEditPage vn mError = pageLayout "航海更新 - Cargo Tracker" $ do
           p_
             [class_ "text-muted small"]
             "区間 1 は必須、2-3 は任意。連続性 (前区間の到着港 = 次区間の出発港) は更新時に検証されます。"
+          let pick n = case drop (n - 1) movements of
+                (cm : _) -> Just cm
+                _ -> Nothing
           div_ [id_ "movements-container"] $ do
-            movementRow 1 True
-            movementRow 2 False
-            movementRow 3 False
+            movementRowWith 1 True (pick 1)
+            movementRowWith 2 False (pick 2)
+            movementRowWith 3 False (pick 3)
           div_ [class_ "mt-2"] $
             button_
               [ type_ "button"
