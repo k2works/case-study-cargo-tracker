@@ -16,8 +16,20 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Test.Hspec
 
-import Cargotracker.Booking.Domain.Model.Value.BookingId (mkBookingId)
+import Cargotracker.Booking.Domain.Model.Cargo
+  ( Cargo (..),
+    mkCargo,
+    requestRouting,
+    submitBooking,
+  )
+import Cargotracker.Booking.Domain.Model.State.BookingStatus
+  ( BookingStatus (..),
+  )
+import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..), mkBookingId)
 import Cargotracker.Booking.Domain.Model.Value.HsCode (mkHsCode)
+import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
+  ( RouteSpecification (..),
+  )
 import Cargotracker.Booking.Domain.Model.Value.TemperatureRequirement
   ( TemperatureUnit (..),
     mkTemperatureRequirement,
@@ -35,6 +47,7 @@ import Cargotracker.Shared.Domain.Common.UnLocode
     mkUnLocode,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 
 -- ---------------------------------------------------------------
 -- ジェネレータ
@@ -184,6 +197,40 @@ prop_temperature_rejects_inverted = property $ do
     Left _ -> pure ()
     Right _ -> fail "expected Left for inverted min/max"
 
+-- L-05 (IT3): Cargo 状態遷移のプロパティ網羅
+sampleCargo :: BookingStatus -> Cargo
+sampleCargo s =
+  let c0 = mkCargo (BookingId "BK-A1B2C3") (ShipperRef "SHP-X1Y2Z3") sampleRoute
+   in c0 {cargoStatus = s}
+
+sampleRoute :: RouteSpecification
+sampleRoute =
+  RouteSpecification
+    { origin = UnLocode "JPTYO"
+    , destination = UnLocode "USNYC"
+    , arrivalDeadline = UTCTime (fromGregorian 2026 12 31) (secondsToDiffTime 0)
+    }
+
+prop_submitBooking_only_from_Draft :: Property
+prop_submitBooking_only_from_Draft = property $ do
+  -- Draft 以外の状態から submitBooking すると必ず InvalidStateTransition
+  s <- forAll (Gen.element [Submitted, RouteProposed, Confirmed, Closed])
+  case submitBooking (sampleCargo s) of
+    Left (InvalidStateTransition _ _) -> pure ()
+    other ->
+      fail
+        ("expected InvalidStateTransition from " <> show s <> " but got " <> show other)
+
+prop_requestRouting_only_from_Submitted :: Property
+prop_requestRouting_only_from_Submitted = property $ do
+  -- Submitted 以外の状態から requestRouting すると必ず InvalidStateTransition
+  s <- forAll (Gen.element [Draft, RouteProposed, Confirmed, Closed])
+  case requestRouting (sampleCargo s) of
+    Left (InvalidStateTransition _ _) -> pure ()
+    other ->
+      fail
+        ("expected InvalidStateTransition from " <> show s <> " but got " <> show other)
+
 -- ---------------------------------------------------------------
 -- hspec wrapper
 -- ---------------------------------------------------------------
@@ -206,3 +253,5 @@ spec = describe "Domain Properties (T-05 hedgehog)" $ do
   runProp "HsCode: 5 桁以下 / 11 桁以上は必ず InvalidHsCode (U-13)" prop_hscode_rejects_wrong_length
   runProp "TemperatureRequirement: min<=max は必ず Right (U-13)" prop_temperature_min_le_max
   runProp "TemperatureRequirement: min>max は必ず Left (U-13)" prop_temperature_rejects_inverted
+  runProp "submitBooking: Draft 以外は必ず InvalidStateTransition (L-05)" prop_submitBooking_only_from_Draft
+  runProp "requestRouting: Submitted 以外は必ず InvalidStateTransition (L-05)" prop_requestRouting_only_from_Submitted
