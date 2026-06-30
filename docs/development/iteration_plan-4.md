@@ -140,8 +140,8 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | `LinkRouteCommand` / `UnlinkRouteCommand` + 予約状態遷移 (`RouteAssigned`) | 3h | - | [ ] |
-| 3.2 | 二重紐付け 409 + 紐付け解除 (確定前のみ) のドメインガード | 2h | - | [ ] |
+| 3.1 | `LinkRouteCommand` / `UnlinkRouteCommand` + 予約状態遷移 (`RouteAssigned`) | 3h | - | [x] 両 Command を Application 層に実装、Link 3 件 + Unlink 4 件 = 7 件パス、T-01〜T-03 規約準拠 |
+| 3.2 | 二重紐付け 409 + 紐付け解除 (確定前のみ) のドメインガード | 2h | - | [x] Cargo 集約の状態遷移ルール (canTransitionTo) で二重紐付け・確定済解除を Domain 層拒否、Application 層は InvalidStateTransition を返却 |
 | 3.3 | UI: 経路紐付けボタン + 状態バッジ | 2h | - | [ ] |
 
 **小計**: 7h
@@ -184,14 +184,14 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 |---------|----|----|------|
 | US08b 経路制約評価 | 3 | 12h | 進行中 (Domain 完了 2/3 SP、UI/受入 1 SP 残) |
 | US09 経路選択・確定 | 3 | 12h | 進行中 (Itinerary/Leg ドメイン 完了 1.5/3 SP、Command/UI/migration 1.5 SP 残) |
-| US11 経路-予約紐付け | 2 | 7h | [ ] |
+| US11 経路-予約紐付け | 2 | 7h | 進行中 (Domain + Application 完了 1.5/2 SP、UI 0.5 SP 残) |
 | US13 予約確定 + キャンセル | 3 | 14h | 進行中 (Domain + Application 完了 3/3 SP、UI + 受入は Phase C で実装) |
 | IT3 繰越 (U-04 / Phase 3 / U-08 / U-12) | 7 | 18h | [ ] |
 | 拡張 (WM-01 / U-15) | 2 | 4.5h | [ ] |
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 52.5% (10.5/20 SP) — Phase B 着手 (ConfirmBookingCommand + CancelBookingCommand 完了、キャンセル料 3 段階自動算定)
+**進捗率**: 60% (12.0/20 SP) — Phase B 過半 (Confirm/Cancel/Link/Unlink 4 Command 完了、US11/US13 Application 層完成)
 
 ---
 

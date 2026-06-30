@@ -127,6 +127,8 @@ library:
   - Cargotracker.Booking.Application.SubmitBookingCommand
   - Cargotracker.Booking.Application.ConfirmBookingCommand
   - Cargotracker.Booking.Application.CancelBookingCommand
+  - Cargotracker.Booking.Application.LinkRouteCommand
+  - Cargotracker.Booking.Application.UnlinkRouteCommand
   - Cargotracker.Booking.Application.CustomsPorts
   - Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
   - Cargotracker.Booking.Views.CustomsSectionView

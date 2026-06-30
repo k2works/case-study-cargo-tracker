@@ -14,8 +14,10 @@ import qualified Booking.Application.AttachCustomsDeclarationCommandSpec
 import qualified Booking.Application.CancelBookingCommandSpec
 import qualified Booking.Application.ConfirmBookingCommandSpec
 import qualified Booking.Application.HandOverToRouterCommandSpec
+import qualified Booking.Application.LinkRouteCommandSpec
 import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Application.SubmitBookingCommandSpec
+import qualified Booking.Application.UnlinkRouteCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
 import qualified Booking.Domain.Model.CustomsDeclarationSpec
 import qualified Booking.Domain.Model.ItinerarySpec
@@ -208,6 +210,14 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Application.CancelBookingCommand"
     Booking.Application.CancelBookingCommandSpec.spec
+
+  describe
+    "Cargotracker.Booking.Application.LinkRouteCommand"
+    Booking.Application.LinkRouteCommandSpec.spec
+
+  describe
+    "Cargotracker.Booking.Application.UnlinkRouteCommand"
+    Booking.Application.UnlinkRouteCommandSpec.spec
 
   describe
     "Cargotracker.Booking.Application.AttachCustomsDeclarationCommand"
