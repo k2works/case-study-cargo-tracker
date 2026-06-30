@@ -1,6 +1,7 @@
 -- | BookingStatus 状態遷移のテスト (IT1-IT4 統合)
 module Booking.Domain.Model.State.BookingStatusSpec (spec) where
 
+import qualified Data.Text as T
 import Test.Hspec
 
 import Cargotracker.Booking.Domain.Model.State.BookingStatus
@@ -52,3 +53,20 @@ spec = describe "BookingStatus (IT1-IT4)" $ do
     it "Confirmed -> CONFIRMED" $ bookingStatusToText Confirmed `shouldBe` "CONFIRMED"
     it "Cancelled -> CANCELLED" $ bookingStatusToText Cancelled `shouldBe` "CANCELLED"
     it "Closed -> CLOSED" $ bookingStatusToText Closed `shouldBe` "CLOSED"
+
+  describe "Enum / Bounded インスタンス整合" $ do
+    it "minBound == Draft" $ (minBound :: BookingStatus) `shouldBe` Draft
+    it "maxBound == Closed" $ (maxBound :: BookingStatus) `shouldBe` Closed
+    it "fromEnum / toEnum 整合 (全 7 状態)" $
+      let all_ = [minBound .. maxBound] :: [BookingStatus]
+       in map (toEnum . fromEnum :: BookingStatus -> BookingStatus) all_ `shouldBe` all_
+    it "succ Draft == Submitted" $ succ Draft `shouldBe` Submitted
+    it "pred Closed == Cancelled" $ pred Closed `shouldBe` Cancelled
+
+  describe "bookingStatusToText の入力カバレッジ (Enum 経由)" $
+    it "全状態 [minBound..maxBound] が変換に成功し空文字を含まない" $ do
+      let all_ = [minBound .. maxBound] :: [BookingStatus]
+          texts = map bookingStatusToText all_
+      length texts `shouldBe` 7
+      not (any T.null texts) `shouldBe` True
+      length (T.unpack (mconcat texts)) `shouldSatisfy` (>= 7 * 5)
