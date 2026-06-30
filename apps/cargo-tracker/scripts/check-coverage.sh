@@ -5,20 +5,22 @@
 # しきい値を下回ったら exit 1 で fail させる。
 #
 # 環境変数:
-# - COVERAGE_MIN_OVERALL  : 全体カバレッジ最低値 (デフォルト 70 / IT3 U-06 で 60 → 70 引き上げ)
-# - COVERAGE_TARGET       : 目標値 (達成時に祝賀ログを出す、デフォルト 70)
+# - COVERAGE_MIN_OVERALL  : 全体カバレッジ最低値 (デフォルト 74 / IT4 U-15 で 70 → 74 段階引き上げ)
+# - COVERAGE_TARGET       : 目標値 (達成時に祝賀ログを出す、デフォルト 75)
 # - COVERAGE_REPORT_MODULES : 1 にすると Domain モジュール別の coverage を
 #                             stack hpc report で個別出力 (CI 補助情報、gate 化はしない)
 #
 # IT3 baseline (U-06 完了時): 70% expressions used (unified)。
+# IT4 baseline (U-15 段階 1): 74% (Phase A 純粋ドメイン + hedgehog プロパティ 12 件追加で +4%)。
+#   75% は Phase B/C で Application/Interface 層のテスト追加後に到達予定。
 # IT4 以降: Domain ≥ 95% を per-module gate 化検討。HTML レポート
 # (.stack-work/install/.../hpc/combined/custom/hpc_index.html) で
 # 確認可能。
 
 set -uo pipefail
 
-MIN_OVERALL="${COVERAGE_MIN_OVERALL:-70}"
-TARGET="${COVERAGE_TARGET:-70}"
+MIN_OVERALL="${COVERAGE_MIN_OVERALL:-74}"
+TARGET="${COVERAGE_TARGET:-75}"
 REPORT_MODULES="${COVERAGE_REPORT_MODULES:-0}"
 
 LOG=$(mktemp)
