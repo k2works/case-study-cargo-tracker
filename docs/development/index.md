@@ -17,6 +17,7 @@
 |---------------|------|-----------|-----------|------|
 | IT1 (2026-06-26) | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了 |
 | IT2 (2026-06-27) | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [iteration_report-2.md](iteration_report-2.md) | 完了 |
+| IT3 (2026-06-29) | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 完了 |
 
 ### 進捗サマリー
 
@@ -24,7 +25,8 @@
 |---------------|---------|---------|--------|
 | IT1 | 13 | 20 | 154% |
 | IT2 | 10 (+Try 8+横断 2) | 18 | 180% |
-| **累計** | **31** | **38** | **123%** |
+| IT3 | 29 (本体 11 + 繰越 12 + レビュー 2 + 推奨 4) | 22 | 76% |
+| **累計** | **60** | **60** | **100%** |
 
 ### フェーズ進捗
 

@@ -77,6 +77,9 @@
 | [IT2 計画](./development/iteration_plan-2.md) | US01 / US04+US05 / US06 / US25 の 10 SP + Try 必達 8 SP、Release 0.1 Internal Alpha 計画 |
 | [IT2 完了報告書](./development/iteration_report-2.md) | 本体 4/4 ストーリー + Try 10/10 完了、207 tests / 0 failures、arch-check Phase 2 は IT3 繰越 |
 | [IT2 ふりかえり (KPT)](./development/retrospective-2.md) | Keep 9・Problem 11・Try 14 (必達 10 + 推奨 4)、ベロシティ実績 IT1 154% → IT2 100% |
+| [IT3 計画](./development/iteration_plan-3.md) | US07 / US08a / US27 + IT2 繰越 + レビュー高優先 5 件、本体 11 + 拡張 29 SP |
+| [IT3 完了報告書](./development/iteration_report-3.md) | 本体 3/3 + Try 4 + レビュー 5 + 横断 2 = 22 SP 完了、ストレッチ 7 SP は IT4 繰越、ADR 3 件起票 |
+| [IT3 ふりかえり (KPT)](./development/retrospective-3.md) | post-nav レビュー H-01〜H-03 即時対応、ShipperRef 導入で arch-check Rule 4 ALLOWLIST 0 件化 |
 
 ### レビュードキュメント
 
