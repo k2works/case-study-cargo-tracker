@@ -10,8 +10,12 @@ import { test, expect } from '@playwright/test';
 // - PRG パターンと UnLocode (5 文字大文字英字) を共有
 // - 経路候補は事前登録された航海が必要なため、US07 で使う航海を先に登録する
 
-const PORT_FROM = 'JPTYO';
-const PORT_TO = 'USNYC';
+// IT5 E2E test isolation 対応: seed 済の頻出ペア (JPTYO/HKHKG/USNYC/USLAX) は
+// 既存 voyage が top 5 候補を埋め尽くし新規 voyage が出てこない問題があるため、
+// IT3 stories はマイナーペア (JPOSA→USSEA) を使い、新規登録した voyage が
+// 必ず候補表示されるようにする。
+const PORT_FROM = 'JPOSA';
+const PORT_TO = 'USSEA';
 
 async function registerShipper(page: import('@playwright/test').Page): Promise<string> {
   const email = `it3.${Date.now()}.${Math.random().toString(36).slice(2, 6)}@example.com`;
