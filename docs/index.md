@@ -80,6 +80,7 @@
 | [IT3 計画](./development/iteration_plan-3.md) | US07 / US08a / US27 + IT2 繰越 + レビュー高優先 5 件、本体 11 + 拡張 29 SP |
 | [IT3 完了報告書](./development/iteration_report-3.md) | 本体 3/3 + Try 4 + レビュー 5 + 横断 2 = 22 SP 完了、ストレッチ 7 SP は IT4 繰越、ADR 3 件起票 |
 | [IT3 ふりかえり (KPT)](./development/retrospective-3.md) | post-nav レビュー H-01〜H-03 即時対応、ShipperRef 導入で arch-check Rule 4 ALLOWLIST 0 件化 |
+| [IT4 計画](./development/iteration_plan-4.md) | US08b/US09/US11/US13 (経路評価→確定→紐付け→予約確定) + IT3 繰越 7 SP + 拡張 2 SP = 20 SP、Release 0.2 リリース |
 
 ### レビュードキュメント
 
