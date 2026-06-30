@@ -151,7 +151,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 4.1 | `BookingConfirmed` イベント + `CancellationFee` VO (3 段階ルール) | 3h | - | [x] CancellationFee VO + CancellationPolicy.calculate 実装、境界値テスト 8 件パス |
-| 4.2 | `ConfirmBookingCommand` / `CancelBookingCommand` ハンドラ + 監査 | 3h | - | [ ] |
+| 4.2 | `ConfirmBookingCommand` / `CancelBookingCommand` ハンドラ + 監査 | 3h | - | [x] Application 層 Command 両方実装、ポート (BookingRepository) 経由で T-01/T-02/T-03 規約準拠、Confirm 4 件 + Cancel 6 件 全パス。監査ログは Phase C で追加 |
 | 4.3 | キャンセル料算定の単体テスト (境界値: 7 日前 / 1 日前 / 出航日) | 2h | - | [x] 境界値 8 件 (168h/24h/0h/過去) を CancellationPolicySpec で網羅、Task 4.1 と同 commit (649f9783) |
 | 4.4 | UI: キャンセルボタン + 現時点料金表示 + 確認モーダル | 3h | - | [ ] |
 | 4.5 | 受入テスト (確定 → キャンセル各タイミング) | 3h | - | [ ] |
@@ -185,13 +185,13 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | US08b 経路制約評価 | 3 | 12h | 進行中 (Domain 完了 2/3 SP、UI/受入 1 SP 残) |
 | US09 経路選択・確定 | 3 | 12h | 進行中 (Itinerary/Leg ドメイン 完了 1.5/3 SP、Command/UI/migration 1.5 SP 残) |
 | US11 経路-予約紐付け | 2 | 7h | [ ] |
-| US13 予約確定 + キャンセル | 3 | 14h | 進行中 (CancellationPolicy 完了 1.5/3 SP、Command/UI/受入 1.5 SP 残) |
+| US13 予約確定 + キャンセル | 3 | 14h | 進行中 (Domain + Application 完了 3/3 SP、UI + 受入は Phase C で実装) |
 | IT3 繰越 (U-04 / Phase 3 / U-08 / U-12) | 7 | 18h | [ ] |
 | 拡張 (WM-01 / U-15) | 2 | 4.5h | [ ] |
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 42.5% (8.5/20 SP) — Phase A 完了 + Cargo 状態遷移 + hedgehog 12 件 + HPC ゲート段階引き上げ (74%)
+**進捗率**: 52.5% (10.5/20 SP) — Phase B 着手 (ConfirmBookingCommand + CancelBookingCommand 完了、キャンセル料 3 段階自動算定)
 
 ---
 
