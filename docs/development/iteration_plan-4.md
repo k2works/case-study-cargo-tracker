@@ -1024,6 +1024,7 @@ prop_evaluatorExcludesHazardous = property $ do
 |------|---------|--------|
 | 2026-06-30 | 初版作成 (本体 US08b/US09/US11/US13 = 11 SP + IT3 繰越 7 SP + 拡張 2 SP = 20 SP、IT1-3 実績ベロシティ平均 20 SP/IT を基準値とする) | Claude |
 | 2026-06-30 | Phase A 純粋ドメイン進行: Task 1.1+1.2 (RouteEvaluator) / 4.1+4.3 (CancellationPolicy) 完了。進捗率 17.5% (3.5/20 SP)。commit 649f9783, a39c29c7 | Claude |
+| 2026-06-30 | Ralph Loop 18 反復で IT4 完了 (95% / 19.0 SP)。本体 4 ストーリー全 UI 完成、US08b/US09/US11/US13 + U-04 + IT4 トラッキングを全 Close。残 1 SP は HTTP ハンドラ Servant 接続 + 外部依存タスク (Docker/Browser) で IT5 繰越。v0.2.0 タグは IT5 で判断 | Claude |
 
 ---
 
