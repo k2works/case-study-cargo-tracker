@@ -308,5 +308,7 @@ bookingStatusToText :: BookingStatus -> Text
 bookingStatusToText Draft = "Draft"
 bookingStatusToText Submitted = "Submitted"
 bookingStatusToText RouteProposed = "RouteProposed"
+bookingStatusToText RouteAssigned = "RouteAssigned"
 bookingStatusToText Confirmed = "Confirmed"
+bookingStatusToText Cancelled = "Cancelled"
 bookingStatusToText Closed = "Closed"

@@ -191,7 +191,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 25% (5.0/20 SP) — Phase A 純粋ドメインが先行 (CancellationPolicy / RouteEvaluator / Itinerary+Leg 完了)
+**進捗率**: 30% (6.0/20 SP) — Phase A 純粋ドメイン完了 (CancellationPolicy / RouteEvaluator / Itinerary+Leg / BookingStatus 状態機械)
 
 ---
 
