@@ -119,7 +119,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | `RouteConstraint` VO (Hazardous / Reefer / DirectPreferred) を Domain に追加 | 3h | - | [x] Estimation BC に RouteConstraint / ExclusionReason / ConstraintEvaluation を追加 |
-| 1.2 | `RouteFinder.evaluateConstraints` を実装 + hedgehog プロパティテスト | 4h | - | [x] RouteEvaluator.evaluate を純粋関数で実装 (T-03)、hspec 7 件パス、hedgehog は次サイクルで追加 |
+| 1.2 | `RouteFinder.evaluateConstraints` を実装 + hedgehog プロパティテスト | 4h | - | [x] RouteEvaluator.evaluate を純粋関数で実装 (T-03)、hspec 7 件 + hedgehog 6 プロパティ (600 ケース) 全パス |
 | 1.3 | `/routing/candidates` レスポンスに制約評価結果 (rank / 除外理由) を含める | 2h | - | [ ] |
 | 1.4 | 受入テスト (Gherkin 4 シナリオ) | 3h | - | [ ] |
 
@@ -191,7 +191,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 37.5% (7.5/20 SP) — Phase A 完了 + Cargo 集約に IT4 状態遷移 (link/unlink/confirm/cancel) 追加
+**進捗率**: 40% (8.0/20 SP) — Phase A 完了 + Cargo 状態遷移 + hedgehog プロパティテスト 12 件 (1200 ケース)
 
 ---
 
