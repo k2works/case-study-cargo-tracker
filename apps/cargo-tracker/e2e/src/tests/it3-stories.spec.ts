@@ -123,14 +123,14 @@ test.describe('US27 通関情報紐付け (IT3)', () => {
 
     await page.locator('#hs_code').fill('640391');
     await page.locator('#broker_name').fill('E2E 通関業者株式会社');
-    await page.locator('#status').selectOption('Cleared');
+    await page.locator('#status').selectOption('CLEARED');
     await page.locator('button[type="submit"]').click();
 
-    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingId}$`));
+    await expect(page).toHaveURL(new RegExp(`/bookings/${bookingId}(\\?.*)?$`));
     const body = page.locator('body');
     await expect(body).toContainText('640391');
     await expect(body).toContainText('E2E 通関業者株式会社');
-    await expect(body).toContainText('Cleared');
+    await expect(body).toContainText('CLEARED');
   });
 
   test('HS コード 5 桁などの不正値はエラーフラッシュで再表示される', async ({ page }) => {

@@ -105,6 +105,65 @@ ALTER SEQUENCE public.carrier_movement_id_seq OWNED BY public.carrier_movement.i
 
 
 --
+-- Name: customs_declaration; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.customs_declaration (
+    id bigint NOT NULL,
+    booking_id character varying(20) NOT NULL,
+    hs_code character varying(10) NOT NULL,
+    broker_name character varying(100) NOT NULL,
+    declaration_status character varying(20) DEFAULT 'PENDING'::character varying NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT customs_declaration_broker_name_check CHECK (((char_length((broker_name)::text) >= 1) AND (char_length((broker_name)::text) <= 100))),
+    CONSTRAINT customs_declaration_declaration_status_check CHECK (((declaration_status)::text = ANY ((ARRAY['PENDING'::character varying, 'CLEARED'::character varying, 'HELD'::character varying, 'REJECTED'::character varying])::text[]))),
+    CONSTRAINT customs_declaration_hs_code_check CHECK ((((char_length((hs_code)::text) >= 6) AND (char_length((hs_code)::text) <= 10)) AND ((hs_code)::text ~ '^[0-9]+$'::text)))
+);
+
+
+--
+-- Name: TABLE customs_declaration; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.customs_declaration IS '通関申告 (US27 IT3)。1 予約 = 0..1 通関情報。Handling Context 実装時に handling_activity_id 等を ALTER で追加予定。';
+
+
+--
+-- Name: COLUMN customs_declaration.hs_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.customs_declaration.hs_code IS 'Harmonized System code (6-10 桁の数字)。';
+
+
+--
+-- Name: COLUMN customs_declaration.declaration_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.customs_declaration.declaration_status IS 'PENDING / CLEARED / HELD / REJECTED。状態遷移ルールは現状アプリ側で強制しない。';
+
+
+--
+-- Name: customs_declaration_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.customs_declaration_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: customs_declaration_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.customs_declaration_id_seq OWNED BY public.customs_declaration.id;
+
+
+--
 -- Name: estimate; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -360,6 +419,13 @@ ALTER TABLE ONLY public.carrier_movement ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: customs_declaration id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customs_declaration ALTER COLUMN id SET DEFAULT nextval('public.customs_declaration_id_seq'::regclass);
+
+
+--
 -- Name: estimate id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -431,6 +497,22 @@ ALTER TABLE ONLY public.carrier_movement
 
 ALTER TABLE ONLY public.carrier_movement
     ADD CONSTRAINT carrier_movement_seq_unique UNIQUE (voyage_id, seq_number);
+
+
+--
+-- Name: customs_declaration customs_declaration_booking_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customs_declaration
+    ADD CONSTRAINT customs_declaration_booking_id_key UNIQUE (booking_id);
+
+
+--
+-- Name: customs_declaration customs_declaration_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customs_declaration
+    ADD CONSTRAINT customs_declaration_pkey PRIMARY KEY (id);
 
 
 --
@@ -604,6 +686,20 @@ CREATE INDEX estimate_status_idx ON public.estimate USING btree (estimate_status
 
 
 --
+-- Name: idx_customs_declaration_booking; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_customs_declaration_booking ON public.customs_declaration USING btree (booking_id);
+
+
+--
+-- Name: idx_customs_declaration_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_customs_declaration_status ON public.customs_declaration USING btree (declaration_status);
+
+
+--
 -- Name: route_candidate_estimate_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -739,4 +835,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260706120500'),
     ('20260720100000'),
     ('20260720100100'),
-    ('20260720100200');
+    ('20260720100200'),
+    ('20260803100000');
