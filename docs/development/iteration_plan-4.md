@@ -292,7 +292,7 @@ RouteSpecification *-- RouteConstraint
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
 | POST | `/routing/candidates/evaluate` | US08b: 経路候補に制約評価を適用 |
-| POST | `/routing/itineraries/{id}/confirm` | US09: 経路を確定 |
+| POST | `/bookings/{id}/routes/confirm` | US09: 経路を確定 (Booking 集約配下に配置、最終決定は ADR-0008 で行う) |
 | POST | `/bookings/{id}/route` | US11: 経路を予約に紐付け |
 | DELETE | `/bookings/{id}/route` | US11: 経路紐付け解除 (確定前のみ) |
 | POST | `/bookings/{id}/confirm` | US13: 予約確定 |
