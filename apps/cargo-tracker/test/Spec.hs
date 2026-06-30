@@ -16,6 +16,7 @@ import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Application.SubmitBookingCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
 import qualified Booking.Domain.Model.CustomsDeclarationSpec
+import qualified Booking.Domain.Model.ItinerarySpec
 import qualified Booking.Domain.Model.Value.CargoTypeSpec
 import qualified Booking.Domain.Service.CancellationPolicySpec
 import qualified Booking.Infrastructure.PostgresBookingRepositorySpec
@@ -130,6 +131,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Service.CancellationPolicy"
     Booking.Domain.Service.CancellationPolicySpec.spec
+
+  describe
+    "Cargotracker.Booking.Domain.Model.Itinerary"
+    Booking.Domain.Model.ItinerarySpec.spec
 
   describe
     "Cargotracker.Estimation.Domain.Service.RouteEvaluator"

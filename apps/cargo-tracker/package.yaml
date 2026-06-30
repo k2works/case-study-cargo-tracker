@@ -94,6 +94,9 @@ library:
   - Cargotracker.Booking.Domain.Model.CustomsDeclaration
   - Cargotracker.Booking.Domain.Model.Value.CancellationFee
   - Cargotracker.Booking.Domain.Service.CancellationPolicy
+  - Cargotracker.Booking.Domain.Model.Value.ItineraryId
+  - Cargotracker.Booking.Domain.Model.Leg
+  - Cargotracker.Booking.Domain.Model.Itinerary
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate

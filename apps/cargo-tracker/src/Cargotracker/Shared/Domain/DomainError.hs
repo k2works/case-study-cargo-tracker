@@ -58,4 +58,12 @@ data DomainError
     InvalidDeclarationStatus !Text
   | -- | 通関業者名が不正 (US27)
     InvalidBrokerName !Text
+  | -- IT4 追加 (US09 Itinerary / Leg)
+
+    -- | Itinerary ID が UUID 形式でない (US09)
+    InvalidItineraryId !Text
+  | -- | 経路区間 (Leg) の load_time > unload_time など順序不正 (US09)
+    InvalidLeg !Text
+  | -- | Itinerary が 1 区間未満、または隣接 Leg の接続が不整合 (US09)
+    InvalidItinerary !Text
   deriving stock (Eq, Show)
