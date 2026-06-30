@@ -150,7 +150,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | `BookingConfirmed` イベント + `CancellationFee` VO (3 段階ルール) | 3h | - | [ ] |
+| 4.1 | `BookingConfirmed` イベント + `CancellationFee` VO (3 段階ルール) | 3h | - | [x] CancellationFee VO + CancellationPolicy.calculate 実装、境界値テスト 8 件パス |
 | 4.2 | `ConfirmBookingCommand` / `CancelBookingCommand` ハンドラ + 監査 | 3h | - | [ ] |
 | 4.3 | キャンセル料算定の単体テスト (境界値: 7 日前 / 1 日前 / 出航日) | 2h | - | [ ] |
 | 4.4 | UI: キャンセルボタン + 現時点料金表示 + 確認モーダル | 3h | - | [ ] |
