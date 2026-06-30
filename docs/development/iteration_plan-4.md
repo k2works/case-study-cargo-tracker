@@ -130,7 +130,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | `Itinerary` / `Leg` エンティティ + migration | 3h | - | [x] エンティティ部分完了 (ItineraryId VO + Leg + Itinerary、接続性+時刻+seq 検証、14 件パス)、migration は Phase C で実装 |
-| 2.2 | `ConfirmRouteCommand` ハンドラ + Postgres リポジトリ | 4h | - | [ ] |
+| 2.2 | `ConfirmRouteCommand` ハンドラ + Postgres リポジトリ | 4h | - | 進行中: Application 層 Command 完了 (ItineraryPorts 含む)、4 件パス。Postgres 実装は Phase C |
 | 2.3 | UI: 候補一覧 radio + 確定ボタン + 確定後 disabled | 3h | - | [ ] |
 | 2.4 | 監査ログ統合 + 409 Conflict E2E | 2h | - | [ ] |
 
@@ -183,7 +183,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | US08b 経路制約評価 | 3 | 12h | 進行中 (Domain + Application 完了 2.5/3 SP、HTTP/UI/受入 0.5 SP 残) |
-| US09 経路選択・確定 | 3 | 12h | 進行中 (Itinerary/Leg ドメイン 完了 1.5/3 SP、Command/UI/migration 1.5 SP 残) |
+| US09 経路選択・確定 | 3 | 12h | 進行中 (Domain + Application 完了 2.5/3 SP、Postgres 永続化 + UI 0.5 SP 残) |
 | US11 経路-予約紐付け | 2 | 7h | 進行中 (Domain + Application 完了 1.5/2 SP、UI 0.5 SP 残) |
 | US13 予約確定 + キャンセル | 3 | 14h | 進行中 (Domain + Application 完了 3/3 SP、UI + 受入は Phase C で実装) |
 | IT3 繰越 (U-04 / Phase 3 / U-08 / U-12) | 7 | 18h | [ ] |
@@ -191,7 +191,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 62.5% (12.5/20 SP) — Phase B Application 層が US08b/US11/US13 まで完成
+**進捗率**: 67.5% (13.5/20 SP) — Phase B Application 層が US08b/US09/US11/US13 全 4 ストーリーで完成
 
 ---
 

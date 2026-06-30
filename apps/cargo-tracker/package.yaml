@@ -130,6 +130,8 @@ library:
   - Cargotracker.Booking.Application.CancelBookingCommand
   - Cargotracker.Booking.Application.LinkRouteCommand
   - Cargotracker.Booking.Application.UnlinkRouteCommand
+  - Cargotracker.Booking.Application.ItineraryPorts
+  - Cargotracker.Booking.Application.ConfirmRouteCommand
   - Cargotracker.Booking.Application.CustomsPorts
   - Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
   - Cargotracker.Booking.Views.CustomsSectionView
