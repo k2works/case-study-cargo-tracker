@@ -137,6 +137,7 @@ library:
   - Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
   - Cargotracker.Booking.Views.CustomsSectionView
   - Cargotracker.Booking.Views.CancellationFeeView
+  - Cargotracker.Booking.Views.RouteConfirmView
   - Cargotracker.Booking.Infrastructure.PostgresCustomsDeclarationRepository
   - Cargotracker.Routing.Application.Ports
   - Cargotracker.Routing.Application.RegisterVoyageCommand

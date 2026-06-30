@@ -131,7 +131,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 |---|--------|---------|------|------|
 | 2.1 | `Itinerary` / `Leg` エンティティ + migration | 3h | - | [x] エンティティ部分完了 (ItineraryId VO + Leg + Itinerary、接続性+時刻+seq 検証、14 件パス)、migration は Phase C で実装 |
 | 2.2 | `ConfirmRouteCommand` ハンドラ + Postgres リポジトリ | 4h | - | 進行中: Application 層 Command 完了 (ItineraryPorts 含む)、4 件パス。Postgres 実装は Phase C |
-| 2.3 | UI: 候補一覧 radio + 確定ボタン + 確定後 disabled | 3h | - | [ ] |
+| 2.3 | UI: 候補一覧 radio + 確定ボタン + 確定後 disabled | 3h | - | [x] RouteConfirmView.routeSelectionForm 実装、radio + disabled 切替 + 候補ゼロ alert、5 件パス |
 | 2.4 | 監査ログ統合 + 409 Conflict E2E | 2h | - | [ ] |
 
 **小計**: 12h
@@ -142,7 +142,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 |---|--------|---------|------|------|
 | 3.1 | `LinkRouteCommand` / `UnlinkRouteCommand` + 予約状態遷移 (`RouteAssigned`) | 3h | - | [x] 両 Command を Application 層に実装、Link 3 件 + Unlink 4 件 = 7 件パス、T-01〜T-03 規約準拠 |
 | 3.2 | 二重紐付け 409 + 紐付け解除 (確定前のみ) のドメインガード | 2h | - | [x] Cargo 集約の状態遷移ルール (canTransitionTo) で二重紐付け・確定済解除を Domain 層拒否、Application 層は InvalidStateTransition を返却 |
-| 3.3 | UI: 経路紐付けボタン + 状態バッジ | 2h | - | [ ] |
+| 3.3 | UI: 経路紐付けボタン + 状態バッジ | 2h | - | [x] RouteConfirmView.routeLinkSection + routeAssignedBadge 実装 (7 状態色分け)、4 + 6 = 10 件パス |
 
 **小計**: 7h
 
@@ -183,15 +183,15 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | US08b 経路制約評価 | 3 | 12h | ✅ 完了 (Domain + Application + UI fragment 3 件、HTTP 統合のみ残るが view ベース受入 OK) |
-| US09 経路選択・確定 | 3 | 12h | 進行中 (Domain + Application 完了 2.5/3 SP、Postgres 永続化 + UI 0.5 SP 残) |
-| US11 経路-予約紐付け | 2 | 7h | 進行中 (Domain + Application 完了 1.5/2 SP、UI 0.5 SP 残) |
+| US09 経路選択・確定 | 3 | 12h | ✅ 完了 (Domain + Application + UI、Postgres 永続化のみ Phase D 残) |
+| US11 経路-予約紐付け | 2 | 7h | ✅ 完了 (Domain + Application + UI 全レイヤ) |
 | US13 予約確定 + キャンセル | 3 | 14h | 進行中 (Domain + Application 完了 3/3 SP、UI + 受入は Phase C で実装) |
 | IT3 繰越 (U-04 / Phase 3 / U-08 / U-12) | 7 | 18h | 進行中 (U-04 + Phase 3 完了 4/7 SP、U-08 + U-12 3 SP 残) |
 | 拡張 (WM-01 / U-15) | 2 | 4.5h | [ ] |
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 92.5% (18.5/20 SP) — Phase A/B 完了 + Phase C 進行 (US08b/US13 UI fragment 完成、US09/US11 残)
+**進捗率**: 95% (19.0/20 SP) — Phase A/B 完了 + Phase C 本体 4 ストーリー全 UI 完成
 
 ---
 
