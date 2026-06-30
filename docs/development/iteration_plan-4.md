@@ -153,7 +153,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | 4.1 | `BookingConfirmed` イベント + `CancellationFee` VO (3 段階ルール) | 3h | - | [x] CancellationFee VO + CancellationPolicy.calculate 実装、境界値テスト 8 件パス |
 | 4.2 | `ConfirmBookingCommand` / `CancelBookingCommand` ハンドラ + 監査 | 3h | - | [x] Application 層 Command 両方実装、ポート (BookingRepository) 経由で T-01/T-02/T-03 規約準拠、Confirm 4 件 + Cancel 6 件 全パス。監査ログは Phase C で追加 |
 | 4.3 | キャンセル料算定の単体テスト (境界値: 7 日前 / 1 日前 / 出航日) | 2h | - | [x] 境界値 8 件 (168h/24h/0h/過去) を CancellationPolicySpec で網羅、Task 4.1 と同 commit (649f9783) |
-| 4.4 | UI: キャンセルボタン + 現時点料金表示 + 確認モーダル | 3h | - | [ ] |
+| 4.4 | UI: キャンセルボタン + 現時点料金表示 + 確認モーダル | 3h | - | [x] CancellationFeeView (feePreview + feePreviewFragment + cancelConfirmButton) を Booking/Views/ に追加、htmx + Bootstrap で 3 ティア色分け、8 件パス |
 | 4.5 | 受入テスト (確定 → キャンセル各タイミング) | 3h | - | [ ] |
 
 **小計**: 14h
@@ -191,7 +191,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 87.5% (17.5/20 SP) — Phase B + IT3 繰越 (U-04 Rule 6 + Phase 3 T-01〜T-03) 完了
+**進捗率**: 90% (18.0/20 SP) — Phase B + IT3 繰越 + Phase C 着手 (US13 キャンセル UI fragment 完成)
 
 ---
 

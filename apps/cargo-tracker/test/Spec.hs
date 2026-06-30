@@ -29,6 +29,7 @@ import qualified Booking.Domain.Service.CancellationPolicySpec
 import qualified Booking.Infrastructure.PostgresBookingRepositorySpec
 import qualified Booking.Interfaces.BookingApiSpec
 import qualified Booking.Interfaces.BookingPageApiSpec
+import qualified Booking.Views.CancellationFeeViewSpec
 import qualified Domain.PropertiesSpec
 import qualified Estimation.Application.CreateEstimateCommandSpec
 import qualified Estimation.Application.EvaluateRouteCandidatesCommandSpec
@@ -136,6 +137,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Model.CustomsDeclaration"
     Booking.Domain.Model.CustomsDeclarationSpec.spec
+
+  describe
+    "Cargotracker.Booking.Views.CancellationFeeView"
+    Booking.Views.CancellationFeeViewSpec.spec
 
   describe
     "Cargotracker.Booking.Domain.Service.CancellationPolicy"
