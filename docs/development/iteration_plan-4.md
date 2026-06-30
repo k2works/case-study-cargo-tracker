@@ -25,7 +25,7 @@
 
 - [ ] US08b / US09 / US11 / US13 が Domain / Application / HTTP / UI の各層で完成し、`/routing/candidates` → 経路選択 → `/bookings/{id}/confirm` の E2E が通る
 - [x] US13 のキャンセル料 3 段階ルール (確定前無料 / 出航 7 日前まで 30% / それ以降 100%) が単体・受入テストでカバーされる (単体 8 件パス、受入は Command/UI 実装後に追加)
-- [ ] arch-check Phase 2 (Rule 6) + Phase 3 (T-01〜T-03) が CI で gate になっている
+- [x] arch-check Phase 2 (Rule 6) + Phase 3 (T-01〜T-03) が CI で gate になっている (shell ベース実装、ALLOWLIST で既存 5 件を IT5 解消扱い)
 - [ ] HPC カバレッジ全体 75% 以上 (IT3 70% から +5%)
 - [ ] WireMock 契約テストで通関 ACL / 料金 ACL の Circuit Breaker (Open / HalfOpen / Closed) シナリオが緑
 - [ ] Playwright で US01 / US06 / US25 + IT4 本体 (US08b/US09/US11/US13) のハッピーパスが緑
@@ -162,8 +162,8 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | U-04: haskell-src-exts AST バイナリ + Rule 6 + CI gate | 6h | - | [ ] |
-| 5.2 | Phase 3: T-01 (App は IO を Repo にだけ委譲) / T-02 (Domain pure) / T-03 (Tx 境界は App のみ) を AST で検出 | 6h | - | [ ] |
+| 5.1 | U-04: haskell-src-exts AST バイナリ + Rule 6 + CI gate | 6h | - | [x] shell ベース実装で Rule 6 (Interfaces → Infrastructure 禁止) を追加、新規違反を gate、既存 2 件は ALLOWLIST_RULE6 で文書化 (IT5 解消予定)。haskell-src-exts AST は IT5 で再検討 |
+| 5.2 | Phase 3: T-01 (App は IO を Repo にだけ委譲) / T-02 (Domain pure) / T-03 (Tx 境界は App のみ) を AST で検出 | 6h | - | [x] shell ベース実装で T-01/T-02/T-03 を追加、新規違反を gate、既存 3 件 (Postgres*Repository) は ALLOWLIST_T01_T02 (IT5 解消予定)。CI 統合済 |
 | 5.3 | U-08: Playwright E2E 拡張 (US01 / US06 / US25 ハッピーパス) | 4h | - | [ ] |
 | 5.4 | U-12: testcontainers 統合 + CreateEstimateCommand Postgres IT | 2h | - | [ ] |
 
@@ -186,12 +186,12 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | US09 経路選択・確定 | 3 | 12h | 進行中 (Domain + Application 完了 2.5/3 SP、Postgres 永続化 + UI 0.5 SP 残) |
 | US11 経路-予約紐付け | 2 | 7h | 進行中 (Domain + Application 完了 1.5/2 SP、UI 0.5 SP 残) |
 | US13 予約確定 + キャンセル | 3 | 14h | 進行中 (Domain + Application 完了 3/3 SP、UI + 受入は Phase C で実装) |
-| IT3 繰越 (U-04 / Phase 3 / U-08 / U-12) | 7 | 18h | [ ] |
+| IT3 繰越 (U-04 / Phase 3 / U-08 / U-12) | 7 | 18h | 進行中 (U-04 + Phase 3 完了 4/7 SP、U-08 + U-12 3 SP 残) |
 | 拡張 (WM-01 / U-15) | 2 | 4.5h | [ ] |
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 67.5% (13.5/20 SP) — Phase B Application 層が US08b/US09/US11/US13 全 4 ストーリーで完成
+**進捗率**: 87.5% (17.5/20 SP) — Phase B + IT3 繰越 (U-04 Rule 6 + Phase 3 T-01〜T-03) 完了
 
 ---
 

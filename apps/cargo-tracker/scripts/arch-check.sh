@@ -1,20 +1,31 @@
 #!/usr/bin/env bash
-# arch-check Phase 1 (シェルスクリプト実装)
+# arch-check Phase 1 + Phase 2/3 (シェルスクリプト実装)
 #
 # IT1 のシンプル実装: grep -E で Domain 層が許可されていないモジュールを
 # 直接 import していないかを検査する。
 #
-# ADR 0002 で定めた 3 ルール + IT2 T-06 で追加 Rule 4:
+# ADR 0002 で定めた 3 ルール + IT2 T-06 で追加 Rule 4 + IT4 U-04 Phase 2 Rule 6
+# + IT3 繰越 Phase 3 トランザクション境界 T-01 / T-02 / T-03:
+#
+# Phase 1 (IT1-IT2):
 # 1. Cargotracker.*.Domain.*       → Cargotracker.*.Infrastructure.* を import 不可
 # 2. Cargotracker.*.Domain.*       → Servant / postgresql-simple / aeson 等を import 不可
 # 3. Cargotracker.*.Application.*  → Cargotracker.*.Infrastructure.* を import 不可
 # 4. Cargotracker.<BC>.*           → 別 BC の Cargotracker.<OtherBC>.Domain.* を import 不可
 #                                    (Shared.* は共有カーネル例外、それ以外は ACL 経由のみ許可)
-#                                    IT1 由来の既知違反 6 件は ALLOWLIST_RULE4 で許容し、
-#                                    新規違反のみ fail させる。完全解消は IT3 で実施。
 #
-# IT2 で haskell-src-exts ベースの AST 解析バイナリ (arch-check) に
-# 置き換える予定だが、Phase 1 は確実性とシンプルさを優先。
+# Phase 2 (IT4 U-04):
+# 6. Cargotracker.*.Interfaces.*   → Cargotracker.*.Infrastructure.* を import 不可
+#                                    (Servant ハンドラは Application Command 経由のみ I/O)
+#
+# Phase 3 (IT3 繰越、トランザクション境界):
+# T-01. Cargotracker.*.Application.* のみが withTransaction / withDbTransaction を呼び出せる
+# T-02. Cargotracker.*.Infrastructure.Repository.* は withTransaction を呼び出してはいけない
+# T-03. Cargotracker.*.Domain.* は liftIO / IO 型を直接記述してはいけない
+#       (Rule 2 で import 禁止済、追加で本文中の `liftIO` 使用を検出)
+#
+# IT5+ で haskell-src-exts ベースの AST 解析バイナリへの置き換えを検討するが、
+# Phase 1/2/3 はシンプル & 確実性を優先して grep ベース継続。
 
 set -uo pipefail
 
@@ -39,6 +50,41 @@ VIOLATIONS=0
 # 2. 暫定で本配列に "<file>|<import 正規表現>" を追加 (target IT を ADR 起票で明示)
 # 3. 解消した時点で配列から削除し、retrospective に経緯を記録
 ALLOWLIST_RULE4=()
+
+# IT4 U-04 Phase 2/3 既知違反 ALLOWLIST:
+#
+# IT1-IT3 で実装された Repository / Interfaces ファイルは新ルール導入前に
+# 設計された経緯があり、Rule 6 + T-01 + T-02 を即時準拠させると大規模な
+# リファクタが必要となるため、暫定 ALLOWLIST 化し IT5 で段階的に解消する。
+#
+# 解消計画 (IT5 タスク予定):
+# - Rule 6: BookingPageApi / ShipperPageApi の Postgres 依存を Application Command 経由に移行
+# - T-01/T-02: 既存 Repository から withTransaction を取り除き、Application 層に Tx 境界を移動
+ALLOWLIST_RULE6=(
+  "Booking/Interfaces/BookingPageApi.hs"
+  "Shipper/Interfaces/ShipperPageApi.hs"
+)
+ALLOWLIST_T01_T02=(
+  "Booking/Infrastructure/PostgresCustomsDeclarationRepository.hs"
+  "Estimation/Infrastructure/PostgresEstimateRepository.hs"
+  "Routing/Infrastructure/PostgresVoyageRepository.hs"
+)
+
+is_allowed_rule6() {
+  local file="$1" entry
+  for entry in "${ALLOWLIST_RULE6[@]}"; do
+    [[ "$file" == *"$entry" ]] && return 0
+  done
+  return 1
+}
+
+is_allowed_t01_t02() {
+  local file="$1" entry
+  for entry in "${ALLOWLIST_T01_T02[@]}"; do
+    [[ "$file" == *"$entry" ]] && return 0
+  done
+  return 1
+}
 
 # U-14 (IT3): ALLOWLIST 整合性検証。
 # 登録ファイルが src/ 配下に実在しなければ stale エントリとして即 fail させる
@@ -77,6 +123,14 @@ is_domain_module() {
 
 is_application_module() {
   grep -Eq '^module +Cargotracker\.[^.]+\.Application(\.|$| )' "$1"
+}
+
+is_interfaces_module() {
+  grep -Eq '^module +Cargotracker\.[^.]+\.Interfaces(\.|$| )' "$1"
+}
+
+is_repository_module() {
+  grep -Eq '^module +Cargotracker\.[^.]+\.Infrastructure\.(Postgres|Repository)' "$1"
 }
 
 # Rule 1: Domain → Infrastructure 禁止
@@ -151,12 +205,101 @@ check_rule4() {
   done < <(grep -nE '^import +(qualified +)?Cargotracker\.[^.]+\.Domain\.' "$file" || true)
 }
 
-echo "arch-check Phase 1: $SRC_DIR を検査中..."
+# Rule 6 (Phase 2): Interfaces → Infrastructure 禁止
+# Servant ハンドラは Application Command 経由のみ I/O を行うべき。
+# 例外: Main.hs / app/ のエントリポイントは Env 構築のため Infrastructure を import する。
+# 本ルールは src/Cargotracker/<BC>/Interfaces/ 配下のみを対象とする。
+check_rule6() {
+  local file="$1"
+  if is_interfaces_module "$file"; then
+    if is_allowed_rule6 "$file"; then
+      return
+    fi
+    local hits
+    hits=$(grep -nE '^import +(qualified +)?Cargotracker\.[^.]+\.Infrastructure\.' "$file" || true)
+    if [ -n "$hits" ]; then
+      echo "❌ Rule 6 違反 (Interfaces → Infrastructure): $file"
+      echo "$hits" | sed 's/^/   /'
+      VIOLATIONS=$((VIOLATIONS + 1))
+    fi
+  fi
+}
+
+# T-01 (Phase 3): withTransaction は Application 層のみで張る
+# Domain / Infrastructure / Interfaces で withTransaction / withDbTransaction を
+# 使ってはいけない。Application 層のみ Tx 境界を持つ責務。
+check_t01() {
+  local file="$1"
+  if is_application_module "$file" || is_interfaces_module "$file" || is_domain_module "$file"; then
+    : # Application は OK、それ以外でも本ルールは Infrastructure 側で検査するため skip
+  fi
+  # 実装: Application 以外で withTransaction / withDbTransaction を使ってはいけない
+  if ! is_application_module "$file"; then
+    if is_allowed_t01_t02 "$file"; then
+      return
+    fi
+    local hits
+    hits=$(grep -nE '\b(withTransaction|withDbTransaction)\b' "$file" || true)
+    if [ -n "$hits" ]; then
+      # Infrastructure / Interfaces / Domain での Tx 境界張りを違反として検出
+      if is_infrastructure_module "$file" || is_interfaces_module "$file" || is_domain_module "$file"; then
+        echo "❌ T-01 違反 (Application 以外で Tx 境界を張っている): $file"
+        echo "$hits" | sed 's/^/   /'
+        VIOLATIONS=$((VIOLATIONS + 1))
+      fi
+    fi
+  fi
+}
+
+is_infrastructure_module() {
+  grep -Eq '^module +Cargotracker\.[^.]+\.Infrastructure(\.|$| )' "$1"
+}
+
+# T-02 (Phase 3): Repository は IO のみで Tx 開始禁止
+# postgresql-simple の Connection を受け取って SQL を実行するだけで、
+# トランザクション境界は Application 層に委譲する。
+check_t02() {
+  local file="$1"
+  if is_repository_module "$file"; then
+    if is_allowed_t01_t02 "$file"; then
+      return
+    fi
+    local hits
+    hits=$(grep -nE '\b(withTransaction|withDbTransaction|begin\b|BEGIN;|COMMIT;|ROLLBACK;)' "$file" || true)
+    if [ -n "$hits" ]; then
+      echo "❌ T-02 違反 (Repository で Tx 境界を張っている): $file"
+      echo "$hits" | sed 's/^/   /'
+      VIOLATIONS=$((VIOLATIONS + 1))
+    fi
+  fi
+}
+
+# T-03 (Phase 3): Domain は IO 完全排除
+# Rule 2 で import 禁止済だが、追加で `liftIO` 呼び出しを検出する
+# (DomainError 等で IO を直接記述するパターン防止)。
+check_t03() {
+  local file="$1"
+  if is_domain_module "$file"; then
+    local hits
+    hits=$(grep -nE '\b(liftIO|unsafePerformIO|performIO)\b' "$file" || true)
+    if [ -n "$hits" ]; then
+      echo "❌ T-03 違反 (Domain で IO を直接使用): $file"
+      echo "$hits" | sed 's/^/   /'
+      VIOLATIONS=$((VIOLATIONS + 1))
+    fi
+  fi
+}
+
+echo "arch-check Phase 1+2+3: $SRC_DIR を検査中..."
 while IFS= read -r -d '' file; do
   check_rule1 "$file"
   check_rule2 "$file"
   check_rule3 "$file"
   check_rule4 "$file"
+  check_rule6 "$file"
+  check_t01 "$file"
+  check_t02 "$file"
+  check_t03 "$file"
 done < <(find "$SRC_DIR" -name "*.hs" -print0)
 
 if [ "$VIOLATIONS" -gt 0 ]; then
@@ -165,4 +308,5 @@ if [ "$VIOLATIONS" -gt 0 ]; then
   exit 1
 fi
 
-echo "✅ アーキテクチャ規約遵守 (Rule 1/2/3/4 全て OK、Rule 4 既知違反 ${#ALLOWLIST_RULE4[@]} 件は ALLOWLIST 化済)"
+echo "✅ アーキテクチャ規約遵守 (Rule 1/2/3/4/6 + T-01/T-02/T-03 全て OK)"
+echo "   ALLOWLIST: Rule 4=${#ALLOWLIST_RULE4[@]} / Rule 6=${#ALLOWLIST_RULE6[@]} / T-01+T-02=${#ALLOWLIST_T01_T02[@]} (IT5 段階解消)"
