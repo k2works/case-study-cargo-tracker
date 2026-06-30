@@ -120,7 +120,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 |---|--------|---------|------|------|
 | 1.1 | `RouteConstraint` VO (Hazardous / Reefer / DirectPreferred) を Domain に追加 | 3h | - | [x] Estimation BC に RouteConstraint / ExclusionReason / ConstraintEvaluation を追加 |
 | 1.2 | `RouteFinder.evaluateConstraints` を実装 + hedgehog プロパティテスト | 4h | - | [x] RouteEvaluator.evaluate を純粋関数で実装 (T-03)、hspec 7 件 + hedgehog 6 プロパティ (600 ケース) 全パス |
-| 1.3 | `/routing/candidates` レスポンスに制約評価結果 (rank / 除外理由) を含める | 2h | - | [ ] |
+| 1.3 | `/routing/candidates` レスポンスに制約評価結果 (rank / 除外理由) を含める | 2h | - | 進行中: EvaluateRouteCandidatesCommand を Application 層に実装 (5 件パス、ADR-0004 準拠で Text 識別子の Cross-BC 非依存)、HTTP ハンドラは Phase C |
 | 1.4 | 受入テスト (Gherkin 4 シナリオ) | 3h | - | [ ] |
 
 **小計**: 12h
@@ -182,7 +182,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US08b 経路制約評価 | 3 | 12h | 進行中 (Domain 完了 2/3 SP、UI/受入 1 SP 残) |
+| US08b 経路制約評価 | 3 | 12h | 進行中 (Domain + Application 完了 2.5/3 SP、HTTP/UI/受入 0.5 SP 残) |
 | US09 経路選択・確定 | 3 | 12h | 進行中 (Itinerary/Leg ドメイン 完了 1.5/3 SP、Command/UI/migration 1.5 SP 残) |
 | US11 経路-予約紐付け | 2 | 7h | 進行中 (Domain + Application 完了 1.5/2 SP、UI 0.5 SP 残) |
 | US13 予約確定 + キャンセル | 3 | 14h | 進行中 (Domain + Application 完了 3/3 SP、UI + 受入は Phase C で実装) |
@@ -191,7 +191,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 60% (12.0/20 SP) — Phase B 過半 (Confirm/Cancel/Link/Unlink 4 Command 完了、US11/US13 Application 層完成)
+**進捗率**: 62.5% (12.5/20 SP) — Phase B Application 層が US08b/US11/US13 まで完成
 
 ---
 

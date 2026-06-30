@@ -30,6 +30,7 @@ import qualified Booking.Interfaces.BookingApiSpec
 import qualified Booking.Interfaces.BookingPageApiSpec
 import qualified Domain.PropertiesSpec
 import qualified Estimation.Application.CreateEstimateCommandSpec
+import qualified Estimation.Application.EvaluateRouteCandidatesCommandSpec
 import qualified Estimation.Domain.Model.EstimateSpec
 import qualified Estimation.Domain.Service.RouteEvaluatorPropertiesSpec
 import qualified Estimation.Domain.Service.RouteEvaluatorSpec
@@ -158,6 +159,10 @@ main = hspec $ do
   describe
     "Cargotracker.Estimation.Domain.Service.RouteEvaluator (hedgehog)"
     Estimation.Domain.Service.RouteEvaluatorPropertiesSpec.spec
+
+  describe
+    "Cargotracker.Estimation.Application.EvaluateRouteCandidatesCommand"
+    Estimation.Application.EvaluateRouteCandidatesCommandSpec.spec
 
   describe
     "Cargotracker.Estimation.Domain.Model.Estimate"
