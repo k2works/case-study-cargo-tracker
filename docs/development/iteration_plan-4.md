@@ -24,7 +24,7 @@
 ### 成功基準
 
 - [ ] US08b / US09 / US11 / US13 が Domain / Application / HTTP / UI の各層で完成し、`/routing/candidates` → 経路選択 → `/bookings/{id}/confirm` の E2E が通る
-- [ ] US13 のキャンセル料 3 段階ルール (確定前無料 / 出航 7 日前まで 30% / それ以降 100%) が単体・受入テストでカバーされる
+- [x] US13 のキャンセル料 3 段階ルール (確定前無料 / 出航 7 日前まで 30% / それ以降 100%) が単体・受入テストでカバーされる (単体 8 件パス、受入は Command/UI 実装後に追加)
 - [ ] arch-check Phase 2 (Rule 6) + Phase 3 (T-01〜T-03) が CI で gate になっている
 - [ ] HPC カバレッジ全体 75% 以上 (IT3 70% から +5%)
 - [ ] WireMock 契約テストで通関 ACL / 料金 ACL の Circuit Breaker (Open / HalfOpen / Closed) シナリオが緑
@@ -152,7 +152,7 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 |---|--------|---------|------|------|
 | 4.1 | `BookingConfirmed` イベント + `CancellationFee` VO (3 段階ルール) | 3h | - | [x] CancellationFee VO + CancellationPolicy.calculate 実装、境界値テスト 8 件パス |
 | 4.2 | `ConfirmBookingCommand` / `CancelBookingCommand` ハンドラ + 監査 | 3h | - | [ ] |
-| 4.3 | キャンセル料算定の単体テスト (境界値: 7 日前 / 1 日前 / 出航日) | 2h | - | [ ] |
+| 4.3 | キャンセル料算定の単体テスト (境界値: 7 日前 / 1 日前 / 出航日) | 2h | - | [x] 境界値 8 件 (168h/24h/0h/過去) を CancellationPolicySpec で網羅、Task 4.1 と同 commit (649f9783) |
 | 4.4 | UI: キャンセルボタン + 現時点料金表示 + 確認モーダル | 3h | - | [ ] |
 | 4.5 | 受入テスト (確定 → キャンセル各タイミング) | 3h | - | [ ] |
 
@@ -182,16 +182,16 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US08b 経路制約評価 | 3 | 12h | [ ] |
+| US08b 経路制約評価 | 3 | 12h | 進行中 (Domain 完了 2/3 SP、UI/受入 1 SP 残) |
 | US09 経路選択・確定 | 3 | 12h | [ ] |
 | US11 経路-予約紐付け | 2 | 7h | [ ] |
-| US13 予約確定 + キャンセル | 3 | 14h | [ ] |
+| US13 予約確定 + キャンセル | 3 | 14h | 進行中 (CancellationPolicy 完了 1.5/3 SP、Command/UI/受入 1.5 SP 残) |
 | IT3 繰越 (U-04 / Phase 3 / U-08 / U-12) | 7 | 18h | [ ] |
 | 拡張 (WM-01 / U-15) | 2 | 4.5h | [ ] |
 | **合計** | **20** | **67.5h** | |
 
 **1 SP あたり**: 約 3.4h
-**進捗率**: 0% (0/20 SP)
+**進捗率**: 17.5% (3.5/20 SP) — Phase A 純粋ドメイン部分が先行
 
 ---
 
@@ -1023,6 +1023,7 @@ prop_evaluatorExcludesHazardous = property $ do
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-06-30 | 初版作成 (本体 US08b/US09/US11/US13 = 11 SP + IT3 繰越 7 SP + 拡張 2 SP = 20 SP、IT1-3 実績ベロシティ平均 20 SP/IT を基準値とする) | Claude |
+| 2026-06-30 | Phase A 純粋ドメイン進行: Task 1.1+1.2 (RouteEvaluator) / 4.1+4.3 (CancellationPolicy) 完了。進捗率 17.5% (3.5/20 SP)。commit 649f9783, a39c29c7 | Claude |
 
 ---
 
