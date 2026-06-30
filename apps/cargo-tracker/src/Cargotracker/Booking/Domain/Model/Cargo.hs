@@ -13,6 +13,10 @@ module Cargotracker.Booking.Domain.Model.Cargo
     mkCargoWithType,
     submitBooking,
     requestRouting,
+    linkRoute,
+    unlinkRoute,
+    confirmBooking,
+    cancelBooking,
   ) where
 
 import qualified Data.Text as T
@@ -101,3 +105,55 @@ requestRouting cargo = case cargoStatus cargo of
           (T.pack (show other))
           (T.pack (show RouteProposed))
       )
+
+{- | 経路を予約に紐付ける (RouteProposed → RouteAssigned) (US11, IT4)。
+他の状態からは InvalidStateTransition。
+-}
+linkRoute :: Cargo -> Either DomainError Cargo
+linkRoute = transitionFromTo RouteProposed RouteAssigned
+
+{- | 経路紐付けを解除する (RouteAssigned → Draft) (US11, IT4)。
+確定済 (Confirmed) からは戻せず InvalidStateTransition。
+-}
+unlinkRoute :: Cargo -> Either DomainError Cargo
+unlinkRoute = transitionFromTo RouteAssigned Draft
+
+{- | 予約を確定する (RouteAssigned → Confirmed) (US13, IT4)。
+経路紐付け前 (Draft / Submitted / RouteProposed) からの確定は不可。
+-}
+confirmBooking :: Cargo -> Either DomainError Cargo
+confirmBooking = transitionFromTo RouteAssigned Confirmed
+
+{- | 予約をキャンセルする (US13, IT4)。
+Submitted / RouteProposed / RouteAssigned / Confirmed から Cancelled へ。
+キャンセル料の算定は Application 層で CancellationPolicy を呼び出す。
+本関数は状態遷移のみを担当する。
+-}
+cancelBooking :: Cargo -> Either DomainError Cargo
+cancelBooking cargo = case cargoStatus cargo of
+  s
+    | s `elem` [Submitted, RouteProposed, RouteAssigned, Confirmed] ->
+        Right
+          cargo
+            { cargoStatus = Cancelled
+            , cargoVersion = cargoVersion cargo + 1
+            }
+  other ->
+    Left (InvalidStateTransition (T.pack (show other)) (T.pack (show Cancelled)))
+
+-- | 「指定 from 状態のみ to 状態へ遷移」を行う汎用ヘルパ。
+transitionFromTo ::
+  BookingStatus -> BookingStatus -> Cargo -> Either DomainError Cargo
+transitionFromTo from to cargo
+  | cargoStatus cargo == from =
+      Right
+        cargo
+          { cargoStatus = to
+          , cargoVersion = cargoVersion cargo + 1
+          }
+  | otherwise =
+      Left
+        ( InvalidStateTransition
+            (T.pack (show (cargoStatus cargo)))
+            (T.pack (show to))
+        )
