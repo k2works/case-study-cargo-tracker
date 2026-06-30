@@ -118,8 +118,8 @@ release_plan.md IT4 原案の本体 11 SP に **IT3 繰越 7 SP + 推奨 2 SP** 
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `RouteConstraint` VO (Hazardous / Reefer / DirectPreferred) を Domain に追加 | 3h | - | [ ] |
-| 1.2 | `RouteFinder.evaluateConstraints` を実装 + hedgehog プロパティテスト | 4h | - | [ ] |
+| 1.1 | `RouteConstraint` VO (Hazardous / Reefer / DirectPreferred) を Domain に追加 | 3h | - | [x] Estimation BC に RouteConstraint / ExclusionReason / ConstraintEvaluation を追加 |
+| 1.2 | `RouteFinder.evaluateConstraints` を実装 + hedgehog プロパティテスト | 4h | - | [x] RouteEvaluator.evaluate を純粋関数で実装 (T-03)、hspec 7 件パス、hedgehog は次サイクルで追加 |
 | 1.3 | `/routing/candidates` レスポンスに制約評価結果 (rank / 除外理由) を含める | 2h | - | [ ] |
 | 1.4 | 受入テスト (Gherkin 4 シナリオ) | 3h | - | [ ] |
 

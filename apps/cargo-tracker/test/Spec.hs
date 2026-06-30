@@ -24,6 +24,7 @@ import qualified Booking.Interfaces.BookingPageApiSpec
 import qualified Domain.PropertiesSpec
 import qualified Estimation.Application.CreateEstimateCommandSpec
 import qualified Estimation.Domain.Model.EstimateSpec
+import qualified Estimation.Domain.Service.RouteEvaluatorSpec
 import qualified Estimation.Interfaces.EstimatePageApiSpec
 import qualified Routing.Application.ComputeRouteCandidatesQuerySpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
@@ -129,6 +130,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Service.CancellationPolicy"
     Booking.Domain.Service.CancellationPolicySpec.spec
+
+  describe
+    "Cargotracker.Estimation.Domain.Service.RouteEvaluator"
+    Estimation.Domain.Service.RouteEvaluatorSpec.spec
 
   describe
     "Cargotracker.Estimation.Domain.Model.Estimate"
