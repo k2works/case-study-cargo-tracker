@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import Cargotracker.Booking.Domain.Error (pattern InvalidStateTransition)
 import Cargotracker.Booking.Domain.Model.State.BookingStatus
   ( BookingStatus (..),
+    canTransitionTo,
   )
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId)
 import Cargotracker.Booking.Domain.Model.Value.CargoType (CargoType (..))
@@ -68,84 +69,43 @@ mkCargoWithType bid sid route ctype =
     , cargoVersion = 1
     }
 
-{- | 予約を確定送信する (Draft → Submitted)。
-すでに Submitted 以降の状態にあるとエラー。
--}
+-- | 予約を確定送信する (Draft → Submitted)。
 submitBooking :: Cargo -> Either DomainError Cargo
-submitBooking cargo = case cargoStatus cargo of
-  Draft ->
-    Right
-      cargo
-        { cargoStatus = Submitted
-        , cargoVersion = cargoVersion cargo + 1
-        }
-  other ->
-    Left
-      ( InvalidStateTransition
-          (T.pack (show other))
-          (T.pack (show Submitted))
-      )
+submitBooking = transitionTo Submitted
 
-{- | 予約を経路設計者に引き渡す (Submitted → RouteProposed) (US06, IT2)。
-
-Submitted 以外の状態からは InvalidStateTransition を返し、
-二重引き渡し・順序違反 (Draft からの直接引き渡し等) を防ぐ。
--}
+-- | 予約を経路設計者に引き渡す (Submitted → RouteProposed) (US06, IT2)。
 requestRouting :: Cargo -> Either DomainError Cargo
-requestRouting cargo = case cargoStatus cargo of
-  Submitted ->
-    Right
-      cargo
-        { cargoStatus = RouteProposed
-        , cargoVersion = cargoVersion cargo + 1
-        }
-  other ->
-    Left
-      ( InvalidStateTransition
-          (T.pack (show other))
-          (T.pack (show RouteProposed))
-      )
+requestRouting = transitionTo RouteProposed
 
-{- | 経路を予約に紐付ける (RouteProposed → RouteAssigned) (US11, IT4)。
-他の状態からは InvalidStateTransition。
--}
+-- | 経路を予約に紐付ける (RouteProposed → RouteAssigned) (US11, IT4)。
 linkRoute :: Cargo -> Either DomainError Cargo
-linkRoute = transitionFromTo RouteProposed RouteAssigned
+linkRoute = transitionTo RouteAssigned
 
-{- | 経路紐付けを解除する (RouteAssigned → Draft) (US11, IT4)。
-確定済 (Confirmed) からは戻せず InvalidStateTransition。
--}
+-- | 経路紐付けを解除する (RouteAssigned → Draft) (US11, IT4)。
 unlinkRoute :: Cargo -> Either DomainError Cargo
-unlinkRoute = transitionFromTo RouteAssigned Draft
+unlinkRoute = transitionTo Draft
 
-{- | 予約を確定する (RouteAssigned → Confirmed) (US13, IT4)。
-経路紐付け前 (Draft / Submitted / RouteProposed) からの確定は不可。
--}
+-- | 予約を確定する (RouteAssigned → Confirmed) (US13, IT4)。
 confirmBooking :: Cargo -> Either DomainError Cargo
-confirmBooking = transitionFromTo RouteAssigned Confirmed
+confirmBooking = transitionTo Confirmed
 
 {- | 予約をキャンセルする (US13, IT4)。
-Submitted / RouteProposed / RouteAssigned / Confirmed から Cancelled へ。
+
 キャンセル料の算定は Application 層で CancellationPolicy を呼び出す。
 本関数は状態遷移のみを担当する。
 -}
 cancelBooking :: Cargo -> Either DomainError Cargo
-cancelBooking cargo = case cargoStatus cargo of
-  s
-    | s `elem` [Submitted, RouteProposed, RouteAssigned, Confirmed] ->
-        Right
-          cargo
-            { cargoStatus = Cancelled
-            , cargoVersion = cargoVersion cargo + 1
-            }
-  other ->
-    Left (InvalidStateTransition (T.pack (show other)) (T.pack (show Cancelled)))
+cancelBooking = transitionTo Cancelled
 
--- | 「指定 from 状態のみ to 状態へ遷移」を行う汎用ヘルパ。
-transitionFromTo ::
-  BookingStatus -> BookingStatus -> Cargo -> Either DomainError Cargo
-transitionFromTo from to cargo
-  | cargoStatus cargo == from =
+{- | 状態遷移の SSoT (H-01 リファクタ, IT4 レビュー指摘)。
+
+`BookingStatus.canTransitionTo` を真実とし、許可された場合のみ
+status 更新と version+1 を行う。許可ペアの一覧は BookingStatus.hs
+の `canTransitionTo` を参照。
+-}
+transitionTo :: BookingStatus -> Cargo -> Either DomainError Cargo
+transitionTo to cargo
+  | canTransitionTo (cargoStatus cargo) to =
       Right
         cargo
           { cargoStatus = to

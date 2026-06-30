@@ -19,38 +19,25 @@ module Cargotracker.Booking.Application.HandOverToRouterCommand
   ) where
 
 import Cargotracker.Booking.Application.Ports
-  ( BookingRepository (..),
+  ( BookingRepository,
+    withCargo,
   )
 import Cargotracker.Booking.Domain.Model.Cargo
-  ( Cargo (..),
+  ( Cargo,
     requestRouting,
   )
-import Cargotracker.Booking.Domain.Model.Value.BookingId
-  ( BookingId,
-    unBookingId,
-  )
-import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId)
+import Cargotracker.Shared.Domain.DomainError (DomainError)
 
 newtype HandOverToRouterInput = HandOverToRouterInput
   { inputBookingId :: BookingId
   }
   deriving stock (Eq, Show)
 
+-- M-01 リファクタ (IT4 レビュー): `withCargo` 共通ヘルパに集約。
 execute ::
   Monad m =>
   BookingRepository m ->
   HandOverToRouterInput ->
   m (Either DomainError Cargo)
-execute repo input = do
-  let bid = inputBookingId input
-  mCargo <- findCargoById repo bid
-  case mCargo of
-    Nothing ->
-      pure (Left (BookingNotFound (unBookingId bid)))
-    Just cargo -> case requestRouting cargo of
-      Left e -> pure (Left e)
-      Right updated -> do
-        result <- updateBooking repo updated
-        case result of
-          Left e -> pure (Left e)
-          Right () -> pure (Right updated)
+execute repo input = withCargo repo (inputBookingId input) requestRouting

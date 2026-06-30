@@ -22,6 +22,7 @@ Cargo 集約の状態。値の追加履歴:
 module Cargotracker.Booking.Domain.Model.State.BookingStatus
   ( BookingStatus (..),
     canTransitionTo,
+    cancellableStatuses,
     bookingStatusToText,
   ) where
 
@@ -39,7 +40,15 @@ data BookingStatus
   | Closed
   deriving stock (Eq, Show, Enum, Bounded)
 
--- | 状態遷移可否 (純粋関数、IT4 までのルールを網羅)
+{- | キャンセル可能状態の集合 (US13, IT4)
+
+`canTransitionTo s Cancelled == True` となる s のリスト。
+派生して `cancelBooking` 等が利用する業務概念。
+-}
+cancellableStatuses :: [BookingStatus]
+cancellableStatuses = [Submitted, RouteProposed, RouteAssigned, Confirmed]
+
+-- | 状態遷移可否 (純粋関数、IT4 までのルールを網羅、SSoT)
 canTransitionTo :: BookingStatus -> BookingStatus -> Bool
 canTransitionTo Draft Submitted = True
 canTransitionTo Submitted RouteProposed = True

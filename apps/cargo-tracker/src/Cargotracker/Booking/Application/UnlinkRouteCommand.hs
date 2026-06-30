@@ -1,15 +1,10 @@
-{-# LANGUAGE PatternSynonyms #-}
-
 {- | 経路紐付けを解除するコマンド (US11, IT4)
 
-業務フロー:
-1. BookingId を受け取り、既存予約 (RouteAssigned 状態) を取得
-2. Domain の Cargo.unlinkRoute で RouteAssigned → Draft に遷移
-3. 永続化
-4. 失敗 (不在 / 確定済 / 楽観ロック) は DomainError で伝播
+`Cargo.unlinkRoute` で RouteAssigned → Draft に遷移し、
+成功なら BookingRepository.updateBooking で永続化する。
+確定済 (Confirmed) からは Domain 層で拒否される。
 
-確定済 (Confirmed) からの解除は Domain 層で拒否される。
-T-01/T-02/T-03 規約: 全ての I/O は BookingRepository ポート経由。
+M-01 リファクタ (IT4 レビュー): `withCargo` 共通ヘルパに集約。
 -}
 module Cargotracker.Booking.Application.UnlinkRouteCommand
   ( UnlinkRouteInput (..),
@@ -17,17 +12,14 @@ module Cargotracker.Booking.Application.UnlinkRouteCommand
   ) where
 
 import Cargotracker.Booking.Application.Ports
-  ( BookingRepository (..),
+  ( BookingRepository,
+    withCargo,
   )
-import Cargotracker.Booking.Domain.Error (pattern BookingNotFound)
 import Cargotracker.Booking.Domain.Model.Cargo
-  ( Cargo (..),
+  ( Cargo,
     unlinkRoute,
   )
-import Cargotracker.Booking.Domain.Model.Value.BookingId
-  ( BookingId,
-    unBookingId,
-  )
+import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId)
 import Cargotracker.Shared.Domain.DomainError (DomainError)
 
 newtype UnlinkRouteInput = UnlinkRouteInput
@@ -40,15 +32,4 @@ execute ::
   BookingRepository m ->
   UnlinkRouteInput ->
   m (Either DomainError Cargo)
-execute repo input = do
-  let bid = inputBookingId input
-  mCargo <- findCargoById repo bid
-  case mCargo of
-    Nothing -> pure (Left (BookingNotFound (unBookingId bid)))
-    Just cargo -> case unlinkRoute cargo of
-      Left e -> pure (Left e)
-      Right updated -> do
-        result <- updateBooking repo updated
-        case result of
-          Left e -> pure (Left e)
-          Right () -> pure (Right updated)
+execute repo input = withCargo repo (inputBookingId input) unlinkRoute
