@@ -81,6 +81,7 @@ import Cargotracker.Shipper.Interfaces.ShipperSearchApi (shipperSearchApp)
 import Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
   ( newPostgresTrackingRepository,
   )
+import Cargotracker.Tracking.Interfaces.PublicTrackingApi (publicTrackingApp)
 
 main :: IO ()
 main = do
@@ -149,6 +150,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsRepo voyageRepo trackingRepo req respond
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
+    "public" : "tracking" : _ -> publicTrackingApp trackingRepo req respond
     _ ->
       respond $
         responseLBS

@@ -177,9 +177,9 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 7.1 | Application: `QueryTrackingByIdQuery` (HandlingEvent 時系列 + 予定到着日算出) | 4h | AI 完結可 | [ ] |
-| 7.2 | HTTP: 公開エンドポイント `/public/tracking/{trackingNumber}` + rate-limit middleware (ui_design.md 準拠) | 4h | AI 完結可 | [ ] |
-| 7.3 | UI: 公開ページ (Leaflet 地図 + タイムライン + Lucid template) | 5h | AI 完結可 | [ ] |
+| 7.1 | Application: `QueryTrackingByIdQuery` (HandlingEvent 時系列 + 予定到着日算出) | 4h | AI 完結可 | [x] iter 27 完了 (QueryTrackingByNumberQuery.execute + TrackingView DTO で公開向け情報のみ返却、mkTrackingNumber 経由の形式検証込み) |
+| 7.2 | HTTP: 公開エンドポイント `/public/tracking/{trackingNumber}` + rate-limit middleware (ui_design.md 準拠) | 4h | AI 完結可 | [~] iter 27 部分完了 (PublicTrackingApi + QueryParam + Capture 両対応 handler、Main.hs 配線)。rate-limit middleware は IT6 繰越 |
+| 7.3 | UI: 公開ページ (Leaflet 地図 + タイムライン + Lucid template) | 5h | AI 完結可 | [~] iter 27 部分完了 (PublicTrackingView に検索フォーム + 詳細ページ + 404 ページ、日本語ラベル 9 状態変換、Bootstrap 色 class)。Leaflet 地図 + タイムラインは HandlingEvent 実装後 IT6 |
 | 7.4 | Playwright E2E: 追跡照会ハッピーパス (存在/不在/rate-limit) | 3h | Browser 必要 | [ ] |
 
 **小計**: 16h
@@ -290,7 +290,8 @@
 | 23 | 本体 US14 Step 1 完了: TrackingNumber VO (8 文字英数大文字) + TransportStatus 共有型 9 値 + TrackingActivity 集約 (最小) + TrackingRepository port + IssueTrackingNumberCommand (冪等性込み) + tracking_activity migration、DomainError 拡張 (InvalidTrackingNumberFormat / TrackingNotFound)、6 新規モジュール、stack build 成功 | `d75dd032` |
 | 24 | 本体 US14 Step 2 完了: PostgresTrackingRepository 実装 (saveImpl INSERT / findByBookingIdImpl / findByTrackingNumberImpl、既存 PostgresBookingRepository パターン踏襲、T-02 準拠) | `2a16c3a8` |
 | 25 | 本体 US14 Step 3 完了: IdGenerator に generateTrackingNumberText 追加 ("TR" + 6 文字英数) + handlerConfirm に TrackingRepository 引数追加、Confirm 成功後に自動発行、Main.hs に newPostgresTrackingRepository 配線 + BookingPageApiSpec.hs 5 callsite 追従 | `33b42a21` |
-| 26 | **本体 US14 完了**: Step 4 (View 配線) - handlerShow に TrackingRepository 追加、TrackingPort.findByBookingId で TrackingActivity 取得、bookingShowPage が Maybe Text で表示 (発行済は code_ タグ、未発行はミュート「未発行」) | (未 commit) |
+| 26 | **本体 US14 完了**: Step 4 (View 配線) - handlerShow に TrackingRepository 追加、queryTrackingNumberText で Rule 4 遵守、bookingShowPage が Maybe Text で表示 (発行済は code_ タグ、未発行はミュート「未発行」) | `aad24565` |
+| 27 | **本体 US18 骨格完了**: QueryTrackingByNumberQuery.execute + TrackingView DTO (公開向け Text ベース) + PublicTrackingApi (QueryParam + Capture 両対応) + PublicTrackingView (検索フォーム + 詳細ページ + 404 ページ、9 状態日本語ラベル + Bootstrap 色 class) + Main.hs 配線。rate-limit / Leaflet / タイムラインは IT6 繰越 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
