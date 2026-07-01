@@ -48,6 +48,10 @@ import Cargotracker.Booking.Application.HandOverToRouterCommand
   ( HandOverToRouterInput (..),
   )
 import qualified Cargotracker.Booking.Application.HandOverToRouterCommand as HandOver
+import Cargotracker.Booking.Application.LinkRouteCommand
+  ( LinkRouteInput (..),
+  )
+import qualified Cargotracker.Booking.Application.LinkRouteCommand as LinkRoute
 import Cargotracker.Booking.Application.Ports
   ( BookingRepository (..),
     ShipperExistenceChecker,
@@ -61,6 +65,10 @@ import Cargotracker.Booking.Application.SubmitBookingCommand
   ( SubmitBookingInput (..),
   )
 import qualified Cargotracker.Booking.Application.SubmitBookingCommand as Submit
+import Cargotracker.Booking.Application.UnlinkRouteCommand
+  ( UnlinkRouteInput (..),
+  )
+import qualified Cargotracker.Booking.Application.UnlinkRouteCommand as UnlinkRoute
 import Cargotracker.Booking.Domain.Model.Cargo (cargoRouteSpec)
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
 import qualified Cargotracker.Booking.Domain.Model.Value.RouteSpecification as RouteSpec
@@ -157,6 +165,12 @@ type BookingPageApi =
            :<|> Capture "bookingId" Text
              :> "cancel"
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "bookingId" Text
+             :> "route"
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "bookingId" Text
+             :> "route"
+             :> Verb 'DELETE 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
 bookingPageApp ::
@@ -180,6 +194,8 @@ bookingPageApp repo checker customsRepo voyageRepo =
         :<|> handlerRoutes repo voyageRepo
         :<|> handlerConfirm repo
         :<|> handlerCancel repo
+        :<|> handlerLinkRoute repo
+        :<|> handlerUnlinkRoute repo
     )
 
 {- | US08a (IT3): GET /bookings/:bookingId/routes
@@ -551,6 +567,76 @@ handlerCancel repo bid = do
   where
     redirectCancelErr :: Text -> Handler a
     redirectCancelErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
+
+{- | US11 (IT5 task 1.1 IT4 繰越): POST /bookings/:bookingId/route
+経路紐付け (Booking → RouteAssigned)。
+-}
+handlerLinkRoute ::
+  BookingRepository IO ->
+  Text ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerLinkRoute repo bid = do
+  result <-
+    liftIO
+      ( LinkRoute.execute
+          repo
+          (LinkRouteInput {inputBookingId = BookingId bid})
+      )
+  let detail = "/bookings/" <> bid
+  case result of
+    Right _ ->
+      pure (addHeader (detail <> "?flash=link-ok") NoContent)
+    Left (BookingNotFound _) ->
+      redirectLinkErr "/bookings/new?error=booking-not-found"
+    Left (InvalidStateTransition fromS _) ->
+      redirectLinkErr (detail <> "?error=invalid-state&from=" <> fromS)
+    Left (ConcurrentModification _) ->
+      redirectLinkErr (detail <> "?error=concurrent-modification")
+    Left e ->
+      redirectLinkErr (detail <> "?error=" <> T.pack (show e))
+  where
+    redirectLinkErr :: Text -> Handler a
+    redirectLinkErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
+
+{- | US11 (IT5 task 1.1 IT4 繰越): DELETE /bookings/:bookingId/route
+経路紐付け解除 (確定前のみ)。
+-}
+handlerUnlinkRoute ::
+  BookingRepository IO ->
+  Text ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerUnlinkRoute repo bid = do
+  result <-
+    liftIO
+      ( UnlinkRoute.execute
+          repo
+          (UnlinkRouteInput {inputBookingId = BookingId bid})
+      )
+  let detail = "/bookings/" <> bid
+  case result of
+    Right _ ->
+      pure (addHeader (detail <> "?flash=unlink-ok") NoContent)
+    Left (BookingNotFound _) ->
+      redirectUnlinkErr "/bookings/new?error=booking-not-found"
+    Left (InvalidStateTransition fromS _) ->
+      redirectUnlinkErr (detail <> "?error=invalid-state&from=" <> fromS)
+    Left (ConcurrentModification _) ->
+      redirectUnlinkErr (detail <> "?error=concurrent-modification")
+    Left e ->
+      redirectUnlinkErr (detail <> "?error=" <> T.pack (show e))
+  where
+    redirectUnlinkErr :: Text -> Handler a
+    redirectUnlinkErr loc =
       throwError $
         err303
           { errHeaders = [("Location", BC.pack (T.unpack loc))]

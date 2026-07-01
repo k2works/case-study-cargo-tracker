@@ -108,7 +108,7 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 1.1 | Confirm/Cancel/Link/Unlink/EvaluateRoute の Servant ハンドラ実装 (Application Command 呼び出し) | 6h | AI 完結可 | [~] iter 7: Confirm + Cancel 完了 (2/5)、Link/Unlink/EvaluateRoute 残 |
+| 1.1 | Confirm/Cancel/Link/Unlink/EvaluateRoute の Servant ハンドラ実装 (Application Command 呼び出し) | 6h | AI 完結可 | [~] iter 7-8: Confirm + Cancel + Link + Unlink 完了 (4/5)、EvaluateRoute 残 |
 | 1.2 | Servant Auth: セッション Cookie 発行 (login) + JWT/Session middleware 配線 | 5h | AI 完結可 | [ ] session migration 完了 (iter 4)、Haskell 実装は未 |
 | 1.3 | ADR-0010 セッション認証方式 (Cookie vs JWT) を起票 | 2h | AI 完結可 | [x] iter 3-4 (JWT/Session 共存設計) |
 | 1.4 | ADR-0008 Itinerary+Leg のみ「提案」→「採用」昇格 (task 2.1 PostgresItineraryRepository 完了後)。ADR-0007/0009 は既に「採用」済のためタスク不要 (Ralph Loop iter 3 で確認) | 1h | AI 完結可 | [ ] task 2.1 完了 (iter 6) 済、昇格作業のみ残 |
@@ -231,7 +231,8 @@
 | 4 | ADR-0010 を JWT/Session 共存に修正 + `create_session.sql` 作成 (task 1.2 部分) | `ed420d84` |
 | 5 | IT4 繰越 migration 2 本 (`create_itinerary_and_leg.sql` + `extend_cargo_for_confirmation.sql`) (task 2.1 部分) | `21193d18` |
 | 6 | `PostgresItineraryRepository.hs` 実装 + stack build 成功 + arch-check Rule 4 = 0 (task 2.1/2.2) | `5a2a555a` |
-| 7 | BookingPageApi に POST /bookings/:id/confirm + POST /bookings/:id/cancel ハンドラ追加 (task 1.1: 5 本中 2 本完)、getCurrentTime 導入で CancelBookingInput 3 フィールド対応、Itinerary からの departureTime 参照は task 2.1 完了後の統合で有効化 | (未 commit) |
+| 7 | BookingPageApi に POST /bookings/:id/confirm + POST /bookings/:id/cancel ハンドラ追加 (task 1.1: 5 本中 2 本完)、getCurrentTime 導入で CancelBookingInput 3 フィールド対応、Itinerary からの departureTime 参照は task 2.1 完了後の統合で有効化 | `d3624410` |
+| 8 | BookingPageApi に POST + DELETE /bookings/:id/route ハンドラ追加 (LinkRoute/UnlinkRoute、task 1.1: 5 本中 4 本完)、stack build 成功 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
