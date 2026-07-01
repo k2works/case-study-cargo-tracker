@@ -188,7 +188,7 @@
 |---|--------|---------|-----------|------|
 | 8.1 | Service Worker 登録 + キャッシュ戦略 (荷役画面 assets) | 4h | AI 完結可 | [ ] |
 | 8.2 | IndexedDB による HandlingEvent キュー実装 + オンライン復帰時再送 | 5h | AI 完結可 | [ ] |
-| 8.3 | ADR-0011 オフライン対応方式を起票 | 2h | AI 完結可 | [ ] 未着手 |
+| 8.3 | ADR-0011 オフライン対応方式を起票 | 2h | AI 完結可 | [x] iter 20 完了 (Service Worker + IndexedDB + BackgroundSync 選定、Safari fallback、Release 1.1 分割トリガ明記、adr/index.md 更新) |
 
 **小計**: 11h
 
@@ -258,7 +258,8 @@
 | 16 | iteration_plan-5.md 進捗ダッシュボード更新 (完了 SP 13/22 = 59%、Ralph Loop 15 iter 15 commit 蓄積を反映) | `44f4ddb7` |
 | 17 | task 3.4 T4-05 完了: CancelBookingInput.inputDepartureTime :: Maybe UTCTime → BookingDepartureContext sum type (HasDeparture/NoDeparture)、departureFromMaybe/departureToMaybe 変換関数併設、BookingPageApi + CancelBookingCommandSpec 7 callsite 更新、stack build 成功 | `b95p3bnvs` (bg) |
 | 18 | task 9.4 完了: validating-iteration-plan の 8 次元セルフレビュー再実施結果を計画に記録 (前提訂正済み状態で全 OK 判定、PARTIAL 3 件は上流補完 task 9.1-9.3 で解消済) | `8b3d5f87` |
-| 19 | task 3.8 T4-11 完了: BookingStatusPropertiesSpec.hs 新規 (hedgehog forAll Gen.enumBounded、acceptedTransitions 参照真実表 10 件 + 3 プロパティ: 遷移表整合 / 自己ループ False / 終端状態不出遷)、Spec.hs 登録 | (未 commit) |
+| 19 | task 3.8 T4-11 完了: BookingStatusPropertiesSpec.hs 新規 (hedgehog forAll Gen.enumBounded、acceptedTransitions 参照真実表 10 件 + 3 プロパティ: 遷移表整合 / 自己ループ False / 終端状態不出遷)、Spec.hs 登録 | `0ad2b0e7` |
+| 20 | task 8.3 完了: ADR-0011 荷役オフライン対応方式起票 (Service Worker + IndexedDB キュー + BackgroundSync、Safari フォールバック、Release 1.1 分割トリガ明記)、adr/index.md 更新 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
