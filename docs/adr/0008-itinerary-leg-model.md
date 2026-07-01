@@ -6,9 +6,13 @@
 
 ## ステータス
 
-提案 (2026-06-30、IT4 US09 で Domain + Application 完了、IT5 で Postgres 永続化と同時に採用昇格予定)
+採用 (2026-07-01、IT5 Ralph Loop iter 6 で `PostgresItineraryRepository` 実装完了 + iter 10 で ADR 昇格)
 
-採用判断保留の理由: IT4 では `ItineraryRepository` ポートと `ConfirmRouteCommand` を実装したが、`PostgresItineraryRepository` 未実装のため Postgres 層で 1 Tx 設計が検証できていない。IT5 で Postgres 実装 + ALLOWLIST_T01_T02 解消と同時に採用昇格する。
+採用判断の根拠: IT4 で `ItineraryRepository` ポート + `ConfirmRouteCommand` (Domain + Application) を実装、IT5 で `PostgresItineraryRepository` (BIGSERIAL PK + UUID UK、`executeMany` で leg 一括挿入、T-02 準拠で Tx 境界は Application 層に委譲) を実装し `stack build --fast` 成功。migration 2 本 (`20260831110000_create_itinerary_and_leg.sql` + `20260831110100_extend_cargo_for_confirmation.sql`) も投入済み。1 Tx で itinerary + leg + cargo 更新を括る設計が Postgres 層で成立する見込みが立った。
+
+引き続きの残タスク:
+- ConfirmRouteCommand の Tx 境界 (Application 層で `withDbTransaction` を張り、itinerary + leg + cargo 状態更新を 1 Tx 化)
+- hspec-wai 統合テストで actual Tx ロールバック検証 (IT5 task 3.1)
 
 ## コンテキスト
 
