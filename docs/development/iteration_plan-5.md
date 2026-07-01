@@ -108,7 +108,7 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 1.1 | Confirm/Cancel/Link/Unlink/EvaluateRoute の Servant ハンドラ実装 (Application Command 呼び出し) | 6h | AI 完結可 | [~] iter 7-8: Confirm + Cancel + Link + Unlink 完了 (4/5)、EvaluateRoute 残 |
+| 1.1 | Confirm/Cancel/Link/Unlink/EvaluateRoute の Servant ハンドラ実装 (Application Command 呼び出し) | 6h | AI 完結可 | [~] iter 7-8: Confirm + Cancel + Link + Unlink 完了 (4/5)。EvaluateRoute は制約 Form + Query + Command + View の複数モジュール統合が必要で IT6 繰越判定 |
 | 1.2 | Servant Auth: セッション Cookie 発行 (login) + JWT/Session middleware 配線 | 5h | AI 完結可 | [ ] session migration 完了 (iter 4)、Haskell 実装は未 |
 | 1.3 | ADR-0010 セッション認証方式 (Cookie vs JWT) を起票 | 2h | AI 完結可 | [x] iter 3-4 (JWT/Session 共存設計) |
 | 1.4 | ADR-0008 Itinerary+Leg のみ「提案」→「採用」昇格 (task 2.1 PostgresItineraryRepository 完了後)。ADR-0007/0009 は既に「採用」済のためタスク不要 (Ralph Loop iter 3 で確認) | 1h | AI 完結可 | [ ] task 2.1 完了 (iter 6) 済、昇格作業のみ残 |
@@ -120,7 +120,7 @@
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
 | 2.1 | PostgresItineraryRepository / PostgresLegRepository / PostgresRouteCandidateRepository 実装 | 4h | AI 完結可 | [~] Itinerary+Leg 実装完 (iter 6, PostgresItineraryRepository が leg 一括挿入も担当)、RouteCandidateRepository 残 |
-| 2.2 | arch-check ALLOWLIST 5 件 → 2 件へ削減 (T4-16: sunset 日付コメント必須化) | 2h | AI 完結可 | [~] Rule 4 = 0 達成 (iter 6)、Rule 6=2 / T-01+T-02=3 は残 |
+| 2.2 | arch-check ALLOWLIST 5 件 → 2 件へ削減 (T4-16: sunset 日付コメント必須化) | 2h | AI 完結可 | [~] Rule 4 = 0 (iter 6) + T4-16 sunset 日付コメント全 5 件に追加完 (iter 9)、実際の削減は IT6/IT7 の段階解消時 |
 
 **小計**: 6h
 
@@ -232,7 +232,8 @@
 | 5 | IT4 繰越 migration 2 本 (`create_itinerary_and_leg.sql` + `extend_cargo_for_confirmation.sql`) (task 2.1 部分) | `21193d18` |
 | 6 | `PostgresItineraryRepository.hs` 実装 + stack build 成功 + arch-check Rule 4 = 0 (task 2.1/2.2) | `5a2a555a` |
 | 7 | BookingPageApi に POST /bookings/:id/confirm + POST /bookings/:id/cancel ハンドラ追加 (task 1.1: 5 本中 2 本完)、getCurrentTime 導入で CancelBookingInput 3 フィールド対応、Itinerary からの departureTime 参照は task 2.1 完了後の統合で有効化 | `d3624410` |
-| 8 | BookingPageApi に POST + DELETE /bookings/:id/route ハンドラ追加 (LinkRoute/UnlinkRoute、task 1.1: 5 本中 4 本完)、stack build 成功 | (未 commit) |
+| 8 | BookingPageApi に POST + DELETE /bookings/:id/route ハンドラ追加 (LinkRoute/UnlinkRoute、task 1.1: 5 本中 4 本完)、stack build 成功 | `c9d05040` |
+| 9 | task 2.2 T4-16 実施: arch-check.sh の ALLOWLIST 全 5 件に sunset 日付コメントを追加 (Rule 6: 2026-09-30 / T-01+T-02: 2026-09-30 と 2026-10-31)。task 1.1 EvaluateRoute は IT6 繰越判定 (制約 Form + Query + Command + View 統合が必要で 1 iter で完結不可) | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 

@@ -55,18 +55,26 @@ ALLOWLIST_RULE4=()
 #
 # IT1-IT3 で実装された Repository / Interfaces ファイルは新ルール導入前に
 # 設計された経緯があり、Rule 6 + T-01 + T-02 を即時準拠させると大規模な
-# リファクタが必要となるため、暫定 ALLOWLIST 化し IT5 で段階的に解消する。
+# リファクタが必要となるため、暫定 ALLOWLIST 化し IT5-IT6 で段階的に解消する。
 #
-# 解消計画 (IT5 タスク予定):
+# T4-16 (IT5): 全 ALLOWLIST エントリに sunset 日付コメントを必須化。
+# sunset を過ぎたエントリは CI で警告 → エラーに昇格。
+#
+# 解消計画:
 # - Rule 6: BookingPageApi / ShipperPageApi の Postgres 依存を Application Command 経由に移行
-# - T-01/T-02: 既存 Repository から withTransaction を取り除き、Application 層に Tx 境界を移動
+# - T-01/T-02: 既存 Repository から Tx 境界 API を取り除き、Application 層に Tx 境界を移動
 ALLOWLIST_RULE6=(
+  # sunset: 2026-09-30 (IT6 完了目標、handlerShow → QueryBookingDetail Command 経由化で解消)
   "Booking/Interfaces/BookingPageApi.hs"
+  # sunset: 2026-09-30 (IT6 完了目標、handlerSearch → SearchShipper Command 経由化で解消)
   "Shipper/Interfaces/ShipperPageApi.hs"
 )
 ALLOWLIST_T01_T02=(
+  # sunset: 2026-09-30 (IT6、AttachCustomsDeclarationCommand の Tx 境界を Application に移動で解消)
   "Booking/Infrastructure/PostgresCustomsDeclarationRepository.hs"
+  # sunset: 2026-10-31 (IT7、CreateEstimateCommand の Tx 境界を Application に移動で解消)
   "Estimation/Infrastructure/PostgresEstimateRepository.hs"
+  # sunset: 2026-10-31 (IT7、RegisterVoyageCommand の Tx 境界を Application に移動で解消)
   "Routing/Infrastructure/PostgresVoyageRepository.hs"
 )
 
