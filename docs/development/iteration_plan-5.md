@@ -148,7 +148,7 @@
 |---|--------|---------|-----------|------|
 | 4.1 | Domain: TrackingId 値オブジェクト (UUIDv7 + チェックサム) | 3h | AI 完結可 | [x] iter 23 完了 (TrackingNumber VO は 8 文字英数大文字仕様、mkTrackingNumber スマートコンストラクタ / unsafeTrackingNumber DB 復元用 / DomainError に InvalidTrackingNumberFormat + TrackingNotFound 追加) |
 | 4.2 | Application: `IssueTrackingIdCommand` (BookingConfirmed イベント購読) | 3h | AI 完結可 | [x] iter 23 完了 (TrackingActivity 集約 + TransportStatus 9 値 shared + TrackingRepository port + IssueTrackingNumberCommand 冪等性込みで実装、乱数生成は Application 呼び出し側で分離 = T-03 準拠、stack build 成功) |
-| 4.3 | HTTP + UI: 予約詳細画面 + 通知メールへの表示配線 | 3h | AI 完結可 | [~] iter 25 完了 (PostgresTrackingRepository 実装 iter 24 + IdGenerator に generateTrackingNumberText 追加 + handlerConfirm に TrackingRepository 引数追加、Confirm 成功後に generateTrackingNumberText → IssueTrackingNumberCommand.execute で追跡番号自動発行、Main.hs に newPostgresTrackingRepository 配線、stack build 成功)。残: BookingShowView での TrackingNumber 表示 |
+| 4.3 | HTTP + UI: 予約詳細画面 + 通知メールへの表示配線 | 3h | AI 完結可 | [x] iter 26 完了 (Step 3 で HTTP 結線、Step 4 で View 表示: handlerShow に TrackingRepository 引数追加 + TrackingPort.findByBookingId で TrackingActivity 取得 + Maybe Text 変換して bookingShowPage 渡し、BookingShowView に「追跡番号」行追加 code_ タグ + 未発行は「未発行」ミュート表示、stack build 成功)。**US14 完了** ✅ |
 
 **小計**: 9h
 
@@ -289,7 +289,8 @@
 | 22 | iteration_plan-5.md 状態更新 (77%、Ralph Loop 停止、残作業を明示) | `d828b10a` |
 | 23 | 本体 US14 Step 1 完了: TrackingNumber VO (8 文字英数大文字) + TransportStatus 共有型 9 値 + TrackingActivity 集約 (最小) + TrackingRepository port + IssueTrackingNumberCommand (冪等性込み) + tracking_activity migration、DomainError 拡張 (InvalidTrackingNumberFormat / TrackingNotFound)、6 新規モジュール、stack build 成功 | `d75dd032` |
 | 24 | 本体 US14 Step 2 完了: PostgresTrackingRepository 実装 (saveImpl INSERT / findByBookingIdImpl / findByTrackingNumberImpl、既存 PostgresBookingRepository パターン踏襲、T-02 準拠) | `2a16c3a8` |
-| 25 | 本体 US14 Step 3 完了: IdGenerator に generateTrackingNumberText 追加 ("TR" + 6 文字英数) + handlerConfirm に TrackingRepository 引数追加、Confirm 成功後に自動発行、Main.hs に newPostgresTrackingRepository 配線 | (未 commit) |
+| 25 | 本体 US14 Step 3 完了: IdGenerator に generateTrackingNumberText 追加 ("TR" + 6 文字英数) + handlerConfirm に TrackingRepository 引数追加、Confirm 成功後に自動発行、Main.hs に newPostgresTrackingRepository 配線 + BookingPageApiSpec.hs 5 callsite 追従 | `33b42a21` |
+| 26 | **本体 US14 完了**: Step 4 (View 配線) - handlerShow に TrackingRepository 追加、TrackingPort.findByBookingId で TrackingActivity 取得、bookingShowPage が Maybe Text で表示 (発行済は code_ タグ、未発行はミュート「未発行」) | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 

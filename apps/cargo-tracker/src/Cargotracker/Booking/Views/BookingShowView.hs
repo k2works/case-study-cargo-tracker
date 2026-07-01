@@ -6,6 +6,7 @@ module Cargotracker.Booking.Views.BookingShowView
     bookingNotFoundPage,
   ) where
 
+import Data.Text (Text)
 import qualified Data.Text as T
 import Lucid
 import Lucid.Base (makeAttribute)
@@ -24,8 +25,8 @@ import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
 import Cargotracker.Shared.Web.Layout (FlashLevel (..), flashAlert, pageLayout)
 
-bookingShowPage :: Cargo -> Maybe CustomsDeclaration -> Html ()
-bookingShowPage c mCustoms = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
+bookingShowPage :: Cargo -> Maybe CustomsDeclaration -> Maybe Text -> Html ()
+bookingShowPage c mCustoms mTrackingNumber = pageLayout "貨物予約詳細 - Cargo Tracker" $ do
   let BookingId bid = cargoBookingId c
       ShipperRef sid = cargoShipperRef c
       route = cargoRouteSpec c
@@ -54,6 +55,16 @@ bookingShowPage c mCustoms = pageLayout "貨物予約詳細 - Cargo Tracker" $ d
         tr_ $ do
           th_ "状態"
           td_ (toHtml (T.pack (show (cargoStatus c))))
+        -- US14 (IT5): 予約確定後に発行される追跡番号を表示。
+        -- 未確定 (mTrackingNumber = Nothing) の場合は「未発行」を表示。
+        tr_ $ do
+          th_ "追跡番号"
+          td_
+            [makeAttribute "data-story" "US14"]
+            ( case mTrackingNumber of
+                Just tn -> code_ [class_ "fs-6"] (toHtml tn)
+                Nothing -> span_ [class_ "text-muted"] "未発行"
+            )
       -- US06 (IT3, H-03): Draft 状態は「予約を確定送信する」ボタン (POST /submit)。
       -- Submitted 状態は「経路設計者に引き渡す」ボタン (POST /handover)。
       -- いずれも PRG (303 → 同詳細画面?flash=...) に従う。

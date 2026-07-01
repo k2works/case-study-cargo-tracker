@@ -101,7 +101,10 @@ import Cargotracker.Tracking.Application.IssueTrackingNumberCommand
   ( IssueTrackingNumberInput (..),
   )
 import qualified Cargotracker.Tracking.Application.IssueTrackingNumberCommand as IssueTn
-import Cargotracker.Tracking.Application.Ports (TrackingRepository)
+import Cargotracker.Tracking.Application.Ports
+  ( TrackingRepository,
+    queryTrackingNumberText,
+  )
 
 data CustomsFormRequest = CustomsFormRequest
   { hs_code :: !Text
@@ -194,7 +197,7 @@ bookingPageApp repo checker customsRepo voyageRepo trackingRepo =
         :<|> handlerGet
         :<|> handlerPost repo checker
         :<|> handlerCargoTypeRow
-        :<|> handlerShow repo customsRepo
+        :<|> handlerShow repo customsRepo trackingRepo
         :<|> handlerHandover repo
         :<|> handlerSubmit repo
         :<|> handlerCustomsEdit repo customsRepo
@@ -258,15 +261,19 @@ bookingErrorMessage e = "予約登録に失敗しました: " <> e
 handlerShow ::
   BookingRepository IO ->
   CustomsDeclarationRepository IO ->
+  TrackingRepository IO ->
   Text ->
   Handler (Html ())
-handlerShow repo customsRepo bid = do
+handlerShow repo customsRepo trackingRepo bid = do
   m <- liftIO (findCargoById repo (BookingId bid))
   case m of
     Nothing -> pure bookingNotFoundPage
     Just cargo -> do
       mCustoms <- liftIO (findByBookingId customsRepo (BookingId bid))
-      pure (bookingShowPage cargo mCustoms)
+      -- US14 Step 4 (IT5): 予約に紐付く追跡番号を Application 層ヘルパー経由で取得
+      -- (Rule 4 準拠: Tracking Domain 型は Interfaces に漏らさず Maybe Text で受ける)
+      mTrackingNumber <- liftIO (queryTrackingNumberText trackingRepo bid)
+      pure (bookingShowPage cargo mCustoms mTrackingNumber)
 
 handlerPost ::
   BookingRepository IO ->
