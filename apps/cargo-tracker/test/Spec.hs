@@ -23,6 +23,7 @@ import qualified Booking.Domain.Model.CargoSpec
 import qualified Booking.Domain.Model.CustomsDeclarationSpec
 import qualified Booking.Domain.Model.ItinerarySpec
 import qualified Booking.Domain.Model.State.BookingStatusSpec
+import qualified Booking.Domain.Model.Value.CancellationFeeSpec
 import qualified Booking.Domain.Model.Value.CargoTypeSpec
 import qualified Booking.Domain.Service.CancellationPolicyPropertiesSpec
 import qualified Booking.Domain.Service.CancellationPolicySpec
@@ -155,6 +156,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Service.CancellationPolicy (hedgehog)"
     Booking.Domain.Service.CancellationPolicyPropertiesSpec.spec
+
+  describe
+    "Cargotracker.Booking.Domain.Model.Value.CancellationFee"
+    Booking.Domain.Model.Value.CancellationFeeSpec.spec
 
   describe
     "Cargotracker.Booking.Domain.Model.Itinerary"
