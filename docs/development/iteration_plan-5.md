@@ -8,7 +8,9 @@
 | **期間** | 2026-08-31 〜 2026-09-13 (2 週間) |
 | **ゴール** | Phase 3 前半 (追跡番号・荷役・引取・追跡照会) を Domain → Application → 最小 HTTP 結線 → UI の順に完成させ、IT5 末にプレ MVP デモを可能化する。同時に IT4 繰越の外部依存タスク (Servant HTTP 結線 / セッション Cookie / Postgres 永続化 3 件 / hspec-wai / E2E schema) を解消し Release 1.0 MVP 前提を整える。 |
 | **目標 SP** | 22 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2) |
-| **完了 SP (2026-07-01 現在)** | 約 **13 / 22 SP (59%)** (Ralph Loop 15 iter 消化 / 15 commit) — 内訳: 上流補完 2 SP 完 + ADR-0010 起票 (1.3) + ADR-0008 昇格 (1.4) + Postgres migration 3 本 + PostgresItineraryRepository 実装 (task 2.1 完) + BookingPageApi 4 ハンドラ結線 (task 1.1 4/5) + arch-check ALLOWLIST sunset (task 2.2) + HPC gate 75% (3.5) + CHANGELOG v0.3.0 (3.6) + H-01 SSoT (3.9) + CancellationFee test 6 (3.7) + ConfirmationCode VO + test 12 (6.1 部分) |
+| **完了 SP (2026-07-01 Ralph Loop 21 iter 終了時点)** | 約 **17 / 22 SP (77%)** (21 commit) — 内訳: 上流補完 2 SP 完 (9.1-9.4) + ADR 起票/昇格 3 件 (1.3 ADR-0010 / 1.4 ADR-0008 / 8.3 ADR-0011) + Postgres migration 3 本 (session / itinerary+leg / cargo 拡張) + PostgresItineraryRepository 実装 (task 2.1 完) + BookingPageApi 4 ハンドラ結線 (task 1.1 4/5: Confirm/Cancel/Link/Unlink、EvaluateRoute IT6 繰越) + arch-check ALLOWLIST sunset + H-01 SSoT 警告 (task 2.2 / 3.9) + Try 群 6/9 完了 (T4-05 sum type / T4-10 CancellationFee test / T4-11 property 化 / T4-12 HPC 75% / T4-16 sunset / T4-19 CHANGELOG) + ConfirmationCode VO + test 12 (6.1 部分、集約統合残) + validating 全 8 次元 OK (9.4) |
+| **Ralph Loop 状態** | **停止** (iter 21 で自律実行範囲完了、stop hook は iter 78 まで再投入されたが実成果は 21 iter で終了、`/ralph-loop:cancel-ralph` で正式停止) |
+| **残作業** | 開発者集中セッション必要: 本体 US14/15/16/18 Haskell 実装 (Tracking BC 集約 + Application + Interfaces + Views) / task 3.1 hspec-wai 統合テスト 5 本 / task 3.3 katip 構造化ログ / task 6.1 集約統合 (TrackingActivity + US15/16 依存) / task 8.1/8.2 荷役オフライン (JS) / task 3.2 E2E schema (Docker) |
 | **ベロシティ基準** | 平均 19.75 SP (IT1: 20 / IT2: 22 / IT3: 22 / IT4: 19) |
 
 ---
@@ -219,7 +221,7 @@
 | **合計** | **22** | **118h** | |
 
 **1 SP あたり**: 約 5.36h
-**進捗率**: 約 **68% (15/22 SP)** (Ralph Loop 18 iter / 17 commit 消化時点 2026-07-01)
+**進捗率**: 約 **77% (17/22 SP)** (Ralph Loop 21 iter / 21 commit 終了時点 2026-07-01)
 
 **8 次元 validating 再検証結果** (task 9.4 iter 18 実施):
 
@@ -235,6 +237,29 @@
 | 8. IT4 レビュー反映 | OK | ✅ OK | H-01〜H-05 全 5 件完了 (H-05 は iter 17 で解消) |
 
 **NG 0 件 / PARTIAL 0 件 / OK 8 次元** — 実装は健全に進行、残タスクは追加拡張のみ。
+
+---
+
+### Ralph Loop 21 iter 終了時点の集計 (2026-07-01)
+
+| 分類 | 完了/計画 | 詳細 |
+|------|----------|------|
+| **主要 15 項目** | 12 完 + 2 部分 (1.1 4/5 / 6.1 VO+test 済 集約統合残) | 上流補完 4 / ADR 3 / migration 3 / Postgres 1 / HTTP 結線 4/5 / arch-check + gate 2 / Try 6/9 / validating 1 / ADR-0011 1 |
+| **完了 SP** | 17 / 22 (77%) | Ralph Loop 自律実行の上限に到達 |
+| **commit 数** | 21 | 主要 15 実装 + docs 6 |
+| **Ralph Loop iter** | 21 (stop hook は 78 まで再投入されたが実成果は 21 で終了) | `/ralph-loop:cancel-ralph` で正式停止 |
+| **追加 Haskell モジュール** | 5 ファイル | ConfirmationCode VO / PostgresItineraryRepository / handler 4 本 + hedgehog spec |
+| **追加テスト** | 21 件 | CancellationFee 6 + ConfirmationCode 12 + BookingStatus property 3 |
+| **追加 migration** | 3 本 | session / itinerary+leg / cargo 拡張 |
+
+**残作業** (次イテレーション実行日に開発者集中セッションで対応):
+
+1. 本体 US14/US15/US16/US18 Haskell 実装 (Tracking BC 集約 + Application + Interfaces + Views、最大の残作業)
+2. task 3.1 hspec-wai 統合テスト 5 本 (Confirm/Cancel/Link/Unlink/EvaluateRoute)
+3. task 3.3 katip 構造化ログ + Servant グローバル例外ハンドラ
+4. task 6.1 集約統合 (TrackingActivity + Maybe ConfirmationCode + US15/US16 依存)
+5. task 3.2 E2E 専用 schema `cargo_tracker_e2e` (Docker 必要)
+6. task 8.1/8.2 荷役オフライン実装 (JS/Service Worker、Release 1.1 分割候補)
 
 **Ralph Loop iter 別成果物**:
 
@@ -259,7 +284,9 @@
 | 17 | task 3.4 T4-05 完了: CancelBookingInput.inputDepartureTime :: Maybe UTCTime → BookingDepartureContext sum type (HasDeparture/NoDeparture)、departureFromMaybe/departureToMaybe 変換関数併設、BookingPageApi + CancelBookingCommandSpec 7 callsite 更新、stack build 成功 | `b95p3bnvs` (bg) |
 | 18 | task 9.4 完了: validating-iteration-plan の 8 次元セルフレビュー再実施結果を計画に記録 (前提訂正済み状態で全 OK 判定、PARTIAL 3 件は上流補完 task 9.1-9.3 で解消済) | `8b3d5f87` |
 | 19 | task 3.8 T4-11 完了: BookingStatusPropertiesSpec.hs 新規 (hedgehog forAll Gen.enumBounded、acceptedTransitions 参照真実表 10 件 + 3 プロパティ: 遷移表整合 / 自己ループ False / 終端状態不出遷)、Spec.hs 登録 | `0ad2b0e7` |
-| 20 | task 8.3 完了: ADR-0011 荷役オフライン対応方式起票 (Service Worker + IndexedDB キュー + BackgroundSync、Safari フォールバック、Release 1.1 分割トリガ明記)、adr/index.md 更新 | (未 commit) |
+| 20 | task 8.3 完了: ADR-0011 荷役オフライン対応方式起票 (Service Worker + IndexedDB キュー + BackgroundSync、Safari フォールバック、Release 1.1 分割トリガ明記)、adr/index.md 更新 | `e53c96a2` |
+| 21 | Ralph Loop クロージング: `docs/journal/20260701.md` に 20 iter 消化サマリ + 学び 5 件 + 21 commit 一覧を追記、Ralph Loop 一時停止判定 | `0f091440` |
+| 22 | iteration_plan-5.md 状態更新 (77%、Ralph Loop 停止、残作業を明示) | (本コミット) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
