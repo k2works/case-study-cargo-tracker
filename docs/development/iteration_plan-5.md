@@ -130,9 +130,9 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 3.1 | T4-08: hspec-wai 統合テスト 5 本 (Confirm/Cancel/Link/Unlink/EvaluateRoute) | 5h | AI 完結可 | [ ] |
-| 3.2 | T4-14: E2E 専用 schema (cargo_tracker_e2e) + truncate fixture 導入 | 3h | Docker 必要 | [ ] |
-| 3.3 | T4-15: katip 構造化ログ + Servant グローバル例外ハンドラ (SqlException → 500 統一) | 4h | AI 完結可 | [ ] |
+| 3.1 | T4-08: hspec-wai 統合テスト 5 本 (Confirm/Cancel/Link/Unlink/EvaluateRoute) | 5h | AI 完結可 | [~] iter 30 完了 (4/5): BookingPageApiSpec.hs に Confirm (2件) + Cancel (2件) + LinkRoute (1件) + UnlinkRoute (1件) の 6 テスト追加、mkStatusCargo ヘルパーで任意 BookingStatus の Cargo 構築。EvaluateRoute は IT6 繰越 |
+| 3.2 | T4-14: E2E 専用 schema (cargo_tracker_e2e) + truncate fixture 導入 | 3h | Docker 必要 | [~] iter 30 完了 (scaffold): scripts/e2e-schema-setup.sh 新規 (CREATE SCHEMA + dbmate --url ?options=search_path で E2E schema 適用 + 全 17 テーブル TRUNCATE RESTART IDENTITY CASCADE)。実際の Docker 実行は Playwright 起動時に呼び出す運用 |
+| 3.3 | T4-15: katip 構造化ログ + Servant グローバル例外ハンドラ (SqlException → 500 統一) | 4h | AI 完結可 | [~] iter 30 完了 (軽量版): Shared.Infrastructure.Logging (aeson JSON Lines 出力 = katip の代替、logInfo / logError / withCorrelationId) + Main.hs で起動時 logInfo "app:started" + wai-extra logStdoutDev middleware で全リクエストログ。katip / Servant 例外ハンドラは IT6 で置換予定 |
 | 3.4 | T4-05: `Maybe` ドメイン制約 API を sum type へ移行 (H-05 解消) | 4h | AI 完結可 | [x] iter 17 完了 (CancelBookingInput.inputDepartureTime :: Maybe UTCTime → BookingDepartureContext sum type、HasDeparture/NoDeparture、後方互換 departureFromMaybe/departureToMaybe 併設、BookingPageApi handlerCancel + CancelBookingCommandSpec 7 callsite 更新、stack build 成功) |
 | 3.5 | T4-12: HPC カバレッジ gate 74 → 75% 引き上げ (CI ci.yml 更新) | 1h | AI 完結可 | [x] iter 11 完了 (COVERAGE_MIN_OVERALL=75、COVERAGE_TARGET=78) |
 | 3.6 | T4-19: v0.3.0 CHANGELOG / Release Note ドラフト起票 | 2h | AI 完結可 | [x] iter 12 完了 (CHANGELOG.md の [Unreleased] を v0.3.0-mvp-preview 予定として US14/15/16/18 + IT4 繰越 + ADR + IT6 見送り分を記載) |

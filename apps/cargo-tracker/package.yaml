@@ -120,6 +120,7 @@ library:
   - Cargotracker.Tracking.Application.IssueConfirmationCodeCommand
   - Cargotracker.Tracking.Infrastructure.PostgresConfirmationCodeRepository
   - Cargotracker.Handling.Application.QueryHandlingHistoryQuery
+  - Cargotracker.Shared.Infrastructure.Logging
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate
@@ -207,6 +208,7 @@ executables:
     - servant-server >= 0.20
     - warp >= 3.4
     - wai >= 3.2
+    - wai-extra >= 3.1
     - http-types
 
 tests:

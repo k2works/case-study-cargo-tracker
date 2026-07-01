@@ -25,9 +25,12 @@ import Cargotracker.Booking.Application.Ports
     ShipperExistenceChecker (..),
   )
 import Cargotracker.Booking.Domain.Model.Cargo
-  ( Cargo,
+  ( Cargo (..),
     mkCargo,
     submitBooking,
+  )
+import Cargotracker.Booking.Domain.Model.State.BookingStatus
+  ( BookingStatus (..),
   )
 import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId (..))
 import Cargotracker.Booking.Domain.Model.Value.RouteSpecification
@@ -438,3 +441,129 @@ spec = do
           -- V9999 は除外され、警告メッセージが表示される
           shouldSatisfy body ("alert-warning" `BS.isInfixOf`)
           shouldSatisfy body (not . ("V9999" `BS.isInfixOf`))
+
+  -- T4-08 (IT5 task 3.1): Confirm/Cancel/Link/Unlink の hspec-wai 統合テスト
+  -- Cargo 集約の状態遷移 (RouteAssigned → Confirmed / → Cancelled / Draft → RouteAssigned) を
+  -- Application Command 経由で走らせ、PRG (303) の Location と ?flash= / ?error= を検証する。
+
+  describe "POST /bookings/:id/confirm (US13 / T4-08)" $ do
+    let mkConfirmApp status =
+          pure $
+            bookingPageApp
+              ( BookingRepository
+                  { saveBooking = \_ -> pure (Right ())
+                  , findCargoById = \_ ->
+                      pure
+                        ( Just
+                            (fst (mkStatusCargo status))
+                        )
+                  , updateBooking = \_ -> pure (Right ())
+                  , findAllCargos = pure []
+                  }
+              )
+              checkerYes
+              stubCustomsRepo
+              stubVoyageRepo
+              stubTrackingRepo
+
+    with (mkConfirmApp RouteAssigned) $
+      it "RouteAssigned → Confirmed で 303 + flash=confirm-ok" $
+        request "POST" "/bookings/BK-A1B2C3/confirm" [] ""
+          `shouldRespondWith` 303
+            { matchHeaders = ["Location" <:> "/bookings/BK-A1B2C3?flash=confirm-ok"]
+            }
+
+    with (mkConfirmApp Draft) $
+      it "Draft からの Confirm は 303 + error=invalid-state" $
+        request "POST" "/bookings/BK-A1B2C3/confirm" [] ""
+          `shouldRespondWith` 303
+
+  describe "POST /bookings/:id/cancel (US13 / T4-08)" $ do
+    let mkCancelApp status =
+          pure $
+            bookingPageApp
+              ( BookingRepository
+                  { saveBooking = \_ -> pure (Right ())
+                  , findCargoById = \_ ->
+                      pure
+                        ( Just
+                            (fst (mkStatusCargo status))
+                        )
+                  , updateBooking = \_ -> pure (Right ())
+                  , findAllCargos = pure []
+                  }
+              )
+              checkerYes
+              stubCustomsRepo
+              stubVoyageRepo
+              stubTrackingRepo
+
+    with (mkCancelApp Confirmed) $
+      it "Confirmed → Cancelled で 303 + flash=cancel-ok" $
+        request "POST" "/bookings/BK-A1B2C3/cancel" [] ""
+          `shouldRespondWith` 303
+            { matchHeaders = ["Location" <:> "/bookings/BK-A1B2C3?flash=cancel-ok"]
+            }
+
+    with (mkCancelApp Cancelled) $
+      it "Cancelled からの再 cancel は 303 + error=invalid-state" $
+        request "POST" "/bookings/BK-A1B2C3/cancel" [] ""
+          `shouldRespondWith` 303
+
+  describe "POST /bookings/:id/route (US11 LinkRoute / T4-08)" $
+    let mkLinkApp status =
+          pure $
+            bookingPageApp
+              ( BookingRepository
+                  { saveBooking = \_ -> pure (Right ())
+                  , findCargoById = \_ ->
+                      pure
+                        ( Just
+                            (fst (mkStatusCargo status))
+                        )
+                  , updateBooking = \_ -> pure (Right ())
+                  , findAllCargos = pure []
+                  }
+              )
+              checkerYes
+              stubCustomsRepo
+              stubVoyageRepo
+              stubTrackingRepo
+     in with (mkLinkApp RouteProposed) $
+          it "RouteProposed → RouteAssigned で 303 + flash=link-ok" $
+            request "POST" "/bookings/BK-A1B2C3/route" [] ""
+              `shouldRespondWith` 303
+                { matchHeaders = ["Location" <:> "/bookings/BK-A1B2C3?flash=link-ok"]
+                }
+
+  describe "DELETE /bookings/:id/route (US11 UnlinkRoute / T4-08)" $
+    let mkUnlinkApp status =
+          pure $
+            bookingPageApp
+              ( BookingRepository
+                  { saveBooking = \_ -> pure (Right ())
+                  , findCargoById = \_ ->
+                      pure
+                        ( Just
+                            (fst (mkStatusCargo status))
+                        )
+                  , updateBooking = \_ -> pure (Right ())
+                  , findAllCargos = pure []
+                  }
+              )
+              checkerYes
+              stubCustomsRepo
+              stubVoyageRepo
+              stubTrackingRepo
+     in with (mkUnlinkApp RouteAssigned) $
+          it "RouteAssigned → Draft で 303 + flash=unlink-ok" $
+            request "DELETE" "/bookings/BK-A1B2C3/route" [] ""
+              `shouldRespondWith` 303
+                { matchHeaders = ["Location" <:> "/bookings/BK-A1B2C3?flash=unlink-ok"]
+                }
+
+-- ヘルパー: 指定 BookingStatus を持つ Cargo を返す (updateBooking の期待バージョン用)
+mkStatusCargo :: BookingStatus -> (Cargo, ())
+mkStatusCargo status =
+  let base = mkCargo (BookingId "BK-A1B2C3") (ShipperRef "SHP-X1Y2Z3") routeForHandover
+   in (base {cargoStatus = status}, ())

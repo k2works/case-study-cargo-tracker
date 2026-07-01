@@ -75,6 +75,7 @@ import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   )
 import Cargotracker.Shared.Auth.Interfaces.LoginApi (loginApp)
 import Cargotracker.Shared.Auth.Interfaces.LoginPageApi (loginPageApp)
+import Cargotracker.Shared.Infrastructure.Logging (logInfo)
 import Cargotracker.Shared.Web.HomeView (homeApp)
 import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   ( newPostgresShipperRepository,
@@ -89,6 +90,7 @@ import Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
   ( newPostgresTrackingRepository,
   )
 import Cargotracker.Tracking.Interfaces.PublicTrackingApi (publicTrackingApp)
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 
 main :: IO ()
 main = do
@@ -123,7 +125,10 @@ main = do
       putStrLn "  停止: Ctrl+C"
       putStrLn "========================================================"
       putStrLn ""
-      run port (rootApp conn (JwtSecret (T.pack secret)) (JwtTtlSeconds ttlSecs))
+      -- T4-15 (IT5 task 3.3): 起動時ログを JSON 構造化出力
+      logInfo "app:started" []
+      -- T4-15: 全リクエストに WAI ミドルウェアで method/path/status ログを付与
+      run port (logStdoutDev (rootApp conn (JwtSecret (T.pack secret)) (JwtTtlSeconds ttlSecs)))
 
 -- | APP_ENV=production なら fail-fast、それ以外 (dev/test) はスタブで継続。
 failFastOrStub :: Maybe String -> Int -> String -> IO ()
