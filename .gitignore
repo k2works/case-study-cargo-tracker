@@ -42,3 +42,4 @@ apps/cargo-tracker/.env
 
 # Skill test workspaces (作業ディレクトリ。コミット対象外)
 .claude/skills/*-workspace/
+/.claude/ralph-loop.local.md
