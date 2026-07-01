@@ -27,7 +27,12 @@ psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -c \
 
 # 2. dbmate で E2E schema に migration 適用
 #    DBMATE_MIGRATIONS_TABLE で schema 分離、search_path で対象 schema 指定
-DBMATE_URL="${DATABASE_URL}?options=-c%20search_path=${E2E_SCHEMA}%2Cpublic"
+# DATABASE_URL に既にクエリ文字列があるかで結合子を切り替える
+if [[ "${DATABASE_URL}" == *"?"* ]]; then
+  DBMATE_URL="${DATABASE_URL}&options=-c%20search_path=${E2E_SCHEMA}%2Cpublic"
+else
+  DBMATE_URL="${DATABASE_URL}?options=-c%20search_path=${E2E_SCHEMA}%2Cpublic"
+fi
 DBMATE_MIGRATIONS_TABLE="${E2E_SCHEMA}.schema_migrations" \
   dbmate --url "${DBMATE_URL}" \
     --migrations-dir apps/cargo-tracker/db/migrations \
@@ -56,8 +61,7 @@ psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -c "
     voyage,
     location,
     user_roles,
-    users,
-    notification_log
+    users
   RESTART IDENTITY CASCADE;
 "
 

@@ -41,8 +41,16 @@ CREATE TABLE public.cargo (
     min_temperature numeric,
     max_temperature numeric,
     temperature_unit character varying(1),
+    itinerary_id uuid,
+    cancellation_rate numeric(4,3),
+    cancellation_tier character varying(10),
+    cancellation_calculated_at timestamp with time zone,
+    confirmed_at timestamp with time zone,
+    cancelled_at timestamp with time zone,
     CONSTRAINT cargo_booking_id_format CHECK (((booking_id)::text ~ '^BK-[A-Z0-9]{6}$'::text)),
     CONSTRAINT cargo_booking_status_check CHECK (((booking_status)::text = ANY ((ARRAY['Draft'::character varying, 'Submitted'::character varying, 'RouteProposed'::character varying, 'Confirmed'::character varying, 'Closed'::character varying])::text[]))),
+    CONSTRAINT cargo_cancellation_rate_check CHECK (((cancellation_rate IS NULL) OR ((cancellation_rate >= 0.000) AND (cancellation_rate <= 1.000)))),
+    CONSTRAINT cargo_cancellation_tier_check CHECK (((cancellation_tier IS NULL) OR ((cancellation_tier)::text = ANY ((ARRAY['FREE'::character varying, 'PARTIAL'::character varying, 'FULL'::character varying])::text[])))),
     CONSTRAINT cargo_hazardous_fields CHECK (((((cargo_type)::text = 'HAZARDOUS'::text) AND (hazardous_class IS NOT NULL) AND (un_number IS NOT NULL) AND (proper_shipping_name IS NOT NULL)) OR ((cargo_type)::text <> 'HAZARDOUS'::text))),
     CONSTRAINT cargo_refrigerated_fields CHECK (((((cargo_type)::text = 'REFRIGERATED'::text) AND (min_temperature IS NOT NULL) AND (max_temperature IS NOT NULL) AND (temperature_unit IS NOT NULL) AND ((temperature_unit)::text = ANY ((ARRAY['C'::character varying, 'F'::character varying])::text[]))) OR ((cargo_type)::text <> 'REFRIGERATED'::text))),
     CONSTRAINT cargo_type_check CHECK (((cargo_type)::text = ANY ((ARRAY['GENERAL'::character varying, 'HAZARDOUS'::character varying, 'REFRIGERATED'::character varying])::text[])))
@@ -102,6 +110,43 @@ CREATE SEQUENCE public.carrier_movement_id_seq
 --
 
 ALTER SEQUENCE public.carrier_movement_id_seq OWNED BY public.carrier_movement.id;
+
+
+--
+-- Name: confirmation_code; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.confirmation_code (
+    id bigint NOT NULL,
+    booking_id character varying(20) NOT NULL,
+    code character varying(6) NOT NULL,
+    issued_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone,
+    attempt_count integer DEFAULT 0 NOT NULL,
+    version integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT confirmation_code_attempt_count_check CHECK (((attempt_count >= 0) AND (attempt_count <= 5)))
+);
+
+
+--
+-- Name: confirmation_code_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.confirmation_code_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: confirmation_code_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.confirmation_code_id_seq OWNED BY public.confirmation_code.id;
 
 
 --
@@ -206,6 +251,115 @@ ALTER SEQUENCE public.estimate_id_seq OWNED BY public.estimate.id;
 
 
 --
+-- Name: handling_activity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.handling_activity (
+    id bigint NOT NULL,
+    booking_id character varying(20) NOT NULL,
+    event_type character varying(30) NOT NULL,
+    event_completion_time timestamp with time zone NOT NULL,
+    location_unlocode character varying(5) NOT NULL,
+    voyage_number character varying(20),
+    operator_name character varying(200) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT chk_voyage_number_for_load_unload CHECK ((((event_type)::text <> ALL ((ARRAY['LOAD'::character varying, 'UNLOAD'::character varying])::text[])) OR (voyage_number IS NOT NULL))),
+    CONSTRAINT handling_activity_event_type_check CHECK (((event_type)::text = ANY ((ARRAY['RECEIVE'::character varying, 'LOAD'::character varying, 'UNLOAD'::character varying, 'CUSTOMS'::character varying, 'CLAIM'::character varying])::text[])))
+);
+
+
+--
+-- Name: handling_activity_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.handling_activity_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: handling_activity_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.handling_activity_id_seq OWNED BY public.handling_activity.id;
+
+
+--
+-- Name: itinerary; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.itinerary (
+    id bigint NOT NULL,
+    itinerary_id uuid NOT NULL,
+    booking_id character varying(20) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: itinerary_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.itinerary_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: itinerary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.itinerary_id_seq OWNED BY public.itinerary.id;
+
+
+--
+-- Name: leg; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.leg (
+    id bigint NOT NULL,
+    itinerary_id uuid NOT NULL,
+    seq_number integer NOT NULL,
+    load_location_unlocode character varying(5) NOT NULL,
+    unload_location_unlocode character varying(5) NOT NULL,
+    load_time timestamp with time zone NOT NULL,
+    unload_time timestamp with time zone NOT NULL,
+    voyage_number character varying(20) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT leg_check CHECK ((load_time < unload_time)),
+    CONSTRAINT leg_seq_number_check CHECK ((seq_number >= 1))
+);
+
+
+--
+-- Name: leg_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.leg_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: leg_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.leg_id_seq OWNED BY public.leg.id;
+
+
+--
 -- Name: location; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -265,6 +419,39 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: session; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.session (
+    id bigint NOT NULL,
+    session_token character varying(64) NOT NULL,
+    user_id bigint NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_used_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: session_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.session_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: session_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.session_id_seq OWNED BY public.session.id;
+
+
+--
 -- Name: shipper; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -305,6 +492,41 @@ CREATE SEQUENCE public.shipper_id_seq
 --
 
 ALTER SEQUENCE public.shipper_id_seq OWNED BY public.shipper.id;
+
+
+--
+-- Name: tracking_activity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tracking_activity (
+    id bigint NOT NULL,
+    tracking_number character varying(20) NOT NULL,
+    booking_id character varying(20) NOT NULL,
+    transport_status character varying(30) DEFAULT 'TsNotReceived'::character varying NOT NULL,
+    version integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tracking_activity_transport_status_check CHECK (((transport_status)::text = ANY ((ARRAY['TsNotReceived'::character varying, 'TsReceived'::character varying, 'TsLoaded'::character varying, 'TsOnboardCarrier'::character varying, 'TsUnloaded'::character varying, 'TsAwaitingClaim'::character varying, 'TsClaimed'::character varying, 'TsInException'::character varying, 'TsUnknown'::character varying])::text[])))
+);
+
+
+--
+-- Name: tracking_activity_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tracking_activity_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tracking_activity_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tracking_activity_id_seq OWNED BY public.tracking_activity.id;
 
 
 --
@@ -419,6 +641,13 @@ ALTER TABLE ONLY public.carrier_movement ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: confirmation_code id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.confirmation_code ALTER COLUMN id SET DEFAULT nextval('public.confirmation_code_id_seq'::regclass);
+
+
+--
 -- Name: customs_declaration id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -433,6 +662,27 @@ ALTER TABLE ONLY public.estimate ALTER COLUMN id SET DEFAULT nextval('public.est
 
 
 --
+-- Name: handling_activity id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.handling_activity ALTER COLUMN id SET DEFAULT nextval('public.handling_activity_id_seq'::regclass);
+
+
+--
+-- Name: itinerary id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.itinerary ALTER COLUMN id SET DEFAULT nextval('public.itinerary_id_seq'::regclass);
+
+
+--
+-- Name: leg id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leg ALTER COLUMN id SET DEFAULT nextval('public.leg_id_seq'::regclass);
+
+
+--
 -- Name: route_candidate id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -440,10 +690,24 @@ ALTER TABLE ONLY public.route_candidate ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
+-- Name: session id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session ALTER COLUMN id SET DEFAULT nextval('public.session_id_seq'::regclass);
+
+
+--
 -- Name: shipper id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shipper ALTER COLUMN id SET DEFAULT nextval('public.shipper_id_seq'::regclass);
+
+
+--
+-- Name: tracking_activity id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tracking_activity ALTER COLUMN id SET DEFAULT nextval('public.tracking_activity_id_seq'::regclass);
 
 
 --
@@ -500,6 +764,22 @@ ALTER TABLE ONLY public.carrier_movement
 
 
 --
+-- Name: confirmation_code confirmation_code_booking_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.confirmation_code
+    ADD CONSTRAINT confirmation_code_booking_id_key UNIQUE (booking_id);
+
+
+--
+-- Name: confirmation_code confirmation_code_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.confirmation_code
+    ADD CONSTRAINT confirmation_code_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: customs_declaration customs_declaration_booking_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -529,6 +809,46 @@ ALTER TABLE ONLY public.estimate
 
 ALTER TABLE ONLY public.estimate
     ADD CONSTRAINT estimate_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: handling_activity handling_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.handling_activity
+    ADD CONSTRAINT handling_activity_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: itinerary itinerary_itinerary_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.itinerary
+    ADD CONSTRAINT itinerary_itinerary_id_key UNIQUE (itinerary_id);
+
+
+--
+-- Name: itinerary itinerary_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.itinerary
+    ADD CONSTRAINT itinerary_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: leg leg_itinerary_id_seq_number_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leg
+    ADD CONSTRAINT leg_itinerary_id_seq_number_key UNIQUE (itinerary_id, seq_number);
+
+
+--
+-- Name: leg leg_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leg
+    ADD CONSTRAINT leg_pkey PRIMARY KEY (id);
 
 
 --
@@ -564,6 +884,22 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: session session_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session
+    ADD CONSTRAINT session_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: session session_session_token_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session
+    ADD CONSTRAINT session_session_token_key UNIQUE (session_token);
+
+
+--
 -- Name: shipper shipper_email_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -585,6 +921,22 @@ ALTER TABLE ONLY public.shipper
 
 ALTER TABLE ONLY public.shipper
     ADD CONSTRAINT shipper_shipper_id_key UNIQUE (shipper_id);
+
+
+--
+-- Name: tracking_activity tracking_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tracking_activity
+    ADD CONSTRAINT tracking_activity_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tracking_activity tracking_activity_tracking_number_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tracking_activity
+    ADD CONSTRAINT tracking_activity_tracking_number_key UNIQUE (tracking_number);
 
 
 --
@@ -686,6 +1038,20 @@ CREATE INDEX estimate_status_idx ON public.estimate USING btree (estimate_status
 
 
 --
+-- Name: idx_cargo_itinerary; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cargo_itinerary ON public.cargo USING btree (itinerary_id);
+
+
+--
+-- Name: idx_confirmation_code_booking; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_confirmation_code_booking ON public.confirmation_code USING btree (booking_id);
+
+
+--
 -- Name: idx_customs_declaration_booking; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -697,6 +1063,55 @@ CREATE INDEX idx_customs_declaration_booking ON public.customs_declaration USING
 --
 
 CREATE INDEX idx_customs_declaration_status ON public.customs_declaration USING btree (declaration_status);
+
+
+--
+-- Name: idx_handling_activity_booking; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_handling_activity_booking ON public.handling_activity USING btree (booking_id);
+
+
+--
+-- Name: idx_handling_activity_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_handling_activity_time ON public.handling_activity USING btree (event_completion_time DESC);
+
+
+--
+-- Name: idx_itinerary_booking; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_itinerary_booking ON public.itinerary USING btree (booking_id);
+
+
+--
+-- Name: idx_leg_voyage; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_leg_voyage ON public.leg USING btree (voyage_number);
+
+
+--
+-- Name: idx_session_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_session_expires_at ON public.session USING btree (expires_at);
+
+
+--
+-- Name: idx_session_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_session_user ON public.session USING btree (user_id);
+
+
+--
+-- Name: idx_tracking_activity_booking; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tracking_activity_booking ON public.tracking_activity USING btree (booking_id);
 
 
 --
@@ -733,6 +1148,14 @@ CREATE INDEX users_email_idx ON public.users USING btree (email);
 
 ALTER TABLE ONLY public.cargo
     ADD CONSTRAINT cargo_destination_unlocode_fkey FOREIGN KEY (destination_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: cargo cargo_itinerary_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cargo
+    ADD CONSTRAINT cargo_itinerary_id_fkey FOREIGN KEY (itinerary_id) REFERENCES public.itinerary(itinerary_id);
 
 
 --
@@ -800,11 +1223,59 @@ ALTER TABLE ONLY public.estimate
 
 
 --
+-- Name: handling_activity handling_activity_location_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.handling_activity
+    ADD CONSTRAINT handling_activity_location_unlocode_fkey FOREIGN KEY (location_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: itinerary itinerary_booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.itinerary
+    ADD CONSTRAINT itinerary_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.cargo(booking_id);
+
+
+--
+-- Name: leg leg_itinerary_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leg
+    ADD CONSTRAINT leg_itinerary_id_fkey FOREIGN KEY (itinerary_id) REFERENCES public.itinerary(itinerary_id) ON DELETE CASCADE;
+
+
+--
+-- Name: leg leg_load_location_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leg
+    ADD CONSTRAINT leg_load_location_unlocode_fkey FOREIGN KEY (load_location_unlocode) REFERENCES public.location(unlocode);
+
+
+--
+-- Name: leg leg_unload_location_unlocode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.leg
+    ADD CONSTRAINT leg_unload_location_unlocode_fkey FOREIGN KEY (unload_location_unlocode) REFERENCES public.location(unlocode);
+
+
+--
 -- Name: route_candidate route_candidate_estimate_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.route_candidate
     ADD CONSTRAINT route_candidate_estimate_id_fkey FOREIGN KEY (estimate_id) REFERENCES public.estimate(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session session_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session
+    ADD CONSTRAINT session_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -836,4 +1307,10 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260720100000'),
     ('20260720100100'),
     ('20260720100200'),
-    ('20260803100000');
+    ('20260803100000'),
+    ('20260831100000'),
+    ('20260831110000'),
+    ('20260831110100'),
+    ('20260831120000'),
+    ('20260831130000'),
+    ('20260831140000');
