@@ -881,8 +881,10 @@ DROP TABLE route_candidate_selection;
 | `20260720100200_create_route_candidate.sql` | IT2 | `route_candidate` (見積に紐づく候補) |
 | `20260803100000_create_customs_declaration.sql` | IT3 | `customs_declaration` (US27 通関情報、本ドキュメント §customs_declaration 参照) |
 | `20260831100000_create_session.sql` | IT5 | `session` (ADR-0010 セッション認証、opaque Cookie + Postgres KV) |
+| `20260831110000_create_itinerary_and_leg.sql` | IT5 (IT4 繰越) | `itinerary` + `leg` (US09 経路確定、iteration_plan-4.md §4.3 DDL) |
+| `20260831110100_extend_cargo_for_confirmation.sql` | IT5 (IT4 繰越) | `cargo` に itinerary_id / cancellation_* / confirmed_at / cancelled_at 追加 (US13 ADR-0007) |
 
-> Handling Context (`handling_activity` 等)、Tracking Context、Billing Context のテーブルは IT4 以降のイテレーションで追加する。IT4 の Itinerary+Leg テーブルは shell ベース arch-check + Domain/Application 完成のみで、Postgres 永続化 (migration) は IT5 task 2.1 に繰越。IT5 の `confirmation_code` は `tracking_activity` 依存のため tracking テーブル追加後に投入する。
+> Handling Context (`handling_activity` 等)、Tracking Context、Billing Context のテーブルは IT4 以降のイテレーションで追加する。IT4 の Itinerary+Leg 実装 (Domain/Application) は IT5 で Postgres migration 化 (上記 2 本)。IT5 の `confirmation_code` は `tracking_activity` 依存のため tracking テーブル追加後に投入する。
 
 ---
 
