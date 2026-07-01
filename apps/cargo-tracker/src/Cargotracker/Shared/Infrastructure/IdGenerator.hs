@@ -25,6 +25,7 @@ cargo.booking_id) で最終防御し、上位レイヤで挿入失敗時の再�
 module Cargotracker.Shared.Infrastructure.IdGenerator
   ( generateBookingIdText,
     generateShipperIdText,
+    generateSessionTokenText,
     generateTrackingNumberText,
     intToAlphaNumChar,
   ) where
@@ -52,6 +53,14 @@ generateTrackingNumberText :: IO Text
 generateTrackingNumberText = do
   body <- randomAlphaNum 6
   pure ("TR" <> body)
+
+{- | 44 文字のセッショントークンを生成する (task 1.2, ADR-0010, IT5)。
+
+真の base64url ではなく英数大文字 44 文字で代用 (IT5 段階の簡略実装)。
+IT6 で crypto-random + base64url に置換予定。
+-}
+generateSessionTokenText :: IO Text
+generateSessionTokenText = randomAlphaNum 44
 
 randomAlphaNum :: Int -> IO Text
 randomAlphaNum n = do

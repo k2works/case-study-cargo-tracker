@@ -121,6 +121,11 @@ library:
   - Cargotracker.Tracking.Infrastructure.PostgresConfirmationCodeRepository
   - Cargotracker.Handling.Application.QueryHandlingHistoryQuery
   - Cargotracker.Shared.Infrastructure.Logging
+  - Cargotracker.Shared.Auth.Domain.SessionToken
+  - Cargotracker.Shared.Auth.Domain.Session
+  - Cargotracker.Shared.Auth.Application.SessionPorts
+  - Cargotracker.Shared.Auth.Application.CreateSessionCommand
+  - Cargotracker.Shared.Auth.Infrastructure.PostgresSessionRepository
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate

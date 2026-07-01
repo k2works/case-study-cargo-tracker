@@ -70,6 +70,9 @@ import Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
   ( JwtSecret (..),
     JwtTtlSeconds (..),
   )
+import Cargotracker.Shared.Auth.Infrastructure.PostgresSessionRepository
+  ( newPostgresSessionRepository,
+  )
 import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   ( newPostgresUserRepository,
   )
@@ -151,7 +154,7 @@ rootApp conn jwtSecret jwtTtl req respond =
   case pathInfo req of
     [] -> homeApp req respond
     ["health"] -> healthHandler req respond
-    ["login"] -> loginPageApp userRepo verifier req respond
+    ["login"] -> loginPageApp userRepo verifier sessionRepo req respond
     ["api", "login"] -> loginApp userRepo verifier jwtSecret jwtTtl getPOSIXTime req respond
     "api" : "shippers" : _ -> shipperApp shipperRepo req respond
     "api" : "bookings" : _ -> bookingApp bookingRepo shipperChecker req respond
@@ -172,6 +175,7 @@ rootApp conn jwtSecret jwtTtl req respond =
           "{\"error\":\"not found\"}"
   where
     userRepo = newPostgresUserRepository conn
+    sessionRepo = newPostgresSessionRepository conn
     verifier = newBcryptVerifier
     shipperRepo = newPostgresShipperRepository conn
     bookingRepo = newPostgresBookingRepository conn

@@ -111,7 +111,7 @@
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
 | 1.1 | Confirm/Cancel/Link/Unlink/EvaluateRoute の Servant ハンドラ実装 (Application Command 呼び出し) | 6h | AI 完結可 | [~] iter 7-8: Confirm + Cancel + Link + Unlink 完了 (4/5)。EvaluateRoute は制約 Form + Query + Command + View の複数モジュール統合が必要で IT6 繰越判定 |
-| 1.2 | Servant Auth: セッション Cookie 発行 (login) + JWT/Session middleware 配線 | 5h | AI 完結可 | [ ] session migration 完了 (iter 4)、Haskell 実装は未 |
+| 1.2 | Servant Auth: セッション Cookie 発行 (login) + JWT/Session middleware 配線 | 5h | AI 完結可 | [x] iter 31 完了: SessionToken VO + Session 集約 + SessionRepository port + PostgresSessionRepository (users JOIN で BIGINT ↔ Text 変換) + CreateSessionCommand (8h TTL) + LoginPageApi 拡張 (Set-Cookie: cargo_session=... HttpOnly SameSite=Lax Max-Age=28800) + IdGenerator.generateSessionTokenText + Main.hs 配線。JWT Bearer は API 用として維持 (ADR-0010 共存設計)。middleware 化 (AuthProtect handler) は IT6 |
 | 1.3 | ADR-0010 セッション認証方式 (Cookie vs JWT) を起票 | 2h | AI 完結可 | [x] iter 3-4 (JWT/Session 共存設計) |
 | 1.4 | ADR-0008 Itinerary+Leg のみ「提案」→「採用」昇格 (task 2.1 PostgresItineraryRepository 完了後)。ADR-0007/0009 は既に「採用」済のためタスク不要 (Ralph Loop iter 3 で確認) | 1h | AI 完結可 | [x] iter 10 完了 (ADR-0008 採用昇格 + adr/index.md 更新) |
 
