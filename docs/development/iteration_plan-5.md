@@ -7,7 +7,8 @@
 | **イテレーション** | 5 |
 | **期間** | 2026-08-31 〜 2026-09-13 (2 週間) |
 | **ゴール** | Phase 3 前半 (追跡番号・荷役・引取・追跡照会) を Domain → Application → 最小 HTTP 結線 → UI の順に完成させ、IT5 末にプレ MVP デモを可能化する。同時に IT4 繰越の外部依存タスク (Servant HTTP 結線 / セッション Cookie / Postgres 永続化 3 件 / hspec-wai / E2E schema) を解消し Release 1.0 MVP 前提を整える。 |
-| **目標 SP** | 20 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2) |
+| **目標 SP** | 22 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2) |
+| **完了 SP (2026-07-01 現在)** | 約 5 SP (Ralph Loop 6 iter 消化) — 内訳: 上流補完 2 SP 完 + ADR-0010 起票 (1.3) + Postgres migration 3 本 + PostgresItineraryRepository 実装 (task 2.1 部分) + arch-check ALLOWLIST Rule 4 = 0 (task 2.2 部分) |
 | **ベロシティ基準** | 平均 19.75 SP (IT1: 20 / IT2: 22 / IT3: 22 / IT4: 19) |
 
 ---
@@ -26,13 +27,14 @@
 - [ ] US14 / US15 / US16 / US18 の全受入基準を満たし GitHub Issue Close
 - [ ] hspec-wai 統合テスト 5 本以上が緑 (Confirm/Cancel/Link/Unlink/EvaluateRoute)
 - [ ] Playwright E2E: US14〜US18 ハッピーパス + IT4 nav テストが緑 (skip 解除)
-- [ ] arch-check ALLOWLIST 5 件 → 2 件以下 (Postgres*Repository 3 件解消)
+- [~] arch-check ALLOWLIST 5 件 → 2 件以下 (Postgres*Repository 3 件解消) — iter 6 で Rule 4 = 0 達成、残 Rule 6=2 / T-01+T-02=3
 - [ ] HPC カバレッジ gate 74% → 75% 引き上げ (T4-12)
 - [ ] `Maybe` API の sum type 移行 (T4-05 H-05) 完了
 - [ ] Release Note / CHANGELOG v0.3.0 ドラフト起票 (T4-19)
 - [ ] katip 構造化ログ + Servant グローバル例外ハンドラ導入 (T4-15)
 - [ ] 荷役オフライン対応 (Service Worker + IndexedDB) MVP 実装
 - [ ] HPC カバレッジ全体 75% 以上
+- [x] ADR-0007/0008/0009 昇格 + ADR-0010/0011/0012 新規 — iter 3-4 で ADR-0007/0009 既採用確認、ADR-0010 起票 (JWT/Session 共存)、ADR-0012 見送り決定 (既存二層 SSoT)、残 ADR-0008 昇格 + ADR-0011 起票 (task 8.3)
 
 ---
 
@@ -107,9 +109,9 @@
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
 | 1.1 | Confirm/Cancel/Link/Unlink/EvaluateRoute の Servant ハンドラ実装 (Application Command 呼び出し) | 6h | AI 完結可 | [ ] |
-| 1.2 | Servant Auth: セッション Cookie 発行 (login) + JWT/Session middleware 配線 | 5h | AI 完結可 | [ ] |
-| 1.3 | ADR-0010 セッション認証方式 (Cookie vs JWT) を起票 | 2h | AI 完結可 | [ ] |
-| 1.4 | ADR-0008 Itinerary+Leg のみ「提案」→「採用」昇格 (task 2.1 PostgresItineraryRepository 完了後)。ADR-0007/0009 は既に「採用」済のためタスク不要 (Ralph Loop iter 3 で確認) | 1h | AI 完結可 | [ ] |
+| 1.2 | Servant Auth: セッション Cookie 発行 (login) + JWT/Session middleware 配線 | 5h | AI 完結可 | [ ] session migration 完了 (iter 4)、Haskell 実装は未 |
+| 1.3 | ADR-0010 セッション認証方式 (Cookie vs JWT) を起票 | 2h | AI 完結可 | [x] iter 3-4 (JWT/Session 共存設計) |
+| 1.4 | ADR-0008 Itinerary+Leg のみ「提案」→「採用」昇格 (task 2.1 PostgresItineraryRepository 完了後)。ADR-0007/0009 は既に「採用」済のためタスク不要 (Ralph Loop iter 3 で確認) | 1h | AI 完結可 | [ ] task 2.1 完了 (iter 6) 済、昇格作業のみ残 |
 
 **小計**: 15h (T4-02 適用: HTTP 結線を UI より前に実施)
 
@@ -117,8 +119,8 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 2.1 | PostgresItineraryRepository / PostgresLegRepository / PostgresRouteCandidateRepository 実装 | 4h | AI 完結可 | [ ] |
-| 2.2 | arch-check ALLOWLIST 5 件 → 2 件へ削減 (T4-16: sunset 日付コメント必須化) | 2h | AI 完結可 | [ ] |
+| 2.1 | PostgresItineraryRepository / PostgresLegRepository / PostgresRouteCandidateRepository 実装 | 4h | AI 完結可 | [~] Itinerary+Leg 実装完 (iter 6, PostgresItineraryRepository が leg 一括挿入も担当)、RouteCandidateRepository 残 |
+| 2.2 | arch-check ALLOWLIST 5 件 → 2 件へ削減 (T4-16: sunset 日付コメント必須化) | 2h | AI 完結可 | [~] Rule 4 = 0 達成 (iter 6)、Rule 6=2 / T-01+T-02=3 は残 |
 
 **小計**: 6h
 
@@ -134,7 +136,7 @@
 | 3.6 | T4-19: v0.3.0 CHANGELOG / Release Note ドラフト起票 | 2h | AI 完結可 | [ ] |
 | 3.7 | T4-10: CancellationFee VO 単体テスト 5-6 件追加 | 2h | AI 完結可 | [ ] |
 | 3.8 | T4-11: 49 ペア網羅テストを `forAll allStatusPairs` で property 化 | 2h | AI 完結可 | [ ] |
-| 3.9 | H-01: Cargo 状態遷移 SSoT 統合 (Handling/Tracking BC が `canTransitionTo TransportStatus` を経由するよう refactor、二重定義削除) | 3h | AI 完結可 | [ ] |
+| 3.9 | H-01: Cargo 状態遷移 SSoT 統合 (Handling/Tracking BC が `canTransitionTo TransportStatus` を経由するよう refactor、二重定義削除) | 3h | AI 完結可 | [~] iter 1 で設計整理 (TrackingStatus 内部 + trackingStatusToTransportStatus 公開の二層 SSoT 確立)、refactor 実施は未 |
 
 **小計**: 26h
 
@@ -163,7 +165,7 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 6.1 | Domain: ConfirmationCode VO + TsClaimed 遷移 (canTransitionTo TransportStatus SSoT 経由) | 3h | AI 完結可 | [ ] |
+| 6.1 | Domain: ConfirmationCode VO + TsClaimed 遷移 (canTransitionTo TransportStatus SSoT 経由) | 3h | AI 完結可 | [~] iter 1 で domain-model.md に ConfirmationCode VO + Generator + 2 コマンド追加、Haskell 実装は未 |
 | 6.2 | Application: `ClaimCargoCommand` (確認コード検証込み) | 3h | AI 完結可 | [ ] |
 | 6.3 | HTTP + UI: 引取確認フォーム + 検証エラー UI | 3h | AI 完結可 | [ ] |
 
@@ -186,7 +188,7 @@
 |---|--------|---------|-----------|------|
 | 8.1 | Service Worker 登録 + キャッシュ戦略 (荷役画面 assets) | 4h | AI 完結可 | [ ] |
 | 8.2 | IndexedDB による HandlingEvent キュー実装 + オンライン復帰時再送 | 5h | AI 完結可 | [ ] |
-| 8.3 | ADR-0011 オフライン対応方式を起票 | 2h | AI 完結可 | [ ] |
+| 8.3 | ADR-0011 オフライン対応方式を起票 | 2h | AI 完結可 | [ ] 未着手 |
 
 **小計**: 11h
 
@@ -194,10 +196,10 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 9.1 | `docs/design/domain-model.md` line 1073 以降を復旧し Tracking BC セクション追加 (TrackingNumber / ConfirmationCode VO + TransportStatus 遷移図 + Handling BC との FK 関係) | 3h | AI 完結可 | [ ] |
-| 9.2 | `docs/design/data-model.md` に物理スキーマセクション追加 (tracking_number / handling_activity 拡張 / confirmation_code の dbmate migration SQL、BIGSERIAL + UK 規約準拠) | 3h | AI 完結可 | [ ] |
-| 9.3 | `docs/design/ui_design.md` に US18 公開追跡ページ (Leaflet 地図 + タイムライン + rate-limit エラー UI) + US15/US16 荷役登録フォーム (確認コード入力欄) のワイヤーフレーム追加 | 3h | AI 完結可 | [ ] |
-| 9.4 | validating-iteration-plan を再実行し全 8 次元 OK を確認 | 1h | AI 完結可 | [ ] |
+| 9.1 | `docs/design/domain-model.md` line 1073 以降を復旧し Tracking BC セクション追加 (TrackingNumber / ConfirmationCode VO + TransportStatus 遷移図 + Handling BC との FK 関係) | 3h | AI 完結可 | [x] iter 1 (前提訂正: 1,277 行完備で truncated ではない、Tracking Context §4 既存、真に新規な ConfirmationCode VO + Generator + 2 コマンドを追加) |
+| 9.2 | `docs/design/data-model.md` に物理スキーマセクション追加 (tracking_number / handling_activity 拡張 / confirmation_code の dbmate migration SQL、BIGSERIAL + UK 規約準拠) | 3h | AI 完結可 | [x] iter 2 (confirmation_code 追加、既存 tracking_activity 尊重で tracking_number/handling_activity/cargo 拡張は不要と判定) + iter 5 (IT4 繰越 itinerary+leg+cargo 拡張 migration も追加記載) |
+| 9.3 | `docs/design/ui_design.md` に US18 公開追跡ページ (Leaflet 地図 + タイムライン + rate-limit エラー UI) + US15/US16 荷役登録フォーム (確認コード入力欄) のワイヤーフレーム追加 | 3h | AI 完結可 | [x] iter 2 (既存確認: L96 公開追跡 / L349 追跡詳細 / L401 Leaflet+OSM / L483 荷役登録 / L504 確認コード欄 / L530 htmx / L544 Service Worker すべて既存で完備) |
+| 9.4 | validating-iteration-plan を再実行し全 8 次元 OK を確認 | 1h | AI 完結可 | [ ] iter 3-6 で前提訂正済みだが正式再実行は未 |
 
 **小計**: 10h (IT5 着手直後に実施し、以降のタスクは補完済み設計を参照)
 
@@ -217,7 +219,18 @@
 | **合計** | **22** | **118h** | |
 
 **1 SP あたり**: 約 5.36h
-**進捗率**: 0% (0/22 SP)
+**進捗率**: 約 23% (5/22 SP、Ralph Loop 6 iter 消化時点 2026-07-01)
+
+**Ralph Loop iter 別成果物**:
+
+| iter | 主要成果 | コミット |
+| :---: | :--- | :--- |
+| 1 | domain-model.md 前提訂正 + ConfirmationCode 追加 + 計画 Domain 図修正 (task 9.1) | `005f74f0` |
+| 2 | data-model.md confirmation_code + ui_design.md 既存確認 + DB migration 4→1 削減 (task 9.2/9.3) | `67efa7c4` |
+| 3 | ADR 実態確認 (0007/0009 既採用) + ADR-0010 起票 + ADR-0012 見送り (task 1.3/1.4) | `92e4efcb` |
+| 4 | ADR-0010 を JWT/Session 共存に修正 + `create_session.sql` 作成 (task 1.2 部分) | `ed420d84` |
+| 5 | IT4 繰越 migration 2 本 (`create_itinerary_and_leg.sql` + `extend_cargo_for_confirmation.sql`) (task 2.1 部分) | `21193d18` |
+| 6 | `PostgresItineraryRepository.hs` 実装 + stack build 成功 + arch-check Rule 4 = 0 (task 2.1/2.2) | `5a2a555a` |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
