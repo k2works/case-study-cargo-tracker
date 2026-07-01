@@ -165,7 +165,7 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 6.1 | Domain: ConfirmationCode VO + TsClaimed 遷移 (canTransitionTo TransportStatus SSoT 経由) | 3h | AI 完結可 | [~] iter 1 で domain-model.md に ConfirmationCode VO + Generator + 2 コマンド追加、Haskell 実装は未 |
+| 6.1 | Domain: ConfirmationCode VO + TsClaimed 遷移 (canTransitionTo TransportStatus SSoT 経由) | 3h | AI 完結可 | [~] iter 1 (設計) + iter 13 (Haskell 実装: `Cargotracker.Tracking.Domain.Model.ConfirmationCode` の VO + mkConfirmationCode + verify + markUsed + maxAttempts=5、DomainError に IT5 追加 4 コンストラクタ、stack build 成功)。残: TsClaimed 遷移統合と TrackingActivity 集約側の Maybe ConfirmationCode 保持 |
 | 6.2 | Application: `ClaimCargoCommand` (確認コード検証込み) | 3h | AI 完結可 | [ ] |
 | 6.3 | HTTP + UI: 引取確認フォーム + 検証エラー UI | 3h | AI 完結可 | [ ] |
 
@@ -236,7 +236,8 @@
 | 9 | task 2.2 T4-16 実施: arch-check.sh の ALLOWLIST 全 5 件に sunset 日付コメントを追加 (Rule 6: 2026-09-30 / T-01+T-02: 2026-09-30 と 2026-10-31)。task 1.1 EvaluateRoute は IT6 繰越判定 (制約 Form + Query + Command + View 統合が必要で 1 iter で完結不可) | `c4ab7875` |
 | 10 | task 2.1 完了判定 (PostgresRouteCandidateRepository は Estimate 集約内 IT2 実装で不要と判明) + task 1.4 完了 (ADR-0008 「提案」→「採用」昇格、adr/index.md 更新) | `421897a9` |
 | 11 | task 3.5 完了 (`.github/workflows/ci.yml` COVERAGE_MIN_OVERALL 74→75、TARGET 75→78) + task 3.9 完了 (arch-check.sh に `check_h01_transport_status_ssot` 追加、Tracking Context 外での TransportStatus コンストラクタ Ts* 直接使用を警告、現状違反 0 件で成立) | `fbca3054` |
-| 12 | task 3.6 完了 (CHANGELOG.md の [Unreleased] を v0.3.0-mvp-preview 予定として US14/15/16/18 本体 + セッション認証 + IT4 繰越 + Itinerary+Leg 永続化 + 荷役オフライン + Changed/ADR/IT6 見送り事項を記載) | (未 commit) |
+| 12 | task 3.6 完了 (CHANGELOG.md の [Unreleased] を v0.3.0-mvp-preview 予定として US14/15/16/18 本体 + セッション認証 + IT4 繰越 + Itinerary+Leg 永続化 + 荷役オフライン + Changed/ADR/IT6 見送り事項を記載) | `799bdbc5` |
+| 13 | task 6.1 部分完了: Cargotracker/Tracking/ 新規 BC ディレクトリ作成 + `ConfirmationCode.hs` (mkConfirmationCode 6 桁数字検証 + verify 3 段階失敗返却 + markUsed idempotent + maxAttempts=5) + DomainError に IT5 追加 4 コンストラクタ (InvalidConfirmationCodeFormat / ConfirmationCodeMismatch / ConfirmationCodeAlreadyUsed / ConfirmationCodeMaxAttemptsExceeded) + package.yaml 登録 + stack build 成功 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 

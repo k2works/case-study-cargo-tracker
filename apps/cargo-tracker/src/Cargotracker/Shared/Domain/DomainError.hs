@@ -66,4 +66,14 @@ data DomainError
     InvalidLeg !Text
   | -- | Itinerary が 1 区間未満、または隣接 Leg の接続が不整合 (US09)
     InvalidItinerary !Text
+  | -- IT5 追加 (US16 引取確認コード)
+
+    -- | 確認コード形式不正 (6 桁数字以外)
+    InvalidConfirmationCodeFormat !Text
+  | -- | 確認コードが登録値と一致しない
+    ConfirmationCodeMismatch
+  | -- | 確認コードが既に使用済み
+    ConfirmationCodeAlreadyUsed
+  | -- | 確認コード試行回数の上限超過 (Int = 上限値)
+    ConfirmationCodeMaxAttemptsExceeded !Int
   deriving stock (Eq, Show)
