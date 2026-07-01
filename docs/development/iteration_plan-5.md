@@ -156,10 +156,10 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 5.1 | Domain: HandlingEvent 集約 + HandlingType 型 + 順序制約評価関数 | 5h | AI 完結可 | [ ] |
-| 5.2 | Application: `RegisterHandlingEventCommand` + Voyage/Location 検証 | 4h | AI 完結可 | [ ] |
-| 5.3 | HTTP: `/handling-events` POST ハンドラ + hspec-wai テスト | 3h | AI 完結可 | [ ] |
-| 5.4 | UI: 荷役登録フォーム (Operator 画面) + フィールドバリデーション | 4h | AI 完結可 | [ ] |
+| 5.1 | Domain: HandlingEvent 集約 + HandlingType 型 + 順序制約評価関数 | 5h | AI 完結可 | [~] iter 28 完了 (HandlingType 5 値 sum type + text 変換 + HandlingActivity 集約 mkHandlingActivity スマートコンストラクタ、未来時刻拒否 + operator 非空)。順序制約 (前イベント整合性) は Application 層で IT6 追加 |
+| 5.2 | Application: `RegisterHandlingEventCommand` + Voyage/Location 検証 | 4h | AI 完結可 | [~] iter 28 完了 (RegisterHandlingEventCommand.execute で Domain 構築 → save)。Voyage/Location 存在検証は IT6 |
+| 5.3 | HTTP: `/handling-events` POST ハンドラ + hspec-wai テスト | 3h | AI 完結可 | [~] iter 28 完了 (HandlingPageApi の GET /handling/new + POST /handling/new、PRG、flash クエリ、Main.hs 配線)。hspec-wai テストは IT6 |
+| 5.4 | UI: 荷役登録フォーム (Operator 画面) + フィールドバリデーション | 4h | AI 完結可 | [x] iter 28 完了 (handlingFormPage で 6 フィールドフォーム、5 種別 select、datetime-local、UN/LOCODE pattern、flash 表示) |
 
 **小計**: 16h
 
@@ -291,7 +291,8 @@
 | 24 | 本体 US14 Step 2 完了: PostgresTrackingRepository 実装 (saveImpl INSERT / findByBookingIdImpl / findByTrackingNumberImpl、既存 PostgresBookingRepository パターン踏襲、T-02 準拠) | `2a16c3a8` |
 | 25 | 本体 US14 Step 3 完了: IdGenerator に generateTrackingNumberText 追加 ("TR" + 6 文字英数) + handlerConfirm に TrackingRepository 引数追加、Confirm 成功後に自動発行、Main.hs に newPostgresTrackingRepository 配線 + BookingPageApiSpec.hs 5 callsite 追従 | `33b42a21` |
 | 26 | **本体 US14 完了**: Step 4 (View 配線) - handlerShow に TrackingRepository 追加、queryTrackingNumberText で Rule 4 遵守、bookingShowPage が Maybe Text で表示 (発行済は code_ タグ、未発行はミュート「未発行」) | `aad24565` |
-| 27 | **本体 US18 骨格完了**: QueryTrackingByNumberQuery.execute + TrackingView DTO (公開向け Text ベース) + PublicTrackingApi (QueryParam + Capture 両対応) + PublicTrackingView (検索フォーム + 詳細ページ + 404 ページ、9 状態日本語ラベル + Bootstrap 色 class) + Main.hs 配線。rate-limit / Leaflet / タイムラインは IT6 繰越 | (未 commit) |
+| 27 | **本体 US18 骨格完了**: QueryTrackingByNumberQuery.execute + TrackingView DTO (公開向け Text ベース) + PublicTrackingApi (QueryParam + Capture 両対応) + PublicTrackingView (検索フォーム + 詳細ページ + 404 ページ、9 状態日本語ラベル + Bootstrap 色 class) + Main.hs 配線。rate-limit / Leaflet / タイムラインは IT6 繰越 | `8f3ea3d8` |
+| 28 | **本体 US15 骨格完了**: Handling BC 新規 (7 モジュール) + handling_activity migration + HandlingActivity 集約 + RegisterHandlingEventCommand + PostgresHandlingActivityRepository + HandlingPageApi (GET/POST /handling/new) + handlingFormPage (6 フィールド + 5 種別 select) + Main.hs 配線。Voyage/Location 存在検証 + 順序制約 + hspec-wai は IT6 繰越 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 

@@ -53,6 +53,10 @@ import Cargotracker.Estimation.Infrastructure.PostgresEstimateRepository
   ( newPostgresEstimateRepository,
   )
 import Cargotracker.Estimation.Interfaces.EstimatePageApi (estimatePageApp)
+import Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
+  ( newPostgresHandlingActivityRepository,
+  )
+import Cargotracker.Handling.Interfaces.HandlingPageApi (handlingPageApp)
 import Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ( newPostgresVoyageRepository,
   )
@@ -151,6 +155,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     "public" : "tracking" : _ -> publicTrackingApp trackingRepo req respond
+    "handling" : _ -> handlingPageApp handlingRepo req respond
     _ ->
       respond $
         responseLBS
@@ -167,6 +172,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     customsRepo = newPostgresCustomsDeclarationRepository conn
     estimateRepo = newPostgresEstimateRepository conn
     trackingRepo = newPostgresTrackingRepository conn
+    handlingRepo = newPostgresHandlingActivityRepository conn
 
 healthHandler :: Application
 healthHandler _req respond =

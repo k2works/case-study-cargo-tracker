@@ -82,4 +82,12 @@ data DomainError
     InvalidTrackingNumberFormat !Text
   | -- | 追跡活動が存在しない (US18 追跡照会 404 用)
     TrackingNotFound !Text
+  | -- IT5 追加 (US15 荷役登録)
+
+    -- | HandlingType 文字列が不正 (RECEIVE/LOAD/UNLOAD/CUSTOMS/CLAIM 以外)
+    InvalidHandlingType !Text
+  | -- | 発生日時が未来 (現在時刻より後)
+    HandlingEventTimeInFuture
+  | -- | 予約 (Cargo) が見つからない (荷役登録の前提条件)
+    HandlingBookingNotFound !Text
   deriving stock (Eq, Show)

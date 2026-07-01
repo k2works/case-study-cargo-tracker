@@ -107,6 +107,13 @@ library:
   - Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
   - Cargotracker.Tracking.Views.PublicTrackingView
   - Cargotracker.Tracking.Interfaces.PublicTrackingApi
+  - Cargotracker.Handling.Domain.Model.HandlingType
+  - Cargotracker.Handling.Domain.Model.HandlingActivity
+  - Cargotracker.Handling.Application.Ports
+  - Cargotracker.Handling.Application.RegisterHandlingEventCommand
+  - Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
+  - Cargotracker.Handling.Views.HandlingFormView
+  - Cargotracker.Handling.Interfaces.HandlingPageApi
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate
