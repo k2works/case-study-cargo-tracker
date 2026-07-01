@@ -409,6 +409,51 @@ CREATE TABLE shipper (
 | `resolution_notes` | `TEXT` | |
 | `created_at` / `updated_at` | `TIMESTAMPTZ` | |
 
+### `confirmation_code` (引取確認コード / IT5 追加)
+
+US16 (引取作業を記録する) の受入基準「確認コード検証成功時のみ CLAIM イベントを発行」を実現するテーブル。1 追跡活動につき 0..1 の確認コードを持つ。平文コードは保存せず bcrypt (cost=10) ハッシュのみを保存する (SEC-04)。
+
+| カラム | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK` (BIGSERIAL) | サロゲートキー |
+| `confirmation_code_id` | `UUID` | `UK, NOT NULL` | 業務キー |
+| `tracking_id` | `BIGINT` | `NOT NULL UNIQUE, FK → tracking_activity.id` | 1 追跡活動 = 0..1 確認コード |
+| `code_hash` | `VARCHAR(72)` | `NOT NULL` | bcrypt cost=10 (72 バイト) |
+| `issued_at` | `TIMESTAMPTZ` | `NOT NULL` | 発行時刻 |
+| `used_at` | `TIMESTAMPTZ` | | 検証成功時刻 (NULL = 未使用) |
+| `attempt_count` | `INTEGER` | `NOT NULL DEFAULT 0 CHECK (attempt_count >= 0 AND attempt_count <= 5)` | 検証失敗回数 (5 で lock) |
+| `version` | `INTEGER` | `NOT NULL DEFAULT 0` | 楽観ロック |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | 監査 |
+
+```sql
+-- db/migrations/YYYYMMDDHHMMSS_create_confirmation_code.sql
+-- migrate:up
+CREATE TABLE confirmation_code (
+    id                    BIGSERIAL PRIMARY KEY,
+    confirmation_code_id  UUID NOT NULL UNIQUE,
+    tracking_id           BIGINT NOT NULL UNIQUE
+                          REFERENCES tracking_activity(id) ON DELETE CASCADE,
+    code_hash             VARCHAR(72) NOT NULL,
+    issued_at             TIMESTAMPTZ NOT NULL,
+    used_at               TIMESTAMPTZ,
+    attempt_count         INTEGER NOT NULL DEFAULT 0
+                          CHECK (attempt_count >= 0 AND attempt_count <= 5),
+    version               INTEGER NOT NULL DEFAULT 0,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_confirmation_code_tracking ON confirmation_code (tracking_id);
+
+-- migrate:down
+DROP TABLE confirmation_code;
+```
+
+**設計判断 (IT5)**:
+
+- **`tracking_number` は既存の `tracking_activity.tracking_number` VARCHAR(20) を業務キーとして使用**し、UUID には変更しない (data-model.md §1 サロゲートキー + 業務キー規約に準拠)
+- **`handling_activity` への `tracking_number` FK 追加は不要**: 既存の `booking_id` 経由で紐付け可能。`tracking_activity.booking_id` と `handling_activity.booking_id` を JOIN する
+- **平文コード非保存**: `code_hash` のみ保存。Application 層で `bcryptHash` (IO) してから INSERT
+
 ### `handling_activity` (荷役作業記録)
 
 | カラム | 型 | 制約 |

@@ -435,112 +435,85 @@ validate now it he
 
 ### データモデル (IT5 追加分)
 
-新規 `tracking_number` / `confirmation_code` テーブルを追加し、既存 `handling_activity` に `tracking_number` FK を追加、`booking.cargo` に `tracking_number` UK 参照を追加する。
+> **前提訂正 (Ralph Loop iter 2)**: 既存 `tracking_activity` (VARCHAR(20) `tracking_number` UK 業務キー) と `handling_activity` (`booking_id` VARCHAR(20)) は完備。IT5 で真に新規に追加するのは **`confirmation_code`** テーブル 1 本のみ。`handling_activity` への FK 追加や `cargo.tracking_number` 追加は既存設計 (JOIN by `booking_id`) で代替可能なため見送り。
 
 ```plantuml
 @startuml
 hide circle
 skinparam linetype ortho
 
-entity "tracking_number" as tn {
+entity "tracking_activity (既存)" as ta {
     *id : BIGSERIAL <<PK>>
-    *tracking_number : UUID <<UK>>
-    --
-    *booking_id : VARCHAR(20) <<NOT NULL, FK booking.booking_id>>
-    *short_code : VARCHAR(9) <<NOT NULL, UK>>
-    *issued_at : TIMESTAMPTZ <<NOT NULL>>
-    created_at : TIMESTAMPTZ
-    updated_at : TIMESTAMPTZ
+    *tracking_number : VARCHAR(20) <<UK>>
+    *booking_id : VARCHAR(20)
+    *transport_status : VARCHAR(30)
 }
 
-entity "confirmation_code" as cc {
+entity "confirmation_code (IT5 新規)" as cc {
     *id : BIGSERIAL <<PK>>
     *confirmation_code_id : UUID <<UK>>
     --
-    *tracking_number : UUID <<NOT NULL, FK tracking_number.tracking_number>>
-    *code_hash : VARCHAR(64) <<NOT NULL>>   ' bcrypt cost=10 (平文非保存)
+    *tracking_id : BIGINT <<NOT NULL UNIQUE, FK tracking_activity.id>>
+    *code_hash : VARCHAR(72) <<NOT NULL, bcrypt cost=10>>
     *issued_at : TIMESTAMPTZ <<NOT NULL>>
     used_at : TIMESTAMPTZ
-    attempt_count : INT <<NOT NULL DEFAULT 0>>
+    attempt_count : INT <<CHECK 0..5>>
+    version : INT
     created_at : TIMESTAMPTZ
     updated_at : TIMESTAMPTZ
 }
 
-entity "handling_activity" as ha {
+entity "handling_activity (既存、変更なし)" as ha {
     *id : BIGSERIAL <<PK>>
-    *handling_event_id : UUID <<UK>>
-    --
-    tracking_number : UUID <<FK tracking_number.tracking_number, IT5 追加>>
-    *cargo_booking_id : VARCHAR(20) <<NOT NULL, FK booking.booking_id>>
-    *event_type : VARCHAR(10) <<NOT NULL>>  ' RECEIVE/LOAD/UNLOAD/CUSTOMS/CLAIM
-    *occurred_at : TIMESTAMPTZ <<NOT NULL>>
-    *location_unlocode : VARCHAR(5) <<NOT NULL, FK location.unlocode>>
-    voyage_number : VARCHAR(20) <<FK voyage.voyage_number>>
-    *recorded_by : VARCHAR(50) <<NOT NULL>>
-    *recorded_at : TIMESTAMPTZ <<NOT NULL>>
-    created_at : TIMESTAMPTZ
-    updated_at : TIMESTAMPTZ
-}
-
-entity "cargo (既存拡張)" as cg {
-    *id : BIGSERIAL <<PK>>
-    *booking_id : VARCHAR(20) <<UK, FK booking.booking_id>>
-    --
-    tracking_number : UUID <<FK tracking_number.tracking_number, IT5 追加>>
+    *booking_id : VARCHAR(20)
+    *event_type : VARCHAR(30)
+    *event_completion_time : TIMESTAMPTZ
     ...
 }
 
-tn ||--|| cg  : tracking_number
-tn ||--o{ ha  : tracking_number
-tn ||--o| cc  : tracking_number
+entity "cargo (既存、変更なし)" as cg {
+    *id : BIGSERIAL <<PK>>
+    *booking_id : VARCHAR(20) <<UK>>
+    ...
+}
+
+ta ||--o| cc : tracking_id (FK)
+ta .. cg : booking_id (業務キー、既存)
+ta .. ha : booking_id (業務キー、既存)
 @enduml
 ```
 
 **規約準拠**:
 
 - PK: `BIGSERIAL` サロゲートキー、業務キーは UK (data-model.md §1)
-- FK: `handling_activity.tracking_number` → `tracking_number.tracking_number` (UUID 業務キー参照、data-model.md §2)
+- FK: `confirmation_code.tracking_id` → `tracking_activity.id` (サロゲートキー参照、data-model.md §2)
 - 監査: `created_at` / `updated_at` 必須 (data-model.md §3)
-- ENUM 表現: `event_type` は `VARCHAR(10)` + CHECK 制約 (data-model.md §5)
-- **セキュリティ**: `confirmation_code.code_hash` は bcrypt (`crypt(text, gen_salt('bf', 10))`)、平文非保存 (非機能要件 SEC-04)
+- **セキュリティ**: `confirmation_code.code_hash` は bcrypt cost=10 (72 バイト)、平文非保存 (SEC-04)
+- **既存尊重**: `tracking_activity.tracking_number` は既存 VARCHAR(20) 業務キーを維持 (UUID 化しない)
 
-**DDL (IT5 マイグレーション)**:
+**DDL (IT5 マイグレーション、1 本のみ)**:
 
 ```sql
--- 20260831100000_create_tracking_number.sql
-CREATE TABLE tracking_number (
-    id               BIGSERIAL PRIMARY KEY,
-    tracking_number  UUID NOT NULL UNIQUE,
-    booking_id       VARCHAR(20) NOT NULL REFERENCES booking(booking_id),
-    short_code       VARCHAR(9)  NOT NULL UNIQUE,
-    issued_at        TIMESTAMPTZ NOT NULL,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX idx_tracking_number_booking ON tracking_number (booking_id);
-
--- 20260831100100_create_confirmation_code.sql
+-- db/migrations/20260831100000_create_confirmation_code.sql
+-- migrate:up
 CREATE TABLE confirmation_code (
     id                    BIGSERIAL PRIMARY KEY,
     confirmation_code_id  UUID NOT NULL UNIQUE,
-    tracking_number       UUID NOT NULL REFERENCES tracking_number(tracking_number),
-    code_hash             VARCHAR(64) NOT NULL,
+    tracking_id           BIGINT NOT NULL UNIQUE
+                          REFERENCES tracking_activity(id) ON DELETE CASCADE,
+    code_hash             VARCHAR(72) NOT NULL,
     issued_at             TIMESTAMPTZ NOT NULL,
     used_at               TIMESTAMPTZ,
-    attempt_count         INT NOT NULL DEFAULT 0,
+    attempt_count         INTEGER NOT NULL DEFAULT 0
+                          CHECK (attempt_count >= 0 AND attempt_count <= 5),
+    version               INTEGER NOT NULL DEFAULT 0,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE UNIQUE INDEX uq_confirmation_code_tracking ON confirmation_code (tracking_number);
+CREATE INDEX idx_confirmation_code_tracking ON confirmation_code (tracking_id);
 
--- 20260831100200_extend_handling_activity_for_tracking.sql
-ALTER TABLE handling_activity
-  ADD COLUMN tracking_number UUID REFERENCES tracking_number(tracking_number);
-CREATE INDEX idx_handling_activity_tracking ON handling_activity (tracking_number);
-
--- 20260831100300_extend_cargo_for_tracking.sql
-ALTER TABLE cargo
-  ADD COLUMN tracking_number UUID UNIQUE REFERENCES tracking_number(tracking_number);
+-- migrate:down
+DROP TABLE confirmation_code;
 ```
 
 ### モジュール構造 (IT5 追加)
@@ -1016,16 +989,14 @@ data HandlingError
 
 ### DB マイグレーション順序 (IT5)
 
-IT4 の 013 を前提に、IT5 では **4 マイグレーション** を投入する。
+IT4 の 013 を前提に、IT5 では **1 マイグレーション** のみを投入する (Ralph Loop iter 2 で 4 → 1 に削減、既存 `tracking_activity` / `handling_activity` を尊重)。
 
 | 順序 | ファイル | 内容 | 依存 |
 | :--- | :--- | :--- | :--- |
-| 014 | `20260831100000_create_tracking_number.sql` | `tracking_number` 新規作成 | `booking` |
-| 015 | `20260831100100_create_confirmation_code.sql` | `confirmation_code` 新規作成 | 014 |
-| 016 | `20260831100200_extend_handling_activity_for_tracking.sql` | `handling_activity.tracking_number` FK 追加 + index | 014, 既存 `handling_activity` |
-| 017 | `20260831100300_extend_cargo_for_tracking.sql` | `cargo.tracking_number` UK FK 追加 | 014, 既存 `cargo` |
+| 014 | `20260831100000_create_confirmation_code.sql` | `confirmation_code` 新規作成 (tracking_id FK → tracking_activity.id) | 既存 `tracking_activity` (IT1 適用済) |
 
 > **命名規約**: dbmate 標準 `YYYYMMDDHHMMSS_*.sql`。`up` / `down` 両方を記述。E2E 専用 schema `cargo_tracker_e2e` (T4-14) は同一 migration を並列適用 (`dbmate --schema cargo_tracker_e2e up`)。
+> **既存テーブル拡張見送り理由**: `handling_activity.tracking_number` FK 追加 / `cargo.tracking_number` 追加は `booking_id` 経由の JOIN で代替可能。IT5 スコープを最小化し、将来必要になった時点で ALTER 追加する。
 
 ### テスト戦略
 
@@ -1175,6 +1146,7 @@ spec = withApp $ do
 | 2026-07-01 | 上流ドキュメント補完タスク (9.1-9.4) 追加: domain-model.md / data-model.md / ui_design.md Tracking BC 追記 + validating-iteration-plan 再実行。SP 20 → 22 / 理想時間 108h → 118h。Week 1 Day 1 冒頭に配置し以降タスクが補完済み設計を参照する順序に変更 | AI Agent |
 | 2026-07-01 | 設計セクションを iteration_plan-4.md と同レベルに拡充: Haskell 型定義・DDL・モジュール構造・URL 設計・UI (ビュー/モデル/インタラクション/htmx/フィードバック規約)・アプリケーション層シーケンス 3 本・トランザクション境界・エラー処理戦略・DB マイグレーション順序・テスト戦略・CI 統合・ADR 表 (0007/0008/0009 昇格 + 0010/0011/0012 新規) を追記 | AI Agent |
 | 2026-07-01 | **Ralph Loop iter 1**: task 9.1 前提訂正 (domain-model.md は 1,277 行完備で truncated ではない、Tracking Context §4 + TransportStatus §8 既存) → Domain 図を既存設計整合に修正 (TrackingStatus 内部 / TransportStatus 9 値 SSoT / H-01 意味再定義)。domain-model.md §4 に ConfirmationCode VO + Generator + 2 コマンド追加 | AI Agent |
+| 2026-07-01 | **Ralph Loop iter 2**: task 9.2 完了 (data-model.md に confirmation_code テーブル追加、tracking_id FK → tracking_activity.id、bcrypt cost=10)。task 9.3 は既存 ui_design.md に完備確認 (L96 公開追跡、L349 追跡詳細、L401 Leaflet、L483 荷役登録、L504 確認コード、L530 htmx 動的、L544 Service Worker)。IT5 DB マイグレーションを 4 本 → **1 本のみ** に削減、handling_activity/cargo への tracking_number FK 追加は既存 booking_id JOIN で代替可能なため見送り | AI Agent |
 
 ---
 
