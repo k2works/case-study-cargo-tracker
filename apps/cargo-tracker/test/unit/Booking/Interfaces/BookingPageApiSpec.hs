@@ -42,6 +42,7 @@ import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (mkVoyageNumber)
 import Cargotracker.Routing.Domain.Model.Voyage (mkVoyage)
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode (..))
 import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef (..))
+import Cargotracker.Tracking.Application.Ports (TrackingRepository (..))
 import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Network.Wai (Application)
 
@@ -75,7 +76,7 @@ checkerNo = ShipperExistenceChecker {exists = \_ -> pure False}
 mkApp :: ShipperExistenceChecker IO -> IO Application
 mkApp ch = do
   repo <- makeRepo
-  pure (bookingPageApp repo ch stubCustomsRepo stubVoyageRepo)
+  pure (bookingPageApp repo ch stubCustomsRepo stubVoyageRepo stubTrackingRepo)
 
 stubCustomsRepo :: CustomsDeclarationRepository IO
 stubCustomsRepo =
@@ -91,6 +92,15 @@ stubVoyageRepo =
     , saveVoyage = \_ -> pure ()
     , updateVoyage = \_ -> pure (Right ())
     , findAllVoyages = pure []
+    }
+
+-- US14 (IT5): TrackingRepository のテスト用スタブ (save は Right () / find は常に Nothing)
+stubTrackingRepo :: TrackingRepository IO
+stubTrackingRepo =
+  TrackingRepository
+    { saveTracking = \_ -> pure (Right ())
+    , findByBookingId = \_ -> pure Nothing
+    , findByTrackingNumber = \_ -> pure Nothing
     }
 
 -- US06 (IT2): /handover テスト用に、特定の Cargo を find で返し、
@@ -125,7 +135,7 @@ mkHandoverApp seed = do
           , updateBooking = \_ -> pure (Right ())
           , findAllCargos = pure []
           }
-  pure (bookingPageApp repo checkerYes stubCustomsRepo stubVoyageRepo)
+  pure (bookingPageApp repo checkerYes stubCustomsRepo stubVoyageRepo stubTrackingRepo)
 
 spec :: Spec
 spec = do
@@ -219,6 +229,7 @@ spec = do
               checkerYes
               customsRepoStub
               stubVoyageRepo
+              stubTrackingRepo
 
     describe "GET /bookings/:id/customs/edit" $ do
       with (mkCustomsApp (Just cargoStub)) $
@@ -334,6 +345,7 @@ spec = do
               checkerYes
               stubCustomsRepo
               stubVoyageRepo
+              stubTrackingRepo
 
     with (mkRoutesApp (Just draftCargo)) $
       it "予約が存在すれば 200 を返す" $
@@ -364,6 +376,7 @@ spec = do
                   , findAllVoyages = pure voys
                   }
               )
+              stubTrackingRepo
         cargoForRoutes = draftCargo -- JPTYO -> USNYC / arrivalDeadline 2026-12-31
         baseDay = UTCTime (fromGregorian 2026 9 1) (secondsToDiffTime 0)
         plusDays n = case n of

@@ -95,7 +95,13 @@ import Cargotracker.Routing.Views.RouteCandidatesView
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shared.Infrastructure.IdGenerator
   ( generateBookingIdText,
+    generateTrackingNumberText,
   )
+import Cargotracker.Tracking.Application.IssueTrackingNumberCommand
+  ( IssueTrackingNumberInput (..),
+  )
+import qualified Cargotracker.Tracking.Application.IssueTrackingNumberCommand as IssueTn
+import Cargotracker.Tracking.Application.Ports (TrackingRepository)
 
 data CustomsFormRequest = CustomsFormRequest
   { hs_code :: !Text
@@ -179,8 +185,9 @@ bookingPageApp ::
   ShipperExistenceChecker IO ->
   CustomsDeclarationRepository IO ->
   VoyageRepository IO ->
+  TrackingRepository IO ->
   Application
-bookingPageApp repo checker customsRepo voyageRepo =
+bookingPageApp repo checker customsRepo voyageRepo trackingRepo =
   serve
     (Proxy :: Proxy BookingPageApi)
     ( handlerList repo
@@ -193,7 +200,7 @@ bookingPageApp repo checker customsRepo voyageRepo =
         :<|> handlerCustomsEdit repo customsRepo
         :<|> handlerCustomsAttach repo customsRepo
         :<|> handlerRoutes repo voyageRepo
-        :<|> handlerConfirm repo
+        :<|> handlerConfirm repo trackingRepo
         :<|> handlerCancel repo
         :<|> handlerLinkRoute repo
         :<|> handlerUnlinkRoute repo
@@ -501,9 +508,10 @@ RouteAssigned → Confirmed 状態遷移を試行し、PRG で予約詳細に戻
 -}
 handlerConfirm ::
   BookingRepository IO ->
+  TrackingRepository IO ->
   Text ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerConfirm repo bid = do
+handlerConfirm repo trackingRepo bid = do
   result <-
     liftIO
       ( ConfirmBk.execute
@@ -512,7 +520,20 @@ handlerConfirm repo bid = do
       )
   let detail = "/bookings/" <> bid
   case result of
-    Right _ ->
+    Right _ -> do
+      -- US14: 予約確定成功後に追跡番号を発行 (冪等性は IssueTrackingNumberCommand が担保)
+      -- Ralph Loop US14 Step 3: 発行失敗は confirm 自体を成功扱いとし、flash に警告のみ (後続 IT6 で katip 構造化ログ追加予定)
+      tnText <- liftIO generateTrackingNumberText
+      _ <-
+        liftIO
+          ( IssueTn.execute
+              trackingRepo
+              ( IssueTrackingNumberInput
+                  { inputBookingId = bid
+                  , inputTrackingNumberText = tnText
+                  }
+              )
+          )
       pure (addHeader (detail <> "?flash=confirm-ok") NoContent)
     Left (BookingNotFound _) ->
       redirectConfirmErr "/bookings/new?error=booking-not-found"

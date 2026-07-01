@@ -78,6 +78,9 @@ import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
 import Cargotracker.Shipper.Interfaces.ShipperApi (shipperApp)
 import Cargotracker.Shipper.Interfaces.ShipperPageApi (shipperPageApp)
 import Cargotracker.Shipper.Interfaces.ShipperSearchApi (shipperSearchApp)
+import Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
+  ( newPostgresTrackingRepository,
+  )
 
 main :: IO ()
 main = do
@@ -143,7 +146,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     ["shippers", "search"] -> shipperSearchApp shipperRepo req respond
     ["voyages", "new", "movement-row"] -> voyageMovementRowApp req respond
     "shippers" : _ -> shipperPageApp shipperRepo req respond
-    "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsRepo voyageRepo req respond
+    "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsRepo voyageRepo trackingRepo req respond
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     _ ->
@@ -161,6 +164,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     voyageRepo = newPostgresVoyageRepository conn
     customsRepo = newPostgresCustomsDeclarationRepository conn
     estimateRepo = newPostgresEstimateRepository conn
+    trackingRepo = newPostgresTrackingRepository conn
 
 healthHandler :: Application
 healthHandler _req respond =

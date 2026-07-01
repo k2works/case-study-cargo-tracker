@@ -25,6 +25,7 @@ cargo.booking_id) で最終防御し、上位レイヤで挿入失敗時の再�
 module Cargotracker.Shared.Infrastructure.IdGenerator
   ( generateBookingIdText,
     generateShipperIdText,
+    generateTrackingNumberText,
     intToAlphaNumChar,
   ) where
 
@@ -43,6 +44,14 @@ generateShipperIdText :: IO Text
 generateShipperIdText = do
   body <- randomAlphaNum 6
   pure ("SHP-" <> body)
+
+{- | "TRA1B2C3D" のような 8 文字英数大文字の追跡番号を生成する (US14, IT5)。
+domain-model.md §4 と一致 (先頭 "TR" + 続く 6 文字は英数大文字ランダム)。
+-}
+generateTrackingNumberText :: IO Text
+generateTrackingNumberText = do
+  body <- randomAlphaNum 6
+  pure ("TR" <> body)
 
 randomAlphaNum :: Int -> IO Text
 randomAlphaNum n = do
