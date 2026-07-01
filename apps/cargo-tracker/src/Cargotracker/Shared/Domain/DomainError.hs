@@ -76,4 +76,10 @@ data DomainError
     ConfirmationCodeAlreadyUsed
   | -- | 確認コード試行回数の上限超過 (Int = 上限値)
     ConfirmationCodeMaxAttemptsExceeded !Int
+  | -- IT5 追加 (US14 追跡番号)
+
+    -- | 追跡番号の形式が不正 (8 文字英数大文字以外)
+    InvalidTrackingNumberFormat !Text
+  | -- | 追跡活動が存在しない (US18 追跡照会 404 用)
+    TrackingNotFound !Text
   deriving stock (Eq, Show)

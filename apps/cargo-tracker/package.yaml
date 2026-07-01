@@ -98,6 +98,11 @@ library:
   - Cargotracker.Booking.Domain.Model.Leg
   - Cargotracker.Booking.Domain.Model.Itinerary
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
+  - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
+  - Cargotracker.Tracking.Domain.Model.TrackingActivity
+  - Cargotracker.Shared.Domain.TransportStatus
+  - Cargotracker.Tracking.Application.Ports
+  - Cargotracker.Tracking.Application.IssueTrackingNumberCommand
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate
