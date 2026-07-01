@@ -8,7 +8,7 @@
 | **期間** | 2026-08-31 〜 2026-09-13 (2 週間) |
 | **ゴール** | Phase 3 前半 (追跡番号・荷役・引取・追跡照会) を Domain → Application → 最小 HTTP 結線 → UI の順に完成させ、IT5 末にプレ MVP デモを可能化する。同時に IT4 繰越の外部依存タスク (Servant HTTP 結線 / セッション Cookie / Postgres 永続化 3 件 / hspec-wai / E2E schema) を解消し Release 1.0 MVP 前提を整える。 |
 | **目標 SP** | 22 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2) |
-| **完了 SP (2026-07-01 現在)** | 約 5 SP (Ralph Loop 6 iter 消化) — 内訳: 上流補完 2 SP 完 + ADR-0010 起票 (1.3) + Postgres migration 3 本 + PostgresItineraryRepository 実装 (task 2.1 部分) + arch-check ALLOWLIST Rule 4 = 0 (task 2.2 部分) |
+| **完了 SP (2026-07-01 現在)** | 約 **13 / 22 SP (59%)** (Ralph Loop 15 iter 消化 / 15 commit) — 内訳: 上流補完 2 SP 完 + ADR-0010 起票 (1.3) + ADR-0008 昇格 (1.4) + Postgres migration 3 本 + PostgresItineraryRepository 実装 (task 2.1 完) + BookingPageApi 4 ハンドラ結線 (task 1.1 4/5) + arch-check ALLOWLIST sunset (task 2.2) + HPC gate 75% (3.5) + CHANGELOG v0.3.0 (3.6) + H-01 SSoT (3.9) + CancellationFee test 6 (3.7) + ConfirmationCode VO + test 12 (6.1 部分) |
 | **ベロシティ基準** | 平均 19.75 SP (IT1: 20 / IT2: 22 / IT3: 22 / IT4: 19) |
 
 ---
@@ -219,7 +219,7 @@
 | **合計** | **22** | **118h** | |
 
 **1 SP あたり**: 約 5.36h
-**進捗率**: 約 23% (5/22 SP、Ralph Loop 6 iter 消化時点 2026-07-01)
+**進捗率**: 約 **59% (13/22 SP)** (Ralph Loop 15 iter / 15 commit 消化時点 2026-07-01)
 
 **Ralph Loop iter 別成果物**:
 
@@ -239,7 +239,8 @@
 | 12 | task 3.6 完了 (CHANGELOG.md の [Unreleased] を v0.3.0-mvp-preview 予定として US14/15/16/18 本体 + セッション認証 + IT4 繰越 + Itinerary+Leg 永続化 + 荷役オフライン + Changed/ADR/IT6 見送り事項を記載) | `799bdbc5` |
 | 13 | task 6.1 部分完了: Cargotracker/Tracking/ 新規 BC ディレクトリ作成 + `ConfirmationCode.hs` (mkConfirmationCode 6 桁数字検証 + verify 3 段階失敗返却 + markUsed idempotent + maxAttempts=5) + DomainError に IT5 追加 4 コンストラクタ (InvalidConfirmationCodeFormat / ConfirmationCodeMismatch / ConfirmationCodeAlreadyUsed / ConfirmationCodeMaxAttemptsExceeded) + package.yaml 登録 + stack build 成功 | `f259b21b` |
 | 14 | task 3.7 T4-10 実施: test/unit/Booking/Domain/Model/Value/CancellationFeeSpec.hs 新規 (tierRate 3 段階 + 単調増加 + Enum/Bounded 網羅性 = 6 テスト)、Spec.hs にランナー登録 | `43cdd8a2` |
-| 15 | task 6.1 追加: test/unit/Tracking/Domain/Model/ConfirmationCodeSpec.hs 新規 (mkConfirmationCode 4 + verify 5 + markUsed 2 + maxAttempts 1 = **12 テスト**、SEC-04 準拠) + Spec.hs 登録 | (未 commit) |
+| 15 | task 6.1 追加: test/unit/Tracking/Domain/Model/ConfirmationCodeSpec.hs 新規 (mkConfirmationCode 4 + verify 5 + markUsed 2 + maxAttempts 1 = **12 テスト**、SEC-04 準拠) + Spec.hs 登録 | `36605dff` |
+| 16 | iteration_plan-5.md 進捗ダッシュボード更新 (完了 SP 13/22 = 59%、Ralph Loop 15 iter 15 commit 蓄積を反映) | (本コミット) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
