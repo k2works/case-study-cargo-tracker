@@ -34,7 +34,8 @@ import Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
   )
 import qualified Cargotracker.Booking.Application.AttachCustomsDeclarationCommand as AttachCustoms
 import Cargotracker.Booking.Application.CancelBookingCommand
-  ( CancelBookingInput (..),
+  ( BookingDepartureContext (..),
+    CancelBookingInput (..),
   )
 import qualified Cargotracker.Booking.Application.CancelBookingCommand as CancelBk
 import Cargotracker.Booking.Application.ConfirmBookingCommand
@@ -546,10 +547,12 @@ handlerCancel repo bid = do
           ( CancelBookingInput
               { inputBookingId = BookingId bid
               , inputNow = now
-              , inputDepartureTime = Nothing
+              , inputDepartureTime = NoDeparture
               }
           )
       )
+  -- \^ IT5 段階 (T4-05 sum type 移行): Itinerary 統合は task 2.1 完了後の Application 層改修で有効化
+
   -- \^ IT5 段階: departureTime 参照は task 2.1 完了後の Itinerary 統合で有効化
 
   let detail = "/bookings/" <> bid

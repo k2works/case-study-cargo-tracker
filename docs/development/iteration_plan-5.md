@@ -131,7 +131,7 @@
 | 3.1 | T4-08: hspec-wai 統合テスト 5 本 (Confirm/Cancel/Link/Unlink/EvaluateRoute) | 5h | AI 完結可 | [ ] |
 | 3.2 | T4-14: E2E 専用 schema (cargo_tracker_e2e) + truncate fixture 導入 | 3h | Docker 必要 | [ ] |
 | 3.3 | T4-15: katip 構造化ログ + Servant グローバル例外ハンドラ (SqlException → 500 統一) | 4h | AI 完結可 | [ ] |
-| 3.4 | T4-05: `Maybe` ドメイン制約 API を sum type へ移行 (H-05 解消) | 4h | AI 完結可 | [ ] |
+| 3.4 | T4-05: `Maybe` ドメイン制約 API を sum type へ移行 (H-05 解消) | 4h | AI 完結可 | [x] iter 17 完了 (CancelBookingInput.inputDepartureTime :: Maybe UTCTime → BookingDepartureContext sum type、HasDeparture/NoDeparture、後方互換 departureFromMaybe/departureToMaybe 併設、BookingPageApi handlerCancel + CancelBookingCommandSpec 7 callsite 更新、stack build 成功) |
 | 3.5 | T4-12: HPC カバレッジ gate 74 → 75% 引き上げ (CI ci.yml 更新) | 1h | AI 完結可 | [x] iter 11 完了 (COVERAGE_MIN_OVERALL=75、COVERAGE_TARGET=78) |
 | 3.6 | T4-19: v0.3.0 CHANGELOG / Release Note ドラフト起票 | 2h | AI 完結可 | [x] iter 12 完了 (CHANGELOG.md の [Unreleased] を v0.3.0-mvp-preview 予定として US14/15/16/18 + IT4 繰越 + ADR + IT6 見送り分を記載) |
 | 3.7 | T4-10: CancellationFee VO 単体テスト 5-6 件追加 | 2h | AI 完結可 | [x] iter 14 完了 (test/unit/Booking/Domain/Model/Value/CancellationFeeSpec.hs 新規、tierRate 3 段階 + 単調増加 + Enum/Bounded 網羅性、計 6 テスト、Spec.hs にランナー登録) |
@@ -240,7 +240,8 @@
 | 13 | task 6.1 部分完了: Cargotracker/Tracking/ 新規 BC ディレクトリ作成 + `ConfirmationCode.hs` (mkConfirmationCode 6 桁数字検証 + verify 3 段階失敗返却 + markUsed idempotent + maxAttempts=5) + DomainError に IT5 追加 4 コンストラクタ (InvalidConfirmationCodeFormat / ConfirmationCodeMismatch / ConfirmationCodeAlreadyUsed / ConfirmationCodeMaxAttemptsExceeded) + package.yaml 登録 + stack build 成功 | `f259b21b` |
 | 14 | task 3.7 T4-10 実施: test/unit/Booking/Domain/Model/Value/CancellationFeeSpec.hs 新規 (tierRate 3 段階 + 単調増加 + Enum/Bounded 網羅性 = 6 テスト)、Spec.hs にランナー登録 | `43cdd8a2` |
 | 15 | task 6.1 追加: test/unit/Tracking/Domain/Model/ConfirmationCodeSpec.hs 新規 (mkConfirmationCode 4 + verify 5 + markUsed 2 + maxAttempts 1 = **12 テスト**、SEC-04 準拠) + Spec.hs 登録 | `36605dff` |
-| 16 | iteration_plan-5.md 進捗ダッシュボード更新 (完了 SP 13/22 = 59%、Ralph Loop 15 iter 15 commit 蓄積を反映) | (本コミット) |
+| 16 | iteration_plan-5.md 進捗ダッシュボード更新 (完了 SP 13/22 = 59%、Ralph Loop 15 iter 15 commit 蓄積を反映) | `44f4ddb7` |
+| 17 | task 3.4 T4-05 完了: CancelBookingInput.inputDepartureTime :: Maybe UTCTime → BookingDepartureContext sum type (HasDeparture/NoDeparture)、departureFromMaybe/departureToMaybe 変換関数併設、BookingPageApi + CancelBookingCommandSpec 7 callsite 更新、stack build 成功 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 

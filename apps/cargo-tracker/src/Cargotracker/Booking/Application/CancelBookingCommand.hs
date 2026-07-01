@@ -21,6 +21,9 @@ T-03 規約: CancellationPolicy.calculate は純粋関数。
 module Cargotracker.Booking.Application.CancelBookingCommand
   ( CancelBookingInput (..),
     CancelBookingResult (..),
+    BookingDepartureContext (..),
+    departureFromMaybe,
+    departureToMaybe,
     execute,
   ) where
 
@@ -48,11 +51,36 @@ import Cargotracker.Booking.Domain.Model.Value.CancellationFee
 import qualified Cargotracker.Booking.Domain.Service.CancellationPolicy as Policy
 import Cargotracker.Shared.Domain.DomainError (DomainError)
 
+{- | 予約キャンセル料算定における出航日時コンテキスト (H-05 / T4-05 反映)
+
+IT4 code review で「`Maybe UTCTime` は Confirmed 予約か否かの意図が曖昧」と指摘され、
+IT5 (task 3.4 / T4-05) で明示的な sum type に移行した。
+
+- `HasDeparture t`: Itinerary 紐付済で出航日時が確定 → CancellationPolicy で 3 段階算定
+- `NoDeparture`  : Itinerary 未紐付 / 未確定 / Free 扱い
+
+`departureFromMaybe` / `departureToMaybe` で後方互換の変換関数を提供する。
+新規呼出は sum type コンストラクタを直接使うこと。
+-}
+data BookingDepartureContext
+  = HasDeparture !UTCTime
+  | NoDeparture
+  deriving stock (Eq, Show)
+
+-- | 既存 `Maybe UTCTime` 呼出との橋渡し (後方互換)。
+departureFromMaybe :: Maybe UTCTime -> BookingDepartureContext
+departureFromMaybe = maybe NoDeparture HasDeparture
+
+-- | 逆方向の変換 (テスト / 永続化補助)。
+departureToMaybe :: BookingDepartureContext -> Maybe UTCTime
+departureToMaybe (HasDeparture t) = Just t
+departureToMaybe NoDeparture = Nothing
+
 data CancelBookingInput = CancelBookingInput
   { inputBookingId :: !BookingId
   , inputNow :: !UTCTime
-  , inputDepartureTime :: !(Maybe UTCTime)
-  -- ^ Confirmed 予約のみ必要。それ以外は Nothing 可 (Free 扱い)
+  , inputDepartureTime :: !BookingDepartureContext
+  -- ^ H-05 (T4-05, IT5): `Maybe UTCTime` から sum type へ移行
   }
   deriving stock (Eq, Show)
 
@@ -92,7 +120,7 @@ execute repo input = do
 -- | 現状態と入力から料金を算定する。Confirmed 以外は Free。
 computeFee :: BookingStatus -> CancelBookingInput -> CancellationFee
 computeFee status input = case (status, inputDepartureTime input) of
-  (Confirmed, Just dep) -> Policy.calculate (inputNow input) dep
+  (Confirmed, HasDeparture dep) -> Policy.calculate (inputNow input) dep
   _ -> freeFee (inputNow input)
   where
     freeFee now =

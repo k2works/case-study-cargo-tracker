@@ -12,7 +12,8 @@ import Data.Time
 import Test.Hspec
 
 import Cargotracker.Booking.Application.CancelBookingCommand
-  ( CancelBookingInput (..),
+  ( BookingDepartureContext (..),
+    CancelBookingInput (..),
     CancelBookingResult (..),
     execute,
   )
@@ -104,7 +105,7 @@ spec = describe "CancelBookingCommand (US13 / IT4)" $ do
     result <-
       execute
         repo
-        (CancelBookingInput bid now7Days Nothing)
+        (CancelBookingInput bid now7Days NoDeparture)
     case result of
       Right r -> do
         cargoStatus (resultCargo r) `shouldBe` Cancelled
@@ -117,7 +118,7 @@ spec = describe "CancelBookingCommand (US13 / IT4)" $ do
     result <-
       execute
         repo
-        (CancelBookingInput bid now7Days (Just departure))
+        (CancelBookingInput bid now7Days (HasDeparture departure))
     case result of
       Right r -> do
         cargoStatus (resultCargo r) `shouldBe` Cancelled
@@ -129,7 +130,7 @@ spec = describe "CancelBookingCommand (US13 / IT4)" $ do
     result <-
       execute
         repo
-        (CancelBookingInput bid now5Days (Just departure))
+        (CancelBookingInput bid now5Days (HasDeparture departure))
     case result of
       Right r -> do
         cargoStatus (resultCargo r) `shouldBe` Cancelled
@@ -142,7 +143,7 @@ spec = describe "CancelBookingCommand (US13 / IT4)" $ do
     result <-
       execute
         repo
-        (CancelBookingInput bid now6Hours (Just departure))
+        (CancelBookingInput bid now6Hours (HasDeparture departure))
     case result of
       Right r -> do
         cargoStatus (resultCargo r) `shouldBe` Cancelled
@@ -155,7 +156,7 @@ spec = describe "CancelBookingCommand (US13 / IT4)" $ do
     result <-
       execute
         repo
-        (CancelBookingInput bid now7Days Nothing)
+        (CancelBookingInput bid now7Days NoDeparture)
     case result of
       Left (BookingNotFound "BK-A1B2C3") -> pure ()
       other -> expectationFailure ("unexpected: " <> show other)
@@ -165,7 +166,7 @@ spec = describe "CancelBookingCommand (US13 / IT4)" $ do
     result <-
       execute
         repo
-        (CancelBookingInput bid now7Days Nothing)
+        (CancelBookingInput bid now7Days NoDeparture)
     case result of
       Left (InvalidStateTransition "Draft" "Cancelled") -> pure ()
       other -> expectationFailure ("unexpected: " <> show other)
