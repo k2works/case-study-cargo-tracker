@@ -296,82 +296,60 @@ gantt
 
 ### ドメインモデル (IT5 追加分)
 
-> 注: BC 配置は `docs/design/domain-model.md` に準拠する。`TrackingNumber` / `ConfirmationCode` は **Tracking Context (新規)** に配置、`HandlingEvent` / `HandlingType` は **Handling Context (既存拡張)** に、`TransportStatus` は Handling Context 内の SSoT として `canTransitionTo` を集約する (H-01 統合)。`Booking Context` の `Cargo` エンティティに `trackingNumber` フィールドを追加する。
+> 注: BC 配置は `docs/design/domain-model.md` に準拠する。§4 Tracking Context (既存) に `ConfirmationCode` VO を追加。`TrackingNumber` / `TrackingActivity` / `TrackingStatus` / `ExceptionType` は既存 (`docs/design/domain-model.md` §4)。`TransportStatus` は既存 Shared Domain 型 (§8、9 値: TsNotReceived / TsReceived / TsLoaded / TsOnboardCarrier / TsUnloaded / TsAwaitingClaim / TsClaimed / TsInException / TsUnknown)。**H-01 SSoT 統合の意味**: `TrackingStatus` を「イベント履歴から導出する内部状態」として維持し、`Handling.HandlingActivity` から直接 `TransportStatus` を書かず、`Tracking.currentStatus` → `trackingStatusToTransportStatus` の変換関数のみを SSoT とする (二重定義削除)。
 
 ```plantuml
 @startuml
-package "Tracking Context (新規)" {
-  class TrackingNumber <<VO>> {
-    + value : UUIDv7
-    + shortCode : Text (8 桁 + Luhn checksum)
+package "Tracking Context (既存 + IT5 追加)" {
+  class TrackingActivity <<aggregate root, 既存>> {
+    - trackingNumber : TrackingNumber
+    - bookingId : TrackingBookingId
+    - events : [TrackingActivityEvent]
+    - exceptions : [TrackingExceptionEvent]
+    - claimConfirmation : Maybe ConfirmationCode  ' IT5 追加
+    + addEvent(TrackingActivityEvent) : Either DomainError TrackingActivity
+    + verifyClaim(Text, UTCTime) : Either DomainError TrackingActivity  ' IT5 追加
+    + currentStatus() : TrackingStatus
   }
-  class ConfirmationCode <<VO>> {
-    + value : Text (6 桁数字)
-    + issuedAt : UTCTime
-    + usedAt : Maybe UTCTime
+  class TrackingNumber <<newtype, 既存>>
+  class ConfirmationCode <<VO, IT5 新規>> {
+    - value : Text (6 桁数字)
+    - issuedAt : UTCTime
+    - usedAt : Maybe UTCTime
+    - attemptCount : Int
   }
-  class TrackingIssuer <<domain service>> {
-    + issue : UTCTime -> BookingId -> TrackingNumber
-  }
-  class ConfirmationCodeGenerator <<domain service>> {
-    + generate : UTCTime -> TrackingNumber -> ConfirmationCode
+  class ConfirmationCodeGenerator <<domain service, IT5 新規>> {
+    + generate : UTCTime -> Text -> Either DomainError ConfirmationCode
     + verify : Text -> ConfirmationCode -> Either DomainError ConfirmationCode
   }
-  TrackingIssuer ..> TrackingNumber : 生成
+  enum TrackingStatus <<既存>> {
+    NotReceived / Received / Loaded / OnboardCarrier / Unloaded
+    AwaitingClaim / Claimed / InException / UnknownStatus
+  }
+  TrackingActivity *-- TrackingNumber
+  TrackingActivity o-- ConfirmationCode : IT5 追加
   ConfirmationCodeGenerator ..> ConfirmationCode : 生成 / 検証
 }
 
-package "Handling Context (既存拡張)" {
-  class HandlingEvent <<entity>> {
-    + eventId : HandlingEventId
-    + trackingNumber : TrackingNumber
-    + cargoBookingId : BookingId
-    + type : HandlingType
-    + occurredAt : UTCTime
-    + location : UnLocode
-    + voyage : Maybe VoyageNumber
-    + recordedBy : OperatorId
-  }
-  enum HandlingType {
-    Receive
-    Load
-    Unload
-    Customs
-    Claim
-  }
-  enum TransportStatus {
-    TsNotReceived
-    TsReceived
-    TsLoaded
-    TsOnboardCarrier
-    TsUnloaded
-    TsAwaitingClaim
-    TsClaimed
-    TsUnknown
-  }
-  class HandlingEventValidator <<domain service>> {
-    + validate : Itinerary -> HandlingEvent -> Either DomainError HandlingEvent
-  }
-  class TransportStatusTransition <<domain service>> {
-    + canTransitionTo : TransportStatus -> HandlingType -> Either DomainError TransportStatus
-    + fromHistory : [HandlingEvent] -> TransportStatus
-  }
-  HandlingEvent *-- TrackingNumber
-  HandlingEvent *-- HandlingType
-  HandlingEventValidator ..> HandlingEvent : 順序 / Voyage / Location 検証
-  TransportStatusTransition ..> TransportStatus : SSoT / H-01 統合
+package "Handling Context (既存)" {
+  class HandlingActivity <<aggregate root, 既存>>
+  enum HandlingType <<既存>>
+  note bottom of HandlingActivity : H-01 SSoT 統合 (IT5):\nHandling は HandlingActivityRegisteredEvent 発行のみ。\nTransportStatus 直接書き禁止、Tracking.currentStatus 経由。
 }
 
-package "Booking Context (既存拡張)" {
-  class Cargo {
-    + cargoBookingId : BookingId
-    + trackingNumber : TrackingNumber  ' IT5 追加 (Confirm 時に発行)
-    + routeSpec : RouteSpecification
-    + itinerary : Maybe Itinerary
+package "Shared Domain (既存)" {
+  enum TransportStatus <<既存、9 値>> {
+    TsNotReceived / TsReceived / TsLoaded / TsOnboardCarrier / TsUnloaded
+    TsAwaitingClaim / TsClaimed / TsInException / TsUnknown
   }
-  class Booking
-  Booking *-- Cargo
-  Cargo *-- TrackingNumber : issued on Confirm
+}
+
+HandlingActivity ..> TrackingActivity : HandlingActivityRegisteredEvent\n(既存イベント連携)
+TrackingActivity ..> TransportStatus : trackingStatusToTransportStatus\n(既存変換関数、SSoT / H-01)
+
+package "Booking Context (IT5 参照のみ、変更なし)" {
+  class Cargo <<既存>>
+  note bottom of Cargo : IT5 では Cargo に直接 trackingNumber を持たせない。\n既存の CargoBookedEvent → AssignTrackingNumberCommand で\nTrackingActivity 側が bookingId 参照を保持する既存設計を維持。
 }
 @enduml
 ```
@@ -1196,6 +1174,7 @@ spec = withApp $ do
 | 2026-07-01 | validating-iteration-plan 指摘反映: TransportStatus/TsClaimed 統一・handling_activity テーブル名・BIGSERIAL+UK 規約・URL `/public/tracking/{trackingNumber}`・ADR-0007/0008/0009 昇格タスク (1.4)・H-01 状態遷移 SSoT タスク (3.9) 追加。理想時間 103h → 108h | AI Agent |
 | 2026-07-01 | 上流ドキュメント補完タスク (9.1-9.4) 追加: domain-model.md / data-model.md / ui_design.md Tracking BC 追記 + validating-iteration-plan 再実行。SP 20 → 22 / 理想時間 108h → 118h。Week 1 Day 1 冒頭に配置し以降タスクが補完済み設計を参照する順序に変更 | AI Agent |
 | 2026-07-01 | 設計セクションを iteration_plan-4.md と同レベルに拡充: Haskell 型定義・DDL・モジュール構造・URL 設計・UI (ビュー/モデル/インタラクション/htmx/フィードバック規約)・アプリケーション層シーケンス 3 本・トランザクション境界・エラー処理戦略・DB マイグレーション順序・テスト戦略・CI 統合・ADR 表 (0007/0008/0009 昇格 + 0010/0011/0012 新規) を追記 | AI Agent |
+| 2026-07-01 | **Ralph Loop iter 1**: task 9.1 前提訂正 (domain-model.md は 1,277 行完備で truncated ではない、Tracking Context §4 + TransportStatus §8 既存) → Domain 図を既存設計整合に修正 (TrackingStatus 内部 / TransportStatus 9 値 SSoT / H-01 意味再定義)。domain-model.md §4 に ConfirmationCode VO + Generator + 2 コマンド追加 | AI Agent |
 
 ---
 

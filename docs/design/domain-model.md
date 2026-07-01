@@ -577,6 +577,39 @@ package "Value Objects" {
 | 値オブジェクト | `TrackingVoyageNumber` | `newtype Text` | Tracking 固有の航海番号型 |
 | 列挙型 | `TrackingStatus` | sum type | 9 段階の追跡フェーズ。`currentStatus` がイベント履歴から導出 |
 | 列挙型 | `ExceptionType` | sum type | `Delay` / `Damage` / `Lost` / `CustomsHold` |
+| 値オブジェクト | `ConfirmationCode` (IT5 追加) | `data` | 引取確認コード (US16)。6 桁数字 + 発行/使用時刻 + 試行回数 |
+| ドメインサービス | `ConfirmationCodeGenerator` (IT5 追加) | 関数群 | `generate` / `verify` (純粋)。bcrypt ハッシュ化は Application 層でラップ (T-03 準拠) |
+
+#### IT5 追加: 引取確認コード (`ConfirmationCode`)
+
+US16 (引取作業を記録する) の受入基準「確認コード検証成功時のみ CLAIM イベントを発行」を実現するため、Tracking Context に `ConfirmationCode` VO を追加する。TrackingActivity は `claimConfirmation :: Maybe ConfirmationCode` フィールドで発行済み確認コードを保持する。
+
+```haskell
+-- Cargotracker.Tracking.Domain.Model.ConfirmationCode
+data ConfirmationCode = ConfirmationCode
+  { ccValue        :: !Text       -- 6 桁数字 (平文)
+  , ccIssuedAt     :: !UTCTime
+  , ccUsedAt       :: !(Maybe UTCTime)
+  , ccAttemptCount :: !Int        -- 検証失敗回数 (5 回で lock)
+  } deriving stock (Eq, Show)
+
+mkConfirmationCode :: UTCTime -> Text -> Either DomainError ConfirmationCode
+mkConfirmationCode now raw
+  | T.length raw == 6 && T.all isDigit raw
+      = Right (ConfirmationCode raw now Nothing 0)
+  | otherwise
+      = Left (InvalidConfirmationCodeFormat raw)
+
+-- Cargotracker.Tracking.Domain.Service.ConfirmationCodeGenerator (純粋、T-03)
+verify :: Text -> ConfirmationCode -> Either DomainError ConfirmationCode
+verify input cc
+  | ccAttemptCount cc >= 5     = Left (ConfirmationCodeMaxAttemptsExceeded 5)
+  | isJust (ccUsedAt cc)       = Left ConfirmationCodeAlreadyUsed
+  | input /= ccValue cc        = Left ConfirmationCodeMismatch
+  | otherwise                  = Right cc
+```
+
+> **セキュリティ規約 (SEC-04)**: 永続化 (`confirmation_code.code_hash`) は bcrypt (cost=10) でハッシュ化し、平文 (`ccValue`) は Application 層で受け取り DB 保存直前に破棄する。ドメイン層は平文を受け取るだけの純粋関数として実装する (T-03 準拠、`bcryptHash` の IO は Application 層でラップ)。
 
 ```haskell
 data TrackingStatus
@@ -610,6 +643,8 @@ currentStatus ta
 | `AddTrackingEventCommand` | 追跡管理者 | イベント追加 |
 | `RegisterExceptionCommand` | 追跡管理者・税関 | 例外登録 |
 | `ResolveExceptionCommand` | 追跡管理者 | 例外解決 |
+| `IssueConfirmationCodeCommand` (IT5) | Tracking (`CargoBookedEvent` 購読) | 6 桁確認コード発行 + bcrypt 保存 |
+| `VerifyClaimConfirmationCommand` (IT5) | 荷役作業員 (US16) | 引取確認 + Claim イベント追加 |
 
 ## 5. Handling Context
 
