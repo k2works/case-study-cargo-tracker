@@ -22,6 +22,7 @@ import qualified Booking.Application.UnlinkRouteCommandSpec
 import qualified Booking.Domain.Model.CargoSpec
 import qualified Booking.Domain.Model.CustomsDeclarationSpec
 import qualified Booking.Domain.Model.ItinerarySpec
+import qualified Booking.Domain.Model.State.BookingStatusPropertiesSpec
 import qualified Booking.Domain.Model.State.BookingStatusSpec
 import qualified Booking.Domain.Model.Value.CancellationFeeSpec
 import qualified Booking.Domain.Model.Value.CargoTypeSpec
@@ -173,6 +174,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Model.State.BookingStatus"
     Booking.Domain.Model.State.BookingStatusSpec.spec
+
+  describe
+    "Cargotracker.Booking.Domain.Model.State.BookingStatus (hedgehog)"
+    Booking.Domain.Model.State.BookingStatusPropertiesSpec.spec
 
   describe
     "Cargotracker.Estimation.Domain.Service.RouteEvaluator"

@@ -135,7 +135,7 @@
 | 3.5 | T4-12: HPC カバレッジ gate 74 → 75% 引き上げ (CI ci.yml 更新) | 1h | AI 完結可 | [x] iter 11 完了 (COVERAGE_MIN_OVERALL=75、COVERAGE_TARGET=78) |
 | 3.6 | T4-19: v0.3.0 CHANGELOG / Release Note ドラフト起票 | 2h | AI 完結可 | [x] iter 12 完了 (CHANGELOG.md の [Unreleased] を v0.3.0-mvp-preview 予定として US14/15/16/18 + IT4 繰越 + ADR + IT6 見送り分を記載) |
 | 3.7 | T4-10: CancellationFee VO 単体テスト 5-6 件追加 | 2h | AI 完結可 | [x] iter 14 完了 (test/unit/Booking/Domain/Model/Value/CancellationFeeSpec.hs 新規、tierRate 3 段階 + 単調増加 + Enum/Bounded 網羅性、計 6 テスト、Spec.hs にランナー登録) |
-| 3.8 | T4-11: 49 ペア網羅テストを `forAll allStatusPairs` で property 化 | 2h | AI 完結可 | [ ] |
+| 3.8 | T4-11: 49 ペア網羅テストを `forAll allStatusPairs` で property 化 | 2h | AI 完結可 | [x] iter 19 完了 (test/unit/Booking/Domain/Model/State/BookingStatusPropertiesSpec.hs 新規、hedgehog forAll Gen.enumBounded で N² 展開回避、acceptedTransitions 参照真実表 + 3 プロパティ: 遷移表整合 + 自己ループ False + 終端状態不出遷) |
 | 3.9 | H-01: Cargo 状態遷移 SSoT 統合 (Handling/Tracking BC が `canTransitionTo TransportStatus` を経由するよう refactor、二重定義削除) | 3h | AI 完結可 | [x] iter 1 で設計整理 + iter 11 で arch-check.sh に check_h01_transport_status_ssot 追加 (Tracking Context 外での TransportStatus コンストラクタ Ts* 直接使用を警告、IT6 で強制化検討)。実際のコード refactor は現状違反 0 件のため不要 |
 
 **小計**: 26h
@@ -257,7 +257,8 @@
 | 15 | task 6.1 追加: test/unit/Tracking/Domain/Model/ConfirmationCodeSpec.hs 新規 (mkConfirmationCode 4 + verify 5 + markUsed 2 + maxAttempts 1 = **12 テスト**、SEC-04 準拠) + Spec.hs 登録 | `36605dff` |
 | 16 | iteration_plan-5.md 進捗ダッシュボード更新 (完了 SP 13/22 = 59%、Ralph Loop 15 iter 15 commit 蓄積を反映) | `44f4ddb7` |
 | 17 | task 3.4 T4-05 完了: CancelBookingInput.inputDepartureTime :: Maybe UTCTime → BookingDepartureContext sum type (HasDeparture/NoDeparture)、departureFromMaybe/departureToMaybe 変換関数併設、BookingPageApi + CancelBookingCommandSpec 7 callsite 更新、stack build 成功 | `b95p3bnvs` (bg) |
-| 18 | task 9.4 完了: validating-iteration-plan の 8 次元セルフレビュー再実施結果を計画に記録 (前提訂正済み状態で全 OK 判定、PARTIAL 3 件は上流補完 task 9.1-9.3 で解消済) | (本コミット) |
+| 18 | task 9.4 完了: validating-iteration-plan の 8 次元セルフレビュー再実施結果を計画に記録 (前提訂正済み状態で全 OK 判定、PARTIAL 3 件は上流補完 task 9.1-9.3 で解消済) | `8b3d5f87` |
+| 19 | task 3.8 T4-11 完了: BookingStatusPropertiesSpec.hs 新規 (hedgehog forAll Gen.enumBounded、acceptedTransitions 参照真実表 10 件 + 3 プロパティ: 遷移表整合 / 自己ループ False / 終端状態不出遷)、Spec.hs 登録 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
