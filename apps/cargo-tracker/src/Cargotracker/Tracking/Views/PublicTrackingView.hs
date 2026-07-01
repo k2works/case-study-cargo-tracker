@@ -12,6 +12,9 @@ import qualified Data.Text as T
 import Lucid
 import Lucid.Base (makeAttribute)
 
+import Cargotracker.Handling.Application.QueryHandlingHistoryQuery
+  ( HandlingEventView (..),
+  )
 import Cargotracker.Shared.Domain.TransportStatus
   ( TransportStatus (..),
   )
@@ -45,9 +48,9 @@ publicTrackingSearchPage = pageLayout "貨物追跡 - Cargo Tracker" $
               ]
             button_ [type_ "submit", class_ "btn btn-primary"] "追跡する"
 
--- | 追跡詳細ページ (公開・認証不要、追跡番号が存在するとき)。
-publicTrackingDetailPage :: TrackingView -> Html ()
-publicTrackingDetailPage view = pageLayout ("追跡: " <> tvTrackingNumber view) $
+-- | 追跡詳細ページ (公開・認証不要、追跡番号が存在するとき + 荷役履歴タイムライン)。
+publicTrackingDetailPage :: TrackingView -> [HandlingEventView] -> Html ()
+publicTrackingDetailPage view events = pageLayout ("追跡: " <> tvTrackingNumber view) $
   div_ [class_ "row justify-content-center"] $
     div_ [class_ "col-md-8"] $ do
       h1_ [class_ "h3 mb-4"] $ do
@@ -73,7 +76,48 @@ publicTrackingDetailPage view = pageLayout ("追跡: " <> tvTrackingNumber view)
         tr_ $ do
           th_ "内部ステータス"
           td_ (code_ (toHtml (tvStatusText view)))
+      timelineSection events
       a_ [href_ "/public/tracking", class_ "btn btn-secondary"] "別の番号を追跡"
+
+{- | 荷役履歴タイムライン (US18 拡張、IT5)。
+イベントがない場合は「まだ荷役イベントは記録されていません」を表示。
+-}
+timelineSection :: [HandlingEventView] -> Html ()
+timelineSection [] =
+  div_ [class_ "mt-4 mb-3", makeAttribute "data-story" "US18-timeline"] $ do
+    h2_ [class_ "h5"] "荷役履歴"
+    p_ [class_ "text-muted"] "まだ荷役イベントは記録されていません。"
+timelineSection events =
+  div_ [class_ "mt-4 mb-3", makeAttribute "data-story" "US18-timeline"] $ do
+    h2_ [class_ "h5"] "荷役履歴"
+    ol_ [class_ "list-group list-group-numbered"] $
+      mapM_ eventRow events
+  where
+    eventRow :: HandlingEventView -> Html ()
+    eventRow ev = li_ [class_ "list-group-item d-flex justify-content-between align-items-start"] $ do
+      div_ [class_ "ms-2 me-auto"] $ do
+        div_ [class_ "fw-bold"] $ do
+          toHtml (handlingTypeLabelJa (hevEventType ev))
+          span_ [class_ "text-muted ms-2 small"] (code_ (toHtml (hevEventType ev)))
+        span_ [class_ "small"] $ do
+          toHtml (T.pack (show (hevCompletionTime ev)))
+          toHtml (" @ " :: Text)
+          code_ (toHtml (hevLocationUnlocode ev))
+          case hevVoyageNumber ev of
+            Just vn -> do
+              toHtml (" / 航海 " :: Text)
+              code_ (toHtml vn)
+            Nothing -> mempty
+      span_ [class_ "badge bg-secondary rounded-pill"] (toHtml (hevOperatorName ev))
+
+-- | HandlingType Text を日本語ラベル化。
+handlingTypeLabelJa :: Text -> Text
+handlingTypeLabelJa "RECEIVE" = "貨物受領"
+handlingTypeLabelJa "LOAD" = "積込"
+handlingTypeLabelJa "UNLOAD" = "荷降し"
+handlingTypeLabelJa "CUSTOMS" = "通関手続完了"
+handlingTypeLabelJa "CLAIM" = "引取完了"
+handlingTypeLabelJa other = other
 
 -- | 追跡番号が見つからない場合の 404 相当ページ。
 publicTrackingNotFoundPage :: Text -> Html ()

@@ -119,6 +119,7 @@ library:
   - Cargotracker.Tracking.Application.ConfirmationCodePorts
   - Cargotracker.Tracking.Application.IssueConfirmationCodeCommand
   - Cargotracker.Tracking.Infrastructure.PostgresConfirmationCodeRepository
+  - Cargotracker.Handling.Application.QueryHandlingHistoryQuery
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate

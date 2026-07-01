@@ -22,6 +22,8 @@ import Lucid (Html)
 import Servant
 import Servant.HTML.Lucid (HTML)
 
+import Cargotracker.Handling.Application.Ports (HandlingActivityRepository)
+import qualified Cargotracker.Handling.Application.QueryHandlingHistoryQuery as QueryHandling
 import Cargotracker.Tracking.Application.Ports (TrackingRepository)
 import qualified Cargotracker.Tracking.Application.QueryTrackingByNumberQuery as QueryTracking
 import Cargotracker.Tracking.Views.PublicTrackingView
@@ -39,12 +41,15 @@ type PublicTrackingApi =
              :> Get '[HTML] (Html ())
        )
 
-publicTrackingApp :: TrackingRepository IO -> Application
-publicTrackingApp repo =
+publicTrackingApp ::
+  TrackingRepository IO ->
+  HandlingActivityRepository IO ->
+  Application
+publicTrackingApp trackingRepo handlingRepo =
   serve
     (Proxy :: Proxy PublicTrackingApi)
-    ( handlerSearch repo
-        :<|> handlerDetail repo
+    ( handlerSearch trackingRepo handlingRepo
+        :<|> handlerDetail trackingRepo handlingRepo
     )
 
 {- | GET /public/tracking (?trackingNumber=...)
@@ -53,20 +58,30 @@ publicTrackingApp repo =
 -}
 handlerSearch ::
   TrackingRepository IO ->
+  HandlingActivityRepository IO ->
   Maybe Text ->
   Handler (Html ())
-handlerSearch repo mTn = case mTn of
+handlerSearch trackingRepo handlingRepo mTn = case mTn of
   Nothing -> pure publicTrackingSearchPage
-  Just tn -> handlerDetail repo tn
+  Just tn -> handlerDetail trackingRepo handlingRepo tn
 
 -- | GET /public/tracking/:trackingNumber
 handlerDetail ::
   TrackingRepository IO ->
+  HandlingActivityRepository IO ->
   Text ->
   Handler (Html ())
-handlerDetail repo raw = do
-  result <- liftIO (QueryTracking.execute repo raw)
+handlerDetail trackingRepo handlingRepo raw = do
+  result <- liftIO (QueryTracking.execute trackingRepo raw)
   case result of
     Left _ -> pure (publicTrackingNotFoundPage raw)
     Right Nothing -> pure (publicTrackingNotFoundPage raw)
-    Right (Just view) -> pure (publicTrackingDetailPage view)
+    Right (Just view) -> do
+      -- US18 拡張: 荷役履歴タイムラインを Cross-BC で取得
+      events <-
+        liftIO
+          ( QueryHandling.queryHandlingHistoryText
+              handlingRepo
+              (QueryTracking.tvBookingId view)
+          )
+      pure (publicTrackingDetailPage view events)

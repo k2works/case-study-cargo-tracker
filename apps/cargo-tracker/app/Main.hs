@@ -157,7 +157,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     "bookings" : _ -> bookingPageApp bookingRepo shipperChecker customsRepo voyageRepo trackingRepo req respond
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
-    "public" : "tracking" : _ -> publicTrackingApp trackingRepo req respond
+    "public" : "tracking" : _ -> publicTrackingApp trackingRepo handlingRepo req respond
     "handling" : _ -> handlingPageApp handlingRepo codeRepo req respond
     _ ->
       respond $
