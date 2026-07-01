@@ -109,7 +109,7 @@
 | 1.1 | Confirm/Cancel/Link/Unlink/EvaluateRoute の Servant ハンドラ実装 (Application Command 呼び出し) | 6h | AI 完結可 | [ ] |
 | 1.2 | Servant Auth: セッション Cookie 発行 (login) + JWT/Session middleware 配線 | 5h | AI 完結可 | [ ] |
 | 1.3 | ADR-0010 セッション認証方式 (Cookie vs JWT) を起票 | 2h | AI 完結可 | [ ] |
-| 1.4 | ADR-0007 CancellationPolicy / ADR-0008 Itinerary+Leg / ADR-0009 BookingStatus 状態機械 の Status を「提案」→「承認」に昇格 (IT4 実装確定を反映) | 2h | AI 完結可 | [ ] |
+| 1.4 | ADR-0008 Itinerary+Leg のみ「提案」→「採用」昇格 (task 2.1 PostgresItineraryRepository 完了後)。ADR-0007/0009 は既に「採用」済のためタスク不要 (Ralph Loop iter 3 で確認) | 1h | AI 完結可 | [ ] |
 
 **小計**: 15h (T4-02 適用: HTTP 結線を UI より前に実施)
 
@@ -1093,12 +1093,12 @@ spec = withApp $ do
 
 | ADR | タイトル | ステータス |
 |-----|---------|-----------|
-| [ADR-0007](../adr/0007-cancellation-fee-policy.md) | キャンセル料 3 段階ルールのドメインポリシー化 | 承認 (IT5 昇格 / IT4 実装確定) |
-| [ADR-0008](../adr/0008-itinerary-leg-model.md) | Itinerary / Leg を Booking 集約配下に配置 | 承認 (IT5 昇格) |
-| [ADR-0009](../adr/0009-booking-state-machine.md) | Booking 状態機械のドメイン型強制 | 承認 (IT5 昇格) |
-| [ADR-0010](../adr/0010-session-cookie-auth.md) | セッション認証方式 (opaque Cookie + Servant Auth + Postgres KV) | 提案予定 (IT5) |
-| [ADR-0011](../adr/0011-offline-handling-queue.md) | 荷役オフライン対応方式 (Service Worker + IndexedDB キュー + BackgroundSync) | 提案予定 (IT5) |
-| [ADR-0012](../adr/0012-transport-status-ssot.md) | TransportStatus 遷移を `canTransitionTo` SSoT に集約 (H-01 統合) | 提案予定 (IT5) |
+| [ADR-0007](../adr/0007-cancellation-fee-policy.md) | キャンセル料 3 段階ルールのドメインポリシー化 | **既に採用済** (2026-06-30 IT4) |
+| [ADR-0008](../adr/0008-itinerary-leg-model.md) | Itinerary / Leg を Booking 集約配下に配置 | 提案 → **IT5 で採用昇格** (task 2.1 PostgresItineraryRepository 完了後) |
+| [ADR-0009](../adr/0009-booking-state-machine.md) | Booking 状態機械のドメイン型強制 | **既に採用済** (2026-06-30 IT4 H-01 対応) |
+| [ADR-0010](../adr/0010-session-cookie-auth.md) | セッション認証方式 (opaque Cookie + Servant Auth + Postgres KV) | 提案予定 (IT5 task 1.3) |
+| [ADR-0011](../adr/0011-offline-handling-queue.md) | 荷役オフライン対応方式 (Service Worker + IndexedDB キュー + BackgroundSync) | 提案予定 (IT5 task 8.3) |
+| ADR-0012 (見送り) | TransportStatus 遷移 SSoT 集約 | **不要** — 既存 `TrackingStatus.canTransitionTo` (Tracking Context 内部) + `trackingStatusToTransportStatus` (公開変換) の二層 SSoT が既に確立済 (domain-model.md §4/§8)。H-01 の実質は Tracking 集約が SSoT である旨のコード規約として arch-check ルールに追加すれば足りる |
 
 ---
 
@@ -1147,6 +1147,7 @@ spec = withApp $ do
 | 2026-07-01 | 設計セクションを iteration_plan-4.md と同レベルに拡充: Haskell 型定義・DDL・モジュール構造・URL 設計・UI (ビュー/モデル/インタラクション/htmx/フィードバック規約)・アプリケーション層シーケンス 3 本・トランザクション境界・エラー処理戦略・DB マイグレーション順序・テスト戦略・CI 統合・ADR 表 (0007/0008/0009 昇格 + 0010/0011/0012 新規) を追記 | AI Agent |
 | 2026-07-01 | **Ralph Loop iter 1**: task 9.1 前提訂正 (domain-model.md は 1,277 行完備で truncated ではない、Tracking Context §4 + TransportStatus §8 既存) → Domain 図を既存設計整合に修正 (TrackingStatus 内部 / TransportStatus 9 値 SSoT / H-01 意味再定義)。domain-model.md §4 に ConfirmationCode VO + Generator + 2 コマンド追加 | AI Agent |
 | 2026-07-01 | **Ralph Loop iter 2**: task 9.2 完了 (data-model.md に confirmation_code テーブル追加、tracking_id FK → tracking_activity.id、bcrypt cost=10)。task 9.3 は既存 ui_design.md に完備確認 (L96 公開追跡、L349 追跡詳細、L401 Leaflet、L483 荷役登録、L504 確認コード、L530 htmx 動的、L544 Service Worker)。IT5 DB マイグレーションを 4 本 → **1 本のみ** に削減、handling_activity/cargo への tracking_number FK 追加は既存 booking_id JOIN で代替可能なため見送り | AI Agent |
+| 2026-07-01 | **Ralph Loop iter 3**: ADR 実態確認 → ADR-0007/0009 は既に採用済、ADR-0008 のみ提案状態で task 2.1 完了後に昇格予定。task 1.4 を「ADR-0008 のみ (1h)」に整理。ADR-0012 TransportStatus SSoT は不要と判定 (既存の TrackingStatus 内部 + trackingStatusToTransportStatus 公開変換の二層 SSoT が確立済、H-01 は arch-check ルールで規約化すれば足りる)。**ADR-0010 セッション認証を先行起票** (opaque Cookie + Postgres KV + Servant Auth、8h セッション、CSRF は既存 Double Submit Cookie 継承)、adr/index.md 更新 | AI Agent |
 
 ---
 

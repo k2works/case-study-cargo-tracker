@@ -14,5 +14,6 @@
 | [0007](0007-cancellation-fee-policy.md) | キャンセル料 3 段階ルールのドメインポリシー化 (Free/Partial/Full) | 採用 (2026-06-30) |
 | [0008](0008-itinerary-leg-model.md) | Itinerary + Leg を Booking 集約配下に配置、ItineraryRepository ポート分離 | 提案 (2026-06-30) |
 | [0009](0009-booking-state-machine.md) | Booking 状態機械の SSoT 化 (BookingStatus.canTransitionTo) | 採用 (2026-06-30) |
+| [0010](0010-session-cookie-auth.md) | セッション認証方式 (opaque Cookie + Servant Auth + Postgres KV) | 提案 (2026-07-01) |
 
 ADR の作成には `creating-adr` スキルを使用してください。
