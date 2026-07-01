@@ -148,6 +148,7 @@ library:
   - Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   - Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   - Cargotracker.Booking.Infrastructure.PostgresBookingRepository
+  - Cargotracker.Booking.Infrastructure.PostgresItineraryRepository
   - Cargotracker.Booking.Infrastructure.PostgresShipperExistenceChecker
   - Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   - Cargotracker.Shared.Web.Layout
