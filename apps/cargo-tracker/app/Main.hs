@@ -82,6 +82,9 @@ import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
 import Cargotracker.Shipper.Interfaces.ShipperApi (shipperApp)
 import Cargotracker.Shipper.Interfaces.ShipperPageApi (shipperPageApp)
 import Cargotracker.Shipper.Interfaces.ShipperSearchApi (shipperSearchApp)
+import Cargotracker.Tracking.Infrastructure.PostgresConfirmationCodeRepository
+  ( newPostgresConfirmationCodeRepository,
+  )
 import Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
   ( newPostgresTrackingRepository,
   )
@@ -155,7 +158,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     "public" : "tracking" : _ -> publicTrackingApp trackingRepo req respond
-    "handling" : _ -> handlingPageApp handlingRepo req respond
+    "handling" : _ -> handlingPageApp handlingRepo codeRepo req respond
     _ ->
       respond $
         responseLBS
@@ -173,6 +176,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     estimateRepo = newPostgresEstimateRepository conn
     trackingRepo = newPostgresTrackingRepository conn
     handlingRepo = newPostgresHandlingActivityRepository conn
+    codeRepo = newPostgresConfirmationCodeRepository conn
 
 healthHandler :: Application
 healthHandler _req respond =

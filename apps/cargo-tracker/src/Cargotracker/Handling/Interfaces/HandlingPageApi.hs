@@ -28,15 +28,24 @@ import GHC.Generics (Generic)
 import Lucid (Html)
 import Servant
 import Servant.HTML.Lucid (HTML)
-import Web.FormUrlEncoded (FromForm)
+import Web.FormUrlEncoded (FromForm (..), parseUnique)
 
 import Cargotracker.Handling.Application.Ports (HandlingActivityRepository)
 import Cargotracker.Handling.Application.RegisterHandlingEventCommand
   ( RegisterHandlingEventInput (..),
   )
 import qualified Cargotracker.Handling.Application.RegisterHandlingEventCommand as RegisterHandling
+import Cargotracker.Handling.Application.VerifyClaimAndRegisterCommand
+  ( VerifyClaimInput (..),
+  )
+import qualified Cargotracker.Handling.Application.VerifyClaimAndRegisterCommand as VerifyClaim
 import Cargotracker.Handling.Domain.Model.HandlingType (textToHandlingType)
+import Cargotracker.Handling.Views.ClaimFormView (claimFormPage)
 import Cargotracker.Handling.Views.HandlingFormView (handlingFormPage)
+import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Tracking.Application.ConfirmationCodePorts
+  ( ConfirmationCodeRepository,
+  )
 
 data HandlingFormRequest = HandlingFormRequest
   { bookingId :: !Text
@@ -58,14 +67,41 @@ type HandlingPageApi =
            :<|> "new"
              :> ReqBody '[FormUrlEncoded] HandlingFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> "claim"
+             :> QueryParam "flash" Text
+             :> Get '[HTML] (Html ())
+           :<|> "claim"
+             :> ReqBody '[FormUrlEncoded] ClaimFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
-handlingPageApp :: HandlingActivityRepository IO -> Application
-handlingPageApp repo =
+data ClaimFormRequest = ClaimFormRequest
+  { claimBookingId :: !Text
+  , claimConfirmationCode :: !Text
+  , claimLocationUnlocode :: !Text
+  , claimOperatorName :: !Text
+  }
+  deriving stock (Generic, Show, Eq)
+
+instance FromForm ClaimFormRequest where
+  fromForm f =
+    ClaimFormRequest
+      <$> parseUnique "bookingId" f
+      <*> parseUnique "confirmationCode" f
+      <*> parseUnique "locationUnlocode" f
+      <*> parseUnique "operatorName" f
+
+handlingPageApp ::
+  HandlingActivityRepository IO ->
+  ConfirmationCodeRepository IO ->
+  Application
+handlingPageApp repo codeRepo =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
         :<|> handlerPost repo
+        :<|> handlerClaimGet
+        :<|> handlerClaimPost codeRepo repo
     )
 
 handlerGet :: Maybe Text -> Handler (Html ())
@@ -114,3 +150,51 @@ handlerPost repo form = do
 parseCompletionTime :: Text -> Maybe UTCTime
 parseCompletionTime t =
   parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M" (T.unpack t)
+
+-- | GET /handling/claim : 引取確認フォーム
+handlerClaimGet :: Maybe Text -> Handler (Html ())
+handlerClaimGet mFlash = pure (claimFormPage mFlash)
+
+-- | POST /handling/claim : 確認コード検証 → Claim イベント登録
+handlerClaimPost ::
+  ConfirmationCodeRepository IO ->
+  HandlingActivityRepository IO ->
+  ClaimFormRequest ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerClaimPost codeRepo handlingRepo form = do
+  now <- liftIO getCurrentTime
+  result <-
+    liftIO
+      ( VerifyClaim.execute
+          codeRepo
+          handlingRepo
+          VerifyClaimInput
+            { inputBookingId = claimBookingId form
+            , inputConfirmationCode = claimConfirmationCode form
+            , inputLocationUnlocode = claimLocationUnlocode form
+            , inputOperatorName = claimOperatorName form
+            , inputCompletionTime = now
+            , inputNow = now
+            }
+      )
+  case result of
+    Right () ->
+      pure (addHeader "/handling/claim?flash=success" NoContent)
+    Left ConfirmationCodeMismatch ->
+      redirectClaim "/handling/claim?flash=code-mismatch"
+    Left ConfirmationCodeAlreadyUsed ->
+      redirectClaim "/handling/claim?flash=code-used"
+    Left (ConfirmationCodeMaxAttemptsExceeded _) ->
+      redirectClaim "/handling/claim?flash=code-lock"
+    Left (HandlingBookingNotFound _) ->
+      redirectClaim "/handling/claim?flash=not-found"
+    Left _ ->
+      redirectClaim "/handling/claim?flash=invalid"
+  where
+    redirectClaim :: Text -> Handler a
+    redirectClaim loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }

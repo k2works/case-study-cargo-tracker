@@ -114,6 +114,11 @@ library:
   - Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
   - Cargotracker.Handling.Views.HandlingFormView
   - Cargotracker.Handling.Interfaces.HandlingPageApi
+  - Cargotracker.Handling.Application.VerifyClaimAndRegisterCommand
+  - Cargotracker.Handling.Views.ClaimFormView
+  - Cargotracker.Tracking.Application.ConfirmationCodePorts
+  - Cargotracker.Tracking.Application.IssueConfirmationCodeCommand
+  - Cargotracker.Tracking.Infrastructure.PostgresConfirmationCodeRepository
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate

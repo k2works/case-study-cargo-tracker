@@ -167,9 +167,9 @@
 
 | # | タスク | 見積もり | Ralph 適性 | 状態 |
 |---|--------|---------|-----------|------|
-| 6.1 | Domain: ConfirmationCode VO + TsClaimed 遷移 (canTransitionTo TransportStatus SSoT 経由) | 3h | AI 完結可 | [~] iter 1 (設計) + iter 13 (Haskell 実装: `Cargotracker.Tracking.Domain.Model.ConfirmationCode` の VO + mkConfirmationCode + verify + markUsed + maxAttempts=5、DomainError に IT5 追加 4 コンストラクタ、stack build 成功)。残: TsClaimed 遷移統合と TrackingActivity 集約側の Maybe ConfirmationCode 保持 |
-| 6.2 | Application: `ClaimCargoCommand` (確認コード検証込み) | 3h | AI 完結可 | [ ] |
-| 6.3 | HTTP + UI: 引取確認フォーム + 検証エラー UI | 3h | AI 完結可 | [ ] |
+| 6.1 | Domain: ConfirmationCode VO + TsClaimed 遷移 | 3h | AI 完結可 | [x] iter 1/13/29 (設計 + VO + test 12 件 + 集約統合: 確認コード検証成功時に markUsed 適用 + Claim イベント登録) |
+| 6.2 | Application: `ClaimCargoCommand` (確認コード検証込み) | 3h | AI 完結可 | [x] iter 29 完了 (VerifyClaimAndRegisterCommand.execute: findByBookingId → verify 3 段階 → 失敗時 attempt_count++/成功時 markUsed + saveHandlingActivity Claim、IssueConfirmationCodeCommand で発行、ConfirmationCodePorts port 分離、Postgres INSERT ON CONFLICT で upsert 冪等) |
+| 6.3 | HTTP + UI: 引取確認フォーム + 検証エラー UI | 3h | AI 完結可 | [x] iter 29 完了 (POST /handling/claim + ClaimFormPage 4 フィールド + 6 flash メッセージ pattern="[0-9]{6}" + DomainError 別リダイレクト: code-mismatch/code-used/code-lock/not-found/invalid/success) |
 
 **小計**: 9h
 
@@ -292,7 +292,8 @@
 | 25 | 本体 US14 Step 3 完了: IdGenerator に generateTrackingNumberText 追加 ("TR" + 6 文字英数) + handlerConfirm に TrackingRepository 引数追加、Confirm 成功後に自動発行、Main.hs に newPostgresTrackingRepository 配線 + BookingPageApiSpec.hs 5 callsite 追従 | `33b42a21` |
 | 26 | **本体 US14 完了**: Step 4 (View 配線) - handlerShow に TrackingRepository 追加、queryTrackingNumberText で Rule 4 遵守、bookingShowPage が Maybe Text で表示 (発行済は code_ タグ、未発行はミュート「未発行」) | `aad24565` |
 | 27 | **本体 US18 骨格完了**: QueryTrackingByNumberQuery.execute + TrackingView DTO (公開向け Text ベース) + PublicTrackingApi (QueryParam + Capture 両対応) + PublicTrackingView (検索フォーム + 詳細ページ + 404 ページ、9 状態日本語ラベル + Bootstrap 色 class) + Main.hs 配線。rate-limit / Leaflet / タイムラインは IT6 繰越 | `8f3ea3d8` |
-| 28 | **本体 US15 骨格完了**: Handling BC 新規 (7 モジュール) + handling_activity migration + HandlingActivity 集約 + RegisterHandlingEventCommand + PostgresHandlingActivityRepository + HandlingPageApi (GET/POST /handling/new) + handlingFormPage (6 フィールド + 5 種別 select) + Main.hs 配線。Voyage/Location 存在検証 + 順序制約 + hspec-wai は IT6 繰越 | (未 commit) |
+| 28 | **本体 US15 骨格完了**: Handling BC 新規 (7 モジュール) + handling_activity migration + HandlingActivity 集約 + RegisterHandlingEventCommand + PostgresHandlingActivityRepository + HandlingPageApi (GET/POST /handling/new) + handlingFormPage (6 フィールド + 5 種別 select) + Main.hs 配線。Voyage/Location 存在検証 + 順序制約 + hspec-wai は IT6 繰越 | `a03e458f` |
+| 29 | **本体 US16 完了**: confirmation_code migration + ConfirmationCodeRepository port + Postgres upsert 冪等 + IssueConfirmationCodeCommand (US14 と並列で BookingConfirmed 購読) + VerifyClaimAndRegisterCommand (Cross-BC Tracking→Handling、verify 3 段階 + attempt_count++ + markUsed + Claim イベント登録) + POST /handling/claim + ClaimFormPage 4 フィールド + 6 flash メッセージ、Main.hs 配線 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 
