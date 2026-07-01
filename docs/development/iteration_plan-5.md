@@ -1148,6 +1148,7 @@ spec = withApp $ do
 | 2026-07-01 | **Ralph Loop iter 1**: task 9.1 前提訂正 (domain-model.md は 1,277 行完備で truncated ではない、Tracking Context §4 + TransportStatus §8 既存) → Domain 図を既存設計整合に修正 (TrackingStatus 内部 / TransportStatus 9 値 SSoT / H-01 意味再定義)。domain-model.md §4 に ConfirmationCode VO + Generator + 2 コマンド追加 | AI Agent |
 | 2026-07-01 | **Ralph Loop iter 2**: task 9.2 完了 (data-model.md に confirmation_code テーブル追加、tracking_id FK → tracking_activity.id、bcrypt cost=10)。task 9.3 は既存 ui_design.md に完備確認 (L96 公開追跡、L349 追跡詳細、L401 Leaflet、L483 荷役登録、L504 確認コード、L530 htmx 動的、L544 Service Worker)。IT5 DB マイグレーションを 4 本 → **1 本のみ** に削減、handling_activity/cargo への tracking_number FK 追加は既存 booking_id JOIN で代替可能なため見送り | AI Agent |
 | 2026-07-01 | **Ralph Loop iter 3**: ADR 実態確認 → ADR-0007/0009 は既に採用済、ADR-0008 のみ提案状態で task 2.1 完了後に昇格予定。task 1.4 を「ADR-0008 のみ (1h)」に整理。ADR-0012 TransportStatus SSoT は不要と判定 (既存の TrackingStatus 内部 + trackingStatusToTransportStatus 公開変換の二層 SSoT が確立済、H-01 は arch-check ルールで規約化すれば足りる)。**ADR-0010 セッション認証を先行起票** (opaque Cookie + Postgres KV + Servant Auth、8h セッション、CSRF は既存 Double Submit Cookie 継承)、adr/index.md 更新 | AI Agent |
+| 2026-07-01 | **Ralph Loop iter 4**: 既存 IT1 実装調査で JwtIssuer (HS256) が既存判明 → ADR-0010 を「JWT (API 用) + Session Cookie (Web 用) 共存設計」に修正 (両方存在時は Web Cookie 優先ルール明記)。`db/migrations/20260831100000_create_session.sql` 作成 (session_token VARCHAR(64) UK, user_id FK, expires_at, sliding window)。data-model.md §適用済 migration 一覧に session 追加、IT4 Itinerary+Leg migration が未実施であることを明記 | AI Agent |
 
 ---
 

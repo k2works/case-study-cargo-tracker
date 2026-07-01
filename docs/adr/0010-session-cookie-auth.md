@@ -10,33 +10,44 @@ IT5 で Servant Auth によるセッション Cookie 認証を導入する際の
 
 ## コンテキスト
 
-IT1-4 まで認証は非機能要件として存在しつつも、HTTP ハンドラの Servant 結線 (IT4 繰越 task 1.1) を実装する段階で本格的な認証基盤が必要になった。E2E テスト (IT4 完了時に navigation-lists 1 件が login fixture 実装まで skip 状態) を成立させるためにも IT5 冒頭で認証を確定する必要がある。
+IT1 で **JWT (HS256, HMAC-SHA256) 認証は既に実装済** (`Cargotracker.Shared.Auth.Infrastructure.JwtIssuer`)。API 呼び出し (Bearer token) 想定で実装されているが、Web ブラウザからの操作では以下が問題:
 
-Haskell / Servant エコシステムでの選択肢:
+- localStorage / JavaScript から JWT を扱うと XSS で漏洩リスク
+- HttpOnly Cookie に載せる必要があるが、その場合 CSRF 対策必須
+- E2E (Playwright) の login fixture 実装で必要
 
-- (A) **opaque Cookie + Postgres KV**: 短い乱数 (256bit) を Cookie 値とし、サーバ側 `session` テーブルに `user_id` / `expires_at` を保持。サーバ側で無効化・強制ログアウトが可能
-- (B) **JWT (署名付き Cookie)**: HMAC 署名した JSON を Cookie に埋め込む。サーバ側状態不要、水平スケール容易。ただし失効即時反映不可
+IT5 では **既存 JWT (API 用) を維持したまま、Web 用にセッション Cookie を追加** する。API と Web で認証層を分離することで、それぞれに最適な方式を選択できる。
+
+Web 用 Cookie の選択肢:
+
+- (A) **opaque Cookie + Postgres KV**: 短い乱数を Cookie 値とし、サーバ側 `session` テーブルで検証。失効即時反映可能、サーバ側で無効化・強制ログアウト可能
+- (B) **JWT を HttpOnly Cookie で搬送**: 既存 JwtIssuer 流用可能。ただし失効即時反映不可 (revocation list が必要)
 - (C) **JWT + Refresh Token (Postgres KV)**: 短命 JWT + 長命 Refresh。実装量最大
 
-Java/take-2 / Scala/take-1 は (B) JWT ステートレスを採用。ただし本プロジェクトの規模 (単一 ECS Fargate タスク、想定同時 50 セッション) では水平スケールの必要性が低く、失効即時反映と実装単純さを優先すべき。
+本プロジェクトの規模 (単一 ECS Fargate タスク、想定同時 50 セッション) では水平スケールの必要性が低く、Web セッションは失効即時反映と実装単純さを優先すべき。
 
 ## 決定
 
-**(A) opaque Cookie + Postgres KV を採用する**。
+**Web セッションに (A) opaque Cookie + Postgres KV を採用する**。既存 IT1 JWT (API 用 Bearer token) は維持する。
 
-- Cookie 値: `crypto-random` 256bit → base64url 44 文字。HttpOnly / Secure / SameSite=Lax
-- サーバ側テーブル: `session (id BIGSERIAL, session_token VARCHAR(64) UK, user_id BIGINT FK users, expires_at TIMESTAMPTZ, created_at TIMESTAMPTZ)`
-- Servant 側実装: `AuthProtect "session-cookie"` + カスタム `AuthHandler` (Cookie → session lookup → users JOIN → AuthenticatedUser)
-- 有効期限: 8 時間 (business day)、更新は都度延長 (sliding window)
-- ログアウト: `DELETE session WHERE session_token = ?` で即時無効化
-- CSRF: 別 Cookie で Double Submit Cookie パターン (既存 architecture_frontend.md M-04 準拠)
+- **Web セッション**: opaque Cookie
+  - Cookie 値: `crypto-random` 256bit → base64url 44 文字。HttpOnly / Secure / SameSite=Lax
+  - サーバ側テーブル: `session (id BIGSERIAL, session_token VARCHAR(64) UK, user_id BIGINT FK users, expires_at TIMESTAMPTZ, last_used_at TIMESTAMPTZ, created_at TIMESTAMPTZ)`
+  - Servant 側実装: `AuthProtect "session-cookie"` + カスタム `AuthHandler` (Cookie → session lookup → users JOIN → AuthenticatedUser)
+  - 有効期限: 8 時間 (business day)、`last_used_at` 更新で sliding window
+  - ログアウト: `DELETE session WHERE session_token = ?` で即時無効化
+- **API セッション**: 既存 JWT (HS256) をそのまま維持
+  - `Authorization: Bearer <jwt>` ヘッダで受け取り、既存 `JwtIssuer.verifyAndDecode` で検証
+  - 用途: 外部システム連携 / モバイル / SPA (将来)
+- **CSRF**: Web セッションのみ対象。別 Cookie で Double Submit Cookie パターン (既存 architecture_frontend.md M-04 準拠)。JWT Bearer は Origin 不一致で CSRF リスクなし
+- **併用時のルール**: 1 リクエストは Web Cookie / JWT Bearer のいずれか一方のみ。両方存在時は Web Cookie を優先し JWT は無視 (混在バグ防止)
 
 ## 影響
 
-- **新規テーブル**: `session` (IT5 migration 015 として追加、confirmation_code の後)
+- **新規テーブル**: `session` (IT5 migration `20260831100000_create_session.sql` として追加、独立 = tracking_activity 依存なし)
 - **依存追加**: `servant-auth-server` (既に tech_stack.md に記載)、`crypto-random` または `entropy`
-- **既存への影響**: なし (IT1-4 は認証未実装なため)
-- **将来の水平スケール時**: Postgres が SPOF になるため、その時点で JWT (B) or Redis 移行を再検討 (ADR で追記)
+- **既存への影響**: なし (JWT 認証は API 用として維持、Web は新規追加)
+- **将来の水平スケール時**: Postgres が SPOF になるため、その時点で Redis 移行を再検討
 
 ## 段階移行計画
 
