@@ -103,6 +103,7 @@ library:
   - Cargotracker.Shared.Domain.TransportStatus
   - Cargotracker.Tracking.Application.Ports
   - Cargotracker.Tracking.Application.IssueTrackingNumberCommand
+  - Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
   - Cargotracker.Estimation.Domain.Model.Value.EstimateId
   - Cargotracker.Estimation.Domain.Model.Value.EstimateStatus
   - Cargotracker.Estimation.Domain.Model.RouteCandidate
