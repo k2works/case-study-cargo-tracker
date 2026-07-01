@@ -132,11 +132,11 @@
 | 3.2 | T4-14: E2E 専用 schema (cargo_tracker_e2e) + truncate fixture 導入 | 3h | Docker 必要 | [ ] |
 | 3.3 | T4-15: katip 構造化ログ + Servant グローバル例外ハンドラ (SqlException → 500 統一) | 4h | AI 完結可 | [ ] |
 | 3.4 | T4-05: `Maybe` ドメイン制約 API を sum type へ移行 (H-05 解消) | 4h | AI 完結可 | [ ] |
-| 3.5 | T4-12: HPC カバレッジ gate 74 → 75% 引き上げ (CI ci.yml 更新) | 1h | AI 完結可 | [ ] |
+| 3.5 | T4-12: HPC カバレッジ gate 74 → 75% 引き上げ (CI ci.yml 更新) | 1h | AI 完結可 | [x] iter 11 完了 (COVERAGE_MIN_OVERALL=75、COVERAGE_TARGET=78) |
 | 3.6 | T4-19: v0.3.0 CHANGELOG / Release Note ドラフト起票 | 2h | AI 完結可 | [ ] |
 | 3.7 | T4-10: CancellationFee VO 単体テスト 5-6 件追加 | 2h | AI 完結可 | [ ] |
 | 3.8 | T4-11: 49 ペア網羅テストを `forAll allStatusPairs` で property 化 | 2h | AI 完結可 | [ ] |
-| 3.9 | H-01: Cargo 状態遷移 SSoT 統合 (Handling/Tracking BC が `canTransitionTo TransportStatus` を経由するよう refactor、二重定義削除) | 3h | AI 完結可 | [~] iter 1 で設計整理 (TrackingStatus 内部 + trackingStatusToTransportStatus 公開の二層 SSoT 確立)、refactor 実施は未 |
+| 3.9 | H-01: Cargo 状態遷移 SSoT 統合 (Handling/Tracking BC が `canTransitionTo TransportStatus` を経由するよう refactor、二重定義削除) | 3h | AI 完結可 | [x] iter 1 で設計整理 + iter 11 で arch-check.sh に check_h01_transport_status_ssot 追加 (Tracking Context 外での TransportStatus コンストラクタ Ts* 直接使用を警告、IT6 で強制化検討)。実際のコード refactor は現状違反 0 件のため不要 |
 
 **小計**: 26h
 
@@ -234,7 +234,8 @@
 | 7 | BookingPageApi に POST /bookings/:id/confirm + POST /bookings/:id/cancel ハンドラ追加 (task 1.1: 5 本中 2 本完)、getCurrentTime 導入で CancelBookingInput 3 フィールド対応、Itinerary からの departureTime 参照は task 2.1 完了後の統合で有効化 | `d3624410` |
 | 8 | BookingPageApi に POST + DELETE /bookings/:id/route ハンドラ追加 (LinkRoute/UnlinkRoute、task 1.1: 5 本中 4 本完)、stack build 成功 | `c9d05040` |
 | 9 | task 2.2 T4-16 実施: arch-check.sh の ALLOWLIST 全 5 件に sunset 日付コメントを追加 (Rule 6: 2026-09-30 / T-01+T-02: 2026-09-30 と 2026-10-31)。task 1.1 EvaluateRoute は IT6 繰越判定 (制約 Form + Query + Command + View 統合が必要で 1 iter で完結不可) | `c4ab7875` |
-| 10 | task 2.1 完了判定 (PostgresRouteCandidateRepository は Estimate 集約内 IT2 実装で不要と判明) + task 1.4 完了 (ADR-0008 「提案」→「採用」昇格、adr/index.md 更新) | (未 commit) |
+| 10 | task 2.1 完了判定 (PostgresRouteCandidateRepository は Estimate 集約内 IT2 実装で不要と判明) + task 1.4 完了 (ADR-0008 「提案」→「採用」昇格、adr/index.md 更新) | `421897a9` |
+| 11 | task 3.5 完了 (`.github/workflows/ci.yml` COVERAGE_MIN_OVERALL 74→75、TARGET 75→78) + task 3.9 完了 (arch-check.sh に `check_h01_transport_status_ssot` 追加、Tracking Context 外での TransportStatus コンストラクタ Ts* 直接使用を警告、現状違反 0 件で成立) | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 

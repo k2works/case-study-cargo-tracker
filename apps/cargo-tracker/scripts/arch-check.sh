@@ -298,6 +298,32 @@ check_t03() {
   fi
 }
 
+# H-01 (IT5 task 3.9): TransportStatus SSoT 統合規約
+# TransportStatus (Shared 公開語彙、9 値) の直接書き込みは Tracking Context の
+# trackingStatusToTransportStatus 変換関数のみに集約する。
+# Handling / Booking / Billing 等の他 BC が TransportStatus 値を直接構築するのは禁止
+# (SSoT 二重化を防止)。TrackingStatus は Tracking Context 内部型として維持し、
+# 出口で変換関数を経由する。
+check_h01_transport_status_ssot() {
+  local file="$1"
+  # Tracking Context 自身と Shared Domain 定義は除外
+  if grep -Eq '^module +Cargotracker\.Tracking\.' "$file"; then
+    return
+  fi
+  if grep -Eq '^module +Cargotracker\.Shared\.Domain\.' "$file"; then
+    return
+  fi
+  # TransportStatus のコンストラクタ (Ts... 8 値) を直接使用しているかを検出
+  local hits
+  hits=$(grep -nE '\bTs(NotReceived|Received|Loaded|OnboardCarrier|Unloaded|AwaitingClaim|Claimed|InException|Unknown)\b' "$file" || true)
+  if [ -n "$hits" ]; then
+    echo "⚠️  H-01 注意 (Tracking Context 外で TransportStatus コンストラクタを直接使用): $file"
+    echo "$hits" | sed 's/^/   /'
+    echo "   → 推奨: TrackingActivity.currentStatus + trackingStatusToTransportStatus 経由で取得"
+    # 現段階では警告のみ (VIOLATIONS を増やさない、IT6 で強制化検討)
+  fi
+}
+
 echo "arch-check Phase 1+2+3: $SRC_DIR を検査中..."
 while IFS= read -r -d '' file; do
   check_rule1 "$file"
@@ -308,6 +334,7 @@ while IFS= read -r -d '' file; do
   check_t01 "$file"
   check_t02 "$file"
   check_t03 "$file"
+  check_h01_transport_status_ssot "$file"
 done < <(find "$SRC_DIR" -name "*.hs" -print0)
 
 if [ "$VIOLATIONS" -gt 0 ]; then
@@ -318,3 +345,4 @@ fi
 
 echo "✅ アーキテクチャ規約遵守 (Rule 1/2/3/4/6 + T-01/T-02/T-03 全て OK)"
 echo "   ALLOWLIST: Rule 4=${#ALLOWLIST_RULE4[@]} / Rule 6=${#ALLOWLIST_RULE6[@]} / T-01+T-02=${#ALLOWLIST_T01_T02[@]} (IT5 段階解消)"
+echo "   H-01 (IT5): TransportStatus SSoT は警告のみ、IT6 で強制化検討"
