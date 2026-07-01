@@ -238,7 +238,8 @@
 | 11 | task 3.5 完了 (`.github/workflows/ci.yml` COVERAGE_MIN_OVERALL 74→75、TARGET 75→78) + task 3.9 完了 (arch-check.sh に `check_h01_transport_status_ssot` 追加、Tracking Context 外での TransportStatus コンストラクタ Ts* 直接使用を警告、現状違反 0 件で成立) | `fbca3054` |
 | 12 | task 3.6 完了 (CHANGELOG.md の [Unreleased] を v0.3.0-mvp-preview 予定として US14/15/16/18 本体 + セッション認証 + IT4 繰越 + Itinerary+Leg 永続化 + 荷役オフライン + Changed/ADR/IT6 見送り事項を記載) | `799bdbc5` |
 | 13 | task 6.1 部分完了: Cargotracker/Tracking/ 新規 BC ディレクトリ作成 + `ConfirmationCode.hs` (mkConfirmationCode 6 桁数字検証 + verify 3 段階失敗返却 + markUsed idempotent + maxAttempts=5) + DomainError に IT5 追加 4 コンストラクタ (InvalidConfirmationCodeFormat / ConfirmationCodeMismatch / ConfirmationCodeAlreadyUsed / ConfirmationCodeMaxAttemptsExceeded) + package.yaml 登録 + stack build 成功 | `f259b21b` |
-| 14 | task 3.7 T4-10 実施: test/unit/Booking/Domain/Model/Value/CancellationFeeSpec.hs 新規 (tierRate 3 段階 + 単調増加 + Enum/Bounded 網羅性 = 6 テスト)、Spec.hs にランナー登録 | (未 commit) |
+| 14 | task 3.7 T4-10 実施: test/unit/Booking/Domain/Model/Value/CancellationFeeSpec.hs 新規 (tierRate 3 段階 + 単調増加 + Enum/Bounded 網羅性 = 6 テスト)、Spec.hs にランナー登録 | `43cdd8a2` |
+| 15 | task 6.1 追加: test/unit/Tracking/Domain/Model/ConfirmationCodeSpec.hs 新規 (mkConfirmationCode 4 + verify 5 + markUsed 2 + maxAttempts 1 = **12 テスト**、SEC-04 準拠) + Spec.hs 登録 | (未 commit) |
 
 > **ベロシティ超過注記**: 22 SP は IT4 実績 19 SP + 平均 19.75 SP を上回るが、内 2 SP は上流ドキュメント補完 (実装なしのテキスト作業) であり、Ralph Loop 消化速度は本体 20 SP 相当と評価。IT4 実績 (Ralph Loop 18 反復で 19 SP 完遂) から達成見込み。
 

@@ -69,6 +69,7 @@ import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
 import qualified Shipper.Interfaces.ShipperApiSpec
 import qualified Shipper.Interfaces.ShipperPageApiSpec
 import qualified Shipper.Interfaces.ShipperSearchApiSpec
+import qualified Tracking.Domain.Model.ConfirmationCodeSpec
 
 main :: IO ()
 main = hspec $ do
@@ -160,6 +161,10 @@ main = hspec $ do
   describe
     "Cargotracker.Booking.Domain.Model.Value.CancellationFee"
     Booking.Domain.Model.Value.CancellationFeeSpec.spec
+
+  describe
+    "Cargotracker.Tracking.Domain.Model.ConfirmationCode"
+    Tracking.Domain.Model.ConfirmationCodeSpec.spec
 
   describe
     "Cargotracker.Booking.Domain.Model.Itinerary"
