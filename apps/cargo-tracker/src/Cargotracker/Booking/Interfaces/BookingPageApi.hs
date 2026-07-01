@@ -22,7 +22,7 @@ import qualified Data.ByteString.Char8 as BC
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time (UTCTime, defaultTimeLocale, parseTimeM)
+import Data.Time (UTCTime, defaultTimeLocale, getCurrentTime, parseTimeM)
 import GHC.Generics (Generic)
 import Lucid (Html)
 import Servant
@@ -33,6 +33,14 @@ import Cargotracker.Booking.Application.AttachCustomsDeclarationCommand
   ( AttachCustomsInput (..),
   )
 import qualified Cargotracker.Booking.Application.AttachCustomsDeclarationCommand as AttachCustoms
+import Cargotracker.Booking.Application.CancelBookingCommand
+  ( CancelBookingInput (..),
+  )
+import qualified Cargotracker.Booking.Application.CancelBookingCommand as CancelBk
+import Cargotracker.Booking.Application.ConfirmBookingCommand
+  ( ConfirmBookingInput (..),
+  )
+import qualified Cargotracker.Booking.Application.ConfirmBookingCommand as ConfirmBk
 import Cargotracker.Booking.Application.CustomsPorts
   ( CustomsDeclarationRepository (..),
   )
@@ -143,6 +151,12 @@ type BookingPageApi =
            :<|> Capture "bookingId" Text
              :> "routes"
              :> Get '[HTML] (Html ())
+           :<|> Capture "bookingId" Text
+             :> "confirm"
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> Capture "bookingId" Text
+             :> "cancel"
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
 bookingPageApp ::
@@ -164,6 +178,8 @@ bookingPageApp repo checker customsRepo voyageRepo =
         :<|> handlerCustomsEdit repo customsRepo
         :<|> handlerCustomsAttach repo customsRepo
         :<|> handlerRoutes repo voyageRepo
+        :<|> handlerConfirm repo
+        :<|> handlerCancel repo
     )
 
 {- | US08a (IT3): GET /bookings/:bookingId/routes
@@ -457,6 +473,84 @@ handlerHandover repo bid = do
   where
     redirectErr :: Text -> Handler a
     redirectErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
+
+{- | US13 (IT5 task 1.1 IT4 繰越): POST /bookings/:bookingId/confirm
+RouteAssigned → Confirmed 状態遷移を試行し、PRG で予約詳細に戻す。
+-}
+handlerConfirm ::
+  BookingRepository IO ->
+  Text ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerConfirm repo bid = do
+  result <-
+    liftIO
+      ( ConfirmBk.execute
+          repo
+          (ConfirmBookingInput {inputBookingId = BookingId bid})
+      )
+  let detail = "/bookings/" <> bid
+  case result of
+    Right _ ->
+      pure (addHeader (detail <> "?flash=confirm-ok") NoContent)
+    Left (BookingNotFound _) ->
+      redirectConfirmErr "/bookings/new?error=booking-not-found"
+    Left (InvalidStateTransition fromS _) ->
+      redirectConfirmErr (detail <> "?error=invalid-state&from=" <> fromS)
+    Left (ConcurrentModification _) ->
+      redirectConfirmErr (detail <> "?error=concurrent-modification")
+    Left e ->
+      redirectConfirmErr (detail <> "?error=" <> T.pack (show e))
+  where
+    redirectConfirmErr :: Text -> Handler a
+    redirectConfirmErr loc =
+      throwError $
+        err303
+          { errHeaders = [("Location", BC.pack (T.unpack loc))]
+          , errBody = ""
+          }
+
+{- | US13 (IT5 task 1.1 IT4 繰越): POST /bookings/:bookingId/cancel
+Confirmed → Cancelled 状態遷移。キャンセル料は Cargo 更新時に併せて記録。
+-}
+handlerCancel ::
+  BookingRepository IO ->
+  Text ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handlerCancel repo bid = do
+  now <- liftIO getCurrentTime
+  result <-
+    liftIO
+      ( CancelBk.execute
+          repo
+          ( CancelBookingInput
+              { inputBookingId = BookingId bid
+              , inputNow = now
+              , inputDepartureTime = Nothing
+              }
+          )
+      )
+  -- \^ IT5 段階: departureTime 参照は task 2.1 完了後の Itinerary 統合で有効化
+
+  let detail = "/bookings/" <> bid
+  case result of
+    Right _ ->
+      pure (addHeader (detail <> "?flash=cancel-ok") NoContent)
+    Left (BookingNotFound _) ->
+      redirectCancelErr "/bookings/new?error=booking-not-found"
+    Left (InvalidStateTransition fromS _) ->
+      redirectCancelErr (detail <> "?error=invalid-state&from=" <> fromS)
+    Left (ConcurrentModification _) ->
+      redirectCancelErr (detail <> "?error=concurrent-modification")
+    Left e ->
+      redirectCancelErr (detail <> "?error=" <> T.pack (show e))
+  where
+    redirectCancelErr :: Text -> Handler a
+    redirectCancelErr loc =
       throwError $
         err303
           { errHeaders = [("Location", BC.pack (T.unpack loc))]
