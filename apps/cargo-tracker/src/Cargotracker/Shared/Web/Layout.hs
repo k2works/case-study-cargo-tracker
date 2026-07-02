@@ -89,6 +89,7 @@ menuItemsForRole (Just Sales) =
   , NavMenuItem "/bookings" "貨物予約一覧"
   , NavMenuItem "/bookings/new" "予約登録"
   , NavMenuItem "/voyages/search" "航海検索"
+  , NavMenuItem "/pricing/calculate" "送料計算"
   ]
 menuItemsForRole (Just Router) =
   [ NavMenuItem "/bookings" "貨物予約一覧"
@@ -101,21 +102,27 @@ menuItemsForRole (Just MasterAdmin) =
   , NavMenuItem "/voyages" "航海一覧"
   , NavMenuItem "/voyages/new" "航海登録"
   , NavMenuItem "/voyages/search" "航海検索"
+  , NavMenuItem "/pricing/calculate" "送料計算"
+  , NavMenuItem "/notifications" "通知一覧"
   ]
 menuItemsForRole (Just Shipper) =
   [ NavMenuItem "/bookings" "貨物予約一覧"
+  , NavMenuItem "/notifications" "通知一覧"
   ]
 menuItemsForRole (Just Tracker) =
   [ NavMenuItem "/bookings" "貨物予約一覧"
   ]
 menuItemsForRole (Just Handler) =
   [ NavMenuItem "/bookings" "貨物予約一覧"
+  , NavMenuItem "/notifications" "通知一覧"
   ]
 menuItemsForRole (Just Accountant) =
   [ NavMenuItem "/bookings" "貨物予約一覧"
+  , NavMenuItem "/pricing/calculate" "送料計算"
   ]
 menuItemsForRole (Just Consignee) =
   [ NavMenuItem "/bookings" "貨物予約一覧"
+  , NavMenuItem "/notifications" "通知一覧"
   ]
 
 -- | 後方互換: ロール未指定 (Nothing) でレンダリング

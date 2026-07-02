@@ -46,6 +46,8 @@ homePage = pageLayout "Cargo Tracker (Haskell 版)" $ do
         menuCard "/bookings" "📋 貨物予約一覧" "予約状態 + 通関情報 (US27) へ"
         menuCard "/voyages" "🛳️ 航海一覧" "登録済航海スケジュール参照"
         menuCard "/voyages/search" "🔍 航海検索 (US07)" "出発地・到着地・期間で検索"
+        menuCard "/pricing/calculate" "🧮 送料計算 (US21)" "カテゴリ・距離・重量から運賃を試算"
+        menuCard "/notifications" "🔔 通知一覧 (US26)" "引取確認など送信済通知の履歴"
       h2_ [class_ "h4 mt-5 mb-3"] "デモシナリオ"
       ol_ [class_ "list-group list-group-numbered"] $ do
         li_ [class_ "list-group-item"] $ do

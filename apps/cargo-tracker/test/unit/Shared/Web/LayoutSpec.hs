@@ -33,6 +33,7 @@ spec = describe "menuItemsForRole (U-07)" $ do
                  , "/bookings"
                  , "/bookings/new"
                  , "/voyages/search"
+                 , "/pricing/calculate"
                  ]
 
   it "Router は予約一覧/航海一覧/航海検索" $ do
@@ -48,6 +49,8 @@ spec = describe "menuItemsForRole (U-07)" $ do
                  , "/voyages"
                  , "/voyages/new"
                  , "/voyages/search"
+                 , "/pricing/calculate"
+                 , "/notifications"
                  ]
 
   it "Sales は航海登録を表示しない (MasterAdmin 専管)" $ do
