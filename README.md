@@ -269,4 +269,53 @@ nix flake update
 
 **[⬆ back to top](#構成)**
 
+### 環境変数・Cookie 早見表 (T5-19, IT6)
+
+Cargo Tracker (Haskell 版) が参照する環境変数と、認証で発行される Cookie の一覧。
+本番/開発/テストで異なる値を設定する必要があるため、切替時に本節を参照する。
+
+#### アプリケーション実行時の環境変数
+
+| 変数名 | 必須 | デフォルト | 説明 |
+| :--- | :---: | :--- | :--- |
+| `DATABASE_URL` | ○ | なし | PostgreSQL 接続文字列 (例: `postgres://user:pass@localhost:5432/cargo_tracker_dev`) |
+| `JWT_SECRET` | ○ | なし | JWT 署名鍵 (32 文字以上推奨、本番は Secrets Manager から注入) |
+| `JWT_TTL_SECONDS` | | `3600` | JWT 有効期間 (秒) |
+| `APP_ENV` | | (未設定) | `production` 指定時は必須 env 未設定で fail-fast (T-02 IT2) |
+| `PORT` | | `8080` | Warp のリスンポート |
+
+#### DB マイグレーション (dbmate) の環境変数
+
+| 変数名 | 説明 |
+| :--- | :--- |
+| `APP_ENV` | `local` / `staging` / `production` などのプロファイル切替。`APP_ENV=local dbmate status` |
+| `DATABASE_URL` | 対象 DB 接続文字列 (アプリと共有) |
+
+#### E2E (Playwright) 用の環境変数
+
+| 変数名 | 説明 |
+| :--- | :--- |
+| `E2E_SKIP_SETUP` | `1` で `globalSetup` (dbmate up + seed) をスキップ。CI で事前に migration を適用済の場合に使う |
+| `E2E_TRUNCATE_PUBLIC` | `1` で各テスト前に public スキーマの全テーブルを TRUNCATE。テストが独立性を保つ |
+
+#### 認証 Cookie (`cargo_session`)
+
+| 属性 | 値 | 備考 |
+| :--- | :--- | :--- |
+| Name | `cargo_session` | ADR-0010 準拠、Session ID (base64url 44 文字) |
+| HttpOnly | 常時 | JavaScript から参照不可 |
+| SameSite | `Lax` | CSRF 対策 |
+| Path | `/` | サイト全体で有効 |
+| Max-Age | `28800` | 8 時間 (`sessionTtlSeconds`) |
+| Secure | 開発は付与しない / 本番は付与推奨 | HTTPS 環境のみ |
+
+#### 確認コード (`ConfirmationCode`) の TTL
+
+| 定数 | 値 | 出典 |
+| :--- | :--- | :--- |
+| `Tracking.Domain.Model.ConfirmationCode.ttlSeconds` | `86400` (24 時間) | T5-11 (IT6) |
+| `Tracking.Domain.Model.ConfirmationCode.maxAttempts` | `5` | SEC-04 |
+
+**[⬆ back to top](#構成)**
+
 ## 参照

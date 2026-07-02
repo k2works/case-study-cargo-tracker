@@ -7,6 +7,53 @@
 
 ## [Unreleased]
 
+### 進行中 (v1.0.0-mvp, IT6 予定 Release 1.0 MVP)
+
+Phase 3 完了 (Release 1.0 MVP) を目標に、IT5 高優先技術的負債 5 件 (T5-01〜T5-05) を
+完済しつつ、本体 2 ストーリー (US21 輸送料金算出 / US26 荷受人引取通知) を実装する。
+
+#### Added (T5-01〜T5-11)
+
+* **Session Cookie 認証 middleware** (T5-01, ADR-0010 段階移行完了):
+  `Cargotracker.Shared.Auth.Interfaces.SessionAuth` (resolveCookieUser / requireCookieAuth /
+  cookieProtectedApp) + hspec-wai 統合テスト
+* **定数時間比較ヘルパ** (T5-02 Phase 1, SEC-04):
+  `Cargotracker.Shared.Security.ConstantTime.constantTimeEqText` + `Verifier` 型 (Shared)
+* **汎用 bcrypt ヘルパ** (T5-02 Phase 2):
+  `Cargotracker.Shared.Security.BcryptHash.hashSecret / verifySecret`
+* **ConfirmationCode 検証戦略の注入** (T5-02 Phase 3a): `verifyWith :: Verifier -> ...`
+* **ConfirmationCode bcrypt 保存移行** (T5-02 Phase 3b): migration + Postgres repo hash 切替
+* **TxRunner** (T5-03, ADR-0012):
+  `Cargotracker.Shared.Application.TxRunner` (RankNTypes newtype) +
+  `HandlingPageApi.handlerClaimPost` の runInTx 統合
+* **Handling → Tracking 状態反映** (T5-04): Cross-BC helper `markClaimedByBookingId`
+* **引取通知印刷用ビュー** (T5-05): `Tracking.Views.ClaimNotificationView` 暫定策
+* **確認コード TTL** (T5-11): `ttlSeconds = 86400 (24h)` + `isExpiredAt` + `ConfirmationCodeExpired`
+* **hspec-wai 日本語 body アサーション統一** (T5-12):
+  `test/support/Support/HspecWaiJa` の `bodyContainsText` / `isNotHtmlPage`
+
+#### Changed
+
+* `TrackingRepository` に `updateTransportStatus` を追加 (T5-04)
+* `VerifyClaimAndRegisterCommand.execute` シグネチャに `Verifier` と `TrackingRepository m` を追加
+* `verify` を `verifyWith constantTimeEqText` の薄いラッパに (API 互換維持)
+* `verifyAndConsume` を `verifyAndConsumeWith constantTimeEqText` の薄いラッパに
+* `orchestrating-project` skill の IT 開始 checklist に `dbmate status` を追加 (T5-16)
+
+#### Fixed
+
+* 平文比較 `input /= ccValue cc` を定数時間比較に置き換え (SEC-04 タイミング攻撃対策)
+
+#### ADR
+
+* **ADR-0012** トランザクション境界と Cross-BC 参照ポリシー (採用 2026-07-02, IT6)
+
+#### Tests
+
+* 526 → 535 tests / 0 failures (T5-01〜T5-12 期間中に +21 テスト追加)
+* Tracking Application Command テスト補強 (T5-08): 8 tests
+* POST /login Session Cookie 発行の hspec-wai (T5-10): 4 tests
+
 ### 予定 (v0.3.0-mvp-preview, IT5 完了予定 2026-09-13)
 
 Phase 3 前半 (追跡番号発行・荷役・引取・追跡照会) を Domain → Application → 最小 HTTP 結線 → UI の順に完成させ、プレ MVP デモを可能化する。

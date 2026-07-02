@@ -60,6 +60,11 @@ graph TD
 1. `planning-releases --iteration <N>` でイテレーション計画を作成する
 2. `syncing-github-project --sync` で GitHub に反映する
 3. `tracking-progress --iteration <N>` で初期状態を確認する
+4. **DB migration 適用状況を確認する (T5-16 IT6 追加)**:
+   - `APP_ENV=local dbmate status` で開発 DB (`cargo_tracker_dev`) の未適用 migration を検出する
+   - 差分がある場合は `APP_ENV=local dbmate up` で適用してから開発着手する
+   - 直近 IT の migration が未適用のまま E2E を回すと 500 エラーで発覚する (IT5 実績)。
+     T4-13 の「IT 完了時に確認」と対をなす予防チェック
 
 ### 実行中
 
@@ -73,6 +78,9 @@ graph TD
 3. `planning-releases --report` で完了報告書を作成する
 4. `syncing-github-project --sync` で GitHub に最終同期する
 5. `operating-docs --update` で `docs/index.md` と `mkdocs.yml` を同期する
+6. **DB migration 適用状況を確認する (T4-13)**:
+   `APP_ENV=local dbmate status` で開発 DB / staging DB の未適用 migration が残っていないか確認する。
+   本番デプロイ後のロールバック対象になるため、IT 完了時点で全 migration 適用済を保証する
 
 ## GitHub 同期フロー（--sync）
 
