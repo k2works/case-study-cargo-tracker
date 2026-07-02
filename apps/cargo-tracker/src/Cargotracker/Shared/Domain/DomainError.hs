@@ -114,4 +114,8 @@ data DomainError
     通貨コードは Text で保持する
     -}
     CurrencyRateNotFound !Text !Text
+  | -- IT6 追加 (US26 荷受人引取通知、Notification BC)
+
+    -- | 通知本文または件名が空 (Text = 理由)
+    InvalidNotificationContent !Text
   deriving stock (Eq, Show)
