@@ -77,6 +77,7 @@ import qualified Shipper.Interfaces.ShipperPageApiSpec
 import qualified Shipper.Interfaces.ShipperSearchApiSpec
 import qualified Tracking.Application.MarkClaimedSpec
 import qualified Tracking.Domain.Model.ConfirmationCodeSpec
+import qualified Tracking.Views.ClaimNotificationViewSpec
 
 main :: IO ()
 main = hspec $ do
@@ -196,6 +197,10 @@ main = hspec $ do
   describe
     "Cargotracker.Tracking.Application.markClaimedByBookingId"
     Tracking.Application.MarkClaimedSpec.spec
+
+  describe
+    "Cargotracker.Tracking.Views.ClaimNotificationView"
+    Tracking.Views.ClaimNotificationViewSpec.spec
 
   describe
     "Cargotracker.Booking.Domain.Model.Itinerary"

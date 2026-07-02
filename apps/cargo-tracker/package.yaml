@@ -105,6 +105,7 @@ library:
   - Cargotracker.Tracking.Application.IssueTrackingNumberCommand
   - Cargotracker.Tracking.Application.QueryTrackingByNumberQuery
   - Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
+  - Cargotracker.Tracking.Views.ClaimNotificationView
   - Cargotracker.Tracking.Views.PublicTrackingView
   - Cargotracker.Tracking.Interfaces.PublicTrackingApi
   - Cargotracker.Handling.Domain.Model.HandlingType
