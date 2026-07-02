@@ -107,6 +107,8 @@ library:
   - Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
   - Cargotracker.Pricing.Domain.Model.PricingRule
   - Cargotracker.Pricing.Domain.Model.Value.Cost
+  - Cargotracker.Pricing.Domain.Model.Value.CurrencyRate
+  - Cargotracker.Pricing.Domain.Model.Value.Discount
   - Cargotracker.Tracking.Views.ClaimNotificationView
   - Cargotracker.Tracking.Views.PublicTrackingView
   - Cargotracker.Tracking.Interfaces.PublicTrackingApi

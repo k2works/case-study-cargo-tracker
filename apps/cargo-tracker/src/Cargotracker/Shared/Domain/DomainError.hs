@@ -100,4 +100,10 @@ data DomainError
     InvalidCost !Integer
   | -- | 異通貨同士の演算 (CurrencyMismatch left right)
     CurrencyMismatch !Text !Text
+  | -- | 割引率が 0-100 の範囲外 (Discount)
+    InvalidDiscountRate !Integer
+  | -- | 通貨レートの有効期間が不正 (validFrom >= validTo)
+    InvalidCurrencyRatePeriod
+  | -- | 通貨レートが有効期限外 (期間開始前 or 期限切れ)
+    CurrencyRateExpired
   deriving stock (Eq, Show)
