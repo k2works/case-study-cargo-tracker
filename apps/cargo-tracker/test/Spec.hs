@@ -41,6 +41,7 @@ import qualified Estimation.Domain.Service.RouteEvaluatorPropertiesSpec
 import qualified Estimation.Domain.Service.RouteEvaluatorSpec
 import qualified Estimation.Interfaces.EstimatePageApiSpec
 import qualified Estimation.Views.RouteEvaluationViewSpec
+import qualified Pricing.Domain.Model.Value.CostSpec
 import qualified Routing.Application.ComputeRouteCandidatesQuerySpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
 import qualified Routing.Application.SearchVoyagesQuerySpec
@@ -203,6 +204,10 @@ main = hspec $ do
   describe
     "Cargotracker.Tracking.Application.IssueTrackingNumberCommand"
     Tracking.Application.IssueTrackingNumberCommandSpec.spec
+
+  describe
+    "Cargotracker.Pricing.Domain.Model.Value.Cost"
+    Pricing.Domain.Model.Value.CostSpec.spec
 
   describe
     "Cargotracker.Tracking.Application.QueryTrackingByNumberQuery"

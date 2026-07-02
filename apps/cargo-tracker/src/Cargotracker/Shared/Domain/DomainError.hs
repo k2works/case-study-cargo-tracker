@@ -92,4 +92,12 @@ data DomainError
     HandlingEventTimeInFuture
   | -- | 予約 (Cargo) が見つからない (荷役登録の前提条件)
     HandlingBookingNotFound !Text
+  | -- IT6 追加 (US21 輸送料金算出、Pricing BC)
+
+    -- | 通貨コードが ISO 4217 の 3 文字大文字でない (Currency)
+    InvalidCurrency !Text
+  | -- | 金額が負値、または演算結果が負値になる (Cost)
+    InvalidCost !Integer
+  | -- | 異通貨同士の演算 (CurrencyMismatch left right)
+    CurrencyMismatch !Text !Text
   deriving stock (Eq, Show)
