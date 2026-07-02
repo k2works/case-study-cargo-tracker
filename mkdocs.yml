@@ -98,6 +98,12 @@ nav:
       - イテレーション 3 完了報告書: development/iteration_report-3.md
       - イテレーション 3 ふりかえり: development/retrospective-3.md
       - イテレーション 4 計画: development/iteration_plan-4.md
+      - イテレーション 4 完了報告書: development/iteration_report-4.md
+      - イテレーション 4 ふりかえり: development/retrospective-4.md
+      - イテレーション 5 計画: development/iteration_plan-5.md
+      - イテレーション 5 完了報告書: development/iteration_report-5.md
+      - イテレーション 5 ふりかえり: development/retrospective-5.md
+      - イテレーション 6 計画: development/iteration_plan-6.md
       - 分析フェーズ完了報告書: development/analysis_completion_report.md
   - 運用:
       - 概要: operation/index.md
@@ -108,6 +114,10 @@ nav:
   - ジャーナル:
       - 概要: journal/index.md
       - 2026-06-26: journal/20260626.md
+      - 2026-06-27: journal/20260627.md
+      - 2026-06-29: journal/20260629.md
+      - 2026-07-01: journal/20260701.md
+      - 2026-07-02: journal/20260702.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md

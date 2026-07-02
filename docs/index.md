@@ -81,6 +81,12 @@
 | [IT3 完了報告書](./development/iteration_report-3.md) | 本体 3/3 + Try 4 + レビュー 5 + 横断 2 = 22 SP 完了、ストレッチ 7 SP は IT4 繰越、ADR 3 件起票 |
 | [IT3 ふりかえり (KPT)](./development/retrospective-3.md) | post-nav レビュー H-01〜H-03 即時対応、ShipperRef 導入で arch-check Rule 4 ALLOWLIST 0 件化 |
 | [IT4 計画](./development/iteration_plan-4.md) | US08b/US09/US11/US13 (経路評価→確定→紐付け→予約確定) + IT3 繰越 7 SP + 拡張 2 SP = 20 SP、Release 0.2 リリース |
+| [IT4 完了報告書](./development/iteration_report-4.md) | 本体 4/4 ストーリー完了、19.0 SP (95%)、Ralph Loop 18 反復で消化 |
+| [IT4 ふりかえり (KPT)](./development/retrospective-4.md) | IT4 の Keep/Problem/Try 抽出 |
+| [IT5 計画](./development/iteration_plan-5.md) | Phase 3 前半 US14/15/16/18 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2 = 22 SP |
+| [IT5 完了報告書](./development/iteration_report-5.md) | 本体 4 + task 1.2/3.1-3.3 + Ralph 21 iter、40+ SP、新 BC 2 件 (Tracking/Handling)、ADR 3 件更新、E2E globalSetup 配線 |
+| [IT5 ふりかえり (KPT)](./development/retrospective-5.md) | T5-01〜T5-21 の 21 アクション抽出 (高 10・中 15・低 7) |
+| [IT6 計画](./development/iteration_plan-6.md) | US21 料金算出 + US26 引取通知 + IT5 繰越 8 (T5-01〜T5-10) + プロセス品質 3 + 上流補完 2 = 18 SP、Release 1.0 MVP 目標 |
 
 ### レビュードキュメント
 
