@@ -570,6 +570,7 @@ xychart-beta
 | 2026-06-29 | IT3 完了 (実績 22 SP / 76%、ストレッチ 7 SP は IT4 繰越) を §進捗状況に反映、累計 60 SP / 77% に更新 | Claude |
 | 2026-06-30 | IT4 計画策定 (本体 11 + IT3 繰越 7 + 拡張 2 = 20 SP)、`iteration_plan-4.md` 作成 | Claude |
 | 2026-06-30 | IT4 完了 (実績 19.0 SP / 95%、本体 4 ストーリー全 UI 完成、Ralph Loop 18 反復) を §進捗状況に反映、累計 79 SP / 101% に更新 (計画 78 SP を超過達成) | Claude |
+| 2026-07-02 | IT6 完了後の追補 (US21/US26 のホーム・navbar 導線追加 + Playwright E2E + H-01 反映) をコミット `01659f44`/`c4aeb636`/`5b29c7dd` として反映。SP 変動なし。developing-review レポート `docs/review/it6_nav_e2e_review_20260702.md` を追加 | Claude |
 
 ---
 
