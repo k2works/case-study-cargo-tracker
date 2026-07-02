@@ -8,7 +8,9 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import Test.Hspec
 import Test.Hspec.Wai
-import Test.Hspec.Wai.Matcher (MatchBody (..), MatchHeader (..))
+import Test.Hspec.Wai.Matcher (MatchHeader (..))
+
+import Support.HspecWaiJa (bodyContainsText)
 
 import Cargotracker.Shared.Auth.Application.Ports
   ( PasswordVerifier (..),
@@ -41,12 +43,6 @@ fakeSessionRepo =
     , deleteByToken = \_ -> pure (Right ())
     , touchLastUsed = \_ -> pure (Right ())
     }
-
-bodyContains :: BS.ByteString -> MatchBody
-bodyContains needle = MatchBody $ \_ body ->
-  if needle `isInfixOfBS` LBS.toStrict body
-    then Nothing
-    else Just ("body does not contain: " <> show needle)
 
 isInfixOfBS :: BS.ByteString -> BS.ByteString -> Bool
 isInfixOfBS needle hay = BS.length needle == 0 || any (BS.isPrefixOf needle) (BS.tails hay)
@@ -106,15 +102,15 @@ spec = do
 
         it "本文に Cargo Tracker が含まれる" $
           get "/login"
-            `shouldRespondWith` 200 {matchBody = bodyContains "Cargo Tracker"}
+            `shouldRespondWith` 200 {matchBody = bodyContainsText "Cargo Tracker"}
 
         it "本文に form action='/login' method='post' が含まれる" $
           get "/login"
-            `shouldRespondWith` 200 {matchBody = bodyContains "action=\"/login\""}
+            `shouldRespondWith` 200 {matchBody = bodyContainsText "action=\"/login\""}
 
         it "Bootstrap 5 が読み込まれている" $
           get "/login"
-            `shouldRespondWith` 200 {matchBody = bodyContains "bootstrap@5"}
+            `shouldRespondWith` 200 {matchBody = bodyContainsText "bootstrap@5"}
 
     describe "POST /login (T5-10: Session Cookie 発行)"
       $ with

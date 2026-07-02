@@ -228,6 +228,7 @@ tests:
     - test
     - test/unit
     - test/integration
+    - test/support
     ghc-options:
     - -threaded
     - -rtsopts

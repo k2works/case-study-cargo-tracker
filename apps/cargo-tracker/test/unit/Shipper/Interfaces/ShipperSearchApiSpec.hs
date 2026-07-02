@@ -7,12 +7,10 @@ GET /shippers/search?q=... が、検索結果を Bootstrap list-group 部分 HTM
 -}
 module Shipper.Interfaces.ShipperSearchApiSpec (spec) where
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Network.Wai.Test (simpleBody)
 import Test.Hspec
 import Test.Hspec.Wai
-import Test.Hspec.Wai.Matcher (MatchBody (..))
 
 import Cargotracker.Shipper.Application.Ports (ShipperRepository (..))
 import Cargotracker.Shipper.Domain.Model.Shipper
@@ -24,16 +22,7 @@ import Cargotracker.Shipper.Domain.Model.Value.ContactEmail (ContactEmail (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperId (ShipperId (..))
 import Cargotracker.Shipper.Domain.Model.Value.ShipperName (ShipperName (..))
 import Cargotracker.Shipper.Interfaces.ShipperSearchApi (shipperSearchApp)
-
-bodyContains :: BS.ByteString -> MatchBody
-bodyContains needle = MatchBody $ \_ body ->
-  if needle `isInfixOfBS` LBS.toStrict body
-    then Nothing
-    else Just ("body does not contain: " <> show needle)
-
-isInfixOfBS :: BS.ByteString -> BS.ByteString -> Bool
-isInfixOfBS needle hay =
-  BS.length needle == 0 || any (BS.isPrefixOf needle) (BS.tails hay)
+import Support.HspecWaiJa (bodyContainsText, isNotHtmlPage)
 
 seedShipper :: Shipper
 seedShipper =
@@ -60,18 +49,17 @@ spec = do
       it "ヒットありなら list-group-item に shipperId と email を含む" $
         get "/shippers/search?q=alice"
           `shouldRespondWith` 200
-            { matchBody = bodyContains "SHP-ALICE1 \xe2\x80\x94 alice@example.com"
+            { matchBody = bodyContainsText "SHP-ALICE1 — alice@example.com"
             }
 
       it "結果は完全な HTML ドキュメントではなく部分 HTML を返す (<html> タグなし)" $ do
         res <- get "/shippers/search?q=alice"
         let body = LBS.toStrict (simpleBody res)
-        liftIO $ shouldNotSatisfy body (isInfixOfBS "<html")
-        liftIO $ shouldNotSatisfy body (isInfixOfBS "<!DOCTYPE")
+        liftIO $ body `shouldSatisfy` isNotHtmlPage
 
     with (pure (shipperSearchApp (repoFor []))) $
       it "ヒットなしなら「該当なし」プレースホルダを返す" $
         get "/shippers/search?q=ghost"
           `shouldRespondWith` 200
-            { matchBody = bodyContains "\xe8\xa9\xb2\xe5\xbd\x93\xe3\x81\xaa\xe3\x81\x97"
+            { matchBody = bodyContainsText "該当なし"
             }
