@@ -317,10 +317,12 @@ check_h01_transport_status_ssot() {
   local hits
   hits=$(grep -nE '\bTs(NotReceived|Received|Loaded|OnboardCarrier|Unloaded|AwaitingClaim|Claimed|InException|Unknown)\b' "$file" || true)
   if [ -n "$hits" ]; then
-    echo "⚠️  H-01 注意 (Tracking Context 外で TransportStatus コンストラクタを直接使用): $file"
+    echo "❌ H-01 違反 (Tracking Context 外で TransportStatus コンストラクタを直接使用): $file"
     echo "$hits" | sed 's/^/   /'
-    echo "   → 推奨: TrackingActivity.currentStatus + trackingStatusToTransportStatus 経由で取得"
-    # 現段階では警告のみ (VIOLATIONS を増やさない、IT6 で強制化検討)
+    echo "   → 修正: TrackingActivity.currentStatus + trackingStatusToTransportStatus 経由で取得"
+    echo "   → コメント / docstring 内で "Ts..." を書く場合も避ける (Text 化・別語彙を推奨)"
+    # IT6 T5-04 実装完了 + retrospective で「強制化」判断済み (2026-07-02)
+    VIOLATIONS=$((VIOLATIONS + 1))
   fi
 }
 
@@ -343,6 +345,6 @@ if [ "$VIOLATIONS" -gt 0 ]; then
   exit 1
 fi
 
-echo "✅ アーキテクチャ規約遵守 (Rule 1/2/3/4/6 + T-01/T-02/T-03 全て OK)"
+echo "✅ アーキテクチャ規約遵守 (Rule 1/2/3/4/6 + T-01/T-02/T-03 + H-01 全て OK)"
 echo "   ALLOWLIST: Rule 4=${#ALLOWLIST_RULE4[@]} / Rule 6=${#ALLOWLIST_RULE6[@]} / T-01+T-02=${#ALLOWLIST_T01_T02[@]} (IT5 段階解消)"
-echo "   H-01 (IT5): TransportStatus SSoT は警告のみ、IT6 で強制化検討"
+echo "   H-01 (IT6): TransportStatus SSoT の Tracking Context 外直接使用は違反として強制化 (2026-07-02)"

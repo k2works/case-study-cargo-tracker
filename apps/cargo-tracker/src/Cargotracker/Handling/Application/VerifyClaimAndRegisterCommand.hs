@@ -71,7 +71,10 @@ execute checker codeRepo handlingRepo trackingRepo input = do
   case verifyResult of
     Left err -> pure (Left err)
     Right () ->
-      -- 検証成功 → Claim イベント登録 → Tracking 状態を TsClaimed に反映
+      -- 検証成功 → Claim イベント登録 → Tracking 状態を「引取済」に反映
+      -- (H-01 SSoT: 具体的な TransportStatus 値は Tracking Application の
+      --  markClaimedByBookingId 内でのみ参照する。本 Handling BC からは
+      --  Text ベース Cross-BC helper 呼出のみを行う)
       case mkHandlingActivity
         (inputNow input)
         (inputBookingId input)
@@ -86,7 +89,8 @@ execute checker codeRepo handlingRepo trackingRepo input = do
           case saveResult of
             Left err -> pure (Left err)
             Right () ->
-              -- T5-04 (ADR-0012 決定 4): Tracking.transport_status を TsClaimed に遷移。
+              -- T5-04 (ADR-0012 決定 4): Tracking.transport_status を「引取済」状態に遷移。
               -- Tx 境界 (HandlingPageApi.handlerClaimPost の runInTx) 内で実行される
               -- ため、失敗時は verifyAndConsume の状態更新もロールバックされる。
+              -- 具体的な TransportStatus 値は markClaimedByBookingId が内部で決定する。
               markClaimedByBookingId trackingRepo (inputBookingId input)
