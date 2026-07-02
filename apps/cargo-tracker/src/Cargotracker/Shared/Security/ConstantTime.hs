@@ -12,13 +12,26 @@
 参考: https://codahale.com/a-lesson-in-timing-attacks/
 -}
 module Cargotracker.Shared.Security.ConstantTime
-  ( constantTimeEqText,
+  ( Verifier,
+    constantTimeEqText,
   ) where
 
 import Data.Bits (xor, (.|.))
 import Data.Char (ord)
 import Data.Text (Text)
 import qualified Data.Text as T
+
+{- | シークレット比較関数の型。
+
+Domain 層 (ConfirmationCode.verifyWith) や Application ports
+(verifyAndConsumeWith) が受け取る比較戦略。
+
+- constantTimeEqText: DB が平文シークレットを保存する場合
+- Cargotracker.Shared.Security.BcryptHash.verifySecret: bcrypt hash 保存の場合
+
+Cross-BC で共有される型のため Shared に配置する (arch-check Rule 4)。
+-}
+type Verifier = Text -> Text -> Bool
 
 {- | Text の定数時間等価比較。
 

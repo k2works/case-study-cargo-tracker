@@ -43,6 +43,7 @@ import Cargotracker.Handling.Domain.Model.HandlingType (textToHandlingType)
 import Cargotracker.Handling.Views.ClaimFormView (claimFormPage)
 import Cargotracker.Handling.Views.HandlingFormView (handlingFormPage)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Security.BcryptHash (verifySecret)
 import Cargotracker.Tracking.Application.ConfirmationCodePorts
   ( ConfirmationCodeRepository,
   )
@@ -166,6 +167,7 @@ handlerClaimPost codeRepo handlingRepo form = do
   result <-
     liftIO
       ( VerifyClaim.execute
+          verifySecret
           codeRepo
           handlingRepo
           VerifyClaimInput

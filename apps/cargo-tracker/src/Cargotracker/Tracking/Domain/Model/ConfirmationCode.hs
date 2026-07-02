@@ -14,7 +14,6 @@ T-03 準拠: 全関数は純粋 (`Either DomainError ...`)。bcrypt / randomDigi
 -}
 module Cargotracker.Tracking.Domain.Model.ConfirmationCode
   ( ConfirmationCode (..),
-    Verifier,
     mkConfirmationCode,
     verify,
     verifyWith,
@@ -29,7 +28,7 @@ import qualified Data.Text as T
 import Data.Time (UTCTime)
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shared.Security.ConstantTime (constantTimeEqText)
+import Cargotracker.Shared.Security.ConstantTime (Verifier, constantTimeEqText)
 
 -- | 検証失敗の上限。5 回超過で `ConfirmationCodeMaxAttemptsExceeded` を返す。
 maxAttempts :: Int
@@ -67,8 +66,8 @@ mkConfirmationCode now raw
 - verifySecret (bcrypt): DB が code_hash を保存する場合 (T5-02 Phase 3 移行後)
 
 呼出側 (Repository または Application) が選択して `verifyWith` に渡す。
+Verifier 型自体は Shared/Security/ConstantTime に定義 (Cross-BC 共有カーネル)。
 -}
-type Verifier = Text -> Text -> Bool
 
 {- | 入力コードで検証する。失敗時は理由に応じた `DomainError` を返す。
 

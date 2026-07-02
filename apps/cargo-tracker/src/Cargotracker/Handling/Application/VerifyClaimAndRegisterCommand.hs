@@ -32,9 +32,10 @@ import Cargotracker.Handling.Application.Ports
 import Cargotracker.Handling.Domain.Model.HandlingActivity (mkHandlingActivity)
 import Cargotracker.Handling.Domain.Model.HandlingType (HandlingType (..))
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Security.ConstantTime (Verifier)
 import Cargotracker.Tracking.Application.ConfirmationCodePorts
   ( ConfirmationCodeRepository,
-    verifyAndConsume,
+    verifyAndConsumeWith,
   )
 
 data VerifyClaimInput = VerifyClaimInput
@@ -49,15 +50,19 @@ data VerifyClaimInput = VerifyClaimInput
 
 execute ::
   Monad m =>
+  Verifier ->
   ConfirmationCodeRepository m ->
   HandlingActivityRepository m ->
   VerifyClaimInput ->
   m (Either DomainError ())
-execute codeRepo handlingRepo input = do
-  -- 検証は Tracking Application の verifyAndConsume に委譲 (Rule 4 準拠、
+execute checker codeRepo handlingRepo input = do
+  -- 検証は Tracking Application の verifyAndConsumeWith に委譲 (Rule 4 準拠、
   -- ConfirmationCode Domain 型を Handling BC 内に漏らさない)
+  -- Verifier は wire (HandlingPageApi) で verifySecret (bcrypt) を注入する。
+  -- 単体テスト時は constantTimeEqText を渡せる。
   verifyResult <-
-    verifyAndConsume
+    verifyAndConsumeWith
+      checker
       codeRepo
       (inputBookingId input)
       (inputConfirmationCode input)

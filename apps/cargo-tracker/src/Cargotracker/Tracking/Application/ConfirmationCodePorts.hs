@@ -13,10 +13,9 @@ import Data.Text (Text)
 import Data.Time (UTCTime)
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shared.Security.ConstantTime (constantTimeEqText)
+import Cargotracker.Shared.Security.ConstantTime (Verifier, constantTimeEqText)
 import Cargotracker.Tracking.Domain.Model.ConfirmationCode
   ( ConfirmationCode (..),
-    Verifier,
     markUsed,
     verifyWith,
   )
