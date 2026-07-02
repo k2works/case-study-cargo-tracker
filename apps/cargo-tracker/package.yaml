@@ -111,6 +111,7 @@ library:
   - Cargotracker.Pricing.Domain.Model.Value.Discount
   - Cargotracker.Pricing.Application.Ports
   - Cargotracker.Pricing.Application.CalculateShippingCostCommand
+  - Cargotracker.Pricing.Views.CostCalculationView
   - Cargotracker.Notification.Domain.Model.Notification
   - Cargotracker.Notification.Application.Ports
   - Cargotracker.Notification.Application.SendClaimNotificationCommand
