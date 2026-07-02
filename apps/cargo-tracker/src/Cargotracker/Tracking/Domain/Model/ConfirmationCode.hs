@@ -27,6 +27,7 @@ import qualified Data.Text as T
 import Data.Time (UTCTime)
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Security.ConstantTime (constantTimeEqText)
 
 -- | 検証失敗の上限。5 回超過で `ConfirmationCodeMaxAttemptsExceeded` を返す。
 maxAttempts :: Int
@@ -73,7 +74,7 @@ verify input cc
   | ccAttemptCount cc >= maxAttempts =
       Left (ConfirmationCodeMaxAttemptsExceeded maxAttempts)
   | isJust (ccUsedAt cc) = Left ConfirmationCodeAlreadyUsed
-  | input /= ccValue cc = Left ConfirmationCodeMismatch
+  | not (constantTimeEqText input (ccValue cc)) = Left ConfirmationCodeMismatch
   | otherwise = Right cc
 
 {- | 検証成功後の `ccUsedAt` を確定する。既に使用済の場合は上書きしない
