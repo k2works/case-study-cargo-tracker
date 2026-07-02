@@ -7,52 +7,128 @@
 
 ## [Unreleased]
 
-### 進行中 (v1.0.0-mvp, IT6 予定 Release 1.0 MVP)
+### 一巡完成 (v1.0.0-mvp, IT6 実装完了 2026-07-02)
 
-Phase 3 完了 (Release 1.0 MVP) を目標に、IT5 高優先技術的負債 5 件 (T5-01〜T5-05) を
-完済しつつ、本体 2 ストーリー (US21 輸送料金算出 / US26 荷受人引取通知) を実装する。
+Phase 3 完了 (Release 1.0 MVP) を達成。IT5 高優先技術的負債 5 件 (T5-01〜T5-05) を
+完済し、本体 2 ストーリー (US21 輸送料金算出 / US26 荷受人引取通知) を Domain /
+Application / Infrastructure (Postgres) / Interfaces / Views / Wire の全レイヤで
+一巡完成。Ralph Loop 35 反復で消化した (34 コミット、+139 tests / 502 → 641)。
 
-#### Added (T5-01〜T5-11)
+正式リリースタグ (v1.0.0-mvp) は E2E ハッピーパス追加後の IT7 冒頭で打つ予定。
+
+#### Added (T5-01〜T5-21)
 
 * **Session Cookie 認証 middleware** (T5-01, ADR-0010 段階移行完了):
-  `Cargotracker.Shared.Auth.Interfaces.SessionAuth` (resolveCookieUser / requireCookieAuth /
-  cookieProtectedApp) + hspec-wai 統合テスト
+  `Cargotracker.Shared.Auth.Interfaces.SessionAuth` (resolveCookieUser /
+  requireCookieAuth / cookieProtectedApp) + hspec-wai 統合テスト
 * **定数時間比較ヘルパ** (T5-02 Phase 1, SEC-04):
-  `Cargotracker.Shared.Security.ConstantTime.constantTimeEqText` + `Verifier` 型 (Shared)
+  `Cargotracker.Shared.Security.ConstantTime.constantTimeEqText` +
+  `Verifier` 型 (Shared)
 * **汎用 bcrypt ヘルパ** (T5-02 Phase 2):
   `Cargotracker.Shared.Security.BcryptHash.hashSecret / verifySecret`
 * **ConfirmationCode 検証戦略の注入** (T5-02 Phase 3a): `verifyWith :: Verifier -> ...`
-* **ConfirmationCode bcrypt 保存移行** (T5-02 Phase 3b): migration + Postgres repo hash 切替
+* **ConfirmationCode bcrypt 保存移行** (T5-02 Phase 3b): migration +
+  Postgres repo hash 切替
 * **TxRunner** (T5-03, ADR-0012):
   `Cargotracker.Shared.Application.TxRunner` (RankNTypes newtype) +
   `HandlingPageApi.handlerClaimPost` の runInTx 統合
 * **Handling → Tracking 状態反映** (T5-04): Cross-BC helper `markClaimedByBookingId`
 * **引取通知印刷用ビュー** (T5-05): `Tracking.Views.ClaimNotificationView` 暫定策
-* **確認コード TTL** (T5-11): `ttlSeconds = 86400 (24h)` + `isExpiredAt` + `ConfirmationCodeExpired`
+* **確認コード TTL** (T5-11): `ttlSeconds = 86400 (24h)` + `isExpiredAt` +
+  `ConfirmationCodeExpired`
 * **hspec-wai 日本語 body アサーション統一** (T5-12):
   `test/support/Support/HspecWaiJa` の `bodyContainsText` / `isNotHtmlPage`
+* **US21 輸送料金算出**: Pricing BC 新設 (全 7 phases)
+  * `Cargotracker.Pricing.Domain.Model.Value.Cost` (Cost VO + Currency VO)
+  * `Cargotracker.Pricing.Domain.Model.PricingRule` (PricingRule 集約 +
+    CargoCategory + calculate 関数、100 分率割増: General=100/Refrigerated=130/Hazardous=150)
+  * `Cargotracker.Pricing.Domain.Model.Value.Discount` (0-100 百分率)
+  * `Cargotracker.Pricing.Domain.Model.Value.CurrencyRate` (有効期間付きレート、
+    isRateValidAt / convert)
+  * `Cargotracker.Pricing.Application.CalculateShippingCostCommand` (フロー:
+    findByCurrency → calculate → applyDiscount → convert)
+  * `Cargotracker.Pricing.Views.CostCalculationView` (Lucid + Bootstrap 5)
+  * `Cargotracker.Pricing.Interfaces.CostCalculationPageApi` (Servant GET + POST)
+  * Main.rootApp に `"pricing" : "calculate" : _` 配線
+* **US26 荷受人引取通知**: Notification BC 新設 (全 6 phases)
+  * `Cargotracker.Notification.Domain.Model.Notification` (Notification 集約 +
+    NotificationChannel LogChannel/EmailMockChannel/PrintableHtmlChannel +
+    NotificationStatus Pending/Sent/Failed、markSent idempotent / markFailed Sent 保護)
+  * `Cargotracker.Notification.Application.SendClaimNotificationCommand` (ADR-0012
+    決定 3 準拠、Tx 完了後に deliver + markSent/markFailed で状態反映)
+  * `Cargotracker.Notification.Infrastructure.LogDeliveryPort` (現行は Log 出力、
+    将来 SmtpDeliveryPort に拡張)
+  * `Cargotracker.Notification.Views.NotificationListView` (管理者向けテーブル)
+  * `Cargotracker.Notification.Interfaces.NotificationListPageApi` (Servant GET)
+  * Handling ↔ Notification Cross-BC 統合 (Rule 4 準拠の Text-only helper
+    `sendClaimLogNotificationText` 経由)
+  * Main.rootApp に `"notifications" : _` 配線
+* **Postgres 実装 (Phase 1-2、IT6 計画外の追加達成)**:
+  * Migration 3 本: `20260702130000_create_pricing_rule.sql` /
+    `20260702130100_create_currency_rate.sql` / `20260702140000_create_notification.sql`
+  * `PostgresPricingRuleRepository` / `PostgresCurrencyRateRepository` /
+    `PostgresNotificationRepository` 実装
+  * Main.rootApp の InMemory → Postgres 切替 (InMemory 実装はテストフィクスチャ
+    用途で残置)
 
 #### Changed
 
 * `TrackingRepository` に `updateTransportStatus` を追加 (T5-04)
-* `VerifyClaimAndRegisterCommand.execute` シグネチャに `Verifier` と `TrackingRepository m` を追加
+* `VerifyClaimAndRegisterCommand.execute` シグネチャに `Verifier` と
+  `TrackingRepository m` を追加、さらに Handling → Notification 発火のため wire に
+  `NotificationRepository IO` と `NotificationDeliveryPort IO` を追加
 * `verify` を `verifyWith constantTimeEqText` の薄いラッパに (API 互換維持)
 * `verifyAndConsume` を `verifyAndConsumeWith constantTimeEqText` の薄いラッパに
 * `orchestrating-project` skill の IT 開始 checklist に `dbmate status` を追加 (T5-16)
+* README.md に「環境変数・Cookie 早見表」節を追加 (T5-19):
+  DATABASE_URL / JWT_SECRET / cargo_session (HttpOnly / SameSite=Lax / Max-Age=28800) /
+  ConfirmationCode 定数
+* `Cargotracker.Shared.Domain.DomainError` に IT6 バリアントを追加:
+  `InvalidCurrency / InvalidCost / CurrencyMismatch / InvalidDiscountRate /
+  InvalidCurrencyRatePeriod / CurrencyRateExpired / PricingRuleNotFound /
+  CurrencyRateNotFound / InvalidNotificationContent`
+* domain-model.md / data-model.md / ui_design.md に Pricing BC / Notification BC /
+  pricing_rule / currency_rate / notification テーブル / /pricing/calculate /
+  /notifications 画面を追記 (T6-04 上流ドキュメント同期)
 
 #### Fixed
 
 * 平文比較 `input /= ccValue cc` を定数時間比較に置き換え (SEC-04 タイミング攻撃対策)
+* Handling BC が Notification Domain を直接 import する Rule 4 違反を Text-only
+  helper (`sendClaimLogNotificationText`) 経由に修正
+* TxRunner を Infrastructure から Application 層に移設 (arch-check T-01 準拠)
 
 #### ADR
 
 * **ADR-0012** トランザクション境界と Cross-BC 参照ポリシー (採用 2026-07-02, IT6)
+* **ADR-0010** セッション認証方式 (提案 → **採用 2026-07-02**、AuthProtect middleware
+  実装完了に伴う段階移行記述の修正、T5-21)
 
 #### Tests
 
-* 526 → 535 tests / 0 failures (T5-01〜T5-12 期間中に +21 テスト追加)
+* 502 → **641 tests** / 0 failures (IT6 期間中に +139 テスト追加)
 * Tracking Application Command テスト補強 (T5-08): 8 tests
 * POST /login Session Cookie 発行の hspec-wai (T5-10): 4 tests
+* Pricing BC: Cost 15 + PricingRule 11 + Discount 11 + CurrencyRate 13 +
+  CalculateShippingCostCommand 7 + View 7 + PageApi 7 = **71 tests**
+* Notification BC: Notification 10 + SendClaimNotificationCommand 7 +
+  LogDeliveryPort 3 + ListView 7 + ListPageApi 5 = **32 tests**
+* ConfirmationCode TTL 境界 (T5-11): 8 tests
+* BookingPageApi IORef spy (T5-09): 3 tests
+
+#### IT6 完了報告書 / KPT
+
+* [IT6 完了報告書](docs/development/iteration_report-6.md): 実績 30+ SP (計画 18 SP
+  対比 167%)、Ralph Loop 30 反復消化の記録
+* [IT6 KPT ふりかえり](docs/development/retrospective-6.md): Keep 15 / Problem 10 /
+  Try 12 (T6-01〜T6-12) を抽出、平均ベロシティ 24.8 SP を確定
+
+#### 繰越 (IT7 冒頭必達、T6-01〜T6-03)
+
+* T6-01 Playwright E2E ハッピーパス「予約→追跡→引取→料金」1 本追加
+* T6-02 developing-review (マルチパースペクティブレビュー) 実施
+* T6-03 v1.0.0-mvp git tag 作成 + CHANGELOG [Unreleased] → [1.0.0-mvp] セクション切出し
+* T5-18 katip 正式化 (自作 JSON Lines → katip、IT6 未対応)
 
 ### 予定 (v0.3.0-mvp-preview, IT5 完了予定 2026-09-13)
 
