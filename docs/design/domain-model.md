@@ -1004,6 +1004,198 @@ trackingStatusToTransportStatus UnknownStatus  = TsUnknown
 2. UN/LOCODE は国際規格 (ISO 3166-1 alpha-2 + 3 文字) に従う。`mkUnLocode` で検証
 3. `TransportStatus` と `RoutingStatus` は Booking と Tracking / Handling 間で整合性を保つ (イベント連携で同期)
 
+## 9. Pricing Context (US21, IT6 追加)
+
+### 概要
+
+輸送料金の算出を担当する。Booking BC の Cargo から distance / weight / cargo_category を受け取り、CurrencyRate と Discount を適用して最終 Cost (通貨単位: 最小通貨単位の Integer) を返す。
+
+### ドメインモデル図
+
+```plantuml
+@startuml
+title Pricing Context (US21, IT6)
+
+package "Pricing Context" {
+  class Cost <<data>> {
+    +costAmount : Integer  // 最小通貨単位
+    +costCurrency : Currency
+  }
+  class Currency <<newtype>> {
+    +unCurrency : Text  // ISO 4217 3 文字大文字
+  }
+  class PricingRule <<data, aggregate>> {
+    +prCurrency : Currency
+    +prBaseRate : Integer
+    +prDistanceRatePerKm : Integer
+    +prWeightRatePerKg : Integer
+  }
+  enum CargoCategory {
+    General
+    Hazardous
+    Refrigerated
+  }
+  class Discount <<newtype>> {
+    +unDiscount : Integer  // 0-100 の百分率
+  }
+  class CurrencyRate <<data, entity>> {
+    +crFromCurrency : Currency
+    +crToCurrency : Currency
+    +crRate : Integer
+    +crValidFrom : UTCTime
+    +crValidTo : UTCTime
+  }
+}
+
+PricingRule *-- Currency
+Cost *-- Currency
+CurrencyRate *-- Currency
+
+note bottom of PricingRule
+  calculate :: PricingRule -> CargoCategory
+    -> distance -> weight -> Either DomainError Cost
+  categoryMultiplier100 : General=100, Refrigerated=130, Hazardous=150
+end note
+
+note bottom of CurrencyRate
+  isRateValidAt :: UTCTime -> CurrencyRate -> Bool
+    (validFrom <= now < validTo)
+  convert :: CurrencyRate -> UTCTime -> Cost -> Either DomainError Cost
+end note
+
+note bottom of Discount
+  applyDiscount :: Discount -> Cost -> Cost
+    (cost * (100 - rate) `div` 100)
+end note
+
+@enduml
+```
+
+### ビジネスルール
+
+1. `Cost.costAmount` は最小通貨単位 (JPY=円、USD=セント) の `Integer` で保持し、浮動小数点誤差を回避する
+2. `Currency` は ISO 4217 の 3 文字大文字コード (JPY / USD / EUR 等)、`mkCurrency` で検証
+3. `PricingRule` は通貨単位に 1 ルール (現行実装、シンプル化)。将来カテゴリ別ルールが必要になれば複合キーに拡張する
+4. `calculate` の割増: General=1.0 / Refrigerated=1.3 / Hazardous=1.5 (100 分率で Integer 演算、切り捨て)
+5. `CurrencyRate.convert` は `validFrom <= now < validTo` の境界判定で期限外は `CurrencyRateExpired` を返す
+6. `Discount` は 0-100 の整数百分率のみ受理 (`applyDiscount` で `div 100` の切り捨て)
+7. 異通貨演算 (`addCost` / `subCost` / `convert`) は `CurrencyMismatch` で失敗する
+8. Cross-BC 参照は Text ベース (Rule 4 準拠): Booking.CargoType → Pricing.CargoCategory への変換は Application 層の Cross-BC helper が担う
+
+### DomainError (Pricing BC)
+
+| エラー | 意味 |
+| :--- | :--- |
+| `InvalidCurrency !Text` | ISO 4217 の 3 文字大文字でない通貨コード |
+| `InvalidCost !Integer` | 金額が負値、または演算結果が負値 |
+| `CurrencyMismatch !Text !Text` | 異通貨同士の演算 (from / to 通貨コード) |
+| `InvalidDiscountRate !Integer` | 割引率が 0-100 の範囲外 |
+| `InvalidCurrencyRatePeriod` | `validFrom >= validTo` の不正期間 |
+| `CurrencyRateExpired` | 現在時刻が有効期間外 |
+| `PricingRuleNotFound !Text` | 指定通貨の PricingRule が存在しない (Application) |
+| `CurrencyRateNotFound !Text !Text` | 有効な from → to レートが存在しない (Application) |
+
+### Application コマンド
+
+- **CalculateShippingCostCommand**: 貨物カテゴリ + 距離 + 重量 + 基準通貨 + 対象通貨 + 割引 + 現在時刻 → Cost
+  - フロー: findByCurrency → calculate → applyDiscount → convert (通貨換算が必要な場合)
+
+## 10. Notification Context (US26, IT6 追加)
+
+### 概要
+
+引取通知を担当する。Handling BC の Claim イベント (T5-04 Tracking.TsClaimed 遷移) を購読し、荷受人に確認コード + 引取場所を配信する。配信手段は LogChannel (構造化ログ) / EmailMockChannel (メール送信スタブ) / PrintableHtmlChannel (印刷用 HTML)。
+
+### ドメインモデル図
+
+```plantuml
+@startuml
+title Notification Context (US26, IT6)
+
+package "Notification Context" {
+  class Notification <<data, aggregate>> {
+    +nBookingId : Text
+    +nChannel : NotificationChannel
+    +nContent : NotificationContent
+    +nStatus : NotificationStatus
+    +nCreatedAt : UTCTime
+    +nSentAt : Maybe UTCTime
+    +nFailureReason : Maybe Text
+  }
+  class NotificationContent <<data>> {
+    +ncSubject : Text
+    +ncBody : Text
+  }
+  enum NotificationChannel {
+    LogChannel
+    EmailMockChannel
+    PrintableHtmlChannel
+  }
+  enum NotificationStatus {
+    Pending
+    Sent
+    Failed
+  }
+}
+
+Notification *-- NotificationContent
+Notification *-- NotificationChannel
+Notification *-- NotificationStatus
+
+note bottom of Notification
+  mkNotification :: bid -> channel -> content -> now
+    -> Either DomainError Notification (Pending 初期化)
+  markSent :: UTCTime -> Notification -> Notification (idempotent)
+  markFailed :: Text -> Notification -> Notification (Sent 保護)
+end note
+
+@enduml
+```
+
+### 状態遷移
+
+```plantuml
+@startuml
+[*] --> Pending : mkNotification
+
+Pending --> Sent : markSent (idempotent)
+Pending --> Failed : markFailed reason
+
+Failed --> Failed : markFailed newReason
+Failed --> Sent : markSent (再送成功)
+Sent --> Sent : markSent (idempotent、sentAt 上書きしない)
+Sent --> Sent : markFailed (Sent 保護、無視)
+
+Sent --> [*]
+Failed --> [*] : 手動放棄 or 再送
+@enduml
+```
+
+### ビジネスルール
+
+1. `NotificationContent` は subject / body の非空性を検証 (`mkNotificationContent`)
+2. `Notification` は 1 予約に対して複数発行され得る (再送信・監査履歴)
+3. `markSent` は idempotent (既に Sent なら sentAt を上書きしない、外部システム再送対策)
+4. `markFailed` は Sent 状態からは遷移しない (成功済みを覆さない、Pending / Failed からは新しい理由で更新)
+5. ADR-0012 決定 3 準拠: 配信 (deliver) は Tx 完了後に実行し、Tx ロールバック時の副作用漏出を防ぐ
+6. Cross-BC 参照は Text ベース (Rule 4 準拠): Handling BC からは `sendClaimLogNotificationText` 経由で呼出
+
+### DomainError (Notification BC)
+
+| エラー | 意味 |
+| :--- | :--- |
+| `InvalidNotificationContent !Text` | 通知本文または件名が空 (Text = 理由) |
+| `InvalidBookingId !Text` | 予約 ID が空 (Shared から再利用) |
+
+### Application コマンド + Ports
+
+- **SendClaimNotificationCommand**: bookingId + channel + subject + body + now → Notification + DeliveryResult
+- **NotificationRepository**: saveNotification / findByBookingId / updateNotification
+- **NotificationDeliveryPort**: deliver :: Notification → DeliveryResult
+  - **LogDeliveryPort** (現行実装): 全 Channel で `logInfo` (JSON Lines) 出力
+  - 将来: **SmtpDeliveryPort** (メール送信、Notification BC 本格実装)
+- **Cross-BC helper**: `sendClaimLogNotificationText :: NotificationRepository m → NotificationDeliveryPort m → Text (bid) → Text (subj) → Text (body) → UTCTime → m (Either DomainError DeliveryResult)`
+
 ## ドメインエラー
 
 すべての検証失敗は `DomainError` sum type で表現する。`Either DomainError a` を返す関数を組み合わせる。

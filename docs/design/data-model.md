@@ -643,6 +643,118 @@ CREATE TABLE notification_log (
 CREATE INDEX idx_notif_log_booking_sent ON notification_log (booking_id, sent_at DESC);
 ```
 
+### `pricing_rule` (輸送料金ルール / IT6 US21 追加)
+
+Pricing BC の料金計算式を保持する。通貨単位に 1 ルール (シンプル化)。
+基本計算: `base_rate + distance_rate_per_km * km + weight_rate_per_kg * kg`。
+
+| カラム | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | `PK` | サロゲート |
+| `currency` | `VARCHAR(3)` | `UK, NOT NULL` | ISO 4217 (JPY / USD / EUR 等) |
+| `base_rate` | `BIGINT` | `NOT NULL CHECK (base_rate >= 0)` | 基本料金 (最小通貨単位) |
+| `distance_rate_per_km` | `BIGINT` | `NOT NULL CHECK (...)` | km あたり料金 |
+| `weight_rate_per_kg` | `BIGINT` | `NOT NULL CHECK (...)` | kg あたり料金 |
+| `version` | `INTEGER` | `NOT NULL DEFAULT 0` | 楽観ロック |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | | 監査 |
+
+```sql
+CREATE TABLE pricing_rule (
+    id                     BIGSERIAL PRIMARY KEY,
+    currency               VARCHAR(3) NOT NULL UNIQUE,
+    base_rate              BIGINT NOT NULL CHECK (base_rate >= 0),
+    distance_rate_per_km   BIGINT NOT NULL CHECK (distance_rate_per_km >= 0),
+    weight_rate_per_kg     BIGINT NOT NULL CHECK (weight_rate_per_kg >= 0),
+    version                INTEGER NOT NULL DEFAULT 0,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+**設計判断 (IT6)**: 貨物カテゴリ別のレート (General/Refrigerated/Hazardous) は Domain 層の `categoryMultiplier100` (100/130/150) で百分率乗算するため、テーブル上は通貨単位に 1 レコードで十分。将来カテゴリ別ルールが必要になれば `(currency, cargo_category)` の複合キーに拡張する。
+
+### `currency_rate` (通貨換算レート / IT6 US21 追加)
+
+Pricing BC の通貨換算レート。有効期間 (validFrom / validTo) を持ち、`isRateValidAt` は `validFrom <= now AND now < validTo` の境界判定を行う。
+
+| カラム | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | `PK` | サロゲート |
+| `from_currency` | `VARCHAR(3)` | `NOT NULL` | ISO 4217 |
+| `to_currency` | `VARCHAR(3)` | `NOT NULL, CHECK (from<>to)` | ISO 4217 |
+| `rate` | `BIGINT` | `NOT NULL CHECK (rate >= 0)` | 1 単位の from = rate 単位の to |
+| `valid_from` | `TIMESTAMPTZ` | `NOT NULL` | 有効開始 |
+| `valid_to` | `TIMESTAMPTZ` | `NOT NULL, CHECK (valid_from < valid_to)` | 有効終了 |
+| `version` | `INTEGER` | `NOT NULL DEFAULT 0` | 楽観ロック |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | | 監査 |
+
+インデックス: `idx_currency_rate_lookup (from_currency, to_currency, valid_from)` — レート検索の主経路。
+
+```sql
+CREATE TABLE currency_rate (
+    id                BIGSERIAL PRIMARY KEY,
+    from_currency     VARCHAR(3) NOT NULL,
+    to_currency       VARCHAR(3) NOT NULL,
+    rate              BIGINT NOT NULL CHECK (rate >= 0),
+    valid_from        TIMESTAMPTZ NOT NULL,
+    valid_to          TIMESTAMPTZ NOT NULL,
+    version           INTEGER NOT NULL DEFAULT 0,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (from_currency <> to_currency),
+    CHECK (valid_from < valid_to)
+);
+CREATE INDEX idx_currency_rate_lookup
+  ON currency_rate (from_currency, to_currency, valid_from);
+```
+
+**設計判断 (IT6)**: 同一 (from, to) の組でも期間ごとに複数レコードを保持する (レート改定履歴)。有効期間の重複は Application 層で検証 (トリガー排他制約は将来検討)。
+
+### `notification` (通知 / IT6 US26 追加)
+
+Notification BC の通知レコード。data-model.md §notification_log (US12/US13 用) とは別テーブル (US26 引取通知専用、より新しい設計)。
+
+| カラム | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | `PK` | サロゲート |
+| `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID |
+| `channel` | `VARCHAR(20)` | `NOT NULL CHECK IN ('Log','EmailMock','PrintableHtml')` | 配信手段 |
+| `subject` | `VARCHAR(200)` | `NOT NULL` | 通知件名 |
+| `body` | `TEXT` | `NOT NULL` | 通知本文 |
+| `status` | `VARCHAR(20)` | `NOT NULL DEFAULT 'Pending' CHECK IN ('Pending','Sent','Failed')` | 配信ステータス |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL` | 発行時刻 (アプリ層で設定) |
+| `sent_at` | `TIMESTAMPTZ` | | 配信成功時刻 (NULL = 未配信) |
+| `failure_reason` | `TEXT` | | 配信失敗理由 (NULL = 未失敗) |
+| `version` | `INTEGER` | `NOT NULL DEFAULT 0` | 楽観ロック |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | 監査 |
+
+インデックス: `idx_notification_booking (booking_id, created_at DESC)` — /notifications 照会の主経路。
+
+```sql
+CREATE TABLE notification (
+    id                BIGSERIAL PRIMARY KEY,
+    booking_id        VARCHAR(20) NOT NULL,
+    channel           VARCHAR(20) NOT NULL
+                      CHECK (channel IN ('Log', 'EmailMock', 'PrintableHtml')),
+    subject           VARCHAR(200) NOT NULL,
+    body              TEXT NOT NULL,
+    status            VARCHAR(20) NOT NULL DEFAULT 'Pending'
+                      CHECK (status IN ('Pending', 'Sent', 'Failed')),
+    created_at        TIMESTAMPTZ NOT NULL,
+    sent_at           TIMESTAMPTZ,
+    failure_reason    TEXT,
+    version           INTEGER NOT NULL DEFAULT 0,
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_notification_booking
+  ON notification (booking_id, created_at DESC);
+```
+
+**設計判断 (IT6)**:
+
+- **notification_log との使い分け**: `notification_log` は US12/US13 の payload TEXT 中心の汎用ログ用途で残置、`notification` は US26 の subject / body / channel を持つ構造化通知。将来的に `notification_log` は Deprecated → `notification` に統合する方針
+- **updateNotification の主キー**: 現行は `booking_id + created_at` の複合キーで単一レコードを WHERE 節に指定 (id サロゲート未使用)。ADR-0013 で正式化予定 (IT7 T6-08)
+
 ---
 
 ## postgresql-simple マッピング方針

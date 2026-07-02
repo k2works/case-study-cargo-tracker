@@ -658,6 +658,132 @@ Bootstrap 5 では:
 
 ---
 
+## 料金算出画面 (`/pricing/calculate`, US21 IT6 追加)
+
+輸送料金の算出画面。GET / POST を同一 URL に配置し、成功時は入力フォームに結果カードを追加してレンダリングする (PRG は使用せず、POST 200 で結果表示)。
+
+### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  Cargo Tracker : 輸送料金算出
+  ==
+  {+
+    算出条件
+    ---
+    貨物カテゴリ | ^General            ^
+    距離 (km)     | "10               "
+    重量 (kg)     | "5                "
+    基準通貨      | "JPY"
+    対象通貨      | "JPY"
+    割引率 (%)    | "0                "
+    [ 料金を算出 ]
+  }
+  --
+  {+
+    算出結果
+    ---
+    <b>11250 JPY</b>
+    (data-testid="calc-amount")
+  }
+}
+@endsalt
+```
+
+### 遷移とインタラクション
+
+```plantuml
+@startuml
+title 料金算出画面遷移
+
+[*] --> フォーム表示
+state フォーム表示 : GET /pricing/calculate (200)
+フォーム表示 --> 結果表示 : POST /pricing/calculate (成功)
+フォーム表示 --> エラー表示 : POST /pricing/calculate (入力不正 or DomainError)
+結果表示 --> フォーム表示 : ブラウザ戻る
+エラー表示 --> フォーム表示 : ブラウザ戻る
+
+state 結果表示 : 200 + form + 成功カード\n(calc-result-success)
+state エラー表示 : 200 + form + エラーカード\n(calc-result-error)
+@enduml
+```
+
+### 業務ルール
+
+1. 貨物カテゴリは `General` / `Refrigerated` / `Hazardous` の 3 種のみ受理 (未対応値は「未対応の貨物カテゴリ: X」エラー)
+2. 距離 / 重量 / 割引率は 0 以上の整数 (小数点不可、フォームで `min=0` + `pattern` で制約)
+3. 基準通貨 / 対象通貨は ISO 4217 の 3 文字大文字 (`pattern="[A-Z]{3}"`)
+4. 割引率は 0-100 の整数 (フォームで `max=100`)
+5. DomainError (PricingRuleNotFound / CurrencyRateNotFound / CurrencyRateExpired 等) は 500 でなく 200 + エラー表示で返す (UX 重視)
+
+### E2E テスト用属性
+
+- `data-testid="calc-result-success"`: 算出成功カードのルート
+- `data-testid="calc-amount"`: 表示金額
+- `data-testid="calc-result-error"`: 算出失敗カードのルート
+
+---
+
+## 通知一覧画面 (`/notifications?bookingId=X`, US26 IT6 追加)
+
+管理者ビューで予約 ID 別の通知履歴をテーブル表示する。
+
+### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  Cargo Tracker : 通知一覧
+  ==
+  予約 ID: BK-A1B2C3 (data-testid="booking-id")
+  ---
+  {#
+    作成時刻                | 件名             | 配信手段     | 状態    | 配信時刻                | 失敗理由
+    2026-07-02 12:00:00 UTC | 引取完了のお知らせ | Log         | Sent    | 2026-07-02 12:00:10 UTC | -
+    2026-07-02 12:00:00 UTC | 引取完了のお知らせ | EmailMock   | Failed  | -                        | SMTP timeout
+  }
+}
+@endsalt
+```
+
+### 遷移とインタラクション
+
+```plantuml
+@startuml
+title 通知一覧画面遷移
+
+[*] --> プロンプト表示 : bookingId 未指定
+state プロンプト表示 : GET /notifications\n(empty-state + hint)
+プロンプト表示 --> 空表示 : ?bookingId= 追加
+プロンプト表示 --> 一覧表示 : ?bookingId=BK-XXXX
+
+state 空表示 : GET /notifications?bookingId=BK-EMPTY\n(200 + empty-state)
+state 一覧表示 : GET /notifications?bookingId=BK-A1B2C3\n(200 + notif-table)
+
+一覧表示 --> [*]
+空表示 --> [*]
+@enduml
+```
+
+### 業務ルール
+
+1. `bookingId` クエリパラメータが未指定または空文字の場合、プロンプト empty-state を表示 (「bookingId が未指定です」)
+2. 該当予約の通知履歴が 0 件なら empty-state (「この予約の通知履歴はまだありません」)
+3. 履歴ありならテーブル (6 列: 作成時刻 / 件名 / 配信手段 / 状態 / 配信時刻 / 失敗理由) をレンダリング
+4. 状態バッジ: Sent=`bg-success` (緑) / Failed=`bg-danger` (赤) / Pending=`bg-secondary` (灰)
+5. 履歴は `created_at DESC` で並び (新しい通知が上)
+6. 認証は現行未実装だが、将来的に管理者ロール (Admin) の AuthProtect を適用予定 (IT7 T6-09)
+
+### E2E テスト用属性
+
+- `data-testid="booking-id"`: 予約 ID の表示要素
+- `data-testid="empty-state"`: 履歴なし時のカード
+- `data-testid="notif-table"`: 通知テーブル本体
+- `data-testid="notif-row"`: 各通知行 (件数カウント用)
+
+---
+
 ## 共通パンくず (Breadcrumb) 規約 (L-10 反映)
 
 階層深い画面 (予約詳細 → 経路割り当て、貨物追跡 → 追跡詳細 等) で戻り動線が画面ごとにブレないよう、**共通パンくずコンポーネント** を全画面で統一する。
