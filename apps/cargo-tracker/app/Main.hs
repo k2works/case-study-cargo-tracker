@@ -63,6 +63,9 @@ import Cargotracker.Notification.Infrastructure.InMemoryNotificationRepository
 import Cargotracker.Notification.Infrastructure.LogDeliveryPort
   ( newLogDeliveryPort,
   )
+import Cargotracker.Notification.Interfaces.NotificationListPageApi
+  ( notificationListApp,
+  )
 import Cargotracker.Pricing.Infrastructure.InMemoryCurrencyRateRepository
   ( newInMemoryCurrencyRateRepository,
   )
@@ -196,6 +199,11 @@ rootApp conn jwtSecret jwtTtl req respond =
         newInMemoryCurrencyRateRepository
         req
         respond
+    "notifications" : _ -> do
+      -- US26 通知一覧画面。都度 InMemory 生成のため各リクエストで空になる。
+      -- Handling.claim の通知発火と共有するには Postgres 実装への移行が必要。
+      notifRepo <- newInMemoryNotificationRepository
+      notificationListApp notifRepo req respond
     _ ->
       respond $
         responseLBS

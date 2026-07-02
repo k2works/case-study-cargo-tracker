@@ -44,6 +44,7 @@ import qualified Estimation.Views.RouteEvaluationViewSpec
 import qualified Notification.Application.SendClaimNotificationCommandSpec
 import qualified Notification.Domain.Model.NotificationSpec
 import qualified Notification.Infrastructure.LogDeliveryPortSpec
+import qualified Notification.Interfaces.NotificationListPageApiSpec
 import qualified Notification.Views.NotificationListViewSpec
 import qualified Pricing.Application.CalculateShippingCostCommandSpec
 import qualified Pricing.Domain.Model.PricingRuleSpec
@@ -258,6 +259,10 @@ main = hspec $ do
   describe
     "Cargotracker.Notification.Views.NotificationListView"
     Notification.Views.NotificationListViewSpec.spec
+
+  describe
+    "Cargotracker.Notification.Interfaces.NotificationListPageApi"
+    Notification.Interfaces.NotificationListPageApiSpec.spec
 
   describe
     "Cargotracker.Tracking.Application.QueryTrackingByNumberQuery"

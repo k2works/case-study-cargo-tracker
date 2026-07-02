@@ -121,6 +121,7 @@ library:
   - Cargotracker.Notification.Infrastructure.LogDeliveryPort
   - Cargotracker.Notification.Infrastructure.InMemoryNotificationRepository
   - Cargotracker.Notification.Views.NotificationListView
+  - Cargotracker.Notification.Interfaces.NotificationListPageApi
   - Cargotracker.Tracking.Views.ClaimNotificationView
   - Cargotracker.Tracking.Views.PublicTrackingView
   - Cargotracker.Tracking.Interfaces.PublicTrackingApi
