@@ -4,11 +4,9 @@ import { test, expect } from '@playwright/test';
 // pricing_rule / currency_rate はマイグレーションで JPY / USD シード投入済み。
 
 test.describe('料金算出 (US21, IT6)', () => {
-  test('ホームから遷移でき、フォームが表示される', async ({ page }) => {
-    await page.goto('/');
-    const card = page.getByRole('link', { name: /送料計算/ });
-    await expect(card).toBeVisible();
-    await card.click();
+  // H-01 (2026-07-02): 送料計算は未認証ホームから非露出のため、直接遷移で導線を検証する。
+  test('/pricing/calculate でフォームが表示される', async ({ page }) => {
+    await page.goto('/pricing/calculate');
     await expect(page).toHaveURL(/\/pricing\/calculate$/);
     await expect(page.locator('#cargoCategory')).toBeVisible();
     await expect(page.locator('#distanceKm')).toBeVisible();

@@ -4,11 +4,9 @@ import { test, expect } from '@playwright/test';
 // bookingId 未指定時は案内メッセージ、指定時は該当通知一覧を表示。
 
 test.describe('通知一覧 (US26, IT6)', () => {
-  test('ホームから遷移できる', async ({ page }) => {
-    await page.goto('/');
-    const card = page.getByRole('link', { name: /通知一覧/ });
-    await expect(card).toBeVisible();
-    await card.click();
+  // H-01 (2026-07-02): 通知一覧は未認証ホームから非露出のため、直接遷移で検証する。
+  test('/notifications に直接遷移できる', async ({ page }) => {
+    await page.goto('/notifications');
     await expect(page).toHaveURL(/\/notifications$/);
   });
 
