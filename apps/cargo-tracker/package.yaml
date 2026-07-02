@@ -112,6 +112,8 @@ library:
   - Cargotracker.Pricing.Application.Ports
   - Cargotracker.Pricing.Application.CalculateShippingCostCommand
   - Cargotracker.Notification.Domain.Model.Notification
+  - Cargotracker.Notification.Application.Ports
+  - Cargotracker.Notification.Application.SendClaimNotificationCommand
   - Cargotracker.Tracking.Views.ClaimNotificationView
   - Cargotracker.Tracking.Views.PublicTrackingView
   - Cargotracker.Tracking.Interfaces.PublicTrackingApi
