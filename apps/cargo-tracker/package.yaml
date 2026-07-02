@@ -109,6 +109,8 @@ library:
   - Cargotracker.Pricing.Domain.Model.Value.Cost
   - Cargotracker.Pricing.Domain.Model.Value.CurrencyRate
   - Cargotracker.Pricing.Domain.Model.Value.Discount
+  - Cargotracker.Pricing.Application.Ports
+  - Cargotracker.Pricing.Application.CalculateShippingCostCommand
   - Cargotracker.Tracking.Views.ClaimNotificationView
   - Cargotracker.Tracking.Views.PublicTrackingView
   - Cargotracker.Tracking.Interfaces.PublicTrackingApi

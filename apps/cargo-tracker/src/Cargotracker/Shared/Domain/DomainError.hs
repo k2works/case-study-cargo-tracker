@@ -106,4 +106,12 @@ data DomainError
     InvalidCurrencyRatePeriod
   | -- | 通貨レートが有効期限外 (期間開始前 or 期限切れ)
     CurrencyRateExpired
+  | {- | 指定通貨の PricingRule が存在しない (US21 Application)。
+    通貨コードは Text で保持し Shared が Pricing BC 型に依存しないようにする
+    -}
+    PricingRuleNotFound !Text
+  | {- | from → to の有効な通貨レートが存在しない (US21 Application)。
+    通貨コードは Text で保持する
+    -}
+    CurrencyRateNotFound !Text !Text
   deriving stock (Eq, Show)
