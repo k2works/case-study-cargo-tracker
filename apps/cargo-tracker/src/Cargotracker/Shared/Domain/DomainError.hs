@@ -76,6 +76,8 @@ data DomainError
     ConfirmationCodeAlreadyUsed
   | -- | 確認コード試行回数の上限超過 (Int = 上限値)
     ConfirmationCodeMaxAttemptsExceeded !Int
+  | -- | 確認コードの有効期限切れ (T5-11, IT6)
+    ConfirmationCodeExpired
   | -- IT5 追加 (US14 追跡番号)
 
     -- | 追跡番号の形式が不正 (8 文字英数大文字以外)

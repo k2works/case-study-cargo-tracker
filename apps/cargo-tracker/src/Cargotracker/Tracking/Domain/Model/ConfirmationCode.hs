@@ -17,15 +17,17 @@ module Cargotracker.Tracking.Domain.Model.ConfirmationCode
     mkConfirmationCode,
     verify,
     verifyWith,
+    isExpiredAt,
     markUsed,
     maxAttempts,
+    ttlSeconds,
   ) where
 
 import Data.Char (isDigit)
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time (UTCTime)
+import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shared.Security.ConstantTime (Verifier, constantTimeEqText)
@@ -33,6 +35,15 @@ import Cargotracker.Shared.Security.ConstantTime (Verifier, constantTimeEqText)
 -- | 検証失敗の上限。5 回超過で `ConfirmationCodeMaxAttemptsExceeded` を返す。
 maxAttempts :: Int
 maxAttempts = 5
+
+{- | 確認コードの有効期限 (秒)。発行時刻から本値を経過したら
+`ConfirmationCodeExpired` として扱う。
+
+24 時間 = 86400 秒。荷主 → 荷受人へ引取通知を配信し、当日から翌日にかけて
+引取窓口を訪れる想定期間として設定。IT7 以降で環境変数化を検討する。
+-}
+ttlSeconds :: NominalDiffTime
+ttlSeconds = 24 * 60 * 60
 
 data ConfirmationCode = ConfirmationCode
   { ccValue :: !Text
@@ -69,32 +80,45 @@ mkConfirmationCode now raw
 Verifier 型自体は Shared/Security/ConstantTime に定義 (Cross-BC 共有カーネル)。
 -}
 
+{- | 現在時刻 `now` において確認コードが有効期限切れかを判定する純粋関数 (T5-11)。
+
+境界: `now - ccIssuedAt` が `ttlSeconds` 以上なら True。
+`>=` を使うため、ちょうど TTL 経過時点でも期限切れと判定する。
+-}
+isExpiredAt :: UTCTime -> ConfirmationCode -> Bool
+isExpiredAt now cc = diffUTCTime now (ccIssuedAt cc) >= ttlSeconds
+
 {- | 入力コードで検証する。失敗時は理由に応じた `DomainError` を返す。
 
-規約:
-  * `ccAttemptCount` が上限に達している場合は `ConfirmationCodeMaxAttemptsExceeded`
-  * 既に使用済の場合は `ConfirmationCodeAlreadyUsed`
-  * 検証関数が False を返した場合は `ConfirmationCodeMismatch`
+規約 (優先順位):
+  1. `ccAttemptCount` が上限に達している場合は `ConfirmationCodeMaxAttemptsExceeded`
+  2. 既に使用済の場合は `ConfirmationCodeAlreadyUsed`
+  3. 発行から `ttlSeconds` を経過している場合は `ConfirmationCodeExpired` (T5-11)
+  4. 検証関数が False を返した場合は `ConfirmationCodeMismatch`
 
 呼び出し元 (Application 層) は失敗時に `ccAttemptCount` を +1 して永続化する
 責務を負う (Domain 純粋関数のため副作用は返さない)。
 -}
-verifyWith :: Verifier -> Text -> ConfirmationCode -> Either DomainError ConfirmationCode
-verifyWith checker input cc
+verifyWith :: Verifier -> UTCTime -> Text -> ConfirmationCode -> Either DomainError ConfirmationCode
+verifyWith checker now input cc
   | ccAttemptCount cc >= maxAttempts =
       Left (ConfirmationCodeMaxAttemptsExceeded maxAttempts)
   | isJust (ccUsedAt cc) = Left ConfirmationCodeAlreadyUsed
+  | isExpiredAt now cc = Left ConfirmationCodeExpired
   | not (checker input (ccValue cc)) = Left ConfirmationCodeMismatch
   | otherwise = Right cc
 
-{- | `verifyWith constantTimeEqText` のショートカット。
+{- | `verifyWith constantTimeEqText` のショートカット (発行直後を想定した現在時刻 = 発行時刻)。
 
 DB が平文 6 桁数字を保存している IT5 実装からの互換性維持のため残す。
 T5-02 Phase 3 (Repository の code_hash 移行) 完了後は
 `verifyWith verifySecret` に切り替える。
+
+T5-11 対応で TTL 判定用の `now` は `ccIssuedAt` をそのまま使う (未経過扱い)。
+時刻を明示したい呼出は `verifyWith constantTimeEqText now input cc` を推奨。
 -}
 verify :: Text -> ConfirmationCode -> Either DomainError ConfirmationCode
-verify = verifyWith constantTimeEqText
+verify input cc = verifyWith constantTimeEqText (ccIssuedAt cc) input cc
 
 {- | 検証成功後の `ccUsedAt` を確定する。既に使用済の場合は上書きしない
 (実質べき等)。

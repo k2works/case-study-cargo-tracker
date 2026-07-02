@@ -48,7 +48,8 @@ verifyAndConsumeWith checker repo bid inputCode now = do
   case mExisting of
     Nothing -> pure (Left (HandlingBookingNotFound bid))
     Just cc ->
-      case verifyWith checker inputCode cc of
+      -- T5-11 (IT6): TTL 判定用に now を verifyWith に渡す。
+      case verifyWith checker now inputCode cc of
         Left err -> do
           _ <-
             updateAfterVerify

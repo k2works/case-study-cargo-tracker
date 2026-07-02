@@ -7,16 +7,18 @@ module Tracking.Domain.Model.ConfirmationCodeSpec (spec) where
 
 import Data.Either (fromRight)
 import Data.Maybe (isNothing)
-import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
+import Data.Time (UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import Test.Hspec
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shared.Security.BcryptHash (hashSecret, verifySecret)
 import Cargotracker.Tracking.Domain.Model.ConfirmationCode
   ( ConfirmationCode (..),
+    isExpiredAt,
     markUsed,
     maxAttempts,
     mkConfirmationCode,
+    ttlSeconds,
     verify,
     verifyWith,
   )
@@ -91,20 +93,63 @@ spec = describe "Cargotracker.Tracking.Domain.Model.ConfirmationCode (US16)" $ d
     it "bcrypt ハッシュ保存の ConfirmationCode を平文で検証成功" $ do
       hashed <- hashSecret "123456"
       let cc = sampleCode {ccValue = hashed}
-      verifyWith verifySecret "123456" cc `shouldSatisfy` \case
+      verifyWith verifySecret sampleNow "123456" cc `shouldSatisfy` \case
         Right c -> ccValue c == hashed
         _ -> False
 
     it "bcrypt ハッシュ保存で平文が異なれば Mismatch" $ do
       hashed <- hashSecret "123456"
       let cc = sampleCode {ccValue = hashed}
-      verifyWith verifySecret "999999" cc `shouldBe` Left ConfirmationCodeMismatch
+      verifyWith verifySecret sampleNow "999999" cc `shouldBe` Left ConfirmationCodeMismatch
 
     it "bcrypt モードでも attemptCount 上限は Mismatch より優先" $ do
       hashed <- hashSecret "123456"
       let cc = sampleCode {ccValue = hashed, ccAttemptCount = maxAttempts}
-      verifyWith verifySecret "123456" cc
+      verifyWith verifySecret sampleNow "123456" cc
         `shouldBe` Left (ConfirmationCodeMaxAttemptsExceeded maxAttempts)
+
+  describe "TTL 境界 (T5-11, IT6)" $ do
+    let issued = sampleNow -- 2026-07-01 00:00:00 UTC
+        beforeTtl = addUTCTime (ttlSeconds - 1) issued
+        atTtl = addUTCTime ttlSeconds issued
+        afterTtl = addUTCTime (ttlSeconds + 1) issued
+        cc = sampleCode {ccIssuedAt = issued}
+
+    describe "isExpiredAt (純粋境界判定)" $ do
+      it "発行時刻ちょうどでは未期限切れ" $
+        isExpiredAt issued cc `shouldBe` False
+
+      it "TTL の 1 秒手前では未期限切れ" $
+        isExpiredAt beforeTtl cc `shouldBe` False
+
+      it "TTL ちょうどで期限切れ (境界は >= で扱う)" $
+        isExpiredAt atTtl cc `shouldBe` True
+
+      it "TTL を過ぎたら期限切れ" $
+        isExpiredAt afterTtl cc `shouldBe` True
+
+    describe "verifyWith の TTL 統合" $ do
+      let checker input value = input == value
+      it "TTL 内の一致入力は Right" $
+        verifyWith checker beforeTtl "123456" cc
+          `shouldSatisfy` \case
+            Right _ -> True
+            _ -> False
+
+      it "TTL 切れの一致入力は ConfirmationCodeExpired" $
+        verifyWith checker atTtl "123456" cc `shouldBe` Left ConfirmationCodeExpired
+
+      it "TTL 切れでも Mismatch より Expired が優先" $
+        verifyWith checker afterTtl "999999" cc `shouldBe` Left ConfirmationCodeExpired
+
+      it "使用済の判定は Expired より優先" $ do
+        let usedCc = markUsed sampleLater cc
+        verifyWith checker afterTtl "123456" usedCc
+          `shouldBe` Left ConfirmationCodeAlreadyUsed
+
+  describe "ttlSeconds" $
+    it "24 時間 = 86400 秒" $
+      ttlSeconds `shouldBe` 24 * 60 * 60
 
   describe "maxAttempts" $
     it "定数 5 (SEC-04 準拠)" $
