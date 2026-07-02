@@ -115,6 +115,7 @@ library:
   - Cargotracker.Pricing.Interfaces.CostCalculationPageApi
   - Cargotracker.Pricing.Infrastructure.InMemoryPricingRuleRepository
   - Cargotracker.Pricing.Infrastructure.InMemoryCurrencyRateRepository
+  - Cargotracker.Pricing.Infrastructure.PostgresPricingRuleRepository
   - Cargotracker.Notification.Domain.Model.Notification
   - Cargotracker.Notification.Application.Ports
   - Cargotracker.Notification.Application.SendClaimNotificationCommand
