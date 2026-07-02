@@ -113,6 +113,8 @@ library:
   - Cargotracker.Pricing.Application.CalculateShippingCostCommand
   - Cargotracker.Pricing.Views.CostCalculationView
   - Cargotracker.Pricing.Interfaces.CostCalculationPageApi
+  - Cargotracker.Pricing.Infrastructure.InMemoryPricingRuleRepository
+  - Cargotracker.Pricing.Infrastructure.InMemoryCurrencyRateRepository
   - Cargotracker.Notification.Domain.Model.Notification
   - Cargotracker.Notification.Application.Ports
   - Cargotracker.Notification.Application.SendClaimNotificationCommand

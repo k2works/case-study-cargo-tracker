@@ -63,6 +63,15 @@ import Cargotracker.Notification.Infrastructure.InMemoryNotificationRepository
 import Cargotracker.Notification.Infrastructure.LogDeliveryPort
   ( newLogDeliveryPort,
   )
+import Cargotracker.Pricing.Infrastructure.InMemoryCurrencyRateRepository
+  ( newInMemoryCurrencyRateRepository,
+  )
+import Cargotracker.Pricing.Infrastructure.InMemoryPricingRuleRepository
+  ( newInMemoryPricingRuleRepository,
+  )
+import Cargotracker.Pricing.Interfaces.CostCalculationPageApi
+  ( costCalculationApp,
+  )
 import Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ( newPostgresVoyageRepository,
   )
@@ -179,6 +188,14 @@ rootApp conn jwtSecret jwtTtl req respond =
       -- 現状は暫定策として都度生成。永続化が必要になったら Postgres に切替。
       notifRepo <- newInMemoryNotificationRepository
       handlingPageApp txRunner handlingRepo codeRepo trackingRepo notifRepo newLogDeliveryPort req respond
+    "pricing" : "calculate" : _ ->
+      -- US21 料金算出画面。InMemory PricingRule / CurrencyRate (デモ用固定値)。
+      -- Postgres 実装への切替は Interfaces シグネチャ変更なしで可能。
+      costCalculationApp
+        newInMemoryPricingRuleRepository
+        newInMemoryCurrencyRateRepository
+        req
+        respond
     _ ->
       respond $
         responseLBS
