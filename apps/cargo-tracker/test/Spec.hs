@@ -49,6 +49,7 @@ import qualified Pricing.Domain.Model.PricingRuleSpec
 import qualified Pricing.Domain.Model.Value.CostSpec
 import qualified Pricing.Domain.Model.Value.CurrencyRateSpec
 import qualified Pricing.Domain.Model.Value.DiscountSpec
+import qualified Pricing.Interfaces.CostCalculationPageApiSpec
 import qualified Pricing.Views.CostCalculationViewSpec
 import qualified Routing.Application.ComputeRouteCandidatesQuerySpec
 import qualified Routing.Application.RegisterVoyageCommandSpec
@@ -236,6 +237,10 @@ main = hspec $ do
   describe
     "Cargotracker.Pricing.Views.CostCalculationView"
     Pricing.Views.CostCalculationViewSpec.spec
+
+  describe
+    "Cargotracker.Pricing.Interfaces.CostCalculationPageApi"
+    Pricing.Interfaces.CostCalculationPageApiSpec.spec
 
   describe
     "Cargotracker.Notification.Domain.Model.Notification"
