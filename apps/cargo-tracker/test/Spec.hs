@@ -65,6 +65,7 @@ import qualified Shared.Auth.Interfaces.SessionAuthMiddlewareSpec
 import qualified Shared.Auth.Interfaces.SessionAuthSpec
 import qualified Shared.Domain.Common.UnLocodeSpec
 import qualified Shared.Infrastructure.IdGeneratorSpec
+import qualified Shared.Security.BcryptHashSpec
 import qualified Shared.Security.ConstantTimeSpec
 import qualified Shared.Web.LayoutSpec
 import qualified Shipper.Application.RegisterShipperCommandSpec
@@ -137,6 +138,10 @@ main = hspec $ do
   describe
     "Cargotracker.Shared.Security.ConstantTime"
     Shared.Security.ConstantTimeSpec.spec
+
+  describe
+    "Cargotracker.Shared.Security.BcryptHash"
+    Shared.Security.BcryptHashSpec.spec
 
   describe
     "Cargotracker.Shared.Infrastructure.IdGenerator"
