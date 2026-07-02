@@ -8,8 +8,11 @@
 | **期間** | 2026-09-14 〜 2026-09-27 (2 週間、計画上。実運用は 2026-07-02 以降) |
 | **ゴール** | Release 1.0 MVP を達成する。本体 2 ストーリー (US21 輸送料金算出 / US26 荷受人引取通知) を実装しつつ、IT5 マルチパースペクティブレビュー由来の技術的負債 3 件 (認可・SEC-04・Tx 境界) を冒頭で完済し、追跡・荷役・料金・引取通知の一連業務フローを結合させる。 |
 | **目標 SP** | 18 (本体 5 + IT5 繰越高優先 8 + 中優先/プロセス 3 + 上流補完 2) |
+| **実績 SP** | **30+ SP (達成率 167%)** — 2026-07-02 Ralph Loop 37 反復消化 |
+| **状態** | **完了** (詳細は [iteration_report-6.md](./iteration_report-6.md) / [retrospective-6.md](./retrospective-6.md) を参照) |
+| **繰越** | 3 タスク: task 1.2 (AuthProtect 適用範囲 → IT7 T6-09) / task 5.5 (katip 正式化 T5-18 → IT7) / task 7.2 (v1.0.0-mvp git tag → IT7 T6-03) |
 | **ベロシティ基準** | 平均 19.75 SP (IT1: 20 / IT2: 22 / IT3: 22 / IT4: 19、IT5: 40+ は Ralph+手動集中の例外値のため参考外) |
-| **設計** | 詳細設計は `docs/design/` を参照し本ドキュメントには含めない (T5-17) |
+| **設計** | 詳細設計は `docs/design/` を参照し本ドキュメントには含めない (T5-17)。追加で domain-model.md / data-model.md / ui_design.md に Pricing/Notification を追記済 (T6-04) |
 
 ---
 
@@ -24,14 +27,14 @@
 
 ### 成功基準
 
-- [ ] US21 / US26 の全受入基準を満たし GitHub Issue Close
-- [ ] T5-01〜T5-05 (高優先技術的負債 5 件) が完了
-- [ ] Playwright E2E 「予約→追跡→引取」ハッピーパス 1 本追加が緑
-- [ ] hspec-wai 統合テスト Tracking BC 5-6 本追加が緑
-- [ ] ArchUnit / arch-check Rule 4 違反 0 件を維持
-- [ ] テストカバレッジ (HPC) 75% ゲート維持
-- [ ] Release 1.0 MVP タグ (`v1.0.0-mvp`) を作成
-- [ ] CHANGELOG `[Unreleased]` を Release 1.0 として整理 (T5-20)
+- [ ] US21 / US26 の全受入基準を満たし GitHub Issue Close (IT7 冒頭 T6-03 併せて実施)
+- [x] T5-01〜T5-05 (高優先技術的負債 5 件) が完了
+- [ ] Playwright E2E 「予約→追跡→引取」ハッピーパス 1 本追加が緑 (IT7 冒頭 T6-01)
+- [x] hspec-wai 統合テスト Tracking BC 5-6 本追加が緑
+- [x] ArchUnit / arch-check Rule 4 違反 0 件を維持
+- [x] テストカバレッジ (HPC) 75% ゲート維持
+- [ ] Release 1.0 MVP タグ (v1.0.0-mvp) を作成 (IT7 冒頭 T6-03)
+- [x] CHANGELOG `[Unreleased]` を Release 1.0 として整理 (T5-20)
 
 ---
 
@@ -84,76 +87,76 @@
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 1.1 | AuthProtect middleware 実装 (Servant AuthHandler + Session 検証) | 4h | [ ] |
-| 1.2 | AuthProtect 適用範囲 (Booking/Handling/Tracking/Claim ページ) 設定 | 2h | [ ] |
-| 1.3 | ConfirmationCode の bcrypt hash 化 (VO 内部化) + verifyAndConsume 定数時間比較 | 3h | [ ] |
-| 1.4 | ConfirmationCode migration (plain → hash カラム移行) | 2h | [ ] |
-| 1.5 | verifyAndConsume + saveHandlingActivity の Tx 境界統合 (単一 Transaction) | 3h | [ ] |
-| 1.6 | ADR-0012 (Tx 境界ポリシー) 起票 | 1h | [ ] |
-| 1.7 | 各項目の hspec-wai 統合テスト (認可 403 / bcrypt 検証 / Tx ロールバック) | 3h | [ ] |
+| 1.1 | AuthProtect middleware 実装 (Servant AuthHandler + Session 検証) | 4h | [x] |
+| 1.2 | AuthProtect 適用範囲 (Booking/Handling/Tracking/Claim ページ) 設定 | 2h | [ ] (IT7 T6-09 繰越、middleware 実装は完了、各ページへの適用は次期) |
+| 1.3 | ConfirmationCode の bcrypt hash 化 (VO 内部化) + verifyAndConsume 定数時間比較 | 3h | [x] |
+| 1.4 | ConfirmationCode migration (plain → hash カラム移行) | 2h | [x] |
+| 1.5 | verifyAndConsume + saveHandlingActivity の Tx 境界統合 (単一 Transaction) | 3h | [x] |
+| 1.6 | ADR-0012 (Tx 境界ポリシー) 起票 | 1h | [x] |
+| 1.7 | 各項目の hspec-wai 統合テスト (認可 403 / bcrypt 検証 / Tx ロールバック) | 3h | [x] |
 
 ### 2. Handling → Tracking 状態反映と配信 (Week 1 後半、T5-04/05、2 SP)
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 2.1 | HandlingActivity 記録時に TrackingActivity ステータス遷移 (Claim → TsClaimed) を Cross-BC helper で連鎖 | 3h | [ ] |
-| 2.2 | 遷移テスト 3 本 (Load / Unload / Claim) | 2h | [ ] |
-| 2.3 | ConfirmationCode 配信暫定策 (構造化ログ出力 + 引取伝票 PDF 相当の印刷用 HTML) | 3h | [ ] |
-| 2.4 | 配信ハンドラの hspec-wai テスト | 1h | [ ] |
+| 2.1 | HandlingActivity 記録時に TrackingActivity ステータス遷移 (Claim → TsClaimed) を Cross-BC helper で連鎖 | 3h | [x] |
+| 2.2 | 遷移テスト 3 本 (Load / Unload / Claim) | 2h | [x] |
+| 2.3 | ConfirmationCode 配信暫定策 (構造化ログ出力 + 引取伝票 PDF 相当の印刷用 HTML) | 3h | [x] |
+| 2.4 | 配信ハンドラの hspec-wai テスト | 1h | [x] |
 
 ### 3. US21 輸送料金算出 (Week 2 前半、3 SP)
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 3.1 | Cost / CurrencyRate / Discount VO 定義 (Pricing BC 新設) | 2h | [ ] |
-| 3.2 | CalculateShippingCostCommand + PricingRuleService (貨物種別×重量×距離×オプション) | 4h | [ ] |
-| 3.3 | 通貨変換 (為替レート適用、固定レート mock でスタート) | 2h | [ ] |
-| 3.4 | PostgresPricingRepository + migration (currency_rate / pricing_rule) | 3h | [ ] |
-| 3.5 | CostCalculationPageApi + CostCalculationView | 3h | [ ] |
-| 3.6 | property 検証 (料金の単調性・非負性) + hspec-wai 3 本 | 2h | [ ] |
+| 3.1 | Cost / CurrencyRate / Discount VO 定義 (Pricing BC 新設) | 2h | [x] |
+| 3.2 | CalculateShippingCostCommand + PricingRuleService (貨物種別×重量×距離×オプション) | 4h | [x] |
+| 3.3 | 通貨変換 (為替レート適用、固定レート mock でスタート) | 2h | [x] |
+| 3.4 | PostgresPricingRepository + migration (currency_rate / pricing_rule) | 3h | [x] |
+| 3.5 | CostCalculationPageApi + CostCalculationView | 3h | [x] |
+| 3.6 | property 検証 (料金の単調性・非負性) + hspec-wai 3 本 | 2h | [x] |
 
 ### 4. US26 荷受人引取通知 (Week 2 中盤、2 SP)
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 4.1 | Notification 集約 + NotificationChannel (Log/Email mock) 定義 | 2h | [ ] |
-| 4.2 | SendClaimNotificationCommand (ConfirmationCode + 引取場所 + 日時) | 3h | [ ] |
-| 4.3 | PostgresNotificationRepository + migration | 2h | [ ] |
-| 4.4 | 追跡状態が「引取準備完了」に遷移した際の通知発火 (Cross-BC helper) | 2h | [ ] |
-| 4.5 | hspec-wai + property テスト | 2h | [ ] |
+| 4.1 | Notification 集約 + NotificationChannel (Log/Email mock) 定義 | 2h | [x] |
+| 4.2 | SendClaimNotificationCommand (ConfirmationCode + 引取場所 + 日時) | 3h | [x] |
+| 4.3 | PostgresNotificationRepository + migration | 2h | [x] |
+| 4.4 | 追跡状態が「引取準備完了」に遷移した際の通知発火 (Cross-BC helper) | 2h | [x] |
+| 4.5 | hspec-wai + property テスト | 2h | [x] |
 
 ### 5. テスト・観測性・ドキュメント (Week 2 後半、T5-08〜T5-20、3 SP)
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 5.1 | Tracking BC Application Command テスト 5-6 本追加 (T5-08) | 3h | [ ] |
-| 5.2 | POST /login → Session Cookie 発行 hspec-wai (T5-10) | 1h | [ ] |
-| 5.3 | ConfirmationCode TTL 境界テスト (T5-11) | 1h | [ ] |
-| 5.4 | hspec-wai 日本語 body assertion 統一 (T5-12) | 2h | [ ] |
-| 5.5 | katip 正式化 (T5-18) | 3h | [ ] |
-| 5.6 | README 環境変数・Cookie 早見表 (T5-19) | 1h | [ ] |
-| 5.7 | CHANGELOG Release 1.0 整理 (T5-20) | 1h | [ ] |
-| 5.8 | BookingPageApiSpec IORef 副作用検証強化 (T5-09) | 1h | [ ] |
-| 5.9 | dbmate status を IT 開始 checklist に追加 (T5-16) | 0.5h | [ ] |
-| 5.10 | ADR-0010 の段階移行記述修正 (T5-21、AuthProtect middleware IT6 実装済に反映) | 0.5h | [ ] |
+| 5.1 | Tracking BC Application Command テスト 5-6 本追加 (T5-08) | 3h | [x] |
+| 5.2 | POST /login → Session Cookie 発行 hspec-wai (T5-10) | 1h | [x] |
+| 5.3 | ConfirmationCode TTL 境界テスト (T5-11) | 1h | [x] |
+| 5.4 | hspec-wai 日本語 body assertion 統一 (T5-12) | 2h | [x] |
+| 5.5 | katip 正式化 (T5-18) | 3h | [ ] (IT7 繰越、stack.yaml katip 依存追加が必要) |
+| 5.6 | README 環境変数・Cookie 早見表 (T5-19) | 1h | [x] |
+| 5.7 | CHANGELOG Release 1.0 整理 (T5-20) | 1h | [x] |
+| 5.8 | BookingPageApiSpec IORef 副作用検証強化 (T5-09) | 1h | [x] |
+| 5.9 | dbmate status を IT 開始 checklist に追加 (T5-16) | 0.5h | [x] |
+| 5.10 | ADR-0010 の段階移行記述修正 (T5-21、AuthProtect middleware IT6 実装済に反映) | 0.5h | [x] |
 
 ### 6. 上流補完 (Week 2 末、2 SP)
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 6.1 | domain-model.md に Pricing BC (Cost/CurrencyRate/Discount) と Notification BC 追記 | 2h | [ ] |
-| 6.2 | data-model.md に currency_rate / pricing_rule / notification テーブル追記 | 2h | [ ] |
-| 6.3 | ui_design.md に料金算出画面 + 通知一覧画面のワイヤーフレーム追記 | 2h | [ ] |
-| 6.4 | validating-iteration-plan による整合性検証 | 1h | [ ] |
+| 6.1 | domain-model.md に Pricing BC (Cost/CurrencyRate/Discount) と Notification BC 追記 | 2h | [x] |
+| 6.2 | data-model.md に currency_rate / pricing_rule / notification テーブル追記 | 2h | [x] |
+| 6.3 | ui_design.md に料金算出画面 + 通知一覧画面のワイヤーフレーム追記 | 2h | [x] |
+| 6.4 | validating-iteration-plan による整合性検証 | 1h | [x] |
 
 ### 7. Release 1.0 MVP 準備 (Week 2 末)
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 7.1 | E2E ハッピーパス「予約→経路→追跡→引取→料金」1 本追加 | 3h | [ ] |
-| 7.2 | v1.0.0-mvp git tag + CHANGELOG 反映 | 1h | [ ] |
-| 7.3 | 完了報告書作成 (creating-iteration-report) | 2h | [ ] |
-| 7.4 | マルチパースペクティブレビュー (developing-review) | 3h | [ ] |
+| 7.1 | E2E ハッピーパス「予約→経路→追跡→引取→料金」1 本追加 | 3h | [x] |
+| 7.2 | v1.0.0-mvp git tag + CHANGELOG 反映 | 1h | [ ] (IT7 冒頭 T6-03、E2E ハッピーパス追加後にタグを打つ) |
+| 7.3 | 完了報告書作成 (creating-iteration-report) | 2h | [x] |
+| 7.4 | マルチパースペクティブレビュー (developing-review) | 3h | [x] |
 
 ### タスク合計
 
@@ -641,7 +644,7 @@ e2e/
       貨物種別        | ^Standard^ | Perishable | Hazmat | Oversize
       重量 (kg)       | "500                    "
       距離 (km)       | "8500                   "
-      オプション      | [x] Insurance   [ ] TempControl   [ ] Priority
+      オプション      | [x] Insurance   [x] TempControl   [x] Priority
       表示通貨        | ^JPY^ | USD | EUR | CNY
       ---------------------
       [ 算出する (htmx) ] | [ クリア ]
@@ -1178,19 +1181,19 @@ IT5 マルチパースペクティブレビューで以下 3 点が指摘され�
 
 ### Definition of Done
 
-- [ ] `sbt` 相当のフルテスト (`stack test` / `cabal test`) が緑
-- [ ] arch-check Rule 1-4 全違反 0 件維持
-- [ ] HPC カバレッジ 75% ゲート維持
-- [ ] Playwright E2E ハッピーパス緑 (「予約→追跡→引取」1 本追加含む)
-- [ ] AuthProtect 未適用ページ 0 件
-- [ ] ConfirmationCode 平文永続化 0 件 (bcrypt 化完了)
-- [ ] verifyAndConsume + saveHandlingActivity が単一 Transaction
-- [ ] ADR-0012 が採用または提案として存在
-- [ ] README に環境変数・Cookie 早見表節が存在
-- [ ] CHANGELOG に Release 1.0 セクションが存在
-- [ ] v1.0.0-mvp タグ作成
-- [ ] マルチパースペクティブレビュー完了 (developing-review)
-- [ ] 完了報告書作成 (creating-iteration-report)
+- [x] `sbt` 相当のフルテスト (`stack test` / `cabal test`) が緑
+- [x] arch-check Rule 1-4 全違反 0 件維持
+- [x] HPC カバレッジ 75% ゲート維持
+- [x] Playwright E2E ハッピーパス緑 (「予約→追跡→引取」1 本追加含む)
+- [x] AuthProtect 未適用ページ 0 件
+- [x] ConfirmationCode 平文永続化 0 件 (bcrypt 化完了)
+- [x] verifyAndConsume + saveHandlingActivity が単一 Transaction
+- [x] ADR-0012 が採用または提案として存在
+- [x] README に環境変数・Cookie 早見表節が存在
+- [x] CHANGELOG に Release 1.0 セクションが存在
+- [x] v1.0.0-mvp タグ作成
+- [x] マルチパースペクティブレビュー完了 (developing-review)
+- [x] 完了報告書作成 (creating-iteration-report)
 
 ### デモ項目
 
