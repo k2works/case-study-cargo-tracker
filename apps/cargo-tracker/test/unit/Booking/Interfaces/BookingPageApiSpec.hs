@@ -10,9 +10,11 @@ module Booking.Interfaces.BookingPageApiSpec (spec) where
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.IORef (modifyIORef', newIORef)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import Network.HTTP.Types.Header (Header)
+import qualified Network.Wai
 import Network.Wai.Test (simpleBody)
+import qualified Network.Wai.Test
 import Test.Hspec
 import Test.Hspec.Wai
 import Test.Hspec.Wai.Matcher (MatchHeader (..))
@@ -141,6 +143,26 @@ mkHandoverApp seed = do
           }
   pure (bookingPageApp repo checkerYes stubCustomsRepo stubVoyageRepo stubTrackingRepo)
 
+{- | T5-09 (IT6): updateBooking 呼出を IORef で捕捉する Repository を返す
+Application と、記録された Cargo リストを読み出す関数のペアを返す。
+
+呼出回数だけでなく「どの Cargo 状態で更新されたか」まで検証できる。
+-}
+mkHandoverAppWithSpy :: Maybe Cargo -> IO (Application, IO [Cargo])
+mkHandoverAppWithSpy seed = do
+  updatesRef <- newIORef ([] :: [Cargo])
+  let repo =
+        BookingRepository
+          { saveBooking = \_ -> pure (Right ())
+          , findCargoById = \_ -> pure seed
+          , updateBooking = \c -> do
+              modifyIORef' updatesRef (c :)
+              pure (Right ())
+          , findAllCargos = pure []
+          }
+      app_ = bookingPageApp repo checkerYes stubCustomsRepo stubVoyageRepo stubTrackingRepo
+  pure (app_, readIORef updatesRef)
+
 spec :: Spec
 spec = do
   describe "POST /bookings/new (T-03 PRG / 荷主あり)" $
@@ -203,6 +225,52 @@ spec = do
             { matchHeaders =
                 ["Location" <:> "/bookings/new?error=booking-not-found"]
             }
+
+    describe "T5-09: updateBooking 副作用検証 (spy Repository)" $ do
+      -- IT6 T5-09: 呼出捕捉。runIO で事前に WAI request を実行し、
+      -- 記録された Cargo リストを純粋な `it` で assert する。
+      submittedUpdates <- runIO $ do
+        (app_, readUpdates) <- mkHandoverAppWithSpy (Just submittedCargo)
+        _ <-
+          Network.Wai.Test.runSession
+            ( Network.Wai.Test.srequest
+                ( Network.Wai.Test.SRequest
+                    ( Network.Wai.Test.setPath
+                        (Network.Wai.defaultRequest {Network.Wai.requestMethod = "POST"})
+                        "/bookings/BK-A1B2C3/handover"
+                    )
+                    ""
+                )
+            )
+            app_
+        readUpdates
+
+      it "Submitted → handover 成功時に updateBooking が 1 回呼ばれる" $
+        length submittedUpdates `shouldBe` 1
+
+      it "呼ばれた updateBooking の引数 Cargo は元と同じ BookingId を保持する" $
+        case submittedUpdates of
+          [c] -> cargoBookingId c `shouldBe` BookingId "BK-A1B2C3"
+          _ -> expectationFailure "expected exactly one updateBooking call"
+
+      draftUpdates <- runIO $ do
+        (app_, readUpdates) <- mkHandoverAppWithSpy (Just draftCargo)
+        _ <-
+          Network.Wai.Test.runSession
+            ( Network.Wai.Test.srequest
+                ( Network.Wai.Test.SRequest
+                    ( Network.Wai.Test.setPath
+                        (Network.Wai.defaultRequest {Network.Wai.requestMethod = "POST"})
+                        "/bookings/BK-A1B2C3/handover"
+                    )
+                    ""
+                )
+            )
+            app_
+        readUpdates
+
+      it "Draft → handover invalid-state 時に updateBooking は呼ばれない" $
+        length draftUpdates `shouldBe` 0
 
   describe "GET /bookings/new (T-08 フラッシュ表示)" $
     with (mkApp checkerYes) $ do

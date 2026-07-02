@@ -6,7 +6,14 @@ IT5 で Servant Auth によるセッション Cookie 認証を導入する際の
 
 ## ステータス
 
-提案 (2026-07-01、IT5 task 1.3 で実装予定)
+**採用** (2026-07-02、IT5 で発行・IT6 で middleware 完了)
+
+- 2026-07-01 (IT5): `session` テーブル migration + Session VO + Postgres KV +
+  POST /login での Session Cookie 発行 (`cargo_session=<token>; HttpOnly; SameSite=Lax; Max-Age=28800`)
+  が完了
+- 2026-07-02 (IT6 T5-01): `Cargotracker.Shared.Auth.Interfaces.SessionAuth` で
+  AuthProtect middleware (`requireCookieAuth` / `cookieProtectedApp`) が完了。
+  ADR-0010 の段階移行 (Session 発行 → middleware での検証) はここで一巡した
 
 ## コンテキスト
 
@@ -51,9 +58,16 @@ Web 用 Cookie の選択肢:
 
 ## 段階移行計画
 
-- IT5 task 1.2: `session` テーブル migration + `AuthHandler` 実装 + `/auth/login` `/auth/logout` エンドポイント
-- IT5 task 1.1: 既存 Servant ハンドラ (Confirm/Cancel/Link/Unlink/EvaluateRoute) に `AuthProtect` を追加
-- IT6+: Role-based 権限拡張 (Shipper / Sales / RouteDesigner / Handler / Tracker / Accountant / Admin)
+- **IT5 (完了)** task 1.2: `session` テーブル migration + POST /login で Session Cookie 発行
+  (opaque token 44 文字 + HttpOnly + SameSite=Lax + Max-Age=28800)
+- **IT6 T5-01 (完了 2026-07-02)**: AuthProtect middleware 実装
+  (`Cargotracker.Shared.Auth.Interfaces.SessionAuth`)
+  - `resolveCookieUser :: SessionRepository -> ... -> Maybe AuthenticatedUser` (純粋関数)
+  - `requireCookieAuth :: ... -> Handler AuthenticatedUser` (Handler ラッパ、401 発行)
+  - `cookieProtectedApp` で任意の Servant ハンドラを Cookie 認証で保護できるようにした
+- **IT7+**: 保護対象拡張 (既存 Confirm/Cancel/Link/Unlink/EvaluateRoute への適用と Role-based 権限)
+  - Role-based 権限 (Shipper / Sales / RouteDesigner / Handler / Tracker / Accountant / Admin)
+  - `requireRoleFromCookie :: Role -> AuthenticatedUser -> Handler ()` の追加
 
 ## 関連
 
