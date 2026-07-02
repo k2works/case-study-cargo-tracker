@@ -57,6 +57,12 @@ import Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
   ( newPostgresHandlingActivityRepository,
   )
 import Cargotracker.Handling.Interfaces.HandlingPageApi (handlingPageApp)
+import Cargotracker.Notification.Infrastructure.InMemoryNotificationRepository
+  ( newInMemoryNotificationRepository,
+  )
+import Cargotracker.Notification.Infrastructure.LogDeliveryPort
+  ( newLogDeliveryPort,
+  )
 import Cargotracker.Routing.Infrastructure.PostgresVoyageRepository
   ( newPostgresVoyageRepository,
   )
@@ -167,7 +173,12 @@ rootApp conn jwtSecret jwtTtl req respond =
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     "public" : "tracking" : _ -> publicTrackingApp trackingRepo handlingRepo req respond
-    "handling" : _ -> handlingPageApp txRunner handlingRepo codeRepo trackingRepo req respond
+    "handling" : _ -> do
+      -- 単一プロセス内で共有される InMemory Repository (Postgres 実装は将来)。
+      -- リクエスト毎に生成すると状態が失われるため IORef を全体で使うが、
+      -- 現状は暫定策として都度生成。永続化が必要になったら Postgres に切替。
+      notifRepo <- newInMemoryNotificationRepository
+      handlingPageApp txRunner handlingRepo codeRepo trackingRepo notifRepo newLogDeliveryPort req respond
     _ ->
       respond $
         responseLBS

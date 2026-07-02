@@ -50,6 +50,14 @@ import Cargotracker.Tracking.Application.ConfirmationCodePorts
   )
 import Cargotracker.Tracking.Application.Ports (TrackingRepository)
 
+import Cargotracker.Notification.Application.Ports
+  ( NotificationDeliveryPort,
+    NotificationRepository,
+  )
+import Cargotracker.Notification.Application.SendClaimNotificationCommand
+  ( sendClaimLogNotificationText,
+  )
+
 data HandlingFormRequest = HandlingFormRequest
   { bookingId :: !Text
   , eventType :: !Text
@@ -99,14 +107,16 @@ handlingPageApp ::
   HandlingActivityRepository IO ->
   ConfirmationCodeRepository IO ->
   TrackingRepository IO ->
+  NotificationRepository IO ->
+  NotificationDeliveryPort IO ->
   Application
-handlingPageApp tx repo codeRepo trackingRepo =
+handlingPageApp tx repo codeRepo trackingRepo notifRepo notifDelivery =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
         :<|> handlerPost repo
         :<|> handlerClaimGet
-        :<|> handlerClaimPost tx codeRepo repo trackingRepo
+        :<|> handlerClaimPost tx codeRepo repo trackingRepo notifRepo notifDelivery
     )
 
 handlerGet :: Maybe Text -> Handler (Html ())
@@ -166,9 +176,11 @@ handlerClaimPost ::
   ConfirmationCodeRepository IO ->
   HandlingActivityRepository IO ->
   TrackingRepository IO ->
+  NotificationRepository IO ->
+  NotificationDeliveryPort IO ->
   ClaimFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerClaimPost tx codeRepo handlingRepo trackingRepo form = do
+handlerClaimPost tx codeRepo handlingRepo trackingRepo notifRepo notifDelivery form = do
   now <- liftIO getCurrentTime
   -- T5-03 ADR-0012: verifyAndConsume + saveHandlingActivity + markClaimedByBookingId を
   -- 単一 Tx で包む。いずれかが例外を投げた場合、全体がロールバックされ整合性を保つ。
@@ -190,7 +202,24 @@ handlerClaimPost tx codeRepo handlingRepo trackingRepo form = do
               }
       )
   case result of
-    Right () ->
+    Right () -> do
+      -- US26 + ADR-0012 決定 3: Tx 完了後 (副作用は Tx 外) に引取完了通知を発火。
+      -- Cross-BC helper sendClaimLogNotificationText 経由で Text ベースの
+      -- 呼出のみを行い、Notification Domain 型は Handling に漏れない (Rule 4)。
+      -- 失敗しても業務フロー (redirect) は継続する (通知は補助情報)。
+      _ <-
+        liftIO
+          ( sendClaimLogNotificationText
+              notifRepo
+              notifDelivery
+              (claimBookingId form)
+              "引取完了のお知らせ"
+              ( "予約 "
+                  <> claimBookingId form
+                  <> " の引取が完了しました。ご利用ありがとうございました。"
+              )
+              now
+          )
       pure (addHeader "/handling/claim?flash=success" NoContent)
     Left ConfirmationCodeMismatch ->
       redirectClaim "/handling/claim?flash=code-mismatch"

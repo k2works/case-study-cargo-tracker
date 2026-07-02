@@ -1,6 +1,6 @@
 {- | 引取通知送信コマンド (US26, IT6)
 
-Handling BC の T5-04 (Tracking → TsClaimed 遷移) 完了後に呼ばれる想定。
+Handling BC の T5-04 (Tracking の引取済状態への遷移) 完了後に呼ばれる想定。
 Cross-BC helper `sendClaimNotificationText` を通じて Text ベースで呼ばれる。
 
 ADR-0012 決定 3 準拠のフロー:
@@ -18,6 +18,7 @@ ADR-0012 決定 3 準拠のフロー:
 module Cargotracker.Notification.Application.SendClaimNotificationCommand
   ( SendClaimNotificationInput (..),
     execute,
+    sendClaimLogNotificationText,
   ) where
 
 import Data.Text (Text)
@@ -30,7 +31,7 @@ import Cargotracker.Notification.Application.Ports
   )
 import Cargotracker.Notification.Domain.Model.Notification
   ( Notification,
-    NotificationChannel,
+    NotificationChannel (..),
     markFailed,
     markSent,
     mkNotification,
@@ -83,3 +84,36 @@ execute repo delivery input =
                     DeliveryFailed reason -> markFailed reason notif
               _ <- updateNotification repo updated
               pure (Right (updated, result))
+
+{- | Cross-BC helper (Rule 4 準拠): 他 BC (Handling BC など) から呼ばれる
+LogChannel での通知発行。Text ベースの引数で完結し、呼出側は
+Notification Domain 型を import する必要がない。
+
+戻り値: 発行時点の DeliveryResult のみを返し、Notification 集約は返さない
+(呼出側が扱わないため、Cross-BC 境界を狭める)。
+-}
+sendClaimLogNotificationText ::
+  Monad m =>
+  NotificationRepository m ->
+  NotificationDeliveryPort m ->
+  -- | booking_id
+  Text ->
+  -- | subject
+  Text ->
+  -- | body
+  Text ->
+  UTCTime ->
+  m (Either Cargotracker.Shared.Domain.DomainError.DomainError DeliveryResult)
+sendClaimLogNotificationText repo delivery bid subj body now = do
+  result <-
+    execute
+      repo
+      delivery
+      SendClaimNotificationInput
+        { inputBookingId = bid
+        , inputChannel = LogChannel
+        , inputSubject = subj
+        , inputBody = body
+        , inputNow = now
+        }
+  pure (fmap snd result)
