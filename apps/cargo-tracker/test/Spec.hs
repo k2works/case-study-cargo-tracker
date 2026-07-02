@@ -53,6 +53,7 @@ import qualified Routing.Infrastructure.PostgresVoyageRepositorySpec
 import qualified Routing.Interfaces.VoyageApiSpec
 import qualified Routing.Interfaces.VoyageMovementRowApiSpec
 import qualified Routing.Interfaces.VoyagePageApiSpec
+import qualified Shared.Application.TxRunnerSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
 import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
@@ -142,6 +143,10 @@ main = hspec $ do
   describe
     "Cargotracker.Shared.Security.BcryptHash"
     Shared.Security.BcryptHashSpec.spec
+
+  describe
+    "Cargotracker.Shared.Application.TxRunner"
+    Shared.Application.TxRunnerSpec.spec
 
   describe
     "Cargotracker.Shared.Infrastructure.IdGenerator"

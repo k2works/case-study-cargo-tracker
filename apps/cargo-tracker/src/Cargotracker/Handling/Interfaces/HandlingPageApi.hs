@@ -42,6 +42,7 @@ import qualified Cargotracker.Handling.Application.VerifyClaimAndRegisterCommand
 import Cargotracker.Handling.Domain.Model.HandlingType (textToHandlingType)
 import Cargotracker.Handling.Views.ClaimFormView (claimFormPage)
 import Cargotracker.Handling.Views.HandlingFormView (handlingFormPage)
+import Cargotracker.Shared.Application.TxRunner (TxRunner (..))
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import Cargotracker.Shared.Security.BcryptHash (verifySecret)
 import Cargotracker.Tracking.Application.ConfirmationCodePorts
@@ -93,16 +94,17 @@ instance FromForm ClaimFormRequest where
       <*> parseUnique "operatorName" f
 
 handlingPageApp ::
+  TxRunner ->
   HandlingActivityRepository IO ->
   ConfirmationCodeRepository IO ->
   Application
-handlingPageApp repo codeRepo =
+handlingPageApp tx repo codeRepo =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
         :<|> handlerPost repo
         :<|> handlerClaimGet
-        :<|> handlerClaimPost codeRepo repo
+        :<|> handlerClaimPost tx codeRepo repo
     )
 
 handlerGet :: Maybe Text -> Handler (Html ())
@@ -156,28 +158,34 @@ parseCompletionTime t =
 handlerClaimGet :: Maybe Text -> Handler (Html ())
 handlerClaimGet mFlash = pure (claimFormPage mFlash)
 
--- | POST /handling/claim : 確認コード検証 → Claim イベント登録
+-- | POST /handling/claim : 確認コード検証 → Claim イベント登録 (T5-03: 単一 Tx)
 handlerClaimPost ::
+  TxRunner ->
   ConfirmationCodeRepository IO ->
   HandlingActivityRepository IO ->
   ClaimFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerClaimPost codeRepo handlingRepo form = do
+handlerClaimPost tx codeRepo handlingRepo form = do
   now <- liftIO getCurrentTime
+  -- T5-03 ADR-0012: verifyAndConsume + saveHandlingActivity を単一 Tx で包む。
+  -- saveHandlingActivity が例外を投げた場合、attempt_count / used_at の更新も
+  -- ロールバックされ整合性を保つ。ビジネスエラー (Left) は Tx コミット対象
+  -- (再試行回数の永続化が必要なため)。
   result <-
     liftIO
-      ( VerifyClaim.execute
-          verifySecret
-          codeRepo
-          handlingRepo
-          VerifyClaimInput
-            { inputBookingId = claimBookingId form
-            , inputConfirmationCode = claimConfirmationCode form
-            , inputLocationUnlocode = claimLocationUnlocode form
-            , inputOperatorName = claimOperatorName form
-            , inputCompletionTime = now
-            , inputNow = now
-            }
+      ( runInTx tx $
+          VerifyClaim.execute
+            verifySecret
+            codeRepo
+            handlingRepo
+            VerifyClaimInput
+              { inputBookingId = claimBookingId form
+              , inputConfirmationCode = claimConfirmationCode form
+              , inputLocationUnlocode = claimLocationUnlocode form
+              , inputOperatorName = claimOperatorName form
+              , inputCompletionTime = now
+              , inputNow = now
+              }
       )
   case result of
     Right () ->

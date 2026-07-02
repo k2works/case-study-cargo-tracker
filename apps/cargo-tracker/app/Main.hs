@@ -65,6 +65,7 @@ import Cargotracker.Routing.Interfaces.VoyageMovementRowApi
   ( voyageMovementRowApp,
   )
 import Cargotracker.Routing.Interfaces.VoyagePageApi (voyagePageApp)
+import Cargotracker.Shared.Application.TxRunner (newPostgresTxRunner)
 import Cargotracker.Shared.Auth.Infrastructure.BcryptVerifier (newBcryptVerifier)
 import Cargotracker.Shared.Auth.Infrastructure.JwtIssuer
   ( JwtSecret (..),
@@ -166,7 +167,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     "public" : "tracking" : _ -> publicTrackingApp trackingRepo handlingRepo req respond
-    "handling" : _ -> handlingPageApp handlingRepo codeRepo req respond
+    "handling" : _ -> handlingPageApp txRunner handlingRepo codeRepo req respond
     _ ->
       respond $
         responseLBS
@@ -186,6 +187,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     trackingRepo = newPostgresTrackingRepository conn
     handlingRepo = newPostgresHandlingActivityRepository conn
     codeRepo = newPostgresConfirmationCodeRepository conn
+    txRunner = newPostgresTxRunner conn
 
 healthHandler :: Application
 healthHandler _req respond =
