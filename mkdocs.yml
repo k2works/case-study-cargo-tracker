@@ -105,6 +105,7 @@ nav:
       - イテレーション 5 ふりかえり: development/retrospective-5.md
       - イテレーション 6 計画: development/iteration_plan-6.md
       - イテレーション 6 完了報告書: development/iteration_report-6.md
+      - イテレーション 6 ふりかえり: development/retrospective-6.md
       - 分析フェーズ完了報告書: development/analysis_completion_report.md
   - 運用:
       - 概要: operation/index.md

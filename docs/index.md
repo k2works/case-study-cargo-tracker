@@ -88,6 +88,7 @@
 | [IT5 ふりかえり (KPT)](./development/retrospective-5.md) | T5-01〜T5-21 の 21 アクション抽出 (高 10・中 15・低 7) |
 | [IT6 計画](./development/iteration_plan-6.md) | US21 料金算出 + US26 引取通知 + IT5 繰越 8 (T5-01〜T5-10) + プロセス品質 3 + 上流補完 2 = 18 SP、Release 1.0 MVP 目標 |
 | [IT6 完了報告書](./development/iteration_report-6.md) | Ralph Loop 30 反復で 30+ SP (計画 18 SP 対比 167%)、Pricing/Notification BC 新設、Postgres 実装まで一巡完成、+139 tests (641 total) |
+| [IT6 ふりかえり (KPT)](./development/retrospective-6.md) | Keep 15 / Problem 10 / Try 12 (T6-01〜T6-12)、平均ベロシティ 24.8 SP、IT7 冒頭必達 4 件 (E2E / developing-review / v1.0.0-mvp tag / 上流ドキュメント同期) |
 
 ### レビュードキュメント
 

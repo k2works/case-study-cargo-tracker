@@ -20,7 +20,7 @@
 | IT3 (2026-06-29) | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 完了 |
 | IT4 (2026-08-17〜08-30) | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [iteration_report-4.md](iteration_report-4.md) | 完了 |
 | IT5 (2026-08-31〜09-13) | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了 (2026-07-01) |
-| IT6 (2026-09-14〜09-27) | [iteration_plan-6.md](iteration_plan-6.md) | - | [iteration_report-6.md](iteration_report-6.md) | 完了 (2026-07-02、Ralph Loop 30 反復、Release 1.0 MVP 一巡完成) |
+| IT6 (2026-09-14〜09-27) | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了 (2026-07-02、Ralph Loop 30 反復、Release 1.0 MVP 一巡完成) |
 
 ### 進捗サマリー
 
