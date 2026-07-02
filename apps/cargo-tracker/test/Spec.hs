@@ -75,7 +75,9 @@ import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
 import qualified Shipper.Interfaces.ShipperApiSpec
 import qualified Shipper.Interfaces.ShipperPageApiSpec
 import qualified Shipper.Interfaces.ShipperSearchApiSpec
+import qualified Tracking.Application.IssueTrackingNumberCommandSpec
 import qualified Tracking.Application.MarkClaimedSpec
+import qualified Tracking.Application.QueryTrackingByNumberQuerySpec
 import qualified Tracking.Domain.Model.ConfirmationCodeSpec
 import qualified Tracking.Views.ClaimNotificationViewSpec
 
@@ -197,6 +199,14 @@ main = hspec $ do
   describe
     "Cargotracker.Tracking.Application.markClaimedByBookingId"
     Tracking.Application.MarkClaimedSpec.spec
+
+  describe
+    "Cargotracker.Tracking.Application.IssueTrackingNumberCommand"
+    Tracking.Application.IssueTrackingNumberCommandSpec.spec
+
+  describe
+    "Cargotracker.Tracking.Application.QueryTrackingByNumberQuery"
+    Tracking.Application.QueryTrackingByNumberQuerySpec.spec
 
   describe
     "Cargotracker.Tracking.Views.ClaimNotificationView"
