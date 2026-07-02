@@ -37,6 +37,10 @@ import Cargotracker.Tracking.Application.ConfirmationCodePorts
   ( ConfirmationCodeRepository,
     verifyAndConsumeWith,
   )
+import Cargotracker.Tracking.Application.Ports
+  ( TrackingRepository,
+    markClaimedByBookingId,
+  )
 
 data VerifyClaimInput = VerifyClaimInput
   { inputBookingId :: !Text
@@ -53,13 +57,10 @@ execute ::
   Verifier ->
   ConfirmationCodeRepository m ->
   HandlingActivityRepository m ->
+  TrackingRepository m ->
   VerifyClaimInput ->
   m (Either DomainError ())
-execute checker codeRepo handlingRepo input = do
-  -- 検証は Tracking Application の verifyAndConsumeWith に委譲 (Rule 4 準拠、
-  -- ConfirmationCode Domain 型を Handling BC 内に漏らさない)
-  -- Verifier は wire (HandlingPageApi) で verifySecret (bcrypt) を注入する。
-  -- 単体テスト時は constantTimeEqText を渡せる。
+execute checker codeRepo handlingRepo trackingRepo input = do
   verifyResult <-
     verifyAndConsumeWith
       checker
@@ -70,7 +71,7 @@ execute checker codeRepo handlingRepo input = do
   case verifyResult of
     Left err -> pure (Left err)
     Right () ->
-      -- 検証成功: Claim イベント登録
+      -- 検証成功 → Claim イベント登録 → Tracking 状態を TsClaimed に反映
       case mkHandlingActivity
         (inputNow input)
         (inputBookingId input)
@@ -80,4 +81,12 @@ execute checker codeRepo handlingRepo input = do
         Nothing -- Claim は voyage_number 不要
         (inputOperatorName input) of
         Left err -> pure (Left err)
-        Right activity -> saveHandlingActivity handlingRepo activity
+        Right activity -> do
+          saveResult <- saveHandlingActivity handlingRepo activity
+          case saveResult of
+            Left err -> pure (Left err)
+            Right () ->
+              -- T5-04 (ADR-0012 決定 4): Tracking.transport_status を TsClaimed に遷移。
+              -- Tx 境界 (HandlingPageApi.handlerClaimPost の runInTx) 内で実行される
+              -- ため、失敗時は verifyAndConsume の状態更新もロールバックされる。
+              markClaimedByBookingId trackingRepo (inputBookingId input)

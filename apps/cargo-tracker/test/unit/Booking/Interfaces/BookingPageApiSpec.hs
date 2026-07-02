@@ -104,6 +104,7 @@ stubTrackingRepo =
     { saveTracking = \_ -> pure (Right ())
     , findByBookingId = \_ -> pure Nothing
     , findByTrackingNumber = \_ -> pure Nothing
+    , updateTransportStatus = \_ _ -> pure (Right ())
     }
 
 -- US06 (IT2): /handover テスト用に、特定の Cargo を find で返し、

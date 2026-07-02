@@ -48,6 +48,7 @@ import Cargotracker.Shared.Security.BcryptHash (verifySecret)
 import Cargotracker.Tracking.Application.ConfirmationCodePorts
   ( ConfirmationCodeRepository,
   )
+import Cargotracker.Tracking.Application.Ports (TrackingRepository)
 
 data HandlingFormRequest = HandlingFormRequest
   { bookingId :: !Text
@@ -97,14 +98,15 @@ handlingPageApp ::
   TxRunner ->
   HandlingActivityRepository IO ->
   ConfirmationCodeRepository IO ->
+  TrackingRepository IO ->
   Application
-handlingPageApp tx repo codeRepo =
+handlingPageApp tx repo codeRepo trackingRepo =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
         :<|> handlerPost repo
         :<|> handlerClaimGet
-        :<|> handlerClaimPost tx codeRepo repo
+        :<|> handlerClaimPost tx codeRepo repo trackingRepo
     )
 
 handlerGet :: Maybe Text -> Handler (Html ())
@@ -158,19 +160,18 @@ parseCompletionTime t =
 handlerClaimGet :: Maybe Text -> Handler (Html ())
 handlerClaimGet mFlash = pure (claimFormPage mFlash)
 
--- | POST /handling/claim : 確認コード検証 → Claim イベント登録 (T5-03: 単一 Tx)
+-- | POST /handling/claim : 確認コード検証 → Claim イベント登録 → Tracking 状態反映 (T5-03/T5-04: 単一 Tx)
 handlerClaimPost ::
   TxRunner ->
   ConfirmationCodeRepository IO ->
   HandlingActivityRepository IO ->
+  TrackingRepository IO ->
   ClaimFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerClaimPost tx codeRepo handlingRepo form = do
+handlerClaimPost tx codeRepo handlingRepo trackingRepo form = do
   now <- liftIO getCurrentTime
-  -- T5-03 ADR-0012: verifyAndConsume + saveHandlingActivity を単一 Tx で包む。
-  -- saveHandlingActivity が例外を投げた場合、attempt_count / used_at の更新も
-  -- ロールバックされ整合性を保つ。ビジネスエラー (Left) は Tx コミット対象
-  -- (再試行回数の永続化が必要なため)。
+  -- T5-03 ADR-0012: verifyAndConsume + saveHandlingActivity + markClaimedByBookingId を
+  -- 単一 Tx で包む。いずれかが例外を投げた場合、全体がロールバックされ整合性を保つ。
   result <-
     liftIO
       ( runInTx tx $
@@ -178,6 +179,7 @@ handlerClaimPost tx codeRepo handlingRepo form = do
             verifySecret
             codeRepo
             handlingRepo
+            trackingRepo
             VerifyClaimInput
               { inputBookingId = claimBookingId form
               , inputConfirmationCode = claimConfirmationCode form

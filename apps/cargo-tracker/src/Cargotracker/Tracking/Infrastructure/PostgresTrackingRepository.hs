@@ -21,7 +21,8 @@ import Database.PostgreSQL.Simple
 
 import Cargotracker.Shared.Domain.DomainError (DomainError)
 import Cargotracker.Shared.Domain.TransportStatus
-  ( textToTransportStatus,
+  ( TransportStatus,
+    textToTransportStatus,
     transportStatusToText,
   )
 import Cargotracker.Tracking.Application.Ports (TrackingRepository (..))
@@ -39,6 +40,7 @@ newPostgresTrackingRepository conn =
     { saveTracking = saveImpl conn
     , findByBookingId = findByBookingIdImpl conn
     , findByTrackingNumber = findByTrackingNumberImpl conn
+    , updateTransportStatus = updateTransportStatusImpl conn
     }
 
 -- | tracking_activity テーブル 1 行の Text 表現 (SELECT 順に対応)。
@@ -95,3 +97,20 @@ findByTrackingNumberImpl conn (TrackingNumber tn) = do
 headMay :: [a] -> Maybe a
 headMay [] = Nothing
 headMay (x : _) = Just x
+
+updateTransportStatusImpl ::
+  Connection ->
+  Text ->
+  TransportStatus ->
+  IO (Either DomainError ())
+updateTransportStatusImpl conn bid status = do
+  _ <-
+    execute
+      conn
+      "UPDATE tracking_activity SET \
+      \  transport_status = ?, \
+      \  version = version + 1, \
+      \  updated_at = NOW() \
+      \ WHERE booking_id = ?"
+      (transportStatusToText status, bid)
+  pure (Right ())
