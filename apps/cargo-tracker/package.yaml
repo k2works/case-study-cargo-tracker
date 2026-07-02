@@ -116,11 +116,13 @@ library:
   - Cargotracker.Pricing.Infrastructure.InMemoryPricingRuleRepository
   - Cargotracker.Pricing.Infrastructure.InMemoryCurrencyRateRepository
   - Cargotracker.Pricing.Infrastructure.PostgresPricingRuleRepository
+  - Cargotracker.Pricing.Infrastructure.PostgresCurrencyRateRepository
   - Cargotracker.Notification.Domain.Model.Notification
   - Cargotracker.Notification.Application.Ports
   - Cargotracker.Notification.Application.SendClaimNotificationCommand
   - Cargotracker.Notification.Infrastructure.LogDeliveryPort
   - Cargotracker.Notification.Infrastructure.InMemoryNotificationRepository
+  - Cargotracker.Notification.Infrastructure.PostgresNotificationRepository
   - Cargotracker.Notification.Views.NotificationListView
   - Cargotracker.Notification.Interfaces.NotificationListPageApi
   - Cargotracker.Tracking.Views.ClaimNotificationView

@@ -57,20 +57,20 @@ import Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
   ( newPostgresHandlingActivityRepository,
   )
 import Cargotracker.Handling.Interfaces.HandlingPageApi (handlingPageApp)
-import Cargotracker.Notification.Infrastructure.InMemoryNotificationRepository
-  ( newInMemoryNotificationRepository,
-  )
 import Cargotracker.Notification.Infrastructure.LogDeliveryPort
   ( newLogDeliveryPort,
+  )
+import Cargotracker.Notification.Infrastructure.PostgresNotificationRepository
+  ( newPostgresNotificationRepository,
   )
 import Cargotracker.Notification.Interfaces.NotificationListPageApi
   ( notificationListApp,
   )
-import Cargotracker.Pricing.Infrastructure.InMemoryCurrencyRateRepository
-  ( newInMemoryCurrencyRateRepository,
+import Cargotracker.Pricing.Infrastructure.PostgresCurrencyRateRepository
+  ( newPostgresCurrencyRateRepository,
   )
-import Cargotracker.Pricing.Infrastructure.InMemoryPricingRuleRepository
-  ( newInMemoryPricingRuleRepository,
+import Cargotracker.Pricing.Infrastructure.PostgresPricingRuleRepository
+  ( newPostgresPricingRuleRepository,
   )
 import Cargotracker.Pricing.Interfaces.CostCalculationPageApi
   ( costCalculationApp,
@@ -185,25 +185,24 @@ rootApp conn jwtSecret jwtTtl req respond =
     "estimates" : _ -> estimatePageApp estimateRepo req respond
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     "public" : "tracking" : _ -> publicTrackingApp trackingRepo handlingRepo req respond
-    "handling" : _ -> do
-      -- 単一プロセス内で共有される InMemory Repository (Postgres 実装は将来)。
-      -- リクエスト毎に生成すると状態が失われるため IORef を全体で使うが、
-      -- 現状は暫定策として都度生成。永続化が必要になったら Postgres に切替。
-      notifRepo <- newInMemoryNotificationRepository
-      handlingPageApp txRunner handlingRepo codeRepo trackingRepo notifRepo newLogDeliveryPort req respond
-    "pricing" : "calculate" : _ ->
-      -- US21 料金算出画面。InMemory PricingRule / CurrencyRate (デモ用固定値)。
-      -- Postgres 実装への切替は Interfaces シグネチャ変更なしで可能。
-      costCalculationApp
-        newInMemoryPricingRuleRepository
-        newInMemoryCurrencyRateRepository
+    "handling" : _ ->
+      -- Postgres NotificationRepository を注入。Handling.claim 完了時の
+      -- 通知発火は notification テーブルに保存され、/notifications で参照可能。
+      handlingPageApp
+        txRunner
+        handlingRepo
+        codeRepo
+        trackingRepo
+        notificationRepo
+        newLogDeliveryPort
         req
         respond
-    "notifications" : _ -> do
-      -- US26 通知一覧画面。都度 InMemory 生成のため各リクエストで空になる。
-      -- Handling.claim の通知発火と共有するには Postgres 実装への移行が必要。
-      notifRepo <- newInMemoryNotificationRepository
-      notificationListApp notifRepo req respond
+    "pricing" : "calculate" : _ ->
+      -- US21 料金算出画面。Postgres PricingRule / CurrencyRate。
+      costCalculationApp pricingRuleRepo currencyRateRepo req respond
+    "notifications" : _ ->
+      -- US26 通知一覧画面。Postgres 永続化のため Handling.claim の通知と共有。
+      notificationListApp notificationRepo req respond
     _ ->
       respond $
         responseLBS
@@ -224,6 +223,10 @@ rootApp conn jwtSecret jwtTtl req respond =
     handlingRepo = newPostgresHandlingActivityRepository conn
     codeRepo = newPostgresConfirmationCodeRepository conn
     txRunner = newPostgresTxRunner conn
+    -- IT6 US21 / US26: Postgres Repository を InMemory 実装から切替
+    pricingRuleRepo = newPostgresPricingRuleRepository conn
+    currencyRateRepo = newPostgresCurrencyRateRepository conn
+    notificationRepo = newPostgresNotificationRepository conn
 
 healthHandler :: Application
 healthHandler _req respond =
