@@ -183,6 +183,7 @@ library:
   - Cargotracker.Shared.Web.Layout
   - Cargotracker.Shared.Auth.Views.LoginView
   - Cargotracker.Shared.Auth.Interfaces.LoginPageApi
+  - Cargotracker.Shared.Auth.Interfaces.SessionAuth
   - Cargotracker.Shipper.Views.ShipperFormView
   - Cargotracker.Shipper.Interfaces.ShipperPageApi
   - Cargotracker.Booking.Views.BookingFormView

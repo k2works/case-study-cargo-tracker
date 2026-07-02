@@ -61,6 +61,7 @@ import qualified Shared.Auth.Infrastructure.PostgresUserRepositorySpec
 import qualified Shared.Auth.Interfaces.LoginApiSpec
 import qualified Shared.Auth.Interfaces.LoginPageApiSpec
 import qualified Shared.Auth.Interfaces.ProtectedSpec
+import qualified Shared.Auth.Interfaces.SessionAuthSpec
 import qualified Shared.Domain.Common.UnLocodeSpec
 import qualified Shared.Infrastructure.IdGeneratorSpec
 import qualified Shared.Web.LayoutSpec
@@ -114,6 +115,10 @@ main = hspec $ do
   describe
     "Cargotracker.Shared.Auth.Interfaces.LoginPageApi"
     Shared.Auth.Interfaces.LoginPageApiSpec.spec
+
+  describe
+    "Cargotracker.Shared.Auth.Interfaces.SessionAuth"
+    Shared.Auth.Interfaces.SessionAuthSpec.spec
 
   describe
     "Cargotracker.Shipper.Domain.Model.Shipper"
