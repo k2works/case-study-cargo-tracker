@@ -20,7 +20,7 @@
 | IT3 (2026-06-29) | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 完了 |
 | IT4 (2026-08-17〜08-30) | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [iteration_report-4.md](iteration_report-4.md) | 完了 |
 | IT5 (2026-08-31〜09-13) | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了 (2026-07-01) |
-| IT6 (2026-09-14〜09-27) | [iteration_plan-6.md](iteration_plan-6.md) | - | - | 計画策定済み (Release 1.0 MVP 目標) |
+| IT6 (2026-09-14〜09-27) | [iteration_plan-6.md](iteration_plan-6.md) | - | [iteration_report-6.md](iteration_report-6.md) | 完了 (2026-07-02、Ralph Loop 30 反復、Release 1.0 MVP 一巡完成) |
 
 ### 進捗サマリー
 
@@ -31,7 +31,7 @@
 | IT3 | 29 (本体 11 + 繰越 12 + レビュー 2 + 推奨 4) | 22 | 76% |
 | IT4 | 20 (本体 11 + IT3 繰越 7 + 拡張 2) | 19 | 95% |
 | IT5 | 22 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2) | 40+ (本体 14 + task 1.2/3.1-3.3 9 + Ralph 17) | 182% |
-| IT6 | 18 (本体 5 + IT5 繰越 8 + プロセス品質 3 + 上流補完 2) | - | - |
+| IT6 | 18 (本体 5 + IT5 繰越 8 + プロセス品質 3 + 上流補完 2) | 30+ | 167% |
 | **累計** | **119** | **119+** | **100%** |
 
 ### フェーズ進捗
