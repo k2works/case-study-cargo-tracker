@@ -14,8 +14,10 @@ T-03 準拠: 全関数は純粋 (`Either DomainError ...`)。bcrypt / randomDigi
 -}
 module Cargotracker.Tracking.Domain.Model.ConfirmationCode
   ( ConfirmationCode (..),
+    Verifier,
     mkConfirmationCode,
     verify,
+    verifyWith,
     markUsed,
     maxAttempts,
   ) where
@@ -59,23 +61,41 @@ mkConfirmationCode now raw
           }
   | otherwise = Left (InvalidConfirmationCodeFormat raw)
 
+{- | 入力コードと保存値を比較する純粋な関数の型。
+
+- constantTimeEqText: DB が平文の 6 桁数字を保存する場合 (IT5 移行前)
+- verifySecret (bcrypt): DB が code_hash を保存する場合 (T5-02 Phase 3 移行後)
+
+呼出側 (Repository または Application) が選択して `verifyWith` に渡す。
+-}
+type Verifier = Text -> Text -> Bool
+
 {- | 入力コードで検証する。失敗時は理由に応じた `DomainError` を返す。
 
 規約:
   * `ccAttemptCount` が上限に達している場合は `ConfirmationCodeMaxAttemptsExceeded`
   * 既に使用済の場合は `ConfirmationCodeAlreadyUsed`
-  * 平文比較で不一致の場合は `ConfirmationCodeMismatch`
+  * 検証関数が False を返した場合は `ConfirmationCodeMismatch`
 
 呼び出し元 (Application 層) は失敗時に `ccAttemptCount` を +1 して永続化する
 責務を負う (Domain 純粋関数のため副作用は返さない)。
 -}
-verify :: Text -> ConfirmationCode -> Either DomainError ConfirmationCode
-verify input cc
+verifyWith :: Verifier -> Text -> ConfirmationCode -> Either DomainError ConfirmationCode
+verifyWith checker input cc
   | ccAttemptCount cc >= maxAttempts =
       Left (ConfirmationCodeMaxAttemptsExceeded maxAttempts)
   | isJust (ccUsedAt cc) = Left ConfirmationCodeAlreadyUsed
-  | not (constantTimeEqText input (ccValue cc)) = Left ConfirmationCodeMismatch
+  | not (checker input (ccValue cc)) = Left ConfirmationCodeMismatch
   | otherwise = Right cc
+
+{- | `verifyWith constantTimeEqText` のショートカット。
+
+DB が平文 6 桁数字を保存している IT5 実装からの互換性維持のため残す。
+T5-02 Phase 3 (Repository の code_hash 移行) 完了後は
+`verifyWith verifySecret` に切り替える。
+-}
+verify :: Text -> ConfirmationCode -> Either DomainError ConfirmationCode
+verify = verifyWith constantTimeEqText
 
 {- | 検証成功後の `ccUsedAt` を確定する。既に使用済の場合は上書きしない
 (実質べき等)。

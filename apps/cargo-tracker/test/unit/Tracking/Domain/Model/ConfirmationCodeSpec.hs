@@ -11,12 +11,14 @@ import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Test.Hspec
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Security.BcryptHash (hashSecret, verifySecret)
 import Cargotracker.Tracking.Domain.Model.ConfirmationCode
   ( ConfirmationCode (..),
     markUsed,
     maxAttempts,
     mkConfirmationCode,
     verify,
+    verifyWith,
   )
 
 sampleNow :: UTCTime
@@ -84,6 +86,25 @@ spec = describe "Cargotracker.Tracking.Domain.Model.ConfirmationCode (US16)" $ d
       let first = markUsed sampleLater sampleCode
           second = markUsed (UTCTime (fromGregorian 2026 12 31) 0) first
       ccUsedAt second `shouldBe` Just sampleLater
+
+  describe "verifyWith verifySecret (bcrypt モード, T5-02 Phase 3)" $ do
+    it "bcrypt ハッシュ保存の ConfirmationCode を平文で検証成功" $ do
+      hashed <- hashSecret "123456"
+      let cc = sampleCode {ccValue = hashed}
+      verifyWith verifySecret "123456" cc `shouldSatisfy` \case
+        Right c -> ccValue c == hashed
+        _ -> False
+
+    it "bcrypt ハッシュ保存で平文が異なれば Mismatch" $ do
+      hashed <- hashSecret "123456"
+      let cc = sampleCode {ccValue = hashed}
+      verifyWith verifySecret "999999" cc `shouldBe` Left ConfirmationCodeMismatch
+
+    it "bcrypt モードでも attemptCount 上限は Mismatch より優先" $ do
+      hashed <- hashSecret "123456"
+      let cc = sampleCode {ccValue = hashed, ccAttemptCount = maxAttempts}
+      verifyWith verifySecret "123456" cc
+        `shouldBe` Left (ConfirmationCodeMaxAttemptsExceeded maxAttempts)
 
   describe "maxAttempts" $
     it "定数 5 (SEC-04 準拠)" $

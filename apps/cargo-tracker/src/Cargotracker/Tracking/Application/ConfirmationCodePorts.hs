@@ -6,16 +6,19 @@ booking_id を業務キーとして 1 予約 = 0..1 コードを保持する。
 module Cargotracker.Tracking.Application.ConfirmationCodePorts
   ( ConfirmationCodeRepository (..),
     verifyAndConsume,
+    verifyAndConsumeWith,
   ) where
 
 import Data.Text (Text)
 import Data.Time (UTCTime)
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shared.Security.ConstantTime (constantTimeEqText)
 import Cargotracker.Tracking.Domain.Model.ConfirmationCode
   ( ConfirmationCode (..),
+    Verifier,
     markUsed,
-    verify,
+    verifyWith,
   )
 
 data ConfirmationCodeRepository m = ConfirmationCodeRepository
@@ -30,8 +33,9 @@ data ConfirmationCodeRepository m = ConfirmationCodeRepository
 確認コード検証の唯一の窓口。verify + markUsed + attempt_count 更新の副作用を
 Tracking BC 内に閉じ込め、呼出側は Bool 相当の Either だけを受け取る。
 -}
-verifyAndConsume ::
+verifyAndConsumeWith ::
   Monad m =>
+  Verifier ->
   ConfirmationCodeRepository m ->
   -- | 予約 ID
   Text ->
@@ -40,12 +44,12 @@ verifyAndConsume ::
   -- | 現在時刻 (markUsed 用)
   UTCTime ->
   m (Either DomainError ())
-verifyAndConsume repo bid inputCode now = do
+verifyAndConsumeWith checker repo bid inputCode now = do
   mExisting <- findByBookingId repo bid
   case mExisting of
     Nothing -> pure (Left (HandlingBookingNotFound bid))
     Just cc ->
-      case verify inputCode cc of
+      case verifyWith checker inputCode cc of
         Left err -> do
           _ <-
             updateAfterVerify
@@ -57,3 +61,18 @@ verifyAndConsume repo bid inputCode now = do
           let used = markUsed now verified
           _ <- updateAfterVerify repo bid used
           pure (Right ())
+
+{- | 互換性維持: 平文比較 (constantTimeEqText) を使う従来 API。
+
+DB が平文の 6 桁数字を保存している IT5 実装の呼出側が使う。
+T5-02 Phase 3 (code_hash 移行) 完了後は `verifyAndConsumeWith verifySecret`
+に切り替える。
+-}
+verifyAndConsume ::
+  Monad m =>
+  ConfirmationCodeRepository m ->
+  Text ->
+  Text ->
+  UTCTime ->
+  m (Either DomainError ())
+verifyAndConsume = verifyAndConsumeWith constantTimeEqText
