@@ -94,6 +94,11 @@ Shipper 1 ─── N Booking
 | 入金発行 | `/billing/invoices/:id/issue-payment` (POST) | 確定済 Invoice に支払期日 + reference_code を設定 (Pending 遷移) | 経理担当者 | US23 |
 | 入金確認 | `/billing/invoices/:id/confirm-payment` (POST) | reference_code 入力で入金確認 → Confirmed + Cargo.Settled 遷移 | 経理担当者 | US23 |
 | 公開貨物追跡 | `/public/tracking/:trackingNumber` | 認証不要の貨物状態照会 | 荷主・荷受人 (未認証) | US18 |
+| 例外一覧 | `/exceptions` | 3 種例外 (Delay/Damage/Loss) 一覧・種別/重要度/状態フィルタ | Handler, Tracker, Admin | US19, US20 |
+| 遅延例外登録 | `/exceptions/delay` (GET/POST) | 遅延時間 + 理由 + 重要度で登録、Tracking を TsInException 遷移 (ADR-0014) | Handler, Tracker | US19 |
+| 破損例外登録 | `/exceptions/damage` (GET/POST) | 損害額 + 詳細 + 重要度で登録 | Handler, Tracker | US20 |
+| 紛失例外登録 | `/exceptions/loss` (GET/POST) | 損失額 + 最終目視地点 (UN/LOCODE) + 重要度で登録 | Handler, Tracker | US20 |
+| 例外詳細・解決 | `/exceptions/:id` (GET) + `/exceptions/:id/resolve` (POST) | 詳細表示・解決記録 (二重解決不可) | Tracker, Admin | US19, US20 |
 
 ---
 
@@ -782,6 +787,157 @@ state 一覧表示 : GET /notifications?bookingId=BK-A1B2C3\n(200 + notif-table)
 - `data-testid="empty-state"`: 履歴なし時のカード
 - `data-testid="notif-table"`: 通知テーブル本体
 - `data-testid="notif-row"`: 各通知行 (件数カウント用)
+
+---
+
+## 例外一覧・登録画面 (`/exceptions`, US19/US20 IT7 追加)
+
+Exception BC (domain-model.md §11, data-model.md §exception_record) の
+Interfaces。3 種例外 (Delay / Damage / Loss) を統一 UI で扱い、
+ADR-0014 に基づく Tracking 状態遷移 (`TsInException`) と原子的に統合する。
+
+### ワイヤーフレーム (一覧)
+
+```plantuml
+@startsalt
+{
+  Cargo Tracker : 例外一覧 (US19/US20)
+  { / <b>CargoTracker</b> | 予約 | 荷役 | 追跡 | <b>例外</b> | 料金 | 通知 | [ログアウト (Tracker)] } |
+  {
+    ==
+    <b>輸送例外一覧</b>
+    ==
+    [Filter: 種別 ^All^ | Delay | Damage | Loss ]  [重要度 ^All^ | Low | Medium | High | Critical ]  [状態 ^未解決^ | 解決済 ]
+    ==
+    <b>例外 ID</b> | <b>追跡番号</b> | <b>種別</b> | <b>重要度</b> | <b>報告者</b> | <b>報告時刻</b> | <b>状態</b> | <b>操作</b>
+    EX-0001 | TR-A1B2C3D4 | Delay | High | user-42 (Handler) | 2026-09-28 10:00 | 未解決 | [詳細] [解決]
+    EX-0002 | TR-Z9Y8X7W6 | Damage | Critical | user-13 (Tracker) | 2026-09-27 15:30 | 未解決 | [詳細] [解決]
+    EX-0003 | TR-P5Q4R3S2 | Loss | High | user-05 (Admin) | 2026-09-25 09:00 | 解決済 | [詳細]
+    ==
+    [ + 遅延を登録 ] [ + 破損を登録 ] [ + 紛失を登録 ]
+  }
+}
+@endsalt
+```
+
+### ワイヤーフレーム (遅延登録フォーム)
+
+```plantuml
+@startsalt
+{
+  <b>遅延例外を登録</b> (`POST /exceptions/delay`)
+  ==
+  追跡番号     | "TR-A1B2C3D4"
+  遅延時間     | "48" 時間
+  重要度       | ^Medium^ | Low | High | Critical
+  理由         | . . . . . . . . . . . . . . . . . . . .
+                . 港湾ストライキにより出港が遅延。         .
+                . . . . . . . . . . . . . . . . . . . .
+  ==
+  [ 登録する ]  [ キャンセル ]
+  ==
+  <i>US19 IT7: 登録すると Tracking が TsInException に遷移し、荷主・セールスへ通知が発火します。</i>
+}
+@endsalt
+```
+
+### ワイヤーフレーム (破損登録フォーム)
+
+```plantuml
+@startsalt
+{
+  <b>破損例外を登録</b> (`POST /exceptions/damage`)
+  ==
+  追跡番号             | "TR-Z9Y8X7W6"
+  損害額               | ^JPY^ | ^USD^ ; "1,500,000"
+  詳細                 | . . . . . . . . . . . . . . . . . . . .
+                        . 冷凍コンテナ温度制御故障により内容物半損 .
+                        . . . . . . . . . . . . . . . . . . . .
+  重要度               | ^High^ | Critical
+  ==
+  [ 登録する ]  [ キャンセル ]
+  ==
+  <i>PhotoEvidence URL 添付は将来対応 (現状は詳細フィールドに URL 記載)</i>
+}
+@endsalt
+```
+
+### ワイヤーフレーム (紛失登録フォーム)
+
+```plantuml
+@startsalt
+{
+  <b>紛失例外を登録</b> (`POST /exceptions/loss`)
+  ==
+  追跡番号     | "TR-P5Q4R3S2"
+  損失額       | ^JPY^ | ^USD^ ; "3,000,000"
+  最終目視地点 | "USSEA" (UN/LOCODE 5 文字、不明時は空)
+  重要度       | ^High^ | Critical
+  ==
+  [ 登録する ]  [ キャンセル ]
+}
+@endsalt
+```
+
+### 画面遷移
+
+```plantuml
+@startuml
+title 例外一覧・登録・解決の画面遷移
+
+state 一覧 : GET /exceptions (200)
+state 遅延登録 : GET /exceptions/delay
+state 破損登録 : GET /exceptions/damage
+state 紛失登録 : GET /exceptions/loss
+state 詳細 : GET /exceptions/:id
+state エラー表示 : 入力不正 / InvalidTrackingTransition / TrackingNotFound
+
+一覧 --> 遅延登録 : [+ 遅延を登録]
+一覧 --> 破損登録 : [+ 破損を登録]
+一覧 --> 紛失登録 : [+ 紛失を登録]
+
+遅延登録 --> 一覧 : POST /exceptions/delay 303 (成功)
+破損登録 --> 一覧 : POST /exceptions/damage 303 (成功)
+紛失登録 --> 一覧 : POST /exceptions/loss 303 (成功)
+
+遅延登録 --> エラー表示 : POST 422/409
+破損登録 --> エラー表示 : POST 422/409
+紛失登録 --> エラー表示 : POST 422/409
+
+一覧 --> 詳細 : [詳細]
+詳細 --> 一覧 : POST /exceptions/:id/resolve 303 (成功)
+@enduml
+```
+
+### エラー時のフラッシュメッセージ
+
+| DomainError | HTTP | 表示メッセージ |
+| :--- | :---: | :--- |
+| `InvalidDelayHours` | 422 | 「遅延時間は正の整数を入力してください」 |
+| `InvalidExceptionReason "empty"` | 422 | 「理由を入力してください」 |
+| `InvalidExceptionReason "too long"` | 422 | 「理由は 500 文字以内で入力してください」 |
+| `InvalidCost` (負の損害額 / 損失額) | 422 | 「金額は 0 以上を入力してください」 |
+| `InvalidCurrency` | 422 | 「通貨は ISO 4217 大文字 3 文字で入力してください (JPY/USD)」 |
+| `InvalidReporter` | 422 | 「セッションから報告者を特定できませんでした」 |
+| `TrackingNotFound` | 404 | 「該当する追跡番号が見つかりません」 |
+| `InvalidTrackingTransition from to` | 409 | 「現在の状態 (from) から例外状態への遷移は禁止されています (ADR-0014)」 |
+| `ExceptionAlreadyResolved` | 409 | 「この例外は既に解決済です」 |
+
+### `data-testid` 規約
+
+- `data-testid="exception-list"`: 一覧テーブル本体
+- `data-testid="exception-row"`: 各行 (件数 / assertion 用)
+- `data-testid="exception-form-delay"` / `-damage` / `-loss`: 3 種登録フォーム
+- `data-testid="exception-detail"`: 詳細セクション
+- `data-testid="resolve-button"`: 解決ボタン
+- `data-testid="tracking-transition-error"`: ADR-0014 遷移エラー表示
+
+### 実装参照
+
+- Application: `Cargotracker.Exception.Application.Record{Delay,Damage,Loss}ExceptionCommand` / `ResolveExceptionCommand`
+- Cross-BC: `Cargotracker.Tracking.Application.Ports.markInExceptionByTrackingNumber` (ADR-0014 Phase 1)
+- Interfaces: `Cargotracker.Exception.Interfaces.ExceptionListPageApi` (未実装、次イテレーション)
+- 権限判定: Handler / Tracker / Admin のみ登録可 (Tracker / Admin のみ解決可)
 
 ---
 
