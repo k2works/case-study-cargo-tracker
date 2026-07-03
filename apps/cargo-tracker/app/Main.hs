@@ -120,7 +120,10 @@ import Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
 import Cargotracker.Tracking.Infrastructure.PostgresTrackingStateAuditRepository
   ( newPostgresTrackingStateAuditRepository,
   )
-import Cargotracker.Tracking.Interfaces.ManualUpdatePageApi (manualUpdateApp)
+import Cargotracker.Tracking.Interfaces.ManualUpdatePageApi
+  ( auditHistoryApp,
+    manualUpdateApp,
+  )
 import Cargotracker.Tracking.Interfaces.PublicTrackingApi (publicTrackingApp)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 
@@ -198,6 +201,9 @@ rootApp conn jwtSecret jwtTtl req respond =
     "tracking" : _ : "manual-update" : _ ->
       -- US17 手動状態更新 (Tracker/MasterAdmin 権限適用は T6-09 で AuthProtect 統合予定)
       manualUpdateApp trackingRepo auditRepo "system" req respond
+    "tracking" : _ : "audit-history" : _ ->
+      -- US17 監査履歴タブ (htmx フラグメント)
+      auditHistoryApp auditRepo req respond
     "handling" : _ ->
       -- Postgres NotificationRepository を注入。Handling.claim 完了時の
       -- 通知発火は notification テーブルに保存され、/notifications で参照可能。

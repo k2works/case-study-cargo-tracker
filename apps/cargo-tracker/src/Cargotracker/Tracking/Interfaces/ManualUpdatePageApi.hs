@@ -16,6 +16,8 @@ Role-based 認可 (Tracker / MasterAdmin) は T6-09 で AuthProtect 経由に統
 module Cargotracker.Tracking.Interfaces.ManualUpdatePageApi
   ( ManualUpdateApi,
     manualUpdateApp,
+    AuditHistoryApi,
+    auditHistoryApp,
   ) where
 
 import Control.Monad.IO.Class (liftIO)
@@ -37,11 +39,14 @@ import Cargotracker.Shared.Domain.TransportStatus
 import qualified Cargotracker.Tracking.Application.ManualStateUpdateCommand as Cmd
 import Cargotracker.Tracking.Application.Ports (TrackingRepository (..))
 import Cargotracker.Tracking.Application.TrackingStateAuditPorts
-  ( TrackingStateAuditRepository,
+  ( TrackingStateAuditRepository (..),
   )
 import Cargotracker.Tracking.Domain.Model.TrackingActivity (TrackingActivity (..))
 import Cargotracker.Tracking.Domain.Model.Value.TrackingNumber (mkTrackingNumber)
-import Cargotracker.Tracking.Views.ManualUpdateView (manualUpdateFormFragment)
+import Cargotracker.Tracking.Views.ManualUpdateView
+  ( auditHistoryFragment,
+    manualUpdateFormFragment,
+  )
 
 data ManualUpdateForm = ManualUpdateForm
   { formNewStatus :: !Text
@@ -117,3 +122,23 @@ handlerSubmit trackingRepo auditRepo changedBy tn form = do
             ("/public/tracking/" <> tn :: Text)
             NoContent
         )
+
+{- | 監査履歴タブ (htmx フラグメント)。
+GET /tracking/:tn/audit-history で auditHistoryFragment を返す。
+-}
+type AuditHistoryApi =
+  "tracking"
+    :> Capture "trackingNumber" Text
+    :> "audit-history"
+    :> Get '[HTML] (Html ())
+
+auditHistoryApp ::
+  TrackingStateAuditRepository IO ->
+  Application
+auditHistoryApp auditRepo =
+  serve (Proxy :: Proxy AuditHistoryApi) $ \tn ->
+    case mkTrackingNumber tn of
+      Left _ -> pure (auditHistoryFragment [])
+      Right tnObj -> do
+        audits <- liftIO (findAuditsByTrackingNumber auditRepo tnObj)
+        pure (auditHistoryFragment audits)
