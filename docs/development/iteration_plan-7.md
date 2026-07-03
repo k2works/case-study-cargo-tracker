@@ -118,7 +118,7 @@
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
 | 4.1 | DamageException / LossException VO + PhotoEvidence / Amount VO 定義 | 3h | [x] `40a27280` (Amount/DamageException/LossException 完了、PhotoEvidence は View 層で追加予定) |
-| 4.2 | RecordDamageExceptionCommand / RecordLossExceptionCommand + Tracking 状態遷移 (Damaged/Lost) | 3h | [ ] |
+| 4.2 | RecordDamageExceptionCommand / RecordLossExceptionCommand + Tracking 状態遷移 (Damaged/Lost) | 3h | [-] `6722ae81` (8 テスト、713→721 全緑)、Cross-BC 状態遷移は次反復 |
 | 4.3 | Postgres 拡張 (damage_exception / loss_exception 追加、共通テーブル正規化検討) | 3h | [ ] |
 | 4.4 | ExceptionListView へ Damage/Loss 種別フィルタと詳細ページ追加 | 3h | [ ] |
 | 4.5 | 通知配信 (荷主/セールス/保険担当) + 損害額集計サービス | 2h | [ ] |
