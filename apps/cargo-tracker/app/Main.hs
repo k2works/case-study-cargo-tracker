@@ -53,6 +53,12 @@ import Cargotracker.Estimation.Infrastructure.PostgresEstimateRepository
   ( newPostgresEstimateRepository,
   )
 import Cargotracker.Estimation.Interfaces.EstimatePageApi (estimatePageApp)
+import Cargotracker.Exception.Infrastructure.PostgresExceptionRepository
+  ( newPostgresExceptionRepository,
+  )
+import Cargotracker.Exception.Interfaces.ExceptionListPageApi
+  ( exceptionListApp,
+  )
 import Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
   ( newPostgresHandlingActivityRepository,
   )
@@ -203,6 +209,10 @@ rootApp conn jwtSecret jwtTtl req respond =
     "notifications" : _ ->
       -- US26 通知一覧画面。Postgres 永続化のため Handling.claim の通知と共有。
       notificationListApp notificationRepo req respond
+    "exceptions" : _ ->
+      -- US19/US20 例外一覧画面 (IT7)。Postgres exception_record を照会。
+      -- 詳細ページ / 登録フォーム 3 種 / 解決 API は次イテレーションで追加。
+      exceptionListApp exceptionRepo req respond
     _ ->
       respond $
         responseLBS
@@ -225,6 +235,7 @@ rootApp conn jwtSecret jwtTtl req respond =
     txRunner = newPostgresTxRunner conn
     -- IT6 US21 / US26: Postgres Repository を InMemory 実装から切替
     pricingRuleRepo = newPostgresPricingRuleRepository conn
+    exceptionRepo = newPostgresExceptionRepository conn
     currencyRateRepo = newPostgresCurrencyRateRepository conn
     notificationRepo = newPostgresNotificationRepository conn
 
