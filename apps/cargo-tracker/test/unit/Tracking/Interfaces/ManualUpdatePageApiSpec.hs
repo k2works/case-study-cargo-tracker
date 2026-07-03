@@ -63,6 +63,7 @@ makeApp initial = do
           { saveAudit = \a -> do
               modifyIORef' auditRef (a :)
               pure (Right ())
+          , findAuditsByTrackingNumber = \_ -> readIORef auditRef
           }
   pure (manualUpdateApp trackingRepo auditRepo "tracker-1")
 

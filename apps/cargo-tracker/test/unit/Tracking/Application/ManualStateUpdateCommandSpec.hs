@@ -68,6 +68,7 @@ makeRepos initialActivities = do
           { saveAudit = \a -> do
               modifyIORef' auditRef (a :)
               pure (Right ())
+          , findAuditsByTrackingNumber = \_ -> readIORef auditRef
           }
   pure (trackingRepo, auditRepo, readIORef activityRef, readIORef auditRef)
 
@@ -147,6 +148,7 @@ spec = describe "ManualStateUpdateCommand.execute (US17, IT7)" $ do
             { saveAudit = \a -> do
                 modifyIORef' auditRef (a :)
                 pure (Right ())
+            , findAuditsByTrackingNumber = \_ -> readIORef auditRef
             }
     result <- execute tr ar (sampleInput "TR000001" TsClaimed "更新")
     case result of

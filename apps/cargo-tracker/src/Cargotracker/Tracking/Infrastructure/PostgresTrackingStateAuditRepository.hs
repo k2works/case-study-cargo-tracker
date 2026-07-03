@@ -14,26 +14,39 @@ module Cargotracker.Tracking.Infrastructure.PostgresTrackingStateAuditRepository
 
 import Control.Exception (SomeException, try)
 import Data.Int (Int64)
+import Data.Maybe (mapMaybe)
+import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple
   ( Connection,
+    Only (..),
     execute,
+    query,
   )
 
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
-import Cargotracker.Shared.Domain.TransportStatus (transportStatusToText)
+import Cargotracker.Shared.Domain.TransportStatus
+  ( TransportStatus,
+    textToTransportStatus,
+    transportStatusToText,
+  )
 import Cargotracker.Tracking.Application.TrackingStateAuditPorts
   ( TrackingStateAuditRepository (..),
   )
 import Cargotracker.Tracking.Domain.Model.TrackingStateAudit
   ( TrackingStateAudit (..),
   )
-import Cargotracker.Tracking.Domain.Model.Value.TrackingNumber (unTrackingNumber)
+import Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
+  ( TrackingNumber,
+    unTrackingNumber,
+  )
 
 newPostgresTrackingStateAuditRepository :: Connection -> TrackingStateAuditRepository IO
 newPostgresTrackingStateAuditRepository conn =
   TrackingStateAuditRepository
     { saveAudit = saveImpl conn
+    , findAuditsByTrackingNumber = findImpl conn
     }
 
 saveImpl :: Connection -> TrackingStateAudit -> IO (Either DomainError ())
@@ -63,3 +76,37 @@ saveImpl conn audit = do
             )
         )
     Right _ -> pure (Right ())
+
+findImpl :: Connection -> TrackingNumber -> IO [TrackingStateAudit]
+findImpl conn tn = do
+  result <-
+    try
+      ( query
+          conn
+          "SELECT previous_status, new_status, reason, changed_by, changed_at \
+          \FROM tracking_state_audit WHERE tracking_number = ? \
+          \ORDER BY changed_at DESC"
+          (Only (unTrackingNumber tn))
+      ) ::
+      IO (Either SomeException [(Text, Text, Text, Text, UTCTime)])
+  case result of
+    Left _ -> pure []
+    Right rows -> pure (mapMaybe (rowToAudit tn) rows)
+  where
+    rowToAudit ::
+      TrackingNumber ->
+      (Text, Text, Text, Text, UTCTime) ->
+      Maybe TrackingStateAudit
+    rowToAudit tnVal (prev, new, reason, changedBy, changedAt) =
+      Just
+        TrackingStateAudit
+          { tsaTrackingNumber = tnVal
+          , tsaPreviousStatus = decodeStatus prev
+          , tsaNewStatus = decodeStatus new
+          , tsaReason = reason
+          , tsaChangedBy = changedBy
+          , tsaChangedAt = changedAt
+          }
+
+    decodeStatus :: Text -> TransportStatus
+    decodeStatus = textToTransportStatus

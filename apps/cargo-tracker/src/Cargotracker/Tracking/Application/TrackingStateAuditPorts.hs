@@ -11,7 +11,10 @@ module Cargotracker.Tracking.Application.TrackingStateAuditPorts
 
 import Cargotracker.Shared.Domain.DomainError (DomainError)
 import Cargotracker.Tracking.Domain.Model.TrackingStateAudit (TrackingStateAudit)
+import Cargotracker.Tracking.Domain.Model.Value.TrackingNumber (TrackingNumber)
 
-newtype TrackingStateAuditRepository m = TrackingStateAuditRepository
+data TrackingStateAuditRepository m = TrackingStateAuditRepository
   { saveAudit :: TrackingStateAudit -> m (Either DomainError ())
+  , findAuditsByTrackingNumber :: TrackingNumber -> m [TrackingStateAudit]
+  -- ^ US17 監査履歴タブ用。changed_at DESC 順で返却する。
   }
