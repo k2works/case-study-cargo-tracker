@@ -7,14 +7,21 @@
 
 ## [Unreleased]
 
-### 一巡完成 (v1.0.0-mvp, IT6 実装完了 2026-07-02)
+IT7 (例外処理・法人割引・MVP クロージング) の変更を記録する。詳細は
+[docs/development/iteration_plan-7.md](docs/development/iteration_plan-7.md) を参照。
+
+---
+
+## [1.0.0-mvp] - 2026-07-02 (IT6)
+
+### 一巡完成 (Release 1.0 MVP)
 
 Phase 3 完了 (Release 1.0 MVP) を達成。IT5 高優先技術的負債 5 件 (T5-01〜T5-05) を
 完済し、本体 2 ストーリー (US21 輸送料金算出 / US26 荷受人引取通知) を Domain /
 Application / Infrastructure (Postgres) / Interfaces / Views / Wire の全レイヤで
 一巡完成。Ralph Loop 35 反復で消化した (34 コミット、+139 tests / 502 → 641)。
 
-正式リリースタグ (v1.0.0-mvp) は E2E ハッピーパス追加後の IT7 冒頭で打つ予定。
+正式リリースタグ (`v1.0.0-mvp`) は E2E 統合ハッピーパス (T6-01) 追加後に IT7 内で打つ。
 
 #### Added (T5-01〜T5-21)
 
