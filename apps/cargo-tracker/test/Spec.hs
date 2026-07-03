@@ -52,6 +52,7 @@ import qualified Exception.Interfaces.ExceptionListPageApiSpec
 import qualified Exception.Views.ExceptionListViewSpec
 import qualified Notification.Application.SendClaimNotificationCommandSpec
 import qualified Notification.Domain.Model.NotificationSpec
+import qualified Notification.Domain.Model.Value.NotificationIdSpec
 import qualified Notification.Infrastructure.LogDeliveryPortSpec
 import qualified Notification.Interfaces.NotificationListPageApiSpec
 import qualified Notification.Views.NotificationListViewSpec
@@ -287,6 +288,10 @@ main = hspec $ do
   describe
     "Cargotracker.Notification.Domain.Model.Notification"
     Notification.Domain.Model.NotificationSpec.spec
+
+  describe
+    "Cargotracker.Notification.Domain.Model.Value.NotificationId"
+    Notification.Domain.Model.Value.NotificationIdSpec.spec
 
   describe
     "Cargotracker.Notification.Application.SendClaimNotificationCommand"

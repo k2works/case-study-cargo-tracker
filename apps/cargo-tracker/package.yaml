@@ -141,6 +141,7 @@ library:
   - Cargotracker.Pricing.Infrastructure.PostgresPricingRuleRepository
   - Cargotracker.Pricing.Infrastructure.PostgresCurrencyRateRepository
   - Cargotracker.Notification.Domain.Model.Notification
+  - Cargotracker.Notification.Domain.Model.Value.NotificationId
   - Cargotracker.Notification.Application.Ports
   - Cargotracker.Notification.Application.SendClaimNotificationCommand
   - Cargotracker.Notification.Infrastructure.LogDeliveryPort
