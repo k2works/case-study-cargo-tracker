@@ -124,6 +124,10 @@ data DomainError
     StateAlreadyMatches !Text
   | -- | 手動状態更新の変更理由が空
     ManualUpdateReasonRequired
+  | {- | ADR-0014 (IT7): 現状態から目的状態への遷移が Exception BC の遷移
+    マトリクスで禁止されている (from / to の Text 表現)
+    -}
+    InvalidTrackingTransition !Text !Text
   | -- IT7 追加 (US19/US20 例外処理、Exception BC)
 
     -- | 遅延時間が正の整数でない (US19)

@@ -98,6 +98,7 @@ import qualified Shipper.Interfaces.ShipperSearchApiSpec
 import qualified Tracking.Application.IssueTrackingNumberCommandSpec
 import qualified Tracking.Application.ManualStateUpdateCommandSpec
 import qualified Tracking.Application.MarkClaimedSpec
+import qualified Tracking.Application.MarkInExceptionSpec
 import qualified Tracking.Application.QueryTrackingByNumberQuerySpec
 import qualified Tracking.Domain.Model.ConfirmationCodeSpec
 import qualified Tracking.Domain.Model.UpdateStateManuallySpec
@@ -229,6 +230,10 @@ main = hspec $ do
   describe
     "Cargotracker.Tracking.Application.markClaimedByBookingId"
     Tracking.Application.MarkClaimedSpec.spec
+
+  describe
+    "Cargotracker.Tracking.Application.markInExceptionByTrackingNumber (ADR-0014)"
+    Tracking.Application.MarkInExceptionSpec.spec
 
   describe
     "Cargotracker.Tracking.Application.IssueTrackingNumberCommand"

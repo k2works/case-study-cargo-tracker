@@ -9,6 +9,8 @@ module Cargotracker.Tracking.Application.Ports
   ( TrackingRepository (..),
     queryTrackingNumberText,
     markClaimedByBookingId,
+    markInExceptionByTrackingNumber,
+    checkTransitionForException,
   ) where
 
 import Data.Text (Text)
@@ -20,6 +22,7 @@ import Cargotracker.Tracking.Domain.Model.TrackingActivity
   )
 import Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
   ( TrackingNumber (..),
+    mkTrackingNumber,
   )
 
 data TrackingRepository m = TrackingRepository
@@ -66,3 +69,45 @@ markClaimedByBookingId repo bid = do
   case mActivity of
     Nothing -> pure (Left (HandlingBookingNotFound bid))
     Just _ -> updateTransportStatus repo bid TsClaimed
+
+{- | Cross-BC helper (ADR-0014, IT7 Phase 1): trackingNumber (Text-DTO) の
+TrackingActivity を「例外状態 (TsInException)」に遷移させる。
+
+Exception BC の RecordDelayException / RecordDamageException /
+RecordLossException の Tx 境界内で呼ばれる想定。ADR-0014 の遷移マトリクスに
+従い、TsNotReceived / TsClaimed / TsInException からの遷移は
+InvalidTrackingTransition でエラーを返す。
+
+戻り値:
+
+- Right (): 遷移成功
+- Left (TrackingNotFound tn): 該当 tracking_activity なし
+- Left (InvalidTrackingTransition fromStatus toStatus): 遷移禁止
+- Left (PersistenceFailed _): DB エラー
+-}
+markInExceptionByTrackingNumber ::
+  Monad m => TrackingRepository m -> Text -> m (Either DomainError ())
+markInExceptionByTrackingNumber repo tn =
+  case mkTrackingNumber tn of
+    Left err -> pure (Left err)
+    Right tnObj -> do
+      mActivity <- findByTrackingNumber repo tnObj
+      case mActivity of
+        Nothing -> pure (Left (TrackingNotFound tn))
+        Just activity ->
+          case checkTransitionForException (taTransportStatus activity) of
+            Left err -> pure (Left err)
+            Right () -> updateTransportStatus repo (taBookingId activity) TsInException
+
+{- | ADR-0014 遷移マトリクスに基づく遷移可否検証 (Domain 純粋関数)。
+
+TsNotReceived / TsClaimed / TsInException からの Exception 遷移は禁止。
+他の 6 状態 (TsReceived / TsLoaded / TsOnboardCarrier / TsUnloaded /
+TsAwaitingClaim / TsUnknown) からは許可。
+-}
+checkTransitionForException :: TransportStatus -> Either DomainError ()
+checkTransitionForException from = case from of
+  TsNotReceived -> Left (InvalidTrackingTransition "TsNotReceived" "TsInException")
+  TsClaimed -> Left (InvalidTrackingTransition "TsClaimed" "TsInException")
+  TsInException -> Left (InvalidTrackingTransition "TsInException" "TsInException")
+  _ -> Right ()
