@@ -50,6 +50,7 @@ import qualified Pricing.Application.CalculateShippingCostCommandSpec
 import qualified Pricing.Domain.Model.PricingRuleSpec
 import qualified Pricing.Domain.Model.Value.CostSpec
 import qualified Pricing.Domain.Model.Value.CurrencyRateSpec
+import qualified Pricing.Domain.Model.Value.DiscountPropertiesSpec
 import qualified Pricing.Domain.Model.Value.DiscountSpec
 import qualified Pricing.Interfaces.CostCalculationPageApiSpec
 import qualified Pricing.Views.CostCalculationViewSpec
@@ -238,6 +239,10 @@ main = hspec $ do
   describe
     "Cargotracker.Pricing.Domain.Model.Value.Discount"
     Pricing.Domain.Model.Value.DiscountSpec.spec
+
+  describe
+    "Cargotracker.Pricing.Domain.Model.Value.Discount (hedgehog)"
+    Pricing.Domain.Model.Value.DiscountPropertiesSpec.spec
 
   describe
     "Cargotracker.Pricing.Domain.Model.Value.CurrencyRate"
