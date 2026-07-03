@@ -81,6 +81,7 @@ import qualified Shared.Infrastructure.IdGeneratorSpec
 import qualified Shared.Security.BcryptHashSpec
 import qualified Shared.Security.ConstantTimeSpec
 import qualified Shared.Web.LayoutSpec
+import qualified Shipper.Application.DiscountResolutionSpec
 import qualified Shipper.Application.RegisterShipperCommandSpec
 import qualified Shipper.Domain.Model.ShipperSpec
 import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
@@ -331,6 +332,10 @@ main = hspec $ do
   describe
     "Cargotracker.Shipper.Application.RegisterShipperCommand"
     Shipper.Application.RegisterShipperCommandSpec.spec
+
+  describe
+    "Cargotracker.Shipper.Application.Ports (DiscountResolution)"
+    Shipper.Application.DiscountResolutionSpec.spec
 
   describe
     "Cargotracker.Booking.Application.RegisterBookingCommand"
