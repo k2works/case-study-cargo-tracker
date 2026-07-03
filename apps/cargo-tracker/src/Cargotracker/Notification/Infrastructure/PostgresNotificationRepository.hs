@@ -31,6 +31,10 @@ import Cargotracker.Notification.Domain.Model.Notification
     NotificationContent (..),
     NotificationStatus (..),
   )
+import Cargotracker.Notification.Domain.Model.Value.NotificationId
+  ( mkNotificationId,
+    notificationIdToText,
+  )
 import Cargotracker.Shared.Domain.DomainError (DomainError)
 
 newPostgresNotificationRepository :: Connection -> NotificationRepository IO
@@ -65,13 +69,14 @@ textToStatus "Sent" = Sent
 textToStatus "Failed" = Failed
 textToStatus _ = Pending
 
+-- ADR-0013 Phase 3: notification_id を先頭に含む 9 カラムの行型
 type NotificationRow =
-  (Text, Text, Text, Text, Text, UTCTime, Maybe UTCTime, Maybe Text)
+  (Maybe Text, Text, Text, Text, Text, Text, UTCTime, Maybe UTCTime, Maybe Text)
 
 rowToNotification :: NotificationRow -> Notification
-rowToNotification (bid, chan, subj, body, status, created, sent, failure) =
+rowToNotification (mNid, bid, chan, subj, body, status, created, sent, failure) =
   Notification
-    { nId = Nothing -- ADR-0013 Phase 3 で notification_id を SELECT 対象に加える
+    { nId = mNid >>= (either (const Nothing) Just . mkNotificationId)
     , nBookingId = bid
     , nChannel = textToChannel chan
     , nContent = NotificationContent subj body
@@ -85,31 +90,54 @@ rowToNotification (bid, chan, subj, body, status, created, sent, failure) =
 -- 実装
 --------------------------------------------------------------------------------
 
+{- | INSERT (ADR-0013 Phase 3):
+`nId = Just nid` の場合は notification_id を明示的に INSERT する。
+`Nothing` の場合はカラムを省略し、DB のデフォルト (gen_random_uuid()) に委ねる。
+-}
 saveImpl :: Connection -> Notification -> IO (Either DomainError ())
-saveImpl conn n = do
-  _ <-
-    execute
-      conn
-      "INSERT INTO notification \
-      \ (booking_id, channel, subject, body, status, created_at, sent_at, failure_reason) \
-      \ VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-      ( nBookingId n
-      , channelToText (nChannel n)
-      , ncSubject (nContent n)
-      , ncBody (nContent n)
-      , statusToText (nStatus n)
-      , nCreatedAt n
-      , nSentAt n
-      , nFailureReason n
-      )
-  pure (Right ())
+saveImpl conn n = case nId n of
+  Just nid -> do
+    _ <-
+      execute
+        conn
+        "INSERT INTO notification \
+        \ (notification_id, booking_id, channel, subject, body, status, created_at, sent_at, failure_reason) \
+        \ VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ( notificationIdToText nid
+        , nBookingId n
+        , channelToText (nChannel n)
+        , ncSubject (nContent n)
+        , ncBody (nContent n)
+        , statusToText (nStatus n)
+        , nCreatedAt n
+        , nSentAt n
+        , nFailureReason n
+        )
+    pure (Right ())
+  Nothing -> do
+    _ <-
+      execute
+        conn
+        "INSERT INTO notification \
+        \ (booking_id, channel, subject, body, status, created_at, sent_at, failure_reason) \
+        \ VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        ( nBookingId n
+        , channelToText (nChannel n)
+        , ncSubject (nContent n)
+        , ncBody (nContent n)
+        , statusToText (nStatus n)
+        , nCreatedAt n
+        , nSentAt n
+        , nFailureReason n
+        )
+    pure (Right ())
 
 findByBookingIdImpl :: Connection -> Text -> IO [Notification]
 findByBookingIdImpl conn bid = do
   rows <-
     query
       conn
-      "SELECT booking_id, channel, subject, body, status, created_at, sent_at, failure_reason \
+      "SELECT notification_id::text, booking_id, channel, subject, body, status, created_at, sent_at, failure_reason \
       \ FROM notification \
       \ WHERE booking_id = ? \
       \ ORDER BY created_at DESC"
@@ -117,22 +145,42 @@ findByBookingIdImpl conn bid = do
       IO [NotificationRow]
   pure (fmap rowToNotification rows)
 
+{- | UPDATE (ADR-0013 Phase 3):
+`nId = Just nid` の場合は WHERE notification_id = ? を使い、業務キー変更
+(subject 修正 / 再送信) 時も同じレコードを更新できる。
+`Nothing` の場合は互換のため既存の (booking_id + created_at) 複合キーを使う。
+-}
 updateImpl :: Connection -> Notification -> IO (Either DomainError ())
-updateImpl conn n = do
-  _ <-
-    execute
-      conn
-      "UPDATE notification SET \
-      \  status = ?, sent_at = ?, failure_reason = ?, \
-      \  version = version + 1, updated_at = NOW() \
-      \ WHERE booking_id = ? AND created_at = ?"
-      ( statusToText (nStatus n)
-      , nSentAt n
-      , nFailureReason n
-      , nBookingId n
-      , nCreatedAt n
-      )
-  pure (Right ())
+updateImpl conn n = case nId n of
+  Just nid -> do
+    _ <-
+      execute
+        conn
+        "UPDATE notification SET \
+        \  status = ?, sent_at = ?, failure_reason = ?, \
+        \  version = version + 1, updated_at = NOW() \
+        \ WHERE notification_id = ?::uuid"
+        ( statusToText (nStatus n)
+        , nSentAt n
+        , nFailureReason n
+        , notificationIdToText nid
+        )
+    pure (Right ())
+  Nothing -> do
+    _ <-
+      execute
+        conn
+        "UPDATE notification SET \
+        \  status = ?, sent_at = ?, failure_reason = ?, \
+        \  version = version + 1, updated_at = NOW() \
+        \ WHERE booking_id = ? AND created_at = ?"
+        ( statusToText (nStatus n)
+        , nSentAt n
+        , nFailureReason n
+        , nBookingId n
+        , nCreatedAt n
+        )
+    pure (Right ())
 
 -- silence unused import (T.pack 用途など将来拡張)
 _unused :: Text -> Text
