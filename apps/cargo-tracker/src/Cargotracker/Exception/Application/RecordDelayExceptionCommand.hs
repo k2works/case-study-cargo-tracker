@@ -48,19 +48,31 @@ data RecordDelayExceptionInput = RecordDelayExceptionInput
   }
   deriving stock (Eq, Show)
 
+{- | ADR-0014 Phase 2: Record は Cross-BC helper `markInException` を受け取り、
+Exception 永続化と Tracking 状態遷移を単一の Application フローに統合する。
+Tracking 遷移が失敗 (InvalidTrackingTransition / TrackingNotFound / DB エラー)
+した場合、Exception も永続化しない (逆順チェック)。
+-}
 execute ::
   Monad m =>
   ExceptionRepository m ->
+  -- | Cross-BC helper: Tracking.Application.Ports.markInExceptionByTrackingNumber
+  (Text -> m (Either DomainError ())) ->
   RecordDelayExceptionInput ->
   m (Either DomainError ExceptionRecord)
-execute repo input =
+execute repo markInException input =
   case buildRecord input of
     Left err -> pure (Left err)
     Right record -> do
-      saveResult <- saveException repo record
-      case saveResult of
+      -- ADR-0014 Phase 2: 先に Tracking 遷移を試み、成功時のみ Exception を永続化
+      transitionResult <- markInException (inputTrackingNumber input)
+      case transitionResult of
         Left err -> pure (Left err)
-        Right () -> pure (Right record)
+        Right () -> do
+          saveResult <- saveException repo record
+          case saveResult of
+            Left err -> pure (Left err)
+            Right () -> pure (Right record)
 
 buildRecord :: RecordDelayExceptionInput -> Either DomainError ExceptionRecord
 buildRecord input = do

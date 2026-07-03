@@ -45,16 +45,22 @@ data RecordDamageExceptionInput = RecordDamageExceptionInput
 execute ::
   Monad m =>
   ExceptionRepository m ->
+  -- | ADR-0014 Phase 2 Cross-BC helper
+  (Text -> m (Either DomainError ())) ->
   RecordDamageExceptionInput ->
   m (Either DomainError ExceptionRecord)
-execute repo input =
+execute repo markInException input =
   case buildRecord input of
     Left err -> pure (Left err)
     Right record -> do
-      saveResult <- saveException repo record
-      case saveResult of
+      transitionResult <- markInException (inputTrackingNumber input)
+      case transitionResult of
         Left err -> pure (Left err)
-        Right () -> pure (Right record)
+        Right () -> do
+          saveResult <- saveException repo record
+          case saveResult of
+            Left err -> pure (Left err)
+            Right () -> pure (Right record)
 
 buildRecord :: RecordDamageExceptionInput -> Either DomainError ExceptionRecord
 buildRecord input = do

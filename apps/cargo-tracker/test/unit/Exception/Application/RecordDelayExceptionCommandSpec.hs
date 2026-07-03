@@ -58,7 +58,7 @@ spec :: Spec
 spec = describe "RecordDelayExceptionCommand.execute (US19, IT7)" $ do
   it "正常系: ExceptionRecord が構築され Repository に永続化される" $ do
     (repo, getSaved) <- makeRepo
-    result <- execute repo validInput
+    result <- execute repo (\_ -> pure (Right ())) validInput
     case result of
       Right r -> do
         erExceptionId r `shouldBe` "EX-0001"
@@ -75,28 +75,28 @@ spec = describe "RecordDelayExceptionCommand.execute (US19, IT7)" $ do
 
   it "0 時間の遅延は InvalidDelayHours、永続化されない" $ do
     (repo, getSaved) <- makeRepo
-    result <- execute repo (validInput {inputDelayHours = 0})
+    result <- execute repo (\_ -> pure (Right ())) (validInput {inputDelayHours = 0})
     result `shouldBe` Left (InvalidDelayHours 0)
     saved <- getSaved
     length saved `shouldBe` 0
 
   it "空の理由は InvalidExceptionReason、永続化されない" $ do
     (repo, getSaved) <- makeRepo
-    result <- execute repo (validInput {inputReason = "  "})
+    result <- execute repo (\_ -> pure (Right ())) (validInput {inputReason = "  "})
     result `shouldBe` Left (InvalidExceptionReason "empty")
     saved <- getSaved
     length saved `shouldBe` 0
 
   it "空 exceptionId は InvalidExceptionReason \"empty exception id\"" $ do
     (repo, getSaved) <- makeRepo
-    result <- execute repo (validInput {inputExceptionId = ""})
+    result <- execute repo (\_ -> pure (Right ())) (validInput {inputExceptionId = ""})
     result `shouldBe` Left (InvalidExceptionReason "empty exception id")
     saved <- getSaved
     length saved `shouldBe` 0
 
   it "空 reporter userId は InvalidReporter \"empty user id\"" $ do
     (repo, getSaved) <- makeRepo
-    result <- execute repo (validInput {inputReporterUserId = ""})
+    result <- execute repo (\_ -> pure (Right ())) (validInput {inputReporterUserId = ""})
     result `shouldBe` Left (InvalidReporter "empty user id")
     saved <- getSaved
     length saved `shouldBe` 0
@@ -109,7 +109,15 @@ spec = describe "RecordDelayExceptionCommand.execute (US19, IT7)" $ do
             , findExceptionsByTrackingNumber = \_ -> pure []
             , updateExceptionResolution = \_ _ -> pure (Right ())
             }
-    result <- execute failingRepo validInput
+    result <- execute failingRepo (\_ -> pure (Right ())) validInput
     case result of
       Left (ConcurrentModification msg) -> msg `shouldBe` "boom"
       other -> expectationFailure ("expected ConcurrentModification, got " <> show other)
+
+  it "ADR-0014 Phase 2: Tracking 遷移失敗時は Exception も永続化されない" $ do
+    (repo, getSaved) <- makeRepo
+    let failingMark _ = pure (Left (TrackingNotFound "TR000001"))
+    result <- execute repo failingMark validInput
+    result `shouldBe` Left (TrackingNotFound "TR000001")
+    saved <- getSaved
+    length saved `shouldBe` 0
