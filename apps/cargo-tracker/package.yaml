@@ -151,6 +151,7 @@ library:
   - Cargotracker.Tracking.Views.ClaimNotificationView
   - Cargotracker.Tracking.Views.ManualUpdateView
   - Cargotracker.Tracking.Views.PublicTrackingView
+  - Cargotracker.Tracking.Interfaces.ManualUpdatePageApi
   - Cargotracker.Tracking.Interfaces.PublicTrackingApi
   - Cargotracker.Handling.Domain.Model.HandlingType
   - Cargotracker.Handling.Domain.Model.HandlingActivity
