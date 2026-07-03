@@ -1476,3 +1476,5 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - Ralph Loop 2 週目 iter 3: T6-09 RoleGate (Cookie 認証 + RolePolicy 統合ヘルパー) `34f663fe`
 - Ralph Loop 2 週目 iter 4: iteration_plan-7.md に T7-01 完了 / T6-09 着手を反映 `8799da16`
 - Ralph Loop 2 週目 iter 5: T6-07 `newCorrelationId` (UUID v4) を Logging に追加 `a2e5ac67`
+- Ralph Loop 2 週目 iter 6: iteration_plan-7.md に T6-07 着手と iter 4-5 反映 `b4acb29b`
+- Ralph Loop 2 週目 iter 7: T6-07 `newCorrelationId` の hspec テスト 2 本追加 `b3a6a9cd`
