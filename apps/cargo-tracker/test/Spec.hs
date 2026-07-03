@@ -78,6 +78,7 @@ import qualified Routing.Interfaces.VoyageMovementRowApiSpec
 import qualified Routing.Interfaces.VoyagePageApiSpec
 import qualified Shared.Application.TxRunnerSpec
 import qualified Shared.Auth.Application.LoginCommandSpec
+import qualified Shared.Auth.Domain.RolePolicySpec
 import qualified Shared.Auth.Domain.UserSpec
 import qualified Shared.Auth.Infrastructure.BcryptVerifierSpec
 import qualified Shared.Auth.Infrastructure.JwtIssuerSpec
@@ -124,6 +125,10 @@ main = hspec $ do
         `shouldBe` "ConcurrentModification \"BK-A1B2C3\""
 
   describe "Cargotracker.Shared.Auth.Domain.User" Shared.Auth.Domain.UserSpec.spec
+
+  describe
+    "Cargotracker.Shared.Auth.Domain.RolePolicy"
+    Shared.Auth.Domain.RolePolicySpec.spec
 
   describe
     "Cargotracker.Shared.Auth.Application.LoginCommand"
