@@ -27,11 +27,14 @@ module Cargotracker.Shared.Infrastructure.IdGenerator
     generateShipperIdText,
     generateSessionTokenText,
     generateTrackingNumberText,
+    generateNotificationIdText,
     intToAlphaNumChar,
   ) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUIDv4
 import System.Random (randomRIO)
 
 -- | "BK-A1B2C3" のような ID 文字列を生成する。
@@ -53,6 +56,13 @@ generateTrackingNumberText :: IO Text
 generateTrackingNumberText = do
   body <- randomAlphaNum 6
   pure ("TR" <> body)
+
+{- | ADR-0013 Phase 2/3: UUID v4 の Text 表現を生成する (Notification の
+サロゲート識別子用)。`Data.UUID.V4.nextRandom` を利用して衝突確率を
+実質ゼロにする。出力例: "550e8400-e29b-41d4-a716-446655440000"
+-}
+generateNotificationIdText :: IO Text
+generateNotificationIdText = UUID.toText <$> UUIDv4.nextRandom
 
 {- | 44 文字のセッショントークンを生成する (task 1.2, ADR-0010, IT5)。
 
