@@ -1433,7 +1433,7 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - **T6-06 k6 スモーク負荷テスト CI 統合** — 完了 (iter 39-40: k6 script + `.github/workflows/k6-smoke.yml`)
 - **T6-07 katip 正式化** — 未着手
 - **T7-01 IssueConfirmationCode の Handling ワークフロー接続** — 未着手
-- **ADR-0013 Phase 1-3 実装 (Notification 主キー移行)** — Phase 1 (migration) 完了 iter 49、Phase 2 (VO) 着手 iter 50。Phase 2 残 (集約フィールド追加 + UUID v4 生成) と Phase 3 (Postgres WHERE 節移行) は継続
+- **ADR-0013 Phase 1-3 実装 (Notification 主キー移行)** — Phase 1 (migration) 完了 iter 49、Phase 2 (VO + 集約フィールド + Application UUID 注入口) 完了 iter 50/52/53、Phase 3 (Postgres SELECT/INSERT/UPDATE の notification_id 対応) 完了 iter 54。残: Handling BC 側で UUID v4 を採番して `sendClaimLogNotificationText` に渡す (UUID 生成器の DI が必要)、および nId の Maybe 除去は移行運用完了後
 - **ADR-0014 3 種例外詳細化** (TsDelayed / TsDamaged / TsLost、現状 TsInException に統合) — 提案のまま
 - **US17 View 層 (TrackingDetailView 手動更新モーダル + 監査履歴タブ)** — 5.4 完了 (iter 42-44)。監査履歴 Query API は T6-09 と統合予定
 - **hspec-wai Role Policy テスト** (US17 5.5) — 4 テスト完了 (iter 45)。Role Policy (Tracker OK / Handler 403) は T6-09 と統合予定
@@ -1459,3 +1459,7 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - iter 48: US17 監査履歴タブ endpoint (`GET /tracking/:tn/audit-history`) `8304cb6b`
 - iter 49: ADR-0013 Phase 1 migration `20260928100400_add_notification_id.sql` `51c51934`
 - iter 50: ADR-0013 Phase 2 - NotificationId VO + 2 テスト `a62976e3`
+- iter 51: iteration_plan-7.md に iter 46-50 反映 `84972537`
+- iter 52: ADR-0013 Phase 2 - Notification 集約に nId フィールド追加 `353b550e`
+- iter 53: ADR-0013 Phase 2 - SendClaimNotificationCommand UUID 注入口 `e4cfa4eb`
+- iter 54: ADR-0013 Phase 3 - Postgres SELECT/INSERT/UPDATE を notification_id 対応 `705ee46b`
