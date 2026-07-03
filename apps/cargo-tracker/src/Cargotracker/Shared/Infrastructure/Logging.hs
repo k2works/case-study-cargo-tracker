@@ -17,12 +17,15 @@ module Cargotracker.Shared.Infrastructure.Logging
     logInfo,
     logError,
     withCorrelationId,
+    newCorrelationId,
   ) where
 
 import Data.Aeson (KeyValue ((.=)), Value, encode, object)
 import qualified Data.Aeson.Key as Key
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import Data.Text (Text)
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUIDv4
 import System.IO (hPutStrLn, stderr)
 
 data LogLevel = Info | Warn | Error
@@ -53,9 +56,17 @@ writeLog lvl msg extras = do
       full = base <> map (\(k, v) -> Key.fromText k .= v) extras
   hPutStrLn stderr (LBC.unpack (encode (object full)))
 
+{- | T6-07 (IT7): UUID v4 の Text 表現を新規 correlation_id として生成する。
+Servant Handler の入口で呼び出し、リクエスト全体をまたぐ相関 ID とする。
+出力例: "0f8fad5b-d9cb-469f-a165-70867728950e"
+-}
+newCorrelationId :: IO Text
+newCorrelationId = UUID.toText <$> UUIDv4.nextRandom
+
 {- | correlation_id を付けて処理を実行し、成功/失敗を問わず start/end の
 JSON ログを出力する。Servant Handler の外側で使う想定。
-IT5 段階では単純な wrapper のみ (IT6 で UUID 生成と組み合わせて拡張)。
+IT7 T6-07: `newCorrelationId` と組み合わせることで、Servant Handler 全体を
+UUID で相関追跡できる。katip 正式移行前の暫定 API。
 -}
 withCorrelationId :: Text -> IO a -> IO a
 withCorrelationId corrId action = do
