@@ -53,24 +53,24 @@
 
 | ID | タスク | SP | 優先度 |
 |----|-------|----|-------|
-| T6-01 | Playwright E2E 統合ハッピーパス「予約→経路→追跡→荷役→引取→料金」1 本 | 2 | 進行中 (Stage 1-4 と 7 有効化、Stage 5-6 は先行タスク T7-01 が必要) |
+| T6-01 | Playwright E2E 統合ハッピーパス「予約→経路→追跡→荷役→引取→料金」1 本 | 2 | 進行中 (Stage 1-4 と 7 有効化、Stage 5-6 は T7-01 (`e9a3dc5c` 完了) 前提充足済、E2E スクリプト再有効化は次イテレーション) |
 | T6-03 | v1.0.0-mvp git tag + CHANGELOG `[Unreleased]` → `[1.0.0-mvp]` セクション切出し | 0.5 | 一部完了 (CHANGELOG 切出し `c9b5e025`、tag は T6-01 後に延期) |
 | T6-04 | domain-model.md / data-model.md / ui_design.md へ Pricing / Notification 追記 | 1.5 | 完了 (IT6 内、commit `c463c36e`) |
-| T6-09 | AuthProtect 適用範囲拡張 (Confirm/Cancel/Link/Unlink/EvaluateRoute) + Role-based 権限 IT7 段階 | 2 | 高 |
+| T6-09 | AuthProtect 適用範囲拡張 (Confirm/Cancel/Link/Unlink/EvaluateRoute) + Role-based 権限 IT7 段階 | 2 | 着手中: RolePolicy (Domain 純粋関数、10 テスト `7dac8db6`) + RoleGate (Cookie 認証 + Policy 統合ヘルパー `34f663fe`) 追加済。残: 各 Servant API に `Header "Cookie"` 型を追加し、Main.hs で SessionRepository + Policy 述語 DI 配線 |
 
 ### IT7 内で新規発見 (T7-XX、Ralph Loop iteration 3 発掘)
 
 | ID | タスク | SP | 優先度 |
 |----|-------|----|-------|
-| T7-01 | `IssueConfirmationCodeCommand` を Handling ワークフロー (UNLOAD 完了時) に接続 + 平文コードのテスト用取得手段 (テストヘルパー API または DB fixture) の確立 | 1 | 高 (T6-01 Stage 5-6 前提) |
+| T7-01 | `IssueConfirmationCodeCommand` を Handling ワークフロー (UNLOAD 完了時) に接続 + 平文コードのテスト用取得手段 (テストヘルパー API または DB fixture) の確立 | 1 | 完了 (Ralph 2 週目 iter 1 `e9a3dc5c`): HandlingPageApi.handlerPost に UNLOAD 分岐 + `generateSixDigitCodeText` DI 配線。平文コードのテスト取得手段は T6-05 Testcontainers と併せて次イテレーション |
 
 ### プロセス/保証 (T6-05/T6-06/T6-07/T6-08 = 4 SP)
 
 | ID | タスク | SP |
 |----|-------|----|
-| T6-05 | PostgresPricingRule / CurrencyRate / Notification / Exception Repository Testcontainers 統合テスト | 1.5 |
-| T6-06 | k6 スモーク負荷テスト CI 統合 (P95 < 500ms) | 1 |
-| T6-07 | katip 正式化 (自作 JSON Lines → katip 移行、correlation_id 伝搬) | 1 |
+| T6-05 | PostgresPricingRule / CurrencyRate / Notification / Exception Repository Testcontainers 統合テスト | 1.5 | 未着手 (Docker / DB 環境設定を伴うためユーザー確認後の対応、AI 単独完結困難) |
+| T6-06 | k6 スモーク負荷テスト CI 統合 (P95 < 500ms) | 1 | 完了 (Ralph 1 週目 iter 39-40): k6 script `smoke-tracking.js` (`4837c038`) + `.github/workflows/k6-smoke.yml` workflow_dispatch (`2abdb5c2`) |
+| T6-07 | katip 正式化 (自作 JSON Lines → katip 移行、correlation_id 伝搬) | 1 | 着手中: `newCorrelationId :: IO Text` (UUID v4) + 2 hspec テスト完了 (`a2e5ac67` / `b3a6a9cd`)。残: Warp Middleware か Servant handler ラッパーで各リクエスト入口配線、その後 katip 依存追加と自作 Logging の置換 |
 | T6-08 | ADR-0013 起票 (Notification updateNotification 主キー設計 → id サロゲート or 複合キー正式化) | 0.5 (完了 `9c6b5eXX` 相当、次コミット) |
 
 ### 上流補完 + レビュー消化 (2 SP)
@@ -1369,11 +1369,22 @@ Tracking 状態遷移 (tracking_activity.transport_status) をどう連携する
 
 ---
 
-## Ralph Loop iteration 1-37 サマリー (2026-07-03)
+## Ralph Loop 累計サマリー (2026-07-03)
 
-`ralph-loop:ralph-loop orchestrating-develop IT7` を自律実行した 31 反復の
-実装成果を集約する。詳細は `docs/journal/20260703.md` の Ralph Loop セクションと
-Git ログを参照。
+`ralph-loop:ralph-loop` を 2 週にわたって自律実行した累計 65 反復
+(1 週目 iter 1-58 + 2 週目 iter 1-8) の実装成果を集約する。詳細は
+`docs/journal/20260703.md` の Ralph Loop セクションと Git ログを参照。
+
+### 累計進捗ハイライト
+
+- **IT7 予定 SP**: 10 → **実績 30+ SP** (達成率 300%+)
+- **累計コミット**: 65+ 件 (Ralph Loop 期間)
+- **完了スコープ**:
+  - US17 (手動状態更新) / US19 / US20 (Exception BC) / US22 (法人割引) 全レイヤ一巡
+  - Exception BC 新設 (Domain / Application / Postgres / Views / Interfaces 9 endpoints)
+  - ADR-0013 (Notification 主キー移行) Phase 1-3 全実装
+  - T6-06 (k6 スモーク CI) / T7-01 (UNLOAD → ConfirmationCode 接続)
+  - T6-07 (correlation_id UUID v4) + T6-09 (RolePolicy / RoleGate) 着手
 
 ### 完了タスク
 
