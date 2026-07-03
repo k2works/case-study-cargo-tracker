@@ -131,8 +131,8 @@
 | 5.1 | Tracking 集約に `updateStateManually` メソッド + TrackingStateAudit VO 追加 | 2h | [x] `a22d7c9f` (5 テスト追加、651→656 全緑) |
 | 5.2 | ManualStateUpdateCommand (Role: Tracker/Admin 限定、監査ログ書込み) | 2h | [x] `a558957d` (6 テスト、656→662 全緑、Role 判定は Interfaces 層に委譲) |
 | 5.3 | Postgres 拡張 (tracking_state_audit) + Repository 更新 | 2h | [x] `e39f5a10` migration + PostgresTrackingStateAuditRepository (統合テストは T6-05 で追加) |
-| 5.4 | TrackingDetailView に手動更新フォーム (htmx) + 監査履歴タブ | 2h | [ ] |
-| 5.5 | hspec-wai 3 本 (Tracker OK / Handler 403 / 監査記録) | 2h | [ ] |
+| 5.4 | TrackingDetailView に手動更新フォーム (htmx) + 監査履歴タブ | 2h | [x] iter 42 `4c8d5f45` ManualUpdateView (form + audit history fragment) + iter 43 `b44bfd79` Servant handler + iter 44 `35f2b9a6` Main.hs 配線。監査履歴タブの Query API は T6-09 で AuthProtect と統合予定 |
+| 5.5 | hspec-wai 3 本 (Tracker OK / Handler 403 / 監査記録) | 2h | [x] iter 45 `f30c6c03` hspec-wai 4 テスト (GET 200 + POST 303/422)。Role Policy テスト (Tracker OK / Handler 403) は T6-09 と統合予定 |
 
 ### 6. US22 法人割引 (Week 2 中盤、2 SP)
 
@@ -1435,8 +1435,8 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - **T7-01 IssueConfirmationCode の Handling ワークフロー接続** — 未着手
 - **ADR-0013 Phase 1-3 実装 (Notification 主キー移行)** — 提案のまま
 - **ADR-0014 3 種例外詳細化** (TsDelayed / TsDamaged / TsLost、現状 TsInException に統合) — 提案のまま
-- **US17 View 層 (TrackingDetailView 手動更新モーダル + 監査履歴タブ)** — 5.4/5.5
-- **hspec-wai Role Policy テスト** (US17 5.5、T6-09 と統合)
+- **US17 View 層 (TrackingDetailView 手動更新モーダル + 監査履歴タブ)** — 5.4 完了 (iter 42-44)。監査履歴 Query API は T6-09 と統合予定
+- **hspec-wai Role Policy テスト** (US17 5.5) — 4 テスト完了 (iter 45)。Role Policy (Tracker OK / Handler 403) は T6-09 と統合予定
 
 ### Ralph Loop iter 32-37 で追加された成果
 
@@ -1449,3 +1449,8 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - iter 38: 本サマリー更新
 - iter 39: k6 スモーク script `smoke-tracking.js` + README `4837c038`
 - iter 40: `.github/workflows/k6-smoke.yml` (workflow_dispatch, P95 SLA gate)
+- iter 41: iteration_plan-7.md サマリー更新 (T6-06 完了反映) `8c169a65`
+- iter 42: US17 5.4 ManualUpdateView (Lucid フォーム + 監査履歴フラグメント) `4c8d5f45`
+- iter 43: US17 5.4 ManualUpdatePageApi (Servant GET/POST 手動更新) `b44bfd79`
+- iter 44: US17 5.4 Main.hs 配線 (`/tracking/:tn/manual-update`) `35f2b9a6`
+- iter 45: US17 5.5 hspec-wai 4 テスト (200 / 303 / 422) `f30c6c03`
