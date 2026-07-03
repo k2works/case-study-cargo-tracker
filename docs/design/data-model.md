@@ -753,7 +753,83 @@ CREATE INDEX idx_notification_booking
 **設計判断 (IT6)**:
 
 - **notification_log との使い分け**: `notification_log` は US12/US13 の payload TEXT 中心の汎用ログ用途で残置、`notification` は US26 の subject / body / channel を持つ構造化通知。将来的に `notification_log` は Deprecated → `notification` に統合する方針
-- **updateNotification の主キー**: 現行は `booking_id + created_at` の複合キーで単一レコードを WHERE 節に指定 (id サロゲート未使用)。ADR-0013 で正式化予定 (IT7 T6-08)
+- **updateNotification の主キー**: 現行は `booking_id + created_at` の複合キーで単一レコードを WHERE 節に指定 (id サロゲート未使用)。ADR-0013 (2026-07-03 提案) で `notification_id UUID UNIQUE` サロゲートキーへの移行を確定
+
+### `tracking_state_audit` (追跡状態手動更新監査 / IT7 US17 追加)
+
+Tracker/Admin による Tracking 状態の手動修正を追記型で監査する。US17
+`ManualStateUpdateCommand` で永続化され、UPDATE / DELETE は行わない前提。
+
+| カラム | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | `PK` | サロゲートキー |
+| `tracking_number` | `VARCHAR(20)` | `NOT NULL, CHECK ^[A-Z0-9]{8}$` | 業務キー |
+| `previous_status` | `VARCHAR(30)` | `NOT NULL` | 変更前 TransportStatus |
+| `new_status` | `VARCHAR(30)` | `NOT NULL, CHECK previous_status <> new_status` | 変更後 |
+| `reason` | `TEXT` | `NOT NULL, CHECK trim 後空でない` | 変更理由 |
+| `changed_by` | `VARCHAR(64)` | `NOT NULL` | 変更者 userId |
+| `changed_at` | `TIMESTAMPTZ` | `NOT NULL` | 変更時刻 |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | 監査 |
+
+インデックス: `(tracking_number, changed_at DESC)` / `(changed_by)`
+
+Migration: `20260928100200_create_tracking_state_audit.sql`
+Domain: `Cargotracker.Tracking.Domain.Model.TrackingStateAudit`
+Repository: `Cargotracker.Tracking.Application.TrackingStateAuditPorts.TrackingStateAuditRepository`
+Postgres: `Cargotracker.Tracking.Infrastructure.PostgresTrackingStateAuditRepository`
+
+**設計判断 (IT7)**: 追記型のため UPDATE / DELETE を想定せず、CHECK 制約で
+状態変更の意味不整合 (前後同一) を DB レベルで排除。
+
+### `exception_record` (例外記録 / IT7 US19/US20 追加)
+
+Exception BC の集約ルート永続化テーブル。DelayException / DamageException /
+LossException の 3 種を単一テーブル + JSONB `detail_json` に統合 (ADR-0014、
+垂直分割回避)。
+
+| カラム | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | `PK` | サロゲートキー |
+| `exception_id` | `VARCHAR(64)` | `UNIQUE, NOT NULL` | UUID Text (Application 採番) |
+| `tracking_number` | `VARCHAR(20)` | `NOT NULL, CHECK ^[A-Z0-9]{8}$` | Cross-BC 参照 |
+| `exception_type` | `VARCHAR(20)` | `NOT NULL, CHECK IN ('DELAY','DAMAGE','LOSS')` | 例外種別 |
+| `severity` | `VARCHAR(10)` | `NOT NULL, CHECK IN ('LOW','MEDIUM','HIGH','CRITICAL')` | 重要度 |
+| `detail_json` | `JSONB` | `NOT NULL` | 型別詳細 (下記構造) |
+| `reporter_user_id` | `VARCHAR(64)` | `NOT NULL, 非空` | 報告者 userId |
+| `reporter_role` | `VARCHAR(20)` | `NOT NULL, 非空` | Handler / Tracker / Admin |
+| `reported_at` | `TIMESTAMPTZ` | `NOT NULL` | 報告時刻 |
+| `resolved_at` | `TIMESTAMPTZ` | | 解決時刻 (NULL = 未解決) |
+| `version` | `INTEGER` | `NOT NULL DEFAULT 0` | 楽観ロック |
+| `created_at` / `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | 監査 |
+
+`detail_json` の構造 (ADR-0014):
+
+- Delay: `{"delayHours": N, "reason": "..."}`
+- Damage: `{"amount": N, "currency": "XXX", "description": "..."}`
+- Loss: `{"amount": N, "currency": "XXX", "lastSeenAt": "..." | null}`
+
+インデックス:
+
+- `(tracking_number, reported_at DESC)`: /exceptions?trackingNumber= 検索
+- `(exception_type, severity)`: 種別×重要度フィルタ
+- 部分インデックス `(resolved_at) WHERE resolved_at IS NULL`: 未解決一覧
+
+Migration: `20260928100300_create_exception_record.sql`
+Domain: `Cargotracker.Exception.Domain.Model.ExceptionRecord` (§domain-model.md §11)
+Repository: `Cargotracker.Exception.Application.Ports.ExceptionRepository`
+Postgres: `Cargotracker.Exception.Infrastructure.PostgresExceptionRepository`
+
+**設計判断 (IT7)**:
+
+- **単一テーブル + JSONB 統合 (ADR-0014)**: 3 種例外を垂直分割せず 1 テーブルで
+  管理。exception_type 判別列と JSONB detail_json で型別詳細を保持。検索性
+  (tracking_number / severity 別インデックス) と柔軟性 (詳細スキーマ拡張) の
+  バランス
+- **Text-DTO 参照 (Rule 4)**: tracking_number は Text (Cross-BC 参照)。
+  DB FK 制約は張らず、Application 層 (Cross-BC helper) で整合性確保
+- **状態遷移統合 (ADR-0014 Phase 2)**: exception_record INSERT と
+  tracking_activity UPDATE (TsInException) の Tx 統合は Application 層で
+  markInExceptionByTrackingNumber を通じて実現
 
 ---
 
@@ -995,6 +1071,14 @@ DROP TABLE route_candidate_selection;
 | `20260831100000_create_session.sql` | IT5 | `session` (ADR-0010 セッション認証、opaque Cookie + Postgres KV) |
 | `20260831110000_create_itinerary_and_leg.sql` | IT5 (IT4 繰越) | `itinerary` + `leg` (US09 経路確定、iteration_plan-4.md §4.3 DDL) |
 | `20260831110100_extend_cargo_for_confirmation.sql` | IT5 (IT4 繰越) | `cargo` に itinerary_id / cancellation_* / confirmed_at / cancelled_at 追加 (US13 ADR-0007) |
+| `20260831120000_create_tracking_activity.sql` | IT5 | `tracking_activity` (US14 追跡番号発行) |
+| `20260831130000_create_handling_activity.sql` | IT5 | `handling_activity` (US15 荷役作業記録) |
+| `20260831140000_create_confirmation_code.sql` | IT5 | `confirmation_code` (US16 引取確認コード、bcrypt) |
+| `20260914100000_create_currency_rate.sql` | IT6 | `currency_rate` (US21 通貨換算レート) |
+| `20260914100100_create_pricing_rule.sql` | IT6 | `pricing_rule` (US21 輸送料金) |
+| `20260914100200_create_notification.sql` | IT6 | `notification` (US26 引取通知) |
+| `20260928100200_create_tracking_state_audit.sql` | IT7 | `tracking_state_audit` (US17 手動状態更新監査、追記型) |
+| `20260928100300_create_exception_record.sql` | IT7 | `exception_record` (US19/US20 例外記録、単一テーブル + JSONB detail_json) |
 
 > Handling Context (`handling_activity` 等)、Tracking Context、Billing Context のテーブルは IT4 以降のイテレーションで追加する。IT4 の Itinerary+Leg 実装 (Domain/Application) は IT5 で Postgres migration 化 (上記 2 本)。IT5 の `confirmation_code` は `tracking_activity` 依存のため tracking テーブル追加後に投入する。
 
