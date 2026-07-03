@@ -82,6 +82,32 @@ spec = describe "ExceptionListPageApi (US19/US20, IT7)" $ do
         request "POST" "/exceptions/EX-NONE/resolve" [] ""
           `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?error=not-found&id=EX-NONE"]}
 
+  describe "POST /exceptions/delay (US19)" $
+    with app $ do
+      it "正常なフォーム値は 303 flash=delay-recorded" $
+        request
+          "POST"
+          "/exceptions/delay"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-D001&trackingNumber=TR000001&delayHours=48&reason=%E6%B8%AF%E6%B9%BE%E9%81%85%E5%BB%B6&severity=HIGH&reporterUserId=user-42&reporterRole=Handler"
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?flash=delay-recorded"]}
+
+      it "不正な delayHours は 303 で ?error=invalid-delay-hours" $
+        request
+          "POST"
+          "/exceptions/delay"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-D002&trackingNumber=TR000001&delayHours=abc&reason=%E6%B8%AF%E6%B9%BE&severity=HIGH&reporterUserId=user-42&reporterRole=Handler"
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?error=invalid-delay-hours"]}
+
+      it "不正な severity は 303 で ?error=invalid-severity" $
+        request
+          "POST"
+          "/exceptions/delay"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-D003&trackingNumber=TR000001&delayHours=24&reason=%E6%B8%AF%E6%B9%BE&severity=URGENT&reporterUserId=user-42&reporterRole=Handler"
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?error=invalid-severity"]}
+
 reportedAt :: UTCTime
 reportedAt = UTCTime (fromGregorian 2026 9 28) (secondsToDiffTime 3600)
 
