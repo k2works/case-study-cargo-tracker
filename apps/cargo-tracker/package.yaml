@@ -103,6 +103,8 @@ library:
   - Cargotracker.Exception.Domain.Model.DamageException
   - Cargotracker.Exception.Domain.Model.LossException
   - Cargotracker.Exception.Domain.Model.ExceptionType
+  - Cargotracker.Exception.Domain.Model.Reporter
+  - Cargotracker.Exception.Domain.Model.ExceptionRecord
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
   - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
   - Cargotracker.Tracking.Domain.Model.TrackingActivity

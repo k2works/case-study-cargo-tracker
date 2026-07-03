@@ -130,4 +130,8 @@ data DomainError
     InvalidDelayHours !Int
   | -- | 例外の理由が空 or 上限超過 (US19/US20、Text = 理由コード)
     InvalidExceptionReason !Text
+  | -- | 報告者情報が不正 (Text = 理由コード)
+    InvalidReporter !Text
+  | -- | 例外レコードが既に解決済 (二重解決不可)
+    ExceptionAlreadyResolved
   deriving stock (Eq, Show)
