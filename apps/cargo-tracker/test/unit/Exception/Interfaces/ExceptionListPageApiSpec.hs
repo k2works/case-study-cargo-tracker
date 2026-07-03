@@ -136,6 +136,20 @@ spec = describe "ExceptionListPageApi (US19/US20, IT7)" $ do
         get "/exceptions/EX-XYZ"
           `shouldRespondWith` 200 {matchBody = bodyContainsText "EX-XYZ"}
 
+  describe "GET /exceptions/:id (詳細ページ・実データ)" $
+    with (fmap exceptionListApp repoWithRecord) $ do
+      it "存在する ID は exception-detail の実データを表示 (Delay 種別)" $
+        get "/exceptions/EX-0001"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "exception-detail"}
+
+      it "種別詳細 (遅延時間 24 時間) が表示される" $
+        get "/exceptions/EX-0001"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "24 時間"}
+
+      it "未解決レコードは解決ボタンを含む" $
+        get "/exceptions/EX-0001"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "resolve-button"}
+
   describe "POST /exceptions/damage (US20)" $
     with app $ do
       it "正常なフォーム値は 303 flash=damage-recorded" $

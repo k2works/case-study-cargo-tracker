@@ -33,6 +33,9 @@ import qualified Cargotracker.Exception.Application.RecordDamageExceptionCommand
 import qualified Cargotracker.Exception.Application.RecordDelayExceptionCommand as RecordDelay
 import qualified Cargotracker.Exception.Application.RecordLossExceptionCommand as RecordLoss
 import qualified Cargotracker.Exception.Application.ResolveExceptionCommand as Resolve
+import Cargotracker.Exception.Domain.Model.Amount (Amount (..))
+import Cargotracker.Exception.Domain.Model.DamageException (DamageException (..))
+import Cargotracker.Exception.Domain.Model.DelayException (DelayException (..))
 import Cargotracker.Exception.Domain.Model.ExceptionRecord (ExceptionRecord (..))
 import Cargotracker.Exception.Domain.Model.ExceptionSeverity
   ( ExceptionSeverity (..),
@@ -40,8 +43,16 @@ import Cargotracker.Exception.Domain.Model.ExceptionSeverity
     levelToText,
     textToLevel,
   )
-import Cargotracker.Exception.Domain.Model.ExceptionType (exceptionTypeToText)
+import Cargotracker.Exception.Domain.Model.ExceptionType
+  ( ExceptionType (..),
+    exceptionTypeToText,
+  )
+import Cargotracker.Exception.Domain.Model.LossException (LossException (..))
 import Cargotracker.Exception.Domain.Model.Reporter (Reporter (..))
+import Cargotracker.Exception.Views.ExceptionDetailView
+  ( DetailRow (..),
+    exceptionDetailPage,
+  )
 import Cargotracker.Exception.Views.ExceptionFormViews
   ( damageFormPage,
     delayFormPage,
@@ -176,7 +187,40 @@ handleShowDetail repo eid = do
   mRecord <- liftIO (findExceptionById repo eid)
   case mRecord of
     Nothing -> pure (exceptionNotFoundPage eid)
-    Just _ -> pure (exceptionNotFoundPage eid) -- 詳細ビューは次反復で追加
+    Just r -> pure (exceptionDetailPage (recordToDetailRow r))
+
+-- | ExceptionRecord (Domain) → DetailRow (View DTO) の変換
+recordToDetailRow :: ExceptionRecord -> DetailRow
+recordToDetailRow er =
+  DetailRow
+    { drId = erExceptionId er
+    , drTrackingNumber = erTrackingNumber er
+    , drType = exceptionTypeToText (erType er)
+    , drSeverity = levelToText (unSeverity (erSeverity er))
+    , drReporter =
+        reporterUserId (erReporter er)
+          <> " ("
+          <> reporterRole (erReporter er)
+          <> ")"
+    , drReportedAt = erReportedAt er
+    , drResolvedAt = erResolvedAt er
+    , drTypeDetail = detailPairs (erType er)
+    }
+
+-- | ExceptionType 3 種の詳細を key-value ペアの一覧に整形する。
+detailPairs :: ExceptionType -> [(Text, Text)]
+detailPairs (Delay d) =
+  [ ("遅延時間", T.pack (show (deDelayHours d)) <> " 時間")
+  , ("理由", deReason d)
+  ]
+detailPairs (Damage d) =
+  [ ("損害額", T.pack (show (amValue (daAmount d))) <> " " <> amCurrency (daAmount d))
+  , ("詳細", daDescription d)
+  ]
+detailPairs (Loss l) =
+  [ ("損失額", T.pack (show (amValue (loAmount l))) <> " " <> amCurrency (loAmount l))
+  , ("最終目視地点", fromMaybe "不明" (loLastSeenAt l))
+  ]
 
 handler :: ExceptionRepository IO -> Maybe Text -> Handler (Html ())
 handler repo mTn = do

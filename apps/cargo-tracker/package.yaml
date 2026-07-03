@@ -114,6 +114,7 @@ library:
   - Cargotracker.Exception.Infrastructure.DetailJsonParser
   - Cargotracker.Exception.Views.ExceptionListView
   - Cargotracker.Exception.Views.ExceptionFormViews
+  - Cargotracker.Exception.Views.ExceptionDetailView
   - Cargotracker.Exception.Interfaces.ExceptionListPageApi
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
   - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
