@@ -10,8 +10,22 @@ import qualified Network.Wai
 import Test.Hspec
 import Test.Hspec.Wai
 
+import Data.IORef (modifyIORef', newIORef, readIORef)
+
 import Cargotracker.Exception.Application.Ports (ExceptionRepository (..))
+import Cargotracker.Exception.Domain.Model.DelayException (mkDelayException)
+import Cargotracker.Exception.Domain.Model.ExceptionRecord
+  ( ExceptionRecord (..),
+    mkExceptionRecord,
+  )
+import Cargotracker.Exception.Domain.Model.ExceptionSeverity
+  ( ExceptionSeverity (..),
+    Level (..),
+  )
+import Cargotracker.Exception.Domain.Model.ExceptionType (ExceptionType (..))
+import Cargotracker.Exception.Domain.Model.Reporter (mkReporter)
 import Cargotracker.Exception.Interfaces.ExceptionListPageApi (exceptionListApp)
+import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 
 emptyRepo :: ExceptionRepository IO
 emptyRepo =
@@ -56,3 +70,39 @@ spec = describe "ExceptionListPageApi (US19/US20, IT7)" $ do
     with app $ do
       it "空の findExceptionsByTrackingNumber 結果でも 200 を返す" $
         get "/exceptions?trackingNumber=TR-A1B2C3D4" `shouldRespondWith` 200
+
+  describe "POST /exceptions/:id/resolve" $ do
+    with (fmap exceptionListApp repoWithRecord) $
+      it "未解決レコードは 303 で /exceptions?flash=resolved に戻る" $
+        request "POST" "/exceptions/EX-0001/resolve" [] ""
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?flash=resolved"]}
+
+    with app $
+      it "存在しないレコードは 303 で ?error=not-found を返す" $
+        request "POST" "/exceptions/EX-NONE/resolve" [] ""
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?error=not-found&id=EX-NONE"]}
+
+reportedAt :: UTCTime
+reportedAt = UTCTime (fromGregorian 2026 9 28) (secondsToDiffTime 3600)
+
+repoWithRecord :: IO (ExceptionRepository IO)
+repoWithRecord = do
+  ref <- newIORef initialRecords
+  pure
+    ExceptionRepository
+      { saveException = \_ -> pure (Right ())
+      , findExceptionById = \eid -> do
+          xs <- readIORef ref
+          pure (case [r | r <- xs, erExceptionId r == eid] of (x : _) -> Just x; [] -> Nothing)
+      , findExceptionsByTrackingNumber = \_ -> pure []
+      , updateExceptionResolution = \eid updated -> do
+          modifyIORef' ref (map (\r -> if erExceptionId r == eid then updated else r))
+          pure (Right ())
+      }
+  where
+    initialRecords =
+      case (mkDelayException 24 "港湾遅延", mkReporter "user-42" "Tracker") of
+        (Right d, Right rp) -> case mkExceptionRecord "EX-0001" (Delay d) (ExceptionSeverity High) rp reportedAt "TR000001" of
+          Right r -> [r]
+          Left _ -> []
+        _ -> []
