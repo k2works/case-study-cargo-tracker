@@ -118,4 +118,10 @@ data DomainError
 
     -- | 通知本文または件名が空 (Text = 理由)
     InvalidNotificationContent !Text
+  | -- IT7 追加 (US17 手動状態更新、Tracking BC)
+
+    -- | 現在の状態と同じ状態への手動更新は不可 (Text = 状態名)
+    StateAlreadyMatches !Text
+  | -- | 手動状態更新の変更理由が空
+    ManualUpdateReasonRequired
   deriving stock (Eq, Show)

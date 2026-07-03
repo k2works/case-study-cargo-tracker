@@ -92,6 +92,7 @@ import qualified Tracking.Application.IssueTrackingNumberCommandSpec
 import qualified Tracking.Application.MarkClaimedSpec
 import qualified Tracking.Application.QueryTrackingByNumberQuerySpec
 import qualified Tracking.Domain.Model.ConfirmationCodeSpec
+import qualified Tracking.Domain.Model.UpdateStateManuallySpec
 import qualified Tracking.Views.ClaimNotificationViewSpec
 
 main :: IO ()
@@ -208,6 +209,10 @@ main = hspec $ do
   describe
     "Cargotracker.Tracking.Domain.Model.ConfirmationCode"
     Tracking.Domain.Model.ConfirmationCodeSpec.spec
+
+  describe
+    "Cargotracker.Tracking.Domain.Model.TrackingActivity (updateStateManually)"
+    Tracking.Domain.Model.UpdateStateManuallySpec.spec
 
   describe
     "Cargotracker.Tracking.Application.markClaimedByBookingId"
