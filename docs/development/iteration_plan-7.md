@@ -111,7 +111,7 @@
 | 3.3 | Notification BC 連携 (荷主/セールスへの遅延通知配信) | 2h | [ ] |
 | 3.4 | PostgresExceptionRepository + migration (delay_exception) | 3h | [ ] |
 | 3.5 | ExceptionListPageApi + ExceptionListView / DelayExceptionFormView (htmx) | 3h | [ ] |
-| 3.6 | hspec-wai 3 本 (記録・遷移・通知) + hedgehog property (Severity の順序性) | 2h | [ ] |
+| 3.6 | hspec-wai 3 本 (記録・遷移・通知) + hedgehog property (Severity の順序性) | 2h | [-] Severity 順序性は `38712f90` にて既に検証済、hspec-wai は Interfaces 層追加後 |
 
 ### 4. US20 破損・紛失例外処理 (Week 2 前半、3 SP)
 
