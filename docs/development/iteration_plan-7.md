@@ -71,7 +71,7 @@
 | T6-05 | PostgresPricingRule / CurrencyRate / Notification / Exception Repository Testcontainers 統合テスト | 1.5 |
 | T6-06 | k6 スモーク負荷テスト CI 統合 (P95 < 500ms) | 1 |
 | T6-07 | katip 正式化 (自作 JSON Lines → katip 移行、correlation_id 伝搬) | 1 |
-| T6-08 | ADR-0013 起票 (Notification updateNotification 主キー設計 → id サロゲート or 複合キー正式化) | 0.5 |
+| T6-08 | ADR-0013 起票 (Notification updateNotification 主キー設計 → id サロゲート or 複合キー正式化) | 0.5 (完了 `9c6b5eXX` 相当、次コミット) |
 
 ### 上流補完 + レビュー消化 (2 SP)
 

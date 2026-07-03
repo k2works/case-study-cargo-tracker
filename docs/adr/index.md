@@ -17,6 +17,7 @@
 | [0010](0010-session-cookie-auth.md) | セッション認証方式 (opaque Cookie + Servant Auth + Postgres KV) | 提案 (2026-07-01) |
 | [0011](0011-offline-handling-queue.md) | 荷役オフライン対応方式 (Service Worker + IndexedDB キュー + BackgroundSync) | 提案 (2026-07-01) |
 | [0012](0012-transaction-boundary-and-cross-bc-policy.md) | トランザクション境界と Cross-BC 参照ポリシー (Single Tx / Text-DTO / 副作用外出し) | 採用 (2026-07-02) |
+| [0013](0013-notification-primary-key-design.md) | Notification updateNotification 主キーを notification_id (UUID) サロゲートに移行 | 提案 (2026-07-03) |
 | [0015](0015-corporate-discount-rank-derived.md) | 法人契約割引率を contract_rank 由来で決定 (shipper.discount_rate カラム追加を回避) | 採用 (2026-07-03) |
 
 ADR の作成には `creating-adr` スキルを使用してください。
