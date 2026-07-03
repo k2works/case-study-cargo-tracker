@@ -1431,7 +1431,7 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - **T6-09 AuthProtect 適用範囲拡張 (Role-based 権限)** — 着手中: RolePolicy (Domain 純粋関数、10 テスト) + RoleGate (Cookie 認証 + Policy 統合、Interfaces 層) を追加 (Ralph 2 週目 iter 2-3)。次: 各 Servant API (ManualUpdatePageApi / ExceptionListPageApi) の型に `Header "Cookie"` を追加し、Main.hs で SessionRepository と RolePolicy 述語を注入する配線が残
 - **T6-05 Testcontainers 統合テスト** — 未着手 (Exception 実装完了で優先度上昇)
 - **T6-06 k6 スモーク負荷テスト CI 統合** — 完了 (iter 39-40: k6 script + `.github/workflows/k6-smoke.yml`)
-- **T6-07 katip 正式化** — 未着手
+- **T6-07 katip 正式化** — 着手中: `newCorrelationId :: IO Text` (UUID v4) を Logging に追加 (Ralph 2 週目 iter 5)。次: Warp Middleware か Servant handler ラッパーで各リクエスト入口に配線、その後 katip 依存追加と自作 JSON Lines Logging の置換
 - **T7-01 IssueConfirmationCode の Handling ワークフロー接続** — 完了 (Ralph 2 週目 iter 1 `e9a3dc5c`): `HandlingPageApi.handlerPost` が UNLOAD 完了時に `IssueConfirmationCodeCommand` を発火。`generateSixDigitCodeText` を Composition Root から DI 注入。通知配信 (メール) は US26 後続で追加予定
 - **ADR-0013 Phase 1-3 実装 (Notification 主キー移行)** — 全 Phase 一巡完了 (iter 49-57)。Phase 1 migration + Phase 2 VO/集約/Application UUID 注入口 + Phase 3 Postgres + Handling BC UUID v4 DI (iter 56-57)。残: `nId :: Maybe` を非 Maybe 化するリファクタリングは移行運用完了後 (Phase 4 相当) に予定
 - **ADR-0014 3 種例外詳細化** (TsDelayed / TsDamaged / TsLost、現状 TsInException に統合) — 提案のまま
@@ -1474,3 +1474,5 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - Ralph Loop 再駆動 (2 週目) iter 1: T7-01 UNLOAD 完了時に確認コード発行を接続 `e9a3dc5c`
 - Ralph Loop 2 週目 iter 2: T6-09 RolePolicy 純粋関数 + 10 テスト `7dac8db6`
 - Ralph Loop 2 週目 iter 3: T6-09 RoleGate (Cookie 認証 + RolePolicy 統合ヘルパー) `34f663fe`
+- Ralph Loop 2 週目 iter 4: iteration_plan-7.md に T7-01 完了 / T6-09 着手を反映 `8799da16`
+- Ralph Loop 2 週目 iter 5: T6-07 `newCorrelationId` (UUID v4) を Logging に追加 `a2e5ac67`
