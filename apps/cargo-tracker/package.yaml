@@ -108,6 +108,7 @@ library:
   - Cargotracker.Tracking.Application.IssueTrackingNumberCommand
   - Cargotracker.Tracking.Application.QueryTrackingByNumberQuery
   - Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository
+  - Cargotracker.Tracking.Infrastructure.PostgresTrackingStateAuditRepository
   - Cargotracker.Pricing.Domain.Model.PricingRule
   - Cargotracker.Pricing.Domain.Model.Value.Cost
   - Cargotracker.Pricing.Domain.Model.Value.CurrencyRate
