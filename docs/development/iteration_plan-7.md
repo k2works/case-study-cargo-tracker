@@ -1430,7 +1430,7 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - **T6-01 Stage 5-6** (Handling + Claim + Notification) — T7-01 完了待ち
 - **T6-09 AuthProtect 適用範囲拡張 (Role-based 権限)** — 未着手
 - **T6-05 Testcontainers 統合テスト** — 未着手 (Exception 実装完了で優先度上昇)
-- **T6-06 k6 スモーク負荷テスト CI 統合** — 未着手
+- **T6-06 k6 スモーク負荷テスト CI 統合** — 完了 (iter 39-40: k6 script + `.github/workflows/k6-smoke.yml`)
 - **T6-07 katip 正式化** — 未着手
 - **T7-01 IssueConfirmationCode の Handling ワークフロー接続** — 未着手
 - **ADR-0013 Phase 1-3 実装 (Notification 主キー移行)** — 提案のまま
@@ -1447,3 +1447,5 @@ Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態�
 - iter 36: `PostgresExceptionRepository` find 系実装 `a2c2a54a`
 - iter 37: GET /exceptions/:id 実データ詳細ビュー (ExceptionDetailView) `792d3629`
 - iter 38: 本サマリー更新
+- iter 39: k6 スモーク script `smoke-tracking.js` + README `4837c038`
+- iter 40: `.github/workflows/k6-smoke.yml` (workflow_dispatch, P95 SLA gate)
