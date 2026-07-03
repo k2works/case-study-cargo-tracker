@@ -1369,7 +1369,7 @@ Tracking 状態遷移 (tracking_activity.transport_status) をどう連携する
 
 ---
 
-## Ralph Loop iteration 1-31 サマリー (2026-07-03)
+## Ralph Loop iteration 1-37 サマリー (2026-07-03)
 
 `ralph-loop:ralph-loop orchestrating-develop IT7` を自律実行した 31 反復の
 実装成果を集約する。詳細は `docs/journal/20260703.md` の Ralph Loop セクションと
@@ -1387,39 +1387,63 @@ Git ログを参照。
 | **US19/US20 Exception BC 新設 (Domain + Application + Postgres + Interfaces)** | **完了** | iter 10-15 (Domain + App), 16 (Postgres), 27-31 (View + Interfaces) |
 | **ADR-0013/0014/0015 起票 + ADR-0014 3 Phase 実装** | **完了** | iter 18-22 |
 | **上流ドキュメント同期 (domain-model / data-model / ui_design)** | **完了** | iter 23-25 |
+| **Exception BC 全 Interfaces + View + Postgres find 実装** | **完了** | iter 27-37 |
 
-### Exception BC 実装状況
+### Exception BC 実装状況 (iter 37 時点)
 
 | レイヤー | モジュール数 | 状態 |
 | :--- | :---: | :--- |
 | Domain (VO + Aggregate) | 8 | 完成 |
 | Application (Command + Ports) | 5 | 完成 |
-| Infrastructure (Postgres) | 1 | save/update 完成、find 系 JSONB パーサ次反復 |
-| Views (Lucid) | 1 | 一覧完成、登録フォーム画面は次反復 |
-| Interfaces (Servant) | 1 | GET / resolve / delay + damage + loss POST 完成 |
+| Infrastructure (Postgres + DetailJsonParser) | 2 | **save / update / find (JSONB 復元) すべて完成** |
+| Views (Lucid: List + Forms + Detail) | 3 | **一覧 + 3 種登録フォーム + 詳細ページすべて完成** |
+| Interfaces (Servant, 9 endpoint) | 1 | **GET 一覧 + 詳細 + 3 種フォーム / POST 3 種登録 + resolve すべて完成** |
 | Migration | 1 | 完成 (`20260928100300_create_exception_record.sql`) |
 | Main.hs 配線 | ✓ | 完成 |
 
+Exception BC は Postgres 実データで **CRUD 一巡が動作** する状態に到達。
+
+### Exception BC の Servant endpoint 一覧 (9 経路)
+
+| メソッド | パス | 用途 | 実装コミット |
+| :--- | :--- | :--- | :--- |
+| GET | `/exceptions` | 一覧 (?trackingNumber= フィルタ) | `1d5ed90a` |
+| POST | `/exceptions/:id/resolve` | 解決記録 | `12112dae` |
+| GET | `/exceptions/delay` | 遅延登録フォーム | `ec38a7e8` |
+| GET | `/exceptions/damage` | 破損登録フォーム | `ec38a7e8` |
+| GET | `/exceptions/loss` | 紛失登録フォーム | `ec38a7e8` |
+| GET | `/exceptions/:id` | 詳細 (実データ or Not Found) | `b66d1912` / `792d3629` |
+| POST | `/exceptions/delay` | 遅延例外の登録 | `4fa59458` |
+| POST | `/exceptions/damage` | 破損例外の登録 | `8a516853` |
+| POST | `/exceptions/loss` | 紛失例外の登録 | `8a516853` |
+
 ### 数値サマリー
 
-- コミット: 54 件超
-- 累計テスト: 641 → 758 (+117)
+- コミット: 60 件超
+- 累計テスト: 641 → 776 (+135)
 - 累計 hedgehog checks: +800
 - 新規 ADR: 3 件 / 新規 migration: 2 本 / 新規 BC: 1 個 (Exception)
-- 新規モジュール: 22 (Shipper 2, Tracking 4, Pricing 1, Exception 15)
+- 新規モジュール: 24 (Shipper 2, Tracking 4, Pricing 1, Exception 17)
 
 ### 残タスク
 
 - **T6-01 Stage 5-6** (Handling + Claim + Notification) — T7-01 完了待ち
 - **T6-09 AuthProtect 適用範囲拡張 (Role-based 権限)** — 未着手
-- **T6-05 Testcontainers 統合テスト** — 未着手
+- **T6-05 Testcontainers 統合テスト** — 未着手 (Exception 実装完了で優先度上昇)
 - **T6-06 k6 スモーク負荷テスト CI 統合** — 未着手
 - **T6-07 katip 正式化** — 未着手
 - **T7-01 IssueConfirmationCode の Handling ワークフロー接続** — 未着手
 - **ADR-0013 Phase 1-3 実装 (Notification 主キー移行)** — 提案のまま
 - **ADR-0014 3 種例外詳細化** (TsDelayed / TsDamaged / TsLost、現状 TsInException に統合) — 提案のまま
-- **Exception BC の登録フォーム画面 (Lucid Views)** — 3 種
-- **Exception BC の詳細ページ** — GET /exceptions/:id
-- **PostgresExceptionRepository find 系 JSONB パーサ実装**
 - **US17 View 層 (TrackingDetailView 手動更新モーダル + 監査履歴タブ)** — 5.4/5.5
 - **hspec-wai Role Policy テスト** (US17 5.5、T6-09 と統合)
+
+### Ralph Loop iter 32-37 で追加された成果
+
+- iter 32: iteration_plan-7.md サマリー追記
+- iter 33: 3 種登録フォーム画面 (Lucid Views) + GET エンドポイント `ec38a7e8`
+- iter 34: GET /exceptions/:id 骨組み (`exceptionNotFoundPage`) `b66d1912`
+- iter 35: `parseDetailJson` (JSONB → Domain 復元、10 テスト) `a96290e0`
+- iter 36: `PostgresExceptionRepository` find 系実装 `a2c2a54a`
+- iter 37: GET /exceptions/:id 実データ詳細ビュー (ExceptionDetailView) `792d3629`
+- iter 38: 本サマリー更新
