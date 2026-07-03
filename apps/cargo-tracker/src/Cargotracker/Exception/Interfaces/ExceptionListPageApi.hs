@@ -42,6 +42,11 @@ import Cargotracker.Exception.Domain.Model.ExceptionSeverity
   )
 import Cargotracker.Exception.Domain.Model.ExceptionType (exceptionTypeToText)
 import Cargotracker.Exception.Domain.Model.Reporter (Reporter (..))
+import Cargotracker.Exception.Views.ExceptionFormViews
+  ( damageFormPage,
+    delayFormPage,
+    lossFormPage,
+  )
 import Cargotracker.Exception.Views.ExceptionListView
   ( ExceptionRow (..),
     exceptionListPage,
@@ -129,6 +134,9 @@ type ExceptionListApi =
            :<|> Capture "exceptionId" Text
              :> "resolve"
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> "delay" :> Get '[HTML] (Html ())
+           :<|> "damage" :> Get '[HTML] (Html ())
+           :<|> "loss" :> Get '[HTML] (Html ())
            :<|> "delay"
              :> ReqBody '[FormUrlEncoded] RecordDelayFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -146,6 +154,9 @@ exceptionListApp repo =
     (Proxy :: Proxy ExceptionListApi)
     ( handler repo
         :<|> handleResolve repo
+        :<|> pure delayFormPage
+        :<|> pure damageFormPage
+        :<|> pure lossFormPage
         :<|> handleRecordDelay repo
         :<|> handleRecordDamage repo
         :<|> handleRecordLoss repo

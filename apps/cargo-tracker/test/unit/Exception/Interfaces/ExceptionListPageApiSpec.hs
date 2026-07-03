@@ -108,6 +108,24 @@ spec = describe "ExceptionListPageApi (US19/US20, IT7)" $ do
           "exceptionId=EX-D003&trackingNumber=TR000001&delayHours=24&reason=%E6%B8%AF%E6%B9%BE&severity=URGENT&reporterUserId=user-42&reporterRole=Handler"
           `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?error=invalid-severity"]}
 
+  describe "GET /exceptions/delay (US19 登録フォーム画面)" $
+    with app $
+      it "200 で data-testid exception-form-delay を含む HTML を返す" $
+        get "/exceptions/delay"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "exception-form-delay"}
+
+  describe "GET /exceptions/damage (US20 登録フォーム画面)" $
+    with app $
+      it "200 で data-testid exception-form-damage を含む" $
+        get "/exceptions/damage"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "exception-form-damage"}
+
+  describe "GET /exceptions/loss (US20 登録フォーム画面)" $
+    with app $
+      it "200 で data-testid exception-form-loss を含む" $
+        get "/exceptions/loss"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "exception-form-loss"}
+
   describe "POST /exceptions/damage (US20)" $
     with app $ do
       it "正常なフォーム値は 303 flash=damage-recorded" $

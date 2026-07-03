@@ -112,6 +112,7 @@ library:
   - Cargotracker.Exception.Application.ResolveExceptionCommand
   - Cargotracker.Exception.Infrastructure.PostgresExceptionRepository
   - Cargotracker.Exception.Views.ExceptionListView
+  - Cargotracker.Exception.Views.ExceptionFormViews
   - Cargotracker.Exception.Interfaces.ExceptionListPageApi
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
   - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
