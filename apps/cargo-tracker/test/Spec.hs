@@ -95,6 +95,7 @@ import qualified Shipper.Infrastructure.PostgresShipperRepositorySpec
 import qualified Shipper.Interfaces.ShipperApiSpec
 import qualified Shipper.Interfaces.ShipperPageApiSpec
 import qualified Shipper.Interfaces.ShipperSearchApiSpec
+import qualified Tracking.Application.CheckTransitionForExceptionPropertiesSpec
 import qualified Tracking.Application.IssueTrackingNumberCommandSpec
 import qualified Tracking.Application.ManualStateUpdateCommandSpec
 import qualified Tracking.Application.MarkClaimedSpec
@@ -234,6 +235,10 @@ main = hspec $ do
   describe
     "Cargotracker.Tracking.Application.markInExceptionByTrackingNumber (ADR-0014)"
     Tracking.Application.MarkInExceptionSpec.spec
+
+  describe
+    "Cargotracker.Tracking.Application.checkTransitionForException (hedgehog, ADR-0014)"
+    Tracking.Application.CheckTransitionForExceptionPropertiesSpec.spec
 
   describe
     "Cargotracker.Tracking.Application.IssueTrackingNumberCommand"
