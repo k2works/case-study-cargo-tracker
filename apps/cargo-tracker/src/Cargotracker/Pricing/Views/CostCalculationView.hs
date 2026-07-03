@@ -112,6 +112,18 @@ costCalculationPage mResult = doctypehtml_ $ do
                 , required_ ""
                 ]
 
+          div_ [class_ "row g-3 mt-2"] $
+            div_ [class_ "col-md-6"] $ do
+              label_ [class_ "form-label", for_ "shipperId"] "荷主 ID (法人割引適用)"
+              input_
+                [ type_ "text"
+                , name_ "shipperId"
+                , id_ "shipperId"
+                , class_ "form-control"
+                , placeholder_ "SHP-XXXXXX (任意、指定時は契約ランクの割引率が上書き適用されます)"
+                ]
+              div_ [class_ "form-text"] "US22 (IT7): Bronze=5% / Silver=10% / Gold=15%、Individual/未指定は上記の割引率を使用"
+
           div_ [class_ "mt-4"] $
             button_
               [type_ "submit", class_ "btn btn-primary"]

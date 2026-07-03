@@ -199,7 +199,7 @@ rootApp conn jwtSecret jwtTtl req respond =
         respond
     "pricing" : "calculate" : _ ->
       -- US21 料金算出画面。Postgres PricingRule / CurrencyRate。
-      costCalculationApp pricingRuleRepo currencyRateRepo req respond
+      costCalculationApp pricingRuleRepo currencyRateRepo shipperRepo req respond
     "notifications" : _ ->
       -- US26 通知一覧画面。Postgres 永続化のため Handling.claim の通知と共有。
       notificationListApp notificationRepo req respond

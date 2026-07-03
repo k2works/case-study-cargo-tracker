@@ -25,7 +25,19 @@ import Cargotracker.Pricing.Domain.Model.Value.CurrencyRate
 import Cargotracker.Pricing.Interfaces.CostCalculationPageApi
   ( costCalculationApp,
   )
+import Cargotracker.Shipper.Application.Ports (ShipperRepository (..))
 import Support.HspecWaiJa (bodyContainsText)
+
+-- | US22 (IT7) shipperId 解決テストでは荷主が見つからない Repository を渡す。
+emptyShipperRepo :: ShipperRepository IO
+emptyShipperRepo =
+  ShipperRepository
+    { findByContactEmail = \_ -> pure Nothing
+    , findById = \_ -> pure Nothing
+    , save = \_ -> pure ()
+    , searchByQuery = \_ -> pure []
+    , findAllShippers = pure []
+    }
 
 --------------------------------------------------------------------------------
 -- フィクスチャ
@@ -83,10 +95,10 @@ usdRateRepo =
     }
 
 appJpy :: IO Network.Wai.Application
-appJpy = pure (costCalculationApp jpyRuleRepo emptyRateRepo)
+appJpy = pure (costCalculationApp jpyRuleRepo emptyRateRepo emptyShipperRepo)
 
 appUsd :: IO Network.Wai.Application
-appUsd = pure (costCalculationApp usdRuleRepo usdRateRepo)
+appUsd = pure (costCalculationApp usdRuleRepo usdRateRepo emptyShipperRepo)
 
 --------------------------------------------------------------------------------
 -- spec

@@ -29,7 +29,7 @@ import Lucid (Html)
 import Network.Wai (Application)
 import Servant
 import Servant.HTML.Lucid (HTML)
-import Web.FormUrlEncoded (FromForm (..), parseUnique)
+import Web.FormUrlEncoded (Form, FromForm (..), parseUnique)
 
 import Cargotracker.Pricing.Application.CalculateShippingCostCommand
   ( CalculateShippingCostInput (..),
@@ -51,6 +51,10 @@ import Cargotracker.Pricing.Views.CostCalculationView
     costCalculationPage,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Cargotracker.Shipper.Application.Ports
+  ( ShipperRepository,
+    resolveDiscountPercentageByShipperId,
+  )
 
 -- | POST /pricing/calculate のフォーム受信体。
 data CalculateFormRequest = CalculateFormRequest
@@ -60,6 +64,10 @@ data CalculateFormRequest = CalculateFormRequest
   , formBaseCurrency :: !Text
   , formTargetCurrency :: !Text
   , formDiscountRate :: !Text
+  , formShipperId :: !Text
+  {- ^ US22 (IT7): 空文字なら手動 discountRate を使用、
+  空でない場合 Shipper.contract_rank 由来の法人割引率で上書き
+  -}
   }
   deriving stock (Eq, Show, Generic)
 
@@ -72,6 +80,12 @@ instance FromForm CalculateFormRequest where
       <*> parseUnique "baseCurrency" f
       <*> parseUnique "targetCurrency" f
       <*> parseUnique "discountRate" f
+      <*> parseOptional "shipperId" f
+
+parseOptional :: Text -> Form -> Either Text Text
+parseOptional key f = case parseUnique key f of
+  Right t -> Right t
+  Left _ -> Right ""
 
 type CostCalculationApi =
   "pricing"
@@ -84,11 +98,12 @@ type CostCalculationApi =
 costCalculationApp ::
   PricingRuleRepository IO ->
   CurrencyRateRepository IO ->
+  ShipperRepository IO ->
   Application
-costCalculationApp ruleRepo rateRepo =
+costCalculationApp ruleRepo rateRepo shipperRepo =
   serve
     (Proxy :: Proxy CostCalculationApi)
-    (handlerGet :<|> handlerPost ruleRepo rateRepo)
+    (handlerGet :<|> handlerPost ruleRepo rateRepo shipperRepo)
 
 handlerGet :: Handler (Html ())
 handlerGet = pure (costCalculationPage Nothing)
@@ -96,15 +111,46 @@ handlerGet = pure (costCalculationPage Nothing)
 handlerPost ::
   PricingRuleRepository IO ->
   CurrencyRateRepository IO ->
+  ShipperRepository IO ->
   CalculateFormRequest ->
   Handler (Html ())
-handlerPost ruleRepo rateRepo form = do
+handlerPost ruleRepo rateRepo shipperRepo form = do
   now <- liftIO getCurrentTime
   case parseInputs form now of
     Left err -> pure (costCalculationPage (Just (ResultError err)))
     Right input -> do
-      result <- liftIO (execute ruleRepo rateRepo input)
-      pure (costCalculationPage (Just (renderResult result)))
+      -- US22 (IT7): shipperId 指定時は法人契約割引率で override
+      resolvedInput <-
+        if T.null (T.strip (formShipperId form))
+          then pure (Right input)
+          else applyShipperDiscount shipperRepo (formShipperId form) input
+      case resolvedInput of
+        Left err -> pure (costCalculationPage (Just (ResultError err)))
+        Right finalInput -> do
+          result <- liftIO (execute ruleRepo rateRepo finalInput)
+          pure (costCalculationPage (Just (renderResult result)))
+
+{- | US22 (IT7): shipperId から契約割引率を解決し、CalculateShippingCostInput の
+inputDiscount を上書きする。ADR-0015 に基づく contract_rank 由来の割引率を採用。
+-}
+applyShipperDiscount ::
+  ShipperRepository IO ->
+  Text ->
+  CalculateShippingCostInput ->
+  Handler (Either Text CalculateShippingCostInput)
+applyShipperDiscount shipperRepo raw input = do
+  resolved <- liftIO (resolveDiscountPercentageByShipperId shipperRepo raw)
+  case resolved of
+    Left (ShipperNotFound sid) ->
+      pure (Left ("荷主が見つかりません: " <> sid))
+    Left (InvalidShipperId reason) ->
+      pure (Left ("荷主 ID が不正: " <> reason))
+    Left other ->
+      pure (Left (T.pack (show other)))
+    Right percentage ->
+      case mkDiscount percentage of
+        Right d -> pure (Right (input {inputDiscount = d}))
+        Left e -> pure (Left ("割引率の変換に失敗: " <> T.pack (show e)))
 
 parseInputs ::
   CalculateFormRequest ->
