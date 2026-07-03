@@ -93,19 +93,39 @@ test.describe('IT7 T6-01: Release 1.0 MVP 統合ハッピーパス', () => {
     await expect(page.locator('body')).toContainText(voyageNumber);
   });
 
-  test.fixme('Stage 4: 予約 submit → handover → route 割当 → confirm → TrackingIssue', async ({ page }) => {
-    // Ralph Loop 次反復で有効化する。
-    // 各 POST /bookings/{id}/submit /handover /route /confirm の PRG 遷移と、
-    // confirm 成功時の IssueTrackingNumberCommand 呼び出し (BookingPageApi.hs:531)
-    // を追跡番号発行として確認する。
-    //
-    // 想定フロー:
-    //   POST /bookings/{id}/submit         → 303 → ?flash=submit-ok, status=Submitted
-    //   POST /bookings/{id}/handover        → 303 → ?flash=handover-ok, status=RouteProposed
-    //   POST /bookings/{id}/route (voyage)  → 303 → ?flash=route-ok, status=RouteAssigned
-    //   POST /bookings/{id}/confirm         → 303 → ?flash=confirm-ok, status=Confirmed
-    //                                                          + TR-XXXXXXXX 発行
-    //   GET /public/tracking/{tn}           → 詳細ページに NotReceived が表示
+  test('Stage 4: 予約 submit → handover → route 割当 → confirm → TrackingIssue', async ({ page }) => {
+    // Stage 1-3 の再構築
+    const shipperId = await registerShipperFlow(page);
+    await registerVoyageFlow(page, PORT_FROM, PORT_TO, '2027-01-15T09:00', '2027-02-10T18:00');
+    const bookingId = await registerBookingFlow(page, shipperId, '2027-02-28T18:00');
+    const detailUrl = `/bookings/${bookingId}`;
+
+    // Stage 4a: submit (Draft → Submitted)
+    const submitRes = await page.request.post(`${detailUrl}/submit`, { maxRedirects: 0 });
+    expect(submitRes.status()).toBe(303);
+    expect(submitRes.headers()['location']).toContain('flash=submit-ok');
+
+    // Stage 4b: handover (Submitted → RouteProposed)
+    const handoverRes = await page.request.post(`${detailUrl}/handover`, { maxRedirects: 0 });
+    expect(handoverRes.status()).toBe(303);
+    expect(handoverRes.headers()['location']).toContain('flash=handover-ok');
+
+    // Stage 4c: route (RouteProposed → RouteAssigned)
+    const routeRes = await page.request.post(`${detailUrl}/route`, { maxRedirects: 0 });
+    expect(routeRes.status()).toBe(303);
+    expect(routeRes.headers()['location']).toContain('flash=link-ok');
+
+    // Stage 4d: confirm (RouteAssigned → Confirmed + TrackingNumber 発行)
+    const confirmRes = await page.request.post(`${detailUrl}/confirm`, { maxRedirects: 0 });
+    expect(confirmRes.status()).toBe(303);
+    expect(confirmRes.headers()['location']).toContain('flash=confirm-ok');
+
+    // 詳細ページに Confirmed 状態と追跡番号が表示される
+    await page.goto(detailUrl);
+    const body = page.locator('body');
+    await expect(body).toContainText('Confirmed');
+    // 追跡番号は 8 文字英数大文字 (TrackingNumber 規約)
+    await expect(body).toContainText(/[A-Z0-9]{8}/);
   });
 
   test.fixme('Stage 5-6: Handling 登録 → Claim (確認コード) → Tracking が TsClaimed に遷移', async ({ page }) => {
