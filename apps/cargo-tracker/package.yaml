@@ -103,6 +103,8 @@ library:
   - Cargotracker.Tracking.Domain.Model.TrackingStateAudit
   - Cargotracker.Shared.Domain.TransportStatus
   - Cargotracker.Tracking.Application.Ports
+  - Cargotracker.Tracking.Application.TrackingStateAuditPorts
+  - Cargotracker.Tracking.Application.ManualStateUpdateCommand
   - Cargotracker.Tracking.Application.IssueTrackingNumberCommand
   - Cargotracker.Tracking.Application.QueryTrackingByNumberQuery
   - Cargotracker.Tracking.Infrastructure.PostgresTrackingRepository

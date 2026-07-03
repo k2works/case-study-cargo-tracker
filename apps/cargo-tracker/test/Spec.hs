@@ -89,6 +89,7 @@ import qualified Shipper.Interfaces.ShipperApiSpec
 import qualified Shipper.Interfaces.ShipperPageApiSpec
 import qualified Shipper.Interfaces.ShipperSearchApiSpec
 import qualified Tracking.Application.IssueTrackingNumberCommandSpec
+import qualified Tracking.Application.ManualStateUpdateCommandSpec
 import qualified Tracking.Application.MarkClaimedSpec
 import qualified Tracking.Application.QueryTrackingByNumberQuerySpec
 import qualified Tracking.Domain.Model.ConfirmationCodeSpec
@@ -213,6 +214,10 @@ main = hspec $ do
   describe
     "Cargotracker.Tracking.Domain.Model.TrackingActivity (updateStateManually)"
     Tracking.Domain.Model.UpdateStateManuallySpec.spec
+
+  describe
+    "Cargotracker.Tracking.Application.ManualStateUpdateCommand"
+    Tracking.Application.ManualStateUpdateCommandSpec.spec
 
   describe
     "Cargotracker.Tracking.Application.markClaimedByBookingId"
