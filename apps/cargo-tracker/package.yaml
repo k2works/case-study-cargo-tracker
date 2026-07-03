@@ -99,6 +99,10 @@ library:
   - Cargotracker.Booking.Domain.Model.Itinerary
   - Cargotracker.Exception.Domain.Model.ExceptionSeverity
   - Cargotracker.Exception.Domain.Model.DelayException
+  - Cargotracker.Exception.Domain.Model.Amount
+  - Cargotracker.Exception.Domain.Model.DamageException
+  - Cargotracker.Exception.Domain.Model.LossException
+  - Cargotracker.Exception.Domain.Model.ExceptionType
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
   - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
   - Cargotracker.Tracking.Domain.Model.TrackingActivity
