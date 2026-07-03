@@ -232,6 +232,7 @@ library:
   - Cargotracker.Shared.Auth.Views.LoginView
   - Cargotracker.Shared.Auth.Interfaces.LoginPageApi
   - Cargotracker.Shared.Auth.Interfaces.SessionAuth
+  - Cargotracker.Shared.Auth.Interfaces.RoleGate
   - Cargotracker.Shared.Application.TxRunner
   - Cargotracker.Shared.Security.BcryptHash
   - Cargotracker.Shared.Security.ConstantTime
