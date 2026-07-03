@@ -41,6 +41,7 @@ import qualified Estimation.Domain.Service.RouteEvaluatorPropertiesSpec
 import qualified Estimation.Domain.Service.RouteEvaluatorSpec
 import qualified Estimation.Interfaces.EstimatePageApiSpec
 import qualified Estimation.Views.RouteEvaluationViewSpec
+import qualified Exception.Application.RecordDamageAndLossCommandSpec
 import qualified Exception.Application.RecordDelayExceptionCommandSpec
 import qualified Exception.Domain.Model.DelayExceptionSpec
 import qualified Exception.Domain.Model.ExceptionRecordSpec
@@ -339,6 +340,10 @@ main = hspec $ do
   describe
     "Cargotracker.Exception.Application.RecordDelayExceptionCommand"
     Exception.Application.RecordDelayExceptionCommandSpec.spec
+
+  describe
+    "Cargotracker.Exception.Application (Record Damage + Loss)"
+    Exception.Application.RecordDamageAndLossCommandSpec.spec
 
   describe
     "Cargotracker.Estimation.Application.CreateEstimateCommand"

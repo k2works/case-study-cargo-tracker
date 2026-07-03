@@ -107,6 +107,8 @@ library:
   - Cargotracker.Exception.Domain.Model.ExceptionRecord
   - Cargotracker.Exception.Application.Ports
   - Cargotracker.Exception.Application.RecordDelayExceptionCommand
+  - Cargotracker.Exception.Application.RecordDamageExceptionCommand
+  - Cargotracker.Exception.Application.RecordLossExceptionCommand
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
   - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
   - Cargotracker.Tracking.Domain.Model.TrackingActivity
