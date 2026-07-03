@@ -1196,6 +1196,123 @@ Failed --> [*] : 手動放棄 or 再送
   - 将来: **SmtpDeliveryPort** (メール送信、Notification BC 本格実装)
 - **Cross-BC helper**: `sendClaimLogNotificationText :: NotificationRepository m → NotificationDeliveryPort m → Text (bid) → Text (subj) → Text (body) → UTCTime → m (Either DomainError DeliveryResult)`
 
+## 11. Exception Context (US19 / US20, IT7 追加)
+
+Exception BC は輸送中の例外 (遅延 / 破損 / 紛失) を専用集約で扱う独立 BC。
+Tracking BC の `TrackingExceptionEvent` (§Tracking 参照) は Tracking 内の
+「事象記録」で、本 BC の `ExceptionRecord` は「Application 層の Command で
+記録・解決される独立集約」として役割分担する。
+
+ADR-0014 (2026-07-03 提案) に基づく状態遷移ポリシーを Application 層で強制する。
+
+```plantuml
+@startuml
+package "Exception Context (IT7 新規 BC)" #wheat {
+  class ExceptionRecord <<Aggregate>> {
+    - erExceptionId : Text  ' UUID
+    - erTrackingNumber : Text  ' Cross-BC 参照 (Rule 4)
+    - erType : ExceptionType
+    - erSeverity : ExceptionSeverity
+    - erReporter : Reporter
+    - erReportedAt : UTCTime
+    - erResolvedAt : Maybe UTCTime
+    + mkExceptionRecord(...) : Either DomainError ExceptionRecord
+    + resolveException(UTCTime, ExceptionRecord) : Either DomainError ExceptionRecord
+    + isResolved(ExceptionRecord) : Bool
+  }
+  class DelayException <<VO>> {
+    - deDelayHours : Int  ' > 0
+    - deReason : Text  ' 1..500 chars trim
+  }
+  class DamageException <<VO>> {
+    - daAmount : Amount
+    - daDescription : Text  ' 1..500 chars trim
+  }
+  class LossException <<VO>> {
+    - loAmount : Amount
+    - loLastSeenAt : Maybe Text  ' UN/LOCODE 5 chars or 不明
+  }
+  enum ExceptionType {
+    Delay DelayException
+    Damage DamageException
+    Loss LossException
+  }
+  class Amount <<VO>> {
+    - amValue : Integer  ' >= 0, 最小通貨単位
+    - amCurrency : Text  ' ISO 4217 大文字 3 文字
+  }
+  class ExceptionSeverity <<VO>>
+  enum Level {
+    Low
+    Medium
+    High
+    Critical
+  }
+  class Reporter <<VO>> {
+    - reporterUserId : Text
+    - reporterRole : Text  ' Handler / Tracker / Admin
+  }
+
+  ExceptionRecord *-- ExceptionType
+  ExceptionRecord *-- ExceptionSeverity
+  ExceptionRecord *-- Reporter
+  ExceptionType *-- DelayException
+  ExceptionType *-- DamageException
+  ExceptionType *-- LossException
+  DamageException *-- Amount
+  LossException *-- Amount
+  ExceptionSeverity *-- Level
+}
+@enduml
+```
+
+### 集約設計と業務ルール
+
+- **集約ルート**: `ExceptionRecord` (1 例外 = 1 レコード、`exception_id` UUID で識別)
+- **erTrackingNumber は Text-DTO**: ADR-0004 Rule 4 準拠、Tracking BC 型に非依存
+- **状態遷移**: 未解決 (`erResolvedAt = Nothing`) → 解決済 (`Just now`)。
+  二重解決は `ExceptionAlreadyResolved` (idempotent 否定)
+- **DB 永続化**: 単一テーブル + JSONB detail_json で 3 種を統合 (ADR-0014、
+  垂直分割回避)。exception_type / severity カラムで CHECK 制約
+
+### ADR-0014 遷移マトリクス (Tracking → InException)
+
+Cross-BC helper `Tracking.Application.Ports.markInExceptionByTrackingNumber` が
+検証する遷移可否 (Application 層で強制):
+
+| From (現在の TransportStatus) | 遷移可否 |
+| :--- | :--- |
+| `TsNotReceived` | ❌ (未受領時に例外は成立しない) |
+| `TsReceived` / `TsLoaded` / `TsOnboardCarrier` / `TsUnloaded` / `TsAwaitingClaim` / `TsUnknown` | ✅ |
+| `TsClaimed` | ❌ (引取完了後は例外扱わず) |
+| `TsInException` | ❌ (二重例外は追記型で管理) |
+
+違反時は `InvalidTrackingTransition !Text !Text` (from / to) を返す。
+
+### DomainError (IT7 追加)
+
+| エラー | 意味 |
+| :--- | :--- |
+| `InvalidDelayHours !Int` | 遅延時間が正の整数でない (US19) |
+| `InvalidExceptionReason !Text` | 例外の理由が空 or 上限超過 (US19/US20、Text = 理由コード) |
+| `InvalidReporter !Text` | 報告者情報が不正 (Text = 理由コード) |
+| `ExceptionAlreadyResolved` | 二重解決不可 |
+| `InvalidTrackingTransition !Text !Text` | ADR-0014 遷移マトリクス違反 (from / to) |
+
+### Application コマンド + Ports
+
+- **RecordDelayExceptionCommand**: exceptionId + trackingNumber + delayHours +
+  reason + severity + reporter + now → ExceptionRecord (Delay)
+- **RecordDamageExceptionCommand**: 上記 + amount + description → ExceptionRecord (Damage)
+- **RecordLossExceptionCommand**: 上記 + amount + lastSeenAt → ExceptionRecord (Loss)
+- **ResolveExceptionCommand**: exceptionId + now → 更新後 ExceptionRecord
+- **ExceptionRepository**: saveException / findExceptionById /
+  findExceptionsByTrackingNumber / updateExceptionResolution
+- **Cross-BC 統合 (ADR-0014 Phase 2)**: Record*Command は
+  `(Text -> m (Either DomainError ())) callback` を第 2 引数で受け、
+  Tracking 遷移 (markInExceptionByTrackingNumber) 成功後にのみ Exception を
+  永続化する (逆順チェックで整合性保証)
+
 ## ドメインエラー
 
 すべての検証失敗は `DomainError` sum type で表現する。`Either DomainError a` を返す関数を組み合わせる。
