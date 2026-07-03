@@ -126,6 +126,16 @@ spec = describe "ExceptionListPageApi (US19/US20, IT7)" $ do
         get "/exceptions/loss"
           `shouldRespondWith` 200 {matchBody = bodyContainsText "exception-form-loss"}
 
+  describe "GET /exceptions/:id (詳細ページ)" $
+    with app $ do
+      it "存在しない ID は 200 で exception-not-found を含む警告" $
+        get "/exceptions/EX-NONE"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "exception-not-found"}
+
+      it "警告メッセージに指定 ID が表示される" $
+        get "/exceptions/EX-XYZ"
+          `shouldRespondWith` 200 {matchBody = bodyContainsText "EX-XYZ"}
+
   describe "POST /exceptions/damage (US20)" $
     with app $ do
       it "正常なフォーム値は 303 flash=damage-recorded" $

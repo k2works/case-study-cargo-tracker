@@ -11,6 +11,7 @@ module Cargotracker.Exception.Views.ExceptionFormViews
   ( delayFormPage,
     damageFormPage,
     lossFormPage,
+    exceptionNotFoundPage,
   ) where
 
 import Data.Text (Text)
@@ -241,3 +242,19 @@ lossFormPage = formLayout "紛失例外を登録"
         ]
     div_ [class_ "mt-3"] reporterFields
     submitCancelButtons
+
+-- | GET /exceptions/:id で対象が見つからないときに返すページ (US19/US20)
+exceptionNotFoundPage :: Text -> Html ()
+exceptionNotFoundPage eid = formLayout "例外詳細" $ do
+  div_
+    [ class_ "alert alert-warning"
+    , makeAttribute "data-testid" "exception-not-found"
+    ]
+    $ do
+      p_ [class_ "mb-0"] $ do
+        "指定された例外 ID ("
+        strong_ (toHtml eid)
+        ") は見つかりませんでした。"
+      p_
+        [class_ "mt-2 mb-0 small text-muted"]
+        "JSONB detail_json パーサ実装後、Postgres からの実データ表示が有効になります。"

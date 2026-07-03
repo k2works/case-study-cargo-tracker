@@ -45,6 +45,7 @@ import Cargotracker.Exception.Domain.Model.Reporter (Reporter (..))
 import Cargotracker.Exception.Views.ExceptionFormViews
   ( damageFormPage,
     delayFormPage,
+    exceptionNotFoundPage,
     lossFormPage,
   )
 import Cargotracker.Exception.Views.ExceptionListView
@@ -137,6 +138,7 @@ type ExceptionListApi =
            :<|> "delay" :> Get '[HTML] (Html ())
            :<|> "damage" :> Get '[HTML] (Html ())
            :<|> "loss" :> Get '[HTML] (Html ())
+           :<|> Capture "exceptionId" Text :> Get '[HTML] (Html ())
            :<|> "delay"
              :> ReqBody '[FormUrlEncoded] RecordDelayFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -157,10 +159,24 @@ exceptionListApp repo =
         :<|> pure delayFormPage
         :<|> pure damageFormPage
         :<|> pure lossFormPage
+        :<|> handleShowDetail repo
         :<|> handleRecordDelay repo
         :<|> handleRecordDamage repo
         :<|> handleRecordLoss repo
     )
+
+{- | GET /exceptions/:exceptionId 詳細ページ
+
+Postgres Repository の findExceptionById が現状 Nothing を返すため、
+本ハンドラは exceptionNotFoundPage を返す骨組み実装。JSONB detail_json
+パーサ実装後 (次反復以降) に詳細表示ページに置き換える予定。
+-}
+handleShowDetail :: ExceptionRepository IO -> Text -> Handler (Html ())
+handleShowDetail repo eid = do
+  mRecord <- liftIO (findExceptionById repo eid)
+  case mRecord of
+    Nothing -> pure (exceptionNotFoundPage eid)
+    Just _ -> pure (exceptionNotFoundPage eid) -- 詳細ビューは次反復で追加
 
 handler :: ExceptionRepository IO -> Maybe Text -> Handler (Html ())
 handler repo mTn = do
