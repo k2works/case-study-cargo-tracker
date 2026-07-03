@@ -103,7 +103,10 @@ import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   )
 import Cargotracker.Shared.Auth.Interfaces.LoginApi (loginApp)
 import Cargotracker.Shared.Auth.Interfaces.LoginPageApi (loginPageApp)
-import Cargotracker.Shared.Infrastructure.IdGenerator (generateNotificationIdText)
+import Cargotracker.Shared.Infrastructure.IdGenerator
+  ( generateNotificationIdText,
+    generateSixDigitCodeText,
+  )
 import Cargotracker.Shared.Infrastructure.Logging (logInfo)
 import Cargotracker.Shared.Web.HomeView (homeApp)
 import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
@@ -216,6 +219,7 @@ rootApp conn jwtSecret jwtTtl req respond =
         notificationRepo
         newLogDeliveryPort
         generateNotificationIdText -- ADR-0013 Phase 3 UUID v4 生成器 DI
+        generateSixDigitCodeText -- T7-01 UNLOAD 時の確認コード生成器 DI
         req
         respond
     "pricing" : "calculate" : _ ->

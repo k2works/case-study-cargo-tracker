@@ -39,7 +39,7 @@ import Cargotracker.Handling.Application.VerifyClaimAndRegisterCommand
   ( VerifyClaimInput (..),
   )
 import qualified Cargotracker.Handling.Application.VerifyClaimAndRegisterCommand as VerifyClaim
-import Cargotracker.Handling.Domain.Model.HandlingType (textToHandlingType)
+import Cargotracker.Handling.Domain.Model.HandlingType (HandlingType (..), textToHandlingType)
 import Cargotracker.Handling.Views.ClaimFormView (claimFormPage)
 import Cargotracker.Handling.Views.HandlingFormView (handlingFormPage)
 import Cargotracker.Shared.Application.TxRunner (TxRunner (..))
@@ -48,6 +48,7 @@ import Cargotracker.Shared.Security.BcryptHash (verifySecret)
 import Cargotracker.Tracking.Application.ConfirmationCodePorts
   ( ConfirmationCodeRepository,
   )
+import qualified Cargotracker.Tracking.Application.IssueConfirmationCodeCommand as IssueCode
 import Cargotracker.Tracking.Application.Ports (TrackingRepository)
 
 import Cargotracker.Notification.Application.Ports
@@ -109,13 +110,16 @@ handlingPageApp ::
   TrackingRepository IO ->
   NotificationRepository IO ->
   NotificationDeliveryPort IO ->
+  -- | Notification UUID v4 生成器 (ADR-0013 Phase 3)
+  IO Text ->
+  -- | 6 桁確認コード生成器 (T7-01 UNLOAD 時)
   IO Text ->
   Application
-handlingPageApp tx repo codeRepo trackingRepo notifRepo notifDelivery genNid =
+handlingPageApp tx repo codeRepo trackingRepo notifRepo notifDelivery genNid genCode =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
-        :<|> handlerPost repo
+        :<|> handlerPost repo codeRepo genCode
         :<|> handlerClaimGet
         :<|> handlerClaimPost tx codeRepo repo trackingRepo notifRepo notifDelivery genNid
     )
@@ -125,9 +129,11 @@ handlerGet mFlash = pure (handlingFormPage mFlash)
 
 handlerPost ::
   HandlingActivityRepository IO ->
+  ConfirmationCodeRepository IO ->
+  IO Text ->
   HandlingFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerPost repo form = do
+handlerPost repo codeRepo genCode form = do
   now <- liftIO getCurrentTime
   case parseCompletionTime (completionTime form) of
     Nothing -> redirectErr "/handling/new?flash=invalid-state"
@@ -149,8 +155,26 @@ handlerPost repo form = do
                   }
             )
         case result of
-          Right () ->
-            pure (addHeader "/handling/new?flash=success" NoContent)
+          Right () -> do
+            -- T7-01 (IT7): UNLOAD 完了時に確認コードを発行 (Handling → Tracking Cross-BC)
+            -- 冪等: 既発行なら既存を返す (IssueConfirmationCodeCommand 側で保証)。
+            -- 通知配信 (メール等) は US26 の後続ステップで追加予定。
+            case ht of
+              Unload -> do
+                codeText <- liftIO genCode
+                _ <-
+                  liftIO
+                    ( IssueCode.execute
+                        codeRepo
+                        IssueCode.IssueConfirmationCodeInput
+                          { IssueCode.inputBookingId = bookingId form
+                          , IssueCode.inputCodeText = codeText
+                          , IssueCode.inputNow = now
+                          }
+                    )
+                pure (addHeader "/handling/new?flash=success" NoContent)
+              _ ->
+                pure (addHeader "/handling/new?flash=success" NoContent)
           Left _ ->
             redirectErr "/handling/new?flash=invalid-state"
   where
