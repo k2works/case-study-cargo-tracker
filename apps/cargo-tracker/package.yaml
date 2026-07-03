@@ -97,6 +97,8 @@ library:
   - Cargotracker.Booking.Domain.Model.Value.ItineraryId
   - Cargotracker.Booking.Domain.Model.Leg
   - Cargotracker.Booking.Domain.Model.Itinerary
+  - Cargotracker.Exception.Domain.Model.ExceptionSeverity
+  - Cargotracker.Exception.Domain.Model.DelayException
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
   - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
   - Cargotracker.Tracking.Domain.Model.TrackingActivity

@@ -124,4 +124,10 @@ data DomainError
     StateAlreadyMatches !Text
   | -- | 手動状態更新の変更理由が空
     ManualUpdateReasonRequired
+  | -- IT7 追加 (US19/US20 例外処理、Exception BC)
+
+    -- | 遅延時間が正の整数でない (US19)
+    InvalidDelayHours !Int
+  | -- | 例外の理由が空 or 上限超過 (US19/US20、Text = 理由コード)
+    InvalidExceptionReason !Text
   deriving stock (Eq, Show)
