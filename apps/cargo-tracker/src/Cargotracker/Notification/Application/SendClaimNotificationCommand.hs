@@ -32,10 +32,15 @@ import Cargotracker.Notification.Application.Ports
 import Cargotracker.Notification.Domain.Model.Notification
   ( Notification,
     NotificationChannel (..),
+    NotificationContent,
     markFailed,
     markSent,
     mkNotification,
     mkNotificationContent,
+    mkNotificationWithId,
+  )
+import Cargotracker.Notification.Domain.Model.Value.NotificationId
+  ( mkNotificationId,
   )
 import Cargotracker.Shared.Domain.DomainError (DomainError)
 
@@ -45,6 +50,10 @@ data SendClaimNotificationInput = SendClaimNotificationInput
   , inputSubject :: !Text
   , inputBody :: !Text
   , inputNow :: !UTCTime
+  , inputNotificationId :: !(Maybe Text)
+  {- ^ ADR-0013 Phase 2: 呼出側が採番した UUID v4 (Text) を注入する。
+  Nothing の場合は Phase 3 移行完了までの暫定挙動として nId = Nothing で発行する。
+  -}
   }
   deriving stock (Eq, Show)
 
@@ -67,11 +76,7 @@ execute repo delivery input =
   case mkNotificationContent (inputSubject input) (inputBody input) of
     Left err -> pure (Left err)
     Right content ->
-      case mkNotification
-        (inputBookingId input)
-        (inputChannel input)
-        content
-        (inputNow input) of
+      case buildNotification input content of
         Left err -> pure (Left err)
         Right notif -> do
           saveResult <- saveNotification repo notif
@@ -115,5 +120,37 @@ sendClaimLogNotificationText repo delivery bid subj body now = do
         , inputSubject = subj
         , inputBody = body
         , inputNow = now
+        , inputNotificationId = Nothing
         }
   pure (fmap snd result)
+
+{- | 入力に応じて mkNotificationWithId / mkNotification を切り替える。
+inputNotificationId が Just t かつ mkNotificationId で有効な場合は
+NotificationId を持つ集約を返し、それ以外は nId = Nothing で発行する。
+-}
+buildNotification ::
+  SendClaimNotificationInput ->
+  NotificationContent ->
+  Either DomainError Notification
+buildNotification input content = case inputNotificationId input of
+  Just t ->
+    case mkNotificationId t of
+      Right nid ->
+        mkNotificationWithId
+          nid
+          (inputBookingId input)
+          (inputChannel input)
+          content
+          (inputNow input)
+      Left _ ->
+        mkNotification
+          (inputBookingId input)
+          (inputChannel input)
+          content
+          (inputNow input)
+  Nothing ->
+    mkNotification
+      (inputBookingId input)
+      (inputChannel input)
+      content
+      (inputNow input)

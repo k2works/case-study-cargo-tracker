@@ -44,6 +44,7 @@ sampleInput =
     , inputSubject = "引取のご案内"
     , inputBody = "引取窓口までお越しください。確認コード: 789012"
     , inputNow = sampleNow
+    , inputNotificationId = Nothing
     }
 
 -- IORef spy Repository + Delivery を返すヘルパー
