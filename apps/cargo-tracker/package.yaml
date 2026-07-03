@@ -111,6 +111,7 @@ library:
   - Cargotracker.Exception.Application.RecordLossExceptionCommand
   - Cargotracker.Exception.Application.ResolveExceptionCommand
   - Cargotracker.Exception.Infrastructure.PostgresExceptionRepository
+  - Cargotracker.Exception.Views.ExceptionListView
   - Cargotracker.Tracking.Domain.Model.ConfirmationCode
   - Cargotracker.Tracking.Domain.Model.Value.TrackingNumber
   - Cargotracker.Tracking.Domain.Model.TrackingActivity

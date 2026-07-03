@@ -47,6 +47,7 @@ import qualified Exception.Application.ResolveExceptionCommandSpec
 import qualified Exception.Domain.Model.DelayExceptionSpec
 import qualified Exception.Domain.Model.ExceptionRecordSpec
 import qualified Exception.Domain.Model.ExceptionTypeSpec
+import qualified Exception.Views.ExceptionListViewSpec
 import qualified Notification.Application.SendClaimNotificationCommandSpec
 import qualified Notification.Domain.Model.NotificationSpec
 import qualified Notification.Infrastructure.LogDeliveryPortSpec
@@ -359,6 +360,10 @@ main = hspec $ do
   describe
     "Cargotracker.Exception.Application.ResolveExceptionCommand"
     Exception.Application.ResolveExceptionCommandSpec.spec
+
+  describe
+    "Cargotracker.Exception.Views.ExceptionListView"
+    Exception.Views.ExceptionListViewSpec.spec
 
   describe
     "Cargotracker.Estimation.Application.CreateEstimateCommand"
