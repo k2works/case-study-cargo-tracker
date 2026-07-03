@@ -391,6 +391,7 @@ title 主要画面遷移図
 - **htmx ヘッダ判定**: `HX-Request: true` の場合はタイムライン fragment のみ返す、それ以外は全画面
 - **公開エンドポイント**: `/public/tracking/:number` は認証不要。ナビゲーション・管理者操作を省略した簡易レイアウト
 - **htmx**: タイムラインを `hx-get="/tracking/:number" hx-trigger="every 30s" hx-headers='{"HX-Request":"true"}'` で更新
+- **手動状態更新 (US17, IT7)**: `[貨物状態を手動更新]` は `hx-get="/tracking/:number/manual-update"` で編集フォーム (状態選択 + 変更理由) をモーダル/インライン表示。POST `/tracking/:number/manual-update` (PRG 303) で更新し `tracking_state_audit` に監査ログ (前状態・新状態・変更者・理由) を記録。Role: Tracker / Admin 限定、それ以外は 403
 
 ##### M-14 反映: 地図 + タイムラインのメタファー強化
 
