@@ -160,7 +160,7 @@
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
 | 8.1 | domain-model / data-model / ui_design に Exception BC 追記 | 2h | [ ] |
-| 8.2 | ADR-0013 (Notification 主キー) + ADR-0014 (例外状態遷移) 起票 | 2h | [ ] |
+| 8.2 | ADR-0013 (Notification 主キー) + ADR-0014 (例外状態遷移) 起票 | 2h | [x] `9d0b4650` ADR-0013 + iteration 19 で ADR-0014 (提案) |
 | 8.3 | IT6 developing-review 中優先 #2〜#8 消化 (H-02〜H-04 相当) | 3h | [ ] |
 | 8.4 | IT6 developing-review 低優先 #9〜#12 消化 | 2h | [ ] |
 
