@@ -138,7 +138,7 @@
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 6.1 | Shipper 集約に `discountRate` 属性 + CorporateDiscount VO 追加 | 2h | [ ] |
+| 6.1 | Shipper 集約に `discountPercentage :: Shipper -> Integer` を追加 (Individual=0/Bronze=5/Silver=10/Gold=15) | 2h | [x] `b71d434e` (4 テスト追加、641→645 全緑) |
 | 6.2 | CalculateShippingCostCommand を拡張し discountRate を PricingRule.calculate に注入 | 2h | [ ] |
 | 6.3 | Postgres migration (shipper.discount_rate カラム追加) + fixture | 2h | [ ] |
 | 6.4 | CostCalculationView に割引適用表示 (元価格 / 割引額 / 最終価格) | 2h | [ ] |
