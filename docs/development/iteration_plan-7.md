@@ -54,7 +54,7 @@
 | ID | タスク | SP | 優先度 |
 |----|-------|----|-------|
 | T6-01 | Playwright E2E 統合ハッピーパス「予約→経路→追跡→荷役→引取→料金」1 本 | 2 | 必須 |
-| T6-03 | v1.0.0-mvp git tag + CHANGELOG `[Unreleased]` → `[1.0.0-mvp]` セクション切出し | 0.5 | 必須 |
+| T6-03 | v1.0.0-mvp git tag + CHANGELOG `[Unreleased]` → `[1.0.0-mvp]` セクション切出し | 0.5 | 一部完了 (CHANGELOG 切出し `c9b5e025`、tag は T6-01 後に延期) |
 | T6-04 | domain-model.md / data-model.md / ui_design.md へ Pricing / Notification 追記 | 1.5 | 完了 (IT6 内、commit `c463c36e`) |
 | T6-09 | AuthProtect 適用範囲拡張 (Confirm/Cancel/Link/Unlink/EvaluateRoute) + Role-based 権限 IT7 段階 | 2 | 高 |
 
@@ -82,7 +82,7 @@
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
 | 1.1 | Playwright E2E 統合ハッピーパス 1 本 (予約→経路→追跡→荷役→引取→料金) | 6h | [ ] |
-| 1.2 | v1.0.0-mvp git tag 作成 + CHANGELOG セクション切出し | 2h | [ ] |
+| 1.2 | v1.0.0-mvp git tag 作成 + CHANGELOG セクション切出し | 2h | [-] CHANGELOG 切出し `c9b5e025` 完了、tag は 1.1 (T6-01) 後 |
 | 1.3 | domain-model.md へ Pricing (Cost/PricingRule/CurrencyRate/Discount) 追記 | 2h | [x] IT6 内 `c463c36e` |
 | 1.4 | domain-model.md へ Notification (Notification 集約/Channel/Content) 追記 | 2h | [x] IT6 内 `c463c36e` |
 | 1.5 | data-model.md へ pricing_rule / currency_rate / notification テーブル追記 | 1h | [x] IT6 内 `c463c36e` |
