@@ -21,6 +21,7 @@
 | IT4 (2026-08-17〜08-30) | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [iteration_report-4.md](iteration_report-4.md) | 完了 |
 | IT5 (2026-08-31〜09-13) | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了 (2026-07-01) |
 | IT6 (2026-09-14〜09-27) | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了 (2026-07-02、Ralph Loop 30 反復、Release 1.0 MVP 一巡完成) |
+| IT7 (2026-09-28〜10-11) | [iteration_plan-7.md](iteration_plan-7.md) | [retrospective-7.md](retrospective-7.md) | [iteration_report-7.md](iteration_report-7.md) | 完了 (2026-07-03、Ralph Loop 2 週 66 反復、US17/19/20/22 一巡 + Exception BC 新設 + ADR-0013 全 Phase) |
 
 ### 進捗サマリー
 
@@ -32,7 +33,8 @@
 | IT4 | 20 (本体 11 + IT3 繰越 7 + 拡張 2) | 19 | 95% |
 | IT5 | 22 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2) | 40+ (本体 14 + task 1.2/3.1-3.3 9 + Ralph 17) | 182% |
 | IT6 | 18 (本体 5 + IT5 繰越 8 + プロセス品質 3 + 上流補完 2) | 30+ | 167% |
-| **累計** | **119** | **119+** | **100%** |
+| IT7 | 10 | 30+ | 300%+ |
+| **累計** | **129** | **179+** | **139%+** |
 
 ### フェーズ進捗
 
