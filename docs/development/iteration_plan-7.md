@@ -139,9 +139,9 @@
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
 | 6.1 | Shipper 集約に `discountPercentage :: Shipper -> Integer` を追加 (Individual=0/Bronze=5/Silver=10/Gold=15) | 2h | [x] `b71d434e` (4 テスト追加、641→645 全緑) |
-| 6.2 | CalculateShippingCostCommand を拡張し discountRate を PricingRule.calculate に注入 | 2h | [-] Cross-BC helper `3f635748` 追加 (`resolveDiscountPercentageByShipperId`)、Interfaces 層への統合は次反復 |
+| 6.2 | CalculateShippingCostCommand を拡張し discountRate を PricingRule.calculate に注入 | 2h | [x] Cross-BC helper `3f635748` + Interfaces 統合 `4f790ee4` 完了 |
 | 6.3 | Postgres migration (shipper.discount_rate カラム追加) + fixture | 2h | [不要] ADR-0015 で contract_rank 由来設計を採用、migration 不要 |
-| 6.4 | CostCalculationView に割引適用表示 (元価格 / 割引額 / 最終価格) | 2h | [ ] |
+| 6.4 | CostCalculationView に割引適用表示 (元価格 / 割引額 / 最終価格) | 2h | [x] `4f790ee4` shipperId 入力フィールド追加、Interfaces で法人割引率上書きロジック実装 |
 | 6.5 | hspec-wai 2 本 (割引適用 / 割引なし) + hedgehog (割引後 ≤ 元価格) | 2h | [-] `23843d3d` hedgehog 5 プロパティ (P-1〜P-5) 完了、hspec-wai は 6.4 View 併せて次反復 |
 
 ### 7. 保証系: Testcontainers / k6 / katip (Week 2 後半、T6-05/T6-06/T6-07、3.5 SP)
