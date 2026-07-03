@@ -47,6 +47,7 @@ import qualified Exception.Application.ResolveExceptionCommandSpec
 import qualified Exception.Domain.Model.DelayExceptionSpec
 import qualified Exception.Domain.Model.ExceptionRecordSpec
 import qualified Exception.Domain.Model.ExceptionTypeSpec
+import qualified Exception.Infrastructure.DetailJsonParserSpec
 import qualified Exception.Interfaces.ExceptionListPageApiSpec
 import qualified Exception.Views.ExceptionListViewSpec
 import qualified Notification.Application.SendClaimNotificationCommandSpec
@@ -365,6 +366,10 @@ main = hspec $ do
   describe
     "Cargotracker.Exception.Views.ExceptionListView"
     Exception.Views.ExceptionListViewSpec.spec
+
+  describe
+    "Cargotracker.Exception.Infrastructure.DetailJsonParser"
+    Exception.Infrastructure.DetailJsonParserSpec.spec
 
   describe
     "Cargotracker.Exception.Interfaces.ExceptionListPageApi"
