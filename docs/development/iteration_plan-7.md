@@ -110,7 +110,7 @@
 | 3.2 | RecordDelayExceptionCommand + Handling → Tracking 状態遷移 (Delayed) の Cross-BC helper | 3h | [-] `e2a0cb0a` RecordDelayExceptionCommand 完了 (6 テスト、707→713 全緑)、Cross-BC helper は次反復 |
 | 3.3 | Notification BC 連携 (荷主/セールスへの遅延通知配信) | 2h | [ ] |
 | 3.4 | PostgresExceptionRepository + migration (exception_record) | 3h | [x] `10222406` migration + `836b03ff` Postgres Repository (save/update 完了、find 系は JSONB パーサ次反復) |
-| 3.5 | ExceptionListPageApi + ExceptionListView / DelayExceptionFormView (htmx) | 3h | [ ] |
+| 3.5 | ExceptionListPageApi + ExceptionListView / DelayExceptionFormView (htmx) | 3h | [x] View `f4646e7a` + PageApi `1d5ed90a` + Resolve `12112dae` + Delay POST `4fa59458` (登録フォーム画面は次反復) |
 | 3.6 | hspec-wai 3 本 (記録・遷移・通知) + hedgehog property (Severity の順序性) | 2h | [-] Severity 順序性は `38712f90` にて既に検証済、hspec-wai は Interfaces 層追加後 |
 
 ### 4. US20 破損・紛失例外処理 (Week 2 前半、3 SP)
@@ -120,7 +120,7 @@
 | 4.1 | DamageException / LossException VO + PhotoEvidence / Amount VO 定義 | 3h | [x] `40a27280` (Amount/DamageException/LossException 完了、PhotoEvidence は View 層で追加予定) |
 | 4.2 | RecordDamageExceptionCommand / RecordLossExceptionCommand + Tracking 状態遷移 (Damaged/Lost) | 3h | [-] `6722ae81` (8 テスト、713→721 全緑)、Cross-BC 状態遷移は次反復 |
 | 4.3 | Postgres 拡張 (damage_exception / loss_exception 追加、共通テーブル正規化検討) | 3h | [ ] |
-| 4.4 | ExceptionListView へ Damage/Loss 種別フィルタと詳細ページ追加 | 3h | [ ] |
+| 4.4 | ExceptionListView へ Damage/Loss 種別フィルタと詳細ページ追加 | 3h | [-] Damage/Loss POST endpoint 完了 `8a516853`、フィルタ UI と詳細ページは次反復 |
 | 4.5 | 通知配信 (荷主/セールス/保険担当) + 損害額集計サービス | 2h | [ ] |
 | 4.6 | hspec-wai 4 本 + hedgehog (Amount 非負性 / 状態遷移不可逆性) | 2h | [ ] |
 
@@ -1362,4 +1362,64 @@ Tracking 状態遷移 (tracking_activity.transport_status) をどう連携する
 - [リリース計画](./release_plan.md)
 - ADR-0012 (Tx 境界と Cross-BC 参照ポリシー、IT6 採用)
 - ADR-0010 (Session Cookie 認証、IT7 Role-based 節追記)
+- ADR-0013 (Notification updateNotification 主キー、IT7 提案) — `docs/adr/0013-notification-primary-key-design.md`
+- ADR-0014 (例外処理の状態遷移ポリシー、IT7 提案 → 3 Phase 実装完了) — `docs/adr/0014-exception-state-transition-policy.md`
+- ADR-0015 (法人契約割引率を contract_rank 由来、IT7 採用) — `docs/adr/0015-corporate-discount-rank-derived.md`
 - docs/review/it6_nav_e2e_review_20260702.md (IT6 developing-review レポート)
+
+---
+
+## Ralph Loop iteration 1-31 サマリー (2026-07-03)
+
+`ralph-loop:ralph-loop orchestrating-develop IT7` を自律実行した 31 反復の
+実装成果を集約する。詳細は `docs/journal/20260703.md` の Ralph Loop セクションと
+Git ログを参照。
+
+### 完了タスク
+
+| タスク | 状態 | Ralph Loop の反復 / 主コミット |
+| :--- | :--- | :--- |
+| T6-04 上流ドキュメント同期 (Pricing/Notification) | 完了 (IT6 内 `c463c36e`) | iter 1 で確認 |
+| T6-03 CHANGELOG [1.0.0-mvp] 切出し | 完了 | iter 1 `c9b5e025` |
+| T6-01 E2E 統合ハッピーパス (Stage 1-4/7) | 進行中 (Stage 5-6 は T7-01 前提) | iter 2-3 `e06ff933` / `63ab3070` |
+| **US22 法人割引 全レイヤ一巡** | **完了** | iter 4-5 (Domain + Cross-BC), 9 (property), 17 (View/API) |
+| **US17 手動状態更新 Domain + Application + Postgres** | **完了** | iter 6-8 (Domain + App + Postgres) |
+| **US19/US20 Exception BC 新設 (Domain + Application + Postgres + Interfaces)** | **完了** | iter 10-15 (Domain + App), 16 (Postgres), 27-31 (View + Interfaces) |
+| **ADR-0013/0014/0015 起票 + ADR-0014 3 Phase 実装** | **完了** | iter 18-22 |
+| **上流ドキュメント同期 (domain-model / data-model / ui_design)** | **完了** | iter 23-25 |
+
+### Exception BC 実装状況
+
+| レイヤー | モジュール数 | 状態 |
+| :--- | :---: | :--- |
+| Domain (VO + Aggregate) | 8 | 完成 |
+| Application (Command + Ports) | 5 | 完成 |
+| Infrastructure (Postgres) | 1 | save/update 完成、find 系 JSONB パーサ次反復 |
+| Views (Lucid) | 1 | 一覧完成、登録フォーム画面は次反復 |
+| Interfaces (Servant) | 1 | GET / resolve / delay + damage + loss POST 完成 |
+| Migration | 1 | 完成 (`20260928100300_create_exception_record.sql`) |
+| Main.hs 配線 | ✓ | 完成 |
+
+### 数値サマリー
+
+- コミット: 54 件超
+- 累計テスト: 641 → 758 (+117)
+- 累計 hedgehog checks: +800
+- 新規 ADR: 3 件 / 新規 migration: 2 本 / 新規 BC: 1 個 (Exception)
+- 新規モジュール: 22 (Shipper 2, Tracking 4, Pricing 1, Exception 15)
+
+### 残タスク
+
+- **T6-01 Stage 5-6** (Handling + Claim + Notification) — T7-01 完了待ち
+- **T6-09 AuthProtect 適用範囲拡張 (Role-based 権限)** — 未着手
+- **T6-05 Testcontainers 統合テスト** — 未着手
+- **T6-06 k6 スモーク負荷テスト CI 統合** — 未着手
+- **T6-07 katip 正式化** — 未着手
+- **T7-01 IssueConfirmationCode の Handling ワークフロー接続** — 未着手
+- **ADR-0013 Phase 1-3 実装 (Notification 主キー移行)** — 提案のまま
+- **ADR-0014 3 種例外詳細化** (TsDelayed / TsDamaged / TsLost、現状 TsInException に統合) — 提案のまま
+- **Exception BC の登録フォーム画面 (Lucid Views)** — 3 種
+- **Exception BC の詳細ページ** — GET /exceptions/:id
+- **PostgresExceptionRepository find 系 JSONB パーサ実装**
+- **US17 View 層 (TrackingDetailView 手動更新モーダル + 監査履歴タブ)** — 5.4/5.5
+- **hspec-wai Role Policy テスト** (US17 5.5、T6-09 と統合)
