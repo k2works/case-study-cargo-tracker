@@ -106,7 +106,7 @@
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 3.1 | Exception BC 新設 (DelayException / ExceptionType / ExceptionSeverity VO) | 3h | [-] `38712f90` ExceptionSeverity + DelayException 完了 (12 テスト、667→679 全緑)、ExceptionType sum type と Record 集約は次反復 |
+| 3.1 | Exception BC 新設 (DelayException / ExceptionType / ExceptionSeverity VO) | 3h | [x] `38712f90` + `40a27280` (ExceptionSeverity/DelayException/Amount/DamageException/LossException/ExceptionType 全 6 モジュール、29 テスト、667→696 全緑、集約 Record は 4.1/US20 と統合予定) |
 | 3.2 | RecordDelayExceptionCommand + Handling → Tracking 状態遷移 (Delayed) の Cross-BC helper | 3h | [ ] |
 | 3.3 | Notification BC 連携 (荷主/セールスへの遅延通知配信) | 2h | [ ] |
 | 3.4 | PostgresExceptionRepository + migration (delay_exception) | 3h | [ ] |
@@ -117,7 +117,7 @@
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 4.1 | DamageException / LossException VO + PhotoEvidence / Amount VO 定義 | 3h | [ ] |
+| 4.1 | DamageException / LossException VO + PhotoEvidence / Amount VO 定義 | 3h | [x] `40a27280` (Amount/DamageException/LossException 完了、PhotoEvidence は View 層で追加予定) |
 | 4.2 | RecordDamageExceptionCommand / RecordLossExceptionCommand + Tracking 状態遷移 (Damaged/Lost) | 3h | [ ] |
 | 4.3 | Postgres 拡張 (damage_exception / loss_exception 追加、共通テーブル正規化検討) | 3h | [ ] |
 | 4.4 | ExceptionListView へ Damage/Loss 種別フィルタと詳細ページ追加 | 3h | [ ] |
