@@ -1,0 +1,92 @@
+name: k6 Smoke Load Test
+
+# T6-06 (IT7): docs/design/test_strategy.md §9.1 に基づく非機能要件検証。
+# GET /public/tracking/:tn の P95 < 500ms / P99 < 1000ms / エラー率 < 0.1% を保証する。
+#
+# 現状はステージング環境が未構築のため手動起動 (workflow_dispatch) のみ。
+# ステージング環境完成後は main branch push 時にも自動起動する予定。
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: '対象ホスト (例: https://staging.cargo-tracker.example.com)'
+        required: true
+        type: string
+      tracking_number:
+        description: 'リクエストする追跡番号 (例: TR000001)'
+        required: false
+        default: 'TR000001'
+        type: string
+
+  # ステージング環境完成後に有効化する自動起動 (現状はコメントアウト)
+  # push:
+  #   branches: [main]
+
+concurrency:
+  group: k6-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-load-test:
+    name: k6 Smoke Load Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          curl -sLO https://github.com/grafana/k6/releases/download/v0.50.0/k6-v0.50.0-linux-amd64.tar.gz
+          tar -xzf k6-v0.50.0-linux-amd64.tar.gz
+          sudo mv k6-v0.50.0-linux-amd64/k6 /usr/local/bin/
+          k6 version
+
+      - name: Run k6 smoke test
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          TRACKING_NUMBER: ${{ inputs.tracking_number }}
+        run: |
+          k6 run \
+            --summary-export=k6-summary.json \
+            apps/cargo-tracker/scripts/k6/smoke-tracking.js
+
+      - name: Extract SLA metrics
+        id: metrics
+        if: always()
+        run: |
+          if [ -f k6-summary.json ]; then
+            p95=$(jq '.metrics.http_req_duration.values["p(95)"]' k6-summary.json)
+            p99=$(jq '.metrics.http_req_duration.values["p(99)"]' k6-summary.json)
+            err_rate=$(jq '.metrics.http_req_failed.values.rate' k6-summary.json)
+            echo "p95=${p95}" >> "$GITHUB_OUTPUT"
+            echo "p99=${p99}" >> "$GITHUB_OUTPUT"
+            echo "err_rate=${err_rate}" >> "$GITHUB_OUTPUT"
+            echo "### k6 Smoke Test Results" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Metric | Value | SLA | Status |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| --- | --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+            awk -v p="$p95" 'BEGIN { printf "| P95 latency | %.1fms | < 500ms | %s |\n", p, (p < 500 ? "✅" : "❌") }' >> "$GITHUB_STEP_SUMMARY"
+            awk -v p="$p99" 'BEGIN { printf "| P99 latency | %.1fms | < 1000ms | %s |\n", p, (p < 1000 ? "✅" : "❌") }' >> "$GITHUB_STEP_SUMMARY"
+            awk -v r="$err_rate" 'BEGIN { printf "| Error rate | %.3f%% | < 0.1%% | %s |\n", r*100, (r < 0.001 ? "✅" : "❌") }' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail if P95 SLA violated
+        if: always()
+        run: |
+          p95="${{ steps.metrics.outputs.p95 }}"
+          if [ -z "$p95" ]; then
+            echo "k6-summary.json が生成されませんでした (k6 実行失敗の可能性)"
+            exit 1
+          fi
+          awk -v p="$p95" 'BEGIN { exit (p >= 500) }' \
+            || (echo "P95 SLA 違反: ${p95}ms >= 500ms" && exit 1)
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-summary-${{ github.run_id }}
+          path: k6-summary.json
+          retention-days: 30

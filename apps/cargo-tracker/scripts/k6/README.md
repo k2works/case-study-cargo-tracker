@@ -35,37 +35,25 @@ TRACKING_NUMBER=TR123ABC \
   k6 run apps/cargo-tracker/scripts/k6/smoke-tracking.js
 ```
 
-## CI 統合 (T6-06 予定)
+## CI 統合 (`.github/workflows/k6-smoke.yml`)
 
-`.github/workflows/ci.yml` に main branch push 時のスモークテストジョブを追加:
+現状の CI ワークフロー: **手動起動 (`workflow_dispatch`) のみ**。ステージング環境が
+未構築のため、以下の手順で任意タイミング実行できる:
 
-```yaml
-smoke-load-test:
-  needs: [deploy-staging]
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: grafana/setup-k6-action@v1
-    - name: k6 smoke test
-      env:
-        BASE_URL: ${{ secrets.STAGING_BASE_URL }}
-        TRACKING_NUMBER: ${{ secrets.SMOKE_TRACKING_NUMBER }}
-      run: |
-        k6 run --summary-export=k6-summary.json \
-          apps/cargo-tracker/scripts/k6/smoke-tracking.js
+1. GitHub Actions タブから `k6 Smoke Load Test` ワークフローを選択
+2. `Run workflow` ボタン →
+   - `base_url`: 対象ホスト (例: `http://localhost:8080` を ngrok で公開、または将来のステージング URL)
+   - `tracking_number`: リクエストする追跡番号 (デフォルト `TR000001`)
 
-        # P95 抽出と SLA チェック
-        p95=$(jq '.metrics.http_req_duration.values["p(95)"]' k6-summary.json)
-        awk -v p="$p95" 'BEGIN { exit (p >= 500) }' \
-          || (echo "P95 SLA 違反: ${p95}ms" && exit 1)
+ワークフローの動作:
 
-    - name: Upload summary
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: k6-summary
-        path: k6-summary.json
-```
+- k6 v0.50.0 をインストール → `smoke-tracking.js` 実行 (10 VUs × 60 秒)
+- `k6-summary.json` を解析して SLA メトリクス (P95 / P99 / エラー率) を GitHub Summary に表示
+- **P95 >= 500ms なら exit 1 でジョブ失敗**
+- `k6-summary.json` を 30 日間の Artifact として保存
+
+ステージング環境完成後は `push: branches: [main]` トリガーのコメントアウトを解除し、
+デプロイ後の自動スモークに切り替える予定。
 
 ## 判定ルール
 
