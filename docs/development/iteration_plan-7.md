@@ -106,7 +106,7 @@
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 3.1 | Exception BC 新設 (DelayException / ExceptionType / ExceptionSeverity VO) | 3h | [ ] |
+| 3.1 | Exception BC 新設 (DelayException / ExceptionType / ExceptionSeverity VO) | 3h | [-] `38712f90` ExceptionSeverity + DelayException 完了 (12 テスト、667→679 全緑)、ExceptionType sum type と Record 集約は次反復 |
 | 3.2 | RecordDelayExceptionCommand + Handling → Tracking 状態遷移 (Delayed) の Cross-BC helper | 3h | [ ] |
 | 3.3 | Notification BC 連携 (荷主/セールスへの遅延通知配信) | 2h | [ ] |
 | 3.4 | PostgresExceptionRepository + migration (delay_exception) | 3h | [ ] |
