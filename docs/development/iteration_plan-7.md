@@ -128,7 +128,7 @@
 
 | # | タスク | 見積 | 状態 |
 |---|-------|------|------|
-| 5.1 | Tracking 集約に `updateStateManually` メソッド + StateChangeAudit VO 追加 | 2h | [ ] |
+| 5.1 | Tracking 集約に `updateStateManually` メソッド + TrackingStateAudit VO 追加 | 2h | [x] `a22d7c9f` (5 テスト追加、651→656 全緑) |
 | 5.2 | ManualStateUpdateCommand (Role: Tracker/Admin 限定、監査ログ書込み) | 2h | [ ] |
 | 5.3 | Postgres 拡張 (tracking_state_audit) + Repository 更新 | 2h | [ ] |
 | 5.4 | TrackingDetailView に手動更新フォーム (htmx) + 監査履歴タブ | 2h | [ ] |
