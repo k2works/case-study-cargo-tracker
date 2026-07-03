@@ -11,6 +11,7 @@ module Cargotracker.Shipper.Domain.Model.Shipper
     mkCorporateNumber,
     mkIndividualShipper,
     mkCorporateShipper,
+    discountPercentage,
   ) where
 
 import Data.Char (isDigit)
@@ -82,3 +83,19 @@ mkCorporateShipper sid name email addr cn rank =
     , shipperAddress = addr
     , shipperKind = Corporate cn rank
     }
+
+{- | 荷主の契約割引率を百分率 Integer で返す (US22, IT7)。
+
+法人契約は ContractRank (Bronze=5% / Silver=10% / Gold=15%)、
+個人契約 (Individual) は 0% で固定。Pricing BC の Discount VO
+(0-100 の Integer 百分率) と直接互換で、Shared/CrossBc/
+ShipperToPricingHelper 経由で CalculateShippingCostCommand に渡す。
+
+Rule 4 準拠: 戻り値は Integer で Pricing BC 型に依存しない。
+-}
+discountPercentage :: Shipper -> Integer
+discountPercentage s = case shipperKind s of
+  Individual -> 0
+  Corporate _ Bronze -> 5
+  Corporate _ Silver -> 10
+  Corporate _ Gold -> 15

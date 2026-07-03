@@ -14,6 +14,7 @@ import Cargotracker.Shipper.Domain.Model.Shipper
     CorporateNumber (..),
     Shipper (..),
     ShipperKind (..),
+    discountPercentage,
     mkCorporateNumber,
     mkCorporateShipper,
     mkIndividualShipper,
@@ -113,3 +114,20 @@ spec = do
         `shouldBe` Left (InvalidShipperId "shipper name too long (max 255)")
     it "前後空白は trim される" $
       mkShipperName "  山田 太郎  " `shouldBe` Right (ShipperName "山田 太郎")
+
+  describe "discountPercentage (US22, IT7)" $ do
+    it "Individual は 0%" $ do
+      let s = mkIndividualShipper validId validName validEmail validAddress
+      discountPercentage s `shouldBe` 0
+    it "Corporate Bronze は 5%" $ do
+      Right cn <- pure (mkCorporateNumber "1234567890123")
+      let s = mkCorporateShipper validId validName validEmail validAddress cn Bronze
+      discountPercentage s `shouldBe` 5
+    it "Corporate Silver は 10%" $ do
+      Right cn <- pure (mkCorporateNumber "1234567890123")
+      let s = mkCorporateShipper validId validName validEmail validAddress cn Silver
+      discountPercentage s `shouldBe` 10
+    it "Corporate Gold は 15%" $ do
+      Right cn <- pure (mkCorporateNumber "1234567890123")
+      let s = mkCorporateShipper validId validName validEmail validAddress cn Gold
+      discountPercentage s `shouldBe` 15
