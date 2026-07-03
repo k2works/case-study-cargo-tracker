@@ -89,6 +89,9 @@
 | [IT6 計画](./development/iteration_plan-6.md) | US21 料金算出 + US26 引取通知 + IT5 繰越 8 (T5-01〜T5-10) + プロセス品質 3 + 上流補完 2 = 18 SP、Release 1.0 MVP 目標 |
 | [IT6 完了報告書](./development/iteration_report-6.md) | Ralph Loop 30 反復で 30+ SP (計画 18 SP 対比 167%)、Pricing/Notification BC 新設、Postgres 実装まで一巡完成、+139 tests (641 total) |
 | [IT6 ふりかえり (KPT)](./development/retrospective-6.md) | Keep 15 / Problem 10 / Try 12 (T6-01〜T6-12)、平均ベロシティ 24.8 SP、IT7 冒頭必達 4 件 (E2E / developing-review / v1.0.0-mvp tag / 上流ドキュメント同期) |
+| [IT7 計画](./development/iteration_plan-7.md) | 例外処理 (US19/US20) + 手動状態更新 (US17) + 法人割引 (US22) + IT6 繰越 (T6-01〜T6-04) + プロセス品質 (T6-05〜T6-09) = 10 SP、Release 2.0 GA 橋渡し目標 |
+| [IT7 完了報告書](./development/iteration_report-7.md) | Ralph Loop 2 週 66 反復で 30+ SP (計画 10 SP 対比 300%+)、Exception BC 新設 (17 モジュール)、ADR-0013/0014/0015 起票、+135 tests (776 total) |
+| [IT7 ふりかえり (KPT)](./development/retrospective-7.md) | Keep 6 / Problem 4 / Try 14 (T7-A〜T7-N)、平均ベロシティ 25.6 SP、IT8 冒頭必達 4 件 (RolePolicy 配線 / hedgehog / UNLOAD 副作用テスト / ADR-0016) |
 
 ### レビュードキュメント
 
@@ -99,6 +102,11 @@
 | [分析多視点レビュー](./review/analysis_multi_perspective_review_20260626.md) | XP 5 エージェント並列レビュー (高 16・中 16・低 10) |
 | [IT1 コードレビュー](./review/it1_code_review_20260626.md) | IT1 全体の XP 5 エージェント並列レビュー (高 10・中 13・低 8) |
 | [IT2 コードレビュー](./review/it2_code_review_20260627.md) | IT2 全体の XP 5 エージェント並列レビュー (高 12・中 14・低 12、矛盾 3) |
+| [IT3 post-nav レビュー](./review/it3_post_nav_review_20260629.md) | IT3 完了時 nav/E2E レビュー |
+| [IT4 コードレビュー](./review/it4_code_review_20260630.md) | IT4 XP 5 エージェント並列レビュー |
+| [IT5 コードレビュー](./review/it5_code_review_20260701.md) | IT5 全体の XP 5 エージェント並列レビュー |
+| [IT6 nav/E2E レビュー](./review/it6_nav_e2e_review_20260702.md) | IT6 完了時 nav/E2E 高優先指摘反映 (H-01) |
+| [IT7 Ralph Loop 2 週目レビュー](./review/ralph-loop-week2_review_20260703.md) | Ralph 2 週目 iter 1-8 XP 5 エージェント並列レビュー (高 4・中 5・低 5、矛盾 0) |
 
 ## 補足
 
