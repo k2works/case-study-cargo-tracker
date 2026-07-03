@@ -29,7 +29,9 @@ import Servant
 import Servant.HTML.Lucid (HTML)
 
 import Cargotracker.Exception.Application.Ports (ExceptionRepository (..))
+import qualified Cargotracker.Exception.Application.RecordDamageExceptionCommand as RecordDamage
 import qualified Cargotracker.Exception.Application.RecordDelayExceptionCommand as RecordDelay
+import qualified Cargotracker.Exception.Application.RecordLossExceptionCommand as RecordLoss
 import qualified Cargotracker.Exception.Application.ResolveExceptionCommand as Resolve
 import Cargotracker.Exception.Domain.Model.ExceptionRecord (ExceptionRecord (..))
 import Cargotracker.Exception.Domain.Model.ExceptionSeverity
@@ -71,6 +73,56 @@ instance FromForm RecordDelayFormRequest where
       <*> parseUnique "reporterUserId" f
       <*> parseUnique "reporterRole" f
 
+-- | US20 破損例外登録フォームの受信体
+data RecordDamageFormRequest = RecordDamageFormRequest
+  { dmgExceptionId :: !Text
+  , dmgTrackingNumber :: !Text
+  , dmgAmountValue :: !Text
+  , dmgAmountCurrency :: !Text
+  , dmgDescription :: !Text
+  , dmgSeverity :: !Text
+  , dmgReporterUserId :: !Text
+  , dmgReporterRole :: !Text
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance FromForm RecordDamageFormRequest where
+  fromForm f =
+    RecordDamageFormRequest
+      <$> parseUnique "exceptionId" f
+      <*> parseUnique "trackingNumber" f
+      <*> parseUnique "amountValue" f
+      <*> parseUnique "amountCurrency" f
+      <*> parseUnique "description" f
+      <*> parseUnique "severity" f
+      <*> parseUnique "reporterUserId" f
+      <*> parseUnique "reporterRole" f
+
+-- | US20 紛失例外登録フォームの受信体
+data RecordLossFormRequest = RecordLossFormRequest
+  { lossExceptionId :: !Text
+  , lossTrackingNumber :: !Text
+  , lossAmountValue :: !Text
+  , lossAmountCurrency :: !Text
+  , lossLastSeenAt :: !Text
+  , lossSeverity :: !Text
+  , lossReporterUserId :: !Text
+  , lossReporterRole :: !Text
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance FromForm RecordLossFormRequest where
+  fromForm f =
+    RecordLossFormRequest
+      <$> parseUnique "exceptionId" f
+      <*> parseUnique "trackingNumber" f
+      <*> parseUnique "amountValue" f
+      <*> parseUnique "amountCurrency" f
+      <*> parseUnique "lastSeenAt" f
+      <*> parseUnique "severity" f
+      <*> parseUnique "reporterUserId" f
+      <*> parseUnique "reporterRole" f
+
 type ExceptionListApi =
   "exceptions"
     :> ( QueryParam "trackingNumber" Text :> Get '[HTML] (Html ())
@@ -80,13 +132,24 @@ type ExceptionListApi =
            :<|> "delay"
              :> ReqBody '[FormUrlEncoded] RecordDelayFormRequest
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> "damage"
+             :> ReqBody '[FormUrlEncoded] RecordDamageFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
+           :<|> "loss"
+             :> ReqBody '[FormUrlEncoded] RecordLossFormRequest
+             :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
        )
 
 exceptionListApp :: ExceptionRepository IO -> Application
 exceptionListApp repo =
   serve
     (Proxy :: Proxy ExceptionListApi)
-    (handler repo :<|> handleResolve repo :<|> handleRecordDelay repo)
+    ( handler repo
+        :<|> handleResolve repo
+        :<|> handleRecordDelay repo
+        :<|> handleRecordDamage repo
+        :<|> handleRecordLoss repo
+    )
 
 handler :: ExceptionRepository IO -> Maybe Text -> Handler (Html ())
 handler repo mTn = do
@@ -206,4 +269,103 @@ parseDelayInput f now = do
       , RecordDelay.inputReporterUserId = formReporterUserId f
       , RecordDelay.inputReporterRole = formReporterRole f
       , RecordDelay.inputReportedAt = now
+      }
+
+-- | POST /exceptions/damage: US20 破損例外を登録する。
+handleRecordDamage ::
+  ExceptionRepository IO ->
+  RecordDamageFormRequest ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handleRecordDamage repo form = do
+  now <- liftIO getCurrentTime
+  case parseDamageInput form now of
+    Left err ->
+      throwRedirect ("/exceptions?error=" <> err)
+    Right input -> do
+      result <- liftIO (RecordDamage.execute repo (\_ -> pure (Right ())) input)
+      case result of
+        Right _ ->
+          pure (addHeader "/exceptions?flash=damage-recorded" NoContent)
+        Left e ->
+          throwRedirect ("/exceptions?error=domain&detail=" <> T.pack (show e))
+  where
+    throwRedirect ::
+      Text ->
+      Handler (Headers '[Header "Location" Text] NoContent)
+    throwRedirect loc =
+      throwError err303 {errHeaders = [("Location", BC.pack (T.unpack loc))]}
+
+parseDamageInput ::
+  RecordDamageFormRequest ->
+  UTCTime ->
+  Either Text RecordDamage.RecordDamageExceptionInput
+parseDamageInput f now = do
+  value <- case reads (T.unpack (dmgAmountValue f)) :: [(Integer, String)] of
+    [(n, "")] -> Right n
+    _ -> Left "invalid-amount-value"
+  severity <- case textToLevel (T.toUpper (dmgSeverity f)) of
+    Just l -> Right l
+    Nothing -> Left "invalid-severity"
+  Right
+    RecordDamage.RecordDamageExceptionInput
+      { RecordDamage.inputExceptionId = dmgExceptionId f
+      , RecordDamage.inputTrackingNumber = dmgTrackingNumber f
+      , RecordDamage.inputAmountValue = value
+      , RecordDamage.inputAmountCurrency = dmgAmountCurrency f
+      , RecordDamage.inputDescription = dmgDescription f
+      , RecordDamage.inputSeverityLevel = severity
+      , RecordDamage.inputReporterUserId = dmgReporterUserId f
+      , RecordDamage.inputReporterRole = dmgReporterRole f
+      , RecordDamage.inputReportedAt = now
+      }
+
+-- | POST /exceptions/loss: US20 紛失例外を登録する。
+handleRecordLoss ::
+  ExceptionRepository IO ->
+  RecordLossFormRequest ->
+  Handler (Headers '[Header "Location" Text] NoContent)
+handleRecordLoss repo form = do
+  now <- liftIO getCurrentTime
+  case parseLossInput form now of
+    Left err ->
+      throwRedirect ("/exceptions?error=" <> err)
+    Right input -> do
+      result <- liftIO (RecordLoss.execute repo (\_ -> pure (Right ())) input)
+      case result of
+        Right _ ->
+          pure (addHeader "/exceptions?flash=loss-recorded" NoContent)
+        Left e ->
+          throwRedirect ("/exceptions?error=domain&detail=" <> T.pack (show e))
+  where
+    throwRedirect ::
+      Text ->
+      Handler (Headers '[Header "Location" Text] NoContent)
+    throwRedirect loc =
+      throwError err303 {errHeaders = [("Location", BC.pack (T.unpack loc))]}
+
+parseLossInput ::
+  RecordLossFormRequest ->
+  UTCTime ->
+  Either Text RecordLoss.RecordLossExceptionInput
+parseLossInput f now = do
+  value <- case reads (T.unpack (lossAmountValue f)) :: [(Integer, String)] of
+    [(n, "")] -> Right n
+    _ -> Left "invalid-amount-value"
+  severity <- case textToLevel (T.toUpper (lossSeverity f)) of
+    Just l -> Right l
+    Nothing -> Left "invalid-severity"
+  let mLastSeen =
+        let stripped = T.strip (lossLastSeenAt f)
+         in if T.null stripped then Nothing else Just stripped
+  Right
+    RecordLoss.RecordLossExceptionInput
+      { RecordLoss.inputExceptionId = lossExceptionId f
+      , RecordLoss.inputTrackingNumber = lossTrackingNumber f
+      , RecordLoss.inputAmountValue = value
+      , RecordLoss.inputAmountCurrency = lossAmountCurrency f
+      , RecordLoss.inputLastSeenAt = mLastSeen
+      , RecordLoss.inputSeverityLevel = severity
+      , RecordLoss.inputReporterUserId = lossReporterUserId f
+      , RecordLoss.inputReporterRole = lossReporterRole f
+      , RecordLoss.inputReportedAt = now
       }

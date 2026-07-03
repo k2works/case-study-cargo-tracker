@@ -108,6 +108,50 @@ spec = describe "ExceptionListPageApi (US19/US20, IT7)" $ do
           "exceptionId=EX-D003&trackingNumber=TR000001&delayHours=24&reason=%E6%B8%AF%E6%B9%BE&severity=URGENT&reporterUserId=user-42&reporterRole=Handler"
           `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?error=invalid-severity"]}
 
+  describe "POST /exceptions/damage (US20)" $
+    with app $ do
+      it "正常なフォーム値は 303 flash=damage-recorded" $
+        request
+          "POST"
+          "/exceptions/damage"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-DM001&trackingNumber=TR000001&amountValue=1500000&amountCurrency=JPY&description=%E5%86%B7%E5%87%8D&severity=CRITICAL&reporterUserId=user-42&reporterRole=Handler"
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?flash=damage-recorded"]}
+
+      it "非数値の amountValue は 303 ?error=invalid-amount-value" $
+        request
+          "POST"
+          "/exceptions/damage"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-DM002&trackingNumber=TR000001&amountValue=abc&amountCurrency=JPY&description=%E5%86%B7%E5%87%8D&severity=HIGH&reporterUserId=user-42&reporterRole=Handler"
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?error=invalid-amount-value"]}
+
+  describe "POST /exceptions/loss (US20)" $
+    with app $ do
+      it "5 文字 lastSeenAt (UN/LOCODE) の正常フォームは 303 flash=loss-recorded" $
+        request
+          "POST"
+          "/exceptions/loss"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-LS001&trackingNumber=TR000002&amountValue=3000000&amountCurrency=USD&lastSeenAt=USSEA&severity=HIGH&reporterUserId=tracker-1&reporterRole=Tracker"
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?flash=loss-recorded"]}
+
+      it "空 lastSeenAt (不明) も受理される" $
+        request
+          "POST"
+          "/exceptions/loss"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-LS002&trackingNumber=TR000002&amountValue=500&amountCurrency=USD&lastSeenAt=&severity=MEDIUM&reporterUserId=tracker-1&reporterRole=Tracker"
+          `shouldRespondWith` 303 {matchHeaders = ["Location" <:> "/exceptions?flash=loss-recorded"]}
+
+      it "6 文字 lastSeenAt は Domain 側で拒否され 303 ?error=domain" $
+        request
+          "POST"
+          "/exceptions/loss"
+          [("Content-Type", "application/x-www-form-urlencoded")]
+          "exceptionId=EX-LS003&trackingNumber=TR000002&amountValue=500&amountCurrency=USD&lastSeenAt=USSEA1&severity=MEDIUM&reporterUserId=tracker-1&reporterRole=Tracker"
+          `shouldRespondWith` 303 {matchStatus = 303}
+
 reportedAt :: UTCTime
 reportedAt = UTCTime (fromGregorian 2026 9 28) (secondsToDiffTime 3600)
 
