@@ -71,7 +71,8 @@ type NotificationRow =
 rowToNotification :: NotificationRow -> Notification
 rowToNotification (bid, chan, subj, body, status, created, sent, failure) =
   Notification
-    { nBookingId = bid
+    { nId = Nothing -- ADR-0013 Phase 3 で notification_id を SELECT 対象に加える
+    , nBookingId = bid
     , nChannel = textToChannel chan
     , nContent = NotificationContent subj body
     , nStatus = textToStatus status

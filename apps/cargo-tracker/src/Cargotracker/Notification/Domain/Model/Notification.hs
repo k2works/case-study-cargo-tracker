@@ -22,6 +22,7 @@ module Cargotracker.Notification.Domain.Model.Notification
     NotificationStatus (..),
     mkNotificationContent,
     mkNotification,
+    mkNotificationWithId,
     markSent,
     markFailed,
   ) where
@@ -30,6 +31,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 
+import Cargotracker.Notification.Domain.Model.Value.NotificationId (NotificationId)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 -- | 通知本文。件名と本文の非空性のみ検証する。
@@ -59,9 +61,15 @@ data NotificationStatus
   | Failed
   deriving stock (Eq, Show)
 
--- | 通知集約。1 荷受人あたり複数の Notification が発行され得る。
+{- | 通知集約。1 荷受人あたり複数の Notification が発行され得る。
+ADR-0013 Phase 2 (IT7): 業務キー変更耐性のためサロゲート識別子
+`nId :: Maybe NotificationId` を追加する (Nothing は既存レコードとの
+互換性維持のための一時状態)。Phase 3 完了時に Maybe を外す予定。
+-}
 data Notification = Notification
-  { nBookingId :: !Text
+  { nId :: !(Maybe NotificationId)
+  -- ^ ADR-0013 サロゲート識別子 (UUID v4)。Phase 3 で非 Maybe 化予定。
+  , nBookingId :: !Text
   , nChannel :: !NotificationChannel
   , nContent :: !NotificationContent
   , nStatus :: !NotificationStatus
@@ -71,7 +79,12 @@ data Notification = Notification
   }
   deriving stock (Eq, Show)
 
--- | 新規通知を Pending 状態で生成する。
+{- | 新規通知を Pending 状態で生成する。
+
+ADR-0013 移行期 (IT7 Phase 2): nId は Nothing で初期化する。
+Phase 3 で `mkNotificationWithId` を経由し UUID v4 を注入するよう
+Application 層 (SendClaimNotificationCommand) を書き換える。
+-}
 mkNotification ::
   Text ->
   NotificationChannel ->
@@ -83,7 +96,8 @@ mkNotification bid ch content now
   | otherwise =
       Right
         Notification
-          { nBookingId = bid
+          { nId = Nothing
+          , nBookingId = bid
           , nChannel = ch
           , nContent = content
           , nStatus = Pending
@@ -91,6 +105,19 @@ mkNotification bid ch content now
           , nSentAt = Nothing
           , nFailureReason = Nothing
           }
+
+{- | ADR-0013 Phase 2: サロゲート識別子を明示的に指定して新規通知を生成する。
+`SendClaimNotificationCommand` から UUID v4 を採番して呼び出す想定。
+-}
+mkNotificationWithId ::
+  NotificationId ->
+  Text ->
+  NotificationChannel ->
+  NotificationContent ->
+  UTCTime ->
+  Either DomainError Notification
+mkNotificationWithId nid bid ch content now =
+  fmap (\n -> n {nId = Just nid}) (mkNotification bid ch content now)
 
 {- | 配信成功として Sent に遷移し、sentAt を設定する。
 
