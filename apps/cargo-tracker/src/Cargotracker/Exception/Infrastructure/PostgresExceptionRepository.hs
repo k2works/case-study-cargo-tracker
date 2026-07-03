@@ -21,38 +21,101 @@ module Cargotracker.Exception.Infrastructure.PostgresExceptionRepository
 
 import Control.Exception (SomeException, try)
 import Data.Int (Int64)
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple
   ( Connection,
+    Only (..),
     execute,
+    query,
   )
 
 import Cargotracker.Exception.Application.Ports (ExceptionRepository (..))
 import Cargotracker.Exception.Domain.Model.Amount (Amount (..))
 import Cargotracker.Exception.Domain.Model.DamageException (DamageException (..))
 import Cargotracker.Exception.Domain.Model.DelayException (DelayException (..))
-import Cargotracker.Exception.Domain.Model.ExceptionRecord (ExceptionRecord (..))
+import Cargotracker.Exception.Domain.Model.ExceptionRecord
+  ( ExceptionRecord (..),
+    mkExceptionRecord,
+  )
 import Cargotracker.Exception.Domain.Model.ExceptionSeverity
   ( ExceptionSeverity (..),
     levelToText,
+    textToLevel,
   )
 import Cargotracker.Exception.Domain.Model.ExceptionType
   ( ExceptionType (..),
     exceptionTypeToText,
   )
 import Cargotracker.Exception.Domain.Model.LossException (LossException (..))
-import Cargotracker.Exception.Domain.Model.Reporter (Reporter (..))
+import Cargotracker.Exception.Domain.Model.Reporter (Reporter (..), mkReporter)
+import Cargotracker.Exception.Infrastructure.DetailJsonParser (parseDetailJson)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
 newPostgresExceptionRepository :: Connection -> ExceptionRepository IO
 newPostgresExceptionRepository conn =
   ExceptionRepository
     { saveException = saveImpl conn
-    , findExceptionById = \_ -> pure Nothing
-    , findExceptionsByTrackingNumber = \_ -> pure []
+    , findExceptionById = findByIdImpl conn
+    , findExceptionsByTrackingNumber = findByTnImpl conn
     , updateExceptionResolution = updateImpl conn
     }
+
+-- | exception_record 1 行のカラム順序 (SELECT 節と揃える)
+type ExceptionRow =
+  ( Text -- exception_id
+  , Text -- tracking_number
+  , Text -- exception_type
+  , Text -- severity
+  , Text -- detail_json (::text にキャストして読み出し)
+  , Text -- reporter_user_id
+  , Text -- reporter_role
+  , UTCTime -- reported_at
+  , Maybe UTCTime -- resolved_at
+  )
+
+findByIdImpl :: Connection -> Text -> IO (Maybe ExceptionRecord)
+findByIdImpl conn eid = do
+  rows <-
+    query
+      conn
+      "SELECT exception_id, tracking_number, exception_type, severity, \
+      \detail_json::text, reporter_user_id, reporter_role, \
+      \reported_at, resolved_at \
+      \FROM exception_record WHERE exception_id = ? LIMIT 1"
+      (Only eid) ::
+      IO [ExceptionRow]
+  case rows of
+    (r : _) -> pure (rowToRecord r)
+    [] -> pure Nothing
+
+findByTnImpl :: Connection -> Text -> IO [ExceptionRecord]
+findByTnImpl conn tn = do
+  rows <-
+    query
+      conn
+      "SELECT exception_id, tracking_number, exception_type, severity, \
+      \detail_json::text, reporter_user_id, reporter_role, \
+      \reported_at, resolved_at \
+      \FROM exception_record WHERE tracking_number = ? \
+      \ORDER BY reported_at DESC"
+      (Only tn) ::
+      IO [ExceptionRow]
+  -- 復元失敗行 (壊れた JSON 等) はスキップして無視。ログはこの層では持たない。
+  pure (mapMaybe rowToRecord rows)
+
+-- | Row → ExceptionRecord 復元。復元失敗時は Nothing を返す (呼出側でスキップ or 未発見扱い)。
+rowToRecord :: ExceptionRow -> Maybe ExceptionRecord
+rowToRecord (eid, tn, typ, sevText, detail, uid, role, repAt, resAt) = do
+  sev <- textToLevel (T.toUpper sevText)
+  case (parseDetailJson typ detail, mkReporter uid role) of
+    (Right etype, Right rp) ->
+      case mkExceptionRecord eid etype (ExceptionSeverity sev) rp repAt tn of
+        Right r -> pure (r {erResolvedAt = resAt})
+        Left _ -> Nothing
+    _ -> Nothing
 
 saveImpl :: Connection -> ExceptionRecord -> IO (Either DomainError ())
 saveImpl conn er = do
