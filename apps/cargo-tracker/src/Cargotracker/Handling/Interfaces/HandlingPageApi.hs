@@ -55,7 +55,7 @@ import Cargotracker.Notification.Application.Ports
     NotificationRepository,
   )
 import Cargotracker.Notification.Application.SendClaimNotificationCommand
-  ( sendClaimLogNotificationText,
+  ( sendClaimLogNotificationTextWithId,
   )
 
 data HandlingFormRequest = HandlingFormRequest
@@ -109,14 +109,15 @@ handlingPageApp ::
   TrackingRepository IO ->
   NotificationRepository IO ->
   NotificationDeliveryPort IO ->
+  IO Text ->
   Application
-handlingPageApp tx repo codeRepo trackingRepo notifRepo notifDelivery =
+handlingPageApp tx repo codeRepo trackingRepo notifRepo notifDelivery genNid =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
         :<|> handlerPost repo
         :<|> handlerClaimGet
-        :<|> handlerClaimPost tx codeRepo repo trackingRepo notifRepo notifDelivery
+        :<|> handlerClaimPost tx codeRepo repo trackingRepo notifRepo notifDelivery genNid
     )
 
 handlerGet :: Maybe Text -> Handler (Html ())
@@ -178,9 +179,10 @@ handlerClaimPost ::
   TrackingRepository IO ->
   NotificationRepository IO ->
   NotificationDeliveryPort IO ->
+  IO Text ->
   ClaimFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerClaimPost tx codeRepo handlingRepo trackingRepo notifRepo notifDelivery form = do
+handlerClaimPost tx codeRepo handlingRepo trackingRepo notifRepo notifDelivery genNid form = do
   now <- liftIO getCurrentTime
   -- T5-03 ADR-0012: verifyAndConsume + saveHandlingActivity + markClaimedByBookingId を
   -- 単一 Tx で包む。いずれかが例外を投げた場合、全体がロールバックされ整合性を保つ。
@@ -204,12 +206,13 @@ handlerClaimPost tx codeRepo handlingRepo trackingRepo notifRepo notifDelivery f
   case result of
     Right () -> do
       -- US26 + ADR-0012 決定 3: Tx 完了後 (副作用は Tx 外) に引取完了通知を発火。
-      -- Cross-BC helper sendClaimLogNotificationText 経由で Text ベースの
-      -- 呼出のみを行い、Notification Domain 型は Handling に漏れない (Rule 4)。
+      -- ADR-0013 Phase 3: UUID v4 を Handling BC 側で採番し、Notification 集約に
+      -- サロゲート識別子として渡す (業務キー変更耐性のため)。
       -- 失敗しても業務フロー (redirect) は継続する (通知は補助情報)。
+      nid <- liftIO genNid
       _ <-
         liftIO
-          ( sendClaimLogNotificationText
+          ( sendClaimLogNotificationTextWithId
               notifRepo
               notifDelivery
               (claimBookingId form)
@@ -219,6 +222,7 @@ handlerClaimPost tx codeRepo handlingRepo trackingRepo notifRepo notifDelivery f
                   <> " の引取が完了しました。ご利用ありがとうございました。"
               )
               now
+              (Just nid)
           )
       pure (addHeader "/handling/claim?flash=success" NoContent)
     Left ConfirmationCodeMismatch ->

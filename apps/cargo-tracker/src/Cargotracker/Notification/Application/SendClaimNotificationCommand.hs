@@ -19,6 +19,7 @@ module Cargotracker.Notification.Application.SendClaimNotificationCommand
   ( SendClaimNotificationInput (..),
     execute,
     sendClaimLogNotificationText,
+    sendClaimLogNotificationTextWithId,
   ) where
 
 import Data.Text (Text)
@@ -109,7 +110,24 @@ sendClaimLogNotificationText ::
   Text ->
   UTCTime ->
   m (Either Cargotracker.Shared.Domain.DomainError.DomainError DeliveryResult)
-sendClaimLogNotificationText repo delivery bid subj body now = do
+sendClaimLogNotificationText repo delivery bid subj body now =
+  sendClaimLogNotificationTextWithId repo delivery bid subj body now Nothing
+
+{- | ADR-0013 Phase 3: 呼出側が採番した UUID v4 (Text) を注入できる版。
+Handling BC の claim 完了時は本関数を使い generateNotificationIdText を
+渡すことで、通知に業務キー変更耐性のあるサロゲート識別子が付与される。
+-}
+sendClaimLogNotificationTextWithId ::
+  Monad m =>
+  NotificationRepository m ->
+  NotificationDeliveryPort m ->
+  Text ->
+  Text ->
+  Text ->
+  UTCTime ->
+  Maybe Text ->
+  m (Either Cargotracker.Shared.Domain.DomainError.DomainError DeliveryResult)
+sendClaimLogNotificationTextWithId repo delivery bid subj body now mNid = do
   result <-
     execute
       repo
@@ -120,7 +138,7 @@ sendClaimLogNotificationText repo delivery bid subj body now = do
         , inputSubject = subj
         , inputBody = body
         , inputNow = now
-        , inputNotificationId = Nothing
+        , inputNotificationId = mNid
         }
   pure (fmap snd result)
 
