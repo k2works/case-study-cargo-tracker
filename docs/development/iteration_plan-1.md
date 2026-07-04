@@ -1,0 +1,511 @@
+# イテレーション 1 計画
+
+## 概要
+
+| 項目 | 内容 |
+|------|------|
+| **イテレーション** | 1 |
+| **期間** | 2026-07-07 〜 2026-07-18（2 週間） |
+| **ゴール** | 技術基盤（DbUp・UoW + post-commit イベント）と認証を確立し、荷主登録と見積で最初の業務価値を届ける |
+| **目標 SP** | 13 |
+
+---
+
+## ゴール
+
+### イテレーション終了時の達成状態
+
+1. **技術基盤**: DbUp が起動時に SQLite / PostgreSQL のマイグレーションを適用し、AggregateRoot + IUnitOfWork + post-commit ディスパッチ（ADR-0001/0002）の参照実装がテスト付きで存在する
+2. **認証（US26）**: 6 ロールの Cookie 認証でログイン・ログアウトでき、未認証アクセスは `/login` にリダイレクトされる
+3. **荷主登録（US02/03）**: 営業担当者が個人・法人荷主を登録・一覧できる
+4. **見積（US01）**: 営業担当者が輸送見積を作成し、スタブルート候補を確認できる
+
+### 成功基準
+
+- [ ] Heroku 開発環境で「ログイン → 荷主登録 → 見積作成」のデモが通る
+- [ ] ロールバック時にドメインイベントが発行されないことを統合テストで実証（ADR-0002 コンプライアンス）
+- [ ] 方言検出テスト（`NOW()` / `RETURNING` 等の禁止パターン）が CI で動作（ADR-0003・レビュー #24）
+- [ ] テストカバレッジ 80% 以上（ドメイン層 85% 以上）
+
+---
+
+## ユーザーストーリー
+
+### 対象ストーリー
+
+| ID | ユーザーストーリー | SP | 優先度 |
+|----|-------------------|----|----|
+| US26 | システムにログインする | 3 | 必須 |
+| US02 | 荷主を登録する | 3 | 必須 |
+| US03 | 法人荷主を登録する | 2 | 必須 |
+| US01 | 輸送見積を作成する | 5 | 必須 |
+| **合計** | | **13** | |
+
+### ストーリー詳細
+
+#### US26: システムにログインする
+
+**ストーリー**:
+> 業務ユーザー（営業担当者・経路設計者・追跡管理者・荷役作業員・経理担当者・管理者）として、ユーザー ID とパスワードでシステムにログインし、自分のロールに応じた画面・機能だけを利用したい。なぜなら、業務データ（荷主情報・予約・請求）への不正アクセスを防ぎ、誰がどの操作を行ったかを追跡できるからだ。
+
+**受入条件**:
+
+1. ユーザー ID とパスワードでログインできる（Cookie 認証）
+2. 認証失敗時はエラーメッセージが表示され、入力値は保持される
+3. 未認証で保護ページにアクセスするとログイン画面へリダイレクトされる
+4. 公開貨物追跡ページ（`/public/tracking/{trackingId}`）と `/health` は未認証でアクセスできる
+5. ログアウトするとセッションが破棄されログイン画面に戻る
+6. ロール（ROLE_ADMIN / ROLE_SALES / ROLE_ROUTER / ROLE_TRACKER / ROLE_HANDLER / ROLE_BILLING）に応じてナビゲーションと機能が制御される
+7. パスワードはハッシュ化（BCrypt 相当）して保存される
+
+#### US02: 荷主を登録する
+
+**ストーリー**:
+> 営業担当者として、新規荷主の氏名/社名・住所・連絡先・メールアドレスをシステムに登録したい。なぜなら、次回以降の予約で荷主情報の再入力を省略でき、顧客情報を一元管理できるからだ。
+
+**受入条件**:
+
+1. 氏名/社名・住所・連絡先・メールアドレス・荷主種別（個人/法人）を入力できる
+2. 同一メールアドレスが既に登録されている場合、既存荷主として表示しどちらを使用するか選択できる
+3. 登録完了後、荷主 ID が発行される
+4. 荷主種別「個人」で登録できる
+
+#### US03: 法人荷主を登録する
+
+**ストーリー**:
+> 営業担当者として、法人荷主の契約番号と割引率を含めて登録したい。なぜなら、法人契約条件（割引率）を精算時に自動適用できるからだ。
+
+**受入条件**:
+
+1. 荷主種別「法人」を選択すると、法人契約情報（契約番号・割引率）の入力フィールドが表示される
+2. 割引率は 0〜30% の範囲で設定できる
+3. 法人荷主で登録完了後、荷主 ID が発行される
+4. 登録した法人情報は US22（法人割引を適用する）で参照される
+
+#### US01: 輸送見積を作成する
+
+**ストーリー**:
+> 営業担当者として、荷主の輸送要件（出発地・目的地・希望期限・貨物種別・重量）を入力し、輸送料金と所要日数の見積を作成したい。なぜなら、荷主が予算と納期を事前に把握でき、予約決定を迅速に行えるからだ。
+
+**受入条件**:
+
+1. 出発地・目的地・希望期限・貨物種別・重量を入力できる
+2. 航海スケジュール情報をもとにルート概算候補が表示される
+3. ルート候補ごとに「経由港・所要日数・概算料金・航海番号」が表示される
+4. 見積情報が保存され、見積番号が発行される
+5. 希望期限に間に合うルートが存在しない場合、その旨が通知される
+6. 危険物が含まれる場合、危険物申告情報の入力フォームが表示される
+
+> **注**: IT1 時点では航海スケジュール（US24/25、IT3）が未実装のため、ルート候補算出は WireMock.Net で契約を固定したスタブ（`IExternalRoutingServicePort`）で提供する。受入条件 2 の「航海スケジュール情報をもとに」はスタブ応答で代替し、IT3 で実データに差し替える。
+
+### タスク
+
+#### 1. 技術基盤（ストーリー外・ADR-0001/0002/0003 の実装）
+
+| # | タスク | 見積もり | 担当 | 状態 |
+|---|--------|---------|------|------|
+| 1.1 | DbUp 起動時配線（プロバイダ判定・`Scripts/postgresql|sqlite` 適用） | 3h | - | [ ] |
+| 1.2 | 初期スキーマ 0001（users / user_roles / shipper / estimate / route_candidate）両方言 | 3h | - | [ ] |
+| 1.3 | AggregateRoot 基底クラス + IUnitOfWork + post-commit ディスパッチ実装 | 4h | - | [ ] |
+| 1.4 | ロールバック時イベント非発行の統合テスト（Testcontainers） | 2h | - | [ ] |
+| 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [ ] |
+| 1.6 | CQRS 段階適用の判断を ADR 化（レビュー #23） | 1h | - | [ ] |
+
+**小計**: 15h（理想時間）
+
+#### 2. US26: システムにログインする（3 SP）
+
+| # | タスク | 見積もり | 担当 | 状態 |
+|---|--------|---------|------|------|
+| 2.1 | Cookie 認証構成（ログインパス・未認証リダイレクト・公開パス除外） | 2h | - | [ ] |
+| 2.2 | users / user_roles リポジトリ（Dapper）+ パスワードハッシュ | 3h | - | [ ] |
+| 2.3 | ログイン / ログアウト画面（Razor、エラー表示・入力保持） | 2h | - | [ ] |
+| 2.4 | ロール別ナビゲーション制御 + シードユーザー投入 | 2h | - | [ ] |
+
+**小計**: 9h（理想時間）
+
+#### 3. US02/US03: 荷主登録（5 SP）
+
+| # | タスク | 見積もり | 担当 | 状態 |
+|---|--------|---------|------|------|
+| 3.1 | Shipper 集約（個人/法人、DiscountRate 0-30% 検証）ユニットテスト | 3h | - | [ ] |
+| 3.2 | ShipperRepository（ADR-0001 参照実装・楽観的ロック）統合テスト | 3h | - | [ ] |
+| 3.3 | 荷主一覧 / 登録画面（`/shippers`, `/shippers/new`、種別切替・重複メール確認） | 4h | - | [ ] |
+
+**小計**: 10h（理想時間）
+
+#### 4. US01: 輸送見積（5 SP）
+
+| # | タスク | 見積もり | 担当 | 状態 |
+|---|--------|---------|------|------|
+| 4.1 | Estimate 集約（EstimateId・RouteCandidate・期限切れ判定）ユニットテスト | 3h | - | [ ] |
+| 4.2 | IExternalRoutingServicePort スタブ + WireMock.Net 契約テスト | 3h | - | [ ] |
+| 4.3 | EstimateRepository（estimate / route_candidate）統合テスト | 3h | - | [ ] |
+| 4.4 | 見積一覧 / 作成 / 詳細画面（`/estimates`, `/estimates/new`, `/estimates/{estimateId}`） | 4h | - | [ ] |
+
+**小計**: 13h（理想時間）
+
+#### タスク合計
+
+| カテゴリ | SP | 理想時間 | 状態 |
+|---------|----|----|------|
+| 技術基盤 | - | 15h | [ ] |
+| US26 認証 | 3 | 9h | [ ] |
+| US02/03 荷主登録 | 5 | 10h | [ ] |
+| US01 輸送見積 | 5 | 13h | [ ] |
+| **合計** | **13** | **47h** | |
+
+**1 SP あたり**: 約 2.5h（基盤 15h を除く）
+**進捗率**: 0% (0/13 SP)
+
+---
+
+## スケジュール
+
+### Week 1（Day 1-5: 07-07 〜 07-11）
+
+```mermaid
+gantt
+    title イテレーション 1 - Week 1
+    dateFormat  YYYY-MM-DD
+    section 技術基盤
+    DbUp 配線・初期スキーマ       :d1, 2026-07-07, 2d
+    UoW + post-commit・検証テスト :d2, after d1, 2d
+    section US26 認証
+    Cookie 認証・リポジトリ       :d3, 2026-07-09, 2d
+    ログイン画面・ロール制御      :d4, after d3, 1d
+```
+
+| 日 | タスク |
+|----|--------|
+| Day 1 | 1.1 DbUp 配線 |
+| Day 2 | 1.2 初期スキーマ 0001 |
+| Day 3 | 1.3 UoW + post-commit / 2.1 認証構成 |
+| Day 4 | 1.4-1.5 検証テスト・CI / 2.2 users リポジトリ |
+| Day 5 | 2.3-2.4 ログイン画面・ロール制御 / 1.6 ADR |
+
+### Week 2（Day 6-10: 07-14 〜 07-18）
+
+```mermaid
+gantt
+    title イテレーション 1 - Week 2
+    dateFormat  YYYY-MM-DD
+    section US02/03 荷主登録
+    Shipper 集約・リポジトリ     :a1, 2026-07-14, 2d
+    荷主画面                     :a2, after a1, 1d
+    section US01 輸送見積
+    Estimate 集約・スタブ・永続化 :u1, 2026-07-14, 3d
+    見積画面                     :u2, after u1, 1d
+```
+
+| 日 | タスク |
+|----|--------|
+| Day 6 | 3.1 Shipper 集約 / 4.1 Estimate 集約 |
+| Day 7 | 3.2 ShipperRepository / 4.2 ルーティングスタブ |
+| Day 8 | 3.3 荷主画面 / 4.3 EstimateRepository |
+| Day 9 | 4.4 見積画面 |
+| Day 10 | 統合テスト、バグ修正、デモ準備（Heroku デプロイ） |
+
+---
+
+## 設計
+
+### ドメインモデル
+
+domain-model.md（Shipper Context / Estimation Context / Shared Domain）を正とする。
+
+```plantuml
+@startuml
+package "Shipper Context (CargoTracker.Shipper)" {
+  class Shipper <<aggregate root>>
+  class CorporateShipper
+  class Address <<record>>
+  class DiscountRate <<record>>
+  interface IShipperRepository
+}
+
+package "Estimation Context (CargoTracker.Estimation)" {
+  class Estimate <<aggregate root>>
+  class EstimateId <<record>>
+  class RouteCandidate
+  class EstimateStatus <<enum>>
+  interface IEstimateRepository
+  interface IExternalRoutingServicePort
+}
+
+package "Shared Domain (CargoTracker.Shared)" {
+  class ShipperId <<record>>
+  class Location <<record>>
+  class AggregateRoot <<abstract>>
+}
+
+Shipper --|> AggregateRoot
+Estimate --|> AggregateRoot
+CorporateShipper --|> Shipper
+Shipper *-- Address
+CorporateShipper *-- DiscountRate
+Shipper *-- ShipperId
+Estimate *-- EstimateId
+Estimate *-- "0..*" RouteCandidate
+Estimate *-- EstimateStatus
+@enduml
+```
+
+> **注**: 認証（users / user_roles）は業務ドメインではなくインフラ関心事のため、`Shared/Infrastructure` 配下で実装しドメインモデルには含めない（architecture_backend.md の Shared 構成に準拠）。
+
+### データモデル
+
+data-model.md のテーブル定義（Shared Domain / Booking Context / Estimation Context）を正とする。IT1 で作成するのは以下の 5 テーブル。
+
+```plantuml
+@startuml
+hide circle
+skinparam linetype ortho
+entity "users" as users {
+  *id : BIGINT <<PK>>
+  --
+  *username : VARCHAR(50) <<UK>>
+  *email : VARCHAR(200) <<UK>>
+  *password : VARCHAR(255)
+  *enabled : BOOLEAN
+}
+entity "user_roles" as roles {
+  *user_id : BIGINT <<FK, PK>>
+  *role : VARCHAR(50) <<PK>>
+}
+entity "shipper" as shipper {
+  *id : BIGINT <<PK>>
+  --
+  *shipper_code : VARCHAR(20) <<UK>>
+  *shipper_type : VARCHAR(20)
+  *name : VARCHAR(200)
+  *email : VARCHAR(200)
+  phone : VARCHAR(50)
+  contract_number : VARCHAR(50)
+  discount_rate : NUMERIC(5,4)
+  *version : BIGINT
+}
+entity "estimate" as estimate {
+  *id : BIGINT <<PK>>
+  --
+  *estimate_id : UUID <<UK>>
+  *origin_unlocode : VARCHAR(5)
+  *destination_unlocode : VARCHAR(5)
+  *arrival_deadline : DATE
+  *cargo_type : VARCHAR(30)
+  *weight_kg : NUMERIC(10,3)
+  *status : VARCHAR(20)
+  *version : BIGINT
+}
+entity "route_candidate" as candidate {
+  *id : BIGINT <<PK>>
+  --
+  *estimate_id : BIGINT <<FK>>
+  *voyage_number : VARCHAR(20)
+  transit_port : VARCHAR(5)
+  *transit_days : INT
+  *estimated_cost : NUMERIC(12,2)
+  *rank : INT
+}
+users ||--o{ roles
+estimate ||--o{ candidate
+@enduml
+```
+
+- 全テーブルに `created_at` / `updated_at`（`TIMESTAMP WITH TIME ZONE NOT NULL`）を付与（監査カラム規約）
+- タイムスタンプはアプリ側 `DateTimeOffset.UtcNow` をパラメータで渡す（実行時 SQL に `NOW()` 禁止。ADR-0003）
+- 集約ルート表（shipper / estimate）に `version` 列（楽観的ロック。ADR-0001・設計判断 #8）
+
+### ユーザーインターフェース
+
+ui_design.md の画面詳細設計（ログイン / 荷主一覧 / 荷主登録 / 見積一覧 / 見積作成 / 見積詳細）を正とする。
+
+#### ビュー
+
+```plantuml
+@startsalt
+{+
+  ログイン画面 (/login)
+  {+
+    {
+      <b>CargoTracker
+      ---------------------
+      ユーザー ID | "        "
+      パスワード  | "****    "
+      [  ログイン  ]
+    }
+  }
+----------------
+  荷主登録画面 (/shippers/new)
+  {+
+  {/ <b>CargoTracker</b> | 荷主管理 | 見積管理 | [ログアウト] }
+  {
+    荷主種別 | ^個人^
+    氏名/社名 | "         "
+    住所      | "         "
+    連絡先    | "         "
+    メール    | "         "
+    [ 登録する ] | [ キャンセル ]
+  }
+  }
+}
+@endsalt
+```
+
+（見積作成・一覧・詳細のワイヤーフレームは ui_design.md の該当節を参照）
+
+#### モデル
+
+```plantuml
+@startuml
+  class ログイン {
+    ユーザーID
+    パスワード
+    ログイン()
+  }
+  class 荷主登録 {
+    荷主種別
+    氏名/社名
+    住所
+    連絡先
+    メールアドレス
+    契約番号（法人）
+    割引率（法人）
+    登録()
+  }
+  class 見積作成 {
+    出発地
+    目的地
+    希望期限
+    貨物種別
+    重量
+    見積を作成()
+  }
+@enduml
+```
+
+#### インタラクション
+
+```plantuml
+@startuml
+title IT1 画面遷移図
+
+[*] --> ログイン
+
+state ログイン : /login（認証フォーム）
+ログイン --> ログイン : 認証失敗（入力値保持）
+ログイン --> ダッシュボード : 認証成功
+
+state ダッシュボード : /
+ダッシュボード --> 荷主一覧 : [荷主管理]（ROLE_SALES）
+ダッシュボード --> 見積一覧 : [見積管理]（ROLE_SALES）
+
+state 荷主一覧 : /shippers
+state 荷主登録 : /shippers/new（個人/法人切替）
+荷主一覧 --> 荷主登録 : [+ 新規荷主]
+荷主登録 --> 荷主登録 : バリデーションエラー
+荷主登録 --> 荷主一覧 : 登録成功（PRG・フラッシュメッセージ）
+
+state 見積一覧 : /estimates
+state 見積作成 : /estimates/new
+state 見積詳細 : /estimates/{estimateId}
+見積一覧 --> 見積作成 : [+ 新規見積]
+見積作成 --> 見積作成 : バリデーションエラー
+見積作成 --> 見積詳細 : 作成成功（PRG）
+
+ダッシュボード --> [*] : ログアウト
+@enduml
+```
+
+- 荷主種別の法人切替は htmx（`hx-get` で法人フィールドのパーシャルを `hx-target` に挿入）
+- 成功メッセージは TempData フラッシュ（`alert-success`）、htmx エラーは `htmx:responseError` でトースト表示（ui_design.md 規約）
+
+### ディレクトリ構成
+
+```
+apps/cargo-tracker/src/CargoTracker.Web/
+├── Shipper/{Domain,Application/Internal,Infrastructure}/   # US02/03
+├── Estimation/{Domain,Application/Internal,Infrastructure}/ # US01（新設）
+├── Shared/
+│   ├── Domain/Model/            # AggregateRoot, ShipperId, Location
+│   └── Infrastructure/
+│       ├── Auth/                # US26（Cookie 認証・users リポジトリ）
+│       ├── Persistence/         # UnitOfWork, DbUp ブートストラップ
+│       └── Config/
+├── Pages/                       # Razor コントローラー
+└── Scripts/{postgresql,sqlite}/ # 0001_initial_schema.sql ほか
+```
+
+### API 設計
+
+| メソッド | エンドポイント | 説明 |
+|---------|---------------|------|
+| GET/POST | /login, /logout | 認証（US26） |
+| GET | /shippers | 荷主一覧 |
+| GET/POST | /shippers/new | 荷主登録（PRG） |
+| GET | /estimates | 見積一覧 |
+| GET/POST | /estimates/new | 見積作成（PRG） |
+| GET | /estimates/{estimateId} | 見積詳細（ルート候補一覧） |
+
+### データベーススキーマ
+
+`Scripts/postgresql/0001_initial_schema.sql` / `Scripts/sqlite/0001_initial_schema.sql`（データモデル節の 5 テーブル + 監査カラム + version。方言差分は BIGSERIAL ⇔ INTEGER AUTOINCREMENT 等のみ）
+
+### ADR
+
+| ADR | タイトル | ステータス |
+|-----|---------|-----------|
+| [ADR-0001](../adr/0001-集約永続化戦略.md) | Dapper による集約永続化戦略 | 承認（本 IT で参照実装） |
+| [ADR-0002](../adr/0002-UnitOfWorkとpost-commitイベントディスパッチ.md) | UoW と post-commit ディスパッチ | 承認（本 IT で参照実装） |
+| [ADR-0003](../adr/0003-開発SQLite本番PostgreSQLの二方言運用.md) | 二方言運用 | 承認（本 IT で検出テスト実装） |
+| ADR-0004（予定） | CQRS の段階適用方針 | 提案（タスク 1.6・レビュー #23） |
+
+---
+
+## リスクと対策
+
+| リスク | 影響度 | 対策 |
+|--------|--------|------|
+| Dapper 集約永続化パターンの確立に想定以上の時間がかかる | 高 | Week 1 で Shipper を参照実装として先行。難航時は US01 の画面（4.4）をフィーチャバッファへ |
+| 二方言スキーマ（0001）の SQLite 差分でハマる | 中 | 方言差分を BIGSERIAL/IDENTITY と TIMESTAMPTZ に限定し、CI のスクリプト同期検証で早期検知 |
+| 認証とロール制御の作り込み過ぎ | 中 | US26 の受入条件のみ実装（パスワード有効期限・ロックは非機能要件の後続 IT へ） |
+| 外部ルーティングスタブの契約が IT3 で覆る | 中 | WireMock.Net の契約を `IExternalRoutingServicePort` の型に固定し、差し替え面をポートに限定 |
+
+---
+
+## 完了条件
+
+### Definition of Done
+
+- [ ] コードレビュー完了（self-review + developing-review）
+- [ ] ユニットテストがパス（ドメイン層カバレッジ 85% 以上）
+- [ ] 統合テストがパス（Testcontainers・ロールバック時イベント非発行を含む）
+- [ ] dotnet format / Analyzers エラーなし（CI グリーン）
+- [ ] 機能が Heroku 開発環境で動作確認済み
+- [ ] ドキュメント更新完了（domain-model / data-model への差分注記の反映）
+
+### デモ項目
+
+1. ログイン（成功・失敗・未認証リダイレクト）とロール別ナビゲーション
+2. 個人荷主・法人荷主（割引率 0〜30% 検証）の登録と一覧表示
+3. 見積作成 → スタブルート候補の表示 → 見積番号発行
+4. ロールバック時にイベントが発行されないことのテスト実行
+
+---
+
+## 更新履歴
+
+| 日付 | 更新内容 | 更新者 |
+|------|---------|--------|
+| 2026-07-04 | 初版作成 | - |
+
+---
+
+## 関連ドキュメント
+
+- [リリース計画](./release_plan.md)
+- [ユーザーストーリー](../requirements/user_story.md)
+- [ドメインモデル設計](../design/domain-model.md)
+- [データモデル設計](../design/data-model.md)
+- [UI 設計](../design/ui_design.md)
+- イテレーション 1 ふりかえり（完了時に作成: retrospective-1.md）
