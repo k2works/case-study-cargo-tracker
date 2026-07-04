@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cargo-tracker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cargo_tracker
+      POSTGRES_PASSWORD: cargo_tracker
+      POSTGRES_DB: cargo_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargo_tracker -d cargo_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  postgres_data:
