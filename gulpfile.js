@@ -13,6 +13,7 @@ import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import developTasks from './ops/scripts/develop.js';
 import k8sTasks from './ops/scripts/k8s.js';
+import jigTasks from './ops/scripts/jig.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -22,6 +23,7 @@ sshTasks(gulp);
 sonarLocalTasks(gulp);
 developTasks(gulp);
 k8sTasks(gulp);
+jigTasks(gulp);
 
 // ドキュメントサーバー起動（旧 gulp dev。アプリ開発サーバーは gulp dev を使用）
 export const docs = gulp.series('mkdocs:serve', 'mkdocs:open');

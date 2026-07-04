@@ -105,6 +105,22 @@ sbt "scalafixAll --check"  # CI でのみ実行（ローカル pre-commit は sc
 sbt sonarScan
 ```
 
+### 設計可視化（JIG）
+
+[dddjava/jig](https://github.com/dddjava/jig) で Scala バイトコードを解析し、パッケージ関連図・ドメインモデル図・ユースケース図などを HTML 生成する。
+
+```bash
+# 前提: graphviz（dot）が必要
+brew install graphviz
+
+# リポジトリルートで実行（初回は jig-cli.jar を自動ダウンロード）
+npx gulp jig:report        # sbt compile + JIG ドキュメント生成
+npx gulp jig:report:only   # コンパイル済み前提で JIG のみ
+npx gulp jig:open          # build/jig/index.html をブラウザで開く
+```
+
+出力先は `apps/cargo-tracker/build/jig/`（gitignore 対象）。設定は `jig.properties`（JIG 固有 `jig.*`）と `application.properties`（Spring 側 `directory.*` / `project.path`）に分かれる。JIG のバージョンは環境変数 `JIG_VERSION` で切り替え可能。
+
 ### アーキテクチャ
 
 ヘキサゴナル DDD + Scala 3 イミュータブル設計（[architecture_backend.md](../../docs/design/architecture_backend.md) 参照）。各境界付けられたコンテキスト（auth / booking / estimation / routing / shipper / shared）は以下のレイヤーで構成:

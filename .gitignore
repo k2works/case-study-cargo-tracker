@@ -23,6 +23,9 @@ dist/
 build/
 site/
 
+# JIG CLI (gulp jig:setup で取得する。リポジトリには含めない)
+ops/tools/jig/*.jar
+
 # Logs
 *.log
 npm-debug.log*
