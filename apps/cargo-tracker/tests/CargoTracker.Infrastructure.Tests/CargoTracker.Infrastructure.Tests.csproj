@@ -20,7 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\CargoTracker.Infrastructure\CargoTracker.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CargoTracker.Web\CargoTracker.Web.csproj" />
   </ItemGroup>
 
 </Project>

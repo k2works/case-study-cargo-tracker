@@ -1,4 +1,4 @@
-namespace CargoTracker.Web.Models;
+namespace CargoTracker.Shared.Infrastructure.Web;
 
 public class ErrorViewModel
 {

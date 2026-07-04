@@ -17,7 +17,7 @@ tags: design,data-model
 ### 設計方針
 
 - **DB**: PostgreSQL 16.x（本番・ステージング）、SQLite 3.x（開発環境）、Testcontainers による PostgreSQL（テスト）
-- **データアクセス**: Dapper 2.x + ADO.NET プロバイダ（Npgsql / Microsoft.Data.Sqlite）。SQL は手書きし、リポジトリ実装（`CargoTracker.Infrastructure/Repositories`）内に記述する
+- **データアクセス**: Dapper 2.x + ADO.NET プロバイダ（Npgsql / Microsoft.Data.Sqlite）。SQL は手書きし、リポジトリ実装（各コンテキストの `Infrastructure/Repositories` 名前空間）内に記述する
 - **マイグレーション**: DbUp（`Scripts/0001_xxx.sql` 形式のバージョン付き SQL スクリプト、forward-only、プロバイダ別ディレクトリで方言差異を吸収）
 - **SQL 方言方針**: リポジトリの SQL は ANSI 標準の範囲を基本とし、PostgreSQL 固有機能（JSONB・配列型等）は使用しない
 - **ID 戦略**: サロゲートキー（`BIGSERIAL`）+ 業務キー（`VARCHAR`）の併用
@@ -696,7 +696,7 @@ public class ShipperTypeHandler : SqlMapper.TypeHandler<ShipperType>
         => parameter.Value = value.ToString();
 }
 
-// CargoTracker.Infrastructure/Repositories/ShipperRepository.cs
+// CargoTracker.Web/Shipper/Infrastructure/Repositories/ShipperRepository.cs
 // 接続は IDbConnection 抽象で受け、開発（SQLite）/ 本番（PostgreSQL）を透過的に扱う（ADR-0003）
 public class ShipperRepository(IDbConnection connection) : IShipperRepository
 {
@@ -1163,7 +1163,7 @@ public async Task UpdateAsync(Cargo cargo, IDbTransaction tx)
 マイグレーションはバージョン番号付きの SQL スクリプトとして管理し、DbUp がアプリケーション起動時（または CI/CD の専用ステップ）に未適用スクリプトを順次実行します。
 
 ```
-src/CargoTracker.Infrastructure/Scripts/
+src/CargoTracker.Web/Scripts/
   postgresql/                   # ステージング・本番・テスト（Testcontainers）用
     0001_initial_schema.sql     # 初期スキーマ全テーブル作成
     0002_seed_locations.sql     # 初期 UN/LOCODE マスタデータ

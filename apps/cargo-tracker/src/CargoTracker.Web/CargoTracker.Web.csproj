@@ -1,15 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <PropertyGroup>
+    <!-- 名前空間ルートは CargoTracker（architecture_backend.md プロジェクト構造） -->
+    <RootNamespace>CargoTracker</RootNamespace>
+  </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\CargoTracker.Application\CargoTracker.Application.csproj" />
-    <ProjectReference Include="..\CargoTracker.Domain\CargoTracker.Domain.csproj" />
-    <ProjectReference Include="..\CargoTracker.Infrastructure\CargoTracker.Infrastructure.csproj" />
+    <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="dbup-postgresql" Version="7.0.1" />
+    <PackageReference Include="dbup-sqlite" Version="6.0.4" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+  <ItemGroup>
+    <!-- DbUp マイグレーションスクリプト（埋め込みリソース。ADR-0003 プロバイダ別） -->
+    <EmbeddedResource Include="Scripts\**\*.sql" />
+  </ItemGroup>
 
 </Project>

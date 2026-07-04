@@ -1,8 +1,7 @@
 using System.Diagnostics;
-using CargoTracker.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CargoTracker.Web.Controllers;
+namespace CargoTracker.Shared.Infrastructure.Web;
 
 public class HomeController : Controller
 {

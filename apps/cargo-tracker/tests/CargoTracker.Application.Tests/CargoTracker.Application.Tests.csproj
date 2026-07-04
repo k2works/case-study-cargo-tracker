@@ -21,7 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\CargoTracker.Application\CargoTracker.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CargoTracker.Web\CargoTracker.Web.csproj" />
   </ItemGroup>
 
 </Project>
