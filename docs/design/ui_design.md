@@ -104,6 +104,7 @@ Booking 1 ─── 1 Invoice
 | ダッシュボード | `/` | 全ロール |
 | 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
 | 荷主管理 | `/shippers` | ROLE_SALES |
+| 見積管理 | `/estimates` | ROLE_SALES |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 航路管理 | `/voyages` | ROLE_ROUTE_DESIGNER |

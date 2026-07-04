@@ -655,7 +655,7 @@ users ||--o{ user_roles : "ロールを持つ"
 | `email` | `VARCHAR(200)` | `NOT NULL` | メールアドレス |
 | `phone` | `VARCHAR(50)` | | 電話番号 |
 | `contract_number` | `VARCHAR(50)` | | 契約番号（法人のみ。NULLable） |
-| `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.1500、最大 15%） |
+| `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.3000、最大 30%） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック用バージョン（ADR-0001） |
@@ -671,7 +671,7 @@ CREATE TABLE shipper (
     email           VARCHAR(200) NOT NULL,
     phone           VARCHAR(50),
     contract_number VARCHAR(50),                   -- 法人のみ（NULLable）
-    discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.1500 (最大 15%)
+    discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.3000 (最大 30%)
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );

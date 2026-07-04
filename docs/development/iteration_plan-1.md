@@ -251,6 +251,8 @@ Estimate *-- EstimateStatus
 @enduml
 ```
 
+> **注**: `AggregateRoot` 基底クラスは ADR-0002 で導入を決定した基盤要素であり、domain-model.md には未記載。IT1 完了時に domain-model.md（共有カーネル節）へ反映する。
+>
 > **注**: 認証（users / user_roles）は業務ドメインではなくインフラ関心事のため、`Shared/Infrastructure` 配下で実装しドメインモデルには含めない（architecture_backend.md の Shared 構成に準拠）。
 
 ### データモデル
