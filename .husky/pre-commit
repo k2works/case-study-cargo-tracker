@@ -1,0 +1,10 @@
+# C# ソースに変更がある場合のみ品質チェックを実行する
+# apps/ が未作成の分析フェーズでは自動的にスキップされる
+if git diff --cached --name-only | grep -q '^apps/.*\.cs$'; then
+  echo "C# の変更を検出: dotnet format / build を実行します"
+  (cd apps/cargo-tracker \
+    && dotnet format --verify-no-changes \
+    && dotnet build -warnaserror --nologo -v q) || exit 1
+fi
+
+npx lint-staged
