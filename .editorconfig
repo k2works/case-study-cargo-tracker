@@ -17,6 +17,10 @@ indent_size = 2
 trim_trailing_whitespace = false
 
 [*.cs]
+# CA1716: 名前空間 Shared は設計（architecture_backend.md の共有カーネル）で規定。
+# VB との相互運用は想定しないため抑止する
+dotnet_diagnostic.CA1716.severity = none
+
 # 名前空間・using
 csharp_style_namespace_declarations = file_scoped:warning
 dotnet_sort_system_directives_first = true

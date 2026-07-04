@@ -1,0 +1,66 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'apps/cargo-tracker/**'
+      - 'ops/nix/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/cargo-tracker/**'
+      - 'ops/nix/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/cargo-tracker
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@v13
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('apps/cargo-tracker/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      # 高速フィードバック順: フォーマット → ビルド（Analyzers） → テスト
+      - name: Format check
+        run: nix-shell ../../ops/nix/environments/dotnet/shell.nix --run 'dotnet format --verify-no-changes'
+
+      - name: Build (warnings as errors)
+        run: nix-shell ../../ops/nix/environments/dotnet/shell.nix --run 'dotnet build -warnaserror --nologo'
+
+      - name: Test (with coverage)
+        run: nix-shell ../../ops/nix/environments/dotnet/shell.nix --run 'dotnet test --no-build --collect:"XPlat Code Coverage" --logger "trx" --nologo'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            apps/cargo-tracker/**/TestResults/**/*.trx
+            apps/cargo-tracker/**/TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore
