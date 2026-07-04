@@ -32,4 +32,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD curl -fsS http://localhost:${PORT:-8080}/health || exit 1
 
 # Heroku が注入する $PORT で listen する（未設定時は 8080）
-ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT:-8080} exec dotnet CargoTracker.Web.dll"]
+# Heroku Container Runtime は CMD をシェルでラップするため、シェル形式 CMD を使用する
+CMD ASPNETCORE_URLS=http://+:${PORT:-8080} dotnet CargoTracker.Web.dll

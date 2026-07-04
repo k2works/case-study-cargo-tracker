@@ -61,9 +61,12 @@ export default function (gulp) {
   gulp.task('deploy:dev:build', (done) => {
     try {
       const { platform, image } = getHerokuConfig();
-      run(`docker build --platform ${platform} -t ${image} -f ${DOCKERFILE} .`, {
-        cwd: APP_DIR,
-      });
+      // --provenance=false: Heroku Registry は provenance アテステーション付き
+      // マニフェストを受け付けない（push 時に "error from registry: unsupported"）
+      run(
+        `docker build --platform ${platform} --provenance=false -t ${image} -f ${DOCKERFILE} .`,
+        { cwd: APP_DIR }
+      );
       done();
     } catch (error) {
       done(error);
@@ -71,10 +74,18 @@ export default function (gulp) {
   });
 
   // イメージの push
+  // 注意: Docker Desktop の containerd イメージストアでは `docker push` が
+  // OCI マニフェストを送信し、Heroku Registry が "unsupported" で拒否する。
+  // buildx の直接 push（oci-mediatypes=false）で Docker schema2 形式に固定する。
   gulp.task('deploy:dev:push', (done) => {
     try {
-      const { image } = getHerokuConfig();
-      run(`docker push ${image}`);
+      const { platform, image } = getHerokuConfig();
+      run(
+        `docker buildx build --platform ${platform} --provenance=false ` +
+          `--output type=image,name=${image},oci-mediatypes=false,push=true ` +
+          `-f ${DOCKERFILE} .`,
+        { cwd: APP_DIR }
+      );
       done();
     } catch (error) {
       done(error);
