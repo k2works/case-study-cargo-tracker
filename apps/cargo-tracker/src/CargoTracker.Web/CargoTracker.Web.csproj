@@ -20,4 +20,26 @@
     <EmbeddedResource Include="Scripts\**\*.sql" />
   </ItemGroup>
 
+  <Target Name="CopyClientLibraries" BeforeTargets="Build" Condition="Exists('$(MSBuildProjectDirectory)\..\..\..\..\node_modules')">
+    <ItemGroup>
+      <BootstrapClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\bootstrap\dist\**\*.*" />
+      <JQueryClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\jquery\dist\**\*.*" />
+      <JQueryValidationClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\jquery-validation\dist\**\*.*" />
+      <JQueryValidationUnobtrusiveClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\jquery-validation-unobtrusive\dist\**\*.*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(BootstrapClientLibrary)"
+          DestinationFolder="$(MSBuildProjectDirectory)\wwwroot\lib\bootstrap\dist\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(JQueryClientLibrary)"
+          DestinationFolder="$(MSBuildProjectDirectory)\wwwroot\lib\jquery\dist\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(JQueryValidationClientLibrary)"
+          DestinationFolder="$(MSBuildProjectDirectory)\wwwroot\lib\jquery-validation\dist\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(JQueryValidationUnobtrusiveClientLibrary)"
+          DestinationFolder="$(MSBuildProjectDirectory)\wwwroot\lib\jquery-validation-unobtrusive\dist\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>
