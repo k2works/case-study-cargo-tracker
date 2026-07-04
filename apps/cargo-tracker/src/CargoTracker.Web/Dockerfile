@@ -14,18 +14,22 @@ RUN dotnet publish src/CargoTracker.Web/CargoTracker.Web.csproj -c Release -o /a
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# ヘルスチェック用に curl を導入
+# ヘルスチェック用に curl を導入（Heroku Runtime では HEALTHCHECK は使用されない。ローカル用）
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:8080
+# EXPOSE はローカルテスト用途。Heroku は $PORT を注入する
 EXPOSE 8080
 
-# ヘルスチェック（ASP.NET Core Health Checks /health）
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl -fsS http://localhost:8080/health || exit 1
+# 非 root ユーザーで実行（aspnet イメージ同梱の app ユーザー）
+USER app
 
-ENTRYPOINT ["dotnet", "CargoTracker.Web.dll"]
+# ヘルスチェック（ASP.NET Core Health Checks /health。ローカル Docker 用）
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS http://localhost:${PORT:-8080}/health || exit 1
+
+# Heroku が注入する $PORT で listen する（未設定時は 8080）
+ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT:-8080} exec dotnet CargoTracker.Web.dll"]
