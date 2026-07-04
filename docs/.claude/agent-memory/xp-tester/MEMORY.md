@@ -1,0 +1,1 @@
+- [テスト戦略の構造的な弱点](project_test-strategy-gaps.md) — test_strategy のトレーサビリティが古い US 番号体系に基づき user_story と乖離。post-commit ディスパッチのテストが空白
