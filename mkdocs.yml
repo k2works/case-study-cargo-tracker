@@ -75,6 +75,16 @@ nav:
       - ユーザーストーリー: requirements/user_story.md
   - 設計:
       - 概要: design/index.md
+      - バックエンドアーキテクチャ: design/architecture_backend.md
+      - フロントエンドアーキテクチャ: design/architecture_frontend.md
+      - インフラストラクチャ: design/architecture_infrastructure.md
+      - データモデル設計: design/data-model.md
+      - ドメインモデル設計: design/domain-model.md
+      - UI 設計: design/ui_design.md
+      - テスト戦略: design/test_strategy.md
+      - 非機能要件: design/non_functional.md
+      - 運用要件: design/operation.md
+      - 技術スタック選定: design/tech_stack.md
   - 開発:
       - 概要: development/index.md
   - 運用:
@@ -82,8 +92,10 @@ nav:
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - Rust 版設計ドキュメントレビュー: review/design_review_20260706.md
   - ADR:
       - 概要: adr/index.md
+      - "0001: CQRS Read Model 配置": adr/0001-cqrs-read-model-placement.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
@@ -91,7 +103,7 @@ nav:
       - Grokking Concurrency: article/grokking-concurrency/index.md
       - 関数型デザイン - 原則、パターン、実践: article/functional-desgin-ppp/index.md
       - 実践データベース設計：基幹業務システム編: article/practical-database-design/index.md
-      - Docker/Kubernetes 実践コンテナ解説: article/getting-start-docker-kubernetes/index.md
+      - Docker/Kubernetes 実践コンテナ解説: article/getting-start-docker-kubernetes/outline.md
   - リファレンス:
       - 概要: reference/index.md
       - よいソフトウェアとは: reference/よいソフトウェアとは.md
