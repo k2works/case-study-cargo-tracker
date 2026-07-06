@@ -33,3 +33,7 @@ coverage/
 tmp/
 .tmp/
 .claude/agent-memory
+# .NET ビルド生成物
+bin/
+obj/
+*.user

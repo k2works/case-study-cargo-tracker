@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Giraffe" Version="8.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CargoTracker.Shared\CargoTracker.Shared.fsproj" />
+    <ProjectReference Include="..\CargoTracker.Booking\CargoTracker.Booking.fsproj" />
+    <ProjectReference Include="..\CargoTracker.Shipper\CargoTracker.Shipper.fsproj" />
+    <ProjectReference Include="..\CargoTracker.Routing\CargoTracker.Routing.fsproj" />
+    <ProjectReference Include="..\CargoTracker.Tracking\CargoTracker.Tracking.fsproj" />
+    <ProjectReference Include="..\CargoTracker.Handling\CargoTracker.Handling.fsproj" />
+    <ProjectReference Include="..\CargoTracker.Billing\CargoTracker.Billing.fsproj" />
+    <ProjectReference Include="..\CargoTracker.Estimation\CargoTracker.Estimation.fsproj" />
+  </ItemGroup>
+
+</Project>
