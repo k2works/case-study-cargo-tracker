@@ -1,0 +1,13 @@
+[package]
+name = "app-booking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+shared-kernel = { workspace = true }
+domain-booking = { workspace = true }
+async-trait = { workspace = true }

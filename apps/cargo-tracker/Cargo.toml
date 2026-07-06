@@ -1,0 +1,66 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/shared-kernel",
+    "crates/domain-booking",
+    "crates/domain-shipper",
+    "crates/domain-routing",
+    "crates/domain-tracking",
+    "crates/domain-handling",
+    "crates/domain-billing",
+    "crates/domain-estimation",
+    "crates/app-booking",
+    "crates/app-shipper",
+    "crates/app-estimation",
+    "crates/infra-persistence",
+    "crates/infra-external",
+    "crates/infra-eventbus",
+    "crates/interface-rest",
+    "crates/interface-web",
+    "crates/cargo-tracker-server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+# 内部クレート
+shared-kernel = { path = "crates/shared-kernel" }
+domain-booking = { path = "crates/domain-booking" }
+domain-shipper = { path = "crates/domain-shipper" }
+domain-routing = { path = "crates/domain-routing" }
+domain-tracking = { path = "crates/domain-tracking" }
+domain-handling = { path = "crates/domain-handling" }
+domain-billing = { path = "crates/domain-billing" }
+domain-estimation = { path = "crates/domain-estimation" }
+app-booking = { path = "crates/app-booking" }
+app-shipper = { path = "crates/app-shipper" }
+app-estimation = { path = "crates/app-estimation" }
+infra-persistence = { path = "crates/infra-persistence" }
+infra-external = { path = "crates/infra-external" }
+infra-eventbus = { path = "crates/infra-eventbus" }
+interface-rest = { path = "crates/interface-rest" }
+interface-web = { path = "crates/interface-web" }
+
+# 外部クレート（バージョン一元管理）
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.17", features = ["v4", "serde"] }
+rust_decimal = { version = "1.37", features = ["serde"] }
+async-trait = "0.1"
+tokio = { version = "1.45", features = ["full"] }
+axum = "0.8"
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "rust_decimal", "migrate"] }
+reqwest = { version = "0.12", features = ["json"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+
+[workspace.lints.rust]
+warnings = "deny"

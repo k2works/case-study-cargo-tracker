@@ -21,6 +21,7 @@ Thumbs.db
 dist/
 build/
 site/
+target/
 
 # Logs
 *.log

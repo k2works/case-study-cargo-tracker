@@ -1,0 +1,29 @@
+# cargo-deny 最小構成
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+all-features = true
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+# 注: domain-* クレートへの axum / sqlx / tokio / reqwest の混入禁止は
+# workspace のクレート分割（Cargo.toml の依存宣言）で強制している。
+# cargo-deny の deny リストによる追加検証は将来の課題。
+
+[advisories]
+yanked = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
