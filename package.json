@@ -15,7 +15,8 @@
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
-    "gemini:yolo": "gemini --yolo"
+    "gemini:yolo": "gemini --yolo",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -37,5 +38,14 @@
     "@k2works/claude-code-booster": "^4.9.0",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8"
+  },
+  "lint-staged": {
+    "apps/cargo-tracker/**/*.{fs,fsx}": [
+      "ops/scripts/precommit-fsharp.sh"
+    ]
   }
 }
