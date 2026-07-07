@@ -93,6 +93,8 @@
 | [IT7 完了報告書](./development/iteration_report-7.md) | Ralph Loop 2 週 66 反復で 30+ SP (計画 10 SP 対比 300%+)、Exception BC 新設 (17 モジュール)、ADR-0013/0014/0015 起票、+135 tests (776 total) |
 | [IT7 ふりかえり (KPT)](./development/retrospective-7.md) | Keep 6 / Problem 4 / Try 14 (T7-A〜T7-N)、平均ベロシティ 25.6 SP、IT8 冒頭必達 4 件 (RolePolicy 配線 / hedgehog / UNLOAD 副作用テスト / ADR-0016) |
 | [IT8 計画](./development/iteration_plan-8.md) | 精算処理 (US23) + IT7 繰越高優先 (T7-A〜T7-D) + 保証系 (T7-E〜T7-I) + Release 2.0 GA クロージング + ストレッチ (US10/US12) = 22 SP |
+| [IT8 完了報告書](./development/iteration_report-8.md) | Release 2.0 GA (v2.0.0) 達成。US23 精算を Billing BC で全レイヤ一巡 + 保証系完済 (RoleGate/katip/E2E 統合ハッピーパス)、+113 tests (889 total)、実績 21+ SP / 98% |
+| [IT8 ふりかえり (KPT)](./development/retrospective-8.md) | Keep 9 / Problem 8 / Try (高 3 T8-A〜C + 中 5 + 低 5)、平均ベロシティ 25.0 SP、IT9 は残務回収 IT (H-01 Tx 配線 / H-02 OverdueCheck 起動主体 / 料金実値化) |
 
 ### レビュードキュメント
 
@@ -101,6 +103,7 @@
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー (高 11・中 12・低 5) |
 | [分析整合性セルフレビュー](./review/analysis_consistency_review_20260626.md) | grep ベース機械的整合性検証 (集約↔テーブル、UC↔US 等) |
 | [分析多視点レビュー](./review/analysis_multi_perspective_review_20260626.md) | XP 5 エージェント並列レビュー (高 16・中 16・低 10) |
+| [IT8 開発マルチパースペクティブレビュー](./review/it8_review_20260707.md) | US23 精算 + 保証系の XP 5 エージェント並列レビュー。即対応 5 件 (H-03〜05/M-01/02) + IT9 backlog 3 件 (H-01 Tx/H-02 OverdueCheck/H-06 E2E) |
 | [IT1 コードレビュー](./review/it1_code_review_20260626.md) | IT1 全体の XP 5 エージェント並列レビュー (高 10・中 13・低 8) |
 | [IT2 コードレビュー](./review/it2_code_review_20260627.md) | IT2 全体の XP 5 エージェント並列レビュー (高 12・中 14・低 12、矛盾 3) |
 | [IT3 post-nav レビュー](./review/it3_post_nav_review_20260629.md) | IT3 完了時 nav/E2E レビュー |
