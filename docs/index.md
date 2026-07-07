@@ -17,10 +17,10 @@
 | :--- | :--- | :--- |
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
-| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
+| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 2 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
@@ -42,11 +42,27 @@
 | [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
 | [ユーザーストーリー](./requirements/user_story.md) | US 25 件・受け入れ基準・トレーサビリティマトリックス |
 
+### 設計ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [バックエンドアーキテクチャ](./design/architecture_backend.md) | DDD + ヘキサゴナル + CQRS、Rails 8、Packwerk による 8 コンテキスト境界管理 |
+| [フロントエンドアーキテクチャ](./design/architecture_frontend.md) | ERB SSR + Hotwire（Turbo / Stimulus）、Bootstrap 5 |
+| [インフラストラクチャ](./design/architecture_infrastructure.md) | AWS ECS/RDS、Docker、Puma、GitHub Actions CI/CD |
+| [データモデル設計](./design/data-model.md) | 概念・論理データモデル、テーブル定義（19 テーブル）、ER 図 |
+| [ドメインモデル設計](./design/domain-model.md) | 8 コンテキスト、集約・エンティティ・値オブジェクト・ドメインイベント |
+| [UI 設計](./design/ui_design.md) | 画面一覧・画面遷移図・ワイヤーフレーム（17+ 画面） |
+| [テスト戦略](./design/test_strategy.md) | ピラミッド型テスト、RSpec / Capybara + Playwright / WebMock |
+| [非機能要件](./design/non_functional.md) | 性能・可用性・セキュリティ・保守性・拡張性（ISO/IEC 25010 準拠） |
+| [運用要件](./design/operation.md) | 監視・バックアップ・デプロイ・障害対応 |
+| [技術スタック選定](./design/tech_stack.md) | Ruby 3.4 / Rails 8 を軸とした全技術スタック一覧 |
+
 ### レビュードキュメント
 
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
+| [設計ドキュメントレビュー](./review/設計ドキュメント_review_20260707.md) | Rails 版設計ドキュメント全 10 件のマルチパースペクティブレビュー結果（高 11 件・中 13 件・低 6 件） |
 
 ## 補足
 
