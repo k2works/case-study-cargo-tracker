@@ -137,6 +137,23 @@ rules:
 - 新規 ADR 起票時 (ADR 0001 「ADR ↔ ArchUnit 整合チェックリスト」の Haskell 版) は arch-check の影響を確認する規律が必要
 - ADR 0001 で言及した「自作 import 規約チェッカ」の具体化が完了する
 
+## 追記: Application Input record は Text-only を維持する (T7-I, IT8)
+
+Cross-BC 境界を跨いで Application 層コマンドに渡す Input record
+(例: `RegisterHandlingEventInput`、`GenerateInvoiceInput`) のフィールドは、
+他 BC の Domain 型を含めず **Text (および時刻・数値等のプリミティブ) のみ**で
+構成することを規約とする。
+
+- **理由**: Input record に他 BC の Domain 型 (例: `TrackingNumber`、
+  `BookingId`) が混入すると、Rule 4 (BC 間 Domain 直接参照禁止) の抜け道に
+  なる。IT7 の Exception BC 実装時にこの暗黙ルールで設計されており
+  (`inputTrackingNumberText :: Text` 等)、明文化して将来の Rule 4 違反
+  リスクを軽減する (retrospective-7 T7-I)
+- **適用**: 自 BC 内の Domain 型 (呼出側と同一 BC) は Input record に
+  含めてよい。禁止対象は「他 BC の Domain 型」のみ
+- **検証**: 現状は arch-check Rule 4 (import 検査) が間接的に防いでいる。
+  Input record フィールド型の直接検査は Phase 4 の追加ルール候補とする
+
 ## コンプライアンス
 
 - 本 ADR で定めるルール定義は `arch-check.yaml` (リポジトリルート) に格納する
