@@ -79,7 +79,7 @@ import Cargotracker.Exception.Interfaces.ExceptionListPageApi
 import Cargotracker.Handling.Infrastructure.PostgresHandlingActivityRepository
   ( newPostgresHandlingActivityRepository,
   )
-import Cargotracker.Handling.Interfaces.HandlingPageApi (handlingPageApp)
+import Cargotracker.Handling.Interfaces.HandlingPageApi (HandlingPageDeps (..), handlingPageApp)
 import Cargotracker.Notification.Infrastructure.LogDeliveryPort
   ( newLogDeliveryPort,
   )
@@ -238,14 +238,16 @@ rootApp conn jwtSecret jwtTtl req respond =
       -- Postgres NotificationRepository を注入。Handling.claim 完了時の
       -- 通知発火は notification テーブルに保存され、/notifications で参照可能。
       handlingPageApp
-        txRunner
-        handlingRepo
-        codeRepo
-        trackingRepo
-        notificationRepo
-        newLogDeliveryPort
-        generateNotificationIdText -- ADR-0013 Phase 3 UUID v4 生成器 DI
-        generateSixDigitCodeText -- T7-01 UNLOAD 時の確認コード生成器 DI
+        HandlingPageDeps
+          { hpdTxRunner = txRunner
+          , hpdHandlingRepo = handlingRepo
+          , hpdCodeRepo = codeRepo
+          , hpdTrackingRepo = trackingRepo
+          , hpdNotificationRepo = notificationRepo
+          , hpdNotificationDelivery = newLogDeliveryPort
+          , hpdGenNotificationId = generateNotificationIdText
+          , hpdGenConfirmationCode = generateSixDigitCodeText
+          }
         req
         respond
     "billing" : "invoices" : _ ->

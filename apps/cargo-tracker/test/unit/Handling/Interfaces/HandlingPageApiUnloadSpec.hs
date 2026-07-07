@@ -34,7 +34,10 @@ import Test.Hspec
 import Cargotracker.Handling.Application.Ports
   ( HandlingActivityRepository (..),
   )
-import Cargotracker.Handling.Interfaces.HandlingPageApi (handlingPageApp)
+import Cargotracker.Handling.Interfaces.HandlingPageApi
+  ( HandlingPageDeps (..),
+    handlingPageApp,
+  )
 import Cargotracker.Notification.Application.Ports
   ( DeliveryResult (..),
     NotificationDeliveryPort (..),
@@ -108,14 +111,16 @@ postHandling mExisting eventType = do
   callsRef <- newIORef []
   let app =
         handlingPageApp
-          noTxRunner
-          fakeHandlingRepo
-          (spyCodeRepo callsRef mExisting)
-          fakeTrackingRepo
-          fakeNotifRepo
-          fakeDelivery
-          (pure "550e8400-e29b-41d4-a716-446655440000")
-          (pure "123456")
+          HandlingPageDeps
+            { hpdTxRunner = noTxRunner
+            , hpdHandlingRepo = fakeHandlingRepo
+            , hpdCodeRepo = spyCodeRepo callsRef mExisting
+            , hpdTrackingRepo = fakeTrackingRepo
+            , hpdNotificationRepo = fakeNotifRepo
+            , hpdNotificationDelivery = fakeDelivery
+            , hpdGenNotificationId = pure "550e8400-e29b-41d4-a716-446655440000"
+            , hpdGenConfirmationCode = pure "123456"
+            }
       body =
         "bookingId=BK-A1B2C3&eventType="
           <> TE.encodeUtf8 eventType

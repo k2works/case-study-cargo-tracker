@@ -11,6 +11,7 @@
 -}
 module Cargotracker.Handling.Interfaces.HandlingPageApi
   ( HandlingPageApi,
+    HandlingPageDeps (..),
     handlingPageApp,
   ) where
 
@@ -103,25 +104,42 @@ instance FromForm ClaimFormRequest where
       <*> parseUnique "locationUnlocode" f
       <*> parseUnique "operatorName" f
 
-handlingPageApp ::
-  TxRunner ->
-  HandlingActivityRepository IO ->
-  ConfirmationCodeRepository IO ->
-  TrackingRepository IO ->
-  NotificationRepository IO ->
-  NotificationDeliveryPort IO ->
-  -- | Notification UUID v4 生成器 (ADR-0013 Phase 3)
-  IO Text ->
-  -- | 6 桁確認コード生成器 (T7-01 UNLOAD 時)
-  IO Text ->
-  Application
-handlingPageApp tx repo codeRepo trackingRepo notifRepo notifDelivery genNid genCode =
+{- | T7-F (IT8): handlingPageApp の DI 8 個をレコードに集約する。
+
+`IO Text` が 2 種 (UUID v4 / 6 桁コード) あり位置引数では取り違えやすい
+(retrospective-7 T7-F)。フィールド名で意味を固定する。
+-}
+data HandlingPageDeps = HandlingPageDeps
+  { hpdTxRunner :: !TxRunner
+  , hpdHandlingRepo :: !(HandlingActivityRepository IO)
+  , hpdCodeRepo :: !(ConfirmationCodeRepository IO)
+  , hpdTrackingRepo :: !(TrackingRepository IO)
+  , hpdNotificationRepo :: !(NotificationRepository IO)
+  , hpdNotificationDelivery :: !(NotificationDeliveryPort IO)
+  , hpdGenNotificationId :: !(IO Text)
+  -- ^ Notification UUID v4 生成器 (ADR-0013 Phase 3)
+  , hpdGenConfirmationCode :: !(IO Text)
+  -- ^ 6 桁確認コード生成器 (T7-01 UNLOAD 時)
+  }
+
+handlingPageApp :: HandlingPageDeps -> Application
+handlingPageApp deps =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
-        :<|> handlerPost repo codeRepo genCode
+        :<|> handlerPost
+          (hpdHandlingRepo deps)
+          (hpdCodeRepo deps)
+          (hpdGenConfirmationCode deps)
         :<|> handlerClaimGet
-        :<|> handlerClaimPost tx codeRepo repo trackingRepo notifRepo notifDelivery genNid
+        :<|> handlerClaimPost
+          (hpdTxRunner deps)
+          (hpdCodeRepo deps)
+          (hpdHandlingRepo deps)
+          (hpdTrackingRepo deps)
+          (hpdNotificationRepo deps)
+          (hpdNotificationDelivery deps)
+          (hpdGenNotificationId deps)
     )
 
 handlerGet :: Maybe Text -> Handler (Html ())
