@@ -18,7 +18,7 @@
 
 ### イテレーション終了時の達成状態
 
-1. **精算処理 (US23) 稼働**: 「確定」状態の輸送料金 → 精算書発行 (請求番号・請求金額・支払い期限) → 荷主通知 → 入金確認 → 精算完了 (予約状態「精算済」連動) の一連が Domain / Application / Infrastructure (Postgres) / Interfaces / Views / Wire で緑
+1. **精算処理 (US23) 稼働**: 既存設計の **Billing Context (Invoice 集約)** に基づき、「確定」状態の輸送料金 → 精算書発行 (請求番号・請求金額・支払い期限) → 荷主通知 → 入金確認 → 精算完了 (Cargo.Settled 連動) の一連が Domain / Application / Infrastructure (Postgres) / Interfaces / Views / Wire で緑
 2. **セキュリティ保証**: RolePolicy / RoleGate を US17 手動更新 API に配線し (T7-A)、ADR-0016 (Role ベース認可の Domain/Interfaces 分離設計) を起票 (T7-D)
 3. **保証系完了**: Testcontainers 統合テスト 4 Repository (T7-G = T6-05)、katip 完全移行 (T7-H = T6-07)、E2E 統合ハッピーパス再有効化 (T6-01) が緑
 4. **Release 2.0 GA クロージング**: v1.0.0-mvp tag (T6-03 残) + v2.0.0 tag + CHANGELOG 切出し + GA Milestone Close (#255 / #242 / #244 の完了または IT9 移送判断)
@@ -50,7 +50,7 @@
 
 ### ストーリー詳細
 
-#### US23: 精算を処理する
+#### US23: 精算を処理する (対応 UC: UC18)
 
 **ストーリー**:
 > 経理担当者として、確定した輸送料金をもとに精算書を発行し、荷主への通知・入金確認・精算完了処理を行いたい。なぜなら、精算業務を一元管理し、入金状況を追跡して確実に精算を完了できるからだ。
@@ -59,23 +59,23 @@
 
 1. 「確定」状態の輸送料金をもとに精算書 (請求番号・請求金額・支払い期限) を発行できる
 2. 精算書が荷主にメール通知される (Notification BC 経由。メール実配信はスタブ可、通知レコード記録を必須とする)
-3. 決済機関との連携により入金確認ができる (決済機関 IF はポート定義 + fake 実装)
-4. 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる (Cross-BC: Settlement → Booking)
-5. 支払い期限超過時、経理担当者に未払い通知が送信される
+3. 決済機関との連携により入金確認ができる (`payment_reference` 照合。決済機関 IF はポート定義 + fake 実装)
+4. 入金確認後、精算状態が「精算済 (Confirmed)」に更新され予約状態も「精算済 (Cargo.Settled)」になる (Cross-BC: Billing → Booking、状態遷移 `canTransitionTo Delivered Settled` は定義済)
+5. 支払い期限超過時、経理担当者に未払い通知が送信される (`markOverdue`)
 
-#### US10: 経路条件を調整して再算出する (ストレッチ)
+#### US10: 経路条件を調整して再算出する (ストレッチ、対応 UC: UC08)
 
 **ストーリー**:
 > 経路設計者として、経路候補に最適なものがない場合に条件 (期限・経由地等) を調整して経路候補を再算出したい。なぜなら、条件を柔軟に調整することで実現可能な経路を見つけ、輸送を実現できるからだ。
 
 **受入条件**: 制約条件の確認 / 条件調整 (期限延長・経由地追加・貨物種別変更) と再算出 / 調整後候補の提示 / 候補なし時の条件協議依頼
 
-#### US12: 確定経路を荷主に通知する (ストレッチ)
+#### US12: 確定経路を荷主に通知する (ストレッチ、対応 UC: UC10)
 
 **ストーリー**:
 > 営業担当者として、経路が予約に紐付けられた後、確定経路の詳細 (経由港・所要日数・到着予定日) を荷主に通知したい。なぜなら、荷主が確定経路の内容を確認し、承認または変更依頼を行えるようにするからだ。
 
-**受入条件**: 紐付け経路情報の確認 / 通知内容の確認 / 荷主への通知送信 / 通知送信記録の登録 (Notification BC 再利用)
+**受入条件**: 紐付け経路情報の確認 / 通知内容 (経由港・所要日数・到着予定日・**料金概算**) の確認 / 荷主への通知送信 / 通知送信記録の登録 (Notification BC 再利用)
 
 ---
 
@@ -96,11 +96,11 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | Domain: Settlement 集約 (Invoice 値オブジェクト: 請求番号・請求金額・支払い期限、SettlementStatus sum type: 未精算/入金確認中/精算済/期限超過) + 状態遷移純粋関数 + hspec/hedgehog | 4h | [ ] |
-| 2.2 | Application: IssueInvoiceCommand / ConfirmPaymentCommand / OverdueCheckCommand + SettlementRepository / PaymentGateway ポート (型クラス) + fake でユースケーステスト | 4h | [ ] |
-| 2.3 | Infrastructure: dbmate migration (settlements テーブル) + PostgresSettlementRepository (FromRow/ToRow) | 3h | [ ] |
-| 2.4 | Cross-BC: 入金確認 → Booking 状態「精算済」連動 + 精算書発行 → Notification BC 通知レコード + 期限超過 → 未払い通知 | 3h | [ ] |
-| 2.5 | Interfaces/Views: 精算一覧・精算詳細・入金確認操作の Servant API + Lucid ページ + RoleGate (Accounting/Admin) | 4h | [ ] |
+| 2.1 | Domain: **Billing Context の Invoice 集約** (domain-model.md §6 準拠: `PaymentStatus` = Pending/Confirmed/Overdue/Refunded、`applyDiscount`/`issuePayment`/`confirmPayment`/`markOverdue` 純粋関数) + hspec/hedgehog | 4h | [ ] |
+| 2.2 | Application: GenerateInvoiceCommand / ConfirmPaymentCommand / OverdueCheckCommand + InvoiceRepository / PaymentGateway ポート (型クラス) + fake でユースケーステスト | 4h | [ ] |
+| 2.3 | Infrastructure: dbmate migration (`invoice` + `invoice_line_item` テーブル、data-model.md §invoice 準拠: BIGSERIAL PK + `invoice_number` UK + `*_amount_value BIGINT` + `version` 楽観ロック) + PostgresInvoiceRepository (FromRow/ToRow) | 3h | [ ] |
+| 2.4 | Cross-BC: 入金確認 → Cargo.Settled 連動 (FK 制約なし、`booking_id` TEXT 照合を Application 層で実施) + 精算書発行 → Notification BC 通知レコード + 期限超過 → 未払い通知 | 3h | [ ] |
+| 2.5 | Interfaces/Views: 請求書一覧・詳細・入金発行・入金確認の Servant API (ui_design.md `/billing/invoices` 系パス準拠) + Lucid ページ + RoleGate (Accounting/Admin) | 4h | [ ] |
 | 2.6 | Wire: Main.hs DI 配線 + hspec-wai 結合テスト + arch-check 緑 | 2h | [ ] |
 
 **小計**: 20h (理想時間)
@@ -124,11 +124,11 @@
 |---|--------|---------|------|
 | 4.1 | T6-03 残: v1.0.0-mvp git tag (E2E ハッピーパス緑を条件に付与) | 0.5h | [ ] |
 | 4.2 | CHANGELOG `[Unreleased]` → `[2.0.0]` セクション切出し + v2.0.0 tag (developing-release スキル) | 1h | [ ] |
-| 4.3 | 上流ドキュメント同期: domain-model / data-model / ui_design に Settlement を追記 | 2h | [ ] |
+| 4.3 | 上流ドキュメント同期: domain-model.md §6 (Billing) / data-model.md §invoice は定義済のため実装差分のみ反映。ui_design.md に請求書一覧・詳細・入金確認の salt ワイヤーフレーム 3 種 + 画面遷移図の精算フロー統合を追記 (IT6/IT7 慣行踏襲) | 3h | [ ] |
 | 4.4 | GitHub: #255 Close、#242/#244 の完了 or IT9 移送判断、Release 2.0 GA Milestone Close | 0.5h | [ ] |
 | 4.5 | dbmate status 確認 (T4-13: 開発 DB / staging DB の未適用 migration ゼロを保証) | 0.5h | [ ] |
 
-**小計**: 4.5h (理想時間)
+**小計**: 5.5h (理想時間)
 
 ### 5. ストレッチ: US10 / US12 (5 SP) — バッファ消費ルール第 2 優先 (消化困難なら IT9 へ)
 
@@ -153,9 +153,9 @@
 | IT7 繰越高優先 (T7-A〜T7-D) | 5 | 8h | [ ] |
 | US23 精算処理 | 3 | 20h | [ ] |
 | 保証系中優先 (T7-E〜T7-I + T6-01) | 7 | 16h | [ ] |
-| GA クロージング | 2 | 4.5h | [ ] |
+| GA クロージング | 2 | 5.5h | [ ] |
 | ストレッチ (US10/US12) | 5 | 13h | [ ] |
-| **合計** | **22** | **61.5h** | |
+| **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
 **進捗率**: 0% (0/22 SP)
@@ -190,80 +190,97 @@
 
 ## 設計
 
-### ドメインモデル (Settlement BC 差分)
+### ドメインモデル (Billing Context、domain-model.md §6 定義済)
+
+> **注**: US23 の実装対象は既存設計の **Billing Context (精算コンテキスト)** であり、新 BC は作らない。Payment は独立集約とせず Invoice 集約内のステータス + 純粋関数として表現する (Scala 版 ADR 0019 と同方針)。
 
 ```plantuml
 @startuml
-package "Settlement BC" {
-  class Settlement <<Aggregate Root>> {
-    settlementId
-    bookingId
-    invoice
-    status
+package "Billing Context" {
+  class Invoice <<aggregate root>> {
+    invoiceId : InvoiceId
+    cargoBookingId : BillingBookingId
+    shipperId : BillingShipperId
+    baseAmount / finalAmount
+    paymentStatus : PaymentStatus
+    dueDate / paidAt / paymentReference
+    applyDiscount()
+    issuePayment()
+    confirmPayment()
+    markOverdue()
   }
-  class Invoice <<Value Object>> {
-    invoiceNumber
-    amount
-    dueDate
-  }
-  enum SettlementStatus {
-    Unsettled
-    PaymentConfirming
-    Settled
+  enum PaymentStatus {
+    Pending
+    Confirmed
     Overdue
+    Refunded
   }
-  Settlement *-- Invoice
-  Settlement *-- SettlementStatus
+  class DiscountPolicy <<value object>>
+  Invoice *-- PaymentStatus
+  Invoice ..> DiscountPolicy
 }
-package "Pricing BC" {
-  class ShippingCost
-}
-package "Booking BC" {
-  class Booking
+package "Booking Context" {
+  class Cargo
 }
 package "Notification BC" {
   class Notification
 }
-ShippingCost ..> Settlement : 確定料金から精算書発行
-Settlement ..> Booking : 入金確認で「精算済」連動
-Settlement ..> Notification : 精算書通知 / 未払い通知
+Cargo ..> Invoice : InvoiceRequested (Delivered 後)
+Invoice ..> Cargo : confirmPayment で Cargo.Settled 連動
+Invoice ..> Notification : 精算書通知 / 未払い通知
 @enduml
 ```
 
-### データモデル (settlements テーブル差分)
+### データモデル (invoice / invoice_line_item、data-model.md §invoice 定義済)
+
+> **注**: data-model.md の既存定義に従う。単数形テーブル名・BIGSERIAL サロゲート PK・金額は最小通貨単位の BIGINT・`version` 楽観ロック・BC 間 FK 制約なし (`booking_id` TEXT 照合は Application 層)。
 
 ```plantuml
 @startuml
 hide circle
 skinparam linetype ortho
-entity "settlements" as st {
-    *id : uuid
+entity "invoice" as inv {
+    *id : BIGSERIAL
     --
-    booking_id : text
-    invoice_number : text
-    amount : numeric
-    currency : text
-    due_date : date
-    status : text
-    paid_at : timestamptz
-    created_at : timestamptz
-    updated_at : timestamptz
+    *invoice_number : VARCHAR(30) <<UK>>
+    booking_id : VARCHAR(20)
+    base_amount_value : BIGINT
+    base_amount_currency : VARCHAR(3)
+    discount_rate : NUMERIC(5,4)
+    final_amount_value : BIGINT
+    final_amount_currency : VARCHAR(3)
+    tax_rate : NUMERIC(5,4)
+    tax_amount : BIGINT
+    payment_status : VARCHAR(30)
+    issued_at : TIMESTAMPTZ
+    due_date : DATE
+    paid_at : TIMESTAMPTZ
+    payment_reference : VARCHAR(64)
+    version : INTEGER
+    created_at / updated_at : TIMESTAMPTZ
 }
-entity "bookings" as bk {
-    *booking_number : text
+entity "invoice_line_item" as li {
+    *id : BIGSERIAL
+    --
+    invoice_id : BIGINT <<FK>>
 }
-st }o-- bk
+entity "cargo" as cg {
+    *booking_id : VARCHAR(20)
+}
+inv ||--o{ li
+cg .. inv : booking_id (FK 制約なし)
 @enduml
 ```
 
-### API 設計
+### API 設計 (ui_design.md 画面一覧定義済)
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
-| GET | /settlements | 精算一覧 (Accounting/Admin、RoleGate) |
-| GET | /settlements/:id | 精算詳細 |
-| POST | /settlements | 精算書発行 (確定料金から) |
-| POST | /settlements/:id/confirm-payment | 入金確認 → 精算済 |
+| GET | /billing/invoices | 請求書一覧・ステータス管理 (Accounting/Admin、RoleGate) |
+| GET | /billing/invoices/new | 新規請求書発行 (引取済予約の選択・料金自動算出) |
+| GET | /billing/invoices/:invoiceId | 請求書詳細・割引内訳・支払い確認 |
+| POST | /billing/invoices/:id/issue-payment | 入金発行 (支払期日 + reference_code 設定 → Pending) |
+| POST | /billing/invoices/:id/confirm-payment | 入金確認 (reference_code 照合 → Confirmed + Cargo.Settled) |
 
 ### ADR
 
@@ -312,6 +329,7 @@ st }o-- bk
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-07-07 | 初版作成 (retrospective-7 Try + リリース計画 IT8 スコープ + IT7 繰越を反映) | AI Agent |
+| 2026-07-07 | 整合性検証 (validating-iteration-plan) 反映: Settlement BC 新設案を既存 Billing Context (Invoice 集約) に統一、invoice/invoice_line_item テーブル定義を data-model.md 準拠に修正、API パスを ui_design.md の /billing/invoices 系に統一、対応 UC 番号 (UC18/UC08/UC10) と US12「料金概算」を追記、タスク 4.3 に ui_design.md ワイヤーフレーム追記を明記 | AI Agent |
 
 ---
 
