@@ -71,6 +71,7 @@
 | :--- | :--- |
 | [リリース計画](./development/release_plan.md) | 25 US / 73 SP・4 フェーズ × 8 IT (0.1 → 0.2 → 1.0 MVP → 2.0 GA) |
 | [分析フェーズ完了報告書](./development/analysis_completion_report.md) | 全 16 ドキュメントの成果サマリ・主要決定事項・残課題 |
+| [リリース完了報告書 v2.0.0](./development/release_report-2_0_0.md) | Release 2.0 GA 総括 (全 4 Phase / 8 IT)。計画 78 SP → 実績 200+ SP (211%)、438 コミット、889 tests + E2E 29、工期短縮 93% |
 | [IT1 計画](./development/iteration_plan-1.md) | AUTH / US02 / US03 / US04 / US24 の 20 SP イテレーション計画 |
 | [IT1 完了報告書](./development/iteration_report-1.md) | 成功基準 6 件中 5 OK / 1 未達 (HPC 未計測)、主要メトリクス・学び |
 | [IT1 ふりかえり (KPT)](./development/retrospective-1.md) | Keep 13・Problem 14・Try 18 (必達 10 + 推奨 8) |
