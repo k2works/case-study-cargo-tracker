@@ -104,6 +104,8 @@ library:
   - Cargotracker.Billing.Application.OverdueCheckCommand
   - Cargotracker.Billing.Application.Ports
   - Cargotracker.Billing.Infrastructure.BillingNotificationAdapter
+  - Cargotracker.Billing.Interfaces.BillingPageApi
+  - Cargotracker.Billing.Views.InvoiceViews
   - Cargotracker.Billing.Infrastructure.PostgresInvoiceRepository
   - Cargotracker.Billing.Domain.Model.Invoice
   - Cargotracker.Billing.Domain.Model.PaymentStatus

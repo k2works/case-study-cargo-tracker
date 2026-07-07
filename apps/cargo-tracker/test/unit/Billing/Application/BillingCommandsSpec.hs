@@ -86,6 +86,7 @@ newFakeRepo initial = do
           , findPendingWithDueDate = do
               xs <- readIORef ref
               pure [i | i <- xs, invPaymentStatus i == Pending, isJust (invDueDate i)]
+          , findAllInvoices = readIORef ref
           }
   pure (repo, readIORef ref)
   where

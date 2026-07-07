@@ -4,7 +4,8 @@ module Shared.Auth.Domain.RolePolicySpec (spec) where
 import Test.Hspec
 
 import Cargotracker.Shared.Auth.Domain.RolePolicy
-  ( canManualStateUpdate,
+  ( canManageBilling,
+    canManualStateUpdate,
     canRecordException,
     canResolveException,
   )
@@ -48,3 +49,14 @@ spec = describe "RolePolicy (T6-09, IT7)" $ do
 
     it "Handler は拒否 (解決は監督者判断)" $
       canResolveException [Handler] `shouldBe` False
+
+  describe "canManageBilling (US23, IT8)" $ do
+    it "Accountant / MasterAdmin は許可" $
+      all (canManageBilling . (: [])) [Accountant, MasterAdmin] `shouldBe` True
+
+    it "Shipper / Consignee / Sales / Router / Tracker / Handler は拒否" $
+      any (canManageBilling . (: [])) [Shipper, Consignee, Sales, Router, Tracker, Handler]
+        `shouldBe` False
+
+    it "空リストは拒否" $
+      canManageBilling [] `shouldBe` False

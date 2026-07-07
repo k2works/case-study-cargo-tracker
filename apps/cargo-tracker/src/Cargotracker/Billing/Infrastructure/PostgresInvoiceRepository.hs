@@ -55,6 +55,7 @@ newPostgresInvoiceRepository conn =
     , findInvoiceByBookingId = findByBookingIdImpl conn
     , updateInvoice = updateImpl conn
     , findPendingWithDueDate = findPendingWithDueDateImpl conn
+    , findAllInvoices = findAllImpl conn
     }
 
 --------------------------------------------------------------------------------
@@ -163,6 +164,16 @@ findPendingWithDueDateImpl conn = do
     query
       conn
       (selectColumns <> " WHERE payment_status = 'PENDING' AND due_date IS NOT NULL ORDER BY due_date ASC")
+      () ::
+      IO [InvoiceRow]
+  pure (map rowToInvoice rows)
+
+findAllImpl :: Connection -> IO [Invoice]
+findAllImpl conn = do
+  rows <-
+    query
+      conn
+      (selectColumns <> " ORDER BY issued_at DESC NULLS LAST, invoice_number DESC")
       () ::
       IO [InvoiceRow]
   pure (map rowToInvoice rows)

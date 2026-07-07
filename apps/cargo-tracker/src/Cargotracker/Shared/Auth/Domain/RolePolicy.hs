@@ -12,6 +12,7 @@ module Cargotracker.Shared.Auth.Domain.RolePolicy
   ( canManualStateUpdate,
     canRecordException,
     canResolveException,
+    canManageBilling,
   ) where
 
 import Cargotracker.Shared.Auth.Domain.User (Role (..))
@@ -45,5 +46,15 @@ canResolveException :: [Role] -> Bool
 canResolveException = any isAllowed
   where
     isAllowed Tracker = True
+    isAllowed MasterAdmin = True
+    isAllowed _ = False
+
+{- | US23 精算管理 (請求書発行・入金確認) の権限判定 (IT8)。
+Accountant / MasterAdmin のみ許可 (ui_design.md 画面一覧の利用者ロール)。
+-}
+canManageBilling :: [Role] -> Bool
+canManageBilling = any isAllowed
+  where
+    isAllowed Accountant = True
     isAllowed MasterAdmin = True
     isAllowed _ = False

@@ -28,6 +28,8 @@ data InvoiceRepository m = InvoiceRepository
   -- ^ version 楽観ロック比較更新 (更新行数 0 は ConcurrentModification)
   , findPendingWithDueDate :: m [Invoice]
   -- ^ OverdueCheckCommand 用: Pending かつ dueDate 設定済の請求書一覧
+  , findAllInvoices :: m [Invoice]
+  -- ^ 一覧画面用 (IT8 暫定ページング無し、issued_at DESC)
   }
 
 {- | 決済機関 IF (US23 受入基準 3)。IT8 では fake 実装で受入基準を満たし、

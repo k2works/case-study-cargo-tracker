@@ -13,6 +13,7 @@ import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 import qualified Billing.Application.BillingCommandsSpec
 import qualified Billing.Domain.Model.InvoiceSpec
 import qualified Billing.Infrastructure.BillingNotificationAdapterSpec
+import qualified Billing.Interfaces.BillingPageApiSpec
 import qualified Booking.Application.AttachCustomsDeclarationCommandSpec
 import qualified Booking.Application.CancelBookingCommandSpec
 import qualified Booking.Application.ConfirmBookingCommandSpec
@@ -410,6 +411,10 @@ main = hspec $ do
   describe
     "Cargotracker.Billing.Infrastructure.BillingNotificationAdapter"
     Billing.Infrastructure.BillingNotificationAdapterSpec.spec
+
+  describe
+    "Cargotracker.Billing.Interfaces.BillingPageApi"
+    Billing.Interfaces.BillingPageApiSpec.spec
 
   describe
     "Cargotracker.Handling.Interfaces.HandlingPageApi (UNLOAD 副作用)"
