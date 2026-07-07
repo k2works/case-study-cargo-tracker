@@ -50,6 +50,7 @@ import qualified Exception.Domain.Model.ExceptionTypeSpec
 import qualified Exception.Infrastructure.DetailJsonParserSpec
 import qualified Exception.Interfaces.ExceptionListPageApiSpec
 import qualified Exception.Views.ExceptionListViewSpec
+import qualified Handling.Interfaces.HandlingPageApiUnloadSpec
 import qualified Notification.Application.SendClaimNotificationCommandSpec
 import qualified Notification.Domain.Model.NotificationSpec
 import qualified Notification.Domain.Model.Value.NotificationIdSpec
@@ -394,6 +395,10 @@ main = hspec $ do
   describe
     "Cargotracker.Exception.Interfaces.ExceptionListPageApi"
     Exception.Interfaces.ExceptionListPageApiSpec.spec
+
+  describe
+    "Cargotracker.Handling.Interfaces.HandlingPageApi (UNLOAD 副作用)"
+    Handling.Interfaces.HandlingPageApiUnloadSpec.spec
 
   describe
     "Cargotracker.Estimation.Application.CreateEstimateCommand"
