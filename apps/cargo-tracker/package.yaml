@@ -98,6 +98,10 @@ library:
   - Cargotracker.Booking.Domain.Model.Value.ItineraryId
   - Cargotracker.Booking.Domain.Model.Leg
   - Cargotracker.Booking.Domain.Model.Itinerary
+  - Cargotracker.Billing.Domain.Model.Invoice
+  - Cargotracker.Billing.Domain.Model.PaymentStatus
+  - Cargotracker.Billing.Domain.Model.Value.DiscountRate
+  - Cargotracker.Billing.Domain.Model.Value.Money
   - Cargotracker.Exception.Domain.Model.ExceptionSeverity
   - Cargotracker.Exception.Domain.Model.DelayException
   - Cargotracker.Exception.Domain.Model.Amount

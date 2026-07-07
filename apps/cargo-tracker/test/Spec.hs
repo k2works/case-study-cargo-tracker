@@ -10,6 +10,7 @@ import Test.Hspec
 import Cargotracker (greet)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
 
+import qualified Billing.Domain.Model.InvoiceSpec
 import qualified Booking.Application.AttachCustomsDeclarationCommandSpec
 import qualified Booking.Application.CancelBookingCommandSpec
 import qualified Booking.Application.ConfirmBookingCommandSpec
@@ -395,6 +396,10 @@ main = hspec $ do
   describe
     "Cargotracker.Exception.Interfaces.ExceptionListPageApi"
     Exception.Interfaces.ExceptionListPageApiSpec.spec
+
+  describe
+    "Cargotracker.Billing.Domain.Model.Invoice"
+    Billing.Domain.Model.InvoiceSpec.spec
 
   describe
     "Cargotracker.Handling.Interfaces.HandlingPageApi (UNLOAD 副作用)"

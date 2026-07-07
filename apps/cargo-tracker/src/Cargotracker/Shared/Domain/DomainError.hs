@@ -138,4 +138,24 @@ data DomainError
     InvalidReporter !Text
   | -- | 例外レコードが既に解決済 (二重解決不可)
     ExceptionAlreadyResolved
+  | -- IT8 追加 (US23 精算処理、Billing BC)
+
+    -- | 請求書番号が空 or 形式不正 (US23)
+    InvalidInvoiceNumber !Text
+  | -- | 請求書が見つからない (US23、InvoiceId 文字列を保持)
+    InvoiceNotFound !Text
+  | -- | 同一予約への請求書が既に存在する (1 予約 1 請求、booking_id UK)
+    InvoiceAlreadyExists !Text
+  | -- | 請求書が既に入金確認済 (二重確認・確認後の変更不可)
+    InvoiceAlreadyConfirmed
+  | -- | 入金発行が既に実施済 (dueDate / paymentReference 設定済)
+    InvoicePaymentAlreadyIssued
+  | -- | 入金発行時の reference_code が空 (US23)
+    InvalidPaymentReference !Text
+  | -- | 入金確認時の reference_code が登録値と一致しない (US23)
+    PaymentReferenceMismatch
+  | -- | 引取完了 (Delivered) 前の予約には請求書を発行できない (BookingId 文字列)
+    InvoiceNotAllowedBeforeDelivered !Text
+  | -- | 支払い状態文字列が不正 (DB CHECK: PENDING/CONFIRMED/OVERDUE/REFUNDED)
+    InvalidPaymentStatus !Text
   deriving stock (Eq, Show)
