@@ -61,6 +61,7 @@ dependencies:
 - servant-lucid >= 0.9
 - http-api-data >= 0.6
 - random >= 1.2
+- katip >= 0.8
 
 library:
   source-dirs: src
