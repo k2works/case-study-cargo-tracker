@@ -98,7 +98,7 @@
 |---|--------|---------|------|
 | 2.1 | Domain: **Billing Context の Invoice 集約** (domain-model.md §6 準拠: `PaymentStatus` = Pending/Confirmed/Overdue/Refunded、`applyDiscount`/`issuePayment`/`confirmPayment`/`markOverdue` 純粋関数) + hspec/hedgehog | 4h | [x] 完了 (`cc05bc14`、Invoice 集約 + Money/DiscountRate/PaymentStatus VO + DomainError 9 種追加、hspec 27 + hedgehog 3 = 30 tests 緑) |
 | 2.2 | Application: GenerateInvoiceCommand / ConfirmPaymentCommand / OverdueCheckCommand + InvoiceRepository / PaymentGateway ポート (型クラス) + fake でユースケーステスト | 4h | [x] 完了 (`957d8103`、IssuePaymentCommand 含む 4 コマンド + 5 ポート (レコード式、既存慣行準拠)、fake spy 12 tests 緑) |
-| 2.3 | Infrastructure: dbmate migration (`invoice` + `invoice_line_item` テーブル、data-model.md §invoice 準拠: BIGSERIAL PK + `invoice_number` UK + `*_amount_value BIGINT` + `version` 楽観ロック) + PostgresInvoiceRepository (FromRow/ToRow) | 3h | [ ] |
+| 2.3 | Infrastructure: dbmate migration (`invoice` + `invoice_line_item` テーブル、data-model.md §invoice 準拠: BIGSERIAL PK + `invoice_number` UK + `*_amount_value BIGINT` + `version` 楽観ロック) + PostgresInvoiceRepository (FromRow/ToRow) | 3h | [x] 完了 (`895f7d01`、migration 2 本を開発 DB に適用済 (IT7 繰越 7 本含む Pending 9 → 0)、discount_rate の NUMERIC⇔Integer 変換は SQL 側で実施) |
 | 2.4 | Cross-BC: 入金確認 → Cargo.Settled 連動 (FK 制約なし、`booking_id` TEXT 照合を Application 層で実施) + 精算書発行 → Notification BC 通知レコード + 期限超過 → 未払い通知 | 3h | [ ] |
 | 2.5 | Interfaces/Views: 請求書一覧・詳細・入金発行・入金確認の Servant API (ui_design.md `/billing/invoices` 系パス準拠) + Lucid ページ + RoleGate (Accountant/MasterAdmin) | 4h | [ ] |
 | 2.6 | Wire: Main.hs DI 配線 + hspec-wai 結合テスト + arch-check 緑 | 2h | [ ] |
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 約 32% (7/22 SP、タスク 1 全完了 + タスク 2.1-2.2 完了。2026-07-07 Ralph Loop 反復 1-4)
+**進捗率**: 約 36% (8/22 SP、タスク 1 全完了 + タスク 2.1-2.3 完了。2026-07-07 Ralph Loop 反復 1-5)
 
 ---
 
