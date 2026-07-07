@@ -149,6 +149,7 @@ nav:
       - ADR 0013 Notification 主キー設計: adr/0013-notification-primary-key-design.md
       - ADR 0014 Exception 状態遷移ポリシー: adr/0014-exception-state-transition-policy.md
       - ADR 0015 法人割引 contract_rank 由来: adr/0015-corporate-discount-rank-derived.md
+      - ADR 0016 Role ベース認可の分離設計: adr/0016-role-based-authorization-design.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
