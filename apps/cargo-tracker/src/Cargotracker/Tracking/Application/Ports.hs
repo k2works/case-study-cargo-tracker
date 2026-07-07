@@ -9,6 +9,7 @@ module Cargotracker.Tracking.Application.Ports
   ( TrackingRepository (..),
     queryTrackingNumberText,
     markClaimedByBookingId,
+    isClaimedByBookingId,
     markInExceptionByTrackingNumber,
     checkTransitionForException,
   ) where
@@ -111,3 +112,19 @@ checkTransitionForException from = case from of
   TsClaimed -> Left (InvalidTrackingTransition "TsClaimed" "TsInException")
   TsInException -> Left (InvalidTrackingTransition "TsInException" "TsInException")
   _ -> Right ()
+
+{- | Cross-BC helper (US23, IT8 / Rule 4 準拠)。
+
+Billing BC の GenerateInvoiceCommand が「引取完了後にのみ請求書を発行できる」
+前提 (domain-model.md §6 ビジネスルール 1) を検証するための窓口。
+引取完了 = Tracking BC の TsClaimed (H-01 SSoT: TransportStatus の具体値は
+本 Tracking BC 内でのみ参照する)。追跡活動が存在しない場合は Nothing。
+-}
+isClaimedByBookingId ::
+  Monad m =>
+  TrackingRepository m ->
+  Text ->
+  m (Maybe Bool)
+isClaimedByBookingId repo bid = do
+  mActivity <- findByBookingId repo bid
+  pure (fmap ((== TsClaimed) . taTransportStatus) mActivity)

@@ -10,13 +10,16 @@ module Cargotracker.Booking.Application.Ports
   ( BookingRepository (..),
     ShipperExistenceChecker (..),
     withCargo,
+    markSettledByBookingId,
   ) where
 
 import Cargotracker.Booking.Domain.Error (pattern BookingNotFound)
-import Cargotracker.Booking.Domain.Model.Cargo (Cargo)
-import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId, unBookingId)
+import Cargotracker.Booking.Domain.Model.Cargo (Cargo, markSettled)
+import Cargotracker.Booking.Domain.Model.Value.BookingId (BookingId, mkBookingId, unBookingId)
 import Cargotracker.Shared.Domain.DomainError (DomainError)
 import Cargotracker.Shared.Domain.Reference.ShipperRef (ShipperRef)
+import Control.Monad (void)
+import Data.Text (Text)
 
 -- T-01 (IT2): saveBooking は Infrastructure 側の検証失敗 (例: 荷主サロゲート
 -- キー解決不可) を例外で潰さず DomainError として返す。Application 層が
@@ -71,3 +74,21 @@ withCargo repo bid transition = do
         case result of
           Left e -> pure (Left e)
           Right () -> pure (Right updated)
+
+{- | Cross-BC helper (US23, IT8 / ADR-0004 Rule 4 準拠)。
+
+Billing BC の ConfirmPaymentCommand が入金確認後に予約状態を
+「精算済 (Settled)」へ連動させる唯一の窓口。Text の booking_id のみを
+受け取り、Booking BC の Domain 型を境界外へ露出させない。
+-}
+markSettledByBookingId ::
+  Monad m =>
+  BookingRepository m ->
+  Text ->
+  m (Either DomainError ())
+markSettledByBookingId repo bidText =
+  case mkBookingId bidText of
+    Left e -> pure (Left e)
+    Right bid -> do
+      result <- withCargo repo bid markSettled
+      pure (void result)

@@ -14,6 +14,7 @@ import Cargotracker.Booking.Domain.Model.Cargo
     cancelBooking,
     confirmBooking,
     linkRoute,
+    markSettled,
     mkCargo,
     requestRouting,
     submitBooking,
@@ -195,6 +196,32 @@ spec = do
       Right s <- pure (submitBooking cargo)
       Right r <- pure (requestRouting s)
       case confirmBooking r of
+        Left (InvalidStateTransition _ _) -> pure ()
+        other -> expectationFailure ("expected InvalidStateTransition but got " <> show other)
+
+  describe "markSettled (US23, IT8)" $ do
+    it "Confirmed -> Settled に遷移し version が +1 される" $ do
+      Right o <- pure (mkUnLocode "JPTYO")
+      Right d <- pure (mkUnLocode "USNYC")
+      let cargo = mkCargo unsafeBookingId unsafeShipperId (RouteSpecification o d deadline)
+      Right s <- pure (submitBooking cargo)
+      Right r <- pure (requestRouting s)
+      Right a <- pure (linkRoute r)
+      Right c <- pure (confirmBooking a)
+      case markSettled c of
+        Right settled -> do
+          cargoStatus settled `shouldBe` Settled
+          cargoVersion settled `shouldBe` cargoVersion c + 1
+        Left e -> expectationFailure (show e)
+
+    it "Confirmed 前 (RouteAssigned) からの精算済遷移は不可" $ do
+      Right o <- pure (mkUnLocode "JPTYO")
+      Right d <- pure (mkUnLocode "USNYC")
+      let cargo = mkCargo unsafeBookingId unsafeShipperId (RouteSpecification o d deadline)
+      Right s <- pure (submitBooking cargo)
+      Right r <- pure (requestRouting s)
+      Right a <- pure (linkRoute r)
+      case markSettled a of
         Left (InvalidStateTransition _ _) -> pure ()
         other -> expectationFailure ("expected InvalidStateTransition but got " <> show other)
 

@@ -204,7 +204,10 @@ temperatureUnitFromText _ = Celsius
 textToBookingStatus :: Text -> BookingStatus
 textToBookingStatus "Submitted" = Submitted
 textToBookingStatus "RouteProposed" = RouteProposed
+textToBookingStatus "RouteAssigned" = RouteAssigned
 textToBookingStatus "Confirmed" = Confirmed
+textToBookingStatus "Settled" = Settled
+textToBookingStatus "Cancelled" = Cancelled
 textToBookingStatus "Closed" = Closed
 textToBookingStatus _ = Draft
 
@@ -310,5 +313,6 @@ bookingStatusToText Submitted = "Submitted"
 bookingStatusToText RouteProposed = "RouteProposed"
 bookingStatusToText RouteAssigned = "RouteAssigned"
 bookingStatusToText Confirmed = "Confirmed"
+bookingStatusToText Settled = "Settled"
 bookingStatusToText Cancelled = "Cancelled"
 bookingStatusToText Closed = "Closed"

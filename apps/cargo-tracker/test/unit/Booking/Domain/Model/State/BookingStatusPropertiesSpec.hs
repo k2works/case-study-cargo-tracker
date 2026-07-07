@@ -23,7 +23,7 @@ import Cargotracker.Booking.Domain.Model.State.BookingStatus
   )
 
 {- | 参照真実: canTransitionTo が True を返す全 (from, to) の網羅リスト。
-IT4 で明示列挙されていた 10 件と一致する必要がある。
+IT4 の 10 件 + IT8 (US23 精算) の 2 件 (Confirmed→Settled, Settled→Closed) と一致する必要がある。
 -}
 acceptedTransitions :: [(BookingStatus, BookingStatus)]
 acceptedTransitions =
@@ -37,6 +37,8 @@ acceptedTransitions =
   , (RouteAssigned, Cancelled)
   , (Confirmed, Cancelled)
   , (Confirmed, Closed)
+  , (Confirmed, Settled)
+  , (Settled, Closed)
   ]
 
 prop_canTransitionToMatchesTable :: Property

@@ -17,6 +17,7 @@ module Cargotracker.Booking.Domain.Model.Cargo
     unlinkRoute,
     confirmBooking,
     cancelBooking,
+    markSettled,
   ) where
 
 import qualified Data.Text as T
@@ -96,6 +97,14 @@ confirmBooking = transitionTo Confirmed
 -}
 cancelBooking :: Cargo -> Either DomainError Cargo
 cancelBooking = transitionTo Cancelled
+
+{- | 予約を精算済にする (US23, IT8)。
+
+Billing BC の ConfirmPaymentCommand から Cross-BC helper
+(markSettledByBookingId) 経由で呼ばれる。Confirmed からのみ遷移可能。
+-}
+markSettled :: Cargo -> Either DomainError Cargo
+markSettled = transitionTo Settled
 
 {- | 状態遷移の SSoT (H-01 リファクタ, IT4 レビュー指摘)。
 

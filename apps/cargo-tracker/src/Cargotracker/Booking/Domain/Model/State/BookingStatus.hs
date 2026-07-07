@@ -36,6 +36,7 @@ data BookingStatus
   | RouteProposed
   | RouteAssigned
   | Confirmed
+  | Settled
   | Cancelled
   | Closed
   deriving stock (Eq, Show, Enum, Bounded)
@@ -60,6 +61,8 @@ canTransitionTo RouteAssigned Draft = True
 canTransitionTo RouteAssigned Cancelled = True
 canTransitionTo Confirmed Cancelled = True
 canTransitionTo Confirmed Closed = True
+canTransitionTo Confirmed Settled = True -- US23 入金確認 (IT8)
+canTransitionTo Settled Closed = True -- 精算完了後のクローズ (IT8)
 canTransitionTo _ _ = False
 
 -- | DB CHECK 制約と整合する大文字スネークケース表現

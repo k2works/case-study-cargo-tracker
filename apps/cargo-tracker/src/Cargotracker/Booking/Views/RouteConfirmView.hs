@@ -132,5 +132,6 @@ badgeClass Submitted = "bg-info"
 badgeClass RouteProposed = "bg-primary"
 badgeClass RouteAssigned = "bg-success"
 badgeClass Confirmed = "bg-success"
+badgeClass Settled = "bg-dark" -- US23 精算済 (IT8)
 badgeClass Cancelled = "bg-danger"
 badgeClass Closed = "bg-dark"

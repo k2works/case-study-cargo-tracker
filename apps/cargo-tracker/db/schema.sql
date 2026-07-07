@@ -779,7 +779,7 @@ CREATE TABLE public.cargo (
     confirmed_at timestamp with time zone,
     cancelled_at timestamp with time zone,
     CONSTRAINT cargo_booking_id_format CHECK (((booking_id)::text ~ '^BK-[A-Z0-9]{6}$'::text)),
-    CONSTRAINT cargo_booking_status_check CHECK (((booking_status)::text = ANY ((ARRAY['Draft'::character varying, 'Submitted'::character varying, 'RouteProposed'::character varying, 'Confirmed'::character varying, 'Closed'::character varying])::text[]))),
+    CONSTRAINT cargo_booking_status_check CHECK (((booking_status)::text = ANY ((ARRAY['Draft'::character varying, 'Submitted'::character varying, 'RouteProposed'::character varying, 'RouteAssigned'::character varying, 'Confirmed'::character varying, 'Settled'::character varying, 'Cancelled'::character varying, 'Closed'::character varying])::text[]))),
     CONSTRAINT cargo_cancellation_rate_check CHECK (((cancellation_rate IS NULL) OR ((cancellation_rate >= 0.000) AND (cancellation_rate <= 1.000)))),
     CONSTRAINT cargo_cancellation_tier_check CHECK (((cancellation_tier IS NULL) OR ((cancellation_tier)::text = ANY ((ARRAY['FREE'::character varying, 'PARTIAL'::character varying, 'FULL'::character varying])::text[])))),
     CONSTRAINT cargo_hazardous_fields CHECK (((((cargo_type)::text = 'HAZARDOUS'::text) AND (hazardous_class IS NOT NULL) AND (un_number IS NOT NULL) AND (proper_shipping_name IS NOT NULL)) OR ((cargo_type)::text <> 'HAZARDOUS'::text))),
@@ -3280,4 +3280,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260928100300'),
     ('20260928100400'),
     ('20261012100000'),
-    ('20261012100100');
+    ('20261012100100'),
+    ('20261012100200');

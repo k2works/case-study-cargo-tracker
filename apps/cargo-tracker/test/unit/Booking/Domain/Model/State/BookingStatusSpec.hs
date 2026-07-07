@@ -23,6 +23,8 @@ spec = describe "BookingStatus (IT1-IT4)" $ do
     it "RouteAssigned -> Cancelled" $ canTransitionTo RouteAssigned Cancelled `shouldBe` True
     it "Confirmed -> Cancelled (US13 キャンセル料適用)" $ canTransitionTo Confirmed Cancelled `shouldBe` True
     it "Confirmed -> Closed" $ canTransitionTo Confirmed Closed `shouldBe` True
+    it "Confirmed -> Settled (US23 入金確認、IT8)" $ canTransitionTo Confirmed Settled `shouldBe` True
+    it "Settled -> Closed (精算完了後のクローズ、IT8)" $ canTransitionTo Settled Closed `shouldBe` True
 
   describe "canTransitionTo: 拒否される遷移" $ do
     it "Draft -> Confirmed (直接遷移禁止)" $ canTransitionTo Draft Confirmed `shouldBe` False
@@ -39,11 +41,11 @@ spec = describe "BookingStatus (IT1-IT4)" $ do
     it "同一状態への遷移 (自己ループ) は False" $
       canTransitionTo Draft Draft `shouldBe` False
 
-  describe "全 7 状態 × 7 状態 = 49 ペアの網羅性" $
-    it "許可遷移は 10 件、それ以外は 39 件全て False" $ do
+  describe "全 8 状態 × 8 状態 = 64 ペアの網羅性" $
+    it "許可遷移は 12 件、それ以外は 52 件全て False" $ do
       let all_ = [minBound .. maxBound] :: [BookingStatus]
           accepted = [(a, b) | a <- all_, b <- all_, canTransitionTo a b]
-      length accepted `shouldBe` 10
+      length accepted `shouldBe` 12
 
   describe "bookingStatusToText (DB CHECK 整合)" $ do
     it "Draft -> DRAFT" $ bookingStatusToText Draft `shouldBe` "DRAFT"
@@ -52,12 +54,13 @@ spec = describe "BookingStatus (IT1-IT4)" $ do
     it "RouteAssigned -> ROUTE_ASSIGNED" $ bookingStatusToText RouteAssigned `shouldBe` "ROUTE_ASSIGNED"
     it "Confirmed -> CONFIRMED" $ bookingStatusToText Confirmed `shouldBe` "CONFIRMED"
     it "Cancelled -> CANCELLED" $ bookingStatusToText Cancelled `shouldBe` "CANCELLED"
+    it "Settled -> SETTLED (IT8)" $ bookingStatusToText Settled `shouldBe` "SETTLED"
     it "Closed -> CLOSED" $ bookingStatusToText Closed `shouldBe` "CLOSED"
 
   describe "Enum / Bounded インスタンス整合" $ do
     it "minBound == Draft" $ (minBound :: BookingStatus) `shouldBe` Draft
     it "maxBound == Closed" $ (maxBound :: BookingStatus) `shouldBe` Closed
-    it "fromEnum / toEnum 整合 (全 7 状態)" $
+    it "fromEnum / toEnum 整合 (全 8 状態)" $
       let all_ = [minBound .. maxBound] :: [BookingStatus]
        in map (toEnum . fromEnum :: BookingStatus -> BookingStatus) all_ `shouldBe` all_
     it "succ Draft == Submitted" $ succ Draft `shouldBe` Submitted
@@ -67,6 +70,6 @@ spec = describe "BookingStatus (IT1-IT4)" $ do
     it "全状態 [minBound..maxBound] が変換に成功し空文字を含まない" $ do
       let all_ = [minBound .. maxBound] :: [BookingStatus]
           texts = map bookingStatusToText all_
-      length texts `shouldBe` 7
+      length texts `shouldBe` 8
       not (any T.null texts) `shouldBe` True
       length (T.unpack (mconcat texts)) `shouldSatisfy` (>= 7 * 5)
