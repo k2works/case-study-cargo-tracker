@@ -101,7 +101,7 @@
 | 2.3 | Infrastructure: dbmate migration (`invoice` + `invoice_line_item` テーブル、data-model.md §invoice 準拠: BIGSERIAL PK + `invoice_number` UK + `*_amount_value BIGINT` + `version` 楽観ロック) + PostgresInvoiceRepository (FromRow/ToRow) | 3h | [x] 完了 (`895f7d01`、migration 2 本を開発 DB に適用済 (IT7 繰越 7 本含む Pending 9 → 0)、discount_rate の NUMERIC⇔Integer 変換は SQL 側で実施) |
 | 2.4 | Cross-BC: 入金確認 → Cargo.Settled 連動 (FK 制約なし、`booking_id` TEXT 照合を Application 層で実施) + 精算書発行 → Notification BC 通知レコード + 期限超過 → 未払い通知 | 3h | [x] 完了 (`286e1923` + `944e4769`。Settled 状態機械 + markSettledByBookingId + isClaimedByBookingId + BillingNotificationAdapter。**設計判断**: resolveConfirmedCost は Pricing に予約単位の確定料金永続化がないため、Interfaces (新規発行画面) がリクエストスコープで CalculateShippingCost + ADR-0015 割引解決を合成して port closure を組む方式とし、タスク 2.5 で実装) |
 | 2.5 | Interfaces/Views: 請求書一覧・詳細・入金発行・入金確認の Servant API (ui_design.md `/billing/invoices` 系パス準拠) + Lucid ページ + RoleGate (Accountant/MasterAdmin) | 4h | [x] 完了 (`1981dfc2`、BillingPageApi 6 エンドポイント + InvoiceViews 3 画面 + canManageBilling。hspec-wai 9 tests (401/403 マトリクス + 発行→入金確認ハッピーパス + 異常系 flash)。arch-check H-01 は UI 文言の Ts 語彙除去で対応) |
-| 2.6 | Wire: Main.hs DI 配線 + hspec-wai 結合テスト + arch-check 緑 | 2h | [ ] |
+| 2.6 | Wire: Main.hs DI 配線 + hspec-wai 結合テスト + arch-check 緑 | 2h | [x] 完了 (`3450ed71`、/billing/invoices ルート + Cross-BC port 合成 (Delivered 相当判定 + Settled 連動 + PricingRule 基本料金/割引解決) + INV- 採番。**注**: 予約単位の距離/重量が未永続化のため基本料金は distance/weight=0 の暫定、US21 算出結果の予約単位永続化は IT9 backlog。フルテスト 870 examples / arch-check 緑) |
 
 **小計**: 20h (理想時間)
 
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 約 41% (9/22 SP、タスク 1 全完了 + タスク 2.1-2.5 完了。2026-07-07 Ralph Loop 反復 1-8)
+**進捗率**: 50% (11/22 SP、タスク 1 (5 SP) + タスク 2 US23 全レイヤ一巡 (3 SP) + 保証系先行分。2026-07-07 Ralph Loop 反復 1-9)
 
 ---
 
