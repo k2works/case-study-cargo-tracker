@@ -98,6 +98,11 @@ library:
   - Cargotracker.Booking.Domain.Model.Value.ItineraryId
   - Cargotracker.Booking.Domain.Model.Leg
   - Cargotracker.Booking.Domain.Model.Itinerary
+  - Cargotracker.Billing.Application.ConfirmPaymentCommand
+  - Cargotracker.Billing.Application.GenerateInvoiceCommand
+  - Cargotracker.Billing.Application.IssuePaymentCommand
+  - Cargotracker.Billing.Application.OverdueCheckCommand
+  - Cargotracker.Billing.Application.Ports
   - Cargotracker.Billing.Domain.Model.Invoice
   - Cargotracker.Billing.Domain.Model.PaymentStatus
   - Cargotracker.Billing.Domain.Model.Value.DiscountRate
