@@ -112,7 +112,7 @@
 | 3.1 | T7-E: US26 通知チャネル接続 (UNLOAD 時のコード配信を画面表示 or メール送信に接続) | 3h | [x] 完了 (`edf59367`、executeText ヘルパ (Rule 4 準拠) + 新規発行時のみ荷受人向け通知、冪等パスは再送しない。7 tests 緑) |
 | 3.2 | T7-F: `handlingPageApp` の DI 引数 8 個を `AppDeps` レコードに集約 (`IO Text` 2 種の取り違え防止) | 2h | [x] 完了 (`e62f2be5`、HandlingPageDeps レコード化) |
 | 3.3 | T7-G (= T6-05): Testcontainers 統合テスト (Postgres Repository 4 種)。Docker 環境前提のためユーザー確認後に着手 | 4h | [ ] |
-| 3.4 | T7-H (= T6-07): katip 依存追加 + 自作 JSON Lines Logging の置換 + correlation_id 伝搬 (Warp Middleware 入口配線含む) | 4h | [ ] |
+| 3.4 | T7-H (= T6-07): katip 依存追加 + 自作 JSON Lines Logging の置換 + correlation_id 伝搬 (Warp Middleware 入口配線含む) | 4h | [x] 完了 (`726b634c`、katip jsonFormat scribe + LogContexts で correlation_id 構造化。API 互換維持、873 tests 緑、実出力スモーク確認済) |
 | 3.5 | T7-I: ADR-0002 に「Application Input record は Text-only を維持」を追記 | 1h | [x] 完了 (ADR-0002 追記コミット済) |
 | 3.6 | T6-01 残: Playwright E2E 統合ハッピーパス Stage 5-6 再有効化 (T7-01 完了で前提充足済) | 2h | [ ] |
 
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 約 68% (15/22 SP、タスク 1-2 全完了 + タスク 3 の T7-E/F/I + タスク 4.3。残: T7-G (Docker 待ち) / T7-H (katip) / T6-01 (E2E) / GA タグ / GitHub Close / ストレッチ。2026-07-07 Ralph Loop 反復 1-11)
+**進捗率**: 約 73% (16/22 SP、タスク 1-2 全完了 + タスク 3 の T7-E/F/H/I + タスク 4.3-4.5 + #255 Close。残: T7-G (Docker 待ち) / T6-01 (E2E 環境待ち) / GA タグ (E2E 前提) / ストレッチ US10・US12。2026-07-07 Ralph Loop 反復 1-12)
 
 ---
 
