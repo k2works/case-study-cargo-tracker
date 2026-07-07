@@ -21,9 +21,9 @@
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能、運用、技術スタック | 10 件作成済み (Haskell 版) |
 | [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画 + IT1 計画 + 分析完了報告書 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 4 段階セットアップ手順書を配置 |
-| [ジャーナル](./journal/index.md) | セッションでの判断・学びの物語形式の記録 | 1 件 (2026-06-26) |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 3 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 2 件作成済み (ADR 0001, 0002) |
+| [ジャーナル](./journal/index.md) | セッションでの判断・学びの物語形式の記録 | 7 件 (2026-06-26〜07-07) |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 11 件作成済み (分析 3 + IT1-IT8) |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 15 件作成済み (ADR 0001-0016) |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -61,9 +61,14 @@
 
 ### ADR ドキュメント
 
+ADR 0001-0016 の 15 件を [ADR インデックス](./adr/index.md) で管理しています。主要なもの:
+
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [ADR 0001](./adr/0001-haskell-servant-stack.md) | Haskell 版バックエンドスタックとして Servant + Warp を採用 |
+| [ADR 0002](./adr/0002-arch-check-implementation.md) | arch-check による構造規約の CI 強制 (Rule 1-6 / T-01〜03) |
+| [ADR 0012](./adr/0012-transaction-boundary-and-cross-bc-policy.md) | Tx 境界と Cross-BC 参照ポリシー (Single Tx / Text-DTO / 副作用外出し) |
+| [ADR 0016](./adr/0016-role-based-authorization-design.md) | Role ベース認可の Domain/Interfaces 分離 (採用、Release 2.0 GA) |
 
 ### 開発計画ドキュメント
 

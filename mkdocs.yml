@@ -136,6 +136,12 @@ nav:
       - 分析多視点レビュー: review/analysis_multi_perspective_review_20260626.md
       - IT1 コードレビュー: review/it1_code_review_20260626.md
       - IT2 コードレビュー: review/it2_code_review_20260627.md
+      - IT3 post-nav レビュー: review/it3_post_nav_review_20260629.md
+      - IT4 コードレビュー: review/it4_code_review_20260630.md
+      - IT5 コードレビュー: review/it5_code_review_20260701.md
+      - IT6 nav/E2E レビュー: review/it6_nav_e2e_review_20260702.md
+      - IT7 Ralph Loop 2 週目レビュー: review/ralph-loop-week2_review_20260703.md
+      - IT8 開発マルチパースペクティブレビュー: review/it8_review_20260707.md
   - ADR:
       - 概要: adr/index.md
       - ADR 0001 Haskell + Servant スタック: adr/0001-haskell-servant-stack.md
