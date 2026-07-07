@@ -114,7 +114,7 @@
 | 3.3 | T7-G (= T6-05): Testcontainers 統合テスト (Postgres Repository 4 種)。Docker 環境前提のためユーザー確認後に着手 | 4h | [~] 一部完了 (`dbe10b66`、Docker/Postgres 稼働を確認し既存 integration 方式 (env-gated) で PostgresInvoiceRepository 5 ケースを実 DB 検証。**残**: PricingRule/CurrencyRate/Notification/Exception の 4 Repository 分は IT9 へ。testcontainers ライブラリ導入は見送り、既存方式を踏襲) |
 | 3.4 | T7-H (= T6-07): katip 依存追加 + 自作 JSON Lines Logging の置換 + correlation_id 伝搬 (Warp Middleware 入口配線含む) | 4h | [x] 完了 (`726b634c`、katip jsonFormat scribe + LogContexts で correlation_id 構造化。API 互換維持、873 tests 緑、実出力スモーク確認済) |
 | 3.5 | T7-I: ADR-0002 に「Application Input record は Text-only を維持」を追記 | 1h | [x] 完了 (ADR-0002 追記コミット済) |
-| 3.6 | T6-01 残: Playwright E2E 統合ハッピーパス Stage 5-6 再有効化 (T7-01 完了で前提充足済) | 2h | [ ] |
+| 3.6 | T6-01 残: Playwright E2E 統合ハッピーパス Stage 5-6 再有効化 (T7-01 完了で前提充足済) | 2h | [x] 完了 (`08c4c6a4`、T7-E 通知経由の平文コード取得で Stage 5-6 有効化、全 4 Stage + 全 E2E 29 passed。DEHAM 未登録の潜在バグ修正 + 通知一覧に本文列追加) |
 
 **小計**: 16h (理想時間)
 
@@ -122,7 +122,7 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 4.1 | T6-03 残: v1.0.0-mvp git tag (E2E ハッピーパス緑を条件に付与) | 0.5h | [ ] |
+| 4.1 | T6-03 残: v1.0.0-mvp git tag (E2E ハッピーパス緑を条件に付与) | 0.5h | [x] 完了 (統合ハッピーパス緑を確認し v1.0.0-mvp tag 付与) |
 | 4.2 | CHANGELOG `[Unreleased]` → `[2.0.0]` セクション切出し + v2.0.0 tag (developing-release スキル) | 1h | [ ] |
 | 4.3 | 上流ドキュメント同期: domain-model.md §6 (Billing) / data-model.md §invoice は定義済のため実装差分のみ反映。ui_design.md に請求書一覧・詳細・入金確認の salt ワイヤーフレーム 3 種 + 画面遷移図の精算フロー統合を追記 (IT6/IT7 慣行踏襲) | 3h | [x] 完了 (ui_design に請求書画面セクション (salt 3 種 + 実装注記 + flash 規約)、domain-model §6 に US23 実装差分 (TsClaimed=Delivered 相当 / DiscountRate Integer / 2 段入金フロー)、data-model に booking_status 8 値 CamelCase の実装差分注記) |
 | 4.4 | GitHub: #255 Close、#242/#244 の完了 or IT9 移送判断、Release 2.0 GA Milestone Close | 0.5h | [ ] |
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 約 89% (19.5/22 SP、タスク 1-2 全完了 + 保証系 T7-E/F/G(一部)/H/I + タスク 4.3-4.5 + US10/US12 の Domain/App。残: T7-G 残 4 Repository (IT9) / T6-01 + GA タグ (E2E 環境待ち) / US10・US12 の UI (IT9 移送)。2026-07-07 Ralph Loop 反復 1-15)
+**進捗率**: 約 95% (21/22 SP、タスク 1-3 実質完了 (T7-G 残 4 Repo のみ IT9) + タスク 4.1/4.3-4.5 + US10/US12 の Domain/App + v1.0.0-mvp tag。残: 4.2 v2.0.0 tag + CHANGELOG / 4.4 Milestone Close 判断 / US10・US12 UI (IT9)。2026-07-07 Ralph Loop 反復 1-16)
 
 ---
 
