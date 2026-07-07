@@ -16,6 +16,7 @@ module Handling.Interfaces.HandlingPageApiUnloadSpec (spec) where
 import qualified Data.ByteString.Lazy as BSL
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Network.HTTP.Types (hContentType, methodPost, status303)
@@ -42,6 +43,10 @@ import Cargotracker.Notification.Application.Ports
   ( DeliveryResult (..),
     NotificationDeliveryPort (..),
     NotificationRepository (..),
+  )
+import Cargotracker.Notification.Domain.Model.Notification
+  ( Notification (..),
+    NotificationContent (..),
   )
 import Cargotracker.Shared.Application.TxRunner (noTxRunner)
 import Cargotracker.Tracking.Application.ConfirmationCodePorts
@@ -100,6 +105,15 @@ fakeNotifRepo =
     , updateNotification = \_ -> pure (Right ())
     }
 
+-- | T7-E: 保存された通知を spy 記録する NotificationRepository
+spyNotifRepo :: IORef [Notification] -> NotificationRepository IO
+spyNotifRepo ref =
+  NotificationRepository
+    { saveNotification = \n -> modifyIORef' ref (n :) >> pure (Right ())
+    , findByBookingId = \_ -> pure []
+    , updateNotification = \_ -> pure (Right ())
+    }
+
 fakeDelivery :: NotificationDeliveryPort IO
 fakeDelivery = NotificationDeliveryPort {deliver = \_ -> pure DeliverySucceeded}
 
@@ -108,6 +122,15 @@ completionTime は過去時刻 (mkHandlingActivity の未来時刻検証を通�
 -}
 postHandling :: Maybe ConfirmationCode -> Text -> IO [Text]
 postHandling mExisting eventType = do
+  (calls, _) <- postHandlingWith fakeNotifRepo mExisting eventType
+  pure calls
+
+postHandlingWith ::
+  NotificationRepository IO ->
+  Maybe ConfirmationCode ->
+  Text ->
+  IO ([Text], ())
+postHandlingWith notifRepo mExisting eventType = do
   callsRef <- newIORef []
   let app =
         handlingPageApp
@@ -116,7 +139,7 @@ postHandling mExisting eventType = do
             , hpdHandlingRepo = fakeHandlingRepo
             , hpdCodeRepo = spyCodeRepo callsRef mExisting
             , hpdTrackingRepo = fakeTrackingRepo
-            , hpdNotificationRepo = fakeNotifRepo
+            , hpdNotificationRepo = notifRepo
             , hpdNotificationDelivery = fakeDelivery
             , hpdGenNotificationId = pure "550e8400-e29b-41d4-a716-446655440000"
             , hpdGenConfirmationCode = pure "123456"
@@ -145,7 +168,8 @@ postHandling mExisting eventType = do
   simpleStatus resp `shouldBe` status303
   -- 成功パス (?flash=success) であることを保証 (error 303 との混同防止)
   lookup "Location" (simpleHeaders resp) `shouldBe` Just "/handling/new?flash=success"
-  readIORef callsRef
+  calls <- readIORef callsRef
+  pure (calls, ())
 
 spec :: Spec
 spec = describe "HandlingPageApi handlerPost UNLOAD 副作用 (T7-C)" $ do
@@ -164,3 +188,25 @@ spec = describe "HandlingPageApi handlerPost UNLOAD 副作用 (T7-C)" $ do
   it "既発行の予約への UNLOAD 再登録は再保存しない (冪等性)" $ do
     calls <- postHandling (Just existingCode) "UNLOAD"
     calls `shouldBe` []
+
+  it "T7-E: UNLOAD 登録で確認コード通知が荷受人向けに保存される" $ do
+    notifRef <- newIORef []
+    _ <- postHandlingWith (spyNotifRepo notifRef) Nothing "UNLOAD"
+    notifs <- readIORef notifRef
+    case notifs of
+      [n] -> do
+        nBookingId n `shouldBe` "BK-A1B2C3"
+        ncBody (nContent n) `shouldSatisfy` T.isInfixOf "123456"
+      _ -> expectationFailure ("expected 1 notification, got " <> show (length notifs))
+
+  it "T7-E: LOAD 登録では通知が保存されない" $ do
+    notifRef <- newIORef []
+    _ <- postHandlingWith (spyNotifRepo notifRef) Nothing "LOAD"
+    notifs <- readIORef notifRef
+    length notifs `shouldBe` 0
+
+  it "T7-E: 既発行 (冪等パス) では通知を再送しない" $ do
+    notifRef <- newIORef []
+    _ <- postHandlingWith (spyNotifRepo notifRef) (Just existingCode) "UNLOAD"
+    notifs <- readIORef notifRef
+    length notifs `shouldBe` 0

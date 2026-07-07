@@ -12,6 +12,7 @@ Text ベースの検証のみ担当する。
 module Cargotracker.Tracking.Application.IssueConfirmationCodeCommand
   ( IssueConfirmationCodeInput (..),
     execute,
+    executeText,
   ) where
 
 import Data.Text (Text)
@@ -53,3 +54,21 @@ execute repo input = do
           case persist of
             Left err -> pure (Left err)
             Right () -> pure (Right cc)
+
+{- | Cross-BC helper (T7-E, IT8 / Rule 4 準拠): Handling BC 等の他 BC から
+Text のみで呼べる版。新規発行時は Just codeText、既発行 (冪等パス) は
+Nothing を返し、呼出側が「新規発行時のみ通知する」判断を Domain 型なしで
+行えるようにする。
+-}
+executeText ::
+  Monad m =>
+  ConfirmationCodeRepository m ->
+  IssueConfirmationCodeInput ->
+  m (Either DomainError (Maybe Text))
+executeText repo input = do
+  result <- execute repo input
+  pure (fmap classify result)
+  where
+    classify cc
+      | ccValue cc == inputCodeText input = Just (inputCodeText input)
+      | otherwise = Nothing

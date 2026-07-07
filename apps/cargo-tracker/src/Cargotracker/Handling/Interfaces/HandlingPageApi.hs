@@ -127,10 +127,7 @@ handlingPageApp deps =
   serve
     (Proxy :: Proxy HandlingPageApi)
     ( handlerGet
-        :<|> handlerPost
-          (hpdHandlingRepo deps)
-          (hpdCodeRepo deps)
-          (hpdGenConfirmationCode deps)
+        :<|> handlerPost deps
         :<|> handlerClaimGet
         :<|> handlerClaimPost
           (hpdTxRunner deps)
@@ -146,12 +143,13 @@ handlerGet :: Maybe Text -> Handler (Html ())
 handlerGet mFlash = pure (handlingFormPage mFlash)
 
 handlerPost ::
-  HandlingActivityRepository IO ->
-  ConfirmationCodeRepository IO ->
-  IO Text ->
+  HandlingPageDeps ->
   HandlingFormRequest ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerPost repo codeRepo genCode form = do
+handlerPost deps form = do
+  let repo = hpdHandlingRepo deps
+      codeRepo = hpdCodeRepo deps
+      genCode = hpdGenConfirmationCode deps
   now <- liftIO getCurrentTime
   case parseCompletionTime (completionTime form) of
     Nothing -> redirectErr "/handling/new?flash=invalid-state"
@@ -180,9 +178,9 @@ handlerPost repo codeRepo genCode form = do
             case ht of
               Unload -> do
                 codeText <- liftIO genCode
-                _ <-
+                issued <-
                   liftIO
-                    ( IssueCode.execute
+                    ( IssueCode.executeText
                         codeRepo
                         IssueCode.IssueConfirmationCodeInput
                           { IssueCode.inputBookingId = bookingId form
@@ -190,6 +188,28 @@ handlerPost repo codeRepo genCode form = do
                           , IssueCode.inputNow = now
                           }
                     )
+                -- T7-E (IT8): 新規発行時のみ荷受人へ確認コードを通知する
+                -- (US26 通知チャネル接続)。冪等パス (既発行) では再送しない。
+                -- 配信失敗は荷役登録自体を失敗させない (ADR-0012 副作用外出し)。
+                case issued of
+                  Right (Just newCode) | newCode == codeText -> do
+                    nid <- liftIO (hpdGenNotificationId deps)
+                    _ <-
+                      liftIO
+                        ( sendClaimLogNotificationTextWithId
+                            (hpdNotificationRepo deps)
+                            (hpdNotificationDelivery deps)
+                            (bookingId form)
+                            ("引取確認コードのお知らせ (" <> bookingId form <> ")")
+                            ( "荷降しが完了しました。引取時に確認コード "
+                                <> codeText
+                                <> " を荷役担当者に提示してください。"
+                            )
+                            now
+                            (Just nid)
+                        )
+                    pure ()
+                  _ -> pure ()
                 pure (addHeader "/handling/new?flash=success" NoContent)
               _ ->
                 pure (addHeader "/handling/new?flash=success" NoContent)
