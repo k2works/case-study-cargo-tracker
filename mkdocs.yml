@@ -75,15 +75,29 @@ nav:
       - ユーザーストーリー: requirements/user_story.md
   - 設計:
       - 概要: design/index.md
+      - バックエンドアーキテクチャ: design/architecture_backend.md
+      - フロントエンドアーキテクチャ: design/architecture_frontend.md
+      - インフラストラクチャ: design/architecture_infrastructure.md
+      - データモデル設計: design/data-model.md
+      - ドメインモデル設計: design/domain-model.md
+      - UI 設計: design/ui_design.md
+      - テスト戦略: design/test_strategy.md
+      - 非機能要件: design/non_functional.md
+      - 運用要件: design/operation.md
+      - 技術スタック選定: design/tech_stack.md
   - 開発:
       - 概要: development/index.md
+      - リリース計画: development/release_plan.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260707.md
   - ADR:
       - 概要: adr/index.md
+      - 0001 コンテキスト境界と Packwerk 配置: adr/0001-bounded-context-and-packwerk-structure.md
+      - 0002 ドメインイベントと通知方式: adr/0002-domain-events-and-notification.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
