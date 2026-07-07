@@ -24,6 +24,7 @@ module Main (main) where
 
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBC
+import Data.Either (fromRight)
 import qualified Data.Text as T
 import Data.Time (getCurrentTime)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -39,6 +40,21 @@ import System.Environment (lookupEnv)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
 
+import qualified Cargotracker.Billing.Application.Ports as Billing
+import Cargotracker.Billing.Infrastructure.BillingNotificationAdapter
+  ( newBillingNotificationPort,
+  )
+import Cargotracker.Billing.Infrastructure.PostgresInvoiceRepository
+  ( newPostgresInvoiceRepository,
+  )
+import Cargotracker.Billing.Interfaces.BillingPageApi (billingPageApp)
+import Cargotracker.Booking.Application.Ports
+  ( BookingRepository (findCargoById),
+    markSettledByBookingId,
+  )
+import Cargotracker.Booking.Domain.Model.Cargo (Cargo (..))
+import Cargotracker.Booking.Domain.Model.Value.BookingId (mkBookingId)
+import qualified Cargotracker.Booking.Domain.Model.Value.CargoType as CargoType
 import Cargotracker.Booking.Infrastructure.PostgresBookingRepository
   ( newPostgresBookingRepository,
   )
@@ -73,6 +89,10 @@ import Cargotracker.Notification.Infrastructure.PostgresNotificationRepository
 import Cargotracker.Notification.Interfaces.NotificationListPageApi
   ( notificationListApp,
   )
+import qualified Cargotracker.Pricing.Application.CalculateShippingCostCommand as CalcCost
+import Cargotracker.Pricing.Domain.Model.PricingRule (CargoCategory (..))
+import Cargotracker.Pricing.Domain.Model.Value.Cost (Cost (..), mkCurrency, unCurrency)
+import Cargotracker.Pricing.Domain.Model.Value.Discount (noDiscount)
 import Cargotracker.Pricing.Infrastructure.PostgresCurrencyRateRepository
   ( newPostgresCurrencyRateRepository,
   )
@@ -105,18 +125,22 @@ import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   )
 import Cargotracker.Shared.Auth.Interfaces.LoginApi (loginApp)
 import Cargotracker.Shared.Auth.Interfaces.LoginPageApi (loginPageApp)
+import Cargotracker.Shared.Domain.Reference.ShipperRef (unShipperRef)
 import Cargotracker.Shared.Infrastructure.IdGenerator
-  ( generateNotificationIdText,
+  ( generateInvoiceNumberText,
+    generateNotificationIdText,
     generateSixDigitCodeText,
   )
 import Cargotracker.Shared.Infrastructure.Logging (logInfo)
 import Cargotracker.Shared.Web.HomeView (homeApp)
+import Cargotracker.Shipper.Application.Ports (resolveDiscountPercentageByShipperId)
 import Cargotracker.Shipper.Infrastructure.PostgresShipperRepository
   ( newPostgresShipperRepository,
   )
 import Cargotracker.Shipper.Interfaces.ShipperApi (shipperApp)
 import Cargotracker.Shipper.Interfaces.ShipperPageApi (shipperPageApp)
 import Cargotracker.Shipper.Interfaces.ShipperSearchApi (shipperSearchApp)
+import Cargotracker.Tracking.Application.Ports (isClaimedByBookingId)
 import Cargotracker.Tracking.Infrastructure.PostgresConfirmationCodeRepository
   ( newPostgresConfirmationCodeRepository,
   )
@@ -224,6 +248,20 @@ rootApp conn jwtSecret jwtTtl req respond =
         generateSixDigitCodeText -- T7-01 UNLOAD 時の確認コード生成器 DI
         req
         respond
+    "billing" : "invoices" : _ ->
+      -- US23 精算処理 (IT8)。RoleGate (Accountant/MasterAdmin) は
+      -- billingPageApp 内で適用される。
+      billingPageApp
+        invoiceRepo
+        billingBookingPort
+        billingPricingPort
+        billingNotifPort
+        billingGateway
+        generateInvoiceNumberText
+        sessionRepo
+        (findRolesByUserId conn)
+        req
+        respond
     "pricing" : "calculate" : _ ->
       -- US21 料金算出画面。Postgres PricingRule / CurrencyRate。
       costCalculationApp pricingRuleRepo currencyRateRepo shipperRepo req respond
@@ -260,6 +298,82 @@ rootApp conn jwtSecret jwtTtl req respond =
     exceptionRepo = newPostgresExceptionRepository conn
     currencyRateRepo = newPostgresCurrencyRateRepository conn
     notificationRepo = newPostgresNotificationRepository conn
+    -- US23 (IT8): Billing BC の配線
+    invoiceRepo = newPostgresInvoiceRepository conn
+    billingNotifPort =
+      newBillingNotificationPort
+        notificationRepo
+        newLogDeliveryPort
+        generateNotificationIdText
+        getCurrentTime
+    -- 決済機関 IF は IT8 では fake (reference_code の非空のみ確認)。
+    -- 実連携は Release 2.0 スコープ外 (iteration_plan-8 リスク対策)。
+    billingGateway = Billing.PaymentGateway {Billing.verifyPayment = \_ -> pure (Right ())}
+    billingBookingPort =
+      Billing.BookingCrossBcPort
+        { Billing.resolveBookingStatus = \bidText ->
+            case mkBookingId bidText of
+              Left _ -> pure Nothing
+              Right bid -> do
+                mCargo <- findCargoById bookingRepo bid
+                case mCargo of
+                  Nothing -> pure Nothing
+                  Just _ -> do
+                    mClaimed <- isClaimedByBookingId trackingRepo bidText
+                    -- 引取完了 (Tracking BC の判定) を Delivered 相当として扱う
+                    pure (Just (if mClaimed == Just True then "DELIVERED" else "NOT_DELIVERED"))
+        , Billing.markSettledByBookingId = markSettledByBookingId bookingRepo
+        }
+    billingPricingPort =
+      Billing.PricingCrossBcPort
+        { Billing.resolveConfirmedCost = \bidText ->
+            case mkBookingId bidText of
+              Left _ -> pure Nothing
+              Right bid -> do
+                mCargo <- findCargoById bookingRepo bid
+                case mCargo of
+                  Nothing -> pure Nothing
+                  Just cargo -> do
+                    let sidText = unShipperRef (cargoShipperRef cargo)
+                        category = case cargoType cargo of
+                          CargoType.General -> General
+                          CargoType.Hazardous _ -> Hazardous
+                          CargoType.Refrigerated _ -> Refrigerated
+                    discE <- resolveDiscountPercentageByShipperId shipperRepo sidText
+                    now <- getCurrentTime
+                    case mkCurrency "JPY" of
+                      Left _ -> pure Nothing
+                      Right jpy -> do
+                        -- IT8 暫定: 予約単位の距離/重量が未永続化のため
+                        -- PricingRule の基本料金 (distance=0 / weight=0) を
+                        -- 基準額とする。US21 算出結果の予約単位永続化は
+                        -- IT9 backlog (iteration_plan-8 タスク 2.4 注記)。
+                        costE <-
+                          CalcCost.execute
+                            pricingRuleRepo
+                            currencyRateRepo
+                            CalcCost.CalculateShippingCostInput
+                              { CalcCost.inputCargoCategory = category
+                              , CalcCost.inputDistanceKm = 0
+                              , CalcCost.inputWeightKg = 0
+                              , CalcCost.inputBaseCurrency = jpy
+                              , CalcCost.inputTargetCurrency = jpy
+                              , CalcCost.inputDiscount = noDiscount
+                              , CalcCost.inputNow = now
+                              }
+                        case costE of
+                          Left _ -> pure Nothing
+                          Right cost ->
+                            pure
+                              ( Just
+                                  Billing.ConfirmedCost
+                                    { Billing.ccAmount = costAmount cost
+                                    , Billing.ccCurrency = unCurrency (costCurrency cost)
+                                    , Billing.ccDiscountPercentage = fromRight 0 discE
+                                    , Billing.ccShipperId = sidText
+                                    }
+                              )
+        }
 
 healthHandler :: Application
 healthHandler _req respond =

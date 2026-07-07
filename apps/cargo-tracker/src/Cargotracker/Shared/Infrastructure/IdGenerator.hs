@@ -27,6 +27,7 @@ module Cargotracker.Shared.Infrastructure.IdGenerator
     generateShipperIdText,
     generateSessionTokenText,
     generateTrackingNumberText,
+    generateInvoiceNumberText,
     generateNotificationIdText,
     generateSixDigitCodeText,
     intToAlphaNumChar,
@@ -58,6 +59,12 @@ generateTrackingNumberText :: IO Text
 generateTrackingNumberText = do
   body <- randomAlphaNum 6
   pure ("TR" <> body)
+
+-- | US23 (IT8): "INV-A1B2C3" のような請求書番号を生成する。
+generateInvoiceNumberText :: IO Text
+generateInvoiceNumberText = do
+  body <- randomAlphaNum 6
+  pure ("INV-" <> body)
 
 {- | ADR-0013 Phase 2/3: UUID v4 の Text 表現を生成する (Notification の
 サロゲート識別子用)。`Data.UUID.V4.nextRandom` を利用して衝突確率を
