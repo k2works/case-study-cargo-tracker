@@ -316,6 +316,14 @@ CREATE TABLE shipper (
 | `spec_destination_unlocode` | `VARCHAR(5)` | `FK → location.unlocode` | RouteSpec 仕向地 |
 | `spec_arrival_deadline` | `DATE` | `NOT NULL` | 到着期限 |
 | `booking_status` | `VARCHAR(30)` | `NOT NULL DEFAULT 'PRELIMINARY' CHECK (booking_status IN ('PRELIMINARY','ROUTE_PROPOSED','ROUTE_ASSIGNED','CONFIRMED','TRACKING_ISSUED','IN_TRANSIT','DELIVERED','SETTLED','CANCELLED'))` | 予約状態 (BookingStatus 9 値) |
+
+> **実装差分 (IT8 時点)**: 実装の状態機械は ADR-0009 によりコード
+> (`BookingStatus.canTransitionTo`) が SSoT であり、CamelCase 8 値
+> (`'Draft','Submitted','RouteProposed','RouteAssigned','Confirmed','Settled','Cancelled','Closed'`)
+> の CHECK で運用している (migration `20261012100200`)。本表の 9 値案のうち
+> `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` は採用されず、引取完了は
+> Tracking BC の `transport_status` (TsClaimed) で表現する。`Settled` は
+> US23 (IT8) で追加され `Confirmed → Settled → Closed` と遷移する。
 | `declared_value` | `NUMERIC(15,2)` | | 申告価額 |
 | `dimension_length/width/height` | `NUMERIC(10,3)` | | 寸法 (cm) |
 | `quantity` | `INTEGER` | `CHECK (quantity >= 1)` | 個数 |

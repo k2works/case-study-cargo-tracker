@@ -812,6 +812,22 @@ package "Value Objects" {
 3. 支払期限 (`issuedAt + 30 日`) 超過時、`PaymentStatus` を `Overdue` に更新
 4. 支払い確定後のキャンセルは `IssueRefundCommand` で対応し `Refunded` に遷移
 
+> **実装差分 (US23, IT8 時点)**:
+>
+> - ルール 1 の「Delivered」は、実装の BookingStatus (8 状態、ADR-0009 で
+>   コードが SSoT) に Delivered が存在しないため、**Tracking BC の引取完了
+>   (TsClaimed) を Delivered 相当**として `isClaimedByBookingId` で判定する
+> - 入金確認 (`ConfirmPaymentCommand`) 成功時に `markSettledByBookingId` で
+>   `Cargo.Settled` (Confirmed → Settled、IT8 追加) に連動する
+> - `DiscountRate` は ADR-0015 に合わせ **Integer 百分率 (0〜30)** で実装
+>   (`mkDiscountRate` が上限 30% を強制)。割引率の決定は
+>   `resolveDiscountPercentageByShipperId` (contract_rank 由来)
+> - `issuePayment` (支払期日 + reference_code 設定) を経てから
+>   `confirmPayment` (reference 照合) する 2 段フロー。支払期限は固定 30 日
+>   ではなく入金発行時に指定する
+> - `IssueRefundCommand` (ルール 4) は未実装 (Release 2.0 スコープ外)
+> - 実装: `Cargotracker.Billing.Domain.Model.Invoice` ほか (IT8、US23 全レイヤ一巡)
+
 料金計算:
 
 ```text

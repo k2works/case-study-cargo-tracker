@@ -941,6 +941,99 @@ state エラー表示 : 入力不正 / InvalidTrackingTransition / TrackingNotFo
 
 ---
 
+## 請求書画面 (`/billing/invoices`, US23 IT8 追加)
+
+精算処理 (US23) の 3 画面。iteration_plan-8 の設計に基づき IT8 で実装。
+RoleGate (`canManageBilling` = Accountant/MasterAdmin) を全エンドポイントに適用する
+(ADR-0016)。
+
+### 請求書一覧
+
+```plantuml
+@startsalt
+{+
+  請求書一覧  /billing/invoices
+  {+
+  {
+    <b>請求書一覧</b>
+    ---------------------
+    [状態 ^すべて^ | Pending | Confirmed | Overdue | Refunded ]  [ 絞り込み ]
+    ---------------------
+    "INV-A1B2C3 | BK-000012 | 436500 JPY | PENDING   | 2026-11-10 | [詳細]"
+    "INV-Z9Y8X7 | BK-000015 | 891000 JPY | CONFIRMED | -          | [詳細]"
+    ---------------------
+    [ + 請求書を発行する ]
+  }
+  }
+}
+@endsalt
+```
+
+### 新規請求書発行
+
+```plantuml
+@startsalt
+{+
+  新規請求書発行  /billing/invoices/new
+  {+
+  {
+    <b>請求書を発行 (引取済予約から)</b>
+    ---------------------
+    予約番号  | "BK-000012   " | [ 料金を確認 ]
+    ---------------------
+    <b>予約 BK-000012 の料金 (Pricing BC 自動取得)</b>
+    基本料金           | 485000 JPY
+    法人割引           | 10%
+    請求金額 (割引後)  | 436500 JPY
+    ---------------------
+    [ 発行する ] | [ キャンセル ]
+  }
+  }
+}
+@endsalt
+```
+
+### 請求書詳細 (入金発行 / 入金確認)
+
+```plantuml
+@startsalt
+{+
+  請求書詳細  /billing/invoices/INV-A1B2C3
+  {+
+  {
+    <b>請求書詳細 INV-A1B2C3</b>
+    ---------------------
+    予約番号 | BK-000012 | 荷主 | SHP-X1Y2Z3
+    基本料金 | 485000 JPY | 割引 | 10%
+    請求金額 | 436500 JPY | 状態 | PENDING
+    支払期限 | 2026-11-10 | 入金日時 | -
+    ---------------------
+    <b>入金確認</b>
+    reference_code | "PAY-REF-8A3F2C  "
+    [ 入金確認する ]
+    ---------------------
+    ! 入金確認により予約状態が「精算済 (Settled)」に更新されます
+  }
+  }
+}
+@endsalt
+```
+
+### 実装注記 (IT8)
+
+- 状態に応じてフォームを出し分ける: PENDING かつ支払期限未設定 → 入金発行
+  フォーム、PENDING (期限設定済) / OVERDUE → 入金確認フォーム、
+  CONFIRMED / REFUNDED → フォーム非表示
+- フィードバックは flash クエリコード方式 (`?flash=issued|payment-issued|confirmed|not-delivered|already-exists|reference-mismatch|already-confirmed|not-found|bad-due-date`)。
+  Location ヘッダに日本語を含めない
+- **画面遷移図との差分**: 発行成功時の PRG は請求書詳細ではなく
+  `/billing/invoices?flash=issued` (一覧) に戻る (実装済の挙動)
+- CSV 出力・PDF 出力 (画面一覧の記載) は IT8 スコープ外
+- 実装: `Cargotracker.Billing.Views.InvoiceViews` /
+  `Cargotracker.Billing.Interfaces.BillingPageApi` (6 エンドポイント)
+
+---
+
 ## 共通パンくず (Breadcrumb) 規約 (L-10 反映)
 
 階層深い画面 (予約詳細 → 経路割り当て、貨物追跡 → 追跡詳細 等) で戻り動線が画面ごとにブレないよう、**共通パンくずコンポーネント** を全画面で統一する。
