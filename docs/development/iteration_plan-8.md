@@ -126,7 +126,7 @@
 | 4.2 | CHANGELOG `[Unreleased]` → `[2.0.0]` セクション切出し + v2.0.0 tag (developing-release スキル) | 1h | [x] 完了 (IT7-IT8 の Added/Changed/Fixed を切出し、v2.0.0 tag 付与。品質ゲート: フルテスト 882+ / arch-check / E2E 29 passed で充足) |
 | 4.3 | 上流ドキュメント同期: domain-model.md §6 (Billing) / data-model.md §invoice は定義済のため実装差分のみ反映。ui_design.md に請求書一覧・詳細・入金確認の salt ワイヤーフレーム 3 種 + 画面遷移図の精算フロー統合を追記 (IT6/IT7 慣行踏襲) | 3h | [x] 完了 (ui_design に請求書画面セクション (salt 3 種 + 実装注記 + flash 規約)、domain-model §6 に US23 実装差分 (TsClaimed=Delivered 相当 / DiscountRate Integer / 2 段入金フロー)、data-model に booking_status 8 値 CamelCase の実装差分注記) |
 | 4.4 | GitHub: #255 Close、#242/#244 の完了 or IT9 移送判断、Release 2.0 GA Milestone Close | 0.5h | [x] 完了 (#255 Close 済、#242/#244 は IT9 移送コメント + Milestone から除外。Milestone 残 open は #306 トラッキングのみで IT8 クロージング時に Close) |
-| 4.5 | dbmate status 確認 (T4-13: 開発 DB / staging DB の未適用 migration ゼロを保証) | 0.5h | [ ] |
+| 4.5 | dbmate status 確認 (T4-13: 開発 DB / staging DB の未適用 migration ゼロを保証) | 0.5h | [x] 完了 (2026-07-07: 開発 DB Applied 26 / Pending 0、E2E schema (cargo_tracker_e2e) も 26 本適用済を確認。staging DB は本 take では未構築のため対象外) |
 
 **小計**: 5.5h (理想時間)
 
