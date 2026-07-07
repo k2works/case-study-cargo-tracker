@@ -6,5 +6,7 @@
 
 | ADR | 決定内容 | ステータス |
 | :--- | :--- | :--- |
+| [0001](0001-bounded-context-and-packwerk-structure.md) | Bounded Context は 8 コンテキスト、Packwerk 配置は `packs/<context>/app/...`、AR 依存禁止は RuboCop カスタム cop で担保 | 承認 |
+| [0002](0002-domain-events-and-notification.md) | 通知はドメインイベント駆動 + notifications テーブルで送信記録、基盤は ActiveSupport::Notifications（将来 Outbox 移行） | 承認 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
