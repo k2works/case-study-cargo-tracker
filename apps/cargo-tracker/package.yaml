@@ -224,6 +224,7 @@ library:
   - Cargotracker.Booking.Application.LinkRouteCommand
   - Cargotracker.Booking.Application.UnlinkRouteCommand
   - Cargotracker.Booking.Application.ItineraryPorts
+  - Cargotracker.Booking.Application.NotifyRouteCommand
   - Cargotracker.Booking.Application.ConfirmRouteCommand
   - Cargotracker.Booking.Application.CustomsPorts
   - Cargotracker.Booking.Application.AttachCustomsDeclarationCommand

@@ -20,6 +20,7 @@ import qualified Booking.Application.ConfirmBookingCommandSpec
 import qualified Booking.Application.ConfirmRouteCommandSpec
 import qualified Booking.Application.HandOverToRouterCommandSpec
 import qualified Booking.Application.LinkRouteCommandSpec
+import qualified Booking.Application.NotifyRouteCommandSpec
 import qualified Booking.Application.RegisterBookingCommandSpec
 import qualified Booking.Application.SubmitBookingCommandSpec
 import qualified Booking.Application.UnlinkRouteCommandSpec
@@ -420,6 +421,10 @@ main = hspec $ do
   describe
     "Cargotracker.Handling.Interfaces.HandlingPageApi (UNLOAD 副作用)"
     Handling.Interfaces.HandlingPageApiUnloadSpec.spec
+
+  describe
+    "Cargotracker.Booking.Application.NotifyRouteCommand"
+    Booking.Application.NotifyRouteCommandSpec.spec
 
   describe
     "Cargotracker.Estimation.Application.AdjustEstimateCommand"
