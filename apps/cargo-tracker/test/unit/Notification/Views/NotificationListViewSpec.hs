@@ -33,6 +33,7 @@ sentRow =
     , nrSentAt = Just t0
     , nrFailureReason = Nothing
     , nrSubject = "引取完了のお知らせ"
+    , nrBody = "引取時に確認コード 123456 を提示してください"
     }
 
 failedRow :: NotificationRow
@@ -44,6 +45,7 @@ failedRow =
     , nrSentAt = Nothing
     , nrFailureReason = Just "SMTP timeout"
     , nrSubject = "引取完了のお知らせ"
+    , nrBody = "本文"
     }
 
 spec :: Spec

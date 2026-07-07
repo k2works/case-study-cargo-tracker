@@ -18,7 +18,7 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 const PORT_FROM = 'JPYOK'; // 横浜 (IT7 用に他スペックと衝突しないペアを選択)
-const PORT_TO = 'DEHAM'; // ハンブルグ
+const PORT_TO = 'USSEA'; // シアトル (location マスタ登録済、他スペック未使用ペア)
 
 async function registerShipperFlow(page: Page): Promise<string> {
   const email = `it7.mvp.${Date.now()}.${Math.random().toString(36).slice(2, 6)}@example.com`;
@@ -128,19 +128,74 @@ test.describe('IT7 T6-01: Release 1.0 MVP 統合ハッピーパス', () => {
     await expect(body).toContainText(/[A-Z0-9]{8}/);
   });
 
-  test.fixme('Stage 5-6: Handling 登録 → Claim (確認コード) → Tracking が TsClaimed に遷移', async ({ page }) => {
-    // Ralph Loop 次反復で有効化する。confirmation_code の発行タイミング
-    // (現行実装は AwaitingClaim 遷移時に code_hash を保存) の把握が必要。
-    //
-    // 想定フロー:
-    //   POST /handling/new (RECEIVE) → PRG
-    //   POST /handling/new (LOAD)    → PRG
-    //   POST /handling/new (UNLOAD)  → PRG → Tracking が AwaitingClaim へ
-    //                                          + confirmation_code 生成
-    //   (テスト API 経由で平文 code を取得)
-    //   POST /handling/claim         → 確認コード検証成功 → TsClaimed
-    //   GET /public/tracking/{tn}    → 詳細ページに Claimed 表示
-    //   GET /notifications?bookingId={bookingId} → Sent 通知が 1 件見える
+  test('Stage 5-6: Handling 登録 → Claim (確認コード) → 引取済 + 通知確認', async ({ page }) => {
+    // T7-E (IT8) で UNLOAD 時に平文確認コードが荷受人向け通知に載るため、
+    // 通知一覧を「テスト用の平文コード取得手段」として利用する (業務チャネル経由)。
+    const shipperId = await registerShipperFlow(page);
+    const voyageNumber = await registerVoyageFlow(
+      page,
+      PORT_FROM,
+      PORT_TO,
+      '2027-01-15T09:00',
+      '2027-02-10T18:00',
+    );
+    const bookingId = await registerBookingFlow(page, shipperId, '2027-02-28T18:00');
+    const detailUrl = `/bookings/${bookingId}`;
+
+    // Stage 4 相当を短縮再構築 (Confirmed + TrackingIssue まで)
+    for (const step of ['submit', 'handover', 'route', 'confirm']) {
+      const res = await page.request.post(`${detailUrl}/${step}`, { maxRedirects: 0 });
+      expect(res.status()).toBe(303);
+    }
+
+    // Stage 5: 荷役 3 イベント (RECEIVE → LOAD → UNLOAD、過去時刻)
+    const postHandling = async (eventType: string, completionTime: string) => {
+      const res = await page.request.post('/handling/new', {
+        maxRedirects: 0,
+        form: {
+          bookingId,
+          eventType,
+          completionTime,
+          locationUnlocode: eventType === 'UNLOAD' ? PORT_TO : PORT_FROM,
+          voyageNumber,
+          operatorName: 'IT8 E2E Operator',
+        },
+      });
+      expect(res.status()).toBe(303);
+      expect(res.headers()['location']).toContain('flash=success');
+    };
+    await postHandling('RECEIVE', '2026-01-01T09:00');
+    await postHandling('LOAD', '2026-01-02T09:00');
+    await postHandling('UNLOAD', '2026-01-20T09:00');
+
+    // 通知一覧から平文確認コードを取得 (T7-E の荷受人通知)
+    await page.goto(`/notifications?bookingId=${bookingId}`);
+    const notifBody = await page.locator('body').innerText();
+    const codeMatch = notifBody.match(/確認コード\s*(\d{6})/);
+    expect(codeMatch, '通知に 6 桁確認コードが含まれる').not.toBeNull();
+    const confirmationCode = codeMatch![1];
+
+    // Stage 6: 引取確認 (Claim) → 成功 PRG
+    const claimRes = await page.request.post('/handling/claim', {
+      maxRedirects: 0,
+      form: {
+        bookingId,
+        confirmationCode,
+        locationUnlocode: PORT_TO,
+        operatorName: 'IT8 E2E Consignee',
+      },
+    });
+    expect(claimRes.status()).toBe(303);
+    expect(claimRes.headers()['location']).toContain('flash=');
+    expect(claimRes.headers()['location']).not.toContain('error');
+
+    // 予約詳細で追跡番号を取得し、公開追跡ページで引取済を確認
+    await page.goto(detailUrl);
+    const detailText = await page.locator('body').innerText();
+    const tnMatch = detailText.match(/TR[A-Z0-9]{6}/);
+    expect(tnMatch, '予約詳細に追跡番号が表示される').not.toBeNull();
+    await page.goto(`/public/tracking/${tnMatch![0]}`);
+    await expect(page.locator('body')).toContainText(/Claimed|引取/);
   });
 
   test('Stage 7: /pricing/calculate 単体スモーク (独立検証)', async ({ page }) => {

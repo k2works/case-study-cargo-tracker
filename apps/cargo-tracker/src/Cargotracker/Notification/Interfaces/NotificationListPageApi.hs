@@ -63,6 +63,7 @@ notificationToRow n =
     , nrSentAt = nSentAt n
     , nrFailureReason = nFailureReason n
     , nrSubject = ncSubject (nContent n)
+    , nrBody = ncBody (nContent n)
     }
 
 channelText :: NotificationChannel -> Text

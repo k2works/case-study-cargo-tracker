@@ -34,6 +34,8 @@ data NotificationRow = NotificationRow
   , nrSentAt :: !(Maybe UTCTime)
   , nrFailureReason :: !(Maybe Text)
   , nrSubject :: !Text
+  , nrBody :: !Text
+  -- ^ 通知本文 (US26/US12: 荷受人・荷主が内容を確認できるよう一覧に表示)
   }
   deriving stock (Eq, Show)
 
@@ -75,6 +77,7 @@ notificationTable rs =
         thead_ $ tr_ $ do
           th_ "作成時刻"
           th_ "件名"
+          th_ "本文"
           th_ "配信手段"
           th_ "状態"
           th_ "配信時刻"
@@ -87,6 +90,7 @@ notificationRow r =
   tr_ [makeAttribute "data-testid" "notif-row"] $ do
     td_ (toHtml (T.pack (show (nrCreatedAt r))))
     td_ (toHtml (nrSubject r))
+    td_ [class_ "small"] (toHtml (nrBody r))
     td_ (toHtml (nrChannel r))
     td_
       ( span_
