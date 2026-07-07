@@ -13,18 +13,21 @@ findAllVoyages の SQL に委ねる。
 -}
 module Cargotracker.Routing.Application.ComputeRouteCandidatesQuery
   ( ComputeRouteCandidatesInput (..),
+    RouteCandidateDto (..),
     execute,
+    executeText,
   ) where
 
-import Data.Time (UTCTime)
-
 import Cargotracker.Routing.Application.Ports (VoyageRepository (..))
+import Cargotracker.Routing.Domain.Model.Value.VoyageNumber (unVoyageNumber)
 import Cargotracker.Routing.Domain.Service.RouteFinder
-  ( FoundRoute,
+  ( FoundRoute (..),
     findRoutes,
   )
 import Cargotracker.Shared.Domain.Common.UnLocode (UnLocode)
 import Cargotracker.Shared.Domain.DomainError (DomainError (..))
+import Data.Text (Text)
+import Data.Time (UTCTime)
 
 data ComputeRouteCandidatesInput = ComputeRouteCandidatesInput
   { inputOrigin :: !UnLocode
@@ -52,3 +55,34 @@ execute repo input
               (inputDeadline input)
               voys
       pure (Right candidates)
+
+{- | Cross-BC 用の Text-DTO (US10, IT8 / Rule 4 準拠)。
+
+Estimation BC 等が Routing BC の Domain 型 (FoundRoute / VoyageNumber) を
+import せずに経路候補を受け取るための表現。
+-}
+data RouteCandidateDto = RouteCandidateDto
+  { dtoRank :: !Int
+  , dtoVoyageNumbers :: ![Text]
+  , dtoFirstDeparture :: !UTCTime
+  , dtoLastArrival :: !UTCTime
+  }
+  deriving stock (Eq, Show)
+
+-- | `execute` の Text-DTO 版 (US10, IT8)。
+executeText ::
+  Monad m =>
+  VoyageRepository m ->
+  ComputeRouteCandidatesInput ->
+  m (Either DomainError [RouteCandidateDto])
+executeText repo input = do
+  result <- execute repo input
+  pure (fmap (map toDto) result)
+  where
+    toDto fr =
+      RouteCandidateDto
+        { dtoRank = frRank fr
+        , dtoVoyageNumbers = map unVoyageNumber (frVoyageNumbers fr)
+        , dtoFirstDeparture = frFirstDeparture fr
+        , dtoLastArrival = frLastArrival fr
+        }

@@ -27,10 +27,13 @@ ACL 規約:
 module Cargotracker.Estimation.Domain.Model.Estimate
   ( Estimate (..),
     mkEstimate,
+    adjustConditions,
+    replaceCandidates,
   ) where
 
 import Data.List (nub)
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time (UTCTime)
 
 import Cargotracker.Estimation.Domain.Model.RouteCandidate
@@ -87,3 +90,34 @@ mkEstimate eid sidT origin' dest deadline' ctypeText weight candidates
   where
     uniqueRanks rs =
       let ranks = map rank rs in length ranks == length (nub ranks)
+
+{- | US10 (IT8): 経路条件 (到着期限・貨物種別) を調整する純粋関数。
+
+受入基準「条件を調整 (期限延長・経由地追加・貨物種別変更等) して再算出を
+実行できる」の条件変更部分。候補の再算出は Application 層
+(`AdjustEstimateCommand`) が Routing BC へ問い合わせて `replaceCandidates`
+で反映する。
+-}
+adjustConditions :: UTCTime -> Text -> Estimate -> Either DomainError Estimate
+adjustConditions newDeadline newCargoType est
+  | T.null (T.strip newCargoType) =
+      Left (InvalidRouteAdjustment "empty cargo type")
+  | otherwise =
+      Right
+        est
+          { deadline = newDeadline
+          , cargoTypeText = T.strip newCargoType
+          }
+
+{- | US10 (IT8): 経路候補を丸ごと差し替える。rank 重複は拒否する
+(mkEstimate と同じ制約)。空リストは「調整後も期限内到達可能経路なし」を
+表し許容する (受入基準 4: 営業担当者への条件協議依頼へ進む)。
+-}
+replaceCandidates :: [RouteCandidate] -> Estimate -> Either DomainError Estimate
+replaceCandidates candidates est
+  | not uniqueRanks' =
+      Left (InvalidRouteAdjustment "route candidate ranks must be unique")
+  | otherwise = Right est {routeCandidates = candidates}
+  where
+    uniqueRanks' =
+      let ranks = map rank candidates in length ranks == length (nub ranks)

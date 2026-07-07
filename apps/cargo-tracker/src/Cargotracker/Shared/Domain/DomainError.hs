@@ -158,4 +158,10 @@ data DomainError
     InvoiceNotAllowedBeforeDelivered !Text
   | -- | 支払い状態文字列が不正 (DB CHECK: PENDING/CONFIRMED/OVERDUE/REFUNDED)
     InvalidPaymentStatus !Text
+  | -- IT8 追加 (US10 経路条件調整、Estimation BC)
+
+    -- | 見積が見つからない (EstimateId 文字列を保持)
+    EstimateNotFound !Text
+  | -- | 経路条件調整の入力が不正 (US10、Text = 理由コード)
+    InvalidRouteAdjustment !Text
   deriving stock (Eq, Show)

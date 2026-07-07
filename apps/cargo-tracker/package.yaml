@@ -196,6 +196,7 @@ library:
   - Cargotracker.Estimation.Domain.Service.RouteEvaluator
   - Cargotracker.Estimation.Application.EvaluateRouteCandidatesCommand
   - Cargotracker.Estimation.Views.RouteEvaluationView
+  - Cargotracker.Estimation.Application.AdjustEstimateCommand
   - Cargotracker.Estimation.Application.Ports
   - Cargotracker.Estimation.Application.CreateEstimateCommand
   - Cargotracker.Estimation.Views.EstimateFormView

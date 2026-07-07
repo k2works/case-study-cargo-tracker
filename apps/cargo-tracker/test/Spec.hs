@@ -38,6 +38,7 @@ import qualified Booking.Interfaces.BookingPageApiSpec
 import qualified Booking.Views.CancellationFeeViewSpec
 import qualified Booking.Views.RouteConfirmViewSpec
 import qualified Domain.PropertiesSpec
+import qualified Estimation.Application.AdjustEstimateCommandSpec
 import qualified Estimation.Application.CreateEstimateCommandSpec
 import qualified Estimation.Application.EvaluateRouteCandidatesCommandSpec
 import qualified Estimation.Domain.Model.EstimateSpec
@@ -419,6 +420,10 @@ main = hspec $ do
   describe
     "Cargotracker.Handling.Interfaces.HandlingPageApi (UNLOAD 副作用)"
     Handling.Interfaces.HandlingPageApiUnloadSpec.spec
+
+  describe
+    "Cargotracker.Estimation.Application.AdjustEstimateCommand"
+    Estimation.Application.AdjustEstimateCommandSpec.spec
 
   describe
     "Cargotracker.Estimation.Application.CreateEstimateCommand"
