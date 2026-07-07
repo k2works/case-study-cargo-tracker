@@ -85,10 +85,10 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 1.1 | T7-A: RolePolicy を US17 手動更新 API に先行配線 (Servant `Header "Cookie"` + SessionRepository + Policy 述語 DI、T6-09 Servant 配線の残作業) | 4h | [ ] |
-| 1.2 | T7-B: `generateSixDigitCodeText` hedgehog プロパティ (常に長さ 6 かつ全て数字、0/5/99999/999999 境界値) | 1h | [ ] |
-| 1.3 | T7-C: `handlerPost` UNLOAD 分岐の副作用テスト (fake `ConfirmationCodeRepository` spy 化、UNLOAD のみ発火・冪等性検証) | 2h | [ ] |
-| 1.4 | T7-D: ADR-0016 起票 (Role ベース認可の Domain/Interfaces 分離設計) | 1h | [ ] |
+| 1.1 | T7-A: RolePolicy を US17 手動更新 API に先行配線 (Servant `Header "Cookie"` + SessionRepository + Policy 述語 DI、T6-09 Servant 配線の残作業) | 4h | [ ] 着手中 |
+| 1.2 | T7-B: `generateSixDigitCodeText` hedgehog プロパティ (常に長さ 6 かつ全て数字、0/5/99999/999999 境界値) | 1h | [x] 完了 (`8f680725`、sixDigitCodeFromInt 純粋抽出 + プロパティ 2 本 + 境界値 4 + IO スモーク) |
+| 1.3 | T7-C: `handlerPost` UNLOAD 分岐の副作用テスト (fake `ConfirmationCodeRepository` spy 化、UNLOAD のみ発火・冪等性検証) | 2h | [x] 完了 (`e6e09345`、Network.Wai.Test + IORef spy で 4 ケース緑) |
+| 1.4 | T7-D: ADR-0016 起票 (Role ベース認可の Domain/Interfaces 分離設計) | 1h | [x] 完了 (`0d4e2cb0`、docs/adr/0016-role-based-authorization-design.md 提案) |
 
 **小計**: 8h (理想時間)
 
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 0% (0/22 SP)
+**進捗率**: 約 9% (2/22 SP 相当、T7-B/T7-C/T7-D 完了 = タスク 1 の 4h/8h。2026-07-07 Ralph Loop 反復 1)
 
 ---
 
