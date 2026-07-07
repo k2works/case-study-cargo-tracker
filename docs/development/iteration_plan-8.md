@@ -124,7 +124,7 @@
 |---|--------|---------|------|
 | 4.1 | T6-03 残: v1.0.0-mvp git tag (E2E ハッピーパス緑を条件に付与) | 0.5h | [ ] |
 | 4.2 | CHANGELOG `[Unreleased]` → `[2.0.0]` セクション切出し + v2.0.0 tag (developing-release スキル) | 1h | [ ] |
-| 4.3 | 上流ドキュメント同期: domain-model.md §6 (Billing) / data-model.md §invoice は定義済のため実装差分のみ反映。ui_design.md に請求書一覧・詳細・入金確認の salt ワイヤーフレーム 3 種 + 画面遷移図の精算フロー統合を追記 (IT6/IT7 慣行踏襲) | 3h | [ ] |
+| 4.3 | 上流ドキュメント同期: domain-model.md §6 (Billing) / data-model.md §invoice は定義済のため実装差分のみ反映。ui_design.md に請求書一覧・詳細・入金確認の salt ワイヤーフレーム 3 種 + 画面遷移図の精算フロー統合を追記 (IT6/IT7 慣行踏襲) | 3h | [x] 完了 (ui_design に請求書画面セクション (salt 3 種 + 実装注記 + flash 規約)、domain-model §6 に US23 実装差分 (TsClaimed=Delivered 相当 / DiscountRate Integer / 2 段入金フロー)、data-model に booking_status 8 値 CamelCase の実装差分注記) |
 | 4.4 | GitHub: #255 Close、#242/#244 の完了 or IT9 移送判断、Release 2.0 GA Milestone Close | 0.5h | [ ] |
 | 4.5 | dbmate status 確認 (T4-13: 開発 DB / staging DB の未適用 migration ゼロを保証) | 0.5h | [ ] |
 
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 約 64% (14/22 SP、タスク 1 全完了 + タスク 2 全完了 + タスク 3 の T7-E/T7-F/T7-I 完了。2026-07-07 Ralph Loop 反復 1-10)
+**進捗率**: 約 68% (15/22 SP、タスク 1-2 全完了 + タスク 3 の T7-E/F/I + タスク 4.3。残: T7-G (Docker 待ち) / T7-H (katip) / T6-01 (E2E) / GA タグ / GitHub Close / ストレッチ。2026-07-07 Ralph Loop 反復 1-11)
 
 ---
 
