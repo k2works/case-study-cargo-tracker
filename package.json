@@ -16,7 +16,11 @@
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
     "gemini:yolo": "gemini --yolo",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev": "gulp dev:server",
+    "dev:test": "gulp dev:test",
+    "dev:check": "gulp dev:check",
+    "dev:help": "gulp dev:help"
   },
   "repository": {
     "type": "git",
