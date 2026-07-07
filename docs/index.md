@@ -92,6 +92,7 @@
 | [IT7 計画](./development/iteration_plan-7.md) | 例外処理 (US19/US20) + 手動状態更新 (US17) + 法人割引 (US22) + IT6 繰越 (T6-01〜T6-04) + プロセス品質 (T6-05〜T6-09) = 10 SP、Release 2.0 GA 橋渡し目標 |
 | [IT7 完了報告書](./development/iteration_report-7.md) | Ralph Loop 2 週 66 反復で 30+ SP (計画 10 SP 対比 300%+)、Exception BC 新設 (17 モジュール)、ADR-0013/0014/0015 起票、+135 tests (776 total) |
 | [IT7 ふりかえり (KPT)](./development/retrospective-7.md) | Keep 6 / Problem 4 / Try 14 (T7-A〜T7-N)、平均ベロシティ 25.6 SP、IT8 冒頭必達 4 件 (RolePolicy 配線 / hedgehog / UNLOAD 副作用テスト / ADR-0016) |
+| [IT8 計画](./development/iteration_plan-8.md) | 精算処理 (US23) + IT7 繰越高優先 (T7-A〜T7-D) + 保証系 (T7-E〜T7-I) + Release 2.0 GA クロージング + ストレッチ (US10/US12) = 22 SP |
 
 ### レビュードキュメント
 

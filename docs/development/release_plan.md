@@ -510,7 +510,7 @@ gantt
 | IT5 | 22 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2) | 完了 | - | 完了 (2026-07-01) |
 | IT6 | 18 (本体 5 + IT5 繰越 8 + プロセス品質 3 + 上流補完 2) | 30+ (T5-01〜T5-05 高優先 5 + T5-08〜T5-12 中優先 5 + T5-16/19/20/21/09 プロセス 5 + US21 全 7 phases + US26 全 6 phases + Postgres 2 phases) | 167% | 完了 (2026-07-02、Ralph Loop 30 反復、Release 1.0 MVP 一巡完成、E2E + v1.0.0-mvp タグは IT7 繰越) |
 | IT7 | 10 | 30+ (US17/US19/US20/US22 一巡 + Exception BC 新設 + ADR-0013 全 Phase + T6-06 k6 CI + T7-01 UNLOAD→ConfirmationCode 接続 + T6-07 correlation_id + T6-09 RolePolicy/RoleGate + 上流ドキュメント 3 種同期) | 300%+ | 完了 (2026-07-03、Ralph Loop 2 週 66 反復 = 1 週目 iter 1-58 + 2 週目 iter 1-8、iteration_report-7.md + retrospective-7.md 作成済、IT7 繰越は T6-05/T6-07 完全移行/T6-09 Servant 配線を IT8 で対応) |
-| IT8 | 3 (+ストレッチ 5) | - | - | 未着手 |
+| IT8 | 22 (本体 3 + IT7 繰越高優先 5 + 保証系 7 + GA クロージング 2 + ストレッチ 5) | - | - | 計画済 (2026-07-07、[iteration_plan-8.md](./iteration_plan-8.md) 作成) |
 | IT9 | (予備) | - | - | 未着手 |
 | **累計** | **73 + 5** | **179+** | **229%** | IT1-IT7 完了 (Ralph Loop 累計 66 反復消化)、IT8 で保証系タスク継続 |
 

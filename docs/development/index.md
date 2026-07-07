@@ -22,6 +22,7 @@
 | IT5 (2026-08-31〜09-13) | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 完了 (2026-07-01) |
 | IT6 (2026-09-14〜09-27) | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 完了 (2026-07-02、Ralph Loop 30 反復、Release 1.0 MVP 一巡完成) |
 | IT7 (2026-09-28〜10-11) | [iteration_plan-7.md](iteration_plan-7.md) | [retrospective-7.md](retrospective-7.md) | [iteration_report-7.md](iteration_report-7.md) | 完了 (2026-07-03、Ralph Loop 2 週 66 反復、US17/19/20/22 一巡 + Exception BC 新設 + ADR-0013 全 Phase) |
+| IT8 (2026-10-12〜10-25) | [iteration_plan-8.md](iteration_plan-8.md) | - | - | 計画済 (2026-07-07、US23 精算 + IT7 繰越 + GA クロージング = 22 SP) |
 
 ### 進捗サマリー
 
