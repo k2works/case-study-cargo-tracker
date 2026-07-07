@@ -30,6 +30,7 @@ module Cargotracker.Shared.Infrastructure.IdGenerator
     generateNotificationIdText,
     generateSixDigitCodeText,
     intToAlphaNumChar,
+    sixDigitCodeFromInt,
   ) where
 
 import Data.Text (Text)
@@ -70,9 +71,13 @@ generateNotificationIdText = UUID.toText <$> UUIDv4.nextRandom
 先頭 0 を許容するため `T.justifyRight 6 '0'` でパディングする。
 -}
 generateSixDigitCodeText :: IO Text
-generateSixDigitCodeText = do
-  n <- randomRIO (0 :: Int, 999999)
-  pure (T.justifyRight 6 '0' (T.pack (show n)))
+generateSixDigitCodeText = sixDigitCodeFromInt <$> randomRIO (0 :: Int, 999999)
+
+{- | T7-B (IT8): 6 桁数字コードの純粋部分。0〜999999 を先頭 0 パディングで
+6 桁 Text に変換する。hedgehog プロパティ (長さ 6・全数字・単射性) の対象。
+-}
+sixDigitCodeFromInt :: Int -> Text
+sixDigitCodeFromInt n = T.justifyRight 6 '0' (T.pack (show n))
 
 {- | 44 文字のセッショントークンを生成する (task 1.2, ADR-0010, IT5)。
 

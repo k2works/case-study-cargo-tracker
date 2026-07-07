@@ -9,7 +9,7 @@ module Shared.Infrastructure.IdGeneratorSpec (spec) where
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
-import Hedgehog (Property, assert, check, forAll, property)
+import Hedgehog (Property, assert, check, forAll, property, (===))
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Test.Hspec
@@ -17,7 +17,9 @@ import Test.Hspec
 import Cargotracker.Shared.Infrastructure.IdGenerator
   ( generateBookingIdText,
     generateShipperIdText,
+    generateSixDigitCodeText,
     intToAlphaNumChar,
+    sixDigitCodeFromInt,
   )
 
 prop_intToAlphaNumChar_in_range :: Property
@@ -25,6 +27,20 @@ prop_intToAlphaNumChar_in_range = property $ do
   i <- forAll (Gen.int (Range.constant 0 35))
   let c = intToAlphaNumChar i
   assert (c `elem` (['0' .. '9'] <> ['A' .. 'Z']))
+
+-- | T7-B: 常に長さ 6 かつ全て数字 (先頭 0 パディングは典型的欠陥ポイント)。
+prop_sixDigitCode_length_and_digits :: Property
+prop_sixDigitCode_length_and_digits = property $ do
+  n <- forAll (Gen.int (Range.constant 0 999999))
+  let t = sixDigitCodeFromInt n
+  assert (T.length t == 6)
+  assert (T.all (`elem` ['0' .. '9']) t)
+
+-- | T7-B: 単射性 (読み戻すと元の値に一致する)。
+prop_sixDigitCode_roundtrip :: Property
+prop_sixDigitCode_roundtrip = property $ do
+  n <- forAll (Gen.int (Range.constant 0 999999))
+  read (T.unpack (sixDigitCodeFromInt n)) === n
 
 runProp :: String -> Property -> Spec
 runProp name p = it name $ do
@@ -57,3 +73,21 @@ spec = do
       T.length t `shouldBe` 10
       T.take 4 t `shouldBe` "SHP-"
       T.all (`elem` ['0' .. '9'] <> ['A' .. 'Z']) (T.drop 4 t) `shouldBe` True
+
+  describe "sixDigitCodeFromInt (T7-B)" $ do
+    it "0 → \"000000\" (先頭 0 フルパディング)" $
+      sixDigitCodeFromInt 0 `shouldBe` "000000"
+    it "5 → \"000005\"" $
+      sixDigitCodeFromInt 5 `shouldBe` "000005"
+    it "99999 → \"099999\" (5 桁境界)" $
+      sixDigitCodeFromInt 99999 `shouldBe` "099999"
+    it "999999 → \"999999\" (上限境界)" $
+      sixDigitCodeFromInt 999999 `shouldBe` "999999"
+    runProp "常に長さ 6 かつ全て数字 (プロパティ)" prop_sixDigitCode_length_and_digits
+    runProp "read で読み戻すと元の値 (単射性プロパティ)" prop_sixDigitCode_roundtrip
+
+  describe "generateSixDigitCodeText (T7-B)" $ do
+    it "長さ 6 かつ全て数字を返す (IO スモーク)" $ do
+      t <- generateSixDigitCodeText
+      T.length t `shouldBe` 6
+      T.all (`elem` ['0' .. '9']) t `shouldBe` True
