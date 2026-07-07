@@ -134,7 +134,7 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 5.1 | US10: RouteSpecification 条件調整 (期限延長・経由地・貨物種別) + 再算出 Application コマンド + UI | 8h | [ ] |
+| 5.1 | US10: RouteSpecification 条件調整 (期限延長・経由地・貨物種別) + 再算出 Application コマンド + UI | 8h | [~] Domain/Application 完了 (`d4ce14b4`、adjustConditions/replaceCandidates + AdjustEstimateCommand + Routing executeText DTO、5 tests。**残**: UI (EstimatePageApi への調整フォーム統合) は IT9 へ) |
 | 5.2 | US12: 確定経路通知 (Notification BC 再利用、通知内容組立 + 送信記録) + UI | 5h | [ ] |
 
 **小計**: 13h (理想時間)
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 約 73% (16/22 SP、タスク 1-2 全完了 + タスク 3 の T7-E/F/H/I + タスク 4.3-4.5 + #255 Close。残: T7-G (Docker 待ち) / T6-01 (E2E 環境待ち) / GA タグ (E2E 前提) / ストレッチ US10・US12。2026-07-07 Ralph Loop 反復 1-12)
+**進捗率**: 約 82% (18/22 SP、タスク 1-2 全完了 + 保証系 T7-E/F/H/I + タスク 4.3-4.5 + US10 Domain/App (2 SP 相当)。残: T7-G (Docker 待ち) / T6-01 (E2E 環境待ち) / GA タグ (E2E 前提) / US10 UI・US12 (IT9 候補)。2026-07-07 Ralph Loop 反復 1-13)
 
 ---
 
