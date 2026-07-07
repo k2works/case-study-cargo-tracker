@@ -96,7 +96,7 @@
 
 | # | タスク | 見積もり | 状態 |
 |---|--------|---------|------|
-| 2.1 | Domain: **Billing Context の Invoice 集約** (domain-model.md §6 準拠: `PaymentStatus` = Pending/Confirmed/Overdue/Refunded、`applyDiscount`/`issuePayment`/`confirmPayment`/`markOverdue` 純粋関数) + hspec/hedgehog | 4h | [ ] |
+| 2.1 | Domain: **Billing Context の Invoice 集約** (domain-model.md §6 準拠: `PaymentStatus` = Pending/Confirmed/Overdue/Refunded、`applyDiscount`/`issuePayment`/`confirmPayment`/`markOverdue` 純粋関数) + hspec/hedgehog | 4h | [x] 完了 (`cc05bc14`、Invoice 集約 + Money/DiscountRate/PaymentStatus VO + DomainError 9 種追加、hspec 27 + hedgehog 3 = 30 tests 緑) |
 | 2.2 | Application: GenerateInvoiceCommand / ConfirmPaymentCommand / OverdueCheckCommand + InvoiceRepository / PaymentGateway ポート (型クラス) + fake でユースケーステスト | 4h | [ ] |
 | 2.3 | Infrastructure: dbmate migration (`invoice` + `invoice_line_item` テーブル、data-model.md §invoice 準拠: BIGSERIAL PK + `invoice_number` UK + `*_amount_value BIGINT` + `version` 楽観ロック) + PostgresInvoiceRepository (FromRow/ToRow) | 3h | [ ] |
 | 2.4 | Cross-BC: 入金確認 → Cargo.Settled 連動 (FK 制約なし、`booking_id` TEXT 照合を Application 層で実施) + 精算書発行 → Notification BC 通知レコード + 期限超過 → 未払い通知 | 3h | [ ] |
@@ -158,7 +158,7 @@
 | **合計** | **22** | **62.5h** | |
 
 **1 SP あたり**: 約 2.8h
-**進捗率**: 約 23% (5/22 SP、タスク 1 (T7-A〜T7-D) 全完了。2026-07-07 Ralph Loop 反復 1-2)
+**進捗率**: 約 27% (6/22 SP、タスク 1 全完了 + タスク 2.1 完了。2026-07-07 Ralph Loop 反復 1-3)
 
 ---
 
