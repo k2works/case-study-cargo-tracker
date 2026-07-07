@@ -510,9 +510,9 @@ gantt
 | IT5 | 22 (本体 10 + IT4 繰越 3 + Try 5 + 拡張 2 + 上流補完 2) | 完了 | - | 完了 (2026-07-01) |
 | IT6 | 18 (本体 5 + IT5 繰越 8 + プロセス品質 3 + 上流補完 2) | 30+ (T5-01〜T5-05 高優先 5 + T5-08〜T5-12 中優先 5 + T5-16/19/20/21/09 プロセス 5 + US21 全 7 phases + US26 全 6 phases + Postgres 2 phases) | 167% | 完了 (2026-07-02、Ralph Loop 30 反復、Release 1.0 MVP 一巡完成、E2E + v1.0.0-mvp タグは IT7 繰越) |
 | IT7 | 10 | 30+ (US17/US19/US20/US22 一巡 + Exception BC 新設 + ADR-0013 全 Phase + T6-06 k6 CI + T7-01 UNLOAD→ConfirmationCode 接続 + T6-07 correlation_id + T6-09 RolePolicy/RoleGate + 上流ドキュメント 3 種同期) | 300%+ | 完了 (2026-07-03、Ralph Loop 2 週 66 反復 = 1 週目 iter 1-58 + 2 週目 iter 1-8、iteration_report-7.md + retrospective-7.md 作成済、IT7 繰越は T6-05/T6-07 完全移行/T6-09 Servant 配線を IT8 で対応) |
-| IT8 | 22 (本体 3 + IT7 繰越高優先 5 + 保証系 7 + GA クロージング 2 + ストレッチ 5) | - | - | 計画済 (2026-07-07、[iteration_plan-8.md](./iteration_plan-8.md) 作成) |
+| IT8 | 22 (本体 3 + IT7 繰越高優先 5 + 保証系 7 + GA クロージング 2 + ストレッチ 5) | 21+ (US23 全レイヤ一巡 + T7-A〜F/H/I + T6-01/T7-G 一部 + US10/US12 Domain/App + v1.0.0-mvp/v2.0.0 tag) | 約 98% | 完了 (2026-07-07、Ralph Loop 開発 17 反復、**Release 2.0 GA 達成**、+113 tests (776→889)、iteration_report-8.md/retrospective-8.md/レビュー作成済。IT9 移送: H-01 Tx 配線/H-02 OverdueCheck 起動主体/T7-G 残 4 Repo/US10・US12 UI) |
 | IT9 | (予備) | - | - | 未着手 |
-| **累計** | **73 + 5** | **179+** | **229%** | IT1-IT7 完了 (Ralph Loop 累計 66 反復消化)、IT8 で保証系タスク継続 |
+| **累計** | **95 + 5** | **200+** | **211%** | IT1-IT8 完了、**全 4 Phase 完了 (Release 2.0 GA、v2.0.0)**。残: US10/US12 UI と保証系強化を IT9 (残務回収 IT) で対応 |
 
 ### バーンダウンチャート
 
