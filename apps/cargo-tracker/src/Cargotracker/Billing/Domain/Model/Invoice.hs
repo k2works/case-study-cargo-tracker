@@ -20,6 +20,7 @@ module Cargotracker.Billing.Domain.Model.Invoice
     BillingShipperId (..),
     mkInvoice,
     applyDiscount,
+    discountedAmount,
     issuePayment,
     confirmPayment,
     markOverdue,
@@ -96,8 +97,16 @@ mkInvoice invoiceId bookingId shipperId baseAmount issuedAt
           , invVersion = 0
           }
 
-{- | 割引を適用して finalAmount を再計算する。
+{- | 割引後金額の純粋計算 (H-03, IT8 レビュー)。
 finalAmount = baseAmount × (100 - rate) / 100 (端数切り捨て)。
+業務ルール (割引の丸め規則) の Single Source of Truth とし、`applyDiscount`
+と表示側 (Interfaces の料金内訳) の双方から呼ぶことで二重定義を排除する。
+-}
+discountedAmount :: DiscountRate -> Money -> Money
+discountedAmount rate base =
+  base {moneyAmount = moneyAmount base * (100 - unDiscountRate rate) `div` 100}
+
+{- | 割引を適用して finalAmount を再計算する。
 入金発行後 (paymentReference 設定後) の割引変更は不可。
 -}
 applyDiscount :: DiscountRate -> Invoice -> Either DomainError Invoice
@@ -105,14 +114,12 @@ applyDiscount rate inv
   | invPaymentStatus inv == Confirmed = Left InvoiceAlreadyConfirmed
   | isJust (invPaymentReference inv) = Left InvoicePaymentAlreadyIssued
   | otherwise =
-      let base = invBaseAmount inv
-          discounted = moneyAmount base * (100 - unDiscountRate rate) `div` 100
-       in Right
-            inv
-              { invDiscountRate = rate
-              , invFinalAmount = base {moneyAmount = discounted}
-              , invVersion = invVersion inv + 1
-              }
+      Right
+        inv
+          { invDiscountRate = rate
+          , invFinalAmount = discountedAmount rate (invBaseAmount inv)
+          , invVersion = invVersion inv + 1
+          }
 
 {- | 入金発行: 支払期日と reference_code を設定する (Pending のまま)。
 reference_code が空、または既発行 (二重発行) はエラー。

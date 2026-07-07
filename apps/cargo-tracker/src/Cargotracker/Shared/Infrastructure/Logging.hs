@@ -27,6 +27,7 @@ module Cargotracker.Shared.Infrastructure.Logging
     newCorrelationId,
   ) where
 
+import Control.Exception (finally)
 import Data.Aeson (ToJSON (toJSON), Value)
 import Data.Text (Text)
 import qualified Data.UUID as UUID
@@ -108,8 +109,8 @@ newCorrelationId = UUID.toText <$> UUIDv4.nextRandom
 withCorrelationId :: Text -> IO a -> IO a
 withCorrelationId corrId action = do
   logWith "action:start"
-  a <- action
-  logWith "action:end"
-  pure a
+  -- H-04 (IT8 レビュー): action が例外を投げても action:end を必ず出力する
+  -- (エラー経路の相関ログ欠落を防ぐ)。
+  action `finally` logWith "action:end"
   where
     logWith msg = logInfo msg [("correlation_id", toJSON corrId)]

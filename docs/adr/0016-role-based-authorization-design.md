@@ -8,11 +8,12 @@ Role ベース認可を RolePolicy (Domain 純粋関数) と RoleGate (Interface
 
 ## ステータス
 
-提案 (2026-07-07、IT8 Ralph Loop iteration 1 で起票。T7-D)
+採用 (2026-07-07、IT8 Release 2.0 GA で確立。T7-D 起票 → IT8 レビュー H-05 で採用に更新)
 
 RolePolicy (`7dac8db6`、10 テスト) と RoleGate (`34f663fe`) は IT7 で
-実装済。本 ADR は設計判断の事後文書化と、IT8 での `/billing/*` 適用
-拡大に向けた判断根拠の明文化を目的とする。
+実装済。IT8 で `/billing/*` (`canManageBilling` = Accountant/MasterAdmin) と
+US17 手動更新 API (`canManualStateUpdate`) に RoleGate を配線し、
+本 ADR の設計 (Policy/Gate 2 層分離) が実装で確立した。
 
 ## コンテキスト
 
@@ -62,7 +63,7 @@ Handler も含む、といった「どのロールがどの操作をできるか
 - 権限マトリクスが RolePolicy 1 モジュールに集約され、10 件の純粋
   ユニットテストで US17/US19/US20 の業務ルールを網羅済
 - 新 BC への適用は「Policy 述語 1 関数 + handler 冒頭 1 行」で済む
-  (IT8 で `/billing/*` に `canManageBilling` を追加予定)
+  (IT8 で `/billing/*` に `canManageBilling` を追加済)
 - 401/403 の区別 (認証 vs 認可) が RoleGate 1 箇所で統一される
 
 ### 否定的

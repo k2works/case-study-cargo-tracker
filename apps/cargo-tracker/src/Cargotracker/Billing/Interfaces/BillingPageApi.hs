@@ -59,12 +59,13 @@ import Cargotracker.Billing.Application.Ports
   )
 import Cargotracker.Billing.Domain.Model.Invoice
   ( Invoice (..),
+    discountedAmount,
     unBillingBookingId,
     unBillingShipperId,
     unInvoiceId,
   )
 import Cargotracker.Billing.Domain.Model.PaymentStatus (paymentStatusToText)
-import Cargotracker.Billing.Domain.Model.Value.DiscountRate (unDiscountRate)
+import Cargotracker.Billing.Domain.Model.Value.DiscountRate (mkDiscountRate, unDiscountRate)
 import Cargotracker.Billing.Domain.Model.Value.Money (Money (..))
 import Cargotracker.Billing.Views.InvoiceViews
   ( InvoiceRow (..),
@@ -214,14 +215,16 @@ handlerNew pricingPort gate mBookingId mFlash = do
       let amounts = maybe [] costBreakdown mCost
       pure (invoiceNewPage mFlash (Just bid) amounts)
   where
+    -- H-03 (IT8 レビュー): 割引後金額は Domain の discountedAmount を SSoT とし、
+    -- 表示側で計算式を重複させない。
     costBreakdown c =
-      [ ("基本料金", T.pack (show (ccAmount c)) <> " " <> ccCurrency c)
+      [ ("基本料金", formatMoney (Money (ccAmount c) (ccCurrency c)))
       , ("法人割引", T.pack (show (ccDiscountPercentage c)) <> "%")
       ,
         ( "請求金額 (割引後)"
-        , T.pack (show (ccAmount c * (100 - ccDiscountPercentage c) `div` 100))
-            <> " "
-            <> ccCurrency c
+        , case mkDiscountRate (ccDiscountPercentage c) of
+            Right rate -> formatMoney (discountedAmount rate (Money (ccAmount c) (ccCurrency c)))
+            Left _ -> "算出不可"
         )
       ]
 

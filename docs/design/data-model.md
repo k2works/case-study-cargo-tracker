@@ -508,7 +508,12 @@ DROP TABLE confirmation_code;
 
 インデックス: `idx_customs_declaration_booking (booking_id)` / `idx_customs_declaration_status (declaration_status)`
 
-### `invoice` (精算書)
+### `invoice` (精算書 / 請求書)
+
+> **用語注記 (M-01, IT8 レビュー)**: 本テーブル・集約は業務ドキュメントでは
+> 「請求書 (Invoice)」、精算プロセスの成果物としては「精算書」と呼ばれる。
+> 同一の `Invoice` 集約を指す。実装 (`Cargotracker.Billing.Domain.Model.Invoice`)
+> と UI (`/billing/invoices`) は「請求書」表記を採用する。
 
 | カラム | 型 | 制約 |
 | :--- | :--- | :--- |
