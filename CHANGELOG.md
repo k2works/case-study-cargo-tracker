@@ -7,8 +7,67 @@
 
 ## [Unreleased]
 
-IT7 (例外処理・法人割引・MVP クロージング) の変更を記録する。詳細は
-[docs/development/iteration_plan-7.md](docs/development/iteration_plan-7.md) を参照。
+IT9 以降の変更を記録する。
+
+---
+
+## [2.0.0] - 2026-07-07 (IT7-IT8, Release 2.0 GA)
+
+Phase 4 完了 (Release 2.0 GA)。例外処理・法人割引 (IT7) と精算処理 (IT8) を
+全レイヤで一巡完成し、保証系 (RoleGate 配線 / katip / E2E 統合ハッピーパス /
+実 DB 統合テスト) を完済した。詳細は
+[docs/development/iteration_plan-7.md](docs/development/iteration_plan-7.md) /
+[docs/development/iteration_plan-8.md](docs/development/iteration_plan-8.md) を参照。
+
+### Added
+
+#### IT7 (US17 / US19 / US20 / US22)
+
+* **Exception BC 新設** (US19 遅延 / US20 破損・紛失): ExceptionRecord 集約 +
+  Record/Resolve コマンド + Postgres (JSONB detail) + 例外一覧画面。
+  ADR-0014 (状態遷移ポリシー) 採用
+* **手動状態更新** (US17): ManualStateUpdateCommand + 監査ログ
+  (tracking_state_audit) + RolePolicy (Tracker/MasterAdmin)
+* **法人割引** (US22): contract_rank 由来の割引率決定 (ADR-0015) +
+  CalculateShippingCost への Cross-BC 連携
+* **Notification 主キー移行** (ADR-0013 Phase 1-3): notification_id (UUID v4)
+  サロゲート導入
+* **k6 スモーク CI** (T6-06) / **UNLOAD 時の確認コード発行** (T7-01)
+
+#### IT8 (US23 + 保証系)
+
+* **Billing Context 精算処理** (US23): Invoice 集約
+  (applyDiscount/issuePayment/confirmPayment/markOverdue) +
+  Generate/IssuePayment/Confirm/OverdueCheck コマンド +
+  invoice/invoice_line_item テーブル + /billing/invoices 6 エンドポイント
+  (canManageBilling RoleGate) + 入金確認 → Cargo.Settled 連動
+* **BookingStatus.Settled 追加**: Confirmed → Settled → Closed 遷移
+  (ADR-0014 宿題回収)。cargo CHECK 制約の欠落値
+  (RouteAssigned/Cancelled) も修正
+* **RoleGate 配線** (T7-A/ADR-0016): US17 手動更新 API + /billing/* に
+  Cookie 401 / Role 403 を適用、changedBy を認証 UserId 化
+* **UNLOAD → 荷受人通知** (T7-E): 確認コードを Notification BC 経由で配信、
+  通知一覧に本文列を追加
+* **katip 正式化** (T7-H): 自作 JSON Lines を katip jsonFormat scribe に置換、
+  correlation_id を LogContexts で構造化
+* **E2E 統合ハッピーパス完成** (T6-01): 予約→経路→追跡→荷役→引取→料金の
+  全 Stage 緑 (Stage 5-6 は通知経由の平文コード取得で実装)
+* **実 DB 統合テスト** (T7-G 一部): PostgresInvoiceRepository の
+  楽観ロック競合含む 5 ケース
+* **US10/US12 (ストレッチ) の Domain/Application 層**:
+  AdjustEstimateCommand (経路条件調整・再算出) /
+  NotifyRouteCommand (確定経路の荷主通知)。UI は IT9
+
+### Changed
+
+* handlingPageApp の DI 8 引数を HandlingPageDeps レコードに集約 (T7-F)
+* ADR-0002 に「Application Input record は Text-only を維持」を追記 (T7-I)
+
+### Fixed
+
+* cargo_booking_status_check の欠落値 (RouteAssigned/Cancelled) と
+  PostgresBookingRepository.textToBookingStatus の欠落分岐
+* E2E スペックの DEHAM (location マスタ未登録) 参照
 
 ---
 
