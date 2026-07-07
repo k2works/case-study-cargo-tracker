@@ -15,6 +15,7 @@ Application 層の Command から `withTransaction` で張る (IT2 で本格対�
 -}
 module Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
   ( newPostgresUserRepository,
+    findRolesByUserId,
   ) where
 
 import Data.Text (Text)
@@ -65,6 +66,23 @@ findUserByEmail conn email_ = do
               }
       Nothing -> pure Nothing -- ロール未設定ユーザーは認証不可
     _ -> pure Nothing
+
+{- | T7-A (IT8): UserId から全ロールを解決する。RoleGate の
+`UserId -> IO [Role]` DI に渡す用途。未知ロール文字列は読み飛ばす。
+-}
+findRolesByUserId :: Connection -> UserId -> IO [Role]
+findRolesByUserId conn (UserId uid) = do
+  rows <-
+    query
+      conn
+      "SELECT r.role \
+      \ FROM users u \
+      \ JOIN user_roles r ON r.user_id = u.id \
+      \ WHERE u.user_id = ? \
+      \ ORDER BY r.id ASC"
+      (Only uid) ::
+      IO [Only Text]
+  pure [role | Only t <- rows, Just role <- [parseRole (Just t)]]
 
 parseRole :: Maybe Text -> Maybe Role
 parseRole Nothing = Nothing

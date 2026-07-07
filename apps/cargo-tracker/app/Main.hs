@@ -25,6 +25,7 @@ module Main (main) where
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import qualified Data.Text as T
+import Data.Time (getCurrentTime)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Database.PostgreSQL.Simple
   ( Connection,
@@ -99,7 +100,8 @@ import Cargotracker.Shared.Auth.Infrastructure.PostgresSessionRepository
   ( newPostgresSessionRepository,
   )
 import Cargotracker.Shared.Auth.Infrastructure.PostgresUserRepository
-  ( newPostgresUserRepository,
+  ( findRolesByUserId,
+    newPostgresUserRepository,
   )
 import Cargotracker.Shared.Auth.Interfaces.LoginApi (loginApp)
 import Cargotracker.Shared.Auth.Interfaces.LoginPageApi (loginPageApp)
@@ -203,8 +205,8 @@ rootApp conn jwtSecret jwtTtl req respond =
     "voyages" : _ -> voyagePageApp voyageRepo req respond
     "public" : "tracking" : _ -> publicTrackingApp trackingRepo handlingRepo req respond
     "tracking" : _ : "manual-update" : _ ->
-      -- US17 手動状態更新 (Tracker/MasterAdmin 権限適用は T6-09 で AuthProtect 統合予定)
-      manualUpdateApp trackingRepo auditRepo "system" req respond
+      -- US17 手動状態更新 (T7-A: RoleGate 配線済、Tracker/MasterAdmin のみ。ADR-0016)
+      manualUpdateApp trackingRepo auditRepo sessionRepo (findRolesByUserId conn) getCurrentTime req respond
     "tracking" : _ : "audit-history" : _ ->
       -- US17 監査履歴タブ (htmx フラグメント)
       auditHistoryApp auditRepo req respond

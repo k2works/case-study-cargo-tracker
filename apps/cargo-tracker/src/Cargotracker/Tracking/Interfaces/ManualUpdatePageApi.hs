@@ -3,15 +3,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
-{- | 手動状態更新エンドポイント (US17 5.4, IT7)
+{- | 手動状態更新エンドポイント (US17 5.4, IT7 / T7-A, IT8)
 
 Servant handler:
 
 - GET  /tracking/:tn/manual-update : 手動更新フォーム (Lucid)
 - POST /tracking/:tn/manual-update : ManualStateUpdateCommand 実行 + 303 リダイレクト
 
-Role-based 認可 (Tracker / MasterAdmin) は T6-09 で AuthProtect 経由に統合する。
-本反復では handler の骨組みと POST->Command 配線を確立するに留める。
+T7-A (IT8): RoleGate (ADR-0016) を配線済。Cookie 認証 → 未認証 401 →
+`canManualStateUpdate` (Tracker/MasterAdmin のみ) → 不足 403。
+`changedBy` は固定値ではなく認証済み UserId を監査ログに記録する。
 -}
 module Cargotracker.Tracking.Interfaces.ManualUpdatePageApi
   ( ManualUpdateApi,
@@ -24,7 +25,7 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as BSL
 import Data.Text (Text)
-import Data.Time (getCurrentTime)
+import Data.Time (UTCTime, getCurrentTime)
 import GHC.Generics (Generic)
 import Lucid (Html)
 import Network.Wai (Application)
@@ -32,6 +33,11 @@ import Servant
 import Servant.HTML.Lucid (HTML)
 import Web.FormUrlEncoded (FromForm (..), parseUnique)
 
+import Cargotracker.Shared.Auth.Application.SessionPorts (SessionRepository)
+import Cargotracker.Shared.Auth.Domain.RolePolicy (canManualStateUpdate)
+import Cargotracker.Shared.Auth.Domain.User (Role, UserId (..))
+import Cargotracker.Shared.Auth.Interfaces.RoleGate (requireRoleGate)
+import Cargotracker.Shared.Auth.Interfaces.SessionAuth (AuthenticatedUser (..))
 import Cargotracker.Shared.Domain.TransportStatus
   ( TransportStatus (..),
     textToTransportStatus,
@@ -64,6 +70,7 @@ type ManualUpdateApi =
   "tracking"
     :> Capture "trackingNumber" Text
     :> "manual-update"
+    :> Header "Cookie" Text
     :> ( Get '[HTML] (Html ())
            :<|> ReqBody '[FormUrlEncoded] ManualUpdateForm
              :> Verb 'POST 303 '[HTML] (Headers '[Header "Location" Text] NoContent)
@@ -72,18 +79,25 @@ type ManualUpdateApi =
 manualUpdateApp ::
   TrackingRepository IO ->
   TrackingStateAuditRepository IO ->
-  Text ->
+  SessionRepository IO ->
+  (UserId -> IO [Role]) ->
+  IO UTCTime ->
   Application
-manualUpdateApp trackingRepo auditRepo changedBy =
-  serve (Proxy :: Proxy ManualUpdateApi) $ \tn ->
-    handlerForm trackingRepo tn
-      :<|> handlerSubmit trackingRepo auditRepo changedBy tn
+manualUpdateApp trackingRepo auditRepo sessionRepo lookupRoles nowM =
+  serve (Proxy :: Proxy ManualUpdateApi) $ \tn mCookie ->
+    handlerForm trackingRepo (gate mCookie) tn
+      :<|> handlerSubmit trackingRepo auditRepo (gate mCookie) tn
+  where
+    -- T7-A (ADR-0016): Cookie 認証 (401) + canManualStateUpdate (403)
+    gate = requireRoleGate sessionRepo lookupRoles nowM canManualStateUpdate
 
 handlerForm ::
   TrackingRepository IO ->
+  Handler AuthenticatedUser ->
   Text ->
   Handler (Html ())
-handlerForm trackingRepo tn = do
+handlerForm trackingRepo gate tn = do
+  _ <- gate
   case mkTrackingNumber tn of
     Left _ -> pure (manualUpdateFormFragment tn TsUnknown)
     Right tnObj -> do
@@ -94,11 +108,13 @@ handlerForm trackingRepo tn = do
 handlerSubmit ::
   TrackingRepository IO ->
   TrackingStateAuditRepository IO ->
-  Text ->
+  Handler AuthenticatedUser ->
   Text ->
   ManualUpdateForm ->
   Handler (Headers '[Header "Location" Text] NoContent)
-handlerSubmit trackingRepo auditRepo changedBy tn form = do
+handlerSubmit trackingRepo auditRepo gate tn form = do
+  authUser <- gate
+  let UserId changedBy = authUserId authUser
   now <- liftIO getCurrentTime
   let input =
         Cmd.ManualStateUpdateInput
