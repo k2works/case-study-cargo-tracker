@@ -1,0 +1,88 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/cargo-tracker/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "apps/cargo-tracker/**"
+      - ".github/workflows/backend-ci.yml"
+
+defaults:
+  run:
+    working-directory: apps/cargo-tracker
+
+jobs:
+  lint:
+    name: 品質チェック
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ruby セットアップ
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.4"
+          bundler-cache: true
+          working-directory: apps/cargo-tracker
+
+      - name: RuboCop
+        run: bundle exec rubocop --parallel
+
+      - name: Brakeman
+        run: bundle exec brakeman -q --no-pager
+
+      - name: bundler-audit
+        run: bundle exec bundler-audit check --update
+
+      - name: Packwerk（境界検証）
+        run: |
+          bin/packwerk validate
+          bin/packwerk check
+
+  test:
+    name: テスト
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cargo_tracker
+          POSTGRES_PASSWORD: cargo_tracker
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U cargo_tracker"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      RAILS_ENV: test
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: 5433
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ruby セットアップ
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.4"
+          bundler-cache: true
+          working-directory: apps/cargo-tracker
+
+      - name: DB 準備
+        run: bin/rails db:prepare
+
+      - name: RSpec
+        run: bundle exec rspec
+
+      - name: カバレッジレポートをアップロード
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: apps/cargo-tracker/coverage
+          retention-days: 7
