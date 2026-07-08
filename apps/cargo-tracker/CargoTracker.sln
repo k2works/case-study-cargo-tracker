@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CargoTracker.Infrastructure
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CargoTracker.Web.Tests", "tests\CargoTracker.Web.Tests\CargoTracker.Web.Tests.csproj", "{939A1EF1-3910-4574-AD54-009C9A2D2DF5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CargoTracker.E2E.Tests", "tests\CargoTracker.E2E.Tests\CargoTracker.E2E.Tests.csproj", "{E221BC90-60EF-4E83-A579-625762F4A9EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,18 @@ Global
 		{939A1EF1-3910-4574-AD54-009C9A2D2DF5}.Release|x64.Build.0 = Release|Any CPU
 		{939A1EF1-3910-4574-AD54-009C9A2D2DF5}.Release|x86.ActiveCfg = Release|Any CPU
 		{939A1EF1-3910-4574-AD54-009C9A2D2DF5}.Release|x86.Build.0 = Release|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Debug|x86.Build.0 = Debug|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Release|x64.ActiveCfg = Release|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Release|x64.Build.0 = Release|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Release|x86.ActiveCfg = Release|Any CPU
+		{E221BC90-60EF-4E83-A579-625762F4A9EB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,5 +126,6 @@ Global
 		{CA9A0916-4E9A-4FC8-ABF4-754633A16932} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{F823500F-3420-4C11-89BF-C66D5B366050} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{939A1EF1-3910-4574-AD54-009C9A2D2DF5} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{E221BC90-60EF-4E83-A579-625762F4A9EB} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

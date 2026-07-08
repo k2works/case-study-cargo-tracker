@@ -146,8 +146,9 @@
 | 3.1 | Shipper 集約（個人/法人、DiscountRate 0-30% 検証）ユニットテスト | 3h | - | [x] |
 | 3.2 | ShipperRepository（ADR-0001 参照実装）統合テスト | 3h | - | [x] |
 | 3.3 | 荷主一覧 / 登録画面（`/shippers`, `/shippers/new`、種別切替・重複メール確認） | 4h | - | [x] |
+| 3.4 | Playwright E2E テスト（ログイン → 荷主登録 → 一覧表示） | 2h | - | [x] |
 
-**小計**: 10h（理想時間）
+**小計**: 12h（理想時間）
 
 > **注**: 楽観的ロック（version 更新）は登録のみの US02/03 では不要のため未実装（列は用意済み）。更新系ストーリー着手時に ADR-0001 準拠で実装する。
 
@@ -159,8 +160,9 @@
 | 4.2 | IExternalRoutingServicePort スタブ実装（WireMock.Net 契約テストは IT3 で追加） | 3h | - | [x] |
 | 4.3 | EstimateRepository（estimate / route_candidate 集約永続化）統合テスト | 3h | - | [x] |
 | 4.4 | 見積一覧 / 作成 / 詳細画面（`/estimates`, `/estimates/new`, `/estimates/{estimateId}`） | 4h | - | [x] |
+| 4.5 | Playwright E2E テスト（ログイン → 見積作成 → 詳細でルート候補表示） | 2h | - | [x] |
 
-**小計**: 13h（理想時間）
+**小計**: 15h（理想時間）
 
 > **注**: ルート算出は IT1 では素の型付きスタブ（`StubExternalRoutingService`）で提供。WireMock.Net による契約テストは航海スケジュール実装の IT3 で `IExternalRoutingServicePort` の契約固定と同時に追加する。
 
