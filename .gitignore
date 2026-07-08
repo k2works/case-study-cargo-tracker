@@ -33,3 +33,6 @@ coverage/
 tmp/
 .tmp/
 .claude/agent-memory
+# 開発用 SQLite データベース（DbUp 起動時生成・ADR-0003）
+cargotracker.dev.db
+*.dev.db
