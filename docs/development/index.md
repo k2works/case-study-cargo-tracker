@@ -20,7 +20,7 @@
 
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
-| IT1 | [iteration_plan-1.md](iteration_plan-1.md) | - | - | 完了 |
+| IT1 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | - | 完了 |
 
 ### 進捗サマリー
 

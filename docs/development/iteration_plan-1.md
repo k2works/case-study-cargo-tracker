@@ -531,6 +531,8 @@ DbUp のバージョン付きスクリプトを **ストーリー単位で前進
 
 ## 関連ドキュメント
 
+- [イテレーション 1 ふりかえり（KPT）](./retrospective-1.md)
+- [開発成果物レビュー（IT1）](../review/開発成果物_IT1_review_20260708.md)
 - [リリース計画](./release_plan.md)
 - [ユーザーストーリー](../requirements/user_story.md)
 - [ドメインモデル設計](../design/domain-model.md)
