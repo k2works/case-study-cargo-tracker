@@ -71,6 +71,7 @@
 | `syncing-github-project` | GitHub Project 同期 |
 | `tracking-progress` | 進捗分析・レポート |
 | `validating-iteration-plan` | イテレーション計画の整合性検証 |
+| `validating-design` | 設計整合性の横断検証（開発戦略・計画・設計ドキュメント・過去計画） |
 
 ### 運用
 
@@ -94,6 +95,7 @@
 | `generating-slides` | インセプションデッキのスライド生成 |
 | `git-commit` | Conventional Commits 準拠のコミット |
 | `creating-adr` | ADR 作成 |
+| `creating-development-strategy` | 開発戦略（序盤/中盤/終盤の局面別アプローチ）作成 |
 | `creating-release-report` | リリース完了報告書作成 |
 | `creating-iteration-report` | イテレーション完了報告書作成 |
 
