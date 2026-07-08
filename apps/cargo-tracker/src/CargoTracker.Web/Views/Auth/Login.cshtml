@@ -1,0 +1,36 @@
+@model CargoTracker.Shared.Infrastructure.Auth.LoginForm
+@{
+    ViewData["Title"] = "ログイン";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="text-center mb-4">
+            <h1 class="h3"><strong>CargoTracker</strong></h1>
+            <p class="text-muted">国際貨物輸送管理システム</p>
+        </div>
+
+        @if (ViewData["Error"] is string error)
+        {
+            <div class="alert alert-danger" role="alert">@error</div>
+        }
+
+        <form asp-action="Login" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label"></label>
+                <input asp-for="Username" class="form-control" autofocus autocomplete="username" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">ログイン</button>
+            </div>
+        </form>
+        <p class="text-muted mt-3"><em>アカウントがない場合は管理者に連絡してください</em></p>
+    </div>
+</div>

@@ -1,18 +1,51 @@
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
+using CargoTracker.Shared.Infrastructure.Auth;
 using CargoTracker.Shared.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.Extensions.WebEncoders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
+// 日本語 UI のため、HTML エンコーダが日本語をエンティティ化せずそのまま出力するよう全 Unicode を許可する。
+builder.Services.Configure<WebEncoderOptions>(options =>
+    options.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All));
+
+// 既定で全 MVC エンドポイントに認証を要求する（US26 受入条件 3）。
+// 未認証で保護ページにアクセスするとログイン画面へリダイレクトされる。
+// [AllowAnonymous] を付けたログイン・公開追跡は除外される。/health と静的アセットは MVC 外のため影響しない。
+builder.Services.AddControllersWithViews(options =>
+{
+    var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+    options.Filters.Add(new AuthorizeFilter(policy));
+});
 builder.Services.AddHealthChecks();
 
-// DB 接続設定（ADR-0003 二方言運用）と接続ファクトリ・MediatR を登録する。
+// Cookie 認証（US26 受入条件 1・5）。full Identity は導入せず Cookie スキームのみ利用する。
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/login";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+builder.Services.AddAuthorization();
+
+// DB 接続設定（ADR-0003 二方言運用）と接続ファクトリ・MediatR・認証サービスを登録する。
 var databaseOptions = builder.Configuration
     .GetSection(DatabaseOptions.SectionName)
     .Get<DatabaseOptions>() ?? new DatabaseOptions();
 builder.Services.AddSingleton(databaseOptions);
 builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<UserAuthenticator>();
 
 var app = builder.Build();
 
@@ -24,6 +57,15 @@ if (!string.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
     if (!migration.Successful)
     {
         throw new InvalidOperationException("DB マイグレーションに失敗しました。", migration.Error);
+    }
+
+    // 開発・デモ環境ではシードユーザーを投入する（US26 タスク 2.4）。本番では実行しない。
+    if (app.Environment.IsDevelopment())
+    {
+        using var scope = app.Services.CreateScope();
+        await UserSeeder.SeedAsync(
+            scope.ServiceProvider.GetRequiredService<IUserRepository>(),
+            scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
     }
 }
 
@@ -38,6 +80,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
@@ -51,3 +94,6 @@ app.MapControllerRoute(
 
 
 app.Run();
+
+// WebApplicationFactory<Program> による統合テストのためにエントリポイントを公開する。
+public partial class Program;
