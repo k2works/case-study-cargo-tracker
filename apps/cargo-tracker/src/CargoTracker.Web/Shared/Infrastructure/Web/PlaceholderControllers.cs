@@ -17,14 +17,6 @@ public sealed class BookingPlaceholderController : Controller
 }
 
 [Authorize(Roles = $"{Roles.Sales}")]
-public sealed class ShipperPlaceholderController : Controller
-{
-    [HttpGet("/shippers")]
-    public IActionResult Index() =>
-        View("Placeholder", new PlaceholderViewModel("荷主管理", "担当 IT: IT1 / US02-03"));
-}
-
-[Authorize(Roles = $"{Roles.Sales}")]
 public sealed class EstimatePlaceholderController : Controller
 {
     [HttpGet("/estimates")]

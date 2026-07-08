@@ -47,6 +47,12 @@ builder.Services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<UserAuthenticator>();
 
+// Shipper コンテキスト（US02/US03）。
+builder.Services.AddScoped<CargoTracker.Shipper.Domain.Repositories.IShipperRepository,
+    CargoTracker.Shipper.Infrastructure.Repositories.ShipperRepository>();
+builder.Services.AddScoped<CargoTracker.Shipper.Application.Internal.CommandServices.RegisterShipperCommandService>();
+builder.Services.AddScoped<CargoTracker.Shipper.Application.Internal.QueryServices.FindShipperQueryService>();
+
 var app = builder.Build();
 
 // 起動時に DbUp マイグレーションを適用する（forward-only・ADR-0003）。
