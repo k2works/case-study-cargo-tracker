@@ -23,6 +23,11 @@ public sealed class ShipperController(
     [HttpGet("/shippers/new")]
     public IActionResult New() => View(new ShipperForm());
 
+    /// <summary>荷主種別に応じた法人フィールドの部分ビューを返す（htmx 動的切替・US03）。</summary>
+    [HttpGet("/shippers/corporate-fields")]
+    public IActionResult CorporateFields(string? shipperType)
+        => PartialView("_CorporateFields", new ShipperForm { ShipperType = shipperType ?? "Individual" });
+
     [HttpPost("/shippers/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> New(ShipperForm form, CancellationToken ct)

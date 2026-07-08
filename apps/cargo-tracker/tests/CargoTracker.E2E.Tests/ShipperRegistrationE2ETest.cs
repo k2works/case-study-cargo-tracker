@@ -31,5 +31,24 @@ public sealed class ShipperRegistrationE2ETest(E2EFixture fixture)
         await Expect(page.Locator(".alert-success")).ToContainTextAsync("荷主を登録しました");
     }
 
+    [Fact]
+    public async Task 荷主種別を法人に切り替えると契約番号フィールドがhtmxで表示される()
+    {
+        var page = await fixture.NewLoggedInPageAsync("sales");
+        await page.GotoAsync($"{fixture.BaseUrl}/shippers/new");
+
+        // 初期（個人）は法人フィールド非表示
+        await Expect(page.Locator("#ContractNumber")).ToHaveCountAsync(0);
+
+        // 法人を選択すると htmx で契約番号・割引率が差し込まれる
+        await page.CheckAsync("#typeCorporate");
+        await Expect(page.Locator("#ContractNumber")).ToBeVisibleAsync();
+        await Expect(page.Locator("#DiscountPercent")).ToBeVisibleAsync();
+
+        // 個人に戻すと再び非表示になる
+        await page.CheckAsync("#typeIndividual");
+        await Expect(page.Locator("#ContractNumber")).ToHaveCountAsync(0);
+    }
+
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);
 }

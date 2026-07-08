@@ -26,6 +26,7 @@
       <JQueryClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\jquery\dist\**\*.*" />
       <JQueryValidationClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\jquery-validation\dist\**\*.*" />
       <JQueryValidationUnobtrusiveClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\jquery-validation-unobtrusive\dist\**\*.*" />
+      <HtmxClientLibrary Include="$(MSBuildProjectDirectory)\..\..\..\..\node_modules\htmx.org\dist\htmx.min.js" />
     </ItemGroup>
 
     <Copy SourceFiles="@(BootstrapClientLibrary)"
@@ -39,6 +40,9 @@
           SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(JQueryValidationUnobtrusiveClientLibrary)"
           DestinationFolder="$(MSBuildProjectDirectory)\wwwroot\lib\jquery-validation-unobtrusive\dist\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(HtmxClientLibrary)"
+          DestinationFolder="$(MSBuildProjectDirectory)\wwwroot\lib\htmx\dist\"
           SkipUnchangedFiles="true" />
   </Target>
 
