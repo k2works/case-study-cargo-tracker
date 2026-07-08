@@ -25,7 +25,7 @@
 - [x] 「ログイン → 荷主登録 → 見積作成」が WebApplicationFactory 受入テストで一気通貫（Heroku デプロイでのデモは IT 完了後に実施）
 - [x] ロールバック時にドメインイベントが発行されないことを統合テストで実証（ADR-0002 コンプライアンス・`UnitOfWorkTest`）
 - [x] スクリプト同期の検証テスト（両方言のバージョン一致）が動作（ADR-0003 #3・`MigrationScriptSyncTest`）
-- [ ] 方言検出テスト（`NOW()` / `RETURNING` 等の禁止パターンのソース走査）は未実装 → IT2 へ持ち越し（ADR-0003 #2・レビュー #24）
+- [x] 方言検出テスト（`NOW()` / `RETURNING` 等の禁止パターンのソース走査）が動作（ADR-0003 #2・`SqlDialectComplianceTest`・レビュー #24）
 - [ ] テストカバレッジ計測（coverlet）は未実施 → IT2 で CI に組み込み（現状の実装はドメイン先行 TDD でドメイン層を網羅）
 
 > **IT1 実績（tracking-progress 2026-07-08）**: 計画 13 SP を全完了（達成率 100%）。全 62 テストパス（Domain 26 / App 4 / Infra 15 / Web 16 / Arch 1）、ビルド警告 0、`dotnet format` クリーン。
@@ -111,7 +111,7 @@
 | 1.2 | 初期スキーマ（両方言・per-story: 0001 users / 0002 shipper / 0003 estimate・route_candidate） | 3h | - | [x] |
 | 1.3 | AggregateRoot 基底クラス + IUnitOfWork + post-commit ディスパッチ実装 | 4h | - | [x] |
 | 1.4 | ロールバック時イベント非発行の統合テスト（`UnitOfWorkTest`） | 2h | - | [x] |
-| 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [~] |
+| 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [x] |
 | 1.6 | CQRS 段階適用の判断を ADR 化（レビュー #23） | 1h | - | [ ] |
 
 **小計**: 15h（理想時間）
@@ -120,7 +120,7 @@
 >
 > **1.2 注**: 当初の「0001＝5 テーブル一括」から per-story マイグレーション方針に変更（validating-design）。`user_roles` は ADR-0004（単一 role カラム）により不採用。
 > **1.4 注**: UoW のコミット/ロールバック挙動は方言非依存のため SQLite in-memory で検証（Testcontainers はリポジトリ SQL 検証に使用）。
-> **1.5 注（IT2 持ち越し）**: スクリプト同期検証（`MigrationScriptSyncTest`）は実装済み。`NOW()`/`RETURNING` 等の禁止パターンのソース走査テストと CI 組み込みは未実施。
+> **1.5 完了**: スクリプト同期検証（`MigrationScriptSyncTest`）+ 禁止パターン走査（`SqlDialectComplianceTest`・`NOW()`/`RETURNING`/`ILIKE`/`ON CONFLICT`/`JSONB`/`::` を検出）を実装。CI（`backend-ci.yml` の `dotnet test` 全体実行）に自動包含される。
 > **1.6 注（繰り延べ）**: CQRS 段階適用の ADR は ADR-0005（提案）として後続で起票する。
 
 #### 2. US26: システムにログインする（3 SP）
@@ -168,7 +168,7 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 技術基盤 | - | 15h | [~]（中核 1.1-1.4 完了。1.5 部分・1.6 繰り延べ） |
+| 技術基盤 | - | 15h | [~]（1.1-1.5 完了。1.6 CQRS ADR のみ繰り延べ） |
 | US26 認証 | 3 | 9h | [x] |
 | US02/03 荷主登録 | 5 | 10h | [x] |
 | US01 輸送見積 | 5 | 13h | [x] |
