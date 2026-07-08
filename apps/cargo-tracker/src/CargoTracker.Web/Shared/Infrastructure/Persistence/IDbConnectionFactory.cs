@@ -1,15 +1,14 @@
 using System.Data;
+using CargoTracker.Shared.Application.Persistence;
 using Microsoft.Data.Sqlite;
 using Npgsql;
 
 namespace CargoTracker.Shared.Infrastructure.Persistence;
 
-/// <summary>設定されたプロバイダに応じた DB 接続を生成するファクトリ（ADR-0001・IDbConnection 注入）。</summary>
-public interface IDbConnectionFactory
-{
-    IDbConnection Create();
-}
-
+/// <summary>
+/// <see cref="IDbConnectionFactory"/> の具象アダプター。設定されたプロバイダに応じた
+/// DB 接続を生成する（ADR-0001・IDbConnection 注入）。
+/// </summary>
 public sealed class DbConnectionFactory(DatabaseOptions options) : IDbConnectionFactory
 {
     public IDbConnection Create() => options.Provider switch

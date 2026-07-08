@@ -1,4 +1,4 @@
-using CargoTracker.Shared.Infrastructure.Persistence;
+using CargoTracker.Shared.Application.Persistence;
 using Dapper;
 
 namespace CargoTracker.Estimation.Application.Internal.QueryServices;

@@ -33,7 +33,8 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
             ConnectionString = _postgres.GetConnectionString(),
         });
         var repository = new ShipperRepository();
-        _commandService = new RegisterShipperCommandService(_connectionFactory, repository, _publisher.Object);
+        var unitOfWorkFactory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object);
+        _commandService = new RegisterShipperCommandService(unitOfWorkFactory, repository);
         _queryService = new FindShipperQueryService(_connectionFactory);
     }
 

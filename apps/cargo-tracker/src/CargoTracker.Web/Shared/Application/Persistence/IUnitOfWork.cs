@@ -1,7 +1,7 @@
 using System.Data;
 using CargoTracker.Shared.Domain.Model;
 
-namespace CargoTracker.Shared.Infrastructure.Persistence;
+namespace CargoTracker.Shared.Application.Persistence;
 
 /// <summary>
 /// トランザクションと蓄積ドメインイベントを所有する作業単位（ADR-0002）。
@@ -18,4 +18,10 @@ public interface IUnitOfWork : IAsyncDisposable
 
     /// <summary>トランザクションをコミットし、成功後に追跡集約のイベントを発行する。</summary>
     Task CommitAsync(CancellationToken ct = default);
+}
+
+/// <summary>作業単位（<see cref="IUnitOfWork"/>）を生成するファクトリ。ユースケース単位で 1 つ開始する。</summary>
+public interface IUnitOfWorkFactory
+{
+    IUnitOfWork Begin();
 }

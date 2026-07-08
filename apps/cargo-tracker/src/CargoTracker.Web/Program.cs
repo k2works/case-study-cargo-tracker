@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using CargoTracker.Shared.Application.Persistence;
 using CargoTracker.Shared.Infrastructure.Auth;
 using CargoTracker.Shared.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -42,6 +43,7 @@ var databaseOptions = builder.Configuration
     .Get<DatabaseOptions>() ?? new DatabaseOptions();
 builder.Services.AddSingleton(databaseOptions);
 builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
+builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();

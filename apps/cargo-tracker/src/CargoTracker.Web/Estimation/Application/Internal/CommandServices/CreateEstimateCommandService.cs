@@ -1,9 +1,8 @@
 using CargoTracker.Estimation.Application.Internal.OutboundServices;
 using CargoTracker.Estimation.Domain.Model;
 using CargoTracker.Estimation.Domain.Repositories;
+using CargoTracker.Shared.Application.Persistence;
 using CargoTracker.Shared.Domain.Model;
-using CargoTracker.Shared.Infrastructure.Persistence;
-using MediatR;
 
 namespace CargoTracker.Estimation.Application.Internal.CommandServices;
 
@@ -12,10 +11,9 @@ namespace CargoTracker.Estimation.Application.Internal.CommandServices;
 /// ルート候補を取得して紐付け、見積とルート候補を単一トランザクションで永続化する（ADR-0001/0002）。
 /// </summary>
 public sealed class CreateEstimateCommandService(
-    IDbConnectionFactory connectionFactory,
+    IUnitOfWorkFactory unitOfWorkFactory,
     IEstimateRepository repository,
-    IExternalRoutingServicePort routingService,
-    IPublisher publisher)
+    IExternalRoutingServicePort routingService)
 {
     public async Task<EstimateId> HandleAsync(CreateEstimateCommand command, CancellationToken ct = default)
     {
@@ -28,8 +26,7 @@ public sealed class CreateEstimateCommandService(
             origin, destination, command.CargoType, command.WeightKg, ct);
         estimate.ReplaceCandidates(candidates);
 
-        using var connection = connectionFactory.Create();
-        await using var unitOfWork = new UnitOfWork(connection, publisher);
+        await using var unitOfWork = unitOfWorkFactory.Begin();
         unitOfWork.Track(estimate);
         await repository.SaveAsync(estimate, unitOfWork.Transaction, ct);
         await unitOfWork.CommitAsync(ct);

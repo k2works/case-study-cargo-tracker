@@ -1,9 +1,8 @@
+using CargoTracker.Shared.Application.Persistence;
 using CargoTracker.Shared.Domain.Model;
-using CargoTracker.Shared.Infrastructure.Persistence;
 using CargoTracker.Shipper.Domain;
 using CargoTracker.Shipper.Domain.Model;
 using CargoTracker.Shipper.Domain.Repositories;
-using MediatR;
 
 namespace CargoTracker.Shipper.Application.Internal.CommandServices;
 
@@ -12,14 +11,12 @@ namespace CargoTracker.Shipper.Application.Internal.CommandServices;
 /// UoW のトランザクション内で永続化してコミット後にドメインイベントを発行する（ADR-0002）。
 /// </summary>
 public sealed class RegisterShipperCommandService(
-    IDbConnectionFactory connectionFactory,
-    IShipperRepository repository,
-    IPublisher publisher)
+    IUnitOfWorkFactory unitOfWorkFactory,
+    IShipperRepository repository)
 {
     public async Task<ShipperId> HandleAsync(RegisterShipperCommand command, CancellationToken ct = default)
     {
-        using var connection = connectionFactory.Create();
-        await using var unitOfWork = new UnitOfWork(connection, publisher);
+        await using var unitOfWork = unitOfWorkFactory.Begin();
 
         if (await repository.ExistsByEmailAsync(command.Email, unitOfWork.Transaction, ct))
         {

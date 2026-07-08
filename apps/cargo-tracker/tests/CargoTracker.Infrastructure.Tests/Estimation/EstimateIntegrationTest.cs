@@ -28,8 +28,9 @@ public sealed class EstimateIntegrationTest : IAsyncLifetime
             Provider = DatabaseProvider.Postgres,
             ConnectionString = _postgres.GetConnectionString(),
         });
+        var unitOfWorkFactory = new UnitOfWorkFactory(factory, new Mock<IPublisher>().Object);
         _commandService = new CreateEstimateCommandService(
-            factory, new EstimateRepository(), new StubExternalRoutingService(), new Mock<IPublisher>().Object);
+            unitOfWorkFactory, new EstimateRepository(), new StubExternalRoutingService());
         _queryService = new FindEstimateQueryService(factory);
     }
 

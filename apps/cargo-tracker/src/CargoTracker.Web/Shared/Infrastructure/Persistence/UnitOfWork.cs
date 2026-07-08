@@ -1,4 +1,5 @@
 using System.Data;
+using CargoTracker.Shared.Application.Persistence;
 using CargoTracker.Shared.Domain.Model;
 using MediatR;
 
@@ -8,6 +9,7 @@ namespace CargoTracker.Shared.Infrastructure.Persistence;
 /// <see cref="IUnitOfWork"/> の実装。1 ユースケース = 1 トランザクションを原則とし、
 /// コミット成功後にのみ追跡集約のドメインイベントを MediatR で発行する（ADR-0002）。
 /// コミットしないまま破棄された場合はロールバックし、イベントは発行しない。
+/// 生成時に受け取った接続の生存も本作業単位が所有し、破棄時に解放する。
 /// </summary>
 public sealed class UnitOfWork : IUnitOfWork
 {
@@ -53,6 +55,13 @@ public sealed class UnitOfWork : IUnitOfWork
             _transaction.Rollback();
         }
         _transaction.Dispose();
+        _connection.Dispose();
         return ValueTask.CompletedTask;
     }
+}
+
+/// <summary><see cref="IUnitOfWorkFactory"/> の実装。接続を生成し作業単位を開始する。</summary>
+public sealed class UnitOfWorkFactory(IDbConnectionFactory connectionFactory, IPublisher publisher) : IUnitOfWorkFactory
+{
+    public IUnitOfWork Begin() => new UnitOfWork(connectionFactory.Create(), publisher);
 }
