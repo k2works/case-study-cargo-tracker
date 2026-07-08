@@ -1,10 +1,12 @@
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CargoTracker.Shared.Infrastructure.Web;
 
 public class HomeController : Controller
 {
+    // ダッシュボード（/）。全ロールがアクセスできる（グローバル認可により認証は必須）。
     public IActionResult Index()
     {
         return View();
@@ -15,6 +17,7 @@ public class HomeController : Controller
         return View();
     }
 
+    [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

@@ -1,0 +1,103 @@
+using System.Net;
+using System.Text.RegularExpressions;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+
+namespace CargoTracker.Web.Tests.Auth;
+
+/// <summary>
+/// ウォーキングスケルトンの検証（US26 受入条件 6）。ロール別ナビの表示制御と
+/// プレースホルダルートのロール制御・到達性を確認する。
+/// </summary>
+public sealed class WalkingSkeletonTest : IClassFixture<AuthenticationFlowTest.AuthWebFactory>
+{
+    private readonly AuthenticationFlowTest.AuthWebFactory _factory;
+
+    public WalkingSkeletonTest(AuthenticationFlowTest.AuthWebFactory factory) => _factory = factory;
+
+    private static string ExtractAntiforgeryToken(string html)
+    {
+        var match = Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
+        return match.Groups[1].Value;
+    }
+
+    /// <summary>指定シードユーザーでログイン済みのクライアントを返す（リダイレクト追従なし）。</summary>
+    private async Task<HttpClient> LoginAsAsync(string username)
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var token = ExtractAntiforgeryToken(await client.GetStringAsync("/login"));
+        var response = await client.PostAsync("/login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Username"] = username,
+            ["Password"] = "Password1!",
+            ["__RequestVerificationToken"] = token,
+        }));
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        return client;
+    }
+
+    [Fact]
+    public async Task 営業ロールのダッシュボードには営業メニューのみ表示される()
+    {
+        var client = await LoginAsAsync("sales");
+
+        var dashboard = await client.GetStringAsync("/");
+
+        dashboard.Should().Contain("荷主管理").And.Contain("見積管理").And.Contain("貨物予約");
+        dashboard.Should().NotContain("管理設定").And.NotContain("請求管理").And.NotContain("航路管理");
+    }
+
+    [Fact]
+    public async Task 管理者ロールのナビには管理設定が表示される()
+    {
+        var client = await LoginAsAsync("admin");
+
+        var dashboard = await client.GetStringAsync("/");
+
+        dashboard.Should().Contain("管理設定");
+    }
+
+    [Fact]
+    public async Task 営業ロールは荷主プレースホルダにアクセスできる()
+    {
+        var client = await LoginAsAsync("sales");
+
+        var response = await client.GetAsync("/shippers");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("準備中");
+    }
+
+    [Fact]
+    public async Task 権限のないロールは他フローのプレースホルダにアクセスできない()
+    {
+        // 営業ロールで管理設定（ROLE_ADMIN 専用）にアクセスする
+        var client = await LoginAsAsync("sales");
+
+        var response = await client.GetAsync("/admin/discount-policies");
+
+        // 認可外はログイン（AccessDeniedPath = /login）へリダイレクトされる
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location!.OriginalString.Should().Contain("/login");
+    }
+
+    [Fact]
+    public async Task ログアウトするとセッションが破棄されログイン画面に戻る()
+    {
+        var client = await LoginAsAsync("sales");
+
+        // ダッシュボードのログアウトフォームからトークンを取得してログアウトする
+        var token = ExtractAntiforgeryToken(await client.GetStringAsync("/"));
+        var logout = await client.PostAsync("/logout", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+        }));
+        logout.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        logout.Headers.Location!.OriginalString.Should().Contain("/login");
+
+        // ログアウト後は保護ページがログインへリダイレクトされる（セッション破棄）
+        var afterLogout = await client.GetAsync("/");
+        afterLogout.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        afterLogout.Headers.Location!.OriginalString.Should().Contain("/login");
+    }
+}
