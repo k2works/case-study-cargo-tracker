@@ -29,12 +29,19 @@
             </div>
             <div class="mb-3">
                 <label asp-for="CargoType" class="form-label"></label>
-                <select asp-for="CargoType" class="form-select">
+                @* 危険物選択時に htmx で申告フォームを動的に差し替える（US01 受入条件 6） *@
+                <select asp-for="CargoType" class="form-select"
+                        hx-get="/estimates/hazardous-declaration" hx-target="#hazardous-declaration"
+                        hx-swap="innerHTML" hx-trigger="change">
                     <option value="General">一般貨物</option>
                     <option value="Hazardous">危険物</option>
                     <option value="Refrigerated">冷凍・冷蔵</option>
                 </select>
                 <span asp-validation-for="CargoType" class="text-danger"></span>
+            </div>
+
+            <div id="hazardous-declaration">
+                <partial name="_HazardousDeclaration" model="@Model.CargoType" />
             </div>
             <div class="mb-3">
                 <label asp-for="WeightKg" class="form-label"></label>

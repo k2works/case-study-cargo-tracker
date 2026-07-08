@@ -23,6 +23,11 @@ public sealed class EstimateController(
     [HttpGet("/estimates/new")]
     public IActionResult New() => View(new EstimateForm());
 
+    /// <summary>貨物種別に応じた危険物申告フォームの部分ビューを返す（US01 受入条件 6・htmx 動的切替）。</summary>
+    [HttpGet("/estimates/hazardous-declaration")]
+    public IActionResult HazardousDeclaration(string? cargoType)
+        => PartialView("_HazardousDeclaration", cargoType ?? "General");
+
     [HttpPost("/estimates/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> New(EstimateForm form, CancellationToken ct)

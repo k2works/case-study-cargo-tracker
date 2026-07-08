@@ -32,5 +32,24 @@ public sealed class EstimateCreationE2ETest(E2EFixture fixture)
         body.Should().Contain("ルート候補").And.Contain("見積番号");
     }
 
+    [Fact]
+    public async Task 貨物種別を危険物に切り替えると危険物申告フォームがhtmxで表示される()
+    {
+        var page = await fixture.NewLoggedInPageAsync("sales");
+        await page.GotoAsync($"{fixture.BaseUrl}/estimates/new");
+
+        // 初期（一般貨物）は危険物申告フォーム非表示
+        await Expect(page.Locator("#hazardous-fields")).ToHaveCountAsync(0);
+
+        // 危険物を選択すると htmx で申告フォームが差し込まれる
+        await page.SelectOptionAsync("#CargoType", "Hazardous");
+        await Expect(page.Locator("#hazardous-fields")).ToBeVisibleAsync();
+        await Expect(page.Locator("#UnNumber")).ToBeVisibleAsync();
+
+        // 一般貨物に戻すと再び非表示になる
+        await page.SelectOptionAsync("#CargoType", "General");
+        await Expect(page.Locator("#hazardous-fields")).ToHaveCountAsync(0);
+    }
+
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);
 }
