@@ -3,6 +3,7 @@ using System.Text.Unicode;
 using CargoTracker.Shared.Application.Persistence;
 using CargoTracker.Shared.Infrastructure.Auth;
 using CargoTracker.Shared.Infrastructure.Persistence;
+using CargoTracker.Shared.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -75,13 +76,13 @@ if (!string.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
         throw new InvalidOperationException("DB マイグレーションに失敗しました。", migration.Error);
     }
 
-    // 開発・デモ環境ではシードユーザーを投入する（US26 タスク 2.4）。本番では実行しない。
-    if (app.Environment.IsDevelopment())
+    // 開発環境、または Seed:Enabled が有効なデプロイ環境（deploy:dev の Heroku 等）で
+    // デモデータ（シードユーザー + デモ荷主・見積）を投入する。本番では実行しない（US26 タスク 2.4）。
+    var seedOptions = builder.Configuration.GetSection(SeedOptions.SectionName).Get<SeedOptions>() ?? new SeedOptions();
+    if (app.Environment.IsDevelopment() || seedOptions.Enabled)
     {
         using var scope = app.Services.CreateScope();
-        await UserSeeder.SeedAsync(
-            scope.ServiceProvider.GetRequiredService<IUserRepository>(),
-            scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
+        await DemoDataSeeder.SeedAsync(scope.ServiceProvider);
     }
 }
 

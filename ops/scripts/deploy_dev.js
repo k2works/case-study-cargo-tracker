@@ -137,6 +137,17 @@ export default function (gulp) {
     }
   });
 
+  // シードデータ有効化: Seed__Enabled=true を設定（設定変更で dyno が再起動しシード投入される）
+  gulp.task('deploy:dev:seed', (done) => {
+    try {
+      const { appName } = getHerokuConfig();
+      run(`heroku config:set Seed__Enabled=true -a ${appName}`);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
   // 一括デプロイ: build → push → release
   gulp.task('deploy:dev', gulp.series('deploy:dev:build', 'deploy:dev:push', 'deploy:dev:release'));
 
@@ -169,6 +180,7 @@ export default function (gulp) {
   deploy:dev:open         ブラウザでアプリを開く
   deploy:dev:logs         ログのリアルタイム表示
   deploy:dev:status       dyno / リリース状態の確認
+  deploy:dev:seed         シードデータ有効化（Seed__Enabled=true・再起動でデモデータ投入）
 
 詳細: docs/operation/開発環境セットアップ手順書.md
 `);
