@@ -131,10 +131,25 @@ export default function (gulp) {
     }
   });
 
-  // 全テスト実行（カバレッジ付き）
+  // 全テスト実行（カバレッジ付き・E2E は除外）
   gulp.task('dev:test', (done) => {
     try {
-      run('dotnet test --collect:"XPlat Code Coverage"');
+      run('dotnet test --filter "Category!=E2E" --collect:"XPlat Code Coverage"');
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  // E2E テスト（Playwright・Chromium ヘッドレス + 実プロセス起動）
+  gulp.task('dev:e2e', (done) => {
+    try {
+      console.log('=== Playwright E2E テスト（ログイン → 荷主登録 / 見積作成） ===');
+      // E2E フィクスチャは dotnet run --no-build で Web を起動するため、先にビルドする。
+      run('dotnet build CargoTracker.sln --nologo');
+      // Chromium を導入（導入済みならスキップされる）。pwsh が必要。
+      run('pwsh tests/CargoTracker.E2E.Tests/bin/Debug/net10.0/playwright.ps1 install chromium');
+      run('dotnet test tests/CargoTracker.E2E.Tests/CargoTracker.E2E.Tests.csproj --no-build --nologo');
       done();
     } catch (error) {
       done(error);
@@ -164,7 +179,8 @@ export default function (gulp) {
   dev:db:start         PostgreSQL コンテナ起動（healthy まで待機）
   dev:db:stop          コンテナ停止・削除
   dev:db:logs          DB ログのリアルタイム表示
-  dev:test             全テスト実行（カバレッジ付き）
+  dev:test             全テスト実行（カバレッジ付き・E2E 除外）
+  dev:e2e              Playwright E2E テスト（Chromium ヘッドレス・要 pwsh）
   dev:check            品質チェック（format → build -warnaserror → test）
   dev:help             このヘルプを表示
 
