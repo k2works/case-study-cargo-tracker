@@ -112,7 +112,7 @@
 | 1.3 | AggregateRoot 基底クラス + IUnitOfWork + post-commit ディスパッチ実装 | 4h | - | [x] |
 | 1.4 | ロールバック時イベント非発行の統合テスト（`UnitOfWorkTest`） | 2h | - | [x] |
 | 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [x] |
-| 1.6 | CQRS 段階適用の判断を ADR 化（レビュー #23） | 1h | - | [ ] |
+| 1.6 | CQRS 段階適用の判断を ADR 化（レビュー #23・ADR-0005） | 1h | - | [x] |
 
 **小計**: 15h（理想時間）
 
@@ -121,7 +121,7 @@
 > **1.2 注**: 当初の「0001＝5 テーブル一括」から per-story マイグレーション方針に変更（validating-design）。`user_roles` は ADR-0004（単一 role カラム）により不採用。
 > **1.4 注**: UoW のコミット/ロールバック挙動は方言非依存のため SQLite in-memory で検証（Testcontainers はリポジトリ SQL 検証に使用）。
 > **1.5 完了**: スクリプト同期検証（`MigrationScriptSyncTest`）+ 禁止パターン走査（`SqlDialectComplianceTest`・`NOW()`/`RETURNING`/`ILIKE`/`ON CONFLICT`/`JSONB`/`::` を検出）を実装。CI（`backend-ci.yml` の `dotnet test` 全体実行）に自動包含される。
-> **1.6 注（繰り延べ）**: CQRS 段階適用の ADR は ADR-0005（提案）として後続で起票する。
+> **1.6 完了**: CQRS 段階適用の判断を [ADR-0005](../adr/0005-CQRSの段階的適用.md)（サービス分離・単一 DB・イベントソーシングなし）として起票・承認。IT1 の Shipper/Estimation で参照実装済み。
 
 #### 2. US26: システムにログインする（3 SP）
 
@@ -168,7 +168,7 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 技術基盤 | - | 15h | [~]（1.1-1.5 完了。1.6 CQRS ADR のみ繰り延べ） |
+| 技術基盤 | - | 15h | [x]（1.1-1.6 全完了） |
 | US26 認証 | 3 | 9h | [x] |
 | US02/03 荷主登録 | 5 | 10h | [x] |
 | US01 輸送見積 | 5 | 13h | [x] |
@@ -482,7 +482,7 @@ DbUp のバージョン付きスクリプトを **ストーリー単位で前進
 | [ADR-0002](../adr/0002-UnitOfWorkとpost-commitイベントディスパッチ.md) | UoW と post-commit ディスパッチ | 承認（本 IT で参照実装） |
 | [ADR-0003](../adr/0003-開発SQLite本番PostgreSQLの二方言運用.md) | 二方言運用 | 承認（本 IT で検出テスト実装） |
 | [ADR-0004](../adr/0004-Cookie認証と軽量ユーザーストア.md) | Cookie 認証と Dapper 軽量ユーザーストア | 承認（本 IT の US26 で実装） |
-| ADR-0005（予定） | CQRS の段階適用方針 | 提案（レビュー #23） |
+| [ADR-0005](../adr/0005-CQRSの段階的適用.md) | CQRS の段階的適用（サービス分離・単一 DB） | 承認（本 IT で参照実装） |
 
 ---
 

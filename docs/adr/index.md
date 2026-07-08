@@ -10,5 +10,6 @@
 | [ADR-0002](0002-UnitOfWorkとpost-commitイベントディスパッチ.md) | Unit of Work とドメインイベントの post-commit ディスパッチ | 承認 |
 | [ADR-0003](0003-開発SQLite本番PostgreSQLの二方言運用.md) | 開発 SQLite / 本番 PostgreSQL の二方言運用（B 案 + 緩和策） | 承認 |
 | [ADR-0004](0004-Cookie認証と軽量ユーザーストア.md) | Cookie 認証と Dapper 軽量ユーザーストア（full Identity 不使用） | 承認 |
+| [ADR-0005](0005-CQRSの段階的適用.md) | CQRS の段階的適用（サービス分離・単一 DB・イベントソーシングなし） | 承認 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
