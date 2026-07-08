@@ -22,7 +22,7 @@ tags: design, tech-stack, csharp, aspnet-core, postgresql
 | .NET | 10.0 (LTS) | ランタイム・SDK | 長期サポート（EOL: 2028-11）、豊富なエコシステム、クロスプラットフォーム対応 | MIT | GA（LTS） |
 | ASP.NET Core | 10.0 | アプリケーションフレームワーク | ミドルウェアパイプラインと DI 標準統合による開発効率、DDD 実装との親和性 | MIT | GA（.NET 10 に同梱） |
 | ASP.NET Core MVC | 10.0 | Web フレームワーク | Razor ビュー Controller・REST API Controller の統合、ヘキサゴナルの Primary Adapter として機能 | MIT | GA（.NET 10 に同梱） |
-| ASP.NET Core Identity | 10.0 | 認証・認可 | Cookie ベースのフォーム認証、RBAC（Sales / Handler 等のロール）、CSRF 保護（Antiforgery）、セッション管理 | MIT | GA（.NET 10 に同梱） |
+| ASP.NET Core Cookie 認証 | 10.0 | 認証・認可 | Cookie ベースのフォーム認証、ロール Claim による RBAC、CSRF 保護（Antiforgery）、セッション管理。full Identity（EF Core）は導入せず Dapper 軽量ユーザーストア + `PasswordHasher` を用いる（ADR-0004） | MIT | GA（.NET 10 に同梱） |
 | Dapper | 2.x | データアクセス（マイクロ ORM） | 手書き SQL による完全な制御と高速なマッピング、DDD リポジトリ実装との親和性、CQRS Read Model の DTO 直接射影 | Apache 2.0 | GA（アクティブ開発中） |
 | MediatR | 12.x | ドメインイベント発行 / CQRS | Command / Query / Notification による CQRS 実装、`INotification` によるドメインイベントの疎結合なコンテキスト間通信 | Apache 2.0 | GA（アクティブ開発中） |
 | Swashbuckle.AspNetCore | 6.x | API ドキュメント（Swagger UI） | REST API の自動ドキュメント生成、環境別（Development のみ）有効化 | MIT | GA（アクティブ開発中） |

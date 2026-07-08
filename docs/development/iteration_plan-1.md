@@ -55,8 +55,8 @@
 3. 未認証で保護ページにアクセスするとログイン画面へリダイレクトされる
 4. 公開貨物追跡ページ（`/public/tracking/{trackingId}`）と `/health` は未認証でアクセスできる
 5. ログアウトするとセッションが破棄されログイン画面に戻る
-6. ロール（ROLE_ADMIN / ROLE_SALES / ROLE_ROUTER / ROLE_TRACKER / ROLE_HANDLER / ROLE_BILLING）に応じてナビゲーションと機能が制御される
-7. パスワードはハッシュ化（BCrypt 相当）して保存される
+6. ロール（ROLE_ADMIN / ROLE_SALES / ROLE_ROUTE_DESIGNER / ROLE_TRACKER / ROLE_HANDLER / ROLE_BILLING）に応じてナビゲーションと機能が制御される（ADR-0004。ROLE_SHIPPER / ROLE_CONSIGNEE は後続 IT に繰り延べ）
+7. パスワードはハッシュ化（`PasswordHasher`・PBKDF2／BCrypt 相当）して保存される
 
 #### US02: 荷主を登録する
 
@@ -117,12 +117,17 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Cookie 認証構成（ログインパス・未認証リダイレクト・公開パス除外） | 2h | - | [ ] |
-| 2.2 | users / user_roles リポジトリ（Dapper）+ パスワードハッシュ | 3h | - | [ ] |
-| 2.3 | ログイン / ログアウト画面（Razor、エラー表示・入力保持） | 2h | - | [ ] |
-| 2.4 | ロール別ナビゲーション制御 + シードユーザー投入 | 2h | - | [ ] |
+| 2.1 | Cookie 認証構成（ログインパス・未認証リダイレクト・公開パス除外・ADR-0004） | 2h | - | [x] |
+| 2.2 | users リポジトリ（Dapper・単一 role カラム）+ パスワードハッシュ（`PasswordHasher`） | 3h | - | [x] |
+| 2.3 | ログイン / ログアウト画面（Razor、エラー表示・入力保持） | 2h | - | [x] |
+| 2.4 | ロール別ナビゲーション制御 + シードユーザー投入 | 2h | - | [x] |
+| 2.5 | ウォーキングスケルトン: 画面遷移図準拠の全ルートにロール制御付きプレースホルダを一括作成（development_strategy 序盤方針） | 2h | - | [x] |
 
-**小計**: 9h（理想時間）
+> **注（ADR-0004）**: full ASP.NET Core Identity は導入せず Cookie 認証 + Dapper 軽量ユーザーストア + `PasswordHasher` を採用。ロールは 1 ユーザー 1 ロール（`users.role`）とし `user_roles` テーブルは導入しない（多ロール要件発生時に再検討）。
+>
+> **注（序盤アプローチ）**: 開発戦略の序盤（アウトサイドイン）に従い、認証基盤の確立後に [ui_design 画面遷移図](../design/ui_design.md#画面遷移図) 準拠のナビゲーションと全ルートのプレースホルダを一括作成し、ウォーキングスケルトンの骨格とする。以降の US はプレースホルダを実画面へ差し替える。
+
+**小計**: 11h（理想時間）
 
 #### 3. US02/US03: 荷主登録（5 SP）
 
@@ -451,7 +456,9 @@ apps/cargo-tracker/src/CargoTracker.Web/
 
 ### データベーススキーマ
 
-`Scripts/postgresql/0001_initial_schema.sql` / `Scripts/sqlite/0001_initial_schema.sql`（データモデル節の 5 テーブル + 監査カラム + version。方言差分は BIGSERIAL ⇔ INTEGER AUTOINCREMENT 等のみ）
+DbUp のバージョン付きスクリプトを **ストーリー単位で前進的（forward-only）に追加**する（`Scripts/postgresql/` と `Scripts/sqlite/` を同一バージョンで並行管理・ADR-0003）。IT1 では `0001_initial_schema.sql`（`users` テーブル・US26 認証基盤）を作成し、荷主・見積のテーブルは後続スクリプト（0002 以降）で追加する。監査カラム（`created_at`・`updated_at`）+ `version` を付与し、方言差分は BIGSERIAL ⇔ INTEGER AUTOINCREMENT・TIMESTAMPTZ ⇔ TEXT 等に限定する。
+
+> **注**: 当初の「0001＝5 テーブル一括」から、DbUp の forward-only 思想（適用済みスクリプトは不変）に沿った per-story マイグレーション方針に変更（validating-design 2026-07-08）。
 
 ### ADR
 
@@ -460,7 +467,8 @@ apps/cargo-tracker/src/CargoTracker.Web/
 | [ADR-0001](../adr/0001-集約永続化戦略.md) | Dapper による集約永続化戦略 | 承認（本 IT で参照実装） |
 | [ADR-0002](../adr/0002-UnitOfWorkとpost-commitイベントディスパッチ.md) | UoW と post-commit ディスパッチ | 承認（本 IT で参照実装） |
 | [ADR-0003](../adr/0003-開発SQLite本番PostgreSQLの二方言運用.md) | 二方言運用 | 承認（本 IT で検出テスト実装） |
-| ADR-0004（予定） | CQRS の段階適用方針 | 提案（タスク 1.6・レビュー #23） |
+| [ADR-0004](../adr/0004-Cookie認証と軽量ユーザーストア.md) | Cookie 認証と Dapper 軽量ユーザーストア | 承認（本 IT の US26 で実装） |
+| ADR-0005（予定） | CQRS の段階適用方針 | 提案（レビュー #23） |
 
 ---
 

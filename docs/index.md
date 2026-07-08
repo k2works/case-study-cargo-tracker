@@ -71,6 +71,7 @@
 | [ADR-0001 集約永続化戦略](./adr/0001-集約永続化戦略.md) | Dapper による集約の保存・再構築規約（全削除→再挿入・楽観的ロック） |
 | [ADR-0002 UnitOfWork と post-commit イベントディスパッチ](./adr/0002-UnitOfWorkとpost-commitイベントディスパッチ.md) | トランザクション境界とドメインイベント発行タイミングの設計 |
 | [ADR-0003 開発 SQLite / 本番 PostgreSQL の二方言運用](./adr/0003-開発SQLite本番PostgreSQLの二方言運用.md) | 二方言構成の条件付き採用と方言混入の抑止策 |
+| [ADR-0004 Cookie 認証と軽量ユーザーストア](./adr/0004-Cookie認証と軽量ユーザーストア.md) | full Identity を使わず Cookie 認証 + Dapper + PasswordHasher を採用 |
 
 ## 補足
 

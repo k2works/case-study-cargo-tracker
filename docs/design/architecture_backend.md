@@ -473,7 +473,7 @@ public class TrackingEventHandler : INotificationHandler<HandlingActivityRegiste
 | Spring イベント（`ApplicationEventPublisher.publishEvent()`） | MediatR（`IPublisher.Publish()`） | 同期イベントはほぼ等価。同一プロセス内通信。`@TransactionalEventListener(AFTER_COMMIT)` 相当は post-commit ディスパッチで実現する |
 | Spring Data JPA / Hibernate | **Dapper + Npgsql** | O/R マッピングから SQL 明示管理への移行。リポジトリ実装が手書き SQL を発行し、ドメインモデルを永続化属性から完全に独立させる |
 | Bean Validation（`@Valid`） | DataAnnotations + FluentValidation | DTO には DataAnnotations、複雑なルールは FluentValidation で定義 |
-| Spring Security | ASP.NET Core Identity + Cookie 認証 | フォームベース認証・RBAC を ASP.NET Core Identity で実装 |
+| Spring Security | ASP.NET Core Cookie 認証 + Dapper ユーザーストア | フォームベース認証・ロール Claim による RBAC。full Identity（EF Core）は使わず `PasswordHasher` でハッシュ化（ADR-0004） |
 | Thymeleaf | Razor ビュー（cshtml） | フラグメントはパーシャルビュー / ViewComponent に対応 |
 | Flyway | DbUp | バージョン付き SQL スクリプトによる forward-only マイグレーション（Flyway と同思想） |
 | Bean スコープ（`singleton` / `request`） | `AddSingleton` / `AddScoped` | DI コンテナのライフタイム管理として同等の思想 |
@@ -553,28 +553,35 @@ apps/cargo-tracker/src/CargoTracker.Web/          # ASP.NET Core ホスト（Car
 
 ## セキュリティ設計
 
-### ASP.NET Core Identity による認証・認可
+### Cookie 認証 + Dapper ユーザーストアによる認証・認可（ADR-0004）
+
+full な ASP.NET Core Identity（EF Core）は導入せず、Cookie 認証スキーム + Dapper の `users` テーブル + `PasswordHasher` の軽量構成を採用する。
 
 ```plantuml
 @startuml
-title ASP.NET Core - 認証・認可フロー
+title Cookie 認証・認可フロー
 
 actor User
-participant "Authentication\nMiddleware" as security
-participant "SignInManager" as auth
-participant "UserManager\n(ASP.NET Core Identity)" as uds
+participant "Authentication\nMiddleware (Cookie)" as security
+participant "AuthController" as auth
+participant "UserAuthenticator" as authn
+participant "UserRepository\n(Dapper)" as repo
 participant "Controller" as ctrl
-database "PostgreSQL\n(AspNetUsers テーブル)" as db
+database "PostgreSQL\n(users テーブル)" as db
 
-User -> security : HTTP Request
-security -> auth : 認証試行
-auth -> uds : FindByNameAsync()
-uds -> db : ユーザー情報取得
-db --> uds : IdentityUser
-uds --> auth : IdentityUser
-auth --> security : ClaimsPrincipal
+User -> auth : POST /login（ユーザー名・パスワード）
+auth -> authn : AuthenticateAsync()
+authn -> repo : FindByUsernameAsync()
+repo -> db : SELECT ... FROM users
+db --> repo : AppUser（password_hash・role）
+repo --> authn : AppUser
+authn -> authn : PasswordHasher.Verify()
+authn --> auth : AppUser / null
+auth -> security : SignInAsync（Name・Role Claim）
+security --> User : 認証 Cookie
 
-security -> security : 認可チェック\n（[Authorize(Roles = ...)] / Authorization Policy）
+User -> security : 保護ページへの HTTP Request
+security -> security : Cookie 検証・認可\n（[Authorize(Roles = ...)] / グローバル認可）
 security -> ctrl : 認証・認可済みリクエスト
 ctrl --> User : レスポンス
 
@@ -583,14 +590,18 @@ ctrl --> User : レスポンス
 
 ### ロール設計
 
-| ロール | 権限 | 対象ユーザー |
-| :--- | :--- | :--- |
-| `Shipper` | 予約照会・追跡照会 | 荷主 |
-| `Sales` | 予約登録・経路割り当て | 営業担当者 |
-| `Handler` | 荷役作業登録 | 荷役作業員 |
-| `Tracker` | 追跡情報管理・例外対応 | 追跡管理者 |
-| `Accountant` | 請求書管理 | 経理担当者 |
-| `Admin` | 全機能 | システム管理者 |
+ロール名は `ROLE_` プレフィックス付きを正準とする（ADR-0004・ui_design ナビゲーション構成準拠）。1 ユーザー 1 ロール（`users.role`）。
+
+| ロール定数 | 値 | 権限 | 対象ユーザー |
+| :--- | :--- | :--- | :--- |
+| `Roles.Sales` | `ROLE_SALES` | 荷主・見積・予約・経路割り当て | 営業担当者 |
+| `Roles.RouteDesigner` | `ROLE_ROUTE_DESIGNER` | 航路管理・経路設計 | 経路設計者 |
+| `Roles.Handler` | `ROLE_HANDLER` | 荷役作業登録 | 荷役作業員 |
+| `Roles.Tracker` | `ROLE_TRACKER` | 追跡情報管理・例外対応 | 追跡管理者 |
+| `Roles.Billing` | `ROLE_BILLING` | 請求書・精算管理 | 経理担当者 |
+| `Roles.Admin` | `ROLE_ADMIN` | 全機能 | システム管理者 |
+
+> `ROLE_SHIPPER`（荷主）・`ROLE_CONSIGNEE`（荷受人）は外部向けポータルのロールとして後続イテレーションに繰り延べる。それまで追跡・予約照会は社内ロール（`ROLE_TRACKER`・`ROLE_SALES`）で代替する。
 
 ## テスト戦略
 

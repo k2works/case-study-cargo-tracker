@@ -113,6 +113,8 @@ Booking 1 ─── 1 Invoice
 | 管理設定 | `/admin/discount-policies` | ROLE_ADMIN |
 | ログアウト | `/logout` | 全ロール |
 
+> **ロール名・スコープ注記（ADR-0004）**: ロール名は `ROLE_` プレフィックス付きを正準とする。`ROLE_SHIPPER`（荷主）・`ROLE_CONSIGNEE`（荷受人）は外部向けポータルのロールとして後続イテレーションに繰り延べる。それまで貨物予約・貨物追跡は社内ロール（`ROLE_SALES`・`ROLE_TRACKER`）で表示・アクセスする。
+
 ### 共通レイアウト ワイヤーフレーム
 
 ```plantuml
