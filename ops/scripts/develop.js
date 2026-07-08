@@ -63,8 +63,10 @@ export default function (gulp) {
   SERVICES.forEach((svc) => {
     gulp.task(`dev:${svc.name}`, (done) => {
       try {
-        console.log(`=== ${svc.label} 開発サーバー起動（Development / SQLite） ===`);
-        run(`dotnet run --project ${svc.project}`);
+        console.log(`=== ${svc.label} 開発サーバー起動（Development / SQLite・live reload） ===`);
+        // dotnet watch run: ソース（.cs / .cshtml / wwwroot）変更を検知して
+        // ホットリロード + ブラウザ自動更新（live reload）する。
+        run(`dotnet watch run --project ${svc.project}`);
         done();
       } catch (error) {
         done(error);
@@ -156,7 +158,7 @@ export default function (gulp) {
     console.log(`
 === アプリケーション開発タスク ===
 
-  dev:app              開発サーバー起動（Development / SQLite・Docker 不要）
+  dev:app              開発サーバー起動（Development / SQLite・Docker 不要・live reload）
   dev:app:product      本番互換起動（Staging / PostgreSQL・Docker 必要）
   tdd:app              TDD モード（dotnet watch test）
   dev:db:start         PostgreSQL コンテナ起動（healthy まで待機）
