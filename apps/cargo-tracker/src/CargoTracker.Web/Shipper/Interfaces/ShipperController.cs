@@ -43,6 +43,7 @@ public sealed class ShipperController(
             Name: form.Name,
             Email: form.Email,
             Phone: form.Phone,
+            Address: form.Address,
             ContractNumber: form.ContractNumber,
             DiscountRate: form.IsCorporate ? (form.DiscountPercent ?? 0m) / 100m : null);
 

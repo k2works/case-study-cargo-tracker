@@ -654,6 +654,7 @@ users ||--o{ user_roles : "ロールを持つ"
 | `name` | `VARCHAR(200)` | `NOT NULL` | 荷主名称 |
 | `email` | `VARCHAR(200)` | `NOT NULL` | メールアドレス |
 | `phone` | `VARCHAR(50)` | | 電話番号 |
+| `address` | `VARCHAR(500)` | | 住所（任意。domain-model の Address VO） |
 | `contract_number` | `VARCHAR(50)` | | 契約番号（法人のみ。NULLable） |
 | `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.3000、最大 30%） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
@@ -663,17 +664,21 @@ users ||--o{ user_roles : "ロールを持つ"
 #### DDL
 
 ```sql
+-- 実マイグレーション（Scripts/postgresql/0002_shipper.sql + 0004_shipper_address.sql）準拠。
+-- タイムスタンプは C# 側で生成するため NOW() を使わない（ADR-0003）。version は楽観的ロック用（ADR-0001）。
 CREATE TABLE shipper (
-    id              BIGSERIAL PRIMARY KEY,
+    id              BIGSERIAL    PRIMARY KEY,
     shipper_code    VARCHAR(20)  NOT NULL UNIQUE,  -- SHP-XXXXXX 形式
     shipper_type    VARCHAR(20)  NOT NULL,          -- INDIVIDUAL / CORPORATE
     name            VARCHAR(200) NOT NULL,
-    email           VARCHAR(200) NOT NULL,
+    email           VARCHAR(200) NOT NULL,          -- 一意性はアプリ層で担保（domain-model 規則 2）
     phone           VARCHAR(50),
+    address         VARCHAR(500),                  -- 任意（domain-model の Address VO）
     contract_number VARCHAR(50),                   -- 法人のみ（NULLable）
-    discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.3000 (最大 30%)
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    discount_rate   NUMERIC(5,4) NOT NULL DEFAULT 0.0000,   -- 0.0000〜0.3000 (最大 30%)
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+    version         BIGINT       NOT NULL DEFAULT 0
 );
 ```
 

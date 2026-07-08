@@ -25,9 +25,9 @@ public sealed class ShipperRepository : IShipperRepository
         await transaction.Connection!.ExecuteAsync(new CommandDefinition(
             """
             INSERT INTO shipper
-                (shipper_code, shipper_type, name, email, phone, contract_number, discount_rate, created_at, updated_at, version)
+                (shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate, created_at, updated_at, version)
             VALUES
-                (@Code, @Type, @Name, @Email, @Phone, @ContractNumber, @DiscountRate, @CreatedAt, @UpdatedAt, 0)
+                (@Code, @Type, @Name, @Email, @Phone, @Address, @ContractNumber, @DiscountRate, @CreatedAt, @UpdatedAt, 0)
             """,
             new
             {
@@ -36,6 +36,7 @@ public sealed class ShipperRepository : IShipperRepository
                 Name = shipper.Name.Value,
                 Email = shipper.Email.Value,
                 Phone = shipper.Phone?.Value,
+                Address = shipper.Address?.Value,
                 ContractNumber = shipper.ContractNumber?.Value,
                 DiscountRate = shipper.DiscountRate.Value,
                 CreatedAt = now,

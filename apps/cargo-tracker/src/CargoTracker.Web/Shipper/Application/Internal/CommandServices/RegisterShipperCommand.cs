@@ -6,5 +6,6 @@ public sealed record RegisterShipperCommand(
     string Name,
     string Email,
     string? Phone,
+    string? Address,
     string? ContractNumber,
     decimal? DiscountRate);

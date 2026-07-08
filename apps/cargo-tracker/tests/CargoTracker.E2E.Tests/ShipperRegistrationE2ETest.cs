@@ -20,6 +20,7 @@ public sealed class ShipperRegistrationE2ETest(E2EFixture fixture)
         await page.FillAsync("#Name", "E2E 太郎");
         await page.FillAsync("#Email", email);
         await page.FillAsync("#Phone", "03-0000-0000");
+        await page.FillAsync("#Address", "東京都港区1-2-3");
         // navbar のログアウトボタンと区別するため、フォームの送信ボタンを文言で特定する。
         await page.ClickAsync("button:has-text('登録する')");
 

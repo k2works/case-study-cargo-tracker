@@ -67,6 +67,21 @@ public sealed partial record Email
     private static partial Regex EmailPattern();
 }
 
+/// <summary>住所（任意・最大 500 文字）。</summary>
+public sealed record Address
+{
+    public string Value { get; }
+
+    public Address(string value)
+    {
+        if (value.Length > 500)
+        {
+            throw new ArgumentException("住所は 500 文字以内で入力してください。", nameof(value));
+        }
+        Value = value;
+    }
+}
+
 /// <summary>電話番号（任意・最大 50 文字）。</summary>
 public sealed record Phone
 {

@@ -45,7 +45,7 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
         // When: 個人荷主を登録する
         await _commandService.HandleAsync(new RegisterShipperCommand(
             IsCorporate: false, Name: "山田太郎", Email: "yamada@example.com", Phone: "03-1234-5678",
-            ContractNumber: null, DiscountRate: null));
+            Address: "東京都港区1-2-3", ContractNumber: null, DiscountRate: null));
 
         // Then: 一覧に表示される
         var list = await _queryService.FindAllAsync();
@@ -54,6 +54,7 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
         list[0].ShipperType.Should().Be("INDIVIDUAL");
         list[0].DiscountRate.Should().Be(0m);
         list[0].ShipperCode.Should().StartWith("SHP-");
+        list[0].Address.Should().Be("東京都港区1-2-3");
 
         // コミット後にドメインイベントが発行される（MediatR は実行時型 ShipperRegisteredEvent で解決）
         _publisher.Verify(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -64,7 +65,7 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
     {
         await _commandService.HandleAsync(new RegisterShipperCommand(
             IsCorporate: true, Name: "株式会社サンプル", Email: "corp@example.com", Phone: null,
-            ContractNumber: "C-0001", DiscountRate: 0.15m));
+            Address: null, ContractNumber: "C-0001", DiscountRate: 0.15m));
 
         var list = await _queryService.FindAllAsync();
         list.Should().ContainSingle();
@@ -76,10 +77,10 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
     public async Task 重複メールアドレスの登録は例外になる()
     {
         await _commandService.HandleAsync(new RegisterShipperCommand(
-            false, "山田太郎", "dup@example.com", null, null, null));
+            false, "山田太郎", "dup@example.com", null, null, null, null));
 
         var act = () => _commandService.HandleAsync(new RegisterShipperCommand(
-            false, "田中花子", "dup@example.com", null, null, null));
+            false, "田中花子", "dup@example.com", null, null, null, null));
 
         await act.Should().ThrowAsync<EmailAlreadyRegisteredException>();
     }

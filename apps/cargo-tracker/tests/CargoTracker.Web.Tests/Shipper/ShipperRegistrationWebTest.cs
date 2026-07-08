@@ -41,6 +41,7 @@ public sealed class ShipperRegistrationWebTest : IClassFixture<AuthenticationFlo
             ["ShipperType"] = "Individual",
             ["Name"] = "山田太郎",
             ["Email"] = email,
+            ["Address"] = "東京都港区1-2-3",
             ["__RequestVerificationToken"] = token,
         }));
 
@@ -48,9 +49,9 @@ public sealed class ShipperRegistrationWebTest : IClassFixture<AuthenticationFlo
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
         response.Headers.Location!.OriginalString.Should().Be("/shippers");
 
-        // 一覧に表示される
+        // 一覧に表示される（住所も含む）
         var list = await client.GetStringAsync("/shippers");
-        list.Should().Contain("山田太郎").And.Contain(email);
+        list.Should().Contain("山田太郎").And.Contain(email).And.Contain("東京都港区1-2-3");
     }
 
     [Fact]

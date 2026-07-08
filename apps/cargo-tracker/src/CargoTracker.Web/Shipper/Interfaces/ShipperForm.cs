@@ -24,6 +24,10 @@ public sealed class ShipperForm
     [Display(Name = "電話番号")]
     public string? Phone { get; set; }
 
+    [StringLength(500)]
+    [Display(Name = "住所")]
+    public string? Address { get; set; }
+
     [StringLength(50)]
     [Display(Name = "契約番号（法人）")]
     public string? ContractNumber { get; set; }

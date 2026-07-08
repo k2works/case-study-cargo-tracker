@@ -76,4 +76,20 @@ public class ShipperTest
         var act = () => new ShipperName("  ");
         act.Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void 住所を任意で保持できる()
+    {
+        var shipper = CargoTracker.Shipper.Domain.Model.Shipper.RegisterIndividual(
+            new ShipperName("山田太郎"), new Email("yamada@example.com"), null, new Address("東京都港区1-2-3"));
+
+        shipper.Address!.Value.Should().Be("東京都港区1-2-3");
+    }
+
+    [Fact]
+    public void 住所が500文字を超えると例外()
+    {
+        var act = () => new Address(new string('あ', 501));
+        act.Should().Throw<ArgumentException>();
+    }
 }

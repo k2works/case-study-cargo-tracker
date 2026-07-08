@@ -39,10 +39,11 @@ public sealed class RegisterShipperCommandService(
         var name = new ShipperName(command.Name);
         var email = new Email(command.Email);
         var phone = string.IsNullOrWhiteSpace(command.Phone) ? null : new Phone(command.Phone);
+        var address = string.IsNullOrWhiteSpace(command.Address) ? null : new Address(command.Address);
 
         if (!command.IsCorporate)
         {
-            return Domain.Model.Shipper.RegisterIndividual(name, email, phone);
+            return Domain.Model.Shipper.RegisterIndividual(name, email, phone, address);
         }
 
         if (string.IsNullOrWhiteSpace(command.ContractNumber))
@@ -51,6 +52,6 @@ public sealed class RegisterShipperCommandService(
         }
 
         var discountRate = new DiscountRate(command.DiscountRate ?? 0m);
-        return Domain.Model.Shipper.RegisterCorporate(name, email, phone, new ContractNumber(command.ContractNumber), discountRate);
+        return Domain.Model.Shipper.RegisterCorporate(name, email, phone, new ContractNumber(command.ContractNumber), discountRate, address);
     }
 }

@@ -15,6 +15,7 @@ public sealed class ShipperListItem
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? Phone { get; set; }
+    public string? Address { get; set; }
     public decimal DiscountRate { get; set; }
 }
 
@@ -27,7 +28,7 @@ public sealed class FindShipperQueryService(IDbConnectionFactory connectionFacto
         var items = await connection.QueryAsync<ShipperListItem>(new CommandDefinition(
             """
             SELECT shipper_code AS ShipperCode, shipper_type AS ShipperType, name AS Name,
-                   email AS Email, phone AS Phone, discount_rate AS DiscountRate
+                   email AS Email, phone AS Phone, address AS Address, discount_rate AS DiscountRate
             FROM shipper
             ORDER BY id
             """,

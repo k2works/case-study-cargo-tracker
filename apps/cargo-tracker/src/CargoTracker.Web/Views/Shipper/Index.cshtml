@@ -28,6 +28,7 @@ else
                 <th>氏名／社名</th>
                 <th>メールアドレス</th>
                 <th>電話番号</th>
+                <th>住所</th>
                 <th class="text-end">割引率</th>
             </tr>
         </thead>
@@ -40,6 +41,7 @@ else
                     <td>@shipper.Name</td>
                     <td>@shipper.Email</td>
                     <td>@shipper.Phone</td>
+                    <td>@shipper.Address</td>
                     <td class="text-end">@((shipper.DiscountRate * 100).ToString("0.##"))%</td>
                 </tr>
             }
