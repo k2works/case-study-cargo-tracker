@@ -53,6 +53,14 @@ builder.Services.AddScoped<CargoTracker.Shipper.Domain.Repositories.IShipperRepo
 builder.Services.AddScoped<CargoTracker.Shipper.Application.Internal.CommandServices.RegisterShipperCommandService>();
 builder.Services.AddScoped<CargoTracker.Shipper.Application.Internal.QueryServices.FindShipperQueryService>();
 
+// Estimation コンテキスト（US01）。ルート算出は IT1 はスタブ（IT3 で WireMock.Net + 実サービス）。
+builder.Services.AddScoped<CargoTracker.Estimation.Domain.Repositories.IEstimateRepository,
+    CargoTracker.Estimation.Infrastructure.Repositories.EstimateRepository>();
+builder.Services.AddScoped<CargoTracker.Estimation.Application.Internal.OutboundServices.IExternalRoutingServicePort,
+    CargoTracker.Estimation.Infrastructure.Services.StubExternalRoutingService>();
+builder.Services.AddScoped<CargoTracker.Estimation.Application.Internal.CommandServices.CreateEstimateCommandService>();
+builder.Services.AddScoped<CargoTracker.Estimation.Application.Internal.QueryServices.FindEstimateQueryService>();
+
 var app = builder.Build();
 
 // 起動時に DbUp マイグレーションを適用する（forward-only・ADR-0003）。

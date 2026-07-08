@@ -16,14 +16,6 @@ public sealed class BookingPlaceholderController : Controller
         View("Placeholder", new PlaceholderViewModel("貨物予約", "担当 IT: IT2・IT4 / US04-13"));
 }
 
-[Authorize(Roles = $"{Roles.Sales}")]
-public sealed class EstimatePlaceholderController : Controller
-{
-    [HttpGet("/estimates")]
-    public IActionResult Index() =>
-        View("Placeholder", new PlaceholderViewModel("見積管理", "担当 IT: IT1 / US01"));
-}
-
 [Authorize(Roles = $"{Roles.Tracker}")]
 public sealed class TrackingPlaceholderController : Controller
 {

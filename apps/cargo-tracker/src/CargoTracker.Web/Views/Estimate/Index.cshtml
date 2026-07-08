@@ -1,0 +1,50 @@
+@using CargoTracker.Estimation.Application.Internal.QueryServices
+@model IReadOnlyList<EstimateListItem>
+@{
+    ViewData["Title"] = "見積管理";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">見積管理</h1>
+    <a href="/estimates/new" class="btn btn-primary">+ 新規見積作成</a>
+</div>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">登録済みの見積はありません。</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>見積番号</th>
+                <th>出発地</th>
+                <th>仕向地</th>
+                <th>希望期限</th>
+                <th>貨物種別</th>
+                <th class="text-end">重量(kg)</th>
+                <th class="text-end">候補数</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var estimate in Model)
+            {
+                <tr>
+                    <td><a href="/estimates/@estimate.EstimateId">@estimate.EstimateId</a></td>
+                    <td>@estimate.OriginUnlocode</td>
+                    <td>@estimate.DestinationUnlocode</td>
+                    <td>@estimate.ArrivalDeadline.ToString("yyyy-MM-dd")</td>
+                    <td>@estimate.CargoType</td>
+                    <td class="text-end">@estimate.WeightKg.ToString("0.###")</td>
+                    <td class="text-end">@estimate.CandidateCount</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
