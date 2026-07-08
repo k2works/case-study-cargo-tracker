@@ -24,7 +24,8 @@
             </div>
             <div class="mb-3">
                 <label asp-for="Password" class="form-label"></label>
-                <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                @* password 入力は asp-for が value を出力しないため、明示的に初期値を設定する（開発時のプリフィル） *@
+                <input asp-for="Password" value="@Model.Password" class="form-control" autocomplete="current-password" />
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
             <div class="d-grid">

@@ -8,7 +8,7 @@ namespace CargoTracker.Shared.Infrastructure.Auth;
 
 /// <summary>ログイン・ログアウト（US26）。Cookie 認証で資格情報を検証しロールを Claim に載せる。</summary>
 [AllowAnonymous]
-public sealed class AuthController(UserAuthenticator authenticator) : Controller
+public sealed class AuthController(UserAuthenticator authenticator, IWebHostEnvironment environment) : Controller
 {
     [HttpGet("/login")]
     public IActionResult Login(bool timeout = false)
@@ -17,7 +17,13 @@ public sealed class AuthController(UserAuthenticator authenticator) : Controller
         {
             ViewData["Error"] = "セッションの有効期限が切れました。再度ログインしてください。";
         }
-        return View(new LoginForm());
+
+        // 開発環境ではシードユーザーの既定資格情報を初期入力状態にする（デモ利便性）。
+        // 本番ではプリフィルしない（セキュリティ）。
+        var form = environment.IsDevelopment()
+            ? new LoginForm { Username = "sales", Password = UserSeeder.DefaultPassword }
+            : new LoginForm();
+        return View(form);
     }
 
     [HttpPost("/login")]
