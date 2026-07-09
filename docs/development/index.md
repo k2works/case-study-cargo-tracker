@@ -21,12 +21,14 @@
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
 | IT1 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了 |
+| IT2 | [iteration_plan-2.md](iteration_plan-2.md) | - | - | 進行中 |
 
 ### 進捗サマリー
 
 | イテレーション | 計画 SP | 実績 SP | 達成率 |
 |---------------|---------|---------|--------|
 | IT1 | 13 | 13 | 100% |
+| IT2 | 10 | - | 進行中 |
 | **累計** | **13** | **13** | **100%** |
 
 ### フェーズ進捗
