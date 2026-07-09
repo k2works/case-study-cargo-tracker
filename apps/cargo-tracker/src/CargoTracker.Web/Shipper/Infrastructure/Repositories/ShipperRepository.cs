@@ -1,4 +1,4 @@
-using System.Data;
+using CargoTracker.Shared.Infrastructure.Persistence;
 using CargoTracker.Shipper.Domain;
 using CargoTracker.Shipper.Domain.Repositories;
 using Dapper;
@@ -12,22 +12,24 @@ namespace CargoTracker.Shipper.Infrastructure.Repositories;
 /// Dapper による荷主リポジトリ（ADR-0001）。書き込みは UoW のトランザクション上で実行する。
 /// SQL は ADR-0003 の方言禁止規約に従い、タイムスタンプは C# 側で生成する（NOW() 不使用）。
 /// </summary>
-public sealed class ShipperRepository : IShipperRepository
+public sealed class ShipperRepository(AmbientTransaction ambient) : IShipperRepository
 {
-    public async Task<bool> ExistsByEmailAsync(string email, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default)
     {
-        var count = await transaction.Connection!.ExecuteScalarAsync<long>(new CommandDefinition(
+        var tx = ambient.Require();
+        var count = await tx.Connection!.ExecuteScalarAsync<long>(new CommandDefinition(
             "SELECT COUNT(1) FROM shipper WHERE email = @Email",
-            new { Email = email }, transaction, cancellationToken: ct));
+            new { Email = email }, tx, cancellationToken: ct));
         return count > 0;
     }
 
-    public async Task SaveAsync(ShipperAggregate shipper, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task SaveAsync(ShipperAggregate shipper, CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
+        var tx = ambient.Require();
         try
         {
-            await transaction.Connection!.ExecuteAsync(new CommandDefinition(
+            await tx.Connection!.ExecuteAsync(new CommandDefinition(
                 """
                 INSERT INTO shipper
                     (shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate, created_at, updated_at, version)
@@ -47,7 +49,7 @@ public sealed class ShipperRepository : IShipperRepository
                     CreatedAt = now,
                     UpdatedAt = now,
                 },
-                transaction,
+                tx,
                 cancellationToken: ct));
         }
         catch (Exception ex) when (IsEmailUniqueViolation(ex))

@@ -21,6 +21,7 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
     private DbConnectionFactory _connectionFactory = null!;
     private RegisterShipperCommandService _commandService = null!;
     private FindShipperQueryService _queryService = null!;
+    private AmbientTransaction _ambient = null!;
 
     public async Task InitializeAsync()
     {
@@ -32,8 +33,9 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
             Provider = DatabaseProvider.Postgres,
             ConnectionString = _postgres.GetConnectionString(),
         });
-        var repository = new ShipperRepository();
-        var unitOfWorkFactory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object);
+        _ambient = new AmbientTransaction();
+        var repository = new ShipperRepository(_ambient);
+        var unitOfWorkFactory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
         _commandService = new RegisterShipperCommandService(unitOfWorkFactory, repository);
         _queryService = new FindShipperQueryService(_connectionFactory);
     }

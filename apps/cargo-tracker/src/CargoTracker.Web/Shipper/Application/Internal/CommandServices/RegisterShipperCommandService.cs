@@ -18,14 +18,14 @@ public sealed class RegisterShipperCommandService(
     {
         await using var unitOfWork = unitOfWorkFactory.Begin();
 
-        if (await repository.ExistsByEmailAsync(command.Email, unitOfWork.Transaction, ct))
+        if (await repository.ExistsByEmailAsync(command.Email, ct))
         {
             throw new EmailAlreadyRegisteredException(command.Email);
         }
 
         var shipper = BuildShipper(command);
         unitOfWork.Track(shipper);
-        await repository.SaveAsync(shipper, unitOfWork.Transaction, ct);
+        await repository.SaveAsync(shipper, ct);
         await unitOfWork.CommitAsync(ct);
 
         return shipper.Id;

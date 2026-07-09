@@ -28,11 +28,12 @@ public class UnitOfWorkTest
     {
         // Given: イベントを持つ集約を追跡する UoW
         var publisher = new Mock<IPublisher>();
+        var ambient = new AmbientTransaction();
         await using var connection = OpenConnection();
         var aggregate = new SampleAggregate();
         aggregate.Raise("committed");
 
-        await using var uow = new UnitOfWork(connection, publisher.Object);
+        await using var uow = new UnitOfWork(connection, publisher.Object, ambient);
         uow.Track(aggregate);
 
         // When: コミットする
@@ -47,12 +48,13 @@ public class UnitOfWorkTest
     {
         // Given: イベントを持つ集約を追跡する UoW（コミットしない）
         var publisher = new Mock<IPublisher>();
+        var ambient = new AmbientTransaction();
         await using var connection = OpenConnection();
         var aggregate = new SampleAggregate();
         aggregate.Raise("rolledback");
 
         // When: コミットせずに破棄する（Dispose でロールバック）
-        await using (var uow = new UnitOfWork(connection, publisher.Object))
+        await using (var uow = new UnitOfWork(connection, publisher.Object, ambient))
         {
             uow.Track(aggregate);
         }
@@ -62,14 +64,34 @@ public class UnitOfWorkTest
     }
 
     [Fact]
-    public async Task トランザクションはリポジトリ操作のために公開される()
+    public async Task トランザクションはAmbientTransactionに公開され破棄時にクリアされる()
     {
         // Given: UoW
         var publisher = new Mock<IPublisher>();
+        var ambient = new AmbientTransaction();
         await using var connection = OpenConnection();
-        await using var uow = new UnitOfWork(connection, publisher.Object);
 
-        // Then: リポジトリが参加するためのトランザクションが取得できる
-        uow.Transaction.Should().NotBeNull();
+        await using (new UnitOfWork(connection, publisher.Object, ambient))
+        {
+            // Then: リポジトリが参加するためのトランザクションが ambient から取得できる
+            ambient.Current.Should().NotBeNull();
+            ambient.Require().Should().NotBeNull();
+        }
+
+        ambient.Current.Should().BeNull();
+    }
+
+    [Fact]
+    public void AmbientTransaction未設定なら明示的な例外になる()
+    {
+        // Given: UoW 外でリポジトリがトランザクションを要求する
+        var ambient = new AmbientTransaction();
+
+        // When
+        var act = () => ambient.Require();
+
+        // Then
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("アクティブなトランザクションがありません。");
     }
 }

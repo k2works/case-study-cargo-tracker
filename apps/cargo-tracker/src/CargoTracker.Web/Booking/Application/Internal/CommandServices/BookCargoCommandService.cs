@@ -39,7 +39,7 @@ public sealed class BookCargoCommandService(
 
         await using var unitOfWork = unitOfWorkFactory.Begin();
         unitOfWork.Track(cargo);
-        await repository.SaveAsync(cargo, unitOfWork.Transaction, ct);
+        await repository.SaveAsync(cargo, ct);
         await unitOfWork.CommitAsync(ct);
 
         return cargo.BookingId;

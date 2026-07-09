@@ -15,22 +15,23 @@ public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly IDbConnection _connection;
     private readonly IDbTransaction _transaction;
+    private readonly AmbientTransaction _ambient;
     private readonly IPublisher _publisher;
     private readonly List<AggregateRoot> _tracked = [];
     private bool _committed;
 
-    public UnitOfWork(IDbConnection connection, IPublisher publisher)
+    public UnitOfWork(IDbConnection connection, IPublisher publisher, AmbientTransaction ambient)
     {
         _connection = connection;
         _publisher = publisher;
+        _ambient = ambient;
         if (_connection.State != ConnectionState.Open)
         {
             _connection.Open();
         }
         _transaction = _connection.BeginTransaction();
+        _ambient.Current = _transaction;
     }
-
-    public IDbTransaction Transaction => _transaction;
 
     public void Track(AggregateRoot aggregate) => _tracked.Add(aggregate);
 
@@ -55,13 +56,17 @@ public sealed class UnitOfWork : IUnitOfWork
             _transaction.Rollback();
         }
         _transaction.Dispose();
+        _ambient.Current = null;
         _connection.Dispose();
         return ValueTask.CompletedTask;
     }
 }
 
 /// <summary><see cref="IUnitOfWorkFactory"/> の実装。接続を生成し作業単位を開始する。</summary>
-public sealed class UnitOfWorkFactory(IDbConnectionFactory connectionFactory, IPublisher publisher) : IUnitOfWorkFactory
+public sealed class UnitOfWorkFactory(
+    IDbConnectionFactory connectionFactory,
+    IPublisher publisher,
+    AmbientTransaction ambient) : IUnitOfWorkFactory
 {
-    public IUnitOfWork Begin() => new UnitOfWork(connectionFactory.Create(), publisher);
+    public IUnitOfWork Begin() => new UnitOfWork(connectionFactory.Create(), publisher, ambient);
 }

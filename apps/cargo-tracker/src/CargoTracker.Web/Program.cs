@@ -44,6 +44,7 @@ var databaseOptions = builder.Configuration
     .Get<DatabaseOptions>() ?? new DatabaseOptions();
 builder.Services.AddSingleton(databaseOptions);
 builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
+builder.Services.AddScoped<AmbientTransaction>();
 builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();

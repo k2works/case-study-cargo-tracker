@@ -17,6 +17,7 @@ public sealed class EstimateIntegrationTest : IAsyncLifetime
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
     private CreateEstimateCommandService _commandService = null!;
     private FindEstimateQueryService _queryService = null!;
+    private AmbientTransaction _ambient = null!;
 
     public async Task InitializeAsync()
     {
@@ -28,9 +29,10 @@ public sealed class EstimateIntegrationTest : IAsyncLifetime
             Provider = DatabaseProvider.Postgres,
             ConnectionString = _postgres.GetConnectionString(),
         });
-        var unitOfWorkFactory = new UnitOfWorkFactory(factory, new Mock<IPublisher>().Object);
+        _ambient = new AmbientTransaction();
+        var unitOfWorkFactory = new UnitOfWorkFactory(factory, new Mock<IPublisher>().Object, _ambient);
         _commandService = new CreateEstimateCommandService(
-            unitOfWorkFactory, new EstimateRepository(), new StubExternalRoutingService());
+            unitOfWorkFactory, new EstimateRepository(_ambient), new StubExternalRoutingService());
         _queryService = new FindEstimateQueryService(factory);
     }
 

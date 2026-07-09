@@ -1,4 +1,3 @@
-using System.Data;
 using CargoTracker.Shared.Domain.Model;
 
 namespace CargoTracker.Shared.Application.Persistence;
@@ -10,9 +9,6 @@ namespace CargoTracker.Shared.Application.Persistence;
 /// </summary>
 public interface IUnitOfWork : IAsyncDisposable
 {
-    /// <summary>リポジトリ操作が参加する現在のトランザクション。</summary>
-    IDbTransaction Transaction { get; }
-
     /// <summary>コミット成功後にイベント回収の対象とする集約を登録する。</summary>
     void Track(AggregateRoot aggregate);
 

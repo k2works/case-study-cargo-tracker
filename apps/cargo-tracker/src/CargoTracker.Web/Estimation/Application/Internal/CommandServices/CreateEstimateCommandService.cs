@@ -28,7 +28,7 @@ public sealed class CreateEstimateCommandService(
 
         await using var unitOfWork = unitOfWorkFactory.Begin();
         unitOfWork.Track(estimate);
-        await repository.SaveAsync(estimate, unitOfWork.Transaction, ct);
+        await repository.SaveAsync(estimate, ct);
         await unitOfWork.CommitAsync(ct);
 
         return estimate.EstimateId;

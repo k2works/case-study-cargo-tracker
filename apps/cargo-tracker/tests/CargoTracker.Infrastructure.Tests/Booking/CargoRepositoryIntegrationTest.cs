@@ -20,6 +20,7 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
     private DbConnectionFactory _connectionFactory = null!;
     private BookCargoCommandService _commandService = null!;
     private CargoRepository _repository = null!;
+    private AmbientTransaction _ambient = null!;
     private long _shipperId;
 
     public async Task InitializeAsync()
@@ -46,10 +47,11 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
                 new { Now = DateTimeOffset.UtcNow });
         }
 
-        _repository = new CargoRepository(_connectionFactory);
+        _ambient = new AmbientTransaction();
+        _repository = new CargoRepository(_connectionFactory, _ambient);
         var checker = new ShipperExistenceChecker(_connectionFactory);
         _commandService = new BookCargoCommandService(
-            new UnitOfWorkFactory(_connectionFactory, _publisher.Object), _repository, checker);
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient), _repository, checker);
     }
 
     public Task DisposeAsync() => _postgres.DisposeAsync().AsTask();
@@ -128,10 +130,10 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         var cargo = await _repository.FindByBookingIdAsync(bookingId);
         cargo!.AssignToRouting();
 
-        await using (var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object).Begin())
+        await using (var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin())
         {
             unitOfWork.Track(cargo);
-            await _repository.UpdateAsync(cargo, unitOfWork.Transaction);
+            await _repository.UpdateAsync(cargo);
             await unitOfWork.CommitAsync();
         }
 
@@ -149,17 +151,17 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         var second = await _repository.FindByBookingIdAsync(bookingId);
         first!.AssignToRouting();
 
-        await using (var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object).Begin())
+        await using (var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin())
         {
-            await _repository.UpdateAsync(first, unitOfWork.Transaction);
+            await _repository.UpdateAsync(first);
             await unitOfWork.CommitAsync();
         }
 
         second!.AssignToRouting();
         var act = async () =>
         {
-            await using var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object).Begin();
-            await _repository.UpdateAsync(second, unitOfWork.Transaction);
+            await using var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin();
+            await _repository.UpdateAsync(second);
         };
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*並行更新*");

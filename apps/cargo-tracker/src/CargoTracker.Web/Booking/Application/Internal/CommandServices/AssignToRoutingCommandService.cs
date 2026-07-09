@@ -13,12 +13,12 @@ public sealed class AssignToRoutingCommandService(
     {
         await using var unitOfWork = unitOfWorkFactory.Begin();
 
-        var cargo = await repository.FindByBookingIdAsync(command.BookingId, unitOfWork.Transaction, ct)
+        var cargo = await repository.FindByBookingIdAsync(command.BookingId, ct)
             ?? throw new InvalidOperationException("指定された貨物予約が見つかりません。");
 
         cargo.AssignToRouting();
         unitOfWork.Track(cargo);
-        await repository.UpdateAsync(cargo, unitOfWork.Transaction, ct);
+        await repository.UpdateAsync(cargo, ct);
         await unitOfWork.CommitAsync(ct);
     }
 }

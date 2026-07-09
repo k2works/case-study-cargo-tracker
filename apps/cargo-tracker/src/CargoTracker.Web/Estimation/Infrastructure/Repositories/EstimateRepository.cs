@@ -1,6 +1,6 @@
-using System.Data;
 using CargoTracker.Estimation.Domain.Model;
 using CargoTracker.Estimation.Domain.Repositories;
+using CargoTracker.Shared.Infrastructure.Persistence;
 using Dapper;
 
 namespace CargoTracker.Estimation.Infrastructure.Repositories;
@@ -9,10 +9,11 @@ namespace CargoTracker.Estimation.Infrastructure.Repositories;
 /// Dapper による見積リポジトリ（ADR-0001）。見積を INSERT 後、採番されたサロゲートキーを
 /// 業務キー（estimate_id）で取り直し（RETURNING 不使用・ADR-0003）、ルート候補を子として保存する。
 /// </summary>
-public sealed class EstimateRepository : IEstimateRepository
+public sealed class EstimateRepository(AmbientTransaction ambient) : IEstimateRepository
 {
-    public async Task SaveAsync(Estimate estimate, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task SaveAsync(Estimate estimate, CancellationToken ct = default)
     {
+        var transaction = ambient.Require();
         var connection = transaction.Connection!;
         var now = DateTimeOffset.UtcNow;
 

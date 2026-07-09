@@ -4,17 +4,19 @@ using CargoTracker.Booking.Domain.Model;
 using CargoTracker.Booking.Domain.Repositories;
 using CargoTracker.Shared.Application.Persistence;
 using CargoTracker.Shared.Domain.Model;
+using CargoTracker.Shared.Infrastructure.Persistence;
 using Dapper;
 
 namespace CargoTracker.Booking.Infrastructure.Repositories;
 
 /// <summary>Dapper による貨物予約リポジトリ。</summary>
-public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : ICargoRepository
+public sealed class CargoRepository(IDbConnectionFactory connectionFactory, AmbientTransaction ambient) : ICargoRepository
 {
-    public async Task SaveAsync(Cargo cargo, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task SaveAsync(Cargo cargo, CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
-        await transaction.Connection!.ExecuteAsync(new CommandDefinition(
+        var tx = ambient.Require();
+        await tx.Connection!.ExecuteAsync(new CommandDefinition(
             """
             INSERT INTO cargo
                 (booking_id, shipper_id, cargo_type, weight, origin_unlocode, destination_unlocode,
@@ -51,16 +53,17 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
                 CreatedAt = now,
                 UpdatedAt = now,
             },
-            transaction, cancellationToken: ct));
+            tx, cancellationToken: ct));
     }
 
-    public async Task UpdateAsync(Cargo cargo, IDbTransaction transaction, CancellationToken ct = default)
+    public async Task UpdateAsync(Cargo cargo, CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
+        var tx = ambient.Require();
         // Cargo.AssignToRouting() が Version をインクリメント済みのため、WHERE は更新前 version、
         // SET は集約が保持する新 version を使う。影響行数 0 は並行更新競合として扱う。
         var expectedVersion = cargo.Version - 1;
-        var affectedRows = await transaction.Connection!.ExecuteAsync(new CommandDefinition(
+        var affectedRows = await tx.Connection!.ExecuteAsync(new CommandDefinition(
             """
             UPDATE cargo
             SET booking_status = @BookingStatus,
@@ -77,7 +80,7 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
                 ExpectedVersion = expectedVersion,
                 UpdatedAt = now,
             },
-            transaction, cancellationToken: ct));
+            tx, cancellationToken: ct));
 
         if (affectedRows == 0)
         {
@@ -87,15 +90,15 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
 
     public async Task<Cargo?> FindByBookingIdAsync(BookingId id, CancellationToken ct = default)
     {
+        if (ambient.Current is not null)
+        {
+            var tx = ambient.Current;
+            var transactionalRow = await QueryByBookingIdAsync(id, tx.Connection!, tx, ct);
+            return transactionalRow?.ToCargo();
+        }
+
         using var connection = connectionFactory.Create();
         var row = await QueryByBookingIdAsync(id, connection, null, ct);
-
-        return row?.ToCargo();
-    }
-
-    public async Task<Cargo?> FindByBookingIdAsync(BookingId id, IDbTransaction transaction, CancellationToken ct = default)
-    {
-        var row = await QueryByBookingIdAsync(id, transaction.Connection!, transaction, ct);
 
         return row?.ToCargo();
     }
