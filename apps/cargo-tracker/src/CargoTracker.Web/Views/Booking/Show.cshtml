@@ -1,0 +1,46 @@
+@using CargoTracker.Booking.Application.Internal.QueryServices
+@model BookingDetail
+@{
+    ViewData["Title"] = "貨物予約詳細";
+}
+
+<h1 class="h3 mb-3">貨物予約詳細</h1>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+
+<dl class="row">
+    <dt class="col-sm-3">予約番号</dt>
+    <dd class="col-sm-9">@Model.BookingId</dd>
+    <dt class="col-sm-3">状態</dt>
+    <dd class="col-sm-9">@Model.BookingStatus</dd>
+    <dt class="col-sm-3">荷主</dt>
+    <dd class="col-sm-9">@Model.ShipperCode - @Model.ShipperName</dd>
+    <dt class="col-sm-3">区間</dt>
+    <dd class="col-sm-9">@Model.OriginUnlocode → @Model.DestinationUnlocode</dd>
+    <dt class="col-sm-3">希望着日</dt>
+    <dd class="col-sm-9">@Model.ArrivalDeadline.ToString("yyyy-MM-dd")</dd>
+    <dt class="col-sm-3">貨物種別</dt>
+    <dd class="col-sm-9">@Model.CargoType</dd>
+    <dt class="col-sm-3">重量</dt>
+    <dd class="col-sm-9">@Model.Weight.ToString("0.###") kg</dd>
+    <dt class="col-sm-3">寸法</dt>
+    <dd class="col-sm-9">
+        @if (Model.DimensionLength is null)
+        {
+            <span>-</span>
+        }
+        else
+        {
+            <span>@Model.DimensionLength.Value.ToString("0.###") x @Model.DimensionWidth!.Value.ToString("0.###") x @Model.DimensionHeight!.Value.ToString("0.###") cm</span>
+        }
+    </dd>
+    <dt class="col-sm-3">個数</dt>
+    <dd class="col-sm-9">@(Model.Quantity?.ToString() ?? "-")</dd>
+    <dt class="col-sm-3">品名</dt>
+    <dd class="col-sm-9">@(Model.Description ?? "-")</dd>
+</dl>
+
+<a href="/bookings/new" class="btn btn-outline-secondary">続けて登録</a>

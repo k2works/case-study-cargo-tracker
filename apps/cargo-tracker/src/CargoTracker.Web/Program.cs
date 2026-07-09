@@ -64,6 +64,14 @@ builder.Services.AddScoped<CargoTracker.Estimation.Application.Internal.Outbound
 builder.Services.AddScoped<CargoTracker.Estimation.Application.Internal.CommandServices.CreateEstimateCommandService>();
 builder.Services.AddScoped<CargoTracker.Estimation.Application.Internal.QueryServices.FindEstimateQueryService>();
 
+// Booking コンテキスト（US04）。
+builder.Services.AddScoped<CargoTracker.Booking.Domain.Repositories.ICargoRepository,
+    CargoTracker.Booking.Infrastructure.Repositories.CargoRepository>();
+builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.OutboundServices.IShipperExistenceChecker,
+    CargoTracker.Booking.Infrastructure.Services.ShipperExistenceChecker>();
+builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.BookCargoCommandService>();
+builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.QueryServices.FindBookingQueryService>();
+
 var app = builder.Build();
 
 // 起動時に DbUp マイグレーションを適用する（forward-only・ADR-0003）。

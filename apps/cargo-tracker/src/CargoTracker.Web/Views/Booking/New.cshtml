@@ -1,0 +1,99 @@
+@model CargoTracker.Booking.Interfaces.BookingForm
+@{
+    ViewData["Title"] = "貨物予約登録";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <h1 class="h3 mb-3">貨物予約登録</h1>
+
+        <form action="/bookings" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="ShipperId" class="form-label"></label>
+                <select asp-for="ShipperId" class="form-select">
+                    @foreach (var shipper in Model.Shippers)
+                    {
+                        <option value="@shipper.ShipperId">@shipper.ShipperCode - @shipper.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="ShipperId" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="OriginUnLocode" class="form-label"></label>
+                    <input asp-for="OriginUnLocode" class="form-control" placeholder="JPTYO" />
+                    <span asp-validation-for="OriginUnLocode" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="DestinationUnLocode" class="form-label"></label>
+                    <input asp-for="DestinationUnLocode" class="form-control" placeholder="DEHAM" />
+                    <span asp-validation-for="DestinationUnLocode" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ArrivalDeadline" class="form-label"></label>
+                    <input asp-for="ArrivalDeadline" class="form-control" type="date" />
+                    <span asp-validation-for="ArrivalDeadline" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="CargoType" class="form-label"></label>
+                    <select asp-for="CargoType" class="form-select">
+                        <option value="General">一般貨物</option>
+                        <option value="Hazardous">危険物</option>
+                        <option value="Refrigerated">冷凍・冷蔵</option>
+                    </select>
+                    <span asp-validation-for="CargoType" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Weight" class="form-label"></label>
+                <input asp-for="Weight" class="form-control" type="number" min="0" step="0.001" />
+                <span asp-validation-for="Weight" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="DimensionLength" class="form-label"></label>
+                    <input asp-for="DimensionLength" class="form-control" type="number" min="0" step="0.001" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="DimensionWidth" class="form-label"></label>
+                    <input asp-for="DimensionWidth" class="form-control" type="number" min="0" step="0.001" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="DimensionHeight" class="form-label"></label>
+                    <input asp-for="DimensionHeight" class="form-control" type="number" min="0" step="0.001" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Quantity" class="form-label"></label>
+                    <input asp-for="Quantity" class="form-control" type="number" min="1" />
+                    <span asp-validation-for="Quantity" class="text-danger"></span>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Description" class="form-label"></label>
+                    <input asp-for="Description" class="form-control" />
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">予約を登録</button>
+                <a href="/" class="btn btn-outline-secondary">キャンセル</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

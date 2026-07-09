@@ -8,14 +8,6 @@ namespace CargoTracker.Shared.Infrastructure.Web;
 // 各フローのランディングルートにロール制御付きで「準備中」画面を返す。担当 IT で実画面に差し替える。
 // 表示ロールは ui_design のナビゲーション構成に従う（US26 受入条件 6）。
 
-[Authorize(Roles = $"{Roles.Sales}")]
-public sealed class BookingPlaceholderController : Controller
-{
-    [HttpGet("/bookings")]
-    public IActionResult Index() =>
-        View("Placeholder", new PlaceholderViewModel("貨物予約", "担当 IT: IT2・IT4 / US04-13"));
-}
-
 [Authorize(Roles = $"{Roles.Tracker}")]
 public sealed class TrackingPlaceholderController : Controller
 {

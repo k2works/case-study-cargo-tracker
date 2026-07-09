@@ -58,15 +58,15 @@ public sealed class WalkingSkeletonTest : IClassFixture<AuthenticationFlowTest.A
     }
 
     [Fact]
-    public async Task 営業ロールは貨物予約プレースホルダにアクセスできる()
+    public async Task 営業ロールは貨物予約登録画面にアクセスできる()
     {
-        // /shippers・/estimates は実画面化済みのため、まだプレースホルダの /bookings で検証する
+        // /bookings は IT2（US04）で実画面化済み。/bookings/new の登録フォームに到達できることを検証する
         var client = await LoginAsAsync("sales");
 
-        var response = await client.GetAsync("/bookings");
+        var response = await client.GetAsync("/bookings/new");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("準備中");
+        (await response.Content.ReadAsStringAsync()).Should().Contain("貨物予約登録");
     }
 
     [Fact]

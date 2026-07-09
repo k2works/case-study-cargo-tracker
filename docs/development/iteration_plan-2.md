@@ -89,7 +89,7 @@
 | 1.1 | 値オブジェクト実装（BookingId・Dimensions・Quantity・Description・RouteSpecification。ShipperId は Shared カーネルを参照、weight は decimal） | 4h | - | [ ] |
 | 1.2 | CargoType / BookingStatus 列挙型と状態遷移（Preliminary 起点）実装 | 2h | - | [ ] |
 | 1.3 | Cargo 集約ルート実装（不変条件・ファクトリ）＋ドメインユニットテスト | 6h | - | [ ] |
-| 1.4 | ICargoRepository ポート定義（M1: IDbTransaction 非依存を厳守） | 2h | - | [ ] |
+| 1.4 | ICargoRepository ポート定義（IT1 パターン踏襲: `Booking/Domain/Repositories` 配置・IDbTransaction 非依存を厳守。UoW は `Shared.Application.Persistence` の `IUnitOfWorkFactory` 経由） | 2h | - | [ ] |
 | 1.5 | ShipperExistenceChecker ACL（Booking → Shipper 存在確認ポート）実装 | 3h | - | [ ] |
 | 1.6 | BookCargoCommand / CommandService（CargoBookedEvent 発行・見積整合検証） | 4h | - | [ ] |
 | 1.7 | 予約登録画面・エンドポイント（htmx フォーム）＋ Infrastructure リポジトリ実装 | 5h | - | [ ] |
