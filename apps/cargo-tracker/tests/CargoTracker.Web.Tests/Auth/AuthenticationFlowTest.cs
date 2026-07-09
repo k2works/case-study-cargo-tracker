@@ -101,6 +101,8 @@ public sealed class AuthenticationFlowTest : IClassFixture<AuthenticationFlowTes
             builder.UseEnvironment(Environments.Development);
             builder.UseSetting("Database:Provider", "Sqlite");
             builder.UseSetting("Database:ConnectionString", $"Data Source={_dbPath}");
+            // テストは自前で航海・予約を用意するため、Routing のデモデータは投入しない（データ分離）。
+            builder.UseSetting("Seed:IncludeRoutingDemo", "false");
         }
 
         protected override void Dispose(bool disposing)

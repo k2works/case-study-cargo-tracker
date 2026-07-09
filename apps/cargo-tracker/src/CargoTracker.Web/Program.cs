@@ -105,7 +105,7 @@ if (!string.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
     if (app.Environment.IsDevelopment() || seedOptions.Enabled)
     {
         using var scope = app.Services.CreateScope();
-        await DemoDataSeeder.SeedAsync(scope.ServiceProvider);
+        await DemoDataSeeder.SeedAsync(scope.ServiceProvider, seedOptions.IncludeRoutingDemo);
     }
 }
 

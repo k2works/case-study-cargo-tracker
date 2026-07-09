@@ -10,4 +10,10 @@ public sealed class SeedOptions
     public const string SectionName = "Seed";
 
     public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Routing のデモデータ（航海スケジュール・経路設計依頼）を投入するか。
+    /// 既定 true。テスト環境ではデータ分離のため <c>Seed__IncludeRoutingDemo=false</c> で無効化する。
+    /// </summary>
+    public bool IncludeRoutingDemo { get; set; } = true;
 }
