@@ -652,7 +652,7 @@ users ||--o{ user_roles : "ロールを持つ"
 | `shipper_code` | `VARCHAR(20)` | `UK, NOT NULL` | 荷主コード（業務キー。SHP-XXXXXX 形式） |
 | `shipper_type` | `VARCHAR(20)` | `NOT NULL` | 荷主種別（`INDIVIDUAL` / `CORPORATE`） |
 | `name` | `VARCHAR(200)` | `NOT NULL` | 荷主名称 |
-| `email` | `VARCHAR(200)` | `NOT NULL` | メールアドレス |
+| `email` | `VARCHAR(200)` | `UK, NOT NULL` | メールアドレス（DB UNIQUE 制約。IT2 M3 で 0006 マイグレーション追加） |
 | `phone` | `VARCHAR(50)` | | 電話番号 |
 | `address` | `VARCHAR(500)` | | 住所（任意。domain-model の Address VO） |
 | `contract_number` | `VARCHAR(50)` | | 契約番号（法人のみ。NULLable） |
@@ -671,7 +671,7 @@ CREATE TABLE shipper (
     shipper_code    VARCHAR(20)  NOT NULL UNIQUE,  -- SHP-XXXXXX 形式
     shipper_type    VARCHAR(20)  NOT NULL,          -- INDIVIDUAL / CORPORATE
     name            VARCHAR(200) NOT NULL,
-    email           VARCHAR(200) NOT NULL,          -- 一意性はアプリ層で担保（domain-model 規則 2）
+    email           VARCHAR(200) NOT NULL UNIQUE,   -- DB UNIQUE で一意性を最終防御（IT2 M3 / 0006_shipper_email_unique.sql）
     phone           VARCHAR(50),
     address         VARCHAR(500),                  -- 任意（domain-model の Address VO）
     contract_number VARCHAR(50),                   -- 法人のみ（NULLable）

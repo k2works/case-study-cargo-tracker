@@ -1439,7 +1439,7 @@ PRG パターンのリダイレクト後に、操作結果を TempData でフィ
 | HTTP ステータス | 画面 | 内容 |
 | :--- | :--- | :--- |
 | 400 Bad Request | `/error/400` | 不正なリクエスト。入力を確認してください |
-| 403 Forbidden | `/error/403` | アクセス権限がありません |
+| 403 Forbidden | `/forbidden` | 権限がありません（認証済み・ロール不足時の AccessDeniedPath。IT2 M5 で分離） |
 | 404 Not Found | `/error/404` | 指定されたページまたはリソースが見つかりません |
 | 500 Internal Server Error | `/error/500` | サーバーエラーが発生しました。管理者に連絡してください |
 

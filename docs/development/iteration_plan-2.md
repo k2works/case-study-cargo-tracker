@@ -311,7 +311,7 @@ entity "cargo（貨物）" as cargo {
 - 登録成功: PRG（POST → リダイレクト）で予約詳細へ遷移。バリデーションエラーは自己ループ（フォーム再表示＋ `alert-danger`）。
 - 引き渡し: 予約詳細画面の「経路設計依頼」アクションで `Preliminary → RouteProposed` に遷移し、`alert-success` を表示。
 
-> **注（Try T1: 横断更新対象）**: US06 の引き渡しエンドポイント（`POST /bookings/{bookingId}/assign-routing`）と 403 権限画面（M5）は ui_design.md に未記載。IT2 実装時に ui_design.md へ追記し、SoT との一致を確認する。
+> **注（Try T1: 横断更新・実施済み）**: `POST /bookings/{bookingId}/assign-routing` は ui_design.md に既記載（予約詳細のアクション定義）。403 権限画面は M5 実装に合わせ ui_design.md の誤パス `/error/403` を実装の `/forbidden` に是正済み。M3 の email UNIQUE は data-model.md（shipper.email を UK 化・0006 マイグレーション追記）に反映済み。
 
 ### API 設計
 
