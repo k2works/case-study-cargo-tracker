@@ -16,6 +16,30 @@ public class CargoTest
         new Dimensions(120m, 80m, 90m), new Quantity(2), new Description("機械部品"));
 
     [Fact]
+    public void 到着期限が過去日なら予約を作成できない()
+    {
+        var pastRoute = new RouteSpecification(
+            new Location("JPTYO"), new Location("DEHAM"), new DateOnly(2026, 9, 29));
+
+        var act = () => Cargo.Create(
+            _shipperId, pastRoute, CargoType.General, 1200m, today: new DateOnly(2026, 9, 30));
+
+        act.Should().Throw<ArgumentException>().WithMessage("*到着期限は当日以降*");
+    }
+
+    [Fact]
+    public void 到着期限が当日なら予約を作成できる()
+    {
+        var todayRoute = new RouteSpecification(
+            new Location("JPTYO"), new Location("DEHAM"), new DateOnly(2026, 9, 30));
+
+        var act = () => Cargo.Create(
+            _shipperId, todayRoute, CargoType.General, 1200m, today: new DateOnly(2026, 9, 30));
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void 貨物予約を作成すると予約番号が発行され初期状態はPreliminaryになる()
     {
         var cargo = CreateCargo();

@@ -42,11 +42,18 @@ public sealed class Cargo : AggregateRoot
     public static Cargo Create(
         ShipperId shipperId, RouteSpecification routeSpecification, CargoType cargoType, decimal weight,
         Dimensions? dimensions = null, Quantity? quantity = null, Description? description = null,
-        HazardousDeclaration? hazardousDeclaration = null, TemperatureRequirement? temperatureRequirement = null)
+        HazardousDeclaration? hazardousDeclaration = null, TemperatureRequirement? temperatureRequirement = null,
+        DateOnly? today = null)
     {
         if (weight <= 0)
         {
             throw new ArgumentException("重量は正の値でなければなりません。", nameof(weight));
+        }
+        // 到着期限は当日以降でなければならない（IT2 レビュー H3。Estimate.Create と同じ不変条件）。
+        var currentDate = today ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        if (routeSpecification.ArrivalDeadline < currentDate)
+        {
+            throw new ArgumentException("到着期限は当日以降でなければなりません。", nameof(routeSpecification));
         }
         ValidateSpecialRequirements(cargoType, hazardousDeclaration, temperatureRequirement);
 
