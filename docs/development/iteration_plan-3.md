@@ -116,19 +116,20 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | voyage / carrier_movement マイグレーション（0007・二方言）。US24 の船名・運送会社・対応貨物種別・寄港地カラムを data-model に追記のうえ作成（※要 validating-design） | 4h | - | [ ] |
+| 1.0 | 【Day 1・着手前】設計論点 1〜3 を docs/design に反映（data-model に voyage 拡張カラム・楽観ロック方式、domain-model に Routing 経路候補の BC 所属）。局面移行チェック（縦切り・ArchUnit グリーン・UoW 基盤動作） | 3h | - | [ ] |
+| 1.1 | voyage / carrier_movement マイグレーション（0007・二方言）。vessel_name・carrier・supported_cargo_types を voyage に追加、寄港地は carrier_movement 連鎖で表現（論点1 確定） | 4h | - | [ ] |
 | 1.2 | 値オブジェクト（VoyageNumber・Schedule・CarrierMovement エンティティ）実装＋ドメインユニットテスト（時系列順・出発≠到着・日付整合） | 6h | - | [ ] |
 | 1.3 | Voyage 集約ルート（一意 VoyageNumber・Schedule 構成不変条件）＋ユニットテスト | 5h | - | [ ] |
 | 1.4 | IVoyageRepository（Routing/Domain/Repositories）+ Dapper 実装（航海+運送区間の単一トランザクション保存）＋統合テスト | 5h | - | [ ] |
 | 1.5 | RegisterVoyageCommand / CommandService（同一航海番号の重複拒否）＋登録画面・E2E | 5h | - | [ ] |
 
-**小計**: 25h（理想時間）
+**小計**: 28h（理想時間）
 
 #### 2. US25 既存航海スケジュールを更新する（3 SP）
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | UpdateScheduleCommand / CommandService（version 楽観ロック・IT2 パターン踏襲）＋ドメイン更新ロジック | 4h | - | [ ] |
+| 2.1 | UpdateScheduleCommand / CommandService（version 楽観ロック＝IT2 のドメイン先行方式を踏襲。論点3 確定）＋ドメイン更新ロジック | 4h | - | [ ] |
 | 2.2 | 差分表示（既存 vs 更新）・確認/キャンセル導線の画面＋統合/E2E | 5h | - | [ ] |
 | 2.3 | 更新の永続化（運送区間の入替）＋統合テスト | 3h | - | [ ] |
 
@@ -164,21 +165,22 @@
 | 5.3 | H4/T3: CargoType の domain-model「共通」記述を実装（BC 独立）に整合し軽量 ADR 起票（統合判断基準を明示） | 2h | - | [ ] |
 | 5.4 | H3: 予約フォームの過去日ガード（RouteSpecification/BookingForm に当日以降の不変条件）※IT2 レビュー高 | 2h | - | [ ] |
 | 5.5 | T4: ドメイン層カバレッジ計測（coverlet）を CI に組込 | 2h | - | [ ] |
+| 5.6 | H5: E2E.Tests に予約フロー（登録→引き渡し）と航海フロー（登録→検索→経路候補）を追加。時間超過時は予約フロー分を IT4 へ明示繰り越し | 3h | - | [ ] |
 
-**小計**: 11h（理想時間）
+**小計**: 14h（理想時間）
 
 #### タスク合計
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US24 航海スケジュールを新規登録する | 3 | 25h | [ ] |
+| US24 航海スケジュールを新規登録する | 3 | 28h | [ ] |
 | US25 既存航海スケジュールを更新する | 3 | 12h | [ ] |
 | US07 航海スケジュールを検索する | 3 | 11h | [ ] |
 | US08 経路候補を算出する | 5 | 20h | [ ] |
-| IT2 レビュー持ち越し・技術的負債 | - | 11h | [ ] |
-| **合計** | **14** | **79h** | |
+| IT2 レビュー持ち越し・技術的負債 | - | 14h | [ ] |
+| **合計** | **14** | **85h** | |
 
-**1 SP あたり**: 約 4.9h（ストーリータスクのみ 68h ÷ 14 SP）
+**1 SP あたり**: 約 5.1h（ストーリータスクのみ 71h ÷ 14 SP）
 **進捗率**: 0% (0/14 SP)
 
 ---
@@ -202,7 +204,7 @@ gantt
 
 | 日 | タスク |
 |----|--------|
-| Day 1 | 1.1 マイグレーション、1.2 値オブジェクト（Red 先行） |
+| Day 1 | 1.0 docs/design 反映・局面移行チェック、1.1 マイグレーション、1.2 値オブジェクト（Red 先行） |
 | Day 2 | 1.3 Voyage 集約＋ユニットテスト |
 | Day 3 | 1.4 IVoyageRepository＋統合テスト |
 | Day 4 | 1.5 RegisterVoyageCommand・登録画面・E2E |
@@ -230,7 +232,7 @@ gantt
 | Day 7 | 3.2 予約参照 ACL、3.3 検索画面・E2E |
 | Day 8 | 4.1 経路候補算出ドメインサービス（主戦場） |
 | Day 9 | 4.2 WireMock.Net 契約、4.3/4.4 通知・画面・E2E |
-| Day 10 | 5.1-5.5 ArchUnit・ADR 起票・過去日ガード・coverlet、統合テスト、デモ準備 |
+| Day 10 | 5.1-5.6 ArchUnit・ADR 起票・過去日ガード・coverlet・E2E 拡張、統合テスト、デモ準備 |
 
 ---
 
@@ -260,13 +262,13 @@ CarrierMovement --> Location : arrival
 - 集約: Voyage（航海）。VoyageNumber（一意）・Schedule（時系列 CarrierMovement 一覧）を含む。
 - 不変条件: 一意 VoyageNumber、Schedule は時系列順、CarrierMovement の出発地≠到着地、出発日≦到着日。
 - ACL: Routing → Booking（予約情報読取。US07 の予約参照）。他 BC の内部モデルを直接参照しない（IT2 の ShipperExistenceChecker パターン踏襲）。
-- 経路候補算出（US08）は `IExternalRoutingServicePort`（外部経路サービス ACL）経由。**現状ポートは Estimation 名前空間に存在**するため、Routing への移設 or 共有配置を validating-design で判断する（下記「未解決の設計論点」参照）。
+- 経路候補算出（US08）は Routing BC 固有の新規ポート（例 `IRouteCandidateService`）経由で行い、Routing 固有の経路候補型（例 `CandidateRoute`）を返す。Estimation の `IExternalRoutingServicePort`／`RouteCandidate`（見積用）とは分離する（下記「設計論点の確定」2 参照。BC 独立原則）。
 
 ### データモデル
 
 [data-model.md - Routing Context](../design/data-model.md#routing-context) を SoT とする。voyage / carrier_movement を使用。
 
-> **注（要 data-model 追記・validating-design 対象）**: US24 受入条件が要求する **船名（vessel_name）・運送会社（carrier）・対応貨物種別（supported_cargo_types）・寄港地** が、現行の voyage/carrier_movement 物理定義に存在しない。carrier_movement の連鎖で寄港地は表現できるが、船名・運送会社・対応貨物種別は voyage への追記が必要。IT3 実装前に data-model.md を更新し、0007 マイグレーションで反映する。
+> **注（確定・Day 1 タスク 1.0 で反映）**: US24 受入条件が要求する **船名（vessel_name）・運送会社（carrier）・対応貨物種別（supported_cargo_types）** が現行 voyage 物理定義に存在しない（寄港地は carrier_movement の seq_number 連鎖で表現）。「設計論点の確定」1 のとおり voyage テーブルへ追記し、0007 マイグレーションと同時に data-model.md を更新する。
 
 ### API 設計
 
@@ -290,11 +292,17 @@ CarrierMovement --> Location : arrival
 
 ---
 
-## 未解決の設計論点（validating-design で判断）
+## 設計論点の確定（validating-design 2026-07-09 の結果）
 
-1. **voyage/carrier_movement の物理定義拡張**: US24 の船名・運送会社・対応貨物種別カラムが未定義。data-model 更新が前提。
-2. **経路候補算出サービスの所属 BC**: `IExternalRoutingServicePort` は現状 Estimation 名前空間。US08（経路設計者の Routing 活動）で使うため、Routing への移設 / 共有カーネル配置 / Estimation 流用のいずれかを決定。domain-model は Routing 側に配置を示唆（line 166）。
-3. **RouteCandidate の所属**: 現状 Estimation の VO。US08 の経路候補が Estimation の RouteCandidate と同一概念か、Routing 固有かを判断（CargoType 二重定義と同種の論点）。
+設計整合性検証（軸 A/B/C）を実施し、以下を暫定確定した。設計ドキュメントが未確定な論点はテックリード判断で確定し、実装前（Day 1・タスク 1.0）に docs/design へ反映する。確定後は docs/design を正とする。
+
+1. **voyage/carrier_movement の物理定義拡張（確定）**: data-model.md の voyage テーブルに `vessel_name`（船名）・`carrier`（運送会社）・`supported_cargo_types`（対応貨物種別）を追記する。寄港地は carrier_movement の連鎖（seq_number 順）で表現。0007 マイグレーションと同時に data-model.md を更新。
+
+2. **経路候補算出サービス・経路候補の所属 BC（確定）**: DDD の BC 独立原則（CargoType 二重定義の前例）に従い、**US08 の経路候補算出は Routing BC 固有の概念として実装**する。`IExternalRoutingServicePort`（Estimation・見積用・`RouteCandidate` を返す）とは分離し、Routing 側に新規ポート（例 `IRouteCandidateService`）と Routing 固有の経路候補型（例 `CandidateRoute`：所要日数・経由港・費用・航海番号）を定義する。Estimation の `RouteCandidate` は見積用途に据え置く（移設・共有しない）。根拠: US08 は Routing 活動で見積の RouteCandidate とライフサイクル・責務が異なり、共有すると BC 結合が生じる。domain-model.md の該当記述（ポート配置・戻り値 CargoItinerary vs RouteCandidate の乖離）を Routing 側定義に合わせて更新。
+
+3. **楽観ロック実装方式（確定）**: IT2 で実装・テスト済みの**ドメイン先行方式**（集約が `Version++`、リポジトリが `WHERE version=更新前値`、影響行 0 で競合例外）を正とする。US25 も同方式。data-model.md の楽観ロック節（DB 側 `version=version+1` 記述）と ADR-0001 を実装方式に合わせて更新（IT2 レビュー M1 の解決）。
+
+> これら 1〜3 の docs/design 反映は Day 1（タスク 1.0）に実施する。重大な設計変更のため方針に異論があれば着手前に見直す。
 
 ---
 
@@ -335,6 +343,7 @@ CarrierMovement --> Location : arrival
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-07-09 | 初版作成（US24/25/07/08・目標 14 SP・中盤インサイドアウト・IT2 レビュー持ち越し反映） | - |
+| 2026-07-09 | validating-design 反映（軸 A OK。軸 B/C の設計論点を確定：voyage 物理定義拡張・経路候補の Routing BC 独立・楽観ロックのドメイン先行方式。Day 1 の docs 反映タスク 1.0・H5 E2E タスク 5.6 を追加） | - |
 
 ---
 
