@@ -57,6 +57,12 @@
             </div>
             <div class="col-md-8 mb-3">
                 <button type="submit" class="btn btn-primary">検索</button>
+                <button type="button" class="btn btn-success"
+                        hx-get="/routing/requests/@Model.Booking.BookingId/candidates"
+                        hx-include="closest form"
+                        hx-target="#route-candidates">
+                    経路候補を算出
+                </button>
                 <a href="/routing/requests" class="btn btn-outline-secondary">戻る</a>
             </div>
         </div>
@@ -64,3 +70,8 @@
 </section>
 
 <div id="voyage-search-results"></div>
+
+<section class="mt-4">
+    <h2 class="h5">経路候補</h2>
+    <div id="route-candidates"></div>
+</section>

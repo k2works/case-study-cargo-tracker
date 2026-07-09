@@ -1,6 +1,7 @@
 using CargoTracker.Routing.Application.Internal.OutboundServices;
 using CargoTracker.Routing.Application.Internal.QueryServices;
 using CargoTracker.Routing.Domain.Model;
+using CargoTracker.Shared.Domain.Model;
 using CargoTracker.Shared.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,8 @@ namespace CargoTracker.Routing.Interfaces;
 public sealed class RoutingController(
     RoutingRequestQueryService requestQueryService,
     IBookingLookup bookingLookup,
-    SearchVoyagesQueryService searchVoyagesQueryService) : Controller
+    SearchVoyagesQueryService searchVoyagesQueryService,
+    IRouteCandidateService routeCandidateService) : Controller
 {
     [HttpGet("/routing/requests")]
     public async Task<IActionResult> Requests(CancellationToken ct)
@@ -54,6 +56,25 @@ public sealed class RoutingController(
             form.DepartureTo,
             form.CargoType), ct);
         return PartialView("_VoyageSearchResults", new VoyageSearchResultsViewModel(form, results));
+    }
+
+    [HttpGet("/routing/requests/{bookingId}/candidates")]
+    public async Task<IActionResult> Candidates(string bookingId, RoutingSearchForm form, CancellationToken ct)
+    {
+        var booking = await bookingLookup.FindByBookingIdAsync(bookingId, ct);
+        if (booking is null)
+        {
+            return NotFound();
+        }
+
+        var candidates = await routeCandidateService.FindCandidatesAsync(
+            new Location(form.OriginUnlocode),
+            new Location(form.DestinationUnlocode),
+            booking.ArrivalDeadline,
+            form.CargoType,
+            ct);
+
+        return PartialView("_RouteCandidates", new RouteCandidatesViewModel(form, candidates));
     }
 
     private static RoutingSearchForm BuildDefaultForm(RoutingBookingInfo booking)

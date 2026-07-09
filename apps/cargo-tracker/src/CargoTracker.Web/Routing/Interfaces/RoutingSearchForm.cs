@@ -30,3 +30,7 @@ public sealed record RoutingRequestViewModel(RoutingBookingInfo Booking, Routing
 public sealed record VoyageSearchResultsViewModel(
     RoutingSearchForm Form,
     IReadOnlyList<VoyageSearchResult> Results);
+
+public sealed record RouteCandidatesViewModel(
+    RoutingSearchForm Form,
+    IReadOnlyList<CargoTracker.Routing.Domain.Model.CandidateRoute> Candidates);

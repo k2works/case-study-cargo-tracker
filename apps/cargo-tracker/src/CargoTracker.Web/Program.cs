@@ -84,6 +84,8 @@ builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServ
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.FindVoyageQueryService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.RoutingRequestQueryService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.SearchVoyagesQueryService>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.OutboundServices.IRouteCandidateService,
+    CargoTracker.Routing.Infrastructure.Services.VoyageRouteCandidateService>();
 
 var app = builder.Build();
 

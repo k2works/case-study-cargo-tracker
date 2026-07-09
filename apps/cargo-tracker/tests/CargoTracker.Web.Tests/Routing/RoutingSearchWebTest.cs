@@ -159,4 +159,40 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         => $"/routing/requests/{bookingId}/voyages?OriginUnlocode=JPTYO&DestinationUnlocode={destination}"
             + $"&DepartureFrom=2026-10-01T00%3A00%3A00%2B00%3A00&DepartureTo=2026-10-31T23%3A59%3A00%2B00%3A00"
             + $"&CargoType={cargoType}";
+
+    private static string CandidatesUrl(string bookingId, string cargoType)
+        => $"/routing/requests/{bookingId}/candidates?OriginUnlocode=JPTYO&DestinationUnlocode=DEHAM"
+            + $"&DepartureFrom=2026-10-01T00%3A00%3A00%2B00%3A00&DepartureTo=2026-10-31T23%3A59%3A00%2B00%3A00"
+            + $"&CargoType={cargoType}";
+
+    [Fact]
+    public async Task 経路候補を算出すると直行候補が推奨順で表示される()
+    {
+        var sales = await LoginAsync("sales");
+        var bookingId = await CreateAndAssignGeneralBookingAsync(sales);
+        var router = await LoginAsync("router");
+        await CreateVoyageAsync(router, "VYG-CAND-001", "General");
+
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "General"));
+
+        candidates.Should().Contain("VYG-CAND-001")
+            .And.Contain("直行")
+            .And.Contain("JPTYO")
+            .And.Contain("DEHAM");
+    }
+
+    [Fact]
+    public async Task 期限内に到達可能な経路がない場合は条件調整を促す()
+    {
+        var sales = await LoginAsync("sales");
+        // 危険物予約に対し一般貨物対応の航海のみ登録 → 対応航海なしで候補は空になる。
+        var bookingId = await CreateAndAssignHazardousBookingAsync(sales);
+        var router = await LoginAsync("router");
+        await CreateVoyageAsync(router, "VYG-CAND-002-GN", "General");
+
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "Hazardous"));
+
+        candidates.Should().Contain("期限内に到達可能な経路がありません")
+            .And.Contain("alert-warning");
+    }
 }

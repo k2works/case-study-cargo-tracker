@@ -1,0 +1,51 @@
+@model CargoTracker.Routing.Interfaces.RouteCandidatesViewModel
+
+@if (Model.Candidates.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">
+        期限内に到達可能な経路がありません。出発期間や港などの条件を調整してください。
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>推奨順</th>
+                    <th>区分</th>
+                    <th>航海番号</th>
+                    <th>経由港</th>
+                    <th>所要日数</th>
+                    <th>費用</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    var rank = 1;
+                }
+                @foreach (var candidate in Model.Candidates)
+                {
+                    <tr>
+                        <td>@rank</td>
+                        <td>
+                            @if (candidate.IsDirect)
+                            {
+                                <span class="badge bg-success">直行</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">乗継 @candidate.TransferCount 回</span>
+                            }
+                        </td>
+                        <td>@string.Join(" → ", candidate.VoyageNumbers.Select(v => v.Value))</td>
+                        <td>@string.Join(" → ", candidate.Ports.Select(p => p.UnLocode))</td>
+                        <td>@candidate.TransitDays 日</td>
+                        <td>@candidate.Cost.ToString("N0")</td>
+                    </tr>
+                    rank++;
+                }
+            </tbody>
+        </table>
+    </div>
+}

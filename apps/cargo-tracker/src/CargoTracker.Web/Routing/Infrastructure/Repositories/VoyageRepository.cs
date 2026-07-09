@@ -100,6 +100,18 @@ public sealed class VoyageRepository(IDbConnectionFactory connectionFactory, Amb
         return await QueryByVoyageNumberAsync(voyageNumber, connection, null, ct);
     }
 
+    public async Task<IReadOnlyList<Voyage>> FindAllAsync(CancellationToken ct = default)
+    {
+        if (ambient.Current is not null)
+        {
+            var tx = ambient.Current;
+            return await QueryAllAsync(tx.Connection!, tx, ct);
+        }
+
+        using var connection = connectionFactory.Create();
+        return await QueryAllAsync(connection, null, ct);
+    }
+
     public async Task<bool> ExistsAsync(VoyageNumber voyageNumber, CancellationToken ct = default)
     {
         if (ambient.Current is not null)
@@ -123,6 +135,39 @@ public sealed class VoyageRepository(IDbConnectionFactory connectionFactory, Amb
             """,
             new { VoyageNumber = voyageNumber.Value }, transaction, cancellationToken: ct));
         return count > 0;
+    }
+
+    private static async Task<IReadOnlyList<Voyage>> QueryAllAsync(
+        IDbConnection connection, IDbTransaction? transaction, CancellationToken ct)
+    {
+        var rows = await connection.QueryAsync<VoyageRow>(new CommandDefinition(
+            """
+            SELECT id AS Id, voyage_number AS VoyageNumber, vessel_name AS VesselName,
+                   carrier AS Carrier, supported_cargo_types AS SupportedCargoTypes, version AS Version
+            FROM voyage
+            ORDER BY voyage_number
+            """,
+            transaction: transaction, cancellationToken: ct));
+
+        var voyages = new List<Voyage>();
+        foreach (var row in rows)
+        {
+            var movements = await connection.QueryAsync<CarrierMovementRow>(new CommandDefinition(
+                """
+                SELECT departure_location_unlocode AS DepartureLocationUnlocode,
+                       arrival_location_unlocode AS ArrivalLocationUnlocode,
+                       departure_date AS DepartureDate,
+                       arrival_date AS ArrivalDate,
+                       seq_number AS SequenceNumber
+                FROM carrier_movement
+                WHERE voyage_id = @VoyageId
+                ORDER BY seq_number
+                """,
+                new { VoyageId = row.Id }, transaction, cancellationToken: ct));
+            voyages.Add(row.ToVoyage(movements));
+        }
+
+        return voyages;
     }
 
     private static async Task<Voyage?> QueryByVoyageNumberAsync(
