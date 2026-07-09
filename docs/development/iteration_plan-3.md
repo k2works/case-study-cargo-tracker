@@ -270,6 +270,33 @@ CarrierMovement --> Location : arrival
 
 > **注（確定・Day 1 タスク 1.0 で反映）**: US24 受入条件が要求する **船名（vessel_name）・運送会社（carrier）・対応貨物種別（supported_cargo_types）** が現行 voyage 物理定義に存在しない（寄港地は carrier_movement の seq_number 連鎖で表現）。「設計論点の確定」1 のとおり voyage テーブルへ追記し、0007 マイグレーションと同時に data-model.md を更新する。
 
+### ユーザーインターフェース
+
+[UI 設計](../design/ui_design.md) を SoT とする。ナビバーは全画面共通形式に従い、航路・経路設計は経路設計者（ROLE_ROUTE_DESIGNER）向け。IT1 で作成済みのプレースホルダ（航路・経路設計ルート）を実画面化する。
+
+```
+{/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | 航路管理 | [ログアウト] }
+```
+
+**対象画面**（ui_design の画面一覧より）:
+
+| 画面 | URL | 説明 | 対象ロール | US |
+|------|-----|------|-----------|-----|
+| 航路一覧 | `/voyages` | 登録済み航海の一覧 | ROLE_ROUTE_DESIGNER | US24/25 |
+| 航海スケジュール登録 | `/voyages/new` | 新規航海登録フォーム（区間・対応貨物種別） | ROLE_ROUTE_DESIGNER | US24 |
+| 航海スケジュール更新 | `/voyages/{voyageNumber}/edit` | 更新フォーム・差分確認 | ROLE_ROUTE_DESIGNER | US25 |
+| 経路設計依頼一覧 | `/routing/requests` | 引き渡し済み（RouteProposed）予約の一覧 | ROLE_ROUTE_DESIGNER | US07 |
+| 経路設計・候補算出 | `/routing/requests/{bookingId}` | 航海検索・経路候補算出・比較 | ROLE_ROUTE_DESIGNER | US07/US08 |
+
+**インタラクション**（htmx / PRG パターン）:
+
+- 航海登録: `[+ 区間を追加]` で運送区間の行を htmx 部分更新で追加（seq_number 連鎖）。区間の連続性エラー（区間 N 到着港 ≠ 区間 N+1 出発港）・日付整合エラーを `alert-danger` で表示。
+- 登録成功: PRG（POST → リダイレクト）で `/voyages` へ遷移。バリデーションエラーは自己ループ（フォーム再表示＋赤ボーダー強調）。
+- 航海更新（US25）: 更新フォームで既存 vs 更新の**差分を並置表示**し、`[更新する]`（PRG・version 楽観ロック）／`[キャンセル]`（`/voyages` へ戻り変更なし）。影響予約（期限超過の可能性）を警告表示。
+- 経路検索・算出（US07/US08）: 検索条件（出発地・目的地・出発期間・貨物種別）を `hx-get` で送信し結果一覧を部分更新。危険物・冷凍貨物は対応可能な航海のみに絞り込み。経路候補は所要日数・経由港・費用・航海番号を推奨順（直行優先）で表示。該当なし時は条件緩和の再検索導線、期限内到達不能時は `alert-warning` で条件調整を促す。
+
+> **注（Day 1 タスク 1.0 で反映済み）**: US24 登録フォームのワイヤーフレームに対応貨物種別フィールドを ui_design.md へ追記済み。
+
 ### API 設計
 
 | メソッド | エンドポイント | 説明 |
@@ -345,6 +372,7 @@ CarrierMovement --> Location : arrival
 | 2026-07-09 | 初版作成（US24/25/07/08・目標 14 SP・中盤インサイドアウト・IT2 レビュー持ち越し反映） | - |
 | 2026-07-09 | validating-design 反映（軸 A OK。軸 B/C の設計論点を確定：voyage 物理定義拡張・経路候補の Routing BC 独立・楽観ロックのドメイン先行方式。Day 1 の docs 反映タスク 1.0・H5 E2E タスク 5.6 を追加） | - |
 | 2026-07-09 | validating-iteration-plan 反映（ステップ 1/2/7/8 OK。ステップ 3/4/5-6 の docs 欠落＝Day1 タスク 1.0 で反映予定と確認し、1.0 の対象を domain-model の CandidateRoute/IRouteCandidateService・ui_design の対応貨物種別フィールドまで明示化） | - |
+| 2026-07-09 | 設計節に「ユーザーインターフェース」小節を追加（対象画面一覧・htmx/PRG インタラクション。IT2 計画と同構成に是正） | - |
 
 ---
 
