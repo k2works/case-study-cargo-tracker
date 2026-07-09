@@ -66,7 +66,8 @@ public sealed class WalkingSkeletonTest : IClassFixture<AuthenticationFlowTest.A
 
         var dashboard = await client.GetStringAsync("/");
 
-        dashboard.Should().Contain("航路管理").And.Contain("経路設計");
+        // ダッシュボード本体のカード固有文言（navbar には無い）で検証する
+        dashboard.Should().Contain("航海スケジュール").And.Contain("経路候補の算出");
         dashboard.Should().Contain("/voyages").And.Contain("/routing/requests");
         dashboard.Should().NotContain("管理設定").And.NotContain("請求管理");
     }
