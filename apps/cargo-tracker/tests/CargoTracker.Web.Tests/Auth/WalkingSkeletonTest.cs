@@ -58,6 +58,20 @@ public sealed class WalkingSkeletonTest : IClassFixture<AuthenticationFlowTest.A
     }
 
     [Fact]
+    public async Task 経路設計者ロールのナビとダッシュボードに航路管理と経路設計が表示される()
+    {
+        // ナビゲーション整合性の必須検証: 新規画面（IT3 の航路管理・経路設計）が
+        // ナビバー／ダッシュボードにロール条件付きで反映されていることを保証する。
+        var client = await LoginAsAsync("router");
+
+        var dashboard = await client.GetStringAsync("/");
+
+        dashboard.Should().Contain("航路管理").And.Contain("経路設計");
+        dashboard.Should().Contain("/voyages").And.Contain("/routing/requests");
+        dashboard.Should().NotContain("管理設定").And.NotContain("請求管理");
+    }
+
+    [Fact]
     public async Task 営業ロールは貨物予約登録画面にアクセスできる()
     {
         // /bookings は IT2（US04）で実画面化済み。/bookings/new の登録フォームに到達できることを検証する
