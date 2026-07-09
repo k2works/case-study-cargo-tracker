@@ -10,12 +10,18 @@
 {
     <div class="alert alert-success" role="alert">@message</div>
 }
+@if (TempData["WarningMessage"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
 
 <dl class="row">
     <dt class="col-sm-3">予約番号</dt>
     <dd class="col-sm-9">@Model.BookingId</dd>
     <dt class="col-sm-3">状態</dt>
-    <dd class="col-sm-9">@Model.BookingStatus</dd>
+    <dd class="col-sm-9">
+        <span class="badge text-bg-@(Model.BookingStatus == "PRELIMINARY" ? "secondary" : "primary")">@Model.BookingStatus</span>
+    </dd>
     <dt class="col-sm-3">荷主</dt>
     <dd class="col-sm-9">@Model.ShipperCode - @Model.ShipperName</dd>
     <dt class="col-sm-3">区間</dt>
@@ -57,4 +63,19 @@
     }
 </dl>
 
-<a href="/bookings/new" class="btn btn-outline-secondary">続けて登録</a>
+<div class="d-flex gap-2">
+    @if (Model.BookingStatus == "PRELIMINARY")
+    {
+        <form action="/bookings/@Model.BookingId/assign-routing" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-primary">経路設計依頼</button>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-warning mb-0" role="alert">
+            経路設計依頼は仮受付の予約のみ実行できます。
+        </div>
+    }
+    <a href="/bookings/new" class="btn btn-outline-secondary">続けて登録</a>
+</div>

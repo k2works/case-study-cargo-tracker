@@ -120,4 +120,53 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         cargo.TemperatureRequirement.TemperatureUnit.Should().Be(TemperatureUnit.Celsius);
         cargo.HazardousDeclaration.Should().BeNull();
     }
+
+    [Fact]
+    public async Task 経路設計へ引き渡すと状態が永続化されVersionが上がる()
+    {
+        var bookingId = await CreateGeneralCargoAsync();
+        var cargo = await _repository.FindByBookingIdAsync(bookingId);
+        cargo!.AssignToRouting();
+
+        await using (var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object).Begin())
+        {
+            unitOfWork.Track(cargo);
+            await _repository.UpdateAsync(cargo, unitOfWork.Transaction);
+            await unitOfWork.CommitAsync();
+        }
+
+        var updated = await _repository.FindByBookingIdAsync(bookingId);
+        updated!.BookingStatus.Should().Be(BookingStatus.RouteProposed);
+        updated.Version.Should().Be(1);
+        _publisher.Verify(p => p.Publish(It.IsAny<INotification>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task Version不一致なら並行更新例外になる()
+    {
+        var bookingId = await CreateGeneralCargoAsync();
+        var first = await _repository.FindByBookingIdAsync(bookingId);
+        var second = await _repository.FindByBookingIdAsync(bookingId);
+        first!.AssignToRouting();
+
+        await using (var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object).Begin())
+        {
+            await _repository.UpdateAsync(first, unitOfWork.Transaction);
+            await unitOfWork.CommitAsync();
+        }
+
+        second!.AssignToRouting();
+        var act = async () =>
+        {
+            await using var unitOfWork = new UnitOfWorkFactory(_connectionFactory, _publisher.Object).Begin();
+            await _repository.UpdateAsync(second, unitOfWork.Transaction);
+        };
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*並行更新*");
+    }
+
+    private Task<BookingId> CreateGeneralCargoAsync() =>
+        _commandService.HandleAsync(new BookCargoCommand(
+            _shipperId.ToString(CultureInfo.InvariantCulture), "JPTYO", "DEHAM", new DateOnly(2026, 9, 30),
+            CargoType.General, 1200m));
 }

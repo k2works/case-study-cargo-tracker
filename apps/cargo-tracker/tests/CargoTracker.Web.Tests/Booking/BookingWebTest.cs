@@ -126,4 +126,67 @@ public sealed class BookingWebTest : IClassFixture<AuthenticationFlowTest.AuthWe
         refrigerated.Should().Contain("MinTemperature").And.Contain("MaxTemperature").And.NotContain("UnNumber");
         general.Should().NotContain("HazardousClass").And.NotContain("MinTemperature");
     }
+
+    [Fact]
+    public async Task Preliminaryの予約を経路設計へ引き渡すと詳細にRouteProposedが表示される()
+    {
+        var client = await LoginAsSalesAsync();
+        var bookingLocation = await CreateGeneralBookingAsync(client);
+        var detailPage = await client.GetStringAsync(bookingLocation);
+        var token = Token(detailPage);
+
+        var response = await client.PostAsync($"{bookingLocation}/assign-routing", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location!.OriginalString.Should().Be(bookingLocation);
+
+        var detail = await client.GetStringAsync(bookingLocation);
+        detail.Should().Contain("ROUTEPROPOSED").And.Contain("経路設計を依頼しました");
+        detail.Should().NotContain("経路設計依頼</button>");
+    }
+
+    [Fact]
+    public async Task RouteProposedの予約を再度引き渡すと拒否される()
+    {
+        var client = await LoginAsSalesAsync();
+        var bookingLocation = await CreateGeneralBookingAsync(client);
+        var token = Token(await client.GetStringAsync(bookingLocation));
+        await client.PostAsync($"{bookingLocation}/assign-routing", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        var response = await client.PostAsync($"{bookingLocation}/assign-routing", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        var detail = await client.GetStringAsync(bookingLocation);
+        detail.Should().Contain("仮受付の予約のみ").And.Contain("alert-warning");
+    }
+
+    private static async Task<string> CreateGeneralBookingAsync(HttpClient client)
+    {
+        var newPage = await client.GetStringAsync("/bookings/new");
+        var token = Token(newPage);
+        var shipperId = Regex.Match(newPage, "<option value=\"([^\"]+)\"").Groups[1].Value;
+
+        var response = await client.PostAsync("/bookings", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["ShipperId"] = shipperId,
+            ["OriginUnLocode"] = "JPTYO",
+            ["DestinationUnLocode"] = "DEHAM",
+            ["ArrivalDeadline"] = "2026-09-30",
+            ["CargoType"] = "General",
+            ["Weight"] = "1200",
+            ["Description"] = "機械部品",
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        return response.Headers.Location!.OriginalString;
+    }
 }

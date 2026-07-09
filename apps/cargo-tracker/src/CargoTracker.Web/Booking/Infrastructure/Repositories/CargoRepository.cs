@@ -54,10 +54,55 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
             transaction, cancellationToken: ct));
     }
 
+    public async Task UpdateAsync(Cargo cargo, IDbTransaction transaction, CancellationToken ct = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        // Cargo.AssignToRouting() が Version をインクリメント済みのため、WHERE は更新前 version、
+        // SET は集約が保持する新 version を使う。影響行数 0 は並行更新競合として扱う。
+        var expectedVersion = cargo.Version - 1;
+        var affectedRows = await transaction.Connection!.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE cargo
+            SET booking_status = @BookingStatus,
+                version = @NewVersion,
+                updated_at = @UpdatedAt
+            WHERE booking_id = @BookingId
+              AND version = @ExpectedVersion
+            """,
+            new
+            {
+                BookingId = cargo.BookingId.Value,
+                BookingStatus = cargo.BookingStatus.ToString().ToUpperInvariant(),
+                NewVersion = cargo.Version,
+                ExpectedVersion = expectedVersion,
+                UpdatedAt = now,
+            },
+            transaction, cancellationToken: ct));
+
+        if (affectedRows == 0)
+        {
+            throw new InvalidOperationException("貨物予約が並行更新されたため、経路設計依頼を保存できませんでした。");
+        }
+    }
+
     public async Task<Cargo?> FindByBookingIdAsync(BookingId id, CancellationToken ct = default)
     {
         using var connection = connectionFactory.Create();
-        var row = await connection.QuerySingleOrDefaultAsync<CargoRow>(new CommandDefinition(
+        var row = await QueryByBookingIdAsync(id, connection, null, ct);
+
+        return row?.ToCargo();
+    }
+
+    public async Task<Cargo?> FindByBookingIdAsync(BookingId id, IDbTransaction transaction, CancellationToken ct = default)
+    {
+        var row = await QueryByBookingIdAsync(id, transaction.Connection!, transaction, ct);
+
+        return row?.ToCargo();
+    }
+
+    private static Task<CargoRow?> QueryByBookingIdAsync(
+        BookingId id, IDbConnection connection, IDbTransaction? transaction, CancellationToken ct)
+        => connection.QuerySingleOrDefaultAsync<CargoRow>(new CommandDefinition(
             """
             SELECT booking_id AS BookingId, shipper_id AS ShipperId, cargo_type AS CargoType,
                    weight AS Weight, origin_unlocode AS OriginUnlocode, destination_unlocode AS DestinationUnlocode,
@@ -71,10 +116,7 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
             FROM cargo
             WHERE booking_id = @BookingId
             """,
-            new { BookingId = id.Value }, cancellationToken: ct));
-
-        return row?.ToCargo();
-    }
+            new { BookingId = id.Value }, transaction, cancellationToken: ct));
 
     private sealed class CargoRow
     {

@@ -70,6 +70,7 @@ builder.Services.AddScoped<CargoTracker.Booking.Domain.Repositories.ICargoReposi
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.OutboundServices.IShipperExistenceChecker,
     CargoTracker.Booking.Infrastructure.Services.ShipperExistenceChecker>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.BookCargoCommandService>();
+builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.AssignToRoutingCommandService>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.QueryServices.FindBookingQueryService>();
 
 var app = builder.Build();

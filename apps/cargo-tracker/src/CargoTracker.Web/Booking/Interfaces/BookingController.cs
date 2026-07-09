@@ -12,7 +12,8 @@ namespace CargoTracker.Booking.Interfaces;
 [Authorize(Roles = Roles.Sales)]
 public sealed class BookingController(
     FindBookingQueryService queryService,
-    BookCargoCommandService commandService) : Controller
+    BookCargoCommandService commandService,
+    AssignToRoutingCommandService assignToRoutingCommandService) : Controller
 {
     [HttpGet("/bookings")]
     public IActionResult Index() => LocalRedirect("/bookings/new");
@@ -69,6 +70,23 @@ public sealed class BookingController(
             return NotFound();
         }
         return View(detail);
+    }
+
+    [HttpPost("/bookings/{bookingId}/assign-routing")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignRouting(string bookingId, CancellationToken ct)
+    {
+        try
+        {
+            await assignToRoutingCommandService.HandleAsync(new AssignToRoutingCommand(new BookingId(bookingId)), ct);
+            TempData["SuccessMessage"] = "経路設計を依頼しました。";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["WarningMessage"] = ex.Message;
+        }
+
+        return LocalRedirect($"/bookings/{bookingId}");
     }
 
     private async Task<BookingForm> BuildFormAsync(BookingForm form, CancellationToken ct)

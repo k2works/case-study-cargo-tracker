@@ -17,7 +17,7 @@ public sealed class Cargo : AggregateRoot
     public HazardousDeclaration? HazardousDeclaration { get; }
     public TemperatureRequirement? TemperatureRequirement { get; }
     public BookingStatus BookingStatus { get; private set; }
-    public long Version { get; }
+    public long Version { get; private set; }
 
     private Cargo(
         BookingId bookingId, ShipperId shipperId, RouteSpecification routeSpecification, CargoType cargoType,
@@ -64,6 +64,8 @@ public sealed class Cargo : AggregateRoot
             throw new InvalidOperationException("仮受付の予約のみ経路設計へ割り当てられます。");
         }
         BookingStatus = BookingStatus.RouteProposed;
+        Version++;
+        AddDomainEvent(new AssignedToRoutingEvent(BookingId));
     }
 
     /// <summary>永続化データから集約を再構築する（イベントは発生させない）。</summary>

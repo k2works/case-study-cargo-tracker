@@ -29,7 +29,7 @@ public class CargoTest
     }
 
     [Fact]
-    public void 経路設計へ割り当てるとRouteProposedになる()
+    public void 経路設計へ割り当てるとRouteProposedになりVersionが上がりイベントが発生する()
     {
         var cargo = CreateCargo();
         cargo.PullDomainEvents();
@@ -37,6 +37,28 @@ public class CargoTest
         cargo.AssignToRouting();
 
         cargo.BookingStatus.Should().Be(BookingStatus.RouteProposed);
+        cargo.Version.Should().Be(1);
+        cargo.PullDomainEvents().Should().ContainSingle(e => e is AssignedToRoutingEvent);
+    }
+
+    [Fact]
+    public void Preliminary以外から経路設計へ割り当てると例外()
+    {
+        var cargo = Cargo.Reconstruct(
+            new BookingId("BKG-TEST-0000000001"),
+            _shipperId,
+            _route,
+            CargoType.General,
+            1200m,
+            null,
+            null,
+            null,
+            BookingStatus.RouteProposed,
+            1);
+
+        var act = () => cargo.AssignToRouting();
+
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Theory]
