@@ -116,7 +116,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.0 | 【Day 1・着手前】設計論点 1〜3 を docs/design に反映（data-model に voyage 拡張カラム・楽観ロック方式、domain-model に Routing 経路候補の BC 所属）。局面移行チェック（縦切り・ArchUnit グリーン・UoW 基盤動作） | 3h | - | [ ] |
+| 1.0 | 【Day 1・着手前】設計論点 1〜3 を docs/design に反映：(a) data-model の voyage に vessel_name/carrier/supported_cargo_types 追記＋楽観ロック方式（ドメイン先行）記述、(b) domain-model の Routing Context に `CandidateRoute`（VoyageNumber・経由港・所要日数・費用）と `IRouteCandidateService` ポートを追加定義、(c) ui_design の US24 登録フォーム ワイヤーフレームに対応貨物種別フィールドを追記。局面移行チェック（縦切り・ArchUnit グリーン・UoW 基盤動作） | 3h | - | [ ] |
 | 1.1 | voyage / carrier_movement マイグレーション（0007・二方言）。vessel_name・carrier・supported_cargo_types を voyage に追加、寄港地は carrier_movement 連鎖で表現（論点1 確定） | 4h | - | [ ] |
 | 1.2 | 値オブジェクト（VoyageNumber・Schedule・CarrierMovement エンティティ）実装＋ドメインユニットテスト（時系列順・出発≠到着・日付整合） | 6h | - | [ ] |
 | 1.3 | Voyage 集約ルート（一意 VoyageNumber・Schedule 構成不変条件）＋ユニットテスト | 5h | - | [ ] |
@@ -344,6 +344,7 @@ CarrierMovement --> Location : arrival
 |------|---------|--------|
 | 2026-07-09 | 初版作成（US24/25/07/08・目標 14 SP・中盤インサイドアウト・IT2 レビュー持ち越し反映） | - |
 | 2026-07-09 | validating-design 反映（軸 A OK。軸 B/C の設計論点を確定：voyage 物理定義拡張・経路候補の Routing BC 独立・楽観ロックのドメイン先行方式。Day 1 の docs 反映タスク 1.0・H5 E2E タスク 5.6 を追加） | - |
+| 2026-07-09 | validating-iteration-plan 反映（ステップ 1/2/7/8 OK。ステップ 3/4/5-6 の docs 欠落＝Day1 タスク 1.0 で反映予定と確認し、1.0 の対象を domain-model の CandidateRoute/IRouteCandidateService・ui_design の対応貨物種別フィールドまで明示化） | - |
 
 ---
 
