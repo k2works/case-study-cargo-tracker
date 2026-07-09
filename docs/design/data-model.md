@@ -380,6 +380,9 @@ entity "voyage\n（航海）" as voyage {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK, NOT NULL>>
+  * vessel_name : VARCHAR(200) <<NOT NULL>>
+  * carrier : VARCHAR(200) <<NOT NULL>>
+  * supported_cargo_types : VARCHAR(100) <<NOT NULL>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
@@ -811,6 +814,9 @@ public class ShipperRepository(IDbConnection connection) : IShipperRepository
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `vessel_name` | `VARCHAR(200)` | `NOT NULL` | 船名（US24） |
+| `carrier` | `VARCHAR(200)` | `NOT NULL` | 運送会社（US24） |
+| `supported_cargo_types` | `VARCHAR(100)` | `NOT NULL` | 対応貨物種別（`GENERAL`/`HAZARDOUS`/`REFRIGERATED` の CSV。US24・US07 の危険物/冷凍フィルタに使用） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック用バージョン（ADR-0001） |
@@ -1155,7 +1161,9 @@ public async Task UpdateAsync(Cargo cargo, IDbTransaction tx)
 
 ### 8. 楽観的ロック（`version` 列）
 
-**判断**: 集約ルートに対応する 7 テーブル（`shipper`・`cargo`・`voyage`・`tracking_activity`・`handling_activity`・`invoice`・`estimate`）に `version BIGINT NOT NULL DEFAULT 0` を付与します。UPDATE 文は `SET version = version + 1 ... WHERE id = @Id AND version = @ExpectedVersion` とし、更新件数が 0 の場合は並行更新の競合として `ConcurrencyException` を送出します。
+**判断**: 集約ルートに対応する 7 テーブル（`shipper`・`cargo`・`voyage`・`tracking_activity`・`handling_activity`・`invoice`・`estimate`）に `version BIGINT NOT NULL DEFAULT 0` を付与します。
+
+実装方式は **ドメイン先行方式**を採用します（IT2 で `cargo` に実装・検証済み。IT2 レビュー M1 の解決として本方式に統一）。ドメイン集約が状態遷移メソッド内で `Version` をインクリメントし、リポジトリの UPDATE 文は `SET version = @NewVersion ... WHERE <業務キー> = @Key AND version = @ExpectedVersion`（`@ExpectedVersion` はインクリメント前の値、`@NewVersion` は集約が保持する新 version）とします。更新件数が 0 の場合は並行更新の競合として例外を送出します。`voyage`（US25 更新）も本方式に従います。
 
 **根拠**: 追跡管理者と荷役作業員が同一貨物を同時に更新するケース（例外登録と荷役記録の競合等）でロストアップデートを防ぐためです。子テーブル（`leg` 等）は集約ルート経由でのみ更新されるため（ADR-0001）、version 列は集約ルート表にのみ付与します。方式の詳細は ADR-0001 を参照してください。
 

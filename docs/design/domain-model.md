@@ -593,11 +593,15 @@ CarrierMovement --> Location : arrival
 
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
-| 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ |
+| 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ。船名・運送会社・対応貨物種別を保持 |
 | 値オブジェクト（record） | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
 | 値オブジェクト（record） | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
+| 値オブジェクト（record） | CandidateRoute | 経路候補 | 経路設計者向けに算出する経路候補（VoyageNumber 列・経由港・所要日数・費用）。US08 で使用 |
+| ドリブンポート | IRouteCandidateService | 経路候補算出ポート | 航海スケジュール検索結果と出発地・目的地・期限から CandidateRoute を算出（外部経路サービス ACL。WireMock.Net で契約固定） |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
+
+> **注（IT3・BC 独立の設計判断）**: 経路候補は **Routing Context 固有の `CandidateRoute`** として定義し、Estimation Context の `RouteCandidate`（見積用）とは分離する（DDD の BC 独立原則。CargoType 二重定義と同種）。経路候補算出ポートも Routing 固有の `IRouteCandidateService` とし、Estimation の `IExternalRoutingServicePort`（見積用）と分離する。両者はライフサイクル・責務が異なり、共有すると BC 結合が生じるため。
 
 ### ビジネスルール
 
@@ -605,6 +609,8 @@ CarrierMovement --> Location : arrival
 2. Schedule は時系列順の CarrierMovement で構成される
 3. CarrierMovement の出発地と到着地は異なる
 4. Location は UN/LOCODE で一意に識別される（例: `JPOSA` = 大阪、`USLAX` = LA）
+5. Voyage は対応貨物種別（General/Hazardous/Refrigerated）を保持し、US07 検索・US08 算出で危険物・冷凍貨物の絞り込みに用いる
+6. CandidateRoute は所要日数が期限内の航海連鎖のみを対象とし、直行を最優先に推奨順で並べる（US08）
 
 ### コマンド一覧
 

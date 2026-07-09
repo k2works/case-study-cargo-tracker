@@ -885,9 +885,10 @@ state "荷主フロー" as shipper_flow {
   <b>航海スケジュール登録</b>
   ==
   {
-    航海番号 | "V0050         "
-    船名     | "SAKURA MARU   "
-    運送会社 | "Pacific Lines "
+    航海番号     | "V0050         "
+    船名         | "SAKURA MARU   "
+    運送会社     | "Pacific Lines "
+    対応貨物種別 | [x] 一般 [ ] 危険物 [ ] 冷凍・冷蔵
   }
   ==
   <b>運送区間</b>
