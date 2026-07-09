@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | リリース計画作成済み |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | IT1-3 完了（計画・ふりかえり・報告書・ジャーナル） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 2 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 3 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 5 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 7 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -63,6 +63,9 @@
 | :--- | :--- |
 | [ドメインモデル分析レビュー](./review/ドメインモデル分析_review_20260331.md) | ドメインモデル分析のマルチパースペクティブレビュー結果（高 11 件・中 12 件・低 5 件） |
 | [設計ドキュメントレビュー](./review/設計ドキュメント_review_20260704.md) | 設計ドキュメント一式のマルチパースペクティブレビュー結果（高 8 件・中 16 件・低 6 件） |
+| [開発成果物レビュー（IT1）](./review/開発成果物_IT1_review_20260708.md) | IT1 実装のマルチパースペクティブレビュー結果（高 5 件・中 6 件・低 6 件） |
+| [開発成果物レビュー（IT2）](./review/開発成果物_IT2_review_20260709.md) | IT2 実装のマルチパースペクティブレビュー結果（高 5 件・中 9 件・低 5 件） |
+| [開発成果物レビュー（IT3）](./review/開発成果物_IT3_review_20260709.md) | IT3 実装のマルチパースペクティブレビュー結果（高 2 件・中 10 件・低 9 件） |
 
 ### ADR
 
@@ -73,9 +76,11 @@
 | [ADR-0003 開発 SQLite / 本番 PostgreSQL の二方言運用](./adr/0003-開発SQLite本番PostgreSQLの二方言運用.md) | 二方言構成の条件付き採用と方言混入の抑止策 |
 | [ADR-0004 Cookie 認証と軽量ユーザーストア](./adr/0004-Cookie認証と軽量ユーザーストア.md) | full Identity を使わず Cookie 認証 + Dapper + PasswordHasher を採用 |
 | [ADR-0005 CQRS の段階的適用](./adr/0005-CQRSの段階的適用.md) | コマンド／クエリのサービス分離を採用し読み書き DB 分離・イベントソーシングは見送り |
+| [ADR-0006 Ambient Transaction によるトランザクション伝播](./adr/0006-AmbientTransactionによるトランザクション伝播.md) | 永続化ポートから IDbTransaction を除去し scoped な AmbientTransaction 経由に（ADR-0002 の Transaction 公開を Supersede） |
+| [ADR-0007 貨物種別・経路候補の BC 独立定義](./adr/0007-貨物種別と経路候補のBC独立定義.md) | 同名概念（CargoType・経路候補）を BC ごとに独立定義し共有カーネルへ昇格しない |
 
 ## 補足
 
-- `development/`、`operation/` は現時点ではカテゴリ索引が中心です。
-- `journal/` は作業ログ用の予約ディレクトリです。
+- `development/` は IT1-3 の計画・ふりかえり・完了報告書と開発ジャーナルを管理しています。`operation/` はカテゴリ索引が中心です。
+- `journal/` は日々のセッションの判断・学びを残す開発ジャーナル（20260704/08/09）を格納しています。
 - `assets/` は MkDocs 用のスタイル・スクリプトを格納しています。
