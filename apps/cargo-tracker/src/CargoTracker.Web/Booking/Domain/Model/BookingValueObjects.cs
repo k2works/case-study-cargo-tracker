@@ -69,3 +69,56 @@ public sealed record RouteSpecification
         ArrivalDeadline = arrivalDeadline;
     }
 }
+
+/// <summary>危険物申告。危険物貨物の予約時に必須となる。</summary>
+public sealed record HazardousDeclaration
+{
+    public string HazardousClass { get; }
+    public string UnNumber { get; }
+    public string ProperShippingName { get; }
+
+    public HazardousDeclaration(string hazardousClass, string unNumber, string properShippingName)
+    {
+        if (string.IsNullOrWhiteSpace(hazardousClass))
+        {
+            throw new ArgumentException("危険物クラスは必須です。", nameof(hazardousClass));
+        }
+        if (string.IsNullOrWhiteSpace(unNumber))
+        {
+            throw new ArgumentException("UN 番号は必須です。", nameof(unNumber));
+        }
+        if (string.IsNullOrWhiteSpace(properShippingName))
+        {
+            throw new ArgumentException("正式輸送品名は必須です。", nameof(properShippingName));
+        }
+        HazardousClass = hazardousClass;
+        UnNumber = unNumber;
+        ProperShippingName = properShippingName;
+    }
+}
+
+/// <summary>温度単位。</summary>
+public enum TemperatureUnit
+{
+    Celsius,
+    Fahrenheit,
+}
+
+/// <summary>温度管理条件。冷凍・冷蔵貨物の予約時に必須となる。</summary>
+public sealed record TemperatureRequirement
+{
+    public decimal MinTemperature { get; }
+    public decimal MaxTemperature { get; }
+    public TemperatureUnit TemperatureUnit { get; }
+
+    public TemperatureRequirement(decimal minTemperature, decimal maxTemperature, TemperatureUnit temperatureUnit)
+    {
+        if (minTemperature > maxTemperature)
+        {
+            throw new ArgumentException("最低温度は最高温度以下でなければなりません。", nameof(minTemperature));
+        }
+        MinTemperature = minTemperature;
+        MaxTemperature = maxTemperature;
+        TemperatureUnit = temperatureUnit;
+    }
+}

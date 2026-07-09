@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CargoTracker.Booking.Application.Internal.QueryServices;
+using CargoTracker.Booking.Domain.Model;
 
 namespace CargoTracker.Booking.Interfaces;
 
@@ -49,6 +50,24 @@ public sealed class BookingForm
     [StringLength(500, ErrorMessage = "品名は 500 文字以内で入力してください")]
     [Display(Name = "品名")]
     public string? Description { get; set; }
+
+    [Display(Name = "危険物クラス")]
+    public string? HazardousClass { get; set; }
+
+    [Display(Name = "UN 番号")]
+    public string? UnNumber { get; set; }
+
+    [Display(Name = "正式輸送品名")]
+    public string? ProperShippingName { get; set; }
+
+    [Display(Name = "最低温度")]
+    public decimal? MinTemperature { get; set; }
+
+    [Display(Name = "最高温度")]
+    public decimal? MaxTemperature { get; set; }
+
+    [Display(Name = "温度単位")]
+    public TemperatureUnit? TemperatureUnit { get; set; }
 
     public IReadOnlyList<ShipperOption> Shippers { get; set; } = [];
 }

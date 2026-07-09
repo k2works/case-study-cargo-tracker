@@ -86,4 +86,93 @@ public class CargoTest
 
         act.Should().Throw<ArgumentException>();
     }
+
+    [Theory]
+    [InlineData("", "UN1203", "Gasoline")]
+    [InlineData("3", "", "Gasoline")]
+    [InlineData("3", "UN1203", " ")]
+    public void 危険物申告は危険物クラスとUN番号と正式輸送品名が必須(string hazardousClass, string unNumber, string properShippingName)
+    {
+        var act = () => new HazardousDeclaration(hazardousClass, unNumber, properShippingName);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void 温度管理条件は最低温度が最高温度以下でなければならない()
+    {
+        var act = () => new TemperatureRequirement(5m, -10m, TemperatureUnit.Celsius);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void 危険物は危険物申告が必須()
+    {
+        var act = () => Cargo.Create(_shipperId, _route, CargoType.Hazardous, 1200m);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*危険物申告*");
+    }
+
+    [Fact]
+    public void 危険物に温度管理条件は指定できない()
+    {
+        var act = () => Cargo.Create(
+            _shipperId, _route, CargoType.Hazardous, 1200m,
+            hazardousDeclaration: new HazardousDeclaration("3", "UN1203", "Gasoline"),
+            temperatureRequirement: new TemperatureRequirement(-20m, -10m, TemperatureUnit.Celsius));
+
+        act.Should().Throw<ArgumentException>().WithMessage("*温度管理条件*");
+    }
+
+    [Fact]
+    public void 冷凍冷蔵貨物は温度管理条件が必須()
+    {
+        var act = () => Cargo.Create(_shipperId, _route, CargoType.Refrigerated, 1200m);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*温度管理条件*");
+    }
+
+    [Fact]
+    public void 冷凍冷蔵貨物に危険物申告は指定できない()
+    {
+        var act = () => Cargo.Create(
+            _shipperId, _route, CargoType.Refrigerated, 1200m,
+            hazardousDeclaration: new HazardousDeclaration("3", "UN1203", "Gasoline"),
+            temperatureRequirement: new TemperatureRequirement(-20m, -10m, TemperatureUnit.Celsius));
+
+        act.Should().Throw<ArgumentException>().WithMessage("*危険物申告*");
+    }
+
+    [Fact]
+    public void 一般貨物に特別情報は指定できない()
+    {
+        var act = () => Cargo.Create(
+            _shipperId, _route, CargoType.General, 1200m,
+            hazardousDeclaration: new HazardousDeclaration("3", "UN1203", "Gasoline"));
+
+        act.Should().Throw<ArgumentException>().WithMessage("*特別情報*");
+    }
+
+    [Fact]
+    public void 危険物は危険物申告を保持できる()
+    {
+        var declaration = new HazardousDeclaration("3", "UN1203", "Gasoline");
+
+        var cargo = Cargo.Create(_shipperId, _route, CargoType.Hazardous, 1200m, hazardousDeclaration: declaration);
+
+        cargo.HazardousDeclaration.Should().Be(declaration);
+        cargo.TemperatureRequirement.Should().BeNull();
+    }
+
+    [Fact]
+    public void 冷凍冷蔵貨物は温度管理条件を保持できる()
+    {
+        var requirement = new TemperatureRequirement(-20m, -10m, TemperatureUnit.Celsius);
+
+        var cargo = Cargo.Create(_shipperId, _route, CargoType.Refrigerated, 1200m, temperatureRequirement: requirement);
+
+        cargo.TemperatureRequirement.Should().Be(requirement);
+        cargo.HazardousDeclaration.Should().BeNull();
+    }
 }

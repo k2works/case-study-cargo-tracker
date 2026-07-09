@@ -41,6 +41,20 @@
     <dd class="col-sm-9">@(Model.Quantity?.ToString() ?? "-")</dd>
     <dt class="col-sm-3">品名</dt>
     <dd class="col-sm-9">@(Model.Description ?? "-")</dd>
+    @if (!string.IsNullOrWhiteSpace(Model.HazardousClass))
+    {
+        <dt class="col-sm-3">危険物申告</dt>
+        <dd class="col-sm-9">
+            @Model.HazardousClass / @Model.UnNumber / @Model.ProperShippingName
+        </dd>
+    }
+    @if (Model.MinTemperature is not null)
+    {
+        <dt class="col-sm-3">温度管理条件</dt>
+        <dd class="col-sm-9">
+            @Model.MinTemperature.Value.ToString("0.###") - @Model.MaxTemperature!.Value.ToString("0.###") @Model.TemperatureUnit
+        </dd>
+    }
 </dl>
 
 <a href="/bookings/new" class="btn btn-outline-secondary">続けて登録</a>

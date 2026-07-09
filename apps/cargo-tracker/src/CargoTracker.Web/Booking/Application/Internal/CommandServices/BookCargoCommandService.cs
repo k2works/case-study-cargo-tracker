@@ -33,7 +33,9 @@ public sealed class BookCargoCommandService(
             command.Weight,
             BuildDimensions(command),
             command.Quantity is null ? null : new Quantity(command.Quantity.Value),
-            string.IsNullOrWhiteSpace(command.Description) ? null : new Description(command.Description));
+            string.IsNullOrWhiteSpace(command.Description) ? null : new Description(command.Description),
+            BuildHazardousDeclaration(command),
+            BuildTemperatureRequirement(command));
 
         await using var unitOfWork = unitOfWorkFactory.Begin();
         unitOfWork.Track(cargo);
@@ -54,5 +56,32 @@ public sealed class BookCargoCommandService(
             throw new ArgumentException("寸法は長さ・幅・高さをすべて入力してください。", nameof(command));
         }
         return new Dimensions(command.DimensionLength.Value, command.DimensionWidth.Value, command.DimensionHeight.Value);
+    }
+
+    private static HazardousDeclaration? BuildHazardousDeclaration(BookCargoCommand command)
+    {
+        if (string.IsNullOrWhiteSpace(command.HazardousClass)
+            && string.IsNullOrWhiteSpace(command.UnNumber)
+            && string.IsNullOrWhiteSpace(command.ProperShippingName))
+        {
+            return null;
+        }
+        return new HazardousDeclaration(
+            command.HazardousClass ?? string.Empty,
+            command.UnNumber ?? string.Empty,
+            command.ProperShippingName ?? string.Empty);
+    }
+
+    private static TemperatureRequirement? BuildTemperatureRequirement(BookCargoCommand command)
+    {
+        if (command.MinTemperature is null && command.MaxTemperature is null && command.TemperatureUnit is null)
+        {
+            return null;
+        }
+        if (command.MinTemperature is null || command.MaxTemperature is null || command.TemperatureUnit is null)
+        {
+            throw new ArgumentException("温度管理条件は最低温度・最高温度・温度単位をすべて入力してください。", nameof(command));
+        }
+        return new TemperatureRequirement(command.MinTemperature.Value, command.MaxTemperature.Value, command.TemperatureUnit.Value);
     }
 }

@@ -58,4 +58,72 @@ public sealed class BookingWebTest : IClassFixture<AuthenticationFlowTest.AuthWe
         var detail = await client.GetStringAsync(response.Headers.Location.OriginalString);
         detail.Should().Contain("予約番号").And.Contain("PRELIMINARY").And.Contain("機械部品");
     }
+
+    [Fact]
+    public async Task 危険物申告が欠落している危険物予約は登録されない()
+    {
+        var client = await LoginAsSalesAsync();
+        var newPage = await client.GetStringAsync("/bookings/new");
+        var token = Token(newPage);
+        var shipperId = Regex.Match(newPage, "<option value=\"([^\"]+)\"").Groups[1].Value;
+
+        var response = await client.PostAsync("/bookings", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["ShipperId"] = shipperId,
+            ["OriginUnLocode"] = "JPTYO",
+            ["DestinationUnLocode"] = "DEHAM",
+            ["ArrivalDeadline"] = "2026-09-30",
+            ["CargoType"] = "Hazardous",
+            ["Weight"] = "1200",
+            ["Description"] = "燃料",
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("危険物申告").And.Contain("alert-danger");
+    }
+
+    [Fact]
+    public async Task 危険物予約を登録すると詳細に危険物申告が表示される()
+    {
+        var client = await LoginAsSalesAsync();
+        var newPage = await client.GetStringAsync("/bookings/new");
+        var token = Token(newPage);
+        var shipperId = Regex.Match(newPage, "<option value=\"([^\"]+)\"").Groups[1].Value;
+
+        var response = await client.PostAsync("/bookings", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["ShipperId"] = shipperId,
+            ["OriginUnLocode"] = "JPTYO",
+            ["DestinationUnLocode"] = "DEHAM",
+            ["ArrivalDeadline"] = "2026-09-30",
+            ["CargoType"] = "Hazardous",
+            ["Weight"] = "1200",
+            ["Description"] = "燃料",
+            ["HazardousClass"] = "3",
+            ["UnNumber"] = "UN1203",
+            ["ProperShippingName"] = "Gasoline",
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        var detail = await client.GetStringAsync(response.Headers.Location!.OriginalString);
+        detail.Should().Contain("HAZARDOUS").And.Contain("UN1203").And.Contain("Gasoline");
+    }
+
+    [Fact]
+    public async Task 貨物種別別の追加フィールドを部分更新できる()
+    {
+        var client = await LoginAsSalesAsync();
+
+        var hazardous = await client.GetStringAsync("/bookings/new/cargo-fields?cargoType=Hazardous");
+        var refrigerated = await client.GetStringAsync("/bookings/new/cargo-fields?cargoType=Refrigerated");
+        var general = await client.GetStringAsync("/bookings/new/cargo-fields?cargoType=General");
+
+        hazardous.Should().Contain("HazardousClass").And.Contain("UnNumber").And.NotContain("MinTemperature");
+        refrigerated.Should().Contain("MinTemperature").And.Contain("MaxTemperature").And.NotContain("UnNumber");
+        general.Should().NotContain("HazardousClass").And.NotContain("MinTemperature");
+    }
 }

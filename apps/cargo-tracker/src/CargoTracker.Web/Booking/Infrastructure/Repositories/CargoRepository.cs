@@ -19,11 +19,13 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
             INSERT INTO cargo
                 (booking_id, shipper_id, cargo_type, weight, origin_unlocode, destination_unlocode,
                  arrival_deadline, booking_status, dimension_length, dimension_width, dimension_height,
-                 quantity, description, created_at, updated_at, version)
+                 quantity, description, hazardous_class, un_number, proper_shipping_name,
+                 min_temperature, max_temperature, temperature_unit, created_at, updated_at, version)
             VALUES
                 (@BookingId, @ShipperId, @CargoType, @Weight, @Origin, @Destination,
                  @ArrivalDeadline, @BookingStatus, @DimensionLength, @DimensionWidth, @DimensionHeight,
-                 @Quantity, @Description, @CreatedAt, @UpdatedAt, 0)
+                 @Quantity, @Description, @HazardousClass, @UnNumber, @ProperShippingName,
+                 @MinTemperature, @MaxTemperature, @TemperatureUnit, @CreatedAt, @UpdatedAt, 0)
             """,
             new
             {
@@ -40,6 +42,12 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
                 DimensionHeight = cargo.Dimensions?.Height,
                 Quantity = cargo.Quantity?.Value,
                 Description = cargo.Description?.Value,
+                HazardousClass = cargo.HazardousDeclaration?.HazardousClass,
+                UnNumber = cargo.HazardousDeclaration?.UnNumber,
+                ProperShippingName = cargo.HazardousDeclaration?.ProperShippingName,
+                MinTemperature = cargo.TemperatureRequirement?.MinTemperature,
+                MaxTemperature = cargo.TemperatureRequirement?.MaxTemperature,
+                TemperatureUnit = cargo.TemperatureRequirement?.TemperatureUnit.ToString().ToUpperInvariant(),
                 CreatedAt = now,
                 UpdatedAt = now,
             },
@@ -56,6 +64,9 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
                    arrival_deadline AS ArrivalDeadline, booking_status AS BookingStatus,
                    dimension_length AS DimensionLength, dimension_width AS DimensionWidth,
                    dimension_height AS DimensionHeight, quantity AS Quantity, description AS Description,
+                   hazardous_class AS HazardousClass, un_number AS UnNumber,
+                   proper_shipping_name AS ProperShippingName, min_temperature AS MinTemperature,
+                   max_temperature AS MaxTemperature, temperature_unit AS TemperatureUnit,
                    version AS Version
             FROM cargo
             WHERE booking_id = @BookingId
@@ -80,6 +91,12 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
         public decimal? DimensionHeight { get; set; }
         public int? Quantity { get; set; }
         public string? Description { get; set; }
+        public string? HazardousClass { get; set; }
+        public string? UnNumber { get; set; }
+        public string? ProperShippingName { get; set; }
+        public decimal? MinTemperature { get; set; }
+        public decimal? MaxTemperature { get; set; }
+        public string? TemperatureUnit { get; set; }
         public long Version { get; set; }
 
         public Cargo ToCargo()
@@ -87,6 +104,15 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
             var dimensions = DimensionLength is null || DimensionWidth is null || DimensionHeight is null
                 ? null
                 : new Dimensions(DimensionLength.Value, DimensionWidth.Value, DimensionHeight.Value);
+            var hazardousDeclaration = string.IsNullOrWhiteSpace(HazardousClass)
+                ? null
+                : new HazardousDeclaration(HazardousClass, UnNumber ?? string.Empty, ProperShippingName ?? string.Empty);
+            var temperatureRequirement = MinTemperature is null || MaxTemperature is null || string.IsNullOrWhiteSpace(TemperatureUnit)
+                ? null
+                : new TemperatureRequirement(
+                    MinTemperature.Value,
+                    MaxTemperature.Value,
+                    Enum.Parse<TemperatureUnit>(TemperatureUnit, ignoreCase: true));
 
             return Cargo.Reconstruct(
                 new BookingId(BookingId),
@@ -98,7 +124,9 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory) : IC
                 Quantity is null ? null : new Quantity(Quantity.Value),
                 Description is null ? null : new Description(Description),
                 Enum.Parse<BookingStatus>(BookingStatus, ignoreCase: true),
-                Version);
+                Version,
+                hazardousDeclaration,
+                temperatureRequirement);
         }
     }
 }

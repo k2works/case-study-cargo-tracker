@@ -9,7 +9,10 @@
 
         <form action="/bookings" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            }
 
             <div class="mb-3">
                 <label asp-for="ShipperId" class="form-label"></label>
@@ -43,13 +46,19 @@
                 </div>
                 <div class="col-md-6 mb-3">
                     <label asp-for="CargoType" class="form-label"></label>
-                    <select asp-for="CargoType" class="form-select">
+                    <select asp-for="CargoType" class="form-select"
+                            hx-get="/bookings/new/cargo-fields" hx-target="#cargo-fields"
+                            hx-swap="innerHTML" hx-trigger="change">
                         <option value="General">一般貨物</option>
                         <option value="Hazardous">危険物</option>
                         <option value="Refrigerated">冷凍・冷蔵</option>
                     </select>
                     <span asp-validation-for="CargoType" class="text-danger"></span>
                 </div>
+            </div>
+
+            <div id="cargo-fields">
+                <partial name="_CargoFields" model="@Model" />
             </div>
 
             <div class="mb-3">

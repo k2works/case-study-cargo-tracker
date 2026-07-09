@@ -20,6 +20,12 @@ public sealed class BookingDetail
     public decimal? DimensionHeight { get; set; }
     public int? Quantity { get; set; }
     public string? Description { get; set; }
+    public string? HazardousClass { get; set; }
+    public string? UnNumber { get; set; }
+    public string? ProperShippingName { get; set; }
+    public decimal? MinTemperature { get; set; }
+    public decimal? MaxTemperature { get; set; }
+    public string? TemperatureUnit { get; set; }
 }
 
 public sealed class ShipperOption
@@ -56,7 +62,10 @@ public sealed class FindBookingQueryService(IDbConnectionFactory connectionFacto
                    c.origin_unlocode AS OriginUnlocode, c.destination_unlocode AS DestinationUnlocode,
                    c.arrival_deadline AS ArrivalDeadline, c.booking_status AS BookingStatus,
                    c.dimension_length AS DimensionLength, c.dimension_width AS DimensionWidth,
-                   c.dimension_height AS DimensionHeight, c.quantity AS Quantity, c.description AS Description
+                   c.dimension_height AS DimensionHeight, c.quantity AS Quantity, c.description AS Description,
+                   c.hazardous_class AS HazardousClass, c.un_number AS UnNumber,
+                   c.proper_shipping_name AS ProperShippingName, c.min_temperature AS MinTemperature,
+                   c.max_temperature AS MaxTemperature, c.temperature_unit AS TemperatureUnit
             FROM cargo c
             JOIN shipper s ON s.id = c.shipper_id
             WHERE c.booking_id = @BookingId

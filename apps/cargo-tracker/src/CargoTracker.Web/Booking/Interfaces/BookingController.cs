@@ -21,6 +21,10 @@ public sealed class BookingController(
     public async Task<IActionResult> New(CancellationToken ct)
         => View(await BuildFormAsync(new BookingForm(), ct));
 
+    [HttpGet("/bookings/new/cargo-fields")]
+    public IActionResult CargoFields(string? cargoType)
+        => PartialView("_CargoFields", new BookingForm { CargoType = cargoType ?? nameof(CargoType.General) });
+
     [HttpPost("/bookings")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(BookingForm form, CancellationToken ct)
@@ -44,7 +48,8 @@ public sealed class BookingController(
             var bookingId = await commandService.HandleAsync(new BookCargoCommand(
                 form.ShipperId, form.OriginUnLocode, form.DestinationUnLocode, form.ArrivalDeadline,
                 cargoType, form.Weight, form.DimensionLength, form.DimensionWidth, form.DimensionHeight,
-                form.Quantity, form.Description), ct);
+                form.Quantity, form.Description, form.HazardousClass, form.UnNumber, form.ProperShippingName,
+                form.MinTemperature, form.MaxTemperature, form.TemperatureUnit), ct);
             TempData["SuccessMessage"] = "貨物予約を登録しました。";
             return LocalRedirect($"/bookings/{bookingId.Value}");
         }

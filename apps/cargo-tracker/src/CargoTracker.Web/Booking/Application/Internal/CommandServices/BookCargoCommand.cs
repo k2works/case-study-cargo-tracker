@@ -14,4 +14,10 @@ public sealed record BookCargoCommand(
     decimal? DimensionWidth = null,
     decimal? DimensionHeight = null,
     int? Quantity = null,
-    string? Description = null);
+    string? Description = null,
+    string? HazardousClass = null,
+    string? UnNumber = null,
+    string? ProperShippingName = null,
+    decimal? MinTemperature = null,
+    decimal? MaxTemperature = null,
+    TemperatureUnit? TemperatureUnit = null);

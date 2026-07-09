@@ -83,4 +83,41 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*荷主*");
     }
+
+    [Fact]
+    public async Task 危険物予約を登録すると危険物申告が保存され再構築される()
+    {
+        var bookingId = await _commandService.HandleAsync(new BookCargoCommand(
+            _shipperId.ToString(CultureInfo.InvariantCulture), "JPTYO", "DEHAM", new DateOnly(2026, 9, 30),
+            CargoType.Hazardous, 1200m, HazardousClass: "3", UnNumber: "UN1203", ProperShippingName: "Gasoline"));
+
+        var cargo = await _repository.FindByBookingIdAsync(bookingId);
+
+        cargo.Should().NotBeNull();
+        cargo!.CargoType.Should().Be(CargoType.Hazardous);
+        cargo.HazardousDeclaration.Should().NotBeNull();
+        cargo.HazardousDeclaration!.HazardousClass.Should().Be("3");
+        cargo.HazardousDeclaration.UnNumber.Should().Be("UN1203");
+        cargo.HazardousDeclaration.ProperShippingName.Should().Be("Gasoline");
+        cargo.TemperatureRequirement.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task 冷凍冷蔵予約を登録すると温度管理条件が保存され再構築される()
+    {
+        var bookingId = await _commandService.HandleAsync(new BookCargoCommand(
+            _shipperId.ToString(CultureInfo.InvariantCulture), "JPTYO", "DEHAM", new DateOnly(2026, 9, 30),
+            CargoType.Refrigerated, 1200m,
+            MinTemperature: -20m, MaxTemperature: -10m, TemperatureUnit: TemperatureUnit.Celsius));
+
+        var cargo = await _repository.FindByBookingIdAsync(bookingId);
+
+        cargo.Should().NotBeNull();
+        cargo!.CargoType.Should().Be(CargoType.Refrigerated);
+        cargo.TemperatureRequirement.Should().NotBeNull();
+        cargo.TemperatureRequirement!.MinTemperature.Should().Be(-20m);
+        cargo.TemperatureRequirement.MaxTemperature.Should().Be(-10m);
+        cargo.TemperatureRequirement.TemperatureUnit.Should().Be(TemperatureUnit.Celsius);
+        cargo.HazardousDeclaration.Should().BeNull();
+    }
 }
