@@ -32,6 +32,45 @@
                 <button type="submit" class="btn btn-primary">ログイン</button>
             </div>
         </form>
-        <p class="text-muted mt-3"><em>アカウントがない場合は管理者に連絡してください</em></p>
+
+        @if (ViewData["DemoAccounts"] is IReadOnlyList<CargoTracker.Shared.Infrastructure.Auth.DemoAccount> demoAccounts)
+        {
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h2 class="h6 card-title">デモアカウント（開発環境）</h2>
+                    <p class="card-text text-muted small mb-2">
+                        ロールごとに利用できる機能が異なります。行を選ぶとユーザー名が入力されます（パスワード共通: <code>@ViewData["DemoPassword"]</code>）。
+                    </p>
+                    <div class="list-group">
+                        @foreach (var account in demoAccounts)
+                        {
+                            <button type="button"
+                                    class="list-group-item list-group-item-action demo-account"
+                                    data-username="@account.Username">
+                                <strong>@account.RoleLabel</strong>
+                                <span class="text-muted">（@account.Username）</span>
+                                <br />
+                                <span class="small text-muted">@account.Functions</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.querySelectorAll('.demo-account').forEach(function (el) {
+                    el.addEventListener('click', function () {
+                        var username = document.getElementById('Username');
+                        var password = document.getElementById('Password');
+                        if (username) { username.value = this.getAttribute('data-username'); }
+                        if (password && !password.value) { password.value = '@ViewData["DemoPassword"]'; }
+                        if (username) { username.focus(); }
+                    });
+                });
+            </script>
+        }
+        else
+        {
+            <p class="text-muted mt-3"><em>アカウントがない場合は管理者に連絡してください</em></p>
+        }
     </div>
 </div>

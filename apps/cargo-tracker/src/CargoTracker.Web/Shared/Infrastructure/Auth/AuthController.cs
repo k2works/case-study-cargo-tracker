@@ -20,9 +20,19 @@ public sealed class AuthController(UserAuthenticator authenticator, IWebHostEnvi
 
         // 開発環境ではシードユーザーの既定資格情報を初期入力状態にする（デモ利便性）。
         // 本番ではプリフィルしない（セキュリティ）。
-        var form = environment.IsDevelopment()
+        var isDevelopment = environment.IsDevelopment();
+        var form = isDevelopment
             ? new LoginForm { Username = "sales", Password = UserSeeder.DefaultPassword }
             : new LoginForm();
+
+        // 開発環境ではロール別に機能が分かれ、単一ユーザーでは一部機能しか見えないため、
+        // 全デモアカウント（ロール・利用可能機能）を提示してワンクリックで切り替えられるようにする。
+        if (isDevelopment)
+        {
+            ViewData["DemoAccounts"] = UserSeeder.DemoAccounts;
+            ViewData["DemoPassword"] = UserSeeder.DefaultPassword;
+        }
+
         return View(form);
     }
 

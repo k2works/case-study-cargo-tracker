@@ -73,6 +73,20 @@ public sealed class WalkingSkeletonTest : IClassFixture<AuthenticationFlowTest.A
     }
 
     [Fact]
+    public async Task ログイン画面にはロール別デモアカウントが提示される()
+    {
+        // 単一ユーザー（sales 既定）では他ロールの機能が見えず不親切なため、
+        // 開発環境のログイン画面に全ロールのデモアカウントを提示する。
+        var client = _factory.CreateClient();
+
+        var login = await client.GetStringAsync("/login");
+
+        login.Should().Contain("デモアカウント")
+            .And.Contain("経路設計者").And.Contain("router")
+            .And.Contain("追跡管理者").And.Contain("経理担当者").And.Contain("管理者");
+    }
+
+    [Fact]
     public async Task 営業ロールは貨物予約登録画面にアクセスできる()
     {
         // /bookings は IT2（US04）で実画面化済み。/bookings/new の登録フォームに到達できることを検証する
