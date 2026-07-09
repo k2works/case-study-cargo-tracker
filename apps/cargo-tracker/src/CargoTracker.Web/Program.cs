@@ -77,9 +77,13 @@ builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.QueryServic
 // Routing コンテキスト（US24）。
 builder.Services.AddScoped<CargoTracker.Routing.Domain.Repositories.IVoyageRepository,
     CargoTracker.Routing.Infrastructure.Repositories.VoyageRepository>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.OutboundServices.IBookingLookup,
+    CargoTracker.Routing.Infrastructure.Services.BookingLookup>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.RegisterVoyageCommandService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.UpdateScheduleCommandService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.FindVoyageQueryService>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.RoutingRequestQueryService>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.SearchVoyagesQueryService>();
 
 var app = builder.Build();
 

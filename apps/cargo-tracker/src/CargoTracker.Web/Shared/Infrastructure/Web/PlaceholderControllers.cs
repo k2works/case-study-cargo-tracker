@@ -24,14 +24,6 @@ public sealed class HandlingPlaceholderController : Controller
         View("Placeholder", new PlaceholderViewModel("荷役管理", "担当 IT: IT5 / US15-16"));
 }
 
-[Authorize(Roles = $"{Roles.RouteDesigner}")]
-public sealed class RoutingPlaceholderController : Controller
-{
-    [HttpGet("/routing/requests")]
-    public IActionResult Index() =>
-        View("Placeholder", new PlaceholderViewModel("経路設計", "担当 IT: IT3・IT4 / US08-11"));
-}
-
 [Authorize(Roles = $"{Roles.Billing}")]
 public sealed class BillingPlaceholderController : Controller
 {
