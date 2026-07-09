@@ -297,6 +297,19 @@ gantt
 | #16, #17 | 請求書発行の Delivered 制限・用語統一（請求書/精算書） | IT7 | US21/23 の受入と同時 |
 | #25-30（低） | 表記統一・確認ダイアログ・通知スコープ明記ほか | バッファ | IT8 または随時 |
 
+### SonarQube 静的解析の指摘（2026-07-09 初回スキャン・IT3 時点）
+
+初回スキャン結果: Quality Gate **OK**・Bug 0・脆弱性 0・重複 1.8%・信頼性/セキュリティ/保守性 **A**。コードスメル 158 件（技術的負債約 11h）。BLOCKER 3・CRITICAL 1 は即対応済み（空テスト削除・CandidateRoute の S2365）。残りを **IT4 の品質改善タスク**として消化する。
+
+| SQ # | 内容 | 重大度/件数 | 対応 IT | 備考 |
+|------|------|-----------|---------|------|
+| SQ-1 | **カバレッジの SonarQube 取込整備**（coverlet.collector→opencover 等）。現状カバレッジ 0% で未計測。CI 品質ゲート連携（operating-cicd）と合わせて整備 | 高（計測穴） | IT4 | ドメイン層 85%/全体 80% ゲート化の前提 |
+| SQ-2 | `S6967` ModelState.IsValid チェック（Routing/Voyage/Estimate/Auth Controller）。GET アクションの誤検出を精査し、必要箇所のみ対応 or 抑制 | CRITICAL 4 | IT4 | 誤検出の切り分け要 |
+| SQ-3 | `Web:S6853` Razor の label とコントロール関連付け（アクセシビリティ）。IT2/IT3 レビューのアクセシビリティ指摘と同根 | MAJOR 33 | IT4 | UI 日本語化・アクセシビリティ一括対応と合流 |
+| SQ-4 | `S1144` 未使用 private メンバー削除 | MAJOR 23 | IT4 | 機械的返済 |
+| SQ-5 | `SYSLIB1045` 正規表現の GeneratedRegex 化 | MAJOR 22 | IT4 | ソースジェネレータ化 |
+| SQ-6 | `S3459`・`S107`（引数過多）・`S6931`（ルートテンプレート）ほか残スメル | MAJOR/MINOR ほか | IT4-5 | 優先度順に随時 |
+
 ---
 
 ## リスク管理
