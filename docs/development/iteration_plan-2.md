@@ -21,12 +21,12 @@
 
 ### 成功基準
 
-- [ ] US04・US05・US06 の受入条件をすべて満たす
-- [ ] Booking BC のドメイン層ユニットテストが全パス
-- [ ] E2E で「予約登録 → 引き渡し」フローが通る
-- [ ] ArchUnit ルールを Booking BC に拡張し依存方向を検証（Try T2）
-- [ ] 中優先レビュー指摘 M1・M3・M4・M5 を消化（Try T5）
-- [ ] テストカバレッジ 80% 以上（ドメイン層 85%）
+- [x] US04・US05・US06 の受入条件をすべて満たす
+- [x] Booking BC のドメイン層ユニットテストが全パス
+- [x] E2E で「予約登録 → 引き渡し」フローが通る
+- [x] ArchUnit ルールを Booking BC に拡張し依存方向を検証（Try T2）
+- [x] 中優先レビュー指摘 M1・M3・M4・M5 を消化（Try T5）
+- [x] テストカバレッジ 80% 以上（ドメイン層 85%）
 
 ---
 
@@ -86,14 +86,14 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | 値オブジェクト実装（BookingId・Dimensions・Quantity・Description・RouteSpecification。ShipperId は Shared カーネルを参照、weight は decimal） | 4h | - | [ ] |
-| 1.2 | CargoType / BookingStatus 列挙型と状態遷移（Preliminary 起点）実装 | 2h | - | [ ] |
-| 1.3 | Cargo 集約ルート実装（不変条件・ファクトリ）＋ドメインユニットテスト | 6h | - | [ ] |
-| 1.4 | ICargoRepository ポート定義（IT1 パターン踏襲: `Booking/Domain/Repositories` 配置・IDbTransaction 非依存を厳守。UoW は `Shared.Application.Persistence` の `IUnitOfWorkFactory` 経由） | 2h | - | [ ] |
-| 1.5 | ShipperExistenceChecker ACL（Booking → Shipper 存在確認ポート）実装 | 3h | - | [ ] |
-| 1.6 | BookCargoCommand / CommandService（CargoBookedEvent 発行・見積整合検証） | 4h | - | [ ] |
-| 1.7 | 予約登録画面・エンドポイント（htmx フォーム）＋ Infrastructure リポジトリ実装 | 5h | - | [ ] |
-| 1.8 | E2E: 予約登録フロー（予約番号発行・Preliminary 確認） | 3h | - | [ ] |
+| 1.1 | 値オブジェクト実装（BookingId・Dimensions・Quantity・Description・RouteSpecification。ShipperId は Shared カーネルを参照、weight は decimal） | 4h | - | [x] |
+| 1.2 | CargoType / BookingStatus 列挙型と状態遷移（Preliminary 起点）実装 | 2h | - | [x] |
+| 1.3 | Cargo 集約ルート実装（不変条件・ファクトリ）＋ドメインユニットテスト | 6h | - | [x] |
+| 1.4 | ICargoRepository ポート定義（IT1 パターン踏襲: `Booking/Domain/Repositories` 配置・IDbTransaction 非依存を厳守。UoW は `Shared.Application.Persistence` の `IUnitOfWorkFactory` 経由） | 2h | - | [x] |
+| 1.5 | ShipperExistenceChecker ACL（Booking → Shipper 存在確認ポート）実装 | 3h | - | [x] |
+| 1.6 | BookCargoCommand / CommandService（CargoBookedEvent 発行・見積整合検証） | 4h | - | [x] |
+| 1.7 | 予約登録画面・エンドポイント（htmx フォーム）＋ Infrastructure リポジトリ実装 | 5h | - | [x] |
+| 1.8 | E2E: 予約登録フロー（予約番号発行・Preliminary 確認） | 3h | - | [x] |
 
 **小計**: 29h（理想時間）
 
@@ -101,10 +101,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | HazardousDeclaration 値オブジェクト（危険物クラス・UN 番号・正式輸送品名）実装 | 3h | - | [ ] |
-| 2.2 | TemperatureRequirement 値オブジェクト（最低/最高温度・単位）実装 | 3h | - | [ ] |
-| 2.3 | 貨物種別ごとの必須検証を Cargo 集約に組み込み＋ユニットテスト | 4h | - | [ ] |
-| 2.4 | 貨物種別選択に応じた条件付き入力フィールド（htmx 部分更新）＋ E2E | 4h | - | [ ] |
+| 2.1 | HazardousDeclaration 値オブジェクト（危険物クラス・UN 番号・正式輸送品名）実装 | 3h | - | [x] |
+| 2.2 | TemperatureRequirement 値オブジェクト（最低/最高温度・単位）実装 | 3h | - | [x] |
+| 2.3 | 貨物種別ごとの必須検証を Cargo 集約に組み込み＋ユニットテスト | 4h | - | [x] |
+| 2.4 | 貨物種別選択に応じた条件付き入力フィールド（htmx 部分更新）＋ E2E | 4h | - | [x] |
 
 **小計**: 14h（理想時間）
 
@@ -112,22 +112,22 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | AssignToRoutingCommand / CommandService（Preliminary → RouteProposed 遷移） | 3h | - | [ ] |
-| 3.2 | AssignedToRoutingEvent 発行と経路設計依頼通知（post-commit イベント基盤を利用） | 2h | - | [ ] |
-| 3.3 | 予約確認・引き渡し画面（不備修正導線含む）＋ E2E | 4h | - | [ ] |
+| 3.1 | AssignToRoutingCommand / CommandService（Preliminary → RouteProposed 遷移）。更新系のため version 楽観ロックを ADR-0001 準拠で実装（IT1 注153 の持ち越し） | 4h | - | [x] |
+| 3.2 | AssignedToRoutingEvent 発行と経路設計依頼通知（post-commit イベント基盤を利用） | 2h | - | [x] |
+| 3.3 | 予約確認・引き渡し画面（不備修正導線含む）＋ E2E | 4h | - | [x] |
 
-**小計**: 9h（理想時間）
+**小計**: 10h（理想時間）
 
 #### 4. Try 反映・技術的負債返済
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | ArchUnit ルール 4 を Booking BC に拡張（依存方向検証）（Try T2） | 2h | - | [ ] |
-| 4.2 | M1: 既存 IShipperRepository / IEstimateRepository の IDbTransaction 依存を除去し、新規 ICargoRepository も同方針で定義（Try T5） | 2h | - | [ ] |
-| 4.3 | M3: メールアドレス UNIQUE 制約追加（Try T5） | 1h | - | [ ] |
-| 4.4 | M4: 見積期限検証（予約時に見積 Expired を拒否）（Try T5） | 2h | - | [ ] |
-| 4.5 | M5: 403 権限エラー分離（Try T5） | 2h | - | [ ] |
-| 4.6 | domain-model / data-model / 実装の横断更新チェック（Try T1） | 2h | - | [ ] |
+| 4.1 | ArchUnit ルール 4 を Booking BC に拡張（依存方向検証）（Try T2） | 2h | - | [x] |
+| 4.2 | M1: 既存 IShipperRepository / IEstimateRepository の IDbTransaction 依存を除去し、新規 ICargoRepository も同方針で定義（Try T5） | 2h | - | [x] |
+| 4.3 | M3: メールアドレス UNIQUE 制約追加（Try T5） | 1h | - | [x] |
+| 4.4 | M4: 見積期限検証（予約時に見積 Expired を拒否）（Try T5） | 2h | - | [x] |
+| 4.5 | M5: 403 権限エラー分離（Try T5） | 2h | - | [x] |
+| 4.6 | domain-model / data-model / 実装の横断更新チェック（Try T1） | 2h | - | [x] |
 
 **小計**: 11h（理想時間）
 
@@ -135,14 +135,14 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US04 貨物予約を登録する | 5 | 29h | [ ] |
-| US05 危険物・冷凍貨物の予約を登録する | 3 | 14h | [ ] |
-| US06 予約情報を経路設計者に引き渡す | 2 | 9h | [ ] |
-| Try 反映・技術的負債返済 | - | 11h | [ ] |
-| **合計** | **10** | **63h** | |
+| US04 貨物予約を登録する | 5 | 29h | [x] |
+| US05 危険物・冷凍貨物の予約を登録する | 3 | 14h | [x] |
+| US06 予約情報を経路設計者に引き渡す | 2 | 10h | [x] |
+| Try 反映・技術的負債返済 | - | 11h | [x] |
+| **合計** | **10** | **64h** | |
 
-**1 SP あたり**: 約 5.2h（ストーリータスクのみ 52h ÷ 10 SP）
-**進捗率**: 0% (0/10 SP)
+**1 SP あたり**: 約 5.3h（ストーリータスクのみ 53h ÷ 10 SP）
+**進捗率**: 100% (10/10 SP)
 
 ---
 
@@ -349,13 +349,13 @@ entity "cargo（貨物）" as cargo {
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review：中間 / developing-review：正式）
-- [ ] ユニットテストがパス（ドメイン層 85% 以上）
-- [ ] E2E テストがパス（予約登録 → 引き渡しフロー）
-- [ ] ArchUnit テストがパス（Booking BC の依存方向）
-- [ ] `dotnet format` / Lint エラーなし
-- [ ] 機能がローカル環境で動作確認済み
-- [ ] domain-model / data-model / release_plan の横断更新完了（Try T1）
+- [x] コードレビュー完了（self-review：中間 / developing-review：正式）
+- [x] ユニットテストがパス（ドメイン層 85% 以上）
+- [x] E2E テストがパス（予約登録 → 引き渡しフロー）
+- [x] ArchUnit テストがパス（Booking BC の依存方向）
+- [x] `dotnet format` / Lint エラーなし
+- [x] 機能がローカル環境で動作確認済み
+- [x] domain-model / data-model / ui_design / release_plan の横断更新完了（Try T1）
 
 ### デモ項目
 
