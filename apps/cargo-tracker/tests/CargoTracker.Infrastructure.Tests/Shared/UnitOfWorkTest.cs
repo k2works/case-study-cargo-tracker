@@ -1,3 +1,4 @@
+using System.Data;
 using CargoTracker.Shared.Domain.Model;
 using CargoTracker.Shared.Infrastructure.Persistence;
 using FluentAssertions;
@@ -93,5 +94,20 @@ public class UnitOfWorkTest
         // Then
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("アクティブなトランザクションがありません。");
+    }
+
+    [Fact]
+    public void AmbientTransactionのネスト開始は前提違反として例外になる()
+    {
+        // Given: 既にトランザクションが開始されている
+        var ambient = new AmbientTransaction();
+        ambient.Begin(new Mock<IDbTransaction>().Object);
+
+        // When: スコープ内で二重に開始する（ネスト・並行の前提違反）
+        var act = () => ambient.Begin(new Mock<IDbTransaction>().Object);
+
+        // Then: 静かに壊さず明示的な例外にする（ADR-0006・IT2 レビュー H2）
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ネスト*");
     }
 }

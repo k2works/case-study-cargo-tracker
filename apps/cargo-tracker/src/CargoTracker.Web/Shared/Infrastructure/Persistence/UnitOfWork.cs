@@ -30,7 +30,7 @@ public sealed class UnitOfWork : IUnitOfWork
             _connection.Open();
         }
         _transaction = _connection.BeginTransaction();
-        _ambient.Current = _transaction;
+        _ambient.Begin(_transaction);
     }
 
     public void Track(AggregateRoot aggregate) => _tracked.Add(aggregate);
@@ -56,7 +56,7 @@ public sealed class UnitOfWork : IUnitOfWork
             _transaction.Rollback();
         }
         _transaction.Dispose();
-        _ambient.Current = null;
+        _ambient.Clear();
         _connection.Dispose();
         return ValueTask.CompletedTask;
     }
