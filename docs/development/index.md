@@ -22,7 +22,7 @@
 |---------------|------|-----------|-----------|------|
 | IT1 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了 |
 | IT2 | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [iteration_report-2.md](iteration_report-2.md) | 完了 |
-| IT3 | [iteration_plan-3.md](iteration_plan-3.md) | - | - | 進行中 |
+| IT3 | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 開発完了 |
 
 ### 進捗サマリー
 
@@ -30,7 +30,8 @@
 |---------------|---------|---------|--------|
 | IT1 | 13 | 13 | 100% |
 | IT2 | 10 | 10 | 100% |
-| **累計** | **23** | **23** | **100%** |
+| IT3 | 14 | 14 | 100% |
+| **累計** | **37** | **37** | **100%** |
 
 ### フェーズ進捗
 
