@@ -25,14 +25,6 @@ public sealed class HandlingPlaceholderController : Controller
 }
 
 [Authorize(Roles = $"{Roles.RouteDesigner}")]
-public sealed class VoyagePlaceholderController : Controller
-{
-    [HttpGet("/voyages")]
-    public IActionResult Index() =>
-        View("Placeholder", new PlaceholderViewModel("航路管理", "担当 IT: IT3 / US24-25・US07"));
-}
-
-[Authorize(Roles = $"{Roles.RouteDesigner}")]
 public sealed class RoutingPlaceholderController : Controller
 {
     [HttpGet("/routing/requests")]

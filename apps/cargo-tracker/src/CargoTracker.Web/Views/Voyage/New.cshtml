@@ -1,0 +1,99 @@
+@using CargoTracker.Routing.Domain.Model
+@model CargoTracker.Routing.Interfaces.VoyageForm
+@{
+    ViewData["Title"] = "航海スケジュール登録";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">航海スケジュール登録</h1>
+
+        <form action="/voyages" method="post">
+            @Html.AntiForgeryToken()
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            }
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="VoyageNumber" class="form-label"></label>
+                    <input asp-for="VoyageNumber" class="form-control" placeholder="VYG-001" />
+                    <span asp-validation-for="VoyageNumber" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="VesselName" class="form-label"></label>
+                    <input asp-for="VesselName" class="form-control" placeholder="Kiso Maru" />
+                    <span asp-validation-for="VesselName" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Carrier" class="form-label"></label>
+                    <input asp-for="Carrier" class="form-control" placeholder="Ocean Network" />
+                    <span asp-validation-for="Carrier" class="text-danger"></span>
+                </div>
+            </div>
+
+            <fieldset class="mb-4">
+                <legend class="h6">対応貨物種別</legend>
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach (var cargoType in Enum.GetNames<SupportedCargoType>())
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="SupportedCargoTypes" value="@cargoType"
+                                   id="cargo-type-@cargoType" checked="@Model.SupportedCargoTypes.Contains(cargoType)" />
+                            <label class="form-check-label" for="cargo-type-@cargoType">@cargoType</label>
+                        </div>
+                    }
+                </div>
+                <span asp-validation-for="SupportedCargoTypes" class="text-danger"></span>
+            </fieldset>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h5 mb-0">運送区間</h2>
+                <button type="button" id="add-movement" class="btn btn-outline-primary btn-sm"
+                        hx-get="/voyages/new/movement-row" hx-target="#movement-rows" hx-swap="beforeend"
+                        data-next-index="@Model.CarrierMovements.Count">
+                    + 区間を追加
+                </button>
+            </div>
+
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 4rem;">#</th>
+                            <th>出発港</th>
+                            <th>到着港</th>
+                            <th>出発日時</th>
+                            <th>到着日時</th>
+                        </tr>
+                    </thead>
+                    <tbody id="movement-rows">
+                        @for (var i = 0; i < Model.CarrierMovements.Count; i++)
+                        {
+                            <partial name="_MovementRow" model="@(new CargoTracker.Routing.Interfaces.CarrierMovementRowForm(i, Model.CarrierMovements[i]))" />
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">登録</button>
+                <a href="/voyages" class="btn btn-outline-secondary">キャンセル</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.body.addEventListener('htmx:configRequest', function (event) {
+            if (event.detail.elt.id !== 'add-movement') {
+                return;
+            }
+            event.detail.parameters.index = event.detail.elt.dataset.nextIndex;
+            event.detail.elt.dataset.nextIndex = Number(event.detail.elt.dataset.nextIndex) + 1;
+        });
+    </script>
+}

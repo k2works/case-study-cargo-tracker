@@ -90,4 +90,28 @@ public class HexagonalArchitectureTest
             .Because("Booking と Estimation は独立した Bounded Context として直接参照してはならない")
             .Check(_architecture);
     }
+
+    [Fact]
+    public void 経路コンテキストは他BCの内部型に直接参照しない()
+    {
+        var routingContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Routing\.");
+        var bookingContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Booking\.");
+        var estimationContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Estimation\.");
+        var shipperContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Shipper\.");
+
+        Types().That().Are(routingContext)
+            .Should().NotDependOnAny(bookingContext)
+            .Because("Routing は Booking の CargoType 等に依存せず、Shared Kernel だけを共有する")
+            .Check(_architecture);
+
+        Types().That().Are(routingContext)
+            .Should().NotDependOnAny(estimationContext)
+            .Because("Routing と Estimation は独立した Bounded Context として直接参照してはならない")
+            .Check(_architecture);
+
+        Types().That().Are(routingContext)
+            .Should().NotDependOnAny(shipperContext)
+            .Because("Routing と Shipper は独立した Bounded Context として直接参照してはならない")
+            .Check(_architecture);
+    }
 }

@@ -74,6 +74,12 @@ builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServ
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.AssignToRoutingCommandService>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.QueryServices.FindBookingQueryService>();
 
+// Routing コンテキスト（US24）。
+builder.Services.AddScoped<CargoTracker.Routing.Domain.Repositories.IVoyageRepository,
+    CargoTracker.Routing.Infrastructure.Repositories.VoyageRepository>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.RegisterVoyageCommandService>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.FindVoyageQueryService>();
+
 var app = builder.Build();
 
 // 起動時に DbUp マイグレーションを適用する（forward-only・ADR-0003）。
