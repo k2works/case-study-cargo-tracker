@@ -39,6 +39,28 @@ public class EstimateTest
     }
 
     [Fact]
+    public void 到着期限が過去日なら例外()
+    {
+        var act = () => Estimate.Create(
+            new Location("JPTYO"), new Location("DEHAM"), new DateOnly(2026, 7, 8), CargoType.General, 100m,
+            today: new DateOnly(2026, 7, 9));
+
+        act.Should().Throw<ArgumentException>().WithMessage("*到着期限*");
+    }
+
+    [Theory]
+    [InlineData(2026, 7, 9)]
+    [InlineData(2026, 7, 10)]
+    public void 到着期限が当日または未来日なら作成できる(int year, int month, int day)
+    {
+        var estimate = Estimate.Create(
+            new Location("JPTYO"), new Location("DEHAM"), new DateOnly(year, month, day), CargoType.General, 100m,
+            today: new DateOnly(2026, 7, 9));
+
+        estimate.ArrivalDeadline.Should().Be(new DateOnly(year, month, day));
+    }
+
+    [Fact]
     public void ルート候補を差し替えられる()
     {
         var estimate = CreateEstimate();

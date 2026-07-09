@@ -32,7 +32,7 @@ builder.Services
     {
         options.LoginPath = "/login";
         options.LogoutPath = "/logout";
-        options.AccessDeniedPath = "/login";
+        options.AccessDeniedPath = "/forbidden";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
     });

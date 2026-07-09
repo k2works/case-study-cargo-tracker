@@ -72,4 +72,22 @@ public class HexagonalArchitectureTest
             .Because("Bounded Context 間の通信はドメインイベントまたは ACL 経由でなければならない")
             .Check(_architecture);
     }
+
+    [Fact]
+    public void 予約コンテキストは荷主コンテキストと見積コンテキストに直接参照しない()
+    {
+        var bookingContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Booking\.");
+        var shipperContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Shipper\.");
+        var estimationContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Estimation\.");
+
+        Types().That().Are(bookingContext)
+            .Should().NotDependOnAny(shipperContext)
+            .Because("Booking から Shipper への参照は ACL 経由に限定し、Shared 以外の BC 内部型へ依存してはならない")
+            .Check(_architecture);
+
+        Types().That().Are(bookingContext)
+            .Should().NotDependOnAny(estimationContext)
+            .Because("Booking と Estimation は独立した Bounded Context として直接参照してはならない")
+            .Check(_architecture);
+    }
 }

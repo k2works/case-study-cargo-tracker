@@ -85,4 +85,16 @@ public sealed class ShipperRegistrationIntegrationTest : IAsyncLifetime
 
         await act.Should().ThrowAsync<EmailAlreadyRegisteredException>();
     }
+
+    [Fact]
+    public async Task DB一意制約により同一メールアドレスの競合もドメイン例外に翻訳される()
+    {
+        await _commandService.HandleAsync(new RegisterShipperCommand(
+            false, "山田太郎", "race@example.com", null, null, null, null));
+
+        var act = () => _commandService.HandleAsync(new RegisterShipperCommand(
+            false, "田中花子", "race@example.com", null, null, null, null));
+
+        await act.Should().ThrowAsync<EmailAlreadyRegisteredException>();
+    }
 }

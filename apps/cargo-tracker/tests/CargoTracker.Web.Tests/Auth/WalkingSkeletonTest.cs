@@ -77,9 +77,20 @@ public sealed class WalkingSkeletonTest : IClassFixture<AuthenticationFlowTest.A
 
         var response = await client.GetAsync("/admin/discount-policies");
 
-        // 認可外はログイン（AccessDeniedPath = /login）へリダイレクトされる
+        // 認可外は専用の 403 画面（AccessDeniedPath = /forbidden）へリダイレクトされる
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
-        response.Headers.Location!.OriginalString.Should().Contain("/login");
+        response.Headers.Location!.OriginalString.Should().Contain("/forbidden");
+    }
+
+    [Fact]
+    public async Task 認可外リダイレクト先では権限エラー画面が表示される()
+    {
+        var client = await LoginAsAsync("sales");
+
+        var response = await client.GetAsync("/forbidden");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("権限がありません");
     }
 
     [Fact]

@@ -29,6 +29,16 @@ public sealed class DatabaseMigratorTest : IDisposable
         return Convert.ToInt32(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    private int CountUniqueIndex(string indexName)
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name=$name AND sql LIKE '%UNIQUE%'";
+        command.Parameters.AddWithValue("$name", indexName);
+        return Convert.ToInt32(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     [Fact]
     public void SQLiteに初期スキーマを適用しusersテーブルが作成される()
     {
@@ -51,5 +61,14 @@ public sealed class DatabaseMigratorTest : IDisposable
 
         // Then: 成功する
         second.Successful.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SQLiteマイグレーションで荷主メールアドレスの一意制約が作成される()
+    {
+        var result = DatabaseMigrator.Migrate(DatabaseProvider.Sqlite, ConnectionString);
+
+        result.Successful.Should().BeTrue();
+        CountUniqueIndex("uk_shipper_email").Should().Be(1);
     }
 }

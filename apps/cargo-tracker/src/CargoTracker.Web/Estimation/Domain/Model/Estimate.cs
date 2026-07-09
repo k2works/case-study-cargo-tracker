@@ -35,11 +35,17 @@ public sealed class Estimate : AggregateRoot
     }
 
     public static Estimate Create(
-        Location origin, Location destination, DateOnly arrivalDeadline, CargoType cargoType, decimal weightKg)
+        Location origin, Location destination, DateOnly arrivalDeadline, CargoType cargoType, decimal weightKg,
+        DateOnly? today = null)
     {
         if (origin.SameAs(destination))
         {
             throw new ArgumentException("出発地と仕向地は異なる必要があります。", nameof(destination));
+        }
+        var currentDate = today ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        if (arrivalDeadline < currentDate)
+        {
+            throw new ArgumentException("到着期限は当日以降でなければなりません。", nameof(arrivalDeadline));
         }
         if (weightKg <= 0)
         {
