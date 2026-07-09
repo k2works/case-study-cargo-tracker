@@ -597,8 +597,10 @@ CarrierMovement --> Location : arrival
 | 値オブジェクト（record） | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
 | 値オブジェクト（record） | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
+| 列挙型 | SupportedCargoType | 対応貨物種別 | 航海が対応する貨物種別（General/Hazardous/Refrigerated）。Booking の CargoType とは共有せず BC 独立（ADR-0007） |
 | 値オブジェクト（record） | CandidateRoute | 経路候補 | 経路設計者向けに算出する経路候補（VoyageNumber 列・経由港・所要日数・費用）。US08 で使用 |
-| ドリブンポート | IRouteCandidateService | 経路候補算出ポート | 航海スケジュール検索結果と出発地・目的地・期限から CandidateRoute を算出（外部経路サービス ACL。WireMock.Net で契約固定） |
+| ドメインサービス | RouteCandidateCalculator | 経路候補算出 | 利用可能な航海群から出発地→目的地の経路候補を、寄港地接続評価・時刻接続・期限フィルタ・直行優先ソートで算出する純粋ドメインロジック（US08）。費用・所要日数は暫定係数 |
+| ドリブンポート | IRouteCandidateService | 経路候補算出ポート | 航海スケジュール検索結果と出発地・目的地・期限から CandidateRoute を算出（外部経路サービス ACL。WireMock.Net で契約固定は実連携時に実施） |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
 
 > **注（IT3・BC 独立の設計判断）**: 経路候補は **Routing Context 固有の `CandidateRoute`** として定義し、Estimation Context の `RouteCandidate`（見積用）とは分離する（DDD の BC 独立原則。CargoType 二重定義と同種）。経路候補算出ポートも Routing 固有の `IRouteCandidateService` とし、Estimation の `IExternalRoutingServicePort`（見積用）と分離する。両者はライフサイクル・責務が異なり、共有すると BC 結合が生じるため。

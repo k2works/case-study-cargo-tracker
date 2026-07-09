@@ -154,4 +154,90 @@ public class RouteCandidateCalculatorTest
 
         routes.Should().BeEmpty();
     }
+
+    private static readonly Location _osaka = new("JPOSA");
+    private static readonly Location _rotterdam = new("NLRTM");
+
+    [Fact]
+    public void 乗継3航海までは経路候補として算出される()
+    {
+        // JPTYO→CNSHA→SGSIN→DEHAM を 3 航海の乗継で到達（_maxLegs=3 の境界・成功側）。
+        var voyages = new[]
+        {
+            MakeVoyage("V-1", (_tokyo, _shanghai, "2026-09-01T10:00:00Z", "2026-09-03T10:00:00Z")),
+            MakeVoyage("V-2", (_shanghai, _singapore, "2026-09-04T10:00:00Z", "2026-09-06T10:00:00Z")),
+            MakeVoyage("V-3", (_singapore, _hamburg, "2026-09-07T10:00:00Z", "2026-09-20T10:00:00Z")),
+        };
+
+        var routes = _calculator.Calculate(_tokyo, _hamburg, new DateOnly(2026, 9, 30), voyages);
+
+        routes.Should().ContainSingle();
+        routes[0].TransferCount.Should().Be(2, "3 航海 = 乗継 2 回");
+        routes[0].VoyageNumbers.Select(v => v.Value).Should().Equal("V-1", "V-2", "V-3");
+    }
+
+    [Fact]
+    public void 乗継4航海が必要な経路は上限を超えるため算出されない()
+    {
+        // JPTYO→CNSHA→SGSIN→NLRTM→DEHAM は 4 航海必要 → _maxLegs=3 を超え枝刈りされる。
+        var voyages = new[]
+        {
+            MakeVoyage("V-1", (_tokyo, _shanghai, "2026-09-01T10:00:00Z", "2026-09-03T10:00:00Z")),
+            MakeVoyage("V-2", (_shanghai, _singapore, "2026-09-04T10:00:00Z", "2026-09-06T10:00:00Z")),
+            MakeVoyage("V-3", (_singapore, _rotterdam, "2026-09-07T10:00:00Z", "2026-09-09T10:00:00Z")),
+            MakeVoyage("V-4", (_rotterdam, _hamburg, "2026-09-10T10:00:00Z", "2026-09-20T10:00:00Z")),
+        };
+
+        var routes = _calculator.Calculate(_tokyo, _hamburg, new DateOnly(2026, 9, 30), voyages);
+
+        routes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void 前航海の到着時刻と次航海の出発時刻が同一なら接続できる()
+    {
+        // 接続判定は BoardTime < earliestBoard を除外＝等号は接続可（境界）。
+        var voyages = new[]
+        {
+            MakeVoyage("V-1", (_tokyo, _shanghai, "2026-09-01T10:00:00Z", "2026-09-04T10:00:00Z")),
+            MakeVoyage("V-2", (_shanghai, _hamburg, "2026-09-04T10:00:00Z", "2026-09-20T10:00:00Z")),
+        };
+
+        var routes = _calculator.Calculate(_tokyo, _hamburg, new DateOnly(2026, 9, 30), voyages);
+
+        routes.Should().ContainSingle();
+        routes[0].TransferCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void 到着日が期限当日ちょうどなら経路候補に含まれる()
+    {
+        // 期限は当日終端（TimeOnly.MaxValue）まで許容＝AlightTime > deadline を除外する境界。
+        var voyages = new[]
+        {
+            MakeVoyage("V-DEADLINE", (_tokyo, _hamburg, "2026-09-01T10:00:00Z", "2026-09-30T23:00:00Z")),
+        };
+
+        var routes = _calculator.Calculate(_tokyo, _hamburg, new DateOnly(2026, 9, 30), voyages);
+
+        routes.Should().ContainSingle();
+        routes[0].IsDirect.Should().BeTrue();
+    }
+
+    [Fact]
+    public void 同一航海を再び使う循環経路は生成されない()
+    {
+        // V-LOOP は JPTYO→CNSHA と CNSHA→JPTYO の両区間を持つが、同一航海の再乗船は不可。
+        // JPTYO 起点で目的地 JPOSA へ到達できないため空になる（循環しない）。
+        var voyages = new[]
+        {
+            MakeVoyage("V-LOOP",
+                (_tokyo, _shanghai, "2026-09-01T10:00:00Z", "2026-09-03T10:00:00Z"),
+                (_shanghai, _tokyo, "2026-09-04T10:00:00Z", "2026-09-06T10:00:00Z")),
+        };
+
+        var routes = _calculator.Calculate(_tokyo, _osaka, new DateOnly(2026, 9, 30), voyages);
+
+        routes.Should().BeEmpty();
+    }
 }

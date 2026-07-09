@@ -64,14 +64,19 @@ public static class DemoDataSeeder
         {
             var registerVoyage = services.GetRequiredService<RegisterVoyageCommandService>();
 
+            // 固定日付は時間経過でデモの経路候補算出が期限超過で壊れるため、現在日を基準とした
+            // 相対的な未来日で航海を組み立てる（IT3 レビュー H3）。基準は翌月 1 日。
+            var baseDate = new DateTimeOffset(
+                new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc), TimeSpan.Zero)
+                .AddMonths(1);
+            DateTimeOffset At(int dayOffset, int hour) => baseDate.AddDays(dayOffset).AddHours(hour);
+
             // 直行便: JPTYO → DEHAM
             await registerVoyage.HandleAsync(new RegisterVoyageCommand(
                 "VYG-DEMO-001", "SAKURA MARU", "Pacific Ocean Lines",
                 [SupportedCargoType.General, SupportedCargoType.Refrigerated],
                 [
-                    new RegisterCarrierMovementCommand("JPTYO", "DEHAM",
-                        new DateTimeOffset(2026, 9, 1, 10, 0, 0, TimeSpan.Zero),
-                        new DateTimeOffset(2026, 9, 20, 8, 0, 0, TimeSpan.Zero), 1),
+                    new RegisterCarrierMovementCommand("JPTYO", "DEHAM", At(0, 10), At(19, 8), 1),
                 ]), ct);
 
             // 乗継便: JPTYO → SGSIN → DEHAM（寄港地経由）
@@ -79,12 +84,8 @@ public static class DemoDataSeeder
                 "VYG-DEMO-002", "FUJI MARU", "Asia Europe Express",
                 [SupportedCargoType.General, SupportedCargoType.Hazardous],
                 [
-                    new RegisterCarrierMovementCommand("JPTYO", "SGSIN",
-                        new DateTimeOffset(2026, 9, 2, 9, 0, 0, TimeSpan.Zero),
-                        new DateTimeOffset(2026, 9, 7, 12, 0, 0, TimeSpan.Zero), 1),
-                    new RegisterCarrierMovementCommand("SGSIN", "DEHAM",
-                        new DateTimeOffset(2026, 9, 8, 15, 0, 0, TimeSpan.Zero),
-                        new DateTimeOffset(2026, 9, 22, 8, 0, 0, TimeSpan.Zero), 2),
+                    new RegisterCarrierMovementCommand("JPTYO", "SGSIN", At(1, 9), At(6, 12), 1),
+                    new RegisterCarrierMovementCommand("SGSIN", "DEHAM", At(7, 15), At(21, 8), 2),
                 ]), ct);
 
             // 別ルート: JPTYO → CNSHA → DEHAM
@@ -92,12 +93,8 @@ public static class DemoDataSeeder
                 "VYG-DEMO-003", "KISO MARU", "Nippon Global Carrier",
                 [SupportedCargoType.General],
                 [
-                    new RegisterCarrierMovementCommand("JPTYO", "CNSHA",
-                        new DateTimeOffset(2026, 9, 3, 8, 0, 0, TimeSpan.Zero),
-                        new DateTimeOffset(2026, 9, 6, 10, 0, 0, TimeSpan.Zero), 1),
-                    new RegisterCarrierMovementCommand("CNSHA", "DEHAM",
-                        new DateTimeOffset(2026, 9, 7, 14, 0, 0, TimeSpan.Zero),
-                        new DateTimeOffset(2026, 9, 25, 9, 0, 0, TimeSpan.Zero), 2),
+                    new RegisterCarrierMovementCommand("JPTYO", "CNSHA", At(2, 8), At(5, 10), 1),
+                    new RegisterCarrierMovementCommand("CNSHA", "DEHAM", At(6, 14), At(24, 9), 2),
                 ]), ct);
         }
 
