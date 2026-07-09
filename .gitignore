@@ -36,3 +36,9 @@ tmp/
 # 開発用 SQLite データベース（DbUp 起動時生成・ADR-0003）
 cargotracker.dev.db
 *.dev.db
+
+# SonarQube スキャナ作業物・カバレッジ
+.sonarqube/
+**/.sonarqube/
+coverage.opencover.xml
+**/coverage.opencover.xml

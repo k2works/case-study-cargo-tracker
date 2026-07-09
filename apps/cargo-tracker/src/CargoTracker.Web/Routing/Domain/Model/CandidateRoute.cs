@@ -41,10 +41,12 @@ public sealed record CandidateRoute
         var ports = new List<Location> { legs[0].BoardLocation };
         ports.AddRange(legs.Select(leg => leg.AlightLocation));
         Ports = ports;
+
+        VoyageNumbers = legs.Select(leg => leg.VoyageNumber).ToArray();
     }
 
-    /// <summary>経路が使用する航海番号の列。</summary>
-    public IReadOnlyList<VoyageNumber> VoyageNumbers => Legs.Select(leg => leg.VoyageNumber).ToArray();
+    /// <summary>経路が使用する航海番号の列（生成時に確定）。</summary>
+    public IReadOnlyList<VoyageNumber> VoyageNumbers { get; }
 }
 
 /// <summary>経路候補の 1 区間。特定の航海に乗船港から下船港まで乗る単位。</summary>

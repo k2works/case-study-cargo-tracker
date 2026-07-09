@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "name": "backend",
+      "label": "Cargo Tracker C# (Backend)",
+      "projectKey": "cargo-tracker-csharp-backend",
+      "scanType": "dotnet",
+      "srcDir": "apps/cargo-tracker"
+    }
+  ]
+}
