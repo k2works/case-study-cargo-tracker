@@ -87,6 +87,64 @@ public sealed class VoyageWebTest : IClassFixture<AuthenticationFlowTest.AuthWeb
         body.Should().Contain("到着港").And.Contain("出発港").And.Contain("alert-danger");
     }
 
+    [Fact]
+    public async Task 既存航海スケジュールを呼び出して更新すると一覧に更新内容が表示される()
+    {
+        var client = await LoginAsRouteDesignerAsync();
+        await PostVoyageAsync(client, "VYG-WEB-004");
+
+        var edit = await client.GetStringAsync("/voyages/VYG-WEB-004/edit");
+        edit.Should().Contain("既存内容")
+            .And.Contain("更新内容")
+            .And.Contain("Kiso Maru")
+            .And.Contain("JPTYO");
+
+        var response = await PostUpdateAsync(client, "VYG-WEB-004", Token(edit), "0", "Shinano Maru", "Updated Carrier");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location!.OriginalString.Should().Be("/voyages");
+
+        var index = await client.GetStringAsync("/voyages");
+        // 一覧の区間列は起点→終点のサマリ表示（中間港は詳細/編集画面で確認）。
+        // 更新の反映は船名・運送会社（一覧に表示される更新対象）と終点で検証する。
+        index.Should().Contain("航海スケジュールを更新しました")
+            .And.Contain("VYG-WEB-004")
+            .And.Contain("Shinano Maru")
+            .And.Contain("Updated Carrier")
+            .And.Contain("DEHAM");
+    }
+
+    [Fact]
+    public async Task キャンセルでは航海スケジュールは変更されない()
+    {
+        var client = await LoginAsRouteDesignerAsync();
+        await PostVoyageAsync(client, "VYG-WEB-005");
+
+        var edit = await client.GetStringAsync("/voyages/VYG-WEB-005/edit");
+        edit.Should().Contain("キャンセル");
+
+        var unchanged = await client.GetStringAsync("/voyages/VYG-WEB-005/edit");
+        unchanged.Should().Contain("VYG-WEB-005")
+            .And.Contain("Kiso Maru")
+            .And.NotContain("Shinano Maru");
+    }
+
+    [Fact]
+    public async Task 並行更新された航海スケジュールは更新できない()
+    {
+        var client = await LoginAsRouteDesignerAsync();
+        await PostVoyageAsync(client, "VYG-WEB-006");
+        var edit = await client.GetStringAsync("/voyages/VYG-WEB-006/edit");
+        var token = Token(edit);
+
+        await PostUpdateAsync(client, "VYG-WEB-006", token, "0", "Shinano Maru", "Updated Carrier");
+        var response = await PostUpdateAsync(client, "VYG-WEB-006", token, "0", "Stale Maru", "Stale Carrier");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("並行更新").And.Contain("alert-danger");
+    }
+
     private static async Task<HttpResponseMessage> PostVoyageAsync(HttpClient client, string voyageNumber)
     {
         var newPage = await client.GetStringAsync("/voyages/new");
@@ -109,4 +167,28 @@ public sealed class VoyageWebTest : IClassFixture<AuthenticationFlowTest.AuthWeb
             ["__RequestVerificationToken"] = token,
         }));
     }
+
+    private static Task<HttpResponseMessage> PostUpdateAsync(
+        HttpClient client,
+        string voyageNumber,
+        string token,
+        string version,
+        string vesselName,
+        string carrier)
+        => client.PostAsync($"/voyages/{voyageNumber}", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Version"] = version,
+            ["VesselName"] = vesselName,
+            ["Carrier"] = carrier,
+            ["SupportedCargoTypes"] = "General",
+            ["CarrierMovements[0].DepartureLocationUnLocode"] = "JPTYO",
+            ["CarrierMovements[0].ArrivalLocationUnLocode"] = "CNSHA",
+            ["CarrierMovements[0].DepartureDate"] = "2026-10-01T10:00:00+00:00",
+            ["CarrierMovements[0].ArrivalDate"] = "2026-10-03T10:00:00+00:00",
+            ["CarrierMovements[1].DepartureLocationUnLocode"] = "CNSHA",
+            ["CarrierMovements[1].ArrivalLocationUnLocode"] = "DEHAM",
+            ["CarrierMovements[1].DepartureDate"] = "2026-10-04T10:00:00+00:00",
+            ["CarrierMovements[1].ArrivalDate"] = "2026-10-18T10:00:00+00:00",
+            ["__RequestVerificationToken"] = token,
+        }));
 }

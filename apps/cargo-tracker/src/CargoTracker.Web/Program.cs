@@ -78,6 +78,7 @@ builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.QueryServic
 builder.Services.AddScoped<CargoTracker.Routing.Domain.Repositories.IVoyageRepository,
     CargoTracker.Routing.Infrastructure.Repositories.VoyageRepository>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.RegisterVoyageCommandService>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.UpdateScheduleCommandService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.FindVoyageQueryService>();
 
 var app = builder.Build();

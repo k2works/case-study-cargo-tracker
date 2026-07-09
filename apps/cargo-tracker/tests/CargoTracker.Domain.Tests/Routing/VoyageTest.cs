@@ -118,6 +118,54 @@ public sealed class VoyageTest
         voyage.PullDomainEvents().Should().BeEmpty();
     }
 
+    [Fact]
+    public void UpdateScheduleは可変属性を差し替えVersionを上げ更新イベントを発生させる()
+    {
+        var voyage = CreateVoyage();
+        voyage.PullDomainEvents();
+
+        voyage.UpdateSchedule(
+            "Shinano Maru",
+            "Updated Carrier",
+            [SupportedCargoType.General, SupportedCargoType.Hazardous],
+            new Schedule([
+                Movement("JPTYO", "CNSHA", 0, 1, 1),
+                Movement("CNSHA", "DEHAM", 2, 4, 2),
+            ]));
+
+        voyage.VoyageNumber.Value.Should().Be("VYG-001");
+        voyage.VesselName.Should().Be("Shinano Maru");
+        voyage.Carrier.Should().Be("Updated Carrier");
+        voyage.SupportedCargoTypes.Should().Contain(SupportedCargoType.Hazardous);
+        voyage.Schedule.CarrierMovements[0].ArrivalLocation.UnLocode.Should().Be("CNSHA");
+        voyage.Version.Should().Be(1);
+        voyage.PullDomainEvents().Should().ContainSingle(e => e is ScheduleUpdatedEvent);
+    }
+
+    [Fact]
+    public void UpdateScheduleは不変条件を再検証し失敗時に既存状態を変更しない()
+    {
+        var voyage = CreateVoyage();
+        voyage.PullDomainEvents();
+        var originalSchedule = voyage.Schedule;
+
+        var invalidSchedule = new Schedule([
+            Movement("JPTYO", "SGSIN", 0, 1, 1),
+            Movement("CNSHA", "DEHAM", 2, 3, 2),
+        ]);
+        var act = () => voyage.UpdateSchedule(
+            "Shinano Maru",
+            "Updated Carrier",
+            [SupportedCargoType.General],
+            invalidSchedule);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*到着港*出発港*");
+        voyage.VesselName.Should().Be("Kiso Maru");
+        voyage.Schedule.Should().BeSameAs(originalSchedule);
+        voyage.Version.Should().Be(0);
+        voyage.PullDomainEvents().Should().BeEmpty();
+    }
+
     private static Voyage CreateVoyage()
         => Voyage.Create(
             new VoyageNumber("VYG-001"),

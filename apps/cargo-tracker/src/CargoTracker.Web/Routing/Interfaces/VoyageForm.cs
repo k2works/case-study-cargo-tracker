@@ -10,6 +10,8 @@ public sealed class VoyageForm
     [Display(Name = "航海番号")]
     public string VoyageNumber { get; set; } = string.Empty;
 
+    public long Version { get; set; }
+
     [Required(ErrorMessage = "船名を入力してください")]
     [StringLength(200, ErrorMessage = "船名は 200 文字以内で入力してください")]
     [Display(Name = "船名")]
@@ -44,3 +46,7 @@ public sealed class CarrierMovementForm
 }
 
 public sealed record CarrierMovementRowForm(int Index, CarrierMovementForm Movement);
+
+public sealed record EditVoyageViewModel(
+    VoyageForm Form,
+    CargoTracker.Routing.Application.Internal.QueryServices.VoyageDetail Existing);

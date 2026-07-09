@@ -30,6 +30,7 @@ else
                     <th>区間</th>
                     <th>期間</th>
                     <th>対応貨物種別</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -42,6 +43,9 @@ else
                         <td>@voyage.DepartureLocationUnlocode → @voyage.ArrivalLocationUnlocode</td>
                         <td>@voyage.FirstDepartureDate.ToString("yyyy-MM-dd HH:mm") - @voyage.LastArrivalDate.ToString("yyyy-MM-dd HH:mm")</td>
                         <td>@voyage.SupportedCargoTypes</td>
+                        <td class="text-end">
+                            <a href="/voyages/@voyage.VoyageNumber/edit" class="btn btn-outline-primary btn-sm">更新</a>
+                        </td>
                     </tr>
                 }
             </tbody>

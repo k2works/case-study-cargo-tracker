@@ -11,7 +11,8 @@ namespace CargoTracker.Routing.Interfaces;
 [Authorize(Roles = Roles.RouteDesigner)]
 public sealed class VoyageController(
     FindVoyageQueryService queryService,
-    RegisterVoyageCommandService commandService) : Controller
+    RegisterVoyageCommandService commandService,
+    UpdateScheduleCommandService updateCommandService) : Controller
 {
     [HttpGet("/voyages")]
     public async Task<IActionResult> Index(CancellationToken ct)
@@ -22,6 +23,7 @@ public sealed class VoyageController(
         => View(BuildDefaultForm());
 
     [HttpGet("/voyages/new/movement-row")]
+    [HttpGet("/voyages/movement-row")]
     public IActionResult MovementRow(int index)
         => PartialView("_MovementRow", new CarrierMovementRowForm(index, new CarrierMovementForm()));
 
@@ -63,6 +65,63 @@ public sealed class VoyageController(
         }
     }
 
+    [HttpGet("/voyages/{voyageNumber}/edit")]
+    public async Task<IActionResult> Edit(string voyageNumber, CancellationToken ct)
+    {
+        var existing = await queryService.FindByVoyageNumberAsync(voyageNumber, ct);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        return View(new EditVoyageViewModel(BuildForm(existing), existing));
+    }
+
+    [HttpPost("/voyages/{voyageNumber}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(string voyageNumber, VoyageForm form, CancellationToken ct)
+    {
+        form.VoyageNumber = voyageNumber;
+        var existing = await queryService.FindByVoyageNumberAsync(voyageNumber, ct);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        var supportedCargoTypes = ParseSupportedCargoTypes(form);
+        ValidateForm(form, supportedCargoTypes);
+        if (!ModelState.IsValid)
+        {
+            EnsureMovementRows(form);
+            return View("Edit", new EditVoyageViewModel(form, existing));
+        }
+
+        try
+        {
+            await updateCommandService.HandleAsync(new UpdateScheduleCommand(
+                voyageNumber,
+                form.Version,
+                form.VesselName,
+                form.Carrier,
+                supportedCargoTypes,
+                form.CarrierMovements.Select((movement, index) => new RegisterCarrierMovementCommand(
+                    movement.DepartureLocationUnLocode,
+                    movement.ArrivalLocationUnLocode,
+                    movement.DepartureDate!.Value,
+                    movement.ArrivalDate!.Value,
+                    index + 1)).ToArray()), ct);
+
+            TempData["SuccessMessage"] = "航海スケジュールを更新しました。";
+            return LocalRedirect("/voyages");
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            EnsureMovementRows(form);
+            return View("Edit", new EditVoyageViewModel(form, existing));
+        }
+    }
+
     private static VoyageForm BuildDefaultForm()
         => new()
         {
@@ -71,6 +130,29 @@ public sealed class VoyageController(
             [
                 new CarrierMovementForm(),
             ],
+        };
+
+    private static VoyageForm BuildForm(VoyageDetail detail)
+        => new()
+        {
+            VoyageNumber = detail.VoyageNumber,
+            Version = detail.Version,
+            VesselName = detail.VesselName,
+            Carrier = detail.Carrier,
+            SupportedCargoTypes = detail.SupportedCargoTypes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(value => Enum.Parse<SupportedCargoType>(value, ignoreCase: true).ToString())
+                .ToList(),
+            CarrierMovements = detail.CarrierMovements
+                .OrderBy(movement => movement.SequenceNumber)
+                .Select(movement => new CarrierMovementForm
+                {
+                    DepartureLocationUnLocode = movement.DepartureLocationUnlocode,
+                    ArrivalLocationUnLocode = movement.ArrivalLocationUnlocode,
+                    DepartureDate = new DateTimeOffset(DateTime.SpecifyKind(movement.DepartureDate, DateTimeKind.Utc)),
+                    ArrivalDate = new DateTimeOffset(DateTime.SpecifyKind(movement.ArrivalDate, DateTimeKind.Utc)),
+                })
+                .ToList(),
         };
 
     private static void EnsureMovementRows(VoyageForm form)

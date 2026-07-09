@@ -38,30 +38,54 @@ public sealed class VoyageRepository(IDbConnectionFactory connectionFactory, Amb
             "SELECT id FROM voyage WHERE voyage_number = @VoyageNumber",
             new { VoyageNumber = voyage.VoyageNumber.Value }, tx, cancellationToken: ct));
 
-        foreach (var movement in voyage.Schedule.CarrierMovements)
+        await InsertCarrierMovementsAsync(connection, tx, voyageId, voyage.Schedule.CarrierMovements, now, ct);
+    }
+
+    public async Task UpdateAsync(Voyage voyage, CancellationToken ct = default)
+    {
+        var now = ToDatabaseTimestamp(DateTimeOffset.UtcNow);
+        var tx = ambient.Require();
+        var connection = tx.Connection!;
+        // Voyage.UpdateSchedule() が Version をインクリメント済みのため、WHERE は更新前 version、
+        // SET は集約が保持する新 version を使う。影響行数 0 は並行更新競合として扱う。
+        var expectedVersion = voyage.Version - 1;
+        var affectedRows = await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE voyage
+            SET vessel_name = @VesselName,
+                carrier = @Carrier,
+                supported_cargo_types = @SupportedCargoTypes,
+                version = @NewVersion,
+                updated_at = @UpdatedAt
+            WHERE voyage_number = @VoyageNumber
+              AND version = @ExpectedVersion
+            """,
+            new
+            {
+                VoyageNumber = voyage.VoyageNumber.Value,
+                voyage.VesselName,
+                voyage.Carrier,
+                SupportedCargoTypes = SerializeCargoTypes(voyage.SupportedCargoTypes),
+                NewVersion = voyage.Version,
+                ExpectedVersion = expectedVersion,
+                UpdatedAt = now,
+            },
+            tx, cancellationToken: ct));
+
+        if (affectedRows == 0)
         {
-            await connection.ExecuteAsync(new CommandDefinition(
-                """
-                INSERT INTO carrier_movement
-                    (voyage_id, departure_location_unlocode, arrival_location_unlocode,
-                     departure_date, arrival_date, seq_number, created_at, updated_at)
-                VALUES
-                    (@VoyageId, @DepartureLocation, @ArrivalLocation,
-                     @DepartureDate, @ArrivalDate, @SequenceNumber, @CreatedAt, @UpdatedAt)
-                """,
-                new
-                {
-                    VoyageId = voyageId,
-                    DepartureLocation = movement.DepartureLocation.UnLocode,
-                    ArrivalLocation = movement.ArrivalLocation.UnLocode,
-                    DepartureDate = ToDatabaseTimestamp(movement.DepartureDate),
-                    ArrivalDate = ToDatabaseTimestamp(movement.ArrivalDate),
-                    movement.SequenceNumber,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                },
-                tx, cancellationToken: ct));
+            throw new InvalidOperationException("航海スケジュールが並行更新されたため、更新内容を保存できませんでした。");
         }
+
+        var voyageId = await connection.ExecuteScalarAsync<long>(new CommandDefinition(
+            "SELECT id FROM voyage WHERE voyage_number = @VoyageNumber",
+            new { VoyageNumber = voyage.VoyageNumber.Value }, tx, cancellationToken: ct));
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM carrier_movement WHERE voyage_id = @VoyageId",
+            new { VoyageId = voyageId }, tx, cancellationToken: ct));
+
+        await InsertCarrierMovementsAsync(connection, tx, voyageId, voyage.Schedule.CarrierMovements, now, ct);
     }
 
     public async Task<Voyage?> FindByVoyageNumberAsync(VoyageNumber voyageNumber, CancellationToken ct = default)
@@ -135,6 +159,40 @@ public sealed class VoyageRepository(IDbConnectionFactory connectionFactory, Amb
 
     private static string SerializeCargoTypes(IEnumerable<SupportedCargoType> cargoTypes)
         => string.Join(',', cargoTypes.OrderBy(cargoType => cargoType).Select(cargoType => cargoType.ToString().ToUpperInvariant()));
+
+    private static async Task InsertCarrierMovementsAsync(
+        IDbConnection connection,
+        IDbTransaction transaction,
+        long voyageId,
+        IEnumerable<CarrierMovement> carrierMovements,
+        DateTime now,
+        CancellationToken ct)
+    {
+        foreach (var movement in carrierMovements)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO carrier_movement
+                    (voyage_id, departure_location_unlocode, arrival_location_unlocode,
+                     departure_date, arrival_date, seq_number, created_at, updated_at)
+                VALUES
+                    (@VoyageId, @DepartureLocation, @ArrivalLocation,
+                     @DepartureDate, @ArrivalDate, @SequenceNumber, @CreatedAt, @UpdatedAt)
+                """,
+                new
+                {
+                    VoyageId = voyageId,
+                    DepartureLocation = movement.DepartureLocation.UnLocode,
+                    ArrivalLocation = movement.ArrivalLocation.UnLocode,
+                    DepartureDate = ToDatabaseTimestamp(movement.DepartureDate),
+                    ArrivalDate = ToDatabaseTimestamp(movement.ArrivalDate),
+                    movement.SequenceNumber,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                transaction, cancellationToken: ct));
+        }
+    }
 
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
         => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);

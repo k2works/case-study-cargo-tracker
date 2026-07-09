@@ -7,10 +7,10 @@ namespace CargoTracker.Routing.Domain.Model;
 public sealed class Voyage : AggregateRoot
 {
     public VoyageNumber VoyageNumber { get; }
-    public string VesselName { get; }
-    public string Carrier { get; }
-    public IReadOnlySet<SupportedCargoType> SupportedCargoTypes { get; }
-    public Schedule Schedule { get; }
+    public string VesselName { get; private set; }
+    public string Carrier { get; private set; }
+    public IReadOnlySet<SupportedCargoType> SupportedCargoTypes { get; private set; }
+    public Schedule Schedule { get; private set; }
     public long Version { get; private set; }
 
     private Voyage(
@@ -39,6 +39,22 @@ public sealed class Voyage : AggregateRoot
         var voyage = Reconstruct(voyageNumber, vesselName, carrier, supportedCargoTypes, schedule, 0);
         voyage.AddDomainEvent(new VoyageRegisteredEvent(voyage.VoyageNumber));
         return voyage;
+    }
+
+    public void UpdateSchedule(
+        string vesselName,
+        string carrier,
+        IEnumerable<SupportedCargoType> supportedCargoTypes,
+        Schedule schedule)
+    {
+        var validated = Reconstruct(VoyageNumber, vesselName, carrier, supportedCargoTypes, schedule, Version);
+
+        VesselName = validated.VesselName;
+        Carrier = validated.Carrier;
+        SupportedCargoTypes = validated.SupportedCargoTypes;
+        Schedule = validated.Schedule;
+        Version++;
+        AddDomainEvent(new ScheduleUpdatedEvent(VoyageNumber));
     }
 
     /// <summary>永続化データから集約を再構築する（イベントは発生させない）。</summary>
