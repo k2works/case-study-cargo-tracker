@@ -103,6 +103,8 @@ nav:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - 設計ドキュメントレビュー: review/設計ドキュメント_review_20260704.md
+      - 開発成果物レビュー IT1: review/開発成果物_IT1_review_20260708.md
+      - 開発成果物レビュー IT2: review/開発成果物_IT2_review_20260709.md
   - ADR:
       - 概要: adr/index.md
       - ADR-0001 集約永続化戦略: adr/0001-集約永続化戦略.md
