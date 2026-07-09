@@ -115,6 +115,8 @@ nav:
       - ADR-0003 開発 SQLite 本番 PostgreSQL の二方言運用: adr/0003-開発SQLite本番PostgreSQLの二方言運用.md
       - ADR-0004 Cookie 認証と軽量ユーザーストア: adr/0004-Cookie認証と軽量ユーザーストア.md
       - ADR-0005 CQRS の段階的適用: adr/0005-CQRSの段階的適用.md
+      - ADR-0006 Ambient Transaction によるトランザクション伝播: adr/0006-AmbientTransactionによるトランザクション伝播.md
+      - ADR-0007 貨物種別・経路候補の BC 独立定義: adr/0007-貨物種別と経路候補のBC独立定義.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
