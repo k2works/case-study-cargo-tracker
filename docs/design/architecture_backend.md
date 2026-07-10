@@ -487,14 +487,14 @@ func RegisterTrackingEventHandlers(d *events.Dispatcher, svc *TrackingCommandSer
 > pgx のトランザクション（`pgx.Tx`）をコミットした後に Publish する方針とします。
 > 高可用性が必要なシステムへ移行する際は Transactional Outbox パターンへの移行を検討してください。
 
-## Jakarta EE / Spring → Go 移行マッピング
+## Spring → Go 移行マッピング
 
-| Jakarta EE / Spring 技術 | Go 移行先 | 移行ポイント |
+| Spring 技術 | Go 移行先 | 移行ポイント |
 | :--- | :--- | :--- |
-| CDI / Spring DI（`@Inject`, `@Service`） | コンストラクタインジェクション（手動 wiring） | DI コンテナは使用せず、`cmd/server/main.go` で依存を組み立てる |
-| JAX-RS / Spring MVC（`@RestController`） | chi v5 Router + `net/http` Handler | ルーティングは `chi.Router` に明示的に登録する |
-| CDI Events / `ApplicationEventPublisher` | 自作 in-process イベントディスパッチャ（`shared/events`） | 同期イベントはほぼ等価。同一プロセス内通信 |
-| JPA / MyBatis | **sqlc + pgx v5** | SQL 明示管理の思想は MyBatis と同じ。sqlc がコンパイル時に型安全なコードを生成する |
+| Spring DI（`@Inject`, `@Service`） | コンストラクタインジェクション（手動 wiring） | DI コンテナは使用せず、`cmd/server/main.go` で依存を組み立てる |
+| Spring MVC（`@RestController`） | chi v5 Router + `net/http` Handler | ルーティングは `chi.Router` に明示的に登録する |
+| `ApplicationEventPublisher` | 自作 in-process イベントディスパッチャ（`shared/events`） | 同期イベントはほぼ等価。同一プロセス内通信 |
+| MyBatis | **sqlc + pgx v5** | SQL 明示管理の思想は MyBatis と同じ。sqlc がコンパイル時に型安全なコードを生成する |
 | Flyway | golang-migrate | SQL マイグレーションファイルで管理 |
 | Bean Validation（`@Valid`） | ドメインのコンストラクタ関数でのバリデーション + エラー戻り値 | 不変条件はファクトリ関数（`NewXxx`）で強制する |
 | Spring Security | alexedwards/scs セッション + 自作 RBAC ミドルウェア | セッションベース認証・ロールチェックを chi ミドルウェアで実装 |
