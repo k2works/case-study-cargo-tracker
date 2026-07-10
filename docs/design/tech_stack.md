@@ -23,6 +23,9 @@ tags: design, tech-stack, go, chi, htmx, postgresql
 | net/http | 標準 | Web サーバー・HTTP クライアント | Go 標準ライブラリ、フレームワークロックインの回避、長期安定性 | BSD 3-Clause | GA（Go 本体に同梱） |
 | html/template | 標準 | テンプレートエンジン（SSR） | Go 標準の SSR、コンテキスト依存の自動エスケープによる XSS 対策、Thymeleaf SSR の代替 | BSD 3-Clause | GA（Go 本体に同梱） |
 | alexedwards/scs | v2 | セッション管理 | セッションベース認証の実装基盤、PostgreSQL ストア対応、Spring Security のセッション管理の代替 | MIT | GA（アクティブ開発中） |
+| justinas/nosurf | v1 | CSRF 保護ミドルウェア | フォーム・htmx リクエストの CSRF トークン検証を `net/http` ミドルウェアとして提供、Spring Security の CSRF 保護の代替 | MIT | GA（安定版） |
+| go-playground/validator | v10 | 入力バリデーション | 構造体タグ（`validate:"required"` 等）による宣言的なサーバーサイド検証、Bean Validation の代替 | MIT | GA（アクティブ開発中） |
+| microcosm-cc/bluemonday | v1 | HTML サニタイズ（XSS 対策） | ユーザー入力を HTML として出力する際のサニタイズ、html/template の自動エスケープを補完 | MIT | GA（アクティブ開発中） |
 | 自作 RBAC ミドルウェア | - | 認可（RBAC） | ROLE_SALES / ROLE_HANDLER 等のロール別アクセス制御を chi ミドルウェアとして実装、Spring Security の認可の代替 | プロジェクト内 | 自作（テストで保証） |
 | 自作イベントディスパッチャ | - | ドメインイベント発行 | in-process のイベント発行・購読による疎結合なコンテキスト間通信、Spring Events（`ApplicationEventPublisher`）の代替 | プロジェクト内 | 自作（テストで保証） |
 | swaggo/swag | v2 | API ドキュメント（Swagger UI） | コメントアノテーションからの OpenAPI 自動生成、springdoc-openapi の代替、環境別有効化に対応 | Apache 2.0 | GA（アクティブ開発中） |

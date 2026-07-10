@@ -10,7 +10,7 @@ tags: design, ddd, domain-model, go, golang
 
 ## 概要
 
-本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。ドメインモデル自体は言語非依存であり、本ドキュメントでは各モデルの Go への実装マッピングを併記する。システムは以下の 8 つの境界付けられたコンテキスト（Bounded Context）で構成される。
+本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。ドメインモデル自体は言語非依存であり、本ドキュメントでは各モデルの Go への実装マッピングを併記する。システムは以下の 7 つの境界付けられたコンテキスト（Bounded Context）と共有ドメイン（Shared Domain）で構成される。Shared Domain は境界付けられたコンテキストではなく、共有カーネル（Shared Kernel）の置き場である。
 
 | コンテキスト | 日本語名 | 主な責務 | Go パッケージ |
 |---|---|---|---|
@@ -112,15 +112,15 @@ type Event interface {
 }
 
 // Handler はイベント購読側の処理関数です。
-type Handler func(e Event) error
+type Handler func(ctx context.Context, event Event) error
 
 // Dispatcher はイベント名単位で Handler を登録・発行する in-process ディスパッチャです。
 type Dispatcher struct {
 	handlers map[string][]Handler
 }
 
-func (d *Dispatcher) Subscribe(eventName string, h Handler) { /* ... */ }
-func (d *Dispatcher) Publish(e Event) error                 { /* ... */ }
+func (d *Dispatcher) Subscribe(eventName string, h Handler)          { /* ... */ }
+func (d *Dispatcher) Publish(ctx context.Context, event Event) error { /* ... */ }
 ```
 
 ## ユビキタス言語

@@ -61,7 +61,7 @@ package "Go Application (cmd/server)" {
   }
 
   package "domain/" {
-    [aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)]
+    [aggregates/\n(Booking / Shipper / Routing / Tracking\n/ Handling / Billing / Estimation)]
     [valueobjects/]
     [commands/]
     [entities/]
@@ -95,12 +95,12 @@ package "Infrastructure" {
 [web/ Handler\n(html/template SSR)] --> [queryservices/\n(読み取り最適化)]
 [events/ Handler\n(イベントサブスクライバ)] --> [commandservices/\n(ユースケース実行)]
 
-[commandservices/\n(ユースケース実行)] --> [aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)]
+[commandservices/\n(ユースケース実行)] --> [aggregates/\n(Booking / Shipper / Routing / Tracking\n/ Handling / Billing / Estimation)]
 [outboundservices/acl/\n(ACL)] --> [services/\n(net/http 外部 API クライアント)]
 
 [queryservices/\n(読み取り最適化)] --> [repositories/\n(sqlc + pgx v5 永続化)]
 
-[aggregates/\n(Booking / Routing / Tracking\n/ Handling / Billing)] --> [repositories/\n(sqlc + pgx v5 永続化)]
+[aggregates/\n(Booking / Shipper / Routing / Tracking\n/ Handling / Billing / Estimation)] --> [repositories/\n(sqlc + pgx v5 永続化)]
 
 [repositories/\n(sqlc + pgx v5 永続化)] --> [PostgreSQL\n(本番)]
 [services/\n(net/http 外部 API クライアント)] --> [External Routing Service]
@@ -110,6 +110,8 @@ package "Infrastructure" {
 ```
 
 ## 境界付けられたコンテキスト
+
+本システムは正典（ドメインモデル設計）に従い、**7 つの境界付けられたコンテキストと共有ドメイン（Shared Domain）** で構成します（Booking / Shipper / Routing / Tracking / Handling / Billing / Estimation + Shared Domain）。
 
 ### コンテキストマップ
 
@@ -123,6 +125,12 @@ package "Booking Context" as booking #LightBlue {
   class CargoItinerary <<Value Object>>
   class Delivery <<Value Object>>
   class BookingStatus <<Enum>>
+}
+
+package "Shipper Context" as shipper #LightSkyBlue {
+  class Shipper <<Aggregate Root>>
+  class CorporateShipper <<Entity>>
+  class Address <<Value Object>>
 }
 
 package "Routing Context" as routing #LightGreen {
@@ -153,25 +161,42 @@ package "Billing Context" as billing #LightPink {
   class PaymentStatus <<Enum>>
 }
 
+package "Estimation Context" as estimation #Wheat {
+  class Estimate <<Aggregate Root>>
+  class RouteCandidate <<Entity>>
+  class EstimateStatus <<Enum>>
+}
+
 package "Shared Domain (Shared Kernel)" as shared #WhiteSmoke {
   class Location <<Value Object>>
 }
 
 booking --> shared : uses Location
+shipper --> shared : uses ShipperId
 routing --> shared : uses Location
 tracking --> shared : uses Location
 handling --> shared : uses Location
+estimation --> shared : uses Location
 
+booking ..> shipper : ShipperExistenceChecker (ACL Port)
 booking ..> routing : routes cargo (Conformist)
 handling ..> booking : via CargoSnapshot (ACL)
 tracking <.. booking : CargoBookedEvent / CargoRoutedEvent
 tracking <.. handling : HandlingActivityRegisteredEvent
 billing <.. booking : CargoDeliveredEvent (future)
+estimation ..> booking : 見積→予約の引き継ぎ（将来）
 
 note top of handling
   CargoSnapshot は ACL（腐敗防止層）
   Booking → Handling の参照を
   Handling 独自モデルに変換する
+end note
+
+note bottom of estimation
+  Estimation は独立コンテキスト
+  見積→予約の引き継ぎは将来対応であり
+  現時点では他コンテキストと
+  イベント連携しない
 end note
 
 note right of shared
@@ -197,7 +222,18 @@ end note
 | `BookingStatus` | `PRELIMINARY` / `ROUTE_PROPOSED` / `CONFIRMED` / `TRACKING_ISSUED` / `IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED` |
 | アクター | 荷主、営業担当者 |
 
-#### 2. Routing Context（経路コンテキスト）
+#### 2. Shipper Context（荷主コンテキスト）
+
+荷主の登録・管理と法人割引を担います。Booking Context からは `ShipperExistenceChecker` ACL ポート経由で参照されます。
+
+| 要素 | 内容 |
+| :--- | :--- |
+| 集約ルート | `Shipper` |
+| 主要概念 | `CorporateShipper`, `Address` |
+| パッケージ | `internal/shipper` |
+| アクター | 荷主、営業担当者 |
+
+#### 3. Routing Context（経路コンテキスト）
 
 航路・運航スケジュールを管理します。外部経路システムとの統合を担います。
 
@@ -207,7 +243,7 @@ end note
 | 主要概念 | `CarrierMovement`, `Schedule`, `VoyageNumber` |
 | アクター | 経路設計者、外部経路システム |
 
-#### 3. Tracking Context（追跡コンテキスト）
+#### 4. Tracking Context（追跡コンテキスト）
 
 荷物の現在状態・輸送ステータスを管理します。CQRS の読み取り側最適化が特に有効なコンテキストです。
 
@@ -215,10 +251,10 @@ end note
 | :--- | :--- |
 | 集約ルート | `TrackingActivity` |
 | 主要概念 | `TrackingNumber`, `TransportStatus`, `TrackingExceptionEvent` |
-| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `IN_TRANSIT` / `UNLOADED` / `CUSTOMS_INSPECTION` / `AWAITING_CLAIM` / `DELIVERED` / `MISROUTED` |
+| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION` / `UNKNOWN` |
 | アクター | 追跡管理者、荷主、荷受人 |
 
-#### 4. Handling Context（荷役コンテキスト）
+#### 5. Handling Context（荷役コンテキスト）
 
 港湾・税関での荷役作業を記録します。`CargoSnapshot` ACL で Booking Context への依存を吸収します。
 
@@ -228,7 +264,7 @@ end note
 | 主要概念 | `HandlingType`, `CustomsDeclaration`, `CargoSnapshot`（ACL） |
 | アクター | 荷役作業員、港湾管理システム、税関 |
 
-#### 5. Billing Context（請求コンテキスト）
+#### 6. Billing Context（請求コンテキスト）
 
 運賃・請求書の管理を担います。`Money` 値オブジェクトで金額を厳密に管理します。
 
@@ -238,9 +274,20 @@ end note
 | 主要概念 | `Money`, `DiscountPolicy`, `PaymentStatus` |
 | アクター | 経理担当者、荷主、決済機関 |
 
-#### 6. Shared Domain（共有ドメイン）
+#### 7. Estimation Context（見積コンテキスト）
 
-`Location`（UN/LOCODE）のみ共有カーネルとして維持します。`VoyageNumber` は各コンテキスト固有型として定義し、共有しません。
+輸送見積の作成とルート候補の管理を担います。独立したコンテキストであり、見積→予約の引き継ぎは将来対応です。現時点では他コンテキストとイベント連携しません。
+
+| 要素 | 内容 |
+| :--- | :--- |
+| 集約ルート | `Estimate` |
+| 主要概念 | `RouteCandidate`, `EstimateId`, `EstimateStatus`（`CREATED` / `EXPIRED`） |
+| パッケージ | `internal/estimation` |
+| アクター | 営業担当者 |
+
+#### 8. Shared Domain（共有ドメイン）
+
+`Location`（UN/LOCODE）を中心とした共有カーネルを維持します。`TransportStatus`（`NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION` / `UNKNOWN`）と `RoutingStatus`（`NOT_ROUTED` / `ROUTED` / `MISROUTED`）も共有ドメインの列挙型です。`MISROUTED` は `TransportStatus` ではなく `RoutingStatus` の値である点に注意してください。`VoyageNumber` は各コンテキスト固有型として定義し、共有しません。
 
 ## ヘキサゴナルアーキテクチャ（ポートとアダプター）
 
@@ -326,6 +373,29 @@ internal/booking/
     ├── web/                 画面 Handler（BookingWebHandler, html/template + htmx）
     └── events/              イベントハンドラ（CargoBookedEventHandler）
 ```
+
+### 横断的ポート（Clock / IDGenerator）
+
+出力ポートにはリポジトリ・外部サービスに加え、時刻取得と一意 ID 生成を application 層のポートとして定義します。
+`time.Now()` や UUID 生成をドメイン・アプリケーション層で直接呼び出すと、テストが実行時刻や乱数に依存して
+再現性を失うため、以下の interface を `application/ports/` に定義し、テストでは固定時刻・決定的 ID の
+スタブ実装に差し替えます。
+
+```go
+// application/ports - 横断的ポート
+type Clock interface {
+	Now() time.Time
+}
+
+type IDGenerator interface {
+	Generate() string // 例: TrackingNumber / EstimateId の払い出しに使用
+}
+```
+
+本番実装（`SystemClock`、UUID ベースの `UUIDGenerator`）は infrastructure 層に配置し、
+`cmd/server/main.go` でコンストラクタインジェクションにより注入します。
+到着期限の判定・見積の期限切れ判定（`EstimateStatus`）・イベントのタイムスタンプ付与など、
+時刻に依存するビジネスルールは必ず `Clock` 経由で現在時刻を取得します。
 
 ## CQRS 設計
 
@@ -526,10 +596,12 @@ func RegisterTrackingEventHandlers(d *events.Dispatcher, svc *TrackingCommandSer
 │   │       ├── rest/          # REST Handler・DTO・Assembler
 │   │       ├── web/           # 画面 Handler（html/template + htmx）
 │   │       └── events/        # イベントハンドラ登録
+│   ├── shipper/               # Shipper 集約・CorporateShipper（同構造）
 │   ├── routing/               # Voyage 集約（同構造）
 │   ├── tracking/              # TrackingActivity 集約（同構造）
 │   ├── handling/              # HandlingActivity 集約・CargoSnapshot ACL（同構造）
 │   ├── billing/               # Invoice 集約・Money（同構造）
+│   ├── estimation/            # Estimate 集約・RouteCandidate（同構造・独立コンテキスト）
 │   └── shared/
 │       ├── domain/            # Location（UN/LOCODE）、共有 ID 型
 │       ├── events/            # in-process イベントディスパッチャ
@@ -545,12 +617,13 @@ func RegisterTrackingEventHandlers(d *events.Dispatcher, svc *TrackingCommandSer
 
 ### アーキテクチャルール検証（go-arch-lint）
 
-以下のルールを CI で強制します。
+以下のルールを CI で強制します。7 つの境界付けられたコンテキスト（`booking` / `shipper` / `routing` / `tracking` / `handling` / `billing` / `estimation`）と共有ドメイン（`shared`）を go-arch-lint のコンポーネントとして定義します。
 
 - `domain` は標準ライブラリと同一コンテキストの `domain` 以外に依存しない
 - `application` は `domain` と `shared/domain`・`shared/events` のみに依存する
 - `infrastructure` から `interfaces` への依存を禁止する
-- コンテキスト間の直接参照を禁止し、イベントまたは ACL 経由に限定する
+- コンテキスト間の直接参照を禁止し、イベントまたは ACL 経由に限定する（例: `booking` → `shipper` は `ShipperExistenceChecker` ACL ポート経由のみ許可）
+- `estimation` は独立コンテキストとし、他コンテキストへの依存を禁止する（`shared` のみ許可）
 
 ## API 設計方針
 

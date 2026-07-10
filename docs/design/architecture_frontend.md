@@ -54,8 +54,8 @@ package "Go Application（chi v5）" as app {
   }
 
   package "html/template テンプレート" as templates {
-    [layout/\n（共通レイアウト）]
-    [booking/\n（予約画面）]
+    [layout.html\n（共通レイアウト）]
+    [bookings/\n（予約画面）]
     [tracking/\n（追跡画面）]
     [handling/\n（荷役画面）]
     [billing/\n（請求画面）]
@@ -81,7 +81,7 @@ package "Go Application（chi v5）" as app {
 
 [BookingHandler] --> [Query Service\n（画面表示データ）]
 [BookingHandler] --> [Command Service\n（フォーム処理）]
-[BookingHandler] --> [booking/\n（予約画面）]
+[BookingHandler] --> [bookings/\n（予約画面）]
 [TrackingHandler] --> [tracking/\n（追跡画面）]
 [HandlingHandler] --> [handling/\n（荷役画面）]
 [BillingHandler] --> [billing/\n（請求画面）]
@@ -105,49 +105,42 @@ title html/template テンプレート構成
 
 package "templates/" as templates {
 
-  package "layout/" as layout {
-    [base.html\n（共通レイアウト・block 定義）]
-    [nav.html\n（ナビゲーション）]
-    [footer.html\n（フッター）]
-  }
+  [layout.html\n（define "layout" / "navbar" / "footer"）]
 
   package "fragments/" as fragments {
-    [alerts.html\n（フラッシュメッセージ）]
-    [pagination.html\n（ページネーション）]
-    [status-badge.html\n（ステータスバッジ）]
-    [cargo-summary.html\n（貨物サマリーカード）]
+    [alerts.html\n（define "alerts"）]
+    [pagination.html\n（define "pagination"）]
+    [status-badge.html\n（define "status-badge"）]
+    [cargo-row.html\n（define "cargo-row"・htmx 部分更新用）]
+    [status-timeline.html\n（define "status-timeline"・htmx 部分更新用）]
   }
 
-  package "booking/" as booking {
-    [index.html\n（一覧）]
+  package "bookings/" as bookings {
+    [list.html\n（一覧）]
     [new.html\n（登録フォーム）]
-    [show.html\n（詳細）]
+    [detail.html\n（詳細）]
     [route.html\n（経路割り当て）]
-    [_cargo-row.html\n（htmx 部分更新用）]
   }
 
   package "tracking/" as tracking {
-    [index.html\n（追跡入力）]
-    [show.html\n（追跡詳細）]
-    [_status-timeline.html\n（htmx 部分更新用）]
+    [input.html\n（追跡入力）]
+    [detail.html\n（追跡詳細）]
   }
 
   package "handling/" as handling {
-    [index.html\n（一覧）]
+    [list.html\n（一覧）]
     [new.html\n（登録フォーム）]
   }
 
   package "billing/" as billing {
-    [invoices/index.html\n（請求書一覧）]
-    [invoices/show.html\n（請求書詳細）]
+    [list.html\n（請求書一覧）]
+    [detail.html\n（請求書詳細）]
   }
 }
 
-[base.html\n（共通レイアウト・block 定義）] --> [nav.html\n（ナビゲーション）]
-[base.html\n（共通レイアウト・block 定義）] --> [footer.html\n（フッター）]
-[index.html\n（一覧）] --> [base.html\n（共通レイアウト・block 定義）] : define "content"
-[index.html\n（一覧）] --> [pagination.html\n（ページネーション）] : template 呼び出し
-[show.html\n（詳細）] --> [status-badge.html\n（ステータスバッジ）] : template 呼び出し
+[list.html\n（一覧）] --> [layout.html\n（define "layout" / "navbar" / "footer"）] : define "content"
+[list.html\n（一覧）] --> [pagination.html\n（define "pagination"）] : template 呼び出し
+[detail.html\n（詳細）] --> [status-badge.html\n（define "status-badge"）] : template 呼び出し
 
 @enduml
 ```
@@ -156,9 +149,9 @@ package "templates/" as templates {
 
 | 原則 | 内容 |
 | :--- | :--- |
-| **レイアウト合成** | `layout/base.html` に `{{block "content" .}}` を定義し、各画面テンプレートが `{{define "content"}}` で本文を提供する。ページごとに base + ページテンプレートをセットでパースする |
-| **フラグメント分離** | 再利用可能な UI 部品は `fragments/` に `{{define "..."}}` で切り出し、`{{template "..." .}}` で呼び出す |
-| **htmx 用フラグメント** | 部分更新対象の HTML は `_prefix` 付きテンプレートとして定義し、単独でレンダリング可能にする |
+| **レイアウト合成** | `templates/layout.html` に `{{define "layout"}}` と `{{block "content" .}}` を定義し、各画面テンプレートが `{{define "content"}}` で本文を提供する。ページごとに layout + ページテンプレートをセットでパースする |
+| **フラグメント分離** | 再利用可能な UI 部品は `templates/fragments/` に `{{define "..."}}` で切り出し、`{{template "..." .}}` で呼び出す |
+| **htmx 用フラグメント** | 部分更新対象の HTML は `templates/fragments/` 配下の `{{define "..."}}` ブロック（例: `status-timeline`、`cargo-row`）として定義し、単独でレンダリング可能にする |
 | **フォームオブジェクト** | フォームデータは専用のフォーム構造体（`BookCargoForm`）にデコードし、バリデーションエラーとともにテンプレートへ渡す |
 | **ViewModel の使用** | テンプレートに渡すデータは Query Service からの ViewModel（DTO）を使用する。ドメインモデルを直接渡さない |
 | **embed による同梱** | テンプレートと静的資産は `embed.FS` でバイナリに同梱し、単一バイナリデプロイを実現する |
@@ -166,7 +159,8 @@ package "templates/" as templates {
 レイアウト合成の例を以下に示す。
 
 ```html
-<!-- layout/base.html -->
+<!-- templates/layout.html -->
+{{define "layout"}}
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -175,7 +169,7 @@ package "templates/" as templates {
   <script src="/static/js/htmx.min.js" defer></script>
 </head>
 <body>
-  {{template "nav" .}}
+  {{template "navbar" .}}
   <main class="container">
     {{template "alerts" .}}
     {{block "content" .}}{{end}}
@@ -183,10 +177,11 @@ package "templates/" as templates {
   {{template "footer" .}}
 </body>
 </html>
+{{end}}
 ```
 
 ```html
-<!-- booking/index.html -->
+<!-- templates/bookings/list.html -->
 {{define "title"}}貨物予約一覧 - Cargo Tracker{{end}}
 {{define "content"}}
 <h1>貨物予約一覧</h1>
@@ -216,7 +211,7 @@ participant "TrackingQueryService" as service
 browser -> ctrl : GET /tracking/{id}/status\n(hx-get, hx-trigger="every 30s")
 ctrl -> service : GetTransportStatus(trackingNumber)
 service --> ctrl : TransportStatusView
-ctrl --> browser : HTML Fragment\n(_status-timeline.html)
+ctrl --> browser : HTML Fragment\n(fragments/status-timeline.html の\n"status-timeline" ブロック)
 browser -> browser : #status-container を更新
 
 == フォームの非同期バリデーション ==
@@ -268,10 +263,10 @@ func (h *TrackingHandler) GetTrackingStatus(w http.ResponseWriter, r *http.Reque
 
     // htmx リクエストの場合はフラグメントのみ返す
     if r.Header.Get("HX-Request") == "true" {
-        h.renderer.RenderFragment(w, "tracking/_status-timeline.html", "statusTimeline", data)
+        h.renderer.RenderFragment(w, "fragments/status-timeline.html", "status-timeline", data)
         return
     }
-    h.renderer.RenderPage(w, r, "tracking/show.html", data)
+    h.renderer.RenderPage(w, r, "tracking/detail.html", data)
 }
 ```
 
@@ -318,6 +313,9 @@ end note
 
 Thymeleaf の `sec:authorize` に相当する権限別表示制御は、
 セッションから取得したユーザーロールをテンプレートデータに渡し、テンプレート内で分岐することで実現する。
+ロールは UI 設計と同一の `ROLE_*` 体系（ROLE_SALES / ROLE_HANDLER / ROLE_TRACKER / ROLE_ROUTE_DESIGNER / ROLE_BILLING / ROLE_ADMIN / ROLE_SHIPPER / ROLE_CONSIGNEE）を使用する。
+なお、認可そのものはサーバー側の RBAC ミドルウェア（RequireRole）がルート単位で担保する。
+テンプレート内のロール分岐はあくまで表示制御（メニュー・ボタンの出し分け）のみであり、セキュリティ境界としては扱わない。
 
 ```go
 // ミドルウェアでセッションからユーザー情報を取得し、テンプレート共通データに設定する
@@ -327,10 +325,10 @@ data["CurrentUser"] = currentUser
 
 ```html
 <!-- ロールに応じたメニュー表示（sec:authorize 代替） -->
-{{if .CurrentUser.HasRole "SALES"}}
+{{if .CurrentUser.HasRole "ROLE_SALES"}}
   <a class="nav-link" href="/bookings/new">新規予約</a>
 {{end}}
-{{if .CurrentUser.HasRole "ACCOUNTING"}}
+{{if .CurrentUser.HasRole "ROLE_BILLING"}}
   <a class="nav-link" href="/billing/invoices">請求書</a>
 {{end}}
 ```
@@ -428,32 +426,28 @@ apps/backend/
 │
 └── web/                                # embed.FS で同梱
     ├── templates/
-    │   ├── layout/
-    │   │   ├── base.html               # 共通レイアウト（block 定義）
-    │   │   └── nav.html                # ナビゲーション
+    │   ├── layout.html                 # 共通レイアウト（define "layout" / "navbar" / "footer"）
+    │   ├── login.html                  # ログイン画面
     │   ├── fragments/
-    │   │   ├── alerts.html             # フラッシュメッセージ
-    │   │   ├── pagination.html         # ページネーション
-    │   │   └── status-badge.html       # ステータスバッジ
-    │   ├── booking/
-    │   │   ├── index.html
+    │   │   ├── alerts.html             # フラッシュメッセージ（define "alerts"）
+    │   │   ├── pagination.html         # ページネーション（define "pagination"）
+    │   │   ├── status-badge.html       # ステータスバッジ（define "status-badge"）
+    │   │   ├── cargo-row.html          # htmx 部分更新用（define "cargo-row"）
+    │   │   └── status-timeline.html    # htmx 部分更新用（define "status-timeline"）
+    │   ├── bookings/
+    │   │   ├── list.html
     │   │   ├── new.html
-    │   │   ├── show.html
-    │   │   ├── route.html
-    │   │   └── _cargo-row.html         # htmx 部分更新用フラグメント
+    │   │   ├── detail.html
+    │   │   └── route.html
     │   ├── tracking/
-    │   │   ├── index.html
-    │   │   ├── show.html
-    │   │   └── _status-timeline.html   # htmx 部分更新用フラグメント
+    │   │   ├── input.html
+    │   │   └── detail.html
     │   ├── handling/
-    │   │   ├── index.html
+    │   │   ├── list.html
     │   │   └── new.html
-    │   ├── billing/
-    │   │   └── invoices/
-    │   │       ├── index.html
-    │   │       └── show.html
-    │   └── auth/
-    │       └── login.html
+    │   └── billing/
+    │       ├── list.html
+    │       └── detail.html
     └── static/
         ├── css/
         │   ├── bootstrap.min.css       # Bootstrap 5.3（ローカル配置）

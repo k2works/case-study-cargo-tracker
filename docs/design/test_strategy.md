@@ -158,6 +158,76 @@ end note
 - DTO / 単純な struct — データ保持のみでロジックがない
 - `main.go` の DI 組み立て（wiring）— ユニットテストの対象に**しない**
 
+#### 時刻・一意 ID の非決定性対策（テスト容易性の設計方針）
+
+現在時刻（`time.Now()`）や一意 ID（UUID 等）をドメイン/アプリケーション層で直接生成すると、テストが非決定的になり境界値の検証ができない。以下の方針でテスト容易性を設計段階で確保する。
+
+- **`Clock` ポートを注入する**: ドメイン/アプリケーション層は `time.Now()` を直接呼ばず、`Clock` ポート（`Now() time.Time`）を注入して現在時刻を取得する。テストでは固定時刻を返すスタブに差し替える
+- **`IDGenerator` ポートを注入する**: TrackingID・InvoiceId 等の一意 ID の採番は `IDGenerator` ポートに委譲する。テストでは決定的 ID（`"CARGO-001"` 等）を返すスタブに差し替える
+
+```go
+// internal/shared/port/clock.go
+type Clock interface {
+	Now() time.Time
+}
+
+// internal/shared/port/id_generator.go
+type IDGenerator interface {
+	Generate() string
+}
+
+// テスト用スタブ
+type FixedClock struct{ T time.Time }
+
+func (c FixedClock) Now() time.Time { return c.T }
+```
+
+固定時刻スタブにより、48 時間のエスカレーション境界（47:59 / 48:00 / 48:01）をテーブル駆動テストで決定的に検証できる。
+
+```go
+func TestEscalationPolicy_Evaluate_48HourBoundary(t *testing.T) {
+	// Given: 遅延発生時刻を固定する
+	occurredAt := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name               string
+		now                time.Time
+		requiresEscalation bool
+	}{
+		{
+			name:               "遅延 47 時間 59 分ではエスカレーション不要と判定される",
+			now:                occurredAt.Add(47*time.Hour + 59*time.Minute),
+			requiresEscalation: false,
+		},
+		{
+			name:               "遅延ちょうど 48 時間ではエスカレーション不要と判定される（超過が条件）",
+			now:                occurredAt.Add(48 * time.Hour),
+			requiresEscalation: false,
+		},
+		{
+			name:               "遅延 48 時間 1 分でエスカレーションフラグが立つ",
+			now:                occurredAt.Add(48*time.Hour + 1*time.Minute),
+			requiresEscalation: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Given: 固定時刻 Clock を注入したエスカレーションポリシー
+			clock := FixedClock{T: tt.now}
+			policy := domain.NewEscalationPolicy(clock)
+			event := domain.NewDelayEvent(domain.MustTrackingID("CARGO-001"), occurredAt)
+
+			// When: エスカレーション判定を実行する
+			result := policy.Evaluate(event)
+
+			// Then
+			assert.Equal(t, tt.requiresEscalation, result.RequiresEscalation)
+		})
+	}
+}
+```
+
 #### 実装例: Cargo 集約の BookingStatus 遷移テスト
 
 ```go
@@ -211,8 +281,7 @@ func TestCargo_ConfirmBooking(t *testing.T) {
 // テーブル駆動テスト（@ParameterizedTest 代替）
 func TestCargo_ConfirmBooking_TerminalStates(t *testing.T) {
 	terminalStatuses := []domain.BookingStatus{
-		domain.BookingStatusConfirmed,
-		domain.BookingStatusCompleted,
+		domain.BookingStatusSettled,
 		domain.BookingStatusCancelled,
 	}
 
@@ -419,7 +488,7 @@ func TestTrackingHandler_RendersTrackingPage(t *testing.T) {
 	// Given: 追跡情報を返すモックと html/template を組み込んだハンドラ
 	handler := web.NewTrackingHandler(&TrackingQueryServiceMock{
 		FindByTrackingIDFunc: func(ctx context.Context, id domain.TrackingID) (query.TrackingView, error) {
-			return query.TrackingView{TrackingID: "CARGO-001", TransportStatus: "IN_PORT", CurrentLocation: "東京港"}, nil
+			return query.TrackingView{TrackingID: "CARGO-001", TransportStatus: "UNLOADED", CurrentLocation: "東京港"}, nil
 		},
 	})
 	req := httptest.NewRequest(http.MethodGet, "/tracking/CARGO-001", nil)
@@ -430,7 +499,7 @@ func TestTrackingHandler_RendersTrackingPage(t *testing.T) {
 
 	// Then: テンプレートに追跡情報が描画される
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), "IN_PORT")
+	assert.Contains(t, rec.Body.String(), "UNLOADED")
 	assert.Contains(t, rec.Body.String(), "東京港")
 }
 ```
@@ -573,7 +642,7 @@ test.describe('US13: 追跡情報を照会する', () => {
 
     // Then: 追跡情報が表示される
     await expect(page.locator('[data-testid="transport-status"]'))
-      .toHaveText('IN_PORT', { timeout: 10000 });
+      .toHaveText('UNLOADED', { timeout: 10000 });
     await expect(page.locator('[data-testid="current-location"]'))
       .toContainText('東京港');
   });
@@ -1066,36 +1135,54 @@ stop
 #### Cargo の BookingStatus 状態遷移（8 値）
 
 ```
-PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → CUSTOMS_PENDING
-    → IN_TRANSIT → IN_PORT → COMPLETED
-    ↘ MISROUTED（異常系）
-    ↘ CANCELLED（キャンセル）
+PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED
+    → IN_TRANSIT → DELIVERED → SETTLED
+    ↘ CANCELLED（いずれの状態からも遷移可能）
 ```
 
 テスト観点:
 
 - 各遷移の正常系（許可されている遷移）
 - 各遷移の異常系（許可されていない遷移 → `ErrInvalidBookingStatusTransition`）
-- 終端状態（COMPLETED・CANCELLED）からの遷移拒否
+- いずれの状態からも CANCELLED へ遷移できること
+- 終端状態（SETTLED・CANCELLED）からの遷移拒否
 
-#### HandlingActivity の荷役妥当性検証（MISROUTED 判定）
+なお MISROUTED は BookingStatus の値ではなく、RoutingStatus（NOT_ROUTED / ROUTED / MISROUTED）の値である。MISROUTED 判定は次項の HandlingActivity 集約の荷役妥当性検証でテストする。
+
+#### HandlingActivity の荷役妥当性検証（RoutingStatus の MISROUTED 判定）
+
+対象集約は Handling Context の `HandlingActivity` 集約（妥当性検証 `isValidFor`）と、その結果を反映する Booking Context の `Cargo` 集約（`Delivery.routingStatus`）である。荷役記録時刻は `Clock` ポート経由の固定時刻を使用する。
 
 ```go
-func TestCargo_ApplyHandlingActivity_Misrouted(t *testing.T) {
-	// Given: 東京→ハンブルク のルートを持つ貨物
-	cargo := domain.FixtureWithRoute(domain.RouteFixtureTokyoToHamburg())
+func TestHandlingActivity_IsValidFor_Misrouted(t *testing.T) {
+	// Given: 東京→ハンブルク の旅程を持つ貨物スナップショット（ACL 経由取得）と固定時刻 Clock
+	clock := FixedClock{T: time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC)}
+	snapshot := domain.CargoSnapshotFixtureTokyoToHamburg()
 
-	// When: ルートに含まれないシンガポールで荷役を記録する
+	// When: 旅程の積込港に含まれないシンガポールで LOAD 作業を登録する
 	activity := domain.NewHandlingActivity(
-		cargo.TrackingID(),
-		domain.MustUnLocode("SGSIN"), // ルート外の港
+		domain.MustCargoBookingId("CARGO-001"),
+		domain.MustUnLocode("SGSIN"), // 旅程外の港
 		domain.HandlingTypeLoad,
-		time.Now(),
+		domain.MustVoyageNumber("V0100"), // LOAD は VoyageNumber 必須
+		clock.Now(),
 	)
+	result := activity.IsValidFor(snapshot)
 
-	// Then: 貨物が MISROUTED 状態に遷移する
-	cargo.ApplyHandlingActivity(activity)
-	assert.Equal(t, domain.BookingStatusMisrouted, cargo.BookingStatus())
+	// Then: 荷役妥当性検証が MISROUTED と判定する
+	assert.Equal(t, domain.RoutingStatusMisrouted, result.RoutingStatus())
+}
+
+func TestCargo_ReflectMisrouted_RoutingStatus(t *testing.T) {
+	// Given: ルート割り当て済み（ROUTED）の貨物
+	cargo := domain.FixtureWithRouteAssigned()
+	require.Equal(t, domain.RoutingStatusRouted, cargo.Delivery().RoutingStatus())
+
+	// When: Handling Context の MISROUTED 確定を Booking Context に反映する
+	cargo.MarkMisrouted()
+
+	// Then: Cargo の RoutingStatus が MISROUTED になる（BookingStatus は変化しない）
+	assert.Equal(t, domain.RoutingStatusMisrouted, cargo.Delivery().RoutingStatus())
 }
 ```
 
