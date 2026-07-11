@@ -1,0 +1,6 @@
+npx lint-staged
+
+# Go アプリが存在し .go ファイルがステージされている場合のみ golangci-lint を実行
+if [ -d apps/cargo-tracker ] && git diff --cached --name-only | grep -q '\.go$'; then
+  (cd apps/cargo-tracker && golangci-lint run ./...)
+fi
