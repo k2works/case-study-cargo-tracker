@@ -11,7 +11,7 @@ tags: design,data-model
 ## 概要
 
 本ドキュメントは、国際貨物輸送管理システムの永続化層データモデルを定義する。
-ドメインモデル分析で識別した 7 つの境界付けられたコンテキスト（Booking / Routing / Tracking / Handling / Billing / Estimation / Shared Domain）に対応する 18 テーブルを設計する。
+ドメインモデル分析で識別した 7 つの境界付けられたコンテキスト（Booking / Shipper / Routing / Tracking / Handling / Billing / Estimation）と共有ドメイン（Shared Domain）に対応する 18 テーブルを設計する。
 `shipper`（荷主）テーブルと、Spring Security 用の `users` / `user_roles` テーブルを含む。
 
 ### 設計方針
@@ -654,7 +654,7 @@ users ||--o{ user_roles : "ロールを持つ"
 | `email` | `VARCHAR(200)` | `NOT NULL` | メールアドレス |
 | `phone` | `VARCHAR(50)` | | 電話番号 |
 | `contract_number` | `VARCHAR(50)` | | 契約番号（法人のみ。NULLable） |
-| `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.1500、最大 15%） |
+| `discount_rate` | `NUMERIC(5,4)` | `DEFAULT 0.0000` | 割引率（0.0000〜0.3000、最大 30%） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 
@@ -669,7 +669,7 @@ CREATE TABLE shipper (
     email           VARCHAR(200) NOT NULL,
     phone           VARCHAR(50),
     contract_number VARCHAR(50),                   -- 法人のみ（NULLable）
-    discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.1500 (最大 15%)
+    discount_rate   NUMERIC(5,4) DEFAULT 0.0000,   -- 0.0000〜0.3000 (最大 30%)
     created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -931,14 +931,14 @@ CREATE TABLE users (
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `user_id` | `BIGINT` | `PK, FK → users.id, NOT NULL` | 親ユーザー ID |
-| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`ROLE_ADMIN` / `ROLE_OPERATOR` / `ROLE_SHIPPER` 等） |
+| `role` | `VARCHAR(50)` | `PK, NOT NULL` | ロール名（`ROLE_ADMIN` / `ROLE_SALES` / `ROLE_SHIPPER` 等。正典は非機能要件の RBAC ロール定義） |
 
 #### DDL
 
 ```sql
 CREATE TABLE user_roles (
     user_id  BIGINT      NOT NULL REFERENCES users(id),
-    role     VARCHAR(50) NOT NULL,  -- ROLE_ADMIN / ROLE_OPERATOR / ROLE_SHIPPER 等
+    role     VARCHAR(50) NOT NULL,  -- ROLE_ADMIN / ROLE_SALES / ROLE_SHIPPER 等
     PRIMARY KEY (user_id, role)
 );
 ```

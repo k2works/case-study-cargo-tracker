@@ -199,7 +199,7 @@ management:
 
 **認証方式**: Spring Security フォームベース認証（セッション管理）
 
-**RBAC ロール定義**:
+**RBAC ロール定義**（本表を全設計ドキュメントのロール名の正典とする）:
 
 | ロール | 説明 | 主要画面 |
 |---|---|---|
@@ -209,6 +209,7 @@ management:
 | ROLE_HANDLER | 荷役作業員 | 荷役登録のみ |
 | ROLE_TRACKER | 追跡管理者 | 追跡管理・例外処理 |
 | ROLE_BILLING | 経理担当者 | 請求書管理 |
+| ROLE_CONSIGNEE | 荷受人 | 追跡照会（限定情報の閲覧） |
 | ROLE_SHIPPER | 荷主（将来） | 自社予約・追跡（Phase 2） |
 
 **パスワードポリシー**:
@@ -295,7 +296,7 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-{random}'
 |---|---|
 | A01: 認証の不備 | Spring Security フォーム認証・BCrypt・アカウントロック |
 | A02: 暗号化の失敗 | TLS 強制・KMS 暗号化・Secrets Manager |
-| A03: インジェクション | JPA（PreparedStatement）使用・入力値バリデーション（Bean Validation） |
+| A03: インジェクション | MyBatis のパラメータバインディング（`#{}`）による SQL インジェクション対策・入力値バリデーション（Bean Validation） |
 | A04: 安全でない設計 | セキュリティレビューをリリース前チェックリストに含める |
 | A05: セキュリティ設定ミス | Spring Security デフォルト保護設定を有効化 |
 | A06: 脆弱なコンポーネント | GitHub Dependabot による自動脆弱性スキャン |

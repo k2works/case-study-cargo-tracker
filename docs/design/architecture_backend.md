@@ -214,7 +214,7 @@ end note
 | :--- | :--- |
 | 集約ルート | `TrackingActivity` |
 | 主要概念 | `TrackingNumber`, `TransportStatus`, `TrackingExceptionEvent` |
-| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `IN_TRANSIT` / `UNLOADED` / `CUSTOMS_INSPECTION` / `AWAITING_CLAIM` / `DELIVERED` / `MISROUTED` |
+| `TransportStatus` | `NOT_RECEIVED` / `RECEIVED` / `LOADED` / `ONBOARD_CARRIER` / `UNLOADED` / `AWAITING_CLAIM` / `CLAIMED` / `EXCEPTION` / `UNKNOWN` |
 | アクター | 追跡管理者、荷主、荷受人 |
 
 #### 4. Handling Context（荷役コンテキスト）
@@ -558,10 +558,14 @@ ctrl --> User : レスポンス
 | :--- | :--- | :--- |
 | `ROLE_SHIPPER` | 予約照会・追跡照会 | 荷主 |
 | `ROLE_SALES` | 予約登録・経路割り当て | 営業担当者 |
+| `ROLE_ROUTER` | 経路割り当て・航路管理 | 経路設計者 |
 | `ROLE_HANDLER` | 荷役作業登録 | 荷役作業員 |
 | `ROLE_TRACKER` | 追跡情報管理・例外対応 | 追跡管理者 |
-| `ROLE_ACCOUNTANT` | 請求書管理 | 経理担当者 |
+| `ROLE_BILLING` | 請求書管理 | 経理担当者 |
+| `ROLE_CONSIGNEE` | 追跡照会（限定情報） | 荷受人 |
 | `ROLE_ADMIN` | 全機能 | システム管理者 |
+
+> ロール名の正典は [非機能要件](non_functional.md) の RBAC ロール定義に従う。
 
 ## テスト戦略
 

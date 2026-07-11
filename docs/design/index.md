@@ -8,7 +8,7 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| [バックエンドアーキテクチャ](architecture_backend.md) | DDD + ヘキサゴナル + CQRS、Spring Boot 4、6 コンテキスト | 作成済 |
+| [バックエンドアーキテクチャ](architecture_backend.md) | DDD + ヘキサゴナル + CQRS、Spring Boot 4、7 コンテキスト + 共有カーネル | 作成済 |
 | [フロントエンドアーキテクチャ](architecture_frontend.md) | Thymeleaf SSR + htmx、Bootstrap 5、画面遷移設計 | 作成済 |
 | [インフラストラクチャ](architecture_infrastructure.md) | AWS ECS/RDS、Docker、GitHub Actions CI/CD | 作成済 |
 
@@ -16,8 +16,8 @@
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| [データモデル設計](data-model.md) | 概念・論理データモデル、テーブル定義（16 テーブル）、ER 図 | 作成済 |
-| [ドメインモデル設計](domain-model.md) | 6 コンテキスト、集約・エンティティ・値オブジェクト・ドメインイベント | 作成済 |
+| [データモデル設計](data-model.md) | 概念・論理データモデル、テーブル定義（18 テーブル）、ER 図 | 作成済 |
+| [ドメインモデル設計](domain-model.md) | 7 コンテキスト + 共有カーネル、集約・エンティティ・値オブジェクト・ドメインイベント | 作成済 |
 
 ### UI/UX設計
 

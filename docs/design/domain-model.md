@@ -10,7 +10,7 @@ tags: design, ddd, domain-model
 
 ## 概要
 
-本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。システムは以下の 8 つの境界付けられたコンテキスト（Bounded Context）で構成される。
+本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。システムは以下の 7 つの境界付けられたコンテキスト（Bounded Context）と共有ドメイン（共有カーネル）で構成される。
 
 | コンテキスト | 日本語名 | 主な責務 |
 |---|---|---|
@@ -18,7 +18,7 @@ tags: design, ddd, domain-model
 | Shipper Context | 荷主コンテキスト | 荷主の登録・管理・法人割引 |
 | Routing Context | 経路コンテキスト | 航海スケジュール・経路情報の管理 |
 | Tracking Context | 追跡コンテキスト | 貨物追跡・例外イベント管理 |
-| Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理 |
+| Handling Context | 荷役コンテキスト | 荷役作業登録・通関申告管理（実装では Tracking Context に統合。詳細は ADR 参照） |
 | Billing Context | 精算コンテキスト | 請求書発行・割引・支払い管理 |
 | Estimation Context | 見積コンテキスト | 輸送見積の作成・ルート候補の管理 |
 | Shared Domain | 共有ドメイン | 共有カーネル（Location・ShipperId・TransportStatus） |
@@ -49,10 +49,10 @@ quadrantChart
 | 英語（コード名） | 日本語（業務用語） | 使用コンテキスト | 説明 |
 |---|---|---|---|
 | Cargo | 貨物 | Booking Context | 予約の中心的エンティティ。荷主から荷受人へ輸送される物品 |
-| Shipper | 荷主 | Shipper Context | 貨物を発送���る主体。���人・法人の 2 種別 |
+| Shipper | 荷主 | Shipper Context | 貨物を発送する主体。個人・法人の 2 種別 |
 | CorporateShipper | 法人荷主 | Shipper Context | Shipper のサブタイプ。契約番号と割引率を持つ |
-| Address | 住所 | Shipper Context | 荷主���住所情報（最大 500 文字） |
-| Dimensions | ���法 | Booking Context | 貨物の長さ・幅���高さ（オプション） |
+| Address | 住所 | Shipper Context | 荷主の住所情報（最大 500 文字） |
+| Dimensions | 寸法 | Booking Context | 貨物の長さ・幅・高さ（オプション） |
 | Quantity | 個数 | Booking Context | 貨物の個数（オプション、1 以上） |
 | Description | 品名 | Booking Context | 貨物の品名（オプション、最大 500 文字） |
 | HazardousDeclaration | 危険物申告 | Booking Context | 危険物クラス・UN 番号・正式輸送品名 |
