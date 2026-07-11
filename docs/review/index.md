@@ -16,3 +16,4 @@
 | [IT3 UI/UX レビュー](./IT3_uiux_review_20260407.md) | IT3 Estimation コンテキスト Thymeleaf テンプレート（見積一覧・作成・詳細）、booking/new.html pre-fill 対応 | 2026-04-07 | 高 5 件 / 中 7 件 / 低 3 件 |
 | [IT5 実装成果物レビュー](./IT5_review_20260409.md) | IT5 US09・US10・US11 経路割り当て機能（Cargo 集約・CargoItinerary/Leg 値オブジェクト・BookingThymeleafController・route.html・E2E テスト） | 2026-04-09 | 高 9 件 / 中 7 件 / 低 4 件 |
 | [IT5 UI/UX レビュー](./IT5_uiux_review_20260409.md) | IT5 US09・US10・US11 経路割り当て画面（route.html）・予約詳細画面（show.html）・ナビゲーション（navbar.html） | 2026-04-09 | 高 7 件 / 中 7 件 / 低 3 件 |
+| [設計ドキュメントレビュー](./design_docs_review_20260711.md) | `docs/design/` 全 11 ドキュメント（アーキテクチャ・データ/ドメインモデル・UI 設計・テスト戦略・非機能・運用・技術スタック） | 2026-07-11 | 高 14 件 / 中 11 件 / 低 7 件 |
