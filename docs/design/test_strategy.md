@@ -55,7 +55,7 @@ package "統合テスト対象" {
   }
   package "Infrastructure Layer（出力側アダプター）" {
     [CargoRepositoryImpl]
-    [ExternalRoutingAdapter]
+    [BC 間 ACL アダプター（TrackingAdapter 等）]
   }
 }
 
@@ -83,8 +83,10 @@ end note
 | アプリケーション層（ユースケースサービス） | ユニットテスト（ポートをモック） | ポートへの委譲とオーケストレーションを検証 |
 | 入力側アダプター（Controller） | 統合テスト（MockMvc） | HTTP マッピングとバリデーションを検証 |
 | 出力側アダプター（Repository） | 統合テスト（Testcontainers） | SQL クエリの正確性を実 DB で検証 |
-| 外部 ACL ポート（5 件） | 統合テスト（WireMock） | 外部システムとの契約を検証 |
+| BC 間 ACL ポート（TrackingPort / ShipperDiscountPort / BookingSettlementPort） | ユニットテスト（ポートをモック） | 呼び出し側は Mockito でモックし委譲を検証。ポート実装（Adapter）は連携先 BC のサービスへの委譲のみのため、必要に応じて委譲先をモックしたユニットテストで検証 |
 | ユーザーシナリオ全体 | E2E テスト（Playwright） | クリティカルパスの品質保証 |
+
+> **注記（外部システム連携の現状）**: 本システムは単一モノリスであり、ルーティング・通関・決済・港湾・通知といった外部システムとの HTTP 連携は実装していない。これらは各 Bounded Context 内のドメインロジック・アプリケーションサービスとして内部シミュレーション実装される。そのため「外部 HTTP サービスの契約を WireMock で検証する」テストは現時点で対象外である。実在する境界間連携は Bounded Context 間の ACL（Anti-Corruption Layer）ポートのみであり、これらは連携先 BC のアプリケーションサービスへ委譲する内部実装のため、Mockito によるモックで検証する。将来、外部 HTTP 連携を実際に導入した場合は [セクション 4](#4-bounded-context-間-acl-ポートのテスト) の将来方針に従い WireMock を採用する。
 
 ---
 
@@ -100,7 +102,7 @@ end note
      /----------------------\
     /    統合テスト (25%)     \
    /  Testcontainers + MockMvc \
-  /  + WireMock + ArchUnit     \
+  /       + ArchUnit           \
  /----------------------------\
 /       ユニットテスト (70%)    \
 /   JUnit 5 + Mockito + AssertJ \
@@ -199,7 +201,7 @@ class CargoBookingStatusTest {
 
     @ParameterizedTest
     @EnumSource(value = BookingStatus.class,
-                names = {"CONFIRMED", "COMPLETED", "CANCELLED"},
+                names = {"SETTLED", "CANCELLED"},
                 mode = EnumSource.Mode.INCLUDE)
     void 終端状態からの遷移は許可されない(BookingStatus terminalStatus) {
         // Given: 終端ステータスの貨物
@@ -212,19 +214,11 @@ class CargoBookingStatusTest {
 }
 ```
 
-#### 実装例: H2 PostgreSQL 互換モード設定
+#### データベースを伴うテストの方針（H2 と Testcontainers の使い分け）
 
-統合テストではなく、ドメイン層に依存した軽量テストで H2 を使用する場合の設定:
-
-```yaml
-# src/test/resources/application-test.yml
-spring:
-  datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
-    driver-class-name: org.h2.Driver
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-```
+- **DB との結合が必要なテストは、原則 Testcontainers（実 PostgreSQL 16）で行う**（[セクション 3.2](#32-統合テストintegration-test) を参照）。本番と同一の PostgreSQL を用いることで、方言差（型・NULL ソート・関数）に起因する「テストは通るが本番で壊れる」乖離を防ぐ。統合テストの基底クラスは `PostgreSQLIntegrationTestBase`（Testcontainers シングルトンコンテナ）である。
+- **ドメイン層・アプリケーション層のユニットテストは DB に依存しない**。集約・値オブジェクト・ユースケースサービスは POJO とモックのみで検証するため、そもそも DB を起動しない。
+- **H2 はインメモリ DB としては採用しない**。`application-test.yml` では H2 コンソールを無効化しているのみで、テスト用データソースは Testcontainers が動的に上書きする（`@DynamicPropertySource`）。H2 を PostgreSQL 互換モードで使う方針は、方言差リスクを避けるため取らない。
 
 ---
 
@@ -234,7 +228,8 @@ spring:
 
 - **Repository（MyBatis マッパー）**: SQL クエリの正確性、トランザクション、楽観的ロック
 - **Controller（MockMvc）**: HTTP リクエスト/レスポンスのマッピング、バリデーション、エラーハンドリング
-- **外部 ACL ポート（WireMock）**: 外部システムとの契約遵守、タイムアウト・フォールバック
+
+> BC 間 ACL ポート（TrackingPort 等）は外部 HTTP 連携ではなく連携先 BC のアプリケーションサービスへの委譲のため、統合テストではなくユニットテスト（Mockito モック）で検証する。詳細は [セクション 4](#4-bounded-context-間-acl-ポートのテスト) を参照。
 
 #### カバレッジ目標
 
@@ -246,9 +241,8 @@ spring:
 #### 使用ツール
 
 - **JUnit 5**: テストフレームワーク
-- **Testcontainers 2 + `@ServiceConnection`**: 実 PostgreSQL 16 コンテナを自動起動
+- **Testcontainers 1.20（`junit-jupiter` + `postgresql`）**: 実 PostgreSQL 16 コンテナを自動起動。基底クラス `PostgreSQLIntegrationTestBase` がシングルトンコンテナを起動し `@DynamicPropertySource` でデータソースを上書きする
 - **Spring MockMvc**: HTTP 層の結合テスト（サーブレットコンテキストは起動）
-- **WireMock 3**: 外部 ACL ポートのスタブ（5 件すべてを対象）
 
 #### 実行タイミング
 
@@ -257,15 +251,11 @@ spring:
 
 #### 実装例: CargoRepository の保存・検索テスト（Testcontainers）
 
+> 実プロジェクトではコンテナ起動を共通化するため、`support.PostgreSQLIntegrationTestBase`（シングルトンコンテナ + `@DynamicPropertySource`）を継承する。以下はコンテナ設定を明示した最小例である。
+
 ```java
 @SpringBootTest
-@Testcontainers
-class CargoRepositoryIntegrationTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres =
-            new PostgreSQLContainer<>("postgres:16-alpine");
+class CargoRepositoryIntegrationTest extends PostgreSQLIntegrationTestBase {
 
     @Autowired
     private CargoRepository cargoRepository;
@@ -310,7 +300,8 @@ class BookingControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    // Spring Boot 3.4+ では @MockBean は deprecated。@MockitoBean（org.springframework.test.context.bean.override.mockito）を使用する
+    @MockitoBean
     private BookingApplicationService bookingApplicationService;
 
     @Test
@@ -356,9 +347,9 @@ class BookingControllerTest {
 }
 ```
 
-#### WireMock 契約テストの概要
+#### BC 間 ACL ポートのテスト概要
 
-各 ACL ポートに対して WireMock スタブを定義する。詳細は [セクション 4](#4-wiremock-契約テストシナリオacl-ポート別) を参照。
+外部 HTTP サービスへの ACL は現時点で存在しない。実在する境界間連携は Bounded Context 間の ACL ポートのみで、Mockito モックによるユニットテストで検証する。詳細は [セクション 4](#4-bounded-context-間-acl-ポートのテスト) を参照。
 
 ---
 
@@ -503,7 +494,7 @@ test.describe('US13: 追跡情報を照会する', () => {
 
     // Then: 追跡情報が表示される
     await expect(page.locator('[data-testid="transport-status"]'))
-      .toHaveText('IN_PORT', { timeout: 10000 });
+      .toHaveText('ONBOARD_CARRIER', { timeout: 10000 });
     await expect(page.locator('[data-testid="current-location"]'))
       .toContainText('東京港');
   });
@@ -554,291 +545,67 @@ async function waitForHtmxUpdate(page: Page, selector: string, timeout = 35000) 
 
 ---
 
-## 4. WireMock 契約テストシナリオ（ACL ポート別）
+## 4. Bounded Context 間 ACL ポートのテスト
 
-各外部 ACL ポートに対して正常・異常シナリオを定義し、WireMock でスタブ化する。
+### 4.1 現状: 外部 HTTP 連携は未実装
 
-### 4.1 シナリオ一覧
+本システムは単一モノリスであり、ルーティング・通関・決済・港湾・通知といった外部システムとの HTTP 連携は実装していない。これらの業務は各 Bounded Context 内のドメインロジックとアプリケーションサービスとして内部シミュレーション実装される。したがって「外部 HTTP サービスの契約を WireMock でスタブ化して検証する」テストは現時点で対象外である。
 
-| ポート | 正常シナリオ | 異常シナリオ |
-|---|---|---|
-| ExternalRoutingServicePort | ルート検索 → 3 候補返却 | 接続タイムアウト → 過去実績データにフォールバック |
-| CustomsClearancePort | 通関申請 → CLEARED | HELD ステータス → 例外イベント発行 |
-| PaymentGatewayPort | 支払い処理 → CONFIRMED | 決済失敗 → OVERDUE 状態遷移 |
-| PortManagementPort | 港湾入港通知 → 受理 | 港湾満杯 → 代替港提案 |
-| NotificationPort | メール通知送信 → 202 Accepted | 通知失敗 → ログ記録（非クリティカル） |
+実在する境界間連携は、Bounded Context 間の ACL（Anti-Corruption Layer）ポートのみである。
 
-### 4.2 WireMock 実装例
+| ACL ポート | 呼び出し元 BC | 委譲先 BC | 役割 |
+|---|---|---|---|
+| `TrackingPort` | Booking | Tracking | 予約確定時に追跡番号を発行する |
+| `ShipperDiscountPort` | Billing | Shipper | 荷主区分に応じた割引ポリシーを取得する |
+| `BookingSettlementPort` | Billing | Booking | 精算完了時に予約を SETTLED へ遷移させる |
 
-#### ExternalRoutingServicePort: ルート検索（正常・タイムアウト）
+これらのポート実装（`TrackingAdapter` / `ShipperDiscountAdapter` / `BookingSettlementAdapter`）は、いずれも連携先 BC のアプリケーションサービスまたはクエリサービスへ委譲するだけの薄い内部実装であり、HTTP 通信・タイムアウト・リトライは介在しない。
+
+### 4.2 ACL ポートのテスト方針
+
+外部 HTTP 連携が無いため、契約テスト（WireMock）は不要である。ACL ポートは以下の 2 観点でユニットテストする。
+
+- **呼び出し元のテスト**: ポートインターフェースを Mockito でモックし、アプリケーションサービスがポートを正しく呼び出す（委譲する）ことを検証する。実例は `InvoiceCommandServiceTest`（`ShipperDiscountPort` / `BookingSettlementPort` を `@Mock`）を参照。
 
 ```java
-@SpringBootTest
-@AutoConfigureWireMock(port = 0)
-class ExternalRoutingServiceAdapterTest {
+@ExtendWith(MockitoExtension.class)
+class InvoiceCommandServiceTest {
 
-    @Autowired
-    private ExternalRoutingServicePort routingServicePort;
+    @Mock
+    private ShipperDiscountPort shipperDiscountPort;
 
-    @Test
-    void ルート検索で3候補が返却される() {
-        // Given: WireMock スタブ定義（3 候補を返す）
-        stubFor(post(urlEqualTo("/api/routes/search"))
-                .withRequestBody(matchingJsonPath("$.origin", equalTo("JPTYO")))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {
-                                  "routes": [
-                                    {"id": "R001", "legs": [{"voyageNumber": "V001"}], "transitTime": 14},
-                                    {"id": "R002", "legs": [{"voyageNumber": "V002"}], "transitTime": 18},
-                                    {"id": "R003", "legs": [{"voyageNumber": "V003"}], "transitTime": 21}
-                                  ]
-                                }
-                                """)));
+    @Mock
+    private BookingSettlementPort bookingSettlementPort;
 
-        // When: ルート検索を実行する
-        var request = RouteSearchRequest.of(
-                UnLocode.of("JPTYO"),
-                UnLocode.of("DEHAM"),
-                LocalDate.of(2026, 6, 30)
-        );
-        var routes = routingServicePort.searchRoutes(request);
-
-        // Then: 3 候補が返却される
-        assertThat(routes).hasSize(3);
-        assertThat(routes.get(0).getTransitDays()).isEqualTo(14);
-    }
+    @InjectMocks
+    private InvoiceCommandService invoiceCommandService;
 
     @Test
-    void 接続タイムアウト時に過去実績データにフォールバックする() {
-        // Given: タイムアウトを発生させるスタブ
-        stubFor(post(urlEqualTo("/api/routes/search"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withFixedDelay(6000))); // 6 秒遅延（タイムアウト閾値 5 秒を超過）
+    void 精算時に予約が確定される() {
+        // Given: 割引ポリシーを返すようポートをスタブする
+        given(shipperDiscountPort.getDiscountPolicyForShipper(any()))
+                .willReturn(DiscountPolicy.none());
 
-        // When: ルート検索を実行する
-        var request = RouteSearchRequest.of(
-                UnLocode.of("JPTYO"),
-                UnLocode.of("DEHAM"),
-                LocalDate.of(2026, 6, 30)
-        );
-        var routes = routingServicePort.searchRoutes(request);
+        // When: 精算を実行する
+        invoiceCommandService.settle(/* ... */);
 
-        // Then: 過去実績データからフォールバック候補が返却される
-        assertThat(routes).isNotEmpty();
-        assertThat(routes).allSatisfy(route ->
-                assertThat(route.isFallback()).isTrue()
-        );
+        // Then: 予約確定ポートへ委譲される
+        verify(bookingSettlementPort).settleBooking(any());
     }
 }
 ```
 
-#### CustomsClearancePort: 通関申請（CLEARED・HELD）
+- **ポート実装（Adapter）のテスト**: Adapter は委譲のみのため、委譲先 BC のサービスをモックしたユニットテストで「引数の変換と委譲先呼び出し」を検証すれば十分である。委譲先 BC を含めた結合を確認したい場合は、`@SpringBootTest` + Testcontainers による統合テストで実 DB を跨いだ連携を検証する（ただし ArchUnit ルール 4 が示すとおり、BC 間の直接参照は ACL 経由に限定される）。
 
-```java
-@SpringBootTest
-@AutoConfigureWireMock(port = 0)
-class CustomsClearanceAdapterTest {
+### 4.3 将来方針: 外部 HTTP 連携を導入した場合
 
-    @Autowired
-    private CustomsClearancePort customsClearancePort;
+将来、ルーティング・決済・通知などを実際の外部 HTTP サービスとして連携する場合は、次の方針で契約テストを追加する。
 
-    @Test
-    void 通関申請が承認されてCLEAREDステータスを返す() {
-        // Given
-        stubFor(post(urlEqualTo("/api/customs/clearance"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withBody("""
-                                {"status": "CLEARED", "clearanceId": "CUS-001"}
-                                """)));
+- 各外部連携を出力側ポート（例: `ExternalRoutingServicePort`）として定義し、HTTP クライアント実装の Adapter を用意する。
+- Adapter の統合テストで **WireMock**（`spring-cloud-contract-wiremock` の `@AutoConfigureWireMock` 等）を導入し、正常系・タイムアウト・エラーステータス・フォールバックをスタブ化して契約を検証する。
+- ピラミッド §2.1 の統合テスト層に「+ WireMock」を追記し、§1.3 の対応表に外部 ACL ポート行を戻す。
 
-        // When
-        var result = customsClearancePort.submitClearance(
-                ClearanceRequest.of(TrackingId.of("CARGO-001"))
-        );
-
-        // Then
-        assertThat(result.getStatus()).isEqualTo(ClearanceStatus.CLEARED);
-    }
-
-    @Test
-    void 通関保留HELDステータス受信時に例外イベントが発行される() {
-        // Given
-        stubFor(post(urlEqualTo("/api/customs/clearance"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withBody("""
-                                {"status": "HELD", "reason": "書類不備", "holdId": "HOLD-001"}
-                                """)));
-
-        // When
-        var result = customsClearancePort.submitClearance(
-                ClearanceRequest.of(TrackingId.of("CARGO-002"))
-        );
-
-        // Then: HELD ステータスが返却され、例外イベントが発行可能な状態になる
-        assertThat(result.getStatus()).isEqualTo(ClearanceStatus.HELD);
-        assertThat(result.getHoldReason()).isEqualTo("書類不備");
-    }
-}
-```
-
-#### PaymentGatewayPort: 支払い処理（CONFIRMED・失敗）
-
-```java
-@SpringBootTest
-@AutoConfigureWireMock(port = 0)
-class PaymentGatewayAdapterTest {
-
-    @Autowired
-    private PaymentGatewayPort paymentGatewayPort;
-
-    @Test
-    void 支払い処理が成功してCONFIRMEDを返す() {
-        // Given
-        stubFor(post(urlEqualTo("/api/payments"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withBody("""
-                                {"status": "CONFIRMED", "transactionId": "TXN-001"}
-                                """)));
-
-        // When
-        var result = paymentGatewayPort.processPayment(
-                PaymentRequest.of(InvoiceId.of("INV-001"), Money.of(150000, "JPY"))
-        );
-
-        // Then
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.CONFIRMED);
-    }
-
-    @Test
-    void 決済失敗時にOVERDUE状態への遷移情報が返却される() {
-        // Given: 決済失敗レスポンス
-        stubFor(post(urlEqualTo("/api/payments"))
-                .willReturn(aResponse()
-                        .withStatus(402)
-                        .withBody("""
-                                {"status": "FAILED", "errorCode": "INSUFFICIENT_FUNDS"}
-                                """)));
-
-        // When
-        var result = paymentGatewayPort.processPayment(
-                PaymentRequest.of(InvoiceId.of("INV-002"), Money.of(500000, "JPY"))
-        );
-
-        // Then: 失敗情報が返却される（OVERDUE 遷移はドメイン層が担当）
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.FAILED);
-        assertThat(result.getErrorCode()).isEqualTo("INSUFFICIENT_FUNDS");
-    }
-}
-```
-
-#### PortManagementPort: 港湾入港通知（受理・代替港提案）
-
-```java
-@SpringBootTest
-@AutoConfigureWireMock(port = 0)
-class PortManagementAdapterTest {
-
-    @Autowired
-    private PortManagementPort portManagementPort;
-
-    @Test
-    void 港湾入港通知が受理される() {
-        // Given
-        stubFor(post(urlEqualTo("/api/ports/arrival"))
-                .willReturn(aResponse()
-                        .withStatus(202)
-                        .withBody("""
-                                {"accepted": true, "berthId": "BERTH-A1"}
-                                """)));
-
-        // When
-        var result = portManagementPort.notifyArrival(
-                ArrivalNotification.of(UnLocode.of("JPTYO"), VoyageNumber.of("V001"))
-        );
-
-        // Then
-        assertThat(result.isAccepted()).isTrue();
-        assertThat(result.getBerthId()).isEqualTo("BERTH-A1");
-    }
-
-    @Test
-    void 港湾満杯時に代替港が提案される() {
-        // Given
-        stubFor(post(urlEqualTo("/api/ports/arrival"))
-                .willReturn(aResponse()
-                        .withStatus(409)
-                        .withBody("""
-                                {
-                                  "accepted": false,
-                                  "reason": "PORT_FULL",
-                                  "alternativePorts": ["JPYOK", "JPKOB"]
-                                }
-                                """)));
-
-        // When
-        var result = portManagementPort.notifyArrival(
-                ArrivalNotification.of(UnLocode.of("JPTYO"), VoyageNumber.of("V002"))
-        );
-
-        // Then: 代替港リストが返却される
-        assertThat(result.isAccepted()).isFalse();
-        assertThat(result.getAlternativePorts())
-                .containsExactly(UnLocode.of("JPYOK"), UnLocode.of("JPKOB"));
-    }
-}
-```
-
-#### NotificationPort: メール通知（202 Accepted・失敗ログ）
-
-```java
-@SpringBootTest
-@AutoConfigureWireMock(port = 0)
-class NotificationAdapterTest {
-
-    @Autowired
-    private NotificationPort notificationPort;
-
-    @Test
-    void メール通知送信が202Acceptedを返す() {
-        // Given
-        stubFor(post(urlEqualTo("/api/notifications/email"))
-                .willReturn(aResponse()
-                        .withStatus(202)));
-
-        // When: 通知送信を実行する
-        assertThatNoException().isThrownBy(() ->
-                notificationPort.sendEmail(
-                        EmailNotification.of("customer@example.com", "貨物が到着しました", "...")
-                )
-        );
-
-        // Then: スタブが呼び出されたことを確認する
-        verify(1, postRequestedFor(urlEqualTo("/api/notifications/email")));
-    }
-
-    @Test
-    void 通知失敗時にログを記録して処理を継続する() {
-        // Given: 通知サービスがエラーを返す（非クリティカルなので例外を飲み込む）
-        stubFor(post(urlEqualTo("/api/notifications/email"))
-                .willReturn(aResponse()
-                        .withStatus(503)));
-
-        // When & Then: 例外が外部に伝播しない（ログのみ記録）
-        assertThatNoException().isThrownBy(() ->
-                notificationPort.sendEmail(
-                        EmailNotification.of("customer@example.com", "通知テスト", "...")
-                )
-        );
-    }
-}
-```
+現時点では YAGNI に従い、実装が存在しない外部連携の契約テストは設けない。
 
 ---
 
@@ -846,12 +613,12 @@ class NotificationAdapterTest {
 
 | US | タイトル | ユニットテスト | 統合テスト | E2E テスト | 優先度 |
 |---|---|---|---|---|---|
-| US01 | 輸送見積を作成する | `QuotationService`、`Quotation` 値オブジェクト | `ExternalRoutingServicePort` WireMock | - | 高 |
+| US01 | 輸送見積を作成する | `QuotationService`、`Quotation` 値オブジェクト | `QuotationController`（見積 API） | - | 高 |
 | US02 | 荷主を登録する | `Shipper` 集約、`ShipperRegistrationService` | `ShipperRepository`、`ShipperController` | - | 高 |
 | US03 | 法人荷主を登録する | `CorporateShipper` 集約、法人割引率計算 | `CorporateShipperRepository`、`ShipperController` | - | 高 |
 | US04 | 貨物予約を登録する | `Cargo` 集約、`BookingStatus` 初期遷移 | `CargoRepository`、`BookingController` | - | 高 |
 | US05 | 危険物・冷凍貨物の予約を登録する | `Cargo` 集約（危険物フラグ）、`CargoCategory` 値オブジェクト | `CargoRepository`、`BookingController` | - | 高 |
-| US06 | 最適ルートを検索する | `RoutingService`、`Itinerary` 値オブジェクト | `ExternalRoutingServicePort` WireMock（正常・タイムアウト） | - | 高 |
+| US06 | 最適ルートを検索する | `RoutingService`（内部シミュレーション）、`Itinerary` 値オブジェクト | `RoutingController`（ルート検索 API） | - | 高 |
 | US07 | ルートを選択して予約に紐付ける | `Cargo#assignRoute()`、`BookingStatus.ROUTE_PROPOSED` 遷移 | `CargoRepository`（ルート保存）、`RoutingController` | - | 高 |
 | US08 | 予約を確定する | `Cargo#confirmBooking()`、`BookingStatus.CONFIRMED` 遷移 | `BookingController`（確定 API）、`CargoRepository` | **US08 シナリオ** | 高 |
 | US09 | 追跡番号を発行する | `TrackingId` 値オブジェクト（一意性）、`TrackingIdGenerator` | `CargoRepository`（追跡番号保存） | - | 高 |
@@ -859,17 +626,19 @@ class NotificationAdapterTest {
 | US11 | 引取作業を記録する | `HandlingActivity`（RECEIVED イベント） | `HandlingController`（引取 API） | - | 高 |
 | US12 | 貨物状態を手動更新する | `TrackingActivity`、`TransportStatus` 遷移（9 値） | `TrackingController`（手動更新 API） | - | 高 |
 | US13 | 追跡情報を照会する | - | `TrackingQueryService`（CQRS 読み取り）、`TrackingController` | **US13 シナリオ** | 高 |
-| US14 | 遅延例外を処理する | `TrackingExceptionEvent` エスカレーション判定 | `TrackingController`（例外処理 API）、`NotificationPort` WireMock | - | 高 |
-| US15 | 破損・紛失例外を処理する | `HandlingException` 集約、`ExceptionType` 値オブジェクト | `HandlingController`（例外記録 API）、`CustomsClearancePort` WireMock | - | 高 |
+| US14 | 遅延例外を処理する | `TrackingExceptionEvent` エスカレーション判定 | `TrackingController`（例外処理 API） | - | 高 |
+| US15 | 破損・紛失例外を処理する | `HandlingException` 集約、`ExceptionType` 値オブジェクト | `HandlingController`（例外記録 API） | - | 高 |
 | US16 | 輸送料金を算出する | `Invoice` 集約、`FreightCalculationService`、消費税計算 | `InvoiceRepository`、`BillingController` | - | 中 |
-| US17 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック | `BillingController`（割引適用 API）、`PaymentGatewayPort` WireMock | - | 中 |
-| US18 | 精算を処理する | `Invoice#settle()`、`InvoiceStatus` 遷移 | `BillingController`（精算 API）、`PaymentGatewayPort` WireMock（正常・失敗） | - | 中 |
+| US17 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック、`ShipperDiscountPort`（モック） | `BillingController`（割引適用 API） | - | 中 |
+| US18 | 精算を処理する | `Invoice#settle()`、`InvoiceStatus` 遷移、`BookingSettlementPort`（モック） | `BillingController`（精算 API） | - | 中 |
 
 ---
 
 ## 6. カバレッジ目標とメトリクス
 
-### 6.1 レイヤー別カバレッジ目標
+### 6.1 レイヤー別カバレッジ目標（最終目標）
+
+以下は各レイヤーが目指す**最終目標**である。強制の実効化は §6.3 の JaCoCo 検証で段階的に行う。
 
 | レイヤー | 行カバレッジ目標 | 分岐カバレッジ目標 | 計測ツール |
 |---|---|---|---|
@@ -890,6 +659,42 @@ class NotificationAdapterTest {
 | Security Hotspot Review | **100%** | 新規コード |
 
 Quality Gate が失敗した場合、PR のマージをブロックする。
+
+### 6.3 カバレッジ目標の CI 強制方法（JaCoCo 検証）
+
+§6.1 の目標を「飾り」で終わらせないため、`build.gradle` の **`jacocoTestCoverageVerification`** タスクでビルド時に閾値を強制する。`check` タスクに依存させているため、`./gradlew check`（および CI の PR ジョブ）で自動実行され、閾値を下回るとビルドが失敗する。
+
+```gradle
+// apps/cargo-tracker/build.gradle
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.75
+            }
+        }
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.65
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
+```
+
+**段階的引き上げ方針**:
+
+- **現在の閾値**: 全体行 **75%** / 分岐 **65%**。これは現状の実測カバレッジ（全体行約 81.5% / 分岐約 76.8%）を下回る安全側の値で、「いきなり 85% でビルドが壊れる」事態を避けるための開始点である。
+- **引き上げ手順**: カバレッジが安定して目標を上回るようになったら、閾値を段階的に引き上げる。最終的には JaCoCo のパッケージ単位ルール（`includes` / `element = 'PACKAGE'`）を用いてレイヤー別目標（§6.1: ドメイン 85% / 分岐 80% 等）を個別に強制する形へ移行する。
+- **手順の目安**: (1) 現在の閾値で緑を維持 → (2) 実測が閾値+5% を安定して超えたら閾値を実測近くまで引き上げ → (3) レイヤー別ルールへ分割。1 度に大きく上げず、実測に追随させる。
+- **SonarQube との役割分担**: JaCoCo 検証は「プロジェクト全体の後退防止」を担い、SonarQube Quality Gate（§6.2）は「新規コードのカバレッジ 80%」を担う。両者を併用し、既存の底上げと新規の品質担保を両立させる。
 
 ---
 
@@ -927,7 +732,7 @@ endif
 fork
   :ユニットテスト\n< 2 分;
 fork again
-  :統合テスト\n(Testcontainers + MockMvc\n + WireMock)\n< 3 分;
+  :統合テスト\n(Testcontainers + MockMvc)\n< 3 分;
 end fork
 :SonarQube 解析\nQuality Gate チェック;
 if (全テスト + Quality Gate 成功?) then (yes)
@@ -990,8 +795,8 @@ group Step 2: アプリケーション層のユニットテスト
 end group
 
 group Step 3: アダプターの統合テスト
-  :【RED】Repository / Controller /\n外部 ACL アダプターの\n統合テストを書く;
-  :【GREEN】Testcontainers / MockMvc /\nWireMock で実装する;
+  :【RED】Repository / Controller の\n統合テストを書く\n（BC 間 ACL ポートはモック）;
+  :【GREEN】Testcontainers / MockMvc で実装する;
   :【REFACTOR】クエリ最適化・エラーハンドリング整理;
 end group
 
@@ -1009,17 +814,16 @@ stop
 #### Cargo の BookingStatus 状態遷移（8 値）
 
 ```
-PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → CUSTOMS_PENDING
-    → IN_TRANSIT → IN_PORT → COMPLETED
-    ↘ MISROUTED（異常系）
-    ↘ CANCELLED（キャンセル）
+PRELIMINARY → ROUTE_PROPOSED → CONFIRMED → TRACKING_ISSUED
+    → IN_TRANSIT → DELIVERED → SETTLED
+    ↘ CANCELLED（いずれの状態からも遷移可能）
 ```
 
 テスト観点:
 
 - 各遷移の正常系（許可されている遷移）
 - 各遷移の異常系（許可されていない遷移 → `InvalidBookingStatusTransitionException`）
-- 終端状態（COMPLETED・CANCELLED）からの遷移拒否
+- 終端状態（SETTLED・CANCELLED）からの遷移拒否
 
 #### HandlingActivity の荷役妥当性検証（MISROUTED 判定）
 
@@ -1039,9 +843,9 @@ void 指定ルート外の港で荷役を実行するとMISROUTED判定になる
             LocalDateTime.now()
     );
 
-    // Then: 貨物が MISROUTED 状態に遷移する
+    // Then: 貨物の経路状態が MISROUTED に遷移する
     cargo.applyHandlingActivity(activity);
-    assertThat(cargo.getBookingStatus()).isEqualTo(BookingStatus.MISROUTED);
+    assertThat(cargo.getRoutingStatus()).isEqualTo(RoutingStatus.MISROUTED);
 }
 ```
 
@@ -1104,7 +908,7 @@ void 遅延が48時間以内の場合はエスカレーション不要と判定�
 | Bounded Context | TDD 優先ルール | 理由 |
 |---|---|---|
 | Booking Context | BookingStatus 遷移（8 値）を最初にテストする | 最も複雑な状態機械。バグの影響範囲が大きい |
-| Routing Context | ExternalRoutingServicePort のフォールバックをテストする | 外部依存が本番障害の主要因になりやすい |
+| Routing Context | ルート選択ロジック（内部シミュレーション）を最初にテストする | 経路計算はビジネスルールが集中する。外部 HTTP 連携を導入する際は WireMock 契約テストへ拡張する（§4.3） |
 | Tracking Context | CQRS 読み取りクエリのパフォーマンスを統合テストで検証する | 30 秒ポーリングの負荷を事前に確認する |
 | Handling Context | MISROUTED 判定ロジックを先にテストする | 荷役記録ミスは運用上重大なインシデントになる |
 | Billing Context | 割引・消費税計算を `@ParameterizedTest` で網羅する | 金額計算のバグは法的リスクを伴う |
