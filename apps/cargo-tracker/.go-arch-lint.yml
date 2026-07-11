@@ -1,0 +1,39 @@
+version: 3
+workdir: .
+
+vendors:
+  chi: { in: github.com/go-chi/chi/v5 }
+  chi-middleware: { in: github.com/go-chi/chi/v5/middleware }
+  testify: { in: github.com/stretchr/testify/** }
+
+components:
+  cmd: { in: cmd/** }
+  booking: { in: internal/booking/** }
+  shipper: { in: internal/shipper/** }
+  routing: { in: internal/routing/** }
+  tracking: { in: internal/tracking/** }
+  handling: { in: internal/handling/** }
+  billing: { in: internal/billing/** }
+  estimation: { in: internal/estimation/** }
+  shared: { in: internal/shared/** }
+
+commonComponents:
+  - shared
+
+deps:
+  cmd:
+    canUse:
+      - chi
+      - chi-middleware
+      - testify
+    mayDependOn:
+      - booking
+      - shipper
+      - routing
+      - tracking
+      - handling
+      - billing
+      - estimation
+  # BC 間の直接依存は禁止（ACL ポート・イベント経由のみ）。
+  # コンテキスト内のレイヤールール（domain が infrastructure に依存しない）は
+  # 実装開始時に deepScan で追加する。
