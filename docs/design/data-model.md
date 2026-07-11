@@ -16,10 +16,10 @@ tags: design,data-model
 
 ### 設計方針
 
-- **DB**: PostgreSQL 16.x（本番）、H2（テスト）
+- **DB**: PostgreSQL 16.x（本番）、Testcontainers 実 PostgreSQL（テスト。H2 は採用しない）
 - **ORM**: MyBatis（XML マッパー）
 - **マイグレーション**: Flyway（`V1__init.sql` 形式）
-- **ID 戦略**: サロゲートキー（`BIGSERIAL`）+ 業務キー（`VARCHAR`）の併用
+- **ID 戦略**: サロゲートキー（`BIGSERIAL`）+ 業務キー（`VARCHAR`）の併用。例外として `shipper.id` と `cargo.booking_id` / `cargo.shipper_id` は `UUID`（V3/V4 マイグレーション）
 - **命名規則**: スネークケース（PostgreSQL 慣習）
 - **監査カラム**: 全テーブルに `created_at` / `updated_at` を付与
 
@@ -63,7 +63,7 @@ package "Shared Domain" #lightgray {
 
 package "Booking Context" #lightblue {
   entity "shipper\n（荷主）" as shipper {
-    * id : BIGINT <<PK>>
+    * id : UUID <<PK>>
     --
     * shipper_code : VARCHAR(20) <<UK>>
     * shipper_type : VARCHAR(20)
@@ -74,8 +74,8 @@ package "Booking Context" #lightblue {
   entity "cargo\n（貨物）" as cargo {
     * id : BIGINT <<PK>>
     --
-    * booking_id : VARCHAR(20) <<UK>>
-    * shipper_id : BIGINT <<FK>>
+    * booking_id : UUID <<UK>>
+    * shipper_id : UUID <<FK>>
     * booking_status : VARCHAR(30)
     * transport_status : VARCHAR(30)
     * routing_status : VARCHAR(30)
@@ -121,7 +121,7 @@ package "Tracking Context" #lightyellow {
     * id : BIGINT <<PK>>
     --
     * tracking_number : VARCHAR(20) <<UK>>
-    * booking_id : VARCHAR(20)
+    * booking_id : VARCHAR(100)
     * transport_status : VARCHAR(30)
   }
 
@@ -152,7 +152,7 @@ package "Handling Context" #lightcoral {
   entity "handling_activity\n（荷役作業記録）" as handling_activity {
     * id : BIGINT <<PK>>
     --
-    * booking_id : VARCHAR(20)
+    * booking_id : VARCHAR(100)
     * event_type : VARCHAR(30)
     * event_completion_time : TIMESTAMP
     * location_unlocode : VARCHAR(5) <<FK>>
@@ -199,7 +199,7 @@ package "Billing Context" #lightpink {
     * id : BIGINT <<PK>>
     --
     * invoice_number : VARCHAR(30) <<UK>>
-    * booking_id : VARCHAR(20) <<UK>>
+    * booking_id : VARCHAR(100) <<UK>>
     * total_amount_value : INTEGER
     * total_amount_currency : VARCHAR(3)
     * tax_rate : NUMERIC(5,4)
@@ -300,7 +300,7 @@ entity "location\n（場所）" as location {
 title 論理データモデル - Booking Context
 
 entity "shipper\n（荷主）" as shipper {
-  * id : BIGINT <<PK, BIGSERIAL>>
+  * id : UUID <<PK>>
   --
   * shipper_code : VARCHAR(20) <<UK, NOT NULL>>
   * shipper_type : VARCHAR(20) <<NOT NULL>>
@@ -316,8 +316,8 @@ entity "shipper\n（荷主）" as shipper {
 entity "cargo\n（貨物）" as cargo {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
-  * booking_id : VARCHAR(20) <<UK, NOT NULL>>
-  * shipper_id : BIGINT <<FK, NOT NULL>>
+  * booking_id : UUID <<UK, NOT NULL>>
+  * shipper_id : UUID <<FK, NOT NULL>>
   * booking_status : VARCHAR(30) <<NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
   * routing_status : VARCHAR(30) <<NOT NULL>>
@@ -415,7 +415,7 @@ entity "tracking_activity\n（追跡レコード）" as tracking_activity {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
-  * booking_id : VARCHAR(20) <<NOT NULL>>
+  * booking_id : VARCHAR(100) <<NOT NULL>>
   * transport_status : VARCHAR(30) <<NOT NULL>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
@@ -466,7 +466,7 @@ title 論理データモデル - Handling Context
 entity "handling_activity\n（荷役作業記録）" as handling_activity {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
-  * booking_id : VARCHAR(20) <<NOT NULL>>
+  * booking_id : VARCHAR(100) <<NOT NULL>>
   * event_type : VARCHAR(30) <<NOT NULL>>
   * event_completion_time : TIMESTAMP <<NOT NULL>>
   * location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
@@ -508,7 +508,7 @@ entity "invoice\n（精算書）" as invoice {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * invoice_number : VARCHAR(30) <<UK, NOT NULL>>
-  * booking_id : VARCHAR(20) <<UK, NOT NULL>>
+  * booking_id : VARCHAR(100) <<UK, NOT NULL>>
   * total_amount_value : INTEGER <<NOT NULL>>
   * total_amount_currency : VARCHAR(3) <<NOT NULL>>
   * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
@@ -647,7 +647,7 @@ users ||--o{ user_roles : "ロールを持つ"
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `id` | `UUID` | `PK, NOT NULL` | サロゲートキー（UUID。アプリケーション側で採番） |
 | `shipper_code` | `VARCHAR(20)` | `UK, NOT NULL` | 荷主コード（業務キー。SHP-XXXXXX 形式） |
 | `shipper_type` | `VARCHAR(20)` | `NOT NULL` | 荷主種別（`INDIVIDUAL` / `CORPORATE`） |
 | `name` | `VARCHAR(200)` | `NOT NULL` | 荷主名称 |
@@ -662,7 +662,7 @@ users ||--o{ user_roles : "ロールを持つ"
 
 ```sql
 CREATE TABLE shipper (
-    id              BIGSERIAL PRIMARY KEY,
+    id              UUID PRIMARY KEY,
     shipper_code    VARCHAR(20)  NOT NULL UNIQUE,  -- SHP-XXXXXX 形式
     shipper_type    VARCHAR(20)  NOT NULL,          -- INDIVIDUAL / CORPORATE
     name            VARCHAR(200) NOT NULL,
@@ -775,7 +775,7 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー） |
-| `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
+| `booking_id` | `VARCHAR(100)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
 | `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus 列挙値） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
@@ -819,7 +819,7 @@ CREATE TABLE shipper (
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
-| `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
+| `booking_id` | `VARCHAR(100)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
 | `event_type` | `VARCHAR(30)` | `NOT NULL` | 荷役タイプ（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM） |
 | `event_completion_time` | `TIMESTAMP` | `NOT NULL` | 荷役完了日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
@@ -852,7 +852,7 @@ CREATE TABLE shipper (
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `invoice_number` | `VARCHAR(30)` | `UK, NOT NULL` | 精算書番号（業務キー） |
-| `booking_id` | `VARCHAR(20)` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止） |
+| `booking_id` | `VARCHAR(100)` | `UK, NOT NULL` | 予約 ID（UNIQUE 制約で二重請求を防止） |
 | `total_amount_value` | `INTEGER` | `NOT NULL` | 合計金額（最小通貨単位） |
 | `total_amount_currency` | `VARCHAR(3)` | `NOT NULL` | 通貨コード（ISO 4217） |
 | `tax_rate` | `NUMERIC(5,4)` | `NOT NULL, DEFAULT 0.1000` | 消費税率（デフォルト 10%） |
@@ -1014,6 +1014,8 @@ CREATE TABLE route_candidate (
 **判断**: 全テーブルに `BIGSERIAL` のサロゲートキー（`id`）を設け、業務上の識別子（`booking_id`、`voyage_number`、`unlocode` 等）には `UNIQUE` 制約を付与する。
 
 **根拠**: 外部キー参照を `BIGINT` に統一することでインデックス効率が向上する。業務キーはドメインモデルの一部であり、別途管理することで業務ルールの変更に対応しやすい。
+
+**例外**: `shipper.id` はアプリケーション側で採番する `UUID` を採用している（V3 マイグレーション）。荷主 ID はアプリケーションサービスが `UUID` を採番して `ShipperId` 値オブジェクトとして保持するため、DB 採番に依存しない。これに伴い `cargo.shipper_id`・`cargo.booking_id`（`BookingId` も同様に `UUID` 採番）も `UUID` である（V4 マイグレーション）。
 
 ---
 
