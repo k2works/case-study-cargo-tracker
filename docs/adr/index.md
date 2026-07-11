@@ -18,5 +18,6 @@
 | [ADR-010](010-practical-ddd-package-structure.md) | Practical DDD in Enterprise Java のパッケージ構成を採用する | 承認済み |
 | [ADR-011](011-archunit-hexagonal-rules.md) | ArchUnit でヘキサゴナルアーキテクチャの依存関係ルールを自動検証する | 承認済み |
 | [ADR-012](012-default-profile-login-prefill.md) | デフォルトプロファイルでログインフォームに認証情報をプリセットする | 承認済み |
+| [ADR-013](013-handling-merged-into-tracking-context.md) | 荷役（Handling）機能を Tracking Context に統合する | 承認済み |
 
 ADR の作成には `creating-adr` スキルを使用してください。
