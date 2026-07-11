@@ -64,30 +64,34 @@ Booking 1 ─── 1 Invoice
 | 画面名 | URL パス | 説明 | 主要アクター | 対応 US |
 | :--- | :--- | :--- | :--- | :--- |
 | ログイン | `/login` | 認証フォーム | 全ロール | - |
-| ダッシュボード | `/` | 全体サマリー・最新荷役情報 | 全ロール | US01 |
-| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US02, US03 |
-| 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04 |
-| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | 荷主、営業担当者 | US05, US06 |
-| 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択 | 営業担当者 | US07, US08, US09 |
-| 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US13 |
-| 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US14, US15 |
-| 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム | 荷役作業員 | US10, US11 |
-| 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US12 |
-| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | 荷役作業員、追跡管理者 | US19 |
-| 通関申告登録 | `/handling/customs/new` | 通関申告の登録・状態更新フォーム | 荷役作業員、追跡管理者 | US19 |
-| 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | 追跡管理者 | US20 |
-| 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | 追跡管理者 | US20 |
-| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | 追跡管理者 | US21 |
-| 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 | - |
-| 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 | US16, US17 |
-| 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | 経理担当者 | US18 |
-| 割引ポリシー一覧 | `/admin/discount-policies` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US-ADM-01 |
-| 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
-| 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |
-| 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US13 |
+| ダッシュボード | `/` | 全体サマリー・最新荷役情報 | 全ロール | - |
+| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US04 |
+| 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04, US05 |
+| 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴 | 荷主、営業担当者 | US06, US13, US14 |
+| 経路割り当て | `/bookings/{bookingId}/route` | 利用可能な航路から経路を選択 | 営業担当者 | US07, US08, US09, US10, US11 |
+| 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US18 |
+| 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US18 |
+| 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム | 荷役作業員 | US15, US16 |
+| 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15 |
+| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | 荷役作業員、追跡管理者 | -（※1） |
+| 通関申告登録 | `/handling/customs/new` | 通関申告の登録・状態更新フォーム | 荷役作業員、追跡管理者 | -（※1） |
+| 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | 追跡管理者 | US19, US20 |
+| 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | 追跡管理者 | US19, US20 |
+| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | 追跡管理者 | US19, US20 |
+| 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 | US07 |
+| 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 | US21, US22 |
+| 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | 経理担当者 | US23 |
+| 割引ポリシー一覧 | `/admin/discount-policies` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US24 |
+| 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US24 |
+| 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | ROLE_ADMIN | US24 |
+| 公開貨物追跡 | `/public/tracking/{trackingId}` | 認証不要の貨物状態照会ページ（荷主が URL 共有可） | 荷主・荷受人（未認証） | US18 |
 | 見積一覧 | `/estimates` | 見積の一覧・検索 | 営業担当者 | US01 |
 | 見積作成 | `/estimates/new` | 新規見積フォーム（出発地・目的地・期限・貨物仕様入力） | 営業担当者 | US01 |
 | 見積詳細 | `/estimates/{estimateId}` | 見積詳細・スタブルート候補一覧 | 営業担当者 | US01 |
+
+対応 US は `docs/requirements/user_story.md` の US 採番（US01〜US24）を正典とする。
+
+- ※1: 通関申告管理はドメインルール（通関済みでないと引取不可）由来の画面であり、対応するユーザーストーリーは未起票。要件側への起票を推奨。
 
 ---
 

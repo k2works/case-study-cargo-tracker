@@ -430,17 +430,19 @@ class HexagonalArchitectureTest {
 
 クリティカルなユーザーシナリオをブラウザレベルで検証する。ドメインロジックの再検証は行わず、ユーザー体験の観点からシステム全体が協調動作することを確認する。
 
-**優先シナリオ（US08・US10・US13）**:
+**優先シナリオ（US13・US15・US18）**:
 
 | シナリオ | 理由 |
 |---|---|
-| US08: 予約を確定する | 予約フローの最終ステップ。複数コンテキストが連携する |
-| US10: 荷役作業を記録する | 最も頻繁に実行される運用操作 |
-| US13: 追跡情報を照会する | 顧客向け重要機能。htmx ポーリングを含む |
+| US13: 予約を確定する | 予約フローの最終ステップ。複数コンテキストが連携する |
+| US15: 荷役作業を記録する | 最も頻繁に実行される運用操作 |
+| US18: 追跡情報を照会する | 顧客向け重要機能。htmx ポーリングを含む |
 
 #### カバレッジ目標
 
-- 優先度「高」のユーザーシナリオ（US01〜US15）の **80% カバー**
+- 優先度「高」のユーザーシナリオ（US01〜US20）の **80% カバー**
+
+US 採番は `docs/requirements/user_story.md` を正典とする。
 
 #### 使用ツール
 
@@ -472,12 +474,12 @@ async function waitForHtmxUpdate(page: Page, selector: string, timeout = 35000) 
 }
 ```
 
-#### 実装例: US13 追跡情報照会の Playwright テスト（TypeScript）
+#### 実装例: US18 追跡情報照会の Playwright テスト（TypeScript）
 
 ```typescript
 import { test, expect, Page } from '@playwright/test';
 
-test.describe('US13: 追跡情報を照会する', () => {
+test.describe('US18: 追跡情報を照会する', () => {
   let page: Page;
 
   test.beforeEach(async ({ browser }) => {
@@ -611,6 +613,8 @@ class InvoiceCommandServiceTest {
 
 ## 5. ユーザーストーリーとテストのトレーサビリティ
 
+US 採番は `docs/requirements/user_story.md`（US01〜US24）を正典とする。
+
 | US | タイトル | ユニットテスト | 統合テスト | E2E テスト | 優先度 |
 |---|---|---|---|---|---|
 | US01 | 輸送見積を作成する | `QuotationService`、`Quotation` 値オブジェクト | `QuotationController`（見積 API） | - | 高 |
@@ -618,19 +622,25 @@ class InvoiceCommandServiceTest {
 | US03 | 法人荷主を登録する | `CorporateShipper` 集約、法人割引率計算 | `CorporateShipperRepository`、`ShipperController` | - | 高 |
 | US04 | 貨物予約を登録する | `Cargo` 集約、`BookingStatus` 初期遷移 | `CargoRepository`、`BookingController` | - | 高 |
 | US05 | 危険物・冷凍貨物の予約を登録する | `Cargo` 集約（危険物フラグ）、`CargoCategory` 値オブジェクト | `CargoRepository`、`BookingController` | - | 高 |
-| US06 | 最適ルートを検索する | `RoutingService`（内部シミュレーション）、`Itinerary` 値オブジェクト | `RoutingController`（ルート検索 API） | - | 高 |
-| US07 | ルートを選択して予約に紐付ける | `Cargo#assignRoute()`、`BookingStatus.ROUTE_PROPOSED` 遷移 | `CargoRepository`（ルート保存）、`RoutingController` | - | 高 |
-| US08 | 予約を確定する | `Cargo#confirmBooking()`、`BookingStatus.CONFIRMED` 遷移 | `BookingController`（確定 API）、`CargoRepository` | **US08 シナリオ** | 高 |
-| US09 | 追跡番号を発行する | `TrackingId` 値オブジェクト（一意性）、`TrackingIdGenerator` | `CargoRepository`（追跡番号保存） | - | 高 |
-| US10 | 荷役作業を記録する | `HandlingActivity` 集約、MISROUTED 判定ロジック | `HandlingActivityRepository`、`HandlingController` | **US10 シナリオ** | 高 |
-| US11 | 引取作業を記録する | `HandlingActivity`（RECEIVED イベント） | `HandlingController`（引取 API） | - | 高 |
-| US12 | 貨物状態を手動更新する | `TrackingActivity`、`TransportStatus` 遷移（9 値） | `TrackingController`（手動更新 API） | - | 高 |
-| US13 | 追跡情報を照会する | - | `TrackingQueryService`（CQRS 読み取り）、`TrackingController` | **US13 シナリオ** | 高 |
-| US14 | 遅延例外を処理する | `TrackingExceptionEvent` エスカレーション判定 | `TrackingController`（例外処理 API） | - | 高 |
-| US15 | 破損・紛失例外を処理する | `HandlingException` 集約、`ExceptionType` 値オブジェクト | `HandlingController`（例外記録 API） | - | 高 |
-| US16 | 輸送料金を算出する | `Invoice` 集約、`FreightCalculationService`、消費税計算 | `InvoiceRepository`、`BillingController` | - | 中 |
-| US17 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック、`ShipperDiscountPort`（モック） | `BillingController`（割引適用 API） | - | 中 |
-| US18 | 精算を処理する | `Invoice#settle()`、`InvoiceStatus` 遷移、`BookingSettlementPort`（モック） | `BillingController`（精算 API） | - | 中 |
+| US06 | 予約情報を経路設計者に引き渡す | `Cargo` 集約（`BookingStatus.ROUTE_PROPOSED` 遷移） | `BookingController`（引き渡し API） | - | 高 |
+| US07 | 航海スケジュールを検索する | `Voyage` 集約、スケジュール検索ロジック | `VoyageRepository`、`RoutingController` | - | 高 |
+| US08 | 経路候補を算出する | `RoutingService`（内部シミュレーション）、`Itinerary` 値オブジェクト | `RoutingController`（ルート検索 API） | - | 高 |
+| US09 | 経路を選択・確定する | `Cargo#assignRoute()` | `CargoRepository`（ルート保存）、`RoutingController` | - | 高 |
+| US10 | 経路条件を調整して再算出する | `RoutingService`（条件変更・再算出） | `RoutingController`（再算出 API） | - | 高 |
+| US11 | 経路情報を予約に紐付ける | `Cargo#assignRoute()`（経路保存・不変条件） | `CargoRepository`（ルート保存） | - | 高 |
+| US12 | 確定経路を荷主に通知する | 経路確定ドメインイベント発行 | イベントリスナー（AFTER_COMMIT） | - | 高 |
+| US13 | 予約を確定する | `Cargo#confirmBooking()`、`BookingStatus.CONFIRMED` 遷移 | `BookingController`（確定 API）、`CargoRepository` | **US13 シナリオ** | 高 |
+| US14 | 追跡番号を発行する | `TrackingId` 値オブジェクト（一意性）、`TrackingIdGenerator` | `CargoRepository`（追跡番号保存） | - | 高 |
+| US15 | 荷役作業を記録する | `HandlingActivity` 集約、MISROUTED 判定ロジック | `HandlingActivityRepository`、`HandlingController` | **US15 シナリオ** | 高 |
+| US16 | 引取作業を記録する | `HandlingActivity`（RECEIVED イベント） | `HandlingController`（引取 API） | - | 高 |
+| US17 | 貨物状態を手動更新する | `TrackingActivity`、`TransportStatus` 遷移（9 値） | `TrackingController`（手動更新 API） | - | 高 |
+| US18 | 追跡情報を照会する | - | `TrackingQueryService`（CQRS 読み取り）、`TrackingController` | **US18 シナリオ** | 高 |
+| US19 | 遅延例外を処理する | `TrackingExceptionEvent` エスカレーション判定 | `TrackingController`（例外処理 API） | - | 高 |
+| US20 | 破損・紛失例外を処理する | `HandlingException` 集約、`ExceptionType` 値オブジェクト | `HandlingController`（例外記録 API） | - | 高 |
+| US21 | 輸送料金を算出する | `Invoice` 集約、`FreightCalculationService`、消費税計算 | `InvoiceRepository`、`BillingController` | - | 中 |
+| US22 | 法人割引を適用する | `DiscountPolicy` 値オブジェクト、法人割引率計算ロジック、`ShipperDiscountPort`（モック） | `BillingController`（割引適用 API） | - | 中 |
+| US23 | 精算を処理する | `Invoice#settle()`、`InvoiceStatus` 遷移、`BookingSettlementPort`（モック） | `BillingController`（精算 API） | - | 中 |
+| US24 | 割引ポリシーを管理する | `DiscountPolicy`（割引率 0〜30% バリデーション・有効期限判定） | 割引ポリシー管理 Controller / Repository | - | 中 |
 
 ---
 
