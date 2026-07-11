@@ -73,6 +73,11 @@ Booking 1 ─── 1 Invoice
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US14, US15 |
 | 荷役作業登録 | `/handling/new` | 荷役イベント登録フォーム | 荷役作業員 | US10, US11 |
 | 荷役作業一覧 | `/handling` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US12 |
+| 通関申告一覧 | `/handling/customs` | 通関申告の一覧・状態確認 | 荷役作業員、追跡管理者 | US19 |
+| 通関申告登録 | `/handling/customs/new` | 通関申告の登録・状態更新フォーム | 荷役作業員、追跡管理者 | US19 |
+| 例外イベント一覧 | `/tracking/exceptions` | 例外イベントの一覧・状態確認 | 追跡管理者 | US20 |
+| 例外イベント登録 | `/tracking/exceptions/new` | 例外イベント登録フォーム | 追跡管理者 | US20 |
+| 例外イベント解決 | `/tracking/exceptions/{exceptionId}` | 例外の詳細確認・解決フォーム | 追跡管理者 | US21 |
 | 航路一覧 | `/voyages` | 航路・スケジュール一覧 | 経路設計者 | - |
 | 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 | US16, US17 |
 | 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | 経理担当者 | US18 |
@@ -92,23 +97,30 @@ Booking 1 ─── 1 Invoice
 
 全画面共通のナビゲーションバー（Bootstrap 5 `navbar`）を上部に配置する。ロールに応じてメニュー項目を表示制御する。
 
+ロール名は `non_functional.md` の RBAC ロール定義（正典）に準拠する。
+
 | メニュー項目 | 遷移先 | 表示ロール |
 | :--- | :--- | :--- |
 | ダッシュボード | `/` | 全ロール |
+| 見積管理 | `/estimates` | ROLE_SALES |
 | 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
-| 航路管理 | `/voyages` | ROLE_ROUTE_DESIGNER |
+| 通関管理 | `/handling/customs` | ROLE_HANDLER, ROLE_TRACKER |
+| 例外管理 | `/tracking/exceptions` | ROLE_TRACKER |
+| 航路管理 | `/voyages` | ROLE_ROUTER |
 | 請求管理 | `/billing/invoices` | ROLE_BILLING |
 | 管理設定 | `/admin/discount-policies` | ROLE_ADMIN |
 | ログアウト | `/logout` | 全ロール |
+
+> ナビゲーションバーは項目数が多いため、Bootstrap 5 の `dropdown` を用いて業務カテゴリ（見積・予約・追跡・荷役・請求・管理）ごとにグルーピングする。表示ロールに該当しない項目は Thymeleaf の `sec:authorize` でサーバー側から非表示にする。
 
 ### 共通レイアウト ワイヤーフレーム
 
 ```plantuml
 @startsalt
 {+
-  {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | [ログアウト] }
+  {/ <b>CargoTracker</b> | 見積管理 | 貨物予約 | 貨物追跡 | 荷役管理 | 通関管理 | 例外管理 | 請求管理 | [ログアウト] }
   ==
   {
     {
@@ -122,6 +134,8 @@ Booking 1 ─── 1 Invoice
 }
 @endsalt
 ```
+
+> 上記 navbar 例はロール表示制御前の全項目を示す。実際の表示は「ナビゲーション構成」表の表示ロールに従う。個別画面のワイヤーフレームでは紙面の都合上、当該画面に関連する主要項目のみを抜粋して記載している。
 
 ### Bootstrap 5 グリッド運用ルール
 
@@ -231,6 +245,46 @@ state "精算フロー" as billing_flow {
   請求書一覧 --> 請求書詳細 : 行クリック
   請求書詳細 --> 請求書一覧 : [一覧に戻る] / 支払い確認成功（PRG）
 }
+
+state "通関フロー" as customs_flow {
+  state 通関申告一覧 {
+    通関申告一覧 : /handling/customs
+    通関申告一覧 : 一覧テーブル・状態フィルタ
+  }
+  state 通関申告登録 {
+    通関申告登録 : /handling/customs/new
+    通関申告登録 : 登録・状態更新フォーム
+  }
+
+  通関申告一覧 --> 通関申告登録 : [新規申告] ボタン
+  通関申告登録 --> 通関申告一覧 : 登録・更新成功（PRG）
+  通関申告登録 --> 通関申告登録 : バリデーションエラー
+}
+
+state "例外フロー" as exception_flow {
+  state 例外イベント一覧 {
+    例外イベント一覧 : /tracking/exceptions
+    例外イベント一覧 : 一覧テーブル・状態フィルタ
+  }
+  state 例外イベント登録 {
+    例外イベント登録 : /tracking/exceptions/new
+    例外イベント登録 : 登録フォーム
+  }
+  state 例外イベント解決 {
+    例外イベント解決 : /tracking/exceptions/{exceptionId}
+    例外イベント解決 : 詳細・解決フォーム
+  }
+
+  例外イベント一覧 --> 例外イベント登録 : [新規登録] ボタン
+  例外イベント一覧 --> 例外イベント解決 : 行クリック
+  例外イベント登録 --> 例外イベント一覧 : 登録成功（PRG）
+  例外イベント解決 --> 例外イベント一覧 : 解決成功（PRG）
+}
+
+ダッシュボード --> 通関申告一覧 : [通関管理] クリック
+ダッシュボード --> 例外イベント一覧 : [例外管理] クリック
+荷役作業一覧 --> 通関申告一覧 : [通関申告] タブ
+追跡詳細 --> 例外イベント登録 : [例外を登録]
 
 state 航路一覧 {
   航路一覧 : /voyages
@@ -355,28 +409,28 @@ state "見積フロー" as estimation_flow {
       <b>輸送中</b>
       ----
       18 件
-      （IN_TRANSIT）
+      （輸送中）
     } |
     {+
       <b>未割り当て</b>
       ----
       7 件
-      （PRELIMINARY）
+      （仮予約）
     } |
     {+
       <b>未払い請求</b>
       ----
       3 件
-      （PENDING）
+      （未払い）
     }
   }
   ==
   <b>最新荷役作業</b>
   {#
     **作業 ID** | **貨物 ID** | **種別** | **場所** | **日時**
-    HE-0042     | BK-1234     | LOAD     | JPOSA    | 2026-03-31 09:15
-    HE-0041     | BK-1230     | UNLOAD   | USLAX    | 2026-03-31 08:42
-    HE-0040     | BK-1228     | RECEIVE  | JPYOK    | 2026-03-31 07:30
+    HE-0042     | BK-1234     | 積込     | JPOSA    | 2026-03-31 09:15
+    HE-0041     | BK-1230     | 荷降し   | USLAX    | 2026-03-31 08:42
+    HE-0040     | BK-1228     | 受領     | JPYOK    | 2026-03-31 07:30
   }
   ==
   [貨物予約一覧へ] | [追跡入力へ] | [荷役登録へ]
@@ -411,10 +465,10 @@ state "見積フロー" as estimation_flow {
   [+ 新規予約登録]
   {#
     **予約 ID** | **出発地** | **目的地** | **希望期限** | **ステータス** | **操作**
-    BK-1234     | JPOSA      | USLAX      | 2026-04-15    | <color:blue>ROUTE_PROPOSED</color> | [詳細]
-    BK-1233     | JPYOK      | GBFXT      | 2026-04-20    | <color:green>CONFIRMED</color> | [詳細]
-    BK-1232     | JPKIX      | DEHAM      | 2026-04-10    | <color:orange>PRELIMINARY</color> | [詳細]
-    BK-1231     | JPOSA      | SGSIN      | 2026-03-30    | <color:red>CANCELLED</color> | [詳細]
+    BK-1234     | JPOSA      | USLAX      | 2026-04-15    | <color:blue>経路提案済</color> | [詳細]
+    BK-1233     | JPYOK      | GBFXT      | 2026-04-20    | <color:green>確認済</color> | [詳細]
+    BK-1232     | JPKIX      | DEHAM      | 2026-04-10    | <color:orange>仮予約</color> | [詳細]
+    BK-1231     | JPOSA      | SGSIN      | 2026-03-30    | <color:red>キャンセル</color> | [詳細]
   }
   ==
   < 前へ | 1 / 5 | 次へ >
@@ -443,13 +497,21 @@ state "見積フロー" as estimation_flow {
   ==
   <b>貨物予約登録</b>
   ==
+  <b>貨物情報</b>
   {
     出発地（港コード）  | "JPOSA         "
     目的地（港コード）  | "USLAX         "
     希望到着期限        | "2026-04-15    "
-    貨物種別            | ^GENERAL_CARGO^
+    貨物種別            | ^一般貨物（GENERAL）^
     重量（kg）          | "1200          "
     特記事項            | "              "
+  }
+  ==
+  <b>荷受人情報</b>
+  {
+    荷受人氏名          | "Acme Trading Co.        "
+    荷受人住所          | "123 Harbor Ave, Los Angeles, CA "
+    荷受人連絡先メール  | "consignee@acme.example.com "
   }
   ==
   {
@@ -463,9 +525,10 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **入力項目**: 出発地・目的地（UNLOCODE 形式 5 文字）・希望到着期限・貨物種別・重量
-- **バリデーション**: htmx で `hx-post` 送信前にクライアントサイドチェック、サーバー側は Bean Validation
-- **貨物種別**: `GENERAL_CARGO`, `REFRIGERATED`, `HAZARDOUS`, `PERISHABLE` から選択
+- **貨物情報 入力項目**: 出発地・目的地（UNLOCODE 形式 5 文字）・希望到着期限・貨物種別・重量
+- **荷受人情報 入力項目**: 荷受人氏名・荷受人住所・荷受人連絡先メール（domain-model の `Consignee` 値オブジェクト = `name` / `address` / `contactEmail` に対応）。国際輸送予約では荷受人が必須のため、3 項目すべて必須入力とする
+- **バリデーション**: htmx で `hx-post` 送信前にクライアントサイドチェック、サーバー側は Bean Validation。連絡先メールはメール形式を検証
+- **貨物種別**: `GENERAL`（一般貨物）, `HAZARDOUS`（危険物）, `REFRIGERATED`（冷凍・冷蔵）から選択。プルダウンは日本語ラベルで表示する（付録の CargoType 対応表を参照）
 - **登録成功**: PRG パターンで `/bookings/{bookingId}` へリダイレクト
 - **エラー時**: 同画面を再描画し、エラーフィールドを赤ボーダーで強調
 
@@ -480,7 +543,7 @@ state "見積フロー" as estimation_flow {
 {+
   {/ <b>CargoTracker</b> | <b>貨物予約</b> | 貨物追跡 | 荷役管理 | [ログアウト] }
   ==
-  <b>予約詳細</b>  BK-1234  |  <color:blue>ROUTE_PROPOSED</color>
+  <b>予約詳細</b>  BK-1234  |  <color:blue>経路提案済</color>
   ==
   {
     {+
@@ -489,9 +552,14 @@ state "見積フロー" as estimation_flow {
       出発地     | JPOSA（大阪）
       目的地     | USLAX（ロサンゼルス）
       希望期限   | 2026-04-15
-      貨物種別   | GENERAL_CARGO
+      貨物種別   | 一般貨物
       重量       | 1,200 kg
       登録日     | 2026-03-28
+      ----
+      <b>荷受人</b>
+      氏名       | Acme Trading Co.
+      住所       | 123 Harbor Ave, LA
+      連絡先     | consignee@acme.example.com
     } |
     {+
       <b>割り当て経路</b>
@@ -509,8 +577,8 @@ state "見積フロー" as estimation_flow {
   <b>荷役履歴</b>
   {#
     **種別** | **場所** | **日時** | **担当者**
-    RECEIVE  | JPOSA    | 2026-03-30 10:00 | tanaka
-    LOAD     | JPOSA    | 2026-04-01 08:30 | suzuki
+    受領     | JPOSA    | 2026-03-30 10:00 | tanaka
+    積込     | JPOSA    | 2026-04-01 08:30 | suzuki
   }
   ==
   [予約一覧に戻る] | [追跡を表示] | [キャンセル]
@@ -520,7 +588,8 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示
+- **ステータスバッジ**: ページタイトル横に BookingStatus を大きく表示。バッジは日本語ラベル（付録の BookingStatus 対応表）で表示する
+- **荷受人情報**: 予約情報カード内に荷受人（氏名・住所・連絡先メール）を表示する
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を割り当て]` を強調
 - **荷役履歴**: HandlingEvent を時系列降順で表示
 - **[経路設計者に引き渡す]**: ROLE_SALES かつ BookingStatus = PRELIMINARY の場合のみ表示（US06）。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクト、BookingStatus が ROUTE_PROPOSED に遷移する
@@ -618,15 +687,15 @@ state "見積フロー" as estimation_flow {
   ==
   <b>追跡詳細</b>  TRK-20260328-1234
   --
-  現在のステータス: <color:green>ONBOARD_CARRIER</color>　　現在地: 太平洋上
+  現在のステータス: <color:green>搭載中</color>　　現在地: 太平洋上
   推定到着日: 2026-04-10 頃
-  通関ステータス: <color:blue>PENDING</color>
+  通関ステータス: <color:orange>審査中</color>
   ==
   <b>輸送ステータスタイムライン</b>
   {
-    ● 2026-04-01 18:00 | <b>LOADED</b>       | JPOSA（大阪）  | 担当: suzuki
-    ● 2026-03-30 10:00 | <b>RECEIVED</b>     | JPOSA（大阪）  | 担当: tanaka
-    ○ 2026-03-28 00:00 | <b>NOT_RECEIVED</b> | （初期状態）   | -
+    ● 2026-04-01 18:00 | <b>積み込み済</b> | JPOSA（大阪）  | 担当: suzuki
+    ● 2026-03-30 10:00 | <b>受取済</b>     | JPOSA（大阪）  | 担当: tanaka
+    ○ 2026-03-28 00:00 | <b>未受取</b>     | （初期状態）   | -
   }
   ==
   <i>最終更新: 2026-04-02 09:30　　30 秒ごとに自動更新中...</i>
@@ -639,11 +708,11 @@ state "見積フロー" as estimation_flow {
 #### 仕様
 
 - **自動更新**: htmx `hx-get="/tracking/{trackingNumber}/status" hx-trigger="every 30s" hx-target="#status-timeline"` で部分更新
-- **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に
-- **TransportStatus の遷移**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`
+- **タイムライン**: TransportStatus の変化を時系列で表示。最新状態を最上部に。バッジは日本語ラベル（付録の TransportStatus 対応表）で表示する
+- **TransportStatus 全 9 値の表示規則**: 通常フロー（`NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED`）に加え、`EXCEPTION`（例外）・`UNKNOWN`（不明）の表示挙動を付録「TransportStatus 全 9 値の表示規則」に従って行う
 - **推定到着日**: `YYYY-MM-DD 頃` の形式で表示。未確定の場合は「未確定」と表示
-- **CustomsStatus**: `PENDING`（審査中）/ `CLEARED`（通関済）/ `HELD`（留置中）/ `REJECTED`（不可） をバッジで表示
-- **EXCEPTION**: 異常発生時は赤色バッジで表示し、内容を詳細表示
+- **CustomsStatus**: 通関状態を日本語ラベルバッジ（付録の CustomsStatus 対応表）で表示
+- **例外表示・登録**: `EXCEPTION` ステータス時は赤バッジ「例外」と例外種別・内容を詳細表示する。ROLE_TRACKER には `[例外を登録]` ボタンを表示し、例外イベント登録画面（`/tracking/exceptions/new`）へ遷移する
 - **[予約詳細を表示]**: ROLE_SALES, ROLE_SHIPPER のみ表示
 
 ---
@@ -661,7 +730,7 @@ state "見積フロー" as estimation_flow {
   ==
   {
     追跡番号（TRK-YYYYMMDD-NNNN） | "TRK-20260401-    " | [📷 カメラスキャン]
-    荷役種別                       | ^LOAD^
+    荷役種別                       | ^積込（LOAD）^
     場所（港コード）               | "JPOSA            "
     実施日時                       | "2026-04-01 08:30 "
     担当者メモ                     | "                 "
@@ -678,7 +747,7 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **荷役種別**: `RECEIVE`, `LOAD`, `UNLOAD`, `CUSTOMS_CLEARANCE`, `CLAIM` から選択
+- **荷役種別**: `RECEIVE`（受領）, `LOAD`（積込）, `UNLOAD`（荷降し）, `CUSTOMS`（通関）, `CLAIM`（引取）から選択。プルダウンは日本語ラベル表示（付録の HandlingType 対応表）。domain-model の HandlingType 定義に準拠
 - **追跡番号**: `TRK-YYYYMMDD-NNNN` 形式。`[📷 カメラスキャン]` ボタンでバーコード・QR スキャン入力に対応
 - **実施日時**: 未来日時は警告表示（投機的な登録は許可）
 - **登録成功**: PRG パターンで `/handling` へリダイレクト
@@ -703,10 +772,10 @@ state "見積フロー" as estimation_flow {
   [+ 新規荷役登録]
   {#
     **作業 ID** | **貨物 ID** | **荷役種別** | **場所** | **実施日時**        | **担当者**
-    HE-0042     | BK-1234     | LOAD         | JPOSA    | 2026-04-01 08:30    | suzuki
-    HE-0041     | BK-1230     | UNLOAD       | USLAX    | 2026-03-31 08:42    | johnson
-    HE-0040     | BK-1228     | RECEIVE      | JPYOK    | 2026-03-30 07:30    | tanaka
-    HE-0039     | BK-1225     | CUSTOMS      | USLAX    | 2026-03-29 15:00    | lee
+    HE-0042     | BK-1234     | 積込         | JPOSA    | 2026-04-01 08:30    | suzuki
+    HE-0041     | BK-1230     | 荷降し       | USLAX    | 2026-03-31 08:42    | johnson
+    HE-0040     | BK-1228     | 受領         | JPYOK    | 2026-03-30 07:30    | tanaka
+    HE-0039     | BK-1225     | 通関         | USLAX    | 2026-03-29 15:00    | lee
   }
   ==
   < 前へ | 1 / 8 | 次へ >
@@ -720,6 +789,210 @@ state "見積フロー" as estimation_flow {
 - **htmx**: 検索フォームに `hx-get="/handling" hx-target="#handling-list"` で部分更新
 - **新規登録**: ROLE_HANDLER のみ表示
 - **ページネーション**: 1 ページ 20 件
+
+---
+
+### 通関申告一覧 (/handling/customs)
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物追跡 | 荷役管理 | <b>通関管理</b> | [ログアウト] }
+  ==
+  <b>通関申告一覧</b>
+  --
+  {
+    貨物 ID | "BK-      " | 状態 | ^すべて^ | [検索]
+  }
+  ==
+  [+ 新規通関申告]
+  {#
+    **申告 ID** | **貨物 ID** | **申告日時**        | **通関状態**        | **操作**
+    CD-0031     | BK-1234     | 2026-04-10 09:00    | <color:orange>審査中</color>     | [状態更新]
+    CD-0030     | BK-1230     | 2026-04-08 14:30    | <color:green>通関済</color>      | [詳細]
+    CD-0029     | BK-1225     | 2026-04-05 11:00    | <color:red>留置中</color>        | [状態更新]
+    CD-0028     | BK-1220     | 2026-04-02 16:20    | <color:red>不可</color>          | [詳細]
+  }
+  ==
+  < 前へ | 1 / 3 | 次へ >
+}
+@endsalt
+```
+
+#### 仕様
+
+- **一覧項目**: 申告 ID・貨物 ID・申告日時・通関状態（CustomsStatus）。domain-model の `CustomsDeclaration` エンティティに対応
+- **通関状態バッジ**: CustomsStatus を日本語ラベル（付録の CustomsStatus 対応表）で表示。審査中は橙、通関済は緑、留置中・不可は赤
+- **検索フィルタ**: 貨物 ID・通関状態でフィルタリング
+- **アクセス制御**: ROLE_HANDLER・ROLE_TRACKER のみアクセス可能
+- **htmx**: 検索フォームに `hx-get="/handling/customs" hx-target="#customs-list"` で部分更新
+- **業務連携**: 通関状態が `CLEARED`（通関済）になると荷役作業 `CLAIM`（引取）が可能になる（domain-model の CLEARED→CLAIM ルール）。留置中・不可の場合は該当予約の追跡詳細に `CUSTOMS_HOLD` 例外として反映される
+
+---
+
+### 通関申告登録 (/handling/customs/new)
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物追跡 | 荷役管理 | <b>通関管理</b> | [ログアウト] }
+  ==
+  <b>通関申告登録・状態更新</b>
+  ==
+  {
+    貨物 ID                 | "BK-1234          "
+    申告日時                | "2026-04-10 09:00 "
+    通関状態                | ^審査中（PENDING）^
+    通関完了日時（任意）    | "                 "
+    備考                    | "                 "
+  }
+  ==
+  {
+    <color:red>* 必須項目</color>
+  }
+  ==
+  [登録する] | [キャンセル]
+}
+@endsalt
+```
+
+#### 仕様
+
+- **入力項目**: 貨物 ID・申告日時・通関状態・通関完了日時（`CLEARED` 選択時のみ必須）・備考
+- **通関状態**: `PENDING`（審査中）・`CLEARED`（通関済）・`HELD`（留置中）・`REJECTED`（不可）から選択。プルダウンは日本語ラベル表示（付録の CustomsStatus 対応表）
+- **状態更新**: 既存申告の状態変更もこの画面で行う（税関システムの ACL 経由 `UpdateCustomsStatusCommand` に対応する手動操作導線）
+- **CLEARED 遷移**: 通関済に更新すると、対応予約の引取（CLAIM）荷役が有効化される
+- **登録成功**: PRG パターンで `/handling/customs` へリダイレクト
+- **アクセス制御**: ROLE_HANDLER・ROLE_TRACKER のみ操作可能
+
+---
+
+### 例外イベント一覧 (/tracking/exceptions)
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物追跡 | 荷役管理 | <b>例外管理</b> | [ログアウト] }
+  ==
+  <b>例外イベント一覧</b>
+  --
+  {
+    追跡番号 | "TRK-        " | 種別 | ^すべて^ | 状態 | ^未解決^ | [検索]
+  }
+  ==
+  [+ 新規例外登録]
+  {#
+    **例外 ID** | **追跡番号**        | **種別**       | **発生日時**        | **状態**            | **操作**
+    EX-0012     | TRK-20260328-1234   | <color:orange>遅延</color>     | 2026-04-05 12:00    | <color:red>未解決</color>       | [解決]
+    EX-0011     | TRK-20260327-0987   | <color:red>破損</color>        | 2026-04-04 09:30    | <color:red>未解決</color>       | [解決]
+    EX-0010     | TRK-20260325-0555   | <color:red>紛失</color>        | 2026-04-02 15:00    | <color:green>解決済</color>     | [詳細]
+    EX-0009     | TRK-20260324-0321   | <color:orange>税関保留</color> | 2026-04-01 10:00    | <color:green>解決済</color>     | [詳細]
+  }
+  ==
+  < 前へ | 1 / 2 | 次へ >
+}
+@endsalt
+```
+
+#### 仕様
+
+- **一覧項目**: 例外 ID・追跡番号・例外種別（ExceptionType）・発生日時・解決状態。domain-model の `TrackingExceptionEvent` エンティティに対応
+- **例外種別バッジ**: ExceptionType を日本語ラベル（付録の ExceptionType 対応表）で表示。遅延・税関保留は橙、破損・紛失は赤
+- **検索フィルタ**: 追跡番号・例外種別・解決状態でフィルタリング
+- **緊急表示**: 例外種別が `LOST`（紛失）の行は緊急フラグ（escalation）付きとして赤色ハイライト
+- **アクセス制御**: ROLE_TRACKER のみアクセス可能
+- **htmx**: 検索フォームに `hx-get="/tracking/exceptions" hx-target="#exception-list"` で部分更新
+
+---
+
+### 例外イベント登録 (/tracking/exceptions/new)
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物追跡 | 荷役管理 | <b>例外管理</b> | [ログアウト] }
+  ==
+  <b>例外イベント登録</b>
+  ==
+  {
+    追跡番号        | "TRK-20260328-1234 "
+    例外種別        | ^遅延（DELAY）^
+    発生場所（港）  | "USLAX            "
+    発生日時        | "2026-04-05 12:00 "
+    発生理由・状況  | "荒天のため入港が 3 日遅延 "
+  }
+  ==
+  {
+    <color:red>* 必須項目</color>
+  }
+  ==
+  [登録する] | [キャンセル]
+}
+@endsalt
+```
+
+#### 仕様
+
+- **入力項目**: 追跡番号・例外種別・発生場所（港コード）・発生日時・発生理由。domain-model の `RegisterExceptionCommand` に対応
+- **例外種別**: `DELAY`（遅延）・`DAMAGE`（破損）・`LOST`（紛失）・`CUSTOMS_HOLD`（税関保留）から選択。プルダウンは日本語ラベル表示（付録の ExceptionType 対応表）
+- **状態遷移**: 登録すると対象貨物の TransportStatus が `EXCEPTION`（例外）に更新され、追跡詳細に赤バッジで表示される
+- **緊急通知**: 例外種別が `LOST`（紛失）の場合、緊急フラグを設定し管理職へ escalation 通知を送信する
+- **登録成功**: PRG パターンで `/tracking/exceptions` へリダイレクト
+- **アクセス制御**: ROLE_TRACKER のみ操作可能
+
+---
+
+### 例外イベント解決 (/tracking/exceptions/{exceptionId})
+
+#### ワイヤーフレーム
+
+```plantuml
+@startsalt
+{+
+  {/ <b>CargoTracker</b> | 貨物追跡 | 荷役管理 | <b>例外管理</b> | [ログアウト] }
+  ==
+  <b>例外イベント解決</b>  EX-0012  |  <color:red>未解決</color>
+  ==
+  {
+    {+
+      <b>例外情報</b>
+      ----
+      追跡番号   | TRK-20260328-1234
+      例外種別   | 遅延（DELAY）
+      発生場所   | USLAX（ロサンゼルス）
+      発生日時   | 2026-04-05 12:00
+      発生理由   | 荒天のため入港が 3 日遅延
+    } |
+    {+
+      <b>解決内容</b>
+      ----
+      新到着予定日 | "2026-04-13    "
+      対応方針     | "代替便へ振替済み "
+      解決日時     | "2026-04-06 09:00 "
+    }
+  }
+  ==
+  [解決を登録] | [一覧に戻る]
+}
+@endsalt
+```
+
+#### 仕様
+
+- **例外情報**: 登録済みの例外イベント内容を表示（追跡番号・種別・発生場所・発生日時・理由）
+- **解決フォーム**: 新到着予定日・対応方針・解決日時を入力。domain-model の `ResolveExceptionCommand` に対応
+- **状態復帰**: 解決を登録すると TransportStatus が例外発生前の状態に復帰し（domain-model のビジネスルール 5）、荷主へ対応報告の通知が送信される
+- **解決済み**: 既に解決済みの場合は解決フォームを非表示にし、解決日時・対応方針を表示する
+- **[解決を登録]**: `POST /tracking/exceptions/{exceptionId}/resolve` を送信。PRG パターンで `/tracking/exceptions` へリダイレクト
+- **アクセス制御**: ROLE_TRACKER のみ操作可能
 
 ---
 
@@ -755,7 +1028,7 @@ state "見積フロー" as estimation_flow {
 
 - **検索フィルタ**: 出発港・到着港・出発日でフィルタリング
 - **空き状況**: 積載容量に余裕があるかを「あり / なし」で表示
-- **閲覧専用**: ROLE_ROUTE_DESIGNER は読み取りのみ。航路の追加・変更は管理機能から
+- **閲覧専用**: ROLE_ROUTER は読み取りのみ。航路の追加・変更は管理機能から
 - **経路割り当てへの連携**: 経路割り当て画面が本データを参照して候補を生成
 
 ---
@@ -772,16 +1045,16 @@ state "見積フロー" as estimation_flow {
   <b>請求書一覧</b>
   --
   {
-    ステータス | ^PENDING^ | 発行日 | "2026-03-  " | [検索]
+    ステータス | ^未払い^ | 発行日 | "2026-03-  " | [検索]
   }
   ==
   [+ 新規請求書発行]
   {#
     **請求書 ID** | **予約 ID** | **金額** | **発行日**   | **支払期限** | **ステータス**
-    INV-0021      | BK-1234     | ¥450,000 | 2026-03-28   | 2026-04-28   | <color:red>PENDING</color>
-    INV-0020      | BK-1230     | ¥320,000 | 2026-03-25   | 2026-04-25   | <color:red>PENDING</color>
-    INV-0019      | BK-1225     | ¥580,000 | 2026-03-20   | 2026-04-20   | <color:green>CONFIRMED</color>
-    INV-0018      | BK-1220     | ¥210,000 | 2026-03-15   | 2026-04-15   | <color:green>CONFIRMED</color>
+    INV-0021      | BK-1234     | ¥450,000 | 2026-03-28   | 2026-04-28   | <color:red>未払い</color>
+    INV-0020      | BK-1230     | ¥320,000 | 2026-03-25   | 2026-04-25   | <color:red>支払期限超過</color>
+    INV-0019      | BK-1225     | ¥580,000 | 2026-03-20   | 2026-04-20   | <color:green>支払確認済</color>
+    INV-0018      | BK-1220     | ¥210,000 | 2026-03-15   | 2026-04-15   | <color:green>支払確認済</color>
   }
   ==
   < 前へ | 1 / 2 | 次へ >
@@ -791,9 +1064,9 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
-- **フィルタ**: PaymentStatus（`PENDING`, `CONFIRMED`, `OVERDUE`）・発行日でフィルタリング
-- **ステータスバッジ**: `PENDING` は赤、`CONFIRMED` は緑、`OVERDUE` は濃い赤で表示
-- **支払期限超過**: 期限超過かつ未払いの場合は行を赤色ハイライト
+- **フィルタ**: PaymentStatus（`PENDING`, `CONFIRMED`, `OVERDUE`, `REFUNDED`）・発行日でフィルタリング。プルダウンは日本語ラベル表示
+- **ステータスバッジ**: 日本語ラベルバッジ（付録の PaymentStatus 対応表）で表示。`PENDING`（未払い）と `OVERDUE`（支払期限超過）は赤、`CONFIRMED`（支払確認済）は緑、`REFUNDED`（返金済）は灰
+- **支払期限超過**: `OVERDUE` の場合は行を赤色ハイライト
 - **アクセス制御**: ROLE_BILLING のみアクセス可能
 
 ---
@@ -807,7 +1080,7 @@ state "見積フロー" as estimation_flow {
 {+
   {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | <b>請求管理</b> | [ログアウト] }
   ==
-  <b>請求書詳細</b>  INV-0021  |  <color:red>PENDING</color>
+  <b>請求書詳細</b>  INV-0021  |  <color:red>未払い</color>
   ==
   {
     {+
@@ -865,14 +1138,14 @@ state "見積フロー" as estimation_flow {
   <b>割引ポリシー一覧</b>
   ==
   {
-    検索: | "貨物種別または顧客カテゴリ  " | [検索]
+    検索: | "割引方針種別または荷主種別  " | [検索]
   }
   {#
-    **ID** | **ポリシー名** | **貨物種別** | **顧客区分** | **割引率** | **有効開始** | **有効終了** | **操作**
-    DP-001 | 一般顧客基本割引 | GENERAL | STANDARD | 0% | 2026-01-01 | -（無期限） | [編集][無効化]
-    DP-002 | 契約顧客割引 | ALL | CONTRACT | 5% | 2026-01-01 | -（無期限） | [編集][無効化]
-    DP-003 | ボリューム顧客割引 | ALL | VOLUME | 10% | 2026-01-01 | -（無期限） | [編集][無効化]
-    DP-004 | 危険物割増 | DANGEROUS | ALL | -3% | 2026-01-01 | -（無期限） | [編集][無効化]
+    **ID** | **ポリシー名** | **割引方針種別** | **荷主種別** | **貨物種別** | **割引率** | **有効開始** | **有効終了** | **操作**
+    DP-001 | 個人標準 | 割引なし | 個人 | 一般貨物 | 0% | 2026-01-01 | -（無期限） | [編集][無効化]
+    DP-002 | 法人標準割引 | 法人標準割引 | 法人 | 全種別 | 5% | 2026-01-01 | -（無期限） | [編集][無効化]
+    DP-003 | ボリューム割引 | ボリューム割引 | 法人 | 全種別 | 10% | 2026-01-01 | -（無期限） | [編集][無効化]
+    DP-004 | 危険物割増 | 割引なし | 全種別 | 危険物 | -3% | 2026-01-01 | -（無期限） | [編集][無効化]
   }
   ==
   [+ 新規ポリシー登録]
@@ -903,8 +1176,9 @@ state "見積フロー" as estimation_flow {
   ==
   {
     ポリシー名       | "                              "
-    対象貨物種別     | ^GENERAL（一般）▼^
-    対象顧客区分     | ^STANDARD（通常）▼^
+    割引方針種別     | ^法人標準割引（CORPORATE_STANDARD）▼^
+    対象荷主種別     | ^法人（CORPORATE）▼^
+    対象貨物種別     | ^一般貨物（GENERAL）▼^
     割引率（%）      | "    "  （プラス: 割引 / マイナス: 割増）
     有効開始日       | "YYYY-MM-DD  "
     有効終了日       | "YYYY-MM-DD  " （空欄 = 無期限）
@@ -917,8 +1191,11 @@ state "見積フロー" as estimation_flow {
 
 #### 仕様
 
+- **割引方針種別**: `CORPORATE_STANDARD`（法人標準割引）・`VOLUME_DISCOUNT`（ボリューム割引）・`SEASONAL`（季節割引）・`NONE`（割引なし）から選択（付録の DiscountPolicyType 対応表）
+- **対象荷主種別**: `INDIVIDUAL`（個人）・`CORPORATE`（法人）から選択（付録の ShipperType 対応表）。domain-model のビジネスルール「CORPORATE ShipperType の荷主は割引適用対象」に対応
+- **対象貨物種別**: CargoType（一般貨物・危険物・冷凍冷蔵）から選択。プルダウンは日本語ラベル表示
 - **バリデーション**: 割引率は -50〜100% の範囲、有効開始日 ≤ 有効終了日
-- **重複チェック**: 同一の「貨物種別 × 顧客区分 × 期間」のポリシーが既に存在する場合はエラー表示
+- **重複チェック**: 同一の「割引方針種別 × 荷主種別 × 貨物種別 × 期間」のポリシーが既に存在する場合はエラー表示
 - **[登録する]**: `POST /admin/discount-policies` に送信。PRG パターンで一覧にリダイレクト
 - **[キャンセル]**: `/admin/discount-policies` に戻る
 
@@ -946,14 +1223,14 @@ state "見積フロー" as estimation_flow {
   <b>追跡結果</b>
   {+
     追跡番号: TRK-20260328-1234
-    ステータス: <b>輸送中（IN_TRANSIT）</b>
+    ステータス: <b>搭載中</b>
     現在地: JPOSA → USLAX
     ----
     <b>イベント履歴</b>
     {#
       **日時** | **イベント** | **場所**
-      2026-03-31 09:15 | 積込（LOAD） | JPOSA
-      2026-03-30 14:00 | 受取（RECEIVE） | JPOSA
+      2026-03-31 09:15 | 積込 | JPOSA
+      2026-03-30 14:00 | 受領 | JPOSA
     }
   }
   ==
@@ -1145,7 +1422,9 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 
 ---
 
-## 付録: BookingStatus / TransportStatus 対応表
+## 付録: enum 日本語ラベル対応表
+
+> 本付録は全 enum の日本語ラベルの正典である。ワイヤーフレーム・プルダウン・バッジ・テーブルの表示はすべて日本語ラベルを正とし、生の英語 enum 値を画面に露出させない（英語値はコード内部・API・aria-label にのみ使用）。enum の値定義は `domain-model.md` に準拠する。
 
 ### BookingStatus バッジ定義
 
@@ -1172,3 +1451,73 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | `AWAITING_CLAIM` | 引取待ち | `badge bg-warning text-dark` |
 | `CLAIMED` | 引取完了 | `badge bg-success` |
 | `EXCEPTION` | 例外 | `badge bg-danger` |
+| `UNKNOWN` | 不明 | `badge bg-secondary` |
+
+#### TransportStatus 全 9 値の表示規則（追跡詳細）
+
+追跡詳細画面（`/tracking/{trackingNumber}`）では、TransportStatus の全 9 値を以下の規則で表示する。
+
+- **通常フロー（7 値）**: `NOT_RECEIVED → RECEIVED → LOADED → ONBOARD_CARRIER → UNLOADED → AWAITING_CLAIM → CLAIMED` はタイムライン上に順に配置し、現在ステータスを緑バッジで強調。到達済みは `●`、未到達は `○` で表示する
+- **`EXCEPTION`（例外）**: 例外イベント発生中は、現在ステータス欄を赤バッジ「例外」で表示し、その直下に例外種別（付録の ExceptionType 対応表）と発生状況を明示する。タイムラインには例外発生時点のイベントを赤字で挿入する。解決後は例外発生前のステータスに復帰し、通常表示に戻る
+- **`UNKNOWN`（不明）**: ステータスが確定できない場合（外部システム未連携・データ欠損）は灰バッジ「不明」を表示し、「最新の状態を取得できませんでした。時間をおいて再度ご確認ください」の注記を添える。タイムラインは取得済みイベントのみを表示する
+
+### CargoType バッジ定義
+
+| ステータス | 表示ラベル | Bootstrap クラス | 意味 |
+| :--- | :--- | :--- | :--- |
+| `GENERAL` | 一般貨物 | `badge bg-secondary` | 通常貨物（係数 1.0） |
+| `HAZARDOUS` | 危険物 | `badge bg-danger` | 危険物・要申告（係数 1.8） |
+| `REFRIGERATED` | 冷凍・冷蔵 | `badge bg-info text-dark` | 温度管理必須（係数 1.5） |
+
+### HandlingType 表示ラベル定義
+
+| 値 | 表示ラベル | 意味 |
+| :--- | :--- | :--- |
+| `RECEIVE` | 受領 | 出発港での貨物受領 |
+| `LOAD` | 積込 | 航海への積み込み（VoyageNumber 必須） |
+| `UNLOAD` | 荷降し | 航海からの荷降ろし（VoyageNumber 必須） |
+| `CUSTOMS` | 通関 | 通関手続き |
+| `CLAIM` | 引取 | 目的港での貨物引取 |
+
+### PaymentStatus バッジ定義
+
+| ステータス | 表示ラベル | Bootstrap クラス | 意味 |
+| :--- | :--- | :--- | :--- |
+| `PENDING` | 未払い | `badge bg-danger` | 請求発行済・未入金 |
+| `CONFIRMED` | 支払確認済 | `badge bg-success` | 入金確認済 |
+| `OVERDUE` | 支払期限超過 | `badge bg-danger` | 支払期限（発行 + 30 日）超過・未入金。行を赤色ハイライト |
+| `REFUNDED` | 返金済 | `badge bg-secondary` | 返金処理完了 |
+
+### CustomsStatus バッジ定義
+
+| ステータス | 表示ラベル | Bootstrap クラス | 意味 |
+| :--- | :--- | :--- | :--- |
+| `PENDING` | 審査中 | `badge bg-warning text-dark` | 通関審査中 |
+| `CLEARED` | 通関済 | `badge bg-success` | 通関完了。引取（CLAIM）可能 |
+| `HELD` | 留置中 | `badge bg-danger` | 税関留置。追跡に CUSTOMS_HOLD 例外を反映 |
+| `REJECTED` | 不可 | `badge bg-danger` | 通関不可 |
+
+### ExceptionType 表示ラベル定義
+
+| 値 | 表示ラベル | Bootstrap クラス | 意味 |
+| :--- | :--- | :--- | :--- |
+| `DELAY` | 遅延 | `badge bg-warning text-dark` | 輸送遅延 |
+| `DAMAGE` | 破損 | `badge bg-danger` | 貨物破損 |
+| `LOST` | 紛失 | `badge bg-danger` | 貨物紛失（escalation 対象） |
+| `CUSTOMS_HOLD` | 税関保留 | `badge bg-warning text-dark` | 税関留置による保留 |
+
+### DiscountPolicyType 表示ラベル定義
+
+| 値 | 表示ラベル | 意味 |
+| :--- | :--- | :--- |
+| `CORPORATE_STANDARD` | 法人標準割引 | 法人顧客向け標準割引 |
+| `VOLUME_DISCOUNT` | ボリューム割引 | 数量に応じた割引 |
+| `SEASONAL` | 季節割引 | 期間限定の季節割引 |
+| `NONE` | 割引なし | 割引非適用 |
+
+### ShipperType（荷主種別）表示ラベル定義
+
+| 値 | 表示ラベル | 意味 |
+| :--- | :--- | :--- |
+| `INDIVIDUAL` | 個人 | 個人荷主 |
+| `CORPORATE` | 法人 | 法人荷主（割引適用対象） |
