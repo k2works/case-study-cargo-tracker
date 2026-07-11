@@ -85,6 +85,32 @@ jacocoTestReport {
     }
 }
 
+// カバレッジ目標を CI で実効化する。
+// 閾値は現状の実測カバレッジ（全体行 81.5% / 分岐 76.8%）を下回る安全側の値から開始し、
+// レイヤー別目標（テスト戦略 §6: ドメイン 85% 等）へ段階的に引き上げる。
+// 引き上げ手順は docs/design/test_strategy.md §6.3 を参照。
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.75
+            }
+        }
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.65
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
+
 sonar {
     properties {
         property 'sonar.projectKey', 'cargo-tracker'
