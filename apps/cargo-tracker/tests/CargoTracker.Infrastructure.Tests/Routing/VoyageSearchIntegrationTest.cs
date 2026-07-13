@@ -109,7 +109,7 @@ public sealed class VoyageSearchIntegrationTest : IAsyncLifetime
                  arrival_deadline, booking_status, created_at, updated_at, version)
             VALUES
                 ('BKG-US07-001', @ShipperId, 'HAZARDOUS', 1200, 'JPTYO', 'DEHAM',
-                 '2026-10-31', 'ROUTEPROPOSED', @Now, @Now, 0),
+                 '2026-10-31', 'ROUTE_PROPOSED', @Now, @Now, 0),
                 ('BKG-US07-002', @ShipperId, 'GENERAL', 800, 'JPTYO', 'DEHAM',
                  '2026-10-31', 'PRELIMINARY', @Now, @Now, 0)
             """,
