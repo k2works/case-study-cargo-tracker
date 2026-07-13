@@ -267,4 +267,36 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         request.Should().Contain("確定経路")
             .And.Contain("VYG-SEL-001");
     }
+
+    [Theory]
+    [InlineData("99")]
+    [InlineData("-1")]
+    public async Task 範囲外の経路候補インデックスを選択すると400になる(string selectedIndex)
+    {
+        var sales = await LoginAsync("sales");
+        var bookingId = await CreateAndAssignGeneralBookingAsync(sales);
+        var router = await LoginAsync("router");
+        // Theory の各ケースで航海番号を一意にする（クラスフィクスチャで DB を共有するため）。
+        await CreateVoyageAsync(router, $"VYG-SEL-OOR-{selectedIndex.Replace("-", "N")}", "General");
+
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "General"));
+        var token = Token(candidates);
+
+        var response = await router.PostAsync($"/routing/requests/{bookingId}/select", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["OriginUnlocode"] = "JPTYO",
+            ["DestinationUnlocode"] = "DEHAM",
+            ["DepartureFrom"] = "2026-10-01T00:00",
+            ["DepartureTo"] = "2026-10-31T23:59",
+            ["CargoType"] = "General",
+            ["selectedIndex"] = selectedIndex,
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // 確定経路は保存されていない（依頼画面に確定経路バナーが出ない）。
+        var request = await router.GetStringAsync($"/routing/requests/{bookingId}");
+        request.Should().NotContain("確定経路");
+    }
 }

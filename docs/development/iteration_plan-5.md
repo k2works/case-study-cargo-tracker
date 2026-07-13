@@ -130,8 +130,8 @@
 | 0.1 | 【Day 1・着手前】設計反映：(a) Tracking/Handling コンテキストの集約（TrackingActivity・TrackingActivityEvent・HandlingActivity）・`TransportStatus` 同期・追跡番号発行フローを domain-model に確定、(b) tracking/handling テーブル（0011 以降・二方言）を data-model に定義、(c) 対象画面（下記）を ui_design 画面一覧と整合。局面継続チェック（縦切り・ArchUnit グリーン・UoW 基盤動作） | 4h | - | [ ] |
 | 0.2 | IT4 レビュー H1：確定経路の真実の源泉（Routing=源泉／Booking=US11 時点の読取スナップショット）と差し戻し時の再同期方針を domain-model に明記 | 2h | - | [ ] |
 | 0.3 | IT4 レビュー H2/T5：経路選択のインデックス依存を是正（候補キー＝航海番号列で確定対象を照合）＋決定性の前提テスト。もしくは ADR で決定性前提を固定 | 4h | - | [ ] |
-| 0.4 | IT4 レビュー H4：selectedIndex 範囲外・負値の Web テストを追加 | 1h | - | [ ] |
-| 0.5 | IT4 レビュー H5：荷主通知の多重送信可否を確定し、抑止する場合はロジック＋テスト追加（US12） | 2h | - | [ ] |
+| 0.4 | IT4 レビュー H4：selectedIndex 範囲外・負値の Web テストを追加 | 1h | - | [x] |
+| 0.5 | IT4 レビュー H5：荷主通知の多重送信可否を確定し、抑止する場合はロジック＋テスト追加（US12） | 2h | - | [x]（再通知は正当な業務操作＝追記型を正式方針として確定・コメント明記＋追記テスト追加） |
 | 0.6 | IT4 レビュー H6/H7：予約詳細に確定経路サマリを表示し、状態別の推奨アクション順・実行ロールを明示（developing-uiux-review と合流） | 3h | - | [ ] |
 
 **小計**: 16h（理想時間）

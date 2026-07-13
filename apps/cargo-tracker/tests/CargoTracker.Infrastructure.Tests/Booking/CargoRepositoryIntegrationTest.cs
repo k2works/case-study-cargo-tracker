@@ -292,6 +292,28 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         notification.ExpectedArrivalTime.Should().Be(new DateTimeOffset(2026, 9, 20, 0, 0, 0, TimeSpan.Zero));
     }
 
+    [Fact]
+    public async Task 再通知すると通知記録が追記され最新が参照される()
+    {
+        // 通知は追記型（append-only）の監査ログ。経路変更後の再通知は正当な業務操作として複数記録を許容する（IT4 レビュー H5）。
+        var bookingId = await CreateRouteProposedWithItineraryAsync();
+        var factory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
+        var notificationRepository = new RouteNotificationRepository(_connectionFactory, _ambient);
+        var service = new NotifyRouteToShipperCommandService(factory, _repository, notificationRepository);
+
+        await service.HandleAsync(new NotifyRouteToShipperCommand(bookingId));
+        await service.HandleAsync(new NotifyRouteToShipperCommand(bookingId));
+
+        using var connection = _connectionFactory.Create();
+        var count = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM route_notification WHERE booking_id = @BookingId",
+            new { BookingId = bookingId.Value });
+        count.Should().Be(2);
+
+        var latest = await notificationRepository.FindLatestByBookingIdAsync(bookingId);
+        latest.Should().NotBeNull();
+    }
+
     private async Task<BookingId> CreateRouteProposedWithItineraryAsync()
     {
         var bookingId = await CreateGeneralCargoAsync();
