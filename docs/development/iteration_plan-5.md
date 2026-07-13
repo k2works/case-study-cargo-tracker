@@ -15,7 +15,7 @@
 
 ### イテレーション終了時の達成状態
 
-1. **追跡の開始**: 予約確定後、経路設計者が追跡番号を発行し、貨物状態が追跡ライフサイクル（受領待ち→輸送中→配送完了）に入る（US14）。IT4 で宙吊りだった `BookingConfirmedEvent` を追跡番号発行の起点として消費する。
+1. **追跡の開始**: 予約確定後、経路設計者が追跡番号を発行し、貨物状態が追跡ライフサイクル（`TransportStatus`：NotReceived → Received → Loaded → OnboardCarrier → Unloaded → Claimed）に入る（US14）。IT4 で宙吊りだった `BookingConfirmedEvent` を追跡番号発行の起点として消費する。
 2. **荷役の記録と状態同期**: 荷役作業員が受領・積込・荷降し・引取を記録し、貨物状態（`TransportStatus`）と予約状態（`BookingStatus`）を同期する（US15/US16）。追跡管理者が状態を手動更新できる（US17）。
 3. **追跡照会**: 荷主・荷受人・追跡管理者が追跡番号から現在地・状態・イベント履歴・推定到着日を照会でき、公開ページ（認証不要）でも照会できる（US18）。
 4. **Release 1.0 出荷**: IT1-5 の予約〜追跡フローが一気通貫で動作し、MVP のリリース条件を満たす。
@@ -65,7 +65,7 @@
 
 1. 「予約確定」（`Confirmed`）状態の予約に対して追跡番号を発行できる
 2. 追跡番号は一意に採番される
-3. 発行後、貨物状態が「受領待ち」（`TransportStatus` 初期値）に設定される
+3. 発行後、貨物状態が「受領待ち」（`TransportStatus` = `NotReceived`・初期値）に設定される
 4. 予約状態が `Confirmed → TrackingIssued` に遷移する
 5. 荷主に追跡番号と追跡方法をメール通知する（AC）。※メール送信基盤が未整備のため本 IT では通知記録で代替し、実送信は後続 IT（IT4 の通知記録と同方針）
 
@@ -91,8 +91,8 @@
 **受入条件**:
 
 1. 作業種別「引取」を選択すると荷受人情報の確認と署名または確認コードの入力を要求される
-2. 引取記録が登録され、貨物状態が「配送完了」（`Delivered`）に更新される
-3. 予約状態が `Delivered` に同期される
+2. 引取記録が登録され、貨物状態が「引取済」（`TransportStatus` = `Claimed`）に更新される
+3. 予約状態が `Delivered`（配送完了）に同期され、精算処理の開始条件となる
 4. 引取完了の記録が残る
 
 #### US17: 貨物状態を手動更新する（UC14）
@@ -302,7 +302,7 @@ HandlingActivity ..> "Booking" : CargoSnapshot（ACL・妥当性検証）
 
 - 集約: TrackingActivity（追跡・TrackingNumber 一意・TrackingActivityEvent 時系列）、HandlingActivity（荷役作業記録）。domain-model の集約・エンティティ・VO 名に準拠。
 - `HandlingType` は VO（record）で RECEIVE/LOAD/UNLOAD/CUSTOMS/CLAIM を持つ（VoyageNumber 必須判定を内包）。本 IT では RECEIVE/LOAD/UNLOAD（US15）・CLAIM（US16）を扱い、**CUSTOMS（通関）は本リリース対象外**（税関はスコープ外・release_plan #14）。
-- 共有カーネル: `TransportStatus`（受領待ち→輸送中→配送完了）を Tracking/Handling/Booking で共有（domain-model の共有ドメイン）。
+- 共有カーネル: `TransportStatus`（domain-model の 9 段階：`NotReceived`（受領待ち）→ `Received`（受領済）→ `Loaded`（積込済）→ `OnboardCarrier`（輸送中）→ `Unloaded`（荷降し済）→ `AwaitingClaim`（引取待ち）→ `Claimed`（引取済）、ほか `Exception`/`Unknown`）を Tracking/Handling/Booking で共有。荷役種別（RECEIVE/LOAD/UNLOAD/CLAIM）と対応する状態遷移を集約に凝集させる。
 - BC 連携（ACL・BC 独立）: (1) Booking→Tracking の追跡番号発行（`BookingConfirmedEvent` 起点・`AssignTrackingNumberCommand`）、(2) Handling→Booking の `CargoSnapshot` ACL（追跡番号で予約情報＝出発港/旅程/目的港を取得し場所妥当性を検証）、(3) Handling→Tracking/Booking の状態同期（`TransportStatus`/`BookingStatus` 更新）。IT4 の ACL パターン（SQL 直接参照・プリミティブ DTO）を踏襲。
 
 ### データモデル
@@ -400,6 +400,7 @@ HandlingActivity ..> "Booking" : CargoSnapshot（ACL・妥当性検証）
 |------|---------|--------|
 | 2026-07-13 | 初版作成（US14-18・目標 17 SP・中盤インサイドアウト最終・Release 1.0 出荷。IT4 レビュー高優先 H1/H2/H4/H5/H6/H7 とふりかえり Try T1-T6・繰り越し品質ゲートを先行タスク化） | - |
 | 2026-07-13 | validating-iteration-plan 反映（8 ステップ）。ステップ 2：US14 メール通知 AC・US15 作業種別を user_story に整合（引取は US16、通関は対象外）。ステップ 3：コマンド名を domain-model 準拠に修正（HandlingActivityRegistrationCommand・AddTrackingEventCommand・AssignTrackingNumberCommand）、HandlingType を record（RECEIVE/LOAD/UNLOAD/CUSTOMS/CLAIM）とし CUSTOMS 対象外・CargoSnapshot ACL・LOAD/UNLOAD の MISROUTED を明記。ステップ 4：追跡イベントテーブルを tracking_handling_event に是正・マイグレーション番号を 0011 以降に。ステップ 8：IT4 レビュー中優先 M1-M5 の対応方針（対応/保留）を追記 | - |
+| 2026-07-13 | validating-design 反映（軸 A/B/C）。軸 A：局面（中盤・IT3-5 インサイドアウト最終）・アプローチ・US 割り当てが開発戦略と一致。軸 B：`TransportStatus` を domain-model の 9 段階（NotReceived〜Claimed/Exception/Unknown）に是正、US14/US16 の状態呼称を enum 値に整合、CargoSnapshot/LegSnapshot の存在を確認。軸 C：追跡番号・BookingConfirmedEvent 消費・AmbientTransaction・楽観ロック・post-commit・二方言 SQL・ACL パターンの連続性と IT4 レビュー/ふりかえり繰り越しの反映を確認（一致） | - |
 
 ---
 
