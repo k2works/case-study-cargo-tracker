@@ -365,4 +365,28 @@ public class CargoTest
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    // --- US14: 追跡番号発行に連動した状態遷移 ---
+
+    [Fact]
+    public void 確定済みの予約は追跡発行でTrackingIssuedになる()
+    {
+        var cargo = RouteProposedCargo();
+        cargo.AssignItinerary(CreateItinerary());
+        cargo.Confirm();
+
+        cargo.IssueTracking();
+
+        cargo.BookingStatus.Should().Be(BookingStatus.TrackingIssued);
+    }
+
+    [Fact]
+    public void 確定前の予約は追跡発行できない()
+    {
+        var cargo = RouteProposedCargo();
+
+        var act = () => cargo.IssueTracking();
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

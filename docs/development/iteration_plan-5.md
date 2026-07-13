@@ -144,7 +144,7 @@
 |---|--------|---------|------|------|
 | 1.1 | tracking_activity / tracking_handling_event テーブル（追跡番号・予約 ID・TransportStatus・イベント時系列。0011 以降・二方言）＋モデル定義 | 3h | - | [ ] |
 | 1.2 | TrackingActivity 集約（TrackingNumber 採番・受領待ち初期化）＋ドメインユニットテスト | 4h | - | [ ] |
-| 1.3 | AssignTrackingNumberCommand / CommandService（`Confirmed → TrackingIssued` 同期）＋`BookingConfirmedEvent` ハンドラで発行起動（IT4 H3 解消）＋統合テスト | 4h | - | [ ] |
+| 1.3 | AssignTrackingNumberCommand / CommandService（`Confirmed → TrackingIssued` 同期）＋`BookingConfirmedEvent` ハンドラで発行起動（IT4 H3 解消）＋統合テスト | 4h | - | [x]（IssueTrackingOnBookingConfirmedHandler で自動発行・Cargo.IssueTracking で状態遷移。UnitOfWork を post-commit ハンドラが新 UoW を開けるよう修正） |
 | 1.4 | 追跡番号発行 UI（予約詳細から発行）＋E2E | 2h | - | [ ] |
 
 **小計**: 13h（理想時間）

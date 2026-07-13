@@ -19,6 +19,7 @@ public sealed class UnitOfWork : IUnitOfWork
     private readonly IPublisher _publisher;
     private readonly List<AggregateRoot> _tracked = [];
     private bool _committed;
+    private bool _released;
 
     public UnitOfWork(IDbConnection connection, IPublisher publisher, AmbientTransaction ambient)
     {
@@ -40,8 +41,14 @@ public sealed class UnitOfWork : IUnitOfWork
         _transaction.Commit();
         _committed = true;
 
-        // コミット成功後にのみイベントを回収して発行する（post-commit）。
+        // コミット成功後にのみイベントを回収する（post-commit）。
         var events = _tracked.SelectMany(aggregate => aggregate.PullDomainEvents()).ToArray();
+
+        // イベント発行前にトランザクションとアンビエントを解放する。
+        // これにより post-commit ハンドラが自身の UoW（新規トランザクション）を開始でき、
+        // AmbientTransaction のネスト前提違反（ADR-0006）を避けられる。
+        ReleaseTransaction();
+
         foreach (var domainEvent in events)
         {
             await _publisher.Publish(domainEvent, ct);
@@ -50,15 +57,26 @@ public sealed class UnitOfWork : IUnitOfWork
 
     public ValueTask DisposeAsync()
     {
-        if (!_committed)
+        if (!_committed && !_released)
         {
             // 未コミットのまま破棄された場合はロールバックする。イベントは回収されないため発行されない。
             _transaction.Rollback();
         }
-        _transaction.Dispose();
-        _ambient.Clear();
+        ReleaseTransaction();
         _connection.Dispose();
         return ValueTask.CompletedTask;
+    }
+
+    /// <summary>トランザクションを破棄しアンビエントを解除する（多重呼び出しは無害）。</summary>
+    private void ReleaseTransaction()
+    {
+        if (_released)
+        {
+            return;
+        }
+        _released = true;
+        _transaction.Dispose();
+        _ambient.Clear();
     }
 }
 

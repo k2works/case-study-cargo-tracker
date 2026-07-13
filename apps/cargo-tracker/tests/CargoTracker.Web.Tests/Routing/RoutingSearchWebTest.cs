@@ -230,8 +230,9 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         await PostBookingActionAsync(sales, bookingId, "notify");
         await PostBookingActionAsync(sales, bookingId, "confirm");
 
+        // 予約確定を起点に BookingConfirmedEvent → 追跡番号が自動発行され、状態が TrackingIssued に遷移する（US14・H3）。
         var detail = await sales.GetStringAsync($"/bookings/{bookingId}");
-        detail.Should().Contain("CONFIRMED").And.Contain("予約は確定済み");
+        detail.Should().Contain("TRACKING_ISSUED");
     }
 
     private static async Task PostBookingActionAsync(HttpClient client, string bookingId, string action)

@@ -106,6 +106,17 @@ public sealed class Cargo : AggregateRoot
         AddDomainEvent(new BookingConfirmedEvent(BookingId));
     }
 
+    /// <summary>追跡番号発行に連動して追跡ライフサイクルへ移行する（US14）。Confirmed → TrackingIssued。</summary>
+    public void IssueTracking()
+    {
+        if (BookingStatus != BookingStatus.Confirmed)
+        {
+            throw new InvalidOperationException("確定済みの予約のみ追跡番号を発行できます。");
+        }
+        BookingStatus = BookingStatus.TrackingIssued;
+        Version++;
+    }
+
     /// <summary>荷主のルート変更希望で経路再設計に差し戻す（US13）。RouteProposed → Preliminary。</summary>
     public void ReturnToRouting()
     {
