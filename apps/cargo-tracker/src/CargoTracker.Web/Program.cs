@@ -72,6 +72,7 @@ builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.OutboundSer
     CargoTracker.Booking.Infrastructure.Services.ShipperExistenceChecker>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.BookCargoCommandService>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.AssignToRoutingCommandService>();
+builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.RouteCargoCommandService>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.ConfirmBookingCommandService>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.ReturnToRoutingCommandService>();
 builder.Services.AddScoped<CargoTracker.Booking.Application.Internal.CommandServices.CancelBookingCommandService>();

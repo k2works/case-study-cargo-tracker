@@ -245,6 +245,37 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         cancelled!.BookingStatus.Should().Be(BookingStatus.Cancelled);
     }
 
+    [Fact]
+    public async Task RouteCargoコマンドで確定経路を予約に紐付けられる()
+    {
+        var bookingId = await CreateGeneralCargoAsync();
+        var factory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
+
+        var cargo = await _repository.FindByBookingIdAsync(bookingId);
+        cargo!.AssignToRouting();
+        await using (var uow = factory.Begin())
+        {
+            await _repository.UpdateAsync(cargo);
+            await uow.CommitAsync();
+        }
+
+        await new RouteCargoCommandService(factory, _repository).HandleAsync(new RouteCargoCommand(
+            bookingId.Value,
+            new[]
+            {
+                new RouteLegInput("V001", "JPTYO", "SGSIN",
+                    new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero)),
+                new RouteLegInput("V002", "SGSIN", "DEHAM",
+                    new DateTimeOffset(2026, 9, 12, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero)),
+            }));
+
+        var routed = await _repository.FindByBookingIdAsync(bookingId);
+        routed!.CargoItinerary.Should().NotBeNull();
+        routed.CargoItinerary!.Legs.Should().HaveCount(2);
+        routed.CargoItinerary.Legs[0].UnloadLocation.UnLocode.Should().Be("SGSIN");
+        routed.BookingStatus.Should().Be(BookingStatus.RouteProposed);
+    }
+
     private async Task<BookingId> CreateRouteProposedWithItineraryAsync()
     {
         var bookingId = await CreateGeneralCargoAsync();
