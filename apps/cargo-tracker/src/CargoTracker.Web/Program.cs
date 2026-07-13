@@ -99,6 +99,11 @@ builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServic
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.OutboundServices.IRouteCandidateService,
     CargoTracker.Routing.Infrastructure.Services.VoyageRouteCandidateService>();
 
+// Tracking コンテキスト（US14）。
+builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.ITrackingActivityRepository,
+    CargoTracker.Tracking.Infrastructure.Repositories.TrackingActivityRepository>();
+builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
+
 var app = builder.Build();
 
 // 起動時に DbUp マイグレーションを適用する（forward-only・ADR-0003）。
