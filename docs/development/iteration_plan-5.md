@@ -63,11 +63,11 @@
 
 **受入条件**:
 
-1. 予約番号を指定して予約情報を確認できる
-2. 一意の追跡番号が採番される
-3. 追跡番号と予約が紐付けられ、貨物状態が「受領待ち」（`TransportStatus` 初期値）に設定される
+1. 「予約確定」（`Confirmed`）状態の予約に対して追跡番号を発行できる
+2. 追跡番号は一意に採番される
+3. 発行後、貨物状態が「受領待ち」（`TransportStatus` 初期値）に設定される
 4. 予約状態が `Confirmed → TrackingIssued` に遷移する
-5. 追跡番号発行の記録が残る（荷主へのメール通知は記録のみ／実通知手段は後続）
+5. 荷主に追跡番号と追跡方法をメール通知する（AC）。※メール送信基盤が未整備のため本 IT では通知記録で代替し、実送信は後続 IT（IT4 の通知記録と同方針）
 
 #### US15: 荷役作業を記録する（UC13）
 
@@ -76,12 +76,12 @@
 
 **受入条件**:
 
-1. 追跡番号を入力して貨物を特定できる（見つからない場合はエラーと再入力）
-2. 作業種別（受領・積込・荷降し・引取）を選択できる
-3. 作業日時・作業場所（港湾コード）を確認・入力できる
-4. 作業記録が登録され、貨物状態（`TransportStatus`）が更新される
-5. 作業場所が予定ルートと異なる場合、「予定外の作業場所」警告が表示され続行/中断を選べる
-6. 状態変更の記録が残る（荷主への状態変更通知は記録のみ）
+1. 追跡番号の入力（またはスキャン）で貨物を特定できる（存在しない場合はエラーメッセージ）
+2. 作業種別（受領・積込・荷降し＝`HandlingType` の RECEIVE/LOAD/UNLOAD）を選択できる（引取＝CLAIM は US16、通関＝CUSTOMS は本リリース対象外）
+3. 作業日時・作業場所（UN/LOCODE 形式の港湾コード）を入力できる
+4. 記録後、貨物状態が対応する状態（受領済・積込済・荷降し済）に自動更新される
+5. 記録後、荷主に状態変更通知が送信される（AC。本 IT では通知記録で代替）
+6. 作業場所が予定ルートと異なる場合、警告が表示される（LOAD/UNLOAD の不一致は `MISROUTED`、RECEIVE の不一致は警告＝domain-model の場所判定ルール）
 
 #### US16: 引取作業を記録する（UC13 拡張）
 
@@ -136,11 +136,13 @@
 
 **小計**: 16h（理想時間）
 
+> **IT4 レビュー中優先（M1〜M5）の対応方針**: M1（`ToDatabaseTimestamp` 重複の Shared 集約）は本 IT の Tracking/Handling 実装で同変換を再利用する前に 0.x の合間に一括抽出（機会対応）。M3（leg/selected_route_leg の列命名不一致）・M4（cost 型の二方言非対称）・M5（楽観ロック規約の非対称）は**保留**（機能影響なし・IT6 の負債返済枠で対応）。M2（通知が記録のみである旨の UI 明示）は 0.5/0.6 の通知 UI 対応と合流。詳細は [開発成果物レビュー（IT4）](../review/開発成果物_IT4_review_20260713.md)。
+
 #### 1. US14 追跡番号を発行する（2 SP）
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | tracking_activity テーブル（追跡番号・予約 ID・TransportStatus・0011・二方言）＋モデル定義 | 3h | - | [ ] |
+| 1.1 | tracking_activity / tracking_handling_event テーブル（追跡番号・予約 ID・TransportStatus・イベント時系列。0011 以降・二方言）＋モデル定義 | 3h | - | [ ] |
 | 1.2 | TrackingActivity 集約（TrackingNumber 採番・受領待ち初期化）＋ドメインユニットテスト | 4h | - | [ ] |
 | 1.3 | AssignTrackingNumberCommand / CommandService（`Confirmed → TrackingIssued` 同期）＋`BookingConfirmedEvent` ハンドラで発行起動（IT4 H3 解消）＋統合テスト | 4h | - | [ ] |
 | 1.4 | 追跡番号発行 UI（予約詳細から発行）＋E2E | 2h | - | [ ] |
@@ -152,9 +154,9 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | handling_activity テーブル（追跡番号・作業種別・場所・日時・0012・二方言）＋モデル定義 | 3h | - | [ ] |
-| 2.2 | HandlingActivity 集約・作業種別（受領/積込/荷降し/引取）・`TransportStatus` 遷移ルール＋ユニットテスト（中盤の主戦場） | 6h | - | [ ] |
-| 2.3 | Handling→Tracking/Booking の状態同期 ACL（追跡番号から予約/追跡を特定・状態更新）＋契約テスト | 5h | - | [ ] |
-| 2.4 | RegisterHandlingActivityCommand / CommandService（予定外場所の警告判定含む）＋統合テスト | 5h | - | [ ] |
+| 2.2 | HandlingActivity 集約・`HandlingType`（RECEIVE/LOAD/UNLOAD/CLAIM。CUSTOMS は対象外）・`TransportStatus` 遷移ルール・場所判定（LOAD/UNLOAD 不一致で MISROUTED）＋ユニットテスト（中盤の主戦場） | 6h | - | [ ] |
+| 2.3 | Handling→Booking/Tracking の CargoSnapshot ACL（追跡番号から予約情報＝出発港/旅程/目的港を取得し妥当性検証・状態同期。domain-model の CargoSnapshot）＋契約テスト | 5h | - | [ ] |
+| 2.4 | HandlingActivityRegistrationCommand / CommandService（CargoSnapshot で妥当性検証・予定外場所の警告判定含む）＋統合テスト | 5h | - | [ ] |
 | 2.5 | 荷役作業登録 UI（追跡番号特定・種別選択・予定外警告）＋一覧＋E2E | 5h | - | [ ] |
 
 **小計**: 24h（理想時間）
@@ -163,7 +165,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 引取作業のドメインロジック（荷受人確認・署名/確認コード・`Delivered` 遷移・BookingStatus 同期）＋ユニットテスト | 5h | - | [ ] |
+| 3.1 | 引取作業（`HandlingType` CLAIM）のドメインロジック（荷受人確認・署名/確認コード・「引取済」＝`Delivered` 遷移・BookingStatus 同期）＋ユニットテスト。※domain-model の「CustomsDeclaration Cleared まで CLAIM 不可」ルールは通関（CUSTOMS）が本リリース対象外のため適用しない旨を明記 | 5h | - | [ ] |
 | 3.2 | 引取記録の永続化＋統合テスト | 3h | - | [ ] |
 | 3.3 | 引取登録 UI（荷受人確認・確認コード入力）＋E2E | 3h | - | [ ] |
 
@@ -173,8 +175,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | 手動状態更新ドメイン（状態・位置・日時・追跡イベント記録）＋ユニットテスト | 4h | - | [ ] |
-| 4.2 | UpdateTransportStatusCommand / CommandService＋統合テスト | 3h | - | [ ] |
+| 4.1 | 手動状態更新ドメイン（状態・位置・日時を TrackingActivityEvent として時系列記録）＋ユニットテスト | 4h | - | [ ] |
+| 4.2 | AddTrackingEventCommand / CommandService（追跡管理者・domain-model 準拠）＋統合テスト | 3h | - | [ ] |
 | 4.3 | 手動更新 UI（追跡管理者）＋E2E | 3h | - | [ ] |
 
 **小計**: 10h（理想時間）
@@ -287,23 +289,25 @@ class TrackingNumber <<VO>>
 class TrackingActivityEvent <<Entity>>
 enum TransportStatus <<Shared>>
 class HandlingActivity <<AggregateRoot>>
-enum HandlingType
+class HandlingType <<VO record>>
 
 TrackingActivity *-- TrackingNumber
 TrackingActivity *-- "0..*" TrackingActivityEvent
 TrackingActivity --> TransportStatus
-HandlingActivity --> HandlingType
+HandlingActivity *-- HandlingType
 HandlingActivity ..> TrackingActivity : 状態同期（ACL）
+HandlingActivity ..> "Booking" : CargoSnapshot（ACL・妥当性検証）
 @enduml
 ```
 
-- 集約: TrackingActivity（追跡・TrackingNumber 一意・イベント時系列）、HandlingActivity（荷役作業記録）。
+- 集約: TrackingActivity（追跡・TrackingNumber 一意・TrackingActivityEvent 時系列）、HandlingActivity（荷役作業記録）。domain-model の集約・エンティティ・VO 名に準拠。
+- `HandlingType` は VO（record）で RECEIVE/LOAD/UNLOAD/CUSTOMS/CLAIM を持つ（VoyageNumber 必須判定を内包）。本 IT では RECEIVE/LOAD/UNLOAD（US15）・CLAIM（US16）を扱い、**CUSTOMS（通関）は本リリース対象外**（税関はスコープ外・release_plan #14）。
 - 共有カーネル: `TransportStatus`（受領待ち→輸送中→配送完了）を Tracking/Handling/Booking で共有（domain-model の共有ドメイン）。
-- BC 連携（ACL・BC 独立）: (1) Booking→Tracking の追跡番号発行（`BookingConfirmedEvent` 起点）、(2) Handling→Tracking/Booking の状態同期（追跡番号で特定し `TransportStatus`/`BookingStatus` 更新）。IT4 の ACL パターン（SQL 直接参照・プリミティブ DTO）を踏襲。
+- BC 連携（ACL・BC 独立）: (1) Booking→Tracking の追跡番号発行（`BookingConfirmedEvent` 起点・`AssignTrackingNumberCommand`）、(2) Handling→Booking の `CargoSnapshot` ACL（追跡番号で予約情報＝出発港/旅程/目的港を取得し場所妥当性を検証）、(3) Handling→Tracking/Booking の状態同期（`TransportStatus`/`BookingStatus` 更新）。IT4 の ACL パターン（SQL 直接参照・プリミティブ DTO）を踏襲。
 
 ### データモデル
 
-[data-model.md - Tracking / Handling Context](../design/data-model.md) を SoT とする。tracking_activity（0011）・handling_activity（0012）ほかを追加（二方言）。Day1 0.1 で data-model.md を更新してから実装する。
+[data-model.md - Tracking / Handling Context](../design/data-model.md) を SoT とする。data-model 既定のテーブル：`tracking_activity`（追跡レコード）・`tracking_handling_event`（追跡イベント）・`handling_activity`（荷役作業記録）を使用（`tracking_exception_event`・`customs_declaration` は IT6/対象外）。マイグレーション番号は 0011 以降を Day1 0.1 で確定する（IT4 の 0010 に続く）。Day1 0.1 で data-model.md を更新してから実装する。
 
 ### ユーザーインターフェース
 
@@ -339,7 +343,7 @@ HandlingActivity ..> TrackingActivity : 状態同期（ACL）
 | POST | /handling | 荷役作業登録（US15/US16） |
 | GET | /tracking | 追跡番号入力（US18） |
 | GET | /tracking/{trackingNumber} | 追跡詳細（US18） |
-| POST | /tracking/{trackingNumber}/status | 貨物状態手動更新（US17） |
+| POST | /tracking/{trackingNumber}/events | 貨物状態手動更新＝追跡イベント追加（US17・AddTrackingEventCommand） |
 | GET | /public/tracking/{trackingId} | 公開追跡ページ（US18・認証不要） |
 
 ### ADR
@@ -395,6 +399,7 @@ HandlingActivity ..> TrackingActivity : 状態同期（ACL）
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-07-13 | 初版作成（US14-18・目標 17 SP・中盤インサイドアウト最終・Release 1.0 出荷。IT4 レビュー高優先 H1/H2/H4/H5/H6/H7 とふりかえり Try T1-T6・繰り越し品質ゲートを先行タスク化） | - |
+| 2026-07-13 | validating-iteration-plan 反映（8 ステップ）。ステップ 2：US14 メール通知 AC・US15 作業種別を user_story に整合（引取は US16、通関は対象外）。ステップ 3：コマンド名を domain-model 準拠に修正（HandlingActivityRegistrationCommand・AddTrackingEventCommand・AssignTrackingNumberCommand）、HandlingType を record（RECEIVE/LOAD/UNLOAD/CUSTOMS/CLAIM）とし CUSTOMS 対象外・CargoSnapshot ACL・LOAD/UNLOAD の MISROUTED を明記。ステップ 4：追跡イベントテーブルを tracking_handling_event に是正・マイグレーション番号を 0011 以降に。ステップ 8：IT4 レビュー中優先 M1-M5 の対応方針（対応/保留）を追記 | - |
 
 ---
 
