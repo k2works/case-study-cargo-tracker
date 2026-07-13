@@ -1,4 +1,5 @@
 @using CargoTracker.Booking.Application.Internal.QueryServices
+@using CargoTracker.Booking.Interfaces
 @model BookingDetail
 @{
     ViewData["Title"] = "貨物予約詳細";
@@ -20,7 +21,8 @@
     <dd class="col-sm-9">@Model.BookingId</dd>
     <dt class="col-sm-3">状態</dt>
     <dd class="col-sm-9">
-        <span class="badge text-bg-@(Model.BookingStatus == "PRELIMINARY" ? "secondary" : "primary")">@Model.BookingStatus</span>
+        <span class="badge text-bg-@BookingStatusLabel.ToBadgeColor(Model.BookingStatus)">@BookingStatusLabel.ToJapanese(Model.BookingStatus)</span>
+        <span class="text-muted small">(@Model.BookingStatus)</span>
     </dd>
     <dt class="col-sm-3">荷主</dt>
     <dd class="col-sm-9">@Model.ShipperCode - @Model.ShipperName</dd>
