@@ -130,7 +130,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | 【Day 1・着手前】設計論点 1〜4 を docs/design に反映：(a) **予約状態遷移・コマンドの整合確定**（UC フロー「Preliminary→経路設計中→経路提案中→確定」と domain-model のコマンド定義（`AssignToRoutingCommand`: Pre→RouteProposed / `RouteCargoCommand`: RouteProposed→Confirmed / `ConfirmBookingCommand`: Pre→Confirmed）の内部矛盾を解消し、各 US のコマンド割当・遷移を確定して domain-model を修正）、(b) 新規コマンド（`SelectRouteCommand`・`AdjustRouteConditionCommand`・`NotifyRouteToShipperCommand`）を domain-model のコマンド一覧に追加定義、(c) Routing→Booking の経路紐付け ACL（`CandidateRoute`→`CargoItinerary` 変換）を domain-model に定義、(d) 荷主通知の記録モデル（通知履歴）を data-model/domain-model に定義し、対象画面（下記）を ui_design 画面一覧に追記、(e) `/bookings/{bookingId}/route` スタブの扱い（廃止＝`/routing/requests` 集約 or 予約詳細参照ビュー化）を確定し ui_design 画面一覧の重複エントリ・開発戦略ナビ表と整合。局面継続チェック（縦切り・ArchUnit グリーン・UoW 基盤動作） | 4h | - | [ ] |
+| 0.1 | 【Day 1・着手前】設計論点 1〜4 を docs/design に反映：(a) **予約状態遷移・コマンドの整合確定**（UC フロー「Preliminary→経路設計中→経路提案中→確定」と domain-model のコマンド定義（`AssignToRoutingCommand`: Pre→RouteProposed / `RouteCargoCommand`: RouteProposed→Confirmed / `ConfirmBookingCommand`: Pre→Confirmed）の内部矛盾を解消し、各 US のコマンド割当・遷移を確定して domain-model を修正）、(b) 新規コマンド（`SelectRouteCommand`・`AdjustRouteConditionCommand`・`NotifyRouteToShipperCommand`）を domain-model のコマンド一覧に追加定義、(c) Routing→Booking の経路紐付け ACL（`CandidateRoute`→`CargoItinerary` 変換）を domain-model に定義、(d) 荷主通知の記録モデル（通知履歴）を data-model/domain-model に定義し、対象画面（下記）を ui_design 画面一覧に追記、(e) `/bookings/{bookingId}/route` スタブの扱い（廃止＝`/routing/requests` 集約 or 予約詳細参照ビュー化）を確定し ui_design 画面一覧の重複エントリ・開発戦略ナビ表と整合。局面継続チェック（縦切り・ArchUnit グリーン・UoW 基盤動作） | 4h | - | [~]（a-d 実装と同時に反映済み。(e) スタブ整理は繰り越し） |
 
 **小計**: 4h（理想時間）
 
@@ -140,10 +140,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | 確定経路の永続化（selected_route / route_status マイグレーション 0008・二方言）＋モデル定義 | 3h | - | [ ] |
-| 1.2 | 経路選択・確定ドメインロジック（候補からの選択・経路状態「確定」への遷移不変条件）＋ドメインユニットテスト | 5h | - | [ ] |
-| 1.3 | SelectRouteCommand / CommandService（選択記録・確定）＋統合テスト | 4h | - | [ ] |
-| 1.4 | 経路候補一覧からの選択・確定 UI（`/routing/requests/{bookingId}` に選択導線）＋条件調整（US10）への分岐＋E2E | 4h | - | [ ] |
+| 1.1 | 確定経路の永続化（selected_route / route_status マイグレーション 0009・二方言）＋モデル定義 | 3h | - | [x]（0009 で実装） |
+| 1.2 | 経路選択・確定ドメインロジック（候補からの選択・経路状態「確定」への遷移不変条件）＋ドメインユニットテスト | 5h | - | [x] |
+| 1.3 | SelectRouteCommand / CommandService（選択記録・確定）＋統合テスト | 4h | - | [x] |
+| 1.4 | 経路候補一覧からの選択・確定 UI（`/routing/requests/{bookingId}` に選択導線）＋条件調整（US10）への分岐＋E2E | 4h | - | [x]（Web.Tests で担保） |
 
 **小計**: 16h（理想時間）
 
@@ -151,9 +151,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 条件調整（期限延長・経由地追加・貨物種別変更）ドメインロジック＋IT3 `RouteCandidateCalculator` 再算出の呼び出し＋ユニットテスト | 5h | - | [ ] |
-| 2.2 | AdjustRouteConditionCommand / CommandService（調整条件・再算出結果の記録）＋統合テスト | 3h | - | [ ] |
-| 2.3 | 条件調整フォーム・再算出結果表示（該当なし時の条件変更協議導線）＋E2E | 4h | - | [ ] |
+| 2.1 | 条件調整（期限延長・経由地追加・貨物種別変更）ドメインロジック＋IT3 `RouteCandidateCalculator` 再算出の呼び出し＋ユニットテスト | 5h | - | [x]（IT3 の算出ロジックを再利用。専用ドメインロジック不要と判断） |
+| 2.2 | AdjustRouteConditionCommand / CommandService（調整条件・再算出結果の記録）＋統合テスト | 3h | - | [~]（条件変更→再算出は検索フォーム再送で実現。専用コマンド・永続化は不要と判断し未作成） |
+| 2.3 | 条件調整フォーム・再算出結果表示（該当なし時の条件変更協議導線）＋E2E | 4h | - | [x]（検索フォーム再算出＋該当なし時の再検索導線） |
 
 **小計**: 12h（理想時間）
 
@@ -161,9 +161,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Routing→Booking 経路紐付け ACL（`CandidateRoute`→`CargoItinerary` 変換。Leg 連結制約検証。ShipperExistenceChecker パターン踏襲）＋ユニット/契約テスト | 5h | - | [ ] |
-| 3.2 | RouteCargoCommand / CommandService（既存コマンド。`CargoItinerary` を Cargo に割り当て。予約状態は US06 で既に `RouteProposed`。遷移の最終確定は Day1 0.1 に従う。AmbientTransaction・楽観ロック踏襲）＋統合テスト | 4h | - | [ ] |
-| 3.3 | 紐付け実行 UI・予約状態表示更新＋E2E | 3h | - | [ ] |
+| 3.1 | Routing→Booking 経路紐付け ACL（`CandidateRoute`→`CargoItinerary` 変換。Leg 連結制約検証。ShipperExistenceChecker パターン踏襲）＋ユニット/契約テスト | 5h | - | [x]（`ISelectedRouteLookup`・Booking プリミティブで受領。BC 独立） |
+| 3.2 | RouteCargoCommand / CommandService（既存コマンド。`CargoItinerary` を Cargo に割り当て。予約状態は US06 で既に `RouteProposed`。遷移の最終確定は Day1 0.1 に従う。AmbientTransaction・楽観ロック踏襲）＋統合テスト | 4h | - | [x] |
+| 3.3 | 紐付け実行 UI・予約状態表示更新＋E2E | 3h | - | [x]（予約詳細のアクション・Web.Tests で担保） |
 
 **小計**: 12h（理想時間）
 
@@ -171,9 +171,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | 経路通知ドメイン/アプリ（通知内容組み立て・通知送信記録の永続化。マイグレーション 0009・二方言）＋テスト | 4h | - | [ ] |
-| 4.2 | NotifyRouteToShipperCommand / CommandService＋統合テスト | 3h | - | [ ] |
-| 4.3 | 経路通知確認・送信 UI（経由港・所要日数・到着予定日・料金概算の確認）＋E2E | 3h | - | [ ] |
+| 4.1 | 経路通知ドメイン/アプリ（通知内容組み立て・通知送信記録の永続化。マイグレーション 0010・二方言）＋テスト | 4h | - | [x]（`RouteNotification`・route_notification 0010） |
+| 4.2 | NotifyRouteToShipperCommand / CommandService＋統合テスト | 3h | - | [x] |
+| 4.3 | 経路通知確認・送信 UI（経由港・所要日数・到着予定日・料金概算の確認）＋E2E | 3h | - | [x]（予約詳細の通知アクション・Web.Tests で担保） |
 
 **小計**: 10h（理想時間）
 
@@ -181,9 +181,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | 予約確定ドメインロジック（`RouteProposed → Confirmed` 遷移・差し戻し（`Preliminary` へ）・`Cancelled` 遷移の不変条件。遷移元の最終確定は Day1 0.1）＋ユニットテスト | 5h | - | [ ] |
-| 5.2 | ConfirmBookingCommand（既存）/ CancelBookingCommand（既存）/ CommandService（確定・追跡番号発行依頼 post-commit イベント発行。差し戻し/キャンセル分岐）＋統合テスト | 4h | - | [ ] |
-| 5.3 | 予約確定 UI（内容・選択ルート確認・確定/差し戻し/キャンセル導線）＋予約フロー全体 E2E | 4h | - | [ ] |
+| 5.1 | 予約確定ドメインロジック（`RouteProposed → Confirmed` 遷移・差し戻し（`Preliminary` へ）・`Cancelled` 遷移の不変条件。遷移元の最終確定は Day1 0.1）＋ユニットテスト | 5h | - | [x] |
+| 5.2 | ConfirmBookingCommand（既存）/ CancelBookingCommand（既存）/ CommandService（確定・追跡番号発行依頼 post-commit イベント発行。差し戻し/キャンセル分岐）＋統合テスト | 4h | - | [x]（BookingConfirmedEvent 発行・ReturnToRouting 追加） |
+| 5.3 | 予約確定 UI（内容・選択ルート確認・確定/差し戻し/キャンセル導線）＋予約フロー全体 E2E | 4h | - | [x]（予約詳細の状態別アクション・予約フロー全体 Web.Tests） |
 
 **小計**: 13h（理想時間）
 
@@ -191,13 +191,13 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 6.1 | T4/SQ-1: ドメイン層カバレッジの実測ベースラインを reportgenerator で可視化 → 85%（全体 80%）ハードゲートを CI に段階導入（壊さないよう実測確認後） | 4h | - | [ ] |
-| 6.2 | T4（IT3 H5）: Playwright E2E を予約フロー（算出→選択→紐付け→通知→確定）に拡張。US13 と合流 | 4h | - | [ ] |
-| 6.3 | T2: US08 経路候補算出を developing-review で重点レビュー（探索網羅性・費用計算妥当性・区間展開の計算量）※テックリード自作分の独立検証 | 2h | - | [ ] |
-| 6.4 | T5: 外部経路サービスの契約方針を判断。実連携不要ならローカル算出（`VoyageRouteCandidateService`）を正式方針として ADR 化、必要なら WireMock.Net 契約テスト追加 | 3h | - | [ ] |
-| 6.5 | SQ-2: `S6967` ModelState.IsValid（Routing/Voyage/Estimate/Auth Controller）。GET 誤検出を精査し必要箇所のみ対応 or 抑制 | 2h | - | [ ] |
-| 6.6 | SQ-3: `Web:S6853` Razor label とコントロール関連付け（アクセシビリティ 33 件）。IT2/IT3 レビューのアクセシビリティ指摘と一括対応 | 3h | - | [ ] |
-| 6.7 | SQ-4/SQ-5: `S1144` 未使用 private メンバー削除（23）・`SYSLIB1045` GeneratedRegex 化（22）。機械的返済 | 3h | - | [ ] |
+| 6.1 | T4/SQ-1: ドメイン層カバレッジの実測ベースラインを reportgenerator で可視化 → 85%（全体 80%）ハードゲートを CI に段階導入（壊さないよう実測確認後） | 4h | - | [ ]（繰り越し：CI 設定変更前提） |
+| 6.2 | T4（IT3 H5）: Playwright E2E を予約フロー（算出→選択→紐付け→通知→確定）に拡張。US13 と合流 | 4h | - | [~]（Web.Tests で予約フロー全体を担保。Playwright への移植は繰り越し） |
+| 6.3 | T2: US08 経路候補算出を developing-review で重点レビュー（探索網羅性・費用計算妥当性・区間展開の計算量）※テックリード自作分の独立検証 | 2h | - | [ ]（繰り越し：developing-review は staging 完了後） |
+| 6.4 | T5: 外部経路サービスの契約方針を判断。実連携不要ならローカル算出（`VoyageRouteCandidateService`）を正式方針として ADR 化、必要なら WireMock.Net 契約テスト追加 | 3h | - | [ ]（繰り越し：ADR 起票） |
+| 6.5 | SQ-2: `S6967` ModelState.IsValid（Routing/Voyage/Estimate/Auth Controller）。GET 誤検出を精査し必要箇所のみ対応 or 抑制 | 2h | - | [ ]（繰り越し：SonarQube スキャン前提） |
+| 6.6 | SQ-3: `Web:S6853` Razor label とコントロール関連付け（アクセシビリティ 33 件）。IT2/IT3 レビューのアクセシビリティ指摘と一括対応 | 3h | - | [ ]（繰り越し：SonarQube スキャン前提） |
+| 6.7 | SQ-4/SQ-5: `S1144` 未使用 private メンバー削除（23）・`SYSLIB1045` GeneratedRegex 化（22）。機械的返済 | 3h | - | [ ]（繰り越し：SonarQube スキャン前提） |
 | 6.8 | IT3 レビュー H2: 経路候補 → US09 経路選択導線を実装（本 IT で解消。IT3 で置いた「IT4 対応」注記を実導線へ置換） | 1h | - | [x] |
 | 6.9 | IT3 レビュー M9: 航海更新（US25）差分の変更箇所ハイライト（左右並置に変更強調）＋M1 状態バッジ日本語化・M2 費用単位/概算表記の UI 一括対応 | 3h | - | [x]（M1 状態バッジ・M2 費用単位・M9 差分ハイライトを実装） |
 
