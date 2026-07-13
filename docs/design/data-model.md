@@ -181,7 +181,7 @@ package "Tracking Context" #lightyellow {
 }
 
 package "Handling Context" #lightcoral {
-  entity "handling_activity\n（荷役作業記録）" as handling_activity {
+  entity "handling_activity\n（荷役作業記録・migration 0012）" as handling_activity {
     * id : BIGINT <<PK>>
     --
     * booking_id : VARCHAR(20)
