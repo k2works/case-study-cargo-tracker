@@ -87,7 +87,7 @@ package "Booking Context" #lightblue {
     * booking_amount_currency : VARCHAR(3)
   }
 
-  entity "leg\n（輸送区間）" as leg {
+  entity "leg\n（輸送区間・migration 0008）" as leg {
     * id : BIGINT <<PK>>
     --
     * cargo_id : BIGINT <<FK>>
@@ -99,7 +99,7 @@ package "Booking Context" #lightblue {
     * unload_time : TIMESTAMP
   }
 
-  entity "route_notification\n（経路通知記録）" as route_notification {
+  entity "route_notification\n（経路通知記録・migration 0010）" as route_notification {
     * id : BIGINT <<PK>>
     --
     * booking_id : VARCHAR(20)
@@ -125,7 +125,7 @@ package "Routing Context" #lightgreen {
     * arrival_date : TIMESTAMP
   }
 
-  entity "selected_route\n（確定経路）" as selected_route {
+  entity "selected_route\n（確定経路・migration 0009）" as selected_route {
     * id : BIGINT <<PK>>
     --
     * booking_id : VARCHAR(20) <<UK>>

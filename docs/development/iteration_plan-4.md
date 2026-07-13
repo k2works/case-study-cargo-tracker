@@ -306,7 +306,7 @@ IRouteAssignmentAcl ..> CargoItinerary : 変換
 
 ### データモデル
 
-[data-model.md - Booking / Routing Context](../design/data-model.md) を SoT とする。確定経路（selected_route / route_status）と通知履歴を追加（0008・0009 マイグレーション、二方言）。Day 1 タスク 0.1 で data-model.md を更新してから実装する。
+[data-model.md - Booking / Routing Context](../design/data-model.md) を SoT とする。旅程（leg・0008）・確定経路（selected_route / selected_route_leg・0009）・通知履歴（route_notification・0010）を追加（いずれも二方言）。Day 1 タスク 0.1 で data-model.md を更新してから実装する。
 
 ### ユーザーインターフェース
 
