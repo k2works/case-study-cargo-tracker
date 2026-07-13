@@ -60,4 +60,26 @@ public sealed class TrackingActivityRepositoryIntegrationTest : IAsyncLifetime
         second.Should().BeNull();
         (await _repository.ExistsForBookingAsync("BKG-TRK-0002")).Should().BeTrue();
     }
+
+    [Fact]
+    public async Task 追跡イベントを追記すると状態が更新され往復保存される()
+    {
+        await _commandService.HandleAsync(new AssignTrackingNumberCommand("BKG-TRK-0003"));
+
+        var tracking = await _repository.FindByBookingIdAsync("BKG-TRK-0003");
+        tracking!.AddEvent(new TrackingActivityEvent(
+            TrackingEventType.Receive, new TrackingLocation("JPTYO"), new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero)));
+        tracking.AddEvent(new TrackingActivityEvent(
+            TrackingEventType.Load, new TrackingLocation("JPTYO"), new DateTimeOffset(2026, 9, 2, 0, 0, 0, TimeSpan.Zero), new TrackingVoyageNumber("V001")));
+        await using (var uow = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin())
+        {
+            await _repository.SaveAsync(tracking);
+            await uow.CommitAsync();
+        }
+
+        var reloaded = await _repository.FindByBookingIdAsync("BKG-TRK-0003");
+        reloaded!.Events.Should().HaveCount(2);
+        reloaded.CurrentStatus().Should().Be(TrackingStatus.Loaded);
+        reloaded.Events[1].VoyageNumber!.Number.Should().Be("V001");
+    }
 }
