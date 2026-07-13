@@ -620,6 +620,11 @@ CarrierMovement --> Location : arrival
 5. Voyage は対応貨物種別（General/Hazardous/Refrigerated）を保持し、US07 検索・US08 算出で危険物・冷凍貨物の絞り込みに用いる
 6. CandidateRoute は所要日数が期限内の航海連鎖のみを対象とし、直行を最優先に推奨順で並べる（US08）
 
+> **確定経路の真実の源泉（IT4 レビュー H1・確定）**: 確定経路は Routing の `SelectedRoute`（`selected_route`）と Booking の `CargoItinerary`（`leg`）に二重に保持されるが、**真実の源泉は Routing の `SelectedRoute`** とする。Booking の `CargoItinerary` は US11（`RouteCargoCommand`）実行時点の**読取専用スナップショット**であり、`ISelectedRouteLookup` ACL 経由で SelectedRoute から変換・複製したものである。
+>
+> - **差し戻し（US13 `ReturnToRouting`）時の再同期方針**: Booking 側は `CargoItinerary` を破棄（`null`）して `Preliminary` に戻す。Routing 側の `SelectedRoute` は源泉として**残置**し、経路設計者が再度 `SelectRouteCommand` を実行した時点で予約単位 UNIQUE（`uk_selected_route_booking`）により upsert 上書きされる。差し戻し中は「Routing に前回の確定経路が残るが Booking に旅程がない」状態が正常な中間状態であり、次の選択・紐付けで解消する。
+> - この非対称（源泉は残す・スナップショットは破棄する）は BC 独立を保つための意図的な設計であり、Booking から Routing の SelectedRoute を直接無効化する経路は設けない。
+
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |

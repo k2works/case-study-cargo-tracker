@@ -65,6 +65,50 @@
     }
 </dl>
 
+@if (Model.Itinerary.Count > 0)
+{
+    <section class="mb-4">
+        <h2 class="h5">確定経路（旅程）</h2>
+        <p class="text-muted small mb-2">経路設計者が確定し予約に紐付けた経路です。内容を確認してから荷主通知・予約確定を行ってください。</p>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>航海番号</th>
+                        <th>区間</th>
+                        <th>積込日時</th>
+                        <th>荷降日時</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var legNo = 1;
+                    }
+                    @foreach (var leg in Model.Itinerary)
+                    {
+                        <tr>
+                            <td>@legNo</td>
+                            <td>@leg.VoyageNumber</td>
+                            <td>@leg.LoadUnLocode → @leg.UnloadUnLocode</td>
+                            <td>@leg.LoadTime.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@leg.UnloadTime.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                        legNo++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+@if (Model.BookingStatus == "ROUTE_PROPOSED")
+{
+    <div class="alert alert-info" role="alert">
+        <strong>推奨手順</strong>：①「確定経路を予約に紐付ける」（経路設計者が確定した経路を反映）→ ②「確定経路を荷主に通知」→ ③荷主承認後に「予約を確定」。ルート変更希望は「経路再設計に差し戻す」、取消は「キャンセル」。
+    </div>
+}
+
 <div class="d-flex flex-wrap gap-2">
     @if (Model.BookingStatus == "PRELIMINARY")
     {

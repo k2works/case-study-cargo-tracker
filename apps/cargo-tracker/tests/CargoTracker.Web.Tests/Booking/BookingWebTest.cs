@@ -144,7 +144,7 @@ public sealed class BookingWebTest : IClassFixture<AuthenticationFlowTest.AuthWe
         response.Headers.Location!.OriginalString.Should().Be(bookingLocation);
 
         var detail = await client.GetStringAsync(bookingLocation);
-        detail.Should().Contain("ROUTEPROPOSED").And.Contain("経路設計を依頼しました");
+        detail.Should().Contain("経路提案中").And.Contain("ROUTE_PROPOSED").And.Contain("経路設計を依頼しました");
         detail.Should().NotContain("経路設計依頼</button>");
     }
 

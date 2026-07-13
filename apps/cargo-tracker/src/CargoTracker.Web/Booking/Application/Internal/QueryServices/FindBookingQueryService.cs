@@ -26,6 +26,19 @@ public sealed class BookingDetail
     public decimal? MinTemperature { get; set; }
     public decimal? MaxTemperature { get; set; }
     public string? TemperatureUnit { get; set; }
+
+    /// <summary>紐付け済みの確定経路（旅程）の区間。US11 で割り当てられた CargoItinerary のスナップショット（IT4 レビュー H7）。</summary>
+    public IReadOnlyList<BookingLeg> Itinerary { get; set; } = [];
+}
+
+/// <summary>予約詳細に表示する旅程区間（読取専用）。</summary>
+public sealed class BookingLeg
+{
+    public string VoyageNumber { get; set; } = string.Empty;
+    public string LoadUnLocode { get; set; } = string.Empty;
+    public string UnloadUnLocode { get; set; } = string.Empty;
+    public DateTime LoadTime { get; set; }
+    public DateTime UnloadTime { get; set; }
 }
 
 public sealed class ShipperOption
@@ -54,7 +67,7 @@ public sealed class FindBookingQueryService(IDbConnectionFactory connectionFacto
     public async Task<BookingDetail?> FindByBookingIdAsync(string bookingId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.Create();
-        return await connection.QuerySingleOrDefaultAsync<BookingDetail>(new CommandDefinition(
+        var detail = await connection.QuerySingleOrDefaultAsync<BookingDetail>(new CommandDefinition(
             """
             SELECT c.booking_id AS BookingId, c.shipper_id AS ShipperId,
                    s.shipper_code AS ShipperCode, s.name AS ShipperName,
@@ -71,5 +84,23 @@ public sealed class FindBookingQueryService(IDbConnectionFactory connectionFacto
             WHERE c.booking_id = @BookingId
             """,
             new { BookingId = bookingId }, cancellationToken: ct));
+
+        if (detail is null)
+        {
+            return null;
+        }
+
+        // 紐付け済みの確定経路（旅程）を表示用に取得する（IT4 レビュー H7・予約詳細に確定経路を提示）。
+        var legs = await connection.QueryAsync<BookingLeg>(new CommandDefinition(
+            """
+            SELECT voyage_number AS VoyageNumber, load_location_unlocode AS LoadUnLocode,
+                   unload_location_unlocode AS UnloadUnLocode, load_time AS LoadTime, unload_time AS UnloadTime
+            FROM leg
+            WHERE cargo_id = (SELECT id FROM cargo WHERE booking_id = @BookingId)
+            ORDER BY seq_number
+            """,
+            new { BookingId = bookingId }, cancellationToken: ct));
+        detail.Itinerary = legs.ToList();
+        return detail;
     }
 }

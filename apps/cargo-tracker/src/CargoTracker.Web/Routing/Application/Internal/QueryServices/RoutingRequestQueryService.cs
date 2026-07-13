@@ -28,7 +28,7 @@ public sealed class RoutingRequestQueryService(IDbConnectionFactory connectionFa
                    cargo_type AS CargoType,
                    weight AS Weight
             FROM cargo
-            WHERE booking_status = 'ROUTEPROPOSED'
+            WHERE booking_status = 'ROUTE_PROPOSED'
             ORDER BY arrival_deadline, booking_id
             """,
             cancellationToken: ct));

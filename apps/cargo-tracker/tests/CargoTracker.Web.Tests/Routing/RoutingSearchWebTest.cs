@@ -220,6 +220,13 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
 
         // 営業担当者: 予約に紐付け → 荷主通知 → 予約確定
         await PostBookingActionAsync(sales, bookingId, "route");
+
+        // 紐付け後、予約詳細に確定経路（旅程）と推奨手順が表示される（IT4 レビュー H6/H7）。
+        var routed = await sales.GetStringAsync($"/bookings/{bookingId}");
+        routed.Should().Contain("確定経路（旅程）")
+            .And.Contain("VYG-FLOW-001")
+            .And.Contain("推奨手順");
+
         await PostBookingActionAsync(sales, bookingId, "notify");
         await PostBookingActionAsync(sales, bookingId, "confirm");
 
