@@ -142,8 +142,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | tracking_activity / tracking_handling_event テーブル（追跡番号・予約 ID・TransportStatus・イベント時系列。0011 以降・二方言）＋モデル定義 | 3h | - | [ ] |
-| 1.2 | TrackingActivity 集約（TrackingNumber 採番・受領待ち初期化）＋ドメインユニットテスト | 4h | - | [ ] |
+| 1.1 | tracking_activity / tracking_handling_event テーブル（追跡番号・予約 ID・TransportStatus・イベント時系列。0011 以降・二方言）＋モデル定義 | 3h | - | [x] |
+| 1.2 | TrackingActivity 集約（TrackingNumber 採番・受領待ち初期化）＋ドメインユニットテスト | 4h | - | [x] |
 | 1.3 | AssignTrackingNumberCommand / CommandService（`Confirmed → TrackingIssued` 同期）＋`BookingConfirmedEvent` ハンドラで発行起動（IT4 H3 解消）＋統合テスト | 4h | - | [x]（IssueTrackingOnBookingConfirmedHandler で自動発行・Cargo.IssueTracking で状態遷移。UnitOfWork を post-commit ハンドラが新 UoW を開けるよう修正） |
 | 1.4 | 追跡番号発行 UI（予約詳細から発行）＋E2E | 2h | - | [x]（予約確定で自動発行のため予約詳細に発行済み追跡番号・追跡照会リンクを表示。Web テストで担保） |
 
@@ -153,11 +153,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | handling_activity テーブル（追跡番号・作業種別・場所・日時・0012・二方言）＋モデル定義 | 3h | - | [ ] |
-| 2.2 | HandlingActivity 集約・`HandlingType`（RECEIVE/LOAD/UNLOAD/CLAIM。CUSTOMS は対象外）・`TransportStatus` 遷移ルール・場所判定（LOAD/UNLOAD 不一致で MISROUTED）＋ユニットテスト（中盤の主戦場） | 6h | - | [ ] |
-| 2.3 | Handling→Booking/Tracking の CargoSnapshot ACL（追跡番号から予約情報＝出発港/旅程/目的港を取得し妥当性検証・状態同期。domain-model の CargoSnapshot）＋契約テスト | 5h | - | [ ] |
-| 2.4 | HandlingActivityRegistrationCommand / CommandService（CargoSnapshot で妥当性検証・予定外場所の警告判定含む）＋統合テスト | 5h | - | [ ] |
-| 2.5 | 荷役作業登録 UI（追跡番号特定・種別選択・予定外警告）＋一覧＋E2E | 5h | - | [ ] |
+| 2.1 | handling_activity テーブル（追跡番号・作業種別・場所・日時・0012・二方言）＋モデル定義 | 3h | - | [x] |
+| 2.2 | HandlingActivity 集約・`HandlingType`（RECEIVE/LOAD/UNLOAD/CLAIM。CUSTOMS は対象外）・`TransportStatus` 遷移ルール・場所判定（LOAD/UNLOAD 不一致で MISROUTED）＋ユニットテスト（中盤の主戦場） | 6h | - | [x]（デシジョンテーブルをドメイン凝集・6 ユニットテスト） |
+| 2.3 | Handling→Booking/Tracking の CargoSnapshot ACL（追跡番号から予約情報＝出発港/旅程/目的港を取得し妥当性検証・状態同期。domain-model の CargoSnapshot）＋契約テスト | 5h | - | [x]（CargoSnapshotProvider・追跡番号解決 ACL・HandlingActivityRegisteredEvent→Tracking 同期ハンドラ） |
+| 2.4 | HandlingActivityRegistrationCommand / CommandService（CargoSnapshot で妥当性検証・予定外場所の警告判定含む）＋統合テスト | 5h | - | [x]（RegisterHandlingActivityCommandService・統合 4 件緑） |
+| 2.5 | 荷役作業登録 UI（追跡番号特定・種別選択・予定外警告）＋一覧＋E2E | 5h | - | [x]（HandlingController・登録/一覧ビュー・追跡番号解決 ACL・予定外警告。Web テスト緑。ナビは IT1 で ROLE_HANDLER 導線済み） |
 
 **小計**: 24h（理想時間）
 

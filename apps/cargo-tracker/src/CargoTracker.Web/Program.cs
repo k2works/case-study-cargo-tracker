@@ -110,6 +110,9 @@ builder.Services.AddScoped<CargoTracker.Handling.Domain.Repositories.IHandlingAc
 builder.Services.AddScoped<CargoTracker.Handling.Application.Internal.OutboundServices.ICargoSnapshotProvider,
     CargoTracker.Handling.Infrastructure.Services.CargoSnapshotProvider>();
 builder.Services.AddScoped<CargoTracker.Handling.Application.Internal.CommandServices.RegisterHandlingActivityCommandService>();
+builder.Services.AddScoped<CargoTracker.Handling.Application.Internal.OutboundServices.ITrackingNumberResolver,
+    CargoTracker.Handling.Infrastructure.Services.TrackingNumberResolver>();
+builder.Services.AddScoped<CargoTracker.Handling.Application.Internal.QueryServices.HandlingActivityQueryService>();
 
 var app = builder.Build();
 
