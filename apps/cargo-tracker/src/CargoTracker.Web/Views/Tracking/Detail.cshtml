@@ -6,6 +6,15 @@
 
 <h1 class="h3 mb-3">追跡詳細</h1>
 
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+@if (TempData["WarningMessage"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
+
 @if (Model is null)
 {
     <div class="alert alert-warning" role="alert">追跡番号が見つかりません。</div>
@@ -14,5 +23,38 @@
 else
 {
     <partial name="_TrackingTimeline" model="Model" />
+
+    <section class="mt-4">
+        <h2 class="h5">状態の手動更新</h2>
+        <p class="text-muted small">荷役記録に現れない状態変化（積替・保管等）を手動で追跡情報に反映します。</p>
+        <form method="post" action="/tracking/@Model.TrackingNumber/events" class="row g-2 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-3">
+                <label for="eventType" class="form-label">状態</label>
+                <select id="eventType" name="eventType" class="form-select">
+                    <option value="Receive">受領</option>
+                    <option value="Load">積込</option>
+                    <option value="Unload">荷降し</option>
+                    <option value="Claim">引取</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="locationUnLocode" class="form-label">位置（UN/LOCODE）</label>
+                <input id="locationUnLocode" name="locationUnLocode" class="form-control" maxlength="5" placeholder="SGSIN" />
+            </div>
+            <div class="col-md-3">
+                <label for="eventTime" class="form-label">日時</label>
+                <input id="eventTime" name="eventTime" class="form-control" type="datetime-local" />
+            </div>
+            <div class="col-md-2">
+                <label for="voyageNumber" class="form-label">航海番号</label>
+                <input id="voyageNumber" name="voyageNumber" class="form-control" placeholder="V001" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary">更新</button>
+            </div>
+        </form>
+    </section>
+
     <a href="/tracking" class="btn btn-outline-secondary mt-3">追跡照会へ戻る</a>
 }

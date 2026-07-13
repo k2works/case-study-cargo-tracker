@@ -82,4 +82,32 @@ public sealed class TrackingActivityRepositoryIntegrationTest : IAsyncLifetime
         reloaded.CurrentStatus().Should().Be(TrackingStatus.Loaded);
         reloaded.Events[1].VoyageNumber!.Number.Should().Be("V001");
     }
+
+    [Fact]
+    public async Task 追跡管理者が手動で状態を追記できる()
+    {
+        await _commandService.HandleAsync(new AssignTrackingNumberCommand("BKG-TRK-0004"));
+        var trackingNumber = "TRK-TRK-0004";
+        var addService = new AddTrackingEventCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient), _repository);
+
+        await addService.HandleAsync(new AddTrackingEventCommand(
+            trackingNumber, "Unload", "SGSIN", new DateTimeOffset(2026, 9, 15, 0, 0, 0, TimeSpan.Zero)));
+
+        var tracking = await _repository.FindByTrackingNumberAsync(trackingNumber);
+        tracking!.Events.Should().ContainSingle();
+        tracking.CurrentStatus().Should().Be(TrackingStatus.Unloaded);
+    }
+
+    [Fact]
+    public async Task 存在しない追跡番号への手動追記は拒否される()
+    {
+        var addService = new AddTrackingEventCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient), _repository);
+
+        var act = () => addService.HandleAsync(new AddTrackingEventCommand(
+            "TRK-NOT-EXIST", "Receive", "JPTYO", DateTimeOffset.UtcNow));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
 }

@@ -104,6 +104,7 @@ builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.ITrackingAc
     CargoTracker.Tracking.Infrastructure.Repositories.TrackingActivityRepository>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.QueryServices.TrackingQueryService>();
+builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AddTrackingEventCommandService>();
 
 // Handling コンテキスト（US15）。
 builder.Services.AddScoped<CargoTracker.Handling.Domain.Repositories.IHandlingActivityRepository,
