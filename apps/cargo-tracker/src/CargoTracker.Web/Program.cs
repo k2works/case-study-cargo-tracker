@@ -83,8 +83,11 @@ builder.Services.AddScoped<CargoTracker.Routing.Domain.Repositories.IVoyageRepos
     CargoTracker.Routing.Infrastructure.Repositories.VoyageRepository>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.OutboundServices.IBookingLookup,
     CargoTracker.Routing.Infrastructure.Services.BookingLookup>();
+builder.Services.AddScoped<CargoTracker.Routing.Domain.Repositories.ISelectedRouteRepository,
+    CargoTracker.Routing.Infrastructure.Repositories.SelectedRouteRepository>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.RegisterVoyageCommandService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.UpdateScheduleCommandService>();
+builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.CommandServices.SelectRouteCommandService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.FindVoyageQueryService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.RoutingRequestQueryService>();
 builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.QueryServices.SearchVoyagesQueryService>();

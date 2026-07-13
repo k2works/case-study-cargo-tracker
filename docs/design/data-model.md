@@ -116,6 +116,27 @@ package "Routing Context" #lightgreen {
     * departure_date : TIMESTAMP
     * arrival_date : TIMESTAMP
   }
+
+  entity "selected_route\n（確定経路）" as selected_route {
+    * id : BIGINT <<PK>>
+    --
+    * booking_id : VARCHAR(20) <<UK>>
+    * transit_days : INTEGER
+    * cost : NUMERIC(15,2)
+    * route_status : VARCHAR(20)
+  }
+
+  entity "selected_route_leg\n（確定経路区間）" as selected_route_leg {
+    * id : BIGINT <<PK>>
+    --
+    * selected_route_id : BIGINT <<FK>>
+    * seq_number : INTEGER <<UK selected_route_id と複合>>
+    * voyage_number : VARCHAR(20)
+    * board_unlocode : VARCHAR(5) <<FK>>
+    * alight_unlocode : VARCHAR(5) <<FK>>
+    * board_time : TIMESTAMP
+    * alight_time : TIMESTAMP
+  }
 }
 
 package "Tracking Context" #lightyellow {

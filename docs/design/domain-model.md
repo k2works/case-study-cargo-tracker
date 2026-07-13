@@ -597,6 +597,8 @@ CarrierMovement --> Location : arrival
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 集約ルート | Voyage | 航海 | 航路スケジュールを管理する中心エンティティ。船名・運送会社・対応貨物種別を保持 |
+| 集約ルート | SelectedRoute | 確定経路 | 経路設計者が経路候補から選択・確定した経路を予約単位で保持する（US09）。CandidateRoute と RouteStatus を持つ |
+| 列挙型 | RouteStatus | 経路状態 | 確定経路の状態（Confirmed）。US09 で使用 |
 | 値オブジェクト（record） | VoyageNumber | 航海番号 | Routing Context 固有の航海一意識別子 |
 | 値オブジェクト（record） | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
@@ -623,6 +625,7 @@ CarrierMovement --> Location : arrival
 |---|---|---|
 | RegisterVoyageCommand | 経路設計者 | 新規航海スケジュールの登録 |
 | UpdateScheduleCommand | 経路設計者 | 運送区間の追加・変更 |
+| SelectRouteCommand | 経路設計者 | 経路候補を選択して確定経路（SelectedRoute）を予約単位で保存する（US09） |
 
 ## 4. Tracking Context（追跡コンテキスト）
 
