@@ -194,7 +194,7 @@
 | 6.1 | T4/SQ-1: ドメイン層カバレッジの実測ベースラインを reportgenerator で可視化 → 85%（全体 80%）ハードゲートを CI に段階導入（壊さないよう実測確認後） | 4h | - | [ ]（繰り越し：CI 設定変更前提） |
 | 6.2 | T4（IT3 H5）: Playwright E2E を予約フロー（算出→選択→紐付け→通知→確定）に拡張。US13 と合流 | 4h | - | [~]（Web.Tests で予約フロー全体を担保。Playwright への移植は繰り越し） |
 | 6.3 | T2: US08 経路候補算出を developing-review で重点レビュー（探索網羅性・費用計算妥当性・区間展開の計算量）※テックリード自作分の独立検証 | 2h | - | [ ]（繰り越し：developing-review は staging 完了後） |
-| 6.4 | T5: 外部経路サービスの契約方針を判断。実連携不要ならローカル算出（`VoyageRouteCandidateService`）を正式方針として ADR 化、必要なら WireMock.Net 契約テスト追加 | 3h | - | [ ]（繰り越し：ADR 起票） |
+| 6.4 | T5: 外部経路サービスの契約方針を判断。実連携不要ならローカル算出（`VoyageRouteCandidateService`）を正式方針として ADR 化、必要なら WireMock.Net 契約テスト追加 | 3h | - | [x]（IT5 で ADR-0008 起票・ローカル算出を正式化） |
 | 6.5 | SQ-2: `S6967` ModelState.IsValid（Routing/Voyage/Estimate/Auth Controller）。GET 誤検出を精査し必要箇所のみ対応 or 抑制 | 2h | - | [ ]（繰り越し：SonarQube スキャン前提） |
 | 6.6 | SQ-3: `Web:S6853` Razor label とコントロール関連付け（アクセシビリティ 33 件）。IT2/IT3 レビューのアクセシビリティ指摘と一括対応 | 3h | - | [ ]（繰り越し：SonarQube スキャン前提） |
 | 6.7 | SQ-4/SQ-5: `S1144` 未使用 private メンバー削除（23）・`SYSLIB1045` GeneratedRegex 化（22）。機械的返済 | 3h | - | [ ]（繰り越し：SonarQube スキャン前提） |
