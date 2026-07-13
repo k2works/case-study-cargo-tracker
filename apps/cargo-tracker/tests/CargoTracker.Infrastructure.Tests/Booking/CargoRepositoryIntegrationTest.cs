@@ -276,6 +276,22 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         routed.BookingStatus.Should().Be(BookingStatus.RouteProposed);
     }
 
+    [Fact]
+    public async Task 確定経路を荷主に通知すると通知記録が保存される()
+    {
+        var bookingId = await CreateRouteProposedWithItineraryAsync();
+        var factory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
+        var notificationRepository = new RouteNotificationRepository(_connectionFactory, _ambient);
+
+        await new NotifyRouteToShipperCommandService(factory, _repository, notificationRepository)
+            .HandleAsync(new NotifyRouteToShipperCommand(bookingId));
+
+        var notification = await notificationRepository.FindLatestByBookingIdAsync(bookingId);
+        notification.Should().NotBeNull();
+        notification!.BookingId.Should().Be(bookingId);
+        notification.ExpectedArrivalTime.Should().Be(new DateTimeOffset(2026, 9, 20, 0, 0, 0, TimeSpan.Zero));
+    }
+
     private async Task<BookingId> CreateRouteProposedWithItineraryAsync()
     {
         var bookingId = await CreateGeneralCargoAsync();

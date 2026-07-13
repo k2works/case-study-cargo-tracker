@@ -329,4 +329,40 @@ public class CargoTest
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    // --- US12: 確定経路を荷主に通知する ---
+
+    [Fact]
+    public void 旅程割当済みの予約から通知記録を生成できる()
+    {
+        var cargo = RouteProposedCargo();
+        cargo.AssignItinerary(CreateItinerary());
+        var notifiedAt = new DateTimeOffset(2026, 8, 20, 9, 0, 0, TimeSpan.Zero);
+
+        var notification = RouteNotification.Create(cargo, notifiedAt);
+
+        notification.BookingId.Should().Be(cargo.BookingId);
+        notification.NotifiedAt.Should().Be(notifiedAt);
+        notification.ExpectedArrivalTime.Should().Be(new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public void 旅程未割当の予約は通知できない()
+    {
+        var cargo = RouteProposedCargo();
+
+        var act = () => RouteNotification.Create(cargo, DateTimeOffset.UtcNow);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*経路*");
+    }
+
+    [Fact]
+    public void 経路提案中でない予約は通知できない()
+    {
+        var cargo = CreateCargo();
+
+        var act = () => RouteNotification.Create(cargo, DateTimeOffset.UtcNow);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

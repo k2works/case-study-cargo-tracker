@@ -98,6 +98,14 @@ package "Booking Context" #lightblue {
     * load_time : TIMESTAMP
     * unload_time : TIMESTAMP
   }
+
+  entity "route_notification\n（経路通知記録）" as route_notification {
+    * id : BIGINT <<PK>>
+    --
+    * booking_id : VARCHAR(20)
+    * notified_at : TIMESTAMP
+    * expected_arrival_time : TIMESTAMP
+  }
 }
 
 package "Routing Context" #lightgreen {

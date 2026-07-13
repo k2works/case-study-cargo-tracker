@@ -402,6 +402,7 @@ public interface IShipperExistenceChecker // ACL Port
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（Preliminary 状態で作成） |
 | AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（Preliminary → RouteProposed に遷移） |
 | RouteCargoCommand | 経路設計者 | 確定経路（CandidateRoute）を CargoItinerary に変換して Cargo に割り当てる（US11。状態は RouteProposed のまま維持） |
+| NotifyRouteToShipperCommand | 営業担当者 | 確定経路を荷主に通知し通知記録（RouteNotification）を保存する（US12） |
 | ConfirmBookingCommand | 営業担当者 | 予約を確定する（US13。RouteProposed → Confirmed に遷移） |
 | ReturnToRoutingCommand | 営業担当者 | 荷主のルート変更希望で経路再設計に差し戻す（US13。RouteProposed → Preliminary に遷移） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（Cancelled に遷移） |
