@@ -17,7 +17,7 @@ else
                     <th>航海番号</th>
                     <th>経由港</th>
                     <th>所要日数</th>
-                    <th>費用</th>
+                    <th>費用（概算・円）</th>
                     <th>操作</th>
                 </tr>
             </thead>
@@ -43,7 +43,7 @@ else
                         <td>@string.Join(" → ", candidate.VoyageNumbers.Select(v => v.Value))</td>
                         <td>@string.Join(" → ", candidate.Ports.Select(p => p.UnLocode))</td>
                         <td>@candidate.TransitDays 日</td>
-                        <td>@candidate.Cost.ToString("N0")</td>
+                        <td>約 @candidate.Cost.ToString("N0") 円</td>
                         <td>
                             <form method="post" action="/routing/requests/@Model.BookingId/select" class="m-0">
                                 @Html.AntiForgeryToken()

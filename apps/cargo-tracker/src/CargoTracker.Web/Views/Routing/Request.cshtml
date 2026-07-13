@@ -12,7 +12,7 @@
         <strong>確定経路</strong>：
         @string.Join(" → ", Model.ConfirmedRoute.Ports.Select(p => p.UnLocode))
         （航海 @string.Join(" → ", Model.ConfirmedRoute.VoyageNumbers.Select(v => v.Value))・
-        所要 @Model.ConfirmedRoute.TransitDays 日・費用 @Model.ConfirmedRoute.Cost.ToString("N0")）。
+        所要 @Model.ConfirmedRoute.TransitDays 日・費用 約 @Model.ConfirmedRoute.Cost.ToString("N0") 円（概算））。
         別の候補を選択すると確定経路は置き換わります。
     </div>
 }
