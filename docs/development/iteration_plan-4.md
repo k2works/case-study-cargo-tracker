@@ -21,13 +21,13 @@
 
 ### 成功基準
 
-- [ ] US09・US10・US11・US12・US13 の受入条件をすべて満たす
-- [ ] Routing → Booking の経路紐付け ACL（`CandidateRoute` → `CargoItinerary` 変換）がドメイン不変条件（Leg 連結制約）を満たして動作する
-- [ ] BookingStatus 状態遷移（`Preliminary → RouteProposed → Confirmed`、および Cancelled/差し戻し）が単体テストで網羅される
-- [ ] E2E（Playwright）で「経路候補算出 → 選択・確定 → 予約紐付け → 荷主通知 → 予約確定」の予約フロー全体を担保する（IT3 繰り越し H5 の解消）
-- [ ] ドメイン層カバレッジの実測ベースラインを可視化し、85% ハードゲートを段階導入する（IT3 繰り越し T4 / SQ-1）
-- [ ] SonarQube 指摘 SQ-1〜SQ-5 を消化し Quality Gate OK を維持する
-- [ ] ArchUnit で Routing ↔ Booking の依存方向（ACL 経由のみ）を継続検証する
+- [x] US09・US10・US11・US12・US13 の受入条件をすべて満たす
+- [x] Routing → Booking の経路紐付け ACL（`CandidateRoute` → `CargoItinerary` 変換）がドメイン不変条件（Leg 連結制約）を満たして動作する（`ISelectedRouteLookup` 経由・BC 独立）
+- [x] BookingStatus 状態遷移（`Preliminary → RouteProposed → Confirmed`、および Cancelled/差し戻し）が単体テストで網羅される
+- [~] 予約フロー全体（算出 → 選択・確定 → 予約紐付け → 荷主通知 → 予約確定）は Web.Tests（WebApplicationFactory）で担保済み。Playwright E2E への追加は繰り越し
+- [ ] ドメイン層カバレッジの実測ベースラインを可視化し、85% ハードゲートを段階導入する（IT3 繰り越し T4 / SQ-1）＝繰り越し
+- [~] SonarQube 指摘のうち H2/M1/M2/M9（UI レビュー系）を消化。SQ-1〜SQ-5（スキャン実行前提）は繰り越し
+- [x] ArchUnit で Routing ↔ Booking の依存方向（ACL 経由のみ）を継続検証する（6 件緑）
 
 ### アプローチ（開発戦略: 中盤インサイドアウト継続）
 
@@ -369,15 +369,15 @@ IRouteAssignmentAcl ..> CargoItinerary : 変換
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review：中間 / developing-review：正式）
-- [ ] ユニットテストがパス（ドメイン層 85% 以上・状態遷移/紐付け ACL 網羅）
-- [ ] E2E テストがパス（経路算出→選択→紐付け→通知→確定の予約フロー全体）
-- [ ] ArchUnit テストがパス（Routing ↔ Booking の ACL 経由依存）
-- [ ] カバレッジ 85% ハードゲートを CI に段階導入（実測ベースライン確定後）
-- [ ] SonarQube Quality Gate OK（SQ-1〜SQ-5 消化）
-- [ ] `dotnet format` / Lint エラーなし
-- [ ] domain-model / data-model / ui_design / release_plan の横断更新完了
-- [ ] ADR（外部経路サービス契約方針）起票完了
+- [~] コードレビュー完了（self-review：中間 / developing-review：正式）＝ developing-review は staging 完了後に実施予定
+- [~] ユニットテストがパス（状態遷移/紐付け ACL 網羅は達成・全 198 テスト緑。ドメイン層 85% の定量計測は繰り越し）
+- [~] E2E テストがパス（Web.Tests で予約フロー全体を担保。Playwright E2E は繰り越し）
+- [x] ArchUnit テストがパス（Routing ↔ Booking の ACL 経由依存・6 件緑）
+- [ ] カバレッジ 85% ハードゲートを CI に段階導入（実測ベースライン確定後）＝繰り越し
+- [ ] SonarQube Quality Gate OK（SQ-1〜SQ-5 消化）＝繰り越し（スキャン実行前提）
+- [x] `dotnet format` / Lint エラーなし（pre-commit で全コミット通過・警告 0）
+- [x] domain-model / data-model / release_plan の横断更新完了（ui_design のスタブ整理は繰り越し）
+- [ ] ADR（外部経路サービス契約方針）起票完了＝繰り越し
 
 ### デモ項目
 
@@ -394,6 +394,7 @@ IRouteAssignmentAcl ..> CargoItinerary : 変換
 | 2026-07-13 | 初版作成（US09/10/11/12/13・目標 12 SP・中盤インサイドアウト継続。IT3 ふりかえり Try（T1-T5）・SonarQube 指摘（SQ-1〜5）を反映） | - |
 | 2026-07-13 | validating-iteration-plan 反映（8 ステップ）。ステップ 3/7：状態遷移・コマンドの domain-model 乖離を Day1 0.1 の確定対象に明示し US11/US13 タスクを既存コマンド名に整合。ステップ 5：対象画面・API を ui_design 画面一覧（`/routing/requests/{bookingId}`・`/bookings/{bookingId}` 統合）に準拠修正。ステップ 8：IT3 レビュー H2（US09 導線）・M9（差分ハイライト）・M1/M2（状態バッジ日本語化・費用単位）を反映タスク 6.8/6.9 として追加 | - |
 | 2026-07-13 | validating-design 反映（軸 A/B/C）。軸 A：局面（中盤・IT3-5 インサイドアウト）・アプローチ・US 割り当て一致。`/bookings/{bookingId}/route` スタブの扱いを Day1 0.1(e) の確定対象に追加。軸 B：新規ドメインサービス・ACL・コマンド・enum の domain-model 要素表反映を Day1 0.1 に集約、ナビゲーション整合性（既存 navbar/dashboard で担保）を明示。軸 C：CandidateRoute/CargoItinerary・AmbientTransaction・楽観ロック（ドメイン先行）・ACL・二方言 SQL・post-commit イベント・ADR-0007 の連続性を確認（一致） | - |
+| 2026-07-13 | IT4 開発完了（US09-13・12 SP・100%）。インサイドアウトで全層実装：Cargo 集約の旅程割当/状態遷移、leg/selected_route/route_notification 永続化、各コマンドサービス、Routing 経路選択・確定 UI、予約詳細の紐付け/通知/確定/差戻/取消アクション、確定経路読取 ACL（BC 独立）。IT3 レビュー H2/M1/M2/M9 消化。全 198 テスト緑（Domain 93/App 3/Arch 6/Web 48/E2E 4/Infra 44）。tracking-progress --update で成功基準・DoD・release_plan を実績反映。繰り越し：カバレッジ 85% ゲート・SonarQube SQ-1〜5・Playwright E2E・外部経路サービス契約 ADR・ui_design スタブ整理 | - |
 
 ---
 
