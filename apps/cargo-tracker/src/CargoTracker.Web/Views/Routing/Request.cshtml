@@ -6,6 +6,17 @@
 
 <h1 class="h3 mb-3">航海スケジュール検索</h1>
 
+@if (Model.ConfirmedRoute is not null)
+{
+    <div class="alert alert-success" role="alert">
+        <strong>確定経路</strong>：
+        @string.Join(" → ", Model.ConfirmedRoute.Ports.Select(p => p.UnLocode))
+        （航海 @string.Join(" → ", Model.ConfirmedRoute.VoyageNumbers.Select(v => v.Value))・
+        所要 @Model.ConfirmedRoute.TransitDays 日・費用 @Model.ConfirmedRoute.Cost.ToString("N0")）。
+        別の候補を選択すると確定経路は置き換わります。
+    </div>
+}
+
 <section class="mb-4">
     <h2 class="h5">予約情報</h2>
     <dl class="row">

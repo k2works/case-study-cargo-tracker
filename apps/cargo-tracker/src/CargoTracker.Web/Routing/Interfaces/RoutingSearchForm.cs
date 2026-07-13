@@ -25,12 +25,16 @@ public sealed class RoutingSearchForm
     public SupportedCargoType CargoType { get; set; } = SupportedCargoType.General;
 }
 
-public sealed record RoutingRequestViewModel(RoutingBookingInfo Booking, RoutingSearchForm Form);
+public sealed record RoutingRequestViewModel(
+    RoutingBookingInfo Booking,
+    RoutingSearchForm Form,
+    CandidateRoute? ConfirmedRoute = null);
 
 public sealed record VoyageSearchResultsViewModel(
     RoutingSearchForm Form,
     IReadOnlyList<VoyageSearchResult> Results);
 
 public sealed record RouteCandidatesViewModel(
+    string BookingId,
     RoutingSearchForm Form,
     IReadOnlyList<CargoTracker.Routing.Domain.Model.CandidateRoute> Candidates);

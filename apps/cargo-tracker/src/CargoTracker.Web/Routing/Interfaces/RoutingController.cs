@@ -1,6 +1,8 @@
+using CargoTracker.Routing.Application.Internal.CommandServices;
 using CargoTracker.Routing.Application.Internal.OutboundServices;
 using CargoTracker.Routing.Application.Internal.QueryServices;
 using CargoTracker.Routing.Domain.Model;
+using CargoTracker.Routing.Domain.Repositories;
 using CargoTracker.Shared.Domain.Model;
 using CargoTracker.Shared.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authorization;
@@ -8,13 +10,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CargoTracker.Routing.Interfaces;
 
-/// <summary>経路設計依頼と航海スケジュール検索（US07）。</summary>
+/// <summary>経路設計依頼・航海スケジュール検索・経路選択（US07/US08/US09/US10）。</summary>
 [Authorize(Roles = Roles.RouteDesigner)]
 public sealed class RoutingController(
     RoutingRequestQueryService requestQueryService,
     IBookingLookup bookingLookup,
     SearchVoyagesQueryService searchVoyagesQueryService,
-    IRouteCandidateService routeCandidateService) : Controller
+    IRouteCandidateService routeCandidateService,
+    SelectRouteCommandService selectRouteCommandService,
+    ISelectedRouteRepository selectedRouteRepository) : Controller
 {
     [HttpGet("/routing/requests")]
     public async Task<IActionResult> Requests(CancellationToken ct)
@@ -29,7 +33,35 @@ public sealed class RoutingController(
             return NotFound();
         }
 
-        return View("Request", new RoutingRequestViewModel(booking, BuildDefaultForm(booking)));
+        var confirmed = await selectedRouteRepository.FindByBookingIdAsync(bookingId, ct);
+        return View("Request", new RoutingRequestViewModel(booking, BuildDefaultForm(booking), confirmed?.Route));
+    }
+
+    [HttpPost("/routing/requests/{bookingId}/select")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SelectRoute(string bookingId, RoutingSearchForm form, int selectedIndex, CancellationToken ct)
+    {
+        var booking = await bookingLookup.FindByBookingIdAsync(bookingId, ct);
+        if (booking is null)
+        {
+            return NotFound();
+        }
+
+        // 候補は都度算出のため、同一条件で再算出し選択インデックスで確定対象を特定する（算出は決定的）。
+        var candidates = await routeCandidateService.FindCandidatesAsync(
+            new Location(form.OriginUnlocode),
+            new Location(form.DestinationUnlocode),
+            booking.ArrivalDeadline,
+            form.CargoType,
+            ct);
+
+        if (selectedIndex < 0 || selectedIndex >= candidates.Count)
+        {
+            return BadRequest("選択された経路候補が見つかりません。");
+        }
+
+        await selectRouteCommandService.HandleAsync(new SelectRouteCommand(bookingId, candidates[selectedIndex]), ct);
+        return LocalRedirect($"/routing/requests/{bookingId}");
     }
 
     [HttpGet("/routing/requests/{bookingId}/voyages")]
@@ -74,7 +106,7 @@ public sealed class RoutingController(
             form.CargoType,
             ct);
 
-        return PartialView("_RouteCandidates", new RouteCandidatesViewModel(form, candidates));
+        return PartialView("_RouteCandidates", new RouteCandidatesViewModel(bookingId, form, candidates));
     }
 
     private static RoutingSearchForm BuildDefaultForm(RoutingBookingInfo booking)

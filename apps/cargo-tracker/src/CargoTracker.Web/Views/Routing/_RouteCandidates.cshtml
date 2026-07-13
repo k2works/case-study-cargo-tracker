@@ -18,6 +18,7 @@ else
                     <th>経由港</th>
                     <th>所要日数</th>
                     <th>費用</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -26,6 +27,7 @@ else
                 }
                 @foreach (var candidate in Model.Candidates)
                 {
+                    var index = rank - 1;
                     <tr>
                         <td>@rank</td>
                         <td>
@@ -42,6 +44,18 @@ else
                         <td>@string.Join(" → ", candidate.Ports.Select(p => p.UnLocode))</td>
                         <td>@candidate.TransitDays 日</td>
                         <td>@candidate.Cost.ToString("N0")</td>
+                        <td>
+                            <form method="post" action="/routing/requests/@Model.BookingId/select" class="m-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="OriginUnlocode" value="@Model.Form.OriginUnlocode" />
+                                <input type="hidden" name="DestinationUnlocode" value="@Model.Form.DestinationUnlocode" />
+                                <input type="hidden" name="DepartureFrom" value="@Model.Form.DepartureFrom.ToString("yyyy-MM-ddTHH:mm")" />
+                                <input type="hidden" name="DepartureTo" value="@Model.Form.DepartureTo.ToString("yyyy-MM-ddTHH:mm")" />
+                                <input type="hidden" name="CargoType" value="@Model.Form.CargoType" />
+                                <input type="hidden" name="selectedIndex" value="@index" />
+                                <button type="submit" class="btn btn-sm btn-primary">この経路を選択・確定</button>
+                            </form>
+                        </td>
                     </tr>
                     rank++;
                 }
@@ -49,6 +63,6 @@ else
         </table>
     </div>
     <p class="text-muted small mb-0">
-        費用・所要日数は概算です。経路の選択・確定と予約への紐付け（US09）は次イテレーション（IT4）で対応予定です。
+        費用・所要日数は概算です。最適な候補がない場合は検索条件を調整して再算出してください（US10）。
     </p>
 }

@@ -195,4 +195,34 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         candidates.Should().Contain("期限内に到達可能な経路がありません")
             .And.Contain("alert-warning");
     }
+
+    [Fact]
+    public async Task 経路候補を選択確定すると依頼画面に確定経路が表示される()
+    {
+        var sales = await LoginAsync("sales");
+        var bookingId = await CreateAndAssignGeneralBookingAsync(sales);
+        var router = await LoginAsync("router");
+        await CreateVoyageAsync(router, "VYG-SEL-001", "General");
+
+        // 候補を算出して選択・確定フォームのトークンを取得する。
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "General"));
+        candidates.Should().Contain("この経路を選択・確定");
+        var token = Token(candidates);
+
+        var response = await router.PostAsync($"/routing/requests/{bookingId}/select", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["OriginUnlocode"] = "JPTYO",
+            ["DestinationUnlocode"] = "DEHAM",
+            ["DepartureFrom"] = "2026-10-01T00:00",
+            ["DepartureTo"] = "2026-10-31T23:59",
+            ["CargoType"] = "General",
+            ["selectedIndex"] = "0",
+            ["__RequestVerificationToken"] = token,
+        }));
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        var request = await router.GetStringAsync($"/routing/requests/{bookingId}");
+        request.Should().Contain("確定経路")
+            .And.Contain("VYG-SEL-001");
+    }
 }
