@@ -148,7 +148,7 @@ package "Routing Context" #lightgreen {
 }
 
 package "Tracking Context" #lightyellow {
-  entity "tracking_activity\n（追跡レコード）" as tracking_activity {
+  entity "tracking_activity\n（追跡レコード・migration 0011）" as tracking_activity {
     * id : BIGINT <<PK>>
     --
     * tracking_number : VARCHAR(20) <<UK>>
@@ -156,10 +156,11 @@ package "Tracking Context" #lightyellow {
     * transport_status : VARCHAR(30)
   }
 
-  entity "tracking_handling_event\n（追跡イベント）" as tracking_handling_event {
+  entity "tracking_handling_event\n（追跡イベント・migration 0011）" as tracking_handling_event {
     * id : BIGINT <<PK>>
     --
     * tracking_id : BIGINT <<FK>>
+    * seq_number : INTEGER <<UK tracking_id と複合>>
     * event_type : VARCHAR(30)
     * event_time : TIMESTAMP
     * location_unlocode : VARCHAR(5) <<FK>>
