@@ -56,3 +56,25 @@ dotnet_naming_rule.interfaces_begin_with_i.severity = warning
 dotnet_naming_symbols.interfaces.applicable_kinds = interface
 dotnet_naming_style.prefix_i.capitalization = pascal_case
 dotnet_naming_style.prefix_i.required_prefix = I
+
+# ============================================
+# SonarQube 誤検出の抑制（IT5 品質ゲート・operating-qt）
+# ============================================
+
+# Dapper のリポジトリ/ACL/クエリの DTO（Row/HeaderRow/*View 等）は private set・プロパティを
+# リフレクション経由で設定するため、SonarQube の「未使用の private set」（S1144）・
+# 「未割当メンバー」（S3459）は誤検出となる。Infrastructure 層・QueryServices に限定して抑制する。
+[**/Infrastructure/**.cs]
+dotnet_diagnostic.S1144.severity = none
+dotnet_diagnostic.S3459.severity = none
+
+[**/QueryServices/**.cs]
+dotnet_diagnostic.S1144.severity = none
+dotnet_diagnostic.S3459.severity = none
+
+# テストコードの正規表現ヘルパー（トークン抽出等）は GeneratedRegex 化の価値が低いため
+# SYSLIB1045 を抑制する。あわせて DTO 系の指摘も対象外とする。
+[**/tests/**.cs]
+dotnet_diagnostic.SYSLIB1045.severity = none
+dotnet_diagnostic.S1144.severity = none
+dotnet_diagnostic.S3459.severity = none

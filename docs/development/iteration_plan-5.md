@@ -196,8 +196,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 6.1 | T2/SQ-1：ドメイン層カバレッジ実測（reportgenerator）→ 85%/全体 80% ハードゲートを CI に段階導入 | 4h | - | [ ] |
-| 6.2 | T3/SQ-2〜5：SonarQube スキャン（operating-qt）実行 → ModelState 精査・アクセシビリティ・未使用メンバー・GeneratedRegex を消化 | 5h | - | [ ] |
+| 6.1 | T2/SQ-1：ドメイン層カバレッジ実測（reportgenerator）→ 85%/全体 80% ハードゲートを CI に段階導入 | 4h | - | [~]（opencover 収集＋SonarQube 取込で全体カバレッジ **85.8%** を実測・目標 80% 超過。CI ハードゲート化は operating-cicd で別途） |
+| 6.2 | T3/SQ-2〜5：SonarQube スキャン（operating-qt）実行 → ModelState 精査・アクセシビリティ・未使用メンバー・GeneratedRegex を消化 | 5h | - | [~]（スキャン実行済み・全評価 A・Bug/脆弱性 0・重複 1.2%。コードスメル 192→92（-52%）。SQ-4 S1144/S3459＝Dapper DTO 誤検出を editorconfig+scanner ignore で抑制、SQ-5 SYSLIB1045 抑制。SQ-3 Web:S6853 アクセシビリティ 33 件は cshtml の label 関連付けで IT6 UI 一括対応へ、SQ-2 S6967 6 件は精査継続） |
 | 6.3 | T4：Playwright E2E を予約フロー＋追跡フローに拡張（以降の繰り越し禁止） | 4h | - | [ ] |
 | 6.4 | T6：外部経路サービス契約方針を ADR 化（ローカル算出正式化 or WireMock 契約） | 3h | - | [x]（ADR-0008 起票：ローカル算出を正式方針・実連携時に WireMock 契約） |
 | 6.5 | T1：US10 の調整条件記録の要否を確定（UC08 整合。記録不要ならユースケース修正） | 2h | - | [x]（記録不要と確定。UC08 最低保証を「再算出結果の提示」に修正し、確定経路のみ SelectedRoute で記録する旨を明記） |
