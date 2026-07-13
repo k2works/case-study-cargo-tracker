@@ -401,11 +401,14 @@ public interface IShipperExistenceChecker // ACL Port
 |---|---|---|
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（Preliminary 状態で作成） |
 | AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（Preliminary → RouteProposed に遷移） |
-| ConfirmBookingCommand | 営業担当者 | 予約を確定する（Preliminary → Confirmed に遷移） |
+| RouteCargoCommand | 経路設計者 | 確定経路（CandidateRoute）を CargoItinerary に変換して Cargo に割り当てる（US11。状態は RouteProposed のまま維持） |
+| ConfirmBookingCommand | 営業担当者 | 予約を確定する（US13。RouteProposed → Confirmed に遷移） |
+| ReturnToRoutingCommand | 営業担当者 | 荷主のルート変更希望で経路再設計に差し戻す（US13。RouteProposed → Preliminary に遷移） |
 | CancelBookingCommand | 営業担当者 | 予約をキャンセルする（Cancelled に遷移） |
-| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、RouteProposed → Confirmed に遷移 |
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TrackingIssued に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
+
+> **状態遷移の確定（IT4 Day1 0.1・実装整合）**: US06（`AssignToRoutingCommand`）が既に `Preliminary → RouteProposed` を担うため、US11（`RouteCargoCommand`）は **CargoItinerary の割当のみ**を行い状態は `RouteProposed` を維持する。予約の `Confirmed` 遷移は US13（`ConfirmBookingCommand`）に集約する。UC フローの呼称「経路設計中／経路提案中」はそれぞれ `Preliminary`（経路設計者へ引き渡し済み）／`RouteProposed`（経路提案中）に対応する。
 
 ## 2. Shipper Context（荷主コンテキスト）
 

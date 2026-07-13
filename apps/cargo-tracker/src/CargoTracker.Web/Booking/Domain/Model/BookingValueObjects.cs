@@ -122,3 +122,58 @@ public sealed record TemperatureRequirement
         TemperatureUnit = temperatureUnit;
     }
 }
+
+/// <summary>
+/// 航海番号（Booking BC 固有）。Routing BC の VoyageNumber とは独立に定義する（ADR-0007 の BC 独立方針）。
+/// 経路紐付け ACL（US11）が Routing の確定経路を Booking の旅程に変換する際に用いる。
+/// </summary>
+public sealed record VoyageNumber
+{
+    public string Value { get; }
+
+    public VoyageNumber(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("航海番号は必須です。", nameof(value));
+        }
+        Value = value;
+    }
+}
+
+/// <summary>旅程の 1 区間。特定の航海で積地から揚地まで輸送する単位。</summary>
+public sealed record Leg(
+    VoyageNumber Voyage,
+    Location LoadLocation,
+    Location UnloadLocation,
+    DateTimeOffset LoadTime,
+    DateTimeOffset UnloadTime);
+
+/// <summary>
+/// 旅程（US11）。1 つ以上の Leg で構成される貨物の輸送経路全体。
+/// Leg 連結制約（Leg[n].UnloadLocation == Leg[n+1].LoadLocation）を不変条件として持つ。
+/// </summary>
+public sealed record CargoItinerary
+{
+    public IReadOnlyList<Leg> Legs { get; }
+
+    public CargoItinerary(IReadOnlyList<Leg> legs)
+    {
+        if (legs is null || legs.Count == 0)
+        {
+            throw new ArgumentException("旅程は 1 区間以上で構成されます。", nameof(legs));
+        }
+        for (var i = 0; i < legs.Count - 1; i++)
+        {
+            if (!legs[i].UnloadLocation.Equals(legs[i + 1].LoadLocation))
+            {
+                throw new ArgumentException(
+                    "旅程の区間は連結していなければなりません（前区間の揚地と次区間の積地が一致）。", nameof(legs));
+            }
+        }
+        Legs = legs;
+    }
+
+    /// <summary>到着予定時刻（最終区間の揚地時刻）。</summary>
+    public DateTimeOffset ExpectedArrivalTime => Legs[^1].UnloadTime;
+}

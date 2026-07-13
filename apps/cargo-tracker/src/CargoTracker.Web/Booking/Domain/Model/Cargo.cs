@@ -17,13 +17,14 @@ public sealed class Cargo : AggregateRoot
     public HazardousDeclaration? HazardousDeclaration { get; }
     public TemperatureRequirement? TemperatureRequirement { get; }
     public BookingStatus BookingStatus { get; private set; }
+    public CargoItinerary? CargoItinerary { get; private set; }
     public long Version { get; private set; }
 
     private Cargo(
         BookingId bookingId, ShipperId shipperId, RouteSpecification routeSpecification, CargoType cargoType,
         decimal weight, Dimensions? dimensions, Quantity? quantity, Description? description,
         HazardousDeclaration? hazardousDeclaration, TemperatureRequirement? temperatureRequirement,
-        BookingStatus bookingStatus, long version)
+        BookingStatus bookingStatus, long version, CargoItinerary? cargoItinerary = null)
     {
         BookingId = bookingId;
         ShipperId = shipperId;
@@ -36,6 +37,7 @@ public sealed class Cargo : AggregateRoot
         HazardousDeclaration = hazardousDeclaration;
         TemperatureRequirement = temperatureRequirement;
         BookingStatus = bookingStatus;
+        CargoItinerary = cargoItinerary;
         Version = version;
     }
 
@@ -75,15 +77,68 @@ public sealed class Cargo : AggregateRoot
         AddDomainEvent(new AssignedToRoutingEvent(BookingId));
     }
 
+    /// <summary>確定経路（旅程）を予約に紐付ける（US11）。状態は RouteProposed のまま維持する。</summary>
+    public void AssignItinerary(CargoItinerary itinerary)
+    {
+        ArgumentNullException.ThrowIfNull(itinerary);
+        if (BookingStatus != BookingStatus.RouteProposed)
+        {
+            throw new InvalidOperationException("経路提案中の予約のみ経路を紐付けられます。");
+        }
+        CargoItinerary = itinerary;
+        Version++;
+        AddDomainEvent(new CargoRoutedEvent(BookingId));
+    }
+
+    /// <summary>予約を確定する（US13）。経路提案中かつ旅程割当済みでなければならない。</summary>
+    public void Confirm()
+    {
+        if (BookingStatus != BookingStatus.RouteProposed)
+        {
+            throw new InvalidOperationException("経路提案中の予約のみ確定できます。");
+        }
+        if (CargoItinerary is null)
+        {
+            throw new InvalidOperationException("経路が紐付けられていない予約は確定できません。");
+        }
+        BookingStatus = BookingStatus.Confirmed;
+        Version++;
+        AddDomainEvent(new BookingConfirmedEvent(BookingId));
+    }
+
+    /// <summary>荷主のルート変更希望で経路再設計に差し戻す（US13）。RouteProposed → Preliminary。</summary>
+    public void ReturnToRouting()
+    {
+        if (BookingStatus != BookingStatus.RouteProposed)
+        {
+            throw new InvalidOperationException("経路提案中の予約のみ経路再設計に差し戻せます。");
+        }
+        BookingStatus = BookingStatus.Preliminary;
+        CargoItinerary = null;
+        Version++;
+    }
+
+    /// <summary>予約をキャンセルする（US13）。確定後・終端状態からはキャンセルできない。</summary>
+    public void Cancel()
+    {
+        if (BookingStatus is not (BookingStatus.Preliminary or BookingStatus.RouteProposed))
+        {
+            throw new InvalidOperationException("仮受付または経路提案中の予約のみキャンセルできます。");
+        }
+        BookingStatus = BookingStatus.Cancelled;
+        Version++;
+    }
+
     /// <summary>永続化データから集約を再構築する（イベントは発生させない）。</summary>
     public static Cargo Reconstruct(
         BookingId bookingId, ShipperId shipperId, RouteSpecification routeSpecification, CargoType cargoType,
         decimal weight, Dimensions? dimensions, Quantity? quantity, Description? description,
         BookingStatus bookingStatus, long version,
-        HazardousDeclaration? hazardousDeclaration = null, TemperatureRequirement? temperatureRequirement = null)
+        HazardousDeclaration? hazardousDeclaration = null, TemperatureRequirement? temperatureRequirement = null,
+        CargoItinerary? cargoItinerary = null)
         => new(bookingId, shipperId, routeSpecification, cargoType, weight, dimensions, quantity, description,
             hazardousDeclaration, temperatureRequirement,
-            bookingStatus, version);
+            bookingStatus, version, cargoItinerary);
 
     private static void ValidateSpecialRequirements(
         CargoType cargoType, HazardousDeclaration? hazardousDeclaration, TemperatureRequirement? temperatureRequirement)

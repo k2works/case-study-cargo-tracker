@@ -221,4 +221,112 @@ public class CargoTest
         cargo.TemperatureRequirement.Should().Be(requirement);
         cargo.HazardousDeclaration.Should().BeNull();
     }
+
+    // --- US11: 経路情報を予約に紐付ける ---
+
+    private static CargoItinerary CreateItinerary() => new(new[]
+    {
+        new Leg(new VoyageNumber("V001"), new Location("JPTYO"), new Location("SGSIN"),
+            new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero)),
+        new Leg(new VoyageNumber("V002"), new Location("SGSIN"), new Location("DEHAM"),
+            new DateTimeOffset(2026, 9, 12, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero)),
+    });
+
+    private static Cargo RouteProposedCargo() => Cargo.Reconstruct(
+        new BookingId("BKG-TEST-0000000001"), _shipperId, _route, CargoType.General, 1200m,
+        null, null, null, BookingStatus.RouteProposed, 1);
+
+    [Fact]
+    public void 旅程のLeg連結制約を満たさない場合は例外()
+    {
+        var act = () => new CargoItinerary(new[]
+        {
+            new Leg(new VoyageNumber("V001"), new Location("JPTYO"), new Location("SGSIN"),
+                new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero)),
+            new Leg(new VoyageNumber("V002"), new Location("USNYC"), new Location("DEHAM"),
+                new DateTimeOffset(2026, 9, 12, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero)),
+        });
+
+        act.Should().Throw<ArgumentException>().WithMessage("*連結*");
+    }
+
+    [Fact]
+    public void 経路をRouteProposedの予約に割り当てると旅程が保持されVersionが上がる()
+    {
+        var cargo = RouteProposedCargo();
+        var itinerary = CreateItinerary();
+
+        cargo.AssignItinerary(itinerary);
+
+        cargo.CargoItinerary.Should().Be(itinerary);
+        cargo.BookingStatus.Should().Be(BookingStatus.RouteProposed);
+        cargo.Version.Should().Be(2);
+    }
+
+    [Fact]
+    public void RouteProposed以外へ経路を割り当てると例外()
+    {
+        var cargo = CreateCargo();
+
+        var act = () => cargo.AssignItinerary(CreateItinerary());
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    // --- US13: 予約を確定する ---
+
+    [Fact]
+    public void 旅程割当済みのRouteProposedを確定するとConfirmedになる()
+    {
+        var cargo = RouteProposedCargo();
+        cargo.AssignItinerary(CreateItinerary());
+
+        cargo.Confirm();
+
+        cargo.BookingStatus.Should().Be(BookingStatus.Confirmed);
+        cargo.Version.Should().Be(3);
+    }
+
+    [Fact]
+    public void 旅程未割当のまま確定すると例外()
+    {
+        var cargo = RouteProposedCargo();
+
+        var act = () => cargo.Confirm();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*経路*");
+    }
+
+    [Fact]
+    public void RouteProposedを経路再設計に差し戻すとPreliminaryになる()
+    {
+        var cargo = RouteProposedCargo();
+
+        cargo.ReturnToRouting();
+
+        cargo.BookingStatus.Should().Be(BookingStatus.Preliminary);
+        cargo.Version.Should().Be(2);
+    }
+
+    [Fact]
+    public void 予約をキャンセルするとCancelledになる()
+    {
+        var cargo = RouteProposedCargo();
+
+        cargo.Cancel();
+
+        cargo.BookingStatus.Should().Be(BookingStatus.Cancelled);
+    }
+
+    [Fact]
+    public void 確定済みの予約はキャンセルできない()
+    {
+        var cargo = RouteProposedCargo();
+        cargo.AssignItinerary(CreateItinerary());
+        cargo.Confirm();
+
+        var act = () => cargo.Cancel();
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }
