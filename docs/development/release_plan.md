@@ -159,6 +159,8 @@ gantt
 | IT1 基盤 + 荷主・見積 | 13 | 13 | 完了 | US26/US02/US03/US01 完了。技術基盤（ADR-0002/0003）+ 認証 + ウォーキングスケルトン。全 62 テストパス |
 | IT2 貨物予約 | 10 | 10 | 完了 | US04/US05/US06 完了。Booking BC 立ち上げ・危険物冷凍・経路設計者引き渡し（version 楽観ロック）。技術的負債 M1/M3/M4/M5・ArchUnit 拡張。全 117 テストパス |
 | IT3 航海・経路算出 | 14 | 14 | 開発完了 | US24/US25/US07/US08 完了。Routing BC 立ち上げ・航海スケジュール管理・経路候補算出（BC 独立の CandidateRoute/IRouteCandidateService）。負債 H1/H2/H3/H4/T3・ADR-0006/0007。全 161 テストパス。T4 ハードゲート・H5 Playwright E2E は繰り越し |
+| IT4 経路確定・予約確定 | 12 | 12 | 開発完了 | US09/US10/US11/US12/US13 完了。BC 連携 ACL（SQL 直接参照＋プリミティブ DTO）・確定経路の状態遷移・荷主通知（append-only）・ADR-0008。IT3 レビュー高優先消化。BookingStatus 永続化バグ是正（SCREAMING_SNAKE コーデック）。全 198 テストパス。IT3 レビュー H1-H7 を先行消化 |
+| IT5 追跡・荷役 | 17 | 17 | 開発完了 | US14/US15/US16/US17/US18 完了。Tracking/Handling BC 立ち上げ・追跡番号イベント駆動自動発行・荷役妥当性検証（MISROUTED）・引取配送完了同期・追跡照会（認証/公開）。UnitOfWork post-commit 解放後 publish（ADR-0006 懸案解決）。SonarQube 全 A・カバレッジ 85.8%。実 MediatR E2E 補完。全 235 テストパス。カバレッジハードゲート・Playwright E2E は Release 1.1（IT6）へ繰り越し。**Release 1.0 MVP 出荷条件充足** |
 
 （以降イテレーション完了ごとに更新）
 
