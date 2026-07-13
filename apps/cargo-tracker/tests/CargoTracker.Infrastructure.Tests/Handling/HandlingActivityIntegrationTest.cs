@@ -103,4 +103,23 @@ public sealed class HandlingActivityIntegrationTest : IAsyncLifetime
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
+
+    [Fact]
+    public async Task 引取は荷受人確認がないと登録できない()
+    {
+        var act = () => _service.HandleAsync(new RegisterHandlingActivityCommand(
+            "BKG-HD-0001", "Claim", "DEHAM", new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero)));
+
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*荷受人*");
+    }
+
+    [Fact]
+    public async Task 目的港での引取は荷受人確認があれば妥当に登録される()
+    {
+        var result = await _service.HandleAsync(new RegisterHandlingActivityCommand(
+            "BKG-HD-0001", "Claim", "DEHAM", new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero),
+            ConsigneeConfirmation: "SIGN-12345"));
+
+        result.IsOffRoute.Should().BeFalse();
+    }
 }

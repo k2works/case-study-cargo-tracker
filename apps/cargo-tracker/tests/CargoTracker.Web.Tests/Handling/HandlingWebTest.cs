@@ -41,6 +41,16 @@ public sealed class HandlingWebTest : IClassFixture<AuthenticationFlowTest.AuthW
     }
 
     [Fact]
+    public async Task 荷役登録画面に引取と荷受人確認欄がある()
+    {
+        var handler = await LoginAsync("handler");
+
+        var page = await handler.GetStringAsync("/handling/new");
+
+        page.Should().Contain("引取").And.Contain("荷受人確認");
+    }
+
+    [Fact]
     public async Task 存在しない追跡番号では荷役登録できない()
     {
         var handler = await LoginAsync("handler");

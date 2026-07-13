@@ -20,8 +20,13 @@
             <option value="Receive" selected="@(Model.EventType == "Receive")">受領</option>
             <option value="Load" selected="@(Model.EventType == "Load")">積込</option>
             <option value="Unload" selected="@(Model.EventType == "Unload")">荷降し</option>
+            <option value="Claim" selected="@(Model.EventType == "Claim")">引取</option>
         </select>
-        <div class="form-text">積込・荷降しは航海番号が必須です。</div>
+        <div class="form-text">積込・荷降しは航海番号が必須です。引取は荷受人確認が必須です。</div>
+    </div>
+    <div class="mb-3">
+        <label for="ConsigneeConfirmation" class="form-label">荷受人確認（引取時・署名または確認コード）</label>
+        <input id="ConsigneeConfirmation" name="ConsigneeConfirmation" value="@Model.ConsigneeConfirmation" class="form-control" placeholder="確認コードまたは署名" />
     </div>
     <div class="mb-3">
         <label for="LocationUnLocode" class="form-label">作業場所（UN/LOCODE）</label>

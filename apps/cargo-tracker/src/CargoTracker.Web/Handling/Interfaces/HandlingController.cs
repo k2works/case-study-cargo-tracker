@@ -40,7 +40,8 @@ public sealed class HandlingController(
         try
         {
             var result = await commandService.HandleAsync(new RegisterHandlingActivityCommand(
-                bookingId, form.EventType, form.LocationUnLocode, form.CompletionTime, form.VoyageNumber), ct);
+                bookingId, form.EventType, form.LocationUnLocode, form.CompletionTime,
+                form.VoyageNumber, form.ConsigneeConfirmation), ct);
 
             if (result.IsMisrouted)
             {

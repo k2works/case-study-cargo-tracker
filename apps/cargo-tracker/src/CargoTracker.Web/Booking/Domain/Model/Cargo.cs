@@ -77,6 +77,32 @@ public sealed class Cargo : AggregateRoot
         AddDomainEvent(new AssignedToRoutingEvent(BookingId));
     }
 
+    /// <summary>荷役（積込・荷降し）に連動して輸送中へ遷移する（US15）。TrackingIssued/InTransit のとき有効。</summary>
+    public void MarkInTransit()
+    {
+        if (BookingStatus is not (BookingStatus.TrackingIssued or BookingStatus.InTransit))
+        {
+            return;
+        }
+        if (BookingStatus == BookingStatus.InTransit)
+        {
+            return;
+        }
+        BookingStatus = BookingStatus.InTransit;
+        Version++;
+    }
+
+    /// <summary>引取（US16）に連動して配送完了へ遷移する。追跡開始以降のみ有効。精算処理の開始条件となる。</summary>
+    public void MarkDelivered()
+    {
+        if (BookingStatus is not (BookingStatus.TrackingIssued or BookingStatus.InTransit))
+        {
+            throw new InvalidOperationException("追跡中の予約のみ配送完了にできます。");
+        }
+        BookingStatus = BookingStatus.Delivered;
+        Version++;
+    }
+
     /// <summary>確定経路（旅程）を予約に紐付ける（US11）。状態は RouteProposed のまま維持する。</summary>
     public void AssignItinerary(CargoItinerary itinerary)
     {

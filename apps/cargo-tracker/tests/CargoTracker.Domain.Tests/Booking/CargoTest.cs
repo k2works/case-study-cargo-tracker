@@ -389,4 +389,48 @@ public class CargoTest
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    // --- US15/US16: 荷役に連動した状態同期 ---
+
+    private static Cargo TrackingIssuedCargo()
+    {
+        var cargo = RouteProposedCargo();
+        cargo.AssignItinerary(CreateItinerary());
+        cargo.Confirm();
+        cargo.IssueTracking();
+        return cargo;
+    }
+
+    [Fact]
+    public void 積込荷降しで輸送中になる()
+    {
+        var cargo = TrackingIssuedCargo();
+
+        cargo.MarkInTransit();
+
+        cargo.BookingStatus.Should().Be(BookingStatus.InTransit);
+    }
+
+    [Fact]
+    public void 引取で配送完了になる()
+    {
+        var cargo = TrackingIssuedCargo();
+        cargo.MarkInTransit();
+
+        cargo.MarkDelivered();
+
+        cargo.BookingStatus.Should().Be(BookingStatus.Delivered);
+    }
+
+    [Fact]
+    public void 追跡開始前は配送完了にできない()
+    {
+        var cargo = RouteProposedCargo();
+        cargo.AssignItinerary(CreateItinerary());
+        cargo.Confirm();
+
+        var act = () => cargo.MarkDelivered();
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

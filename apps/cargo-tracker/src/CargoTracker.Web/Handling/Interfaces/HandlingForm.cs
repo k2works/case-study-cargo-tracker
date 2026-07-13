@@ -19,6 +19,9 @@ public sealed class HandlingForm
     public DateTimeOffset CompletionTime { get; set; } = DateTimeOffset.UtcNow;
 
     public string? VoyageNumber { get; set; }
+
+    /// <summary>引取（CLAIM）時の荷受人確認（署名または確認コード）。</summary>
+    public string? ConsigneeConfirmation { get; set; }
 }
 
 public sealed record HandlingListViewModel(IReadOnlyList<HandlingActivitySummary> Activities);

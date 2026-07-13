@@ -165,9 +165,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 引取作業（`HandlingType` CLAIM）のドメインロジック（荷受人確認・署名/確認コード・「引取済」＝`Delivered` 遷移・BookingStatus 同期）＋ユニットテスト。※domain-model の「CustomsDeclaration Cleared まで CLAIM 不可」ルールは通関（CUSTOMS）が本リリース対象外のため適用しない旨を明記 | 5h | - | [ ] |
-| 3.2 | 引取記録の永続化＋統合テスト | 3h | - | [ ] |
-| 3.3 | 引取登録 UI（荷受人確認・確認コード入力）＋E2E | 3h | - | [ ] |
+| 3.1 | 引取作業（`HandlingType` CLAIM）のドメインロジック（荷受人確認・署名/確認コード・「引取済」＝`Delivered` 遷移・BookingStatus 同期）＋ユニットテスト。※domain-model の「CustomsDeclaration Cleared まで CLAIM 不可」ルールは通関（CUSTOMS）が本リリース対象外のため適用しない旨を明記 | 5h | - | [x]（CLAIM 妥当性＝目的港・荷受人確認必須・Cargo.MarkDelivered。CUSTOMS ルールは対象外で非適用） |
+| 3.2 | 引取記録の永続化＋統合テスト | 3h | - | [x]（handling_activity に CLAIM 保存・統合 2 件） |
+| 3.3 | 引取登録 UI（荷受人確認・確認コード入力）＋E2E | 3h | - | [x]（荷役フォームに引取・荷受人確認欄。Web テスト） |
 
 **小計**: 11h（理想時間）
 

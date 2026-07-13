@@ -22,6 +22,12 @@ public sealed class RegisterHandlingActivityCommandService(
             throw new ArgumentException("荷役種別が不正です。", nameof(command));
         }
 
+        // 引取（CLAIM）は荷受人確認（署名または確認コード）が必須（US16）。
+        if (eventType == HandlingEventType.Claim && string.IsNullOrWhiteSpace(command.ConsigneeConfirmation))
+        {
+            throw new ArgumentException("引取には荷受人の確認（署名または確認コード）が必要です。", nameof(command));
+        }
+
         var snapshot = await cargoSnapshotProvider.FindByBookingIdAsync(command.BookingId, ct)
             ?? throw new InvalidOperationException("指定された貨物予約が見つかりません。追跡番号・予約番号を確認してください。");
 
