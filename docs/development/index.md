@@ -23,7 +23,7 @@
 | IT1 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了 |
 | IT2 | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [iteration_report-2.md](iteration_report-2.md) | 完了 |
 | IT3 | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 開発完了 |
-| IT4 | [iteration_plan-4.md](iteration_plan-4.md) | - | - | 計画中 |
+| IT4 | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | - | 開発完了 |
 
 ### 進捗サマリー
 

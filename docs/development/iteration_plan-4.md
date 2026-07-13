@@ -400,7 +400,7 @@ IRouteAssignmentAcl ..> CargoItinerary : 変換
 
 ## 関連ドキュメント
 
-- [イテレーション 4 ふりかえり](./retrospective-4.md)（IT4 完了後に作成）
+- [イテレーション 4 ふりかえり](./retrospective-4.md)
 - [開発戦略](./development_strategy.md)
 - [リリース計画](./release_plan.md)
 - [イテレーション 3 計画](./iteration_plan-3.md)
