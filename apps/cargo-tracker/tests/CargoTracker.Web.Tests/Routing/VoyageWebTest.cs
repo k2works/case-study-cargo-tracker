@@ -97,7 +97,10 @@ public sealed class VoyageWebTest : IClassFixture<AuthenticationFlowTest.AuthWeb
         edit.Should().Contain("既存内容")
             .And.Contain("更新内容")
             .And.Contain("Kiso Maru")
-            .And.Contain("JPTYO");
+            .And.Contain("JPTYO")
+            // US25 差分ハイライト（M9）：変更セル強調の説明とベースライン埋め込みを確認。
+            .And.Contain("変更したセル")
+            .And.Contain("movement-baseline");
 
         var response = await PostUpdateAsync(client, "VYG-WEB-004", Token(edit), "0", "Shinano Maru", "Updated Carrier");
 

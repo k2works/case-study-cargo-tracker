@@ -96,6 +96,7 @@
                 </button>
             </div>
 
+            <p class="text-muted small mb-2">既存内容から変更したセルは<span class="badge text-bg-warning">黄色</span>で強調表示されます（変更漏れ・誤りの防止）。</p>
             <div class="table-responsive mb-3">
                 <table class="table table-bordered align-middle">
                     <thead>
@@ -124,6 +125,19 @@
     </div>
 </form>
 
+@{
+    var baseline = Model.Existing.CarrierMovements
+        .OrderBy(movement => movement.SequenceNumber)
+        .Select(movement => new
+        {
+            dep = movement.DepartureLocationUnlocode,
+            arr = movement.ArrivalLocationUnlocode,
+            depDate = movement.DepartureDate.ToString("yyyy-MM-ddTHH:mm"),
+            arrDate = movement.ArrivalDate.ToString("yyyy-MM-ddTHH:mm"),
+        });
+}
+<script type="application/json" id="movement-baseline">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(baseline))</script>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
@@ -134,5 +148,43 @@
             event.detail.parameters.index = event.detail.elt.dataset.nextIndex;
             event.detail.elt.dataset.nextIndex = Number(event.detail.elt.dataset.nextIndex) + 1;
         });
+
+        // US25 差分ハイライト（IT3 レビュー M9）：既存内容から変更したセルを黄色で強調する。
+        (function () {
+            var baselineElement = document.getElementById('movement-baseline');
+            if (!baselineElement) {
+                return;
+            }
+            var baseline = JSON.parse(baselineElement.textContent || '[]');
+            var fieldMap = {
+                'DepartureLocationUnLocode': 'dep',
+                'ArrivalLocationUnLocode': 'arr',
+                'DepartureDate': 'depDate',
+                'ArrivalDate': 'arrDate'
+            };
+            function highlight(input) {
+                var match = /CarrierMovements\[(\d+)\]\.(\w+)/.exec(input.name || '');
+                if (!match) {
+                    return;
+                }
+                var index = Number(match[1]);
+                var key = fieldMap[match[2]];
+                var original = baseline[index] ? baseline[index][key] : undefined;
+                var changed = original === undefined || String(input.value) !== String(original);
+                input.classList.toggle('border-warning', changed);
+                input.classList.toggle('bg-warning-subtle', changed);
+            }
+            var container = document.getElementById('movement-rows');
+            function refresh() {
+                container.querySelectorAll('input').forEach(highlight);
+            }
+            container.addEventListener('input', function (event) {
+                if (event.target.matches('input')) {
+                    highlight(event.target);
+                }
+            });
+            document.body.addEventListener('htmx:afterSwap', refresh);
+            refresh();
+        })();
     </script>
 }
