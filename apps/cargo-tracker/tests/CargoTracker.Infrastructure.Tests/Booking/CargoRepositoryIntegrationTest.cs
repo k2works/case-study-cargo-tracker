@@ -205,6 +205,74 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         reloaded.Version.Should().Be(2);
     }
 
+    [Fact]
+    public async Task 旅程割当済みの予約を確定するとConfirmedになる()
+    {
+        var bookingId = await CreateRouteProposedWithItineraryAsync();
+        var factory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
+
+        await new ConfirmBookingCommandService(factory, _repository)
+            .HandleAsync(new ConfirmBookingCommand(bookingId));
+
+        var confirmed = await _repository.FindByBookingIdAsync(bookingId);
+        confirmed!.BookingStatus.Should().Be(BookingStatus.Confirmed);
+    }
+
+    [Fact]
+    public async Task 経路提案中の予約を差し戻すとPreliminaryに戻り旅程が消える()
+    {
+        var bookingId = await CreateRouteProposedWithItineraryAsync();
+        var factory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
+
+        await new ReturnToRoutingCommandService(factory, _repository)
+            .HandleAsync(new ReturnToRoutingCommand(bookingId));
+
+        var returned = await _repository.FindByBookingIdAsync(bookingId);
+        returned!.BookingStatus.Should().Be(BookingStatus.Preliminary);
+        returned.CargoItinerary.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task 経路提案中の予約をキャンセルするとCancelledになる()
+    {
+        var bookingId = await CreateRouteProposedWithItineraryAsync();
+        var factory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
+
+        await new CancelBookingCommandService(factory, _repository)
+            .HandleAsync(new CancelBookingCommand(bookingId));
+
+        var cancelled = await _repository.FindByBookingIdAsync(bookingId);
+        cancelled!.BookingStatus.Should().Be(BookingStatus.Cancelled);
+    }
+
+    private async Task<BookingId> CreateRouteProposedWithItineraryAsync()
+    {
+        var bookingId = await CreateGeneralCargoAsync();
+        var factory = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient);
+
+        var cargo = await _repository.FindByBookingIdAsync(bookingId);
+        cargo!.AssignToRouting();
+        await using (var uow = factory.Begin())
+        {
+            await _repository.UpdateAsync(cargo);
+            await uow.CommitAsync();
+        }
+
+        var routeProposed = await _repository.FindByBookingIdAsync(bookingId);
+        routeProposed!.AssignItinerary(new CargoItinerary(new[]
+        {
+            new Leg(new VoyageNumber("V001"), new Location("JPTYO"), new Location("DEHAM"),
+                new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 20, 0, 0, 0, TimeSpan.Zero)),
+        }));
+        await using (var uow = factory.Begin())
+        {
+            await _repository.UpdateAsync(routeProposed);
+            await uow.CommitAsync();
+        }
+
+        return bookingId;
+    }
+
     private Task<BookingId> CreateGeneralCargoAsync() =>
         _commandService.HandleAsync(new BookCargoCommand(
             _shipperId.ToString(CultureInfo.InvariantCulture), "JPTYO", "DEHAM", new DateOnly(2026, 9, 30),

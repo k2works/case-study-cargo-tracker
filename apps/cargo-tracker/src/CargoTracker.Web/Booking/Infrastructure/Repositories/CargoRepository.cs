@@ -121,8 +121,8 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory, Ambi
                     VoyageNumber = leg.Voyage.Value,
                     LoadUnlocode = leg.LoadLocation.UnLocode,
                     UnloadUnlocode = leg.UnloadLocation.UnLocode,
-                    LoadTime = leg.LoadTime,
-                    UnloadTime = leg.UnloadTime,
+                    LoadTime = ToDatabaseTimestamp(leg.LoadTime),
+                    UnloadTime = ToDatabaseTimestamp(leg.UnloadTime),
                     Now = now,
                 },
                 tx, cancellationToken: ct));
@@ -242,19 +242,23 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory, Ambi
         }
     }
 
+    /// <summary>DateTimeOffset を DB の TIMESTAMP 列へ書き込む形式（UTC・Kind 未指定）に変換する。</summary>
+    private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
+        => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);
+
     private sealed class LegRow
     {
         public string VoyageNumber { get; set; } = string.Empty;
         public string LoadUnlocode { get; set; } = string.Empty;
         public string UnloadUnlocode { get; set; } = string.Empty;
-        public DateTimeOffset LoadTime { get; set; }
-        public DateTimeOffset UnloadTime { get; set; }
+        public DateTime LoadTime { get; set; }
+        public DateTime UnloadTime { get; set; }
 
         public Leg ToLeg() => new(
             new VoyageNumber(VoyageNumber),
             new Location(LoadUnlocode),
             new Location(UnloadUnlocode),
-            LoadTime,
-            UnloadTime);
+            new DateTimeOffset(DateTime.SpecifyKind(LoadTime, DateTimeKind.Utc)),
+            new DateTimeOffset(DateTime.SpecifyKind(UnloadTime, DateTimeKind.Utc)));
     }
 }
