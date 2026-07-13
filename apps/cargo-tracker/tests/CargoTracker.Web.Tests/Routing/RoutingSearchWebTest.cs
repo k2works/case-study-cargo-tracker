@@ -237,6 +237,90 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
             .And.Contain("TRK-");
     }
 
+    private static string TrackingNumber(string bookingDetailHtml) =>
+        Regex.Match(bookingDetailHtml, "badge text-bg-dark\">(TRK-[^<]+)</span>").Groups[1].Value;
+
+    /// <summary>予約を確定まで進め、自動発行された追跡番号とともに返す（US14 の post-commit 発行を利用）。</summary>
+    private async Task<(string BookingId, string TrackingNumber)> CreateConfirmedTrackedBookingAsync(string voyageNumber)
+    {
+        var sales = await LoginAsync("sales");
+        var bookingId = await CreateAndAssignGeneralBookingAsync(sales);
+        var router = await LoginAsync("router");
+        await CreateVoyageAsync(router, voyageNumber, "General");
+
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "General"));
+        var selectToken = Token(candidates);
+        (await router.PostAsync($"/routing/requests/{bookingId}/select", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["OriginUnlocode"] = "JPTYO",
+            ["DestinationUnlocode"] = "DEHAM",
+            ["DepartureFrom"] = "2026-10-01T00:00",
+            ["DepartureTo"] = "2026-10-31T23:59",
+            ["CargoType"] = "General",
+            ["routeKey"] = voyageNumber,
+            ["__RequestVerificationToken"] = selectToken,
+        }))).StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        await PostBookingActionAsync(sales, bookingId, "route");
+        await PostBookingActionAsync(sales, bookingId, "notify");
+        await PostBookingActionAsync(sales, bookingId, "confirm");
+
+        var detail = await sales.GetStringAsync($"/bookings/{bookingId}");
+        var trackingNumber = TrackingNumber(detail);
+        trackingNumber.Should().StartWith("TRK-");
+        return (bookingId, trackingNumber);
+    }
+
+    private static async Task RegisterHandlingAsync(
+        HttpClient handler, string trackingNumber, string eventType,
+        string location, string completionTime, string? voyageNumber = null)
+    {
+        var token = Token(await handler.GetStringAsync("/handling/new"));
+        var fields = new Dictionary<string, string>
+        {
+            ["TrackingNumber"] = trackingNumber,
+            ["EventType"] = eventType,
+            ["LocationUnLocode"] = location,
+            ["CompletionTime"] = completionTime,
+            ["__RequestVerificationToken"] = token,
+        };
+        if (voyageNumber is not null)
+        {
+            fields["VoyageNumber"] = voyageNumber;
+        }
+
+        var response = await handler.PostAsync("/handling", new FormUrlEncodedContent(fields));
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+    }
+
+    [Fact]
+    public async Task 荷役登録が実イベント経由で追跡状態と予約状態を同期する()
+    {
+        // 予約確定 → 追跡番号自動発行まで進める。
+        var (bookingId, trackingNumber) = await CreateConfirmedTrackedBookingAsync("VYG-FLOW-SYNC-001");
+
+        var handler = await LoginAsync("handler");
+        var tracker = await LoginAsync("tracker");
+
+        // 受領（Receive）を JPTYO で登録 → HandlingActivityRegisteredEvent が post-commit で発行され、
+        // SyncTrackingOnHandlingRegisteredHandler が追跡イベントを追記し状態を受領済に更新する（実 MediatR 経由）。
+        await RegisterHandlingAsync(handler, trackingNumber, "Receive", "JPTYO", "2026-10-01T09:00");
+
+        var afterReceive = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
+        afterReceive.Should().Contain("受領済");
+
+        // 積込（Load）を JPTYO・航海 VYG-FLOW-SYNC-001 で登録 → 予定ルート（JPTYO 発）と一致（MISROUTED でない）。
+        // 追跡状態は積込済へ、SyncBookingStatusOnHandlingRegisteredHandler が予約を輸送中（IN_TRANSIT）へ同期する。
+        await RegisterHandlingAsync(handler, trackingNumber, "Load", "JPTYO", "2026-10-01T10:00", "VYG-FLOW-SYNC-001");
+
+        var afterLoad = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
+        afterLoad.Should().Contain("積込済");
+
+        var sales = await LoginAsync("sales");
+        var booking = await sales.GetStringAsync($"/bookings/{bookingId}");
+        booking.Should().Contain("IN_TRANSIT").And.Contain("輸送中");
+    }
+
     private static async Task PostBookingActionAsync(HttpClient client, string bookingId, string action)
     {
         var detail = await client.GetStringAsync($"/bookings/{bookingId}");
