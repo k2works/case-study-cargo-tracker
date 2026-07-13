@@ -185,10 +185,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | 追跡照会クエリサービス（現在地・状態・イベント履歴タイムライン・推定到着日。Read Model） | 4h | - | [ ] |
-| 5.2 | 追跡番号検証（存在しない場合の該当なし表示） | 2h | - | [ ] |
-| 5.3 | 認証済み追跡画面（`/tracking`・`/tracking/{trackingNumber}`）＋E2E | 4h | - | [ ] |
-| 5.4 | 公開追跡ページ（`/public/tracking/{trackingId}`・認証不要・URL 共有）＋到達性 E2E | 4h | - | [ ] |
+| 5.1 | 追跡照会クエリサービス（現在地・状態・イベント履歴タイムライン・推定到着日。Read Model） | 4h | - | [x]（TrackingQueryService） |
+| 5.2 | 追跡番号検証（存在しない場合の該当なし表示） | 2h | - | [x] |
+| 5.3 | 認証済み追跡画面（`/tracking`・`/tracking/{trackingNumber}`）＋E2E | 4h | - | [x]（TrackingController・タイムライン・IT1 プレースホルダ撤去） |
+| 5.4 | 公開追跡ページ（`/public/tracking/{trackingId}`・認証不要・URL 共有）＋到達性 E2E | 4h | - | [x]（PublicTrackingController 実画面化・未認証到達 Web テスト） |
 
 **小計**: 14h（理想時間）
 

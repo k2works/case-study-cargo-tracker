@@ -103,6 +103,7 @@ builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.OutboundSer
 builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.ITrackingActivityRepository,
     CargoTracker.Tracking.Infrastructure.Repositories.TrackingActivityRepository>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
+builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.QueryServices.TrackingQueryService>();
 
 // Handling コンテキスト（US15）。
 builder.Services.AddScoped<CargoTracker.Handling.Domain.Repositories.IHandlingActivityRepository,

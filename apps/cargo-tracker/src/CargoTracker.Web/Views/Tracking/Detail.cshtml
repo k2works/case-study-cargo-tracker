@@ -1,0 +1,18 @@
+@using CargoTracker.Tracking.Interfaces
+@model CargoTracker.Tracking.Application.Internal.QueryServices.TrackingDetailView
+@{
+    ViewData["Title"] = "追跡詳細";
+}
+
+<h1 class="h3 mb-3">追跡詳細</h1>
+
+@if (Model is null)
+{
+    <div class="alert alert-warning" role="alert">追跡番号が見つかりません。</div>
+    <a href="/tracking" class="btn btn-outline-secondary">追跡照会へ戻る</a>
+}
+else
+{
+    <partial name="_TrackingTimeline" model="Model" />
+    <a href="/tracking" class="btn btn-outline-secondary mt-3">追跡照会へ戻る</a>
+}
