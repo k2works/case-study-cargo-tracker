@@ -24,6 +24,14 @@
         <span class="badge text-bg-@BookingStatusLabel.ToBadgeColor(Model.BookingStatus)">@BookingStatusLabel.ToJapanese(Model.BookingStatus)</span>
         <span class="text-muted small">(@Model.BookingStatus)</span>
     </dd>
+    @if (!string.IsNullOrWhiteSpace(Model.TrackingNumber))
+    {
+        <dt class="col-sm-3">追跡番号</dt>
+        <dd class="col-sm-9">
+            <span class="badge text-bg-dark">@Model.TrackingNumber</span>
+            <a href="/tracking/@Model.TrackingNumber" class="ms-2 small">追跡照会</a>
+        </dd>
+    }
     <dt class="col-sm-3">荷主</dt>
     <dd class="col-sm-9">@Model.ShipperCode - @Model.ShipperName</dd>
     <dt class="col-sm-3">区間</dt>

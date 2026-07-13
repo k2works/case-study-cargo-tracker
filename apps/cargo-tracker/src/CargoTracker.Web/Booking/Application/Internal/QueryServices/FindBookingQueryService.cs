@@ -27,6 +27,9 @@ public sealed class BookingDetail
     public decimal? MaxTemperature { get; set; }
     public string? TemperatureUnit { get; set; }
 
+    /// <summary>発行済みの追跡番号（US14）。未発行なら null。Tracking Context を読取参照する。</summary>
+    public string? TrackingNumber { get; set; }
+
     /// <summary>紐付け済みの確定経路（旅程）の区間。US11 で割り当てられた CargoItinerary のスナップショット（IT4 レビュー H7）。</summary>
     public IReadOnlyList<BookingLeg> Itinerary { get; set; } = [];
 }
@@ -78,9 +81,11 @@ public sealed class FindBookingQueryService(IDbConnectionFactory connectionFacto
                    c.dimension_height AS DimensionHeight, c.quantity AS Quantity, c.description AS Description,
                    c.hazardous_class AS HazardousClass, c.un_number AS UnNumber,
                    c.proper_shipping_name AS ProperShippingName, c.min_temperature AS MinTemperature,
-                   c.max_temperature AS MaxTemperature, c.temperature_unit AS TemperatureUnit
+                   c.max_temperature AS MaxTemperature, c.temperature_unit AS TemperatureUnit,
+                   t.tracking_number AS TrackingNumber
             FROM cargo c
             JOIN shipper s ON s.id = c.shipper_id
+            LEFT JOIN tracking_activity t ON t.booking_id = c.booking_id
             WHERE c.booking_id = @BookingId
             """,
             new { BookingId = bookingId }, cancellationToken: ct));
