@@ -86,6 +86,48 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory, Ambi
         {
             throw new InvalidOperationException("貨物予約が並行更新されたため、経路設計依頼を保存できませんでした。");
         }
+
+        await SaveItineraryAsync(cargo, now, tx, ct);
+    }
+
+    /// <summary>旅程（CargoItinerary）を保存する（US11）。既存 Leg を全削除して再挿入する（seq_number 連鎖）。</summary>
+    private static async Task SaveItineraryAsync(Cargo cargo, DateTimeOffset now, IDbTransaction tx, CancellationToken ct)
+    {
+        await tx.Connection!.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM leg WHERE cargo_id = (SELECT id FROM cargo WHERE booking_id = @BookingId)",
+            new { BookingId = cargo.BookingId.Value }, tx, cancellationToken: ct));
+
+        if (cargo.CargoItinerary is null)
+        {
+            return;
+        }
+
+        var seq = 1;
+        foreach (var leg in cargo.CargoItinerary.Legs)
+        {
+            await tx.Connection!.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO leg
+                    (cargo_id, seq_number, voyage_number, load_location_unlocode, unload_location_unlocode,
+                     load_time, unload_time, created_at, updated_at)
+                VALUES
+                    ((SELECT id FROM cargo WHERE booking_id = @BookingId), @Seq, @VoyageNumber,
+                     @LoadUnlocode, @UnloadUnlocode, @LoadTime, @UnloadTime, @Now, @Now)
+                """,
+                new
+                {
+                    BookingId = cargo.BookingId.Value,
+                    Seq = seq,
+                    VoyageNumber = leg.Voyage.Value,
+                    LoadUnlocode = leg.LoadLocation.UnLocode,
+                    UnloadUnlocode = leg.UnloadLocation.UnLocode,
+                    LoadTime = leg.LoadTime,
+                    UnloadTime = leg.UnloadTime,
+                    Now = now,
+                },
+                tx, cancellationToken: ct));
+            seq++;
+        }
     }
 
     public async Task<Cargo?> FindByBookingIdAsync(BookingId id, CancellationToken ct = default)
@@ -94,13 +136,37 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory, Ambi
         {
             var tx = ambient.Current;
             var transactionalRow = await QueryByBookingIdAsync(id, tx.Connection!, tx, ct);
-            return transactionalRow?.ToCargo();
+            if (transactionalRow is null)
+            {
+                return null;
+            }
+            var legs = await QueryLegsAsync(id, tx.Connection!, tx, ct);
+            return transactionalRow.ToCargo(legs);
         }
 
         using var connection = connectionFactory.Create();
         var row = await QueryByBookingIdAsync(id, connection, null, ct);
+        if (row is null)
+        {
+            return null;
+        }
+        var itineraryLegs = await QueryLegsAsync(id, connection, null, ct);
+        return row.ToCargo(itineraryLegs);
+    }
 
-        return row?.ToCargo();
+    private static async Task<IReadOnlyList<Leg>> QueryLegsAsync(
+        BookingId id, IDbConnection connection, IDbTransaction? transaction, CancellationToken ct)
+    {
+        var rows = await connection.QueryAsync<LegRow>(new CommandDefinition(
+            """
+            SELECT voyage_number AS VoyageNumber, load_location_unlocode AS LoadUnlocode,
+                   unload_location_unlocode AS UnloadUnlocode, load_time AS LoadTime, unload_time AS UnloadTime
+            FROM leg
+            WHERE cargo_id = (SELECT id FROM cargo WHERE booking_id = @BookingId)
+            ORDER BY seq_number
+            """,
+            new { BookingId = id.Value }, transaction, cancellationToken: ct));
+        return rows.Select(r => r.ToLeg()).ToList();
     }
 
     private static Task<CargoRow?> QueryByBookingIdAsync(
@@ -144,7 +210,7 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory, Ambi
         public string? TemperatureUnit { get; set; }
         public long Version { get; set; }
 
-        public Cargo ToCargo()
+        public Cargo ToCargo(IReadOnlyList<Leg>? legs = null)
         {
             var dimensions = DimensionLength is null || DimensionWidth is null || DimensionHeight is null
                 ? null
@@ -171,7 +237,24 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory, Ambi
                 Enum.Parse<BookingStatus>(BookingStatus, ignoreCase: true),
                 Version,
                 hazardousDeclaration,
-                temperatureRequirement);
+                temperatureRequirement,
+                legs is null || legs.Count == 0 ? null : new CargoItinerary(legs));
         }
+    }
+
+    private sealed class LegRow
+    {
+        public string VoyageNumber { get; set; } = string.Empty;
+        public string LoadUnlocode { get; set; } = string.Empty;
+        public string UnloadUnlocode { get; set; } = string.Empty;
+        public DateTimeOffset LoadTime { get; set; }
+        public DateTimeOffset UnloadTime { get; set; }
+
+        public Leg ToLeg() => new(
+            new VoyageNumber(VoyageNumber),
+            new Location(LoadUnlocode),
+            new Location(UnloadUnlocode),
+            LoadTime,
+            UnloadTime);
     }
 }

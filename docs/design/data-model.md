@@ -91,6 +91,7 @@ package "Booking Context" #lightblue {
     * id : BIGINT <<PK>>
     --
     * cargo_id : BIGINT <<FK>>
+    * seq_number : INTEGER <<UK cargo_id と複合>>
     * voyage_number : VARCHAR(20) <<FK>>
     * load_location_unlocode : VARCHAR(5) <<FK>>
     * unload_location_unlocode : VARCHAR(5) <<FK>>

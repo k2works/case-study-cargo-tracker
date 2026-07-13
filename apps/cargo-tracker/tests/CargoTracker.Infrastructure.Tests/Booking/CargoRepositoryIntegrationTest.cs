@@ -4,6 +4,7 @@ using CargoTracker.Booking.Application.Internal.OutboundServices;
 using CargoTracker.Booking.Domain.Model;
 using CargoTracker.Booking.Infrastructure.Repositories;
 using CargoTracker.Booking.Infrastructure.Services;
+using CargoTracker.Shared.Domain.Model;
 using CargoTracker.Shared.Infrastructure.Persistence;
 using Dapper;
 using FluentAssertions;
@@ -165,6 +166,43 @@ public sealed class CargoRepositoryIntegrationTest : IAsyncLifetime
         };
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*並行更新*");
+    }
+
+    [Fact]
+    public async Task 経路を紐付けると旅程が永続化され再構築される()
+    {
+        var bookingId = await CreateGeneralCargoAsync();
+        var cargo = await _repository.FindByBookingIdAsync(bookingId);
+        cargo!.AssignToRouting();
+        await using (var uow = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin())
+        {
+            await _repository.UpdateAsync(cargo);
+            await uow.CommitAsync();
+        }
+
+        var routeProposed = await _repository.FindByBookingIdAsync(bookingId);
+        var itinerary = new CargoItinerary(new[]
+        {
+            new Leg(new VoyageNumber("V001"), new Location("JPTYO"), new Location("SGSIN"),
+                new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero)),
+            new Leg(new VoyageNumber("V002"), new Location("SGSIN"), new Location("DEHAM"),
+                new DateTimeOffset(2026, 9, 12, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero)),
+        });
+        routeProposed!.AssignItinerary(itinerary);
+        await using (var uow = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin())
+        {
+            await _repository.UpdateAsync(routeProposed);
+            await uow.CommitAsync();
+        }
+
+        var reloaded = await _repository.FindByBookingIdAsync(bookingId);
+        reloaded!.CargoItinerary.Should().NotBeNull();
+        reloaded.CargoItinerary!.Legs.Should().HaveCount(2);
+        reloaded.CargoItinerary.Legs[0].Voyage.Value.Should().Be("V001");
+        reloaded.CargoItinerary.Legs[0].LoadLocation.UnLocode.Should().Be("JPTYO");
+        reloaded.CargoItinerary.Legs[1].UnloadLocation.UnLocode.Should().Be("DEHAM");
+        reloaded.BookingStatus.Should().Be(BookingStatus.RouteProposed);
+        reloaded.Version.Should().Be(2);
     }
 
     private Task<BookingId> CreateGeneralCargoAsync() =>
