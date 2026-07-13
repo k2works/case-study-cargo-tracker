@@ -104,6 +104,13 @@ builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.ITrackingAc
     CargoTracker.Tracking.Infrastructure.Repositories.TrackingActivityRepository>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
 
+// Handling コンテキスト（US15）。
+builder.Services.AddScoped<CargoTracker.Handling.Domain.Repositories.IHandlingActivityRepository,
+    CargoTracker.Handling.Infrastructure.Repositories.HandlingActivityRepository>();
+builder.Services.AddScoped<CargoTracker.Handling.Application.Internal.OutboundServices.ICargoSnapshotProvider,
+    CargoTracker.Handling.Infrastructure.Services.CargoSnapshotProvider>();
+builder.Services.AddScoped<CargoTracker.Handling.Application.Internal.CommandServices.RegisterHandlingActivityCommandService>();
+
 var app = builder.Build();
 
 // 起動時に DbUp マイグレーションを適用する（forward-only・ADR-0003）。

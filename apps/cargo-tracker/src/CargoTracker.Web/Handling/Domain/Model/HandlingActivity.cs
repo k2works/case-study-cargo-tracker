@@ -1,3 +1,4 @@
+using CargoTracker.Handling.Domain.Events;
 using CargoTracker.Shared.Domain.Model;
 
 namespace CargoTracker.Handling.Domain.Model;
@@ -65,4 +66,12 @@ public sealed class HandlingActivity : AggregateRoot
 
     /// <summary>この荷役に対応する追跡イベント種別（受領→Receive など）。追跡 ACL への変換に使う。</summary>
     public string EventTypeName => Type.Type.ToString();
+
+    /// <summary>
+    /// 荷役登録完了を宣言し、Tracking/Booking への同期イベントを発行する（US15）。
+    /// isMisrouted は CargoSnapshot 検証の結果（積込・荷降しの予定外場所）。
+    /// </summary>
+    public void ConfirmRegistration(bool isMisrouted)
+        => AddDomainEvent(new HandlingActivityRegisteredEvent(
+            BookingId.Value, EventTypeName, Location.UnLocode, VoyageNumber?.Number, CompletionTime, isMisrouted));
 }

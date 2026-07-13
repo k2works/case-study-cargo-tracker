@@ -33,7 +33,7 @@ public class HandlingActivityTest
     }
 
     [Fact]
-    public void 受領が出発港と異なると妥当でない_ただし警告扱い()
+    public void 受領が出発港と異なると妥当でないが警告扱い()
     {
         var receive = HandlingActivity.Register(
             "BKG-0001", HandlingEventType.Receive, "CNSHA", DateTimeOffset.UtcNow);
