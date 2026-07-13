@@ -406,7 +406,7 @@ HandlingActivity ..> "Booking" : CargoSnapshot（ACL・妥当性検証）
 
 ## 関連ドキュメント
 
-- [イテレーション 5 ふりかえり](./retrospective-5.md)（IT5 完了後に作成）
+- [イテレーション 5 ふりかえり](./retrospective-5.md)
 - [開発戦略](./development_strategy.md)
 - [リリース計画](./release_plan.md)
 - [イテレーション 4 計画](./iteration_plan-4.md)
