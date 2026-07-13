@@ -52,6 +52,7 @@ else
                                 <input type="hidden" name="DepartureFrom" value="@Model.Form.DepartureFrom.ToString("yyyy-MM-ddTHH:mm")" />
                                 <input type="hidden" name="DepartureTo" value="@Model.Form.DepartureTo.ToString("yyyy-MM-ddTHH:mm")" />
                                 <input type="hidden" name="CargoType" value="@Model.Form.CargoType" />
+                                <input type="hidden" name="routeKey" value="@string.Join("-", candidate.VoyageNumbers.Select(v => v.Value))" />
                                 <input type="hidden" name="selectedIndex" value="@index" />
                                 <button type="submit" class="btn btn-sm btn-primary">この経路を選択・確定</button>
                             </form>

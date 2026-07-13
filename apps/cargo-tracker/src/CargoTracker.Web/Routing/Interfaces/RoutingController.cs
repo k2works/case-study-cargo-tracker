@@ -39,7 +39,8 @@ public sealed class RoutingController(
 
     [HttpPost("/routing/requests/{bookingId}/select")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SelectRoute(string bookingId, RoutingSearchForm form, int selectedIndex, CancellationToken ct)
+    public async Task<IActionResult> SelectRoute(
+        string bookingId, RoutingSearchForm form, string? routeKey, int selectedIndex, CancellationToken ct)
     {
         var booking = await bookingLookup.FindByBookingIdAsync(bookingId, ct);
         if (booking is null)
@@ -47,7 +48,7 @@ public sealed class RoutingController(
             return NotFound();
         }
 
-        // 候補は都度算出のため、同一条件で再算出し選択インデックスで確定対象を特定する（算出は決定的）。
+        // 候補は都度算出のため、同一条件で再算出する（算出は決定的）。
         var candidates = await routeCandidateService.FindCandidatesAsync(
             new Location(form.OriginUnlocode),
             new Location(form.DestinationUnlocode),
@@ -55,14 +56,30 @@ public sealed class RoutingController(
             form.CargoType,
             ct);
 
-        if (selectedIndex < 0 || selectedIndex >= candidates.Count)
+        // 確定対象は候補キー（航海番号列）で照合する。表示と選択の間に候補順が変わっても誤選択しない
+        // （IT4 レビュー H2 の是正。インデックス依存の排除）。routeKey 未指定の場合のみインデックスにフォールバックする。
+        CandidateRoute? selected;
+        if (!string.IsNullOrWhiteSpace(routeKey))
         {
-            return BadRequest("選択された経路候補が見つかりません。");
+            selected = candidates.FirstOrDefault(c => RouteKey(c) == routeKey);
+        }
+        else
+        {
+            selected = selectedIndex >= 0 && selectedIndex < candidates.Count ? candidates[selectedIndex] : null;
         }
 
-        await selectRouteCommandService.HandleAsync(new SelectRouteCommand(bookingId, candidates[selectedIndex]), ct);
+        if (selected is null)
+        {
+            return BadRequest("選択された経路候補が見つかりません。条件を再算出して選び直してください。");
+        }
+
+        await selectRouteCommandService.HandleAsync(new SelectRouteCommand(bookingId, selected), ct);
         return LocalRedirect($"/routing/requests/{bookingId}");
     }
+
+    /// <summary>経路候補を一意に識別するキー（航海番号列）。表示順に依存せず確定対象を照合する。</summary>
+    private static string RouteKey(CandidateRoute candidate)
+        => string.Join("-", candidate.VoyageNumbers.Select(v => v.Value));
 
     [HttpGet("/routing/requests/{bookingId}/voyages")]
     public async Task<IActionResult> SearchVoyages(string bookingId, RoutingSearchForm form, CancellationToken ct)

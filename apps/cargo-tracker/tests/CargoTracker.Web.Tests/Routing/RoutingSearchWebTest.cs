@@ -214,7 +214,7 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
             ["DepartureFrom"] = "2026-10-01T00:00",
             ["DepartureTo"] = "2026-10-31T23:59",
             ["CargoType"] = "General",
-            ["selectedIndex"] = "0",
+            ["routeKey"] = "VYG-FLOW-001",
             ["__RequestVerificationToken"] = selectToken,
         }))).StatusCode.Should().Be(HttpStatusCode.Redirect);
 
@@ -258,7 +258,7 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
             ["DepartureFrom"] = "2026-10-01T00:00",
             ["DepartureTo"] = "2026-10-31T23:59",
             ["CargoType"] = "General",
-            ["selectedIndex"] = "0",
+            ["routeKey"] = "VYG-SEL-001",
             ["__RequestVerificationToken"] = token,
         }));
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
@@ -266,6 +266,57 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         var request = await router.GetStringAsync($"/routing/requests/{bookingId}");
         request.Should().Contain("確定経路")
             .And.Contain("VYG-SEL-001");
+    }
+
+    [Fact]
+    public async Task 候補キーで経路を選択確定できる()
+    {
+        var sales = await LoginAsync("sales");
+        var bookingId = await CreateAndAssignGeneralBookingAsync(sales);
+        var router = await LoginAsync("router");
+        await CreateVoyageAsync(router, "VYG-KEY-001", "General");
+
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "General"));
+        var token = Token(candidates);
+        // 候補キー（直行便のため航海番号単体）で確定対象を照合する。
+        var response = await router.PostAsync($"/routing/requests/{bookingId}/select", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["OriginUnlocode"] = "JPTYO",
+            ["DestinationUnlocode"] = "DEHAM",
+            ["DepartureFrom"] = "2026-10-01T00:00",
+            ["DepartureTo"] = "2026-10-31T23:59",
+            ["CargoType"] = "General",
+            ["routeKey"] = "VYG-KEY-001",
+            ["__RequestVerificationToken"] = token,
+        }));
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        var request = await router.GetStringAsync($"/routing/requests/{bookingId}");
+        request.Should().Contain("確定経路").And.Contain("VYG-KEY-001");
+    }
+
+    [Fact]
+    public async Task 存在しない候補キーを選択すると400になる()
+    {
+        var sales = await LoginAsync("sales");
+        var bookingId = await CreateAndAssignGeneralBookingAsync(sales);
+        var router = await LoginAsync("router");
+        await CreateVoyageAsync(router, "VYG-KEY-002", "General");
+
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "General"));
+        var token = Token(candidates);
+        var response = await router.PostAsync($"/routing/requests/{bookingId}/select", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["OriginUnlocode"] = "JPTYO",
+            ["DestinationUnlocode"] = "DEHAM",
+            ["DepartureFrom"] = "2026-10-01T00:00",
+            ["DepartureTo"] = "2026-10-31T23:59",
+            ["CargoType"] = "General",
+            ["routeKey"] = "VYG-NOT-EXIST",
+            ["__RequestVerificationToken"] = token,
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Theory]
