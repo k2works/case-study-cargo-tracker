@@ -63,7 +63,7 @@
     }
 </dl>
 
-<div class="d-flex gap-2">
+<div class="d-flex flex-wrap gap-2">
     @if (Model.BookingStatus == "PRELIMINARY")
     {
         <form action="/bookings/@Model.BookingId/assign-routing" method="post">
@@ -71,10 +71,40 @@
             <button type="submit" class="btn btn-primary">経路設計依頼</button>
         </form>
     }
+    else if (Model.BookingStatus == "ROUTE_PROPOSED")
+    {
+        <form action="/bookings/@Model.BookingId/route" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-primary">確定経路を予約に紐付ける</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/notify" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-info">確定経路を荷主に通知</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/confirm" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-success">予約を確定</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/return-routing" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-warning">経路再設計に差し戻す</button>
+        </form>
+        <form action="/bookings/@Model.BookingId/cancel" method="post"
+              onsubmit="return confirm('予約をキャンセルしますか？');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-danger">キャンセル</button>
+        </form>
+    }
+    else if (Model.BookingStatus == "CONFIRMED")
+    {
+        <div class="alert alert-success mb-0" role="alert">
+            予約は確定済みです。追跡番号発行フェーズに進みます。
+        </div>
+    }
     else
     {
-        <div class="alert alert-warning mb-0" role="alert">
-            経路設計依頼は仮受付の予約のみ実行できます。
+        <div class="alert alert-secondary mb-0" role="alert">
+            現在の状態（@Model.BookingStatus）で実行できる操作はありません。
         </div>
     }
     <a href="/bookings/new" class="btn btn-outline-secondary">続けて登録</a>

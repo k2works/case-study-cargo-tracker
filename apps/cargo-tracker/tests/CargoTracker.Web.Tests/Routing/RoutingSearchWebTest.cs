@@ -197,6 +197,48 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
     }
 
     [Fact]
+    public async Task 予約フロー全体が算出から選択紐付け通知確定まで完了する()
+    {
+        var sales = await LoginAsync("sales");
+        var bookingId = await CreateAndAssignGeneralBookingAsync(sales);
+        var router = await LoginAsync("router");
+        await CreateVoyageAsync(router, "VYG-FLOW-001", "General");
+
+        // 経路設計者: 候補算出 → 選択・確定
+        var candidates = await router.GetStringAsync(CandidatesUrl(bookingId, "General"));
+        var selectToken = Token(candidates);
+        (await router.PostAsync($"/routing/requests/{bookingId}/select", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["OriginUnlocode"] = "JPTYO",
+            ["DestinationUnlocode"] = "DEHAM",
+            ["DepartureFrom"] = "2026-10-01T00:00",
+            ["DepartureTo"] = "2026-10-31T23:59",
+            ["CargoType"] = "General",
+            ["selectedIndex"] = "0",
+            ["__RequestVerificationToken"] = selectToken,
+        }))).StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        // 営業担当者: 予約に紐付け → 荷主通知 → 予約確定
+        await PostBookingActionAsync(sales, bookingId, "route");
+        await PostBookingActionAsync(sales, bookingId, "notify");
+        await PostBookingActionAsync(sales, bookingId, "confirm");
+
+        var detail = await sales.GetStringAsync($"/bookings/{bookingId}");
+        detail.Should().Contain("CONFIRMED").And.Contain("予約は確定済み");
+    }
+
+    private static async Task PostBookingActionAsync(HttpClient client, string bookingId, string action)
+    {
+        var detail = await client.GetStringAsync($"/bookings/{bookingId}");
+        var token = Token(detail);
+        var response = await client.PostAsync($"/bookings/{bookingId}/{action}", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = token,
+        }));
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+    }
+
+    [Fact]
     public async Task 経路候補を選択確定すると依頼画面に確定経路が表示される()
     {
         var sales = await LoginAsync("sales");
