@@ -10,6 +10,13 @@ type DomainError =
     | BusinessRuleViolation of rule: string * message: string
     | NotFound of entity: string * id: string
 
+/// 現在時刻の注入ポート（ADR-0006）。ドメイン関数は DateTimeOffset.Now を直接呼ばず、
+/// このポートから取得した値を引数で受け取ることで純粋性を保つ。
+type Clock = unit -> DateTimeOffset
+
+/// GUID 生成の注入ポート（ADR-0006）。採番するドメイン関数はこのポートを引数で受ける。
+type IdGenerator = unit -> Guid
+
 /// 荷主を一意に識別する共有カーネルの値オブジェクト（Guid ベース）。
 type ShipperId = private ShipperId of Guid
 
@@ -44,3 +51,6 @@ module Location =
 
     /// 内部の文字列表現を取り出す。
     let value (Location code) = code
+
+    /// UN/LOCODE による同一性判定。Location は locode のみを保持するため構造的等価と一致する。
+    let sameAs (a: Location) (b: Location) : bool = a = b

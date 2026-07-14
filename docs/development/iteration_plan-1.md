@@ -98,7 +98,7 @@
 | 1.4 | ロールバック時イベント非発行の統合テスト（`UnitOfWorkTest`） | 2h | - | [ ] |
 | 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [ ] |
 | 1.6 | FsToolkit ROP ワークフロー雛形（`asyncResult` / `validation` CE の Command 処理）＋ ArchUnitNET レイヤールール | 2h | - | [ ] |
-| 1.7 | 時刻・GUID 注入ポート（`Clock: unit -> DateTimeOffset` / `IdGenerator`）の参照実装（ADR-0006・EstimateId.generate で使用） | 2h | - | [ ] |
+| 1.7 | 時刻・GUID 注入ポート（`Clock: unit -> DateTimeOffset` / `IdGenerator`）の参照実装（ADR-0006・EstimateId.generate で使用） | 2h | - | [~] |
 
 **小計**: 18h（理想時間）
 
@@ -127,7 +127,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Shipper 集約（個人/法人・DiscountRate 0-30% スマートコンストラクタ）ユニット + FsCheck | 3h | - | [ ] |
+| 3.1 | Shipper 集約（個人/法人・DiscountRate 0-30% スマートコンストラクタ）ユニット + FsCheck | 3h | - | [x] |
 | 3.2 | ShipperRepository（Donald 手書き SQL・レコードマッピング）統合テスト | 3h | - | [ ] |
 | 3.3 | 荷主一覧 / 登録画面（`/shippers`, `/shippers/new`、種別切替・重複メール確認・htmx） | 4h | - | [ ] |
 | 3.4 | Playwright E2E テスト（ログイン → 荷主登録 → 一覧表示） | 2h | - | [ ] |
@@ -140,7 +140,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | Estimate 集約（EstimateId は IdGenerator ポート経由・RouteCandidate・出発地/仕向地の UN/LOCODE 検証）ユニット + FsCheck | 3h | - | [ ] |
+| 4.1 | Estimate 集約（EstimateId は IdGenerator ポート経由・RouteCandidate・出発地/仕向地の UN/LOCODE 検証）ユニット + FsCheck | 3h | - | [x] |
 | 4.2 | ExternalRoutingServicePort スタブ実装（関数リテラル・WireMock.Net 契約テストは IT3） | 3h | - | [ ] |
 | 4.3 | 見積作成ワークフロー（`asyncResult` 合成・危険物申告分岐・期限超過通知） | 3h | - | [ ] |
 | 4.4 | 見積作成画面（`/estimates/new`・候補一覧表示・危険物フォーム）+ EstimateRepository | 4h | - | [ ] |
