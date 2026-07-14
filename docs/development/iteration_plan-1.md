@@ -29,6 +29,8 @@
 - [ ] ArchUnitNET ルール（Domain → Infrastructure 非依存・Giraffe/Donald 非侵入）が緑
 - [ ] テストカバレッジ 80% 以上（ドメイン層は先行 TDD で網羅、計測 coverlet は IT2 で CI 組込）
 
+> **アプローチ（開発戦略 序盤＝アウトサイドイン）**: [開発戦略](./development_strategy.md#序盤-アウトサイドインit1-it2)に従い、各ストーリーは `HttpHandler`／WebApplicationFactory の受け入れテストを Red にする所から着手し、UI ニーズから Command／Port を導出して薄く縦に貫通させる。下記タスク表はレイヤー別の成果物一覧であり厳密な実装順ではない（実行順は「受け入れテスト Red → ドメイン最小 → Port スタブ → 縦貫通 → Refactor」）。認証基盤の確立後にウォーキングスケルトン（タスク 2.5）を骨格化する。
+
 ---
 
 ## ユーザーストーリー
@@ -82,7 +84,7 @@
 5. 希望期限に間に合うルートが存在しない場合、その旨が通知される
 6. 危険物が含まれる場合、危険物申告情報の入力フォームが表示される
 
-> **注**: IT1 時点では航海スケジュール（US24/25、IT3）が未実装のため、ルート候補算出は WireMock.Net で契約を固定したスタブ（`ExternalRoutingPort` 関数レコード）で提供する。受入条件 2 の「航海スケジュール情報をもとに」はスタブ応答で代替し、IT3 で実データに差し替える。
+> **注**: IT1 時点では航海スケジュール（US24/25、IT3）が未実装のため、ルート候補算出は WireMock.Net で契約を固定したスタブ（`ExternalRoutingServicePort` 関数レコード）で提供する。受入条件 2 の「航海スケジュール情報をもとに」はスタブ応答で代替し、IT3 で実データに差し替える。
 
 ### タスク
 
@@ -96,8 +98,9 @@
 | 1.4 | ロールバック時イベント非発行の統合テスト（`UnitOfWorkTest`） | 2h | - | [ ] |
 | 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [ ] |
 | 1.6 | FsToolkit ROP ワークフロー雛形（`asyncResult` / `validation` CE の Command 処理）＋ ArchUnitNET レイヤールール | 2h | - | [ ] |
+| 1.7 | 時刻・GUID 注入ポート（`Clock: unit -> DateTimeOffset` / `IdGenerator`）の参照実装（ADR-0006・EstimateId.generate で使用） | 2h | - | [ ] |
 
-**小計**: 16h（理想時間）
+**小計**: 18h（理想時間）
 
 > **状態凡例**: `[x]` 完了 / `[~]` 部分完了 / `[ ]` 未着手。
 >
@@ -110,14 +113,15 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | Cookie 認証構成（ログインパス・未認証リダイレクト・公開パス除外） | 2h | - | [ ] |
-| 2.2 | users リポジトリ（Donald・単一 role カラム）+ パスワードハッシュ（PBKDF2 相当） | 3h | - | [ ] |
+| 2.2 | users / user_roles リポジトリ（Donald）+ パスワードハッシュ（PBKDF2 相当） | 3h | - | [ ] |
 | 2.3 | ログイン / ログアウト画面（Giraffe.ViewEngine、エラー表示・入力保持） | 2h | - | [ ] |
 | 2.4 | ロール別ナビゲーション制御（`requiresRole`）+ シードユーザー投入 | 2h | - | [ ] |
-| 2.5 | ウォーキングスケルトン: 画面遷移図準拠の全ルートにロール制御付きプレースホルダを一括作成 | 2h | - | [ ] |
+| 2.5 | ウォーキングスケルトン: 画面一覧（ui_design）準拠の全ルートにロール制御付きプレースホルダを一括作成 | 2h | - | [ ] |
+| 2.6 | ナビゲーション整合性: navbar ビュー関数＋ダッシュボードにロール条件付きで反映し、ロール別ナビ表示の検証テスト（WebApplicationFactory）を追加 | 2h | - | [ ] |
 
-**小計**: 11h（理想時間）
+**小計**: 13h（理想時間）
 
-> **注（認証方針）**: ASP.NET Core Identity は導入せず Cookie 認証 + Donald 軽量ユーザーストア + パスワードハッシュを採用。ロールは 1 ユーザー 1 ロール（`users.role`）とし、Giraffe の `requiresAuthentication` / `requiresRole` と直接統合する。公開追跡ページ（`/public/tracking/{trackingId}`）と `/health` は未認証で許可する。
+> **注（認証方針・data-model 準拠）**: ASP.NET Core Identity は導入せず Cookie 認証 + Donald 軽量ユーザーストア + パスワードハッシュを採用。ユーザー・ロールは data-model.md（正）に従い `users` テーブル + `user_roles`（多対多）テーブルで管理し、Giraffe の `requiresAuthentication` / `requiresRole` と統合する。ロールは `ROLE_SALES` 等の `ROLE_` プレフィックス表記（ui_design のロール別ナビゲーションマトリクスを正とする）。公開追跡ページ（`/public/tracking/{accessToken}`）と `/health` は未認証で許可する。
 
 #### 3. US02/US03: 荷主登録（5 SP）
 
@@ -136,8 +140,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | Estimate 集約（EstimateId・RouteCandidate・出発地/仕向地の UN/LOCODE 検証）ユニット + FsCheck | 3h | - | [ ] |
-| 4.2 | ExternalRoutingPort スタブ実装（関数リテラル・WireMock.Net 契約テストは IT3） | 3h | - | [ ] |
+| 4.1 | Estimate 集約（EstimateId は IdGenerator ポート経由・RouteCandidate・出発地/仕向地の UN/LOCODE 検証）ユニット + FsCheck | 3h | - | [ ] |
+| 4.2 | ExternalRoutingServicePort スタブ実装（関数リテラル・WireMock.Net 契約テストは IT3） | 3h | - | [ ] |
 | 4.3 | 見積作成ワークフロー（`asyncResult` 合成・危険物申告分岐・期限超過通知） | 3h | - | [ ] |
 | 4.4 | 見積作成画面（`/estimates/new`・候補一覧表示・危険物フォーム）+ EstimateRepository | 4h | - | [ ] |
 
@@ -147,13 +151,13 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 技術基盤 | - | 16h | [ ] |
-| 認証（基盤） | - | 11h | [ ] |
+| 技術基盤 | - | 18h | [ ] |
+| 認証（基盤） | - | 13h | [ ] |
 | US02/US03 荷主登録 | 5 | 12h | [ ] |
 | US01 輸送見積 | 5 | 13h | [ ] |
-| **合計** | **10** | **52h** | |
+| **合計** | **10** | **56h** | |
 
-**1 SP あたり**: 約 3.3h（ストーリー分のみ 25h / 10 SP。基盤 27h を含めた総見積 52h）
+**1 SP あたり**: 約 2.5h（ストーリー分のみ 25h / 10 SP。基盤 31h を含めた総見積 56h）
 **進捗率**: 0% (0/10 SP)
 
 ---
@@ -226,11 +230,31 @@ IT1 で起票を検討する ADR:
 | ADR-0001 | Donald による DDD 集約の永続化パターン | 提案 |
 | ADR-0002 | UnitOfWork + post-commit ドメインイベント（MediatR 不使用の関数合成） | 提案 |
 | ADR-0003 | DbUp による二方言（SQLite/PostgreSQL）マイグレーション | 提案 |
-| ADR-0004 | Cookie 認証 + 単一ロールカラムによる RBAC | 提案 |
+| ADR-0004 | Cookie 認証 + `users`/`user_roles` による RBAC | 提案 |
+| ADR-0005 | DomainEvent 型の統一設計（Payload レコード方式）とモジュール構成の一本化（垂直スライス） | 提案 |
+| ADR-0006 | 時刻・GUID の注入ポート（`Clock: unit -> DateTimeOffset` / `IdGenerator`） | 提案 |
 
 > ADR は着手時に `docs/adr/` に `creating-adr` で起票する。番号は既存 ADR を確認して採番する。
+> ADR-0005/0006 は設計レビュー（2026-07-06）の高優先度指摘（DomainEvent 設計矛盾・モジュール構成の二重定義・Clock/GUID 注入ポート未設計）への着手前対応として起票する。
 
 ---
+
+## 過去レビュー対応（設計ドキュメントレビュー 2026-07-06）
+
+[F# 版設計ドキュメントレビュー](../review/設計ドキュメント_review_20260706.md)（高 14 / 中 18 / 低 6）のうち、IT1 着手前に対応する高優先度指摘と対応方針。
+
+| 指摘 | 内容 | IT1 での対応 |
+|------|------|-------------|
+| 高（architect） | DomainEvent 設計がドキュメント間で矛盾（巨大 DU vs Payload レコード） | ADR-0005 で Payload レコード方式に統一（タスク 1.3 の前提） |
+| 高（architect） | モジュール構成・名前空間が 2 ドキュメントで逆（レイヤーファースト vs 垂直スライス） | ADR-0005 で垂直スライスに一本化（`CargoTracker.<Context>.Domain`） |
+| 高（architect） | ADR-0002/0003 が未起票 | タスク 1.1-1.6 の起票で解消 |
+| 高（tester） | 時刻・乱数注入ポート未設計（`EstimateId.generate` 等） | ADR-0006・タスク 1.7 で Clock/IdGenerator ポートを参照実装 |
+| 高（tester） | SQLite/PostgreSQL 二方言テストギャップ | タスク 1.5 の方言検出テスト + Testcontainers で対応 |
+| 高（pm） | コンテキスト数の記述が不統一（8/7/6/5） | 設計ドキュメント側の修正（着手前・本計画の対象外だが着手前に解消） |
+| 高（pm/architect） | domain-model / architecture_backend に US トレーサビリティ断絶 | 設計ドキュメント側の修正（着手前に解消） |
+| 中（pm） | US-ADM-01 が user_story に存在しない設計先行 | 解消済み（user_story.md に US-ADM-01 を正式化・IT7 に配置） |
+
+> **注**: コンテキスト数不統一・US トレーサビリティ断絶は設計ドキュメント（`docs/design/`）側の修正であり、コード着手前に `docs/design` を更新して解消する。Booking Context 内の US14 業務解釈（追跡番号発行の導線）は IT5 で確定する。
 
 ## リスクと対策
 
@@ -249,6 +273,7 @@ IT1 で起票を検討する ADR:
 - [ ] コードレビュー完了（self-review: xp-programmer / xp-tester）
 - [ ] ユニット・統合・アーキテクチャテストがパス
 - [ ] Playwright E2E（ログイン → 荷主登録）がパス
+- [ ] ロール別ナビゲーション表示の検証テスト（navbar／ダッシュボード）がパス
 - [ ] Fantomas フォーマットクリーン・FSharpLint 警告なし・ビルド警告 0
 - [ ] 機能がローカル環境で動作確認済み
 - [ ] ドキュメント更新完了（release_plan 進捗・ADR）
