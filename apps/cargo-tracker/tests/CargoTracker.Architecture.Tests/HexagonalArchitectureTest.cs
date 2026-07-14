@@ -114,4 +114,40 @@ public class HexagonalArchitectureTest
             .Because("Routing と Shipper は独立した Bounded Context として直接参照してはならない")
             .Check(_architecture);
     }
+
+    // ルール 5: Tracking Context は他 BC の内部ドメインモデルに直接依存しない（IT5 レビュー H3・基準線固定）
+    // 他 BC との連携はドメインイベント購読（*.Domain.Events）または ACL 経由に限定し、他 BC の Domain.Model（集約・エンティティ・VO）へは依存しない。
+    [Fact]
+    public void 追跡コンテキストは他BCの内部ドメインモデルに直接参照しない()
+    {
+        var trackingContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Tracking\.");
+
+        Types().That().Are(trackingContext)
+            .Should().NotDependOnAny(Types().That()
+                .ResideInNamespaceMatching(@"CargoTracker\.Booking\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Estimation\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Routing\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Shipper\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Handling\.Domain\.Model"))
+            .Because("Tracking は他 BC の内部集約に依存せず、連携はドメインイベント購読または ACL 経由に限定する")
+            .Check(_architecture);
+    }
+
+    // ルール 6: Handling Context は他 BC の内部ドメインモデルに直接依存しない（IT5 レビュー H3・基準線固定）
+    // Handling→Booking/Tracking の状態同期は CargoSnapshot ACL（SQL 直接参照）とドメインイベント発行で行い、他 BC の Domain.Model へは依存しない。
+    [Fact]
+    public void 荷役コンテキストは他BCの内部ドメインモデルに直接参照しない()
+    {
+        var handlingContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Handling\.");
+
+        Types().That().Are(handlingContext)
+            .Should().NotDependOnAny(Types().That()
+                .ResideInNamespaceMatching(@"CargoTracker\.Booking\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Estimation\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Routing\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Shipper\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Tracking\.Domain\.Model"))
+            .Because("Handling は他 BC の内部集約に依存せず、連携は CargoSnapshot ACL とドメインイベント発行に限定する")
+            .Check(_architecture);
+    }
 }
