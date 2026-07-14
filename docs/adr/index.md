@@ -9,5 +9,8 @@
 | [ADR-0001](0001-モジュール構成は垂直スライスを採用.md) | モジュール構成は垂直スライス（コンテキストファースト）を採用 | 承認済み |
 | [ADR-0002](0002-ドメインイベントはPayloadレコード方式とpost-commitディスパッチを採用.md) | ドメインイベントは Payload レコード方式 + post-commit ディスパッチを採用 | 承認済み |
 | [ADR-0003](0003-DBマイグレーションはDbUpによるforward-only方式を採用.md) | DB マイグレーションは DbUp による forward-only 方式を採用 | 承認済み |
+| [ADR-0004](0004-Donaldによる集約永続化パターンを採用.md) | Donald による DDD 集約の永続化パターン（手書き SQL・楽観ロック）を採用 | 提案 |
+| [ADR-0005](0005-Cookie認証とuser_rolesによるRBACを採用.md) | Cookie 認証 + `users`/`user_roles` による RBAC を採用 | 提案 |
+| [ADR-0006](0006-時刻とGUIDの注入ポートを採用.md) | 時刻・GUID の注入ポート（Clock / IdGenerator）を採用 | 提案 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

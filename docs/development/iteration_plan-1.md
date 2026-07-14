@@ -206,7 +206,7 @@ gantt
 |----|--------|
 | Day 6 | Shipper 集約（FsCheck）・ShipperRepository 統合テスト |
 | Day 7 | 荷主一覧/登録画面・Playwright E2E |
-| Day 8 | Estimate 集約・ExternalRoutingPort スタブ |
+| Day 8 | Estimate 集約・ExternalRoutingServicePort スタブ |
 | Day 9 | 見積作成ワークフロー・見積画面・EstimateRepository |
 | Day 10 | 統合テスト、バグ修正、デモ準備 |
 
@@ -223,19 +223,27 @@ gantt
 
 ### ADR
 
-IT1 で起票を検討する ADR:
+IT1 が前提とする ADR:
+
+**既存（承認済み）** — IT1 で参照実装する:
 
 | ADR | タイトル | ステータス |
 |-----|---------|-----------|
-| ADR-0001 | Donald による DDD 集約の永続化パターン | 提案 |
-| ADR-0002 | UnitOfWork + post-commit ドメインイベント（MediatR 不使用の関数合成） | 提案 |
-| ADR-0003 | DbUp による二方言（SQLite/PostgreSQL）マイグレーション | 提案 |
-| ADR-0004 | Cookie 認証 + `users`/`user_roles` による RBAC | 提案 |
-| ADR-0005 | DomainEvent 型の統一設計（Payload レコード方式）とモジュール構成の一本化（垂直スライス） | 提案 |
+| [ADR-0001](../adr/0001-モジュール構成は垂直スライスを採用.md) | モジュール構成は垂直スライス（コンテキストファースト）を採用 | 承認済み |
+| [ADR-0002](../adr/0002-ドメインイベントはPayloadレコード方式とpost-commitディスパッチを採用.md) | ドメインイベントは Payload レコード方式 + post-commit ディスパッチを採用 | 承認済み |
+| [ADR-0003](../adr/0003-DBマイグレーションはDbUpによるforward-only方式を採用.md) | DB マイグレーションは DbUp による forward-only 方式を採用 | 承認済み |
+
+**IT1 で新規起票する**:
+
+| ADR | タイトル | ステータス |
+|-----|---------|-----------|
+| ADR-0004 | Donald による DDD 集約の永続化パターン（手書き SQL・楽観ロック） | 提案 |
+| ADR-0005 | Cookie 認証 + `users`/`user_roles` による RBAC | 提案 |
 | ADR-0006 | 時刻・GUID の注入ポート（`Clock: unit -> DateTimeOffset` / `IdGenerator`） | 提案 |
 
-> ADR は着手時に `docs/adr/` に `creating-adr` で起票する。番号は既存 ADR を確認して採番する。
-> ADR-0005/0006 は設計レビュー（2026-07-06）の高優先度指摘（DomainEvent 設計矛盾・モジュール構成の二重定義・Clock/GUID 注入ポート未設計）への着手前対応として起票する。
+> **注**: DomainEvent 設計の統一（Payload レコード方式）とモジュール構成の一本化（垂直スライス）は
+> 既存の ADR-0002 / ADR-0001 で確定済みであり、新規 ADR は不要（設計レビュー 2026-07-06 の高優先度指摘は解消済み）。
+> ADR-0006 は同レビューの「時刻・GUID 注入ポート未設計」指摘への対応として起票する。
 
 ---
 
@@ -245,16 +253,16 @@ IT1 で起票を検討する ADR:
 
 | 指摘 | 内容 | IT1 での対応 |
 |------|------|-------------|
-| 高（architect） | DomainEvent 設計がドキュメント間で矛盾（巨大 DU vs Payload レコード） | ADR-0005 で Payload レコード方式に統一（タスク 1.3 の前提） |
-| 高（architect） | モジュール構成・名前空間が 2 ドキュメントで逆（レイヤーファースト vs 垂直スライス） | ADR-0005 で垂直スライスに一本化（`CargoTracker.<Context>.Domain`） |
-| 高（architect） | ADR-0002/0003 が未起票 | タスク 1.1-1.6 の起票で解消 |
+| 高（architect） | DomainEvent 設計がドキュメント間で矛盾（巨大 DU vs Payload レコード） | 解消済み（ADR-0002 で Payload レコード方式に確定） |
+| 高（architect） | モジュール構成・名前空間が 2 ドキュメントで逆 | 解消済み（ADR-0001 で垂直スライスに確定） |
+| 高（architect） | ADR-0002/0003 が未起票 | 解消済み（ADR-0002/0003 起票・承認済み） |
 | 高（tester） | 時刻・乱数注入ポート未設計（`EstimateId.generate` 等） | ADR-0006・タスク 1.7 で Clock/IdGenerator ポートを参照実装 |
 | 高（tester） | SQLite/PostgreSQL 二方言テストギャップ | タスク 1.5 の方言検出テスト + Testcontainers で対応 |
-| 高（pm） | コンテキスト数の記述が不統一（8/7/6/5） | 設計ドキュメント側の修正（着手前・本計画の対象外だが着手前に解消） |
-| 高（pm/architect） | domain-model / architecture_backend に US トレーサビリティ断絶 | 設計ドキュメント側の修正（着手前に解消） |
+| 高（pm） | コンテキスト数の記述が不統一（8/7/6/5） | 解消済み（domain-model・architecture_backend・design/index で「7 + Shared」に統一） |
+| 高（pm/architect） | domain-model / architecture_backend に US トレーサビリティ断絶 | 解消済み（architecture_backend に各 BC の「対応 US」行を追加済み） |
 | 中（pm） | US-ADM-01 が user_story に存在しない設計先行 | 解消済み（user_story.md に US-ADM-01 を正式化・IT7 に配置） |
 
-> **注**: コンテキスト数不統一・US トレーサビリティ断絶は設計ドキュメント（`docs/design/`）側の修正であり、コード着手前に `docs/design` を更新して解消する。Booking Context 内の US14 業務解釈（追跡番号発行の導線）は IT5 で確定する。
+> **注**: ACL ポート名の不統一（`ExternalRoutingPort` / `ExternalRoutingServicePort`）は `ExternalRoutingServicePort` に統一済み（architecture_backend・tech_stack を修正）。Booking Context 内の US14 業務解釈（追跡番号発行の導線）は IT5 で確定する。
 
 ## リスクと対策
 
