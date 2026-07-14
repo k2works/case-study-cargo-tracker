@@ -228,6 +228,9 @@ public sealed class TrackingActivityRepository(IDbConnectionFactory connectionFa
         public DateTime? ResolvedAt { get; set; }
         public string? ResolutionNotes { get; set; }
 
+        // escalation_flag は「例外種別からの導出（BR3: Lost のみ true）」を真実とし、ドメイン再構築では
+        // コンストラクタが種別から再導出する。DB カラムはクエリ/レポート・監査用途（TrackingExceptionView が読む）。
+        // 導出を単一の真実とするため、ここでは EscalationFlag 列を復元に用いない。
         public TrackingExceptionEvent ToEvent() => new(
             Enum.Parse<ExceptionType>(ToPascalCase(ExceptionType), ignoreCase: true),
             new TrackingLocation(LocationUnlocode),

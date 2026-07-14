@@ -49,10 +49,16 @@ public sealed class TrackingActivity : AggregateRoot
     /// <summary>
     /// 例外事象を登録する（US19/US20）。登録中は現在状態が例外発生（Exception）になり、
     /// TrackingExceptionDetectedEvent を post-commit で発行して Booking へ伝える（ADR-0009）。
+    /// 不変条件: 同時に未解決の例外は 1 件まで（UI の単一対応報告フォームと整合し、二重登録・通知重複を防ぐ）。
+    /// 追加の例外を登録する前に、既存の未解決例外を ResolveException で解決する必要がある。
     /// </summary>
     public void AddException(TrackingExceptionEvent exceptionEvent)
     {
         ArgumentNullException.ThrowIfNull(exceptionEvent);
+        if (HasActiveException())
+        {
+            throw new InvalidOperationException("未解決の例外があります。先に対応報告で解決してください。");
+        }
         _exceptions.Add(exceptionEvent);
         Version++;
         AddDomainEvent(new TrackingExceptionDetectedEvent(

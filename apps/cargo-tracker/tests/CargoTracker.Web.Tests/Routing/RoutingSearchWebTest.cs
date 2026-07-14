@@ -549,4 +549,16 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         detail.Should().Contain("LOST").And.Contain("エスカレーション").And.Contain("例外発生")
             .And.Contain("管理職"); // 紛失は管理職エスカレーション通知も記録される。
     }
+
+    [Fact]
+    public async Task 存在しない追跡番号への例外登録画面は追跡照会へリダイレクトされる()
+    {
+        var tracker = await LoginAsync("tracker");
+
+        // 存在しない追跡番号では例外登録画面を出さず /tracking へリダイレクトする（LoginAsync は AutoRedirect 無効）。
+        var response = await tracker.GetAsync("/tracking/TRK-NOT-EXIST/exceptions/new");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location!.OriginalString.Should().Be("/tracking");
+    }
 }

@@ -82,12 +82,52 @@ public class TrackingActivityTest
     [Fact]
     public void 遅延や破損例外はエスカレーションしない()
     {
-        var tracking = TrackingActivity.Issue("BKG-EX-0003");
+        var delay = TrackingActivity.Issue("BKG-EX-0003A");
+        delay.AddException(ExceptionEvent(ExceptionType.Delay));
+        delay.Exceptions[^1].EscalationFlag.Should().BeFalse();
 
-        tracking.AddException(ExceptionEvent(ExceptionType.Delay));
+        var damage = TrackingActivity.Issue("BKG-EX-0003B");
+        damage.AddException(ExceptionEvent(ExceptionType.Damage));
+        damage.Exceptions[^1].EscalationFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void 破損例外を登録すると例外発生になり解決で復帰する()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-DMG1");
+        tracking.AddEvent(new TrackingActivityEvent(
+            TrackingEventType.Load, new TrackingLocation("JPTYO"), new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+
         tracking.AddException(ExceptionEvent(ExceptionType.Damage));
+        tracking.CurrentStatus().Should().Be(TrackingStatus.Exception);
 
-        tracking.Exceptions.Should().OnlyContain(e => e.EscalationFlag == false);
+        tracking.ResolveException(new DateTimeOffset(2026, 10, 9, 0, 0, 0, TimeSpan.Zero), "補償方針を提示");
+        tracking.CurrentStatus().Should().Be(TrackingStatus.Loaded);
+    }
+
+    [Fact]
+    public void 未解決の例外があるうちは新たな例外を登録できない()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-DUP1");
+        tracking.AddException(ExceptionEvent(ExceptionType.Delay));
+
+        var act = () => tracking.AddException(ExceptionEvent(ExceptionType.Damage));
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void 例外を解決すれば新たな例外を登録できる()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-DUP2");
+        tracking.AddException(ExceptionEvent(ExceptionType.Delay));
+        tracking.ResolveException(new DateTimeOffset(2026, 10, 9, 0, 0, 0, TimeSpan.Zero), "解決");
+
+        var act = () => tracking.AddException(ExceptionEvent(ExceptionType.Damage));
+
+        act.Should().NotThrow();
+        tracking.Exceptions.Should().HaveCount(2);
+        tracking.HasActiveException().Should().BeTrue();
     }
 
     [Fact]
