@@ -104,7 +104,7 @@
 | 0.2 | IT6 レビュー H2 / IT5 Try T1：変換ヘルパを Shared に集約。`Shared.Infrastructure.Persistence` に `DatabaseTimestamp`（ToDatabaseTimestamp）と `EnumDbCodec.ToScreamingSnake/FromScreamingSnake` を新設し、Booking/Routing/Tracking の既存 8 箇所を一括で巻き取る（部分適用禁止）。Billing の新規リポジトリは最初から共通版を使用。全テスト緑で担保 | 5h | - | [x]（DatabaseTimestamp/EnumDbCodec 新設・往復 9 テスト。Infrastructure 層 6 リポジトリ＋Cargo/Tracking の enum 変換を共通版へ。SearchVoyagesQueryService は Application 層のため ArchUnit ルール 3 遵守でインライン保持。全 264 テスト緑） |
 | 0.3 | IT6 レビュー H1：対応報告（ResolveException）時の荷主通知を append-only 記録（US19 AC4/US20 AC5 の完全充足）＋テスト | 2h | - | [x]（TrackingExceptionResolvedEvent＋NotifyOnTrackingExceptionResolvedHandler＋ExceptionNotification.ForResolution。統合テストで対応報告通知記録を検証） |
 | 0.4 | IT6 レビュー M1：例外通知ハンドラの冪等性統合テスト（同一イベント 2 回処理で二重記録されない）を追加、または exception_notification に冪等キー/一意制約を導入。ADR-0009 コンプライアンス達成 | 3h | - | [x]（自然キー一意インデックス 0015・二方言＋SaveAsync 存在チェックで冪等化。2 回処理で二重記録なしを統合テストで検証） |
-| 0.5 | ArchUnit：Billing BC の依存ルール（他 BC の `.Domain.Model` 非依存・Shipper 割引率は ACL 経由）を追加（ルール 7） | 2h | - | [ ] |
+| 0.5 | ArchUnit：Billing BC の依存ルール（他 BC の `.Domain.Model` 非依存・Shipper 割引率は ACL 経由）を追加（ルール 7） | 2h | - | [x]（ルール 7 追加＝Billing は他 BC の `.Domain.Model` 非依存。Arch 8→9 緑） |
 
 **小計**: 16h（理想時間）
 
@@ -116,7 +116,7 @@
 |---|--------|---------|------|------|
 | 1.1 | 【Phase 1・Red】料金算出の業務シナリオ受け入れテスト（Web.Tests）：Delivered 予約→料金算出→基本料金確定を一気通貫でアサート。Delivered 未満は算出不可（#16） | 3h | - | [ ] |
 | 1.2 | invoice/invoice_line_item/payment テーブル（0016・二方言）＋モデル定義 | 3h | - | [ ] |
-| 1.3 | `Invoice` 集約・`Money`（最小通貨単位・Add/Multiply 銀行家丸め）・基本料金算出（重量/貨物種別スタブ）＋ドメインユニットテスト（金額境界） | 5h | - | [ ] |
+| 1.3 | `Invoice` 集約・`Money`（最小通貨単位・Add/Multiply 銀行家丸め）・基本料金算出（重量/貨物種別スタブ）＋ドメインユニットテスト（金額境界） | 5h | - | [x]（Money/DiscountRate/PaymentStatus/Invoice 集約＋ドメイン +15。基本料金算出スタブは 1.4 の CommandService で接続） |
 | 1.4 | `GenerateInvoiceCommand` / CommandService（Delivered 制限・`InvoiceRequested` 消費または Booking 起点）＋統合テスト | 4h | - | [ ] |
 | 1.5 | 請求書一覧・詳細 UI（`/billing/invoices`・`/billing/invoices/{id}`・ROLE_BILLING）＋料金確定＋E2E | 4h | - | [ ] |
 
