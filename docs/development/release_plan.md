@@ -161,6 +161,7 @@ gantt
 | IT3 航海・経路算出 | 14 | 14 | 開発完了 | US24/US25/US07/US08 完了。Routing BC 立ち上げ・航海スケジュール管理・経路候補算出（BC 独立の CandidateRoute/IRouteCandidateService）。負債 H1/H2/H3/H4/T3・ADR-0006/0007。全 161 テストパス。T4 ハードゲート・H5 Playwright E2E は繰り越し |
 | IT4 経路確定・予約確定 | 12 | 12 | 開発完了 | US09/US10/US11/US12/US13 完了。BC 連携 ACL（SQL 直接参照＋プリミティブ DTO）・確定経路の状態遷移・荷主通知（append-only）・ADR-0008。IT3 レビュー高優先消化。BookingStatus 永続化バグ是正（SCREAMING_SNAKE コーデック）。全 198 テストパス。IT3 レビュー H1-H7 を先行消化 |
 | IT5 追跡・荷役 | 17 | 17 | 開発完了 | US14/US15/US16/US17/US18 完了。Tracking/Handling BC 立ち上げ・追跡番号イベント駆動自動発行・荷役妥当性検証（MISROUTED）・引取配送完了同期・追跡照会（認証/公開）。UnitOfWork post-commit 解放後 publish（ADR-0006 懸案解決）。SonarQube 全 A・カバレッジ 85.8%。実 MediatR E2E 補完。全 235 テストパス。カバレッジハードゲート・Playwright E2E は Release 1.1（IT6）へ繰り越し。**Release 1.0 MVP 出荷条件充足** |
+| IT6 例外対応 | 6 | 6 | 開発完了 | US19/US20 完了。Tracking BC に追跡例外（遅延/破損/紛失）を追加。ExceptionType・TrackingExceptionEvent・単一未解決不変条件・状態復帰、TrackingExceptionDetectedEvent 発行、荷主/管理職エスカレーション通知（append-only）。IT5 レビュー高優先 H1（ADR-0009 post-commit 結果整合性）/H2（通知記録基盤）/H3（ArchUnit Tracking/Handling ルール）/H4（CLAIM/UNLOAD 状態同期 E2E）を先行消化。self-review 反映（xp-programmer/xp-tester）。ドメイン被覆 96-98%。全 255 テストパス。Playwright E2E・カバレッジ CI ハードゲート・SonarQube SQ-3/SQ-2 は環境操作前提で繰り越し |
 
 （以降イテレーション完了ごとに更新）
 
@@ -359,7 +360,7 @@ gantt
 | IT3 | 14 | 14 | 100% | 完了 |
 | IT4 | 12 | 12 | 100% | 完了 |
 | IT5 | 17 | 17 | 100% | 開発完了（機能実装完了・Release 1.0 MVP 出荷条件充足。品質ゲートの一部繰り越し） |
-| IT6 | 6 | - | - | 未着手 |
+| IT6 | 6 | 6 | 100% | 開発完了（US19/US20 例外対応・IT5 レビュー H1-H4 消化。品質ゲートの一部繰り越し） |
 | IT7 | 13 | - | - | 未着手 |
 
 ### バーンダウンチャート
@@ -370,8 +371,10 @@ xychart-beta
     x-axis ["開始", "IT1", "IT2", "IT3", "IT4", "IT5", "IT6", "IT7"]
     y-axis "残 SP" 0 --> 90
     line "計画" [85, 72, 62, 48, 36, 19, 13, 0]
-    line "実績" [85, 72, 62, 48, 36, 19]
+    line "実績" [85, 72, 62, 48, 36, 19, 13]
 ```
+
+> **実績**: IT6 開発完了時点で残 13 SP（計画どおり 6 SP を消化）。ベロシティ実績 IT1=13・IT2=10・IT3=14・IT4=12・IT5=17・IT6=6（平均 12.0 SP/IT）。IT6 は US19/US20（6 SP）に加え IT5 レビュー高優先 H1-H4 と通知記録基盤の消化を伴う。**例外対応が全層（ドメイン→永続化→アプリ→イベント→通知→UI→受け入れ）で完結**。全 255 テスト緑（Domain 116 / App 3 / Arch 8 / Web 63 / E2E 4 / Infra 61）・0 警告。ドメイン被覆 96-98%。品質ゲート（カバレッジ CI ハードゲート・SonarQube・Playwright E2E）は環境操作前提で繰り越し。
 
 > **実績**: IT5 開発完了時点で残 19 SP（計画どおり 17 SP を消化）。ベロシティ実績 IT1=13・IT2=10・IT3=14・IT4=12・IT5=17（平均 13.2 SP/IT）。**Release 1.0（MVP・Phase 1）の全 66 SP のうち予約〜追跡フローが全層で完結**。全 235 テスト緑（Domain 108 / App 3 / Arch 6 / Web 58 / E2E 4 / Infra 56）。品質ゲート（カバレッジ 85%・SonarQube・Playwright E2E）は環境操作前提で繰り越し。
 

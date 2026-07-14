@@ -22,14 +22,14 @@
 
 ### 成功基準
 
-- [ ] US19・US20 の受入条件をすべて満たす
-- [ ] `ExceptionType`（`Delay` / `Damage` / `Lost` / `CustomsHold`。本 IT は CustomsHold を除く 3 値を扱う）を domain-model 準拠で実装し、`TransportStatus.Exception` への遷移を単体テストで網羅する
-- [ ] 紛失（`Lost`）登録時にエスカレーション通知（管理職向け）が自動送信され、記録が残る
-- [ ] 例外登録・対応報告の荷主通知が append-only 通知記録として残る（H2 の一部消化）
-- [ ] `TrackingExceptionDetectedEvent` を Tracking→Booking へ発行し、post-commit 連鎖の結果整合性方針を ADR 化する（H1）
-- [ ] ArchUnit に Tracking/Handling BC の依存ルール（他 BC 内部型への非依存・ACL 経由のみ）を追加する（H3）
-- [ ] CLAIM→Delivered・UNLOAD→InTransit の状態同期 E2E を追加する（H4）
-- [ ] **繰り越し品質ゲートの決着**：Playwright E2E（予約〜追跡〜例外フロー）・カバレッジ 85% ハードゲートの CI 段階導入（operating-cicd）・SonarQube SQ-3（Web:S6853 アクセシビリティ 33 件）／SQ-2（S6967 6 件）
+- [x] US19・US20 の受入条件をすべて満たす
+- [x] `ExceptionType`（`Delay` / `Damage` / `Lost` / `CustomsHold`。本 IT は CustomsHold を除く 3 値を扱う）を domain-model 準拠で実装し、`TransportStatus.Exception` への遷移を単体テストで網羅する
+- [x] 紛失（`Lost`）登録時にエスカレーション通知（管理職向け）が自動送信され、記録が残る
+- [x] 例外登録・対応報告の荷主通知が append-only 通知記録として残る（H2 の一部消化）
+- [x] `TrackingExceptionDetectedEvent` を Tracking→Booking へ発行し、post-commit 連鎖の結果整合性方針を ADR 化する（H1・ADR-0009）
+- [x] ArchUnit に Tracking/Handling BC の依存ルール（他 BC 内部型への非依存・ACL 経由のみ）を追加する（H3）
+- [x] CLAIM→Delivered・UNLOAD→InTransit の状態同期 E2E を追加する（H4）
+- [ ] **繰り越し品質ゲートの決着**：Playwright E2E（予約〜追跡〜例外フロー）・カバレッジ 85% ハードゲートの CI 段階導入（operating-cicd）・SonarQube SQ-3（Web:S6853 アクセシビリティ 33 件）／SQ-2（S6967 6 件）※環境操作前提で繰り越し。ドメイン被覆は 96-98% を実測
 
 ### アプローチ（開発戦略: 終盤アウトサイドインの初回イテレーション）
 
@@ -135,14 +135,14 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| Day 1 設計反映・IT5 レビュー是正（H1〜H4・通知基盤） | - | 18h | [ ] |
-| US19 遅延例外を処理する | 3 | 18h | [ ] |
-| US20 破損・紛失例外を処理する | 3 | 13h | [ ] |
-| 繰り越し品質ゲート | - | 13h | [ ] |
+| Day 1 設計反映・IT5 レビュー是正（H1〜H4・通知基盤） | - | 18h | [x] |
+| US19 遅延例外を処理する | 3 | 18h | [x] |
+| US20 破損・紛失例外を処理する | 3 | 13h | [x] |
+| 繰り越し品質ゲート | - | 13h | [~]（3.2 ドメイン被覆実測。3.1/3.3 は環境操作前提で繰り越し） |
 | **合計** | **6** | **62h** | |
 
 **1 SP あたり**: 約 5.2h（ストーリータスクのみ 31h ÷ 6 SP）
-**進捗率**: 0% (0/6 SP)
+**進捗率**: 100% (6/6 SP)（US19/US20 機能実装完了・IT5 レビュー H1-H4 消化。品質ゲート 3.1/3.3 は繰り越し）
 
 > **注**: 6 SP は平均ベロシティ（13.2 SP/IT）を大きく下回るが、IT5 レビュー高優先（H1〜H4）と繰り越し品質ゲートの消化（計 31h）を Release 1.0 フィードバック対応として同時進行するため、実質的な負荷は例外 2 ストーリー＋負債返済となる。フィーチャバッファに余裕があるため、改善バックログ #19/#20/#21（追跡 UX 改善）を PO 確認のうえ取り込む候補とする。
 
@@ -285,18 +285,18 @@ TrackingExceptionDetectedEvent ..> "Booking" : post-commit（結果整合・ADR�
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review：中間 / developing-review：正式）
-- [ ] US19・US20 の受入条件をすべて満たす
-- [ ] ユニットテストがパス（`ExceptionType` 別遷移・`Lost` の escalation 境界を網羅）
-- [ ] E2E テストがパス（予約→追跡→例外登録→エスカレーション/通知記録→対応報告。Playwright 拡張）
-- [ ] ArchUnit テストがパス（Tracking/Handling BC の ACL 経由依存・H3）
-- [ ] CLAIM→Delivered・UNLOAD→InTransit の状態同期 E2E がパス（H4）
-- [ ] post-commit 結果整合性 ADR 起票・ADR-0002/0006 更新完了（H1）
-- [ ] 荷主通知・エスカレーション通知が append-only 記録として残る（H2 一部）
-- [ ] カバレッジ 85% ハードゲートを CI に段階導入（繰り越し決着）
-- [ ] SonarQube Quality Gate OK（SQ-3 アクセシビリティ・SQ-2 消化）
-- [ ] `dotnet format` / Lint エラーなし
-- [ ] domain-model / data-model / ui_design / release_plan の横断更新完了
+- [x] コードレビュー完了（self-review：中間＝xp-programmer/xp-tester 並列実施。developing-review：正式は staging 完了後）
+- [x] US19・US20 の受入条件をすべて満たす
+- [x] ユニットテストがパス（`ExceptionType` 別遷移・`Lost` の escalation 境界・単一未解決不変条件を網羅）
+- [~] E2E テストがパス（予約→追跡→例外登録→エスカレーション/通知記録→対応報告。WebApplicationFactory 受け入れテストで貫通済み。Playwright 拡張は繰り越し）
+- [x] ArchUnit テストがパス（Tracking/Handling BC の ACL 経由依存・H3）
+- [x] CLAIM→Delivered・UNLOAD→InTransit の状態同期 E2E がパス（H4）
+- [x] post-commit 結果整合性 ADR 起票・ADR-0002/0006 更新完了（H1・ADR-0009）
+- [x] 荷主通知・エスカレーション通知が append-only 記録として残る（H2 一部）
+- [ ] カバレッジ 85% ハードゲートを CI に段階導入（繰り越し。ドメイン被覆 96-98% を実測）
+- [ ] SonarQube Quality Gate OK（SQ-3 アクセシビリティ・SQ-2 消化）※繰り越し
+- [x] `dotnet format` / Lint エラーなし（0 警告）
+- [x] domain-model / data-model / release_plan の横断更新完了（ui_design は既存整合）
 
 ### デモ項目
 
