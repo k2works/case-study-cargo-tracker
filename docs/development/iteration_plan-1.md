@@ -128,7 +128,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 3.1 | Shipper 集約（個人/法人・DiscountRate 0-30% スマートコンストラクタ）ユニット + FsCheck | 3h | - | [x] |
-| 3.2 | ShipperRepository（Donald 手書き SQL・レコードマッピング）統合テスト | 3h | - | [ ] |
+| 3.2 | ShipperRepository（Donald 手書き SQL・レコードマッピング）統合テスト | 3h | - | [x] |
 | 3.3 | 荷主一覧 / 登録画面（`/shippers`, `/shippers/new`、種別切替・重複メール確認・htmx） | 4h | - | [ ] |
 | 3.4 | Playwright E2E テスト（ログイン → 荷主登録 → 一覧表示） | 2h | - | [ ] |
 
