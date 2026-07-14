@@ -433,4 +433,26 @@ public class CargoTest
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    [Fact]
+    public void 入金確認で配送完了から精算済になる()
+    {
+        var cargo = TrackingIssuedCargo();
+        cargo.MarkInTransit();
+        cargo.MarkDelivered();
+
+        cargo.MarkSettled();
+
+        cargo.BookingStatus.Should().Be(BookingStatus.Settled);
+    }
+
+    [Fact]
+    public void 配送完了前は精算済にできない()
+    {
+        var cargo = TrackingIssuedCargo();
+
+        var act = () => cargo.MarkSettled();
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

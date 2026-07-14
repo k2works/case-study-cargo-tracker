@@ -68,6 +68,17 @@ public class InvoiceTest
     }
 
     [Fact]
+    public void 入金確認で入金確認イベントが発行される()
+    {
+        var invoice = IssueFor("Corporate");
+
+        invoice.ConfirmPayment(new DateTimeOffset(2026, 10, 20, 0, 0, 0, TimeSpan.Zero));
+
+        invoice.PullDomainEvents().Should().ContainSingle()
+            .Which.Should().BeOfType<CargoTracker.Billing.Domain.Events.PaymentConfirmedEvent>();
+    }
+
+    [Fact]
     public void 支払済の精算書は再度入金確認できない()
     {
         var invoice = IssueFor("Corporate");

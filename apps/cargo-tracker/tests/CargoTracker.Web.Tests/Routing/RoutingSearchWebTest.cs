@@ -620,4 +620,31 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         var list = await billing.GetStringAsync("/billing/invoices");
         list.Should().Contain("配送完了（Delivered）の予約のみ");
     }
+
+    [Fact]
+    public async Task 入金確認で精算済になり予約状態も精算済へ同期される()
+    {
+        // US23: 精算書発行 → 入金確認 → 精算済（Confirmed）→ 予約状態 Settled 同期。
+        var bookingId = await CreateDeliveredBookingAsync("VYG-BILL-003");
+        var billing = await LoginAsync("billing");
+        var detailUrl = await GenerateInvoiceAsync(billing, bookingId);
+
+        // 入金確認（PRG）。
+        var token = Token(await billing.GetStringAsync(detailUrl));
+        var response = await billing.PostAsync($"{detailUrl}/payment", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["paymentMethod"] = "銀行振込",
+            ["__RequestVerificationToken"] = token,
+        }));
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        // 精算書は精算済へ。
+        var afterPayment = await billing.GetStringAsync(detailUrl);
+        afterPayment.Should().Contain("精算済");
+
+        // 予約状態も精算済（SETTLED）へ同期される（post-commit イベント経由）。
+        var sales = await LoginAsync("sales");
+        var booking = await sales.GetStringAsync($"/bookings/{bookingId}");
+        booking.Should().Contain("SETTLED");
+    }
 }

@@ -103,6 +103,17 @@ public sealed class Cargo : AggregateRoot
         Version++;
     }
 
+    /// <summary>入金確認（US23）に連動して精算済へ遷移する。配送完了（Delivered）以降のみ有効。</summary>
+    public void MarkSettled()
+    {
+        if (BookingStatus != BookingStatus.Delivered)
+        {
+            throw new InvalidOperationException("配送完了の予約のみ精算済にできます。");
+        }
+        BookingStatus = BookingStatus.Settled;
+        Version++;
+    }
+
     /// <summary>確定経路（旅程）を予約に紐付ける（US11）。状態は RouteProposed のまま維持する。</summary>
     public void AssignItinerary(CargoItinerary itinerary)
     {

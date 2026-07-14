@@ -10,7 +10,8 @@ namespace CargoTracker.Billing.Interfaces;
 [Authorize(Roles = Roles.Billing)]
 public sealed class BillingController(
     InvoiceQueryService queryService,
-    GenerateInvoiceCommandService generateInvoiceCommandService) : Controller
+    GenerateInvoiceCommandService generateInvoiceCommandService,
+    ConfirmPaymentCommandService confirmPaymentCommandService) : Controller
 {
     [HttpGet("/billing/invoices")]
     public async Task<IActionResult> Index(CancellationToken ct)
@@ -42,5 +43,23 @@ public sealed class BillingController(
             TempData["WarningMessage"] = ex.Message;
             return LocalRedirect("/billing/invoices");
         }
+    }
+
+    [HttpPost("/billing/invoices/{invoiceNumber}/payment")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmPayment(string invoiceNumber, string? paymentMethod, CancellationToken ct)
+    {
+        try
+        {
+            await confirmPaymentCommandService.HandleAsync(
+                new ConfirmPaymentCommand(invoiceNumber, string.IsNullOrWhiteSpace(paymentMethod) ? "銀行振込" : paymentMethod), ct);
+            TempData["SuccessMessage"] = "入金を確認し精算済にしました。";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            TempData["WarningMessage"] = ex.Message;
+        }
+
+        return LocalRedirect($"/billing/invoices/{invoiceNumber}");
     }
 }

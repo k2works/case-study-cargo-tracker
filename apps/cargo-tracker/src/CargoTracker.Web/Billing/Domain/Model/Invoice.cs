@@ -1,3 +1,4 @@
+using CargoTracker.Billing.Domain.Events;
 using CargoTracker.Shared.Domain.Model;
 
 namespace CargoTracker.Billing.Domain.Model;
@@ -81,6 +82,7 @@ public sealed class Invoice : AggregateRoot
         PaymentStatus = PaymentStatus.Confirmed;
         PaidAt = paidAt;
         Version++;
+        AddDomainEvent(new PaymentConfirmedEvent(BookingId.Value, InvoiceId.Value, paidAt));
     }
 
     /// <summary>支払期限を超過した未払いを延滞（Overdue）にする（US23）。</summary>
