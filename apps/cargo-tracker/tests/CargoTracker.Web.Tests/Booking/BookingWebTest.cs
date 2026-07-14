@@ -169,6 +169,37 @@ public sealed class BookingWebTest : IClassFixture<AuthenticationFlowTest.AuthWe
         detail.Should().Contain("仮受付の予約のみ").And.Contain("alert-warning");
     }
 
+    [Fact]
+    public async Task 貨物予約一覧に登録済み予約が表示されステータスで絞り込める()
+    {
+        var client = await LoginAsSalesAsync();
+        var location = await CreateGeneralBookingAsync(client);
+        var bookingId = location.Replace("/bookings/", string.Empty);
+
+        // 一覧に登録済み予約と仮受付バッジが表示される。
+        var list = await client.GetStringAsync("/bookings");
+        list.Should().Contain("貨物予約一覧").And.Contain(bookingId).And.Contain("仮受付");
+
+        // ステータス絞り込み（仮受付＝PRELIMINARY）でヒットする。
+        var filtered = await client.GetStringAsync("/bookings?status=PRELIMINARY");
+        filtered.Should().Contain(bookingId);
+
+        // 該当しないステータス（精算済）では表示されない。
+        var empty = await client.GetStringAsync("/bookings?status=SETTLED");
+        empty.Should().NotContain(bookingId);
+    }
+
+    [Fact]
+    public async Task 貨物予約一覧を出発地でフィルタできる()
+    {
+        var client = await LoginAsSalesAsync();
+        var location = await CreateGeneralBookingAsync(client); // 出発地 JPTYO
+        var bookingId = location.Replace("/bookings/", string.Empty);
+
+        (await client.GetStringAsync("/bookings?origin=JPTYO")).Should().Contain(bookingId);
+        (await client.GetStringAsync("/bookings?origin=USLAX")).Should().NotContain(bookingId);
+    }
+
     private static async Task<string> CreateGeneralBookingAsync(HttpClient client)
     {
         var newPage = await client.GetStringAsync("/bookings/new");

@@ -51,9 +51,47 @@ public sealed class ShipperOption
     public string Name { get; set; } = string.Empty;
 }
 
+/// <summary>貨物予約一覧の 1 件（読取・US04/US13）。</summary>
+public sealed class BookingSummary
+{
+    public string BookingId { get; set; } = string.Empty;
+    public string ShipperName { get; set; } = string.Empty;
+    public string OriginUnlocode { get; set; } = string.Empty;
+    public string DestinationUnlocode { get; set; } = string.Empty;
+    public DateOnly ArrivalDeadline { get; set; }
+    public string BookingStatus { get; set; } = string.Empty;
+}
+
 /// <summary>予約画面向けの読み取りサービス。</summary>
 public sealed class FindBookingQueryService(IDbConnectionFactory connectionFactory)
 {
+    /// <summary>貨物予約を一覧取得する（US04/US13）。出発地・目的地・ステータスで任意フィルタする。</summary>
+    public async Task<IReadOnlyList<BookingSummary>> ListAsync(
+        string? origin = null, string? destination = null, string? status = null, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.Create();
+        var items = await connection.QueryAsync<BookingSummary>(new CommandDefinition(
+            """
+            SELECT c.booking_id AS BookingId, s.name AS ShipperName,
+                   c.origin_unlocode AS OriginUnlocode, c.destination_unlocode AS DestinationUnlocode,
+                   c.arrival_deadline AS ArrivalDeadline, c.booking_status AS BookingStatus
+            FROM cargo c
+            JOIN shipper s ON s.id = c.shipper_id
+            WHERE (@Origin IS NULL OR c.origin_unlocode = @Origin)
+              AND (@Destination IS NULL OR c.destination_unlocode = @Destination)
+              AND (@Status IS NULL OR c.booking_status = @Status)
+            ORDER BY c.id DESC
+            """,
+            new
+            {
+                Origin = string.IsNullOrWhiteSpace(origin) ? null : origin.Trim().ToUpperInvariant(),
+                Destination = string.IsNullOrWhiteSpace(destination) ? null : destination.Trim().ToUpperInvariant(),
+                Status = string.IsNullOrWhiteSpace(status) ? null : status.Trim().ToUpperInvariant(),
+            },
+            cancellationToken: ct));
+        return items.ToList();
+    }
+
     public async Task<IReadOnlyList<ShipperOption>> FindShipperOptionsAsync(CancellationToken ct = default)
     {
         using var connection = connectionFactory.Create();

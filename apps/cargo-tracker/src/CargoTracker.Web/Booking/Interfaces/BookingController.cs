@@ -23,7 +23,19 @@ public sealed class BookingController(
     ISelectedRouteLookup selectedRouteLookup) : Controller
 {
     [HttpGet("/bookings")]
-    public IActionResult Index() => LocalRedirect("/bookings/new");
+    public async Task<IActionResult> Index(string? origin, string? destination, string? status, CancellationToken ct)
+    {
+        var bookings = await queryService.ListAsync(origin, destination, status, ct);
+        ViewData["FilterOrigin"] = origin;
+        ViewData["FilterDestination"] = destination;
+        ViewData["FilterStatus"] = status;
+        // htmx の部分更新（検索フォーム）ではリスト部分のみ返す。
+        if (Request.Headers.ContainsKey("HX-Request"))
+        {
+            return PartialView("_BookingList", bookings);
+        }
+        return View("Index", bookings);
+    }
 
     [HttpGet("/bookings/new")]
     public async Task<IActionResult> New(CancellationToken ct)

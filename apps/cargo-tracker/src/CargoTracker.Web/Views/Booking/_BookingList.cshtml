@@ -1,0 +1,37 @@
+@using CargoTracker.Booking.Interfaces
+@model IReadOnlyList<CargoTracker.Booking.Application.Internal.QueryServices.BookingSummary>
+
+<div id="booking-list">
+    @if (Model.Count == 0)
+    {
+        <p class="text-muted">該当する貨物予約はありません。</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>予約 ID</th><th>荷主</th><th>出発地</th><th>目的地</th><th>希望期限</th><th>ステータス</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var booking in Model)
+                {
+                    <tr>
+                        <td>@booking.BookingId</td>
+                        <td>@booking.ShipperName</td>
+                        <td>@booking.OriginUnlocode</td>
+                        <td>@booking.DestinationUnlocode</td>
+                        <td>@booking.ArrivalDeadline.ToString("yyyy-MM-dd")</td>
+                        <td>
+                            <span class="badge text-bg-@BookingStatusLabel.ToBadgeColor(booking.BookingStatus)">
+                                @BookingStatusLabel.ToJapanese(booking.BookingStatus)
+                            </span>
+                        </td>
+                        <td><a href="/bookings/@booking.BookingId" class="btn btn-sm btn-outline-primary">詳細</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
