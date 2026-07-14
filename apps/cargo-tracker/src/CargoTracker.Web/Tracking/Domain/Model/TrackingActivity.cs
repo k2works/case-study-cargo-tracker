@@ -1,4 +1,5 @@
 using CargoTracker.Shared.Domain.Model;
+using CargoTracker.Tracking.Domain.Events;
 
 namespace CargoTracker.Tracking.Domain.Model;
 
@@ -45,12 +46,22 @@ public sealed class TrackingActivity : AggregateRoot
         Version++;
     }
 
-    /// <summary>例外事象を登録する（US19/US20）。登録中は現在状態が例外発生（Exception）になる。</summary>
+    /// <summary>
+    /// 例外事象を登録する（US19/US20）。登録中は現在状態が例外発生（Exception）になり、
+    /// TrackingExceptionDetectedEvent を post-commit で発行して Booking へ伝える（ADR-0009）。
+    /// </summary>
     public void AddException(TrackingExceptionEvent exceptionEvent)
     {
         ArgumentNullException.ThrowIfNull(exceptionEvent);
         _exceptions.Add(exceptionEvent);
         Version++;
+        AddDomainEvent(new TrackingExceptionDetectedEvent(
+            BookingId.Value,
+            TrackingNumber.Value,
+            exceptionEvent.ExceptionType.ToString().ToUpperInvariant(),
+            exceptionEvent.Location.UnLocode,
+            exceptionEvent.EscalationFlag,
+            exceptionEvent.OccurredAt));
     }
 
     /// <summary>未解決の例外があるか（domain-model の HasActiveException）。</summary>

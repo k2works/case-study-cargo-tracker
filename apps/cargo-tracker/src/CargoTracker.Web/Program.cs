@@ -105,6 +105,8 @@ builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.ITrackingAc
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.QueryServices.TrackingQueryService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AddTrackingEventCommandService>();
+builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.RegisterExceptionCommandService>();
+builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.ResolveExceptionCommandService>();
 
 // Handling コンテキスト（US15）。
 builder.Services.AddScoped<CargoTracker.Handling.Domain.Repositories.IHandlingActivityRepository,

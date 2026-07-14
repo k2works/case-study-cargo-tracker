@@ -1,5 +1,6 @@
 using CargoTracker.Shared.Infrastructure.Persistence;
 using CargoTracker.Tracking.Application.Internal.CommandServices;
+using CargoTracker.Tracking.Domain.Events;
 using CargoTracker.Tracking.Domain.Model;
 using CargoTracker.Tracking.Infrastructure.Repositories;
 using FluentAssertions;
@@ -147,5 +148,38 @@ public sealed class TrackingActivityRepositoryIntegrationTest : IAsyncLifetime
             "TRK-NOT-EXIST", "Receive", "JPTYO", DateTimeOffset.UtcNow));
 
         await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task 例外登録で追跡例外検知イベントがpostcommitで発行される()
+    {
+        await _commandService.HandleAsync(new AssignTrackingNumberCommand("BKG-TRK-EV01"));
+        var registerService = new RegisterExceptionCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient), _repository);
+
+        await registerService.HandleAsync(new RegisterExceptionCommand(
+            "TRK-TRK-EV01", "Lost", "USLAX",
+            new DateTimeOffset(2026, 10, 8, 14, 0, 0, TimeSpan.Zero), "紛失の疑い"));
+
+        // post-commit で TrackingExceptionDetectedEvent（エスカレーションフラグ付き）が発行される。
+        _publisher.Verify(p => p.Publish(
+            It.Is<INotification>(n => (n as TrackingExceptionDetectedEvent) != null
+                && ((TrackingExceptionDetectedEvent)n).BookingId == "BKG-TRK-EV01"
+                && ((TrackingExceptionDetectedEvent)n).EscalationFlag
+                && ((TrackingExceptionDetectedEvent)n).ExceptionType == "LOST"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task 税関保留の手動登録は拒否される()
+    {
+        await _commandService.HandleAsync(new AssignTrackingNumberCommand("BKG-TRK-EV02"));
+        var registerService = new RegisterExceptionCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient), _repository);
+
+        var act = () => registerService.HandleAsync(new RegisterExceptionCommand(
+            "TRK-TRK-EV02", "CustomsHold", "USLAX", DateTimeOffset.UtcNow));
+
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 }
