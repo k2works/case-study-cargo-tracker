@@ -80,6 +80,10 @@ module EstimateRepository =
 
         let save (estimate: Estimate) : Async<Result<unit, DomainError>> =
             async {
+                // 親（estimate）と子（route_candidate）の複数 INSERT を単一トランザクションで
+                // 原子化し、集約の部分永続化を防ぐ（ADR-0001 集約整合性 / ADR-0002）。
+                use tx = conn.BeginTransaction()
+
                 try
                     let now = clock ()
                     let estimateGuid = (EstimateId.value estimate.EstimateId).ToString("D")
@@ -94,6 +98,7 @@ module EstimateRepository =
                             (@estimate_id, @origin, @destination, @arrival_deadline,
                              @cargo_type, @weight_kg, @status, @now, @now)
                         """
+                    |> Db.setTransaction tx
                     |> Db.setParams
                         [ "estimate_id", SqlType.String estimateGuid
                           "origin", SqlType.String(Location.value estimate.Origin)
@@ -109,6 +114,7 @@ module EstimateRepository =
                     let estimateId =
                         conn
                         |> Db.newCommand "SELECT id AS eid FROM estimate WHERE estimate_id = @estimate_id"
+                        |> Db.setTransaction tx
                         |> Db.setParams [ "estimate_id", SqlType.String estimateGuid ]
                         |> Db.querySingle (fun rd -> rd.ReadInt64 "eid")
                         |> Option.defaultValue 0L
@@ -123,6 +129,7 @@ module EstimateRepository =
                             VALUES
                                 (@estimate_id, @voyage_number, @transit_port, @transit_days, @estimated_cost, @rank)
                             """
+                        |> Db.setTransaction tx
                         |> Db.setParams
                             [ "estimate_id", SqlType.Int64 estimateId
                               "voyage_number", SqlType.String c.VoyageNumber
@@ -132,8 +139,11 @@ module EstimateRepository =
                               "rank", SqlType.Int32(i + 1) ]
                         |> Db.exec)
 
+                    tx.Commit()
+
                     return Ok()
                 with ex ->
+                    tx.Rollback()
                     return Error(BusinessRuleViolation("EstimateRepository", ex.Message))
             }
 

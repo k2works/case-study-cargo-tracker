@@ -94,6 +94,31 @@ let ``見積とルート候補を保存できる`` () =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
+let ``子 INSERT が失敗すると親 estimate も永続化されない（トランザクション原子性）`` () =
+    use conn = openDb ()
+    // route_candidate.transit_days に NOT NULL 制約違反を起こすため列を落とした不整合スキーマを再作成
+    use drop = conn.CreateCommand()
+
+    drop.CommandText <-
+        "DROP TABLE route_candidate; CREATE TABLE route_candidate (id INTEGER PRIMARY KEY, estimate_id INTEGER NOT NULL, voyage_number TEXT NOT NULL, transit_port TEXT, transit_days INTEGER NOT NULL, estimated_cost NUMERIC NOT NULL, rank INTEGER NOT NULL, extra TEXT NOT NULL)"
+
+    drop.ExecuteNonQuery() |> ignore
+
+    let repo = EstimateRepository.create conn fixedClock
+    let estimate = makeEstimate ()
+
+    // extra 列（NOT NULL・INSERT で未指定）により子 INSERT が失敗する
+    match repo.Save estimate |> Async.RunSynchronously with
+    | Error _ -> ()
+    | Ok() -> failwith "子 INSERT 失敗で Error になるはず"
+
+    // 親 estimate はロールバックされ 0 件であること
+    use cmd = conn.CreateCommand()
+    cmd.CommandText <- "SELECT COUNT(*) FROM estimate"
+    cmd.ExecuteScalar() |> Convert.ToInt32 |> should equal 0
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
 let ``ルート候補は rank が 1 始まりで採番される`` () =
     use conn = openDb ()
     let repo = EstimateRepository.create conn fixedClock
