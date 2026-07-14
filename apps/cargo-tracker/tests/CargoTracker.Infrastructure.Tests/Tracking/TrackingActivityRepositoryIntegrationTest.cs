@@ -84,6 +84,44 @@ public sealed class TrackingActivityRepositoryIntegrationTest : IAsyncLifetime
     }
 
     [Fact]
+    public async Task 例外を登録し解決すると往復保存され状態が復帰する()
+    {
+        await _commandService.HandleAsync(new AssignTrackingNumberCommand("BKG-TRK-EX01"));
+        var tracking = await _repository.FindByBookingIdAsync("BKG-TRK-EX01");
+        tracking!.AddEvent(new TrackingActivityEvent(
+            TrackingEventType.Load, new TrackingLocation("JPTYO"), new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+        tracking.AddException(new TrackingExceptionEvent(
+            ExceptionType.Lost, new TrackingLocation("USLAX"),
+            new DateTimeOffset(2026, 10, 8, 14, 0, 0, TimeSpan.Zero), "紛失の疑い"));
+        await using (var uow = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin())
+        {
+            await _repository.SaveAsync(tracking);
+            await uow.CommitAsync();
+        }
+
+        // 例外登録後は Exception 状態・エスカレーションフラグが往復保存される。
+        var afterRegister = await _repository.FindByBookingIdAsync("BKG-TRK-EX01");
+        afterRegister!.CurrentStatus().Should().Be(TrackingStatus.Exception);
+        afterRegister.HasActiveException().Should().BeTrue();
+        afterRegister.Exceptions.Should().ContainSingle()
+            .Which.EscalationFlag.Should().BeTrue();
+
+        // 解決すると例外発生前（Loaded）へ復帰し、resolved_at/notes が保存される。
+        afterRegister.ResolveException(
+            new DateTimeOffset(2026, 10, 9, 0, 0, 0, TimeSpan.Zero), "代替便を手配");
+        await using (var uow = new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient).Begin())
+        {
+            await _repository.SaveAsync(afterRegister);
+            await uow.CommitAsync();
+        }
+
+        var afterResolve = await _repository.FindByBookingIdAsync("BKG-TRK-EX01");
+        afterResolve!.HasActiveException().Should().BeFalse();
+        afterResolve.CurrentStatus().Should().Be(TrackingStatus.Loaded);
+        afterResolve.Exceptions[^1].ResolutionNotes.Should().Be("代替便を手配");
+    }
+
+    [Fact]
     public async Task 追跡管理者が手動で状態を追記できる()
     {
         await _commandService.HandleAsync(new AssignTrackingNumberCommand("BKG-TRK-0004"));

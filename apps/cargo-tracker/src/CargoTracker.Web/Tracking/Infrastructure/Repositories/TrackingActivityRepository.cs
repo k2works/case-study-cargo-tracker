@@ -85,6 +85,36 @@ public sealed class TrackingActivityRepository(IDbConnectionFactory connectionFa
                 tx, cancellationToken: ct));
             seq++;
         }
+
+        // 例外イベント（US19/US20）を全削除→再挿入する（ADR-0001 の集約永続化パターン）。解決時の resolved_at 更新もこれで反映される。
+        await connection.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM tracking_exception_event WHERE tracking_id = @Id", new { Id = trackingId }, tx, cancellationToken: ct));
+
+        foreach (var exceptionEvent in trackingActivity.Exceptions)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO tracking_exception_event
+                    (tracking_id, exception_type, location_unlocode, occurred_at, escalation_flag,
+                     description, resolved_at, resolution_notes, created_at, updated_at)
+                VALUES
+                    (@TrackingId, @ExceptionType, @Location, @OccurredAt, @EscalationFlag,
+                     @Description, @ResolvedAt, @ResolutionNotes, @Now, @Now)
+                """,
+                new
+                {
+                    TrackingId = trackingId,
+                    ExceptionType = exceptionEvent.ExceptionType.ToString().ToUpperInvariant(),
+                    Location = exceptionEvent.Location.UnLocode,
+                    OccurredAt = ToDatabaseTimestamp(exceptionEvent.OccurredAt),
+                    exceptionEvent.EscalationFlag,
+                    exceptionEvent.Description,
+                    ResolvedAt = exceptionEvent.ResolvedAt is { } r ? ToDatabaseTimestamp(r) : (DateTime?)null,
+                    exceptionEvent.ResolutionNotes,
+                    Now = now,
+                },
+                tx, cancellationToken: ct));
+        }
     }
 
     public Task<TrackingActivity?> FindByBookingIdAsync(string bookingId, CancellationToken ct = default)
@@ -132,8 +162,19 @@ public sealed class TrackingActivityRepository(IDbConnectionFactory connectionFa
             new { header.Id }, tx, cancellationToken: ct));
 
         var events = eventRows.Select(r => r.ToEvent()).ToList();
+
+        var exceptionRows = await connection.QueryAsync<ExceptionRow>(new CommandDefinition(
+            """
+            SELECT exception_type AS ExceptionType, location_unlocode AS LocationUnlocode,
+                   occurred_at AS OccurredAt, escalation_flag AS EscalationFlag,
+                   description AS Description, resolved_at AS ResolvedAt, resolution_notes AS ResolutionNotes
+            FROM tracking_exception_event WHERE tracking_id = @Id ORDER BY id
+            """,
+            new { header.Id }, tx, cancellationToken: ct));
+
+        var exceptions = exceptionRows.Select(r => r.ToEvent()).ToList();
         return TrackingActivity.Reconstruct(
-            new TrackingNumber(header.TrackingNumber), new TrackingBookingId(header.BookingId), events, header.Version);
+            new TrackingNumber(header.TrackingNumber), new TrackingBookingId(header.BookingId), events, header.Version, exceptions);
     }
 
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
@@ -174,5 +215,33 @@ public sealed class TrackingActivityRepository(IDbConnectionFactory connectionFa
             new TrackingLocation(LocationUnlocode),
             new DateTimeOffset(DateTime.SpecifyKind(EventTime, DateTimeKind.Utc)),
             string.IsNullOrWhiteSpace(VoyageNumber) ? null : new TrackingVoyageNumber(VoyageNumber));
+    }
+
+    private sealed class ExceptionRow
+    {
+        public string ExceptionType { get; set; } = string.Empty;
+        public string LocationUnlocode { get; set; } = string.Empty;
+        public DateTime OccurredAt { get; set; }
+        // 二方言（PostgreSQL BOOLEAN / SQLite INTEGER 0..1）を吸収するため long で受ける。
+        public long EscalationFlag { get; set; }
+        public string? Description { get; set; }
+        public DateTime? ResolvedAt { get; set; }
+        public string? ResolutionNotes { get; set; }
+
+        public TrackingExceptionEvent ToEvent() => new(
+            Enum.Parse<ExceptionType>(ToPascalCase(ExceptionType), ignoreCase: true),
+            new TrackingLocation(LocationUnlocode),
+            new DateTimeOffset(DateTime.SpecifyKind(OccurredAt, DateTimeKind.Utc)),
+            Description,
+            ResolvedAt is { } r ? new DateTimeOffset(DateTime.SpecifyKind(r, DateTimeKind.Utc)) : null,
+            ResolutionNotes);
+
+        private static string ToPascalCase(string dbValue)
+        {
+            // DB は SCREAMING_SNAKE（CUSTOMS_HOLD）。enum 名（CustomsHold）へ復元する。
+            var parts = dbValue.Split('_', StringSplitOptions.RemoveEmptyEntries);
+            return string.Concat(parts.Select(p =>
+                char.ToUpperInvariant(p[0]) + p[1..].ToLowerInvariant()));
+        }
     }
 }
