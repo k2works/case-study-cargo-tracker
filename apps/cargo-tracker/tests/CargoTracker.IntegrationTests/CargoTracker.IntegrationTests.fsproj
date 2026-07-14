@@ -9,6 +9,7 @@
     <Compile Include="IntegrationTests.fs" />
     <Compile Include="ShipperRepositoryTests.fs" />
     <Compile Include="EstimateRepositoryTests.fs" />
+    <Compile Include="MigrationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +26,7 @@
     <ProjectReference Include="..\..\src\CargoTracker.Shared\CargoTracker.Shared.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Shipper\CargoTracker.Shipper.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Estimation\CargoTracker.Estimation.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Web\CargoTracker.Web.fsproj" />
   </ItemGroup>
 
 </Project>

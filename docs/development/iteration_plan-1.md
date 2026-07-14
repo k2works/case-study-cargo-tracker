@@ -92,7 +92,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | DbUp 起動時配線（プロバイダ判定・`Scripts/postgresql|sqlite` 適用） | 3h | - | [ ] |
+| 1.1 | DbUp 起動時配線（プロバイダ判定・`Scripts/postgresql|sqlite` 適用） | 3h | - | [x] |
 | 1.2 | 初期スキーマ（両方言・per-story: 0001 users / 0002 shipper / 0003 estimate・route_candidate） | 3h | - | [x] |
 | 1.3 | AggregateRoot + UnitOfWork + post-commit ディスパッチ（関数合成・MediatR 不使用） | 4h | - | [ ] |
 | 1.4 | ロールバック時イベント非発行の統合テスト（`UnitOfWorkTest`） | 2h | - | [ ] |
