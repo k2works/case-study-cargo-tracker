@@ -30,7 +30,7 @@ public static class DemoDataSeeder
             services.GetRequiredService<IPasswordHasher>(),
             ct);
 
-        // 2. デモ荷主（既に荷主が存在する場合はスキップ）。
+        // 2. デモ荷主（既に荷主が存在する場合はスキップ）。個人 2・法人 2 で各機能の画面を賑やかにする。
         var shipperQuery = services.GetRequiredService<FindShipperQueryService>();
         if ((await shipperQuery.FindAllAsync(ct)).Count == 0)
         {
@@ -41,15 +41,26 @@ public static class DemoDataSeeder
             await registerShipper.HandleAsync(new RegisterShipperCommand(
                 IsCorporate: true, Name: "サンプル物流株式会社", Email: "sales@sample-logistics.example.com",
                 Phone: "06-9876-5432", Address: "大阪府大阪市住之江区南港北2-1-10", ContractNumber: "C-2026-001", DiscountRate: 0.15m), ct);
+            await registerShipper.HandleAsync(new RegisterShipperCommand(
+                IsCorporate: false, Name: "佐藤花子", Email: "sato.hanako@example.com",
+                Phone: "045-222-3333", Address: "神奈川県横浜市中区海岸通1-1", ContractNumber: null, DiscountRate: null), ct);
+            await registerShipper.HandleAsync(new RegisterShipperCommand(
+                IsCorporate: true, Name: "グローバル通商株式会社", Email: "trade@global-tsusho.example.com",
+                Phone: "078-555-1212", Address: "兵庫県神戸市中央区港島中町6-1", ContractNumber: "C-2026-002", DiscountRate: 0.25m), ct);
         }
 
-        // 3. デモ見積（既に見積が存在する場合はスキップ）。
+        // 3. デモ見積（既に見積が存在する場合はスキップ）。複数ルート・貨物種別で見積一覧を充実させる。
         var estimateQuery = services.GetRequiredService<FindEstimateQueryService>();
         if ((await estimateQuery.FindAllAsync(ct)).Count == 0)
         {
             var createEstimate = services.GetRequiredService<CreateEstimateCommandService>();
+            var estDeadline = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(3);
             await createEstimate.HandleAsync(new CreateEstimateCommand(
-                "JPTYO", "DEHAM", new DateOnly(2026, 9, 30), Estimation.Domain.Model.CargoType.General, 1200m), ct);
+                "JPTYO", "DEHAM", estDeadline, Estimation.Domain.Model.CargoType.General, 1200m), ct);
+            await createEstimate.HandleAsync(new CreateEstimateCommand(
+                "JPOSA", "USLAX", estDeadline, Estimation.Domain.Model.CargoType.Refrigerated, 800m), ct);
+            await createEstimate.HandleAsync(new CreateEstimateCommand(
+                "JPTYO", "SGSIN", estDeadline, Estimation.Domain.Model.CargoType.Hazardous, 450m), ct);
         }
 
         // Routing のデモ（航海・経路設計依頼）はデータ分離のためテスト環境では投入しない。
@@ -98,31 +109,52 @@ public static class DemoDataSeeder
                 ]), ct);
         }
 
-        // 5. 経路設計依頼（経路設計者ロールの依頼一覧用）。予約を登録し経路設計に引き渡した
-        //    RouteProposed 状態の貨物を投入する（既に予約があればスキップ）。
+        // 5. デモ予約（貨物予約一覧・経路設計依頼一覧用）。貨物種別・ルートを多様化し、
+        //    一部を経路設計へ引き渡して RouteProposed 状態にする（仮受付＋経路提案中の 2 状態を表示）。
         var connectionFactory = services.GetRequiredService<IDbConnectionFactory>();
         using (var connection = connectionFactory.Create())
         {
             var cargoCount = await connection.ExecuteScalarAsync<long>(
                 new CommandDefinition("SELECT COUNT(1) FROM cargo", cancellationToken: ct));
-            var shipperSurrogateId = await connection.ExecuteScalarAsync<long?>(
-                new CommandDefinition("SELECT id FROM shipper ORDER BY id", cancellationToken: ct));
+            var shipperIds = (await connection.QueryAsync<long>(
+                new CommandDefinition("SELECT id FROM shipper ORDER BY id", cancellationToken: ct))).ToList();
 
-            if (cargoCount == 0 && shipperSurrogateId is not null)
+            if (cargoCount == 0 && shipperIds.Count > 0)
             {
                 var bookCargo = services.GetRequiredService<BookCargoCommandService>();
                 var assignToRouting = services.GetRequiredService<AssignToRoutingCommandService>();
-
-                // 到着期限は過去日ガード（H3）を避けるため相対的な未来日にする。
                 var arrivalDeadline = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(3);
-                var bookingId = await bookCargo.HandleAsync(new BookCargoCommand(
-                    ShipperId: shipperSurrogateId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    OriginUnLocode: "JPTYO", DestinationUnLocode: "DEHAM",
-                    ArrivalDeadline: arrivalDeadline,
-                    CargoType: Booking.Domain.Model.CargoType.General, Weight: 1500m,
-                    Description: "デモ経路設計依頼貨物"), ct);
+                string Sid(int i) => shipperIds[i % shipperIds.Count].ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-                await assignToRouting.HandleAsync(new AssignToRoutingCommand(bookingId), ct);
+                // (a) 一般貨物 JPTYO→DEHAM。経路設計へ引き渡して RouteProposed（依頼一覧に表示）。
+                var b1 = await bookCargo.HandleAsync(new BookCargoCommand(
+                    ShipperId: Sid(0), OriginUnLocode: "JPTYO", DestinationUnLocode: "DEHAM",
+                    ArrivalDeadline: arrivalDeadline, CargoType: Booking.Domain.Model.CargoType.General, Weight: 1500m,
+                    DimensionLength: 120m, DimensionWidth: 80m, DimensionHeight: 90m, Quantity: 3,
+                    Description: "デモ経路設計依頼貨物（機械部品）"), ct);
+                await assignToRouting.HandleAsync(new AssignToRoutingCommand(b1), ct);
+
+                // (b) 冷凍貨物 JPOSA→USLAX。仮受付のまま（一覧の冷凍・別ルート例）。
+                await bookCargo.HandleAsync(new BookCargoCommand(
+                    ShipperId: Sid(1), OriginUnLocode: "JPOSA", DestinationUnLocode: "USLAX",
+                    ArrivalDeadline: arrivalDeadline, CargoType: Booking.Domain.Model.CargoType.Refrigerated, Weight: 800m,
+                    Quantity: 10, Description: "デモ冷凍食品",
+                    MinTemperature: -18m, MaxTemperature: -5m, TemperatureUnit: Booking.Domain.Model.TemperatureUnit.Celsius), ct);
+
+                // (c) 危険物貨物 JPTYO→SGSIN。経路設計へ引き渡して RouteProposed。
+                var b3 = await bookCargo.HandleAsync(new BookCargoCommand(
+                    ShipperId: Sid(2), OriginUnLocode: "JPTYO", DestinationUnLocode: "SGSIN",
+                    ArrivalDeadline: arrivalDeadline, CargoType: Booking.Domain.Model.CargoType.Hazardous, Weight: 450m,
+                    Quantity: 5, Description: "デモ危険物（塗料）",
+                    HazardousClass: "3", UnNumber: "UN1263", ProperShippingName: "PAINT"), ct);
+                await assignToRouting.HandleAsync(new AssignToRoutingCommand(b3), ct);
+
+                // (d) 一般貨物 JPTYO→CNSHA。仮受付のまま。
+                await bookCargo.HandleAsync(new BookCargoCommand(
+                    ShipperId: Sid(3), OriginUnLocode: "JPTYO", DestinationUnLocode: "CNSHA",
+                    ArrivalDeadline: arrivalDeadline, CargoType: Booking.Domain.Model.CargoType.General, Weight: 2000m,
+                    DimensionLength: 200m, DimensionWidth: 150m, DimensionHeight: 120m, Quantity: 1,
+                    Description: "デモ一般貨物（産業機械）"), ct);
             }
         }
     }
