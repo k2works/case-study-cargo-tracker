@@ -56,6 +56,11 @@ jobs:
         # E2E（Playwright・ブラウザ + 実プロセス起動が必要）は除外する。E2E は main マージ時の別ステージで実行する（test_strategy）。
         run: nix-shell ../../ops/nix/environments/dotnet/shell.nix --run 'dotnet test --no-build --filter "Category!=E2E" --collect:"XPlat Code Coverage" --logger "trx" --nologo'
 
+      # カバレッジハードゲート: ドメイン層 85%（全テストプロジェクトのレポートをマージして判定）。
+      # プレゼンテーション層（Views/Controllers）は Web.Tests 統合で担保し単体対象外のためドメイン層に限定する。
+      - name: Coverage hard gate (domain layer >= 85%)
+        run: python3 ../../ops/scripts/coverage-gate.py "**/TestResults/**/coverage.cobertura.xml" --threshold 0.85
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
