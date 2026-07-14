@@ -111,6 +111,7 @@ builder.Services.AddScoped<CargoTracker.Billing.Domain.Repositories.IInvoiceRepo
 builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.OutboundServices.IBillingSnapshotProvider,
     CargoTracker.Billing.Infrastructure.Services.BillingSnapshotProvider>();
 builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.CommandServices.GenerateInvoiceCommandService>();
+builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.QueryServices.InvoiceQueryService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.QueryServices.TrackingQueryService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AddTrackingEventCommandService>();

@@ -10,14 +10,7 @@ namespace CargoTracker.Shared.Infrastructure.Web;
 
 // 貨物追跡（/tracking）は TrackingController、荷役管理（/handling）は HandlingController で
 // IT5 に実画面化済みのためプレースホルダを撤去した。
-
-[Authorize(Roles = $"{Roles.Billing}")]
-public sealed class BillingPlaceholderController : Controller
-{
-    [HttpGet("/billing/invoices")]
-    public IActionResult Index() =>
-        View("Placeholder", new PlaceholderViewModel("請求管理", "担当 IT: IT7 / US21-23"));
-}
+// 請求管理（/billing/invoices）は BillingController で IT7 に実画面化済みのためプレースホルダを撤去した。
 
 [Authorize(Roles = $"{Roles.Admin}")]
 public sealed class AdminPlaceholderController : Controller

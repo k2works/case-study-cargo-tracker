@@ -1,0 +1,75 @@
+@using CargoTracker.Billing.Interfaces
+@model CargoTracker.Billing.Application.Internal.QueryServices.InvoiceDetailView
+@{
+    ViewData["Title"] = "精算書詳細";
+}
+
+<h1 class="h3 mb-3">精算書詳細</h1>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success" role="alert">@message</div>
+}
+@if (TempData["WarningMessage"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
+
+@if (Model is null)
+{
+    <div class="alert alert-warning" role="alert">精算書が見つかりません。</div>
+    <a href="/billing/invoices" class="btn btn-outline-secondary">精算書一覧へ戻る</a>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">精算書番号</dt><dd class="col-sm-9">@Model.InvoiceNumber</dd>
+        <dt class="col-sm-3">予約番号</dt><dd class="col-sm-9">@Model.BookingId</dd>
+        <dt class="col-sm-3">荷主種別</dt><dd class="col-sm-9">@(Model.ShipperType == "Corporate" ? "法人" : "個人")</dd>
+        <dt class="col-sm-3">基本料金</dt><dd class="col-sm-9">@Model.BaseAmountValue @Model.Currency</dd>
+        <dt class="col-sm-3">割引率</dt><dd class="col-sm-9">@Model.DiscountRate.ToString("P0")</dd>
+        <dt class="col-sm-3">請求金額（割引後）</dt><dd class="col-sm-9"><strong>@Model.FinalAmountValue @Model.Currency</strong></dd>
+        <dt class="col-sm-3">支払期限</dt><dd class="col-sm-9">@Model.DueDate.ToString("yyyy-MM-dd")</dd>
+        <dt class="col-sm-3">支払状態</dt>
+        <dd class="col-sm-9">
+            <span class="badge @(Model.PaymentStatus == "CONFIRMED" ? "text-bg-success" : Model.PaymentStatus == "OVERDUE" ? "text-bg-danger" : "text-bg-secondary")">
+                @PaymentStatusLabel.ToJapanese(Model.PaymentStatus)
+            </span>
+        </dd>
+    </dl>
+
+    <h2 class="h5 mt-4">精算明細</h2>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>内訳</th><th class="text-end">金額</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.LineItems)
+            {
+                <tr>
+                    <td>@item.Description</td>
+                    <td class="text-end">@item.AmountValue @item.AmountCurrency</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (Model.PaymentStatus is "PENDING" or "OVERDUE")
+    {
+        <section class="mt-4">
+            <h2 class="h5">入金確認</h2>
+            <form method="post" action="/billing/invoices/@Model.InvoiceNumber/payment" class="row g-2 align-items-end">
+                @Html.AntiForgeryToken()
+                <div class="col-md-4">
+                    <label for="paymentMethod" class="form-label">支払方法</label>
+                    <input id="paymentMethod" name="paymentMethod" class="form-control" placeholder="銀行振込" />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success">入金を確認</button>
+                </div>
+            </form>
+        </section>
+    }
+
+    <a href="/billing/invoices" class="btn btn-outline-secondary mt-3">精算書一覧へ戻る</a>
+}

@@ -561,4 +561,63 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         response.StatusCode.Should().Be(HttpStatusCode.Redirect);
         response.Headers.Location!.OriginalString.Should().Be("/tracking");
     }
+
+    /// <summary>予約を配送完了（Delivered）まで進めて予約番号を返す（US21 精算の前提）。</summary>
+    private async Task<string> CreateDeliveredBookingAsync(string voyageNumber)
+    {
+        var (bookingId, trackingNumber) = await CreateConfirmedTrackedBookingAsync(voyageNumber);
+        var handler = await LoginAsync("handler");
+
+        await RegisterHandlingAsync(handler, trackingNumber, "Receive", "JPTYO", "2026-10-01T09:00");
+        await RegisterHandlingAsync(handler, trackingNumber, "Load", "JPTYO", "2026-10-01T10:00", voyageNumber);
+        await RegisterHandlingAsync(handler, trackingNumber, "Unload", "DEHAM", "2026-10-20T08:00", voyageNumber);
+        await RegisterHandlingAsync(
+            handler, trackingNumber, "Claim", "DEHAM", "2026-10-20T14:00",
+            consigneeConfirmation: "署名: 荷受人 山田太郎");
+        return bookingId;
+    }
+
+    private static async Task<string> GenerateInvoiceAsync(HttpClient billing, string bookingId)
+    {
+        var token = Token(await billing.GetStringAsync("/billing/invoices"));
+        var response = await billing.PostAsync("/billing/invoices", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["bookingId"] = bookingId,
+            ["__RequestVerificationToken"] = token,
+        }));
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        return response.Headers.Location!.OriginalString;
+    }
+
+    [Fact]
+    public async Task 配送完了予約から精算書を発行し詳細を照会できる()
+    {
+        // US21/US22: 配送完了予約 → 料金算出 → 精算書発行 → 詳細照会（基本料金・支払状態）。
+        var bookingId = await CreateDeliveredBookingAsync("VYG-BILL-001");
+        var billing = await LoginAsync("billing");
+
+        var location = await GenerateInvoiceAsync(billing, bookingId);
+        location.Should().StartWith("/billing/invoices/INV-");
+
+        var detail = await billing.GetStringAsync(location);
+        detail.Should().Contain("精算書詳細").And.Contain("基本料金").And.Contain("支払待ち").And.Contain("精算明細");
+
+        // 一覧にも精算書が表示される。
+        var list = await billing.GetStringAsync("/billing/invoices");
+        list.Should().Contain(bookingId.Replace("BKG-", "INV-"));
+    }
+
+    [Fact]
+    public async Task 配送未完了の予約は精算書を発行できず警告される()
+    {
+        // US21 AC1（改善 #16）: Delivered 未満は発行不可。予約確定直後（未配送）で発行を試みる。
+        var (bookingId, _) = await CreateConfirmedTrackedBookingAsync("VYG-BILL-002");
+        var billing = await LoginAsync("billing");
+
+        var location = await GenerateInvoiceAsync(billing, bookingId);
+
+        location.Should().Be("/billing/invoices");
+        var list = await billing.GetStringAsync("/billing/invoices");
+        list.Should().Contain("配送完了（Delivered）の予約のみ");
+    }
 }
