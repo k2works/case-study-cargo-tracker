@@ -102,11 +102,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | 【Phase 1・Red】例外登録の業務シナリオ受け入れテスト（Web.Tests）：追跡番号→遅延登録→状態 Exception→荷主通知記録→対応報告を一気通貫でアサート | 3h | - | [ ] |
+| 1.1 | 【Phase 1・Red】例外登録の業務シナリオ受け入れテスト（Web.Tests）：追跡番号→遅延登録→状態 Exception→荷主通知記録→対応報告を一気通貫でアサート | 3h | - | [x]（`追跡管理者が遅延例外を登録し対応報告で解決できる`＝登録→例外発生→解決→復帰を貫通。荷主通知記録は 0.5 で接続予定） |
 | 1.2 | `tracking_exception_event` テーブル（追跡 ID・exception_type・occurred_at・escalation_flag・description・resolved_at・resolution_notes。0013・二方言）＋モデル定義 | 3h | - | [x]（0013 二方言追加。domain/UI 要求の location_unlocode を追加し data-model を是正。リポジトリ永続化は未） |
 | 1.3 | `TrackingExceptionEvent` エンティティ・`ExceptionType`（Delay/Damage/Lost/CustomsHold）・`TransportStatus.Exception` 遷移を TrackingActivity 集約に凝集＋ドメインユニットテスト | 4h | - | [x]（AddException/HasActiveException/ResolveException・CurrentStatus の Exception 導出と復帰・Lost の EscalationFlag。ドメイン +6 緑） |
 | 1.4 | `RegisterExceptionCommand` / CommandService（遅延登録・`TrackingExceptionEvent` 追加・`TransportStatus.Exception` 遷移・`TrackingExceptionDetectedEvent` 発行）＋ `ResolveExceptionCommand`（対応報告・resolvedAt 記録・例外発生前状態への復帰＝domain-model BR5）＋統合テスト | 5h | - | [x]（両 CommandService＋イベント発行＋DI 登録。CustomsHold 手動登録拒否。Infra 統合でイベント post-commit 発行・拒否を検証 +2 緑） |
-| 1.5 | 例外登録 UI（`/tracking/{trackingNumber}/exceptions/new`・種別選択・状況入力・PRG）＋対応報告（解決）フォーム＋E2E | 4h | - | [ ] |
+| 1.5 | 例外登録 UI（`/tracking/{trackingNumber}/exceptions/new`・種別選択・状況入力・PRG）＋対応報告（解決）フォーム＋E2E | 4h | - | [x]（NewException 画面・追跡詳細の [例外を登録] ボタン/EXCEPTION バッジ/例外履歴/対応報告フォーム。TrackingController 登録/解決アクション・QueryService 例外読取） |
 
 **小計**: 18h（理想時間）
 
@@ -114,10 +114,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 【Phase 1・Red】破損・紛失の受け入れテスト（Web.Tests）：破損登録・紛失登録→escalation_flag 設定→管理職エスカレーション通知記録をアサート | 2h | - | [ ] |
-| 2.2 | `Damage`/`Lost` の例外ドメインロジック（紛失は escalation_flag 必須・管理職通知トリガ）＋ユニットテスト（境界：Lost のみ escalation） | 4h | - | [ ] |
+| 2.1 | 【Phase 1・Red】破損・紛失の受け入れテスト（Web.Tests）：破損登録・紛失登録→escalation_flag 設定→管理職エスカレーション通知記録をアサート | 2h | - | [~]（`紛失例外を登録するとエスカレーションが表示される`＝紛失登録→escalation バッジ表示を検証。管理職通知記録アサートは 2.3 で接続予定） |
+| 2.2 | `Damage`/`Lost` の例外ドメインロジック（紛失は escalation_flag 必須・管理職通知トリガ）＋ユニットテスト（境界：Lost のみ escalation） | 4h | - | [x]（TrackingExceptionEvent で Lost のみ EscalationFlag。ドメインテスト `紛失例外はエスカレーションフラグが立つ`/`遅延や破損例外はエスカレーションしない`。イテレーション 2 で実装済み） |
 | 2.3 | エスカレーション通知（管理職向け）＋荷主通知の append-only 記録（0.5 の通知基盤で実装）＋統合テスト | 4h | - | [ ] |
-| 2.4 | 破損・紛失登録 UI（種別選択で紛失時のエスカレーション必須表示＝ui_design の警告文言）＋補償方針入力＋E2E | 3h | - | [ ] |
+| 2.4 | 破損・紛失登録 UI（種別選択で紛失時のエスカレーション必須表示＝ui_design の警告文言）＋補償方針入力＋E2E | 3h | - | [x]（NewException 画面に破損/紛失種別＋紛失エスカレーション警告（ui_design 文言）。対応方針は対応報告フォームで入力。US20 受け入れ緑） |
 
 **小計**: 13h（理想時間）
 
