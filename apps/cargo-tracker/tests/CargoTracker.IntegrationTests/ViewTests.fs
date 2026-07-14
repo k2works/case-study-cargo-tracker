@@ -40,3 +40,9 @@ let ``経路設計ロールは航路管理を表示し荷主管理は表示し�
     let html = render (Views.dashboard [ "ROLE_ROUTE_DESIGNER" ])
     html |> should haveSubstring "航路管理"
     html |> should not' (haveSubstring "荷主管理")
+
+[<Fact>]
+let ``準備中プレースホルダは案内メッセージを表示する`` () =
+    let html = render (Views.placeholder "貨物予約" [ "ROLE_SALES" ])
+    html |> should haveSubstring "貨物予約"
+    html |> should haveSubstring "準備中"

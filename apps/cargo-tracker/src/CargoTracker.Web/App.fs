@@ -89,6 +89,15 @@ let private dashboard: HttpHandler =
 let private mustHaveRole (role: string) : HttpHandler =
     mustBeLoggedIn >=> requiresRole role (setStatusCode 403 >=> text "権限がありません。")
 
+/// いずれかのロールを要求する（不足時は 403）。
+let private mustHaveAnyRole (roles: string list) : HttpHandler =
+    mustBeLoggedIn >=> requiresRoleOf roles (setStatusCode 403 >=> text "権限がありません。")
+
+/// 準備中プレースホルダ画面のハンドラ（ウォーキングスケルトンの骨格）。
+let private placeholder (title: string) (allowed: string list) : HttpHandler =
+    mustHaveAnyRole allowed
+    >=> fun next ctx -> htmlView (Views.placeholder title (rolesOf ctx)) next ctx
+
 // ---- US02/US03: 荷主管理（ROLE_SALES）----
 
 let private shipperList: HttpHandler =
@@ -264,7 +273,14 @@ let webApp: HttpHandler =
                     route "/shippers" >=> shipperList
                     route "/shippers/new" >=> shipperNew
                     route "/estimates" >=> estimateList
-                    route "/estimates/new" >=> estimateNew ]
+                    route "/estimates/new" >=> estimateNew
+                    // ウォーキングスケルトン: 後続 IT で実画面化するプレースホルダ（ADR-0005 ロール制御）
+                    route "/bookings" >=> placeholder "貨物予約" [ "ROLE_SALES"; "ROLE_SHIPPER" ]
+                    route "/tracking"
+                    >=> placeholder "貨物追跡" [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
+                    route "/handling" >=> placeholder "荷役管理" [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
+                    route "/voyages" >=> placeholder "航路管理" [ "ROLE_ROUTE_DESIGNER" ]
+                    route "/admin/discount-policies" >=> placeholder "割引ポリシー管理" [ "ROLE_ADMIN" ] ]
           POST
           >=> choose
                   [ route "/login" >=> loginPost

@@ -176,6 +176,24 @@ let ``法人荷主を割引率付きで登録できる`` () =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
+let ``荷役ロールは荷役管理プレースホルダにアクセスできる`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "handler01"
+        let res = authedGet client cookie "/handling"
+        res.StatusCode |> should equal HttpStatusCode.OK
+        let body = run (res.Content.ReadAsStringAsync())
+        body |> should haveSubstring "準備中")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``営業ロールは航路管理プレースホルダにアクセスできない（403）`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "sales01"
+        let res = authedGet client cookie "/voyages"
+        res.StatusCode |> should equal HttpStatusCode.Forbidden)
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
 let ``割引率が範囲外なら 400 とエラーメッセージを返す`` () =
     withServer (fun client ->
         let cookie = authCookie client "sales01"

@@ -76,6 +76,14 @@ module Views =
 
         layout "ホーム" roles [ h1 [ _class "mb-4" ] [ str "ダッシュボード" ]; div [ _class "row" ] cards ]
 
+    /// 準備中プレースホルダ画面（ウォーキングスケルトンの骨格・後続 IT で実画面化）。
+    let placeholder (pageTitle: string) (roles: string list) : XmlNode =
+        layout
+            pageTitle
+            roles
+            [ h1 [ _class "mb-4" ] [ str pageTitle ]
+              div [ _class "alert alert-info" ] [ str "この機能は今後のイテレーションで実装予定です（準備中）。" ] ]
+
     /// 荷主一覧の表示行。
     type ShipperRow =
         { Code: string
