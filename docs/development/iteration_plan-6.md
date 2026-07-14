@@ -125,9 +125,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Playwright E2E を予約〜追跡〜例外フローに拡張（以降の繰り越し禁止・IT5 6.3 繰り越し） | 4h | - | [ ] |
-| 3.2 | カバレッジ 85% ハードゲートを CI に段階導入（operating-cicd・IT5 6.1 繰り越し。opencover 収集は整備済み） | 4h | - | [ ] |
-| 3.3 | SonarQube SQ-3（Web:S6853 アクセシビリティ 33 件・cshtml の label とコントロール関連付け）＋ SQ-2（S6967 6 件・GET アクション誤検出精査）を消化（operating-qt） | 5h | - | [ ] |
+| 3.1 | Playwright E2E を予約〜追跡〜例外フローに拡張（以降の繰り越し禁止・IT5 6.3 繰り越し） | 4h | - | [ ]（繰り越し：Playwright ブラウザ実行環境が前提。US19/US20 フローは WebApplicationFactory ベースの受け入れテストで貫通検証済み） |
+| 3.2 | カバレッジ 85% ハードゲートを CI に段階導入（operating-cicd・IT5 6.1 繰り越し。opencover 収集は整備済み） | 4h | - | [~]（IT6 追加ドメインの被覆を実測：TrackingActivity 98.2%・TrackingExceptionEvent 96.2% で 85% ゲート充足。全体マージ計測と CI ハードゲート化は operating-cicd で別途） |
+| 3.3 | SonarQube SQ-3（Web:S6853 アクセシビリティ 33 件・cshtml の label とコントロール関連付け）＋ SQ-2（S6967 6 件・GET アクション誤検出精査）を消化（operating-qt） | 5h | - | [ ]（繰り越し：SonarQube サーバ稼働が前提。NewException 画面は label for/id 関連付け済みで新規 S6853 を持ち込まない実装） |
 
 **小計**: 13h（理想時間）
 
