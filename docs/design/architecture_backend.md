@@ -327,7 +327,7 @@ hexagon "Application Core" as core {
   }
   rectangle "Port（関数レコード）" {
     interface "CargoRepository\n(出力ポート)" as repo_port
-    interface "ExternalRoutingPort\n(出力ポート)" as routing_port
+    interface "ExternalRoutingServicePort\n(出力ポート)" as routing_port
   }
 }
 
@@ -362,7 +362,7 @@ type CargoRepository =
     { FindByBookingId: BookingId -> Async<Result<Cargo option, DataError>>
       Save: Cargo -> IDbTransaction -> Async<Result<unit, DataError>> }
 
-type ExternalRoutingPort =
+type ExternalRoutingServicePort =
     { FetchCandidateRoutes: RouteSpecification -> Async<Result<CargoItinerary list, RoutingError>> }
 ```
 
@@ -415,7 +415,7 @@ CargoTracker.Booking/
 │   ├── Events.fs                イベント DU（CargoBooked, CargoRouted）
 │   └── Aggregates.fs            集約ルート（Cargo, BookingId）と状態遷移関数
 ├── Application/
-│   ├── Ports.fs                 出力ポート（CargoRepository, ExternalRoutingPort。関数レコード）
+│   ├── Ports.fs                 出力ポート（CargoRepository, ExternalRoutingServicePort。関数レコード）
 │   ├── Workflows.fs             コマンドワークフロー（bookCargo, routeCargo）
 │   ├── Queries.fs               クエリ関数（findBooking, listBookings）
 │   └── Acl.fs                   ACL（externalCargoRouting）

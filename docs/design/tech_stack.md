@@ -78,7 +78,7 @@ F# 選定の中核的な動機は、**判別共用体・レコードによる不
 | Testcontainers for .NET | 3.x | 統合テスト用コンテナ | 実 PostgreSQL を使用した統合テスト、`PostgreSqlContainer` モジュールによる簡潔なセットアップ | MIT | GA（アクティブ開発中） |
 | WebApplicationFactory | 10.0 | HttpHandler / エンドポイントテスト | ASP.NET Core + Giraffe エンドポイントのインメモリテスト、Giraffe.ViewEngine のレンダリング検証 | MIT | GA（.NET 10 に同梱） |
 | ArchUnitNET | 0.11.x | アーキテクチャテスト | ヘキサゴナルアーキテクチャの依存関係ルール自動検証。F# のファイル順コンパイルによる制約と併せて二重の防御を構成する | Apache 2.0 | GA（アクティブ開発中） |
-| WireMock.Net | 1.6.x | 外部 API スタブ | ExternalRoutingPort・CustomsClearancePort 等の外部システムスタブ | Apache 2.0 | GA（アクティブ開発中） |
+| WireMock.Net | 1.6.x | 外部 API スタブ | ExternalRoutingServicePort・CustomsClearancePort 等の外部システムスタブ | Apache 2.0 | GA（アクティブ開発中） |
 | Microsoft.Playwright | 1.4x | E2E テスト・ブラウザ自動テスト | htmx の動的更新・ポーリングを含む画面の E2E テストに適しているため（.NET 版バインディング） | Apache 2.0 | GA（アクティブ開発中） |
 | coverlet + ReportGenerator | 6.x / 5.x | カバレッジ計測・レポート | `dotnet test` 統合によるカバレッジ収集（Cobertura 形式）、HTML レポート生成、SonarQube 連携 | MIT / Apache 2.0 | GA（アクティブ開発中） |
 
@@ -143,7 +143,7 @@ ACL ポートはすべて F# の関数レコードとして定義し、実装は
 
 | 外部システム | 連携方式 | 使用技術 | ACL ポート名 |
 | :--- | :--- | :--- | :--- |
-| 外部経路システム | REST API（HTTP/JSON） | IHttpClientFactory + HttpClient / WireMock.Net（テスト） | `ExternalRoutingPort` |
+| 外部経路システム | REST API（HTTP/JSON） | IHttpClientFactory + HttpClient / WireMock.Net（テスト） | `ExternalRoutingServicePort` |
 | 税関システム | REST API（HTTP/JSON） | IHttpClientFactory + HttpClient / WireMock.Net（テスト） | `CustomsClearancePort` |
 | 決済機関 | REST API（HTTPS）| IHttpClientFactory + HttpClient / WireMock.Net（テスト） | `PaymentGatewayPort` |
 | 港湾管理システム | REST API（HTTP/JSON） | IHttpClientFactory + HttpClient / WireMock.Net（テスト） | `PortManagementPort` |
