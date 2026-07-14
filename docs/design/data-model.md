@@ -541,23 +541,33 @@ handling_activity ||--o| customs_declaration : "税関申告を持つ"
 @startuml
 title 論理データモデル - Billing Context
 
-entity "invoice\n（精算書）" as invoice {
+entity "invoice\n（精算書・migration 0016）" as invoice {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * invoice_number : VARCHAR(30) <<UK, NOT NULL>>
   * booking_id : VARCHAR(20) <<UK, NOT NULL>>
-  * total_amount_value : INTEGER <<NOT NULL>>
-  * total_amount_currency : VARCHAR(3) <<NOT NULL>>
-  * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
-  * tax_amount : NUMERIC(15,2) <<NOT NULL, DEFAULT 0>>
-  * payment_status : VARCHAR(30) <<NOT NULL>>
-  issued_at : TIMESTAMP
-  due_date : DATE
-  discount_amount_value : INTEGER
-  discount_amount_currency : VARCHAR(3)
+  * shipper_id : VARCHAR(30) <<NOT NULL>>
+  * shipper_type : VARCHAR(20) <<NOT NULL>>
+  * base_amount_value : BIGINT <<NOT NULL>>
+  * base_amount_currency : VARCHAR(3) <<NOT NULL>>
+  * discount_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0>>
+  * final_amount_value : BIGINT <<NOT NULL>>
+  * final_amount_currency : VARCHAR(3) <<NOT NULL>>
+  * payment_status : VARCHAR(30) <<NOT NULL, DEFAULT 'PENDING'>>
+  * issued_at : TIMESTAMP <<NOT NULL>>
+  * due_date : DATE <<NOT NULL>>
+  paid_at : TIMESTAMP
+  * version : BIGINT <<NOT NULL, DEFAULT 0>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
+
+note bottom of invoice
+  IT7 実装で domain-model（Money 値オブジェクト＝base/final の value+currency・
+  DiscountRate）に整合させ、当初案の total_amount/tax_rate/tax_amount/discount_amount を
+  base_amount/discount_rate/final_amount へ再構成した（税計算は本リリース対象外）。
+  shipper_id/shipper_type は割引適用の荷主種別判定（BillingShipperId）用。
+end note
 
 entity "invoice_line_item\n（精算明細）" as invoice_line_item {
   * id : BIGINT <<PK, BIGSERIAL>>

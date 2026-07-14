@@ -1220,9 +1220,10 @@ state "荷主フロー" as shipper_flow {
 
 #### 仕様
 
-- **金額内訳**: 基本運賃・サーチャージ・割引・消費税を明細表示
-- **[支払い確認を登録]**: `POST /billing/invoices/{invoiceId}/confirm` を送信。PRG パターンで同画面へリダイレクト
-- **確認済み**: PaymentStatus が `CONFIRMED` の場合は支払いフォームを非表示にし、確認日時を表示
+- **金額内訳**: 基本料金・割引率・割引後金額を精算明細（invoice_line_item）で表示（IT7 実装。サーチャージ・消費税は本リリース対象外）
+- **[入金を確認]**: `POST /billing/invoices/{invoiceNumber}/payment` を送信（IT7 実装）。PRG パターンで同画面へリダイレクトし、決済機関スタブで入金確認 → 精算済（Confirmed）・予約 Settled へ同期
+- **確認済み**: PaymentStatus が `CONFIRMED`（精算済）の場合は入金確認フォームを非表示にする
+- **識別子**: 精算書は `invoice_number`（`INV-<予約番号>`）で識別する（`{invoiceId}` は invoice_number）
 - **PDF 出力**: `GET /billing/invoices/{invoiceId}/pdf` で請求書 PDF をダウンロード（将来実装）
 
 ---

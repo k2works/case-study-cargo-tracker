@@ -990,8 +990,10 @@ DiscountPolicy *-- DiscountPolicyType
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
-| GenerateInvoiceCommand | 経理担当者 | 請求書を新規発行（Pending 状態で作成） |
-| ConfirmPaymentCommand | 経理担当者 | 支払い確認を記録し Confirmed に遷移 |
+| GenerateInvoiceCommand | 経理担当者 | 精算書を新規発行（Delivered 予約に限定・基本料金算出＋割引適用・Pending 状態で作成） |
+| ConfirmPaymentCommand | 経理担当者 | 決済機関（IPaymentGatewayPort）で入金確認し Confirmed に遷移・PaymentConfirmedEvent を発行 |
+
+> **IT7 実装補足**: (1) 基本料金の算出は `FreightCalculator` ドメインサービス（重量×単価×貨物種別割増のスタブ・将来アダプター差し替え）で行う。(2) 精算開始はコンテキストマップの `InvoiceRequested`（Booking→Billing・Delivered 後の自動起票）ではなく、経理担当者による `GenerateInvoiceCommand` の手動発行として実装した（Delivered 制限で担保）。(3) 入金確認は `PaymentConfirmedEvent`（Billing→Booking・post-commit）を発行し、Booking 側が `Cargo.MarkSettled` で予約を Settled へ同期する（ADR-0009 準拠）。荷主割引率は `BillingSnapshotProvider` ACL（cargo+shipper の SQL 直接参照）で取得する。
 
 ## 7. Estimation Context（見積コンテキスト）
 
