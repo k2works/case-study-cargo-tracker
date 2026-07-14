@@ -516,9 +516,10 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         await RegisterExceptionAsync(
             tracker, trackingNumber, "Delay", "USLAX", "2026-10-08T14:00", "荒天による寄港遅延");
 
-        // 例外登録後は例外発生状態・例外履歴が表示される。
+        // 例外登録後は例外発生状態・例外履歴・荷主通知記録が表示される（AC3・post-commit で通知記録）。
         var afterRegister = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
-        afterRegister.Should().Contain("例外発生").And.Contain("DELAY").And.Contain("対応中");
+        afterRegister.Should().Contain("例外発生").And.Contain("DELAY").And.Contain("対応中")
+            .And.Contain("通知記録").And.Contain("荷主");
 
         // 対応報告（解決）で例外発生前の状態へ復帰する。
         var token = Token(afterRegister);
@@ -545,6 +546,7 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
             tracker, trackingNumber, "Lost", "USLAX", "2026-10-08T14:00", "紛失の疑い");
 
         var detail = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
-        detail.Should().Contain("LOST").And.Contain("エスカレーション").And.Contain("例外発生");
+        detail.Should().Contain("LOST").And.Contain("エスカレーション").And.Contain("例外発生")
+            .And.Contain("管理職"); // 紛失は管理職エスカレーション通知も記録される。
     }
 }

@@ -36,9 +36,19 @@ public sealed class TrackingDetailView
     public DateTime? EstimatedArrival { get; set; }
     public IReadOnlyList<TrackingEventView> Events { get; set; } = [];
     public IReadOnlyList<TrackingExceptionView> Exceptions { get; set; } = [];
+    public IReadOnlyList<TrackingNotificationView> Notifications { get; set; } = [];
 
     /// <summary>未解決の例外があるか（EXCEPTION バッジ表示用）。</summary>
     public bool HasActiveException => Exceptions.Any(e => e.IsActive);
+}
+
+/// <summary>例外通知記録 1 件（読取・US19/US20）。</summary>
+public sealed class TrackingNotificationView
+{
+    public string RecipientType { get; set; } = string.Empty;
+    public string ExceptionType { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public DateTime NotifiedAt { get; set; }
 }
 
 /// <summary>追跡照会の読取サービス（US18）。追跡番号から状態・現在地・イベント履歴・推定到着日を取得する。</summary>
@@ -75,6 +85,16 @@ public sealed class TrackingQueryService(IDbConnectionFactory connectionFactory)
                    description AS Description, resolved_at AS ResolvedAt, resolution_notes AS ResolutionNotes
             FROM tracking_exception_event
             WHERE tracking_id = (SELECT id FROM tracking_activity WHERE tracking_number = @TrackingNumber)
+            ORDER BY id
+            """,
+            new { TrackingNumber = normalized }, cancellationToken: ct))).ToList();
+
+        header.Notifications = (await connection.QueryAsync<TrackingNotificationView>(new CommandDefinition(
+            """
+            SELECT recipient_type AS RecipientType, exception_type AS ExceptionType,
+                   message AS Message, notified_at AS NotifiedAt
+            FROM exception_notification
+            WHERE tracking_number = @TrackingNumber
             ORDER BY id
             """,
             new { TrackingNumber = normalized }, cancellationToken: ct))).ToList();

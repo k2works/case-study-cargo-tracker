@@ -182,4 +182,45 @@ public sealed class TrackingActivityRepositoryIntegrationTest : IAsyncLifetime
 
         await act.Should().ThrowAsync<ArgumentException>();
     }
+
+    [Fact]
+    public async Task 紛失例外の検知で荷主と管理職の通知が記録される()
+    {
+        var notificationRepository = new CargoTracker.Tracking.Infrastructure.Repositories.ExceptionNotificationRepository(
+            _connectionFactory, _ambient);
+        var handler = new CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionDetectedHandler(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            notificationRepository,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<
+                CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionDetectedHandler>.Instance);
+
+        await handler.Handle(new TrackingExceptionDetectedEvent(
+            "BKG-NOTIF-01", "TRK-NOTIF-01", "LOST", "USLAX", true,
+            new DateTimeOffset(2026, 10, 8, 14, 0, 0, TimeSpan.Zero)), CancellationToken.None);
+
+        var notifications = await notificationRepository.FindByTrackingNumberAsync("TRK-NOTIF-01");
+        notifications.Should().HaveCount(2);
+        notifications.Should().Contain(n => n.Recipient == NotificationRecipient.Shipper);
+        notifications.Should().Contain(n => n.Recipient == NotificationRecipient.Management);
+    }
+
+    [Fact]
+    public async Task 遅延例外の検知では荷主通知のみ記録される()
+    {
+        var notificationRepository = new CargoTracker.Tracking.Infrastructure.Repositories.ExceptionNotificationRepository(
+            _connectionFactory, _ambient);
+        var handler = new CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionDetectedHandler(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            notificationRepository,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<
+                CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionDetectedHandler>.Instance);
+
+        await handler.Handle(new TrackingExceptionDetectedEvent(
+            "BKG-NOTIF-02", "TRK-NOTIF-02", "DELAY", "USLAX", false,
+            new DateTimeOffset(2026, 10, 8, 14, 0, 0, TimeSpan.Zero)), CancellationToken.None);
+
+        var notifications = await notificationRepository.FindByTrackingNumberAsync("TRK-NOTIF-02");
+        notifications.Should().ContainSingle()
+            .Which.Recipient.Should().Be(NotificationRecipient.Shipper);
+    }
 }

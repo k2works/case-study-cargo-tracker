@@ -102,6 +102,8 @@ builder.Services.AddScoped<CargoTracker.Routing.Application.Internal.OutboundSer
 // Tracking コンテキスト（US14）。
 builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.ITrackingActivityRepository,
     CargoTracker.Tracking.Infrastructure.Repositories.TrackingActivityRepository>();
+builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.IExceptionNotificationRepository,
+    CargoTracker.Tracking.Infrastructure.Repositories.ExceptionNotificationRepository>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.QueryServices.TrackingQueryService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AddTrackingEventCommandService>();
