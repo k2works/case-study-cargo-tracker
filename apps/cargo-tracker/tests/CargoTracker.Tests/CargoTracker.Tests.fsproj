@@ -10,6 +10,7 @@
     <Compile Include="ShipperDomainTests.fs" />
     <Compile Include="EstimationDomainTests.fs" />
     <Compile Include="ShipperRegistrationTests.fs" />
+    <Compile Include="EstimateCreationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
