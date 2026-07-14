@@ -37,3 +37,9 @@ tmp/
 bin/
 obj/
 *.user
+
+# 開発用 SQLite DB・カバレッジ成果物
+cargo_tracker.db
+*.db-shm
+*.db-wal
+coverage-out/
