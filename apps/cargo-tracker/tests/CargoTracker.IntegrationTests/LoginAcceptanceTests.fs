@@ -49,7 +49,11 @@ let private seedDatabase (connStr: string) =
             INSERT INTO users (username, email, password, enabled, created_at)
             VALUES ('sales01', 'sales01@example.com', '%s', 1, '2026-07-14');
             INSERT INTO user_roles (user_id, role) VALUES (1, 'ROLE_SALES');
+            INSERT INTO users (username, email, password, enabled, created_at)
+            VALUES ('admin', 'admin@example.com', '%s', 1, '2026-07-14');
+            INSERT INTO user_roles (user_id, role) VALUES (2, 'ROLE_ADMIN');
             """
+            hash
             hash
 
     cmd.ExecuteNonQuery() |> ignore
@@ -166,3 +170,21 @@ let ``GET /logout は 404（ログアウトは POST のみ）`` () =
     withServer (fun client ->
         let res = run (client.GetAsync "/logout")
         res.StatusCode |> should equal HttpStatusCode.NotFound)
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``sales 以外のシードユーザー（admin）でもログインできる`` () =
+    withServer (fun client ->
+        let loginRes = run (client.PostAsync("/login", loginForm "admin" "pw"))
+        loginRes.StatusCode |> should equal HttpStatusCode.Found
+
+        let cookieValue =
+            (loginRes.Headers.GetValues "Set-Cookie" |> Seq.head).Split(';').[0]
+
+        use req = new HttpRequestMessage(HttpMethod.Get, "/")
+        req.Headers.Add("Cookie", cookieValue)
+        let res = run (client.SendAsync req)
+        res.StatusCode |> should equal HttpStatusCode.OK
+        // 管理者ロールの導線が表示される
+        let body = run (res.Content.ReadAsStringAsync())
+        body |> should haveSubstring "管理設定")

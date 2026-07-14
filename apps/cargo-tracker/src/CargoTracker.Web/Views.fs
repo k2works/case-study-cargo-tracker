@@ -289,7 +289,23 @@ module Views =
 
     /// ログイン画面。エラー時はメッセージを表示し、入力値を保持する。
     /// 初期表示ではシードの既定ユーザー ID・パスワードを事前入力する。
-    let login (username: string) (password: string) (error: string option) : XmlNode =
+    /// selectableUsers が非空なら、ユーザー ID をセレクトボックスで選択できる（開発用シードユーザー）。
+    let login (username: string) (password: string) (selectableUsers: string list) (error: string option) : XmlNode =
+        let usernameField =
+            if List.isEmpty selectableUsers then
+                input [ _class "form-control"; _id "username"; _name "username"; _value username ]
+            else
+                select
+                    [ _class "form-select"; _id "username"; _name "username" ]
+                    (selectableUsers
+                     |> List.map (fun u ->
+                         option
+                             (if u = username then
+                                  [ _value u; _selected ]
+                              else
+                                  [ _value u ])
+                             [ str u ]))
+
         layout
             "ログイン"
             []
@@ -306,7 +322,7 @@ module Views =
                               [ div
                                     [ _class "mb-3" ]
                                     [ label [ _class "form-label"; _for "username" ] [ str "ユーザー ID" ]
-                                      input [ _class "form-control"; _id "username"; _name "username"; _value username ] ]
+                                      usernameField ]
                                 div
                                     [ _class "mb-3" ]
                                     [ label [ _class "form-label"; _for "password" ] [ str "パスワード" ]

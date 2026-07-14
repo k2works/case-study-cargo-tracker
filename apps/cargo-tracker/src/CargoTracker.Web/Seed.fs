@@ -25,6 +25,9 @@ module Seed =
           "billing", "ROLE_BILLING"
           "admin", "ROLE_ADMIN" ]
 
+    /// ログイン画面のユーザー選択に使う既定ユーザー名一覧。
+    let defaultUsernames = defaultUsers |> List.map fst
+
     /// users が空なら既定ユーザーを投入する。now は監査タイムスタンプ（ISO 8601）。
     let ensureDefaultUsers (conn: IDbConnection) (now: string) : unit =
         let count =
