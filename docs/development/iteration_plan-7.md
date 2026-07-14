@@ -115,7 +115,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | 【Phase 1・Red】料金算出の業務シナリオ受け入れテスト（Web.Tests）：Delivered 予約→料金算出→基本料金確定を一気通貫でアサート。Delivered 未満は算出不可（#16） | 3h | - | [ ] |
-| 1.2 | invoice/invoice_line_item/payment テーブル（0016・二方言）＋モデル定義 | 3h | - | [ ] |
+| 1.2 | invoice/invoice_line_item/payment テーブル（0016・二方言）＋モデル定義 | 3h | - | [x]（0016 二方言＋InvoiceRepository（ヘッダ upsert・明細 delete→再挿入・Money 保持・due_date は DateOnly）。往復保存を PostgreSQL 統合で検証 +2 緑） |
 | 1.3 | `Invoice` 集約・`Money`（最小通貨単位・Add/Multiply 銀行家丸め）・基本料金算出（重量/貨物種別スタブ）＋ドメインユニットテスト（金額境界） | 5h | - | [x]（Money/DiscountRate/PaymentStatus/Invoice 集約＋ドメイン +15。基本料金算出スタブは 1.4 の CommandService で接続） |
 | 1.4 | `GenerateInvoiceCommand` / CommandService（Delivered 制限・`InvoiceRequested` 消費または Booking 起点）＋統合テスト | 4h | - | [ ] |
 | 1.5 | 請求書一覧・詳細 UI（`/billing/invoices`・`/billing/invoices/{id}`・ROLE_BILLING）＋料金確定＋E2E | 4h | - | [ ] |
