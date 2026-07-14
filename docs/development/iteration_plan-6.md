@@ -103,8 +103,8 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | 【Phase 1・Red】例外登録の業務シナリオ受け入れテスト（Web.Tests）：追跡番号→遅延登録→状態 Exception→荷主通知記録→対応報告を一気通貫でアサート | 3h | - | [ ] |
-| 1.2 | `tracking_exception_event` テーブル（追跡 ID・exception_type・occurred_at・escalation_flag・description・resolved_at・resolution_notes。0013・二方言）＋モデル定義 | 3h | - | [ ] |
-| 1.3 | `TrackingExceptionEvent` エンティティ・`ExceptionType`（Delay/Damage/Lost/CustomsHold）・`TransportStatus.Exception` 遷移を TrackingActivity 集約に凝集＋ドメインユニットテスト | 4h | - | [ ] |
+| 1.2 | `tracking_exception_event` テーブル（追跡 ID・exception_type・occurred_at・escalation_flag・description・resolved_at・resolution_notes。0013・二方言）＋モデル定義 | 3h | - | [x]（0013 二方言追加。domain/UI 要求の location_unlocode を追加し data-model を是正。リポジトリ永続化は未） |
+| 1.3 | `TrackingExceptionEvent` エンティティ・`ExceptionType`（Delay/Damage/Lost/CustomsHold）・`TransportStatus.Exception` 遷移を TrackingActivity 集約に凝集＋ドメインユニットテスト | 4h | - | [x]（AddException/HasActiveException/ResolveException・CurrentStatus の Exception 導出と復帰・Lost の EscalationFlag。ドメイン +6 緑） |
 | 1.4 | `RegisterExceptionCommand` / CommandService（遅延登録・`TrackingExceptionEvent` 追加・`TransportStatus.Exception` 遷移・`TrackingExceptionDetectedEvent` 発行）＋ `ResolveExceptionCommand`（対応報告・resolvedAt 記録・例外発生前状態への復帰＝domain-model BR5）＋統合テスト | 5h | - | [ ] |
 | 1.5 | 例外登録 UI（`/tracking/{trackingNumber}/exceptions/new`・種別選択・状況入力・PRG）＋対応報告（解決）フォーム＋E2E | 4h | - | [ ] |
 
