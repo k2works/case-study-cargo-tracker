@@ -240,7 +240,7 @@ public sealed class VoyageRepository(IDbConnectionFactory connectionFactory, Amb
     }
 
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
-        => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);
+        => DatabaseTimestamp.ToDatabase(value);
 
     private static HashSet<SupportedCargoType> DeserializeCargoTypes(string value)
         => value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

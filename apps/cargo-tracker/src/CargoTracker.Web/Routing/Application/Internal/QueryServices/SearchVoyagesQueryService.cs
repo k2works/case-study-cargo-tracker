@@ -125,6 +125,8 @@ public sealed class SearchVoyagesQueryService(IDbConnectionFactory connectionFac
         => csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Any(value => string.Equals(value, cargoType.ToString(), StringComparison.OrdinalIgnoreCase));
 
+    // 本クラスは Application 層のため Shared.Infrastructure に依存できない（ArchUnit ルール 3）。
+    // 変換ロジックはインライン保持する（Infrastructure 層の共通ヘルパ DatabaseTimestamp と同一規約）。
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
         => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);
 

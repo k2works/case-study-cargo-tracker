@@ -60,7 +60,7 @@ public sealed class RouteNotificationRepository(IDbConnectionFactory connectionF
     }
 
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
-        => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);
+        => DatabaseTimestamp.ToDatabase(value);
 
     private sealed class Row
     {

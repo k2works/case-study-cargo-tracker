@@ -244,30 +244,18 @@ public sealed class CargoRepository(IDbConnectionFactory connectionFactory, Ambi
 
     /// <summary>DateTimeOffset を DB の TIMESTAMP 列へ書き込む形式（UTC・Kind 未指定）に変換する。</summary>
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
-        => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);
+        => DatabaseTimestamp.ToDatabase(value);
 
     /// <summary>
     /// BookingStatus を DB 表現（SCREAMING_SNAKE_CASE）に変換する。
     /// 例: RouteProposed → ROUTE_PROPOSED。ビュー・BookingStatusLabel の比較値と一致させる。
     /// </summary>
     private static string ToDbStatus(BookingStatus status)
-    {
-        var name = status.ToString();
-        var builder = new System.Text.StringBuilder(name.Length + 4);
-        for (var i = 0; i < name.Length; i++)
-        {
-            if (i > 0 && char.IsUpper(name[i]))
-            {
-                builder.Append('_');
-            }
-            builder.Append(char.ToUpperInvariant(name[i]));
-        }
-        return builder.ToString();
-    }
+        => EnumDbCodec.ToScreamingSnake(status);
 
     /// <summary>DB 表現（SCREAMING_SNAKE_CASE またはアンダースコアなし）から BookingStatus を復元する。</summary>
     private static BookingStatus FromDbStatus(string value)
-        => Enum.Parse<BookingStatus>(value.Replace("_", string.Empty), ignoreCase: true);
+        => EnumDbCodec.FromScreamingSnake<BookingStatus>(value);
 
     private sealed class LegRow
     {

@@ -178,22 +178,10 @@ public sealed class TrackingActivityRepository(IDbConnectionFactory connectionFa
     }
 
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
-        => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);
+        => DatabaseTimestamp.ToDatabase(value);
 
     private static string ToDbStatus(TrackingStatus status)
-    {
-        var name = status.ToString();
-        var builder = new System.Text.StringBuilder(name.Length + 4);
-        for (var i = 0; i < name.Length; i++)
-        {
-            if (i > 0 && char.IsUpper(name[i]))
-            {
-                builder.Append('_');
-            }
-            builder.Append(char.ToUpperInvariant(name[i]));
-        }
-        return builder.ToString();
-    }
+        => EnumDbCodec.ToScreamingSnake(status);
 
     private sealed class HeaderRow
     {
@@ -232,19 +220,11 @@ public sealed class TrackingActivityRepository(IDbConnectionFactory connectionFa
         // コンストラクタが種別から再導出する。DB カラムはクエリ/レポート・監査用途（TrackingExceptionView が読む）。
         // 導出を単一の真実とするため、ここでは EscalationFlag 列を復元に用いない。
         public TrackingExceptionEvent ToEvent() => new(
-            Enum.Parse<ExceptionType>(ToPascalCase(ExceptionType), ignoreCase: true),
+            EnumDbCodec.FromScreamingSnake<ExceptionType>(ExceptionType),
             new TrackingLocation(LocationUnlocode),
             new DateTimeOffset(DateTime.SpecifyKind(OccurredAt, DateTimeKind.Utc)),
             Description,
             ResolvedAt is { } r ? new DateTimeOffset(DateTime.SpecifyKind(r, DateTimeKind.Utc)) : null,
             ResolutionNotes);
-
-        private static string ToPascalCase(string dbValue)
-        {
-            // DB は SCREAMING_SNAKE（CUSTOMS_HOLD）。enum 名（CustomsHold）へ復元する。
-            var parts = dbValue.Split('_', StringSplitOptions.RemoveEmptyEntries);
-            return string.Concat(parts.Select(p =>
-                char.ToUpperInvariant(p[0]) + p[1..].ToLowerInvariant()));
-        }
     }
 }

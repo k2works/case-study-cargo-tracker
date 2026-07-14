@@ -119,7 +119,7 @@ public sealed class SelectedRouteRepository(IDbConnectionFactory connectionFacto
     }
 
     private static DateTime ToDatabaseTimestamp(DateTimeOffset value)
-        => DateTime.SpecifyKind(value.UtcDateTime, DateTimeKind.Unspecified);
+        => DatabaseTimestamp.ToDatabase(value);
 
     private sealed class HeaderRow
     {
