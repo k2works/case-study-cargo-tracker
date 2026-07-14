@@ -100,10 +100,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | 【Day 1・着手前】設計反映：(a) Billing Context の Invoice 集約（Money・DiscountRate・PaymentStatus・ApplyDiscount/ConfirmPayment）・`InvoiceRequested` イベントを domain-model に確定、(b) invoice/invoice_line_item/payment テーブル（0015 以降・二方言）を data-model と突合、(c) 請求書一覧/詳細（`/billing/invoices`・`/billing/invoices/{id}`）を ui_design 画面一覧と整合。局面継続チェック（アウトサイドイン・ArchUnit グリーン・UoW 基盤動作）。用語統一（Invoice=「精算書」＝改善 #17） | 4h | - | [ ] |
+| 0.1 | 【Day 1・着手前】設計反映：(a) Billing Context の Invoice 集約（Money・DiscountRate・PaymentStatus・ApplyDiscount/ConfirmPayment）・`InvoiceRequested` イベントを domain-model に確定、(b) invoice/invoice_line_item/payment テーブル（0016 以降・二方言。0015 は例外通知冪等キーで使用済み）を data-model と突合、(c) 請求書一覧/詳細（`/billing/invoices`・`/billing/invoices/{id}`）を ui_design 画面一覧と整合。局面継続チェック（アウトサイドイン・ArchUnit グリーン・UoW 基盤動作）。用語統一（Invoice=「精算書」＝改善 #17） | 4h | - | [ ] |
 | 0.2 | IT6 レビュー H2 / IT5 Try T1：変換ヘルパを Shared に集約。`Shared.Infrastructure.Persistence` に `DatabaseTimestamp`（ToDatabaseTimestamp）と `EnumDbCodec.ToScreamingSnake/FromScreamingSnake` を新設し、Booking/Routing/Tracking の既存 8 箇所を一括で巻き取る（部分適用禁止）。Billing の新規リポジトリは最初から共通版を使用。全テスト緑で担保 | 5h | - | [x]（DatabaseTimestamp/EnumDbCodec 新設・往復 9 テスト。Infrastructure 層 6 リポジトリ＋Cargo/Tracking の enum 変換を共通版へ。SearchVoyagesQueryService は Application 層のため ArchUnit ルール 3 遵守でインライン保持。全 264 テスト緑） |
-| 0.3 | IT6 レビュー H1：対応報告（ResolveException）時の荷主通知を append-only 記録（US19 AC4/US20 AC5 の完全充足）＋テスト | 2h | - | [ ] |
-| 0.4 | IT6 レビュー M1：例外通知ハンドラの冪等性統合テスト（同一イベント 2 回処理で二重記録されない）を追加、または exception_notification に冪等キー/一意制約を導入。ADR-0009 コンプライアンス達成 | 3h | - | [ ] |
+| 0.3 | IT6 レビュー H1：対応報告（ResolveException）時の荷主通知を append-only 記録（US19 AC4/US20 AC5 の完全充足）＋テスト | 2h | - | [x]（TrackingExceptionResolvedEvent＋NotifyOnTrackingExceptionResolvedHandler＋ExceptionNotification.ForResolution。統合テストで対応報告通知記録を検証） |
+| 0.4 | IT6 レビュー M1：例外通知ハンドラの冪等性統合テスト（同一イベント 2 回処理で二重記録されない）を追加、または exception_notification に冪等キー/一意制約を導入。ADR-0009 コンプライアンス達成 | 3h | - | [x]（自然キー一意インデックス 0015・二方言＋SaveAsync 存在チェックで冪等化。2 回処理で二重記録なしを統合テストで検証） |
 | 0.5 | ArchUnit：Billing BC の依存ルール（他 BC の `.Domain.Model` 非依存・Shipper 割引率は ACL 経由）を追加（ルール 7） | 2h | - | [ ] |
 
 **小計**: 16h（理想時間）
@@ -115,7 +115,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | 【Phase 1・Red】料金算出の業務シナリオ受け入れテスト（Web.Tests）：Delivered 予約→料金算出→基本料金確定を一気通貫でアサート。Delivered 未満は算出不可（#16） | 3h | - | [ ] |
-| 1.2 | invoice/invoice_line_item/payment テーブル（0015・二方言）＋モデル定義 | 3h | - | [ ] |
+| 1.2 | invoice/invoice_line_item/payment テーブル（0016・二方言）＋モデル定義 | 3h | - | [ ] |
 | 1.3 | `Invoice` 集約・`Money`（最小通貨単位・Add/Multiply 銀行家丸め）・基本料金算出（重量/貨物種別スタブ）＋ドメインユニットテスト（金額境界） | 5h | - | [ ] |
 | 1.4 | `GenerateInvoiceCommand` / CommandService（Delivered 制限・`InvoiceRequested` 消費または Booking 起点）＋統合テスト | 4h | - | [ ] |
 | 1.5 | 請求書一覧・詳細 UI（`/billing/invoices`・`/billing/invoices/{id}`・ROLE_BILLING）＋料金確定＋E2E | 4h | - | [ ] |
@@ -256,7 +256,7 @@ InvoiceRequested ..> Invoice : 精算起動（post-commit・ADR-0009）
 
 ### データモデル
 
-[data-model.md - Billing Context](../design/data-model.md) を SoT とする。既定テーブル `invoice`（精算書・total_amount/tax/discount_amount・payment_status・due_date）・`invoice_line_item`（精算明細・割引根拠）・`payment`（支払記録）を使用。マイグレーション番号は 0015 以降を Day1 0.1 で確定する（IT6 の 0014 に続く）。domain-model（baseAmount/finalAmount）と data-model（total_amount/discount_amount）の呼称差を Day1 0.1 で突合し整合させる。
+[data-model.md - Billing Context](../design/data-model.md) を SoT とする。既定テーブル `invoice`（精算書・total_amount/tax/discount_amount・payment_status・due_date）・`invoice_line_item`（精算明細・割引根拠）・`payment`（支払記録）を使用。マイグレーション番号は 0016 以降を Day1 0.1 で確定する（0015 は例外通知の冪等キーで使用済み）。domain-model（baseAmount/finalAmount）と data-model（total_amount/discount_amount）の呼称差を Day1 0.1 で突合し整合させる。
 
 ### ユーザーインターフェース
 
