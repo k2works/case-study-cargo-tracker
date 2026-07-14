@@ -739,6 +739,8 @@ TrackingExceptionEvent *-- TrackingLocation
 3. ExceptionType が Lost の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
 4. CustomsHold 例外は税関システム（ICustomsClearancePort）からの通知によって自動登録される
 5. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する
+6. 同時に未解決（未解決 = resolvedAt 未設定）の例外は 1 件までとする（不変条件）。追加の例外を登録する前に既存の未解決例外を解決する必要がある。UI の単一対応報告フォームと整合し、二重登録・通知重複を防ぐ（IT6 self-review で確定）
+7. 例外検知時に `TrackingExceptionDetectedEvent` を post-commit で発行し、荷主通知（常時）と管理職エスカレーション通知（escalationFlag=true 時）を append-only 記録する（ADR-0009 の結果整合性方針に従う）
 
 ### コマンド一覧
 
