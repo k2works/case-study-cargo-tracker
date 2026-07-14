@@ -485,4 +485,66 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         var request = await router.GetStringAsync($"/routing/requests/{bookingId}");
         request.Should().NotContain("確定経路");
     }
+
+    private static async Task RegisterExceptionAsync(
+        HttpClient tracker, string trackingNumber, string exceptionType,
+        string location, string occurredAt, string? description = null)
+    {
+        var token = Token(await tracker.GetStringAsync($"/tracking/{trackingNumber}/exceptions/new"));
+        var fields = new Dictionary<string, string>
+        {
+            ["exceptionType"] = exceptionType,
+            ["locationUnLocode"] = location,
+            ["occurredAt"] = occurredAt,
+            ["__RequestVerificationToken"] = token,
+        };
+        if (description is not null)
+        {
+            fields["description"] = description;
+        }
+        (await tracker.PostAsync($"/tracking/{trackingNumber}/exceptions",
+            new FormUrlEncodedContent(fields))).StatusCode.Should().Be(HttpStatusCode.Redirect);
+    }
+
+    [Fact]
+    public async Task 追跡管理者が遅延例外を登録し対応報告で解決できる()
+    {
+        // US19：予約確定→追跡番号発行まで進め、遅延例外を登録する。
+        var (_, trackingNumber) = await CreateConfirmedTrackedBookingAsync("VYG-EX-DELAY-001");
+        var tracker = await LoginAsync("tracker");
+
+        await RegisterExceptionAsync(
+            tracker, trackingNumber, "Delay", "USLAX", "2026-10-08T14:00", "荒天による寄港遅延");
+
+        // 例外登録後は例外発生状態・例外履歴が表示される。
+        var afterRegister = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
+        afterRegister.Should().Contain("例外発生").And.Contain("DELAY").And.Contain("対応中");
+
+        // 対応報告（解決）で例外発生前の状態へ復帰する。
+        var token = Token(afterRegister);
+        (await tracker.PostAsync($"/tracking/{trackingNumber}/exceptions/resolution",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["resolvedAt"] = "2026-10-09T09:00",
+                ["resolutionNotes"] = "新到着予定日を荷主に提示",
+                ["__RequestVerificationToken"] = token,
+            }))).StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        var afterResolve = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
+        afterResolve.Should().Contain("解決済").And.NotContain("未解決の例外があります");
+    }
+
+    [Fact]
+    public async Task 紛失例外を登録するとエスカレーションが表示される()
+    {
+        // US20：紛失例外は escalation_flag が立ち、エスカレーションバッジが表示される。
+        var (_, trackingNumber) = await CreateConfirmedTrackedBookingAsync("VYG-EX-LOST-001");
+        var tracker = await LoginAsync("tracker");
+
+        await RegisterExceptionAsync(
+            tracker, trackingNumber, "Lost", "USLAX", "2026-10-08T14:00", "紛失の疑い");
+
+        var detail = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
+        detail.Should().Contain("LOST").And.Contain("エスカレーション").And.Contain("例外発生");
+    }
 }

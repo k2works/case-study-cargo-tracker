@@ -12,6 +12,20 @@ public sealed class TrackingEventView
     public string? VoyageNumber { get; set; }
 }
 
+/// <summary>追跡例外 1 件（読取・US19/US20）。</summary>
+public sealed class TrackingExceptionView
+{
+    public string ExceptionType { get; set; } = string.Empty;
+    public string LocationUnlocode { get; set; } = string.Empty;
+    public DateTime OccurredAt { get; set; }
+    public bool EscalationFlag { get; set; }
+    public string? Description { get; set; }
+    public DateTime? ResolvedAt { get; set; }
+    public string? ResolutionNotes { get; set; }
+
+    public bool IsActive => ResolvedAt is null;
+}
+
 /// <summary>追跡照会の詳細（US18）。</summary>
 public sealed class TrackingDetailView
 {
@@ -21,6 +35,10 @@ public sealed class TrackingDetailView
     public string? CurrentLocation { get; set; }
     public DateTime? EstimatedArrival { get; set; }
     public IReadOnlyList<TrackingEventView> Events { get; set; } = [];
+    public IReadOnlyList<TrackingExceptionView> Exceptions { get; set; } = [];
+
+    /// <summary>未解決の例外があるか（EXCEPTION バッジ表示用）。</summary>
+    public bool HasActiveException => Exceptions.Any(e => e.IsActive);
 }
 
 /// <summary>追跡照会の読取サービス（US18）。追跡番号から状態・現在地・イベント履歴・推定到着日を取得する。</summary>
@@ -49,6 +67,18 @@ public sealed class TrackingQueryService(IDbConnectionFactory connectionFactory)
             new { TrackingNumber = normalized }, cancellationToken: ct))).ToList();
 
         header.Events = events;
+
+        header.Exceptions = (await connection.QueryAsync<TrackingExceptionView>(new CommandDefinition(
+            """
+            SELECT exception_type AS ExceptionType, location_unlocode AS LocationUnlocode,
+                   occurred_at AS OccurredAt, escalation_flag AS EscalationFlag,
+                   description AS Description, resolved_at AS ResolvedAt, resolution_notes AS ResolutionNotes
+            FROM tracking_exception_event
+            WHERE tracking_id = (SELECT id FROM tracking_activity WHERE tracking_number = @TrackingNumber)
+            ORDER BY id
+            """,
+            new { TrackingNumber = normalized }, cancellationToken: ct))).ToList();
+
         header.CurrentLocation = events.Count > 0 ? events[^1].LocationUnlocode : null;
         header.EstimatedArrival = await connection.ExecuteScalarAsync<DateTime?>(new CommandDefinition(
             """
