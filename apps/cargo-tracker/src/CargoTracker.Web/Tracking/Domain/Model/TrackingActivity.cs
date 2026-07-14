@@ -83,6 +83,12 @@ public sealed class TrackingActivity : AggregateRoot
             ?? throw new InvalidOperationException("未解決の例外がありません。");
         active.Resolve(resolvedAt, resolutionNotes);
         Version++;
+        AddDomainEvent(new TrackingExceptionResolvedEvent(
+            BookingId.Value,
+            TrackingNumber.Value,
+            active.ExceptionType.ToString().ToUpperInvariant(),
+            resolvedAt,
+            resolutionNotes));
     }
 
     /// <summary>

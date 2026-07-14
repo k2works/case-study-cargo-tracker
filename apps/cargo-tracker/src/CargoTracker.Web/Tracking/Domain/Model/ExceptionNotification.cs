@@ -43,4 +43,11 @@ public sealed class ExceptionNotification
         string trackingNumber, string bookingId, string exceptionType, DateTimeOffset notifiedAt)
         => new(trackingNumber, bookingId, NotificationRecipient.Management, exceptionType,
             $"【エスカレーション】貨物 {trackingNumber} に重大例外（{exceptionType}）が発生しました。至急対応が必要です。", notifiedAt);
+
+    /// <summary>荷主向けの対応報告通知記録を生成する（US19 AC4/US20 AC5・例外解決時）。</summary>
+    public static ExceptionNotification ForResolution(
+        string trackingNumber, string bookingId, string exceptionType,
+        string? resolutionNotes, DateTimeOffset notifiedAt)
+        => new(trackingNumber, bookingId, NotificationRecipient.Shipper, exceptionType,
+            $"貨物 {trackingNumber} の例外（{exceptionType}）に対応しました。{(string.IsNullOrWhiteSpace(resolutionNotes) ? string.Empty : $"対応内容: {resolutionNotes}")}", notifiedAt);
 }

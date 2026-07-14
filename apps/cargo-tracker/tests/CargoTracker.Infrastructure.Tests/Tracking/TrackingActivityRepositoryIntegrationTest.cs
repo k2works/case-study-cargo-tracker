@@ -223,4 +223,50 @@ public sealed class TrackingActivityRepositoryIntegrationTest : IAsyncLifetime
         notifications.Should().ContainSingle()
             .Which.Recipient.Should().Be(NotificationRecipient.Shipper);
     }
+
+    [Fact]
+    public async Task 例外解決で荷主への対応報告通知が記録される()
+    {
+        var notificationRepository = new CargoTracker.Tracking.Infrastructure.Repositories.ExceptionNotificationRepository(
+            _connectionFactory, _ambient);
+        var handler = new CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionResolvedHandler(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            notificationRepository,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<
+                CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionResolvedHandler>.Instance);
+
+        await handler.Handle(new TrackingExceptionResolvedEvent(
+            "BKG-NOTIF-03", "TRK-NOTIF-03", "DELAY",
+            new DateTimeOffset(2026, 10, 9, 9, 0, 0, TimeSpan.Zero), "新到着予定日を提示"), CancellationToken.None);
+
+        var notifications = await notificationRepository.FindByTrackingNumberAsync("TRK-NOTIF-03");
+        notifications.Should().ContainSingle()
+            .Which.Recipient.Should().Be(NotificationRecipient.Shipper);
+        notifications[^1].Message.Should().Contain("対応しました");
+    }
+
+    [Fact]
+    public async Task 同一の例外検知イベントを2回処理しても通知は重複記録されない()
+    {
+        var notificationRepository = new CargoTracker.Tracking.Infrastructure.Repositories.ExceptionNotificationRepository(
+            _connectionFactory, _ambient);
+        var handler = new CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionDetectedHandler(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            notificationRepository,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<
+                CargoTracker.Tracking.Application.Internal.EventHandlers.NotifyOnTrackingExceptionDetectedHandler>.Instance);
+
+        // ADR-0009 コンプライアンス（M1）: at-least-once 再配信を模して同一イベントを 2 回処理。
+        var evt = new TrackingExceptionDetectedEvent(
+            "BKG-IDEMP-01", "TRK-IDEMP-01", "LOST", "USLAX", true,
+            new DateTimeOffset(2026, 10, 8, 14, 0, 0, TimeSpan.Zero));
+        await handler.Handle(evt, CancellationToken.None);
+        await handler.Handle(evt, CancellationToken.None);
+
+        // 荷主 1 通・管理職 1 通のみ（二重記録されない）。
+        var notifications = await notificationRepository.FindByTrackingNumberAsync("TRK-IDEMP-01");
+        notifications.Should().HaveCount(2);
+        notifications.Count(n => n.Recipient == NotificationRecipient.Shipper).Should().Be(1);
+        notifications.Count(n => n.Recipient == NotificationRecipient.Management).Should().Be(1);
+    }
 }

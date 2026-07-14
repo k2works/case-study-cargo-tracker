@@ -15,6 +15,23 @@ public sealed class ExceptionNotificationRepository(IDbConnectionFactory connect
     {
         var now = ToDatabaseTimestamp(DateTimeOffset.UtcNow);
         var tx = ambient.Require();
+        var recipientType = notification.Recipient.ToString().ToUpperInvariant();
+        var notifiedAt = ToDatabaseTimestamp(notification.NotifiedAt);
+
+        // 冪等性（ADR-0009・M1）: 同一イベントの再配信で二重記録しない。自然キー（uk_exception_notification_natural）で判定。
+        var exists = await tx.Connection!.ExecuteScalarAsync<long>(new CommandDefinition(
+            """
+            SELECT COUNT(*) FROM exception_notification
+            WHERE tracking_number = @TrackingNumber AND recipient_type = @RecipientType
+              AND exception_type = @ExceptionType AND notified_at = @NotifiedAt
+            """,
+            new { notification.TrackingNumber, RecipientType = recipientType, notification.ExceptionType, NotifiedAt = notifiedAt },
+            tx, cancellationToken: ct));
+        if (exists > 0)
+        {
+            return;
+        }
+
         await tx.Connection!.ExecuteAsync(new CommandDefinition(
             """
             INSERT INTO exception_notification
@@ -26,10 +43,10 @@ public sealed class ExceptionNotificationRepository(IDbConnectionFactory connect
             {
                 notification.TrackingNumber,
                 notification.BookingId,
-                RecipientType = notification.Recipient.ToString().ToUpperInvariant(),
+                RecipientType = recipientType,
                 notification.ExceptionType,
                 notification.Message,
-                NotifiedAt = ToDatabaseTimestamp(notification.NotifiedAt),
+                NotifiedAt = notifiedAt,
                 Now = now,
             },
             tx, cancellationToken: ct));

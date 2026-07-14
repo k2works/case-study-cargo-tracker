@@ -16,7 +16,7 @@ public sealed class EnumDbCodecTest
     [InlineData(SampleStatus.Pending, "PENDING")]
     [InlineData(SampleStatus.RouteProposed, "ROUTE_PROPOSED")]
     [InlineData(SampleStatus.CustomsHold, "CUSTOMS_HOLD")]
-    public void enum値をSCREAMING_SNAKEへ変換する(SampleStatus value, string expected)
+    public void enum値をScreamingSnakeへ変換する(SampleStatus value, string expected)
     {
         EnumDbCodec.ToScreamingSnake(value).Should().Be(expected);
     }
@@ -25,7 +25,7 @@ public sealed class EnumDbCodecTest
     [InlineData("PENDING", SampleStatus.Pending)]
     [InlineData("ROUTE_PROPOSED", SampleStatus.RouteProposed)]
     [InlineData("CUSTOMS_HOLD", SampleStatus.CustomsHold)]
-    public void SCREAMING_SNAKEをenum値へ復元する(string dbValue, SampleStatus expected)
+    public void ScreamingSnakeをenum値へ復元する(string dbValue, SampleStatus expected)
     {
         EnumDbCodec.FromScreamingSnake<SampleStatus>(dbValue).Should().Be(expected);
     }
