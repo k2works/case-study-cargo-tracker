@@ -10,6 +10,28 @@ open CargoTracker.Shipper.Application
 // Shipper コンテキストのインフラ層（Donald による手書き SQL リポジトリ・ADR-0004）。
 // ANSI 標準の範囲で SQL を記述し、SQLite / PostgreSQL 両方言で動作させる（ADR-0003）。
 
+/// 一覧表示用の読み取りモデル（CQRS の Read 側・DTO 直接射影）。
+type ShipperListItem =
+    { Code: string
+      Name: string
+      Email: string
+      ShipperType: string
+      DiscountRate: decimal }
+
+module ShipperQueries =
+
+    /// 荷主一覧を取得する（コード順）。
+    let findAll (conn: IDbConnection) : ShipperListItem list =
+        conn
+        |> Db.newCommand
+            "SELECT shipper_code, name, email, shipper_type, discount_rate FROM shipper ORDER BY shipper_code"
+        |> Db.query (fun rd ->
+            { Code = rd.ReadString "shipper_code"
+              Name = rd.ReadString "name"
+              Email = rd.ReadString "email"
+              ShipperType = rd.ReadString "shipper_type"
+              DiscountRate = rd.ReadDecimal "discount_rate" })
+
 module ShipperRepository =
 
     /// ShipperKind を永続化用の (種別文字列, 契約番号 option, 割引率) に展開する。

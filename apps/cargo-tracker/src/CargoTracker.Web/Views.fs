@@ -76,6 +76,103 @@ module Views =
 
         layout "ホーム" roles [ h1 [ _class "mb-4" ] [ str "ダッシュボード" ]; div [ _class "row" ] cards ]
 
+    /// 荷主一覧の表示行。
+    type ShipperRow =
+        { Code: string
+          Name: string
+          Email: string
+          Kind: string
+          DiscountRate: decimal }
+
+    /// 荷主一覧画面（`/shippers`）。
+    let shipperList (roles: string list) (rows: ShipperRow list) : XmlNode =
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ str r.Code ]
+                      td [] [ str r.Name ]
+                      td [] [ str r.Email ]
+                      td [] [ str r.Kind ]
+                      td [] [ str (sprintf "%.1f%%" (r.DiscountRate * 100m)) ] ])
+
+        layout
+            "荷主管理"
+            roles
+            [ div
+                  [ _class "d-flex justify-content-between align-items-center mb-4" ]
+                  [ h1 [] [ str "荷主一覧" ]
+                    a [ _class "btn btn-primary"; _href "/shippers/new" ] [ str "新規荷主登録" ] ]
+              table
+                  [ _class "table table-striped" ]
+                  [ thead
+                        []
+                        [ tr
+                              []
+                              [ th [] [ str "荷主コード" ]
+                                th [] [ str "名称" ]
+                                th [] [ str "メール" ]
+                                th [] [ str "種別" ]
+                                th [] [ str "割引率" ] ] ]
+                    tbody [] bodyRows ] ]
+
+    /// 荷主登録フォームの入力値（エラー時の再表示に使う）。
+    type ShipperFormValues =
+        { Name: string
+          Email: string
+          Phone: string
+          Address: string
+          IsCorporate: bool
+          ContractNumber: string
+          DiscountRatePercent: string }
+
+    let emptyShipperForm =
+        { Name = ""
+          Email = ""
+          Phone = ""
+          Address = ""
+          IsCorporate = false
+          ContractNumber = ""
+          DiscountRatePercent = "" }
+
+    /// 荷主登録画面（`/shippers/new`）。個人/法人を切り替える（htmx なしのシンプル版）。
+    let shipperForm (roles: string list) (values: ShipperFormValues) (error: string option) : XmlNode =
+        let field labelText name value inputType =
+            div
+                [ _class "mb-3" ]
+                [ label [ _class "form-label"; _for name ] [ str labelText ]
+                  input [ _class "form-control"; _id name; _name name; _value value; _type inputType ] ]
+
+        layout
+            "荷主登録"
+            roles
+            [ h1 [ _class "mb-4" ] [ str "新規荷主登録" ]
+              (match error with
+               | Some msg -> div [ _class "alert alert-danger" ] [ str msg ]
+               | None -> emptyText)
+              form
+                  [ _method "post"; _action "/shippers" ]
+                  [ field "名称（氏名/社名）" "name" values.Name "text"
+                    field "メールアドレス" "email" values.Email "email"
+                    field "電話番号（任意）" "phone" values.Phone "text"
+                    field "住所（任意）" "address" values.Address "text"
+                    div
+                        [ _class "form-check mb-3" ]
+                        [ input (
+                              [ _class "form-check-input"
+                                _id "isCorporate"
+                                _name "isCorporate"
+                                _type "checkbox"
+                                _value "true" ]
+                              @ (if values.IsCorporate then [ _checked ] else [])
+                          )
+                          label [ _class "form-check-label"; _for "isCorporate" ] [ str "法人荷主" ] ]
+                    field "契約番号（法人時）" "contractNumber" values.ContractNumber "text"
+                    field "割引率 %（法人時・0〜30）" "discountRatePercent" values.DiscountRatePercent "number"
+                    button [ _class "btn btn-primary"; _type "submit" ] [ str "登録" ]
+                    a [ _class "btn btn-secondary ms-2"; _href "/shippers" ] [ str "キャンセル" ] ] ]
+
     /// ログイン画面。エラー時はメッセージを表示し、入力値を保持する。
     let login (username: string) (error: string option) : XmlNode =
         layout

@@ -20,6 +20,19 @@ type ConnectionFactory = unit -> IDbConnection
 let rolesOf (ctx: HttpContext) : string list =
     ctx.User.FindAll(ClaimTypes.Role) |> Seq.map (fun c -> c.Value) |> List.ofSeq
 
+/// 合成ルートで使う実時刻ポート（ADR-0006）。
+let systemClock: CargoTracker.Shared.Domain.Clock =
+    fun () -> System.DateTimeOffset.Now
+
+/// ドメインエラーを日本語のユーザー向けメッセージに変換する。
+let domainErrorMessage (err: CargoTracker.Shared.Domain.DomainError) : string =
+    match err with
+    | CargoTracker.Shared.Domain.ValidationError(_, message) -> message
+    | CargoTracker.Shared.Domain.BusinessRuleViolation(_, message) -> message
+    | CargoTracker.Shared.Domain.InvalidStateTransition(cur, attempted) ->
+        sprintf "現在の状態（%s）では操作（%s）を実行できません。" cur attempted
+    | CargoTracker.Shared.Domain.NotFound(entity, id) -> sprintf "%s が見つかりません（%s）。" entity id
+
 /// 認証済みユーザーを Cookie にサインインさせる（ユーザー名 + ロールクレーム）。
 let private signIn (ctx: HttpContext) (user: Auth.AuthenticatedUser) =
     task {
@@ -72,6 +85,93 @@ let private dashboard: HttpHandler =
     mustBeLoggedIn
     >=> fun next ctx -> htmlView (Views.dashboard (rolesOf ctx)) next ctx
 
+/// 指定ロールを要求する（不足時は 403）。認証は前段の mustBeLoggedIn で担保する。
+let private mustHaveRole (role: string) : HttpHandler =
+    mustBeLoggedIn >=> requiresRole role (setStatusCode 403 >=> text "権限がありません。")
+
+// ---- US02/US03: 荷主管理（ROLE_SALES）----
+
+let private shipperList: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        let factory = ctx.GetService<ConnectionFactory>()
+        use conn = factory ()
+        let items = CargoTracker.Shipper.Infrastructure.ShipperQueries.findAll conn
+
+        let rows =
+            items
+            |> List.map (fun i ->
+                { Views.Code = i.Code
+                  Views.Name = i.Name
+                  Views.Email = i.Email
+                  Views.Kind = (if i.ShipperType = "CORPORATE" then "法人" else "個人")
+                  Views.DiscountRate = i.DiscountRate })
+
+        htmlView (Views.shipperList (rolesOf ctx) rows) next ctx
+
+let private shipperNew: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx -> htmlView (Views.shipperForm (rolesOf ctx) Views.emptyShipperForm None) next ctx
+
+/// フォーム値を読み取り、登録コマンドと再表示用の値を組み立てる。
+let private readShipperForm (form: Microsoft.AspNetCore.Http.IFormCollection) =
+    let get key = string form.[key]
+    let isCorporate = (get "isCorporate") = "true"
+
+    let values: Views.ShipperFormValues =
+        { Name = get "name"
+          Email = get "email"
+          Phone = get "phone"
+          Address = get "address"
+          IsCorporate = isCorporate
+          ContractNumber = get "contractNumber"
+          DiscountRatePercent = get "discountRatePercent" }
+
+    let corporate =
+        if isCorporate then
+            let rate =
+                match System.Decimal.TryParse(get "discountRatePercent") with
+                | true, p -> p / 100m
+                | _ -> -1m // 範囲外にしてドメイン検証で弾く
+
+            Some
+                { CargoTracker.Shipper.Application.ContractNumber = get "contractNumber"
+                  CargoTracker.Shipper.Application.DiscountRate = rate }
+        else
+            None
+
+    let cmd: CargoTracker.Shipper.Application.RegisterShipperCommand =
+        { Name = get "name"
+          Email = get "email"
+          Phone = (if get "phone" = "" then None else Some(get "phone"))
+          Address = (if get "address" = "" then None else Some(get "address"))
+          Corporate = corporate }
+
+    values, cmd
+
+let private shipperCreate: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let values, cmd = readShipperForm form
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Shipper.Infrastructure.ShipperRepository.create conn systemClock
+
+            let newId: CargoTracker.Shared.Domain.IdGenerator = fun () -> System.Guid.NewGuid()
+            let! result = CargoTracker.Shipper.Application.ShipperRegistration.register repo newId cmd
+
+            match result with
+            | Ok _ -> return! redirectTo false "/shippers" next ctx
+            | Error err ->
+                ctx.SetStatusCode 400
+                let msg = domainErrorMessage err
+                return! htmlView (Views.shipperForm (rolesOf ctx) values (Some msg)) next ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -79,8 +179,14 @@ let webApp: HttpHandler =
           >=> choose
                   [ route "/health" >=> text "Healthy"
                     route "/login" >=> htmlView (Views.login "" None)
-                    route "/" >=> dashboard ]
-          POST >=> choose [ route "/login" >=> loginPost; route "/logout" >=> logout ]
+                    route "/" >=> dashboard
+                    route "/shippers" >=> shipperList
+                    route "/shippers/new" >=> shipperNew ]
+          POST
+          >=> choose
+                  [ route "/login" >=> loginPost
+                    route "/logout" >=> logout
+                    route "/shippers" >=> shipperCreate ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。
