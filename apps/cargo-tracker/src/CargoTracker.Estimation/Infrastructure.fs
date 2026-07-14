@@ -9,6 +9,59 @@ open CargoTracker.Estimation.Application
 // Estimation コンテキストのインフラ層（Donald による手書き SQL リポジトリ・ADR-0004）。
 // estimate（親）と route_candidate（子）の 1 対多を保存する。
 
+/// 見積一覧の読み取りモデル（CQRS Read 側）。
+type EstimateListItem =
+    { EstimateId: string
+      Origin: string
+      Destination: string
+      ArrivalDeadline: string
+      CargoType: string
+      WeightKg: decimal
+      Status: string
+      CandidateCount: int }
+
+module EstimateQueries =
+
+    let findAll (conn: IDbConnection) : EstimateListItem list =
+        conn
+        |> Db.newCommand
+            """
+            SELECT e.estimate_id, e.origin_unlocode, e.destination_unlocode, e.arrival_deadline,
+                   e.cargo_type, e.weight_kg, e.status,
+                   (SELECT COUNT(*) FROM route_candidate rc WHERE rc.estimate_id = e.id) AS candidate_count
+            FROM estimate e
+            ORDER BY e.created_at DESC
+            """
+        |> Db.query (fun rd ->
+            { EstimateId = rd.ReadString "estimate_id"
+              Origin = rd.ReadString "origin_unlocode"
+              Destination = rd.ReadString "destination_unlocode"
+              ArrivalDeadline = rd.ReadString "arrival_deadline"
+              CargoType = rd.ReadString "cargo_type"
+              WeightKg = rd.ReadDecimal "weight_kg"
+              Status = rd.ReadString "status"
+              CandidateCount = rd.ReadInt32 "candidate_count" })
+
+/// 外部経路システムの ACL スタブ（IT1）。重量ベースの固定コストでルート候補を返す。
+/// IT3 で WireMock.Net による契約テスト付きの実サービスへ差し替える。
+module StubRoutingService =
+
+    let create () : ExternalRoutingServicePort =
+        { FetchCandidateRoutes =
+            fun (_query: RouteQuery) ->
+                async {
+                    let baseCost = 100_000m
+
+                    let candidates =
+                        [ RouteCandidate.create "V001" "SGSIN" 21 baseCost
+                          RouteCandidate.create "V002" "HKHKG" 25 (baseCost * 0.9m) ]
+                        |> List.choose (function
+                            | Ok c -> Some c
+                            | Error _ -> None)
+
+                    return Ok candidates
+                } }
+
 module EstimateRepository =
 
     let private cargoTypeToString =

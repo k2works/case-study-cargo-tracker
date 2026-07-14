@@ -173,6 +173,109 @@ module Views =
                     button [ _class "btn btn-primary"; _type "submit" ] [ str "登録" ]
                     a [ _class "btn btn-secondary ms-2"; _href "/shippers" ] [ str "キャンセル" ] ] ]
 
+    /// 見積一覧の表示行。
+    type EstimateRow =
+        { EstimateId: string
+          Origin: string
+          Destination: string
+          ArrivalDeadline: string
+          CargoType: string
+          WeightKg: decimal
+          Status: string
+          CandidateCount: int }
+
+    /// 見積一覧画面（`/estimates`）。
+    let estimateList (roles: string list) (rows: EstimateRow list) : XmlNode =
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ str (r.EstimateId.Substring(0, 8)) ]
+                      td [] [ str (sprintf "%s → %s" r.Origin r.Destination) ]
+                      td [] [ str r.ArrivalDeadline ]
+                      td [] [ str r.CargoType ]
+                      td [] [ str (sprintf "%.1f kg" r.WeightKg) ]
+                      td [] [ str (string r.CandidateCount) ]
+                      td [] [ str r.Status ] ])
+
+        layout
+            "見積管理"
+            roles
+            [ div
+                  [ _class "d-flex justify-content-between align-items-center mb-4" ]
+                  [ h1 [] [ str "見積一覧" ]
+                    a [ _class "btn btn-primary"; _href "/estimates/new" ] [ str "新規見積作成" ] ]
+              table
+                  [ _class "table table-striped" ]
+                  [ thead
+                        []
+                        [ tr
+                              []
+                              [ th [] [ str "見積番号" ]
+                                th [] [ str "区間" ]
+                                th [] [ str "到着期限" ]
+                                th [] [ str "貨物種別" ]
+                                th [] [ str "重量" ]
+                                th [] [ str "候補数" ]
+                                th [] [ str "状態" ] ] ]
+                    tbody [] bodyRows ] ]
+
+    /// 見積作成フォームの入力値。
+    type EstimateFormValues =
+        { OriginUnlocode: string
+          DestinationUnlocode: string
+          ArrivalDeadline: string
+          CargoType: string
+          WeightKg: string }
+
+    let emptyEstimateForm =
+        { OriginUnlocode = ""
+          DestinationUnlocode = ""
+          ArrivalDeadline = ""
+          CargoType = "GENERAL"
+          WeightKg = "" }
+
+    /// 見積作成画面（`/estimates/new`）。
+    let estimateForm (roles: string list) (values: EstimateFormValues) (error: string option) : XmlNode =
+        let field labelText name value inputType =
+            div
+                [ _class "mb-3" ]
+                [ label [ _class "form-label"; _for name ] [ str labelText ]
+                  input [ _class "form-control"; _id name; _name name; _value value; _type inputType ] ]
+
+        let cargoOption v label =
+            option
+                (if values.CargoType = v then
+                     [ _value v; _selected ]
+                 else
+                     [ _value v ])
+                [ str label ]
+
+        layout
+            "見積作成"
+            roles
+            [ h1 [ _class "mb-4" ] [ str "新規見積作成" ]
+              (match error with
+               | Some msg -> div [ _class "alert alert-danger" ] [ str msg ]
+               | None -> emptyText)
+              form
+                  [ _method "post"; _action "/estimates" ]
+                  [ field "出発地（UN/LOCODE・例 JPTYO）" "originUnlocode" values.OriginUnlocode "text"
+                    field "目的地（UN/LOCODE・例 USLAX）" "destinationUnlocode" values.DestinationUnlocode "text"
+                    field "希望到着期限" "arrivalDeadline" values.ArrivalDeadline "date"
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "cargoType" ] [ str "貨物種別" ]
+                          select
+                              [ _class "form-select"; _id "cargoType"; _name "cargoType" ]
+                              [ cargoOption "GENERAL" "一般"
+                                cargoOption "HAZARDOUS" "危険物"
+                                cargoOption "REFRIGERATED" "冷凍・冷蔵" ] ]
+                    field "重量 kg" "weightKg" values.WeightKg "number"
+                    button [ _class "btn btn-primary"; _type "submit" ] [ str "見積作成" ]
+                    a [ _class "btn btn-secondary ms-2"; _href "/estimates" ] [ str "キャンセル" ] ] ]
+
     /// ログイン画面。エラー時はメッセージを表示し、入力値を保持する。
     let login (username: string) (error: string option) : XmlNode =
         layout

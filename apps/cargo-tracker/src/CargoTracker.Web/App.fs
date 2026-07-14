@@ -172,6 +172,87 @@ let private shipperCreate: HttpHandler =
                 return! htmlView (Views.shipperForm (rolesOf ctx) values (Some msg)) next ctx
         }
 
+// ---- US01: 見積管理（ROLE_SALES）----
+
+let private estimateList: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        let factory = ctx.GetService<ConnectionFactory>()
+        use conn = factory ()
+        let items = CargoTracker.Estimation.Infrastructure.EstimateQueries.findAll conn
+
+        let rows =
+            items
+            |> List.map (fun i ->
+                { Views.EstimateId = i.EstimateId
+                  Views.Origin = i.Origin
+                  Views.Destination = i.Destination
+                  Views.ArrivalDeadline = i.ArrivalDeadline
+                  Views.CargoType = i.CargoType
+                  Views.WeightKg = i.WeightKg
+                  Views.Status = i.Status
+                  Views.CandidateCount = i.CandidateCount })
+
+        htmlView (Views.estimateList (rolesOf ctx) rows) next ctx
+
+let private estimateNew: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx -> htmlView (Views.estimateForm (rolesOf ctx) Views.emptyEstimateForm None) next ctx
+
+let private parseCargoType (value: string) : CargoTracker.Estimation.Domain.CargoType =
+    match value with
+    | "HAZARDOUS" -> CargoTracker.Estimation.Domain.Hazardous
+    | "REFRIGERATED" -> CargoTracker.Estimation.Domain.Refrigerated
+    | _ -> CargoTracker.Estimation.Domain.General
+
+let private estimateCreate: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get key = string form.[key]
+
+            let values: Views.EstimateFormValues =
+                { OriginUnlocode = get "originUnlocode"
+                  DestinationUnlocode = get "destinationUnlocode"
+                  ArrivalDeadline = get "arrivalDeadline"
+                  CargoType = get "cargoType"
+                  WeightKg = get "weightKg" }
+
+            let deadline =
+                match System.DateOnly.TryParse(get "arrivalDeadline") with
+                | true, d -> d
+                | _ -> System.DateOnly.FromDateTime(System.DateTime.Today)
+
+            let weight =
+                match System.Decimal.TryParse(get "weightKg") with
+                | true, w -> w
+                | _ -> -1m // 範囲外にしてドメイン検証で弾く
+
+            let cmd: CargoTracker.Estimation.Application.CreateEstimateCommand =
+                { OriginUnlocode = get "originUnlocode"
+                  DestinationUnlocode = get "destinationUnlocode"
+                  ArrivalDeadline = deadline
+                  CargoType = parseCargoType (get "cargoType")
+                  WeightKg = weight }
+
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Estimation.Infrastructure.EstimateRepository.create conn systemClock
+
+            let routing = CargoTracker.Estimation.Infrastructure.StubRoutingService.create ()
+            let newId: CargoTracker.Shared.Domain.IdGenerator = fun () -> System.Guid.NewGuid()
+            let! result = CargoTracker.Estimation.Application.EstimateCreation.create repo routing newId cmd
+
+            match result with
+            | Ok _ -> return! redirectTo false "/estimates" next ctx
+            | Error err ->
+                ctx.SetStatusCode 400
+                return! htmlView (Views.estimateForm (rolesOf ctx) values (Some(domainErrorMessage err))) next ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -181,12 +262,15 @@ let webApp: HttpHandler =
                     route "/login" >=> htmlView (Views.login "" None)
                     route "/" >=> dashboard
                     route "/shippers" >=> shipperList
-                    route "/shippers/new" >=> shipperNew ]
+                    route "/shippers/new" >=> shipperNew
+                    route "/estimates" >=> estimateList
+                    route "/estimates/new" >=> estimateNew ]
           POST
           >=> choose
                   [ route "/login" >=> loginPost
                     route "/logout" >=> logout
-                    route "/shippers" >=> shipperCreate ]
+                    route "/shippers" >=> shipperCreate
+                    route "/estimates" >=> estimateCreate ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。

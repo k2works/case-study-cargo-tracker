@@ -141,9 +141,9 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 4.1 | Estimate 集約（EstimateId は IdGenerator ポート経由・RouteCandidate・出発地/仕向地の UN/LOCODE 検証）ユニット + FsCheck | 3h | - | [x] |
-| 4.2 | ExternalRoutingServicePort スタブ実装（関数リテラル・WireMock.Net 契約テストは IT3） | 3h | - | [ ] |
-| 4.3 | 見積作成ワークフロー（`asyncResult` 合成・危険物申告分岐・期限超過通知） | 3h | - | [ ] |
-| 4.4 | 見積作成画面（`/estimates/new`・候補一覧表示・危険物フォーム）+ EstimateRepository | 4h | - | [ ] |
+| 4.2 | ExternalRoutingServicePort スタブ実装（関数リテラル・WireMock.Net 契約テストは IT3） | 3h | - | [x] |
+| 4.3 | 見積作成ワークフロー（`asyncResult` 合成・危険物申告分岐・期限超過通知） | 3h | - | [x] |
+| 4.4 | 見積作成画面（`/estimates/new`・候補一覧表示・危険物フォーム）+ EstimateRepository | 4h | - | [x] |
 
 **小計**: 13h（理想時間）
 
