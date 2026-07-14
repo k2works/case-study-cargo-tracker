@@ -101,7 +101,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 0.1 | 【Day 1・着手前】設計反映：(a) Billing Context の Invoice 集約（Money・DiscountRate・PaymentStatus・ApplyDiscount/ConfirmPayment）・`InvoiceRequested` イベントを domain-model に確定、(b) invoice/invoice_line_item/payment テーブル（0015 以降・二方言）を data-model と突合、(c) 請求書一覧/詳細（`/billing/invoices`・`/billing/invoices/{id}`）を ui_design 画面一覧と整合。局面継続チェック（アウトサイドイン・ArchUnit グリーン・UoW 基盤動作）。用語統一（Invoice=「精算書」＝改善 #17） | 4h | - | [ ] |
-| 0.2 | IT6 レビュー H2 / IT5 Try T1：変換ヘルパを Shared に集約。`Shared.Infrastructure.Persistence` に `DatabaseTimestamp`（ToDatabaseTimestamp）と `EnumDbCodec.ToScreamingSnake/FromScreamingSnake` を新設し、Booking/Routing/Tracking の既存 8 箇所を一括で巻き取る（部分適用禁止）。Billing の新規リポジトリは最初から共通版を使用。全テスト緑で担保 | 5h | - | [ ] |
+| 0.2 | IT6 レビュー H2 / IT5 Try T1：変換ヘルパを Shared に集約。`Shared.Infrastructure.Persistence` に `DatabaseTimestamp`（ToDatabaseTimestamp）と `EnumDbCodec.ToScreamingSnake/FromScreamingSnake` を新設し、Booking/Routing/Tracking の既存 8 箇所を一括で巻き取る（部分適用禁止）。Billing の新規リポジトリは最初から共通版を使用。全テスト緑で担保 | 5h | - | [x]（DatabaseTimestamp/EnumDbCodec 新設・往復 9 テスト。Infrastructure 層 6 リポジトリ＋Cargo/Tracking の enum 変換を共通版へ。SearchVoyagesQueryService は Application 層のため ArchUnit ルール 3 遵守でインライン保持。全 264 テスト緑） |
 | 0.3 | IT6 レビュー H1：対応報告（ResolveException）時の荷主通知を append-only 記録（US19 AC4/US20 AC5 の完全充足）＋テスト | 2h | - | [ ] |
 | 0.4 | IT6 レビュー M1：例外通知ハンドラの冪等性統合テスト（同一イベント 2 回処理で二重記録されない）を追加、または exception_notification に冪等キー/一意制約を導入。ADR-0009 コンプライアンス達成 | 3h | - | [ ] |
 | 0.5 | ArchUnit：Billing BC の依存ルール（他 BC の `.Domain.Model` 非依存・Shipper 割引率は ACL 経由）を追加（ルール 7） | 2h | - | [ ] |
