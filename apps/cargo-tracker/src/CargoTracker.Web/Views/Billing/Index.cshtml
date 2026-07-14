@@ -52,7 +52,15 @@ else
                     <td>@invoice.BookingId</td>
                     <td>@invoice.FinalAmountValue @invoice.FinalAmountCurrency</td>
                     <td>@invoice.DueDate.ToString("yyyy-MM-dd")</td>
-                    <td><span class="badge text-bg-secondary">@PaymentStatusLabel.ToJapanese(invoice.PaymentStatus)</span></td>
+                    <td>
+                        <span class="badge @(invoice.PaymentStatus == "OVERDUE" ? "text-bg-danger" : invoice.PaymentStatus == "CONFIRMED" ? "text-bg-success" : "text-bg-secondary")">
+                            @PaymentStatusLabel.ToJapanese(invoice.PaymentStatus)
+                        </span>
+                        @if (invoice.PaymentStatus == "OVERDUE")
+                        {
+                            <span class="text-danger small ms-1">⚠ 未払い（要督促）</span>
+                        }
+                    </td>
                 </tr>
             }
         </tbody>

@@ -109,6 +109,39 @@ public sealed class InvoiceRepositoryIntegrationTest : IAsyncLifetime
     }
 
     [Fact]
+    public async Task 支払期限を過ぎた未払い精算書は延滞へ遷移する()
+    {
+        // US23 AC5: 期限超過の未払いを延滞（Overdue）へ遷移させる。
+        var pastIssued = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var pastDue = new DateTimeOffset(2026, 1, 31, 0, 0, 0, TimeSpan.Zero);
+        var invoice = Invoice.Issue(
+            "BKG-OVD-0001", new BillingShipperId("SHP-1", "Individual"),
+            new Money(10000, "JPY"), pastIssued, pastDue);
+        await SaveAsync(invoice);
+
+        var service = new MarkOverdueInvoicesCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient), _repository);
+        await service.MarkIfOverdueAsync("INV-OVD-0001", new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero));
+
+        var overdue = await _repository.FindByBookingIdAsync("BKG-OVD-0001");
+        overdue!.PaymentStatus.Should().Be(PaymentStatus.Overdue);
+    }
+
+    [Fact]
+    public async Task 期限内の未払い精算書は延滞へ遷移しない()
+    {
+        var invoice = IssueFor("BKG-OVD-0002", "Individual"); // due 2026-10-31
+        await SaveAsync(invoice);
+
+        var service = new MarkOverdueInvoicesCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient), _repository);
+        await service.MarkIfOverdueAsync("INV-OVD-0002", new DateTimeOffset(2026, 10, 15, 0, 0, 0, TimeSpan.Zero));
+
+        var invoiceAfter = await _repository.FindByBookingIdAsync("BKG-OVD-0002");
+        invoiceAfter!.PaymentStatus.Should().Be(PaymentStatus.Pending);
+    }
+
+    [Fact]
     public async Task 配送未完了の予約は精算書を発行できない()
     {
         var snapshot = new BillingSnapshot(

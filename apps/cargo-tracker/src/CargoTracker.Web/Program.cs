@@ -115,6 +115,7 @@ builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.QueryServic
 builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.OutboundServices.IPaymentGatewayPort,
     CargoTracker.Billing.Infrastructure.Services.StubPaymentGateway>();
 builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.CommandServices.ConfirmPaymentCommandService>();
+builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.CommandServices.MarkOverdueInvoicesCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.QueryServices.TrackingQueryService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AddTrackingEventCommandService>();

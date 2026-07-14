@@ -11,11 +11,17 @@ namespace CargoTracker.Billing.Interfaces;
 public sealed class BillingController(
     InvoiceQueryService queryService,
     GenerateInvoiceCommandService generateInvoiceCommandService,
-    ConfirmPaymentCommandService confirmPaymentCommandService) : Controller
+    ConfirmPaymentCommandService confirmPaymentCommandService,
+    MarkOverdueInvoicesCommandService markOverdueInvoicesCommandService) : Controller
 {
     [HttpGet("/billing/invoices")]
     public async Task<IActionResult> Index(CancellationToken ct)
     {
+        // US23 AC5: 照会時に期限超過の未払いを延滞（Overdue）へ遷移させる（バッチ導入までの暫定起動点）。
+        var current = await queryService.ListAsync(ct);
+        var pending = current.Where(i => i.PaymentStatus == "PENDING").Select(i => i.InvoiceNumber);
+        await markOverdueInvoicesCommandService.MarkAllOverdueAsync(pending, DateTimeOffset.UtcNow, ct);
+
         var invoices = await queryService.ListAsync(ct);
         return View("Index", invoices);
     }
@@ -23,6 +29,7 @@ public sealed class BillingController(
     [HttpGet("/billing/invoices/{invoiceNumber}")]
     public async Task<IActionResult> Detail(string invoiceNumber, CancellationToken ct)
     {
+        await markOverdueInvoicesCommandService.MarkIfOverdueAsync(invoiceNumber, DateTimeOffset.UtcNow, ct);
         var detail = await queryService.FindByInvoiceNumberAsync(invoiceNumber, ct);
         return View("Detail", detail);
     }
