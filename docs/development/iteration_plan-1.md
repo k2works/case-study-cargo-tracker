@@ -93,10 +93,10 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 1.1 | DbUp 起動時配線（プロバイダ判定・`Scripts/postgresql|sqlite` 適用） | 3h | - | [ ] |
-| 1.2 | 初期スキーマ（両方言・per-story: 0001 users / 0002 shipper / 0003 estimate・route_candidate） | 3h | - | [ ] |
+| 1.2 | 初期スキーマ（両方言・per-story: 0001 users / 0002 shipper / 0003 estimate・route_candidate） | 3h | - | [x] |
 | 1.3 | AggregateRoot + UnitOfWork + post-commit ディスパッチ（関数合成・MediatR 不使用） | 4h | - | [ ] |
 | 1.4 | ロールバック時イベント非発行の統合テスト（`UnitOfWorkTest`） | 2h | - | [ ] |
-| 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [ ] |
+| 1.5 | 方言検出テスト（禁止パターン走査）+ スクリプト同期検証を CI に追加 | 2h | - | [x] |
 | 1.6 | FsToolkit ROP ワークフロー雛形（`asyncResult` / `validation` CE の Command 処理）＋ ArchUnitNET レイヤールール | 2h | - | [ ] |
 | 1.7 | 時刻・GUID 注入ポート（`Clock: unit -> DateTimeOffset` / `IdGenerator`）の参照実装（ADR-0006・EstimateId.generate で使用） | 2h | - | [~] |
 
