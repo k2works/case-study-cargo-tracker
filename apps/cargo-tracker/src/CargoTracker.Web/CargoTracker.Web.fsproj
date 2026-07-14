@@ -8,11 +8,13 @@
   <ItemGroup>
     <Compile Include="Db.fs" />
     <Compile Include="UnitOfWork.fs" />
+    <Compile Include="Views.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Giraffe" Version="8.2.0" />
+    <PackageReference Include="Giraffe.ViewEngine" Version="1.4.0" />
     <PackageReference Include="dbup-core" Version="6.1.1" />
     <PackageReference Include="dbup-sqlite" Version="6.0.4" />
     <PackageReference Include="dbup-postgresql" Version="7.0.1" />

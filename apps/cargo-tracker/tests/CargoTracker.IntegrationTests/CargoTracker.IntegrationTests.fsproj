@@ -11,6 +11,7 @@
     <Compile Include="EstimateRepositoryTests.fs" />
     <Compile Include="MigrationTests.fs" />
     <Compile Include="UnitOfWorkTests.fs" />
+    <Compile Include="ViewTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

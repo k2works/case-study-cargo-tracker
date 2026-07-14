@@ -7,8 +7,13 @@ open Microsoft.Extensions.DependencyInjection
 open Giraffe
 open CargoTracker.Web
 
-/// ルーティング定義。ヘルスチェックは Giraffe の route で最小構成とする。
-let webApp: HttpHandler = choose [ route "/health" >=> text "Healthy" ]
+/// ルーティング定義。ヘルスチェック + ウォーキングスケルトンの主要ルート。
+/// 認証・ロール解決は後続タスク（ADR-0005）で追加する。現状はロール空で描画する。
+let webApp: HttpHandler =
+    choose
+        [ route "/health" >=> text "Healthy"
+          route "/" >=> htmlView (Views.dashboard [])
+          route "/login" >=> htmlView (Views.login "" None) ]
 
 /// 設定から DB プロバイダ・接続文字列・スクリプトルートを解決する。
 let resolveDbConfig (config: IConfiguration) (contentRoot: string) =
