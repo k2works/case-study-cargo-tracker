@@ -26,7 +26,7 @@
 | IT4 | [iteration_plan-4.md](iteration_plan-4.md) | [retrospective-4.md](retrospective-4.md) | [iteration_report-4.md](iteration_report-4.md) | 開発完了 |
 | IT5 | [iteration_plan-5.md](iteration_plan-5.md) | [retrospective-5.md](retrospective-5.md) | [iteration_report-5.md](iteration_report-5.md) | 開発完了 |
 | IT6 | [iteration_plan-6.md](iteration_plan-6.md) | [retrospective-6.md](retrospective-6.md) | [iteration_report-6.md](iteration_report-6.md) | 開発完了 |
-| IT7 | [iteration_plan-7.md](iteration_plan-7.md) | - | - | 計画中 |
+| IT7 | [iteration_plan-7.md](iteration_plan-7.md) | - | - | 開発完了 |
 
 ### 進捗サマリー
 
@@ -38,7 +38,8 @@
 | IT4 | 12 | 12 | 100% |
 | IT5 | 17 | 17 | 100% |
 | IT6 | 6 | 6 | 100% |
-| **累計** | **72** | **72** | **100%** |
+| IT7 | 13 | 13 | 100% |
+| **累計** | **85** | **85** | **100%** |
 
 ### フェーズ進捗
 

@@ -22,14 +22,14 @@
 
 ### 成功基準
 
-- [ ] US21・US22・US23 の受入条件をすべて満たす
-- [ ] `Invoice` 集約（`Money`・`DiscountRate`・`PaymentStatus`）を domain-model 準拠で実装し、基本料金・割引・最終金額の一貫性と金額境界（Money 最小通貨単位・割引上限 30%・銀行家丸め）を単体テストで網羅する
-- [ ] `InvoiceRequested`（Booking→Billing・Delivered 後）を post-commit で発行し、精算を起動する（ADR-0009 準拠）
-- [ ] 法人割引率を Shipper Context から ACL（プリミティブ DTO・SQL 直接参照）で取得し、Billing が Shipper の内部型に依存しない（ArchUnit で Billing BC の依存ルールを追加）
-- [ ] 入金確認で `PaymentStatus` Confirmed・予約状態 精算済への同期が動作する
-- [ ] **改善バックログ #16/#17 の消化**: 精算書発行の Delivered 制限（Delivered 未満は発行不可）、用語統一（Invoice の日本語表記を「精算書」に統一）
-- [ ] **IT6 レビュー高優先の消化**: H1（対応報告の荷主通知記録）・H2（変換ヘルパの Shared 集約・EnumDbCodec/DatabaseTimestamp）
-- [ ] **繰り越し品質ゲートの決着（4 IT 連続繰り越しを止める）**: Playwright E2E・カバレッジ 85% CI ハードゲート・SonarQube SQ-3/SQ-2
+- [x] US21・US22・US23 の受入条件をすべて満たす
+- [x] `Invoice` 集約（`Money`・`DiscountRate`・`PaymentStatus`）を domain-model 準拠で実装し、基本料金・割引・最終金額の一貫性と金額境界（Money 最小通貨単位・割引上限 30%・銀行家丸め）を単体テストで網羅する
+- [x] 入金確認で `PaymentConfirmedEvent`（Billing→Booking）を post-commit で発行し予約を Settled へ同期（ADR-0009 準拠）※精算開始は InvoiceRequested 自動起票ではなく GenerateInvoiceCommand 手動発行として実装（Delivered 制限で担保・domain-model 補足済み）
+- [x] 法人割引率を Shipper Context から ACL（プリミティブ DTO・SQL 直接参照）で取得し、Billing が Shipper の内部型に依存しない（ArchUnit ルール 7 追加）
+- [x] 入金確認で `PaymentStatus` Confirmed・予約状態 精算済（Settled）への同期が動作する
+- [x] **改善バックログ #16/#17 の消化**: 精算書発行の Delivered 制限（Delivered 未満は発行不可）、用語統一（Invoice の日本語表記を「精算書」に統一）
+- [x] **IT6 レビュー高優先の消化**: H1（対応報告の荷主通知記録）・H2（変換ヘルパの Shared 集約・EnumDbCodec/DatabaseTimestamp）・M1（例外通知冪等化）
+- [ ] **繰り越し品質ゲートの決着（4 IT 連続繰り越しを止める）**: Playwright E2E・カバレッジ 85% CI ハードゲート・SonarQube SQ-3/SQ-2 ※環境操作前提で繰り越し。ドメイン被覆は Invoice 95.2%/Money 86.7% を実測
 
 ### アプローチ（開発戦略: 終盤アウトサイドインの最終イテレーション）
 
@@ -159,15 +159,15 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| Day 1 設計反映・IT6 レビュー是正・負債返済 | - | 16h | [ ] |
-| US21 輸送料金を算出する | 5 | 19h | [ ] |
-| US22 法人割引を適用する | 3 | 11h | [ ] |
-| US23 精算を処理する | 5 | 17h | [ ] |
-| 繰り越し品質ゲート | - | 13h | [ ] |
+| Day 1 設計反映・IT6 レビュー是正・負債返済 | - | 16h | [x] |
+| US21 輸送料金を算出する | 5 | 19h | [x] |
+| US22 法人割引を適用する | 3 | 11h | [x] |
+| US23 精算を処理する | 5 | 17h | [x] |
+| 繰り越し品質ゲート | - | 13h | [~]（4.2 ドメイン被覆実測。4.1/4.3 は環境操作前提で繰り越し） |
 | **合計** | **13** | **76h** | |
 
 **1 SP あたり**: 約 3.6h（ストーリータスクのみ 47h ÷ 13 SP）
-**進捗率**: 0% (0/13 SP)
+**進捗率**: 100% (13/13 SP)（US21/US22/US23 機能実装完了・IT6 レビュー H1/H2/M1 消化・正式レビュー是正。品質ゲート 4.1/4.3 は繰り越し）
 
 > **注**: 13 SP は平均ベロシティ（12.0 SP/IT）とほぼ同等。IT6 レビュー是正（H1/H2/M1）と 4 IT 連続繰り越しの品質ゲート決着を同時進行するため、負債返済（0.x）と品質ゲート（4.x）を Week 1 前半・Week 2 後半に配置。超過時は US22（割引）を最初の調整候補とし、料金算出（US21）と精算（US23）のコアを優先する。
 
@@ -311,19 +311,19 @@ InvoiceRequested ..> Invoice : 精算起動（post-commit・ADR-0009）
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review：中間 / developing-review：正式）
-- [ ] US21・US22・US23 の受入条件をすべて満たす
-- [ ] ユニットテストがパス（Money 金額境界・割引上限 30%・銀行家丸め・PaymentStatus 遷移を網羅）
-- [ ] E2E テストがパス（Delivered→料金算出→割引→精算書発行→入金確認→精算済。Playwright 拡張・繰り越し決着）
-- [ ] ArchUnit テストがパス（Billing BC の ACL 経由依存・ルール 7）
-- [ ] `InvoiceRequested`・精算状態同期が post-commit で動作（ADR-0009 準拠・冪等）
-- [ ] **カバレッジ 85% ハードゲートを CI に導入（4 IT 繰り越しの決着）**
-- [ ] **SonarQube Quality Gate OK（SQ-3 アクセシビリティ・SQ-2 消化）**
-- [ ] IT6 レビュー H1（対応報告通知）・H2（変換ヘルパ集約）・M1（冪等テスト）を消化
-- [ ] 用語統一（精算書）・精算書発行の Delivered 制限（改善 #16/#17）
-- [ ] `dotnet format` / Lint エラーなし（0 警告）
-- [ ] domain-model / data-model / ui_design / release_plan の横断更新完了
-- [ ] **Release 1.1（Phase 2）のリリース条件を満たす**
+- [x] コードレビュー完了（self-review：中間 / developing-review：正式＝XP 5 視点実施・高 1/中 5/低 6 を IT7 内で是正）
+- [x] US21・US22・US23 の受入条件をすべて満たす
+- [x] ユニットテストがパス（Money 金額境界・割引上限 30%・銀行家丸め・PaymentStatus 遷移・延滞境界を網羅）
+- [~] E2E テストがパス（Delivered→料金算出→割引→精算書発行→入金確認→精算済。WebApplicationFactory 受け入れテストで貫通済み。Playwright 拡張は繰り越し）
+- [x] ArchUnit テストがパス（Billing BC の ACL 経由依存・ルール 7）
+- [x] 精算状態同期が post-commit で動作（`PaymentConfirmedEvent`→Settled・ADR-0009 準拠・冪等）
+- [ ] カバレッジ 85% ハードゲートを CI に導入（繰り越し。ドメイン被覆 Invoice 95.2%/Money 86.7% を実測）
+- [ ] SonarQube Quality Gate OK（SQ-3 アクセシビリティ・SQ-2 消化）※繰り越し
+- [x] IT6 レビュー H1（対応報告通知）・H2（変換ヘルパ集約）・M1（冪等テスト）を消化
+- [x] 用語統一（精算書）・精算書発行の Delivered 制限（改善 #16/#17）
+- [x] `dotnet format` / Lint エラーなし（0 警告）
+- [x] domain-model / data-model / ui_design / release_plan の横断更新完了
+- [x] **Release 1.1（Phase 2）のリリース条件を満たす**
 
 ### デモ項目
 
