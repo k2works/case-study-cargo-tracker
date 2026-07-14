@@ -140,4 +140,29 @@ let ``ログイン後のダッシュボードは営業ロールの導線を表�
         res.StatusCode |> should equal HttpStatusCode.OK
         let body = run (res.Content.ReadAsStringAsync())
         body |> should haveSubstring "ダッシュボード"
-        body |> should haveSubstring "荷主管理")
+        body |> should haveSubstring "荷主管理"
+        // ナビのログアウトは POST フォームであること（GET リンクだと 404 になるため）
+        body |> should haveSubstring "action=\"/logout\""
+        body |> should haveSubstring "method=\"post\"")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``ログアウト（POST /logout）でログインへリダイレクトする`` () =
+    withServer (fun client ->
+        let loginRes = run (client.PostAsync("/login", loginForm "sales01" "pw"))
+
+        let cookieValue =
+            (loginRes.Headers.GetValues "Set-Cookie" |> Seq.head).Split(';').[0]
+
+        use req = new HttpRequestMessage(HttpMethod.Post, "/logout")
+        req.Headers.Add("Cookie", cookieValue)
+        let res = run (client.SendAsync req)
+        res.StatusCode |> should equal HttpStatusCode.Found
+        res.Headers.Location.OriginalString |> should haveSubstring "/login")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``GET /logout は 404（ログアウトは POST のみ）`` () =
+    withServer (fun client ->
+        let res = run (client.GetAsync "/logout")
+        res.StatusCode |> should equal HttpStatusCode.NotFound)

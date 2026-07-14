@@ -29,7 +29,10 @@ module Views =
             if List.isEmpty roles then
                 a [ _class "nav-link"; _href "/login" ] [ str "ログイン" ]
             else
-                a [ _class "nav-link"; _href "/logout" ] [ str "ログアウト" ]
+                // ログアウトは状態変更操作のため POST フォームで送信する（CSRF 対策）。
+                form
+                    [ _method "post"; _action "/logout"; _class "d-inline" ]
+                    [ button [ _class "btn btn-link nav-link"; _type "submit" ] [ str "ログアウト" ] ]
 
         nav
             [ _class "navbar navbar-expand-lg navbar-dark bg-dark" ]
