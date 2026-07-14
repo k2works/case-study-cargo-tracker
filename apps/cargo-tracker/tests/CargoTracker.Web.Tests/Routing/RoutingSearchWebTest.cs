@@ -273,7 +273,8 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
 
     private static async Task RegisterHandlingAsync(
         HttpClient handler, string trackingNumber, string eventType,
-        string location, string completionTime, string? voyageNumber = null)
+        string location, string completionTime, string? voyageNumber = null,
+        string? consigneeConfirmation = null)
     {
         var token = Token(await handler.GetStringAsync("/handling/new"));
         var fields = new Dictionary<string, string>
@@ -287,6 +288,10 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         if (voyageNumber is not null)
         {
             fields["VoyageNumber"] = voyageNumber;
+        }
+        if (consigneeConfirmation is not null)
+        {
+            fields["ConsigneeConfirmation"] = consigneeConfirmation;
         }
 
         var response = await handler.PostAsync("/handling", new FormUrlEncodedContent(fields));
@@ -319,6 +324,42 @@ public sealed class RoutingSearchWebTest : IClassFixture<AuthenticationFlowTest.
         var sales = await LoginAsync("sales");
         var booking = await sales.GetStringAsync($"/bookings/{bookingId}");
         booking.Should().Contain("IN_TRANSIT").And.Contain("輸送中");
+    }
+
+    [Fact]
+    public async Task 荷役登録の荷降しから引取まで進めると予約が配送完了へ同期する()
+    {
+        // IT5 レビュー H4：CLAIM→Delivered・UNLOAD→InTransit の状態同期を終端まで貫通検証する。
+        // 予約確定 → 追跡番号自動発行 → 受領 → 積込（IN_TRANSIT）まで進める。
+        var (bookingId, trackingNumber) = await CreateConfirmedTrackedBookingAsync("VYG-FLOW-CLAIM-001");
+
+        var handler = await LoginAsync("handler");
+        var tracker = await LoginAsync("tracker");
+        var sales = await LoginAsync("sales");
+
+        await RegisterHandlingAsync(handler, trackingNumber, "Receive", "JPTYO", "2026-10-01T09:00");
+        await RegisterHandlingAsync(handler, trackingNumber, "Load", "JPTYO", "2026-10-01T10:00", "VYG-FLOW-CLAIM-001");
+
+        // 荷降し（Unload）を目的港 DEHAM・航海 VYG-FLOW-CLAIM-001 で登録 → 追跡状態は荷降し済へ。
+        // UNLOAD→InTransit のため予約状態は輸送中（IN_TRANSIT）を維持する（H4 の UNLOAD 分岐）。
+        await RegisterHandlingAsync(handler, trackingNumber, "Unload", "DEHAM", "2026-10-20T08:00", "VYG-FLOW-CLAIM-001");
+
+        var afterUnload = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
+        afterUnload.Should().Contain("荷降し済");
+        var bookingAfterUnload = await sales.GetStringAsync($"/bookings/{bookingId}");
+        bookingAfterUnload.Should().Contain("IN_TRANSIT").And.Contain("輸送中");
+
+        // 引取（Claim）を目的港 DEHAM・荷受人確認付きで登録 → 追跡状態は引取済へ、
+        // SyncBookingStatusOnHandlingRegisteredHandler が MarkDelivered() を通り予約を配送完了（DELIVERED）へ同期する（H4 の CLAIM 分岐終端）。
+        await RegisterHandlingAsync(
+            handler, trackingNumber, "Claim", "DEHAM", "2026-10-20T14:00",
+            consigneeConfirmation: "署名: 荷受人 山田太郎");
+
+        var afterClaim = await tracker.GetStringAsync($"/tracking/{trackingNumber}");
+        afterClaim.Should().Contain("引取済");
+
+        var bookingAfterClaim = await sales.GetStringAsync($"/bookings/{bookingId}");
+        bookingAfterClaim.Should().Contain("DELIVERED").And.Contain("配送完了");
     }
 
     private static async Task PostBookingActionAsync(HttpClient client, string bookingId, string action)
