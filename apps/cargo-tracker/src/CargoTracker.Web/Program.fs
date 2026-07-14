@@ -42,5 +42,12 @@ let main args =
     Seed.ensureDefaultUsers seedConn (System.DateTimeOffset.Now.UtcDateTime.ToString("o"))
 
     App.configureApp app
-    app.Run("http://0.0.0.0:8080")
+
+    // ASPNETCORE_URLS（launchSettings / dotnet watch / コンテナ）が設定されていればそれを尊重し、
+    // 未設定なら本番既定の 8080 で起動する。dotnet watch のブラウザ自動更新と両立させる。
+    match System.Environment.GetEnvironmentVariable "ASPNETCORE_URLS" with
+    | null
+    | "" -> app.Run("http://0.0.0.0:8080")
+    | _ -> app.Run()
+
     0

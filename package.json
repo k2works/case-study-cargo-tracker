@@ -4,6 +4,8 @@
   "main": "index.js",
   "scripts": {
     "start": "gulp spec",
+    "dev": "gulp dev:app:watch",
+    "dev:app": "gulp dev:app",
     "journal": "gulp journal:generate",
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
