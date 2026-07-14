@@ -49,4 +49,72 @@ public class TrackingActivityTest
         tracking.CurrentStatus().Should().Be(TrackingStatus.Loaded);
         tracking.Events.Should().HaveCount(2);
     }
+
+    private static TrackingExceptionEvent ExceptionEvent(
+        ExceptionType type, string description = "状況説明") =>
+        new(type, new TrackingLocation("USLAX"),
+            new DateTimeOffset(2026, 10, 8, 14, 0, 0, TimeSpan.Zero), description);
+
+    [Fact]
+    public void 遅延例外を登録すると例外発生状態になる()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-0001");
+        tracking.AddEvent(new TrackingActivityEvent(
+            TrackingEventType.Load, new TrackingLocation("JPTYO"), new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+
+        tracking.AddException(ExceptionEvent(ExceptionType.Delay));
+
+        tracking.CurrentStatus().Should().Be(TrackingStatus.Exception);
+        tracking.HasActiveException().Should().BeTrue();
+        tracking.Exceptions.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void 紛失例外はエスカレーションフラグが立つ()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-0002");
+
+        tracking.AddException(ExceptionEvent(ExceptionType.Lost));
+
+        tracking.Exceptions[^1].EscalationFlag.Should().BeTrue();
+    }
+
+    [Fact]
+    public void 遅延や破損例外はエスカレーションしない()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-0003");
+
+        tracking.AddException(ExceptionEvent(ExceptionType.Delay));
+        tracking.AddException(ExceptionEvent(ExceptionType.Damage));
+
+        tracking.Exceptions.Should().OnlyContain(e => e.EscalationFlag == false);
+    }
+
+    [Fact]
+    public void 例外を解決すると例外発生前の状態に復帰する()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-0004");
+        tracking.AddEvent(new TrackingActivityEvent(
+            TrackingEventType.Load, new TrackingLocation("JPTYO"), new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+        tracking.AddException(ExceptionEvent(ExceptionType.Delay));
+        tracking.CurrentStatus().Should().Be(TrackingStatus.Exception);
+
+        tracking.ResolveException(
+            new DateTimeOffset(2026, 10, 9, 0, 0, 0, TimeSpan.Zero), "新到着予定日を提示");
+
+        tracking.HasActiveException().Should().BeFalse();
+        tracking.CurrentStatus().Should().Be(TrackingStatus.Loaded);
+        tracking.Exceptions[^1].ResolvedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void 未解決の例外がなければ解決できない()
+    {
+        var tracking = TrackingActivity.Issue("BKG-EX-0005");
+
+        var act = () => tracking.ResolveException(
+            new DateTimeOffset(2026, 10, 9, 0, 0, 0, TimeSpan.Zero), "対応");
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

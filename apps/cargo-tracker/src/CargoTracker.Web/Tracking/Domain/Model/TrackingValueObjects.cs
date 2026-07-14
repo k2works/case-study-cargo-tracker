@@ -77,3 +77,15 @@ public enum TrackingEventType
     Unload,
     Claim,
 }
+
+/// <summary>
+/// 例外種別（Tracking BC 固有・US19/US20）。遅延・破損・紛失・税関保留。
+/// 本リリースでは Delay/Damage/Lost を扱い、CustomsHold は税関システム連携（対象外）で自動登録される。
+/// </summary>
+public enum ExceptionType
+{
+    Delay,
+    Damage,
+    Lost,
+    CustomsHold,
+}

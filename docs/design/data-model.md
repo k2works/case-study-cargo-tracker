@@ -172,6 +172,7 @@ package "Tracking Context" #lightyellow {
     --
     * tracking_id : BIGINT <<FK>>
     * exception_type : VARCHAR(50)
+    * location_unlocode : VARCHAR(5)
     * occurred_at : TIMESTAMP
     * escalation_flag : BOOLEAN
     description : VARCHAR(500)
@@ -473,6 +474,7 @@ entity "tracking_exception_event\n（追跡例外イベント）" as tracking_ex
   --
   * tracking_id : BIGINT <<FK, NOT NULL>>
   * exception_type : VARCHAR(50) <<NOT NULL>>
+  * location_unlocode : VARCHAR(5) <<NOT NULL>>
   * occurred_at : TIMESTAMP <<NOT NULL>>
   * escalation_flag : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
   description : VARCHAR(500)

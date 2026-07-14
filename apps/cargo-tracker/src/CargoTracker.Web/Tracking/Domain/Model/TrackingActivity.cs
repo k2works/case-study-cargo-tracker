@@ -9,19 +9,23 @@ namespace CargoTracker.Tracking.Domain.Model;
 public sealed class TrackingActivity : AggregateRoot
 {
     private readonly List<TrackingActivityEvent> _events;
+    private readonly List<TrackingExceptionEvent> _exceptions;
 
     public TrackingNumber TrackingNumber { get; }
     public TrackingBookingId BookingId { get; }
     public IReadOnlyList<TrackingActivityEvent> Events => _events;
+    public IReadOnlyList<TrackingExceptionEvent> Exceptions => _exceptions;
     public long Version { get; private set; }
 
     private TrackingActivity(
         TrackingNumber trackingNumber, TrackingBookingId bookingId,
-        IEnumerable<TrackingActivityEvent> events, long version)
+        IEnumerable<TrackingActivityEvent> events, long version,
+        IEnumerable<TrackingExceptionEvent>? exceptions = null)
     {
         TrackingNumber = trackingNumber;
         BookingId = bookingId;
         _events = events.ToList();
+        _exceptions = exceptions?.ToList() ?? [];
         Version = version;
     }
 
@@ -41,15 +45,48 @@ public sealed class TrackingActivity : AggregateRoot
         Version++;
     }
 
-    /// <summary>現在の輸送状態を導出する。イベントがなければ受領待ち（NotReceived）。</summary>
+    /// <summary>例外事象を登録する（US19/US20）。登録中は現在状態が例外発生（Exception）になる。</summary>
+    public void AddException(TrackingExceptionEvent exceptionEvent)
+    {
+        ArgumentNullException.ThrowIfNull(exceptionEvent);
+        _exceptions.Add(exceptionEvent);
+        Version++;
+    }
+
+    /// <summary>未解決の例外があるか（domain-model の HasActiveException）。</summary>
+    public bool HasActiveException() => _exceptions.Any(e => e.IsActive);
+
+    /// <summary>
+    /// 未解決の例外を解決し、輸送状態を例外発生前（イベント由来）の状態へ復帰させる
+    /// （US19/US20 の対応報告・domain-model ビジネスルール 5）。
+    /// </summary>
+    public void ResolveException(DateTimeOffset resolvedAt, string? resolutionNotes)
+    {
+        var active = _exceptions.LastOrDefault(e => e.IsActive)
+            ?? throw new InvalidOperationException("未解決の例外がありません。");
+        active.Resolve(resolvedAt, resolutionNotes);
+        Version++;
+    }
+
+    /// <summary>
+    /// 現在の輸送状態を導出する。未解決の例外があれば例外発生（Exception）、
+    /// なければ最新イベントから導出する。イベントがなければ受領待ち（NotReceived）。
+    /// </summary>
     public TrackingStatus CurrentStatus()
-        => _events.Count == 0
+    {
+        if (HasActiveException())
+        {
+            return TrackingStatus.Exception;
+        }
+        return _events.Count == 0
             ? TrackingStatus.NotReceived
             : _events[^1].ToStatus();
+    }
 
     /// <summary>永続化データから再構築する。</summary>
     public static TrackingActivity Reconstruct(
         TrackingNumber trackingNumber, TrackingBookingId bookingId,
-        IEnumerable<TrackingActivityEvent> events, long version)
-        => new(trackingNumber, bookingId, events, version);
+        IEnumerable<TrackingActivityEvent> events, long version,
+        IEnumerable<TrackingExceptionEvent>? exceptions = null)
+        => new(trackingNumber, bookingId, events, version, exceptions);
 }
