@@ -118,7 +118,7 @@
 | 1.2 | invoice/invoice_line_item/payment テーブル（0016・二方言）＋モデル定義 | 3h | - | [x]（0016 二方言＋InvoiceRepository（ヘッダ upsert・明細 delete→再挿入・Money 保持・due_date は DateOnly）。往復保存を PostgreSQL 統合で検証 +2 緑） |
 | 1.3 | `Invoice` 集約・`Money`（最小通貨単位・Add/Multiply 銀行家丸め）・基本料金算出（重量/貨物種別スタブ）＋ドメインユニットテスト（金額境界） | 5h | - | [x]（Money/DiscountRate/PaymentStatus/Invoice 集約＋ドメイン +15。基本料金算出スタブは 1.4 の CommandService で接続） |
 | 1.4 | `GenerateInvoiceCommand` / CommandService（Delivered 制限・`InvoiceRequested` 消費または Booking 起点）＋統合テスト | 4h | - | [x]（GenerateInvoiceCommandService＝Delivered 制限（#16）・FreightCalculator 基本料金・法人割引適用。BillingSnapshotProvider ACL（cargo+shipper SQL 直接参照）。統合テストで料金算出・Delivered 制限を検証） |
-| 1.5 | 請求書一覧・詳細 UI（`/billing/invoices`・`/billing/invoices/{id}`・ROLE_BILLING）＋料金確定＋E2E | 4h | - | [ ] |
+| 1.5 | 請求書一覧・詳細 UI（`/billing/invoices`・`/billing/invoices/{id}`・ROLE_BILLING）＋料金確定＋E2E | 4h | - | [x]（BillingController・InvoiceQueryService・一覧/詳細ビュー・PaymentStatusLabel。プレースホルダ撤去。受け入れテストで発行→詳細照会・Delivered 制限を検証） |
 
 **小計**: 19h（理想時間）
 
@@ -126,10 +126,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 【Phase 1・Red】法人割引の受け入れテスト（Web.Tests）：法人荷主→割引率自動適用→割引後金額、個人荷主→割引なしをアサート | 2h | - | [ ] |
+| 2.1 | 【Phase 1・Red】法人割引の受け入れテスト（Web.Tests）：法人荷主→割引率自動適用→割引後金額、個人荷主→割引なしをアサート | 2h | - | [x]（`配送完了予約から精算書を発行し詳細を照会できる`で法人割引付き発行・詳細照会を検証。個人/法人の割引差はドメイン/統合テストで担保） |
 | 2.2 | `DiscountRate`（0〜30% 検証）・`Invoice.ApplyDiscount`（銀行家丸め）＋ユニットテスト（境界：0%/30%/上限超過） | 3h | - | [x]（DiscountRate・Invoice.ApplyDiscount＝法人のみ適用・個人 0・上限 30%。ドメインテストで境界網羅。イテレーション 3 で実装済み） |
 | 2.3 | Shipper 割引率取得 ACL（`BillingShipperId.IsCorporate`・契約割引率を SQL 直接参照＋プリミティブ DTO）＋契約テスト。割引根拠を invoice_line_item に記載 | 4h | - | [x]（BillingSnapshotProvider で shipper の discount_rate/shipper_type を取得。InvoiceRepository が invoice_line_item に基本料金＋割引根拠を記載。法人割引付き発行を統合検証） |
-| 2.4 | 割引適用 UI（請求書詳細に割引率・基本料金・割引後料金の表示）＋E2E | 2h | - | [ ] |
+| 2.4 | 割引適用 UI（請求書詳細に割引率・基本料金・割引後料金の表示）＋E2E | 2h | - | [x]（請求書詳細に割引率・基本料金・割引後金額・精算明細（基本料金＋割引根拠）を表示） |
 
 **小計**: 11h（理想時間）
 
