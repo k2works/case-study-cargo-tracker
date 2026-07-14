@@ -1,3 +1,5 @@
+using CargoTracker.Billing.Application.Internal.CommandServices;
+using CargoTracker.Billing.Application.Internal.OutboundServices;
 using CargoTracker.Billing.Domain.Model;
 using CargoTracker.Billing.Infrastructure.Repositories;
 using CargoTracker.Shared.Infrastructure.Persistence;
@@ -78,5 +80,46 @@ public sealed class InvoiceRepositoryIntegrationTest : IAsyncLifetime
         var afterPayment = await _repository.FindByBookingIdAsync("BKG-INV-0002");
         afterPayment!.PaymentStatus.Should().Be(PaymentStatus.Confirmed);
         afterPayment.PaidAt.Should().NotBeNull();
+    }
+
+    private sealed class FakeSnapshotProvider(BillingSnapshot? snapshot)
+        : IBillingSnapshotProvider
+    {
+        public Task<BillingSnapshot?> FindByBookingIdAsync(
+            string bookingId, CancellationToken ct = default) => Task.FromResult(snapshot);
+    }
+
+    [Fact]
+    public async Task 配送完了予約の料金算出で法人割引付き精算書が発行される()
+    {
+        var snapshot = new BillingSnapshot(
+            "BKG-GEN-0001", "DELIVERED", "General", 100m, "SHP-CORP", "Corporate", 0.10m);
+        var service = new GenerateInvoiceCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            _repository, new FakeSnapshotProvider(snapshot));
+
+        var invoiceNumber = await service.HandleAsync(new GenerateInvoiceCommand(
+            "BKG-GEN-0001", new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+
+        invoiceNumber.Should().Be("INV-GEN-0001");
+        var invoice = await _repository.FindByBookingIdAsync("BKG-GEN-0001");
+        invoice!.BaseAmount.Should().Be(new Money(10000, "JPY"));   // 100kg × 100 × 1.0
+        invoice.FinalAmount.Should().Be(new Money(9000, "JPY"));    // 10% 割引
+        invoice.PaymentStatus.Should().Be(PaymentStatus.Pending);
+    }
+
+    [Fact]
+    public async Task 配送未完了の予約は精算書を発行できない()
+    {
+        var snapshot = new BillingSnapshot(
+            "BKG-GEN-0002", "IN_TRANSIT", "General", 100m, "SHP-1", "Individual", 0m);
+        var service = new GenerateInvoiceCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            _repository, new FakeSnapshotProvider(snapshot));
+
+        var act = () => service.HandleAsync(new GenerateInvoiceCommand(
+            "BKG-GEN-0002", new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

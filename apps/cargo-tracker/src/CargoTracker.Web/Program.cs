@@ -108,6 +108,9 @@ builder.Services.AddScoped<CargoTracker.Tracking.Domain.Repositories.IExceptionN
 // Billing コンテキスト（US21-23）。
 builder.Services.AddScoped<CargoTracker.Billing.Domain.Repositories.IInvoiceRepository,
     CargoTracker.Billing.Infrastructure.Repositories.InvoiceRepository>();
+builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.OutboundServices.IBillingSnapshotProvider,
+    CargoTracker.Billing.Infrastructure.Services.BillingSnapshotProvider>();
+builder.Services.AddScoped<CargoTracker.Billing.Application.Internal.CommandServices.GenerateInvoiceCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AssignTrackingNumberCommandService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.QueryServices.TrackingQueryService>();
 builder.Services.AddScoped<CargoTracker.Tracking.Application.Internal.CommandServices.AddTrackingEventCommandService>();
