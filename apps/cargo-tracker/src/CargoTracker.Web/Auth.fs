@@ -35,10 +35,9 @@ module Auth =
         let hash (plain: string) : string =
             let salt = RandomNumberGenerator.GetBytes saltSize
 
-            use pbkdf2 =
-                new Rfc2898DeriveBytes(plain, salt, iterations, HashAlgorithmName.SHA256)
+            let key =
+                Rfc2898DeriveBytes.Pbkdf2(plain, salt, iterations, HashAlgorithmName.SHA256, keySize)
 
-            let key = pbkdf2.GetBytes keySize
             sprintf "%d.%s.%s" iterations (Convert.ToBase64String salt) (Convert.ToBase64String key)
 
         let verify (plain: string) (stored: string) : bool =
@@ -48,8 +47,10 @@ module Auth =
                 | true, iter ->
                     let salt = Convert.FromBase64String saltB64
                     let expected = Convert.FromBase64String keyB64
-                    use pbkdf2 = new Rfc2898DeriveBytes(plain, salt, iter, HashAlgorithmName.SHA256)
-                    let actual = pbkdf2.GetBytes expected.Length
+
+                    let actual =
+                        Rfc2898DeriveBytes.Pbkdf2(plain, salt, iter, HashAlgorithmName.SHA256, expected.Length)
+
                     CryptographicOperations.FixedTimeEquals(actual, expected)
                 | _ -> false
             | _ -> false

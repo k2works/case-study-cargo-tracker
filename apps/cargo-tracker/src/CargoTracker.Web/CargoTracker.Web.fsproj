@@ -10,6 +10,7 @@
     <Compile Include="UnitOfWork.fs" />
     <Compile Include="Auth.fs" />
     <Compile Include="Views.fs" />
+    <Compile Include="App.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -20,7 +21,9 @@
     <PackageReference Include="dbup-core" Version="6.1.1" />
     <PackageReference Include="dbup-sqlite" Version="6.0.4" />
     <PackageReference Include="dbup-postgresql" Version="7.0.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <!-- NU1903（GHSA-2m69-gcr7-jv3q）回避のためパッチ版ネイティブライブラリを明示ピン -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
   </ItemGroup>
 

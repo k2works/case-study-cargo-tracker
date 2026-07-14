@@ -3,17 +3,7 @@ module CargoTracker.Web.Program
 open System.IO
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.Configuration
-open Microsoft.Extensions.DependencyInjection
-open Giraffe
 open CargoTracker.Web
-
-/// ルーティング定義。ヘルスチェック + ウォーキングスケルトンの主要ルート。
-/// 認証・ロール解決は後続タスク（ADR-0005）で追加する。現状はロール空で描画する。
-let webApp: HttpHandler =
-    choose
-        [ route "/health" >=> text "Healthy"
-          route "/" >=> htmlView (Views.dashboard [])
-          route "/login" >=> htmlView (Views.login "" None) ]
 
 /// 設定から DB プロバイダ・接続文字列・スクリプトルートを解決する。
 let resolveDbConfig (config: IConfiguration) (contentRoot: string) =
@@ -36,7 +26,7 @@ let resolveDbConfig (config: IConfiguration) (contentRoot: string) =
 [<EntryPoint>]
 let main args =
     let builder = WebApplication.CreateBuilder(args)
-    builder.Services.AddGiraffe() |> ignore
+    App.configureServices builder.Configuration builder.Services
     let app = builder.Build()
 
     // 起動時に forward-only マイグレーションを適用する（ADR-0003）。
@@ -47,6 +37,6 @@ let main args =
     | Ok() -> ()
     | Error e -> failwithf "DB マイグレーションに失敗しました: %s" e
 
-    app.UseGiraffe webApp
+    App.configureApp app
     app.Run("http://0.0.0.0:8080")
     0
