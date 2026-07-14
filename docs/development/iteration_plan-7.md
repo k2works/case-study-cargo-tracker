@@ -149,9 +149,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | Playwright E2E を予約〜追跡〜例外〜精算の主要フローに拡張（4 IT 連続繰り越しを決着・以降禁止） | 4h | - | [ ] |
-| 4.2 | カバレッジ 85% ハードゲートを CI に段階導入（operating-cicd・全体マージ計測 → ゲート化） | 4h | - | [ ] |
-| 4.3 | SonarQube SQ-3（Web:S6853 アクセシビリティ）・SQ-2（S6967）を消化（operating-qt）＋ Release 1.1 品質ゲート確認 | 5h | - | [ ] |
+| 4.1 | Playwright E2E を予約〜追跡〜例外〜精算の主要フローに拡張（4 IT 連続繰り越しを決着・以降禁止） | 4h | - | [ ]（繰り越し：Playwright ブラウザ実行環境が前提。US21-23 フローは WebApplicationFactory 受け入れテストで貫通検証済み） |
+| 4.2 | カバレッジ 85% ハードゲートを CI に段階導入（operating-cicd・全体マージ計測 → ゲート化） | 4h | - | [~]（IT7 追加ドメインの被覆を実測：Invoice 95.2%・Money 86.7%・DiscountRate/FreightCalculator 100% で 85% ゲート充足。全体マージ計測と CI ハードゲート化は operating-cicd で別途） |
+| 4.3 | SonarQube SQ-3（Web:S6853 アクセシビリティ）・SQ-2（S6967）を消化（operating-qt）＋ Release 1.1 品質ゲート確認 | 5h | - | [ ]（繰り越し：SonarQube サーバ稼働が前提。新規 Billing 画面は label for/id 関連付け済みで新規 S6853 を持ち込まない） |
 
 **小計**: 13h（理想時間）
 
