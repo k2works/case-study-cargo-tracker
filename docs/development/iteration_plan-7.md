@@ -27,7 +27,7 @@
 - [ ] `InvoiceRequested`（Booking→Billing・Delivered 後）を post-commit で発行し、精算を起動する（ADR-0009 準拠）
 - [ ] 法人割引率を Shipper Context から ACL（プリミティブ DTO・SQL 直接参照）で取得し、Billing が Shipper の内部型に依存しない（ArchUnit で Billing BC の依存ルールを追加）
 - [ ] 入金確認で `PaymentStatus` Confirmed・予約状態 精算済への同期が動作する
-- [ ] **改善バックログ #16/#17 の消化**: 請求書発行の Delivered 制限（Delivered 未満は発行不可）、用語統一（請求書/精算書＝Invoice の日本語表記を「精算書」に統一）
+- [ ] **改善バックログ #16/#17 の消化**: 精算書発行の Delivered 制限（Delivered 未満は発行不可）、用語統一（Invoice の日本語表記を「精算書」に統一）
 - [ ] **IT6 レビュー高優先の消化**: H1（対応報告の荷主通知記録）・H2（変換ヘルパの Shared 集約・EnumDbCodec/DatabaseTimestamp）
 - [ ] **繰り越し品質ゲートの決着（4 IT 連続繰り越しを止める）**: Playwright E2E・カバレッジ 85% CI ハードゲート・SonarQube SQ-3/SQ-2
 
@@ -100,7 +100,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | 【Day 1・着手前】設計反映：(a) Billing Context の Invoice 集約（Money・DiscountRate・PaymentStatus・ApplyDiscount/ConfirmPayment）・`InvoiceRequested` イベントを domain-model に確定、(b) invoice/invoice_line_item/payment テーブル（0016 以降・二方言。0015 は例外通知冪等キーで使用済み）を data-model と突合、(c) 請求書一覧/詳細（`/billing/invoices`・`/billing/invoices/{id}`）を ui_design 画面一覧と整合。局面継続チェック（アウトサイドイン・ArchUnit グリーン・UoW 基盤動作）。用語統一（Invoice=「精算書」＝改善 #17） | 4h | - | [x]（data-model invoice を実装（Money base/final・discount_rate・shipper・version・0016）へ再構成。domain-model に FreightCalculator/PaymentConfirmedEvent/GenerateInvoiceCommand 手動発行/ACL を補足。ui_design を実装エンドポイント/精算明細に整合。用語統一（精算書＝#17）） |
+| 0.1 | 【Day 1・着手前】設計反映：(a) Billing Context の Invoice 集約（Money・DiscountRate・PaymentStatus・ApplyDiscount/ConfirmPayment）・`InvoiceRequested` イベントを domain-model に確定、(b) invoice/invoice_line_item/payment テーブル（0016 以降・二方言。0015 は例外通知冪等キーで使用済み）を data-model と突合、(c) 精算書一覧/詳細（`/billing/invoices`・`/billing/invoices/{id}`）を ui_design 画面一覧と整合。局面継続チェック（アウトサイドイン・ArchUnit グリーン・UoW 基盤動作）。用語統一（Invoice=「精算書」＝改善 #17） | 4h | - | [x]（data-model invoice を実装（Money base/final・discount_rate・shipper・version・0016）へ再構成。domain-model に FreightCalculator/PaymentConfirmedEvent/GenerateInvoiceCommand 手動発行/ACL を補足。ui_design を実装エンドポイント/精算明細に整合。用語統一（精算書＝#17）） |
 | 0.2 | IT6 レビュー H2 / IT5 Try T1：変換ヘルパを Shared に集約。`Shared.Infrastructure.Persistence` に `DatabaseTimestamp`（ToDatabaseTimestamp）と `EnumDbCodec.ToScreamingSnake/FromScreamingSnake` を新設し、Booking/Routing/Tracking の既存 8 箇所を一括で巻き取る（部分適用禁止）。Billing の新規リポジトリは最初から共通版を使用。全テスト緑で担保 | 5h | - | [x]（DatabaseTimestamp/EnumDbCodec 新設・往復 9 テスト。Infrastructure 層 6 リポジトリ＋Cargo/Tracking の enum 変換を共通版へ。SearchVoyagesQueryService は Application 層のため ArchUnit ルール 3 遵守でインライン保持。全 264 テスト緑） |
 | 0.3 | IT6 レビュー H1：対応報告（ResolveException）時の荷主通知を append-only 記録（US19 AC4/US20 AC5 の完全充足）＋テスト | 2h | - | [x]（TrackingExceptionResolvedEvent＋NotifyOnTrackingExceptionResolvedHandler＋ExceptionNotification.ForResolution。統合テストで対応報告通知記録を検証） |
 | 0.4 | IT6 レビュー M1：例外通知ハンドラの冪等性統合テスト（同一イベント 2 回処理で二重記録されない）を追加、または exception_notification に冪等キー/一意制約を導入。ADR-0009 コンプライアンス達成 | 3h | - | [x]（自然キー一意インデックス 0015・二方言＋SaveAsync 存在チェックで冪等化。2 回処理で二重記録なしを統合テストで検証） |
@@ -118,7 +118,7 @@
 | 1.2 | invoice/invoice_line_item/payment テーブル（0016・二方言）＋モデル定義 | 3h | - | [x]（0016 二方言＋InvoiceRepository（ヘッダ upsert・明細 delete→再挿入・Money 保持・due_date は DateOnly）。往復保存を PostgreSQL 統合で検証 +2 緑） |
 | 1.3 | `Invoice` 集約・`Money`（最小通貨単位・Add/Multiply 銀行家丸め）・基本料金算出（重量/貨物種別スタブ）＋ドメインユニットテスト（金額境界） | 5h | - | [x]（Money/DiscountRate/PaymentStatus/Invoice 集約＋ドメイン +15。基本料金算出スタブは 1.4 の CommandService で接続） |
 | 1.4 | `GenerateInvoiceCommand` / CommandService（Delivered 制限・`InvoiceRequested` 消費または Booking 起点）＋統合テスト | 4h | - | [x]（GenerateInvoiceCommandService＝Delivered 制限（#16）・FreightCalculator 基本料金・法人割引適用。BillingSnapshotProvider ACL（cargo+shipper SQL 直接参照）。統合テストで料金算出・Delivered 制限を検証） |
-| 1.5 | 請求書一覧・詳細 UI（`/billing/invoices`・`/billing/invoices/{id}`・ROLE_BILLING）＋料金確定＋E2E | 4h | - | [x]（BillingController・InvoiceQueryService・一覧/詳細ビュー・PaymentStatusLabel。プレースホルダ撤去。受け入れテストで発行→詳細照会・Delivered 制限を検証） |
+| 1.5 | 精算書一覧・詳細 UI（`/billing/invoices`・`/billing/invoices/{id}`・ROLE_BILLING）＋料金確定＋E2E | 4h | - | [x]（BillingController・InvoiceQueryService・一覧/詳細ビュー・PaymentStatusLabel。プレースホルダ撤去。受け入れテストで発行→詳細照会・Delivered 制限を検証） |
 
 **小計**: 19h（理想時間）
 
@@ -129,7 +129,7 @@
 | 2.1 | 【Phase 1・Red】法人割引の受け入れテスト（Web.Tests）：法人荷主→割引率自動適用→割引後金額、個人荷主→割引なしをアサート | 2h | - | [x]（`配送完了予約から精算書を発行し詳細を照会できる`で法人割引付き発行・詳細照会を検証。個人/法人の割引差はドメイン/統合テストで担保） |
 | 2.2 | `DiscountRate`（0〜30% 検証）・`Invoice.ApplyDiscount`（銀行家丸め）＋ユニットテスト（境界：0%/30%/上限超過） | 3h | - | [x]（DiscountRate・Invoice.ApplyDiscount＝法人のみ適用・個人 0・上限 30%。ドメインテストで境界網羅。イテレーション 3 で実装済み） |
 | 2.3 | Shipper 割引率取得 ACL（`BillingShipperId.IsCorporate`・契約割引率を SQL 直接参照＋プリミティブ DTO）＋契約テスト。割引根拠を invoice_line_item に記載 | 4h | - | [x]（BillingSnapshotProvider で shipper の discount_rate/shipper_type を取得。InvoiceRepository が invoice_line_item に基本料金＋割引根拠を記載。法人割引付き発行を統合検証） |
-| 2.4 | 割引適用 UI（請求書詳細に割引率・基本料金・割引後料金の表示）＋E2E | 2h | - | [x]（請求書詳細に割引率・基本料金・割引後金額・精算明細（基本料金＋割引根拠）を表示） |
+| 2.4 | 割引適用 UI（精算書詳細に割引率・基本料金・割引後料金の表示）＋E2E | 2h | - | [x]（精算書詳細に割引率・基本料金・割引後金額・精算明細（基本料金＋割引根拠）を表示） |
 
 **小計**: 11h（理想時間）
 
@@ -141,7 +141,7 @@
 | 3.2 | `PaymentStatus`（Pending/Confirmed/Overdue/Refunded）遷移・`Invoice.ConfirmPayment`・精算書発行（invoice_number 採番・due_date）＋ユニットテスト | 4h | - | [x]（PaymentStatus 遷移・ConfirmPayment（PaymentConfirmedEvent 発行）・MarkOverdue。ドメインテストで境界網羅。イテレーション 3/7 で実装） |
 | 3.3 | `ConfirmPaymentCommand` / CommandService＋`IPaymentGatewayPort`（スタブ）＋予約状態 精算済 同期（post-commit イベント）＋統合テスト | 5h | - | [x]（ConfirmPaymentCommandService＋StubPaymentGateway。PaymentConfirmedEvent→SyncBookingStatusOnPaymentConfirmedHandler で Cargo.MarkSettled（冪等・失敗ログ）。受け入れテストで予約 Settled 同期を検証） |
 | 3.4 | 精算書の荷主通知記録・期限超過の未払い通知記録（append-only・IT6 通知パターン踏襲）＋テスト | 2h | - | [ ] |
-| 3.5 | 精算 UI（請求書詳細に入金確認・精算完了・支払状態表示）＋E2E | 3h | - | [x]（請求書詳細に入金確認フォーム・支払状態バッジ。BillingController 入金確認エンドポイント。受け入れテストで精算済表示を検証） |
+| 3.5 | 精算 UI（精算書詳細に入金確認・精算完了・支払状態表示）＋E2E | 3h | - | [x]（精算書詳細に入金確認フォーム・支払状態バッジ。BillingController 入金確認エンドポイント。受け入れテストで精算済表示を検証） |
 
 **小計**: 17h（理想時間）
 
@@ -186,7 +186,7 @@ gantt
     H1/M1 是正・Billing ArchUnit      :d1, after d0, 1d
     section US21 料金算出
     受け入れテスト・テーブル・Invoice集約 :d2, after d1, 1d
-    Command・請求書UI                 :d3, after d2, 1d
+    Command・精算書UI                 :d3, after d2, 1d
 ```
 
 | 日 | タスク |
@@ -195,7 +195,7 @@ gantt
 | Day 2 | 0.2 完了、0.3 H1 対応報告通知、0.4 M1 冪等テスト |
 | Day 3 | 0.5 Billing ArchUnit、1.1 US21 受け入れテスト（Red）、1.2 invoice マイグレーション |
 | Day 4 | 1.3 Invoice 集約・Money（金額境界）、1.4 GenerateInvoiceCommand |
-| Day 5 | 1.5 請求書一覧/詳細 UI・料金確定、2.1 US22 受け入れテスト（Red） |
+| Day 5 | 1.5 精算書一覧/詳細 UI・料金確定、2.1 US22 受け入れテスト（Red） |
 
 ### Week 2（Day 6-10）
 
@@ -266,16 +266,16 @@ InvoiceRequested ..> Invoice : 精算起動（post-commit・ADR-0009）
 
 | 画面 | URL | 説明 | 対象ロール | US |
 |------|-----|------|-----------|-----|
-| 請求書一覧 | `/billing/invoices` | 精算書の一覧・ステータス管理 | ROLE_BILLING | US21/US23 |
-| 請求書詳細 | `/billing/invoices/{invoiceId}` | 精算書詳細・割引表示・支払確認 | ROLE_BILLING | US22/US23 |
+| 精算書一覧 | `/billing/invoices` | 精算書の一覧・ステータス管理 | ROLE_BILLING | US21/US23 |
+| 精算書詳細 | `/billing/invoices/{invoiceId}` | 精算書詳細・割引表示・支払確認 | ROLE_BILLING | US22/US23 |
 
 > **ナビゲーション整合性（絶対項目）**: 請求管理（`/billing/invoices`）は IT1 のウォーキングスケルトンで navbar・ダッシュボードに ROLE_BILLING 表示で実装済み。本 IT はスタブの実画面化のため、navbar（`_Layout.cshtml`）・ダッシュボード（`Home/Index.cshtml`）の ROLE_BILLING 表示条件と `WalkingSkeletonTest` のロール別到達アサートを Day1 0.1 で確認する（ui_design ナビ表 → navbar → dashboard → テストの 4 点一致）。割引ポリシー管理（`/admin/discount-policies`・ROLE_ADMIN・US-ADM-01）は本 IT スコープ外（法人割引は Shipper 契約割引率を使用）。
 
 **インタラクション**（htmx / PRG パターン）:
 
-- 料金算出（US21）: 請求書一覧から Delivered 予約を選択 → 料金算出 → 基本料金確定（PRG）。Delivered 未満は算出不可（`alert-warning`）。
-- 割引適用（US22）: 法人荷主は割引率・基本料金・割引後料金を請求書詳細に表示。
-- 精算（US23）: 請求書詳細から入金確認（`IPaymentGatewayPort` スタブ）→ 精算済へ遷移。期限超過は Overdue バッジ。
+- 料金算出（US21）: 精算書一覧から Delivered 予約を選択 → 料金算出 → 基本料金確定（PRG）。Delivered 未満は算出不可（`alert-warning`）。
+- 割引適用（US22）: 法人荷主は割引率・基本料金・割引後料金を精算書詳細に表示。
+- 精算（US23）: 精算書詳細から入金確認（`IPaymentGatewayPort` スタブ）→ 精算済へ遷移。期限超過は Overdue バッジ。
 
 ### API 設計
 
@@ -320,7 +320,7 @@ InvoiceRequested ..> Invoice : 精算起動（post-commit・ADR-0009）
 - [ ] **カバレッジ 85% ハードゲートを CI に導入（4 IT 繰り越しの決着）**
 - [ ] **SonarQube Quality Gate OK（SQ-3 アクセシビリティ・SQ-2 消化）**
 - [ ] IT6 レビュー H1（対応報告通知）・H2（変換ヘルパ集約）・M1（冪等テスト）を消化
-- [ ] 用語統一（精算書）・請求書発行の Delivered 制限（改善 #16/#17）
+- [ ] 用語統一（精算書）・精算書発行の Delivered 制限（改善 #16/#17）
 - [ ] `dotnet format` / Lint エラーなし（0 警告）
 - [ ] domain-model / data-model / ui_design / release_plan の横断更新完了
 - [ ] **Release 1.1（Phase 2）のリリース条件を満たす**

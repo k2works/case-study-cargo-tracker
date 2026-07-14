@@ -14,7 +14,7 @@ tags: design, ui, ux, wireframe
 
 ### 設計方針
 
-**OOUX（オブジェクト指向 UI 設計）** をベースに、ユーザーが操作する「オブジェクト」（貨物予約・追跡・荷役・航路・請求書）を中心に画面を構成します。各画面はオブジェクトの状態を可視化し、アクターに応じた操作を提供します。
+**OOUX（オブジェクト指向 UI 設計）** をベースに、ユーザーが操作する「オブジェクト」（貨物予約・追跡・荷役・航路・精算書）を中心に画面を構成します。各画面はオブジェクトの状態を可視化し、アクターに応じた操作を提供します。
 
 ### 技術スタック
 
@@ -46,7 +46,7 @@ OOUX に基づき、システム内の主要オブジェクトとそのアクシ
 | **追跡情報（Tracking）** | trackingNumber, TransportStatus, 現在地, ステータス履歴 | 追跡番号検索・履歴確認 | 貨物予約 |
 | **荷役作業（HandlingEvent）** | eventId, 貨物 ID, 荷役種別, 場所, 実施日時, 担当者 | 新規登録・一覧確認 | 貨物予約 |
 | **航路（Voyage）** | voyageNumber, 出発港, 到着港, 出発予定日, 到着予定日 | 一覧確認・経路割り当てへの提供 | 貨物予約 |
-| **請求書（Invoice）** | invoiceId, 貨物予約, 金額, 割引, 消費税, PaymentStatus | 一覧確認・詳細確認・支払い確認 | 貨物予約 |
+| **精算書（Invoice）** | invoiceId, 貨物予約, 金額, 割引, 消費税, PaymentStatus | 一覧確認・詳細確認・支払い確認 | 貨物予約 |
 
 ### オブジェクト間の関係
 
@@ -81,8 +81,8 @@ Booking 1 ─── 1 Invoice
 | 経路設計・候補算出 | `/routing/requests/{bookingId}` | 航海検索・経路候補算出・比較・確定 | 経路設計者 | US07, US08, US09, US10, US11 |
 | 荷主一覧 | `/shippers` | 荷主の一覧・検索 | 営業担当者 | US02, US03 |
 | 荷主登録 | `/shippers/new` | 新規荷主登録フォーム（個人/法人切替） | 営業担当者 | US02, US03 |
-| 請求書一覧 | `/billing/invoices` | 請求書の一覧・ステータス管理 | 経理担当者 | US21, US23 |
-| 請求書詳細 | `/billing/invoices/{invoiceId}` | 請求書詳細・支払い確認 | 経理担当者 | US22, US23 |
+| 精算書一覧 | `/billing/invoices` | 精算書の一覧・ステータス管理 | 経理担当者 | US21, US23 |
+| 精算書詳細 | `/billing/invoices/{invoiceId}` | 精算書詳細・支払い確認 | 経理担当者 | US22, US23 |
 | 割引ポリシー一覧 | `/admin/discount-policies` | 割引ポリシーの一覧・有効期限管理 | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー登録 | `/admin/discount-policies/new` | 新規割引ポリシー登録フォーム | ROLE_ADMIN | US-ADM-01 |
 | 割引ポリシー編集 | `/admin/discount-policies/{id}/edit` | 割引ポリシー編集フォーム | ROLE_ADMIN | US-ADM-01 |
@@ -170,7 +170,7 @@ state ダッシュボード {
 ダッシュボード --> 貨物予約一覧 : [予約管理] クリック
 ダッシュボード --> 貨物追跡入力 : [追跡] クリック
 ダッシュボード --> 荷役作業一覧 : [荷役管理] クリック
-ダッシュボード --> 請求書一覧 : [請求管理] クリック
+ダッシュボード --> 精算書一覧 : [請求管理] クリック
 ダッシュボード --> 航路一覧 : [航路管理] クリック
 
 state "予約フロー" as booking_flow {
@@ -239,17 +239,17 @@ state "荷役フロー" as handling_flow {
 }
 
 state "精算フロー" as billing_flow {
-  state 請求書一覧 {
-    請求書一覧 : /billing/invoices
-    請求書一覧 : 一覧テーブル・フィルタ
+  state 精算書一覧 {
+    精算書一覧 : /billing/invoices
+    精算書一覧 : 一覧テーブル・フィルタ
   }
-  state 請求書詳細 {
-    請求書詳細 : /billing/invoices/{invoiceId}
-    請求書詳細 : 詳細・支払い確認
+  state 精算書詳細 {
+    精算書詳細 : /billing/invoices/{invoiceId}
+    精算書詳細 : 詳細・支払い確認
   }
 
-  請求書一覧 --> 請求書詳細 : 行クリック
-  請求書詳細 --> 請求書一覧 : [一覧に戻る] / 支払い確認成功（PRG）
+  精算書一覧 --> 精算書詳細 : 行クリック
+  精算書詳細 --> 精算書一覧 : [一覧に戻る] / 支払い確認成功（PRG）
 }
 
 state "航路・経路設計フロー" as routing_flow {
@@ -1134,7 +1134,7 @@ state "荷主フロー" as shipper_flow {
 
 ---
 
-### 請求書一覧 (/billing/invoices)
+### 精算書一覧 (/billing/invoices)
 
 #### ワイヤーフレーム
 
@@ -1143,15 +1143,15 @@ state "荷主フロー" as shipper_flow {
 {+
   {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | <b>請求管理</b> | [ログアウト] }
   ==
-  <b>請求書一覧</b>
+  <b>精算書一覧</b>
   --
   {
     ステータス | ^PENDING^ | 発行日 | "2026-03-  " | [検索]
   }
   ==
-  [+ 新規請求書発行]
+  [+ 新規精算書発行]
   {#
-    **請求書 ID** | **予約 ID** | **金額** | **発行日**   | **支払期限** | **ステータス**
+    **精算書 ID** | **予約 ID** | **金額** | **発行日**   | **支払期限** | **ステータス**
     INV-0021      | BK-1234     | ¥450,000 | 2026-03-28   | 2026-04-28   | <color:red>PENDING</color>
     INV-0020      | BK-1230     | ¥320,000 | 2026-03-25   | 2026-04-25   | <color:red>PENDING</color>
     INV-0019      | BK-1225     | ¥580,000 | 2026-03-20   | 2026-04-20   | <color:green>CONFIRMED</color>
@@ -1172,7 +1172,7 @@ state "荷主フロー" as shipper_flow {
 
 ---
 
-### 請求書詳細 (/billing/invoices/{invoiceId})
+### 精算書詳細 (/billing/invoices/{invoiceId})
 
 #### ワイヤーフレーム
 
@@ -1181,7 +1181,7 @@ state "荷主フロー" as shipper_flow {
 {+
   {/ <b>CargoTracker</b> | 貨物予約 | 貨物追跡 | 荷役管理 | <b>請求管理</b> | [ログアウト] }
   ==
-  <b>請求書詳細</b>  INV-0021  |  <color:red>PENDING</color>
+  <b>精算書詳細</b>  INV-0021  |  <color:red>PENDING</color>
   ==
   {
     {+
@@ -1213,7 +1213,7 @@ state "荷主フロー" as shipper_flow {
     備考      | "              "
   }
   ==
-  [支払い確認を登録] | [請求書一覧に戻る]
+  [支払い確認を登録] | [精算書一覧に戻る]
 }
 @endsalt
 ```
@@ -1224,7 +1224,7 @@ state "荷主フロー" as shipper_flow {
 - **[入金を確認]**: `POST /billing/invoices/{invoiceNumber}/payment` を送信（IT7 実装）。PRG パターンで同画面へリダイレクトし、決済機関スタブで入金確認 → 精算済（Confirmed）・予約 Settled へ同期
 - **確認済み**: PaymentStatus が `CONFIRMED`（精算済）の場合は入金確認フォームを非表示にする
 - **識別子**: 精算書は `invoice_number`（`INV-<予約番号>`）で識別する（`{invoiceId}` は invoice_number）
-- **PDF 出力**: `GET /billing/invoices/{invoiceId}/pdf` で請求書 PDF をダウンロード（将来実装）
+- **PDF 出力**: `GET /billing/invoices/{invoiceId}/pdf` で精算書 PDF をダウンロード（将来実装）
 
 ---
 
@@ -1440,7 +1440,7 @@ PRG パターンのリダイレクト後に、操作結果を TempData でフィ
 | 予約登録成功 | 「貨物予約 BK-1234 を登録しました」 | `alert-success` |
 | 経路割り当て成功 | 「経路 V0042 を割り当てました」 | `alert-success` |
 | 荷役登録成功 | 「荷役作業 HE-0042 を登録しました」 | `alert-success` |
-| 支払い確認成功 | 「請求書 INV-0021 の支払いを確認しました」 | `alert-success` |
+| 支払い確認成功 | 「精算書 INV-0021 の支払いを確認しました」 | `alert-success` |
 | バリデーションエラー | 「入力内容に誤りがあります。確認してください」 | `alert-danger` |
 | システムエラー | 「処理中にエラーが発生しました。時間をおいて再試行してください」 | `alert-danger` |
 

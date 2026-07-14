@@ -594,6 +594,12 @@ entity "payment\n（支払記録）" as payment {
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
 }
 
+note bottom of payment
+  **IT7 実装状況**: payment テーブルは 0016 で作成済みだが、本 IT では入金確認時に
+  invoice.paid_at / payment_status のみ更新し payment への INSERT は未実装（IT7 レビュー M1）。
+  支払方法・取引参照・入金額の永続化は実決済機関連携（IPaymentGatewayPort 実装）時に対応する。
+end note
+
 invoice ||--o{ invoice_line_item : "明細を持つ"
 invoice ||--o{ payment : "支払を持つ"
 

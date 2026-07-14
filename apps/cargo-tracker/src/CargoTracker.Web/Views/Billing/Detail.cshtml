@@ -28,7 +28,7 @@ else
         <dt class="col-sm-3">荷主種別</dt><dd class="col-sm-9">@(Model.ShipperType == "Corporate" ? "法人" : "個人")</dd>
         <dt class="col-sm-3">基本料金</dt><dd class="col-sm-9">@Model.BaseAmountValue @Model.Currency</dd>
         <dt class="col-sm-3">割引率</dt><dd class="col-sm-9">@Model.DiscountRate.ToString("P0")</dd>
-        <dt class="col-sm-3">請求金額（割引後）</dt><dd class="col-sm-9"><strong>@Model.FinalAmountValue @Model.Currency</strong></dd>
+        <dt class="col-sm-3">精算金額（割引後）</dt><dd class="col-sm-9"><strong>@Model.FinalAmountValue @Model.Currency</strong></dd>
         <dt class="col-sm-3">支払期限</dt><dd class="col-sm-9">@Model.DueDate.ToString("yyyy-MM-dd")</dd>
         <dt class="col-sm-3">支払状態</dt>
         <dd class="col-sm-9">
