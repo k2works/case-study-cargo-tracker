@@ -89,7 +89,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 0.1 | 【Day 1・着手前】設計反映：(a) `TrackingExceptionEvent`（集約内エンティティ）・`ExceptionType`（Delay/Damage/Lost/CustomsHold）・`TransportStatus.Exception` 遷移・`TrackingExceptionDetectedEvent` を domain-model に確定、(b) `tracking_exception_event` テーブル（0013 以降・二方言）を data-model に定義、(c) 例外登録画面（`/tracking/{trackingNumber}/exceptions/new`）を ui_design 画面一覧と整合。局面移行チェック（終盤アウトサイドインへの切替・ArchUnit グリーン・UoW 基盤動作） | 4h | - | [ ] |
-| 0.2 | IT5 レビュー H1：post-commit 連鎖の結果整合性方針（at-least-once・冪等スキップ・補償/再試行/手動修復のいずれか）を ADR 化し、ADR-0002/0006 の Consequences を更新。同期失敗ログ・再同期手段の可観測性方針を明記。例外イベント（`TrackingExceptionDetectedEvent`）追加の前提として先行 | 5h | - | [ ] |
+| 0.2 | IT5 レビュー H1：post-commit 連鎖の結果整合性方針（at-least-once・冪等スキップ・補償/再試行/手動修復のいずれか）を ADR 化し、ADR-0002/0006 の Consequences を更新。同期失敗ログ・再同期手段の可観測性方針を明記。例外イベント（`TrackingExceptionDetectedEvent`）追加の前提として先行 | 5h | - | [x]（ADR-0009 起票＝結果整合性モデル・冪等ハンドラ・同期失敗 WARN ログ・手動修復（状態導出）・Outbox 移行方針。ADR-0002/0006 の影響に相互参照追記。index 更新） |
 | 0.3 | IT5 レビュー H3：ArchUnit に Tracking/Handling BC の依存ルール（他 BC 内部型への非依存・ACL 経由のみ）を追加。基準線を固定し回帰検出可能にする | 3h | - | [x]（ルール 5/6 追加＝Tracking/Handling は他 BC の `.Domain.Model` に非依存。ドメインイベント購読・CargoSnapshot ACL は正規チャネルとして許容。Arch テスト 6→8 緑） |
 | 0.4 | IT5 レビュー H4：CLAIM→Delivered・UNLOAD→InTransit の状態同期 E2E を追加（`MarkDelivered()` 終端・UNLOAD 分岐を回帰テスト内に） | 3h | - | [x]（`荷役登録の荷降しから引取まで進めると予約が配送完了へ同期する` を追加。Unload@DEHAM→荷降し済/IN_TRANSIT 維持、Claim@DEHAM+荷受人確認→引取済/DELIVERED を貫通検証。Web.Tests 59→60 緑） |
 | 0.5 | IT5 レビュー H2（一部・基盤）：荷主通知の append-only 記録基盤を Tracking BC に整備（`NotifyRouteToShipper` の通知記録パターンを踏襲）。実送信は後続、本 IT では通知記録で代替。US19/US20 の通知要件で消費 | 3h | - | [ ] |
