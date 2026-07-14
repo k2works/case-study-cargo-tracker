@@ -150,4 +150,24 @@ public class HexagonalArchitectureTest
             .Because("Handling は他 BC の内部集約に依存せず、連携は CargoSnapshot ACL とドメインイベント発行に限定する")
             .Check(_architecture);
     }
+
+    // ルール 7: Billing Context は他 BC の内部ドメインモデルに直接依存しない（IT7・基準線固定）
+    // Booking の Delivered 起点（InvoiceRequested）・Shipper の割引率取得は ACL（SQL 直接参照）とドメインイベントで行い、
+    // 他 BC の Domain.Model へは依存しない。
+    [Fact]
+    public void 精算コンテキストは他BCの内部ドメインモデルに直接参照しない()
+    {
+        var billingContext = Types().That().ResideInNamespaceMatching(@"CargoTracker\.Billing\.");
+
+        Types().That().Are(billingContext)
+            .Should().NotDependOnAny(Types().That()
+                .ResideInNamespaceMatching(@"CargoTracker\.Booking\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Estimation\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Routing\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Shipper\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Tracking\.Domain\.Model")
+                .Or().ResideInNamespaceMatching(@"CargoTracker\.Handling\.Domain\.Model"))
+            .Because("Billing は他 BC の内部集約に依存せず、連携は割引率 ACL とドメインイベント（InvoiceRequested）に限定する")
+            .Check(_architecture);
+    }
 }
