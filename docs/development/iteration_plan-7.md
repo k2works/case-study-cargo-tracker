@@ -138,10 +138,10 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 3.1 | 【Phase 1・Red】精算の受け入れテスト（Web.Tests）：精算書発行→荷主通知記録→入金確認→精算済・予約状態同期→期限超過で未払い記録をアサート | 3h | - | [ ] |
-| 3.2 | `PaymentStatus`（Pending/Confirmed/Overdue/Refunded）遷移・`Invoice.ConfirmPayment`・精算書発行（invoice_number 採番・due_date）＋ユニットテスト | 4h | - | [ ] |
-| 3.3 | `ConfirmPaymentCommand` / CommandService＋`IPaymentGatewayPort`（スタブ）＋予約状態 精算済 同期（post-commit イベント）＋統合テスト | 5h | - | [ ] |
+| 3.2 | `PaymentStatus`（Pending/Confirmed/Overdue/Refunded）遷移・`Invoice.ConfirmPayment`・精算書発行（invoice_number 採番・due_date）＋ユニットテスト | 4h | - | [x]（PaymentStatus 遷移・ConfirmPayment（PaymentConfirmedEvent 発行）・MarkOverdue。ドメインテストで境界網羅。イテレーション 3/7 で実装） |
+| 3.3 | `ConfirmPaymentCommand` / CommandService＋`IPaymentGatewayPort`（スタブ）＋予約状態 精算済 同期（post-commit イベント）＋統合テスト | 5h | - | [x]（ConfirmPaymentCommandService＋StubPaymentGateway。PaymentConfirmedEvent→SyncBookingStatusOnPaymentConfirmedHandler で Cargo.MarkSettled（冪等・失敗ログ）。受け入れテストで予約 Settled 同期を検証） |
 | 3.4 | 精算書の荷主通知記録・期限超過の未払い通知記録（append-only・IT6 通知パターン踏襲）＋テスト | 2h | - | [ ] |
-| 3.5 | 精算 UI（請求書詳細に入金確認・精算完了・支払状態表示）＋E2E | 3h | - | [ ] |
+| 3.5 | 精算 UI（請求書詳細に入金確認・精算完了・支払状態表示）＋E2E | 3h | - | [x]（請求書詳細に入金確認フォーム・支払状態バッジ。BillingController 入金確認エンドポイント。受け入れテストで精算済表示を検証） |
 
 **小計**: 17h（理想時間）
 
