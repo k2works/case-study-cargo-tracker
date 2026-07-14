@@ -59,6 +59,40 @@ let ``SQLite マイグレーションで全テーブルが作成される`` () =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
+let ``既定ユーザーをシードすると sales で認証でき冪等である`` () =
+    let dbFile =
+        Path.Combine(Path.GetTempPath(), sprintf "cargo_seed_%s.db" (System.Guid.NewGuid().ToString("N")))
+
+    let connStr = sprintf "Data Source=%s" dbFile
+
+    try
+        Db.runMigrations Db.Sqlite connStr scriptsRoot |> ignore
+        use conn = new SqliteConnection(connStr)
+        conn.Open()
+
+        Seed.ensureDefaultUsers conn "2026-07-14T00:00:00Z"
+        // 冪等: 再実行しても重複投入しない
+        Seed.ensureDefaultUsers conn "2026-07-14T00:00:00Z"
+
+        // 既定ユーザーで認証できる
+        let store = Auth.UserStore.create conn
+
+        match Auth.authenticate store Seed.DefaultUsername Seed.DefaultPassword with
+        | Some user -> user.Roles |> should equal [ "ROLE_SALES" ]
+        | None -> failwith "既定ユーザーで認証できるはず"
+
+        // ユーザー数は 6 ロール分（重複なし）
+        use cmd = conn.CreateCommand()
+        cmd.CommandText <- "SELECT COUNT(*) FROM users"
+        cmd.ExecuteScalar() |> System.Convert.ToInt32 |> should equal 6
+    finally
+        SqliteConnection.ClearAllPools()
+
+        if File.Exists dbFile then
+            File.Delete dbFile
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
 let ``マイグレーションは冪等（再適用してもエラーにならない）`` () =
     let dbFile =
         Path.Combine(Path.GetTempPath(), sprintf "cargo_idem_%s.db" (System.Guid.NewGuid().ToString("N")))

@@ -285,7 +285,8 @@ module Views =
                     a [ _class "btn btn-secondary ms-2"; _href "/estimates" ] [ str "キャンセル" ] ] ]
 
     /// ログイン画面。エラー時はメッセージを表示し、入力値を保持する。
-    let login (username: string) (error: string option) : XmlNode =
+    /// 初期表示ではシードの既定ユーザー ID・パスワードを事前入力する。
+    let login (username: string) (password: string) (error: string option) : XmlNode =
         layout
             "ログイン"
             []
@@ -307,5 +308,9 @@ module Views =
                                     [ _class "mb-3" ]
                                     [ label [ _class "form-label"; _for "password" ] [ str "パスワード" ]
                                       input
-                                          [ _class "form-control"; _id "password"; _name "password"; _type "password" ] ]
+                                          [ _class "form-control"
+                                            _id "password"
+                                            _name "password"
+                                            _type "password"
+                                            _value password ] ]
                                 button [ _class "btn btn-primary"; _type "submit" ] [ str "ログイン" ] ] ] ] ]

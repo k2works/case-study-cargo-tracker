@@ -65,7 +65,7 @@ let private loginPost: HttpHandler =
             | None ->
                 ctx.SetStatusCode 401
 
-                return! htmlView (Views.login username (Some "ユーザー ID またはパスワードが正しくありません。")) next ctx
+                return! htmlView (Views.login username "" (Some "ユーザー ID またはパスワードが正しくありません。")) next ctx
         }
 
 /// ログアウト: Cookie を破棄しログイン画面へ戻す。
@@ -268,7 +268,8 @@ let webApp: HttpHandler =
         [ GET
           >=> choose
                   [ route "/health" >=> text "Healthy"
-                    route "/login" >=> htmlView (Views.login "" None)
+                    route "/login"
+                    >=> htmlView (Views.login Seed.DefaultUsername Seed.DefaultPassword None)
                     route "/" >=> dashboard
                     route "/shippers" >=> shipperList
                     route "/shippers/new" >=> shipperNew

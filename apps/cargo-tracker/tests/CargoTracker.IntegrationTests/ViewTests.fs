@@ -24,16 +24,22 @@ let ``管理者ロールのダッシュボードは管理設定を表示する``
 
 [<Fact>]
 let ``未認証のログイン画面はログインメニューを表示しログアウトは表示しない`` () =
-    let html = render (Views.login "" None)
+    let html = render (Views.login "sales" "password" None)
     html |> should haveSubstring "ログイン"
     html |> should not' (haveSubstring "ログアウト")
     html |> should haveSubstring "パスワード"
 
 [<Fact>]
 let ``ログインエラーはメッセージと入力値を保持して表示する`` () =
-    let html = render (Views.login "sales01" (Some "認証に失敗しました"))
+    let html = render (Views.login "sales01" "" (Some "認証に失敗しました"))
     html |> should haveSubstring "認証に失敗しました"
     html |> should haveSubstring "sales01"
+
+[<Fact>]
+let ``ログイン初期表示は既定ユーザー ID とパスワードを事前入力する`` () =
+    let html = render (Views.login Seed.DefaultUsername Seed.DefaultPassword None)
+    html |> should haveSubstring (sprintf "value=\"%s\"" Seed.DefaultUsername)
+    html |> should haveSubstring (sprintf "value=\"%s\"" Seed.DefaultPassword)
 
 [<Fact>]
 let ``経路設計ロールは航路管理を表示し荷主管理は表示しない`` () =

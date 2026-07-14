@@ -37,6 +37,10 @@ let main args =
     | Ok() -> ()
     | Error e -> failwithf "DB マイグレーションに失敗しました: %s" e
 
+    // 開発用の既定ユーザーを投入する（users が空のときのみ・冪等）。
+    use seedConn = Db.openConnection provider connStr
+    Seed.ensureDefaultUsers seedConn (System.DateTimeOffset.Now.UtcDateTime.ToString("o"))
+
     App.configureApp app
     app.Run("http://0.0.0.0:8080")
     0
