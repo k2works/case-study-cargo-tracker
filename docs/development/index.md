@@ -51,6 +51,7 @@
 | リリース | 報告書 | 状態 |
 |---------|--------|------|
 | Release 1.0 MVP（Phase 1・IT1-5） | [release_report-1.0.md](release_report-1.0.md) | 開発完了 |
+| Release 1.1（Phase 2・IT6-7） | [release_report-1.1.md](release_report-1.1.md) | 開発完了 |
 
 ### 開発ジャーナル
 
