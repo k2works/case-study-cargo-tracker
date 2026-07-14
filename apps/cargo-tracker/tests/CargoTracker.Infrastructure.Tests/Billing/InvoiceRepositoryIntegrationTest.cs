@@ -155,4 +155,40 @@ public sealed class InvoiceRepositoryIntegrationTest : IAsyncLifetime
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
+
+    [Fact]
+    public async Task 同一予約への精算書は二重発行できない()
+    {
+        var snapshot = new BillingSnapshot(
+            "BKG-GEN-0003", "DELIVERED", "General", 100m, "SHP-1", "Individual", 0m);
+        var service = new GenerateInvoiceCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            _repository, new FakeSnapshotProvider(snapshot));
+        await service.HandleAsync(new GenerateInvoiceCommand(
+            "BKG-GEN-0003", new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+
+        var act = () => service.HandleAsync(new GenerateInvoiceCommand(
+            "BKG-GEN-0003", new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero)));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    private sealed class StubGateway : IPaymentGatewayPort
+    {
+        public Task<PaymentConfirmation> ConfirmPaymentAsync(
+            string invoiceNumber, string paymentMethod, DateTimeOffset asOf, CancellationToken ct = default)
+            => Task.FromResult(new PaymentConfirmation(true, asOf, $"STUB-{invoiceNumber}"));
+    }
+
+    [Fact]
+    public async Task 存在しない精算書の入金確認は拒否される()
+    {
+        var service = new ConfirmPaymentCommandService(
+            new UnitOfWorkFactory(_connectionFactory, _publisher.Object, _ambient),
+            _repository, new StubGateway());
+
+        var act = () => service.HandleAsync(new ConfirmPaymentCommand("INV-NOT-EXIST", "銀行振込"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
 }

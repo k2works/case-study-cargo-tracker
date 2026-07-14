@@ -108,4 +108,26 @@ public class InvoiceTest
 
         invoice.PaymentStatus.Should().Be(PaymentStatus.Pending);
     }
+
+    [Fact]
+    public void 支払期限ちょうどでは延滞にならない()
+    {
+        var invoice = IssueFor("Individual"); // due 2026-10-31
+
+        invoice.MarkOverdue(_due); // asOf == DueDate（境界）
+
+        invoice.PaymentStatus.Should().Be(PaymentStatus.Pending);
+    }
+
+    [Fact]
+    public void 延滞状態からでも入金確認できる()
+    {
+        var invoice = IssueFor("Individual");
+        invoice.MarkOverdue(new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero));
+        invoice.PaymentStatus.Should().Be(PaymentStatus.Overdue);
+
+        invoice.ConfirmPayment(new DateTimeOffset(2026, 11, 2, 0, 0, 0, TimeSpan.Zero));
+
+        invoice.PaymentStatus.Should().Be(PaymentStatus.Confirmed);
+    }
 }

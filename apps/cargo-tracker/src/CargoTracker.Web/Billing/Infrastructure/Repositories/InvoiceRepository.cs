@@ -67,7 +67,9 @@ public sealed class InvoiceRepository(IDbConnectionFactory connectionFactory, Am
         else
         {
             invoiceId = existingId.Value;
-            await connection.ExecuteAsync(new CommandDefinition(
+            // 楽観ロック（CargoRepository と同方針）: 集約が Version をインクリメント済みのため
+            // WHERE は更新前 version、SET は新 version。影響行数 0 は並行更新競合として扱う。
+            var affectedRows = await connection.ExecuteAsync(new CommandDefinition(
                 """
                 UPDATE invoice SET
                     base_amount_value = @BaseValue, base_amount_currency = @BaseCurrency,
@@ -75,7 +77,7 @@ public sealed class InvoiceRepository(IDbConnectionFactory connectionFactory, Am
                     final_amount_value = @FinalValue, final_amount_currency = @FinalCurrency,
                     payment_status = @PaymentStatus, paid_at = @PaidAt,
                     version = @Version, updated_at = @Now
-                WHERE id = @Id
+                WHERE id = @Id AND version = @ExpectedVersion
                 """,
                 new
                 {
@@ -87,10 +89,15 @@ public sealed class InvoiceRepository(IDbConnectionFactory connectionFactory, Am
                     parameters.PaymentStatus,
                     parameters.PaidAt,
                     invoice.Version,
+                    ExpectedVersion = invoice.Version - 1,
                     parameters.Now,
                     Id = invoiceId,
                 },
                 tx, cancellationToken: ct));
+            if (affectedRows == 0)
+            {
+                throw new InvalidOperationException("精算書が並行更新されたため、保存できませんでした。");
+            }
         }
 
         // 割引根拠の明細（invoice_line_item）を全削除→再挿入。基本料金と割引額を明細化する（US22 AC4）。
