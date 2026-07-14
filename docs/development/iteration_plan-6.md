@@ -92,7 +92,7 @@
 | 0.2 | IT5 レビュー H1：post-commit 連鎖の結果整合性方針（at-least-once・冪等スキップ・補償/再試行/手動修復のいずれか）を ADR 化し、ADR-0002/0006 の Consequences を更新。同期失敗ログ・再同期手段の可観測性方針を明記。例外イベント（`TrackingExceptionDetectedEvent`）追加の前提として先行 | 5h | - | [x]（ADR-0009 起票＝結果整合性モデル・冪等ハンドラ・同期失敗 WARN ログ・手動修復（状態導出）・Outbox 移行方針。ADR-0002/0006 の影響に相互参照追記。index 更新） |
 | 0.3 | IT5 レビュー H3：ArchUnit に Tracking/Handling BC の依存ルール（他 BC 内部型への非依存・ACL 経由のみ）を追加。基準線を固定し回帰検出可能にする | 3h | - | [x]（ルール 5/6 追加＝Tracking/Handling は他 BC の `.Domain.Model` に非依存。ドメインイベント購読・CargoSnapshot ACL は正規チャネルとして許容。Arch テスト 6→8 緑） |
 | 0.4 | IT5 レビュー H4：CLAIM→Delivered・UNLOAD→InTransit の状態同期 E2E を追加（`MarkDelivered()` 終端・UNLOAD 分岐を回帰テスト内に） | 3h | - | [x]（`荷役登録の荷降しから引取まで進めると予約が配送完了へ同期する` を追加。Unload@DEHAM→荷降し済/IN_TRANSIT 維持、Claim@DEHAM+荷受人確認→引取済/DELIVERED を貫通検証。Web.Tests 59→60 緑） |
-| 0.5 | IT5 レビュー H2（一部・基盤）：荷主通知の append-only 記録基盤を Tracking BC に整備（`NotifyRouteToShipper` の通知記録パターンを踏襲）。実送信は後続、本 IT では通知記録で代替。US19/US20 の通知要件で消費 | 3h | - | [ ] |
+| 0.5 | IT5 レビュー H2（一部・基盤）：荷主通知の append-only 記録基盤を Tracking BC に整備（`NotifyRouteToShipper` の通知記録パターンを踏襲）。実送信は後続、本 IT では通知記録で代替。US19/US20 の通知要件で消費 | 3h | - | [x]（exception_notification 0014・ExceptionNotification 記録・リポジトリ・NotifyOnTrackingExceptionDetectedHandler（荷主常時＋管理職エスカレーション）。ADR-0009 準拠の失敗 WARN ログ。追跡詳細に通知記録表示） |
 
 **小計**: 18h（理想時間）
 
@@ -114,9 +114,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 【Phase 1・Red】破損・紛失の受け入れテスト（Web.Tests）：破損登録・紛失登録→escalation_flag 設定→管理職エスカレーション通知記録をアサート | 2h | - | [~]（`紛失例外を登録するとエスカレーションが表示される`＝紛失登録→escalation バッジ表示を検証。管理職通知記録アサートは 2.3 で接続予定） |
+| 2.1 | 【Phase 1・Red】破損・紛失の受け入れテスト（Web.Tests）：破損登録・紛失登録→escalation_flag 設定→管理職エスカレーション通知記録をアサート | 2h | - | [x]（`紛失例外を登録するとエスカレーションが表示される`＝紛失登録→escalation バッジ＋管理職通知記録表示を検証） |
 | 2.2 | `Damage`/`Lost` の例外ドメインロジック（紛失は escalation_flag 必須・管理職通知トリガ）＋ユニットテスト（境界：Lost のみ escalation） | 4h | - | [x]（TrackingExceptionEvent で Lost のみ EscalationFlag。ドメインテスト `紛失例外はエスカレーションフラグが立つ`/`遅延や破損例外はエスカレーションしない`。イテレーション 2 で実装済み） |
-| 2.3 | エスカレーション通知（管理職向け）＋荷主通知の append-only 記録（0.5 の通知基盤で実装）＋統合テスト | 4h | - | [ ] |
+| 2.3 | エスカレーション通知（管理職向け）＋荷主通知の append-only 記録（0.5 の通知基盤で実装）＋統合テスト | 4h | - | [x]（NotifyOnTrackingExceptionDetectedHandler で紛失→荷主+管理職 2 通、遅延→荷主 1 通を記録。Infra 統合で検証 +2 緑） |
 | 2.4 | 破損・紛失登録 UI（種別選択で紛失時のエスカレーション必須表示＝ui_design の警告文言）＋補償方針入力＋E2E | 3h | - | [x]（NewException 画面に破損/紛失種別＋紛失エスカレーション警告（ui_design 文言）。対応方針は対応報告フォームで入力。US20 受け入れ緑） |
 
 **小計**: 13h（理想時間）
