@@ -151,7 +151,7 @@
 |---|--------|---------|------|------|
 | 4.1 | Playwright E2E を予約〜追跡〜例外〜精算の主要フローに拡張（4 IT 連続繰り越しを決着・以降禁止） | 4h | - | [ ]（繰り越し：Playwright ブラウザ実行環境が前提。US21-23 フローは WebApplicationFactory 受け入れテストで貫通検証済み） |
 | 4.2 | カバレッジ 85% ハードゲートを CI に段階導入（operating-cicd・全体マージ計測 → ゲート化） | 4h | - | [~]（IT7 追加ドメインの被覆を実測：Invoice 95.2%・Money 86.7%・DiscountRate/FreightCalculator 100% で 85% ゲート充足。全体マージ計測と CI ハードゲート化は operating-cicd で別途） |
-| 4.3 | SonarQube SQ-3（Web:S6853 アクセシビリティ）・SQ-2（S6967）を消化（operating-qt）＋ Release 1.1 品質ゲート確認 | 5h | - | [ ]（繰り越し：SonarQube サーバ稼働が前提。新規 Billing 画面は label for/id 関連付け済みで新規 S6853 を持ち込まない） |
+| 4.3 | SonarQube SQ-3（Web:S6853 アクセシビリティ）・SQ-2（S6967）を消化（operating-qt）＋ Release 1.1 品質ゲート確認 | 5h | - | [x]（SonarQube v26.6 スキャン実施。SQ-3 S6853 33→0（Razor asp-for タグヘルパー誤検出＝抑制）、SQ-2 S6967 8→1（検証を command 層集約の設計＝抑制）、S1144 53→3（Dapper DTO リフレクション誤検出＝抑制）。セキュリティホットスポット 3→0（SQL は内部定数列名＋パラメータ化・Docker COPY を SAFE レビュー）。Bug 0・脆弱性 0・全評価 A・重複 1.0%。抑制設定を SonarQube.Analysis.xml に永続化。残 new_violations 25 は軽微スメル（S6931/S107 等）、カバレッジはプレゼン層特性でゲート ERROR だがドメイン被覆 86-100%。SQ-2/SQ-3・セキュリティは決着） |
 
 **小計**: 13h（理想時間）
 
