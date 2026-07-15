@@ -124,9 +124,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | ワークフロー（`registerVoyage`・`updateVoyage`・`searchVoyages`・`computeRouteCandidates`）を `asyncResult` で構成・VoyageRepository ポート（関数レコード）定義 | 3h | - | [ ] |
-| 2.2 | マイグレーション 0006（voyage 拡張: 船名・運送会社・対応貨物種別／carrier_movement）両方言 + data-model 反映 | 3h | - | [ ] |
-| 2.3 | VoyageRepository（Donald・voyage + carrier_movement 親子の単一トランザクション書き込み・検索クエリ）統合テスト | 4h | - | [ ] |
+| 2.1 | ワークフロー（`registerVoyage`・`updateVoyage`・`searchVoyages`・`computeRouteCandidates`）を `asyncResult` で構成・VoyageRepository ポート（関数レコード）定義 | 3h | - | [x] |
+| 2.2 | マイグレーション 0006（voyage 拡張: 船名・運送会社・対応貨物種別／carrier_movement）両方言 + data-model 反映（data-model 反映は完了時） | 3h | - | [x] |
+| 2.3 | VoyageRepository（Donald・voyage + carrier_movement 親子の単一トランザクション書き込み・検索クエリ）統合テスト | 4h | - | [x] |
 | 2.4 | 予約 → 経路設計依頼一覧の連携（RoutingRequested 状態の予約を `/routing/requests` に表示）。IT2 の post-commit イベント結線（レビュー H6・retro Try#2） | 3h | - | [ ] |
 
 **小計**: 13h（理想時間）
