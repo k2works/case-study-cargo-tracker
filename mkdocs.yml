@@ -91,6 +91,9 @@ nav:
       - 開発戦略: development/development_strategy.md
       - イテレーション 1 計画: development/iteration_plan-1.md
       - イテレーション 1 ふりかえり: development/retrospective-1.md
+      - イテレーション 2 計画: development/iteration_plan-2.md
+      - イテレーション 2 ふりかえり: development/retrospective-2.md
+      - イテレーション 2 完了報告書: development/iteration_report-2.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
