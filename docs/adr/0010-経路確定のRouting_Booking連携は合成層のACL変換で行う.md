@@ -7,6 +7,7 @@ US09 で選択された Routing の経路候補を、US11 で Booking の `Cargo
 ## ステータス
 
 2026-07-15 提案
+2026-09-05 承認済み（IT4 で `CargoTracker.Web.RouteAcl` として参照実装・受け入れテストで検証）
 
 ## コンテキスト
 
