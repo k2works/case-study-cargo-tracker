@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\CargoTracker.Estimation\CargoTracker.Estimation.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Routing\CargoTracker.Routing.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Tracking\CargoTracker.Tracking.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Handling\CargoTracker.Handling.fsproj" />
   </ItemGroup>
 
 </Project>
