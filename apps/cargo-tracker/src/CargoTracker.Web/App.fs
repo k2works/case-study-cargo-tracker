@@ -691,6 +691,104 @@ let private voyageUpdate (voyageNumberStr: string) : HttpHandler =
                         ctx
         }
 
+// ---- US07/US08: 経路設計依頼・候補算出（ROLE_ROUTE_DESIGNER）----
+
+/// 貨物種別文字列を Routing の CargoTypeTag へ変換する（既定は General）。
+let private toCargoTypeTag (s: string) : CargoTracker.Routing.Domain.CargoTypeTag =
+    match CargoTracker.Routing.Domain.CargoTypeTag.ofString s with
+    | Ok tag -> tag
+    | Error _ -> CargoTracker.Routing.Domain.General
+
+/// 経路設計依頼一覧（`/routing/requests`・US07）。経路設計中（ROUTING_REQUESTED）の予約を表示する。
+let private routingRequests: HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        let factory = ctx.GetService<ConnectionFactory>()
+        use conn = factory ()
+
+        let rows =
+            CargoTracker.Booking.Infrastructure.CargoQueries.findAll conn
+            |> List.filter (fun i -> i.BookingStatus = "ROUTING_REQUESTED")
+            |> List.map (fun i ->
+                { Views.RoutingRequestRow.BookingId = i.BookingId
+                  Views.RoutingRequestRow.CargoType = i.CargoType
+                  Views.RoutingRequestRow.Origin = i.Origin
+                  Views.RoutingRequestRow.Destination = i.Destination
+                  Views.RoutingRequestRow.ArrivalDeadline = i.ArrivalDeadline })
+
+        htmlView (Views.routingRequestList (rolesOf ctx) rows) next ctx
+
+/// 経路設計・候補算出（`/routing/requests/{bookingId}`・US07/US08）。
+let private routingDesign (bookingIdStr: string) : HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let booking =
+                CargoTracker.Booking.Infrastructure.CargoQueries.findAll conn
+                |> List.tryFind (fun i -> i.BookingId = bookingIdStr)
+
+            match booking with
+            | None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+            | Some b ->
+                // 予約の輸送条件から経路探索クエリを構成する。
+                let originResult = CargoTracker.Shared.Domain.Location.create b.Origin
+                let destResult = CargoTracker.Shared.Domain.Location.create b.Destination
+
+                let deadline =
+                    match System.DateOnly.TryParse b.ArrivalDeadline with
+                    | true, d -> System.DateTimeOffset(d.ToDateTime(System.TimeOnly(23, 59, 0)), System.TimeSpan.Zero)
+                    | _ -> System.DateTimeOffset.MaxValue
+
+                match originResult, destResult with
+                | Ok origin, Ok destination ->
+                    let query: CargoTracker.Routing.Domain.RouteQuery =
+                        { Origin = origin
+                          Destination = destination
+                          CargoType = toCargoTypeTag b.CargoType
+                          Deadline = deadline }
+
+                    let repo =
+                        CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+
+                    let! result = CargoTracker.Routing.Application.VoyageWorkflow.computeRoutes repo query
+
+                    let candidateRows =
+                        match result with
+                        | Ok candidates ->
+                            candidates
+                            |> List.map (fun c ->
+                                { Views.RouteCandidateRow.VoyageNumbers =
+                                    c.Legs
+                                    |> List.map (fun l ->
+                                        CargoTracker.Routing.Domain.VoyageNumber.value l.VoyageNumber)
+                                    |> String.concat " → "
+                                  Views.RouteCandidateRow.TransitPorts =
+                                    c.TransitPorts
+                                    |> List.map CargoTracker.Shared.Domain.Location.value
+                                    |> String.concat ", "
+                                  Views.RouteCandidateRow.TransitDays = c.TransitDays
+                                  Views.RouteCandidateRow.EstimatedCost =
+                                    sprintf "¥%s" (c.EstimatedCost.ToString("N0"))
+                                  Views.RouteCandidateRow.IsDirect = c.IsDirect })
+                        | Error _ -> []
+
+                    return!
+                        htmlView
+                            (Views.routingDesign
+                                (rolesOf ctx)
+                                bookingIdStr
+                                b.Origin
+                                b.Destination
+                                b.ArrivalDeadline
+                                candidateRows)
+                            next
+                            ctx
+                | _ -> return! (setStatusCode 400 >=> text "予約の出発地・目的地が不正です。") next ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -715,6 +813,8 @@ let webApp: HttpHandler =
                     route "/voyages" >=> voyageList
                     route "/voyages/new" >=> voyageNew
                     routef "/voyages/%s/edit" voyageEdit
+                    route "/routing/requests" >=> routingRequests
+                    routef "/routing/requests/%s" routingDesign
                     route "/admin/discount-policies" >=> placeholder "割引ポリシー管理" [ "ROLE_ADMIN" ] ]
           POST
           >=> choose

@@ -744,3 +744,107 @@ module Views =
                     div [] (values.Legs |> List.mapi legRow)
                     button [ _class "btn btn-primary mt-3"; _type "submit" ] [ str (if isEdit then "更新する" else "登録") ]
                     a [ _class "btn btn-secondary ms-2 mt-3"; _href "/voyages" ] [ str "キャンセル" ] ] ]
+
+    // ---- Routing: 経路設計依頼一覧・経路設計（US07/US08）----
+
+    /// 経路設計依頼一覧の表示行（経路設計中の予約）。
+    type RoutingRequestRow =
+        { BookingId: string
+          CargoType: string
+          Origin: string
+          Destination: string
+          ArrivalDeadline: string }
+
+    /// 経路設計依頼一覧画面（`/routing/requests`・US07）。経路設計中（RoutingRequested）の予約を表示する。
+    let routingRequestList (roles: string list) (rows: RoutingRequestRow list) : XmlNode =
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ a [ _href (sprintf "/routing/requests/%s" r.BookingId) ] [ str r.BookingId ] ]
+                      td [] [ str (cargoTypeLabel r.CargoType) ]
+                      td [] [ str r.Origin ]
+                      td [] [ str r.Destination ]
+                      td [] [ str r.ArrivalDeadline ] ])
+
+        layout
+            "経路設計依頼"
+            roles
+            [ h1 [ _class "mb-4" ] [ str "経路設計依頼一覧" ]
+              (if List.isEmpty rows then
+                   div [ _class "alert alert-info" ] [ str "経路設計待ちの予約はありません。" ]
+               else
+                   table
+                       [ _class "table table-striped" ]
+                       [ thead
+                             []
+                             [ tr
+                                   []
+                                   [ th [] [ str "予約番号" ]
+                                     th [] [ str "種別" ]
+                                     th [] [ str "出発地" ]
+                                     th [] [ str "目的地" ]
+                                     th [] [ str "到着期限" ] ] ]
+                         tbody [] bodyRows ]) ]
+
+    /// 経路候補の表示行（US08）。
+    type RouteCandidateRow =
+        { VoyageNumbers: string
+          TransitPorts: string
+          TransitDays: int
+          EstimatedCost: string
+          IsDirect: bool }
+
+    /// 経路設計・候補算出画面（`/routing/requests/{bookingId}`・US07/US08）。
+    let routingDesign
+        (roles: string list)
+        (bookingId: string)
+        (origin: string)
+        (destination: string)
+        (deadline: string)
+        (candidates: RouteCandidateRow list)
+        : XmlNode =
+        let candidateRows =
+            candidates
+            |> List.map (fun c ->
+                tr
+                    []
+                    [ td
+                          []
+                          [ str c.VoyageNumbers
+                            (if c.IsDirect then
+                                 span [ _class "badge bg-success ms-2" ] [ str "直行" ]
+                             else
+                                 emptyText) ]
+                      td [] [ str (if c.TransitPorts = "" then "-" else c.TransitPorts) ]
+                      td [] [ str (sprintf "%d 日" c.TransitDays) ]
+                      td [] [ str c.EstimatedCost ] ])
+
+        layout
+            "経路設計"
+            roles
+            [ h1 [ _class "mb-4" ] [ str (sprintf "経路設計 %s" bookingId) ]
+              table
+                  [ _class "table table-bordered mb-4" ]
+                  [ tbody
+                        []
+                        [ tr [] [ th [ _class "w-25" ] [ str "出発地" ]; td [] [ str origin ] ]
+                          tr [] [ th [] [ str "目的地" ]; td [] [ str destination ] ]
+                          tr [] [ th [] [ str "到着期限" ]; td [] [ str deadline ] ] ] ]
+              h2 [ _class "h4 mb-3" ] [ str "経路候補（推奨順）" ]
+              (if List.isEmpty candidates then
+                   div [ _class "alert alert-warning" ] [ str "期限内に到達可能な経路候補がありません。到着期限の緩和や航海スケジュールの追加を検討してください。" ]
+               else
+                   table
+                       [ _class "table table-striped" ]
+                       [ thead
+                             []
+                             [ tr
+                                   []
+                                   [ th [] [ str "航海番号" ]
+                                     th [] [ str "経由港" ]
+                                     th [] [ str "所要日数" ]
+                                     th [] [ str "概算費用" ] ] ]
+                         tbody [] candidateRows ])
+              a [ _class "btn btn-secondary mt-3"; _href "/routing/requests" ] [ str "依頼一覧へ戻る" ] ]
