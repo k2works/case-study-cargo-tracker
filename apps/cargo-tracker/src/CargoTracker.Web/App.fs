@@ -405,7 +405,11 @@ let private toBookingDetail
         (match cargo.State with
          | CargoTracker.Booking.Domain.Cancelled _ -> false
          | _ -> true)
-      CanNotify = (CargoTracker.Booking.Domain.BookingState.itinerary cargo.State |> Option.isSome) }
+      // US12 の荷主通知は経路提案中（RouteProposed）のみ。確定後の重複通知は業務上不自然（レビュー M1）。
+      CanNotify =
+        (match cargo.State with
+         | CargoTracker.Booking.Domain.RouteProposed _ -> true
+         | _ -> false) }
 
 /// 貨物予約詳細（`GET /bookings/{bookingId}`・US06）。
 let private bookingDetail (bookingIdStr: string) : HttpHandler =
@@ -422,9 +426,19 @@ let private bookingDetail (bookingIdStr: string) : HttpHandler =
             let! found = repo.FindById bookingId
             let shipperNames = shipperNameMap conn
 
+            // PRG 後の操作成功メッセージ（?msg=... クエリ・レビュー H2）。
+            let info =
+                match ctx.TryGetQueryStringValue "msg" with
+                | Some "routed" -> Some "確定経路を予約に紐付けました。"
+                | Some "notified" -> Some "荷主に確定経路を通知しました。"
+                | Some "confirmed" -> Some "予約を確定しました。"
+                | Some "restored" -> Some "経路設計へ差し戻しました。"
+                | Some "cancelled" -> Some "予約をキャンセルしました。"
+                | _ -> None
+
             match found with
             | Ok(Some cargo) ->
-                return! htmlView (Views.bookingDetail (rolesOf ctx) (toBookingDetail shipperNames cargo) None) next ctx
+                return! htmlView (Views.bookingDetail (rolesOf ctx) (toBookingDetail shipperNames cargo) info) next ctx
             | Ok None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
@@ -466,6 +480,7 @@ let private bookingStateAction
                     CargoTracker.Shared.Domain.DomainError
                  >
              >)
+    (msgCode: string)
     (bookingIdStr: string)
     : HttpHandler =
     mustHaveRole "ROLE_SALES"
@@ -484,7 +499,8 @@ let private bookingStateAction
             let! result = workflow repo dispatcher bookingId
 
             match result with
-            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s" bookingIdStr) next ctx
+            // PRG: 成功メッセージコードを付けて予約詳細へ戻す（レビュー H2）。
+            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s?msg=%s" bookingIdStr msgCode) next ctx
             | Error(CargoTracker.Shared.Domain.NotFound _) ->
                 return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
@@ -492,17 +508,18 @@ let private bookingStateAction
 
 /// 予約確定（`POST /bookings/{bookingId}/confirm`・US13）。
 let private bookingConfirm (bookingIdStr: string) : HttpHandler =
-    bookingStateAction CargoTracker.Booking.Application.RouteAssignment.confirmBooking bookingIdStr
+    bookingStateAction CargoTracker.Booking.Application.RouteAssignment.confirmBooking "confirmed" bookingIdStr
 
 /// 経路設計へ差し戻し（`POST /bookings/{bookingId}/restore`・US13 受入条件4）。
 let private bookingRestore (bookingIdStr: string) : HttpHandler =
-    bookingStateAction CargoTracker.Booking.Application.RouteAssignment.restoreToRouting bookingIdStr
+    bookingStateAction CargoTracker.Booking.Application.RouteAssignment.restoreToRouting "restored" bookingIdStr
 
 /// 予約キャンセル（`POST /bookings/{bookingId}/cancel`・US13）。
 let private bookingCancel (bookingIdStr: string) : HttpHandler =
     bookingStateAction
         (fun repo dispatcher bookingId ->
             CargoTracker.Booking.Application.RouteAssignment.cancel repo dispatcher bookingId "営業によるキャンセル")
+        "cancelled"
         bookingIdStr
 
 /// 荷主への経路通知（`POST /bookings/{bookingId}/notify`・US12・ROLE_SALES）。
@@ -524,7 +541,7 @@ let private bookingNotify (bookingIdStr: string) : HttpHandler =
             let! result = CargoTracker.Booking.Application.RouteAssignment.notifyRouteToShipper repo notifier bookingId
 
             match result with
-            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s" bookingIdStr) next ctx
+            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s?msg=notified" bookingIdStr) next ctx
             | Error(CargoTracker.Shared.Domain.NotFound _) ->
                 return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
@@ -1012,7 +1029,7 @@ let private routingPropose (bookingIdStr: string) : HttpHandler =
                                 itinerary
 
                         match result with
-                        | Ok _ -> return! redirectTo false (sprintf "/bookings/%s" bookingIdStr) next ctx
+                        | Ok _ -> return! redirectTo false (sprintf "/bookings/%s?msg=routed" bookingIdStr) next ctx
                         | Error(CargoTracker.Shared.Domain.NotFound _) ->
                             return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
                         | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx

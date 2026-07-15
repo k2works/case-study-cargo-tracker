@@ -376,3 +376,21 @@ let ``緩和期限で見えた候補を確定してもドメインは元の期�
                 [ "candidateIndex", "0"; "deadline", "2026-12-31" ]
 
         proposeRes.StatusCode |> should equal HttpStatusCode.BadRequest)
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``操作後に予約詳細で成功メッセージが表示される（レビュー H2）`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookRequestAndPropose client shipperUuid
+        let salesCookie = authCookie client "sales01"
+
+        // 荷主通知 → PRG の msg=notified を付けた詳細で成功メッセージが出る。
+        authedPost client salesCookie (sprintf "/bookings/%s/notify" bookingId) []
+        |> ignore
+
+        let detail =
+            authedGet client salesCookie (sprintf "/bookings/%s?msg=notified" bookingId)
+
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "荷主に確定経路を通知しました"
+        body |> should haveSubstring "alert-success")
