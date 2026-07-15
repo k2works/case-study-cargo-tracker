@@ -820,6 +820,8 @@ module ShipperRepository =
 
 ### `leg`（輸送区間）
 
+> **IT4 実装状況**: マイグレーション 0007 で作成（US09-13 経路確定・旅程永続化）。`cargo` 集約に属し、集約ルート経由でのみ更新する（ADR-0001）。`cargo_id` にはコンテキスト内参照として FK 制約を設ける。`voyage_number`・`load_location_unlocode`・`unload_location_unlocode` は BC 分離のため物理 FK は張らず業務キーとして保持する。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
