@@ -1216,12 +1216,15 @@ let private toTrackingEventType
     | CargoTracker.Handling.Domain.Claim -> Some CargoTracker.Tracking.Domain.ClaimedEvent
     | CargoTracker.Handling.Domain.Customs -> None
 
-/// 荷役作業一覧（`GET /handling`・US15）。
+/// 荷役作業一覧（`GET /handling`・US15）。登録直後の妥当性結果を banner で表示する（レビュー）。
 let private handlingList: HttpHandler =
     mustHaveAnyRole [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
     >=> fun next ctx ->
         let factory = ctx.GetService<ConnectionFactory>()
         use conn = factory ()
+
+        // 荷役登録の PRG 後フィードバック（Misrouted/Warning/成功）は Views 側で banner 化する。
+        let msg = ctx.TryGetQueryStringValue "msg"
 
         let rows =
             CargoTracker.Handling.Infrastructure.HandlingQueries.findAll conn
@@ -1232,7 +1235,7 @@ let private handlingList: HttpHandler =
                   Views.HandlingRow.CompletionTime = r.CompletionTime
                   Views.HandlingRow.VoyageNumber = r.VoyageNumber |> Option.defaultValue "-" })
 
-        htmlView (Views.handlingList (rolesOf ctx) rows) next ctx
+        htmlView (Views.handlingList (rolesOf ctx) msg rows) next ctx
 
 /// 荷役登録フォーム（`GET /handling/new`・US15/US16）。
 let private handlingNew: HttpHandler =
@@ -1294,14 +1297,18 @@ let private handlingCreate: HttpHandler =
                               Location = location
                               CompletionTime = completionTime }
 
-                        let! _ =
+                        // 荷役は保存済み（別トランザクション）。追跡記録はベストエフォートで、失敗は握り潰さずログする
+                        // （xp-programmer 高#1・完全な原子性は将来 UoW 化で対応）。
+                        let! trackingResult =
                             CargoTracker.Tracking.Application.RecordTracking.record
                                 trackingRepo
                                 notifier
                                 (CargoTracker.Tracking.Domain.TrackingNumber.ofString trackingNumberStr)
                                 event
 
-                        ()
+                        match trackingResult with
+                        | Ok _ -> ()
+                        | Error e -> eprintfn "[handlingCreate] 追跡状態の更新に失敗（荷役は登録済み）: %A" e
                     | None -> ()
 
                     let msg =

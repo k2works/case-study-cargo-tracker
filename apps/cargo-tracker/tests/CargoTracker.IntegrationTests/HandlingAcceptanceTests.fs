@@ -179,3 +179,29 @@ let ``存在しない追跡番号の荷役登録は 404`` () =
                   "consigneeConfirmation", "" ]
 
         res.StatusCode |> should equal HttpStatusCode.NotFound)
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``予定ルート外の積込は Misrouted 警告が一覧に表示される（US15 受入7）`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "handler01"
+
+        // 旅程に無い航海 V999 での積込 → Misrouted。
+        let res =
+            authedPost
+                client
+                cookie
+                "/handling"
+                [ "trackingNumber", "TRK-TEST0001"
+                  "handlingType", "LOAD"
+                  "location", "JPTYO"
+                  "voyageNumber", "V999"
+                  "consigneeConfirmation", "" ]
+
+        res.StatusCode |> should equal HttpStatusCode.Found
+        (string res.Headers.Location) |> should haveSubstring "msg=handling_misrouted"
+
+        // 一覧の PRG 後に Misrouted 警告が表示される。
+        let list = authedGet client cookie "/handling?msg=handling_misrouted"
+        let body = run (list.Content.ReadAsStringAsync())
+        body |> should haveSubstring "Misrouted")

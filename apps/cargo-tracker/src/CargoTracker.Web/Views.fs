@@ -1128,7 +1128,15 @@ module Views =
         | other -> other
 
     /// 荷役作業一覧画面（`/handling`・US15）。
-    let handlingList (roles: string list) (rows: HandlingRow list) : XmlNode =
+    let handlingList (roles: string list) (msg: string option) (rows: HandlingRow list) : XmlNode =
+        let banner =
+            match msg with
+            | Some "handling_ok" -> div [ _class "alert alert-success" ] [ str "荷役作業を登録しました。" ]
+            | Some "handling_warning" -> div [ _class "alert alert-warning" ] [ str "荷役作業を登録しましたが、作業場所が予定と一致しません（警告）。" ]
+            | Some "handling_misrouted" ->
+                div [ _class "alert alert-danger" ] [ str "荷役作業を登録しましたが、予定ルート外です（Misrouted）。経路を確認してください。" ]
+            | _ -> emptyText
+
         let bodyRows =
             rows
             |> List.map (fun r ->
@@ -1143,7 +1151,8 @@ module Views =
         layout
             "荷役管理"
             roles
-            [ div
+            [ banner
+              div
                   [ _class "d-flex justify-content-between align-items-center mb-4" ]
                   [ h1 [] [ str "荷役作業一覧" ]
                     a [ _class "btn btn-primary"; _href "/handling/new" ] [ str "荷役作業を登録" ] ]
