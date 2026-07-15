@@ -26,6 +26,7 @@
     <Compile Include="NotificationLogTests.fs" />
     <Compile Include="TrackingRepositoryTests.fs" />
     <Compile Include="HandlingRepositoryTests.fs" />
+    <Compile Include="TrackingAcceptanceTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

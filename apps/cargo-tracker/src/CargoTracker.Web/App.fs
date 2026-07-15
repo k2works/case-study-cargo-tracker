@@ -1062,6 +1062,64 @@ let private routingPropose (bookingIdStr: string) : HttpHandler =
                         | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
 
+// ---- US18: 貨物追跡照会（ROLE_SHIPPER/CONSIGNEE/TRACKER + 未認証公開）----
+
+/// TrackingView を表示用 DTO に変換する。
+let private toTrackingDetailView (view: CargoTracker.Tracking.Infrastructure.TrackingView) : Views.TrackingDetailView =
+    { TrackingNumber = view.TrackingNumber
+      TransportStatus = view.TransportStatus
+      Events =
+        view.Events
+        |> List.map (fun e ->
+            { Views.TrackingEventRow.EventType = e.EventType
+              Views.TrackingEventRow.Location = e.Location
+              Views.TrackingEventRow.EventTime = e.EventTime }) }
+
+/// 追跡番号入力（`GET /tracking`・US18）。
+let private trackingInput: HttpHandler =
+    mustHaveAnyRole [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
+    >=> fun next ctx -> htmlView (Views.trackingInput (rolesOf ctx) None) next ctx
+
+/// 追跡番号での照会（`GET /tracking/search?trackingNumber=`・US18）。PRG 的に詳細へ。
+let private trackingSearch: HttpHandler =
+    mustHaveAnyRole [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
+    >=> fun next ctx ->
+        task {
+            match ctx.TryGetQueryStringValue "trackingNumber" with
+            | Some tn when tn <> "" -> return! redirectTo false (sprintf "/tracking/%s" tn) next ctx
+            | _ -> return! htmlView (Views.trackingInput (rolesOf ctx) (Some "追跡番号を入力してください。")) next ctx
+        }
+
+/// 追跡詳細（`GET /tracking/{trackingNumber}`・US18・認証あり）。
+let private trackingDetail (trackingNumber: string) : HttpHandler =
+    mustHaveAnyRole [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            match CargoTracker.Tracking.Infrastructure.TrackingQueries.findByTrackingNumber conn trackingNumber with
+            | Some view -> return! htmlView (Views.trackingDetail (rolesOf ctx) (toTrackingDetailView view)) next ctx
+            | None ->
+                return!
+                    (setStatusCode 404
+                     >=> htmlView (Views.trackingInput (rolesOf ctx) (Some "追跡番号が見つかりません。")))
+                        next
+                        ctx
+        }
+
+/// 公開追跡（`GET /public/tracking/{accessToken}`・US18・未認証）。
+let private publicTracking (accessToken: string) : HttpHandler =
+    fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            match CargoTracker.Tracking.Infrastructure.TrackingQueries.findByAccessToken conn accessToken with
+            | Some view -> return! htmlView (Views.publicTracking (toTrackingDetailView view)) next ctx
+            | None -> return! (setStatusCode 404 >=> text "追跡番号が見つかりません。") next ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -1079,9 +1137,12 @@ let webApp: HttpHandler =
                     // 具体パス `/bookings/new` を `routef "/bookings/%s"` より先に置く（順序依存・"new" が %s に食われないように）。
                     route "/bookings/new" >=> bookingNew
                     routef "/bookings/%s" bookingDetail
+                    // US18: 貨物追跡照会（具体パスを routef より先に置く）。
+                    route "/tracking" >=> trackingInput
+                    route "/tracking/search" >=> trackingSearch
+                    routef "/public/tracking/%s" publicTracking
+                    routef "/tracking/%s" trackingDetail
                     // ウォーキングスケルトン: 後続 IT で実画面化するプレースホルダ（ADR-0005 ロール制御）
-                    route "/tracking"
-                    >=> placeholder "貨物追跡" [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
                     route "/handling" >=> placeholder "荷役管理" [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
                     route "/voyages" >=> voyageList
                     route "/voyages/new" >=> voyageNew

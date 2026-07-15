@@ -1018,3 +1018,93 @@ module Views =
                else
                    div [ _class "form-text mt-2" ] [ str "※ 概算費用は暫定値です。正式な料金は精算フェーズで確定します。" ])
               a [ _class "btn btn-secondary mt-3"; _href "/routing/requests" ] [ str "依頼一覧へ戻る" ] ]
+
+    /// 輸送状態の日本語表示（TransportStatus の toString 値）。
+    let transportStatusLabel (status: string) : string =
+        match status with
+        | "NOT_RECEIVED" -> "受領待ち"
+        | "RECEIVED" -> "受領済"
+        | "LOADED" -> "積込済"
+        | "ONBOARD_CARRIER" -> "輸送中"
+        | "UNLOADED" -> "荷降し済"
+        | "AWAITING_CLAIM" -> "引取待ち"
+        | "CLAIMED" -> "引取済"
+        | "IN_EXCEPTION" -> "例外発生"
+        | other -> other
+
+    /// 追跡イベント種別の日本語表示。
+    let trackingEventLabel (eventType: string) : string =
+        match eventType with
+        | "RECEIVED" -> "受領"
+        | "LOADED" -> "積込"
+        | "DEPARTED" -> "出港"
+        | "UNLOADED" -> "荷降し"
+        | "ARRIVED" -> "入港"
+        | "CLAIMED" -> "引取"
+        | other -> other
+
+    /// 追跡イベントの表示行（US18）。
+    type TrackingEventRow =
+        { EventType: string
+          Location: string
+          EventTime: string }
+
+    /// 追跡詳細の表示値（US18）。
+    type TrackingDetailView =
+        { TrackingNumber: string
+          TransportStatus: string
+          Events: TrackingEventRow list }
+
+    /// 追跡番号入力画面（`/tracking`・US18）。
+    let trackingInput (roles: string list) (error: string option) : XmlNode =
+        layout
+            "貨物追跡"
+            roles
+            [ h1 [ _class "mb-4" ] [ str "貨物追跡" ]
+              (match error with
+               | Some msg -> div [ _class "alert alert-warning" ] [ str msg ]
+               | None -> emptyText)
+              form
+                  [ _method "get"; _action "/tracking/search"; _class "row g-2" ]
+                  [ div
+                        [ _class "col-auto" ]
+                        [ input
+                              [ _class "form-control"
+                                _type "text"
+                                _name "trackingNumber"
+                                _placeholder "追跡番号（例: TRK-XXXXXXXX）" ] ]
+                    div [ _class "col-auto" ] [ button [ _type "submit"; _class "btn btn-primary" ] [ str "照会" ] ] ] ]
+
+    /// 追跡詳細のタイムライン本体（認証あり・公開ページ共通）。
+    let private trackingTimeline (d: TrackingDetailView) : XmlNode list =
+        [ h1 [ _class "mb-3" ] [ str (sprintf "追跡 %s" d.TrackingNumber) ]
+          div
+              [ _class "mb-4" ]
+              [ span [ _class "badge bg-primary fs-6" ] [ str (transportStatusLabel d.TransportStatus) ] ]
+          h2 [ _class "h5 mb-2" ] [ str "追跡イベント履歴" ]
+          (if List.isEmpty d.Events then
+               div [ _class "alert alert-info" ] [ str "まだ追跡イベントはありません。" ]
+           else
+               table
+                   [ _class "table table-striped" ]
+                   [ thead [] [ tr [] [ th [] [ str "日時" ]; th [] [ str "作業種別" ]; th [] [ str "場所" ] ] ]
+                     tbody
+                         []
+                         (d.Events
+                          |> List.map (fun e ->
+                              tr
+                                  []
+                                  [ td [] [ str e.EventTime ]
+                                    td [] [ str (trackingEventLabel e.EventType) ]
+                                    td [] [ str e.Location ] ])) ]) ]
+
+    /// 追跡詳細画面（`/tracking/{trackingNumber}`・US18・認証あり）。
+    let trackingDetail (roles: string list) (d: TrackingDetailView) : XmlNode =
+        layout
+            "追跡詳細"
+            roles
+            (trackingTimeline d
+             @ [ a [ _class "btn btn-secondary mt-3"; _href "/tracking" ] [ str "追跡入力へ戻る" ] ])
+
+    /// 公開追跡ページ（`/public/tracking/{accessToken}`・US18・未認証）。
+    let publicTracking (d: TrackingDetailView) : XmlNode = layout "公開追跡" [] (trackingTimeline d)
