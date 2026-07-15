@@ -148,9 +148,11 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | IT1 の Estimation `ExternalRoutingServicePort` スタブに WireMock.Net 契約テストを追加し、契約を固定（tech_stack のスタブ→契約固定方針） | 2h | - | [ ] |
+| 4.1 | ~~IT1 の Estimation `ExternalRoutingServicePort` スタブに WireMock.Net 契約テストを追加~~ | 2h | - | デスコープ |
 
 **小計**: 2h（理想時間）
+
+> **注（4.1 デスコープ・ADR-0009 反映）**: 当初は US08 経路候補算出が外部 `ExternalRoutingServicePort` を用いる想定だったが、ADR-0009 で US08 を Routing 自コンテキストのドメインサービス（`RouteComputation`）に確定したため、本ポートは US08 で不使用となった。現行の Estimation 側スタブ（US01 の概算見積）は純粋関数（HTTP 非依存）であり、WireMock.Net 契約テストの前提となる実 HTTP 実装が存在しない。実在の外部経路サービスを統合する時点まで、HTTP 実装 + WireMock.Net 契約テストの導入を延期する（YAGNI）。この判断を IT3 ふりかえりの Try に引き継ぐ。
 
 #### タスク合計
 
@@ -159,7 +161,7 @@
 | Routing ドメイン層 | 8 | 15h | [x] Voyage集約・Schedule・RouteComputation 完了 |
 | Routing アプリ/インフラ | — | 13h | [ ] |
 | Routing Web 層 | 6 | 13h | [x] 一覧/登録/更新/経路設計 完了 |
-| 外部 ACL 契約 | — | 2h | [ ] |
+| 外部 ACL 契約 | — | 2h | デスコープ（ADR-0009・将来連携時） |
 | **合計** | **14** | **43h** | |
 
 **1 SP あたり**: 約 3.1h（ストーリー分 43h / 14 SP）
