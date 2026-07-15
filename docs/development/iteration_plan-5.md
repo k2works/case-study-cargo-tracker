@@ -150,7 +150,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | **`BookingEventDispatcher` の実消費結線**: `BookingConfirmed` → Tracking の追跡番号発行（US14）を合成層で結線。dispatch 失敗のログ出力を追加（IT4 レビュー M8） | 3h | - | [ ] |
+| 3.1 | **`BookingEventDispatcher` の実消費結線**: `BookingConfirmed` → Tracking の追跡番号発行（US14）を合成層で結線。dispatch 失敗のログ出力を追加（IT4 レビュー M8） | 3h | - | [x] |
 | 3.2 | `HandlingActivityRegistered` → Tracking の状態自動更新（US15 受入4）を合成層 ACL で結線。BC 分離（Handling は Tracking を直接参照しない）を維持 | 3h | - | [x] |
 | 3.3 | **ADR-0002 の決着**: 実装実態（Application 層 post-commit ＋ BC ローカル DU）と ADR-0002（UnitOfWork.execute ＋ Shared Payload）の三重不整合を decision で解消（案 a: ADR 改訂 + UnitOfWork.fs 整理／案 b: 実装寄せ）。ADR 起票または改訂 | 3h | - | [ ] |
 
