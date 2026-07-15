@@ -446,17 +446,17 @@ manual --> trackDetail : 更新（PRG）
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review: xp-programmer / xp-tester、正式 developing-review は staging 完了後）
-- [ ] ユニット・統合・アーキテクチャテストがパス
-- [ ] TrackingStatus（導出値）遷移・TrackingActivity/HandlingActivity が FsCheck 含めて網羅検証
-- [ ] 「予約確定→追跡番号発行→荷役記録→追跡照会」の E2E（US13・US15・US18）がパス
-- [ ] BookingConfirmed→追跡番号発行、HandlingActivityRegistered→状態更新の BC 連携が統合テストでパス
-- [ ] 公開追跡ページが未認証で照会でき、トークンで保護される
-- [ ] カバレッジゲート（ドメイン 85%／全体 80%）が緑
-- [ ] ナビゲーション整合性（/tracking・/handling の navbar/ダッシュボード反映・検証テスト）
-- [ ] Fantomas クリーン・FSharpLint 警告なし・ビルド警告 0
-- [ ] ドキュメント更新完了（release_plan 進捗・ADR-0011/0002・data-model 0009/0010＋access_token 反映・domain-model の Tracking/Handling 実装反映・TransportStatus/TrackingStatus を Shared/Tracking へ）
-- [ ] **Release 1.0 MVP のリリース判定**（IT5 完了時出荷）
+- [x] コードレビュー完了（self-review: xp-programmer / xp-tester、正式 developing-review は staging 完了後）
+- [x] ユニット・統合・アーキテクチャテストがパス（Unit 160 / Arch 24 / Integration 122）
+- [x] TrackingStatus（導出値）遷移・TrackingActivity/HandlingActivity が FsCheck 含めて網羅検証
+- [x] 「予約確定→追跡番号発行→荷役記録→追跡照会」の E2E（US13・US15・US18）がパス
+- [x] BookingConfirmed→追跡番号発行、HandlingActivityRegistered→状態更新の BC 連携が統合テストでパス
+- [x] 公開追跡ページが未認証で照会でき、トークンで保護される
+- [x] カバレッジゲート（ドメイン 85%／全体 80%）が緑（全体 91.3%／ドメイン 89.1%）
+- [x] ナビゲーション整合性（/tracking・/handling の navbar/ダッシュボード反映・検証テスト）
+- [x] Fantomas クリーン・FSharpLint 警告なし・ビルド警告 0
+- [x] ドキュメント更新完了（release_plan 進捗・ADR-0002 改訂・data-model 0009/0010＋access_token 反映・domain-model の Tracking/Handling 実装反映・TransportStatus/TrackingStatus を Shared/Tracking へ）
+- [ ] **Release 1.0 MVP のリリース判定**（IT5 完了時出荷・別途判断）
 
 ### デモ項目
 

@@ -66,3 +66,22 @@ let ``準備中プレースホルダは案内メッセージを表示する`` ()
     let html = render (Views.placeholder "貨物予約" [ "ROLE_SALES" ])
     html |> should haveSubstring "貨物予約"
     html |> should haveSubstring "準備中"
+
+// IT5: 追跡・荷役の実画面化に伴うナビゲーション整合性（DoD）。
+
+[<Fact>]
+let ``追跡管理者ロールのダッシュボードは貨物追跡を表示する（IT5 ナビ整合）`` () =
+    let html = render (Views.dashboard [ "ROLE_TRACKER" ])
+    html |> should haveSubstring "貨物追跡"
+    html |> should haveSubstring "荷役管理"
+
+[<Fact>]
+let ``荷役ロールのダッシュボードは荷役管理を表示する（IT5 ナビ整合）`` () =
+    let html = render (Views.dashboard [ "ROLE_HANDLER" ])
+    html |> should haveSubstring "荷役管理"
+
+[<Fact>]
+let ``荷主ロールのダッシュボードは貨物追跡を表示し荷役管理は表示しない`` () =
+    let html = render (Views.dashboard [ "ROLE_SHIPPER" ])
+    html |> should haveSubstring "貨物追跡"
+    html |> should not' (haveSubstring "荷役管理")
