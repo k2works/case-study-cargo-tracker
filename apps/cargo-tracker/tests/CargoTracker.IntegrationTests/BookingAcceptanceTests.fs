@@ -297,7 +297,21 @@ let ``予約詳細を表示できる`` () =
         res.StatusCode |> should equal HttpStatusCode.OK
         let body = run (res.Content.ReadAsStringAsync())
         body |> should haveSubstring bookingId
-        body |> should haveSubstring "経路設計を依頼")
+        body |> should haveSubstring "経路設計を依頼"
+        // 荷主は Guid でなく名称で表示される（レビュー H8）
+        body |> should haveSubstring "テスト荷主")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``一覧に荷主名が表示され詳細へのリンクがある`` () =
+    withSeededShipper (fun client uuid ->
+        let cookie = authCookie client "sales01"
+        let bookingId = bookOne client cookie uuid
+        let res = authedGet client cookie "/bookings"
+        let body = run (res.Content.ReadAsStringAsync())
+        // 荷主名列（レビュー H8）と詳細への href（レビュー H7）
+        body |> should haveSubstring "テスト荷主"
+        body |> should haveSubstring (sprintf "href=\"/bookings/%s\"" bookingId))
 
 [<Fact>]
 [<Trait("Category", "Integration")>]

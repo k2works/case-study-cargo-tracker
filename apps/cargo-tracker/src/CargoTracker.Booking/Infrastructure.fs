@@ -273,8 +273,21 @@ module CargoRepository =
 
                 try
                     let now = clock ()
+                    let bookingIdStr = BookingId.value cargo.BookingId
 
-                    let affected =
+                    // 更新対象の存在を確認する（存在しない予約への更新を silent 成功にしない）。
+                    let existing =
+                        conn
+                        |> Db.newCommand "SELECT COUNT(*) AS cnt FROM cargo WHERE booking_id = @booking_id"
+                        |> Db.setTransaction tx
+                        |> Db.setParams [ "booking_id", SqlType.String bookingIdStr ]
+                        |> Db.querySingle (fun rd -> rd.ReadInt32 "cnt")
+                        |> Option.defaultValue 0
+
+                    if existing = 0 then
+                        tx.Rollback()
+                        return Error(NotFound("Cargo", bookingIdStr))
+                    else
                         conn
                         |> Db.newCommand
                             """
@@ -286,12 +299,11 @@ module CargoRepository =
                         |> Db.setParams
                             [ "booking_status", SqlType.String(BookingState.toString cargo.State)
                               "now", SqlType.String(now.UtcDateTime.ToString("o"))
-                              "booking_id", SqlType.String(BookingId.value cargo.BookingId) ]
+                              "booking_id", SqlType.String bookingIdStr ]
                         |> Db.exec
 
-                    ignore affected
-                    tx.Commit()
-                    return Ok()
+                        tx.Commit()
+                        return Ok()
                 with ex ->
                     tx.Rollback()
                     return Error(BusinessRuleViolation("CargoRepository", ex.Message))

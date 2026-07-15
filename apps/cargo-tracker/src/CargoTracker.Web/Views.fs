@@ -131,7 +131,7 @@ module Views =
     /// 貨物予約一覧の表示行（US04）。
     type CargoRow =
         { BookingId: string
-          ShipperId: string
+          ShipperName: string
           CargoType: string
           Origin: string
           Destination: string
@@ -161,7 +161,8 @@ module Views =
             |> List.map (fun r ->
                 tr
                     []
-                    [ td [] [ str r.BookingId ]
+                    [ td [] [ a [ _href (sprintf "/bookings/%s" r.BookingId) ] [ str r.BookingId ] ]
+                      td [] [ str r.ShipperName ]
                       td [] [ str (cargoTypeLabel r.CargoType) ]
                       td [] [ str r.Origin ]
                       td [] [ str r.Destination ]
@@ -182,6 +183,7 @@ module Views =
                         [ tr
                               []
                               [ th [] [ str "予約番号" ]
+                                th [] [ str "荷主" ]
                                 th [] [ str "種別" ]
                                 th [] [ str "出発地" ]
                                 th [] [ str "目的地" ]
@@ -323,7 +325,7 @@ module Views =
     /// 貨物予約詳細の表示値（US06）。
     type BookingDetail =
         { BookingId: string
-          ShipperId: string
+          ShipperName: string
           CargoType: string
           Origin: string
           Destination: string
@@ -360,7 +362,7 @@ module Views =
                   [ tbody
                         []
                         [ row "予約番号" d.BookingId
-                          row "荷主 ID" d.ShipperId
+                          row "荷主" d.ShipperName
                           row "貨物種別" (cargoTypeLabel d.CargoType)
                           row "出発地" d.Origin
                           row "目的地" d.Destination

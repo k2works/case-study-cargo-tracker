@@ -214,6 +214,22 @@ let private estimateNew: HttpHandler =
 
 // ---- US04: 貨物予約一覧（ROLE_SALES / ROLE_SHIPPER）----
 
+/// 荷主 uuid → 名称 の解決マップを構築する（ADR-0008・BC 分離を合成層で結合）。
+let private shipperNameMap (conn: IDbConnection) : Map<string, string> =
+    CargoTracker.Shipper.Infrastructure.ShipperQueries.findAllForSelection conn
+    |> List.map (fun s -> s.Uuid, s.Name)
+    |> Map.ofList
+
+/// shipper_id（uuid）を荷主名に解決する。未解決時は uuid を短縮表示する。
+let private resolveShipperName (names: Map<string, string>) (shipperId: string) : string =
+    match Map.tryFind shipperId names with
+    | Some name -> name
+    | None ->
+        if shipperId.Length >= 8 then
+            sprintf "(未登録: %s…)" (shipperId.Substring(0, 8))
+        else
+            sprintf "(未登録: %s)" shipperId
+
 /// 貨物予約一覧（`/bookings`）。IT1 ウォーキングスケルトンのプレースホルダを実画面へ差し替え。
 let private bookingList: HttpHandler =
     mustHaveAnyRole [ "ROLE_SALES"; "ROLE_SHIPPER" ]
@@ -221,12 +237,14 @@ let private bookingList: HttpHandler =
         let factory = ctx.GetService<ConnectionFactory>()
         use conn = factory ()
         let items = CargoTracker.Booking.Infrastructure.CargoQueries.findAll conn
+        // 荷主名は uuid→name の解決マップで補う（ADR-0008・BC 分離を合成層で結合）。
+        let shipperNames = shipperNameMap conn
 
         let rows =
             items
             |> List.map (fun i ->
                 { Views.CargoRow.BookingId = i.BookingId
-                  Views.CargoRow.ShipperId = i.ShipperId
+                  Views.CargoRow.ShipperName = resolveShipperName shipperNames i.ShipperId
                   Views.CargoRow.CargoType = i.CargoType
                   Views.CargoRow.Origin = i.Origin
                   Views.CargoRow.Destination = i.Destination
@@ -334,8 +352,11 @@ let private bookingCreate: HttpHandler =
 
 // ---- US06: 予約詳細・経路設計依頼 ----
 
-/// Cargo 集約を詳細表示用の DTO へ射影する。
-let private toBookingDetail (cargo: CargoTracker.Booking.Domain.Cargo) : Views.BookingDetail =
+/// Cargo 集約を詳細表示用の DTO へ射影する。荷主名は解決マップで補う（ADR-0008）。
+let private toBookingDetail
+    (shipperNames: Map<string, string>)
+    (cargo: CargoTracker.Booking.Domain.Cargo)
+    : Views.BookingDetail =
     let cargoTypeStr =
         match cargo.CargoType with
         | CargoTracker.Booking.Domain.General -> "GENERAL"
@@ -344,8 +365,11 @@ let private toBookingDetail (cargo: CargoTracker.Booking.Domain.Cargo) : Views.B
 
     let spec = cargo.RouteSpecification
 
+    let shipperUuid =
+        (CargoTracker.Shared.Domain.ShipperId.value cargo.ShipperId).ToString("D")
+
     { BookingId = CargoTracker.Booking.Domain.BookingId.value cargo.BookingId
-      ShipperId = (CargoTracker.Shared.Domain.ShipperId.value cargo.ShipperId).ToString("D")
+      ShipperName = resolveShipperName shipperNames shipperUuid
       CargoType = cargoTypeStr
       Origin = CargoTracker.Shared.Domain.Location.value (CargoTracker.Booking.Domain.RouteSpecification.origin spec)
       Destination =
@@ -368,10 +392,11 @@ let private bookingDetail (bookingIdStr: string) : HttpHandler =
 
             let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
             let! found = repo.FindById bookingId
+            let shipperNames = shipperNameMap conn
 
             match found with
             | Ok(Some cargo) ->
-                return! htmlView (Views.bookingDetail (rolesOf ctx) (toBookingDetail cargo) None) next ctx
+                return! htmlView (Views.bookingDetail (rolesOf ctx) (toBookingDetail shipperNames cargo) None) next ctx
             | Ok None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }

@@ -167,6 +167,50 @@ let ``経路設計依頼後の状態を永続化して取得できる`` () =
     routing.State |> should equal RoutingRequested
 
 [<Fact>]
+let ``危険物予約を経路設計依頼後も種別が保持されて往復できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+
+    let haz =
+        match HazardousDeclaration.create "3" "UN1203" "Gasoline" with
+        | Ok d -> d
+        | Error e -> failwithf "%A" e
+
+    let cargo = makeCargo (Hazardous haz)
+    repo.Save cargo |> Async.RunSynchronously |> Result.isOk |> should equal true
+
+    // 経路設計依頼で状態遷移し、Update で永続化する。
+    let routing =
+        match Cargo.execute cargo SubmitForRouting with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    repo.Update routing
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    // 状態は RoutingRequested に更新され、危険物種別は保持される。
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        found.State |> should equal RoutingRequested
+
+        match found.CargoType with
+        | Hazardous d -> HazardousDeclaration.unNumber d |> should equal "UN1203"
+        | other -> failwithf "Hazardous を期待したが: %A" other
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``存在しない予約の Update は NotFound を返す`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General // 保存しない
+
+    match repo.Update cargo |> Async.RunSynchronously with
+    | Error(NotFound(entity, _)) -> entity |> should equal "Cargo"
+    | other -> failwithf "NotFound を期待したが: %A" other
+
+[<Fact>]
 let ``重複する予約 ID の保存は失敗し件数が増えない`` () =
     use conn = openDb ()
     let repo = CargoRepository.create conn fixedClock

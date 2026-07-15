@@ -50,6 +50,18 @@ let ``重量が上限を超えると Error を返す`` () =
     | Error(ValidationError _) -> ()
     | other -> failwithf "ValidationError を期待したが: %A" other
 
+[<Fact>]
+let ``重量は上限ちょうど 30,000kg なら Ok を返す（境界値）`` () =
+    match Weight.create 30_000m with
+    | Ok w -> Weight.value w |> should equal 30_000m
+    | Error e -> failwithf "境界ちょうどは Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``重量は有効側最小 0.001kg なら Ok を返す（境界値）`` () =
+    match Weight.create 0.001m with
+    | Ok w -> Weight.value w |> should equal 0.001m
+    | Error e -> failwithf "有効側最小は Ok を期待したが Error: %A" e
+
 [<Property>]
 let ``0 より大きく上限以下の重量は常に Ok になる`` (NormalFloat f) =
     let kg = decimal (abs f % 30_000.0) + 0.001m
@@ -87,6 +99,18 @@ let ``危険物クラスが空なら Error を返す`` () =
     | other -> failwithf "ValidationError を期待したが: %A" other
 
 [<Fact>]
+let ``UN 番号が空なら Error を返す`` () =
+    match HazardousDeclaration.create "3" "" "Gasoline" with
+    | Error(ValidationError(field, _)) -> field |> should equal "UnNumber"
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``正式輸送品名が空なら Error を返す`` () =
+    match HazardousDeclaration.create "3" "UN1203" "" with
+    | Error(ValidationError(field, _)) -> field |> should equal "ProperShippingName"
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
 let ``温度管理条件は最低温度が最高温度以下なら Ok を返す`` () =
     match TemperatureRequirement.create -20m 5m Celsius with
     | Ok _ -> ()
@@ -97,6 +121,14 @@ let ``温度管理条件は最低温度が最高温度を超えると Error を�
     match TemperatureRequirement.create 10m 5m Celsius with
     | Error(ValidationError(field, _)) -> field |> should equal "TemperatureRequirement"
     | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``温度管理条件は最低温度と最高温度が等しければ Ok を返す（境界値）`` () =
+    match TemperatureRequirement.create 5m 5m Celsius with
+    | Ok t ->
+        TemperatureRequirement.minTemperature t |> should equal 5m
+        TemperatureRequirement.maxTemperature t |> should equal 5m
+    | Error e -> failwithf "等値境界は Ok を期待したが Error: %A" e
 
 // ---- Cargo.book（US04/US05）----
 
