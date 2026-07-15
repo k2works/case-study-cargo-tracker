@@ -127,8 +127,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 選択された Routing 経路候補（`RouteCandidate`）を Booking `CargoItinerary` へ変換する連携（ACL 変換関数・合成層で結合・BC 分離維持）。ADR-0010 起票 | 3h | - | [ ] |
-| 2.2 | 経路確定→予約紐付けワークフロー（`ProposeRoute` 実行・`CargoRepository.Update` で旅程永続化）。US09 の選択確定を含む | 3h | - | [ ] |
+| 2.1 | 選択された Routing 経路候補（`RouteCandidate`）を Booking `CargoItinerary` へ変換する連携（ACL 変換関数・合成層で結合・BC 分離維持）。ADR-0010 起票 | 3h | - | [x] |
+| 2.2 | 経路確定→予約紐付けワークフロー（`ProposeRoute` 実行・`CargoRepository.Update` で旅程永続化）。US09 の選択確定を含む | 3h | - | [x] |
 | 2.3 | **post-commit イベント dispatch 結線**（`UnitOfWork.execute` で `CargoRouted`/`BookingConfirmed` を発火）。IT2 H6・IT3 M2・retro-3 Try#1 の解消 | 3h | - | [ ] |
 
 **小計**: 9h（理想時間）
@@ -137,8 +137,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | マイグレーション 0007（`leg` テーブル〔data-model 既定義〕を作成。`cargo.booking_status` は VARCHAR のため ROUTE_PROPOSED/CONFIRMED は値追加のみで DDL 変更不要。`routing_status`〔ROUTED/MISROUTED/NOT_ROUTED〕は経路決定結果の別概念で US09-13 には不要のため対象外）両方言 + data-model 反映 | 3h | - | [ ] |
-| 3.2 | CargoRepository を CargoItinerary（leg 親子）の保存・復元に拡張（Update で旅程書き込み・FindById で復元）統合テスト | 4h | - | [ ] |
+| 3.1 | マイグレーション 0007（`leg` テーブル〔data-model 既定義〕を作成。`cargo.booking_status` は VARCHAR のため ROUTE_PROPOSED/CONFIRMED は値追加のみで DDL 変更不要。`routing_status`〔ROUTED/MISROUTED/NOT_ROUTED〕は経路決定結果の別概念で US09-13 には不要のため対象外）両方言 + data-model 反映 | 3h | - | [x] |
+| 3.2 | CargoRepository を CargoItinerary（leg 親子）の保存・復元に拡張（Update で旅程書き込み・FindById で復元）統合テスト | 4h | - | [x] |
 | 3.3 | US12 通知記録の永続化（`notification_log` 相当・最小実装）+ 統合テスト | 2h | - | [ ] |
 
 **小計**: 9h（理想時間）
