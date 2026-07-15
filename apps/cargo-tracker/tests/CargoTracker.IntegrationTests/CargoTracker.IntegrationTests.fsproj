@@ -10,6 +10,7 @@
     <Compile Include="ShipperRepositoryTests.fs" />
     <Compile Include="EstimateRepositoryTests.fs" />
     <Compile Include="CargoRepositoryTests.fs" />
+    <Compile Include="ShipperExistenceAdapterTests.fs" />
     <Compile Include="MigrationTests.fs" />
     <Compile Include="UnitOfWorkTests.fs" />
     <Compile Include="ViewTests.fs" />

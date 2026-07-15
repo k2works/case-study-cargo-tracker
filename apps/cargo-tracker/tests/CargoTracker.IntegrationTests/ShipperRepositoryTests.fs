@@ -18,6 +18,7 @@ let private shipperDdl =
     CREATE TABLE shipper (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
         shipper_code    TEXT    NOT NULL UNIQUE,
+        shipper_uuid    TEXT,
         shipper_type    TEXT    NOT NULL,
         name            TEXT    NOT NULL,
         email           TEXT    NOT NULL,

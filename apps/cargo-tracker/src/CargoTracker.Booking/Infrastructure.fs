@@ -43,6 +43,28 @@ module CargoQueries =
               ArrivalDeadline = rd.ReadString "arrival_deadline"
               BookingStatus = rd.ReadString "booking_status" })
 
+/// 荷主存在確認 ACL のアダプタ（ADR-0008）。Shipper プロジェクトを参照せず、
+/// shipper テーブルを shipper_uuid（ShipperId の Guid）で直接照会する（BC 分離）。
+module ShipperExistenceAdapter =
+
+    let create (conn: IDbConnection) : ShipperExistenceChecker =
+        { Exists =
+            fun (shipperId: ShipperId) ->
+                async {
+                    try
+                        let guid = (ShipperId.value shipperId).ToString("D")
+
+                        let count =
+                            conn
+                            |> Db.newCommand "SELECT COUNT(*) AS cnt FROM shipper WHERE shipper_uuid = @uuid"
+                            |> Db.setParams [ "uuid", SqlType.String guid ]
+                            |> Db.querySingle (fun rd -> rd.ReadInt32 "cnt")
+
+                        return Ok(count |> Option.defaultValue 0 > 0)
+                    with ex ->
+                        return Error(BusinessRuleViolation("ShipperExistenceChecker", ex.Message))
+                } }
+
 module CargoRepository =
 
     /// CargoType を永続化用の (種別文字列, 危険物 3 項目 option, 温度 3 項目 option) に展開する。

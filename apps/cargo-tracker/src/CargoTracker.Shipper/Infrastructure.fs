@@ -67,14 +67,16 @@ module ShipperRepository =
                     |> Db.newCommand
                         """
                         INSERT INTO shipper
-                            (shipper_code, shipper_type, name, email, phone,
+                            (shipper_code, shipper_uuid, shipper_type, name, email, phone,
                              contract_number, discount_rate, created_at, updated_at, version)
                         VALUES
-                            (@shipper_code, @shipper_type, @name, @email, @phone,
+                            (@shipper_code, @shipper_uuid, @shipper_type, @name, @email, @phone,
                              @contract_number, @discount_rate, @now, @now, 0)
                         """
                     |> Db.setParams
                         [ "shipper_code", SqlType.String(ShipperCode.value shipper.Code)
+                          // ShipperId（Guid）を業務識別子として永続化する（ADR-0008）。
+                          "shipper_uuid", SqlType.String((ShipperId.value shipper.Id).ToString("D"))
                           "shipper_type", SqlType.String kindStr
                           "name", SqlType.String(ShipperName.value shipper.Name)
                           "email", SqlType.String(Email.value shipper.Email)
