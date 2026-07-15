@@ -14,5 +14,6 @@
 | [ADR-0006](0006-時刻とGUIDの注入ポートを採用.md) | 時刻・GUID の注入ポート（Clock / IdGenerator）を採用 | 提案 |
 | [ADR-0007](0007-経路設計中状態はBookingState_DU拡張で表現.md) | 「経路設計中」状態は BookingState DU の拡張（RoutingRequested ケース）で表現 | 承認済み |
 | [ADR-0008](0008-荷主参照はShipperId永続化により業務識別子で行う.md) | 荷主の横断参照は ShipperId（Guid）の永続化により業務識別子で行う | 承認済み |
+| [ADR-0009](0009-経路候補算出はRouting自コンテキストで構成する.md) | 経路候補算出は Routing Context が自コンテキストの Voyage スケジュールから構成する | 提案 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
