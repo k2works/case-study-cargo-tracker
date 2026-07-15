@@ -107,6 +107,7 @@ nav:
       - 0005 Cookie 認証と user_roles による RBAC を採用: adr/0005-Cookie認証とuser_rolesによるRBACを採用.md
       - 0006 時刻と GUID の注入ポートを採用: adr/0006-時刻とGUIDの注入ポートを採用.md
       - 0007 経路設計中状態は BookingState DU 拡張で表現: adr/0007-経路設計中状態はBookingState_DU拡張で表現.md
+      - 0008 荷主参照は ShipperId 永続化により業務識別子で行う: adr/0008-荷主参照はShipperId永続化により業務識別子で行う.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
