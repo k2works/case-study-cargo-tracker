@@ -19,6 +19,7 @@
 | IT2 貨物予約 | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | 開発完了 |
 | IT3 航海・経路算出 | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | 開発完了 |
 | IT4 経路確定・予約確定 | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | 開発完了 |
+| IT5 追跡・荷役 | [iteration_plan-5.md](./iteration_plan-5.md) | - | - | 計画中 |
 
 イテレーション開始時に行を追加します。
 
