@@ -94,7 +94,7 @@
 | 1.2 | 値オブジェクト（RouteSpecification・Dimensions・Quantity・Description・Consignee）のスマートコンストラクタ + プロパティテスト | 3h | - | [x] |
 | 1.3 | ShipperExistenceChecker ACL ポート（関数レコード `ShipperId -> Async<bool>`）とスタブ／Shipper リポジトリ実装配線 | 2h | - | [~] |
 | 1.4 | 予約登録ワークフロー（`asyncResult` 合成・荷主存在確認・見積整合性チェック・原子的永続化） | 3h | - | [~] |
-| 1.5 | CargoRepository（Donald 手書き SQL・cargo テーブル・単一トランザクション書き込み）統合テスト（IT1 Try#2 の原子性テスト含む） | 4h | - | [ ] |
+| 1.5 | CargoRepository（Donald 手書き SQL・cargo テーブル・単一トランザクション書き込み）統合テスト（IT1 Try#2 の原子性テスト含む） | 4h | - | [x] |
 | 1.6 | 貨物予約一覧／登録画面（`/bookings`, `/bookings/new`・荷主選択・PRG）+ HttpHandler。IT1 ウォーキングスケルトンのプレースホルダを実画面へ差し替え | 4h | - | [ ] |
 | 1.7 | ナビゲーション整合性: navbar「貨物予約」（ROLE_SALES・ROLE_SHIPPER）を実 `/bookings` へ結線・アクティブ表示、ダッシュボードの [予約管理] 導線を有効化し、ロール別ナビ表示の検証テスト（WebApplicationFactory）を追加 | 2h | - | [ ] |
 
@@ -109,7 +109,7 @@
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
 | 2.1 | `CargoType` DU（General / Hazardous of HazardousDeclaration / Refrigerated of TemperatureRequirement）と埋め込みデータのスマートコンストラクタ + FsCheck | 3h | - | [x] |
-| 2.2 | 危険物申告・温度管理条件の永続化（cargo テーブル `hazardous_class`・`un_number`・`min/max_temperature` 等のマッピング） | 2h | - | [ ] |
+| 2.2 | 危険物申告・温度管理条件の永続化（cargo テーブル `hazardous_class`・`un_number`・`min/max_temperature` 等のマッピング） | 2h | - | [x] |
 | 2.3 | 登録画面の種別連動フォーム（危険物／冷凍で必須フィールドを htmx で表示・サーバ側必須バリデーション）+ 受入テスト（未入力時 400） | 3h | - | [ ] |
 
 **小計**: 8h（理想時間）
@@ -137,8 +137,8 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US04 貨物予約登録 | 5 | 22h | [~] Domain/Application 完了・Infra/Web 残 |
-| US05 危険物・冷凍 | 3 | 8h | [~] CargoType DU 完了・永続化/フォーム残 |
+| US04 貨物予約登録 | 5 | 22h | [~] Domain/Application/Infra 完了・Web 残 |
+| US05 危険物・冷凍 | 3 | 8h | [~] CargoType DU・永続化完了・フォーム残 |
 | US06 経路設計依頼 | 2 | 8h | [~] 状態遷移/ワークフロー完了・画面残 |
 | 品質基盤（IT1 Try） | - | 4h | [ ] |
 | **合計** | **10** | **42h** | |
