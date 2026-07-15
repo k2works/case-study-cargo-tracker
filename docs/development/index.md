@@ -18,6 +18,7 @@
 | IT1 基盤 + 荷主・見積 | [iteration_plan-1.md](./iteration_plan-1.md) | [retrospective-1.md](./retrospective-1.md) | - | 開発完了 |
 | IT2 貨物予約 | [iteration_plan-2.md](./iteration_plan-2.md) | [retrospective-2.md](./retrospective-2.md) | [iteration_report-2.md](./iteration_report-2.md) | 開発完了 |
 | IT3 航海・経路算出 | [iteration_plan-3.md](./iteration_plan-3.md) | [retrospective-3.md](./retrospective-3.md) | [iteration_report-3.md](./iteration_report-3.md) | 開発完了 |
+| IT4 経路確定・予約確定 | [iteration_plan-4.md](./iteration_plan-4.md) | [retrospective-4.md](./retrospective-4.md) | [iteration_report-4.md](./iteration_report-4.md) | 開発完了 |
 
 イテレーション開始時に行を追加します。
 
@@ -28,7 +29,8 @@
 | IT1 | 10 | 10 | 100% |
 | IT2 | 10 | 10 | 100% |
 | IT3 | 14 | 14 | 100% |
-| **累計** | **34** | **34** | **100%** |
+| IT4 | 12 | 12 | 100% |
+| **累計** | **46** | **46** | **100%** |
 
 ### フェーズ進捗
 
