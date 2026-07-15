@@ -1,10 +1,49 @@
 module CargoTracker.Web.Program
 
+open System
 open System.Data
 open System.IO
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.Configuration
 open CargoTracker.Web
+
+let private tryResolveScriptsRoot (contentRoot: string) =
+    let rec candidates current =
+        seq {
+            if not (String.IsNullOrWhiteSpace current) then
+                let candidate = Path.GetFullPath(Path.Combine(current, "db", "scripts"))
+                yield candidate
+
+                let parent = Directory.GetParent(current)
+
+                if not (isNull parent) then
+                    yield! candidates parent.FullName
+        }
+
+    candidates contentRoot |> Seq.tryFind Directory.Exists
+
+let private normalizeAspNetCoreUrls (urls: string) =
+    let normalizeSegment (segment: string) =
+        let s = segment.Trim()
+
+        if s.StartsWith("http://0.0.0.0:", StringComparison.OrdinalIgnoreCase) then
+            s.Replace("0.0.0.0", "localhost")
+        elif s.StartsWith("https://0.0.0.0:", StringComparison.OrdinalIgnoreCase) then
+            s.Replace("0.0.0.0", "localhost")
+        elif s.StartsWith("http://+:", StringComparison.OrdinalIgnoreCase) then
+            s.Replace("http://+:", "http://localhost:")
+        elif s.StartsWith("https://+:", StringComparison.OrdinalIgnoreCase) then
+            s.Replace("https://+:", "https://localhost:")
+        elif s.StartsWith("http://*:", StringComparison.OrdinalIgnoreCase) then
+            s.Replace("http://*:", "http://localhost:")
+        elif s.StartsWith("https://*:", StringComparison.OrdinalIgnoreCase) then
+            s.Replace("https://*:", "https://localhost:")
+        else
+            s
+
+    urls.Split(';', StringSplitOptions.RemoveEmptyEntries)
+    |> Array.map normalizeSegment
+    |> String.concat ";"
 
 /// 設定から DB プロバイダ・接続文字列・スクリプトルートを解決する。
 let resolveDbConfig (config: IConfiguration) (contentRoot: string) =
@@ -19,7 +58,10 @@ let resolveDbConfig (config: IConfiguration) (contentRoot: string) =
     let scriptsRoot =
         match config.["Database:ScriptsRoot"] with
         | null
-        | "" -> Path.Combine(contentRoot, "..", "..", "db", "scripts")
+        | "" ->
+            match tryResolveScriptsRoot contentRoot with
+            | Some path -> path
+            | None -> Path.Combine(contentRoot, "db", "scripts")
         | s -> s
 
     provider, connStr, scriptsRoot
@@ -54,11 +96,17 @@ let main args =
     App.configureApp app
 
     // ASPNETCORE_URLS（launchSettings / dotnet watch / コンテナ）が設定されていればそれを尊重し、
-    // 未設定なら本番既定の 8080 で起動する。dotnet watch のブラウザ自動更新と両立させる。
+    // 未設定ならローカル開発向けに localhost:8080 で起動する。
     match System.Environment.GetEnvironmentVariable "ASPNETCORE_URLS" with
     | null
-    | "" -> app.Run("http://0.0.0.0:8080")
-    | _ -> app.Run()
+    | "" -> app.Run("http://localhost:8080")
+    | urls ->
+        let normalized = normalizeAspNetCoreUrls urls
+
+        if normalized <> urls then
+            System.Environment.SetEnvironmentVariable("ASPNETCORE_URLS", normalized)
+
+        app.Run()
 
     // シャットダウンまで keep-alive 接続を保持し、ここで明示的に閉じる（早期 GC 防止）。
     keepAlive |> Option.iter (fun c -> c.Dispose())
