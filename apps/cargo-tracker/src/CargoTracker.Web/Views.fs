@@ -1216,3 +1216,31 @@ module Views =
                                 _type "text" ] ]
                     button [ _type "submit"; _class "btn btn-primary" ] [ str "登録" ]
                     a [ _class "btn btn-secondary ms-2"; _href "/handling" ] [ str "一覧へ戻る" ] ] ]
+
+    /// 貨物状態手動更新フォーム（`/tracking/{trackingNumber}/status/new`・US17）。
+    let manualStatusForm (roles: string list) (trackingNumber: string) (error: string option) : XmlNode =
+        layout
+            "貨物状態更新"
+            roles
+            [ h1 [ _class "mb-4" ] [ str (sprintf "貨物状態更新 %s" trackingNumber) ]
+              (match error with
+               | Some msg -> div [ _class "alert alert-warning" ] [ str msg ]
+               | None -> emptyText)
+              form
+                  [ _method "post"; _action (sprintf "/tracking/%s/status" trackingNumber) ]
+                  [ div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "eventType" ] [ str "状態変更" ]
+                          select
+                              [ _class "form-select"; _id "eventType"; _name "eventType" ]
+                              [ option [ _value "DEPARTED" ] [ str "出港（輸送中へ）" ]
+                                option [ _value "ARRIVED" ] [ str "入港（引取待ちへ）" ] ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "location" ] [ str "場所（UN/LOCODE）" ]
+                          input [ _class "form-control"; _id "location"; _name "location"; _type "text" ] ]
+                    button [ _type "submit"; _class "btn btn-primary" ] [ str "更新" ]
+                    a
+                        [ _class "btn btn-secondary ms-2"
+                          _href (sprintf "/tracking/%s" trackingNumber) ]
+                        [ str "追跡詳細へ戻る" ] ] ]

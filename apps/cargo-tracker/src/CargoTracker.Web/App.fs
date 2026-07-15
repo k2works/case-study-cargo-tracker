@@ -1113,6 +1113,68 @@ let private trackingDetail (trackingNumber: string) : HttpHandler =
                         ctx
         }
 
+/// 貨物状態手動更新フォーム（`GET /tracking/{trackingNumber}/status/new`・US17・ROLE_TRACKER）。
+let private manualStatusNew (trackingNumber: string) : HttpHandler =
+    mustHaveRole "ROLE_TRACKER"
+    >=> fun next ctx -> htmlView (Views.manualStatusForm (rolesOf ctx) trackingNumber None) next ctx
+
+/// 貨物状態手動更新の実行（`POST /tracking/{trackingNumber}/status`・US17）。
+let private manualStatusUpdate (trackingNumber: string) : HttpHandler =
+    mustHaveRole "ROLE_TRACKER"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get (k: string) = string form.[k]
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let eventTypeResult =
+                CargoTracker.Tracking.Domain.TrackingEventType.ofString (get "eventType")
+
+            let locationResult =
+                CargoTracker.Shared.Domain.Location.create (get "location")
+                |> Result.mapError (fun m -> CargoTracker.Shared.Domain.ValidationError("Location", m))
+
+            match eventTypeResult, locationResult with
+            | Ok eventType, Ok location ->
+                let repo =
+                    CargoTracker.Tracking.Infrastructure.TrackingRepository.create conn systemClock
+
+                let notifier: CargoTracker.Tracking.Application.TrackingNotifier =
+                    { Notify = fun _ _ -> async { return Ok() } }
+
+                let event: CargoTracker.Tracking.Domain.TrackingActivityEvent =
+                    { EventType = eventType
+                      Location = location
+                      CompletionTime = systemClock () }
+
+                let! result =
+                    CargoTracker.Tracking.Application.RecordTracking.record
+                        repo
+                        notifier
+                        (CargoTracker.Tracking.Domain.TrackingNumber.ofString trackingNumber)
+                        event
+
+                match result with
+                | Ok _ -> return! redirectTo false (sprintf "/tracking/%s" trackingNumber) next ctx
+                | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                    return! (setStatusCode 404 >=> text "追跡番号が見つかりません。") next ctx
+                | Error err ->
+                    return!
+                        (setStatusCode 400
+                         >=> htmlView (
+                             Views.manualStatusForm (rolesOf ctx) trackingNumber (Some(domainErrorMessage err))
+                         ))
+                            next
+                            ctx
+            | _ ->
+                return!
+                    (setStatusCode 400
+                     >=> htmlView (Views.manualStatusForm (rolesOf ctx) trackingNumber (Some "入力が不正です。")))
+                        next
+                        ctx
+        }
+
 /// 公開追跡（`GET /public/tracking/{accessToken}`・US18・未認証）。
 let private publicTracking (accessToken: string) : HttpHandler =
     fun next ctx ->
@@ -1296,6 +1358,7 @@ let webApp: HttpHandler =
                     route "/tracking" >=> trackingInput
                     route "/tracking/search" >=> trackingSearch
                     routef "/public/tracking/%s" publicTracking
+                    routef "/tracking/%s/status/new" manualStatusNew
                     routef "/tracking/%s" trackingDetail
                     // US15/US16: 荷役作業（具体パス /handling/new を先に置く）。
                     route "/handling/new" >=> handlingNew
@@ -1314,6 +1377,7 @@ let webApp: HttpHandler =
                     route "/estimates" >=> estimateCreate
                     route "/bookings" >=> bookingCreate
                     route "/handling" >=> handlingCreate
+                    routef "/tracking/%s/status" manualStatusUpdate
                     routef "/bookings/%s/routing" bookingSubmitRouting
                     routef "/bookings/%s/confirm" bookingConfirm
                     routef "/bookings/%s/restore" bookingRestore
