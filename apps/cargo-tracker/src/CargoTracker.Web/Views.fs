@@ -583,3 +583,164 @@ module Views =
                                             _type "password"
                                             _value password ] ]
                                 button [ _class "btn btn-primary"; _type "submit" ] [ str "ログイン" ] ] ] ] ]
+
+    // ---- Routing: 航路管理（US24/US25/US07）----
+
+    /// 航路一覧の表示行。
+    type VoyageRow =
+        { VoyageNumber: string
+          Vessel: string
+          Carrier: string
+          Origin: string
+          Destination: string
+          Departure: string
+          Arrival: string }
+
+    /// 航路一覧画面（`/voyages`・US07/US24）。
+    let voyageList (roles: string list) (rows: VoyageRow list) : XmlNode =
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ a [ _href (sprintf "/voyages/%s/edit" r.VoyageNumber) ] [ str r.VoyageNumber ] ]
+                      td [] [ str r.Vessel ]
+                      td [] [ str r.Carrier ]
+                      td [] [ str r.Origin ]
+                      td [] [ str r.Destination ]
+                      td [] [ str r.Departure ]
+                      td [] [ str r.Arrival ] ])
+
+        layout
+            "航路管理"
+            roles
+            [ div
+                  [ _class "d-flex justify-content-between align-items-center mb-4" ]
+                  [ h1 [] [ str "航路一覧" ]
+                    a [ _class "btn btn-primary"; _href "/voyages/new" ] [ str "航海スケジュール登録" ] ]
+              table
+                  [ _class "table table-striped" ]
+                  [ thead
+                        []
+                        [ tr
+                              []
+                              [ th [] [ str "航海番号" ]
+                                th [] [ str "船名" ]
+                                th [] [ str "運送会社" ]
+                                th [] [ str "出発港" ]
+                                th [] [ str "到着港" ]
+                                th [] [ str "出発日" ]
+                                th [] [ str "到着日" ] ] ]
+                    tbody [] bodyRows ] ]
+
+    /// 航海スケジュール登録／更新フォームの入力値。運送区間は最大 3 区間の固定行で受ける。
+    type VoyageFormValues =
+        { VoyageNumber: string
+          VesselName: string
+          CarrierName: string
+          CargoGeneral: bool
+          CargoHazardous: bool
+          CargoRefrigerated: bool
+          Legs: (string * string * string * string) list } // (出発港, 到着港, 出発日時, 到着日時)
+
+    let emptyVoyageForm: VoyageFormValues =
+        { VoyageNumber = ""
+          VesselName = ""
+          CarrierName = ""
+          CargoGeneral = true
+          CargoHazardous = false
+          CargoRefrigerated = false
+          Legs = [ ("", "", "", ""); ("", "", "", ""); ("", "", "", "") ] }
+
+    /// 航海スケジュール登録／更新フォーム（`/voyages/new`・`/voyages/{n}/edit`・US24/US25）。
+    let voyageForm
+        (roles: string list)
+        (pageTitle: string)
+        (actionPath: string)
+        (isEdit: bool)
+        (values: VoyageFormValues)
+        (error: string option)
+        : XmlNode =
+        let field labelText name value inputType =
+            div
+                [ _class "mb-3" ]
+                [ label [ _class "form-label"; _for name ] [ str labelText ]
+                  input [ _class "form-control"; _id name; _name name; _value value; _type inputType ] ]
+
+        let checkbox name labelText isChecked =
+            div
+                [ _class "form-check" ]
+                [ input (
+                      [ _class "form-check-input"
+                        _id name
+                        _name name
+                        _type "checkbox"
+                        _value "true" ]
+                      @ (if isChecked then [ _checked ] else [])
+                  )
+                  label [ _class "form-check-label"; _for name ] [ str labelText ] ]
+
+        let legRow i (dep, arr, depDate, arrDate) =
+            let n = i + 1
+
+            div
+                [ _class "row g-2 mb-2" ]
+                [ div
+                      [ _class "col" ]
+                      [ input
+                            [ _class "form-control"
+                              _name (sprintf "leg%dDep" n)
+                              _value dep
+                              _placeholder "出発港(UN/LOCODE)" ] ]
+                  div
+                      [ _class "col" ]
+                      [ input
+                            [ _class "form-control"
+                              _name (sprintf "leg%dArr" n)
+                              _value arr
+                              _placeholder "到着港(UN/LOCODE)" ] ]
+                  div
+                      [ _class "col" ]
+                      [ input
+                            [ _class "form-control"
+                              _name (sprintf "leg%dDepDate" n)
+                              _value depDate
+                              _type "datetime-local" ] ]
+                  div
+                      [ _class "col" ]
+                      [ input
+                            [ _class "form-control"
+                              _name (sprintf "leg%dArrDate" n)
+                              _value arrDate
+                              _type "datetime-local" ] ] ]
+
+        layout
+            "航路管理"
+            roles
+            [ h1 [ _class "mb-4" ] [ str pageTitle ]
+              (match error with
+               | Some msg -> div [ _class "alert alert-danger" ] [ str msg ]
+               | None -> emptyText)
+              form
+                  [ _method "post"; _action actionPath ]
+                  [ (if isEdit then
+                         // 更新時は航海番号を変更不可（hidden で送出）。
+                         div
+                             [ _class "mb-3" ]
+                             [ label [ _class "form-label" ] [ str "航海番号" ]
+                               input [ _class "form-control"; _value values.VoyageNumber; _readonly ]
+                               input [ _name "voyageNumber"; _type "hidden"; _value values.VoyageNumber ] ]
+                     else
+                         field "航海番号" "voyageNumber" values.VoyageNumber "text")
+                    field "船名" "vesselName" values.VesselName "text"
+                    field "運送会社" "carrierName" values.CarrierName "text"
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label" ] [ str "対応貨物種別" ]
+                          checkbox "cargoGeneral" "一般" values.CargoGeneral
+                          checkbox "cargoHazardous" "危険物" values.CargoHazardous
+                          checkbox "cargoRefrigerated" "冷凍・冷蔵" values.CargoRefrigerated ]
+                    label [ _class "form-label" ] [ str "運送区間（出発港・到着港・出発日時・到着日時／上から順序）" ]
+                    div [] (values.Legs |> List.mapi legRow)
+                    button [ _class "btn btn-primary mt-3"; _type "submit" ] [ str (if isEdit then "更新する" else "登録") ]
+                    a [ _class "btn btn-secondary ms-2 mt-3"; _href "/voyages" ] [ str "キャンセル" ] ] ]

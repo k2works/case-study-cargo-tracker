@@ -481,6 +481,133 @@ let private estimateCreate: HttpHandler =
                 return! htmlView (Views.estimateForm (rolesOf ctx) values (Some(domainErrorMessage err))) next ctx
         }
 
+// ---- US24/US25/US07: 航路管理（ROLE_ROUTE_DESIGNER）----
+
+/// Voyage 集約を一覧行 DTO へ射影する。
+let private toVoyageRow (v: CargoTracker.Routing.Domain.Voyage) : Views.VoyageRow =
+    let sched = v.Schedule
+    let fmt (d: System.DateTimeOffset) = d.ToString("yyyy-MM-dd")
+
+    { VoyageNumber = CargoTracker.Routing.Domain.VoyageNumber.value v.VoyageNumber
+      Vessel = CargoTracker.Routing.Domain.VesselName.value v.Vessel
+      Carrier = CargoTracker.Routing.Domain.CarrierName.value v.Carrier
+      Origin = CargoTracker.Shared.Domain.Location.value (CargoTracker.Routing.Domain.Schedule.origin sched)
+      Destination = CargoTracker.Shared.Domain.Location.value (CargoTracker.Routing.Domain.Schedule.destination sched)
+      Departure = fmt (CargoTracker.Routing.Domain.Schedule.departureDate sched)
+      Arrival = fmt (CargoTracker.Routing.Domain.Schedule.arrivalDate sched) }
+
+/// 航路一覧（`/voyages`・US07/US24）。IT3 ウォーキングスケルトンのプレースホルダを実画面へ差し替え。
+let private voyageList: HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+
+            let! result = repo.FindAll()
+
+            let rows =
+                match result with
+                | Ok voyages -> voyages |> List.map toVoyageRow
+                | Error _ -> []
+
+            return! htmlView (Views.voyageList (rolesOf ctx) rows) next ctx
+        }
+
+/// 航海登録フォーム（`/voyages/new`・US24）。
+let private voyageNew: HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        htmlView (Views.voyageForm (rolesOf ctx) "航海スケジュール登録" "/voyages" false Views.emptyVoyageForm None) next ctx
+
+/// フォームから VoyageCommand を組み立てる（空の運送区間行は除外）。
+let private readVoyageForm
+    (get: string -> string)
+    : Views.VoyageFormValues * CargoTracker.Routing.Application.VoyageCommand =
+    let legRows =
+        [ 1; 2; 3 ]
+        |> List.map (fun n ->
+            get (sprintf "leg%dDep" n),
+            get (sprintf "leg%dArr" n),
+            get (sprintf "leg%dDepDate" n),
+            get (sprintf "leg%dArrDate" n))
+
+    let values: Views.VoyageFormValues =
+        { VoyageNumber = get "voyageNumber"
+          VesselName = get "vesselName"
+          CarrierName = get "carrierName"
+          CargoGeneral = get "cargoGeneral" = "true"
+          CargoHazardous = get "cargoHazardous" = "true"
+          CargoRefrigerated = get "cargoRefrigerated" = "true"
+          Legs = legRows }
+
+    let parseDate (s: string) =
+        match System.DateTimeOffset.TryParse s with
+        | true, d -> d
+        | _ -> System.DateTimeOffset.MinValue
+
+    let movements =
+        legRows
+        |> List.filter (fun (dep, arr, _, _) -> dep <> "" && arr <> "")
+        |> List.map (fun (dep, arr, depDate, arrDate) ->
+            { CargoTracker.Routing.Application.DepartureUnlocode = dep
+              CargoTracker.Routing.Application.ArrivalUnlocode = arr
+              CargoTracker.Routing.Application.DepartureDate = parseDate depDate
+              CargoTracker.Routing.Application.ArrivalDate = parseDate arrDate })
+
+    let tags =
+        [ (values.CargoGeneral, "GENERAL")
+          (values.CargoHazardous, "HAZARDOUS")
+          (values.CargoRefrigerated, "REFRIGERATED") ]
+        |> List.filter fst
+        |> List.map snd
+
+    let cmd: CargoTracker.Routing.Application.VoyageCommand =
+        { VoyageNumber = get "voyageNumber"
+          VesselName = get "vesselName"
+          CarrierName = get "carrierName"
+          Movements = movements
+          SupportedCargoTypes = tags }
+
+    values, cmd
+
+/// 航海登録の実行（`POST /voyages`・US24）。
+let private voyageCreate: HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get key = string form.[key]
+            let values, cmd = readVoyageForm get
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+
+            let! result = CargoTracker.Routing.Application.VoyageWorkflow.register repo cmd
+
+            match result with
+            | Ok _ -> return! redirectTo false "/voyages" next ctx
+            | Error err ->
+                ctx.SetStatusCode 400
+
+                return!
+                    htmlView
+                        (Views.voyageForm
+                            (rolesOf ctx)
+                            "航海スケジュール登録"
+                            "/voyages"
+                            false
+                            values
+                            (Some(domainErrorMessage err)))
+                        next
+                        ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -502,7 +629,8 @@ let webApp: HttpHandler =
                     route "/tracking"
                     >=> placeholder "貨物追跡" [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
                     route "/handling" >=> placeholder "荷役管理" [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
-                    route "/voyages" >=> placeholder "航路管理" [ "ROLE_ROUTE_DESIGNER" ]
+                    route "/voyages" >=> voyageList
+                    route "/voyages/new" >=> voyageNew
                     route "/admin/discount-policies" >=> placeholder "割引ポリシー管理" [ "ROLE_ADMIN" ] ]
           POST
           >=> choose
@@ -511,7 +639,8 @@ let webApp: HttpHandler =
                     route "/shippers" >=> shipperCreate
                     route "/estimates" >=> estimateCreate
                     route "/bookings" >=> bookingCreate
-                    routef "/bookings/%s/routing" bookingSubmitRouting ]
+                    routef "/bookings/%s/routing" bookingSubmitRouting
+                    route "/voyages" >=> voyageCreate ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。
