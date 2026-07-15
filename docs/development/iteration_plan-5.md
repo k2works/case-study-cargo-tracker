@@ -141,8 +141,8 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `HandlingType`（domain-model 準拠: `Receive` / `Load of VoyageNumber` / `Unload of VoyageNumber` / `Customs` / `Claim`。IT5 は Receive/Load/Unload/Claim を対象、Customs は次 IT）・`HandlingActivity` 集約（追跡番号・種別・場所〔Location〕・実施日時・荷受人確認〔Claim 時〕）を `create` で検証 + FsCheck | 4h | - | [ ] |
-| 2.2 | 荷役登録ワークフロー（追跡番号で特定→`HandlingActivity` 生成→`HandlingActivityRegistered` イベント）。引取（CLAIM）は荷受人確認必須。予定ルート外は警告（US15 受入7） | 3h | - | [ ] |
+| 2.1 | `HandlingType`（domain-model 準拠: `Receive` / `Load of VoyageNumber` / `Unload of VoyageNumber` / `Customs` / `Claim`。IT5 は Receive/Load/Unload/Claim を対象、Customs は次 IT）・`HandlingActivity` 集約（追跡番号・種別・場所〔Location〕・実施日時・荷受人確認〔Claim 時〕）を `create` で検証 + FsCheck | 4h | - | [x] |
+| 2.2 | 荷役登録ワークフロー（`validateFor` デシジョンテーブル→`HandlingActivity.register`→`HandlingActivityRegistered` イベント）。引取（CLAIM）は荷受人確認必須。予定ルート外は Misrouted/Warning（US15 受入7）。※追跡番号での特定・永続化はタスク 3/4 で結線 | 3h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -189,7 +189,7 @@
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | Tracking ドメイン | 4 | 9h | [x] |
-| Handling ドメイン | 5 | 7h | [ ] |
+| Handling ドメイン | 5 | 7h | [x] |
 | BC 間イベント連携・ADR 決着 | — | 9h | [ ] |
 | インフラ（追跡・荷役永続化）| — | 9h | [ ] |
 | Web（US14-18・公開ページ）| 8 | 11h | [ ] |
@@ -197,7 +197,7 @@
 | **合計** | **17** | **48h** | |
 
 **1 SP あたり**: 約 2.8h（ストーリー分 48h / 17 SP）
-**進捗率**: 24% (4/17 SP)
+**進捗率**: 53% (9/17 SP)
 
 > **スコープ注記（過積載）**: 17 SP は直近ベロシティ（12-14 SP）を上回る。フィーチャバッファ消費ルール（release_plan）に従い、**US17（手動更新・2 SP）を最初の切り出し候補**とする。US14/US15/US18 は Release 1.0 の E2E（US13・US15・US18）に必須のため死守。US16（引取）は精算開始条件のため次点で保持。
 
