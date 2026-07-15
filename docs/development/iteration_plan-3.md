@@ -127,7 +127,7 @@
 | 2.1 | ワークフロー（`registerVoyage`・`updateVoyage`・`searchVoyages`・`computeRouteCandidates`）を `asyncResult` で構成・VoyageRepository ポート（関数レコード）定義 | 3h | - | [x] |
 | 2.2 | マイグレーション 0006（voyage 拡張: 船名・運送会社・対応貨物種別／carrier_movement）両方言 + data-model 反映（data-model 反映は完了時） | 3h | - | [x] |
 | 2.3 | VoyageRepository（Donald・voyage + carrier_movement 親子の単一トランザクション書き込み・検索クエリ）統合テスト | 4h | - | [x] |
-| 2.4 | 予約 → 経路設計依頼一覧の連携（RoutingRequested 状態の予約を `/routing/requests` に表示）。IT2 の post-commit イベント結線（レビュー H6・retro Try#2） | 3h | - | [ ] |
+| 2.4 | 予約 → 経路設計依頼一覧の連携（RoutingRequested 状態の予約を `/routing/requests` に表示）。IT2 の post-commit イベント結線（レビュー H6・retro Try#2）※依頼一覧は状態クエリで実現・イベント dispatch 結線は消費者確定後 | 3h | - | [~] |
 
 **小計**: 13h（理想時間）
 
@@ -137,7 +137,7 @@
 |---|--------|---------|------|------|
 | 3.1 | 航路一覧 `/voyages`・航海登録 `/voyages/new`（寄港地の順序付き入力・種別）+ HttpHandler・受入テスト | 4h | - | [x] |
 | 3.2 | 航海更新 `/voyages/{voyageNumber}/edit`（差分確認・PRG）+ 受入テスト（キャンセル時不変） | 3h | - | [x] |
-| 3.3 | 経路設計 `/routing/requests/{bookingId}`（航海検索・経路候補算出・推奨順表示・期限超過通知）+ 受入テスト | 4h | - | [ ] |
+| 3.3 | 経路設計 `/routing/requests/{bookingId}`（航海検索・経路候補算出・推奨順表示・期限超過通知）+ 受入テスト | 4h | - | [x] |
 | 3.4 | ナビゲーション整合性: navbar「航路管理」（ROLE_ROUTE_DESIGNER）を実 `/voyages` へ結線・ダッシュボード導線・ロール別ナビ表示の検証テスト | 2h | - | [x] |
 
 **小計**: 13h（理想時間）
@@ -158,7 +158,7 @@
 |---------|----|----|------|
 | Routing ドメイン層 | 8 | 15h | [x] Voyage集約・Schedule・RouteComputation 完了 |
 | Routing アプリ/インフラ | — | 13h | [ ] |
-| Routing Web 層 | 6 | 13h | [ ] |
+| Routing Web 層 | 6 | 13h | [x] 一覧/登録/更新/経路設計 完了 |
 | 外部 ACL 契約 | — | 2h | [ ] |
 | **合計** | **14** | **43h** | |
 
