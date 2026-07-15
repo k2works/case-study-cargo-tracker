@@ -404,7 +404,8 @@ let private toBookingDetail
       CanCancel =
         (match cargo.State with
          | CargoTracker.Booking.Domain.Cancelled _ -> false
-         | _ -> true) }
+         | _ -> true)
+      CanNotify = (CargoTracker.Booking.Domain.BookingState.itinerary cargo.State |> Option.isSome) }
 
 /// 貨物予約詳細（`GET /bookings/{bookingId}`・US06）。
 let private bookingDetail (bookingIdStr: string) : HttpHandler =
@@ -503,6 +504,31 @@ let private bookingCancel (bookingIdStr: string) : HttpHandler =
         (fun repo dispatcher bookingId ->
             CargoTracker.Booking.Application.RouteAssignment.cancel repo dispatcher bookingId "営業によるキャンセル")
         bookingIdStr
+
+/// 荷主への経路通知（`POST /bookings/{bookingId}/notify`・US12・ROLE_SALES）。
+let private bookingNotify (bookingIdStr: string) : HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+            let notifier =
+                CargoTracker.Booking.Infrastructure.NotificationLogShipperNotifier.create conn systemClock
+
+            let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
+
+            let! result = CargoTracker.Booking.Application.RouteAssignment.notifyRouteToShipper repo notifier bookingId
+
+            match result with
+            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s" bookingIdStr) next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
 
 let private parseCargoType (value: string) : CargoTracker.Estimation.Domain.CargoType =
     match value with
@@ -1013,6 +1039,7 @@ let webApp: HttpHandler =
                     routef "/bookings/%s/confirm" bookingConfirm
                     routef "/bookings/%s/restore" bookingRestore
                     routef "/bookings/%s/cancel" bookingCancel
+                    routef "/bookings/%s/notify" bookingNotify
                     route "/voyages" >=> voyageCreate
                     routef "/voyages/%s/edit" voyageUpdate
                     routef "/voyages/%s/confirm" voyageConfirm

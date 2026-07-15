@@ -59,6 +59,36 @@ module StubBookingEventDispatcher =
     let create () : BookingEventDispatcher =
         { Dispatch = fun (event: BookingEvent) -> async { printfn "[BookingEvent] %A" event } }
 
+/// 荷主通知アダプタ（US12）。notification_log へ通知記録を書き込む最小実装。
+/// 実送信（メール等）は後続 IT で差し替える。clock は記録日時に使う（ADR-0006）。
+module NotificationLogShipperNotifier =
+
+    let create (conn: IDbConnection) (clock: Clock) : ShipperNotifier =
+        { Notify =
+            fun (bookingId: BookingId) (recipient: string) (message: string) ->
+                async {
+                    try
+                        let now = (clock ()).UtcDateTime.ToString("o")
+
+                        conn
+                        |> Db.newCommand
+                            """
+                            INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at)
+                            VALUES (@booking_id, @recipient, @message, @notified_at, @created_at)
+                            """
+                        |> Db.setParams
+                            [ "booking_id", SqlType.String(BookingId.value bookingId)
+                              "recipient", SqlType.String recipient
+                              "message", SqlType.String message
+                              "notified_at", SqlType.String now
+                              "created_at", SqlType.String now ]
+                        |> Db.exec
+
+                        return Ok()
+                    with ex ->
+                        return Error(BusinessRuleViolation("ShipperNotifier", ex.Message))
+                } }
+
 /// 荷主存在確認 ACL のアダプタ（ADR-0008）。Shipper プロジェクトを参照せず、
 /// shipper テーブルを shipper_uuid（ShipperId の Guid）で直接照会する（BC 分離）。
 module ShipperExistenceAdapter =

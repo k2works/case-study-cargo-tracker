@@ -290,3 +290,19 @@ let ``経路確定した予約をキャンセルできる`` () =
         let detail = authedGet client salesCookie (sprintf "/bookings/%s" bookingId)
         let body = run (detail.Content.ReadAsStringAsync())
         body |> should haveSubstring "キャンセル")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``経路確定後に荷主へ通知できる（US12）`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookRequestAndPropose client shipperUuid
+        let salesCookie = authCookie client "sales01"
+
+        let notifyRes =
+            authedPost client salesCookie (sprintf "/bookings/%s/notify" bookingId) []
+
+        // PRG: 予約詳細へリダイレクトする（通知成功）。
+        notifyRes.StatusCode |> should equal HttpStatusCode.Found
+
+        (string notifyRes.Headers.Location)
+        |> should haveSubstring (sprintf "/bookings/%s" bookingId))

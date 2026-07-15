@@ -340,7 +340,8 @@ module Views =
           Itinerary: string list
           CanConfirm: bool
           CanRestore: bool
-          CanCancel: bool }
+          CanCancel: bool
+          CanNotify: bool }
 
     /// 貨物予約詳細画面（`/bookings/{bookingId}`・US06/US11/US12/US13）。
     /// 仮受付（Preliminary）のときのみ [経路設計を依頼]、経路確定後は確定/差し戻し/キャンセルを表示する。
@@ -386,7 +387,11 @@ module Views =
             else
                 div
                     [ _class "mt-3" ]
-                    [ (if d.CanConfirm then
+                    [ (if d.CanNotify then
+                           actionForm "notify" "荷主に経路を通知する" "btn-info"
+                       else
+                           emptyText)
+                      (if d.CanConfirm then
                            actionForm "confirm" "予約を確定する" "btn-success"
                        else
                            emptyText)

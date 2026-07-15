@@ -22,6 +22,11 @@ type ShipperExistenceChecker =
 type RoutingRequestNotifier =
     { Notify: BookingId -> Async<Result<unit, DomainError>> }
 
+/// 荷主への通知ポート（US12）。確定経路などを荷主に通知し、記録する。
+/// recipient は荷主識別子、message は通知本文。実送信の有無は実装（アダプタ）で吸収する。
+type ShipperNotifier =
+    { Notify: BookingId -> string -> string -> Async<Result<unit, DomainError>> }
+
 /// ドメインイベントの発行ポート（ADR-0002）。永続化コミット成功後にのみ発火する。
 /// 他コンテキスト（Routing/Tracking 等）への連携はこのポートの実装で吸収する（BC 分離）。
 type BookingEventDispatcher =
@@ -195,3 +200,35 @@ module RouteAssignment =
     /// 予約をキャンセルする（US13・任意状態 → Cancelled）。
     let cancel (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) (reason: string) =
         applyCommand repo dispatcher bookingId (Cancel reason)
+
+    /// 荷主に確定経路を通知する（US12）。
+    /// 予約読込 → 確定経路（旅程）から通知本文を構成 → 荷主へ通知・記録。
+    /// 旅程が未確定（RouteProposed/Confirmed 以外）の場合は業務ルール違反とする。
+    let notifyRouteToShipper
+        (repo: CargoRepository)
+        (notifier: ShipperNotifier)
+        (bookingId: BookingId)
+        : Async<Result<unit, DomainError>> =
+        asyncResult {
+            let! found = repo.FindById bookingId
+
+            let! cargo =
+                match found with
+                | Some c -> Ok c
+                | None -> Error(NotFound("Cargo", BookingId.value bookingId))
+
+            let! itinerary =
+                match BookingState.itinerary cargo.State with
+                | Some i -> Ok i
+                | None -> Error(BusinessRuleViolation("ShipperNotification", "確定経路が無いため荷主に通知できません。"))
+
+            let route =
+                CargoItinerary.legs itinerary
+                |> List.map (fun leg ->
+                    sprintf "%s→%s" (Location.value (Leg.loadLocation leg)) (Location.value (Leg.unloadLocation leg)))
+                |> String.concat " / "
+
+            let recipient = (ShipperId.value cargo.ShipperId).ToString("D")
+            let message = sprintf "予約 %s の確定経路: %s" (BookingId.value bookingId) route
+            do! notifier.Notify bookingId recipient message
+        }

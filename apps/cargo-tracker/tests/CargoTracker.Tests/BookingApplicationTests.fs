@@ -42,7 +42,7 @@ let private existingShipper = { Exists = fun _ -> async { return Ok true } }
 
 let private missingShipper = { Exists = fun _ -> async { return Ok false } }
 
-let private notifierStub (calls: System.Collections.Generic.List<BookingId>) =
+let private notifierStub (calls: System.Collections.Generic.List<BookingId>) : RoutingRequestNotifier =
     { Notify =
         fun bid ->
             async {
@@ -326,3 +326,44 @@ let ``失敗時（NotFound）はイベントを発火しない`` () =
     |> ignore
 
     recorded.Count |> should equal 0
+
+// US12: 荷主通知ワークフロー。
+
+let private shipperNotifierStub (recorded: System.Collections.Generic.List<string>) : ShipperNotifier =
+    { Notify =
+        fun _ recipient message ->
+            async {
+                recorded.Add(sprintf "%s|%s" recipient message)
+                return Ok()
+            } }
+
+[<Fact>]
+let ``notifyRouteToShipper は確定経路がある予約を通知する`` () =
+    let repo, _ = repoStub ()
+    let bid = seedRoutingRequested repo
+
+    RouteAssignment.proposeRoute repo nullDispatcher bid (satisfyingItinerary ())
+    |> Async.RunSynchronously
+    |> ignore
+
+    let recorded = System.Collections.Generic.List<string>()
+
+    match
+        RouteAssignment.notifyRouteToShipper repo (shipperNotifierStub recorded) bid
+        |> Async.RunSynchronously
+    with
+    | Ok() -> recorded.Count |> should equal 1
+    | Error e -> failwithf "成功を期待したが: %A" e
+
+[<Fact>]
+let ``確定経路が無い予約への通知は業務ルール違反`` () =
+    let repo, _ = repoStub ()
+    let bid = seedRoutingRequested repo // RoutingRequested（旅程なし）
+    let recorded = System.Collections.Generic.List<string>()
+
+    match
+        RouteAssignment.notifyRouteToShipper repo (shipperNotifierStub recorded) bid
+        |> Async.RunSynchronously
+    with
+    | Error(BusinessRuleViolation(rule, _)) -> rule |> should equal "ShipperNotification"
+    | other -> failwithf "BusinessRuleViolation を期待したが: %A" other

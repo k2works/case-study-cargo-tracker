@@ -55,6 +55,7 @@ let ``SQLite マイグレーションで全テーブルが作成される`` () =
         tables |> should contain "voyage"
         tables |> should contain "carrier_movement"
         tables |> should contain "leg"
+        tables |> should contain "notification_log"
     finally
         SqliteConnection.ClearAllPools()
 
