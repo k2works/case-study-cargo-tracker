@@ -106,6 +106,7 @@ nav:
       - 0004 Donald による集約永続化パターンを採用: adr/0004-Donaldによる集約永続化パターンを採用.md
       - 0005 Cookie 認証と user_roles による RBAC を採用: adr/0005-Cookie認証とuser_rolesによるRBACを採用.md
       - 0006 時刻と GUID の注入ポートを採用: adr/0006-時刻とGUIDの注入ポートを採用.md
+      - 0007 経路設計中状態は BookingState DU 拡張で表現: adr/0007-経路設計中状態はBookingState_DU拡張で表現.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
