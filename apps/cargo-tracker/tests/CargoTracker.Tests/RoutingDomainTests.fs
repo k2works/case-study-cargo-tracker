@@ -160,6 +160,100 @@ let ``航海は指定貨物種別への対応可否を判定できる`` () =
         Voyage.supports Hazardous voyage |> should equal false
     | Error e -> failwithf "%A" e
 
+// ---- RouteComputation（US08 経路候補算出）----
+
+/// 指定条件で航海を 1 件生成するヘルパー。
+let private makeVoyage vn origin dest depart arrive tags =
+    let sched =
+        match Schedule.create [ movement origin dest depart arrive 1 ] with
+        | Ok s -> s
+        | Error e -> failwithf "%A" e
+
+    match Voyage.register (voyageNo vn) (vessel "V") (carrier "C") sched (Set.ofList tags) with
+    | Ok(v, _) -> v
+    | Error e -> failwithf "%A" e
+
+let private query origin dest cargoType deadline : RouteQuery =
+    { Origin = loc origin
+      Destination = loc dest
+      CargoType = cargoType
+      Deadline = deadline }
+
+[<Fact>]
+let ``直行便があれば経路候補として算出される`` () =
+    let voyages =
+        [ makeVoyage "V001" "JPTYO" "USLAX" (dt (2026, 9, 1)) (dt (2026, 9, 20)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 10, 1)))
+
+    candidates |> List.length |> should equal 1
+    (List.head candidates).IsDirect |> should equal true
+
+[<Fact>]
+let ``直行便が乗継便より優先される`` () =
+    let voyages =
+        [ makeVoyage "V-DIRECT" "JPTYO" "USLAX" (dt (2026, 9, 1)) (dt (2026, 9, 20)) [ General ]
+          makeVoyage "V-A" "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 8)) [ General ]
+          makeVoyage "V-B" "SGSIN" "USLAX" (dt (2026, 9, 9)) (dt (2026, 9, 25)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 10, 1)))
+
+    candidates |> List.length |> should equal 2
+    // 先頭は直行便
+    (List.head candidates).IsDirect |> should equal true
+
+    VoyageNumber.value (List.head candidates).Legs.Head.VoyageNumber
+    |> should equal "V-DIRECT"
+
+[<Fact>]
+let ``乗継で接続する経路が算出され経由港が示される`` () =
+    let voyages =
+        [ makeVoyage "V-A" "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 8)) [ General ]
+          makeVoyage "V-B" "SGSIN" "USLAX" (dt (2026, 9, 9)) (dt (2026, 9, 25)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 10, 1)))
+
+    candidates |> List.length |> should equal 1
+    let c = List.head candidates
+    c.IsDirect |> should equal false
+    c.Legs |> List.length |> should equal 2
+    c.TransitPorts |> List.map Location.value |> should equal [ "SGSIN" ]
+
+[<Fact>]
+let ``貨物種別に対応しない航海は候補から除外される`` () =
+    let voyages =
+        [ makeVoyage "V001" "JPTYO" "USLAX" (dt (2026, 9, 1)) (dt (2026, 9, 20)) [ General ] ]
+    // 冷凍貨物を要求するが航海は General のみ対応
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" Refrigerated (dt (2026, 10, 1)))
+
+    candidates |> should be Empty
+
+[<Fact>]
+let ``期限内に到達できない経路は候補から除外される`` () =
+    let voyages =
+        [ makeVoyage "V001" "JPTYO" "USLAX" (dt (2026, 9, 1)) (dt (2026, 9, 20)) [ General ] ]
+    // 到着 9/20 だが期限は 9/10
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 9, 10)))
+
+    candidates |> should be Empty
+
+[<Fact>]
+let ``時刻が連結しない乗継は経路にならない`` () =
+    // V-B が V-A 到着（9/8）より前に出発（9/2）するため接続不可
+    let voyages =
+        [ makeVoyage "V-A" "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 8)) [ General ]
+          makeVoyage "V-B" "SGSIN" "USLAX" (dt (2026, 9, 2)) (dt (2026, 9, 20)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 10, 1)))
+
+    candidates |> should be Empty
+
 [<Fact>]
 let ``航海を更新すると航海番号は不変で VoyageScheduleUpdated を発行する`` () =
     let vn = voyageNo "V001"

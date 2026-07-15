@@ -213,3 +213,96 @@ module Voyage =
     /// 指定の貨物種別に対応しているか。
     let supports (tag: CargoTypeTag) (voyage: Voyage) : bool =
         Set.contains tag voyage.SupportedCargoTypes
+
+// ---- US08: 経路候補算出ドメインサービス（ADR-0009・自コンテキストの Voyage から構成）----
+
+/// 経路探索の条件（出発地・目的地・貨物種別・到着期限）。
+type RouteQuery =
+    { Origin: Location
+      Destination: Location
+      CargoType: CargoTypeTag
+      Deadline: DateTimeOffset }
+
+/// 経路候補の 1 区間（どの航海で、どこからどこへ、いつ）。
+type RouteLeg =
+    { VoyageNumber: VoyageNumber
+      From: Location
+      To: Location
+      Departure: DateTimeOffset
+      Arrival: DateTimeOffset }
+
+/// 経路候補（Routing 固有型・Estimation の RouteCandidate とは別概念・ADR-0009）。
+type RouteCandidate =
+    { Legs: RouteLeg list
+      TransitPorts: Location list
+      TransitDays: int
+      EstimatedCost: decimal
+      IsDirect: bool }
+
+/// 経路候補算出ドメインサービス（US08）。純粋関数。
+/// 登録済み Voyage 群を航海単位のエッジ（出発港→到着港）とみなし、出発地→目的地の接続経路を探索する。
+module RouteComputation =
+
+    /// 探索の最大乗継段数（発散防止・直行 + 最大 2 回乗継まで）。
+    let private maxLegs = 3
+
+    /// 費用の暫定ヒューリスティック（区間所要日数ベース）。正式な料金計算は Billing（IT7）で置換する。
+    let private dailyRate = 12_000m
+
+    /// Voyage を航海単位のエッジに変換する。
+    let private toEdge (v: Voyage) : RouteLeg =
+        { VoyageNumber = v.VoyageNumber
+          From = Schedule.origin v.Schedule
+          To = Schedule.destination v.Schedule
+          Departure = Schedule.departureDate v.Schedule
+          Arrival = Schedule.arrivalDate v.Schedule }
+
+    /// 経路候補を推奨順に算出する。貨物種別対応・接続・期限を制約とし、直行優先→所要日数昇順で並べる。
+    let computeCandidates (voyages: Voyage list) (query: RouteQuery) : RouteCandidate list =
+        // 貨物種別に対応する航海のみをエッジ化する。
+        let edges =
+            voyages |> List.filter (Voyage.supports query.CargoType) |> List.map toEdge
+
+        // 現在地から目的地までの経路を深さ優先で探索する（時刻連結・期限・訪問済み航海の重複回避）。
+        let rec search
+            (current: Location)
+            (earliest: DateTimeOffset)
+            (usedVoyages: Set<string>)
+            (acc: RouteLeg list)
+            : RouteLeg list list =
+            if List.length acc >= maxLegs then
+                []
+            else
+                edges
+                |> List.filter (fun e ->
+                    Location.sameAs e.From current
+                    && e.Departure >= earliest
+                    && not (Set.contains (VoyageNumber.value e.VoyageNumber) usedVoyages))
+                |> List.collect (fun e ->
+                    let legs = acc @ [ e ]
+
+                    if Location.sameAs e.To query.Destination then
+                        [ legs ]
+                    else
+                        search e.To e.Arrival (Set.add (VoyageNumber.value e.VoyageNumber) usedVoyages) legs)
+
+        let toCandidate (legs: RouteLeg list) : RouteCandidate =
+            let arrival = (List.last legs).Arrival
+            let departure = (List.head legs).Departure
+            let transitDays = int (arrival - departure).TotalDays
+            // 経由港 = 最初の出発港と最後の到着港を除いた中間の到着港。
+            let transitPorts =
+                legs |> List.map (fun l -> l.To) |> List.rev |> List.tail |> List.rev
+
+            { Legs = legs
+              TransitPorts = transitPorts
+              TransitDays = transitDays
+              EstimatedCost = decimal transitDays * dailyRate
+              IsDirect = List.length legs = 1 }
+
+        search query.Origin DateTimeOffset.MinValue Set.empty []
+        |> List.map toCandidate
+        // 期限内に到達できる候補のみ。
+        |> List.filter (fun c -> (List.last c.Legs).Arrival <= query.Deadline)
+        // 直行を最優先、次に所要日数の短い順。
+        |> List.sortBy (fun c -> (not c.IsDirect), c.TransitDays)
