@@ -309,45 +309,47 @@ let private bookingCreate: HttpHandler =
                   MaxTemperature = get "maxTemperature"
                   TemperatureUnit = get "temperatureUnit" }
 
-            let deadline =
-                match System.DateOnly.TryParse(get "arrivalDeadline") with
-                | true, d -> d
-                | _ -> System.DateOnly.FromDateTime(System.DateTime.Today)
-
             let weight =
                 match System.Decimal.TryParse(get "weightKg") with
                 | true, w -> w
                 | _ -> -1m // 範囲外にしてドメイン検証で弾く
 
-            let cmd: CargoTracker.Booking.Application.BookCargoCommand =
-                { ShipperId = get "shipperId"
-                  OriginUnlocode = get "originUnlocode"
-                  DestinationUnlocode = get "destinationUnlocode"
-                  ArrivalDeadline = deadline
-                  CargoType = buildCargoTypeInput get
-                  WeightKg = weight
-                  Consignee = None }
-
             let factory = ctx.GetService<ConnectionFactory>()
             use conn = factory ()
 
-            let repo =
-                CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
-
-            let shipperChecker =
-                CargoTracker.Booking.Infrastructure.ShipperExistenceAdapter.create conn
-
-            let newId: CargoTracker.Shared.Domain.IdGenerator = fun () -> System.Guid.NewGuid()
-            let! result = CargoTracker.Booking.Application.BookCargo.book repo shipperChecker newId cmd
-
-            match result with
-            | Ok _ -> return! redirectTo false "/bookings" next ctx
-            | Error err ->
+            let renderError (msg: string) =
                 ctx.SetStatusCode 400
                 let shippers = loadShipperChoices conn
+                htmlView (Views.bookingForm (rolesOf ctx) shippers values (Some msg)) next ctx
 
-                return!
-                    htmlView (Views.bookingForm (rolesOf ctx) shippers values (Some(domainErrorMessage err))) next ctx
+            // 到着期限のパース失敗は「今日」に化けさせず、明示的な検証エラーとして扱う。
+            match System.DateOnly.TryParse(get "arrivalDeadline") with
+            | false, _ -> return! renderError "希望到着期限の形式が不正です。"
+            | true, deadline ->
+                let cmd: CargoTracker.Booking.Application.BookCargoCommand =
+                    { ShipperId = get "shipperId"
+                      OriginUnlocode = get "originUnlocode"
+                      DestinationUnlocode = get "destinationUnlocode"
+                      ArrivalDeadline = deadline
+                      CargoType = buildCargoTypeInput get
+                      WeightKg = weight
+                      Consignee = None }
+
+                let repo =
+                    CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+                let shipperChecker =
+                    CargoTracker.Booking.Infrastructure.ShipperExistenceAdapter.create conn
+
+                let newId: CargoTracker.Shared.Domain.IdGenerator = fun () -> System.Guid.NewGuid()
+                let! result = CargoTracker.Booking.Application.BookCargo.book repo shipperChecker newId cmd
+
+                match result with
+                | Ok(cargo, _) ->
+                    // PRG: 作成した予約の詳細へリダイレクト（Location に booking_id が入る）。
+                    let bookingId = CargoTracker.Booking.Domain.BookingId.value cargo.BookingId
+                    return! redirectTo false (sprintf "/bookings/%s" bookingId) next ctx
+                | Error err -> return! renderError (domainErrorMessage err)
         }
 
 // ---- US06: 予約詳細・経路設計依頼 ----
@@ -493,6 +495,7 @@ let webApp: HttpHandler =
                     route "/estimates" >=> estimateList
                     route "/estimates/new" >=> estimateNew
                     route "/bookings" >=> bookingList
+                    // 具体パス `/bookings/new` を `routef "/bookings/%s"` より先に置く（順序依存・"new" が %s に食われないように）。
                     route "/bookings/new" >=> bookingNew
                     routef "/bookings/%s" bookingDetail
                     // ウォーキングスケルトン: 後続 IT で実画面化するプレースホルダ（ADR-0005 ロール制御）

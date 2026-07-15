@@ -79,6 +79,23 @@ type TemperatureUnit =
     | Celsius
     | Fahrenheit
 
+module TemperatureUnit =
+
+    /// 永続化・DTO 用の文字列表現。DU ↔ 文字列変換はこの一箇所に集約する（DRY）。
+    let toString (unit: TemperatureUnit) : string =
+        match unit with
+        | Celsius -> "CELSIUS"
+        | Fahrenheit -> "FAHRENHEIT"
+
+    /// 文字列から温度単位を復元する。`C`/`F` の短縮表記も許容する。
+    let ofString (value: string) : Result<TemperatureUnit, DomainError> =
+        match value.Trim().ToUpperInvariant() with
+        | "CELSIUS"
+        | "C" -> Ok Celsius
+        | "FAHRENHEIT"
+        | "F" -> Ok Fahrenheit
+        | other -> Error(ValidationError("TemperatureUnit", sprintf "未知の温度単位です: %s" other))
+
 /// 温度管理条件（US05）。最低温度 ≤ 最高温度の不変条件をスマートコンストラクタで保証する。
 type TemperatureRequirement =
     private
@@ -203,7 +220,9 @@ module BookingState =
         | Cancelled _ -> "CANCELLED"
 
     /// 永続化された文字列から状態を復元する（cargo.booking_status）。
-    /// Cancelled の理由は本カラムに保持しないため空文字で復元する（IT2 スコープ）。
+    /// 【往復非対称の注意】`Cancelled reason` の reason は booking_status カラムに保持しないため、
+    /// `toString`→`ofString` のラウンドトリップで理由は失われ空文字で復元される。
+    /// キャンセル理由の永続化が必要になった時点で cancellation_reason カラムを追加する（IT4+）。
     let ofString (value: string) : Result<BookingState, DomainError> =
         match value with
         | "PRELIMINARY" -> Ok Preliminary
@@ -231,6 +250,8 @@ type Cargo =
       CargoType: CargoType
       Weight: Weight
       State: BookingState
+      // 以下 3 つは domain-model の Cargo に定義された任意属性。IT2 では入力フォーム未対応のため
+      // 常に None で生成する（書き込み経路は貨物明細の詳細化を行う後続 IT で追加する）。
       Dimensions: (decimal * decimal * decimal) option
       Quantity: Quantity option
       Description: Description option }

@@ -74,29 +74,39 @@ module ShipperExistenceAdapter =
 
 module CargoRepository =
 
-    /// CargoType を永続化用の (種別文字列, 危険物 3 項目 option, 温度 3 項目 option) に展開する。
-    let private explodeCargoType
-        (cargoType: CargoType)
-        : string * (string * string * string) option * (decimal * decimal * string) option =
-        match cargoType with
-        | General -> "GENERAL", None, None
-        | Hazardous d ->
-            "HAZARDOUS",
-            Some(
-                HazardousDeclaration.hazardClass d,
-                HazardousDeclaration.unNumber d,
-                HazardousDeclaration.properShippingName d
-            ),
-            None
-        | Refrigerated t ->
-            let unitStr =
-                match TemperatureRequirement.unit t with
-                | Celsius -> "CELSIUS"
-                | Fahrenheit -> "FAHRENHEIT"
+    /// CargoType を永続化用のカラム値に展開したもの（位置ズレを型で防ぐためラベル付きレコード）。
+    type private CargoTypeColumns =
+        { TypeCode: string
+          HazardClass: string option
+          UnNumber: string option
+          ProperShippingName: string option
+          MinTemperature: decimal option
+          MaxTemperature: decimal option
+          TemperatureUnit: string option }
 
-            "REFRIGERATED",
-            None,
-            Some(TemperatureRequirement.minTemperature t, TemperatureRequirement.maxTemperature t, unitStr)
+    let private noneColumns typeCode =
+        { TypeCode = typeCode
+          HazardClass = None
+          UnNumber = None
+          ProperShippingName = None
+          MinTemperature = None
+          MaxTemperature = None
+          TemperatureUnit = None }
+
+    /// CargoType を永続化カラム値へ展開する。
+    let private explodeCargoType (cargoType: CargoType) : CargoTypeColumns =
+        match cargoType with
+        | General -> noneColumns "GENERAL"
+        | Hazardous d ->
+            { noneColumns "HAZARDOUS" with
+                HazardClass = Some(HazardousDeclaration.hazardClass d)
+                UnNumber = Some(HazardousDeclaration.unNumber d)
+                ProperShippingName = Some(HazardousDeclaration.properShippingName d) }
+        | Refrigerated t ->
+            { noneColumns "REFRIGERATED" with
+                MinTemperature = Some(TemperatureRequirement.minTemperature t)
+                MaxTemperature = Some(TemperatureRequirement.maxTemperature t)
+                TemperatureUnit = Some(TemperatureUnit.toString (TemperatureRequirement.unit t)) }
 
     let private strParam (v: string option) =
         match v with
@@ -128,13 +138,6 @@ module CargoRepository =
           ConsigneeAddress: string option
           ConsigneeEmail: string option }
 
-    /// 温度単位文字列を DU へ復元する。
-    let private toTemperatureUnit (value: string) : Result<TemperatureUnit, DomainError> =
-        match value.ToUpperInvariant() with
-        | "CELSIUS" -> Ok Celsius
-        | "FAHRENHEIT" -> Ok Fahrenheit
-        | other -> Error(ValidationError("TemperatureUnit", sprintf "未知の温度単位です: %s" other))
-
     /// 生レコードから Cargo 集約を復元する（永続化データは信頼するが、値検証は通す）。
     let private reconstruct (row: CargoRow) : Result<Cargo, DomainError> =
         let toLocation field code =
@@ -160,7 +163,7 @@ module CargoRepository =
                     |> Result.map Hazardous
                 | "REFRIGERATED" ->
                     result {
-                        let! unit = toTemperatureUnit (defaultArg row.TemperatureUnit "")
+                        let! unit = TemperatureUnit.ofString (defaultArg row.TemperatureUnit "")
 
                         let! req =
                             TemperatureRequirement.create
@@ -203,13 +206,8 @@ module CargoRepository =
 
                 try
                     let now = clock ()
-                    let cargoTypeStr, haz, temp = explodeCargoType cargo.CargoType
-                    let hazClass = haz |> Option.map (fun (c, _, _) -> c)
-                    let unNumber = haz |> Option.map (fun (_, u, _) -> u)
-                    let properName = haz |> Option.map (fun (_, _, p) -> p)
-                    let minTemp = temp |> Option.map (fun (mn, _, _) -> mn)
-                    let maxTemp = temp |> Option.map (fun (_, mx, _) -> mx)
-                    let tempUnit = temp |> Option.map (fun (_, _, u) -> u)
+                    let cols = explodeCargoType cargo.CargoType
+                    let cargoTypeStr = cols.TypeCode
                     let consigneeName = cargo.Consignee |> Option.map Consignee.name
                     let consigneeAddress = cargo.Consignee |> Option.map Consignee.address
                     let consigneeEmail = cargo.Consignee |> Option.map Consignee.contactEmail
@@ -246,12 +244,12 @@ module CargoRepository =
                               (RouteSpecification.arrivalDeadline cargo.RouteSpecification).ToString("yyyy-MM-dd")
                           )
                           "booking_status", SqlType.String(BookingState.toString cargo.State)
-                          "hazardous_class", strParam hazClass
-                          "un_number", strParam unNumber
-                          "proper_shipping_name", strParam properName
-                          "min_temperature", decParam minTemp
-                          "max_temperature", decParam maxTemp
-                          "temperature_unit", strParam tempUnit
+                          "hazardous_class", strParam cols.HazardClass
+                          "un_number", strParam cols.UnNumber
+                          "proper_shipping_name", strParam cols.ProperShippingName
+                          "min_temperature", decParam cols.MinTemperature
+                          "max_temperature", decParam cols.MaxTemperature
+                          "temperature_unit", strParam cols.TemperatureUnit
                           "consignee_name", strParam consigneeName
                           "consignee_address", strParam consigneeAddress
                           "consignee_email", strParam consigneeEmail

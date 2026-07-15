@@ -249,13 +249,14 @@ module Views =
                              [ _value s.Uuid ])
                         [ str s.Label ]))
 
-        let cargoTypeOption v label =
+        // 種別コード→日本語ラベルは cargoTypeLabel を単一の真実として再利用する（DRY）。
+        let cargoTypeOption v =
             option
                 (if values.CargoType = v then
                      [ _value v; _selected ]
                  else
                      [ _value v ])
-                [ str label ]
+                [ str (cargoTypeLabel v) ]
 
         let unitOption v label =
             option
@@ -290,9 +291,9 @@ module Views =
                                 _id "cargoType"
                                 _name "cargoType"
                                 attr "onchange" "toggleCargoFields()" ]
-                              [ cargoTypeOption "GENERAL" "一般"
-                                cargoTypeOption "HAZARDOUS" "危険物"
-                                cargoTypeOption "REFRIGERATED" "冷凍・冷蔵" ] ]
+                              [ cargoTypeOption "GENERAL"
+                                cargoTypeOption "HAZARDOUS"
+                                cargoTypeOption "REFRIGERATED" ] ]
                     div
                         [ _id "hazardousFields" ]
                         [ field "危険物クラス" "hazardClass" values.HazardClass "text"

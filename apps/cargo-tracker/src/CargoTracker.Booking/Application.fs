@@ -52,16 +52,8 @@ module BookCargo =
     let private toLocation (field: string) (code: string) : Result<Location, DomainError> =
         Location.create code |> Result.mapError (fun msg -> ValidationError(field, msg))
 
-    /// 温度単位の文字列を DU に変換する。
-    let private toTemperatureUnit (value: string) : Result<TemperatureUnit, DomainError> =
-        match value.Trim().ToUpperInvariant() with
-        | "CELSIUS"
-        | "C" -> Ok Celsius
-        | "FAHRENHEIT"
-        | "F" -> Ok Fahrenheit
-        | _ -> Error(ValidationError("TemperatureUnit", "温度単位は CELSIUS または FAHRENHEIT を指定してください。"))
-
     /// 種別入力を検証済み CargoType に変換する（危険物・冷凍は必須情報を検証）。
+    /// 温度単位の文字列変換は Domain の `TemperatureUnit.ofString` に集約している（DRY）。
     let private validateCargoType (input: CargoTypeInput) : Result<CargoType, DomainError> =
         match input with
         | GeneralInput -> Ok General
@@ -70,7 +62,7 @@ module BookCargo =
             |> Result.map Hazardous
         | RefrigeratedInput(minTemperature, maxTemperature, unit) ->
             result {
-                let! u = toTemperatureUnit unit
+                let! u = TemperatureUnit.ofString unit
                 let! req = TemperatureRequirement.create minTemperature maxTemperature u
                 return Refrigerated req
             }
