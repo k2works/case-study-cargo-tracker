@@ -33,6 +33,16 @@ module Db =
         conn.Open()
         conn
 
+    /// SQLite の共有インメモリ DB（`Mode=Memory` かつ `Cache=Shared`）かを判定する。
+    /// 共有インメモリ DB は「開いている接続が 1 本も無くなると破棄される」ため、
+    /// アプリ生存中は keep-alive 接続を保持する必要がある（呼び出し側で openConnection して保持する）。
+    let isSharedInMemory (provider: DbProvider) (connectionString: string) : bool =
+        match provider with
+        | Postgres -> false
+        | Sqlite ->
+            let s = connectionString.ToLowerInvariant()
+            (s.Contains "mode=memory" && s.Contains "cache=shared") || s.Contains ":memory:"
+
     /// プロバイダ別のスクリプトディレクトリ（db/scripts/{sqlite|postgresql}）。
     let scriptsDir (scriptsRoot: string) (provider: DbProvider) : string =
         let dialect =

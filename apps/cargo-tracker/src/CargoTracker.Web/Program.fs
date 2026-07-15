@@ -1,5 +1,6 @@
 module CargoTracker.Web.Program
 
+open System.Data
 open System.IO
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.Configuration
@@ -33,6 +34,15 @@ let main args =
     let provider, connStr, scriptsRoot =
         resolveDbConfig app.Configuration app.Environment.ContentRootPath
 
+    // 共有インメモリ SQLite（開発用）は、接続が全て閉じると DB が破棄される。
+    // マイグレーション前に keep-alive 接続を開き、プロセス終了まで保持して DB を存続させる。
+    // （毎起動でスキーマがまっさらになるため、file DB の SchemaVersions ジャーナル不整合を回避できる）
+    let keepAlive: IDbConnection option =
+        if Db.isSharedInMemory provider connStr then
+            Some(Db.openConnection provider connStr)
+        else
+            None
+
     match Db.runMigrations provider connStr scriptsRoot with
     | Ok() -> ()
     | Error e -> failwithf "DB マイグレーションに失敗しました: %s" e
@@ -50,4 +60,6 @@ let main args =
     | "" -> app.Run("http://0.0.0.0:8080")
     | _ -> app.Run()
 
+    // シャットダウンまで keep-alive 接続を保持し、ここで明示的に閉じる（早期 GC 防止）。
+    keepAlive |> Option.iter (fun c -> c.Dispose())
     0
