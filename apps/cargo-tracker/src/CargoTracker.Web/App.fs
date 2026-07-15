@@ -1120,6 +1120,156 @@ let private publicTracking (accessToken: string) : HttpHandler =
             | None -> return! (setStatusCode 404 >=> text "追跡番号が見つかりません。") next ctx
         }
 
+// ---- US15/US16: 荷役作業登録（ROLE_HANDLER/TRACKER）----
+
+/// 荷役種別を HandlingType へ変換する（積込/荷降しは航海番号必須）。
+let private parseHandlingType
+    (handlingType: string)
+    (voyageNumber: string)
+    : Result<CargoTracker.Handling.Domain.HandlingType, CargoTracker.Shared.Domain.DomainError> =
+    match handlingType with
+    | "RECEIVE" -> Ok CargoTracker.Handling.Domain.Receive
+    | "CLAIM" -> Ok CargoTracker.Handling.Domain.Claim
+    | "LOAD" ->
+        CargoTracker.Handling.Domain.VoyageNumber.create voyageNumber
+        |> Result.map CargoTracker.Handling.Domain.Load
+    | "UNLOAD" ->
+        CargoTracker.Handling.Domain.VoyageNumber.create voyageNumber
+        |> Result.map CargoTracker.Handling.Domain.Unload
+    | other -> Error(CargoTracker.Shared.Domain.ValidationError("HandlingType", sprintf "未知の作業種別です: %s" other))
+
+/// 荷役種別を Tracking のイベント種別へ写像する（Customs は追跡イベント無し）。
+let private toTrackingEventType
+    (handlingType: CargoTracker.Handling.Domain.HandlingType)
+    : CargoTracker.Tracking.Domain.TrackingEventType option =
+    match handlingType with
+    | CargoTracker.Handling.Domain.Receive -> Some CargoTracker.Tracking.Domain.ReceivedEvent
+    | CargoTracker.Handling.Domain.Load _ -> Some CargoTracker.Tracking.Domain.LoadedEvent
+    | CargoTracker.Handling.Domain.Unload _ -> Some CargoTracker.Tracking.Domain.UnloadedEvent
+    | CargoTracker.Handling.Domain.Claim -> Some CargoTracker.Tracking.Domain.ClaimedEvent
+    | CargoTracker.Handling.Domain.Customs -> None
+
+/// 荷役作業一覧（`GET /handling`・US15）。
+let private handlingList: HttpHandler =
+    mustHaveAnyRole [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
+    >=> fun next ctx ->
+        let factory = ctx.GetService<ConnectionFactory>()
+        use conn = factory ()
+
+        let rows =
+            CargoTracker.Handling.Infrastructure.HandlingQueries.findAll conn
+            |> List.map (fun r ->
+                { Views.HandlingRow.BookingId = r.BookingId
+                  Views.HandlingRow.HandlingType = r.HandlingType
+                  Views.HandlingRow.Location = r.Location
+                  Views.HandlingRow.CompletionTime = r.CompletionTime
+                  Views.HandlingRow.VoyageNumber = r.VoyageNumber |> Option.defaultValue "-" })
+
+        htmlView (Views.handlingList (rolesOf ctx) rows) next ctx
+
+/// 荷役登録フォーム（`GET /handling/new`・US15/US16）。
+let private handlingNew: HttpHandler =
+    mustHaveAnyRole [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
+    >=> fun next ctx -> htmlView (Views.handlingForm (rolesOf ctx) None None) next ctx
+
+/// 荷役登録の実行（`POST /handling`・US15/US16）。
+/// 荷役登録成功後、対応する追跡イベントを記録して追跡状態を更新する（BC 連携・US15 受入4）。
+let private handlingCreate: HttpHandler =
+    mustHaveAnyRole [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get (k: string) = string form.[k]
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let trackingNumberStr = get "trackingNumber"
+
+            let consignee =
+                match get "consigneeConfirmation" with
+                | "" -> None
+                | c -> Some c
+
+            let completionTime = systemClock ()
+
+            let locationResult =
+                CargoTracker.Shared.Domain.Location.create (get "location")
+                |> Result.mapError (fun m -> CargoTracker.Shared.Domain.ValidationError("Location", m))
+
+            match parseHandlingType (get "handlingType") (get "voyageNumber"), locationResult with
+            | Ok handlingType, Ok location ->
+                let repo =
+                    CargoTracker.Handling.Infrastructure.HandlingRepository.create conn systemClock
+
+                let! result =
+                    CargoTracker.Handling.Application.RegisterHandling.register
+                        repo
+                        (CargoTracker.Web.HandlingAcl.cargoSnapshotProvider conn)
+                        trackingNumberStr
+                        handlingType
+                        location
+                        completionTime
+                        consignee
+
+                match result with
+                | Ok(_, outcome, _) ->
+                    // BC 連携: 荷役に対応する追跡イベントを記録して状態を進める（US15 受入4）。
+                    let trackingRepo =
+                        CargoTracker.Tracking.Infrastructure.TrackingRepository.create conn systemClock
+
+                    let notifier: CargoTracker.Tracking.Application.TrackingNotifier =
+                        { Notify = fun _ _ -> async { return Ok() } }
+
+                    match toTrackingEventType handlingType with
+                    | Some eventType ->
+                        let event: CargoTracker.Tracking.Domain.TrackingActivityEvent =
+                            { EventType = eventType
+                              Location = location
+                              CompletionTime = completionTime }
+
+                        let! _ =
+                            CargoTracker.Tracking.Application.RecordTracking.record
+                                trackingRepo
+                                notifier
+                                (CargoTracker.Tracking.Domain.TrackingNumber.ofString trackingNumberStr)
+                                event
+
+                        ()
+                    | None -> ()
+
+                    let msg =
+                        match outcome with
+                        | CargoTracker.Handling.Domain.Misrouted -> "handling_misrouted"
+                        | CargoTracker.Handling.Domain.Warning _ -> "handling_warning"
+                        | CargoTracker.Handling.Domain.Valid -> "handling_ok"
+
+                    return! redirectTo false (sprintf "/handling?msg=%s" msg) next ctx
+                | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                    return!
+                        (setStatusCode 404
+                         >=> htmlView (Views.handlingForm (rolesOf ctx) None (Some "追跡番号が見つかりません。")))
+                            next
+                            ctx
+                | Error err ->
+                    return!
+                        (setStatusCode 400
+                         >=> htmlView (Views.handlingForm (rolesOf ctx) None (Some(domainErrorMessage err))))
+                            next
+                            ctx
+            | Error err, _
+            | _, Error err ->
+                let msg =
+                    match err with
+                    | CargoTracker.Shared.Domain.ValidationError(_, m) -> m
+                    | _ -> "入力が不正です。"
+
+                return!
+                    (setStatusCode 400
+                     >=> htmlView (Views.handlingForm (rolesOf ctx) None (Some msg)))
+                        next
+                        ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -1142,8 +1292,9 @@ let webApp: HttpHandler =
                     route "/tracking/search" >=> trackingSearch
                     routef "/public/tracking/%s" publicTracking
                     routef "/tracking/%s" trackingDetail
-                    // ウォーキングスケルトン: 後続 IT で実画面化するプレースホルダ（ADR-0005 ロール制御）
-                    route "/handling" >=> placeholder "荷役管理" [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
+                    // US15/US16: 荷役作業（具体パス /handling/new を先に置く）。
+                    route "/handling/new" >=> handlingNew
+                    route "/handling" >=> handlingList
                     route "/voyages" >=> voyageList
                     route "/voyages/new" >=> voyageNew
                     routef "/voyages/%s/edit" voyageEdit
@@ -1157,6 +1308,7 @@ let webApp: HttpHandler =
                     route "/shippers" >=> shipperCreate
                     route "/estimates" >=> estimateCreate
                     route "/bookings" >=> bookingCreate
+                    route "/handling" >=> handlingCreate
                     routef "/bookings/%s/routing" bookingSubmitRouting
                     routef "/bookings/%s/confirm" bookingConfirm
                     routef "/bookings/%s/restore" bookingRestore

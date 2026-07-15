@@ -27,6 +27,7 @@
     <Compile Include="TrackingRepositoryTests.fs" />
     <Compile Include="HandlingRepositoryTests.fs" />
     <Compile Include="TrackingAcceptanceTests.fs" />
+    <Compile Include="HandlingAcceptanceTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

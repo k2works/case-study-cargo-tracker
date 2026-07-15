@@ -176,13 +176,13 @@ let ``法人荷主を割引率付きで登録できる`` () =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
-let ``荷役ロールは荷役管理プレースホルダにアクセスできる`` () =
+let ``荷役ロールは荷役作業一覧にアクセスできる`` () =
     withServer (fun client ->
         let cookie = authCookie client "handler01"
         let res = authedGet client cookie "/handling"
         res.StatusCode |> should equal HttpStatusCode.OK
         let body = run (res.Content.ReadAsStringAsync())
-        body |> should haveSubstring "準備中")
+        body |> should haveSubstring "荷役作業一覧")
 
 [<Fact>]
 [<Trait("Category", "Integration")>]

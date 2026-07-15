@@ -12,6 +12,7 @@
     <Compile Include="Seed.fs" />
     <Compile Include="Views.fs" />
     <Compile Include="RouteAcl.fs" />
+    <Compile Include="HandlingAcl.fs" />
     <Compile Include="App.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

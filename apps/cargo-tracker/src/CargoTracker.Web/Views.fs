@@ -1108,3 +1108,111 @@ module Views =
 
     /// 公開追跡ページ（`/public/tracking/{accessToken}`・US18・未認証）。
     let publicTracking (d: TrackingDetailView) : XmlNode = layout "公開追跡" [] (trackingTimeline d)
+
+    /// 荷役履歴の表示行（US15）。
+    type HandlingRow =
+        { BookingId: string
+          HandlingType: string
+          Location: string
+          CompletionTime: string
+          VoyageNumber: string }
+
+    /// 荷役種別の日本語表示。
+    let handlingTypeLabel (handlingType: string) : string =
+        match handlingType with
+        | "RECEIVE" -> "受領"
+        | "LOAD" -> "積込"
+        | "UNLOAD" -> "荷降し"
+        | "CUSTOMS" -> "通関"
+        | "CLAIM" -> "引取"
+        | other -> other
+
+    /// 荷役作業一覧画面（`/handling`・US15）。
+    let handlingList (roles: string list) (rows: HandlingRow list) : XmlNode =
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ str r.BookingId ]
+                      td [] [ str (handlingTypeLabel r.HandlingType) ]
+                      td [] [ str r.Location ]
+                      td [] [ str r.CompletionTime ]
+                      td [] [ str r.VoyageNumber ] ])
+
+        layout
+            "荷役管理"
+            roles
+            [ div
+                  [ _class "d-flex justify-content-between align-items-center mb-4" ]
+                  [ h1 [] [ str "荷役作業一覧" ]
+                    a [ _class "btn btn-primary"; _href "/handling/new" ] [ str "荷役作業を登録" ] ]
+              (if List.isEmpty rows then
+                   div [ _class "alert alert-info" ] [ str "荷役作業の記録はまだありません。" ]
+               else
+                   table
+                       [ _class "table table-striped" ]
+                       [ thead
+                             []
+                             [ tr
+                                   []
+                                   [ th [] [ str "予約番号" ]
+                                     th [] [ str "作業種別" ]
+                                     th [] [ str "場所" ]
+                                     th [] [ str "完了日時" ]
+                                     th [] [ str "航海番号" ] ] ]
+                         tbody [] bodyRows ]) ]
+
+    /// 荷役登録フォーム（`/handling/new`・US15/US16）。引取は荷受人確認欄を表示する。
+    let handlingForm (roles: string list) (info: string option) (error: string option) : XmlNode =
+        layout
+            "荷役作業登録"
+            roles
+            [ h1 [ _class "mb-4" ] [ str "荷役作業登録" ]
+              (match info with
+               | Some msg -> div [ _class "alert alert-success" ] [ str msg ]
+               | None -> emptyText)
+              (match error with
+               | Some msg -> div [ _class "alert alert-warning" ] [ str msg ]
+               | None -> emptyText)
+              form
+                  [ _method "post"; _action "/handling" ]
+                  [ div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "trackingNumber" ] [ str "追跡番号" ]
+                          input
+                              [ _class "form-control"
+                                _id "trackingNumber"
+                                _name "trackingNumber"
+                                _type "text" ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "handlingType" ] [ str "作業種別" ]
+                          select
+                              [ _class "form-select"; _id "handlingType"; _name "handlingType" ]
+                              [ option [ _value "RECEIVE" ] [ str "受領" ]
+                                option [ _value "LOAD" ] [ str "積込" ]
+                                option [ _value "UNLOAD" ] [ str "荷降し" ]
+                                option [ _value "CLAIM" ] [ str "引取" ] ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "location" ] [ str "作業場所（UN/LOCODE）" ]
+                          input [ _class "form-control"; _id "location"; _name "location"; _type "text" ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "voyageNumber" ] [ str "航海番号（積込/荷降し時）" ]
+                          input
+                              [ _class "form-control"
+                                _id "voyageNumber"
+                                _name "voyageNumber"
+                                _type "text" ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "consigneeConfirmation" ] [ str "荷受人確認（引取時・署名または確認コード）" ]
+                          input
+                              [ _class "form-control"
+                                _id "consigneeConfirmation"
+                                _name "consigneeConfirmation"
+                                _type "text" ] ]
+                    button [ _type "submit"; _class "btn btn-primary" ] [ str "登録" ]
+                    a [ _class "btn btn-secondary ms-2"; _href "/handling" ] [ str "一覧へ戻る" ] ] ]
