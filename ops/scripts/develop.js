@@ -97,6 +97,13 @@ export default function (gulp) {
     done();
   });
 
+  // カバレッジ CI ゲート（IT1 Try#1・ドメイン 85% / 全体 80%）。
+  gulp.task('dev:test:coverage:gate', (done) => {
+    run('dotnet test --collect:"XPlat Code Coverage"');
+    run('node ops/scripts/coverage-gate.cjs');
+    done();
+  });
+
   // ------------------------------------------
   // 品質チェック
   // ------------------------------------------

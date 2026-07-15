@@ -1,0 +1,63 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'fsharp/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: apps/cargo-tracker
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Format check (Fantomas)
+        run: dotnet fantomas --check src tests
+
+      - name: Lint (FSharpLint)
+        run: dotnet build && dotnet dotnet-fsharplint lint CargoTracker.sln
+        continue-on-error: true
+
+      - name: Build
+        run: dotnet build --no-restore -warnaserror
+
+      - name: Test with coverage
+        run: dotnet test --no-build --collect:"XPlat Code Coverage"
+
+      - name: Coverage gate (domain 85% / total 80%)
+        run: node ops/scripts/coverage-gate.cjs
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: apps/cargo-tracker/coverage-report
+          if-no-files-found: ignore

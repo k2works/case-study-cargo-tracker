@@ -43,3 +43,8 @@ cargo_tracker.db
 *.db-shm
 *.db-wal
 coverage-out/
+
+# .NET テスト/カバレッジ成果物
+TestResults/
+coverage-report/
+coverage-report-domain/

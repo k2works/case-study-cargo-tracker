@@ -188,3 +188,89 @@ let ``booking_status の文字列表現が状態と一致する`` () =
     BookingState.toString Preliminary |> should equal "PRELIMINARY"
     BookingState.toString RoutingRequested |> should equal "ROUTING_REQUESTED"
     BookingState.toString (Cancelled "x") |> should equal "CANCELLED"
+
+// ---- BookingState.ofString（永続化文字列からの復元）----
+
+[<Fact>]
+let ``booking_status 文字列から状態を復元できる`` () =
+    let ok expected actual =
+        match actual with
+        | Ok v -> v |> should equal expected
+        | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+    ok Preliminary (BookingState.ofString "PRELIMINARY")
+    ok RoutingRequested (BookingState.ofString "ROUTING_REQUESTED")
+    ok (Cancelled "") (BookingState.ofString "CANCELLED")
+
+[<Fact>]
+let ``未知の booking_status は Error を返す`` () =
+    match BookingState.ofString "UNKNOWN" with
+    | Error(ValidationError(field, _)) -> field |> should equal "BookingState"
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+// ---- Consignee（荷受人・任意）----
+
+[<Fact>]
+let ``荷受人は名前があれば Ok を返しアクセサで取り出せる`` () =
+    match Consignee.create "山田太郎" "東京都港区" "yamada@example.com" with
+    | Ok c ->
+        Consignee.name c |> should equal "山田太郎"
+        Consignee.address c |> should equal "東京都港区"
+        Consignee.contactEmail c |> should equal "yamada@example.com"
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``荷受人名が空なら Error を返す`` () =
+    match Consignee.create "" "住所" "a@example.com" with
+    | Error(ValidationError(field, _)) -> field |> should equal "ConsigneeName"
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+// ---- Quantity（個数・任意）----
+
+[<Fact>]
+let ``個数は 1 以上なら Ok を返す`` () =
+    match Quantity.create 3 with
+    | Ok q -> Quantity.value q |> should equal 3
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``個数が 0 以下なら Error を返す`` () =
+    match Quantity.create 0 with
+    | Error(ValidationError(field, _)) -> field |> should equal "Quantity"
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+// ---- Description（品名・任意）----
+
+[<Fact>]
+let ``品名は 500 文字以内なら Ok を返す`` () =
+    match Description.create "電子部品" with
+    | Ok d -> Description.value d |> should equal "電子部品"
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``品名が 500 文字を超えると Error を返す`` () =
+    match Description.create (String.replicate 501 "あ") with
+    | Error(ValidationError(field, _)) -> field |> should equal "Description"
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+// ---- HazardousDeclaration アクセサ ----
+
+[<Fact>]
+let ``危険物申告のアクセサで各項目を取り出せる`` () =
+    match HazardousDeclaration.create "3" "UN1203" "Gasoline" with
+    | Ok d ->
+        HazardousDeclaration.hazardClass d |> should equal "3"
+        HazardousDeclaration.unNumber d |> should equal "UN1203"
+        HazardousDeclaration.properShippingName d |> should equal "Gasoline"
+    | Error e -> failwithf "%A" e
+
+// ---- TemperatureRequirement アクセサ ----
+
+[<Fact>]
+let ``温度管理条件のアクセサで各項目を取り出せる`` () =
+    match TemperatureRequirement.create -20m 5m Fahrenheit with
+    | Ok t ->
+        TemperatureRequirement.minTemperature t |> should equal -20m
+        TemperatureRequirement.maxTemperature t |> should equal 5m
+        TemperatureRequirement.unit t |> should equal Fahrenheit
+    | Error e -> failwithf "%A" e
