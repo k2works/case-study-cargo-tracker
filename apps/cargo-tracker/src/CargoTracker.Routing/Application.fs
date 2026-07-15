@@ -76,6 +76,10 @@ module VoyageWorkflow =
             return voyageNumber, vessel, carrier, schedule, Set.ofList tags
         }
 
+    /// コマンドの妥当性のみを検証する（US25 の差分確認前チェック用・永続化しない）。
+    let validate (cmd: VoyageCommand) : Async<Result<unit, DomainError>> =
+        async { return validateCommand cmd |> Result.map (fun _ -> ()) }
+
     /// 航海を新規登録する（US24）。航海番号の重複を確認し、登録する。
     let register (repo: VoyageRepository) (cmd: VoyageCommand) : Async<Result<Voyage, DomainError>> =
         asyncResult {

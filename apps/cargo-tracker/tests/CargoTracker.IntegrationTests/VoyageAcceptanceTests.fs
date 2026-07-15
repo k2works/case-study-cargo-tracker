@@ -204,7 +204,39 @@ let ``航海更新フォームに既存内容が表示される`` () =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
-let ``航海を更新すると一覧に反映される`` () =
+let ``更新フォーム送信で差分確認画面が表示される（US25 受入条件2）`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "designer01"
+        registerV001 client cookie
+
+        // POST /edit は即時更新せず、差分確認を表示する（200）。
+        let res =
+            authedPost
+                client
+                cookie
+                "/voyages/V001/edit"
+                [ "voyageNumber", "V001"
+                  "vesselName", "MSC Oscar"
+                  "carrierName", "Evergreen"
+                  "cargoGeneral", "true"
+                  "leg1Dep", "JPTYO"
+                  "leg1Arr", "USLAX"
+                  "leg1DepDate", "2026-09-01T00:00"
+                  "leg1ArrDate", "2026-09-20T00:00" ]
+
+        res.StatusCode |> should equal HttpStatusCode.OK
+        let body = run (res.Content.ReadAsStringAsync())
+        body |> should haveSubstring "更新の確認"
+        // 変更前（Ever Given）と変更後（MSC Oscar）が両方表示される
+        body |> should haveSubstring "Ever Given"
+        body |> should haveSubstring "MSC Oscar"
+        // まだ更新されていない（一覧は旧値）
+        let list = authedGet client cookie "/voyages"
+        run (list.Content.ReadAsStringAsync()) |> should haveSubstring "Ever Given")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``差分確認後に確定すると一覧に反映される（US25）`` () =
     withServer (fun client ->
         let cookie = authCookie client "designer01"
         registerV001 client cookie
@@ -213,7 +245,7 @@ let ``航海を更新すると一覧に反映される`` () =
             authedPost
                 client
                 cookie
-                "/voyages/V001/edit"
+                "/voyages/V001/confirm"
                 [ "voyageNumber", "V001"
                   "vesselName", "MSC Oscar"
                   "carrierName", "Evergreen"

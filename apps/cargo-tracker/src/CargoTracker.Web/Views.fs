@@ -741,9 +741,92 @@ module Views =
                           checkbox "cargoHazardous" "危険物" values.CargoHazardous
                           checkbox "cargoRefrigerated" "冷凍・冷蔵" values.CargoRefrigerated ]
                     label [ _class "form-label" ] [ str "運送区間（出発港・到着港・出発日時・到着日時／上から順序）" ]
+                    div [ _class "form-text mb-2" ] [ str "※ 現在は最大 3 区間まで登録できます（4 区間以上の航路は今後対応予定）。" ]
                     div [] (values.Legs |> List.mapi legRow)
                     button [ _class "btn btn-primary mt-3"; _type "submit" ] [ str (if isEdit then "更新する" else "登録") ]
                     a [ _class "btn btn-secondary ms-2 mt-3"; _href "/voyages" ] [ str "キャンセル" ] ] ]
+
+    /// 航海スケジュール更新の差分確認画面（US25 受入条件2）。変更前後を並べ、確定で初めて更新する。
+    let voyageDiff
+        (roles: string list)
+        (voyageNumber: string)
+        (oldValues: VoyageFormValues)
+        (newValues: VoyageFormValues)
+        : XmlNode =
+        let cargoLabel (v: VoyageFormValues) =
+            [ (v.CargoGeneral, "一般")
+              (v.CargoHazardous, "危険物")
+              (v.CargoRefrigerated, "冷凍・冷蔵") ]
+            |> List.filter fst
+            |> List.map snd
+            |> String.concat ", "
+
+        let legLabel (dep, arr, depDate, arrDate) =
+            if dep = "" && arr = "" then
+                ""
+            else
+                sprintf "%s → %s（%s 〜 %s）" dep arr depDate arrDate
+
+        let legsLabel (v: VoyageFormValues) =
+            v.Legs
+            |> List.map legLabel
+            |> List.filter (fun s -> s <> "")
+            |> String.concat " / "
+
+        // 変更前後が異なる行を強調する。
+        let diffRow labelText oldV newV =
+            let changed = oldV <> newV
+
+            tr
+                (if changed then [ _class "table-warning" ] else [])
+                [ th [] [ str labelText ]; td [] [ str oldV ]; td [] [ str newV ] ]
+
+        // 確定フォームに新しい値を hidden で載せる（POST /voyages/{n}/confirm）。
+        let hidden name value =
+            input [ _name name; _type "hidden"; _value value ]
+
+        let legHiddenInputs =
+            newValues.Legs
+            |> List.mapi (fun i (dep, arr, depDate, arrDate) ->
+                let n = i + 1
+
+                [ hidden (sprintf "leg%dDep" n) dep
+                  hidden (sprintf "leg%dArr" n) arr
+                  hidden (sprintf "leg%dDepDate" n) depDate
+                  hidden (sprintf "leg%dArrDate" n) arrDate ])
+            |> List.concat
+
+        let cargoHidden =
+            [ if newValues.CargoGeneral then
+                  hidden "cargoGeneral" "true"
+              if newValues.CargoHazardous then
+                  hidden "cargoHazardous" "true"
+              if newValues.CargoRefrigerated then
+                  hidden "cargoRefrigerated" "true" ]
+
+        layout
+            "航路管理"
+            roles
+            [ h1 [ _class "mb-4" ] [ str (sprintf "航海スケジュール更新の確認 %s" voyageNumber) ]
+              div [ _class "alert alert-info" ] [ str "変更内容を確認してください。強調行が変更箇所です。" ]
+              table
+                  [ _class "table table-bordered" ]
+                  [ thead [] [ tr [] [ th [] [ str "項目" ]; th [] [ str "変更前" ]; th [] [ str "変更後" ] ] ]
+                    tbody
+                        []
+                        [ diffRow "船名" oldValues.VesselName newValues.VesselName
+                          diffRow "運送会社" oldValues.CarrierName newValues.CarrierName
+                          diffRow "対応貨物種別" (cargoLabel oldValues) (cargoLabel newValues)
+                          diffRow "運送区間" (legsLabel oldValues) (legsLabel newValues) ] ]
+              form
+                  [ _method "post"; _action (sprintf "/voyages/%s/confirm" voyageNumber) ]
+                  (hidden "voyageNumber" voyageNumber
+                   :: hidden "vesselName" newValues.VesselName
+                   :: hidden "carrierName" newValues.CarrierName
+                   :: (cargoHidden
+                       @ legHiddenInputs
+                       @ [ button [ _class "btn btn-primary"; _type "submit" ] [ str "更新する" ]
+                           a [ _class "btn btn-secondary ms-2"; _href "/voyages" ] [ str "キャンセル" ] ])) ]
 
     // ---- Routing: 経路設計依頼一覧・経路設計（US07/US08）----
 
@@ -832,7 +915,7 @@ module Views =
                         [ tr [] [ th [ _class "w-25" ] [ str "出発地" ]; td [] [ str origin ] ]
                           tr [] [ th [] [ str "目的地" ]; td [] [ str destination ] ]
                           tr [] [ th [] [ str "到着期限" ]; td [] [ str deadline ] ] ] ]
-              h2 [ _class "h4 mb-3" ] [ str "経路候補（推奨順）" ]
+              h2 [ _class "h4 mb-3" ] [ str "経路候補（直行優先・所要日数昇順）" ]
               (if List.isEmpty candidates then
                    div [ _class "alert alert-warning" ] [ str "期限内に到達可能な経路候補がありません。到着期限の緩和や航海スケジュールの追加を検討してください。" ]
                else
@@ -845,6 +928,10 @@ module Views =
                                    [ th [] [ str "航海番号" ]
                                      th [] [ str "経由港" ]
                                      th [] [ str "所要日数" ]
-                                     th [] [ str "概算費用" ] ] ]
+                                     th [] [ str "概算費用（暫定）" ] ] ]
                          tbody [] candidateRows ])
+              (if List.isEmpty candidates then
+                   emptyText
+               else
+                   div [ _class "form-text mt-2" ] [ str "※ 概算費用は暫定値です。正式な料金は精算フェーズで確定します。" ])
               a [ _class "btn btn-secondary mt-3"; _href "/routing/requests" ] [ str "依頼一覧へ戻る" ] ]

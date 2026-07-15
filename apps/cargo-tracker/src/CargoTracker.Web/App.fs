@@ -662,8 +662,55 @@ let private voyageEdit (voyageNumberStr: string) : HttpHandler =
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
 
-/// 航海更新の実行（`POST /voyages/{voyageNumber}/edit`・US25）。
+/// 航海更新の差分確認（`POST /voyages/{voyageNumber}/edit`・US25 受入条件2）。
+/// 即時更新せず、既存内容と入力内容の差分を提示する。確定は POST /confirm で行う。
 let private voyageUpdate (voyageNumberStr: string) : HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get key = string form.[key]
+            let newValues, cmd = readVoyageForm get
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+
+            let vn = CargoTracker.Routing.Domain.VoyageNumber.ofString voyageNumberStr
+            let action = sprintf "/voyages/%s/edit" voyageNumberStr
+
+            // 入力の妥当性を先に検証（不正なら差分に進まずフォームへ戻す）。
+            let! validation = CargoTracker.Routing.Application.VoyageWorkflow.validate cmd
+
+            match validation with
+            | Error err ->
+                ctx.SetStatusCode 400
+
+                return!
+                    htmlView
+                        (Views.voyageForm
+                            (rolesOf ctx)
+                            "航海スケジュール更新"
+                            action
+                            true
+                            newValues
+                            (Some(domainErrorMessage err)))
+                        next
+                        ctx
+            | Ok() ->
+                let! found = repo.FindByNumber vn
+
+                match found with
+                | Ok(Some existing) ->
+                    let oldValues = toVoyageFormValues existing
+                    return! htmlView (Views.voyageDiff (rolesOf ctx) voyageNumberStr oldValues newValues) next ctx
+                | Ok None -> return! (setStatusCode 404 >=> text "航海が見つかりません。") next ctx
+                | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 航海更新の確定（`POST /voyages/{voyageNumber}/confirm`・US25）。差分確認後の上書き更新。
+let private voyageConfirm (voyageNumberStr: string) : HttpHandler =
     mustHaveRole "ROLE_ROUTE_DESIGNER"
     >=> fun next ctx ->
         task {
@@ -825,7 +872,8 @@ let webApp: HttpHandler =
                     route "/bookings" >=> bookingCreate
                     routef "/bookings/%s/routing" bookingSubmitRouting
                     route "/voyages" >=> voyageCreate
-                    routef "/voyages/%s/edit" voyageUpdate ]
+                    routef "/voyages/%s/edit" voyageUpdate
+                    routef "/voyages/%s/confirm" voyageConfirm ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。
