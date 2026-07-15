@@ -198,12 +198,12 @@ sequenceDiagram
 3. Application 層で `asyncResult` / `validation` によるワークフローを組み、Port 経由でインフラを呼ぶ。
 4. Infrastructure 層の Donald リポジトリを Testcontainers（実 PostgreSQL）で検証する。
 5. 最後に Web 層（`HttpHandler` + ViewEngine）へ結線し、受け入れ・E2E で束ねる。
-6. 外部経路 ACL（`ExternalRoutingPort`）は WireMock.Net で契約を固定してから実装する。
+6. 経路候補算出（US08）は Routing Context が保有する Voyage スケジュールから構成するドメインサービスとして実装する（ADR-0009）。外部経路 ACL（`ExternalRoutingServicePort`）は Estimation の概算見積・将来の代替経路連携に役割を限定し、WireMock.Net で契約を固定する。
 
 ### 完了条件
 
 - [ ] Routing・Tracking・Handling のドメイン不変条件が FsCheck で検証済み（ドメイン被覆 85% 以上）
-- [ ] 経路候補算出が外部 ACL スタブ駆動で動作、状態遷移（追跡・荷役）が網羅的に検証済み
+- [ ] 経路候補算出が Routing 保有スケジュールからのドメインサービスで動作（ADR-0009）、状態遷移（追跡・荷役）が網羅的に検証済み
 - [ ] IT5 完了時点で Release 1.0 MVP の業務フローが一気通貫（US13・US15・US18 の E2E）
 - [ ] ArchUnitNET（BC 間の直接参照禁止・ドメインのフレームワーク非侵入）が緑
 
@@ -289,3 +289,4 @@ sequenceDiagram
 | 日付 | 更新内容 | 更新者 |
 |------|---------|--------|
 | 2026-07-14 | 初版作成。IT1-7 を 3 局面（序盤 IT1-2 / 中盤 IT3-5 / 終盤 IT6-7）に割り当て、F# 技術スタック（Giraffe/Donald/FsToolkit ROP・ファイル順コンパイル）に即した各局面のワークフローと不変規律を定義 | - |
+| 2026-07-15 | 中盤の US08 経路候補算出を「外部 ACL スタブ駆動」から「Routing 自コンテキストのドメインサービス構成」に修正（ADR-0009 に整合。US24/25 の登録スケジュールを US08 で活用）。ExternalRoutingServicePort は Estimation 概算・将来連携に役割限定 | - |
