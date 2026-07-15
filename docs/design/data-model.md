@@ -837,10 +837,15 @@ module ShipperRepository =
 
 ### `voyage`（航海）
 
+> **IT3 実装状況**: マイグレーション 0006 で `vessel_name`・`carrier_name`・`supported_cargo_types` を追加（US24 の船名・運送会社・対応貨物種別要件に対応）。ドメインの `Voyage` 集約（`VesselName`・`CarrierName`・`Set<CargoTypeTag>`）に対応する。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `vessel_name` | `VARCHAR(100)` | `NOT NULL` | 船名（US24・0006 で追加） |
+| `carrier_name` | `VARCHAR(100)` | `NOT NULL` | 運送会社名（US24・0006 で追加） |
+| `supported_cargo_types` | `VARCHAR(50)` | `NOT NULL` | 対応貨物種別（`GENERAL,HAZARDOUS,REFRIGERATED` のカンマ区切り・US24・0006 で追加） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック用バージョン（ADR-0001） |

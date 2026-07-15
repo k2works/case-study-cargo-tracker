@@ -103,9 +103,14 @@ type DomainError =
 | CargoItinerary | 旅程 | Booking Context | 貨物の輸送経路全体。1 つ以上の Leg で構成（非空リスト） |
 | Leg | 輸送区間 | Booking Context | 単一航海での積込港から荷降港までの区間 |
 | Delivery | 配送状況 | Booking Context | 現在の輸送状態・経路状態・最終荷役イベントの集合 |
-| Voyage | 航海 | Routing Context | 特定の船舶が実施する一連の運送区間 |
-| Schedule | 航海スケジュール | Routing Context | 航海を構成する時系列の運送区間一覧 |
+| Voyage | 航海 | Routing Context | 特定の船舶が実施する一連の運送区間。船名・運送会社・対応貨物種別を保持（US24・IT3） |
+| Schedule | 航海スケジュール | Routing Context | 航海を構成する時系列の運送区間一覧（非空・連結制約・時系列を保証） |
 | CarrierMovement | 運送区間 | Routing Context | 出発港・到着港・出発時刻・到着時刻を持つ区間単位 |
+| VesselName | 船名 | Routing Context | 船名（単一ケース DU・1〜100 文字・US24・IT3） |
+| CarrierName | 運送会社名 | Routing Context | 運送会社名（単一ケース DU・1〜100 文字・US24・IT3） |
+| CargoTypeTag | 対応貨物種別タグ | Routing Context | 航海が受け入れ可能な貨物種別（DU: General/Hazardous/Refrigerated・US24・IT3） |
+| RouteComputation | 経路候補算出 | Routing Context | ドメインサービス（純粋関数）。保有 Voyage から接続経路を探索し候補を推奨順に構成（US08・ADR-0009・IT3） |
+| RouteQuery / RouteCandidate | 経路探索条件 / 経路候補 | Routing Context | 経路探索の入力条件と、Routing 固有の経路候補（航海番号・経由港・所要日数・費用）。Estimation の RouteCandidate とは別概念（US08・IT3） |
 | TrackingActivity | 追跡レコード | Tracking Context | 貨物の追跡情報全体を管理する集約 |
 | TrackingNumber | 追跡番号 | Tracking Context | 追跡活動を一意に識別する番号 |
 | TrackingActivityEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事 |
