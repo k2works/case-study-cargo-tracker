@@ -15,5 +15,6 @@
 | [ADR-0007](0007-経路設計中状態はBookingState_DU拡張で表現.md) | 「経路設計中」状態は BookingState DU の拡張（RoutingRequested ケース）で表現 | 承認済み |
 | [ADR-0008](0008-荷主参照はShipperId永続化により業務識別子で行う.md) | 荷主の横断参照は ShipperId（Guid）の永続化により業務識別子で行う | 承認済み |
 | [ADR-0009](0009-経路候補算出はRouting自コンテキストで構成する.md) | 経路候補算出は Routing Context が自コンテキストの Voyage スケジュールから構成する | 提案 |
+| [ADR-0010](0010-経路確定のRouting_Booking連携は合成層のACL変換で行う.md) | 経路確定の Routing→Booking 連携は合成層の ACL 変換で行う | 提案 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
