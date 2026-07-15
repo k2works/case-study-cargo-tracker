@@ -397,6 +397,26 @@ let ``連結が途切れる区間列は LegConnectivity エラー`` () =
     | Error(BusinessRuleViolation("LegConnectivity", _)) -> ()
     | other -> failwithf "LegConnectivity を期待したが: %A" other
 
+/// 港コード列（3 港以上）を連番の連結した区間列に変換する。
+let private connectedLegsFrom (ports: string list) =
+    ports
+    |> List.pairwise
+    |> List.mapi (fun i (a, b) -> leg a b (dto (2026, 8, 1 + i)) (dto (2026, 8, 2 + i)) (sprintf "V-%d" i))
+
+[<Property>]
+let ``連結した任意長の区間列は常に旅程を構成できる`` (PositiveInt n) =
+    // 相異なる港コード列から 2〜6 港を選び、連結した区間列を構成する。
+    let ports = [ "JPTYO"; "SGSIN"; "USLAX"; "HKHKG"; "CNSHA"; "KRPUS" ]
+    let count = 2 + (n % (ports.Length - 1))
+    let selected = ports |> List.truncate count
+    let legs = connectedLegsFrom selected
+
+    match CargoItinerary.create legs with
+    | Ok itin ->
+        Location.value (CargoItinerary.firstLoadLocation itin) = List.head selected
+        && Location.value (CargoItinerary.lastUnloadLocation itin) = List.last selected
+    | Error _ -> false
+
 // ---- IT4: 経路提案〜予約確定の状態遷移（US11/US13）----
 
 /// routeSpec（JPTYO→USLAX・期限 2026-09-01）を満たす旅程。
