@@ -559,3 +559,68 @@ let ``booking_status に ROUTE_PROPOSED と CONFIRMED が対応する`` () =
 
     BookingState.toString (Confirmed(satisfyingItinerary ()))
     |> should equal "CONFIRMED"
+
+// ---- IT4 M3 / IT5 task6: 不正遷移マトリクスの Theory 網羅（Cancelled からの前進系を含む）----
+
+/// 各状態の Cargo を構築する（テスト用）。
+let private cargoInState (stateName: string) : Cargo =
+    let confirmed () =
+        match Cargo.execute (routeProposedCargo ()) ConfirmBooking with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    match stateName with
+    | "Preliminary" -> preliminaryCargo ()
+    | "RoutingRequested" -> routingRequestedCargo ()
+    | "RouteProposed" -> routeProposedCargo ()
+    | "Confirmed" -> confirmed ()
+    | "Cancelled" ->
+        match Cargo.execute (preliminaryCargo ()) (Cancel "テスト") with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+    | other -> failwithf "未知の状態: %s" other
+
+/// コマンド名から BookingCommand を構築する。
+let private commandByName (name: string) : BookingCommand =
+    match name with
+    | "SubmitForRouting" -> SubmitForRouting
+    | "ProposeRoute" -> ProposeRoute(satisfyingItinerary ())
+    | "ConfirmBooking" -> ConfirmBooking
+    | "RestoreToRouting" -> RestoreToRouting
+    | other -> failwithf "未知のコマンド: %s" other
+
+[<Theory>]
+// Preliminary から前進できるのは SubmitForRouting のみ
+[<InlineData("Preliminary", "ProposeRoute")>]
+[<InlineData("Preliminary", "ConfirmBooking")>]
+[<InlineData("Preliminary", "RestoreToRouting")>]
+// RoutingRequested から前進できるのは ProposeRoute のみ
+[<InlineData("RoutingRequested", "SubmitForRouting")>]
+[<InlineData("RoutingRequested", "ConfirmBooking")>]
+[<InlineData("RoutingRequested", "RestoreToRouting")>]
+// RouteProposed から前進できるのは ConfirmBooking のみ
+[<InlineData("RouteProposed", "SubmitForRouting")>]
+[<InlineData("RouteProposed", "ProposeRoute")>]
+[<InlineData("RouteProposed", "RestoreToRouting")>]
+// Confirmed から前進できるのは RestoreToRouting のみ
+[<InlineData("Confirmed", "SubmitForRouting")>]
+[<InlineData("Confirmed", "ProposeRoute")>]
+[<InlineData("Confirmed", "ConfirmBooking")>]
+// Cancelled からはいずれの前進遷移も不可
+[<InlineData("Cancelled", "SubmitForRouting")>]
+[<InlineData("Cancelled", "ProposeRoute")>]
+[<InlineData("Cancelled", "ConfirmBooking")>]
+[<InlineData("Cancelled", "RestoreToRouting")>]
+let ``非許可の状態遷移は InvalidStateTransition を返す`` (stateName: string) (commandName: string) =
+    let cargo = cargoInState stateName
+    let command = commandByName commandName
+
+    match Cargo.execute cargo command with
+    | Error(InvalidStateTransition _) -> ()
+    | other -> failwithf "InvalidStateTransition を期待したが (%s, %s): %A" stateName commandName other
+
+[<Fact>]
+let ``Cancelled からの再キャンセルは不正遷移`` () =
+    match Cargo.execute (cargoInState "Cancelled") (Cancel "再") with
+    | Error(InvalidStateTransition _) -> ()
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
