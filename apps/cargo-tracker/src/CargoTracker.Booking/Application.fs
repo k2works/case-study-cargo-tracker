@@ -203,6 +203,25 @@ module RouteAssignment =
     let cancel (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) (reason: string) =
         applyCommand repo dispatcher bookingId (Cancel reason)
 
+    /// 予約をキャンセルし、荷主にキャンセル確認通知を送る（US13 受入基準6）。
+    /// キャンセル永続化の成功後に通知・記録する。
+    let cancelAndNotify
+        (repo: CargoRepository)
+        (dispatcher: BookingEventDispatcher)
+        (notifier: ShipperNotifier)
+        (bookingId: BookingId)
+        (reason: string)
+        : Async<Result<Cargo * BookingEvent list, DomainError>> =
+        asyncResult {
+            let! updated, events = applyCommand repo dispatcher bookingId (Cancel reason)
+            let recipient = (ShipperId.value updated.ShipperId).ToString("D")
+
+            let message = sprintf "予約 %s はキャンセルされました。理由: %s" (BookingId.value bookingId) reason
+
+            do! notifier.Notify bookingId recipient message
+            return updated, events
+        }
+
     /// 荷主に確定経路を通知する（US12）。
     /// 予約読込 → 確定経路（旅程）から通知本文を構成 → 荷主へ通知・記録。
     /// 旅程が未確定（RouteProposed/Confirmed 以外）の場合は業務ルール違反とする。

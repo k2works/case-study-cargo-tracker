@@ -515,12 +515,39 @@ let private bookingRestore (bookingIdStr: string) : HttpHandler =
     bookingStateAction CargoTracker.Booking.Application.RouteAssignment.restoreToRouting "restored" bookingIdStr
 
 /// 予約キャンセル（`POST /bookings/{bookingId}/cancel`・US13）。
+/// キャンセル後に荷主へキャンセル確認通知を送る（US13 受入基準6）。
 let private bookingCancel (bookingIdStr: string) : HttpHandler =
-    bookingStateAction
-        (fun repo dispatcher bookingId ->
-            CargoTracker.Booking.Application.RouteAssignment.cancel repo dispatcher bookingId "営業によるキャンセル")
-        "cancelled"
-        bookingIdStr
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+            let dispatcher =
+                CargoTracker.Booking.Infrastructure.StubBookingEventDispatcher.create ()
+
+            let notifier =
+                CargoTracker.Booking.Infrastructure.NotificationLogShipperNotifier.create conn systemClock
+
+            let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
+
+            let! result =
+                CargoTracker.Booking.Application.RouteAssignment.cancelAndNotify
+                    repo
+                    dispatcher
+                    notifier
+                    bookingId
+                    "営業によるキャンセル"
+
+            match result with
+            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s?msg=cancelled" bookingIdStr) next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
 
 /// 荷主への経路通知（`POST /bookings/{bookingId}/notify`・US12・ROLE_SALES）。
 let private bookingNotify (bookingIdStr: string) : HttpHandler =

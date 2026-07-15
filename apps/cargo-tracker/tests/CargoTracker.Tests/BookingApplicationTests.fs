@@ -433,3 +433,20 @@ let ``永続化失敗時はイベントを発火しない`` () =
     with
     | Error(BusinessRuleViolation("CargoRepository", _)) -> recorded.Count |> should equal 0
     | other -> failwithf "永続化失敗を期待したが: %A" other
+
+[<Fact>]
+let ``cancelAndNotify はキャンセル後に荷主へ通知する（US13 受入基準6）`` () =
+    let repo, _ = repoStub ()
+    let bid = seedRoutingRequested repo
+    let recorded = System.Collections.Generic.List<string>()
+    let events = System.Collections.Generic.List<BookingEvent>()
+
+    match
+        RouteAssignment.cancelAndNotify repo (dispatcherStub events) (shipperNotifierStub recorded) bid "荷主都合"
+        |> Async.RunSynchronously
+    with
+    | Ok(cargo, _) ->
+        cargo.State |> should equal (Cancelled "荷主都合")
+        recorded.Count |> should equal 1
+        (recorded.[0]) |> should haveSubstring "キャンセル"
+    | Error e -> failwithf "成功を期待したが: %A" e
