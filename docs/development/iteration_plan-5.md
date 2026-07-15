@@ -160,9 +160,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | マイグレーション 0009（`tracking_activity`〔access_token 含む〕・`tracking_handling_event`）両方言 + data-model 反映 | 3h | - | [ ] |
-| 4.2 | マイグレーション 0010（`handling_activity`）両方言 + data-model 反映 | 2h | - | [ ] |
-| 4.3 | TrackingRepository・HandlingRepository（Donald 手書き SQL・親子トランザクション・状態/イベント往復）統合テスト | 4h | - | [ ] |
+| 4.1 | マイグレーション 0009（`tracking_activity`〔access_token 含む〕・`tracking_handling_event`）両方言 + data-model 反映 | 3h | - | [x] |
+| 4.2 | マイグレーション 0010（`handling_activity`）両方言 + data-model 反映 | 2h | - | [x] |
+| 4.3 | TrackingRepository・HandlingRepository（Donald 手書き SQL・親子トランザクション・状態/イベント往復）統合テスト | 4h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -191,13 +191,13 @@
 | Tracking ドメイン | 4 | 9h | [x] |
 | Handling ドメイン | 5 | 7h | [x] |
 | BC 間イベント連携・ADR 決着 | — | 9h | [ ] |
-| インフラ（追跡・荷役永続化）| — | 9h | [ ] |
+| インフラ（追跡・荷役永続化）| — | 9h | [x] |
 | Web（US14-18・公開ページ）| 8 | 11h | [ ] |
 | 小リファクタ（IT4 M3/M4・任意）| — | 3h | [ ] |
 | **合計** | **17** | **48h** | |
 
 **1 SP あたり**: 約 2.8h（ストーリー分 48h / 17 SP）
-**進捗率**: 53% (9/17 SP)
+**進捗率**: 53% (9/17 SP・ドメイン完了＋インフラ完了)
 
 > **スコープ注記（過積載）**: 17 SP は直近ベロシティ（12-14 SP）を上回る。フィーチャバッファ消費ルール（release_plan）に従い、**US17（手動更新・2 SP）を最初の切り出し候補**とする。US14/US15/US18 は Release 1.0 の E2E（US13・US15・US18）に必須のため死守。US16（引取）は精算開始条件のため次点で保持。
 
