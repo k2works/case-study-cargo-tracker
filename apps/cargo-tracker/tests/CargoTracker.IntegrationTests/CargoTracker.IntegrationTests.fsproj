@@ -24,6 +24,7 @@
     <Compile Include="RoutingDesignAcceptanceTests.fs" />
     <Compile Include="RouteAclTests.fs" />
     <Compile Include="NotificationLogTests.fs" />
+    <Compile Include="TrackingRepositoryTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,6 +45,7 @@
     <ProjectReference Include="..\..\src\CargoTracker.Estimation\CargoTracker.Estimation.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Routing\CargoTracker.Routing.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Booking\CargoTracker.Booking.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Tracking\CargoTracker.Tracking.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Web\CargoTracker.Web.fsproj" />
   </ItemGroup>
 

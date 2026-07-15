@@ -1,0 +1,144 @@
+module CargoTracker.IntegrationTests.TrackingRepositoryTests
+
+open System
+open System.Data
+open Microsoft.Data.Sqlite
+open Xunit
+open FsUnit.Xunit
+open CargoTracker.Shared.Domain
+open CargoTracker.Tracking.Domain
+open CargoTracker.Tracking.Infrastructure
+
+// US14/US15/US18: TrackingRepository（Donald）と読み取りモデル（TrackingQueries）の統合テスト。
+
+let private ddl =
+    """
+    CREATE TABLE tracking_activity (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        tracking_number  TEXT    NOT NULL UNIQUE,
+        booking_id       TEXT    NOT NULL,
+        transport_status TEXT    NOT NULL DEFAULT 'NOT_RECEIVED',
+        access_token     TEXT    NOT NULL UNIQUE,
+        created_at       TEXT    NOT NULL,
+        updated_at       TEXT    NOT NULL,
+        version          INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE tracking_handling_event (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        tracking_id       INTEGER NOT NULL REFERENCES tracking_activity(id),
+        event_type        TEXT    NOT NULL,
+        event_time        TEXT    NOT NULL,
+        location_unlocode TEXT,
+        voyage_number     TEXT,
+        seq_number        INTEGER NOT NULL,
+        created_at        TEXT    NOT NULL,
+        updated_at        TEXT    NOT NULL
+    );
+    """
+
+let private openDb () : IDbConnection =
+    let conn = new SqliteConnection("Data Source=:memory:")
+    conn.Open()
+    use cmd = conn.CreateCommand()
+    cmd.CommandText <- ddl
+    cmd.ExecuteNonQuery() |> ignore
+    conn :> IDbConnection
+
+let private fixedClock: Clock =
+    fun () -> DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero)
+
+let private newId () : Guid = Guid.NewGuid()
+
+let private loc code =
+    match Location.create code with
+    | Ok l -> l
+    | Error e -> failwithf "%s" e
+
+let private bookingId () =
+    match TrackingBookingId.create "BKG-0001" with
+    | Ok b -> b
+    | Error e -> failwithf "%A" e
+
+let private event etype code day =
+    { EventType = etype
+      Location = loc code
+      CompletionTime = DateTimeOffset(2026, 9, day, 0, 0, 0, TimeSpan.Zero) }
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``追跡活動を保存して追跡番号で復元できる（NotReceived）`` () =
+    use conn = openDb ()
+    let repo = TrackingRepository.create conn fixedClock
+    let activity, _ = TrackingActivity.issue newId (bookingId ())
+
+    repo.Save activity "TOKEN-ABC"
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    match repo.FindByTrackingNumber activity.TrackingNumber |> Async.RunSynchronously with
+    | Ok(Some found) -> TrackingActivity.currentStatus found |> should equal NotReceived
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``イベント記録後に更新すると導出状態が往復する`` () =
+    use conn = openDb ()
+    let repo = TrackingRepository.create conn fixedClock
+    let activity, _ = TrackingActivity.issue newId (bookingId ())
+    repo.Save activity "TOKEN-ABC" |> Async.RunSynchronously |> ignore
+
+    // 受領 → 積込
+    let progressed =
+        [ event ReceivedEvent "JPTYO" 1; event LoadedEvent "JPTYO" 2 ]
+        |> List.fold
+            (fun acc e ->
+                match TrackingActivity.execute acc (RecordEvent e) with
+                | Ok(a, _) -> a
+                | Error err -> failwithf "%A" err)
+            activity
+
+    repo.Update progressed
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    match repo.FindByTrackingNumber activity.TrackingNumber |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        TrackingActivity.currentStatus found |> should equal Loaded
+        found.Events |> List.length |> should equal 2
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``公開トークンで追跡ビューを照会できる（US18）`` () =
+    use conn = openDb ()
+    let repo = TrackingRepository.create conn fixedClock
+    let activity, _ = TrackingActivity.issue newId (bookingId ())
+    repo.Save activity "TOKEN-XYZ" |> Async.RunSynchronously |> ignore
+
+    let progressed =
+        match TrackingActivity.execute activity (RecordEvent(event ReceivedEvent "JPTYO" 1)) with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    repo.Update progressed |> Async.RunSynchronously |> ignore
+
+    match TrackingQueries.findByAccessToken conn "TOKEN-XYZ" with
+    | Some view ->
+        view.TransportStatus |> should equal "RECEIVED"
+        view.Events |> List.length |> should equal 1
+    | None -> failwith "公開トークンで照会できるはず"
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``存在しない追跡番号は None を返す`` () =
+    use conn = openDb ()
+    let repo = TrackingRepository.create conn fixedClock
+
+    match
+        repo.FindByTrackingNumber(TrackingNumber.ofString "TRK-NOPE")
+        |> Async.RunSynchronously
+    with
+    | Ok None -> ()
+    | other -> failwithf "None を期待したが: %A" other
