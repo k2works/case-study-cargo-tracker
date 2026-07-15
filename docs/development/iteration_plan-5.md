@@ -170,7 +170,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | 追跡照会 `/tracking`（入力）・`/tracking/{trackingNumber}`（履歴タイムライン）+ **公開 `/public/tracking/{accessToken}`（未認証）**（US18）+ 受入テスト | 4h | - | [ ] |
+| 5.1 | 追跡照会 `/tracking`（入力）・`/tracking/{trackingNumber}`（履歴タイムライン）+ **公開 `/public/tracking/{accessToken}`（未認証）**（US18）+ 受入テスト | 4h | - | [x] |
 | 5.2 | 荷役作業登録 `/handling/new`・一覧 `/handling`（US15/US16・引取は荷受人確認欄）+ 受入テスト | 4h | - | [ ] |
 | 5.3 | 追跡番号発行導線（US14・経路設計依頼一覧 `/routing/requests` または予約詳細）+ 貨物状態手動更新 `/tracking/{trackingNumber}/status/new`（US17）+ 受入テスト | 3h | - | [ ] |
 
