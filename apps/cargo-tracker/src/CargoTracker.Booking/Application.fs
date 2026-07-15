@@ -22,6 +22,16 @@ type ShipperExistenceChecker =
 type RoutingRequestNotifier =
     { Notify: BookingId -> Async<Result<unit, DomainError>> }
 
+/// ドメインイベントの発行ポート（ADR-0002）。永続化コミット成功後にのみ発火する。
+/// 他コンテキスト（Routing/Tracking 等）への連携はこのポートの実装で吸収する（BC 分離）。
+type BookingEventDispatcher =
+    { Dispatch: BookingEvent -> Async<unit> }
+
+/// 何もしないイベントディスパッチャ（発火先が未接続の局面向け・テスト用）。
+module NullBookingEventDispatcher =
+    let create () : BookingEventDispatcher =
+        { Dispatch = fun _ -> async { return () } }
+
 /// 貨物種別の入力（UI からの DTO）。種別に応じて追加情報を持つ。
 type CargoTypeInput =
     | GeneralInput
@@ -138,9 +148,12 @@ module RouteAssignment =
 
     open FsToolkit.ErrorHandling
 
-    /// 予約を読み込みコマンドを適用して永続化する共通ワークフロー。
+    /// 予約を読み込みコマンドを適用して永続化し、コミット成功後にイベントを発火する共通ワークフロー。
+    /// `repo.Update` が Ok を返した時点で永続化はコミット済みのため、ここでの dispatch は post-commit（ADR-0002）。
+    /// 失敗（NotFound・ドメイン検証エラー・永続化失敗）時はイベントを発火しない。
     let private applyCommand
         (repo: CargoRepository)
+        (dispatcher: BookingEventDispatcher)
         (bookingId: BookingId)
         (command: BookingCommand)
         : Async<Result<Cargo * BookingEvent list, DomainError>> =
@@ -154,22 +167,31 @@ module RouteAssignment =
 
             let! updated, events = Cargo.execute cargo command
             do! repo.Update updated
+            // 永続化コミット後にのみイベントを順次発火する（ロールバック時は未発火）。
+            for e in events do
+                do! (dispatcher.Dispatch e |> Async.map Ok)
+
             return updated, events
         }
 
     /// 確定経路を予約に紐付ける（US09/US11・RoutingRequested → RouteProposed）。
     /// 旅程がルート仕様を満たすかはドメイン（Cargo.execute）が検証する。
-    let proposeRoute (repo: CargoRepository) (bookingId: BookingId) (itinerary: CargoItinerary) =
-        applyCommand repo bookingId (ProposeRoute itinerary)
+    let proposeRoute
+        (repo: CargoRepository)
+        (dispatcher: BookingEventDispatcher)
+        (bookingId: BookingId)
+        (itinerary: CargoItinerary)
+        =
+        applyCommand repo dispatcher bookingId (ProposeRoute itinerary)
 
     /// 予約を確定する（US13・RouteProposed → Confirmed）。
-    let confirmBooking (repo: CargoRepository) (bookingId: BookingId) =
-        applyCommand repo bookingId ConfirmBooking
+    let confirmBooking (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) =
+        applyCommand repo dispatcher bookingId ConfirmBooking
 
     /// 経路設計中へ差し戻す（US13 受入条件4・Confirmed → RoutingRequested）。
-    let restoreToRouting (repo: CargoRepository) (bookingId: BookingId) =
-        applyCommand repo bookingId RestoreToRouting
+    let restoreToRouting (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) =
+        applyCommand repo dispatcher bookingId RestoreToRouting
 
     /// 予約をキャンセルする（US13・任意状態 → Cancelled）。
-    let cancel (repo: CargoRepository) (bookingId: BookingId) (reason: string) =
-        applyCommand repo bookingId (Cancel reason)
+    let cancel (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) (reason: string) =
+        applyCommand repo dispatcher bookingId (Cancel reason)

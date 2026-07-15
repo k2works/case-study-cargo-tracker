@@ -189,6 +189,17 @@ let private loc code =
     | Ok l -> l
     | Error e -> failwithf "%A" e
 
+/// 発火されたイベントを記録するディスパッチャスタブ。
+let private dispatcherStub (recorded: System.Collections.Generic.List<BookingEvent>) =
+    { Dispatch =
+        fun e ->
+            async {
+                recorded.Add e
+                return ()
+            } }
+
+let private nullDispatcher = NullBookingEventDispatcher.create ()
+
 /// JPTYO→USLAX・期限 2026-09-01 を満たす直行旅程。
 let private satisfyingItinerary () =
     let leg =
@@ -231,7 +242,7 @@ let ``proposeRoute で経路設計中の予約が RouteProposed になる`` () =
     let bid = seedRoutingRequested repo
 
     match
-        RouteAssignment.proposeRoute repo bid (satisfyingItinerary ())
+        RouteAssignment.proposeRoute repo nullDispatcher bid (satisfyingItinerary ())
         |> Async.RunSynchronously
     with
     | Ok(cargo, events) ->
@@ -247,11 +258,11 @@ let ``confirmBooking で RouteProposed の予約が Confirmed になる`` () =
     let repo, _ = repoStub ()
     let bid = seedRoutingRequested repo
 
-    RouteAssignment.proposeRoute repo bid (satisfyingItinerary ())
+    RouteAssignment.proposeRoute repo nullDispatcher bid (satisfyingItinerary ())
     |> Async.RunSynchronously
     |> ignore
 
-    match RouteAssignment.confirmBooking repo bid |> Async.RunSynchronously with
+    match RouteAssignment.confirmBooking repo nullDispatcher bid |> Async.RunSynchronously with
     | Ok(cargo, events) ->
         match cargo.State with
         | Confirmed _ -> ()
@@ -265,13 +276,18 @@ let ``restoreToRouting で Confirmed の予約が RoutingRequested に差し戻�
     let repo, _ = repoStub ()
     let bid = seedRoutingRequested repo
 
-    RouteAssignment.proposeRoute repo bid (satisfyingItinerary ())
+    RouteAssignment.proposeRoute repo nullDispatcher bid (satisfyingItinerary ())
     |> Async.RunSynchronously
     |> ignore
 
-    RouteAssignment.confirmBooking repo bid |> Async.RunSynchronously |> ignore
+    RouteAssignment.confirmBooking repo nullDispatcher bid
+    |> Async.RunSynchronously
+    |> ignore
 
-    match RouteAssignment.restoreToRouting repo bid |> Async.RunSynchronously with
+    match
+        RouteAssignment.restoreToRouting repo nullDispatcher bid
+        |> Async.RunSynchronously
+    with
     | Ok(cargo, events) ->
         cargo.State |> should equal RoutingRequested
         events |> should contain (BookingRestoredToRouting bid)
@@ -282,8 +298,31 @@ let ``存在しない予約への proposeRoute は NotFound を返す`` () =
     let repo, _ = repoStub ()
 
     match
-        RouteAssignment.proposeRoute repo (BookingId.ofString "BKG-NOPE") (satisfyingItinerary ())
+        RouteAssignment.proposeRoute repo nullDispatcher (BookingId.ofString "BKG-NOPE") (satisfyingItinerary ())
         |> Async.RunSynchronously
     with
     | Error(NotFound(entity, _)) -> entity |> should equal "Cargo"
     | other -> failwithf "NotFound を期待したが: %A" other
+
+[<Fact>]
+let ``proposeRoute 成功時はイベントが post-commit で発火される`` () =
+    let repo, _ = repoStub ()
+    let bid = seedRoutingRequested repo
+    let recorded = System.Collections.Generic.List<BookingEvent>()
+
+    RouteAssignment.proposeRoute repo (dispatcherStub recorded) bid (satisfyingItinerary ())
+    |> Async.RunSynchronously
+    |> ignore
+
+    recorded |> List.ofSeq |> should contain (CargoRouted bid)
+
+[<Fact>]
+let ``失敗時（NotFound）はイベントを発火しない`` () =
+    let repo, _ = repoStub ()
+    let recorded = System.Collections.Generic.List<BookingEvent>()
+
+    RouteAssignment.proposeRoute repo (dispatcherStub recorded) (BookingId.ofString "BKG-NOPE") (satisfyingItinerary ())
+    |> Async.RunSynchronously
+    |> ignore
+
+    recorded.Count |> should equal 0
