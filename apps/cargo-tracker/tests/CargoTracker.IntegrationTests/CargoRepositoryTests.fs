@@ -46,11 +46,28 @@ let private cargoDdl =
     );
     """
 
+/// leg テーブルの DDL（SQLite 方言・0007_leg.sql と整合）。
+let private legDdl =
+    """
+    CREATE TABLE leg (
+        id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+        cargo_id                 INTEGER NOT NULL REFERENCES cargo(id),
+        voyage_number            TEXT    NOT NULL,
+        load_location_unlocode   TEXT    NOT NULL,
+        unload_location_unlocode TEXT    NOT NULL,
+        load_time                TEXT    NOT NULL,
+        unload_time              TEXT    NOT NULL,
+        seq_number               INTEGER NOT NULL,
+        created_at               TEXT    NOT NULL,
+        updated_at               TEXT    NOT NULL
+    );
+    """
+
 let private openDb () : IDbConnection =
     let conn = new SqliteConnection("Data Source=:memory:")
     conn.Open()
     use cmd = conn.CreateCommand()
-    cmd.CommandText <- cargoDdl
+    cmd.CommandText <- cargoDdl + legDdl
     cmd.ExecuteNonQuery() |> ignore
     conn :> IDbConnection
 
@@ -226,3 +243,99 @@ let ``重複する予約 ID の保存は失敗し件数が増えない`` () =
 
     let count = (CargoQueries.findAll conn) |> List.length
     count |> should equal 1
+
+/// routeSpec（JPTYO→USLAX・期限 2026-09-01）を満たす直行旅程を構成する。
+let private satisfyingItinerary () =
+    let leg =
+        match
+            Leg.create
+                (loc "JPTYO")
+                (loc "USLAX")
+                (DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero))
+                (DateTimeOffset(2026, 8, 14, 0, 0, 0, TimeSpan.Zero))
+                (VoyageNumber.ofString "V001")
+        with
+        | Ok l -> l
+        | Error e -> failwithf "%A" e
+
+    match CargoItinerary.create [ leg ] with
+    | Ok i -> i
+    | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``経路提案（RouteProposed）は旅程込みで leg テーブルへ永続化され往復できる`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General
+    repo.Save cargo |> Async.RunSynchronously |> ignore
+
+    // Preliminary → RoutingRequested → RouteProposed(itinerary)
+    let routing =
+        match Cargo.execute cargo SubmitForRouting with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    let proposed =
+        match Cargo.execute routing (ProposeRoute(satisfyingItinerary ())) with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    repo.Update proposed
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    // 再取得すると RouteProposed が旅程込みで復元される。
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        match found.State with
+        | RouteProposed itinerary ->
+            CargoItinerary.legs itinerary |> List.length |> should equal 1
+
+            CargoItinerary.firstLoadLocation itinerary
+            |> Location.value
+            |> should equal "JPTYO"
+
+            CargoItinerary.lastUnloadLocation itinerary
+            |> Location.value
+            |> should equal "USLAX"
+        | other -> failwithf "RouteProposed を期待したが: %A" other
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+let ``差し戻し（RoutingRequested へ戻す）と leg が削除される`` () =
+    use conn = openDb ()
+    let repo = CargoRepository.create conn fixedClock
+    let cargo = makeCargo General
+    repo.Save cargo |> Async.RunSynchronously |> ignore
+
+    let proposed =
+        Cargo.execute cargo SubmitForRouting
+        |> Result.bind (fun (c, _) -> Cargo.execute c (ProposeRoute(satisfyingItinerary ())))
+        |> function
+            | Ok(c, _) -> c
+            | Error e -> failwithf "%A" e
+
+    repo.Update proposed |> Async.RunSynchronously |> ignore
+
+    // 確定 → 差し戻し（Confirmed → RoutingRequested）で leg が削除される。
+    let restored =
+        Cargo.execute proposed ConfirmBooking
+        |> Result.bind (fun (c, _) -> Cargo.execute c RestoreToRouting)
+        |> function
+            | Ok(c, _) -> c
+            | Error e -> failwithf "%A" e
+
+    repo.Update restored
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) -> found.State |> should equal RoutingRequested
+    | other -> failwithf "Some を期待したが: %A" other
+
+    // leg テーブルが空になっている。
+    use cmd = conn.CreateCommand()
+    cmd.CommandText <- "SELECT COUNT(*) FROM leg"
+    cmd.ExecuteScalar() |> Convert.ToInt32 |> should equal 0

@@ -325,6 +325,15 @@ module BookingState =
         | "CANCELLED" -> Ok(Cancelled "")
         | other -> Error(ValidationError("BookingState", sprintf "未知の予約状態です: %s" other))
 
+    /// 状態が保持する旅程（RouteProposed/Confirmed のみ）。永続化で leg テーブルへ書き出す際に使う。
+    let itinerary (state: BookingState) : CargoItinerary option =
+        match state with
+        | RouteProposed i
+        | Confirmed i -> Some i
+        | Preliminary
+        | RoutingRequested
+        | Cancelled _ -> None
+
 /// 集約への操作コマンド（IT2 + IT4 の経路確定〜予約確定）。
 type BookingCommand =
     | SubmitForRouting

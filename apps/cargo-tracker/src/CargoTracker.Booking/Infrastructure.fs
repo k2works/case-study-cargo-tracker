@@ -138,8 +138,47 @@ module CargoRepository =
           ConsigneeAddress: string option
           ConsigneeEmail: string option }
 
+    /// leg テーブルから読み出した生レコード（復元前）。
+    type private LegRow =
+        { VoyageNumber: string
+          LoadLocation: string
+          UnloadLocation: string
+          LoadTime: string
+          UnloadTime: string }
+
+    /// leg 生レコード群から CargoItinerary を復元する。leg が無ければ None。
+    let private reconstructItinerary (rows: LegRow list) : Result<CargoItinerary option, DomainError> =
+        match rows with
+        | [] -> Ok None
+        | _ ->
+            let toLocation field code =
+                Location.create code |> Result.mapError (fun m -> ValidationError(field, m))
+
+            result {
+                let! legs =
+                    rows
+                    |> List.traverseResultM (fun r ->
+                        result {
+                            let! loadLoc = toLocation "LoadLocation" r.LoadLocation
+                            let! unloadLoc = toLocation "UnloadLocation" r.UnloadLocation
+                            let! voyage = VoyageNumber.create r.VoyageNumber
+
+                            let loadTime =
+                                DateTimeOffset.Parse(r.LoadTime, null, Globalization.DateTimeStyles.RoundtripKind)
+
+                            let unloadTime =
+                                DateTimeOffset.Parse(r.UnloadTime, null, Globalization.DateTimeStyles.RoundtripKind)
+
+                            return! Leg.create loadLoc unloadLoc loadTime unloadTime voyage
+                        })
+
+                let! itinerary = CargoItinerary.create legs
+                return Some itinerary
+            }
+
     /// 生レコードから Cargo 集約を復元する（永続化データは信頼するが、値検証は通す）。
-    let private reconstruct (row: CargoRow) : Result<Cargo, DomainError> =
+    /// ROUTE_PROPOSED/CONFIRMED は leg テーブル由来の旅程（itinerary）を要する。
+    let private reconstruct (itinerary: CargoItinerary option) (row: CargoRow) : Result<Cargo, DomainError> =
         let toLocation field code =
             Location.create code |> Result.mapError (fun m -> ValidationError(field, m))
 
@@ -150,9 +189,7 @@ module CargoRepository =
             let deadline = DateOnly.Parse row.ArrivalDeadline
             let! routeSpec = RouteSpecification.create origin destination deadline
             let! weight = Weight.create row.Weight
-            // TODO(IT4 タスク3.2): ROUTE_PROPOSED/CONFIRMED は leg テーブルから旅程を読み出して渡す。
-            // 現時点では leg 永続化未実装のため None（当該状態の予約はまだ生成されない）。
-            let! state = BookingState.ofString None row.BookingStatus
+            let! state = BookingState.ofString itinerary row.BookingStatus
 
             let! cargoType =
                 match row.CargoType with
@@ -199,6 +236,44 @@ module CargoRepository =
 
     /// Donald の出力ポート実装を生成する。clock は監査カラムに使う（ADR-0006）。
     let create (conn: IDbConnection) (clock: Clock) : CargoRepository =
+
+        /// 旅程を leg テーブルへ同期する（既存を削除して再挿入・集約ルート経由の全置換）。
+        let syncLegs (tx: IDbTransaction) (nowStr: string) (bookingIdStr: string) (state: BookingState) =
+            // 既存 leg を全削除してから、現在の状態が保持する旅程を書き込む。
+            conn
+            |> Db.newCommand "DELETE FROM leg WHERE cargo_id = (SELECT id FROM cargo WHERE booking_id = @booking_id)"
+            |> Db.setTransaction tx
+            |> Db.setParams [ "booking_id", SqlType.String bookingIdStr ]
+            |> Db.exec
+
+            match BookingState.itinerary state with
+            | None -> ()
+            | Some itinerary ->
+                CargoItinerary.legs itinerary
+                |> List.iteri (fun i leg ->
+                    conn
+                    |> Db.newCommand
+                        """
+                        INSERT INTO leg
+                            (cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode,
+                             load_time, unload_time, seq_number, created_at, updated_at)
+                        VALUES
+                            ((SELECT id FROM cargo WHERE booking_id = @booking_id),
+                             @voyage_number, @load_location, @unload_location,
+                             @load_time, @unload_time, @seq_number, @now, @now)
+                        """
+                    |> Db.setTransaction tx
+                    |> Db.setParams
+                        [ "booking_id", SqlType.String bookingIdStr
+                          "voyage_number", SqlType.String(VoyageNumber.value (Leg.voyage leg))
+                          "load_location", SqlType.String(Location.value (Leg.loadLocation leg))
+                          "unload_location", SqlType.String(Location.value (Leg.unloadLocation leg))
+                          "load_time", SqlType.String((Leg.loadTime leg).UtcDateTime.ToString("o"))
+                          "unload_time", SqlType.String((Leg.unloadTime leg).UtcDateTime.ToString("o"))
+                          "seq_number", SqlType.Int(i + 1)
+                          "now", SqlType.String nowStr ]
+                    |> Db.setTransaction tx
+                    |> Db.exec)
 
         let save (cargo: Cargo) : Async<Result<unit, DomainError>> =
             async {
@@ -302,6 +377,9 @@ module CargoRepository =
                               "booking_id", SqlType.String bookingIdStr ]
                         |> Db.exec
 
+                        // 旅程（leg）を集約ルート経由で全置換する（ProposeRoute/確定時）。
+                        syncLegs tx (now.UtcDateTime.ToString("o")) bookingIdStr cargo.State
+
                         tx.Commit()
                         return Ok()
                 with ex ->
@@ -344,7 +422,31 @@ module CargoRepository =
                               ConsigneeEmail = rd.ReadStringOption "consignee_email" })
 
                     match row with
-                    | Some r -> return reconstruct r |> Result.map Some
+                    | Some r ->
+                        // 旅程（leg）を seq_number 昇順で読み出す。
+                        let legRows =
+                            conn
+                            |> Db.newCommand
+                                """
+                                SELECT l.voyage_number, l.load_location_unlocode, l.unload_location_unlocode,
+                                       l.load_time, l.unload_time
+                                FROM leg l
+                                JOIN cargo c ON c.id = l.cargo_id
+                                WHERE c.booking_id = @booking_id
+                                ORDER BY l.seq_number
+                                """
+                            |> Db.setParams [ "booking_id", SqlType.String(BookingId.value bookingId) ]
+                            |> Db.query (fun rd ->
+                                { VoyageNumber = rd.ReadString "voyage_number"
+                                  LoadLocation = rd.ReadString "load_location_unlocode"
+                                  UnloadLocation = rd.ReadString "unload_location_unlocode"
+                                  LoadTime = rd.ReadString "load_time"
+                                  UnloadTime = rd.ReadString "unload_time" })
+
+                        return
+                            reconstructItinerary legRows
+                            |> Result.bind (fun i -> reconstruct i r)
+                            |> Result.map Some
                     | None -> return Ok None
                 with ex ->
                     return Error(BusinessRuleViolation("CargoRepository", ex.Message))
