@@ -54,3 +54,46 @@ module Location =
 
     /// UN/LOCODE による同一性判定。Location は locode のみを保持するため構造的等価と一致する。
     let sameAs (a: Location) (b: Location) : bool = a = b
+
+/// 貨物の輸送フェーズを表す共有 DU（domain-model 準拠・9 ケース）。
+/// Tracking Context 固有の TrackingStatus（イベント履歴からの導出値）とは同一ケースだが
+/// 別型として分離し、変換は Tracking のアプリケーション層が担う（BC 分離）。
+type TransportStatus =
+    | NotReceived
+    | Received
+    | Loaded
+    | OnboardCarrier
+    | Unloaded
+    | AwaitingClaim
+    | Claimed
+    | InException
+    | Unknown
+
+module TransportStatus =
+
+    /// 永続化用の文字列表現。
+    let toString (status: TransportStatus) : string =
+        match status with
+        | NotReceived -> "NOT_RECEIVED"
+        | Received -> "RECEIVED"
+        | Loaded -> "LOADED"
+        | OnboardCarrier -> "ONBOARD_CARRIER"
+        | Unloaded -> "UNLOADED"
+        | AwaitingClaim -> "AWAITING_CLAIM"
+        | Claimed -> "CLAIMED"
+        | InException -> "IN_EXCEPTION"
+        | Unknown -> "UNKNOWN"
+
+    /// 永続化文字列から復元する。未知の値は Error（domain-model の網羅 + フォールバック方針）。
+    let ofString (value: string) : Result<TransportStatus, DomainError> =
+        match value with
+        | "NOT_RECEIVED" -> Ok NotReceived
+        | "RECEIVED" -> Ok Received
+        | "LOADED" -> Ok Loaded
+        | "ONBOARD_CARRIER" -> Ok OnboardCarrier
+        | "UNLOADED" -> Ok Unloaded
+        | "AWAITING_CLAIM" -> Ok AwaitingClaim
+        | "CLAIMED" -> Ok Claimed
+        | "IN_EXCEPTION" -> Ok InException
+        | "UNKNOWN" -> Ok Unknown
+        | other -> Error(ValidationError("TransportStatus", sprintf "未知の輸送状態です: %s" other))

@@ -14,7 +14,8 @@ let architecture =
             Assembly.Load("CargoTracker.Booking"),
             Assembly.Load("CargoTracker.Shipper"),
             Assembly.Load("CargoTracker.Estimation"),
-            Assembly.Load("CargoTracker.Routing")
+            Assembly.Load("CargoTracker.Routing"),
+            Assembly.Load("CargoTracker.Tracking")
         )
         .Build()
 
@@ -42,6 +43,7 @@ let private domainNotDependOnDonald (context: string) =
 [<InlineData("Shipper")>]
 [<InlineData("Estimation")>]
 [<InlineData("Routing")>]
+[<InlineData("Tracking")>]
 let ``Domain は Infrastructure に依存しない`` (context: string) =
     (domainNotDependOnInfrastructure context).Check(architecture)
 
@@ -72,6 +74,22 @@ let ``Routing は他 BC に直接依存しない`` (other: string) =
     Types()
         .That()
         .ResideInNamespace("CargoTracker.Routing")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)
+
+/// 「Tracking は他 BC の Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001）。
+/// BC 間連携は合成層 ACL / イベントで行い、Tracking ドメインは他 BC 型を知らない。
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+[<InlineData("Routing")>]
+let ``Tracking は他 BC に直接依存しない`` (other: string) =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Tracking")
         .Should()
         .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
         .WithoutRequiringPositiveResults()
