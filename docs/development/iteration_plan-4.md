@@ -425,15 +425,15 @@ IT4 で新規起票する:
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review: xp-programmer / xp-tester）
-- [ ] ユニット・統合・アーキテクチャテストがパス
-- [ ] BookingState 遷移・CargoItinerary 連結が FsCheck 含めて網羅検証
-- [ ] 「経路選択→確定→紐付け→荷主通知→予約確定」の受入テストがパス
-- [ ] post-commit dispatch がロールバック時非発行・コミット後発行で動作（統合テスト）
-- [ ] カバレッジゲート（ドメイン 85%／全体 80%）が緑
-- [ ] ナビゲーション整合性（予約詳細・経路設計の導線・検証テスト）
-- [ ] Fantomas クリーン・FSharpLint 警告なし・ビルド警告 0
-- [ ] ドキュメント更新完了（release_plan 進捗・ADR-0010・data-model 0007 反映・domain-model 整合修正）
+- [x] コードレビュー完了（self-review: xp-programmer / xp-tester・指摘の高/中を反映）
+- [x] ユニット・統合・アーキテクチャテストがパス（Unit 128 / Arch 13 / Integration 101）
+- [x] BookingState 遷移・CargoItinerary 連結が FsCheck 含めて網羅検証
+- [x] 「経路選択→確定→紐付け→荷主通知→予約確定」の受入テストがパス
+- [x] post-commit dispatch がロールバック時非発行・コミット後発行で動作（統合テスト）
+- [x] カバレッジゲート（ドメイン 85%／全体 80%）が緑（全体 95.1%／ドメイン 90.7%）
+- [x] ナビゲーション整合性（予約詳細・経路設計の導線・検証テスト）
+- [x] Fantomas クリーン・FSharpLint 警告なし・ビルド警告 0
+- [x] ドキュメント更新完了（release_plan 進捗・ADR-0010・data-model 0007/0008 反映・domain-model 整合修正）
 
 ### デモ項目
 
