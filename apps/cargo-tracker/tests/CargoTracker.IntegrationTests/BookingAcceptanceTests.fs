@@ -198,7 +198,7 @@ let ``営業ロールは貨物予約登録フォームを表示できる`` () =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
-let ``一般貨物の予約を登録すると一覧へリダイレクトし永続化される`` () =
+let ``一般貨物の予約を登録すると詳細へリダイレクトし永続化される`` () =
     withSeededShipper (fun client uuid ->
         let cookie = authCookie client "sales01"
 
@@ -214,8 +214,9 @@ let ``一般貨物の予約を登録すると一覧へリダイレクトし永�
                   "cargoType", "GENERAL"
                   "weightKg", "500" ]
 
-        // PRG（Post/Redirect/Get）で 302 リダイレクト
+        // PRG（Post/Redirect/Get）で作成した予約詳細（/bookings/{id}）へリダイレクト
         res.StatusCode |> should equal HttpStatusCode.Found
+        (string res.Headers.Location) |> should haveSubstring "/bookings/BKG-"
 
         // 一覧に登録された予約が表示される
         let list = authedGet client cookie "/bookings"
@@ -265,27 +266,25 @@ let ``存在しない荷主を指定すると 400 になる`` () =
 
         res.StatusCode |> should equal HttpStatusCode.BadRequest)
 
-/// 予約を 1 件登録し、その booking_id を一覧ページから抽出する。
+/// 予約を 1 件登録し、その booking_id を PRG リダイレクト先（Location: /bookings/{id}）から取得する。
 let private bookOne (client: HttpClient) (cookie: string) (uuid: string) : string =
-    authedPost
-        client
-        cookie
-        "/bookings"
-        [ "shipperId", uuid
-          "originUnlocode", "JPTYO"
-          "destinationUnlocode", "USLAX"
-          "arrivalDeadline", "2026-09-01"
-          "cargoType", "GENERAL"
-          "weightKg", "500" ]
-    |> ignore
+    let res =
+        authedPost
+            client
+            cookie
+            "/bookings"
+            [ "shipperId", uuid
+              "originUnlocode", "JPTYO"
+              "destinationUnlocode", "USLAX"
+              "arrivalDeadline", "2026-09-01"
+              "cargoType", "GENERAL"
+              "weightKg", "500" ]
 
-    let body = run ((authedGet client cookie "/bookings").Content.ReadAsStringAsync())
-    let m = System.Text.RegularExpressions.Regex.Match(body, "BKG-[0-9A-F]+")
+    res.StatusCode |> should equal HttpStatusCode.Found
 
-    if m.Success then
-        m.Value
-    else
-        failwith "booking_id が一覧に見つからない"
+    match res.Headers.Location with
+    | null -> failwith "Location ヘッダがありません"
+    | loc -> loc.ToString().Replace("/bookings/", "")
 
 [<Fact>]
 [<Trait("Category", "Integration")>]

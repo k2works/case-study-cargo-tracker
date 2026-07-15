@@ -63,12 +63,30 @@ let ``重量は有効側最小 0.001kg なら Ok を返す（境界値）`` () =
     | Error e -> failwithf "有効側最小は Ok を期待したが Error: %A" e
 
 [<Property>]
-let ``0 より大きく上限以下の重量は常に Ok になる`` (NormalFloat f) =
-    let kg = decimal (abs f % 30_000.0) + 0.001m
+let ``有効な重量は create して value で元の値に戻る（ラウンドトリップ不変条件）`` (NormalFloat f) =
+    // 0 < kg <= 上限 の有効域に写像し、create→value のラウンドトリップで値が保存されることを性質化する。
+    let kg = decimal (abs f % 29_999.0) + 0.001m
 
     match Weight.create kg with
-    | Ok _ -> true
+    | Ok w -> Weight.value w = kg
     | Error _ -> false
+
+[<Property>]
+let ``0 以下の重量は必ず Error になる`` (PositiveInt n) =
+    // 無効域（≤ 0）を境界（0）を含めて生成し、必ず Error になることを性質化する。
+    let kg = -decimal n
+
+    match Weight.create kg with
+    | Error(ValidationError("Weight", _)) -> true
+    | _ -> false
+
+[<Property>]
+let ``上限を超える重量は必ず Error になる`` (PositiveInt n) =
+    let kg = Weight.maxWeightKg + decimal n
+
+    match Weight.create kg with
+    | Error(ValidationError("Weight", _)) -> true
+    | _ -> false
 
 // ---- RouteSpecification（US04 出発地 ≠ 目的地）----
 
@@ -202,6 +220,22 @@ let ``RoutingRequested から再度の経路設計依頼は不正遷移になる
         match Cargo.execute routing SubmitForRouting with
         | Error(InvalidStateTransition(current, _)) -> current |> should equal "ROUTING_REQUESTED"
         | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+    | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``RoutingRequested から Cancel で Cancelled に遷移する`` () =
+    let cargo = preliminaryCargo ()
+
+    match Cargo.execute cargo SubmitForRouting with
+    | Ok(routing, _) ->
+        match Cargo.execute routing (Cancel "在庫調整") with
+        | Ok(updated, events) ->
+            updated.State |> should equal (Cancelled "在庫調整")
+
+            match events with
+            | [ BookingCancelled _ ] -> ()
+            | other -> failwithf "BookingCancelled を期待したが: %A" other
+        | Error e -> failwithf "Ok を期待したが Error: %A" e
     | Error e -> failwithf "%A" e
 
 [<Fact>]

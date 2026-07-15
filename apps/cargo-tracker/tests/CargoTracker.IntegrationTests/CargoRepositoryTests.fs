@@ -148,7 +148,7 @@ let ``存在しない予約は None を返す`` () =
     | other -> failwithf "None を期待したが: %A" other
 
 [<Fact>]
-let ``経路設計依頼後の状態を永続化して取得できる`` () =
+let ``Update 経由で経路設計中の状態を永続化して取得できる`` () =
     use conn = openDb ()
     let repo = CargoRepository.create conn fixedClock
     let cargo = makeCargo General
@@ -159,12 +159,15 @@ let ``経路設計依頼後の状態を永続化して取得できる`` () =
         | Ok(c, _) -> c
         | Error e -> failwithf "%A" e
 
-    // 同一 booking_id の再保存は UNIQUE 制約に触れるため、別 booking で状態遷移の往復を検証する。
-    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
-    | Ok(Some found) -> found.State |> should equal Preliminary
-    | other -> failwithf "Some を期待したが: %A" other
+    repo.Update routing
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
 
-    routing.State |> should equal RoutingRequested
+    // Update 後に再取得すると状態が RoutingRequested に更新されている。
+    match repo.FindById cargo.BookingId |> Async.RunSynchronously with
+    | Ok(Some found) -> found.State |> should equal RoutingRequested
+    | other -> failwithf "Some を期待したが: %A" other
 
 [<Fact>]
 let ``危険物予約を経路設計依頼後も種別が保持されて往復できる`` () =
