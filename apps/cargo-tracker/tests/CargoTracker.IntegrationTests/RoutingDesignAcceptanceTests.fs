@@ -328,3 +328,51 @@ let ``到着期限を短縮すると候補が絞られ緩和で再び算出さ�
 
         let relaxedBody = run (relaxed.Content.ReadAsStringAsync())
         relaxedBody |> should haveSubstring "V001")
+
+/// 指定した到着期限で予約し経路設計依頼まで進める。
+let private bookWithDeadline (client: HttpClient) (shipperUuid: string) (deadline: string) : string =
+    let salesCookie = authCookie client "sales01"
+
+    let bookRes =
+        authedPost
+            client
+            salesCookie
+            "/bookings"
+            [ "shipperId", shipperUuid
+              "originUnlocode", "JPTYO"
+              "destinationUnlocode", "USLAX"
+              "arrivalDeadline", deadline
+              "cargoType", "GENERAL"
+              "weightKg", "500" ]
+
+    let bookingId = (string bookRes.Headers.Location).Replace("/bookings/", "")
+
+    authedPost client salesCookie (sprintf "/bookings/%s/routing" bookingId) []
+    |> ignore
+
+    bookingId
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``緩和期限で見えた候補を確定してもドメインは元の期限で棄却する（US10 条件協議は営業経由）`` () =
+    withServer (fun client shipperUuid ->
+        // 元の期限 2026-09-15 < 航海 V001 到着 2026-09-20。
+        let bookingId = bookWithDeadline client shipperUuid "2026-09-15"
+        registerDirectVoyage client
+        let cookie = authCookie client "designer01"
+
+        // 期限を緩和（2026-12-31）すると候補が見える。
+        let relaxed =
+            authedGet client cookie (sprintf "/routing/requests/%s?deadline=2026-12-31" bookingId)
+
+        (run (relaxed.Content.ReadAsStringAsync())) |> should haveSubstring "V001"
+
+        // その候補を緩和期限のまま確定しようとすると、集約は元の期限で検証するため棄却される。
+        let proposeRes =
+            authedPost
+                client
+                cookie
+                (sprintf "/routing/requests/%s/propose" bookingId)
+                [ "candidateIndex", "0"; "deadline", "2026-12-31" ]
+
+        proposeRes.StatusCode |> should equal HttpStatusCode.BadRequest)

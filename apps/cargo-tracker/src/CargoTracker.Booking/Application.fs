@@ -173,8 +173,10 @@ module RouteAssignment =
             let! updated, events = Cargo.execute cargo command
             do! repo.Update updated
             // 永続化コミット後にのみイベントを順次発火する（ロールバック時は未発火）。
+            // post-commit のため永続化は既に確定済み。発火はベストエフォートとし、失敗しても
+            // 確定済みの結果を巻き戻さない（実消費への差し替え時はディスパッチャ側でリトライ/DLQ を担う）。
             for e in events do
-                do! (dispatcher.Dispatch e |> Async.map Ok)
+                do! (dispatcher.Dispatch e |> Async.Catch |> Async.map (fun _ -> Ok()))
 
             return updated, events
         }

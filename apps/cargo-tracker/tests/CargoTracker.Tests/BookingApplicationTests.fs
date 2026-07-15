@@ -367,3 +367,69 @@ let ``確定経路が無い予約への通知は業務ルール違反`` () =
     with
     | Error(BusinessRuleViolation(rule, _)) -> rule |> should equal "ShipperNotification"
     | other -> failwithf "BusinessRuleViolation を期待したが: %A" other
+
+[<Fact>]
+let ``ドメイン検証エラー時（不正遷移）はイベントを発火しない`` () =
+    // Preliminary（RoutingRequested 未満）へ proposeRoute → 不正遷移でイベント未発火。
+    let repo, store = repoStub ()
+
+    let cargo, _ =
+        match
+            BookCargo.book repo existingShipper (fixedId (Guid.NewGuid())) (baseCommand ())
+            |> Async.RunSynchronously
+        with
+        | Ok r -> r
+        | Error e -> failwithf "%A" e
+
+    let recorded = System.Collections.Generic.List<BookingEvent>()
+
+    match
+        RouteAssignment.proposeRoute repo (dispatcherStub recorded) cargo.BookingId (satisfyingItinerary ())
+        |> Async.RunSynchronously
+    with
+    | Error(InvalidStateTransition _) -> recorded.Count |> should equal 0
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
+    ignore store
+
+[<Fact>]
+let ``永続化失敗時はイベントを発火しない`` () =
+    // Update が必ず失敗する repo。RoutingRequested の予約に対して proposeRoute。
+    let store = System.Collections.Generic.Dictionary<string, Cargo>()
+
+    let baseRepo, _ = repoStub ()
+
+    let cargo, _ =
+        match
+            BookCargo.book baseRepo existingShipper (fixedId (Guid.NewGuid())) (baseCommand ())
+            |> Async.RunSynchronously
+        with
+        | Ok r -> r
+        | Error e -> failwithf "%A" e
+
+    let routing =
+        match Cargo.execute cargo SubmitForRouting with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    store[BookingId.value routing.BookingId] <- routing
+
+    let failingRepo =
+        { Save = fun _ -> async { return Ok() }
+          Update = fun _ -> async { return Error(BusinessRuleViolation("CargoRepository", "書き込み失敗")) }
+          FindById =
+            fun bid ->
+                async {
+                    match store.TryGetValue(BookingId.value bid) with
+                    | true, c -> return Ok(Some c)
+                    | false, _ -> return Ok None
+                } }
+
+    let recorded = System.Collections.Generic.List<BookingEvent>()
+
+    match
+        RouteAssignment.proposeRoute failingRepo (dispatcherStub recorded) routing.BookingId (satisfyingItinerary ())
+        |> Async.RunSynchronously
+    with
+    | Error(BusinessRuleViolation("CargoRepository", _)) -> recorded.Count |> should equal 0
+    | other -> failwithf "永続化失敗を期待したが: %A" other

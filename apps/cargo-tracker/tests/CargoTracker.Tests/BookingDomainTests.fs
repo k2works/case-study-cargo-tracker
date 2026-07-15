@@ -521,6 +521,38 @@ let ``Preliminary からの経路提案は不正遷移`` () =
     | other -> failwithf "InvalidStateTransition を期待したが: %A" other
 
 [<Fact>]
+let ``Preliminary からの予約確定は不正遷移`` () =
+    match Cargo.execute (preliminaryCargo ()) ConfirmBooking with
+    | Error(InvalidStateTransition(current, _)) -> current |> should equal "PRELIMINARY"
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
+[<Fact>]
+let ``RoutingRequested からの予約確定は不正遷移（経路提案前）`` () =
+    match Cargo.execute (routingRequestedCargo ()) ConfirmBooking with
+    | Error(InvalidStateTransition(current, _)) -> current |> should equal "ROUTING_REQUESTED"
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
+[<Fact>]
+let ``RouteProposed からの再経路提案は不正遷移`` () =
+    match Cargo.execute (routeProposedCargo ()) (ProposeRoute(satisfyingItinerary ())) with
+    | Error(InvalidStateTransition(current, _)) -> current |> should equal "ROUTE_PROPOSED"
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
+[<Fact>]
+let ``RoutingRequested からの差し戻しは不正遷移（確定前）`` () =
+    match Cargo.execute (routingRequestedCargo ()) RestoreToRouting with
+    | Error(InvalidStateTransition(current, _)) -> current |> should equal "ROUTING_REQUESTED"
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
+[<Fact>]
+let ``輸送区間は積込時刻と荷降時刻が等しいと Error（境界値）`` () =
+    let t = dto (2026, 8, 1)
+
+    match Leg.create (loc "JPTYO") (loc "USLAX") t t (voyageNo "V001") with
+    | Error(BusinessRuleViolation("Leg", _)) -> ()
+    | other -> failwithf "BusinessRuleViolation を期待したが: %A" other
+
+[<Fact>]
 let ``booking_status に ROUTE_PROPOSED と CONFIRMED が対応する`` () =
     BookingState.toString (RouteProposed(satisfyingItinerary ()))
     |> should equal "ROUTE_PROPOSED"
