@@ -11,6 +11,7 @@
     <Compile Include="EstimateRepositoryTests.fs" />
     <Compile Include="CargoRepositoryTests.fs" />
     <Compile Include="ShipperExistenceAdapterTests.fs" />
+    <Compile Include="VoyageRepositoryTests.fs" />
     <Compile Include="MigrationTests.fs" />
     <Compile Include="UnitOfWorkTests.fs" />
     <Compile Include="ViewTests.fs" />
@@ -37,6 +38,7 @@
     <ProjectReference Include="..\..\src\CargoTracker.Shared\CargoTracker.Shared.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Shipper\CargoTracker.Shipper.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Estimation\CargoTracker.Estimation.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Routing\CargoTracker.Routing.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Booking\CargoTracker.Booking.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Web\CargoTracker.Web.fsproj" />
   </ItemGroup>

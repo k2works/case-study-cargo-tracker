@@ -14,6 +14,7 @@
     <Compile Include="BookingDomainTests.fs" />
     <Compile Include="BookingApplicationTests.fs" />
     <Compile Include="RoutingDomainTests.fs" />
+    <Compile Include="RoutingApplicationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
