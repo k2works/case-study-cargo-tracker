@@ -139,7 +139,7 @@
 |---|--------|---------|------|------|
 | 3.1 | マイグレーション 0007（`leg` テーブル〔data-model 既定義〕を作成。`cargo.booking_status` は VARCHAR のため ROUTE_PROPOSED/CONFIRMED は値追加のみで DDL 変更不要。`routing_status`〔ROUTED/MISROUTED/NOT_ROUTED〕は経路決定結果の別概念で US09-13 には不要のため対象外）両方言 + data-model 反映 | 3h | - | [x] |
 | 3.2 | CargoRepository を CargoItinerary（leg 親子）の保存・復元に拡張（Update で旅程書き込み・FindById で復元）統合テスト | 4h | - | [x] |
-| 3.3 | US12 通知記録の永続化（`notification_log` 相当・最小実装）+ 統合テスト | 2h | - | [ ] |
+| 3.3 | US12 通知記録の永続化（`notification_log` 相当・最小実装）+ 統合テスト | 2h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -149,7 +149,7 @@
 |---|--------|---------|------|------|
 | 4.1 | 経路設計画面（`/routing/requests/{bookingId}`）に**経路候補の選択・確定→予約紐付け**（US09/US11）を追加 + 受入テスト | 4h | - | [x] |
 | 4.2 | **条件調整・再算出**（US10・期限延長等で computeRoutes 再実行）+ 受入テスト。営業への条件協議依頼導線 | 3h | - | [ ] |
-| 4.3 | 予約詳細（`/bookings/{bookingId}`）に**確定経路表示・荷主通知（US12）・予約確定（US13）・差し戻し・キャンセル**を追加 + 受入テスト（状態遷移確認）| 4h | - | [x]（US12 通知は task3.3 と併せて対応予定）|
+| 4.3 | 予約詳細（`/bookings/{bookingId}`）に**確定経路表示・荷主通知（US12）・予約確定（US13）・差し戻し・キャンセル**を追加 + 受入テスト（状態遷移確認）| 4h | - | [x] |
 
 **小計**: 11h（理想時間）
 
