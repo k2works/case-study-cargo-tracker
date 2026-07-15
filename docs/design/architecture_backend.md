@@ -601,7 +601,13 @@ end note
 
 ### 関数合成による実装方針（MediatR 不使用）
 
+> **改訂（IT5・2026-09-19）**: 下記の Shared 集約 `DomainEvent` + `EventDispatcher` は当初案。
+> 実装は **BC ローカルイベント DU**（`BookingEvent`〔Booking〕・`TrackingEvent`〔Tracking〕・`HandlingEvent`〔Handling〕）
+> と、合成層の消費ディスパッチャ（`BookingEventConsumer`）に置換済み。post-commit の不変条件は維持。
+> 現行の正は ADR-0002「決定の改訂（IT5）」。下記コードは設計経緯として保存する。
+
 ```fsharp
+// 【当初案・IT5 で BC ローカル DU に置換】
 // Shared/Events.fs — ドメインイベントは判別共用体で定義する
 // 各ケースはプリミティブ / 共有型のみを持つ Payload レコードで構成し、
 // Shared に配置することで BC → Event → 全 BC の循環参照を回避する（ADR-0002 参照）

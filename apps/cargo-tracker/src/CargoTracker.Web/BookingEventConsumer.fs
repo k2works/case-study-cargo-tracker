@@ -53,19 +53,24 @@ let create (conn: IDbConnection) (clock: Clock) (newId: IdGenerator) : BookingEv
     { Dispatch =
         fun (event: BookingEvent) ->
             async {
-                match event with
-                | BookingConfirmed bookingId ->
-                    let bid = BookingId.value bookingId
+                // dispatch はベストエフォート。alreadyIssued の COUNT を含め DB 例外を握り、
+                // 確定済み予約（applyCommand が post-commit）を巻き戻さない。
+                try
+                    match event with
+                    | BookingConfirmed bookingId ->
+                        let bid = BookingId.value bookingId
 
-                    if not (alreadyIssued conn bid) then
-                        let repo = CargoTracker.Tracking.Infrastructure.TrackingRepository.create conn clock
-                        let notifier = trackingNotifier conn clock
-                        let trackingBookingId = CargoTracker.Tracking.Domain.TrackingBookingId.ofString bid
+                        if not (alreadyIssued conn bid) then
+                            let repo = CargoTracker.Tracking.Infrastructure.TrackingRepository.create conn clock
+                            let notifier = trackingNotifier conn clock
+                            let trackingBookingId = CargoTracker.Tracking.Domain.TrackingBookingId.ofString bid
 
-                        let! result = IssueTracking.issue repo notifier newId trackingBookingId
+                            let! result = IssueTracking.issue repo notifier newId trackingBookingId
 
-                        match result with
-                        | Ok _ -> ()
-                        | Error e -> printfn "[BookingEventConsumer] 追跡番号発行に失敗: %A" e
-                | other -> printfn "[BookingEventConsumer] 未消費イベント: %A" other
+                            match result with
+                            | Ok _ -> ()
+                            | Error e -> printfn "[BookingEventConsumer] 追跡番号発行に失敗: %A" e
+                    | other -> printfn "[BookingEventConsumer] 未消費イベント: %A" other
+                with ex ->
+                    printfn "[BookingEventConsumer] dispatch 例外を握り潰し（予約は確定済み）: %s" ex.Message
             } }

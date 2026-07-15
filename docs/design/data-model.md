@@ -876,12 +876,11 @@ module ShipperRepository =
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
-| `access_token` | `VARCHAR(64)` | `UK, NOT NULL` | 公開追跡照会用トークン（US18・IT5 0009 で追加） |
-| :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
-| `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー。単一ケース DU `TrackingId of string` に対応） |
+| `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー。単一ケース DU `TrackingNumber of string` に対応） |
 | `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
-| `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus） |
+| `transport_status` | `VARCHAR(30)` | `NOT NULL` | 輸送状態（TransportStatus・導出値の非正規化キャッシュ） |
+| `access_token` | `VARCHAR(64)` | `UK, NOT NULL` | 公開追跡照会用トークン（US18・IT5 0009 で追加） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック用バージョン（ADR-0001） |
@@ -941,13 +940,13 @@ module ShipperRepository =
 
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
-| `consignee_confirmation` | `VARCHAR(255)` | | 引取時の荷受人確認（US16・IT5 0010 で追加） |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
 | `event_type` | `VARCHAR(30)` | `NOT NULL` | 荷役タイプ（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM） |
 | `event_completion_time` | `TIMESTAMP` | `NOT NULL` | 荷役完了日時 |
 | `location_unlocode` | `VARCHAR(5)` | `FK → location.unlocode, NOT NULL` | 作業場所（UN/LOCODE） |
 | `voyage_number` | `VARCHAR(20)` | | 関連する航海番号（LOAD / UNLOAD 時に設定） |
+| `consignee_confirmation` | `VARCHAR(255)` | | 引取時の荷受人確認（US16・IT5 0010 で追加） |
 | `operator_name` | `VARCHAR(200)` | | 作業員名 |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |

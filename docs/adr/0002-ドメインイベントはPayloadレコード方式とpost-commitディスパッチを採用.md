@@ -29,7 +29,11 @@ F# は .fsproj に記述されたファイル順で上から順にコンパイ�
 
 また、永続化前にイベントをディスパッチすると、トランザクションがロールバックした場合に未コミットデータに基づく通知が他コンテキストへ届いてしまい、コンテキスト間のデータ不整合を引き起こします。
 
-## 決定
+## 決定（当初・IT5 で改訂）
+
+> **注記（2026-09-19 改訂）**: 本節の (1) Payload レコード方式・(2) `UnitOfWork.execute` ディスパッチは
+> IT5 で置換済み。現行の正は上記「決定の改訂（IT5）」節。以下は経緯として保存する。
+> **post-commit の不変条件（コミット後のみ発火・ロールバック時非発火）のみ現行でも有効**。
 
 **DomainEvent は Payload レコード方式で定義し、post-commit ディスパッチを採用します。**
 
@@ -46,11 +50,13 @@ F# は .fsproj に記述されたファイル順で上から順にコンパイ�
 
 - **Transactional Outbox パターン**: イベントを同一トランザクション内で outbox テーブルに永続化し、別プロセスが配信する方式。プロセスクラッシュ時のイベント喪失も防げますが、現時点の同一プロセス内同期イベントには過剰です。高可用性要件が上がった際の移行先として記録します。
 
-## 影響
+## 影響（当初・IT5 で改訂）
 
-- イベントハンドラは `DomainEvent -> Async<unit>` の関数リストとして合成ルートで登録し、`EventDispatcher.create` で合成します（`docs/design/architecture_backend.md` 参照）。
-- 集約関数のシグネチャは `State * DomainEvent list`（または `State * DomainEvent`）を返す形に統一します。
-- Payload レコードの追加により `CargoTracker.Shared` が肥大化する可能性がありますが、イベント Payload に限定することで許容範囲に抑えます。
+> **注記（2026-09-19 改訂）**: 以下は当初想定の影響。現行実装は「決定の改訂（IT5）」に置換済み。
+
+- ~~イベントハンドラは `DomainEvent -> Async<unit>` の関数リストとして合成ルートで登録し、`EventDispatcher.create` で合成します~~ → 現行は BC ローカルイベント DU を合成層の消費ディスパッチャ（`BookingEventConsumer`）で消費。
+- ~~集約関数のシグネチャは `State * DomainEvent list` を返す形に統一~~ → 現行はワークフロー（`applyCommand`）が `repo.Update` 成功後に BC ローカルイベントを post-commit 発火。
+- ~~Payload レコードの追加により `CargoTracker.Shared` が肥大化~~ → 現行はイベント DU を各 BC に配置するため Shared は肥大化しない。
 
 ## コンプライアンス
 
