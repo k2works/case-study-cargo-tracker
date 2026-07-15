@@ -129,9 +129,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `TransportStatus`（9 ケース DU）を Shared へ配置（`toString`/`ofString`・網羅 + Error フォールバック）+ FsCheck。Tracking 固有 `TrackingStatus`（同一 9 ケース・別型）と `TrackingEventType.toStatus` を実装。`TrackingNumber`（単一ケース DU・一意採番） | 3h | - | [ ] |
-| 1.2 | `TrackingActivity` 集約（`TrackingNumber`・`TrackingBookingId`・`TrackingActivityEvent list`〔時系列新しい順〕）と、**状態は保持せず `currentStatus` 関数でイベント履歴から導出**。イベント追加遷移（`recordHandling`/`recordManualUpdate`）を `execute` で保証 + FsCheck（導出状態の網羅） | 4h | - | [ ] |
-| 1.3 | 追跡番号発行ファクトリ（`issue`・Confirmed 予約から生成・イベント空＝`NotReceived` 導出・`TrackingNumberIssued` イベント）+ ユニット | 2h | - | [ ] |
+| 1.1 | `TransportStatus`（9 ケース DU）を Shared へ配置（`toString`/`ofString`・網羅 + Error フォールバック）+ FsCheck。Tracking 固有 `TrackingStatus`（同一 9 ケース・別型）と `TrackingEventType.toStatus` を実装。`TrackingNumber`（単一ケース DU・一意採番） | 3h | - | [x] |
+| 1.2 | `TrackingActivity` 集約（`TrackingNumber`・`TrackingBookingId`・`TrackingActivityEvent list`〔時系列新しい順〕）と、**状態は保持せず `currentStatus` 関数でイベント履歴から導出**。イベント追加遷移（`recordHandling`/`recordManualUpdate`）を `execute` で保証 + FsCheck（導出状態の網羅） | 4h | - | [x] |
+| 1.3 | 追跡番号発行ファクトリ（`issue`・Confirmed 予約から生成・イベント空＝`NotReceived` 導出・`TrackingNumberIssued` イベント）+ ユニット | 2h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -188,7 +188,7 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| Tracking ドメイン | 4 | 9h | [ ] |
+| Tracking ドメイン | 4 | 9h | [x] |
 | Handling ドメイン | 5 | 7h | [ ] |
 | BC 間イベント連携・ADR 決着 | — | 9h | [ ] |
 | インフラ（追跡・荷役永続化）| — | 9h | [ ] |
@@ -197,7 +197,7 @@
 | **合計** | **17** | **48h** | |
 
 **1 SP あたり**: 約 2.8h（ストーリー分 48h / 17 SP）
-**進捗率**: 0% (0/17 SP)
+**進捗率**: 24% (4/17 SP)
 
 > **スコープ注記（過積載）**: 17 SP は直近ベロシティ（12-14 SP）を上回る。フィーチャバッファ消費ルール（release_plan）に従い、**US17（手動更新・2 SP）を最初の切り出し候補**とする。US14/US15/US18 は Release 1.0 の E2E（US13・US15・US18）に必須のため死守。US16（引取）は精算開始条件のため次点で保持。
 
