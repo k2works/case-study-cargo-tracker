@@ -143,6 +143,8 @@ module Views =
         match status with
         | "PRELIMINARY" -> "仮受付"
         | "ROUTING_REQUESTED" -> "経路設計中"
+        | "ROUTE_PROPOSED" -> "経路確定"
+        | "CONFIRMED" -> "予約確定"
         | "CANCELLED" -> "キャンセル"
         | other -> other
 
@@ -873,7 +875,8 @@ module Views =
 
     /// 経路候補の表示行（US08）。
     type RouteCandidateRow =
-        { VoyageNumbers: string
+        { Index: int
+          VoyageNumbers: string
           TransitPorts: string
           TransitDays: int
           EstimatedCost: string
@@ -902,7 +905,13 @@ module Views =
                                  emptyText) ]
                       td [] [ str (if c.TransitPorts = "" then "-" else c.TransitPorts) ]
                       td [] [ str (sprintf "%d 日" c.TransitDays) ]
-                      td [] [ str c.EstimatedCost ] ])
+                      td [] [ str c.EstimatedCost ]
+                      td
+                          []
+                          [ form
+                                [ _method "post"; _action (sprintf "/routing/requests/%s/propose" bookingId) ]
+                                [ input [ _type "hidden"; _name "candidateIndex"; _value (string c.Index) ]
+                                  button [ _type "submit"; _class "btn btn-sm btn-primary" ] [ str "この経路で確定" ] ] ] ])
 
         layout
             "経路設計"
@@ -928,7 +937,8 @@ module Views =
                                    [ th [] [ str "航海番号" ]
                                      th [] [ str "経由港" ]
                                      th [] [ str "所要日数" ]
-                                     th [] [ str "概算費用（暫定）" ] ] ]
+                                     th [] [ str "概算費用（暫定）" ]
+                                     th [] [ str "操作" ] ] ]
                          tbody [] candidateRows ])
               (if List.isEmpty candidates then
                    emptyText

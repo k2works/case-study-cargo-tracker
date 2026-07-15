@@ -50,6 +50,15 @@ module StubRoutingRequestNotifier =
     let create () : RoutingRequestNotifier =
         { Notify = fun (_bookingId: BookingId) -> async { return Ok() } }
 
+/// Booking ドメインイベントのディスパッチャ実装（ADR-0002）。
+/// 現時点では発火先の他コンテキスト（Routing/Tracking 消費側）が未接続のため、
+/// イベントを標準出力へログ出力するに留める（post-commit 発火の配線自体は RouteAssignment で完了）。
+/// 後続 IT で実消費（Tracking 追跡番号発行等）へ差し替える。
+module StubBookingEventDispatcher =
+
+    let create () : BookingEventDispatcher =
+        { Dispatch = fun (event: BookingEvent) -> async { printfn "[BookingEvent] %A" event } }
+
 /// 荷主存在確認 ACL のアダプタ（ADR-0008）。Shipper プロジェクトを参照せず、
 /// shipper テーブルを shipper_uuid（ShipperId の Guid）で直接照会する（BC 分離）。
 module ShipperExistenceAdapter =

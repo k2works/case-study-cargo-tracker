@@ -191,3 +191,40 @@ let ``航海が無い予約の経路設計は候補なしの案内を表示す�
         res.StatusCode |> should equal HttpStatusCode.OK
         let body = run (res.Content.ReadAsStringAsync())
         body |> should haveSubstring "経路候補がありません")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``経路候補を確定すると予約が経路確定状態になり詳細に反映される`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookAndRequestRouting client shipperUuid
+        registerDirectVoyage client
+        let cookie = authCookie client "designer01"
+
+        // 先頭候補（index 0）を選択して確定する。
+        let proposeRes =
+            authedPost client cookie (sprintf "/routing/requests/%s/propose" bookingId) [ "candidateIndex", "0" ]
+
+        // PRG: 予約詳細へリダイレクトする。
+        proposeRes.StatusCode |> should equal HttpStatusCode.Found
+
+        (string proposeRes.Headers.Location)
+        |> should haveSubstring (sprintf "/bookings/%s" bookingId)
+
+        // 予約詳細で経路確定状態が表示される（営業ロールで確認）。
+        let salesCookie = authCookie client "sales01"
+        let detail = authedGet client salesCookie (sprintf "/bookings/%s" bookingId)
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "経路確定")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``不正な候補インデックスの確定は 400 を返す`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookAndRequestRouting client shipperUuid
+        registerDirectVoyage client
+        let cookie = authCookie client "designer01"
+
+        let res =
+            authedPost client cookie (sprintf "/routing/requests/%s/propose" bookingId) [ "candidateIndex", "99" ]
+
+        res.StatusCode |> should equal HttpStatusCode.BadRequest)

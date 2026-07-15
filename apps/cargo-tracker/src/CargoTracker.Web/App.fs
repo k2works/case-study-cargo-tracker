@@ -765,6 +765,41 @@ let private routingRequests: HttpHandler =
 
         htmlView (Views.routingRequestList (rolesOf ctx) rows) next ctx
 
+/// 予約の輸送条件から経路候補（Routing 固有型）を算出する（US08）。
+/// 選択画面表示（routingDesign）と確定（routingPropose）で同一の候補列を再現するため共通化する。
+let private computeCandidatesForBooking
+    (conn: System.Data.IDbConnection)
+    (b: CargoTracker.Booking.Infrastructure.CargoListItem)
+    : Async<CargoTracker.Routing.Domain.RouteCandidate list> =
+    async {
+        let originResult = CargoTracker.Shared.Domain.Location.create b.Origin
+        let destResult = CargoTracker.Shared.Domain.Location.create b.Destination
+
+        let deadline =
+            match System.DateOnly.TryParse b.ArrivalDeadline with
+            | true, d -> System.DateTimeOffset(d.ToDateTime(System.TimeOnly(23, 59, 0)), System.TimeSpan.Zero)
+            | _ -> System.DateTimeOffset.MaxValue
+
+        match originResult, destResult with
+        | Ok origin, Ok destination ->
+            let query: CargoTracker.Routing.Domain.RouteQuery =
+                { Origin = origin
+                  Destination = destination
+                  CargoType = toCargoTypeTag b.CargoType
+                  Deadline = deadline }
+
+            let repo =
+                CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+
+            let! result = CargoTracker.Routing.Application.VoyageWorkflow.computeRoutes repo query
+
+            return
+                (match result with
+                 | Ok candidates -> candidates
+                 | Error _ -> [])
+        | _ -> return []
+    }
+
 /// 経路設計・候補算出（`/routing/requests/{bookingId}`・US07/US08）。
 let private routingDesign (bookingIdStr: string) : HttpHandler =
     mustHaveRole "ROLE_ROUTE_DESIGNER"
@@ -780,60 +815,87 @@ let private routingDesign (bookingIdStr: string) : HttpHandler =
             match booking with
             | None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Some b ->
-                // 予約の輸送条件から経路探索クエリを構成する。
-                let originResult = CargoTracker.Shared.Domain.Location.create b.Origin
-                let destResult = CargoTracker.Shared.Domain.Location.create b.Destination
+                let! candidates = computeCandidatesForBooking conn b
 
-                let deadline =
-                    match System.DateOnly.TryParse b.ArrivalDeadline with
-                    | true, d -> System.DateTimeOffset(d.ToDateTime(System.TimeOnly(23, 59, 0)), System.TimeSpan.Zero)
-                    | _ -> System.DateTimeOffset.MaxValue
+                let candidateRows =
+                    candidates
+                    |> List.mapi (fun i c ->
+                        { Views.RouteCandidateRow.Index = i
+                          Views.RouteCandidateRow.VoyageNumbers =
+                            c.Legs
+                            |> List.map (fun l -> CargoTracker.Routing.Domain.VoyageNumber.value l.VoyageNumber)
+                            |> String.concat " → "
+                          Views.RouteCandidateRow.TransitPorts =
+                            c.TransitPorts
+                            |> List.map CargoTracker.Shared.Domain.Location.value
+                            |> String.concat ", "
+                          Views.RouteCandidateRow.TransitDays = c.TransitDays
+                          Views.RouteCandidateRow.EstimatedCost = sprintf "¥%s" (c.EstimatedCost.ToString("N0"))
+                          Views.RouteCandidateRow.IsDirect = c.IsDirect })
 
-                match originResult, destResult with
-                | Ok origin, Ok destination ->
-                    let query: CargoTracker.Routing.Domain.RouteQuery =
-                        { Origin = origin
-                          Destination = destination
-                          CargoType = toCargoTypeTag b.CargoType
-                          Deadline = deadline }
+                return!
+                    htmlView
+                        (Views.routingDesign
+                            (rolesOf ctx)
+                            bookingIdStr
+                            b.Origin
+                            b.Destination
+                            b.ArrivalDeadline
+                            candidateRows)
+                        next
+                        ctx
+        }
 
-                    let repo =
-                        CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+/// 経路候補の選択・確定（`POST /routing/requests/{bookingId}/propose`・US09/US11）。
+/// 表示時と同じ候補列を再算出し、選択された候補を Booking の旅程へ変換して予約に紐付ける。
+let private routingPropose (bookingIdStr: string) : HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
 
-                    let! result = CargoTracker.Routing.Application.VoyageWorkflow.computeRoutes repo query
+            let booking =
+                CargoTracker.Booking.Infrastructure.CargoQueries.findAll conn
+                |> List.tryFind (fun i -> i.BookingId = bookingIdStr)
 
-                    let candidateRows =
+            match booking with
+            | None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+            | Some b ->
+                let! candidates = computeCandidatesForBooking conn b
+                let! form = ctx.Request.ReadFormAsync()
+
+                let selectedIndex =
+                    match System.Int32.TryParse(string form.["candidateIndex"]) with
+                    | true, i -> Some i
+                    | _ -> None
+
+                match selectedIndex |> Option.bind (fun i -> List.tryItem i candidates) with
+                | None -> return! (setStatusCode 400 >=> text "選択された経路候補が不正です。") next ctx
+                | Some candidate ->
+                    match CargoTracker.Web.RouteAcl.toCargoItinerary candidate with
+                    | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+                    | Ok itinerary ->
+                        let repo =
+                            CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+                        let dispatcher =
+                            CargoTracker.Booking.Infrastructure.StubBookingEventDispatcher.create ()
+
+                        let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
+
+                        let! result =
+                            CargoTracker.Booking.Application.RouteAssignment.proposeRoute
+                                repo
+                                dispatcher
+                                bookingId
+                                itinerary
+
                         match result with
-                        | Ok candidates ->
-                            candidates
-                            |> List.map (fun c ->
-                                { Views.RouteCandidateRow.VoyageNumbers =
-                                    c.Legs
-                                    |> List.map (fun l ->
-                                        CargoTracker.Routing.Domain.VoyageNumber.value l.VoyageNumber)
-                                    |> String.concat " → "
-                                  Views.RouteCandidateRow.TransitPorts =
-                                    c.TransitPorts
-                                    |> List.map CargoTracker.Shared.Domain.Location.value
-                                    |> String.concat ", "
-                                  Views.RouteCandidateRow.TransitDays = c.TransitDays
-                                  Views.RouteCandidateRow.EstimatedCost =
-                                    sprintf "¥%s" (c.EstimatedCost.ToString("N0"))
-                                  Views.RouteCandidateRow.IsDirect = c.IsDirect })
-                        | Error _ -> []
-
-                    return!
-                        htmlView
-                            (Views.routingDesign
-                                (rolesOf ctx)
-                                bookingIdStr
-                                b.Origin
-                                b.Destination
-                                b.ArrivalDeadline
-                                candidateRows)
-                            next
-                            ctx
-                | _ -> return! (setStatusCode 400 >=> text "予約の出発地・目的地が不正です。") next ctx
+                        | Ok _ -> return! redirectTo false (sprintf "/bookings/%s" bookingIdStr) next ctx
+                        | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                            return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+                        | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
 
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
@@ -873,7 +935,8 @@ let webApp: HttpHandler =
                     routef "/bookings/%s/routing" bookingSubmitRouting
                     route "/voyages" >=> voyageCreate
                     routef "/voyages/%s/edit" voyageUpdate
-                    routef "/voyages/%s/confirm" voyageConfirm ]
+                    routef "/voyages/%s/confirm" voyageConfirm
+                    routef "/routing/requests/%s/propose" routingPropose ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。
