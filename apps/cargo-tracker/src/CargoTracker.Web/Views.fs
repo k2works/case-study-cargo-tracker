@@ -189,6 +189,137 @@ module Views =
                                 th [] [ str "状態" ] ] ]
                     tbody [] bodyRows ] ]
 
+    /// 荷主選択肢（貨物予約フォーム）。
+    type ShipperChoice = { Uuid: string; Label: string }
+
+    /// 貨物予約登録フォームの入力値（エラー時の再表示に使う）。
+    type BookingFormValues =
+        { ShipperId: string
+          OriginUnlocode: string
+          DestinationUnlocode: string
+          ArrivalDeadline: string
+          CargoType: string
+          WeightKg: string
+          HazardClass: string
+          UnNumber: string
+          ProperShippingName: string
+          MinTemperature: string
+          MaxTemperature: string
+          TemperatureUnit: string }
+
+    let emptyBookingForm: BookingFormValues =
+        { ShipperId = ""
+          OriginUnlocode = ""
+          DestinationUnlocode = ""
+          ArrivalDeadline = ""
+          CargoType = "GENERAL"
+          WeightKg = ""
+          HazardClass = ""
+          UnNumber = ""
+          ProperShippingName = ""
+          MinTemperature = ""
+          MaxTemperature = ""
+          TemperatureUnit = "CELSIUS" }
+
+    /// 貨物予約登録フォーム画面（`/bookings/new`・US04/US05）。
+    /// 種別連動フィールドの表示は cargoType の選択に応じてクライアント側で切り替える
+    /// （必須検証はサーバー側 BookCargo.book で担保する）。
+    let bookingForm
+        (roles: string list)
+        (shippers: ShipperChoice list)
+        (values: BookingFormValues)
+        (error: string option)
+        : XmlNode =
+        let field labelText name value inputType =
+            div
+                [ _class "mb-3" ]
+                [ label [ _class "form-label"; _for name ] [ str labelText ]
+                  input [ _class "form-control"; _id name; _name name; _value value; _type inputType ] ]
+
+        let shipperOptions =
+            option [ _value "" ] [ str "-- 荷主を選択 --" ]
+            :: (shippers
+                |> List.map (fun s ->
+                    option
+                        (if s.Uuid = values.ShipperId then
+                             [ _value s.Uuid; _selected ]
+                         else
+                             [ _value s.Uuid ])
+                        [ str s.Label ]))
+
+        let cargoTypeOption v label =
+            option
+                (if values.CargoType = v then
+                     [ _value v; _selected ]
+                 else
+                     [ _value v ])
+                [ str label ]
+
+        let unitOption v label =
+            option
+                (if values.TemperatureUnit = v then
+                     [ _value v; _selected ]
+                 else
+                     [ _value v ])
+                [ str label ]
+
+        layout
+            "貨物予約登録"
+            roles
+            [ h1 [ _class "mb-4" ] [ str "新規予約登録" ]
+              (match error with
+               | Some msg -> div [ _class "alert alert-danger" ] [ str msg ]
+               | None -> emptyText)
+              form
+                  [ _method "post"; _action "/bookings" ]
+                  [ div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "shipperId" ] [ str "荷主" ]
+                          select [ _class "form-select"; _id "shipperId"; _name "shipperId" ] shipperOptions ]
+                    field "出発地（UN/LOCODE）" "originUnlocode" values.OriginUnlocode "text"
+                    field "目的地（UN/LOCODE）" "destinationUnlocode" values.DestinationUnlocode "text"
+                    field "希望到着期限" "arrivalDeadline" values.ArrivalDeadline "date"
+                    field "重量（kg）" "weightKg" values.WeightKg "number"
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "cargoType" ] [ str "貨物種別" ]
+                          select
+                              [ _class "form-select"
+                                _id "cargoType"
+                                _name "cargoType"
+                                attr "onchange" "toggleCargoFields()" ]
+                              [ cargoTypeOption "GENERAL" "一般"
+                                cargoTypeOption "HAZARDOUS" "危険物"
+                                cargoTypeOption "REFRIGERATED" "冷凍・冷蔵" ] ]
+                    div
+                        [ _id "hazardousFields" ]
+                        [ field "危険物クラス" "hazardClass" values.HazardClass "text"
+                          field "UN 番号" "unNumber" values.UnNumber "text"
+                          field "正式輸送品名" "properShippingName" values.ProperShippingName "text" ]
+                    div
+                        [ _id "refrigeratedFields" ]
+                        [ field "最低温度" "minTemperature" values.MinTemperature "number"
+                          field "最高温度" "maxTemperature" values.MaxTemperature "number"
+                          div
+                              [ _class "mb-3" ]
+                              [ label [ _class "form-label"; _for "temperatureUnit" ] [ str "温度単位" ]
+                                select
+                                    [ _class "form-select"; _id "temperatureUnit"; _name "temperatureUnit" ]
+                                    [ unitOption "CELSIUS" "摂氏"; unitOption "FAHRENHEIT" "華氏" ] ] ]
+                    button [ _class "btn btn-primary"; _type "submit" ] [ str "登録" ]
+                    a [ _class "btn btn-secondary ms-2"; _href "/bookings" ] [ str "キャンセル" ] ]
+              script
+                  []
+                  [ rawText
+                        """
+                        function toggleCargoFields() {
+                          var t = document.getElementById('cargoType').value;
+                          document.getElementById('hazardousFields').style.display = (t === 'HAZARDOUS') ? 'block' : 'none';
+                          document.getElementById('refrigeratedFields').style.display = (t === 'REFRIGERATED') ? 'block' : 'none';
+                        }
+                        document.addEventListener('DOMContentLoaded', toggleCargoFields);
+                        """ ] ]
+
     /// 荷主登録フォームの入力値（エラー時の再表示に使う）。
     type ShipperFormValues =
         { Name: string

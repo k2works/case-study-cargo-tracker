@@ -101,6 +101,51 @@ let private authedGet (client: HttpClient) (cookie: string) (path: string) =
     req.Headers.Add("Cookie", cookie)
     run (client.SendAsync req)
 
+let private authedPost (client: HttpClient) (cookie: string) (path: string) (fields: (string * string) list) =
+    use req = new HttpRequestMessage(HttpMethod.Post, path)
+    req.Headers.Add("Cookie", cookie)
+    req.Content <- new FormUrlEncodedContent(dict fields)
+    run (client.SendAsync req)
+
+/// 荷主を 1 件登録し、その shipper_uuid（Guid）を返す。
+let private seedShipper (connStr: string) : string =
+    let guid = System.Guid.NewGuid()
+    use conn = new SqliteConnection(connStr)
+    conn.Open()
+    use cmd = conn.CreateCommand()
+
+    cmd.CommandText <-
+        sprintf
+            """
+            INSERT INTO shipper
+                (shipper_code, shipper_uuid, shipper_type, name, email, discount_rate, created_at, updated_at, version)
+            VALUES ('SHP-TEST0001', '%s', 'INDIVIDUAL', 'テスト荷主', 'ship@example.com', 0, '2026-07-28', '2026-07-28', 0);
+            """
+            (guid.ToString("D"))
+
+    cmd.ExecuteNonQuery() |> ignore
+    guid.ToString("D")
+
+/// サーバーを起動し、荷主を 1 件シードしたうえで (client, shipperUuid) をテストへ渡す。
+let private withSeededShipper (test: HttpClient -> string -> unit) =
+    let dbFile =
+        Path.Combine(Path.GetTempPath(), sprintf "cargo_bkgs_%s.db" (System.Guid.NewGuid().ToString("N")))
+
+    let connStr = sprintf "Data Source=%s" dbFile
+    seedDatabase connStr
+    let shipperUuid = seedShipper connStr
+    use server = buildServer connStr
+    let client = server.CreateClient()
+
+    try
+        test client shipperUuid
+    finally
+        server.Dispose()
+        SqliteConnection.ClearAllPools()
+
+        if File.Exists dbFile then
+            File.Delete dbFile
+
 [<Fact>]
 [<Trait("Category", "Integration")>]
 let ``営業ロールは貨物予約一覧を表示できる`` () =
@@ -139,3 +184,83 @@ let ``ナビゲーション整合性: 荷役ロールのダッシュボードに
         let dashboard = authedGet client cookie "/"
         let body = run (dashboard.Content.ReadAsStringAsync())
         body |> should not' (haveSubstring "/bookings"))
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``営業ロールは貨物予約登録フォームを表示できる`` () =
+    withSeededShipper (fun client _uuid ->
+        let cookie = authCookie client "sales01"
+        let res = authedGet client cookie "/bookings/new"
+        res.StatusCode |> should equal HttpStatusCode.OK
+        let body = run (res.Content.ReadAsStringAsync())
+        body |> should haveSubstring "新規予約登録"
+        body |> should haveSubstring "テスト荷主")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``一般貨物の予約を登録すると一覧へリダイレクトし永続化される`` () =
+    withSeededShipper (fun client uuid ->
+        let cookie = authCookie client "sales01"
+
+        let res =
+            authedPost
+                client
+                cookie
+                "/bookings"
+                [ "shipperId", uuid
+                  "originUnlocode", "JPTYO"
+                  "destinationUnlocode", "USLAX"
+                  "arrivalDeadline", "2026-09-01"
+                  "cargoType", "GENERAL"
+                  "weightKg", "500" ]
+
+        // PRG（Post/Redirect/Get）で 302 リダイレクト
+        res.StatusCode |> should equal HttpStatusCode.Found
+
+        // 一覧に登録された予約が表示される
+        let list = authedGet client cookie "/bookings"
+        let body = run (list.Content.ReadAsStringAsync())
+        body |> should haveSubstring "BKG-")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``危険物の必須情報が欠けると 400 になる`` () =
+    withSeededShipper (fun client uuid ->
+        let cookie = authCookie client "sales01"
+
+        let res =
+            authedPost
+                client
+                cookie
+                "/bookings"
+                [ "shipperId", uuid
+                  "originUnlocode", "JPTYO"
+                  "destinationUnlocode", "USLAX"
+                  "arrivalDeadline", "2026-09-01"
+                  "cargoType", "HAZARDOUS"
+                  "weightKg", "500"
+                  "hazardClass", ""
+                  "unNumber", ""
+                  "properShippingName", "" ]
+
+        res.StatusCode |> should equal HttpStatusCode.BadRequest)
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``存在しない荷主を指定すると 400 になる`` () =
+    withSeededShipper (fun client _uuid ->
+        let cookie = authCookie client "sales01"
+
+        let res =
+            authedPost
+                client
+                cookie
+                "/bookings"
+                [ "shipperId", System.Guid.NewGuid().ToString("D")
+                  "originUnlocode", "JPTYO"
+                  "destinationUnlocode", "USLAX"
+                  "arrivalDeadline", "2026-09-01"
+                  "cargoType", "GENERAL"
+                  "weightKg", "500" ]
+
+        res.StatusCode |> should equal HttpStatusCode.BadRequest)

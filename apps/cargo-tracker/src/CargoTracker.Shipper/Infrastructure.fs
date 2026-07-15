@@ -18,7 +18,23 @@ type ShipperListItem =
       ShipperType: string
       DiscountRate: decimal }
 
+/// 荷主選択用の軽量読み取りモデル（貨物予約フォームの荷主ドロップダウン・ADR-0008）。
+type ShipperOption =
+    { Uuid: string
+      Code: string
+      Name: string }
+
 module ShipperQueries =
+
+    /// 荷主選択肢を取得する（コード順・shipper_uuid を持つ荷主のみ）。
+    let findAllForSelection (conn: IDbConnection) : ShipperOption list =
+        conn
+        |> Db.newCommand
+            "SELECT shipper_uuid, shipper_code, name FROM shipper WHERE shipper_uuid IS NOT NULL ORDER BY shipper_code"
+        |> Db.query (fun rd ->
+            { Uuid = rd.ReadString "shipper_uuid"
+              Code = rd.ReadString "shipper_code"
+              Name = rd.ReadString "name" })
 
     /// 荷主一覧を取得する（コード順）。
     let findAll (conn: IDbConnection) : ShipperListItem list =

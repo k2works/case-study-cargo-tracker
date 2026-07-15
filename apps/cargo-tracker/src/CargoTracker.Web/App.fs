@@ -235,6 +235,103 @@ let private bookingList: HttpHandler =
 
         htmlView (Views.bookingList (rolesOf ctx) rows) next ctx
 
+/// 荷主選択肢を読み込む（貨物予約フォーム用・ADR-0008）。
+let private loadShipperChoices (conn: IDbConnection) : Views.ShipperChoice list =
+    CargoTracker.Shipper.Infrastructure.ShipperQueries.findAllForSelection conn
+    |> List.map (fun s ->
+        { Views.ShipperChoice.Uuid = s.Uuid
+          Views.ShipperChoice.Label = sprintf "%s（%s）" s.Name s.Code })
+
+/// 貨物予約登録フォーム（`/bookings/new`・US04/US05）。
+let private bookingNew: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        let factory = ctx.GetService<ConnectionFactory>()
+        use conn = factory ()
+        let shippers = loadShipperChoices conn
+        htmlView (Views.bookingForm (rolesOf ctx) shippers Views.emptyBookingForm None) next ctx
+
+/// フォーム入力から CargoTypeInput を組み立てる（未入力はドメイン層で検証・弾く）。
+let private buildCargoTypeInput (get: string -> string) : CargoTracker.Booking.Application.CargoTypeInput =
+    match get "cargoType" with
+    | "HAZARDOUS" ->
+        CargoTracker.Booking.Application.HazardousInput(get "hazardClass", get "unNumber", get "properShippingName")
+    | "REFRIGERATED" ->
+        let parseDec s =
+            match System.Decimal.TryParse(s: string) with
+            | true, v -> v
+            | _ -> 0m
+
+        CargoTracker.Booking.Application.RefrigeratedInput(
+            parseDec (get "minTemperature"),
+            parseDec (get "maxTemperature"),
+            get "temperatureUnit"
+        )
+    | _ -> CargoTracker.Booking.Application.GeneralInput
+
+/// 貨物予約登録の実行（`POST /bookings`・US04/US05）。
+let private bookingCreate: HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get key = string form.[key]
+
+            let values: Views.BookingFormValues =
+                { ShipperId = get "shipperId"
+                  OriginUnlocode = get "originUnlocode"
+                  DestinationUnlocode = get "destinationUnlocode"
+                  ArrivalDeadline = get "arrivalDeadline"
+                  CargoType = get "cargoType"
+                  WeightKg = get "weightKg"
+                  HazardClass = get "hazardClass"
+                  UnNumber = get "unNumber"
+                  ProperShippingName = get "properShippingName"
+                  MinTemperature = get "minTemperature"
+                  MaxTemperature = get "maxTemperature"
+                  TemperatureUnit = get "temperatureUnit" }
+
+            let deadline =
+                match System.DateOnly.TryParse(get "arrivalDeadline") with
+                | true, d -> d
+                | _ -> System.DateOnly.FromDateTime(System.DateTime.Today)
+
+            let weight =
+                match System.Decimal.TryParse(get "weightKg") with
+                | true, w -> w
+                | _ -> -1m // 範囲外にしてドメイン検証で弾く
+
+            let cmd: CargoTracker.Booking.Application.BookCargoCommand =
+                { ShipperId = get "shipperId"
+                  OriginUnlocode = get "originUnlocode"
+                  DestinationUnlocode = get "destinationUnlocode"
+                  ArrivalDeadline = deadline
+                  CargoType = buildCargoTypeInput get
+                  WeightKg = weight
+                  Consignee = None }
+
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+            let shipperChecker =
+                CargoTracker.Booking.Infrastructure.ShipperExistenceAdapter.create conn
+
+            let newId: CargoTracker.Shared.Domain.IdGenerator = fun () -> System.Guid.NewGuid()
+            let! result = CargoTracker.Booking.Application.BookCargo.book repo shipperChecker newId cmd
+
+            match result with
+            | Ok _ -> return! redirectTo false "/bookings" next ctx
+            | Error err ->
+                ctx.SetStatusCode 400
+                let shippers = loadShipperChoices conn
+
+                return!
+                    htmlView (Views.bookingForm (rolesOf ctx) shippers values (Some(domainErrorMessage err))) next ctx
+        }
+
 let private parseCargoType (value: string) : CargoTracker.Estimation.Domain.CargoType =
     match value with
     | "HAZARDOUS" -> CargoTracker.Estimation.Domain.Hazardous
@@ -303,6 +400,7 @@ let webApp: HttpHandler =
                     route "/estimates" >=> estimateList
                     route "/estimates/new" >=> estimateNew
                     route "/bookings" >=> bookingList
+                    route "/bookings/new" >=> bookingNew
                     // ウォーキングスケルトン: 後続 IT で実画面化するプレースホルダ（ADR-0005 ロール制御）
                     route "/tracking"
                     >=> placeholder "貨物追跡" [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
@@ -314,7 +412,8 @@ let webApp: HttpHandler =
                   [ route "/login" >=> loginPost
                     route "/logout" >=> logout
                     route "/shippers" >=> shipperCreate
-                    route "/estimates" >=> estimateCreate ]
+                    route "/estimates" >=> estimateCreate
+                    route "/bookings" >=> bookingCreate ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。
