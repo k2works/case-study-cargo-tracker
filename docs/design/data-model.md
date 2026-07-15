@@ -872,7 +872,11 @@ module ShipperRepository =
 
 ### `tracking_activity`（追跡レコード）
 
+> **IT5 実装状況**: マイグレーション 0009 で作成（US14/US18）。`transport_status` はイベント履歴からの導出値（`currentStatus`）をクエリ用に非正規化保持する（復元時は tracking_handling_event から導出し直す）。公開追跡ページ（US18・未認証）用に `access_token`（`VARCHAR(64) UK`・推測困難トークン）を追加した。`booking_id`・`tracking_number` は BC をまたぐ参照のため物理 FK を張らず業務キー保持。
+
 | カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `access_token` | `VARCHAR(64)` | `UK, NOT NULL` | 公開追跡照会用トークン（US18・IT5 0009 で追加） |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `tracking_number` | `VARCHAR(20)` | `UK, NOT NULL` | 追跡番号（業務キー。単一ケース DU `TrackingId of string` に対応） |
@@ -933,8 +937,11 @@ module ShipperRepository =
 
 ### `handling_activity`（荷役作業記録）
 
+> **IT5 実装状況**: マイグレーション 0010 で作成（US15/US16）。引取（CLAIM）時の荷受人確認（署名または確認コード）を `consignee_confirmation` に保持する。`booking_id` は BC をまたぐ参照のため物理 FK を張らず業務キー保持。通関（customs_declaration）は次 IT。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
+| `consignee_confirmation` | `VARCHAR(255)` | | 引取時の荷受人確認（US16・IT5 0010 で追加） |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
 | `event_type` | `VARCHAR(30)` | `NOT NULL` | 荷役タイプ（RECEIVE / LOAD / UNLOAD / CUSTOMS / CLAIM） |
