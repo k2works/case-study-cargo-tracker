@@ -113,9 +113,9 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `Leg`（積込港・荷降港・積込/荷降時刻・VoyageNumber）と `CargoItinerary`（Leg 非空リスト・連結制約 `Leg[n].荷降港 = Leg[n+1].積込港`）を `create` で保証 + FsCheck | 4h | - | [ ] |
-| 1.2 | `BookingState` に `RouteProposed of CargoItinerary`・`Confirmed of CargoItinerary` を追加（ADR-0007 と同系統の DU 拡張・`toString`/`ofString`・CHECK 制約更新）| 2h | - | [ ] |
-| 1.3 | `BookingCommand`／`Cargo.execute` に `ProposeRoute`（RoutingRequested→RouteProposed・**`RouteSpecification.isSatisfiedBy` で旅程がルート仕様を満たすことを検証**・CargoRouted 発行）・`ConfirmBooking`（RouteProposed→Confirmed・BookingConfirmed 発行）・`RestoreToRouting`（Confirmed→RoutingRequested 差し戻し・US13 受入条件4）・`Cancel` を実装 + ユニット/FsCheck。DU 拡張後は必ずフルテスト（網羅性）| 4h | - | [ ] |
+| 1.1 | `Leg`（積込港・荷降港・積込/荷降時刻・VoyageNumber）と `CargoItinerary`（Leg 非空リスト・連結制約 `Leg[n].荷降港 = Leg[n+1].積込港`）を `create` で保証 + FsCheck | 4h | - | [x] |
+| 1.2 | `BookingState` に `RouteProposed of CargoItinerary`・`Confirmed of CargoItinerary` を追加（ADR-0007 と同系統の DU 拡張・`toString`/`ofString`・CHECK 制約更新）| 2h | - | [x] |
+| 1.3 | `BookingCommand`／`Cargo.execute` に `ProposeRoute`（RoutingRequested→RouteProposed・**`RouteSpecification.isSatisfiedBy` で旅程がルート仕様を満たすことを検証**・CargoRouted 発行）・`ConfirmBooking`（RouteProposed→Confirmed・BookingConfirmed 発行）・`RestoreToRouting`（Confirmed→RoutingRequested 差し戻し・US13 受入条件4）・`Cancel` を実装 + ユニット/FsCheck。DU 拡張後は必ずフルテスト（網羅性）| 4h | - | [x] |
 
 **小計**: 10h（理想時間）
 
@@ -165,7 +165,7 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| Booking ドメイン拡張 | 5 | 10h | [ ] |
+| Booking ドメイン拡張 | 5 | 10h | [x] |
 | Routing→Booking 連携・post-commit | — | 9h | [ ] |
 | インフラ（旅程永続化・通知記録）| — | 9h | [ ] |
 | Web（US09-13）| 7 | 11h | [ ] |
@@ -173,7 +173,7 @@
 | **合計** | **12** | **41h** | |
 
 **1 SP あたり**: 約 3.4h（ストーリー分 41h / 12 SP）
-**進捗率**: 0% (0/12 SP)
+**進捗率**: 42% (5/12 SP)
 
 ---
 
