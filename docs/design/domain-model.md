@@ -239,6 +239,7 @@ package "Aggregate（集約 / レコード + 状態 DU）" {
   }
   class BookingState <<DU>> {
     Preliminary
+    RoutingRequested
     RouteProposed of CargoItinerary
     Confirmed of CargoItinerary
     TrackingIssued of CargoItinerary * TrackingNumber
@@ -444,6 +445,7 @@ module Money =
 
 type BookingState =
     | Preliminary
+    | RoutingRequested                          // 経路設計依頼済み・提案前（US06・ADR-0007）
     | RouteProposed of CargoItinerary
     | Confirmed of CargoItinerary
     | TrackingIssued of CargoItinerary * TrackingNumber
@@ -456,16 +458,23 @@ type BookingState =
 
 type Cargo =
     { BookingId: BookingId
-      ShipperId: ShipperId
-      Consignee: Consignee
+      ShipperId: ShipperId                      // 荷主の横断参照は Guid 識別子（ADR-0008）
+      Consignee: Consignee option               // 予約時は荷受人未確定を許容（IT2・consignee_* は IT4+）
       RouteSpecification: RouteSpecification
       CargoType: CargoType
-      BookingAmount: Money
+      Weight: Weight                            // US04 重量要件（レビュー #34 のドメイン未対応カラム解消）
+      BookingAmount: Money option               // 予約時は金額未確定を許容（Billing 実装 IT4+ で確定）
       State: BookingState
       Dimensions: Dimensions option
       Quantity: Quantity option
       Description: Description option }
 ```
+
+> **IT2 での確定事項（ADR-0007 / ADR-0008 反映）**:
+> - `BookingState` に `RoutingRequested`（経路設計依頼済み・提案前）を追加。`Preliminary → RoutingRequested → RouteProposed` の遷移とし、`routing_status`（経路決定結果・IT4+）とは概念を分離する（ADR-0007）。
+> - `Cargo` に `Weight` 値オブジェクト（kg・>0・上限 30,000kg）を追加（US04・data-model の `cargo.weight` に対応）。
+> - `Consignee` / `BookingAmount` は予約時点で未確定を許容するため `option` とする（段階導入。荷受人管理・Billing は IT4+）。
+> - `ShipperId`（Guid）は Shipper 側で `shipper_uuid` に永続化し、Booking は物理 FK ではなく Guid 識別子で参照する（ADR-0008・BC 分離）。
 
 ### コマンドと集約操作（純粋関数）
 
@@ -473,6 +482,7 @@ type Cargo =
 
 ```fsharp
 type BookingCommand =
+    | SubmitForRouting                       // 経路設計者への引き渡し（US06・ADR-0007）
     | ProposeRoute of CargoItinerary
     | ConfirmBooking
     | IssueTrackingNumber of TrackingNumber  // 経路設計者による手動発行（US14）
@@ -502,7 +512,10 @@ module Cargo =
     let execute (cargo: Cargo) (command: BookingCommand)
         : Result<Cargo * DomainEvent list, DomainError> =
         match cargo.State, command with
-        | Preliminary, ProposeRoute itinerary ->
+        | Preliminary, SubmitForRouting ->
+            Ok ({ cargo with State = RoutingRequested }, [ RoutingRequested cargo.BookingId ])
+
+        | RoutingRequested, ProposeRoute itinerary ->
             if cargo.RouteSpecification |> RouteSpecification.isSatisfiedBy itinerary then
                 Ok ({ cargo with State = RouteProposed itinerary },
                     [ CargoRouted (cargo.BookingId, itinerary) ])
