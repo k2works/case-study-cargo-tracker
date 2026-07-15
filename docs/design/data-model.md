@@ -884,6 +884,21 @@ module ShipperRepository =
 
 ---
 
+### `notification_log`（荷主通知記録）
+
+> **IT4 実装状況**: マイグレーション 0008 で作成（US12 荷主通知）。経路確定などの通知イベントを記録する最小実装。実送信（メール等）は後続 IT で差し替える。`booking_id` はコンテキストをまたぐ参照のため物理 FK は張らず業務キーとして保持する。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `VARCHAR(20)` | `NOT NULL` | 予約 ID（参照整合性は書き込み側で保証） |
+| `recipient` | `VARCHAR(255)` | `NOT NULL` | 通知先（荷主識別子） |
+| `message` | `TEXT` | `NOT NULL` | 通知本文 |
+| `notified_at` | `TIMESTAMP` | `NOT NULL` | 通知日時 |
+| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+
+---
+
 ### `tracking_handling_event`（追跡イベント）
 
 | カラム名 | データ型 | 制約 | 説明 |

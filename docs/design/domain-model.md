@@ -416,6 +416,11 @@ type Leg =
       Voyage: VoyageNumber }
 
 /// 「1 つ以上の Leg」を非空リストで型保証する
+// IT4 実装状況（注）:
+// - 実装では `CargoItinerary` を `Leg list` + `create` 保証（非空・連結）で表現している
+//   （Schedule/IT3 と同じ扱い。型表記は本モデルの NonEmptyList を実装に合わせて list とみなす）。
+// - BookingState の遷移に `RestoreToRouting`（Confirmed → RoutingRequested 差し戻し・US13 受入条件4）を追加済み。
+//   `ProposeRoute`（RoutingRequested → RouteProposed）・`ConfirmBooking`（RouteProposed → Confirmed）も実装済み。
 type CargoItinerary = private CargoItinerary of NonEmptyList<Leg>
 
 module CargoItinerary =

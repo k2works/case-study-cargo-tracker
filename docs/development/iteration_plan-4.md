@@ -157,7 +157,7 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 5.1 | IT3 レビュー M1: `Result list` 畳み込みを FsToolkit `List.traverseResultM` に集約（Routing Application/Infrastructure）| 2h | - | [ ] |
+| 5.1 | IT3 レビュー M1: `Result list` 畳み込みを FsToolkit `List.traverseResultM` に集約（Routing Application/Infrastructure）| 2h | - | [x] |
 
 **小計**: 2h（理想時間）
 
@@ -169,11 +169,11 @@
 | Routing→Booking 連携・post-commit | — | 9h | [x] |
 | インフラ（旅程永続化・通知記録）| — | 9h | [x] |
 | Web（US09-13）| 7 | 11h | [x] |
-| 小リファクタ（M1）| — | 2h | [ ] |
+| 小リファクタ（M1）| — | 2h | [x] |
 | **合計** | **12** | **41h** | |
 
 **1 SP あたり**: 約 3.4h（ストーリー分 41h / 12 SP）
-**進捗率**: 100% (12/12 SP・US09-13 完了。M1 リファクタは任意タスクとして残)
+**進捗率**: 100% (12/12 SP・US09-13 完了・全タスク完了)
 
 ---
 
