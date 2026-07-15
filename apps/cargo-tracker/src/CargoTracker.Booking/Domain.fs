@@ -202,6 +202,15 @@ module BookingState =
         | RoutingRequested -> "ROUTING_REQUESTED"
         | Cancelled _ -> "CANCELLED"
 
+    /// 永続化された文字列から状態を復元する（cargo.booking_status）。
+    /// Cancelled の理由は本カラムに保持しないため空文字で復元する（IT2 スコープ）。
+    let ofString (value: string) : Result<BookingState, DomainError> =
+        match value with
+        | "PRELIMINARY" -> Ok Preliminary
+        | "ROUTING_REQUESTED" -> Ok RoutingRequested
+        | "CANCELLED" -> Ok(Cancelled "")
+        | other -> Error(ValidationError("BookingState", sprintf "未知の予約状態です: %s" other))
+
 /// 集約への操作コマンド（IT2 スコープ）。
 type BookingCommand =
     | SubmitForRouting
