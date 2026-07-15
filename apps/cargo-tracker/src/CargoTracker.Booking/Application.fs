@@ -131,3 +131,45 @@ module BookCargo =
             do! notifier.Notify bookingId
             return updated, events
         }
+
+/// 経路確定〜予約確定のワークフロー（US09/US11/US13）。
+/// 予約読込 → コマンド実行（ドメイン検証） → 永続化、の共通形をとる。
+module RouteAssignment =
+
+    open FsToolkit.ErrorHandling
+
+    /// 予約を読み込みコマンドを適用して永続化する共通ワークフロー。
+    let private applyCommand
+        (repo: CargoRepository)
+        (bookingId: BookingId)
+        (command: BookingCommand)
+        : Async<Result<Cargo * BookingEvent list, DomainError>> =
+        asyncResult {
+            let! found = repo.FindById bookingId
+
+            let! cargo =
+                match found with
+                | Some c -> Ok c
+                | None -> Error(NotFound("Cargo", BookingId.value bookingId))
+
+            let! updated, events = Cargo.execute cargo command
+            do! repo.Update updated
+            return updated, events
+        }
+
+    /// 確定経路を予約に紐付ける（US09/US11・RoutingRequested → RouteProposed）。
+    /// 旅程がルート仕様を満たすかはドメイン（Cargo.execute）が検証する。
+    let proposeRoute (repo: CargoRepository) (bookingId: BookingId) (itinerary: CargoItinerary) =
+        applyCommand repo bookingId (ProposeRoute itinerary)
+
+    /// 予約を確定する（US13・RouteProposed → Confirmed）。
+    let confirmBooking (repo: CargoRepository) (bookingId: BookingId) =
+        applyCommand repo bookingId ConfirmBooking
+
+    /// 経路設計中へ差し戻す（US13 受入条件4・Confirmed → RoutingRequested）。
+    let restoreToRouting (repo: CargoRepository) (bookingId: BookingId) =
+        applyCommand repo bookingId RestoreToRouting
+
+    /// 予約をキャンセルする（US13・任意状態 → Cancelled）。
+    let cancel (repo: CargoRepository) (bookingId: BookingId) (reason: string) =
+        applyCommand repo bookingId (Cancel reason)

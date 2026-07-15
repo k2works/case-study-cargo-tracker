@@ -181,3 +181,109 @@ let ``存在しない予約の経路設計依頼は NotFound`` () =
     match result with
     | Error(NotFound(entity, _)) -> entity |> should equal "Cargo"
     | other -> failwithf "NotFound を期待したが: %A" other
+
+// US09/US11/US13: 経路確定〜予約確定ワークフロー（RouteAssignment）。
+
+let private loc code =
+    match Location.create code with
+    | Ok l -> l
+    | Error e -> failwithf "%A" e
+
+/// JPTYO→USLAX・期限 2026-09-01 を満たす直行旅程。
+let private satisfyingItinerary () =
+    let leg =
+        match
+            Leg.create
+                (loc "JPTYO")
+                (loc "USLAX")
+                (DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero))
+                (DateTimeOffset(2026, 8, 14, 0, 0, 0, TimeSpan.Zero))
+                (VoyageNumber.ofString "V001")
+        with
+        | Ok l -> l
+        | Error e -> failwithf "%A" e
+
+    match CargoItinerary.create [ leg ] with
+    | Ok i -> i
+    | Error e -> failwithf "%A" e
+
+/// 経路設計中（RoutingRequested）の予約を repo に用意して BookingId を返す。
+let private seedRoutingRequested repo =
+    let cargo, _ =
+        match
+            BookCargo.book repo existingShipper (fixedId (Guid.NewGuid())) (baseCommand ())
+            |> Async.RunSynchronously
+        with
+        | Ok r -> r
+        | Error e -> failwithf "%A" e
+
+    let calls = System.Collections.Generic.List<BookingId>()
+
+    BookCargo.submitForRouting repo (notifierStub calls) cargo.BookingId
+    |> Async.RunSynchronously
+    |> ignore
+
+    cargo.BookingId
+
+[<Fact>]
+let ``proposeRoute で経路設計中の予約が RouteProposed になる`` () =
+    let repo, _ = repoStub ()
+    let bid = seedRoutingRequested repo
+
+    match
+        RouteAssignment.proposeRoute repo bid (satisfyingItinerary ())
+        |> Async.RunSynchronously
+    with
+    | Ok(cargo, events) ->
+        match cargo.State with
+        | RouteProposed _ -> ()
+        | other -> failwithf "RouteProposed を期待したが: %A" other
+
+        events |> should contain (CargoRouted bid)
+    | Error e -> failwithf "成功を期待したが: %A" e
+
+[<Fact>]
+let ``confirmBooking で RouteProposed の予約が Confirmed になる`` () =
+    let repo, _ = repoStub ()
+    let bid = seedRoutingRequested repo
+
+    RouteAssignment.proposeRoute repo bid (satisfyingItinerary ())
+    |> Async.RunSynchronously
+    |> ignore
+
+    match RouteAssignment.confirmBooking repo bid |> Async.RunSynchronously with
+    | Ok(cargo, events) ->
+        match cargo.State with
+        | Confirmed _ -> ()
+        | other -> failwithf "Confirmed を期待したが: %A" other
+
+        events |> should contain (BookingConfirmed bid)
+    | Error e -> failwithf "成功を期待したが: %A" e
+
+[<Fact>]
+let ``restoreToRouting で Confirmed の予約が RoutingRequested に差し戻される`` () =
+    let repo, _ = repoStub ()
+    let bid = seedRoutingRequested repo
+
+    RouteAssignment.proposeRoute repo bid (satisfyingItinerary ())
+    |> Async.RunSynchronously
+    |> ignore
+
+    RouteAssignment.confirmBooking repo bid |> Async.RunSynchronously |> ignore
+
+    match RouteAssignment.restoreToRouting repo bid |> Async.RunSynchronously with
+    | Ok(cargo, events) ->
+        cargo.State |> should equal RoutingRequested
+        events |> should contain (BookingRestoredToRouting bid)
+    | Error e -> failwithf "成功を期待したが: %A" e
+
+[<Fact>]
+let ``存在しない予約への proposeRoute は NotFound を返す`` () =
+    let repo, _ = repoStub ()
+
+    match
+        RouteAssignment.proposeRoute repo (BookingId.ofString "BKG-NOPE") (satisfyingItinerary ())
+        |> Async.RunSynchronously
+    with
+    | Error(NotFound(entity, _)) -> entity |> should equal "Cargo"
+    | other -> failwithf "NotFound を期待したが: %A" other
