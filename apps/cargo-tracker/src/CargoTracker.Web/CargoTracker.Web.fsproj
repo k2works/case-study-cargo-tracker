@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <Compile Include="Db.fs" />
-    <Compile Include="UnitOfWork.fs" />
     <Compile Include="Auth.fs" />
     <Compile Include="Seed.fs" />
     <Compile Include="Views.fs" />

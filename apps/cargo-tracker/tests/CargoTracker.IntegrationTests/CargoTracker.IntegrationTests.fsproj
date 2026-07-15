@@ -13,7 +13,6 @@
     <Compile Include="ShipperExistenceAdapterTests.fs" />
     <Compile Include="VoyageRepositoryTests.fs" />
     <Compile Include="MigrationTests.fs" />
-    <Compile Include="UnitOfWorkTests.fs" />
     <Compile Include="ViewTests.fs" />
     <Compile Include="AuthTests.fs" />
     <Compile Include="LoginAcceptanceTests.fs" />

@@ -7,6 +7,16 @@
 ## ステータス
 
 2026-07-06 承認済み
+2026-09-19 改訂（IT5）— イベント型の定義方式を「Shared Payload レコード」から「**BC ローカルイベント DU**」へ、ディスパッチ機構を「`UnitOfWork.execute`」から「**アプリケーション層 + 合成層の post-commit ディスパッチ**」へ変更。post-commit の不変条件（コミット後のみ発火・ロールバック時非発火）は維持。詳細は下記「決定の改訂（IT5）」を参照。
+
+## 決定の改訂（IT5）
+
+IT2〜IT5 の実装を通じて、当初の決定のうち **(1) Payload レコード方式** と **(2) `UnitOfWork.execute` によるディスパッチ** は実装実態と乖離し、後者は結線されないデッドコードとして 3 イテレーション継続した（IT4 developing-review・xp-architect 指摘）。IT5 で以下に改訂して決着する。
+
+1. **BC ローカルイベント DU を採用**（Shared Payload レコードは不採用）: 各 BC は自コンテキストのイベント DU を BC 内に定義する（`BookingEvent`〔Booking〕・`TrackingEvent`〔Tracking〕・`HandlingEvent`〔Handling〕）。各イベントは**自 BC の値オブジェクト/識別子と共有型のみ**を参照し、他 BC の型は参照しない。したがって「BC → Event → 全 BC」の循環は発生せず、Shared への集約も不要。消費側は合成層の ACL（例: `BookingEventConsumer`）で自 BC 型へ変換する。これにより BC の独立性（ADR-0001）がより強く保たれる。
+2. **post-commit ディスパッチはアプリケーション層 + 合成層で実装**（`UnitOfWork.execute` は不採用・削除）: 各リポジトリが自前トランザクションでコミットするため、ワークフロー（例: `RouteAssignment.applyCommand`）は `repo.Update` が `Ok` を返した後＝**コミット済み**の時点でのみイベントを発火する。発火はベストエフォート（`Async.Catch`）とし、確定済みの結果を巻き戻さない。BC 間連携（`BookingConfirmed`→追跡番号発行等）は Web 合成層の実消費ディスパッチャ（`BookingEventConsumer`）が担う。generic な `UnitOfWork.execute` ヘルパはどこからも使われないデッドコードのため削除する。
+
+**改訂の根拠**: BC ローカル DU は Payload レコードより BC 所有権が明確で、イベント語彙の変更が自 BC に閉じる。ディスパッチをアプリ/合成層に置くことで、リポジトリが自前トランザクションを持つ現行の永続化設計（ADR-0004）と自然に整合し、専用の UoW 抽象を持ち込まずに post-commit 不変条件を満たせる。将来の高可用要件では代替案の Transactional Outbox へ移行する（この改訂はその移行を妨げない）。
 
 ## コンテキスト
 
