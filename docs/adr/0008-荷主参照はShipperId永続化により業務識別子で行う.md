@@ -7,6 +7,7 @@ Booking Context から Shipper Context への参照キーを ShipperId（Guid）
 ## ステータス
 
 2026-07-15 提案
+2026-07-15 承認（IT2 で実装・全 141 テスト緑）
 
 ## コンテキスト
 

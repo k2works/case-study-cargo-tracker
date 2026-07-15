@@ -162,6 +162,9 @@ let deps: BookingDeps =
 | ドメイン層 | **85% 以上** | **80% 以上** |
 | アプリケーション層 | **80% 以上** | **75% 以上** |
 
+> **カバレッジゲート（IT2 で整備）**: `node ops/scripts/coverage-gate.cjs` で、全体 80% / ドメイン層（`CargoTracker.*.Domain*`）85% の行カバレッジ閾値を機械判定する（閾値未達で非ゼロ終了）。
+> `gulp dev:test:coverage:gate` でテスト収集からゲートまで一括実行できる。Backend CI（`.github/workflows/backend-ci.yml`）でも実行し、閾値の出所は本表とする。
+
 #### 使用ツール
 
 - **xUnit**: テストフレームワーク（`[<Fact>]`, `[<Theory>]`）
