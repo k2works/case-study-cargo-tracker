@@ -1,0 +1,196 @@
+module CargoTracker.IntegrationTests.ReleaseFlowE2ETests
+
+// WebHostBuilder / TestServer は受け入れテスト用の正当なパターン。非推奨（FS0044）は抑制する。
+#nowarn "44"
+
+open System.IO
+open System.Net
+open System.Net.Http
+open System.Threading.Tasks
+open Microsoft.AspNetCore.Hosting
+open Microsoft.AspNetCore.TestHost
+open Microsoft.Extensions.Configuration
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.Data.Sqlite
+open Xunit
+open FsUnit.Xunit
+open CargoTracker.Web
+
+// Release 1.0 MVP の一気通貫 E2E（US13 予約確定 → US14 追跡番号発行 → US15 荷役 → US18 照会）。
+
+let private repoRoot =
+    let rec findUp (dir: DirectoryInfo) =
+        if isNull dir then
+            failwith "sln 未検出"
+        elif File.Exists(Path.Combine(dir.FullName, "CargoTracker.sln")) then
+            dir.FullName
+        else
+            findUp dir.Parent
+
+    findUp (DirectoryInfo(System.AppContext.BaseDirectory))
+
+let private run (t: Task<'a>) = t.GetAwaiter().GetResult()
+
+/// 営業・経路設計者・荷役作業員（TRACKER 兼務）と荷主 1 件をシードする。
+let private seedDatabase (connStr: string) : string =
+    match Db.runMigrations Db.Sqlite connStr (Path.Combine(repoRoot, "db", "scripts")) with
+    | Ok() -> ()
+    | Error e -> failwithf "マイグレーション失敗: %s" e
+
+    use conn = new SqliteConnection(connStr)
+    conn.Open()
+    let hash = Auth.Password.hash "pw"
+    let shipperUuid = System.Guid.NewGuid().ToString("D")
+    use cmd = conn.CreateCommand()
+
+    cmd.CommandText <-
+        sprintf
+            """
+            INSERT INTO users (username, email, password, enabled, created_at)
+            VALUES ('sales01', 's@example.com', '%s', 1, '2026-09-08');
+            INSERT INTO user_roles (user_id, role) VALUES (1, 'ROLE_SALES');
+            INSERT INTO users (username, email, password, enabled, created_at)
+            VALUES ('designer01', 'd@example.com', '%s', 1, '2026-09-08');
+            INSERT INTO user_roles (user_id, role) VALUES (2, 'ROLE_ROUTE_DESIGNER');
+            INSERT INTO users (username, email, password, enabled, created_at)
+            VALUES ('handler01', 'h@example.com', '%s', 1, '2026-09-08');
+            INSERT INTO user_roles (user_id, role) VALUES (3, 'ROLE_HANDLER');
+            INSERT INTO user_roles (user_id, role) VALUES (3, 'ROLE_TRACKER');
+            INSERT INTO shipper
+                (shipper_code, shipper_uuid, shipper_type, name, email, discount_rate, created_at, updated_at, version)
+            VALUES ('SHP-E2E00001', '%s', 'INDIVIDUAL', 'E2E 荷主', 'ship@example.com', 0, '2026-09-08', '2026-09-08', 0);
+            """
+            hash
+            hash
+            hash
+            shipperUuid
+
+    cmd.ExecuteNonQuery() |> ignore
+    shipperUuid
+
+let private buildServer (connStr: string) : TestServer =
+    let settings =
+        dict [ "Database:Provider", "sqlite"; "Database:ConnectionString", connStr ]
+
+    let config =
+        ConfigurationBuilder().AddInMemoryCollection(settings).Build() :> IConfiguration
+
+    let builder =
+        WebHostBuilder()
+            .ConfigureServices(fun services -> App.configureServices config services)
+            .Configure(fun app -> App.configureApp app)
+
+    new TestServer(builder)
+
+let private authCookie (client: HttpClient) (username: string) : string =
+    let form =
+        new FormUrlEncodedContent(dict [ "username", username; "password", "pw" ])
+
+    let res = run (client.PostAsync("/login", form))
+    (res.Headers.GetValues "Set-Cookie" |> Seq.head).Split(';').[0]
+
+let private post (client: HttpClient) (cookie: string) (path: string) (fields: (string * string) list) =
+    use req = new HttpRequestMessage(HttpMethod.Post, path)
+    req.Headers.Add("Cookie", cookie)
+    req.Content <- new FormUrlEncodedContent(dict fields)
+    run (client.SendAsync req)
+
+let private get (client: HttpClient) (cookie: string) (path: string) =
+    use req = new HttpRequestMessage(HttpMethod.Get, path)
+    req.Headers.Add("Cookie", cookie)
+    run (client.SendAsync req)
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``予約確定から追跡照会まで一気通貫（US13→US14→US15→US18）`` () =
+    let dbFile =
+        Path.Combine(Path.GetTempPath(), sprintf "cargo_e2e_%s.db" (System.Guid.NewGuid().ToString("N")))
+
+    let connStr = sprintf "Data Source=%s" dbFile
+    let shipperUuid = seedDatabase connStr
+    use server = buildServer connStr
+    let client = server.CreateClient()
+
+    try
+        let sales = authCookie client "sales01"
+        let designer = authCookie client "designer01"
+        let handler = authCookie client "handler01"
+
+        // 経路設計者: 航海 V001（JPTYO→USLAX 直行）を登録
+        post
+            client
+            designer
+            "/voyages"
+            [ "voyageNumber", "V001"
+              "vesselName", "Ever Given"
+              "carrierName", "Evergreen"
+              "cargoGeneral", "true"
+              "leg1Dep", "JPTYO"
+              "leg1Arr", "USLAX"
+              "leg1DepDate", "2026-09-15T00:00"
+              "leg1ArrDate", "2026-09-25T00:00" ]
+        |> ignore
+
+        // 営業: 予約登録 → 経路設計依頼
+        let bookRes =
+            post
+                client
+                sales
+                "/bookings"
+                [ "shipperId", shipperUuid
+                  "originUnlocode", "JPTYO"
+                  "destinationUnlocode", "USLAX"
+                  "arrivalDeadline", "2026-12-01"
+                  "cargoType", "GENERAL"
+                  "weightKg", "500" ]
+
+        let bookingId = (string bookRes.Headers.Location).Replace("/bookings/", "")
+        post client sales (sprintf "/bookings/%s/routing" bookingId) [] |> ignore
+
+        // 経路設計者: 経路候補を確定（index 0）
+        post client designer (sprintf "/routing/requests/%s/propose" bookingId) [ "candidateIndex", "0" ]
+        |> ignore
+
+        // 営業: 予約確定 → 追跡番号が自動発行される（US13→US14）
+        let confirmRes = post client sales (sprintf "/bookings/%s/confirm" bookingId) []
+        confirmRes.StatusCode |> should equal HttpStatusCode.Found
+
+        // 自動発行された追跡番号を DB から取得
+        let trackingNumber =
+            use conn = new SqliteConnection(connStr)
+            conn.Open()
+            use cmd = conn.CreateCommand()
+            cmd.CommandText <- sprintf "SELECT tracking_number FROM tracking_activity WHERE booking_id = '%s'" bookingId
+
+            match cmd.ExecuteScalar() with
+            | null -> failwith "追跡番号が自動発行されていない（US14 BC 連携）"
+            | v -> string v
+
+        trackingNumber |> should startWith "TRK-"
+
+        // 荷役作業員: 受領を記録（US15）→ 追跡状態が受領済へ
+        let handleRes =
+            post
+                client
+                handler
+                "/handling"
+                [ "trackingNumber", trackingNumber
+                  "handlingType", "RECEIVE"
+                  "location", "JPTYO"
+                  "voyageNumber", ""
+                  "consigneeConfirmation", "" ]
+
+        handleRes.StatusCode |> should equal HttpStatusCode.Found
+
+        // 荷主/追跡: 追跡照会で受領済を確認（US18）
+        let detail = get client handler (sprintf "/tracking/%s" trackingNumber)
+        detail.StatusCode |> should equal HttpStatusCode.OK
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "受領済"
+        body |> should haveSubstring "受領"
+    finally
+        server.Dispose()
+        SqliteConnection.ClearAllPools()
+
+        if File.Exists dbFile then
+            File.Delete dbFile
