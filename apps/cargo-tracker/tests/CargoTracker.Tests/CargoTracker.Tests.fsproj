@@ -12,6 +12,7 @@
     <Compile Include="ShipperRegistrationTests.fs" />
     <Compile Include="EstimateCreationTests.fs" />
     <Compile Include="BookingDomainTests.fs" />
+    <Compile Include="BookingApplicationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
