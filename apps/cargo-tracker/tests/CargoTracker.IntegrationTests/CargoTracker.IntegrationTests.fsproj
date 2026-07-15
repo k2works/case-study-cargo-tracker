@@ -22,6 +22,7 @@
     <Compile Include="BookingAcceptanceTests.fs" />
     <Compile Include="VoyageAcceptanceTests.fs" />
     <Compile Include="RoutingDesignAcceptanceTests.fs" />
+    <Compile Include="RouteAclTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

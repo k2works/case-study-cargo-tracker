@@ -11,11 +11,13 @@
     <Compile Include="Auth.fs" />
     <Compile Include="Seed.fs" />
     <Compile Include="Views.fs" />
+    <Compile Include="RouteAcl.fs" />
     <Compile Include="App.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="4.18.0" />
     <PackageReference Include="Giraffe" Version="8.2.0" />
     <PackageReference Include="Giraffe.ViewEngine" Version="1.4.0" />
     <PackageReference Include="Donald" Version="10.1.0" />
