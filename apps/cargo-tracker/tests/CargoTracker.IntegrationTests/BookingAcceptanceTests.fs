@@ -264,3 +264,53 @@ let ``存在しない荷主を指定すると 400 になる`` () =
                   "weightKg", "500" ]
 
         res.StatusCode |> should equal HttpStatusCode.BadRequest)
+
+/// 予約を 1 件登録し、その booking_id を一覧ページから抽出する。
+let private bookOne (client: HttpClient) (cookie: string) (uuid: string) : string =
+    authedPost
+        client
+        cookie
+        "/bookings"
+        [ "shipperId", uuid
+          "originUnlocode", "JPTYO"
+          "destinationUnlocode", "USLAX"
+          "arrivalDeadline", "2026-09-01"
+          "cargoType", "GENERAL"
+          "weightKg", "500" ]
+    |> ignore
+
+    let body = run ((authedGet client cookie "/bookings").Content.ReadAsStringAsync())
+    let m = System.Text.RegularExpressions.Regex.Match(body, "BKG-[0-9A-F]+")
+
+    if m.Success then
+        m.Value
+    else
+        failwith "booking_id が一覧に見つからない"
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``予約詳細を表示できる`` () =
+    withSeededShipper (fun client uuid ->
+        let cookie = authCookie client "sales01"
+        let bookingId = bookOne client cookie uuid
+        let res = authedGet client cookie (sprintf "/bookings/%s" bookingId)
+        res.StatusCode |> should equal HttpStatusCode.OK
+        let body = run (res.Content.ReadAsStringAsync())
+        body |> should haveSubstring bookingId
+        body |> should haveSubstring "経路設計を依頼")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``経路設計を依頼すると状態が経路設計中になる`` () =
+    withSeededShipper (fun client uuid ->
+        let cookie = authCookie client "sales01"
+        let bookingId = bookOne client cookie uuid
+
+        let res = authedPost client cookie (sprintf "/bookings/%s/routing" bookingId) []
+        res.StatusCode |> should equal HttpStatusCode.Found
+
+        let detail = authedGet client cookie (sprintf "/bookings/%s" bookingId)
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "経路設計中"
+        // 経路設計中は再依頼ボタンを出さない
+        body |> should not' (haveSubstring "経路設計を依頼"))

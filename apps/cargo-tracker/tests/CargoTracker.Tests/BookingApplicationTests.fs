@@ -22,6 +22,12 @@ let private repoStub () =
                     store[BookingId.value cargo.BookingId] <- cargo
                     return Ok()
                 }
+          Update =
+            fun cargo ->
+                async {
+                    store[BookingId.value cargo.BookingId] <- cargo
+                    return Ok()
+                }
           FindById =
             fun bookingId ->
                 async {

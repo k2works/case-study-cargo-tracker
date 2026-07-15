@@ -10,6 +10,7 @@ open CargoTracker.Booking.Domain
 /// 貨物予約リポジトリの出力ポート（関数レコード）。テストは関数リテラルで差し替える。
 type CargoRepository =
     { Save: Cargo -> Async<Result<unit, DomainError>>
+      Update: Cargo -> Async<Result<unit, DomainError>>
       FindById: BookingId -> Async<Result<Cargo option, DomainError>> }
 
 /// 荷主存在確認の ACL ポート（domain-model: ShipperId -> Async<bool>）。
@@ -134,7 +135,7 @@ module BookCargo =
                 | None -> Error(NotFound("Cargo", BookingId.value bookingId))
 
             let! updated, events = Cargo.execute cargo SubmitForRouting
-            do! repo.Save updated
+            do! repo.Update updated
             do! notifier.Notify bookingId
             return updated, events
         }

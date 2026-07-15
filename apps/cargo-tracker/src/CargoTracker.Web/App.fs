@@ -332,6 +332,74 @@ let private bookingCreate: HttpHandler =
                     htmlView (Views.bookingForm (rolesOf ctx) shippers values (Some(domainErrorMessage err))) next ctx
         }
 
+// ---- US06: 予約詳細・経路設計依頼 ----
+
+/// Cargo 集約を詳細表示用の DTO へ射影する。
+let private toBookingDetail (cargo: CargoTracker.Booking.Domain.Cargo) : Views.BookingDetail =
+    let cargoTypeStr =
+        match cargo.CargoType with
+        | CargoTracker.Booking.Domain.General -> "GENERAL"
+        | CargoTracker.Booking.Domain.Hazardous _ -> "HAZARDOUS"
+        | CargoTracker.Booking.Domain.Refrigerated _ -> "REFRIGERATED"
+
+    let spec = cargo.RouteSpecification
+
+    { BookingId = CargoTracker.Booking.Domain.BookingId.value cargo.BookingId
+      ShipperId = (CargoTracker.Shared.Domain.ShipperId.value cargo.ShipperId).ToString("D")
+      CargoType = cargoTypeStr
+      Origin = CargoTracker.Shared.Domain.Location.value (CargoTracker.Booking.Domain.RouteSpecification.origin spec)
+      Destination =
+        CargoTracker.Shared.Domain.Location.value (CargoTracker.Booking.Domain.RouteSpecification.destination spec)
+      ArrivalDeadline = (CargoTracker.Booking.Domain.RouteSpecification.arrivalDeadline spec).ToString("yyyy-MM-dd")
+      Weight = sprintf "%M" (CargoTracker.Booking.Domain.Weight.value cargo.Weight)
+      BookingStatus = CargoTracker.Booking.Domain.BookingState.toString cargo.State
+      CanSubmitRouting = (cargo.State = CargoTracker.Booking.Domain.Preliminary) }
+
+/// 貨物予約詳細（`GET /bookings/{bookingId}`・US06）。
+let private bookingDetail (bookingIdStr: string) : HttpHandler =
+    mustHaveAnyRole [ "ROLE_SALES"; "ROLE_SHIPPER" ]
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+            let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
+            let! found = repo.FindById bookingId
+
+            match found with
+            | Ok(Some cargo) ->
+                return! htmlView (Views.bookingDetail (rolesOf ctx) (toBookingDetail cargo) None) next ctx
+            | Ok None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 経路設計依頼（`POST /bookings/{bookingId}/routing`・US06）。
+let private bookingSubmitRouting (bookingIdStr: string) : HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+            let notifier =
+                CargoTracker.Booking.Infrastructure.StubRoutingRequestNotifier.create ()
+
+            let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
+            let! result = CargoTracker.Booking.Application.BookCargo.submitForRouting repo notifier bookingId
+
+            match result with
+            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s" bookingIdStr) next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
+
 let private parseCargoType (value: string) : CargoTracker.Estimation.Domain.CargoType =
     match value with
     | "HAZARDOUS" -> CargoTracker.Estimation.Domain.Hazardous
@@ -401,6 +469,7 @@ let webApp: HttpHandler =
                     route "/estimates/new" >=> estimateNew
                     route "/bookings" >=> bookingList
                     route "/bookings/new" >=> bookingNew
+                    routef "/bookings/%s" bookingDetail
                     // ウォーキングスケルトン: 後続 IT で実画面化するプレースホルダ（ADR-0005 ロール制御）
                     route "/tracking"
                     >=> placeholder "貨物追跡" [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
@@ -413,7 +482,8 @@ let webApp: HttpHandler =
                     route "/logout" >=> logout
                     route "/shippers" >=> shipperCreate
                     route "/estimates" >=> estimateCreate
-                    route "/bookings" >=> bookingCreate ]
+                    route "/bookings" >=> bookingCreate
+                    routef "/bookings/%s/routing" bookingSubmitRouting ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。

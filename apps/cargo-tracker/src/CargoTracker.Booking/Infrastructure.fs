@@ -43,6 +43,13 @@ module CargoQueries =
               ArrivalDeadline = rd.ReadString "arrival_deadline"
               BookingStatus = rd.ReadString "booking_status" })
 
+/// 経路設計者への通知 ACL のスタブ（US06）。IT2 は無処理で成功を返す。
+/// 後続 IT で実通知（メール／画面キュー）に差し替える。
+module StubRoutingRequestNotifier =
+
+    let create () : RoutingRequestNotifier =
+        { Notify = fun (_bookingId: BookingId) -> async { return Ok() } }
+
 /// 荷主存在確認 ACL のアダプタ（ADR-0008）。Shipper プロジェクトを参照せず、
 /// shipper テーブルを shipper_uuid（ShipperId の Guid）で直接照会する（BC 分離）。
 module ShipperExistenceAdapter =
@@ -259,6 +266,37 @@ module CargoRepository =
                     return Error(BusinessRuleViolation("CargoRepository", ex.Message))
             }
 
+        let update (cargo: Cargo) : Async<Result<unit, DomainError>> =
+            async {
+                // 状態遷移の更新。IT2 は booking_status と version を更新する（付随テーブルは後続 IT）。
+                use tx = conn.BeginTransaction()
+
+                try
+                    let now = clock ()
+
+                    let affected =
+                        conn
+                        |> Db.newCommand
+                            """
+                            UPDATE cargo
+                            SET booking_status = @booking_status, updated_at = @now, version = version + 1
+                            WHERE booking_id = @booking_id
+                            """
+                        |> Db.setTransaction tx
+                        |> Db.setParams
+                            [ "booking_status", SqlType.String(BookingState.toString cargo.State)
+                              "now", SqlType.String(now.UtcDateTime.ToString("o"))
+                              "booking_id", SqlType.String(BookingId.value cargo.BookingId) ]
+                        |> Db.exec
+
+                    ignore affected
+                    tx.Commit()
+                    return Ok()
+                with ex ->
+                    tx.Rollback()
+                    return Error(BusinessRuleViolation("CargoRepository", ex.Message))
+            }
+
         let findById (bookingId: BookingId) : Async<Result<Cargo option, DomainError>> =
             async {
                 try
@@ -300,4 +338,6 @@ module CargoRepository =
                     return Error(BusinessRuleViolation("CargoRepository", ex.Message))
             }
 
-        { Save = save; FindById = findById }
+        { Save = save
+          Update = update
+          FindById = findById }

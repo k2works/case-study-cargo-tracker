@@ -320,6 +320,61 @@ module Views =
                         document.addEventListener('DOMContentLoaded', toggleCargoFields);
                         """ ] ]
 
+    /// 貨物予約詳細の表示値（US06）。
+    type BookingDetail =
+        { BookingId: string
+          ShipperId: string
+          CargoType: string
+          Origin: string
+          Destination: string
+          ArrivalDeadline: string
+          Weight: string
+          BookingStatus: string
+          CanSubmitRouting: bool }
+
+    /// 貨物予約詳細画面（`/bookings/{bookingId}`・US06）。
+    /// 仮受付（Preliminary）のときのみ [経路設計を依頼] を表示する。
+    let bookingDetail (roles: string list) (d: BookingDetail) (info: string option) : XmlNode =
+        let row labelText value =
+            tr [] [ th [ _class "w-25" ] [ str labelText ]; td [] [ str value ] ]
+
+        let submitButton =
+            if d.CanSubmitRouting then
+                form
+                    [ _method "post"
+                      _action (sprintf "/bookings/%s/routing" d.BookingId)
+                      _class "mt-3" ]
+                    [ button [ _class "btn btn-primary"; _type "submit" ] [ str "経路設計を依頼" ] ]
+            else
+                emptyText
+
+        layout
+            "貨物予約"
+            roles
+            [ h1 [ _class "mb-4" ] [ str (sprintf "予約詳細 %s" d.BookingId) ]
+              (match info with
+               | Some msg -> div [ _class "alert alert-success" ] [ str msg ]
+               | None -> emptyText)
+              table
+                  [ _class "table table-bordered" ]
+                  [ tbody
+                        []
+                        [ row "予約番号" d.BookingId
+                          row "荷主 ID" d.ShipperId
+                          row "貨物種別" (cargoTypeLabel d.CargoType)
+                          row "出発地" d.Origin
+                          row "目的地" d.Destination
+                          row "到着期限" d.ArrivalDeadline
+                          row "重量（kg）" d.Weight
+                          tr
+                              []
+                              [ th [] [ str "状態" ]
+                                td
+                                    []
+                                    [ span [ _class "badge bg-secondary" ] [ str (bookingStatusLabel d.BookingStatus) ] ] ] ] ]
+              submitButton
+              a [ _class "btn btn-secondary ms-2 mt-3"; _href "/bookings" ] [ str "一覧へ戻る" ] ]
+
     /// 荷主登録フォームの入力値（エラー時の再表示に使う）。
     type ShipperFormValues =
         { Name: string
