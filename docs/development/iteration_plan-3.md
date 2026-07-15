@@ -111,10 +111,10 @@
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | 値オブジェクト（VoyageNumber・VesselName・CarrierName・PortCall・対応貨物種別集合）のスマートコンストラクタ + FsCheck | 3h | - | [ ] |
-| 1.2 | `Schedule` 値オブジェクト（順序付き CarrierMovement 非空リスト・連結制約 `movement[n].到着港 = movement[n+1].出発港`・出発日 < 到着日）を `create` で保証 + FsCheck | 4h | - | [ ] |
-| 1.3 | `Voyage` 集約（VoyageNumber・船名・運送会社・Schedule・対応貨物種別）と `register`/`updateSchedule` 純粋関数 + ユニット | 3h | - | [ ] |
-| 1.4 | 経路候補算出ドメインサービス `RouteComputation`（US08）: 登録航海群から出発地→目的地の接続経路を探索し、貨物種別対応・期限で絞り、直行便優先の推奨順に並べる。費用は区間ベースの簡易ヒューリスティック（正式料金は Billing IT7）。Routing 固有の候補型を返す + FsCheck | 5h | - | [ ] |
+| 1.1 | 値オブジェクト（VoyageNumber・VesselName・CarrierName・PortCall・対応貨物種別集合）のスマートコンストラクタ + FsCheck | 3h | - | [x] |
+| 1.2 | `Schedule` 値オブジェクト（順序付き CarrierMovement 非空リスト・連結制約 `movement[n].到着港 = movement[n+1].出発港`・出発日 < 到着日）を `create` で保証 + FsCheck | 4h | - | [x] |
+| 1.3 | `Voyage` 集約（VoyageNumber・船名・運送会社・Schedule・対応貨物種別）と `register`/`updateSchedule` 純粋関数 + ユニット | 3h | - | [x] |
+| 1.4 | 経路候補算出ドメインサービス `RouteComputation`（US08）: 登録航海群から出発地→目的地の接続経路を探索し、貨物種別対応・期限で絞り、直行便優先の推奨順に並べる。費用は区間ベースの簡易ヒューリスティック（正式料金は Billing IT7）。Routing 固有の候補型を返す + FsCheck | 5h | - | [x] |
 
 **小計**: 15h（理想時間）
 
@@ -156,7 +156,7 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| Routing ドメイン層 | 8 | 15h | [ ] |
+| Routing ドメイン層 | 8 | 15h | [x] Voyage集約・Schedule・RouteComputation 完了 |
 | Routing アプリ/インフラ | — | 13h | [ ] |
 | Routing Web 層 | 6 | 13h | [ ] |
 | 外部 ACL 契約 | — | 2h | [ ] |
