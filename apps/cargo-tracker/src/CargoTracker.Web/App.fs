@@ -608,6 +608,89 @@ let private voyageCreate: HttpHandler =
                         ctx
         }
 
+/// Voyage 集約を編集フォーム値へ射影する（US25）。
+let private toVoyageFormValues (v: CargoTracker.Routing.Domain.Voyage) : Views.VoyageFormValues =
+    let fmt (d: System.DateTimeOffset) = d.ToString("yyyy-MM-ddTHH:mm")
+
+    let legs =
+        CargoTracker.Routing.Domain.Schedule.movements v.Schedule
+        |> List.map (fun m ->
+            CargoTracker.Shared.Domain.Location.value (CargoTracker.Routing.Domain.CarrierMovement.departureLocation m),
+            CargoTracker.Shared.Domain.Location.value (CargoTracker.Routing.Domain.CarrierMovement.arrivalLocation m),
+            fmt (CargoTracker.Routing.Domain.CarrierMovement.departureDate m),
+            fmt (CargoTracker.Routing.Domain.CarrierMovement.arrivalDate m))
+
+    // フォームは 3 区間固定のため、不足分を空行で埋める。
+    let paddedLegs =
+        legs @ List.replicate (max 0 (3 - List.length legs)) ("", "", "", "")
+
+    let supports tag =
+        CargoTracker.Routing.Domain.Voyage.supports tag v
+
+    { VoyageNumber = CargoTracker.Routing.Domain.VoyageNumber.value v.VoyageNumber
+      VesselName = CargoTracker.Routing.Domain.VesselName.value v.Vessel
+      CarrierName = CargoTracker.Routing.Domain.CarrierName.value v.Carrier
+      CargoGeneral = supports CargoTracker.Routing.Domain.General
+      CargoHazardous = supports CargoTracker.Routing.Domain.Hazardous
+      CargoRefrigerated = supports CargoTracker.Routing.Domain.Refrigerated
+      Legs = paddedLegs }
+
+/// 航海更新フォーム（`GET /voyages/{voyageNumber}/edit`・US25）。
+let private voyageEdit (voyageNumberStr: string) : HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+
+            let vn = CargoTracker.Routing.Domain.VoyageNumber.ofString voyageNumberStr
+            let! found = repo.FindByNumber vn
+
+            match found with
+            | Ok(Some voyage) ->
+                let action = sprintf "/voyages/%s/edit" voyageNumberStr
+
+                return!
+                    htmlView
+                        (Views.voyageForm (rolesOf ctx) "航海スケジュール更新" action true (toVoyageFormValues voyage) None)
+                        next
+                        ctx
+            | Ok None -> return! (setStatusCode 404 >=> text "航海が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 航海更新の実行（`POST /voyages/{voyageNumber}/edit`・US25）。
+let private voyageUpdate (voyageNumberStr: string) : HttpHandler =
+    mustHaveRole "ROLE_ROUTE_DESIGNER"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get key = string form.[key]
+            let values, cmd = readVoyageForm get
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Routing.Infrastructure.VoyageRepository.create conn systemClock
+
+            let! result = CargoTracker.Routing.Application.VoyageWorkflow.update repo cmd
+
+            match result with
+            | Ok _ -> return! redirectTo false "/voyages" next ctx
+            | Error err ->
+                ctx.SetStatusCode 400
+                let action = sprintf "/voyages/%s/edit" voyageNumberStr
+
+                return!
+                    htmlView
+                        (Views.voyageForm (rolesOf ctx) "航海スケジュール更新" action true values (Some(domainErrorMessage err)))
+                        next
+                        ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -631,6 +714,7 @@ let webApp: HttpHandler =
                     route "/handling" >=> placeholder "荷役管理" [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
                     route "/voyages" >=> voyageList
                     route "/voyages/new" >=> voyageNew
+                    routef "/voyages/%s/edit" voyageEdit
                     route "/admin/discount-policies" >=> placeholder "割引ポリシー管理" [ "ROLE_ADMIN" ] ]
           POST
           >=> choose
@@ -640,7 +724,8 @@ let webApp: HttpHandler =
                     route "/estimates" >=> estimateCreate
                     route "/bookings" >=> bookingCreate
                     routef "/bookings/%s/routing" bookingSubmitRouting
-                    route "/voyages" >=> voyageCreate ]
+                    route "/voyages" >=> voyageCreate
+                    routef "/voyages/%s/edit" voyageUpdate ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。

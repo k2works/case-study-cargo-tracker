@@ -173,6 +173,70 @@ let ``日付が逆転した区間の登録は 400 になる`` () =
 
         res.StatusCode |> should equal HttpStatusCode.BadRequest)
 
+/// 航海 V001 を登録する。
+let private registerV001 (client: HttpClient) (cookie: string) =
+    authedPost
+        client
+        cookie
+        "/voyages"
+        [ "voyageNumber", "V001"
+          "vesselName", "Ever Given"
+          "carrierName", "Evergreen"
+          "cargoGeneral", "true"
+          "leg1Dep", "JPTYO"
+          "leg1Arr", "USLAX"
+          "leg1DepDate", "2026-09-01T00:00"
+          "leg1ArrDate", "2026-09-20T00:00" ]
+    |> ignore
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``航海更新フォームに既存内容が表示される`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "designer01"
+        registerV001 client cookie
+        let res = authedGet client cookie "/voyages/V001/edit"
+        res.StatusCode |> should equal HttpStatusCode.OK
+        let body = run (res.Content.ReadAsStringAsync())
+        body |> should haveSubstring "航海スケジュール更新"
+        body |> should haveSubstring "Ever Given"
+        body |> should haveSubstring "JPTYO")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``航海を更新すると一覧に反映される`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "designer01"
+        registerV001 client cookie
+
+        let res =
+            authedPost
+                client
+                cookie
+                "/voyages/V001/edit"
+                [ "voyageNumber", "V001"
+                  "vesselName", "MSC Oscar"
+                  "carrierName", "Evergreen"
+                  "cargoGeneral", "true"
+                  "leg1Dep", "JPTYO"
+                  "leg1Arr", "USLAX"
+                  "leg1DepDate", "2026-09-01T00:00"
+                  "leg1ArrDate", "2026-09-20T00:00" ]
+
+        res.StatusCode |> should equal HttpStatusCode.Found
+
+        let list = authedGet client cookie "/voyages"
+        let body = run (list.Content.ReadAsStringAsync())
+        body |> should haveSubstring "MSC Oscar")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``存在しない航海の更新フォームは 404`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "designer01"
+        let res = authedGet client cookie "/voyages/NOPE/edit"
+        res.StatusCode |> should equal HttpStatusCode.NotFound)
+
 [<Fact>]
 [<Trait("Category", "Integration")>]
 let ``ナビゲーション整合性: 経路設計者のダッシュボードに航路管理導線がある`` () =
