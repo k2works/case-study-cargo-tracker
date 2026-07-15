@@ -884,6 +884,8 @@ module Voyage =
 
 対応 US：US14, US17〜US20
 
+> **IT5 実装状況**: US14/US17/US18 を実装。`TrackingActivity`（`currentStatus` 導出）・`TrackingNumber`・`TrackingBookingId`・`TrackingStatus`（導出値・9 ケース）・`TrackingEventType`（`toStatus`）・`TrackingActivityEvent` を実装。Shared に `TransportStatus` を配置し、`TrackingActivity.toTransportStatus` で写像（アプリ層で Booking.Delivery 同期用）。`TrackingException`・`ExceptionResolution`・`ResolveException` は IT6（US19/US20 例外）で追加予定のため、IT5 は `Exceptions` を持たず非例外遷移のみ（Its の `execute` は `RecordEvent` のみ）。イベント DU は BC ローカル（`TrackingEvent`・ADR-0002 改訂）。
+
 ### ドメインモデル図
 
 ```plantuml
@@ -1061,6 +1063,8 @@ module TrackingActivity =
 モジュール：`CargoTracker.Handling.Domain`
 
 対応 US：US15, US16
+
+> **IT5 実装状況**: US15/US16 を実装。`HandlingActivity`・`HandlingType`（`Load`/`Unload` は VoyageNumber 付き）・`CargoBookingId`・`VoyageNumber`・`CargoSnapshot`/`LegSnapshot`・`ValidationOutcome`・`validateFor`（デシジョンテーブル）・`register`（引取は荷受人確認必須・Misrouted 時 `CargoMisrouted` 発行）を実装。貨物スナップショットは合成層 ACL（`Web.HandlingAcl`）で追跡番号→cargo+leg を解決（BC 分離）。`CustomsDeclaration`・`CustomsStatus` の通関ゲート（ビジネスルール 2/3）は次 IT。イベント DU は BC ローカル（`HandlingEvent`・ADR-0002 改訂）。荷受人確認は集約に `ConsigneeConfirmation: string option` として保持。
 
 ### ドメインモデル図
 

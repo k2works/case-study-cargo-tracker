@@ -136,3 +136,77 @@ let ``TransportStatus は toString→ofString でラウンドトリップする`
     match TransportStatus.ofString (TransportStatus.toString status) with
     | Ok restored -> restored = status
     | Error _ -> false
+
+// ---- 追加: エラー/境界分岐（カバレッジ補強）----
+
+[<Fact>]
+let ``追跡番号は 20 文字超で Error`` () =
+    match TrackingNumber.create (String.replicate 21 "A") with
+    | Error(ValidationError("TrackingNumber", _)) -> ()
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``予約参照 ID は空で Error`` () =
+    match TrackingBookingId.create "" with
+    | Error(ValidationError("TrackingBookingId", _)) -> ()
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``TransportStatus は未知の値で Error`` () =
+    match TransportStatus.ofString "NOPE" with
+    | Error(ValidationError("TransportStatus", _)) -> ()
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``TrackingEventType は未知の値で Error`` () =
+    match TrackingEventType.ofString "NOPE" with
+    | Error(ValidationError("TrackingEventType", _)) -> ()
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``TrackingEventType の toString と ofString が往復する`` () =
+    for et in
+        [ ReceivedEvent
+          LoadedEvent
+          DepartedEvent
+          UnloadedEvent
+          ArrivedEvent
+          ClaimedEvent ] do
+        match TrackingEventType.ofString (TrackingEventType.toString et) with
+        | Ok restored -> restored |> should equal et
+        | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``出港・入港イベントは輸送中・引取待ちを導出する`` () =
+    let a0 = issued ()
+
+    let departed =
+        match TrackingActivity.execute a0 (RecordEvent(event DepartedEvent "JPTYO" 1)) with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    TrackingActivity.currentStatus departed |> should equal OnboardCarrier
+
+    let arrived =
+        match TrackingActivity.execute departed (RecordEvent(event ArrivedEvent "USLAX" 2)) with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    TrackingActivity.currentStatus arrived |> should equal AwaitingClaim
+
+[<Fact>]
+let ``例外・不明状態も TransportStatus へ変換される`` () =
+    TrackingActivity.toTransportStatus InException
+    |> should equal TransportStatus.InException
+
+    TrackingActivity.toTransportStatus Unknown
+    |> should equal TransportStatus.Unknown
+
+    TrackingActivity.toTransportStatus OnboardCarrier
+    |> should equal TransportStatus.OnboardCarrier
+
+    TrackingActivity.toTransportStatus Unloaded
+    |> should equal TransportStatus.Unloaded
+
+    TrackingActivity.toTransportStatus AwaitingClaim
+    |> should equal TransportStatus.AwaitingClaim

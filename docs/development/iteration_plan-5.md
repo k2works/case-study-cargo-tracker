@@ -152,7 +152,7 @@
 |---|--------|---------|------|------|
 | 3.1 | **`BookingEventDispatcher` の実消費結線**: `BookingConfirmed` → Tracking の追跡番号発行（US14）を合成層で結線。dispatch 失敗のログ出力を追加（IT4 レビュー M8） | 3h | - | [x] |
 | 3.2 | `HandlingActivityRegistered` → Tracking の状態自動更新（US15 受入4）を合成層 ACL で結線。BC 分離（Handling は Tracking を直接参照しない）を維持 | 3h | - | [x] |
-| 3.3 | **ADR-0002 の決着**: 実装実態（Application 層 post-commit ＋ BC ローカル DU）と ADR-0002（UnitOfWork.execute ＋ Shared Payload）の三重不整合を decision で解消（案 a: ADR 改訂 + UnitOfWork.fs 整理／案 b: 実装寄せ）。ADR 起票または改訂 | 3h | - | [ ] |
+| 3.3 | **ADR-0002 の決着**: 実装実態（Application 層 post-commit ＋ BC ローカル DU）と ADR-0002（UnitOfWork.execute ＋ Shared Payload）の三重不整合を decision で解消（案 a: ADR 改訂 + UnitOfWork.fs 整理／案 b: 実装寄せ）。ADR 起票または改訂 | 3h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -172,7 +172,7 @@
 |---|--------|---------|------|------|
 | 5.1 | 追跡照会 `/tracking`（入力）・`/tracking/{trackingNumber}`（履歴タイムライン）+ **公開 `/public/tracking/{accessToken}`（未認証）**（US18）+ 受入テスト | 4h | - | [x] |
 | 5.2 | 荷役作業登録 `/handling/new`・一覧 `/handling`（US15/US16・引取は荷受人確認欄）+ 受入テスト | 4h | - | [x] |
-| 5.3 | 追跡番号発行導線（US14・経路設計依頼一覧 `/routing/requests` または予約詳細）+ 貨物状態手動更新 `/tracking/{trackingNumber}/status/new`（US17）+ 受入テスト | 3h | - | [ ] |
+| 5.3 | 追跡番号発行導線（US14・経路設計依頼一覧 `/routing/requests` または予約詳細）+ 貨物状態手動更新 `/tracking/{trackingNumber}/status/new`（US17）+ 受入テスト | 3h | - | [x] |
 
 **小計**: 11h（理想時間）
 
@@ -190,14 +190,14 @@
 |---------|----|----|------|
 | Tracking ドメイン | 4 | 9h | [x] |
 | Handling ドメイン | 5 | 7h | [x] |
-| BC 間イベント連携・ADR 決着 | — | 9h | [ ] |
+| BC 間イベント連携・ADR 決着 | — | 9h | [x] |
 | インフラ（追跡・荷役永続化）| — | 9h | [x] |
-| Web（US14-18・公開ページ）| 8 | 11h | [ ] |
+| Web（US14-18・公開ページ）| 8 | 11h | [x] |
 | 小リファクタ（IT4 M3/M4・任意）| — | 3h | [ ] |
 | **合計** | **17** | **48h** | |
 
 **1 SP あたり**: 約 2.8h（ストーリー分 48h / 17 SP）
-**進捗率**: 53% (9/17 SP・ドメイン完了＋インフラ完了)
+**進捗率**: 100% (17/17 SP・US14-18 完了。task6 リファクタは任意)
 
 > **スコープ注記（過積載）**: 17 SP は直近ベロシティ（12-14 SP）を上回る。フィーチャバッファ消費ルール（release_plan）に従い、**US17（手動更新・2 SP）を最初の切り出し候補**とする。US14/US15/US18 は Release 1.0 の E2E（US13・US15・US18）に必須のため死守。US16（引取）は精算開始条件のため次点で保持。
 

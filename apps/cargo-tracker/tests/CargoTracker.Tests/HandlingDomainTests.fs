@@ -105,3 +105,47 @@ let ``荷役種別は toString で対応する文字列になる`` () =
     HandlingType.toString (Unload(voyage "V001")) |> should equal "UNLOAD"
     HandlingType.toString Customs |> should equal "CUSTOMS"
     HandlingType.toString Claim |> should equal "CLAIM"
+
+// ---- 追加: エラー/境界分岐（カバレッジ補強）----
+
+[<Fact>]
+let ``航海番号は空で Error`` () =
+    match VoyageNumber.create "" with
+    | Error(ValidationError("VoyageNumber", _)) -> ()
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``予約識別子は空で Error`` () =
+    match CargoBookingId.create "" with
+    | Error(ValidationError("CargoBookingId", _)) -> ()
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``荷降しは旅程と一致すれば Valid・不一致なら Misrouted`` () =
+    HandlingActivity.validateFor (snapshot ()) (Unload(voyage "V001")) (loc "USLAX")
+    |> should equal Valid
+
+    HandlingActivity.validateFor (snapshot ()) (Unload(voyage "V001")) (loc "CNSHA")
+    |> should equal Misrouted
+
+[<Fact>]
+let ``通関は常に Valid（IT5 はゲートなし）`` () =
+    HandlingActivity.validateFor (snapshot ()) Customs (loc "JPTYO")
+    |> should equal Valid
+
+[<Fact>]
+let ``引取が目的港と不一致なら Warning`` () =
+    match HandlingActivity.validateFor (snapshot ()) Claim (loc "CNSHA") with
+    | Warning _ -> ()
+    | other -> failwithf "Warning を期待したが: %A" other
+
+[<Fact>]
+let ``荷降しを登録すると航海番号込みで記録される`` () =
+    match HandlingActivity.register (snapshot ()) (Unload(voyage "V001")) (loc "USLAX") now None with
+    | Ok(activity, outcome, _) ->
+        outcome |> should equal Valid
+
+        match activity.Type with
+        | Unload _ -> ()
+        | other -> failwithf "Unload を期待したが: %A" other
+    | Error e -> failwithf "%A" e
