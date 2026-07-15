@@ -91,6 +91,9 @@ module VoyageWorkflow =
                 | Some _ -> Error(BusinessRuleViolation("VoyageNumber", "同一の航海番号が既に登録されています。"))
                 | None -> Ok()
 
+            // NOTE（IT3 バイパス中・レビュー M2/IT2 H6）: VoyageEvent は現時点で消費者が無いため
+            // 破棄している。IT4 で Booking との経路確定連携を実装する際に UnitOfWork の post-commit
+            // ディスパッチ（ADR-0002）へ結線する（retrospective-3 Try#1）。
             let! voyage, _events = Voyage.register voyageNumber vessel carrier schedule tags
             do! repo.Save voyage
             return voyage
