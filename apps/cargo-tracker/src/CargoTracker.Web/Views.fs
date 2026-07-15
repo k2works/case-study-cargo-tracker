@@ -964,6 +964,8 @@ module Views =
                           [ form
                                 [ _method "post"; _action (sprintf "/routing/requests/%s/propose" bookingId) ]
                                 [ input [ _type "hidden"; _name "candidateIndex"; _value (string c.Index) ]
+                                  // US10: 調整した期限で算出した候補を確定する場合、同じ期限を引き継ぐ。
+                                  input [ _type "hidden"; _name "deadline"; _value deadline ]
                                   button [ _type "submit"; _class "btn btn-sm btn-primary" ] [ str "この経路で確定" ] ] ] ])
 
         layout
@@ -976,7 +978,25 @@ module Views =
                         []
                         [ tr [] [ th [ _class "w-25" ] [ str "出発地" ]; td [] [ str origin ] ]
                           tr [] [ th [] [ str "目的地" ]; td [] [ str destination ] ]
-                          tr [] [ th [] [ str "到着期限" ]; td [] [ str deadline ] ] ] ]
+                          tr [] [ th [] [ str "到着期限（調整可）" ]; td [] [ str deadline ] ] ] ]
+              // US10: 期限調整・再算出。営業と条件を協議のうえ到着期限を調整して候補を再算出する。
+              form
+                  [ _method "get"
+                    _action (sprintf "/routing/requests/%s" bookingId)
+                    _class "row g-2 align-items-end mb-4" ]
+                  [ div
+                        [ _class "col-auto" ]
+                        [ label [ _class "form-label"; _for "deadline" ] [ str "到着期限を調整して再算出" ]
+                          input
+                              [ _class "form-control"
+                                _type "date"
+                                _id "deadline"
+                                _name "deadline"
+                                _value deadline ] ]
+                    div
+                        [ _class "col-auto" ]
+                        [ button [ _type "submit"; _class "btn btn-outline-primary" ] [ str "この期限で再算出" ] ] ]
+              div [ _class "form-text mb-3" ] [ str "※ 期限緩和は営業を通じて荷主と条件を協議のうえ行ってください（US10）。" ]
               h2 [ _class "h4 mb-3" ] [ str "経路候補（直行優先・所要日数昇順）" ]
               (if List.isEmpty candidates then
                    div [ _class "alert alert-warning" ] [ str "期限内に到達可能な経路候補がありません。到着期限の緩和や航海スケジュールの追加を検討してください。" ]

@@ -872,14 +872,18 @@ let private routingRequests: HttpHandler =
 /// 選択画面表示（routingDesign）と確定（routingPropose）で同一の候補列を再現するため共通化する。
 let private computeCandidatesForBooking
     (conn: System.Data.IDbConnection)
+    (deadlineOverride: string option)
     (b: CargoTracker.Booking.Infrastructure.CargoListItem)
     : Async<CargoTracker.Routing.Domain.RouteCandidate list> =
     async {
         let originResult = CargoTracker.Shared.Domain.Location.create b.Origin
         let destResult = CargoTracker.Shared.Domain.Location.create b.Destination
 
+        // US10: 期限調整・再算出。調整値（deadlineOverride）があれば予約の期限より優先する。
+        let effectiveDeadline = deadlineOverride |> Option.defaultValue b.ArrivalDeadline
+
         let deadline =
-            match System.DateOnly.TryParse b.ArrivalDeadline with
+            match System.DateOnly.TryParse effectiveDeadline with
             | true, d -> System.DateTimeOffset(d.ToDateTime(System.TimeOnly(23, 59, 0)), System.TimeSpan.Zero)
             | _ -> System.DateTimeOffset.MaxValue
 
@@ -918,7 +922,13 @@ let private routingDesign (bookingIdStr: string) : HttpHandler =
             match booking with
             | None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Some b ->
-                let! candidates = computeCandidatesForBooking conn b
+                // US10: クエリで期限調整値が渡された場合は再算出に使う。
+                let deadlineOverride =
+                    match ctx.TryGetQueryStringValue "deadline" with
+                    | Some d when d <> "" -> Some d
+                    | _ -> None
+
+                let! candidates = computeCandidatesForBooking conn deadlineOverride b
 
                 let candidateRows =
                     candidates
@@ -943,7 +953,7 @@ let private routingDesign (bookingIdStr: string) : HttpHandler =
                             bookingIdStr
                             b.Origin
                             b.Destination
-                            b.ArrivalDeadline
+                            (deadlineOverride |> Option.defaultValue b.ArrivalDeadline)
                             candidateRows)
                         next
                         ctx
@@ -965,8 +975,15 @@ let private routingPropose (bookingIdStr: string) : HttpHandler =
             match booking with
             | None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Some b ->
-                let! candidates = computeCandidatesForBooking conn b
                 let! form = ctx.Request.ReadFormAsync()
+
+                // US10: 調整期限で算出した候補を確定する場合、同じ期限で再算出して整合させる。
+                let deadlineOverride =
+                    match string form.["deadline"] with
+                    | "" -> None
+                    | d -> Some d
+
+                let! candidates = computeCandidatesForBooking conn deadlineOverride b
 
                 let selectedIndex =
                     match System.Int32.TryParse(string form.["candidateIndex"]) with

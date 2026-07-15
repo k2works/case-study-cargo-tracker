@@ -306,3 +306,25 @@ let ``経路確定後に荷主へ通知できる（US12）`` () =
 
         (string notifyRes.Headers.Location)
         |> should haveSubstring (sprintf "/bookings/%s" bookingId))
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``到着期限を短縮すると候補が絞られ緩和で再び算出される（US10）`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookAndRequestRouting client shipperUuid
+        registerDirectVoyage client // V001 は 2026-09-20 到着
+        let cookie = authCookie client "designer01"
+
+        // 期限を到着日より前（2026-09-10）に調整すると候補が無くなる。
+        let tight =
+            authedGet client cookie (sprintf "/routing/requests/%s?deadline=2026-09-10" bookingId)
+
+        let tightBody = run (tight.Content.ReadAsStringAsync())
+        tightBody |> should haveSubstring "経路候補がありません"
+
+        // 期限を緩和（2026-12-31）すると再び候補が算出される。
+        let relaxed =
+            authedGet client cookie (sprintf "/routing/requests/%s?deadline=2026-12-31" bookingId)
+
+        let relaxedBody = run (relaxed.Content.ReadAsStringAsync())
+        relaxedBody |> should haveSubstring "V001")
