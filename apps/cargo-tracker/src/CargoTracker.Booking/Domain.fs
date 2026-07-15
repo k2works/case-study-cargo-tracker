@@ -204,10 +204,96 @@ module Description =
 
     let value (Description v) = v
 
-/// 予約状態（IT2 スコープ）。RouteProposed 以降は後続 IT で追加する。
+/// 航海番号（Booking Context 固有・単一ケース DU）。Leg.Voyage 用。
+/// Routing Context の同名型とは別型であり、コンテキスト跨ぎの取り違えはコンパイルエラーになる（domain-model 型帰属方針）。
+type VoyageNumber = private VoyageNumber of string
+
+module VoyageNumber =
+
+    let create (value: string) : Result<VoyageNumber, DomainError> =
+        if System.String.IsNullOrWhiteSpace value then
+            Error(ValidationError("VoyageNumber", "航海番号は空にできません。"))
+        else
+            Ok(VoyageNumber value)
+
+    let ofString (value: string) : VoyageNumber = VoyageNumber value
+    let value (VoyageNumber v) = v
+
+/// 輸送区間（US11）。単一航海での積込港から荷降港までの区間。
+/// 積込港 ≠ 荷降港・積込時刻 < 荷降時刻をスマートコンストラクタで保証する。
+type Leg =
+    private
+        { LoadLocation: Location
+          UnloadLocation: Location
+          LoadTime: System.DateTimeOffset
+          UnloadTime: System.DateTimeOffset
+          Voyage: VoyageNumber }
+
+module Leg =
+
+    let create
+        (loadLocation: Location)
+        (unloadLocation: Location)
+        (loadTime: System.DateTimeOffset)
+        (unloadTime: System.DateTimeOffset)
+        (voyage: VoyageNumber)
+        : Result<Leg, DomainError> =
+        if Location.sameAs loadLocation unloadLocation then
+            Error(BusinessRuleViolation("Leg", "積込港と荷降港は異なる必要があります。"))
+        elif loadTime >= unloadTime then
+            Error(BusinessRuleViolation("Leg", "積込時刻は荷降時刻より前でなければなりません。"))
+        else
+            Ok
+                { LoadLocation = loadLocation
+                  UnloadLocation = unloadLocation
+                  LoadTime = loadTime
+                  UnloadTime = unloadTime
+                  Voyage = voyage }
+
+    let loadLocation (l: Leg) = l.LoadLocation
+    let unloadLocation (l: Leg) = l.UnloadLocation
+    let loadTime (l: Leg) = l.LoadTime
+    let unloadTime (l: Leg) = l.UnloadTime
+    let voyage (l: Leg) = l.Voyage
+
+/// 旅程（US11）。1 つ以上の Leg で構成する非空リスト。
+/// 連結制約 `Leg[n].荷降港 = Leg[n+1].積込港` を `create` で保証する（domain-model は NonEmptyList・実装は list + create 保証）。
+type CargoItinerary = private CargoItinerary of Leg list
+
+module CargoItinerary =
+
+    let create (legs: Leg list) : Result<CargoItinerary, DomainError> =
+        match legs with
+        | [] -> Error(ValidationError("Legs", "旅程は 1 つ以上の輸送区間が必要です。"))
+        | _ ->
+            let broken =
+                legs
+                |> List.pairwise
+                |> List.tryFind (fun (prev, next) ->
+                    not (Location.sameAs (Leg.unloadLocation prev) (Leg.loadLocation next)))
+
+            match broken with
+            | Some _ -> Error(BusinessRuleViolation("LegConnectivity", "輸送区間が連結していません。"))
+            | None -> Ok(CargoItinerary legs)
+
+    let legs (CargoItinerary ls) = ls
+    let firstLoadLocation (CargoItinerary ls) = Leg.loadLocation (List.head ls)
+    let lastUnloadLocation (CargoItinerary ls) = Leg.unloadLocation (List.last ls)
+    let expectedArrivalTime (CargoItinerary ls) = Leg.unloadTime (List.last ls)
+
+    /// 旅程がルート仕様（出発地・目的地・到着期限）を満たすか（domain-model の RouteSpecification.isSatisfiedBy に対応）。
+    let satisfies (spec: RouteSpecification) (itinerary: CargoItinerary) : bool =
+        Location.sameAs (firstLoadLocation itinerary) (RouteSpecification.origin spec)
+        && Location.sameAs (lastUnloadLocation itinerary) (RouteSpecification.destination spec)
+        && System.DateOnly.FromDateTime((expectedArrivalTime itinerary).UtcDateTime)
+           <= RouteSpecification.arrivalDeadline spec
+
+/// 予約状態（IT4 で RouteProposed/Confirmed を追加・ADR-0007 系統）。TrackingIssued 以降は IT5+ で追加する。
 type BookingState =
     | Preliminary
     | RoutingRequested
+    | RouteProposed of CargoItinerary
+    | Confirmed of CargoItinerary
     | Cancelled of reason: string
 
 module BookingState =
@@ -217,28 +303,43 @@ module BookingState =
         match state with
         | Preliminary -> "PRELIMINARY"
         | RoutingRequested -> "ROUTING_REQUESTED"
+        | RouteProposed _ -> "ROUTE_PROPOSED"
+        | Confirmed _ -> "CONFIRMED"
         | Cancelled _ -> "CANCELLED"
 
     /// 永続化された文字列から状態を復元する（cargo.booking_status）。
+    /// `ROUTE_PROPOSED`/`CONFIRMED` は旅程（leg テーブル由来）を要するため itinerary を受け取る。
     /// 【往復非対称の注意】`Cancelled reason` の reason は booking_status カラムに保持しないため、
-    /// `toString`→`ofString` のラウンドトリップで理由は失われ空文字で復元される。
-    /// キャンセル理由の永続化が必要になった時点で cancellation_reason カラムを追加する（IT4+）。
-    let ofString (value: string) : Result<BookingState, DomainError> =
+    /// ラウンドトリップで理由は失われ空文字で復元される（cancellation_reason 化は将来）。
+    let ofString (itinerary: CargoItinerary option) (value: string) : Result<BookingState, DomainError> =
+        let withItinerary ctor =
+            match itinerary with
+            | Some i -> Ok(ctor i)
+            | None -> Error(ValidationError("BookingState", sprintf "%s の復元には旅程が必要です。" value))
+
         match value with
         | "PRELIMINARY" -> Ok Preliminary
         | "ROUTING_REQUESTED" -> Ok RoutingRequested
+        | "ROUTE_PROPOSED" -> withItinerary RouteProposed
+        | "CONFIRMED" -> withItinerary Confirmed
         | "CANCELLED" -> Ok(Cancelled "")
         | other -> Error(ValidationError("BookingState", sprintf "未知の予約状態です: %s" other))
 
-/// 集約への操作コマンド（IT2 スコープ）。
+/// 集約への操作コマンド（IT2 + IT4 の経路確定〜予約確定）。
 type BookingCommand =
     | SubmitForRouting
+    | ProposeRoute of CargoItinerary // US11: 確定経路を予約に紐付ける
+    | ConfirmBooking // US13: 予約を確定する
+    | RestoreToRouting // US13 受入条件4: 経路設計中に差し戻す
     | Cancel of reason: string
 
-/// Booking コンテキストのドメインイベント。BC 固有イベントはローカル record とする（ADR-0002 の Shared 循環回避方針）。
+/// Booking コンテキストのドメインイベント。BC 固有イベントはローカル DU とする（ADR-0002 の Shared 循環回避方針）。
 type BookingEvent =
     | CargoBooked of BookingId * ShipperId
     | RoutingRequestedEvent of BookingId
+    | CargoRouted of BookingId // US11: 経路提案（RouteProposed）
+    | BookingConfirmed of BookingId // US13: 予約確定
+    | BookingRestoredToRouting of BookingId // US13: 差し戻し
     | BookingCancelled of BookingId * reason: string
 
 /// 集約ルート。予約の中心。状態遷移・貨物仕様を統括する。
@@ -284,13 +385,36 @@ module Cargo =
 
         Ok(cargo, [ CargoBooked(bookingId, shipperId) ])
 
-    /// 状態遷移（US06）。網羅的パターンマッチにより許可されない遷移は InvalidStateTransition を返す。
+    /// 状態遷移（US06/US11/US13）。網羅的パターンマッチにより許可されない遷移は InvalidStateTransition を返す。
     let execute (cargo: Cargo) (command: BookingCommand) : Result<Cargo * BookingEvent list, DomainError> =
         match cargo.State, command with
         | Preliminary, SubmitForRouting ->
             Ok({ cargo with State = RoutingRequested }, [ RoutingRequestedEvent cargo.BookingId ])
 
-        // Cancelled からの Cancel は不正遷移。Preliminary / RoutingRequested からは Cancel 可能。
+        // US11: 経路提案。旅程がルート仕様（出発地・目的地・期限）を満たすことを検証する。
+        | RoutingRequested, ProposeRoute itinerary ->
+            if CargoItinerary.satisfies cargo.RouteSpecification itinerary then
+                Ok(
+                    { cargo with
+                        State = RouteProposed itinerary },
+                    [ CargoRouted cargo.BookingId ]
+                )
+            else
+                Error(BusinessRuleViolation("RouteSpecification", "旅程がルート仕様（出発地・目的地・到着期限）を満たしていません。"))
+
+        // US13: 予約確定。
+        | RouteProposed itinerary, ConfirmBooking ->
+            Ok(
+                { cargo with
+                    State = Confirmed itinerary },
+                [ BookingConfirmed cargo.BookingId ]
+            )
+
+        // US13 受入条件4: 予約確定から経路設計中へ差し戻す（ルート変更希望）。
+        | Confirmed _, RestoreToRouting ->
+            Ok({ cargo with State = RoutingRequested }, [ BookingRestoredToRouting cargo.BookingId ])
+
+        // Cancelled からの Cancel は不正遷移。それ以外の状態からは Cancel 可能（US13 受入条件5）。
         | Cancelled _, Cancel _ -> Error(InvalidStateTransition(BookingState.toString cargo.State, "Cancel"))
 
         | _, Cancel reason -> Ok({ cargo with State = Cancelled reason }, [ BookingCancelled(cargo.BookingId, reason) ])

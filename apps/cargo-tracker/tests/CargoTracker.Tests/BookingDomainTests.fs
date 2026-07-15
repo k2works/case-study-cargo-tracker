@@ -264,14 +264,20 @@ let ``booking_status 文字列から状態を復元できる`` () =
         | Ok v -> v |> should equal expected
         | Error e -> failwithf "Ok を期待したが Error: %A" e
 
-    ok Preliminary (BookingState.ofString "PRELIMINARY")
-    ok RoutingRequested (BookingState.ofString "ROUTING_REQUESTED")
-    ok (Cancelled "") (BookingState.ofString "CANCELLED")
+    ok Preliminary (BookingState.ofString None "PRELIMINARY")
+    ok RoutingRequested (BookingState.ofString None "ROUTING_REQUESTED")
+    ok (Cancelled "") (BookingState.ofString None "CANCELLED")
 
 [<Fact>]
 let ``未知の booking_status は Error を返す`` () =
-    match BookingState.ofString "UNKNOWN" with
+    match BookingState.ofString None "UNKNOWN" with
     | Error(ValidationError(field, _)) -> field |> should equal "BookingState"
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``ROUTE_PROPOSED は旅程が無いと復元できない`` () =
+    match BookingState.ofString None "ROUTE_PROPOSED" with
+    | Error(ValidationError("BookingState", _)) -> ()
     | other -> failwithf "ValidationError を期待したが: %A" other
 
 // ---- Consignee（荷受人・任意）----
@@ -340,3 +346,164 @@ let ``温度管理条件のアクセサで各項目を取り出せる`` () =
         TemperatureRequirement.maxTemperature t |> should equal 5m
         TemperatureRequirement.unit t |> should equal Fahrenheit
     | Error e -> failwithf "%A" e
+
+// ---- IT4: Leg / CargoItinerary（US11）----
+
+let private dto (y, m, d) =
+    DateTimeOffset(y, m, d, 0, 0, 0, TimeSpan.Zero)
+
+let private voyageNo n = VoyageNumber.ofString n
+
+let private leg load unload loadT unloadT vn =
+    match Leg.create (loc load) (loc unload) loadT unloadT (voyageNo vn) with
+    | Ok l -> l
+    | Error e -> failwithf "テスト前提の Leg 生成に失敗: %A" e
+
+[<Fact>]
+let ``輸送区間は積込港≠荷降港かつ積込<荷降なら Ok`` () =
+    match Leg.create (loc "JPTYO") (loc "USLAX") (dto (2026, 8, 1)) (dto (2026, 8, 20)) (voyageNo "V001") with
+    | Ok _ -> ()
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``輸送区間は積込港と荷降港が同一なら Error`` () =
+    match Leg.create (loc "JPTYO") (loc "JPTYO") (dto (2026, 8, 1)) (dto (2026, 8, 20)) (voyageNo "V001") with
+    | Error(BusinessRuleViolation("Leg", _)) -> ()
+    | other -> failwithf "BusinessRuleViolation を期待したが: %A" other
+
+[<Fact>]
+let ``旅程は空なら Error`` () =
+    match CargoItinerary.create [] with
+    | Error(ValidationError("Legs", _)) -> ()
+    | other -> failwithf "ValidationError を期待したが: %A" other
+
+[<Fact>]
+let ``連結した区間列は旅程を構成でき端点が取れる`` () =
+    let l1 = leg "JPTYO" "SGSIN" (dto (2026, 8, 1)) (dto (2026, 8, 8)) "V-A"
+    let l2 = leg "SGSIN" "USLAX" (dto (2026, 8, 9)) (dto (2026, 8, 25)) "V-B"
+
+    match CargoItinerary.create [ l1; l2 ] with
+    | Ok itin ->
+        Location.value (CargoItinerary.firstLoadLocation itin) |> should equal "JPTYO"
+        Location.value (CargoItinerary.lastUnloadLocation itin) |> should equal "USLAX"
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``連結が途切れる区間列は LegConnectivity エラー`` () =
+    let l1 = leg "JPTYO" "SGSIN" (dto (2026, 8, 1)) (dto (2026, 8, 8)) "V-A"
+    let l2 = leg "HKHKG" "USLAX" (dto (2026, 8, 9)) (dto (2026, 8, 25)) "V-B"
+
+    match CargoItinerary.create [ l1; l2 ] with
+    | Error(BusinessRuleViolation("LegConnectivity", _)) -> ()
+    | other -> failwithf "LegConnectivity を期待したが: %A" other
+
+// ---- IT4: 経路提案〜予約確定の状態遷移（US11/US13）----
+
+/// routeSpec（JPTYO→USLAX・期限 2026-09-01）を満たす旅程。
+let private satisfyingItinerary () =
+    match CargoItinerary.create [ leg "JPTYO" "USLAX" (dto (2026, 8, 1)) (dto (2026, 8, 20)) "V001" ] with
+    | Ok i -> i
+    | Error e -> failwithf "%A" e
+
+let private routingRequestedCargo () =
+    let cargo = preliminaryCargo ()
+
+    match Cargo.execute cargo SubmitForRouting with
+    | Ok(c, _) -> c
+    | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``経路提案で RoutingRequested から RouteProposed に遷移し CargoRouted を発行する`` () =
+    let cargo = routingRequestedCargo ()
+
+    match Cargo.execute cargo (ProposeRoute(satisfyingItinerary ())) with
+    | Ok(updated, events) ->
+        (match updated.State with
+         | RouteProposed _ -> ()
+         | other -> failwithf "RouteProposed を期待したが: %A" other)
+
+        events |> should equal [ CargoRouted cargo.BookingId ]
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``ルート仕様を満たさない旅程は経路提案できない`` () =
+    let cargo = routingRequestedCargo ()
+    // 目的地が USLAX でない旅程
+    let badItinerary =
+        match CargoItinerary.create [ leg "JPTYO" "SGSIN" (dto (2026, 8, 1)) (dto (2026, 8, 20)) "V001" ] with
+        | Ok i -> i
+        | Error e -> failwithf "%A" e
+
+    match Cargo.execute cargo (ProposeRoute badItinerary) with
+    | Error(BusinessRuleViolation("RouteSpecification", _)) -> ()
+    | other -> failwithf "BusinessRuleViolation を期待したが: %A" other
+
+[<Fact>]
+let ``期限を超過する旅程は経路提案できない`` () =
+    let cargo = routingRequestedCargo ()
+    // 到着 9/20 > 期限 9/1
+    let lateItinerary =
+        match CargoItinerary.create [ leg "JPTYO" "USLAX" (dto (2026, 9, 1)) (dto (2026, 9, 20)) "V001" ] with
+        | Ok i -> i
+        | Error e -> failwithf "%A" e
+
+    match Cargo.execute cargo (ProposeRoute lateItinerary) with
+    | Error(BusinessRuleViolation("RouteSpecification", _)) -> ()
+    | other -> failwithf "BusinessRuleViolation を期待したが: %A" other
+
+let private routeProposedCargo () =
+    let cargo = routingRequestedCargo ()
+
+    match Cargo.execute cargo (ProposeRoute(satisfyingItinerary ())) with
+    | Ok(c, _) -> c
+    | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``予約確定で RouteProposed から Confirmed に遷移し BookingConfirmed を発行する`` () =
+    let cargo = routeProposedCargo ()
+
+    match Cargo.execute cargo ConfirmBooking with
+    | Ok(updated, events) ->
+        (match updated.State with
+         | Confirmed _ -> ()
+         | other -> failwithf "Confirmed を期待したが: %A" other)
+
+        events |> should equal [ BookingConfirmed cargo.BookingId ]
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``予約確定から差し戻すと RoutingRequested に戻る（US13 受入条件4）`` () =
+    let confirmed =
+        match Cargo.execute (routeProposedCargo ()) ConfirmBooking with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    match Cargo.execute confirmed RestoreToRouting with
+    | Ok(updated, events) ->
+        updated.State |> should equal RoutingRequested
+        events |> should equal [ BookingRestoredToRouting confirmed.BookingId ]
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``RouteProposed からもキャンセルできる（US13 受入条件5）`` () =
+    let cargo = routeProposedCargo ()
+
+    match Cargo.execute cargo (Cancel "荷主都合") with
+    | Ok(updated, _) -> updated.State |> should equal (Cancelled "荷主都合")
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``Preliminary からの経路提案は不正遷移`` () =
+    let cargo = preliminaryCargo ()
+
+    match Cargo.execute cargo (ProposeRoute(satisfyingItinerary ())) with
+    | Error(InvalidStateTransition _) -> ()
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
+[<Fact>]
+let ``booking_status に ROUTE_PROPOSED と CONFIRMED が対応する`` () =
+    BookingState.toString (RouteProposed(satisfyingItinerary ()))
+    |> should equal "ROUTE_PROPOSED"
+
+    BookingState.toString (Confirmed(satisfyingItinerary ()))
+    |> should equal "CONFIRMED"

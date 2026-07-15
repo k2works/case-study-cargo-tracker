@@ -150,7 +150,9 @@ module CargoRepository =
             let deadline = DateOnly.Parse row.ArrivalDeadline
             let! routeSpec = RouteSpecification.create origin destination deadline
             let! weight = Weight.create row.Weight
-            let! state = BookingState.ofString row.BookingStatus
+            // TODO(IT4 タスク3.2): ROUTE_PROPOSED/CONFIRMED は leg テーブルから旅程を読み出して渡す。
+            // 現時点では leg 永続化未実装のため None（当該状態の予約はまだ生成されない）。
+            let! state = BookingState.ofString None row.BookingStatus
 
             let! cargoType =
                 match row.CargoType with
