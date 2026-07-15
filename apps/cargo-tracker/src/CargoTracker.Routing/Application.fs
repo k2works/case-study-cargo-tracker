@@ -39,19 +39,13 @@ module VoyageWorkflow =
     /// 入力の運送区間列を検証済み CarrierMovement 列へ変換する（順序は入力順で 1 始まり）。
     let private validateMovements (inputs: MovementInput list) : Result<CarrierMovement list, DomainError> =
         inputs
-        |> List.mapi (fun i m ->
+        |> List.mapi (fun i m -> (i, m))
+        |> List.traverseResultM (fun (i, m) ->
             result {
                 let! dep = toLocation "DepartureLocation" m.DepartureUnlocode
                 let! arr = toLocation "ArrivalLocation" m.ArrivalUnlocode
                 return! CarrierMovement.create dep arr m.DepartureDate m.ArrivalDate (i + 1)
             })
-        |> List.fold
-            (fun acc r ->
-                match acc, r with
-                | Ok xs, Ok x -> Ok(xs @ [ x ])
-                | Error e, _ -> Error e
-                | _, Error e -> Error e)
-            (Ok [])
 
     /// コマンドを検証済みの値オブジェクト群へ変換する。
     let private validateCommand (cmd: VoyageCommand) =
@@ -62,16 +56,7 @@ module VoyageWorkflow =
             let! movements = validateMovements cmd.Movements
             let! schedule = Schedule.create movements
 
-            let! tags =
-                cmd.SupportedCargoTypes
-                |> List.map CargoTypeTag.ofString
-                |> List.fold
-                    (fun acc r ->
-                        match acc, r with
-                        | Ok xs, Ok x -> Ok(x :: xs)
-                        | Error e, _ -> Error e
-                        | _, Error e -> Error e)
-                    (Ok [])
+            let! tags = cmd.SupportedCargoTypes |> List.traverseResultM CargoTypeTag.ofString
 
             return voyageNumber, vessel, carrier, schedule, Set.ofList tags
         }

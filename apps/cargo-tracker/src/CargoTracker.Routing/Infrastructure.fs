@@ -31,14 +31,7 @@ module VoyageRepository =
         value.Split(',')
         |> Array.toList
         |> List.filter (fun s -> not (String.IsNullOrWhiteSpace s))
-        |> List.map CargoTypeTag.ofString
-        |> List.fold
-            (fun acc r ->
-                match acc, r with
-                | Ok xs, Ok x -> Ok(x :: xs)
-                | Error e, _ -> Error e
-                | _, Error e -> Error e)
-            (Ok [])
+        |> List.traverseResultM CargoTypeTag.ofString
         |> Result.map Set.ofList
 
     /// carrier_movement の生行。
@@ -71,7 +64,7 @@ module VoyageRepository =
             let! movements =
                 movementRows
                 |> List.sortBy (fun r -> r.SeqNumber)
-                |> List.map (fun r ->
+                |> List.traverseResultM (fun r ->
                     result {
                         let! dep = toLoc "DepartureLocation" r.Departure
                         let! arr = toLoc "ArrivalLocation" r.Arrival
@@ -84,13 +77,6 @@ module VoyageRepository =
                                 (parseDate r.ArrivalDate)
                                 r.SeqNumber
                     })
-                |> List.fold
-                    (fun acc r ->
-                        match acc, r with
-                        | Ok xs, Ok x -> Ok(xs @ [ x ])
-                        | Error e, _ -> Error e
-                        | _, Error e -> Error e)
-                    (Ok [])
 
             let! schedule = Schedule.create movements
 
@@ -281,17 +267,8 @@ module VoyageRepository =
 
                     let result =
                         headers
-                        |> List.fold
-                            (fun acc (vid, vn, vessel, carrier, tags) ->
-                                match acc with
-                                | Error e -> Error e
-                                | Ok xs ->
-                                    let movements = loadMovements vid
-
-                                    match reconstruct vn vessel carrier tags movements with
-                                    | Ok v -> Ok(xs @ [ v ])
-                                    | Error e -> Error e)
-                            (Ok [])
+                        |> List.traverseResultM (fun (vid, vn, vessel, carrier, tags) ->
+                            reconstruct vn vessel carrier tags (loadMovements vid))
 
                     return result
                 with ex ->
