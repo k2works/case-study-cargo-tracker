@@ -24,6 +24,10 @@ let rolesOf (ctx: HttpContext) : string list =
 let systemClock: CargoTracker.Shared.Domain.Clock =
     fun () -> System.DateTimeOffset.Now
 
+/// 合成ルートで使う GUID 生成ポート（ADR-0006）。
+let systemNewId: CargoTracker.Shared.Domain.IdGenerator =
+    fun () -> System.Guid.NewGuid()
+
 /// ドメインエラーを日本語のユーザー向けメッセージに変換する。
 let domainErrorMessage (err: CargoTracker.Shared.Domain.DomainError) : string =
     match err with
@@ -492,8 +496,9 @@ let private bookingStateAction
             let repo =
                 CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
 
+            // 実消費ディスパッチャ: BookingConfirmed → 追跡番号自動発行（US14・retro-4 Try#1）。
             let dispatcher =
-                CargoTracker.Booking.Infrastructure.StubBookingEventDispatcher.create ()
+                CargoTracker.Web.BookingEventConsumer.create conn systemClock systemNewId
 
             let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
             let! result = workflow repo dispatcher bookingId
