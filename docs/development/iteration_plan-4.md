@@ -129,7 +129,7 @@
 |---|--------|---------|------|------|
 | 2.1 | 選択された Routing 経路候補（`RouteCandidate`）を Booking `CargoItinerary` へ変換する連携（ACL 変換関数・合成層で結合・BC 分離維持）。ADR-0010 起票 | 3h | - | [x] |
 | 2.2 | 経路確定→予約紐付けワークフロー（`ProposeRoute` 実行・`CargoRepository.Update` で旅程永続化）。US09 の選択確定を含む | 3h | - | [x] |
-| 2.3 | **post-commit イベント dispatch 結線**（`UnitOfWork.execute` で `CargoRouted`/`BookingConfirmed` を発火）。IT2 H6・IT3 M2・retro-3 Try#1 の解消 | 3h | - | [ ] |
+| 2.3 | **post-commit イベント dispatch 結線**（`UnitOfWork.execute` で `CargoRouted`/`BookingConfirmed` を発火）。IT2 H6・IT3 M2・retro-3 Try#1 の解消 | 3h | - | [x] |
 
 **小計**: 9h（理想時間）
 
