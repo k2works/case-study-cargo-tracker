@@ -335,13 +335,27 @@ module Views =
           ArrivalDeadline: string
           Weight: string
           BookingStatus: string
-          CanSubmitRouting: bool }
+          CanSubmitRouting: bool
+          // US11/US13: 確定経路（旅程）と操作可否。
+          Itinerary: string list
+          CanConfirm: bool
+          CanRestore: bool
+          CanCancel: bool }
 
-    /// 貨物予約詳細画面（`/bookings/{bookingId}`・US06）。
-    /// 仮受付（Preliminary）のときのみ [経路設計を依頼] を表示する。
+    /// 貨物予約詳細画面（`/bookings/{bookingId}`・US06/US11/US12/US13）。
+    /// 仮受付（Preliminary）のときのみ [経路設計を依頼]、経路確定後は確定/差し戻し/キャンセルを表示する。
     let bookingDetail (roles: string list) (d: BookingDetail) (info: string option) : XmlNode =
         let row labelText value =
             tr [] [ th [ _class "w-25" ] [ str labelText ]; td [] [ str value ] ]
+
+        let isSales = List.contains "ROLE_SALES" roles
+
+        let actionForm path label btnClass =
+            form
+                [ _method "post"
+                  _action (sprintf "/bookings/%s/%s" d.BookingId path)
+                  _class "d-inline me-2" ]
+                [ button [ _class (sprintf "btn %s" btnClass); _type "submit" ] [ str label ] ]
 
         let submitButton =
             if d.CanSubmitRouting then
@@ -352,6 +366,38 @@ module Views =
                     [ button [ _class "btn btn-primary"; _type "submit" ] [ str "経路設計を依頼" ] ]
             else
                 emptyText
+
+        // 確定経路（旅程）の表示。
+        let itinerarySection =
+            if List.isEmpty d.Itinerary then
+                emptyText
+            else
+                div
+                    [ _class "mt-4" ]
+                    [ h2 [ _class "h5 mb-2" ] [ str "確定経路" ]
+                      ul
+                          [ _class "list-group" ]
+                          (d.Itinerary |> List.map (fun s -> li [ _class "list-group-item" ] [ str s ])) ]
+
+        // 経路確定後の操作（営業のみ）。
+        let actionSection =
+            if not isSales then
+                emptyText
+            else
+                div
+                    [ _class "mt-3" ]
+                    [ (if d.CanConfirm then
+                           actionForm "confirm" "予約を確定する" "btn-success"
+                       else
+                           emptyText)
+                      (if d.CanRestore then
+                           actionForm "restore" "経路設計へ差し戻す" "btn-warning"
+                       else
+                           emptyText)
+                      (if d.CanCancel then
+                           actionForm "cancel" "予約をキャンセルする" "btn-danger"
+                       else
+                           emptyText) ]
 
         layout
             "貨物予約"
@@ -377,7 +423,9 @@ module Views =
                                 td
                                     []
                                     [ span [ _class "badge bg-secondary" ] [ str (bookingStatusLabel d.BookingStatus) ] ] ] ] ]
+              itinerarySection
               submitButton
+              actionSection
               a [ _class "btn btn-secondary ms-2 mt-3"; _href "/bookings" ] [ str "一覧へ戻る" ] ]
 
     /// 荷主登録フォームの入力値（エラー時の再表示に使う）。

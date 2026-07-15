@@ -379,7 +379,32 @@ let private toBookingDetail
       ArrivalDeadline = (CargoTracker.Booking.Domain.RouteSpecification.arrivalDeadline spec).ToString("yyyy-MM-dd")
       Weight = sprintf "%M" (CargoTracker.Booking.Domain.Weight.value cargo.Weight)
       BookingStatus = CargoTracker.Booking.Domain.BookingState.toString cargo.State
-      CanSubmitRouting = (cargo.State = CargoTracker.Booking.Domain.Preliminary) }
+      CanSubmitRouting = (cargo.State = CargoTracker.Booking.Domain.Preliminary)
+      Itinerary =
+        match CargoTracker.Booking.Domain.BookingState.itinerary cargo.State with
+        | Some itin ->
+            CargoTracker.Booking.Domain.CargoItinerary.legs itin
+            |> List.map (fun leg ->
+                sprintf
+                    "%s: %s → %s（%s 〜 %s）"
+                    (CargoTracker.Booking.Domain.VoyageNumber.value (CargoTracker.Booking.Domain.Leg.voyage leg))
+                    (CargoTracker.Shared.Domain.Location.value (CargoTracker.Booking.Domain.Leg.loadLocation leg))
+                    (CargoTracker.Shared.Domain.Location.value (CargoTracker.Booking.Domain.Leg.unloadLocation leg))
+                    ((CargoTracker.Booking.Domain.Leg.loadTime leg).ToString("yyyy-MM-dd"))
+                    ((CargoTracker.Booking.Domain.Leg.unloadTime leg).ToString("yyyy-MM-dd")))
+        | None -> []
+      CanConfirm =
+        (match cargo.State with
+         | CargoTracker.Booking.Domain.RouteProposed _ -> true
+         | _ -> false)
+      CanRestore =
+        (match cargo.State with
+         | CargoTracker.Booking.Domain.Confirmed _ -> true
+         | _ -> false)
+      CanCancel =
+        (match cargo.State with
+         | CargoTracker.Booking.Domain.Cancelled _ -> false
+         | _ -> true) }
 
 /// 貨物予約詳細（`GET /bookings/{bookingId}`・US06）。
 let private bookingDetail (bookingIdStr: string) : HttpHandler =
@@ -426,6 +451,58 @@ let private bookingSubmitRouting (bookingIdStr: string) : HttpHandler =
                 return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
+
+/// 予約確定・差し戻し・キャンセルの共通ハンドラ（US13・ROLE_SALES）。
+/// RouteAssignment の各ワークフローを受け取り、PRG で予約詳細へ戻す。
+let private bookingStateAction
+    (workflow:
+        CargoTracker.Booking.Application.CargoRepository
+            -> CargoTracker.Booking.Application.BookingEventDispatcher
+            -> CargoTracker.Booking.Domain.BookingId
+            -> Async<
+                Result<
+                    CargoTracker.Booking.Domain.Cargo * CargoTracker.Booking.Domain.BookingEvent list,
+                    CargoTracker.Shared.Domain.DomainError
+                 >
+             >)
+    (bookingIdStr: string)
+    : HttpHandler =
+    mustHaveRole "ROLE_SALES"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
+
+            let dispatcher =
+                CargoTracker.Booking.Infrastructure.StubBookingEventDispatcher.create ()
+
+            let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
+            let! result = workflow repo dispatcher bookingId
+
+            match result with
+            | Ok _ -> return! redirectTo false (sprintf "/bookings/%s" bookingIdStr) next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 予約確定（`POST /bookings/{bookingId}/confirm`・US13）。
+let private bookingConfirm (bookingIdStr: string) : HttpHandler =
+    bookingStateAction CargoTracker.Booking.Application.RouteAssignment.confirmBooking bookingIdStr
+
+/// 経路設計へ差し戻し（`POST /bookings/{bookingId}/restore`・US13 受入条件4）。
+let private bookingRestore (bookingIdStr: string) : HttpHandler =
+    bookingStateAction CargoTracker.Booking.Application.RouteAssignment.restoreToRouting bookingIdStr
+
+/// 予約キャンセル（`POST /bookings/{bookingId}/cancel`・US13）。
+let private bookingCancel (bookingIdStr: string) : HttpHandler =
+    bookingStateAction
+        (fun repo dispatcher bookingId ->
+            CargoTracker.Booking.Application.RouteAssignment.cancel repo dispatcher bookingId "営業によるキャンセル")
+        bookingIdStr
 
 let private parseCargoType (value: string) : CargoTracker.Estimation.Domain.CargoType =
     match value with
@@ -933,6 +1010,9 @@ let webApp: HttpHandler =
                     route "/estimates" >=> estimateCreate
                     route "/bookings" >=> bookingCreate
                     routef "/bookings/%s/routing" bookingSubmitRouting
+                    routef "/bookings/%s/confirm" bookingConfirm
+                    routef "/bookings/%s/restore" bookingRestore
+                    routef "/bookings/%s/cancel" bookingCancel
                     route "/voyages" >=> voyageCreate
                     routef "/voyages/%s/edit" voyageUpdate
                     routef "/voyages/%s/confirm" voyageConfirm

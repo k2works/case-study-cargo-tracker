@@ -228,3 +228,65 @@ let ``不正な候補インデックスの確定は 400 を返す`` () =
             authedPost client cookie (sprintf "/routing/requests/%s/propose" bookingId) [ "candidateIndex", "99" ]
 
         res.StatusCode |> should equal HttpStatusCode.BadRequest)
+
+/// 経路確定まで進めて予約詳細で確定可能な状態にする。
+let private bookRequestAndPropose (client: HttpClient) (shipperUuid: string) : string =
+    let bookingId = bookAndRequestRouting client shipperUuid
+    registerDirectVoyage client
+    let cookie = authCookie client "designer01"
+
+    authedPost client cookie (sprintf "/routing/requests/%s/propose" bookingId) [ "candidateIndex", "0" ]
+    |> ignore
+
+    bookingId
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``営業が予約を確定すると予約確定状態になる`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookRequestAndPropose client shipperUuid
+        let salesCookie = authCookie client "sales01"
+
+        let confirmRes =
+            authedPost client salesCookie (sprintf "/bookings/%s/confirm" bookingId) []
+
+        confirmRes.StatusCode |> should equal HttpStatusCode.Found
+
+        let detail = authedGet client salesCookie (sprintf "/bookings/%s" bookingId)
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "予約確定")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``確定した予約を経路設計へ差し戻せる`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookRequestAndPropose client shipperUuid
+        let salesCookie = authCookie client "sales01"
+
+        authedPost client salesCookie (sprintf "/bookings/%s/confirm" bookingId) []
+        |> ignore
+
+        let restoreRes =
+            authedPost client salesCookie (sprintf "/bookings/%s/restore" bookingId) []
+
+        restoreRes.StatusCode |> should equal HttpStatusCode.Found
+
+        let detail = authedGet client salesCookie (sprintf "/bookings/%s" bookingId)
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "経路設計中")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``経路確定した予約をキャンセルできる`` () =
+    withServer (fun client shipperUuid ->
+        let bookingId = bookRequestAndPropose client shipperUuid
+        let salesCookie = authCookie client "sales01"
+
+        let cancelRes =
+            authedPost client salesCookie (sprintf "/bookings/%s/cancel" bookingId) []
+
+        cancelRes.StatusCode |> should equal HttpStatusCode.Found
+
+        let detail = authedGet client salesCookie (sprintf "/bookings/%s" bookingId)
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "キャンセル")
