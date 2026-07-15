@@ -166,7 +166,7 @@ gantt
 | IT1 基盤 + 荷主・見積 | 10 | 10 | 開発完了 | US02/US03/US01 完了。技術基盤（DbUp 二方言・UoW + post-commit・認証/RBAC・ROP・ArchUnitNET）+ Clock/Id 注入。全 75 テスト緑（Tests 26 / Integration 41 / Arch 8）・警告 0。Playwright E2E・カバレッジ CI ゲートは繰り越し |
 | IT2 貨物予約 | 10 | 10 | 開発完了 | US04/US05/US06 完了。Booking を縦貫通（一覧/登録/詳細/経路設計依頼）。ADR-0007/0008 起票。全 133 テスト緑・カバレッジ 全体91.9%/ドメイン85.7%・Backend CI 整備。post-commit 結線と見積整合性は保留 |
 | IT3 航海・経路算出 | 14 | 14 | 開発完了 | US24/US25/US07/US08 完了。Routing を縦貫通（航路一覧/登録/更新/経路設計）。ADR-0009 起票。全 187 テスト緑・カバレッジ 全体93.0%/ドメイン88.4%。4.1（WireMock）はデスコープ |
-| IT4 経路確定・予約確定 | 12 | - | 未着手 | US09/US10/US11/US12/US13 |
+| IT4 経路確定・予約確定 | 12 | - | 計画中 | US09/US10/US11/US12/US13。[iteration_plan-4.md](./iteration_plan-4.md) 作成済み。中盤インサイドアウト。ADR-0010（経路確定連携）・BookingState DU 拡張・post-commit 結線論点あり |
 | IT5 追跡・荷役 | 17 | - | 未着手 | US14/US15/US16/US17/US18（Release 1.0 出荷） |
 | IT6 例外対応 | 6 | - | 未着手 | US19/US20 |
 | IT7 割引ポリシー・請求・精算 | 16 | - | 未着手 | US-ADM-01/US21/US22/US23（Release 1.1 出荷） |
