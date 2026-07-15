@@ -128,6 +128,67 @@ module Views =
                                 th [] [ str "割引率" ] ] ]
                     tbody [] bodyRows ] ]
 
+    /// 貨物予約一覧の表示行（US04）。
+    type CargoRow =
+        { BookingId: string
+          ShipperId: string
+          CargoType: string
+          Origin: string
+          Destination: string
+          ArrivalDeadline: string
+          BookingStatus: string }
+
+    /// 予約状態の日本語表示。
+    let bookingStatusLabel (status: string) : string =
+        match status with
+        | "PRELIMINARY" -> "仮受付"
+        | "ROUTING_REQUESTED" -> "経路設計中"
+        | "CANCELLED" -> "キャンセル"
+        | other -> other
+
+    /// 貨物種別の日本語表示。
+    let cargoTypeLabel (cargoType: string) : string =
+        match cargoType with
+        | "GENERAL" -> "一般"
+        | "HAZARDOUS" -> "危険物"
+        | "REFRIGERATED" -> "冷凍・冷蔵"
+        | other -> other
+
+    /// 貨物予約一覧画面（`/bookings`・US04）。
+    let bookingList (roles: string list) (rows: CargoRow list) : XmlNode =
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ str r.BookingId ]
+                      td [] [ str (cargoTypeLabel r.CargoType) ]
+                      td [] [ str r.Origin ]
+                      td [] [ str r.Destination ]
+                      td [] [ str r.ArrivalDeadline ]
+                      td [] [ span [ _class "badge bg-secondary" ] [ str (bookingStatusLabel r.BookingStatus) ] ] ])
+
+        layout
+            "貨物予約"
+            roles
+            [ div
+                  [ _class "d-flex justify-content-between align-items-center mb-4" ]
+                  [ h1 [] [ str "貨物予約一覧" ]
+                    a [ _class "btn btn-primary"; _href "/bookings/new" ] [ str "新規予約登録" ] ]
+              table
+                  [ _class "table table-striped" ]
+                  [ thead
+                        []
+                        [ tr
+                              []
+                              [ th [] [ str "予約番号" ]
+                                th [] [ str "種別" ]
+                                th [] [ str "出発地" ]
+                                th [] [ str "目的地" ]
+                                th [] [ str "到着期限" ]
+                                th [] [ str "状態" ] ] ]
+                    tbody [] bodyRows ] ]
+
     /// 荷主登録フォームの入力値（エラー時の再表示に使う）。
     type ShipperFormValues =
         { Name: string

@@ -17,6 +17,7 @@
     <Compile Include="LoginAcceptanceTests.fs" />
     <Compile Include="ShipperAcceptanceTests.fs" />
     <Compile Include="EstimateAcceptanceTests.fs" />
+    <Compile Include="BookingAcceptanceTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

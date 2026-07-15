@@ -197,20 +197,43 @@ let private estimateList: HttpHandler =
         let rows =
             items
             |> List.map (fun i ->
-                { Views.EstimateId = i.EstimateId
-                  Views.Origin = i.Origin
-                  Views.Destination = i.Destination
-                  Views.ArrivalDeadline = i.ArrivalDeadline
-                  Views.CargoType = i.CargoType
-                  Views.WeightKg = i.WeightKg
-                  Views.Status = i.Status
-                  Views.CandidateCount = i.CandidateCount })
+                { Views.EstimateRow.EstimateId = i.EstimateId
+                  Views.EstimateRow.Origin = i.Origin
+                  Views.EstimateRow.Destination = i.Destination
+                  Views.EstimateRow.ArrivalDeadline = i.ArrivalDeadline
+                  Views.EstimateRow.CargoType = i.CargoType
+                  Views.EstimateRow.WeightKg = i.WeightKg
+                  Views.EstimateRow.Status = i.Status
+                  Views.EstimateRow.CandidateCount = i.CandidateCount })
 
         htmlView (Views.estimateList (rolesOf ctx) rows) next ctx
 
 let private estimateNew: HttpHandler =
     mustHaveRole "ROLE_SALES"
     >=> fun next ctx -> htmlView (Views.estimateForm (rolesOf ctx) Views.emptyEstimateForm None) next ctx
+
+// ---- US04: 貨物予約一覧（ROLE_SALES / ROLE_SHIPPER）----
+
+/// 貨物予約一覧（`/bookings`）。IT1 ウォーキングスケルトンのプレースホルダを実画面へ差し替え。
+let private bookingList: HttpHandler =
+    mustHaveAnyRole [ "ROLE_SALES"; "ROLE_SHIPPER" ]
+    >=> fun next ctx ->
+        let factory = ctx.GetService<ConnectionFactory>()
+        use conn = factory ()
+        let items = CargoTracker.Booking.Infrastructure.CargoQueries.findAll conn
+
+        let rows =
+            items
+            |> List.map (fun i ->
+                { Views.CargoRow.BookingId = i.BookingId
+                  Views.CargoRow.ShipperId = i.ShipperId
+                  Views.CargoRow.CargoType = i.CargoType
+                  Views.CargoRow.Origin = i.Origin
+                  Views.CargoRow.Destination = i.Destination
+                  Views.CargoRow.ArrivalDeadline = i.ArrivalDeadline
+                  Views.CargoRow.BookingStatus = i.BookingStatus })
+
+        htmlView (Views.bookingList (rolesOf ctx) rows) next ctx
 
 let private parseCargoType (value: string) : CargoTracker.Estimation.Domain.CargoType =
     match value with
@@ -279,8 +302,8 @@ let webApp: HttpHandler =
                     route "/shippers/new" >=> shipperNew
                     route "/estimates" >=> estimateList
                     route "/estimates/new" >=> estimateNew
+                    route "/bookings" >=> bookingList
                     // ウォーキングスケルトン: 後続 IT で実画面化するプレースホルダ（ADR-0005 ロール制御）
-                    route "/bookings" >=> placeholder "貨物予約" [ "ROLE_SALES"; "ROLE_SHIPPER" ]
                     route "/tracking"
                     >=> placeholder "貨物追跡" [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
                     route "/handling" >=> placeholder "荷役管理" [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
