@@ -168,6 +168,61 @@ let ``航海を更新すると区間が入れ替わる`` () =
     | Ok(Some found) -> Schedule.movements found.Schedule |> List.length |> should equal 2
     | other -> failwithf "Some を期待したが: %A" other
 
+/// carrier_movement の 2 区間目 INSERT が失敗する制約付き DB（seq_number <= 1 の CHECK）。
+let private openConstrainedDb () : IDbConnection =
+    let ddl =
+        """
+        CREATE TABLE voyage (
+            id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+            voyage_number         TEXT    NOT NULL UNIQUE,
+            vessel_name           TEXT    NOT NULL,
+            carrier_name          TEXT    NOT NULL,
+            supported_cargo_types TEXT    NOT NULL,
+            created_at            TEXT    NOT NULL,
+            updated_at            TEXT    NOT NULL,
+            version               INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE carrier_movement (
+            id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+            voyage_id                   INTEGER NOT NULL REFERENCES voyage(id),
+            departure_location_unlocode TEXT    NOT NULL,
+            arrival_location_unlocode   TEXT    NOT NULL,
+            departure_date              TEXT    NOT NULL,
+            arrival_date                TEXT    NOT NULL,
+            seq_number                  INTEGER NOT NULL CHECK (seq_number <= 1),
+            created_at                  TEXT    NOT NULL,
+            updated_at                  TEXT    NOT NULL
+        );
+        """
+
+    let conn = new SqliteConnection("Data Source=:memory:")
+    conn.Open()
+    use cmd = conn.CreateCommand()
+    cmd.CommandText <- ddl
+    cmd.ExecuteNonQuery() |> ignore
+    conn :> IDbConnection
+
+[<Fact>]
+let ``子区間の途中失敗で親航海もロールバックされる（原子性）`` () =
+    use conn = openConstrainedDb ()
+    let repo = VoyageRepository.create conn fixedClock
+
+    // 2 区間目（seq_number = 2）が CHECK 制約で失敗する。
+    let v =
+        makeVoyage
+            "V001"
+            [ mv "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 8)) 1
+              mv "SGSIN" "USLAX" (dt (2026, 9, 9)) (dt (2026, 9, 25)) 2 ]
+            [ General ]
+
+    // Save は失敗する。
+    repo.Save v |> Async.RunSynchronously |> Result.isError |> should equal true
+
+    // 親 voyage も孤児として残らず、件数は 0。
+    match repo.FindAll() |> Async.RunSynchronously with
+    | Ok voyages -> voyages |> List.length |> should equal 0
+    | Error e -> failwithf "%A" e
+
 [<Fact>]
 let ``FindAll で全航海を取得できる`` () =
     use conn = openDb ()

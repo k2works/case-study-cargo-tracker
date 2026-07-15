@@ -3,6 +3,8 @@ module CargoTracker.Tests.RoutingDomainTests
 open System
 open Xunit
 open FsUnit.Xunit
+open FsCheck
+open FsCheck.Xunit
 open CargoTracker.Shared.Domain
 open CargoTracker.Routing.Domain
 
@@ -276,3 +278,135 @@ let ``航海を更新すると航海番号は不変で VoyageScheduleUpdated を
         VesselName.value updated.Vessel |> should equal "New Vessel"
         events |> should equal [ VoyageScheduleUpdated vn ]
     | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+// ---- H1: Schedule 連結制約の FsCheck プロパティ（IT3 DoD「FsCheck で網羅」）----
+
+/// テスト用の相異なる港コード（UN/LOCODE・5 文字大文字）。
+let private portPool = [ "JPTYO"; "SGSIN"; "USLAX"; "HKHKG"; "NLRTM"; "DEHAM" ]
+
+/// n 区間の連結スケジュールを構成する（港は portPool から順に採り、時系列は 3 日刻み）。
+let private connectedMovements (legCount: int) =
+    let ports = portPool |> List.take (legCount + 1)
+
+    ports
+    |> List.pairwise
+    |> List.mapi (fun i (a, b) -> movement a b (dt (2026, 9, 1 + i * 3)) (dt (2026, 9, 2 + i * 3)) (i + 1))
+
+[<Property>]
+let ``連結した任意長の区間列は必ず Ok になり端点が一致する`` (PositiveInt seed) =
+    // 1〜5 区間（portPool 6 港）に写像する。
+    let legCount = (seed % 5) + 1
+    let ports = portPool |> List.take (legCount + 1)
+
+    match Schedule.create (connectedMovements legCount) with
+    | Ok s ->
+        Location.value (Schedule.origin s) = List.head ports
+        && Location.value (Schedule.destination s) = List.last ports
+        && List.length (Schedule.movements s) = legCount
+    | Error _ -> false
+
+[<Property>]
+let ``連結が 1 箇所でも切れる区間列は必ず ScheduleConnectivity エラー`` (PositiveInt seed) =
+    // 2〜4 区間の連結列を作り、最後の区間の出発港を別の港に差し替えて連結を断つ。
+    let legCount = (seed % 3) + 2
+    let baseMovements = connectedMovements legCount
+    let head = baseMovements |> List.take (legCount - 1)
+    let last = baseMovements |> List.last
+    // 直前区間の到着港と一致しない港（portPool の末尾）を出発港にする。
+    let brokenDep = portPool |> List.last
+
+    let prevArrival =
+        Location.value (CarrierMovement.arrivalLocation (List.item (legCount - 2) baseMovements))
+
+    if brokenDep = prevArrival then
+        true // 偶然一致した場合はスキップ（連結してしまう）
+    else
+        let brokenLast =
+            movement
+                brokenDep
+                (Location.value (CarrierMovement.arrivalLocation last))
+                (CarrierMovement.departureDate last)
+                (CarrierMovement.arrivalDate last)
+                legCount
+
+        match Schedule.create (head @ [ brokenLast ]) with
+        | Error(BusinessRuleViolation("ScheduleConnectivity", _)) -> true
+        | _ -> false
+
+// ---- H2: RouteComputation の探索境界テスト ----
+
+[<Fact>]
+let ``3 区間乗継の経路は算出される（maxLegs 上限ちょうど）`` () =
+    let voyages =
+        [ makeVoyage "V-A" "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 5)) [ General ]
+          makeVoyage "V-B" "SGSIN" "HKHKG" (dt (2026, 9, 6)) (dt (2026, 9, 9)) [ General ]
+          makeVoyage "V-C" "HKHKG" "USLAX" (dt (2026, 9, 10)) (dt (2026, 9, 25)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 10, 1)))
+
+    candidates |> List.length |> should equal 1
+    (List.head candidates).Legs |> List.length |> should equal 3
+
+[<Fact>]
+let ``4 区間必要な経路は探索打ち切りで候補にならない（maxLegs 超過）`` () =
+    let voyages =
+        [ makeVoyage "V-A" "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 5)) [ General ]
+          makeVoyage "V-B" "SGSIN" "HKHKG" (dt (2026, 9, 6)) (dt (2026, 9, 9)) [ General ]
+          makeVoyage "V-C" "HKHKG" "NLRTM" (dt (2026, 9, 10)) (dt (2026, 9, 15)) [ General ]
+          makeVoyage "V-D" "NLRTM" "USLAX" (dt (2026, 9, 16)) (dt (2026, 9, 30)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 11, 1)))
+
+    // JPTYO→SGSIN→HKHKG→NLRTM→USLAX は 4 区間で maxLegs=3 を超えるため候補なし。
+    candidates |> should be Empty
+
+[<Fact>]
+let ``港が循環する航海群でも探索が停止し重複航海を含まない`` () =
+    let voyages =
+        [ makeVoyage "V-A" "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 5)) [ General ]
+          makeVoyage "V-BACK" "SGSIN" "JPTYO" (dt (2026, 9, 6)) (dt (2026, 9, 8)) [ General ] // 戻り便（ループ）
+          makeVoyage "V-C" "SGSIN" "USLAX" (dt (2026, 9, 6)) (dt (2026, 9, 25)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 10, 1)))
+
+    // JPTYO→SGSIN→USLAX の 1 経路のみ。戻り便でループせず、各候補内で航海番号は重複しない。
+    candidates |> List.length |> should equal 1
+
+    let vns =
+        (List.head candidates).Legs
+        |> List.map (fun l -> VoyageNumber.value l.VoyageNumber)
+
+    vns |> should equal [ "V-A"; "V-C" ]
+    vns |> List.distinct |> List.length |> should equal (List.length vns)
+
+[<Fact>]
+let ``到着日時が期限ちょうどの経路は候補に含まれる（期限境界）`` () =
+    let voyages =
+        [ makeVoyage "V001" "JPTYO" "USLAX" (dt (2026, 9, 1)) (dt (2026, 9, 20)) [ General ] ]
+    // 期限 = 到着 9/20 ちょうど。
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 9, 20)))
+
+    candidates |> List.length |> should equal 1
+
+[<Fact>]
+let ``複数候補は直行優先かつ所要日数昇順で並ぶ（並び順の完全アサート）`` () =
+    let voyages =
+        // 直行（19 日）・2 経由の速い便（合計 24 日）・2 経由の遅い便（合計 29 日）
+        [ makeVoyage "V-DIRECT" "JPTYO" "USLAX" (dt (2026, 9, 1)) (dt (2026, 9, 20)) [ General ]
+          makeVoyage "V-F1" "JPTYO" "SGSIN" (dt (2026, 9, 1)) (dt (2026, 9, 5)) [ General ]
+          makeVoyage "V-F2" "SGSIN" "USLAX" (dt (2026, 9, 6)) (dt (2026, 9, 25)) [ General ]
+          makeVoyage "V-S1" "JPTYO" "HKHKG" (dt (2026, 9, 1)) (dt (2026, 9, 5)) [ General ]
+          makeVoyage "V-S2" "HKHKG" "USLAX" (dt (2026, 9, 6)) (dt (2026, 9, 30)) [ General ] ]
+
+    let candidates =
+        RouteComputation.computeCandidates voyages (query "JPTYO" "USLAX" General (dt (2026, 10, 15)))
+
+    // 先頭は直行、以降は所要日数昇順。
+    candidates |> List.length |> should equal 3
+    (List.head candidates).IsDirect |> should equal true
+    let days = candidates |> List.map (fun c -> c.TransitDays)
+    days |> should equal (List.sortBy id days)

@@ -13,7 +13,8 @@ let architecture =
             Assembly.Load("CargoTracker.Shared"),
             Assembly.Load("CargoTracker.Booking"),
             Assembly.Load("CargoTracker.Shipper"),
-            Assembly.Load("CargoTracker.Estimation")
+            Assembly.Load("CargoTracker.Estimation"),
+            Assembly.Load("CargoTracker.Routing")
         )
         .Build()
 
@@ -40,12 +41,14 @@ let private domainNotDependOnDonald (context: string) =
 [<InlineData("Booking")>]
 [<InlineData("Shipper")>]
 [<InlineData("Estimation")>]
+[<InlineData("Routing")>]
 let ``Domain は Infrastructure に依存しない`` (context: string) =
     (domainNotDependOnInfrastructure context).Check(architecture)
 
 [<Theory>]
 [<InlineData("Shipper")>]
 [<InlineData("Estimation")>]
+[<InlineData("Routing")>]
 let ``Domain はデータアクセス（Donald）に依存しない`` (context: string) =
     (domainNotDependOnDonald context).Check(architecture)
 
@@ -57,5 +60,19 @@ let ``Shipper と Estimation は互いに直接依存しない`` () =
         .ResideInNamespace("CargoTracker.Shipper")
         .Should()
         .NotDependOnAny(Types().That().ResideInNamespace("CargoTracker.Estimation"))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)
+
+/// 「Routing は他 BC の Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001/ADR-0009）。
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+let ``Routing は他 BC に直接依存しない`` (other: string) =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Routing")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
         .WithoutRequiringPositiveResults()
         .Check(architecture)
