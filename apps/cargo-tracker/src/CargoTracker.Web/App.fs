@@ -1203,7 +1203,25 @@ let private manualStatusUpdate (trackingNumber: string) : HttpHandler =
                         ctx
         }
 
-// ---- 通知の共通ヘルパ（retro-6 Try#1・IT6 レビュー中#3 DRY）----
+// ---- 通知の共通ヘルパ（retro-6 Try#1・IT6 レビュー中#3 DRY / IT8 task2.1 送信抽象）----
+
+/// メール送信の抽象ポート（IT8 task2.1）。notification_log 記録と実送信を分離し、
+/// 実 SMTP/SES への差し替えを合成層の 1 箇所に閉じ込める。宛先未解決時は呼び出し側が送信を省略する。
+type MailSender =
+    { Send: string -> string -> string -> Async<Result<unit, CargoTracker.Shared.Domain.DomainError>> }
+
+/// 既定の MailSender（標準出力へ記録するコンソール実装）。実送信基盤が整うまでの既定。
+/// 送信自体は常に成功する（配送保証は将来 IT で実基盤に委譲）。
+let private consoleMailSender: MailSender =
+    { Send =
+        fun recipient subject body ->
+            async {
+                printfn "[MAIL] to=%s subject=%s body=%s" recipient subject body
+                return Ok()
+            } }
+
+/// 合成層が使用する MailSender。将来は設定で実送信へ差し替える。
+let private mailSender: MailSender = consoleMailSender
 
 /// notification_log へ 1 件書き込む合成層の共通ヘルパ。追跡・例外・エスカレーション・精算の
 /// 各通知はこのヘルパに集約し、INSERT・エラーハンドリングの重複を排除する（source はエラー分類用）。
@@ -1233,17 +1251,45 @@ let private writeNotificationLog
             return Error(CargoTracker.Shared.Domain.BusinessRuleViolation(source, ex.Message))
     }
 
+/// 荷主へ通知する（IT8 task2.1）。連絡先（メール）を Shipper から解決し、notification_log へ記録した上で
+/// MailSender で送信する。記録と送信を分離し、宛先が解決できなければ記録のみ行う（送信は省略）。
+let private notifyShipperByBooking
+    (conn: System.Data.IDbConnection)
+    (source: string)
+    (bookingId: string)
+    (subject: string)
+    (message: string)
+    : Async<Result<unit, CargoTracker.Shared.Domain.DomainError>> =
+    async {
+        let email =
+            CargoTracker.Shipper.Infrastructure.ShipperQueries.findEmailByBooking conn bookingId
+
+        let recipient = email |> Option.defaultValue bookingId
+        let! logged = writeNotificationLog conn source bookingId recipient message
+
+        match logged with
+        | Error e -> return Error e
+        | Ok() ->
+            match email with
+            | Some addr -> return! mailSender.Send addr subject message
+            | None -> return Ok() // 宛先未解決なら記録のみ（送信省略）
+    }
+
 // ---- US19/US20: 例外登録・解決（ROLE_TRACKER）----
 
-/// notification_log へ書き込む TrackingNotifier（荷主通知の最小実装）。
-/// recipient の荷主識別子化は IT6 task4.6（通知モデル化）で是正する。
+/// 荷主連絡先へ追跡通知を届ける TrackingNotifier（IT8 task2.1 通知実効化）。
+/// 追跡番号から予約 ID を解決し、荷主メールへ記録＋送信を共通ヘルパで行う。
+/// 予約が解決できない場合は追跡番号を宛先として記録のみ行う（フォールバック）。
 let private notificationLogNotifier
     (conn: System.Data.IDbConnection)
     : CargoTracker.Tracking.Application.TrackingNotifier =
     { Notify =
         fun trackingNumber message ->
             let tn = CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber
-            writeNotificationLog conn "TrackingNotifier" tn tn message }
+
+            match CargoTracker.Tracking.Infrastructure.TrackingQueries.findByTrackingNumber conn tn with
+            | Some view -> notifyShipperByBooking conn "TrackingNotifier" view.BookingId "貨物追跡のお知らせ" message
+            | None -> writeNotificationLog conn "TrackingNotifier" tn tn message }
 
 /// 管理職エスカレーション通知（notification_log に MANAGER 宛で記録・US20 紛失時）。
 let private escalationLogNotifier
@@ -1718,13 +1764,13 @@ let private discountPolicyDeactivate (idInt: int) : HttpHandler =
 
 // ---- US21/US22/US23: 精算（請求管理・ROLE_BILLING）----
 
-/// notification_log へ書き込む BillingNotifier（精算書通知・期限超過通知の最小実装）。
-/// 共通ヘルパ writeNotificationLog に集約（retro-6 Try#1・IT6 レビュー中#3 DRY）。
+/// 荷主連絡先へ精算書通知・期限超過通知を届ける BillingNotifier（IT8 task2.1 通知実効化）。
+/// Shipper メールを合成層 ACL で解決し、notification_log 記録＋MailSender 送信を行う。
 let private billingNotifier (conn: System.Data.IDbConnection) : CargoTracker.Billing.Application.BillingNotifier =
     { Notify =
         fun bookingId message ->
             let bid = CargoTracker.Billing.Domain.BillingBookingId.value bookingId
-            writeNotificationLog conn "BillingNotifier" bid bid message }
+            notifyShipperByBooking conn "BillingNotifier" bid "精算のお知らせ" message }
 
 /// 決済 ACL のスタブ（US23）。入金確認を即時成功させ支払時刻を返す。
 /// 外部決済機関との実連携（WireMock.Net で契約固定）は将来 IT で差し替える。

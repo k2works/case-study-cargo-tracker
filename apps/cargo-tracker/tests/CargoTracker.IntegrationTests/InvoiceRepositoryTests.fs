@@ -66,6 +66,10 @@ let private notifier (calls: System.Collections.Generic.List<string>) : BillingN
                 return Ok()
             } }
 
+/// 通知が必ず失敗する Notifier（Save 成功・通知失敗経路の検証・IT8 task2.2）。
+let private failingNotifier: BillingNotifier =
+    { Notify = fun _ _ -> async { return Error(BusinessRuleViolation("MailSender", "送信に失敗しました。")) } }
+
 let private gateway (paidAt: DateTimeOffset) : PaymentGatewayPort =
     { ConfirmPayment = fun _ _ -> async { return Ok paidAt } }
 
@@ -161,6 +165,35 @@ let ``入金確認で Confirmed へ遷移し永続化される（US23）`` () =
     match repo.FindByInvoiceId invoice.InvoiceId |> Async.RunSynchronously with
     | Ok(Some found) -> PaymentState.name found.Payment |> should equal "Confirmed"
     | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``通知が失敗しても精算書は永続化される（Save 成功・通知失敗・IT8 task2.2）`` () =
+    use conn = openDb ()
+    let repo = InvoiceRepository.create conn fixedClock
+
+    // 通知は失敗するが、Save は先に成功しているため精算書は永続化されている
+    let result =
+        Billing.generateInvoice
+            repo
+            failingNotifier
+            newId
+            (bookingId ())
+            (corporate ())
+            baseAmount
+            CorporateStandard
+            (DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero))
+        |> Async.RunSynchronously
+
+    // 通知失敗はエラーとして表面化する
+    match result with
+    | Error(BusinessRuleViolation("MailSender", _)) -> ()
+    | other -> failwithf "通知失敗エラーを期待したが: %A" other
+
+    // だが精算書自体は永続化済み（Save 成功）
+    match repo.FindByBookingId(bookingId ()) |> Async.RunSynchronously with
+    | Ok(Some found) -> found.FinalAmount.Amount |> should equal 360_000L
+    | other -> failwithf "永続化された精算書を期待したが: %A" other
 
 [<Fact>]
 [<Trait("Category", "Integration")>]

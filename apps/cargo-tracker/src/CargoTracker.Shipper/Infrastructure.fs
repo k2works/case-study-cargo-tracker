@@ -44,6 +44,26 @@ module ShipperQueries =
         |> Db.querySingle (fun rd -> rd.ReadString "shipper_type")
         |> Option.map (fun t -> t = "CORPORATE")
 
+    /// 荷主 UUID からメールアドレスを解決する（通知の連絡先解決・合成層向け・US23/IT8）。
+    let findEmailByUuid (conn: IDbConnection) (shipperUuid: string) : string option =
+        conn
+        |> Db.newCommand "SELECT email FROM shipper WHERE shipper_uuid = @uuid"
+        |> Db.setParams [ "uuid", SqlType.String shipperUuid ]
+        |> Db.querySingle (fun rd -> rd.ReadString "email")
+
+    /// 予約 ID から荷主メールアドレスを解決する（cargo.shipper_id = shipper.shipper_uuid 経由・通知の連絡先解決）。
+    let findEmailByBooking (conn: IDbConnection) (bookingId: string) : string option =
+        conn
+        |> Db.newCommand
+            """
+            SELECT s.email
+            FROM cargo c
+            JOIN shipper s ON s.shipper_uuid = c.shipper_id
+            WHERE c.booking_id = @bid
+            """
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.querySingle (fun rd -> rd.ReadString "email")
+
     /// 荷主一覧を取得する（コード順）。
     let findAll (conn: IDbConnection) : ShipperListItem list =
         conn
