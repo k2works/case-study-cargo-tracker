@@ -120,7 +120,7 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 | 2.1 | Application.fs に例外登録・解決ユースケースを追加（NotificationPort で荷主通知・Clock ポートで時刻注入） | 3h | - | [x] |
 | 2.2 | Lost 時の管理職 escalation 通知経路（`ExceptionEscalated` 消費）を結線（`EscalationNotifier` ポート・アプリ層で発行イベント検査） | 2h | - | [x] |
 | 2.3 | 例外の永続化（`tracking_exception_event` マイグレーション 0011・save/update の `syncExceptions`・reconstruct 復元）と InException 往復統合テスト | 3h | - | [x] |
-| 2.4 | 例外登録・解決の受け入れテスト（一気通貫: 登録→通知→エスカレーション→対応報告→解決→復帰） | 3h | - | [ ] |
+| 2.4 | 例外登録・解決の受け入れテスト（一気通貫: 登録→通知→エスカレーション→対応報告→解決→復帰） | 3h | - | [x] |
 
 **小計**: 11h（理想時間）
 
@@ -128,9 +128,9 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 例外登録画面（`GET/POST /tracking/{trackingNumber}/exceptions/new`・ROLE_TRACKER） | 3h | - | [ ] |
-| 3.2 | 例外解決・対応報告画面（`POST /tracking/{trackingNumber}/exceptions/{index}/resolve`） | 2h | - | [ ] |
-| 3.3 | 追跡詳細に例外一覧・状態（InException）表示と [例外を登録]／[例外を解決] ボタン（ROLE_TRACKER 条件表示）を追加し、ナビゲーション整合性テストを更新 | 2h | - | [ ] |
+| 3.1 | 例外登録画面（`GET/POST /tracking/{trackingNumber}/exceptions/new`・ROLE_TRACKER） | 3h | - | [x] |
+| 3.2 | 例外解決・対応報告（`POST /tracking/{trackingNumber}/exceptions/{index}/resolve`・追跡詳細のインライン解決フォーム） | 2h | - | [x] |
+| 3.3 | 追跡詳細に例外一覧・状態（InException）表示と [例外を登録]／[解決] ボタン（ROLE_TRACKER 条件表示）を追加し、受け入れテストで権限・一気通貫を検証 | 2h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -158,13 +158,13 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | 例外ドメイン | 3 | 12h | [x] |
-| アプリ層・BC 連携 | 2 | 11h | [ ] |
-| Web UI・例外画面 | 1 | 7h | [ ] |
+| アプリ層・BC 連携 | 2 | 11h | [x] |
+| Web UI・例外画面 | 1 | 7h | [x] |
 | 技術的負債の解消 | - | 18h | [ ] |
 | **合計** | **6** | **48h** | |
 
 **1 SP あたり**: 約 8.0h（IT5 レビュー IT6 送り・改善タスク 18h を含む）
-**進捗率**: 50% (3/6 SP・例外ドメイン完了)
+**進捗率**: 100% (6/6 SP・US19/US20 ストーリー完了。残は技術的負債タスク 4)
 
 ---
 

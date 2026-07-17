@@ -1050,10 +1050,21 @@ module Views =
           EventTime: string }
 
     /// 追跡詳細の表示値（US18）。
+    /// 追跡詳細の例外表示行（US19/US20）。Index は解決アクションの対象指定に使う。
+    type TrackingExceptionRow =
+        { Index: int
+          ExceptionType: string
+          Location: string
+          OccurredAt: string
+          Description: string
+          Escalated: bool
+          Resolved: bool }
+
     type TrackingDetailView =
         { TrackingNumber: string
           TransportStatus: string
-          Events: TrackingEventRow list }
+          Events: TrackingEventRow list
+          Exceptions: TrackingExceptionRow list }
 
     /// 追跡番号入力画面（`/tracking`・US18）。
     let trackingInput (roles: string list) (error: string option) : XmlNode =
@@ -1098,12 +1109,91 @@ module Views =
                                     td [] [ str (trackingEventLabel e.EventType) ]
                                     td [] [ str e.Location ] ])) ]) ]
 
-    /// 追跡詳細画面（`/tracking/{trackingNumber}`・US18・認証あり）。
+    /// 例外種別の日本語表示。
+    let exceptionTypeLabel (exType: string) : string =
+        match exType with
+        | "DELAY" -> "遅延"
+        | "DAMAGE" -> "破損"
+        | "LOST" -> "紛失"
+        | "CUSTOMS_HOLD" -> "通関保留"
+        | other -> other
+
+    /// 例外一覧と解決導線（US19/US20・ROLE_TRACKER のみ操作可能）。
+    let private exceptionSection (roles: string list) (d: TrackingDetailView) : XmlNode list =
+        let isTracker = List.contains "ROLE_TRACKER" roles
+
+        [ div
+              [ _class "d-flex justify-content-between align-items-center mt-4 mb-2" ]
+              [ h2 [ _class "h5 mb-0" ] [ str "例外" ]
+                (if isTracker then
+                     a
+                         [ _class "btn btn-outline-danger btn-sm"
+                           _href (sprintf "/tracking/%s/exceptions/new" d.TrackingNumber) ]
+                         [ str "例外を登録" ]
+                 else
+                     emptyText) ]
+          (if List.isEmpty d.Exceptions then
+               div [ _class "alert alert-info" ] [ str "例外は登録されていません。" ]
+           else
+               table
+                   [ _class "table table-bordered" ]
+                   [ thead
+                         []
+                         [ tr
+                               []
+                               [ th [] [ str "種別" ]
+                                 th [] [ str "発生日時" ]
+                                 th [] [ str "場所" ]
+                                 th [] [ str "状況・対応方針" ]
+                                 th [] [ str "状態" ]
+                                 th [] [ str "操作" ] ] ]
+                     tbody
+                         []
+                         (d.Exceptions
+                          |> List.map (fun x ->
+                              tr
+                                  []
+                                  [ td [] [ str (exceptionTypeLabel x.ExceptionType) ]
+                                    td [] [ str x.OccurredAt ]
+                                    td [] [ str x.Location ]
+                                    td [] [ str x.Description ]
+                                    td
+                                        []
+                                        [ if x.Resolved then
+                                              span [ _class "badge bg-success" ] [ str "解決済み" ]
+                                          else
+                                              span [ _class "badge bg-danger" ] [ str "未解決" ]
+                                          if x.Escalated && not x.Resolved then
+                                              span [ _class "badge bg-warning text-dark ms-1" ] [ str "エスカレーション" ] ]
+                                    td
+                                        []
+                                        [ if isTracker && not x.Resolved then
+                                              form
+                                                  [ _method "post"
+                                                    _action (
+                                                        sprintf
+                                                            "/tracking/%s/exceptions/%d/resolve"
+                                                            d.TrackingNumber
+                                                            x.Index
+                                                    ) ]
+                                                  [ input
+                                                        [ _type "text"
+                                                          _name "resolutionNote"
+                                                          _class "form-control form-control-sm mb-1"
+                                                          _placeholder "対応内容" ]
+                                                    button
+                                                        [ _type "submit"; _class "btn btn-sm btn-success" ]
+                                                        [ str "解決" ] ]
+                                          else
+                                              emptyText ] ])) ]) ]
+
+    /// 追跡詳細画面（`/tracking/{trackingNumber}`・US18/US19/US20・認証あり）。
     let trackingDetail (roles: string list) (d: TrackingDetailView) : XmlNode =
         layout
             "追跡詳細"
             roles
             (trackingTimeline d
+             @ exceptionSection roles d
              @ [ a [ _class "btn btn-secondary mt-3"; _href "/tracking" ] [ str "追跡入力へ戻る" ] ])
 
     /// 公開追跡ページ（`/public/tracking/{accessToken}`・US18・未認証）。
@@ -1227,6 +1317,42 @@ module Views =
                     a [ _class "btn btn-secondary ms-2"; _href "/handling" ] [ str "一覧へ戻る" ] ] ]
 
     /// 貨物状態手動更新フォーム（`/tracking/{trackingNumber}/status/new`・US17）。
+    /// 例外登録フォーム（`/tracking/{trackingNumber}/exceptions/new`・US19/US20・ROLE_TRACKER）。
+    let exceptionForm (roles: string list) (trackingNumber: string) (error: string option) : XmlNode =
+        layout
+            "例外登録"
+            roles
+            [ h1 [ _class "mb-4" ] [ str (sprintf "例外登録 %s" trackingNumber) ]
+              (match error with
+               | Some msg -> div [ _class "alert alert-warning" ] [ str msg ]
+               | None -> emptyText)
+              div [ _class "alert alert-danger" ] [ str "例外種別「紛失（LOST）」を選択した場合、管理職へのエスカレーション通知が必須として自動送信されます。" ]
+              form
+                  [ _method "post"
+                    _action (sprintf "/tracking/%s/exceptions/new" trackingNumber) ]
+                  [ div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "exceptionType" ] [ str "例外種別" ]
+                          select
+                              [ _class "form-select"; _id "exceptionType"; _name "exceptionType" ]
+                              [ option [ _value "DELAY" ] [ str "遅延（DELAY）" ]
+                                option [ _value "DAMAGE" ] [ str "破損（DAMAGE）" ]
+                                option [ _value "LOST" ] [ str "紛失（LOST）" ]
+                                option [ _value "CUSTOMS_HOLD" ] [ str "通関保留（CUSTOMS_HOLD）" ] ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "location" ] [ str "発生場所（UN/LOCODE）" ]
+                          input [ _class "form-control"; _id "location"; _name "location"; _type "text" ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "description" ] [ str "状況説明・対応方針" ]
+                          textarea [ _class "form-control"; _id "description"; _name "description"; _rows "3" ] [] ]
+                    button [ _type "submit"; _class "btn btn-primary" ] [ str "登録" ]
+                    a
+                        [ _class "btn btn-secondary ms-2"
+                          _href (sprintf "/tracking/%s" trackingNumber) ]
+                        [ str "追跡詳細へ戻る" ] ] ]
+
     let manualStatusForm (roles: string list) (trackingNumber: string) (error: string option) : XmlNode =
         layout
             "貨物状態更新"

@@ -1078,7 +1078,17 @@ let private toTrackingDetailView (view: CargoTracker.Tracking.Infrastructure.Tra
         |> List.map (fun e ->
             { Views.TrackingEventRow.EventType = e.EventType
               Views.TrackingEventRow.Location = e.Location
-              Views.TrackingEventRow.EventTime = e.EventTime }) }
+              Views.TrackingEventRow.EventTime = e.EventTime })
+      Exceptions =
+        view.Exceptions
+        |> List.map (fun x ->
+            { Views.TrackingExceptionRow.Index = x.Index
+              Views.TrackingExceptionRow.ExceptionType = x.ExceptionType
+              Views.TrackingExceptionRow.Location = x.Location
+              Views.TrackingExceptionRow.OccurredAt = x.OccurredAt
+              Views.TrackingExceptionRow.Description = x.Description
+              Views.TrackingExceptionRow.Escalated = x.Escalated
+              Views.TrackingExceptionRow.Resolved = x.Resolved }) }
 
 /// 追跡番号入力（`GET /tracking`・US18）。
 let private trackingInput: HttpHandler =
@@ -1173,6 +1183,151 @@ let private manualStatusUpdate (trackingNumber: string) : HttpHandler =
                      >=> htmlView (Views.manualStatusForm (rolesOf ctx) trackingNumber (Some "入力が不正です。")))
                         next
                         ctx
+        }
+
+// ---- US19/US20: 例外登録・解決（ROLE_TRACKER）----
+
+/// notification_log へ書き込む TrackingNotifier（荷主通知の最小実装）。
+/// recipient の荷主識別子化は IT6 task4.6（通知モデル化）で是正する。
+let private notificationLogNotifier
+    (conn: System.Data.IDbConnection)
+    : CargoTracker.Tracking.Application.TrackingNotifier =
+    { Notify =
+        fun trackingNumber message ->
+            async {
+                try
+                    let now = (systemClock ()).UtcDateTime.ToString("o")
+                    let tn = CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber
+
+                    conn
+                    |> Donald.Db.newCommand
+                        "INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at) VALUES (@bid, @rcp, @msg, @now, @now)"
+                    |> Donald.Db.setParams
+                        [ "bid", Donald.SqlType.String tn
+                          "rcp", Donald.SqlType.String tn
+                          "msg", Donald.SqlType.String message
+                          "now", Donald.SqlType.String now ]
+                    |> Donald.Db.exec
+
+                    return Ok()
+                with ex ->
+                    return Error(CargoTracker.Shared.Domain.BusinessRuleViolation("TrackingNotifier", ex.Message))
+            } }
+
+/// 管理職エスカレーション通知（notification_log に ESCALATION として記録・US20 紛失時）。
+let private escalationLogNotifier
+    (conn: System.Data.IDbConnection)
+    : CargoTracker.Tracking.Application.EscalationNotifier =
+    { Escalate =
+        fun trackingNumber exType ->
+            async {
+                try
+                    let now = (systemClock ()).UtcDateTime.ToString("o")
+                    let tn = CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber
+
+                    let message =
+                        sprintf
+                            "【緊急】追跡番号 %s の例外（%s）を管理職へエスカレーションしました。"
+                            tn
+                            (CargoTracker.Tracking.Domain.ExceptionType.toString exType)
+
+                    conn
+                    |> Donald.Db.newCommand
+                        "INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at) VALUES (@bid, @rcp, @msg, @now, @now)"
+                    |> Donald.Db.setParams
+                        [ "bid", Donald.SqlType.String tn
+                          "rcp", Donald.SqlType.String "MANAGER"
+                          "msg", Donald.SqlType.String message
+                          "now", Donald.SqlType.String now ]
+                    |> Donald.Db.exec
+
+                    return Ok()
+                with ex ->
+                    return Error(CargoTracker.Shared.Domain.BusinessRuleViolation("EscalationNotifier", ex.Message))
+            } }
+
+/// 例外登録フォーム（`GET /tracking/{trackingNumber}/exceptions/new`・US19/US20・ROLE_TRACKER）。
+let private exceptionNew (trackingNumber: string) : HttpHandler =
+    mustHaveRole "ROLE_TRACKER"
+    >=> fun next ctx -> htmlView (Views.exceptionForm (rolesOf ctx) trackingNumber None) next ctx
+
+/// 例外登録の実行（`POST /tracking/{trackingNumber}/exceptions/new`・US19/US20）。
+let private exceptionCreate (trackingNumber: string) : HttpHandler =
+    mustHaveRole "ROLE_TRACKER"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get (k: string) = string form.[k]
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let exTypeResult =
+                CargoTracker.Tracking.Domain.ExceptionType.ofString (get "exceptionType")
+
+            let locationResult =
+                CargoTracker.Shared.Domain.Location.create (get "location")
+                |> Result.mapError (fun m -> CargoTracker.Shared.Domain.ValidationError("Location", m))
+
+            match exTypeResult, locationResult with
+            | Ok exType, Ok location ->
+                let repo =
+                    CargoTracker.Tracking.Infrastructure.TrackingRepository.create conn systemClock
+
+                let! result =
+                    CargoTracker.Tracking.Application.ManageException.register
+                        repo
+                        (notificationLogNotifier conn)
+                        (escalationLogNotifier conn)
+                        (CargoTracker.Tracking.Domain.TrackingNumber.ofString trackingNumber)
+                        exType
+                        location
+                        (systemClock ())
+                        (get "description")
+
+                match result with
+                | Ok _ -> return! redirectTo false (sprintf "/tracking/%s" trackingNumber) next ctx
+                | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                    return! (setStatusCode 404 >=> text "追跡番号が見つかりません。") next ctx
+                | Error err ->
+                    return!
+                        (setStatusCode 400
+                         >=> htmlView (Views.exceptionForm (rolesOf ctx) trackingNumber (Some(domainErrorMessage err))))
+                            next
+                            ctx
+            | _ ->
+                return!
+                    (setStatusCode 400
+                     >=> htmlView (Views.exceptionForm (rolesOf ctx) trackingNumber (Some "入力が不正です。")))
+                        next
+                        ctx
+        }
+
+/// 例外解決の実行（`POST /tracking/{trackingNumber}/exceptions/{index}/resolve`・US19/US20）。
+let private exceptionResolve (trackingNumber: string, index: int) : HttpHandler =
+    mustHaveRole "ROLE_TRACKER"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Tracking.Infrastructure.TrackingRepository.create conn systemClock
+
+            let! result =
+                CargoTracker.Tracking.Application.ManageException.resolve
+                    repo
+                    (notificationLogNotifier conn)
+                    (CargoTracker.Tracking.Domain.TrackingNumber.ofString trackingNumber)
+                    index
+                    (systemClock ())
+                    (string form.["resolutionNote"])
+
+            match result with
+            | Ok _ -> return! redirectTo false (sprintf "/tracking/%s" trackingNumber) next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "例外が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
 
 /// 公開追跡（`GET /public/tracking/{accessToken}`・US18・未認証）。
@@ -1366,6 +1521,7 @@ let webApp: HttpHandler =
                     route "/tracking/search" >=> trackingSearch
                     routef "/public/tracking/%s" publicTracking
                     routef "/tracking/%s/status/new" manualStatusNew
+                    routef "/tracking/%s/exceptions/new" exceptionNew
                     routef "/tracking/%s" trackingDetail
                     // US15/US16: 荷役作業（具体パス /handling/new を先に置く）。
                     route "/handling/new" >=> handlingNew
@@ -1384,6 +1540,8 @@ let webApp: HttpHandler =
                     route "/estimates" >=> estimateCreate
                     route "/bookings" >=> bookingCreate
                     route "/handling" >=> handlingCreate
+                    routef "/tracking/%s/exceptions/%i/resolve" exceptionResolve
+                    routef "/tracking/%s/exceptions/new" exceptionCreate
                     routef "/tracking/%s/status" manualStatusUpdate
                     routef "/bookings/%s/routing" bookingSubmitRouting
                     routef "/bookings/%s/confirm" bookingConfirm

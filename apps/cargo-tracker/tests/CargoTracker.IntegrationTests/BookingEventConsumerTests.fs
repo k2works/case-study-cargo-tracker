@@ -27,6 +27,12 @@ let private ddl =
         id INTEGER PRIMARY KEY AUTOINCREMENT, booking_id TEXT NOT NULL, recipient TEXT NOT NULL,
         message TEXT NOT NULL, notified_at TEXT NOT NULL, created_at TEXT NOT NULL
     );
+    CREATE TABLE tracking_exception_event (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, tracking_id INTEGER NOT NULL,
+        exception_type TEXT NOT NULL, location_unlocode TEXT, occurred_at TEXT NOT NULL,
+        escalation_flag INTEGER NOT NULL DEFAULT 0, description TEXT, resolved_at TEXT,
+        resolution_notes TEXT, seq_number INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
     """
 
 let private openDb () : IDbConnection =

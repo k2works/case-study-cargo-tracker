@@ -170,3 +170,53 @@ let ``荷主は手動更新フォームにアクセスできない（ROLE_TRACKE
         let cookie = authCookie client "shipper01"
         let res = authedGet client cookie "/tracking/TRK-TEST0001/status/new"
         res.StatusCode |> should equal HttpStatusCode.Forbidden)
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``追跡管理者が紛失例外を登録すると In/エスカレーション表示され解決で復帰する（US19/US20）`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "tracker01"
+
+        // 紛失例外を登録
+        use req =
+            new HttpRequestMessage(HttpMethod.Post, "/tracking/TRK-TEST0001/exceptions/new")
+
+        req.Headers.Add("Cookie", cookie)
+
+        req.Content <-
+            new FormUrlEncodedContent(
+                dict [ "exceptionType", "LOST"; "location", "USLAX"; "description", "海上事故により紛失" ]
+            )
+
+        let res = run (client.SendAsync req)
+        res.StatusCode |> should equal HttpStatusCode.Found
+
+        // 追跡詳細で例外発生・エスカレーションが表示される
+        let detail = authedGet client cookie "/tracking/TRK-TEST0001"
+        let body = run (detail.Content.ReadAsStringAsync())
+        body |> should haveSubstring "例外発生"
+        body |> should haveSubstring "紛失"
+        body |> should haveSubstring "エスカレーション"
+
+        // 例外を解決すると復帰する
+        use rreq =
+            new HttpRequestMessage(HttpMethod.Post, "/tracking/TRK-TEST0001/exceptions/0/resolve")
+
+        rreq.Headers.Add("Cookie", cookie)
+        rreq.Content <- new FormUrlEncodedContent(dict [ "resolutionNote", "代替手配・補償対応済" ])
+        let rres = run (client.SendAsync rreq)
+        rres.StatusCode |> should equal HttpStatusCode.Found
+
+        let detail2 = authedGet client cookie "/tracking/TRK-TEST0001"
+        let body2 = run (detail2.Content.ReadAsStringAsync())
+        body2 |> should haveSubstring "解決済み"
+        // 復帰後は受領済（RECEIVED）に戻る
+        body2 |> should haveSubstring "受領済")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``荷主は例外登録フォームにアクセスできない（ROLE_TRACKER 必須）`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "shipper01"
+        let res = authedGet client cookie "/tracking/TRK-TEST0001/exceptions/new"
+        res.StatusCode |> should equal HttpStatusCode.Forbidden)

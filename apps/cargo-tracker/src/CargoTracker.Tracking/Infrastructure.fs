@@ -18,11 +18,22 @@ type TrackingEventView =
       Location: string
       EventTime: string }
 
+/// 追跡例外の読み取りモデル（US19/US20）。Index は新しい順の位置（解決アクション対象）。
+type TrackingExceptionView =
+    { Index: int
+      ExceptionType: string
+      Location: string
+      OccurredAt: string
+      Description: string
+      Escalated: bool
+      Resolved: bool }
+
 type TrackingView =
     { TrackingNumber: string
       BookingId: string
       TransportStatus: string
-      Events: TrackingEventView list }
+      Events: TrackingEventView list
+      Exceptions: TrackingExceptionView list }
 
 module TrackingQueries =
 
@@ -41,11 +52,39 @@ module TrackingQueries =
               Location = rd.ReadStringOption "location_unlocode" |> Option.defaultValue ""
               EventTime = rd.ReadString "event_time" })
 
+    /// 例外を新しい順（seq DESC）で読み込む。Index は 0 始まりで register の prepend 順に一致する。
+    let private exceptionsOf (conn: IDbConnection) (trackingId: int64) : TrackingExceptionView list =
+        conn
+        |> Db.newCommand
+            """
+            SELECT exception_type, location_unlocode, occurred_at, description, escalation_flag, resolved_at
+            FROM tracking_exception_event
+            WHERE tracking_id = @tracking_id
+            ORDER BY seq_number DESC
+            """
+        |> Db.setParams [ "tracking_id", SqlType.Int64 trackingId ]
+        |> Db.query (fun rd ->
+            rd.ReadString "exception_type",
+            rd.ReadStringOption "location_unlocode" |> Option.defaultValue "",
+            rd.ReadString "occurred_at",
+            rd.ReadStringOption "description" |> Option.defaultValue "",
+            rd.ReadBoolean "escalation_flag",
+            rd.ReadStringOption "resolved_at")
+        |> List.mapi (fun i (exType, loc, occurredAt, description, escalated, resolvedAt) ->
+            { Index = i
+              ExceptionType = exType
+              Location = loc
+              OccurredAt = occurredAt
+              Description = description
+              Escalated = escalated
+              Resolved = Option.isSome resolvedAt })
+
     let private toView (conn: IDbConnection) (id: int64, tn: string, bid: string, status: string) : TrackingView =
         { TrackingNumber = tn
           BookingId = bid
           TransportStatus = status
-          Events = eventsOf conn id }
+          Events = eventsOf conn id
+          Exceptions = exceptionsOf conn id }
 
     /// 追跡番号で照会する（US18・認証あり）。
     let findByTrackingNumber (conn: IDbConnection) (trackingNumber: string) : TrackingView option =
