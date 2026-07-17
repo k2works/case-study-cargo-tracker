@@ -77,7 +77,7 @@
 | 1.1 | 割引ポリシーマスタ接続（`DiscountPolicyRepository.FindEffective` の有効ポリシー・率を `Invoice.generate` に適用。法人/ボリューム/シーズンの実効化） | 4h | - | [ ] |
 | 1.2 | 料金算出画面に輸送実績（重量・貨物種別・経路）・確定前割引率を表示。距離を確定経路から自動導出（手入力を単価確認へ） | 4h | - | [ ] |
 | 1.3 | 支払期限の精算書詳細・一覧表示、`markOverdueIfDue` の結線（期限超過検出→経理未払い通知）・統合テスト | 4h | - | [ ] |
-| 1.4 | 消費税・付加料金を `invoice_line_item`＋`tax_amount` で計上し、精算書詳細の金額内訳（基本料金／割引／小計／消費税／請求総額）を表示。domain-model の Invoice へ税を反映 | 4h | - | [ ] |
+| 1.4 | マイグレーション 0014 で `invoice.tax_amount`/`tax_rate` を追加。消費税・付加料金を `invoice_line_item`＋`tax_amount` で計上し、精算書詳細の金額内訳（基本料金／割引／小計／消費税／請求総額）を表示。domain-model の Invoice へ税を反映 | 4h | - | [ ] |
 | 1.5 | 例外時の料金調整（減額・補償費用）入力（US21 受入6）と受け入れテスト | 3h | - | [ ] |
 
 **小計**: 19h（理想時間）
@@ -215,6 +215,10 @@ Invoice ..> Cargo : BookingSettled 消費で Settle（イベント駆動・ADR-0
 ```
 
 > IT8 で `Invoice` に `TaxAmount`（消費税）・`LineItems`（明細・付加料金）を追加し、消費税・付加料金を型で表現する（domain-model へ反映）。Settled 同期は `BookingSettled` イベント消費の集約更新（`Booking.Application.settle`）へ移行し、状態射影 `syncBookingStatus` を廃止 or 補助に格下げする（ADR-0013 改訂）。
+
+### データモデル
+
+> **注（マイグレーション要否）**: `invoice_line_item` テーブルはマイグレーション 0013 で作成済み（本 IT で明細＋付加料金の書き込み/読み出しを実装する）。一方 `invoice` テーブルには `tax_amount`/`tax_rate` カラムが未作成（0013 で省略）。消費税の計上には **マイグレーション 0014 で `invoice.tax_amount`（NUMERIC）・`tax_rate`（NUMERIC・デフォルト 0.10）を追加**する。data-model の当初設計（`tax_rate`/`tax_amount`）に合わせて反映し、IT7 実装状況注記を更新する。付加料金（燃油サーチャージ等）は `invoice_line_item` の明細行として表現する（ui_design の金額内訳に整合）。
 
 ### API 設計
 
