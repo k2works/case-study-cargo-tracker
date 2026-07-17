@@ -363,6 +363,7 @@ let private bookingCreate: HttpHandler =
 /// Cargo 集約を詳細表示用の DTO へ射影する。荷主名は解決マップで補う（ADR-0008）。
 let private toBookingDetail
     (shipperNames: Map<string, string>)
+    (trackingNumber: string option)
     (cargo: CargoTracker.Booking.Domain.Cargo)
     : Views.BookingDetail =
     let cargoTypeStr =
@@ -385,6 +386,7 @@ let private toBookingDetail
       ArrivalDeadline = (CargoTracker.Booking.Domain.RouteSpecification.arrivalDeadline spec).ToString("yyyy-MM-dd")
       Weight = sprintf "%M" (CargoTracker.Booking.Domain.Weight.value cargo.Weight)
       BookingStatus = CargoTracker.Booking.Domain.BookingState.toString cargo.State
+      TrackingNumber = trackingNumber
       CanSubmitRouting = (cargo.State = CargoTracker.Booking.Domain.Preliminary)
       Itinerary =
         match CargoTracker.Booking.Domain.BookingState.itinerary cargo.State with
@@ -442,9 +444,19 @@ let private bookingDetail (bookingIdStr: string) : HttpHandler =
                 | Some "cancelled" -> Some "予約をキャンセルしました。"
                 | _ -> None
 
+            // 予約確定後に発行された追跡番号を解決して詳細に表示する（US14 導線改善）。
+            let trackingNumber =
+                CargoTracker.Tracking.Infrastructure.TrackingQueries.findAllSummary conn
+                |> List.tryFind (fun s -> s.BookingId = bookingIdStr)
+                |> Option.map (fun s -> s.TrackingNumber)
+
             match found with
             | Ok(Some cargo) ->
-                return! htmlView (Views.bookingDetail (rolesOf ctx) (toBookingDetail shipperNames cargo) info) next ctx
+                return!
+                    htmlView
+                        (Views.bookingDetail (rolesOf ctx) (toBookingDetail shipperNames trackingNumber cargo) info)
+                        next
+                        ctx
             | Ok None -> return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
@@ -1104,10 +1116,28 @@ let private toTrackingDetailView
               Views.TrackingExceptionRow.Escalated = x.Escalated
               Views.TrackingExceptionRow.Resolved = x.Resolved }) }
 
-/// 追跡番号入力（`GET /tracking`・US18）。
+/// 担当者（ROLE_TRACKER）のときのみ追跡一覧を取得する。荷主・荷受人は自分の番号で照会する運用のため空。
+let private trackingSummariesFor
+    (conn: System.Data.IDbConnection)
+    (roles: string list)
+    : Views.TrackingSummaryRow list =
+    if List.contains "ROLE_TRACKER" roles then
+        CargoTracker.Tracking.Infrastructure.TrackingQueries.findAllSummary conn
+        |> List.map (fun s ->
+            { Views.TrackingSummaryRow.TrackingNumber = s.TrackingNumber
+              Views.TrackingSummaryRow.BookingId = s.BookingId
+              Views.TrackingSummaryRow.TransportStatus = s.TransportStatus })
+    else
+        []
+
+/// 追跡番号入力（`GET /tracking`・US18）。担当者には追跡番号一覧も表示する。
 let private trackingInput: HttpHandler =
     mustHaveAnyRole [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
-    >=> fun next ctx -> htmlView (Views.trackingInput (rolesOf ctx) None) next ctx
+    >=> fun next ctx ->
+        let factory = ctx.GetService<ConnectionFactory>()
+        use conn = factory ()
+        let summaries = trackingSummariesFor conn (rolesOf ctx)
+        htmlView (Views.trackingInput (rolesOf ctx) None summaries) next ctx
 
 /// 追跡番号での照会（`GET /tracking/search?trackingNumber=`・US18）。PRG 的に詳細へ。
 let private trackingSearch: HttpHandler =
@@ -1116,7 +1146,7 @@ let private trackingSearch: HttpHandler =
         task {
             match ctx.TryGetQueryStringValue "trackingNumber" with
             | Some tn when tn <> "" -> return! redirectTo false (sprintf "/tracking/%s" tn) next ctx
-            | _ -> return! htmlView (Views.trackingInput (rolesOf ctx) (Some "追跡番号を入力してください。")) next ctx
+            | _ -> return! htmlView (Views.trackingInput (rolesOf ctx) (Some "追跡番号を入力してください。") []) next ctx
         }
 
 /// 追跡詳細（`GET /tracking/{trackingNumber}`・US18・認証あり）。
@@ -1138,7 +1168,7 @@ let private trackingDetail (trackingNumber: string) : HttpHandler =
             | None ->
                 return!
                     (setStatusCode 404
-                     >=> htmlView (Views.trackingInput (rolesOf ctx) (Some "追跡番号が見つかりません。")))
+                     >=> htmlView (Views.trackingInput (rolesOf ctx) (Some "追跡番号が見つかりません。") []))
                         next
                         ctx
         }

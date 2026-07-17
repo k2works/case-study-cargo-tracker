@@ -68,7 +68,7 @@ Booking 1 ─── 1 Invoice
 | 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US04, US13 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム | 営業担当者 | US04, US05 |
 | 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴・荷主通知・予約確定 | 荷主、営業担当者 | US06, US12, US13 |
-| 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム | 荷主、荷受人、追跡管理者 | US18 |
+| 貨物追跡入力 | `/tracking` | 追跡番号入力フォーム（追跡管理者には追跡番号一覧も表示） | 荷主、荷受人、追跡管理者 | US18 |
 | 追跡詳細 | `/tracking/{trackingNumber}` | 輸送ステータス履歴タイムライン | 荷主、荷受人 | US18 |
 | 貨物状態更新 | `/tracking/{trackingNumber}/status/new` | 出港・入港等の通常状態の手動更新フォーム | 追跡管理者 | US17 |
 | 例外登録 | `/tracking/{trackingNumber}/exceptions/new` | 遅延・破損・紛失などの例外登録フォーム | 追跡管理者 | US19, US20 |

@@ -123,6 +123,18 @@ let ``荷主は追跡番号で状態とイベント履歴を照会できる（US
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
+let ``追跡管理者は貨物追跡画面で追跡番号一覧を確認できる（US18 導線改善）`` () =
+    withServer (fun client ->
+        let cookie = authCookie client "tracker01"
+        let res = authedGet client cookie "/tracking"
+        res.StatusCode |> should equal HttpStatusCode.OK
+        let body = run (res.Content.ReadAsStringAsync())
+        body |> should haveSubstring "追跡番号一覧"
+        body |> should haveSubstring "TRK-TEST0001"
+        body |> should haveSubstring "BKG-0001")
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
 let ``存在しない追跡番号は 404 と案内を返す`` () =
     withServer (fun client ->
         let cookie = authCookie client "shipper01"

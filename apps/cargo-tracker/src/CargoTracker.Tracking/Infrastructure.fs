@@ -99,6 +99,22 @@ module TrackingQueries =
             rd.ReadString "transport_status")
         |> Option.map (toView conn)
 
+    /// 追跡一覧の要約行（追跡番号・予約 ID・現在の輸送状態）。
+    type TrackingSummary =
+        { TrackingNumber: string
+          BookingId: string
+          TransportStatus: string }
+
+    /// 全追跡の要約を取得する（担当者が追跡番号を一覧から選べるようにする・US18 導線改善）。
+    let findAllSummary (conn: IDbConnection) : TrackingSummary list =
+        conn
+        |> Db.newCommand
+            "SELECT tracking_number, booking_id, transport_status FROM tracking_activity ORDER BY tracking_number"
+        |> Db.query (fun rd ->
+            { TrackingNumber = rd.ReadString "tracking_number"
+              BookingId = rd.ReadString "booking_id"
+              TransportStatus = rd.ReadString "transport_status" })
+
     /// 予約 ID に未解決の輸送例外（遅延・破損等）が存在するか判定する（US21 受入6 例外時料金調整・合成層向け）。
     let hasUnresolvedException (conn: IDbConnection) (bookingId: string) : bool =
         conn

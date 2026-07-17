@@ -337,6 +337,8 @@ module Views =
           ArrivalDeadline: string
           Weight: string
           BookingStatus: string
+          // 予約確定後に発行される追跡番号（未発行なら None）。
+          TrackingNumber: string option
           CanSubmitRouting: bool
           // US11/US13: 確定経路（旅程）と操作可否。
           Itinerary: string list
@@ -429,7 +431,14 @@ module Views =
                               [ th [] [ str "状態" ]
                                 td
                                     []
-                                    [ span [ _class "badge bg-secondary" ] [ str (bookingStatusLabel d.BookingStatus) ] ] ] ] ]
+                                    [ span [ _class "badge bg-secondary" ] [ str (bookingStatusLabel d.BookingStatus) ] ] ]
+                          (match d.TrackingNumber with
+                           | Some tn ->
+                               tr
+                                   []
+                                   [ th [] [ str "追跡番号" ]
+                                     td [] [ a [ _href (sprintf "/tracking/%s" tn) ] [ str tn ] ] ]
+                           | None -> emptyText) ] ]
               itinerarySection
               submitButton
               actionSection
@@ -1076,8 +1085,38 @@ module Views =
           Events: TrackingEventRow list
           Exceptions: TrackingExceptionRow list }
 
-    /// 追跡番号入力画面（`/tracking`・US18）。
-    let trackingInput (roles: string list) (error: string option) : XmlNode =
+    /// 追跡一覧の行（追跡番号・予約 ID・状態）。
+    type TrackingSummaryRow =
+        { TrackingNumber: string
+          BookingId: string
+          TransportStatus: string }
+
+    /// 追跡番号入力画面（`/tracking`・US18）。担当者向けに追跡番号の一覧も表示する。
+    let trackingInput (roles: string list) (error: string option) (summaries: TrackingSummaryRow list) : XmlNode =
+        let listSection =
+            if List.isEmpty summaries then
+                emptyText
+            else
+                div
+                    [ _class "mt-4" ]
+                    [ h2 [ _class "h5 mb-2" ] [ str "追跡番号一覧" ]
+                      table
+                          [ _class "table table-striped" ]
+                          [ thead [] [ tr [] [ th [] [ str "追跡番号" ]; th [] [ str "予約番号" ]; th [] [ str "状態" ] ] ]
+                            tbody
+                                []
+                                (summaries
+                                 |> List.map (fun r ->
+                                     tr
+                                         []
+                                         [ td
+                                               []
+                                               [ a
+                                                     [ _href (sprintf "/tracking/%s" r.TrackingNumber) ]
+                                                     [ str r.TrackingNumber ] ]
+                                           td [] [ str r.BookingId ]
+                                           td [] [ str r.TransportStatus ] ])) ] ]
+
         layout
             "貨物追跡"
             roles
@@ -1094,7 +1133,8 @@ module Views =
                                 _type "text"
                                 _name "trackingNumber"
                                 _placeholder "追跡番号（例: TRK-XXXXXXXX）" ] ]
-                    div [ _class "col-auto" ] [ button [ _type "submit"; _class "btn btn-primary" ] [ str "照会" ] ] ] ]
+                    div [ _class "col-auto" ] [ button [ _type "submit"; _class "btn btn-primary" ] [ str "照会" ] ] ]
+              listSection ]
 
     /// 追跡詳細のタイムライン本体（認証あり・公開ページ共通）。
     let private trackingTimeline (d: TrackingDetailView) : XmlNode list =
