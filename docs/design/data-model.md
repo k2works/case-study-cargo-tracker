@@ -1027,6 +1027,24 @@ module ShipperRepository =
 
 ---
 
+### `discount_policy`（割引ポリシーマスタ）
+
+> **IT7 実装状況**: マイグレーション 0012 で作成（US-ADM-01）。運用管理者（ROLE_ADMIN）が登録・変更・無効化する法人割引ポリシーのマスタ。有効期間内かつ `active = true` のポリシーのみ US22 の割引計算に使う（`DiscountPolicyMaster.isEffectiveOn`）。`policy_type` は `DiscountPolicy` DU（`CORPORATE_STANDARD`/`VOLUME_DISCOUNT`/`SEASONAL`/`NO_DISCOUNT`）に対応。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `policy_type` | `VARCHAR(30)` | `NOT NULL` | 割引方針（`DiscountPolicy` DU の永続値） |
+| `discount_rate` | `NUMERIC(5,4)` | `NOT NULL` | 割引率（0.0000〜0.3000・最大 30%） |
+| `applicable_condition` | `VARCHAR(200)` | | 適用条件（自由記述） |
+| `effective_from` | `DATE` | `NOT NULL` | 有効開始日 |
+| `effective_to` | `DATE` | | 有効終了日（NULL = 無期限） |
+| `active` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | 有効フラグ（無効化で FALSE） |
+| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
 ### `users`（ユーザー）
 
 認証のカスタムユーザーストアが参照するユーザー認証テーブルです。

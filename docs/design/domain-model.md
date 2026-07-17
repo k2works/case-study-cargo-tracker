@@ -465,6 +465,15 @@ type BookingState =
     | Cancelled of reason: string
 
 // ---- 集約ルート ----
+//
+// > IT7 実装状況（US21/US23・ADR-0013）: Booking の実装は Preliminary / RoutingRequested /
+// > RouteProposed / Confirmed / Delivered of CargoItinerary / Settled of CargoItinerary /
+// > Cancelled を段階実装済み。設計上の TrackingIssued / InTransit や Delivered/Settled の
+// > TrackingNumber・Delivery 同伴は、追跡状態を Tracking Context（transport_status 導出値）へ
+// > 委譲した割り切りにより未実装（Booking は追跡番号・配送状態を保持しない）。精算完了の
+// > Settled 同期は cargo.booking_status の状態射影更新で行う（ADR-0013）。MarkDelivered
+// > （Confirmed→Delivered）・Settle（Delivered→Settled）コマンド、CargoDelivered/BookingSettled
+// > イベントを追加済み。
 
 type Cargo =
     { BookingId: BookingId
@@ -1262,7 +1271,9 @@ module HandlingActivity =
 
 モジュール：`CargoTracker.Billing.Domain`
 
-対応 US：US21〜US23
+対応 US：US-ADM-01・US21〜US23
+
+> **IT7 実装状況**: US-ADM-01/US21/US22/US23 を実装。`Money`（int64 + `CurrencyCode`・`add`/`multiply` 銀行家丸め）・`DiscountRate`（0〜30%）・`DiscountPolicy` DU＋`calculateRate`・`BillingShipperId`（`IsCorporate` 内包）・`InvoiceId`/`BillingBookingId`・`Invoice` 集約＋`generate`・`PaymentState` DU＋`execute`（ConfirmPayment/MarkOverdue/IssueRefund の遷移ガード）・`CargoCategory`＋`Charge.calculateBase`（距離係数×重量×貨物種別係数）・`DiscountPolicyMaster`（有効期限・`isEffectiveOn`・`deactivate`・US-ADM-01 マスタ）を実装。イベントは BC ローカル DU（`BillingEvent`）。永続化は discount_policy（0012）・invoice/invoice_line_item/payment（0013）。料金算出の貨物・荷主データは合成層 ACL で解決（ADR-0013）。決済 ACL（`PaymentGatewayPort`）はスタブ、消費税・付加料金（`invoice_line_item`＋`tax_amount`）は未実装（精算強化 IT）。
 
 ### ドメインモデル図
 
