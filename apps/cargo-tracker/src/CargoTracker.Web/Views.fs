@@ -1673,7 +1673,8 @@ module Views =
           UnitPrice: decimal
           DiscountRate: decimal
           BaseAmount: int64
-          FinalAmount: int64 }
+          FinalAmount: int64
+          HasException: bool }
 
     /// 料金算出フォーム（`/billing/invoices/new`・ROLE_BILLING）。
     /// preview が None のときは予約番号の入力（Step1）、Some のときは輸送実績・割引率を確定前に表示（Step2）。
@@ -1724,6 +1725,12 @@ module Views =
                         dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (p.BaseAmount.ToString("N0"))) ]
                         dt [ _class "col-sm-3" ] [ str "請求金額（割引後）" ]
                         dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (p.FinalAmount.ToString("N0"))) ] ]
+                  (if p.HasException then
+                       div
+                           [ _class "alert alert-warning" ]
+                           [ str "この予約には未解決の輸送例外（遅延・破損等）があります。必要に応じて料金調整（減額・補償費用）を入力してください。" ]
+                   else
+                       emptyText)
                   form
                       [ _method "post"; _action "/billing/invoices" ]
                       [ input [ _type "hidden"; _name "bookingId"; _value p.BookingId ]
@@ -1737,6 +1744,20 @@ module Views =
                                     _type "number"
                                     _step "0.01"
                                     _value (p.UnitPrice.ToString()) ] ]
+                        (if p.HasException then
+                             div
+                                 [ _class "mb-3" ]
+                                 [ label [ _class "form-label"; _for "adjustment" ] [ str "料金調整（減額・補償費用／円）" ]
+                                   input
+                                       [ _class "form-control"
+                                         _id "adjustment"
+                                         _name "adjustment"
+                                         _type "number"
+                                         _step "1"
+                                         _value "0" ]
+                                   div [ _class "form-text" ] [ str "入力額を基本料金から減額します（例外時のみ）。" ] ]
+                         else
+                             emptyText)
                         button [ _type "submit"; _class "btn btn-primary" ] [ str "料金を確定する" ]
                         a [ _class "btn btn-secondary ms-2"; _href "/billing/invoices/new" ] [ str "予約番号を選び直す" ] ] ]
 

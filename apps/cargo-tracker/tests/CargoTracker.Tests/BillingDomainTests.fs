@@ -86,6 +86,18 @@ let ``距離係数は 導出距離×単価 で算出される（US21）`` () =
     |> should equal 50_000L
 
 [<Fact>]
+let ``例外時の料金調整は基本料金から減額される（US21 受入6・IT8）`` () =
+    // 基本料金 50000 から 8000 減額 → 42000
+    (Charge.applyAdjustment 8_000L { Amount = 50_000L; Currency = JPY }).Amount
+    |> should equal 42_000L
+    // 減額しすぎても 0 円を下回らない
+    (Charge.applyAdjustment 60_000L { Amount = 50_000L; Currency = JPY }).Amount
+    |> should equal 0L
+    // 負の調整額は無視（減額 0）
+    (Charge.applyAdjustment -100L { Amount = 50_000L; Currency = JPY }).Amount
+    |> should equal 50_000L
+
+[<Fact>]
 let ``消費税は割引後小計に標準税率10%で課税される（US22・IT8）`` () =
     // 小計 45000 × 10% = 4500
     (ConsumptionTax.calculate ConsumptionTax.StandardRate { Amount = 45_000L; Currency = JPY }).Amount

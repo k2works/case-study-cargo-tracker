@@ -1850,7 +1850,11 @@ let private chargeNew: HttpHandler =
                               UnitPrice = defaultUnitPrice
                               DiscountRate = CargoTracker.Billing.Domain.DiscountRate.value discountRate
                               BaseAmount = baseAmount.Amount
-                              FinalAmount = finalAmount.Amount }
+                              FinalAmount = finalAmount.Amount
+                              HasException =
+                                CargoTracker.Tracking.Infrastructure.TrackingQueries.hasUnresolvedException
+                                    conn
+                                    bookingIdStr }
 
                         return! htmlView (Views.chargeForm (rolesOf ctx) None (Some preview)) next ctx
         }
@@ -1897,12 +1901,21 @@ let private invoiceCreate: HttpHandler =
                         CargoTracker.Shipper.Infrastructure.ShipperQueries.isCorporateByUuid conn shipperId
                         |> Option.defaultValue false
 
-                    let baseAmount =
+                    let rawBase =
                         CargoTracker.Billing.Domain.Charge.calculateBase
                             distance
                             weight
                             category
                             CargoTracker.Billing.Domain.JPY
+
+                    // US21 受入6（IT8）: 例外時の料金調整（減額・補償費用）を基本料金へ適用する。
+                    let adjustment =
+                        match Int64.TryParse(get "adjustment") with
+                        | true, v when v > 0L -> v
+                        | _ -> 0L
+
+                    let baseAmount =
+                        rawBase |> CargoTracker.Billing.Domain.Charge.applyAdjustment adjustment
 
                     // US22（IT8）: 割引ポリシーマスタ（US-ADM-01）の有効ポリシーから割引率を解決する。
                     // マスタの discount_rate を権威とし、ハードコード率は使わない（IT7 レビュー高#2）。

@@ -99,6 +99,21 @@ module TrackingQueries =
             rd.ReadString "transport_status")
         |> Option.map (toView conn)
 
+    /// 予約 ID に未解決の輸送例外（遅延・破損等）が存在するか判定する（US21 受入6 例外時料金調整・合成層向け）。
+    let hasUnresolvedException (conn: IDbConnection) (bookingId: string) : bool =
+        conn
+        |> Db.newCommand
+            """
+            SELECT COUNT(*) AS cnt
+            FROM tracking_exception_event e
+            JOIN tracking_activity a ON a.id = e.tracking_id
+            WHERE a.booking_id = @bid AND e.resolved_at IS NULL
+            """
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.querySingle (fun rd -> rd.ReadInt64 "cnt")
+        |> Option.map (fun c -> c > 0L)
+        |> Option.defaultValue false
+
     /// 公開トークンで照会する（US18・未認証）。
     let findByAccessToken (conn: IDbConnection) (accessToken: string) : TrackingView option =
         conn

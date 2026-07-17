@@ -62,6 +62,13 @@ let private seedDatabase (connStr: string) : unit =
             VALUES
                 ((SELECT id FROM cargo WHERE booking_id = 'BKG-BILL01'), 'V001', 'JPTYO', 'SGSIN', '2026-10-07', '2026-10-15', 1, '2026-10-06', '2026-10-06'),
                 ((SELECT id FROM cargo WHERE booking_id = 'BKG-BILL01'), 'V002', 'SGSIN', 'USLAX', '2026-10-16', '2026-10-25', 2, '2026-10-06', '2026-10-06');
+            INSERT INTO tracking_activity
+                (tracking_number, booking_id, transport_status, access_token, created_at, updated_at, version)
+            VALUES ('TRK-BILL01', 'BKG-BILL01', 'IN_PORT', 'tok-bill01', '2026-10-06', '2026-10-06', 0);
+            INSERT INTO tracking_exception_event
+                (tracking_id, exception_type, location_unlocode, occurred_at, escalation_flag, description, resolved_at, resolution_notes, seq_number, created_at, updated_at)
+            VALUES
+                ((SELECT id FROM tracking_activity WHERE tracking_number = 'TRK-BILL01'), 'DELAYED', 'SGSIN', '2026-10-16', 1, '荒天による遅延', NULL, NULL, 1, '2026-10-06', '2026-10-06');
             """
             hash
             shipperUuid
@@ -169,6 +176,34 @@ let ``経理担当者が料金算出→精算書発行→入金確認まで一�
 // 注: マスタ率が権威であること（マスタの discount_rate を使い、ハードコード率を使わない）は、
 // 上記受け入れテストがシードの割引ポリシー（10%）に依存して 45000 になる点と、
 // BillingDomainTests の resolveApplicableRate（5 ケース）で担保する。
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``例外発生時は料金調整を入力でき基本料金から減額される（US21 受入6・IT8）`` () =
+    withServer (fun client ->
+        let billing = authCookie client "billing01"
+
+        // BKG-BILL01 には未解決の輸送例外（遅延）があるため、プレビューに調整入力欄が表示される
+        let preview = authedGet client billing "/billing/invoices/new?bookingId=BKG-BILL01"
+        let previewBody = run (preview.Content.ReadAsStringAsync())
+        previewBody |> should haveSubstring "未解決の輸送例外"
+        previewBody |> should haveSubstring "料金調整"
+
+        // 料金調整 10000 減額で確定 → 基本料金 50000-10000=40000、法人 10% → 36000
+        let createRes =
+            post
+                client
+                billing
+                "/billing/invoices"
+                [ "bookingId", "BKG-BILL01"; "unitPrice", "0.1"; "adjustment", "10000" ]
+
+        createRes.StatusCode |> should equal HttpStatusCode.Found
+        let detailPath = string createRes.Headers.Location
+        let detail = authedGet client billing detailPath
+        let body = run (detail.Content.ReadAsStringAsync())
+        // 減額後の基本料金 40,000・割引後小計 36,000
+        body |> should haveSubstring "40,000"
+        body |> should haveSubstring "36,000")
 
 [<Fact>]
 [<Trait("Category", "Integration")>]

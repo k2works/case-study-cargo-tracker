@@ -192,6 +192,12 @@ module Charge =
         { Amount = int64 rounded
           Currency = currency }
 
+    /// 例外時の料金調整（減額・補償費用）を基本料金へ適用する（US21 受入6・IT8）。
+    /// 調整額は基本料金から減額する。減額しすぎても 0 円を下回らない。
+    let applyAdjustment (adjustment: int64) (baseAmount: Money) : Money =
+        { baseAmount with
+            Amount = max 0L (baseAmount.Amount - max 0L adjustment) }
+
 /// 消費税（US22 消費税・付加料金・IT8）。割引後小計に対して課税する。
 module ConsumptionTax =
     /// 日本の標準消費税率（10%）。
