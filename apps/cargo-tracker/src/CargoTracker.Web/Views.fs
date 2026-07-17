@@ -15,6 +15,7 @@ module Views =
           "貨物追跡", "/tracking", [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
           "荷役管理", "/handling", [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
           "航路管理", "/voyages", [ "ROLE_ROUTE_DESIGNER" ]
+          "請求管理", "/billing/invoices", [ "ROLE_BILLING" ]
           "管理設定", "/admin/discount-policies", [ "ROLE_ADMIN" ] ]
 
     /// ロールに基づいてナビゲーションバーを描画する。未認証（roles 空）はログインのみ表示する。
@@ -1599,3 +1600,134 @@ module Views =
                                 _value effTo ] ]
                     button [ _type "submit"; _class "btn btn-primary" ] [ str "保存" ]
                     a [ _class "btn btn-secondary ms-2"; _href "/admin/discount-policies" ] [ str "一覧へ戻る" ] ] ]
+
+    // ---- US21/US22/US23: 精算（請求管理・ROLE_BILLING）----
+
+    /// 支払い状態の日本語表示。
+    let paymentStatusLabel (status: string) : string =
+        match status with
+        | "Pending" -> "支払待ち"
+        | "Confirmed" -> "精算済"
+        | "Overdue" -> "期限超過"
+        | "Refunded" -> "返金済"
+        | other -> other
+
+    /// 精算書一覧の表示行。
+    type InvoiceRow =
+        { InvoiceNumber: string
+          BookingId: string
+          FinalAmount: int64
+          PaymentStatus: string }
+
+    /// 精算書一覧画面（`/billing/invoices`・ROLE_BILLING）。
+    let invoiceList (roles: string list) (msg: string option) (rows: InvoiceRow list) : XmlNode =
+        let banner =
+            match msg with
+            | Some "created" -> div [ _class "alert alert-success" ] [ str "精算書を発行しました。" ]
+            | Some "confirmed" -> div [ _class "alert alert-success" ] [ str "入金を確認し精算を完了しました。" ]
+            | _ -> emptyText
+
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ a [ _href (sprintf "/billing/invoices/%s" r.InvoiceNumber) ] [ str r.InvoiceNumber ] ]
+                      td [] [ str r.BookingId ]
+                      td [] [ str (sprintf "¥%s" (r.FinalAmount.ToString("N0"))) ]
+                      td [] [ span [ _class "badge bg-secondary" ] [ str (paymentStatusLabel r.PaymentStatus) ] ] ])
+
+        layout
+            "請求管理"
+            roles
+            [ banner
+              div
+                  [ _class "d-flex justify-content-between align-items-center mb-4" ]
+                  [ h1 [] [ str "精算書一覧" ]
+                    a [ _class "btn btn-primary"; _href "/billing/invoices/new" ] [ str "新規精算書発行" ] ]
+              (if List.isEmpty rows then
+                   div [ _class "alert alert-info" ] [ str "精算書はまだありません。" ]
+               else
+                   table
+                       [ _class "table table-striped" ]
+                       [ thead
+                             []
+                             [ tr
+                                   []
+                                   [ th [] [ str "請求番号" ]
+                                     th [] [ str "予約番号" ]
+                                     th [] [ str "請求金額" ]
+                                     th [] [ str "状態" ] ] ]
+                         tbody [] bodyRows ]) ]
+
+    /// 料金算出フォーム（`/billing/invoices/new`・ROLE_BILLING）。
+    let chargeForm (roles: string list) (error: string option) : XmlNode =
+        layout
+            "料金算出"
+            roles
+            [ h1 [ _class "mb-4" ] [ str "料金算出・精算書発行" ]
+              (match error with
+               | Some m -> div [ _class "alert alert-danger" ] [ str m ]
+               | None -> emptyText)
+              div [ _class "alert alert-info" ] [ str "「引取済」状態の予約に対して料金を算出します。基本料金＝距離係数×重量×貨物種別係数。法人荷主は割引が自動適用されます。" ]
+              form
+                  [ _method "post"; _action "/billing/invoices" ]
+                  [ div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "bookingId" ] [ str "予約番号" ]
+                          input [ _class "form-control"; _id "bookingId"; _name "bookingId"; _type "text" ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "distanceFactor" ] [ str "距離係数（1kg あたり単価×距離）" ]
+                          input
+                              [ _class "form-control"
+                                _id "distanceFactor"
+                                _name "distanceFactor"
+                                _type "number"
+                                _step "1"
+                                _value "100" ] ]
+                    button [ _type "submit"; _class "btn btn-primary" ] [ str "料金を確定する" ]
+                    a [ _class "btn btn-secondary ms-2"; _href "/billing/invoices" ] [ str "一覧へ戻る" ] ] ]
+
+    /// 精算書詳細の表示値。
+    type InvoiceDetailView =
+        { InvoiceNumber: string
+          BookingId: string
+          ShipperId: string
+          BaseAmount: int64
+          DiscountRate: decimal
+          FinalAmount: int64
+          PaymentStatus: string
+          IssuedAt: string }
+
+    /// 精算書詳細画面（`/billing/invoices/{invoiceId}`・ROLE_BILLING）。支払待ちなら入金確認フォームを表示。
+    let invoiceDetail (roles: string list) (d: InvoiceDetailView) : XmlNode =
+        layout
+            "精算書詳細"
+            roles
+            [ h1 [ _class "mb-3" ] [ str (sprintf "精算書 %s" d.InvoiceNumber) ]
+              div
+                  [ _class "mb-3" ]
+                  [ span [ _class "badge bg-primary fs-6" ] [ str (paymentStatusLabel d.PaymentStatus) ] ]
+              dl
+                  [ _class "row" ]
+                  [ dt [ _class "col-sm-3" ] [ str "対象予約" ]
+                    dd [ _class "col-sm-9" ] [ str d.BookingId ]
+                    dt [ _class "col-sm-3" ] [ str "荷主" ]
+                    dd [ _class "col-sm-9" ] [ str d.ShipperId ]
+                    dt [ _class "col-sm-3" ] [ str "基本料金" ]
+                    dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (d.BaseAmount.ToString("N0"))) ]
+                    dt [ _class "col-sm-3" ] [ str "割引率" ]
+                    dd [ _class "col-sm-9" ] [ str (sprintf "%.1f%%" (d.DiscountRate * 100m)) ]
+                    dt [ _class "col-sm-3" ] [ str "請求金額（割引後）" ]
+                    dd [ _class "col-sm-9" ] [ b [] [ str (sprintf "¥%s" (d.FinalAmount.ToString("N0"))) ] ]
+                    dt [ _class "col-sm-3" ] [ str "発行日" ]
+                    dd [ _class "col-sm-9" ] [ str d.IssuedAt ] ]
+              (if d.PaymentStatus = "Pending" || d.PaymentStatus = "Overdue" then
+                   form
+                       [ _method "post"
+                         _action (sprintf "/billing/invoices/%s/confirm" d.InvoiceNumber) ]
+                       [ button [ _type "submit"; _class "btn btn-success" ] [ str "入金を確認する" ] ]
+               else
+                   emptyText)
+              a [ _class "btn btn-secondary mt-3"; _href "/billing/invoices" ] [ str "一覧へ戻る" ] ]

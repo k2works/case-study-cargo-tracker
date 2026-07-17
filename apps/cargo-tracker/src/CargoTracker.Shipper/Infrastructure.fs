@@ -36,6 +36,14 @@ module ShipperQueries =
               Code = rd.ReadString "shipper_code"
               Name = rd.ReadString "name" })
 
+    /// 荷主 UUID から法人かどうかを判定する（US22 法人割引の合成層向け）。存在しなければ None。
+    let isCorporateByUuid (conn: IDbConnection) (shipperUuid: string) : bool option =
+        conn
+        |> Db.newCommand "SELECT shipper_type FROM shipper WHERE shipper_uuid = @uuid"
+        |> Db.setParams [ "uuid", SqlType.String shipperUuid ]
+        |> Db.querySingle (fun rd -> rd.ReadString "shipper_type")
+        |> Option.map (fun t -> t = "CORPORATE")
+
     /// 荷主一覧を取得する（コード順）。
     let findAll (conn: IDbConnection) : ShipperListItem list =
         conn

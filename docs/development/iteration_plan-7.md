@@ -159,10 +159,10 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 |---|--------|---------|------|------|
 | 3.1 | 料金算出（`Charge.calculateBase`＝距離係数×重量×貨物種別係数・銀行家丸め）・`InvoiceRepository`（Donald・PaymentState 写像）・`Billing.generateInvoice` ユースケース | 3h | - | [x] |
 | 3.2 | 法人割引適用（`Invoice.generate` が `DiscountPolicy.calculateRate` で法人割引を適用・アプリ層で `BillingShipperId.IsCorporate` を渡す） | 3h | - | [x] |
-| 3.3 | 精算書発行→荷主通知・`Billing.confirmPayment`（`PaymentGatewayPort` 決済 ACL で入金確認）・`markOverdueIfDue`（期限超過通知）。Web/WireMock は残 | 3h | - | [~] |
+| 3.3 | 精算書発行→荷主通知・`Billing.confirmPayment`（`PaymentGatewayPort` 決済 ACL で入金確認）・`markOverdueIfDue`（期限超過通知）。決済は合成層スタブ、WireMock 契約固定は残 | 3h | - | [x] |
 | 3.4 | BC 連携: `BookingState` に `Delivered`・`Settled` ケースを段階追加。Tracking 引取済（Claimed）→ Booking `Delivered` 同期→ `InvoiceRequested` 発行（戦略の Delivered 制限）→ 料金算出開始、精算完了→ Booking `Settle`→`Settled` 同期を post-commit＋合成層 ACL で結線。ADR-0013 起票 | 3h | - | [ ] |
-| 3.5 | 期限超過の未払い通知（`MarkOverdue`→経理通知）・料金算出/精算の Web 画面（`/billing/invoices` 系・ROLE_BILLING） | 3h | - | [ ] |
-| 3.6 | 受け入れテスト（料金算出→確定→精算書→通知→入金確認→Settled 同期の一気通貫・法人/個人分岐・通知失敗時の部分失敗挙動＝IT6 レビュー中#5） | 3h | - | [ ] |
+| 3.5 | 料金算出/精算の Web 画面（`/billing/invoices` 一覧・`/new` 料金算出・`/{id}` 詳細・`/{id}/confirm` 入金確認・ROLE_BILLING）・navbar「請求管理」追加・決済スタブ・通知結線 | 3h | - | [x] |
+| 3.6 | 受け入れテスト（料金算出→法人割引→精算書→入金確認の一気通貫・ROLE_BILLING 権限）。Settled 同期・通知失敗検証は task3.4/4 で対応 | 3h | - | [~] |
 
 **小計**: 18h（理想時間）
 
@@ -187,7 +187,7 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 | **合計** | **16** | **49h** | |
 
 **1 SP あたり**: 約 3.1h（改善・出荷タスク 8h を含む）
-**進捗率**: 56% (9/16 SP・Billing ドメイン・US-ADM-01 完了)
+**進捗率**: 88% (14/16 SP・US-ADM-01/US21/US22 完了・US23 は Settled 同期残)
 
 ---
 

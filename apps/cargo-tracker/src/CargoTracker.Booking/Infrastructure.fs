@@ -50,6 +50,17 @@ module CargoQueries =
         |> Db.setParams [ "bid", SqlType.String bookingId ]
         |> Db.querySingle (fun rd -> rd.ReadString "arrival_deadline")
 
+    /// 料金算出の基礎（重量・貨物種別・荷主 ID・予約状態）を取得する（US21 の合成層向け）。
+    let findChargeBasis (conn: IDbConnection) (bookingId: string) : (decimal * string * string * string) option =
+        conn
+        |> Db.newCommand "SELECT weight, cargo_type, shipper_id, booking_status FROM cargo WHERE booking_id = @bid"
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.querySingle (fun rd ->
+            rd.ReadDecimal "weight",
+            rd.ReadString "cargo_type",
+            rd.ReadString "shipper_id",
+            rd.ReadString "booking_status")
+
 /// 経路設計者への通知 ACL のスタブ（US06）。IT2 は無処理で成功を返す。
 /// 後続 IT で実通知（メール／画面キュー）に差し替える。
 module StubRoutingRequestNotifier =

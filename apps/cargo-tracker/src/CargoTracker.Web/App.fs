@@ -1717,6 +1717,203 @@ let private discountPolicyDeactivate (idInt: int) : HttpHandler =
             | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
         }
 
+// ---- US21/US22/US23: 精算（請求管理・ROLE_BILLING）----
+
+/// notification_log へ書き込む BillingNotifier（精算書通知・期限超過通知の最小実装）。
+let private billingNotifier (conn: System.Data.IDbConnection) : CargoTracker.Billing.Application.BillingNotifier =
+    { Notify =
+        fun bookingId message ->
+            async {
+                try
+                    let now = (systemClock ()).UtcDateTime.ToString("o")
+                    let bid = CargoTracker.Billing.Domain.BillingBookingId.value bookingId
+
+                    conn
+                    |> Donald.Db.newCommand
+                        "INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at) VALUES (@bid, @rcp, @msg, @now, @now)"
+                    |> Donald.Db.setParams
+                        [ "bid", Donald.SqlType.String bid
+                          "rcp", Donald.SqlType.String bid
+                          "msg", Donald.SqlType.String message
+                          "now", Donald.SqlType.String now ]
+                    |> Donald.Db.exec
+
+                    return Ok()
+                with ex ->
+                    return Error(CargoTracker.Shared.Domain.BusinessRuleViolation("BillingNotifier", ex.Message))
+            } }
+
+/// 決済 ACL のスタブ（US23）。入金確認を即時成功させ支払時刻を返す。
+/// 外部決済機関との実連携（WireMock.Net で契約固定）は将来 IT で差し替える。
+let private stubPaymentGateway: CargoTracker.Billing.Application.PaymentGatewayPort =
+    { ConfirmPayment = fun _ _ -> async { return Ok(systemClock ()) } }
+
+/// DB の支払い状態（大文字）を PaymentState.name 形式へ正規化する。
+let private normalizePaymentStatus (dbStatus: string) : string =
+    match dbStatus with
+    | "PENDING" -> "Pending"
+    | "CONFIRMED" -> "Confirmed"
+    | "OVERDUE" -> "Overdue"
+    | "REFUNDED" -> "Refunded"
+    | other -> other
+
+/// 精算書一覧（`GET /billing/invoices`・ROLE_BILLING）。
+let private invoiceList: HttpHandler =
+    mustHaveRole "ROLE_BILLING"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+            let msg = ctx.TryGetQueryStringValue "msg"
+
+            let rows =
+                CargoTracker.Billing.Infrastructure.InvoiceQueries.findAll conn
+                |> List.map (fun r ->
+                    { Views.InvoiceRow.InvoiceNumber = r.InvoiceNumber
+                      Views.InvoiceRow.BookingId = r.BookingId
+                      Views.InvoiceRow.FinalAmount = r.FinalAmountValue
+                      Views.InvoiceRow.PaymentStatus = normalizePaymentStatus r.PaymentStatus })
+
+            return! htmlView (Views.invoiceList (rolesOf ctx) msg rows) next ctx
+        }
+
+/// 料金算出フォーム（`GET /billing/invoices/new`・ROLE_BILLING）。
+let private chargeNew: HttpHandler =
+    mustHaveRole "ROLE_BILLING"
+    >=> fun next ctx -> htmlView (Views.chargeForm (rolesOf ctx) None) next ctx
+
+/// 料金確定・精算書発行（`POST /billing/invoices`・ROLE_BILLING）。
+let private invoiceCreate: HttpHandler =
+    mustHaveRole "ROLE_BILLING"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get (k: string) = string form.[k]
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+            let bookingIdStr = get "bookingId"
+
+            let renderErr (msg: string) =
+                setStatusCode 400 >=> htmlView (Views.chargeForm (rolesOf ctx) (Some msg))
+
+            // 合成層で貨物（重量・種別・状態）と荷主の法人判定を解決する（BC 分離）。
+            match CargoTracker.Booking.Infrastructure.CargoQueries.findChargeBasis conn bookingIdStr with
+            | None -> return! renderErr "予約が見つかりません。" next ctx
+            | Some(weight, cargoType, shipperId, _bookingStatus) ->
+                let distanceResult =
+                    match Decimal.TryParse(get "distanceFactor") with
+                    | true, v when v > 0m -> Ok v
+                    | _ -> Error "距離係数は正の数で入力してください。"
+
+                let categoryResult =
+                    CargoTracker.Billing.Domain.CargoCategory.ofString cargoType
+                    |> Result.mapError (fun _ -> "貨物種別を解決できません。")
+
+                match distanceResult, categoryResult with
+                | Ok distance, Ok category ->
+                    let isCorporate =
+                        CargoTracker.Shipper.Infrastructure.ShipperQueries.isCorporateByUuid conn shipperId
+                        |> Option.defaultValue false
+
+                    let baseAmount =
+                        CargoTracker.Billing.Domain.Charge.calculateBase
+                            distance
+                            weight
+                            category
+                            CargoTracker.Billing.Domain.JPY
+
+                    let policy =
+                        if isCorporate then
+                            CargoTracker.Billing.Domain.CorporateStandard
+                        else
+                            CargoTracker.Billing.Domain.NoDiscount
+
+                    match
+                        CargoTracker.Billing.Domain.BillingBookingId.create bookingIdStr,
+                        CargoTracker.Billing.Domain.BillingShipperId.create shipperId isCorporate
+                    with
+                    | Ok bid, Ok sid ->
+                        let repo =
+                            CargoTracker.Billing.Infrastructure.InvoiceRepository.create conn systemClock
+
+                        let! result =
+                            CargoTracker.Billing.Application.Billing.generateInvoice
+                                repo
+                                (billingNotifier conn)
+                                systemNewId
+                                bid
+                                sid
+                                baseAmount
+                                policy
+                                (systemClock ())
+
+                        match result with
+                        | Ok inv ->
+                            return!
+                                redirectTo
+                                    false
+                                    (sprintf
+                                        "/billing/invoices/%s"
+                                        (CargoTracker.Billing.Domain.InvoiceId.value inv.InvoiceId))
+                                    next
+                                    ctx
+                        | Error err -> return! renderErr (domainErrorMessage err) next ctx
+                    | _ -> return! renderErr "予約 ID または荷主 ID が不正です。" next ctx
+                | Error msg, _
+                | _, Error msg -> return! renderErr msg next ctx
+        }
+
+/// 精算書詳細（`GET /billing/invoices/{invoiceId}`・ROLE_BILLING）。
+let private invoiceDetail (invoiceNumber: string) : HttpHandler =
+    mustHaveRole "ROLE_BILLING"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.InvoiceRepository.create conn systemClock
+
+            match! repo.FindByInvoiceId(CargoTracker.Billing.Domain.InvoiceId.ofString invoiceNumber) with
+            | Ok(Some inv) ->
+                let d: Views.InvoiceDetailView =
+                    { InvoiceNumber = CargoTracker.Billing.Domain.InvoiceId.value inv.InvoiceId
+                      BookingId = CargoTracker.Billing.Domain.BillingBookingId.value inv.CargoBookingId
+                      ShipperId = inv.ShipperId.ShipperId
+                      BaseAmount = inv.BaseAmount.Amount
+                      DiscountRate = CargoTracker.Billing.Domain.DiscountRate.value inv.DiscountRate
+                      FinalAmount = inv.FinalAmount.Amount
+                      PaymentStatus = CargoTracker.Billing.Domain.PaymentState.name inv.Payment
+                      IssuedAt = inv.IssuedAt.ToString("yyyy-MM-dd") }
+
+                return! htmlView (Views.invoiceDetail (rolesOf ctx) d) next ctx
+            | Ok None -> return! (setStatusCode 404 >=> text "精算書が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 入金確認（`POST /billing/invoices/{invoiceId}/confirm`・ROLE_BILLING）。
+let private paymentConfirm (invoiceNumber: string) : HttpHandler =
+    mustHaveRole "ROLE_BILLING"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.InvoiceRepository.create conn systemClock
+
+            match!
+                CargoTracker.Billing.Application.Billing.confirmPayment
+                    repo
+                    stubPaymentGateway
+                    (CargoTracker.Billing.Domain.InvoiceId.ofString invoiceNumber)
+            with
+            | Ok _ -> return! redirectTo false "/billing/invoices?msg=confirmed" next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "精算書が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -1752,7 +1949,11 @@ let webApp: HttpHandler =
                     // US-ADM-01: 割引ポリシー管理（具体パス /new を routef より先に置く）。
                     route "/admin/discount-policies" >=> discountPolicyList
                     route "/admin/discount-policies/new" >=> discountPolicyNew
-                    routef "/admin/discount-policies/%i/edit" discountPolicyEdit ]
+                    routef "/admin/discount-policies/%i/edit" discountPolicyEdit
+                    // US21/US22/US23: 精算（具体パス /new を routef より先に置く）。
+                    route "/billing/invoices" >=> invoiceList
+                    route "/billing/invoices/new" >=> chargeNew
+                    routef "/billing/invoices/%s" invoiceDetail ]
           POST
           >=> choose
                   [ route "/login" >=> loginPost
@@ -1776,7 +1977,10 @@ let webApp: HttpHandler =
                     // US-ADM-01: 割引ポリシー管理（POST）。
                     routef "/admin/discount-policies/%i/edit" discountPolicyUpdate
                     routef "/admin/discount-policies/%i/deactivate" discountPolicyDeactivate
-                    route "/admin/discount-policies" >=> discountPolicyCreate ]
+                    route "/admin/discount-policies" >=> discountPolicyCreate
+                    // US21/US22/US23: 精算（POST）。
+                    routef "/billing/invoices/%s/confirm" paymentConfirm
+                    route "/billing/invoices" >=> invoiceCreate ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。

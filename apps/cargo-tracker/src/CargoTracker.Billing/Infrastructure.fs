@@ -374,3 +374,22 @@ module InvoiceRepository =
           Update = update
           FindByInvoiceId = fun id -> findBy "invoice_number" (InvoiceId.value id)
           FindByBookingId = fun bid -> findBy "booking_id" (BillingBookingId.value bid) }
+
+/// 精算書の読み取りモデル（US23・一覧表示）。
+module InvoiceQueries =
+
+    type InvoiceListRow =
+        { InvoiceNumber: string
+          BookingId: string
+          FinalAmountValue: int64
+          PaymentStatus: string }
+
+    let findAll (conn: IDbConnection) : InvoiceListRow list =
+        conn
+        |> Db.newCommand
+            "SELECT invoice_number, booking_id, final_amount_value, payment_status FROM invoice ORDER BY id DESC"
+        |> Db.query (fun rd ->
+            { InvoiceNumber = rd.ReadString "invoice_number"
+              BookingId = rd.ReadString "booking_id"
+              FinalAmountValue = rd.ReadInt64 "final_amount_value"
+              PaymentStatus = rd.ReadString "payment_status" })
