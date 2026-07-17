@@ -38,11 +38,18 @@ let ``Money は負値で Error`` () =
     | other -> failwithf "ValidationError を期待したが: %A" other
 
 [<Fact>]
-let ``異通貨の加算は拒否される`` () =
-    // 現状 JPY のみだが将来の多通貨に備えた契約。同通貨は加算成功。
+let ``同一通貨の加算は成功する`` () =
     match Money.add (jpy 100L) (jpy 200L) with
     | Ok m -> m.Amount |> should equal 300L
     | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``異通貨の加算は CurrencyMismatch で拒否される（IT8 task5.2）`` () =
+    let usd = { Amount = 100L; Currency = USD }
+
+    match Money.add (jpy 100L) usd with
+    | Error(BusinessRuleViolation("CurrencyMismatch", _)) -> ()
+    | other -> failwithf "CurrencyMismatch を期待したが: %A" other
 
 [<Fact>]
 let ``Money.multiply は銀行家丸め（0.5 は偶数側へ）を行う`` () =

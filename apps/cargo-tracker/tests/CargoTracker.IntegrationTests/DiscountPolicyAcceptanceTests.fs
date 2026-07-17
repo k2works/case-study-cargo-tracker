@@ -132,6 +132,48 @@ let ``運用管理者は割引ポリシーを登録し一覧で確認できる�
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
+let ``有効期限フィルタは現在有効なポリシーのみ表示する（US-ADM-01・IT8 task5.1）`` () =
+    withServer (fun client ->
+        let admin = authCookie client "admin01"
+
+        // 現在有効（2026-01-01〜2026-12-31・今日 2026 年内を含む）
+        post
+            client
+            admin
+            "/admin/discount-policies"
+            [ "policyType", "CORPORATE_STANDARD"
+              "discountRate", "10.0"
+              "condition", "現在有効ポリシー"
+              "effectiveFrom", "2026-01-01"
+              "effectiveTo", "2026-12-31" ]
+        |> ignore
+
+        // 期限切れ（2025-01-01〜2025-12-31・今日より前に終了）
+        post
+            client
+            admin
+            "/admin/discount-policies"
+            [ "policyType", "SEASONAL"
+              "discountRate", "5.0"
+              "condition", "期限切れポリシー"
+              "effectiveFrom", "2025-01-01"
+              "effectiveTo", "2025-12-31" ]
+        |> ignore
+
+        // 全件表示: 両方見える
+        let all = authedGet client admin "/admin/discount-policies"
+        let allBody = run (all.Content.ReadAsStringAsync())
+        allBody |> should haveSubstring "現在有効ポリシー"
+        allBody |> should haveSubstring "期限切れポリシー"
+
+        // 有効のみ: 現在有効なものだけ
+        let effective = authedGet client admin "/admin/discount-policies?filter=effective"
+        let effBody = run (effective.Content.ReadAsStringAsync())
+        effBody |> should haveSubstring "現在有効ポリシー"
+        effBody |> should not' (haveSubstring "期限切れポリシー"))
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
 let ``割引率が範囲外（31%）だと登録できずエラー表示される（US-ADM-01 受入6）`` () =
     withServer (fun client ->
         let admin = authCookie client "admin01"

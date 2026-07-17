@@ -197,6 +197,81 @@ let ``通知が失敗しても精算書は永続化される（Save 成功・通
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
+let ``確定済みの精算書は返金で Refunded へ遷移し永続化される（US23・IT8 task5.2）`` () =
+    use conn = openDb ()
+    let repo = InvoiceRepository.create conn fixedClock
+    let calls = System.Collections.Generic.List<string>()
+
+    let invoice =
+        Billing.generateInvoice
+            repo
+            (notifier calls)
+            newId
+            (bookingId ())
+            (corporate ())
+            baseAmount
+            CorporateStandard
+            (DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero))
+        |> Async.RunSynchronously
+        |> function
+            | Ok i -> i
+            | Error e -> failwithf "%A" e
+
+    // まず入金確認で Confirmed にする
+    Billing.confirmPayment repo (gateway (DateTimeOffset(2026, 10, 20, 0, 0, 0, TimeSpan.Zero))) invoice.InvoiceId
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    calls.Clear()
+    let refundedAt = DateTimeOffset(2026, 10, 25, 0, 0, 0, TimeSpan.Zero)
+
+    let updated =
+        Billing.refund repo (notifier calls) invoice.InvoiceId refundedAt
+        |> Async.RunSynchronously
+        |> function
+            | Ok i -> i
+            | Error e -> failwithf "%A" e
+
+    PaymentState.name updated.Payment |> should equal "Refunded"
+    calls.Count |> should equal 1
+    calls.[0] |> should haveSubstring "返金"
+
+    match repo.FindByInvoiceId invoice.InvoiceId |> Async.RunSynchronously with
+    | Ok(Some found) -> PaymentState.name found.Payment |> should equal "Refunded"
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``未確定（Pending）の精算書は返金できない（不正遷移拒否・IT8 task5.2）`` () =
+    use conn = openDb ()
+    let repo = InvoiceRepository.create conn fixedClock
+    let calls = System.Collections.Generic.List<string>()
+
+    let invoice =
+        Billing.generateInvoice
+            repo
+            (notifier calls)
+            newId
+            (bookingId ())
+            (corporate ())
+            baseAmount
+            CorporateStandard
+            (DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero))
+        |> Async.RunSynchronously
+        |> function
+            | Ok i -> i
+            | Error e -> failwithf "%A" e
+
+    match
+        Billing.refund repo (notifier calls) invoice.InvoiceId (DateTimeOffset(2026, 10, 25, 0, 0, 0, TimeSpan.Zero))
+        |> Async.RunSynchronously
+    with
+    | Error(InvalidStateTransition _) -> ()
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
 let ``期限超過で Overdue へ遷移し経理へ未払い通知される（US23 受入5・IT8）`` () =
     use conn = openDb ()
     let repo = InvoiceRepository.create conn fixedClock

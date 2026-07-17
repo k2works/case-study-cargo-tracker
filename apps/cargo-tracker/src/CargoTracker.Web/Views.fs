@@ -1436,7 +1436,12 @@ module Views =
           Active: bool }
 
     /// 割引ポリシー一覧画面（`/admin/discount-policies`・ROLE_ADMIN）。
-    let discountPolicyList (roles: string list) (msg: string option) (rows: DiscountPolicyRow list) : XmlNode =
+    let discountPolicyList
+        (roles: string list)
+        (msg: string option)
+        (effectiveOnly: bool)
+        (rows: DiscountPolicyRow list)
+        : XmlNode =
         let banner =
             match msg with
             | Some "created" -> div [ _class "alert alert-success" ] [ str "割引ポリシーを登録しました。" ]
@@ -1482,7 +1487,18 @@ module Views =
               div
                   [ _class "d-flex justify-content-between align-items-center mb-4" ]
                   [ h1 [] [ str "割引ポリシー管理" ]
-                    a [ _class "btn btn-primary"; _href "/admin/discount-policies/new" ] [ str "新規登録" ] ]
+                    div
+                        []
+                        [ (if effectiveOnly then
+                               a
+                                   [ _class "btn btn-outline-secondary me-2"; _href "/admin/discount-policies" ]
+                                   [ str "すべて表示" ]
+                           else
+                               a
+                                   [ _class "btn btn-outline-secondary me-2"
+                                     _href "/admin/discount-policies?filter=effective" ]
+                                   [ str "有効のみ表示" ])
+                          a [ _class "btn btn-primary"; _href "/admin/discount-policies/new" ] [ str "新規登録" ] ] ]
               (if List.isEmpty rows then
                    div [ _class "alert alert-info" ] [ str "割引ポリシーは登録されていません。" ]
                else
@@ -1570,6 +1586,9 @@ module Views =
                                 _name "discountRate"
                                 _type "number"
                                 _step "0.1"
+                                _min "0"
+                                _max "30"
+                                _required
                                 _value ratePercent ] ]
                     div
                         [ _class "mb-3" ]
@@ -1818,6 +1837,13 @@ module Views =
                        [ _method "post"
                          _action (sprintf "/billing/invoices/%s/confirm" d.InvoiceNumber) ]
                        [ button [ _type "submit"; _class "btn btn-success" ] [ str "入金を確認する" ] ]
+               elif d.PaymentStatus = "Confirmed" then
+                   // 確定済みはキャンセル・過誤請求時の返金導線を表示する（US23・IT8 task5.2）。
+                   form
+                       [ _method "post"
+                         _action (sprintf "/billing/invoices/%s/refund" d.InvoiceNumber)
+                         attr "onsubmit" "return confirm('この精算書を返金します。よろしいですか？');" ]
+                       [ button [ _type "submit"; _class "btn btn-warning" ] [ str "返金する" ] ]
                else
                    emptyText)
               a [ _class "btn btn-secondary mt-3"; _href "/billing/invoices" ] [ str "一覧へ戻る" ] ]

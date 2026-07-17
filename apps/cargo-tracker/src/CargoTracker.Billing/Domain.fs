@@ -8,17 +8,21 @@ open CargoTracker.Shared.Domain
 // 支払い状態は PaymentState DU で各ケースに時刻を埋め込み「Confirmed なのに paidAt が null」を型排除する。
 // イベントは BC ローカル DU（BillingEvent・ADR-0002）。
 
-/// 通貨コード（最小実装は日本円）。
-type CurrencyCode = | JPY
+/// 通貨コード（国内は日本円。USD は多通貨対応の契約を明示し異通貨演算の不変条件を検証可能にする）。
+type CurrencyCode =
+    | JPY
+    | USD
 
 module CurrencyCode =
     let toString (c: CurrencyCode) : string =
         match c with
         | JPY -> "JPY"
+        | USD -> "USD"
 
     let ofString (value: string) : Result<CurrencyCode, DomainError> =
         match value with
         | "JPY" -> Ok JPY
+        | "USD" -> Ok USD
         | other -> Error(ValidationError("CurrencyCode", sprintf "未対応の通貨コードです: %s" other))
 
 /// 金額：最小通貨単位の整数（円は 1 円単位）と通貨コード。

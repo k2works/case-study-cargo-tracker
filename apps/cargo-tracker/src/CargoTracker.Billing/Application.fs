@@ -161,6 +161,30 @@ module Billing =
             return updated
         }
 
+    /// 返金（US23・IT8 task5.2）。確定済み（Confirmed）の精算書を Refunded へ遷移する。
+    /// キャンセル・過誤請求時の払い戻し導線。遷移不可（未確定など）はドメインが拒否する。
+    let refund
+        (repo: InvoiceRepository)
+        (notifier: BillingNotifier)
+        (invoiceId: InvoiceId)
+        (refundedAt: DateTimeOffset)
+        : Async<Result<Invoice, DomainError>> =
+        asyncResult {
+            let! found = repo.FindByInvoiceId invoiceId
+
+            let! invoice =
+                match found with
+                | Some i -> Ok i
+                | None -> Error(NotFound("Invoice", InvoiceId.value invoiceId))
+
+            let! updated, _events = Invoice.execute invoice (IssueRefund refundedAt)
+            do! repo.Update updated
+
+            do! notifier.Notify updated.CargoBookingId (sprintf "精算書 %s の返金を行いました。" (InvoiceId.value invoiceId))
+
+            return updated
+        }
+
     /// 期限超過の検出と未払い通知（US23 受入 5）。期限内なら状態は変わらない。
     let markOverdueIfDue
         (repo: InvoiceRepository)

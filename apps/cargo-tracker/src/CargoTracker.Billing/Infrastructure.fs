@@ -75,9 +75,11 @@ module DiscountPolicyRepository =
                           "now", SqlType.String nowStr ]
                     |> Db.exec
 
+                    // 直近 INSERT の surrogate id を同一接続で取得する（IT8 task5.2）。
+                    // `ORDER BY id DESC LIMIT 1` は他接続の並行 INSERT で誤取得しうるため last_insert_rowid() を使う。
                     let id =
                         conn
-                        |> Db.newCommand "SELECT id FROM discount_policy ORDER BY id DESC LIMIT 1"
+                        |> Db.newCommand "SELECT last_insert_rowid() AS id"
                         |> Db.querySingle (fun rd -> rd.ReadInt64 "id")
                         |> Option.defaultValue 0L
 

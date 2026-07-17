@@ -1621,10 +1621,20 @@ let private discountPolicyList: HttpHandler =
 
             let msg = ctx.TryGetQueryStringValue "msg"
 
-            match! repo.FindAll() with
+            // US-ADM-01（IT8 task5.1）: 有効期限フィルタ。filter=effective なら現在有効なポリシーのみ表示。
+            let effectiveOnly = ctx.TryGetQueryStringValue "filter" = Some "effective"
+
+            let! result =
+                if effectiveOnly then
+                    let today = DateOnly.FromDateTime((systemClock ()).UtcDateTime)
+                    repo.FindEffective today
+                else
+                    repo.FindAll()
+
+            match result with
             | Ok masters ->
                 let rows = masters |> List.map toDiscountPolicyRow
-                return! htmlView (Views.discountPolicyList (rolesOf ctx) msg rows) next ctx
+                return! htmlView (Views.discountPolicyList (rolesOf ctx) msg effectiveOnly rows) next ctx
             | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
         }
 
@@ -2096,6 +2106,31 @@ let private paymentConfirm (invoiceNumber: string) : HttpHandler =
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
         }
 
+/// 返金（`POST /billing/invoices/{invoiceId}/refund`・ROLE_BILLING・IT8 task5.2）。
+/// 確定済みの精算書を Refunded へ遷移する。遷移不可（未確定など）はドメインが 400 で拒否する。
+let private paymentRefund (invoiceNumber: string) : HttpHandler =
+    mustHaveRole "ROLE_BILLING"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.InvoiceRepository.create conn systemClock
+
+            match!
+                CargoTracker.Billing.Application.Billing.refund
+                    repo
+                    (billingNotifier conn)
+                    (CargoTracker.Billing.Domain.InvoiceId.ofString invoiceNumber)
+                    (systemClock ())
+            with
+            | Ok _ -> return! redirectTo false (sprintf "/billing/invoices/%s?msg=refunded" invoiceNumber) next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "精算書が見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -2162,6 +2197,7 @@ let webApp: HttpHandler =
                     route "/admin/discount-policies" >=> discountPolicyCreate
                     // US21/US22/US23: 精算（POST）。
                     routef "/billing/invoices/%s/confirm" paymentConfirm
+                    routef "/billing/invoices/%s/refund" paymentRefund
                     route "/billing/invoices" >=> invoiceCreate ]
           setStatusCode 404 >=> text "Not Found" ]
 
