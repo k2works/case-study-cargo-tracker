@@ -11,11 +11,11 @@ CREATE TABLE invoice (
     final_amount_value       BIGINT      NOT NULL,
     final_amount_currency    VARCHAR(3)  NOT NULL,
     payment_status           VARCHAR(30) NOT NULL,
-    issued_at                TIMESTAMP   NOT NULL,
-    due_date                 DATE,
-    paid_at                  TIMESTAMP,
-    created_at               TIMESTAMP   NOT NULL DEFAULT NOW(),
-    updated_at               TIMESTAMP   NOT NULL DEFAULT NOW()
+    issued_at                TEXT   NOT NULL,
+    due_date                 TEXT,
+    paid_at                  TEXT,
+    created_at               TEXT   NOT NULL DEFAULT (now())::text,
+    updated_at               TEXT   NOT NULL DEFAULT (now())::text
 );
 
 CREATE TABLE invoice_line_item (
@@ -25,8 +25,8 @@ CREATE TABLE invoice_line_item (
     amount_value  BIGINT      NOT NULL,
     amount_currency VARCHAR(3) NOT NULL,
     seq_number    INTEGER     NOT NULL,
-    created_at    TIMESTAMP   NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMP   NOT NULL DEFAULT NOW()
+    created_at    TEXT   NOT NULL DEFAULT (now())::text,
+    updated_at    TEXT   NOT NULL DEFAULT (now())::text
 );
 
 CREATE TABLE payment (
@@ -34,11 +34,11 @@ CREATE TABLE payment (
     invoice_id            BIGINT      NOT NULL REFERENCES invoice(id),
     paid_amount_value     BIGINT      NOT NULL,
     paid_amount_currency  VARCHAR(3)  NOT NULL,
-    paid_at               TIMESTAMP   NOT NULL,
+    paid_at               TEXT   NOT NULL,
     payment_method        VARCHAR(30) NOT NULL,
     transaction_reference VARCHAR(100),
-    created_at            TIMESTAMP   NOT NULL DEFAULT NOW(),
-    updated_at            TIMESTAMP   NOT NULL DEFAULT NOW()
+    created_at            TEXT   NOT NULL DEFAULT (now())::text,
+    updated_at            TEXT   NOT NULL DEFAULT (now())::text
 );
 
 CREATE INDEX idx_invoice_line_item_invoice_id ON invoice_line_item(invoice_id);

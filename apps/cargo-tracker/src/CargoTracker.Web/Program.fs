@@ -89,10 +89,30 @@ let main args =
     | Ok() -> ()
     | Error e -> failwithf "DB マイグレーションに失敗しました: %s" e
 
-    // 開発用の既定ユーザーと業務サンプルデータを投入する（各テーブルが空のときのみ・冪等）。
+    // シード投入（各テーブルが空のときのみ・冪等）。
+    // Seed:SampleData=true（開発既定）のときはロール別の既定ユーザー＋業務サンプルデータを投入する。
+    // 本番（Seed:SampleData=false）では、環境変数の管理者認証情報からのみ管理者を初期ブートストラップする。
     use seedConn = Db.openConnection provider connStr
-    Seed.ensureDefaultUsers seedConn (System.DateTimeOffset.Now.UtcDateTime.ToString("o"))
-    Seed.ensureBusinessData seedConn System.DateTimeOffset.Now
+    let nowStr = System.DateTimeOffset.Now.UtcDateTime.ToString("o")
+
+    let sampleData =
+        match app.Configuration.["Seed:SampleData"] with
+        | null
+        | "" -> app.Environment.EnvironmentName = "Development"
+        | v -> v.Equals("true", System.StringComparison.OrdinalIgnoreCase)
+
+    if sampleData then
+        Seed.ensureDefaultUsers seedConn nowStr
+        Seed.ensureBusinessData seedConn System.DateTimeOffset.Now
+    else
+        // 本番: 管理者ブートストラップ（Seed:AdminUsername / Seed:AdminPassword または環境変数）。
+        let adminUser = app.Configuration.["Seed:AdminUsername"]
+        let adminPass = app.Configuration.["Seed:AdminPassword"]
+
+        if Seed.ensureAdminUser seedConn nowStr adminUser adminPass then
+            printfn "[Seed] 管理者ユーザー '%s' を初期投入しました。初回ログイン後にパスワードを変更してください。" adminUser
+        else
+            eprintfn "[Seed] サンプルデータ無効かつ管理者未投入です。Seed__AdminUsername / Seed__AdminPassword を設定して再起動するか、手動で管理者を作成してください。"
 
     App.configureApp app
 

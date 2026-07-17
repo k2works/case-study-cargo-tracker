@@ -5,8 +5,8 @@ CREATE TABLE notification_log (
     booking_id  VARCHAR(20)  NOT NULL,
     recipient   VARCHAR(255) NOT NULL,
     message     TEXT         NOT NULL,
-    notified_at TIMESTAMP    NOT NULL,
-    created_at  TIMESTAMP    NOT NULL DEFAULT NOW()
+    notified_at TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL DEFAULT (now())::text
 );
 
 CREATE INDEX idx_notification_log_booking_id ON notification_log(booking_id);

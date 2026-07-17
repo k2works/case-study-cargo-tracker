@@ -9,7 +9,7 @@ CREATE TABLE cargo (
     weight               NUMERIC(10,3) NOT NULL,
     origin_unlocode      VARCHAR(5)    NOT NULL,
     destination_unlocode VARCHAR(5)    NOT NULL,
-    arrival_deadline     DATE          NOT NULL,
+    arrival_deadline     TEXT          NOT NULL,
     booking_status       VARCHAR(30)   NOT NULL DEFAULT 'PRELIMINARY',
     dimension_length     NUMERIC(10,3),
     dimension_width      NUMERIC(10,3),
@@ -25,7 +25,7 @@ CREATE TABLE cargo (
     consignee_name       VARCHAR(200),
     consignee_address    VARCHAR(500),
     consignee_email      VARCHAR(200),
-    created_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at           TEXT NOT NULL DEFAULT (now())::text,
+    updated_at           TEXT NOT NULL DEFAULT (now())::text,
     version              BIGINT        NOT NULL DEFAULT 0
 );

@@ -116,6 +116,7 @@ nav:
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
+      - PostgreSQL 本番環境デプロイ手順書: operation/PostgreSQL本番環境デプロイ手順書.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md

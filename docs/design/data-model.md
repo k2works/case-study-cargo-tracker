@@ -26,6 +26,7 @@ DB スキーマは言語非依存であるため、テーブル構造・ER 図�
 - **ID 戦略**: サロゲートキー（`BIGSERIAL`）+ 業務キー（`VARCHAR`）の併用
 - **命名規則**: スネークケース（PostgreSQL 慣習。`ofDataReader` 内でカラム名を明示指定して F# レコードへマッピング）
 - **監査カラム**: 全テーブルに `created_at` / `updated_at` を付与
+- **時刻・日付の格納型**: アプリは全時刻を `DateTimeOffset` の ISO 8601 文字列として一貫して読み書きするため、PostgreSQL でも時刻・日付列は `timestamptz`/`date` ではなく `TEXT` で保持する（SQLite と挙動を統一。Npgsql の text→timestamp 暗黙キャスト不可を回避。IT8 本番環境整備で確定）
 
 ---
 

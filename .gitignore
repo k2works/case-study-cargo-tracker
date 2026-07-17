@@ -5,6 +5,10 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.production
+
+# 本番 DB バックアップ（秘密データを含みうる）
+apps/cargo-tracker/backups/
 
 # IDE
 .idea/

@@ -6,11 +6,11 @@ CREATE TABLE leg (
     voyage_number            VARCHAR(20) NOT NULL,
     load_location_unlocode   VARCHAR(5)  NOT NULL,
     unload_location_unlocode VARCHAR(5)  NOT NULL,
-    load_time                TIMESTAMP   NOT NULL,
-    unload_time              TIMESTAMP   NOT NULL,
+    load_time                TEXT   NOT NULL,
+    unload_time              TEXT   NOT NULL,
     seq_number               INTEGER     NOT NULL,
-    created_at               TIMESTAMP   NOT NULL DEFAULT NOW(),
-    updated_at               TIMESTAMP   NOT NULL DEFAULT NOW()
+    created_at               TEXT   NOT NULL DEFAULT (now())::text,
+    updated_at               TEXT   NOT NULL DEFAULT (now())::text
 );
 
 CREATE INDEX idx_leg_cargo_id ON leg(cargo_id);

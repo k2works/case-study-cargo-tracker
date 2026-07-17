@@ -67,6 +67,53 @@ module Seed =
                 |> Db.setParams [ "id", SqlType.Int64 userId; "role", SqlType.String role ]
                 |> Db.exec
 
+    /// 本番用の管理者ユーザーを 1 件だけ投入する（users が空 かつ 認証情報が与えられたときのみ・冪等）。
+    /// サンプルデータを投入しない本番では、ここで管理者を初期ブートストラップしログイン可能にする。
+    /// 認証情報が無い場合は何もせず false を返す（呼び出し側が運用者へ案内する）。
+    let ensureAdminUser (conn: IDbConnection) (now: string) (username: string) (password: string) : bool =
+        let count =
+            conn
+            |> Db.newCommand "SELECT COUNT(*) AS c FROM users"
+            |> Db.querySingle (fun rd -> rd.ReadInt32 "c")
+            |> Option.defaultValue 0
+
+        if
+            count = 0
+            && not (System.String.IsNullOrWhiteSpace username)
+            && not (System.String.IsNullOrWhiteSpace password)
+        then
+            let hash = Auth.Password.hash password
+
+            conn
+            |> Db.newCommand
+                """
+                INSERT INTO users (username, email, password, enabled, created_at)
+                VALUES (@u, @e, @p, @enabled, @now)
+                """
+            |> Db.setParams
+                [ "u", SqlType.String username
+                  "e", SqlType.String(sprintf "%s@example.com" username)
+                  "p", SqlType.String hash
+                  "enabled", SqlType.Boolean true
+                  "now", SqlType.String now ]
+            |> Db.exec
+
+            let userId =
+                conn
+                |> Db.newCommand "SELECT id AS id FROM users WHERE username = @u"
+                |> Db.setParams [ "u", SqlType.String username ]
+                |> Db.querySingle (fun rd -> rd.ReadInt64 "id")
+                |> Option.defaultValue 0L
+
+            conn
+            |> Db.newCommand "INSERT INTO user_roles (user_id, role) VALUES (@id, @role)"
+            |> Db.setParams [ "id", SqlType.Int64 userId; "role", SqlType.String "ROLE_ADMIN" ]
+            |> Db.exec
+
+            true
+        else
+            false
+
     /// 全業務（見積→予約→経路設計→確定→追跡→荷役→例外→料金算出→精算→返金）を一通り
     /// 実行できる開発用サンプルデータを投入する（shipper が空のときのみ・冪等）。
     /// 荷主・航海・割引ポリシーのマスタと、ライフサイクル各段階の貨物（経路設計待ち／確定済み輸送中／

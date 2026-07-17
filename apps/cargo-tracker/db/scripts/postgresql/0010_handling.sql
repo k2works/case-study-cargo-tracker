@@ -4,13 +4,13 @@ CREATE TABLE handling_activity (
     id                     BIGSERIAL    PRIMARY KEY,
     booking_id             VARCHAR(20)  NOT NULL,
     event_type             VARCHAR(30)  NOT NULL,
-    event_completion_time  TIMESTAMP    NOT NULL,
+    event_completion_time  TEXT    NOT NULL,
     location_unlocode      VARCHAR(5)   NOT NULL,
     voyage_number          VARCHAR(20),
     consignee_confirmation VARCHAR(255),
     operator_name          VARCHAR(200),
-    created_at             TIMESTAMP    NOT NULL DEFAULT NOW(),
-    updated_at             TIMESTAMP    NOT NULL DEFAULT NOW(),
+    created_at             TEXT    NOT NULL DEFAULT (now())::text,
+    updated_at             TEXT    NOT NULL DEFAULT (now())::text,
     version                BIGINT       NOT NULL DEFAULT 0
 );
 

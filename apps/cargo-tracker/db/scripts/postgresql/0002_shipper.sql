@@ -8,7 +8,7 @@ CREATE TABLE shipper (
     phone           VARCHAR(50),
     contract_number VARCHAR(50),
     discount_rate   NUMERIC(5,4) NOT NULL DEFAULT 0.0000,
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at      TEXT NOT NULL DEFAULT (now())::text,
+    updated_at      TEXT NOT NULL DEFAULT (now())::text,
     version         BIGINT NOT NULL DEFAULT 0
 );

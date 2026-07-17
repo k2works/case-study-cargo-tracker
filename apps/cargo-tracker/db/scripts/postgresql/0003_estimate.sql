@@ -4,12 +4,12 @@ CREATE TABLE estimate (
     estimate_id          UUID         NOT NULL UNIQUE,
     origin_unlocode      VARCHAR(5)   NOT NULL,
     destination_unlocode VARCHAR(5)   NOT NULL,
-    arrival_deadline     DATE         NOT NULL,
+    arrival_deadline     TEXT         NOT NULL,
     cargo_type           VARCHAR(30)  NOT NULL,
     weight_kg            NUMERIC(10,3) NOT NULL,
     status               VARCHAR(20)  NOT NULL DEFAULT 'CREATED',
-    created_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at           TEXT NOT NULL DEFAULT (now())::text,
+    updated_at           TEXT NOT NULL DEFAULT (now())::text
 );
 
 CREATE TABLE route_candidate (

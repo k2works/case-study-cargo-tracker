@@ -5,7 +5,7 @@ CREATE TABLE users (
     email      VARCHAR(200) NOT NULL UNIQUE,
     password   VARCHAR(255) NOT NULL,
     enabled    BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT (now())::text
 );
 
 CREATE TABLE user_roles (
