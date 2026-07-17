@@ -157,9 +157,9 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 料金算出ユースケース（引取済 Cargo の輸送実績→基本料金＝距離係数×重量×貨物種別係数・例外時の料金調整明細）・アプリ層 | 3h | - | [ ] |
-| 3.2 | 法人割引適用（Shipper の `Corporate` 割引率・有効な `DiscountPolicy` 解決を合成層 ACL で取得） | 3h | - | [ ] |
-| 3.3 | 精算書発行→荷主通知・`PaymentGatewayPort`（決済 ACL）で入金確認・WireMock.Net で契約固定 | 3h | - | [ ] |
+| 3.1 | 料金算出（`Charge.calculateBase`＝距離係数×重量×貨物種別係数・銀行家丸め）・`InvoiceRepository`（Donald・PaymentState 写像）・`Billing.generateInvoice` ユースケース | 3h | - | [x] |
+| 3.2 | 法人割引適用（`Invoice.generate` が `DiscountPolicy.calculateRate` で法人割引を適用・アプリ層で `BillingShipperId.IsCorporate` を渡す） | 3h | - | [x] |
+| 3.3 | 精算書発行→荷主通知・`Billing.confirmPayment`（`PaymentGatewayPort` 決済 ACL で入金確認）・`markOverdueIfDue`（期限超過通知）。Web/WireMock は残 | 3h | - | [~] |
 | 3.4 | BC 連携: `BookingState` に `Delivered`・`Settled` ケースを段階追加。Tracking 引取済（Claimed）→ Booking `Delivered` 同期→ `InvoiceRequested` 発行（戦略の Delivered 制限）→ 料金算出開始、精算完了→ Booking `Settle`→`Settled` 同期を post-commit＋合成層 ACL で結線。ADR-0013 起票 | 3h | - | [ ] |
 | 3.5 | 期限超過の未払い通知（`MarkOverdue`→経理通知）・料金算出/精算の Web 画面（`/billing/invoices` 系・ROLE_BILLING） | 3h | - | [ ] |
 | 3.6 | 受け入れテスト（料金算出→確定→精算書→通知→入金確認→Settled 同期の一気通貫・法人/個人分岐・通知失敗時の部分失敗挙動＝IT6 レビュー中#5） | 3h | - | [ ] |

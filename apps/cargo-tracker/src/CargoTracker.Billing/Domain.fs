@@ -144,6 +144,42 @@ module DiscountPolicy =
         | VolumeDiscount -> DiscountRate.create 0.05m
         | Seasonal -> DiscountRate.create 0.08m
 
+/// 貨物種別（料金係数・BC 分離のため Booking の CargoType を直接参照しない）。
+type CargoCategory =
+    | General
+    | Hazardous
+    | Refrigerated
+
+module CargoCategory =
+    /// 貨物種別係数（domain-model 料金計算ロジック）。
+    let factor (c: CargoCategory) : decimal =
+        match c with
+        | General -> 1.0m
+        | Hazardous -> 1.8m
+        | Refrigerated -> 1.5m
+
+    let ofString (value: string) : Result<CargoCategory, DomainError> =
+        match value with
+        | "GENERAL" -> Ok General
+        | "HAZARDOUS" -> Ok Hazardous
+        | "REFRIGERATED" -> Ok Refrigerated
+        | other -> Error(ValidationError("CargoCategory", sprintf "未知の貨物種別です: %s" other))
+
+module Charge =
+    /// 基本料金 = 距離係数 × 重量（kg）× 貨物種別係数（domain-model 料金計算ロジック）。
+    /// 最小通貨単位（円）へ銀行家丸めする。距離係数は 1km あたりの単価（円）。
+    let calculateBase
+        (distanceFactor: decimal)
+        (weightKg: decimal)
+        (category: CargoCategory)
+        (currency: CurrencyCode)
+        : Money =
+        let raw = distanceFactor * weightKg * CargoCategory.factor category
+        let rounded = Math.Round(raw, MidpointRounding.ToEven)
+
+        { Amount = int64 rounded
+          Currency = currency }
+
 /// 割引ポリシーマスタ（US-ADM-01）。運用管理者が登録・変更・無効化する。
 /// 割引方針（DiscountPolicy）に割引率・適用条件・有効期限・有効フラグを付与したマスタレコード。
 type DiscountPolicyMaster =

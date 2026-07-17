@@ -58,6 +58,17 @@ let ``Money.multiply 1.0 は金額を変えない`` (amount: int64) =
     let a = abs (amount % 1_000_000_000L)
     (Money.multiply 1.0m (jpy a)).Amount = a
 
+// ---- Charge（料金算出・US21）----
+
+[<Fact>]
+let ``基本料金は 距離係数×重量×貨物種別係数 で算出される（US21）`` () =
+    // 距離係数 100 × 重量 500kg × 一般 1.0 = 50000
+    (Charge.calculateBase 100m 500m General JPY).Amount |> should equal 50_000L
+    // 危険物 1.8 → 90000
+    (Charge.calculateBase 100m 500m Hazardous JPY).Amount |> should equal 90_000L
+    // 冷凍 1.5 → 75000
+    (Charge.calculateBase 100m 500m Refrigerated JPY).Amount |> should equal 75_000L
+
 // ---- DiscountRate ----
 
 [<Fact>]

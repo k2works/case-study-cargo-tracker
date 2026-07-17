@@ -64,3 +64,88 @@ module ManageDiscountPolicy =
 
             do! repo.Update(DiscountPolicyMaster.deactivate master)
         }
+
+module Billing =
+
+    open FsToolkit.ErrorHandling
+
+    /// 料金算出→精算書発行（US21/US22/US23）。基本料金に法人割引を適用して精算書を発行し、
+    /// 荷主へ通知する。同一予約の重複発行は拒否する。
+    let generateInvoice
+        (repo: InvoiceRepository)
+        (notifier: BillingNotifier)
+        (newId: IdGenerator)
+        (bookingId: BillingBookingId)
+        (shipperId: BillingShipperId)
+        (baseAmount: Money)
+        (policy: DiscountPolicy)
+        (issuedAt: DateTimeOffset)
+        : Async<Result<Invoice, DomainError>> =
+        asyncResult {
+            let! existing = repo.FindByBookingId bookingId
+
+            do!
+                match existing with
+                | Some _ -> Error(BusinessRuleViolation("AlreadyInvoiced", "この予約はすでに精算書が発行されています。"))
+                | None -> Ok()
+
+            let invoiceId = InvoiceId.generate newId
+            let! invoice, _events = Invoice.generate invoiceId bookingId shipperId baseAmount policy issuedAt
+            do! repo.Save invoice
+
+            let message =
+                sprintf
+                    "精算書 %s を発行しました。請求金額 %d 円・支払期限は発行から 30 日です。"
+                    (InvoiceId.value invoiceId)
+                    invoice.FinalAmount.Amount
+
+            do! notifier.Notify bookingId message
+            return invoice
+        }
+
+    /// 入金確認（US23）。決済 ACL で入金を確認し、精算書を Confirmed へ遷移する。
+    /// 呼び出し側（合成層）は Confirmed 後に Booking を Settled へ同期する。
+    let confirmPayment
+        (repo: InvoiceRepository)
+        (gateway: PaymentGatewayPort)
+        (invoiceId: InvoiceId)
+        : Async<Result<Invoice, DomainError>> =
+        asyncResult {
+            let! found = repo.FindByInvoiceId invoiceId
+
+            let! invoice =
+                match found with
+                | Some i -> Ok i
+                | None -> Error(NotFound("Invoice", InvoiceId.value invoiceId))
+
+            let! paidAt = gateway.ConfirmPayment invoiceId invoice.FinalAmount
+            let! updated, _events = Invoice.execute invoice (ConfirmPayment paidAt)
+            do! repo.Update updated
+            return updated
+        }
+
+    /// 期限超過の検出と未払い通知（US23 受入 5）。期限内なら状態は変わらない。
+    let markOverdueIfDue
+        (repo: InvoiceRepository)
+        (notifier: BillingNotifier)
+        (invoiceId: InvoiceId)
+        (now: DateTimeOffset)
+        : Async<Result<Invoice, DomainError>> =
+        asyncResult {
+            let! found = repo.FindByInvoiceId invoiceId
+
+            let! invoice =
+                match found with
+                | Some i -> Ok i
+                | None -> Error(NotFound("Invoice", InvoiceId.value invoiceId))
+
+            match Invoice.execute invoice (MarkOverdue now) with
+            | Ok(updated, _) ->
+                do! repo.Update updated
+
+                do! notifier.Notify updated.CargoBookingId (sprintf "精算書 %s が支払期限を超過しました。" (InvoiceId.value invoiceId))
+
+                return updated
+            | Error(InvalidStateTransition _) -> return invoice // 期限内・既遷移は無処理
+            | Error e -> return! Error e
+        }
