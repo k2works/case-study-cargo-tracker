@@ -160,7 +160,7 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 | 3.1 | 料金算出ユースケース（引取済 Cargo の輸送実績→基本料金＝距離係数×重量×貨物種別係数・例外時の料金調整明細）・アプリ層 | 3h | - | [ ] |
 | 3.2 | 法人割引適用（Shipper の `Corporate` 割引率・有効な `DiscountPolicy` 解決を合成層 ACL で取得） | 3h | - | [ ] |
 | 3.3 | 精算書発行→荷主通知・`PaymentGatewayPort`（決済 ACL）で入金確認・WireMock.Net で契約固定 | 3h | - | [ ] |
-| 3.4 | BC 連携: `InvoiceRequested`（Booking Delivered/引取済 契機）→ 料金算出開始・精算完了→ Booking へ `Settle` コマンド（`BookingState` に `Settled` ケースを段階追加し Settled 同期）を post-commit で結線 | 3h | - | [ ] |
+| 3.4 | BC 連携: `BookingState` に `Delivered`・`Settled` ケースを段階追加。Tracking 引取済（Claimed）→ Booking `Delivered` 同期→ `InvoiceRequested` 発行（戦略の Delivered 制限）→ 料金算出開始、精算完了→ Booking `Settle`→`Settled` 同期を post-commit＋合成層 ACL で結線。ADR-0013 起票 | 3h | - | [ ] |
 | 3.5 | 期限超過の未払い通知（`MarkOverdue`→経理通知）・料金算出/精算の Web 画面（`/billing/invoices` 系・ROLE_BILLING） | 3h | - | [ ] |
 | 3.6 | 受け入れテスト（料金算出→確定→精算書→通知→入金確認→Settled 同期の一気通貫・法人/個人分岐・通知失敗時の部分失敗挙動＝IT6 レビュー中#5） | 3h | - | [ ] |
 
@@ -286,7 +286,7 @@ Invoice ..> DiscountPolicy : applyDiscount
 
 > 実装対象は [ドメインモデル設計](../design/domain-model.md#6-billing-context精算コンテキスト) の Billing Context（§6）に定義済み。`Money`（int64 + CurrencyCode・銀行家丸め）・`DiscountRate`（0〜30%）・`PaymentState` DU により「Confirmed なのに paidAt が null」等の不正状態を型排除する。基本料金＝距離係数×重量（kg）×貨物種別係数（General 1.0／Hazardous 1.8／Refrigerated 1.5）、割引後料金＝基本料金×(1−割引率)（domain-model 料金計算ロジック準拠）。
 >
-> **注（Booking 拡張・domain-model 反映）**: 精算完了で予約を `Settled` へ同期するが、現状 `BookingState`（Booking.Domain）は Preliminary/RoutingRequested/RouteProposed/Confirmed/Cancelled まで（IT4）で `Settled`・`Delivered` 未実装。IT7 で `Settled` ケースを段階追加し（[[adr-migration-via-maybe]] 方式の段階導入）、`Settle` コマンドと BC 連携を結線する。domain-model のビジネスルール（Invoice は Delivered 後に発行）に対し、本 IT は Tracking の「引取済（Claimed）」を配送完了の契機として扱う割り切りとし、Booking の Delivered 実体化は本 IT のスコープに含める範囲を最小化する（着手時に validating-design で確認）。
+> **注（Booking 拡張・domain-model 反映・戦略の Delivered 制限）**: 開発戦略の完了条件は「料金算出（**Delivered 制限**）」、domain-model ビジネスルール 1 は「Invoice は Delivered 後に発行」と定める。US21 受入は「引取済」状態を契機とする。現状 `BookingState`（Booking.Domain）は Preliminary/RoutingRequested/RouteProposed/Confirmed/Cancelled まで（IT4・iteration_plan-4 で「TrackingIssued→…→Settled は IT5+」と明記）で `Delivered`・`Settled` 未実装。**IT7 で `Delivered` と `Settled` ケースを段階追加**（iteration_plan-4 の BookingState 段階拡張・[[adr-migration-via-maybe]] 方式を踏襲）し、配送完了＝Tracking の「引取済（Claimed）」を契機に Booking を `Delivered` へ同期（`InvoiceRequested` 発行の前提＝戦略の Delivered 制限を満たす）、精算完了で `Settle`→`Settled` を同期する。この状態遷移と契機（Claimed→Delivered→InvoiceRequested→Settled）は ADR-0013 で明文化し domain-model へ反映する。
 >
 > **注（消費税・付加料金・data-model/ui_design 反映）**: data-model の `invoice`（`tax_rate`/`tax_amount`）と ui_design の精算書詳細（消費税 10%・燃油サーチャージ）は税・付加料金を含むが、domain-model の `Invoice`（BaseAmount/DiscountRate/FinalAmount）は税を持たない。本 IT は domain-model に従い基本料金＋割引を実装し、消費税・付加料金は `invoice_line_item`（明細）＋ `tax_amount` カラムで表現する方針を IT7 で確定し domain-model へ反映する（設計トピックの未確定事項）。
 
@@ -406,8 +406,10 @@ state 精算書詳細 : /billing/invoices/{invoiceId}
 
 | ADR | タイトル | ステータス |
 |-----|---------|-----------|
-| ADR-0013（新規予定） | 料金算出と Billing↔Booking 連携（`InvoiceRequested` 消費・精算完了の Settled 同期・合成層 ACL） | 提案 |
+| ADR-0013（新規予定） | 料金算出と Billing↔Booking 連携（Claimed→Delivered 同期・`InvoiceRequested` 消費・精算完了の Settled 同期・合成層 ACL＋post-commit） | 提案 |
 | ADR-0014（新規予定・候補） | 決済 ACL（`PaymentGatewayPort`）と WireMock.Net による契約固定 | 提案 |
+
+> **注（ADR 番号の連続性）**: 既存 ADR は 0001〜0012（IT6 で 0011 所有者制御・0012 荷役→追跡整合を起票）。本 IT の新規は 0013・0014 を充てる。BC 連携は既存の ADR-0002（post-commit）・ADR-0010（合成層 ACL 変換）パターンの踏襲だが、Billing は新規 BC で Booking の状態拡張（Delivered/Settled）を伴うため ADR-0013 として明文化する。
 
 ---
 
