@@ -225,7 +225,9 @@ module InvoiceRepository =
             status: string,
             issuedAt: string,
             dueDate: string option,
-            paidAt: string option
+            paidAt: string option,
+            taxRate: decimal option,
+            taxValue: int64 option
         ) : Result<Invoice, DomainError> =
         result {
             let! baseCur = CurrencyCode.ofString baseCurrency
@@ -250,6 +252,11 @@ module InvoiceRepository =
                   FinalAmount =
                     { Amount = finalValue
                       Currency = finalCur }
+                  // 消費税は 0014 で追加。NULL（旧行）は税率 0・税額 0 として復元する。
+                  TaxRate = taxRate |> Option.defaultValue 0m
+                  TaxAmount =
+                    { Amount = taxValue |> Option.defaultValue 0L
+                      Currency = finalCur }
                   IssuedAt = DateTimeOffset.Parse(issuedAt, null, Globalization.DateTimeStyles.RoundtripKind)
                   Payment = payment }
         }
@@ -266,7 +273,9 @@ module InvoiceRepository =
         rd.ReadString "payment_status",
         rd.ReadString "issued_at",
         rd.ReadStringOption "due_date",
-        rd.ReadStringOption "paid_at"
+        rd.ReadStringOption "paid_at",
+        rd.ReadDecimalOption "tax_rate",
+        rd.ReadInt64Option "tax_amount"
 
     let create (conn: IDbConnection) (clock: Clock) : InvoiceRepository =
 
@@ -284,8 +293,8 @@ module InvoiceRepository =
                         INSERT INTO invoice
                             (invoice_number, booking_id, shipper_id, base_amount_value, base_amount_currency,
                              discount_rate, final_amount_value, final_amount_currency, payment_status,
-                             issued_at, due_date, paid_at, created_at, updated_at)
-                        VALUES (@num, @bid, @sid, @bval, @bcur, @rate, @fval, @fcur, @status, @issued, @due, @paid, @now, @now)
+                             issued_at, due_date, paid_at, tax_rate, tax_amount, created_at, updated_at)
+                        VALUES (@num, @bid, @sid, @bval, @bcur, @rate, @fval, @fcur, @status, @issued, @due, @paid, @trate, @tamt, @now, @now)
                         """
                     |> Db.setParams
                         [ "num", SqlType.String(InvoiceId.value invoice.InvoiceId)
@@ -297,6 +306,8 @@ module InvoiceRepository =
                           "fval", SqlType.Int64 invoice.FinalAmount.Amount
                           "fcur", SqlType.String(CurrencyCode.toString invoice.FinalAmount.Currency)
                           "status", SqlType.String status
+                          "trate", SqlType.Decimal invoice.TaxRate
+                          "tamt", SqlType.Int64 invoice.TaxAmount.Amount
                           "issued", SqlType.String(invoice.IssuedAt.UtcDateTime.ToString("o"))
                           "due",
                           (match dueDate with
@@ -355,7 +366,7 @@ module InvoiceRepository =
                                 """
                                 SELECT invoice_number, booking_id, shipper_id, base_amount_value, base_amount_currency,
                                        discount_rate, final_amount_value, final_amount_currency, payment_status,
-                                       issued_at, due_date, paid_at
+                                       issued_at, due_date, paid_at, tax_rate, tax_amount
                                 FROM invoice WHERE %s = @p
                                 """
                                 whereColumn

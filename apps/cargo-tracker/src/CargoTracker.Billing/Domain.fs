@@ -192,6 +192,14 @@ module Charge =
         { Amount = int64 rounded
           Currency = currency }
 
+/// 消費税（US22 消費税・付加料金・IT8）。割引後小計に対して課税する。
+module ConsumptionTax =
+    /// 日本の標準消費税率（10%）。
+    let StandardRate = 0.10m
+
+    /// 消費税額 = 割引後小計 × 税率（最小通貨単位へ銀行家丸め）。
+    let calculate (rate: decimal) (subtotal: Money) : Money = subtotal |> Money.multiply rate
+
 /// 割引ポリシーマスタ（US-ADM-01）。運用管理者が登録・変更・無効化する。
 /// 割引方針（DiscountPolicy）に割引率・適用条件・有効期限・有効フラグを付与したマスタレコード。
 type DiscountPolicyMaster =
@@ -275,7 +283,9 @@ type Invoice =
       ShipperId: BillingShipperId
       BaseAmount: Money
       DiscountRate: DiscountRate
-      FinalAmount: Money
+      FinalAmount: Money // 割引後小計（税抜）
+      TaxRate: decimal // 消費税率（IT8・US22）
+      TaxAmount: Money // 消費税額（IT8・US22）
       IssuedAt: DateTimeOffset
       Payment: PaymentState }
 
@@ -301,6 +311,12 @@ module InvoiceCommand =
 
 module Invoice =
 
+    /// 請求総額 = 割引後小計（FinalAmount） + 消費税（TaxAmount）（IT8・US22）。
+    let totalAmount (invoice: Invoice) : Money =
+        match Money.add invoice.FinalAmount invoice.TaxAmount with
+        | Ok m -> m
+        | Error _ -> invoice.FinalAmount // 通貨不一致は発生しない（同一通貨で構築）
+
     /// 発行（割引率を直接指定）：割引適用と最終金額計算を合成。支払期限は発行日 + 30 日（ビジネスルール 3）。
     /// 割引ポリシーマスタ（US-ADM-01）の率を権威とする場合はこの関数に解決済み率を渡す（IT8・US22）。
     let generateWithRate
@@ -314,6 +330,10 @@ module Invoice =
         let finalAmount =
             baseAmount |> Money.multiply (1.0m - DiscountRate.value discountRate)
 
+        // 割引後小計に消費税を課す（IT8・US22）。
+        let taxRate = ConsumptionTax.StandardRate
+        let taxAmount = finalAmount |> ConsumptionTax.calculate taxRate
+
         let dueDate = issuedAt.AddDays 30.0
 
         let invoice =
@@ -323,6 +343,8 @@ module Invoice =
               BaseAmount = baseAmount
               DiscountRate = discountRate
               FinalAmount = finalAmount
+              TaxRate = taxRate
+              TaxAmount = taxAmount
               IssuedAt = issuedAt
               Payment = Pending dueDate }
 

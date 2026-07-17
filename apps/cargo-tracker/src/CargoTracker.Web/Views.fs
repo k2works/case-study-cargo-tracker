@@ -1750,6 +1750,9 @@ module Views =
           BaseAmount: int64
           DiscountRate: decimal
           FinalAmount: int64
+          TaxRate: decimal
+          TaxAmount: int64
+          TotalAmount: int64
           PaymentStatus: string
           IssuedAt: string
           DueDate: string }
@@ -1773,8 +1776,12 @@ module Views =
                     dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (d.BaseAmount.ToString("N0"))) ]
                     dt [ _class "col-sm-3" ] [ str "割引率" ]
                     dd [ _class "col-sm-9" ] [ str (sprintf "%.1f%%" (d.DiscountRate * 100m)) ]
-                    dt [ _class "col-sm-3" ] [ str "請求金額（割引後）" ]
-                    dd [ _class "col-sm-9" ] [ b [] [ str (sprintf "¥%s" (d.FinalAmount.ToString("N0"))) ] ]
+                    dt [ _class "col-sm-3" ] [ str "小計（割引後・税抜）" ]
+                    dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (d.FinalAmount.ToString("N0"))) ]
+                    dt [ _class "col-sm-3" ] [ str (sprintf "消費税（%.1f%%）" (d.TaxRate * 100m)) ]
+                    dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (d.TaxAmount.ToString("N0"))) ]
+                    dt [ _class "col-sm-3" ] [ str "請求総額（税込）" ]
+                    dd [ _class "col-sm-9" ] [ b [] [ str (sprintf "¥%s" (d.TotalAmount.ToString("N0"))) ] ]
                     dt [ _class "col-sm-3" ] [ str "発行日" ]
                     dd [ _class "col-sm-9" ] [ str d.IssuedAt ]
                     dt [ _class "col-sm-3" ] [ str "支払期限" ]

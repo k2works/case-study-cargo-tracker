@@ -85,6 +85,42 @@ let ``距離係数は 導出距離×単価 で算出される（US21）`` () =
     (Charge.calculateBase (Charge.distanceFactorOf 2 0.1m) 500m General JPY).Amount
     |> should equal 50_000L
 
+[<Fact>]
+let ``消費税は割引後小計に標準税率10%で課税される（US22・IT8）`` () =
+    // 小計 45000 × 10% = 4500
+    (ConsumptionTax.calculate ConsumptionTax.StandardRate { Amount = 45_000L; Currency = JPY }).Amount
+    |> should equal 4_500L
+
+[<Fact>]
+let ``精算書は税抜小計・消費税・税込総額を保持する（US22・IT8）`` () =
+    let rate =
+        match DiscountRate.create 0.10m with
+        | Ok r -> r
+        | Error e -> failwithf "%A" e
+
+    let bid = BillingBookingId.ofString "BKG-TAX01"
+
+    let sid =
+        { ShipperId = "SHP"
+          IsCorporate = true }
+
+    let issuedAt = DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero)
+
+    let invoice, _ =
+        Invoice.generateWithRate
+            (InvoiceId.ofString "INV-TAX01")
+            bid
+            sid
+            { Amount = 50_000L; Currency = JPY }
+            rate
+            issuedAt
+
+    // 割引後小計 45000・消費税 4500・税込総額 49500
+    invoice.FinalAmount.Amount |> should equal 45_000L
+    invoice.TaxRate |> should equal 0.10m
+    invoice.TaxAmount.Amount |> should equal 4_500L
+    (Invoice.totalAmount invoice).Amount |> should equal 49_500L
+
 // ---- DiscountRate ----
 
 [<Fact>]

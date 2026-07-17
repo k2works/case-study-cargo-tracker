@@ -148,6 +148,10 @@ let ``経理担当者が料金算出→精算書発行→入金確認まで一�
         let body = run (detail.Content.ReadAsStringAsync())
         body |> should haveSubstring "10.0%"
         body |> should haveSubstring "45,000"
+        // 消費税 10%（4,500）・税込総額（49,500）が内訳表示される（US22・IT8）
+        body |> should haveSubstring "消費税"
+        body |> should haveSubstring "4,500"
+        body |> should haveSubstring "49,500"
         body |> should haveSubstring "支払待ち"
 
         // 入金確認 → 精算済

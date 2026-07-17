@@ -28,6 +28,8 @@ let private ddl =
         issued_at             TEXT    NOT NULL,
         due_date              TEXT,
         paid_at               TEXT,
+        tax_rate              NUMERIC,
+        tax_amount            INTEGER,
         created_at            TEXT    NOT NULL,
         updated_at            TEXT    NOT NULL
     );

@@ -1273,7 +1273,9 @@ module HandlingActivity =
 
 対応 US：US-ADM-01・US21〜US23
 
-> **IT7 実装状況**: US-ADM-01/US21/US22/US23 を実装。`Money`（int64 + `CurrencyCode`・`add`/`multiply` 銀行家丸め）・`DiscountRate`（0〜30%）・`DiscountPolicy` DU＋`calculateRate`・`BillingShipperId`（`IsCorporate` 内包）・`InvoiceId`/`BillingBookingId`・`Invoice` 集約＋`generate`・`PaymentState` DU＋`execute`（ConfirmPayment/MarkOverdue/IssueRefund の遷移ガード）・`CargoCategory`＋`Charge.calculateBase`（距離係数×重量×貨物種別係数）・`DiscountPolicyMaster`（有効期限・`isEffectiveOn`・`deactivate`・US-ADM-01 マスタ）を実装。イベントは BC ローカル DU（`BillingEvent`）。永続化は discount_policy（0012）・invoice/invoice_line_item/payment（0013）。料金算出の貨物・荷主データは合成層 ACL で解決（ADR-0013）。決済 ACL（`PaymentGatewayPort`）はスタブ、消費税・付加料金（`invoice_line_item`＋`tax_amount`）は未実装（精算強化 IT）。
+> **IT7 実装状況**: US-ADM-01/US21/US22/US23 を実装。`Money`（int64 + `CurrencyCode`・`add`/`multiply` 銀行家丸め）・`DiscountRate`（0〜30%）・`DiscountPolicy` DU＋`calculateRate`・`BillingShipperId`（`IsCorporate` 内包）・`InvoiceId`/`BillingBookingId`・`Invoice` 集約＋`generate`・`PaymentState` DU＋`execute`（ConfirmPayment/MarkOverdue/IssueRefund の遷移ガード）・`CargoCategory`＋`Charge.calculateBase`（距離係数×重量×貨物種別係数）・`DiscountPolicyMaster`（有効期限・`isEffectiveOn`・`deactivate`・US-ADM-01 マスタ）を実装。イベントは BC ローカル DU（`BillingEvent`）。永続化は discount_policy（0012）・invoice/invoice_line_item/payment（0013）。料金算出の貨物・荷主データは合成層 ACL で解決（ADR-0013）。決済 ACL（`PaymentGatewayPort`）はスタブ。
+
+> **IT8 実装状況**: US21 距離自動導出（`Charge.deriveDistance`/`distanceFactorOf`）・確定前輸送実績プレビュー、US22 消費税（`ConsumptionTax` 標準 10%・`Invoice.TaxRate`/`TaxAmount`・`Invoice.totalAmount` で税込総額）を実装。精算書詳細に金額内訳（基本料金／割引／小計／消費税／請求総額）を表示。マイグレーション 0014 で `invoice.tax_rate`/`tax_amount`（nullable）を追加。付加料金（`invoice_line_item`）は継続。
 
 ### ドメインモデル図
 
