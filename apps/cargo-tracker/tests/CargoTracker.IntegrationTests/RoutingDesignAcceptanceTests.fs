@@ -204,11 +204,16 @@ let ``経路候補を確定すると予約が経路確定状態になり詳細�
         let proposeRes =
             authedPost client cookie (sprintf "/routing/requests/%s/propose" bookingId) [ "candidateIndex", "0" ]
 
-        // PRG: 予約詳細へリダイレクトする。
+        // PRG: 経路設計者は予約詳細（ROLE_SALES/SHIPPER 限定）へは遷移できないため、自身の作業一覧へ戻す。
         proposeRes.StatusCode |> should equal HttpStatusCode.Found
 
-        (string proposeRes.Headers.Location)
-        |> should haveSubstring (sprintf "/bookings/%s" bookingId)
+        (string proposeRes.Headers.Location) |> should haveSubstring "/routing/requests"
+
+        // 経路設計者はリダイレクト先（作業一覧）へ権限エラーなく到達できる。
+        let afterRedirect = authedGet client cookie "/routing/requests?msg=routed"
+        afterRedirect.StatusCode |> should equal HttpStatusCode.OK
+        let listBody = run (afterRedirect.Content.ReadAsStringAsync())
+        listBody |> should haveSubstring "経路を確定しました"
 
         // 予約詳細で経路確定状態が表示される（営業ロールで確認）。
         let salesCookie = authCookie client "sales01"

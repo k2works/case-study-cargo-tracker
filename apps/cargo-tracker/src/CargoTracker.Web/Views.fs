@@ -896,7 +896,12 @@ module Views =
           ArrivalDeadline: string }
 
     /// 経路設計依頼一覧画面（`/routing/requests`・US07）。経路設計中（RoutingRequested）の予約を表示する。
-    let routingRequestList (roles: string list) (rows: RoutingRequestRow list) : XmlNode =
+    let routingRequestList (roles: string list) (msg: string option) (rows: RoutingRequestRow list) : XmlNode =
+        let banner =
+            match msg with
+            | Some "routed" -> div [ _class "alert alert-success" ] [ str "経路を確定しました。予約は経路確定（RouteProposed）へ進みました。" ]
+            | _ -> emptyText
+
         let bodyRows =
             rows
             |> List.map (fun r ->
@@ -912,6 +917,7 @@ module Views =
             "経路設計依頼"
             roles
             [ h1 [ _class "mb-4" ] [ str "経路設計依頼一覧" ]
+              banner
               (if List.isEmpty rows then
                    div [ _class "alert alert-info" ] [ str "経路設計待ちの予約はありません。" ]
                else

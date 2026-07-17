@@ -917,7 +917,8 @@ let private routingRequests: HttpHandler =
                   Views.RoutingRequestRow.Destination = i.Destination
                   Views.RoutingRequestRow.ArrivalDeadline = i.ArrivalDeadline })
 
-        htmlView (Views.routingRequestList (rolesOf ctx) rows) next ctx
+        let msg = ctx.TryGetQueryStringValue "msg"
+        htmlView (Views.routingRequestList (rolesOf ctx) msg rows) next ctx
 
 /// 予約の輸送条件から経路候補（Routing 固有型）を算出する（US08）。
 /// 選択画面表示（routingDesign）と確定（routingPropose）で同一の候補列を再現するため共通化する。
@@ -1063,7 +1064,8 @@ let private routingPropose (bookingIdStr: string) : HttpHandler =
                                 itinerary
 
                         match result with
-                        | Ok _ -> return! redirectTo false (sprintf "/bookings/%s?msg=routed" bookingIdStr) next ctx
+                        // 経路設計者は予約詳細（ROLE_SALES/SHIPPER 限定）へは遷移できないため、自身の作業一覧へ戻す。
+                        | Ok _ -> return! redirectTo false "/routing/requests?msg=routed" next ctx
                         | Error(CargoTracker.Shared.Domain.NotFound _) ->
                             return! (setStatusCode 404 >=> text "予約が見つかりません。") next ctx
                         | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx
