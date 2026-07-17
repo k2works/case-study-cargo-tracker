@@ -16,7 +16,8 @@ let architecture =
             Assembly.Load("CargoTracker.Estimation"),
             Assembly.Load("CargoTracker.Routing"),
             Assembly.Load("CargoTracker.Tracking"),
-            Assembly.Load("CargoTracker.Handling")
+            Assembly.Load("CargoTracker.Handling"),
+            Assembly.Load("CargoTracker.Billing")
         )
         .Build()
 
@@ -46,6 +47,7 @@ let private domainNotDependOnDonald (context: string) =
 [<InlineData("Routing")>]
 [<InlineData("Tracking")>]
 [<InlineData("Handling")>]
+[<InlineData("Billing")>]
 let ``Domain は Infrastructure に依存しない`` (context: string) =
     (domainNotDependOnInfrastructure context).Check(architecture)
 
@@ -108,6 +110,24 @@ let ``Handling は他 BC に直接依存しない`` (other: string) =
     Types()
         .That()
         .ResideInNamespace("CargoTracker.Handling")
+        .Should()
+        .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
+        .WithoutRequiringPositiveResults()
+        .Check(architecture)
+
+/// 「Billing は他 BC の Domain 型を直接参照しない」ルール（BC 独立性・ADR-0001/ADR-0013）。
+/// 料金算出の貨物・荷主データは合成層 ACL で解決し、Billing ドメインは Booking/Shipper 型を知らない。
+[<Theory>]
+[<InlineData("Booking")>]
+[<InlineData("Shipper")>]
+[<InlineData("Estimation")>]
+[<InlineData("Routing")>]
+[<InlineData("Tracking")>]
+[<InlineData("Handling")>]
+let ``Billing は他 BC に直接依存しない`` (other: string) =
+    Types()
+        .That()
+        .ResideInNamespace("CargoTracker.Billing")
         .Should()
         .NotDependOnAny(Types().That().ResideInNamespace(sprintf "CargoTracker.%s" other))
         .WithoutRequiringPositiveResults()

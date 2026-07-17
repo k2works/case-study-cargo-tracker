@@ -1893,13 +1893,17 @@ let private paymentConfirm (invoiceNumber: string) : HttpHandler =
             with
             | Ok inv ->
                 // BC 連携: 精算完了で予約を Settled へ同期する（ADR-0013・状態射影更新）。
+                // 入金確認は確定済みのため、Settled 同期の失敗は握り潰さずログに残す（IT7 レビュー高#1）。
                 let bookingId =
                     CargoTracker.Billing.Domain.BillingBookingId.value inv.CargoBookingId
 
                 let nowStr = (systemClock ()).UtcDateTime.ToString("o")
 
-                CargoTracker.Booking.Infrastructure.CargoQueries.syncBookingStatus conn nowStr bookingId "SETTLED"
-                |> ignore
+                match
+                    CargoTracker.Booking.Infrastructure.CargoQueries.syncBookingStatus conn nowStr bookingId "SETTLED"
+                with
+                | Ok() -> ()
+                | Error e -> eprintfn "[paymentConfirm] 予約 Settled 同期に失敗（入金は確認済み）: %s / %A" bookingId e
 
                 return! redirectTo false "/billing/invoices?msg=confirmed" next ctx
             | Error(CargoTracker.Shared.Domain.NotFound _) ->

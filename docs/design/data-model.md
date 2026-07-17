@@ -972,6 +972,10 @@ module ShipperRepository =
 
 ### `invoice`（精算書）
 
+> **IT7 実装状況（マイグレーション 0013・実装が正）**: 下表は C# 版踏襲の当初設計。IT7 の実装スキーマは以下で、消費税・合計金額・楽観ロックは未導入（domain-model の `Invoice` 準拠）。当初設計の `total_amount_*`/`tax_rate`/`tax_amount`/`discount_amount_*`/`version` は本 IT では採用せず、消費税・付加料金は精算強化 IT で `invoice_line_item`＋`tax_amount` として実装予定（retro-7 Try#5）。
+>
+> 実装カラム: `id`・`invoice_number`(UK)・`booking_id`(UK)・`shipper_id`・`base_amount_value`/`base_amount_currency`（基本料金）・`discount_rate`（NUMERIC・0〜0.3）・`final_amount_value`/`final_amount_currency`（割引後）・`payment_status`（PENDING/CONFIRMED/OVERDUE/REFUNDED）・`issued_at`・`due_date`・`paid_at`・`created_at`・`updated_at`。`Money` は `*_value`＋`*_currency` の 2 カラム、`PaymentState` DU は `payment_status`＋`due_date`/`paid_at` へ写像する。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
@@ -990,9 +994,9 @@ module ShipperRepository =
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
 | `version` | `BIGINT` | `NOT NULL, DEFAULT 0` | 楽観的ロック用バージョン（ADR-0001） |
 
-> **F# マッピング注記**: `discount_amount_value` / `discount_amount_currency` はドメインでは `DiscountAmount : Money option` 1 フィールドです。2 カラムが両方非 NULL のときのみ `Some (Money ...)` に復元し、片方だけ NULL の状態は不変条件違反としてエラーにします。
+> **F# マッピング注記（当初設計・未実装）**: 当初は割引を `discount_amount_value`/`discount_amount_currency`（`DiscountAmount : Money option`）で持つ設計だったが、**IT7 実装では割引を `discount_rate`（率）で保持し、割引後金額を `final_amount_*` に確定して持つ**方式に変更した（`Invoice.generate` が割引適用済みの `FinalAmount` を算出）。当初設計の `DiscountAmount` フィールドは実装に存在しない。
 
-> **ドメイン未対応カラム注記**: `tax_rate`・`tax_amount` は C# 版スキーマ踏襲によりドメインモデル（domain-model.md）の Invoice 集約に対応フィールドが無いカラムです。実装フェーズでドメインへの反映または削除を判断します。
+> **ドメイン未対応カラム注記（当初設計・未実装）**: `tax_rate`・`tax_amount`・`total_amount_*` は当初設計（C# 版踏襲）のカラムで、IT7 の Invoice 集約には対応フィールドが無く未実装。消費税・付加料金は精算強化 IT で実装する（retro-7 Try#5）。
 
 ---
 
