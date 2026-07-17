@@ -1473,8 +1473,9 @@ let private handlingCreate: HttpHandler =
                               Location = location
                               CompletionTime = completionTime }
 
-                        // 荷役は保存済み（別トランザクション）。追跡記録はベストエフォートで、失敗は握り潰さずログする
-                        // （xp-programmer 高#1・完全な原子性は将来 UoW 化で対応）。
+                        // 荷役は保存済み（別トランザクション）。追跡記録はベストエフォートで、失敗は握り潰さずログする。
+                        // 荷役を正とし、追跡は冪等な再記録で回復する結果整合方針（ADR-0012・retro-5 Try#1）。
+                        // 強整合の単一トランザクション化は BC 分離に反するため採らない（将来はアウトボックスで再試行）。
                         let! trackingResult =
                             CargoTracker.Tracking.Application.RecordTracking.record
                                 trackingRepo

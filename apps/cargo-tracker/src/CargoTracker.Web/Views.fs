@@ -1334,7 +1334,18 @@ module Views =
                               [ _class "form-control"
                                 _id "consigneeConfirmation"
                                 _name "consigneeConfirmation"
-                                _type "text" ] ]
+                                _type "text" ]
+                          div [ _class "form-text" ] [ str "「引取」を選択した場合は荷受人確認が必須です（未入力だとエラーになります）。" ] ]
+                    // 誤登録防止の確認ステップ（US16・レビュー中#4）。チェックしないと送信できない。
+                    div
+                        [ _class "form-check mb-3" ]
+                        [ input
+                              [ _class "form-check-input"
+                                _id "confirmed"
+                                _name "confirmed"
+                                _type "checkbox"
+                                _required ]
+                          label [ _class "form-check-label"; _for "confirmed" ] [ str "追跡番号・作業種別・場所を確認しました" ] ]
                     button [ _type "submit"; _class "btn btn-primary" ] [ str "登録" ]
                     a [ _class "btn btn-secondary ms-2"; _href "/handling" ] [ str "一覧へ戻る" ] ] ]
 
