@@ -56,6 +56,7 @@ let private seedDatabase (connStr: string) : string =
             VALUES ('handler01', 'h@example.com', '%s', 1, '2026-09-08');
             INSERT INTO user_roles (user_id, role) VALUES (3, 'ROLE_HANDLER');
             INSERT INTO user_roles (user_id, role) VALUES (3, 'ROLE_TRACKER');
+            INSERT INTO user_roles (user_id, role) VALUES (3, 'ROLE_BILLING');
             INSERT INTO shipper
                 (shipper_code, shipper_uuid, shipper_type, name, email, discount_rate, created_at, updated_at, version)
             VALUES ('SHP-E2E00001', '%s', 'INDIVIDUAL', 'E2E 荷主', 'ship@example.com', 0, '2026-09-08', '2026-09-08', 0);
@@ -102,7 +103,7 @@ let private get (client: HttpClient) (cookie: string) (path: string) =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
-let ``予約確定から追跡照会・例外対応まで一気通貫（US13→US14→US15→US18→US19）`` () =
+let ``予約確定から追跡・例外・精算まで一気通貫（US13→US14→US15→US18→US19→US21→US23）`` () =
     let dbFile =
         Path.Combine(Path.GetTempPath(), sprintf "cargo_e2e_%s.db" (System.Guid.NewGuid().ToString("N")))
 
@@ -218,6 +219,31 @@ let ``予約確定から追跡照会・例外対応まで一気通貫（US13→U
         let resolvedBody = run (resolvedDetail.Content.ReadAsStringAsync())
         resolvedBody |> should haveSubstring "解決済み"
         resolvedBody |> should haveSubstring "受領済"
+
+        // 経理担当者（ROLE_BILLING）: 料金算出→精算書発行（個人荷主・割引なし）→入金確認（US21/US23）
+        // 距離係数 100 × 重量 500 × 一般 1.0 = 50000、個人なので割引なし → 50000
+        let billRes =
+            post client handler "/billing/invoices" [ "bookingId", bookingId; "distanceFactor", "100" ]
+
+        billRes.StatusCode |> should equal HttpStatusCode.Found
+        let invPath = string billRes.Headers.Location
+
+        let invDetail = get client handler invPath
+        let invBody = run (invDetail.Content.ReadAsStringAsync())
+        invBody |> should haveSubstring "50,000"
+        invBody |> should haveSubstring "支払待ち"
+
+        // 入金確認 → 精算済・予約 Settled 同期
+        let invoiceNumber = invPath.Replace("/billing/invoices/", "")
+
+        let confirmBillRes =
+            post client handler (sprintf "/billing/invoices/%s/confirm" invoiceNumber) []
+
+        confirmBillRes.StatusCode |> should equal HttpStatusCode.Found
+
+        let invList = get client handler "/billing/invoices"
+        let invListBody = run (invList.Content.ReadAsStringAsync())
+        invListBody |> should haveSubstring "精算済"
     finally
         server.Dispose()
         SqliteConnection.ClearAllPools()

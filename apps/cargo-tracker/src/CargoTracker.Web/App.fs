@@ -1203,6 +1203,36 @@ let private manualStatusUpdate (trackingNumber: string) : HttpHandler =
                         ctx
         }
 
+// ---- 通知の共通ヘルパ（retro-6 Try#1・IT6 レビュー中#3 DRY）----
+
+/// notification_log へ 1 件書き込む合成層の共通ヘルパ。追跡・例外・エスカレーション・精算の
+/// 各通知はこのヘルパに集約し、INSERT・エラーハンドリングの重複を排除する（source はエラー分類用）。
+let private writeNotificationLog
+    (conn: System.Data.IDbConnection)
+    (source: string)
+    (bookingId: string)
+    (recipient: string)
+    (message: string)
+    : Async<Result<unit, CargoTracker.Shared.Domain.DomainError>> =
+    async {
+        try
+            let now = (systemClock ()).UtcDateTime.ToString("o")
+
+            conn
+            |> Donald.Db.newCommand
+                "INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at) VALUES (@bid, @rcp, @msg, @now, @now)"
+            |> Donald.Db.setParams
+                [ "bid", Donald.SqlType.String bookingId
+                  "rcp", Donald.SqlType.String recipient
+                  "msg", Donald.SqlType.String message
+                  "now", Donald.SqlType.String now ]
+            |> Donald.Db.exec
+
+            return Ok()
+        with ex ->
+            return Error(CargoTracker.Shared.Domain.BusinessRuleViolation(source, ex.Message))
+    }
+
 // ---- US19/US20: 例外登録・解決（ROLE_TRACKER）----
 
 /// notification_log へ書き込む TrackingNotifier（荷主通知の最小実装）。
@@ -1212,56 +1242,25 @@ let private notificationLogNotifier
     : CargoTracker.Tracking.Application.TrackingNotifier =
     { Notify =
         fun trackingNumber message ->
-            async {
-                try
-                    let now = (systemClock ()).UtcDateTime.ToString("o")
-                    let tn = CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber
+            let tn = CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber
+            writeNotificationLog conn "TrackingNotifier" tn tn message }
 
-                    conn
-                    |> Donald.Db.newCommand
-                        "INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at) VALUES (@bid, @rcp, @msg, @now, @now)"
-                    |> Donald.Db.setParams
-                        [ "bid", Donald.SqlType.String tn
-                          "rcp", Donald.SqlType.String tn
-                          "msg", Donald.SqlType.String message
-                          "now", Donald.SqlType.String now ]
-                    |> Donald.Db.exec
-
-                    return Ok()
-                with ex ->
-                    return Error(CargoTracker.Shared.Domain.BusinessRuleViolation("TrackingNotifier", ex.Message))
-            } }
-
-/// 管理職エスカレーション通知（notification_log に ESCALATION として記録・US20 紛失時）。
+/// 管理職エスカレーション通知（notification_log に MANAGER 宛で記録・US20 紛失時）。
 let private escalationLogNotifier
     (conn: System.Data.IDbConnection)
     : CargoTracker.Tracking.Application.EscalationNotifier =
     { Escalate =
         fun trackingNumber exType ->
             async {
-                try
-                    let now = (systemClock ()).UtcDateTime.ToString("o")
-                    let tn = CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber
+                let tn = CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber
 
-                    let message =
-                        sprintf
-                            "【緊急】追跡番号 %s の例外（%s）を管理職へエスカレーションしました。"
-                            tn
-                            (CargoTracker.Tracking.Domain.ExceptionType.toString exType)
+                let message =
+                    sprintf
+                        "【緊急】追跡番号 %s の例外（%s）を管理職へエスカレーションしました。"
+                        tn
+                        (CargoTracker.Tracking.Domain.ExceptionType.toString exType)
 
-                    conn
-                    |> Donald.Db.newCommand
-                        "INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at) VALUES (@bid, @rcp, @msg, @now, @now)"
-                    |> Donald.Db.setParams
-                        [ "bid", Donald.SqlType.String tn
-                          "rcp", Donald.SqlType.String "MANAGER"
-                          "msg", Donald.SqlType.String message
-                          "now", Donald.SqlType.String now ]
-                    |> Donald.Db.exec
-
-                    return Ok()
-                with ex ->
-                    return Error(CargoTracker.Shared.Domain.BusinessRuleViolation("EscalationNotifier", ex.Message))
+                return! writeNotificationLog conn "EscalationNotifier" tn "MANAGER" message
             } }
 
 /// 例外登録フォーム（`GET /tracking/{trackingNumber}/exceptions/new`・US19/US20・ROLE_TRACKER）。
@@ -1720,28 +1719,12 @@ let private discountPolicyDeactivate (idInt: int) : HttpHandler =
 // ---- US21/US22/US23: 精算（請求管理・ROLE_BILLING）----
 
 /// notification_log へ書き込む BillingNotifier（精算書通知・期限超過通知の最小実装）。
+/// 共通ヘルパ writeNotificationLog に集約（retro-6 Try#1・IT6 レビュー中#3 DRY）。
 let private billingNotifier (conn: System.Data.IDbConnection) : CargoTracker.Billing.Application.BillingNotifier =
     { Notify =
         fun bookingId message ->
-            async {
-                try
-                    let now = (systemClock ()).UtcDateTime.ToString("o")
-                    let bid = CargoTracker.Billing.Domain.BillingBookingId.value bookingId
-
-                    conn
-                    |> Donald.Db.newCommand
-                        "INSERT INTO notification_log (booking_id, recipient, message, notified_at, created_at) VALUES (@bid, @rcp, @msg, @now, @now)"
-                    |> Donald.Db.setParams
-                        [ "bid", Donald.SqlType.String bid
-                          "rcp", Donald.SqlType.String bid
-                          "msg", Donald.SqlType.String message
-                          "now", Donald.SqlType.String now ]
-                    |> Donald.Db.exec
-
-                    return Ok()
-                with ex ->
-                    return Error(CargoTracker.Shared.Domain.BusinessRuleViolation("BillingNotifier", ex.Message))
-            } }
+            let bid = CargoTracker.Billing.Domain.BillingBookingId.value bookingId
+            writeNotificationLog conn "BillingNotifier" bid bid message }
 
 /// 決済 ACL のスタブ（US23）。入金確認を即時成功させ支払時刻を返す。
 /// 外部決済機関との実連携（WireMock.Net で契約固定）は将来 IT で差し替える。
