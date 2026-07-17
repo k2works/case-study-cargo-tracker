@@ -127,7 +127,8 @@ module TrackingRepository =
           OccurredAt: string
           Description: string
           Escalated: bool
-          ResolvedAt: string option }
+          ResolvedAt: string option
+          ResolutionNote: string option }
 
     /// 生レコードから TrackingActivity を復元する（状態は Events / Exceptions から導出）。
     let private reconstruct
@@ -183,7 +184,8 @@ module TrackingRepository =
                               Location = loc
                               OccurredAt = occurredAt
                               Description = r.Description
-                              Resolution = resolution }
+                              Resolution = resolution
+                              ResolutionNote = r.ResolutionNote }
                     })
 
             return
@@ -235,7 +237,9 @@ module TrackingRepository =
                 |> Db.exec)
 
         /// tracking_exception_event を集約ルート経由で全置換する（Exceptions は新しい順→seq は古い順）。
-        /// 例外の解決は既存行の resolved_at/escalation_flag を書き換えるため全置換で確実に反映する。
+        /// 例外の解決は既存行の resolved_at/escalation_flag/resolution_notes を書き換えるため全置換で確実に反映する。
+        /// 注（永続化戦略の非対称・レビュー中#2）: イベント（syncEvents）は不変・追記のみなので append-only、
+        /// 例外は「登録は追記・解決は既存行の更新」という可変性があるため全置換とする。差分 UPDATE 化は将来の最適化余地。
         let syncExceptions (tx: IDbTransaction) (nowStr: string) (trackingNumber: string) (activity: TrackingActivity) =
             conn
             |> Db.newCommand
@@ -261,7 +265,7 @@ module TrackingRepository =
                     VALUES
                         ((SELECT id FROM tracking_activity WHERE tracking_number = @tn),
                          @exception_type, @location, @occurred_at, @escalation_flag, @description,
-                         @resolved_at, NULL, @seq_number, @now, @now)
+                         @resolved_at, @resolution_notes, @seq_number, @now, @now)
                     """
                 |> Db.setTransaction tx
                 |> Db.setParams
@@ -274,6 +278,10 @@ module TrackingRepository =
                       "resolved_at",
                       (match resolvedAt with
                        | Some s -> SqlType.String s
+                       | None -> SqlType.Null)
+                      "resolution_notes",
+                      (match ex.ResolutionNote with
+                       | Some n -> SqlType.String n
                        | None -> SqlType.Null)
                       "seq_number", SqlType.Int(i + 1)
                       "now", SqlType.String nowStr ]
@@ -397,7 +405,7 @@ module TrackingRepository =
                             |> Db.newCommand
                                 """
                                 SELECT x.exception_type, x.location_unlocode, x.occurred_at, x.description,
-                                       x.escalation_flag, x.resolved_at
+                                       x.escalation_flag, x.resolved_at, x.resolution_notes
                                 FROM tracking_exception_event x
                                 JOIN tracking_activity a ON a.id = x.tracking_id
                                 WHERE a.tracking_number = @tn
@@ -410,7 +418,8 @@ module TrackingRepository =
                                   OccurredAt = rd.ReadString "occurred_at"
                                   Description = rd.ReadStringOption "description" |> Option.defaultValue ""
                                   Escalated = rd.ReadBoolean "escalation_flag"
-                                  ResolvedAt = rd.ReadStringOption "resolved_at" })
+                                  ResolvedAt = rd.ReadStringOption "resolved_at"
+                                  ResolutionNote = rd.ReadStringOption "resolution_notes" })
 
                         return reconstruct tn bookingId rows exRows |> Result.map Some
                 with ex ->

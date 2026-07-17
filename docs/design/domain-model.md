@@ -884,7 +884,9 @@ module Voyage =
 
 対応 US：US14, US17〜US20
 
-> **IT5 実装状況**: US14/US17/US18 を実装。`TrackingActivity`（`currentStatus` 導出）・`TrackingNumber`・`TrackingBookingId`・`TrackingStatus`（導出値・9 ケース）・`TrackingEventType`（`toStatus`）・`TrackingActivityEvent` を実装。Shared に `TransportStatus` を配置し、`TrackingActivity.toTransportStatus` で写像（アプリ層で Booking.Delivery 同期用）。`TrackingException`・`ExceptionResolution`・`ResolveException` は IT6（US19/US20 例外）で追加予定のため、IT5 は `Exceptions` を持たず非例外遷移のみ（Its の `execute` は `RecordEvent` のみ）。イベント DU は BC ローカル（`TrackingEvent`・ADR-0002 改訂）。
+> **IT5 実装状況**: US14/US17/US18 を実装。`TrackingActivity`（`currentStatus` 導出）・`TrackingNumber`・`TrackingBookingId`・`TrackingStatus`（導出値・9 ケース）・`TrackingEventType`（`toStatus`）・`TrackingActivityEvent` を実装。Shared に `TransportStatus` を配置し、`TrackingActivity.toTransportStatus` で写像（アプリ層で Booking.Delivery 同期用）。イベント DU は BC ローカル（`TrackingEvent`・ADR-0002 改訂）。
+>
+> **IT6 実装状況**: US19/US20 を実装。`ExceptionType`（Delay/Damage/Lost/CustomsHold）・`ExceptionResolution` DU（`Unresolved of escalated` / `Resolved of resolvedAt`）・`TrackingException`（`ResolutionNote: string option` 含む）・`RegisterException`/`ResolveException` コマンドを追加。`currentStatus` をアクティブ例外優先の `InException` 導出へ拡張し、解決後は自動復帰（ビジネスルール 5）。Lost は必ずエスカレーション（ルール 3・`ExceptionEscalated` 発行）、二重解決は `BusinessRuleViolation("AlreadyResolved")` で拒否。永続化は `tracking_exception_event`（マイグレーション 0011・DU を `escalation_flag`＋`resolved_at` 2 カラムへ写像）。`TrackingExceptionDetected` は発行するが、Booking の `transport_status` が未実体化のため越境同期先はなく将来消費用（InException は `tracking_activity.transport_status` に反映）。所有者制御は ADR-0011、荷役→追跡整合は ADR-0012。
 
 ### ドメインモデル図
 
@@ -961,7 +963,8 @@ type TrackingException =
       Location: TrackingLocation
       OccurredAt: System.DateTimeOffset
       Description: string
-      Resolution: ExceptionResolution }
+      Resolution: ExceptionResolution
+      ResolutionNote: string option }   // 解決時の対応内容（US19「対応報告」）。未解決は None
 
 module TrackingException =
     /// Lost の場合は必ずエスカレーションする（ビジネスルール 3 を関数で保証）
@@ -969,7 +972,7 @@ module TrackingException =
         let escalated = (exceptionType = Lost)
         { ExceptionType = exceptionType; Location = location
           OccurredAt = occurredAt; Description = description
-          Resolution = Unresolved escalated }
+          Resolution = Unresolved escalated; ResolutionNote = None }
 
 type TrackingStatus =
     | NotReceived | Received | Loaded | OnboardCarrier
@@ -984,7 +987,7 @@ type TrackingActivity =
 type TrackingCommand =
     | AddEvent of TrackingActivityEvent
     | RegisterException of ExceptionType * TrackingLocation * System.DateTimeOffset * string
-    | ResolveException of index: int * resolvedAt: System.DateTimeOffset
+    | ResolveException of index: int * resolvedAt: System.DateTimeOffset * note: string
 
 module TrackingActivity =
 

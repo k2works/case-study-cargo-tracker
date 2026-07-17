@@ -150,7 +150,9 @@ module ManageException =
                 | Some a -> Ok a
                 | None -> Error(NotFound("TrackingActivity", TrackingNumber.value trackingNumber))
 
-            let! updated, _events = TrackingActivity.execute activity (ResolveException(index, resolvedAt))
+            let! updated, _events =
+                TrackingActivity.execute activity (ResolveException(index, resolvedAt, resolutionNote))
+
             do! repo.Update updated
 
             let message =

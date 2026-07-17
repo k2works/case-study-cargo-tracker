@@ -245,8 +245,9 @@ state "追跡フロー" as tracking_flow {
   貨物状態更新 --> 追跡詳細 : 更新成功（PRG）
   貨物状態更新 --> 貨物状態更新 : バリデーションエラー
   追跡詳細 --> 例外登録 : [例外を登録] ボタン（ROLE_TRACKER）
-  例外登録 --> 追跡詳細 : 登録成功（PRG）
+  例外登録 --> 追跡詳細 : 登録成功（PRG・InException・荷主通知・LOST はエスカレーション）
   例外登録 --> 例外登録 : バリデーションエラー
+  追跡詳細 --> 追跡詳細 : [解決] インラインフォーム（POST .../exceptions/{index}/resolve・PRG・状態復帰・対応内容記録）
 }
 
 state "荷役フロー" as handling_flow {
@@ -786,7 +787,7 @@ state "荷主フロー" as shipper_flow {
   現在のステータス: <color:green>ONBOARD_CARRIER</color>　　現在地: 太平洋上
   ==
   {
-    例外種別        | ^DELAYED（遅延）^
+    例外種別        | ^DELAY（遅延）^
     発生場所（港コード） | "USLAX            "
     発生日時        | "2026-04-08 14:00 "
     状況説明        | "荒天による寄港遅延。到着予定が 3 日遅れる見込み"
@@ -799,6 +800,12 @@ state "荷主フロー" as shipper_flow {
   --
   <color:red>⚠ 例外種別「LOST（紛失）」を選択した場合、管理職へのエスカレーション通知が必須として自動送信されます</color>
   ==
+  例外一覧（追跡詳細に表示）
+  {#
+  . | 種別 | 状態 | 操作
+  . | 遅延 | 未解決 | [ 解決 ]
+  }
+  ==
   [登録する] | [キャンセル]
 }
 @endsalt
@@ -806,10 +813,11 @@ state "荷主フロー" as shipper_flow {
 
 #### 仕様
 
-- **例外種別**: `DELAYED`（遅延）, `DAMAGED`（破損）, `LOST`（紛失）, `CUSTOMS_HOLD`（通関保留）から選択（US19, US20）
+- **例外種別**: `DELAY`（遅延）, `DAMAGE`（破損）, `LOST`（紛失）, `CUSTOMS_HOLD`（通関保留）から選択（US19, US20。永続値・`ExceptionType.ofString` と一致）
 - **入力項目**: 発生場所（港コード）・発生日時・状況説明・対応方針（新しい到着予定日・補償方針等）
 - **荷主通知**: 「荷主に通知する」チェックボックスをデフォルト ON で表示。登録時に荷主へ例外発生通知を送信する
 - **LOST 選択時**: 緊急フラグが設定され、管理職へのエスカレーション通知が必須・自動で送信される旨を画面上に表示する（US20）
+- **例外解決（追跡詳細から）**: 追跡詳細（`/tracking/{trackingNumber}`）の例外一覧に未解決例外ごとの [解決] インラインフォームを表示し、対応内容を入力して `POST /tracking/{trackingNumber}/exceptions/{index}/resolve` で解決する（ROLE_TRACKER）。解決すると `resolution_notes` に対応内容が記録され、貨物状態は例外発生前へ復帰する（US19「対応報告」）
 - **登録成功**: 貨物状態が `EXCEPTION` に更新され、PRG パターンで `/tracking/{trackingNumber}` へリダイレクト。例外対応履歴が記録される
 - **アクセス制御**: ROLE_TRACKER のみアクセス可能
 

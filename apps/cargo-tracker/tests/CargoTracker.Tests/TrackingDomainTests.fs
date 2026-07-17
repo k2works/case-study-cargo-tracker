@@ -278,7 +278,7 @@ let ``例外を解決すると状態が例外発生前へ導出復帰する（�
     TrackingActivity.currentStatus inEx |> should equal InException
 
     let resolved =
-        match TrackingActivity.execute inEx (ResolveException(0, dto (2026, 9, 4))) with
+        match TrackingActivity.execute inEx (ResolveException(0, dto (2026, 9, 4), "対応完了")) with
         | Ok(a, evts) ->
             evts
             |> List.exists (function
@@ -298,11 +298,11 @@ let ``解決済み例外の再解決は AlreadyResolved で拒否する`` () =
     let inEx, _ = registerEx Delay "USLAX" 1 "遅延" a0
 
     let resolved =
-        match TrackingActivity.execute inEx (ResolveException(0, dto (2026, 9, 2))) with
+        match TrackingActivity.execute inEx (ResolveException(0, dto (2026, 9, 2), "一次対応")) with
         | Ok(a, _) -> a
         | Error e -> failwithf "%A" e
 
-    match TrackingActivity.execute resolved (ResolveException(0, dto (2026, 9, 3))) with
+    match TrackingActivity.execute resolved (ResolveException(0, dto (2026, 9, 3), "再対応")) with
     | Error(BusinessRuleViolation(rule, _)) -> rule |> should equal "AlreadyResolved"
     | other -> failwithf "AlreadyResolved を期待したが: %A" other
 
@@ -310,7 +310,7 @@ let ``解決済み例外の再解決は AlreadyResolved で拒否する`` () =
 let ``存在しない例外の解決は NotFound を返す`` () =
     let a0 = issued ()
 
-    match TrackingActivity.execute a0 (ResolveException(5, dto (2026, 9, 1))) with
+    match TrackingActivity.execute a0 (ResolveException(5, dto (2026, 9, 1), "無効")) with
     | Error(NotFound(entity, _)) -> entity |> should equal "TrackingException"
     | other -> failwithf "NotFound を期待したが: %A" other
 
@@ -328,8 +328,45 @@ let ``未解決例外が残る限り InException を優先導出する（複数�
 
     // 1 件だけ解決してもまだ未解決が残るため InException
     let partial =
-        match TrackingActivity.execute a2 (ResolveException(0, dto (2026, 9, 3))) with
+        match TrackingActivity.execute a2 (ResolveException(0, dto (2026, 9, 3), "再対応")) with
         | Ok(a, _) -> a
         | Error e -> failwithf "%A" e
 
     TrackingActivity.currentStatus partial |> should equal InException
+
+[<Fact>]
+let ``通関保留例外は InException を導出しエスカレーションしない（CustomsHold）`` () =
+    let a0 = issued ()
+    let a1, evts = registerEx CustomsHold "USLAX" 1 "税関検査による保留" a0
+
+    TrackingActivity.currentStatus a1 |> should equal InException
+
+    match a1.Exceptions with
+    | [ { ExceptionType = CustomsHold
+          Resolution = Unresolved escalated } ] -> escalated |> should equal false
+    | other -> failwithf "Unresolved(false) の CustomsHold を期待したが: %A" other
+
+    // CustomsHold は TrackingExceptionDetected を発行しエスカレーションは発行しない
+    evts
+    |> List.exists (function
+        | TrackingExceptionDetected(_, CustomsHold) -> true
+        | _ -> false)
+    |> should equal true
+
+    evts
+    |> List.exists (function
+        | ExceptionEscalated _ -> true
+        | _ -> false)
+    |> should equal false
+
+[<Fact>]
+let ``例外解決で対応内容（ResolutionNote）が記録される（US19 対応報告）`` () =
+    let a0 = issued ()
+    let a1, _ = registerEx Delay "USLAX" 1 "遅延" a0
+
+    match TrackingActivity.execute a1 (ResolveException(0, dto (2026, 9, 2), "新到着予定日 9/10 を提示")) with
+    | Ok(a, _) ->
+        match a.Exceptions with
+        | [ { ResolutionNote = Some note } ] -> note |> should equal "新到着予定日 9/10 を提示"
+        | other -> failwithf "ResolutionNote=Some を期待したが: %A" other
+    | Error e -> failwithf "%A" e

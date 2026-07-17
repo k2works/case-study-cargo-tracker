@@ -133,12 +133,14 @@ type ExceptionResolution =
     | Resolved of resolvedAt: DateTimeOffset
 
 /// 追跡例外イベント（遅延・破損・紛失・通関保留の記録）。
+/// ResolutionNote は解決時に入力する対応内容（US19「対応報告」）。未解決時は None。
 type TrackingException =
     { ExceptionType: ExceptionType
       Location: Location
       OccurredAt: DateTimeOffset
       Description: string
-      Resolution: ExceptionResolution }
+      Resolution: ExceptionResolution
+      ResolutionNote: string option }
 
 module TrackingException =
 
@@ -155,7 +157,8 @@ module TrackingException =
           Location = location
           OccurredAt = occurredAt
           Description = description
-          Resolution = Unresolved escalated }
+          Resolution = Unresolved escalated
+          ResolutionNote = None }
 
     /// 未解決かどうか。
     let isActive (ex: TrackingException) : bool =
@@ -185,7 +188,7 @@ type TrackingActivity =
 type TrackingCommand =
     | RecordEvent of TrackingActivityEvent
     | RegisterException of ExceptionType * Location * DateTimeOffset * string
-    | ResolveException of index: int * resolvedAt: DateTimeOffset
+    | ResolveException of index: int * resolvedAt: DateTimeOffset * note: string
 
 module TrackingActivity =
 
@@ -238,14 +241,19 @@ module TrackingActivity =
                 events
             )
 
-        | ResolveException(index, resolvedAt) ->
+        | ResolveException(index, resolvedAt, note) ->
             match List.tryItem index activity.Exceptions with
             | None -> Error(NotFound("TrackingException", string index))
             | Some { Resolution = Resolved _ } -> Error(BusinessRuleViolation("AlreadyResolved", "この例外はすでに解決済みです。"))
             | Some ex ->
                 let resolved =
                     { ex with
-                        Resolution = Resolved resolvedAt }
+                        Resolution = Resolved resolvedAt
+                        ResolutionNote =
+                            (if System.String.IsNullOrWhiteSpace note then
+                                 None
+                             else
+                                 Some note) }
 
                 let exceptions =
                     activity.Exceptions |> List.mapi (fun i e -> if i = index then resolved else e)

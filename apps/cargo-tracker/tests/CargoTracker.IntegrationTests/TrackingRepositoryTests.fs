@@ -175,7 +175,9 @@ let ``例外解決後は状態が復帰し解決済みが永続化される`` ()
 
     let resolved =
         match
-            TrackingActivity.execute withEx (ResolveException(0, DateTimeOffset(2026, 9, 4, 0, 0, 0, TimeSpan.Zero)))
+            TrackingActivity.execute
+                withEx
+                (ResolveException(0, DateTimeOffset(2026, 9, 4, 0, 0, 0, TimeSpan.Zero), "代替手配・補償対応済"))
         with
         | Ok(a, _) -> a
         | Error e -> failwithf "%A" e
@@ -191,8 +193,11 @@ let ``例外解決後は状態が復帰し解決済みが永続化される`` ()
         TrackingActivity.currentStatus found |> should equal NotReceived
 
         match found.Exceptions with
-        | [ { Resolution = Resolved _ } ] -> ()
-        | other -> failwithf "Resolved を期待したが: %A" other
+        | [ { Resolution = Resolved _
+              ResolutionNote = Some note } ] ->
+            // 対応内容（US19「対応報告」）が永続化・復元される（レビュー高#1・データ損失防止）
+            note |> should equal "代替手配・補償対応済"
+        | other -> failwithf "Resolved かつ ResolutionNote=Some を期待したが: %A" other
     | other -> failwithf "Some を期待したが: %A" other
 
 [<Fact>]
