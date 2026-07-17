@@ -69,6 +69,22 @@ let ``基本料金は 距離係数×重量×貨物種別係数 で算出され�
     // 冷凍 1.5 → 75000
     (Charge.calculateBase 100m 500m Refrigerated JPY).Amount |> should equal 75_000L
 
+[<Fact>]
+let ``距離は確定経路の区間数から自動導出される（US21・1 区間 500km）`` () =
+    Charge.deriveDistance 0 |> should equal 0m
+    Charge.deriveDistance 1 |> should equal 500m
+    Charge.deriveDistance 2 |> should equal 1000m
+    // 負の区間数は 0km に丸める
+    Charge.deriveDistance -3 |> should equal 0m
+
+[<Fact>]
+let ``距離係数は 導出距離×単価 で算出される（US21）`` () =
+    // 2 区間（1000km）× 単価 0.1 = 距離係数 100
+    Charge.distanceFactorOf 2 0.1m |> should equal 100m
+    // 距離係数 100 × 重量 500 × 一般 1.0 = 50000
+    (Charge.calculateBase (Charge.distanceFactorOf 2 0.1m) 500m General JPY).Amount
+    |> should equal 50_000L
+
 // ---- DiscountRate ----
 
 [<Fact>]

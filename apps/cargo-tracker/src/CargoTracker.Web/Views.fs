@@ -1663,34 +1663,84 @@ module Views =
                                      th [] [ str "状態" ] ] ]
                          tbody [] bodyRows ]) ]
 
+    /// 料金算出プレビュー（確定前の輸送実績・割引率表示・US21/US22）。
+    type ChargePreview =
+        { BookingId: string
+          Weight: decimal
+          CargoType: string
+          Route: (string * string) list
+          DerivedDistanceKm: decimal
+          UnitPrice: decimal
+          DiscountRate: decimal
+          BaseAmount: int64
+          FinalAmount: int64 }
+
     /// 料金算出フォーム（`/billing/invoices/new`・ROLE_BILLING）。
-    let chargeForm (roles: string list) (error: string option) : XmlNode =
-        layout
-            "料金算出"
-            roles
-            [ h1 [ _class "mb-4" ] [ str "料金算出・精算書発行" ]
-              (match error with
-               | Some m -> div [ _class "alert alert-danger" ] [ str m ]
-               | None -> emptyText)
-              div [ _class "alert alert-info" ] [ str "「引取済」状態の予約に対して料金を算出します。基本料金＝距離係数×重量×貨物種別係数。法人荷主は割引が自動適用されます。" ]
-              form
-                  [ _method "post"; _action "/billing/invoices" ]
-                  [ div
-                        [ _class "mb-3" ]
-                        [ label [ _class "form-label"; _for "bookingId" ] [ str "予約番号" ]
-                          input [ _class "form-control"; _id "bookingId"; _name "bookingId"; _type "text" ] ]
-                    div
-                        [ _class "mb-3" ]
-                        [ label [ _class "form-label"; _for "distanceFactor" ] [ str "距離係数（1kg あたり単価×距離）" ]
-                          input
-                              [ _class "form-control"
-                                _id "distanceFactor"
-                                _name "distanceFactor"
-                                _type "number"
-                                _step "1"
-                                _value "100" ] ]
-                    button [ _type "submit"; _class "btn btn-primary" ] [ str "料金を確定する" ]
-                    a [ _class "btn btn-secondary ms-2"; _href "/billing/invoices" ] [ str "一覧へ戻る" ] ] ]
+    /// preview が None のときは予約番号の入力（Step1）、Some のときは輸送実績・割引率を確定前に表示（Step2）。
+    let chargeForm (roles: string list) (error: string option) (preview: ChargePreview option) : XmlNode =
+        let errorBanner =
+            match error with
+            | Some m -> div [ _class "alert alert-danger" ] [ str m ]
+            | None -> emptyText
+
+        let body =
+            match preview with
+            | None ->
+                [ div [ _class "alert alert-info" ] [ str "料金を算出する「引取済」状態の予約番号を入力してください。確定前に輸送実績と割引率を確認できます。" ]
+                  form
+                      [ _method "get"; _action "/billing/invoices/new" ]
+                      [ div
+                            [ _class "mb-3" ]
+                            [ label [ _class "form-label"; _for "bookingId" ] [ str "予約番号" ]
+                              input [ _class "form-control"; _id "bookingId"; _name "bookingId"; _type "text" ] ]
+                        button [ _type "submit"; _class "btn btn-primary" ] [ str "輸送実績を確認する" ]
+                        a [ _class "btn btn-secondary ms-2"; _href "/billing/invoices" ] [ str "一覧へ戻る" ] ] ]
+            | Some p ->
+                let routeText =
+                    if List.isEmpty p.Route then
+                        "（経路未確定）"
+                    else
+                        p.Route |> List.map (fun (l, u) -> sprintf "%s→%s" l u) |> String.concat " / "
+
+                [ div
+                      [ _class "alert alert-info" ]
+                      [ str "以下の輸送実績と割引率で料金を確定します。距離は確定経路の区間数から自動導出しています。単価を確認して確定してください。" ]
+                  h2 [ _class "h5 mt-3" ] [ str "輸送実績" ]
+                  dl
+                      [ _class "row" ]
+                      [ dt [ _class "col-sm-3" ] [ str "予約番号" ]
+                        dd [ _class "col-sm-9" ] [ str p.BookingId ]
+                        dt [ _class "col-sm-3" ] [ str "重量" ]
+                        dd [ _class "col-sm-9" ] [ str (sprintf "%s kg" (p.Weight.ToString("N0"))) ]
+                        dt [ _class "col-sm-3" ] [ str "貨物種別" ]
+                        dd [ _class "col-sm-9" ] [ str p.CargoType ]
+                        dt [ _class "col-sm-3" ] [ str "確定経路" ]
+                        dd [ _class "col-sm-9" ] [ str routeText ]
+                        dt [ _class "col-sm-3" ] [ str "導出距離" ]
+                        dd [ _class "col-sm-9" ] [ str (sprintf "%s km" (p.DerivedDistanceKm.ToString("N0"))) ]
+                        dt [ _class "col-sm-3" ] [ str "確定前割引率" ]
+                        dd [ _class "col-sm-9" ] [ str (sprintf "%s%%" ((p.DiscountRate * 100m).ToString("0.#"))) ]
+                        dt [ _class "col-sm-3" ] [ str "基本料金（税抜）" ]
+                        dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (p.BaseAmount.ToString("N0"))) ]
+                        dt [ _class "col-sm-3" ] [ str "請求金額（割引後）" ]
+                        dd [ _class "col-sm-9" ] [ str (sprintf "¥%s" (p.FinalAmount.ToString("N0"))) ] ]
+                  form
+                      [ _method "post"; _action "/billing/invoices" ]
+                      [ input [ _type "hidden"; _name "bookingId"; _value p.BookingId ]
+                        div
+                            [ _class "mb-3" ]
+                            [ label [ _class "form-label"; _for "unitPrice" ] [ str "1km あたり単価（円/kg・km）" ]
+                              input
+                                  [ _class "form-control"
+                                    _id "unitPrice"
+                                    _name "unitPrice"
+                                    _type "number"
+                                    _step "0.01"
+                                    _value (p.UnitPrice.ToString()) ] ]
+                        button [ _type "submit"; _class "btn btn-primary" ] [ str "料金を確定する" ]
+                        a [ _class "btn btn-secondary ms-2"; _href "/billing/invoices/new" ] [ str "予約番号を選び直す" ] ] ]
+
+        layout "料金算出" roles ([ h1 [ _class "mb-4" ] [ str "料金算出・精算書発行" ]; errorBanner ] @ body)
 
     /// 精算書詳細の表示値。
     type InvoiceDetailView =

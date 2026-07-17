@@ -57,6 +57,11 @@ let private seedDatabase (connStr: string) : unit =
             INSERT INTO discount_policy
                 (policy_type, discount_rate, applicable_condition, effective_from, effective_to, active, created_at, updated_at)
             VALUES ('CORPORATE_STANDARD', 0.10, '法人標準', '2026-01-01', NULL, 1, '2026-10-06', '2026-10-06');
+            INSERT INTO leg
+                (cargo_id, voyage_number, load_location_unlocode, unload_location_unlocode, load_time, unload_time, seq_number, created_at, updated_at)
+            VALUES
+                ((SELECT id FROM cargo WHERE booking_id = 'BKG-BILL01'), 'V001', 'JPTYO', 'SGSIN', '2026-10-07', '2026-10-15', 1, '2026-10-06', '2026-10-06'),
+                ((SELECT id FROM cargo WHERE booking_id = 'BKG-BILL01'), 'V002', 'SGSIN', 'USLAX', '2026-10-16', '2026-10-25', 2, '2026-10-06', '2026-10-06');
             """
             hash
             shipperUuid
@@ -120,9 +125,19 @@ let ``経理担当者が料金算出→精算書発行→入金確認まで一�
     withServer (fun client ->
         let billing = authCookie client "billing01"
 
-        // 料金算出・精算書発行（距離係数 100 × 重量 500 × 一般 1.0 = 50000、法人 10% 割引 → 45000）
+        // 確定前プレビュー（US21/US22）: 輸送実績・導出距離・確定前割引率が表示される
+        let preview = authedGet client billing "/billing/invoices/new?bookingId=BKG-BILL01"
+        let previewBody = run (preview.Content.ReadAsStringAsync())
+        previewBody |> should haveSubstring "輸送実績"
+        previewBody |> should haveSubstring "JPTYO→SGSIN"
+        previewBody |> should haveSubstring "1,000 km"
+        previewBody |> should haveSubstring "確定前割引率"
+
+        // 料金算出・精算書発行
+        // 距離自動導出（2 区間 × 500km = 1000km）× 単価 0.1 = 距離係数 100
+        // 基本料金 = 100 × 重量 500 × 一般 1.0 = 50000、法人 10% 割引 → 45000
         let createRes =
-            post client billing "/billing/invoices" [ "bookingId", "BKG-BILL01"; "distanceFactor", "100" ]
+            post client billing "/billing/invoices" [ "bookingId", "BKG-BILL01"; "unitPrice", "0.1" ]
 
         createRes.StatusCode |> should equal HttpStatusCode.Found
         let detailPath = string createRes.Headers.Location

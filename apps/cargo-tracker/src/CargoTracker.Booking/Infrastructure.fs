@@ -71,6 +71,20 @@ module CargoQueries =
         with ex ->
             Error(BusinessRuleViolation("CargoQueries", ex.Message))
 
+    /// 確定経路の区間（leg）を積込地・荷降地の順で取得する（US21 距離自動導出・輸送実績表示の合成層向け）。
+    let findRouteLegs (conn: IDbConnection) (bookingId: string) : (string * string) list =
+        conn
+        |> Db.newCommand
+            """
+            SELECT l.load_location_unlocode, l.unload_location_unlocode
+            FROM leg l
+            JOIN cargo c ON c.id = l.cargo_id
+            WHERE c.booking_id = @bid
+            ORDER BY l.seq_number
+            """
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.query (fun rd -> rd.ReadString "load_location_unlocode", rd.ReadString "unload_location_unlocode")
+
     /// 料金算出の基礎（重量・貨物種別・荷主 ID・予約状態）を取得する（US21 の合成層向け）。
     let findChargeBasis (conn: IDbConnection) (bookingId: string) : (decimal * string * string * string) option =
         conn

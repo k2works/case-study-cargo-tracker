@@ -166,6 +166,18 @@ module CargoCategory =
         | other -> Error(ValidationError("CargoCategory", sprintf "未知の貨物種別です: %s" other))
 
 module Charge =
+    /// 区間 1 本あたりの標準輸送距離（km）。確定経路の区間数から距離を導出する係数。
+    /// 地理座標を持たないため、確定経路の leg 数を距離の代理指標とする（US21 距離自動導出）。
+    let StandardLegDistanceKm = 500m
+
+    /// 確定経路の区間数から輸送距離（km）を導出する（US21）。区間が無い（未確定）場合は 0km。
+    let deriveDistance (legCount: int) : decimal =
+        decimal (max 0 legCount) * StandardLegDistanceKm
+
+    /// 距離係数（= 導出距離 × 1km あたり単価）。calculateBase の distanceFactor に渡す。
+    let distanceFactorOf (legCount: int) (unitPricePerKm: decimal) : decimal =
+        deriveDistance legCount * unitPricePerKm
+
     /// 基本料金 = 距離係数 × 重量（kg）× 貨物種別係数（domain-model 料金計算ロジック）。
     /// 最小通貨単位（円）へ銀行家丸めする。距離係数は 1km あたりの単価（円）。
     let calculateBase

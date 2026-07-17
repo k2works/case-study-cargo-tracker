@@ -1421,6 +1421,9 @@ module Invoice =
 料金計算ロジック：
 
 ```text
+距離（km） = 確定経路の区間数 × 標準区間距離（Charge.StandardLegDistanceKm = 500km）  ※IT8 US21 自動導出
+距離係数 = 距離（km） × 1km あたり単価（Charge.distanceFactorOf）
+
 基本料金 = 距離係数 × 重量（kg） × 貨物種別係数
   - General（一般貨物）: 係数 1.0
   - Hazardous（危険物）: 係数 1.8
@@ -1430,6 +1433,8 @@ module Invoice =
   - Corporate 荷主: 割引率 0〜30%
   - Individual 荷主: 割引なし（割引率 0%）
 ```
+
+> **IT8 US21 距離自動導出**: 地理座標を持たないため、確定経路（leg テーブル）の区間数を距離の代理指標とする。`Charge.deriveDistance`（区間数→km）・`Charge.distanceFactorOf`（区間数・単価→距離係数）をドメインサービスとして追加。料金算出画面は確定前に輸送実績（重量・貨物種別・経路）と割引率をプレビュー表示する。手入力は 1km あたり単価に変更（旧 distanceFactor 直接指定は後方互換で受付）。
 
 ### コマンド一覧
 

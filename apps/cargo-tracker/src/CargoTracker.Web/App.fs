@@ -1781,10 +1781,79 @@ let private invoiceList: HttpHandler =
             return! htmlView (Views.invoiceList (rolesOf ctx) msg rows) next ctx
         }
 
-/// 料金算出フォーム（`GET /billing/invoices/new`・ROLE_BILLING）。
+/// 料金算出フォーム（`GET /billing/invoices/new?bookingId=`・ROLE_BILLING）。
+/// bookingId 未指定なら予約番号入力（Step1）、指定時は輸送実績・確定前割引率をプレビュー（Step2・US21/US22）。
 let private chargeNew: HttpHandler =
     mustHaveRole "ROLE_BILLING"
-    >=> fun next ctx -> htmlView (Views.chargeForm (rolesOf ctx) None) next ctx
+    >=> fun next ctx ->
+        task {
+            match ctx.TryGetQueryStringValue "bookingId" with
+            | None
+            | Some "" -> return! htmlView (Views.chargeForm (rolesOf ctx) None None) next ctx
+            | Some bookingIdStr ->
+                let factory = ctx.GetService<ConnectionFactory>()
+                use conn = factory ()
+
+                match CargoTracker.Booking.Infrastructure.CargoQueries.findChargeBasis conn bookingIdStr with
+                | None -> return! htmlView (Views.chargeForm (rolesOf ctx) (Some "予約が見つかりません。") None) next ctx
+                | Some(weight, cargoType, shipperId, _bookingStatus) ->
+                    let route =
+                        CargoTracker.Booking.Infrastructure.CargoQueries.findRouteLegs conn bookingIdStr
+
+                    let legCount = List.length route
+                    let defaultUnitPrice = 0.1m
+
+                    match CargoTracker.Billing.Domain.CargoCategory.ofString cargoType with
+                    | Error _ -> return! htmlView (Views.chargeForm (rolesOf ctx) (Some "貨物種別を解決できません。") None) next ctx
+                    | Ok category ->
+                        let isCorporate =
+                            CargoTracker.Shipper.Infrastructure.ShipperQueries.isCorporateByUuid conn shipperId
+                            |> Option.defaultValue false
+
+                        let distanceFactor =
+                            CargoTracker.Billing.Domain.Charge.distanceFactorOf legCount defaultUnitPrice
+
+                        let baseAmount =
+                            CargoTracker.Billing.Domain.Charge.calculateBase
+                                distanceFactor
+                                weight
+                                category
+                                CargoTracker.Billing.Domain.JPY
+
+                        let today = DateOnly.FromDateTime((systemClock ()).UtcDateTime)
+
+                        let effectiveMasters =
+                            CargoTracker.Billing.Infrastructure.DiscountPolicyRepository.create conn systemClock
+                            |> fun r -> r.FindEffective today |> Async.RunSynchronously
+                            |> function
+                                | Ok ms -> ms
+                                | Error _ -> []
+
+                        let discountRate =
+                            CargoTracker.Billing.Domain.DiscountPolicyMaster.resolveApplicableRate
+                                effectiveMasters
+                                isCorporate
+                                baseAmount
+
+                        let finalAmount =
+                            baseAmount
+                            |> CargoTracker.Billing.Domain.Money.multiply (
+                                1.0m - CargoTracker.Billing.Domain.DiscountRate.value discountRate
+                            )
+
+                        let preview: Views.ChargePreview =
+                            { BookingId = bookingIdStr
+                              Weight = weight
+                              CargoType = cargoType
+                              Route = route
+                              DerivedDistanceKm = CargoTracker.Billing.Domain.Charge.deriveDistance legCount
+                              UnitPrice = defaultUnitPrice
+                              DiscountRate = CargoTracker.Billing.Domain.DiscountRate.value discountRate
+                              BaseAmount = baseAmount.Amount
+                              FinalAmount = finalAmount.Amount }
+
+                        return! htmlView (Views.chargeForm (rolesOf ctx) None (Some preview)) next ctx
+        }
 
 /// 料金確定・精算書発行（`POST /billing/invoices`・ROLE_BILLING）。
 let private invoiceCreate: HttpHandler =
@@ -1798,16 +1867,25 @@ let private invoiceCreate: HttpHandler =
             let bookingIdStr = get "bookingId"
 
             let renderErr (msg: string) =
-                setStatusCode 400 >=> htmlView (Views.chargeForm (rolesOf ctx) (Some msg))
+                setStatusCode 400 >=> htmlView (Views.chargeForm (rolesOf ctx) (Some msg) None)
 
             // 合成層で貨物（重量・種別・状態）と荷主の法人判定を解決する（BC 分離）。
             match CargoTracker.Booking.Infrastructure.CargoQueries.findChargeBasis conn bookingIdStr with
             | None -> return! renderErr "予約が見つかりません。" next ctx
             | Some(weight, cargoType, shipperId, _bookingStatus) ->
+                // US21（IT8）: 距離は確定経路の区間数から自動導出し、手入力は 1km あたり単価とする。
+                // 旧来の distanceFactor 直接指定も後方互換で受け付ける。
+                let legCount =
+                    CargoTracker.Booking.Infrastructure.CargoQueries.findRouteLegs conn bookingIdStr
+                    |> List.length
+
                 let distanceResult =
-                    match Decimal.TryParse(get "distanceFactor") with
-                    | true, v when v > 0m -> Ok v
-                    | _ -> Error "距離係数は正の数で入力してください。"
+                    match Decimal.TryParse(get "unitPrice") with
+                    | true, up when up > 0m -> Ok(CargoTracker.Billing.Domain.Charge.distanceFactorOf legCount up)
+                    | _ ->
+                        match Decimal.TryParse(get "distanceFactor") with
+                        | true, v when v > 0m -> Ok v
+                        | _ -> Error "単価は正の数で入力してください。"
 
                 let categoryResult =
                     CargoTracker.Billing.Domain.CargoCategory.ofString cargoType
