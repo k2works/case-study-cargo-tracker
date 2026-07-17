@@ -22,6 +22,7 @@
 | IT5 追跡・荷役 | [iteration_plan-5.md](./iteration_plan-5.md) | [retrospective-5.md](./retrospective-5.md) | [iteration_report-5.md](./iteration_report-5.md) | 開発完了 |
 | IT6 例外対応 | [iteration_plan-6.md](./iteration_plan-6.md) | [retrospective-6.md](./retrospective-6.md) | [iteration_report-6.md](./iteration_report-6.md) | 開発完了 |
 | IT7 割引・請求・精算 | [iteration_plan-7.md](./iteration_plan-7.md) | [retrospective-7.md](./retrospective-7.md) | [iteration_report-7.md](./iteration_report-7.md) | 開発完了 |
+| IT8 予備・強化（出荷品質） | [iteration_plan-8.md](./iteration_plan-8.md) | - | - | 計画済み |
 
 イテレーション開始時に行を追加します。
 
