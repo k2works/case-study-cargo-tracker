@@ -103,6 +103,7 @@ nav:
       - イテレーション 5 計画: development/iteration_plan-5.md
       - イテレーション 5 ふりかえり: development/retrospective-5.md
       - イテレーション 5 完了報告書: development/iteration_report-5.md
+      - イテレーション 6 計画: development/iteration_plan-6.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
