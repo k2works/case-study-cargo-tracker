@@ -18,6 +18,7 @@
     <Compile Include="TrackingDomainTests.fs" />
     <Compile Include="TrackingApplicationTests.fs" />
     <Compile Include="HandlingDomainTests.fs" />
+    <Compile Include="BillingDomainTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,6 +39,7 @@
     <ProjectReference Include="..\..\src\CargoTracker.Routing\CargoTracker.Routing.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Tracking\CargoTracker.Tracking.fsproj" />
     <ProjectReference Include="..\..\src\CargoTracker.Handling\CargoTracker.Handling.fsproj" />
+    <ProjectReference Include="..\..\src\CargoTracker.Billing\CargoTracker.Billing.fsproj" />
   </ItemGroup>
 
 </Project>

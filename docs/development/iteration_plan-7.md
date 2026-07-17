@@ -135,10 +135,10 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `Money`（int64 + `CurrencyCode`・`add`/`multiply` 銀行家丸め）・`DiscountRate`（0〜30% スマートコンストラクタ）を Billing ドメインに実装 + FsCheck | 3h | - | [ ] |
-| 1.2 | `DiscountPolicy` DU・`calculateRate`（法人/ボリューム/シーズン/なし）と `BillingShipperId`（IsCorporate 判定）を実装 | 3h | - | [ ] |
-| 1.3 | `Invoice` 集約・`generate`（割引適用・最終金額 ROP 合成）・`PaymentState` DU・`execute`（ConfirmPayment/MarkOverdue/IssueRefund の遷移ガード） | 4h | - | [ ] |
-| 1.4 | ドメインユニット（FsCheck: Money 丸め・割引上限 30%・PaymentState 不正遷移拒否・法人/個人分岐） | 4h | - | [ ] |
+| 1.1 | `Money`（int64 + `CurrencyCode`・`add`/`multiply` 銀行家丸め）・`DiscountRate`（0〜30% スマートコンストラクタ）を Billing ドメインに実装 + FsCheck | 3h | - | [x] |
+| 1.2 | `DiscountPolicy` DU・`calculateRate`（法人/ボリューム/シーズン/なし）と `BillingShipperId`（IsCorporate 判定）を実装 | 3h | - | [x] |
+| 1.3 | `Invoice` 集約・`generate`（割引適用・最終金額 ROP 合成）・`PaymentState` DU・`execute`（ConfirmPayment/MarkOverdue/IssueRefund の遷移ガード） | 4h | - | [x] |
+| 1.4 | ドメインユニット（FsCheck: Money 丸め・割引上限 30%・PaymentState 不正遷移拒否・法人/個人分岐） | 4h | - | [x] |
 
 **小計**: 14h（理想時間）
 
@@ -180,14 +180,14 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| Billing ドメイン | 6 | 14h | [ ] |
+| Billing ドメイン | 6 | 14h | [x] |
 | 割引ポリシー管理 | 3 | 9h | [ ] |
 | 料金算出・精算・BC 連携 | 7 | 18h | [ ] |
 | 通知集約・Release 1.1 出荷 | - | 8h | [ ] |
 | **合計** | **16** | **49h** | |
 
 **1 SP あたり**: 約 3.1h（改善・出荷タスク 8h を含む）
-**進捗率**: 0% (0/16 SP)
+**進捗率**: 38% (6/16 SP・Billing ドメイン完了)
 
 ---
 
