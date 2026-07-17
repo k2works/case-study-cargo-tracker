@@ -42,9 +42,11 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 | 出典 | 指摘 | 反映先タスク | 対応方針 |
 |------|------|-------------|----------|
 | retro-6 Try#4 | 終盤パターン（集約拡張＋DU 写像永続化＋合成層 ACL＋受け入れ縦貫通）を Billing へ適用 | 全タスク | 本 IT の基本方針 |
-| retro-6 Try#1 / IT6 レビュー中#3 | 通知を合成層ヘルパへ集約し方針統一 | 4.1 | 精算書通知の実装とセットで通知ヘルパを導入 |
+| retro-6 Try#1 / IT6 レビュー中#3 | 通知を合成層ヘルパへ集約し方針統一・notification_log 書き込みの重複解消 | 4.1 | 精算書通知の実装とセットで通知ヘルパを導入し Billing/例外/追跡通知を共通化 |
 | retro-6 Try#3 | ui_design の例外解決 state・例外種別コード統一（IT6 で反映済み。着手前に再確認） | 着手前チェック | validating-iteration-plan で確認 |
-| IT6 レビュー中#3（DRY） | notification_log 書き込みの重複解消 | 4.1 | Billing 通知と共通ヘルパ化 |
+| IT6 レビュー中#4 | 例外フォームに誤登録防止の確認チェックを追加（荷役フォームと同方式で統一） | 4.1 | 通知ヘルパ集約と同じリファクタ枠で例外フォームに確認チェックを追加 |
+| IT6 レビュー中#5 | 通知/エスカレーション失敗時の挙動を検証（部分失敗の不整合） | 3.6 / 4.1 | 精算・例外通知の失敗経路を受け入れ/統合テストで固定 |
+| IT6 レビュー高6/高7 | US19 新到着予定日欄・通知の実メール送信 | — | 保留（US19 改善・通知強化 IT。本 IT スコープ外・明示的保留） |
 
 ---
 
@@ -146,7 +148,7 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 |---|--------|---------|------|------|
 | 2.1 | `DiscountPolicy` マスタのドメイン（有効期限・適用条件・無効化）とリポジトリポート | 2h | - | [ ] |
 | 2.2 | マイグレーション `discount_policy`（新規・data-model へ追加）・Donald リポジトリ | 2h | - | [ ] |
-| 2.3 | 管理画面（`/admin/discount-policies` 一覧/新規/編集/無効化・ROLE_ADMIN）・navbar/dashboard 整合・検証テスト | 3h | - | [ ] |
+| 2.3 | 管理画面（`/admin/discount-policies` 一覧・`/new` 登録・`/{id}/edit` 編集・`/{id}/deactivate` 無効化・ROLE_ADMIN）・navbar（管理設定）/dashboard 整合・検証テスト | 3h | - | [ ] |
 | 2.4 | 割引率範囲外（0〜30% 逸脱）のバリデーションと受け入れテスト | 2h | - | [ ] |
 
 **小計**: 9h（理想時間）
@@ -155,12 +157,12 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 料金算出ユースケース（引取済 Cargo の輸送実績→基本料金・例外時の料金調整明細）・アプリ層 | 3h | - | [ ] |
+| 3.1 | 料金算出ユースケース（引取済 Cargo の輸送実績→基本料金＝距離係数×重量×貨物種別係数・例外時の料金調整明細）・アプリ層 | 3h | - | [ ] |
 | 3.2 | 法人割引適用（Shipper の `Corporate` 割引率・有効な `DiscountPolicy` 解決を合成層 ACL で取得） | 3h | - | [ ] |
 | 3.3 | 精算書発行→荷主通知・`PaymentGatewayPort`（決済 ACL）で入金確認・WireMock.Net で契約固定 | 3h | - | [ ] |
-| 3.4 | BC 連携: `InvoiceRequested`（Booking Delivered/引取済 契機）→ 料金算出開始・精算完了→ Booking `Settle`（Settled 同期）を post-commit で結線 | 3h | - | [ ] |
-| 3.5 | 期限超過の未払い通知（`MarkOverdue`→経理通知）・料金算出/精算の Web 画面 | 3h | - | [ ] |
-| 3.6 | 受け入れテスト（料金算出→確定→精算書→通知→入金確認→Settled 同期の一気通貫・法人/個人分岐） | 3h | - | [ ] |
+| 3.4 | BC 連携: `InvoiceRequested`（Booking Delivered/引取済 契機）→ 料金算出開始・精算完了→ Booking へ `Settle` コマンド（`BookingState` に `Settled` ケースを段階追加し Settled 同期）を post-commit で結線 | 3h | - | [ ] |
+| 3.5 | 期限超過の未払い通知（`MarkOverdue`→経理通知）・料金算出/精算の Web 画面（`/billing/invoices` 系・ROLE_BILLING） | 3h | - | [ ] |
+| 3.6 | 受け入れテスト（料金算出→確定→精算書→通知→入金確認→Settled 同期の一気通貫・法人/個人分岐・通知失敗時の部分失敗挙動＝IT6 レビュー中#5） | 3h | - | [ ] |
 
 **小計**: 18h（理想時間）
 
@@ -168,7 +170,7 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | notification_log 書き込みを合成層ヘルパへ集約し、精算通知・例外通知・追跡通知の方針を統一（retro-6 Try#1・IT6 レビュー中#3 DRY） | 3h | - | [ ] |
+| 4.1 | notification_log 書き込みを合成層ヘルパへ集約し、精算通知・例外通知・追跡通知の方針を統一（retro-6 Try#1・IT6 レビュー中#3 DRY）。あわせて例外フォームに誤登録防止の確認チェックを追加（IT6 レビュー中#4・荷役フォームと同方式） | 3h | - | [ ] |
 | 4.2 | Release 1.1 E2E に精算シナリオを追加（US13→…→US21→US23：予約確定〜精算完了の全体縦貫通） | 2h | - | [ ] |
 | 4.3 | Release 1.1 出荷（`developing-release`: 品質ゲート→バージョンバンプ→CHANGELOG→tag）・リリース完了報告書 | 3h | - | [ ] |
 
@@ -282,7 +284,11 @@ Invoice ..> DiscountPolicy : applyDiscount
 @enduml
 ```
 
-> 実装対象は [ドメインモデル設計](../design/domain-model.md#6-billing-context精算コンテキスト) の Billing Context（§6）に定義済み。`Money`（int64 + CurrencyCode・銀行家丸め）・`DiscountRate`（0〜30%）・`PaymentState` DU により「Confirmed なのに paidAt が null」等の不正状態を型排除する。割引ポリシーマスタ（US-ADM-01）は domain-model の `DiscountPolicy` DU を有効期限・適用条件付きのマスタへ拡張する（domain-model へ反映）。
+> 実装対象は [ドメインモデル設計](../design/domain-model.md#6-billing-context精算コンテキスト) の Billing Context（§6）に定義済み。`Money`（int64 + CurrencyCode・銀行家丸め）・`DiscountRate`（0〜30%）・`PaymentState` DU により「Confirmed なのに paidAt が null」等の不正状態を型排除する。基本料金＝距離係数×重量（kg）×貨物種別係数（General 1.0／Hazardous 1.8／Refrigerated 1.5）、割引後料金＝基本料金×(1−割引率)（domain-model 料金計算ロジック準拠）。
+>
+> **注（Booking 拡張・domain-model 反映）**: 精算完了で予約を `Settled` へ同期するが、現状 `BookingState`（Booking.Domain）は Preliminary/RoutingRequested/RouteProposed/Confirmed/Cancelled まで（IT4）で `Settled`・`Delivered` 未実装。IT7 で `Settled` ケースを段階追加し（[[adr-migration-via-maybe]] 方式の段階導入）、`Settle` コマンドと BC 連携を結線する。domain-model のビジネスルール（Invoice は Delivered 後に発行）に対し、本 IT は Tracking の「引取済（Claimed）」を配送完了の契機として扱う割り切りとし、Booking の Delivered 実体化は本 IT のスコープに含める範囲を最小化する（着手時に validating-design で確認）。
+>
+> **注（消費税・付加料金・data-model/ui_design 反映）**: data-model の `invoice`（`tax_rate`/`tax_amount`）と ui_design の精算書詳細（消費税 10%・燃油サーチャージ）は税・付加料金を含むが、domain-model の `Invoice`（BaseAmount/DiscountRate/FinalAmount）は税を持たない。本 IT は domain-model に従い基本料金＋割引を実装し、消費税・付加料金は `invoice_line_item`（明細）＋ `tax_amount` カラムで表現する方針を IT7 で確定し domain-model へ反映する（設計トピックの未確定事項）。
 
 ### 状態遷移（PaymentState）
 
@@ -343,6 +349,10 @@ inv ||--o{ pay
 
 > `invoice`・`invoice_line_item`・`payment` は [データモデル設計](../design/data-model.md) に定義済み（マイグレーション新規）。`discount_policy` は US-ADM-01 用に新規追加する（data-model へ反映）。マイグレーション番号は 0011（tracking_exception）に続き 0012（discount_policy）・0013（invoice/invoice_line_item/payment）を予定。金額は `Money`（int64 最小通貨単位 + 通貨コード）を `*_value`／`*_currency` の 2 カラムへ写像する。
 
+### ユーザーインターフェース（ビュー）
+
+> [ui_design.md](../design/ui_design.md) の画面一覧・ナビゲーション構成表を正とする。新規画面は 精算書一覧（`/billing/invoices`）・料金算出（`/billing/invoices/new`）・精算書詳細（`/billing/invoices/{invoiceId}`）＝ナビ「請求管理」ROLE_BILLING、割引ポリシー一覧/登録/編集（`/admin/discount-policies[/new|/{id}/edit]`）＝ナビ「管理設定」ROLE_ADMIN。ナビバーは `{/ <b>CargoTracker</b> | … | <b>請求管理</b> | [ログアウト] }` 形式、テーブルヘッダーは `**太字**`、金額内訳は基本運賃・割引・（明細で消費税/付加料金）・合計を表示する。「管理設定」は IT6 まで placeholder のため、本 IT で実画面化し navbar（既存項目）・dashboard・ナビ検証テストに反映する。
+
 ### インタラクション
 
 ```plantuml
@@ -351,32 +361,46 @@ title 割引ポリシー管理・精算の画面遷移図
 
 [*] --> 割引ポリシー一覧
 state 割引ポリシー一覧 : /admin/discount-policies（ROLE_ADMIN）
-割引ポリシー一覧 --> ポリシー登録 : [新規登録]
-ポリシー登録 --> 割引ポリシー一覧 : 登録成功（PRG）
-ポリシー登録 --> ポリシー登録 : 割引率範囲外（0〜30%）エラー
-割引ポリシー一覧 --> ポリシー編集 : [編集]
-ポリシー編集 --> 割引ポリシー一覧 : 更新/無効化成功（PRG）
+state 割引ポリシー登録 : /admin/discount-policies/new
+state 割引ポリシー編集 : /admin/discount-policies/{id}/edit
+割引ポリシー一覧 --> 割引ポリシー登録 : [新規登録] ボタン
+割引ポリシー登録 --> 割引ポリシー一覧 : 登録成功（PRG）
+割引ポリシー登録 --> 割引ポリシー登録 : 割引率範囲外（0〜30%）エラー（自己ループ）
+割引ポリシー一覧 --> 割引ポリシー編集 : 行の [編集] リンク
+割引ポリシー編集 --> 割引ポリシー一覧 : 更新/無効化成功（PRG）
 
-[*] --> 料金算出
-state 料金算出 : /billing/{bookingId}/new（ROLE_ACCOUNTING）
-料金算出 --> 精算書詳細 : 確定（PRG・法人割引適用・InvoiceCreated）
-state 精算書詳細 : /billing/{invoiceNumber}
-精算書詳細 --> 精算書詳細 : 入金確認（ConfirmPayment→Settled 同期・PRG）
+[*] --> 精算書一覧
+state 精算書一覧 : /billing/invoices（ROLE_BILLING）
+state 料金算出 : /billing/invoices/new
+state 精算書詳細 : /billing/invoices/{invoiceId}
+精算書一覧 --> 料金算出 : [+ 新規精算書発行] ボタン
+料金算出 --> 料金算出 : 料金調整・再計算（htmx hx-post・#amount-summary 部分更新）
+料金算出 --> 精算書詳細 : 料金確定成功（PRG・法人割引適用・InvoiceCreated）
+料金算出 --> 料金算出 : バリデーションエラー（自己ループ）
+精算書一覧 --> 精算書詳細 : 行クリック
+精算書詳細 --> 精算書詳細 : 支払い確認登録（ConfirmPayment→Booking Settled 同期・PRG）
 @enduml
 ```
 
+> フィードバック規約（ui_design 準拠）: 成功は PRG リダイレクト＋成功アラート（`alert-success`）、バリデーション（割引率範囲外・状態不正）は同一フォームへ `alert-danger` 再表示、料金調整の再計算は htmx（`hx-post`＋`hx-target="#amount-summary"`）で部分更新する。
+
 ### API 設計
+
+> URL・ロールは [ui_design.md](../design/ui_design.md) の画面一覧・ナビゲーション構成表を正とする（請求管理＝ROLE_BILLING、割引ポリシー＝ROLE_ADMIN）。
 
 | メソッド | エンドポイント | 説明 |
 |---------|---------------|------|
 | GET | /admin/discount-policies | 割引ポリシー一覧（ROLE_ADMIN） |
+| GET | /admin/discount-policies/new | ポリシー登録フォーム |
 | POST | /admin/discount-policies | ポリシー登録 |
+| GET | /admin/discount-policies/{id}/edit | ポリシー編集フォーム |
 | POST | /admin/discount-policies/{id}/edit | ポリシー変更 |
 | POST | /admin/discount-policies/{id}/deactivate | ポリシー無効化 |
-| GET | /billing/{bookingId}/new | 料金算出フォーム（ROLE_ACCOUNTING） |
-| POST | /billing | 料金確定・精算書発行 |
-| GET | /billing/{invoiceNumber} | 精算書詳細 |
-| POST | /billing/{invoiceNumber}/confirm | 入金確認（Settled 同期） |
+| GET | /billing/invoices | 精算書一覧（ROLE_BILLING） |
+| GET | /billing/invoices/new | 料金算出フォーム（ROLE_BILLING） |
+| POST | /billing/invoices | 料金確定・精算書発行 |
+| GET | /billing/invoices/{invoiceId} | 精算書詳細 |
+| POST | /billing/invoices/{invoiceId}/confirm | 入金確認（Settled 同期） |
 
 ### ADR
 
