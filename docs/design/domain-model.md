@@ -1275,7 +1275,7 @@ module HandlingActivity =
 
 > **IT7 実装状況**: US-ADM-01/US21/US22/US23 を実装。`Money`（int64 + `CurrencyCode`・`add`/`multiply` 銀行家丸め）・`DiscountRate`（0〜30%）・`DiscountPolicy` DU＋`calculateRate`・`BillingShipperId`（`IsCorporate` 内包）・`InvoiceId`/`BillingBookingId`・`Invoice` 集約＋`generate`・`PaymentState` DU＋`execute`（ConfirmPayment/MarkOverdue/IssueRefund の遷移ガード）・`CargoCategory`＋`Charge.calculateBase`（距離係数×重量×貨物種別係数）・`DiscountPolicyMaster`（有効期限・`isEffectiveOn`・`deactivate`・US-ADM-01 マスタ）を実装。イベントは BC ローカル DU（`BillingEvent`）。永続化は discount_policy（0012）・invoice/invoice_line_item/payment（0013）。料金算出の貨物・荷主データは合成層 ACL で解決（ADR-0013）。決済 ACL（`PaymentGatewayPort`）はスタブ。
 
-> **IT8 実装状況**: US21 距離自動導出（`Charge.deriveDistance`/`distanceFactorOf`）・確定前輸送実績プレビュー、US22 消費税（`ConsumptionTax` 標準 10%・`Invoice.TaxRate`/`TaxAmount`・`Invoice.totalAmount` で税込総額）を実装。精算書詳細に金額内訳（基本料金／割引／小計／消費税／請求総額）を表示。マイグレーション 0014 で `invoice.tax_rate`/`tax_amount`（nullable）を追加。US21 受入6 例外時料金調整（`Charge.applyAdjustment` で基本料金を減額。未解決の輸送例外がある予約のみ調整入力欄を表示）を実装。付加料金（`invoice_line_item`）は継続。
+> **IT8 実装状況**: US21 距離自動導出（`Charge.deriveDistance`/`distanceFactorOf`）・確定前輸送実績プレビュー、US22 消費税（`ConsumptionTax` 標準 10%・`Invoice.TaxRate`/`TaxAmount`・`Invoice.totalAmount` で税込総額）を実装。精算書詳細に金額内訳（基本料金／割引／小計／消費税／請求総額）を表示。マイグレーション 0014 で `invoice.tax_rate`/`tax_amount`（nullable）を追加。US21 受入6 例外時料金調整（`Charge.applyAdjustment` で基本料金を減額。未解決の輸送例外がある予約のみ調整入力欄を表示）を実装。US23 返金導線（`Billing.refund`＝Confirmed→Refunded・過誤請求/キャンセル時）を実装。`CurrencyCode` に USD を追加し多通貨演算の不変条件（`Money.add` 異通貨拒否）を検証可能化。精算完了の Settled 同期は `BookingSettled` イベント駆動の集約更新へ移行（ADR-0013 改訂）。決済 ACL は実 HTTP アダプタ＋契約固定テスト（ADR-0014 承認）。付加料金（`invoice_line_item`）は継続。
 
 ### ドメインモデル図
 
