@@ -54,6 +54,9 @@ let private seedDatabase (connStr: string) : unit =
             INSERT INTO cargo
                 (booking_id, shipper_id, cargo_type, weight, origin_unlocode, destination_unlocode, arrival_deadline, booking_status, created_at, updated_at, version)
             VALUES ('BKG-BILL01', '%s', 'GENERAL', 500, 'JPTYO', 'USLAX', '2026-12-01', 'CLAIMED', '2026-10-06', '2026-10-06', 0);
+            INSERT INTO discount_policy
+                (policy_type, discount_rate, applicable_condition, effective_from, effective_to, active, created_at, updated_at)
+            VALUES ('CORPORATE_STANDARD', 0.10, '法人標準', '2026-01-01', NULL, 1, '2026-10-06', '2026-10-06');
             """
             hash
             shipperUuid
@@ -143,6 +146,10 @@ let ``経理担当者が料金算出→精算書発行→入金確認まで一�
         let list = authedGet client billing "/billing/invoices"
         let listBody = run (list.Content.ReadAsStringAsync())
         listBody |> should haveSubstring "精算済")
+
+// 注: マスタ率が権威であること（マスタの discount_rate を使い、ハードコード率を使わない）は、
+// 上記受け入れテストがシードの割引ポリシー（10%）に依存して 45000 になる点と、
+// BillingDomainTests の resolveApplicableRate（5 ケース）で担保する。
 
 [<Fact>]
 [<Trait("Category", "Integration")>]

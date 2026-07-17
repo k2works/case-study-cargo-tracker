@@ -118,6 +118,46 @@ let ``割引方針の toString/ofString は往復する`` () =
         | Ok back -> back |> should equal p
         | Error e -> failwithf "%A" e
 
+// ---- DiscountPolicyMaster.resolveApplicableRate（US22・マスタ権威・IT8）----
+
+let private rateOf v =
+    match DiscountRate.create v with
+    | Ok r -> r
+    | Error e -> failwithf "%A" e
+
+let private masterOf policy rateVal =
+    DiscountPolicyMaster.create policy (rateOf rateVal) "" (DateOnly(2026, 10, 1)) None
+
+[<Fact>]
+let ``法人荷主は有効な CorporateStandard マスタの率を適用する（マスタ権威）`` () =
+    // マスタの率 12% を採用（ハードコード 10% ではない）
+    let masters = [ masterOf CorporateStandard 0.12m ]
+    let r = DiscountPolicyMaster.resolveApplicableRate masters true (jpy 400_000L)
+    DiscountRate.value r |> should equal 0.12m
+
+[<Fact>]
+let ``個人荷主は CorporateStandard マスタがあっても割引 0`` () =
+    let masters = [ masterOf CorporateStandard 0.12m ]
+    let r = DiscountPolicyMaster.resolveApplicableRate masters false (jpy 400_000L)
+    DiscountRate.value r |> should equal 0.0m
+
+[<Fact>]
+let ``100 万円以上はボリューム割引マスタが適用される`` () =
+    let masters = [ masterOf VolumeDiscount 0.15m ]
+    let r = DiscountPolicyMaster.resolveApplicableRate masters false (jpy 1_000_000L)
+    DiscountRate.value r |> should equal 0.15m
+
+[<Fact>]
+let ``複数該当時は割引率が最大のマスタを採用する`` () =
+    let masters = [ masterOf CorporateStandard 0.10m; masterOf Seasonal 0.20m ]
+    let r = DiscountPolicyMaster.resolveApplicableRate masters true (jpy 400_000L)
+    DiscountRate.value r |> should equal 0.20m
+
+[<Fact>]
+let ``該当マスタが無ければ割引 0`` () =
+    let r = DiscountPolicyMaster.resolveApplicableRate [] true (jpy 400_000L)
+    DiscountRate.value r |> should equal 0.0m
+
 // ---- Invoice.generate ----
 
 let private bookingId () =

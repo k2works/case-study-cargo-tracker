@@ -103,6 +103,43 @@ module Billing =
             return invoice
         }
 
+    /// 料金算出→精算書発行（割引率を直接適用・IT8・US22）。割引ポリシーマスタ（US-ADM-01）から
+    /// 合成層が解決した割引率を適用し、マスタの `discount_rate` を権威とする。同一予約の重複発行は拒否する。
+    let generateInvoiceWithRate
+        (repo: InvoiceRepository)
+        (notifier: BillingNotifier)
+        (newId: IdGenerator)
+        (bookingId: BillingBookingId)
+        (shipperId: BillingShipperId)
+        (baseAmount: Money)
+        (discountRate: DiscountRate)
+        (issuedAt: DateTimeOffset)
+        : Async<Result<Invoice, DomainError>> =
+        asyncResult {
+            let! existing = repo.FindByBookingId bookingId
+
+            do!
+                match existing with
+                | Some _ -> Error(BusinessRuleViolation("AlreadyInvoiced", "この予約はすでに精算書が発行されています。"))
+                | None -> Ok()
+
+            let invoiceId = InvoiceId.generate newId
+
+            let invoice, _events =
+                Invoice.generateWithRate invoiceId bookingId shipperId baseAmount discountRate issuedAt
+
+            do! repo.Save invoice
+
+            let message =
+                sprintf
+                    "精算書 %s を発行しました。請求金額 %d 円・支払期限は発行から 30 日です。"
+                    (InvoiceId.value invoiceId)
+                    invoice.FinalAmount.Amount
+
+            do! notifier.Notify bookingId message
+            return invoice
+        }
+
     /// 入金確認（US23）。決済 ACL で入金を確認し、精算書を Confirmed へ遷移する。
     /// 呼び出し側（合成層）は Confirmed 後に Booking を Settled へ同期する。
     let confirmPayment

@@ -1805,11 +1805,22 @@ let private invoiceCreate: HttpHandler =
                             category
                             CargoTracker.Billing.Domain.JPY
 
-                    let policy =
-                        if isCorporate then
-                            CargoTracker.Billing.Domain.CorporateStandard
-                        else
-                            CargoTracker.Billing.Domain.NoDiscount
+                    // US22（IT8）: 割引ポリシーマスタ（US-ADM-01）の有効ポリシーから割引率を解決する。
+                    // マスタの discount_rate を権威とし、ハードコード率は使わない（IT7 レビュー高#2）。
+                    let today = DateOnly.FromDateTime((systemClock ()).UtcDateTime)
+
+                    let effectiveMasters =
+                        CargoTracker.Billing.Infrastructure.DiscountPolicyRepository.create conn systemClock
+                        |> fun r -> r.FindEffective today |> Async.RunSynchronously
+                        |> function
+                            | Ok ms -> ms
+                            | Error _ -> []
+
+                    let discountRate =
+                        CargoTracker.Billing.Domain.DiscountPolicyMaster.resolveApplicableRate
+                            effectiveMasters
+                            isCorporate
+                            baseAmount
 
                     match
                         CargoTracker.Billing.Domain.BillingBookingId.create bookingIdStr,
@@ -1820,14 +1831,14 @@ let private invoiceCreate: HttpHandler =
                             CargoTracker.Billing.Infrastructure.InvoiceRepository.create conn systemClock
 
                         let! result =
-                            CargoTracker.Billing.Application.Billing.generateInvoice
+                            CargoTracker.Billing.Application.Billing.generateInvoiceWithRate
                                 repo
                                 (billingNotifier conn)
                                 systemNewId
                                 bid
                                 sid
                                 baseAmount
-                                policy
+                                discountRate
                                 (systemClock ())
 
                         match result with

@@ -220,6 +220,27 @@ module DiscountPolicyMaster =
     /// 無効化する（US-ADM-01 受入 5）。無効化されたポリシーは割引計算に使われない。
     let deactivate (m: DiscountPolicyMaster) : DiscountPolicyMaster = { m with Active = false }
 
+    /// 荷主・金額に適用する割引率をマスタから解決する（US22・IT8）。マスタの `discount_rate` を権威とする。
+    /// 適用優先: 法人荷主は CorporateStandard、次に金額条件を満たす VolumeDiscount（100 万円以上）、
+    /// 次に Seasonal。複数該当時は割引率が最大のポリシーを採用する。該当なしは 0%。
+    /// masters は「有効な（isEffectiveOn を満たす）」ポリシーのみを渡す前提。
+    let resolveApplicableRate (masters: DiscountPolicyMaster list) (isCorporate: bool) (amount: Money) : DiscountRate =
+        let applicable =
+            masters
+            |> List.filter (fun m ->
+                match m.Policy with
+                | CorporateStandard -> isCorporate
+                | VolumeDiscount -> amount.Amount >= 1_000_000L
+                | Seasonal -> true
+                | NoDiscount -> false)
+
+        match applicable with
+        | [] -> DiscountRate.zero
+        | _ ->
+            applicable
+            |> List.maxBy (fun m -> DiscountRate.value m.Rate)
+            |> fun m -> m.Rate
+
 /// 支払い状態：各ケースに必要な時刻データを埋め込む。
 type PaymentState =
     | Pending of dueDate: DateTimeOffset
@@ -268,7 +289,34 @@ module InvoiceCommand =
 
 module Invoice =
 
-    /// 発行：割引適用と最終金額計算を合成。支払期限は発行日 + 30 日（ビジネスルール 3）。
+    /// 発行（割引率を直接指定）：割引適用と最終金額計算を合成。支払期限は発行日 + 30 日（ビジネスルール 3）。
+    /// 割引ポリシーマスタ（US-ADM-01）の率を権威とする場合はこの関数に解決済み率を渡す（IT8・US22）。
+    let generateWithRate
+        (invoiceId: InvoiceId)
+        (bookingId: BillingBookingId)
+        (shipperId: BillingShipperId)
+        (baseAmount: Money)
+        (discountRate: DiscountRate)
+        (issuedAt: DateTimeOffset)
+        : Invoice * BillingEvent list =
+        let finalAmount =
+            baseAmount |> Money.multiply (1.0m - DiscountRate.value discountRate)
+
+        let dueDate = issuedAt.AddDays 30.0
+
+        let invoice =
+            { InvoiceId = invoiceId
+              CargoBookingId = bookingId
+              ShipperId = shipperId
+              BaseAmount = baseAmount
+              DiscountRate = discountRate
+              FinalAmount = finalAmount
+              IssuedAt = issuedAt
+              Payment = Pending dueDate }
+
+        invoice, [ InvoiceCreated(invoiceId, bookingId, finalAmount) ]
+
+    /// 発行（割引方針から率を導出）：`DiscountPolicy` DU のハードコード率で発行する（IT7 互換）。
     let generate
         (invoiceId: InvoiceId)
         (bookingId: BillingBookingId)
@@ -279,23 +327,7 @@ module Invoice =
         : Result<Invoice * BillingEvent list, DomainError> =
         match DiscountPolicy.calculateRate shipperId baseAmount policy with
         | Error e -> Error e
-        | Ok discountRate ->
-            let finalAmount =
-                baseAmount |> Money.multiply (1.0m - DiscountRate.value discountRate)
-
-            let dueDate = issuedAt.AddDays 30.0
-
-            let invoice =
-                { InvoiceId = invoiceId
-                  CargoBookingId = bookingId
-                  ShipperId = shipperId
-                  BaseAmount = baseAmount
-                  DiscountRate = discountRate
-                  FinalAmount = finalAmount
-                  IssuedAt = issuedAt
-                  Payment = Pending dueDate }
-
-            Ok(invoice, [ InvoiceCreated(invoiceId, bookingId, finalAmount) ])
+        | Ok discountRate -> Ok(generateWithRate invoiceId bookingId shipperId baseAmount discountRate issuedAt)
 
     /// 支払い状態遷移（ビジネスルール 3・4）。不正遷移は InvalidStateTransition で拒否する。
     let execute (invoice: Invoice) (command: InvoiceCommand) : Result<Invoice * BillingEvent list, DomainError> =
