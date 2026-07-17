@@ -195,18 +195,25 @@ module TrackingRepository =
 
     let create (conn: IDbConnection) (clock: Clock) : TrackingRepository =
 
-        /// tracking_handling_event を集約ルート経由で全置換する（Events は新しい順→seq は古い順）。
+        /// tracking_handling_event を追記（append-only）で永続化する（レビュー中#2）。
+        /// イベントは不変・追加のみのため、既に永続化済みの seq_number を超える分だけを INSERT する
+        /// （全置換 DELETE→INSERT を廃止し、イベントソースの追記原則と監査整合を守る）。
         let syncEvents (tx: IDbTransaction) (nowStr: string) (trackingNumber: string) (activity: TrackingActivity) =
-            conn
-            |> Db.newCommand
-                "DELETE FROM tracking_handling_event WHERE tracking_id = (SELECT id FROM tracking_activity WHERE tracking_number = @tn)"
-            |> Db.setTransaction tx
-            |> Db.setParams [ "tn", SqlType.String trackingNumber ]
-            |> Db.exec
+            let persistedCount =
+                conn
+                |> Db.newCommand
+                    "SELECT COUNT(*) AS cnt FROM tracking_handling_event WHERE tracking_id = (SELECT id FROM tracking_activity WHERE tracking_number = @tn)"
+                |> Db.setTransaction tx
+                |> Db.setParams [ "tn", SqlType.String trackingNumber ]
+                |> Db.querySingle (fun rd -> rd.ReadInt32 "cnt")
+                |> Option.defaultValue 0
 
+            // Events は新しい順。古い順に並べ、既存の persistedCount 件を除いた新規分のみ追記する。
             activity.Events
             |> List.rev
-            |> List.iteri (fun i event ->
+            |> List.indexed
+            |> List.filter (fun (i, _) -> i >= persistedCount)
+            |> List.iter (fun (i, event) ->
                 conn
                 |> Db.newCommand
                     """

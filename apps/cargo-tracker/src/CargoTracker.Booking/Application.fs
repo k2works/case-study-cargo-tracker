@@ -175,8 +175,21 @@ module RouteAssignment =
             // 永続化コミット後にのみイベントを順次発火する（ロールバック時は未発火）。
             // post-commit のため永続化は既に確定済み。発火はベストエフォートとし、失敗しても
             // 確定済みの結果を巻き戻さない（実消費への差し替え時はディスパッチャ側でリトライ/DLQ を担う）。
+            // dispatch 例外は握り潰さずログに残す（可観測性・レビュー中#1）。
             for e in events do
-                do! (dispatcher.Dispatch e |> Async.Catch |> Async.map (fun _ -> Ok()))
+                do!
+                    (dispatcher.Dispatch e
+                     |> Async.Catch
+                     |> Async.map (fun result ->
+                         match result with
+                         | Choice1Of2() -> ()
+                         | Choice2Of2(ex: exn) ->
+                             eprintfn
+                                 "[Booking.applyCommand] post-commit dispatch 例外を握り潰し（結果は確定済み）: %A / %s"
+                                 e
+                                 ex.Message
+
+                         Ok()))
 
             return updated, events
         }

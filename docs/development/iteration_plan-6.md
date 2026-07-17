@@ -144,10 +144,10 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 | 4.2 | 追跡照会の所有者制御方針を ADR 化（ADR-0011: 公開=capability トークン・認証=RBAC・所有者チェックは非導入・retro-5 Try#4） | 2h | - | [x] |
 | 4.3 | US18 追跡照会に現在地・推定到着日を表示（現在地=最新イベント場所・ETA=合成層で cargo.arrival_deadline 解決・レビュー高#5） | 2h | - | [x] |
 | 4.4 | 公開追跡 URL を荷主へ提示する導線を追加（追跡番号発行通知に `/public/tracking/{token}` を同梱・レビュー高#6） | 2h | - | [x] |
-| 4.5 | `syncEvents` を全置換（DELETE→INSERT）から append-only に変更（レビュー中#2） | 2h | - | [ ] |
-| 4.6 | 通知の booking_id/recipient を TrackingNumber から予約 ID へ是正（レビュー中#3・完了）。dispatch 例外ログ（中#1）は残タスク | 3h | - | [~] |
+| 4.5 | `syncEvents` を全置換（DELETE→INSERT）から append-only（未永続分のみ追記）に変更（レビュー中#2） | 2h | - | [x] |
+| 4.6 | 通知の booking_id/recipient を予約 ID へ是正（中#3）・`applyCommand` の dispatch 例外をログ出力（中#1） | 3h | - | [x] |
 | 4.7 | US16 荷役登録の確認ステップ明示（中#4・残）・`DateTimeOffset.Parse` 例外経路のテスト追加（中#6・完了） | 2h | - | [~] |
-| 4.8 | Release 1.0 の E2E に例外シナリオ（US19/US20）を追加し一気通貫を維持 | 2h | - | [ ] |
+| 4.8 | Release 1.0 の E2E に例外シナリオ（US19）を追加し一気通貫を維持（US13→US14→US15→US18→US19） | 2h | - | [x] |
 
 **小計**: 18h（理想時間）
 

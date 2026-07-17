@@ -102,7 +102,7 @@ let private get (client: HttpClient) (cookie: string) (path: string) =
 
 [<Fact>]
 [<Trait("Category", "Integration")>]
-let ``予約確定から追跡照会まで一気通貫（US13→US14→US15→US18）`` () =
+let ``予約確定から追跡照会・例外対応まで一気通貫（US13→US14→US15→US18→US19）`` () =
     let dbFile =
         Path.Combine(Path.GetTempPath(), sprintf "cargo_e2e_%s.db" (System.Guid.NewGuid().ToString("N")))
 
@@ -188,6 +188,36 @@ let ``予約確定から追跡照会まで一気通貫（US13→US14→US15→US
         let body = run (detail.Content.ReadAsStringAsync())
         body |> should haveSubstring "受領済"
         body |> should haveSubstring "受領"
+
+        // 追跡管理者: 遅延例外を登録（US19）→ 例外発生へ
+        let exRes =
+            post
+                client
+                handler
+                (sprintf "/tracking/%s/exceptions/new" trackingNumber)
+                [ "exceptionType", "DELAY"; "location", "USLAX"; "description", "荒天による寄港遅延" ]
+
+        exRes.StatusCode |> should equal HttpStatusCode.Found
+
+        let inExDetail = get client handler (sprintf "/tracking/%s" trackingNumber)
+        let inExBody = run (inExDetail.Content.ReadAsStringAsync())
+        inExBody |> should haveSubstring "例外発生"
+        inExBody |> should haveSubstring "遅延"
+
+        // 追跡管理者: 例外を解決（US19 対応報告）→ 受領済へ復帰
+        let resolveRes =
+            post
+                client
+                handler
+                (sprintf "/tracking/%s/exceptions/0/resolve" trackingNumber)
+                [ "resolutionNote", "新到着予定日を荷主へ提示" ]
+
+        resolveRes.StatusCode |> should equal HttpStatusCode.Found
+
+        let resolvedDetail = get client handler (sprintf "/tracking/%s" trackingNumber)
+        let resolvedBody = run (resolvedDetail.Content.ReadAsStringAsync())
+        resolvedBody |> should haveSubstring "解決済み"
+        resolvedBody |> should haveSubstring "受領済"
     finally
         server.Dispose()
         SqliteConnection.ClearAllPools()
