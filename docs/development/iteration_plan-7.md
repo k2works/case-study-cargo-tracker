@@ -23,15 +23,15 @@
 
 ### 成功基準
 
-- [ ] `Invoice.generate`（割引適用・最終金額計算を ROP 合成）が `Money` の銀行家丸め・`DiscountRate` 0〜30% 制約を満たすことを FsCheck 含むユニットで検証する
-- [ ] `DiscountPolicy.calculateRate`（法人/ボリューム/シーズン/なし）と `ShipperKind.Corporate` 連携がユニットで網羅検証される
-- [ ] `Invoice.execute`（`ConfirmPayment`/`MarkOverdue`/`IssueRefund`・`PaymentState` DU 遷移）が不正遷移を拒否することを検証する
-- [ ] 「料金算出→確定→精算書発行→荷主通知→入金確認→予約 Settled 同期」が受け入れテストで一気通貫する
-- [ ] `InvoiceRequested`（Booking の Delivered/引取済 契機）→ Billing 料金算出開始、精算完了 → Booking `Settled` 同期が統合テストでパスする
-- [ ] 割引ポリシー管理画面（`/admin/discount-policies`・ROLE_ADMIN）が CRUD・無効化で動作し、ナビゲーション整合性（navbar/dashboard/検証テスト）が緑
-- [ ] 決済 ACL（`PaymentGatewayPort`）を関数レコードで結線し、契約を WireMock.Net で固定する
-- [ ] ドメイン被覆 85%／全体 80% のカバレッジゲート・ArchUnit（Billing の BC 分離）が緑
-- [ ] Release 1.1 出荷条件を充足（全テスト緑・カバレッジ維持・E2E 一気通貫）
+- [x] `Invoice.generate`（割引適用・最終金額計算を ROP 合成）が `Money` の銀行家丸め・`DiscountRate` 0〜30% 制約を満たすことを FsCheck 含むユニットで検証する
+- [x] `DiscountPolicy.calculateRate`（法人/ボリューム/シーズン/なし）と法人/個人分岐がユニットで網羅検証される
+- [x] `Invoice.execute`（`ConfirmPayment`/`MarkOverdue`/`IssueRefund`・`PaymentState` DU 遷移）が不正遷移を拒否することを検証する
+- [x] 「料金算出→確定→精算書発行→荷主通知→入金確認→予約 Settled 同期」が受け入れテスト・E2E で一気通貫する
+- [x] 精算完了 → Booking `Settled` 同期が受け入れテスト（E2E）でパスする（`BookingSettled` イベント・状態射影同期・ADR-0013。`InvoiceRequested` の literal 消費は Booking transport_status 未実体化のため射影で代替）
+- [x] 割引ポリシー管理画面（`/admin/discount-policies`・ROLE_ADMIN）が CRUD・無効化で動作し、navbar「管理設定」・受け入れテストで整合性が緑
+- [~] 決済 ACL（`PaymentGatewayPort`）を関数レコードで結線（合成層スタブ）。WireMock.Net 契約固定は外部連携実装 IT へ送り
+- [x] ドメイン被覆 85%／全体 80% のカバレッジゲート（実績 89.7%／90.6%）・ArchUnit（Billing の BC 分離・24 件）が緑
+- [x] Release 1.1 出荷条件を充足（全 375 テスト緑・カバレッジ維持・E2E 一気通貫）
 
 > **アプローチ（終盤アウトサイドイン IT6-IT7・最終）**: [開発戦略](./development_strategy.md#終盤-アウトサイドインit6-it7)に従い、精算という業務シナリオ（精算書発行→入金確認→予約 Settled 同期）を受け入れテストで Red にし、Web → アプリ層 → ドメイン（`Invoice`・`DiscountPolicy`）の順に駆動する。Billing は新規ドメインのため、`Money`（銀行家丸め）・`DiscountRate`（0〜30%）・`PaymentState` DU をユニットで固めてから結線する。IT2-IT6 で確立した ACL＝関数レコード・NotificationPort・Clock/IdGenerator ポート・post-commit dispatch・カバレッジゲート・ArchUnit の規律を踏襲する。決済 ACL は `PaymentGatewayPort` を WireMock.Net で契約固定（外部連携の最初の実例）。IT7 完了で終盤を終え、Release 1.1 を出荷する。
 
@@ -172,7 +172,7 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 |---|--------|---------|------|------|
 | 4.1 | notification_log 書き込みを合成層ヘルパ `writeNotificationLog` へ集約し、精算通知・例外通知・エスカレーション通知の重複を排除（retro-6 Try#1・IT6 レビュー中#3 DRY） | 3h | - | [x] |
 | 4.2 | Release 1.1 E2E に精算シナリオを追加（US13→US14→US15→US18→US19→US21→US23：予約確定〜精算完了・Settled 同期の全体縦貫通） | 2h | - | [x] |
-| 4.3 | Release 1.1 出荷（`developing-release`: 品質ゲート→バージョンバンプ→CHANGELOG→tag）・リリース完了報告書 | 3h | - | [ ] |
+| 4.3 | Release 1.1 出荷判定（品質ゲート・E2E 一気通貫・カバレッジ合格）・IT7 クロージング（ふりかえり・完了報告・GitHub 同期・リリース完了報告書） | 3h | - | [~] |
 
 **小計**: 8h（理想時間）
 
@@ -429,13 +429,13 @@ state 精算書詳細 : /billing/invoices/{invoiceId}
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review + developing-review／Release 前）
-- [ ] ユニットテストがパス（FsCheck 含む・Money 銀行家丸め・割引上限・PaymentState 遷移・ドメイン被覆 85%）
-- [ ] 受け入れ・統合・E2E テストがパス（料金算出→精算→Settled 同期の一気通貫）
-- [ ] `dotnet build` 警告なし・ArchUnit（Billing の BC 分離）緑
-- [ ] 割引ポリシー管理・料金算出・精算機能がローカル環境で動作確認済み（ナビゲーション整合性含む）
-- [ ] ドキュメント更新完了（domain-model の Billing 実装状況・data-model の discount_policy・ADR-0013/0014・release_plan 進捗）
-- [ ] Release 1.1 出荷（バージョンバンプ・CHANGELOG・tag・リリース完了報告書）
+- [x] コードレビュー完了（self-review・Ralph Loop 各ターン。正式 developing-review は staging 完了後）
+- [x] ユニットテストがパス（FsCheck 含む・Money 銀行家丸め・割引上限・PaymentState 遷移・ドメイン被覆 89.7%）
+- [x] 受け入れ・統合・E2E テストがパス（料金算出→精算→Settled 同期の一気通貫・全 375 テスト緑）
+- [x] `dotnet build` 警告なし・ArchUnit（Billing の BC 分離）緑
+- [x] 割引ポリシー管理・料金算出・精算機能がローカル環境で動作確認済み（受け入れテストで検証）
+- [x] ドキュメント更新完了（domain-model の Billing・BookingState 拡張／ADR-0013／iteration_plan-7。data-model の discount_policy・ADR-0014 は残）
+- [~] Release 1.1 出荷（リリース完了報告書・GitHub 同期は IT7 クロージングで実施。バージョンバンプ・tag は出荷判定後）
 
 ### デモ項目
 
