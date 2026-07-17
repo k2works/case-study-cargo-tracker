@@ -42,11 +42,13 @@ module IssueTracking =
             let token = generateToken newId
             do! repo.Save activity token
 
+            // 公開追跡 URL（access_token）を通知に同梱し、荷主が認証なしで照会・URL 共有できる導線を提供する（レビュー高#6）。
             let message =
                 sprintf
-                    "予約 %s の追跡番号 %s を発行しました。/tracking で照会できます。"
+                    "予約 %s の追跡番号 %s を発行しました。認証ありは /tracking、認証なしは /public/tracking/%s で照会できます。"
                     (TrackingBookingId.value bookingId)
                     (TrackingNumber.value activity.TrackingNumber)
+                    token
 
             do! notifier.Notify activity.TrackingNumber message
             return activity

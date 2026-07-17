@@ -65,6 +65,12 @@ let ``BookingConfirmed を消費すると追跡番号が発行される（US14�
 
     countTracking conn "BKG-0001" |> should equal 1
 
+    // 発行通知に公開追跡 URL（access_token 導線）が含まれる（レビュー高#6）。
+    use cmd = conn.CreateCommand()
+    cmd.CommandText <- "SELECT message FROM notification_log WHERE booking_id = 'BKG-0001'"
+    let message = cmd.ExecuteScalar() |> string
+    message |> should haveSubstring "/public/tracking/"
+
 [<Fact>]
 [<Trait("Category", "Integration")>]
 let ``同じ予約の再確認では追跡番号を二重発行しない（冪等）`` () =

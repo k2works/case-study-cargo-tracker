@@ -43,6 +43,13 @@ module CargoQueries =
               ArrivalDeadline = rd.ReadString "arrival_deadline"
               BookingStatus = rd.ReadString "booking_status" })
 
+    /// 予約 ID から到着予定日（arrival_deadline）を取得する（US18 追跡照会の推定到着日表示・レビュー高#5）。
+    let findArrivalDeadline (conn: IDbConnection) (bookingId: string) : string option =
+        conn
+        |> Db.newCommand "SELECT arrival_deadline FROM cargo WHERE booking_id = @bid"
+        |> Db.setParams [ "bid", SqlType.String bookingId ]
+        |> Db.querySingle (fun rd -> rd.ReadString "arrival_deadline")
+
 /// 経路設計者への通知 ACL のスタブ（US06）。IT2 は無処理で成功を返す。
 /// 後続 IT で実通知（メール／画面キュー）に差し替える。
 module StubRoutingRequestNotifier =

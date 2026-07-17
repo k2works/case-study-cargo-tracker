@@ -116,7 +116,10 @@ let ``荷主は追跡番号で状態とイベント履歴を照会できる（US
         res.StatusCode |> should equal HttpStatusCode.OK
         let body = run (res.Content.ReadAsStringAsync())
         body |> should haveSubstring "受領済"
-        body |> should haveSubstring "JPTYO")
+        body |> should haveSubstring "JPTYO"
+        // 現在地・推定到着日が表示される（レビュー高#5）
+        body |> should haveSubstring "現在地"
+        body |> should haveSubstring "推定到着日")
 
 [<Fact>]
 [<Trait("Category", "Integration")>]

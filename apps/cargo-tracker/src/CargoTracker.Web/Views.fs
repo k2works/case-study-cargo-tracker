@@ -1063,6 +1063,8 @@ module Views =
     type TrackingDetailView =
         { TrackingNumber: string
           TransportStatus: string
+          CurrentLocation: string
+          EstimatedArrival: string
           Events: TrackingEventRow list
           Exceptions: TrackingExceptionRow list }
 
@@ -1092,6 +1094,26 @@ module Views =
           div
               [ _class "mb-4" ]
               [ span [ _class "badge bg-primary fs-6" ] [ str (transportStatusLabel d.TransportStatus) ] ]
+          dl
+              [ _class "row mb-4" ]
+              [ dt [ _class "col-sm-3" ] [ str "現在地" ]
+                dd
+                    [ _class "col-sm-9" ]
+                    [ str (
+                          if d.CurrentLocation = "" then
+                              "（未受領）"
+                          else
+                              d.CurrentLocation
+                      ) ]
+                dt [ _class "col-sm-3" ] [ str "推定到着日" ]
+                dd
+                    [ _class "col-sm-9" ]
+                    [ str (
+                          if d.EstimatedArrival = "" then
+                              "（未定）"
+                          else
+                              d.EstimatedArrival
+                      ) ] ]
           h2 [ _class "h5 mb-2" ] [ str "追跡イベント履歴" ]
           (if List.isEmpty d.Events then
                div [ _class "alert alert-info" ] [ str "まだ追跡イベントはありません。" ]

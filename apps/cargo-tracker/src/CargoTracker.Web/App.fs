@@ -1069,10 +1069,20 @@ let private routingPropose (bookingIdStr: string) : HttpHandler =
 
 // ---- US18: 貨物追跡照会（ROLE_SHIPPER/CONSIGNEE/TRACKER + 未認証公開）----
 
-/// TrackingView を表示用 DTO に変換する。
-let private toTrackingDetailView (view: CargoTracker.Tracking.Infrastructure.TrackingView) : Views.TrackingDetailView =
+/// TrackingView を表示用 DTO に変換する。現在地は最新イベント（末尾）の場所、
+/// 推定到着日は合成層で解決した予約の到着予定日を受け取る（レビュー高#5）。
+let private toTrackingDetailView
+    (estimatedArrival: string)
+    (view: CargoTracker.Tracking.Infrastructure.TrackingView)
+    : Views.TrackingDetailView =
     { TrackingNumber = view.TrackingNumber
       TransportStatus = view.TransportStatus
+      CurrentLocation =
+        view.Events
+        |> List.tryLast
+        |> Option.map (fun e -> e.Location)
+        |> Option.defaultValue ""
+      EstimatedArrival = estimatedArrival
       Events =
         view.Events
         |> List.map (fun e ->
@@ -1114,7 +1124,13 @@ let private trackingDetail (trackingNumber: string) : HttpHandler =
             use conn = factory ()
 
             match CargoTracker.Tracking.Infrastructure.TrackingQueries.findByTrackingNumber conn trackingNumber with
-            | Some view -> return! htmlView (Views.trackingDetail (rolesOf ctx) (toTrackingDetailView view)) next ctx
+            | Some view ->
+                // 推定到着日は合成層で Booking（cargo.arrival_deadline）から解決する（BC 分離・レビュー高#5）。
+                let eta =
+                    CargoTracker.Booking.Infrastructure.CargoQueries.findArrivalDeadline conn view.BookingId
+                    |> Option.defaultValue ""
+
+                return! htmlView (Views.trackingDetail (rolesOf ctx) (toTrackingDetailView eta view)) next ctx
             | None ->
                 return!
                     (setStatusCode 404
@@ -1338,7 +1354,12 @@ let private publicTracking (accessToken: string) : HttpHandler =
             use conn = factory ()
 
             match CargoTracker.Tracking.Infrastructure.TrackingQueries.findByAccessToken conn accessToken with
-            | Some view -> return! htmlView (Views.publicTracking (toTrackingDetailView view)) next ctx
+            | Some view ->
+                let eta =
+                    CargoTracker.Booking.Infrastructure.CargoQueries.findArrivalDeadline conn view.BookingId
+                    |> Option.defaultValue ""
+
+                return! htmlView (Views.publicTracking (toTrackingDetailView eta view)) next ctx
             | None -> return! (setStatusCode 404 >=> text "追跡番号が見つかりません。") next ctx
         }
 

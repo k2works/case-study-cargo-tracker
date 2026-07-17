@@ -12,10 +12,12 @@ open CargoTracker.Booking.Domain
 open CargoTracker.Booking.Application
 open CargoTracker.Tracking.Application
 
-/// notification_log へ通知を記録する TrackingNotifier（US14 荷主通知の最小実装）。
-let private trackingNotifier (conn: IDbConnection) (clock: Clock) : TrackingNotifier =
+/// notification_log へ通知を記録する TrackingNotifier（US14 荷主通知）。
+/// booking_id には予約 ID を、recipient には荷主識別子（現状は予約 ID を代理利用）を記録する。
+/// 追跡番号ではなく予約 ID を通知先キーにする（レビュー中#3・荷主連絡先モデル化は将来 IT）。
+let private trackingNotifier (conn: IDbConnection) (clock: Clock) (bookingId: string) : TrackingNotifier =
     { Notify =
-        fun trackingNumber message ->
+        fun _trackingNumber message ->
             async {
                 try
                     let now = (clock ()).UtcDateTime.ToString("o")
@@ -27,8 +29,8 @@ let private trackingNotifier (conn: IDbConnection) (clock: Clock) : TrackingNoti
                         VALUES (@booking_id, @recipient, @message, @now, @now)
                         """
                     |> Db.setParams
-                        [ "booking_id", SqlType.String(CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber)
-                          "recipient", SqlType.String(CargoTracker.Tracking.Domain.TrackingNumber.value trackingNumber)
+                        [ "booking_id", SqlType.String bookingId
+                          "recipient", SqlType.String bookingId
                           "message", SqlType.String message
                           "now", SqlType.String now ]
                     |> Db.exec
@@ -62,7 +64,7 @@ let create (conn: IDbConnection) (clock: Clock) (newId: IdGenerator) : BookingEv
 
                         if not (alreadyIssued conn bid) then
                             let repo = CargoTracker.Tracking.Infrastructure.TrackingRepository.create conn clock
-                            let notifier = trackingNotifier conn clock
+                            let notifier = trackingNotifier conn clock bid
                             let trackingBookingId = CargoTracker.Tracking.Domain.TrackingBookingId.ofString bid
 
                             let! result = IssueTracking.issue repo notifier newId trackingBookingId
