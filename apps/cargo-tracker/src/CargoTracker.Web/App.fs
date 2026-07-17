@@ -1908,7 +1908,17 @@ let private paymentConfirm (invoiceNumber: string) : HttpHandler =
                     stubPaymentGateway
                     (CargoTracker.Billing.Domain.InvoiceId.ofString invoiceNumber)
             with
-            | Ok _ -> return! redirectTo false "/billing/invoices?msg=confirmed" next ctx
+            | Ok inv ->
+                // BC 連携: 精算完了で予約を Settled へ同期する（ADR-0013・状態射影更新）。
+                let bookingId =
+                    CargoTracker.Billing.Domain.BillingBookingId.value inv.CargoBookingId
+
+                let nowStr = (systemClock ()).UtcDateTime.ToString("o")
+
+                CargoTracker.Booking.Infrastructure.CargoQueries.syncBookingStatus conn nowStr bookingId "SETTLED"
+                |> ignore
+
+                return! redirectTo false "/billing/invoices?msg=confirmed" next ctx
             | Error(CargoTracker.Shared.Domain.NotFound _) ->
                 return! (setStatusCode 404 >=> text "精算書が見つかりません。") next ctx
             | Error err -> return! (setStatusCode 400 >=> text (domainErrorMessage err)) next ctx

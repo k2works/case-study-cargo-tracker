@@ -288,12 +288,15 @@ module CargoItinerary =
         && System.DateOnly.FromDateTime((expectedArrivalTime itinerary).UtcDateTime)
            <= RouteSpecification.arrivalDeadline spec
 
-/// 予約状態（IT4 で RouteProposed/Confirmed を追加・ADR-0007 系統）。TrackingIssued 以降は IT5+ で追加する。
+/// 予約状態（IT4 で RouteProposed/Confirmed を追加・ADR-0007 系統）。
+/// IT7 で Delivered/Settled を段階追加（配送完了→精算完了・ADR-0013・戦略の Delivered 制限）。
 type BookingState =
     | Preliminary
     | RoutingRequested
     | RouteProposed of CargoItinerary
     | Confirmed of CargoItinerary
+    | Delivered of CargoItinerary
+    | Settled of CargoItinerary
     | Cancelled of reason: string
 
 module BookingState =
@@ -305,6 +308,8 @@ module BookingState =
         | RoutingRequested -> "ROUTING_REQUESTED"
         | RouteProposed _ -> "ROUTE_PROPOSED"
         | Confirmed _ -> "CONFIRMED"
+        | Delivered _ -> "DELIVERED"
+        | Settled _ -> "SETTLED"
         | Cancelled _ -> "CANCELLED"
 
     /// 永続化された文字列から状態を復元する（cargo.booking_status）。
@@ -322,14 +327,18 @@ module BookingState =
         | "ROUTING_REQUESTED" -> Ok RoutingRequested
         | "ROUTE_PROPOSED" -> withItinerary RouteProposed
         | "CONFIRMED" -> withItinerary Confirmed
+        | "DELIVERED" -> withItinerary Delivered
+        | "SETTLED" -> withItinerary Settled
         | "CANCELLED" -> Ok(Cancelled "")
         | other -> Error(ValidationError("BookingState", sprintf "未知の予約状態です: %s" other))
 
-    /// 状態が保持する旅程（RouteProposed/Confirmed のみ）。永続化で leg テーブルへ書き出す際に使う。
+    /// 状態が保持する旅程（旅程を持つ状態のみ）。永続化で leg テーブルへ書き出す際に使う。
     let itinerary (state: BookingState) : CargoItinerary option =
         match state with
         | RouteProposed i
-        | Confirmed i -> Some i
+        | Confirmed i
+        | Delivered i
+        | Settled i -> Some i
         | Preliminary
         | RoutingRequested
         | Cancelled _ -> None
@@ -340,6 +349,8 @@ type BookingCommand =
     | ProposeRoute of CargoItinerary // US11: 確定経路を予約に紐付ける
     | ConfirmBooking // US13: 予約を確定する
     | RestoreToRouting // US13 受入条件4: 経路設計中に差し戻す
+    | MarkDelivered // US21: 配送完了（引取済）を反映（InvoiceRequested の前提・戦略の Delivered 制限）
+    | Settle // US23: 精算完了を反映（入金確認後）
     | Cancel of reason: string
 
 /// Booking コンテキストのドメインイベント。BC 固有イベントはローカル DU とする（ADR-0002 の Shared 循環回避方針）。
@@ -349,6 +360,8 @@ type BookingEvent =
     | CargoRouted of BookingId // US11: 経路提案（RouteProposed）
     | BookingConfirmed of BookingId // US13: 予約確定
     | BookingRestoredToRouting of BookingId // US13: 差し戻し
+    | CargoDelivered of BookingId // US21: 配送完了（InvoiceRequested の契機）
+    | BookingSettled of BookingId // US23: 精算完了
     | BookingCancelled of BookingId * reason: string
 
 /// 集約ルート。予約の中心。状態遷移・貨物仕様を統括する。
@@ -422,6 +435,18 @@ module Cargo =
         // US13 受入条件4: 予約確定から経路設計中へ差し戻す（ルート変更希望）。
         | Confirmed _, RestoreToRouting ->
             Ok({ cargo with State = RoutingRequested }, [ BookingRestoredToRouting cargo.BookingId ])
+
+        // US21: 配送完了（引取済）を反映（ADR-0013・戦略の Delivered 制限）。CargoDelivered で精算開始の契機。
+        | Confirmed itinerary, MarkDelivered ->
+            Ok(
+                { cargo with
+                    State = Delivered itinerary },
+                [ CargoDelivered cargo.BookingId ]
+            )
+
+        // US23: 精算完了を反映（入金確認後）。
+        | Delivered itinerary, Settle ->
+            Ok({ cargo with State = Settled itinerary }, [ BookingSettled cargo.BookingId ])
 
         // Cancelled からの Cancel は不正遷移。それ以外の状態からは Cancel 可能（US13 受入条件5）。
         | Cancelled _, Cancel _ -> Error(InvalidStateTransition(BookingState.toString cargo.State, "Cancel"))

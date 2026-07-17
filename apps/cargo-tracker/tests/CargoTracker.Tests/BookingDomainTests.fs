@@ -491,6 +491,46 @@ let ``予約確定で RouteProposed から Confirmed に遷移し BookingConfirm
         events |> should equal [ BookingConfirmed cargo.BookingId ]
     | Error e -> failwithf "Ok を期待したが Error: %A" e
 
+let private confirmedCargo () =
+    match Cargo.execute (routeProposedCargo ()) ConfirmBooking with
+    | Ok(c, _) -> c
+    | Error e -> failwithf "%A" e
+
+[<Fact>]
+let ``配送完了で Confirmed から Delivered に遷移し CargoDelivered を発行する（US21・IT7）`` () =
+    let cargo = confirmedCargo ()
+
+    match Cargo.execute cargo MarkDelivered with
+    | Ok(updated, events) ->
+        (match updated.State with
+         | Delivered _ -> ()
+         | other -> failwithf "Delivered を期待したが: %A" other)
+
+        events |> should equal [ CargoDelivered cargo.BookingId ]
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``精算完了で Delivered から Settled に遷移し BookingSettled を発行する（US23・IT7）`` () =
+    let delivered =
+        match Cargo.execute (confirmedCargo ()) MarkDelivered with
+        | Ok(c, _) -> c
+        | Error e -> failwithf "%A" e
+
+    match Cargo.execute delivered Settle with
+    | Ok(updated, events) ->
+        (match updated.State with
+         | Settled _ -> ()
+         | other -> failwithf "Settled を期待したが: %A" other)
+
+        events |> should equal [ BookingSettled delivered.BookingId ]
+    | Error e -> failwithf "Ok を期待したが Error: %A" e
+
+[<Fact>]
+let ``Confirmed からの精算完了は不正遷移（配送完了前）`` () =
+    match Cargo.execute (confirmedCargo ()) Settle with
+    | Error(InvalidStateTransition _) -> ()
+    | other -> failwithf "InvalidStateTransition を期待したが: %A" other
+
 [<Fact>]
 let ``予約確定から差し戻すと RoutingRequested に戻る（US13 受入条件4）`` () =
     let confirmed =

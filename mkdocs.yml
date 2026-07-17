@@ -137,6 +137,7 @@ nav:
       - 0010 経路確定の Routing→Booking 連携は合成層の ACL 変換で行う: adr/0010-経路確定のRouting_Booking連携は合成層のACL変換で行う.md
       - 0011 追跡照会の所有者制御は capability トークンとロールで行う: adr/0011-追跡照会の所有者制御はcapabilityトークンとロールで行う.md
       - 0012 荷役→追跡の状態連携はベストエフォートと冪等で行う: adr/0012-荷役から追跡への状態連携はベストエフォートと冪等で行う.md
+      - 0013 料金算出と Billing↔Booking 連携は合成層と状態射影で行う: adr/0013-料金算出とBilling_Booking連携は合成層と状態射影で行う.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md

@@ -212,6 +212,14 @@ module RouteAssignment =
     let restoreToRouting (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) =
         applyCommand repo dispatcher bookingId RestoreToRouting
 
+    /// 配送完了（引取済）を反映する（US21・Confirmed → Delivered・ADR-0013）。
+    let markDelivered (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) =
+        applyCommand repo dispatcher bookingId MarkDelivered
+
+    /// 精算完了を反映する（US23・Delivered → Settled）。
+    let settle (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) =
+        applyCommand repo dispatcher bookingId Settle
+
     /// 予約をキャンセルする（US13・任意状態 → Cancelled）。
     let cancel (repo: CargoRepository) (dispatcher: BookingEventDispatcher) (bookingId: BookingId) (reason: string) =
         applyCommand repo dispatcher bookingId (Cancel reason)

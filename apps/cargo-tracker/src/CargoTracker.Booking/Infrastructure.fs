@@ -50,6 +50,27 @@ module CargoQueries =
         |> Db.setParams [ "bid", SqlType.String bookingId ]
         |> Db.querySingle (fun rd -> rd.ReadString "arrival_deadline")
 
+    /// 予約状態（booking_status）を射影として直接更新する（US23 精算完了の Settled 同期・ADR-0013）。
+    /// 旅程（leg）を伴う集約再構成を要さず、BC 連携の状態射影のみを更新する（transport_status と同方針）。
+    let syncBookingStatus
+        (conn: IDbConnection)
+        (nowStr: string)
+        (bookingId: string)
+        (status: string)
+        : Result<unit, DomainError> =
+        try
+            conn
+            |> Db.newCommand "UPDATE cargo SET booking_status = @status, updated_at = @now WHERE booking_id = @bid"
+            |> Db.setParams
+                [ "status", SqlType.String status
+                  "now", SqlType.String nowStr
+                  "bid", SqlType.String bookingId ]
+            |> Db.exec
+
+            Ok()
+        with ex ->
+            Error(BusinessRuleViolation("CargoQueries", ex.Message))
+
     /// 料金算出の基礎（重量・貨物種別・荷主 ID・予約状態）を取得する（US21 の合成層向け）。
     let findChargeBasis (conn: IDbConnection) (bookingId: string) : (decimal * string * string * string) option =
         conn
