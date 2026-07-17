@@ -16,6 +16,7 @@
     <Compile Include="RoutingDomainTests.fs" />
     <Compile Include="RoutingApplicationTests.fs" />
     <Compile Include="TrackingDomainTests.fs" />
+    <Compile Include="TrackingApplicationTests.fs" />
     <Compile Include="HandlingDomainTests.fs" />
   </ItemGroup>
 

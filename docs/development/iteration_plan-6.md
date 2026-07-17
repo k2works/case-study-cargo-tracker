@@ -117,8 +117,8 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Application.fs に例外登録・解決ユースケースを追加（NotificationPort で荷主通知・Clock ポートで時刻注入） | 3h | - | [ ] |
-| 2.2 | Lost 時の管理職 escalation 通知経路（`ExceptionEscalated` 消費）を結線 | 2h | - | [ ] |
+| 2.1 | Application.fs に例外登録・解決ユースケースを追加（NotificationPort で荷主通知・Clock ポートで時刻注入） | 3h | - | [x] |
+| 2.2 | Lost 時の管理職 escalation 通知経路（`ExceptionEscalated` 消費）を結線（`EscalationNotifier` ポート・アプリ層で発行イベント検査） | 2h | - | [x] |
 | 2.3 | `TrackingExceptionDetected` → Booking Delivery（InException 同期）の post-commit dispatch 結線・統合テスト | 3h | - | [ ] |
 | 2.4 | 例外登録・解決の受け入れテスト（一気通貫: 登録→通知→エスカレーション→対応報告→解決→復帰） | 3h | - | [ ] |
 
