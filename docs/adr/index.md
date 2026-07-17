@@ -16,5 +16,6 @@
 | [ADR-0008](0008-荷主参照はShipperId永続化により業務識別子で行う.md) | 荷主の横断参照は ShipperId（Guid）の永続化により業務識別子で行う | 承認済み |
 | [ADR-0009](0009-経路候補算出はRouting自コンテキストで構成する.md) | 経路候補算出は Routing Context が自コンテキストの Voyage スケジュールから構成する | 提案 |
 | [ADR-0010](0010-経路確定のRouting_Booking連携は合成層のACL変換で行う.md) | 経路確定の Routing→Booking 連携は合成層の ACL 変換で行う | 提案 |
+| [ADR-0011](0011-追跡照会の所有者制御はcapabilityトークンとロールで行う.md) | 追跡照会の所有者制御は capability トークン（公開）とロール（認証）で行う | 提案 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

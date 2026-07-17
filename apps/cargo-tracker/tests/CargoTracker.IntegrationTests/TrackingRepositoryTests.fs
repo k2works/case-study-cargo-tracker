@@ -228,3 +228,31 @@ let ``存在しない追跡番号は None を返す`` () =
     with
     | Ok None -> ()
     | other -> failwithf "None を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``不正な日時を持つ行の復元は例外を投げず Error を返す（レビュー中#6）`` () =
+    use conn = openDb ()
+    let repo = TrackingRepository.create conn fixedClock
+    let activity, _ = TrackingActivity.issue newId (bookingId ())
+    repo.Save activity "TOKEN-ABC" |> Async.RunSynchronously |> ignore
+
+    // 復元時に DateTimeOffset.Parse が失敗する不正な event_time を直接投入する。
+    use cmd = conn.CreateCommand()
+
+    cmd.CommandText <-
+        sprintf
+            """
+            INSERT INTO tracking_handling_event
+                (tracking_id, event_type, event_time, location_unlocode, seq_number, created_at, updated_at)
+            VALUES ((SELECT id FROM tracking_activity WHERE tracking_number = '%s'),
+                    'RECEIVED', 'not-a-date', 'JPTYO', 1, '2026-09-08', '2026-09-08')
+            """
+            (TrackingNumber.value activity.TrackingNumber)
+
+    cmd.ExecuteNonQuery() |> ignore
+
+    // 例外で落ちず、Error（BusinessRuleViolation）として扱われる。
+    match repo.FindByTrackingNumber activity.TrackingNumber |> Async.RunSynchronously with
+    | Error(BusinessRuleViolation("TrackingRepository", _)) -> ()
+    | other -> failwithf "BusinessRuleViolation を期待したが: %A" other
