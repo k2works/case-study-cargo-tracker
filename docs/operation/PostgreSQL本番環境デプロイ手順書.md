@@ -28,12 +28,13 @@ node "Docker ホスト" {
 
 ### 1. 環境変数ファイルの作成
 
+リポジトリルートで setup タスクを実行すると、`.env.production.example` から `.env.production` を生成する（既存があれば上書きしない）。
+
 ```bash
-cd apps/cargo-tracker
-cp .env.production.example .env.production
+npm run prod:setup          # = gulp ops:prod:setup
 ```
 
-`.env.production` を編集し、以下を **強力な値** に設定する（`.env.production` は `.gitignore` 済み・コミット禁止）。
+生成された `apps/cargo-tracker/.env.production` を編集し、以下を **強力な値** に設定する（`.env.production` は `.gitignore` 済み・コミット禁止）。
 
 | 変数 | 用途 | 必須 |
 | :--- | :--- | :--- |
@@ -67,6 +68,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 | コマンド | 内容 |
 | :--- | :--- |
+| `gulp ops:prod:setup` | `.env.production` を生成（既存は上書きしない） |
 | `gulp ops:prod:build` | 本番イメージをビルド |
 | `gulp ops:prod:up` | スタック起動（ビルド + マイグレーション自動適用） |
 | `gulp ops:prod:down` | スタック停止・削除 |
@@ -79,7 +81,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 | `gulp ops:prod:restore` | `RESTORE_FILE=<パス> gulp ops:prod:restore` で復元 |
 | `gulp ops:prod:help` | ヘルプ表示 |
 
-npm ショートカット: `npm run prod:up` / `prod:down` / `prod:logs` / `prod:backup` / `prod:help`。
+npm ショートカット: `npm run prod:setup` / `prod:up` / `prod:down` / `prod:logs` / `prod:backup` / `prod:help`。
 
 ### バックアップ・リストア例
 

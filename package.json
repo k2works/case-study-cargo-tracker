@@ -6,6 +6,7 @@
     "start": "gulp spec",
     "dev": "gulp dev:app:watch",
     "dev:app": "gulp dev:app",
+    "prod:setup": "gulp ops:prod:setup",
     "prod:up": "gulp ops:prod:up",
     "prod:down": "gulp ops:prod:down",
     "prod:logs": "gulp ops:prod:logs",

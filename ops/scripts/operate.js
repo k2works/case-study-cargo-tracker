@@ -47,8 +47,7 @@ function requireEnvFile() {
   if (!fs.existsSync(envPath)) {
     console.error(
       `エラー: ${ENV_FILE} がありません。\n` +
-        `  cp ${path.join('apps/cargo-tracker', '.env.production.example')} ${path.join('apps/cargo-tracker', ENV_FILE)}\n` +
-        `を実行し、秘密情報を設定してください。`
+        `  gulp ops:prod:setup  を実行して ${ENV_FILE} を作成し、秘密情報を設定してください。`
     );
     process.exit(1);
   }
@@ -74,6 +73,40 @@ function readEnv() {
 // ============================================
 
 export default function (gulp) {
+  // ------------------------------------------
+  // セットアップ（.env.production 生成）
+  // ------------------------------------------
+
+  gulp.task('ops:prod:setup', (done) => {
+    const examplePath = path.join(APP_DIR, '.env.production.example');
+    const envPath = path.join(APP_DIR, ENV_FILE);
+
+    if (!fs.existsSync(examplePath)) {
+      console.error(`エラー: ${path.join('apps/cargo-tracker', '.env.production.example')} が見つかりません。`);
+      process.exit(1);
+    }
+
+    if (fs.existsSync(envPath)) {
+      console.log(
+        `${ENV_FILE} は既に存在します（上書きしません）。\n` +
+          `  秘密情報を設定済みか確認してください: ${path.join('apps/cargo-tracker', ENV_FILE)}`
+      );
+      done();
+      return;
+    }
+
+    fs.copyFileSync(examplePath, envPath);
+    console.log(
+      `${path.join('apps/cargo-tracker', ENV_FILE)} を作成しました。\n\n` +
+        '次の手順:\n' +
+        `  1. ${path.join('apps/cargo-tracker', ENV_FILE)} を編集し、以下を強力な値に設定する（コミット禁止）:\n` +
+        '       POSTGRES_PASSWORD（必須）・ADMIN_PASSWORD（必須）\n' +
+        '       任意: POSTGRES_USER / POSTGRES_DB / APP_PORT / ADMIN_USERNAME\n' +
+        '  2. gulp ops:prod:up で起動する（ビルド + マイグレーション自動適用）'
+    );
+    done();
+  });
+
   // ------------------------------------------
   // ビルド・起動・停止
   // ------------------------------------------
@@ -177,8 +210,8 @@ export default function (gulp) {
 === 本番運用コマンド (apps/cargo-tracker / PostgreSQL) ===
 
   事前準備
-    cp apps/cargo-tracker/.env.production.example apps/cargo-tracker/.env.production
-    （.env.production を編集して秘密情報を設定）
+    ops:prod:setup         .env.production を生成（既存は上書きしない）
+                           生成後 apps/cargo-tracker/.env.production を編集し秘密情報を設定
 
   デプロイ
     ops:prod:build         本番イメージをビルド
