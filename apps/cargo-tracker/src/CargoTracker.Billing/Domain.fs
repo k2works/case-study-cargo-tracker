@@ -144,6 +144,46 @@ module DiscountPolicy =
         | VolumeDiscount -> DiscountRate.create 0.05m
         | Seasonal -> DiscountRate.create 0.08m
 
+/// 割引ポリシーマスタ（US-ADM-01）。運用管理者が登録・変更・無効化する。
+/// 割引方針（DiscountPolicy）に割引率・適用条件・有効期限・有効フラグを付与したマスタレコード。
+type DiscountPolicyMaster =
+    { Id: int64 option // 永続化前は None
+      Policy: DiscountPolicy
+      Rate: DiscountRate
+      ApplicableCondition: string
+      EffectiveFrom: DateOnly
+      EffectiveTo: DateOnly option // 無期限は None
+      Active: bool }
+
+module DiscountPolicyMaster =
+
+    /// 新規ポリシーを作成する（割引率は 0〜30% を DiscountRate で保証）。
+    let create
+        (policy: DiscountPolicy)
+        (rate: DiscountRate)
+        (condition: string)
+        (effectiveFrom: DateOnly)
+        (effectiveTo: DateOnly option)
+        : DiscountPolicyMaster =
+        { Id = None
+          Policy = policy
+          Rate = rate
+          ApplicableCondition = condition
+          EffectiveFrom = effectiveFrom
+          EffectiveTo = effectiveTo
+          Active = true }
+
+    /// 指定日に有効か（active かつ有効期間内）。US22 の割引計算は有効なポリシーのみ使用する。
+    let isEffectiveOn (date: DateOnly) (m: DiscountPolicyMaster) : bool =
+        m.Active
+        && date >= m.EffectiveFrom
+        && (match m.EffectiveTo with
+            | Some until -> date <= until
+            | None -> true)
+
+    /// 無効化する（US-ADM-01 受入 5）。無効化されたポリシーは割引計算に使われない。
+    let deactivate (m: DiscountPolicyMaster) : DiscountPolicyMaster = { m with Active = false }
+
 /// 支払い状態：各ケースに必要な時刻データを埋め込む。
 type PaymentState =
     | Pending of dueDate: DateTimeOffset

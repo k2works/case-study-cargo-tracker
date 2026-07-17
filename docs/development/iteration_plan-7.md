@@ -146,8 +146,8 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | `DiscountPolicy` マスタのドメイン（有効期限・適用条件・無効化）とリポジトリポート | 2h | - | [ ] |
-| 2.2 | マイグレーション `discount_policy`（新規・data-model へ追加）・Donald リポジトリ | 2h | - | [ ] |
+| 2.1 | `DiscountPolicyMaster` のドメイン（有効期限・適用条件・`isEffectiveOn`・`deactivate`）とリポジトリポート・`ManageDiscountPolicy` ユースケース | 2h | - | [x] |
+| 2.2 | マイグレーション `discount_policy`（0012・新規）・invoice 系（0013）・Donald リポジトリ（`DiscountPolicyRepository`）・往復統合テスト | 2h | - | [x] |
 | 2.3 | 管理画面（`/admin/discount-policies` 一覧・`/new` 登録・`/{id}/edit` 編集・`/{id}/deactivate` 無効化・ROLE_ADMIN）・navbar（管理設定）/dashboard 整合・検証テスト | 3h | - | [ ] |
 | 2.4 | 割引率範囲外（0〜30% 逸脱）のバリデーションと受け入れテスト | 2h | - | [ ] |
 
