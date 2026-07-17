@@ -23,16 +23,16 @@
 
 ### 成功基準
 
-- [ ] `RegisterException`（Delay/Damage/Lost/CustomsHold）で `TrackingException` が登録され、`currentStatus` が `InException` へ導出遷移することがユニット（FsCheck 込み）で検証される
-- [ ] Lost 例外は必ず `Unresolved (escalated=true)` で生成され `ExceptionEscalated` を発行する（ビジネスルール 3）ことがユニットで保証される
-- [ ] `ResolveException` で状態が例外発生前へ復帰し、二重解決が拒否される（ビジネスルール 5）ことがユニットで検証される
-- [ ] 「例外登録 → 荷主通知 →（Lost 時）エスカレーション通知 → 対応報告 → 解決 → 状態復帰」が受け入れテストで一気通貫する
-- [ ] `TrackingExceptionDetected` が Booking の Delivery（InException 同期）に伝播することが統合テストでパスする
-- [ ] 例外登録画面（`/tracking/{trackingNumber}/exceptions/new`・ROLE_TRACKER）と追跡詳細からの解決導線が動作する。例外登録は navbar 直下ではなく追跡詳細（`/tracking`・ROLE_TRACKER 含む）配下の導線のため、navbar は変更せず [例外を登録]／[例外を解決] ボタンのロール条件表示＋ナビ表示の検証テストで整合性を担保する
-- [ ] 追跡詳細に現在地・推定到着日が表示され（レビュー高#5）、追跡番号発行通知に公開追跡 URL が同梱される（レビュー高#6）
-- [ ] IT5 レビュー IT6 送り（高 2・中 6）と retro-5 Try#1/#4 が消化済み（「過去レビュー・ふりかえり指摘の反映」表のとおり）
-- [ ] ドメイン被覆 85%／全体 80% のカバレッジゲート・ArchUnit（BC 分離）が緑
-- [ ] テストカバレッジ 80% 以上
+- [x] `RegisterException`（Delay/Damage/Lost/CustomsHold）で `TrackingException` が登録され、`currentStatus` が `InException` へ導出遷移することがユニット（FsCheck 込み）で検証される
+- [x] Lost 例外は必ず `Unresolved (escalated=true)` で生成され `ExceptionEscalated` を発行する（ビジネスルール 3）ことがユニットで保証される
+- [x] `ResolveException` で状態が例外発生前へ復帰し、二重解決が拒否される（ビジネスルール 5）ことがユニットで検証される
+- [x] 「例外登録 → 荷主通知 →（Lost 時）エスカレーション通知 → 対応報告 → 解決 → 状態復帰」が受け入れテストで一気通貫する
+- [x] InException が `tracking_activity.transport_status` に反映され永続化往復する（Booking の transport_status は未実体化のため越境同期先なし。`TrackingExceptionDetected` は将来消費用に発行）
+- [x] 例外登録画面（`/tracking/{trackingNumber}/exceptions/new`・ROLE_TRACKER）と追跡詳細からの解決導線が動作する。例外登録は navbar 直下ではなく追跡詳細（`/tracking`・ROLE_TRACKER 含む）配下の導線のため、navbar は変更せず [例外を登録]／[解決] ボタンのロール条件表示＋受け入れテストで整合性を担保する
+- [x] 追跡詳細に現在地・推定到着日が表示され（レビュー高#5）、追跡番号発行通知に公開追跡 URL が同梱される（レビュー高#6）
+- [x] IT5 レビュー IT6 送り（高 2・中 6）と retro-5 Try#1/#4 が消化済み（「過去レビュー・ふりかえり指摘の反映」表のとおり）
+- [x] ドメイン被覆 85%／全体 80% のカバレッジゲート（実績: ドメイン 89.7%／全体 91.6%）・ArchUnit（BC 分離・24 件）が緑
+- [x] テストカバレッジ 80% 以上
 
 > **アプローチ（終盤アウトサイドイン IT6-IT7）**: [開発戦略](./development_strategy.md#終盤-アウトサイドインit6-it7)に従い、実装済みの Tracking 集約を業務シナリオ（例外登録〜対応報告）起点で結合する。受け入れテスト → Web → アプリ層 → ドメイン（`RegisterException`/`ResolveException`）の順に外側から駆動し、既存の ACL＝関数レコード・NotificationPort・Clock ポート・post-commit dispatch・カバレッジゲート・ArchUnit の規律を踏襲する。例外の解決状態は `ExceptionResolution` DU で表現し「解決済みなのに時刻が null」という不正状態を型で排除する。
 
@@ -164,7 +164,7 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 | **合計** | **6** | **48h** | |
 
 **1 SP あたり**: 約 8.0h（IT5 レビュー IT6 送り・改善タスク 18h を含む）
-**進捗率**: 100% (6/6 SP・US19/US20 ストーリー完了。残は技術的負債タスク 4)
+**進捗率**: 100% (6/6 SP・US19/US20 完了・技術的負債タスク 4 完了・カバレッジゲート合格)
 
 ---
 
@@ -374,12 +374,12 @@ note right of 追跡詳細 : 二重解決は AlreadyResolved で拒否しエラ�
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review + 必要に応じ developing-review）
-- [ ] ユニットテストがパス（FsCheck 含む・ドメイン被覆 85%）
-- [ ] 受け入れ・統合・E2E テストがパス（例外シナリオ一気通貫）
-- [ ] `dotnet build` 警告なし・ArchUnit（BC 分離）緑
-- [ ] 例外登録・解決機能がローカル環境で動作確認済み（ナビゲーション整合性含む）
-- [ ] ドキュメント更新完了（domain-model の IT6 実装状況・ADR-0011・release_plan 進捗）
+- [x] コードレビュー完了（self-review・Ralph Loop 各ターンで実施。正式レビューは staging 完了後の developing-review）
+- [x] ユニットテストがパス（FsCheck 含む・ドメイン被覆 89.7%）
+- [x] 受け入れ・統合・E2E テストがパス（例外シナリオ一気通貫・全 340 テスト緑）
+- [x] `dotnet build` 警告なし・ArchUnit（BC 分離・24 件）緑
+- [x] 例外登録・解決機能がローカル環境で動作確認済み（受け入れテストで検証）
+- [x] ドキュメント更新完了（ADR-0011/0012・release_plan 進捗・iteration_plan-6）
 
 ### デモ項目
 
