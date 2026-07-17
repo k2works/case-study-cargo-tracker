@@ -1,7 +1,9 @@
 module CargoTracker.Web.App
 
+open System
 open System.Data
 open System.Security.Claims
+open FsToolkit.ErrorHandling
 open Microsoft.AspNetCore.Authentication
 open Microsoft.AspNetCore.Authentication.Cookies
 open Microsoft.AspNetCore.Builder
@@ -1521,6 +1523,200 @@ let private handlingCreate: HttpHandler =
                         ctx
         }
 
+// ---- US-ADM-01: 割引ポリシー管理（ROLE_ADMIN）----
+
+/// DiscountPolicyMaster を表示用 DTO に変換する。
+let private toDiscountPolicyRow (m: CargoTracker.Billing.Domain.DiscountPolicyMaster) : Views.DiscountPolicyRow =
+    { Id = m.Id |> Option.defaultValue 0L
+      PolicyType = CargoTracker.Billing.Domain.DiscountPolicy.toString m.Policy
+      DiscountRate = CargoTracker.Billing.Domain.DiscountRate.value m.Rate
+      Condition = m.ApplicableCondition
+      EffectiveFrom = m.EffectiveFrom.ToString("yyyy-MM-dd")
+      EffectiveTo =
+        m.EffectiveTo
+        |> Option.map (fun d -> d.ToString("yyyy-MM-dd"))
+        |> Option.defaultValue ""
+      Active = m.Active }
+
+/// フォームから割引ポリシー入力を解釈する（割引率は % 入力 → 0〜1 の decimal へ）。
+let private parseDiscountPolicyForm (get: string -> string) =
+    result {
+        let! policy = CargoTracker.Billing.Domain.DiscountPolicy.ofString (get "policyType")
+
+        let! ratePercent =
+            match Decimal.TryParse(get "discountRate") with
+            | true, v -> Ok v
+            | _ -> Error(CargoTracker.Shared.Domain.ValidationError("discountRate", "割引率は数値で入力してください。"))
+
+        let! rate = CargoTracker.Billing.Domain.DiscountRate.create (ratePercent / 100m)
+
+        let! effFrom =
+            match DateOnly.TryParse(get "effectiveFrom") with
+            | true, d -> Ok d
+            | _ -> Error(CargoTracker.Shared.Domain.ValidationError("effectiveFrom", "有効開始日を入力してください。"))
+
+        let effTo =
+            match DateOnly.TryParse(get "effectiveTo") with
+            | true, d -> Some d
+            | _ -> None
+
+        return policy, rate, (get "condition"), effFrom, effTo
+    }
+
+/// 割引ポリシー一覧（`GET /admin/discount-policies`・ROLE_ADMIN）。
+let private discountPolicyList: HttpHandler =
+    mustHaveRole "ROLE_ADMIN"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.DiscountPolicyRepository.create conn systemClock
+
+            let msg = ctx.TryGetQueryStringValue "msg"
+
+            match! repo.FindAll() with
+            | Ok masters ->
+                let rows = masters |> List.map toDiscountPolicyRow
+                return! htmlView (Views.discountPolicyList (rolesOf ctx) msg rows) next ctx
+            | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 割引ポリシー登録フォーム（`GET /admin/discount-policies/new`・ROLE_ADMIN）。
+let private discountPolicyNew: HttpHandler =
+    mustHaveRole "ROLE_ADMIN"
+    >=> fun next ctx -> htmlView (Views.discountPolicyForm (rolesOf ctx) None None None) next ctx
+
+/// 割引ポリシー登録の実行（`POST /admin/discount-policies`・ROLE_ADMIN）。
+let private discountPolicyCreate: HttpHandler =
+    mustHaveRole "ROLE_ADMIN"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get (k: string) = string form.[k]
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.DiscountPolicyRepository.create conn systemClock
+
+            match parseDiscountPolicyForm get with
+            | Ok(policy, rate, condition, effFrom, effTo) ->
+                match!
+                    CargoTracker.Billing.Application.ManageDiscountPolicy.register
+                        repo
+                        policy
+                        rate
+                        condition
+                        effFrom
+                        effTo
+                with
+                | Ok _ -> return! redirectTo false "/admin/discount-policies?msg=created" next ctx
+                | Error err ->
+                    return!
+                        (setStatusCode 400
+                         >=> htmlView (Views.discountPolicyForm (rolesOf ctx) None None (Some(domainErrorMessage err))))
+                            next
+                            ctx
+            | Error err ->
+                return!
+                    (setStatusCode 400
+                     >=> htmlView (Views.discountPolicyForm (rolesOf ctx) None None (Some(domainErrorMessage err))))
+                        next
+                        ctx
+        }
+
+/// 割引ポリシー編集フォーム（`GET /admin/discount-policies/{id}/edit`・ROLE_ADMIN）。
+let private discountPolicyEdit (idInt: int) : HttpHandler =
+    let id = int64 idInt
+
+    mustHaveRole "ROLE_ADMIN"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.DiscountPolicyRepository.create conn systemClock
+
+            match! repo.FindById id with
+            | Ok(Some m) ->
+                return!
+                    htmlView
+                        (Views.discountPolicyForm (rolesOf ctx) (Some id) (Some(toDiscountPolicyRow m)) None)
+                        next
+                        ctx
+            | Ok None -> return! (setStatusCode 404 >=> text "割引ポリシーが見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 割引ポリシー更新の実行（`POST /admin/discount-policies/{id}/edit`・ROLE_ADMIN）。
+let private discountPolicyUpdate (idInt: int) : HttpHandler =
+    let id = int64 idInt
+
+    mustHaveRole "ROLE_ADMIN"
+    >=> fun next ctx ->
+        task {
+            let! form = ctx.Request.ReadFormAsync()
+            let get (k: string) = string form.[k]
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.DiscountPolicyRepository.create conn systemClock
+
+            match! repo.FindById id with
+            | Ok(Some existing) ->
+                match parseDiscountPolicyForm get with
+                | Ok(policy, rate, condition, effFrom, effTo) ->
+                    let updated =
+                        { existing with
+                            Policy = policy
+                            Rate = rate
+                            ApplicableCondition = condition
+                            EffectiveFrom = effFrom
+                            EffectiveTo = effTo }
+
+                    match! CargoTracker.Billing.Application.ManageDiscountPolicy.update repo updated with
+                    | Ok _ -> return! redirectTo false "/admin/discount-policies?msg=updated" next ctx
+                    | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
+                | Error err ->
+                    return!
+                        (setStatusCode 400
+                         >=> htmlView (
+                             Views.discountPolicyForm
+                                 (rolesOf ctx)
+                                 (Some id)
+                                 (Some(toDiscountPolicyRow existing))
+                                 (Some(domainErrorMessage err))
+                         ))
+                            next
+                            ctx
+            | Ok None -> return! (setStatusCode 404 >=> text "割引ポリシーが見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
+        }
+
+/// 割引ポリシー無効化の実行（`POST /admin/discount-policies/{id}/deactivate`・ROLE_ADMIN）。
+let private discountPolicyDeactivate (idInt: int) : HttpHandler =
+    let id = int64 idInt
+
+    mustHaveRole "ROLE_ADMIN"
+    >=> fun next ctx ->
+        task {
+            let factory = ctx.GetService<ConnectionFactory>()
+            use conn = factory ()
+
+            let repo =
+                CargoTracker.Billing.Infrastructure.DiscountPolicyRepository.create conn systemClock
+
+            match! CargoTracker.Billing.Application.ManageDiscountPolicy.deactivate repo id with
+            | Ok _ -> return! redirectTo false "/admin/discount-policies?msg=deactivated" next ctx
+            | Error(CargoTracker.Shared.Domain.NotFound _) ->
+                return! (setStatusCode 404 >=> text "割引ポリシーが見つかりません。") next ctx
+            | Error err -> return! (setStatusCode 500 >=> text (domainErrorMessage err)) next ctx
+        }
+
 /// ルーティング定義。公開パス（/health・/login）以外は認証を要求する。
 let webApp: HttpHandler =
     choose
@@ -1553,7 +1749,10 @@ let webApp: HttpHandler =
                     routef "/voyages/%s/edit" voyageEdit
                     route "/routing/requests" >=> routingRequests
                     routef "/routing/requests/%s" routingDesign
-                    route "/admin/discount-policies" >=> placeholder "割引ポリシー管理" [ "ROLE_ADMIN" ] ]
+                    // US-ADM-01: 割引ポリシー管理（具体パス /new を routef より先に置く）。
+                    route "/admin/discount-policies" >=> discountPolicyList
+                    route "/admin/discount-policies/new" >=> discountPolicyNew
+                    routef "/admin/discount-policies/%i/edit" discountPolicyEdit ]
           POST
           >=> choose
                   [ route "/login" >=> loginPost
@@ -1573,7 +1772,11 @@ let webApp: HttpHandler =
                     route "/voyages" >=> voyageCreate
                     routef "/voyages/%s/edit" voyageUpdate
                     routef "/voyages/%s/confirm" voyageConfirm
-                    routef "/routing/requests/%s/propose" routingPropose ]
+                    routef "/routing/requests/%s/propose" routingPropose
+                    // US-ADM-01: 割引ポリシー管理（POST）。
+                    routef "/admin/discount-policies/%i/edit" discountPolicyUpdate
+                    routef "/admin/discount-policies/%i/deactivate" discountPolicyDeactivate
+                    route "/admin/discount-policies" >=> discountPolicyCreate ]
           setStatusCode 404 >=> text "Not Found" ]
 
 /// DI 構成。Giraffe + Cookie 認証 + 接続ファクトリを登録する。

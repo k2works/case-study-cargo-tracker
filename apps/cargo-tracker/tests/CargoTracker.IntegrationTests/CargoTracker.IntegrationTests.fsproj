@@ -29,6 +29,7 @@
     <Compile Include="HandlingAcceptanceTests.fs" />
     <Compile Include="BookingEventConsumerTests.fs" />
     <Compile Include="DiscountPolicyRepositoryTests.fs" />
+    <Compile Include="DiscountPolicyAcceptanceTests.fs" />
     <Compile Include="ReleaseFlowE2ETests.fs" />
   </ItemGroup>
 

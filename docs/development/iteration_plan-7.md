@@ -148,8 +148,8 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 |---|--------|---------|------|------|
 | 2.1 | `DiscountPolicyMaster` のドメイン（有効期限・適用条件・`isEffectiveOn`・`deactivate`）とリポジトリポート・`ManageDiscountPolicy` ユースケース | 2h | - | [x] |
 | 2.2 | マイグレーション `discount_policy`（0012・新規）・invoice 系（0013）・Donald リポジトリ（`DiscountPolicyRepository`）・往復統合テスト | 2h | - | [x] |
-| 2.3 | 管理画面（`/admin/discount-policies` 一覧・`/new` 登録・`/{id}/edit` 編集・`/{id}/deactivate` 無効化・ROLE_ADMIN）・navbar（管理設定）/dashboard 整合・検証テスト | 3h | - | [ ] |
-| 2.4 | 割引率範囲外（0〜30% 逸脱）のバリデーションと受け入れテスト | 2h | - | [ ] |
+| 2.3 | 管理画面（`/admin/discount-policies` 一覧・`/new` 登録・`/{id}/edit` 編集・`/{id}/deactivate` 無効化・ROLE_ADMIN）・navbar（管理設定・placeholder 実画面化）/dashboard 整合 | 3h | - | [x] |
+| 2.4 | 割引率範囲外（0〜30% 逸脱）のバリデーションと受け入れテスト（登録・31% エラー・ROLE_ADMIN 権限） | 2h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -181,13 +181,13 @@ IT6 レビュー保留・retro-6 Try のうち IT7 スコープに関わる項�
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
 | Billing ドメイン | 6 | 14h | [x] |
-| 割引ポリシー管理 | 3 | 9h | [ ] |
+| 割引ポリシー管理 | 3 | 9h | [x] |
 | 料金算出・精算・BC 連携 | 7 | 18h | [ ] |
 | 通知集約・Release 1.1 出荷 | - | 8h | [ ] |
 | **合計** | **16** | **49h** | |
 
 **1 SP あたり**: 約 3.1h（改善・出荷タスク 8h を含む）
-**進捗率**: 38% (6/16 SP・Billing ドメイン完了)
+**進捗率**: 56% (9/16 SP・Billing ドメイン・US-ADM-01 完了)
 
 ---
 

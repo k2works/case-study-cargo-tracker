@@ -1412,3 +1412,190 @@ module Views =
                         [ _class "btn btn-secondary ms-2"
                           _href (sprintf "/tracking/%s" trackingNumber) ]
                         [ str "追跡詳細へ戻る" ] ] ]
+
+    // ---- US-ADM-01: 割引ポリシー管理（ROLE_ADMIN）----
+
+    /// 割引方針コードの日本語表示。
+    let discountPolicyLabel (policyType: string) : string =
+        match policyType with
+        | "CORPORATE_STANDARD" -> "法人標準"
+        | "VOLUME_DISCOUNT" -> "ボリューム"
+        | "SEASONAL" -> "シーズン"
+        | "NO_DISCOUNT" -> "割引なし"
+        | other -> other
+
+    /// 割引ポリシー一覧の表示行。
+    type DiscountPolicyRow =
+        { Id: int64
+          PolicyType: string
+          DiscountRate: decimal
+          Condition: string
+          EffectiveFrom: string
+          EffectiveTo: string
+          Active: bool }
+
+    /// 割引ポリシー一覧画面（`/admin/discount-policies`・ROLE_ADMIN）。
+    let discountPolicyList (roles: string list) (msg: string option) (rows: DiscountPolicyRow list) : XmlNode =
+        let banner =
+            match msg with
+            | Some "created" -> div [ _class "alert alert-success" ] [ str "割引ポリシーを登録しました。" ]
+            | Some "updated" -> div [ _class "alert alert-success" ] [ str "割引ポリシーを更新しました。" ]
+            | Some "deactivated" -> div [ _class "alert alert-success" ] [ str "割引ポリシーを無効化しました。" ]
+            | _ -> emptyText
+
+        let bodyRows =
+            rows
+            |> List.map (fun r ->
+                tr
+                    []
+                    [ td [] [ str (discountPolicyLabel r.PolicyType) ]
+                      td [] [ str (sprintf "%.1f%%" (r.DiscountRate * 100m)) ]
+                      td [] [ str r.Condition ]
+                      td [] [ str r.EffectiveFrom ]
+                      td [] [ str r.EffectiveTo ]
+                      td
+                          []
+                          [ if r.Active then
+                                span [ _class "badge bg-success" ] [ str "有効" ]
+                            else
+                                span [ _class "badge bg-secondary" ] [ str "無効" ] ]
+                      td
+                          []
+                          [ a
+                                [ _class "btn btn-sm btn-outline-primary me-1"
+                                  _href (sprintf "/admin/discount-policies/%d/edit" r.Id) ]
+                                [ str "編集" ]
+                            if r.Active then
+                                form
+                                    [ _method "post"
+                                      _action (sprintf "/admin/discount-policies/%d/deactivate" r.Id)
+                                      _class "d-inline" ]
+                                    [ button [ _type "submit"; _class "btn btn-sm btn-outline-danger" ] [ str "無効化" ] ]
+                            else
+                                emptyText ] ])
+
+        layout
+            "割引ポリシー管理"
+            roles
+            [ banner
+              div
+                  [ _class "d-flex justify-content-between align-items-center mb-4" ]
+                  [ h1 [] [ str "割引ポリシー管理" ]
+                    a [ _class "btn btn-primary"; _href "/admin/discount-policies/new" ] [ str "新規登録" ] ]
+              (if List.isEmpty rows then
+                   div [ _class "alert alert-info" ] [ str "割引ポリシーは登録されていません。" ]
+               else
+                   table
+                       [ _class "table table-striped" ]
+                       [ thead
+                             []
+                             [ tr
+                                   []
+                                   [ th [] [ str "割引方針" ]
+                                     th [] [ str "割引率" ]
+                                     th [] [ str "適用条件" ]
+                                     th [] [ str "有効開始" ]
+                                     th [] [ str "有効終了" ]
+                                     th [] [ str "状態" ]
+                                     th [] [ str "操作" ] ] ]
+                         tbody [] bodyRows ]) ]
+
+    /// 割引ポリシー登録・編集フォーム（`/admin/discount-policies/new`・`/{id}/edit`・ROLE_ADMIN）。
+    /// edit が Some id の場合は編集（POST 先が /{id}/edit）、None の場合は新規（POST 先が /admin/discount-policies）。
+    let discountPolicyForm
+        (roles: string list)
+        (editId: int64 option)
+        (values: DiscountPolicyRow option)
+        (error: string option)
+        : XmlNode =
+        let action =
+            match editId with
+            | Some id -> sprintf "/admin/discount-policies/%d/edit" id
+            | None -> "/admin/discount-policies"
+
+        let title =
+            match editId with
+            | Some _ -> "割引ポリシー編集"
+            | None -> "割引ポリシー登録"
+
+        let sel (v: string) (current: string) =
+            if v = current then
+                [ _value v; _selected ]
+            else
+                [ _value v ]
+
+        let currentType =
+            values
+            |> Option.map (fun v -> v.PolicyType)
+            |> Option.defaultValue "CORPORATE_STANDARD"
+
+        let ratePercent =
+            values
+            |> Option.map (fun v -> sprintf "%.1f" (v.DiscountRate * 100m))
+            |> Option.defaultValue "10.0"
+
+        let condition =
+            values |> Option.map (fun v -> v.Condition) |> Option.defaultValue ""
+
+        let effFrom =
+            values |> Option.map (fun v -> v.EffectiveFrom) |> Option.defaultValue ""
+
+        let effTo = values |> Option.map (fun v -> v.EffectiveTo) |> Option.defaultValue ""
+
+        layout
+            title
+            roles
+            [ h1 [ _class "mb-4" ] [ str title ]
+              (match error with
+               | Some m -> div [ _class "alert alert-danger" ] [ str m ]
+               | None -> emptyText)
+              form
+                  [ _method "post"; _action action ]
+                  [ div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "policyType" ] [ str "割引方針" ]
+                          select
+                              [ _class "form-select"; _id "policyType"; _name "policyType" ]
+                              [ option (sel "CORPORATE_STANDARD" currentType) [ str "法人標準" ]
+                                option (sel "VOLUME_DISCOUNT" currentType) [ str "ボリューム" ]
+                                option (sel "SEASONAL" currentType) [ str "シーズン" ]
+                                option (sel "NO_DISCOUNT" currentType) [ str "割引なし" ] ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "discountRate" ] [ str "割引率（%・0〜30）" ]
+                          input
+                              [ _class "form-control"
+                                _id "discountRate"
+                                _name "discountRate"
+                                _type "number"
+                                _step "0.1"
+                                _value ratePercent ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "condition" ] [ str "適用条件" ]
+                          input
+                              [ _class "form-control"
+                                _id "condition"
+                                _name "condition"
+                                _type "text"
+                                _value condition ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "effectiveFrom" ] [ str "有効開始日（YYYY-MM-DD）" ]
+                          input
+                              [ _class "form-control"
+                                _id "effectiveFrom"
+                                _name "effectiveFrom"
+                                _type "date"
+                                _value effFrom ] ]
+                    div
+                        [ _class "mb-3" ]
+                        [ label [ _class "form-label"; _for "effectiveTo" ] [ str "有効終了日（任意）" ]
+                          input
+                              [ _class "form-control"
+                                _id "effectiveTo"
+                                _name "effectiveTo"
+                                _type "date"
+                                _value effTo ] ]
+                    button [ _type "submit"; _class "btn btn-primary" ] [ str "保存" ]
+                    a [ _class "btn btn-secondary ms-2"; _href "/admin/discount-policies" ] [ str "一覧へ戻る" ] ] ]
