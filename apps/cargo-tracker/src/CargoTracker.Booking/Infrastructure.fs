@@ -50,26 +50,9 @@ module CargoQueries =
         |> Db.setParams [ "bid", SqlType.String bookingId ]
         |> Db.querySingle (fun rd -> rd.ReadString "arrival_deadline")
 
-    /// 予約状態（booking_status）を射影として直接更新する（US23 精算完了の Settled 同期・ADR-0013）。
-    /// 旅程（leg）を伴う集約再構成を要さず、BC 連携の状態射影のみを更新する（transport_status と同方針）。
-    let syncBookingStatus
-        (conn: IDbConnection)
-        (nowStr: string)
-        (bookingId: string)
-        (status: string)
-        : Result<unit, DomainError> =
-        try
-            conn
-            |> Db.newCommand "UPDATE cargo SET booking_status = @status, updated_at = @now WHERE booking_id = @bid"
-            |> Db.setParams
-                [ "status", SqlType.String status
-                  "now", SqlType.String nowStr
-                  "bid", SqlType.String bookingId ]
-            |> Db.exec
-
-            Ok()
-        with ex ->
-            Error(BusinessRuleViolation("CargoQueries", ex.Message))
+    // 【IT8 task4.1 で廃止】精算完了の Settled 同期は状態射影の直接 UPDATE（旧 syncBookingStatus）から
+    // BookingSettled イベント駆動の集約更新（Booking.Application.RouteAssignment.settle）へ移行した（ADR-0013 案 C）。
+    // Delivered→Settled の遷移ガードを集約で通すため、ガードなしの射影 UPDATE は不要になった。
 
     /// 確定経路の区間（leg）を積込地・荷降地の順で取得する（US21 距離自動導出・輸送実績表示の合成層向け）。
     let findRouteLegs (conn: IDbConnection) (bookingId: string) : (string * string) list =

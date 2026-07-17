@@ -6,7 +6,10 @@
 
 ## ステータス
 
-2026-07-17 提案（IT7・Billing コンテキスト立ち上げ・Release 1.1）
+- 2026-07-17 提案（IT7・Billing コンテキスト立ち上げ・Release 1.1）
+- 2026-07-17 改訂（IT8 task4.1）: **精算完了の Settled 同期を状態射影更新（案）から `BookingSettled` イベント駆動の集約更新（案 C）へ移行**。
+
+> **改訂の要点（IT8）**: 当初の「決定 3. Settled 同期は状態射影の更新（`CargoQueries.syncBookingStatus` によるガードなし `UPDATE`）」を廃止し、`Billing.confirmPayment` 成功後に合成層が `Booking.Application.RouteAssignment.settle`（`CargoRepository` 経由で Cargo 集約を再構成し `Settle` コマンドを適用）を呼ぶ方式に変更した。これにより **Delivered→Settled の遷移ガードを集約で通す**（Delivered でない予約は Settled にならない）。`syncBookingStatus` は削除。E2E/受け入れテストで `cargo.booking_status` の実値が `SETTLED` になることを検証する（IT7 レビュー高#1・retro-7 Try#3）。案 C は当初「保留」だったが、Delivered/Settled が旅程（leg）を持つ集約として実装済みのため再構成コストは許容範囲と判断した。
 
 ## コンテキスト
 

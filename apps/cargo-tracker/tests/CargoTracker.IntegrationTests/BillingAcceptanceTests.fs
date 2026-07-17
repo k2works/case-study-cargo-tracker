@@ -53,7 +53,7 @@ let private seedDatabase (connStr: string) : unit =
             VALUES ('SHP-CORP0001', '%s', 'CORPORATE', '法人荷主', 'corp@example.com', 'C-001', 0.10, '2026-10-06', '2026-10-06', 0);
             INSERT INTO cargo
                 (booking_id, shipper_id, cargo_type, weight, origin_unlocode, destination_unlocode, arrival_deadline, booking_status, created_at, updated_at, version)
-            VALUES ('BKG-BILL01', '%s', 'GENERAL', 500, 'JPTYO', 'USLAX', '2026-12-01', 'CLAIMED', '2026-10-06', '2026-10-06', 0);
+            VALUES ('BKG-BILL01', '%s', 'GENERAL', 500, 'JPTYO', 'USLAX', '2026-12-01', 'DELIVERED', '2026-10-06', '2026-10-06', 0);
             INSERT INTO discount_policy
                 (policy_type, discount_rate, applicable_condition, effective_from, effective_to, active, created_at, updated_at)
             VALUES ('CORPORATE_STANDARD', 0.10, '法人標準', '2026-01-01', NULL, 1, '2026-10-06', '2026-10-06');
@@ -90,7 +90,7 @@ let private buildServer (connStr: string) : TestServer =
 
     new TestServer(builder)
 
-let private withServer (test: HttpClient -> unit) =
+let private withServerDb (test: HttpClient -> string -> unit) =
     let dbFile =
         Path.Combine(Path.GetTempPath(), sprintf "cargo_bill_%s.db" (System.Guid.NewGuid().ToString("N")))
 
@@ -100,13 +100,16 @@ let private withServer (test: HttpClient -> unit) =
     let client = server.CreateClient()
 
     try
-        test client
+        test client connStr
     finally
         server.Dispose()
         SqliteConnection.ClearAllPools()
 
         if File.Exists dbFile then
             File.Delete dbFile
+
+let private withServer (test: HttpClient -> unit) =
+    withServerDb (fun client _ -> test client)
 
 let private authCookie (client: HttpClient) (username: string) : string =
     let form =
@@ -129,7 +132,7 @@ let private post (client: HttpClient) (cookie: string) (path: string) (fields: (
 [<Fact>]
 [<Trait("Category", "Integration")>]
 let ``経理担当者が料金算出→精算書発行→入金確認まで一気通貫（US21/US22/US23）`` () =
-    withServer (fun client ->
+    withServerDb (fun client connStr ->
         let billing = authCookie client "billing01"
 
         // 確定前プレビュー（US21/US22）: 輸送実績・導出距離・確定前割引率が表示される
@@ -171,7 +174,16 @@ let ``経理担当者が料金算出→精算書発行→入金確認まで一�
 
         let list = authedGet client billing "/billing/invoices"
         let listBody = run (list.Content.ReadAsStringAsync())
-        listBody |> should haveSubstring "精算済")
+        listBody |> should haveSubstring "精算済"
+
+        // BC 連携（task4.1/4.2）: 精算完了で予約が BookingSettled イベント駆動で Settled へ遷移し、
+        // cargo.booking_status が実値 'SETTLED' に更新されていることを検証する（IT7 レビュー高#1）。
+        use verifyConn = new SqliteConnection(connStr)
+        verifyConn.Open()
+        use statusCmd = verifyConn.CreateCommand()
+        statusCmd.CommandText <- "SELECT booking_status FROM cargo WHERE booking_id = 'BKG-BILL01'"
+        let bookingStatus = statusCmd.ExecuteScalar() |> string
+        bookingStatus |> should equal "SETTLED")
 
 // 注: マスタ率が権威であること（マスタの discount_rate を使い、ハードコード率を使わない）は、
 // 上記受け入れテストがシードの割引ポリシー（10%）に依存して 45000 になる点と、

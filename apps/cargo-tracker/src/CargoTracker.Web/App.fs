@@ -2072,18 +2072,23 @@ let private paymentConfirm (invoiceNumber: string) : HttpHandler =
                     (CargoTracker.Billing.Domain.InvoiceId.ofString invoiceNumber)
             with
             | Ok inv ->
-                // BC 連携: 精算完了で予約を Settled へ同期する（ADR-0013・状態射影更新）。
+                // BC 連携: 精算完了で予約を Settled へ同期する（ADR-0013 案 C・BookingSettled イベント駆動）。
+                // 状態射影の直接 UPDATE ではなく Booking 集約経由で Delivered→Settled の遷移ガードを通す。
                 // 入金確認は確定済みのため、Settled 同期の失敗は握り潰さずログに残す（IT7 レビュー高#1）。
-                let bookingId =
+                let bookingIdStr =
                     CargoTracker.Billing.Domain.BillingBookingId.value inv.CargoBookingId
 
-                let nowStr = (systemClock ()).UtcDateTime.ToString("o")
+                let cargoRepo =
+                    CargoTracker.Booking.Infrastructure.CargoRepository.create conn systemClock
 
-                match
-                    CargoTracker.Booking.Infrastructure.CargoQueries.syncBookingStatus conn nowStr bookingId "SETTLED"
-                with
-                | Ok() -> ()
-                | Error e -> eprintfn "[paymentConfirm] 予約 Settled 同期に失敗（入金は確認済み）: %s / %A" bookingId e
+                let dispatcher =
+                    CargoTracker.Web.BookingEventConsumer.create conn systemClock systemNewId
+
+                let bookingId = CargoTracker.Booking.Domain.BookingId.ofString bookingIdStr
+
+                match! CargoTracker.Booking.Application.RouteAssignment.settle cargoRepo dispatcher bookingId with
+                | Ok _ -> ()
+                | Error e -> eprintfn "[paymentConfirm] 予約 Settled 同期に失敗（入金は確認済み）: %s / %A" bookingIdStr e
 
                 return! redirectTo false "/billing/invoices?msg=confirmed" next ctx
             | Error(CargoTracker.Shared.Domain.NotFound _) ->
