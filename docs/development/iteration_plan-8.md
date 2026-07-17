@@ -215,6 +215,8 @@ Invoice ..> Cargo : BookingSettled 消費で Settle（イベント駆動・ADR-0
 ```
 
 > IT8 で `Invoice` に `TaxAmount`（消費税）・`LineItems`（明細・付加料金）を追加し、消費税・付加料金を型で表現する（domain-model へ反映）。Settled 同期は `BookingSettled` イベント消費の集約更新（`Booking.Application.settle`）へ移行し、状態射影 `syncBookingStatus` を廃止 or 補助に格下げする（ADR-0013 改訂）。
+>
+> **状態遷移図・画面遷移図の扱い（本 IT は既存の再利用）**: 本 IT は新規集約・新規画面を作らない強化イテレーションのため、`PaymentState`（Pending→Confirmed/Overdue→Refunded）・`BookingState`（Confirmed→Delivered→Settled）の状態遷移は [iteration_plan-7.md](./iteration_plan-7.md) の図を、精算/割引ポリシー画面の画面遷移は [ui_design.md](../design/ui_design.md) の精算フロー・管理フローを正として再利用する。本 IT の差分は (1) Settled 遷移の契機を射影から `BookingSettled` イベント駆動へ変更（遷移そのものは不変）、(2) 精算書詳細の金額内訳に消費税・付加料金の表示行を追加、(3) 割引ポリシー一覧に有効期限フィルタ・精算書詳細に返金ボタンを追加、の 3 点で、いずれも既存 state/画面の拡張に留まる。
 
 ### データモデル
 
