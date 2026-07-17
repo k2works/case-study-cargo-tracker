@@ -89,9 +89,10 @@ let main args =
     | Ok() -> ()
     | Error e -> failwithf "DB マイグレーションに失敗しました: %s" e
 
-    // 開発用の既定ユーザーを投入する（users が空のときのみ・冪等）。
+    // 開発用の既定ユーザーと業務サンプルデータを投入する（各テーブルが空のときのみ・冪等）。
     use seedConn = Db.openConnection provider connStr
     Seed.ensureDefaultUsers seedConn (System.DateTimeOffset.Now.UtcDateTime.ToString("o"))
+    Seed.ensureBusinessData seedConn System.DateTimeOffset.Now
 
     App.configureApp app
 
