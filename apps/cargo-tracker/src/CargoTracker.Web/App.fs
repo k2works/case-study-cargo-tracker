@@ -1749,13 +1749,34 @@ let private invoiceList: HttpHandler =
             use conn = factory ()
             let msg = ctx.TryGetQueryStringValue "msg"
 
+            // 一覧表示前に期限超過を検出し、経理へ未払い通知を送る（US23 受入5・markOverdueIfDue 結線）。
+            let repo =
+                CargoTracker.Billing.Infrastructure.InvoiceRepository.create conn systemClock
+
+            let now = systemClock ()
+
+            let pending =
+                CargoTracker.Billing.Infrastructure.InvoiceQueries.findAll conn
+                |> List.filter (fun r -> normalizePaymentStatus r.PaymentStatus = "Pending")
+
+            for r in pending do
+                let! _ =
+                    CargoTracker.Billing.Application.Billing.markOverdueIfDue
+                        repo
+                        (billingNotifier conn)
+                        (CargoTracker.Billing.Domain.InvoiceId.ofString r.InvoiceNumber)
+                        now
+
+                ()
+
             let rows =
                 CargoTracker.Billing.Infrastructure.InvoiceQueries.findAll conn
                 |> List.map (fun r ->
                     { Views.InvoiceRow.InvoiceNumber = r.InvoiceNumber
                       Views.InvoiceRow.BookingId = r.BookingId
                       Views.InvoiceRow.FinalAmount = r.FinalAmountValue
-                      Views.InvoiceRow.PaymentStatus = normalizePaymentStatus r.PaymentStatus })
+                      Views.InvoiceRow.PaymentStatus = normalizePaymentStatus r.PaymentStatus
+                      Views.InvoiceRow.DueDate = (r.DueDate |> Option.defaultValue "") })
 
             return! htmlView (Views.invoiceList (rolesOf ctx) msg rows) next ctx
         }
@@ -1870,6 +1891,13 @@ let private invoiceDetail (invoiceNumber: string) : HttpHandler =
 
             match! repo.FindByInvoiceId(CargoTracker.Billing.Domain.InvoiceId.ofString invoiceNumber) with
             | Ok(Some inv) ->
+                // 支払期限は PaymentState（Pending/Overdue）が保持する dueDate から取り出す（US23）。
+                let dueDate =
+                    match inv.Payment with
+                    | CargoTracker.Billing.Domain.Pending d
+                    | CargoTracker.Billing.Domain.Overdue d -> d.ToString("yyyy-MM-dd")
+                    | _ -> ""
+
                 let d: Views.InvoiceDetailView =
                     { InvoiceNumber = CargoTracker.Billing.Domain.InvoiceId.value inv.InvoiceId
                       BookingId = CargoTracker.Billing.Domain.BillingBookingId.value inv.CargoBookingId
@@ -1878,7 +1906,8 @@ let private invoiceDetail (invoiceNumber: string) : HttpHandler =
                       DiscountRate = CargoTracker.Billing.Domain.DiscountRate.value inv.DiscountRate
                       FinalAmount = inv.FinalAmount.Amount
                       PaymentStatus = CargoTracker.Billing.Domain.PaymentState.name inv.Payment
-                      IssuedAt = inv.IssuedAt.ToString("yyyy-MM-dd") }
+                      IssuedAt = inv.IssuedAt.ToString("yyyy-MM-dd")
+                      DueDate = dueDate }
 
                 return! htmlView (Views.invoiceDetail (rolesOf ctx) d) next ctx
             | Ok None -> return! (setStatusCode 404 >=> text "精算書が見つかりません。") next ctx

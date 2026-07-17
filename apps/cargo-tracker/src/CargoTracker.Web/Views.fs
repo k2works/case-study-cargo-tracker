@@ -1617,7 +1617,8 @@ module Views =
         { InvoiceNumber: string
           BookingId: string
           FinalAmount: int64
-          PaymentStatus: string }
+          PaymentStatus: string
+          DueDate: string }
 
     /// 精算書一覧画面（`/billing/invoices`・ROLE_BILLING）。
     let invoiceList (roles: string list) (msg: string option) (rows: InvoiceRow list) : XmlNode =
@@ -1635,6 +1636,7 @@ module Views =
                     [ td [] [ a [ _href (sprintf "/billing/invoices/%s" r.InvoiceNumber) ] [ str r.InvoiceNumber ] ]
                       td [] [ str r.BookingId ]
                       td [] [ str (sprintf "¥%s" (r.FinalAmount.ToString("N0"))) ]
+                      td [] [ (if r.DueDate = "" then str "—" else str r.DueDate) ]
                       td [] [ span [ _class "badge bg-secondary" ] [ str (paymentStatusLabel r.PaymentStatus) ] ] ])
 
         layout
@@ -1657,6 +1659,7 @@ module Views =
                                    [ th [] [ str "請求番号" ]
                                      th [] [ str "予約番号" ]
                                      th [] [ str "請求金額" ]
+                                     th [] [ str "支払期限" ]
                                      th [] [ str "状態" ] ] ]
                          tbody [] bodyRows ]) ]
 
@@ -1698,7 +1701,8 @@ module Views =
           DiscountRate: decimal
           FinalAmount: int64
           PaymentStatus: string
-          IssuedAt: string }
+          IssuedAt: string
+          DueDate: string }
 
     /// 精算書詳細画面（`/billing/invoices/{invoiceId}`・ROLE_BILLING）。支払待ちなら入金確認フォームを表示。
     let invoiceDetail (roles: string list) (d: InvoiceDetailView) : XmlNode =
@@ -1722,7 +1726,15 @@ module Views =
                     dt [ _class "col-sm-3" ] [ str "請求金額（割引後）" ]
                     dd [ _class "col-sm-9" ] [ b [] [ str (sprintf "¥%s" (d.FinalAmount.ToString("N0"))) ] ]
                     dt [ _class "col-sm-3" ] [ str "発行日" ]
-                    dd [ _class "col-sm-9" ] [ str d.IssuedAt ] ]
+                    dd [ _class "col-sm-9" ] [ str d.IssuedAt ]
+                    dt [ _class "col-sm-3" ] [ str "支払期限" ]
+                    dd
+                        [ _class "col-sm-9" ]
+                        [ str (if d.DueDate = "" then "-" else d.DueDate)
+                          (if d.PaymentStatus = "Overdue" then
+                               span [ _class "badge bg-danger ms-2" ] [ str "期限超過" ]
+                           else
+                               emptyText) ] ]
               (if d.PaymentStatus = "Pending" || d.PaymentStatus = "Overdue" then
                    form
                        [ _method "post"

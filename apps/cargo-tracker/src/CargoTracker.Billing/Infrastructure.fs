@@ -382,14 +382,16 @@ module InvoiceQueries =
         { InvoiceNumber: string
           BookingId: string
           FinalAmountValue: int64
-          PaymentStatus: string }
+          PaymentStatus: string
+          DueDate: string option }
 
     let findAll (conn: IDbConnection) : InvoiceListRow list =
         conn
         |> Db.newCommand
-            "SELECT invoice_number, booking_id, final_amount_value, payment_status FROM invoice ORDER BY id DESC"
+            "SELECT invoice_number, booking_id, final_amount_value, payment_status, due_date FROM invoice ORDER BY id DESC"
         |> Db.query (fun rd ->
             { InvoiceNumber = rd.ReadString "invoice_number"
               BookingId = rd.ReadString "booking_id"
               FinalAmountValue = rd.ReadInt64 "final_amount_value"
-              PaymentStatus = rd.ReadString "payment_status" })
+              PaymentStatus = rd.ReadString "payment_status"
+              DueDate = rd.ReadStringOption "due_date" })

@@ -159,3 +159,80 @@ let ``入金確認で Confirmed へ遷移し永続化される（US23）`` () =
     match repo.FindByInvoiceId invoice.InvoiceId |> Async.RunSynchronously with
     | Ok(Some found) -> PaymentState.name found.Payment |> should equal "Confirmed"
     | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``期限超過で Overdue へ遷移し経理へ未払い通知される（US23 受入5・IT8）`` () =
+    use conn = openDb ()
+    let repo = InvoiceRepository.create conn fixedClock
+    let calls = System.Collections.Generic.List<string>()
+
+    let invoice =
+        Billing.generateInvoice
+            repo
+            (notifier calls)
+            newId
+            (bookingId ())
+            (corporate ())
+            baseAmount
+            CorporateStandard
+            (DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero))
+        |> Async.RunSynchronously
+        |> function
+            | Ok i -> i
+            | Error e -> failwithf "%A" e
+
+    calls.Clear()
+    // 支払期限（11/5）より後
+    let now = DateTimeOffset(2026, 11, 10, 0, 0, 0, TimeSpan.Zero)
+
+    let updated =
+        Billing.markOverdueIfDue repo (notifier calls) invoice.InvoiceId now
+        |> Async.RunSynchronously
+        |> function
+            | Ok i -> i
+            | Error e -> failwithf "%A" e
+
+    PaymentState.name updated.Payment |> should equal "Overdue"
+    // 未払い通知が送られる
+    calls.Count |> should equal 1
+    calls.[0] |> should haveSubstring "支払期限を超過"
+
+    // 永続化も Overdue
+    match repo.FindByInvoiceId invoice.InvoiceId |> Async.RunSynchronously with
+    | Ok(Some found) -> PaymentState.name found.Payment |> should equal "Overdue"
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``期限内は markOverdueIfDue で状態が変わらず通知もされない`` () =
+    use conn = openDb ()
+    let repo = InvoiceRepository.create conn fixedClock
+    let calls = System.Collections.Generic.List<string>()
+
+    let invoice =
+        Billing.generateInvoice
+            repo
+            (notifier calls)
+            newId
+            (bookingId ())
+            (corporate ())
+            baseAmount
+            CorporateStandard
+            (DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero))
+        |> Async.RunSynchronously
+        |> function
+            | Ok i -> i
+            | Error e -> failwithf "%A" e
+
+    calls.Clear()
+    // 期限内（10/20）
+    let now = DateTimeOffset(2026, 10, 20, 0, 0, 0, TimeSpan.Zero)
+
+    Billing.markOverdueIfDue repo (notifier calls) invoice.InvoiceId now
+    |> Async.RunSynchronously
+    |> function
+        | Ok i -> PaymentState.name i.Payment |> should equal "Pending"
+        | Error e -> failwithf "%A" e
+
+    calls.Count |> should equal 0
