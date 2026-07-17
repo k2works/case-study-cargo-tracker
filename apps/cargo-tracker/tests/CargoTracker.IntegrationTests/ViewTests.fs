@@ -62,6 +62,12 @@ let ``経路設計ロールは航路管理を表示し荷主管理は表示し�
     html |> should not' (haveSubstring "荷主管理")
 
 [<Fact>]
+let ``経路設計ロールは経路設計（/routing/requests）へのナビを表示する（ナビ整合）`` () =
+    let html = render (Views.dashboard [ "ROLE_ROUTE_DESIGNER" ])
+    html |> should haveSubstring "経路設計"
+    html |> should haveSubstring "/routing/requests"
+
+[<Fact>]
 let ``準備中プレースホルダは案内メッセージを表示する`` () =
     let html = render (Views.placeholder "貨物予約" [ "ROLE_SALES" ])
     html |> should haveSubstring "貨物予約"

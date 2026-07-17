@@ -14,6 +14,7 @@ module Views =
           "見積管理", "/estimates", [ "ROLE_SALES" ]
           "貨物追跡", "/tracking", [ "ROLE_SHIPPER"; "ROLE_CONSIGNEE"; "ROLE_TRACKER" ]
           "荷役管理", "/handling", [ "ROLE_HANDLER"; "ROLE_TRACKER" ]
+          "経路設計", "/routing/requests", [ "ROLE_ROUTE_DESIGNER" ]
           "航路管理", "/voyages", [ "ROLE_ROUTE_DESIGNER" ]
           "請求管理", "/billing/invoices", [ "ROLE_BILLING" ]
           "管理設定", "/admin/discount-policies", [ "ROLE_ADMIN" ] ]
