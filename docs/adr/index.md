@@ -19,6 +19,6 @@
 | [ADR-0011](0011-追跡照会の所有者制御はcapabilityトークンとロールで行う.md) | 追跡照会の所有者制御は capability トークン（公開）とロール（認証）で行う | 提案 |
 | [ADR-0012](0012-荷役から追跡への状態連携はベストエフォートと冪等で行う.md) | 荷役→追跡の状態連携はベストエフォート＋冪等（結果整合）で行う | 提案 |
 | [ADR-0013](0013-料金算出とBilling_Booking連携は合成層と状態射影で行う.md) | 料金算出と Billing↔Booking 連携は合成層 ACL と状態射影で行う | 提案 |
-| [ADR-0014](0014-決済ACLはPaymentGatewayPortとWireMockで契約固定する.md) | 決済 ACL は PaymentGatewayPort で抽象化し WireMock.Net で契約固定する | 提案 |
+| [ADR-0014](0014-決済ACLはPaymentGatewayPortとWireMockで契約固定する.md) | 決済 ACL は PaymentGatewayPort で抽象化し HTTP 契約スタブで契約固定する | 承認 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

@@ -32,6 +32,7 @@
     <Compile Include="DiscountPolicyAcceptanceTests.fs" />
     <Compile Include="InvoiceRepositoryTests.fs" />
     <Compile Include="BillingAcceptanceTests.fs" />
+    <Compile Include="PaymentGatewayContractTests.fs" />
     <Compile Include="ReleaseFlowE2ETests.fs" />
   </ItemGroup>
 
