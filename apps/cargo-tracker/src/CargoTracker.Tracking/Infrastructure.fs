@@ -113,7 +113,9 @@ module TrackingRepository =
             return
                 { TrackingNumber = tn
                   BookingId = bid
-                  Events = events }
+                  Events = events
+                  // TODO(IT6): tracking_exception_event からの例外復元を実装する。
+                  Exceptions = [] }
         }
 
     let create (conn: IDbConnection) (clock: Clock) : TrackingRepository =

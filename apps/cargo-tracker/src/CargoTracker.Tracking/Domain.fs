@@ -101,19 +101,91 @@ type TrackingActivityEvent =
       Location: Location
       CompletionTime: DateTimeOffset }
 
+/// 例外種別（US19: Delay / US20: Damage・Lost / 通関: CustomsHold）。
+/// domain-model の ExceptionType に対応。永続値は DELAY / DAMAGE / LOST / CUSTOMS_HOLD。
+type ExceptionType =
+    | Delay
+    | Damage
+    | Lost
+    | CustomsHold
+
+module ExceptionType =
+
+    let toString (exType: ExceptionType) : string =
+        match exType with
+        | Delay -> "DELAY"
+        | Damage -> "DAMAGE"
+        | Lost -> "LOST"
+        | CustomsHold -> "CUSTOMS_HOLD"
+
+    let ofString (value: string) : Result<ExceptionType, DomainError> =
+        match value with
+        | "DELAY" -> Ok Delay
+        | "DAMAGE" -> Ok Damage
+        | "LOST" -> Ok Lost
+        | "CUSTOMS_HOLD" -> Ok CustomsHold
+        | other -> Error(ValidationError("ExceptionType", sprintf "未知の例外種別です: %s" other))
+
+/// 例外の解決状態。「未解決（エスカレーション有無）」と「解決済み（解決時刻必須）」を
+/// DU で表現し「解決済みなのに時刻が null」という不正状態を型で排除する（domain-model ビジネスルール 5・6）。
+type ExceptionResolution =
+    | Unresolved of escalated: bool
+    | Resolved of resolvedAt: DateTimeOffset
+
+/// 追跡例外イベント（遅延・破損・紛失・通関保留の記録）。
+type TrackingException =
+    { ExceptionType: ExceptionType
+      Location: Location
+      OccurredAt: DateTimeOffset
+      Description: string
+      Resolution: ExceptionResolution }
+
+module TrackingException =
+
+    /// 例外を登録する。Lost の場合は必ずエスカレーションする（ビジネスルール 3）。
+    let register
+        (exceptionType: ExceptionType)
+        (location: Location)
+        (occurredAt: DateTimeOffset)
+        (description: string)
+        : TrackingException =
+        let escalated = (exceptionType = Lost)
+
+        { ExceptionType = exceptionType
+          Location = location
+          OccurredAt = occurredAt
+          Description = description
+          Resolution = Unresolved escalated }
+
+    /// 未解決かどうか。
+    let isActive (ex: TrackingException) : bool =
+        match ex.Resolution with
+        | Unresolved _ -> true
+        | Resolved _ -> false
+
 /// Tracking コンテキストのドメインイベント（BC ローカル DU・ADR-0002 の Shared 循環回避方針）。
 type TrackingEvent =
     | TrackingNumberIssued of TrackingNumber * TrackingBookingId
     | TrackingEventRecorded of TrackingNumber * TrackingEventType
+    /// 例外検知。Booking の Delivery を InException へ同期するため BookingId を伴う（US19/US20）。
+    | TrackingExceptionDetected of TrackingBookingId * ExceptionType
+    /// エスカレーション（Lost 時。管理職通知の契機）。
+    | ExceptionEscalated of TrackingNumber * ExceptionType
+    /// 例外解決（状態復帰の契機）。
+    | TrackingExceptionResolved of TrackingNumber * ExceptionType
 
 /// 集約ルート。追跡活動全体を管理する。状態は Events から導出（保持しない）。
 type TrackingActivity =
     { TrackingNumber: TrackingNumber
       BookingId: TrackingBookingId
-      Events: TrackingActivityEvent list } // 時系列（新しい順）
+      Events: TrackingActivityEvent list // 時系列（新しい順）
+      Exceptions: TrackingException list } // 新しい順（index 0 が最新）
 
 /// 集約への操作コマンド。
-type TrackingCommand = RecordEvent of TrackingActivityEvent
+type TrackingCommand =
+    | RecordEvent of TrackingActivityEvent
+    | RegisterException of ExceptionType * Location * DateTimeOffset * string
+    | ResolveException of index: int * resolvedAt: DateTimeOffset
 
 module TrackingActivity =
 
@@ -124,17 +196,22 @@ module TrackingActivity =
         let activity =
             { TrackingNumber = trackingNumber
               BookingId = bookingId
-              Events = [] }
+              Events = []
+              Exceptions = [] }
 
         activity, [ TrackingNumberIssued(trackingNumber, bookingId) ]
 
-    /// 現在の追跡状態：最新イベントから導出する純粋関数（例外は IT6・IT5 は非例外のみ）。
+    /// 現在の追跡状態：アクティブな例外があれば InException、なければ最新イベントから導出する純粋関数。
+    /// currentStatus は保持値でなく導出関数のため、例外解決後は自動的に元の状態へ復帰する（ビジネスルール 5）。
     let currentStatus (activity: TrackingActivity) : TrackingStatus =
-        match activity.Events with
-        | [] -> NotReceived
-        | latest :: _ -> TrackingEventType.toStatus latest.EventType
+        if activity.Exceptions |> List.exists TrackingException.isActive then
+            InException
+        else
+            match activity.Events with
+            | [] -> NotReceived
+            | latest :: _ -> TrackingEventType.toStatus latest.EventType
 
-    /// 追跡イベントを時系列（新しい順）に追加する。状態は導出のため自動更新される。
+    /// 追跡イベント・例外を集約へ適用する。状態は導出のため自動更新される。
     let execute
         (activity: TrackingActivity)
         (command: TrackingCommand)
@@ -146,6 +223,38 @@ module TrackingActivity =
                     Events = event :: activity.Events }
 
             Ok(updated, [ TrackingEventRecorded(activity.TrackingNumber, event.EventType) ])
+
+        | RegisterException(exType, location, occurredAt, description) ->
+            let ex = TrackingException.register exType location occurredAt description
+
+            let events =
+                [ TrackingExceptionDetected(activity.BookingId, exType)
+                  if exType = Lost then
+                      ExceptionEscalated(activity.TrackingNumber, exType) ]
+
+            Ok(
+                { activity with
+                    Exceptions = ex :: activity.Exceptions },
+                events
+            )
+
+        | ResolveException(index, resolvedAt) ->
+            match List.tryItem index activity.Exceptions with
+            | None -> Error(NotFound("TrackingException", string index))
+            | Some { Resolution = Resolved _ } -> Error(BusinessRuleViolation("AlreadyResolved", "この例外はすでに解決済みです。"))
+            | Some ex ->
+                let resolved =
+                    { ex with
+                        Resolution = Resolved resolvedAt }
+
+                let exceptions =
+                    activity.Exceptions |> List.mapi (fun i e -> if i = index then resolved else e)
+
+                Ok(
+                    { activity with
+                        Exceptions = exceptions },
+                    [ TrackingExceptionResolved(activity.TrackingNumber, ex.ExceptionType) ]
+                )
 
     /// TrackingStatus を Shared の TransportStatus へ写像する（アプリ層で Booking.Delivery へ同期）。
     /// ケースの追加・変更はコンパイルエラーとしてここに伝播する（BC 分離・網羅変換）。

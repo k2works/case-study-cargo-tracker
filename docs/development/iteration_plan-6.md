@@ -106,10 +106,10 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `ExceptionType`/`ExceptionResolution`/`TrackingException` 型と `register`（Lost→escalated）を Domain.fs に追加（IT5 デスコープ分の起こし込み） | 3h | - | [ ] |
-| 1.2 | `TrackingCommand` に `RegisterException`/`ResolveException` を追加し `execute` を拡張（イベント発行含む） | 3h | - | [ ] |
-| 1.3 | `currentStatus` の `InException` 導出（アクティブ例外優先・解決後復帰）を実装 | 2h | - | [ ] |
-| 1.4 | ドメインユニット（FsCheck: 例外登録→InException、Lost→escalated、解決→復帰、二重解決拒否） | 4h | - | [ ] |
+| 1.1 | `ExceptionType`/`ExceptionResolution`/`TrackingException` 型と `register`（Lost→escalated）を Domain.fs に追加（IT5 デスコープ分の起こし込み） | 3h | - | [x] |
+| 1.2 | `TrackingCommand` に `RegisterException`/`ResolveException` を追加し `execute` を拡張（イベント発行含む） | 3h | - | [x] |
+| 1.3 | `currentStatus` の `InException` 導出（アクティブ例外優先・解決後復帰）を実装 | 2h | - | [x] |
+| 1.4 | ドメインユニット（FsCheck: 例外登録→InException、Lost→escalated、解決→復帰、二重解決拒否） | 4h | - | [x] |
 
 **小計**: 12h（理想時間）
 
@@ -157,14 +157,14 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| 例外ドメイン | 3 | 12h | [ ] |
+| 例外ドメイン | 3 | 12h | [x] |
 | アプリ層・BC 連携 | 2 | 11h | [ ] |
 | Web UI・例外画面 | 1 | 7h | [ ] |
 | 技術的負債の解消 | - | 18h | [ ] |
 | **合計** | **6** | **48h** | |
 
 **1 SP あたり**: 約 8.0h（IT5 レビュー IT6 送り・改善タスク 18h を含む）
-**進捗率**: 0% (0/6 SP)
+**進捗率**: 50% (3/6 SP・例外ドメイン完了)
 
 ---
 

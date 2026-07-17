@@ -210,3 +210,126 @@ let ``例外・不明状態も TransportStatus へ変換される`` () =
 
     TrackingActivity.toTransportStatus AwaitingClaim
     |> should equal TransportStatus.AwaitingClaim
+
+// ---- 例外の登録・解決（US19/US20・IT6）----
+
+let private registerEx exType code day desc activity =
+    match TrackingActivity.execute activity (RegisterException(exType, loc code, dto (2026, 9, day), desc)) with
+    | Ok(a, evts) -> a, evts
+    | Error e -> failwithf "例外登録に失敗: %A" e
+
+[<Fact>]
+let ``例外を登録すると状態が InException を導出する（US19）`` () =
+    let a0 = issued ()
+    let a1, evts = registerEx Delay "USLAX" 1 "荒天による寄港遅延" a0
+
+    TrackingActivity.currentStatus a1 |> should equal InException
+    a1.Exceptions |> List.length |> should equal 1
+
+    match evts with
+    | [ TrackingExceptionDetected(_, Delay) ] -> ()
+    | other -> failwithf "TrackingExceptionDetected(Delay) を期待したが: %A" other
+
+[<Fact>]
+let ``紛失例外は必ずエスカレーションされ ExceptionEscalated を発行する（US20・ルール3）`` () =
+    let a0 = issued ()
+    let a1, evts = registerEx Lost "USLAX" 1 "海上事故により紛失" a0
+
+    match a1.Exceptions with
+    | [ { Resolution = Unresolved escalated } ] -> escalated |> should equal true
+    | other -> failwithf "Unresolved(true) を期待したが: %A" other
+
+    evts
+    |> List.exists (function
+        | ExceptionEscalated(_, Lost) -> true
+        | _ -> false)
+    |> should equal true
+
+[<Fact>]
+let ``破損例外はエスカレーションしない（US20）`` () =
+    let a0 = issued ()
+    let a1, evts = registerEx Damage "USLAX" 1 "荷崩れによる破損" a0
+
+    match a1.Exceptions with
+    | [ { Resolution = Unresolved escalated } ] -> escalated |> should equal false
+    | other -> failwithf "Unresolved(false) を期待したが: %A" other
+
+    evts
+    |> List.exists (function
+        | ExceptionEscalated _ -> true
+        | _ -> false)
+    |> should equal false
+
+[<Fact>]
+let ``例外を解決すると状態が例外発生前へ導出復帰する（ルール5）`` () =
+    let a0 = issued ()
+
+    // 積込済みまで進めてから例外発生
+    let loaded =
+        [ ReceivedEvent, "JPTYO", 1; LoadedEvent, "JPTYO", 2 ]
+        |> List.fold
+            (fun acc (e, c, d) ->
+                match TrackingActivity.execute acc (RecordEvent(event e c d)) with
+                | Ok(a, _) -> a
+                | Error err -> failwithf "%A" err)
+            a0
+
+    let inEx, _ = registerEx Delay "USLAX" 3 "遅延" loaded
+    TrackingActivity.currentStatus inEx |> should equal InException
+
+    let resolved =
+        match TrackingActivity.execute inEx (ResolveException(0, dto (2026, 9, 4))) with
+        | Ok(a, evts) ->
+            evts
+            |> List.exists (function
+                | TrackingExceptionResolved(_, Delay) -> true
+                | _ -> false)
+            |> should equal true
+
+            a
+        | Error e -> failwithf "%A" e
+
+    // 例外発生前の状態（Loaded）へ復帰する
+    TrackingActivity.currentStatus resolved |> should equal Loaded
+
+[<Fact>]
+let ``解決済み例外の再解決は AlreadyResolved で拒否する`` () =
+    let a0 = issued ()
+    let inEx, _ = registerEx Delay "USLAX" 1 "遅延" a0
+
+    let resolved =
+        match TrackingActivity.execute inEx (ResolveException(0, dto (2026, 9, 2))) with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    match TrackingActivity.execute resolved (ResolveException(0, dto (2026, 9, 3))) with
+    | Error(BusinessRuleViolation(rule, _)) -> rule |> should equal "AlreadyResolved"
+    | other -> failwithf "AlreadyResolved を期待したが: %A" other
+
+[<Fact>]
+let ``存在しない例外の解決は NotFound を返す`` () =
+    let a0 = issued ()
+
+    match TrackingActivity.execute a0 (ResolveException(5, dto (2026, 9, 1))) with
+    | Error(NotFound(entity, _)) -> entity |> should equal "TrackingException"
+    | other -> failwithf "NotFound を期待したが: %A" other
+
+[<Property>]
+let ``例外種別の toString/ofString は往復する`` (exType: ExceptionType) =
+    match ExceptionType.ofString (ExceptionType.toString exType) with
+    | Ok back -> back = exType
+    | Error _ -> false
+
+[<Fact>]
+let ``未解決例外が残る限り InException を優先導出する（複数例外）`` () =
+    let a0 = issued ()
+    let a1, _ = registerEx Delay "USLAX" 1 "遅延1" a0
+    let a2, _ = registerEx Damage "USLAX" 2 "破損1" a1
+
+    // 1 件だけ解決してもまだ未解決が残るため InException
+    let partial =
+        match TrackingActivity.execute a2 (ResolveException(0, dto (2026, 9, 3))) with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    TrackingActivity.currentStatus partial |> should equal InException
