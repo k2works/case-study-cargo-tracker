@@ -34,6 +34,20 @@ let private ddl =
         created_at        TEXT    NOT NULL,
         updated_at        TEXT    NOT NULL
     );
+    CREATE TABLE tracking_exception_event (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        tracking_id      INTEGER NOT NULL REFERENCES tracking_activity(id),
+        exception_type   TEXT    NOT NULL,
+        location_unlocode TEXT,
+        occurred_at      TEXT    NOT NULL,
+        escalation_flag  INTEGER NOT NULL DEFAULT 0,
+        description      TEXT,
+        resolved_at      TEXT,
+        resolution_notes TEXT,
+        seq_number       INTEGER NOT NULL,
+        created_at       TEXT    NOT NULL,
+        updated_at       TEXT    NOT NULL
+    );
     """
 
 let private openDb () : IDbConnection =
@@ -107,6 +121,78 @@ let ``イベント記録後に更新すると導出状態が往復する`` () =
     | Ok(Some found) ->
         TrackingActivity.currentStatus found |> should equal Loaded
         found.Events |> List.length |> should equal 2
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``例外を登録・更新すると InException 状態が永続化され復元される（US19/US20）`` () =
+    use conn = openDb ()
+    let repo = TrackingRepository.create conn fixedClock
+    let activity, _ = TrackingActivity.issue newId (bookingId ())
+    repo.Save activity "TOKEN-ABC" |> Async.RunSynchronously |> ignore
+
+    // 紛失例外を登録（escalated=true）
+    let withEx =
+        match
+            TrackingActivity.execute
+                activity
+                (RegisterException(Lost, loc "USLAX", DateTimeOffset(2026, 9, 3, 0, 0, 0, TimeSpan.Zero), "海上事故"))
+        with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    repo.Update withEx |> Async.RunSynchronously |> Result.isOk |> should equal true
+
+    match repo.FindByTrackingNumber activity.TrackingNumber |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        TrackingActivity.currentStatus found |> should equal InException
+        found.Exceptions |> List.length |> should equal 1
+
+        match found.Exceptions with
+        | [ { ExceptionType = Lost
+              Resolution = Unresolved escalated } ] -> escalated |> should equal true
+        | other -> failwithf "Unresolved(true) の Lost を期待したが: %A" other
+    | other -> failwithf "Some を期待したが: %A" other
+
+[<Fact>]
+[<Trait("Category", "Integration")>]
+let ``例外解決後は状態が復帰し解決済みが永続化される`` () =
+    use conn = openDb ()
+    let repo = TrackingRepository.create conn fixedClock
+    let activity, _ = TrackingActivity.issue newId (bookingId ())
+    repo.Save activity "TOKEN-ABC" |> Async.RunSynchronously |> ignore
+
+    let withEx =
+        match
+            TrackingActivity.execute
+                activity
+                (RegisterException(Delay, loc "USLAX", DateTimeOffset(2026, 9, 3, 0, 0, 0, TimeSpan.Zero), "遅延"))
+        with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    repo.Update withEx |> Async.RunSynchronously |> ignore
+
+    let resolved =
+        match
+            TrackingActivity.execute withEx (ResolveException(0, DateTimeOffset(2026, 9, 4, 0, 0, 0, TimeSpan.Zero)))
+        with
+        | Ok(a, _) -> a
+        | Error e -> failwithf "%A" e
+
+    repo.Update resolved
+    |> Async.RunSynchronously
+    |> Result.isOk
+    |> should equal true
+
+    match repo.FindByTrackingNumber activity.TrackingNumber |> Async.RunSynchronously with
+    | Ok(Some found) ->
+        // イベントなし＋解決済み例外のみ → NotReceived へ復帰
+        TrackingActivity.currentStatus found |> should equal NotReceived
+
+        match found.Exceptions with
+        | [ { Resolution = Resolved _ } ] -> ()
+        | other -> failwithf "Resolved を期待したが: %A" other
     | other -> failwithf "Some を期待したが: %A" other
 
 [<Fact>]

@@ -18,7 +18,7 @@
 1. **遅延例外の登録と荷主通知（US19）**: 追跡管理者が追跡番号で貨物を特定し、例外種別「遅延」と発生状況（場所・日時・理由）を登録すると、貨物状態が `InException`（例外発生）へ導出遷移し、荷主へ遅延通知が送信される。対応内容（新到着予定日・対応方針）を入力して対応報告を送信し、例外を `Resolved` へ遷移できる。
 2. **破損・紛失例外の登録とエスカレーション（US20）**: 例外種別「破損」または「紛失」を登録でき、「紛失」（Lost）の場合は `TrackingException.register` が必ずエスカレーションフラグを立て `ExceptionEscalated` イベントを発行し、管理職への escalation 通知が送信される。荷主にも緊急通知が送信される。
 3. **例外解決と状態復帰（ビジネスルール 5）**: `ResolveException` により例外が `Resolved` へ遷移すると、`currentStatus`（導出値）が例外発生前の状態（最新イベントから導出）へ自動復帰する。二重解決は `BusinessRuleViolation`（AlreadyResolved）で拒否される。
-4. **BC 間連携（例外→予約）**: `TrackingExceptionDetected` を Booking へ伝播し、Delivery の輸送状態を `InException` に同期する（IT4/IT5 の post-commit dispatch 方式を踏襲）。
+4. **BC 間連携（例外→輸送状態）**: 例外登録で `TrackingExceptionDetected` を発行し、輸送状態を `InException` に反映する。**注（実装で判明）**: Booking 側に `transport_status` カラムは未実体化（data-model の「将来追加予定」）で、輸送状態は Tracking 自身の `tracking_activity.transport_status`（`currentStatus`→`toTransportStatus` の非正規化キャッシュ）に保持される。したがって例外の InException は Tracking のリポジトリ保存で自動反映され、Booking への越境書き込み先は現時点で存在しない。`TrackingExceptionDetected` は発行イベントとして残し（将来の Booking 実体化時に消費）、本 IT は Tracking 内の永続化整合（例外の save/load）で InException の往復を保証する。
 5. **技術的負債の解消（retro-5 Try#1/#4）**: 荷役登録と追跡イベント記録の一貫性方針を確定（合成層ヘルパ or 補償/再試行方針の明文化）し、追跡照会の所有者制御方針を ADR 化する。
 
 ### 成功基準
@@ -119,7 +119,7 @@ IT5 レビュー（[開発成果物_IT5_review_20260716.md](../review/開発成�
 |---|--------|---------|------|------|
 | 2.1 | Application.fs に例外登録・解決ユースケースを追加（NotificationPort で荷主通知・Clock ポートで時刻注入） | 3h | - | [x] |
 | 2.2 | Lost 時の管理職 escalation 通知経路（`ExceptionEscalated` 消費）を結線（`EscalationNotifier` ポート・アプリ層で発行イベント検査） | 2h | - | [x] |
-| 2.3 | `TrackingExceptionDetected` → Booking Delivery（InException 同期）の post-commit dispatch 結線・統合テスト | 3h | - | [ ] |
+| 2.3 | 例外の永続化（`tracking_exception_event` マイグレーション 0011・save/update の `syncExceptions`・reconstruct 復元）と InException 往復統合テスト | 3h | - | [x] |
 | 2.4 | 例外登録・解決の受け入れテスト（一気通貫: 登録→通知→エスカレーション→対応報告→解決→復帰） | 3h | - | [ ] |
 
 **小計**: 11h（理想時間）

@@ -81,11 +81,21 @@ module TrackingRepository =
           Location: string
           EventTime: string }
 
-    /// 生レコードから TrackingActivity を復元する（状態は Events から導出）。
+    /// 生例外行（復元前）。resolved_at が None なら未解決、Some なら解決済み。
+    type private ExceptionRow =
+        { ExceptionType: string
+          Location: string
+          OccurredAt: string
+          Description: string
+          Escalated: bool
+          ResolvedAt: string option }
+
+    /// 生レコードから TrackingActivity を復元する（状態は Events / Exceptions から導出）。
     let private reconstruct
         (trackingNumber: string)
         (bookingId: string)
         (rows: EventRow list)
+        (exRows: ExceptionRow list)
         : Result<TrackingActivity, DomainError> =
         result {
             let tn = TrackingNumber.ofString trackingNumber
@@ -110,12 +120,38 @@ module TrackingRepository =
                               CompletionTime = time }
                     })
 
+            let! exceptions =
+                exRows
+                |> List.traverseResultM (fun r ->
+                    result {
+                        let! exType = ExceptionType.ofString r.ExceptionType
+
+                        let! loc =
+                            Location.create r.Location
+                            |> Result.mapError (fun m -> ValidationError("Location", m))
+
+                        let occurredAt =
+                            DateTimeOffset.Parse(r.OccurredAt, null, Globalization.DateTimeStyles.RoundtripKind)
+
+                        let resolution =
+                            match r.ResolvedAt with
+                            | Some raw ->
+                                Resolved(DateTimeOffset.Parse(raw, null, Globalization.DateTimeStyles.RoundtripKind))
+                            | None -> Unresolved r.Escalated
+
+                        return
+                            { ExceptionType = exType
+                              Location = loc
+                              OccurredAt = occurredAt
+                              Description = r.Description
+                              Resolution = resolution }
+                    })
+
             return
                 { TrackingNumber = tn
                   BookingId = bid
                   Events = events
-                  // TODO(IT6): tracking_exception_event からの例外復元を実装する。
-                  Exceptions = [] }
+                  Exceptions = exceptions }
         }
 
     let create (conn: IDbConnection) (clock: Clock) : TrackingRepository =
@@ -152,6 +188,52 @@ module TrackingRepository =
                 |> Db.setTransaction tx
                 |> Db.exec)
 
+        /// tracking_exception_event を集約ルート経由で全置換する（Exceptions は新しい順→seq は古い順）。
+        /// 例外の解決は既存行の resolved_at/escalation_flag を書き換えるため全置換で確実に反映する。
+        let syncExceptions (tx: IDbTransaction) (nowStr: string) (trackingNumber: string) (activity: TrackingActivity) =
+            conn
+            |> Db.newCommand
+                "DELETE FROM tracking_exception_event WHERE tracking_id = (SELECT id FROM tracking_activity WHERE tracking_number = @tn)"
+            |> Db.setTransaction tx
+            |> Db.setParams [ "tn", SqlType.String trackingNumber ]
+            |> Db.exec
+
+            activity.Exceptions
+            |> List.rev
+            |> List.iteri (fun i (ex: TrackingException) ->
+                let escalated, resolvedAt =
+                    match ex.Resolution with
+                    | Unresolved e -> e, None
+                    | Resolved at -> false, Some(at.UtcDateTime.ToString("o"))
+
+                conn
+                |> Db.newCommand
+                    """
+                    INSERT INTO tracking_exception_event
+                        (tracking_id, exception_type, location_unlocode, occurred_at, escalation_flag, description,
+                         resolved_at, resolution_notes, seq_number, created_at, updated_at)
+                    VALUES
+                        ((SELECT id FROM tracking_activity WHERE tracking_number = @tn),
+                         @exception_type, @location, @occurred_at, @escalation_flag, @description,
+                         @resolved_at, NULL, @seq_number, @now, @now)
+                    """
+                |> Db.setTransaction tx
+                |> Db.setParams
+                    [ "tn", SqlType.String trackingNumber
+                      "exception_type", SqlType.String(ExceptionType.toString ex.ExceptionType)
+                      "location", SqlType.String(Location.value ex.Location)
+                      "occurred_at", SqlType.String(ex.OccurredAt.UtcDateTime.ToString("o"))
+                      "escalation_flag", SqlType.Boolean escalated
+                      "description", SqlType.String ex.Description
+                      "resolved_at",
+                      (match resolvedAt with
+                       | Some s -> SqlType.String s
+                       | None -> SqlType.Null)
+                      "seq_number", SqlType.Int(i + 1)
+                      "now", SqlType.String nowStr ]
+                |> Db.setTransaction tx
+                |> Db.exec)
+
         let save (activity: TrackingActivity) (accessToken: string) : Async<Result<unit, DomainError>> =
             async {
                 use tx = conn.BeginTransaction()
@@ -180,6 +262,7 @@ module TrackingRepository =
                     |> Db.exec
 
                     syncEvents tx now (TrackingNumber.value activity.TrackingNumber) activity
+                    syncExceptions tx now (TrackingNumber.value activity.TrackingNumber) activity
                     tx.Commit()
                     return Ok()
                 with ex ->
@@ -221,6 +304,7 @@ module TrackingRepository =
                         |> Db.exec
 
                         syncEvents tx now tn activity
+                        syncExceptions tx now tn activity
                         tx.Commit()
                         return Ok()
                 with ex ->
@@ -261,7 +345,28 @@ module TrackingRepository =
                                   Location = rd.ReadStringOption "location_unlocode" |> Option.defaultValue ""
                                   EventTime = rd.ReadString "event_time" })
 
-                        return reconstruct tn bookingId rows |> Result.map Some
+                        // Exceptions は新しい順（seq DESC）で復元する（index が register の prepend 順に一致）。
+                        let exRows =
+                            conn
+                            |> Db.newCommand
+                                """
+                                SELECT x.exception_type, x.location_unlocode, x.occurred_at, x.description,
+                                       x.escalation_flag, x.resolved_at
+                                FROM tracking_exception_event x
+                                JOIN tracking_activity a ON a.id = x.tracking_id
+                                WHERE a.tracking_number = @tn
+                                ORDER BY x.seq_number DESC
+                                """
+                            |> Db.setParams [ "tn", SqlType.String tn ]
+                            |> Db.query (fun rd ->
+                                { ExceptionType = rd.ReadString "exception_type"
+                                  Location = rd.ReadStringOption "location_unlocode" |> Option.defaultValue ""
+                                  OccurredAt = rd.ReadString "occurred_at"
+                                  Description = rd.ReadStringOption "description" |> Option.defaultValue ""
+                                  Escalated = rd.ReadBoolean "escalation_flag"
+                                  ResolvedAt = rd.ReadStringOption "resolved_at" })
+
+                        return reconstruct tn bookingId rows exRows |> Result.map Some
                 with ex ->
                     return Error(BusinessRuleViolation("TrackingRepository", ex.Message))
             }
