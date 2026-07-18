@@ -171,13 +171,21 @@ date: 2026-07-18T00:00:00.000Z
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US-AUTH-01 認証・認可基盤 | 3 | 23h | [ ] |
-| US02/US03 荷主登録 | 5 | 17h | [ ] |
-| US04/US05 貨物予約登録 | 8 | 27h | [ ] |
+| US-AUTH-01 認証・認可基盤 | 3 | 23h | [ ] 未着手（認証基盤・UI 骨格） |
+| US02/US03 荷主登録 | 5 | 17h | [~] ドメイン/アプリ/永続化 完了・UI 残 |
+| US04/US05 貨物予約登録 | 8 | 27h | [~] ドメイン/アプリ/永続化 完了・UI 残 |
 | **合計** | **16** | **67h** | |
 
 **1 SP あたり**: 約 4.2h
-**進捗率**: 0% (0/16 SP)
+**進捗率**: 約 50%（バックエンド中核完了 / 認証・UI・サーバ結線が残）
+
+> **実装進捗メモ（2026-07-18 セッション）**: 序盤アウトサイドインの中で DDD コアをインサイドに先行実装。
+> `shared-kernel`（ShipperId・Role）、`domain-shipper`+`app-shipper`、`domain-booking`+`app-booking`、
+> `infra-persistence`（マイグレーション・SqlxShipperRepository・SqlxCargoRepository・
+> SqlxShipperExistenceChecker）を TDD で完了。単体 29 + testcontainers 統合 6 = 全テスト green。
+> 残タスク: US-AUTH-01 認証・認可基盤（axum-login/tower-sessions）、`interface-web`/`interface-rest`
+>（Askama 画面・navbar・ダッシュボード・登録フォーム・oneshot テスト）、`cargo-tracker-server` 結線、
+> sqlx オフラインビルド硬化（task 1.7）。
 
 ---
 
