@@ -25,10 +25,19 @@ async fn health() -> Json<serde_json::Value> {
 /// セッションレイヤー・Web ルーター（認証/ダッシュボード）・ヘルスチェックを合成する。
 fn build_app(pool: PgPool) -> Router {
     let session_layer = SessionManagerLayer::new(MemoryStore::default());
-    health_router()
+    let app = health_router()
         .merge(rest_router(RestState { pool: pool.clone() }))
         .merge(web_router(AppState { pool }))
-        .layer(session_layer)
+        .layer(session_layer);
+
+    // 環境変数 LIVERELOAD が設定されている場合のみ、ブラウザ自動リロードを有効化する（開発専用）。
+    // tower-livereload が HTML にスクリプトを注入し、サーバ再起動時にブラウザを再読み込みさせる。
+    if std::env::var("LIVERELOAD").is_ok() {
+        tracing::info!("livereload 有効: ブラウザ自動リロードを注入します");
+        app.layer(tower_livereload::LiveReloadLayer::new())
+    } else {
+        app
+    }
 }
 
 /// リッスンアドレスを環境変数 PORT（既定 8080）から組み立てる。

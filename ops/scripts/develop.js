@@ -18,6 +18,7 @@ const SERVICES = [
     dbService: 'postgres',
     serverCrate: 'cargo-tracker-server',
     migrations: 'crates/infra-persistence/migrations',
+    dbUrl: 'postgres://cargo:cargo@localhost:5432/cargo_tracker',
     label: '貨物輸送管理',
   },
 ];
@@ -39,18 +40,28 @@ function serviceDir(svc) {
  * サービスのワークスペース内でコマンドを実行する
  * @param {object} svc - サービス定義
  * @param {string} command - 実行するコマンド
+ * @param {object} [extraEnv] - 追加の環境変数（既存の process.env を上書き）
  */
-function runInService(svc, command) {
+function runInService(svc, command, extraEnv = {}) {
   try {
     execSync(command, {
       cwd: serviceDir(svc),
       stdio: 'inherit',
-      env: cleanDockerEnv(),
+      env: { ...cleanDockerEnv(), ...extraEnv },
     });
   } catch (err) {
     console.error(`エラー: ${command} が失敗しました (${err.message})`);
     process.exit(1);
   }
+}
+
+/**
+ * sqlx CLI 等が必要とする DATABASE_URL を解決する（環境変数優先、無ければ既定値）。
+ * @param {object} svc - サービス定義
+ * @returns {object} DATABASE_URL を含む環境変数オブジェクト
+ */
+function dbEnv(svc) {
+  return { DATABASE_URL: process.env.DATABASE_URL || svc.dbUrl };
 }
 
 // ============================================
@@ -68,6 +79,16 @@ export default function (gulp) {
     // TDD モード（テスト自動再実行）
     gulp.task(`tdd:${svc.name}`, (done) => {
       runInService(svc, 'cargo watch -x "test --workspace"');
+      done();
+    });
+
+    // ライブリロード開発（コード/テンプレート変更で自動リビルド・再起動 + ブラウザ再読込）
+    gulp.task(`dev:${svc.name}:watch`, (done) => {
+      runInService(
+        svc,
+        `cargo watch -w crates -x "run -p ${svc.serverCrate} --bin ${svc.serverCrate}"`,
+        { ...dbEnv(svc), LIVERELOAD: '1' }
+      );
       done();
     });
 
@@ -123,21 +144,21 @@ export default function (gulp) {
       done();
     });
 
-    // マイグレーション適用
+    // マイグレーション適用（埋め込みマイグレータ・sqlx-cli 非依存）
     gulp.task(`dev:${svc.name}:db:migrate`, (done) => {
-      runInService(svc, `sqlx migrate run --source ${svc.migrations}`);
+      runInService(svc, `cargo run -p ${svc.serverCrate} --bin migrate`, dbEnv(svc));
       done();
     });
 
     // sqlx オフラインキャッシュ生成
     gulp.task(`dev:${svc.name}:db:prepare`, (done) => {
-      runInService(svc, 'cargo sqlx prepare --workspace');
+      runInService(svc, 'cargo sqlx prepare --workspace', dbEnv(svc));
       done();
     });
 
     // 開発用ユーザーの seed（ログイン検証用・冪等）
     gulp.task(`dev:${svc.name}:db:seed`, (done) => {
-      runInService(svc, `cargo run -p ${svc.serverCrate} --bin seed`);
+      runInService(svc, `cargo run -p ${svc.serverCrate} --bin seed`, dbEnv(svc));
       done();
     });
   });
@@ -148,6 +169,7 @@ export default function (gulp) {
 === アプリケーション開発コマンド ===
 
   dev:cargo-tracker             開発サーバー起動 (http://localhost:8080)
+  dev:cargo-tracker:watch       ライブリロード開発（自動リビルド・再起動 + ブラウザ再読込）
   tdd:cargo-tracker             TDD モード（テスト自動再実行）
   dev:cargo-tracker:build       ワークスペース全体をビルド
   dev:cargo-tracker:test        全テスト実行（統合テストは Docker 必須）
