@@ -15,7 +15,7 @@
 
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
-| IT1 予約基盤 | [iteration_plan-1.md](iteration_plan-1.md) | - | - | 完了（機能スコープ・全テスト green） |
+| IT1 予約基盤 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了（機能スコープ・全テスト green） |
 
 イテレーション開始時に行を追加します。
 
