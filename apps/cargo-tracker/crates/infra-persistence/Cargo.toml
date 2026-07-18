@@ -8,3 +8,17 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+shared-kernel = { workspace = true }
+domain-shipper = { workspace = true }
+domain-booking = { workspace = true }
+sqlx = { workspace = true }
+async-trait = { workspace = true }
+uuid = { workspace = true }
+rust_decimal = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+testcontainers = "0.24"
+testcontainers-modules = { version = "0.12", features = ["postgres"] }

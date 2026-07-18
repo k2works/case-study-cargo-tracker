@@ -1,17 +1,12 @@
-//! infra-persistence クレート（プレースホルダ）。
+//! Booking / Shipper Context の永続化アダプター（sqlx 実装）。
+//!
+//! ドメインの出力ポート（`ShipperRepository` 等）を PostgreSQL 上で実装する。
+//! IT1 ではランタイムクエリを用い、コンパイル時 `query!` マクロ + `.sqlx` オフライン化は
+//! 後続タスク（1.7）で硬化する。
 
-/// クレート結線検証用のプレースホルダ関数。
-#[must_use]
-pub fn crate_name() -> &'static str {
-    "infra-persistence"
-}
+pub mod shipper_repository;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use shipper_repository::SqlxShipperRepository;
 
-    #[test]
-    fn クレート名を返す() {
-        assert_eq!(crate_name(), "infra-persistence");
-    }
-}
+/// sqlx マイグレータ。アプリ起動時・テスト時にスキーマを適用する。
+pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
