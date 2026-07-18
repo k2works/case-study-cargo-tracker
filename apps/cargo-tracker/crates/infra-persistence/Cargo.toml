@@ -17,6 +17,7 @@ uuid = { workspace = true }
 rust_decimal = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
+argon2 = "0.5"
 
 [dev-dependencies]
 tokio = { workspace = true }
