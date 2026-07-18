@@ -16,6 +16,7 @@ date: 2026-07-18T00:00:00.000Z
 | **局面** | 序盤（アウトサイドイン） / [開発戦略](./development_strategy.md#序盤-アウトサイドインit1) |
 | **ゴール** | 認証・ロール別アクセス制御を最初に確立し、荷主登録から貨物予約登録までの縦切りを受け入れテストで通す（歩けるスケルトン） |
 | **目標 SP** | 16 |
+| **状態** | 完了（機能スコープ・全テスト green・developing-review 実施済み。残: カバレッジ計測・sqlx query! 硬化・E2E・イベントバス骨格） |
 
 > 対象ストーリー・SP は [リリース計画](./release_plan.md) を、局面・アプローチは [開発戦略](./development_strategy.md) を正とする。
 
@@ -131,13 +132,13 @@ date: 2026-07-18T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `shared-kernel` に Location（UN/LOCODE）・ShipperId・共通 enum・DomainError・ロール定義を実装（TDD） | 4h | - | [ ] |
-| 1.2 | axum-login + tower-sessions による認証基盤（ログイン/ログアウト・PostgreSQL セッションストア・users/user_roles マイグレーション） | 5h | - | [ ] |
-| 1.3 | ロール別認可（AuthzBackend）と未認証リダイレクト・403 制御 | 3h | - | [ ] |
-| 1.4 | Askama `base.html` 共通レイアウト + ロール制御付き navbar（UI 設計メニュー表準拠） | 3h | - | [ ] |
-| 1.5 | 全ルートのプレースホルダ画面 + ダッシュボード（`/`）のロール別カード表示 | 3h | - | [ ] |
-| 1.6 | ログイン・ロール別ナビ表示・認可の検証テスト（interface-web の HTTP レベル） | 3h | - | [ ] |
-| 1.7 | sqlx オフラインビルド基盤（`SQLX_OFFLINE` + `.sqlx` コミット + `cargo sqlx prepare --check`）と Dockerfile 整合（設計レビュー #155 対応） | 2h | - | [ ] |
+| 1.1 | `shared-kernel` に Location（UN/LOCODE）・ShipperId・共通 enum・DomainError・ロール定義を実装（TDD） | 4h | - | [x] |
+| 1.2 | axum-login + tower-sessions による認証基盤（ログイン/ログアウト・PostgreSQL セッションストア・users/user_roles マイグレーション） | 5h | - | [x] |
+| 1.3 | ロール別認可（AuthzBackend）と未認証リダイレクト・403 制御 | 3h | - | [x] |
+| 1.4 | Askama `base.html` 共通レイアウト + ロール制御付き navbar（UI 設計メニュー表準拠） | 3h | - | [x] |
+| 1.5 | 全ルートのプレースホルダ画面 + ダッシュボード（`/`）のロール別カード表示 | 3h | - | [x] |
+| 1.6 | ログイン・ロール別ナビ表示・認可の検証テスト（interface-web の HTTP レベル） | 3h | - | [x] |
+| 1.7 | sqlx オフラインビルド基盤（`SQLX_OFFLINE` + `.sqlx` コミット + `cargo sqlx prepare --check`）と Dockerfile 整合（設計レビュー #155 対応） | 2h | - | [ ] 未（ランタイムクエリでオフラインビルドは成立・query! 硬化は残ハードニング） |
 
 **小計**: 23h（理想時間）
 
@@ -145,11 +146,11 @@ date: 2026-07-18T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 受け入れテスト（荷主登録シナリオ・interface-rest oneshot）を Red で作成 | 2h | - | [ ] |
-| 2.2 | `domain-shipper`: Shipper 集約・ShipperKind（Individual/Corporate）・値オブジェクト（ShipperCode 生成・Email・DiscountRate 0〜30%）を TDD 実装 | 5h | - | [ ] |
-| 2.3 | `app-shipper`: RegisterShipperCommand サービス（Email 重複チェック・ShipperCode 自動生成、ポートは mockall） | 3h | - | [ ] |
-| 2.4 | `infra-persistence`: shipper テーブルマイグレーション + SqlxShipperRepository（testcontainers 統合テスト） | 4h | - | [ ] |
-| 2.5 | `interface-web`: 荷主登録フォーム（htmx モーダル・法人フィールド動的表示） + PRG | 3h | - | [ ] |
+| 2.1 | 受け入れテスト（荷主登録シナリオ・interface-rest oneshot）を Red で作成 | 2h | - | [x] |
+| 2.2 | `domain-shipper`: Shipper 集約・ShipperKind（Individual/Corporate）・値オブジェクト（ShipperCode 生成・Email・DiscountRate 0〜30%）を TDD 実装 | 5h | - | [x] |
+| 2.3 | `app-shipper`: RegisterShipperCommand サービス（Email 重複チェック・ShipperCode 自動生成、ポートは mockall） | 3h | - | [x] |
+| 2.4 | `infra-persistence`: shipper テーブルマイグレーション + SqlxShipperRepository（testcontainers 統合テスト） | 4h | - | [x] |
+| 2.5 | `interface-web`: 荷主登録フォーム（htmx モーダル・法人フィールド動的表示） + PRG | 3h | - | [x]（注: 標準ページ実装。htmx モーダル化は IT2） |
 
 **小計**: 17h（理想時間）
 
@@ -157,13 +158,13 @@ date: 2026-07-18T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 受け入れテスト（一般/危険物/冷凍の予約登録シナリオ）を Red で作成 | 3h | - | [ ] |
-| 3.2 | `domain-booking`: Cargo 集約・BookingId・RouteSpecification（出発地≠目的地）・CargoType・HazardousDeclaration・TemperatureRequirement・Dimensions/Quantity/Description を TDD 実装 | 6h | - | [ ] |
-| 3.3 | `domain-booking`: `Cargo::book` の不変条件（危険物→申告必須・冷凍→温度条件必須）と BookingStatus=Preliminary 生成を TDD | 3h | - | [ ] |
-| 3.4 | `app-booking`: BookCargoCommand サービス（ShipperExistenceChecker ACL で荷主存在確認・予約番号発行） | 4h | - | [ ] |
-| 3.5 | `infra-persistence`: cargo テーブルマイグレーション + SqlxCargoRepository（testcontainers 統合テスト） | 4h | - | [ ] |
-| 3.6 | `infra-external`/`infra-eventbus`: ShipperExistenceChecker アダプター + 予約登録イベント発行の骨格 | 3h | - | [ ] |
-| 3.7 | `interface-web`: 予約登録フォーム（貨物種別で申告/温度フィールド動的表示・荷主インクリメンタル検索）+ PRG | 4h | - | [ ] |
+| 3.1 | 受け入れテスト（一般/危険物/冷凍の予約登録シナリオ）を Red で作成 | 3h | - | [x] |
+| 3.2 | `domain-booking`: Cargo 集約・BookingId・RouteSpecification（出発地≠目的地）・CargoType・HazardousDeclaration・TemperatureRequirement・Dimensions/Quantity/Description を TDD 実装 | 6h | - | [x] |
+| 3.3 | `domain-booking`: `Cargo::book` の不変条件（危険物→申告必須・冷凍→温度条件必須）と BookingStatus=Preliminary 生成を TDD | 3h | - | [x] |
+| 3.4 | `app-booking`: BookCargoCommand サービス（ShipperExistenceChecker ACL で荷主存在確認・予約番号発行） | 4h | - | [x] |
+| 3.5 | `infra-persistence`: cargo テーブルマイグレーション + SqlxCargoRepository（testcontainers 統合テスト） | 4h | - | [x] |
+| 3.6 | `infra-external`/`infra-eventbus`: ShipperExistenceChecker アダプター + 予約登録イベント発行の骨格 | 3h | - | [~] ACL は infra-persistence に実装済み・イベント発行骨格（infra-eventbus）は IT2 へ持ち越し |
+| 3.7 | `interface-web`: 予約登録フォーム（貨物種別で申告/温度フィールド動的表示・荷主インクリメンタル検索）+ PRG | 4h | - | [x]（注: `/api/shippers` は実装済み・フォームは荷主 ID テキスト入力。動的表示/検索モーダルは IT2） |
 
 **小計**: 27h（理想時間）
 
@@ -493,7 +494,7 @@ apps/cargo-tracker/crates/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review 済み・`developing-review` は未実施）
+- [x] コードレビュー完了（`developing-review` 実施済み・[IT1 開発成果物レビュー](../review/it1_development_review_20260718.md)。高 3 件は IT2 早期対応）
 - [x] ユニットテストがパス（`cargo test --workspace`）
 - [x] 統合テストがパス（testcontainers による shipper/cargo/user リポジトリ・auth/shipper/booking フロー）
 - [ ] E2E テスト（Playwright）— 未実装（HTTP レベル oneshot で代替検証済み。Playwright は後続）
