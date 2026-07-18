@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}ダッシュボード - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="dashboard-title">ダッシュボード</h1>
+<div class="row g-3">
+  {% if current_user.has_role("ROLE_SALES") %}
+  <div class="col-md-4">
+    <div class="card" data-testid="card-bookings">
+      <div class="card-body">
+        <h2 class="h6 card-title">貨物予約</h2>
+        <a href="/bookings/new" class="btn btn-primary btn-sm">＋ 新規予約登録</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if current_user.has_role("ROLE_BILLING") %}
+  <div class="col-md-4">
+    <div class="card" data-testid="card-billing">
+      <div class="card-body">
+        <h2 class="h6 card-title">未払い請求</h2>
+        <a href="/billing/invoices" class="btn btn-outline-secondary btn-sm">請求一覧</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">CargoTracker</a>
+    <ul class="navbar-nav me-auto">
+      <li class="nav-item"><a class="nav-link" href="/">ダッシュボード</a></li>
+      {% if current_user.has_role("ROLE_SALES") || current_user.has_role("ROLE_SHIPPER") %}
+      <li class="nav-item"><a class="nav-link" href="/bookings" data-testid="nav-bookings">貨物予約</a></li>
+      {% endif %}
+      {% if current_user.has_role("ROLE_SHIPPER") || current_user.has_role("ROLE_CONSIGNEE") || current_user.has_role("ROLE_TRACKER") %}
+      <li class="nav-item"><a class="nav-link" href="/tracking" data-testid="nav-tracking">貨物追跡</a></li>
+      {% endif %}
+      {% if current_user.has_role("ROLE_HANDLER") || current_user.has_role("ROLE_TRACKER") %}
+      <li class="nav-item"><a class="nav-link" href="/handling" data-testid="nav-handling">荷役管理</a></li>
+      {% endif %}
+      {% if current_user.has_role("ROLE_SALES") %}
+      <li class="nav-item"><a class="nav-link" href="/estimates" data-testid="nav-estimates">見積管理</a></li>
+      {% endif %}
+      {% if current_user.has_role("ROLE_ROUTE_DESIGNER") %}
+      <li class="nav-item"><a class="nav-link" href="/voyages" data-testid="nav-voyages">航路管理</a></li>
+      {% endif %}
+      {% if current_user.has_role("ROLE_BILLING") %}
+      <li class="nav-item"><a class="nav-link" href="/billing/invoices" data-testid="nav-billing">請求管理</a></li>
+      {% endif %}
+      {% if current_user.has_role("ROLE_ADMIN") %}
+      <li class="nav-item"><a class="nav-link" href="/admin/discount-policies" data-testid="nav-admin">管理設定</a></li>
+      {% endif %}
+    </ul>
+    <span class="navbar-text me-2">{{ current_user.username }}</span>
+    <form method="post" action="/logout" class="d-inline">
+      <button type="submit" class="btn btn-outline-light btn-sm">ログアウト</button>
+    </form>
+  </div>
+</nav>
