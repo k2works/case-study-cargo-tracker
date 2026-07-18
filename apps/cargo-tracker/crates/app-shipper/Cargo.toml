@@ -11,3 +11,9 @@ workspace = true
 shared-kernel = { workspace = true }
 domain-shipper = { workspace = true }
 async-trait = { workspace = true }
+thiserror = { workspace = true }
+rust_decimal = { workspace = true }
+
+[dev-dependencies]
+mockall = "0.13"
+tokio = { workspace = true }

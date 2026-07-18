@@ -1,33 +1,16 @@
-//! shipper コンテキストのドメイン層。
+//! Shipper Context のドメイン層。
+//!
+//! 荷主（個人・法人）の集約・値オブジェクト・出力ポートを定義する。
+//! 不変条件は値オブジェクトのスマートコンストラクタと `ShipperKind` enum で型レベルに強制する。
 
-use shared_kernel::Location;
+pub mod aggregate;
+pub mod error;
+pub mod ports;
+pub mod value_objects;
 
-/// クレート結線検証用のプレースホルダ関数。
-#[must_use]
-pub fn context_name() -> &'static str {
-    "shipper"
-}
-
-/// shared-kernel への依存を検証するプレースホルダ関数。
-///
-/// # Errors
-///
-/// UN/LOCODE の形式が不正な場合はエラーを返す。
-pub fn parse_location(code: &str) -> Result<Location, shared_kernel::SharedKernelError> {
-    Location::new(code)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn コンテキスト名を返す() {
-        assert_eq!(context_name(), "shipper");
-    }
-
-    #[test]
-    fn shared_kernel_の_location_を利用できる() {
-        assert!(parse_location("USNYC").is_ok());
-    }
-}
+pub use aggregate::{CorporateProfile, Shipper, ShipperKind};
+pub use error::ShipperError;
+pub use ports::{RepositoryError, ShipperRepository};
+pub use value_objects::{
+    Address, ContractNumber, DiscountRate, Email, Phone, ShipperCode, ShipperName,
+};
