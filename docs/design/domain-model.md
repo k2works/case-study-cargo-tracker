@@ -725,7 +725,7 @@ pub trait ShipperRepository: Send + Sync {
 | 値オブジェクト | ContractNumber | 契約番号 | 法人荷主の契約番号 |
 | 値オブジェクト | DiscountRate | 割引率 | 法人荷主の割引率（0〜30%） |
 | 列挙型 | ShipperKind | 荷主種別 | Individual / Corporate（法人情報を内包） |
-| 共有カーネル参照 | ShipperId | 荷主識別子 | UUID ベースの一意識別子。shared-domain クレートに配置 |
+| 共有カーネル参照 | ShipperId | 荷主識別子 | UUID ベースの一意識別子。shared-kernel クレートに配置 |
 | リポジトリポート | ShipperRepository | 荷主リポジトリ | `save` / `find_by_id` / `exists_by_email` |
 
 ### ビジネスルール
