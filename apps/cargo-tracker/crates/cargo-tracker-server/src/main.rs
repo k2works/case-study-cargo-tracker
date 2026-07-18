@@ -5,6 +5,7 @@
 
 use axum::{Json, Router, routing::get};
 use infra_persistence::MIGRATOR;
+use interface_rest::{RestState, rest_router};
 use interface_web::{AppState, web_router};
 use sqlx::PgPool;
 use tower_sessions::{MemoryStore, SessionManagerLayer};
@@ -25,6 +26,7 @@ async fn health() -> Json<serde_json::Value> {
 fn build_app(pool: PgPool) -> Router {
     let session_layer = SessionManagerLayer::new(MemoryStore::default());
     health_router()
+        .merge(rest_router(RestState { pool: pool.clone() }))
         .merge(web_router(AppState { pool }))
         .layer(session_layer)
 }

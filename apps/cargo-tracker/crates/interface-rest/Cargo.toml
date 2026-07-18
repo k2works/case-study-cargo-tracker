@@ -8,3 +8,18 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+app-shipper = { workspace = true }
+infra-persistence = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+sqlx = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tower = { workspace = true }
+http-body-util = { workspace = true }
+serde_json = { workspace = true }
+domain-shipper = { workspace = true }
+shared-kernel = { workspace = true }
+testcontainers = "0.24"
+testcontainers-modules = { version = "0.12", features = ["postgres"] }

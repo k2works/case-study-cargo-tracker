@@ -1,7 +1,12 @@
 //! Shipper Context のアプリケーション層。
 //!
-//! 荷主登録ユースケース（`RegisterShipperCommandService`）を提供する。
+//! 荷主登録ユースケース（`RegisterShipperCommandService`）と荷主検索クエリ
+//! （`FindShipperQueryService`）を提供する。
 //! ドメインの出力ポート `ShipperRepository` にのみ依存し、インフラ実装には依存しない。
+
+pub mod query;
+
+pub use query::{FindShipperQueryService, QueryError, ShipperQueryPort, ShipperSummary};
 
 use domain_shipper::{
     Address, ContractNumber, CorporateProfile, DiscountRate, Email, Phone, Shipper, ShipperError,

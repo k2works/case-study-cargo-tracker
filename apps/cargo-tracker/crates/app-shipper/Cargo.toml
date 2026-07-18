@@ -13,6 +13,7 @@ domain-shipper = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 rust_decimal = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
 mockall = "0.13"
