@@ -70,9 +70,11 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 | スキル | 説明 |
 | :--- | :--- |
 | `planning-releases` | アジャイルなリリース計画とイテレーション計画を作成・管理。 |
+| `creating-development-strategy` | 開発戦略ドキュメントを作成。リリース計画のイテレーションを序盤・中盤・終盤に分け、TDD アプローチ（アウトサイドイン／インサイドアウト）とウォーキングスケルトン、設計ドキュメント整合方針を定義。 |
 | `syncing-github-project` | リリース計画を GitHub Project・Issue・Milestone に同期。 |
 | `tracking-progress` | プロジェクトの開発進捗を包括的に分析しレポート生成。 |
 | `validating-iteration-plan` | イテレーション計画と上流設計ドキュメント群との整合性を検証。 |
+| `validating-design` | 開発戦略・イテレーション計画・設計ドキュメント・過去計画の間で設計トピックの整合性を横断検証。 |
 | `validating-operating-setup` | 環境セットアップ手順書の実施状況を監査し、未対応項目を報告。 |
 
 #### 運用系
@@ -213,6 +215,7 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 │   ├── tracking-progress/SKILL.md
 │   ├── syncing-github-project/SKILL.md
 │   ├── planning-releases/SKILL.md
+│   ├── creating-development-strategy/SKILL.md
 │   ├── creating-journal/SKILL.md
 │   ├── creating-slides/SKILL.md
 │   ├── creating-release-report/SKILL.md
@@ -222,6 +225,7 @@ Claude Code をより効率的に使うための基本設定テンプレート�
 │   ├── orchestrating-operation/SKILL.md
 │   ├── orchestrating-project/SKILL.md
 │   ├── validating-iteration-plan/SKILL.md
+│   ├── validating-design/SKILL.md
 │   ├── validating-operating-setup/SKILL.md
 │   └── practicing-getting-start-tdd/SKILL.md
 ├── README.md
