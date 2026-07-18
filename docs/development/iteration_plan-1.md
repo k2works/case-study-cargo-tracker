@@ -32,13 +32,13 @@ date: 2026-07-18T00:00:00.000Z
 
 ### 成功基準
 
-- [ ] ログイン/ログアウトが動作し、ロール別アクセス制御と未認証リダイレクトが機能する
-- [ ] 荷主登録（個人・法人）の受け入れテストが緑（Email 重複検出・割引率 0〜30% 検証含む）
-- [ ] 貨物予約登録（一般・危険物・冷凍）の受け入れテストが緑（危険物申告・温度条件の必須検証含む）
-- [ ] ログイン → ダッシュボード → 予約登録 → 予約詳細の画面遷移が動作する
-- [ ] ナビゲーションバーがロール別に出し分けされ、検証テストが緑
-- [ ] `cargo build` / `cargo clippy -D warnings` / `cargo fmt --check` が緑
-- [ ] テストカバレッジ 80% 以上
+- [x] ログイン/ログアウトが動作し、ロール別アクセス制御と未認証リダイレクトが機能する
+- [x] 荷主登録（個人・法人）の受け入れテストが緑（Email 重複検出・割引率 0〜30% 検証含む）
+- [x] 貨物予約登録（一般・危険物・冷凍）の受け入れテストが緑（危険物申告・温度条件の必須検証含む）
+- [x] ログイン → ダッシュボード → 予約登録 → 予約詳細の画面遷移が動作する（実 PostgreSQL で確認）
+- [x] ナビゲーションバーがロール別に出し分けされ、検証テストが緑
+- [x] `cargo build` / `cargo clippy -D warnings` / `cargo fmt --check` が緑
+- [ ] テストカバレッジ 80% 以上（未計測。cargo-llvm-cov による計測は残ハードニング）
 
 ---
 
@@ -493,15 +493,15 @@ apps/cargo-tracker/crates/
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review + 必要に応じ developing-review）
-- [ ] ユニットテストがパス（`cargo test --workspace`）
-- [ ] 統合テストがパス（testcontainers による shipper/cargo リポジトリ）
-- [ ] E2E テスト（ログイン→予約登録の主要フロー）がパス
-- [ ] clippy エラーなし（`cargo clippy --workspace --all-targets -- -D warnings`）
-- [ ] `cargo fmt --check` が緑・`cargo build` でクレート境界が維持
-- [ ] ナビゲーション表示のロール別検証テストが緑
-- [ ] 機能がローカル環境で動作確認済み
-- [ ] ドキュメント更新完了（設計判断の変更は docs/design へ反映）
+- [ ] コードレビュー完了（self-review 済み・`developing-review` は未実施）
+- [x] ユニットテストがパス（`cargo test --workspace`）
+- [x] 統合テストがパス（testcontainers による shipper/cargo/user リポジトリ・auth/shipper/booking フロー）
+- [ ] E2E テスト（Playwright）— 未実装（HTTP レベル oneshot で代替検証済み。Playwright は後続）
+- [x] clippy エラーなし（`cargo clippy --workspace --all-targets -- -D warnings`）
+- [x] `cargo fmt --check` が緑・`cargo build` でクレート境界が維持
+- [x] ナビゲーション表示のロール別検証テストが緑
+- [x] 機能がローカル環境で動作確認済み（seed + 実起動でログイン〜予約詳細を確認）
+- [x] ドキュメント更新完了（設計判断の変更は docs/design へ反映・ADR-0002 起票）
 
 ### デモ項目
 
