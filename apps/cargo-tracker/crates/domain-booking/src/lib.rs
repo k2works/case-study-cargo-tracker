@@ -1,33 +1,17 @@
-//! booking コンテキストのドメイン層。
+//! Booking Context のドメイン層。
+//!
+//! 貨物予約の集約（`Cargo`）・値オブジェクト・出力ポートを定義する。
+//! 危険物申告・温度管理条件の必須性、出発地≠目的地などの不変条件を型と `Cargo::book` で強制する。
 
-use shared_kernel::Location;
+pub mod aggregate;
+pub mod error;
+pub mod ports;
+pub mod value_objects;
 
-/// クレート結線検証用のプレースホルダ関数。
-#[must_use]
-pub fn context_name() -> &'static str {
-    "booking"
-}
-
-/// shared-kernel への依存を検証するプレースホルダ関数。
-///
-/// # Errors
-///
-/// UN/LOCODE の形式が不正な場合はエラーを返す。
-pub fn parse_location(code: &str) -> Result<Location, shared_kernel::SharedKernelError> {
-    Location::new(code)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn コンテキスト名を返す() {
-        assert_eq!(context_name(), "booking");
-    }
-
-    #[test]
-    fn shared_kernel_の_location_を利用できる() {
-        assert!(parse_location("USNYC").is_ok());
-    }
-}
+pub use aggregate::{BookCargoCommand, Cargo};
+pub use error::BookingError;
+pub use ports::{AclError, CargoRepository, RepositoryError, ShipperExistenceChecker};
+pub use value_objects::{
+    BookingId, BookingStatus, CargoType, Consignee, Description, Dimensions, HazardousDeclaration,
+    Quantity, RouteSpecification, TemperatureRequirement, TemperatureUnit, Weight,
+};

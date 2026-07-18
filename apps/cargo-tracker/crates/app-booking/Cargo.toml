@@ -11,3 +11,10 @@ workspace = true
 shared-kernel = { workspace = true }
 domain-booking = { workspace = true }
 async-trait = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+mockall = "0.13"
+tokio = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
