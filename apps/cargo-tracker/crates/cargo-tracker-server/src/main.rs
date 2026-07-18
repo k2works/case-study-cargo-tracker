@@ -8,6 +8,7 @@ use infra_persistence::MIGRATOR;
 use interface_rest::{RestState, rest_router};
 use interface_web::{AppState, web_router};
 use sqlx::PgPool;
+use tower_http::services::ServeDir;
 use tower_sessions::{MemoryStore, SessionManagerLayer};
 
 /// ヘルスチェックのみのルーター（DB 非依存）。
@@ -31,9 +32,13 @@ fn build_app(pool: PgPool) -> Router {
     let secure_cookies = std::env::var("SECURE_COOKIES").is_ok_and(|v| v == "1" || v == "true");
     let session_layer =
         SessionManagerLayer::new(MemoryStore::default()).with_secure(secure_cookies);
+    // 静的アセット（Bootstrap / htmx / カスタム CSS・JS）を /static で配信する。
+    // 配信元は STATIC_DIR（既定 "static"、cwd = apps/cargo-tracker を想定）。
+    let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "static".to_string());
     let app = health_router()
         .merge(rest_router(RestState { pool: pool.clone() }))
         .merge(web_router(AppState { pool }))
+        .nest_service("/static", ServeDir::new(static_dir))
         .layer(session_layer);
 
     // 環境変数 LIVERELOAD が設定されている場合のみ、ブラウザ自動リロードを有効化する（開発専用）。

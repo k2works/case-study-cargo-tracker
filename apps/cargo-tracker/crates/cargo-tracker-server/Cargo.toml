@@ -14,6 +14,7 @@ axum = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
 tower-sessions = "0.14"
+tower-http = { workspace = true, features = ["fs", "trace"] }
 shared-kernel = { workspace = true }
 interface-web = { workspace = true }
 interface-rest = { workspace = true }
