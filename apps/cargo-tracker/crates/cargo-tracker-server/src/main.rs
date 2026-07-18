@@ -1,12 +1,16 @@
 //! Cargo Tracker サーバーの composition root。
 //!
-//! axum Router を組み立て、HTTP サーバーとして起動する。
-//! 現状はヘルスチェックのみ。各コンテキストのルートは Phase 1 以降で追加する。
+//! PgPool・セッション・Web ルーターを組み立て、HTTP サーバーとして起動する。
+//! IT1 では認証・ダッシュボードのウォーキングスケルトンと `/health` を提供する。
 
 use axum::{Json, Router, routing::get};
+use infra_persistence::MIGRATOR;
+use interface_web::{AppState, web_router};
+use sqlx::PgPool;
+use tower_sessions::{MemoryStore, SessionManagerLayer};
 
-/// アプリケーションの Router を組み立てる。
-fn app() -> Router {
+/// ヘルスチェックのみのルーター（DB 非依存）。
+fn health_router() -> Router {
     Router::new().route("/health", get(health))
 }
 
@@ -15,20 +19,46 @@ async fn health() -> Json<serde_json::Value> {
     Json(serde_json::json!({ "status": "UP" }))
 }
 
+/// アプリケーション全体の Router を組み立てる。
+///
+/// セッションレイヤー・Web ルーター（認証/ダッシュボード）・ヘルスチェックを合成する。
+fn build_app(pool: PgPool) -> Router {
+    let session_layer = SessionManagerLayer::new(MemoryStore::default());
+    health_router()
+        .merge(web_router(AppState { pool }))
+        .layer(session_layer)
+}
+
 /// リッスンアドレスを環境変数 PORT（既定 8080）から組み立てる。
 fn listen_addr() -> String {
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     format!("0.0.0.0:{port}")
 }
 
+/// DB 接続 URL を環境変数 DATABASE_URL から取得する。
+fn database_url() -> String {
+    std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@127.0.0.1:5432/cargo_tracker".to_string())
+}
+
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
+
+    let pool = PgPool::connect(&database_url())
+        .await
+        .expect("データベースに接続できません");
+    MIGRATOR
+        .run(&pool)
+        .await
+        .expect("マイグレーションの適用に失敗しました");
+
     let addr = listen_addr();
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .unwrap_or_else(|e| panic!("{addr} にバインドできません: {e}"));
-    println!("cargo-tracker-server listening on http://{addr}");
-    axum::serve(listener, app())
+    tracing::info!("cargo-tracker-server listening on http://{addr}");
+    axum::serve(listener, build_app(pool))
         .await
         .expect("サーバーの起動に失敗しました");
 }
@@ -43,7 +73,7 @@ mod tests {
 
     #[tokio::test]
     async fn ヘルスチェックは200とupを返す() {
-        let response = app()
+        let response = health_router()
             .oneshot(
                 Request::builder()
                     .uri("/health")
@@ -61,7 +91,7 @@ mod tests {
 
     #[tokio::test]
     async fn 未定義パスは404を返す() {
-        let response = app()
+        let response = health_router()
             .oneshot(
                 Request::builder()
                     .uri("/unknown")
