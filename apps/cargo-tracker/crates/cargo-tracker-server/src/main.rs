@@ -24,7 +24,13 @@ async fn health() -> Json<serde_json::Value> {
 ///
 /// セッションレイヤー・Web ルーター（認証/ダッシュボード）・ヘルスチェックを合成する。
 fn build_app(pool: PgPool) -> Router {
-    let session_layer = SessionManagerLayer::new(MemoryStore::default());
+    // セッション Cookie の Secure 属性。HTTPS 環境でのみ true にする。
+    // 既定は false（開発は http://localhost のため）。本番は SECURE_COOKIES=1 で有効化する。
+    // Secure=true のまま http でアクセスするとブラウザが Cookie を返送せず、
+    // ログイン後にセッションが復元できず /login にループする。
+    let secure_cookies = std::env::var("SECURE_COOKIES").is_ok_and(|v| v == "1" || v == "true");
+    let session_layer =
+        SessionManagerLayer::new(MemoryStore::default()).with_secure(secure_cookies);
     let app = health_router()
         .merge(rest_router(RestState { pool: pool.clone() }))
         .merge(web_router(AppState { pool }))
