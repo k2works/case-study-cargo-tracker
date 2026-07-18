@@ -84,6 +84,39 @@ impl Cargo {
         })
     }
 
+    /// 永続化レコードから貨物集約を復元する（不変条件検証は行わない）。
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub fn reconstitute(
+        booking_id: BookingId,
+        shipper_id: ShipperId,
+        route_specification: RouteSpecification,
+        consignee: Consignee,
+        cargo_type: CargoType,
+        weight: Weight,
+        status: BookingStatus,
+        dimensions: Option<Dimensions>,
+        quantity: Option<Quantity>,
+        description: Option<Description>,
+        hazardous_declaration: Option<HazardousDeclaration>,
+        temperature_requirement: Option<TemperatureRequirement>,
+    ) -> Self {
+        Self {
+            booking_id,
+            shipper_id,
+            route_specification,
+            consignee,
+            cargo_type,
+            weight,
+            status,
+            dimensions,
+            quantity,
+            description,
+            hazardous_declaration,
+            temperature_requirement,
+        }
+    }
+
     /// 予約 ID を返す。
     #[must_use]
     pub fn booking_id(&self) -> &BookingId {
@@ -136,6 +169,24 @@ impl Cargo {
     #[must_use]
     pub fn temperature_requirement(&self) -> Option<TemperatureRequirement> {
         self.temperature_requirement
+    }
+
+    /// 寸法を返す。
+    #[must_use]
+    pub fn dimensions(&self) -> Option<Dimensions> {
+        self.dimensions
+    }
+
+    /// 個数を返す。
+    #[must_use]
+    pub fn quantity(&self) -> Option<Quantity> {
+        self.quantity
+    }
+
+    /// 品名を返す。
+    #[must_use]
+    pub fn description(&self) -> Option<&Description> {
+        self.description.as_ref()
     }
 }
 

@@ -75,6 +75,21 @@ impl BookingStatus {
             Self::Cancelled => "CANCELLED",
         }
     }
+
+    /// 文字列表現から予約状態を復元する。未知の値は `Preliminary` にフォールバックする。
+    #[must_use]
+    pub fn from_str_or_preliminary(value: &str) -> Self {
+        match value {
+            "ROUTE_PROPOSED" => Self::RouteProposed,
+            "CONFIRMED" => Self::Confirmed,
+            "TRACKING_ISSUED" => Self::TrackingIssued,
+            "IN_TRANSIT" => Self::InTransit,
+            "DELIVERED" => Self::Delivered,
+            "SETTLED" => Self::Settled,
+            "CANCELLED" => Self::Cancelled,
+            _ => Self::Preliminary,
+        }
+    }
 }
 
 /// 貨物種別。
@@ -96,6 +111,16 @@ impl CargoType {
             Self::General => "GENERAL",
             Self::Hazardous => "HAZARDOUS",
             Self::Refrigerated => "REFRIGERATED",
+        }
+    }
+
+    /// 文字列表現から貨物種別を復元する。未知の値は `General` にフォールバックする。
+    #[must_use]
+    pub fn from_str_or_general(value: &str) -> Self {
+        match value {
+            "HAZARDOUS" => Self::Hazardous,
+            "REFRIGERATED" => Self::Refrigerated,
+            _ => Self::General,
         }
     }
 }
@@ -270,6 +295,26 @@ pub enum TemperatureUnit {
     Celsius,
     /// 華氏。
     Fahrenheit,
+}
+
+impl TemperatureUnit {
+    /// 文字列表現を返す。
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Celsius => "CELSIUS",
+            Self::Fahrenheit => "FAHRENHEIT",
+        }
+    }
+
+    /// 文字列表現から温度単位を復元する。未知の値は `Celsius` にフォールバックする。
+    #[must_use]
+    pub fn from_str_or_celsius(value: &str) -> Self {
+        match value {
+            "FAHRENHEIT" => Self::Fahrenheit,
+            _ => Self::Celsius,
+        }
+    }
 }
 
 /// 温度管理条件（REFRIGERATED 時に必須）。

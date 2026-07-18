@@ -4,8 +4,10 @@
 //! IT1 ではランタイムクエリを用い、コンパイル時 `query!` マクロ + `.sqlx` オフライン化は
 //! 後続タスク（1.7）で硬化する。
 
+pub mod cargo_repository;
 pub mod shipper_repository;
 
+pub use cargo_repository::{SqlxCargoRepository, SqlxShipperExistenceChecker};
 pub use shipper_repository::SqlxShipperRepository;
 
 /// sqlx マイグレータ。アプリ起動時・テスト時にスキーマを適用する。
