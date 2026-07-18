@@ -203,18 +203,27 @@ end note
 
 ```text
 crates/
-  shared-domain/         # 共有カーネル（Location・ShipperId・TransportStatus 等）
-  booking-domain/        # Booking Context ドメイン層
-  shipper-domain/        # Shipper Context ドメイン層
-  routing-domain/        # Routing Context ドメイン層
-  tracking-domain/       # Tracking Context ドメイン層
-  handling-domain/       # Handling Context ドメイン層
-  billing-domain/        # Billing Context ドメイン層
-  estimation-domain/     # Estimation Context ドメイン層
-  application/           # ユースケース（コマンド / クエリサービス）
-  infrastructure/        # sqlx リポジトリ実装・外部システムアダプター
-  api/                   # axum ハンドラー・ルーティング
+  shared-kernel/         # 共有カーネル（Location・ShipperId・TransportStatus 等）
+  domain-booking/        # Booking Context ドメイン層
+  domain-shipper/        # Shipper Context ドメイン層
+  domain-routing/        # Routing Context ドメイン層
+  domain-tracking/       # Tracking Context ドメイン層
+  domain-handling/       # Handling Context ドメイン層
+  domain-billing/        # Billing Context ドメイン層
+  domain-estimation/     # Estimation Context ドメイン層
+  app-booking/           # ユースケース（コマンド / クエリサービス）※コンテキスト別に app-* を配置
+  app-shipper/
+  app-estimation/
+  infra-persistence/     # sqlx リポジトリ実装・Read Model
+  infra-external/        # 外部システムアダプター（reqwest）
+  infra-eventbus/        # in-process イベントバス（tokio broadcast）
+  interface-rest/        # axum ハンドラー・REST API・ルーティング
+  interface-web/         # Askama SSR 画面ハンドラー
+  cargo-tracker-server/  # 実行バイナリ（合成ルート）
 ```
+
+> クレート命名は [バックエンドアーキテクチャ設計](architecture_backend.md) と実際の `apps/cargo-tracker/Cargo.toml` を正とする。
+> アプリケーション層は単一クレートではなくコンテキスト別（`app-booking` 等）に分割する。
 
 ## 1. Booking Context（予約コンテキスト）
 
