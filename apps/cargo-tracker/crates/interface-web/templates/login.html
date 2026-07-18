@@ -13,15 +13,15 @@
     <form method="post" action="/login">
       <div class="mb-3">
         <label for="username" class="form-label">ユーザー名</label>
-        <input type="text" class="form-control" id="username" name="username" required>
+        <input type="text" class="form-control" id="username" name="username" value="{{ default_username }}" required>
       </div>
       <div class="mb-3">
         <label for="password" class="form-label">パスワード</label>
-        <input type="password" class="form-control" id="password" name="password" required>
+        <input type="password" class="form-control" id="password" name="password" value="{{ default_password }}" required>
       </div>
       <button type="submit" class="btn btn-primary" data-testid="login-submit">ログイン</button>
     </form>
-    <p class="mt-3 text-muted"><small>アカウントがない場合は管理者に連絡してください</small></p>
+    <p class="mt-3 text-muted"><small>開発用の既定アカウント（sales / password）を初期入力しています。他ロールは seed 済みユーザー（shipper・handler・tracker・designer・billing・admin、いずれも password）でログインできます。</small></p>
   </div>
 </div>
 {% endblock %}

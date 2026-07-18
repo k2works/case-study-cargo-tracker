@@ -58,6 +58,19 @@ pub struct AppState {
 #[template(path = "login.html")]
 struct LoginTemplate {
     error: bool,
+    default_username: String,
+    default_password: String,
+}
+
+impl LoginTemplate {
+    /// 開発用の既定アカウントを初期入力した状態のテンプレートを構成する。
+    fn new(error: bool) -> Self {
+        Self {
+            error,
+            default_username: "sales".to_string(),
+            default_password: "password".to_string(),
+        }
+    }
 }
 
 #[derive(Template)]
@@ -178,7 +191,7 @@ async fn require_user(session: &Session) -> Result<CurrentUser, Response> {
 }
 
 async fn login_form() -> Response {
-    render(&LoginTemplate { error: false })
+    render(&LoginTemplate::new(false))
 }
 
 async fn login_submit(
@@ -198,7 +211,7 @@ async fn login_submit(
             }
             Redirect::to("/").into_response()
         }
-        Ok(_) => (StatusCode::OK, render(&LoginTemplate { error: true })).into_response(),
+        Ok(_) => (StatusCode::OK, render(&LoginTemplate::new(true))).into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }

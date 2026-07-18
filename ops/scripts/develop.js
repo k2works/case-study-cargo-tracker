@@ -134,6 +134,12 @@ export default function (gulp) {
       runInService(svc, 'cargo sqlx prepare --workspace');
       done();
     });
+
+    // 開発用ユーザーの seed（ログイン検証用・冪等）
+    gulp.task(`dev:${svc.name}:db:seed`, (done) => {
+      runInService(svc, `cargo run -p ${svc.serverCrate} --bin seed`);
+      done();
+    });
   });
 
   // ヘルプタスク（必須）
@@ -152,6 +158,7 @@ export default function (gulp) {
   dev:cargo-tracker:db:stop     PostgreSQL コンテナ停止
   dev:cargo-tracker:db:logs     PostgreSQL ログ表示
   dev:cargo-tracker:db:migrate  マイグレーション適用
+  dev:cargo-tracker:db:seed     開発用ユーザー投入（ログイン検証用・冪等）
   dev:cargo-tracker:db:prepare  sqlx オフラインキャッシュ (.sqlx) 生成
   dev:help                      このヘルプを表示
     `);
