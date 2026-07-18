@@ -100,6 +100,13 @@ struct BookingShowTemplate {
     cargo_type: String,
 }
 
+#[derive(Template)]
+#[template(path = "placeholder.html")]
+struct PlaceholderTemplate {
+    current_user: CurrentUser,
+    title: String,
+}
+
 /// 予約登録フォーム入力。
 #[derive(Debug, Deserialize)]
 pub struct BookingForm {
@@ -151,8 +158,14 @@ pub fn web_router(state: AppState) -> Router {
         .route("/shippers/new", get(shipper_new_form))
         .route("/shippers", post(shipper_create))
         .route("/bookings/new", get(booking_new_form))
-        .route("/bookings", post(booking_create))
+        .route("/bookings", get(placeholder_bookings).post(booking_create))
         .route("/bookings/{booking_id}", get(booking_show))
+        .route("/tracking", get(placeholder_tracking))
+        .route("/handling", get(placeholder_handling))
+        .route("/estimates", get(placeholder_estimates))
+        .route("/voyages", get(placeholder_voyages))
+        .route("/billing/invoices", get(placeholder_billing))
+        .route("/admin/discount-policies", get(placeholder_admin))
         .with_state(state)
 }
 
@@ -200,6 +213,38 @@ async fn dashboard(session: Session) -> Response {
         Ok(Some(current_user)) => render(&DashboardTemplate { current_user }),
         _ => Redirect::to("/login").into_response(),
     }
+}
+
+async fn render_placeholder(session: &Session, title: &str) -> Response {
+    match require_user(session).await {
+        Ok(current_user) => render(&PlaceholderTemplate {
+            current_user,
+            title: title.to_string(),
+        }),
+        Err(resp) => resp,
+    }
+}
+
+async fn placeholder_bookings(session: Session) -> Response {
+    render_placeholder(&session, "貨物予約一覧").await
+}
+async fn placeholder_tracking(session: Session) -> Response {
+    render_placeholder(&session, "貨物追跡").await
+}
+async fn placeholder_handling(session: Session) -> Response {
+    render_placeholder(&session, "荷役管理").await
+}
+async fn placeholder_estimates(session: Session) -> Response {
+    render_placeholder(&session, "見積管理").await
+}
+async fn placeholder_voyages(session: Session) -> Response {
+    render_placeholder(&session, "航路管理").await
+}
+async fn placeholder_billing(session: Session) -> Response {
+    render_placeholder(&session, "請求管理").await
+}
+async fn placeholder_admin(session: Session) -> Response {
+    render_placeholder(&session, "管理設定").await
 }
 
 async fn shipper_new_form(session: Session) -> Response {
