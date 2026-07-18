@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}予約詳細 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="booking-show-title">予約詳細</h1>
+<dl class="row">
+  <dt class="col-sm-3">予約番号</dt>
+  <dd class="col-sm-9" data-testid="booking-id">{{ booking_id }}</dd>
+  <dt class="col-sm-3">状態</dt>
+  <dd class="col-sm-9" data-testid="booking-status">{{ status }}</dd>
+  <dt class="col-sm-3">出発地 → 目的地</dt>
+  <dd class="col-sm-9">{{ origin }} → {{ destination }}</dd>
+  <dt class="col-sm-3">貨物種別</dt>
+  <dd class="col-sm-9">{{ cargo_type }}</dd>
+</dl>
+<a href="/" class="btn btn-secondary">ダッシュボードへ戻る</a>
+{% endblock %}
