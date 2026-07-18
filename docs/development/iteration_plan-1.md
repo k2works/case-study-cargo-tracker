@@ -171,21 +171,30 @@ date: 2026-07-18T00:00:00.000Z
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| US-AUTH-01 認証・認可基盤 | 3 | 23h | [ ] 未着手（認証基盤・UI 骨格） |
-| US02/US03 荷主登録 | 5 | 17h | [~] ドメイン/アプリ/永続化 完了・UI 残 |
-| US04/US05 貨物予約登録 | 8 | 27h | [~] ドメイン/アプリ/永続化 完了・UI 残 |
+| US-AUTH-01 認証・認可基盤 | 3 | 23h | [x] 完了（認証・セッション・RBAC・ナビ・ダッシュボード・骨格） |
+| US02/US03 荷主登録 | 5 | 17h | [x] 完了（ドメイン/アプリ/永続化/UI） |
+| US04/US05 貨物予約登録 | 8 | 27h | [x] 完了（ドメイン/アプリ/永続化/UI/予約詳細） |
 | **合計** | **16** | **67h** | |
 
 **1 SP あたり**: 約 4.2h
-**進捗率**: 約 50%（バックエンド中核完了 / 認証・UI・サーバ結線が残）
+**進捗率**: 約 95%（中核 US 完了 / sqlx オフライン硬化・/api/shippers 増分検索が残）
 
-> **実装進捗メモ（2026-07-18 セッション）**: 序盤アウトサイドインの中で DDD コアをインサイドに先行実装。
-> `shared-kernel`（ShipperId・Role）、`domain-shipper`+`app-shipper`、`domain-booking`+`app-booking`、
-> `infra-persistence`（マイグレーション・SqlxShipperRepository・SqlxCargoRepository・
-> SqlxShipperExistenceChecker）を TDD で完了。単体 29 + testcontainers 統合 6 = 全テスト green。
-> 残タスク: US-AUTH-01 認証・認可基盤（axum-login/tower-sessions）、`interface-web`/`interface-rest`
->（Askama 画面・navbar・ダッシュボード・登録フォーム・oneshot テスト）、`cargo-tracker-server` 結線、
-> sqlx オフラインビルド硬化（task 1.7）。
+> **実装進捗メモ（2026-07-18 セッション）**: 序盤アウトサイドインの中で DDD コアをインサイドに先行実装後、
+> 認証・UI・サーバ結線まで縦切りを完成。
+> - `shared-kernel`（ShipperId・Role）、`domain-shipper`+`app-shipper`、`domain-booking`+`app-booking`
+> - `infra-persistence`（マイグレーション・SqlxShipperRepository・SqlxCargoRepository・
+>   SqlxShipperExistenceChecker・SqlxUserRepository + argon2）
+> - `interface-web`（Askama SSR・tower-sessions・ロール別 navbar・ダッシュボード・ログイン・
+>   荷主登録・予約登録・予約詳細・全ルートのプレースホルダ）
+> - `cargo-tracker-server`（PgPool・セッション・web_router・/health の合成ルート）
+>
+> 全テスト green（単体 + testcontainers 統合 + HTTP フロー oneshot、失敗ゼロ）。
+> ログイン→荷主登録→予約登録→予約詳細の縦切りが実 PostgreSQL 上で成立。
+>
+> **残タスク（IT1 完了前の仕上げ・ハードニング）**: (1) sqlx オフラインビルド硬化（`query!` マクロ +
+> `.sqlx` キャッシュ・task 1.7、現状はランタイムクエリ）、(2) `/api/shippers` 増分検索エンドポイント
+>（`interface-rest`、予約フォームの htmx 荷主検索。現状は荷主 ID テキスト入力で機能）、
+> (3) 認証方式の ADR 起票（axum-login ではなく tower-sessions + 自前 RBAC を採用した経緯）。
 
 ---
 
