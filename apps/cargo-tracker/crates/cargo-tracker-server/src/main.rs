@@ -38,9 +38,12 @@ fn listen_addr() -> String {
 }
 
 /// DB 接続 URL を環境変数 DATABASE_URL から取得する。
+///
+/// 既定値は `apps/cargo-tracker/docker-compose.yml` の postgres サービス
+/// （user=cargo / password=cargo / db=cargo_tracker）に一致させる。
 fn database_url() -> String {
     std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@127.0.0.1:5432/cargo_tracker".to_string())
+        .unwrap_or_else(|_| "postgres://cargo:cargo@127.0.0.1:5432/cargo_tracker".to_string())
 }
 
 #[tokio::main]
