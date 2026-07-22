@@ -95,6 +95,7 @@ nav:
       - イテレーション2計画 航海スケジュール: development/iteration_plan-2.md
       - イテレーション2 ふりかえり: development/retrospective-2.md
       - イテレーション2 完了報告書: development/iteration_report-2.md
+      - イテレーション3計画 経路算出・選択: development/iteration_plan-3.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
