@@ -57,7 +57,10 @@ impl CargoRepository for SqlxCargoRepository {
                  dimension_length, dimension_width, dimension_height, quantity, description,
                  hazardous_class, un_number, proper_shipping_name,
                  min_temperature, max_temperature, temperature_unit)
-              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)",
+              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+              ON CONFLICT (booking_id) DO UPDATE SET
+                booking_status = EXCLUDED.booking_status,
+                updated_at = NOW()",
         )
         .bind(cargo.booking_id().as_str())
         .bind(cargo.shipper_id().value())

@@ -106,6 +106,43 @@ async fn 危険物申告付きの予約を永続化して復元できる() {
 }
 
 #[tokio::test]
+async fn 状態遷移後の保存で予約状態が更新される() {
+    use domain_booking::BookingStatus;
+
+    let (pool, _c) = setup().await;
+    let shipper_id = persist_shipper(&pool).await;
+    let repo = SqlxCargoRepository::new(pool.clone());
+    let mut cargo = Cargo::book(command(shipper_id, CargoType::General)).unwrap();
+    let booking_id = cargo.booking_id().clone();
+    repo.save(&cargo).await.expect("save cargo");
+
+    // 経路設計依頼 → 経路提案 → 確定 と遷移し、都度 upsert で状態が反映される。
+    cargo.request_route_design().unwrap();
+    repo.save(&cargo).await.expect("update to route_designing");
+    assert_eq!(
+        repo.find_by_booking_id(&booking_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status(),
+        BookingStatus::RouteDesigning
+    );
+
+    cargo.propose_route().unwrap();
+    repo.save(&cargo).await.expect("update to route_proposed");
+    cargo.confirm().unwrap();
+    repo.save(&cargo).await.expect("update to confirmed");
+    assert_eq!(
+        repo.find_by_booking_id(&booking_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status(),
+        BookingStatus::Confirmed
+    );
+}
+
+#[tokio::test]
 async fn shipper_existence_checker_は存在有無を判定する() {
     let (pool, _c) = setup().await;
     let shipper_id = persist_shipper(&pool).await;
