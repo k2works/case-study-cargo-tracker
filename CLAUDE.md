@@ -73,6 +73,7 @@
 | `tracking-progress` | 進捗分析・レポート |
 | `validating-iteration-plan` | イテレーション計画の整合性検証 |
 | `validating-design` | 設計トピックの横断的整合性検証 |
+| `opening-iteration` | イテレーション開始準備（ふりかえり反映→計画作成→詳細検証→横断検証→GitHub→ドキュメント同期） |
 | `closing-iteration` | イテレーションクローズ（レビュー→品質ゲート→進捗→ふりかえり→報告書→GitHub→ドキュメント同期） |
 
 ### 運用
