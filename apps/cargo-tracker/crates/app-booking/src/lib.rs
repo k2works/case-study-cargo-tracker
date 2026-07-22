@@ -277,6 +277,7 @@ mod tests {
         impl CargoRepository for Repo {
             async fn save(&self, cargo: &Cargo) -> Result<(), RepositoryError>;
             async fn find_by_booking_id(&self, id: &BookingId) -> Result<Option<Cargo>, RepositoryError>;
+            async fn find_all(&self) -> Result<Vec<Cargo>, RepositoryError>;
         }
     }
 

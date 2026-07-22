@@ -28,6 +28,9 @@ pub trait CargoRepository: Send + Sync {
 
     /// 予約 ID で検索する。
     async fn find_by_booking_id(&self, id: &BookingId) -> Result<Option<Cargo>, RepositoryError>;
+
+    /// 全予約を予約 ID 昇順で返す（一覧表示用）。
+    async fn find_all(&self) -> Result<Vec<Cargo>, RepositoryError>;
 }
 
 /// Shipper Context への ACL ポート。荷主の存在を確認する。
@@ -73,6 +76,9 @@ impl CargoRepository for std::sync::Arc<dyn CargoRepository> {
     }
     async fn find_by_booking_id(&self, id: &BookingId) -> Result<Option<Cargo>, RepositoryError> {
         (**self).find_by_booking_id(id).await
+    }
+    async fn find_all(&self) -> Result<Vec<Cargo>, RepositoryError> {
+        (**self).find_all().await
     }
 }
 

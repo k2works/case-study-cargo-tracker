@@ -3,7 +3,7 @@
     <a class="navbar-brand" href="/">CargoTracker</a>
     <ul class="navbar-nav me-auto">
       <li class="nav-item"><a class="nav-link" href="/">ダッシュボード</a></li>
-      {% if current_user.has_role("ROLE_SALES") || current_user.has_role("ROLE_SHIPPER") %}
+      {% if current_user.has_role("ROLE_SALES") || current_user.has_role("ROLE_SHIPPER") || current_user.has_role("ROLE_ROUTE_DESIGNER") %}
       <li class="nav-item"><a class="nav-link" href="/bookings" data-testid="nav-bookings">貨物予約</a></li>
       {% endif %}
       {% if current_user.has_role("ROLE_SHIPPER") || current_user.has_role("ROLE_CONSIGNEE") || current_user.has_role("ROLE_TRACKER") %}

@@ -67,7 +67,7 @@ Booking 1 ─── 1 Invoice
 | :--- | :--- | :--- | :--- | :--- |
 | ログイン | `/login` | 認証フォーム | 全ロール | - |
 | ダッシュボード | `/` | 全体サマリー・最新荷役情報 | 全ロール | US01 |
-| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧・検索 | 荷主、営業担当者 | US04 |
+| 貨物予約一覧 | `/bookings` | 予約済み貨物の一覧（状態・出発地→目的地・詳細導線） | 荷主、営業担当者、経路設計者 | US04 |
 | 貨物予約登録 | `/bookings/new` | 新規予約フォーム（荷主・荷受人情報を含む） | 営業担当者 | US02, US03, US04, US05 |
 | 予約詳細 | `/bookings/{bookingId}` | 予約情報・経路・荷役履歴。経路設計依頼・荷主への経路通知・予約確定・追跡番号発行の起点 | 荷主、営業担当者、経路設計者 | US06, US12, US13, US14 |
 | 経路設計・割り当て | `/bookings/{bookingId}/route` | 航海スケジュール検索 → 経路候補算出 → 選択・確定 → 予約への紐付け。条件調整・再算出を含む | 経路設計者（営業担当者は引き渡しまで） | US07, US08, US09, US10, US11 |
@@ -103,7 +103,7 @@ Booking 1 ─── 1 Invoice
 | メニュー項目 | 遷移先 | 表示ロール |
 | :--- | :--- | :--- |
 | ダッシュボード | `/` | 全ロール |
-| 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER |
+| 貨物予約 | `/bookings` | ROLE_SALES, ROLE_SHIPPER, ROLE_ROUTE_DESIGNER |
 | 貨物追跡 | `/tracking` | ROLE_SHIPPER, ROLE_CONSIGNEE, ROLE_TRACKER |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/customs` | ROLE_HANDLER, ROLE_TRACKER |

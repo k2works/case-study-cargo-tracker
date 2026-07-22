@@ -276,7 +276,7 @@ pub fn web_router(state: AppState) -> Router {
         .route("/shippers/new", get(shipper_new_form))
         .route("/shippers", post(shipper_create))
         .route("/bookings/new", get(booking_new_form))
-        .route("/bookings", get(placeholder_bookings).post(booking_create))
+        .route("/bookings", get(booking_list).post(booking_create))
         .route("/bookings/{booking_id}", get(booking_show))
         .route("/tracking", get(placeholder_tracking))
         .route("/handling", get(placeholder_handling))
@@ -360,8 +360,52 @@ async fn render_placeholder(session: &Session, title: &str) -> Response {
     }
 }
 
-async fn placeholder_bookings(session: Session) -> Response {
-    render_placeholder(&session, "貨物予約一覧").await
+/// 予約一覧の 1 行分の表示データ。
+struct BookingRow {
+    booking_id: String,
+    status: String,
+    status_label: String,
+    origin: String,
+    destination: String,
+    cargo_type: String,
+}
+
+#[derive(Template)]
+#[template(path = "booking_list.html")]
+struct BookingListTemplate {
+    current_user: CurrentUser,
+    bookings: Vec<BookingRow>,
+}
+
+/// 貨物予約一覧（navbar「貨物予約」の遷移先）。詳細画面への導線を提供する。
+async fn booking_list(State(state): State<AppState>, session: Session) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    match state.cargo_repo.find_all().await {
+        Ok(cargos) => {
+            let bookings = cargos
+                .iter()
+                .map(|c| {
+                    let status = c.status().as_str().to_string();
+                    BookingRow {
+                        booking_id: c.booking_id().as_str().to_string(),
+                        status_label: booking_status_label(&status).to_string(),
+                        status,
+                        origin: c.route_specification().origin().code().to_string(),
+                        destination: c.route_specification().destination().code().to_string(),
+                        cargo_type: c.cargo_type().as_str().to_string(),
+                    }
+                })
+                .collect();
+            render(&BookingListTemplate {
+                current_user,
+                bookings,
+            })
+        }
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 async fn placeholder_tracking(session: Session) -> Response {
     render_placeholder(&session, "貨物追跡").await

@@ -1,11 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * IT4 デモ項目の E2E テスト（予約状態機械）。
+ * IT4 デモ項目の E2E テスト（予約状態機械）。ナビゲーション経由で操作する。
+ *
+ * ナビゲーション経路:
+ *   ログイン → ダッシュボード → navbar「貨物予約」→ 予約一覧 → 詳細 →（経路設計者は）経路設計
  *
  * シードデータ（seed バイナリ）が用意する状態:
  * - BKG-0001 仮受付（US06 経路設計依頼）
- * - BKG-0004 経路設計中・期限内直行便あり（US11 確定紐付け）
+ * - BKG-0004 経路設計中・期限内直行便あり（US11 確定紐付け・US13 差し戻し）
  * - BKG-0005 経路設計中・期限超過のみ（US10 条件調整・US13 キャンセル）
  * - BKG-0002 経路提案中＋確定経路（US12 荷主通知・US13 予約確定）
  *
@@ -21,15 +24,30 @@ async function login(page: Page, username: string) {
   await page.waitForURL('http://localhost:8080/');
 }
 
+/** navbar「貨物予約」→ 一覧 → 指定予約の詳細、へメニュー経由で遷移する。 */
+async function navigateToBookingDetail(page: Page, bookingId: string) {
+  await page.getByTestId('nav-bookings').click();
+  await page.waitForURL('**/bookings');
+  await expect(page.getByTestId('booking-table')).toBeVisible();
+  await page.locator(`a[href="/bookings/${bookingId}"]`).click();
+  await page.waitForURL(`**/bookings/${bookingId}`);
+}
+
+/** 予約詳細から経路設計画面へ遷移する（経路設計者）。 */
+async function navigateToRouteDesign(page: Page, bookingId: string) {
+  await page.getByTestId('design-route-link').click();
+  await page.waitForURL(`**/bookings/${bookingId}/route`);
+}
+
 /** 予約詳細の状態コード（data-status）を返す。 */
 async function bookingStatus(page: Page): Promise<string> {
   return (await page.getByTestId('booking-status').getAttribute('data-status')) ?? '';
 }
 
-test.describe.serial('IT4 デモ: 予約状態機械', () => {
-  test('US06: 経路設計依頼で仮受付→経路設計中に遷移する', async ({ page }) => {
+test.describe.serial('IT4 デモ: 予約状態機械（ナビゲーション経由）', () => {
+  test('US06: 予約一覧から詳細へ辿り経路設計依頼で経路設計中になる', async ({ page }) => {
     await login(page, 'sales');
-    await page.goto('/bookings/BKG-0001');
+    await navigateToBookingDetail(page, 'BKG-0001');
     expect(await bookingStatus(page)).toBe('PRELIMINARY');
 
     await page.getByTestId('assign-routing-btn').click();
@@ -37,9 +55,10 @@ test.describe.serial('IT4 デモ: 予約状態機械', () => {
     expect(await bookingStatus(page)).toBe('ROUTE_DESIGNING');
   });
 
-  test('US10: 期限超過のみの候補を条件調整で期限内に再算出する', async ({ page }) => {
+  test('US10: 経路設計画面へ辿り期限超過の候補を条件調整で期限内に再算出する', async ({ page }) => {
     await login(page, 'designer');
-    await page.goto('/bookings/BKG-0005/route');
+    await navigateToBookingDetail(page, 'BKG-0005');
+    await navigateToRouteDesign(page, 'BKG-0005');
 
     // 調整前: 期限（2026-05-10）に対し V0001 到着（2026-05-14）で期限超過 ⚠。
     await expect(page.getByTestId('route-candidates')).toBeVisible();
@@ -55,9 +74,10 @@ test.describe.serial('IT4 デモ: 予約状態機械', () => {
     await expect(page.getByTestId('route-candidates')).toContainText('V0001');
   });
 
-  test('US11: 経路を確定して予約に紐付けると経路提案中になる', async ({ page }) => {
+  test('US11: 経路設計画面から経路を確定すると経路提案中になる', async ({ page }) => {
     await login(page, 'designer');
-    await page.goto('/bookings/BKG-0004/route');
+    await navigateToBookingDetail(page, 'BKG-0004');
+    await navigateToRouteDesign(page, 'BKG-0004');
     await expect(page.getByTestId('route-candidates')).toBeVisible();
 
     await page.getByTestId('route-confirm').click();
@@ -69,7 +89,7 @@ test.describe.serial('IT4 デモ: 予約状態機械', () => {
   test('US13: 経路提案中の予約を経路設計中に差し戻せる', async ({ page }) => {
     // 直前の US11 テストで BKG-0004 は経路提案中になっている。
     await login(page, 'sales');
-    await page.goto('/bookings/BKG-0004');
+    await navigateToBookingDetail(page, 'BKG-0004');
     expect(await bookingStatus(page)).toBe('ROUTE_PROPOSED');
 
     await page.getByTestId('revert-btn').click();
@@ -79,7 +99,7 @@ test.describe.serial('IT4 デモ: 予約状態機械', () => {
 
   test('US12/US13: 荷主通知の後に予約を確定できる', async ({ page }) => {
     await login(page, 'sales');
-    await page.goto('/bookings/BKG-0002');
+    await navigateToBookingDetail(page, 'BKG-0002');
     expect(await bookingStatus(page)).toBe('ROUTE_PROPOSED');
     await expect(page.getByTestId('selected-route')).toBeVisible();
 
@@ -97,7 +117,7 @@ test.describe.serial('IT4 デモ: 予約状態機械', () => {
   test('US13: 経路設計中の予約をキャンセルできる', async ({ page }) => {
     // BKG-0005 は US10 テストでも状態を変えず経路設計中のまま。
     await login(page, 'sales');
-    await page.goto('/bookings/BKG-0005');
+    await navigateToBookingDetail(page, 'BKG-0005');
     expect(await bookingStatus(page)).toBe('ROUTE_DESIGNING');
 
     await page.getByTestId('cancel-btn').click();

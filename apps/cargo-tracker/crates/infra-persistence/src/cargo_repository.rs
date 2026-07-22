@@ -99,10 +99,24 @@ impl CargoRepository for SqlxCargoRepository {
             .fetch_optional(&self.pool)
             .await
             .map_err(backend)?;
-        let Some(row) = row else {
-            return Ok(None);
-        };
+        match row {
+            Some(row) => Ok(Some(row_to_cargo(&row)?)),
+            None => Ok(None),
+        }
+    }
 
+    async fn find_all(&self) -> Result<Vec<Cargo>, RepositoryError> {
+        let rows = sqlx::query(r"SELECT * FROM cargo ORDER BY booking_id")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(backend)?;
+        rows.iter().map(row_to_cargo).collect()
+    }
+}
+
+/// `cargo` テーブルの 1 行を貨物集約へ復元する。
+fn row_to_cargo(row: &sqlx::postgres::PgRow) -> Result<Cargo, RepositoryError> {
+    {
         let origin = Location::new(
             &row.try_get::<String, _>("origin_unlocode")
                 .map_err(backend)?,
@@ -208,7 +222,7 @@ impl CargoRepository for SqlxCargoRepository {
             hazardous_declaration,
             temperature_requirement,
         );
-        Ok(Some(cargo))
+        Ok(cargo)
     }
 }
 

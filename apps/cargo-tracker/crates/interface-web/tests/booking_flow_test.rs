@@ -410,6 +410,25 @@ async fn 経路提案中の予約は荷主通知と確定ができる() {
 }
 
 #[tokio::test]
+async fn 予約一覧から詳細へナビゲーションできる() {
+    // navbar「貨物予約」の遷移先 /bookings が実一覧を表示し、詳細への導線を持つ。
+    let (app, shipper_id, pool, _c) = setup_full().await;
+    let cookie = login(&app).await;
+    seed_cargo_with_status(&pool, &shipper_id, "BKG-1001", "PRELIMINARY").await;
+
+    // 一覧に予約が表示され、詳細リンクがある。
+    let html = get_html(&app, "/bookings", &cookie).await;
+    assert!(html.contains("booking-table"));
+    assert!(html.contains("BKG-1001"));
+    assert!(html.contains("booking-detail-link"));
+    assert!(html.contains(r#"href="/bookings/BKG-1001""#));
+
+    // 詳細へ遷移できる。
+    let detail = get_html(&app, "/bookings/BKG-1001", &cookie).await;
+    assert!(detail.contains("booking-show-title"));
+}
+
+#[tokio::test]
 async fn 経路確定で予約が経路提案中になり差し戻せる() {
     // US11: route/confirm で経路設計中 → 経路提案中に遷移。US13: /revert で経路設計中へ差し戻す。
     let (app, shipper_id, pool, _c) = setup_full().await;
