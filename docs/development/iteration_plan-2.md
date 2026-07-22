@@ -106,10 +106,10 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | 認可を axum extractor（`RouteDesignerUser` 等）+ `require_role` で宣言化し、`CurrentUser.roles` を `Vec<Role>` に型化（Try #1） | 4h | - | [ ] |
-| 0.2 | interface 層のサービス生成を composition root（AppState ファクトリ）へ集約し DIP を回復・ADR 化（Try #2） | 4h | - | [ ] |
-| 0.3 | 法人荷主（US03）・危険物/冷凍（US05）の HTTP フローテストを追加（Try #3） | 3h | - | [ ] |
-| 0.4 | cargo-llvm-cov を導入しカバレッジ計測を CI 暫定ゲートに組み込む | 2h | - | [ ] |
+| 0.1 | 認可を axum extractor（`RouteDesignerUser` 等）+ `require_role` で宣言化し、`CurrentUser.roles` を `Vec<Role>` に型化（Try #1） | 4h | - | [x] |
+| 0.2 | interface 層のサービス生成を composition root（AppState ファクトリ）へ集約し DIP を回復・ADR 化（Try #2） | 4h | - | [x] |
+| 0.3 | 法人荷主（US03）・危険物/冷凍（US05）の HTTP フローテストを追加（Try #3） | 3h | - | [x] |
+| 0.4 | cargo-llvm-cov を導入しカバレッジ計測を CI 暫定ゲートに組み込む | 2h | - | [x] |
 
 **小計**: 13h（理想時間）
 
@@ -117,13 +117,13 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `VoyageNumber`・`CarrierMovement`（seq 順・出発<到着）値オブジェクトの単体テスト → 実装 | 3h | - | [ ] |
-| 1.2 | `Schedule`（時系列順検証・`Schedule::new`）の単体テスト → 実装 | 3h | - | [ ] |
-| 1.3 | `Voyage` 集約ルート（新規生成・不変条件）の単体テスト → 実装 | 3h | - | [ ] |
-| 1.4 | `VoyageRepository` ポート定義（`save`/`find_by_voyage_number`） | 1h | - | [ ] |
-| 1.5 | `infra-persistence` に SqlxVoyageRepository（voyage/carrier_movement）＋ migration を実装、testcontainers 統合テスト | 4h | - | [ ] |
-| 1.6 | app-routing サービス（航海登録ユースケース）＋ 航路一覧/登録画面・POST `/voyages` の HTTP フローテスト | 4h | - | [ ] |
-| 1.7 | ナビゲーション整合: navbar「航路管理」を IT1 プレースホルダから実リンク（`/voyages`）化＋ダッシュボードに ROLE_ROUTE_DESIGNER 導線を反映＋ナビ表示の検証テスト | 2h | - | [ ] |
+| 1.1 | `VoyageNumber`・`CarrierMovement`（seq 順・出発<到着）値オブジェクトの単体テスト → 実装 | 3h | - | [x] |
+| 1.2 | `Schedule`（時系列順検証・`Schedule::new`）の単体テスト → 実装 | 3h | - | [x] |
+| 1.3 | `Voyage` 集約ルート（新規生成・不変条件）の単体テスト → 実装 | 3h | - | [x] |
+| 1.4 | `VoyageRepository` ポート定義（`save`/`find_by_voyage_number`） | 1h | - | [x] |
+| 1.5 | `infra-persistence` に SqlxVoyageRepository（voyage/carrier_movement）＋ migration を実装、testcontainers 統合テスト | 4h | - | [x] |
+| 1.6 | app-routing サービス（航海登録ユースケース）＋ 航路一覧/登録画面・POST `/voyages` の HTTP フローテスト | 4h | - | [x] |
+| 1.7 | ナビゲーション整合: navbar「航路管理」を IT1 プレースホルダから実リンク（`/voyages`）化＋ダッシュボードに ROLE_ROUTE_DESIGNER 導線を反映＋ナビ表示の検証テスト | 2h | - | [x] |
 
 **小計**: 20h（理想時間）
 
@@ -131,10 +131,10 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | Voyage 集約の更新（スケジュール上書き）ドメインメソッドの単体テスト → 実装 | 3h | - | [ ] |
-| 2.2 | SqlxVoyageRepository の upsert / 更新対応と統合テスト | 3h | - | [ ] |
-| 2.3 | 更新ユースケース（既存呼び出し・差分算出）と app-routing サービス | 3h | - | [ ] |
-| 2.4 | 更新画面（差分確認・更新/キャンセル）・GET/POST `/voyages/{number}/edit` の HTTP フローテスト | 4h | - | [ ] |
+| 2.1 | Voyage 集約の更新（スケジュール上書き）ドメインメソッドの単体テスト → 実装 | 3h | - | [x] |
+| 2.2 | SqlxVoyageRepository の upsert / 更新対応と統合テスト | 3h | - | [x] |
+| 2.3 | 更新ユースケース（既存呼び出し・差分算出）と app-routing サービス | 3h | - | [x] |
+| 2.4 | 更新画面（差分確認・更新/キャンセル）・GET/POST `/voyages/{number}/edit` の HTTP フローテスト | 4h | - | [x] |
 
 **小計**: 13h（理想時間）
 
@@ -142,11 +142,11 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | 検索条件（出発地・目的地・出発期間・貨物種別）値オブジェクトと制約評価ロジックの単体テスト → 実装 | 4h | - | [ ] |
-| 3.2 | VoyageRepository の検索メソッド（条件フィルタ）と統合テスト | 4h | - | [ ] |
-| 3.3 | 貨物種別対応（危険物・冷凍の絞り込み）・寄港地接続評価の単体テスト → 実装 | 4h | - | [ ] |
-| 3.4 | 検索ユースケース（予約番号からの貨物仕様確認含む）と app-routing サービス | 3h | - | [ ] |
-| 3.5 | 検索画面（条件入力・結果一覧・0 件時の再検索）・GET `/voyages` 検索の HTTP フローテスト | 4h | - | [ ] |
+| 3.1 | 検索条件（出発地・目的地・出発期間・貨物種別）値オブジェクトと制約評価ロジックの単体テスト → 実装 | 4h | - | [x] |
+| 3.2 | VoyageRepository の検索メソッド（条件フィルタ）と統合テスト | 4h | - | [x] |
+| 3.3 | 貨物種別対応（危険物・冷凍の絞り込み）・寄港地接続評価の単体テスト → 実装 | 4h | - | [x] |
+| 3.4 | 検索ユースケース（予約番号からの貨物仕様確認含む）と app-routing サービス | 3h | - | [x] |
+| 3.5 | 検索画面（条件入力・結果一覧・0 件時の再検索）・GET `/voyages` 検索の HTTP フローテスト | 4h | - | [x] |
 
 **小計**: 19h（理想時間）
 
@@ -154,24 +154,29 @@ date: 2026-07-22T00:00:00.000Z
 
 | カテゴリ | SP | 理想時間 | 状態 |
 |---------|----|----|------|
-| IT1 Try リファクタリング枠（SP 外） | - | 13h | [ ] |
-| Voyage 集約・登録（US24） | 3 | 18h | [ ] |
-| 航海スケジュール更新（US25） | 3 | 13h | [ ] |
-| 航海スケジュール検索（US07） | 5 | 19h | [ ] |
+| IT1 Try リファクタリング枠（SP 外） | - | 13h | [x] |
+| Voyage 集約・登録（US24） | 3 | 18h | [x] |
+| 航海スケジュール更新（US25） | 3 | 13h | [x] |
+| 航海スケジュール検索（US07） | 5 | 19h | [x] |
 | **合計** | **11** | **63h** | |
 
 **1 SP あたり**: 約 4.5h（リファクタリング枠除く実装のみ）
 **進捗率**: 100% (11/11 SP)
 
 > **実績（2026-07-22）**: US24・US25・US07 の縦切りを実 PostgreSQL・実 HTTP フローで完成。
-> ドメイン単体 16 + app 単体 5 + Repository 統合 4 + HTTP フロー 6（+ US03/US05 の 4）＝全 green。
+> ドメイン単体 16 + app 単体 5 + Repository 統合 4 + HTTP フロー 11（+ US03/US05 の 4）＝全 green。
 > ドメイン層カバレッジ 83〜91%（cargo-llvm-cov、目標 85% にほぼ到達）。
 > IT1 Try 返済: #1 認可 extractor 化・#2 DIP 回復（composition root・ADR-0003）・
 > #3 US03/US05 フローテスト・cargo-llvm-cov 導入をすべて完了。
 > developing-review（[it2_development_review_20260722.md](../review/it2_development_review_20260722.md)）を実施し、
-> 高優先度の受入基準テスト漏れ（寄港地複数・0 件・キャンセル・日付逆転）も補完済み。
-> **残作業**: ui_design.md への航路登録・更新画面の反映（クローズ時）、`search` の N+1 の SQL 絞り込み化、
-> CurrentUser の Vec<Role> 型化（ADR-0003 でスコープ外・別途）。
+> 高優先度の受入基準テスト漏れ（寄港地複数・0 件・キャンセル・日付逆転）も補完済み。ui_design.md への航路登録・更新画面反映も完了。
+>
+> **一部スコープ調整（後続で対応）**:
+> - タスク 3.1/3.4 の US07「出発期間での検索」「予約番号からの貨物仕様確認」は未実装。検索条件は出発港・到着港・貨物種別で成立させ、予約起点の連携は IT3（US08 経路候補算出フロー）で対応する
+> - タスク 0.1 の `CurrentUser.roles` の Vec<Role> 型化は ADR-0003 でスコープ外とし別途対応（認可 extractor 化は完了）
+> - タスク 0.4 の cargo-llvm-cov は導入・計測まで完了、CI 暫定ゲートへの組込は IT3 で CI 整備とあわせて実施
+> - `search` の N+1 は SQL 絞り込み化（中優先度・後続）
+> - DoD の実ブラウザ動作確認は IT2 クローズ時に実施予定
 
 ---
 
