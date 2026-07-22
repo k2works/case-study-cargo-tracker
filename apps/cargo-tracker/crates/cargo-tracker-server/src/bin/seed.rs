@@ -142,7 +142,15 @@ async fn seed_business_flow(pool: &PgPool) -> Result<(), sqlx::Error> {
     tx.commit().await?;
 
     println!(
-        "業務フロー seed 完了: 荷主 2 / 予約 3（BKG-0001 仮受付・BKG-0002 経路提案中・BKG-0003 仮受付）/ 航海 4 / 確定経路 1"
+        "業務フロー seed 完了: 荷主 2 / 予約 5（BKG-0001 仮受付・BKG-0002 経路提案中・BKG-0003 仮受付冷凍・BKG-0004 経路設計中/期限内候補あり・BKG-0005 経路設計中/期限超過のみ）/ 航海 4 / 確定経路 1"
+    );
+    println!("デモ手順:");
+    println!("  US06 経路設計依頼: sales で BKG-0001 →[経路設計を依頼する]（仮受付→経路設計中）");
+    println!(
+        "  US10/US11 条件調整→確定紐付け: designer で BKG-0005 →⚠期限超過を期限延長で再算出→確定 / BKG-0004 →候補を確定（経路設計中→経路提案中）"
+    );
+    println!(
+        "  US12/US13 荷主通知→確定/差戻し/キャンセル: sales で BKG-0002 →[荷主に経路を通知する]→[予約を確定する]"
     );
     Ok(())
 }
@@ -152,9 +160,11 @@ async fn seed_business_flow(pool: &PgPool) -> Result<(), sqlx::Error> {
 /// - 荷主: 個人（田中太郎）・法人（山田物流）
 /// - 航海: V0001 直行（大阪→LA）/ V0002 大阪→シンガポール / V0003 シンガポール→ハンブルク
 ///   （V0002+V0003 で 2 区間接続）/ V0004 危険物対応の代替直行（大阪→LA）
-/// - 予約: BKG-0001 直行候補あり（仮受付）/ BKG-0002 2 区間経路を確定済（経路提案中）/
-///   BKG-0003 冷凍（仮受付）
+/// - 予約: BKG-0001 直行候補あり（仮受付・US06 デモ）/ BKG-0002 2 区間経路を確定済（経路提案中・US12/US13 デモ）/
+///   BKG-0003 冷凍（仮受付）/ BKG-0004 経路設計中・期限内直行便あり（US11 確定紐付けデモ）/
+///   BKG-0005 経路設計中・期限超過のみ（US10 条件調整デモ）
 /// - 確定経路: BKG-0002 に V0002→V0003 の 2 区間を割り当て
+/// - IT4 デモ項目（予約状態機械）を一通り実演できる状態を用意する
 const BUSINESS_FLOW_SQL: &str = r"
 -- 荷主（Shipper Context）------------------------------------------------------
 INSERT INTO shipper (id, shipper_code, shipper_type, name, email, phone, address, contract_number, discount_rate) VALUES
@@ -176,7 +186,15 @@ INSERT INTO cargo
      'ROUTE_PROPOSED', NULL, NULL, NULL),
     ('BKG-0003', '22222222-2222-2222-2222-222222222222', 'REFRIGERATED', 3000.000,
      'JPOSA', 'SGSIN', DATE '2026-05-15', 'SG Cold Chain Pte', 'ops@sg-coldchain.example.com',
-     'PRELIMINARY', -18.000, -5.000, 'CELSIUS');
+     'PRELIMINARY', -18.000, -5.000, 'CELSIUS'),
+    -- BKG-0004: 経路設計中・期限内に直行便あり（demo2 の確定紐付け用。V0001 到着 05-14 ≤ 期限 05-20）
+    ('BKG-0004', '11111111-1111-1111-1111-111111111111', 'GENERAL', 1500.000,
+     'JPOSA', 'USLAX', DATE '2026-05-20', 'LA Trading Inc.', 'consignee@la-trading.example.com',
+     'ROUTE_DESIGNING', NULL, NULL, NULL),
+    -- BKG-0005: 経路設計中だが期限内経路が 0 件（demo2 の条件調整用。V0001 到着 05-14 > 期限 05-10 で ⚠ 期限超過）
+    ('BKG-0005', '22222222-2222-2222-2222-222222222222', 'GENERAL', 2000.000,
+     'JPOSA', 'USLAX', DATE '2026-05-10', 'LA Trading Inc.', 'consignee@la-trading.example.com',
+     'ROUTE_DESIGNING', NULL, NULL, NULL);
 
 -- 航海スケジュール（Routing Context）------------------------------------------
 INSERT INTO voyage (voyage_number, vessel_name, carrier) VALUES
