@@ -27,7 +27,8 @@ export default defineConfig({
     url: 'http://localhost:8080/health',
     reuseExistingServer: false,
     timeout: 240_000,
-    stdout: 'pipe',
-    stderr: 'pipe',
+    // パイプ滞留によるサーバ停止（接続リセット）を避けるため出力は破棄する。
+    stdout: 'ignore',
+    stderr: 'ignore',
   },
 });

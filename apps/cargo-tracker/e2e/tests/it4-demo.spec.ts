@@ -1,4 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import {
+  login,
+  navigateToBookingDetail,
+  navigateToRouteDesign,
+  bookingStatus,
+} from './helpers';
 
 /**
  * IT4 デモ項目の E2E テスト（予約状態機械）。ナビゲーション経由で操作する。
@@ -14,36 +20,6 @@ import { test, expect, type Page } from '@playwright/test';
  *
  * 状態機械を伴い共有 DB を変更するため直列実行する（playwright.config: workers=1）。
  */
-
-/** ログインしてダッシュボードまで遷移する。 */
-async function login(page: Page, username: string) {
-  await page.goto('/login');
-  await page.fill('#username', username);
-  await page.fill('#password', 'password');
-  await page.getByTestId('login-submit').click();
-  await page.waitForURL('http://localhost:8080/');
-}
-
-/** navbar「貨物予約」→ 一覧 → 指定予約の詳細、へメニュー経由で遷移する。 */
-async function navigateToBookingDetail(page: Page, bookingId: string) {
-  await page.getByTestId('nav-bookings').click();
-  await page.waitForURL('**/bookings');
-  await expect(page.getByTestId('booking-table')).toBeVisible();
-  await page.locator(`a[href="/bookings/${bookingId}"]`).click();
-  await page.waitForURL(`**/bookings/${bookingId}`);
-}
-
-/** 予約詳細から経路設計画面へ遷移する（経路設計者）。 */
-async function navigateToRouteDesign(page: Page, bookingId: string) {
-  await page.getByTestId('design-route-link').click();
-  await page.waitForURL(`**/bookings/${bookingId}/route`);
-}
-
-/** 予約詳細の状態コード（data-status）を返す。 */
-async function bookingStatus(page: Page): Promise<string> {
-  return (await page.getByTestId('booking-status').getAttribute('data-status')) ?? '';
-}
-
 test.describe.serial('IT4 デモ: 予約状態機械（ナビゲーション経由）', () => {
   test('US06: 予約一覧から詳細へ辿り経路設計依頼で経路設計中になる', async ({ page }) => {
     await login(page, 'sales');
