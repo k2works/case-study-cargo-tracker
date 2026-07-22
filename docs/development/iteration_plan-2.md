@@ -166,9 +166,12 @@ date: 2026-07-22T00:00:00.000Z
 > **実績（2026-07-22）**: US24・US25・US07 の縦切りを実 PostgreSQL・実 HTTP フローで完成。
 > ドメイン単体 16 + app 単体 5 + Repository 統合 4 + HTTP フロー 6（+ US03/US05 の 4）＝全 green。
 > ドメイン層カバレッジ 83〜91%（cargo-llvm-cov、目標 85% にほぼ到達）。
-> IT1 Try 返済: #1 認可 extractor 化・#3 US03/US05 フローテスト・cargo-llvm-cov 導入は完了。
-> **#2 DIP 回復（composition root）+ CurrentUser の Vec<Role> 型化は IT2 後半へ繰り越し**
-> （既存ハンドラ全面に影響する大改修のため developing-review を挟んで実施）。
+> IT1 Try 返済: #1 認可 extractor 化・#2 DIP 回復（composition root・ADR-0003）・
+> #3 US03/US05 フローテスト・cargo-llvm-cov 導入をすべて完了。
+> developing-review（[it2_development_review_20260722.md](../review/it2_development_review_20260722.md)）を実施し、
+> 高優先度の受入基準テスト漏れ（寄港地複数・0 件・キャンセル・日付逆転）も補完済み。
+> **残作業**: ui_design.md への航路登録・更新画面の反映（クローズ時）、`search` の N+1 の SQL 絞り込み化、
+> CurrentUser の Vec<Role> 型化（ADR-0003 でスコープ外・別途）。
 
 ---
 
