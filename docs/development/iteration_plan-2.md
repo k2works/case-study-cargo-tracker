@@ -161,7 +161,14 @@ date: 2026-07-22T00:00:00.000Z
 | **合計** | **11** | **63h** | |
 
 **1 SP あたり**: 約 4.5h（リファクタリング枠除く実装のみ）
-**進捗率**: 0% (0/11 SP)
+**進捗率**: 100% (11/11 SP)
+
+> **実績（2026-07-22）**: US24・US25・US07 の縦切りを実 PostgreSQL・実 HTTP フローで完成。
+> ドメイン単体 16 + app 単体 5 + Repository 統合 4 + HTTP フロー 6（+ US03/US05 の 4）＝全 green。
+> ドメイン層カバレッジ 83〜91%（cargo-llvm-cov、目標 85% にほぼ到達）。
+> IT1 Try 返済: #1 認可 extractor 化・#3 US03/US05 フローテスト・cargo-llvm-cov 導入は完了。
+> **#2 DIP 回復（composition root）+ CurrentUser の Vec<Role> 型化は IT2 後半へ繰り越し**
+> （既存ハンドラ全面に影響する大改修のため developing-review を挟んで実施）。
 
 ---
 
