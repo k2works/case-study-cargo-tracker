@@ -119,6 +119,10 @@ nav:
       - "0003: DIP 回復（composition root への注入）": adr/0003-dependency-injection-composition-root.md
       - "0004: BC 跨ぎ書き込みの一貫性": adr/0004-cross-context-write-consistency.md
       - "0005: 予約状態機械の遷移ルール": adr/0005-booking-status-state-machine.md
+  - 開発ジャーナル:
+      - 2026-07-06: journal/20260706.md
+      - 2026-07-18: journal/20260718.md
+      - 2026-07-22: journal/20260722.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
