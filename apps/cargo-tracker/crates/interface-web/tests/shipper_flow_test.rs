@@ -119,6 +119,29 @@ async fn メール重複時はエラーメッセージを表示する() {
 }
 
 #[tokio::test]
+async fn 法人荷主を契約情報付きで登録できる() {
+    let (app, _c) = setup(Role::Sales).await;
+    let cookie = login(&app, "user").await;
+    let body = "kind=CORPORATE&name=グローバル物流&email=corp@example.com\
+                &contract_number=CT-2026-001&discount_rate=0.1000";
+    let resp = app
+        .oneshot(
+            Request::post("/shippers")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+    assert_eq!(
+        resp.headers().get(header::LOCATION).unwrap(),
+        "/bookings/new"
+    );
+}
+
+#[tokio::test]
 async fn 権限のないロールは荷主登録フォームにアクセスできない() {
     let (app, _c) = setup(Role::Handler).await;
     let cookie = login(&app, "user").await;

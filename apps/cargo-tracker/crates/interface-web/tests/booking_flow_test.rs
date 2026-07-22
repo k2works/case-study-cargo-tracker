@@ -130,6 +130,85 @@ async fn 存在しない荷主では予約登録がエラーになる() {
 }
 
 #[tokio::test]
+async fn 危険物貨物を申告情報付きで登録できる() {
+    let (app, shipper_id, _c) = setup().await;
+    let cookie = login(&app).await;
+    let body = format!(
+        "shipper_id={sid}&consignee_name=LA+Trading&consignee_contact=contact%40la.example\
+         &origin=JPOSA&destination=USLAX&arrival_deadline=2026-04-15&cargo_type=HAZARDOUS&weight=800\
+         &hazardous_class=3&un_number=1203&proper_shipping_name=GASOLINE",
+        sid = shipper_id
+    );
+    let resp = app
+        .oneshot(
+            Request::post("/bookings")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+}
+
+#[tokio::test]
+async fn 危険物貨物で申告情報が欠落するとエラーになる() {
+    let (app, shipper_id, _c) = setup().await;
+    let cookie = login(&app).await;
+    // hazardous_class 等を欠落させる
+    let body = format!(
+        "shipper_id={sid}&consignee_name=LA+Trading&consignee_contact=contact%40la.example\
+         &origin=JPOSA&destination=USLAX&arrival_deadline=2026-04-15&cargo_type=HAZARDOUS&weight=800",
+        sid = shipper_id
+    );
+    let resp = app
+        .oneshot(
+            Request::post("/bookings")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let html = String::from_utf8(
+        resp.into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(html.contains("booking-error"));
+}
+
+#[tokio::test]
+async fn 冷凍貨物を温度条件付きで登録できる() {
+    let (app, shipper_id, _c) = setup().await;
+    let cookie = login(&app).await;
+    let body = format!(
+        "shipper_id={sid}&consignee_name=LA+Trading&consignee_contact=contact%40la.example\
+         &origin=JPOSA&destination=USLAX&arrival_deadline=2026-04-15&cargo_type=REFRIGERATED&weight=500\
+         &min_temperature=-20&max_temperature=-5&temperature_unit=CELSIUS",
+        sid = shipper_id
+    );
+    let resp = app
+        .oneshot(
+            Request::post("/bookings")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+}
+
+#[tokio::test]
 async fn 登録した予約は詳細画面で参照できる() {
     let (app, shipper_id, _c) = setup().await;
     let cookie = login(&app).await;
