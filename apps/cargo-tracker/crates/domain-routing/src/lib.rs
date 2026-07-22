@@ -1,33 +1,14 @@
-//! routing コンテキストのドメイン層。
+//! Routing コンテキストのドメイン層。
+//!
+//! 航海スケジュール（Voyage 集約）の登録・更新・検索に関わる
+//! 集約・値オブジェクト・出力ポートを定義する。
 
-use shared_kernel::Location;
+pub mod aggregate;
+pub mod error;
+pub mod ports;
+pub mod value_objects;
 
-/// クレート結線検証用のプレースホルダ関数。
-#[must_use]
-pub fn context_name() -> &'static str {
-    "routing"
-}
-
-/// shared-kernel への依存を検証するプレースホルダ関数。
-///
-/// # Errors
-///
-/// UN/LOCODE の形式が不正な場合はエラーを返す。
-pub fn parse_location(code: &str) -> Result<Location, shared_kernel::SharedKernelError> {
-    Location::new(code)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn コンテキスト名を返す() {
-        assert_eq!(context_name(), "routing");
-    }
-
-    #[test]
-    fn shared_kernel_の_location_を利用できる() {
-        assert!(parse_location("USNYC").is_ok());
-    }
-}
+pub use aggregate::Voyage;
+pub use error::RoutingError;
+pub use ports::{RepositoryError, VoyageRepository, VoyageSearchCriteria};
+pub use value_objects::{CargoType, Carrier, CarrierMovement, Schedule, VesselName, VoyageNumber};
