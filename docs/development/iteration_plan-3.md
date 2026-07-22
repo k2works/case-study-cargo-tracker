@@ -85,6 +85,8 @@ date: 2026-07-22T00:00:00.000Z
 #### 0. IT2 ふりかえり Try 返済枠（技術的負債返済・SP 外）
 
 > IT3 冒頭で着手し、経路探索の土台を整える。詳細は [IT2 ふりかえり](./retrospective-2.md) Try #2・#4 を参照。
+>
+> **繰り越し保留の明示**: IT2 の `CurrentUser.roles` の Vec<Role> 型化（ADR-0003 でスコープ外）は、認証の別領域でありセッションシリアライズ仕様への影響確認を要するため、IT3 でも着手せず保留を継続する。経路設計フローの認可（ROLE_ROUTE_DESIGNER）は既存の `RoleGuard` extractor で成立するため IT3 のブロッカーにはならない。
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
@@ -98,7 +100,7 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `RouteCandidate` 値オブジェクト（経由港・所要日数・航海番号列・到着予定・期限充足フラグ）の単体テスト → 実装 | 3h | - | [ ] |
+| 1.1 | `RouteLeg`・`RouteCandidate` 値オブジェクト（Routing 固有・経由港・所要日数・航海番号列・到着予定・期限充足フラグ）の単体テスト → 実装 | 3h | - | [ ] |
 | 1.2 | `RouteCandidateCalculator`（直行便探索）の単体テスト → 実装 | 3h | - | [ ] |
 | 1.3 | `RouteCandidateCalculator`（単純接続 1 経由・寄港地接続評価）の単体テスト → 実装 | 4h | - | [ ] |
 | 1.4 | `RouteCandidateCalculator`（多段接続・貨物種別対応絞り込み・推奨順ソート・期限超過警告）の単体テスト → 実装 | 4h | - | [ ] |
@@ -195,29 +197,34 @@ class RouteCandidateCalculator <<domain service>> {
   +calculate(spec, voyages): Vec<RouteCandidate>
 }
 class RouteCandidate <<value object>> {
-  -legs: Vec<Leg>
+  -segments: Vec<RouteLeg>
   -transit_days: u32
   -voyage_numbers: Vec<VoyageNumber>
   -expected_arrival: DateTime<Utc>
   -within_deadline: bool
 }
-class Leg <<value object>> {
-  -voyage_number: VoyageNumber
+class RouteLeg <<value object>> {
+  -voyage: VoyageNumber
   -load_location: Location
   -unload_location: Location
   -load_time: DateTime<Utc>
   -unload_time: DateTime<Utc>
 }
 class Voyage <<aggregate root>>
+class Location <<shared kernel>>
 
 RouteCandidateCalculator ..> Voyage : 探索対象
 RouteCandidateCalculator --> RouteCandidate : 生成
-RouteCandidate *-- Leg
-Leg --> Voyage : 参照（VoyageNumber）
+RouteCandidate *-- RouteLeg
+RouteLeg --> Location : load/unload
+RouteLeg --> Voyage : 参照（VoyageNumber）
 @enduml
 ```
 
-> **注（設計への反映が必要）**: `RouteCandidate` は現行 domain-model.md では Estimation Context の要素として定義されているが、IT3 では Routing Context の経路探索結果として実装する。両者の関係（見積時の候補と経路設計時の候補）を domain-model.md に整理する。`Leg`（輸送区間）は Booking Context の `CargoItinerary` 構成要素だが、経路候補の表現として Routing でも用いるため、共有の是非を設計に明記する。**費用**は Voyage に運賃データが無いため、IT3 では所要日数・経由港・航海番号・到着予定を算出し、費用は Billing/Estimation 連携（後続）に委ねる旨を注記する。
+> **注（BC 独立性・設計への反映が必要）**:
+> - `RouteLeg` は Routing Context 固有の値オブジェクトとして新規定義する。Booking Context の `Leg`（`CargoItinerary` 構成要素）とフィールド構成（voyage・load/unload location・load/unload time）は同形だが、**domain-routing → domain-booking の依存を避けるため直接共有しない**（IT2 で `CargoType` を Routing 固有型にした判断と一貫）。共有カーネル `Location`・`VoyageNumber`（Routing）は再利用する。両者の同形性と関係は domain-model.md に整理する。
+> - `RouteCandidate` は現行 domain-model.md では Estimation Context の要素として定義されているが、IT3 では Routing Context の経路探索結果として実装する。見積時の候補（Estimation）と経路設計時の候補（Routing）の関係を domain-model.md に整理する。
+> - **費用**は Voyage に運賃データが無いため、IT3 では所要日数・経由港・航海番号・到着予定を算出し、費用は Billing/Estimation 連携（後続）に委ねる旨を注記する。
 
 ### データモデル（Routing Context・IT3）
 
@@ -272,6 +279,8 @@ state 経路設計 : /bookings/{bookingId}/route\nステップ1 貨物仕様・�
 - **htmx パターン**: 航海検索・候補算出・候補選択は `hx-get`/`hx-post` で該当領域（`#route-candidates` 等）を部分更新する。
 - **PRG パターン**: 経路確定の POST は成功時 `303 See Other` で `/bookings/{bookingId}` へリダイレクト。BookingStatus の `RouteProposed` 反映は IT4（US11）。
 - **フィードバック**: 期限超過候補は `⚠` 付き警告、期限内経路なしは `alert-warning`（条件調整導線）、確定成功は `alert-success`。
+
+> **注（ui_design.md との差分・IT3/IT4 境界）**: ui_design.md の経路設計・割り当て画面仕様は「確定成功時に BookingStatus が `RouteProposed`（経路提案中）に更新される」と US09 と US11 を一体で記述している。本 IT では **US09（Routing 内の経路確定）までを実装し、Cargo の `RouteProposed` 遷移・`/bookings/{bookingId}` への BookingStatus 反映は US11（IT4）** とする。IT3 の確定成功時リダイレクトは `/bookings/{bookingId}` へ行うが、予約側の状態は IT4 まで更新されない。この段階分割を ui_design.md に注記する。条件調整・再算出（US10）の再算出ロジックも IT4 のため、本画面の条件調整パネルは US10 導線（案内）までとする。
 
 ### API 設計
 
