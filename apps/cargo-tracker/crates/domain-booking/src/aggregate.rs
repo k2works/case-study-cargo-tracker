@@ -188,6 +188,103 @@ impl Cargo {
     pub fn description(&self) -> Option<&Description> {
         self.description.as_ref()
     }
+
+    // --- 状態遷移（予約ライフサイクル） ---------------------------------------
+
+    /// 経路設計を依頼する（`Preliminary → RouteDesigning`・US06）。
+    ///
+    /// # Errors
+    ///
+    /// 仮受付以外の状態からは依頼できない → `InvalidStatusTransition`。
+    pub fn request_route_design(&mut self) -> Result<(), BookingError> {
+        match self.status {
+            BookingStatus::Preliminary => {
+                self.status = BookingStatus::RouteDesigning;
+                Ok(())
+            }
+            other => Err(BookingError::InvalidStatusTransition {
+                from: other.as_str(),
+                action: "request_route_design",
+            }),
+        }
+    }
+
+    /// 確定経路を予約に紐付ける（`RouteDesigning → RouteProposed`・US11）。
+    ///
+    /// # Errors
+    ///
+    /// 経路設計中以外の状態からは紐付けできない → `InvalidStatusTransition`。
+    pub fn propose_route(&mut self) -> Result<(), BookingError> {
+        match self.status {
+            BookingStatus::RouteDesigning => {
+                self.status = BookingStatus::RouteProposed;
+                Ok(())
+            }
+            other => Err(BookingError::InvalidStatusTransition {
+                from: other.as_str(),
+                action: "propose_route",
+            }),
+        }
+    }
+
+    /// 予約を確定する（`RouteProposed → Confirmed`・US13）。
+    ///
+    /// # Errors
+    ///
+    /// 経路提案中以外の状態からは確定できない → `InvalidStatusTransition`。
+    pub fn confirm(&mut self) -> Result<(), BookingError> {
+        match self.status {
+            BookingStatus::RouteProposed => {
+                self.status = BookingStatus::Confirmed;
+                Ok(())
+            }
+            other => Err(BookingError::InvalidStatusTransition {
+                from: other.as_str(),
+                action: "confirm",
+            }),
+        }
+    }
+
+    /// ルート変更のため経路設計中へ差し戻す（`RouteProposed → RouteDesigning`・US13）。
+    ///
+    /// # Errors
+    ///
+    /// 経路提案中以外の状態からは差し戻せない → `InvalidStatusTransition`。
+    pub fn revert_to_route_designing(&mut self) -> Result<(), BookingError> {
+        match self.status {
+            BookingStatus::RouteProposed => {
+                self.status = BookingStatus::RouteDesigning;
+                Ok(())
+            }
+            other => Err(BookingError::InvalidStatusTransition {
+                from: other.as_str(),
+                action: "revert_to_route_designing",
+            }),
+        }
+    }
+
+    /// 予約をキャンセルする（`→ Cancelled`・US13）。
+    ///
+    /// 確定前（`Preliminary`/`RouteDesigning`/`RouteProposed`）からのみキャンセル可能。
+    /// 確定済み以降は輸送手配が進むため本 IT ではキャンセル不可とする。
+    ///
+    /// # Errors
+    ///
+    /// 確定済み以降・キャンセル済みからはキャンセルできない → `InvalidStatusTransition`。
+    pub fn cancel(&mut self) -> Result<(), BookingError> {
+        match self.status {
+            BookingStatus::Preliminary
+            | BookingStatus::RouteDesigning
+            | BookingStatus::RouteProposed => {
+                self.status = BookingStatus::Cancelled;
+                Ok(())
+            }
+            other => Err(BookingError::InvalidStatusTransition {
+                from: other.as_str(),
+                action: "cancel",
+            }),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -265,5 +362,128 @@ mod tests {
             .unwrap(),
         );
         assert!(Cargo::book(command).is_ok());
+    }
+
+    fn preliminary_cargo() -> Cargo {
+        Cargo::book(base_command(CargoType::General)).expect("登録成功")
+    }
+
+    #[test]
+    fn 仮受付から経路設計中へ遷移できる() {
+        let mut cargo = preliminary_cargo();
+        assert!(cargo.request_route_design().is_ok());
+        assert_eq!(cargo.status(), BookingStatus::RouteDesigning);
+    }
+
+    #[test]
+    fn 仮受付以外からの経路設計依頼は拒否される() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        // 既に経路設計中なので再依頼は不可。
+        assert_eq!(
+            cargo.request_route_design(),
+            Err(BookingError::InvalidStatusTransition {
+                from: "ROUTE_DESIGNING",
+                action: "request_route_design",
+            })
+        );
+    }
+
+    #[test]
+    fn 経路設計中から経路提案中へ遷移できる() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        assert!(cargo.propose_route().is_ok());
+        assert_eq!(cargo.status(), BookingStatus::RouteProposed);
+    }
+
+    #[test]
+    fn 経路設計中以外からの経路紐付けは拒否される() {
+        let mut cargo = preliminary_cargo();
+        // 仮受付から直接の紐付けは不可。
+        assert_eq!(
+            cargo.propose_route(),
+            Err(BookingError::InvalidStatusTransition {
+                from: "PRELIMINARY",
+                action: "propose_route",
+            })
+        );
+    }
+
+    #[test]
+    fn 経路提案中から予約確定へ遷移できる() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        cargo.propose_route().unwrap();
+        assert!(cargo.confirm().is_ok());
+        assert_eq!(cargo.status(), BookingStatus::Confirmed);
+    }
+
+    #[test]
+    fn 経路提案中以外からの予約確定は拒否される() {
+        let mut cargo = preliminary_cargo();
+        assert_eq!(
+            cargo.confirm(),
+            Err(BookingError::InvalidStatusTransition {
+                from: "PRELIMINARY",
+                action: "confirm",
+            })
+        );
+    }
+
+    #[test]
+    fn 経路提案中から経路設計中へ差し戻せる() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        cargo.propose_route().unwrap();
+        assert!(cargo.revert_to_route_designing().is_ok());
+        assert_eq!(cargo.status(), BookingStatus::RouteDesigning);
+    }
+
+    #[test]
+    fn 経路提案中以外からの差し戻しは拒否される() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        assert_eq!(
+            cargo.revert_to_route_designing(),
+            Err(BookingError::InvalidStatusTransition {
+                from: "ROUTE_DESIGNING",
+                action: "revert_to_route_designing",
+            })
+        );
+    }
+
+    #[test]
+    fn 確定前の各状態からキャンセルできる() {
+        // 仮受付から。
+        let mut c1 = preliminary_cargo();
+        assert!(c1.cancel().is_ok());
+        assert_eq!(c1.status(), BookingStatus::Cancelled);
+        // 経路設計中から。
+        let mut c2 = preliminary_cargo();
+        c2.request_route_design().unwrap();
+        assert!(c2.cancel().is_ok());
+        assert_eq!(c2.status(), BookingStatus::Cancelled);
+        // 経路提案中から。
+        let mut c3 = preliminary_cargo();
+        c3.request_route_design().unwrap();
+        c3.propose_route().unwrap();
+        assert!(c3.cancel().is_ok());
+        assert_eq!(c3.status(), BookingStatus::Cancelled);
+    }
+
+    #[test]
+    fn 確定済みはキャンセルできない() {
+        let mut cargo = preliminary_cargo();
+        cargo.request_route_design().unwrap();
+        cargo.propose_route().unwrap();
+        cargo.confirm().unwrap();
+        assert_eq!(
+            cargo.cancel(),
+            Err(BookingError::InvalidStatusTransition {
+                from: "CONFIRMED",
+                action: "cancel",
+            })
+        );
     }
 }

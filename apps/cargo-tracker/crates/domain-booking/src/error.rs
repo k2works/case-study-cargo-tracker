@@ -33,4 +33,12 @@ pub enum BookingError {
     /// 温度管理条件が不正な場合（最低 > 最高）。
     #[error("invalid temperature requirement")]
     InvalidTemperatureRequirement,
+    /// 現在の予約状態では実行できない状態遷移を試みた場合。
+    #[error("invalid booking status transition from {from} for {action}")]
+    InvalidStatusTransition {
+        /// 遷移元の状態（`BookingStatus::as_str`）。
+        from: &'static str,
+        /// 試みた操作名。
+        action: &'static str,
+    },
 }

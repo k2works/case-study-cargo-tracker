@@ -39,11 +39,13 @@ impl BookingId {
     }
 }
 
-/// 予約状態（8 段階の予約ライフサイクル）。
+/// 予約状態（9 段階の予約ライフサイクル）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BookingStatus {
     /// 仮受付。
     Preliminary,
+    /// 経路設計中（経路設計依頼済み・設計者が経路を設計している）。
+    RouteDesigning,
     /// 経路提案中。
     RouteProposed,
     /// 予約確定。
@@ -66,6 +68,7 @@ impl BookingStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Preliminary => "PRELIMINARY",
+            Self::RouteDesigning => "ROUTE_DESIGNING",
             Self::RouteProposed => "ROUTE_PROPOSED",
             Self::Confirmed => "CONFIRMED",
             Self::TrackingIssued => "TRACKING_ISSUED",
@@ -80,6 +83,7 @@ impl BookingStatus {
     #[must_use]
     pub fn from_str_or_preliminary(value: &str) -> Self {
         match value {
+            "ROUTE_DESIGNING" => Self::RouteDesigning,
             "ROUTE_PROPOSED" => Self::RouteProposed,
             "CONFIRMED" => Self::Confirmed,
             "TRACKING_ISSUED" => Self::TrackingIssued,
