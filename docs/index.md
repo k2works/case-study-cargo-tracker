@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 10 件作成済み |
-| [開発](./development/index.md) | リリース計画、開発戦略、IT1・IT2・IT3 計画・ふりかえり・完了報告書、進捗管理 | IT3 完了（Phase 2 の 2/4・残 59 SP） |
+| [開発](./development/index.md) | リリース計画、開発戦略、IT1〜IT4 計画・ふりかえり・完了報告書、進捗管理 | IT4 完了（Phase 2 の 3/4・残 45 SP） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | 1 件作成済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 4 件作成済み |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 3 件作成済み |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | 5 件作成済み |
 | [記事](./article/index.md) | 学習用の記事シリーズ一覧 | `index.md` を整備済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
 | [テンプレート](./template/index.md) | 各種ドキュメントの作成テンプレート | 18 件のテンプレートを配置 |
@@ -66,6 +66,7 @@
 | [IT1 開発成果物レビュー](./review/it1_development_review_20260718.md) | IT1 実装（9 クレート・約 4,400 行）のマルチパースペクティブレビュー結果（高 3 件・中 7 件・低 6 件） |
 | [IT2 開発成果物レビュー](./review/it2_development_review_20260722.md) | IT2 実装（航海スケジュール・約 2,300 行）のマルチパースペクティブレビュー結果（高 6 件・中 6 件・低 5 件、高対応済） |
 | [IT3 開発成果物レビュー](./review/it3_development_review_20260722.md) | IT3 実装（経路算出・選択・約 1,700 行）のマルチパースペクティブレビュー結果（高 3 件・中 5 件・低 4 件、高対応済） |
+| [IT4 開発成果物レビュー](./review/it4_development_review_20260722.md) | IT4 実装（経路連携・予約確定・約 1,800 行）のマルチパースペクティブレビュー結果（高 4 件・中 5 件・低 4 件、高対応済） |
 
 ### ADR
 
@@ -73,6 +74,9 @@
 | :--- | :--- |
 | [0001: CQRS Read Model 配置](./adr/0001-cqrs-read-model-placement.md) | Read Model の sqlx 実装は infra-persistence に配置、app 層はクエリポート trait のみ |
 | [0002: 認証方式（tower-sessions + 自前 RBAC）](./adr/0002-authentication-with-tower-sessions.md) | IT1 は axum-login ではなく tower-sessions + 自前 RBAC を採用（意図的逸脱） |
+| [0003: DIP を composition root で回復](./adr/0003-dependency-injection-composition-root.md) | interface 層の依存を composition root（AppState に出力ポート trait）で注入（IT2） |
+| [0004: BC 跨ぎ書き込みの一貫性](./adr/0004-cross-context-write-consistency.md) | BC 跨ぎ書き込みは単一トランザクションで束ねず各 BC 内整合＋冪等リトライで収束（IT4） |
+| [0005: 予約状態機械の遷移ルール](./adr/0005-booking-status-state-machine.md) | 予約状態遷移を Cargo 集約に閉じ込め不正遷移を Result::Err で拒否（IT4） |
 
 ## 補足
 
