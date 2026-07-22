@@ -618,12 +618,14 @@ pub struct VoyageForm {
 }
 
 fn cargo_types_label(types: &[domain_routing::CargoType]) -> String {
+    use domain_routing::CargoType as Ct;
+    // enum で直接 match し、バリアント追加時の考慮漏れをコンパイラに検出させる
     types
         .iter()
-        .map(|t| match t.as_str() {
-            "HAZARDOUS" => "危険物",
-            "REFRIGERATED" => "冷凍・冷蔵",
-            _ => "一般",
+        .map(|t| match t {
+            Ct::General => "一般",
+            Ct::Hazardous => "危険物",
+            Ct::Refrigerated => "冷凍・冷蔵",
         })
         .collect::<Vec<_>>()
         .join("、")
@@ -719,7 +721,11 @@ fn build_voyage_input(form: &VoyageForm) -> Result<VoyageInput, String> {
     let leg2_arr = form.leg2_arrival.as_deref().unwrap_or("").trim();
     let leg2_dep_t = form.leg2_departure_time.as_deref().unwrap_or("").trim();
     let leg2_arr_t = form.leg2_arrival_time.as_deref().unwrap_or("").trim();
-    if !leg2_dep.is_empty() || !leg2_arr.is_empty() || !leg2_dep_t.is_empty() {
+    if !leg2_dep.is_empty()
+        || !leg2_arr.is_empty()
+        || !leg2_dep_t.is_empty()
+        || !leg2_arr_t.is_empty()
+    {
         movements.push(MovementInput {
             departure_unlocode: leg2_dep.to_string(),
             arrival_unlocode: leg2_arr.to_string(),

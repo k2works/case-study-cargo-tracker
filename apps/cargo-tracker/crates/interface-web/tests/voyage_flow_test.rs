@@ -204,6 +204,135 @@ async fn 貨物種別で航海を検索できる() {
 }
 
 #[tokio::test]
+async fn 寄港地経由の複数区間で航海を登録し一覧に両港が表示される() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app, "user").await;
+    // JPOSA → SGSIN → USLAX の 2 区間（時系列順）
+    let body = "voyage_number=V0070&vessel_name=SAKURA&carrier=NipponLine&cargo_general=on\
+                &leg1_departure=JPOSA&leg1_arrival=SGSIN\
+                &leg1_departure_time=2026-04-01T18%3A00&leg1_arrival_time=2026-04-07T08%3A00\
+                &leg2_departure=SGSIN&leg2_arrival=USLAX\
+                &leg2_departure_time=2026-04-08T10%3A00&leg2_arrival_time=2026-04-20T08%3A00"
+        .to_string();
+    let resp = post_voyage(&app, &cookie, "/voyages", body).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+
+    let resp = app
+        .oneshot(
+            Request::get("/voyages")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let html = body_string(resp).await;
+    // 一覧は全体の出発地（JPOSA）と到着地（USLAX）を表示する
+    assert!(html.contains("JPOSA"));
+    assert!(html.contains("USLAX"));
+}
+
+#[tokio::test]
+async fn 区間跨ぎの時系列が逆転した登録は422になる() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app, "user").await;
+    // leg1 到着(04-20) > leg2 出発(04-08) で逆転
+    let body = "voyage_number=V0071&vessel_name=SAKURA&carrier=NipponLine&cargo_general=on\
+                &leg1_departure=JPOSA&leg1_arrival=SGSIN\
+                &leg1_departure_time=2026-04-01T18%3A00&leg1_arrival_time=2026-04-20T08%3A00\
+                &leg2_departure=SGSIN&leg2_arrival=USLAX\
+                &leg2_departure_time=2026-04-08T10%3A00&leg2_arrival_time=2026-04-25T08%3A00"
+        .to_string();
+    let resp = post_voyage(&app, &cookie, "/voyages", body).await;
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let html = body_string(resp).await;
+    assert!(html.contains("voyage-error"));
+}
+
+#[tokio::test]
+async fn 出発が到着より後の登録は422でエラーを示す() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app, "user").await;
+    // leg1 の出発(04-14) > 到着(04-01)
+    let body = "voyage_number=V0072&vessel_name=SAKURA&carrier=NipponLine&cargo_general=on\
+                &leg1_departure=JPOSA&leg1_arrival=USLAX\
+                &leg1_departure_time=2026-04-14T08%3A00&leg1_arrival_time=2026-04-01T18%3A00"
+        .to_string();
+    let resp = post_voyage(&app, &cookie, "/voyages", body).await;
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let html = body_string(resp).await;
+    assert!(html.contains("voyage-error"));
+}
+
+#[tokio::test]
+async fn 検索で該当なしのとき空メッセージが表示される() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app, "user").await;
+    post_voyage(
+        &app,
+        &cookie,
+        "/voyages",
+        voyage_body("V0080", "JPOSA", "USLAX", "cargo_general=on"),
+    )
+    .await;
+    // 一致しない出発港で検索 → 0 件
+    let resp = app
+        .oneshot(
+            Request::get("/voyages?origin=JPKIX")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let html = body_string(resp).await;
+    assert!(html.contains("voyage-empty"));
+    assert!(html.contains("該当する航海がありません"));
+}
+
+#[tokio::test]
+async fn 更新画面を開いてもキャンセルなら既存は変わらない() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app, "user").await;
+    post_voyage(
+        &app,
+        &cookie,
+        "/voyages",
+        voyage_body("V0090", "JPOSA", "USLAX", "cargo_general=on"),
+    )
+    .await;
+    // 更新フォームを開く（GET のみ・副作用なし = キャンセル相当）
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::get("/voyages/V0090/edit")
+                .header(header::COOKIE, cookie.clone())
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let html = body_string(resp).await;
+    assert!(html.contains("voyage-current")); // 現在の登録内容カード
+
+    // 一覧は元の内容のまま（SAKURA / JPOSA）
+    let resp = app
+        .oneshot(
+            Request::get("/voyages")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let html = body_string(resp).await;
+    assert!(html.contains("V0090"));
+    assert!(html.contains("SAKURA"));
+    assert!(html.contains("JPOSA"));
+}
+
+#[tokio::test]
 async fn 既存航海を更新すると内容が反映される() {
     let (app, _c) = setup(Role::RouteDesigner).await;
     let cookie = login(&app, "user").await;
