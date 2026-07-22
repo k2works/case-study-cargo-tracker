@@ -740,7 +740,7 @@ CREATE TABLE shipper (
 | `arrival_deadline` | `DATE` | `NOT NULL` | 到着期限（RouteSpecification） |
 | `consignee_name` | `VARCHAR(200)` | `NOT NULL` | 荷受人名（予約登録で必須。US04） |
 | `consignee_email` | `VARCHAR(200)` | `NOT NULL` | 荷受人連絡先（予約登録で必須。US04） |
-| `booking_status` | `VARCHAR(30)` | `NOT NULL, DEFAULT 'PRELIMINARY'` | 予約状態（BookingStatus 列挙値） |
+| `booking_status` | `VARCHAR(30)` | `NOT NULL, DEFAULT 'PRELIMINARY'` | 予約状態（BookingStatus 列挙値。許容値: `PRELIMINARY`/`ROUTE_DESIGNING`/`ROUTE_PROPOSED`/`CONFIRMED`/`TRACKING_ISSUED`/`IN_TRANSIT`/`DELIVERED`/`SETTLED`/`CANCELLED`。値の妥当性は Rust enum が担保しスキーマ制約は設けない） |
 | `dimension_length` | `NUMERIC(10,3)` | | 貨物の長さ（cm、オプション） |
 | `dimension_width` | `NUMERIC(10,3)` | | 貨物の幅（cm、オプション） |
 | `dimension_height` | `NUMERIC(10,3)` | | 貨物の高さ（cm、オプション） |
@@ -856,6 +856,27 @@ CREATE TABLE shipper (
 | `seq_number` | `INTEGER` | `NOT NULL` | 区間順序（1 始まり） |
 | `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `notification`（通知送信記録・IT4）
+
+予約ライフサイクルの節目（経路設計依頼 US06・荷主への経路通知 US12・追跡番号発行依頼／キャンセル US13）で送信した通知を記録する。本 IT では「送信＝記録」に限定し、実配信（メール/SMS）はスコープ外。コンテキスト間参照（`booking_id`）は BC 独立方針に従い DB 外部キー制約を設けない。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `VARCHAR(20)` | `NOT NULL` | 対象予約 ID（業務キー参照・FK なし） |
+| `notification_type` | `VARCHAR(30)` | `NOT NULL` | 通知種別（`ROUTE_DESIGN_REQUESTED`/`ROUTE_NOTIFIED_TO_SHIPPER`/`TRACKING_ISSUE_REQUESTED`/`BOOKING_CANCELLED`） |
+| `recipient_role` | `VARCHAR(50)` | `NOT NULL` | 受信者ロール（`ROLE_*`） |
+| `recipient_email` | `VARCHAR(200)` | `NOT NULL` | 受信者メールアドレス |
+| `subject` | `VARCHAR(200)` | `NOT NULL` | 件名 |
+| `body` | `TEXT` | `NOT NULL` | 本文 |
+| `sent_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | 送信（記録）日時 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+インデックス: `idx_notification_booking_id (booking_id)`。
 
 ---
 

@@ -619,7 +619,7 @@ state "見積フロー" as estimation_flow {
 - **経路情報**: 未割り当ての場合は「経路が割り当てられていません」と表示し `[経路を設計する]` を強調
 - **[経路を設計する]**: ROLE_ROUTE_DESIGNER のみ表示。経路設計・割り当て画面（`/bookings/{bookingId}/route`）へ遷移する。営業担当者の関与は「経路設計依頼」までであり、依頼後は営業担当者（ROLE_SALES）に本ボタンを表示しない
 - **荷役履歴**: HandlingEvent を時系列降順で表示
-- **[経路設計依頼]**: ROLE_SALES かつ BookingStatus = `Preliminary` の場合のみ表示（US06 / UC04）。予約情報（出発地・目的地・期限・貨物仕様）を確認し、不備があれば修正してから依頼する。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクトし、予約は業務上の「経路設計中」となり経路設計者に通知が送信される（BookingStatus は `Preliminary` のまま経路設計依頼済みとして扱う）
+- **[経路設計依頼]**: ROLE_SALES かつ BookingStatus = `Preliminary` の場合のみ表示（US06 / UC04）。予約情報（出発地・目的地・期限・貨物仕様）を確認し、不備があれば修正してから依頼する。確認モーダル表示後に `POST /bookings/{bookingId}/assign-routing`。成功時 PRG で同詳細画面へリダイレクトし、**BookingStatus が `RouteDesigning`（経路設計中）に遷移**し経路設計者に通知が送信される（IT4）
 - **[荷主に経路通知]**: ROLE_SALES かつ BookingStatus = `RouteProposed` の場合のみ表示（US12 / UC10）。通知内容（経由港・所要日数・到着予定日・料金概算）を確認モーダルで表示し、`POST /bookings/{bookingId}/notify-route` で荷主へ送信。通知送信記録を登録する
 - **[予約確定]**: ROLE_SALES かつ経路通知済みの場合のみ表示（US13 / UC11）。荷主の承認を確認して `POST /bookings/{bookingId}/confirm` を送信し、BookingStatus が `Confirmed` に遷移。経路設計者に追跡番号発行依頼の通知が送信される
 - **[経路設計に差し戻し]**: ROLE_SALES のみ表示（US13）。荷主がルート変更を希望する場合に予約を「経路設計中」に戻す
@@ -1515,6 +1515,7 @@ htmx の部分更新後に動的コンテンツが更新されることをスク
 | ステータス | 表示ラベル | Bootstrap クラス | 意味 |
 | :--- | :--- | :--- | :--- |
 | `PRELIMINARY` | 仮予約 | `badge bg-warning text-dark` | 経路未割り当て |
+| `ROUTE_DESIGNING` | 経路設計中 | `badge bg-warning text-dark` | 経路設計依頼済み・設計者が経路を設計中（IT4） |
 | `ROUTE_PROPOSED` | 経路提案済 | `badge bg-primary` | 経路割り当て完了・未確認 |
 | `CONFIRMED` | 確認済 | `badge bg-success` | 予約確定 |
 | `TRACKING_ISSUED` | 追跡番号発行済 | `badge bg-info text-dark` | 追跡番号付与 |

@@ -104,7 +104,7 @@ quadrantChart
 | Location | 位置情報 | Shared Domain | UN/LOCODE で識別される港湾・地点の共有カーネル |
 | TransportStatus | 輸送状態 | Shared Domain | 貨物の現在の輸送フェーズを表す共有列挙型 |
 | RoutingStatus | 経路状態 | Shared Domain | 経路の妥当性状態（NOT_ROUTED / ROUTED / MISROUTED） |
-| BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（8 値） |
+| BookingStatus | 予約状態 | Booking Context | 予約ライフサイクルの状態（9 値・RouteDesigning を含む） |
 | CargoType | 貨物種別 | Booking Context | GENERAL / HAZARDOUS / REFRIGERATED |
 | ExceptionType | 例外種別 | Tracking Context | DELAY / DAMAGE / LOST / CUSTOMS_HOLD |
 | CustomsStatus | 通関状態 | Handling Context | PENDING / CLEARED / HELD / REJECTED |
@@ -300,6 +300,7 @@ package "Value Objects（値オブジェクト）" {
   }
   enum BookingStatus {
     Preliminary
+    RouteDesigning
     RouteProposed
     Confirmed
     TrackingIssued
@@ -452,6 +453,7 @@ impl CargoItinerary {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum BookingStatus {
     Preliminary,
+    RouteDesigning,
     RouteProposed,
     Confirmed,
     TrackingIssued,
@@ -548,7 +550,10 @@ pub trait CargoRepository: Send + Sync {
 | 値オブジェクト | Delivery | 配送状況 | 現在の輸送状態・経路状態・最終荷役イベント |
 | 値オブジェクト | Money | 金額 | `rust_decimal::Decimal` と通貨コードのペア。多通貨対応 |
 | 値オブジェクト | CargoHandlingActivity | 荷役活動（参照用） | 最終荷役イベントの記録 |
-| 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
+| 列挙型 | BookingStatus | 予約状態 | 9 段階の予約ライフサイクル（RouteDesigning を含む） |
+| ドメインサービス | NotificationPort | 通知送信ポート | 予約ライフサイクルの節目で通知を送信（＝記録）する出力ポート（IT4） |
+| 値オブジェクト | NotificationType | 通知種別 | RouteDesignRequested / RouteNotifiedToShipper / TrackingIssueRequested / BookingCancelled（IT4） |
+| ACL ポート | SelectedRouteView | 確定経路読み取り | Routing Context への逆方向 ACL trait。確定経路の要約を読み取る（IT4・US11/US12） |
 | 列挙型 | ShipperType | 荷主種別 | Individual / Corporate |
 | 値オブジェクト | Dimensions | 寸法 | 貨物の長さ・幅・高さ（`Option`） |
 | 値オブジェクト | Quantity | 個数 | 貨物の個数（1 以上、`Option`） |
@@ -565,7 +570,7 @@ pub trait CargoRepository: Send + Sync {
 1. 貨物は必ず BookingId・ShipperId・CargoType を持つ
 2. RouteSpecification の出発地と目的地は異なる（UN/LOCODE 形式で検証、スマートコンストラクタで強制）
 3. CargoItinerary は 1 つ以上の Leg で構成される。`Leg[n].unload_location == Leg[n+1].load_location` の連結制約を `CargoItinerary::new` で検証する
-4. BookingStatus の遷移は `Preliminary → RouteProposed → Confirmed → TrackingIssued → InTransit → Delivered → Settled` の順に進む。いずれの状態からも Cancelled に遷移可能。遷移は網羅的 `match` で実装しコンパイラが漏れを検出する
+4. BookingStatus の遷移は `Preliminary → RouteDesigning → RouteProposed → Confirmed → TrackingIssued → InTransit → Delivered → Settled` の順に進む。確定前（Preliminary/RouteDesigning/RouteProposed）からは Cancelled に遷移可能で、RouteProposed からは RouteDesigning へ差し戻せる。遷移は `Cargo` の `&mut self` メソッド（`request_route_design`/`propose_route`/`confirm`/`revert_to_route_designing`/`cancel`）として実装し、不正遷移は `BookingError::InvalidStatusTransition` で拒否する（IT4）
 5. Corporate ShipperType の荷主は割引適用の対象となる（割引率上限 30%）
 6. Hazardous / Refrigerated の CargoType は指定港のみ取扱可能
 7. Hazardous CargoType の場合、HazardousDeclaration は必須（`Cargo::book` で検証）
@@ -577,10 +582,11 @@ pub trait CargoRepository: Send + Sync {
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
 | BookCargoCommand | 営業担当者 | 貨物予約の新規登録（Preliminary 状態で作成） |
-| AssignToRoutingCommand | 営業担当者 | 予約情報を経路設計者に引き渡す（Preliminary → RouteProposed に遷移） |
-| ConfirmBookingCommand | 営業担当者 | 予約を確定する（Preliminary → Confirmed に遷移） |
-| CancelBookingCommand | 営業担当者 | 予約をキャンセルする（Cancelled に遷移） |
-| RouteCargoCommand | 経路設計者 | CargoItinerary を Cargo に割り当て、RouteProposed → Confirmed に遷移 |
+| AssignToRoutingCommand（`request_route_design`） | 営業担当者 | 予約情報を経路設計者に引き渡す（Preliminary → RouteDesigning に遷移・IT4） |
+| ProposeRouteCommand（`propose_route`） | 経路設計者 | 確定経路を予約に紐付ける（RouteDesigning → RouteProposed に遷移・IT4/US11） |
+| ConfirmBookingCommand（`confirm`） | 営業担当者 | 予約を確定する（RouteProposed → Confirmed に遷移・IT4/US13） |
+| RevertToRouteDesigningCommand（`revert_to_route_designing`） | 営業担当者 | ルート変更のため差し戻す（RouteProposed → RouteDesigning・IT4/US13） |
+| CancelBookingCommand（`cancel`） | 営業担当者 | 予約をキャンセルする（確定前 → Cancelled に遷移） |
 | AssignTrackingNumberCommand | 経路設計者 | TrackingNumber を Cargo に紐付け、TrackingIssued に遷移 |
 | UpdateBookingStatusCommand | システム | BookingStatus の状態遷移を更新 |
 
