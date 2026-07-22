@@ -11,7 +11,9 @@ workspace = true
 shared-kernel = { workspace = true }
 app-shipper = { workspace = true }
 app-booking = { workspace = true }
+app-routing = { workspace = true }
 domain-booking = { workspace = true }
+domain-routing = { workspace = true }
 infra-persistence = { workspace = true }
 axum = { workspace = true }
 tower-sessions = "0.14"

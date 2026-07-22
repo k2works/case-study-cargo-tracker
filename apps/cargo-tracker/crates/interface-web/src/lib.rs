@@ -3,23 +3,28 @@
 //! IT1 ではログイン認証・ロール別ナビゲーション・ダッシュボードのウォーキングスケルトンを提供する。
 
 use app_booking::{BookCargoCommandService, BookingServiceError};
+use app_routing::{
+    MovementInput, VoyageCommandService, VoyageInput, VoyageQueryService, VoyageSearchInput,
+    VoyageServiceError,
+};
 use app_shipper::{
     RegisterShipperCommandService, RegisterShipperInput, ShipperKindInput, ShipperServiceError,
 };
 use askama::Template;
 use axum::Router;
-use axum::extract::{Form, Path, State};
+use axum::extract::{Form, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use domain_booking::{
     BookCargoCommand, CargoType, Consignee, HazardousDeclaration, RouteSpecification,
     TemperatureRequirement, TemperatureUnit, Weight,
 };
+use domain_routing::Voyage;
 use infra_persistence::{
     SqlxCargoRepository, SqlxShipperExistenceChecker, SqlxShipperRepository, SqlxUserRepository,
-    verify_password,
+    SqlxVoyageRepository, verify_password,
 };
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -176,7 +181,10 @@ pub fn web_router(state: AppState) -> Router {
         .route("/tracking", get(placeholder_tracking))
         .route("/handling", get(placeholder_handling))
         .route("/estimates", get(placeholder_estimates))
-        .route("/voyages", get(placeholder_voyages))
+        .route("/voyages", get(voyage_list).post(voyage_create))
+        .route("/voyages/new", get(voyage_new_form))
+        .route("/voyages/{voyage_number}/edit", get(voyage_edit_form))
+        .route("/voyages/{voyage_number}", post(voyage_update))
         .route("/billing/invoices", get(placeholder_billing))
         .route("/admin/discount-policies", get(placeholder_admin))
         .with_state(state)
@@ -249,9 +257,6 @@ async fn placeholder_handling(session: Session) -> Response {
 }
 async fn placeholder_estimates(session: Session) -> Response {
     render_placeholder(&session, "見積管理").await
-}
-async fn placeholder_voyages(session: Session) -> Response {
-    render_placeholder(&session, "航路管理").await
 }
 async fn placeholder_billing(session: Session) -> Response {
     render_placeholder(&session, "請求管理").await
@@ -494,5 +499,415 @@ async fn booking_show(
         }),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+// ===== Routing Context（航路管理・US24 / US25 / US07）=====
+
+const ROLE_ROUTE_DESIGNER: &str = "ROLE_ROUTE_DESIGNER";
+
+/// 航路一覧の 1 行分の表示データ。
+struct VoyageRow {
+    number: String,
+    vessel_name: String,
+    carrier: String,
+    origin: String,
+    destination: String,
+    departure: String,
+    arrival: String,
+    cargo_types: String,
+}
+
+/// 航路フォームのプリフィル / 再描画用データ。
+#[derive(Default)]
+struct VoyageFormData {
+    voyage_number: String,
+    vessel_name: String,
+    carrier: String,
+    general: bool,
+    hazardous: bool,
+    refrigerated: bool,
+    leg1_departure: String,
+    leg1_arrival: String,
+    leg1_departure_time: String,
+    leg1_arrival_time: String,
+    leg2_departure: String,
+    leg2_arrival: String,
+    leg2_departure_time: String,
+    leg2_arrival_time: String,
+}
+
+#[derive(Template)]
+#[template(path = "voyage_list.html")]
+struct VoyageListTemplate {
+    current_user: CurrentUser,
+    voyages: Vec<VoyageRow>,
+    origin: String,
+    destination: String,
+    cargo_type_general: bool,
+    cargo_type_hazardous: bool,
+    cargo_type_refrigerated: bool,
+    flash: String,
+}
+
+#[derive(Template)]
+#[template(path = "voyage_new.html")]
+struct VoyageNewTemplate {
+    current_user: CurrentUser,
+    error: bool,
+    error_message: String,
+    form: VoyageFormData,
+}
+
+#[derive(Template)]
+#[template(path = "voyage_edit.html")]
+struct VoyageEditTemplate {
+    current_user: CurrentUser,
+    error: bool,
+    error_message: String,
+    form: VoyageFormData,
+    current: VoyageRow,
+}
+
+/// 航路検索クエリ（US07）。
+#[derive(Debug, Deserialize)]
+pub struct VoyageSearchQuery {
+    origin: Option<String>,
+    destination: Option<String>,
+    cargo_type: Option<String>,
+    #[serde(default)]
+    flash: Option<String>,
+}
+
+/// 航路登録 / 更新フォーム入力。
+#[derive(Debug, Deserialize)]
+pub struct VoyageForm {
+    voyage_number: String,
+    vessel_name: String,
+    carrier: String,
+    cargo_general: Option<String>,
+    cargo_hazardous: Option<String>,
+    cargo_refrigerated: Option<String>,
+    leg1_departure: String,
+    leg1_arrival: String,
+    leg1_departure_time: String,
+    leg1_arrival_time: String,
+    leg2_departure: Option<String>,
+    leg2_arrival: Option<String>,
+    leg2_departure_time: Option<String>,
+    leg2_arrival_time: Option<String>,
+}
+
+fn cargo_types_label(types: &[domain_routing::CargoType]) -> String {
+    types
+        .iter()
+        .map(|t| match t.as_str() {
+            "HAZARDOUS" => "危険物",
+            "REFRIGERATED" => "冷凍・冷蔵",
+            _ => "一般",
+        })
+        .collect::<Vec<_>>()
+        .join("、")
+}
+
+fn voyage_to_row(v: &Voyage) -> VoyageRow {
+    let movements = v.schedule().carrier_movements();
+    let first = &movements[0];
+    let last = &movements[movements.len() - 1];
+    VoyageRow {
+        number: v.voyage_number().as_str().to_string(),
+        vessel_name: v.vessel_name().as_str().to_string(),
+        carrier: v.carrier().as_str().to_string(),
+        origin: v.origin().code().to_string(),
+        destination: v.destination().code().to_string(),
+        departure: first.departure_time().format("%Y-%m-%d %H:%M").to_string(),
+        arrival: last.arrival_time().format("%Y-%m-%d %H:%M").to_string(),
+        cargo_types: cargo_types_label(v.supported_cargo_types()),
+    }
+}
+
+fn voyage_to_form_data(v: &Voyage) -> VoyageFormData {
+    let movements = v.schedule().carrier_movements();
+    let fmt = |dt: chrono::DateTime<Utc>| dt.format("%Y-%m-%dT%H:%M").to_string();
+    let leg1 = &movements[0];
+    let mut data = VoyageFormData {
+        voyage_number: v.voyage_number().as_str().to_string(),
+        vessel_name: v.vessel_name().as_str().to_string(),
+        carrier: v.carrier().as_str().to_string(),
+        general: v.supports(domain_routing::CargoType::General),
+        hazardous: v.supports(domain_routing::CargoType::Hazardous),
+        refrigerated: v.supports(domain_routing::CargoType::Refrigerated),
+        leg1_departure: leg1.departure_location().code().to_string(),
+        leg1_arrival: leg1.arrival_location().code().to_string(),
+        leg1_departure_time: fmt(leg1.departure_time()),
+        leg1_arrival_time: fmt(leg1.arrival_time()),
+        ..VoyageFormData::default()
+    };
+    if let Some(leg2) = movements.get(1) {
+        data.leg2_departure = leg2.departure_location().code().to_string();
+        data.leg2_arrival = leg2.arrival_location().code().to_string();
+        data.leg2_departure_time = fmt(leg2.departure_time());
+        data.leg2_arrival_time = fmt(leg2.arrival_time());
+    }
+    data
+}
+
+fn parse_local_dt(value: &str) -> Result<chrono::DateTime<Utc>, String> {
+    NaiveDateTime::parse_from_str(value.trim(), "%Y-%m-%dT%H:%M")
+        .map(|naive| Utc.from_utc_datetime(&naive))
+        .map_err(|_| "日時の形式が不正です".to_string())
+}
+
+fn form_to_data(form: &VoyageForm) -> VoyageFormData {
+    VoyageFormData {
+        voyage_number: form.voyage_number.clone(),
+        vessel_name: form.vessel_name.clone(),
+        carrier: form.carrier.clone(),
+        general: form.cargo_general.is_some(),
+        hazardous: form.cargo_hazardous.is_some(),
+        refrigerated: form.cargo_refrigerated.is_some(),
+        leg1_departure: form.leg1_departure.clone(),
+        leg1_arrival: form.leg1_arrival.clone(),
+        leg1_departure_time: form.leg1_departure_time.clone(),
+        leg1_arrival_time: form.leg1_arrival_time.clone(),
+        leg2_departure: form.leg2_departure.clone().unwrap_or_default(),
+        leg2_arrival: form.leg2_arrival.clone().unwrap_or_default(),
+        leg2_departure_time: form.leg2_departure_time.clone().unwrap_or_default(),
+        leg2_arrival_time: form.leg2_arrival_time.clone().unwrap_or_default(),
+    }
+}
+
+fn build_voyage_input(form: &VoyageForm) -> Result<VoyageInput, String> {
+    let mut cargo_types = Vec::new();
+    if form.cargo_general.is_some() {
+        cargo_types.push("GENERAL".to_string());
+    }
+    if form.cargo_hazardous.is_some() {
+        cargo_types.push("HAZARDOUS".to_string());
+    }
+    if form.cargo_refrigerated.is_some() {
+        cargo_types.push("REFRIGERATED".to_string());
+    }
+
+    let mut movements = vec![MovementInput {
+        departure_unlocode: form.leg1_departure.trim().to_string(),
+        arrival_unlocode: form.leg1_arrival.trim().to_string(),
+        departure_time: parse_local_dt(&form.leg1_departure_time)?,
+        arrival_time: parse_local_dt(&form.leg1_arrival_time)?,
+    }];
+
+    let leg2_dep = form.leg2_departure.as_deref().unwrap_or("").trim();
+    let leg2_arr = form.leg2_arrival.as_deref().unwrap_or("").trim();
+    let leg2_dep_t = form.leg2_departure_time.as_deref().unwrap_or("").trim();
+    let leg2_arr_t = form.leg2_arrival_time.as_deref().unwrap_or("").trim();
+    if !leg2_dep.is_empty() || !leg2_arr.is_empty() || !leg2_dep_t.is_empty() {
+        movements.push(MovementInput {
+            departure_unlocode: leg2_dep.to_string(),
+            arrival_unlocode: leg2_arr.to_string(),
+            departure_time: parse_local_dt(leg2_dep_t)?,
+            arrival_time: parse_local_dt(leg2_arr_t)?,
+        });
+    }
+
+    Ok(VoyageInput {
+        voyage_number: form.voyage_number.trim().to_string(),
+        vessel_name: form.vessel_name.trim().to_string(),
+        carrier: form.carrier.trim().to_string(),
+        cargo_types,
+        movements,
+    })
+}
+
+fn voyage_error_message(e: &VoyageServiceError) -> String {
+    match e {
+        VoyageServiceError::AlreadyExists(_) => "この航海番号は既に登録されています".to_string(),
+        VoyageServiceError::NotFound(_) => "対象の航海が見つかりません".to_string(),
+        VoyageServiceError::Domain(_) | VoyageServiceError::Location(_) => {
+            "入力内容に誤りがあります（港コード・日時・スケジュール順序を確認してください）"
+                .to_string()
+        }
+        VoyageServiceError::Repository(_) => "処理に失敗しました".to_string(),
+    }
+}
+
+async fn voyage_list(
+    State(state): State<AppState>,
+    session: Session,
+    Query(query): Query<VoyageSearchQuery>,
+) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let service = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    let origin = query.origin.clone().unwrap_or_default();
+    let destination = query.destination.clone().unwrap_or_default();
+    let cargo_type = query.cargo_type.clone().unwrap_or_default();
+    let cargo_type_general = cargo_type == "GENERAL";
+    let cargo_type_hazardous = cargo_type == "HAZARDOUS";
+    let cargo_type_refrigerated = cargo_type == "REFRIGERATED";
+
+    let search = VoyageSearchInput {
+        origin: non_empty(query.origin),
+        destination: non_empty(query.destination),
+        cargo_type: non_empty(query.cargo_type),
+    };
+    let result =
+        if search.origin.is_none() && search.destination.is_none() && search.cargo_type.is_none() {
+            service.list().await
+        } else {
+            service.search(search).await
+        };
+
+    match result {
+        Ok(voyages) => render(&VoyageListTemplate {
+            current_user,
+            voyages: voyages.iter().map(voyage_to_row).collect(),
+            origin,
+            destination,
+            cargo_type_general,
+            cargo_type_hazardous,
+            cargo_type_refrigerated,
+            flash: query.flash.unwrap_or_default(),
+        }),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn voyage_new_form(session: Session) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    render(&VoyageNewTemplate {
+        current_user,
+        error: false,
+        error_message: String::new(),
+        form: VoyageFormData::default(),
+    })
+}
+
+async fn voyage_create(
+    State(state): State<AppState>,
+    session: Session,
+    Form(form): Form<VoyageForm>,
+) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let render_error = |current_user: CurrentUser, message: String| -> Response {
+        (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            render(&VoyageNewTemplate {
+                current_user,
+                error: true,
+                error_message: message,
+                form: form_to_data(&form),
+            }),
+        )
+            .into_response()
+    };
+
+    let input = match build_voyage_input(&form) {
+        Ok(input) => input,
+        Err(message) => return render_error(current_user, message),
+    };
+
+    let service = VoyageCommandService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    match service.register(input).await {
+        Ok(_) => Redirect::to("/voyages?flash=%E8%88%AA%E6%B5%B7%E3%82%92%E7%99%BB%E9%8C%B2%E3%81%97%E3%81%BE%E3%81%97%E3%81%9F").into_response(),
+        Err(e) => {
+            let message = voyage_error_message(&e);
+            render_error(current_user, message)
+        }
+    }
+}
+
+async fn voyage_edit_form(
+    State(state): State<AppState>,
+    session: Session,
+    Path(voyage_number): Path<String>,
+) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let service = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    match service.find(&voyage_number).await {
+        Ok(Some(voyage)) => render(&VoyageEditTemplate {
+            current_user,
+            error: false,
+            error_message: String::new(),
+            form: voyage_to_form_data(&voyage),
+            current: voyage_to_row(&voyage),
+        }),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+async fn voyage_update(
+    State(state): State<AppState>,
+    session: Session,
+    Path(voyage_number): Path<String>,
+    Form(form): Form<VoyageForm>,
+) -> Response {
+    let current_user = match require_user(&session).await {
+        Ok(u) => u,
+        Err(resp) => return resp,
+    };
+    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let query = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    let current_row = match query.find(&voyage_number).await {
+        Ok(Some(voyage)) => voyage_to_row(&voyage),
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    let render_error =
+        |current_user: CurrentUser, message: String, current: VoyageRow| -> Response {
+            (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                render(&VoyageEditTemplate {
+                    current_user,
+                    error: true,
+                    error_message: message,
+                    form: form_to_data(&form),
+                    current,
+                }),
+            )
+                .into_response()
+        };
+
+    let input = match build_voyage_input(&form) {
+        Ok(input) => input,
+        Err(message) => return render_error(current_user, message, current_row),
+    };
+
+    let service = VoyageCommandService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    match service.update(input).await {
+        Ok(_) => Redirect::to("/voyages?flash=%E8%88%AA%E6%B5%B7%E3%82%92%E6%9B%B4%E6%96%B0%E3%81%97%E3%81%BE%E3%81%97%E3%81%9F").into_response(),
+        Err(e) => {
+            let message = voyage_error_message(&e);
+            render_error(current_user, message, current_row)
+        }
     }
 }

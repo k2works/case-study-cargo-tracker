@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}航路新規登録 - CargoTracker{% endblock %}
+{% block nav %}{% include "nav.html" %}{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3" data-testid="voyage-new-title">航路新規登録</h1>
+{% if error %}
+<div class="alert alert-danger" role="alert" data-testid="voyage-error">{{ error_message }}</div>
+{% endif %}
+<form method="post" action="/voyages" class="col-md-8">
+  <div class="mb-3">
+    <label for="voyage_number" class="form-label">航海番号<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="voyage_number" name="voyage_number" value="{{ form.voyage_number }}" maxlength="20" required>
+  </div>
+  <div class="mb-3">
+    <label for="vessel_name" class="form-label">船名<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="vessel_name" name="vessel_name" value="{{ form.vessel_name }}" maxlength="100" required>
+  </div>
+  <div class="mb-3">
+    <label for="carrier" class="form-label">運送会社<span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="carrier" name="carrier" value="{{ form.carrier }}" maxlength="100" required>
+  </div>
+  <fieldset class="border rounded p-2 mb-3">
+    <legend class="h6">対応貨物種別</legend>
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="cargo_general" value="on" id="cargo_general" {% if form.general %}checked{% endif %}>
+      <label class="form-check-label" for="cargo_general">一般</label>
+    </div>
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="cargo_hazardous" value="on" id="cargo_hazardous" {% if form.hazardous %}checked{% endif %}>
+      <label class="form-check-label" for="cargo_hazardous">危険物</label>
+    </div>
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="cargo_refrigerated" value="on" id="cargo_refrigerated" {% if form.refrigerated %}checked{% endif %}>
+      <label class="form-check-label" for="cargo_refrigerated">冷凍・冷蔵</label>
+    </div>
+  </fieldset>
+  <fieldset class="border rounded p-2 mb-3">
+    <legend class="h6">運送区間 1（必須）</legend>
+    <div class="row g-2">
+      <div class="col"><label class="form-label">出発港</label><input type="text" class="form-control" name="leg1_departure" value="{{ form.leg1_departure }}" maxlength="5" required></div>
+      <div class="col"><label class="form-label">到着港</label><input type="text" class="form-control" name="leg1_arrival" value="{{ form.leg1_arrival }}" maxlength="5" required></div>
+    </div>
+    <div class="row g-2 mt-1">
+      <div class="col"><label class="form-label">出発日時</label><input type="datetime-local" class="form-control" name="leg1_departure_time" value="{{ form.leg1_departure_time }}" required></div>
+      <div class="col"><label class="form-label">到着日時</label><input type="datetime-local" class="form-control" name="leg1_arrival_time" value="{{ form.leg1_arrival_time }}" required></div>
+    </div>
+  </fieldset>
+  <fieldset class="border rounded p-2 mb-3">
+    <legend class="h6">運送区間 2（寄港地経由・任意）</legend>
+    <div class="row g-2">
+      <div class="col"><label class="form-label">出発港</label><input type="text" class="form-control" name="leg2_departure" value="{{ form.leg2_departure }}" maxlength="5"></div>
+      <div class="col"><label class="form-label">到着港</label><input type="text" class="form-control" name="leg2_arrival" value="{{ form.leg2_arrival }}" maxlength="5"></div>
+    </div>
+    <div class="row g-2 mt-1">
+      <div class="col"><label class="form-label">出発日時</label><input type="datetime-local" class="form-control" name="leg2_departure_time" value="{{ form.leg2_departure_time }}"></div>
+      <div class="col"><label class="form-label">到着日時</label><input type="datetime-local" class="form-control" name="leg2_arrival_time" value="{{ form.leg2_arrival_time }}"></div>
+    </div>
+  </fieldset>
+  <button type="submit" class="btn btn-primary" data-testid="voyage-submit">登録する</button>
+  <a href="/voyages" class="btn btn-secondary">キャンセル</a>
+</form>
+{% endblock %}
