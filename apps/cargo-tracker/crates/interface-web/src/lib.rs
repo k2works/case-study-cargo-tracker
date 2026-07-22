@@ -19,20 +19,19 @@ use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use domain_booking::{
-    BookCargoCommand, CargoType, Consignee, HazardousDeclaration, RouteSpecification,
-    TemperatureRequirement, TemperatureUnit, Weight,
+    BookCargoCommand, CargoRepository, CargoType, Consignee, HazardousDeclaration,
+    RouteSpecification, ShipperExistenceChecker, TemperatureRequirement, TemperatureUnit, Weight,
 };
-use domain_routing::Voyage;
-use infra_persistence::{
-    SqlxCargoRepository, SqlxShipperExistenceChecker, SqlxShipperRepository, SqlxUserRepository,
-    SqlxVoyageRepository, verify_password,
-};
+use domain_routing::{Voyage, VoyageRepository};
+use domain_shipper::ShipperRepository;
+use infra_persistence::{SqlxUserRepository, verify_password};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use shared_kernel::{Location, ShipperId};
 use sqlx::PgPool;
 use std::marker::PhantomData;
 use std::str::FromStr;
+use std::sync::Arc;
 use tower_sessions::Session;
 
 /// セッションに保存する現在のユーザー（ロール付き）。
@@ -104,10 +103,22 @@ type SalesUser = RoleGuard<SalesRole>;
 type RouteDesignerUser = RoleGuard<RouteDesignerRole>;
 
 /// Web 層の共有状態。
+///
+/// リポジトリは出力ポート trait のトレイトオブジェクトとして保持し、
+/// composition root（`cargo-tracker-server`）で sqlx 実装を注入する（ADR-0003）。
+/// `pool` は認証（`SqlxUserRepository`）の特例用途にのみ残す。
 #[derive(Clone)]
 pub struct AppState {
-    /// DB コネクションプール。
+    /// DB コネクションプール（認証専用。ADR-0003 の例外）。
     pub pool: PgPool,
+    /// 荷主リポジトリ（出力ポート）。
+    pub shipper_repo: Arc<dyn ShipperRepository>,
+    /// 貨物リポジトリ（出力ポート）。
+    pub cargo_repo: Arc<dyn CargoRepository>,
+    /// 荷主存在確認 ACL（出力ポート）。
+    pub shipper_checker: Arc<dyn ShipperExistenceChecker>,
+    /// 航海リポジトリ（出力ポート）。
+    pub voyage_repo: Arc<dyn VoyageRepository>,
 }
 
 #[derive(Template)]
@@ -351,8 +362,7 @@ async fn shipper_create(
         kind,
     };
 
-    let service =
-        RegisterShipperCommandService::new(SqlxShipperRepository::new(state.pool.clone()));
+    let service = RegisterShipperCommandService::new(state.shipper_repo.clone());
     match service.register(input).await {
         Ok(_) => Redirect::to("/bookings/new").into_response(),
         Err(e) => {
@@ -475,10 +485,8 @@ async fn booking_create(
         Err(message) => return render_error(current_user, message),
     };
 
-    let service = BookCargoCommandService::new(
-        SqlxCargoRepository::new(state.pool.clone()),
-        SqlxShipperExistenceChecker::new(state.pool.clone()),
-    );
+    let service =
+        BookCargoCommandService::new(state.cargo_repo.clone(), state.shipper_checker.clone());
     match service.book(command).await {
         Ok(booking_id) => {
             Redirect::to(&format!("/bookings/{}", booking_id.as_str())).into_response()
@@ -504,7 +512,7 @@ async fn booking_show(
     };
 
     use domain_booking::{BookingId, CargoRepository};
-    let repo = SqlxCargoRepository::new(state.pool.clone());
+    let repo = state.cargo_repo.clone();
     let id = match BookingId::parse(booking_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
@@ -760,7 +768,7 @@ async fn voyage_list(
     RoleGuard(current_user, _): RouteDesignerUser,
     Query(query): Query<VoyageSearchQuery>,
 ) -> Response {
-    let service = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    let service = VoyageQueryService::new(state.voyage_repo.clone());
     let origin = query.origin.clone().unwrap_or_default();
     let destination = query.destination.clone().unwrap_or_default();
     let cargo_type = query.cargo_type.clone().unwrap_or_default();
@@ -827,7 +835,7 @@ async fn voyage_create(
         Err(message) => return render_error(current_user, message),
     };
 
-    let service = VoyageCommandService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    let service = VoyageCommandService::new(state.voyage_repo.clone());
     match service.register(input).await {
         Ok(_) => Redirect::to("/voyages?flash=%E8%88%AA%E6%B5%B7%E3%82%92%E7%99%BB%E9%8C%B2%E3%81%97%E3%81%BE%E3%81%97%E3%81%9F").into_response(),
         Err(e) => {
@@ -842,7 +850,7 @@ async fn voyage_edit_form(
     RoleGuard(current_user, _): RouteDesignerUser,
     Path(voyage_number): Path<String>,
 ) -> Response {
-    let service = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    let service = VoyageQueryService::new(state.voyage_repo.clone());
     match service.find(&voyage_number).await {
         Ok(Some(voyage)) => render(&VoyageEditTemplate {
             current_user,
@@ -862,7 +870,7 @@ async fn voyage_update(
     Path(voyage_number): Path<String>,
     Form(form): Form<VoyageForm>,
 ) -> Response {
-    let query = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    let query = VoyageQueryService::new(state.voyage_repo.clone());
     let current_row = match query.find(&voyage_number).await {
         Ok(Some(voyage)) => voyage_to_row(&voyage),
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
@@ -889,7 +897,7 @@ async fn voyage_update(
         Err(message) => return render_error(current_user, message, current_row),
     };
 
-    let service = VoyageCommandService::new(SqlxVoyageRepository::new(state.pool.clone()));
+    let service = VoyageCommandService::new(state.voyage_repo.clone());
     match service.update(input).await {
         Ok(_) => Redirect::to("/voyages?flash=%E8%88%AA%E6%B5%B7%E3%82%92%E6%9B%B4%E6%96%B0%E3%81%97%E3%81%BE%E3%81%97%E3%81%9F").into_response(),
         Err(e) => {

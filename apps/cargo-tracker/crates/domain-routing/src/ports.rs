@@ -47,3 +47,32 @@ pub trait VoyageRepository: Send + Sync {
     /// 全航海を返す（航路一覧の初期表示用）。
     async fn find_all(&self) -> Result<Vec<Voyage>, RepositoryError>;
 }
+
+/// `Arc<dyn VoyageRepository>` へ委譲するブランケット実装。
+///
+/// composition root で注入したトレイトオブジェクトを、ジェネリックな
+/// アプリケーションサービス（`VoyageCommandService<R>` 等）へ渡せるようにする（ADR-0003）。
+#[async_trait::async_trait]
+impl VoyageRepository for std::sync::Arc<dyn VoyageRepository> {
+    async fn save(&self, voyage: &Voyage) -> Result<(), RepositoryError> {
+        (**self).save(voyage).await
+    }
+    async fn find_by_voyage_number(
+        &self,
+        number: &VoyageNumber,
+    ) -> Result<Option<Voyage>, RepositoryError> {
+        (**self).find_by_voyage_number(number).await
+    }
+    async fn exists(&self, number: &VoyageNumber) -> Result<bool, RepositoryError> {
+        (**self).exists(number).await
+    }
+    async fn search(
+        &self,
+        criteria: &VoyageSearchCriteria,
+    ) -> Result<Vec<Voyage>, RepositoryError> {
+        (**self).search(criteria).await
+    }
+    async fn find_all(&self) -> Result<Vec<Voyage>, RepositoryError> {
+        (**self).find_all().await
+    }
+}

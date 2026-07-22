@@ -24,3 +24,17 @@ pub trait ShipperRepository: Send + Sync {
     /// 指定メールアドレスの荷主が既に存在するかを返す。
     async fn exists_by_email(&self, email: &Email) -> Result<bool, RepositoryError>;
 }
+
+/// `Arc<dyn ShipperRepository>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl ShipperRepository for std::sync::Arc<dyn ShipperRepository> {
+    async fn save(&self, shipper: &Shipper) -> Result<(), RepositoryError> {
+        (**self).save(shipper).await
+    }
+    async fn find_by_id(&self, id: &ShipperId) -> Result<Option<Shipper>, RepositoryError> {
+        (**self).find_by_id(id).await
+    }
+    async fn exists_by_email(&self, email: &Email) -> Result<bool, RepositoryError> {
+        (**self).exists_by_email(email).await
+    }
+}

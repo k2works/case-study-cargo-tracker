@@ -12,6 +12,7 @@ shared-kernel = { workspace = true }
 app-shipper = { workspace = true }
 app-booking = { workspace = true }
 app-routing = { workspace = true }
+domain-shipper = { workspace = true }
 domain-booking = { workspace = true }
 domain-routing = { workspace = true }
 infra-persistence = { workspace = true }
@@ -27,6 +28,5 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 tower = { workspace = true }
 http-body-util = { workspace = true }
-domain-shipper = { workspace = true }
 testcontainers = "0.24"
 testcontainers-modules = { version = "0.12", features = ["postgres"] }

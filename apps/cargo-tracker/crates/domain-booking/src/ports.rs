@@ -38,3 +38,22 @@ pub trait ShipperExistenceChecker: Send + Sync {
     /// 指定荷主 ID が存在するかを返す。
     async fn exists(&self, shipper_id: &ShipperId) -> Result<bool, AclError>;
 }
+
+/// `Arc<dyn CargoRepository>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl CargoRepository for std::sync::Arc<dyn CargoRepository> {
+    async fn save(&self, cargo: &Cargo) -> Result<(), RepositoryError> {
+        (**self).save(cargo).await
+    }
+    async fn find_by_booking_id(&self, id: &BookingId) -> Result<Option<Cargo>, RepositoryError> {
+        (**self).find_by_booking_id(id).await
+    }
+}
+
+/// `Arc<dyn ShipperExistenceChecker>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl ShipperExistenceChecker for std::sync::Arc<dyn ShipperExistenceChecker> {
+    async fn exists(&self, shipper_id: &ShipperId) -> Result<bool, AclError> {
+        (**self).exists(shipper_id).await
+    }
+}

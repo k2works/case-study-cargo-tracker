@@ -67,6 +67,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "app-routing"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "domain-routing",
+ "shared-kernel",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "app-shipper"
 version = "0.1.0"
 dependencies = [
@@ -687,7 +699,11 @@ dependencies = [
 name = "domain-routing"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "chrono",
+ "serde",
  "shared-kernel",
+ "thiserror",
 ]
 
 [[package]]
@@ -1358,6 +1374,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "domain-booking",
+ "domain-routing",
  "domain-shipper",
  "rust_decimal",
  "shared-kernel",
@@ -1393,11 +1410,13 @@ name = "interface-web"
 version = "0.1.0"
 dependencies = [
  "app-booking",
+ "app-routing",
  "app-shipper",
  "askama",
  "axum",
  "chrono",
  "domain-booking",
+ "domain-routing",
  "domain-shipper",
  "http-body-util",
  "infra-persistence",

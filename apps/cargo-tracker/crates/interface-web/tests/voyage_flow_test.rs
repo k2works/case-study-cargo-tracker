@@ -4,8 +4,23 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use infra_persistence::{MIGRATOR, SqlxUserRepository};
+use infra_persistence::{
+    MIGRATOR, SqlxCargoRepository, SqlxShipperExistenceChecker, SqlxShipperRepository,
+    SqlxUserRepository, SqlxVoyageRepository,
+};
 use interface_web::{AppState, web_router};
+use std::sync::Arc;
+
+/// composition root 相当のテスト用 AppState 構築（ADR-0003）。
+fn app_state(pool: PgPool) -> AppState {
+    AppState {
+        shipper_repo: Arc::new(SqlxShipperRepository::new(pool.clone())),
+        cargo_repo: Arc::new(SqlxCargoRepository::new(pool.clone())),
+        shipper_checker: Arc::new(SqlxShipperExistenceChecker::new(pool.clone())),
+        voyage_repo: Arc::new(SqlxVoyageRepository::new(pool.clone())),
+        pool,
+    }
+}
 use shared_kernel::Role;
 use sqlx::PgPool;
 use testcontainers::ContainerAsync;
@@ -29,7 +44,7 @@ async fn setup(role: Role) -> (Router, ContainerAsync<Postgres>) {
         .create_user("user", "user@example.com", "pass1234", &[role])
         .await
         .expect("seed");
-    let app = web_router(AppState { pool }).layer(SessionManagerLayer::new(MemoryStore::default()));
+    let app = web_router(app_state(pool)).layer(SessionManagerLayer::new(MemoryStore::default()));
     (app, container)
 }
 

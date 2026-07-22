@@ -4,12 +4,28 @@
 //! IT1 では認証・ダッシュボードのウォーキングスケルトンと `/health` を提供する。
 
 use axum::{Json, Router, routing::get};
-use infra_persistence::MIGRATOR;
+use infra_persistence::{
+    MIGRATOR, SqlxCargoRepository, SqlxShipperExistenceChecker, SqlxShipperRepository,
+    SqlxVoyageRepository,
+};
 use interface_rest::{RestState, rest_router};
 use interface_web::{AppState, web_router};
 use sqlx::PgPool;
+use std::sync::Arc;
 use tower_http::services::ServeDir;
 use tower_sessions::{MemoryStore, SessionManagerLayer};
+
+/// composition root: sqlx 実装を出力ポート trait のトレイトオブジェクトとして
+/// `AppState` に注入する（ADR-0003）。
+fn build_app_state(pool: PgPool) -> AppState {
+    AppState {
+        shipper_repo: Arc::new(SqlxShipperRepository::new(pool.clone())),
+        cargo_repo: Arc::new(SqlxCargoRepository::new(pool.clone())),
+        shipper_checker: Arc::new(SqlxShipperExistenceChecker::new(pool.clone())),
+        voyage_repo: Arc::new(SqlxVoyageRepository::new(pool.clone())),
+        pool,
+    }
+}
 
 /// ヘルスチェックのみのルーター（DB 非依存）。
 fn health_router() -> Router {
@@ -37,7 +53,7 @@ fn build_app(pool: PgPool) -> Router {
     let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "static".to_string());
     let app = health_router()
         .merge(rest_router(RestState { pool: pool.clone() }))
-        .merge(web_router(AppState { pool }))
+        .merge(web_router(build_app_state(pool)))
         .nest_service("/static", ServeDir::new(static_dir))
         .layer(session_layer);
 
