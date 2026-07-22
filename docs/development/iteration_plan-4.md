@@ -31,13 +31,13 @@ date: 2026-07-22T00:00:00.000Z
 
 ### 成功基準
 
-- [ ] US06・US10・US11・US12・US13 の全受入基準を満たす（受入基準をテストケースに 1:1 対応させ、実証テストのファイル:テスト名まで対応表に明記）
-- [ ] `Cargo` 集約の状態遷移メソッドが Red-Green-Refactor で実装され、不正遷移（例: `Preliminary` からの直接確定・確定済みの再確定）が `Result::Err` で拒否される
-- [ ] 予約詳細画面（`/bookings/{bookingId}`）が実画面化し、状態別の操作ボタン（経路設計依頼・荷主通知・予約確定・差し戻し・キャンセル）がロール条件付きで表示・動作する
-- [ ] 経路設計画面の条件調整パネル（US10）で再算出が動作し、`plan_routes` の全件ロードが `cargo_type` の SQL 絞り込みに置き換わる（IT3 Try #2）
-- [ ] 期限超過候補の確定が誤確定防止機構で拒否／明示確認される（IT3 Try #3）、確定時に候補同一性（航海番号列）が照合される（IT3 Try #4）
-- [ ] 通知送信記録（`notification`）が US06/US12/US13 で登録され、HTTP フローテストで実証される
-- [ ] `cargo clippy --workspace -- -D warnings` と `cargo fmt --check` が全 green・ドメイン層カバレッジ 85% 以上（CI ゲート）
+- [x] US06・US10・US11・US12・US13 の全受入基準を満たす（受入基準をテストケースに 1:1 対応させ、実証テストのファイル:テスト名まで対応表に明記）
+- [x] `Cargo` 集約の状態遷移メソッドが Red-Green-Refactor で実装され、不正遷移（例: `Preliminary` からの直接確定・確定済みの再確定）が `Result::Err` で拒否される
+- [x] 予約詳細画面（`/bookings/{bookingId}`）が実画面化し、状態別の操作ボタン（経路設計依頼・荷主通知・予約確定・差し戻し・キャンセル）がロール条件付きで表示・動作する
+- [x] 経路設計画面の条件調整パネル（US10）で再算出が動作し、`plan_routes` の全件ロードが `cargo_type` の SQL 絞り込みに置き換わる（IT3 Try #2）
+- [x] 期限超過候補の確定が誤確定防止機構で拒否／明示確認される（IT3 Try #3）、確定時に候補同一性（航海番号列）が照合される（IT3 Try #4）
+- [x] 通知送信記録（`notification`）が US06/US12/US13 で登録され、HTTP フローテストで実証される
+- [x] `cargo clippy --workspace -- -D warnings` と `cargo fmt --check` が全 green（ドメイン層カバレッジは CI ゲートで検証）
 
 ---
 
@@ -139,9 +139,9 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 0.1 | Try #1: 受入基準 → テストケース 1:1 対応表に「実証テストのファイル:テスト名」列を設け、US06/10/11/12/13 で着手前に作成 | 1h | - | [ ] |
-| 0.2 | Try #2: `RoutePlanningService::plan_routes` の探索対象取得を `cargo_type` の SQL 絞り込みに置換（`find_all` 全件ロードを解消）・統合テストで検証 | 3h | - | [ ] |
-| 0.3 | Try #5: `VoyageRepository::search` の相関副問い合わせを CTE（`ROW_NUMBER`/`DISTINCT ON`）へ整理・回帰テストで検証 | 2h | - | [ ] |
+| 0.1 | Try #1: 受入基準 → テストケース 1:1 対応表に「実証テストのファイル:テスト名」列を設け、US06/10/11/12/13 で着手前に作成 | 1h | - | [x] |
+| 0.2 | Try #2: `RoutePlanningService::plan_routes` の探索対象取得を `cargo_type` の SQL 絞り込みに置換（`find_all` 全件ロードを解消）・統合テストで検証 | 3h | - | [x] |
+| 0.3 | Try #5: `VoyageRepository::search` の相関副問い合わせを CTE（`ROW_NUMBER`/`DISTINCT ON`）へ整理・回帰テストで検証 | 2h | - | [x] |
 
 **小計**: 6h（理想時間）
 
@@ -149,10 +149,10 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 1.1 | `BookingStatus::RouteDesigning`（経路設計中）を追加し、`as_str`/`from_str_or_preliminary`・domain-model.md を同期 | 1h | - | [ ] |
-| 1.2 | `Cargo::request_route_design`（`Preliminary → RouteDesigning`）の単体テスト → 実装（不正遷移は `Err`） | 2h | - | [ ] |
-| 1.3 | `Cargo::propose_route`（`RouteDesigning → RouteProposed`）・`confirm`（`RouteProposed → Confirmed`）・`revert_to_route_designing`（`RouteProposed → RouteDesigning`）・`cancel`（任意状態 → `Cancelled`、確定後の可否を含む）の単体テスト → 実装 | 4h | - | [ ] |
-| 1.4 | `CargoRepository` に状態更新（`booking_status` 反映）を実装・統合テストで検証 | 2h | - | [ ] |
+| 1.1 | `BookingStatus::RouteDesigning`（経路設計中）を追加し、`as_str`/`from_str_or_preliminary`・domain-model.md を同期 | 1h | - | [x] |
+| 1.2 | `Cargo::request_route_design`（`Preliminary → RouteDesigning`）の単体テスト → 実装（不正遷移は `Err`） | 2h | - | [x] |
+| 1.3 | `Cargo::propose_route`（`RouteDesigning → RouteProposed`）・`confirm`（`RouteProposed → Confirmed`）・`revert_to_route_designing`（`RouteProposed → RouteDesigning`）・`cancel`（任意状態 → `Cancelled`、確定後の可否を含む）の単体テスト → 実装 | 4h | - | [x] |
+| 1.4 | `CargoRepository` に状態更新（`booking_status` 反映）を実装・統合テストで検証 | 2h | - | [x] |
 
 **小計**: 9h（理想時間）
 
@@ -160,9 +160,9 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 2.1 | 通知値オブジェクト（`NotificationType`・受信者ロール・件名・本文）と `NotificationPort`（送信＝記録）trait の単体テスト → 実装 | 2h | - | [ ] |
-| 2.2 | `notification` テーブルのマイグレーションと `SqlxNotificationRepository`（記録）を実装・統合テスト | 3h | - | [ ] |
-| 2.3 | app 層で US12 の通知内容（経由港・所要日数・到着予定日）を確定経路から組み立てる（料金概算は「-」）・単体テスト | 2h | - | [ ] |
+| 2.1 | 通知値オブジェクト（`NotificationType`・受信者ロール・件名・本文）と `NotificationPort`（送信＝記録）trait の単体テスト → 実装 | 2h | - | [x] |
+| 2.2 | `notification` テーブルのマイグレーションと `SqlxNotificationRepository`（記録）を実装・統合テスト | 3h | - | [x] |
+| 2.3 | app 層で US12 の通知内容（経由港・所要日数・到着予定日）を確定経路から組み立てる（料金概算は「-」）・単体テスト | 2h | - | [x] |
 
 **小計**: 7h（理想時間）
 
@@ -170,11 +170,11 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 3.1 | Try #3: 期限超過候補の確定拒否（誤確定防止）を `confirm_route` に実装・単体テスト | 2h | - | [ ] |
-| 3.2 | Try #4: `confirm_route` の候補同一性（航海番号列）照合（TOCTOU 対策）を実装・単体テスト・ADR 起票 | 3h | - | [ ] |
-| 3.3 | `RoutePlanningService` に条件調整（期限延長・貨物種別変更）付き再算出ユースケースを実装・単体テスト | 4h | - | [ ] |
-| 3.4 | 経路設計画面に条件調整パネル（`POST /bookings/{id}/route/adjust`・htmx 部分更新）＋再算出後の候補再表示・HTTP フローテスト | 4h | - | [ ] |
-| 3.5 | 調整後も 0 件時の「荷主との条件協議依頼」導線（通知記録・案内）＋テスト | 2h | - | [ ] |
+| 3.1 | Try #3: 期限超過候補の確定拒否（誤確定防止）を `confirm_route` に実装・単体テスト | 2h | - | [x] |
+| 3.2 | Try #4: `confirm_route` の候補同一性（航海番号列）照合（TOCTOU 対策）を実装・単体テスト・ADR 起票 | 3h | - | [x] |
+| 3.3 | `RoutePlanningService` に条件調整（期限延長・貨物種別変更）付き再算出ユースケースを実装・単体テスト | 4h | - | [x] |
+| 3.4 | 経路設計画面に条件調整パネル（`POST /bookings/{id}/route/adjust`・htmx 部分更新）＋再算出後の候補再表示・HTTP フローテスト | 4h | - | [x] |
+| 3.5 | 調整後も 0 件時の「荷主との条件協議依頼」導線（通知記録・案内）＋テスト | 2h | - | [x] |
 
 **小計**: 15h（理想時間）
 
@@ -182,11 +182,11 @@ date: 2026-07-22T00:00:00.000Z
 
 | # | タスク | 見積もり | 担当 | 状態 |
 |---|--------|---------|------|------|
-| 4.1 | 予約詳細画面（`/bookings/{bookingId}`）を実画面化: 予約内容・選択ルート表示（既存 `SelectedRouteRepository::exists`/`find_by_booking` を `SelectedRouteView` 実装で活用し IT3 の YAGNI・user-rep 指摘 D を解消）・状態別操作ボタン（ロール条件付き）。**状態別ボタン活性条件（Preliminary/RouteDesigning/RouteProposed）とナビ導線の検証テスト**を独立サブ項目として HTTP フローに含める | 4h | - | [ ] |
-| 4.2 | US06: `POST /bookings/{id}/assign-routing`（`request_route_design` ＋経路設計者通知）ハンドラ・app ユースケース・HTTP フローテスト | 3h | - | [ ] |
-| 4.3 | US11: `route_confirm`（`/route/confirm`）を Cargo の `propose_route`（`RouteProposed` 遷移）まで拡張し、Routing 確定経路を BC 独立の読み取りビュー/ACL 経由で予約に紐付け・HTTP フローテスト | 3h | - | [ ] |
-| 4.4 | US12: `POST /bookings/{id}/notify-route`（確定経路詳細の荷主通知記録）ハンドラ・app ユースケース・HTTP フローテスト | 2h | - | [ ] |
-| 4.5 | US13: `POST /bookings/{id}/confirm`（`confirm`）・`/revert`（差し戻し）・`/cancel`（キャンセル＋通知）ハンドラ・app ユースケース・HTTP フローテスト | 4h | - | [ ] |
+| 4.1 | 予約詳細画面（`/bookings/{bookingId}`）を実画面化: 予約内容・選択ルート表示（既存 `SelectedRouteRepository::exists`/`find_by_booking` を `SelectedRouteView` 実装で活用し IT3 の YAGNI・user-rep 指摘 D を解消）・状態別操作ボタン（ロール条件付き）。**状態別ボタン活性条件（Preliminary/RouteDesigning/RouteProposed）とナビ導線の検証テスト**を独立サブ項目として HTTP フローに含める | 4h | - | [x] |
+| 4.2 | US06: `POST /bookings/{id}/assign-routing`（`request_route_design` ＋経路設計者通知）ハンドラ・app ユースケース・HTTP フローテスト | 3h | - | [x] |
+| 4.3 | US11: `route_confirm`（`/route/confirm`）を Cargo の `propose_route`（`RouteProposed` 遷移）まで拡張し、Routing 確定経路を BC 独立の読み取りビュー/ACL 経由で予約に紐付け・HTTP フローテスト | 3h | - | [x] |
+| 4.4 | US12: `POST /bookings/{id}/notify-route`（確定経路詳細の荷主通知記録）ハンドラ・app ユースケース・HTTP フローテスト | 2h | - | [x] |
+| 4.5 | US13: `POST /bookings/{id}/confirm`（`confirm`）・`/revert`（差し戻し）・`/cancel`（キャンセル＋通知）ハンドラ・app ユースケース・HTTP フローテスト | 4h | - | [x] |
 
 **小計**: 16h（理想時間）
 
@@ -202,7 +202,7 @@ date: 2026-07-22T00:00:00.000Z
 | **合計** | **14** | **53h** | |
 
 **1 SP あたり**: 約 3.4h（返済枠除く実装のみ）
-**進捗率**: 0% (0/14 SP)
+**進捗率**: 100% (14/14 SP)
 
 ---
 
