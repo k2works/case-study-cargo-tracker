@@ -91,7 +91,40 @@ async fn seed_cargo(pool: &PgPool, booking_id: &str) {
     .expect("seed cargo");
 }
 
+/// 目的地に到達できない cargo（USLAX 行きに対し目的地 DEHAM）を seed する。
+async fn seed_cargo_unreachable(pool: &PgPool, booking_id: &str) {
+    let shipper_id = uuid::Uuid::new_v4();
+    sqlx::query(
+        r"INSERT INTO shipper (id, shipper_code, shipper_type, name, email)
+          VALUES ($1, $2, 'INDIVIDUAL', '荷主', $3)",
+    )
+    .bind(shipper_id)
+    .bind(format!("SHP-{}", &shipper_id.simple().to_string()[..8]))
+    .bind(format!("{booking_id}@example.com"))
+    .execute(pool)
+    .await
+    .expect("seed shipper");
+
+    sqlx::query(
+        r"INSERT INTO cargo
+            (booking_id, shipper_id, cargo_type, weight, origin_unlocode,
+             destination_unlocode, arrival_deadline, consignee_name, consignee_email, booking_status)
+          VALUES ($1, $2, 'GENERAL', 1000, 'JPOSA', 'DEHAM', DATE '2026-04-20',
+                  'Hamburg Trading', 'consignee@example.com', 'PRELIMINARY')",
+    )
+    .bind(booking_id)
+    .bind(shipper_id)
+    .execute(pool)
+    .await
+    .expect("seed cargo");
+}
+
 async fn setup(role: Role) -> (Router, ContainerAsync<Postgres>) {
+    setup_with(role, true).await
+}
+
+/// `seed_matching_voyage` が false の場合は cargo の目的地に到達できない状態を作る（経路 0 件）。
+async fn setup_with(role: Role, seed_matching_voyage: bool) -> (Router, ContainerAsync<Postgres>) {
     let container = Postgres::default()
         .with_tag("16-alpine")
         .start()
@@ -106,7 +139,11 @@ async fn setup(role: Role) -> (Router, ContainerAsync<Postgres>) {
         .await
         .expect("seed user");
     seed_voyage(&pool).await;
-    seed_cargo(&pool, "BKG-0001").await;
+    if seed_matching_voyage {
+        seed_cargo(&pool, "BKG-0001").await;
+    } else {
+        seed_cargo_unreachable(&pool, "BKG-0001").await;
+    }
     let app = web_router(app_state(pool)).layer(SessionManagerLayer::new(MemoryStore::default()));
     (app, container)
 }
@@ -202,6 +239,42 @@ async fn 存在しない予約の経路設計は404を返す() {
         .await
         .unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn 期限内に到達可能な経路がない場合は0件通知を表示する() {
+    let (app, _c) = setup_with(Role::RouteDesigner, false).await;
+    let cookie = login(&app).await;
+    let resp = app
+        .oneshot(
+            Request::get("/bookings/BKG-0001/route")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let html = body_string(resp).await;
+    assert!(html.contains("route-empty"));
+    assert!(!html.contains("route-candidates"));
+}
+
+#[tokio::test]
+async fn 範囲外の候補を確定しようとすると422を返す() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app).await;
+    let resp = app
+        .oneshot(
+            Request::post("/bookings/BKG-0001/route/confirm")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::from("candidate_index=99"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
 }
 
 #[tokio::test]

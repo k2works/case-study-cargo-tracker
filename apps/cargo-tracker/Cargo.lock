@@ -1429,6 +1429,7 @@ dependencies = [
  "tokio",
  "tower",
  "tower-sessions",
+ "uuid",
 ]
 
 [[package]]

@@ -552,4 +552,143 @@ mod tests {
         );
         assert!(result.is_empty());
     }
+
+    #[test]
+    fn 乗り継ぎ時間ゼロの同時刻接続は成立する() {
+        // 前区間到着 == 次区間出発（`unload_time <= load_time` の等号境界）で接続が成立すること。
+        let voyages = vec![
+            voyage(
+                "VA",
+                "JPOSA",
+                "SGSIN",
+                "2026-04-01T00:00:00Z",
+                "2026-04-06T00:00:00Z",
+                vec![CargoType::General],
+            ),
+            voyage(
+                "VB",
+                "SGSIN",
+                "USLAX",
+                "2026-04-06T00:00:00Z",
+                "2026-04-18T00:00:00Z",
+                vec![CargoType::General],
+            ),
+        ];
+        let calc = RouteCandidateCalculator::default();
+        let result = calc.calculate(
+            &loc("JPOSA"),
+            &loc("USLAX"),
+            date("2026-04-25"),
+            CargoType::General,
+            &voyages,
+        );
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].leg_count(), 2);
+    }
+
+    #[test]
+    fn 区間数上限を超える経路は打ち切られる() {
+        // max_legs=2 のとき、3 区間必要な経路は候補にならない。
+        let voyages = vec![
+            voyage(
+                "V1",
+                "JPOSA",
+                "SGSIN",
+                "2026-04-01T00:00:00Z",
+                "2026-04-05T00:00:00Z",
+                vec![CargoType::General],
+            ),
+            voyage(
+                "V2",
+                "SGSIN",
+                "AEJEA",
+                "2026-04-06T00:00:00Z",
+                "2026-04-12T00:00:00Z",
+                vec![CargoType::General],
+            ),
+            voyage(
+                "V3",
+                "AEJEA",
+                "USLAX",
+                "2026-04-13T00:00:00Z",
+                "2026-04-28T00:00:00Z",
+                vec![CargoType::General],
+            ),
+        ];
+        let calc = RouteCandidateCalculator::with_max_legs(2);
+        let result = calc.calculate(
+            &loc("JPOSA"),
+            &loc("USLAX"),
+            date("2026-05-01"),
+            CargoType::General,
+            &voyages,
+        );
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn 同一港を循環する航海はサイクル回避で無限探索にならない() {
+        // JPOSA→SGSIN→JPOSA→… と循環しうる航海群でも、同一航海の再利用を避け停止する。
+        let voyages = vec![
+            voyage(
+                "VA",
+                "JPOSA",
+                "SGSIN",
+                "2026-04-01T00:00:00Z",
+                "2026-04-05T00:00:00Z",
+                vec![CargoType::General],
+            ),
+            voyage(
+                "VB",
+                "SGSIN",
+                "JPOSA",
+                "2026-04-06T00:00:00Z",
+                "2026-04-10T00:00:00Z",
+                vec![CargoType::General],
+            ),
+        ];
+        let calc = RouteCandidateCalculator::default();
+        // USLAX には到達不能なので候補は空だが、無限ループせず停止すること（本テストが完了する）。
+        let result = calc.calculate(
+            &loc("JPOSA"),
+            &loc("USLAX"),
+            date("2026-05-01"),
+            CargoType::General,
+            &voyages,
+        );
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn 同一区間数では所要日数が短い候補が上位になる() {
+        // 直行 2 便（同一 leg_count）で、所要日数が短い方が推奨順で上位（第 2 キー）。
+        let voyages = vec![
+            voyage(
+                "VSLOW",
+                "JPOSA",
+                "USLAX",
+                "2026-04-01T00:00:00Z",
+                "2026-04-20T00:00:00Z",
+                vec![CargoType::General],
+            ),
+            voyage(
+                "VFAST",
+                "JPOSA",
+                "USLAX",
+                "2026-04-01T00:00:00Z",
+                "2026-04-12T00:00:00Z",
+                vec![CargoType::General],
+            ),
+        ];
+        let calc = RouteCandidateCalculator::default();
+        let result = calc.calculate(
+            &loc("JPOSA"),
+            &loc("USLAX"),
+            date("2026-04-25"),
+            CargoType::General,
+            &voyages,
+        );
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].voyage_numbers()[0].as_str(), "VFAST");
+    }
 }
