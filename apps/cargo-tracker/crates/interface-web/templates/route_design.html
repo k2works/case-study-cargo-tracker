@@ -18,13 +18,38 @@
   </div>
 </div>
 
+<div class="card mb-3" data-testid="route-adjust">
+  <div class="card-header">条件調整・再算出（US10）</div>
+  <div class="card-body">
+    <form method="post" action="/bookings/{{ booking_id }}/route/adjust" class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label" for="extend_deadline_days">期限延長（日）</label>
+        <input type="number" class="form-control" id="extend_deadline_days" name="extend_deadline_days" min="0" value="0">
+      </div>
+      <div class="col-auto">
+        <label class="form-label" for="cargo_type">貨物種別の変更</label>
+        <select class="form-select" id="cargo_type" name="cargo_type">
+          <option value="">（変更なし）</option>
+          <option value="GENERAL">GENERAL</option>
+          <option value="HAZARDOUS">HAZARDOUS</option>
+          <option value="REFRIGERATED">REFRIGERATED</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary" data-testid="route-adjust-submit">再算出</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <h2 class="h6">経路候補（推奨順）</h2>
 {% if candidates.is_empty() %}
 <div class="alert alert-warning" role="alert" data-testid="route-empty">
-  期限内に到達可能な経路がありません。条件を調整して再算出してください（条件調整は後続イテレーションで対応）。
+  期限内に到達可能な経路がありません。上の条件調整で再算出するか、営業担当者に荷主との条件協議を依頼してください（US10）。
 </div>
 {% else %}
 <form method="post" action="/bookings/{{ booking_id }}/route/confirm" data-testid="route-form">
+  <input type="hidden" name="expected_voyages_list" value="{% for c in candidates %}{{ c.voyage_csv }}{% if !loop.last %};{% endif %}{% endfor %}">
   <table class="table table-striped" data-testid="route-candidates">
     <thead>
       <tr>

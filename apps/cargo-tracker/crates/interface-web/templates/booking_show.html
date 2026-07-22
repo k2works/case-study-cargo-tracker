@@ -7,14 +7,53 @@
   <dt class="col-sm-3">予約番号</dt>
   <dd class="col-sm-9" data-testid="booking-id">{{ booking_id }}</dd>
   <dt class="col-sm-3">状態</dt>
-  <dd class="col-sm-9" data-testid="booking-status">{{ status }}</dd>
+  <dd class="col-sm-9" data-testid="booking-status" data-status="{{ status }}">{{ status_label }}</dd>
   <dt class="col-sm-3">出発地 → 目的地</dt>
   <dd class="col-sm-9">{{ origin }} → {{ destination }}</dd>
   <dt class="col-sm-3">貨物種別</dt>
   <dd class="col-sm-9">{{ cargo_type }}</dd>
 </dl>
-{% if current_user.has_role("ROLE_ROUTE_DESIGNER") %}
-<a href="/bookings/{{ booking_id }}/route" class="btn btn-primary" data-testid="design-route-link">経路を設計する</a>
+
+{% if has_route %}
+<div class="card mb-3" data-testid="selected-route">
+  <div class="card-header">選択ルート</div>
+  <div class="card-body">
+    <p class="mb-1">経由港: {{ route_transit_ports }}</p>
+    <p class="mb-1">航海: {{ route_voyages }}</p>
+    <p class="mb-1">所要日数: {{ route_transit_days }} 日</p>
+    <p class="mb-0">到着予定日: {{ route_arrival }}</p>
+  </div>
+</div>
 {% endif %}
+
+<div class="d-flex flex-wrap gap-2 mb-3" data-testid="booking-actions">
+{% if current_user.has_role("ROLE_SALES") %}
+  {% if is_preliminary %}
+  <form method="post" action="/bookings/{{ booking_id }}/assign-routing">
+    <button type="submit" class="btn btn-primary" data-testid="assign-routing-btn">経路設計を依頼する</button>
+  </form>
+  {% endif %}
+  {% if is_route_proposed %}
+  <form method="post" action="/bookings/{{ booking_id }}/notify-route">
+    <button type="submit" class="btn btn-info" data-testid="notify-route-btn">荷主に経路を通知する</button>
+  </form>
+  <form method="post" action="/bookings/{{ booking_id }}/confirm">
+    <button type="submit" class="btn btn-success" data-testid="confirm-btn">予約を確定する</button>
+  </form>
+  <form method="post" action="/bookings/{{ booking_id }}/revert">
+    <button type="submit" class="btn btn-warning" data-testid="revert-btn">経路設計に差し戻す</button>
+  </form>
+  {% endif %}
+  {% if is_preliminary || is_route_designing || is_route_proposed %}
+  <form method="post" action="/bookings/{{ booking_id }}/cancel">
+    <button type="submit" class="btn btn-outline-danger" data-testid="cancel-btn">キャンセルする</button>
+  </form>
+  {% endif %}
+{% endif %}
+{% if current_user.has_role("ROLE_ROUTE_DESIGNER") && (is_route_designing || is_route_proposed) %}
+  <a href="/bookings/{{ booking_id }}/route" class="btn btn-primary" data-testid="design-route-link">経路を設計する</a>
+{% endif %}
+</div>
+
 <a href="/" class="btn btn-secondary">ダッシュボードへ戻る</a>
 {% endblock %}

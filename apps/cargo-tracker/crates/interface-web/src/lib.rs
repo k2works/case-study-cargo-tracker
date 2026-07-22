@@ -2,10 +2,10 @@
 //!
 //! IT1 ではログイン認証・ロール別ナビゲーション・ダッシュボードのウォーキングスケルトンを提供する。
 
-use app_booking::{BookCargoCommandService, BookingServiceError};
+use app_booking::{BookCargoCommandService, BookingLifecycleService, BookingServiceError};
 use app_routing::{
-    MovementInput, RoutePlanningService, VoyageCommandService, VoyageInput, VoyageQueryService,
-    VoyageSearchInput, VoyageServiceError,
+    MovementInput, RouteAdjustment, RoutePlanningService, VoyageCommandService, VoyageInput,
+    VoyageQueryService, VoyageSearchInput, VoyageServiceError,
 };
 use app_shipper::{
     RegisterShipperCommandService, RegisterShipperInput, ShipperKindInput, ShipperServiceError,
@@ -20,7 +20,8 @@ use axum::routing::{get, post};
 use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use domain_booking::{
     BookCargoCommand, CargoRepository, CargoType, Consignee, HazardousDeclaration,
-    RouteSpecification, ShipperExistenceChecker, TemperatureRequirement, TemperatureUnit, Weight,
+    NotificationPort, RouteSpecification, SelectedRouteView, ShipperExistenceChecker,
+    TemperatureRequirement, TemperatureUnit, Weight,
 };
 use domain_routing::{
     CargoSpecProvider, RouteCandidate, SelectedRouteRepository, Voyage, VoyageRepository,
@@ -125,6 +126,10 @@ pub struct AppState {
     pub cargo_spec_provider: Arc<dyn CargoSpecProvider>,
     /// 確定経路リポジトリ（US09・出力ポート）。
     pub selected_route_repo: Arc<dyn SelectedRouteRepository>,
+    /// 通知ポート（US06/US12/US13・送信＝記録・出力ポート）。
+    pub notification_port: Arc<dyn NotificationPort>,
+    /// 確定経路の読み取りビュー ACL（US11/US12・Booking → Routing 逆方向・出力ポート）。
+    pub selected_route_view: Arc<dyn SelectedRouteView>,
 }
 
 #[derive(Template)]
@@ -181,9 +186,36 @@ struct BookingShowTemplate {
     current_user: CurrentUser,
     booking_id: String,
     status: String,
+    status_label: String,
     origin: String,
     destination: String,
     cargo_type: String,
+    /// 状態別の操作可否（テンプレートのボタン活性条件）。
+    is_preliminary: bool,
+    is_route_designing: bool,
+    is_route_proposed: bool,
+    /// 確定経路の要約（US11 で紐付け済みなら表示）。
+    has_route: bool,
+    route_voyages: String,
+    route_transit_ports: String,
+    route_transit_days: i64,
+    route_arrival: String,
+}
+
+/// 予約状態の日本語ラベル。
+fn booking_status_label(status: &str) -> &'static str {
+    match status {
+        "PRELIMINARY" => "仮受付",
+        "ROUTE_DESIGNING" => "経路設計中",
+        "ROUTE_PROPOSED" => "経路提案中",
+        "CONFIRMED" => "予約確定",
+        "TRACKING_ISSUED" => "追跡番号発行済",
+        "IN_TRANSIT" => "輸送中",
+        "DELIVERED" => "配送完了",
+        "SETTLED" => "精算済",
+        "CANCELLED" => "キャンセル済",
+        _ => "不明",
+    }
 }
 
 #[derive(Template)]
@@ -255,6 +287,18 @@ pub fn web_router(state: AppState) -> Router {
         .route("/voyages/{voyage_number}", post(voyage_update))
         .route("/bookings/{booking_id}/route", get(route_design))
         .route("/bookings/{booking_id}/route/confirm", post(route_confirm))
+        .route("/bookings/{booking_id}/route/adjust", post(route_adjust))
+        .route(
+            "/bookings/{booking_id}/assign-routing",
+            post(booking_assign_routing),
+        )
+        .route(
+            "/bookings/{booking_id}/notify-route",
+            post(booking_notify_route),
+        )
+        .route("/bookings/{booking_id}/confirm", post(booking_confirm))
+        .route("/bookings/{booking_id}/revert", post(booking_revert))
+        .route("/bookings/{booking_id}/cancel", post(booking_cancel))
         .route("/billing/invoices", get(placeholder_billing))
         .route("/admin/discount-policies", get(placeholder_admin))
         .with_state(state)
@@ -521,22 +565,46 @@ async fn booking_show(
 
     use domain_booking::{BookingId, CargoRepository};
     let repo = state.cargo_repo.clone();
-    let id = match BookingId::parse(booking_id) {
+    let id = match BookingId::parse(&booking_id) {
         Ok(id) => id,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
     };
-    match repo.find_by_booking_id(&id).await {
-        Ok(Some(cargo)) => render(&BookingShowTemplate {
-            current_user,
-            booking_id: cargo.booking_id().as_str().to_string(),
-            status: cargo.status().as_str().to_string(),
-            origin: cargo.route_specification().origin().code().to_string(),
-            destination: cargo.route_specification().destination().code().to_string(),
-            cargo_type: cargo.cargo_type().as_str().to_string(),
-        }),
-        Ok(None) => StatusCode::NOT_FOUND.into_response(),
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
+    let cargo = match repo.find_by_booking_id(&id).await {
+        Ok(Some(cargo)) => cargo,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    let status = cargo.status().as_str().to_string();
+    // 確定経路の要約を読み取る（US11 で紐付け済みなら表示・BC 独立 ACL 経由）。
+    let route = state
+        .selected_route_view
+        .find_by_booking(&booking_id)
+        .await
+        .ok()
+        .flatten();
+    render(&BookingShowTemplate {
+        current_user,
+        booking_id: cargo.booking_id().as_str().to_string(),
+        status_label: booking_status_label(&status).to_string(),
+        is_preliminary: status == "PRELIMINARY",
+        is_route_designing: status == "ROUTE_DESIGNING",
+        is_route_proposed: status == "ROUTE_PROPOSED",
+        status,
+        origin: cargo.route_specification().origin().code().to_string(),
+        destination: cargo.route_specification().destination().code().to_string(),
+        cargo_type: cargo.cargo_type().as_str().to_string(),
+        has_route: route.is_some(),
+        route_voyages: route
+            .as_ref()
+            .map(|r| r.voyage_numbers.join(" → "))
+            .unwrap_or_default(),
+        route_transit_ports: route
+            .as_ref()
+            .map(|r| r.transit_ports.join(" → "))
+            .unwrap_or_default(),
+        route_transit_days: route.as_ref().map(|r| r.transit_days).unwrap_or_default(),
+        route_arrival: route.map(|r| r.expected_arrival).unwrap_or_default(),
+    })
 }
 
 // ===== Routing Context（航路管理・US24 / US25 / US07）=====
@@ -771,6 +839,12 @@ fn voyage_error_message(e: &VoyageServiceError) -> String {
         }
         VoyageServiceError::BookingNotFound(_) => "対象の予約が見つかりません".to_string(),
         VoyageServiceError::InvalidCandidate(_) => "選択した経路候補が不正です".to_string(),
+        VoyageServiceError::CandidateExpired => {
+            "期限超過の経路は確定できません。条件を調整してください".to_string()
+        }
+        VoyageServiceError::CandidateMismatch => {
+            "表示時と経路候補が変化しました。再度確認してください".to_string()
+        }
         VoyageServiceError::Repository(_) | VoyageServiceError::Acl(_) => {
             "処理に失敗しました".to_string()
         }
@@ -931,6 +1005,8 @@ struct RouteRow {
     transit_ports: Vec<String>,
     transit_days: i64,
     voyage_label: String,
+    /// 航海番号列のカンマ区切り（TOCTOU 照合の hidden 入力用）。
+    voyage_csv: String,
     arrival: String,
     within_deadline: bool,
 }
@@ -966,8 +1042,67 @@ fn route_row(c: &RouteCandidate, deadline: chrono::NaiveDate) -> RouteRow {
             .map(|v| v.as_str().to_string())
             .collect::<Vec<_>>()
             .join(" → "),
+        voyage_csv: c
+            .voyage_numbers()
+            .iter()
+            .map(|v| v.as_str().to_string())
+            .collect::<Vec<_>>()
+            .join(","),
         arrival: c.expected_arrival().format("%Y-%m-%d").to_string(),
         within_deadline: c.within_deadline(deadline),
+    }
+}
+
+/// US10: 経路条件調整フォーム入力。
+#[derive(Debug, Deserialize)]
+pub struct RouteAdjustForm {
+    /// 期限延長日数（空可）。
+    #[serde(default)]
+    extend_deadline_days: String,
+    /// 貨物種別の上書き（空可）。
+    #[serde(default)]
+    cargo_type: String,
+}
+
+/// US10: 条件を調整して経路候補を再算出する。
+async fn route_adjust(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): RouteDesignerUser,
+    Path(booking_id): Path<String>,
+    Form(form): Form<RouteAdjustForm>,
+) -> Response {
+    let service = RoutePlanningService::new(
+        state.voyage_repo.clone(),
+        state.cargo_spec_provider.clone(),
+        state.selected_route_repo.clone(),
+    );
+    let adjustment = RouteAdjustment {
+        extend_deadline_days: form
+            .extend_deadline_days
+            .trim()
+            .parse::<i64>()
+            .ok()
+            .filter(|d| *d != 0),
+        cargo_type_override: Some(form.cargo_type.trim().to_string()).filter(|s| !s.is_empty()),
+    };
+    match service.plan_routes_adjusted(&booking_id, &adjustment).await {
+        Ok((spec, candidates)) => render(&RouteDesignTemplate {
+            current_user,
+            error: false,
+            error_message: String::new(),
+            booking_id,
+            origin: spec.origin.code().to_string(),
+            destination: spec.destination.code().to_string(),
+            arrival_deadline: spec.arrival_deadline.format("%Y-%m-%d").to_string(),
+            cargo_type: spec.cargo_type.as_str().to_string(),
+            candidates: candidates
+                .iter()
+                .map(|c| route_row(c, spec.arrival_deadline))
+                .collect(),
+        }),
+        Err(VoyageServiceError::BookingNotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(VoyageServiceError::Domain(_)) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
@@ -1001,10 +1136,29 @@ async fn route_design(
     }
 }
 
-/// 経路確定フォーム入力（US09）。
+/// 経路確定フォーム入力（US09/US11）。
 #[derive(Debug, Deserialize)]
 pub struct RouteConfirmForm {
     candidate_index: usize,
+    /// 表示時の全候補の航海番号列（候補ごとにカンマ区切り・候補間はセミコロン区切り）。
+    /// 選択インデックスの要素を取り出して確定時の候補と照合する（TOCTOU 対策・IT3 Try #4）。
+    #[serde(default)]
+    expected_voyages_list: String,
+}
+
+/// `AppState` から予約ライフサイクルサービスを構成する（US06/US11/US12/US13）。
+fn lifecycle_service(
+    state: &AppState,
+) -> BookingLifecycleService<
+    Arc<dyn CargoRepository>,
+    Arc<dyn NotificationPort>,
+    Arc<dyn SelectedRouteView>,
+> {
+    BookingLifecycleService::new(
+        state.cargo_repo.clone(),
+        state.notification_port.clone(),
+        state.selected_route_view.clone(),
+    )
 }
 
 async fn route_confirm(
@@ -1018,16 +1172,121 @@ async fn route_confirm(
         state.cargo_spec_provider.clone(),
         state.selected_route_repo.clone(),
     );
-    // 選択候補を確定し確定経路を永続化する（US09）。BookingStatus の RouteProposed 反映は US11（IT4）。
+    // 選択インデックスに対応する候補の航海番号列を取り出す（TOCTOU 照合用）。
+    let expected: Vec<String> = form
+        .expected_voyages_list
+        .split(';')
+        .nth(form.candidate_index)
+        .unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect();
+    // US09: 選択候補を確定し確定経路を永続化する（期限超過拒否・候補同一性照合を含む）。
     match service
-        .confirm_route(&booking_id, form.candidate_index)
+        .confirm_route(&booking_id, form.candidate_index, &expected)
         .await
     {
-        Ok(()) => Redirect::to(&format!("/bookings/{booking_id}")).into_response(),
-        Err(VoyageServiceError::BookingNotFound(_)) => StatusCode::NOT_FOUND.into_response(),
-        Err(VoyageServiceError::InvalidCandidate(_)) => {
-            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+        Ok(()) => {}
+        Err(VoyageServiceError::BookingNotFound(_)) => {
+            return StatusCode::NOT_FOUND.into_response();
         }
+        Err(
+            VoyageServiceError::InvalidCandidate(_)
+            | VoyageServiceError::CandidateExpired
+            | VoyageServiceError::CandidateMismatch,
+        ) => return StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+    // US11: 予約を経路提案中へ遷移する（BC 独立のライフサイクルサービス経由）。
+    match lifecycle_service(&state).propose_route(&booking_id).await {
+        Ok(()) => Redirect::to(&format!("/bookings/{booking_id}")).into_response(),
+        Err(BookingServiceError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(BookingServiceError::Domain(_)) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+/// 予約状態遷移操作（US06/US12/US13）の POST ハンドラ共通処理。
+async fn lifecycle_action<F, Fut>(state: AppState, booking_id: String, action: F) -> Response
+where
+    F: FnOnce(
+        BookingLifecycleService<
+            Arc<dyn CargoRepository>,
+            Arc<dyn NotificationPort>,
+            Arc<dyn SelectedRouteView>,
+        >,
+        String,
+    ) -> Fut,
+    Fut: std::future::Future<Output = Result<(), BookingServiceError>>,
+{
+    match action(lifecycle_service(&state), booking_id.clone()).await {
+        Ok(()) => Redirect::to(&format!("/bookings/{booking_id}")).into_response(),
+        Err(BookingServiceError::NotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(BookingServiceError::Domain(_)) => StatusCode::UNPROCESSABLE_ENTITY.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// US06: 経路設計依頼（`Preliminary → RouteDesigning`＋経路設計者通知）。
+async fn booking_assign_routing(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): SalesUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    lifecycle_action(state, booking_id, |svc, id| async move {
+        svc.request_route_design(&id).await
+    })
+    .await
+}
+
+/// US12: 荷主への経路通知（確定経路要約から通知記録）。
+async fn booking_notify_route(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): SalesUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    lifecycle_action(state, booking_id, |svc, id| async move {
+        svc.notify_route_to_shipper(&id).await
+    })
+    .await
+}
+
+/// US13: 予約確定（`RouteProposed → Confirmed`＋追跡番号発行依頼通知）。
+async fn booking_confirm(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): SalesUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    lifecycle_action(state, booking_id, |svc, id| async move {
+        svc.confirm(&id).await
+    })
+    .await
+}
+
+/// US13: ルート変更差し戻し（`RouteProposed → RouteDesigning`）。
+async fn booking_revert(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): SalesUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    lifecycle_action(state, booking_id, |svc, id| async move {
+        svc.revert_to_route_designing(&id).await
+    })
+    .await
+}
+
+/// US13: 予約キャンセル（`→ Cancelled`＋荷主キャンセル確認通知）。
+async fn booking_cancel(
+    State(state): State<AppState>,
+    RoleGuard(_u, _): SalesUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    lifecycle_action(
+        state,
+        booking_id,
+        |svc, id| async move { svc.cancel(&id).await },
+    )
+    .await
 }

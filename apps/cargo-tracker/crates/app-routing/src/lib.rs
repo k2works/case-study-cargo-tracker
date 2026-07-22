@@ -84,6 +84,12 @@ pub enum VoyageServiceError {
     /// 選択された経路候補のインデックスが範囲外の場合。
     #[error("invalid route candidate index: {0}")]
     InvalidCandidate(usize),
+    /// 期限超過の候補を確定しようとした場合（誤確定防止・IT3 Try #3）。
+    #[error("cannot confirm a candidate that exceeds the arrival deadline")]
+    CandidateExpired,
+    /// 表示時と確定時で候補（航海番号列）が一致しない場合（TOCTOU 対策・IT3 Try #4）。
+    #[error("selected candidate no longer matches the displayed route")]
+    CandidateMismatch,
 }
 
 /// `YYYY-MM-DD` 文字列を `NaiveDate` にパースする（空・未指定は `None`）。
@@ -242,6 +248,25 @@ impl<R: VoyageRepository> VoyageQueryService<R> {
     }
 }
 
+/// 経路条件の調整入力（US10）。期限延長・貨物種別変更で再算出する。
+///
+/// 経由地追加はアルゴリズム改修を要するため本 IT ではスコープ外（計画リスク表参照）。
+#[derive(Debug, Clone, Default)]
+pub struct RouteAdjustment {
+    /// 到着期限を延長する日数（任意）。
+    pub extend_deadline_days: Option<i64>,
+    /// 貨物種別の上書き（`GENERAL`/`HAZARDOUS`/`REFRIGERATED`、任意）。
+    pub cargo_type_override: Option<String>,
+}
+
+impl RouteAdjustment {
+    /// 調整が何も指定されていない（元の条件と同じ）か。
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.extend_deadline_days.is_none() && self.cargo_type_override.is_none()
+    }
+}
+
 /// 経路候補算出ユースケース（US08）。予約番号から貨物仕様を取得し、
 /// 制約を満たす航海を検索して経路候補を算出する。
 pub struct RoutePlanningService<R, P, S>
@@ -274,19 +299,43 @@ where
 
     /// 経路候補から 1 件を選択して確定し、予約番号に紐づけて永続化する（US09）。
     ///
+    /// `expected_voyage_numbers` が空でない場合、確定時に再算出した候補の航海番号列と
+    /// 照合し、表示時と異なる場合は `CandidateMismatch` を返す（TOCTOU 対策・IT3 Try #4）。
+    /// 期限超過の候補は誤確定防止のため `CandidateExpired` で拒否する（IT3 Try #3）。
+    ///
     /// # Errors
     ///
     /// 予約が無い場合は `BookingNotFound`、選択インデックスが範囲外なら `InvalidCandidate`、
+    /// 期限超過候補は `CandidateExpired`、候補不一致は `CandidateMismatch`、
     /// 永続化失敗時は `Repository`。
     pub async fn confirm_route(
         &self,
         booking_id: &str,
         candidate_index: usize,
+        expected_voyage_numbers: &[String],
     ) -> Result<(), VoyageServiceError> {
-        let (_spec, candidates) = self.plan_routes(booking_id).await?;
+        let (spec, candidates) = self.plan_routes(booking_id).await?;
         let selected = candidates
             .get(candidate_index)
             .ok_or(VoyageServiceError::InvalidCandidate(candidate_index))?;
+
+        // Try #4: 表示時と確定時で候補（航海番号列）が一致するか照合する。
+        if !expected_voyage_numbers.is_empty() {
+            let actual: Vec<String> = selected
+                .voyage_numbers()
+                .iter()
+                .map(|n| n.as_str().to_string())
+                .collect();
+            if actual != expected_voyage_numbers {
+                return Err(VoyageServiceError::CandidateMismatch);
+            }
+        }
+
+        // Try #3: 期限超過候補の確定を拒否する（誤確定防止）。
+        if !selected.within_deadline(spec.arrival_deadline) {
+            return Err(VoyageServiceError::CandidateExpired);
+        }
+
         self.selected_routes.save(booking_id, selected).await?;
         Ok(())
     }
@@ -317,17 +366,58 @@ where
         booking_id: &str,
     ) -> Result<(CargoSpec, Vec<RouteCandidate>), VoyageServiceError> {
         let spec = self.cargo_spec(booking_id).await?;
-        // 貨物種別に対応し、出発地から乗れる可能性のある航海を広めに取得する
-        // （具体的な接続評価はドメインサービスが行う）。
-        let voyages = self.repository.find_all().await?;
-        let candidates = self.calculator.calculate(
+        let candidates = self.calculate_for_spec(&spec).await?;
+        Ok((spec, candidates))
+    }
+
+    /// 条件を調整して経路候補を再算出する（US10）。
+    ///
+    /// 期限延長・貨物種別変更を貨物仕様に適用してから経路候補を算出する。調整後の
+    /// 貨物仕様と候補を返し、0 件なら呼び出し側が条件協議依頼へ導く。
+    ///
+    /// # Errors
+    ///
+    /// 予約が無い場合は `BookingNotFound`、貨物種別が不正なら `Domain`、
+    /// 永続化・ACL 失敗時はそれぞれ `Repository`/`Acl`。
+    pub async fn plan_routes_adjusted(
+        &self,
+        booking_id: &str,
+        adjustment: &RouteAdjustment,
+    ) -> Result<(CargoSpec, Vec<RouteCandidate>), VoyageServiceError> {
+        let mut spec = self.cargo_spec(booking_id).await?;
+        if let Some(days) = adjustment.extend_deadline_days {
+            spec.arrival_deadline += chrono::Duration::days(days);
+        }
+        if let Some(ct) = adjustment.cargo_type_override.as_deref() {
+            spec.cargo_type = CargoType::parse(ct)?;
+        }
+        let candidates = self.calculate_for_spec(&spec).await?;
+        Ok((spec, candidates))
+    }
+
+    /// 貨物仕様から経路候補を算出する内部処理。
+    ///
+    /// IT3 Try #2: `find_all` 全件ロードを廃し、貨物種別で SQL 絞り込みした航海のみを
+    /// 探索対象にする（多段接続のため出発地では絞れないが、貨物種別は安全に絞れる）。
+    async fn calculate_for_spec(
+        &self,
+        spec: &CargoSpec,
+    ) -> Result<Vec<RouteCandidate>, VoyageServiceError> {
+        let criteria = VoyageSearchCriteria {
+            origin: None,
+            destination: None,
+            cargo_type: Some(spec.cargo_type),
+            departure_from: None,
+            departure_to: None,
+        };
+        let voyages = self.repository.search(&criteria).await?;
+        Ok(self.calculator.calculate(
             &spec.origin,
             &spec.destination,
             spec.arrival_deadline,
             spec.cargo_type,
             &voyages,
-        );
-        Ok((spec, candidates))
+        ))
     }
 }
 
@@ -637,8 +727,91 @@ mod tests {
         let selected = InMemorySelectedRoutes::default();
         let service = RoutePlanningService::new(&repo, provider, &selected);
 
-        service.confirm_route("BKG-1", 0).await.expect("confirm");
+        service
+            .confirm_route("BKG-1", 0, &[])
+            .await
+            .expect("confirm");
         assert!(selected.exists("BKG-1").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn 期限超過候補の確定は拒否される() {
+        let repo = InMemoryVoyageRepository::default();
+        let cmd = VoyageCommandService::new(&repo);
+        cmd.register(input("V0001", "JPOSA", "USLAX", vec!["GENERAL"]))
+            .await
+            .unwrap();
+        // 航海到着（2026-04-14）より前の期限にして期限超過候補を作る。
+        let provider = FixedCargoSpecProvider {
+            booking_id: "BKG-1".to_string(),
+            spec: spec("JPOSA", "USLAX", "2026-04-10", CargoType::General),
+        };
+        let selected = InMemorySelectedRoutes::default();
+        let service = RoutePlanningService::new(&repo, provider, &selected);
+
+        let err = service.confirm_route("BKG-1", 0, &[]).await.unwrap_err();
+        assert!(matches!(err, VoyageServiceError::CandidateExpired));
+        assert!(!selected.exists("BKG-1").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn 表示時と異なる航海番号列の確定は拒否される() {
+        let repo = InMemoryVoyageRepository::default();
+        let cmd = VoyageCommandService::new(&repo);
+        cmd.register(input("V0001", "JPOSA", "USLAX", vec!["GENERAL"]))
+            .await
+            .unwrap();
+        let provider = FixedCargoSpecProvider {
+            booking_id: "BKG-1".to_string(),
+            spec: spec("JPOSA", "USLAX", "2026-04-20", CargoType::General),
+        };
+        let selected = InMemorySelectedRoutes::default();
+        let service = RoutePlanningService::new(&repo, provider, &selected);
+
+        // 表示時は別の航海（V9999）だったと主張 → 不一致で拒否。
+        let err = service
+            .confirm_route("BKG-1", 0, &["V9999".to_string()])
+            .await
+            .unwrap_err();
+        assert!(matches!(err, VoyageServiceError::CandidateMismatch));
+
+        // 実際の候補（V0001）と一致すれば確定できる。
+        service
+            .confirm_route("BKG-1", 0, &["V0001".to_string()])
+            .await
+            .expect("confirm");
+        assert!(selected.exists("BKG-1").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn 期限延長で再算出すると期限内候補になる() {
+        let repo = InMemoryVoyageRepository::default();
+        let cmd = VoyageCommandService::new(&repo);
+        cmd.register(input("V0001", "JPOSA", "USLAX", vec!["GENERAL"]))
+            .await
+            .unwrap();
+        // 期限超過（到着 04-14 に対し期限 04-10）。
+        let provider = FixedCargoSpecProvider {
+            booking_id: "BKG-1".to_string(),
+            spec: spec("JPOSA", "USLAX", "2026-04-10", CargoType::General),
+        };
+        let selected = InMemorySelectedRoutes::default();
+        let service = RoutePlanningService::new(&repo, provider, &selected);
+
+        // 調整前は期限超過。
+        let (s0, before) = service.plan_routes("BKG-1").await.unwrap();
+        assert!(!before[0].within_deadline(s0.arrival_deadline));
+
+        // 10 日延長すると期限内になる。
+        let adjustment = RouteAdjustment {
+            extend_deadline_days: Some(10),
+            cargo_type_override: None,
+        };
+        let (s1, after) = service
+            .plan_routes_adjusted("BKG-1", &adjustment)
+            .await
+            .unwrap();
+        assert!(after[0].within_deadline(s1.arrival_deadline));
     }
 
     #[tokio::test]
@@ -655,7 +828,7 @@ mod tests {
         let selected = InMemorySelectedRoutes::default();
         let service = RoutePlanningService::new(&repo, provider, &selected);
 
-        let err = service.confirm_route("BKG-1", 99).await.unwrap_err();
+        let err = service.confirm_route("BKG-1", 99, &[]).await.unwrap_err();
         assert!(matches!(err, VoyageServiceError::InvalidCandidate(_)));
     }
 }

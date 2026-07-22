@@ -20,6 +20,10 @@ fn app_state(pool: PgPool) -> AppState {
         voyage_repo: Arc::new(SqlxVoyageRepository::new(pool.clone())),
         cargo_spec_provider: Arc::new(SqlxCargoSpecProvider::new(pool.clone())),
         selected_route_repo: Arc::new(SqlxSelectedRouteRepository::new(pool.clone())),
+        notification_port: Arc::new(infra_persistence::SqlxNotificationRepository::new(
+            pool.clone(),
+        )),
+        selected_route_view: Arc::new(infra_persistence::SqlxSelectedRouteView::new(pool.clone())),
         pool,
     }
 }

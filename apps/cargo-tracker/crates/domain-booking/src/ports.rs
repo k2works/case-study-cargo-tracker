@@ -39,6 +39,32 @@ pub trait ShipperExistenceChecker: Send + Sync {
     async fn exists(&self, shipper_id: &ShipperId) -> Result<bool, AclError>;
 }
 
+/// 確定経路の読み取り要約（荷主通知 US12 の通知内容組み立てに使用）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelectedRouteSummary {
+    /// 航海番号列（区間順）。
+    pub voyage_numbers: Vec<String>,
+    /// 経由港の UN/LOCODE 列（出発地→各積替港→目的地）。
+    pub transit_ports: Vec<String>,
+    /// 所要日数（最初の積載から最後の荷揚までの日数）。
+    pub transit_days: i64,
+    /// 到着予定日（最後の区間の荷揚日、`YYYY-MM-DD`）。
+    pub expected_arrival: String,
+}
+
+/// Routing Context への逆方向 ACL ポート。確定経路の要約を読み取る（US11/US12）。
+///
+/// Booking Context は Routing Context を直接参照せず、この trait を通じてのみ確定経路を得る
+/// （IT3 の `CargoSpecProvider` と対をなす逆方向 ACL）。
+#[async_trait::async_trait]
+pub trait SelectedRouteView: Send + Sync {
+    /// 予約番号に紐づく確定経路の要約を返す（未確定なら `None`）。
+    async fn find_by_booking(
+        &self,
+        booking_id: &str,
+    ) -> Result<Option<SelectedRouteSummary>, AclError>;
+}
+
 /// `Arc<dyn CargoRepository>` へ委譲するブランケット実装（ADR-0003）。
 #[async_trait::async_trait]
 impl CargoRepository for std::sync::Arc<dyn CargoRepository> {
@@ -55,5 +81,16 @@ impl CargoRepository for std::sync::Arc<dyn CargoRepository> {
 impl ShipperExistenceChecker for std::sync::Arc<dyn ShipperExistenceChecker> {
     async fn exists(&self, shipper_id: &ShipperId) -> Result<bool, AclError> {
         (**self).exists(shipper_id).await
+    }
+}
+
+/// `Arc<dyn SelectedRouteView>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl SelectedRouteView for std::sync::Arc<dyn SelectedRouteView> {
+    async fn find_by_booking(
+        &self,
+        booking_id: &str,
+    ) -> Result<Option<SelectedRouteSummary>, AclError> {
+        (**self).find_by_booking(booking_id).await
     }
 }

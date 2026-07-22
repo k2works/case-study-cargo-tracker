@@ -33,6 +33,10 @@ fn app_state(pool: PgPool) -> AppState {
         voyage_repo: Arc::new(SqlxVoyageRepository::new(pool.clone())),
         cargo_spec_provider: Arc::new(SqlxCargoSpecProvider::new(pool.clone())),
         selected_route_repo: Arc::new(SqlxSelectedRouteRepository::new(pool.clone())),
+        notification_port: Arc::new(infra_persistence::SqlxNotificationRepository::new(
+            pool.clone(),
+        )),
+        selected_route_view: Arc::new(infra_persistence::SqlxSelectedRouteView::new(pool.clone())),
         pool,
     }
 }
@@ -82,7 +86,7 @@ async fn seed_cargo(pool: &PgPool, booking_id: &str) {
             (booking_id, shipper_id, cargo_type, weight, origin_unlocode,
              destination_unlocode, arrival_deadline, consignee_name, consignee_email, booking_status)
           VALUES ($1, $2, 'GENERAL', 1000, 'JPOSA', 'USLAX', DATE '2026-04-20',
-                  'LA Trading', 'consignee@example.com', 'PRELIMINARY')",
+                  'LA Trading', 'consignee@example.com', 'ROUTE_DESIGNING')",
     )
     .bind(booking_id)
     .bind(shipper_id)
