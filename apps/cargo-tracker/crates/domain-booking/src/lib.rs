@@ -5,11 +5,13 @@
 
 pub mod aggregate;
 pub mod error;
+pub mod notification;
 pub mod ports;
 pub mod value_objects;
 
 pub use aggregate::{BookCargoCommand, Cargo};
 pub use error::BookingError;
+pub use notification::{Notification, NotificationPort, NotificationType};
 pub use ports::{AclError, CargoRepository, RepositoryError, ShipperExistenceChecker};
 pub use value_objects::{
     BookingId, BookingStatus, CargoType, Consignee, Description, Dimensions, HazardousDeclaration,

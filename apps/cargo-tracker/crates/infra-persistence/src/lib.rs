@@ -6,6 +6,7 @@
 
 pub mod cargo_repository;
 pub mod cargo_spec_provider;
+pub mod notification_repository;
 pub mod selected_route_repository;
 pub mod shipper_query;
 pub mod shipper_repository;
@@ -14,6 +15,7 @@ pub mod voyage_repository;
 
 pub use cargo_repository::{SqlxCargoRepository, SqlxShipperExistenceChecker};
 pub use cargo_spec_provider::SqlxCargoSpecProvider;
+pub use notification_repository::SqlxNotificationRepository;
 pub use selected_route_repository::SqlxSelectedRouteRepository;
 pub use shipper_query::SqlxShipperQueryAdapter;
 pub use shipper_repository::SqlxShipperRepository;
