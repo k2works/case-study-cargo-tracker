@@ -18,6 +18,7 @@
 | IT1 予約基盤 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了（機能スコープ・全テスト green） |
 | IT2 航海スケジュール | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [iteration_report-2.md](iteration_report-2.md) | 完了（US24・US25・US07・レビュー済・DIP 回復 ADR-0003） |
 | IT3 経路算出・選択 | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 完了（US08 経路候補算出・US09 経路選択確定・レビュー済・CI 品質ゲート導入） |
+| IT4 経路連携・予約確定 | [iteration_plan-4.md](iteration_plan-4.md) | - | - | 計画済み（US06・US10・US11・US12・US13／予約状態機械・通知・経路紐付け） |
 
 イテレーション開始時に行を追加します。
 
