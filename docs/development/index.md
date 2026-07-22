@@ -17,7 +17,7 @@
 |---------------|------|-----------|-----------|------|
 | IT1 予約基盤 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了（機能スコープ・全テスト green） |
 | IT2 航海スケジュール | [iteration_plan-2.md](iteration_plan-2.md) | [retrospective-2.md](retrospective-2.md) | [iteration_report-2.md](iteration_report-2.md) | 完了（US24・US25・US07・レビュー済・DIP 回復 ADR-0003） |
-| IT3 経路算出・選択 | [iteration_plan-3.md](iteration_plan-3.md) | - | - | 計画済み（US08 経路候補算出・US09 経路選択確定） |
+| IT3 経路算出・選択 | [iteration_plan-3.md](iteration_plan-3.md) | [retrospective-3.md](retrospective-3.md) | [iteration_report-3.md](iteration_report-3.md) | 完了（US08 経路候補算出・US09 経路選択確定・レビュー済・CI 品質ゲート導入） |
 
 イテレーション開始時に行を追加します。
 
@@ -26,14 +26,16 @@
 | イテレーション | 計画 SP | 実績 SP | 達成率 |
 |---------------|---------|---------|--------|
 | IT1 | 16 | 16 | 100% |
-| **累計** | **97** | **16** | **16%** |
+| IT2 | 11 | 11 | 100% |
+| IT3 | 11 | 11 | 100% |
+| **累計** | **97** | **38** | **39%** |
 
 ### フェーズ進捗
 
 | フェーズ | 内容 | SP | 完了 SP | 状態 |
 |---------|------|-----|---------|------|
 | Phase 1 | 予約基盤（IT1） | 16 | 16 | 完了 |
-| Phase 2 | コア輸送フロー（IT2-5） | 50 | 0 | 未着手 |
+| Phase 2 | コア輸送フロー（IT2-5） | 50 | 22 | 進行中（IT2・IT3 完了） |
 | Phase 3 | 見積・例外対応・精算（IT6-8） | 31 | 0 | 未着手 |
 
 ### リリース完了報告書
