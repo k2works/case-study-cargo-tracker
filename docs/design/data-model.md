@@ -414,8 +414,15 @@ entity "voyage\n（航海）" as voyage {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * voyage_number : VARCHAR(20) <<UK, NOT NULL>>
+  * vessel_name : VARCHAR(100) <<NOT NULL>>
+  * carrier : VARCHAR(100) <<NOT NULL>>
   * created_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
   * updated_at : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+}
+
+entity "voyage_cargo_type\n（航海対応貨物種別）" as voyage_cargo_type {
+  * voyage_id : BIGINT <<PK, FK, NOT NULL>>
+  * cargo_type : VARCHAR(30) <<PK, NOT NULL>>
 }
 
 entity "carrier_movement\n（運送区間）" as carrier_movement {
@@ -432,6 +439,7 @@ entity "carrier_movement\n（運送区間）" as carrier_movement {
 }
 
 voyage ||--o{ carrier_movement : "運送区間を持つ"
+voyage ||--o{ voyage_cargo_type : "対応貨物種別を持つ"
 
 @enduml
 ```

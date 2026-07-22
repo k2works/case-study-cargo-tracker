@@ -224,11 +224,15 @@ RouteLeg --> Voyage : 参照（VoyageNumber）
 > **注（BC 独立性・設計への反映が必要）**:
 > - `RouteLeg` は Routing Context 固有の値オブジェクトとして新規定義する。Booking Context の `Leg`（`CargoItinerary` 構成要素）とフィールド構成（voyage・load/unload location・load/unload time）は同形だが、**domain-routing → domain-booking の依存を避けるため直接共有しない**（IT2 で `CargoType` を Routing 固有型にした判断と一貫）。共有カーネル `Location`・`VoyageNumber`（Routing）は再利用する。両者の同形性と関係は domain-model.md に整理する。
 > - `RouteCandidate` は現行 domain-model.md では Estimation Context の要素として定義されているが、IT3 では Routing Context の経路探索結果として実装する。見積時の候補（Estimation）と経路設計時の候補（Routing）の関係を domain-model.md に整理する。
+> - **新規ドメインサービス `RouteCandidateCalculator` と値オブジェクト `RouteLeg`・`RouteCandidate`（Routing）を domain-model.md の Routing Context 要素表に定義行として追加する**（集約・VO だけでなくドメインサービスも要素表に載せるドリフト再発防止）。
+> - **ナビゲーション上の位置**: 経路設計・割り当て画面（`/bookings/{bookingId}/route`）は navbar のトップメニュー項目ではなく、予約詳細（`/bookings/{bookingId}`）配下のサブ画面である。navbar・ダッシュボードへの新規メニュー追加は不要で、ナビ整合はタスク 1.8 の「予約詳細 → 経路設計の導線＋検証テスト」で担保する。
 > - **費用**は Voyage に運賃データが無いため、IT3 では所要日数・経由港・航海番号・到着予定を算出し、費用は Billing/Estimation 連携（後続）に委ねる旨を注記する。
 
 ### データモデル（Routing Context・IT3）
 
-> 経路候補は算出結果（一時データ）であり、確定した経路のみを永続化する。確定経路は `selected_route` テーブル（booking_id・経路の Leg 列）で保持する。IT3 で data-model.md に追加する。
+> 経路候補は算出結果（一時データ）であり、確定した経路のみを永続化する。確定経路は `selected_route` テーブル（booking_id・経路の区間列）で保持する。IT3 で data-model.md に追加する。
+>
+> **命名規約の対応**: `selected_route`（親）/ `selected_route_leg`（子）は IT2 の `voyage`（親）/ `carrier_movement`（子）と同じ規約に従う — 単数形・サロゲート PK（`BIGSERIAL id`）+ 業務キー UK（`selected_route.booking_id`）、子は親 `id` を FK 参照、区間順序は `seq_number`、港湾は `*_unlocode`（`location.unlocode` 参照）、監査カラム `created_at`/`updated_at`。`selected_route_leg` は `carrier_movement` の対応物にあたる。
 
 ```plantuml
 @startuml
