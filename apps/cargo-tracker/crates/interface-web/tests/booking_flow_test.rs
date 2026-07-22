@@ -39,6 +39,11 @@ use tower_sessions::{MemoryStore, SessionManagerLayer};
 use domain_shipper::{Email, Shipper, ShipperKind, ShipperName, ShipperRepository};
 
 async fn setup() -> (Router, ShipperId, ContainerAsync<Postgres>) {
+    let (app, shipper_id, _pool, container) = setup_full().await;
+    (app, shipper_id, container)
+}
+
+async fn setup_full() -> (Router, ShipperId, PgPool, ContainerAsync<Postgres>) {
     let container = Postgres::default()
         .with_tag("16-alpine")
         .start()
@@ -64,8 +69,9 @@ async fn setup() -> (Router, ShipperId, ContainerAsync<Postgres>) {
         .save(&shipper)
         .await
         .expect("seed shipper");
-    let app = web_router(app_state(pool)).layer(SessionManagerLayer::new(MemoryStore::default()));
-    (app, shipper_id, container)
+    let app =
+        web_router(app_state(pool.clone())).layer(SessionManagerLayer::new(MemoryStore::default()));
+    (app, shipper_id, pool, container)
 }
 
 async fn login(app: &Router) -> String {
@@ -227,6 +233,177 @@ async fn 冷凍貨物を温度条件付きで登録できる() {
         .await
         .unwrap();
     assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+}
+
+/// 指定状態の cargo を SQL で直接 seed する。
+async fn seed_cargo_with_status(
+    pool: &PgPool,
+    shipper_id: &ShipperId,
+    booking_id: &str,
+    status: &str,
+) {
+    sqlx::query(
+        r"INSERT INTO cargo
+            (booking_id, shipper_id, cargo_type, weight, origin_unlocode,
+             destination_unlocode, arrival_deadline, consignee_name, consignee_email, booking_status)
+          VALUES ($1, $2, 'GENERAL', 1000, 'JPOSA', 'DEHAM', DATE '2026-06-05',
+                  'Hamburg Handels', 'import@hamburg.example', $3)",
+    )
+    .bind(booking_id)
+    .bind(shipper_id.value())
+    .bind(status)
+    .execute(pool)
+    .await
+    .expect("seed cargo");
+}
+
+/// 確定経路（2 区間）を SQL で直接 seed する。
+async fn seed_selected_route(pool: &PgPool, booking_id: &str) {
+    let route_id: i64 = sqlx::query_scalar(
+        r"INSERT INTO selected_route (booking_id, status) VALUES ($1, 'SELECTED') RETURNING id",
+    )
+    .bind(booking_id)
+    .fetch_one(pool)
+    .await
+    .expect("seed selected_route");
+    sqlx::query(
+        r"INSERT INTO selected_route_leg
+            (selected_route_id, voyage_number, load_location_unlocode, unload_location_unlocode,
+             load_time, unload_time, seq_number)
+          VALUES
+            ($1, 'V0002', 'JPOSA', 'SGSIN', TIMESTAMPTZ '2026-05-02 09:00:00+09', TIMESTAMPTZ '2026-05-09 18:00:00+08', 1),
+            ($1, 'V0003', 'SGSIN', 'DEHAM', TIMESTAMPTZ '2026-05-11 10:00:00+08', TIMESTAMPTZ '2026-05-30 16:00:00+02', 2)",
+    )
+    .bind(route_id)
+    .execute(pool)
+    .await
+    .expect("seed selected_route_leg");
+}
+
+async fn post(app: &Router, path: &str, cookie: &str) -> axum::response::Response {
+    app.clone()
+        .oneshot(
+            Request::post(path)
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap()
+}
+
+async fn get_html(app: &Router, path: &str, cookie: &str) -> String {
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::get(path)
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    String::from_utf8(
+        resp.into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap()
+}
+
+#[tokio::test]
+async fn 経路設計依頼で予約が経路設計中になる() {
+    let (app, shipper_id, _c) = setup().await;
+    let cookie = login(&app).await;
+    // 仮受付予約を作成。
+    let create = app
+        .clone()
+        .oneshot(
+            Request::post("/bookings")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie.clone())
+                .body(Body::from(form_body(&shipper_id)))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let location = create
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let resp = post(&app, &format!("{location}/assign-routing"), &cookie).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+
+    let html = get_html(&app, &location, &cookie).await;
+    assert!(html.contains(r#"data-status="ROUTE_DESIGNING""#));
+}
+
+#[tokio::test]
+async fn 経路提案中の予約は荷主通知と確定ができる() {
+    let (app, shipper_id, pool, _c) = setup_full().await;
+    let cookie = login(&app).await;
+    // 経路提案中の予約＋確定経路（2 区間）を seed する。
+    seed_cargo_with_status(&pool, &shipper_id, "BKG-2001", "ROUTE_PROPOSED").await;
+    seed_selected_route(&pool, "BKG-2001").await;
+
+    // 詳細に選択ルートと確定ボタンが表示される。
+    let html = get_html(&app, "/bookings/BKG-2001", &cookie).await;
+    assert!(html.contains("selected-route"));
+    assert!(html.contains("DEHAM"));
+    assert!(html.contains("confirm-btn"));
+
+    // US12: 荷主通知（通知が記録される）。
+    let notify = post(&app, "/bookings/BKG-2001/notify-route", &cookie).await;
+    assert_eq!(notify.status(), StatusCode::SEE_OTHER);
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM notification WHERE booking_id = 'BKG-2001' AND notification_type = 'ROUTE_NOTIFIED_TO_SHIPPER'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(count, 1);
+
+    // US13: 予約確定（ROUTE_PROPOSED → CONFIRMED）。
+    let confirm = post(&app, "/bookings/BKG-2001/confirm", &cookie).await;
+    assert_eq!(confirm.status(), StatusCode::SEE_OTHER);
+    let html = get_html(&app, "/bookings/BKG-2001", &cookie).await;
+    assert!(html.contains(r#"data-status="CONFIRMED""#));
+}
+
+#[tokio::test]
+async fn 仮受付の予約は確定できず422になる() {
+    let (app, shipper_id, pool, _c) = setup_full().await;
+    let cookie = login(&app).await;
+    seed_cargo_with_status(&pool, &shipper_id, "BKG-2002", "PRELIMINARY").await;
+    // 仮受付から直接確定は不正遷移。
+    let resp = post(&app, "/bookings/BKG-2002/confirm", &cookie).await;
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+#[tokio::test]
+async fn 経路提案中の予約はキャンセルできる() {
+    let (app, shipper_id, pool, _c) = setup_full().await;
+    let cookie = login(&app).await;
+    seed_cargo_with_status(&pool, &shipper_id, "BKG-2003", "ROUTE_PROPOSED").await;
+    let resp = post(&app, "/bookings/BKG-2003/cancel", &cookie).await;
+    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
+    let html = get_html(&app, "/bookings/BKG-2003", &cookie).await;
+    assert!(html.contains(r#"data-status="CANCELLED""#));
+    let count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM notification WHERE booking_id = 'BKG-2003' AND notification_type = 'BOOKING_CANCELLED'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(count, 1);
 }
 
 #[tokio::test]
