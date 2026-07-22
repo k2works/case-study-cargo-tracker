@@ -11,6 +11,7 @@ members = [
     "crates/domain-estimation",
     "crates/app-booking",
     "crates/app-shipper",
+    "crates/app-routing",
     "crates/app-estimation",
     "crates/infra-persistence",
     "crates/infra-external",
@@ -37,6 +38,7 @@ domain-billing = { path = "crates/domain-billing" }
 domain-estimation = { path = "crates/domain-estimation" }
 app-booking = { path = "crates/app-booking" }
 app-shipper = { path = "crates/app-shipper" }
+app-routing = { path = "crates/app-routing" }
 app-estimation = { path = "crates/app-estimation" }
 infra-persistence = { path = "crates/infra-persistence" }
 infra-external = { path = "crates/infra-external" }
