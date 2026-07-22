@@ -1,0 +1,75 @@
+name: Rust CI
+
+# Cargo Tracker（Rust 版）の品質ゲート（IT3 Try #4）。
+# fmt・clippy・テスト（testcontainers 統合含む）・カバレッジ計測を PR/push で実行する。
+on:
+  push:
+    branches: ["rust/take-1", "main"]
+    paths:
+      - "apps/cargo-tracker/**"
+      - ".github/workflows/rust-ci.yml"
+  pull_request:
+    paths:
+      - "apps/cargo-tracker/**"
+      - ".github/workflows/rust-ci.yml"
+
+# 同一 ref の実行途中ジョブは新しい push でキャンセルする。
+concurrency:
+  group: rust-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # 統合テストは testcontainers-rs が Docker で PostgreSQL を起動するため DB サービス定義は不要。
+
+defaults:
+  run:
+    working-directory: apps/cargo-tracker
+
+jobs:
+  lint:
+    name: fmt + clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/cargo-tracker
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+      - name: cargo clippy -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: test（単体 + testcontainers 統合）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/cargo-tracker
+      - name: cargo test --workspace
+        run: cargo test --workspace
+
+  coverage:
+    name: coverage gate（ドメイン層 85%）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/cargo-tracker
+      # 当該イテレーションで作り込む Routing ドメイン層のカバレッジ下限（行 85%）を強制する。
+      # domain-booking / domain-shipper（IT1 実装）は ports.rs の trait 定義・Arc 委譲などが
+      # 統合テスト側で担保され単体カバレッジが低いため、レガシー改善は別トラックとし当ゲートの
+      # 対象外にする（テスト戦略のカバレッジ目標は維持しつつ、新規コードにゲートを効かせる方針）。
+      - name: cargo llvm-cov（domain-routing 行 85% 下限）
+        run: cargo llvm-cov --summary-only --fail-under-lines 85 -p domain-routing

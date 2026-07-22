@@ -828,6 +828,37 @@ CREATE TABLE shipper (
 
 ---
 
+### `selected_route`（確定経路）
+
+> **注記（IT3 追加）**: 経路設計者が経路候補から選択・確定した経路（US09）を予約番号に紐づけて永続化する。経路候補（算出結果）は一時データのため永続化せず、確定経路のみを保持する。`voyage`/`carrier_movement` と同じ規約（単数形・サロゲート PK + 業務キー UK・子は `id` 参照）に従う。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `booking_id` | `VARCHAR(20)` | `UK, NOT NULL` | 予約 ID（1 予約に 1 確定経路） |
+| `status` | `VARCHAR(20)` | `NOT NULL, DEFAULT 'SELECTED'` | 経路状態（`SELECTED`） |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `selected_route_leg`（確定経路区間）
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
+| `selected_route_id` | `BIGINT` | `FK → selected_route.id, NOT NULL` | 親確定経路 ID（CASCADE 削除） |
+| `voyage_number` | `VARCHAR(20)` | `NOT NULL` | 区間で使用する航海番号 |
+| `load_location_unlocode` | `VARCHAR(5)` | `NOT NULL` | 積込地（UN/LOCODE） |
+| `unload_location_unlocode` | `VARCHAR(5)` | `NOT NULL` | 荷降地（UN/LOCODE） |
+| `load_time` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 積込日時 |
+| `unload_time` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | 荷降日時 |
+| `seq_number` | `INTEGER` | `NOT NULL` | 区間順序（1 始まり） |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
 ### `tracking_activity`（追跡レコード）
 
 | カラム名 | データ型 | 制約 | 説明 |

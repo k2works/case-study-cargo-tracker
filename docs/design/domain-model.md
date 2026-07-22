@@ -831,7 +831,13 @@ pub trait VoyageRepository: Send + Sync {
 | 値オブジェクト | Schedule | 航海スケジュール | 時系列の CarrierMovement 一覧を保持 |
 | エンティティ | CarrierMovement | 運送区間 | 出発地・到着地・出発時刻・到着時刻の区間単位 |
 | 共有カーネル参照 | Location | 位置情報 | UN/LOCODE で識別される港湾・地点 |
-| リポジトリポート | VoyageRepository | 航海リポジトリ | `save` / `find_by_voyage_number` |
+| 値オブジェクト | CargoType | 貨物種別 | Routing 固有の対応貨物種別（GENERAL/HAZARDOUS/REFRIGERATED。BC 独立のため Booking の同名型と共有しない・IT2） |
+| 値オブジェクト | RouteLeg | 経路区間 | 経路候補の 1 区間（航海番号・積込/荷降地・積込/荷降時刻）。Booking の Leg と同形だが BC 独立のため Routing 固有型として定義（IT3） |
+| 値オブジェクト | RouteCandidate | 経路候補 | 連結した RouteLeg 列。所要日数・経由港・航海番号列・到着予定・期限内判定を提供（IT3。Estimation の RouteCandidate とは別物） |
+| ドメインサービス | RouteCandidateCalculator | 経路探索サービス | 登録済み航海から直行→単純接続→多段接続を段階探索し推奨順の経路候補を算出（US08・IT3） |
+| リポジトリポート | VoyageRepository | 航海リポジトリ | `save` / `find_by_voyage_number` / `search`（出発港・到着港・貨物種別・出発期間） |
+| リポジトリポート | SelectedRouteRepository | 確定経路リポジトリ | 確定経路（RouteCandidate）を予約番号に紐づけ永続化（US09・IT3） |
+| ACL ポート | CargoSpecProvider | 貨物仕様プロバイダ | 予約番号から貨物仕様（出発地・目的地・期限・貨物種別）を射影。Booking を直接参照しない腐敗防止層（US07/US08・IT3） |
 
 ### ビジネスルール
 
