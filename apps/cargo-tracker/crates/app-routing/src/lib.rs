@@ -3,10 +3,11 @@
 //! 航海スケジュールの登録（US24）・更新（US25）・検索（US07）ユースケースを提供する。
 //! ドメインの出力ポート `VoyageRepository` にのみ依存し、インフラ実装には依存しない。
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use domain_routing::{
-    CargoType, Carrier, CarrierMovement, RepositoryError, RoutingError, Schedule, VesselName,
-    Voyage, VoyageNumber, VoyageRepository, VoyageSearchCriteria,
+    CargoSpec, CargoSpecProvider, CargoType, Carrier, CarrierMovement, RepositoryError,
+    RouteCandidate, RouteCandidateCalculator, RoutingError, Schedule, VesselName, Voyage,
+    VoyageNumber, VoyageRepository, VoyageSearchCriteria,
 };
 use shared_kernel::{Location, SharedKernelError};
 
@@ -47,6 +48,10 @@ pub struct VoyageSearchInput {
     pub destination: Option<String>,
     /// 対応貨物種別（任意）。
     pub cargo_type: Option<String>,
+    /// 出発日の下限（`YYYY-MM-DD`、任意・US07）。
+    pub departure_from: Option<String>,
+    /// 出発日の上限（`YYYY-MM-DD`、任意・US07）。
+    pub departure_to: Option<String>,
 }
 
 /// 航海サービスのエラー。
@@ -67,6 +72,25 @@ pub enum VoyageServiceError {
     /// 永続化エラー。
     #[error("repository error: {0}")]
     Repository(String),
+    /// 日付の形式が不正な場合。
+    #[error("invalid date: {0}")]
+    InvalidDate(String),
+    /// ACL（貨物仕様取得）エラー。
+    #[error("acl error: {0}")]
+    Acl(String),
+    /// 指定予約が見つからない場合（経路設計の対象予約が存在しない）。
+    #[error("booking not found: {0}")]
+    BookingNotFound(String),
+}
+
+/// `YYYY-MM-DD` 文字列を `NaiveDate` にパースする（空・未指定は `None`）。
+fn parse_date(value: Option<&str>) -> Result<Option<NaiveDate>, VoyageServiceError> {
+    match value.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(s) => NaiveDate::parse_from_str(s, "%Y-%m-%d")
+            .map(Some)
+            .map_err(|_| VoyageServiceError::InvalidDate(s.to_string())),
+        None => Ok(None),
+    }
 }
 
 impl From<RepositoryError> for VoyageServiceError {
@@ -202,12 +226,74 @@ impl<R: VoyageRepository> VoyageQueryService<R> {
             .as_deref()
             .map(CargoType::parse)
             .transpose()?;
+        let departure_from = parse_date(input.departure_from.as_deref())?;
+        let departure_to = parse_date(input.departure_to.as_deref())?;
         let criteria = VoyageSearchCriteria {
             origin,
             destination,
             cargo_type,
+            departure_from,
+            departure_to,
         };
         Ok(self.repository.search(&criteria).await?)
+    }
+}
+
+/// 経路候補算出ユースケース（US08）。予約番号から貨物仕様を取得し、
+/// 制約を満たす航海を検索して経路候補を算出する。
+pub struct RoutePlanningService<R: VoyageRepository, P: CargoSpecProvider> {
+    repository: R,
+    spec_provider: P,
+    calculator: RouteCandidateCalculator,
+}
+
+impl<R: VoyageRepository, P: CargoSpecProvider> RoutePlanningService<R, P> {
+    /// サービスを生成する。
+    pub fn new(repository: R, spec_provider: P) -> Self {
+        Self {
+            repository,
+            spec_provider,
+            calculator: RouteCandidateCalculator::default(),
+        }
+    }
+
+    /// 予約番号に紐づく貨物仕様を取得する（画面上部の貨物仕様表示・US07）。
+    ///
+    /// # Errors
+    ///
+    /// ACL エラー時は `Acl`、対象予約が無い場合は `BookingNotFound`。
+    pub async fn cargo_spec(&self, booking_id: &str) -> Result<CargoSpec, VoyageServiceError> {
+        self.spec_provider
+            .find_cargo_spec(booking_id)
+            .await
+            .map_err(|e| VoyageServiceError::Acl(e.to_string()))?
+            .ok_or_else(|| VoyageServiceError::BookingNotFound(booking_id.to_string()))
+    }
+
+    /// 予約番号をもとに経路候補を推奨順で算出する（US08）。
+    ///
+    /// 貨物仕様（出発地・目的地・期限・貨物種別）を取得し、貨物種別に対応する航海から
+    /// 経路候補を算出する。期限超過候補も含むが推奨順では後方に並ぶ。
+    ///
+    /// # Errors
+    ///
+    /// 予約が無い場合は `BookingNotFound`、永続化・ACL 失敗時はそれぞれ `Repository`/`Acl`。
+    pub async fn plan_routes(
+        &self,
+        booking_id: &str,
+    ) -> Result<(CargoSpec, Vec<RouteCandidate>), VoyageServiceError> {
+        let spec = self.cargo_spec(booking_id).await?;
+        // 貨物種別に対応し、出発地から乗れる可能性のある航海を広めに取得する
+        // （具体的な接続評価はドメインサービスが行う）。
+        let voyages = self.repository.find_all().await?;
+        let candidates = self.calculator.calculate(
+            &spec.origin,
+            &spec.destination,
+            spec.arrival_deadline,
+            spec.cargo_type,
+            &voyages,
+        );
+        Ok((spec, candidates))
     }
 }
 
@@ -370,9 +456,8 @@ mod tests {
         let query = VoyageQueryService::new(&repo);
         let result = query
             .search(VoyageSearchInput {
-                origin: None,
-                destination: None,
                 cargo_type: Some("HAZARDOUS".to_string()),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -405,4 +490,67 @@ mod tests {
             (**self).find_all().await
         }
     }
+
+    /// テスト用の貨物仕様プロバイダ（固定の 1 予約を返す）。
+    struct FixedCargoSpecProvider {
+        booking_id: String,
+        spec: CargoSpec,
+    }
+
+    #[async_trait]
+    impl CargoSpecProvider for FixedCargoSpecProvider {
+        async fn find_cargo_spec(
+            &self,
+            booking_id: &str,
+        ) -> Result<Option<CargoSpec>, domain_routing::AclError> {
+            if booking_id == self.booking_id {
+                Ok(Some(self.spec.clone()))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    fn spec(origin: &str, dest: &str, deadline: &str, cargo: CargoType) -> CargoSpec {
+        CargoSpec {
+            origin: Location::new(origin).unwrap(),
+            destination: Location::new(dest).unwrap(),
+            arrival_deadline: NaiveDate::parse_from_str(deadline, "%Y-%m-%d").unwrap(),
+            cargo_type: cargo,
+        }
+    }
+
+    #[tokio::test]
+    async fn 予約番号から貨物仕様と経路候補を算出する() {
+        let repo = InMemoryVoyageRepository::default();
+        let cmd = VoyageCommandService::new(&repo);
+        cmd.register(input("V0001", "JPOSA", "USLAX", vec!["GENERAL"]))
+            .await
+            .unwrap();
+
+        let provider = FixedCargoSpecProvider {
+            booking_id: "BKG-1".to_string(),
+            spec: spec("JPOSA", "USLAX", "2026-04-20", CargoType::General),
+        };
+        let service = RoutePlanningService::new(&repo, provider);
+        let (spec, candidates) = service.plan_routes("BKG-1").await.expect("plan");
+        assert_eq!(spec.origin.code(), "JPOSA");
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].leg_count(), 1);
+        assert_eq!(candidates[0].voyage_numbers()[0].as_str(), "V0001");
+    }
+
+    #[tokio::test]
+    async fn 存在しない予約番号はbookingnotfoundになる() {
+        let repo = InMemoryVoyageRepository::default();
+        let provider = FixedCargoSpecProvider {
+            booking_id: "BKG-1".to_string(),
+            spec: spec("JPOSA", "USLAX", "2026-04-20", CargoType::General),
+        };
+        let service = RoutePlanningService::new(&repo, provider);
+        let err = service.plan_routes("BKG-UNKNOWN").await.unwrap_err();
+        assert!(matches!(err, VoyageServiceError::BookingNotFound(_)));
+    }
+
+    // &InMemoryVoyageRepository を RoutePlanningService に渡せるよう、参照でも動くことを利用する。
 }

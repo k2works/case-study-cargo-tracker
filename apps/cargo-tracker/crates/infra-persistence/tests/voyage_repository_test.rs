@@ -131,6 +131,7 @@ async fn 検索条件で航海を絞り込める() {
         origin: Some(Location::new("JPOSA").unwrap()),
         destination: None,
         cargo_type: None,
+        ..Default::default()
     };
     let result = repo.search(&criteria).await.expect("search");
     assert_eq!(result.len(), 1);
@@ -141,6 +142,7 @@ async fn 検索条件で航海を絞り込める() {
         origin: None,
         destination: None,
         cargo_type: Some(CargoType::Hazardous),
+        ..Default::default()
     };
     let result = repo.search(&hazard).await.expect("search");
     assert_eq!(result.len(), 1);
@@ -176,6 +178,7 @@ async fn 検索は到着地と複合条件でsql絞り込みできる() {
         origin: None,
         destination: Some(Location::new("USLAX").unwrap()),
         cargo_type: None,
+        ..Default::default()
     };
     let mut result = repo.search(&by_dest).await.expect("search");
     result.sort_by(|a, b| a.voyage_number().as_str().cmp(b.voyage_number().as_str()));
@@ -188,10 +191,35 @@ async fn 検索は到着地と複合条件でsql絞り込みできる() {
         origin: Some(Location::new("JPOSA").unwrap()),
         destination: Some(Location::new("USLAX").unwrap()),
         cargo_type: Some(CargoType::Refrigerated),
+        ..Default::default()
     };
     let result = repo.search(&combined).await.expect("search");
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].voyage_number().as_str(), "V0003");
+}
+
+#[tokio::test]
+async fn 検索は出発期間で絞り込める() {
+    use chrono::NaiveDate;
+    let (pool, _c) = setup().await;
+    let repo = SqlxVoyageRepository::new(pool);
+    // voyage() ヘルパは出発 2026-04-01。期間 [04-05, 04-30] には入らない。
+    repo.save(&voyage("V0001", "JPOSA", "USLAX", vec![CargoType::General]))
+        .await
+        .unwrap();
+
+    let out_of_range = VoyageSearchCriteria {
+        departure_from: Some(NaiveDate::from_ymd_opt(2026, 4, 5).unwrap()),
+        ..Default::default()
+    };
+    assert!(repo.search(&out_of_range).await.unwrap().is_empty());
+
+    let in_range = VoyageSearchCriteria {
+        departure_from: Some(NaiveDate::from_ymd_opt(2026, 3, 1).unwrap()),
+        departure_to: Some(NaiveDate::from_ymd_opt(2026, 4, 30).unwrap()),
+        ..Default::default()
+    };
+    assert_eq!(repo.search(&in_range).await.unwrap().len(), 1);
 }
 
 #[tokio::test]
@@ -205,6 +233,7 @@ async fn 検索は該当なしのとき空を返す() {
         origin: Some(Location::new("JPKIX").unwrap()),
         destination: None,
         cargo_type: None,
+        ..Default::default()
     };
     let result = repo.search(&criteria).await.expect("search");
     assert!(result.is_empty());

@@ -203,11 +203,23 @@ impl VoyageRepository for SqlxVoyageRepository {
                         WHERE cm.voyage_id = v.id
                           AND cm.seq_number = (SELECT MAX(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
                           AND cm.arrival_location_unlocode = $3))
+                AND ($4::date IS NULL OR EXISTS (
+                        SELECT 1 FROM carrier_movement cm
+                        WHERE cm.voyage_id = v.id
+                          AND cm.seq_number = (SELECT MIN(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
+                          AND cm.departure_date::date >= $4))
+                AND ($5::date IS NULL OR EXISTS (
+                        SELECT 1 FROM carrier_movement cm
+                        WHERE cm.voyage_id = v.id
+                          AND cm.seq_number = (SELECT MIN(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
+                          AND cm.departure_date::date <= $5))
               ORDER BY v.voyage_number",
         )
         .bind(cargo_type)
         .bind(origin)
         .bind(destination)
+        .bind(criteria.departure_from)
+        .bind(criteria.departure_to)
         .fetch_all(&self.pool)
         .await
         .map_err(backend)?;

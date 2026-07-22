@@ -2,6 +2,7 @@
 
 use crate::aggregate::Voyage;
 use crate::value_objects::{CargoType, VoyageNumber};
+use chrono::NaiveDate;
 use shared_kernel::Location;
 
 /// リポジトリ操作のエラー。インフラ層の詳細に依存しない抽象エラー。
@@ -23,6 +24,10 @@ pub struct VoyageSearchCriteria {
     pub destination: Option<Location>,
     /// 対応貨物種別。
     pub cargo_type: Option<CargoType>,
+    /// 出発日（先頭区間の出発日）の下限（この日以降・両端含む・US07）。
+    pub departure_from: Option<chrono::NaiveDate>,
+    /// 出発日（先頭区間の出発日）の上限（この日以前・両端含む・US07）。
+    pub departure_to: Option<chrono::NaiveDate>,
 }
 
 /// 航海リポジトリの出力ポート。
@@ -74,5 +79,46 @@ impl VoyageRepository for std::sync::Arc<dyn VoyageRepository> {
     }
     async fn find_all(&self) -> Result<Vec<Voyage>, RepositoryError> {
         (**self).find_all().await
+    }
+}
+
+/// ACL ポートのエラー。外部コンテキスト（Booking）参照時の抽象エラー。
+#[derive(Debug, thiserror::Error)]
+pub enum AclError {
+    /// 外部コンテキスト参照時のエラー。
+    #[error("acl failure: {0}")]
+    Backend(String),
+}
+
+/// 予約に紐づく貨物仕様（経路探索の入力）。
+///
+/// Booking Context の貨物（Cargo）から必要な項目のみを Routing 向けに射影した ACL の DTO。
+/// domain-booking への依存を避けるため、Routing 固有の型（`Location`・`CargoType`）で表現する。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CargoSpec {
+    /// 出発地（UN/LOCODE）。
+    pub origin: Location,
+    /// 目的地（UN/LOCODE）。
+    pub destination: Location,
+    /// 到着期限。
+    pub arrival_deadline: NaiveDate,
+    /// 貨物種別。
+    pub cargo_type: CargoType,
+}
+
+/// 予約番号から貨物仕様を取得する ACL ポート（US07/US08）。
+///
+/// Routing Context は Booking Context を直接参照せず、この trait を通じてのみ貨物仕様を得る。
+#[async_trait::async_trait]
+pub trait CargoSpecProvider: Send + Sync {
+    /// 予約番号（booking_id）に紐づく貨物仕様を取得する。存在しなければ `None`。
+    async fn find_cargo_spec(&self, booking_id: &str) -> Result<Option<CargoSpec>, AclError>;
+}
+
+/// `Arc<dyn CargoSpecProvider>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl CargoSpecProvider for std::sync::Arc<dyn CargoSpecProvider> {
+    async fn find_cargo_spec(&self, booking_id: &str) -> Result<Option<CargoSpec>, AclError> {
+        (**self).find_cargo_spec(booking_id).await
     }
 }

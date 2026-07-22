@@ -755,11 +755,16 @@ fn voyage_error_message(e: &VoyageServiceError) -> String {
     match e {
         VoyageServiceError::AlreadyExists(_) => "この航海番号は既に登録されています".to_string(),
         VoyageServiceError::NotFound(_) => "対象の航海が見つかりません".to_string(),
-        VoyageServiceError::Domain(_) | VoyageServiceError::Location(_) => {
+        VoyageServiceError::Domain(_)
+        | VoyageServiceError::Location(_)
+        | VoyageServiceError::InvalidDate(_) => {
             "入力内容に誤りがあります（港コード・日時・スケジュール順序を確認してください）"
                 .to_string()
         }
-        VoyageServiceError::Repository(_) => "処理に失敗しました".to_string(),
+        VoyageServiceError::BookingNotFound(_) => "対象の予約が見つかりません".to_string(),
+        VoyageServiceError::Repository(_) | VoyageServiceError::Acl(_) => {
+            "処理に失敗しました".to_string()
+        }
     }
 }
 
@@ -780,6 +785,7 @@ async fn voyage_list(
         origin: non_empty(query.origin),
         destination: non_empty(query.destination),
         cargo_type: non_empty(query.cargo_type),
+        ..Default::default()
     };
     let result =
         if search.origin.is_none() && search.destination.is_none() && search.cargo_type.is_none() {

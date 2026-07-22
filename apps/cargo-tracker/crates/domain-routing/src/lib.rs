@@ -11,6 +11,8 @@ pub mod value_objects;
 
 pub use aggregate::Voyage;
 pub use error::RoutingError;
-pub use ports::{RepositoryError, VoyageRepository, VoyageSearchCriteria};
+pub use ports::{
+    AclError, CargoSpec, CargoSpecProvider, RepositoryError, VoyageRepository, VoyageSearchCriteria,
+};
 pub use route::{RouteCandidate, RouteCandidateCalculator, RouteLeg};
 pub use value_objects::{CargoType, Carrier, CarrierMovement, Schedule, VesselName, VoyageNumber};
