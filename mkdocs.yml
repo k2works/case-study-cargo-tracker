@@ -93,6 +93,8 @@ nav:
       - イテレーション1 ふりかえり: development/retrospective-1.md
       - イテレーション1 完了報告書: development/iteration_report-1.md
       - イテレーション2計画 航海スケジュール: development/iteration_plan-2.md
+      - イテレーション2 ふりかえり: development/retrospective-2.md
+      - イテレーション2 完了報告書: development/iteration_report-2.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -101,10 +103,12 @@ nav:
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
       - Rust 版設計ドキュメントレビュー: review/design_review_20260706.md
       - IT1 開発成果物レビュー: review/it1_development_review_20260718.md
+      - IT2 開発成果物レビュー: review/it2_development_review_20260722.md
   - ADR:
       - 概要: adr/index.md
       - "0001: CQRS Read Model 配置": adr/0001-cqrs-read-model-placement.md
       - "0002: 認証方式（tower-sessions + 自前 RBAC）": adr/0002-authentication-with-tower-sessions.md
+      - "0003: DIP 回復（composition root への注入）": adr/0003-dependency-injection-composition-root.md
   - 記事:
       - 概要: article/index.md
       - テスト駆動開発から始める XX 入門: article/getting-start-tdd/index.md
