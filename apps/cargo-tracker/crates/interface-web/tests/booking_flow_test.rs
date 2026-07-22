@@ -5,8 +5,8 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use infra_persistence::{
-    MIGRATOR, SqlxCargoRepository, SqlxShipperExistenceChecker, SqlxShipperRepository,
-    SqlxUserRepository, SqlxVoyageRepository,
+    MIGRATOR, SqlxCargoRepository, SqlxCargoSpecProvider, SqlxShipperExistenceChecker,
+    SqlxShipperRepository, SqlxUserRepository, SqlxVoyageRepository,
 };
 use interface_web::{AppState, web_router};
 use std::sync::Arc;
@@ -18,6 +18,7 @@ fn app_state(pool: PgPool) -> AppState {
         cargo_repo: Arc::new(SqlxCargoRepository::new(pool.clone())),
         shipper_checker: Arc::new(SqlxShipperExistenceChecker::new(pool.clone())),
         voyage_repo: Arc::new(SqlxVoyageRepository::new(pool.clone())),
+        cargo_spec_provider: Arc::new(SqlxCargoSpecProvider::new(pool.clone())),
         pool,
     }
 }

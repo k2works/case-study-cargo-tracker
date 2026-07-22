@@ -28,5 +28,6 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 tower = { workspace = true }
 http-body-util = { workspace = true }
+uuid = { workspace = true }
 testcontainers = "0.24"
 testcontainers-modules = { version = "0.12", features = ["postgres"] }

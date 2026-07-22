@@ -5,12 +5,14 @@
 //! 後続タスク（1.7）で硬化する。
 
 pub mod cargo_repository;
+pub mod cargo_spec_provider;
 pub mod shipper_query;
 pub mod shipper_repository;
 pub mod user_repository;
 pub mod voyage_repository;
 
 pub use cargo_repository::{SqlxCargoRepository, SqlxShipperExistenceChecker};
+pub use cargo_spec_provider::SqlxCargoSpecProvider;
 pub use shipper_query::SqlxShipperQueryAdapter;
 pub use shipper_repository::SqlxShipperRepository;
 pub use user_repository::{

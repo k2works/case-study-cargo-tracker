@@ -4,8 +4,8 @@
 
 use app_booking::{BookCargoCommandService, BookingServiceError};
 use app_routing::{
-    MovementInput, VoyageCommandService, VoyageInput, VoyageQueryService, VoyageSearchInput,
-    VoyageServiceError,
+    MovementInput, RoutePlanningService, VoyageCommandService, VoyageInput, VoyageQueryService,
+    VoyageSearchInput, VoyageServiceError,
 };
 use app_shipper::{
     RegisterShipperCommandService, RegisterShipperInput, ShipperKindInput, ShipperServiceError,
@@ -22,7 +22,7 @@ use domain_booking::{
     BookCargoCommand, CargoRepository, CargoType, Consignee, HazardousDeclaration,
     RouteSpecification, ShipperExistenceChecker, TemperatureRequirement, TemperatureUnit, Weight,
 };
-use domain_routing::{Voyage, VoyageRepository};
+use domain_routing::{CargoSpecProvider, RouteCandidate, Voyage, VoyageRepository};
 use domain_shipper::ShipperRepository;
 use infra_persistence::{SqlxUserRepository, verify_password};
 use rust_decimal::Decimal;
@@ -119,6 +119,8 @@ pub struct AppState {
     pub shipper_checker: Arc<dyn ShipperExistenceChecker>,
     /// 航海リポジトリ（出力ポート）。
     pub voyage_repo: Arc<dyn VoyageRepository>,
+    /// 貨物仕様プロバイダ ACL（Routing → Booking の予約仕様参照・出力ポート）。
+    pub cargo_spec_provider: Arc<dyn CargoSpecProvider>,
 }
 
 #[derive(Template)]
@@ -247,6 +249,8 @@ pub fn web_router(state: AppState) -> Router {
         .route("/voyages/new", get(voyage_new_form))
         .route("/voyages/{voyage_number}/edit", get(voyage_edit_form))
         .route("/voyages/{voyage_number}", post(voyage_update))
+        .route("/bookings/{booking_id}/route", get(route_design))
+        .route("/bookings/{booking_id}/route/confirm", post(route_confirm))
         .route("/billing/invoices", get(placeholder_billing))
         .route("/admin/discount-policies", get(placeholder_admin))
         .with_state(state)
@@ -910,5 +914,108 @@ async fn voyage_update(
             let message = voyage_error_message(&e);
             render_error(current_user, message, current_row)
         }
+    }
+}
+
+// ===== Routing Context（経路設計・割り当て・US08 / US09）=====
+
+/// 経路候補 1 件の表示データ。
+struct RouteRow {
+    direct: bool,
+    transit_ports_label: String,
+    transit_ports: Vec<String>,
+    transit_days: i64,
+    voyage_label: String,
+    arrival: String,
+    within_deadline: bool,
+}
+
+#[derive(Template)]
+#[template(path = "route_design.html")]
+struct RouteDesignTemplate {
+    current_user: CurrentUser,
+    error: bool,
+    error_message: String,
+    booking_id: String,
+    origin: String,
+    destination: String,
+    arrival_deadline: String,
+    cargo_type: String,
+    candidates: Vec<RouteRow>,
+}
+
+fn route_row(c: &RouteCandidate, deadline: chrono::NaiveDate) -> RouteRow {
+    let transit_ports: Vec<String> = c
+        .transit_ports()
+        .iter()
+        .map(|l| l.code().to_string())
+        .collect();
+    RouteRow {
+        direct: c.leg_count() == 1,
+        transit_ports_label: transit_ports.join(" → "),
+        transit_ports,
+        transit_days: c.transit_days(),
+        voyage_label: c
+            .voyage_numbers()
+            .iter()
+            .map(|v| v.as_str().to_string())
+            .collect::<Vec<_>>()
+            .join(" → "),
+        arrival: c.expected_arrival().format("%Y-%m-%d").to_string(),
+        within_deadline: c.within_deadline(deadline),
+    }
+}
+
+async fn route_design(
+    State(state): State<AppState>,
+    RoleGuard(current_user, _): RouteDesignerUser,
+    Path(booking_id): Path<String>,
+) -> Response {
+    let service =
+        RoutePlanningService::new(state.voyage_repo.clone(), state.cargo_spec_provider.clone());
+    match service.plan_routes(&booking_id).await {
+        Ok((spec, candidates)) => render(&RouteDesignTemplate {
+            current_user,
+            error: false,
+            error_message: String::new(),
+            booking_id,
+            origin: spec.origin.code().to_string(),
+            destination: spec.destination.code().to_string(),
+            arrival_deadline: spec.arrival_deadline.format("%Y-%m-%d").to_string(),
+            cargo_type: spec.cargo_type.as_str().to_string(),
+            candidates: candidates
+                .iter()
+                .map(|c| route_row(c, spec.arrival_deadline))
+                .collect(),
+        }),
+        Err(VoyageServiceError::BookingNotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// 経路確定フォーム入力（US09）。
+#[derive(Debug, Deserialize)]
+pub struct RouteConfirmForm {
+    candidate_index: usize,
+}
+
+async fn route_confirm(
+    State(state): State<AppState>,
+    RoleGuard(_current_user, _): RouteDesignerUser,
+    Path(booking_id): Path<String>,
+    Form(form): Form<RouteConfirmForm>,
+) -> Response {
+    let service =
+        RoutePlanningService::new(state.voyage_repo.clone(), state.cargo_spec_provider.clone());
+    // 候補を再算出し、選択インデックスの妥当性を確認する（確定経路の永続化は US09 本実装で追加）。
+    match service.plan_routes(&booking_id).await {
+        Ok((_spec, candidates)) => {
+            if form.candidate_index >= candidates.len() {
+                return StatusCode::UNPROCESSABLE_ENTITY.into_response();
+            }
+            Redirect::to(&format!("/bookings/{booking_id}")).into_response()
+        }
+        Err(VoyageServiceError::BookingNotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }

@@ -13,5 +13,8 @@
   <dt class="col-sm-3">貨物種別</dt>
   <dd class="col-sm-9">{{ cargo_type }}</dd>
 </dl>
+{% if current_user.has_role("ROLE_ROUTE_DESIGNER") %}
+<a href="/bookings/{{ booking_id }}/route" class="btn btn-primary" data-testid="design-route-link">経路を設計する</a>
+{% endif %}
 <a href="/" class="btn btn-secondary">ダッシュボードへ戻る</a>
 {% endblock %}
