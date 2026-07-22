@@ -30,14 +30,14 @@ date: 2026-07-22T00:00:00.000Z
 
 ### 成功基準
 
-- [ ] US24・US25・US07 の全受入基準を満たす
-- [ ] Voyage 集約のドメイン単体テストが Red-Green-Refactor で作成されている
-- [ ] VoyageRepository の testcontainers 統合テストが green
-- [ ] 航路一覧・登録・更新・検索の HTTP フローテストが green
-- [ ] IT1 Try #1-#3（認可 extractor・DIP 回復・US03/05 フローテスト）が完了
-- [ ] `cargo clippy --workspace -- -D warnings` と `cargo fmt --check` が全 green
-- [ ] テストカバレッジ計測（cargo-llvm-cov）を導入し、ドメイン層の現在地を可視化
-- [ ] 設計反映: Voyage 集約・voyage テーブルへの船名/運送会社/対応貨物種別の追加、`/voyages` 登録・更新画面の新設を domain-model.md / data-model.md / ui_design.md に反映
+- [x] US24・US25・US07 の全受入基準を満たす
+- [x] Voyage 集約のドメイン単体テストが Red-Green-Refactor で作成されている（16 件）
+- [x] VoyageRepository の testcontainers 統合テストが green（4 件）
+- [x] 航路一覧・登録・更新・検索の HTTP フローテストが green（11 件）
+- [x] IT1 Try #1-#3（認可 extractor・DIP 回復 ADR-0003・US03/05 フローテスト）が完了
+- [x] `cargo clippy --workspace -- -D warnings` と `cargo fmt --check` が全 green
+- [x] テストカバレッジ計測（cargo-llvm-cov）を導入し、ドメイン層の現在地を可視化（Routing 層 83〜91%）
+- [x] 設計反映: Voyage 集約・voyage テーブルへの船名/運送会社/対応貨物種別の追加、`/voyages` 登録・更新画面の新設を domain-model.md / data-model.md / ui_design.md に反映
 
 ---
 
@@ -363,14 +363,14 @@ state 航路更新 : /voyages/{number}/edit\n差分確認 → 更新 / キャン
 
 ### Definition of Done
 
-- [ ] コードレビュー完了（self-review、区切りで実施）
-- [ ] ユニットテストがパス（ドメイン層 Red-Green-Refactor）
-- [ ] testcontainers 統合テストがパス
-- [ ] HTTP フローテストがパス
-- [ ] `cargo clippy --workspace -- -D warnings` エラーなし・`cargo fmt --check` 準拠
-- [ ] 機能がローカル環境（実 PostgreSQL・実ブラウザ）で動作確認済み
-- [ ] ナビゲーション整合性（navbar → `/voyages` → 検証テスト）を確認
-- [ ] ドキュメント更新完了（ADR・設計差分）
+- [x] コードレビュー完了（developing-review 5 エージェント・[it2_development_review_20260722.md](../review/it2_development_review_20260722.md)）
+- [x] ユニットテストがパス（ドメイン層 Red-Green-Refactor・16 件）
+- [x] testcontainers 統合テストがパス（4 件）
+- [x] HTTP フローテストがパス（voyage 11 + US03/05 の 4）
+- [x] `cargo clippy --workspace -- -D warnings` エラーなし・`cargo fmt --check` 準拠
+- [ ] 機能がローカル環境（実 PostgreSQL・実ブラウザ）で動作確認済み（HTTP フローテストで代替、実ブラウザ確認は IT2 クローズ時に実施予定）
+- [x] ナビゲーション整合性（navbar → `/voyages` → dashboard → 検証テスト）を確認
+- [x] ドキュメント更新完了（ADR-0003・domain-model / data-model / ui_design の設計差分）
 
 ### デモ項目
 
