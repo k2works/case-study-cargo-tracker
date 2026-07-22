@@ -22,7 +22,9 @@ use domain_booking::{
     BookCargoCommand, CargoRepository, CargoType, Consignee, HazardousDeclaration,
     RouteSpecification, ShipperExistenceChecker, TemperatureRequirement, TemperatureUnit, Weight,
 };
-use domain_routing::{CargoSpecProvider, RouteCandidate, Voyage, VoyageRepository};
+use domain_routing::{
+    CargoSpecProvider, RouteCandidate, SelectedRouteRepository, Voyage, VoyageRepository,
+};
 use domain_shipper::ShipperRepository;
 use infra_persistence::{SqlxUserRepository, verify_password};
 use rust_decimal::Decimal;
@@ -121,6 +123,8 @@ pub struct AppState {
     pub voyage_repo: Arc<dyn VoyageRepository>,
     /// 貨物仕様プロバイダ ACL（Routing → Booking の予約仕様参照・出力ポート）。
     pub cargo_spec_provider: Arc<dyn CargoSpecProvider>,
+    /// 確定経路リポジトリ（US09・出力ポート）。
+    pub selected_route_repo: Arc<dyn SelectedRouteRepository>,
 }
 
 #[derive(Template)]
@@ -766,6 +770,7 @@ fn voyage_error_message(e: &VoyageServiceError) -> String {
                 .to_string()
         }
         VoyageServiceError::BookingNotFound(_) => "対象の予約が見つかりません".to_string(),
+        VoyageServiceError::InvalidCandidate(_) => "選択した経路候補が不正です".to_string(),
         VoyageServiceError::Repository(_) | VoyageServiceError::Acl(_) => {
             "処理に失敗しました".to_string()
         }
@@ -971,8 +976,11 @@ async fn route_design(
     RoleGuard(current_user, _): RouteDesignerUser,
     Path(booking_id): Path<String>,
 ) -> Response {
-    let service =
-        RoutePlanningService::new(state.voyage_repo.clone(), state.cargo_spec_provider.clone());
+    let service = RoutePlanningService::new(
+        state.voyage_repo.clone(),
+        state.cargo_spec_provider.clone(),
+        state.selected_route_repo.clone(),
+    );
     match service.plan_routes(&booking_id).await {
         Ok((spec, candidates)) => render(&RouteDesignTemplate {
             current_user,
@@ -1005,17 +1013,21 @@ async fn route_confirm(
     Path(booking_id): Path<String>,
     Form(form): Form<RouteConfirmForm>,
 ) -> Response {
-    let service =
-        RoutePlanningService::new(state.voyage_repo.clone(), state.cargo_spec_provider.clone());
-    // 候補を再算出し、選択インデックスの妥当性を確認する（確定経路の永続化は US09 本実装で追加）。
-    match service.plan_routes(&booking_id).await {
-        Ok((_spec, candidates)) => {
-            if form.candidate_index >= candidates.len() {
-                return StatusCode::UNPROCESSABLE_ENTITY.into_response();
-            }
-            Redirect::to(&format!("/bookings/{booking_id}")).into_response()
-        }
+    let service = RoutePlanningService::new(
+        state.voyage_repo.clone(),
+        state.cargo_spec_provider.clone(),
+        state.selected_route_repo.clone(),
+    );
+    // 選択候補を確定し確定経路を永続化する（US09）。BookingStatus の RouteProposed 反映は US11（IT4）。
+    match service
+        .confirm_route(&booking_id, form.candidate_index)
+        .await
+    {
+        Ok(()) => Redirect::to(&format!("/bookings/{booking_id}")).into_response(),
         Err(VoyageServiceError::BookingNotFound(_)) => StatusCode::NOT_FOUND.into_response(),
+        Err(VoyageServiceError::InvalidCandidate(_)) => {
+            StatusCode::UNPROCESSABLE_ENTITY.into_response()
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }

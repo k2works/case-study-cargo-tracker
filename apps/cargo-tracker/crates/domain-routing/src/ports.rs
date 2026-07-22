@@ -122,3 +122,34 @@ impl CargoSpecProvider for std::sync::Arc<dyn CargoSpecProvider> {
         (**self).find_cargo_spec(booking_id).await
     }
 }
+
+/// 確定経路リポジトリの出力ポート（US09）。
+///
+/// 経路候補から選択・確定した経路（`RouteCandidate`）を予約番号（booking_id）に紐づけて永続化する。
+#[async_trait::async_trait]
+pub trait SelectedRouteRepository: Send + Sync {
+    /// 予約番号に紐づく確定経路を保存する（upsert。既存があれば上書き）。
+    async fn save(
+        &self,
+        booking_id: &str,
+        route: &crate::route::RouteCandidate,
+    ) -> Result<(), RepositoryError>;
+
+    /// 予約番号の確定経路が存在するかを返す。
+    async fn exists(&self, booking_id: &str) -> Result<bool, RepositoryError>;
+}
+
+/// `Arc<dyn SelectedRouteRepository>` へ委譲するブランケット実装（ADR-0003）。
+#[async_trait::async_trait]
+impl SelectedRouteRepository for std::sync::Arc<dyn SelectedRouteRepository> {
+    async fn save(
+        &self,
+        booking_id: &str,
+        route: &crate::route::RouteCandidate,
+    ) -> Result<(), RepositoryError> {
+        (**self).save(booking_id, route).await
+    }
+    async fn exists(&self, booking_id: &str) -> Result<bool, RepositoryError> {
+        (**self).exists(booking_id).await
+    }
+}

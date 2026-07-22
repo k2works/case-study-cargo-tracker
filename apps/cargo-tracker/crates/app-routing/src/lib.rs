@@ -6,8 +6,8 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use domain_routing::{
     CargoSpec, CargoSpecProvider, CargoType, Carrier, CarrierMovement, RepositoryError,
-    RouteCandidate, RouteCandidateCalculator, RoutingError, Schedule, VesselName, Voyage,
-    VoyageNumber, VoyageRepository, VoyageSearchCriteria,
+    RouteCandidate, RouteCandidateCalculator, RoutingError, Schedule, SelectedRouteRepository,
+    VesselName, Voyage, VoyageNumber, VoyageRepository, VoyageSearchCriteria,
 };
 use shared_kernel::{Location, SharedKernelError};
 
@@ -81,6 +81,9 @@ pub enum VoyageServiceError {
     /// 指定予約が見つからない場合（経路設計の対象予約が存在しない）。
     #[error("booking not found: {0}")]
     BookingNotFound(String),
+    /// 選択された経路候補のインデックスが範囲外の場合。
+    #[error("invalid route candidate index: {0}")]
+    InvalidCandidate(usize),
 }
 
 /// `YYYY-MM-DD` 文字列を `NaiveDate` にパースする（空・未指定は `None`）。
@@ -241,20 +244,51 @@ impl<R: VoyageRepository> VoyageQueryService<R> {
 
 /// 経路候補算出ユースケース（US08）。予約番号から貨物仕様を取得し、
 /// 制約を満たす航海を検索して経路候補を算出する。
-pub struct RoutePlanningService<R: VoyageRepository, P: CargoSpecProvider> {
+pub struct RoutePlanningService<R, P, S>
+where
+    R: VoyageRepository,
+    P: CargoSpecProvider,
+    S: SelectedRouteRepository,
+{
     repository: R,
     spec_provider: P,
+    selected_routes: S,
     calculator: RouteCandidateCalculator,
 }
 
-impl<R: VoyageRepository, P: CargoSpecProvider> RoutePlanningService<R, P> {
+impl<R, P, S> RoutePlanningService<R, P, S>
+where
+    R: VoyageRepository,
+    P: CargoSpecProvider,
+    S: SelectedRouteRepository,
+{
     /// サービスを生成する。
-    pub fn new(repository: R, spec_provider: P) -> Self {
+    pub fn new(repository: R, spec_provider: P, selected_routes: S) -> Self {
         Self {
             repository,
             spec_provider,
+            selected_routes,
             calculator: RouteCandidateCalculator::default(),
         }
+    }
+
+    /// 経路候補から 1 件を選択して確定し、予約番号に紐づけて永続化する（US09）。
+    ///
+    /// # Errors
+    ///
+    /// 予約が無い場合は `BookingNotFound`、選択インデックスが範囲外なら `InvalidCandidate`、
+    /// 永続化失敗時は `Repository`。
+    pub async fn confirm_route(
+        &self,
+        booking_id: &str,
+        candidate_index: usize,
+    ) -> Result<(), VoyageServiceError> {
+        let (_spec, candidates) = self.plan_routes(booking_id).await?;
+        let selected = candidates
+            .get(candidate_index)
+            .ok_or(VoyageServiceError::InvalidCandidate(candidate_index))?;
+        self.selected_routes.save(booking_id, selected).await?;
+        Ok(())
     }
 
     /// 予約番号に紐づく貨物仕様を取得する（画面上部の貨物仕様表示・US07）。
@@ -520,6 +554,41 @@ mod tests {
         }
     }
 
+    /// テスト用の確定経路リポジトリ（保存された予約番号を記録する）。
+    #[derive(Default)]
+    struct InMemorySelectedRoutes {
+        saved: Mutex<Vec<String>>,
+    }
+
+    #[async_trait]
+    impl SelectedRouteRepository for InMemorySelectedRoutes {
+        async fn save(
+            &self,
+            booking_id: &str,
+            _route: &RouteCandidate,
+        ) -> Result<(), RepositoryError> {
+            self.saved.lock().unwrap().push(booking_id.to_string());
+            Ok(())
+        }
+        async fn exists(&self, booking_id: &str) -> Result<bool, RepositoryError> {
+            Ok(self.saved.lock().unwrap().iter().any(|b| b == booking_id))
+        }
+    }
+
+    #[async_trait]
+    impl SelectedRouteRepository for &InMemorySelectedRoutes {
+        async fn save(
+            &self,
+            booking_id: &str,
+            route: &RouteCandidate,
+        ) -> Result<(), RepositoryError> {
+            (**self).save(booking_id, route).await
+        }
+        async fn exists(&self, booking_id: &str) -> Result<bool, RepositoryError> {
+            (**self).exists(booking_id).await
+        }
+    }
+
     #[tokio::test]
     async fn 予約番号から貨物仕様と経路候補を算出する() {
         let repo = InMemoryVoyageRepository::default();
@@ -532,7 +601,8 @@ mod tests {
             booking_id: "BKG-1".to_string(),
             spec: spec("JPOSA", "USLAX", "2026-04-20", CargoType::General),
         };
-        let service = RoutePlanningService::new(&repo, provider);
+        let selected = InMemorySelectedRoutes::default();
+        let service = RoutePlanningService::new(&repo, provider, &selected);
         let (spec, candidates) = service.plan_routes("BKG-1").await.expect("plan");
         assert_eq!(spec.origin.code(), "JPOSA");
         assert_eq!(candidates.len(), 1);
@@ -547,10 +617,45 @@ mod tests {
             booking_id: "BKG-1".to_string(),
             spec: spec("JPOSA", "USLAX", "2026-04-20", CargoType::General),
         };
-        let service = RoutePlanningService::new(&repo, provider);
+        let selected = InMemorySelectedRoutes::default();
+        let service = RoutePlanningService::new(&repo, provider, &selected);
         let err = service.plan_routes("BKG-UNKNOWN").await.unwrap_err();
         assert!(matches!(err, VoyageServiceError::BookingNotFound(_)));
     }
 
-    // &InMemoryVoyageRepository を RoutePlanningService に渡せるよう、参照でも動くことを利用する。
+    #[tokio::test]
+    async fn 経路を選択して確定すると保存される() {
+        let repo = InMemoryVoyageRepository::default();
+        let cmd = VoyageCommandService::new(&repo);
+        cmd.register(input("V0001", "JPOSA", "USLAX", vec!["GENERAL"]))
+            .await
+            .unwrap();
+        let provider = FixedCargoSpecProvider {
+            booking_id: "BKG-1".to_string(),
+            spec: spec("JPOSA", "USLAX", "2026-04-20", CargoType::General),
+        };
+        let selected = InMemorySelectedRoutes::default();
+        let service = RoutePlanningService::new(&repo, provider, &selected);
+
+        service.confirm_route("BKG-1", 0).await.expect("confirm");
+        assert!(selected.exists("BKG-1").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn 範囲外の候補選択はinvalidcandidateになる() {
+        let repo = InMemoryVoyageRepository::default();
+        let cmd = VoyageCommandService::new(&repo);
+        cmd.register(input("V0001", "JPOSA", "USLAX", vec!["GENERAL"]))
+            .await
+            .unwrap();
+        let provider = FixedCargoSpecProvider {
+            booking_id: "BKG-1".to_string(),
+            spec: spec("JPOSA", "USLAX", "2026-04-20", CargoType::General),
+        };
+        let selected = InMemorySelectedRoutes::default();
+        let service = RoutePlanningService::new(&repo, provider, &selected);
+
+        let err = service.confirm_route("BKG-1", 99).await.unwrap_err();
+        assert!(matches!(err, VoyageServiceError::InvalidCandidate(_)));
+    }
 }
