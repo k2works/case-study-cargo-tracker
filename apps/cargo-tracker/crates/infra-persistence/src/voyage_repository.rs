@@ -181,38 +181,34 @@ impl VoyageRepository for SqlxVoyageRepository {
         criteria: &VoyageSearchCriteria,
     ) -> Result<Vec<Voyage>, RepositoryError> {
         // 全件ロード後の Rust フィルタ（N+1）を避け、DB 側で voyage ID を絞り込む。
-        // 出発地はスケジュール先頭（seq 最小）の carrier_movement の departure、
-        // 到着地は末尾（seq 最大）の arrival に対応するため EXISTS 副問い合わせで表現する。
+        // IT4 Try #5: 相関副問い合わせ（各行での MIN/MAX seq 再評価）を CTE 化する。
+        // DISTINCT ON で航海ごとの先頭区間（出発地）・末尾区間（到着地）を 1 度だけ算出し、
         // 各条件は「引数が NULL なら素通し」で任意化する（VoyageSearchCriteria の Option 意味論に一致）。
         let origin = criteria.origin.as_ref().map(|l| l.code().to_string());
         let destination = criteria.destination.as_ref().map(|l| l.code().to_string());
         let cargo_type = criteria.cargo_type.map(|c| c.as_str().to_string());
 
         let ids = sqlx::query(
-            r"SELECT v.id FROM voyage v
+            r"WITH first_movement AS (
+                  SELECT DISTINCT ON (voyage_id)
+                         voyage_id, departure_location_unlocode, departure_date
+                  FROM carrier_movement
+                  ORDER BY voyage_id, seq_number ASC
+              ), last_movement AS (
+                  SELECT DISTINCT ON (voyage_id) voyage_id, arrival_location_unlocode
+                  FROM carrier_movement
+                  ORDER BY voyage_id, seq_number DESC
+              )
+              SELECT v.id FROM voyage v
+              JOIN first_movement fm ON fm.voyage_id = v.id
+              JOIN last_movement  lm ON lm.voyage_id = v.id
               WHERE ($1::text IS NULL OR EXISTS (
                         SELECT 1 FROM voyage_cargo_type vct
                         WHERE vct.voyage_id = v.id AND vct.cargo_type = $1))
-                AND ($2::text IS NULL OR EXISTS (
-                        SELECT 1 FROM carrier_movement cm
-                        WHERE cm.voyage_id = v.id
-                          AND cm.seq_number = (SELECT MIN(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
-                          AND cm.departure_location_unlocode = $2))
-                AND ($3::text IS NULL OR EXISTS (
-                        SELECT 1 FROM carrier_movement cm
-                        WHERE cm.voyage_id = v.id
-                          AND cm.seq_number = (SELECT MAX(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
-                          AND cm.arrival_location_unlocode = $3))
-                AND ($4::date IS NULL OR EXISTS (
-                        SELECT 1 FROM carrier_movement cm
-                        WHERE cm.voyage_id = v.id
-                          AND cm.seq_number = (SELECT MIN(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
-                          AND cm.departure_date::date >= $4))
-                AND ($5::date IS NULL OR EXISTS (
-                        SELECT 1 FROM carrier_movement cm
-                        WHERE cm.voyage_id = v.id
-                          AND cm.seq_number = (SELECT MIN(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
-                          AND cm.departure_date::date <= $5))
+                AND ($2::text IS NULL OR fm.departure_location_unlocode = $2)
+                AND ($3::text IS NULL OR lm.arrival_location_unlocode = $3)
+                AND ($4::date IS NULL OR fm.departure_date::date >= $4)
+                AND ($5::date IS NULL OR fm.departure_date::date <= $5)
               ORDER BY v.voyage_number",
         )
         .bind(cargo_type)
