@@ -12,8 +12,9 @@ use app_shipper::{
 };
 use askama::Template;
 use axum::Router;
-use axum::extract::{Form, Path, Query, State};
+use axum::extract::{Form, FromRequestParts, Path, Query, State};
 use axum::http::StatusCode;
+use axum::http::request::Parts;
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
@@ -30,6 +31,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use shared_kernel::{Location, ShipperId};
 use sqlx::PgPool;
+use std::marker::PhantomData;
 use std::str::FromStr;
 use tower_sessions::Session;
 
@@ -51,6 +53,55 @@ impl CurrentUser {
 }
 
 const SESSION_USER_KEY: &str = "current_user";
+
+/// 認可 extractor が要求するロールを表すマーカー trait。
+///
+/// ハンドラ引数で `RoleGuard<SalesRole>` 等を受けることで、認可チェックの
+/// 書き忘れをコンパイラが構造的に防ぐ（IT1 Try #1）。
+pub trait RequiredRole: Send + Sync + 'static {
+    /// 要求する `ROLE_` プレフィックス付きロール文字列。
+    const ROLE: &'static str;
+}
+
+/// 営業担当者ロール。
+pub struct SalesRole;
+impl RequiredRole for SalesRole {
+    const ROLE: &'static str = "ROLE_SALES";
+}
+
+/// 経路設計者ロール。
+pub struct RouteDesignerRole;
+impl RequiredRole for RouteDesignerRole {
+    const ROLE: &'static str = "ROLE_ROUTE_DESIGNER";
+}
+
+/// ロール認可 extractor。認証・認可を型で保証し、ハンドラ本体から
+/// `require_user` + `has_role` の重複を排除する。
+pub struct RoleGuard<R: RequiredRole>(pub CurrentUser, PhantomData<R>);
+
+impl<S, R> FromRequestParts<S> for RoleGuard<R>
+where
+    S: Send + Sync,
+    R: RequiredRole,
+{
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let session = Session::from_request_parts(parts, state)
+            .await
+            .map_err(|_| Redirect::to("/login").into_response())?;
+        match session.get::<CurrentUser>(SESSION_USER_KEY).await {
+            Ok(Some(user)) if user.has_role(R::ROLE) => Ok(Self(user, PhantomData)),
+            Ok(Some(_)) => Err(StatusCode::FORBIDDEN.into_response()),
+            _ => Err(Redirect::to("/login").into_response()),
+        }
+    }
+}
+
+/// 営業担当者に認可されたユーザー。
+type SalesUser = RoleGuard<SalesRole>;
+/// 経路設計者に認可されたユーザー。
+type RouteDesignerUser = RoleGuard<RouteDesignerRole>;
 
 /// Web 層の共有状態。
 #[derive(Clone)]
@@ -265,14 +316,7 @@ async fn placeholder_admin(session: Session) -> Response {
     render_placeholder(&session, "管理設定").await
 }
 
-async fn shipper_new_form(session: Session) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role("ROLE_SALES") {
-        return StatusCode::FORBIDDEN.into_response();
-    }
+async fn shipper_new_form(RoleGuard(current_user, _): SalesUser) -> Response {
     render(&ShipperNewTemplate {
         current_user,
         error: false,
@@ -282,17 +326,9 @@ async fn shipper_new_form(session: Session) -> Response {
 
 async fn shipper_create(
     State(state): State<AppState>,
-    session: Session,
+    RoleGuard(current_user, _): SalesUser,
     Form(form): Form<ShipperForm>,
 ) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role("ROLE_SALES") {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
     let kind = if form.kind == "CORPORATE" {
         let rate = form
             .discount_rate
@@ -409,14 +445,7 @@ fn build_command(form: &BookingForm) -> Result<BookCargoCommand, String> {
     })
 }
 
-async fn booking_new_form(session: Session) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role("ROLE_SALES") {
-        return StatusCode::FORBIDDEN.into_response();
-    }
+async fn booking_new_form(RoleGuard(current_user, _): SalesUser) -> Response {
     render(&BookingNewTemplate {
         current_user,
         error: false,
@@ -426,17 +455,9 @@ async fn booking_new_form(session: Session) -> Response {
 
 async fn booking_create(
     State(state): State<AppState>,
-    session: Session,
+    RoleGuard(current_user, _): SalesUser,
     Form(form): Form<BookingForm>,
 ) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role("ROLE_SALES") {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
     let render_error = |current_user: CurrentUser, message: String| -> Response {
         (
             StatusCode::OK,
@@ -503,8 +524,6 @@ async fn booking_show(
 }
 
 // ===== Routing Context（航路管理・US24 / US25 / US07）=====
-
-const ROLE_ROUTE_DESIGNER: &str = "ROLE_ROUTE_DESIGNER";
 
 /// 航路一覧の 1 行分の表示データ。
 struct VoyageRow {
@@ -732,17 +751,9 @@ fn voyage_error_message(e: &VoyageServiceError) -> String {
 
 async fn voyage_list(
     State(state): State<AppState>,
-    session: Session,
+    RoleGuard(current_user, _): RouteDesignerUser,
     Query(query): Query<VoyageSearchQuery>,
 ) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
     let service = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
     let origin = query.origin.clone().unwrap_or_default();
     let destination = query.destination.clone().unwrap_or_default();
@@ -778,14 +789,7 @@ async fn voyage_list(
     }
 }
 
-async fn voyage_new_form(session: Session) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
+async fn voyage_new_form(RoleGuard(current_user, _): RouteDesignerUser) -> Response {
     render(&VoyageNewTemplate {
         current_user,
         error: false,
@@ -796,17 +800,9 @@ async fn voyage_new_form(session: Session) -> Response {
 
 async fn voyage_create(
     State(state): State<AppState>,
-    session: Session,
+    RoleGuard(current_user, _): RouteDesignerUser,
     Form(form): Form<VoyageForm>,
 ) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
     let render_error = |current_user: CurrentUser, message: String| -> Response {
         (
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -837,16 +833,9 @@ async fn voyage_create(
 
 async fn voyage_edit_form(
     State(state): State<AppState>,
-    session: Session,
+    RoleGuard(current_user, _): RouteDesignerUser,
     Path(voyage_number): Path<String>,
 ) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
     let service = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
     match service.find(&voyage_number).await {
         Ok(Some(voyage)) => render(&VoyageEditTemplate {
@@ -863,18 +852,10 @@ async fn voyage_edit_form(
 
 async fn voyage_update(
     State(state): State<AppState>,
-    session: Session,
+    RoleGuard(current_user, _): RouteDesignerUser,
     Path(voyage_number): Path<String>,
     Form(form): Form<VoyageForm>,
 ) -> Response {
-    let current_user = match require_user(&session).await {
-        Ok(u) => u,
-        Err(resp) => return resp,
-    };
-    if !current_user.has_role(ROLE_ROUTE_DESIGNER) {
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
     let query = VoyageQueryService::new(SqlxVoyageRepository::new(state.pool.clone()));
     let current_row = match query.find(&voyage_number).await {
         Ok(Some(voyage)) => voyage_to_row(&voyage),
