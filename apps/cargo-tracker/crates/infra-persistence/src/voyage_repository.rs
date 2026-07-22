@@ -180,17 +180,44 @@ impl VoyageRepository for SqlxVoyageRepository {
         &self,
         criteria: &VoyageSearchCriteria,
     ) -> Result<Vec<Voyage>, RepositoryError> {
-        let all = self.find_all().await?;
-        Ok(all
-            .into_iter()
-            .filter(|v| {
-                v.matches(
-                    criteria.origin.as_ref(),
-                    criteria.destination.as_ref(),
-                    criteria.cargo_type,
-                )
-            })
-            .collect())
+        // 全件ロード後の Rust フィルタ（N+1）を避け、DB 側で voyage ID を絞り込む。
+        // 出発地はスケジュール先頭（seq 最小）の carrier_movement の departure、
+        // 到着地は末尾（seq 最大）の arrival に対応するため EXISTS 副問い合わせで表現する。
+        // 各条件は「引数が NULL なら素通し」で任意化する（VoyageSearchCriteria の Option 意味論に一致）。
+        let origin = criteria.origin.as_ref().map(|l| l.code().to_string());
+        let destination = criteria.destination.as_ref().map(|l| l.code().to_string());
+        let cargo_type = criteria.cargo_type.map(|c| c.as_str().to_string());
+
+        let ids = sqlx::query(
+            r"SELECT v.id FROM voyage v
+              WHERE ($1::text IS NULL OR EXISTS (
+                        SELECT 1 FROM voyage_cargo_type vct
+                        WHERE vct.voyage_id = v.id AND vct.cargo_type = $1))
+                AND ($2::text IS NULL OR EXISTS (
+                        SELECT 1 FROM carrier_movement cm
+                        WHERE cm.voyage_id = v.id
+                          AND cm.seq_number = (SELECT MIN(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
+                          AND cm.departure_location_unlocode = $2))
+                AND ($3::text IS NULL OR EXISTS (
+                        SELECT 1 FROM carrier_movement cm
+                        WHERE cm.voyage_id = v.id
+                          AND cm.seq_number = (SELECT MAX(seq_number) FROM carrier_movement WHERE voyage_id = v.id)
+                          AND cm.arrival_location_unlocode = $3))
+              ORDER BY v.voyage_number",
+        )
+        .bind(cargo_type)
+        .bind(origin)
+        .bind(destination)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(backend)?;
+
+        let mut voyages = Vec::with_capacity(ids.len());
+        for row in ids {
+            let id: i64 = row.try_get("id").map_err(backend)?;
+            voyages.push(self.load_voyage(id).await?);
+        }
+        Ok(voyages)
     }
 
     async fn find_all(&self) -> Result<Vec<Voyage>, RepositoryError> {

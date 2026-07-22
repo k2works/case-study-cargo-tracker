@@ -146,3 +146,66 @@ async fn 検索条件で航海を絞り込める() {
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].voyage_number().as_str(), "V0002");
 }
+
+#[tokio::test]
+async fn 検索は到着地と複合条件でsql絞り込みできる() {
+    let (pool, _c) = setup().await;
+    let repo = SqlxVoyageRepository::new(pool);
+    repo.save(&voyage("V0001", "JPOSA", "USLAX", vec![CargoType::General]))
+        .await
+        .unwrap();
+    repo.save(&voyage(
+        "V0002",
+        "JPYOK",
+        "DEHAM",
+        vec![CargoType::Hazardous],
+    ))
+    .await
+    .unwrap();
+    repo.save(&voyage(
+        "V0003",
+        "JPOSA",
+        "USLAX",
+        vec![CargoType::General, CargoType::Refrigerated],
+    ))
+    .await
+    .unwrap();
+
+    // 到着地単独（USLAX 行きは V0001・V0003）
+    let by_dest = VoyageSearchCriteria {
+        origin: None,
+        destination: Some(Location::new("USLAX").unwrap()),
+        cargo_type: None,
+    };
+    let mut result = repo.search(&by_dest).await.expect("search");
+    result.sort_by(|a, b| a.voyage_number().as_str().cmp(b.voyage_number().as_str()));
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0].voyage_number().as_str(), "V0001");
+    assert_eq!(result[1].voyage_number().as_str(), "V0003");
+
+    // 複合条件（出発 JPOSA・到着 USLAX・冷凍対応 = V0003 のみ）
+    let combined = VoyageSearchCriteria {
+        origin: Some(Location::new("JPOSA").unwrap()),
+        destination: Some(Location::new("USLAX").unwrap()),
+        cargo_type: Some(CargoType::Refrigerated),
+    };
+    let result = repo.search(&combined).await.expect("search");
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].voyage_number().as_str(), "V0003");
+}
+
+#[tokio::test]
+async fn 検索は該当なしのとき空を返す() {
+    let (pool, _c) = setup().await;
+    let repo = SqlxVoyageRepository::new(pool);
+    repo.save(&voyage("V0001", "JPOSA", "USLAX", vec![CargoType::General]))
+        .await
+        .unwrap();
+    let criteria = VoyageSearchCriteria {
+        origin: Some(Location::new("JPKIX").unwrap()),
+        destination: None,
+        cargo_type: None,
+    };
+    let result = repo.search(&criteria).await.expect("search");
+    assert!(result.is_empty());
+}
