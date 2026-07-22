@@ -230,6 +230,65 @@ async fn 経路を選択して確定すると予約詳細へリダイレクト�
 }
 
 #[tokio::test]
+async fn 経路設計画面は条件調整パネルを表示する() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app).await;
+    let resp = app
+        .oneshot(
+            Request::get("/bookings/BKG-0001/route")
+                .header(header::COOKIE, cookie)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let html = body_string(resp).await;
+    assert!(html.contains("route-adjust"));
+    assert!(html.contains("extend_deadline_days"));
+}
+
+#[tokio::test]
+async fn 条件調整で経路候補が再算出される() {
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app).await;
+    // 期限を 5 日延長して再算出。候補が再提示される（US10 受入 2/3）。
+    let resp = app
+        .oneshot(
+            Request::post("/bookings/BKG-0001/route/adjust")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::from("extend_deadline_days=5&cargo_type="))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let html = body_string(resp).await;
+    assert!(html.contains("route-candidates"));
+    assert!(html.contains("V0001"));
+}
+
+#[tokio::test]
+async fn 貨物種別を変更して再算出すると対応航海が絞り込まれる() {
+    // BKG-0001 は GENERAL。HAZARDOUS に変更すると対応航海（V0001 は GENERAL のみ）が無く 0 件。
+    let (app, _c) = setup(Role::RouteDesigner).await;
+    let cookie = login(&app).await;
+    let resp = app
+        .oneshot(
+            Request::post("/bookings/BKG-0001/route/adjust")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, cookie)
+                .body(Body::from("extend_deadline_days=0&cargo_type=HAZARDOUS"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let html = body_string(resp).await;
+    assert!(html.contains("route-empty"));
+}
+
+#[tokio::test]
 async fn 存在しない予約の経路設計は404を返す() {
     let (app, _c) = setup(Role::RouteDesigner).await;
     let cookie = login(&app).await;

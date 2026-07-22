@@ -75,12 +75,16 @@ async fn setup_full() -> (Router, ShipperId, PgPool, ContainerAsync<Postgres>) {
 }
 
 async fn login(app: &Router) -> String {
+    login_as(app, "sales").await
+}
+
+async fn login_as(app: &Router, username: &str) -> String {
     let resp = app
         .clone()
         .oneshot(
             Request::post("/login")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .body(Body::from("username=sales&password=pass1234"))
+                .body(Body::from(format!("username={username}&password=pass1234")))
                 .unwrap(),
         )
         .await
@@ -246,8 +250,8 @@ async fn seed_cargo_with_status(
         r"INSERT INTO cargo
             (booking_id, shipper_id, cargo_type, weight, origin_unlocode,
              destination_unlocode, arrival_deadline, consignee_name, consignee_email, booking_status)
-          VALUES ($1, $2, 'GENERAL', 1000, 'JPOSA', 'DEHAM', DATE '2026-06-05',
-                  'Hamburg Handels', 'import@hamburg.example', $3)",
+          VALUES ($1, $2, 'GENERAL', 1000, 'JPOSA', 'USLAX', DATE '2026-06-05',
+                  'LA Trading', 'import@la.example', $3)",
     )
     .bind(booking_id)
     .bind(shipper_id.value())
@@ -255,6 +259,33 @@ async fn seed_cargo_with_status(
     .execute(pool)
     .await
     .expect("seed cargo");
+}
+
+/// 直行航海 JPOSA→USLAX（GENERAL）を SQL で seed する（route/confirm 用）。
+async fn seed_voyage(pool: &PgPool) {
+    let voyage_id: i64 = sqlx::query_scalar(
+        r"INSERT INTO voyage (voyage_number, vessel_name, carrier)
+          VALUES ('V0001', 'SAKURA MARU', 'Nippon Line') RETURNING id",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("seed voyage");
+    sqlx::query(
+        r"INSERT INTO carrier_movement
+            (voyage_id, departure_location_unlocode, arrival_location_unlocode,
+             departure_date, arrival_date, seq_number)
+          VALUES ($1, 'JPOSA', 'USLAX', TIMESTAMPTZ '2026-05-01 18:00:00+09',
+                  TIMESTAMPTZ '2026-05-14 08:00:00-07', 1)",
+    )
+    .bind(voyage_id)
+    .execute(pool)
+    .await
+    .expect("seed carrier_movement");
+    sqlx::query("INSERT INTO voyage_cargo_type (voyage_id, cargo_type) VALUES ($1, 'GENERAL')")
+        .bind(voyage_id)
+        .execute(pool)
+        .await
+        .expect("seed voyage_cargo_type");
 }
 
 /// 確定経路（2 区間）を SQL で直接 seed する。
@@ -376,6 +407,50 @@ async fn 経路提案中の予約は荷主通知と確定ができる() {
     assert_eq!(confirm.status(), StatusCode::SEE_OTHER);
     let html = get_html(&app, "/bookings/BKG-2001", &cookie).await;
     assert!(html.contains(r#"data-status="CONFIRMED""#));
+}
+
+#[tokio::test]
+async fn 経路確定で予約が経路提案中になり差し戻せる() {
+    // US11: route/confirm で経路設計中 → 経路提案中に遷移。US13: /revert で経路設計中へ差し戻す。
+    let (app, shipper_id, pool, _c) = setup_full().await;
+    // 経路設計者と航海・経路設計中の予約を用意する。
+    SqlxUserRepository::new(pool.clone())
+        .create_user(
+            "designer",
+            "designer@example.com",
+            "pass1234",
+            &[Role::RouteDesigner],
+        )
+        .await
+        .expect("seed designer");
+    seed_voyage(&pool).await;
+    seed_cargo_with_status(&pool, &shipper_id, "BKG-3001", "ROUTE_DESIGNING").await;
+
+    // 経路設計者でログインし、経路確定（US11）。
+    let designer_cookie = login_as(&app, "designer").await;
+    let confirm = app
+        .clone()
+        .oneshot(
+            Request::post("/bookings/BKG-3001/route/confirm")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header(header::COOKIE, designer_cookie)
+                .body(Body::from("candidate_index=0"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(confirm.status(), StatusCode::SEE_OTHER);
+
+    // 営業で状態が経路提案中になったことを確認。
+    let sales_cookie = login(&app).await;
+    let html = get_html(&app, "/bookings/BKG-3001", &sales_cookie).await;
+    assert!(html.contains(r#"data-status="ROUTE_PROPOSED""#));
+
+    // US13: 差し戻しで経路設計中へ戻る。
+    let revert = post(&app, "/bookings/BKG-3001/revert", &sales_cookie).await;
+    assert_eq!(revert.status(), StatusCode::SEE_OTHER);
+    let html = get_html(&app, "/bookings/BKG-3001", &sales_cookie).await;
+    assert!(html.contains(r#"data-status="ROUTE_DESIGNING""#));
 }
 
 #[tokio::test]

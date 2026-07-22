@@ -164,6 +164,15 @@ where
         booking_id: &str,
     ) -> Result<(), BookingServiceError> {
         let cargo = self.load(booking_id).await?;
+        // US12 の不変条件: 経路提案中の予約のみ荷主通知できる（UI ガードに依存しない）。
+        if cargo.status() != domain_booking::BookingStatus::RouteProposed {
+            return Err(BookingServiceError::Domain(
+                BookingError::InvalidStatusTransition {
+                    from: cargo.status().as_str(),
+                    action: "notify_route_to_shipper",
+                },
+            ));
+        }
         let summary = self
             .selected_routes
             .find_by_booking(booking_id)
@@ -381,6 +390,24 @@ mod tests {
             .notify_route_to_shipper("BKG-0001")
             .await
             .expect("ok");
+    }
+
+    #[tokio::test]
+    async fn 経路提案中でない予約の荷主通知は拒否され通知されない() {
+        // 仮受付のまま荷主通知しようとすると不正状態でドメインエラー。
+        let mut repo = MockRepo::new();
+        repo.expect_find_by_booking_id()
+            .returning(|_| Ok(Some(preliminary_cargo())));
+        let mut notifier = MockNotifier::new();
+        notifier.expect_notify().times(0);
+        let mut view = MockRouteView::new();
+        view.expect_find_by_booking().times(0);
+        let service = BookingLifecycleService::new(repo, notifier, view);
+        let err = service
+            .notify_route_to_shipper("BKG-0001")
+            .await
+            .unwrap_err();
+        assert!(matches!(err, BookingServiceError::Domain(_)));
     }
 
     #[tokio::test]

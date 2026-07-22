@@ -202,18 +202,18 @@ struct BookingShowTemplate {
     route_arrival: String,
 }
 
-/// 予約状態の日本語ラベル。
+/// 予約状態の日本語ラベル。ui_design.md 付録「ステータス対応表（正典）」に準拠する。
 fn booking_status_label(status: &str) -> &'static str {
     match status {
-        "PRELIMINARY" => "仮受付",
+        "PRELIMINARY" => "仮予約",
         "ROUTE_DESIGNING" => "経路設計中",
-        "ROUTE_PROPOSED" => "経路提案中",
-        "CONFIRMED" => "予約確定",
+        "ROUTE_PROPOSED" => "経路提案済",
+        "CONFIRMED" => "確認済",
         "TRACKING_ISSUED" => "追跡番号発行済",
         "IN_TRANSIT" => "輸送中",
         "DELIVERED" => "配送完了",
-        "SETTLED" => "精算済",
-        "CANCELLED" => "キャンセル済",
+        "SETTLED" => "精算完了",
+        "CANCELLED" => "キャンセル",
         _ => "不明",
     }
 }

@@ -691,4 +691,37 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].voyage_numbers()[0].as_str(), "VFAST");
     }
+
+    #[test]
+    fn 到着日と期限が同日なら期限内と判定する() {
+        // 到着 2026-04-14。期限が同日・翌日は期限内、前日は期限超過（境界値 == の検証）。
+        let candidate = RouteCandidateCalculator::default()
+            .calculate(
+                &loc("JPOSA"),
+                &loc("USLAX"),
+                date("2026-04-14"),
+                CargoType::General,
+                &[voyage(
+                    "V0001",
+                    "JPOSA",
+                    "USLAX",
+                    "2026-04-01T18:00:00Z",
+                    "2026-04-14T08:00:00Z",
+                    vec![CargoType::General],
+                )],
+            )
+            .remove(0);
+        assert!(
+            candidate.within_deadline(date("2026-04-14")),
+            "同日は期限内"
+        );
+        assert!(
+            candidate.within_deadline(date("2026-04-15")),
+            "翌日は期限内"
+        );
+        assert!(
+            !candidate.within_deadline(date("2026-04-13")),
+            "前日は期限超過"
+        );
+    }
 }
