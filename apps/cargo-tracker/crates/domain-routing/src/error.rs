@@ -27,4 +27,10 @@ pub enum RoutingError {
     /// 未知の貨物種別文字列の場合。
     #[error("unknown cargo type: {0}")]
     UnknownCargoType(String),
+    /// 経路候補が空（区間が 1 つもない）の場合。
+    #[error("route candidate must have at least one segment")]
+    EmptyRoute,
+    /// 経路候補の区間が接続していない（前区間の到着地/時刻と次区間が連結しない）場合。
+    #[error("route segments must connect (location and chronology)")]
+    DisconnectedRoute,
 }
