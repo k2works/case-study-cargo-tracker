@@ -16,6 +16,7 @@
 | イテレーション | 計画 | ふりかえり | 完了報告書 | 状態 |
 |---------------|------|-----------|-----------|------|
 | IT1 予約基盤 | [iteration_plan-1.md](iteration_plan-1.md) | [retrospective-1.md](retrospective-1.md) | [iteration_report-1.md](iteration_report-1.md) | 完了（機能スコープ・全テスト green） |
+| IT2 航海スケジュール | [iteration_plan-2.md](iteration_plan-2.md) | - | - | 計画済み・着手中（Routing Context / US24・US25・US07） |
 
 イテレーション開始時に行を追加します。
 
