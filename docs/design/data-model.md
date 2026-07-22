@@ -780,12 +780,27 @@ CREATE TABLE shipper (
 
 ### `voyage`（航海）
 
+> **注記（IT2 追加）**: US24 の受入基準（船名・運送会社・対応貨物種別の入力）を満たすため、`vessel_name`・`carrier` カラムを追加した。対応貨物種別は 1 航海が複数種別に対応しうるため、`voyage` テーブルのカラムではなく子テーブル `voyage_cargo_type`（下記）へ正規化した。
+
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGINT` | `PK, NOT NULL` | サロゲートキー（BIGSERIAL） |
 | `voyage_number` | `VARCHAR(20)` | `UK, NOT NULL` | 航海番号（業務キー） |
+| `vessel_name` | `VARCHAR(100)` | `NOT NULL` | 船名（US24） |
+| `carrier` | `VARCHAR(100)` | `NOT NULL` | 運送会社（US24） |
 | `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード作成日時 |
 | `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT NOW()` | レコード更新日時 |
+
+---
+
+### `voyage_cargo_type`（航海対応貨物種別）
+
+> **注記（IT2 追加）**: 1 航海が対応する貨物種別（`GENERAL` / `HAZARDOUS` / `REFRIGERATED`）を保持する子テーブル。US07 の貨物種別絞り込みの制約評価に用いる。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `voyage_id` | `BIGINT` | `PK, FK → voyage.id, NOT NULL` | 親航海 ID（CASCADE 削除） |
+| `cargo_type` | `VARCHAR(30)` | `PK, NOT NULL` | 対応貨物種別（CargoType 列挙値） |
 
 ---
 

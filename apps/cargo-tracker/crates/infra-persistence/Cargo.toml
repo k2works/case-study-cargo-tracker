@@ -11,6 +11,7 @@ workspace = true
 shared-kernel = { workspace = true }
 domain-shipper = { workspace = true }
 domain-booking = { workspace = true }
+domain-routing = { workspace = true }
 app-shipper = { workspace = true }
 sqlx = { workspace = true }
 async-trait = { workspace = true }
