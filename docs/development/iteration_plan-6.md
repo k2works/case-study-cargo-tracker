@@ -91,37 +91,38 @@ date: 2026-07-23T00:00:00.000Z
 
 #### 0. IT5 ふりかえり Try 返済枠（技術的負債返済・SP 外）
 
-- [ ] **Try#1**: 「送信＝記録」系（通知）の受入基準に、永続化テーブル（notification）をアサートする統合テストをセットで書く運用を DoD 化。本計画の対応表に「通知アサートテスト名」列を設ける。
-- [ ] **Try#2**: ADR-0006 の Booking→Tracking 冪等再操作パスを実装（`TrackingIssued` かつ追跡レコード無しの再実行を許容）。
-- [ ] **Try#3**: 通知の実配信（`NotificationPort` 実装差し替え）・荷主 contact 解決を導入し、宛先ハードコード・subject/body 重複を解消。US18 照会画面で通知履歴・追跡番号を荷主に見せる導線とあわせて対応。
-- [ ] **Try#4**: `transport_status` を CQRS Read Model として整理、またはキャッシュである旨をコード・スキーマにコメント明記。
-- [ ] **Try#5**: `RouteCheckPort` の戻り値を `enum { OnRoute, OffRoute, Unknown }` にして「判定不能」と「ルート上」を分離。
-- [ ] **Try#6**: dashboard の最新荷役一覧・予約詳細への追跡番号表示を追加。
+- [x] **Try#1**: 通知アサートテストを DoD 化。IT6 HTTP フローテストで notification テーブル（EXCEPTION_RAISED/EXCEPTION_RESOLVED）をアサート。対応表に通知アサート列を設置済み。
+- [x] **Try#2**: ADR-0006 の Booking→Tracking 冪等再操作パスを実装（`find_by_booking_id` で既存追跡があれば既存番号を返し二重発行防止・`TrackingIssued` からの回復を許容）。
+- [ ] **Try#3**: 通知の実配信・荷主 contact 解決・宛先ハードコード解消（**クローズ前対応**。US18 照会画面の通知履歴導線とあわせて）。
+- [x] **Try#4**: `transport_status` を Read Model キャッシュとコード・マイグレーションに明記（ADR-0006）。
+- [x] **Try#5**: `RouteCheckPort` を `enum RouteCheck { OnRoute, OffRoute, Unknown }` に分離（OffRoute のみ警告）。
+- [ ] **Try#6**: dashboard の最新荷役一覧・予約詳細への追跡番号表示（**クローズ前対応**）。
 
 #### 1. 見積ドメイン・アプリ（US01・アウトサイドイン起点）（US01 5 SP の一部）
 
-- [ ] 受入テスト（見積作成の HTTP フロー）を入口に、`domain-estimation` を昇格: `Estimate` 集約・`EstimateId`（UUID）・`RouteCandidate`（航海番号・経由港・輸送日数・見積コスト）・`EstimateStatus`（Created/Expired）・`replace_candidates()`・出力ポート。
-- [ ] `app-estimation`: 見積作成ユースケース。ルート候補算出は既存 Routing（`VoyageRepository`／既存経路算出）を ACL 経由で参照する。概算料金はスタブ（重量ベース固定計算・domain-model 根拠）とし将来差し替え可能に。
-- [ ] `infra-persistence`: `estimate`／`route_candidate` テーブルのマイグレーションと sqlx リポジトリ。
+- [x] `domain-estimation` を昇格: `Estimate` 集約・`EstimateId`（UUID）・`RouteCandidate`・`EstimateStatus`・`Weight`・`EstimateLocation`・`replace_candidates()`・`EstimateRepository` ポート（7 テスト）。
+- [x] `app-estimation`: `CreateEstimateService`。`RouteCandidateProvider` ACL で既存 Routing を参照、概算料金は重量ベーススタブ（mockall 4 テスト）。
+- [x] `infra-persistence`: `estimate`／`route_candidate` マイグレーションと `SqlxEstimateRepository`。
 
 #### 2. 追跡照会（US18・CQRS 読み取り）（US18 3 SP）
 
-- [ ] 追跡照会クエリ（Read Model）: `tracking_activity`＋`tracking_handling_event` を JOIN し現在状態・位置・履歴・推定到着日を返す DTO を `infra-persistence` の `query` で構築（app 層はクエリポート trait）。
-- [ ] 公開追跡ページ `/public/tracking/{trackingNumber}`（認証不要ルート・`RoleGuard` を通さない別ルーティング）。追跡番号不存在時は「追跡番号が見つかりません」。
-- [ ] 推定到着日の導出（確定経路の最終 leg 到着日、または見積の所要日数から）。
+- [x] 追跡照会は既存 `tracking_activity`＋`tracking_handling_event`（`find_by_tracking_number`）を Read Model として利用し現在状態・位置・履歴・推定到着日を表示。
+- [x] 公開追跡ページ `/public/tracking/{trackingNumber}`（認証不要・`RoleGuard` 非適用）。不存在時は「追跡番号が見つかりません」。
+- [x] 推定到着日は最新イベント日時から簡易導出（確定経路連携は後続 IT）。
 
 #### 3. 遅延例外（US19・Tracking 例外イベント）（US19 5 SP）
 
-- [ ] `domain-tracking` に `TrackingExceptionEvent`・`ExceptionType`（本 IT は `Delay` のみ・`Damage`/`Lost`/`CustomsHold` は IT7）・`add_exception()`・`has_active_exception()`・`resolve_exception()` を追加。`current_status()` を未解決例外時に `Exception` を返すよう拡張（ADR-0006 の末尾判定拡張）。
-- [ ] `app-tracking`: 遅延例外記録・対応報告ユースケース。荷主へ遅延通知・対応報告を記録（Try#1 のテーブルアサート対象）。
-- [ ] `infra-persistence`: `tracking_exception_event` テーブルのマイグレーション（IT5 で繰延）・sqlx 永続化（追跡集約の例外洗い替え）。
-- [ ] 例外登録 `/tracking/{trackingNumber}/exceptions/new`・例外解決 `/tracking/{trackingNumber}/exceptions/{exceptionId}/resolve`（追跡管理者）。
+- [x] `domain-tracking` に `TrackingExceptionEvent`・`ExceptionType`（Delay）・`add_exception()`・`has_active_exception()`・`resolve_exception()` を追加。`current_status()` を例外対応に拡張（4 テスト・計 12 green）。
+- [x] `app-tracking`: `TrackingExceptionService`（遅延記録・対応報告）。荷主へ遅延通知・対応報告を記録（mockall 2 テスト）。
+- [x] `infra-persistence`: `tracking_exception_event` マイグレーション（occurred_at は TIMESTAMPTZ で domain と整合）・sqlx 永続化（例外洗い替え）。
+- [x] 例外登録 `/tracking/{n}/exceptions/new`→POST `.../exceptions`・例外解決 `.../{i}/resolve`（追跡管理者）。
 
 #### 4. インターフェース（画面・htmx／PRG）
 
-- [ ] 見積一覧 `/estimates`・見積作成 `/estimates/new`（危険物入力の出し分け）・見積詳細 `/estimates/{estimateId}`（`RoleGuard<SalesUser>`）。
-- [ ] 公開追跡ページ・例外登録／解決画面（追跡管理者）。
-- [ ] ナビゲーション整合: navbar の見積管理（ROLE_SALES）は IT1 出力済み。dashboard 拡充（Try#6）とあわせ検証テストを追加。
+- [x] 見積一覧／作成（危険物出し分け）／詳細（`RoleGuard<SalesUser>`）・`RoutingRouteCandidateProvider` ACL。
+- [x] 公開追跡ページ・例外登録／解決画面（追跡管理者）。
+- [x] HTTP フロー統合テスト 5 件（testcontainers）で US01/US18/US19 を検証。
+- [ ] ナビ検証テスト（見積管理は IT1 navbar 出力済み）・dashboard 拡充（Try#6）は**クローズ前**。
 
 #### タスク合計
 
