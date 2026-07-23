@@ -104,35 +104,36 @@ date: 2026-07-23T00:00:00.000Z
 
 #### 0. IT4 ふりかえり Try 返済枠（技術的負債返済・SP 外）
 
-- [ ] **Try#1**: `closing-iteration` 品質ゲートに「受入基準対応表の想定テスト名 vs 実テスト名を grep 突合」する手順を追加（IT5 クローズ時に適用）。本計画の対応表に想定テスト名を記載する。
-- [ ] **Try#2**: 状態を確定的に変える操作（追跡発行・荷役記録・引取・手動更新）に確認ダイアログを付与。
-- [ ] **Try#3**: US10 0 件時の「荷主との条件協議依頼」を通知記録・遷移を伴う実導線化（IT4 積み残し・本 IT の通知基盤流用で対応）。
-- [ ] **Try#4**: 期限超過候補（⚠）を UI でラジオ選択不可化し app 層 422 をユーザーに見せない（IT4 経路選択画面の残返済）。
-- [ ] **Try#5**: TOCTOU の `expected_voyages_list` エンコード/デコードを 1 ヘルパーに集約し round-trip テスト追加。
-- [ ] **Try#6**: `BookingStatus` に述語メソッド（`is_confirmed()` 等）・`label()` を持たせ web の文字列マジック比較を排除。
+- [x] **Try#1**: 本計画の対応表に想定テスト名を記載済み（クローズ時に grep 突合を実施）。
+- [x] **Try#2**: 状態を確定的に変える操作（追跡発行・荷役記録・引取・手動更新）に確認ダイアログ（`confirm()`）を付与。
+- [ ] **Try#3**: US10 0 件時の「荷主との条件協議依頼」を通知記録・遷移を伴う実導線化（**未着手・クローズ前対応**）。
+- [ ] **Try#4**: 期限超過候補（⚠）を UI でラジオ選択不可化（**未着手・クローズ前対応**）。
+- [x] **Try#5**: TOCTOU の `expected_voyages_list` を `expected_voyages` モジュールに集約し round-trip テスト 4 件を追加。
+- [x] **Try#6**: `BookingStatus` に `label()`・述語メソッド（`is_confirmed()` 等）を追加し web の文字列比較を排除。
 
 #### 1. 追跡ドメイン（US14 の基盤・インサイドアウト起点）（US14 3 SP）
 
-- [ ] `domain-tracking` を昇格: `TrackingActivity` 集約・`TrackingNumber`／`TrackingBookingId`／`TrackingLocation`／`TrackingVoyageNumber` 値オブジェクト・`TrackingActivityEvent`／`TrackingHandlingType`・`TrackingStatus` enum・`current_status()` 純粋関数・`TrackingActivityRepository` ポートを実装（スマートコンストラクタで不変条件）。
-- [ ] 追跡番号採番ポート（`TrackingNumberGenerator`）を定義し一意性を保証。
+- [x] `domain-tracking` を昇格: `TrackingActivity` 集約・値オブジェクト・`TrackingStatus` enum（9値）・`current_status()` 純粋関数・`TrackingActivityRepository` ポートを実装（9 テスト green）。
+- [x] 追跡番号採番ポート（`TrackingNumberGenerator`／`UuidTrackingNumberGenerator`）を定義。
 
 #### 2. 荷役ドメイン（US15/US16）（US15 の一部）
 
-- [ ] `domain-handling` を昇格: `HandlingActivity` 集約・`HandlingType`（受領・積込・荷降し・引取）・`ReceiptConfirmation`（荷受人確認・署名/確認コード）値オブジェクト・`HandlingActivityRepository` ポート・Read Model 分離方針を実装。
-- [ ] 引取（Claim）は荷受人確認必須の不変条件をドメインに閉じ込める（UI ガード依存にしない・IT4 Problem の再発防止）。
+- [x] `domain-handling` を昇格: `HandlingActivity` 集約・`HandlingType`・`ReceiptConfirmation` 値オブジェクト・`HandlingActivityRepository` ポートを実装（9 テスト green）。
+- [x] 引取（Claim）は荷受人確認必須の不変条件をドメインに閉じ込め（`ReceiptConfirmationRequired`）。
 
 #### 3. アプリケーション層・BC 連携（US14/US15/US16/US17）（US15 残 ＋ US16 ＋ US17）
 
-- [ ] `app-tracking` クレート新設: 追跡発行（US14）・手動状態更新（US17）ユースケース。Booking→Tracking 連携は `ConfirmedBookingView`（Tracking 側 ACL・IT4 `SelectedRouteView` 対称）で確定予約を参照し、予約状態遷移（`Confirmed → TrackingIssued`）は app 層でオーケストレーション（ADR-0004 の逐次書き込み・冪等収束方針を踏襲）。
-- [ ] `app-handling` クレート新設: 荷役記録（US15）・引取記録（US16）ユースケース。Handling→Tracking 反映は `TrackingUpdatePort`（Handling 側 ACL）経由で追跡イベント追記。作業場所と予定ルートの相違は警告（非ブロッキング）として返す。
-- [ ] 通知は IT4 `NotificationPort`/`NotificationType` を拡張（`TrackingNumberIssued`・`CargoStatusChanged` 追加）し「送信＝記録」に限定。
+- [x] `app-tracking` 新設: `IssueTrackingService`（US14）・`ManualTrackingUpdateService`（US17）。`ConfirmedBookingIssuer` ACL で `Confirmed → TrackingIssued` を先行確定（ADR-0004）。mockall 4 テスト。
+- [x] `app-handling` 新設: `RecordHandlingService`（US15/US16）。`TrackingReflectionPort`（Handling 側 ACL）で追跡反映、`RouteCheckPort` で相違警告（非ブロッキング）。mockall 5 テスト。
+- [x] 通知は tracking 由来の `TRACKING_NUMBER_ISSUED`／`CARGO_STATUS_CHANGED` を notification テーブルへ記録（送信＝記録）。
 
 #### 4. インターフェース（画面・htmx／PRG）（US14/US15/US16/US17 の画面）
 
-- [ ] 予約詳細（`/bookings/{bookingId}`）に「追跡番号発行」導線（US14・確認ダイアログ付・経路設計者のみ）。
-- [ ] 荷役作業登録（`/handling/new`）・荷役作業一覧（`/handling`）（US15/US16・`RoleGuard<HandlerUser>`）。引取選択時に荷受人確認フィールドを htmx で出し分け。
-- [ ] 貨物追跡入力（`/tracking`）・追跡詳細（`/tracking/{trackingNumber}`・タイムライン）・手動更新導線（US17・`RoleGuard<TrackerUser>`）。
-- [ ] ナビゲーション整合: navbar／dashboard／ロール別メニュー（荷役管理・貨物追跡）と検証テストの 4 点一致を DoD 化。
+- [x] 予約詳細（`/bookings/{bookingId}`）に「追跡番号発行」導線（US14・確認ダイアログ付・経路設計者のみ）。
+- [x] 荷役作業登録（`/handling/new`）・荷役作業一覧（`/handling`）（US15/US16・`RoleGuard<HandlerUser>`）。引取選択時に荷受人確認フィールドを JS で出し分け。
+- [x] 貨物追跡入力（`/tracking`）・追跡詳細（`/tracking/{trackingNumber}`・タイムライン）・手動更新導線（US17・`RoleGuard<TrackerUser>`）。ACL アダプター 4 種を `tracking_acl` に実装。
+- [x] HTTP フロー統合テスト 5 件（testcontainers）で US14-17 の一貫フローを検証。
+- [ ] ナビゲーション: navbar は IT1 で `/tracking`・`/handling` を出力済み。dashboard 最新荷役情報・ナビ表示検証テストは**クローズ前に追加**。
 
 #### タスク合計
 
