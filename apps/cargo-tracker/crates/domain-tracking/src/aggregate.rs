@@ -1,10 +1,120 @@
 //! Tracking Context の集約ルート `TrackingActivity`。
 
 use crate::value_objects::{
-    TrackingBookingId, TrackingLocation, TrackingNumber, TrackingStatus, TrackingVoyageNumber,
+    ExceptionType, TrackingBookingId, TrackingLocation, TrackingNumber, TrackingStatus,
+    TrackingVoyageNumber,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+
+/// 追跡例外イベント（遅延・損傷等。US19 は遅延のみ）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrackingExceptionEvent {
+    exception_type: ExceptionType,
+    location: TrackingLocation,
+    occurred_at: DateTime<Utc>,
+    description: Option<String>,
+    escalation_flag: bool,
+    resolved_at: Option<DateTime<Utc>>,
+    resolution_notes: Option<String>,
+}
+
+impl TrackingExceptionEvent {
+    /// 未解決の例外イベントを生成する（US19 登録）。
+    #[must_use]
+    pub fn new(
+        exception_type: ExceptionType,
+        location: TrackingLocation,
+        occurred_at: DateTime<Utc>,
+        description: Option<String>,
+    ) -> Self {
+        Self {
+            exception_type,
+            location,
+            occurred_at,
+            description,
+            escalation_flag: false,
+            resolved_at: None,
+            resolution_notes: None,
+        }
+    }
+
+    /// 永続化済みデータから再構築する。
+    #[must_use]
+    pub fn reconstruct(
+        exception_type: ExceptionType,
+        location: TrackingLocation,
+        occurred_at: DateTime<Utc>,
+        description: Option<String>,
+        escalation_flag: bool,
+        resolved_at: Option<DateTime<Utc>>,
+        resolution_notes: Option<String>,
+    ) -> Self {
+        Self {
+            exception_type,
+            location,
+            occurred_at,
+            description,
+            escalation_flag,
+            resolved_at,
+            resolution_notes,
+        }
+    }
+
+    /// 例外種別。
+    #[must_use]
+    pub fn exception_type(&self) -> ExceptionType {
+        self.exception_type
+    }
+
+    /// 発生位置。
+    #[must_use]
+    pub fn location(&self) -> &TrackingLocation {
+        &self.location
+    }
+
+    /// 発生日時。
+    #[must_use]
+    pub fn occurred_at(&self) -> DateTime<Utc> {
+        self.occurred_at
+    }
+
+    /// 内容。
+    #[must_use]
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    /// エスカレーションフラグ。
+    #[must_use]
+    pub fn escalation_flag(&self) -> bool {
+        self.escalation_flag
+    }
+
+    /// 解決日時（未解決なら `None`）。
+    #[must_use]
+    pub fn resolved_at(&self) -> Option<DateTime<Utc>> {
+        self.resolved_at
+    }
+
+    /// 対応内容（対応報告・US19）。
+    #[must_use]
+    pub fn resolution_notes(&self) -> Option<&str> {
+        self.resolution_notes.as_deref()
+    }
+
+    /// 未解決か。
+    #[must_use]
+    pub fn is_active(&self) -> bool {
+        self.resolved_at.is_none()
+    }
+
+    /// 例外を解決する（対応日時・対応内容を記録）。
+    fn resolve(&mut self, resolved_at: DateTime<Utc>, resolution_notes: String) {
+        self.resolved_at = Some(resolved_at);
+        self.resolution_notes = Some(resolution_notes);
+    }
+}
 
 /// 追跡イベント（時系列で記録される追跡の出来事）。
 ///
@@ -66,6 +176,7 @@ pub struct TrackingActivity {
     tracking_number: TrackingNumber,
     booking_id: TrackingBookingId,
     events: Vec<TrackingActivityEvent>,
+    exceptions: Vec<TrackingExceptionEvent>,
 }
 
 impl TrackingActivity {
@@ -78,6 +189,7 @@ impl TrackingActivity {
             tracking_number,
             booking_id,
             events: Vec::new(),
+            exceptions: Vec::new(),
         }
     }
 
@@ -92,6 +204,23 @@ impl TrackingActivity {
             tracking_number,
             booking_id,
             events,
+            exceptions: Vec::new(),
+        }
+    }
+
+    /// 例外イベントも含めて永続化済みデータから再構築する（US19）。
+    #[must_use]
+    pub fn reconstruct_with_exceptions(
+        tracking_number: TrackingNumber,
+        booking_id: TrackingBookingId,
+        events: Vec<TrackingActivityEvent>,
+        exceptions: Vec<TrackingExceptionEvent>,
+    ) -> Self {
+        Self {
+            tracking_number,
+            booking_id,
+            events,
+            exceptions,
         }
     }
 
@@ -118,12 +247,51 @@ impl TrackingActivity {
         self.events.push(event);
     }
 
-    /// 現在の輸送状態をイベント列から純粋に導出する。
+    /// 記録済み例外イベント列。
+    #[must_use]
+    pub fn exceptions(&self) -> &[TrackingExceptionEvent] {
+        &self.exceptions
+    }
+
+    /// 例外イベントを追記する（US19 遅延例外登録）。
+    pub fn add_exception(&mut self, exception: TrackingExceptionEvent) {
+        self.exceptions.push(exception);
+    }
+
+    /// 未解決の例外があるか（US19）。
+    #[must_use]
+    pub fn has_active_exception(&self) -> bool {
+        self.exceptions
+            .iter()
+            .any(TrackingExceptionEvent::is_active)
+    }
+
+    /// 指定インデックスの例外を解決し、対応内容を記録する（US19 対応報告）。
     ///
-    /// イベントが無ければ「受領待ち」。末尾イベントの状態を採用する
-    /// （例外イベントは IT6 で導入。本 IT ではイベント末尾がそのまま現在状態）。
+    /// # Errors
+    ///
+    /// インデックスが範囲外の場合は `false` を返す（対象なし）。
+    pub fn resolve_exception(
+        &mut self,
+        index: usize,
+        resolved_at: DateTime<Utc>,
+        resolution_notes: impl Into<String>,
+    ) -> bool {
+        let Some(ex) = self.exceptions.get_mut(index) else {
+            return false;
+        };
+        ex.resolve(resolved_at, resolution_notes.into());
+        true
+    }
+
+    /// 現在の輸送状態をイベント列・例外から純粋に導出する（ADR-0006 拡張）。
+    ///
+    /// 未解決の例外があれば `Exception`。無ければイベント末尾の状態（イベントが無ければ受領待ち）。
     #[must_use]
     pub fn current_status(&self) -> TrackingStatus {
+        if self.has_active_exception() {
+            return TrackingStatus::Exception;
+        }
         self.events
             .last()
             .map_or(TrackingStatus::NotReceived, TrackingActivityEvent::status)
@@ -190,5 +358,57 @@ mod tests {
             None,
         ));
         assert!(activity.current_status().is_delivered());
+    }
+
+    #[test]
+    fn 遅延例外を追加すると現在状態が例外発生になる() {
+        use crate::value_objects::ExceptionType;
+        let mut activity = TrackingActivity::issue(tn(), bid());
+        activity.record_event(TrackingActivityEvent::new(
+            TrackingStatus::Loaded,
+            loc(),
+            now(),
+            None,
+        ));
+        activity.add_exception(TrackingExceptionEvent::new(
+            ExceptionType::Delay,
+            loc(),
+            now(),
+            Some("台風による遅延".to_string()),
+        ));
+        assert!(activity.has_active_exception());
+        assert_eq!(activity.current_status(), TrackingStatus::Exception);
+    }
+
+    #[test]
+    fn 例外を解決すると現在状態が例外前に復帰し対応内容が記録される() {
+        use crate::value_objects::ExceptionType;
+        let mut activity = TrackingActivity::issue(tn(), bid());
+        activity.record_event(TrackingActivityEvent::new(
+            TrackingStatus::Loaded,
+            loc(),
+            now(),
+            None,
+        ));
+        activity.add_exception(TrackingExceptionEvent::new(
+            ExceptionType::Delay,
+            loc(),
+            now(),
+            None,
+        ));
+        assert!(activity.resolve_exception(0, now(), "代替便を手配"));
+        assert!(!activity.has_active_exception());
+        // 例外解決後はイベント末尾（Loaded）に復帰する。
+        assert_eq!(activity.current_status(), TrackingStatus::Loaded);
+        assert_eq!(
+            activity.exceptions()[0].resolution_notes(),
+            Some("代替便を手配")
+        );
+    }
+
+    #[test]
+    fn 範囲外インデックスの例外解決は失敗する() {
+        let mut activity = TrackingActivity::issue(tn(), bid());
+        assert!(!activity.resolve_exception(0, now(), "x"));
     }
 }

@@ -185,6 +185,40 @@ impl TrackingStatus {
     }
 }
 
+/// 追跡例外の種別。IT6 は `Delay`（遅延）のみ。`Damage`/`Lost`/`CustomsHold` は IT7 で導入。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExceptionType {
+    /// 遅延（US19）。
+    Delay,
+}
+
+impl ExceptionType {
+    /// 永続化用の文字列表現。
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Delay => "DELAY",
+        }
+    }
+
+    /// 文字列から復元する。未知の値は `None`。
+    #[must_use]
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "DELAY" => Some(Self::Delay),
+            _ => None,
+        }
+    }
+
+    /// 画面表示用の日本語ラベル。
+    #[must_use]
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Delay => "遅延",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

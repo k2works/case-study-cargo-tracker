@@ -9,12 +9,13 @@ mod error;
 mod ports;
 mod value_objects;
 
-pub use aggregate::{TrackingActivity, TrackingActivityEvent};
+pub use aggregate::{TrackingActivity, TrackingActivityEvent, TrackingExceptionEvent};
 pub use error::TrackingError;
 pub use ports::{
     TrackingActivityRepository, TrackingNumberGenerator, TrackingRepositoryError,
     UuidTrackingNumberGenerator,
 };
 pub use value_objects::{
-    TrackingBookingId, TrackingLocation, TrackingNumber, TrackingStatus, TrackingVoyageNumber,
+    ExceptionType, TrackingBookingId, TrackingLocation, TrackingNumber, TrackingStatus,
+    TrackingVoyageNumber,
 };
