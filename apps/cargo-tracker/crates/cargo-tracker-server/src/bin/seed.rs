@@ -152,6 +152,13 @@ async fn seed_business_flow(pool: &PgPool) -> Result<(), sqlx::Error> {
     println!(
         "  US12/US13 荷主通知→確定/差戻し/キャンセル: sales で BKG-0002 →[荷主に経路を通知する]→[予約を確定する]"
     );
+    println!(
+        "  US14 追跡番号発行: designer で BKG-0006（確定済）→[追跡番号を発行する]（確定→追跡番号発行済）"
+    );
+    println!(
+        "  US15/US16 荷役・引取: handler で 荷役管理→新規登録→追跡番号 TRK-DEMO-0007 で受領/積込/荷降し/引取記録"
+    );
+    println!("  US17 手動更新: tracker で 貨物追跡→TRK-DEMO-0007→[手動更新]（出港=搭載中 等）");
     Ok(())
 }
 
@@ -194,7 +201,19 @@ INSERT INTO cargo
     -- BKG-0005: 経路設計中だが期限内経路が 0 件（demo2 の条件調整用。V0001 到着 05-14 > 期限 05-10 で ⚠ 期限超過）
     ('BKG-0005', '22222222-2222-2222-2222-222222222222', 'GENERAL', 2000.000,
      'JPOSA', 'USLAX', DATE '2026-05-10', 'LA Trading Inc.', 'consignee@la-trading.example.com',
-     'ROUTE_DESIGNING', NULL, NULL, NULL);
+     'ROUTE_DESIGNING', NULL, NULL, NULL),
+    -- BKG-0006: 予約確定（IT5 US14 追跡番号発行デモ用）
+    ('BKG-0006', '11111111-1111-1111-1111-111111111111', 'GENERAL', 1800.000,
+     'JPOSA', 'USLAX', DATE '2026-05-20', 'LA Trading Inc.', 'consignee@la-trading.example.com',
+     'CONFIRMED', NULL, NULL, NULL),
+    -- BKG-0007: 追跡番号発行済（IT5 US15/US16/US17 荷役・手動更新デモ用）
+    ('BKG-0007', '11111111-1111-1111-1111-111111111111', 'GENERAL', 1600.000,
+     'JPOSA', 'USLAX', DATE '2026-05-20', 'LA Trading Inc.', 'consignee@la-trading.example.com',
+     'TRACKING_ISSUED', NULL, NULL, NULL);
+
+-- 追跡活動（Tracking Context・BKG-0007 は発行済み＝受領待ち。IT5 US15/16/17 デモ用）--
+INSERT INTO tracking_activity (tracking_number, booking_id, transport_status) VALUES
+    ('TRK-DEMO-0007', 'BKG-0007', 'NOT_RECEIVED');
 
 -- 航海スケジュール（Routing Context）------------------------------------------
 INSERT INTO voyage (voyage_number, vessel_name, carrier) VALUES
